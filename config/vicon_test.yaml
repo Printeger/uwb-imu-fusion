@@ -1,0 +1,59 @@
+# VICON dataset config — uwb_imu_fgo
+# Dataset: 2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag
+# VICON GT: /vrpn_client_node/tas_uwb_0/pose
+
+anchors:
+  - {id: 1, pos: [-2.06630158300, 2.12503509737, 1.82465691815], prior_sigma: 0.10}
+  - {id: 2, pos: [3.3014387996, 2.19409215449, 1.86671415040], prior_sigma: 0.10}
+  - {id: 3, pos: [2.77601936572, -1.39771423973, 1.87903886979], prior_sigma: 0.10}
+  - {id: 4, pos: [-2.10524047246, -1.20249493967, 1.86451214829], prior_sigma: 0.10}
+
+extrinsics:
+  lever_arm_init: [0.0, 0.0, 0.0]
+  calib_lever: false
+  lever_prior_sigma: 0.05
+
+calibration:
+  calib_anchor: false
+  calib_range_bias: false
+  range_bias_sigma: 0.05
+  calib_td: false
+  td_init: 0.0
+
+imu:
+  sigma_a: 0.1
+  sigma_g: 0.01
+  sigma_wa: 0.001
+  sigma_wg: 2.0e-5
+  gravity: 9.81
+
+uwb:
+  sigma_range: 0.15
+  v_max: 3.0
+  nlos_rssi_diff: 6.0
+  min_range: 0.3
+  max_range: 100.0
+  dist_consistency_thresh: 2.0
+  warmup_frames: 20
+
+solver:
+  lm_max_iter: 200
+  rel_error_tol: 1.0e-6
+  abs_error_tol: 1.0e-8
+  cauchy_k: 1.0
+  chi2_reject_prob: 0.99
+  max_rejection_rounds: 3
+
+# Keyframe control: use every Nth UWB frame (1=all, 10=every 10th)
+keyframe:
+  step: 10
+
+topics:
+  imu: "/livox/imu"
+  uwb: "/nlink_linktrack_nodeframe3"
+  vicon: "/vrpn_client_node/tas_uwb_0/pose"
+
+bag:
+  path: "data/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag"
+  start: 0.0
+  durr: -1.0

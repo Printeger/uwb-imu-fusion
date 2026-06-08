@@ -1,0 +1,71 @@
+# ============================================================
+# UWB-IMU FGO — 统一配置文件
+# ============================================================
+# 数据集: VICON 2025-10-24 (无遮挡场景)
+# rosbag: data/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag
+# 使用: roslaunch uwb_imu_fgo offline.launch
+# ============================================================
+
+# --- 锚点 3D 坐标 (已预标定, 来自 data/anchor_pose.yaml) ---
+anchors:
+  - {id: 1, pos: [-2.06630158300, 2.12503509737, 1.82465691815], prior_sigma: 0.10}
+  - {id: 2, pos: [3.3014387996, 2.19409215449, 1.86671415040], prior_sigma: 0.10}
+  - {id: 3, pos: [2.77601936572, -1.39771423973, 1.87903886979], prior_sigma: 0.10}
+  - {id: 4, pos: [-2.10524047246, -1.20249493967, 1.86451214829], prior_sigma: 0.10}
+
+# --- 外参: UWB 天线在 IMU 坐标系下的位置 ---
+extrinsics:
+  lever_arm_init: [0.0, 0.0, 0.0]   # UWB antenna position in IMU frame (m)
+  calib_lever: false                # true = 在线标定杆臂
+  lever_prior_sigma: 0.05
+
+# --- 在线标定开关 (多趟渐进: bias → anchor → lever → joint) ---
+calibration:
+  calib_anchor: false               # true = 在线修正锚点位置
+  calib_range_bias: false           # true = 在线标定每锚点距离偏置
+  range_bias_sigma: 0.05
+  calib_td: false                   # true = 在线标定 IMU-UWB 时间偏移
+  td_init: 0.0
+
+# --- IMU 噪声参数 ---
+imu:
+  sigma_a: 0.1                      # 加速度计噪声 (m/s²)
+  sigma_g: 0.01                     # 陀螺仪噪声 (rad/s)
+  sigma_wa: 0.001                   # 加速度计随机游走 (m/s³)
+  sigma_wg: 2.0e-5                  # 陀螺仪随机游走 (rad/s²)
+  gravity: 9.81
+
+# --- UWB 噪声 & 过滤 ---
+uwb:
+  sigma_range: 0.15                 # 基础测距标准差 (m)
+  v_max: 3.0                        # 载体最大速度 (用于自适应协方差)
+  nlos_rssi_diff: 6.0               # NLOS 检测: rx-fp > 此值 → 丢弃 (dB)
+  min_range: 0.3                    # 最小有效距离 (m)
+  max_range: 100.0                  # 最大有效距离 (m)
+  dist_consistency_thresh: 2.0      # 距离一致性检查阈值 (m)
+  warmup_frames: 20                 # 预热帧数
+
+# --- 求解器 ---
+solver:
+  lm_max_iter: 200                  # LM 最大迭代次数
+  rel_error_tol: 1.0e-6
+  abs_error_tol: 1.0e-8
+  cauchy_k: 1.0                     # Cauchy 核参数
+  chi2_reject_prob: 0.99            # χ² 剔除置信度 (0.99 = 宽松, 0.95 = 严格)
+  max_rejection_rounds: 3           # χ² 剔除回环最大轮次
+
+# --- 关键帧下采样 (大数据量时增大 step 加速) ---
+keyframe:
+  step: 10                          # 每 N 个 UWB 帧取 1 个关键帧 (1=全部, 10=推荐)
+
+# --- ROS Topic 配置 (rosbag 内直接读取, 非 playback) ---
+topics:
+  imu: "/livox/imu"                                                # sensor_msgs/Imu
+  uwb: "/nlink_linktrack_nodeframe3"                               # LinktrackNodeframe3
+  vicon: "/vrpn_client_node/tas_uwb_0/pose"                       # geometry_msgs/PoseStamped (可选GT)
+
+# --- Rosbag 路径 (相对此 config 文件, 或绝对路径) ---
+bag:
+  path: "../data/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag"
+  start: 0.0                        # 起始偏移 (s)
+  durr: -1.0                        # 持续时间 (-1 = 全部)

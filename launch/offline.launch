@@ -1,0 +1,15 @@
+<launch>
+  <!-- UWB-IMU FGO Offline Batch Processing -->
+  <!-- 使用: roslaunch uwb_imu_fgo offline.launch -->
+  <!-- 自定义配置: roslaunch uwb_imu_fgo offline.launch config_path:=/path/to/slam.yaml -->
+
+  <arg name="config_path" default="$(find uwb_imu_fgo)/config/slam.yaml" />
+
+  <env name="PYTHONUNBUFFERED" value="1" />
+
+  <node pkg="uwb_imu_fgo" type="uwb_imu_fgo_node" name="uwb_imu_fgo" output="screen"
+        launch-prefix="stdbuf -oL">
+    <param name="config_path" value="$(arg config_path)" />
+  </node>
+
+</launch>
