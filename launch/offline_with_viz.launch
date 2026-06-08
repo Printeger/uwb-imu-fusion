@@ -1,0 +1,42 @@
+<launch>
+  <!-- =================================================================== -->
+  <!-- UWB-IMU FGO — Offline Batch Processing + RViz Visualization         -->
+  <!-- =================================================================== -->
+  <!-- Usage:                                                               -->
+  <!--   roslaunch uwb_imu_fgo offline_with_viz.launch                      -->
+  <!--                                                                      -->
+  <!-- Debug with GDB (auto-backtrace on crash):                            -->
+  <!--   roslaunch uwb_imu_fgo offline_with_viz.launch gdb:=1               -->
+  <!--                                                                      -->
+  <!-- Debug with GDB (interactive, break at main):                         -->
+  <!--   roslaunch uwb_imu_fgo offline_with_viz.launch gdb:=1 gdb_interactive:=1 -->
+  <!--                                                                      -->
+  <!-- Custom config:                                                       -->
+  <!--   roslaunch uwb_imu_fgo offline_with_viz.launch                      -->
+  <!--        config_path:=/path/to/slam.yaml                               -->
+  <!-- =================================================================== -->
+
+  <arg name="config_path" default="$(find uwb_imu_fgo)/config/slam.yaml" />
+  <arg name="rviz_config" default="$(find uwb_imu_fgo)/config/uwb_fgo_viz.rviz" />
+  <arg name="gdb"            default="0" />
+  <arg name="gdb_interactive" default="0" />
+
+  <env name="PYTHONUNBUFFERED" value="1" />
+
+  <!-- ============== FGO Batch Processing Node ============== -->
+  <!-- Processes rosbag, runs optimization, publishes viz markers -->
+  <node pkg="uwb_imu_fgo" type="uwb_imu_fgo_node" name="uwb_imu_fgo"
+        output="screen"
+        launch-prefix="$(eval 'stdbuf -oL' if arg('gdb') == '0'
+                        else 'gdb -ex run -ex bt -ex quit --args' if arg('gdb_interactive') == '0'
+                        else 'gdb -ex run --args')">
+    <param name="config_path" value="$(arg config_path)" />
+  </node>
+
+  <!-- ============== RViz ============== -->
+  <!-- WSL D3D12 Mesa 后端与 OGRE 不兼容，需强制软件渲染 -->
+  <node pkg="rviz" type="rviz" name="rviz"
+        args="-d $(arg rviz_config)" required="false"
+        launch-prefix="env LIBGL_ALWAYS_SOFTWARE=1" />
+
+</launch>

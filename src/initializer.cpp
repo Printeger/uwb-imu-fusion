@@ -1,45 +1,45 @@
 #include "uifgo/initializer.h"
-#include <cmath>
+
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 
 namespace uifgo {
 
 Initializer::Initializer(const Config& cfg) : cfg_(cfg) {}
 
-bool Initializer::DetectStatic(const std::vector<ImuSample>& imu,
-                                size_t i0, size_t i1,
-                                double* accel_norm_mean) {
+bool Initializer::DetectStatic(const std::vector<ImuSample>& imu, size_t i0,
+                               size_t i1, double* accel_norm_mean) {
   if (i1 <= i0 || i1 > imu.size()) return false;
   size_t n = i1 - i0;
   double sum_norm = 0.0, sum_norm2 = 0.0;
   for (size_t i = i0; i < i1; ++i) {
     double norm = imu[i].acc.norm();
-    sum_norm  += norm;
+    sum_norm += norm;
     sum_norm2 += norm * norm;
   }
   double mean = sum_norm / n;
-  double var  = sum_norm2 / n - mean * mean;
+  double var = sum_norm2 / n - mean * mean;
   if (accel_norm_mean) *accel_norm_mean = mean;
 
   // Static if accelerometer norm variance is very small
   // and mean is close to gravity
-  static const double kStaticVarThresh = 0.01;   // (m/s^2)^2
-  static const double kGravityTol     = 1.0;     // m/s^2
+  static const double kStaticVarThresh = 0.01;  // (m/s^2)^2
+  static const double kGravityTol = 1.0;        // m/s^2
   return (var < kStaticVarThresh) &&
          (std::abs(mean - cfg_.gravity) < kGravityTol);
 }
 
 bool Initializer::Trilaterate(const std::vector<UwbRange>& ranges,
-                               const std::vector<AnchorConfig>& anchors,
-                               gtsam::Point3* p_out) {
+                              const std::vector<AnchorConfig>& anchors,
+                              gtsam::Point3* p_out) {
   // Build anchor lookup
   std::unordered_map<int, gtsam::Point3> anchor_map;
   for (const auto& a : anchors) anchor_map[a.id] = a.pos;
 
   // Collect valid anchor-range pairs
   std::vector<gtsam::Point3> A;
-  std::vector<double>       r;
+  std::vector<double> r;
   for (const auto& range : ranges) {
     auto it = anchor_map.find(range.anchor_id);
     if (it == anchor_map.end()) continue;
@@ -62,11 +62,11 @@ bool Initializer::Trilaterate(const std::vector<UwbRange>& ranges,
     Eigen::Vector3d b = Eigen::Vector3d::Zero();
 
     for (size_t i = 0; i < A.size(); ++i) {
-      Eigen::Vector3d d  = gtsam::Vector3(p) - gtsam::Vector3(A[i]);
+      Eigen::Vector3d d = gtsam::Vector3(p) - gtsam::Vector3(A[i]);
       double dn = d.norm();
       if (dn < 1e-9) continue;
-      Eigen::Vector3d u  = d / dn;           // unit vector from anchor to p
-      double e = dn - r[i];                   // residual
+      Eigen::Vector3d u = d / dn;  // unit vector from anchor to p
+      double e = dn - r[i];        // residual
       H += u * u.transpose();
       b -= u * e;
     }
@@ -81,7 +81,7 @@ bool Initializer::Trilaterate(const std::vector<UwbRange>& ranges,
 }
 
 InitResult Initializer::Run(const std::vector<ImuSample>& imu,
-                             const std::vector<UwbFrame>& uwb_frames) {
+                            const std::vector<UwbFrame>& uwb_frames) {
   InitResult res;
 
   if (imu.empty() || uwb_frames.empty()) {
@@ -94,7 +94,10 @@ InitResult Initializer::Run(const std::vector<ImuSample>& imu,
   size_t i0 = 0, i1 = 0;
   double static_dur = 2.0;
   for (size_t i = 0; i < imu.size(); ++i) {
-    if (imu[i].t - t0 > static_dur) { i1 = i; break; }
+    if (imu[i].t - t0 > static_dur) {
+      i1 = i;
+      break;
+    }
   }
   if (i1 == 0) i1 = std::min(imu.size(), (size_t)200);
 
@@ -104,37 +107,56 @@ InitResult Initializer::Run(const std::vector<ImuSample>& imu,
     Eigen::Vector3d acc_avg = Eigen::Vector3d::Zero();
     Eigen::Vector3d gyro_avg = Eigen::Vector3d::Zero();
     for (size_t i = i0; i < i1; ++i) {
-      acc_avg  += imu[i].acc;
+      acc_avg += imu[i].acc;
       gyro_avg += imu[i].gyro;
     }
-    acc_avg  /= (i1 - i0);
+    acc_avg /= (i1 - i0);
     gyro_avg /= (i1 - i0);
 
-    res.ba0 = acc_avg - acc_avg.normalized() * cfg_.gravity;  // residual
-    // Actually, when static, acc_avg ≈ g_body, so ba0 ≈ acc_avg - g_body ≈ 0
-    // Better: set ba0 from nominal vs measured (approximate)
+    // Diagnostic: print mean accel norm to verify IMU units (should be ~9.81)
+    std::cout
+        << "Initializer: static acc norm = " << acc_avg.norm()
+        << " m/s^2 (expect ~9.81; if ~1.0, IMU data is gravity-normalized)\n";
+
     res.ba0 = gtsam::Vector3::Zero();  // small bias, refined later
     res.bg0 = gyro_avg;
 
-    // Align gravity direction to get roll/pitch
-    Eigen::Vector3d g_body = acc_avg.normalized() * cfg_.gravity;  // direction of g
-    Eigen::Vector3d g_world(0, 0, -cfg_.gravity);
+    // Align gravity direction to get roll/pitch.
+    // Key insight: the accelerometer measures PROPER acceleration (reaction
+    // force opposing gravity). When static on a table, acc_avg points UP
+    // (sky direction).  The world-frame gravity g_world points DOWN.
+    //
+    // We want: R_wb * (body gravity direction) = (world gravity direction).
+    // Body gravity direction = -acc_avg (pointing DOWN in body frame).
+    // World gravity direction = (0,0,-g) (pointing DOWN in world frame).
+    Eigen::Vector3d g_body =
+        -acc_avg.normalized() * cfg_.gravity;      // DOWN in body
+    Eigen::Vector3d g_world(0, 0, -cfg_.gravity);  // DOWN in world
     // Find rotation that aligns g_body to g_world
     Eigen::Vector3d axis = g_body.cross(g_world);
     double axis_norm = axis.norm();
+    double cos_angle = g_body.dot(g_world) / (g_body.norm() * g_world.norm());
     gtsam::Rot3 R_wb;
     if (axis_norm < 1e-9) {
-      R_wb = gtsam::Rot3::identity();
+      // Parallel or anti-parallel
+      if (cos_angle > 0) {
+        R_wb = gtsam::Rot3::identity();  // already aligned
+      } else {
+        // 180° about any perpendicular axis (e.g. X)
+        R_wb = gtsam::Rot3::Rx(M_PI);
+      }
     } else {
       axis.normalize();
-      double angle = std::acos(g_body.dot(g_world) / (g_body.norm() * g_world.norm()));
+      double angle = std::acos(std::max(-1.0, std::min(1.0, cos_angle)));
       R_wb = gtsam::Rot3::AxisAngle(gtsam::Unit3(axis), angle);
     }
     res.T0 = gtsam::Pose3(R_wb, gtsam::Point3(0, 0, 0));
     res.gravity_world = gtsam::Vector3(0, 0, -cfg_.gravity);
-    std::cout << "Initializer: static detected, aligned gravity. bg0=[" << res.bg0.transpose() << "]\n";
+    std::cout << "Initializer: static detected, aligned gravity. bg0=["
+              << res.bg0.transpose() << "]\n";
   } else {
-    std::cout << "Initializer: no static interval found, using identity orientation.\n";
+    std::cout << "Initializer: no static interval found, using identity "
+                 "orientation.\n";
     res.T0 = gtsam::Pose3();
     res.ba0 = gtsam::Vector3::Zero();
     res.bg0 = gtsam::Vector3::Zero();
@@ -146,14 +168,16 @@ InitResult Initializer::Run(const std::vector<ImuSample>& imu,
     gtsam::Point3 p0;
     if (Trilaterate(uwb_frames[0].ranges, cfg_.anchors, &p0)) {
       res.T0 = gtsam::Pose3(res.T0.rotation(), p0);
-      std::cout << "Initializer: trilateration success, p0=" << gtsam::Vector3(p0).transpose() << "\n";
+      std::cout << "Initializer: trilateration success, p0="
+                << gtsam::Vector3(p0).transpose() << "\n";
     } else {
       std::cerr << "Initializer: trilateration failed, using origin.\n";
     }
   }
 
   // --- 3. Yaw alignment (simplified: skip if no motion data) ---
-  // A proper yaw alignment needs a short trajectory segment; for now, keep identity yaw.
+  // A proper yaw alignment needs a short trajectory segment; for now, keep
+  // identity yaw.
 
   res.v0 = gtsam::Vector3::Zero();
   res.ok = true;

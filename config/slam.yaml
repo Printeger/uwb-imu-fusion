@@ -21,8 +21,8 @@ extrinsics:
 
 # --- 在线标定开关 (多趟渐进: bias → anchor → lever → joint) ---
 calibration:
-  calib_anchor: false               # true = 在线修正锚点位置
-  calib_range_bias: false           # true = 在线标定每锚点距离偏置
+  calib_anchor: true               # true = 在线修正锚点位置
+  calib_range_bias: true           # true = 在线标定每锚点距离偏置
   range_bias_sigma: 0.05
   calib_td: false                   # true = 在线标定 IMU-UWB 时间偏移
   td_init: 0.0
@@ -56,7 +56,11 @@ solver:
 
 # --- 关键帧下采样 (大数据量时增大 step 加速) ---
 keyframe:
-  step: 10                          # 每 N 个 UWB 帧取 1 个关键帧 (1=全部, 10=推荐)
+  step: 2                          # 每 N 个 UWB 帧取 1 个关键帧 (1=全部, 10=推荐)
+
+# --- Debug 日志输出 ---
+debug:
+  log: true                         # true = 输出详细 debug log 到 logs/
 
 # --- ROS Topic 配置 (rosbag 内直接读取, 非 playback) ---
 topics:

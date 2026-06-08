@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   message_generation
   eigen_conversions
+  visualization_msgs
 )
 
 add_message_files(
@@ -44,6 +45,7 @@ catkin_package(
     tf
     message_runtime
     eigen_conversions
+    visualization_msgs
 )
 
 # --- GTSAM ---
@@ -94,6 +96,7 @@ add_library(${PROJECT_NAME}
   src/optimizer.cpp
   src/chi2.cpp
   src/trajectory_io.cpp
+  src/logger.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -111,6 +114,7 @@ add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EX
 # =============================================
 add_executable(uwb_imu_fgo_node
   tools/run_offline.cpp
+  src/visualizer.cpp
 )
 
 target_link_libraries(uwb_imu_fgo_node

@@ -29,7 +29,8 @@ src/uwb-imu-fusion/
 ├── config/
 │   └── vicon_test.yaml               # VICON 数据集测试配置
 ├── launch/
-│   └── offline.launch                 # roslaunch 入口
+│   ├── offline.launch                 # 离线批处理 roslaunch 入口
+│   └── offline_with_viz.launch        # 离线批处理 + RViz 同步可视化
 ├── include/uifgo/                     # 公开头文件
 │   ├── types.h                        # ImuSample, UwbRange, UwbFrame, NavState
 │   ├── config.h                       # Config 结构体 + ConfigLoader
@@ -40,14 +41,34 @@ src/uwb-imu-fusion/
 │   ├── uwb_factor.h                   # MakeUwbFactor (Expression 自动微分)
 │   ├── graph_builder.h                # 关键帧化 + 因子图组装
 │   ├── optimizer.h                    # LM + χ² 剔除 + Marginals
-│   └── trajectory_io.h               # TUM 格式输出 + ATE/RPE 评估
-├── src/                               # 11 个源文件
+│   ├── trajectory_io.h               # TUM 格式输出 + ATE/RPE 评估
+│   └── visualizer.h                  # RViz 可视化发布器 (9 类 marker)
+├── src/                               # 12 个源文件
 │   ├── config.cpp, data_loader.cpp, outlier_filter.cpp
 │   ├── initializer.cpp, imu_preint.cpp, imu_sync.cpp
 │   ├── uwb_factor.cpp, graph_builder.cpp, optimizer.cpp
-│   ├── chi2.cpp, trajectory_io.cpp
+│   ├── chi2.cpp, trajectory_io.cpp, visualizer.cpp
 ├── tools/
-│   └── run_offline.cpp                # 离线批处理主入口
+│   ├── run_offline.cpp                # 离线批处理主入口
+│   └── analyze_log.py                 # 日志解析 + 可视化脚本
+├── config/
+│   ├── slam.yaml                      # 默认配置 (VICON 数据集)
+│   └── uwb_fgo_viz.rviz              # RViz 预配置文件
+├── logs/
+│   ├── latest → <timestamp>_<bag>/    # 符号链接 → 最新日志
+│   └── <timestamp>_<bag>/            # 每次运行的完整日志
+│       ├── config.yaml                #   配置快照
+│       ├── summary.json               #   结构化汇总
+│       ├── trajectory.txt             #   融合轨迹 (TUM)
+│       ├── groundtruth.txt            #   真值轨迹 (TUM)
+│       ├── calibration.txt            #   标定结果
+│       ├── optimization.csv           #   每趟优化指标
+│       ├── state_trace.csv            #   每关键帧状态
+│       ├── residuals.csv              #   每锚点残差
+│       ├── covariance_diag.csv        #   协方差对角
+│       ├── gt_comparison.csv          #   GT 对比
+│       ├── *.png                      #   可视化图表
+│       └── report.md                  #   Markdown 综合报告
 ├── test/                              # GoogleTest 单元测试 (36 tests)
 └── doc/                               # 调研文档 + 设计文档
     ├── 00-overview.md                 # 三算法对比总览
@@ -169,6 +190,13 @@ solver:
   max_rejection_rounds: 3     # 剔除回环最大轮次
 ```
 
+### 6.8 Debug 日志
+
+```yaml
+debug:
+  log: true                   # true = 启用详细日志 (logs/<timestamp>_<bag>/)
+```
+
 ## 7. 运行方式
 
 Rosbag 通过**直接读取文件**的方式导入（`rosbag::Bag::open()` + `rosbag::View` 迭代，非 `rosbag play` 回放），无需单独终端运行 `roscore` + `rosbag play`。
@@ -187,14 +215,69 @@ roslaunch uwb_imu_fgo offline.launch
 roslaunch uwb_imu_fgo offline.launch config_path:=/path/to/your_config.yaml
 ```
 
+### 带 RViz 可视化（推荐）
+
+```bash
+roslaunch uwb_imu_fgo offline_with_viz.launch
+```
+
+处理完成后，RViz 自动加载全部可视化内容。保持终端运行，在 RViz 窗口中可旋转/缩放查看。详见 [12. RViz 可视化](#12-rviz-可视化)。
+
 ## 8. 输出文件
 
-运行后在**配置文件所在目录**生成：
+### 8.1 基础输出（始终生成）
+
+运行后在 `data/` 目录生成：
 
 | 文件 | 内容 |
 |------|------|
-| `trajectory.txt` | TUM 格式轨迹: `t x y z qx qy qz qw` |
-| `calibration.txt` | 标定结果: 杆臂、锚点位置修正、距离偏置 |
+| `data/trajectory.txt` | TUM 格式轨迹: `t x y z qx qy qz qw` |
+| `data/groundtruth.txt` | TUM 格式真值轨迹（如有 VICON） |
+| `data/calibration.txt` | 标定结果: 杆臂、锚点位置修正、距离偏置 |
+
+### 8.2 Debug 日志（`debug.log: true` 时）
+
+启用后，所有输出自动同步保存到 `logs/<timestamp>_<bag_name>/`：
+
+| 文件 | 格式 | 内容 |
+|------|------|------|
+| `config.yaml` | YAML | 本次运行的配置快照 |
+| `summary.json` | JSON | 结构化汇总（ATE/P95/内点比...） |
+| `trajectory.txt` | TUM | 融合轨迹 |
+| `groundtruth.txt` | TUM | 真值轨迹 |
+| `calibration.txt` | 文本 | 标定结果 |
+| `optimization.csv` | CSV | 每趟优化: 误差、χ²、内点数、耗时 |
+| `state_trace.csv` | CSV | 每关键帧: t, x, y, z, qw, qx, qy, qz, vx, vy, vz |
+| `residuals.csv` | CSV | 每帧每锚点: 残差 RMSE、测距数量 |
+| `covariance_diag.csv` | CSV | 每关键帧: σ_x, σ_y, σ_z |
+| `gt_comparison.csv` | CSV | ATE / P50 / P95 / P99 / Max 误差 |
+
+### 8.3 日志分析（`tools/analyze_log.py`）
+
+```bash
+# 分析最新日志
+python3 tools/analyze_log.py
+
+# 分析指定日志
+python3 tools/analyze_log.py logs/2026-06-08_15-30-45_no_obstacle/
+```
+
+脚本自动读取 log 目录中的所有 CSV/JSON 文件，生成：
+
+| 输出 | 说明 |
+|------|------|
+| `trajectory_xy.png` | 俯视轨迹（标记起点/终点） |
+| `trajectory_3d.png` | 3D 轨迹图 |
+| `position_time.png` | X/Y/Z 位置随时间变化 |
+| `velocity_time.png` | 速度随时间变化 |
+| `convergence.png` | 每趟优化误差和 χ² 柱状图 |
+| `residual_heatmap.png` | 每锚点残差热力图 |
+| `covariance_diag.png` | 位置不确定度随时间变化 |
+| `report.md` | **Markdown 综合报告**（含所有表格+图表） |
+
+在 VS Code 中打开 `report.md` 后按 `Ctrl+Shift+V` 即可预览完整报告。
+
+`logs/latest/` 始终指向最近一次运行，每次运行自动更新该符号链接。
 
 控制台输出包含：
 - 每个 Pass 的因子数、优化误差、卡方值、内点比例
@@ -250,6 +333,93 @@ roslaunch uwb_imu_fgo offline.launch
 | uwb-imu-positioning | IMU 预积分 + 偏置一阶修正、Ceres 流形参数化 |
 | C-LIUO | UWB 消息格式 (LinktrackNodeframe3)、NLOS RSSI 检测 |
 
-## 12. License
+## 12. RViz 可视化
+
+### 13.1 概述
+
+优化完成后，系统自动将所有结果发布为 ROS 可视化消息（latched topics），RViz 可同步渲染 9 类内容。
+
+```
+┌──────────────────────────────────────────────────────┐
+│  offline_with_viz.launch                             │
+│                                                      │
+│  ┌──────────────────────┐   ┌─────────────────────┐  │
+│  │ uwb_imu_fgo_node     │   │ rviz                │  │
+│  │  (run_offline.cpp)   │   │  uwb_fgo_viz.rviz   │  │
+│  │                      │──►│                     │  │
+│  │  处理完成后发布 ──────│   │  订阅并渲染 9 类    │  │
+│  │  visualization_msgs  │   │  Marker / Path      │  │
+│  └──────────────────────┘   └─────────────────────┘  │
+│                                                      │
+│  TF: 独立线程 10Hz 广播 world→map (帧始终有效)       │
+└──────────────────────────────────────────────────────┘
+```
+
+### 13.2 可视化内容 (9 类)
+
+| # | RViz 显示名称 | 数据类型 | ROS Topic | 颜色/样式 |
+|---|-------------|---------|-----------|-----------|
+| 1 | Anchor Initial (Green) | `MarkerArray` | `/uwb_imu_fgo/anchor_initial` | 🟢 绿色球体 + 白色文字标签 |
+| 2 | Anchor Optimized (Orange+Arrows) | `MarkerArray` | `/uwb_imu_fgo/anchor_optimized` | 🟠 橙色球体 + 绿→红位移箭头 |
+| 3 | GT Trajectory (Blue) | `Path` | `/uwb_imu_fgo/gt_trajectory` | 🔵 蓝色实线 (VICON 真值) |
+| 4 | Fused Trajectory (Red) | `Path` | `/uwb_imu_fgo/fused_trajectory` | 🔴 红色实线 (融合结果) |
+| 5 | Keyframe Poses (RGB axes) | `MarkerArray` | `/uwb_imu_fgo/keyframe_poses` | RGB 坐标轴 (红=X,绿=Y,蓝=Z) |
+| 6 | Covariance Ellipsoids (cyan) | `MarkerArray` | `/uwb_imu_fgo/covariance_ellipsoids` | 🔷 半透明青色 2σ 椭球 |
+| 7 | UWB Range Edges (green→red) | `MarkerArray` | `/uwb_imu_fgo/uwb_edges` | 🟢→🔴 残差颜色编码连线 |
+| 8 | Error Vectors (est → GT) | `MarkerArray` | `/uwb_imu_fgo/error_vectors` | 🟢→🔴 估计→真值误差箭头 |
+| 9 | Metrics Text | `Marker` | `/uwb_imu_fgo/metrics_text` | ⬜ 屏幕文字 (ATE/P95/耗时) |
+
+### 13.3 各显示项说明
+
+**Anchor 初始位置 & 优化位置** — 锚点初始位置用绿色球体标出，如果开启了 `calib_anchor`，橙色球体显示优化后位置，并用箭头连接初始→优化位置（箭头颜色从绿到红编码位移大小）。
+
+**真值轨迹 & 融合轨迹** — VICON 真值用蓝色 Path 显示，FGO 融合轨迹用红色 Path 显示，两条轨迹叠加可直观评估定位精度。
+
+**关键帧位姿** — 对轨迹按下采样步长绘制 RGB 三色坐标轴（红=X, 绿=Y, 蓝=Z），可观察载体朝向变化。
+
+**协方差椭球** — 从 GTSAM Marginals 提取位置协方差矩阵，Eigen 特征值分解后渲染为 2σ 置信椭球。椭球越大 → 该处定位不确定性越高。
+
+**UWB 测距边** — 每个采样关键帧，绘制从融合位置到各锚点的线段。线段颜色按测距残差编码：绿色 = 小残差（一致性高），红色 = 大残差（可能 NLOS）。
+
+**误差向量** — 箭头从估计位置指向对应时刻的真值位置，颜色按误差大小编码（绿→红）。
+
+**评测指标** — 屏幕上方显示 ATE RMSE、P95 误差、关键帧数、UWB 内点比例、运行耗时。
+
+### 13.4 运行方式
+
+```bash
+# 默认配置 + RViz
+roslaunch uwb_imu_fgo offline_with_viz.launch
+
+# 自定义配置 + RViz
+roslaunch uwb_imu_fgo offline_with_viz.launch config_path:=/path/to/slam.yaml
+```
+
+> **注意**: 节点启动后会立即广播 `world→map` TF（10Hz 独立线程），确保 RViz 从始至终有合法的 Fixed Frame，Grid 和所有 Marker 都能正常渲染。
+
+> **WSL 用户**: 由于 WSL 的 D3D12 Mesa GL 后端与 RViz 的 OGRE 引擎不兼容，launch 文件已自动设置 `LIBGL_ALWAYS_SOFTWARE=1` 强制使用 llvmpipe 软件渲染。
+
+### 13.5 RViz 交互提示
+
+| 操作 | 快捷键 |
+|------|--------|
+| 旋转视角 | 鼠标左键拖拽 |
+| 平移视角 | 鼠标中键拖拽 |
+| 缩放 | 鼠标滚轮 |
+| 切换 Display 开关 | 左侧面板勾选/取消 |
+| 聚焦某物体 | 选中后按 `F` |
+
+建议在左侧 Displays 面板中按需开关各类显示（如关闭 UWB Edges 可大幅提升渲染帧率）。
+
+### 13.6 设计说明
+
+- **Latched topics**: 所有 marker 以 latched 模式发布，RViz 即使后启动也能接收完整数据
+- **下采样**: 轨迹/关键帧/UWB 边/误差向量按 `traj.size() / 300` 自动下采样，防止 RViz 渲染过载
+- **协方差**: 使用 Optimizer 的 Marginals 接口提取逐帧位置协方差，仅当优化器完成了 covariance 计算时可用
+- **TF**: 固定发布 `world → map` 恒等变换，因为本系统无漂移坐标系需求
+
+---
+
+## 13. License
 
 BSD
