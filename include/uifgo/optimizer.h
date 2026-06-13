@@ -1,31 +1,41 @@
 #pragma once
 
-#include "uifgo/config.h"
+#include <gtsam/inference/Key.h>
+#include <gtsam/nonlinear/GncOptimizer.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/Values.h>
-#include <gtsam/inference/Key.h>
-#include <vector>
+
 #include <set>
+#include <vector>
+
+#include "uifgo/config.h"
 
 namespace uifgo {
 
 struct OptimizerResult {
-  gtsam::Values        values;                  // final (clean refined) state
-  std::vector<size_t>  inlier_uwb_indices;      // kept UWB factor indices
-  std::vector<size_t>  outlier_uwb_indices;     // rejected UWB factor indices
-  double               reduced_chi2 = 0.0;      // chi2/dof on clean graph
-  int                  num_rejection_rounds = 0;
-  double               initial_error = 0.0;
-  double               final_error   = 0.0;
+  gtsam::Values values;  // final (clean refined) state
+  gtsam::Vector
+      gnc_weights;  // GNC converged weights (aligned to graph factor indices)
+  std::vector<size_t> inlier_uwb_indices;   // kept UWB factor indices
+  std::vector<size_t> outlier_uwb_indices;  // rejected UWB factor indices
+  double reduced_chi2 = 0.0;                // chi2/dof on clean graph
+  int num_rejection_rounds = 0;
+  double initial_error = 0.0;
+  double final_error = 0.0;
 };
 
 class Optimizer {
  public:
   explicit Optimizer(const Config& cfg);
 
-  // Main entry: three-stage pipeline.
-  //   Stage A: Cauchy-robust LM (soft weighting)
-  //   Stage B: Chi-square rejection loop + clean LM refine
+  // Main entry: four-stage pipeline (design doc §15.2).
+  //   Stage 0: Pre-warming LM (3 iterations, no robust weighting)
+  //            Reduces giant initial IMU-prediction error (10^10→10^3).
+  //   Stage A: GNC + TLS annealing with setKnownInliers
+  //            (only UWB factors participate in robust weighting;
+  //             IMU preintegration and prior factors are pinned as
+  //             known-inliers).
+  //   Stage B: Chi-square rejection loop on clean (inlier-only) graph
   //   Stage C: Marginals (covariance) on clean graph
   OptimizerResult Optimize(const gtsam::NonlinearFactorGraph& graph,
                            const gtsam::Values& initial,
@@ -40,14 +50,12 @@ class Optimizer {
  private:
   // Build a clean graph (IMU + prior + inlier UWB factors).
   gtsam::NonlinearFactorGraph BuildCleanGraph(
-      const gtsam::NonlinearFactorGraph& full,
-      const std::set<size_t>& uwb_set,
+      const gtsam::NonlinearFactorGraph& full, const std::set<size_t>& uwb_set,
       const std::set<size_t>& rejected) const;
 
   // Chi-square test on UWB factors; returns indices (in full graph) to reject.
   std::vector<size_t> ChiSquareReject(
-      const gtsam::NonlinearFactorGraph& full,
-      const gtsam::Values& values,
+      const gtsam::NonlinearFactorGraph& full, const gtsam::Values& values,
       const std::set<size_t>& uwb_set,
       const std::set<size_t>& already_rejected) const;
 
@@ -55,9 +63,9 @@ class Optimizer {
                      const gtsam::Values& v) const;
 
   Config cfg_;
-  gtsam::NonlinearFactorGraph clean_graph_;   // cached for Marginals
-  gtsam::Values               result_values_;
-  bool                        solved_ = false;
+  gtsam::NonlinearFactorGraph clean_graph_;  // cached for Marginals
+  gtsam::Values result_values_;
+  bool solved_ = false;
 };
 
 // Chi-square inverse CDF (p = confidence, dof = degrees of freedom).

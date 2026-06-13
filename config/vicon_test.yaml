@@ -1,6 +1,12 @@
-# VICON dataset config — uwb_imu_fgo
-# Dataset: 2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag
+# ============================================================
+# UWB-IMU FGO — VICON 数据集配置
+# ============================================================
+# 数据集: 2025-10-24-15-31-28 (VICON 真值, 无遮挡)
+# rosbag: data/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag
 # VICON GT: /vrpn_client_node/tas_uwb_0/pose
+# 锚点来源: data/anchor_pose.yaml (4个锚点, IDs 1-4)
+# 使用: roslaunch uwb_imu_fgo offline_with_viz.launch
+# ============================================================
 
 anchors:
   - {id: 1, pos: [-2.06630158300, 2.12503509737, 1.82465691815], prior_sigma: 0.10}
@@ -23,7 +29,7 @@ calibration:
 imu:
   sigma_a: 0.1
   sigma_g: 0.01
-  sigma_wa: 0.001
+  sigma_wa: 0.01
   sigma_wg: 2.0e-5
   gravity: 9.81
 
@@ -40,13 +46,22 @@ solver:
   lm_max_iter: 200
   rel_error_tol: 1.0e-6
   abs_error_tol: 1.0e-8
-  cauchy_k: 1.0
+  # --- GNC (Graduated Non-Convexity) TLS 退火 ---
+  gnc_mu_step: 1.4
+  gnc_max_iter: 50
+  gnc_rel_cost_tol: 1.0e-5
+  gnc_inlier_prob: 0.99
+  gnc_weight_thresh: 0.01
+  # --- 卡方剔除回环 (post-GNC) ---
   chi2_reject_prob: 0.99
   max_rejection_rounds: 3
 
-# Keyframe control: use every Nth UWB frame (1=all, 10=every 10th)
 keyframe:
   step: 10
+  yaw_align_frames: 15
+
+debug:
+  log: true
 
 topics:
   imu: "/livox/imu"
@@ -54,6 +69,6 @@ topics:
   vicon: "/vrpn_client_node/tas_uwb_0/pose"
 
 bag:
-  path: "data/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag"
+  path: "../data/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag"
   start: 0.0
   durr: -1.0

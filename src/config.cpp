@@ -83,7 +83,11 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
     if (sv["lm_max_iter"]) cfg.lm_max_iter = sv["lm_max_iter"].as<int>();
     if (sv["rel_error_tol"]) cfg.lm_rel_tol = sv["rel_error_tol"].as<double>();
     if (sv["abs_error_tol"]) cfg.lm_abs_tol = sv["abs_error_tol"].as<double>();
-    if (sv["cauchy_k"]) cfg.cauchy_k = sv["cauchy_k"].as<double>();
+    if (sv["gnc_mu_step"]) cfg.gnc_mu_step = sv["gnc_mu_step"].as<double>();
+    if (sv["gnc_max_iter"]) cfg.gnc_max_iter = sv["gnc_max_iter"].as<int>();
+    if (sv["gnc_rel_cost_tol"]) cfg.gnc_rel_cost_tol = sv["gnc_rel_cost_tol"].as<double>();
+    if (sv["gnc_inlier_prob"]) cfg.gnc_inlier_prob = sv["gnc_inlier_prob"].as<double>();
+    if (sv["gnc_weight_thresh"]) cfg.gnc_weight_thresh = sv["gnc_weight_thresh"].as<double>();
     if (sv["chi2_reject_prob"])
       cfg.chi2_reject_prob = sv["chi2_reject_prob"].as<double>();
     if (sv["max_rejection_rounds"])
@@ -94,6 +98,8 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
   if (node["keyframe"]) {
     auto kf = node["keyframe"];
     if (kf["step"]) cfg.kf_step = kf["step"].as<int>();
+    if (kf["yaw_align_frames"])
+      cfg.yaw_align_frames = kf["yaw_align_frames"].as<int>();
   }
 
   // --- Debug ---

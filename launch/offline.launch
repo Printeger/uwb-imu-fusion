@@ -3,7 +3,7 @@
   <!-- 使用: roslaunch uwb_imu_fgo offline.launch -->
   <!-- 自定义配置: roslaunch uwb_imu_fgo offline.launch config_path:=/path/to/slam.yaml -->
 
-  <arg name="config_path" default="$(find uwb_imu_fgo)/config/slam.yaml" />
+  <arg name="config_path" default="$(find uwb_imu_fgo)/config/vicon_test.yaml" />
 
   <env name="PYTHONUNBUFFERED" value="1" />
 

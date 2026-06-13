@@ -1,12 +1,25 @@
 # ============================================================
 # UWB-IMU FGO — 统一配置文件
 # ============================================================
-# 数据集: VICON 2025-10-24 (无遮挡场景)
-# rosbag: data/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag
+# 数据集: Building 2025-04-25 (室内大楼场景, 无VICON)
+# rosbag: data/2025-04-25-11-30-21_uwb_lidar_imu.bag
+# 锚点来源: data/building_anchor_pose.yaml
 # 使用: roslaunch uwb_imu_fgo offline.launch
 # ============================================================
 
-# --- 锚点 3D 坐标 (已预标定, 来自 data/anchor_pose.yaml) ---
+# --- 锚点 3D 坐标 (预标定, 来自 data/building_anchor_pose.yaml, 10个有效锚点, 跳过id=1原点) ---
+# anchors:
+#   - {id: 2, pos: [13.023, 77.497, 0.038], prior_sigma: 0.10}
+#   - {id: 3, pos: [-49.342, 85.832, -0.162], prior_sigma: 0.10}
+#   - {id: 4, pos: [-58.484, 7.827, -0.162], prior_sigma: 0.10}
+#   - {id: 5, pos: [-32.864, 26.932, 18.552], prior_sigma: 0.10}
+#   - {id: 6, pos: [-31.517, 36.976, 18.523], prior_sigma: 0.10}
+#   - {id: 7, pos: [0.962, 62.839, 18.512], prior_sigma: 0.10}
+#   - {id: 8, pos: [2.421, 74.731, 18.509], prior_sigma: 0.10}
+#   - {id: 9, pos: [-9.230, 76.332, 18.535], prior_sigma: 0.10}
+#   - {id: 10, pos: [-42.454, 46.909, 18.510], prior_sigma: 0.10}
+#   - {id: 11, pos: [-44.855, 28.688, 18.577], prior_sigma: 0.10}
+
 anchors:
   - {id: 1, pos: [-2.06630158300, 2.12503509737, 1.82465691815], prior_sigma: 0.10}
   - {id: 2, pos: [3.3014387996, 2.19409215449, 1.86671415040], prior_sigma: 0.10}
@@ -17,12 +30,12 @@ anchors:
 extrinsics:
   lever_arm_init: [0.0, 0.0, 0.0]   # UWB antenna position in IMU frame (m)
   calib_lever: false                # true = 在线标定杆臂
-  lever_prior_sigma: 0.05
+  lever_prior_sigma: 0.01
 
 # --- 在线标定开关 (多趟渐进: bias → anchor → lever → joint) ---
 calibration:
-  calib_anchor: true               # true = 在线修正锚点位置
-  calib_range_bias: true           # true = 在线标定每锚点距离偏置
+  calib_anchor: false              # true = 在线修正锚点位置 (首次运行关闭)
+  calib_range_bias: false          # true = 在线标定每锚点距离偏置 (首次运行关闭)
   range_bias_sigma: 0.05
   calib_td: false                   # true = 在线标定 IMU-UWB 时间偏移
   td_init: 0.0
@@ -31,7 +44,7 @@ calibration:
 imu:
   sigma_a: 0.1                      # 加速度计噪声 (m/s²)
   sigma_g: 0.01                     # 陀螺仪噪声 (rad/s)
-  sigma_wa: 0.001                   # 加速度计随机游走 (m/s³)
+  sigma_wa: 0.01                    # 加速度计随机游走 (m/s³)
   sigma_wg: 2.0e-5                  # 陀螺仪随机游走 (rad/s²)
   gravity: 9.81
 
@@ -45,18 +58,25 @@ uwb:
   dist_consistency_thresh: 2.0      # 距离一致性检查阈值 (m)
   warmup_frames: 20                 # 预热帧数
 
-# --- 求解器 ---
+# --- 求解器 (含 GNC 鲁棒优化) ---
 solver:
-  lm_max_iter: 200                  # LM 最大迭代次数
+  lm_max_iter: 200                  # LM 最大迭代次数 (GNC 内层 & clean 精修共用)
   rel_error_tol: 1.0e-6
   abs_error_tol: 1.0e-8
-  cauchy_k: 1.0                     # Cauchy 核参数
-  chi2_reject_prob: 0.99            # χ² 剔除置信度 (0.99 = 宽松, 0.95 = 严格)
-  max_rejection_rounds: 3           # χ² 剔除回环最大轮次
+  # --- GNC (Graduated Non-Convexity) TLS 退火 ---
+  gnc_mu_step: 1.4                  # mu 同伦步长
+  gnc_max_iter: 50                  # GNC 外循环最大迭代
+  gnc_rel_cost_tol: 1.0e-5          # GNC 相对代价收敛阈值
+  gnc_inlier_prob: 0.99             # 内点代价阈值的卡方置信度
+  gnc_weight_thresh: 0.01            # GNC 权重硬判内/外点门限 (保守: 仅极端外点 w<0.01)
+  # --- 卡方剔除回环 (post-GNC) ---
+  chi2_reject_prob: 0.99            # 逐因子卡方剔除置信度 (0.99 = 宽松, 0.95 = 严格)
+  max_rejection_rounds: 3           # 卡方剔除回环最大轮次
 
 # --- 关键帧下采样 (大数据量时增大 step 加速) ---
 keyframe:
-  step: 2                          # 每 N 个 UWB 帧取 1 个关键帧 (1=全部, 10=推荐)
+  step: 5                          # 每 N 个 UWB 帧取 1 个关键帧 (1=全部, 5=加速)
+  yaw_align_frames: 15             # yaw 对齐使用的关键帧数 (0=禁用)
 
 # --- Debug 日志输出 ---
 debug:
@@ -66,10 +86,10 @@ debug:
 topics:
   imu: "/livox/imu"                                                # sensor_msgs/Imu
   uwb: "/nlink_linktrack_nodeframe3"                               # LinktrackNodeframe3
-  vicon: "/vrpn_client_node/tas_uwb_0/pose"                       # geometry_msgs/PoseStamped (可选GT)
+  vicon: ""                                                    # geometry_msgs/PoseStamped (无VICON)
 
 # --- Rosbag 路径 (相对此 config 文件, 或绝对路径) ---
 bag:
-  path: "../data/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag"
+  path: "../data/2025-04-25-11-30-21_uwb_lidar_imu.bag"
   start: 0.0                        # 起始偏移 (s)
   durr: -1.0                        # 持续时间 (-1 = 全部)

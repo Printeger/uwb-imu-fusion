@@ -63,7 +63,10 @@ void Logger::LogConfig(const Config& cfg) {
   f << "calib_range_bias: " << cfg.calib_range_bias << "\n";
   f << "lever_prior_sigma: " << cfg.lever_prior_sigma << "\n";
   f << "sigma_range: " << cfg.sigma_range << "\n";
-  f << "cauchy_k: " << cfg.cauchy_k << "\n";
+  f << "gnc_mu_step: " << cfg.gnc_mu_step << "\n";
+  f << "gnc_max_iter: " << cfg.gnc_max_iter << "\n";
+  f << "gnc_inlier_prob: " << cfg.gnc_inlier_prob << "\n";
+  f << "gnc_weight_thresh: " << cfg.gnc_weight_thresh << "\n";
   f << "chi2_reject_prob: " << cfg.chi2_reject_prob << "\n";
   f << "max_rejection_rounds: " << cfg.max_rejection_rounds << "\n";
   f << "kf_step: " << cfg.kf_step << "\n";

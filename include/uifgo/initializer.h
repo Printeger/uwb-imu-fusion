@@ -35,6 +35,16 @@ class Initializer {
                  const std::vector<UwbFrame>& uwb_frames);
 
  private:
+  // Yaw alignment by grid search over the first num_keyframes of motion data.
+  // Fixes roll/pitch (from gravity) and p0 (from trilateration); searches yaw
+  // ∈ [0, 2π) minimizing UWB range residuals on IMU-predicted trajectory.
+  // Returns best yaw angle (rad) in world frame.
+  double AlignYaw(const std::vector<ImuSample>& imu,
+                  const std::vector<UwbFrame>& uwb_frames,
+                  const gtsam::Rot3& R_rp,
+                  const gtsam::Point3& p0,
+                  size_t num_keyframes) const;
+
   Config cfg_;
 };
 

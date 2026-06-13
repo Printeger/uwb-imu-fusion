@@ -1,5 +1,8 @@
 #include "uifgo/initializer.h"
+#include "uifgo/imu_preint.h"
 
+#include <gtsam/navigation/NavState.h>
+#include <gtsam/navigation/ImuBias.h>
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -175,13 +178,125 @@ InitResult Initializer::Run(const std::vector<ImuSample>& imu,
     }
   }
 
-  // --- 3. Yaw alignment (simplified: skip if no motion data) ---
-  // A proper yaw alignment needs a short trajectory segment; for now, keep
-  // identity yaw.
+  // --- 3. Yaw alignment via grid search over initial motion ---
+  // Design doc §6.3: fix roll/pitch (from gravity) and p0 (from trilateration),
+  // search yaw ∈ [0, 2π) minimizing IMU-predicted UWB range residuals.
+  if (cfg_.yaw_align_frames > 0 && uwb_frames.size() >= 4) {
+    size_t n_yaw_kf = std::min((size_t)cfg_.yaw_align_frames, uwb_frames.size());
+    double best_yaw =
+        AlignYaw(imu, uwb_frames, res.T0.rotation(),
+                 gtsam::Point3(res.T0.translation()), n_yaw_kf);
+    gtsam::Rot3 R_yaw = gtsam::Rot3::Rz(best_yaw);
+    res.T0 = gtsam::Pose3(res.T0.rotation() * R_yaw, res.T0.translation());
+    std::cout << "Initializer: yaw aligned = " << best_yaw * 180.0 / M_PI
+              << " deg (using " << n_yaw_kf << " keyframes)\n";
+  } else if (cfg_.yaw_align_frames <= 0) {
+    std::cout << "Initializer: yaw alignment disabled (yaw_align_frames=0).\n";
+  } else {
+    std::cout << "Initializer: too few keyframes for yaw alignment, "
+                 "keeping identity yaw.\n";
+  }
 
   res.v0 = gtsam::Vector3::Zero();
   res.ok = true;
   return res;
+}
+
+// ---------------------------------------------------------------------------
+double Initializer::AlignYaw(const std::vector<ImuSample>& imu,
+                              const std::vector<UwbFrame>& uwb_frames,
+                              const gtsam::Rot3& R_rp,
+                              const gtsam::Point3& p0,
+                              size_t num_keyframes) const {
+  // --- Build anchor lookup ---
+  std::unordered_map<int, gtsam::Point3> anchor_map;
+  for (const auto& a : cfg_.anchors) anchor_map[a.id] = a.pos;
+
+  // --- Preintegrate IMU between consecutive keyframes ---
+  // Store preintegrated measurements for each interval [k-1, k]
+  struct Seg {
+    gtsam::PreintegratedCombinedMeasurements pim;
+    double t0, t1;
+  };
+  std::vector<Seg> segs;
+  {
+    ImuPreintegrator pi(cfg_, gtsam::Vector3(0, 0, -cfg_.gravity));
+    gtsam::imuBias::ConstantBias bias0(gtsam::Vector3::Zero(), gtsam::Vector3::Zero());
+    size_t i_imu = 0;
+    while (i_imu < imu.size() && imu[i_imu].t <= uwb_frames[0].t) ++i_imu;
+    for (size_t k = 1; k < num_keyframes && k < uwb_frames.size(); ++k) {
+      pi.Reset(bias0);
+      i_imu = IntegrateBetween(imu, i_imu,
+                                uwb_frames[k - 1].t, uwb_frames[k].t, &pi);
+      segs.push_back({pi.Pim(), uwb_frames[k - 1].t, uwb_frames[k].t});
+    }
+  }
+  if (segs.empty()) {
+    std::cerr << "AlignYaw: no preintegration segments.\n";
+    return 0.0;
+  }
+
+  // --- Helper: evaluate total UWB squared residual for a given yaw ---
+  auto EvaluateYaw = [&](double yaw_rad) -> double {
+    gtsam::Rot3 R0 = R_rp * gtsam::Rot3::Rz(yaw_rad);
+    gtsam::Pose3 T_k(R0, p0);
+    gtsam::Vector3 v_k = gtsam::Vector3::Zero();
+    gtsam::imuBias::ConstantBias bias0(gtsam::Vector3::Zero(), gtsam::Vector3::Zero());
+    double cost = 0.0;
+    size_t n_ranges = 0;
+
+    for (size_t k = 0; k <= segs.size(); ++k) {
+      // Evaluate UWB ranges at this keyframe
+      size_t kf_idx = k;  // k=0 is the first keyframe, k≥1 uses segs[k-1]
+      if (kf_idx >= uwb_frames.size()) break;
+      for (const auto& r : uwb_frames[kf_idx].ranges) {
+        auto it = anchor_map.find(r.anchor_id);
+        if (it == anchor_map.end()) continue;
+        // Antenna position in world
+        gtsam::Point3 ant = T_k.transformFrom(cfg_.lever_arm_init);
+        double pred = (gtsam::Vector3(ant) - gtsam::Vector3(it->second)).norm();
+        double err = pred - r.dist;
+        cost += err * err;
+        ++n_ranges;
+      }
+
+      // Propagate to next keyframe using IMU preintegration
+      if (k < segs.size()) {
+        gtsam::NavState ns_i(T_k, v_k);
+        gtsam::NavState ns_j = segs[k].pim.predict(ns_i, bias0);
+        T_k = ns_j.pose();
+        v_k = ns_j.velocity();
+      }
+    }
+    return (n_ranges > 0) ? cost : 1e12;
+  };
+
+  // --- Coarse grid search: 5° steps ---
+  const double kCoarseStep = 5.0 * M_PI / 180.0;
+  double best_yaw = 0.0, best_cost = 1e12;
+  for (double yaw = 0.0; yaw < 2.0 * M_PI; yaw += kCoarseStep) {
+    double c = EvaluateYaw(yaw);
+    if (c < best_cost) { best_cost = c; best_yaw = yaw; }
+  }
+
+  // --- Local refinement: ±5° around best, 0.5° steps ---
+  const double kFineRange = 5.0 * M_PI / 180.0;
+  const double kFineStep  = 0.5 * M_PI / 180.0;
+  double refined_yaw = best_yaw;
+  double refined_cost = best_cost;
+  for (double dy = -kFineRange; dy <= kFineRange; dy += kFineStep) {
+    double yaw = best_yaw + dy;
+    if (yaw < 0.0) yaw += 2.0 * M_PI;
+    if (yaw >= 2.0 * M_PI) yaw -= 2.0 * M_PI;
+    double c = EvaluateYaw(yaw);
+    if (c < refined_cost) { refined_cost = c; refined_yaw = yaw; }
+  }
+
+  std::cout << "AlignYaw: coarse best=" << best_yaw * 180.0 / M_PI
+            << " deg (cost=" << best_cost << "), refined="
+            << refined_yaw * 180.0 / M_PI << " deg (cost="
+            << refined_cost << ")\n";
+  return refined_yaw;
 }
 
 }  // namespace uifgo

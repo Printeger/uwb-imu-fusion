@@ -1,5 +1,8 @@
 // run_offline.cpp — ROS entry point for batch UWB-IMU FGO processing.
-// Multi-pass pipeline: robust init → calibration unlock → joint refinement.
+// Multi-pass pipeline (design doc §6.3):
+//   Pass 1: GNC+TLS robust init (all calib OFF) → outlier identification
+//   Pass 2..4: Pure-LM refinement with progressive calibration unlock
+//   Pass Final: Joint LM refinement with chi2 monitoring
 //
 // Usage:
 //   rosrun uwb_imu_fgo uwb_imu_fgo_node _config_path:=/path/to/slam.yaml
@@ -108,6 +111,8 @@ int main(int argc, char** argv) {
   std::cout << "============================================\n";
 
   // ============ M1: Config & Data Loading ============
+  std::cout << "\n[1/6] Loading data from rosbag..." << std::flush;
+  auto t1 = std::chrono::high_resolution_clock::now();
   uifgo::Config base_cfg = uifgo::ConfigLoader::Load(config_path);
   std::string bag_path =
       uifgo::ConfigLoader::ResolveBagPath(config_dir, base_cfg.bag_path);
@@ -132,8 +137,14 @@ int main(int argc, char** argv) {
     std::cerr << "ERROR: failed to load data from bag.\n";
     return 1;
   }
+  auto t1e = std::chrono::high_resolution_clock::now();
+  std::cout << " done (" << std::chrono::duration<double>(t1e - t1).count()
+            << "s, " << imu_samples.size() << " IMU, " << uwb_frames.size()
+            << " UWB frames)\n";
 
   // --- Outlier pre-filtering ---
+  std::cout << "[2/6] Pre-filtering + keyframe downsampling..." << std::flush;
+  auto t2 = std::chrono::high_resolution_clock::now();
   uifgo::OutlierFilter filter(base_cfg);
   std::vector<uifgo::UwbFrame> filtered_uwb;
   for (const auto& f : uwb_frames) {
@@ -157,6 +168,9 @@ int main(int argc, char** argv) {
               << downsampled.size() << " (step=" << base_cfg.kf_step << ")\n";
     filtered_uwb = downsampled;
   }
+  auto t2e = std::chrono::high_resolution_clock::now();
+  std::cout << " done (" << std::chrono::duration<double>(t2e - t2).count()
+            << "s, " << filtered_uwb.size() << " keyframes)\n";
 
   if (filtered_uwb.empty()) {
     std::cerr << "ERROR: no UWB data after filtering.\n";
@@ -164,19 +178,27 @@ int main(int argc, char** argv) {
   }
 
   // ============ M2: Initialization ============
+  std::cout
+      << "[3/6] Initialization (static detect + trilateration + yaw align)..."
+      << std::flush;
+  auto t3 = std::chrono::high_resolution_clock::now();
   uifgo::Initializer init(base_cfg);
   auto init_result = init.Run(imu_samples, filtered_uwb);
-  std::cout << "Init:  ok=" << init_result.ok << " p0=["
-            << init_result.T0.translation().transpose() << "]\n";
+  auto t3e = std::chrono::high_resolution_clock::now();
+  std::cout << " done (" << std::chrono::duration<double>(t3e - t3).count()
+            << "s, p0=[" << init_result.T0.translation().transpose() << "])\n";
 
   // ============ M5-M7: Multi-Pass Optimization ============
-  // Pass 1 — All calibration OFF: robust trajectory initialization
+  std::cout << "[4/6] Multi-pass optimization...\n";
+  auto t4 = std::chrono::high_resolution_clock::now();
+  // Pass 1 — All calibration OFF: GNC+TLS robust trajectory initialization
+  //         (setKnownInliers pins IMU/priors; only UWB factors are weighted)
   auto cfg_pass1 = base_cfg;
   cfg_pass1.calib_lever = false;
   cfg_pass1.calib_anchor = false;
   cfg_pass1.calib_range_bias = false;
   auto res1 = RunPass(cfg_pass1, filtered_uwb, imu_samples, init_result,
-                      "Pass 1: Robust Init (no calib)");
+                      "Pass 1: GNC Robust Init (no calib)");
   auto best_values = res1.values;
   auto best_inliers = res1.inlier_uwb_indices;
 
@@ -252,7 +274,13 @@ int main(int argc, char** argv) {
     std::cout << "\n>>> Final result adopted from best pass.\n";
   }
 
+  auto t4e = std::chrono::high_resolution_clock::now();
+  std::cout << "  optimization done ("
+            << std::chrono::duration<double>(t4e - t4).count() << "s)\n";
+
   // ============ M7: Covariance on best result ============
+  std::cout << "[5/6] Covariance diagnostics..." << std::flush;
+  auto t5 = std::chrono::high_resolution_clock::now();
   // Build a clean graph for marginalization using the best result directly,
   // without re-optimizing (best_values is already optimal from multi-pass).
   uifgo::GraphBuilder final_builder(base_cfg);
@@ -283,6 +311,17 @@ int main(int argc, char** argv) {
               << "] σ_xyz: " << std::sqrt(Pn(0, 0)) << " "
               << std::sqrt(Pn(1, 1)) << " " << std::sqrt(Pn(2, 2)) << " (m)\n";
 
+    // --- Per-keyframe σ_z diagnostic (every 10th keyframe) ---
+    std::cout << "\n--- Per-Keyframe σ_z (height uncertainty) ---\n";
+    size_t kf_count = filtered_uwb.size();
+    for (size_t k = 0; k < kf_count; k += std::max(size_t(1), kf_count / 20)) {
+      auto Pk = final_opt.PoseCovariance(k);
+      double sigma_z = std::sqrt(Pk(2, 2));
+      std::cout << "  KF[" << k << "] σ_z=" << sigma_z << " m";
+      if (k > 0 && k % 5 == 0) std::cout << "\n";
+    }
+    std::cout << "\n";
+
     if (base_cfg.calib_lever) {
       auto PL = final_opt.LeverCovariance();
       std::cout << "Lever σ: " << std::sqrt(PL(0, 0)) << " "
@@ -303,7 +342,13 @@ int main(int argc, char** argv) {
               << " (some variables not observable)\n";
   }
 
+  auto t5e = std::chrono::high_resolution_clock::now();
+  std::cout << " done (" << std::chrono::duration<double>(t5e - t5).count()
+            << "s)\n";
+
   // ============ M8: Output ============
+  std::cout << "[6/6] Writing output..." << std::flush;
+  auto t6 = std::chrono::high_resolution_clock::now();
   std::vector<double> kf_times;
   for (const auto& f : filtered_uwb) kf_times.push_back(f.t);
   auto traj = uifgo::TrajectoryIO::ExtractTrajectory(best_values, kf_times);
@@ -401,6 +446,9 @@ int main(int argc, char** argv) {
   }
 
   // ============ Summary ============
+  auto t6e = std::chrono::high_resolution_clock::now();
+  std::cout << " done (" << std::chrono::duration<double>(t6e - t6).count()
+            << "s)\n";
   auto t_end = std::chrono::high_resolution_clock::now();
   double elapsed = std::chrono::duration<double>(t_end - t_start).count();
 

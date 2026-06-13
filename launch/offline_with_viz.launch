@@ -16,7 +16,7 @@
   <!--        config_path:=/path/to/slam.yaml                               -->
   <!-- =================================================================== -->
 
-  <arg name="config_path" default="$(find uwb_imu_fgo)/config/slam.yaml" />
+  <arg name="config_path" default="$(find uwb_imu_fgo)/config/vicon_test.yaml" />
   <arg name="rviz_config" default="$(find uwb_imu_fgo)/config/uwb_fgo_viz.rviz" />
   <arg name="gdb"            default="0" />
   <arg name="gdb_interactive" default="0" />

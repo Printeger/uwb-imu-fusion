@@ -48,11 +48,11 @@ catkin_package(
     visualization_msgs
 )
 
-# --- GTSAM ---
-find_package(GTSAM REQUIRED)
+# --- GTSAM (≥ 4.2 required for GncOptimizer / setInlierCostThresholdsAtProbability) ---
+find_package(GTSAM 4.2 REQUIRED)
 if(GTSAM_FOUND)
   include_directories(${GTSAM_INCLUDE_DIR})
-  message(STATUS "GTSAM found: ${GTSAM_INCLUDE_DIR}")
+  message(STATUS "GTSAM found: ${GTSAM_INCLUDE_DIR} (version: ${GTSAM_VERSION})")
 endif()
 
 # --- Eigen3 ---

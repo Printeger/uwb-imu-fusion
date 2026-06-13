@@ -48,16 +48,24 @@ struct Config {
   double lm_rel_tol = 1.0e-6;
   double lm_abs_tol = 1.0e-8;
 
-  // --- Robust: Cauchy loss for UWB factors ---
-  double cauchy_k = 1.0;           // Cauchy kernel parameter
+  // --- GNC (Graduated Non-Convexity) with TLS kernel ---
+  double gnc_mu_step = 1.4;        // mu homotopy step (GTSAM default)
+  int gnc_max_iter = 50;           // GNC outer-loop max iterations
+  double gnc_rel_cost_tol = 1e-5;  // GNC convergence tolerance on relative cost
+  double gnc_inlier_prob = 0.99;   // chi2 confidence for inlier cost threshold
+  double gnc_weight_thresh =
+      0.01;  // GNC weight below which UWB factor is hard-rejected
+             // (conservative: only extreme outliers)
+  // --- Chi-square rejection loop (post-GNC) ---
   double chi2_reject_prob = 0.99;  // chi2 rejection confidence
   int max_rejection_rounds = 3;
-  double chi2_inlier_weight_thresh = 0.5;
 
   // --- Keyframe ---
   double kf_min_interval =
       0.0;          // minimum keyframe interval (s), 0=all UWB frames
   int kf_step = 1;  // use every Nth UWB frame as keyframe (1=all)
+  int yaw_align_frames =
+      15;  // # keyframes for yaw alignment grid search (0=skip)
 
   // --- Debug logging ---
   bool debug_log =
