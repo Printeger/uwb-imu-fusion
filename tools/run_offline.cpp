@@ -298,24 +298,34 @@ int main(int argc, char** argv) {
   std::cout << "\n============ Covariance Diagnostics ============\n";
   try {
     auto P0 = final_opt.PoseCovariance(0);
-    std::cout << "Pose[0] σ_xyz: " << std::sqrt(P0(0, 0)) << " "
-              << std::sqrt(P0(1, 1)) << " " << std::sqrt(P0(2, 2)) << " (m)\n";
+    if (P0.rows() > 0) {
+      std::cout << "Pose[0] σ_xyz: " << std::sqrt(P0(0, 0)) << " "
+                << std::sqrt(P0(1, 1)) << " " << std::sqrt(P0(2, 2))
+                << " (m)\n";
+    }
 
     size_t mid = filtered_uwb.size() / 2;
     auto Pm = final_opt.PoseCovariance(mid);
-    std::cout << "Pose[" << mid << "] σ_xyz: " << std::sqrt(Pm(0, 0)) << " "
-              << std::sqrt(Pm(1, 1)) << " " << std::sqrt(Pm(2, 2)) << " (m)\n";
+    if (Pm.rows() > 0) {
+      std::cout << "Pose[" << mid << "] σ_xyz: " << std::sqrt(Pm(0, 0)) << " "
+                << std::sqrt(Pm(1, 1)) << " " << std::sqrt(Pm(2, 2))
+                << " (m)\n";
+    }
 
     auto Pn = final_opt.PoseCovariance(filtered_uwb.size() - 1);
-    std::cout << "Pose[" << filtered_uwb.size() - 1
-              << "] σ_xyz: " << std::sqrt(Pn(0, 0)) << " "
-              << std::sqrt(Pn(1, 1)) << " " << std::sqrt(Pn(2, 2)) << " (m)\n";
+    if (Pn.rows() > 0) {
+      std::cout << "Pose[" << filtered_uwb.size() - 1
+                << "] σ_xyz: " << std::sqrt(Pn(0, 0)) << " "
+                << std::sqrt(Pn(1, 1)) << " " << std::sqrt(Pn(2, 2))
+                << " (m)\n";
+    }
 
     // --- Per-keyframe σ_z diagnostic (every 10th keyframe) ---
     std::cout << "\n--- Per-Keyframe σ_z (height uncertainty) ---\n";
     size_t kf_count = filtered_uwb.size();
     for (size_t k = 0; k < kf_count; k += std::max(size_t(1), kf_count / 20)) {
       auto Pk = final_opt.PoseCovariance(k);
+      if (Pk.rows() == 0) continue;
       double sigma_z = std::sqrt(Pk(2, 2));
       std::cout << "  KF[" << k << "] σ_z=" << sigma_z << " m";
       if (k > 0 && k % 5 == 0) std::cout << "\n";
@@ -382,9 +392,14 @@ int main(int argc, char** argv) {
               << "\n";
   }
 
-  // ============ Ground Truth Comparison (VICON) ============
+  // ============ Ground Truth Comparison (VICON + Odometry fallback)
+  // ============
   uifgo::DataLoader gt_loader(base_cfg);
   auto gt_traj = gt_loader.LoadGroundTruth(bag_path);
+  // If no VICON PoseStamped GT, try Odometry-based GT (e.g. /sim/odom)
+  if (gt_traj.empty()) {
+    gt_traj = gt_loader.LoadGroundTruthOdom(bag_path);
+  }
   if (!gt_traj.empty()) {
     uifgo::TrajectoryIO::WriteTum(data_dir + "/groundtruth.txt", gt_traj);
     if (logger.enabled()) logger.LogGroundTruth(data_dir + "/groundtruth.txt");

@@ -1,0 +1,87 @@
+# ============================================================
+# UWB-IMU FGO — Simulation Dataset Config
+# ============================================================
+# 数据集: Sim Circle (仿真圆形轨迹, 8锚点立方体)
+# rosbag: data/sim_circle_2026-06-13-20-06-12.bag
+# 锚点: 10m边长立方体8顶点 (z=1m~5m)
+# 使用: roslaunch uwb_imu_fgo offline_with_viz.launch
+# ============================================================
+
+# --- 锚点 3D 坐标 (10m立方体8顶点, z=1m~5m) ---
+anchors:
+  - {id: 1, pos: [-5.0, -5.0, 1.0], prior_sigma: 0.10}
+  - {id: 2, pos: [-5.0, -5.0, 5.0], prior_sigma: 0.10}
+  - {id: 3, pos: [-5.0,  5.0, 1.0], prior_sigma: 0.10}
+  - {id: 4, pos: [-5.0,  5.0, 5.0], prior_sigma: 0.10}
+  - {id: 5, pos: [ 5.0, -5.0, 1.0], prior_sigma: 0.10}
+  - {id: 6, pos: [ 5.0, -5.0, 5.0], prior_sigma: 0.10}
+  - {id: 7, pos: [ 5.0,  5.0, 1.0], prior_sigma: 0.10}
+  - {id: 8, pos: [ 5.0,  5.0, 5.0], prior_sigma: 0.10}
+
+# --- 外参: UWB 天线在 IMU 坐标系下的位置 ---
+extrinsics:
+  lever_arm_init: [0.0, 0.0, 0.0]
+  calib_lever: false
+  lever_prior_sigma: 0.05
+
+# --- 在线标定开关 ---
+calibration:
+  calib_anchor: false
+  calib_range_bias: false
+  range_bias_sigma: 0.05
+  calib_td: false
+  td_init: 0.0
+
+# --- IMU 噪声参数 ---
+imu:
+  sigma_a: 0.1
+  sigma_g: 0.01
+  sigma_wa: 0.01
+  sigma_wg: 2.0e-5
+  gravity: 9.81
+  imu_acc_in_g: false              # 仿真IMU直接输出m/s², 无需×9.81
+
+# --- UWB 噪声 & 过滤 (匹配仿真精度 0.1m) ---
+uwb:
+  sigma_range: 0.10                 # 匹配仿真测距噪声 σ=0.10m
+  v_max: 2.0                        # 仿真飞行速度 ~1m/s
+  nlos_rssi_diff: 6.0
+  min_range: 0.1                    # 仿真最近距离约2m
+  max_range: 50.0                   # 仿真最远距离约10m
+  dist_consistency_thresh: 2.0
+  warmup_frames: 20
+
+# --- 求解器 (含 GNC 鲁棒优化) ---
+solver:
+  lm_max_iter: 200
+  rel_error_tol: 1.0e-6
+  abs_error_tol: 1.0e-8
+  gnc_mu_step: 1.4
+  gnc_max_iter: 50
+  gnc_rel_cost_tol: 1.0e-5
+  gnc_inlier_prob: 0.99
+  gnc_weight_thresh: 0.01
+  chi2_reject_prob: 0.99
+  max_rejection_rounds: 3
+
+# --- 关键帧下采样 ---
+keyframe:
+  step: 10                          # 仿真100Hz UWB → 降采样到5Hz (325 keyframes)
+  yaw_align_frames: 15              # 仿真起点yaw未知, 需要yaw对齐
+
+# --- Debug 日志输出 ---
+debug:
+  log: true
+
+# --- ROS Topic 配置 (仿真topic) ---
+topics:
+  imu: "/sim/imu"                                                # 仿真IMU
+  uwb: "/nlink_linktrack_nodeframe3"                             # 仿真UWB
+  vicon: ""                                                      # 无VICON
+  gt_odom: "/sim/odom"                                           # 仿真真值 (Odometry)
+
+# --- Rosbag 路径 ---
+bag:
+  path: "../data/sim_circle_2026-06-15-16-04-35.bag"
+  start: 0.0
+  durr: -1.0

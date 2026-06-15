@@ -1,6 +1,7 @@
 #include "uifgo/data_loader.h"
 
 #include <geometry_msgs/PoseStamped.h>
+#include <nav_msgs/Odometry.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 #include <sensor_msgs/Imu.h>
@@ -16,6 +17,7 @@ DataLoader::DataLoader(const Config& cfg)
     : imu_topic_(cfg.imu_topic),
       uwb_topic_(cfg.uwb_topic),
       gt_topic_(cfg.vicon_topic),
+      gt_odom_topic_(cfg.gt_odom_topic),
       cfg_(cfg) {}
 
 bool DataLoader::LoadFromBag(const std::string& bag_path,
@@ -68,10 +70,9 @@ bool DataLoader::LoadFromBag(const std::string& bag_path,
 
       ImuSample s;
       s.t = imu_msg->header.stamp.toSec();
-      // Many IMU drivers (e.g. Livox) publish linear_acceleration in g-units
-      // (1.0 = 1g) rather than m/s^2.  Convert to m/s^2 by scaling with
-      // configured gravity so that GTSAM preintegration receives raw SI units.
-      const double g_scale = cfg_.gravity;  // typically 9.81
+      // Hardware IMU (e.g. Livox) publishes in g-units → scale to m/s².
+      // Simulation IMU publishes directly in m/s² → skip scaling.
+      const double g_scale = cfg_.imu_acc_in_g ? cfg_.gravity : 1.0;
       s.acc = Eigen::Vector3d(imu_msg->linear_acceleration.x * g_scale,
                               imu_msg->linear_acceleration.y * g_scale,
                               imu_msg->linear_acceleration.z * g_scale);
@@ -174,6 +175,53 @@ std::vector<NavState> DataLoader::LoadGroundTruth(const std::string& bag_path) {
   bag.close();
   std::cout << "LoadGroundTruth: " << gt.size() << " poses from " << gt_topic_
             << "\n";
+  return gt;
+}
+
+std::vector<NavState> DataLoader::LoadGroundTruthOdom(
+    const std::string& bag_path) {
+  std::vector<NavState> gt;
+  if (gt_odom_topic_.empty()) {
+    return gt;
+  }
+
+  rosbag::Bag bag;
+  try {
+    bag.open(bag_path, rosbag::bagmode::Read);
+  } catch (const std::exception& e) {
+    std::cerr << "LoadGroundTruthOdom: cannot open bag: " << e.what() << "\n";
+    return gt;
+  }
+
+  rosbag::View view;
+  view.addQuery(bag, rosbag::TopicQuery({gt_odom_topic_}));
+  if (view.size() == 0) {
+    std::cerr << "LoadGroundTruthOdom: no messages on " << gt_odom_topic_
+              << "\n";
+    bag.close();
+    return gt;
+  }
+
+  for (const auto& m : view) {
+    auto odom_msg = m.instantiate<nav_msgs::Odometry>();
+    if (!odom_msg) continue;
+    NavState s;
+    s.t = odom_msg->header.stamp.toSec();
+    auto& q = odom_msg->pose.pose.orientation;
+    auto& p = odom_msg->pose.pose.position;
+    s.T = gtsam::Pose3(gtsam::Rot3::Quaternion(q.w, q.x, q.y, q.z),
+                       gtsam::Point3(p.x, p.y, p.z));
+    // Odometry may carry velocity
+    s.v = gtsam::Vector3(odom_msg->twist.twist.linear.x,
+                         odom_msg->twist.twist.linear.y,
+                         odom_msg->twist.twist.linear.z);
+    s.ba = gtsam::Vector3::Zero();
+    s.bg = gtsam::Vector3::Zero();
+    gt.push_back(s);
+  }
+  bag.close();
+  std::cout << "LoadGroundTruthOdom: " << gt.size() << " poses from "
+            << gt_odom_topic_ << "\n";
   return gt;
 }
 

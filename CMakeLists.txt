@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs
   tf
+  nodelet
   message_generation
   eigen_conversions
   visualization_msgs
@@ -25,11 +26,26 @@ add_message_files(
   LinktrackNode2.msg
   LinktrackNodeframe3.msg
   LinktrackTagframe0.msg
+  AuxCommand.msg
+  Corrections.msg
+  Gains.msg
+  LQRTrajectory.msg
+  Odometry.msg
+  OutputData.msg
+  PPROutputData.msg
+  PolynomialTrajectory.msg
+  PositionCommand.msg
+  SO3Command.msg
+  Serial.msg
+  StatusData.msg
+  TRPYCommand.msg
 )
 
 generate_messages(
   DEPENDENCIES
   std_msgs
+  geometry_msgs
+  nav_msgs
 )
 
 catkin_package(
@@ -74,11 +90,18 @@ endif()
 # --- GoogleTest ---
 find_package(GTest REQUIRED)
 
+# --- Armadillo (simulator: ODE integrator) ---
+find_package(Armadillo REQUIRED)
+
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${GTSAM_INCLUDE_DIR}
   ${EIGEN3_INCLUDE_DIR}
+  ${ARMADILLO_INCLUDE_DIRS}
+  simulator/quadrotor_dynamics/include
+  simulator/uav_utils/include
+  simulator/so3_control/include
 )
 
 # =============================================
@@ -127,6 +150,17 @@ target_link_libraries(uwb_imu_fgo_node
 )
 
 add_dependencies(uwb_imu_fgo_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+# =============================================
+# Simulator — quadrotor dynamics + SO3 control
+# =============================================
+add_subdirectory(simulator)
+
+catkin_install_python(PROGRAMS
+  simulator/scripts/trajectory_circle.py
+  simulator/scripts/odom_to_path.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 # =============================================
 # Unit Tests (GoogleTest)

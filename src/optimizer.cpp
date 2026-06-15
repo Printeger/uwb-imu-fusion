@@ -71,6 +71,7 @@ OptimizerResult Optimizer::Optimize(const NonlinearFactorGraph& graph,
   lm_params.setMaxIterations(cfg_.lm_max_iter);
   lm_params.setRelativeErrorTol(cfg_.lm_rel_tol);
   lm_params.setAbsoluteErrorTol(cfg_.lm_abs_tol);
+  lm_params.setLinearSolverType("SEQUENTIAL_CHOLESKY");  // avoid TBB segfault
 
   out.initial_error = graph.error(initial);
   std::cout << "  [Stage 0/3] Pre-warming LM... " << std::flush;
@@ -81,11 +82,11 @@ OptimizerResult Optimizer::Optimize(const NonlinearFactorGraph& graph,
   // directly on this, the IMU-dominated cost forces all UWB weights to
   // near-zero, causing catastrophic outlier rejection.
   //
-  // A few standard LM iterations on the full graph reduce the initial error
+  // Standard LM iterations on the full graph reduce the initial error
   // by orders of magnitude, bringing the solution into a regime where GNC
   // can correctly distinguish NLOS outliers from inliers.
   LevenbergMarquardtParams prewarm_params = lm_params;
-  prewarm_params.setMaxIterations(3);
+  prewarm_params.setMaxIterations(10);
   Values prewarmed = initial;
   {
     LevenbergMarquardtOptimizer preopt(graph, prewarmed, prewarm_params);

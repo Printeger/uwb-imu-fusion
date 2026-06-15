@@ -1,0 +1,503 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!60!black}
+
+% ---------- code listing style ----------
+\definecolor{codebg}{RGB}{248,248,248}
+\definecolor{codekw}{RGB}{0,0,180}
+\definecolor{codecm}{RGB}{0,128,0}
+\definecolor{codestr}{RGB}{170,0,0}
+\lstdefinestyle{mystyle}{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecm},
+  stringstyle=\color{codestr},
+  breaklines=true,
+  showstringspaces=false,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  frame=single,
+  tabsize=2,
+  captionpos=b
+}
+\lstset{style=mystyle}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+
+\title{\textbf{基于 ego-planner-swarm 的 UWB TWR 仿真开发文档}\\
+\large 兼容 Nooploop LinkTrack 消息格式 (ROS1 / master)}
+\author{Simulation Module Specification}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\bigskip
+
+%==================================================================
+\section{目标与范围}
+本文档定义一个独立的 ROS1 节点 \texttt{uwb\_twr\_sim}，它运行在
+\texttt{ego-planner-swarm}（master 分支）之上，订阅各无人机的真值里程计，
+按 TDMA 时隙调度生成两两双向测距 (Two-Way Ranging, TWR) 观测量，
+叠加 UWB 真实误差模型，并以与实际硬件\textbf{完全一致}的 Nooploop
+LinkTrack 消息格式发布，供相对定位 / 融合算法消费。
+
+\textbf{设计原则：}
+\begin{itemize}[leftmargin=1.4em]
+  \item 不侵入 planner 核心代码，作为外挂节点存在。
+  \item 发布消息的字段、话题命名与真实 \texttt{nlink\_parser} 保持一致，
+        以便在仿真与实机间无缝切换。
+  \item 所有误差、调度、链路参数通过 ROS param / YAML 暴露，便于调参。
+\end{itemize}
+
+%==================================================================
+\section{消息格式定义（与硬件一致）}
+直接复用真实 LinkTrack 的两条消息定义，放入功能包 \texttt{nlink\_parser/msg}
+（或自建 \texttt{uwb\_msgs}，但建议沿用真实包名以零改动切换实机）。
+
+\subsection{LinktrackNode2.msg}
+\begin{lstlisting}[language=C]
+uint8   role        # 节点角色 (0:tag, 1:anchor, ...)
+uint8   id          # 被测邻居节点 ID
+float32 dis         # 到该邻居的测距值 [m]
+float32 fp_rssi     # 首径接收功率 First-Path RSSI [dBm]
+float32 rx_rssi     # 总接收功率 Received RSSI [dBm]
+\end{lstlisting}
+
+\subsection{LinktrackNodeframe3.msg}
+\begin{lstlisting}[language=C]
+std_msgs/Header   header
+uint8             role          # 本节点角色
+uint8             id            # 本节点(发布者) ID
+uint64            local_time    # 本地高精度时钟 [us]
+uint32            system_time   # 系统时间 [ms]
+float32           voltage       # 电池电压 [V]
+LinktrackNode2[]  nodes         # 本节点对所有邻居的测距数组
+\end{lstlisting}
+
+\paragraph{语义约定。}每架无人机视为一个 UWB 节点。节点 $i$ 在其 TDMA 时隙内
+完成对若干邻居的测距后，发布\textbf{一帧} \texttt{Nodeframe3}：
+其 \texttt{id} 为 $i$，\texttt{nodes[]} 中每个元素对应一个被测邻居 $j$。
+据此一个超帧内全网共产生 $N$ 帧（每节点一帧）。
+
+%==================================================================
+\section{系统架构与数据来源}
+\subsection{真值来源}
+master 分支默认使用 \texttt{poscmd\_2\_odom}（fake\_drone）将控制指令直接转为
+里程计，故各机 odom 为干净真值。话题命名为：
+\begin{center}
+\texttt{/drone\_\{i\}\_visual\_slam/odom} \quad ($i=0,1,\dots,N-1$)
+\end{center}
+（请以 \texttt{swarm.launch} 与对应 xml 中的实际命名为准；可用参数
+\texttt{odom\_topic\_pattern} 配置前后缀。）
+
+\subsection{发布话题}
+为兼容多机，每架机使用独立命名空间：
+\begin{center}
+\texttt{/drone\_\{i\}/nlink\_linktrack\_nodeframe3}
+\end{center}
+若融合算法期望全局单话题，亦提供可选聚合话题
+\texttt{/nlink\_linktrack\_nodeframe3}（参数 \texttt{publish\_aggregated}）。
+
+\subsection{数据流}
+\begin{enumerate}[leftmargin=1.6em]
+  \item 订阅全部 $N$ 路 odom，缓存最新位姿 $p_i=(x_i,y_i,z_i)$ 与时间戳。
+  \item 主定时器按时隙节拍推进 TDMA 状态机。
+  \item 当某节点时隙结束，计算其对邻居的真实距离、叠加误差、生成 RSSI。
+  \item 组装并发布该节点的 \texttt{Nodeframe3}。
+\end{enumerate}
+
+%==================================================================
+\section{测距与误差模型}
+\subsection{真实距离}
+$$ d_{ij} = \lVert p_i - p_j \rVert_2 . $$
+
+\subsection{观测距离模型}
+$$
+\tilde{d}_{ij} \;=\; d_{ij}\,(1+\epsilon_{\text{clk}})
+              \;+\; b_0 \;+\; b_{ij}
+              \;+\; \beta_{\text{nlos}}\,\mathbb{1}_{\text{NLOS}}
+              \;+\; n,\qquad n\sim\mathcal{N}(0,\sigma^2).
+$$
+各项含义与可调参数：
+\begin{itemize}[leftmargin=1.4em]
+  \item $\sigma$：LOS 高斯测距噪声标准差（典型 $0.05\sim0.10$ m）。参数
+        \texttt{range\_noise\_std}。
+  \item $b_0$：全局常值偏置（天线延迟标定残差）。参数 \texttt{range\_bias\_const}。
+  \item $b_{ij}$：每链路固定偏置，启动时按
+        $\mathcal{U}(-b_{\max},b_{\max})$ 随机生成并保持不变。
+        参数 \texttt{per\_link\_bias\_max}。
+  \item $\epsilon_{\text{clk}}$：时钟漂移引起的比例误差。SS-TWR 残留较大，
+        DS-TWR 近似抵消（见 \S\ref{sec:tdma}）。参数 \texttt{clock\_ppm}。
+  \item $\beta_{\text{nlos}}$：NLOS 附加正偏置，
+        $\beta_{\text{nlos}}\sim\text{Exp}(\lambda_{\text{nlos}})$，仅取正值
+        （NLOS 几乎总使测距偏大）。参数 \texttt{nlos\_bias\_mean}。
+\end{itemize}
+
+\subsection{NLOS 判定}
+若启用 \texttt{enable\_nlos\_check}，对连线 $\overline{p_i p_j}$ 与全局点云 /
+栅格地图做射线遮挡检测；遮挡则置 $\mathbb{1}_{\text{NLOS}}=1$。
+轻量替代：基于概率 \texttt{nlos\_probability} 随机触发，无需地图。
+
+\subsection{链路有效性与丢包}
+测量被丢弃（不写入 \texttt{nodes[]}）当满足任一：
+\begin{itemize}[leftmargin=1.4em]
+  \item $d_{ij} > $ \texttt{max\_range}（典型 $60\sim100$ m）；
+  \item 随机丢包：以概率 \texttt{packet\_loss\_prob} 丢弃；
+  \item odom 数据过期：时间戳超过 \texttt{odom\_timeout}。
+\end{itemize}
+
+\subsection{RSSI 建模}
+采用对数距离路径损耗模型生成 \texttt{rx\_rssi}：
+$$
+\text{rx\_rssi} = P_{\text{tx}} - 10\,n_p\log_{10}\!\Big(\frac{d_{ij}}{d_0}\Big)
+                 + X,\qquad X\sim\mathcal{N}(0,\sigma_{\text{sh}}^2),
+$$
+首径功率 \texttt{fp\_rssi} 在 LOS 下略低于 \texttt{rx\_rssi}，NLOS 下显著更低：
+$$
+\text{fp\_rssi} = \text{rx\_rssi} - \Delta_{\text{fp}}
+                  - \gamma\,\mathbb{1}_{\text{NLOS}}.
+$$
+差值 $\text{rx\_rssi}-\text{fp\_rssi}$ 可作为下游 NLOS 识别特征。
+参数：\texttt{rssi\_tx\_power}$=P_{\text{tx}}$、\texttt{rssi\_path\_loss\_n}$=n_p$、
+\texttt{rssi\_ref\_dist}$=d_0$、\texttt{rssi\_shadowing\_std}$=\sigma_{\text{sh}}$、
+\texttt{fp\_offset\_los}$=\Delta_{\text{fp}}$、\texttt{fp\_offset\_nlos}$=\gamma$。
+
+%==================================================================
+\section{TDMA 时隙调度逻辑}\label{sec:tdma}
+\subsection{超帧结构}
+为模拟真实 TWR 的串行特性，将时间划分为周期 $T_{\text{sf}}$ 的\textbf{超帧}
+(superframe)，超帧再均分为 $N$ 个\textbf{时隙} (slot)，每节点固定占用一个时隙：
+$$ \tau = \frac{T_{\text{sf}}}{N}. $$
+节点 $i$ 在其时隙内作为发起者 (initiator)，与所有可达邻居顺序完成 TWR。
+\textbf{每节点更新率} $= 1/T_{\text{sf}}$。例：$T_{\text{sf}}=100$ ms、$N=5$，
+则 $\tau=20$ ms，每机 $10$ Hz。
+
+\subsection{时隙内容量约束}
+单次 TWR 报文交换耗时 $t_{\text{msg}}$：
+SS-TWR 为 poll+response（2 报文），DS-TWR 为 poll+response+final（3 报文）。
+一个时隙可完成的最大邻居数：
+$$
+k_{\max} = \Big\lfloor \frac{\tau}{m\cdot t_{\text{slot\_msg}}} \Big\rfloor,
+\qquad m=\begin{cases}2 & \text{SS-TWR}\\ 3 & \text{DS-TWR}\end{cases}
+$$
+若实际邻居数超过 $k_{\max}$，则按轮转 (round-robin) 在多个超帧间分摊测量。
+参数：\texttt{ranging\_mode}（\texttt{"SS"}/\texttt{"DS"}）、\texttt{msg\_air\_time}$=t_{\text{slot\_msg}}$。
+
+\subsection{时钟漂移与 SS/DS 选择}
+节点 $i$ 维持缓变本地时钟偏移 $o_i(t)$（速率由 \texttt{clock\_ppm} 决定）。
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{SS-TWR}：$\epsilon_{\text{clk}}=(o_i-o_j)\cdot c_{\text{ss}}$，
+        漂移残留明显。
+  \item \textbf{DS-TWR}：$\epsilon_{\text{clk}}\approx 0$（二阶抵消），仅保留
+        小残差 $c_{\text{ds}}\ll c_{\text{ss}}$。
+\end{itemize}
+
+\subsection{各节点时间戳错开}
+关键：\textbf{不可}让所有距离共享同一时间戳。节点 $i$ 在其时隙\textbf{结束时刻}
+$t_i^{\text{pub}} = k\,T_{\text{sf}} + (i+1)\tau$ 发布，
+\texttt{header.stamp} 与 \texttt{local\_time} 据此独立赋值，
+真实复现 TDMA 的时间错位，避免下游融合在实机上失效。
+
+\subsection{调度算法}
+\begin{algorithm}[H]
+\caption{UWB TDMA 超帧调度（主定时器，周期 $=\tau$）}
+\begin{algorithmic}[1]
+\State \textbf{Init:} 分配时隙 $\text{slot}(i)=i$；初始化每链路偏置 $b_{ij}$、时钟偏移 $o_i$
+\State $s \gets 0$ \Comment{当前时隙索引}
+\Procedure{OnSlotTimer}{$t_{\text{now}}$}
+  \State $i \gets \text{owner}(s)$ \Comment{本时隙发起节点}
+  \State 更新时钟漂移 $o_i \mathrel{+}= \text{ppm}\cdot \tau$
+  \State $\text{frame} \gets$ new \texttt{Nodeframe3}; $\text{frame.id}\gets i$
+  \State 选取候选邻居集合 $\mathcal{N}_i$（按 round-robin 取至多 $k_{\max}$ 个）
+  \For{each $j \in \mathcal{N}_i$}
+     \If{odom$_i$/odom$_j$ 有效 \textbf{and} $d_{ij}\le$ max\_range}
+        \If{rand() $>$ packet\_loss\_prob}
+           \State 计算 $\tilde{d}_{ij}$（含噪声/偏置/NLOS/漂移）
+           \State 计算 fp\_rssi, rx\_rssi
+           \State 追加 \texttt{Node2}\{role,$j$,$\tilde{d}_{ij}$,fp,rx\} 到 frame.nodes
+        \EndIf
+     \EndIf
+  \EndFor
+  \State frame.header.stamp $\gets t_{\text{now}}$;\ frame.local\_time $\gets$ us($t_{\text{now}}$)
+  \State frame.voltage $\gets$ battery\_model($i$)
+  \State \textbf{publish} frame 到 \texttt{/drone\_$i$/nlink\_linktrack\_nodeframe3}
+  \State $s \gets (s+1) \bmod N$ \Comment{推进到下一时隙}
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+%==================================================================
+\section{可调参数接口（YAML）}
+所有参数经 ROS param 暴露，放入 \texttt{config/uwb\_twr\_sim.yaml}。
+
+\begin{longtable}{@{}p{4.6cm}p{2.4cm}p{7.0cm}@{}}
+\toprule
+\textbf{参数名} & \textbf{默认值} & \textbf{说明} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{参数名} & \textbf{默认值} & \textbf{说明}\\\midrule
+\endhead
+\multicolumn{3}{@{}l}{\textit{拓扑与话题}}\\
+num\_drones            & 5    & 无人机/节点数 $N$\\
+odom\_topic\_pattern   & /drone\_\{\}\_visual\_slam/odom & odom 话题模板\\
+pub\_topic\_pattern    & /drone\_\{\}/nlink\_linktrack\_nodeframe3 & 发布模板\\
+publish\_aggregated    & false & 是否额外发布全局聚合话题\\
+node\_role             & 0    & 写入消息的 role 字段\\
+\midrule
+\multicolumn{3}{@{}l}{\textit{TDMA 调度}}\\
+superframe\_period     & 0.10 & 超帧周期 $T_{\text{sf}}$ [s]\\
+ranging\_mode          & "DS" & "SS" 或 "DS"\\
+msg\_air\_time         & 0.0015 & 单报文空口时间 $t_{\text{slot\_msg}}$ [s]\\
+max\_neighbors\_per\_slot & 0 & $>0$ 时强制 $k_{\max}$，0 表示自动计算\\
+\midrule
+\multicolumn{3}{@{}l}{\textit{测距误差}}\\
+range\_noise\_std      & 0.06 & LOS 高斯噪声 $\sigma$ [m]\\
+range\_bias\_const     & 0.02 & 全局常偏 $b_0$ [m]\\
+per\_link\_bias\_max   & 0.05 & 每链路偏置幅值 $b_{\max}$ [m]\\
+clock\_ppm            & 20.0 & 时钟漂移 [ppm]\\
+max\_range            & 80.0 & 最大有效测距 [m]\\
+packet\_loss\_prob    & 0.02 & 丢包概率\\
+odom\_timeout         & 0.20 & odom 过期阈值 [s]\\
+\midrule
+\multicolumn{3}{@{}l}{\textit{NLOS}}\\
+enable\_nlos\_check   & false & 是否基于地图做遮挡判定\\
+nlos\_probability     & 0.05 & 无地图时的随机 NLOS 概率\\
+nlos\_bias\_mean      & 0.40 & NLOS 附加正偏置均值 [m]\\
+map\_topic            & /global\_cloud & 用于遮挡检测的点云话题\\
+\midrule
+\multicolumn{3}{@{}l}{\textit{RSSI}}\\
+rssi\_tx\_power       & -45.0 & $P_{\text{tx}}$ [dBm]\\
+rssi\_path\_loss\_n   & 2.2  & 路损指数 $n_p$\\
+rssi\_ref\_dist       & 1.0  & 参考距离 $d_0$ [m]\\
+rssi\_shadowing\_std  & 2.0  & 阴影衰落 $\sigma_{\text{sh}}$ [dB]\\
+fp\_offset\_los       & 3.0  & LOS 下 fp 低于 rx 的量 $\Delta_{\text{fp}}$ [dB]\\
+fp\_offset\_nlos      & 8.0  & NLOS 附加 fp 衰减 $\gamma$ [dB]\\
+\midrule
+\multicolumn{3}{@{}l}{\textit{其它}}\\
+battery\_voltage      & 4.10 & voltage 字段填充值 [V]\\
+random\_seed          & 0    & 随机种子（0=随机）\\
+\bottomrule
+\end{longtable}
+
+%==================================================================
+\section{节点实现骨架（C++ / roscpp）}
+\begin{lstlisting}[language=C++,caption={uwb\_twr\_sim\_node.cpp 关键结构}]
+#include <ros/ros.h>
+#include <nav_msgs/Odometry.h>
+#include <nlink_parser/LinktrackNode2.h>
+#include <nlink_parser/LinktrackNodeframe3.h>
+#include <random>
+#include <vector>
+
+struct DroneState {
+  Eigen::Vector3d p; ros::Time stamp; bool valid=false;
+  double clk_offset=0.0;          // 时钟漂移累积
+};
+
+class UwbTwrSim {
+public:
+  UwbTwrSim(ros::NodeHandle& nh) {
+    // ---- 读取参数 ----
+    nh.param("num_drones", N_, 5);
+    nh.param("superframe_period", T_sf_, 0.10);
+    nh.param("ranging_mode", mode_, std::string("DS"));
+    nh.param("range_noise_std", sigma_, 0.06);
+    nh.param("range_bias_const", b0_, 0.02);
+    nh.param("per_link_bias_max", blink_max_, 0.05);
+    nh.param("clock_ppm", ppm_, 20.0);
+    nh.param("max_range", max_range_, 80.0);
+    nh.param("packet_loss_prob", ploss_, 0.02);
+    nh.param("odom_timeout", odom_to_, 0.20);
+    // ... NLOS / RSSI 参数同理 ...
+
+    states_.resize(N_);
+    initLinkBias();                      // 生成 b_ij
+    tau_ = T_sf_ / N_;
+    int m = (mode_=="DS") ? 3 : 2;
+    nh.param("msg_air_time", t_msg_, 0.0015);
+    kmax_ = std::max(1, (int)(tau_ / (m * t_msg_)));
+
+    // ---- 订阅 N 路 odom ----
+    for (int i=0;i<N_;++i) {
+      std::string topic = fmt(odom_pat_, i);
+      subs_.push_back(nh.subscribe<nav_msgs::Odometry>(
+        topic, 10, boost::bind(&UwbTwrSim::odomCb, this, _1, i)));
+      pubs_.push_back(nh.advertise<nlink_parser::LinktrackNodeframe3>(
+        fmt(pub_pat_, i), 10));
+    }
+    // ---- 时隙定时器：周期 = tau ----
+    timer_ = nh.createTimer(ros::Duration(tau_),
+                            &UwbTwrSim::onSlot, this);
+  }
+
+private:
+  void odomCb(const nav_msgs::Odometry::ConstPtr& m, int id){
+    states_[id].p = {m->pose.pose.position.x,
+                     m->pose.pose.position.y,
+                     m->pose.pose.position.z};
+    states_[id].stamp = m->header.stamp;
+    states_[id].valid = true;
+  }
+
+  void onSlot(const ros::TimerEvent& e){
+    int i = slot_; ros::Time now = ros::Time::now();
+    states_[i].clk_offset += ppm_*1e-6 * tau_;     // 漂移累积
+
+    nlink_parser::LinktrackNodeframe3 fr;
+    fr.header.stamp = now; fr.id = i; fr.role = role_;
+    fr.local_time  = (uint64_t)(now.toSec()*1e6);
+    fr.system_time = (uint32_t)(now.toSec()*1e3);
+    fr.voltage     = batt_v_;
+
+    int cnt=0;
+    for (int off=1; off<N_ && cnt<kmax_; ++off){      // round-robin
+      int j = (i+off) % N_;
+      if (!linkUsable(i,j,now)) continue;
+      double d = (states_[i].p - states_[j].p).norm();
+      if (d > max_range_) continue;
+      if (uni_(rng_) < ploss_) continue;
+
+      bool nlos = decideNlos(i,j);
+      double dis = applyRangeModel(i,j,d,nlos);
+      nlink_parser::LinktrackNode2 nd;
+      nd.role=role_; nd.id=(uint8_t)j; nd.dis=(float)dis;
+      computeRssi(d,nlos,nd.rx_rssi,nd.fp_rssi);
+      fr.nodes.push_back(nd); ++cnt;
+    }
+    pubs_[i].publish(fr);
+    if (agg_) agg_pub_.publish(fr);
+    slot_ = (slot_+1) % N_;                            // 推进时隙
+  }
+
+  double applyRangeModel(int i,int j,double d,bool nlos){
+    double eps = (mode_=="DS")
+        ? (states_[i].clk_offset-states_[j].clk_offset)*c_ds_
+        : (states_[i].clk_offset-states_[j].clk_offset)*c_ss_;
+    double dd = d*(1.0+eps) + b0_ + blink_[i][j];
+    if (nlos) dd += nlos_exp_(rng_);                  // 仅正偏置
+    dd += gauss_(rng_)*sigma_;
+    return std::max(0.0, dd);
+  }
+  // linkUsable / decideNlos / computeRssi / initLinkBias / fmt ...
+  int N_, slot_=0, kmax_; double T_sf_, tau_, t_msg_;
+  double sigma_,b0_,blink_max_,ppm_,max_range_,ploss_,odom_to_,batt_v_;
+  std::string mode_, odom_pat_, pub_pat_; int role_=0; bool agg_=false;
+  std::vector<DroneState> states_;
+  std::vector<std::vector<double>> blink_;
+  std::vector<ros::Subscriber> subs_; std::vector<ros::Publisher> pubs_;
+  ros::Publisher agg_pub_; ros::Timer timer_;
+  std::mt19937 rng_; std::normal_distribution<> gauss_{0,1};
+  std::uniform_real_distribution<> uni_{0,1};
+  std::exponential_distribution<> nlos_exp_;
+  double c_ss_=1.0, c_ds_=0.02;
+};
+
+int main(int argc,char**argv){
+  ros::init(argc,argv,"uwb_twr_sim");
+  ros::NodeHandle nh("~");
+  UwbTwrSim sim(nh);
+  ros::spin();
+  return 0;
+}
+\end{lstlisting}
+
+%==================================================================
+\section{字段映射对照表}
+\begin{longtable}{@{}p{3.6cm}p{4.0cm}p{6.4cm}@{}}
+\toprule
+\textbf{消息字段} & \textbf{仿真来源} & \textbf{备注}\\
+\midrule
+\endhead
+header.stamp        & 时隙结束时刻 $t_i^{\text{pub}}$ & 各节点错开，勿统一\\
+role                & 参数 node\_role        & 默认 0\\
+id (frame)          & 发布节点 $i$           & \\
+local\_time         & $t_{\text{now}}\times10^6$ [us] & 高精度本地钟\\
+system\_time        & $t_{\text{now}}\times10^3$ [ms] & \\
+voltage             & 电池模型/常值          & 可加缓降\\
+nodes[k].id         & 邻居 $j$               & \\
+nodes[k].dis        & $\tilde{d}_{ij}$       & 误差模型输出\\
+nodes[k].rx\_rssi   & 路损模型               & \\
+nodes[k].fp\_rssi   & rx\_rssi $-\Delta_{\text{fp}}-\gamma\mathbb{1}$ & NLOS 显著更低\\
+\bottomrule
+\end{longtable}
+
+%==================================================================
+\section{编译与启动集成}
+\subsection{package.xml 依赖}
+\begin{lstlisting}[language=XML]
+<depend>roscpp</depend>
+<depend>nav_msgs</depend>
+<depend>std_msgs</depend>
+<depend>nlink_parser</depend>   <!-- 提供两条消息定义 -->
+<depend>eigen</depend>
+\end{lstlisting}
+
+\subsection{CMakeLists.txt 关键片段}
+\begin{lstlisting}
+find_package(catkin REQUIRED COMPONENTS
+  roscpp nav_msgs std_msgs nlink_parser)
+find_package(Eigen3 REQUIRED)
+include_directories(${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS})
+add_executable(uwb_twr_sim_node src/uwb_twr_sim_node.cpp)
+target_link_libraries(uwb_twr_sim_node ${catkin_LIBRARIES})
+add_dependencies(uwb_twr_sim_node ${catkin_EXPORTED_TARGETS})
+\end{lstlisting}
+
+\subsection{launch 示例}
+\begin{lstlisting}[language=XML]
+<launch>
+  <node pkg="uwb_twr_sim" type="uwb_twr_sim_node"
+        name="uwb_twr_sim" output="screen">
+    <rosparam command="load"
+              file="$(find uwb_twr_sim)/config/uwb_twr_sim.yaml"/>
+  </node>
+</launch>
+\end{lstlisting}
+
+\subsection{编译命令（沿用 repo 约定）}
+\begin{lstlisting}
+catkin_make -DCMAKE_BUILD_TYPE=Release -j1
+source devel/setup.bash
+roslaunch ego_planner swarm.launch        # 先起 swarm 仿真
+roslaunch uwb_twr_sim uwb_twr_sim.launch  # 再起 UWB 仿真
+\end{lstlisting}
+
+%==================================================================
+\section{开发与调参注意事项}
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{话题命名核对：}master 分支 swarm 模式按 drone\_id 命名空间隔离，
+        务必在 \texttt{swarm.launch} / xml 中确认真实 odom 话题名后再设
+        \texttt{odom\_topic\_pattern}。
+  \item \textbf{时间戳错位优先：}先保证各节点 \texttt{Nodeframe3} 时间戳按时隙
+        错开，再加误差。统一时间戳会让下游算法在实机翻车。
+  \item \textbf{nodes[] 仅含成功测量：}丢包 / 超距 / 遮挡链路不写入数组，
+        与硬件行为一致。
+  \item \textbf{先纯高斯跑通：}调试顺序建议为 高斯噪声 $\to$ 常值/链路偏置
+        $\to$ 时钟漂移 $\to$ NLOS $\to$ RSSI，逐项打开便于定位问题。
+  \item \textbf{可观测性：}纯距离融合存在尺度/旋转不可观模态，避免无人机长时间
+        共线/共面；必要时配合 IMU/速度约束。
+  \item \textbf{容量自检：}启动时打印 $\tau$、$k_{\max}$、每机更新率，
+        确认 $T_{\text{sf}}$ 与 $N$ 搭配合理（每机更新率不宜过低）。
+  \item \textbf{实机切换：}因复用真实 \texttt{nlink\_parser} 消息与话题名，
+        关闭本节点、接入真实 UWB 驱动即可零改动切换。
+\end{enumerate}
+
+\end{document}

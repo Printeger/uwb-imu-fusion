@@ -61,6 +61,7 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
     if (im["sigma_wa"]) cfg.sigma_wa = im["sigma_wa"].as<double>();
     if (im["sigma_wg"]) cfg.sigma_wg = im["sigma_wg"].as<double>();
     if (im["gravity"]) cfg.gravity = im["gravity"].as<double>();
+    if (im["imu_acc_in_g"]) cfg.imu_acc_in_g = im["imu_acc_in_g"].as<bool>();
   }
 
   // --- UWB ---
@@ -85,9 +86,12 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
     if (sv["abs_error_tol"]) cfg.lm_abs_tol = sv["abs_error_tol"].as<double>();
     if (sv["gnc_mu_step"]) cfg.gnc_mu_step = sv["gnc_mu_step"].as<double>();
     if (sv["gnc_max_iter"]) cfg.gnc_max_iter = sv["gnc_max_iter"].as<int>();
-    if (sv["gnc_rel_cost_tol"]) cfg.gnc_rel_cost_tol = sv["gnc_rel_cost_tol"].as<double>();
-    if (sv["gnc_inlier_prob"]) cfg.gnc_inlier_prob = sv["gnc_inlier_prob"].as<double>();
-    if (sv["gnc_weight_thresh"]) cfg.gnc_weight_thresh = sv["gnc_weight_thresh"].as<double>();
+    if (sv["gnc_rel_cost_tol"])
+      cfg.gnc_rel_cost_tol = sv["gnc_rel_cost_tol"].as<double>();
+    if (sv["gnc_inlier_prob"])
+      cfg.gnc_inlier_prob = sv["gnc_inlier_prob"].as<double>();
+    if (sv["gnc_weight_thresh"])
+      cfg.gnc_weight_thresh = sv["gnc_weight_thresh"].as<double>();
     if (sv["chi2_reject_prob"])
       cfg.chi2_reject_prob = sv["chi2_reject_prob"].as<double>();
     if (sv["max_rejection_rounds"])
@@ -114,6 +118,7 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
     if (tp["imu"]) cfg.imu_topic = tp["imu"].as<std::string>();
     if (tp["uwb"]) cfg.uwb_topic = tp["uwb"].as<std::string>();
     if (tp["vicon"]) cfg.vicon_topic = tp["vicon"].as<std::string>();
+    if (tp["gt_odom"]) cfg.gt_odom_topic = tp["gt_odom"].as<std::string>();
   }
 
   // --- Bag ---

@@ -1,0 +1,47 @@
+# ============================================================
+# UWB TWR Simulation — Default Configuration
+# Design doc: doc/uwb_sim.tex
+# ============================================================
+
+# --- Topology ---
+num_anchors: 8
+anchors:
+  - {id: 1, pos: [-5.0, -5.0, 1.0]}
+  - {id: 2, pos: [-5.0, -5.0, 5.0]}
+  - {id: 3, pos: [-5.0,  5.0, 1.0]}
+  - {id: 4, pos: [-5.0,  5.0, 5.0]}
+  - {id: 5, pos: [ 5.0, -5.0, 1.0]}
+  - {id: 6, pos: [ 5.0, -5.0, 5.0]}
+  - {id: 7, pos: [ 5.0,  5.0, 1.0]}
+  - {id: 8, pos: [ 5.0,  5.0, 5.0]}
+
+# --- TDMA scheduling ---
+superframe_period: 0.10       # T_sf [s] — per-slot update rate = N/T_sf
+pub_rate: 20.0                # UWB output rate [Hz] — auto-determines anchors/msg
+ranging_mode: "DS"            # "SS" or "DS"
+msg_air_time: 0.0015          # single message air time [s]
+
+# --- Range error model ---
+range_noise_std: 0.10         # LOS Gaussian σ [m]
+range_bias_const: 0.0         # global constant bias b0 [m]
+per_link_bias_max: 0.0        # per-link uniform bias amplitude [m]
+clock_ppm: 20.0               # clock drift [ppm]
+max_range: 80.0               # max valid range [m]
+packet_loss_prob: 0.02        # per-measurement drop probability
+odom_timeout: 0.20            # odom staleness threshold [s]
+
+# --- NLOS ---
+nlos_probability: 0.05        # random NLOS trigger probability (no-map mode)
+nlos_bias_mean: 0.40          # Exp(λ) mean positive bias [m]
+
+# --- RSSI ---
+rssi_tx_power: -45.0          # P_tx [dBm]
+rssi_path_loss_n: 2.2         # path loss exponent
+rssi_ref_dist: 1.0            # reference distance d0 [m]
+rssi_shadowing_std: 2.0       # shadowing σ [dB]
+fp_offset_los: 3.0            # fp below rx in LOS [dB]
+fp_offset_nlos: 8.0           # additional fp attenuation in NLOS [dB]
+
+# --- Other ---
+battery_voltage: 4.10         # voltage field [V]
+random_seed: 0                # 0 = random

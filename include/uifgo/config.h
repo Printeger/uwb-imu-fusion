@@ -31,6 +31,8 @@ struct Config {
   double sigma_wa = 0.01;    // accel random walk (m/s^3)
   double sigma_wg = 2.0e-5;  // gyro random walk (rad/s^2)
   double gravity = 9.81;
+  bool imu_acc_in_g =
+      true;  // true=multiply by gravity (Livox), false=raw (sim)
 
   // --- UWB noise & adaptive ---
   double sigma_range = 0.10;  // base range std (m)
@@ -75,6 +77,8 @@ struct Config {
   std::string imu_topic = "/imu/data";
   std::string uwb_topic = "/nlink_linktrack_nodeframe3";
   std::string vicon_topic = "";  // VICON GT topic (PoseStamped)
+  std::string gt_odom_topic =
+      "";  // Odom-based GT topic (Odometry), e.g. /sim/odom
   std::string bag_path = "";
   double bag_start = 0.0;
   double bag_durr = -1.0;  // -1 = full bag

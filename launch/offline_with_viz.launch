@@ -16,12 +16,13 @@
   <!--        config_path:=/path/to/slam.yaml                               -->
   <!-- =================================================================== -->
 
-  <arg name="config_path" default="$(find uwb_imu_fgo)/config/vicon_test.yaml" />
+  <arg name="config_path" default="$(find uwb_imu_fgo)/config/sim_circle.yaml" />
   <arg name="rviz_config" default="$(find uwb_imu_fgo)/config/uwb_fgo_viz.rviz" />
   <arg name="gdb"            default="0" />
   <arg name="gdb_interactive" default="0" />
 
   <env name="PYTHONUNBUFFERED" value="1" />
+  <env name="TBB_NUM_THREADS" value="1" />
 
   <!-- ============== FGO Batch Processing Node ============== -->
   <!-- Processes rosbag, runs optimization, publishes viz markers -->
