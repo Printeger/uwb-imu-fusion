@@ -221,7 +221,7 @@ roslaunch uwb_imu_fgo offline.launch config_path:=/path/to/your_config.yaml
 roslaunch uwb_imu_fgo offline_with_viz.launch
 ```
 
-处理完成后，RViz 自动加载全部可视化内容。保持终端运行，在 RViz 窗口中可旋转/缩放查看。详见 [12. RViz 可视化](#12-rviz-可视化)。
+处理完成后，RViz 自动加载全部可视化内容。保持终端运行，在 RViz 窗口中可旋转/缩放查看。详见 [13. RViz 可视化](#13-rviz-可视化)。
 
 ## 8. 输出文件
 
@@ -268,14 +268,21 @@ python3 tools/analyze_log.py logs/2026-06-08_15-30-45_no_obstacle/
 |------|------|
 | `trajectory_xy.png` | 俯视轨迹（标记起点/终点） |
 | `trajectory_3d.png` | 3D 轨迹图 |
+| `trajectory_compare_xy.png` | **GT vs 估计 对比 (XY, ATE上色)** |
+| `trajectory_compare_3d.png` | **GT vs 估计 对比 (3D, ATE上色)** |
+| `ate_timeline.png` | **ATE 误差随时间变化** |
+| `rpe_timeline.png` | **RPE 误差随时间变化** |
+| `error_distributions.png` | **ATE/RPE 直方图 + 统计量** |
 | `position_time.png` | X/Y/Z 位置随时间变化 |
 | `velocity_time.png` | 速度随时间变化 |
 | `convergence.png` | 每趟优化误差和 χ² 柱状图 |
 | `residual_heatmap.png` | 每锚点残差热力图 |
 | `covariance_diag.png` | 位置不确定度随时间变化 |
-| `report.md` | **Markdown 综合报告**（含所有表格+图表） |
+| `report.md` | **Markdown 综合报告**（含所有表格+图表，含 ATE/RPE 统计） |
 
 在 VS Code 中打开 `report.md` 后按 `Ctrl+Shift+V` 即可预览完整报告。
+
+> 💡 仿真场景下会自动生成 `groundtruth.txt` 并进行 GT 对比评测，详见 [§10 仿真系统](#10-仿真系统)。
 
 `logs/latest/` 始终指向最近一次运行，每次运行自动更新该符号链接。
 
@@ -297,9 +304,217 @@ roslaunch uwb_imu_fgo offline.launch
 默认配置: **kf_step=10** (367 关键帧, <1min)、**标定全关** (基线精度)。
 调参: 改 `config/slam.yaml` 中的 `keyframe.step`（5 更精，1 最精）或开启 `calibration.*`。
 
-## 10. 开发指南
+## 10. 仿真系统
 
-### 10.1 里程碑
+`simulator/` 提供完整的 UWB-IMU 仿真管道，覆盖轨迹生成 → 传感器仿真 → 录包 → 离线 FGO 处理 → 精度评测的全流程。
+
+### 10.1 仿真架构
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ 1. trajectory_circle.py                                  │
+│    圆形轨迹 (takeoff→3圈→return→land)                     │
+│    输出: /position_cmd                                   │
+├──────────────────────────────────────────────────────────┤
+│ 2. quadrotor_simulator_so3                               │
+│    四旋翼动力学 + SO3 控制器                              │
+│    输出: /sim/imu (200 Hz), /sim/odom (200 Hz)           │
+├──────────────────────────────────────────────────────────┤
+│ 3. uwb_twr_sim                                           │
+│    UWB TWR 测距 + TDMA 调度 + 噪声/偏置/时钟误差模型      │
+│    输出: /nlink_linktrack_nodeframe3 (20 Hz, 8 anchors)  │
+├──────────────────────────────────────────────────────────┤
+│ 4. rosbag record -a                                      │
+│    录制 → sim_circle_<ts>.bag                             │
+├──────────────────────────────────────────────────────────┤
+│ 5. uwb_imu_fgo (offline_with_viz.launch)                 │
+│    GTSAM FGO 批量优化 → trajectory.txt + groundtruth.txt │
+├──────────────────────────────────────────────────────────┤
+│ 6. tools/analyze_log.py                                  │
+│    GT 对比 → ATE/RPE 统计 + 图表 → report.md              │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 10.2 端到端流程
+
+```bash
+# ===== 步骤 1: 启动仿真 =====
+cd ~/ws_fusion_uwb
+source devel/setup.bash
+roslaunch uwb_imu_fgo circle_sim.launch
+
+# ===== 步骤 2: 录制 rosbag (另开终端) =====
+cd src/uwb-imu-fusion/data
+rosbag record -a -o ./sim_circle.bag
+# 仿真约 85 秒后自动结束，Ctrl+C 停止录制
+
+# ===== 步骤 3: 配置 bag 路径 =====
+# 编辑 config/sim_circle.yaml，更新 bag.path 为刚录制的 bag 文件名
+
+# ===== 步骤 4: 离线 FGO 处理 =====
+roslaunch uwb_imu_fgo offline_with_viz.launch
+# 处理完成后自动输出:
+#   logs/<timestamp>/trajectory.txt   (融合轨迹)
+#   logs/<timestamp>/groundtruth.txt  (真值轨迹)
+#   logs/<timestamp>/report.md        (分析报告)
+
+# ===== 步骤 5: 生成分析报告 =====
+python3 tools/analyze_log.py
+# 或指定日志目录
+python3 tools/analyze_log.py logs/2026-06-15_16-09-35_sim_circle/
+# 打开 report.md 查看 ATE/RPE 精度结果
+```
+
+### 10.3 UWB 仿真参数
+
+**`simulator/config/uwb_twr_sim.yaml`** — 传感器级仿真参数：
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `num_anchors` | `8` | 锚点数量 |
+| `pub_rate` | `20.0` | 输出频率 (Hz)，`T_sf` 自动对齐 |
+| `ranging_mode` | `"DS"` | DS-TWR 双边测距 ("DS" / "SS") |
+| `msg_air_time` | `0.0015` | 单条消息空中时间 (s)，决定 `kmax` |
+| **噪声模型** | | |
+| `range_noise_std` | `0.10` | LOS 高斯噪声 σ (m) |
+| `range_bias_const` | `0.0` | 全局固定偏置 (m) |
+| `per_link_bias_max` | `0.0` | 逐链路随机偏置幅度 (m) |
+| `clock_ppm` | `20.0` | 时钟漂移 (ppm) |
+| **丢包与 NLOS** | | |
+| `packet_loss_prob` | `0.02` | 丢包概率 |
+| `nlos_probability` | `0.05` | 随机 NLOS 触发概率 |
+| `nlos_bias_mean` | `0.40` | NLOS 正偏置均值 Exp(λ) (m) |
+| **RSSI 模拟** | | |
+| `rssi_tx_power` | `-45.0` | 发射功率 (dBm) |
+| `rssi_path_loss_n` | `2.2` | 路径损耗指数 |
+| `rssi_ref_dist` | `1.0` | 参考距离 (m) |
+| `rssi_shadowing_std` | `2.0` | 阴影衰落 σ (dB) |
+| `fp_offset_los` | `3.0` | 首径低于接收功率的 LOS 偏移 (dB) |
+| `fp_offset_nlos` | `8.0` | NLOS 额外衰减 (dB) |
+| `max_range` | `80.0` | 最大有效距离 (m) |
+| `random_seed` | `0` | 随机种子 (0=随机) |
+
+### 10.4 FGO 处理配置
+
+**`config/sim_circle.yaml`** — 离线 FGO 参数：
+
+| 参数 | 值 | 说明 |
+|------|-----|------|
+| `topics.imu` | `/sim/imu` | 仿真 IMU (m/s²) |
+| `topics.uwb` | `/nlink_linktrack_nodeframe3` | 仿真 UWB |
+| `topics.gt_odom` | `/sim/odom` | 真值 (用于 groundtruth.txt) |
+| `imu.imu_acc_in_g` | `false` | **关键**: 仿真 IMU 已是 m/s² |
+| `keyframe.step` | `10` | 每 10 帧取 1 关键帧 (~2 Hz) |
+| `keyframe.yaw_align_frames` | `15` | 前 15 帧 yaw 网格搜索对齐 |
+| `uwb.sigma_range` | `0.10` | 匹配仿真噪声 |
+| `uwb.max_range` | `50.0` | 最大有效距离 |
+
+### 10.5 数据格式
+
+#### 仿真 IMU (`/sim/imu` — `sensor_msgs/Imu`)
+
+| 字段 | 值 | 说明 |
+|------|-----|------|
+| `linear_acceleration` | 比力 (m/s²) | **Z-up** 坐标系，悬停时 Z≈+9.81 |
+| `angular_velocity` | 角速度 (rad/s) | Z-up，右手法则 |
+| `orientation` | 有效四元数 | `R_body_to_world` |
+
+> ⚠️ 仿真 IMU 单位为 **m/s²**，配置 `imu_acc_in_g: false`。  
+> 原始 Livox IMU 单位为 **g-units**，配置 `imu_acc_in_g: true`。
+
+#### 仿真 UWB (`/nlink_linktrack_nodeframe3` — `LinktrackNodeframe3`)
+
+| 字段 | 说明 |
+|------|------|
+| `header.stamp` | 发布时刻 (20 Hz) |
+| `nodes[].id` | 锚点 ID (1~8) |
+| `nodes[].dis` | 测距值 (m, 含噪声+偏置+时钟漂移) |
+| `nodes[].rx_rssi` | 接收 RSSI (dBm) |
+| `nodes[].fp_rssi` | 首径 RSSI (用于 NLOS 检测: `rx - fp > 6dB → NLOS`) |
+
+每帧包含全部 8 锚点测距（superframe 对齐到 pub_rate）。
+
+#### 真值 (`/sim/odom` — `nav_msgs/Odometry`)
+
+| 字段 | 说明 |
+|------|------|
+| `pose.pose.position` | 真实位置 (200 Hz) |
+| `pose.pose.orientation` | 真实姿态 |
+| `twist.twist.linear` | 真实速度 |
+
+#### 输出格式
+
+| 文件 | 格式 | 内容 |
+|------|------|------|
+| `trajectory.txt` | TUM (`t x y z qx qy qz qw`) | FGO 融合轨迹 |
+| `groundtruth.txt` | TUM | 真值轨迹 (从 Odometry 提取) |
+
+### 10.6 评测与分析 (`tools/analyze_log.py`)
+
+```bash
+# 分析最新日志 (自动跟随 logs/latest 符号链接)
+python3 tools/analyze_log.py
+
+# 分析指定日志
+python3 tools/analyze_log.py logs/2026-06-15_16-09-35_sim_circle/
+```
+
+**依赖**: `evo` (Python API), `numpy`, `matplotlib`, `scipy`
+
+**工作流程**:
+1. 读取 `trajectory.txt` + `groundtruth.txt`
+2. 通过 evo Python API 做 SE(3) Umeyama 全位姿对齐
+3. 计算 ATE (Absolute Trajectory Error) 和 RPE (Relative Pose Error，未对齐)
+4. 生成 14 张 PNG 图表 + `report.md` 综合报告
+
+#### 生成图表清单
+
+**基础轨迹图** (GT+Estimate 叠加):
+| 图 | 内容 |
+|----|------|
+| `trajectory_xy.png` | 俯视轨迹 (GT 蓝虚 + 估计 红实) |
+| `trajectory_3d.png` | 3D 轨迹 (GT 蓝虚 + 估计 红实) |
+| `position_time.png` | X/Y/Z 位置 vs 时间 (GT 黑虚 + 估计 彩色实) |
+| `velocity_time.png` | 估计速度 vs 时间 |
+
+**精度对比图**:
+| 图 | 内容 |
+|----|------|
+| `trajectory_compare_xy.png` | GT vs 估计 俯视 (ATE 热力上色) |
+| `trajectory_compare_3d.png` | GT vs 估计 3D (ATE 热力上色) |
+| `ate_timeline.png` | ATE 误差随时间 (含 RMSE/Mean/Median/P95) |
+| `rpe_timeline.png` | RPE 误差随时间 (含 RMSE/Mean/Median) |
+| `error_distributions.png` | ATE/RPE 直方图 (含全部统计量 + P95 达标检测) |
+
+**诊断图**:
+| 图 | 内容 |
+|----|------|
+| `convergence.png` | 优化收敛 (每趟误差 + χ²) |
+| `residual_heatmap.png` | 每锚点残差热力图 |
+| `covariance_diag.png` | 位置不确定度 (σ) vs 时间 |
+
+#### 报告内容 (`report.md`)
+
+- **Summary**: 关键帧数、内点比例、每锚点 RMSE
+- **Trajectory Comparison**: ATE/RMSE/Mean/Median/**P95**/Max/Min/Std
+- **P95 达标检测**: 目标 ≤ 0.10m, ✅ PASS 或 ❌ FAIL (含超出量)
+- **RPE 表格**: Δ=1 frame 和 Δ~1s 的 RMSE/Mean/Median/P95
+- **所有图表内嵌** (14 张 PNG)
+
+在 VS Code 中按 `Ctrl+Shift+V` 预览报告。
+
+#### 预期精度 (仿真场景)
+
+| 指标 | 典型值 |
+|------|--------|
+| ATE RMSE | < 0.10 m |
+| ATE P95 | < 0.12 m |
+| RPE (1 frame) RMSE | ~0.64 m (未对齐) |
+| UWB 内点比例 | 100% (LOS 无遮挡) |
+
+## 11. 开发指南
+
+### 11.1 里程碑
 
 | M | 内容 | 测试 |
 |---|------|------|
@@ -313,18 +528,18 @@ roslaunch uwb_imu_fgo offline.launch
 | M7 | 在线自标定 | UT-9 |
 | M8 | 诊断 + 轨迹输出 | IT-1~IT-4 |
 
-### 10.2 添加新模块
+### 11.2 添加新模块
 
 1. 在 `include/uifgo/` 中声明接口
 2. 在 `src/` 中实现
 3. 在 `test/` 中写 GoogleTest（合成数据 + 已知真值）
 4. 在 `CMakeLists.txt` 中添加源文件
 
-### 10.3 添加新的 UWB 消息类型
+### 11.3 添加新的 UWB 消息类型
 
 当前支持 `LinktrackNodeframe3`。要添加新类型，在 `src/data_loader.cpp` 的 `LoadFromBag()` 中添加对应的 `instantiate<>()` 分支。
 
-## 11. 设计参考
+## 12. 设计参考
 
 | 参考来源 | 借鉴技术 |
 |----------|---------|
@@ -333,7 +548,7 @@ roslaunch uwb_imu_fgo offline.launch
 | uwb-imu-positioning | IMU 预积分 + 偏置一阶修正、Ceres 流形参数化 |
 | C-LIUO | UWB 消息格式 (LinktrackNodeframe3)、NLOS RSSI 检测 |
 
-## 12. RViz 可视化
+## 13. RViz 可视化
 
 ### 13.1 概述
 
@@ -420,6 +635,6 @@ roslaunch uwb_imu_fgo offline_with_viz.launch config_path:=/path/to/slam.yaml
 
 ---
 
-## 13. License
+## 14. License
 
 BSD
