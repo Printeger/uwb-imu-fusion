@@ -1,0 +1,79 @@
+# SFUISE ISAS-Walk3 Configuration
+# ISAS-Walk dataset: handheld walking with RTLS UWB + Waveshare Sense HAT IMU
+# Ground truth: VIVE lighthouse tracker
+
+dataset:
+  interface: "sfuise"
+
+sfuise:
+  data_dir: "data/SFUISE"
+  sequence: 3
+  uwb_group_window: 0.0
+  imu_topic: "/waveshare_sense_hat_b"
+  uwb_topic: "/rtls_flares"
+  anchor_topic: "/anchor_list"
+  gt_topic: "/vive/transform/tracker_1_ref"
+
+anchors: []
+
+extrinsics:
+  lever_arm_init: [0.1, -0.025, 0.0]
+  calib_lever: true
+  lever_prior_sigma: 0.05
+
+calibration:
+  calib_anchor: false
+  calib_range_bias: false
+  range_bias_sigma: 0.05
+  calib_td: false
+  td_init: 0.0
+
+imu:
+  sigma_a: 0.357
+  sigma_g: 0.19
+  sigma_wa: 0.044
+  sigma_wg: 0.018
+  gravity: 9.81
+  imu_acc_in_g: false
+
+initialization:
+  use_imu_orientation: false
+  imu_orientation_world: "enu"
+
+uwb:
+  sigma_range: 0.15
+  v_max: 2.0
+  nlos_rssi_diff: 8.0
+  min_range: 0.3
+  max_range: 60.0
+  dist_consistency_thresh: 2.0
+  warmup_frames: 20
+
+solver:
+  lm_max_iter: 100
+  rel_error_tol: 1.0e-6
+  abs_error_tol: 1.0e-8
+  gnc_mu_step: 1.4
+  gnc_max_iter: 20
+  gnc_rel_cost_tol: 1.0e-4
+  gnc_inlier_prob: 0.99
+  gnc_weight_thresh: -1.0
+  chi2_reject_prob: 0.99
+  max_rejection_rounds: 3
+
+keyframe:
+  step: 4
+  yaw_align_frames: 15
+
+debug:
+  log: false
+
+# --- DoP-Optimized Synthetic Anchors (greedy PDOP minimization) ---
+synthetic:
+  enabled: true
+  sigma_range: 0.12
+  test_counts: [1]
+  anchors:
+    - id: 9000
+      pos: [1.82, 0.49, 2.91]
+      prior_sigma: 0.05

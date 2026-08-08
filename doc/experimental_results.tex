@@ -412,6 +412,84 @@ for real data.}
 \end{frame}
 
 % ============================================================
+\begin{frame}{DoP Ablation — Anchor Distribution (SFUISE Walk1)}
+\centering
+\includegraphics[width=0.95\textwidth]{../logs/plots/dop_anchor_layout.png}
+
+\vspace{0.1cm}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+{\footnotesize \textbf{Left (N=5)}: 5 real anchors — 3 at ground (z=0), 2 elevated (z≈1.86m). PDOP=1.94.}
+\end{column}
+\begin{column}{0.5\textwidth}
+{\footnotesize \textbf{Center (N=7)}: +2 DoP-optimal synthetic (S1 at z=3.1m, S2 at z=−0.5m). PDOP→1.15 (−41\%).}
+\end{column}
+\end{columns}
+\vspace{0.05cm}
+{\footnotesize \textbf{Right (N=8)}: +3rd synthetic (S3 at z=3.1m). PDOP→1.07 (−45\%) but ATE degrades — noise outweighs geometry gain.}
+\end{frame}
+
+% ============================================================
+\begin{frame}{DoP Ablation — SFUISE Results (All 3 Walks)}
+\centering
+\includegraphics[width=0.9\textwidth]{../logs/plots/dop_sfuise.png}
+
+\vspace{0.1cm}
+\begin{table}
+\centering\tiny
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Walk} & \textbf{N=5 (real)} & \textbf{N=7 (+2 opt)} & \textbf{N=8 (+3 opt)} & \textbf{Best $\Delta$ATE} \\
+\midrule
+W1 (57s) & 0.170m (PDOP 1.94) & \textbf{0.123m} (PDOP 1.15) & 0.130m (PDOP 1.07) & \textbf{--27\%} \\
+W2 (73s) & 0.233m (PDOP 2.03) & \textbf{0.160m} (PDOP 1.16) & 0.178m (PDOP 1.07) & \textbf{--31\%} \\
+W3 (78s) & 0.167m (PDOP 2.07) & \textbf{0.148m} (PDOP 1.16) & 0.161m (PDOP 1.08) & \textbf{--12\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.1cm}
+\begin{block}{Key Finding}
+\textbf{+2 DoP-optimal synthetic anchors} $\to$ ATE $\downarrow$ 12--31\% across all walks.
+N=7 consistently beats N=8 (diminishing returns — 3rd anchor adds noise without PDOP gain).
+Longer walks (W3, 78s) benefit less due to accumulated IMU drift. \textbf{Δz, not anchor count, drives accuracy.}
+\end{block}
+\end{frame}
+
+% ============================================================
+\begin{frame}{DoP Ablation — MILUV (Plain-LM Limitation)}
+\centering
+\begin{columns}
+\begin{column}{0.48\textwidth}
+\centering
+\includegraphics[width=\textwidth]{../logs/plots/dop_miluv.png}
+\end{column}
+\begin{column}{0.48\textwidth}
+\vspace{-0.3cm}
+\textbf{MILUV DoP-optimized anchors fail}\\
+\vspace{0.1cm}
+\begin{itemize}\setlength{\itemsep}{4pt}\footnotesize
+    \item Greedy optimizer places anchors at\\ \textbf{extreme heights} (−3.1m / +6.1m)
+    \item PDOP drops 1.69→1.09 (−35\%)\\
+    but \textbf{plain-LM diverges} for N=7,8
+    \item Reason: trilateration initialization\\
+    is already far from optimum with\\
+    coplanar real anchors (Δz=0.31m)
+    \item GNC pre-warming would likely\\
+    resolve this (works for SFUISE)
+\end{itemize}
+
+\vspace{0.2cm}
+\begin{block}{Contrast with SFUISE}
+SFUISE baseline geometry (Δz=1.86m) is \textbf{good enough} for plain-LM to converge.
+MILUV (Δz=0.31m) needs GNC pre-warming before synthetic anchor augmentation.
+\textbf{Geometry quality determines optimizer robustness, not just final accuracy.}
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================================
 \begin{frame}{Key Findings \& Recommendations}
 \centering
 \begin{columns}
