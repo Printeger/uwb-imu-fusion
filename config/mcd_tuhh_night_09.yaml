@@ -1,0 +1,85 @@
+# MCD tuhh_night_09 -- split-bag UWB/IMU interface
+#
+# Anchor positions below were robustly fitted from this sequence's official
+# gt_pose_inW.csv, tag0 ranges and the official HHS tag0 lever arm. MCD does
+# not publish surveyed UWB anchor positions. Therefore these anchors are
+# suitable for interface/integration testing, but GT-assisted anchor fitting
+# must be disclosed when reporting benchmark accuracy.
+
+dataset:
+  interface: "mcd"
+  imu_bag_path: "../data/tuhh_night_09_vn200.bag"
+  uwb_bag_path: "../data/tuhh_night_09_ltpb.bag"
+  gt_csv_path: "../data/gt_pose_inW.csv"
+
+anchors:
+  - {id: 6, pos: [41.746789438, 132.703824440, 3.159697103], prior_sigma: 0.50}
+  - {id: 7, pos: [23.140480674, 93.528641040, 0.058293379], prior_sigma: 0.50}
+  - {id: 8, pos: [-17.645612735, 11.311440232, 2.122226266], prior_sigma: 0.50}
+  - {id: 9, pos: [51.937365032, 29.267983570, 0.991459879], prior_sigma: 0.50}
+
+extrinsics:
+  # Official MCD HHS calibration: body(VN200) <- ltpb_tag0.
+  lever_arm_init: [-0.0423, 0.1908, 0.0469]
+  calib_lever: false
+  lever_prior_sigma: 0.05
+
+calibration:
+  calib_anchor: false
+  calib_range_bias: false
+  range_bias_sigma: 0.10
+  calib_td: false
+  td_init: 0.0
+
+imu:
+  sigma_a: 0.10
+  sigma_g: 0.01
+  sigma_wa: 0.01
+  sigma_wg: 2.0e-5
+  gravity: 9.81
+  imu_acc_in_g: false       # VN200 bag is already in m/s^2
+
+initialization:
+  # TUHH Body coincides with VN200 and uses the VN200 NED attitude convention.
+  # The sequence does not start with a sufficiently static two-second interval.
+  use_imu_orientation: true
+  imu_orientation_world: "ned"
+
+uwb:
+  sigma_range: 0.20
+  v_max: 5.0
+  nlos_rssi_diff: 6.0
+  min_range: 0.3
+  max_range: 150.0
+  dist_consistency_thresh: 3.0
+  warmup_frames: 20
+
+solver:
+  lm_max_iter: 200
+  rel_error_tol: 1.0e-6
+  abs_error_tol: 1.0e-8
+  gnc_mu_step: 1.4
+  gnc_max_iter: 50
+  gnc_rel_cost_tol: 1.0e-5
+  gnc_inlier_prob: 0.99
+  gnc_weight_thresh: 0.01
+  chi2_reject_prob: 0.99
+  max_rejection_rounds: 3
+
+keyframe:
+  step: 10                # 20 Hz UWB -> about 2 Hz keyframes
+  yaw_align_frames: 15
+
+debug:
+  log: true
+
+topics:
+  imu: "/vn200/imu"
+  uwb: "/ltp_tag0/nlnf3"
+  vicon: ""
+  gt_odom: ""
+
+bag:
+  # Crop the first 1.1 s so sensor data starts inside the CSV GT interval.
+  start: 1.1
+  durr: -1.0

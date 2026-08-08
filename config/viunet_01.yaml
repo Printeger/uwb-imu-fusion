@@ -1,0 +1,95 @@
+# ============================================================
+# UWB-IMU FGO — VIUNet Dataset Config (Sequence 01)
+# ============================================================
+# 数据集: VIUNet (NTU, Vicon GT, D435i IMU, LinkTrack UWB, 4 ceiling anchors)
+# 传感器:
+#   IMU: RealSense D435i, 200 Hz, y-up → rotated to ENU (z-up)
+#   UWB: Nooploop LinkTrack S, ~33 Hz, 4 anchors, CSV format
+#   GT:  Vicon motion capture, ~33 Hz, 3×4 affine matrix CSV
+# 使用: rosrun uwb_imu_fgo uwb_imu_fgo_node _config_path:=config/viunet_01.yaml
+# ============================================================
+
+dataset:
+  interface: "viunet"
+
+# --- VIUNet-specific settings ---
+viunet:
+  data_dir: "../data/VIUNet/VIUNet_01"
+  swap_uwb_yz: true
+  rotate_imu_yup: true
+  imu_csv: "imu/data.csv"
+  uwb_csv: "uwb/data.csv"
+  gt_csv:  "gt/data.csv"
+
+# --- 外参: UWB 天线在 IMU 坐标系下的位置 (D435i body frame) ---
+extrinsics:
+  lever_arm_init: [0.0, 0.0, 0.0]
+  calib_lever: false
+  lever_prior_sigma: 0.05
+
+# --- 在线标定开关 ---
+calibration:
+  calib_anchor: false
+  calib_range_bias: false
+  range_bias_sigma: 0.10
+  calib_td: true
+  td_init: 0.0
+
+# --- IMU 噪声参数 (RealSense D435i) ---
+imu:
+  sigma_a: 0.05
+  sigma_g: 0.005
+  sigma_wa: 0.005
+  sigma_wg: 1.0e-5
+  gravity: 9.81
+  imu_acc_in_g: false
+
+# --- Initialization ---
+initialization:
+  use_imu_orientation: false
+  imu_orientation_world: "enu"
+
+# --- UWB 噪声 & 过滤 (Nooploop LinkTrack S) ---
+uwb:
+  sigma_range: 0.15
+  v_max: 3.0
+  nlos_rssi_diff: 6.0
+  min_range: 0.3
+  max_range: 30.0
+  dist_consistency_thresh: 2.0
+  warmup_frames: 20
+
+# --- 求解器 (含 GNC 鲁棒优化) ---
+solver:
+  lm_max_iter: 200
+  rel_error_tol: 1.0e-6
+  abs_error_tol: 1.0e-8
+  gnc_mu_step: 1.4
+  gnc_max_iter: 100
+  gnc_rel_cost_tol: 1.0e-5
+  gnc_inlier_prob: 0.99
+  gnc_weight_thresh: 0.01
+  chi2_reject_prob: 0.99
+  max_rejection_rounds: 3
+
+# --- 关键帧下采样 (UWB ~33 Hz → step=3 → ~11 Hz keyframes) ---
+keyframe:
+  step: 3
+  yaw_align_frames: 30
+
+# --- Debug 日志输出 ---
+debug:
+  log: true
+
+# --- ROS Topic 配置 (not used for VIUNet CSV interface) ---
+topics:
+  imu: ""
+  uwb: ""
+  vicon: ""
+  gt_odom: ""
+
+# --- Rosbag 路径 (not used for VIUNet) ---
+bag:
+  path: ""
+  start: 0.0
+  durr: -1.0

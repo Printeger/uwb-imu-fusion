@@ -1,0 +1,81 @@
+# ============================================================
+# UWB-IMU FGO — MILUV Dataset Config (Random 3D Trajectory)
+# ============================================================
+
+dataset:
+  interface: "miluv"
+
+miluv:
+  data_dir: "../data/MILUV/default_1_random3_0"
+  uwb_group_window: 0.05
+  tag_levers:
+    10: [0.13189, -0.17245, -0.05249]
+    11: [-0.17542, 0.15712, -0.05307]
+
+anchors:
+  - {id: 0, pos: [3.2738, 3.4640, 1.8093], prior_sigma: 0.10}
+  - {id: 1, pos: [3.1864, 0.2739, 1.5885], prior_sigma: 0.10}
+  - {id: 2, pos: [2.8505, -2.9231, 1.8974], prior_sigma: 0.10}
+  - {id: 3, pos: [-2.4976, -3.5018, 1.7731], prior_sigma: 0.10}
+  - {id: 4, pos: [-2.9579, 0.6128, 1.6571], prior_sigma: 0.10}
+  - {id: 5, pos: [-2.7347, 3.6585, 1.8903], prior_sigma: 0.10}
+
+extrinsics:
+  lever_arm_init: [0.0, 0.0, 0.0]
+  calib_lever: false
+  lever_prior_sigma: 0.05
+
+calibration:
+  calib_anchor: false
+  calib_range_bias: false
+  range_bias_sigma: 0.10
+  calib_td: false
+  td_init: 0.0
+
+imu:
+  sigma_a: 0.002
+  sigma_g: 0.0005
+  sigma_wa: 0.0002
+  sigma_wg: 4.0e-5
+  gravity: 9.81
+  imu_acc_in_g: false
+
+initialization:
+  use_imu_orientation: false
+  imu_orientation_world: "enu"
+
+uwb:
+  sigma_range: 0.15
+  v_max: 3.0
+  min_range: 0.3
+  max_range: 30.0
+  dist_consistency_thresh: 3.0
+  warmup_frames: 30
+
+solver:
+  lm_max_iter: 200
+  gnc_mu_step: 1.4
+  gnc_max_iter: 100
+  gnc_rel_cost_tol: 1.0e-5
+  gnc_inlier_prob: 0.99
+  gnc_weight_thresh: -1.0
+  chi2_reject_prob: 0.99
+  max_rejection_rounds: 3
+
+keyframe:
+  step: 3
+  yaw_align_frames: 30
+
+debug:
+  log: true
+
+topics:
+  imu: ""
+  uwb: ""
+  vicon: ""
+  gt_odom: ""
+
+bag:
+  path: ""
+  start: 0.0
+  durr: -1.0

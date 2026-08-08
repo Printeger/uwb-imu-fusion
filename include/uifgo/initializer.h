@@ -1,18 +1,21 @@
 #pragma once
 
-#include "uifgo/types.h"
-#include "uifgo/config.h"
+#include <gtsam/navigation/ImuBias.h>
+
 #include <vector>
+
+#include "uifgo/config.h"
+#include "uifgo/types.h"
 
 namespace uifgo {
 
 struct InitResult {
   bool ok = false;
-  gtsam::Pose3  T0;                     // initial body->world pose
-  gtsam::Vector3 v0;                    // initial world velocity (zero)
-  gtsam::Vector3 ba0;                   // initial accel bias
-  gtsam::Vector3 bg0;                   // initial gyro bias
-  gtsam::Vector3 gravity_world;         // (0, 0, -g) after alignment
+  gtsam::Pose3 T0;               // initial body->world pose
+  gtsam::Vector3 v0;             // initial world velocity (zero)
+  gtsam::Vector3 ba0;            // initial accel bias
+  gtsam::Vector3 bg0;            // initial gyro bias
+  gtsam::Vector3 gravity_world;  // (0, 0, -g) after alignment
 };
 
 class Initializer {
@@ -20,8 +23,7 @@ class Initializer {
   explicit Initializer(const Config& cfg);
 
   // Detect static interval in [i0, i1) using accel norm variance.
-  bool DetectStatic(const std::vector<ImuSample>& imu,
-                    size_t i0, size_t i1,
+  bool DetectStatic(const std::vector<ImuSample>& imu, size_t i0, size_t i1,
                     double* accel_norm_mean = nullptr);
 
   // UWB trilateration: Gauss-Newton on sum-of-squared range errors.
@@ -41,9 +43,9 @@ class Initializer {
   // Returns best yaw angle (rad) in world frame.
   double AlignYaw(const std::vector<ImuSample>& imu,
                   const std::vector<UwbFrame>& uwb_frames,
-                  const gtsam::Rot3& R_rp,
-                  const gtsam::Point3& p0,
-                  size_t num_keyframes) const;
+                  const gtsam::Rot3& R_rp, const gtsam::Point3& p0,
+                  size_t num_keyframes,
+                  const gtsam::imuBias::ConstantBias& init_bias) const;
 
   Config cfg_;
 };

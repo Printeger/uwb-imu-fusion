@@ -7,6 +7,10 @@
 # 使用: roslaunch uwb_imu_fgo offline.launch
 # ============================================================
 
+# 原始单-bag接口；切换MCD数据集请使用 mcd_tuhh_night_09.yaml。
+dataset:
+  interface: "original"
+
 # --- 锚点 3D 坐标 (预标定, 来自 data/building_anchor_pose.yaml, 10个有效锚点, 跳过id=1原点) ---
 # anchors:
 #   - {id: 2, pos: [13.023, 77.497, 0.038], prior_sigma: 0.10}

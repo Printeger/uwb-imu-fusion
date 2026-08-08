@@ -71,7 +71,15 @@ void Logger::LogConfig(const Config& cfg) {
   f << "max_rejection_rounds: " << cfg.max_rejection_rounds << "\n";
   f << "kf_step: " << cfg.kf_step << "\n";
   f << "lm_max_iter: " << cfg.lm_max_iter << "\n";
+  f << "use_imu_orientation_init: " << cfg.use_imu_orientation_init << "\n";
+  f << "imu_orientation_world: " << cfg.imu_orientation_world << "\n";
   f << "bag_path: " << cfg.bag_path << "\n";
+  f << "dataset_interface: " << cfg.data_interface << "\n";
+  if (cfg.data_interface == "mcd") {
+    f << "imu_bag_path: " << cfg.imu_bag_path << "\n";
+    f << "uwb_bag_path: " << cfg.uwb_bag_path << "\n";
+    f << "gt_csv_path: " << cfg.gt_csv_path << "\n";
+  }
   f.close();
 }
 

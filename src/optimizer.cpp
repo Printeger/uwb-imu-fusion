@@ -86,14 +86,17 @@ OptimizerResult Optimizer::Optimize(const NonlinearFactorGraph& graph,
   // by orders of magnitude, bringing the solution into a regime where GNC
   // can correctly distinguish NLOS outliers from inliers.
   LevenbergMarquardtParams prewarm_params = lm_params;
-  prewarm_params.setMaxIterations(10);
+  int prewarm_iters = (out.initial_error > 1e8)   ? 30
+                      : (out.initial_error > 1e4) ? 15
+                                                  : 10;
+  prewarm_params.setMaxIterations(prewarm_iters);
   Values prewarmed = initial;
   {
     LevenbergMarquardtOptimizer preopt(graph, prewarmed, prewarm_params);
     prewarmed = preopt.optimize();
   }
   std::cout << "done (error " << out.initial_error << " -> "
-            << graph.error(prewarmed) << ")\n";
+            << graph.error(prewarmed) << ", " << prewarm_iters << " iters)\n";
   std::cout << "  [Stage 1/3] GNC+TLS annealing... " << std::flush;
 
   // ====================== Stage A: GNC + TLS ======================

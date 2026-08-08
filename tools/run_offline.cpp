@@ -18,6 +18,7 @@
 #include <iostream>
 #include <map>
 #include <numeric>
+#include <random>
 #include <thread>
 
 #include "uifgo/config.h"
@@ -58,6 +59,40 @@ static uifgo::OptimizerResult RunPass(const uifgo::Config& cfg,
             << " inliers=" << result.inlier_uwb_indices.size() << "/"
             << uwb_indices.size() << "\n";
   return result;
+}
+
+// Helper: run one optimization pass with plain LM (no GNC, for synthetic data)
+static uifgo::OptimizerResult RunPassPlainLM(
+    const uifgo::Config& cfg, const std::vector<uifgo::UwbFrame>& kfs,
+    const std::vector<uifgo::ImuSample>& imu, const uifgo::InitResult& init,
+    const std::string& pass_name) {
+  uifgo::GraphBuilder builder(cfg);
+  gtsam::NonlinearFactorGraph graph;
+  gtsam::Values values;
+  std::vector<size_t> uwb_indices;
+  builder.Build(kfs, imu, init, &graph, &values, &uwb_indices);
+
+  std::cout << "\n--- Pass [" << pass_name << "] (plain LM) ---\n";
+  std::cout << "  Graph: " << graph.size() << " factors, " << uwb_indices.size()
+            << " UWB\n";
+
+  gtsam::LevenbergMarquardtParams lm_params;
+  lm_params.setMaxIterations(cfg.lm_max_iter);
+  lm_params.setRelativeErrorTol(cfg.lm_rel_tol);
+  lm_params.setAbsoluteErrorTol(cfg.lm_abs_tol);
+  lm_params.setLinearSolverType("SEQUENTIAL_CHOLESKY");
+
+  uifgo::OptimizerResult out;
+  out.initial_error = graph.error(values);
+  gtsam::LevenbergMarquardtOptimizer lmopt(graph, values, lm_params);
+  out.values = lmopt.optimize();
+  out.final_error = graph.error(out.values);
+  out.reduced_chi2 = 0.0;
+  for (size_t idx : uwb_indices) out.inlier_uwb_indices.push_back(idx);
+  std::cout << "  Result: error=" << out.final_error
+            << " inliers=" << out.inlier_uwb_indices.size() << "/"
+            << uwb_indices.size() << "\n";
+  return out;
 }
 
 int main(int argc, char** argv) {
@@ -114,10 +149,77 @@ int main(int argc, char** argv) {
   std::cout << "\n[1/6] Loading data from rosbag..." << std::flush;
   auto t1 = std::chrono::high_resolution_clock::now();
   uifgo::Config base_cfg = uifgo::ConfigLoader::Load(config_path);
-  std::string bag_path =
-      uifgo::ConfigLoader::ResolveBagPath(config_dir, base_cfg.bag_path);
-
-  std::cout << "Bag:       " << bag_path << "\n";
+  const bool is_mcd = base_cfg.data_interface == "mcd";
+  const bool is_viral = base_cfg.data_interface == "viral";
+  const bool is_viunet = base_cfg.data_interface == "viunet";
+  const bool is_miluv = base_cfg.data_interface == "miluv";
+  const bool is_sfuise = base_cfg.data_interface == "sfuise";
+  std::string imu_bag_path;
+  std::string uwb_bag_path;
+  std::string gt_csv_path;
+  std::string bag_path;  // primary bag, also used as the run/log identifier
+  if (is_mcd) {
+    imu_bag_path =
+        uifgo::ConfigLoader::ResolveBagPath(config_dir, base_cfg.imu_bag_path);
+    uwb_bag_path =
+        uifgo::ConfigLoader::ResolveBagPath(config_dir, base_cfg.uwb_bag_path);
+    gt_csv_path =
+        uifgo::ConfigLoader::ResolveBagPath(config_dir, base_cfg.gt_csv_path);
+    bag_path = uwb_bag_path;
+    std::cout << "Interface: MCD split bags + CSV GT\n";
+    std::cout << "IMU bag:   " << imu_bag_path << "\n";
+    std::cout << "UWB bag:   " << uwb_bag_path << "\n";
+    std::cout << "GT CSV:    " << gt_csv_path << "\n";
+  } else if (is_viral) {
+    bag_path =
+        uifgo::ConfigLoader::ResolveBagPath(config_dir, base_cfg.bag_path);
+    // Override topics for VIRAL dataset convention.
+    base_cfg.imu_topic = base_cfg.viral_imu_topic;
+    base_cfg.uwb_topic = base_cfg.viral_uwb_topic;
+    base_cfg.vicon_topic = base_cfg.viral_gt_topic;
+    base_cfg.gt_odom_topic = "";
+    std::cout << "Interface: NTU VIRAL single bag\n";
+    std::cout << "Bag:       " << bag_path << "\n";
+    std::cout << "IMU topic: " << base_cfg.imu_topic << "\n";
+    std::cout << "UWB topic: " << base_cfg.uwb_topic << "\n";
+    std::cout << "GT topic:  " << base_cfg.vicon_topic << "\n";
+  } else if (is_viunet) {
+    bag_path = uifgo::ConfigLoader::ResolveBagPath(config_dir,
+                                                   base_cfg.viunet_data_dir);
+    std::cout << "Interface: VIUNet CSV\n";
+    std::cout << "Data dir:  " << bag_path << "\n";
+    std::cout << "IMU csv:   " << base_cfg.viunet_imu_csv << "\n";
+    std::cout << "UWB csv:   " << base_cfg.viunet_uwb_csv << "\n";
+    std::cout << "GT csv:    " << base_cfg.viunet_gt_csv << "\n";
+    std::cout << "Y-up→ENU:  "
+              << (base_cfg.viunet_rotate_imu_yup ? "yes" : "no") << "\n";
+  } else if (is_miluv) {
+    bag_path = uifgo::ConfigLoader::ResolveBagPath(config_dir,
+                                                   base_cfg.miluv_data_dir);
+    std::cout << "Interface: MILUV CSV (PX4 IMU + Decawave UWB + Mocap)\n";
+    std::cout << "Data dir:  " << bag_path << "\n";
+    std::cout << "Robot:     " << base_cfg.miluv_robot_dir << "\n";
+    std::cout << "IMU csv:   " << base_cfg.miluv_imu_csv << "\n";
+    std::cout << "UWB csv:   " << base_cfg.miluv_uwb_csv << "\n";
+    std::cout << "GT csv:    " << base_cfg.miluv_gt_csv << "\n";
+    std::cout << "UWB group: " << base_cfg.miluv_uwb_group_window << "s\n";
+  } else if (is_sfuise) {
+    bag_path = uifgo::ConfigLoader::ResolveBagPath(config_dir,
+                                                   base_cfg.sfuise_data_dir);
+    std::cout << "Interface: SFUISE ISAS-Walk" << base_cfg.sfuise_sequence
+              << " (ToA UWB+IMU+GT)\n";
+    std::cout << "Data dir:  " << bag_path << "\n";
+    std::cout << "Sequence:  " << base_cfg.sfuise_sequence << "\n";
+    std::cout << "IMU topic: " << base_cfg.sfuise_imu_topic << "\n";
+    std::cout << "UWB topic: " << base_cfg.sfuise_uwb_topic << "\n";
+    std::cout << "GT topic:  " << base_cfg.sfuise_gt_topic << "\n";
+    std::cout << "UWB group: " << base_cfg.sfuise_uwb_group_window << "s\n";
+  } else {
+    bag_path =
+        uifgo::ConfigLoader::ResolveBagPath(config_dir, base_cfg.bag_path);
+    std::cout << "Interface: original single bag\n";
+    std::cout << "Bag:       " << bag_path << "\n";
+  }
   std::cout << "Anchors:   " << base_cfg.anchors.size() << "\n";
   for (const auto& a : base_cfg.anchors)
     std::cout << "  #" << a.id << " @ [" << a.pos.x() << "," << a.pos.y() << ","
@@ -133,7 +235,74 @@ int main(int argc, char** argv) {
   uifgo::DataLoader loader(base_cfg);
   std::vector<uifgo::ImuSample> imu_samples;
   std::vector<uifgo::UwbFrame> uwb_frames;
-  if (!loader.LoadFromBag(bag_path, &imu_samples, &uwb_frames)) {
+  bool load_ok = false;
+
+  if (is_mcd) {
+    load_ok = loader.LoadFromBags(imu_bag_path, uwb_bag_path, &imu_samples,
+                                  &uwb_frames);
+  } else if (is_viral) {
+    // VIRAL: auto-extract anchors from UWB messages.
+    std::vector<uifgo::AnchorConfig> viral_anchors;
+    load_ok = loader.LoadViralBag(bag_path, &imu_samples, &uwb_frames,
+                                  &viral_anchors);
+    // If auto-anchors were discovered and no anchors were provided in config,
+    // use the auto-discovered ones.
+    if (!viral_anchors.empty() && base_cfg.anchors.empty()) {
+      base_cfg.anchors = std::move(viral_anchors);
+      // Rebuild per-anchor prior sigma list.
+      base_cfg.anchor_prior_sigmas.clear();
+      for (const auto& a : base_cfg.anchors)
+        base_cfg.anchor_prior_sigmas.push_back(a.prior_sigma);
+      std::cout << "VIRAL: using " << base_cfg.anchors.size()
+                << " auto-discovered anchors.\n";
+    }
+  } else if (is_viunet) {
+    // VIUNet: CSV-based dataset, anchors auto-extracted from UWB CSV.
+    std::string viunet_data_dir = uifgo::ConfigLoader::ResolveBagPath(
+        config_dir, base_cfg.viunet_data_dir);
+    std::vector<uifgo::AnchorConfig> viunet_anchors;
+    load_ok = loader.LoadViunetCsv(viunet_data_dir, &imu_samples, &uwb_frames,
+                                   &viunet_anchors);
+    if (!viunet_anchors.empty() && base_cfg.anchors.empty()) {
+      base_cfg.anchors = std::move(viunet_anchors);
+      base_cfg.anchor_prior_sigmas.clear();
+      for (const auto& a : base_cfg.anchors)
+        base_cfg.anchor_prior_sigmas.push_back(a.prior_sigma);
+      std::cout << "VIUNet: using " << base_cfg.anchors.size()
+                << " anchors from UWB CSV.\n";
+    }
+  } else if (is_miluv) {
+    std::string miluv_data_dir = uifgo::ConfigLoader::ResolveBagPath(
+        config_dir, base_cfg.miluv_data_dir);
+    std::vector<uifgo::AnchorConfig> miluv_anchors;
+    load_ok = loader.LoadMiluvCsv(miluv_data_dir, &imu_samples, &uwb_frames,
+                                  &miluv_anchors);
+    if (base_cfg.anchors.empty() && !miluv_anchors.empty()) {
+      base_cfg.anchors = std::move(miluv_anchors);
+      base_cfg.anchor_prior_sigmas.clear();
+      for (const auto& a : base_cfg.anchors)
+        base_cfg.anchor_prior_sigmas.push_back(a.prior_sigma);
+      std::cout << "MILUV: using " << base_cfg.anchors.size()
+                << " anchors from config.\n";
+    }
+  } else if (is_sfuise) {
+    std::string sfuise_data_dir = uifgo::ConfigLoader::ResolveBagPath(
+        config_dir, base_cfg.sfuise_data_dir);
+    std::vector<uifgo::AnchorConfig> sfuise_anchors;
+    load_ok = loader.LoadSfuiseBag(sfuise_data_dir, base_cfg.sfuise_sequence,
+                                   &imu_samples, &uwb_frames, &sfuise_anchors);
+    if (base_cfg.anchors.empty() && !sfuise_anchors.empty()) {
+      base_cfg.anchors = std::move(sfuise_anchors);
+      base_cfg.anchor_prior_sigmas.clear();
+      for (const auto& a : base_cfg.anchors)
+        base_cfg.anchor_prior_sigmas.push_back(a.prior_sigma);
+      std::cout << "SFUISE: using " << base_cfg.anchors.size()
+                << " auto-discovered anchors.\n";
+    }
+  } else {
+    load_ok = loader.LoadFromBag(bag_path, &imu_samples, &uwb_frames);
+  }
+  if (!load_ok) {
     std::cerr << "ERROR: failed to load data from bag.\n";
     return 1;
   }
@@ -395,10 +564,32 @@ int main(int argc, char** argv) {
   // ============ Ground Truth Comparison (VICON + Odometry fallback)
   // ============
   uifgo::DataLoader gt_loader(base_cfg);
-  auto gt_traj = gt_loader.LoadGroundTruth(bag_path);
-  // If no VICON PoseStamped GT, try Odometry-based GT (e.g. /sim/odom)
-  if (gt_traj.empty()) {
-    gt_traj = gt_loader.LoadGroundTruthOdom(bag_path);
+  std::vector<uifgo::NavState> gt_traj;
+  if (is_miluv) {
+    std::string miluv_data_dir = uifgo::ConfigLoader::ResolveBagPath(
+        config_dir, base_cfg.miluv_data_dir);
+    std::string gt_csv = miluv_data_dir + "/" + base_cfg.miluv_robot_dir + "/" +
+                         base_cfg.miluv_gt_csv;
+    gt_traj = gt_loader.LoadGroundTruthMiluv(gt_csv);
+  } else if (is_viunet) {
+    std::string viunet_data_dir = uifgo::ConfigLoader::ResolveBagPath(
+        config_dir, base_cfg.viunet_data_dir);
+    std::string gt_csv = viunet_data_dir + "/" + base_cfg.viunet_gt_csv;
+    gt_traj = gt_loader.LoadGroundTruthViunet(gt_csv);
+  } else if (is_sfuise) {
+    std::string sfuise_data_dir = uifgo::ConfigLoader::ResolveBagPath(
+        config_dir, base_cfg.sfuise_data_dir);
+    std::string sfuise_bag = sfuise_data_dir + "/ISAS-Walk" +
+                             std::to_string(base_cfg.sfuise_sequence) + ".bag";
+    gt_traj = gt_loader.LoadGroundTruthSfuise(sfuise_bag);
+  } else if (is_mcd) {
+    gt_traj = gt_loader.LoadGroundTruthCsv(gt_csv_path);
+  } else {
+    gt_traj = gt_loader.LoadGroundTruth(bag_path);
+    // If no VICON PoseStamped GT, try Odometry-based GT (e.g. /sim/odom)
+    if (gt_traj.empty()) {
+      gt_traj = gt_loader.LoadGroundTruthOdom(bag_path);
+    }
   }
   if (!gt_traj.empty()) {
     uifgo::TrajectoryIO::WriteTum(data_dir + "/groundtruth.txt", gt_traj);
@@ -406,45 +597,39 @@ int main(int argc, char** argv) {
   }
   double ate_rmse = -1.0, p50 = -1.0, p95 = -1.0, p99 = -1.0, max_err = -1.0;
   size_t gt_match_count = 0;
+  uifgo::ATEStats stats;  // kept in outer scope for synthetic ablation
 
   if (!gt_traj.empty()) {
-    // Compute per-frame position errors
-    std::vector<double> pos_errors;
-    for (const auto& e : traj) {
-      auto it = std::lower_bound(
-          gt_traj.begin(), gt_traj.end(), e.t,
-          [](const uifgo::NavState& g, double t) { return g.t < t; });
-      if (it == gt_traj.end()) continue;
-      const uifgo::NavState* g;
-      if (it == gt_traj.begin())
-        g = &(*it);
-      else {
-        double d1 = it->t - e.t, d0 = e.t - (it - 1)->t;
-        g = (d0 < d1) ? &(*(it - 1)) : &(*it);
-      }
-      double err = (gtsam::Vector3(e.T.translation()) -
-                    gtsam::Vector3(g->T.translation()))
-                       .norm();
-      pos_errors.push_back(err);
+    // Compute ATE with SE(3) Umeyama alignment (handles different GT frames).
+    stats = uifgo::TrajectoryIO::ComputeATE(traj, gt_traj);
+    if (stats.ok) {
+      ate_rmse = stats.rmse;
+      p50 = stats.p50;
+      p95 = stats.p95;
+      p99 = stats.p99;
+      max_err = stats.max_err;
+      gt_match_count = stats.matched;
     }
 
-    if (!pos_errors.empty()) {
-      std::sort(pos_errors.begin(), pos_errors.end());
-      gt_match_count = pos_errors.size();
-      ate_rmse = std::sqrt(
-          std::accumulate(pos_errors.begin(), pos_errors.end(), 0.0,
-                          [](double s, double v) { return s + v * v; }) /
-          pos_errors.size());
-      p50 = pos_errors[pos_errors.size() * 50 / 100];
-      p95 = pos_errors[pos_errors.size() * 95 / 100];
-      p99 = pos_errors[pos_errors.size() * 99 / 100];
-      max_err = pos_errors.back();
-    }
-
-    std::cout << "\n--- VICON Ground Truth Comparison ---\n";
-    std::cout << "GT topic:       " << base_cfg.vicon_topic << "\n";
+    std::cout << "\n--- Ground Truth Comparison ---\n";
+    std::cout << "GT source:      "
+              << (is_sfuise  ? base_cfg.sfuise_gt_topic
+                  : is_miluv ? base_cfg.miluv_data_dir + "/" +
+                                   base_cfg.miluv_robot_dir + "/" +
+                                   base_cfg.miluv_gt_csv
+                  : is_viunet
+                      ? base_cfg.viunet_data_dir + "/" + base_cfg.viunet_gt_csv
+                  : is_mcd ? gt_csv_path
+                           : base_cfg.vicon_topic)
+              << "\n";
     std::cout << "GT poses:       " << gt_traj.size() << "\n";
     std::cout << "Matched frames: " << gt_match_count << "\n";
+    if (stats.ok) {
+      std::cout << "Align scale:    " << stats.scale << "\n";
+      std::cout << "Align R:\n" << stats.T_align.rotation().matrix() << "\n";
+      std::cout << "Align t:        " << stats.T_align.translation().transpose()
+                << "\n";
+    }
     std::cout << "ATE RMSE:       " << ate_rmse << " m\n";
     std::cout << "P50 error:      " << p50 << " m\n";
     std::cout << "P95 error:      " << p95 << " m\n";
@@ -456,8 +641,7 @@ int main(int argc, char** argv) {
       logger.LogGtComparison(ate_rmse, p50, p95, p99, max_err, gt_match_count,
                              gt_traj.size());
   } else {
-    std::cout << "\n[INFO] No VICON ground truth loaded (topic not configured "
-                 "or empty).\n";
+    std::cout << "\n[INFO] No ground truth loaded.\n";
   }
 
   // ============ Summary ============
@@ -508,7 +692,175 @@ int main(int argc, char** argv) {
   std::cout << "Output:             " << data_dir << "/trajectory.txt\n";
   std::cout << "GroundTruth:        " << data_dir << "/groundtruth.txt\n";
   std::cout << "Calibration:        " << data_dir << "/calibration.txt\n";
-  std::cout << "============================================\n";
+
+  // ============ Synthetic Anchor Ablation ============
+  if (base_cfg.synthetic_enabled && stats.ok && !gt_traj.empty()) {
+    std::cout << "\n============================================\n";
+    std::cout << " SYNTHETIC ANCHOR ABLATION STUDY\n";
+    std::cout << "============================================\n";
+    std::cout << "Baseline ATE: " << stats.rmse << " m (" << stats.matched
+              << " matched poses)\n";
+    std::cout << "Noise sigma:  " << base_cfg.synthetic_sigma_range << " m\n";
+    std::cout << "Synth anchors: " << base_cfg.synthetic_anchors.size()
+              << " defined\n";
+
+    // SE(3): estimate → GT. Invert for GT → anchor frame.
+    gtsam::Pose3 T_gt_to_anchor = stats.T_align.inverse();
+    const double syn_sigma = base_cfg.synthetic_sigma_range;
+
+    // Pre-transform all GT positions to anchor frame
+    std::vector<double> gt_t;
+    std::vector<Eigen::Vector3d> gt_pa;
+    for (const auto& g : gt_traj) {
+      gtsam::Point3 pa = T_gt_to_anchor.transformFrom(g.T.translation());
+      gt_t.push_back(g.t);
+      gt_pa.push_back(Eigen::Vector3d(pa.x(), pa.y(), pa.z()));
+    }
+
+    std::mt19937 rng(42);
+    std::normal_distribution<double> ndist(0.0, syn_sigma);
+
+    // Summary rows
+    struct SR {
+      int n;
+      double ate, p50, p95, p99, mx;
+      int inl, tot;
+      double c2;
+    };
+    std::vector<SR> sres;
+
+    for (int ns : base_cfg.synthetic_test_counts) {
+      if (ns > (int)base_cfg.synthetic_anchors.size()) {
+        std::cout << "  Skipping N=" << ns << " (only "
+                  << base_cfg.synthetic_anchors.size() << " defined)\n";
+        continue;
+      }
+
+      std::cout << "\n--- Synthetic N=" << ns << " ---\n" << std::flush;
+
+      // Augment anchors
+      uifgo::Config acfg = base_cfg;
+      acfg.anchors = base_cfg.anchors;
+      for (int i = 0; i < ns; ++i)
+        acfg.anchors.push_back(base_cfg.synthetic_anchors[i]);
+      acfg.anchor_prior_sigmas.clear();
+      for (const auto& a : acfg.anchors)
+        acfg.anchor_prior_sigmas.push_back(a.prior_sigma);
+      acfg.calib_anchor = false;
+      acfg.calib_range_bias = false;
+
+      // Augment UWB frames with noise-corrupted synthetic ranges
+      auto aug_uwb = uwb_frames;
+      int added = 0;
+      for (auto& f : aug_uwb) {
+        // Interpolate GT position in anchor frame at frame.t
+        auto it = std::lower_bound(gt_t.begin(), gt_t.end(), f.t);
+        Eigen::Vector3d pa;
+        if (it == gt_t.end()) {
+          pa = gt_pa.back();
+        } else if (it == gt_t.begin()) {
+          pa = gt_pa.front();
+        } else {
+          size_t i2 = it - gt_t.begin(), i1 = i2 - 1;
+          double alpha = (f.t - gt_t[i1]) / (gt_t[i2] - gt_t[i1]);
+          pa = gt_pa[i1] * (1.0 - alpha) + gt_pa[i2] * alpha;
+        }
+
+        for (int i = 0; i < ns; ++i) {
+          const auto& sa = base_cfg.synthetic_anchors[i];
+          Eigen::Vector3d sap(sa.pos.x(), sa.pos.y(), sa.pos.z());
+          double tr = (pa - sap).norm();
+          double nr = tr + ndist(rng);
+          if (nr < 0.1) nr = 0.1;
+          uifgo::UwbRange sr;
+          sr.anchor_id = sa.id;
+          sr.dist = nr;
+          sr.fp_rssi = 0.0;
+          sr.rx_rssi = 0.0;
+          f.ranges.push_back(sr);
+          ++added;
+        }
+      }
+      std::cout << "  Added " << added << " synthetic ranges to "
+                << aug_uwb.size() << " frames\n";
+
+      // Filter + downsample
+      uifgo::OutlierFilter filt(acfg);
+      std::vector<uifgo::UwbFrame> kfs;
+      for (const auto& f : aug_uwb) {
+        auto ret = filt.PreFilter(f);
+        if (!ret.empty()) {
+          uifgo::UwbFrame ff = f;
+          ff.ranges = ret;
+          kfs.push_back(ff);
+        }
+      }
+      if (acfg.kf_step > 1) {
+        std::vector<uifgo::UwbFrame> ds;
+        for (size_t i = 0; i < kfs.size(); i += acfg.kf_step)
+          ds.push_back(kfs[i]);
+        kfs = ds;
+      }
+      if (kfs.empty()) {
+        std::cerr << "  ERROR: no keyframes\n";
+        continue;
+      }
+      std::cout << "  Keyframes: " << kfs.size() << "\n";
+
+      // Init + optimize
+      uifgo::Initializer init(acfg);
+      auto ires = init.Run(imu_samples, kfs);
+      acfg.calib_lever = true;
+      auto ores = RunPassPlainLM(acfg, kfs, imu_samples, ires, "Synth");
+
+      // ATE
+      std::vector<double> kt;
+      for (const auto& f : kfs) kt.push_back(f.t);
+      auto straj = uifgo::TrajectoryIO::ExtractTrajectory(ores.values, kt);
+      auto sstat = uifgo::TrajectoryIO::ComputeATE(straj, gt_traj);
+
+      SR r;
+      r.n = ns;
+      r.ate = sstat.ok ? sstat.rmse : -1.0;
+      r.p50 = sstat.ok ? sstat.p50 : -1.0;
+      r.p95 = sstat.ok ? sstat.p95 : -1.0;
+      r.p99 = sstat.ok ? sstat.p99 : -1.0;
+      r.mx = sstat.ok ? sstat.max_err : -1.0;
+      r.inl = ores.inlier_uwb_indices.size();
+      r.tot = ores.inlier_uwb_indices.size() + ores.outlier_uwb_indices.size();
+      r.c2 = ores.reduced_chi2;
+      sres.push_back(r);
+
+      std::cout << "  ATE: " << r.ate << " m  P95: " << r.p95
+                << " m  inliers: " << r.inl << "/" << r.tot
+                << "  chi2: " << r.c2 << "\n";
+
+      // Save trajectory
+      std::string od = data_dir + "/synthetic_n" + std::to_string(ns);
+      fs::create_directories(od);
+      uifgo::TrajectoryIO::WriteTum(od + "/trajectory.txt", straj);
+    }
+
+    // Print summary table
+    std::cout << "\n--- Synthetic Anchor Ablation Summary ---\n";
+    std::cout << " N  | ATE(m) | P50(m) | P95(m) | P99(m) | Max(m) | Inl/Tot | "
+                 "chi2\n";
+    std::cout << " ---|--------|--------|--------|--------|--------|---------|-"
+                 "-----\n";
+    std::cout << std::fixed << std::setprecision(3);
+    std::cout << std::setw(3) << 0 << " | " << std::setw(6) << stats.rmse
+              << " | " << std::setw(6) << stats.p50 << " | " << std::setw(6)
+              << stats.p95 << " | " << std::setw(6) << stats.p99 << " | "
+              << std::setw(6) << stats.max_err << " |   ---   |  ---\n";
+    for (const auto& r : sres) {
+      std::cout << std::setw(3) << r.n << " | " << std::setw(6) << r.ate
+                << " | " << std::setw(6) << r.p50 << " | " << std::setw(6)
+                << r.p95 << " | " << std::setw(6) << r.p99 << " | "
+                << std::setw(6) << r.mx << " | " << std::setw(4) << r.inl << "/"
+                << std::setw(4) << r.tot << " | " << r.c2 << "\n";
+    }
+    std::cout << "============================================\n";
+  }
 
   // --- Log Summary ---
   if (logger.enabled()) {

@@ -24,8 +24,7 @@ TEST(ConfigLoader, LoadSampleYaml) {
     << "  v_max: 2.0\n"
     << "  nlos_rssi_diff: 8.0\n"
     << "solver:\n"
-    << "  lm_max_iter: 50\n"
-    << "  cauchy_k: 1.5\n";
+    << "  lm_max_iter: 50\n";
   f.close();
 
   auto cfg = uifgo::ConfigLoader::Load(tmp_path);
@@ -43,7 +42,28 @@ TEST(ConfigLoader, LoadSampleYaml) {
   EXPECT_DOUBLE_EQ(cfg.v_max, 2.0);
   EXPECT_DOUBLE_EQ(cfg.nlos_rssi_diff, 8.0);
   EXPECT_EQ(cfg.lm_max_iter, 50);
-  EXPECT_DOUBLE_EQ(cfg.cauchy_k, 1.5);
+}
+
+TEST(ConfigLoader, McdDatasetInterface) {
+  std::string tmp_path = "/tmp/test_mcd_dataset.yaml";
+  std::ofstream f(tmp_path);
+  f << "dataset:\n"
+    << "  interface: mcd\n"
+    << "  imu_bag_path: imu.bag\n"
+    << "  uwb_bag_path: uwb.bag\n"
+    << "  gt_csv_path: gt.csv\n"
+    << "initialization:\n"
+    << "  use_imu_orientation: true\n"
+    << "  imu_orientation_world: ned\n";
+  f.close();
+
+  auto cfg = uifgo::ConfigLoader::Load(tmp_path);
+  EXPECT_EQ(cfg.data_interface, "mcd");
+  EXPECT_EQ(cfg.imu_bag_path, "imu.bag");
+  EXPECT_EQ(cfg.uwb_bag_path, "uwb.bag");
+  EXPECT_EQ(cfg.gt_csv_path, "gt.csv");
+  EXPECT_TRUE(cfg.use_imu_orientation_init);
+  EXPECT_EQ(cfg.imu_orientation_world, "ned");
 }
 
 TEST(ConfigLoader, DefaultValues) {

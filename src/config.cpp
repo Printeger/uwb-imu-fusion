@@ -17,6 +17,24 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
 
   YAML::Node node = YAML::LoadFile(yaml_path);
 
+  // --- Dataset interface ---
+  if (node["dataset"]) {
+    auto ds = node["dataset"];
+    if (ds["interface"]) cfg.data_interface = ds["interface"].as<std::string>();
+    if (ds["imu_bag_path"])
+      cfg.imu_bag_path = ds["imu_bag_path"].as<std::string>();
+    if (ds["uwb_bag_path"])
+      cfg.uwb_bag_path = ds["uwb_bag_path"].as<std::string>();
+    if (ds["gt_csv_path"])
+      cfg.gt_csv_path = ds["gt_csv_path"].as<std::string>();
+  }
+  if (cfg.data_interface != "original" && cfg.data_interface != "mcd" &&
+      cfg.data_interface != "viral" && cfg.data_interface != "viunet" &&
+      cfg.data_interface != "miluv" && cfg.data_interface != "sfuise") {
+    throw std::runtime_error("Unsupported dataset.interface: " +
+                             cfg.data_interface);
+  }
+
   // --- Anchors ---
   if (node["anchors"]) {
     for (const auto& a : node["anchors"]) {
@@ -62,6 +80,22 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
     if (im["sigma_wg"]) cfg.sigma_wg = im["sigma_wg"].as<double>();
     if (im["gravity"]) cfg.gravity = im["gravity"].as<double>();
     if (im["imu_acc_in_g"]) cfg.imu_acc_in_g = im["imu_acc_in_g"].as<bool>();
+  }
+
+  // --- Initialization ---
+  if (node["initialization"]) {
+    auto init = node["initialization"];
+    if (init["use_imu_orientation"])
+      cfg.use_imu_orientation_init = init["use_imu_orientation"].as<bool>();
+    if (init["imu_orientation_world"])
+      cfg.imu_orientation_world =
+          init["imu_orientation_world"].as<std::string>();
+  }
+  if (cfg.imu_orientation_world != "enu" &&
+      cfg.imu_orientation_world != "ned") {
+    throw std::runtime_error(
+        "Unsupported initialization.imu_orientation_world: " +
+        cfg.imu_orientation_world);
   }
 
   // --- UWB ---
@@ -127,6 +161,105 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
     if (bg["path"]) cfg.bag_path = bg["path"].as<std::string>();
     if (bg["start"]) cfg.bag_start = bg["start"].as<double>();
     if (bg["durr"]) cfg.bag_durr = bg["durr"].as<double>();
+  }
+
+  // --- VIRAL ---
+  if (node["viral"]) {
+    auto vr = node["viral"];
+    if (vr["requester_ids"]) {
+      cfg.viral_requester_ids = vr["requester_ids"].as<std::vector<int>>();
+    }
+    if (vr["responder_ids"]) {
+      cfg.viral_responder_ids = vr["responder_ids"].as<std::vector<int>>();
+    }
+    if (vr["auto_anchors"])
+      cfg.viral_auto_anchors = vr["auto_anchors"].as<bool>();
+    if (vr["uwb_group_window"])
+      cfg.viral_uwb_group_window = vr["uwb_group_window"].as<double>();
+    if (vr["imu_topic"])
+      cfg.viral_imu_topic = vr["imu_topic"].as<std::string>();
+    if (vr["uwb_topic"])
+      cfg.viral_uwb_topic = vr["uwb_topic"].as<std::string>();
+    if (vr["gt_topic"]) cfg.viral_gt_topic = vr["gt_topic"].as<std::string>();
+    // requester_levers: map of node_id -> [x, y, z]
+    if (vr["requester_levers"]) {
+      for (const auto& kv : vr["requester_levers"]) {
+        int nid = kv.first.as<int>();
+        auto lv = kv.second.as<std::vector<double>>();
+        cfg.viral_requester_levers[nid] = gtsam::Point3(lv[0], lv[1], lv[2]);
+      }
+    }
+  }
+
+  // --- VIUNet ---
+  if (node["viunet"]) {
+    auto vn = node["viunet"];
+    if (vn["data_dir"]) cfg.viunet_data_dir = vn["data_dir"].as<std::string>();
+    if (vn["imu_csv"]) cfg.viunet_imu_csv = vn["imu_csv"].as<std::string>();
+    if (vn["uwb_csv"]) cfg.viunet_uwb_csv = vn["uwb_csv"].as<std::string>();
+    if (vn["gt_csv"]) cfg.viunet_gt_csv = vn["gt_csv"].as<std::string>();
+    if (vn["swap_uwb_yz"])
+      cfg.viunet_swap_uwb_yz = vn["swap_uwb_yz"].as<bool>();
+    if (vn["rotate_imu_yup"])
+      cfg.viunet_rotate_imu_yup = vn["rotate_imu_yup"].as<bool>();
+  }
+
+  // --- MILUV ---
+  if (node["miluv"]) {
+    auto ml = node["miluv"];
+    if (ml["data_dir"]) cfg.miluv_data_dir = ml["data_dir"].as<std::string>();
+    if (ml["robot_dir"])
+      cfg.miluv_robot_dir = ml["robot_dir"].as<std::string>();
+    if (ml["imu_csv"]) cfg.miluv_imu_csv = ml["imu_csv"].as<std::string>();
+    if (ml["uwb_csv"]) cfg.miluv_uwb_csv = ml["uwb_csv"].as<std::string>();
+    if (ml["gt_csv"]) cfg.miluv_gt_csv = ml["gt_csv"].as<std::string>();
+    if (ml["uwb_group_window"])
+      cfg.miluv_uwb_group_window = ml["uwb_group_window"].as<double>();
+    if (ml["tag_levers"]) {
+      for (const auto& kv : ml["tag_levers"]) {
+        int tid = kv.first.as<int>();
+        auto lv = kv.second.as<std::vector<double>>();
+        cfg.miluv_tag_levers[tid] = gtsam::Point3(lv[0], lv[1], lv[2]);
+      }
+    }
+  }
+
+  // --- SFUISE ---
+  if (node["sfuise"]) {
+    auto sf = node["sfuise"];
+    if (sf["data_dir"]) cfg.sfuise_data_dir = sf["data_dir"].as<std::string>();
+    if (sf["sequence"]) cfg.sfuise_sequence = sf["sequence"].as<int>();
+    if (sf["uwb_group_window"])
+      cfg.sfuise_uwb_group_window = sf["uwb_group_window"].as<double>();
+    if (sf["imu_topic"])
+      cfg.sfuise_imu_topic = sf["imu_topic"].as<std::string>();
+    if (sf["uwb_topic"])
+      cfg.sfuise_uwb_topic = sf["uwb_topic"].as<std::string>();
+    if (sf["anchor_topic"])
+      cfg.sfuise_anchor_topic = sf["anchor_topic"].as<std::string>();
+    if (sf["gt_topic"]) cfg.sfuise_gt_topic = sf["gt_topic"].as<std::string>();
+  }
+
+  // --- Synthetic anchors ---
+  if (node["synthetic"]) {
+    auto sy = node["synthetic"];
+    if (sy["enabled"]) cfg.synthetic_enabled = sy["enabled"].as<bool>();
+    if (sy["sigma_range"])
+      cfg.synthetic_sigma_range = sy["sigma_range"].as<double>();
+    if (sy["test_counts"]) {
+      cfg.synthetic_test_counts = sy["test_counts"].as<std::vector<int>>();
+    }
+    if (sy["anchors"]) {
+      for (const auto& a : sy["anchors"]) {
+        AnchorConfig ac;
+        ac.id = a["id"].as<int>();
+        auto pos = a["pos"].as<std::vector<double>>();
+        ac.pos = gtsam::Point3(pos[0], pos[1], pos[2]);
+        ac.prior_sigma =
+            a["prior_sigma"] ? a["prior_sigma"].as<double>() : 0.05;
+        cfg.synthetic_anchors.push_back(ac);
+      }
+    }
   }
 
   // populate per-anchor prior sigma list

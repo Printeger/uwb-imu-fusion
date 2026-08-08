@@ -25,6 +25,7 @@ src/uwb-imu-fusion/
 ├── msg/                               # UWB 消息定义（兼容 LinkTrack 协议）
 │   ├── LinktrackNode2.msg
 │   ├── LinktrackNodeframe3.msg
+│   ├── McdLinktrackNodeframe3.msg
 │   └── LinktrackTagframe0.msg
 ├── config/
 │   └── vicon_test.yaml               # VICON 数据集测试配置
@@ -232,7 +233,7 @@ roslaunch uwb_imu_fgo offline_with_viz.launch
 | 文件 | 内容 |
 |------|------|
 | `data/trajectory.txt` | TUM 格式轨迹: `t x y z qx qy qz qw` |
-| `data/groundtruth.txt` | TUM 格式真值轨迹（如有 VICON） |
+| `data/groundtruth.txt` | TUM 格式真值轨迹（VICON、Odometry 或 MCD CSV） |
 | `data/calibration.txt` | 标定结果: 杆臂、锚点位置修正、距离偏置 |
 
 ### 8.2 Debug 日志（`debug.log: true` 时）
@@ -303,6 +304,21 @@ roslaunch uwb_imu_fgo offline.launch
 
 默认配置: **kf_step=10** (367 关键帧, <1min)、**标定全关** (基线精度)。
 调参: 改 `config/slam.yaml` 中的 `keyframe.step`（5 更精，1 最精）或开启 `calibration.*`。
+
+### 9.1 MCD TUHH split-bag 数据接口
+
+`dataset.interface` 默认为 `original`，因此原有配置无需修改。MCD 将
+VN200、UWB 和 GT 分别存储，使用专用配置即可切换：
+
+```bash
+roslaunch uwb_imu_fgo offline_with_viz.launch \
+  config_path:=$(rospack find uwb_imu_fgo)/config/mcd_tuhh_night_09.yaml
+```
+
+MCD 配置使用 `/vn200/imu`、`/ltp_tag0/nlnf3` 和
+`gt_pose_inW.csv`。官方未提供 UWB 锚点坐标；示例配置中的锚点由该序列
+GT 和 tag0 测距拟合，只适合打通接口和集成测试，正式 benchmark 应使用
+独立标定得到的锚点坐标。
 
 ## 10. 仿真系统
 

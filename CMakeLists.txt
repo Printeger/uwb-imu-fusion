@@ -19,12 +19,15 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   eigen_conversions
   visualization_msgs
+  uwb_driver
+  isas_msgs
 )
 
 add_message_files(
   FILES
   LinktrackNode2.msg
   LinktrackNodeframe3.msg
+  McdLinktrackNodeframe3.msg
   LinktrackTagframe0.msg
   AuxCommand.msg
   Corrections.msg
@@ -62,6 +65,7 @@ catkin_package(
     message_runtime
     eigen_conversions
     visualization_msgs
+    uwb_driver
 )
 
 # --- GTSAM (≥ 4.2 required for GncOptimizer / setInlierCostThresholdsAtProbability) ---

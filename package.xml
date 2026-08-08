@@ -20,6 +20,8 @@
   <build_depend>eigen_conversions</build_depend>
   <build_depend>visualization_msgs</build_depend>
   <build_depend>nodelet</build_depend>
+  <build_depend>uwb_driver</build_depend>
+  <build_depend>isas_msgs</build_depend>
 
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rosbag</exec_depend>
@@ -32,6 +34,8 @@
   <exec_depend>eigen_conversions</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>
   <exec_depend>nodelet</exec_depend>
+  <exec_depend>uwb_driver</exec_depend>
+  <exec_depend>isas_msgs</exec_depend>
 
   <export>
     <nodelet plugin="${prefix}/simulator/so3_control/so3_control_plugin.xml"/>

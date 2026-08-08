@@ -1,11 +1,14 @@
 #include "uifgo/initializer.h"
-#include "uifgo/imu_preint.h"
 
-#include <gtsam/navigation/NavState.h>
 #include <gtsam/navigation/ImuBias.h>
+#include <gtsam/navigation/NavState.h>
+
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <set>
+
+#include "uifgo/imu_preint.h"
 
 namespace uifgo {
 
@@ -60,9 +63,18 @@ bool Initializer::Trilaterate(const std::vector<UwbRange>& ranges,
   for (const auto& a : A) p = p + gtsam::Point3(gtsam::Vector3(a) / A.size());
 
   // Gauss-Newton: minimize sum (||A_i - p|| - r_i)^2
-  for (int iter = 0; iter < 30; ++iter) {
+  // With Levenberg-Marquardt damping for stability (co-planar anchors etc.)
+  const double kDamping = 1.0;   // initial LM damping
+  const double kMaxStep = 50.0;  // max position update per iteration (m)
+  const int kMaxIters = 50;
+
+  double lambda = kDamping;
+  double prev_cost = 1e30;
+
+  for (int iter = 0; iter < kMaxIters; ++iter) {
     Eigen::Matrix3d H = Eigen::Matrix3d::Zero();
     Eigen::Vector3d b = Eigen::Vector3d::Zero();
+    double cost = 0.0;
 
     for (size_t i = 0; i < A.size(); ++i) {
       Eigen::Vector3d d = gtsam::Vector3(p) - gtsam::Vector3(A[i]);
@@ -72,11 +84,34 @@ bool Initializer::Trilaterate(const std::vector<UwbRange>& ranges,
       double e = dn - r[i];        // residual
       H += u * u.transpose();
       b -= u * e;
+      cost += e * e;
     }
 
-    Eigen::Vector3d dp = H.ldlt().solve(b);
+    // LM damping: H_damped = H + lambda * diag(H)
+    Eigen::Matrix3d H_damped = H;
+    H_damped(0, 0) += lambda * std::max(H(0, 0), 1e-6);
+    H_damped(1, 1) += lambda * std::max(H(1, 1), 1e-6);
+    H_damped(2, 2) += lambda * std::max(H(2, 2), 1e-6);
+
+    Eigen::Vector3d dp = H_damped.ldlt().solve(b);
+
+    // Clamp step size to prevent divergence
+    double step_norm = dp.norm();
+    if (step_norm > kMaxStep) {
+      dp *= kMaxStep / step_norm;
+    }
+
     p = gtsam::Point3(gtsam::Vector3(p) + dp);
-    if (dp.norm() < 1e-6) break;
+
+    // LM lambda adjustment
+    if (cost < prev_cost) {
+      lambda *= 0.5;  // reduce damping, trust the model more
+      prev_cost = cost;
+    } else {
+      lambda *= 3.0;  // increase damping, be more cautious
+    }
+
+    if (dp.norm() < 1e-3 || (cost < 1e-6 && iter > 3)) break;
   }
 
   *p_out = p;
@@ -155,26 +190,91 @@ InitResult Initializer::Run(const std::vector<ImuSample>& imu,
     }
     res.T0 = gtsam::Pose3(R_wb, gtsam::Point3(0, 0, 0));
     res.gravity_world = gtsam::Vector3(0, 0, -cfg_.gravity);
+
+    // If IMU orientation is available (e.g. VN100), use its yaw to seed the
+    // gravity-aligned orientation.  This avoids the yaw grid search starting
+    // from an arbitrary 0° and converging to a wrong local minimum.
+    if (cfg_.use_imu_orientation_init) {
+      auto it = std::find_if(imu.begin(), imu.end(), [](const ImuSample& s) {
+        return s.has_orientation;
+      });
+      if (it != imu.end()) {
+        // Extract yaw from IMU orientation (after NED→ENU conversion if needed)
+        Eigen::Matrix3d R_world_body = it->orientation.toRotationMatrix();
+        if (cfg_.imu_orientation_world == "ned") {
+          Eigen::Matrix3d R_enu_ned;
+          R_enu_ned << 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0;
+          R_world_body = R_enu_ned * R_world_body;
+        }
+        // Decompose: R_world_body = R_gravity * Rz(yaw_imu)
+        // We have R_wb (gravity-aligned). Want: R_wb * Rz(yaw_imu)
+        // The IMU's yaw = atan2(R_world_body(1,0), R_world_body(0,0))
+        double yaw_imu = std::atan2(R_world_body(1, 0), R_world_body(0, 0));
+        gtsam::Rot3 R_yaw_imu = gtsam::Rot3::Rz(yaw_imu);
+        res.T0 = gtsam::Pose3(R_wb * R_yaw_imu, gtsam::Point3(0, 0, 0));
+        std::cout << "Initializer: seeded yaw from IMU orientation = "
+                  << yaw_imu * 180.0 / M_PI << " deg\n";
+      }
+    }
     std::cout << "Initializer: static detected, aligned gravity. bg0=["
               << res.bg0.transpose() << "]\n";
   } else {
-    std::cout << "Initializer: no static interval found, using identity "
-                 "orientation.\n";
-    res.T0 = gtsam::Pose3();
+    gtsam::Rot3 R_wb = gtsam::Rot3::identity();
+    bool used_imu_orientation = false;
+    if (cfg_.use_imu_orientation_init) {
+      auto it = std::find_if(imu.begin(), imu.end(), [](const ImuSample& s) {
+        return s.has_orientation;
+      });
+      if (it != imu.end()) {
+        Eigen::Matrix3d R_world_body = it->orientation.toRotationMatrix();
+        if (cfg_.imu_orientation_world == "ned") {
+          Eigen::Matrix3d R_enu_ned;
+          R_enu_ned << 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0;
+          R_world_body = R_enu_ned * R_world_body;
+        }
+        R_wb = gtsam::Rot3(R_world_body);
+        used_imu_orientation = true;
+      }
+    }
+    std::cout << "Initializer: no static interval found, using "
+              << (used_imu_orientation ? "IMU message" : "identity")
+              << " orientation.\n";
+    res.T0 = gtsam::Pose3(R_wb, gtsam::Point3(0, 0, 0));
     res.ba0 = gtsam::Vector3::Zero();
     res.bg0 = gtsam::Vector3::Zero();
     res.gravity_world = gtsam::Vector3(0, 0, -cfg_.gravity);
   }
 
   // --- 2. UWB trilateration for initial position ---
+  // Try the first frame first.  If it has < 3 unique anchors, accumulate
+  // ranges from subsequent frames until we reach ≥ 3 unique anchors or
+  // exhaust a small look-ahead window.  We stop early because the drone
+  // is moving — ranges from different poses destroy the trilateration
+  // single-point assumption.
   if (!uwb_frames.empty()) {
+    std::vector<UwbRange> accumulated;
+    std::set<int> anchor_ids_seen;
+    const size_t kMaxLookAhead = std::min(size_t(5), uwb_frames.size());
+
+    for (size_t i = 0; i < kMaxLookAhead; ++i) {
+      for (const auto& r : uwb_frames[i].ranges) {
+        accumulated.push_back(r);
+        anchor_ids_seen.insert(r.anchor_id);
+      }
+      if (anchor_ids_seen.size() >= 3) break;  // enough unique anchors
+    }
+
     gtsam::Point3 p0;
-    if (Trilaterate(uwb_frames[0].ranges, cfg_.anchors, &p0)) {
+    if (Trilaterate(accumulated, cfg_.anchors, &p0)) {
       res.T0 = gtsam::Pose3(res.T0.rotation(), p0);
-      std::cout << "Initializer: trilateration success, p0="
-                << gtsam::Vector3(p0).transpose() << "\n";
+      std::cout << "Initializer: trilateration success ("
+                << anchor_ids_seen.size() << " unique anchors from "
+                << accumulated.size()
+                << " ranges), p0=" << gtsam::Vector3(p0).transpose() << "\n";
     } else {
-      std::cerr << "Initializer: trilateration failed, using origin.\n";
+      std::cerr << "Initializer: trilateration failed ("
+                << anchor_ids_seen.size() << " unique anchors from "
+                << accumulated.size() << " ranges), using origin.\n";
     }
   }
 
@@ -182,10 +282,12 @@ InitResult Initializer::Run(const std::vector<ImuSample>& imu,
   // Design doc §6.3: fix roll/pitch (from gravity) and p0 (from trilateration),
   // search yaw ∈ [0, 2π) minimizing IMU-predicted UWB range residuals.
   if (cfg_.yaw_align_frames > 0 && uwb_frames.size() >= 4) {
-    size_t n_yaw_kf = std::min((size_t)cfg_.yaw_align_frames, uwb_frames.size());
+    size_t n_yaw_kf =
+        std::min((size_t)cfg_.yaw_align_frames, uwb_frames.size());
+    gtsam::imuBias::ConstantBias init_bias(res.ba0, res.bg0);
     double best_yaw =
         AlignYaw(imu, uwb_frames, res.T0.rotation(),
-                 gtsam::Point3(res.T0.translation()), n_yaw_kf);
+                 gtsam::Point3(res.T0.translation()), n_yaw_kf, init_bias);
     gtsam::Rot3 R_yaw = gtsam::Rot3::Rz(best_yaw);
     res.T0 = gtsam::Pose3(res.T0.rotation() * R_yaw, res.T0.translation());
     std::cout << "Initializer: yaw aligned = " << best_yaw * 180.0 / M_PI
@@ -203,11 +305,10 @@ InitResult Initializer::Run(const std::vector<ImuSample>& imu,
 }
 
 // ---------------------------------------------------------------------------
-double Initializer::AlignYaw(const std::vector<ImuSample>& imu,
-                              const std::vector<UwbFrame>& uwb_frames,
-                              const gtsam::Rot3& R_rp,
-                              const gtsam::Point3& p0,
-                              size_t num_keyframes) const {
+double Initializer::AlignYaw(
+    const std::vector<ImuSample>& imu, const std::vector<UwbFrame>& uwb_frames,
+    const gtsam::Rot3& R_rp, const gtsam::Point3& p0, size_t num_keyframes,
+    const gtsam::imuBias::ConstantBias& init_bias) const {
   // --- Build anchor lookup ---
   std::unordered_map<int, gtsam::Point3> anchor_map;
   for (const auto& a : cfg_.anchors) anchor_map[a.id] = a.pos;
@@ -221,13 +322,13 @@ double Initializer::AlignYaw(const std::vector<ImuSample>& imu,
   std::vector<Seg> segs;
   {
     ImuPreintegrator pi(cfg_, gtsam::Vector3(0, 0, -cfg_.gravity));
-    gtsam::imuBias::ConstantBias bias0(gtsam::Vector3::Zero(), gtsam::Vector3::Zero());
+    gtsam::imuBias::ConstantBias bias0 = init_bias;
     size_t i_imu = 0;
     while (i_imu < imu.size() && imu[i_imu].t <= uwb_frames[0].t) ++i_imu;
     for (size_t k = 1; k < num_keyframes && k < uwb_frames.size(); ++k) {
       pi.Reset(bias0);
-      i_imu = IntegrateBetween(imu, i_imu,
-                                uwb_frames[k - 1].t, uwb_frames[k].t, &pi);
+      i_imu = IntegrateBetween(imu, i_imu, uwb_frames[k - 1].t, uwb_frames[k].t,
+                               &pi);
       segs.push_back({pi.Pim(), uwb_frames[k - 1].t, uwb_frames[k].t});
     }
   }
@@ -241,7 +342,7 @@ double Initializer::AlignYaw(const std::vector<ImuSample>& imu,
     gtsam::Rot3 R0 = R_rp * gtsam::Rot3::Rz(yaw_rad);
     gtsam::Pose3 T_k(R0, p0);
     gtsam::Vector3 v_k = gtsam::Vector3::Zero();
-    gtsam::imuBias::ConstantBias bias0(gtsam::Vector3::Zero(), gtsam::Vector3::Zero());
+    gtsam::imuBias::ConstantBias bias0 = init_bias;
     double cost = 0.0;
     size_t n_ranges = 0;
 
@@ -276,12 +377,15 @@ double Initializer::AlignYaw(const std::vector<ImuSample>& imu,
   double best_yaw = 0.0, best_cost = 1e12;
   for (double yaw = 0.0; yaw < 2.0 * M_PI; yaw += kCoarseStep) {
     double c = EvaluateYaw(yaw);
-    if (c < best_cost) { best_cost = c; best_yaw = yaw; }
+    if (c < best_cost) {
+      best_cost = c;
+      best_yaw = yaw;
+    }
   }
 
   // --- Local refinement: ±5° around best, 0.5° steps ---
   const double kFineRange = 5.0 * M_PI / 180.0;
-  const double kFineStep  = 0.5 * M_PI / 180.0;
+  const double kFineStep = 0.5 * M_PI / 180.0;
   double refined_yaw = best_yaw;
   double refined_cost = best_cost;
   for (double dy = -kFineRange; dy <= kFineRange; dy += kFineStep) {
@@ -289,13 +393,16 @@ double Initializer::AlignYaw(const std::vector<ImuSample>& imu,
     if (yaw < 0.0) yaw += 2.0 * M_PI;
     if (yaw >= 2.0 * M_PI) yaw -= 2.0 * M_PI;
     double c = EvaluateYaw(yaw);
-    if (c < refined_cost) { refined_cost = c; refined_yaw = yaw; }
+    if (c < refined_cost) {
+      refined_cost = c;
+      refined_yaw = yaw;
+    }
   }
 
   std::cout << "AlignYaw: coarse best=" << best_yaw * 180.0 / M_PI
-            << " deg (cost=" << best_cost << "), refined="
-            << refined_yaw * 180.0 / M_PI << " deg (cost="
-            << refined_cost << ")\n";
+            << " deg (cost=" << best_cost
+            << "), refined=" << refined_yaw * 180.0 / M_PI
+            << " deg (cost=" << refined_cost << ")\n";
   return refined_yaw;
 }
 

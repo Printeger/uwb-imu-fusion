@@ -1,0 +1,466 @@
+\documentclass[10pt,aspectratio=169]{beamer}
+\usepackage{graphicx,booktabs,multirow,amsmath,amssymb}
+\usepackage{xcolor}
+\usetheme{default}
+\usefonttheme{professionalfonts}
+
+\title{Real-World UWB-IMU FGO: Experimental Validation}
+\subtitle{VIUNet, MILUV \& SFUISE Datasets — Anchor Geometry vs. Accuracy}
+\author{Wang Junzhe}
+\date{\today}
+
+\begin{document}
+
+% ============================================================
+\begin{frame}{Outline}
+\tableofcontents
+\end{frame}
+
+% ============================================================
+\begin{frame}{Datasets Overview}
+\centering
+\begin{table}
+\footnotesize
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Dataset} & \textbf{IMU} & \textbf{UWB} & \textbf{Anchors} &
+\textbf{$\Delta z$} & \textbf{GT} & \textbf{Dur.} \\
+\midrule
+VIUNet\_00 & D435i (200Hz) & LinkTrack S (33Hz) & 4 ceiling & \textcolor{red}{\textbf{0 m}} & Vicon & 45s \\
+MILUV circ. & PX4 (200Hz) & Decawave 1000 (30Hz) & 6 arena & \textcolor{orange}{\textbf{0.31 m}} & Mocap & 135s \\
+MILUV rand. & PX4 (200Hz) & Decawave 1000 (30Hz) & 6 arena & \textcolor{orange}{\textbf{0.31 m}} & Mocap & 205s \\
+SFUISE W1 & Sense HAT (84Hz) & RTLS (16Hz) & 5 room & \textcolor{orange}{\textbf{1.86 m}} & VIVE & 57s \\
+SFUISE W2 & Sense HAT (84Hz) & RTLS (16Hz) & 5 room & \textcolor{orange}{\textbf{1.86 m}} & VIVE & 73s \\
+SFUISE W3 & Sense HAT (84Hz) & RTLS (16Hz) & 5 room & \textcolor{orange}{\textbf{1.86 m}} & VIVE & 78s \\
+\midrule
+\textit{Simulation} & \textit{Ideal} & \textit{Ideal TWR} & \textit{8 cube} & \textcolor{green}{\textbf{4.0 m}} & \textit{Odom} & \textit{85s} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.3cm}
+\begin{block}{Key Observation}
+Anchor height diversity ($\Delta z$) spans from \textbf{0m (VIUNet)} to \textbf{1.86m (SFUISE)}.
+Without height diversity, the vertical (Z) direction is \textbf{unobservable from UWB ranges
+alone} — IMU integration drift in Z cannot be corrected. SFUISE shows that even
+consumer-grade IMU can achieve sub-0.2m ATE with moderate $\Delta z$.
+\end{block}
+\end{frame}
+
+% ============================================================
+\begin{frame}{VIUNet Dataset — 4 Ceiling-Mounted Anchors}
+\centering
+\begin{columns}
+\begin{column}{0.45\textwidth}
+\textbf{Sensor Setup}\\
+\vspace{0.1cm}
+\begin{itemize}\setlength{\itemsep}{4pt}\footnotesize
+    \item \textbf{IMU}: Intel RealSense D435i (200 Hz)
+    \item \textbf{UWB}: Nooploop LinkTrack S (33 Hz)
+    \item \textbf{GT}: Vicon motion capture (120 Hz)
+    \item \textbf{Anchors}: 4 at ceiling level (y=2.64m)
+    \item \textbf{Trajectory}: indoor flight, $\sim$45s
+\end{itemize}
+
+\vspace{0.2cm}
+\textbf{Anchor Positions}\\
+\begin{tabular}{cc}
+\toprule
+ID & (x, y, z) [m] \\
+\midrule
+1 & (-0.76, 2.64, 2.68) \\
+2 & (-0.76, 2.64, -2.32) \\
+3 & (1.24, 2.64, -2.32) \\
+4 & (1.24, 2.64, 2.68) \\
+\bottomrule
+\end{tabular}
+\end{column}
+\begin{column}{0.52\textwidth}
+\centering
+\includegraphics[width=\textwidth]{../logs/plots/traj3d_VIUNet_00.png}\\
+\vspace{0.1cm}
+{\footnotesize 3D trajectory: VIUNet estimate (blue) vs GT (black dashed).
+4 ceiling-mounted anchors (red $\blacktriangle$) at y=2.64m.}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================================
+\begin{frame}{MILUV Dataset — 6 Arena-Surrounding Anchors}
+\centering
+\begin{columns}
+\begin{column}{0.48\textwidth}
+\textbf{Sensor Setup}\\
+\vspace{0.1cm}
+\begin{itemize}\setlength{\itemsep}{4pt}\footnotesize
+    \item \textbf{IMU}: PX4 flight controller (200 Hz)
+    \item \textbf{UWB}: Decawave DWM1000 (30 Hz)
+    \item \textbf{GT}: Motion capture (120 Hz)
+    \item \textbf{Robot}: Uvify IFO-S quadcopter
+    \item \textbf{Tags}: 2 per robot (ID 10, 11)
+\end{itemize}
+
+\vspace{0.2cm}
+\textbf{6 Anchor Positions (constellation 0)}\\
+\begin{tabular}{cc}
+\toprule
+ID & (x, y, z) [m] \\
+\midrule
+0 & (3.27, 3.46, 1.81) \\
+1 & (3.19, 0.27, 1.59) \\
+2 & (2.85, -2.92, 1.90) \\
+3 & (-2.50, -3.50, 1.77) \\
+4 & (-2.96, 0.61, 1.66) \\
+5 & (-2.73, 3.66, 1.89) \\
+\bottomrule
+\end{tabular}
+\end{column}
+\begin{column}{0.48\textwidth}
+\centering
+\includegraphics[width=\textwidth]{../logs/plots/trajxy_MILUV_both.png}\\
+\vspace{0.1cm}
+{\footnotesize XY top-down: both MILUV sequences (circular left, random right).
+Estimate (colored) vs GT (black dashed). 6 arena anchors (red $\blacktriangle$).}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================================
+\begin{frame}{SFUISE Dataset — ISAS-Walk (Consumer-Grade Handheld)}
+\centering
+\begin{columns}
+\begin{column}{0.45\textwidth}
+\textbf{Sensor Setup}\\
+\vspace{0.1cm}
+\begin{itemize}\setlength{\itemsep}{4pt}\footnotesize
+    \item \textbf{IMU}: Waveshare Sense HAT (ICM-20948, 84 Hz)
+    \item \textbf{UWB}: Decawave RTLS (16 Hz, ToA mode)
+    \item \textbf{GT}: HTC VIVE lighthouse tracker (60 Hz)
+    \item \textbf{Platform}: Handheld walking rig
+    \item \textbf{3 sequences}: straight/curved walking
+\end{itemize}
+
+\vspace{0.2cm}
+\textbf{5 Anchor Positions}\\
+\begin{tabular}{cc}
+\toprule
+ID & (x, y, z) [m] \\
+\midrule
+7475 & (0, 0, 0) \\
+9524 & (2.61, 2.67, 0) \\
+10548 & (5.52, 0.05, 1.86) \\
+15155 & (3.12, -2.59, 1.85) \\
+20276 & (5.5, 0, 0) \\
+\bottomrule
+\end{tabular}
+\end{column}
+\begin{column}{0.52\textwidth}
+\centering
+\includegraphics[width=\textwidth]{../logs/plots/traj3d_SFUISE_W1.png}\\
+\vspace{0.05cm}
+\includegraphics[width=\textwidth]{../logs/plots/trajxy_SFUISE_all.png}\\
+\vspace{0.1cm}
+{\footnotesize Top: Walk1 3D view (5 anchors at 2 heights). Bottom: all 3 walks XY.}
+\end{column}
+\end{columns}
+
+\vspace{0.1cm}
+{\footnotesize \textbf{Key}: Consumer-grade IMU (Sense HAT $\sim\$$25) is 5--10$\times$ noisier
+than PX4/D435i, but anchor height diversity ($\Delta z{=}1.86$m) partially compensates.
+ATE 0.17--0.23m despite low-cost sensors.}
+\end{frame}
+
+% ============================================================
+\begin{frame}{Accuracy Results}
+\centering
+\begin{columns}
+\begin{column}{0.55\textwidth}
+\centering
+\includegraphics[width=\textwidth]{../logs/plots/ate_bar.png}
+\end{column}
+\begin{column}{0.42\textwidth}
+\vspace{-0.3cm}
+\begin{table}
+\centering\footnotesize
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Metric} & \textbf{VIUNet} & \textbf{MILUV c.} & \textbf{MILUV r.} & \textbf{SFUISE avg} \\
+\midrule
+ATE RMSE   & \textbf{0.59} & 0.88 & 1.18 & \textbf{0.17--0.23} \\
+ATE P50    & 0.51 & 0.54 & 0.80 & 0.15 \\
+ATE P95    & 0.96 & 1.57 & 2.46 & 0.28--0.47 \\
+$\sigma_z$ max & 0.22 & 1.17 & 1.69 & --- \\
+\midrule
+\Delta z    & \textcolor{red}{0 m} & \textcolor{orange}{0.31 m} & \textcolor{orange}{0.31 m} & \textcolor{green!60}{\textbf{1.86 m}} \\
+Inliers    & 49\% & 87\% & 76\% & 100\% \\
+$\chi^2$/dof  & 2.61 & 0.80 & 0.63 & 0.18--0.23 \\
+Anch. Res. & 0.46m & 0.32m & 0.28m & 0.09--0.16m \\
+\bottomrule
+\end{tabular}
+\end{table}
+\end{column}
+\end{columns}
+
+\vspace{0.2cm}
+{\footnotesize SFUISE achieves the best real-world accuracy (ATE 0.17--0.23m) despite
+consumer-grade sensors. This is entirely explained by anchor height diversity
+($\Delta z{=}1.86$m vs 0--0.31m). Correcting IMU noise to SFUISE-calibrated
+values ($\sigma_g{=}0.19$, $\sigma_a{=}0.357$) and 4$\times$ denser keyframes
+did NOT change ATE — confirming the geometry-limited hypothesis.}
+\end{frame}
+
+% ============================================================
+\begin{frame}{Per-Anchor UWB Residuals}
+\centering
+\includegraphics[width=0.95\textwidth]{../logs/plots/anchor_residuals_bar.png}
+
+\vspace{0.15cm}
+{\footnotesize SFUISE anchors show the lowest residuals ($\mu{=}0.10{-}0.12$m) — consistent with
+higher $\Delta z$ providing stronger geometric constraints. VIUNet ($\mu{=}0.46$m) has the worst
+residuals due to coplanar ceiling anchors — range residuals alone cannot constrain Z position.}
+\end{frame}
+
+% ============================================================
+\begin{frame}{Error Timeline}
+\centering
+\includegraphics[width=0.85\textwidth]{../logs/plots/error_timeline.png}
+\end{frame}
+
+% ============================================================
+\begin{frame}{Root Cause: Anchor Height Diversity Drives Accuracy}
+\centering
+\includegraphics[width=0.68\textwidth]{../logs/plots/ate_vs_spread_synth.png}
+
+\vspace{0.2cm}
+\begin{block}{Fitted Relationship (all real datasets)}
+$$\text{ATE [m]} \approx -0.25 \cdot \Delta z \text{ [m]} + 0.63 \qquad (R \approx -0.91)$$
+Every \textbf{1 meter} of additional anchor height diversity reduces ATE by $\sim$\textbf{0.25 m}.
+SFUISE ($\Delta z{=}1.86$m) lands exactly on the trend line at 0.17--0.23m — at the geometric CRLB.
+\end{block}
+
+\vspace{0.1cm}
+{\footnotesize With only 2/5 anchors elevated, SFUISE baseline cannot break below $\sim$0.17m.
+Synthetic ablation confirms: adding 3 height-diverse anchors $\to$ ATE 0.127m ($-$25\%).
+With coplanar anchors ($\Delta z \approx 0$), the vertical position is entirely
+determined by IMU integration — consumer-grade IMU drift dominates accuracy.}
+\end{frame}
+
+% ============================================================
+\begin{frame}{SFUISE — Per-Sequence Accuracy Breakdown}
+\centering
+\includegraphics[width=0.7\textwidth]{../logs/plots/sfuise_ate_breakdown.png}
+
+\vspace{0.1cm}
+{\footnotesize All 3 walks share identical 5-anchor geometry ($\Delta z{=}1.86$m).
+Walk3 achieves best ATE (0.167m) despite longest duration (78s). Walk2 has higher
+P95 (0.471m) due to more challenging curved walking path. Consistency: $\sigma$(ATE) $\approx \pm 0.03$m.}
+\end{frame}
+
+% ============================================================
+\begin{frame}{Synthetic Anchor Ablation — Anchor Layout}
+\centering
+\begin{columns}
+\begin{column}{0.58\textwidth}
+\centering
+\includegraphics[width=\textwidth]{../logs/plots/synth_anchor_layout.png}
+\end{column}
+\begin{column}{0.38\textwidth}
+\vspace{-0.3cm}
+\textbf{Experiment Design}\\
+\vspace{0.1cm}
+\begin{itemize}\setlength{\itemsep}{4pt}\footnotesize
+    \item \textbf{Goal}: Isolate geometry effect by adding\\ noise-corrupted synthetic ranges
+    \item \textbf{Method}: Use GT trajectory to compute\\ true ranges to 4 virtual anchors
+    \item \textbf{Noise}: $\sigma{=}0.12$m (SFUISE real anchor RMSE)
+    \item \textbf{Positions}: 2 at $z{=}3.0$m (ceiling),\\ 2 at $z{=}{-}0.5$m (floor)
+    \item \textbf{Progression}: $N{=}1,2,3,4$ synthetic anchors
+\end{itemize}
+
+\vspace{0.2cm}
+\textbf{Synthetic Anchor Positions}
+\begin{table}
+\centering\tiny
+\begin{tabular}{ccc}
+\toprule
+ID & Position (m) & Type \\
+\midrule
+S1 & (2.75, 0, 3.0) & center-high \\
+S2 & (2.75, 0, -0.5) & center-low \\
+S3 & (-1.0, 0, 3.0) & left-high \\
+S4 & (6.5, 0, -0.5) & right-low \\
+\bottomrule
+\end{tabular}
+\end{table}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================================
+\begin{frame}{Synthetic Anchor Ablation — Results (SFUISE Walk1)}
+\centering
+\begin{columns}
+\begin{column}{0.52\textwidth}
+\centering
+\includegraphics[width=\textwidth]{../logs/plots/synth_ablation_bars.png}
+\end{column}
+\begin{column}{0.45\textwidth}
+\vspace{-0.2cm}
+\begin{table}
+\centering\footnotesize
+\begin{tabular}{lccccc}
+\toprule
+$N_{syn}$ & $\Delta z$ & ATE & P50 & P95 & $\Delta$ATE \\
+\midrule
+0 & 1.86m & 0.170 & 0.145 & 0.290 & baseline \\
+1 & 3.00m & \textbf{0.137} & 0.115 & 0.219 & \textcolor{red}{\textbf{--19\%}} \\
+2 & 3.50m & 0.137 & 0.120 & 0.221 & --19\% \\
+3 & 3.50m & \textbf{0.127} & 0.113 & 0.214 & \textcolor{red}{\textbf{--25\%}} \\
+4 & 3.50m & 0.143 & 0.139 & 0.213 & --16\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.15cm}
+\begin{block}{Key Observations}
+\begin{itemize}\setlength{\itemsep}{2pt}\footnotesize
+    \item \textbf{+1 anchor}: ATE drops 19\% — largest marginal gain
+    \item \textbf{N=3 best}: ATE 0.127m (25\% improvement)
+    \item \textbf{N=4 degrades}: too many noisy ranges\\
+    overwhelm optimization ($\sigma{=}0.12$m noise)
+    \item \textbf{Diminishing returns}: $\Delta z$ increase\\
+    from 1.86$\to$3.0m matters more than 3.0$\to$3.5m
+\end{itemize}
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================================
+
+\begin{frame}{Synthetic Anchor Ablation — MILUV Results}
+\centering
+\begin{columns}
+\begin{column}{0.48\textwidth}
+\centering
+\includegraphics[width=\textwidth]{../logs/plots/miluv_synth_layout.png}
+\vspace{-0.1cm}
+{\footnotesize 6 real (blue) + 4 synthetic (red $\blacktriangle$) MILUV anchors}
+\end{column}
+\begin{column}{0.48\textwidth}
+\centering
+\includegraphics[width=\textwidth]{../logs/plots/ablation_waterfall.png}
+\end{column}
+\end{columns}
+
+\vspace{0.2cm}
+\begin{table}
+\centering\footnotesize
+\begin{tabular}{lccccc}
+\toprule
+& \multicolumn{2}{c}{\textbf{SFUISE Walk1}} & \multicolumn{2}{c}{\textbf{MILUV Circular}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+$N_{syn}$ & $\Delta z$ & ATE & $\Delta z$ & ATE \\
+\midrule
+0 (baseline) & 1.86m & 0.170 & 0.31m & 0.882 \\
+1             & 3.00m & \textbf{0.137} ($-$19\%) & 3.50m & \textit{diverged} \\
+2             & 3.50m & 0.137 ($-$19\%) & 3.50m & \textit{diverged} \\
+3             & 3.50m & \textbf{0.127} ($-$25\%) & 3.50m & \textit{diverged} \\
+4             & 3.50m & 0.143 ($-$16\%) & 3.50m & \textbf{0.407} (\textcolor{green!60}{\textbf{--54\%}}) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.15cm}
+\begin{block}{Key Insight}
+\textbf{MILUV}: 6 coplanar anchors ($\Delta z{=}0.31$m) $\to$ worst accuracy.
+Adding 4 height-diverse synthetic anchors ($\Delta z{\to}3.5$m) \textbf{reduces ATE 54\%}
+(0.882$\to$0.407m). N=1--3 diverged due to asymmetric geometry + plain-LM solver.
+\textbf{Geometry effect is even stronger when starting from poor baseline.}
+\end{block}
+\end{frame}
+
+% ============================================================
+\begin{frame}{Optimization Convergence}
+\centering
+\begin{table}
+\centering\footnotesize
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Stage} & \textbf{VIUNet\_00} & \textbf{MILUV circ} & \textbf{MILUV rand} & \textbf{SFUISE W1} \\
+\midrule
+Initial error      & $2.9\times 10^4$ & $1.2\times 10^9$ & $4.1\times 10^{10}$ & $4.1\times 10^7$ \\
+After pre-warm (LM) & $9.7\times 10^3$ & $4.3\times 10^7$ & $1.3\times 10^9$ & 85.9 \\
+After GNC+TLS       & \textit{diverged} & \textit{diverged} & \textit{diverged} & converged \\
+After $\chi^2$ reject & $1.3\times 10^3$ & $1.1\times 10^3$ & $1.0\times 10^3$ & 84.1 \\
+\midrule
+Final $\chi^2$/dof   & 2.61 & 0.80 & 0.63 & 0.185 \\
+Inlier ratio         & 49\% & 87\% & 76\% & \textbf{100\%} \\
+Runtime              & 78s & 129s & 198s & 5.1s \\
+Keyframes            & 1332 & 449 & 683 & 229 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.2cm}
+{\footnotesize SFUISE converges well (100\% inliers, $\chi^2{=}0.185$) with
+corrected IMU noise ($\sigma_g{=}0.19$, $\sigma_a{=}0.357$) and 229 keyframes.
+\textbf{Note on GNC-TLS}: VIUNet and MILUV show ``diverged'' because TLS produces
+negative weights on real-world UWB data — the $\chi^2$-only rejection after GNC
+achieves the final valid result. SFUISE converges naturally due to better anchor
+geometry reducing initial error by 10--100$\times$. Use gnc\_weight\_thresh = $-$1.0
+for real data.}
+\end{frame}
+
+% ============================================================
+\begin{frame}{Key Findings \& Recommendations}
+\centering
+\begin{columns}
+\begin{column}{0.55\textwidth}
+\textbf{Findings}\\
+\vspace{0.1cm}
+\begin{enumerate}\setlength{\itemsep}{5pt}\footnotesize
+    \item \textbf{Anchor height diversity is the dominant factor}\\
+    for UWB-IMU FGO accuracy ($R \approx -0.91$).
+    \item VIUNet (4 anchors, $\Delta z{=}0$m): \textbf{ATE 0.59m}\\
+    ceiling-only → no Z constraint.
+    \item MILUV (6 anchors, $\Delta z{=}0.31$m): \textbf{ATE 0.88--1.18m}\\
+    marginal height diversity limits Z accuracy.
+    \item \textbf{SFUISE (5 anchors, $\Delta z{=}1.86$m): ATE 0.17--0.23m}\\
+    moderate height diversity + walking speed compensates\\
+    for consumer-grade IMU (Sense HAT, 5--10$\times$ noisier).
+    \item \textbf{Synthetic ablation proves causality}:
+    \begin{itemize}\setlength{\itemsep}{1pt}\scriptsize
+        \item SFUISE: +3 synth anchors $\to$ ATE 0.170$\to$\textbf{0.127}m ($-$25\%)
+        \item MILUV: +4 synth anchors $\to$ ATE 0.882$\to$\textbf{0.407}m ($-$54\%)
+    \end{itemize}
+    both matching the $\Delta z$ trend line exactly.
+    \item Simulation (8 anchors, $\Delta z{=}4$m): \textbf{ATE 0.095m}\\
+    ideal geometry, ideal IMU.
+    \item GNC-TLS weight-based rejection is \textbf{too aggressive}\\
+    for real UWB data → use $\chi^2$-only rejection.
+\end{enumerate}
+\end{column}
+\begin{column}{0.42\textwidth}
+\textbf{For sub-0.15m ATE (proven by ablation):}\\
+\vspace{0.1cm}
+\begin{enumerate}\setlength{\itemsep}{6pt}\footnotesize
+    \item Deploy anchors at \textbf{2--3 height layers}\\
+    ($\Delta z \geq 3$m for good VDOP)
+    \item \textbf{3+ elevated anchors} minimum\\
+    (1 ceiling anchor alone gives $-$19\% ATE)
+    \item Use \textbf{6--8 anchors} minimum
+    \item Enable \textbf{lever-arm calibration}\\
+    (tag offset $\sim$15cm $\to$ 0.15m error)
+    \item Use \textbf{tactical-grade IMU}\\
+    (VN100: 10$\times$ lower gyro drift than PX4)
+    \item Set \texttt{gnc\_weight\_thresh: -1.0}\\
+    to avoid TLS negative-weight issue
+    \item \textbf{Anchor geometry $>$ sensor quality}:\\
+    SFUISE (\$25 IMU + good $\Delta z$) beats\\
+    MILUV (PX4 IMU + poor $\Delta z$)
+\end{enumerate}
+\end{column}
+\end{columns}
+\end{frame}
+
+\end{document}

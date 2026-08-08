@@ -1,0 +1,121 @@
+# ============================================================
+# UWB-IMU FGO — NTU VIRAL Dataset Config (tnp_03)
+# ============================================================
+# 数据集: NTU VIRAL tnp_03 (UAV indoor flight)
+# rosbag: data/tnp_03/tnp_03.bag
+# 传感器:
+#   IMU: VectorNav VN100, /imu/imu, 385 Hz, sensor_msgs/Imu
+#   UWB: Humatics P440, /uwb_endorange_info, ~68 Hz, uwb_driver/UwbRange
+#   GT:  Leica MS60, /leica/pose/relative, 20 Hz, geometry_msgs/PoseStamped
+# 使用: rosrun uwb_imu_fgo uwb_imu_fgo_node _config_path:=config/tnp_03.yaml
+# ============================================================
+# NOTE: Always use the filtered bag (tnp_03_fusion.bag, 37 MB) not the full bag
+# (8.8 GB) to avoid WSL OOM. Filter with:
+#   rosbag filter tnp_03.bag tnp_03_fusion.bag \
+#     "topic == '/imu/imu' or topic == '/uwb_endorange_info' or topic == '/leica/pose/relative'"
+dataset:
+  interface: "viral"
+  bag_path: "../data/tnp_03/tnp_03_fusion.bag"
+
+# --- VIRAL-specific settings ---
+viral:
+  # Requester node IDs on the UAV (200 and 201 each have 2 antennas).
+  # Leave empty to use all seen requesters.
+  requester_ids: [200, 201]
+  # Responder (anchor) node IDs. Leave empty for auto-detect.
+  responder_ids: [100, 101, 102]
+  # Auto-extract anchor positions from UwbRange.responder_location.
+  # Set to false to use manually configured anchors below.
+  auto_anchors: true
+  # Time window (s) to group ranges into frames. 0 = each range is its own frame.
+  # VIRAL P440: ~68 Hz = ~15ms per range. 100ms groups ~7 ranges — covers all 3 anchors.
+  uwb_group_window: 0.10
+  # Override default topics (these match the VIRAL dataset convention).
+  imu_topic: "/imu/imu"
+  uwb_topic: "/uwb_endorange_info"
+  gt_topic: "/leica/pose/relative"
+  # Per-requester antenna lever-arm offsets in IMU/body frame (optional).
+  # If not set, uses the general lever_arm_init from extrinsics section.
+  # requester_levers:
+  #   200: [0.0, -0.15, 0.0]
+  #   201: [-0.20, 0.15, 0.0]
+
+# --- Manual anchor positions (used only when viral.auto_anchors=false) ---
+# anchors:
+#   - {id: 100, pos: [0.0, 0.0, 1.5], prior_sigma: 0.10}
+#   - {id: 101, pos: [3.0, 0.0, 1.5], prior_sigma: 0.10}
+#   - {id: 102, pos: [0.0, -3.0, 1.5], prior_sigma: 0.10}
+
+# --- 外参: UWB 天线在 IMU 坐标系下的位置 (VN100 body frame) ---
+extrinsics:
+  lever_arm_init: [0.0, 0.0, 0.0]
+  calib_lever: false
+  lever_prior_sigma: 0.05
+
+# --- 在线标定开关 ---
+calibration:
+  calib_anchor: false
+  calib_range_bias: false
+  range_bias_sigma: 0.10
+  calib_td: false
+  td_init: 0.0
+
+# --- IMU 噪声参数 (VectorNav VN100) ---
+imu:
+  sigma_a: 0.05          # accelerometer noise (m/s²)
+  sigma_g: 0.005          # gyroscope noise (rad/s)
+  sigma_wa: 0.005         # accelerometer random walk (m/s³)
+  sigma_wg: 1.0e-5        # gyroscope random walk (rad/s²)
+  gravity: 9.81
+  imu_acc_in_g: false     # VN100 outputs m/s² natively
+
+# --- UWB 噪声 & 过滤 (Humatics P440) ---
+uwb:
+  sigma_range: 0.15         # P440 ranging noise ~0.05-0.15m (conservative for robust init)
+  v_max: 5.0                # max UAV velocity (m/s)
+  nlos_rssi_diff: 6.0       # (not used for VIRAL — RSSI fields are 0)
+  min_range: 0.3            # minimum valid range (m)
+  max_range: 50.0           # VIRAL anchors within ~30m
+  dist_consistency_thresh: 3.0
+  warmup_frames: 30
+
+# --- 求解器 (含 GNC 鲁棒优化) ---
+solver:
+  lm_max_iter: 300
+  rel_error_tol: 1.0e-6
+  abs_error_tol: 1.0e-8
+  gnc_mu_step: 1.4
+  gnc_max_iter: 100
+  gnc_rel_cost_tol: 1.0e-5
+  gnc_inlier_prob: 0.99
+  gnc_weight_thresh: 0.01
+  chi2_reject_prob: 0.99
+  max_rejection_rounds: 3
+
+# --- 关键帧下采样 (grouped frames ~20 Hz -> step=10 -> ~2 Hz keyframes) ---
+keyframe:
+  step: 10
+  yaw_align_frames: 0       # disabled: VN100 orientation provides yaw seed
+
+# --- Initialization: use VN100 built-in orientation (NED -> ENU internally) ---
+initialization:
+  # VN100 orientation in NED frame → converted to ENU internally.
+  use_imu_orientation: true
+  imu_orientation_world: "ned"
+
+# --- Debug 日志输出 ---
+debug:
+  log: true
+
+# --- ROS Topic 配置 (overridden by viral section above for viral interface) ---
+topics:
+  imu: "/imu/imu"
+  uwb: "/uwb_endorange_info"
+  vicon: "/leica/pose/relative"
+  gt_odom: ""
+
+# --- Rosbag 路径 (use filtered 37 MB bag, not the 8.8 GB full bag) ---
+bag:
+  path: "../data/tnp_03/tnp_03_fusion.bag"
+  start: 0.0
+  durr: -1.0
