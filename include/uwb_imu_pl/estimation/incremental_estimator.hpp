@@ -59,6 +59,7 @@ class IncrementalUwbImuEstimator {
   double lastNoUwbUpdateMs() const { return last_no_uwb_update_ms_; }
   double lastMarginalMs() const { return last_marginal_ms_; }
   double lastUwbUpdateMs() const { return last_uwb_update_ms_; }
+  double globalGraphResidualStatistic() const;
 
   // Method B candidate: computes the leave-current-out information downdate
   // and gates it numerically. It is never used by the formal output unless the

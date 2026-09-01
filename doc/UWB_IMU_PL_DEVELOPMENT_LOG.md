@@ -43,3 +43,15 @@ Overall delivery status: `IMPLEMENTED_UNVERIFIED`.
 - Strengthened the legacy `uifgo::ImuPreintegrator` with finite-sample, positive-dt, valid-interval and null-output checks while preserving its API.
 - Added deferred tests for regularizer row semantics, Pose3 protected-position Jacobian and Method A exclusion of current UWB.
 - Commit SHA: to be recorded after the milestone commit.
+
+## 2026-09-01 — M8 conditional detector and fusion PL
+
+- Implemented Method A conditional monitoring from an immutable pre-current-UWB prior. The monitor rejects missing capabilities, current-batch double counting, blind cached linearization and any version mismatch.
+- Computes whitened innovation covariance `S_w = H_w P^- H_w^T + I`, chi-square statistic with DOF equal to current UWB group size, standardized per-anchor diagnostics, posterior covariance and current-only single-anchor slopes.
+- Uses the same full-covariance Cholesky whitener for the innovation, factor Jacobian and physical-anchor fault incidence. The protected world-position map is `[0,R_WB]` in the 15-state tangent ordering.
+- Added explicit comparison outputs for global graph squared residual, UWB post-fit residual and conditional innovation. Only the conditional detector feeds the main fusion PL.
+- Added a pipeline enforcing detect-before-commit. Passing groups are committed in a second iSAM2 update; failed groups are rejected wholesale and publish the IMU/history prior with infinite PL and `ALERT` (or `UNAVAILABLE` for invalid assumptions).
+- Implemented the Method B information-downdate candidate with dimension, SPD and condition-number gates. It is disabled by default and is not used for formal output pending Method A/B equivalence and timing validation.
+- All formal outputs are scoped and labelled `FORMAL_LOCAL_CURRENT_FAULT_ONLY`; fixed-lag, persistent/history fault PL and provenance-preserving marginalization remain unsupported.
+- Added deferred tests for conditional DOF/statistics and Method B algebraic recovery.
+- Commit SHA: to be recorded after the milestone commit.

@@ -3,6 +3,8 @@
 #include "uwb_imu_pl/common/types.hpp"
 #include "uwb_imu_pl/estimation/snapshot_estimator.hpp"
 
+#include <memory>
+
 namespace uwb_imu_pl {
 
 class IntegrityMonitor {
@@ -15,6 +17,8 @@ class IntegrityMonitor {
 
   IntegrityOutput evaluateSnapshot(const UwbBatch& batch,
                                    const SnapshotSolution& solution) const;
+  IntegrityOutput evaluateConditional(const UwbBatch& batch,
+                                      const EstimationSnapshot& snapshot) const;
 
   static double noncentralityBoundary(int dof, double threshold, double p_md);
 
@@ -26,6 +30,12 @@ class IntegrityMonitor {
                                         const SnapshotSolution& solution,
                                         const FaultHypothesis& hypothesis,
                                         double threshold) const;
+  SensitivityResult conditionalSensitivity(
+      const UwbBatch& batch, const FaultHypothesis& hypothesis,
+      const Eigen::MatrixXd& whitener, const Eigen::MatrixXd& innovation_cov,
+      const Eigen::Matrix<double, 15, Eigen::Dynamic>& gain,
+      const Eigen::Matrix<double, 3, 15>& protected_jacobian, int dof,
+      double threshold) const;
   ProtectionLevelResult protectionLevel(
       TimestampNs timestamp, const Eigen::Matrix3d& covariance,
       const DetectorResult& detector,
@@ -35,6 +45,21 @@ class IntegrityMonitor {
   RiskBudget risk_;
   double rank_tolerance_;
   double max_condition_number_;
+};
+
+class IncrementalUwbImuEstimator;
+
+// Orchestration layer enforcing "detect before commit" for each UWB group.
+class RealtimeIntegrityPipeline {
+ public:
+  RealtimeIntegrityPipeline(IncrementalUwbImuEstimator* estimator,
+                            IntegrityMonitor monitor);
+  void ingestImu(const ImuMeasurement& measurement);
+  IntegrityOutput processUwbBatch(const UwbBatch& batch);
+
+ private:
+  IncrementalUwbImuEstimator* estimator_;
+  IntegrityMonitor monitor_;
 };
 
 }  // namespace uwb_imu_pl

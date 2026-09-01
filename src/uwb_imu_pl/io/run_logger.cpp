@@ -43,7 +43,7 @@ RunLogger::RunLogger(const std::string& output_directory)
   requireOpen(events_, directory_ + "/events.csv");
   states_ << "timestamp_ns,state_id,px,py,pz,qw,qx,qy,qz,vx,vy,vz,bax,bay,baz,bgx,bgy,bgz\n";
   residuals_ << "timestamp_ns,factor_id,anchor_id,row_role,raw,whitened\n";
-  integrity_ << "timestamp_ns,detector,statistic,threshold,dof,passed,pl_x,pl_y,pl_z,hpl_box,vpl,availability,label,batch_committed,reason\n";
+  integrity_ << "timestamp_ns,detector,statistic,threshold,dof,passed,global_graph_statistic,uwb_postfit_statistic,conditional_statistic,pl_x,pl_y,pl_z,hpl_box,vpl,availability,label,batch_committed,reason\n";
   timing_ << "timestamp_ns,stage,wall_ms,success\n";
   events_ << "timestamp_ns,event,detail\n";
 }
@@ -94,6 +94,9 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
   integrity_ << o.timestamp.value() << ',' << csv(o.detector.detector_type)
              << ',' << o.detector.statistic << ',' << o.detector.threshold
              << ',' << o.detector.dof << ',' << o.detector.passed << ','
+             << o.global_graph_residual_statistic << ','
+             << o.uwb_postfit_residual_statistic << ','
+             << o.conditional_innovation_statistic << ','
              << p.pl_xyz_m.x() << ',' << p.pl_xyz_m.y() << ',' << p.pl_xyz_m.z()
              << ',' << p.hpl_box_m << ',' << p.vpl_m << ','
              << toString(p.availability) << ',' << toString(p.label) << ','

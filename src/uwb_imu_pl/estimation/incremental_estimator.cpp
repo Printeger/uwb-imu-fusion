@@ -434,6 +434,14 @@ NavigationState IncrementalUwbImuEstimator::currentState() const {
   return navigationState(epoch_, state_timestamp_);
 }
 
+double IncrementalUwbImuEstimator::globalGraphResidualStatistic() const {
+  if (!initialized_) return std::numeric_limits<double>::quiet_NaN();
+  // GTSAM graph error is one half of the total whitened squared residual.
+  // This is a graph-health diagnostic only; it is deliberately not assigned a
+  // chi-square threshold or used by the formal current-fault PL.
+  return 2.0 * full_graph_.error(estimate_);
+}
+
 std::optional<Eigen::Matrix<double, 15, 15>>
 IncrementalUwbImuEstimator::methodBCandidatePrior(
     const Eigen::Matrix<double, 15, 15>& all_in_covariance,

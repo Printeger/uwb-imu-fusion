@@ -187,6 +187,12 @@ struct IntegrityOutput {
   DetectorResult detector;
   std::vector<SensitivityResult> sensitivities;
   ProtectionLevelResult protection_level;
+  double global_graph_residual_statistic =
+      std::numeric_limits<double>::quiet_NaN();
+  double uwb_postfit_residual_statistic =
+      std::numeric_limits<double>::quiet_NaN();
+  double conditional_innovation_statistic =
+      std::numeric_limits<double>::quiet_NaN();
   bool batch_committed = false;
 };
 

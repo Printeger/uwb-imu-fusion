@@ -1,7 +1,12 @@
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 #include "uwb_imu_pl/factors/realtime_factors.hpp"
+#include "uwb_imu_pl/integrity/integrity_monitor.hpp"
 
 #include <gtest/gtest.h>
+
+#include <Eigen/LU>
+
+#include <cmath>
 
 namespace {
 
@@ -98,4 +103,56 @@ TEST(UwbImuIncremental, MethodAPriorExcludesCurrentBatch) {
   EXPECT_TRUE(snapshot->capabilities().pre_measurement_prior);
   EXPECT_FALSE(snapshot->capabilities().fixed_lag);
   EXPECT_FALSE(snapshot->capabilities().historical_fault_provenance);
+}
+
+TEST(UwbImuIncremental, ConditionalDetectorUsesInnovationDimension) {
+  auto cfg = config();
+  cfg.risk.p_fa = 1e-5;
+  cfg.risk.nominal_axis_tail = 1e-5;
+  cfg.risk.p_nm = 1e-7;
+  cfg.risk.horizontal_alert_limit_m = 100.0;
+  cfg.risk.vertical_alert_limit_m = 100.0;
+  uwb_imu_pl::FaultHypothesis allocation;
+  allocation.missed_detection_allocation = 1e-3;
+  allocation.prior_probability_bound = 1e-4;
+  cfg.risk.hypotheses.push_back(allocation);
+  uwb_imu_pl::IncrementalUwbImuEstimator estimator(cfg, Eigen::Vector3d::Zero());
+  uwb_imu_pl::NavigationState initial;
+  initial.timestamp = uwb_imu_pl::TimestampNs(0);
+  initial.position_world_m = Eigen::Vector3d(0,0,1);
+  estimator.initialize(initial, Eigen::Matrix<double, 15, 1>::Constant(0.1));
+  for (int i = 1; i <= 2; ++i) {
+    uwb_imu_pl::ImuMeasurement imu;
+    imu.timestamp = uwb_imu_pl::TimestampNs(i * 5000000);
+    imu.specific_force_mps2 = Eigen::Vector3d(0, 0, cfg.imu.gravity_mps2);
+    estimator.ingestImu(imu);
+  }
+  const auto timestamp = uwb_imu_pl::TimestampNs(10000000);
+  const auto batch = makeBatch(timestamp, Eigen::Vector3d(0,0,1));
+  estimator.predictTo(timestamp);
+  const auto snapshot = estimator.preMeasurementSnapshot(batch);
+  uwb_imu_pl::IntegrityMonitor monitor(cfg.risk, cfg.snapshot.rank_tolerance,
+                                       cfg.snapshot.max_condition_number);
+  const auto output = monitor.evaluateConditional(batch, *snapshot);
+  EXPECT_EQ(output.detector.dof, static_cast<int>(batch.measurements.size()));
+  EXPECT_EQ(output.detector.detector_type,
+            "conditional_current_uwb_innovation_chi_square");
+  EXPECT_TRUE(std::isfinite(output.conditional_innovation_statistic));
+  EXPECT_TRUE(std::isfinite(output.uwb_postfit_residual_statistic));
+}
+
+TEST(UwbImuIncremental, MethodBDowndateCandidateRecoversPrior) {
+  auto cfg = config();
+  cfg.incremental.method_b_max_condition = 1e6;
+  uwb_imu_pl::IncrementalUwbImuEstimator estimator(cfg, Eigen::Vector3d::Zero());
+  const Eigen::Matrix<double, 15, 15> prior =
+      Eigen::Matrix<double, 15, 15>::Identity();
+  Eigen::MatrixXd h = Eigen::MatrixXd::Zero(4, 15);
+  h.block<4, 4>(0, 0) = Eigen::Matrix4d::Identity();
+  const Eigen::Matrix4d r = 0.5 * Eigen::Matrix4d::Identity();
+  const Eigen::Matrix<double, 15, 15> all_in =
+      (prior.inverse() + h.transpose() * r.inverse() * h).inverse();
+  const auto recovered = estimator.methodBCandidatePrior(all_in, h, r);
+  ASSERT_TRUE(recovered.has_value());
+  EXPECT_TRUE(recovered->isApprox(prior, 1e-10));
 }
