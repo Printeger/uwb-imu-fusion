@@ -7,8 +7,12 @@ float64 statistic
 float64 threshold
 uint32 dof
 float64[3] pl_xyz_m
-float64 hpl_box_m
+float64 hpl_m
 float64 vpl_m
+bool formal_eligible
+bool risk_budget_valid
+float64 allocated_hmi_risk
+float64 hmi_risk_requirement
 uint64[3] maximizing_anchor_id
 string config_hash
 string reason

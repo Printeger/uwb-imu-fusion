@@ -110,6 +110,7 @@ struct Config {
   double sigma_wa = 0.01;    // accel random walk (m/s^3)
   double sigma_wg = 2.0e-5;  // gyro random walk (rad/s^2)
   double gravity = 9.81;
+  double imu_max_gap = 0.02;
   bool imu_acc_in_g =
       true;  // true=multiply by gravity (Livox), false=raw (sim)
 

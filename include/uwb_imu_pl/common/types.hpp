@@ -41,6 +41,9 @@ class StrongId {
   friend constexpr bool operator==(StrongId a, StrongId b) {
     return a.value_ == b.value_;
   }
+  friend constexpr bool operator!=(StrongId a, StrongId b) {
+    return !(a == b);
+  }
   friend constexpr bool operator<(StrongId a, StrongId b) {
     return a.value_ < b.value_;
   }
@@ -132,6 +135,7 @@ struct FaultHypothesis {
 
 struct RiskBudget {
   double p_fa = 0.0;
+  double p_hmi_total = 0.0;
   double nominal_axis_tail = 0.0;
   double p_nm = 0.0;
   double horizontal_alert_limit_m = 0.0;
@@ -181,14 +185,27 @@ struct ProtectionLevelResult {
       std::numeric_limits<double>::infinity());
   Eigen::Vector3d fault_component_m = Eigen::Vector3d::Constant(
       std::numeric_limits<double>::infinity());
-  double hpl_box_m = std::numeric_limits<double>::infinity();
+  double hpl_m = std::numeric_limits<double>::infinity();
   double vpl_m = std::numeric_limits<double>::infinity();
   double unmonitored_risk = 0.0;
+  double allocated_hmi_risk = std::numeric_limits<double>::infinity();
+  double hmi_risk_requirement = 0.0;
+  bool formal_eligible = false;
+  bool risk_budget_valid = false;
   std::array<AnchorId, 3> maximizing_anchor{};
   Availability availability = Availability::Unavailable;
   IntegrityLabel label = IntegrityLabel::ImplementedUnverified;
   LinearizationConsistency consistency = LinearizationConsistency::Strict;
   std::string reason;
+};
+
+struct ResidualRecord {
+  TimestampNs timestamp;
+  FactorId factor_id;
+  AnchorId anchor_id;
+  RowRole role = RowRole::Measurement;
+  double raw = std::numeric_limits<double>::quiet_NaN();
+  double whitened = std::numeric_limits<double>::quiet_NaN();
 };
 
 struct IntegrityOutput {
@@ -204,6 +221,10 @@ struct IntegrityOutput {
   double conditional_innovation_statistic =
       std::numeric_limits<double>::quiet_NaN();
   bool batch_committed = false;
+  // True when the current UWB has valid model/capability/provenance inputs.
+  // Risk-budget or alert-limit unavailability does not clear this flag.
+  bool measurement_model_valid = false;
+  std::vector<ResidualRecord> residual_records;
 };
 
 struct RunManifest {

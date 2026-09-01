@@ -62,23 +62,27 @@ std::string cpuModel() {
 
 }  // namespace
 
-RunLogger::RunLogger(const std::string& output_directory)
-    : directory_(output_directory) {
+RunLogger::RunLogger(const std::string& output_directory,
+                     bool write_residuals, bool write_timing)
+    : directory_(output_directory), write_residuals_(write_residuals),
+      write_timing_(write_timing) {
   boost::filesystem::create_directories(directory_);
   states_.open(directory_ + "/states.csv");
-  residuals_.open(directory_ + "/residuals.csv");
+  if (write_residuals_) residuals_.open(directory_ + "/residuals.csv");
   integrity_.open(directory_ + "/integrity.csv");
-  timing_.open(directory_ + "/timing.csv");
+  if (write_timing_) timing_.open(directory_ + "/timing.csv");
   events_.open(directory_ + "/events.csv");
   requireOpen(states_, directory_ + "/states.csv");
-  requireOpen(residuals_, directory_ + "/residuals.csv");
+  if (write_residuals_) requireOpen(residuals_, directory_ + "/residuals.csv");
   requireOpen(integrity_, directory_ + "/integrity.csv");
-  requireOpen(timing_, directory_ + "/timing.csv");
+  if (write_timing_) requireOpen(timing_, directory_ + "/timing.csv");
   requireOpen(events_, directory_ + "/events.csv");
   states_ << "timestamp_ns,state_id,px,py,pz,qw,qx,qy,qz,vx,vy,vz,bax,bay,baz,bgx,bgy,bgz\n";
-  residuals_ << "timestamp_ns,factor_id,anchor_id,row_role,raw,whitened\n";
-  integrity_ << "timestamp_ns,detector,statistic,threshold,dof,passed,global_graph_statistic,uwb_postfit_statistic,conditional_statistic,pl_x,pl_y,pl_z,hpl_box,vpl,availability,label,batch_committed,reason\n";
-  timing_ << "timestamp_ns,stage,wall_ms,success\n";
+  if (write_residuals_) {
+    residuals_ << "timestamp_ns,factor_id,anchor_id,row_role,raw,whitened\n";
+  }
+  integrity_ << "timestamp_ns,detector,statistic,threshold,dof,passed,global_graph_statistic,uwb_postfit_statistic,conditional_statistic,pl_x,pl_y,pl_z,hpl_m,vpl,availability,label,formal_eligible,risk_budget_valid,allocated_hmi_risk,hmi_risk_requirement,batch_committed,reason\n";
+  if (write_timing_) timing_ << "timestamp_ns,stage,wall_ms,success\n";
   events_ << "timestamp_ns,event,detail\n";
 }
 
@@ -119,6 +123,7 @@ void RunLogger::writeState(const NavigationState& s) {
 
 void RunLogger::writeResidual(TimestampNs t, FactorId factor, AnchorId anchor,
                               RowRole role, double raw, double whitened) {
+  if (!write_residuals_) return;
   const char* role_name = role == RowRole::Measurement ? "Measurement" :
       (role == RowRole::TrustedPrior ? "TrustedPrior" : "Regularizer");
   residuals_ << t.value() << ',' << factor.value() << ',' << anchor.value()
@@ -134,13 +139,16 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
              << o.uwb_postfit_residual_statistic << ','
              << o.conditional_innovation_statistic << ','
              << p.pl_xyz_m.x() << ',' << p.pl_xyz_m.y() << ',' << p.pl_xyz_m.z()
-             << ',' << p.hpl_box_m << ',' << p.vpl_m << ','
+             << ',' << p.hpl_m << ',' << p.vpl_m << ','
              << toString(p.availability) << ',' << toString(p.label) << ','
+             << p.formal_eligible << ',' << p.risk_budget_valid << ','
+             << p.allocated_hmi_risk << ',' << p.hmi_risk_requirement << ','
              << o.batch_committed << ',' << csv(p.reason) << '\n';
 }
 
 void RunLogger::writeTiming(TimestampNs t, const std::string& stage,
                             double wall_ms, bool success) {
+  if (!write_timing_) return;
   timing_ << t.value() << ',' << csv(stage) << ',' << wall_ms << ',' << success << '\n';
 }
 

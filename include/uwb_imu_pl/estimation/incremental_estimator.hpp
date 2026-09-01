@@ -14,6 +14,19 @@
 
 namespace uwb_imu_pl {
 
+struct EstimatorAudit {
+  Eigen::Matrix<double, 15, 15> current_marginal =
+      Eigen::Matrix<double, 15, 15>::Constant(
+          std::numeric_limits<double>::quiet_NaN());
+  std::size_t epoch = 0;
+  TimestampNs state_timestamp;
+  LinearizationVersion version;
+  std::size_t factor_count = 0;
+  std::vector<BatchId> committed_uwb_batch_ids;
+  bool pending_epoch = false;
+  std::optional<BatchId> pending_batch_id;
+};
+
 class IncrementalUwbEstimator {
  public:
   explicit IncrementalUwbEstimator(const IncrementalConfig& config);
@@ -44,6 +57,7 @@ class IncrementalUwbImuEstimator {
   void initialize(const NavigationState& initial_state,
                   const Eigen::Matrix<double, 15, 1>& prior_sigmas);
   void ingestImu(const ImuMeasurement& measurement);
+  void validateUwbBatch(const UwbBatch& batch) const;
 
   // Method A lifecycle. predictTo commits only IMU/history and creates the
   // current state key. preMeasurementSnapshot is read-only and guarantees the
@@ -60,6 +74,7 @@ class IncrementalUwbImuEstimator {
   double lastMarginalMs() const { return last_marginal_ms_; }
   double lastUwbUpdateMs() const { return last_uwb_update_ms_; }
   double globalGraphResidualStatistic() const;
+  EstimatorAudit audit() const;
 
   // Method B candidate: computes the leave-current-out information downdate
   // and gates it numerically. It is never used by the formal output unless the
@@ -73,6 +88,7 @@ class IncrementalUwbImuEstimator {
   NavigationState navigationState(std::size_t epoch,
                                   TimestampNs timestamp) const;
   CurrentStatePrior queryCurrentPrior(TimestampNs timestamp);
+  Eigen::Matrix<double, 15, 15> currentJointMarginal() const;
   void appendGraph(const gtsam::NonlinearFactorGraph& graph);
 
   IntegrityConfig config_;
@@ -83,11 +99,15 @@ class IncrementalUwbImuEstimator {
   boost::shared_ptr<gtsam::PreintegratedCombinedMeasurements::Params> imu_params_;
   std::unique_ptr<gtsam::PreintegratedCombinedMeasurements> preintegrated_;
   std::deque<ImuMeasurement> imu_queue_;
+  std::optional<ImuMeasurement> imu_boundary_;
+  std::optional<TimestampNs> last_received_imu_timestamp_;
   std::size_t epoch_ = 0;
   TimestampNs state_timestamp_;
   bool initialized_ = false;
   bool pending_epoch_ = false;
   bool current_uwb_committed_ = false;
+  std::optional<BatchId> pending_batch_id_;
+  std::vector<BatchId> committed_uwb_batch_ids_;
   std::uint64_t graph_version_ = 0;
   std::uint64_t linpoint_version_ = 0;
   double last_no_uwb_update_ms_ = 0.0;

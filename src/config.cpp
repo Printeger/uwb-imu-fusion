@@ -79,6 +79,7 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
     if (im["sigma_wa"]) cfg.sigma_wa = im["sigma_wa"].as<double>();
     if (im["sigma_wg"]) cfg.sigma_wg = im["sigma_wg"].as<double>();
     if (im["gravity"]) cfg.gravity = im["gravity"].as<double>();
+    if (im["max_gap_s"]) cfg.imu_max_gap = im["max_gap_s"].as<double>();
     if (im["imu_acc_in_g"]) cfg.imu_acc_in_g = im["imu_acc_in_g"].as<bool>();
   }
 

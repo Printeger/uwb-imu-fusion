@@ -5,6 +5,7 @@
 #include "uifgo/types.h"
 #include <gtsam/inference/Symbol.h>
 #include <gtest/gtest.h>
+#include <cmath>
 
 using namespace gtsam;
 using symbol_shorthand::X;
@@ -14,7 +15,9 @@ using symbol_shorthand::B;
 // Helper: generate synthetic data
 static std::vector<uifgo::ImuSample> GenStaticImu(double t0, double t1) {
   std::vector<uifgo::ImuSample> imu;
-  for (double t = t0; t <= t1; t += 0.01) {
+  const int count = static_cast<int>(std::llround((t1 - t0) / 0.01));
+  for (int i = 0; i <= count; ++i) {
+    const double t = t0 + 0.01 * i;
     imu.push_back({t, Vector3(0, 0, 9.81), Vector3(0, 0, 0)});
   }
   return imu;

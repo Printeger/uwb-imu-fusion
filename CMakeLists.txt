@@ -243,6 +243,14 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(test_snapshot_integrity test/test_snapshot_integrity.cpp test/test_main.cpp)
   target_link_libraries(test_snapshot_integrity ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
 
+  catkin_add_gtest(test_integrity_config test/test_integrity_config.cpp test/test_main.cpp)
+  target_compile_definitions(test_integrity_config PRIVATE
+    UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(test_integrity_config ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_run_logger test/test_run_logger.cpp test/test_main.cpp)
+  target_link_libraries(test_run_logger ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
   catkin_add_gtest(test_realtime_incremental test/test_realtime_incremental.cpp test/test_main.cpp)
   target_link_libraries(test_realtime_incremental ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
 endif()

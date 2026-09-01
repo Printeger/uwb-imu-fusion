@@ -16,6 +16,7 @@
 
 #include <chrono>
 #include <cmath>
+#include <set>
 #include <stdexcept>
 
 namespace uwb_imu_pl {
@@ -251,66 +252,133 @@ void IncrementalUwbImuEstimator::ingestImu(const ImuMeasurement& measurement) {
       !measurement.angular_velocity_radps.allFinite()) {
     throw std::invalid_argument("IMU measurement must be finite");
   }
-  if (!imu_queue_.empty() && !(imu_queue_.back().timestamp < measurement.timestamp)) {
+  if (last_received_imu_timestamp_ &&
+      !(last_received_imu_timestamp_.value() < measurement.timestamp)) {
     throw std::invalid_argument("IMU timestamps must be strictly increasing");
   }
-  if (measurement.timestamp < state_timestamp_ ||
-      measurement.timestamp == state_timestamp_) return;
+  if (measurement.timestamp < state_timestamp_) {
+    throw std::invalid_argument("IMU timestamp precedes estimator state");
+  }
+  last_received_imu_timestamp_ = measurement.timestamp;
+  if (measurement.timestamp == state_timestamp_) {
+    if (imu_boundary_) {
+      throw std::invalid_argument("duplicate IMU boundary timestamp");
+    }
+    imu_boundary_ = measurement;
+    return;
+  }
   imu_queue_.push_back(measurement);
+}
+
+void IncrementalUwbImuEstimator::validateUwbBatch(
+    const UwbBatch& batch) const {
+  if (!initialized_) throw std::logic_error("UWB/IMU estimator is not initialized");
+  if (batch.measurements.empty()) {
+    throw std::invalid_argument("UWB batch must not be empty");
+  }
+  if (!(state_timestamp_ < batch.timestamp)) {
+    throw std::invalid_argument("UWB batch timestamp must increase");
+  }
+  std::set<std::uint64_t> configured;
+  for (const auto& anchor : config_.anchors) configured.insert(anchor.id.value());
+  std::set<std::uint64_t> measurement_ids;
+  std::set<std::uint64_t> factor_ids;
+  TimestampNs earliest = batch.measurements.front().timestamp;
+  TimestampNs latest = earliest;
+  for (const auto& measurement : batch.measurements) {
+    if (!std::isfinite(measurement.range_m) || measurement.range_m <= 0.0 ||
+        !std::isfinite(measurement.sigma_m) || measurement.sigma_m <= 0.0 ||
+        !measurement.anchor_position_m.allFinite()) {
+      throw std::invalid_argument("UWB batch contains invalid measurement values");
+    }
+    if (!configured.empty() && configured.count(measurement.anchor_id.value()) == 0) {
+      throw std::invalid_argument("UWB batch references an unconfigured physical anchor");
+    }
+    if (!measurement_ids.insert(measurement.id.value()).second ||
+        !factor_ids.insert(measurement.factor_id.value()).second) {
+      throw std::invalid_argument("UWB batch measurement/factor IDs must be unique");
+    }
+    if (measurement.timestamp < earliest) earliest = measurement.timestamp;
+    if (latest < measurement.timestamp) latest = measurement.timestamp;
+    const double skew = std::abs(
+        measurement.timestamp.seconds() - batch.timestamp.seconds());
+    if (skew > config_.incremental.max_time_skew_s + 1e-12) {
+      throw std::invalid_argument("UWB batch member exceeds max_time_skew_s");
+    }
+  }
+  if (latest.seconds() - earliest.seconds() >
+      config_.incremental.epoch_bin_s + 1e-12) {
+    throw std::invalid_argument("UWB batch span exceeds epoch_bin_s");
+  }
+  (void)validatedUwbCovariance(batch);
 }
 
 void IncrementalUwbImuEstimator::predictTo(TimestampNs timestamp) {
   if (!initialized_) throw std::logic_error("UWB/IMU estimator is not initialized");
   if (pending_epoch_) throw std::logic_error("commit or reject pending UWB epoch first");
   if (!(state_timestamp_ < timestamp)) throw std::invalid_argument("prediction timestamp must increase");
-  if (imu_queue_.empty()) throw std::runtime_error("no IMU samples available for prediction");
+  if (!imu_boundary_ || imu_boundary_->timestamp != state_timestamp_) {
+    throw std::runtime_error("missing causal IMU sample at state boundary");
+  }
 
   const auto start = std::chrono::steady_clock::now();
   const auto previous_bias = estimate_.at<gtsam::imuBias::ConstantBias>(biasKey(epoch_));
-  preintegrated_->resetIntegrationAndSetBias(previous_bias);
+  gtsam::PreintegratedCombinedMeasurements proposed(imu_params_, previous_bias);
   TimestampNs previous_time = state_timestamp_;
-  std::size_t integrated = 0;
-  std::optional<ImuMeasurement> last_measurement;
-  while (!imu_queue_.empty() && !(timestamp < imu_queue_.front().timestamp)) {
-    const ImuMeasurement measurement = imu_queue_.front();
-    imu_queue_.pop_front();
-    if (measurement.timestamp < previous_time || measurement.timestamp == previous_time) continue;
+  ImuMeasurement previous_measurement = *imu_boundary_;
+  std::size_t consume_count = 0;
+  for (const auto& measurement : imu_queue_) {
+    if (timestamp < measurement.timestamp) break;
+    if (!(previous_time < measurement.timestamp)) {
+      throw std::runtime_error("duplicate or reversed IMU sample in prediction interval");
+    }
     const double dt = measurement.timestamp.seconds() - previous_time.seconds();
-    preintegrated_->integrateMeasurement(measurement.specific_force_mps2,
-                                         measurement.angular_velocity_radps, dt);
+    if (!std::isfinite(dt) || dt > config_.imu.max_gap_s + 1e-12) {
+      throw std::runtime_error("IMU gap exceeds imu.max_gap_s");
+    }
+    proposed.integrateMeasurement(
+        0.5 * (previous_measurement.specific_force_mps2 +
+               measurement.specific_force_mps2),
+        0.5 * (previous_measurement.angular_velocity_radps +
+               measurement.angular_velocity_radps), dt);
     previous_time = measurement.timestamp;
-    last_measurement = measurement;
-    ++integrated;
+    previous_measurement = measurement;
+    ++consume_count;
   }
-  if (integrated == 0 && !imu_queue_.empty()) {
-    last_measurement = imu_queue_.front();
-  }
-  if (!last_measurement) throw std::runtime_error("no IMU sample in prediction interval");
   if (previous_time < timestamp) {
     const double dt = timestamp.seconds() - previous_time.seconds();
-    preintegrated_->integrateMeasurement(last_measurement->specific_force_mps2,
-                                         last_measurement->angular_velocity_radps, dt);
+    if (!std::isfinite(dt) || dt > config_.imu.max_gap_s + 1e-12) {
+      throw std::runtime_error("causal IMU hold exceeds imu.max_gap_s");
+    }
+    proposed.integrateMeasurement(previous_measurement.specific_force_mps2,
+                                  previous_measurement.angular_velocity_radps,
+                                  dt);
   }
 
   const gtsam::Pose3 previous_pose = estimate_.at<gtsam::Pose3>(poseKey(epoch_));
   const gtsam::Vector3 previous_velocity = estimate_.at<gtsam::Vector3>(velocityKey(epoch_));
-  const gtsam::NavState predicted = preintegrated_->predict(
+  const gtsam::NavState predicted = proposed.predict(
       gtsam::NavState(previous_pose, previous_velocity), previous_bias);
-  ++epoch_;
+  const std::size_t next_epoch = epoch_ + 1;
   gtsam::NonlinearFactorGraph graph;
   gtsam::Values values;
   graph.add(gtsam::CombinedImuFactor(
-      poseKey(epoch_ - 1), velocityKey(epoch_ - 1), poseKey(epoch_),
-      velocityKey(epoch_), biasKey(epoch_ - 1), biasKey(epoch_), *preintegrated_));
-  values.insert(poseKey(epoch_), predicted.pose());
-  values.insert(velocityKey(epoch_), predicted.velocity());
-  values.insert(biasKey(epoch_), previous_bias);
+      poseKey(epoch_), velocityKey(epoch_), poseKey(next_epoch),
+      velocityKey(next_epoch), biasKey(epoch_), biasKey(next_epoch), proposed));
+  values.insert(poseKey(next_epoch), predicted.pose());
+  values.insert(velocityKey(next_epoch), predicted.velocity());
+  values.insert(biasKey(next_epoch), previous_bias);
   isam2_.update(graph, values);
   appendGraph(graph);
   estimate_ = isam2_.calculateEstimate();
+  for (std::size_t i = 0; i < consume_count; ++i) imu_queue_.pop_front();
+  previous_measurement.timestamp = timestamp;
+  imu_boundary_ = previous_measurement;
+  epoch_ = next_epoch;
   state_timestamp_ = timestamp;
   pending_epoch_ = true;
   current_uwb_committed_ = false;
+  pending_batch_id_.reset();
   ++graph_version_;
   ++linpoint_version_;
   last_no_uwb_update_ms_ = elapsedMs(start);
@@ -331,9 +399,8 @@ NavigationState IncrementalUwbImuEstimator::navigationState(
   return state;
 }
 
-CurrentStatePrior IncrementalUwbImuEstimator::queryCurrentPrior(
-    TimestampNs timestamp) {
-  const auto start = std::chrono::steady_clock::now();
+Eigen::Matrix<double, 15, 15>
+IncrementalUwbImuEstimator::currentJointMarginal() const {
   gtsam::Marginals marginals(full_graph_, estimate_);
   const gtsam::KeyVector keys{poseKey(epoch_), velocityKey(epoch_), biasKey(epoch_)};
   const gtsam::JointMarginal joint = marginals.jointMarginalCovariance(keys);
@@ -351,6 +418,13 @@ CurrentStatePrior IncrementalUwbImuEstimator::queryCurrentPrior(
       !covariance.allFinite()) {
     throw std::runtime_error("invalid 15x15 current-state marginal");
   }
+  return covariance;
+}
+
+CurrentStatePrior IncrementalUwbImuEstimator::queryCurrentPrior(
+    TimestampNs timestamp) {
+  const auto start = std::chrono::steady_clock::now();
+  const Eigen::Matrix<double, 15, 15> covariance = currentJointMarginal();
   CurrentStatePrior prior;
   prior.mean = navigationState(epoch_, timestamp);
   prior.covariance = covariance;
@@ -366,6 +440,7 @@ IncrementalUwbImuEstimator::preMeasurementSnapshot(const UwbBatch& batch) {
     throw std::logic_error("pre-measurement snapshot requires matching predicted epoch");
   }
   CurrentStatePrior prior = queryCurrentPrior(batch.timestamp);
+  pending_batch_id_ = batch.id;
   if (!prior.excludes_current_uwb) throw std::logic_error("current UWB already contaminates prior");
   const gtsam::Pose3 pose = estimate_.at<gtsam::Pose3>(poseKey(epoch_));
   UwbPoseBatchFactor proposed(poseKey(epoch_), batch, lever_arm_body_m_);
@@ -380,6 +455,10 @@ IncrementalUwbImuEstimator::preMeasurementSnapshot(const UwbBatch& batch) {
   rows.role = RowRole::Measurement;
   rows.jacobian = w * h;
   rows.residual = -w * factor_error;
+  rows.covariance = covariance;
+  rows.whitener = w;
+  rows.jacobian_raw = h;
+  rows.residual_raw = -factor_error;
   rows.whitening_model_id = batch.covariance_model_id;
   rows.version = prior.version;
   for (int i = 0; i < 15; ++i) rows.column_indices.push_back(i);
@@ -400,6 +479,7 @@ IncrementalUwbImuEstimator::preMeasurementSnapshot(const UwbBatch& batch) {
   diagnostics.model_valid = diagnostics.covariance_valid &&
       diagnostics.condition_number <= config_.snapshot.max_condition_number;
   if (!diagnostics.model_valid) diagnostics.reason = "pre-UWB prior marginal is ill-conditioned";
+  diagnostics.linearization_step_norm = 0.0;
   SnapshotCapabilities capabilities;
   capabilities.dense_snapshot = true;
   capabilities.sparse_solve = true;
@@ -419,6 +499,9 @@ void IncrementalUwbImuEstimator::commitUwbBatch(const UwbBatch& batch) {
   if (!pending_epoch_ || batch.timestamp != state_timestamp_) {
     throw std::logic_error("commit requires matching pending epoch");
   }
+  if (pending_batch_id_ && pending_batch_id_.value() != batch.id) {
+    throw std::logic_error("commit batch ID differs from audited pending batch");
+  }
   const auto start = std::chrono::steady_clock::now();
   gtsam::NonlinearFactorGraph graph;
   graph.add(boost::make_shared<UwbPoseBatchFactor>(
@@ -428,6 +511,8 @@ void IncrementalUwbImuEstimator::commitUwbBatch(const UwbBatch& batch) {
   estimate_ = isam2_.calculateEstimate();
   pending_epoch_ = false;
   current_uwb_committed_ = true;
+  committed_uwb_batch_ids_.push_back(batch.id);
+  pending_batch_id_.reset();
   ++graph_version_;
   ++linpoint_version_;
   last_uwb_update_ms_ = elapsedMs(start);
@@ -439,8 +524,12 @@ void IncrementalUwbImuEstimator::rejectUwbBatch(
   if (!pending_epoch_ || batch.timestamp != state_timestamp_) {
     throw std::logic_error("reject requires matching pending epoch");
   }
+  if (pending_batch_id_ && pending_batch_id_.value() != batch.id) {
+    throw std::logic_error("reject batch ID differs from audited pending batch");
+  }
   pending_epoch_ = false;
   current_uwb_committed_ = false;
+  pending_batch_id_.reset();
   last_uwb_update_ms_ = 0.0;
 }
 
@@ -455,6 +544,20 @@ double IncrementalUwbImuEstimator::globalGraphResidualStatistic() const {
   // This is a graph-health diagnostic only; it is deliberately not assigned a
   // chi-square threshold or used by the formal current-fault PL.
   return 2.0 * full_graph_.error(estimate_);
+}
+
+EstimatorAudit IncrementalUwbImuEstimator::audit() const {
+  if (!initialized_) throw std::logic_error("UWB/IMU estimator is not initialized");
+  EstimatorAudit result;
+  result.current_marginal = currentJointMarginal();
+  result.epoch = epoch_;
+  result.state_timestamp = state_timestamp_;
+  result.version = {graph_version_, 1, 1, linpoint_version_};
+  result.factor_count = full_graph_.size();
+  result.committed_uwb_batch_ids = committed_uwb_batch_ids_;
+  result.pending_epoch = pending_epoch_;
+  result.pending_batch_id = pending_batch_id_;
+  return result;
 }
 
 std::optional<Eigen::Matrix<double, 15, 15>>

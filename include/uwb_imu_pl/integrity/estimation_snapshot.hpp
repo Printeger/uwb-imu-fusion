@@ -31,6 +31,10 @@ struct WhitenedRowBlock {
   RowRole role = RowRole::Measurement;
   Eigen::MatrixXd jacobian;
   Eigen::VectorXd residual;
+  Eigen::MatrixXd covariance;
+  Eigen::MatrixXd whitener;
+  Eigen::MatrixXd jacobian_raw;
+  Eigen::VectorXd residual_raw;
   std::vector<int> column_indices;
   int row_offset = 0;
   double robust_weight = 1.0;

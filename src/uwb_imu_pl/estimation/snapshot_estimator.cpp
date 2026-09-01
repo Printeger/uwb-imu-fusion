@@ -164,21 +164,23 @@ std::shared_ptr<const EstimationSnapshot> SnapshotUwbEstimator::makeSnapshot(
   state.position_world_m = solution.position_world_m;
   LinearizationVersion version{version_number, 1, 1, version_number};
   std::vector<WhitenedRowBlock> rows;
-  rows.reserve(batch.measurements.size());
+  WhitenedRowBlock row;
+  row.factor_id = batch.measurements.front().factor_id;
+  row.role = RowRole::Measurement;
+  row.jacobian = solution.jacobian_whitened;
+  row.residual = solution.residual_whitened;
+  row.covariance = solution.covariance_measurement_m2;
+  row.whitener = solution.whitener;
+  row.jacobian_raw = solution.jacobian_raw;
+  row.residual_raw = solution.residual_raw_m;
+  row.column_indices = {0, 1, 2};
+  row.whitening_model_id = batch.covariance_model_id;
+  row.version = version;
   for (std::size_t i = 0; i < batch.measurements.size(); ++i) {
-    WhitenedRowBlock row;
-    row.factor_id = batch.measurements[i].factor_id;
-    row.measurement_ids = {batch.measurements[i].id};
-    row.anchor_ids = {batch.measurements[i].anchor_id};
-    row.role = RowRole::Measurement;
-    row.jacobian = solution.jacobian_whitened.row(static_cast<Eigen::Index>(i));
-    row.residual = Eigen::VectorXd::Constant(1, solution.residual_whitened(static_cast<Eigen::Index>(i)));
-    row.column_indices = {0, 1, 2};
-    row.row_offset = static_cast<int>(i);
-    row.whitening_model_id = batch.covariance_model_id;
-    row.version = version;
-    rows.push_back(std::move(row));
+    row.measurement_ids.push_back(batch.measurements[i].id);
+    row.anchor_ids.push_back(batch.measurements[i].anchor_id);
   }
+  rows.push_back(std::move(row));
   SnapshotCapabilities capabilities;
   capabilities.dense_snapshot = true;
   capabilities.sparse_solve = true;

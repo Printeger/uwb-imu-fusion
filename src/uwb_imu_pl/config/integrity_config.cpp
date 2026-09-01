@@ -117,28 +117,40 @@ IntegrityConfig IntegrityConfigLoader::load(const std::string& yaml_path) {
     throw std::runtime_error("incremental.max_time_skew_s must be in [0, epoch_bin_s]");
   }
   positive(cfg.incremental.method_b_max_condition, "incremental.method_b_max_condition");
+  if (cfg.incremental.enable_method_b) {
+    throw std::runtime_error(
+        "incremental.enable_method_b=true is unsupported for online operation");
+  }
+  if (cfg.incremental.fixed_lag_epochs != 0) {
+    throw std::runtime_error(
+        "incremental.fixed_lag_epochs>0 is unsupported in this release");
+  }
 
   const auto imu = root["imu"];
-  rejectUnknown(imu, "imu", {"accelerometer_sigma", "gyroscope_sigma", "accelerometer_bias_rw_sigma", "gyroscope_bias_rw_sigma", "gravity_mps2"});
+  rejectUnknown(imu, "imu", {"accelerometer_sigma", "gyroscope_sigma", "accelerometer_bias_rw_sigma", "gyroscope_bias_rw_sigma", "gravity_mps2", "max_gap_s"});
   cfg.imu.accelerometer_sigma = required<double>(imu, "accelerometer_sigma", "imu");
   cfg.imu.gyroscope_sigma = required<double>(imu, "gyroscope_sigma", "imu");
   cfg.imu.accelerometer_bias_rw_sigma = required<double>(imu, "accelerometer_bias_rw_sigma", "imu");
   cfg.imu.gyroscope_bias_rw_sigma = required<double>(imu, "gyroscope_bias_rw_sigma", "imu");
   cfg.imu.gravity_mps2 = required<double>(imu, "gravity_mps2", "imu");
+  cfg.imu.max_gap_s = required<double>(imu, "max_gap_s", "imu");
   positive(cfg.imu.accelerometer_sigma, "imu.accelerometer_sigma");
   positive(cfg.imu.gyroscope_sigma, "imu.gyroscope_sigma");
   positive(cfg.imu.accelerometer_bias_rw_sigma, "imu.accelerometer_bias_rw_sigma");
   positive(cfg.imu.gyroscope_bias_rw_sigma, "imu.gyroscope_bias_rw_sigma");
   positive(cfg.imu.gravity_mps2, "imu.gravity_mps2");
+  positive(cfg.imu.max_gap_s, "imu.max_gap_s");
 
   const auto risk = root["risk"];
-  rejectUnknown(risk, "risk", {"p_fa", "nominal_axis_tail", "p_nm", "horizontal_alert_limit_m", "vertical_alert_limit_m", "single_anchor_p_md", "single_anchor_prior_bound"});
+  rejectUnknown(risk, "risk", {"p_fa", "p_hmi_total", "nominal_axis_tail", "p_nm", "horizontal_alert_limit_m", "vertical_alert_limit_m", "single_anchor_p_md", "single_anchor_prior_bound"});
   cfg.risk.p_fa = required<double>(risk, "p_fa", "risk");
+  cfg.risk.p_hmi_total = required<double>(risk, "p_hmi_total", "risk");
   cfg.risk.nominal_axis_tail = required<double>(risk, "nominal_axis_tail", "risk");
   cfg.risk.p_nm = required<double>(risk, "p_nm", "risk");
   cfg.risk.horizontal_alert_limit_m = required<double>(risk, "horizontal_alert_limit_m", "risk");
   cfg.risk.vertical_alert_limit_m = required<double>(risk, "vertical_alert_limit_m", "risk");
   probability(cfg.risk.p_fa, "risk.p_fa");
+  probability(cfg.risk.p_hmi_total, "risk.p_hmi_total");
   probability(cfg.risk.nominal_axis_tail, "risk.nominal_axis_tail");
   probability(cfg.risk.p_nm, "risk.p_nm");
   positive(cfg.risk.horizontal_alert_limit_m, "risk.horizontal_alert_limit_m");
@@ -147,8 +159,6 @@ IntegrityConfig IntegrityConfigLoader::load(const std::string& yaml_path) {
   const double prior = required<double>(risk, "single_anchor_prior_bound", "risk");
   probability(p_md, "risk.single_anchor_p_md");
   probability(prior, "risk.single_anchor_prior_bound");
-  // Physical anchor hypotheses are materialized per batch by IntegrityMonitor.
-  cfg.risk.hypotheses.push_back(FaultHypothesis{HypothesisId(0), AnchorId(0), {}, prior, p_md, true});
 
   const auto output = root["output"];
   rejectUnknown(output, "output", {"root", "write_residuals", "write_timing"});
@@ -203,6 +213,20 @@ IntegrityConfig IntegrityConfigLoader::load(const std::string& yaml_path) {
       throw std::runtime_error("anchor frame must equal realtime.world_frame in this release");
     }
     cfg.anchors.push_back(std::move(record));
+  }
+  for (const auto& anchor : cfg.anchors) {
+    FaultHypothesis hypothesis;
+    hypothesis.id = HypothesisId(anchor.id.value());
+    hypothesis.anchor_id = anchor.id;
+    hypothesis.prior_probability_bound = prior;
+    hypothesis.missed_detection_allocation = p_md;
+    cfg.risk.hypotheses.push_back(std::move(hypothesis));
+  }
+  const double allocated_hmi = 3.0 * cfg.risk.nominal_axis_tail + cfg.risk.p_nm +
+      static_cast<double>(cfg.risk.hypotheses.size()) * prior * p_md;
+  if (!std::isfinite(allocated_hmi) || allocated_hmi > cfg.risk.p_hmi_total) {
+    throw std::runtime_error(
+        "risk.p_hmi_total is smaller than the complete anchor-map allocation");
   }
   return cfg;
 }

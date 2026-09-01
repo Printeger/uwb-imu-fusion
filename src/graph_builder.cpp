@@ -136,7 +136,8 @@ void GraphBuilder::Build(const std::vector<UwbFrame>& uwb_kf,
   for (size_t k = 1; k < N; ++k) {
     // --- 4a: IMU preintegration ---
     pim.Reset(prev_bias);
-    i_imu = IntegrateBetween(imu, i_imu, uwb_kf[k - 1].t, uwb_kf[k].t, &pim);
+    i_imu = IntegrateBetween(imu, i_imu, uwb_kf[k - 1].t, uwb_kf[k].t,
+                             &pim, cfg_.imu_max_gap);
 
     // --- 4b: CombinedImuFactor ---
     graph->add(CombinedImuFactor(X(k - 1), V(k - 1), X(k), V(k), B(k - 1), B(k),

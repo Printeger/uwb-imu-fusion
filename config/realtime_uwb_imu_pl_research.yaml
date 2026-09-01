@@ -24,9 +24,11 @@ imu:
   accelerometer_bias_rw_sigma: 0.001
   gyroscope_bias_rw_sigma: 0.0001
   gravity_mps2: 9.80665
+  max_gap_s: 0.02
 
 risk:
   p_fa: 1.0e-5
+  p_hmi_total: 4.0e-5
   nominal_axis_tail: 1.0e-5
   p_nm: 1.0e-7
   single_anchor_p_md: 1.0e-3

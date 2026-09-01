@@ -328,7 +328,7 @@ double Initializer::AlignYaw(
     for (size_t k = 1; k < num_keyframes && k < uwb_frames.size(); ++k) {
       pi.Reset(bias0);
       i_imu = IntegrateBetween(imu, i_imu, uwb_frames[k - 1].t, uwb_frames[k].t,
-                               &pi);
+                               &pi, cfg_.imu_max_gap);
       segs.push_back({pi.Pim(), uwb_frames[k - 1].t, uwb_frames[k].t});
     }
   }

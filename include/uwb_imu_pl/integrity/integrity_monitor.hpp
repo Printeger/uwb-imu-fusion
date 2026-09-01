@@ -40,7 +40,19 @@ class IntegrityMonitor {
       TimestampNs timestamp, const Eigen::Matrix3d& covariance,
       const DetectorResult& detector,
       const std::vector<SensitivityResult>& sensitivities,
-      const LinearizationDiagnostics& diagnostics) const;
+      const std::vector<FaultHypothesis>& hypotheses,
+      const LinearizationDiagnostics& diagnostics,
+      LinearizationConsistency consistency, bool model_formal_eligible,
+      const std::string& gate_reason) const;
+  bool completePhysicalFaultMap(
+      const UwbBatch& batch, const std::vector<FaultHypothesis>& hypotheses,
+      std::string* reason) const;
+  bool snapshotFormalGate(
+      const UwbBatch& batch, const SnapshotSolution& solution,
+      const std::vector<FaultHypothesis>& hypotheses,
+      std::string* reason) const;
+  bool riskBudgetValid(const std::vector<FaultHypothesis>& hypotheses,
+                       double* allocated) const;
 
   RiskBudget risk_;
   double rank_tolerance_;

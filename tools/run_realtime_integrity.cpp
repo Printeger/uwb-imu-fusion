@@ -73,7 +73,9 @@ class RealtimeNode {
     }
     const std::string run_directory = config_.output.root + "/online_" +
         std::to_string(ros::WallTime::now().toNSec());
-    logger_.reset(new uwb_imu_pl::RunLogger(run_directory));
+    logger_.reset(new uwb_imu_pl::RunLogger(
+        run_directory, config_.output.write_residuals,
+        config_.output.write_timing));
     logger_->writeResolvedConfig(config_.resolved_yaml);
     logger_->writeManifest(uwb_imu_pl::makeRunManifest(
         config_, UWB_IMU_PL_GIT_SHA, UWB_IMU_PL_GIT_DIRTY != 0));
@@ -179,7 +181,6 @@ class RealtimeNode {
   void processImu(const Event& event) {
     if (!estimator_) {
       initialize(event.timestamp);
-      return;
     }
     uwb_imu_pl::ImuMeasurement measurement;
     measurement.id = uwb_imu_pl::MeasurementId(event.sequence);
@@ -199,6 +200,11 @@ class RealtimeNode {
     publish(output);
     logger_->writeState(output.state);
     logger_->writeIntegrity(output);
+    for (const auto& residual : output.residual_records) {
+      logger_->writeResidual(residual.timestamp, residual.factor_id,
+                             residual.anchor_id, residual.role, residual.raw,
+                             residual.whitened);
+    }
     logger_->writeTiming(output.timestamp, "update_no_current_uwb",
                          estimator_->lastNoUwbUpdateMs(), true);
     logger_->writeTiming(output.timestamp, "current_joint_marginal",
@@ -266,8 +272,12 @@ class RealtimeNode {
       status.maximizing_anchor_id[axis] =
           output.protection_level.maximizing_anchor[axis].value();
     }
-    status.hpl_box_m = output.protection_level.hpl_box_m;
+    status.hpl_m = output.protection_level.hpl_m;
     status.vpl_m = output.protection_level.vpl_m;
+    status.formal_eligible = output.protection_level.formal_eligible;
+    status.risk_budget_valid = output.protection_level.risk_budget_valid;
+    status.allocated_hmi_risk = output.protection_level.allocated_hmi_risk;
+    status.hmi_risk_requirement = output.protection_level.hmi_risk_requirement;
     status.config_hash = config_.config_hash;
     status.reason = output.protection_level.reason;
     integrity_publisher_.publish(status);

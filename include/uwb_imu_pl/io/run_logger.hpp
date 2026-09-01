@@ -11,7 +11,8 @@ struct IntegrityConfig;
 
 class RunLogger {
  public:
-  explicit RunLogger(const std::string& output_directory);
+  explicit RunLogger(const std::string& output_directory,
+                     bool write_residuals = true, bool write_timing = true);
   void writeResolvedConfig(const std::string& yaml) const;
   void writeManifest(const RunManifest& manifest) const;
   void writeState(const NavigationState& state);
@@ -32,6 +33,8 @@ class RunLogger {
   std::ofstream integrity_;
   std::ofstream timing_;
   std::ofstream events_;
+  bool write_residuals_ = true;
+  bool write_timing_ = true;
 };
 
 RunManifest makeRunManifest(const IntegrityConfig& config,

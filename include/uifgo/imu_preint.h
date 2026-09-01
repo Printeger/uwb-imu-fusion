@@ -44,6 +44,7 @@ ImuSample InterpolateImu(const std::vector<ImuSample>& imu, double t);
 // Convention: each sample imu[i] covers interval (t_prev, imu[i].t];
 // boundary samples at t0 and t1 are linearly interpolated.
 size_t IntegrateBetween(const std::vector<ImuSample>& imu, size_t i_start,
-                        double t0, double t1, ImuPreintegrator* pim);
+                        double t0, double t1, ImuPreintegrator* pim,
+                        double max_gap_s = 0.02);
 
 }  // namespace uifgo

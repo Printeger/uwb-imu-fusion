@@ -34,6 +34,7 @@ struct ImuNoiseConfig {
   double accelerometer_bias_rw_sigma = 0.0;
   double gyroscope_bias_rw_sigma = 0.0;
   double gravity_mps2 = 9.80665;
+  double max_gap_s = 0.02;
 };
 
 struct OutputConfig {

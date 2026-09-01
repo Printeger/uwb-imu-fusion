@@ -3,6 +3,7 @@
 #include <gtsam/base/numericalDerivative.h>
 #include <gtsam/navigation/PreintegrationParams.h>
 
+#include <algorithm>
 #include <cmath>
 #include <stdexcept>
 
@@ -70,29 +71,76 @@ ImuSample InterpolateImu(const std::vector<ImuSample>& imu, double t) {
 }
 
 size_t IntegrateBetween(const std::vector<ImuSample>& imu, size_t i_start,
-                        double t0, double t1, ImuPreintegrator* pim) {
+                        double t0, double t1, ImuPreintegrator* pim,
+                        double max_gap_s) {
   if (pim == nullptr) throw std::invalid_argument("IMU preintegrator is null");
   if (!std::isfinite(t0) || !std::isfinite(t1) || t1 <= t0) {
     throw std::invalid_argument("IMU integration interval must satisfy t1 > t0");
   }
-  size_t i = i_start;
-  // Advance to first sample after t0
-  while (i < imu.size() && imu[i].t <= t0) ++i;
-
-  double t_prev = t0;
-  while (i < imu.size() && imu[i].t < t1) {
-    double dt = imu[i].t - t_prev;
-    if (dt > 1e-9) pim->Integrate(imu[i].acc, imu[i].gyro, dt);
-    t_prev = imu[i].t;
-    ++i;
+  if (!std::isfinite(max_gap_s) || max_gap_s <= 0.0) {
+    throw std::invalid_argument("IMU max gap must be finite and > 0");
+  }
+  if (imu.size() < 2 || imu.front().t > t0 || imu.back().t < t1) {
+    throw std::invalid_argument("IMU samples do not cover the integration interval");
+  }
+  for (std::size_t i = 0; i < imu.size(); ++i) {
+    if (!std::isfinite(imu[i].t) || !imu[i].acc.allFinite() ||
+        !imu[i].gyro.allFinite()) {
+      throw std::invalid_argument("IMU sequence contains non-finite values");
+    }
+    if (i > 0 && !(imu[i - 1].t < imu[i].t)) {
+      throw std::invalid_argument("IMU sequence must be strictly ordered");
+    }
+    if (i > 0 && imu[i - 1].t < t1 && imu[i].t > t0 &&
+        imu[i].t - imu[i - 1].t > max_gap_s + 1e-12) {
+      throw std::runtime_error("IMU gap exceeds configured maximum");
+    }
   }
 
-  // Final segment: interpolate to t1
-  ImuSample s_end = InterpolateImu(imu, t1);
-  double dt = t1 - t_prev;
-  if (dt > 1e-9) pim->Integrate(s_end.acc, s_end.gyro, dt);
+  auto sample_at = [&imu](double time) {
+    auto upper = std::lower_bound(
+        imu.begin(), imu.end(), time,
+        [](const ImuSample& sample, double value) { return sample.t < value; });
+    if (upper != imu.end() && std::abs(upper->t - time) <= 1e-12) {
+      ImuSample exact = *upper;
+      exact.t = time;
+      return exact;
+    }
+    if (upper == imu.begin() || upper == imu.end()) {
+      throw std::invalid_argument("IMU boundary interpolation is not covered");
+    }
+    const ImuSample& right = *upper;
+    const ImuSample& left = *(upper - 1);
+    const double ratio = (time - left.t) / (right.t - left.t);
+    return ImuSample{time,
+                     left.acc + ratio * (right.acc - left.acc),
+                     left.gyro + ratio * (right.gyro - left.gyro)};
+  };
 
-  return i;
+  std::vector<ImuSample> knots;
+  knots.push_back(sample_at(t0));
+  auto first = std::upper_bound(
+      imu.begin(), imu.end(), t0,
+      [](double value, const ImuSample& sample) { return value < sample.t; });
+  for (auto it = first; it != imu.end() && it->t < t1; ++it) {
+    knots.push_back(*it);
+  }
+  knots.push_back(sample_at(t1));
+  for (std::size_t i = 1; i < knots.size(); ++i) {
+    const double dt = knots[i].t - knots[i - 1].t;
+    if (!std::isfinite(dt) || dt <= 0.0 || dt > max_gap_s + 1e-12) {
+      throw std::runtime_error("invalid IMU integration segment");
+    }
+    pim->Integrate(0.5 * (knots[i - 1].acc + knots[i].acc),
+                   0.5 * (knots[i - 1].gyro + knots[i].gyro), dt);
+  }
+  (void)i_start;
+  return static_cast<std::size_t>(std::distance(
+      imu.begin(), std::lower_bound(
+                       imu.begin(), imu.end(), t1,
+                       [](const ImuSample& sample, double value) {
+                         return sample.t < value;
+                       })));
 }
 
 }  // namespace uifgo
