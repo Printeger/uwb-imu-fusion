@@ -24,6 +24,9 @@ class TimestampNs {
   friend constexpr bool operator==(TimestampNs a, TimestampNs b) {
     return a.value_ == b.value_;
   }
+  friend constexpr bool operator!=(TimestampNs a, TimestampNs b) {
+    return !(a == b);
+  }
 
  private:
   std::int64_t value_;

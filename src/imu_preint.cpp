@@ -3,6 +3,9 @@
 #include <gtsam/base/numericalDerivative.h>
 #include <gtsam/navigation/PreintegrationParams.h>
 
+#include <cmath>
+#include <stdexcept>
+
 namespace uifgo {
 
 ImuPreintegrator::ImuPreintegrator(const Config& cfg,
@@ -33,6 +36,12 @@ void ImuPreintegrator::Reset(const gtsam::imuBias::ConstantBias& bias) {
 
 void ImuPreintegrator::Integrate(const gtsam::Vector3& acc,
                                  const gtsam::Vector3& gyro, double dt) {
+  if (!acc.allFinite() || !gyro.allFinite()) {
+    throw std::invalid_argument("IMU sample contains a non-finite value");
+  }
+  if (!std::isfinite(dt) || dt <= 0.0) {
+    throw std::invalid_argument("IMU integration dt must be finite and > 0");
+  }
   pim_.integrateMeasurement(acc, gyro, dt);
 }
 
@@ -62,6 +71,10 @@ ImuSample InterpolateImu(const std::vector<ImuSample>& imu, double t) {
 
 size_t IntegrateBetween(const std::vector<ImuSample>& imu, size_t i_start,
                         double t0, double t1, ImuPreintegrator* pim) {
+  if (pim == nullptr) throw std::invalid_argument("IMU preintegrator is null");
+  if (!std::isfinite(t0) || !std::isfinite(t1) || t1 <= t0) {
+    throw std::invalid_argument("IMU integration interval must satisfy t1 > t0");
+  }
   size_t i = i_start;
   // Advance to first sample after t0
   while (i < imu.size() && imu[i].t <= t0) ++i;

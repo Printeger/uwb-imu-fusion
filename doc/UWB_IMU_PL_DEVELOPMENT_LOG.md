@@ -31,3 +31,15 @@ Overall delivery status: `IMPLEMENTED_UNVERIFIED`.
 - Added a deterministic sweep executable spanning straight/circle/figure-eight trajectories, geometry scale, noise, fault anchor/magnitude and explicit risk/seed dimensions. It is source-only in this delivery and has not been run.
 - Added deferred GoogleTest coverage for whitening/full covariance, analytic Jacobian, chi-square DOF, physical-anchor mapping, noncentral boundary and rank-deficient infinite PL.
 - Commit SHA: to be recorded after the milestone commit.
+
+## 2026-09-01 — M5–M7 incremental estimation
+
+- Added a UWB-only iSAM2 bridge with deterministic position/velocity keys, a constant-velocity factor and group UWB factor. Smoothness rows are exported as `RowRole::Regularizer`; reported detector measurement-row count excludes them.
+- Added immutable `EstimationSnapshot` capability negotiation, factor/measurement/anchor row provenance, linearization versions, current marginal and information-solve surface without exposing a mutable graph or mutable values.
+- Added a full-history tightly coupled iSAM2 estimator with `(Pose3, velocity, IMU bias)`, Combined IMU preintegration and covariance-preserving UWB group factors including the body-frame lever arm.
+- Implemented the Method A lifecycle `predictTo -> preMeasurementSnapshot -> commitUwbBatch/rejectUwbBatch`. The snapshot contract asserts that the prior excludes the current UWB batch.
+- Current `(Pose3,v,bias)` covariance is extracted as a 15×15 joint marginal through public GTSAM factor/marginal APIs. World-frame protected position uses the Pose3 tangent Jacobian `[0, R_WB]`, with a finite-difference regression test, rather than direct covariance indices.
+- Added source-level capability placeholders for fixed lag and historical fault provenance; both explicitly report unsupported. The implementation retains full history.
+- Strengthened the legacy `uifgo::ImuPreintegrator` with finite-sample, positive-dt, valid-interval and null-output checks while preserving its API.
+- Added deferred tests for regularizer row semantics, Pose3 protected-position Jacobian and Method A exclusion of current UWB.
+- Commit SHA: to be recorded after the milestone commit.

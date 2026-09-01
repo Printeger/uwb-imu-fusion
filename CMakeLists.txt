@@ -118,6 +118,8 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/integrity/estimation_snapshot.cpp
   src/uwb_imu_pl/estimation/snapshot_estimator.cpp
   src/uwb_imu_pl/integrity/integrity_monitor.cpp
+  src/uwb_imu_pl/factors/realtime_factors.cpp
+  src/uwb_imu_pl/estimation/incremental_estimator.cpp
   src/config.cpp
   src/data_loader.cpp
   src/outlier_filter.cpp
@@ -205,4 +207,7 @@ if(GTest_FOUND)
 
   catkin_add_gtest(test_snapshot_integrity test/test_snapshot_integrity.cpp)
   target_link_libraries(test_snapshot_integrity ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_realtime_incremental test/test_realtime_incremental.cpp)
+  target_link_libraries(test_realtime_incremental ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
 endif()
