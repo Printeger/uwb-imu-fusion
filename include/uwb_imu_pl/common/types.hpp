@@ -35,7 +35,8 @@ class TimestampNs {
 template <typename Tag>
 class StrongId {
  public:
-  explicit constexpr StrongId(std::uint64_t value = 0) : value_(value) {}
+  constexpr StrongId() = default;
+  explicit constexpr StrongId(std::uint64_t value) : value_(value) {}
   constexpr std::uint64_t value() const { return value_; }
   friend constexpr bool operator==(StrongId a, StrongId b) {
     return a.value_ == b.value_;
@@ -45,7 +46,7 @@ class StrongId {
   }
 
  private:
-  std::uint64_t value_;
+  std::uint64_t value_ = 0;
 };
 
 struct AnchorIdTag {};

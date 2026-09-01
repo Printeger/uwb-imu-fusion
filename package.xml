@@ -39,6 +39,9 @@
   <exec_depend>uwb_driver</exec_depend>
   <exec_depend>isas_msgs</exec_depend>
 
+  <test_depend>gtest</test_depend>
+  <test_depend>rostest</test_depend>
+
   <export>
     <nodelet plugin="${prefix}/simulator/so3_control/so3_control_plugin.xml"/>
   </export>

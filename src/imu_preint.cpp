@@ -10,12 +10,12 @@ namespace uifgo {
 
 ImuPreintegrator::ImuPreintegrator(const Config& cfg,
                                    const gtsam::Vector3& gravity_world) {
-  // MakeSharedU expects positive gravity magnitude; internally sets
-  // n_gravity = (0,0,-g) for Z-up world frame.
-  // gravity_world is (0,0,-g), so we pass |g| = cfg.gravity directly.
-  (void)gravity_world;  // kept for API compatibility
+  if (!gravity_world.allFinite()) {
+    throw std::invalid_argument("world gravity must be finite");
+  }
   auto p = gtsam::PreintegratedCombinedMeasurements::Params::MakeSharedU(
-      cfg.gravity);
+      gravity_world.norm());
+  p->n_gravity = gravity_world;
   p->accelerometerCovariance =
       Eigen::Matrix3d::Identity() * cfg.sigma_a * cfg.sigma_a;
   p->gyroscopeCovariance =

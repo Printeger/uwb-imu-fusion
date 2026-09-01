@@ -88,7 +88,8 @@ IntegrityOutput IncrementalUwbEstimator::update(const UwbBatch& batch) {
       positionKey(epoch_ - 1), velocityKey(epoch_ - 1), positionKey(epoch_),
       velocityKey(epoch_), dt, config_.smoothness_sigma_m));
   graph.add(boost::make_shared<UwbPositionBatchFactor>(positionKey(epoch_), batch));
-  values.insert(positionKey(epoch_), p0 + dt * v0);
+  const gtsam::Point3 predicted_position(p0 + dt * v0);
+  values.insert(positionKey(epoch_), predicted_position);
   values.insert(velocityKey(epoch_), v0);
   isam2_.update(graph, values);
   for (const auto& factor : graph) full_graph_.push_back(factor);

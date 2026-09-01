@@ -3,8 +3,10 @@ project(uwb_imu_pl)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g -Wno-sign-compare -Wno-unused -Wno-comment -pthread")
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+add_compile_options(-Wall -Wno-sign-compare -Wno-unused -Wno-comment -pthread)
 
 # --- Catkin ---
 find_package(catkin REQUIRED COMPONENTS
@@ -73,6 +75,7 @@ catkin_package(
 
 # --- GTSAM (≥ 4.2 required for GncOptimizer / setInlierCostThresholdsAtProbability) ---
 find_package(GTSAM 4.2 REQUIRED)
+find_package(GTSAM_UNSTABLE REQUIRED)
 if(GTSAM_FOUND)
   include_directories(${GTSAM_INCLUDE_DIR})
   message(STATUS "GTSAM found: ${GTSAM_INCLUDE_DIR} (version: ${GTSAM_VERSION})")
@@ -94,8 +97,9 @@ if(Boost_FOUND)
   link_directories(${Boost_LIBRARY_DIRS})
 endif()
 
-# --- GoogleTest ---
-find_package(GTest REQUIRED)
+if(CATKIN_ENABLE_TESTING)
+  find_package(GTest REQUIRED)
+endif()
 
 # --- Armadillo (simulator: ODE integrator) ---
 find_package(Armadillo REQUIRED)
@@ -212,7 +216,7 @@ catkin_install_python(PROGRAMS
 # =============================================
 # Unit Tests (GoogleTest)
 # =============================================
-if(GTest_FOUND)
+if(CATKIN_ENABLE_TESTING)
   enable_testing()
 
   catkin_add_gtest(test_config test/test_config.cpp)
@@ -236,9 +240,9 @@ if(GTest_FOUND)
   catkin_add_gtest(test_optimizer test/test_optimizer.cpp)
   target_link_libraries(test_optimizer ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
 
-  catkin_add_gtest(test_snapshot_integrity test/test_snapshot_integrity.cpp)
+  catkin_add_gtest(test_snapshot_integrity test/test_snapshot_integrity.cpp test/test_main.cpp)
   target_link_libraries(test_snapshot_integrity ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
 
-  catkin_add_gtest(test_realtime_incremental test/test_realtime_incremental.cpp)
+  catkin_add_gtest(test_realtime_incremental test/test_realtime_incremental.cpp test/test_main.cpp)
   target_link_libraries(test_realtime_incremental ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
 endif()
