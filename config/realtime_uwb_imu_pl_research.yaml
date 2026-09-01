@@ -1,0 +1,49 @@
+# Research-only example. It is not a certified safety configuration.
+seed: 20260901
+
+snapshot:
+  dimensions: 3
+  max_iterations: 30
+  step_tolerance_m: 1.0e-7
+  rank_tolerance: 1.0e-10
+  max_condition_number: 1.0e10
+
+incremental:
+  relinearize_threshold: 0.1
+  relinearize_skip: 1
+  smoothness_sigma_m: 0.5
+  epoch_bin_s: 0.02
+  max_time_skew_s: 0.01
+  enable_method_b: false
+  method_b_max_condition: 1.0e10
+  fixed_lag_epochs: 0
+
+imu:
+  accelerometer_sigma: 0.10
+  gyroscope_sigma: 0.01
+  accelerometer_bias_rw_sigma: 0.001
+  gyroscope_bias_rw_sigma: 0.0001
+  gravity_mps2: 9.80665
+
+risk:
+  p_fa: 1.0e-5
+  nominal_axis_tail: 1.0e-5
+  p_nm: 1.0e-7
+  single_anchor_p_md: 1.0e-3
+  single_anchor_prior_bound: 1.0e-4
+  horizontal_alert_limit_m: 2.0
+  vertical_alert_limit_m: 3.0
+
+output:
+  root: results/realtime_uwb_imu_pl
+  write_residuals: true
+  write_timing: true
+
+realtime:
+  world_frame: world
+  body_frame: base_link
+  imu_topic: /imu/data
+  uwb_topic: /nlink_linktrack_nodeframe3
+  odometry_topic: /uwb_imu_pl/odometry
+  integrity_topic: /uwb_imu_pl/integrity
+  diagnostics_topic: /diagnostics

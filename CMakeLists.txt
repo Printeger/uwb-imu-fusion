@@ -112,6 +112,9 @@ include_directories(
 # Library: core algorithm (ROS-free)
 # =============================================
 add_library(${PROJECT_NAME}
+  src/uwb_imu_pl/common/types.cpp
+  src/uwb_imu_pl/config/integrity_config.cpp
+  src/uwb_imu_pl/io/run_logger.cpp
   src/config.cpp
   src/data_loader.cpp
   src/outlier_filter.cpp

@@ -1,0 +1,209 @@
+#pragma once
+
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+
+#include <array>
+#include <cstdint>
+#include <limits>
+#include <optional>
+#include <string>
+#include <vector>
+
+namespace uwb_imu_pl {
+
+class TimestampNs {
+ public:
+  explicit constexpr TimestampNs(std::int64_t value = 0) : value_(value) {}
+  static TimestampNs fromSeconds(double seconds);
+  constexpr std::int64_t value() const { return value_; }
+  double seconds() const;
+  friend constexpr bool operator<(TimestampNs a, TimestampNs b) {
+    return a.value_ < b.value_;
+  }
+  friend constexpr bool operator==(TimestampNs a, TimestampNs b) {
+    return a.value_ == b.value_;
+  }
+
+ private:
+  std::int64_t value_;
+};
+
+template <typename Tag>
+class StrongId {
+ public:
+  explicit constexpr StrongId(std::uint64_t value = 0) : value_(value) {}
+  constexpr std::uint64_t value() const { return value_; }
+  friend constexpr bool operator==(StrongId a, StrongId b) {
+    return a.value_ == b.value_;
+  }
+  friend constexpr bool operator<(StrongId a, StrongId b) {
+    return a.value_ < b.value_;
+  }
+
+ private:
+  std::uint64_t value_;
+};
+
+struct AnchorIdTag {};
+struct MeasurementIdTag {};
+struct FactorIdTag {};
+struct StateIdTag {};
+struct HypothesisIdTag {};
+struct BatchIdTag {};
+using AnchorId = StrongId<AnchorIdTag>;
+using MeasurementId = StrongId<MeasurementIdTag>;
+using FactorId = StrongId<FactorIdTag>;
+using StateId = StrongId<StateIdTag>;
+using HypothesisId = StrongId<HypothesisIdTag>;
+using BatchId = StrongId<BatchIdTag>;
+
+enum class RowRole { Measurement, TrustedPrior, Regularizer };
+enum class LinearizationConsistency { Strict, CachedChecked, CachedBlind };
+enum class IntegrityLabel {
+  FormalLocalCurrentFaultOnly,
+  ImplementedUnverified,
+  HeuristicDebug
+};
+enum class Availability { Available, Alert, Unavailable };
+
+struct UwbMeasurement {
+  MeasurementId id;
+  FactorId factor_id;
+  AnchorId anchor_id;
+  TimestampNs timestamp;
+  double range_m = 0.0;
+  Eigen::Vector3d anchor_position_m = Eigen::Vector3d::Zero();
+  double sigma_m = 0.0;
+  std::uint64_t sequence = 0;
+  std::uint32_t quality_flags = 0;
+};
+
+struct UwbBatch {
+  BatchId id;
+  TimestampNs timestamp;
+  std::vector<UwbMeasurement> measurements;
+  // Empty means diag(sigma_m^2). Otherwise it must be symmetric positive
+  // definite and match measurements.size().
+  Eigen::MatrixXd covariance_m2;
+  std::string covariance_model_id;
+};
+
+struct ImuMeasurement {
+  MeasurementId id;
+  TimestampNs timestamp;
+  Eigen::Vector3d specific_force_mps2 = Eigen::Vector3d::Zero();
+  Eigen::Vector3d angular_velocity_radps = Eigen::Vector3d::Zero();
+  std::uint32_t quality_flags = 0;
+};
+
+struct NavigationState {
+  StateId id;
+  TimestampNs timestamp;
+  Eigen::Quaterniond q_world_body = Eigen::Quaterniond::Identity();
+  Eigen::Vector3d position_world_m = Eigen::Vector3d::Zero();
+  Eigen::Vector3d velocity_world_mps = Eigen::Vector3d::Zero();
+  Eigen::Vector3d accel_bias_mps2 = Eigen::Vector3d::Zero();
+  Eigen::Vector3d gyro_bias_radps = Eigen::Vector3d::Zero();
+};
+
+struct FaultHypothesis {
+  HypothesisId id;
+  AnchorId anchor_id;
+  std::vector<MeasurementId> affected_measurements;
+  double prior_probability_bound = 0.0;
+  double missed_detection_allocation = 0.0;
+  bool monitored = true;
+  std::string physical_fault_type = "single_anchor_range_bias";
+  std::string pruning_reason;
+};
+
+struct RiskBudget {
+  double p_fa = 0.0;
+  double nominal_axis_tail = 0.0;
+  double p_nm = 0.0;
+  double horizontal_alert_limit_m = 0.0;
+  double vertical_alert_limit_m = 0.0;
+  std::vector<FaultHypothesis> hypotheses;
+};
+
+struct LinearizationDiagnostics {
+  int rows = 0;
+  int columns = 0;
+  int rank = 0;
+  double condition_number = std::numeric_limits<double>::infinity();
+  double linearization_step_norm = std::numeric_limits<double>::infinity();
+  bool covariance_valid = false;
+  bool model_valid = false;
+  std::string reason;
+};
+
+struct DetectorResult {
+  std::string detector_type;
+  double statistic = std::numeric_limits<double>::infinity();
+  double threshold = 0.0;
+  int dof = 0;
+  double p_fa = 0.0;
+  bool passed = false;
+  bool numerically_valid = false;
+  std::vector<double> local_anchor_scores;
+  std::string reason;
+};
+
+struct SensitivityResult {
+  HypothesisId hypothesis_id;
+  AnchorId anchor_id;
+  Eigen::Vector3d slope_xyz = Eigen::Vector3d::Constant(
+      std::numeric_limits<double>::infinity());
+  double detector_gram = 0.0;
+  double noncentrality_boundary = 0.0;
+  bool finite = false;
+  std::string reason;
+};
+
+struct ProtectionLevelResult {
+  TimestampNs timestamp;
+  Eigen::Vector3d pl_xyz_m = Eigen::Vector3d::Constant(
+      std::numeric_limits<double>::infinity());
+  Eigen::Vector3d nominal_component_m = Eigen::Vector3d::Constant(
+      std::numeric_limits<double>::infinity());
+  Eigen::Vector3d fault_component_m = Eigen::Vector3d::Constant(
+      std::numeric_limits<double>::infinity());
+  double hpl_box_m = std::numeric_limits<double>::infinity();
+  double vpl_m = std::numeric_limits<double>::infinity();
+  std::array<AnchorId, 3> maximizing_anchor{};
+  Availability availability = Availability::Unavailable;
+  IntegrityLabel label = IntegrityLabel::ImplementedUnverified;
+  LinearizationConsistency consistency = LinearizationConsistency::Strict;
+  std::string reason;
+};
+
+struct IntegrityOutput {
+  TimestampNs timestamp;
+  NavigationState state;
+  DetectorResult detector;
+  std::vector<SensitivityResult> sensitivities;
+  ProtectionLevelResult protection_level;
+  bool batch_committed = false;
+};
+
+struct RunManifest {
+  std::string schema_version = "uwb-imu-pl/v1";
+  std::string created_utc;
+  std::string git_sha;
+  bool git_dirty = false;
+  std::string config_path;
+  std::string config_hash;
+  std::string resolved_config;
+  std::uint64_t seed = 0;
+  std::string build_type;
+  std::string compiler;
+  std::string os;
+  std::string gtsam_version;
+  std::string eigen_version;
+};
+
+const char* toString(Availability value);
+const char* toString(IntegrityLabel value);
+
+}  // namespace uwb_imu_pl
