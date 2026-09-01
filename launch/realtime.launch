@@ -1,7 +1,7 @@
 <launch>
   <arg name="config_path"
-       default="$(find uwb_imu_fgo)/config/realtime_uwb_imu_pl_research.yaml"/>
-  <node pkg="uwb_imu_fgo" type="uwb_imu_pl_realtime_node"
+       default="$(find uwb_imu_pl)/config/realtime_uwb_imu_pl_research.yaml"/>
+  <node pkg="uwb_imu_pl" type="uwb_imu_pl_realtime_node"
         name="uwb_imu_pl_realtime" output="screen">
     <param name="config_path" value="$(arg config_path)"/>
   </node>

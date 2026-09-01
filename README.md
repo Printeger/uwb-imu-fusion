@@ -1,13 +1,12 @@
-# uwb-imu-fusion — UWB-IMU Tightly-Coupled FGO SLAM
+# uwb-imu-fusion-pl — UWB-IMU Tightly-Coupled FGO SLAM
 
 基于 GTSAM 的批量因子图优化（batch FGO）UWB-IMU 紧耦合定位系统。追求离线后处理的最高精度，非实时在线 SLAM。
 
-> **实时完整性分支状态：`IMPLEMENTED_UNVERIFIED`。** 本分支在不改变原有
-> `uifgo` batch LM/GNC 接口、包名和 launch 兼容性的前提下，新增了
+> **实时完整性分支状态：`IMPLEMENTED_UNVERIFIED`。** 本分支保留原有
+> `uifgo` batch LM/GNC C++ 接口，并将 ROS 包、节点、launch 与 topic 统一为
 > `uwb_imu_pl` snapshot RAIM、full-history iSAM2 UWB–IMU、conditional
-> current-UWB detector 与单锚 PL。当前交付环境为 Ubuntu 24.04 / ROS2 only，
-> 未具备 ROS1 Noetic + GTSAM 4.2.x，故没有声称编译、单测、仿真或性能通过。
-> 待验证项以 [测试账本](doc/UWB_IMU_PL_TEST_PLAN.md) 为准；数学范围见
+> current-UWB detector 与单锚 PL。构建和测试的真实执行结果以
+> [测试账本](doc/UWB_IMU_PL_TEST_PLAN.md) 为准；数学范围见
 > [完整性语义](doc/UWB_IMU_PL_INTEGRITY_SEMANTICS.md)。
 
 ## 1. 算法概述
@@ -27,7 +26,7 @@
 ## 2. 项目结构
 
 ```
-src/uwb-imu-fusion/
+src/uwb-imu-fusion-pl/
 ├── CMakeLists.txt                     # catkin + GTSAM + yaml-cpp + GTest
 ├── package.xml                        # ROS Noetic
 ├── README.md
@@ -103,14 +102,14 @@ src/uwb-imu-fusion/
 
 ```bash
 cd /home/mint/dev/ws_uwb
-catkin build uwb_imu_fgo
+catkin build uwb_imu_pl
 source devel/setup.bash
 ```
 
 ## 5. 运行单元测试
 
 ```bash
-catkin test uwb_imu_fgo
+catkin test uwb_imu_pl
 # 预期: 36 tests, 0 errors, 0 failures
 ```
 
@@ -215,20 +214,20 @@ Rosbag 通过**直接读取文件**的方式导入（`rosbag::Bag::open()` + `ro
 
 ```bash
 cd /home/mint/dev/ws_uwb
-catkin build uwb_imu_fgo && source devel/setup.bash
-roslaunch uwb_imu_fgo offline.launch
+catkin build uwb_imu_pl && source devel/setup.bash
+roslaunch uwb_imu_pl offline.launch
 ```
 
 ### 使用自定义配置
 
 ```bash
-roslaunch uwb_imu_fgo offline.launch config_path:=/path/to/your_config.yaml
+roslaunch uwb_imu_pl offline.launch config_path:=/path/to/your_config.yaml
 ```
 
 ### 带 RViz 可视化（推荐）
 
 ```bash
-roslaunch uwb_imu_fgo offline_with_viz.launch
+roslaunch uwb_imu_pl offline_with_viz.launch
 ```
 
 处理完成后，RViz 自动加载全部可视化内容。保持终端运行，在 RViz 窗口中可旋转/缩放查看。详见 [13. RViz 可视化](#13-rviz-可视化)。
@@ -307,8 +306,8 @@ python3 tools/analyze_log.py logs/2026-06-08_15-30-45_no_obstacle/
 
 ```bash
 cd /home/mint/dev/ws_uwb
-catkin build uwb_imu_fgo && source devel/setup.bash
-roslaunch uwb_imu_fgo offline.launch
+catkin build uwb_imu_pl && source devel/setup.bash
+roslaunch uwb_imu_pl offline.launch
 ```
 
 默认配置: **kf_step=10** (367 关键帧, <1min)、**标定全关** (基线精度)。
@@ -320,8 +319,8 @@ roslaunch uwb_imu_fgo offline.launch
 VN200、UWB 和 GT 分别存储，使用专用配置即可切换：
 
 ```bash
-roslaunch uwb_imu_fgo offline_with_viz.launch \
-  config_path:=$(rospack find uwb_imu_fgo)/config/mcd_tuhh_night_09.yaml
+roslaunch uwb_imu_pl offline_with_viz.launch \
+  config_path:=$(rospack find uwb_imu_pl)/config/mcd_tuhh_night_09.yaml
 ```
 
 MCD 配置使用 `/vn200/imu`、`/ltp_tag0/nlnf3` 和
@@ -336,11 +335,11 @@ GT 和 tag0 测距拟合，只适合打通接口和集成测试，正式 benchma
 ROS1 + GTSAM 4.2.x 环境中，研究配置的预期入口为：
 
 ```bash
-roslaunch uwb_imu_fgo realtime.launch
+roslaunch uwb_imu_pl realtime.launch
 
 # 或运行完整仿真；trajectory=straight|circle|figure_eight
 # fault_mode=none|step|ramp|magnitude_sweep|outage
-roslaunch uwb_imu_fgo realtime_integrity_sim.launch \
+roslaunch uwb_imu_pl realtime_integrity_sim.launch \
   trajectory:=figure_eight fault_mode:=step fault_anchor_id:=1 \
   fault_magnitude_m:=1.0 random_seed:=20260901
 ```
@@ -375,7 +374,7 @@ provenance 或 nonlinear remainder bound。
 │ 4. rosbag record -a                                      │
 │    录制 → sim_circle_<ts>.bag                             │
 ├──────────────────────────────────────────────────────────┤
-│ 5. uwb_imu_fgo (offline_with_viz.launch)                 │
+│ 5. uwb_imu_pl (offline_with_viz.launch)                 │
 │    GTSAM FGO 批量优化 → trajectory.txt + groundtruth.txt │
 ├──────────────────────────────────────────────────────────┤
 │ 6. tools/analyze_log.py                                  │
@@ -389,10 +388,10 @@ provenance 或 nonlinear remainder bound。
 # ===== 步骤 1: 启动仿真 =====
 cd ~/ws_fusion_uwb
 source devel/setup.bash
-roslaunch uwb_imu_fgo circle_sim.launch
+roslaunch uwb_imu_pl circle_sim.launch
 
 # ===== 步骤 2: 录制 rosbag (另开终端) =====
-cd src/uwb-imu-fusion/data
+cd src/uwb-imu-fusion-pl/data
 rosbag record -a -o ./sim_circle.bag
 # 仿真约 85 秒后自动结束，Ctrl+C 停止录制
 
@@ -400,7 +399,7 @@ rosbag record -a -o ./sim_circle.bag
 # 编辑 config/sim_circle.yaml，更新 bag.path 为刚录制的 bag 文件名
 
 # ===== 步骤 4: 离线 FGO 处理 =====
-roslaunch uwb_imu_fgo offline_with_viz.launch
+roslaunch uwb_imu_pl offline_with_viz.launch
 # 处理完成后自动输出:
 #   logs/<timestamp>/trajectory.txt   (融合轨迹)
 #   logs/<timestamp>/groundtruth.txt  (真值轨迹)
@@ -607,7 +606,7 @@ python3 tools/analyze_log.py logs/2026-06-15_16-09-35_sim_circle/
 │  offline_with_viz.launch                             │
 │                                                      │
 │  ┌──────────────────────┐   ┌─────────────────────┐  │
-│  │ uwb_imu_fgo_node     │   │ rviz                │  │
+│  │ uwb_imu_pl_node     │   │ rviz                │  │
 │  │  (run_offline.cpp)   │   │  uwb_fgo_viz.rviz   │  │
 │  │                      │──►│                     │  │
 │  │  处理完成后发布 ──────│   │  订阅并渲染 9 类    │  │
@@ -622,15 +621,15 @@ python3 tools/analyze_log.py logs/2026-06-15_16-09-35_sim_circle/
 
 | # | RViz 显示名称 | 数据类型 | ROS Topic | 颜色/样式 |
 |---|-------------|---------|-----------|-----------|
-| 1 | Anchor Initial (Green) | `MarkerArray` | `/uwb_imu_fgo/anchor_initial` | 🟢 绿色球体 + 白色文字标签 |
-| 2 | Anchor Optimized (Orange+Arrows) | `MarkerArray` | `/uwb_imu_fgo/anchor_optimized` | 🟠 橙色球体 + 绿→红位移箭头 |
-| 3 | GT Trajectory (Blue) | `Path` | `/uwb_imu_fgo/gt_trajectory` | 🔵 蓝色实线 (VICON 真值) |
-| 4 | Fused Trajectory (Red) | `Path` | `/uwb_imu_fgo/fused_trajectory` | 🔴 红色实线 (融合结果) |
-| 5 | Keyframe Poses (RGB axes) | `MarkerArray` | `/uwb_imu_fgo/keyframe_poses` | RGB 坐标轴 (红=X,绿=Y,蓝=Z) |
-| 6 | Covariance Ellipsoids (cyan) | `MarkerArray` | `/uwb_imu_fgo/covariance_ellipsoids` | 🔷 半透明青色 2σ 椭球 |
-| 7 | UWB Range Edges (green→red) | `MarkerArray` | `/uwb_imu_fgo/uwb_edges` | 🟢→🔴 残差颜色编码连线 |
-| 8 | Error Vectors (est → GT) | `MarkerArray` | `/uwb_imu_fgo/error_vectors` | 🟢→🔴 估计→真值误差箭头 |
-| 9 | Metrics Text | `Marker` | `/uwb_imu_fgo/metrics_text` | ⬜ 屏幕文字 (ATE/P95/耗时) |
+| 1 | Anchor Initial (Green) | `MarkerArray` | `/uwb_imu_pl/anchor_initial` | 🟢 绿色球体 + 白色文字标签 |
+| 2 | Anchor Optimized (Orange+Arrows) | `MarkerArray` | `/uwb_imu_pl/anchor_optimized` | 🟠 橙色球体 + 绿→红位移箭头 |
+| 3 | GT Trajectory (Blue) | `Path` | `/uwb_imu_pl/gt_trajectory` | 🔵 蓝色实线 (VICON 真值) |
+| 4 | Fused Trajectory (Red) | `Path` | `/uwb_imu_pl/fused_trajectory` | 🔴 红色实线 (融合结果) |
+| 5 | Keyframe Poses (RGB axes) | `MarkerArray` | `/uwb_imu_pl/keyframe_poses` | RGB 坐标轴 (红=X,绿=Y,蓝=Z) |
+| 6 | Covariance Ellipsoids (cyan) | `MarkerArray` | `/uwb_imu_pl/covariance_ellipsoids` | 🔷 半透明青色 2σ 椭球 |
+| 7 | UWB Range Edges (green→red) | `MarkerArray` | `/uwb_imu_pl/uwb_edges` | 🟢→🔴 残差颜色编码连线 |
+| 8 | Error Vectors (est → GT) | `MarkerArray` | `/uwb_imu_pl/error_vectors` | 🟢→🔴 估计→真值误差箭头 |
+| 9 | Metrics Text | `Marker` | `/uwb_imu_pl/metrics_text` | ⬜ 屏幕文字 (ATE/P95/耗时) |
 
 ### 13.3 各显示项说明
 
@@ -652,10 +651,10 @@ python3 tools/analyze_log.py logs/2026-06-15_16-09-35_sim_circle/
 
 ```bash
 # 默认配置 + RViz
-roslaunch uwb_imu_fgo offline_with_viz.launch
+roslaunch uwb_imu_pl offline_with_viz.launch
 
 # 自定义配置 + RViz
-roslaunch uwb_imu_fgo offline_with_viz.launch config_path:=/path/to/slam.yaml
+roslaunch uwb_imu_pl offline_with_viz.launch config_path:=/path/to/slam.yaml
 ```
 
 > **注意**: 节点启动后会立即广播 `world→map` TF（10Hz 独立线程），确保 RViz 从始至终有合法的 Fixed Frame，Grid 和所有 Marker 都能正常渲染。

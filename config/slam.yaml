@@ -4,7 +4,7 @@
 # 数据集: Building 2025-04-25 (室内大楼场景, 无VICON)
 # rosbag: data/2025-04-25-11-30-21_uwb_lidar_imu.bag
 # 锚点来源: data/building_anchor_pose.yaml
-# 使用: roslaunch uwb_imu_fgo offline.launch
+# 使用: roslaunch uwb_imu_pl offline.launch
 # ============================================================
 
 # 原始单-bag接口；切换MCD数据集请使用 mcd_tuhh_night_09.yaml。

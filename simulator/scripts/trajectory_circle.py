@@ -9,12 +9,12 @@ Phases:
   4. Return:   fly back to (0, 0, 2.0)   over 5 s
   5. Land:     descend to (0, 0, 0.0)    over 3 s
 
-Publishes: /position_cmd (uwb_imu_fgo/PositionCommand)
+Publishes: /position_cmd (uwb_imu_pl/PositionCommand)
 """
 
 import math
 import rospy
-from uwb_imu_fgo.msg import PositionCommand
+from uwb_imu_pl.msg import PositionCommand
 
 PHASE_TAKEOFF = 0
 PHASE_HOLD = 1

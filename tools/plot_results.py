@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import os, json
 
-OUT = "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion/logs/plots"
+OUT = "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/logs/plots"
 os.makedirs(OUT, exist_ok=True)
 
 def load_tum(path):
@@ -44,29 +44,29 @@ def umeyama_align(est_t, est_p, gt_t, gt_p):
 datasets = [
     # --- VIUNet ---
     {"name":"VIUNet_00","label":"VIUNet (4 ceiling anchors)",
-     "log":"/home/mint/ws_fusion_uwb/src/uwb-imu-fusion/logs/2026-08-07_17-34-42_VIUNet_00","color":"#2196F3",
+     "log":"/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/logs/2026-08-07_17-34-42_VIUNet_00","color":"#2196F3",
      "anchors":np.array([[-0.76,2.68,2.64],[-0.76,-2.32,2.64],[1.24,-2.32,2.64],[1.24,2.68,2.64]]),
      "anchor_ids":["A1","A2","A3","A4"]},
     # --- MILUV ---
     {"name":"MILUV_circular","label":"MILUV Circular",
-     "log":"/home/mint/ws_fusion_uwb/src/uwb-imu-fusion/logs/2026-08-07_22-44-53_default_1_circular3D_0","color":"#4CAF50",
+     "log":"/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/logs/2026-08-07_22-44-53_default_1_circular3D_0","color":"#4CAF50",
      "anchors":np.array([[3.27,3.46,1.81],[3.19,0.27,1.59],[2.85,-2.92,1.90],[-2.50,-3.50,1.77],[-2.96,0.61,1.66],[-2.73,3.66,1.89]]),
      "anchor_ids":["A0","A1","A2","A3","A4","A5"]},
     {"name":"MILUV_random","label":"MILUV Random",
-     "log":"/home/mint/ws_fusion_uwb/src/uwb-imu-fusion/logs/2026-08-07_23-30-39_default_1_random3_0","color":"#FF9800",
+     "log":"/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/logs/2026-08-07_23-30-39_default_1_random3_0","color":"#FF9800",
      "anchors":np.array([[3.27,3.46,1.81],[3.19,0.27,1.59],[2.85,-2.92,1.90],[-2.50,-3.50,1.77],[-2.96,0.61,1.66],[-2.73,3.66,1.89]]),
      "anchor_ids":["A0","A1","A2","A3","A4","A5"]},
     # --- SFUISE ISAS-Walk (corrected IMU noise) ---
     {"name":"SFUISE_Walk1","label":"SFUISE Walk1 (5 anchors)",
-     "log":"/home/mint/ws_fusion_uwb/src/uwb-imu-fusion/logs/sfuise/walk1_v2","color":"#E91E63",
+     "log":"/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/logs/sfuise/walk1_v2","color":"#E91E63",
      "anchors":np.array([[0,0,0],[2.61,2.67,0],[5.52,0.05,1.86],[3.12,-2.59,1.85],[5.5,0,0]]),
      "anchor_ids":["A0","A1","A2","A3","A4"]},
     {"name":"SFUISE_Walk2","label":"SFUISE Walk2 (5 anchors)",
-     "log":"/home/mint/ws_fusion_uwb/src/uwb-imu-fusion/logs/sfuise/walk2_v2","color":"#9C27B0",
+     "log":"/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/logs/sfuise/walk2_v2","color":"#9C27B0",
      "anchors":np.array([[0,0,0],[2.61,2.67,0],[5.52,0.05,1.86],[3.12,-2.59,1.85],[5.5,0,0]]),
      "anchor_ids":["A0","A1","A2","A3","A4"]},
     {"name":"SFUISE_Walk3","label":"SFUISE Walk3 (5 anchors)",
-     "log":"/home/mint/ws_fusion_uwb/src/uwb-imu-fusion/logs/sfuise/walk3_v2","color":"#00BCD4",
+     "log":"/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/logs/sfuise/walk3_v2","color":"#00BCD4",
      "anchors":np.array([[0,0,0],[2.61,2.67,0],[5.52,0.05,1.86],[3.12,-2.59,1.85],[5.5,0,0]]),
      "anchor_ids":["A0","A1","A2","A3","A4"]},
 ]

@@ -1,6 +1,6 @@
 # UWB-IMU FGO 紧耦合融合定位系统 — 完整代码文档
 
-> **项目名称**: `uwb_imu_fgo` (UWB-IMU Factor Graph Optimization)
+> **项目名称**: `uwb_imu_pl` (UWB-IMU Factor Graph Optimization)
 > **定位**: 基于 GTSAM 的离线 batch 因子图优化 UWB-IMU 紧耦合定位系统，追求**最高后处理精度**
 > **依赖**: ROS Noetic, GTSAM ≥ 4.2, Eigen3, yaml-cpp, Boost, GoogleTest
 
@@ -124,7 +124,7 @@ s.gyro = Eigen::Vector3d(
 
 ```cpp
 // Topic: config.uwb_topic (默认 "/nlink_linktrack_nodeframe3")
-// 消息类型: uwb_imu_fgo::LinktrackNodeframe3 (自定义 ROS 消息)
+// 消息类型: uwb_imu_pl::LinktrackNodeframe3 (自定义 ROS 消息)
 ```
 
 **消息结构**（定义于 `msg/LinktrackNodeframe3.msg`）:
@@ -1192,30 +1192,30 @@ $$\mathbf{R}_{WB} = \text{Exp}(\theta \boldsymbol{\omega})$$
 
 ```bash
 cd /home/mint/ws_fusion_uwb
-catkin build uwb_imu_fgo
+catkin build uwb_imu_pl
 source devel/setup.bash
 ```
 
 ### 运行（无可视化）
 
 ```bash
-roslaunch uwb_imu_fgo offline.launch config_path:=/path/to/slam.yaml
+roslaunch uwb_imu_pl offline.launch config_path:=/path/to/slam.yaml
 ```
 
 ### 运行（带 RViz 可视化）
 
 ```bash
-roslaunch uwb_imu_fgo offline_with_viz.launch config_path:=/path/to/slam.yaml
+roslaunch uwb_imu_pl offline_with_viz.launch config_path:=/path/to/slam.yaml
 ```
 
 ### 调试模式
 
 ```bash
 # 自动 backtrace on crash
-roslaunch uwb_imu_fgo offline_with_viz.launch gdb:=1
+roslaunch uwb_imu_pl offline_with_viz.launch gdb:=1
 
 # 交互式 GDB
-roslaunch uwb_imu_fgo offline_with_viz.launch gdb:=1 gdb_interactive:=1
+roslaunch uwb_imu_pl offline_with_viz.launch gdb:=1 gdb_interactive:=1
 ```
 
 ## 附录 B: 关键设计决策记录
@@ -1234,5 +1234,5 @@ roslaunch uwb_imu_fgo offline_with_viz.launch gdb:=1 gdb_interactive:=1
 ---
 
 > **文档版本**: v1.0
-> **对应代码**: `uwb-imu-fusion` @ `src/`, `include/`, `tools/`, `config/`
+> **对应代码**: `uwb-imu-fusion-pl` @ `src/`, `include/`, `tools/`, `config/`
 > **生成日期**: 2026-06-12

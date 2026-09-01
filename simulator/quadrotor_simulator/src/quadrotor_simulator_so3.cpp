@@ -4,7 +4,7 @@
 #include <sensor_msgs/Imu.h>
 #include <tf/transform_broadcaster.h>
 #include <uav_utils/geometry_utils.h>
-#include <uwb_imu_fgo/SO3Command.h>
+#include <uwb_imu_pl/SO3Command.h>
 
 #include <Eigen/Geometry>
 
@@ -152,7 +152,7 @@ static Control getControl(const QuadrotorSimulator::Quadrotor& quad,
   return control;
 }
 
-static void cmd_callback(const uwb_imu_fgo::SO3Command::ConstPtr& cmd) {
+static void cmd_callback(const uwb_imu_pl::SO3Command::ConstPtr& cmd) {
   command.force[0] = cmd->force.x;
   command.force[1] = cmd->force.y;
   command.force[2] = cmd->force.z;

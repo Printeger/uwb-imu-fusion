@@ -4,7 +4,7 @@
 import math
 
 import rospy
-from uwb_imu_fgo.msg import PositionCommand
+from uwb_imu_pl.msg import PositionCommand
 
 
 def smoothstep(value):

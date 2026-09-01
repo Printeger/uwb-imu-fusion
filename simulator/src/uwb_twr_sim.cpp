@@ -13,8 +13,8 @@
 
 #include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
-#include <uwb_imu_fgo/LinktrackNode2.h>
-#include <uwb_imu_fgo/LinktrackNodeframe3.h>
+#include <uwb_imu_pl/LinktrackNode2.h>
+#include <uwb_imu_pl/LinktrackNodeframe3.h>
 #include <visualization_msgs/Marker.h>
 
 #include <Eigen/Dense>
@@ -138,7 +138,7 @@ class UwbTwrSim {
     std::string odom_topic;
     nh_.param("odom_topic", odom_topic, std::string("/sim/odom"));
     odom_sub_ = nh_.subscribe(odom_topic, 10, &UwbTwrSim::odomCb, this);
-    pub_ = nh_.advertise<uwb_imu_fgo::LinktrackNodeframe3>(
+    pub_ = nh_.advertise<uwb_imu_pl::LinktrackNodeframe3>(
         "/nlink_linktrack_nodeframe3", 10);
     viz_anchor_pub_ = nh_.advertise<visualization_msgs::Marker>(
         "/uwb_sim/anchor_markers", 100, true);  // high queue, latched
@@ -232,7 +232,7 @@ class UwbTwrSim {
       dd += injected_bias;
       dd += gauss_(rng_) * sigma_;
 
-      uwb_imu_fgo::LinktrackNode2 nd;
+      uwb_imu_pl::LinktrackNode2 nd;
       nd.role = 1;
       nd.id = anchors_[j].id;
       nd.dis = (float)std::max(0.0, dd);
@@ -249,7 +249,7 @@ class UwbTwrSim {
   void onPublish(const ros::TimerEvent&) {
     if (pending_map_.empty()) return;
 
-    uwb_imu_fgo::LinktrackNodeframe3 f;
+    uwb_imu_pl::LinktrackNodeframe3 f;
     ros::Time now = ros::Time::now();
     f.header.stamp = now;
     f.id = tag_id_;
@@ -384,7 +384,7 @@ class UwbTwrSim {
   std::map<int, RangeData> last_ranges_;
   // Accumulate latest range per anchor between publish ticks (dedup by anchor
   // ID)
-  std::map<int, uwb_imu_fgo::LinktrackNode2> pending_map_;
+  std::map<int, uwb_imu_pl::LinktrackNode2> pending_map_;
   std::mt19937 rng_;
   std::uniform_real_distribution<double> uni_{0, 1};
   std::normal_distribution<double> gauss_{0, 1}, shadow_{0, 1};

@@ -7,7 +7,7 @@
 #   IMU: VectorNav VN100, /imu/imu, 385 Hz, sensor_msgs/Imu
 #   UWB: Humatics P440, /uwb_endorange_info, ~68 Hz, uwb_driver/UwbRange
 #   GT:  Leica MS60, /leica/pose/relative, 20 Hz, geometry_msgs/PoseStamped
-# 使用: rosrun uwb_imu_fgo uwb_imu_fgo_node _config_path:=config/tnp_03.yaml
+# 使用: rosrun uwb_imu_pl uwb_imu_pl_node _config_path:=config/tnp_03.yaml
 # ============================================================
 # NOTE: Always use the filtered bag (tnp_03_fusion.bag, 37 MB) not the full bag
 # (8.8 GB) to avoid WSL OOM. Filter with:

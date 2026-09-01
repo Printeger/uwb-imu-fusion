@@ -6,7 +6,7 @@
 #   IMU: RealSense D435i, 200 Hz, y-up → rotated to ENU (z-up)
 #   UWB: Nooploop LinkTrack S, ~33 Hz, 4 anchors, CSV format
 #   GT:  Vicon motion capture, ~33 Hz, 3×4 affine matrix CSV
-# 使用: rosrun uwb_imu_fgo uwb_imu_fgo_node _config_path:=config/viunet_00.yaml
+# 使用: rosrun uwb_imu_pl uwb_imu_pl_node _config_path:=config/viunet_00.yaml
 # ============================================================
 
 dataset:

@@ -5,7 +5,7 @@
 //   Pass Final: Joint LM refinement with chi2 monitoring
 //
 // Usage:
-//   rosrun uwb_imu_fgo uwb_imu_fgo_node _config_path:=/path/to/slam.yaml
+//   rosrun uwb_imu_pl uwb_imu_pl_node _config_path:=/path/to/slam.yaml
 
 #include <gtsam/inference/Symbol.h>
 #include <ros/ros.h>
@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
   std::cout << std::unitbuf;
 
   // Allow startup without rosmaster (we only read rosbag offline)
-  ros::init(argc, argv, "uwb_imu_fgo");
+  ros::init(argc, argv, "uwb_imu_pl");
   ros::NodeHandle nh("~");
 
   // --- Keep TF "map" frame alive from the very start ---
@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
   nh.param<std::string>("config_path", config_path, "");
   if (config_path.empty()) {
     std::cerr << "ERROR: config_path parameter required.\n"
-              << "Usage: rosrun uwb_imu_fgo uwb_imu_fgo_node "
+              << "Usage: rosrun uwb_imu_pl uwb_imu_pl_node "
                  "_config_path:=/path/to/slam.yaml\n";
     return 1;
   }

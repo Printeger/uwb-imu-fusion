@@ -9,8 +9,8 @@
 #include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
-#include <uwb_imu_fgo/IntegrityStatus.h>
-#include <uwb_imu_fgo/LinktrackNodeframe3.h>
+#include <uwb_imu_pl/IntegrityStatus.h>
+#include <uwb_imu_pl/LinktrackNodeframe3.h>
 
 #include <algorithm>
 #include <atomic>
@@ -53,7 +53,7 @@ struct Event {
   uwb_imu_pl::TimestampNs timestamp;
   std::uint64_t sequence = 0;
   sensor_msgs::Imu imu;
-  uwb_imu_fgo::LinktrackNodeframe3 uwb;
+  uwb_imu_pl::LinktrackNodeframe3 uwb;
 };
 
 struct EventLess {
@@ -80,7 +80,7 @@ class RealtimeNode {
 
     odometry_publisher_ = node_.advertise<nav_msgs::Odometry>(
         config_.realtime.odometry_topic, 10);
-    integrity_publisher_ = node_.advertise<uwb_imu_fgo::IntegrityStatus>(
+    integrity_publisher_ = node_.advertise<uwb_imu_pl::IntegrityStatus>(
         config_.realtime.integrity_topic, 10);
     diagnostics_publisher_ = node_.advertise<diagnostic_msgs::DiagnosticArray>(
         config_.realtime.diagnostics_topic, 10);
@@ -116,7 +116,7 @@ class RealtimeNode {
     condition_.notify_one();
   }
 
-  void uwbCallback(const uwb_imu_fgo::LinktrackNodeframe3::ConstPtr& message) {
+  void uwbCallback(const uwb_imu_pl::LinktrackNodeframe3::ConstPtr& message) {
     Event event;
     event.kind = Event::Kind::Uwb;
     event.timestamp = timestamp(message->header.stamp);
@@ -252,7 +252,7 @@ class RealtimeNode {
     odometry.twist.twist.linear.z = output.state.velocity_world_mps.z();
     odometry_publisher_.publish(odometry);
 
-    uwb_imu_fgo::IntegrityStatus status;
+    uwb_imu_pl::IntegrityStatus status;
     status.header = odometry.header;
     status.scope_label = uwb_imu_pl::toString(output.protection_level.label);
     status.availability = uwb_imu_pl::toString(output.protection_level.availability);

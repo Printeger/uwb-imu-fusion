@@ -9,9 +9,9 @@
 #include <rosbag/view.h>
 #include <sensor_msgs/Imu.h>
 #include <uwb_driver/UwbRange.h>
-#include <uwb_imu_fgo/LinktrackNode2.h>
-#include <uwb_imu_fgo/LinktrackNodeframe3.h>
-#include <uwb_imu_fgo/McdLinktrackNodeframe3.h>
+#include <uwb_imu_pl/LinktrackNode2.h>
+#include <uwb_imu_pl/LinktrackNodeframe3.h>
+#include <uwb_imu_pl/McdLinktrackNodeframe3.h>
 
 #include <algorithm>
 #include <cmath>
@@ -133,12 +133,12 @@ bool DataLoader::LoadFromBag(const std::string& bag_path,
     } else if (topic == uwb_topic_) {
       // Original project message. MessageInstance checks the ROS MD5, so MCD's
       // uint32 local_time variant is handled by the second definition below.
-      auto uwb_msg = m.instantiate<uwb_imu_fgo::LinktrackNodeframe3>();
+      auto uwb_msg = m.instantiate<uwb_imu_pl::LinktrackNodeframe3>();
       UwbFrame frame;
       if (uwb_msg) {
         frame = ConvertUwbFrame(*uwb_msg);
       } else {
-        auto mcd_msg = m.instantiate<uwb_imu_fgo::McdLinktrackNodeframe3>();
+        auto mcd_msg = m.instantiate<uwb_imu_pl::McdLinktrackNodeframe3>();
         if (!mcd_msg) continue;
         frame = ConvertUwbFrame(*mcd_msg);
       }
@@ -224,11 +224,11 @@ bool DataLoader::LoadFromBags(const std::string& imu_bag_path,
 
   for (const auto& m : uwb_view) {
     UwbFrame frame;
-    auto original = m.instantiate<uwb_imu_fgo::LinktrackNodeframe3>();
+    auto original = m.instantiate<uwb_imu_pl::LinktrackNodeframe3>();
     if (original) {
       frame = ConvertUwbFrame(*original);
     } else {
-      auto mcd = m.instantiate<uwb_imu_fgo::McdLinktrackNodeframe3>();
+      auto mcd = m.instantiate<uwb_imu_pl::McdLinktrackNodeframe3>();
       if (!mcd) {
         std::cerr << "DataLoader: unsupported UWB type/MD5 on " << uwb_topic_
                   << ": " << m.getDataType() << " / " << m.getMD5Sum() << "\n";

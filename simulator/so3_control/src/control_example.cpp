@@ -1,5 +1,5 @@
 #include <Eigen/Eigen>
-#include <uwb_imu_fgo/PositionCommand.h>
+#include <uwb_imu_pl/PositionCommand.h>
 #include <ros/ros.h>
 
 int main(int argc, char **argv)
@@ -8,7 +8,7 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "quad_sim_example");
   ros::NodeHandle nh("~");
 
-  ros::Publisher cmd_pub = nh.advertise<uwb_imu_fgo::PositionCommand>("/position_cmd", 10);
+  ros::Publisher cmd_pub = nh.advertise<uwb_imu_pl::PositionCommand>("/position_cmd", 10);
 
   ros::Duration(2.0).sleep();
 
@@ -21,7 +21,7 @@ int main(int argc, char **argv)
               << "\033[0m" << std::endl;
     for (int i = 0; i < 500; i++)
     {
-      uwb_imu_fgo::PositionCommand cmd;
+      uwb_imu_pl::PositionCommand cmd;
       cmd.position.x = 2.0;
       cmd.position.y = 0.0;
       cmd.position.z = 1.0;
@@ -37,7 +37,7 @@ int main(int argc, char **argv)
               << "\033[0m" << std::endl;
     for (int i = 0; i < 500; i++)
     {
-      uwb_imu_fgo::PositionCommand cmd;
+      uwb_imu_pl::PositionCommand cmd;
       cmd.position.x = std::numeric_limits<float>::quiet_NaN(); // lower-order commands must be disabled by nan
       cmd.position.y = std::numeric_limits<float>::quiet_NaN(); // lower-order commands must be disabled by nan
       cmd.position.z = std::numeric_limits<float>::quiet_NaN(); // lower-order commands must be disabled by nan
@@ -56,7 +56,7 @@ int main(int argc, char **argv)
               << "\033[0m" << std::endl;
     for (int i = 0; i < 500; i++)
     {
-      uwb_imu_fgo::PositionCommand cmd;
+      uwb_imu_pl::PositionCommand cmd;
       cmd.position.x = std::numeric_limits<float>::quiet_NaN(); // lower-order commands must be disabled by nan
       cmd.position.y = std::numeric_limits<float>::quiet_NaN(); // lower-order commands must be disabled by nan
       cmd.position.z = std::numeric_limits<float>::quiet_NaN(); // lower-order commands must be disabled by nan

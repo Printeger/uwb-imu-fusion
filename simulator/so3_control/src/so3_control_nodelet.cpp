@@ -1,9 +1,9 @@
 #include <Eigen/Geometry>
 #include <nav_msgs/Odometry.h>
 #include <nodelet/nodelet.h>
-#include <uwb_imu_fgo/Corrections.h>
-#include <uwb_imu_fgo/PositionCommand.h>
-#include <uwb_imu_fgo/SO3Command.h>
+#include <uwb_imu_pl/Corrections.h>
+#include <uwb_imu_pl/PositionCommand.h>
+#include <uwb_imu_pl/SO3Command.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
 #include <so3_control/SO3Control.h>
@@ -32,10 +32,10 @@ public:
 private:
   void publishSO3Command(void);
   void position_cmd_callback(
-    const uwb_imu_fgo::PositionCommand::ConstPtr& cmd);
+    const uwb_imu_pl::PositionCommand::ConstPtr& cmd);
   void odom_callback(const nav_msgs::Odometry::ConstPtr& odom);
   void enable_motors_callback(const std_msgs::Bool::ConstPtr& msg);
-  void corrections_callback(const uwb_imu_fgo::Corrections::ConstPtr& msg);
+  void corrections_callback(const uwb_imu_pl::Corrections::ConstPtr& msg);
   void imu_callback(const sensor_msgs::Imu& imu);
 
   SO3Control      controller_;
@@ -67,8 +67,8 @@ SO3ControlNodelet::publishSO3Command(void)
   const Eigen::Vector3d&    force       = controller_.getComputedForce();
   const Eigen::Quaterniond& orientation = controller_.getComputedOrientation();
 
-  uwb_imu_fgo::SO3Command::Ptr so3_command(
-    new uwb_imu_fgo::SO3Command); //! @note memory leak?
+  uwb_imu_pl::SO3Command::Ptr so3_command(
+    new uwb_imu_pl::SO3Command); //! @note memory leak?
   so3_command->header.stamp    = ros::Time::now();
   so3_command->header.frame_id = frame_id_;
   so3_command->force.x         = force(0);
@@ -94,7 +94,7 @@ SO3ControlNodelet::publishSO3Command(void)
 
 void
 SO3ControlNodelet::position_cmd_callback(
-  const uwb_imu_fgo::PositionCommand::ConstPtr& cmd)
+  const uwb_imu_pl::PositionCommand::ConstPtr& cmd)
 {
   des_pos_ = Eigen::Vector3d(cmd->position.x, cmd->position.y, cmd->position.z);
   des_vel_ = Eigen::Vector3d(cmd->velocity.x, cmd->velocity.y, cmd->velocity.z);
@@ -168,7 +168,7 @@ SO3ControlNodelet::enable_motors_callback(const std_msgs::Bool::ConstPtr& msg)
 
 void
 SO3ControlNodelet::corrections_callback(
-  const uwb_imu_fgo::Corrections::ConstPtr& msg)
+  const uwb_imu_pl::Corrections::ConstPtr& msg)
 {
   corrections_[0] = msg->kf_correction;
   corrections_[1] = msg->angle_corrections[0];
@@ -220,7 +220,7 @@ SO3ControlNodelet::onInit(void)
   n.param("so3_control/init_state_y", init_y_, 0.0);
   n.param("so3_control/init_state_z", init_z_, -10000.0);
 
-  so3_command_pub_ = n.advertise<uwb_imu_fgo::SO3Command>("so3_cmd", 10);
+  so3_command_pub_ = n.advertise<uwb_imu_pl::SO3Command>("so3_cmd", 10);
 
   odom_sub_ = n.subscribe("odom", 10, &SO3ControlNodelet::odom_callback, this,
                           ros::TransportHints().tcpNoDelay());

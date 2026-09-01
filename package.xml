@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>uwb_imu_fgo</name>
+  <name>uwb_imu_pl</name>
   <version>0.1.0</version>
   <description>Batch and realtime tightly-coupled UWB-IMU factor graph estimation with research integrity monitoring</description>
 

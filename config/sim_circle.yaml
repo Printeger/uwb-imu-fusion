@@ -4,7 +4,7 @@
 # 数据集: Sim Circle (仿真圆形轨迹, 8锚点立方体)
 # rosbag: data/sim_circle_2026-06-13-20-06-12.bag
 # 锚点: 10m边长立方体8顶点 (z=1m~5m)
-# 使用: roslaunch uwb_imu_fgo offline_with_viz.launch
+# 使用: roslaunch uwb_imu_pl offline_with_viz.launch
 # ============================================================
 
 # --- 锚点 3D 坐标 (10m立方体8顶点, z=1m~5m) ---

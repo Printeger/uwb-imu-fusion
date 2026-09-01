@@ -5,7 +5,7 @@
 # rosbag: data/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag
 # VICON GT: /vrpn_client_node/tas_uwb_0/pose
 # 锚点来源: data/anchor_pose.yaml (4个锚点, IDs 1-4)
-# 使用: roslaunch uwb_imu_fgo offline_with_viz.launch
+# 使用: roslaunch uwb_imu_pl offline_with_viz.launch
 # ============================================================
 
 anchors:

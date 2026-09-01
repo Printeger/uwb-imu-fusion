@@ -16,7 +16,7 @@
         args="0 0 0 0 0 0 world map 100"/>
 
   <!-- ============ 1. Quadrotor Dynamics Simulator ============ -->
-  <node pkg="uwb_imu_fgo"
+  <node pkg="uwb_imu_pl"
         type="quadrotor_simulator_so3"
         name="quadrotor_simulator_so3"
         output="screen">
@@ -45,8 +45,8 @@
     <remap from="~corrections" to="corrections"/>
     <remap from="~so3_cmd" to="/so3_cmd"/>
     <remap from="~imu" to="/sim/imu"/>
-    <rosparam file="$(find uwb_imu_fgo)/simulator/so3_control/gains.yaml"/>
-    <rosparam file="$(find uwb_imu_fgo)/simulator/so3_control/corrections.yaml"/>
+    <rosparam file="$(find uwb_imu_pl)/simulator/so3_control/gains.yaml"/>
+    <rosparam file="$(find uwb_imu_pl)/simulator/so3_control/corrections.yaml"/>
     <param name="mass" value="0.98"/>
     <param name="use_angle_corrections" value="false"/>
     <param name="use_external_yaw" value="false"/>
@@ -55,7 +55,7 @@
   </node>
 
   <!-- ============ 3. Trajectory Generator ============ -->
-  <node pkg="uwb_imu_fgo"
+  <node pkg="uwb_imu_pl"
         type="trajectory_circle.py"
         name="trajectory_generator"
         output="screen">
@@ -71,16 +71,16 @@
   </node>
 
   <!-- ============ 4. UWB TWR Simulator ============ -->
-  <node pkg="uwb_imu_fgo"
+  <node pkg="uwb_imu_pl"
         type="uwb_twr_sim"
         name="uwb_twr_sim"
         output="screen">
-    <rosparam file="$(find uwb_imu_fgo)/simulator/config/uwb_twr_sim.yaml"/>
+    <rosparam file="$(find uwb_imu_pl)/simulator/config/uwb_twr_sim.yaml"/>
     <param name="odom_topic" value="/sim/odom"/>
   </node>
 
   <!-- ============ 5. Odometry → Path Converter ============ -->
-  <node pkg="uwb_imu_fgo"
+  <node pkg="uwb_imu_pl"
         type="odom_to_path.py"
         name="odom_to_path"
         output="screen"/>
@@ -88,7 +88,7 @@
   <!-- ============ 5. RViz Visualization ============ -->
   <node if="$(arg rviz)"
         pkg="rviz" type="rviz" name="rviz"
-        args="-d $(find uwb_imu_fgo)/simulator/launch/sim_rviz.rviz"
+        args="-d $(find uwb_imu_pl)/simulator/launch/sim_rviz.rviz"
         launch-prefix="env LIBGL_ALWAYS_SOFTWARE=1 DISABLE_ROS1_EOL_WARNINGS=1"/>
 
 </launch>

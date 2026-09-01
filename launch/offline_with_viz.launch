@@ -3,21 +3,21 @@
   <!-- UWB-IMU FGO — Offline Batch Processing + RViz Visualization         -->
   <!-- =================================================================== -->
   <!-- Usage:                                                               -->
-  <!--   roslaunch uwb_imu_fgo offline_with_viz.launch                      -->
+  <!--   roslaunch uwb_imu_pl offline_with_viz.launch                      -->
   <!--                                                                      -->
   <!-- Debug with GDB (auto-backtrace on crash):                            -->
-  <!--   roslaunch uwb_imu_fgo offline_with_viz.launch gdb:=1               -->
+  <!--   roslaunch uwb_imu_pl offline_with_viz.launch gdb:=1               -->
   <!--                                                                      -->
   <!-- Debug with GDB (interactive, break at main):                         -->
-  <!--   roslaunch uwb_imu_fgo offline_with_viz.launch gdb:=1 gdb_interactive:=1 -->
+  <!--   roslaunch uwb_imu_pl offline_with_viz.launch gdb:=1 gdb_interactive:=1 -->
   <!--                                                                      -->
   <!-- Custom config:                                                       -->
-  <!--   roslaunch uwb_imu_fgo offline_with_viz.launch                      -->
+  <!--   roslaunch uwb_imu_pl offline_with_viz.launch                      -->
   <!--        config_path:=/path/to/slam.yaml                               -->
   <!-- =================================================================== -->
 
-  <arg name="config_path" default="$(find uwb_imu_fgo)/config/sim_circle.yaml" />
-  <arg name="rviz_config" default="$(find uwb_imu_fgo)/config/uwb_fgo_viz.rviz" />
+  <arg name="config_path" default="$(find uwb_imu_pl)/config/sim_circle.yaml" />
+  <arg name="rviz_config" default="$(find uwb_imu_pl)/config/uwb_fgo_viz.rviz" />
   <arg name="gdb"            default="0" />
   <arg name="gdb_interactive" default="0" />
 
@@ -26,7 +26,7 @@
 
   <!-- ============== FGO Batch Processing Node ============== -->
   <!-- Processes rosbag, runs optimization, publishes viz markers -->
-  <node pkg="uwb_imu_fgo" type="uwb_imu_fgo_node" name="uwb_imu_fgo"
+  <node pkg="uwb_imu_pl" type="uwb_imu_pl_node" name="uwb_imu_pl"
         output="screen"
         launch-prefix="$(eval 'stdbuf -oL' if arg('gdb') == '0'
                         else 'gdb -ex run -ex bt -ex quit --args' if arg('gdb_interactive') == '0'

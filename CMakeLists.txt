@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(uwb_imu_fgo)
+project(uwb_imu_pl)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -148,14 +148,14 @@ target_link_libraries(${PROJECT_NAME}
 add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 # =============================================
-# ROS Node: uwb_imu_fgo_node
+# ROS Node: uwb_imu_pl_node
 # =============================================
-add_executable(uwb_imu_fgo_node
+add_executable(uwb_imu_pl_node
   tools/run_offline.cpp
   src/visualizer.cpp
 )
 
-target_link_libraries(uwb_imu_fgo_node
+target_link_libraries(uwb_imu_pl_node
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
   gtsam
@@ -164,7 +164,7 @@ target_link_libraries(uwb_imu_fgo_node
   yaml-cpp
 )
 
-add_dependencies(uwb_imu_fgo_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(uwb_imu_pl_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 execute_process(
   COMMAND git rev-parse --short=12 HEAD

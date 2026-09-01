@@ -53,7 +53,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /uwb_imu_fgo/anchor_initial
+      Marker Topic: /uwb_imu_pl/anchor_initial
       Name: Anchor Initial (Green)
       Namespaces:
         {}
@@ -61,7 +61,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /uwb_imu_fgo/anchor_optimized
+      Marker Topic: /uwb_imu_pl/anchor_optimized
       Name: Anchor Optimized (Orange+Arrows)
       Namespaces:
         {}
@@ -88,7 +88,7 @@ Visualization Manager:
       Radius: 0.029999999329447746
       Shaft Diameter: 0.10000000149011612
       Shaft Length: 0.10000000149011612
-      Topic: /uwb_imu_fgo/gt_trajectory
+      Topic: /uwb_imu_pl/gt_trajectory
       Unreliable: false
       Value: true
     - Alpha: 1
@@ -112,12 +112,12 @@ Visualization Manager:
       Radius: 0.029999999329447746
       Shaft Diameter: 0.10000000149011612
       Shaft Length: 0.10000000149011612
-      Topic: /uwb_imu_fgo/fused_trajectory
+      Topic: /uwb_imu_pl/fused_trajectory
       Unreliable: false
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /uwb_imu_fgo/keyframe_poses
+      Marker Topic: /uwb_imu_pl/keyframe_poses
       Name: Keyframe Poses (RGB axes)
       Namespaces:
         {}
@@ -125,7 +125,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /uwb_imu_fgo/uwb_edges
+      Marker Topic: /uwb_imu_pl/uwb_edges
       Name: UWB Range Edges (green→red)
       Namespaces:
         {}
@@ -133,7 +133,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /uwb_imu_fgo/covariance_ellipsoids
+      Marker Topic: /uwb_imu_pl/covariance_ellipsoids
       Name: Covariance Ellipsoids (cyan)
       Namespaces:
         {}
@@ -141,7 +141,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /uwb_imu_fgo/error_vectors
+      Marker Topic: /uwb_imu_pl/error_vectors
       Name: Error Vectors (est → GT)
       Namespaces:
         {}
@@ -149,7 +149,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /uwb_imu_fgo/metrics_text
+      Marker Topic: /uwb_imu_pl/metrics_text
       Name: Metrics Text
       Namespaces:
         {}
