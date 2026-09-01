@@ -2,7 +2,9 @@
 
 基于 GTSAM 的批量因子图优化（batch FGO）UWB-IMU 紧耦合定位系统。追求离线后处理的最高精度，非实时在线 SLAM。
 
-> **实时完整性分支状态：`IMPLEMENTED_UNVERIFIED`。** 本分支保留原有
+> **实时完整性分支状态：确定性基线已验收。** 每个完整性结果默认为
+> `IMPLEMENTED_UNVERIFIED`，仅在 formal gate 全部通过后提升为
+> `FORMAL_LOCAL_CURRENT_FAULT_ONLY`。本分支保留原有
 > `uifgo` batch LM/GNC C++ 接口，并将 ROS 包、节点、launch 与 topic 统一为
 > `uwb_imu_pl` snapshot RAIM、full-history iSAM2 UWB–IMU、conditional
 > current-UWB detector 与单锚 PL。构建和测试的真实执行结果以
@@ -78,7 +80,7 @@ src/uwb-imu-fusion-pl/
 │       ├── gt_comparison.csv          #   GT 对比
 │       ├── *.png                      #   可视化图表
 │       └── report.md                  #   Markdown 综合报告
-├── test/                              # GoogleTest 单元测试 (36 tests)
+├── test/                              # GoogleTest 单元测试 (51 tests)
 └── doc/                               # 调研文档 + 设计文档
     ├── 00-overview.md                 # 三算法对比总览
     ├── 01-awesome-uwb-localization.md
@@ -110,7 +112,7 @@ source devel/setup.bash
 
 ```bash
 catkin test uwb_imu_pl
-# 预期: 36 tests, 0 errors, 0 failures
+# 预期: 51 GoogleTest cases, 0 errors, 0 failures
 ```
 
 ## 6. 配置文件说明

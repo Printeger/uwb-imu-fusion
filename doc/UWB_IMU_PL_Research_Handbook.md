@@ -284,7 +284,7 @@ HPL=\sqrt{PL_x^2+PL_y^2},\qquad VPL=PL_z.
 更正规的二维水平 PL 应基于二维误差椭圆、方向扫描或主轴 worst case，而不是把两个独立轴界机械相加。第一版可以同时输出：
 
 - `axis_PL = [PL_x,PL_y,PL_z]`；
-- conservative `HPL_box=sqrt(PL_x²+PL_y²)`；
+- conservative `HPL=sqrt(PL_x²+PL_y²)`；
 - nominal covariance ellipse；
 - 后续实现 direction-wise HPL。
 

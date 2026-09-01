@@ -1,87 +1,85 @@
-# UWB–IMU–PL deferred test ledger
+# UWB–IMU–PL test ledger
 
-Delivery status: `IMPLEMENTED_UNVERIFIED`.
+Deterministic acceptance status: `PASS` on 2026-09-01. This is the authoritative
+execution ledger for the P0 baseline recovery and P1 M0–M8 correctness work. It
+does not make a certification claim.
 
-This file is the authoritative test ledger. For every build, unit, Monte Carlo,
-ROS, simulation and runtime item below:
+## Verified environment
 
-- Status: `NOT_RUN_ENVIRONMENT`
-- Actual result: `Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable`
-- Required target environment: Ubuntu 20.04, ROS1 Noetic, GTSAM 4.2.x,
-  Eigen 3.3+, Boost Math, yaml-cpp and catkin tools.
+| Item | Actual value |
+|---|---|
+| Host | Ubuntu 20.04.6 LTS |
+| ROS | ROS 1 Noetic |
+| GTSAM | 4.2a5 (`GTSAM_VERSION_NUMERIC=40200`) |
+| GCC | 9.4.0 |
+| CMake | 3.16.3 |
+| catkin tools | 0.9.2, Python 3.8.10 |
+| Package | `uwb_imu_pl`; legacy C++ namespace/API `uifgo` retained |
+| Research configuration | `config/realtime_uwb_imu_pl_research.yaml` |
+| Verification date | 2026-09-01 (Asia/Shanghai) |
 
-No unexecuted item is represented as passing. Commands assume the repository is
-checked out as `~/ws_uipl/src/uwb-imu-fusion-pl` and the workspace is
-`~/ws_uipl`. Unless overridden, the research config and seed are
-`config/realtime_uwb_imu_pl_research.yaml` and `20260901`.
+The package was cleaned independently; build products belonging to the sibling
+`uwb_imu_fgo` package were not cleaned. The final retained build is Release.
+There are 51 distinct GoogleTest cases. `catkin_test_results` reports 102 because
+the generated GoogleTest XML contains both root and suite aggregate counts; the
+result remains 0 errors, 0 failures and 0 skipped.
 
 ## Build and regression
 
-| ID | Milestone | Objective | Complete command | Input / seed | Expected result | Acceptance threshold | Status | Actual result | Commit / notes |
-|---|---|---|---|---|---|---|---|---|---|
-| BUILD-001 | M0–M8 | ROS Noetic Release build with GTSAM 4.2.x | `cd ~/ws_uipl && source /opt/ros/noetic/setup.bash && catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release && catkin build uwb_imu_pl` | repository config; no random input | Library, messages, legacy node, realtime node, simulator and sweep executable link | zero compiler/linker errors; GTSAM reports 4.2.x | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Delivery HEAD |
-| BUILD-002 | M0–M8 | Debug build and warnings review | `cd ~/ws_uipl && source /opt/ros/noetic/setup.bash && catkin clean -y uwb_imu_pl && catkin config --cmake-args -DCMAKE_BUILD_TYPE=Debug && catkin build uwb_imu_pl` | repository config | Debug build succeeds | zero errors; no new actionable `-Wall` warnings | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Delivery HEAD |
-| REG-001 | Regression | Preserve all legacy tests | `cd ~/ws_uipl && source devel/setup.bash && catkin run_tests uwb_imu_pl && catkin_test_results --verbose` | existing test fixtures | Original config/outlier/trilateration/IMU/UWB/graph/optimizer tests pass | 100% legacy tests pass | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Must compare against `main@6f8aaa1` |
+| ID | Command | Status | Actual result |
+|---|---|---|---|
+| BUILD-DBG | `source /opt/ros/noetic/setup.bash && catkin clean uwb_imu_pl -y && catkin config --cmake-args -DCMAKE_BUILD_TYPE=Debug && catkin build uwb_imu_pl && catkin run_tests uwb_imu_pl && catkin_test_results --verbose` | `PASS` | Clean Debug build; all 51 GoogleTest cases passed. |
+| BUILD-REL | `source /opt/ros/noetic/setup.bash && catkin clean uwb_imu_pl -y && catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release && catkin build uwb_imu_pl && catkin run_tests uwb_imu_pl && catkin_test_results --verbose` | `PASS` | Clean Release build; 0 errors, 0 failures, 0 skipped. Release retained. |
+| REG-001 | Same package test command | `PASS` | All legacy config, outlier, trilateration, IMU, UWB-factor, graph-builder and optimizer tests passed. |
+| LAUNCH-001 | `roslaunch --files uwb_imu_pl realtime_integrity_sim.launch` | `PASS` | Exactly one top-level forwarding launch and one uniquely named internal `realtime_integrity_stack.launch` resolved. |
 
-## M0 contracts and reproducibility
+## Deterministic M0–M8 acceptance
 
-| ID | Milestone | Objective | Complete command | Input / seed | Expected result | Acceptance threshold | Status | Actual result | Commit / notes |
-|---|---|---|---|---|---|---|---|---|---|
-| M0-001 | M0 | Strict YAML success and missing/unknown field failure | `cd ~/ws_uipl && source devel/setup.bash && ./devel/lib/uwb_imu_pl/test_config --gtest_filter='*Integrity*Config*'` | research YAML / 20260901 plus generated invalid cases | Valid config resolves; each invalid config throws with field path | 100% specified cases; no implicit seed/risk/AL | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Add invalid fixtures before execution |
-| M0-002 | M0 | Nanosecond ordering and deterministic replay | `cd ~/ws_uipl && source devel/setup.bash && ./devel/lib/uwb_imu_pl/test_realtime_incremental --gtest_filter='*Timestamp*:*Replay*'` | 10 s synthetic events / 20260901 | Two replays emit byte-identical measurement/event logs | exact byte equality; strictly increasing `(timestamp_ns,sequence)` | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Test fixture to be completed in validation environment |
-| M0-003 | M0 | Manifest and output schema completeness | `cd ~/ws_uipl && source devel/setup.bash && rostest uwb_imu_pl manifest_output.test` | research YAML / 20260901 | resolved config, manifest, states, residuals, integrity, timing, events, summary exist | schema fields present; hash/SHA/seed nonempty; dirty bit correct | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | ROS integration fixture deferred |
+All commands below run from `/home/mint/ws_fusion_uwb` after sourcing
+`devel/setup.bash`.
 
-## M1–M4 snapshot RAIM
+| ID | Coverage / command | Acceptance | Status |
+|---|---|---|---|
+| M0-001 | `test_integrity_config` | Valid research YAML; every required section field missing; unknown root/section/anchor keys; invalid total risk; unsupported Method B/fixed lag | `PASS` (4 cases) |
+| M0-002 | `test_realtime_incremental --gtest_filter='UwbImuIncremental.RepeatedExecutionIsDeterministic'` | Deterministic repeated estimator output and audit state | `PASS` |
+| M0-003 | `test_run_logger` | `write_residuals` and `write_timing` independently control CSV creation | `PASS` |
+| M1-001 | `test_snapshot_integrity --gtest_filter='SnapshotIntegrity.FullCovarianceAndAnalyticJacobianAreConsistent'` | Analytic range Jacobian and finite differences agree | `PASS` |
+| M1-002 | `test_snapshot_integrity --gtest_filter='SnapshotIntegrity.DiagonalAndExplicitCovarianceWhiteningAreEquivalent'` | Diagonal/full-covariance whitening equivalence | `PASS` |
+| M1-003 | `test_snapshot_integrity --gtest_filter='SnapshotIntegrity.RankDeficientGeometryIsUnavailable'` | Invalid rank fails closed with infinite PL | `PASS` |
+| M2-001 | `test_snapshot_integrity --gtest_filter='SnapshotIntegrity.ChiSquareDofAndPhysicalAnchorHypotheses'` | Projector symmetric/idempotent, correct DOF and physical mapping | `PASS` |
+| M3-001 | `test_snapshot_integrity --gtest_filter='SnapshotIntegrity.NoncentralityBoundaryMeetsMissedDetectionAllocation'` | Noncentral CDF inverse error `<1e-10` | `PASS` |
+| M3-002 | snapshot slope assertions in `test_snapshot_integrity` | Closed form agrees with dense oracle; unmonitorable modes fail closed | `PASS` |
+| M4-001 | `test_snapshot_integrity --gtest_filter='SnapshotIntegrity.FormalGateRiskAlarmAndAlertLimitBranchesFailClose'` | Radial HPL, total-risk allocation and formal gate/alarm/AL branches | `PASS` |
+| M5-001 | `test_realtime_incremental --gtest_filter='UwbIncremental.TwentyEpochsMatchBatchPositionAndMarginal'` | 20-epoch iSAM2 position `<1e-6 m`; marginal relative error `<1e-6` | `PASS` |
+| M5-002 | `test_realtime_incremental --gtest_filter='UwbIncremental.RegularizerRowsAreExcludedByRole'` | Regularizer rows excluded from formal statistic | `PASS` |
+| M5-003 | `test_realtime_incremental --gtest_filter='UwbImuIncremental.BatchSkewFailsBeforeGraphMutation'` | Epoch span/member skew rejected before graph mutation | `PASS` |
+| M6-001 | `test_imu_preint` | Static specific force, constant world acceleration and angular rate; position/velocity `<1e-6`, rotation `<1e-7 rad` | `PASS` (8 cases total) |
+| M6-002 | `test_imu_preint --gtest_filter='ImuSync.*'` | Exact interval, boundary interpolation, adjacent means, gap/order fail-close | `PASS` |
+| M6-003 | realtime gap/future-sample cases | Gap/duplicate leaves audit unchanged; future sample cannot affect current prediction | `PASS` |
+| M7-001 | `test_realtime_incremental --gtest_filter='UwbImuIncremental.FiveSecondIsamMatchesBatchPoseAndMarginal'` | 5 s Pose3 local error `<1e-5`; marginal relative error `<1e-5` | `PASS` |
+| M7-002 | `test_realtime_incremental --gtest_filter='RealtimeFactors.*'` | Nonzero-lever-arm Pose3 Jacobian central-difference error `<1e-7` | `PASS` (2 cases) |
+| M8-001 | Method A prior/provenance/formal-gate cases in `test_realtime_incremental` | Prior excludes current UWB; factor count/version unchanged; 15x15 SPD prior and innovation/provenance gates | `PASS` |
+| M8-002 | `test_realtime_incremental --gtest_filter='UwbImuIncremental.MethodBDowndateCandidateRecoversPrior:UwbImuIncremental.MethodAAndLinearMethodBCandidateGiveEquivalentOutput'` | Offline Method B candidate recovers/equates prior, statistic and PL; online Method B remains rejected | `PASS` |
+| M8-003 | `test_realtime_incremental --gtest_filter='UwbImuIncremental.FaultAlarmRejectsOnlyCurrentUwbAndNextBatchRecovers'` | 20 m fault alarms; no UWB commit/version change; exact IMU-only state; next changed-anchor batch recovers | `PASS` |
+| M8-004 | `test_realtime_incremental --gtest_filter='UwbImuIncremental.RiskOrAlertLimitUnavailableStillCommitsValidUwb'` | Risk/AL unavailability does not suppress a detector-passing UWB commit | `PASS` |
 
-| ID | Milestone | Objective | Complete command | Input / seed | Expected result | Acceptance threshold | Status | Actual result | Commit / notes |
-|---|---|---|---|---|---|---|---|---|---|
-| M1-001 | M1 | Analytic range Jacobian | `cd ~/ws_uipl && source devel/setup.bash && ./devel/lib/uwb_imu_pl/test_snapshot_integrity --gtest_filter='SnapshotIntegrity.FullCovarianceAndAnalyticJacobianAreConsistent'` | six-anchor geometry / deterministic | Analytic and central finite difference Jacobians agree | max absolute error `<1e-6` | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | `1a28547` |
-| M1-002 | M1 | Diagonal/full-covariance whitening consistency | `cd ~/ws_uipl && source devel/setup.bash && ./devel/lib/uwb_imu_pl/test_snapshot_integrity --gtest_filter='SnapshotIntegrity.*Covariance*'` | diagonal and correlated SPD R / deterministic | `W R W^T=I`; same transformed WLS solution | matrix error `<1e-10`; position delta `<1e-8 m` | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | `1a28547` |
-| M1-003 | M1 | Rank, condition and infinite-PL gate | `cd ~/ws_uipl && source devel/setup.bash && ./devel/lib/uwb_imu_pl/test_snapshot_integrity --gtest_filter='SnapshotIntegrity.RankDeficientGeometryIsUnavailable'` | collinear/coplanar-degenerate anchors | Explicit invalid diagnostics and infinite PL | never available; no pseudoinverse-hidden finite PL | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | `1a28547` |
-| M1-004 | M1 | Covariance small-noise Monte Carlo | `cd ~/ws_uipl && source devel/setup.bash && ./devel/lib/uwb_imu_pl/snapshot_integrity_sweep config/realtime_uwb_imu_pl_research.yaml results/m1_covariance.csv` | no fault, sigma 0.05/0.10/0.20 / seeds 20260901–20261000 | Empirical axis error covariance matches predicted | each variance ratio in `[0.8,1.2]`; bias `<0.1 sigma` | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Expand seed matrix before execution |
-| M2-001 | M2 | Post-fit chi-square/projector/DOF algebra | `cd ~/ws_uipl && source devel/setup.bash && ./devel/lib/uwb_imu_pl/test_snapshot_integrity --gtest_filter='SnapshotIntegrity.ChiSquareDofAndPhysicalAnchorHypotheses'` | six ranges, rank 3 | `T=r^Tr`, projector symmetric/idempotent, DOF 3 | matrix error `<1e-10`; exact DOF | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Add explicit projector assertions before run |
-| M2-002 | M2 | H0 false-alarm calibration | `cd ~/ws_uipl && source devel/setup.bash && ./scripts/run_snapshot_mc.sh --mode h0 --trials 200000 --config config/realtime_uwb_imu_pl_research.yaml --seed 20260901` | P_FA `1e-5`, 200k+ trials | Empirical CDF follows chi-square | target P_FA lies in 95% exact binomial CI; KS `p>0.01` | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Script/large run belongs to validation harness |
-| M2-003 | M2 | Injected-fault noncentral chi-square calibration | `cd ~/ws_uipl && source devel/setup.bash && ./scripts/run_snapshot_mc.sh --mode noncentral --trials 100000 --config config/realtime_uwb_imu_pl_research.yaml --seed 20260901` | single-anchor biases 0.25–3 m | Empirical missed detection follows configured noncentral model | predicted P_MD inside 95% binomial CI per magnitude | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Validation harness extension required |
-| M3-001 | M3 | Noncentral boundary solver | `cd ~/ws_uipl && source devel/setup.bash && ./devel/lib/uwb_imu_pl/test_snapshot_integrity --gtest_filter='SnapshotIntegrity.NoncentralityBoundaryMeetsMissedDetectionAllocation'` | DOF 3, threshold 20, P_MD `1e-3` | CDF at returned lambda equals allocation | absolute CDF error `<1e-10` | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Add CDF assertion before execution |
-| M3-002 | M3 | Slope vs constrained dense oracle and unmonitorable mode | `cd ~/ws_uipl && source devel/setup.bash && ./scripts/run_snapshot_slope_oracle.sh --cases 1000 --seed 20260901` | random/hand-designed 3D matrices | Closed form and direct optimization agree; null detector Gram returns infinity | relative error `<1e-8`; 100% unmonitorable cases unavailable | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Oracle script deferred |
-| M4-001 | M4 | Geometry/noise/fault/risk sweep | `cd ~/ws_uipl && source devel/setup.bash && mkdir -p results && ./devel/lib/uwb_imu_pl/snapshot_integrity_sweep config/realtime_uwb_imu_pl_research.yaml results/snapshot_sweep.csv` | straight/circle/figure-eight; built-in matrix / 20260901 | Complete CSV without non-finite available results | all Cartesian-product rows present; invalid rows unavailable | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | `1a28547` |
-| M4-002 | M4 | Position error versus PL coverage/HMI | `cd ~/ws_uipl && source devel/setup.bash && ./scripts/evaluate_pl_coverage.py results/snapshot_sweep.csv --hal 2 --val 3` | output of M4-001 | PE/PL, HMI and availability report | no empirical HMI above allocated risk CI; coverage CI reported | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | No certification claim from finite MC |
+## Explicitly out of this acceptance scope
 
-## M5–M8 incremental and fusion
+These items were not executed and are not represented as passing.
 
-| ID | Milestone | Objective | Complete command | Input / seed | Expected result | Acceptance threshold | Status | Actual result | Commit / notes |
-|---|---|---|---|---|---|---|---|---|---|
-| M5-001 | M5 | UWB-only batch versus iSAM2 | `cd ~/ws_uipl && source devel/setup.bash && ./devel/lib/uwb_imu_pl/test_realtime_incremental --gtest_filter='UwbIncremental.BatchVsIsam2'` | 20-epoch synthetic graph / 20260901 | Position/velocity and marginal agree | position `<1e-6 m`; covariance relative error `<1e-6` | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Comparison fixture to add |
-| M5-002 | M5 | Regularizer row detector semantics | `cd ~/ws_uipl && source devel/setup.bash && ./devel/lib/uwb_imu_pl/test_realtime_incremental --gtest_filter='UwbIncremental.RegularizerRowsAreExcludedByRole'` | five-anchor group | Smoothness is `Regularizer`; measurement count excludes six smoothness rows | exact roles and row count | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | `9385e3a` |
-| M5-003 | M5 | Delayed range/changing anchor set | `cd ~/ws_uipl && source devel/setup.bash && rostest uwb_imu_pl uwb_incremental_async.test` | epoch_bin 20 ms, skew 10 ms / 20260901 | In-window ranges grouped; over-skew range rejected explicitly | no silent reassociation; deterministic state IDs | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | ROS fixture deferred |
-| M6-001 | M6 | IMU preintegration static/constant acceleration/angular rate | `cd ~/ws_uipl && source devel/setup.bash && ./devel/lib/uwb_imu_pl/test_imu_preint` | analytic motions / deterministic | Delta pose/velocity and covariance match references | translation/velocity `<1e-6`; rotation `<1e-7 rad` | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Includes legacy and new finite/dt guards |
-| M6-002 | M6 | Bias Jacobian finite differences and covariance MC | `cd ~/ws_uipl && source devel/setup.bash && ./scripts/run_preintegration_mc.sh --trials 10000 --seed 20260901` | bias perturbations and configured IMU noise | Bias Jacobians/covariance statistically consistent | Jacobian relative error `<1e-5`; NEES 95% bounds | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | MC harness deferred |
-| M7-001 | M7 | Small-graph batch versus tightly coupled iSAM2 | `cd ~/ws_uipl && source devel/setup.bash && ./devel/lib/uwb_imu_pl/test_realtime_incremental --gtest_filter='UwbImuIncremental.BatchVsIsam2'` | 5 s synthetic UWB/IMU / 20260901 | Nav states and current joint marginal agree | pose local error `<1e-5`; covariance relative error `<1e-5` | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Fixture to add |
-| M7-002 | M7 | Lever-arm and protected-position tangent Jacobians | `cd ~/ws_uipl && source devel/setup.bash && ./devel/lib/uwb_imu_pl/test_realtime_incremental --gtest_filter='RealtimeFactors.WorldPositionUsesPoseTangentRotation:*LeverArm*'` | nonidentity Pose3 / deterministic | Analytic Jacobians match Pose3 retract finite difference | max error `<1e-7` | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Lever-arm assertion to add |
-| M7-003 | M7 | Outage, UWB delay/drop and IMU-gap recovery | `cd ~/ws_uipl && source devel/setup.bash && rostest uwb_imu_pl incremental_failure_recovery.test` | fault/outage configs / 20260901 | Explicit reject/unavailable; no stale covariance or crash | 100% faults produce expected event; no timestamp rollback | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Integration fixture deferred |
-| M8-001 | M8 | Method A prior exclusion and conditional DOF | `cd ~/ws_uipl && source devel/setup.bash && ./devel/lib/uwb_imu_pl/test_realtime_incremental --gtest_filter='UwbImuIncremental.MethodAPriorExcludesCurrentBatch:UwbImuIncremental.ConditionalDetectorUsesInnovationDimension'` | five-anchor group / deterministic | Prior exclusion true; DOF exactly five | exact assertions; finite S/T | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | `83f29f7` |
-| M8-002 | M8 | Method A versus Method B prior equivalence | `cd ~/ws_uipl && source devel/setup.bash && ./devel/lib/uwb_imu_pl/test_realtime_incremental --gtest_filter='UwbImuIncremental.MethodBDowndateCandidateRecoversPrior:*MethodABEquivalence*'` | SPD toys plus 100 replay epochs / 20260901 | Mean/covariance/T/PL match; gate rejects ill-conditioned downdates | covariance relative error `<1e-8`; T/PL relative error `<1e-6` | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Method B remains disabled until this passes |
-| M8-003 | M8 | Alarm batch isolation | `cd ~/ws_uipl && source devel/setup.bash && rostest uwb_imu_pl conditional_batch_isolation.test` | 20 m current-anchor step / 20260901 | Detector fails; zero current-UWB factors committed; state equals pre-UWB prior | exact factor/state/version assertions; infinite PL and ALERT | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Critical gate |
-| M8-004 | M8 | H0 calibration and detector comparison | `cd ~/ws_uipl && source devel/setup.bash && ./scripts/run_conditional_mc.sh --trials 200000 --windows 1,10,50,200 --seed 20260901` | configured P_FA/current faults | Conditional P_FA calibrated; comparison CSV has global/post-fit/conditional | target P_FA in 95% binomial CI; no conditional degradation from unrelated history | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Only conditional statistic may drive PL |
+| ID | Item | Status | Reason / next artifact |
+|---|---|---|---|
+| MC-001 | Snapshot covariance, H0 false-alarm, noncentral-fault and PL-coverage Monte Carlo | `NOT_IMPLEMENTED` | Long-run harness and confidence-interval report are deferred. |
+| MC-002 | IMU bias-Jacobian/covariance Monte Carlo and conditional-detector calibration | `NOT_IMPLEMENTED` | Statistical harness is deferred. |
+| SIM-001 | Full straight/circle/figure-eight ROS topic simulations and fault sweeps | `NOT_RUN_SCOPE` | Launch parsing was verified; long-running topic-level experiments are outside this batch. |
+| ROS-001 | Dedicated `rostest` topic/queue/recovery fixtures | `NOT_IMPLEMENTED` | Deterministic estimator-level equivalents pass; ROS integration fixtures remain future work. |
+| PERF-001 | 600 s 20 Hz latency and PL-overhead study | `NOT_IMPLEMENTED` | Benchmark harness/report are deferred. |
 
-## Simulation, ROS and performance
+## Static checks
 
-| ID | Milestone | Objective | Complete command | Input / seed | Expected result | Acceptance threshold | Status | Actual result | Commit / notes |
-|---|---|---|---|---|---|---|---|---|---|
-| SIM-001 | M4/M7/M8 | Three no-fault trajectories | `cd ~/ws_uipl && source devel/setup.bash && for t in straight circle figure_eight; do roslaunch uwb_imu_pl realtime_integrity_sim.launch trajectory:=$t fault_mode:=none random_seed:=20260901; done` | three trajectories / 20260901 | Ordered outputs and nominal detector/PL traces | no processing errors; report RMSE, P95, P_FA, availability | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Run separately/automate timeout in validation host |
-| SIM-002 | M4/M8 | Single-anchor step/ramp/magnitude sweep/outage | `cd ~/ws_uipl && source devel/setup.bash && for f in step ramp magnitude_sweep outage; do roslaunch uwb_imu_pl realtime_integrity_sim.launch trajectory:=figure_eight fault_mode:=$f fault_anchor_id:=1 random_seed:=20260901; done` | one physical anchor / 20260901 | Fault truth aligns with events; alarm/isolation and availability logged | no simultaneous injected faults; magnitude/detection curves complete | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Current-fault scope only |
-| ROS-001 | M8 | ROS1 topics, queue ordering and diagnostics | `cd ~/ws_uipl && source devel/setup.bash && rostest uwb_imu_pl realtime_topics.test` | LinkTrack + 200 Hz IMU / 20260901 | Odometry, IntegrityStatus, diagnostics at UWB epochs | no callback-side processing; monotonic output timestamps; required fields populated | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | ROS test fixture deferred |
-| PERF-001 | M7/M8 | 20 Hz realtime latency and PL overhead | `cd ~/ws_uipl && source devel/setup.bash && ./scripts/benchmark_realtime.sh --rate 20 --duration 600 --seed 20260901 --config config/realtime_uwb_imu_pl_research.yaml` | figure-eight no fault / 20260901 | Timing report by update, marginal, detector, PL, logging | mean `<50 ms`; P99 `<100 ms`; PL overhead `<30%` of estimator baseline | `NOT_RUN_ENVIRONMENT` | Ubuntu 24.04 / ROS2 only; ROS1 Noetic and GTSAM environment unavailable | Method A must meet gate or Method B validation becomes mandatory |
-
-## Static checks permitted on the delivery host
-
-These checks do not compile or execute the algorithms and do not change the
-`IMPLEMENTED_UNVERIFIED` delivery status.
-
-| ID | Command | Expected | Status | Actual result | Commit |
-|---|---|---|---|---|---|
-| STATIC-001 | `git diff main --check` | no whitespace errors | `PASS_STATIC` | No whitespace errors reported | Delivery HEAD |
-| STATIC-002 | `rg -n '^(<<<<<<<\\|=======\\|>>>>>>>)' --glob '!doc/*.pdf'` | no unresolved conflict markers | `PASS_STATIC` | No conflict markers found outside excluded vendor/PDF content | Delivery HEAD |
-| STATIC-003 | `node -e 'const fs=require("fs"),YAML=require("yaml"); for(const f of process.argv.slice(1)) YAML.parse(fs.readFileSync(f,"utf8"))' config/*.yaml simulator/config/*.yaml` | YAML parses | `PASS_STATIC` | 27 YAML files parsed as mappings | Delivery HEAD |
-| STATIC-004 | Python `ast.parse` of `simulator/scripts/*.py` and `tools/*.py`; ElementTree parse of `package.xml`, `launch/*.launch`, and `simulator/launch/*.launch` | Python/XML syntax parses | `PASS_STATIC` | 5 Python files and 7 XML files parsed; changed Markdown basic checks passed | Delivery HEAD |
-| STATIC-005 | tracked artifact and sensitive-name/content scan described in delivery log | no generated artifact or likely secret tracked | `PASS_STATIC` | No changed artifact path or private-key/token signature found; existing tracked research PDF is unchanged baseline content | Delivery HEAD |
+| Check | Status | Actual result |
+|---|---|---|
+| `git diff --check` | `PASS` | No whitespace errors. |
+| Conflict-marker scan | `PASS` | No unresolved markers in source/config/launch/tests. |
+| YAML, XML and Python syntax parsing | `PASS` | Repository configuration, launch/package XML and Python tooling parsed successfully. |
+| Legacy-name scan | `PASS` | No ROS package/node/topic/launch compatibility alias for `uwb_imu_fgo`; only the intended legacy `uifgo` C++ API remains. |
