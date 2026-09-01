@@ -20,3 +20,14 @@ Overall delivery status: `IMPLEMENTED_UNVERIFIED`.
 - TDoA, multiple simultaneous faults, FDE, nonlinear remainder bounds and certified noise overbounds are not implemented.
 - Manifest config hashing is reproducibility metadata, not tamper evidence.
 - All formal labels remain unvalidated until the deferred test ledger is executed in the required environment.
+
+## 2026-09-01 — M1–M4 snapshot UWB RAIM
+
+- Implemented 3D TWR Gauss–Newton WLS/NLS with heteroscedastic diagonal or full covariance, positive-definite validation and one common Cholesky whitener for residuals, Jacobians and fault incidence.
+- Added convergence, numerical rank, condition number, covariance and linearization-step diagnostics. Rank-deficient or over-condition-limit geometry is explicitly unavailable.
+- Added post-fit chi-square detection with `DOF = n - rank(H)` and threshold from configured `P_FA`.
+- Generated hypotheses by physical `AnchorId`, not row index. Added detector Gram, protected-axis failure slope, explicit unmonitorable/infinite-slope handling and a bracketed noncentral chi-square missed-detection boundary.
+- Added per-axis nominal/fault components, maximizing anchor, `PL_xyz`, box-horizontal PL, vertical PL and alert-limit availability decisions.
+- Added a deterministic sweep executable spanning straight/circle/figure-eight trajectories, geometry scale, noise, fault anchor/magnitude and explicit risk/seed dimensions. It is source-only in this delivery and has not been run.
+- Added deferred GoogleTest coverage for whitening/full covariance, analytic Jacobian, chi-square DOF, physical-anchor mapping, noncentral boundary and rank-deficient infinite PL.
+- Commit SHA: to be recorded after the milestone commit.

@@ -115,6 +115,9 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/common/types.cpp
   src/uwb_imu_pl/config/integrity_config.cpp
   src/uwb_imu_pl/io/run_logger.cpp
+  src/uwb_imu_pl/integrity/estimation_snapshot.cpp
+  src/uwb_imu_pl/estimation/snapshot_estimator.cpp
+  src/uwb_imu_pl/integrity/integrity_monitor.cpp
   src/config.cpp
   src/data_loader.cpp
   src/outlier_filter.cpp
@@ -158,6 +161,10 @@ target_link_libraries(uwb_imu_fgo_node
 
 add_dependencies(uwb_imu_fgo_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
+add_executable(snapshot_integrity_sweep apps/snapshot_integrity_sweep.cpp)
+target_link_libraries(snapshot_integrity_sweep
+  ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
+
 # =============================================
 # Simulator — quadrotor dynamics + SO3 control
 # =============================================
@@ -195,4 +202,7 @@ if(GTest_FOUND)
 
   catkin_add_gtest(test_optimizer test/test_optimizer.cpp)
   target_link_libraries(test_optimizer ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_snapshot_integrity test/test_snapshot_integrity.cpp)
+  target_link_libraries(test_snapshot_integrity ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
 endif()
