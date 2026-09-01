@@ -97,7 +97,12 @@ IntegrityOutput IncrementalUwbEstimator::update(const UwbBatch& batch) {
 
   gtsam::Marginals marginals(full_graph_, estimate_);
   const gtsam::KeyVector keys{positionKey(epoch_), velocityKey(epoch_)};
-  marginal_ = marginals.jointMarginalCovariance(keys).fullMatrix();
+  const gtsam::JointMarginal joint = marginals.jointMarginalCovariance(keys);
+  marginal_ = Eigen::MatrixXd::Zero(6, 6);
+  marginal_.block<3, 3>(0, 0) = joint.at(keys[0], keys[0]);
+  marginal_.block<3, 3>(0, 3) = joint.at(keys[0], keys[1]);
+  marginal_.block<3, 3>(3, 0) = joint.at(keys[1], keys[0]);
+  marginal_.block<3, 3>(3, 3) = joint.at(keys[1], keys[1]);
   const gtsam::Point3 position = estimate_.at<gtsam::Point3>(positionKey(epoch_));
   const Eigen::MatrixXd covariance = validatedUwbCovariance(batch);
   const Eigen::MatrixXd w = whitener(covariance);
@@ -330,8 +335,17 @@ CurrentStatePrior IncrementalUwbImuEstimator::queryCurrentPrior(
   const auto start = std::chrono::steady_clock::now();
   gtsam::Marginals marginals(full_graph_, estimate_);
   const gtsam::KeyVector keys{poseKey(epoch_), velocityKey(epoch_), biasKey(epoch_)};
-  const Eigen::MatrixXd covariance =
-      marginals.jointMarginalCovariance(keys).fullMatrix();
+  const gtsam::JointMarginal joint = marginals.jointMarginalCovariance(keys);
+  Eigen::Matrix<double, 15, 15> covariance =
+      Eigen::Matrix<double, 15, 15>::Zero();
+  const std::array<int, 3> offsets{0, 6, 9};
+  const std::array<int, 3> dimensions{6, 3, 6};
+  for (std::size_t row = 0; row < keys.size(); ++row) {
+    for (std::size_t column = 0; column < keys.size(); ++column) {
+      covariance.block(offsets[row], offsets[column], dimensions[row],
+                       dimensions[column]) = joint.at(keys[row], keys[column]);
+    }
+  }
   if (covariance.rows() != 15 || covariance.cols() != 15 ||
       !covariance.allFinite()) {
     throw std::runtime_error("invalid 15x15 current-state marginal");

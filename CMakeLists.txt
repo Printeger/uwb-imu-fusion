@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   eigen_conversions
   visualization_msgs
+  diagnostic_msgs
   uwb_driver
   isas_msgs
 )
@@ -42,6 +43,7 @@ add_message_files(
   Serial.msg
   StatusData.msg
   TRPYCommand.msg
+  IntegrityStatus.msg
 )
 
 generate_messages(
@@ -65,6 +67,7 @@ catkin_package(
     message_runtime
     eigen_conversions
     visualization_msgs
+    diagnostic_msgs
     uwb_driver
 )
 
@@ -163,6 +166,33 @@ target_link_libraries(uwb_imu_fgo_node
 
 add_dependencies(uwb_imu_fgo_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
+execute_process(
+  COMMAND git rev-parse --short=12 HEAD
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  OUTPUT_VARIABLE UWB_IMU_PL_GIT_SHA
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET)
+execute_process(
+  COMMAND git status --porcelain
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  OUTPUT_VARIABLE UWB_IMU_PL_GIT_STATUS
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET)
+if(UWB_IMU_PL_GIT_STATUS STREQUAL "")
+  set(UWB_IMU_PL_GIT_DIRTY 0)
+else()
+  set(UWB_IMU_PL_GIT_DIRTY 1)
+endif()
+
+add_executable(uwb_imu_pl_realtime_node tools/run_realtime_integrity.cpp)
+target_compile_definitions(uwb_imu_pl_realtime_node PRIVATE
+  UWB_IMU_PL_GIT_SHA="${UWB_IMU_PL_GIT_SHA}"
+  UWB_IMU_PL_GIT_DIRTY=${UWB_IMU_PL_GIT_DIRTY})
+target_link_libraries(uwb_imu_pl_realtime_node
+  ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam ${Boost_LIBRARIES} yaml-cpp)
+add_dependencies(uwb_imu_pl_realtime_node
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
 add_executable(snapshot_integrity_sweep apps/snapshot_integrity_sweep.cpp)
 target_link_libraries(snapshot_integrity_sweep
   ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
@@ -174,6 +204,7 @@ add_subdirectory(simulator)
 
 catkin_install_python(PROGRAMS
   simulator/scripts/trajectory_circle.py
+  simulator/scripts/trajectory_realtime.py
   simulator/scripts/odom_to_path.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

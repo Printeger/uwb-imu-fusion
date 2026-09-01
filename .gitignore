@@ -10,6 +10,7 @@ devel_isolated/
 
 # Logs & generated analysis (debug log system)
 logs/
+results/
 *.png
 report.md
 

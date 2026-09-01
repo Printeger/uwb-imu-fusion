@@ -1,0 +1,16 @@
+<launch>
+  <arg name="trajectory" default="figure_eight"/>
+  <arg name="fault_mode" default="none"/>
+  <arg name="fault_anchor_id" default="1"/>
+  <arg name="fault_magnitude_m" default="1.0"/>
+  <arg name="random_seed" default="20260901"/>
+  <arg name="rviz" default="false"/>
+  <include file="$(find uwb_imu_fgo)/simulator/launch/realtime_integrity_sim.launch">
+    <arg name="trajectory" value="$(arg trajectory)"/>
+    <arg name="fault_mode" value="$(arg fault_mode)"/>
+    <arg name="fault_anchor_id" value="$(arg fault_anchor_id)"/>
+    <arg name="fault_magnitude_m" value="$(arg fault_magnitude_m)"/>
+    <arg name="random_seed" value="$(arg random_seed)"/>
+    <arg name="rviz" value="$(arg rviz)"/>
+  </include>
+</launch>

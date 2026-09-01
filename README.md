@@ -2,11 +2,20 @@
 
 基于 GTSAM 的批量因子图优化（batch FGO）UWB-IMU 紧耦合定位系统。追求离线后处理的最高精度，非实时在线 SLAM。
 
+> **实时完整性分支状态：`IMPLEMENTED_UNVERIFIED`。** 本分支在不改变原有
+> `uifgo` batch LM/GNC 接口、包名和 launch 兼容性的前提下，新增了
+> `uwb_imu_pl` snapshot RAIM、full-history iSAM2 UWB–IMU、conditional
+> current-UWB detector 与单锚 PL。当前交付环境为 Ubuntu 24.04 / ROS2 only，
+> 未具备 ROS1 Noetic + GTSAM 4.2.x，故没有声称编译、单测、仿真或性能通过。
+> 待验证项以 [测试账本](doc/UWB_IMU_PL_TEST_PLAN.md) 为准；数学范围见
+> [完整性语义](doc/UWB_IMU_PL_INTEGRITY_SEMANTICS.md)。
+
 ## 1. 算法概述
 
 | 组件 | 方案 |
 |------|------|
-| 优化框架 | GTSAM 4.x **batch Levenberg-Marquardt**（非 iSAM2） |
+| 原有离线路径 | GTSAM 4.x **batch Levenberg-Marquardt** |
+| 新增实时路径 | GTSAM 4.2.x iSAM2，Method A detect-before-commit |
 | 状态变量 | 15D keyframe: `[Pose3, Vector3(vel), ConstantBias]` |
 | IMU 因子 | `CombinedImuFactor` — 中点预积分 + 偏置一阶修正 + 协方差传播 |
 | UWB 因子 | 自定义 `ExpressionFactor<double>`: $r = \|A - (R \cdot t_{UI} + p)\| + \beta - z$ |
@@ -84,7 +93,7 @@ src/uwb-imu-fusion/
 | 依赖 | 版本 | 用途 |
 |------|------|------|
 | ROS | Noetic | catkin 构建 + rosbag 读取 |
-| GTSAM | ≥ 4.0 | 因子图优化 (LM, Expression, CombinedImuFactor) |
+| GTSAM | 4.2.x | 因子图优化 (LM/iSAM2, Expression, CombinedImuFactor) |
 | Eigen3 | ≥ 3.3 | 线性代数 |
 | yaml-cpp | ≥ 0.6 | 配置文件解析 |
 | Boost | ≥ 1.65 | filesystem 等 |
@@ -321,6 +330,29 @@ GT 和 tag0 测距拟合，只适合打通接口和集成测试，正式 benchma
 独立标定得到的锚点坐标。
 
 ## 10. 仿真系统
+
+### 实时完整性入口（未验证）
+
+ROS1 + GTSAM 4.2.x 环境中，研究配置的预期入口为：
+
+```bash
+roslaunch uwb_imu_fgo realtime.launch
+
+# 或运行完整仿真；trajectory=straight|circle|figure_eight
+# fault_mode=none|step|ramp|magnitude_sweep|outage
+roslaunch uwb_imu_fgo realtime_integrity_sim.launch \
+  trajectory:=figure_eight fault_mode:=step fault_anchor_id:=1 \
+  fault_magnitude_m:=1.0 random_seed:=20260901
+```
+
+节点订阅配置中的 IMU 与 `LinktrackNodeframe3` topic，发布 odometry、
+`IntegrityStatus` 和 ROS diagnostics。callback 只入队，单 worker 按纳秒时间与
+sequence 处理；一个 LinkTrack frame 是一个 UWB group。异步单 range adapter
+必须按显式 `epoch_bin_s/max_time_skew_s` 分组后再创建 batch。
+
+正式输出只覆盖 `FORMAL_LOCAL_CURRENT_FAULT_ONLY`。detector 失败会隔离整个
+当前 group，不实现 TDoA、多同时故障、FDE、persistent-fault PL、fixed-lag
+provenance 或 nonlinear remainder bound。
 
 `simulator/` 提供完整的 UWB-IMU 仿真管道，覆盖轨迹生成 → 传感器仿真 → 录包 → 离线 FGO 处理 → 精度评测的全流程。
 

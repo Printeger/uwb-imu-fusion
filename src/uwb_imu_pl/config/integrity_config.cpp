@@ -65,6 +65,16 @@ std::string fnv1a64(const std::string& input) {
   return out.str();
 }
 
+Eigen::Vector3d vector3(const YAML::Node& node, const std::string& path) {
+  if (!node || !node.IsSequence() || node.size() != 3) {
+    throw std::runtime_error(path + " must contain exactly three numbers");
+  }
+  Eigen::Vector3d value(node[0].as<double>(), node[1].as<double>(),
+                        node[2].as<double>());
+  if (!value.allFinite()) throw std::runtime_error(path + " must be finite");
+  return value;
+}
+
 }  // namespace
 
 IntegrityConfig IntegrityConfigLoader::load(const std::string& yaml_path) {
@@ -73,7 +83,7 @@ IntegrityConfig IntegrityConfigLoader::load(const std::string& yaml_path) {
   cfg.resolved_yaml = readAll(yaml_path);
   cfg.config_hash = fnv1a64(cfg.resolved_yaml);
   const YAML::Node root = YAML::Load(cfg.resolved_yaml);
-  rejectUnknown(root, "root", {"seed", "snapshot", "incremental", "imu", "risk", "output", "realtime"});
+  rejectUnknown(root, "root", {"seed", "snapshot", "incremental", "imu", "risk", "output", "realtime", "anchors"});
   cfg.seed = required<std::uint64_t>(root, "seed", "root");
 
   const auto snapshot = root["snapshot"];
@@ -148,7 +158,7 @@ IntegrityConfig IntegrityConfigLoader::load(const std::string& yaml_path) {
   if (cfg.output.root.empty()) throw std::runtime_error("output.root must not be empty");
 
   const auto realtime = root["realtime"];
-  rejectUnknown(realtime, "realtime", {"world_frame", "body_frame", "imu_topic", "uwb_topic", "odometry_topic", "integrity_topic", "diagnostics_topic"});
+  rejectUnknown(realtime, "realtime", {"world_frame", "body_frame", "imu_topic", "uwb_topic", "odometry_topic", "integrity_topic", "diagnostics_topic", "initial_position_m", "initial_velocity_mps", "lever_arm_body_m", "range_sigma_m", "prior_sigmas"});
   cfg.realtime.world_frame = required<std::string>(realtime, "world_frame", "realtime");
   cfg.realtime.body_frame = required<std::string>(realtime, "body_frame", "realtime");
   cfg.realtime.imu_topic = required<std::string>(realtime, "imu_topic", "realtime");
@@ -156,6 +166,44 @@ IntegrityConfig IntegrityConfigLoader::load(const std::string& yaml_path) {
   cfg.realtime.odometry_topic = required<std::string>(realtime, "odometry_topic", "realtime");
   cfg.realtime.integrity_topic = required<std::string>(realtime, "integrity_topic", "realtime");
   cfg.realtime.diagnostics_topic = required<std::string>(realtime, "diagnostics_topic", "realtime");
+  cfg.realtime.initial_position_m = vector3(realtime["initial_position_m"], "realtime.initial_position_m");
+  cfg.realtime.initial_velocity_mps = vector3(realtime["initial_velocity_mps"], "realtime.initial_velocity_mps");
+  cfg.realtime.lever_arm_body_m = vector3(realtime["lever_arm_body_m"], "realtime.lever_arm_body_m");
+  cfg.realtime.range_sigma_m = required<double>(realtime, "range_sigma_m", "realtime");
+  positive(cfg.realtime.range_sigma_m, "realtime.range_sigma_m");
+  const auto prior_sigmas = realtime["prior_sigmas"];
+  if (!prior_sigmas || !prior_sigmas.IsSequence() || prior_sigmas.size() != 15) {
+    throw std::runtime_error("realtime.prior_sigmas must contain 15 values in Pose3,v,bias order");
+  }
+  for (int i = 0; i < 15; ++i) {
+    cfg.realtime.prior_sigmas(i) = prior_sigmas[static_cast<std::size_t>(i)].as<double>();
+    positive(cfg.realtime.prior_sigmas(i), "realtime.prior_sigmas");
+  }
+
+  const auto anchors = root["anchors"];
+  if (!anchors || !anchors.IsSequence() || anchors.size() < 4) {
+    throw std::runtime_error("anchors must contain at least four records");
+  }
+  std::set<std::uint64_t> anchor_ids;
+  for (std::size_t i = 0; i < anchors.size(); ++i) {
+    const auto anchor = anchors[i];
+    rejectUnknown(anchor, "anchors[]", {"id", "position_m", "sigma_m", "frame", "map_version"});
+    AnchorRecord record;
+    record.id = AnchorId(required<std::uint64_t>(anchor, "id", "anchors[]"));
+    if (!anchor_ids.insert(record.id.value()).second) {
+      throw std::runtime_error("duplicate physical anchor id");
+    }
+    record.position_world_m = vector3(anchor["position_m"], "anchors[].position_m");
+    const double sigma = required<double>(anchor, "sigma_m", "anchors[]");
+    positive(sigma, "anchors[].sigma_m");
+    record.covariance_m2 = Eigen::Matrix3d::Identity() * sigma * sigma;
+    record.frame = required<std::string>(anchor, "frame", "anchors[]");
+    record.map_version = required<std::string>(anchor, "map_version", "anchors[]");
+    if (record.frame != cfg.realtime.world_frame) {
+      throw std::runtime_error("anchor frame must equal realtime.world_frame in this release");
+    }
+    cfg.anchors.push_back(std::move(record));
+  }
   return cfg;
 }
 

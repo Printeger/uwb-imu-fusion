@@ -162,6 +162,7 @@ ProtectionLevelResult IntegrityMonitor::protectionLevel(
     const LinearizationDiagnostics& diagnostics) const {
   ProtectionLevelResult result;
   result.timestamp = timestamp;
+  result.unmonitored_risk = risk_.p_nm;
   result.label = IntegrityLabel::FormalLocalCurrentFaultOnly;
   result.consistency = LinearizationConsistency::Strict;
   if (!detector.numerically_valid || !diagnostics.model_valid ||
@@ -402,20 +403,27 @@ void RealtimeIntegrityPipeline::ingestImu(const ImuMeasurement& measurement) {
 
 IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch) {
   estimator_->predictTo(batch.timestamp);
-  const auto snapshot = estimator_->preMeasurementSnapshot(batch);
-  IntegrityOutput output = monitor_.evaluateConditional(batch, *snapshot);
-  if (output.detector.passed) {
-    estimator_->commitUwbBatch(batch);
-    output.state = estimator_->currentState();
-    output.batch_committed = true;
-  } else {
-    estimator_->rejectUwbBatch(batch, output.detector.reason);
-    output.state = estimator_->currentState();
-    output.batch_committed = false;
+  try {
+    const auto snapshot = estimator_->preMeasurementSnapshot(batch);
+    IntegrityOutput output = monitor_.evaluateConditional(batch, *snapshot);
+    if (output.detector.passed) {
+      estimator_->commitUwbBatch(batch);
+      output.state = estimator_->currentState();
+      output.batch_committed = true;
+    } else {
+      estimator_->rejectUwbBatch(batch, output.detector.reason);
+      output.state = estimator_->currentState();
+      output.batch_committed = false;
+    }
+    output.global_graph_residual_statistic =
+        estimator_->globalGraphResidualStatistic();
+    return output;
+  } catch (...) {
+    if (estimator_->hasPendingEpoch()) {
+      estimator_->rejectUwbBatch(batch, "conditional processing exception");
+    }
+    throw;
   }
-  output.global_graph_residual_statistic =
-      estimator_->globalGraphResidualStatistic();
-  return output;
 }
 
 }  // namespace uwb_imu_pl

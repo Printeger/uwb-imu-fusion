@@ -3,9 +3,14 @@
 #include "uwb_imu_pl/config/integrity_config.hpp"
 
 #include <boost/filesystem.hpp>
+#include <gtsam/config.h>
 
 #include <chrono>
+#include <ctime>
+#include <sys/sysinfo.h>
+#include <sys/utsname.h>
 #include <iomanip>
+#include <fstream>
 #include <sstream>
 #include <stdexcept>
 
@@ -22,8 +27,37 @@ std::string csv(const std::string& value) {
   return "\"" + escaped + "\"";
 }
 
+std::string json(const std::string& value) {
+  std::string escaped;
+  escaped.reserve(value.size() + 2);
+  for (char c : value) {
+    switch (c) {
+      case '"': escaped += "\\\""; break;
+      case '\\': escaped += "\\\\"; break;
+      case '\n': escaped += "\\n"; break;
+      case '\r': escaped += "\\r"; break;
+      case '\t': escaped += "\\t"; break;
+      default: escaped += c; break;
+    }
+  }
+  return "\"" + escaped + "\"";
+}
+
 void requireOpen(const std::ofstream& stream, const std::string& path) {
   if (!stream) throw std::runtime_error("cannot open run output: " + path);
+}
+
+std::string cpuModel() {
+  std::ifstream input("/proc/cpuinfo");
+  std::string line;
+  while (std::getline(input, line)) {
+    const std::string key = "model name";
+    if (line.compare(0, key.size(), key) == 0) {
+      const auto colon = line.find(':');
+      return colon == std::string::npos ? line : line.substr(colon + 2);
+    }
+  }
+  return "unknown";
 }
 
 }  // namespace
@@ -58,18 +92,20 @@ void RunLogger::writeManifest(const RunManifest& m) const {
   std::ofstream out(directory_ + "/run_manifest.json");
   requireOpen(out, directory_ + "/run_manifest.json");
   out << "{\n"
-      << "  \"schema_version\": " << csv(m.schema_version) << ",\n"
-      << "  \"created_utc\": " << csv(m.created_utc) << ",\n"
-      << "  \"git_sha\": " << csv(m.git_sha) << ",\n"
+      << "  \"schema_version\": " << json(m.schema_version) << ",\n"
+      << "  \"created_utc\": " << json(m.created_utc) << ",\n"
+      << "  \"git_sha\": " << json(m.git_sha) << ",\n"
       << "  \"git_dirty\": " << (m.git_dirty ? "true" : "false") << ",\n"
-      << "  \"config_path\": " << csv(m.config_path) << ",\n"
-      << "  \"config_hash\": " << csv(m.config_hash) << ",\n"
+      << "  \"config_path\": " << json(m.config_path) << ",\n"
+      << "  \"config_hash\": " << json(m.config_hash) << ",\n"
       << "  \"seed\": " << m.seed << ",\n"
-      << "  \"build_type\": " << csv(m.build_type) << ",\n"
-      << "  \"compiler\": " << csv(m.compiler) << ",\n"
-      << "  \"os\": " << csv(m.os) << ",\n"
-      << "  \"gtsam_version\": " << csv(m.gtsam_version) << ",\n"
-      << "  \"eigen_version\": " << csv(m.eigen_version) << "\n}\n";
+      << "  \"build_type\": " << json(m.build_type) << ",\n"
+      << "  \"compiler\": " << json(m.compiler) << ",\n"
+      << "  \"os\": " << json(m.os) << ",\n"
+      << "  \"cpu\": " << json(m.cpu) << ",\n"
+      << "  \"ram_bytes\": " << m.ram_bytes << ",\n"
+      << "  \"gtsam_version\": " << json(m.gtsam_version) << ",\n"
+      << "  \"eigen_version\": " << json(m.eigen_version) << "\n}\n";
 }
 
 void RunLogger::writeState(const NavigationState& s) {
@@ -117,7 +153,7 @@ void RunLogger::writeSummary(const std::string& status,
                              const std::string& detail) const {
   std::ofstream out(directory_ + "/summary.json");
   requireOpen(out, directory_ + "/summary.json");
-  out << "{\"status\":" << csv(status) << ",\"detail\":" << csv(detail) << "}\n";
+  out << "{\"status\":" << json(status) << ",\"detail\":" << json(detail) << "}\n";
 }
 
 RunManifest makeRunManifest(const IntegrityConfig& config,
@@ -142,6 +178,20 @@ RunManifest makeRunManifest(const IntegrityConfig& config,
   manifest.compiler = __VERSION__;
   manifest.eigen_version = std::to_string(EIGEN_WORLD_VERSION) + "." +
       std::to_string(EIGEN_MAJOR_VERSION) + "." + std::to_string(EIGEN_MINOR_VERSION);
+  struct utsname system_name {};
+  manifest.os = uname(&system_name) == 0 ?
+      std::string(system_name.sysname) + " " + system_name.release : "unknown";
+  manifest.cpu = cpuModel();
+  struct sysinfo memory_info {};
+  if (sysinfo(&memory_info) == 0) {
+    manifest.ram_bytes = static_cast<std::uint64_t>(memory_info.totalram) *
+        static_cast<std::uint64_t>(memory_info.mem_unit);
+  }
+#ifdef GTSAM_VERSION_STRING
+  manifest.gtsam_version = GTSAM_VERSION_STRING;
+#else
+  manifest.gtsam_version = "4.2.x-required";
+#endif
   return manifest;
 }
 

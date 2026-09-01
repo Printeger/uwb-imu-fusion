@@ -18,15 +18,17 @@
 #include <visualization_msgs/Marker.h>
 
 #include <Eigen/Dense>
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include <random>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
 class UwbTwrSim {
  public:
-  UwbTwrSim(ros::NodeHandle& nh) : nh_(nh), rng_(std::random_device{}()) {
+  UwbTwrSim(ros::NodeHandle& nh) : nh_(nh), rng_(0) {
     nh_.param("num_anchors", N_, 4);
     nh_.param("superframe_period", T_sf_, 0.10);
     nh_.param("pub_rate", pub_rate_, 20.0);  // output rate [Hz]
@@ -47,9 +49,31 @@ class UwbTwrSim {
     nh_.param("fp_offset_los", fp_lo_, 3.0);
     nh_.param("fp_offset_nlos", fp_nl_, 8.0);
     nh_.param("battery_voltage", batt_v_, 4.10f);
+    nh_.param("fault_mode", fault_mode_, std::string("none"));
+    nh_.param("fault_anchor_id", fault_anchor_id_, -1);
+    nh_.param("fault_onset_s", fault_onset_s_, 10.0);
+    nh_.param("fault_duration_s", fault_duration_s_, -1.0);
+    nh_.param("fault_magnitude_m", fault_magnitude_m_, 1.0);
+    nh_.param("fault_ramp_rate_mps", fault_ramp_rate_mps_, 0.05);
+    nh_.param("fault_sweep_min_m", fault_sweep_min_m_, 0.0);
+    nh_.param("fault_sweep_max_m", fault_sweep_max_m_, 2.0);
+    nh_.param("fault_sweep_period_s", fault_sweep_period_s_, 20.0);
+    if (fault_mode_ != "none" && fault_mode_ != "step" &&
+        fault_mode_ != "ramp" && fault_mode_ != "magnitude_sweep" &&
+        fault_mode_ != "outage") {
+      throw std::runtime_error("unsupported fault_mode: " + fault_mode_);
+    }
+    if (fault_sweep_period_s_ <= 0.0 || fault_duration_s_ == 0.0) {
+      throw std::runtime_error(
+          "fault_sweep_period_s must be positive and fault_duration_s nonzero");
+    }
     int seed;
-    nh_.param("random_seed", seed, 0);
-    if (seed != 0) rng_.seed(seed);
+    nh_.param("random_seed", seed, -1);
+    if (seed < 0) {
+      throw std::runtime_error("random_seed must be explicitly configured");
+    }
+    rng_.seed(static_cast<std::mt19937::result_type>(seed));
+    sim_start_ = ros::Time::now();
 
     // Load anchor positions from ROS param
     XmlRpc::XmlRpcValue anc;
@@ -78,6 +102,12 @@ class UwbTwrSim {
                                 R * sin(2 * M_PI * i / N_), 1.8);
         anchors_.push_back(a);
       }
+    }
+    if (fault_mode_ != "none" &&
+        std::none_of(anchors_.begin(), anchors_.end(), [this](const Anchor& a) {
+          return a.id == fault_anchor_id_;
+        })) {
+      throw std::runtime_error("fault_anchor_id is absent from the anchor map");
     }
     ROS_INFO("UwbTwrSim: total anchors = %d", (int)anchors_.size());
 
@@ -139,6 +169,33 @@ class UwbTwrSim {
     bool ok = false;
   };
 
+  double injectedFault(int anchor_id, const ros::Time& now,
+                       bool* outage) const {
+    *outage = false;
+    if (fault_mode_ == "none" || anchor_id != fault_anchor_id_) return 0.0;
+    const double elapsed = (now - sim_start_).toSec();
+    const double active_time = elapsed - fault_onset_s_;
+    if (active_time < 0.0 ||
+        (fault_duration_s_ >= 0.0 && active_time > fault_duration_s_)) {
+      return 0.0;
+    }
+    if (fault_mode_ == "outage") {
+      *outage = true;
+      return 0.0;
+    }
+    if (fault_mode_ == "step") return fault_magnitude_m_;
+    if (fault_mode_ == "ramp") {
+      return fault_magnitude_m_ + fault_ramp_rate_mps_ * active_time;
+    }
+    if (fault_mode_ == "magnitude_sweep") {
+      const double phase = std::fmod(active_time, fault_sweep_period_s_) /
+          fault_sweep_period_s_;
+      return fault_sweep_min_m_ +
+          phase * (fault_sweep_max_m_ - fault_sweep_min_m_);
+    }
+    return 0.0;
+  }
+
   void odomCb(const nav_msgs::Odometry::ConstPtr& m) {
     drone_.p = {m->pose.pose.position.x, m->pose.pose.position.y,
                 m->pose.pose.position.z};
@@ -158,6 +215,10 @@ class UwbTwrSim {
     int cnt = 0;
     for (int off = 0; off < N_ && cnt < kmax_; ++off) {
       int j = (i + off) % N_;
+      bool forced_outage = false;
+      const double injected_bias =
+          injectedFault(anchors_[j].id, now, &forced_outage);
+      if (forced_outage) continue;
       double d = (drone_.p - anchors_[j].pos).norm();
       if (d > max_range_) continue;
       if (uni_(rng_) < ploss_) continue;
@@ -168,6 +229,7 @@ class UwbTwrSim {
                                        : (clk_[i] - clk_[j]) * c_ss_;
       double dd = d * (1.0 + eps) + b0_ + blink_[i][j];
       if (nlos) dd += nlos_exp_(rng_);
+      dd += injected_bias;
       dd += gauss_(rng_) * sigma_;
 
       uwb_imu_fgo::LinktrackNode2 nd;
@@ -297,6 +359,12 @@ class UwbTwrSim {
       odom_to_, nlos_p_, nlos_mean_, P_tx_, n_p_, d0_, s_sh_, fp_lo_, fp_nl_,
       c_ss_, c_ds_;
   std::string mode_str_;
+  std::string fault_mode_;
+  int fault_anchor_id_;
+  double fault_onset_s_, fault_duration_s_, fault_magnitude_m_,
+      fault_ramp_rate_mps_, fault_sweep_min_m_, fault_sweep_max_m_,
+      fault_sweep_period_s_;
+  ros::Time sim_start_;
   float batt_v_;
   Drone drone_;
   std::vector<Anchor> anchors_;

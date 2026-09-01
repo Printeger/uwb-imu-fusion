@@ -47,3 +47,21 @@ realtime:
   odometry_topic: /uwb_imu_pl/odometry
   integrity_topic: /uwb_imu_pl/integrity
   diagnostics_topic: /diagnostics
+  initial_position_m: [0.0, 0.0, 0.0]
+  initial_velocity_mps: [0.0, 0.0, 0.0]
+  lever_arm_body_m: [0.0, 0.0, 0.0]
+  range_sigma_m: 0.10
+  # Pose3 tangent (rotation, local translation), world velocity, ba, bg.
+  prior_sigmas: [0.10, 0.10, 0.10, 0.50, 0.50, 0.50,
+                 0.50, 0.50, 0.50, 0.10, 0.10, 0.10,
+                 0.01, 0.01, 0.01]
+
+anchors:
+  - {id: 1, position_m: [-5.0, -5.0, 1.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 2, position_m: [-5.0, -5.0, 5.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 3, position_m: [-5.0,  5.0, 1.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 4, position_m: [-5.0,  5.0, 5.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 5, position_m: [ 5.0, -5.0, 1.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 6, position_m: [ 5.0, -5.0, 5.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 7, position_m: [ 5.0,  5.0, 1.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 8, position_m: [ 5.0,  5.0, 5.0], sigma_m: 0.05, frame: world, map_version: sim-v1}

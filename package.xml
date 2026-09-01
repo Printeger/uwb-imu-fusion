@@ -2,7 +2,7 @@
 <package format="2">
   <name>uwb_imu_fgo</name>
   <version>0.1.0</version>
-  <description>Tightly-coupled UWB-IMU factor graph optimization SLAM using GTSAM batch optimization</description>
+  <description>Batch and realtime tightly-coupled UWB-IMU factor graph estimation with research integrity monitoring</description>
 
   <maintainer email="dev@uwb-imu-fgo.com">UWB-IMU FGO Team</maintainer>
   <license>BSD</license>
@@ -19,6 +19,7 @@
   <build_depend>message_generation</build_depend>
   <build_depend>eigen_conversions</build_depend>
   <build_depend>visualization_msgs</build_depend>
+  <build_depend>diagnostic_msgs</build_depend>
   <build_depend>nodelet</build_depend>
   <build_depend>uwb_driver</build_depend>
   <build_depend>isas_msgs</build_depend>
@@ -33,6 +34,7 @@
   <exec_depend>message_runtime</exec_depend>
   <exec_depend>eigen_conversions</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>diagnostic_msgs</exec_depend>
   <exec_depend>nodelet</exec_depend>
   <exec_depend>uwb_driver</exec_depend>
   <exec_depend>isas_msgs</exec_depend>

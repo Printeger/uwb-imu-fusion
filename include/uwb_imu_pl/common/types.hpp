@@ -82,6 +82,14 @@ struct UwbMeasurement {
   std::uint32_t quality_flags = 0;
 };
 
+struct AnchorRecord {
+  AnchorId id;
+  Eigen::Vector3d position_world_m = Eigen::Vector3d::Zero();
+  Eigen::Matrix3d covariance_m2 = Eigen::Matrix3d::Zero();
+  std::string frame;
+  std::string map_version;
+};
+
 struct UwbBatch {
   BatchId id;
   TimestampNs timestamp;
@@ -174,6 +182,7 @@ struct ProtectionLevelResult {
       std::numeric_limits<double>::infinity());
   double hpl_box_m = std::numeric_limits<double>::infinity();
   double vpl_m = std::numeric_limits<double>::infinity();
+  double unmonitored_risk = 0.0;
   std::array<AnchorId, 3> maximizing_anchor{};
   Availability availability = Availability::Unavailable;
   IntegrityLabel label = IntegrityLabel::ImplementedUnverified;
@@ -208,6 +217,8 @@ struct RunManifest {
   std::string build_type;
   std::string compiler;
   std::string os;
+  std::string cpu;
+  std::uint64_t ram_bytes = 0;
   std::string gtsam_version;
   std::string eigen_version;
 };

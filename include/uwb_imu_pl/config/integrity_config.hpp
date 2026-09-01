@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace uwb_imu_pl {
 
@@ -49,6 +50,12 @@ struct RealtimeConfig {
   std::string odometry_topic;
   std::string integrity_topic;
   std::string diagnostics_topic;
+  Eigen::Vector3d initial_position_m = Eigen::Vector3d::Zero();
+  Eigen::Vector3d initial_velocity_mps = Eigen::Vector3d::Zero();
+  Eigen::Vector3d lever_arm_body_m = Eigen::Vector3d::Zero();
+  double range_sigma_m = 0.10;
+  Eigen::Matrix<double, 15, 1> prior_sigmas =
+      Eigen::Matrix<double, 15, 1>::Ones();
 };
 
 struct IntegrityConfig {
@@ -59,6 +66,7 @@ struct IntegrityConfig {
   RiskBudget risk;
   OutputConfig output;
   RealtimeConfig realtime;
+  std::vector<AnchorRecord> anchors;
   std::string resolved_yaml;
   std::string source_path;
   std::string config_hash;

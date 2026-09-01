@@ -1,0 +1,14 @@
+std_msgs/Header header
+string scope_label
+string availability
+bool detector_passed
+bool batch_committed
+float64 statistic
+float64 threshold
+uint32 dof
+float64[3] pl_xyz_m
+float64 hpl_box_m
+float64 vpl_m
+uint64[3] maximizing_anchor_id
+string config_hash
+string reason
