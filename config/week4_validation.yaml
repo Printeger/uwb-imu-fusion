@@ -1,0 +1,210 @@
+schema_version: uwb-imu-pl/week4-protocol/v1
+protocol_name: week4_foundation
+base_config: config/realtime_uwb_imu_pl_research.yaml
+formal_results_template: results/week4_{git12}_{protocol_hash12}
+statuses: [PASS, FAIL, INVALID]
+formal_execution:
+  require_clean_git: true
+  require_manifest_sha_match: true
+  continue_after_scientific_failure: true
+  resume_same_seed_only: true
+  preserve_failed_attempts: true
+  bootstrap_seed: 20260902
+
+noncentral:
+  required: true
+  root_seed: 20260902
+  h0:
+    anchor_counts: [4, 5, 6, 8]
+    dofs: [1, 2, 3, 5]
+    trials_per_job: 200000
+    exact_ci_level: 0.95
+    ks_min_p: 0.01
+  alternatives:
+    dofs: [1, 2, 3, 5]
+    anchor_ids: [1, 2, 3, 4, 5, 6, 7, 8]
+    eta_ratios: [0.25, 0.5, 1.0, 2.0, 4.0]
+    trials_per_job: 100000
+    exact_binomial_ordering: probability
+  global_test:
+    statistic: pearson
+    parameter_bootstrap_trials: 100000
+    min_p: 0.05
+  multiple_testing:
+    method: holm
+    familywise_alpha: 0.05
+    maximum_rejections: 0
+
+snapshot_sweep:
+  required: true
+  seeds: {start: 20260901, stop: 20261000}
+  trajectories: [straight, circle, figure_eight]
+  anchor_counts: [4, 6, 8]
+  geometries:
+    regular: {geometry_scales: [0.7, 1.0, 1.5]}
+    near_degenerate: {geometry_scales: [1.0]}
+  noise_sigmas_m: [0.05, 0.10, 0.20]
+  fault:
+    anchor_indices: all_available
+    magnitudes_m: [0.5, 1.0, 2.0]
+    include_nominal: true
+  epochs_per_job: 200
+  expected_jobs: 205200
+  expected_rows: 41040000
+  bootstrap_seed: 20260901
+  gates:
+    nominal_regular_aggregate_count: 81
+    bias_over_predicted_sigma_max: 0.1
+    variance_ratio: [0.8, 1.2]
+    operational_hmi_events_max: 0
+  report_only: [stress_availability, fault_availability, fault_detection]
+
+imu_monte_carlo:
+  required: true
+  root_seed: 20260902
+  scenarios: [static, constant_acceleration, constant_angular_velocity]
+  rate_hz: 200
+  duration_s: 1.0
+  trials_per_scenario: 100000
+  bias_dimensions: 6
+  error_dimensions: 15
+  finite_difference: {scheme: central, step: 1.0e-6}
+  noise_source: resolved_config
+  gates:
+    jacobian_relative_frobenius_max: 1.0e-5
+    jacobian_max_absolute_error: 1.0e-6
+    whitened_covariance_eigenvalues: [0.95, 1.05]
+    mean_and_covariance_global_min_p: 0.01
+    multiple_testing: {method: holm, familywise_alpha: 0.01}
+
+roc:
+  required: true
+  graph_histories: [2, 10, 50, 200, 0]
+  rolling_windows: [1]
+  temporal_ablation:
+    graph_history: 200
+    rolling_windows: [1, 10, 50, 200]
+  trajectories: [straight, circle, figure_eight]
+  epochs_per_sequence: 600
+  detectors: [global, postfit, conditional]
+  operating_p_fa: [1.0e-2, 1.0e-3, 1.0e-4]
+  conditional_theoretical_p_fa: 1.0e-5
+  calibration_seeds: {start: 20262001, count: 250}
+  nominal_evaluation_seeds: {start: 20262251, count: 250}
+  fault_evaluation_seeds: {start: 20262501, count: 80}
+  fault:
+    anchor_ids: [1, 2, 3, 4, 5, 6, 7, 8]
+    magnitudes_m: [0.1, 0.25, 0.5, 1.0, 2.0]
+    onset_epoch: 200
+    assignment: balanced
+  bootstrap:
+    block_fields: [seed, trajectory]
+    trials: 10000
+    seed: 20260902
+  gates:
+    familywise_alpha: 0.05
+    multiple_testing: holm
+    longest_window_min_valid_epochs_per_item: 300000
+    calibration_evaluation_disjoint: true
+
+history_experiments:
+  required: true
+  primary_graph_histories: [2, 10, 50, 200, 0]
+  primary_rolling_window: 1
+  temporal_ablation_graph_history: 200
+  temporal_ablation_rolling_windows: [1, 10, 50, 200]
+  gates:
+    detector: conditional
+    operating_p_fa: 1.0e-3
+    minimum_fault_magnitude_m: 0.5
+    reference_graph_history: 2
+    noninferiority_margin: -0.05
+    require_lower_bound_strictly_greater: true
+  required_outputs: [roc, auc, pfa, power, time_to_detect]
+
+method_ab_shadow:
+  required: true
+  root_seed: 20260902
+  fixed_lag_epochs: 200
+  trajectories: [straight, circle, figure_eight]
+  comparable_epochs_per_trajectory: 200
+  candidate_count: 600
+  condition_max: 1.0e10
+  tolerance:
+    machine_epsilon_multiplier: 100.0
+    minimum: 1.0e-9
+    maximum: 1.0e-3
+  gates:
+    all_candidates_spd: true
+    availability_equal: true
+    decision_equal: true
+    metrics: [prior_local_coordinate, covariance, statistic, protection_level]
+  report_only: [runtime]
+  online_enablement: false
+
+ros_topic_tests:
+  required: true
+  deterministic_seed: 20260902
+  scenarios:
+    - delayed_stale_uwb
+    - uwb_drop_resume
+    - imu_gap
+    - anchor_set_8_7_8
+    - fault_step
+    - fault_ramp
+    - fault_magnitude_sweep
+    - fault_outage
+  gates:
+    stale_rejected: true
+    drop_resume_processed: true
+    imu_gap_unavailable_or_reinitialized: true
+    anchor_count_and_dof_change_correct: true
+    fault_truth_matches_injection: true
+    detector_expected_response: true
+    crashes_max: 0
+    silent_reassociations_max: 0
+  excluded: [persistent_fault_recovery, fde]
+
+performance:
+  required: true
+  platform: WSL2
+  build_type: Release
+  fixed_lag_epochs: 200
+  trajectory: figure_eight
+  seed: 20260901
+  cpu_affinity: [0, 2, 4, 6]
+  numerical_library_threads: 1
+  repetitions: 3
+  epochs_per_repetition: 12000
+  warmup_epochs: 100
+  timeout_s: 630
+  overrides:
+    output.write_global_diagnostics: false
+    output.write_residuals: false
+    output.write_timing: true
+  gates:
+    core_total_mean_ms_max: 50.0
+    core_total_p99_ms_max: 100.0
+    pl_to_estimator_mean_ratio_max: 0.30
+    processing_errors_max: 0
+    numerical_reinitializations_max: 0
+    timeouts_max: 0
+    retained_epochs_max: 200
+    marginalization_required: true
+
+acceptance:
+  required_gates:
+    - noncentral
+    - snapshot_sweep
+    - imu_monte_carlo
+    - roc
+    - history_experiments
+    - method_ab_shadow
+    - ros_topic_tests
+    - performance
+  checksum_algorithm: sha256
+  success_token: WEEK4_FOUNDATION_CLOSED
+  excluded_claims:
+    - persistent_fault_protection_level
+    - fault_detection_and_exclusion
+    - rare_event_certification
