@@ -114,15 +114,45 @@ Eigen::Vector3d vector3(const YAML::Node& node, const std::string& path) {
 IntegrityConfig IntegrityConfigLoader::load(
     const std::string& yaml_path,
     const std::optional<std::string>& fixed_lag_epochs_override) {
+  IntegrityConfigOverrides overrides;
+  if (fixed_lag_epochs_override && !fixed_lag_epochs_override->empty()) {
+    overrides.fixed_lag_epochs = parseFixedLagEpochs(
+        *fixed_lag_epochs_override, "incremental.fixed_lag_epochs override");
+  }
+  return load(yaml_path, overrides);
+}
+
+IntegrityConfig IntegrityConfigLoader::load(
+    const std::string& yaml_path,
+    const IntegrityConfigOverrides& overrides) {
   IntegrityConfig cfg;
   cfg.source_path = yaml_path;
   YAML::Node root = YAML::Load(readAll(yaml_path));
-  if (fixed_lag_epochs_override && !fixed_lag_epochs_override->empty()) {
-    requireMap(root, "root");
+  requireMap(root, "root");
+  if (overrides.seed) root["seed"] = *overrides.seed;
+  if (overrides.fixed_lag_epochs) {
     requireMap(root["incremental"], "incremental");
-    root["incremental"]["fixed_lag_epochs"] = parseFixedLagEpochs(
-        *fixed_lag_epochs_override, "incremental.fixed_lag_epochs override");
+    if (*overrides.fixed_lag_epochs == 1) {
+      throw std::runtime_error(
+          "incremental.fixed_lag_epochs override must be 0 or at least 2");
+    }
+    root["incremental"]["fixed_lag_epochs"] = *overrides.fixed_lag_epochs;
   }
+  const bool has_output_override = overrides.write_global_diagnostics ||
+      overrides.write_residuals || overrides.write_timing ||
+      overrides.output_root;
+  if (has_output_override) requireMap(root["output"], "output");
+  if (overrides.write_global_diagnostics) {
+    root["output"]["write_global_diagnostics"] =
+        *overrides.write_global_diagnostics;
+  }
+  if (overrides.write_residuals) {
+    root["output"]["write_residuals"] = *overrides.write_residuals;
+  }
+  if (overrides.write_timing) {
+    root["output"]["write_timing"] = *overrides.write_timing;
+  }
+  if (overrides.output_root) root["output"]["root"] = *overrides.output_root;
   cfg.resolved_yaml = emitResolvedYaml(root);
   cfg.config_hash = fnv1a64(cfg.resolved_yaml);
   rejectUnknown(root, "root", {"seed", "snapshot", "incremental", "imu", "risk", "output", "realtime", "anchors"});

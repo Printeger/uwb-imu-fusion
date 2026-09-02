@@ -141,3 +141,26 @@ TEST(IntegrityConfig, HashCoversResolvedConfigurationAfterOverride) {
   EXPECT_EQ(reloaded.config_hash, full_history.config_hash);
   EXPECT_EQ(reloaded.resolved_yaml, full_history.resolved_yaml);
 }
+
+TEST(IntegrityConfig, UnifiedOverridesAreResolvedAndHashed) {
+  uwb_imu_pl::IntegrityConfigOverrides overrides;
+  overrides.seed = 20260902;
+  overrides.fixed_lag_epochs = 50;
+  overrides.write_global_diagnostics = true;
+  overrides.write_residuals = false;
+  overrides.write_timing = false;
+  overrides.output_root = "results/week4_fixture";
+  const auto loaded = uwb_imu_pl::IntegrityConfigLoader::load(
+      kResearchConfig, overrides);
+  EXPECT_EQ(loaded.seed, 20260902u);
+  EXPECT_EQ(loaded.incremental.fixed_lag_epochs, 50u);
+  EXPECT_TRUE(loaded.output.write_global_diagnostics);
+  EXPECT_FALSE(loaded.output.write_residuals);
+  EXPECT_FALSE(loaded.output.write_timing);
+  EXPECT_EQ(loaded.output.root, "results/week4_fixture");
+  EXPECT_NE(loaded.resolved_yaml.find("seed: 20260902"), std::string::npos);
+  EXPECT_NE(loaded.resolved_yaml.find("root: results/week4_fixture"),
+            std::string::npos);
+  EXPECT_NE(loaded.config_hash,
+            uwb_imu_pl::IntegrityConfigLoader::load(kResearchConfig).config_hash);
+}

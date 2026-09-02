@@ -275,6 +275,21 @@ TEST(UwbImuIncremental, MethodBDowndateCandidateRecoversPrior) {
   EXPECT_TRUE(recovered->isApprox(prior, 1e-10));
 }
 
+TEST(UwbImuIncremental, MethodBDowndateRejectsIllConditionedSpdPrior) {
+  auto cfg = config();
+  cfg.incremental.method_b_max_condition = 10.0;
+  uwb_imu_pl::IncrementalUwbImuEstimator estimator(cfg, Eigen::Vector3d::Zero());
+  Eigen::Matrix<double, 15, 15> prior =
+      Eigen::Matrix<double, 15, 15>::Identity();
+  prior(14, 14) = 100.0;
+  Eigen::MatrixXd h = Eigen::MatrixXd::Zero(4, 15);
+  h.block<4, 4>(0, 0) = Eigen::Matrix4d::Identity();
+  const Eigen::Matrix4d r = Eigen::Matrix4d::Identity();
+  const Eigen::Matrix<double, 15, 15> all_in =
+      (prior.inverse() + h.transpose() * r.inverse() * h).inverse();
+  EXPECT_FALSE(estimator.methodBCandidatePrior(all_in, h, r).has_value());
+}
+
 TEST(UwbImuIncremental, MethodAAndLinearMethodBCandidateGiveEquivalentOutput) {
   auto cfg = config();
   uwb_imu_pl::IncrementalUwbImuEstimator estimator(cfg, Eigen::Vector3d::Zero());

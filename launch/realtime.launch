@@ -2,6 +2,11 @@
   <arg name="config_path"
        default="$(find uwb_imu_pl)/config/realtime_uwb_imu_pl_research.yaml"/>
   <arg name="fixed_lag_epochs" default=""/>
+  <arg name="seed" default=""/>
+  <arg name="write_global_diagnostics" default=""/>
+  <arg name="write_residuals" default=""/>
+  <arg name="write_timing" default=""/>
+  <arg name="output_root" default=""/>
   <arg name="run_directory" default=""/>
   <arg name="execution_command"
        default="roslaunch uwb_imu_pl realtime.launch config_path:=$(arg config_path) fixed_lag_epochs:=$(arg fixed_lag_epochs) run_directory:=$(arg run_directory)"/>
@@ -9,6 +14,11 @@
         name="uwb_imu_pl_realtime" output="screen">
     <param name="config_path" value="$(arg config_path)"/>
     <param name="fixed_lag_epochs" type="str" value="$(arg fixed_lag_epochs)"/>
+    <param name="seed" type="str" value="$(arg seed)"/>
+    <param name="write_global_diagnostics" type="str" value="$(arg write_global_diagnostics)"/>
+    <param name="write_residuals" type="str" value="$(arg write_residuals)"/>
+    <param name="write_timing" type="str" value="$(arg write_timing)"/>
+    <param name="output_root" value="$(arg output_root)"/>
     <param name="run_directory" value="$(arg run_directory)"/>
     <param name="execution_command" value="$(arg execution_command)"/>
   </node>

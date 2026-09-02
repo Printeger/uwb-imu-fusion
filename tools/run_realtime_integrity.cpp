@@ -18,6 +18,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <chrono>
+#include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <map>
@@ -87,6 +88,27 @@ std::string processCommandLine(int argc, char** argv) {
     command << argv[index];
   }
   return command.str();
+}
+
+std::optional<bool> parseOptionalBool(const std::string& value,
+                                      const std::string& name) {
+  if (value.empty()) return std::nullopt;
+  if (value == "true" || value == "1") return true;
+  if (value == "false" || value == "0") return false;
+  throw std::runtime_error(name + " must be true or false");
+}
+
+std::optional<std::uint64_t> parseOptionalUnsigned(
+    const std::string& value, const std::string& name) {
+  if (value.empty()) return std::nullopt;
+  if (!std::all_of(value.begin(), value.end(), [](unsigned char character) {
+        return std::isdigit(character) != 0;
+      })) throw std::runtime_error(name + " must be an unsigned integer");
+  try {
+    return std::stoull(value);
+  } catch (const std::exception&) {
+    throw std::runtime_error(name + " must be an unsigned integer");
+  }
 }
 
 class RealtimeNode {
@@ -599,19 +621,46 @@ int main(int argc, char** argv) {
   std::string config_path;
   std::string run_directory;
   std::string fixed_lag_epochs_override;
+  std::string seed_override;
+  std::string global_diagnostics_override;
+  std::string residual_logging_override;
+  std::string timing_logging_override;
+  std::string output_root_override;
   std::string execution_command;
   private_node.param("config_path", config_path, std::string());
   private_node.param("run_directory", run_directory, std::string());
   private_node.param("fixed_lag_epochs", fixed_lag_epochs_override,
                      std::string());
+  private_node.param("seed", seed_override, std::string());
+  private_node.param("write_global_diagnostics", global_diagnostics_override,
+                     std::string());
+  private_node.param("write_residuals", residual_logging_override,
+                     std::string());
+  private_node.param("write_timing", timing_logging_override, std::string());
+  private_node.param("output_root", output_root_override, std::string());
   private_node.param("execution_command", execution_command, std::string());
   if (config_path.empty()) {
     ROS_FATAL("~config_path is required");
     return 2;
   }
   try {
-    auto config = uwb_imu_pl::IntegrityConfigLoader::load(
-        config_path, fixed_lag_epochs_override);
+    uwb_imu_pl::IntegrityConfigOverrides overrides;
+    overrides.seed = parseOptionalUnsigned(seed_override, "seed override");
+    if (const auto lag = parseOptionalUnsigned(
+            fixed_lag_epochs_override, "fixed_lag_epochs override")) {
+      if (*lag > std::numeric_limits<std::uint32_t>::max()) {
+        throw std::runtime_error("fixed_lag_epochs override must fit in uint32");
+      }
+      overrides.fixed_lag_epochs = static_cast<std::uint32_t>(*lag);
+    }
+    overrides.write_global_diagnostics = parseOptionalBool(
+        global_diagnostics_override, "write_global_diagnostics override");
+    overrides.write_residuals = parseOptionalBool(
+        residual_logging_override, "write_residuals override");
+    overrides.write_timing = parseOptionalBool(
+        timing_logging_override, "write_timing override");
+    if (!output_root_override.empty()) overrides.output_root = output_root_override;
+    auto config = uwb_imu_pl::IntegrityConfigLoader::load(config_path, overrides);
     if (execution_command.empty()) {
       execution_command = processCommandLine(argc, argv);
     }

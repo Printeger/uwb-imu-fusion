@@ -75,6 +75,18 @@ struct IntegrityConfig {
   std::string config_hash;
 };
 
+// Experiment-only overrides are applied to the parsed YAML before strict
+// validation, resolved serialization, and hashing.  Keeping the overrides in
+// one value object prevents a run from reporting the hash of its base config.
+struct IntegrityConfigOverrides {
+  std::optional<std::uint64_t> seed;
+  std::optional<std::uint32_t> fixed_lag_epochs;
+  std::optional<bool> write_global_diagnostics;
+  std::optional<bool> write_residuals;
+  std::optional<bool> write_timing;
+  std::optional<std::string> output_root;
+};
+
 class IntegrityConfigLoader {
  public:
   // This loader is deliberately strict: every safety-relevant field is
@@ -85,6 +97,8 @@ class IntegrityConfigLoader {
       const std::string& yaml_path,
       const std::optional<std::string>& fixed_lag_epochs_override =
           std::nullopt);
+  static IntegrityConfig load(const std::string& yaml_path,
+                              const IntegrityConfigOverrides& overrides);
 };
 
 }  // namespace uwb_imu_pl

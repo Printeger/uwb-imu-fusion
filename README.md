@@ -418,6 +418,56 @@ provenance 或 nonlinear remainder bound。Schur 边界 prior 与窗口历史仅
 可信历史使用，`historical_fault_provenance=false`，不得将标签升级为历史或持续
 故障保护级别。
 
+### Week-4 基础研究平台门禁
+
+机器可读的预注册协议是 `config/week4_validation.yaml`。它只保存实验矩阵、
+seed、样本量和门禁；估计器参数仍来自唯一的
+`config/realtime_uwb_imu_pl_research.yaml`。总控会先应用 seed、fixed lag、
+global diagnostics、residual/timing 和输出目录覆盖，再保存 resolved YAML 并对
+实际字节计算 config hash。
+
+正式运行必须从已经提交且 clean 的同一 SHA 执行。先构建 Release（正式验收还
+应从同一 SHA 完成一次 clean Debug/Release 全量测试），然后准备目录并逐项运行：
+
+```bash
+python3 tools/run_week4_validation.py prepare --formal
+python3 tools/run_week4_validation.py build --formal
+python3 tools/run_week4_validation.py run --formal --stage noncentral
+python3 tools/run_week4_validation.py run --formal --stage snapshot_sweep
+python3 tools/run_week4_validation.py run --formal --stage imu_monte_carlo
+python3 tools/run_week4_validation.py run --formal --stage roc
+python3 tools/run_week4_validation.py run --formal --stage history_experiments
+python3 tools/run_week4_validation.py run --formal --stage method_ab_shadow
+python3 tools/run_week4_validation.py run --formal --stage ros_topic_tests
+python3 tools/run_week4_validation.py run --formal --stage performance
+python3 tools/run_week4_validation.py finalize --formal
+```
+
+目录固定为 `results/week4_<git12>_<protocol_hash12>/`。每一项写入独立的
+`attempt_NNN`；只有 `INVALID` attempt（中断、缺行、schema/非有限数错误）才能用
+同一 seed 和 `--resume` 续跑。完整但未过科学门禁是 `FAIL`，不得换 seed 重跑来
+消除。独立项目即使 FAIL 也继续执行。`history_experiments` 复用已完成 ROC 的原始
+独立数据，不重复生成或混淆 graph history 与 rolling window。
+
+开发 smoke 省略 `--formal`，使用隔离的非正式 seed、小样本协议和
+`results/week4_development/`；它永远不会输出正式闭环声明。
+
+长期 artifact 包含协议/各 resolved config、Phase-2 experiment manifest、环境和
+命令、各门禁摘要、ROS 关键日志、三次 timing、acceptance summary 与
+`checksums.sha256`。snapshot/ROC raw 在完整性清点和摘要成功后删除，
+`raw_inventory.json` 保留每个 shard 的行数、大小和 SHA-256。最终只有 required
+gate 全为 `PASS`、manifest SHA/clean 状态一致且 checksum 反向校验通过时，
+`acceptance_summary.json` 才包含：
+
+```text
+WEEK4_FOUNDATION_CLOSED
+```
+
+这个口径仍不覆盖 persistent-fault PL、FDE、rare-event certification、多同时
+故障或非线性余项认证。Method B 始终只写 shadow sidecar；即使 600/600 通过也
+不会启用在线路径。WSL2 性能结果只适用于该次 hypervisor/CPU 环境，不能外推到
+裸机。
+
 `simulator/` 提供完整的 UWB-IMU 仿真管道，覆盖轨迹生成 → 传感器仿真 → 录包 → 离线 FGO 处理 → 精度评测的全流程。
 
 ### 10.1 仿真架构

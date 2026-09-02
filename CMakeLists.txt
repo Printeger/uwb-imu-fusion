@@ -210,6 +210,21 @@ target_compile_definitions(integrity_monte_carlo PRIVATE
 target_link_libraries(integrity_monte_carlo
   ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
 
+add_executable(method_ab_shadow apps/method_ab_shadow.cpp)
+target_link_libraries(method_ab_shadow
+  ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
+
+add_executable(sequential_detector_history apps/sequential_detector_history.cpp)
+target_link_libraries(sequential_detector_history
+  ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
+
+add_executable(realtime_performance_benchmark apps/realtime_performance_benchmark.cpp)
+target_compile_definitions(realtime_performance_benchmark PRIVATE
+  UWB_IMU_PL_GIT_SHA="${UWB_IMU_PL_GIT_SHA}"
+  UWB_IMU_PL_GIT_DIRTY=${UWB_IMU_PL_GIT_DIRTY})
+target_link_libraries(realtime_performance_benchmark
+  ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
+
 # =============================================
 # Simulator — quadrotor dynamics + SO3 control
 # =============================================
@@ -224,6 +239,14 @@ catkin_install_python(PROGRAMS
   tools/generate_integrity_report.py
   tools/summarize_snapshot_sweep.py
   tools/calibrate_detector_roc.py
+  tools/analyze_noncentral.py
+  tools/analyze_detector_roc.py
+  tools/run_imu_bias_monte_carlo.py
+  tools/week4_topic_publisher.py
+  tools/validate_week4_ros.py
+  tools/analyze_week4_performance.py
+  tools/week4_common.py
+  tools/run_week4_validation.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -276,4 +299,9 @@ if(CATKIN_ENABLE_TESTING)
   target_link_libraries(test_dense_oracle ${PROJECT_NAME} ${GTEST_LIBRARIES})
 
   add_rostest(test/realtime_integrity_viz.test)
+
+  add_test(NAME test_week4_tools
+    COMMAND ${CMAKE_COMMAND} -E env
+      PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools
+      python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_week4_tools.py)
 endif()

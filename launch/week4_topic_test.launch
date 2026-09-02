@@ -1,0 +1,20 @@
+<launch>
+  <arg name="scenario" default="delayed_stale_uwb"/>
+  <arg name="epochs" default="120"/>
+  <arg name="rate_scale" default="10.0"/>
+  <arg name="run_directory"/>
+  <arg name="inventory"/>
+  <arg name="config_path"
+       default="$(find uwb_imu_pl)/config/realtime_uwb_imu_pl_research.yaml"/>
+  <node pkg="uwb_imu_pl" type="uwb_imu_pl_realtime_node"
+        name="uwb_imu_pl_realtime" output="screen">
+    <param name="config_path" value="$(arg config_path)"/>
+    <param name="fixed_lag_epochs" type="str" value="200"/>
+    <param name="run_directory" value="$(arg run_directory)"/>
+    <param name="execution_command" value="week4_topic_test $(arg scenario)"/>
+    <remap from="/imu/data" to="/sim/imu"/>
+  </node>
+  <node pkg="uwb_imu_pl" type="week4_topic_publisher.py"
+        name="week4_topic_publisher" required="true" output="screen"
+        args="$(arg scenario) --epochs $(arg epochs) --rate-scale $(arg rate_scale) --inventory $(arg inventory)"/>
+</launch>
