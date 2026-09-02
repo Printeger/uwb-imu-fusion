@@ -5,6 +5,11 @@
   <arg name="fault_magnitude_m" default="1.0"/>
   <arg name="random_seed" default="20260901"/>
   <arg name="rviz" default="false"/>
+  <arg name="run_directory" default=""/>
+  <arg name="config_path"
+       default="$(find uwb_imu_pl)/config/realtime_uwb_imu_pl_research.yaml"/>
+  <arg name="packet_loss_prob" default="0.0"/>
+  <arg name="nlos_probability" default="0.0"/>
 
   <node pkg="tf" type="static_transform_publisher" name="world_broadcaster"
         args="0 0 0 0 0 0 world map 100"/>
@@ -56,14 +61,31 @@
     <param name="fault_anchor_id" value="$(arg fault_anchor_id)"/>
     <param name="fault_magnitude_m" value="$(arg fault_magnitude_m)"/>
     <param name="random_seed" value="$(arg random_seed)"/>
+    <param name="packet_loss_prob" value="$(arg packet_loss_prob)"/>
+    <param name="nlos_probability" value="$(arg nlos_probability)"/>
   </node>
 
   <node pkg="uwb_imu_pl" type="uwb_imu_pl_realtime_node"
         name="uwb_imu_pl_realtime" output="screen">
     <param name="config_path"
-           value="$(find uwb_imu_pl)/config/realtime_uwb_imu_pl_research.yaml"/>
+           value="$(arg config_path)"/>
+    <param name="run_directory" value="$(arg run_directory)"/>
+    <remap from="/imu/data" to="/sim/imu"/>
+  </node>
+
+  <node if="$(arg rviz)" pkg="uwb_imu_pl" type="realtime_integrity_viz.py"
+        name="realtime_integrity_viz" output="screen">
+    <param name="world_frame" value="world"/>
+    <param name="path_sample_period_s" value="0.05"/>
+    <param name="path_publish_period_s" value="0.2"/>
+    <param name="path_history_s" value="120.0"/>
+    <param name="max_path_points" value="2402"/>
+    <param name="ground_truth_buffer_s" value="120.0"/>
+    <param name="max_pending_messages" value="2000"/>
+    <param name="max_drawable_pl_m" value="50.0"/>
   </node>
 
   <node if="$(arg rviz)" pkg="rviz" type="rviz" name="rviz"
-        args="-d $(find uwb_imu_pl)/simulator/launch/sim_rviz.rviz"/>
+        args="-d $(find uwb_imu_pl)/simulator/launch/sim_rviz.rviz"
+        launch-prefix="env LIBGL_ALWAYS_SOFTWARE=1"/>
 </launch>

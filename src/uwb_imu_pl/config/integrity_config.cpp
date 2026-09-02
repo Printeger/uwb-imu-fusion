@@ -6,6 +6,7 @@
 #include <cmath>
 #include <fstream>
 #include <iomanip>
+#include <limits>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -108,7 +109,14 @@ IntegrityConfig IntegrityConfigLoader::load(const std::string& yaml_path) {
   cfg.incremental.max_time_skew_s = required<double>(incremental, "max_time_skew_s", "incremental");
   cfg.incremental.enable_method_b = required<bool>(incremental, "enable_method_b", "incremental");
   cfg.incremental.method_b_max_condition = required<double>(incremental, "method_b_max_condition", "incremental");
-  cfg.incremental.fixed_lag_epochs = required<std::size_t>(incremental, "fixed_lag_epochs", "incremental");
+  const std::uint64_t fixed_lag_epochs = required<std::uint64_t>(
+      incremental, "fixed_lag_epochs", "incremental");
+  if (fixed_lag_epochs > std::numeric_limits<std::uint32_t>::max()) {
+    throw std::runtime_error(
+        "incremental.fixed_lag_epochs must fit in uint32");
+  }
+  cfg.incremental.fixed_lag_epochs =
+      static_cast<std::uint32_t>(fixed_lag_epochs);
   positive(cfg.incremental.relinearize_threshold, "incremental.relinearize_threshold");
   if (cfg.incremental.relinearize_skip <= 0) throw std::runtime_error("incremental.relinearize_skip must be > 0");
   positive(cfg.incremental.smoothness_sigma_m, "incremental.smoothness_sigma_m");
@@ -121,9 +129,9 @@ IntegrityConfig IntegrityConfigLoader::load(const std::string& yaml_path) {
     throw std::runtime_error(
         "incremental.enable_method_b=true is unsupported for online operation");
   }
-  if (cfg.incremental.fixed_lag_epochs != 0) {
+  if (cfg.incremental.fixed_lag_epochs == 1) {
     throw std::runtime_error(
-        "incremental.fixed_lag_epochs>0 is unsupported in this release");
+        "incremental.fixed_lag_epochs must be 0 or at least 2");
   }
 
   const auto imu = root["imu"];
@@ -161,10 +169,12 @@ IntegrityConfig IntegrityConfigLoader::load(const std::string& yaml_path) {
   probability(prior, "risk.single_anchor_prior_bound");
 
   const auto output = root["output"];
-  rejectUnknown(output, "output", {"root", "write_residuals", "write_timing"});
+  rejectUnknown(output, "output", {"root", "write_residuals", "write_timing", "write_global_diagnostics"});
   cfg.output.root = required<std::string>(output, "root", "output");
   cfg.output.write_residuals = required<bool>(output, "write_residuals", "output");
   cfg.output.write_timing = required<bool>(output, "write_timing", "output");
+  cfg.output.write_global_diagnostics =
+      required<bool>(output, "write_global_diagnostics", "output");
   if (cfg.output.root.empty()) throw std::runtime_error("output.root must not be empty");
 
   const auto realtime = root["realtime"];

@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <Eigen/Cholesky>
+#include <chrono>
 #include <cmath>
 #include <map>
 #include <set>
@@ -352,9 +353,12 @@ IntegrityOutput IntegrityMonitor::evaluateSnapshot(
     const UwbBatch& batch, const SnapshotSolution& solution) const {
   IntegrityOutput output;
   output.timestamp = batch.timestamp;
+  output.measurement_group_size = batch.measurements.size();
   output.state.timestamp = batch.timestamp;
   output.state.position_world_m = solution.position_world_m;
   output.detector = snapshotDetector(solution);
+  output.postfit_detector = output.detector;
+  output.uwb_postfit_residual_statistic = output.detector.statistic;
   const auto hypotheses = currentAnchorHypotheses(batch);
   if (output.detector.numerically_valid) {
     for (const auto& hypothesis : hypotheses) {
@@ -439,8 +443,10 @@ SensitivityResult IntegrityMonitor::conditionalSensitivity(
 
 IntegrityOutput IntegrityMonitor::evaluateConditional(
     const UwbBatch& batch, const EstimationSnapshot& snapshot) const {
+  auto stage_start = std::chrono::steady_clock::now();
   IntegrityOutput output;
   output.timestamp = batch.timestamp;
+  output.measurement_group_size = batch.measurements.size();
   output.state = snapshot.state();
   output.detector.detector_type = "conditional_current_uwb_innovation_chi_square";
   output.detector.p_fa = risk_.p_fa;
@@ -551,6 +557,11 @@ IntegrityOutput IntegrityMonitor::evaluateConditional(
       std::isfinite(output.detector.threshold);
   output.detector.passed = output.detector.numerically_valid &&
       output.detector.statistic <= output.detector.threshold;
+  output.stage_timings.push_back({
+      "conditional_statistic",
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - stage_start).count(), true});
+  stage_start = std::chrono::steady_clock::now();
   if (!output.detector.passed) {
     output.detector.reason = output.detector.numerically_valid
         ? "conditional innovation threshold exceeded"
@@ -571,6 +582,19 @@ IntegrityOutput IntegrityMonitor::evaluateConditional(
   const Eigen::Matrix<double, 15, 1> posterior_increment = gain * rows.residual;
   output.uwb_postfit_residual_statistic =
       (rows.residual - rows.jacobian * posterior_increment).squaredNorm();
+  output.postfit_detector.detector_type =
+      "current_uwb_posterior_residual_heuristic";
+  output.postfit_detector.statistic = output.uwb_postfit_residual_statistic;
+  output.postfit_detector.dof = output.detector.dof;
+  output.postfit_detector.numerically_valid =
+      std::isfinite(output.postfit_detector.statistic);
+  // A threshold is intentionally not invented here. The diagnostic must be
+  // calibrated on independent data before `passed` has meaning.
+  output.postfit_detector.threshold =
+      std::numeric_limits<double>::quiet_NaN();
+  output.postfit_detector.passed = false;
+  output.postfit_detector.reason =
+      "independent empirical calibration required";
 
   Eigen::Matrix<double, 3, 15> protected_jacobian =
       Eigen::Matrix<double, 3, 15>::Zero();
@@ -594,6 +618,11 @@ IntegrityOutput IntegrityMonitor::evaluateConditional(
         batch, hypothesis, w, innovation_cov, gain, protected_jacobian,
         output.detector.dof, output.detector.threshold));
   }
+  output.stage_timings.push_back({
+      "hypothesis_incidence_slope",
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - stage_start).count(), true});
+  stage_start = std::chrono::steady_clock::now();
   bool model_gate = snapshot.diagnostics().model_valid &&
       snapshot.diagnostics().rank == 15 &&
       std::isfinite(snapshot.diagnostics().condition_number) &&
@@ -612,6 +641,11 @@ IntegrityOutput IntegrityMonitor::evaluateConditional(
       batch.timestamp, protected_covariance, output.detector,
       output.sensitivities, hypotheses, snapshot.diagnostics(),
       snapshot.consistency(), model_gate, gate_reason);
+  output.stage_timings.push_back({
+      "protection_level_risk_availability",
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - stage_start).count(),
+      output.protection_level.formal_eligible});
   for (std::size_t i = 0; i < batch.measurements.size(); ++i) {
     output.residual_records.push_back(ResidualRecord{
         batch.timestamp, batch.measurements[i].factor_id,
@@ -648,8 +682,20 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
       output.state = estimator_->currentState();
       output.batch_committed = false;
     }
-    output.global_graph_residual_statistic =
-        estimator_->globalGraphResidualStatistic();
+    if (estimator_->globalDiagnosticsEnabled()) {
+      output.global_graph_residual_statistic =
+          estimator_->globalGraphResidualStatistic();
+    }
+    output.global_detector.detector_type =
+        "all_in_graph_residual_diagnostic";
+    output.global_detector.statistic = output.global_graph_residual_statistic;
+    output.global_detector.threshold =
+        std::numeric_limits<double>::quiet_NaN();
+    output.global_detector.numerically_valid =
+        std::isfinite(output.global_detector.statistic);
+    output.global_detector.reason = estimator_->globalDiagnosticsEnabled()
+        ? "independent empirical calibration required"
+        : "disabled on formal/performance path";
     return output;
   } catch (...) {
     if (estimator_->hasPendingEpoch()) {

@@ -46,7 +46,7 @@ Visualization Manager:
       Length: 0.30000001192092896
       Line Style: Lines
       Line Width: 0.029999999329447746
-      Name: Trajectory
+      Name: Time-aligned Ground Truth Trajectory (Green)
       Offset:
         X: 0
         Y: 0
@@ -57,7 +57,31 @@ Visualization Manager:
       Radius: 0.029999999329447746
       Shaft Diameter: 0.10000000149011612
       Shaft Length: 0.10000000149011612
-      Topic: /sim/path
+      Topic: /uwb_imu_pl/viz/time_aligned_ground_truth_path
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 255; 45; 45
+      Enabled: true
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
+      Line Style: Lines
+      Line Width: 0.05000000074505806
+      Name: Fused Trajectory (Red)
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Queue Size: 10
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
+      Topic: /uwb_imu_pl/viz/fused_path
       Unreliable: false
       Value: true
     - Angle Tolerance: 0.10000000149011612
@@ -77,24 +101,94 @@ Visualization Manager:
           Scale: 1
           Value: true
         Value: true
-      Enabled: false
+      Enabled: true
       Keep: 1
-      Name: Current Pose
+      Name: Fused Body Frame (Epoch-aligned RGB)
       Position Tolerance: 0.10000000149011612
       Queue Size: 10
       Shape:
         Alpha: 1
-        Axes Length: 1
-        Axes Radius: 0.10000000149011612
+        Axes Length: 0.5
+        Axes Radius: 0.03999999910593033
         Color: 255; 25; 0
         Head Length: 0.30000001192092896
         Head Radius: 0.10000000149011612
         Shaft Length: 1
         Shaft Radius: 0.05000000074505806
-        Value: Arrow
+        Value: Axes
+      Topic: /uwb_imu_pl/viz/fused_epoch
+      Unreliable: false
+      Value: true
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: false
+        Position:
+          Alpha: 0
+          Color: 204; 51; 204
+          Scale: 1
+          Value: false
+        Value: false
+      Enabled: true
+      Keep: 1
+      Name: Time-aligned Ground Truth (RGB)
+      Position Tolerance: 0.01
+      Queue Size: 10
+      Shape:
+        Alpha: 1
+        Axes Length: 0.65
+        Axes Radius: 0.05000000074505806
+        Color: 0; 255; 0
+        Head Length: 0.30000001192092896
+        Head Radius: 0.10000000149011612
+        Shaft Length: 1
+        Shaft Radius: 0.05000000074505806
+        Value: Axes
+      Topic: /uwb_imu_pl/viz/time_aligned_ground_truth
+      Unreliable: false
+      Value: true
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: false
+        Position:
+          Alpha: 0
+          Color: 204; 51; 204
+          Scale: 1
+          Value: false
+        Value: false
+      Enabled: true
+      Keep: 1
+      Name: Live Ground Truth
+      Position Tolerance: 0.01
+      Queue Size: 10
+      Shape:
+        Alpha: 0.75
+        Axes Length: 0.85
+        Axes Radius: 0.06000000074505806
+        Color: 0; 255; 0
+        Head Length: 0.30000001192092896
+        Head Radius: 0.10000000149011612
+        Shaft Length: 1
+        Shaft Radius: 0.05000000074505806
+        Value: Axes
       Topic: /sim/odom
       Unreliable: false
-      Value: false
+      Value: true
     - Class: rviz/TF
       Enabled: true
       Filter (blacklist): ""
@@ -134,10 +228,18 @@ Visualization Manager:
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /uwb_sim/range_lines
-      Name: Marker
+      Name: UWB Range Lines
       Namespaces:
         uwb_range_lines: true
       Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /uwb_imu_pl/viz/pl_markers
+      Name: PL Ellipsoid, HPL/VPL and Status
+      Namespaces:
+        {}
+      Queue Size: 10
       Value: true
   Enabled: true
   Global Options:

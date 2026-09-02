@@ -1,0 +1,23 @@
+<launch>
+  <node pkg="uwb_imu_pl" type="realtime_integrity_viz.py"
+        name="realtime_integrity_viz_test_node" output="screen">
+    <param name="world_frame" value="world"/>
+    <param name="path_sample_period_s" value="0.05"/>
+    <param name="path_publish_period_s" value="0.05"/>
+    <param name="path_history_s" value="10.0"/>
+    <param name="max_path_points" value="3"/>
+    <param name="max_pending_messages" value="8"/>
+    <param name="max_drawable_pl_m" value="10.0"/>
+    <param name="ground_truth_topic" value="/test/viz/ground_truth"/>
+    <param name="fused_odometry_topic" value="/test/viz/fused_odometry"/>
+    <param name="integrity_topic" value="/test/viz/integrity"/>
+    <param name="ground_truth_path_topic" value="/test/viz/ground_truth_path"/>
+    <param name="time_aligned_ground_truth_topic" value="/test/viz/aligned_ground_truth"/>
+    <param name="fused_epoch_topic" value="/test/viz/fused_epoch"/>
+    <param name="fused_path_topic" value="/test/viz/fused_path"/>
+    <param name="pl_marker_topic" value="/test/viz/pl_markers"/>
+  </node>
+
+  <test pkg="uwb_imu_pl" type="test_realtime_integrity_viz.py"
+        test-name="realtime_integrity_viz" time-limit="30"/>
+</launch>

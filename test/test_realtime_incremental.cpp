@@ -37,6 +37,31 @@ uwb_imu_pl::UwbBatch makeBatch(uwb_imu_pl::TimestampNs timestamp,
   return batch;
 }
 
+uwb_imu_pl::UwbBatch makeBatchWithCount(
+    uwb_imu_pl::TimestampNs timestamp, const Eigen::Vector3d& position,
+    std::size_t count) {
+  const std::vector<Eigen::Vector3d> anchors = {
+      {-5,-5,0}, {5,-5,1}, {5,5,3}, {-5,5,4},
+      {0,-6,2}, {0,6,4}, {-7,0,1}, {7,0,5}};
+  uwb_imu_pl::UwbBatch batch;
+  batch.id = uwb_imu_pl::BatchId(timestamp.value());
+  batch.timestamp = timestamp;
+  batch.covariance_model_id = "changing_anchor_set_diagonal";
+  for (std::size_t index = 0; index < count; ++index) {
+    uwb_imu_pl::UwbMeasurement measurement;
+    measurement.id = uwb_imu_pl::MeasurementId(
+        static_cast<std::uint64_t>(timestamp.value()) + index);
+    measurement.factor_id = uwb_imu_pl::FactorId(measurement.id.value());
+    measurement.anchor_id = uwb_imu_pl::AnchorId(index + 1);
+    measurement.timestamp = timestamp;
+    measurement.anchor_position_m = anchors[index];
+    measurement.range_m = (position - anchors[index]).norm();
+    measurement.sigma_m = 0.1;
+    batch.measurements.push_back(measurement);
+  }
+  return batch;
+}
+
 uwb_imu_pl::IntegrityConfig config() {
   uwb_imu_pl::IntegrityConfig config;
   config.incremental.relinearize_threshold = 0.1;
@@ -199,6 +224,14 @@ TEST(UwbImuIncremental, MethodAPriorExcludesCurrentBatch) {
   EXPECT_TRUE(snapshot->currentPrior()->version == after_snapshot.version);
 }
 
+TEST(UwbImuIncremental, DirectConstructionRejectsSingleEpochFixedLag) {
+  auto cfg = config();
+  cfg.incremental.fixed_lag_epochs = 1;
+  EXPECT_THROW(
+      uwb_imu_pl::IncrementalUwbImuEstimator(cfg, Eigen::Vector3d::Zero()),
+      std::invalid_argument);
+}
+
 TEST(UwbImuIncremental, ConditionalDetectorUsesInnovationDimension) {
   auto cfg = config();
   uwb_imu_pl::IncrementalUwbImuEstimator estimator(cfg, Eigen::Vector3d::Zero());
@@ -283,6 +316,33 @@ TEST(UwbImuIncremental, MethodAAndLinearMethodBCandidateGiveEquivalentOutput) {
       output_b.protection_level.pl_xyz_m, 1e-10));
   EXPECT_EQ(output_a.protection_level.availability,
             output_b.protection_level.availability);
+}
+
+TEST(UwbImuIncremental, MethodBInformationVectorDowndateRecoversMeanAndCovariance) {
+  auto cfg = config();
+  uwb_imu_pl::IncrementalUwbImuEstimator estimator(cfg, Eigen::Vector3d::Zero());
+  Eigen::Matrix<double, 15, 15> prior_covariance =
+      Eigen::Matrix<double, 15, 15>::Identity() * 0.5;
+  Eigen::Matrix<double, 15, 1> prior_mean =
+      Eigen::Matrix<double, 15, 1>::LinSpaced(15, -0.2, 0.3);
+  Eigen::MatrixXd h = Eigen::MatrixXd::Zero(5, 15);
+  h.leftCols(5) = Eigen::MatrixXd::Identity(5, 5);
+  Eigen::MatrixXd r = Eigen::MatrixXd::Identity(5, 5) * 0.04;
+  Eigen::VectorXd y = Eigen::VectorXd::LinSpaced(5, 1.0, 2.0);
+  const Eigen::Matrix<double, 15, 15> prior_information =
+      prior_covariance.inverse();
+  const Eigen::Matrix<double, 15, 15> all_in_information =
+      prior_information + h.transpose() * r.inverse() * h;
+  const Eigen::Matrix<double, 15, 15> all_in_covariance =
+      all_in_information.inverse();
+  const Eigen::Matrix<double, 15, 1> all_in_mean = all_in_covariance *
+      (prior_information * prior_mean + h.transpose() * r.inverse() * y);
+  const auto recovered = estimator.methodBCandidatePrior(
+      all_in_mean, all_in_covariance, h, r, y);
+  ASSERT_TRUE(recovered.has_value());
+  EXPECT_LT((recovered->covariance - prior_covariance).norm() /
+                prior_covariance.norm(), 1e-10);
+  EXPECT_LT((recovered->mean - prior_mean).norm(), 1e-10);
 }
 
 TEST(UwbImuIncremental, ConditionalFormalGateBranchesFailClosed) {
@@ -630,6 +690,99 @@ TEST(UwbImuIncremental, BatchSkewFailsBeforeGraphMutation) {
   EXPECT_TRUE(before.version == after.version);
 }
 
+TEST(UwbImuIncremental, StaleUwbIsRejectedWithoutGraphOrVersionMutation) {
+  auto cfg = config();
+  uwb_imu_pl::IncrementalUwbImuEstimator estimator(cfg, Eigen::Vector3d::Zero());
+  uwb_imu_pl::NavigationState initial;
+  initial.timestamp = uwb_imu_pl::TimestampNs(0);
+  initial.position_world_m = {0, 0, 1};
+  estimator.initialize(initial, Eigen::Matrix<double, 15, 1>::Constant(0.1));
+  uwb_imu_pl::RealtimeIntegrityPipeline pipeline(
+      &estimator, uwb_imu_pl::IntegrityMonitor(
+          cfg.risk, cfg.snapshot.rank_tolerance,
+          cfg.snapshot.max_condition_number));
+  for (int index = 0; index <= 2; ++index) {
+    uwb_imu_pl::ImuMeasurement sample;
+    sample.timestamp = uwb_imu_pl::TimestampNs(index * 5000000);
+    sample.specific_force_mps2 = {0, 0, cfg.imu.gravity_mps2};
+    pipeline.ingestImu(sample);
+  }
+  pipeline.processUwbBatch(makeBatch(
+      uwb_imu_pl::TimestampNs(10000000), initial.position_world_m));
+  const auto before = estimator.audit();
+  EXPECT_THROW(pipeline.processUwbBatch(makeBatch(
+                   uwb_imu_pl::TimestampNs(5000000), initial.position_world_m)),
+               std::invalid_argument);
+  const auto after = estimator.audit();
+  EXPECT_EQ(before.factor_count, after.factor_count);
+  EXPECT_EQ(before.epoch, after.epoch);
+  EXPECT_TRUE(before.version == after.version);
+  EXPECT_TRUE(before.current_marginal.isApprox(after.current_marginal, 0.0));
+}
+
+TEST(UwbImuIncremental, OneSecondUwbDropAndChangingAnchorSetRecover) {
+  auto cfg = config();
+  cfg.incremental.fixed_lag_epochs = 3;
+  cfg.risk.hypotheses.clear();
+  for (std::uint64_t id = 1; id <= 8; ++id) {
+    uwb_imu_pl::FaultHypothesis hypothesis;
+    hypothesis.id = uwb_imu_pl::HypothesisId(id);
+    hypothesis.anchor_id = uwb_imu_pl::AnchorId(id);
+    hypothesis.missed_detection_allocation = 1e-3;
+    hypothesis.prior_probability_bound = 1e-4;
+    cfg.risk.hypotheses.push_back(hypothesis);
+  }
+  uwb_imu_pl::NavigationState initial;
+  initial.timestamp = uwb_imu_pl::TimestampNs(0);
+  initial.position_world_m = {0, 0, 1};
+  uwb_imu_pl::IncrementalUwbImuEstimator estimator(cfg, Eigen::Vector3d::Zero());
+  estimator.initialize(initial, Eigen::Matrix<double, 15, 1>::Constant(0.1));
+  uwb_imu_pl::RealtimeIntegrityPipeline pipeline(
+      &estimator, uwb_imu_pl::IntegrityMonitor(
+          cfg.risk, cfg.snapshot.rank_tolerance,
+          cfg.snapshot.max_condition_number));
+  uwb_imu_pl::ImuMeasurement boundary;
+  boundary.timestamp = initial.timestamp;
+  boundary.specific_force_mps2 = {0, 0, cfg.imu.gravity_mps2};
+  pipeline.ingestImu(boundary);
+  const std::vector<std::size_t> counts{8, 6, 4, 8};
+  const std::vector<int> uwb_times_ms{10, 1010, 1020, 1030};
+  int imu_index = 1;
+  for (std::size_t epoch = 0; epoch < counts.size(); ++epoch) {
+    const int target_index = uwb_times_ms[epoch] / 5;
+    for (; imu_index <= target_index; ++imu_index) {
+      uwb_imu_pl::ImuMeasurement sample;
+      sample.timestamp = uwb_imu_pl::TimestampNs(
+          static_cast<std::int64_t>(imu_index) * 5000000LL);
+      sample.specific_force_mps2 = {0, 0, cfg.imu.gravity_mps2};
+      pipeline.ingestImu(sample);
+    }
+    const auto output = pipeline.processUwbBatch(makeBatchWithCount(
+        uwb_imu_pl::TimestampNs(
+            static_cast<std::int64_t>(uwb_times_ms[epoch]) * 1000000LL),
+        initial.position_world_m, counts[epoch]));
+    EXPECT_EQ(output.detector.dof, static_cast<int>(counts[epoch]));
+    EXPECT_EQ(output.measurement_group_size, counts[epoch]);
+    EXPECT_TRUE(output.measurement_model_valid) << output.detector.reason;
+    EXPECT_TRUE(output.batch_committed) << output.detector.reason;
+  }
+  const auto final_audit = estimator.audit();
+  EXPECT_TRUE(final_audit.fixed_lag_active);
+  EXPECT_EQ(final_audit.retained_epochs, 3u);
+  EXPECT_EQ(final_audit.marginalization_count, 2u);
+  EXPECT_EQ(final_audit.committed_uwb_batch_ids.size(), 3u);
+
+  uwb_imu_pl::IncrementalUwbImuEstimator reinitialized(
+      cfg, Eigen::Vector3d::Zero());
+  reinitialized.initialize(estimator.currentState(),
+                           Eigen::Matrix<double, 15, 1>::Constant(0.1));
+  const auto reset_audit = reinitialized.audit();
+  EXPECT_TRUE(reset_audit.fixed_lag_active);
+  EXPECT_EQ(reset_audit.retained_epochs, 1u);
+  EXPECT_EQ(reset_audit.active_value_count, 3u);
+  EXPECT_EQ(reset_audit.marginalization_count, 0u);
+}
+
 TEST(UwbImuIncremental, RepeatedExecutionIsDeterministic) {
   auto run = [] {
     auto cfg = config();
@@ -671,5 +824,153 @@ TEST(UwbImuIncremental, RepeatedExecutionIsDeterministic) {
     EXPECT_TRUE(left[i].protection_level.pl_xyz_m.isApprox(
         right[i].protection_level.pl_xyz_m, 0.0));
     EXPECT_EQ(left[i].batch_committed, right[i].batch_committed);
+  }
+}
+
+TEST(UwbImuIncremental, FixedLagRetainsThreeCompleteEpochsAndBoundedMetadata) {
+  auto cfg = config();
+  cfg.incremental.fixed_lag_epochs = 3;
+  uwb_imu_pl::IncrementalUwbImuEstimator estimator(
+      cfg, Eigen::Vector3d::Zero());
+  uwb_imu_pl::NavigationState initial;
+  initial.timestamp = uwb_imu_pl::TimestampNs(0);
+  initial.position_world_m = {0, 0, 1};
+  estimator.initialize(initial, Eigen::Matrix<double, 15, 1>::Constant(0.1));
+
+  uwb_imu_pl::ImuMeasurement boundary;
+  boundary.timestamp = initial.timestamp;
+  boundary.specific_force_mps2 = {0, 0, cfg.imu.gravity_mps2};
+  estimator.ingestImu(boundary);
+
+  std::size_t maximum_factor_slots = 0;
+  for (int epoch = 1; epoch <= 10; ++epoch) {
+    for (int sample_index = 2 * epoch - 1; sample_index <= 2 * epoch;
+         ++sample_index) {
+      auto sample = boundary;
+      sample.timestamp = uwb_imu_pl::TimestampNs(
+          static_cast<std::int64_t>(sample_index) * 5000000LL);
+      estimator.ingestImu(sample);
+    }
+    const auto time = uwb_imu_pl::TimestampNs(
+        static_cast<std::int64_t>(epoch) * 10000000LL);
+    const auto batch = makeBatchWithCount(
+        time, initial.position_world_m, 4 + (epoch % 2));
+    estimator.predictTo(time);
+    const auto snapshot = estimator.preMeasurementSnapshot(batch);
+    EXPECT_TRUE(snapshot->capabilities().fixed_lag);
+    EXPECT_FALSE(snapshot->capabilities().historical_fault_provenance);
+    if (epoch % 4 == 0) estimator.rejectUwbBatch(batch, "controlled reject");
+    else estimator.commitUwbBatch(batch);
+
+    const auto audit = estimator.audit();
+    maximum_factor_slots = std::max(maximum_factor_slots,
+                                    audit.factor_slot_count);
+    EXPECT_TRUE(audit.fixed_lag_active);
+    EXPECT_FALSE(audit.historical_fault_provenance);
+    EXPECT_LE(audit.active_value_count, 9u);
+    EXPECT_LE(audit.committed_uwb_batch_ids.size(), 3u);
+    EXPECT_EQ(audit.timestamp_count, audit.active_value_count);
+    if (epoch >= 2) {
+      EXPECT_EQ(audit.retained_epochs, 3u);
+      EXPECT_EQ(audit.pose_value_count, 3u);
+      EXPECT_EQ(audit.velocity_value_count, 3u);
+      EXPECT_EQ(audit.bias_value_count, 3u);
+      EXPECT_EQ(audit.oldest_retained_epoch,
+                static_cast<std::size_t>(epoch - 2));
+    }
+    if (epoch >= 3) {
+      EXPECT_EQ(audit.marginalization_count,
+                static_cast<std::uint64_t>(epoch - 2));
+      EXPECT_GT(audit.boundary_prior_factor_count, 0u);
+    }
+  }
+  EXPECT_LE(maximum_factor_slots, 16u);
+  EXPECT_TRUE(std::isfinite(estimator.globalGraphResidualStatistic()));
+}
+
+TEST(UwbImuIncremental, FixedLagMatchesUnboundedBeforeAndAfterMarginalization) {
+  auto unbounded_cfg = config();
+  auto fixed_cfg = unbounded_cfg;
+  fixed_cfg.incremental.fixed_lag_epochs = 3;
+  uwb_imu_pl::IncrementalUwbImuEstimator unbounded(
+      unbounded_cfg, Eigen::Vector3d::Zero());
+  uwb_imu_pl::IncrementalUwbImuEstimator fixed(
+      fixed_cfg, Eigen::Vector3d::Zero());
+  uwb_imu_pl::NavigationState initial;
+  initial.timestamp = uwb_imu_pl::TimestampNs(0);
+  initial.position_world_m = {0, 0, 1};
+  const auto sigmas = Eigen::Matrix<double, 15, 1>::Constant(0.1);
+  unbounded.initialize(initial, sigmas);
+  fixed.initialize(initial, sigmas);
+  uwb_imu_pl::ImuMeasurement boundary;
+  boundary.timestamp = initial.timestamp;
+  boundary.specific_force_mps2 = {0, 0, unbounded_cfg.imu.gravity_mps2};
+  unbounded.ingestImu(boundary);
+  fixed.ingestImu(boundary);
+  uwb_imu_pl::IntegrityMonitor unbounded_monitor(
+      unbounded_cfg.risk, unbounded_cfg.snapshot.rank_tolerance,
+      unbounded_cfg.snapshot.max_condition_number);
+  uwb_imu_pl::IntegrityMonitor fixed_monitor(
+      fixed_cfg.risk, fixed_cfg.snapshot.rank_tolerance,
+      fixed_cfg.snapshot.max_condition_number);
+
+  for (int epoch = 1; epoch <= 8; ++epoch) {
+    for (int sample_index = 2 * epoch - 1; sample_index <= 2 * epoch;
+         ++sample_index) {
+      auto sample = boundary;
+      sample.timestamp = uwb_imu_pl::TimestampNs(
+          static_cast<std::int64_t>(sample_index) * 5000000LL);
+      unbounded.ingestImu(sample);
+      fixed.ingestImu(sample);
+    }
+    const auto time = uwb_imu_pl::TimestampNs(
+        static_cast<std::int64_t>(epoch) * 10000000LL);
+    const auto batch = makeBatch(time, initial.position_world_m);
+    unbounded.predictTo(time);
+    fixed.predictTo(time);
+    const auto unbounded_snapshot = unbounded.preMeasurementSnapshot(batch);
+    const auto fixed_snapshot = fixed.preMeasurementSnapshot(batch);
+    const auto left = unbounded.currentState();
+    const auto right = fixed.currentState();
+    EXPECT_LT((left.position_world_m - right.position_world_m).norm(), 1e-5);
+    EXPECT_LT((left.velocity_world_mps - right.velocity_world_mps).norm(), 1e-5);
+    EXPECT_LT((left.accel_bias_mps2 - right.accel_bias_mps2).norm(), 1e-5);
+    EXPECT_LT((left.gyro_bias_radps - right.gyro_bias_radps).norm(), 1e-5);
+    EXPECT_LT(Eigen::AngleAxisd(left.q_world_body.conjugate() *
+                               right.q_world_body).angle(), 1e-5);
+    const Eigen::MatrixXd left_cov = unbounded_snapshot->currentMarginal();
+    const Eigen::MatrixXd right_cov = fixed_snapshot->currentMarginal();
+    EXPECT_LT((left_cov - right_cov).norm() / left_cov.norm(), 1e-5);
+    const auto left_integrity =
+        unbounded_monitor.evaluateConditional(batch, *unbounded_snapshot);
+    const auto right_integrity =
+        fixed_monitor.evaluateConditional(batch, *fixed_snapshot);
+    EXPECT_EQ(left_integrity.detector.passed, right_integrity.detector.passed);
+    EXPECT_EQ(left_integrity.batch_committed, right_integrity.batch_committed);
+    EXPECT_EQ(left_integrity.protection_level.availability,
+              right_integrity.protection_level.availability);
+    EXPECT_EQ(left_integrity.protection_level.label,
+              uwb_imu_pl::IntegrityLabel::FormalLocalCurrentFaultOnly);
+    EXPECT_EQ(right_integrity.protection_level.label,
+              uwb_imu_pl::IntegrityLabel::FormalLocalCurrentFaultOnly);
+    const double statistic_scale = std::max(
+        1.0, std::abs(left_integrity.detector.statistic));
+    EXPECT_LT(std::abs(left_integrity.detector.statistic -
+                       right_integrity.detector.statistic) / statistic_scale,
+              1e-5);
+    const double pl_scale = std::max(
+        1.0, left_integrity.protection_level.pl_xyz_m.norm());
+    EXPECT_LT((left_integrity.protection_level.pl_xyz_m -
+               right_integrity.protection_level.pl_xyz_m).norm() / pl_scale,
+              1e-4);
+    if (epoch <= 2) {
+      EXPECT_TRUE(left_cov.isApprox(right_cov, 1e-12));
+      EXPECT_NEAR(left_integrity.detector.statistic,
+                  right_integrity.detector.statistic, 1e-12);
+      EXPECT_TRUE(left_integrity.protection_level.pl_xyz_m.isApprox(
+          right_integrity.protection_level.pl_xyz_m, 1e-12));
+    }
+    unbounded.commitUwbBatch(batch);
+    fixed.commitUwbBatch(batch);
   }
 }

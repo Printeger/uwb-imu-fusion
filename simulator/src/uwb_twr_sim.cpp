@@ -15,6 +15,7 @@
 #include <ros/ros.h>
 #include <uwb_imu_pl/LinktrackNode2.h>
 #include <uwb_imu_pl/LinktrackNodeframe3.h>
+#include <uwb_imu_pl/FaultTruth.h>
 #include <visualization_msgs/Marker.h>
 
 #include <Eigen/Dense>
@@ -140,6 +141,8 @@ class UwbTwrSim {
     odom_sub_ = nh_.subscribe(odom_topic, 10, &UwbTwrSim::odomCb, this);
     pub_ = nh_.advertise<uwb_imu_pl::LinktrackNodeframe3>(
         "/nlink_linktrack_nodeframe3", 10);
+    fault_truth_pub_ = nh_.advertise<uwb_imu_pl::FaultTruth>(
+        "/uwb_sim/fault_truth", 100);
     viz_anchor_pub_ = nh_.advertise<visualization_msgs::Marker>(
         "/uwb_sim/anchor_markers", 100, true);  // high queue, latched
     viz_line_pub_ =
@@ -218,6 +221,17 @@ class UwbTwrSim {
       bool forced_outage = false;
       const double injected_bias =
           injectedFault(anchors_[j].id, now, &forced_outage);
+      uwb_imu_pl::FaultTruth truth;
+      truth.header.stamp = now;
+      truth.header.frame_id = "world";
+      truth.sequence = fault_truth_sequence_++;
+      truth.anchor_id = anchors_[j].id;
+      truth.fault_mode = fault_mode_;
+      truth.active = forced_outage || injected_bias != 0.0;
+      truth.outage = forced_outage;
+      truth.injected_bias_m = injected_bias;
+      truth.true_range_m = (drone_.p - anchors_[j].pos).norm();
+      fault_truth_pub_.publish(truth);
       if (forced_outage) continue;
       double d = (drone_.p - anchors_[j].pos).norm();
       if (d > max_range_) continue;
@@ -372,6 +386,7 @@ class UwbTwrSim {
   std::vector<std::vector<double>> blink_;
   ros::Subscriber odom_sub_;
   ros::Publisher pub_;
+  ros::Publisher fault_truth_pub_;
   ros::Publisher viz_anchor_pub_, viz_line_pub_;
   ros::Timer timer_, pub_timer_, viz_timer_;
 
@@ -385,6 +400,7 @@ class UwbTwrSim {
   // Accumulate latest range per anchor between publish ticks (dedup by anchor
   // ID)
   std::map<int, uwb_imu_pl::LinktrackNode2> pending_map_;
+  std::uint64_t fault_truth_sequence_ = 1;
   std::mt19937 rng_;
   std::uniform_real_distribution<double> uni_{0, 1};
   std::normal_distribution<double> gauss_{0, 1}, shadow_{0, 1};

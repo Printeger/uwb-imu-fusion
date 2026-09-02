@@ -5,6 +5,11 @@
   <arg name="fault_magnitude_m" default="1.0"/>
   <arg name="random_seed" default="20260901"/>
   <arg name="rviz" default="false"/>
+  <arg name="run_directory" default=""/>
+  <arg name="config_path"
+       default="$(find uwb_imu_pl)/config/realtime_uwb_imu_pl_research.yaml"/>
+  <arg name="packet_loss_prob" default="0.0"/>
+  <arg name="nlos_probability" default="0.0"/>
   <include file="$(find uwb_imu_pl)/simulator/launch/realtime_integrity_stack.launch">
     <arg name="trajectory" value="$(arg trajectory)"/>
     <arg name="fault_mode" value="$(arg fault_mode)"/>
@@ -12,5 +17,9 @@
     <arg name="fault_magnitude_m" value="$(arg fault_magnitude_m)"/>
     <arg name="random_seed" value="$(arg random_seed)"/>
     <arg name="rviz" value="$(arg rviz)"/>
+    <arg name="run_directory" value="$(arg run_directory)"/>
+    <arg name="config_path" value="$(arg config_path)"/>
+    <arg name="packet_loss_prob" value="$(arg packet_loss_prob)"/>
+    <arg name="nlos_probability" value="$(arg nlos_probability)"/>
   </include>
 </launch>

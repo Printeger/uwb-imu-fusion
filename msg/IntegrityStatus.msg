@@ -6,6 +6,15 @@ bool batch_committed
 float64 statistic
 float64 threshold
 uint32 dof
+uint32 group_size
+bool measurement_model_valid
+bool fixed_lag_active
+uint32 retained_epochs
+uint64 marginalization_count
+bool historical_fault_provenance
+uint32 queue_depth
+float64 sensor_to_process_ms
+float64 sensor_to_publish_ms
 float64[3] pl_xyz_m
 float64 hpl_m
 float64 vpl_m

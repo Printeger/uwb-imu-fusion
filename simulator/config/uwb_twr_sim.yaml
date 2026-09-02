@@ -27,11 +27,11 @@ range_bias_const: 0.0         # global constant bias b0 [m]
 per_link_bias_max: 0.0        # per-link uniform bias amplitude [m]
 clock_ppm: 20.0               # clock drift [ppm]
 max_range: 80.0               # max valid range [m]
-packet_loss_prob: 0.02        # per-measurement drop probability
+packet_loss_prob: 0.0         # nominal/H0 calibration; override for transport stress
 odom_timeout: 0.20            # odom staleness threshold [s]
 
 # --- NLOS ---
-nlos_probability: 0.05        # random NLOS trigger probability (no-map mode)
+nlos_probability: 0.0         # nominal/H0 calibration; override for NLOS stress
 nlos_bias_mean: 0.40          # Exp(λ) mean positive bias [m]
 
 # --- RSSI ---

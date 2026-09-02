@@ -67,8 +67,16 @@ def main():
         else:
             state = command_for(shape, elapsed - takeoff_duration,
                                 radius, omega, height)
-            yaw = math.atan2(state[4], state[3])
-            yaw_rate = omega
+            if shape == "straight":
+                # A back-and-forth line does not require the airframe to flip
+                # heading by pi whenever its velocity crosses zero. Keeping a
+                # fixed heading avoids a discontinuous, physically impossible
+                # attitude command in this nominal fixture.
+                yaw = 0.0
+                yaw_rate = 0.0
+            else:
+                yaw = math.atan2(state[4], state[3])
+                yaw_rate = omega
         message = PositionCommand()
         message.header.stamp = now
         message.header.frame_id = "world"

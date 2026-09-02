@@ -2,14 +2,19 @@
 
 基于 GTSAM 的批量因子图优化（batch FGO）UWB-IMU 紧耦合定位系统。追求离线后处理的最高精度，非实时在线 SLAM。
 
-> **实时完整性分支状态：确定性基线已验收。** 每个完整性结果默认为
+> **实时完整性分支状态：IMPLEMENTED_UNVERIFIED。** 每个完整性结果默认为
 > `IMPLEMENTED_UNVERIFIED`，仅在 formal gate 全部通过后提升为
 > `FORMAL_LOCAL_CURRENT_FAULT_ONLY`。本分支保留原有
 > `uifgo` batch LM/GNC C++ 接口，并将 ROS 包、节点、launch 与 topic 统一为
 > `uwb_imu_pl` snapshot RAIM、full-history iSAM2 UWB–IMU、conditional
 > current-UWB detector 与单锚 PL。构建和测试的真实执行结果以
+> [P2/P3 实际验证报告](doc/P2_P3_VALIDATION_REPORT.md) 和
 > [测试账本](doc/UWB_IMU_PL_TEST_PLAN.md) 为准；数学范围见
 > [完整性语义](doc/UWB_IMU_PL_INTEGRITY_SEMANTICS.md)。
+
+免依赖单页报告见 [P2_P3_VALIDATION_REPORT.html](doc/P2_P3_VALIDATION_REPORT.html)。
+正式 raw run 使用 `tools/validate_run_schema.py` 校验，并由
+`tools/generate_integrity_report.py` 重新生成报告。
 
 ## 1. 算法概述
 
@@ -80,7 +85,7 @@ src/uwb-imu-fusion-pl/
 │       ├── gt_comparison.csv          #   GT 对比
 │       ├── *.png                      #   可视化图表
 │       └── report.md                  #   Markdown 综合报告
-├── test/                              # GoogleTest 单元测试 (51 tests)
+├── test/                              # GoogleTest 单元测试（当前 60 个独立 cases）
 └── doc/                               # 调研文档 + 设计文档
     ├── 00-overview.md                 # 三算法对比总览
     ├── 01-awesome-uwb-localization.md
@@ -112,7 +117,7 @@ source devel/setup.bash
 
 ```bash
 catkin test uwb_imu_pl
-# 预期: 51 GoogleTest cases, 0 errors, 0 failures
+# 当前: 60 个独立 GoogleTest cases, 0 errors, 0 failures
 ```
 
 ## 6. 配置文件说明
@@ -344,6 +349,11 @@ roslaunch uwb_imu_pl realtime.launch
 roslaunch uwb_imu_pl realtime_integrity_sim.launch \
   trajectory:=figure_eight fault_mode:=step fault_anchor_id:=1 \
   fault_magnitude_m:=1.0 random_seed:=20260901
+
+# 单窗口实时显示真值轨迹、融合轨迹和 PL 保护范围
+roslaunch uwb_imu_pl realtime_integrity_sim.launch \
+  trajectory:=figure_eight rviz:=true \
+  run_directory:=/tmp/uwb_imu_pl_rviz_test
 ```
 
 节点订阅配置中的 IMU 与 `LinktrackNodeframe3` topic，发布 odometry、
@@ -351,9 +361,20 @@ roslaunch uwb_imu_pl realtime_integrity_sim.launch \
 sequence 处理；一个 LinkTrack frame 是一个 UWB group。异步单 range adapter
 必须按显式 `epoch_bin_s/max_time_skew_s` 分组后再创建 batch。
 
+`incremental.fixed_lag_epochs` 取 `0` 时保持全历史 iSAM2；取 `N>=2` 时启用
+固定窗，保留含当前历元在内最多 N 组 Pose/Velocity/Bias。实现以逻辑 epoch
+作为 GTSAM timestamp（lag 为 `N-1`），真实传感器时间仍保存在导航状态中。
+固定窗的 `IntegrityStatus`/diagnostics 会报告 retained epochs、边缘化次数以及
+活动 value/factor 数；全图残差在此模式下仅表示 active fixed-lag graph residual。
+长时验收可复制研究配置、将该字段改为 `400`，再通过
+`realtime_integrity_sim.launch config_path:=/path/to/fixed_lag_400.yaml` 运行；
+仓库内示例配置继续默认关闭固定窗。
+
 正式输出只覆盖 `FORMAL_LOCAL_CURRENT_FAULT_ONLY`。detector 失败会隔离整个
 当前 group，不实现 TDoA、多同时故障、FDE、persistent-fault PL、fixed-lag
-provenance 或 nonlinear remainder bound。
+provenance 或 nonlinear remainder bound。Schur 边界 prior 与窗口历史仅按名义
+可信历史使用，`historical_fault_provenance=false`，不得将标签升级为历史或持续
+故障保护级别。
 
 `simulator/` 提供完整的 UWB-IMU 仿真管道，覆盖轨迹生成 → 传感器仿真 → 录包 → 离线 FGO 处理 → 精度评测的全流程。
 

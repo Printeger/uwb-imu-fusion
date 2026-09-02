@@ -46,6 +46,7 @@ add_message_files(
   StatusData.msg
   TRPYCommand.msg
   IntegrityStatus.msg
+  FaultTruth.msg
 )
 
 generate_messages(
@@ -125,6 +126,7 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/integrity/estimation_snapshot.cpp
   src/uwb_imu_pl/estimation/snapshot_estimator.cpp
   src/uwb_imu_pl/integrity/integrity_monitor.cpp
+  src/uwb_imu_pl/integrity/dense_oracle.cpp
   src/uwb_imu_pl/factors/realtime_factors.cpp
   src/uwb_imu_pl/estimation/incremental_estimator.cpp
   src/config.cpp
@@ -201,6 +203,13 @@ add_executable(snapshot_integrity_sweep apps/snapshot_integrity_sweep.cpp)
 target_link_libraries(snapshot_integrity_sweep
   ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
 
+add_executable(integrity_monte_carlo apps/integrity_monte_carlo.cpp)
+target_compile_definitions(integrity_monte_carlo PRIVATE
+  UWB_IMU_PL_GIT_SHA="${UWB_IMU_PL_GIT_SHA}"
+  UWB_IMU_PL_GIT_DIRTY=${UWB_IMU_PL_GIT_DIRTY})
+target_link_libraries(integrity_monte_carlo
+  ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
+
 # =============================================
 # Simulator — quadrotor dynamics + SO3 control
 # =============================================
@@ -210,6 +219,11 @@ catkin_install_python(PROGRAMS
   simulator/scripts/trajectory_circle.py
   simulator/scripts/trajectory_realtime.py
   simulator/scripts/odom_to_path.py
+  simulator/scripts/realtime_integrity_viz.py
+  tools/validate_run_schema.py
+  tools/generate_integrity_report.py
+  tools/summarize_snapshot_sweep.py
+  tools/calibrate_detector_roc.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -218,6 +232,7 @@ catkin_install_python(PROGRAMS
 # =============================================
 if(CATKIN_ENABLE_TESTING)
   enable_testing()
+  find_package(rostest REQUIRED)
 
   catkin_add_gtest(test_config test/test_config.cpp)
   target_link_libraries(test_config ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
@@ -253,4 +268,12 @@ if(CATKIN_ENABLE_TESTING)
 
   catkin_add_gtest(test_realtime_incremental test/test_realtime_incremental.cpp test/test_main.cpp)
   target_link_libraries(test_realtime_incremental ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_deterministic_event test/test_deterministic_event.cpp test/test_main.cpp)
+  target_link_libraries(test_deterministic_event ${PROJECT_NAME} ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_dense_oracle test/test_dense_oracle.cpp test/test_main.cpp)
+  target_link_libraries(test_dense_oracle ${PROJECT_NAME} ${GTEST_LIBRARIES})
+
+  add_rostest(test/realtime_integrity_viz.test)
 endif()

@@ -24,6 +24,30 @@ There are 51 distinct GoogleTest cases. `catkin_test_results` reports 102 becaus
 the generated GoogleTest XML contains both root and suite aggregate counts; the
 result remains 0 errors, 0 failures and 0 skipped.
 
+## P2/P3 closure update — 2026-09-01
+
+P0/P1 acceptance above remains historical. The current P2/P3 overall status is
+`IMPLEMENTED_UNVERIFIED`, not PASS. There are now 60 distinct GoogleTest cases;
+the latest Release run reports the catkin aggregate `120 tests, 0 errors,
+0 failures, 0 skipped`. Detailed Chinese/HTML evidence is in
+`doc/P2_P3_VALIDATION_REPORT.md` and `.html`.
+
+| ID | Actual execution | Status | Samples / artifact |
+|---|---|---|---|
+| P2-ORACLE | Independent dense SVD covariance/slope and unmonitorable fail-close | `PASS` | 1000 random full-rank cases + failure fixtures; `test_dense_oracle` |
+| P2-MC-SMOKE | H0/noncentral runner functional smoke | `PASS_FUNCTIONAL_ONLY` | H0 16×1000; noncentral 160×1000; `/tmp/uwb_pl_quick.*/mc/` |
+| P2-SWEEP-SMOKE | resumable sweep + seed block-bootstrap functional smoke | `PASS_FUNCTIONAL_ONLY` | 4104 raw rows / 2052 summary rows; temporary artifact |
+| P2-MC-H0-FULL | 16 jobs × 200k formal H0 sampling | `PASS` | 16/16 target-in-exact-CI and KS p>0.01; `results/p2_monte_carlo/` |
+| P2-MC-NC-FULL | 160 jobs × 100k formal noncentral sampling | `FAIL` | 154/160 theory-in-exact-CI; six failures retained; same artifact |
+| P2-SWEEP-FULL | planned 100 seeds × 200 epochs sweep | `NOT_RUN` | runner implemented; target `results/p2_sweep.csv` |
+| P3-DETERMINISM | 10 s event ordering, stale UWB, drop and anchor-set fixtures | `PASS` | deterministic tests; 1 s drop; `8→6→4→8` |
+| P3-ROS-SMOKE | Early 12 s nominal figure-eight plus v2 schema validation | `FAIL_RETAINED` | 217 epochs; 122 commits; 94 ALERT; 1 fail-closed numerical reinit; `/tmp/uwb_pl_ros_smoke6.O57oge/` |
+| P3-ROS-43S-F8 | Dogleg/Cholesky, relinearize skip 10, nominal figure-eight | `PASS` | 836/836 commits; all AVAILABLE; PE mean/P95/max 0.081/0.145/0.229 m; schema PASS; temporary artifact |
+| P3-ROS-43S-NOMINAL | straight/circle/figure-eight nominal | `PASS` | all three 43 s runs: 838/838, 836/836, 836/836 commits; no reject/reinit |
+| P3-ROS-43S-FAULT | step/ramp/magnitude-sweep/outage | `PARTIAL` | all detected/aligned as expected; persistent step caused one explicit controlled reinit because FDE is not implemented |
+| P3-METHOD-AB | 600 real multi-epoch comparisons | `NOT_RUN` | linear mean/covariance downdate fixtures PASS; online switch still rejected |
+| P3-PERF | 3×600 s timing gate | `NOT_RUN` | 43 s warm core mean/P99 19.18/81.48 ms PASS only for current duration; not the 600 s conclusion |
+
 ## Build and regression
 
 | ID | Command | Status | Actual result |
@@ -32,6 +56,9 @@ result remains 0 errors, 0 failures and 0 skipped.
 | BUILD-REL | `source /opt/ros/noetic/setup.bash && catkin clean uwb_imu_pl -y && catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release && catkin build uwb_imu_pl && catkin run_tests uwb_imu_pl && catkin_test_results --verbose` | `PASS` | Clean Release build; 0 errors, 0 failures, 0 skipped. Release retained. |
 | REG-001 | Same package test command | `PASS` | All legacy config, outlier, trilateration, IMU, UWB-factor, graph-builder and optimizer tests passed. |
 | LAUNCH-001 | `roslaunch --files uwb_imu_pl realtime_integrity_sim.launch` | `PASS` | Exactly one top-level forwarding launch and one uniquely named internal `realtime_integrity_stack.launch` resolved. |
+| VIZ-BUILD-001 | `catkin build uwb_imu_pl --no-status && catkin run_tests uwb_imu_pl --no-status` | `PASS` | Release incremental build; 122 aggregate tests, 0 errors/failures/skips, including the new visualization rostest. |
+| VIZ-ROS-001 | `rostest uwb_imu_pl realtime_integrity_viz.test` | `PASS` | Bounded paths, exact timestamp pairing, PL geometry/colors and infinite-PL stale-marker deletion passed. |
+| VIZ-SMOKE-001 | `realtime_integrity_sim.launch trajectory:=figure_eight rviz:=true` | `PASS` | 76 s live run; GT/fused paths and four PL markers updated in RViz, 1528 commits, 2 explicit stale-UWB rejects, 0 processing errors; v2 schema PASS at `/tmp/uwb_imu_pl_rviz_final.jLfLgH`. |
 
 ## Deterministic M0–M8 acceptance
 
@@ -69,11 +96,11 @@ These items were not executed and are not represented as passing.
 
 | ID | Item | Status | Reason / next artifact |
 |---|---|---|---|
-| MC-001 | Snapshot covariance, H0 false-alarm, noncentral-fault and PL-coverage Monte Carlo | `NOT_IMPLEMENTED` | Long-run harness and confidence-interval report are deferred. |
-| MC-002 | IMU bias-Jacobian/covariance Monte Carlo and conditional-detector calibration | `NOT_IMPLEMENTED` | Statistical harness is deferred. |
-| SIM-001 | Full straight/circle/figure-eight ROS topic simulations and fault sweeps | `NOT_RUN_SCOPE` | Launch parsing was verified; long-running topic-level experiments are outside this batch. |
+| MC-001 | Snapshot covariance, H0 false-alarm, noncentral-fault and PL-coverage Monte Carlo | `PARTIAL_FAIL` | Formal H0 PASS and noncentral FAIL (6/160); full PE–PL/coverage sweep remains NOT RUN. |
+| MC-002 | IMU bias-Jacobian/covariance Monte Carlo and conditional-detector calibration | `PARTIAL_NOT_FULL_RUN` | Detector calibration/ROC tool exists; full independent calibration remains NOT RUN. |
+| SIM-001 | Full straight/circle/figure-eight ROS topic simulations and fault sweeps | `PARTIAL` | all three nominal runs PASS; four fault runs executed, with step recovery limitation retained. |
 | ROS-001 | Dedicated `rostest` topic/queue/recovery fixtures | `NOT_IMPLEMENTED` | Deterministic estimator-level equivalents pass; ROS integration fixtures remain future work. |
-| PERF-001 | 600 s 20 Hz latency and PL-overhead study | `NOT_IMPLEMENTED` | Benchmark harness/report are deferred. |
+| PERF-001 | 600 s 20 Hz latency and PL-overhead study | `IMPLEMENTED_NOT_RUN` | v2 stage timing/report plumbing exists; 3×600 s execution remains NOT RUN. |
 
 ## Static checks
 

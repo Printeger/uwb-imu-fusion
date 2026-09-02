@@ -89,4 +89,19 @@ TEST(IntegrityConfig, RejectsInvalidRiskAndUnsupportedOnlineModes) {
                              "enable_method_b: true"), 31);
   expectRejected(replaceOnce(base, "fixed_lag_epochs: 0",
                              "fixed_lag_epochs: 1"), 32);
+  expectRejected(replaceOnce(base, "fixed_lag_epochs: 0",
+                             "fixed_lag_epochs: -1"), 33);
+  expectRejected(replaceOnce(base, "fixed_lag_epochs: 0",
+                             "fixed_lag_epochs: 4294967296"), 34);
+}
+
+TEST(IntegrityConfig, AcceptsDisabledAndValidFixedLagWindows) {
+  const std::string base = readConfig();
+  for (const std::uint32_t value : {0u, 2u, 400u}) {
+    const auto loaded = uwb_imu_pl::IntegrityConfigLoader::load(writeTemp(
+        replaceOnce(base, "fixed_lag_epochs: 0",
+                    "fixed_lag_epochs: " + std::to_string(value)),
+        40 + static_cast<int>(value)));
+    EXPECT_EQ(loaded.incremental.fixed_lag_epochs, value);
+  }
 }

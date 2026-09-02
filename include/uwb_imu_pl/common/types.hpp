@@ -208,6 +208,12 @@ struct ResidualRecord {
   double whitened = std::numeric_limits<double>::quiet_NaN();
 };
 
+struct StageTiming {
+  std::string stage;
+  double wall_ms = 0.0;
+  bool success = true;
+};
+
 struct IntegrityOutput {
   TimestampNs timestamp;
   NavigationState state;
@@ -220,15 +226,22 @@ struct IntegrityOutput {
       std::numeric_limits<double>::quiet_NaN();
   double conditional_innovation_statistic =
       std::numeric_limits<double>::quiet_NaN();
+  // Diagnostic detector records use independently calibrated thresholds when
+  // available.  `detector` remains the formal conditional detector (or the
+  // snapshot post-fit detector for the ROS-free snapshot path).
+  DetectorResult global_detector;
+  DetectorResult postfit_detector;
+  std::size_t measurement_group_size = 0;
   bool batch_committed = false;
   // True when the current UWB has valid model/capability/provenance inputs.
   // Risk-budget or alert-limit unavailability does not clear this flag.
   bool measurement_model_valid = false;
   std::vector<ResidualRecord> residual_records;
+  std::vector<StageTiming> stage_timings;
 };
 
 struct RunManifest {
-  std::string schema_version = "uwb-imu-pl/v1";
+  std::string schema_version = "uwb-imu-pl/v2";
   std::string created_utc;
   std::string git_sha;
   bool git_dirty = false;
@@ -243,6 +256,59 @@ struct RunManifest {
   std::uint64_t ram_bytes = 0;
   std::string gtsam_version;
   std::string eigen_version;
+};
+
+struct TimingRecord {
+  TimestampNs timestamp;
+  std::uint64_t epoch = 0;
+  std::string stage;
+  double wall_ms = 0.0;
+  std::size_t problem_size = 0;
+  std::size_t hypothesis_count = 0;
+  std::size_t factor_count = 0;
+  bool cold = false;
+  bool success = true;
+};
+
+struct ComparisonDiagnostics {
+  TimestampNs timestamp;
+  std::uint64_t epoch = 0;
+  bool candidate_spd = false;
+  double candidate_condition = std::numeric_limits<double>::infinity();
+  double prior_mean_difference = std::numeric_limits<double>::infinity();
+  double covariance_relative_error = std::numeric_limits<double>::infinity();
+  double statistic_relative_error = std::numeric_limits<double>::infinity();
+  double protection_level_relative_error = std::numeric_limits<double>::infinity();
+  bool availability_equal = false;
+  bool decision_equal = false;
+};
+
+struct GroundTruthRecord {
+  TimestampNs timestamp;
+  Eigen::Vector3d position_world_m = Eigen::Vector3d::Zero();
+  Eigen::Quaterniond q_world_body = Eigen::Quaterniond::Identity();
+};
+
+struct FaultTruthRecord {
+  TimestampNs timestamp;
+  std::uint64_t sequence = 0;
+  AnchorId anchor_id;
+  std::string fault_mode;
+  bool active = false;
+  bool outage = false;
+  double injected_bias_m = 0.0;
+  double true_range_m = std::numeric_limits<double>::quiet_NaN();
+};
+
+struct RunSummary {
+  std::string status = "IMPLEMENTED_UNVERIFIED";
+  std::uint64_t processed = 0;
+  std::uint64_t committed = 0;
+  std::uint64_t rejected = 0;
+  std::uint64_t errors = 0;
+  double core_total_ms = 0.0;
+  double end_to_end_total_ms = 0.0;
+  std::string detail;
 };
 
 const char* toString(Availability value);

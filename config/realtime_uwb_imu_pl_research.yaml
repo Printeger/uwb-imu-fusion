@@ -10,13 +10,17 @@ snapshot:
 
 incremental:
   relinearize_threshold: 0.1
-  relinearize_skip: 1
+  # Two iSAM2 updates are issued per 20 Hz UWB epoch. A short fixed skip makes
+  # periodic relinearization scans dominate as the research graph grows.
+  # Recheck every 5 s (200 updates / 2 / 20 Hz); current-state clique
+  # updates and marginal queries still run every epoch.
+  relinearize_skip: 200
   smoothness_sigma_m: 0.5
   epoch_bin_s: 0.02
   max_time_skew_s: 0.01
   enable_method_b: false
   method_b_max_condition: 1.0e10
-  fixed_lag_epochs: 0
+  fixed_lag_epochs: 200
 
 imu:
   accelerometer_sigma: 0.10
@@ -40,6 +44,9 @@ output:
   root: results/realtime_uwb_imu_pl
   write_residuals: true
   write_timing: true
+  # Full-graph residual is a separately calibrated diagnostic and is disabled
+  # on the formal/performance path.
+  write_global_diagnostics: false
 
 realtime:
   world_frame: world

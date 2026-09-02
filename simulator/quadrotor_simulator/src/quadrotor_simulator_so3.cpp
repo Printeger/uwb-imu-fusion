@@ -332,19 +332,17 @@ void quadToImuMsg(const QuadrotorSimulator::Quadrotor& quad,
 
   imu.angular_velocity.x = state.omega(0);
   imu.angular_velocity.y = state.omega(1);
-  // Z flipped: sim body frame has Z-down (NED), Livox has Z-up.
-  // Negate Z to match the Livox IMU convention used in data_loader.
-  imu.angular_velocity.z = -state.omega(2);
+  imu.angular_velocity.z = state.omega(2);
 
-  // Specific force = proper acceleration + gravity in body frame
-  // Real IMU measures: a_body + R^T * (-g_world)  where g_world = (0, 0, -9.81)
-  //                   = a_body + R^T * (0, 0, 9.81)
-  Eigen::Vector3d a_proper = quad.getAcc();
-  Eigen::Vector3d g_world(0, 0, quad.getGravity());  // +9.81 down in world
-  Eigen::Vector3d a_imu = a_proper - state.R.transpose() * g_world;
-  // a_imu = R^T * (a_world - g_world)  — standard IMU model
+  // Dynamics and odometry use ENU/world-Z-up and body-Z-up. A standard IMU
+  // reports specific force in the body frame: R^T(a_world - g_world).
+  // The previous implementation mixed world x/y with body z and flipped only
+  // z, which was correct only while perfectly level and corrupted motion IMU.
+  const Eigen::Vector3d acceleration_world = quad.getAcc();
+  const Eigen::Vector3d gravity_world(0, 0, -quad.getGravity());
+  const Eigen::Vector3d a_imu =
+      state.R.transpose() * (acceleration_world - gravity_world);
   imu.linear_acceleration.x = a_imu.x();
   imu.linear_acceleration.y = a_imu.y();
-  // Z flipped: match Livox convention (Z-up, measures +g when hovering)
-  imu.linear_acceleration.z = -a_imu.z();
+  imu.linear_acceleration.z = a_imu.z();
 }

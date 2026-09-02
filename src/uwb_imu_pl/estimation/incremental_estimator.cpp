@@ -4,8 +4,12 @@
 
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/navigation/NavState.h>
+#include <gtsam/linear/GaussianFactorGraph.h>
+#include <gtsam/linear/GaussianBayesNet.h>
+#include <gtsam/nonlinear/LinearContainerFactor.h>
 #include <gtsam/nonlinear/Marginals.h>
 #include <gtsam/slam/PriorFactor.h>
+#include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
 
 #include <boost/make_shared.hpp>
 
@@ -16,10 +20,20 @@
 
 #include <chrono>
 #include <cmath>
+#include <functional>
 #include <set>
 #include <stdexcept>
 
 namespace uwb_imu_pl {
+
+class FixedLagBackend final : public gtsam::IncrementalFixedLagSmoother {
+ public:
+  FixedLagBackend(double lag, const gtsam::ISAM2Params& params)
+      : gtsam::IncrementalFixedLagSmoother(lag, params) {}
+
+  const gtsam::ISAM2& isam() const { return isam_; }
+};
+
 namespace {
 
 gtsam::Key positionKey(std::size_t epoch) { return gtsam::Symbol('p', epoch); }
@@ -45,6 +59,35 @@ Eigen::MatrixXd whitener(const Eigen::MatrixXd& covariance) {
 double elapsedMs(std::chrono::steady_clock::time_point start) {
   return std::chrono::duration<double, std::milli>(
       std::chrono::steady_clock::now() - start).count();
+}
+
+gtsam::GaussianBayesNet currentCliqueClosure(
+    const gtsam::ISAM2& isam2, const gtsam::KeyVector& keys) {
+  gtsam::GaussianBayesNet bayes_net;
+  std::vector<gtsam::ISAM2Clique::shared_ptr> closure;
+  std::set<const gtsam::ISAM2Clique*> seen;
+  for (const auto key : keys) {
+    auto clique = isam2.clique(key);
+    while (clique) {
+      if (seen.insert(clique.get()).second) closure.push_back(clique);
+      clique = clique->parent();
+    }
+  }
+  auto depth = [](gtsam::ISAM2Clique::shared_ptr clique) {
+    int value = 0;
+    while ((clique = clique->parent())) ++value;
+    return value;
+  };
+  // Bayes-net elimination order is deepest child to root. Back-substitution
+  // consequently visits the returned container in reverse order.
+  std::stable_sort(closure.begin(), closure.end(),
+                   [&](const auto& left, const auto& right) {
+                     return depth(left) > depth(right);
+                   });
+  for (const auto& clique : closure) {
+    bayes_net.push_back(clique->conditional());
+  }
+  return bayes_net;
 }
 
 }  // namespace
@@ -194,8 +237,26 @@ IncrementalUwbImuEstimator::IncrementalUwbImuEstimator(
         gtsam::ISAM2Params params;
         params.relinearizeThreshold = config.incremental.relinearize_threshold;
         params.relinearizeSkip = config.incremental.relinearize_skip;
+        // The newest navigation state is at the top of this temporal Bayes
+        // tree. Stop the relinearization check once an unchanged separator is
+        // reached instead of scanning every historical state each period.
+        params.enablePartialRelinearizationCheck = true;
+        // Range factors are strongly nonlinear in the coupled pose/velocity
+        // state. Dogleg prevents the unbounded Gauss-Newton steps that can
+        // corrupt the following IMU prediction and make an otherwise anchored
+        // graph appear indefinite during Cholesky elimination.
+        params.optimizationParams = gtsam::ISAM2DoglegParams();
         return params;
       }()) {
+  if (config_.incremental.fixed_lag_epochs == 1) {
+    throw std::invalid_argument("fixed_lag_epochs must be 0 or at least 2");
+  }
+  if (config_.incremental.fixed_lag_epochs > 0) {
+    gtsam::ISAM2Params params = isam2_.params();
+    params.findUnusedFactorSlots = true;
+    fixed_lag_backend_.reset(new FixedLagBackend(
+        static_cast<double>(config_.incremental.fixed_lag_epochs - 1), params));
+  }
   auto params = gtsam::PreintegratedCombinedMeasurements::Params::MakeSharedU(
       config_.imu.gravity_mps2);
   params->accelerometerCovariance = Eigen::Matrix3d::Identity() *
@@ -210,9 +271,74 @@ IncrementalUwbImuEstimator::IncrementalUwbImuEstimator(
   imu_params_ = params;
 }
 
-void IncrementalUwbImuEstimator::appendGraph(
-    const gtsam::NonlinearFactorGraph& graph) {
-  for (const auto& factor : graph) full_graph_.push_back(factor);
+IncrementalUwbImuEstimator::~IncrementalUwbImuEstimator() = default;
+
+const gtsam::ISAM2& IncrementalUwbImuEstimator::backendIsam() const {
+  return fixed_lag_backend_ ? fixed_lag_backend_->isam() : isam2_;
+}
+
+const gtsam::NonlinearFactorGraph&
+IncrementalUwbImuEstimator::activeGraph() const {
+  return backendIsam().getFactorsUnsafe();
+}
+
+std::size_t IncrementalUwbImuEstimator::backendUpdate(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
+    std::size_t timestamp_epoch, bool add_timestamps) {
+  if (!fixed_lag_backend_) {
+    isam2_.update(graph, values);
+    return 0;
+  }
+
+  gtsam::FixedLagSmoother::KeyTimestampMap timestamps;
+  if (add_timestamps) {
+    const double logical_timestamp = static_cast<double>(timestamp_epoch);
+    timestamps.emplace(poseKey(timestamp_epoch), logical_timestamp);
+    timestamps.emplace(velocityKey(timestamp_epoch), logical_timestamp);
+    timestamps.emplace(biasKey(timestamp_epoch), logical_timestamp);
+  }
+  const std::size_t before = fixed_lag_backend_->timestamps().size();
+  fixed_lag_backend_->update(graph, values, timestamps);
+  const std::size_t after = fixed_lag_backend_->timestamps().size();
+  const std::size_t added = add_timestamps ? 3 : 0;
+  if (before + added < after || (before + added - after) % 3 != 0) {
+    throw std::runtime_error("fixed-lag timestamp bookkeeping is inconsistent");
+  }
+  return (before + added - after) / 3;
+}
+
+std::uint32_t IncrementalUwbImuEstimator::retainedEpochs() const {
+  if (!initialized_) return 0;
+  if (!fixed_lag_backend_) {
+    return static_cast<std::uint32_t>(std::min<std::size_t>(
+        epoch_ + 1, std::numeric_limits<std::uint32_t>::max()));
+  }
+  return static_cast<std::uint32_t>(fixed_lag_backend_->timestamps().size() / 3);
+}
+
+std::size_t IncrementalUwbImuEstimator::oldestRetainedEpoch() const {
+  if (!initialized_ || !fixed_lag_backend_) return 0;
+  const std::uint32_t retained = retainedEpochs();
+  return retained == 0 ? epoch_ : epoch_ + 1 - retained;
+}
+
+std::size_t IncrementalUwbImuEstimator::factorCount() const {
+  std::size_t count = 0;
+  for (const auto& factor : activeGraph()) count += factor ? 1 : 0;
+  return count;
+}
+
+std::size_t IncrementalUwbImuEstimator::activeValueCount() const {
+  return initialized_ ? backendIsam().getLinearizationPoint().size() : 0;
+}
+
+void IncrementalUwbImuEstimator::pruneRetainedMetadata() {
+  if (!fixed_lag_backend_) return;
+  const std::size_t oldest = oldestRetainedEpoch();
+  while (!committed_uwb_batches_.empty() &&
+         committed_uwb_batches_.front().first < oldest) {
+    committed_uwb_batches_.pop_front();
+  }
 }
 
 void IncrementalUwbImuEstimator::initialize(
@@ -236,10 +362,14 @@ void IncrementalUwbImuEstimator::initialize(
   values.insert(poseKey(0), pose);
   values.insert(velocityKey(0), velocity);
   values.insert(biasKey(0), bias);
-  isam2_.update(graph, values);
-  appendGraph(graph);
-  estimate_ = isam2_.calculateEstimate();
+  const std::size_t marginalized = backendUpdate(graph, values, 0, true);
+  if (marginalized != 0) {
+    throw std::runtime_error("fixed-lag initialization marginalized state");
+  }
+  current_state_ = initial_state;
+  current_state_.id = StateId(0);
   state_timestamp_ = initial_state.timestamp;
+  queryCurrentState();
   preintegrated_.reset(new gtsam::PreintegratedCombinedMeasurements(imu_params_, bias));
   initialized_ = true;
   graph_version_ = 1;
@@ -322,7 +452,8 @@ void IncrementalUwbImuEstimator::predictTo(TimestampNs timestamp) {
   }
 
   const auto start = std::chrono::steady_clock::now();
-  const auto previous_bias = estimate_.at<gtsam::imuBias::ConstantBias>(biasKey(epoch_));
+  const auto preintegration_start = start;
+  const auto previous_bias = toGtsamBias(current_state_);
   gtsam::PreintegratedCombinedMeasurements proposed(imu_params_, previous_bias);
   TimestampNs previous_time = state_timestamp_;
   ImuMeasurement previous_measurement = *imu_boundary_;
@@ -355,10 +486,11 @@ void IncrementalUwbImuEstimator::predictTo(TimestampNs timestamp) {
                                   dt);
   }
 
-  const gtsam::Pose3 previous_pose = estimate_.at<gtsam::Pose3>(poseKey(epoch_));
-  const gtsam::Vector3 previous_velocity = estimate_.at<gtsam::Vector3>(velocityKey(epoch_));
+  const gtsam::Pose3 previous_pose = toGtsamPose(current_state_);
+  const gtsam::Vector3 previous_velocity = current_state_.velocity_world_mps;
   const gtsam::NavState predicted = proposed.predict(
       gtsam::NavState(previous_pose, previous_velocity), previous_bias);
+  last_imu_preintegration_ms_ = elapsedMs(preintegration_start);
   const std::size_t next_epoch = epoch_ + 1;
   gtsam::NonlinearFactorGraph graph;
   gtsam::Values values;
@@ -368,14 +500,22 @@ void IncrementalUwbImuEstimator::predictTo(TimestampNs timestamp) {
   values.insert(poseKey(next_epoch), predicted.pose());
   values.insert(velocityKey(next_epoch), predicted.velocity());
   values.insert(biasKey(next_epoch), previous_bias);
-  isam2_.update(graph, values);
-  appendGraph(graph);
-  estimate_ = isam2_.calculateEstimate();
+  const std::size_t marginalized =
+      backendUpdate(graph, values, next_epoch, true);
+  epoch_ = next_epoch;
+  if (marginalized > 0) {
+    marginalization_count_ += marginalized;
+    ++ordering_version_;
+    ++linpoint_version_;
+  }
+  pruneRetainedMetadata();
+  state_timestamp_ = timestamp;
+  const auto state_query_start = std::chrono::steady_clock::now();
+  queryCurrentState();
+  last_state_query_ms_ = elapsedMs(state_query_start);
   for (std::size_t i = 0; i < consume_count; ++i) imu_queue_.pop_front();
   previous_measurement.timestamp = timestamp;
   imu_boundary_ = previous_measurement;
-  epoch_ = next_epoch;
-  state_timestamp_ = timestamp;
   pending_epoch_ = true;
   current_uwb_committed_ = false;
   pending_batch_id_.reset();
@@ -384,36 +524,79 @@ void IncrementalUwbImuEstimator::predictTo(TimestampNs timestamp) {
   last_no_uwb_update_ms_ = elapsedMs(start);
 }
 
-NavigationState IncrementalUwbImuEstimator::navigationState(
-    std::size_t epoch, TimestampNs timestamp) const {
-  NavigationState state;
-  state.id = StateId(epoch);
-  state.timestamp = timestamp;
-  const gtsam::Pose3 pose = estimate_.at<gtsam::Pose3>(poseKey(epoch));
-  state.position_world_m = pose.translation();
-  state.q_world_body = Eigen::Quaterniond(pose.rotation().matrix());
-  state.velocity_world_mps = estimate_.at<gtsam::Vector3>(velocityKey(epoch));
-  const auto bias = estimate_.at<gtsam::imuBias::ConstantBias>(biasKey(epoch));
-  state.accel_bias_mps2 = bias.accelerometer();
-  state.gyro_bias_radps = bias.gyroscope();
-  return state;
+void IncrementalUwbImuEstimator::queryCurrentState() {
+  // GTSAM's single-key calculateEstimate<T>() still enters getDelta(), whose
+  // wildfire update can visit the full Bayes tree. Solve only the current
+  // cliques and their ancestor closure, then retract these three keys at the
+  // stored linearization point. The closure is also the exact dependency set
+  // used by the current-state marginal below.
+  const gtsam::KeyVector keys{
+      poseKey(epoch_), velocityKey(epoch_), biasKey(epoch_)};
+  const gtsam::ISAM2& isam = backendIsam();
+  const gtsam::GaussianBayesNet bayes_net =
+      currentCliqueClosure(isam, keys);
+  gtsam::VectorValues local_delta;
+  for (std::size_t i = bayes_net.size(); i > 0; --i) {
+    local_delta.insert(bayes_net[i - 1]->solve(local_delta));
+  }
+  const gtsam::Values& theta = isam.getLinearizationPoint();
+  const gtsam::Pose3 pose = gtsam::traits<gtsam::Pose3>::Retract(
+      theta.at<gtsam::Pose3>(keys[0]), local_delta.at(keys[0]));
+  const gtsam::Vector3 velocity = gtsam::traits<gtsam::Vector3>::Retract(
+      theta.at<gtsam::Vector3>(keys[1]), local_delta.at(keys[1]));
+  const auto bias =
+      gtsam::traits<gtsam::imuBias::ConstantBias>::Retract(
+          theta.at<gtsam::imuBias::ConstantBias>(keys[2]),
+          local_delta.at(keys[2]));
+  current_state_.id = StateId(epoch_);
+  current_state_.timestamp = state_timestamp_;
+  current_state_.position_world_m = pose.translation();
+  current_state_.q_world_body = Eigen::Quaterniond(pose.rotation().matrix());
+  current_state_.velocity_world_mps = velocity;
+  current_state_.accel_bias_mps2 = bias.accelerometer();
+  current_state_.gyro_bias_radps = bias.gyroscope();
 }
 
 Eigen::Matrix<double, 15, 15>
 IncrementalUwbImuEstimator::currentJointMarginal() const {
-  gtsam::Marginals marginals(full_graph_, estimate_);
   const gtsam::KeyVector keys{poseKey(epoch_), velocityKey(epoch_), biasKey(epoch_)};
-  const gtsam::JointMarginal joint = marginals.jointMarginalCovariance(keys);
-  Eigen::Matrix<double, 15, 15> covariance =
-      Eigen::Matrix<double, 15, 15>::Zero();
   const std::array<int, 3> offsets{0, 6, 9};
   const std::array<int, 3> dimensions{6, 3, 6};
-  for (std::size_t row = 0; row < keys.size(); ++row) {
-    for (std::size_t column = 0; column < keys.size(); ++column) {
-      covariance.block(offsets[row], offsets[column], dimensions[row],
-                       dimensions[column]) = joint.at(keys[row], keys[column]);
+  // Extract only the current cliques and their ancestor closure from the
+  // already-factorized iSAM2 Bayes tree. Other child subtrees integrate out
+  // and cannot affect this marginal. Triangular selected-inverse solves on
+  // this small Bayes net are exact without scanning the historical graph.
+  const gtsam::GaussianBayesNet bayes_net =
+      currentCliqueClosure(backendIsam(), keys);
+
+  gtsam::VectorValues zero_rhs;
+  for (const auto& conditional : bayes_net) {
+    for (auto item = conditional->begin(); item != conditional->end(); ++item) {
+      if (!zero_rhs.exists(*item)) {
+        zero_rhs.insert(*item, Eigen::VectorXd::Zero(conditional->getDim(item)));
+      }
     }
   }
+  Eigen::Matrix<double, 15, 15> covariance =
+      Eigen::Matrix<double, 15, 15>::Zero();
+  for (std::size_t column_key = 0; column_key < keys.size(); ++column_key) {
+    for (int local_column = 0; local_column < dimensions[column_key];
+         ++local_column) {
+      gtsam::VectorValues rhs = zero_rhs;
+      rhs.at(keys[column_key])(local_column) = 1.0;
+      const gtsam::VectorValues intermediate =
+          bayes_net.backSubstituteTranspose(rhs);
+      const gtsam::VectorValues inverse_column =
+          bayes_net.backSubstitute(intermediate);
+      const int output_column = offsets[column_key] + local_column;
+      for (std::size_t row_key = 0; row_key < keys.size(); ++row_key) {
+        covariance.block(offsets[row_key], output_column,
+                         dimensions[row_key], 1) =
+            inverse_column.at(keys[row_key]);
+      }
+    }
+  }
+  covariance = 0.5 * (covariance + covariance.transpose());
   if (covariance.rows() != 15 || covariance.cols() != 15 ||
       !covariance.allFinite()) {
     throw std::runtime_error("invalid 15x15 current-state marginal");
@@ -426,23 +609,25 @@ CurrentStatePrior IncrementalUwbImuEstimator::queryCurrentPrior(
   const auto start = std::chrono::steady_clock::now();
   const Eigen::Matrix<double, 15, 15> covariance = currentJointMarginal();
   CurrentStatePrior prior;
-  prior.mean = navigationState(epoch_, timestamp);
+  prior.mean = current_state_;
+  prior.mean.timestamp = timestamp;
   prior.covariance = covariance;
   prior.excludes_current_uwb = !current_uwb_committed_;
-  prior.version = {graph_version_, 1, 1, linpoint_version_};
+  prior.version = {graph_version_, ordering_version_, 1, linpoint_version_};
   last_marginal_ms_ = elapsedMs(start);
   return prior;
 }
 
 std::shared_ptr<const EstimationSnapshot>
 IncrementalUwbImuEstimator::preMeasurementSnapshot(const UwbBatch& batch) {
+  const auto snapshot_start = std::chrono::steady_clock::now();
   if (!pending_epoch_ || batch.timestamp != state_timestamp_) {
     throw std::logic_error("pre-measurement snapshot requires matching predicted epoch");
   }
   CurrentStatePrior prior = queryCurrentPrior(batch.timestamp);
   pending_batch_id_ = batch.id;
   if (!prior.excludes_current_uwb) throw std::logic_error("current UWB already contaminates prior");
-  const gtsam::Pose3 pose = estimate_.at<gtsam::Pose3>(poseKey(epoch_));
+  const gtsam::Pose3 pose = toGtsamPose(current_state_);
   UwbPoseBatchFactor proposed(poseKey(epoch_), batch, lever_arm_body_m_);
   gtsam::Matrix raw_h;
   const Eigen::VectorXd factor_error = proposed.evaluateError(pose, raw_h);
@@ -486,13 +671,15 @@ IncrementalUwbImuEstimator::preMeasurementSnapshot(const UwbBatch& batch) {
   capabilities.pre_measurement_prior = true;
   capabilities.factor_provenance = true;
   capabilities.consistent_relinearization = true;
-  capabilities.fixed_lag = false;
+  capabilities.fixed_lag = fixed_lag_backend_ != nullptr;
   capabilities.historical_fault_provenance = false;
   const Eigen::Matrix<double, 15, 15> information = prior.covariance.inverse();
-  return std::make_shared<ImmutableEstimationSnapshot>(
+  auto snapshot = std::make_shared<ImmutableEstimationSnapshot>(
       prior.mean, prior.version, diagnostics, std::vector<WhitenedRowBlock>{rows},
       capabilities, LinearizationConsistency::Strict, prior, prior.covariance,
       information);
+  last_snapshot_extraction_ms_ = elapsedMs(snapshot_start) - last_marginal_ms_;
+  return snapshot;
 }
 
 void IncrementalUwbImuEstimator::commitUwbBatch(const UwbBatch& batch) {
@@ -506,12 +693,17 @@ void IncrementalUwbImuEstimator::commitUwbBatch(const UwbBatch& batch) {
   gtsam::NonlinearFactorGraph graph;
   graph.add(boost::make_shared<UwbPoseBatchFactor>(
       poseKey(epoch_), batch, lever_arm_body_m_));
-  isam2_.update(graph, gtsam::Values());
-  appendGraph(graph);
-  estimate_ = isam2_.calculateEstimate();
+  const std::size_t marginalized =
+      backendUpdate(graph, gtsam::Values(), epoch_, false);
+  if (marginalized != 0) {
+    throw std::runtime_error("UWB-only update unexpectedly marginalized state");
+  }
+  const auto state_query_start = std::chrono::steady_clock::now();
+  queryCurrentState();
+  last_state_query_ms_ = elapsedMs(state_query_start);
   pending_epoch_ = false;
   current_uwb_committed_ = true;
-  committed_uwb_batch_ids_.push_back(batch.id);
+  committed_uwb_batches_.emplace_back(epoch_, batch.id);
   pending_batch_id_.reset();
   ++graph_version_;
   ++linpoint_version_;
@@ -535,7 +727,7 @@ void IncrementalUwbImuEstimator::rejectUwbBatch(
 
 NavigationState IncrementalUwbImuEstimator::currentState() const {
   if (!initialized_) throw std::logic_error("UWB/IMU estimator is not initialized");
-  return navigationState(epoch_, state_timestamp_);
+  return current_state_;
 }
 
 double IncrementalUwbImuEstimator::globalGraphResidualStatistic() const {
@@ -543,7 +735,10 @@ double IncrementalUwbImuEstimator::globalGraphResidualStatistic() const {
   // GTSAM graph error is one half of the total whitened squared residual.
   // This is a graph-health diagnostic only; it is deliberately not assigned a
   // chi-square threshold or used by the formal current-fault PL.
-  return 2.0 * full_graph_.error(estimate_);
+  // Full Values are intentionally materialized only on this explicitly
+  // enabled diagnostic path. They are never cached by the realtime estimator.
+  const gtsam::Values full_estimate = backendIsam().calculateEstimate();
+  return 2.0 * activeGraph().error(full_estimate);
 }
 
 EstimatorAudit IncrementalUwbImuEstimator::audit() const {
@@ -552,9 +747,33 @@ EstimatorAudit IncrementalUwbImuEstimator::audit() const {
   result.current_marginal = currentJointMarginal();
   result.epoch = epoch_;
   result.state_timestamp = state_timestamp_;
-  result.version = {graph_version_, 1, 1, linpoint_version_};
-  result.factor_count = full_graph_.size();
-  result.committed_uwb_batch_ids = committed_uwb_batch_ids_;
+  result.version = {graph_version_, ordering_version_, 1, linpoint_version_};
+  result.factor_count = factorCount();
+  result.factor_slot_count = activeGraph().size();
+  result.active_value_count = activeValueCount();
+  for (const auto key : backendIsam().getLinearizationPoint().keys()) {
+    const char prefix = gtsam::Symbol(key).chr();
+    result.pose_value_count += prefix == 'x' ? 1 : 0;
+    result.velocity_value_count += prefix == 'v' ? 1 : 0;
+    result.bias_value_count += prefix == 'b' ? 1 : 0;
+  }
+  for (const auto& factor : activeGraph()) {
+    if (factor && dynamic_cast<const gtsam::LinearContainerFactor*>(
+                      factor.get()) != nullptr) {
+      ++result.boundary_prior_factor_count;
+    }
+  }
+  result.timestamp_count = fixed_lag_backend_
+      ? fixed_lag_backend_->timestamps().size() : activeValueCount();
+  result.oldest_retained_epoch = oldestRetainedEpoch();
+  result.retained_epochs = retainedEpochs();
+  result.marginalization_count = marginalization_count_;
+  result.fixed_lag_active = fixed_lag_backend_ != nullptr;
+  result.historical_fault_provenance = false;
+  result.committed_uwb_batch_ids.reserve(committed_uwb_batches_.size());
+  for (const auto& committed : committed_uwb_batches_) {
+    result.committed_uwb_batch_ids.push_back(committed.second);
+  }
   result.pending_epoch = pending_epoch_;
   result.pending_batch_id = pending_batch_id_;
   return result;
@@ -586,6 +805,41 @@ IncrementalUwbImuEstimator::methodBCandidatePrior(
       condition > config_.incremental.method_b_max_condition) return std::nullopt;
   Eigen::LDLT<Eigen::Matrix<double, 15, 15>> prior_ldlt(prior_information);
   return prior_ldlt.solve(Eigen::Matrix<double, 15, 15>::Identity());
+}
+
+std::optional<MethodBCandidatePrior>
+IncrementalUwbImuEstimator::methodBCandidatePrior(
+    const Eigen::Matrix<double, 15, 1>& all_in_mean,
+    const Eigen::Matrix<double, 15, 15>& all_in_covariance,
+    const Eigen::MatrixXd& current_uwb_jacobian,
+    const Eigen::MatrixXd& current_uwb_covariance,
+    const Eigen::VectorXd& current_uwb_linear_measurement) const {
+  if (!all_in_mean.allFinite() ||
+      current_uwb_linear_measurement.size() != current_uwb_jacobian.rows()) {
+    return std::nullopt;
+  }
+  const auto covariance = methodBCandidatePrior(
+      all_in_covariance, current_uwb_jacobian, current_uwb_covariance);
+  if (!covariance) return std::nullopt;
+  Eigen::LDLT<Eigen::Matrix<double, 15, 15>> all_in_ldlt(all_in_covariance);
+  Eigen::LDLT<Eigen::MatrixXd> measurement_ldlt(current_uwb_covariance);
+  if (all_in_ldlt.info() != Eigen::Success ||
+      measurement_ldlt.info() != Eigen::Success) return std::nullopt;
+  const Eigen::Matrix<double, 15, 15> all_in_information =
+      all_in_ldlt.solve(Eigen::Matrix<double, 15, 15>::Identity());
+  const Eigen::Matrix<double, 15, 1> prior_information_vector =
+      all_in_information * all_in_mean - current_uwb_jacobian.transpose() *
+      measurement_ldlt.solve(current_uwb_linear_measurement);
+  MethodBCandidatePrior result;
+  result.covariance = *covariance;
+  result.mean = result.covariance * prior_information_vector;
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 15, 15>> eigen(
+      result.covariance.inverse());
+  if (!result.mean.allFinite() || eigen.info() != Eigen::Success ||
+      eigen.eigenvalues().minCoeff() <= 0.0) return std::nullopt;
+  result.condition_number = eigen.eigenvalues().maxCoeff() /
+      eigen.eigenvalues().minCoeff();
+  return result;
 }
 
 }  // namespace uwb_imu_pl

@@ -25,7 +25,7 @@ struct IncrementalConfig {
   double max_time_skew_s = 0.01;
   bool enable_method_b = false;
   double method_b_max_condition = 1e10;
-  std::size_t fixed_lag_epochs = 0;
+  std::uint32_t fixed_lag_epochs = 0;
 };
 
 struct ImuNoiseConfig {
@@ -41,6 +41,7 @@ struct OutputConfig {
   std::string root;
   bool write_residuals = true;
   bool write_timing = true;
+  bool write_global_diagnostics = false;
 };
 
 struct RealtimeConfig {

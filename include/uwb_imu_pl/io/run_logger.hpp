@@ -3,6 +3,7 @@
 #include "uwb_imu_pl/common/types.hpp"
 
 #include <fstream>
+#include <mutex>
 #include <string>
 
 namespace uwb_imu_pl {
@@ -21,10 +22,16 @@ class RunLogger {
   void writeIntegrity(const IntegrityOutput& output);
   void writeTiming(TimestampNs timestamp, const std::string& stage,
                    double wall_ms, bool success);
+  void writeTiming(const TimingRecord& record);
   void writeEvent(TimestampNs timestamp, const std::string& event,
                   const std::string& detail);
+  void writeEvent(TimestampNs timestamp, std::uint64_t sequence,
+                  const std::string& event, const std::string& detail);
+  void writeGroundTruth(const GroundTruthRecord& record);
+  void writeFaultTruth(const FaultTruthRecord& record);
   void writeSummary(const std::string& status,
                     const std::string& detail) const;
+  void writeSummary(const RunSummary& summary) const;
 
  private:
   std::string directory_;
@@ -33,8 +40,12 @@ class RunLogger {
   std::ofstream integrity_;
   std::ofstream timing_;
   std::ofstream events_;
+  std::ofstream ground_truth_;
+  std::ofstream fault_truth_;
   bool write_residuals_ = true;
   bool write_timing_ = true;
+  std::uint64_t next_event_sequence_ = 1;
+  mutable std::mutex mutex_;
 };
 
 RunManifest makeRunManifest(const IntegrityConfig& config,
