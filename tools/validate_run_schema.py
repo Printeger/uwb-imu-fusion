@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate uwb-imu-pl/v1 and v2 raw run directories without dependencies."""
+"""Validate uwb-imu-pl raw run directories without third-party dependencies."""
 
 import argparse
 import csv
@@ -33,6 +33,14 @@ def header(path):
 def boolean(value, field):
     if value not in ("0", "1", "true", "false", "True", "False"):
         fail(f"{field}: invalid boolean {value!r}")
+
+
+def fnv1a64(payload):
+    value = 1469598103934665603
+    for byte in payload:
+        value ^= byte
+        value = (value * 1099511628211) & 0xffffffffffffffff
+    return f"{value:016x}"
 
 
 def validate_monotonic(path, strict):
@@ -94,6 +102,27 @@ def validate_v2(directory, manifest):
         fail("summary.json: metrics must be an object")
 
 
+def validate_v3(directory, manifest):
+    validate_v2(directory, manifest)
+    fixed_lag = manifest.get("fixed_lag_epochs")
+    if not isinstance(fixed_lag, int) or isinstance(fixed_lag, bool):
+        fail("run_manifest.json: fixed_lag_epochs must be an integer")
+    if fixed_lag != 0 and fixed_lag < 2:
+        fail("run_manifest.json: fixed_lag_epochs must be 0 or at least 2")
+    command = manifest.get("execution_command")
+    if not isinstance(command, str) or not command.strip():
+        fail("run_manifest.json: execution_command must be non-empty")
+
+    resolved_path = directory / "resolved_config.yaml"
+    payload = resolved_path.read_bytes()
+    if fnv1a64(payload) != manifest["config_hash"].lower():
+        fail("resolved_config.yaml: content does not match config_hash")
+    match = re.search(rb"(?m)^\s*fixed_lag_epochs:\s*([0-9]+)\s*$",
+                      payload)
+    if match is None or int(match.group(1)) != fixed_lag:
+        fail("resolved_config.yaml: fixed_lag_epochs does not match manifest")
+
+
 def validate(directory):
     manifest_path = directory / "run_manifest.json"
     if not manifest_path.is_file():
@@ -101,7 +130,7 @@ def validate(directory):
     with manifest_path.open(encoding="utf-8") as stream:
         manifest = json.load(stream)
     version = manifest.get("schema_version")
-    if version not in ("uwb-imu-pl/v1", "uwb-imu-pl/v2"):
+    if version not in ("uwb-imu-pl/v1", "uwb-imu-pl/v2", "uwb-imu-pl/v3"):
         fail(f"unsupported schema_version: {version!r}")
     for field, kind in (("git_sha", str), ("config_hash", str),
                         ("seed", int), ("git_dirty", bool)):
@@ -111,7 +140,9 @@ def validate(directory):
         fail("run_manifest.json: empty git_sha")
     if not re.fullmatch(r"[0-9a-fA-F]{16}", manifest["config_hash"]):
         fail("run_manifest.json: config_hash is not 16 hexadecimal digits")
-    if version == "uwb-imu-pl/v2":
+    if version == "uwb-imu-pl/v3":
+        validate_v3(directory, manifest)
+    elif version == "uwb-imu-pl/v2":
         validate_v2(directory, manifest)
     else:
         path = directory / "integrity.csv"

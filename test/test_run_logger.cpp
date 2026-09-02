@@ -48,7 +48,7 @@ TEST(RunLogger, OptionalCsvCreationFollowsConfiguration) {
   boost::filesystem::remove_all(enabled);
 }
 
-TEST(RunLogger, V2SchemaHasExactHeadersAndStructuredSummary) {
+TEST(RunLogger, V3SchemaHasExactHeadersAndStructuredSummary) {
   const std::string directory = "/tmp/uwb_imu_pl_logger_v2";
   boost::filesystem::remove_all(directory);
   {
@@ -56,6 +56,9 @@ TEST(RunLogger, V2SchemaHasExactHeadersAndStructuredSummary) {
     uwb_imu_pl::RunManifest manifest;
     manifest.git_sha = "254f290";
     manifest.config_hash = "0123456789abcdef";
+    manifest.fixed_lag_epochs = 200;
+    manifest.execution_command =
+        "roslaunch uwb_imu_pl realtime.launch fixed_lag_epochs:=200";
     logger.writeManifest(manifest);
     uwb_imu_pl::RunSummary summary;
     summary.processed = 3;
@@ -82,6 +85,13 @@ TEST(RunLogger, V2SchemaHasExactHeadersAndStructuredSummary) {
   const std::string json((std::istreambuf_iterator<char>(summary)), {});
   EXPECT_NE(json.find("\"processed\": 3"), std::string::npos);
   EXPECT_NE(json.find("\"committed\": 2"), std::string::npos);
+  std::ifstream manifest_input(directory + "/run_manifest.json");
+  const std::string manifest_json(
+      (std::istreambuf_iterator<char>(manifest_input)), {});
+  EXPECT_NE(manifest_json.find("\"fixed_lag_epochs\": 200"),
+            std::string::npos);
+  EXPECT_NE(manifest_json.find("\"execution_command\":"),
+            std::string::npos);
   boost::filesystem::remove_all(directory);
 }
 

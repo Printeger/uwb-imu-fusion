@@ -3,6 +3,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <fstream>
 #include <iomanip>
@@ -66,6 +67,38 @@ std::string fnv1a64(const std::string& input) {
   return out.str();
 }
 
+std::uint32_t parseFixedLagEpochs(const std::string& text,
+                                  const std::string& path) {
+  if (text.empty() || !std::all_of(text.begin(), text.end(), [](char value) {
+        return std::isdigit(static_cast<unsigned char>(value)) != 0;
+      })) {
+    throw std::runtime_error(path + " must be an unsigned integer");
+  }
+  std::uint64_t value = 0;
+  try {
+    value = std::stoull(text);
+  } catch (const std::exception&) {
+    throw std::runtime_error(path + " must be an unsigned integer");
+  }
+  if (value > std::numeric_limits<std::uint32_t>::max()) {
+    throw std::runtime_error(path + " must fit in uint32");
+  }
+  if (value == 1) {
+    throw std::runtime_error(path + " must be 0 or at least 2");
+  }
+  return static_cast<std::uint32_t>(value);
+}
+
+std::string emitResolvedYaml(const YAML::Node& root) {
+  YAML::Emitter emitter;
+  emitter << root;
+  if (!emitter.good()) {
+    throw std::runtime_error("cannot serialize resolved configuration: " +
+                             emitter.GetLastError());
+  }
+  return std::string(emitter.c_str()) + "\n";
+}
+
 Eigen::Vector3d vector3(const YAML::Node& node, const std::string& path) {
   if (!node || !node.IsSequence() || node.size() != 3) {
     throw std::runtime_error(path + " must contain exactly three numbers");
@@ -78,12 +111,20 @@ Eigen::Vector3d vector3(const YAML::Node& node, const std::string& path) {
 
 }  // namespace
 
-IntegrityConfig IntegrityConfigLoader::load(const std::string& yaml_path) {
+IntegrityConfig IntegrityConfigLoader::load(
+    const std::string& yaml_path,
+    const std::optional<std::string>& fixed_lag_epochs_override) {
   IntegrityConfig cfg;
   cfg.source_path = yaml_path;
-  cfg.resolved_yaml = readAll(yaml_path);
+  YAML::Node root = YAML::Load(readAll(yaml_path));
+  if (fixed_lag_epochs_override && !fixed_lag_epochs_override->empty()) {
+    requireMap(root, "root");
+    requireMap(root["incremental"], "incremental");
+    root["incremental"]["fixed_lag_epochs"] = parseFixedLagEpochs(
+        *fixed_lag_epochs_override, "incremental.fixed_lag_epochs override");
+  }
+  cfg.resolved_yaml = emitResolvedYaml(root);
   cfg.config_hash = fnv1a64(cfg.resolved_yaml);
-  const YAML::Node root = YAML::Load(cfg.resolved_yaml);
   rejectUnknown(root, "root", {"seed", "snapshot", "incremental", "imu", "risk", "output", "realtime", "anchors"});
   cfg.seed = required<std::uint64_t>(root, "seed", "root");
 
@@ -109,14 +150,14 @@ IntegrityConfig IntegrityConfigLoader::load(const std::string& yaml_path) {
   cfg.incremental.max_time_skew_s = required<double>(incremental, "max_time_skew_s", "incremental");
   cfg.incremental.enable_method_b = required<bool>(incremental, "enable_method_b", "incremental");
   cfg.incremental.method_b_max_condition = required<double>(incremental, "method_b_max_condition", "incremental");
-  const std::uint64_t fixed_lag_epochs = required<std::uint64_t>(
-      incremental, "fixed_lag_epochs", "incremental");
-  if (fixed_lag_epochs > std::numeric_limits<std::uint32_t>::max()) {
+  if (!incremental["fixed_lag_epochs"] ||
+      !incremental["fixed_lag_epochs"].IsScalar()) {
     throw std::runtime_error(
-        "incremental.fixed_lag_epochs must fit in uint32");
+        "missing required key incremental.fixed_lag_epochs");
   }
-  cfg.incremental.fixed_lag_epochs =
-      static_cast<std::uint32_t>(fixed_lag_epochs);
+  cfg.incremental.fixed_lag_epochs = parseFixedLagEpochs(
+      incremental["fixed_lag_epochs"].Scalar(),
+      "incremental.fixed_lag_epochs");
   positive(cfg.incremental.relinearize_threshold, "incremental.relinearize_threshold");
   if (cfg.incremental.relinearize_skip <= 0) throw std::runtime_error("incremental.relinearize_skip must be > 0");
   positive(cfg.incremental.smoothness_sigma_m, "incremental.smoothness_sigma_m");
@@ -129,11 +170,6 @@ IntegrityConfig IntegrityConfigLoader::load(const std::string& yaml_path) {
     throw std::runtime_error(
         "incremental.enable_method_b=true is unsupported for online operation");
   }
-  if (cfg.incremental.fixed_lag_epochs == 1) {
-    throw std::runtime_error(
-        "incremental.fixed_lag_epochs must be 0 or at least 2");
-  }
-
   const auto imu = root["imu"];
   rejectUnknown(imu, "imu", {"accelerometer_sigma", "gyroscope_sigma", "accelerometer_bias_rw_sigma", "gyroscope_bias_rw_sigma", "gravity_mps2", "max_gap_s"});
   cfg.imu.accelerometer_sigma = required<double>(imu, "accelerometer_sigma", "imu");

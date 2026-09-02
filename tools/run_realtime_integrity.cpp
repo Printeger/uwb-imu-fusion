@@ -26,6 +26,7 @@
 #include <limits>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -79,10 +80,19 @@ double sensorLagMs(uwb_imu_pl::TimestampNs sensor_timestamp) {
   return std::isfinite(lag_ms) ? std::max(0.0, lag_ms) : 0.0;
 }
 
+std::string processCommandLine(int argc, char** argv) {
+  std::ostringstream command;
+  for (int index = 0; index < argc; ++index) {
+    if (index != 0) command << ' ';
+    command << argv[index];
+  }
+  return command.str();
+}
+
 class RealtimeNode {
  public:
   RealtimeNode(ros::NodeHandle& node, uwb_imu_pl::IntegrityConfig config,
-               std::string run_directory)
+               std::string run_directory, std::string execution_command)
       : node_(node), config_(std::move(config)) {
     for (const auto& anchor : config_.anchors) {
       anchors_.emplace(anchor.id.value(), anchor);
@@ -96,7 +106,8 @@ class RealtimeNode {
         config_.output.write_timing));
     logger_->writeResolvedConfig(config_.resolved_yaml);
     logger_->writeManifest(uwb_imu_pl::makeRunManifest(
-        config_, UWB_IMU_PL_GIT_SHA, UWB_IMU_PL_GIT_DIRTY != 0));
+        config_, UWB_IMU_PL_GIT_SHA, UWB_IMU_PL_GIT_DIRTY != 0,
+        execution_command));
 
     odometry_publisher_ = node_.advertise<nav_msgs::Odometry>(
         config_.realtime.odometry_topic, 10);
@@ -587,15 +598,28 @@ int main(int argc, char** argv) {
   ros::NodeHandle private_node("~");
   std::string config_path;
   std::string run_directory;
+  std::string fixed_lag_epochs_override;
+  std::string execution_command;
   private_node.param("config_path", config_path, std::string());
   private_node.param("run_directory", run_directory, std::string());
+  private_node.param("fixed_lag_epochs", fixed_lag_epochs_override,
+                     std::string());
+  private_node.param("execution_command", execution_command, std::string());
   if (config_path.empty()) {
     ROS_FATAL("~config_path is required");
     return 2;
   }
   try {
-    RealtimeNode realtime(node,
-        uwb_imu_pl::IntegrityConfigLoader::load(config_path), run_directory);
+    auto config = uwb_imu_pl::IntegrityConfigLoader::load(
+        config_path, fixed_lag_epochs_override);
+    if (execution_command.empty()) {
+      execution_command = processCommandLine(argc, argv);
+    }
+    ROS_INFO_STREAM("resolved fixed_lag_epochs="
+                    << config.incremental.fixed_lag_epochs
+                    << " config_hash=" << config.config_hash);
+    RealtimeNode realtime(node, std::move(config), run_directory,
+                          execution_command);
     ros::spin();
   } catch (const std::exception& error) {
     ROS_FATAL_STREAM(error.what());

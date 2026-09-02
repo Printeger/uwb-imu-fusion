@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -78,7 +79,12 @@ class IntegrityConfigLoader {
  public:
   // This loader is deliberately strict: every safety-relevant field is
   // required, unknown keys are rejected, and no random seed is implicit.
-  static IntegrityConfig load(const std::string& yaml_path);
+  // A non-empty fixed-lag override is applied before validation,
+  // serialization, and hashing. An empty optional uses the YAML value.
+  static IntegrityConfig load(
+      const std::string& yaml_path,
+      const std::optional<std::string>& fixed_lag_epochs_override =
+          std::nullopt);
 };
 
 }  // namespace uwb_imu_pl

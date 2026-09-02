@@ -49,6 +49,7 @@ class RunLogger {
 };
 
 RunManifest makeRunManifest(const IntegrityConfig& config,
-                            const std::string& git_sha, bool git_dirty);
+                            const std::string& git_sha, bool git_dirty,
+                            const std::string& execution_command = "unknown");
 
 }  // namespace uwb_imu_pl

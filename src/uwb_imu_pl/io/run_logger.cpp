@@ -120,6 +120,8 @@ void RunLogger::writeManifest(const RunManifest& m) const {
       << "  \"config_path\": " << json(m.config_path) << ",\n"
       << "  \"config_hash\": " << json(m.config_hash) << ",\n"
       << "  \"seed\": " << m.seed << ",\n"
+      << "  \"fixed_lag_epochs\": " << m.fixed_lag_epochs << ",\n"
+      << "  \"execution_command\": " << json(m.execution_command) << ",\n"
       << "  \"build_type\": " << json(m.build_type) << ",\n"
       << "  \"compiler\": " << json(m.compiler) << ",\n"
       << "  \"os\": " << json(m.os) << ",\n"
@@ -249,7 +251,8 @@ void RunLogger::writeSummary(const RunSummary& summary) const {
 }
 
 RunManifest makeRunManifest(const IntegrityConfig& config,
-                            const std::string& git_sha, bool git_dirty) {
+                            const std::string& git_sha, bool git_dirty,
+                            const std::string& execution_command) {
   RunManifest manifest;
   const auto now = std::chrono::system_clock::now();
   const std::time_t time = std::chrono::system_clock::to_time_t(now);
@@ -262,6 +265,8 @@ RunManifest makeRunManifest(const IntegrityConfig& config,
   manifest.config_hash = config.config_hash;
   manifest.resolved_config = config.resolved_yaml;
   manifest.seed = config.seed;
+  manifest.fixed_lag_epochs = config.incremental.fixed_lag_epochs;
+  manifest.execution_command = execution_command;
 #ifdef NDEBUG
   manifest.build_type = "Release";
 #else

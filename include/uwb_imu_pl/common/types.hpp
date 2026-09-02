@@ -241,7 +241,7 @@ struct IntegrityOutput {
 };
 
 struct RunManifest {
-  std::string schema_version = "uwb-imu-pl/v2";
+  std::string schema_version = "uwb-imu-pl/v3";
   std::string created_utc;
   std::string git_sha;
   bool git_dirty = false;
@@ -249,6 +249,8 @@ struct RunManifest {
   std::string config_hash;
   std::string resolved_config;
   std::uint64_t seed = 0;
+  std::uint32_t fixed_lag_epochs = 0;
+  std::string execution_command;
   std::string build_type;
   std::string compiler;
   std::string os;

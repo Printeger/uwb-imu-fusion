@@ -85,7 +85,7 @@ src/uwb-imu-fusion-pl/
 │       ├── gt_comparison.csv          #   GT 对比
 │       ├── *.png                      #   可视化图表
 │       └── report.md                  #   Markdown 综合报告
-├── test/                              # GoogleTest 单元测试（当前 60 个独立 cases）
+├── test/                              # GoogleTest 单元测试 + ROS 可视化测试
 └── doc/                               # 调研文档 + 设计文档
     ├── 00-overview.md                 # 三算法对比总览
     ├── 01-awesome-uwb-localization.md
@@ -117,7 +117,8 @@ source devel/setup.bash
 
 ```bash
 catkin test uwb_imu_pl
-# 当前: 60 个独立 GoogleTest cases, 0 errors, 0 failures
+catkin_test_results --verbose
+# 验收要求: 0 errors, 0 failures, 0 skipped
 ```
 
 ## 6. 配置文件说明
@@ -361,14 +362,55 @@ roslaunch uwb_imu_pl realtime_integrity_sim.launch \
 sequence 处理；一个 LinkTrack frame 是一个 UWB group。异步单 range adapter
 必须按显式 `epoch_bin_s/max_time_skew_s` 分组后再创建 batch。
 
-`incremental.fixed_lag_epochs` 取 `0` 时保持全历史 iSAM2；取 `N>=2` 时启用
-固定窗，保留含当前历元在内最多 N 组 Pose/Velocity/Bias。实现以逻辑 epoch
-作为 GTSAM timestamp（lag 为 `N-1`），真实传感器时间仍保存在导航状态中。
-固定窗的 `IntegrityStatus`/diagnostics 会报告 retained epochs、边缘化次数以及
-活动 value/factor 数；全图残差在此模式下仅表示 active fixed-lag graph residual。
-长时验收可复制研究配置、将该字段改为 `400`，再通过
-`realtime_integrity_sim.launch config_path:=/path/to/fixed_lag_400.yaml` 运行；
-仓库内示例配置继续默认关闭固定窗。
+仓库只保留一份研究配置
+`config/realtime_uwb_imu_pl_research.yaml`，当前基础值为
+`incremental.fixed_lag_epochs: 200`。运行时无需修改或复制 YAML：
+
+```bash
+# full-history iSAM2
+roslaunch uwb_imu_pl realtime.launch fixed_lag_epochs:=0
+
+# fixed-lag，保留含当前历元在内最多 200 组 Pose/Velocity/Bias
+roslaunch uwb_imu_pl realtime.launch fixed_lag_epochs:=200
+
+# 完整仿真使用相同覆盖入口
+roslaunch uwb_imu_pl realtime_integrity_sim.launch \
+  fixed_lag_epochs:=0 run_directory:=results/full_history_smoke
+roslaunch uwb_imu_pl realtime_integrity_sim.launch \
+  fixed_lag_epochs:=200 run_directory:=results/fixed_lag_smoke
+```
+
+省略 `fixed_lag_epochs` 时使用基础 YAML 的值。`0` 表示 full-history，
+`N>=2` 表示 fixed-lag；`1`、负数、非整数和超过 `uint32` 的值都会在节点启动
+阶段被拒绝。launch 覆盖发生在严格校验、resolved YAML 序列化和 config hash
+计算之前，因此运行目录中的 `resolved_config.yaml` 与 `config_hash` 对应的是
+最终实际生效配置，而不是原始 YAML。
+
+固定窗实现以逻辑 epoch 作为 GTSAM timestamp（lag 为 `N-1`），真实传感器
+时间仍保存在导航状态中。固定窗的 `IntegrityStatus`/diagnostics 会报告
+retained epochs、边缘化次数以及活动 value/factor 数；全图残差在此模式下仅
+表示 active fixed-lag graph residual。
+
+每个实时正式运行目录使用 `uwb-imu-pl/v3` manifest，并保存
+`resolved_config.yaml`、最终 `fixed_lag_epochs`、覆盖后 `config_hash`、seed、
+Git SHA/dirty、构建类型和可复现的实际执行命令。正式运行应显式设置持久化的
+`run_directory`，不要把唯一结果留在 `/tmp`。可用以下命令校验：
+
+```bash
+python3 tools/validate_run_schema.py results/full_history_smoke
+```
+
+从已提交且 clean 的候选版本执行完整阶段一验收：
+
+```bash
+tools/run_stage1_acceptance.sh
+```
+
+脚本会独立 clean 配置、构建并测试 Debug/Release，随后运行 full-history 与
+fixed-lag 最小 ROS 仿真。正式结果保存在忽略 Git 的
+`results/stage1_baseline_<sha>/`，其中只保留构建/测试摘要、两种模式的最小运行
+数据、manifest、resolved config、timing/summary、阶段验收摘要和
+`checksums.sha256`；执行结束后再次要求工作区保持 clean。
 
 正式输出只覆盖 `FORMAL_LOCAL_CURRENT_FAULT_ONLY`。detector 失败会隔离整个
 当前 group，不实现 TDoA、多同时故障、FDE、persistent-fault PL、fixed-lag

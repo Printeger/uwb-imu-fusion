@@ -173,7 +173,7 @@ target_link_libraries(uwb_imu_pl_node
 add_dependencies(uwb_imu_pl_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 execute_process(
-  COMMAND git rev-parse --short=12 HEAD
+  COMMAND git rev-parse HEAD
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   OUTPUT_VARIABLE UWB_IMU_PL_GIT_SHA
   OUTPUT_STRIP_TRAILING_WHITESPACE

@@ -1,8 +1,15 @@
 <launch>
   <arg name="config_path"
        default="$(find uwb_imu_pl)/config/realtime_uwb_imu_pl_research.yaml"/>
+  <arg name="fixed_lag_epochs" default=""/>
+  <arg name="run_directory" default=""/>
+  <arg name="execution_command"
+       default="roslaunch uwb_imu_pl realtime.launch config_path:=$(arg config_path) fixed_lag_epochs:=$(arg fixed_lag_epochs) run_directory:=$(arg run_directory)"/>
   <node pkg="uwb_imu_pl" type="uwb_imu_pl_realtime_node"
         name="uwb_imu_pl_realtime" output="screen">
     <param name="config_path" value="$(arg config_path)"/>
+    <param name="fixed_lag_epochs" type="str" value="$(arg fixed_lag_epochs)"/>
+    <param name="run_directory" value="$(arg run_directory)"/>
+    <param name="execution_command" value="$(arg execution_command)"/>
   </node>
 </launch>
