@@ -42,12 +42,17 @@ run_build_and_tests() {
   local summary_path="${artifact_root}/build/${lower_type}_summary.txt"
 
   cd "${workspace_root}"
-  catkin clean uwb_imu_pl -y >"${detail_log}" 2>&1
-  catkin config --cmake-args "-DCMAKE_BUILD_TYPE=${build_type}" \
-    >>"${detail_log}" 2>&1
-  catkin build uwb_imu_pl --no-status >>"${detail_log}" 2>&1
-  catkin run_tests uwb_imu_pl --no-status >>"${detail_log}" 2>&1
-  catkin_test_results --verbose >"${result_log}" 2>&1
+  if ! catkin clean uwb_imu_pl -y >"${detail_log}" 2>&1 ||
+     ! catkin config --cmake-args "-DCMAKE_BUILD_TYPE=${build_type}" \
+       >>"${detail_log}" 2>&1 ||
+     ! catkin build uwb_imu_pl --no-status >>"${detail_log}" 2>&1 ||
+     ! catkin run_tests uwb_imu_pl --no-status >>"${detail_log}" 2>&1 ||
+     ! catkin_test_results --verbose >"${result_log}" 2>&1; then
+    cp "${detail_log}" "${artifact_root}/build/${lower_type}_failure.log"
+    printf 'stage=1\nstatus=FAIL\nbuild_type=%s\ngit_sha=%s\n' \
+      "${build_type}" "${git_sha}" >"${summary_path}"
+    return 1
+  fi
 
   {
     printf 'stage=1\nstatus=PASS\nbuild_type=%s\n' "${build_type}"
