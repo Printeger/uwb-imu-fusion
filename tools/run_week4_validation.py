@@ -471,6 +471,8 @@ def main() -> int:
             result = json.loads(runner.manifest_path.read_text())
         print(json.dumps({"root": str(runner.root), "result": result},
                          sort_keys=True))
+        if args.action in ("prepare", "status"):
+            return 0
         status = result.get("status", result.get("final_gate_verdict", INVALID))
         return 0 if status == PASS else (1 if status == FAIL else 2)
     except (InvalidArtifact, OSError, json.JSONDecodeError) as error:
