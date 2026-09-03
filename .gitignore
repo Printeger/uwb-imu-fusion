@@ -9,10 +9,12 @@ build_isolated/
 devel_isolated/
 
 # Logs & generated analysis (debug log system)
-logs/
-results/
-*.png
-report.md
+# Keep these rules repository-rooted so report assets in nested directories
+# remain visible to Git.
+/logs/
+/results/
+/*.png
+/report.md
 
 # LaTeX build artifacts
 *.aux
@@ -24,12 +26,21 @@ report.md
 *.fdb_latexmk
 *.fls
 *.synctex.gz
+*.bbl
+*.bcf
+*.blg
+*.lof
+*.lot
+*.run.xml
+*.vrb
 
 # Generated trajectory / calibration outputs
-data/
+/data/
 
 # Python
 __pycache__/
+.pytest_cache/
+.coverage
 *.pyc
 *.pyo
 

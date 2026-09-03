@@ -1,0 +1,130 @@
+schema_version: uwb-imu-pl/advisor-report-protocol/v1
+protocol_name: realtime_full_history_fixed_lag_advisor_report
+base_config: config/realtime_uwb_imu_pl_research.yaml
+artifact_template: results/advisor_report_{git12}_{protocol_hash12}
+report:
+  title: Real-Time UWB--IMU Factor-Graph Fusion with Integrity Monitoring
+  subtitle: Architecture, Validation, and Full-History vs. Fixed-Lag Analysis
+  author: Wang Junzhe
+  bootstrap_seed: 20263701
+  bootstrap_trials: 10000
+  warmup_epochs: 200
+
+nominal:
+  histories: [0, 200]
+  trajectories: [straight, circle, figure_eight]
+  seeds: {start: 20263301, count: 20}
+  epochs_per_sequence: 2000
+  paired_relative_ate_ci95_upper_max: 0.05
+
+window_ablation:
+  histories: [20, 50, 100, 200, 0]
+  trajectories: [straight, circle, figure_eight]
+  seeds: {start: 20263401, count: 5}
+  epochs_per_sequence: 2000
+
+roc:
+  histories: [0, 200]
+  trajectories: [straight, circle, figure_eight]
+  epochs_per_sequence: 600
+  fault_onset_epoch: 200
+  calibration_seeds: {start: 20263001, count: 100}
+  nominal_evaluation_seeds: {start: 20263101, count: 100}
+  fault_evaluation_seeds: {start: 20263201, count: 40}
+  fault:
+    anchor_ids: [1, 2, 3, 4, 5, 6, 7, 8]
+    magnitudes_m: [0.1, 0.25, 0.5, 1.0, 2.0]
+    assignment: balanced_by_seed_offset
+  operating_p_fa: [1.0e-2, 1.0e-3, 1.0e-4]
+  theory_only_p_fa: 1.0e-5
+  familywise_alpha: 0.05
+  noninferiority:
+    detector: conditional
+    operating_p_fa: 1.0e-3
+    minimum_fault_magnitude_m: 0.5
+    margin: -0.05
+
+performance:
+  histories: [0, 200]
+  trajectory: figure_eight
+  seed: 20263501
+  repetitions: 3
+  epochs_per_repetition: 12000
+  warmup_epochs: 100
+  cpu_affinity: [0, 2, 4, 6]
+  numerical_library_threads: 1
+  reference_lines_ms: {mean: 50.0, p99: 100.0}
+
+representative_fault:
+  histories: [0, 200]
+  trajectory: figure_eight
+  seed: 20263601
+  epochs: 600
+  onset_epoch: 200
+  anchor_id: 1
+  magnitude_m: 1.0
+
+# The focused-pl profile executes the three PL suites below at their complete
+# preregistered sizes and keeps the legacy comparison suites at SMOKE size.
+focused_pl:
+  baseline_profile: smoke
+  pl_profile: complete
+
+isolated_pl:
+  histories: [0, 200]
+  trajectories: [straight, circle, figure_eight]
+  seeds: {start: 20264001, count: 640}
+  epochs_per_sequence: 312
+  output_epoch_range: [296, 304]
+  fault_onset_epoch: 300
+  fault_duration_epochs: 1
+  fault:
+    anchor_ids: [1, 2, 3, 4, 5, 6, 7, 8]
+    magnitudes_m: [0.1, 0.25, 0.4, 0.5, 0.6, 0.75, 1.0, 2.0]
+    seeds_per_anchor_magnitude_cell: 10
+    assignment: balanced_by_seed_offset
+  near_boundary_ratio: [0.8, 1.2]
+  clopper_pearson_confidence: 0.95
+
+persistent_fault:
+  histories: [0, 200]
+  trajectories: [straight, circle, figure_eight]
+  seeds: {start: 20265001, count: 80}
+  epochs_per_sequence: 600
+  output_epoch_range: [290, 599]
+  fault_onset_epoch: 300
+  fault_duration_epochs: 0
+  fault:
+    anchor_ids: [1, 2, 3, 4, 5, 6, 7, 8]
+    magnitude_m: 1.0
+    seeds_per_anchor: 10
+    assignment: balanced_by_seed_offset
+  representative:
+    trajectory: figure_eight
+    seed: 20265001
+    anchor_id: 1
+
+representative_trajectory:
+  histories: [0, 200]
+  trajectory: figure_eight
+  seed: 20266001
+  epochs_per_sequence: 1000
+
+reused_week4:
+  acceptance_glob: results/week4_*/acceptance_summary.json
+  require_checksum_verification: true
+  gates: [noncentral, imu_monte_carlo, method_ab_shadow, ros_topic_tests, performance]
+  unfinished_gates: [snapshot_sweep, roc, history_experiments]
+
+claims:
+  simulation_only: true
+  estimator_backends: [full_history_incremental_isam2, incremental_fixed_lag_smoother]
+  formal_scope: current_group_single_anchor_fault
+  excluded:
+    - real_data_validation
+    - certified_persistent_fault_protection_level
+    - fault_detection_and_exclusion
+    - multiple_simultaneous_faults
+    - tdoa
+    - rare_event_certification
+    - nonlinear_remainder_certification

@@ -225,6 +225,10 @@ target_compile_definitions(realtime_performance_benchmark PRIVATE
 target_link_libraries(realtime_performance_benchmark
   ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
 
+add_executable(advisor_paired_benchmark apps/advisor_paired_benchmark.cpp)
+target_link_libraries(advisor_paired_benchmark
+  ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
+
 # =============================================
 # Simulator — quadrotor dynamics + SO3 control
 # =============================================
@@ -304,4 +308,9 @@ if(CATKIN_ENABLE_TESTING)
     COMMAND ${CMAKE_COMMAND} -E env
       PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools
       python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_week4_tools.py)
+
+  add_test(NAME test_advisor_report
+    COMMAND ${CMAKE_COMMAND} -E env
+      PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools
+      python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_advisor_report.py)
 endif()
