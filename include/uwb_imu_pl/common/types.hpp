@@ -243,6 +243,7 @@ struct CandidateAuditRecord {
   double vpl_m = std::numeric_limits<double>::infinity();
   bool selected = false;
   std::string reason;
+  double wall_ms = 0.0;
 };
 
 struct FactorLedgerAuditRecord {
@@ -259,6 +260,14 @@ struct FactorLedgerAuditRecord {
   std::string noise_model_id;
   std::string model_id;
   std::string health;
+  std::string source_ids;
+  std::string measurement_ids;
+  std::string fault_units;
+  std::uint64_t commit_graph_version = 0;
+  std::uint64_t removed_graph_version = 0;
+  std::uint64_t replacement_group_id = 0;
+  std::uint64_t replaces_group_id = 0;
+  std::size_t recovery_epoch = 0;
 };
 
 struct HealthAuditRecord {
@@ -317,6 +326,13 @@ struct IntegrityOutput {
   std::uint32_t backend_updates = 0;
   bool stale_state = false;
   bool controlled_reinitialization_required = false;
+  std::vector<std::uint64_t> historical_groups_removed;
+  std::vector<std::uint64_t> historical_groups_added;
+  std::uint64_t recovery_epoch_begin = 0;
+  std::uint64_t recovery_epoch_end = 0;
+  std::uint64_t reinitialization_request_id = 0;
+  std::string reinitialization_phase = "RUNNING";
+  std::string reinitialization_reason;
   std::vector<ResidualRecord> residual_records;
   std::vector<StageTiming> stage_timings;
   std::vector<HypothesisAuditRecord> hypothesis_audit;

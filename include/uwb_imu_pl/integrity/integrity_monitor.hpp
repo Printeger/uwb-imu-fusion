@@ -3,6 +3,7 @@
 #include "uwb_imu_pl/common/types.hpp"
 #include "uwb_imu_pl/estimation/snapshot_estimator.hpp"
 #include "uwb_imu_pl/integrity/health_manager.hpp"
+#include "uwb_imu_pl/estimation/reinitialization.hpp"
 
 #include <memory>
 
@@ -69,6 +70,16 @@ class RealtimeIntegrityPipeline {
                             IntegrityMonitor monitor);
   void ingestImu(const ImuMeasurement& measurement);
   IntegrityOutput processUwbBatch(const UwbBatch& batch);
+  const ReinitializationDirective& reinitializationDirective() const {
+    return reinitializer_.directive();
+  }
+  std::optional<NavigationState> pendingReinitializationSeed() const {
+    return pending_reinitialization_seed_;
+  }
+  Eigen::Matrix<double, 15, 1> reinitializationPriorSigmas(
+      const Eigen::Matrix<double, 15, 1>& base) const;
+  void completeReinitialization(IncrementalUwbImuEstimator* estimator,
+                                const ImuMeasurement& trusted_boundary);
 
  private:
   IncrementalUwbImuEstimator* estimator_;
@@ -76,6 +87,9 @@ class RealtimeIntegrityPipeline {
   HealthManager health_;
   std::uint32_t consecutive_bridge_epochs_ = 0;
   std::optional<TimestampNs> bridge_start_timestamp_;
+  ControlledReinitializer reinitializer_;
+  std::optional<NavigationState> pending_reinitialization_seed_;
+  bool awaiting_first_clean_uwb_ = false;
 };
 
 }  // namespace uwb_imu_pl

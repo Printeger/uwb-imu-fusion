@@ -55,7 +55,7 @@ struct UwbFaultModelConfig {
   bool enabled = true;
   bool epoch_single_anchor_bias = true;
   bool persistent_anchor_bias = true;
-  bool ramp_bias = false;
+  bool ramp_bias = true;
   double prior_probability_bound = 1e-4;
   double p_md = 1e-3;
 };

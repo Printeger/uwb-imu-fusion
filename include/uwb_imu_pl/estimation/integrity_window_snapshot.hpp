@@ -44,6 +44,16 @@ struct WindowCapabilities {
   bool history_provenance_valid = false;
   bool fixed_lag_maturity_valid = false;
   bool no_duplicate_rows = false;
+  bool every_active_factor_accounted_once = false;
+  bool frozen_slot_identity_valid = false;
+};
+
+struct FactorSlotAccounting {
+  std::size_t slot = 0;
+  std::optional<FactorGroupId> group_id;
+  bool explicit_window_block = false;
+  bool boundary_input = false;
+  bool pointer_identity_valid = false;
 };
 
 struct IntegrityWindowRequest {
@@ -58,6 +68,9 @@ struct LinearizedIntegrityWindow {
   LinearizationVersion version;
   std::vector<StateLayoutEntry> state_layout;
   std::vector<LinearizedFactorBlock> blocks;
+  std::vector<FactorSlotAccounting> slot_accounting;
+  std::size_t detector_first_epoch = 0;
+  std::size_t recovery_first_epoch = 0;
   Eigen::MatrixXd H;
   Eigen::VectorXd z;
   int rank = 0;

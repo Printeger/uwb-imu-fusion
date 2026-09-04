@@ -43,13 +43,26 @@ PendingFactorGroup BridgeFactory::makeGeneric(
   group.kind = FactorKind::KinematicBridge;
   group.sensor = SensorType::Bridge;
   group.keys = {x(tx.previous_epoch), v(tx.previous_epoch),
-                x(tx.proposed_epoch), v(tx.proposed_epoch),
-                b(tx.previous_epoch), b(tx.proposed_epoch)};
+                x(tx.proposed_epoch), v(tx.proposed_epoch)};
   group.noise_model_id = "generic_bridge_optimization_covariance_v1";
   group.model_id = config.model;
   group.factors.add(boost::make_shared<KinematicPoseVelocityBridgeFactor>(
       x(tx.previous_epoch), v(tx.previous_epoch), x(tx.proposed_epoch),
       v(tx.proposed_epoch), dt, covariance));
+  return group;
+}
+
+PendingFactorGroup BridgeFactory::makeBiasContinuity(
+    const EpochTransaction& tx, const GenericBridgeSpec& config) const {
+  positive(config.optimization_sigma_bias_accel, "accelerometer bias sigma");
+  positive(config.optimization_sigma_bias_gyro, "gyroscope bias sigma");
+  PendingFactorGroup group;
+  group.id = tx.generic_bias_continuity_group.id;
+  group.kind = FactorKind::BiasContinuity;
+  group.sensor = SensorType::Bridge;
+  group.keys = {b(tx.previous_epoch), b(tx.proposed_epoch)};
+  group.noise_model_id = "generic_bridge_bias_continuity_covariance_v1";
+  group.model_id = "constant_bias_continuity";
   Eigen::Matrix<double, 6, 1> bias_sigmas;
   bias_sigmas << Eigen::Vector3d::Constant(config.optimization_sigma_bias_accel),
       Eigen::Vector3d::Constant(config.optimization_sigma_bias_gyro);

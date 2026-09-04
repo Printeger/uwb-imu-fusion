@@ -17,7 +17,9 @@ struct FactorLedgerEntry {
   FactorKind kind = FactorKind::Unknown;
   std::vector<gtsam::Key> keys;
   std::vector<MeasurementId> source_measurements;
+  std::vector<std::string> source_ids;
   std::vector<FaultUnitId> associated_fault_units;
+  std::vector<std::string> fault_units;
   std::size_t epoch_begin = 0;
   std::size_t epoch_end = 0;
   TimestampNs time_begin;
@@ -28,6 +30,10 @@ struct FactorLedgerEntry {
   std::string noise_model_id;
   std::string model_id;
   LinearizationVersion commit_version;
+  std::optional<LinearizationVersion> removed_version;
+  std::optional<FactorGroupId> replacement_group;
+  std::optional<FactorGroupId> replaces_group;
+  std::size_t recovery_epoch = 0;
   gtsam::NonlinearFactor::shared_ptr factor;
 };
 
@@ -38,15 +44,26 @@ class FactorLedger {
                            TimestampNs timestamp,
                            const LinearizationVersion& version);
   void recordPending(const EpochTransaction& transaction);
+  void recordSelected(const EpochTransaction& transaction,
+                      const std::vector<FactorGroupId>& selected_groups);
   void activate(FactorGroupId group, const std::vector<std::size_t>& slots,
                 const LinearizationVersion& version);
   void transition(FactorGroupId group, FactorLifecycle lifecycle);
+  void setHealth(FactorGroupId group, HealthState health);
+  void transition(FactorGroupId group, FactorLifecycle lifecycle,
+                  const LinearizationVersion& removed_version,
+                  std::optional<FactorGroupId> replacement = std::nullopt);
+  void syncBoundaryFactors(const gtsam::NonlinearFactorGraph& active_graph,
+                           const std::vector<std::size_t>& boundary_slots,
+                           TimestampNs timestamp, std::size_t epoch,
+                           const LinearizationVersion& version);
   void markSlotsAbsent(const gtsam::NonlinearFactorGraph& active_graph,
                        std::size_t oldest_retained_epoch);
   std::vector<FactorLedgerEntry> entries() const;
   std::vector<FactorLedgerEntry> activeEntries(std::size_t epoch_begin,
                                                 std::size_t epoch_end) const;
   std::vector<std::size_t> activeSlots(FactorGroupId group) const;
+  std::vector<FactorLedgerEntry> groupEntries(FactorGroupId group) const;
   bool hasCompleteActiveProvenance() const;
   bool hasCompleteActiveProvenance(
       const gtsam::NonlinearFactorGraph& active_graph) const;

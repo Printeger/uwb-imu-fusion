@@ -24,6 +24,9 @@ class BridgeFactory {
  public:
   PendingFactorGroup makeGeneric(const EpochTransaction& transaction,
                                  const GenericBridgeSpec& config) const;
+  PendingFactorGroup makeBiasContinuity(
+      const EpochTransaction& transaction,
+      const GenericBridgeSpec& config) const;
   BridgeUncertainty uncertainty(const EpochTransaction& transaction,
                                 const GenericBridgeSpec& config) const;
   Eigen::Vector3d propagateBoxMargin(

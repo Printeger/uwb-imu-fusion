@@ -42,6 +42,7 @@ struct CandidateEvaluation {
   bool covers_plausible_set = false;
   bool valid = false;
   bool selected = false;
+  double wall_ms = 0.0;
   std::string reason;
 };
 

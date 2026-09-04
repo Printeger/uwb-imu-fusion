@@ -162,21 +162,29 @@ gtsam::Vector KinematicPoseVelocityBridgeFactor::evaluateError(
     const gtsam::Pose3& p1, const gtsam::Vector3& v1,
     boost::optional<gtsam::Matrix&> h1, boost::optional<gtsam::Matrix&> h2,
     boost::optional<gtsam::Matrix&> h3, boost::optional<gtsam::Matrix&> h4) const {
-  const auto f = [this](const gtsam::Pose3& a, const gtsam::Vector3& b,
-                        const gtsam::Pose3& c, const gtsam::Vector3& d) {
-    return residual(a, b, c, d);
-  };
-  // The numerical derivatives are an implementation oracle around the exact
-  // residual definition. This avoids silently mixing Pose3 local translation
-  // coordinates with the world-frame position residual.
-  if (h1) *h1 = gtsam::numericalDerivative41<gtsam::Vector9, gtsam::Pose3,
-      gtsam::Vector3, gtsam::Pose3, gtsam::Vector3>(f, p0, v0, p1, v1);
-  if (h2) *h2 = gtsam::numericalDerivative42<gtsam::Vector9, gtsam::Pose3,
-      gtsam::Vector3, gtsam::Pose3, gtsam::Vector3>(f, p0, v0, p1, v1);
-  if (h3) *h3 = gtsam::numericalDerivative43<gtsam::Vector9, gtsam::Pose3,
-      gtsam::Vector3, gtsam::Pose3, gtsam::Vector3>(f, p0, v0, p1, v1);
-  if (h4) *h4 = gtsam::numericalDerivative44<gtsam::Vector9, gtsam::Pose3,
-      gtsam::Vector3, gtsam::Pose3, gtsam::Vector3>(f, p0, v0, p1, v1);
+  gtsam::Matrix33 h_between_0, h_between_1, h_log;
+  const gtsam::Rot3 relative = p0.rotation().between(
+      p1.rotation(), h_between_0, h_between_1);
+  (void)gtsam::Rot3::Logmap(relative, h_log);
+  if (h1) {
+    *h1 = gtsam::Matrix::Zero(9, 6);
+    h1->block<3, 3>(0, 0) = h_log * h_between_0;
+    h1->block<3, 3>(3, 3) = -p0.rotation().matrix();
+  }
+  if (h2) {
+    *h2 = gtsam::Matrix::Zero(9, 3);
+    h2->block<3, 3>(3, 0) = -dt_seconds_ * gtsam::Matrix3::Identity();
+    h2->block<3, 3>(6, 0) = -gtsam::Matrix3::Identity();
+  }
+  if (h3) {
+    *h3 = gtsam::Matrix::Zero(9, 6);
+    h3->block<3, 3>(0, 0) = h_log * h_between_1;
+    h3->block<3, 3>(3, 3) = p1.rotation().matrix();
+  }
+  if (h4) {
+    *h4 = gtsam::Matrix::Zero(9, 3);
+    h4->block<3, 3>(6, 0) = gtsam::Matrix3::Identity();
+  }
   return residual(p0, v0, p1, v1);
 }
 

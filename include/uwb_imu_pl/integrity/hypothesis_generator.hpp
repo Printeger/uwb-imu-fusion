@@ -16,12 +16,17 @@ struct HypothesisGeneratorConfig {
   double total_hmi_allocation = 9e-6;
   bool include_uwb_accel_combinations = true;
   bool include_uwb_gyro_combinations = true;
+  bool include_epoch_independent_uwb = true;
+  bool include_persistent_uwb = true;
+  bool include_ramp_uwb = true;
 };
 
 struct GeneratedFaultModelSet {
   std::vector<FaultUnit> units;
+  std::vector<FaultModeBasis> modes;
   std::vector<FaultHypothesisV2> hypotheses;
   std::vector<ExclusionAction> actions;
+  std::vector<ExclusionAction> single_mode_actions;
 };
 
 // Generates only the initial V2 claim: physical single-anchor UWB faults,
@@ -36,6 +41,12 @@ class HypothesisGenerator {
       const EpochTransaction& transaction,
       const ImuFaultSubspaces& imu_subspaces,
       const LinearizedFactorBlock& generic_bridge_block) const;
+
+  std::vector<ExclusionAction> actionsForPlausibleSet(
+      const LinearizedIntegrityWindow& window,
+      const EpochTransaction& transaction,
+      const GeneratedFaultModelSet& models,
+      const std::vector<FaultModeEvidence>& evidence) const;
 
  private:
   HypothesisGeneratorConfig config_;

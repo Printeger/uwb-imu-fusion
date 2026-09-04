@@ -8,9 +8,20 @@ namespace uwb_imu_pl {
 namespace {
 
 bool covers(const ExclusionAction& action, const FaultHypothesisV2& hypothesis) {
-  for (const auto unit : hypothesis.units) {
-    if (std::find(action.covered_units.begin(), action.covered_units.end(), unit) ==
-        action.covered_units.end()) return false;
+  if (!hypothesis.modes.empty()) {
+    for (const auto mode : hypothesis.modes) {
+      if (std::find(action.covered_modes.begin(), action.covered_modes.end(), mode) ==
+          action.covered_modes.end()) return false;
+    }
+  } else {
+    for (const auto unit : hypothesis.units) {
+      if (std::find(action.covered_units.begin(), action.covered_units.end(), unit) ==
+          action.covered_units.end()) return false;
+    }
+  }
+  for (const auto group : hypothesis.affected_groups) {
+    if (std::find(action.groups_to_remove.begin(), action.groups_to_remove.end(), group) ==
+        action.groups_to_remove.end()) return false;
   }
   return true;
 }

@@ -37,3 +37,10 @@ bool history_provenance_valid
 uint32 backend_updates
 bool stale_state
 bool controlled_reinitialization_required
+uint64[] historical_groups_removed
+uint64[] historical_groups_added
+uint64 recovery_epoch_begin
+uint64 recovery_epoch_end
+uint64 reinitialization_request_id
+string reinitialization_phase
+string reinitialization_reason

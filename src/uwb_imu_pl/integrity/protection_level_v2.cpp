@@ -43,6 +43,20 @@ ProtectionLevelV2Result ProtectionLevelV2::compute(
     std::vector<FaultHypothesisV2>* hypotheses,
     const RiskBudgetV2& risk,
     const Eigen::Vector3d& bridge_margin) const {
+  return computeStreaming(
+      window, candidate, detector, hypotheses,
+      [](const FaultHypothesisV2& hypothesis) { return hypothesis.A; },
+      risk, bridge_margin);
+}
+
+ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
+    const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate,
+    const DetectorResultV2& detector,
+    std::vector<FaultHypothesisV2>* hypotheses,
+    const FaultMapProvider& fault_map_provider,
+    const RiskBudgetV2& risk,
+    const Eigen::Vector3d& bridge_margin) const {
   ProtectionLevelV2Result result;
   result.bridge_component_m = bridge_margin.cwiseAbs();
   if (!hypotheses || !candidate.valid || !detector.numerically_valid ||
@@ -79,19 +93,21 @@ ProtectionLevelV2Result ProtectionLevelV2::compute(
   const Eigen::MatrixXd& h = candidate.retained_jacobian;
   const Eigen::MatrixXd gain = candidate.covariance * h.transpose();
   for (auto& hypothesis : *hypotheses) {
-    if (hypothesis.A.rows() != h.rows() || hypothesis.A.cols() == 0) {
+    const Eigen::MatrixXd fault_map = fault_map_provider(hypothesis);
+    if (fault_map.rows() != h.rows() || fault_map.cols() == 0 ||
+        !fault_map.allFinite()) {
       hypothesis.monitored = false;
       hypothesis.monitorability.reason = "post-FDE fault map row mismatch";
       result.reason = "remaining hypothesis cannot be mapped post-FDE";
       return result;
     }
-    const Eigen::MatrixXd projected = hypothesis.A - h * gain * hypothesis.A;
+    const Eigen::MatrixXd projected = fault_map - h * gain * fault_map;
     const Eigen::MatrixXd gram = projected.transpose() * projected;
     Eigen::JacobiSVD<Eigen::MatrixXd> svd(gram);
     const auto singular = svd.singularValues();
     const double largest = singular.size() ? singular(0) : 0.0;
     const double gate = 1e-10 * std::max(1.0, largest);
-    hypothesis.monitorability.parameter_dimension = hypothesis.A.cols();
+    hypothesis.monitorability.parameter_dimension = fault_map.cols();
     hypothesis.monitorability.rank =
         static_cast<int>((singular.array() > gate).count());
     const double smallest = hypothesis.monitorability.rank > 0
@@ -101,7 +117,7 @@ ProtectionLevelV2Result ProtectionLevelV2::compute(
     hypothesis.monitorability.condition_number = smallest > 0.0
         ? largest / smallest : std::numeric_limits<double>::infinity();
     hypothesis.monitorability.monitorable =
-        hypothesis.monitorability.rank == hypothesis.A.cols();
+        hypothesis.monitorability.rank == fault_map.cols();
     hypothesis.monitored = hypothesis.monitorability.monitorable;
     if (!hypothesis.monitored) {
       result.reason = "remaining post-FDE fault is unmonitorable";
@@ -113,7 +129,7 @@ ProtectionLevelV2Result ProtectionLevelV2::compute(
       return result;
     }
     const Eigen::MatrixXd protected_fault =
-        window.protected_state_map * gain * hypothesis.A;
+        window.protected_state_map * gain * fault_map;
     Eigen::Vector3d slopes;
     for (int axis = 0; axis < 3; ++axis) {
       const Eigen::VectorXd response = protected_fault.row(axis).transpose();

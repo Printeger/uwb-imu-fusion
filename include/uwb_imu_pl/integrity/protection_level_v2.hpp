@@ -2,6 +2,8 @@
 
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
 
+#include <functional>
+
 namespace uwb_imu_pl {
 
 struct ProtectionLevelV2Result {
@@ -23,11 +25,25 @@ struct ProtectionLevelV2Result {
 
 class ProtectionLevelV2 {
  public:
+  using FaultMapProvider = std::function<Eigen::MatrixXd(
+      const FaultHypothesisV2&)>;
+
   ProtectionLevelV2Result compute(
       const LinearizedIntegrityWindow& window,
       const CandidateEvaluation& candidate,
       const DetectorResultV2& detector,
       std::vector<FaultHypothesisV2>* remaining_hypotheses,
+      const RiskBudgetV2& risk,
+      const Eigen::Vector3d& bridge_margin_m = Eigen::Vector3d::Zero()) const;
+
+  // Compact-mode path: the provider assembles one hypothesis map at a time
+  // from unique preprojected modes, so combinations never retain dense A.
+  ProtectionLevelV2Result computeStreaming(
+      const LinearizedIntegrityWindow& window,
+      const CandidateEvaluation& candidate,
+      const DetectorResultV2& detector,
+      std::vector<FaultHypothesisV2>* remaining_hypotheses,
+      const FaultMapProvider& fault_map_provider,
       const RiskBudgetV2& risk,
       const Eigen::Vector3d& bridge_margin_m = Eigen::Vector3d::Zero()) const;
 

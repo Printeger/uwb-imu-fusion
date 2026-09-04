@@ -54,6 +54,23 @@ gtsam::imuBias::ConstantBias toGtsamBias(const NavigationState& state) {
   return {state.accel_bias_mps2, state.gyro_bias_radps};
 }
 
+NavigationState stateFromValues(const gtsam::Values& values,
+                                std::size_t epoch,
+                                TimestampNs timestamp) {
+  const auto pose = values.at<gtsam::Pose3>(poseKey(epoch));
+  const auto velocity = values.at<gtsam::Vector3>(velocityKey(epoch));
+  const auto bias = values.at<gtsam::imuBias::ConstantBias>(biasKey(epoch));
+  NavigationState state;
+  state.id = StateId(epoch);
+  state.timestamp = timestamp;
+  state.position_world_m = pose.translation();
+  state.q_world_body = Eigen::Quaterniond(pose.rotation().matrix());
+  state.velocity_world_mps = velocity;
+  state.accel_bias_mps2 = bias.accelerometer();
+  state.gyro_bias_radps = bias.gyroscope();
+  return state;
+}
+
 Eigen::MatrixXd whitener(const Eigen::MatrixXd& covariance) {
   Eigen::LLT<Eigen::MatrixXd> llt(covariance);
   if (llt.info() != Eigen::Success) throw std::runtime_error("whitening failed");
@@ -95,6 +112,7 @@ gtsam::GaussianBayesNet currentCliqueClosure(
 }
 
 gtsam::Values transactionValues(const EpochTransaction& tx) {
+  if (tx.frozen_values) return *tx.frozen_values;
   gtsam::Values values;
   values.insert(poseKey(tx.previous_epoch), toGtsamPose(tx.previous_state));
   values.insert(velocityKey(tx.previous_epoch), tx.previous_state.velocity_world_mps);
@@ -613,6 +631,12 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
       Eigen::Quaterniond(predicted.pose().rotation().matrix());
   tx.nominal_predicted_state.position_world_m = predicted.position();
   tx.nominal_predicted_state.velocity_world_mps = predicted.velocity();
+  tx.cv_predicted_state = current_state_;
+  tx.cv_predicted_state.id = StateId(next_epoch);
+  tx.cv_predicted_state.timestamp = timestamp;
+  const double prediction_dt = timestamp.seconds() - state_timestamp_.seconds();
+  tx.cv_predicted_state.position_world_m +=
+      current_state_.velocity_world_mps * prediction_dt;
   tx.preintegration = std::make_shared<const gtsam::PreintegratedCombinedMeasurements>(proposed);
   tx.raw_imu_slice.push_back(*imu_boundary_);
   for (std::size_t i = 0; i < consume_count; ++i) {
@@ -637,8 +661,157 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
       poseKey(epoch_), velocityKey(epoch_), poseKey(next_epoch),
       velocityKey(next_epoch), biasKey(epoch_), biasKey(next_epoch), proposed));
   tx.generic_bridge_group.id = FactorGroupId(tx.id.value() * 1000 + 3);
+  tx.generic_bias_continuity_group.id =
+      FactorGroupId(tx.id.value() * 1000 + 4);
   tx.generic_bridge_group = BridgeFactory().makeGeneric(tx, config_.bridge.generic);
+  tx.generic_bias_continuity_group =
+      BridgeFactory().makeBiasContinuity(tx, config_.bridge.generic);
   if (batch) attachUwbGroups(&tx, *batch);
+  tx.ledger_version = factor_ledger_.version();
+  tx.frozen_graph = std::make_shared<const gtsam::NonlinearFactorGraph>(
+      activeGraph());
+  gtsam::Values frozen = backendIsam().calculateEstimate();
+  frozen.insert(poseKey(next_epoch), toGtsamPose(tx.cv_predicted_state));
+  frozen.insert(velocityKey(next_epoch), tx.cv_predicted_state.velocity_world_mps);
+  frozen.insert(biasKey(next_epoch), toGtsamBias(tx.cv_predicted_state));
+  tx.frozen_values = std::make_shared<const gtsam::Values>(std::move(frozen));
+  std::map<std::size_t, FactorGroupId> slot_groups;
+  for (const auto& entry : factor_ledger_.entries()) {
+    if (entry.lifecycle == FactorLifecycle::Active && entry.backend_slot) {
+      slot_groups.emplace(*entry.backend_slot, entry.group_id);
+    }
+  }
+  for (std::size_t slot = 0; slot < tx.frozen_graph->size(); ++slot) {
+    if (!(*tx.frozen_graph)[slot]) continue;
+    FrozenFactorSlot frozen_slot;
+    frozen_slot.slot = slot;
+    frozen_slot.factor = (*tx.frozen_graph)[slot];
+    const auto owner = slot_groups.find(slot);
+    if (owner != slot_groups.end()) frozen_slot.group_id = owner->second;
+    tx.frozen_slots.push_back(std::move(frozen_slot));
+  }
+  const std::size_t context_intervals =
+      static_cast<std::size_t>(config_.integrity_window.epochs) +
+      static_cast<std::size_t>(config_.integrity_window.recovery_margin_epochs);
+  tx.oldest_recoverable_epoch = tx.previous_epoch > context_intervals
+      ? tx.previous_epoch - context_intervals : 0;
+  if (fixed_lag_backend_) {
+    tx.oldest_recoverable_epoch =
+        std::max(tx.oldest_recoverable_epoch, oldestRetainedEpoch());
+  }
+  for (const auto& record : committed_epochs_) {
+    const auto& committed = record.transaction;
+    if (committed.proposed_epoch <= tx.oldest_recoverable_epoch) continue;
+    HistoricalEpochContext context;
+    context.previous_epoch = committed.previous_epoch;
+    context.proposed_epoch = committed.proposed_epoch;
+    context.begin = committed.begin;
+    context.end = committed.end;
+    context.raw_imu_slice = committed.raw_imu_slice;
+    context.preintegration = committed.preintegration;
+    context.uwb_batch = committed.uwb_batch;
+    context.previous_state = stateFromValues(
+        *tx.frozen_values, committed.previous_epoch,
+        state_history_.at(committed.previous_epoch).timestamp);
+    context.current_state = stateFromValues(
+        *tx.frozen_values, committed.proposed_epoch,
+        state_history_.at(committed.proposed_epoch).timestamp);
+    context.groups.push_back(committed.imu_group);
+    const std::uint64_t history_base =
+        tx.id.value() * 1000000ULL + committed.proposed_epoch * 100ULL;
+    std::uint64_t replacement_index = 0;
+    FactorGroupId selected_uwb;
+    const PendingFactorGroup* selected_uwb_group = nullptr;
+    for (const auto& group : committed.uwb_groups) {
+      if (std::find(record.selected_groups.begin(), record.selected_groups.end(),
+                    group.id) != record.selected_groups.end()) {
+        selected_uwb = group.id;
+        selected_uwb_group = &group;
+        context.groups.push_back(group);
+      }
+    }
+    std::set<std::uint64_t> selected_measurements;
+    std::set<std::uint64_t> selected_anchors;
+    if (selected_uwb_group) {
+      for (const auto id : selected_uwb_group->source_measurements) {
+        selected_measurements.insert(id.value());
+        const auto measurement = std::find_if(
+            committed.uwb_batch.measurements.begin(),
+            committed.uwb_batch.measurements.end(),
+            [&](const UwbMeasurement& value) { return value.id == id; });
+        if (measurement != committed.uwb_batch.measurements.end()) {
+          selected_anchors.insert(measurement->anchor_id.value());
+        }
+      }
+    }
+    const Eigen::MatrixXd historical_covariance = selected_uwb_group
+        ? validatedUwbCovariance(committed.uwb_batch) : Eigen::MatrixXd{};
+    for (const auto excluded_anchor : selected_anchors) {
+      UwbBatch retained = committed.uwb_batch;
+      retained.measurements.clear();
+      std::vector<Eigen::Index> retained_indices;
+      for (std::size_t i = 0; i < committed.uwb_batch.measurements.size(); ++i) {
+        const auto& measurement = committed.uwb_batch.measurements[i];
+        if (selected_measurements.count(measurement.id.value()) &&
+            measurement.anchor_id.value() != excluded_anchor) {
+          retained.measurements.push_back(measurement);
+          retained_indices.push_back(static_cast<Eigen::Index>(i));
+        }
+      }
+      if (retained.measurements.empty()) continue;
+      retained.covariance_m2.resize(retained_indices.size(), retained_indices.size());
+      for (std::size_t row = 0; row < retained_indices.size(); ++row) {
+        for (std::size_t column = 0; column < retained_indices.size(); ++column) {
+          retained.covariance_m2(row, column) = historical_covariance(
+              retained_indices[row], retained_indices[column]);
+        }
+      }
+      retained.covariance_model_id = committed.uwb_batch.covariance_model_id +
+          ":recovery_principal_covariance";
+      PendingFactorGroup replacement;
+      replacement.id = FactorGroupId(history_base + 10 + replacement_index++);
+      replacement.kind = FactorKind::UwbBatch;
+      replacement.sensor = SensorType::Uwb;
+      replacement.keys = {poseKey(committed.proposed_epoch)};
+      replacement.noise_model_id = retained.covariance_model_id;
+      replacement.model_id = "historical_uwb_exclude_anchor_" +
+          std::to_string(excluded_anchor);
+      replacement.nominal = false;
+      replacement.raw_covariance = retained.covariance_m2;
+      replacement.excluded_fault_units = {FaultUnitId(excluded_anchor)};
+      for (const auto& measurement : retained.measurements) {
+        replacement.source_measurements.push_back(measurement.id);
+        replacement.fault_units.push_back(FaultUnitId(measurement.anchor_id.value()));
+        replacement.source_ids.push_back("uwb:" +
+                                         std::to_string(measurement.anchor_id.value()));
+      }
+      replacement.factors.add(boost::make_shared<UwbPoseBatchFactor>(
+          poseKey(committed.proposed_epoch), retained, lever_arm_body_m_));
+      replacement.replaces_group = selected_uwb;
+      replacement.recovery_epoch = next_epoch;
+      context.groups.push_back(std::move(replacement));
+    }
+    PendingFactorGroup historical_bridge = committed.generic_bridge_group;
+    historical_bridge.id = FactorGroupId(history_base + 80);
+    historical_bridge.replaces_group = committed.imu_group.id;
+    historical_bridge.recovery_epoch = next_epoch;
+    context.groups.push_back(std::move(historical_bridge));
+    PendingFactorGroup historical_bias = committed.generic_bias_continuity_group;
+    historical_bias.id = FactorGroupId(history_base + 81);
+    historical_bias.replaces_group = committed.imu_group.id;
+    historical_bias.recovery_epoch = next_epoch;
+    context.groups.push_back(std::move(historical_bias));
+    if (committed.dynamics_bridge_group) {
+      context.groups.push_back(*committed.dynamics_bridge_group);
+    }
+    context.selected_groups = record.selected_groups;
+    for (auto& group : context.groups) group.recovery_epoch = next_epoch;
+    tx.recoverable_history.push_back(std::move(context));
+  }
+  tx.history_recoverability =
+      factor_ledger_.hasCompleteActiveProvenance(*tx.frozen_graph)
+          ? HistoryRecoverability::Recoverable
+          : HistoryRecoverability::MissingProvenance;
   active_transaction_id_ = tx.id;
   pending_epoch_ = true;
   current_uwb_committed_ = false;
@@ -663,6 +836,8 @@ void IncrementalUwbImuEstimator::attachUwbGroups(
   for (std::size_t i = 0; i < batch.measurements.size(); ++i) {
     group.source_measurements.push_back(batch.measurements[i].id);
     group.fault_units.push_back(FaultUnitId(batch.measurements[i].anchor_id.value()));
+    group.source_ids.push_back("uwb:" +
+                               std::to_string(batch.measurements[i].anchor_id.value()));
   }
   group.factors.add(boost::make_shared<UwbPoseBatchFactor>(
       poseKey(tx->proposed_epoch), batch, lever_arm_body_m_));
@@ -709,9 +884,12 @@ void IncrementalUwbImuEstimator::attachUwbGroups(
     replacement.nominal = false;
     replacement.raw_covariance = retained.covariance_m2;
     replacement.excluded_fault_units.push_back(FaultUnitId(excluded_anchor));
+    replacement.replaces_group = tx->uwb_groups.front().id;
     for (const auto& measurement : retained.measurements) {
       replacement.source_measurements.push_back(measurement.id);
       replacement.fault_units.push_back(FaultUnitId(measurement.anchor_id.value()));
+      replacement.source_ids.push_back(
+          "uwb:" + std::to_string(measurement.anchor_id.value()));
     }
     replacement.factors.add(boost::make_shared<UwbPoseBatchFactor>(
         poseKey(tx->proposed_epoch), retained, lever_arm_body_m_));
@@ -790,6 +968,7 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     const EpochTransaction& tx, const IntegrityWindowRequest& request) const {
   if (!active_transaction_id_ || *active_transaction_id_ != tx.id ||
       tx.backend_mutated || tx.base_graph_version != graph_version_ ||
+      tx.ledger_version != factor_ledger_.version() ||
       !(tx.base_version == LinearizationVersion{
           graph_version_, ordering_version_, 1, linpoint_version_})) {
     throw std::logic_error("integrity window requires the active frozen transaction");
@@ -800,6 +979,8 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
   const std::size_t interval_count = std::min<std::size_t>(
       request.epochs, tx.proposed_epoch);
   const std::size_t first_epoch = tx.proposed_epoch - interval_count;
+  window.detector_first_epoch = first_epoch;
+  window.recovery_first_epoch = tx.oldest_recoverable_epoch;
   const int total_columns = static_cast<int>((interval_count + 1) * 15);
   for (std::size_t epoch = first_epoch; epoch <= tx.proposed_epoch; ++epoch) {
     window.state_layout.push_back(StateLayoutEntry{
@@ -808,28 +989,138 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
         epoch == tx.proposed_epoch});
   }
 
-  const auto prefix = prefix_covariances_.find(first_epoch);
-  if (prefix == prefix_covariances_.end()) {
-    window.reason = "trusted prefix boundary covariance is unavailable";
+  if (!tx.frozen_graph || !tx.frozen_values ||
+      tx.ledger_version != factor_ledger_.version()) {
+    window.reason = "transaction graph/values/ledger freeze is incomplete";
     return window;
   }
-  LinearizedFactorBlock boundary;
-  boundary.group_id = FactorGroupId(tx.id.value() * 1000);
-  boundary.kind = FactorKind::BoundaryPrior;
-  boundary.sensor = SensorType::Prior;
-  boundary.role = RowRole::TrustedPrior;
-  boundary.covariance = prefix->second;
-  boundary.whitener = whitener(prefix->second);
-  boundary.jacobian_raw = Eigen::MatrixXd::Zero(15, total_columns);
-  boundary.jacobian_raw.leftCols(15).setIdentity();
-  boundary.residual_raw = Eigen::VectorXd::Zero(15);
-  boundary.jacobian_whitened = boundary.whitener * boundary.jacobian_raw;
-  boundary.residual_whitened = Eigen::VectorXd::Zero(15);
-  boundary.effective_weight = 1.0;
-  boundary.whitening_model_id = "committed_bayes_tree_schur_boundary";
-  boundary.version = tx.base_version;
-  window.blocks.push_back(std::move(boundary));
-  window.capabilities.includes_boundary_prior = true;
+
+  std::set<std::uint64_t> explicit_group_ids;
+  for (const auto& record : tx.recoverable_history) {
+    if (record.proposed_epoch <= first_epoch ||
+        record.proposed_epoch > tx.previous_epoch) continue;
+    for (const auto group : record.selected_groups) {
+      explicit_group_ids.insert(group.value());
+    }
+  }
+  std::set<std::size_t> explicit_slots;
+  bool slot_identity_valid = true;
+  for (const auto group_value : explicit_group_ids) {
+    const auto slots = factor_ledger_.activeSlots(FactorGroupId(group_value));
+    if (slots.empty()) slot_identity_valid = false;
+    explicit_slots.insert(slots.begin(), slots.end());
+  }
+  gtsam::NonlinearFactorGraph boundary_graph;
+  for (const auto& frozen : tx.frozen_slots) {
+    const bool pointer_ok = frozen.slot < tx.frozen_graph->size() &&
+        (*tx.frozen_graph)[frozen.slot] && frozen.factor &&
+        (*tx.frozen_graph)[frozen.slot].get() == frozen.factor.get() &&
+        frozen.slot < activeGraph().size() && activeGraph()[frozen.slot] &&
+        activeGraph()[frozen.slot].get() == frozen.factor.get();
+    const bool explicit_block = explicit_slots.count(frozen.slot) != 0;
+    FactorSlotAccounting accounting;
+    accounting.slot = frozen.slot;
+    accounting.group_id = frozen.group_id;
+    accounting.explicit_window_block = explicit_block;
+    accounting.boundary_input = !explicit_block;
+    accounting.pointer_identity_valid = pointer_ok;
+    window.slot_accounting.push_back(accounting);
+    slot_identity_valid = slot_identity_valid && pointer_ok &&
+        (accounting.explicit_window_block != accounting.boundary_input) &&
+        frozen.group_id.has_value();
+    if (!explicit_block) boundary_graph.push_back(frozen.factor);
+  }
+  window.capabilities.frozen_slot_identity_valid = slot_identity_valid;
+  window.capabilities.every_active_factor_accounted_once = slot_identity_valid &&
+      window.slot_accounting.size() == tx.frozen_slots.size();
+  if (!slot_identity_valid) {
+    window.reason = "active factor slot ownership/pointer identity is invalid";
+    return window;
+  }
+
+  if (!boundary_graph.empty()) {
+    std::set<gtsam::Key> window_keys;
+    for (std::size_t epoch = first_epoch; epoch <= tx.previous_epoch; ++epoch) {
+      window_keys.insert(poseKey(epoch));
+      window_keys.insert(velocityKey(epoch));
+      window_keys.insert(biasKey(epoch));
+    }
+    std::set<gtsam::Key> graph_keys;
+    for (const auto& factor : boundary_graph) {
+      graph_keys.insert(factor->keys().begin(), factor->keys().end());
+    }
+    gtsam::Ordering ordering;
+    int outside_columns = 0;
+    for (const auto key : graph_keys) {
+      if (window_keys.count(key) == 0) {
+        ordering.push_back(key);
+        outside_columns += keyDimension(key);
+      }
+    }
+    for (std::size_t epoch = first_epoch; epoch <= tx.previous_epoch; ++epoch) {
+      for (const auto key : {poseKey(epoch), velocityKey(epoch), biasKey(epoch)}) {
+        if (graph_keys.count(key)) ordering.push_back(key);
+      }
+    }
+    const auto gaussian = boundary_graph.linearize(*tx.frozen_values);
+    const auto dense = gaussian->jacobian(ordering);
+    const int inside_columns = dense.first.cols() - outside_columns;
+    Eigen::MatrixXd information = dense.first.transpose() * dense.first;
+    Eigen::VectorXd information_rhs = dense.first.transpose() * dense.second;
+    Eigen::MatrixXd reduced_information =
+        information.bottomRightCorner(inside_columns, inside_columns);
+    Eigen::VectorXd reduced_rhs = information_rhs.tail(inside_columns);
+    if (outside_columns > 0) {
+      const Eigen::MatrixXd noo =
+          information.topLeftCorner(outside_columns, outside_columns);
+      const Eigen::MatrixXd now =
+          information.topRightCorner(outside_columns, inside_columns);
+      Eigen::CompleteOrthogonalDecomposition<Eigen::MatrixXd> solve(noo);
+      reduced_information.noalias() -= now.transpose() * solve.solve(now);
+      reduced_rhs.noalias() -= now.transpose() *
+          solve.solve(information_rhs.head(outside_columns));
+    }
+    reduced_information =
+        0.5 * (reduced_information + reduced_information.transpose());
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigen(reduced_information);
+    if (eigen.info() != Eigen::Success || !eigen.eigenvalues().allFinite() ||
+        eigen.eigenvalues().minCoeff() <
+            -config_.integrity_window.rank_tolerance) {
+      window.reason = "boundary partial Schur is not positive semidefinite";
+      return window;
+    }
+    const double max_eigen = std::max(1.0, eigen.eigenvalues().maxCoeff());
+    std::vector<int> retained;
+    for (int i = 0; i < eigen.eigenvalues().size(); ++i) {
+      if (eigen.eigenvalues()(i) >
+          config_.integrity_window.rank_tolerance * max_eigen) retained.push_back(i);
+    }
+    LinearizedFactorBlock boundary;
+    boundary.group_id = FactorGroupId(tx.id.value() * 1000);
+    boundary.kind = FactorKind::BoundaryPrior;
+    boundary.sensor = SensorType::Prior;
+    boundary.role = RowRole::TrustedPrior;
+    boundary.jacobian_whitened = Eigen::MatrixXd::Zero(
+        retained.size(), total_columns);
+    Eigen::MatrixXd compact = Eigen::MatrixXd::Zero(retained.size(), inside_columns);
+    for (std::size_t row = 0; row < retained.size(); ++row) {
+      compact.row(row) = std::sqrt(eigen.eigenvalues()(retained[row])) *
+          eigen.eigenvectors().col(retained[row]).transpose();
+    }
+    // Boundary graph has no pending epoch columns and is ordered by epoch.
+    boundary.jacobian_whitened.leftCols(inside_columns) = compact;
+    boundary.residual_whitened = compact.transpose()
+        .completeOrthogonalDecomposition().solve(reduced_rhs);
+    boundary.jacobian_raw = boundary.jacobian_whitened;
+    boundary.residual_raw = boundary.residual_whitened;
+    boundary.covariance = Eigen::MatrixXd::Identity(retained.size(), retained.size());
+    boundary.whitener = boundary.covariance;
+    boundary.effective_weight = 1.0;
+    boundary.whitening_model_id = "frozen_graph_partial_qr_schur";
+    boundary.version = tx.base_version;
+    window.blocks.push_back(std::move(boundary));
+    window.capabilities.includes_boundary_prior = true;
+  }
 
   auto append_group = [&](const PendingFactorGroup& group,
                           EpochTransaction linearization_tx) {
@@ -857,27 +1148,23 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     window.blocks.push_back(std::move(block));
   };
 
-  for (const auto& record : committed_epochs_) {
-    const auto& history = record.transaction;
+  for (const auto& record : tx.recoverable_history) {
+    const auto& history = record;
     if (history.proposed_epoch <= first_epoch ||
         history.proposed_epoch > tx.previous_epoch) continue;
-    const auto previous_state = state_history_.find(history.previous_epoch);
-    const auto current_state = state_history_.find(history.proposed_epoch);
-    if (previous_state == state_history_.end() ||
-        current_state == state_history_.end()) {
-      window.reason = "history state provenance is unavailable";
-      return window;
-    }
-    EpochTransaction linearization_tx = history;
-    linearization_tx.previous_state = previous_state->second;
-    linearization_tx.nominal_predicted_state = current_state->second;
-    std::vector<const PendingFactorGroup*> groups{&history.imu_group,
-                                                  &history.generic_bridge_group};
-    for (const auto& group : history.uwb_groups) groups.push_back(&group);
-    if (history.dynamics_bridge_group) {
-      groups.push_back(&*history.dynamics_bridge_group);
-    }
-    for (const auto selected_group : record.selected_groups) {
+    EpochTransaction linearization_tx;
+    linearization_tx.previous_epoch = history.previous_epoch;
+    linearization_tx.proposed_epoch = history.proposed_epoch;
+    linearization_tx.previous_state = history.previous_state;
+    linearization_tx.nominal_predicted_state = history.current_state;
+    linearization_tx.cv_predicted_state = history.current_state;
+    linearization_tx.preintegration = history.preintegration;
+    linearization_tx.raw_imu_slice = history.raw_imu_slice;
+    linearization_tx.base_version = tx.base_version;
+    linearization_tx.frozen_values = tx.frozen_values;
+    std::vector<const PendingFactorGroup*> groups;
+    for (const auto& group : history.groups) groups.push_back(&group);
+    for (const auto selected_group : history.selected_groups) {
       const auto group = std::find_if(groups.begin(), groups.end(),
           [&](const PendingFactorGroup* candidate) {
             return candidate->id == selected_group;
@@ -903,6 +1190,7 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
   }
   if (request.include_generic_bridge) {
     append_group(tx.generic_bridge_group, tx);
+    append_group(tx.generic_bias_continuity_group, tx);
   }
   window.protected_state_map = Eigen::MatrixXd::Zero(3, total_columns);
   window.protected_state_map.block<3, 6>(
@@ -932,16 +1220,35 @@ LinearizedFactorBlock IncrementalUwbImuEstimator::buildPendingFactorBlock(
     throw std::logic_error("pending block requires active frozen transaction");
   }
   std::vector<const PendingFactorGroup*> groups{&tx.imu_group,
-                                                &tx.generic_bridge_group};
+                                                &tx.generic_bridge_group,
+                                                &tx.generic_bias_continuity_group};
   for (const auto& group : tx.uwb_groups) groups.push_back(&group);
   if (tx.dynamics_bridge_group) groups.push_back(&*tx.dynamics_bridge_group);
+  for (const auto& history : tx.recoverable_history) {
+    for (const auto& group : history.groups) groups.push_back(&group);
+  }
   const auto found = std::find_if(groups.begin(), groups.end(),
       [&](const PendingFactorGroup* group) { return group->id == id; });
   if (found == groups.end()) {
     throw std::out_of_range("unknown pending factor group");
   }
-  const auto linear = linearizeGroupDense(**found, tx);
-  return linearizePendingGroup(**found, tx, linear.first, linear.second);
+  EpochTransaction local = tx;
+  for (const auto& history : tx.recoverable_history) {
+    const auto historical = std::find_if(history.groups.begin(), history.groups.end(),
+        [&](const PendingFactorGroup& group) { return group.id == id; });
+    if (historical != history.groups.end()) {
+      local.previous_epoch = history.previous_epoch;
+      local.proposed_epoch = history.proposed_epoch;
+      local.previous_state = history.previous_state;
+      local.nominal_predicted_state = history.current_state;
+      local.cv_predicted_state = history.current_state;
+      local.preintegration = history.preintegration;
+      local.raw_imu_slice = history.raw_imu_slice;
+      break;
+    }
+  }
+  const auto linear = linearizeGroupDense(**found, local);
+  return linearizePendingGroup(**found, local, linear.first, linear.second);
 }
 
 void IncrementalUwbImuEstimator::queryCurrentState() {
@@ -1128,7 +1435,13 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
   all_groups.push_back(&tx.imu_group);
   for (const auto& group : tx.uwb_groups) all_groups.push_back(&group);
   all_groups.push_back(&tx.generic_bridge_group);
+  all_groups.push_back(&tx.generic_bias_continuity_group);
   if (tx.dynamics_bridge_group) all_groups.push_back(&*tx.dynamics_bridge_group);
+  for (const auto& history : tx.recoverable_history) {
+    for (const auto& group : history.groups) {
+      if (group.replaces_group) all_groups.push_back(&group);
+    }
+  }
   std::set<std::uint64_t> selected_ids;
   std::vector<const PendingFactorGroup*> selected_groups;
   for (const auto id : plan.groups_to_add) {
@@ -1142,11 +1455,16 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
     for (const auto& factor : (*found)->factors) graph.push_back(factor);
   }
   const bool has_imu = selected_ids.count(tx.imu_group.id.value()) != 0;
-  const bool has_bridge = selected_ids.count(tx.generic_bridge_group.id.value()) != 0 ||
+  const bool has_pose_bridge =
+      selected_ids.count(tx.generic_bridge_group.id.value()) != 0;
+  const bool has_bias_bridge =
+      selected_ids.count(tx.generic_bias_continuity_group.id.value()) != 0;
+  const bool has_bridge = has_pose_bridge ||
       (tx.dynamics_bridge_group &&
        selected_ids.count(tx.dynamics_bridge_group->id.value()) != 0);
-  if (has_imu == has_bridge) {
-    throw std::logic_error("commit plan must select exactly one IMU transition or bridge");
+  if (has_imu == has_bridge || has_pose_bridge != has_bias_bridge) {
+    throw std::logic_error(
+        "commit plan must select IMU or a complete pose/bias bridge pair");
   }
   std::vector<std::size_t> remove_slots;
   for (const auto group : plan.groups_to_remove) {
@@ -1154,14 +1472,32 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
     if (slots.empty()) throw std::logic_error("commit plan cannot remove inactive/unknown group");
     remove_slots.insert(remove_slots.end(), slots.begin(), slots.end());
   }
+  for (const auto& history : tx.recoverable_history) {
+    const auto removed_imu = std::find(
+        plan.groups_to_remove.begin(), plan.groups_to_remove.end(),
+        history.groups.front().id) != plan.groups_to_remove.end();
+    if (!removed_imu) continue;
+    int historical_pose_bridges = 0;
+    int historical_bias_bridges = 0;
+    for (const auto& group : history.groups) {
+      if (!group.replaces_group || *group.replaces_group != history.groups.front().id ||
+          selected_ids.count(group.id.value()) == 0) continue;
+      historical_pose_bridges += group.kind == FactorKind::KinematicBridge;
+      historical_bias_bridges += group.kind == FactorKind::BiasContinuity;
+    }
+    if (historical_pose_bridges != 1 || historical_bias_bridges != 1) {
+      throw std::logic_error(
+          "historical IMU removal requires exactly one complete bridge pair");
+    }
+  }
   std::sort(remove_slots.begin(), remove_slots.end());
   if (std::adjacent_find(remove_slots.begin(), remove_slots.end()) != remove_slots.end()) {
     throw std::logic_error("commit plan attempts duplicate factor-slot removal");
   }
   gtsam::Values values;
-  values.insert(poseKey(tx.proposed_epoch), toGtsamPose(tx.nominal_predicted_state));
-  values.insert(velocityKey(tx.proposed_epoch), tx.nominal_predicted_state.velocity_world_mps);
-  values.insert(biasKey(tx.proposed_epoch), toGtsamBias(tx.nominal_predicted_state));
+  values.insert(poseKey(tx.proposed_epoch), toGtsamPose(tx.cv_predicted_state));
+  values.insert(velocityKey(tx.proposed_epoch), tx.cv_predicted_state.velocity_world_mps);
+  values.insert(biasKey(tx.proposed_epoch), toGtsamBias(tx.cv_predicted_state));
   BackendUpdateAudit update;
   try {
     update = backendUpdate(graph, values, tx.proposed_epoch, true, remove_slots);
@@ -1189,8 +1525,29 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
   state_history_[epoch_] = current_state_;
   prefix_covariances_[epoch_] = currentJointMarginal();
 
-  factor_ledger_.recordPending(tx);
+  // Historical removal/replacement can change every retained state linpoint.
+  // Synchronize the recovery catalog with the single post-update estimate so
+  // the next transaction never mixes pre- and post-recovery states.
+  if (!plan.groups_to_remove.empty()) {
+    const gtsam::Values recovered_values = backendIsam().calculateEstimate();
+    for (auto& item : state_history_) {
+      if (!recovered_values.exists(poseKey(item.first)) ||
+          !recovered_values.exists(velocityKey(item.first)) ||
+          !recovered_values.exists(biasKey(item.first))) continue;
+      item.second = stateFromValues(recovered_values, item.first,
+                                    item.second.timestamp);
+    }
+    current_state_ = state_history_.at(epoch_);
+  }
+
+  factor_ledger_.recordSelected(tx, plan.groups_to_add);
+  for (const auto& item : plan.group_health) {
+    factor_ledger_.setHealth(FactorGroupId(item.first), item.second);
+  }
   const auto& active = activeGraph();
+  factor_ledger_.markSlotsAbsent(active, oldestRetainedEpoch());
+  std::set<std::size_t> previously_occupied(remove_slots.begin(), remove_slots.end());
+  std::set<std::size_t> reused_slots;
   for (const auto* group : selected_groups) {
     std::vector<std::size_t> slots;
     for (const auto& expected : group->factors) {
@@ -1206,18 +1563,58 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
     }
     factor_ledger_.activate(group->id, slots,
         {graph_version_, ordering_version_, 1, linpoint_version_});
-  }
-  for (const auto* group : all_groups) {
-    if (selected_ids.count(group->id.value()) == 0) {
-      factor_ledger_.transition(group->id, FactorLifecycle::RemovedByFde);
+    for (const auto slot : slots) {
+      if (previously_occupied.count(slot)) reused_slots.insert(slot);
     }
   }
   for (const auto group : plan.groups_to_remove) {
-    factor_ledger_.transition(group, has_bridge
-        ? FactorLifecycle::SupersededByBridge : FactorLifecycle::RemovedByFde);
+    std::optional<FactorGroupId> replacement;
+    const auto relation = plan.replacement_relations.find(group.value());
+    if (relation != plan.replacement_relations.end()) {
+      replacement = FactorGroupId(relation->second);
+    }
+    factor_ledger_.transition(
+        group, replacement ? FactorLifecycle::SupersededByBridge
+                           : FactorLifecycle::RemovedByFde,
+        {graph_version_, ordering_version_, 1, linpoint_version_}, replacement);
   }
-  factor_ledger_.markSlotsAbsent(activeGraph(), oldestRetainedEpoch());
-  committed_epochs_.push_back(CommittedEpochRecord{tx, plan.groups_to_add});
+  factor_ledger_.syncBoundaryFactors(
+      activeGraph(), update.boundary_factor_slots, state_timestamp_, epoch_,
+      {graph_version_, ordering_version_, 1, linpoint_version_});
+
+  for (auto& committed : committed_epochs_) {
+    bool changed = false;
+    for (const auto removed : plan.groups_to_remove) {
+      auto selected = std::find(committed.selected_groups.begin(),
+                                committed.selected_groups.end(), removed);
+      if (selected != committed.selected_groups.end()) {
+        committed.selected_groups.erase(selected);
+        changed = true;
+      }
+    }
+    if (!changed) continue;
+    for (const auto* group : selected_groups) {
+      if (group->replaces_group &&
+          std::find(plan.groups_to_remove.begin(), plan.groups_to_remove.end(),
+                    *group->replaces_group) != plan.groups_to_remove.end()) {
+        committed.selected_groups.push_back(group->id);
+        if (group->kind == FactorKind::UwbBatch) {
+          committed.transaction.uwb_groups.push_back(*group);
+        } else if (group->kind == FactorKind::KinematicBridge) {
+          committed.transaction.generic_bridge_group = *group;
+        } else if (group->kind == FactorKind::BiasContinuity) {
+          committed.transaction.generic_bias_continuity_group = *group;
+        }
+      }
+    }
+  }
+  EpochTransaction committed_transaction = tx;
+  committed_transaction.frozen_graph.reset();
+  committed_transaction.frozen_values.reset();
+  committed_transaction.frozen_slots.clear();
+  committed_transaction.recoverable_history.clear();
+  committed_epochs_.push_back(
+      CommittedEpochRecord{std::move(committed_transaction), plan.groups_to_add});
 
   current_uwb_committed_ = false;
   for (const auto& group : tx.uwb_groups) {
@@ -1241,6 +1638,25 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
   receipt.removed_factor_slots = update.removed_factor_slots;
   receipt.marginalized_keys = update.marginalized_keys;
   receipt.boundary_factor_slots = update.boundary_factor_slots;
+  receipt.group_to_slots.clear();
+  for (const auto* group : selected_groups) {
+    receipt.group_to_slots[group->id.value()] =
+        factor_ledger_.activeSlots(group->id);
+  }
+  receipt.reused_factor_slots.assign(reused_slots.begin(), reused_slots.end());
+  receipt.recovery_epoch_begin = plan.recovery_epoch_begin;
+  receipt.recovery_epoch_end = plan.recovery_epoch_end;
+  for (const auto group : plan.groups_to_remove) {
+    const auto entries = factor_ledger_.groupEntries(group);
+    if (!entries.empty() && entries.front().epoch_end < tx.proposed_epoch) {
+      receipt.historical_groups_removed.push_back(group);
+    }
+  }
+  for (const auto* group : selected_groups) {
+    if (group->recovery_epoch != 0 && group->recovery_epoch == tx.proposed_epoch) {
+      receipt.historical_groups_added.push_back(group->id);
+    }
+  }
   receipt.backend_updates = 1;
   receipt.integrity_available = !plan.best_effort_integrity_unavailable;
   return receipt;
@@ -1251,17 +1667,6 @@ DiscardReceipt IncrementalUwbImuEstimator::discardEpoch(
   if (!active_transaction_id_ || *active_transaction_id_ != tx.id ||
       tx.backend_mutated) {
     throw std::logic_error("discard requires the active unmutated transaction");
-  }
-  factor_ledger_.recordPending(tx);
-  factor_ledger_.transition(tx.imu_group.id, FactorLifecycle::QuarantinedSource);
-  for (const auto& group : tx.uwb_groups) {
-    factor_ledger_.transition(group.id, FactorLifecycle::QuarantinedSource);
-  }
-  factor_ledger_.transition(tx.generic_bridge_group.id,
-                            FactorLifecycle::QuarantinedSource);
-  if (tx.dynamics_bridge_group) {
-    factor_ledger_.transition(tx.dynamics_bridge_group->id,
-                              FactorLifecycle::QuarantinedSource);
   }
   DiscardReceipt receipt;
   receipt.transaction_id = tx.id;
@@ -1347,7 +1752,8 @@ EstimatorAudit IncrementalUwbImuEstimator::audit() const {
   result.retained_epochs = retainedEpochs();
   result.marginalization_count = marginalization_count_;
   result.fixed_lag_active = fixed_lag_backend_ != nullptr;
-  result.historical_fault_provenance = false;
+  result.historical_fault_provenance =
+      factor_ledger_.hasCompleteActiveProvenance(activeGraph());
   result.committed_uwb_batch_ids.reserve(committed_uwb_batches_.size());
   for (const auto& committed : committed_uwb_batches_) {
     result.committed_uwb_batch_ids.push_back(committed.second);

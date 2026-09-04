@@ -44,6 +44,15 @@ std::string json(const std::string& value) {
   return "\"" + escaped + "\"";
 }
 
+std::string joinIds(const std::vector<std::uint64_t>& ids) {
+  std::ostringstream out;
+  for (std::size_t i = 0; i < ids.size(); ++i) {
+    if (i) out << ';';
+    out << ids[i];
+  }
+  return out.str();
+}
+
 void requireOpen(const std::ofstream& stream, const std::string& path) {
   if (!stream) throw std::runtime_error("cannot open run output: " + path);
 }
@@ -108,7 +117,11 @@ RunLogger::RunLogger(const std::string& output_directory,
                 "transaction_id,window_id,base_graph_version,linearization_version,"
                 "selected_action_id,selected_action_type,fde_status,bridge_pl_x,"
                 "bridge_pl_y,bridge_pl_z,history_provenance_valid,backend_updates,"
-                "stale_state,controlled_reinitialization_required,reason\n";
+                "stale_state,controlled_reinitialization_required,"
+                "historical_groups_removed,historical_groups_added,"
+                "recovery_epoch_begin,recovery_epoch_end,"
+                "reinitialization_request_id,reinitialization_phase,"
+                "reinitialization_reason,reason\n";
   if (write_timing_) {
     timing_ << "timestamp_ns,epoch,stage,wall_ms,problem_size,hypothesis_count,"
                "factor_count,cold_warm,success\n";
@@ -126,10 +139,12 @@ RunLogger::RunLogger(const std::string& output_directory,
                  "conditioned_statistic,log_evidence,reason\n";
   candidates_ << "timestamp_ns,window_id,action_id,action_type,cardinality,valid,"
                  "post_detector_passed,covers_plausible_set,statistic,threshold,"
-                 "rank,dof,condition_number,hpl_m,vpl_m,selected,reason\n";
+                 "rank,dof,condition_number,hpl_m,vpl_m,selected,wall_ms,reason\n";
   factor_ledger_ << "factor_id,group_id,sensor,factor_kind,lifecycle,epoch_begin,"
                     "epoch_end,time_begin_ns,time_end_ns,backend_slot,"
-                    "noise_model_id,model_id,health\n";
+                    "noise_model_id,model_id,health,source_ids,measurement_ids,"
+                    "fault_units,commit_graph_version,removed_graph_version,"
+                    "replacement_group_id,replaces_group_id,recovery_epoch\n";
   health_ << "timestamp_ns,source_id,sensor,previous_state,current_state,trigger,"
              "suspicion_count,shadow_pass_count,recovery_pass_count\n";
   bridge_ << "timestamp_ns,transaction_id,mode,consecutive_epochs,duration_s,"
@@ -230,6 +245,12 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
              << o.bridge_component_m.z() << ',' << o.history_provenance_valid << ','
              << o.backend_updates << ',' << o.stale_state << ','
              << o.controlled_reinitialization_required << ','
+             << csv(joinIds(o.historical_groups_removed)) << ','
+             << csv(joinIds(o.historical_groups_added)) << ','
+             << o.recovery_epoch_begin << ',' << o.recovery_epoch_end << ','
+             << o.reinitialization_request_id << ','
+             << csv(o.reinitialization_phase) << ','
+             << csv(o.reinitialization_reason) << ','
              << csv(p.reason) << '\n';
   transactions_ << o.timestamp.value() << ',' << o.transaction_id << ','
                 << o.window_id << ',' << o.base_graph_version << ','
@@ -252,7 +273,8 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
                 << c.post_detector_passed << ',' << c.covers_plausible_set << ','
                 << c.statistic << ',' << c.threshold << ',' << c.rank << ','
                 << c.dof << ',' << c.condition_number << ',' << c.hpl_m << ','
-                << c.vpl_m << ',' << c.selected << ',' << csv(c.reason) << '\n';
+                << c.vpl_m << ',' << c.selected << ',' << c.wall_ms << ','
+                << csv(c.reason) << '\n';
   }
   for (const auto& f : o.factor_ledger_audit) {
     factor_ledger_ << f.factor_id << ',' << f.group_id << ',' << csv(f.sensor)
@@ -260,7 +282,11 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
                    << f.epoch_begin << ',' << f.epoch_end << ','
                    << f.time_begin.value() << ',' << f.time_end.value() << ','
                    << csv(f.backend_slot) << ',' << csv(f.noise_model_id) << ','
-                   << csv(f.model_id) << ',' << csv(f.health) << '\n';
+                   << csv(f.model_id) << ',' << csv(f.health) << ','
+                   << csv(f.source_ids) << ',' << csv(f.measurement_ids) << ','
+                   << csv(f.fault_units) << ',' << f.commit_graph_version << ','
+                   << f.removed_graph_version << ',' << f.replacement_group_id
+                   << ',' << f.replaces_group_id << ',' << f.recovery_epoch << '\n';
   }
   for (const auto& h : o.health_audit) {
     health_ << o.timestamp.value() << ',' << csv(h.source_id) << ','

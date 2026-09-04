@@ -22,11 +22,11 @@ V2_HEADERS = {
 V4_HEADERS = dict(V2_HEADERS)
 V4_HEADERS.update({
     "integrity.csv": V2_HEADERS["integrity.csv"][:-len(",reason")] +
-        ",transaction_id,window_id,base_graph_version,linearization_version,selected_action_id,selected_action_type,fde_status,bridge_pl_x,bridge_pl_y,bridge_pl_z,history_provenance_valid,backend_updates,stale_state,controlled_reinitialization_required,reason",
+        ",transaction_id,window_id,base_graph_version,linearization_version,selected_action_id,selected_action_type,fde_status,bridge_pl_x,bridge_pl_y,bridge_pl_z,history_provenance_valid,backend_updates,stale_state,controlled_reinitialization_required,historical_groups_removed,historical_groups_added,recovery_epoch_begin,recovery_epoch_end,reinitialization_request_id,reinitialization_phase,reinitialization_reason,reason",
     "transactions.csv": "timestamp_ns,transaction_id,window_id,base_graph_version,linearization_version,selected_action_id,fde_status,backend_updates,stale_state,reinitialization_required",
     "hypotheses.csv": "timestamp_ns,window_id,hypothesis_id,fault_unit_ids,prior_bound,p_md_allocation,hmi_allocation,monitorable,plausible,conditioned_statistic,log_evidence,reason",
-    "candidates.csv": "timestamp_ns,window_id,action_id,action_type,cardinality,valid,post_detector_passed,covers_plausible_set,statistic,threshold,rank,dof,condition_number,hpl_m,vpl_m,selected,reason",
-    "factor_ledger.csv": "factor_id,group_id,sensor,factor_kind,lifecycle,epoch_begin,epoch_end,time_begin_ns,time_end_ns,backend_slot,noise_model_id,model_id,health",
+    "candidates.csv": "timestamp_ns,window_id,action_id,action_type,cardinality,valid,post_detector_passed,covers_plausible_set,statistic,threshold,rank,dof,condition_number,hpl_m,vpl_m,selected,wall_ms,reason",
+    "factor_ledger.csv": "factor_id,group_id,sensor,factor_kind,lifecycle,epoch_begin,epoch_end,time_begin_ns,time_end_ns,backend_slot,noise_model_id,model_id,health,source_ids,measurement_ids,fault_units,commit_graph_version,removed_graph_version,replacement_group_id,replaces_group_id,recovery_epoch",
     "health.csv": "timestamp_ns,source_id,sensor,previous_state,current_state,trigger,suspicion_count,shadow_pass_count,recovery_pass_count",
     "bridge.csv": "timestamp_ns,transaction_id,mode,consecutive_epochs,duration_s,integrity_model,calibration_id,bound_x,bound_y,bound_z,status",
     "fault_truth.csv": "timestamp_ns,sequence,anchor_id,fault_mode,active,outage,injected_bias_m,true_range_m,sensor_type,fault_kind,axis,epoch_begin,epoch_end,injected_value,injected_units",

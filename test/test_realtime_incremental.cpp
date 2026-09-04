@@ -644,7 +644,7 @@ TEST(UwbImuIncremental, FaultAlarmRejectsOnlyCurrentUwbAndNextBatchRecovers) {
   ASSERT_EQ(estimator.audit().committed_uwb_batch_ids.size(), 1u);
 }
 
-TEST(UwbImuIncremental, PlausibleUwbFaultAfterCommitFailsClosedOnHistory) {
+TEST(UwbImuIncremental, PlausibleMultiAnchorAmbiguityDoesNotClaimHistoryLoss) {
   auto cfg = config();
   uwb_imu_pl::IncrementalUwbImuEstimator estimator(cfg, Eigen::Vector3d::Zero());
   uwb_imu_pl::NavigationState initial;
@@ -679,11 +679,11 @@ TEST(UwbImuIncremental, PlausibleUwbFaultAfterCommitFailsClosedOnHistory) {
   const auto output = pipeline.processUwbBatch(faulted);
 
   EXPECT_FALSE(output.detector.passed);
-  EXPECT_EQ(output.fde_status, "HISTORY_PRIOR_CONTAMINATED");
+  EXPECT_EQ(output.fde_status, "AMBIGUOUS_UNAVAILABLE");
   EXPECT_FALSE(output.batch_committed);
   EXPECT_EQ(output.backend_updates, 0u);
   EXPECT_TRUE(output.stale_state);
-  EXPECT_TRUE(output.controlled_reinitialization_required);
+  EXPECT_FALSE(output.controlled_reinitialization_required);
   EXPECT_EQ(output.timestamp, uwb_imu_pl::TimestampNs(10000000));
   EXPECT_EQ(estimator.audit().epoch, 1u);
   EXPECT_EQ(estimator.audit().committed_uwb_batch_ids.size(), 1u);
@@ -934,7 +934,7 @@ TEST(UwbImuIncremental, FixedLagRetainsThreeCompleteEpochsAndBoundedMetadata) {
     maximum_factor_slots = std::max(maximum_factor_slots,
                                     audit.factor_slot_count);
     EXPECT_TRUE(audit.fixed_lag_active);
-    EXPECT_FALSE(audit.historical_fault_provenance);
+    EXPECT_TRUE(audit.historical_fault_provenance);
     EXPECT_LE(audit.active_value_count, 9u);
     EXPECT_LE(audit.committed_uwb_batch_ids.size(), 3u);
     EXPECT_EQ(audit.timestamp_count, audit.active_value_count);

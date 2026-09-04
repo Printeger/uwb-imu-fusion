@@ -1,13 +1,18 @@
 #include "uwb_imu_pl/config/integrity_config.hpp"
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 #include "uwb_imu_pl/estimation/rank_update_kernel.hpp"
+#include "uwb_imu_pl/estimation/reinitialization.hpp"
+#include "uwb_imu_pl/factors/realtime_factors.hpp"
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
 #include "uwb_imu_pl/integrity/health_manager.hpp"
+#include "uwb_imu_pl/integrity/hypothesis_generator.hpp"
 #include "uwb_imu_pl/integrity/imu_fault_subspace.hpp"
 #include "uwb_imu_pl/integrity/joint_window_detector.hpp"
 #include "uwb_imu_pl/integrity/protection_level_v2.hpp"
 
 #include <gtest/gtest.h>
+#include <gtsam/base/numericalDerivative.h>
+#include <gtsam/inference/Symbol.h>
 
 #include <algorithm>
 #include <cmath>
@@ -96,20 +101,32 @@ TEST(IntegrityV2Transaction, PrepareAndDiscardNeverMutateBackend) {
   estimator.initialize(initial, config.realtime.prior_sigmas);
   addImu(&estimator, config.imu.gravity_mps2);
   const auto before = estimator.audit();
+  const auto ledger_version_before = estimator.factorLedger().version();
   auto transaction = estimator.prepareEpoch(batch(config, 10000000));
   EXPECT_EQ(estimator.backendUpdateCount(), 1u);
   EXPECT_EQ(estimator.audit().epoch, before.epoch);
   EXPECT_EQ(estimator.audit().state_timestamp, before.state_timestamp);
+  EXPECT_EQ(estimator.factorLedger().version(), ledger_version_before);
   auto window = estimator.buildIntegrityWindow(
       transaction, uwb_imu_pl::IntegrityWindowRequest{});
   EXPECT_TRUE(window.capabilities.includes_pending_imu);
   EXPECT_TRUE(window.capabilities.includes_pending_uwb);
+  EXPECT_TRUE(window.capabilities.every_active_factor_accounted_once);
+  EXPECT_TRUE(window.capabilities.frozen_slot_identity_valid);
+  for (const auto& slot : window.slot_accounting) {
+    EXPECT_NE(slot.explicit_window_block, slot.boundary_input);
+    EXPECT_TRUE(slot.pointer_identity_valid);
+  }
   const auto imu_block = estimator.buildPendingFactorBlock(
       transaction, transaction.imu_group.id);
   const auto bridge_block = estimator.buildPendingFactorBlock(
       transaction, transaction.generic_bridge_group.id);
-  EXPECT_EQ(transaction.generic_bridge_group.factors.size(), 2u);
-  EXPECT_EQ(bridge_block.residual_whitened.size(), 15);
+  EXPECT_EQ(transaction.generic_bridge_group.factors.size(), 1u);
+  EXPECT_EQ(transaction.generic_bias_continuity_group.factors.size(), 1u);
+  EXPECT_EQ(bridge_block.residual_whitened.size(), 9);
+  const auto bias_bridge_block = estimator.buildPendingFactorBlock(
+      transaction, transaction.generic_bias_continuity_group.id);
+  EXPECT_EQ(bias_bridge_block.residual_whitened.size(), 6);
   const auto sensitivity =
       uwb_imu_pl::ImuFaultSubspaceBuilder().build(transaction, imu_block);
   EXPECT_TRUE(sensitivity.analytic_verified)
@@ -119,6 +136,7 @@ TEST(IntegrityV2Transaction, PrepareAndDiscardNeverMutateBackend) {
   EXPECT_EQ(receipt.backend_updates, 0u);
   EXPECT_EQ(estimator.backendUpdateCount(), 1u);
   EXPECT_EQ(estimator.currentState().timestamp, before.state_timestamp);
+  EXPECT_EQ(estimator.factorLedger().version(), ledger_version_before);
 }
 
 TEST(IntegrityV2Transaction, CommitIsOneAtomicBackendUpdateAndLedgerIsComplete) {
@@ -186,6 +204,170 @@ TEST(IntegrityV2Transaction, CorrelatedUwbExclusionUsesPrincipalCovariance) {
       {uwb_imu_pl::FdeStatus::ModelInvalid, "test complete", false});
 }
 
+TEST(IntegrityV2FaultModel, GeneratesCompactUwbModesAndEveryImuAxis) {
+  const auto config = researchConfig();
+  uwb_imu_pl::IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+  uwb_imu_pl::NavigationState initial;
+  initial.timestamp = uwb_imu_pl::TimestampNs(0);
+  initial.position_world_m = {0, 0, 1};
+  estimator.initialize(initial, config.realtime.prior_sigmas);
+  addImu(&estimator, config.imu.gravity_mps2);
+  auto transaction = estimator.prepareEpoch(batch(config, 10000000));
+  const auto window = estimator.buildIntegrityWindow(
+      transaction, uwb_imu_pl::IntegrityWindowRequest{});
+  ASSERT_TRUE(window.model_valid) << window.reason;
+  const auto imu_block = estimator.buildPendingFactorBlock(
+      transaction, transaction.imu_group.id);
+  const auto bridge_block = estimator.buildPendingFactorBlock(
+      transaction, transaction.generic_bridge_group.id);
+  const auto imu_maps =
+      uwb_imu_pl::ImuFaultSubspaceBuilder().build(transaction, imu_block);
+  const auto models = uwb_imu_pl::HypothesisGenerator().generate(
+      window, transaction, imu_maps, bridge_block);
+
+  std::size_t epoch_modes = 0, persistent_modes = 0, ramp_modes = 0;
+  std::size_t imu_modes = 0;
+  for (const auto& mode : models.modes) {
+    if (mode.sensor == uwb_imu_pl::SensorType::Uwb) {
+      epoch_modes += mode.kind ==
+          uwb_imu_pl::FaultKind::AnchorBiasEpochIndependent;
+      persistent_modes += mode.kind ==
+          uwb_imu_pl::FaultKind::AnchorBiasPersistentConstant;
+      ramp_modes += mode.kind == uwb_imu_pl::FaultKind::AnchorBiasRamp;
+      EXPECT_EQ(mode.affected_groups.size(), 1u);
+      if (mode.kind == uwb_imu_pl::FaultKind::AnchorBiasRamp) {
+        EXPECT_EQ(mode.parameter_dimension, 2);
+      }
+    } else {
+      ++imu_modes;
+    }
+  }
+  EXPECT_EQ(epoch_modes, config.anchors.size());
+  EXPECT_EQ(persistent_modes, config.anchors.size());
+  EXPECT_EQ(ramp_modes, config.anchors.size());
+  EXPECT_EQ(imu_modes, 6u);
+  EXPECT_TRUE(std::all_of(models.hypotheses.begin(), models.hypotheses.end(),
+                          [](const auto& hypothesis) {
+    return hypothesis.A.size() == 0 && !hypothesis.modes.empty() &&
+           !hypothesis.affected_groups.empty();
+  }));
+  estimator.discardEpoch(std::move(transaction),
+      {uwb_imu_pl::FdeStatus::ModelInvalid, "test complete", false});
+}
+
+TEST(IntegrityV2Bridge, AnalyticJacobiansMatchNumericalOracleAndCvIsExact) {
+  const double dt = 0.05;
+  const auto covariance = Eigen::Matrix<double, 9, 9>::Identity();
+  uwb_imu_pl::KinematicPoseVelocityBridgeFactor factor(
+      gtsam::Symbol('x', 0), gtsam::Symbol('v', 0),
+      gtsam::Symbol('x', 1), gtsam::Symbol('v', 1), dt, covariance);
+  const gtsam::Pose3 p0(
+      gtsam::Rot3::RzRyRx(0.1, -0.2, 0.3), gtsam::Point3(1.0, 2.0, -0.5));
+  const gtsam::Vector3 v0(0.4, -0.2, 0.1);
+  const gtsam::Pose3 p1(
+      p0.rotation(), p0.translation() + dt * v0);
+  const gtsam::Vector3 v1 = v0;
+  gtsam::Matrix h1, h2, h3, h4;
+  const auto error = factor.evaluateError(p0, v0, p1, v1, h1, h2, h3, h4);
+  EXPECT_LT(error.norm(), 1e-12);
+  const auto fn = [&](const gtsam::Pose3& a, const gtsam::Vector3& b,
+                      const gtsam::Pose3& c, const gtsam::Vector3& d) {
+    return factor.evaluateError(a, b, c, d);
+  };
+  EXPECT_TRUE(h1.isApprox(gtsam::numericalDerivative41<
+      gtsam::Vector, gtsam::Pose3, gtsam::Vector3, gtsam::Pose3,
+      gtsam::Vector3>(fn, p0, v0, p1, v1), 1e-7));
+  EXPECT_TRUE(h2.isApprox(gtsam::numericalDerivative42<
+      gtsam::Vector, gtsam::Pose3, gtsam::Vector3, gtsam::Pose3,
+      gtsam::Vector3>(fn, p0, v0, p1, v1), 1e-7));
+  EXPECT_TRUE(h3.isApprox(gtsam::numericalDerivative43<
+      gtsam::Vector, gtsam::Pose3, gtsam::Vector3, gtsam::Pose3,
+      gtsam::Vector3>(fn, p0, v0, p1, v1), 1e-7));
+  EXPECT_TRUE(h4.isApprox(gtsam::numericalDerivative44<
+      gtsam::Vector, gtsam::Pose3, gtsam::Vector3, gtsam::Pose3,
+      gtsam::Vector3>(fn, p0, v0, p1, v1), 1e-7));
+}
+
+TEST(IntegrityV2Transaction, HistoricalUwbReplacementCommitsAtomically) {
+  const auto config = researchConfig();
+  uwb_imu_pl::IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+  uwb_imu_pl::NavigationState initial;
+  initial.timestamp = uwb_imu_pl::TimestampNs(0);
+  initial.position_world_m = {0, 0, 1};
+  estimator.initialize(initial, config.realtime.prior_sigmas);
+  addImu(&estimator, config.imu.gravity_mps2);
+  auto first = estimator.prepareEpoch(batch(config, 10000000));
+  const auto first_plan = uwb_imu_pl::EpochCommitPlan::nominalPlan(first);
+  estimator.commitEpoch(std::move(first), first_plan);
+
+  for (int i = 3; i <= 4; ++i) {
+    uwb_imu_pl::ImuMeasurement measurement;
+    measurement.id = uwb_imu_pl::MeasurementId(100 + i);
+    measurement.timestamp = uwb_imu_pl::TimestampNs(i * 5000000);
+    measurement.specific_force_mps2 = {0, 0, config.imu.gravity_mps2};
+    estimator.ingestImu(measurement);
+  }
+  auto transaction = estimator.prepareEpoch(batch(config, 20000000));
+  ASSERT_EQ(transaction.recoverable_history.size(), 1u);
+  const auto& history = transaction.recoverable_history.front();
+  const auto historical_uwb = std::find_if(
+      history.groups.begin(), history.groups.end(), [&](const auto& group) {
+        return group.kind == uwb_imu_pl::FactorKind::UwbBatch &&
+            std::find(history.selected_groups.begin(), history.selected_groups.end(),
+                      group.id) != history.selected_groups.end();
+      });
+  ASSERT_NE(historical_uwb, history.groups.end());
+  const auto replacement = std::find_if(
+      history.groups.begin(), history.groups.end(), [&](const auto& group) {
+        return group.kind == uwb_imu_pl::FactorKind::UwbBatch &&
+            group.replaces_group && *group.replaces_group == historical_uwb->id &&
+            group.excluded_fault_units.size() == 1 &&
+            group.excluded_fault_units.front().value() == 1;
+      });
+  ASSERT_NE(replacement, history.groups.end());
+  auto plan = uwb_imu_pl::EpochCommitPlan::nominalPlan(transaction);
+  plan.groups_to_remove = {historical_uwb->id};
+  plan.groups_to_add.push_back(replacement->id);
+  plan.replacement_relations[historical_uwb->id.value()] = replacement->id.value();
+  plan.recovery_epoch_begin = history.proposed_epoch;
+  plan.recovery_epoch_end = history.proposed_epoch;
+  const auto historical_id = historical_uwb->id;
+  const auto replacement_id = replacement->id;
+  const auto updates_before = estimator.backendUpdateCount();
+  const auto receipt = estimator.commitEpoch(std::move(transaction), plan);
+  EXPECT_EQ(estimator.backendUpdateCount(), updates_before + 1);
+  EXPECT_EQ(receipt.backend_updates, 1u);
+  EXPECT_FALSE(receipt.historical_groups_removed.empty());
+  EXPECT_FALSE(receipt.historical_groups_added.empty());
+  EXPECT_TRUE(estimator.factorLedger().activeSlots(historical_id).empty());
+  EXPECT_FALSE(estimator.factorLedger().activeSlots(replacement_id).empty());
+}
+
+TEST(IntegrityV2Reinitialization, ExecutesControlledStateSequence) {
+  uwb_imu_pl::ControlledReinitializer controller;
+  uwb_imu_pl::NavigationState committed;
+  committed.timestamp = uwb_imu_pl::TimestampNs(100);
+  const auto id = controller.request(
+      uwb_imu_pl::FdeStatus::BridgeTimeout, "timeout", committed);
+  EXPECT_NE(id.value(), 0u);
+  EXPECT_EQ(controller.directive().state,
+            uwb_imu_pl::ReinitializationState::Requested);
+  controller.beginWaiting();
+  uwb_imu_pl::ImuMeasurement stale;
+  stale.timestamp = committed.timestamp;
+  EXPECT_FALSE(controller.acceptTrustedImu(stale).has_value());
+  uwb_imu_pl::ImuMeasurement trusted;
+  trusted.timestamp = uwb_imu_pl::TimestampNs(101);
+  trusted.specific_force_mps2.setZero();
+  trusted.angular_velocity_radps.setZero();
+  EXPECT_TRUE(controller.acceptTrustedImu(trusted).has_value());
+  EXPECT_EQ(controller.directive().state,
+            uwb_imu_pl::ReinitializationState::Reinitialized);
+  controller.complete();
+  EXPECT_EQ(controller.directive().state,
+            uwb_imu_pl::ReinitializationState::Running);
+}
+
 TEST(IntegrityV2Window, RejectsFixedLagWithoutMaturityMargin) {
   auto config = researchConfig();
   config.incremental.fixed_lag_epochs =
@@ -221,6 +403,20 @@ TEST(IntegrityV2RankUpdate, MatchesIndependentDenseOracle) {
   EXPECT_TRUE(fast.state_increment.isApprox(dense.state_increment, 1e-10));
   EXPECT_TRUE(fast.covariance.isApprox(dense.covariance, 1e-10));
   EXPECT_NEAR(fast.statistic, dense.statistic, 1e-10);
+}
+
+TEST(IntegrityV2RankUpdate, RejectsUnresolvedRemovalBeforeSelection) {
+  const auto window = syntheticWindow();
+  uwb_imu_pl::ExclusionAction action;
+  action.id = uwb_imu_pl::ExclusionActionId(9);
+  action.groups_to_remove = {uwb_imu_pl::FactorGroupId(999)};
+  const uwb_imu_pl::RankUpdateEvaluator evaluator;
+  const auto fast = evaluator.evaluate(evaluator.factorizeOnce(window), action);
+  const auto dense = uwb_imu_pl::DenseCandidateOracle().evaluate(window, action);
+  EXPECT_FALSE(fast.valid);
+  EXPECT_FALSE(dense.valid);
+  EXPECT_EQ(fast.reason, "candidate removal block is absent from frozen window");
+  EXPECT_EQ(dense.reason, fast.reason);
 }
 
 TEST(IntegrityV2Detector, UsesSquaredParityDofAndUnionBound) {

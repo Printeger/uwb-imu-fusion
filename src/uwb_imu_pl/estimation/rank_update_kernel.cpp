@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 #include <set>
 
 namespace uwb_imu_pl {
@@ -14,15 +15,21 @@ bool selected(FactorGroupId id, const std::vector<FactorGroupId>& ids) {
   return std::find(ids.begin(), ids.end(), id) != ids.end();
 }
 
-void candidateRows(const LinearizedIntegrityWindow& window,
+bool candidateRows(const LinearizedIntegrityWindow& window,
                    const ExclusionAction& action, Eigen::MatrixXd* h,
                    Eigen::VectorXd* z) {
+  std::set<std::uint64_t> requested;
+  std::set<std::uint64_t> resolved;
+  for (const auto id : action.groups_to_remove) requested.insert(id.value());
   int rows = 0;
   for (const auto& block : window.blocks) {
-    if (!selected(block.group_id, action.groups_to_remove)) {
+    if (selected(block.group_id, action.groups_to_remove)) {
+      resolved.insert(block.group_id.value());
+    } else {
       rows += block.jacobian_whitened.rows();
     }
   }
+  if (requested != resolved) return false;
   for (const auto& block : action.added_blocks) rows += block.jacobian_whitened.rows();
   h->setZero(rows, window.H.cols());
   z->setZero(rows);
@@ -37,6 +44,7 @@ void candidateRows(const LinearizedIntegrityWindow& window,
     if (!selected(block.group_id, action.groups_to_remove)) append(block);
   }
   for (const auto& block : action.added_blocks) append(block);
+  return true;
 }
 
 bool covarianceFromInformation(const Eigen::MatrixXd& information,
@@ -111,6 +119,7 @@ BaseCandidateKernel RankUpdateEvaluator::factorizeOnce(
 CandidateEvaluation RankUpdateEvaluator::evaluate(
     const BaseCandidateKernel& base, const ExclusionAction& action) const {
   CandidateEvaluation result;
+  const auto wall_start = std::chrono::steady_clock::now();
   result.action = action;
   result.base_version = base.version;
   if (!base.valid) {
@@ -120,15 +129,54 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
   Eigen::MatrixXd covariance = base.covariance;
   Eigen::VectorXd information_rhs = base.window.base_information_rhs;
 
+  std::vector<const LinearizedFactorBlock*> removals;
   for (const auto& block : base.window.blocks) {
-    if (!selected(block.group_id, action.groups_to_remove)) continue;
-    const Eigen::MatrixXd& j = block.jacobian_whitened;
-    const Eigen::VectorXd& b = block.residual_whitened;
+    if (selected(block.group_id, action.groups_to_remove)) removals.push_back(&block);
+  }
+  std::sort(removals.begin(), removals.end(), [](const auto* a, const auto* b) {
+    return a->group_id < b->group_id;
+  });
+  std::set<std::uint64_t> requested_removals;
+  for (const auto id : action.groups_to_remove) {
+    requested_removals.insert(id.value());
+  }
+  std::set<std::uint64_t> resolved_removals;
+  for (const auto* block : removals) {
+    resolved_removals.insert(block->group_id.value());
+  }
+  if (requested_removals != resolved_removals) {
+    result.reason = "candidate removal block is absent from frozen window";
+    result.wall_ms = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - wall_start).count();
+    return result;
+  }
+  auto stacked = [&](const std::vector<const LinearizedFactorBlock*>& blocks) {
+    int rows = 0;
+    for (const auto* block : blocks) rows += block->jacobian_whitened.rows();
+    std::pair<Eigen::MatrixXd, Eigen::VectorXd> value{
+        Eigen::MatrixXd::Zero(rows, base.window.H.cols()),
+        Eigen::VectorXd::Zero(rows)};
+    int offset = 0;
+    for (const auto* block : blocks) {
+      value.first.middleRows(offset, block->jacobian_whitened.rows()) =
+          block->jacobian_whitened;
+      value.second.segment(offset, block->residual_whitened.size()) =
+          block->residual_whitened;
+      offset += block->jacobian_whitened.rows();
+    }
+    return value;
+  };
+  if (!removals.empty()) {
+    const auto removal = stacked(removals);
+    const Eigen::MatrixXd& j = removal.first;
+    const Eigen::VectorXd& b = removal.second;
     const Eigen::MatrixXd inner = Eigen::MatrixXd::Identity(j.rows(), j.rows()) -
         j * covariance * j.transpose();
     Eigen::LLT<Eigen::MatrixXd> llt(inner);
     if (llt.info() != Eigen::Success) {
       result.reason = "Woodbury downdate inner matrix is not SPD";
+      result.wall_ms = std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - wall_start).count();
       return result;
     }
     const Eigen::MatrixXd cj = covariance * j.transpose();
@@ -136,14 +184,34 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
     covariance = 0.5 * (covariance + covariance.transpose());
     information_rhs.noalias() -= j.transpose() * b;
   }
+  std::vector<const LinearizedFactorBlock*> additions;
   for (const auto& block : action.added_blocks) {
-    const Eigen::MatrixXd& j = block.jacobian_whitened;
-    const Eigen::VectorXd& b = block.residual_whitened;
+    if (!(block.version == base.version) ||
+        block.jacobian_whitened.cols() != base.window.H.cols() ||
+        block.jacobian_whitened.rows() != block.residual_whitened.size() ||
+        !block.jacobian_whitened.allFinite() ||
+        !block.residual_whitened.allFinite()) {
+      result.reason = "candidate addition block/version is invalid";
+      result.wall_ms = std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - wall_start).count();
+      return result;
+    }
+    additions.push_back(&block);
+  }
+  std::sort(additions.begin(), additions.end(), [](const auto* a, const auto* b) {
+    return a->group_id < b->group_id;
+  });
+  if (!additions.empty()) {
+    const auto addition = stacked(additions);
+    const Eigen::MatrixXd& j = addition.first;
+    const Eigen::VectorXd& b = addition.second;
     const Eigen::MatrixXd inner = Eigen::MatrixXd::Identity(j.rows(), j.rows()) +
         j * covariance * j.transpose();
     Eigen::LLT<Eigen::MatrixXd> llt(inner);
     if (llt.info() != Eigen::Success) {
       result.reason = "Woodbury update inner matrix is not SPD";
+      result.wall_ms = std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - wall_start).count();
       return result;
     }
     const Eigen::MatrixXd cj = covariance * j.transpose();
@@ -155,34 +223,63 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
   result.state_increment = covariance * information_rhs;
   Eigen::MatrixXd h;
   Eigen::VectorXd z;
-  candidateRows(base.window, action, &h, &z);
+  if (!candidateRows(base.window, action, &h, &z)) {
+    result.reason = "candidate removal block is absent from frozen window";
+    result.wall_ms = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - wall_start).count();
+    return result;
+  }
   result.retained_jacobian = h;
   result.retained_residual = z;
   finishCandidate(&result, h, z, config_.rank_tolerance,
                   config_.max_condition_number,
                   config_.max_linearization_step_norm);
+  result.wall_ms = std::chrono::duration<double, std::milli>(
+      std::chrono::steady_clock::now() - wall_start).count();
   return result;
 }
 
 CandidateEvaluation DenseCandidateOracle::evaluate(
     const LinearizedIntegrityWindow& window, const ExclusionAction& action) const {
   CandidateEvaluation result;
+  const auto wall_start = std::chrono::steady_clock::now();
   result.action = action;
   result.base_version = window.version;
+  for (const auto& block : action.added_blocks) {
+    if (!(block.version == window.version) ||
+        block.jacobian_whitened.cols() != window.H.cols() ||
+        block.jacobian_whitened.rows() != block.residual_whitened.size() ||
+        !block.jacobian_whitened.allFinite() ||
+        !block.residual_whitened.allFinite()) {
+      result.reason = "candidate addition block/version is invalid";
+      result.wall_ms = std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - wall_start).count();
+      return result;
+    }
+  }
   Eigen::MatrixXd h;
   Eigen::VectorXd z;
-  candidateRows(window, action, &h, &z);
+  if (!candidateRows(window, action, &h, &z)) {
+    result.reason = "candidate removal block is absent from frozen window";
+    result.wall_ms = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - wall_start).count();
+    return result;
+  }
   result.retained_jacobian = h;
   result.retained_residual = z;
   const Eigen::MatrixXd information = h.transpose() * h;
   if (!covarianceFromInformation(information, &result.covariance)) {
     result.reason = "dense candidate information is not SPD";
+    result.wall_ms = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - wall_start).count();
     return result;
   }
   result.state_increment = result.covariance * h.transpose() * z;
   finishCandidate(&result, h, z, config_.rank_tolerance,
                   config_.max_condition_number,
                   config_.max_linearization_step_norm);
+  result.wall_ms = std::chrono::duration<double, std::milli>(
+      std::chrono::steady_clock::now() - wall_start).count();
   return result;
 }
 

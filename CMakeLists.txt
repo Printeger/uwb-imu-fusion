@@ -133,6 +133,7 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/estimation/factor_ledger.cpp
   src/uwb_imu_pl/estimation/integrity_window_snapshot.cpp
   src/uwb_imu_pl/estimation/rank_update_kernel.cpp
+  src/uwb_imu_pl/estimation/reinitialization.cpp
   src/uwb_imu_pl/integrity/joint_window_detector.cpp
   src/uwb_imu_pl/integrity/hypothesis_evidence.cpp
   src/uwb_imu_pl/integrity/hypothesis_generator.cpp

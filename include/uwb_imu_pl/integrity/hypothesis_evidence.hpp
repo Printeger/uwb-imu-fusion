@@ -17,6 +17,11 @@ class HypothesisEvidenceEvaluator {
       : config_(config) {}
   std::vector<FaultModeEvidence> evaluateAll(
       const LinearizedIntegrityWindow& window,
+      const std::vector<FaultModeBasis>& modes,
+      std::vector<FaultHypothesisV2>* hypotheses,
+      double squared_detector_threshold) const;
+  std::vector<FaultModeEvidence> evaluateAll(
+      const LinearizedIntegrityWindow& window,
       std::vector<FaultHypothesisV2>* hypotheses,
       double squared_detector_threshold) const;
 

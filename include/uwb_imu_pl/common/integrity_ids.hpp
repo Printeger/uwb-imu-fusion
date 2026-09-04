@@ -8,13 +8,17 @@ struct TransactionIdTag {};
 struct WindowIdTag {};
 struct FactorGroupIdTag {};
 struct FaultUnitIdTag {};
+struct FaultModeIdTag {};
 struct ExclusionActionIdTag {};
+struct RecoveryRequestIdTag {};
 
 using TransactionId = StrongId<TransactionIdTag>;
 using WindowId = StrongId<WindowIdTag>;
 using FactorGroupId = StrongId<FactorGroupIdTag>;
 using FaultUnitId = StrongId<FaultUnitIdTag>;
+using FaultModeId = StrongId<FaultModeIdTag>;
 using ExclusionActionId = StrongId<ExclusionActionIdTag>;
+using RecoveryRequestId = StrongId<RecoveryRequestIdTag>;
 
 enum class SensorType {
   Unknown,
@@ -30,6 +34,7 @@ enum class FaultKind {
   Unknown,
   AnchorBiasEpochIndependent,
   AnchorBiasPersistentConstant,
+  AnchorBiasRamp,
   AccelAxisIntervalConstant,
   GyroAxisIntervalConstant,
   HardwareBarrier,
@@ -57,6 +62,18 @@ enum class FactorLifecycle {
 
 enum class BridgeMode { None, GenericKinematic, Dynamics };
 enum class HealthState { Healthy, Suspect, Quarantined, RecoveryTest, Failed };
+enum class HistoryRecoverability {
+  Recoverable,
+  Marginalized,
+  MissingProvenance,
+  OnsetBeforeRecoverableBoundary
+};
+enum class ReinitializationState {
+  Running,
+  Requested,
+  WaitingForTrustedImu,
+  Reinitialized
+};
 
 enum class FdeStatus {
   NotTriggered,
@@ -83,6 +100,8 @@ const char* toString(FactorKind value);
 const char* toString(FactorLifecycle value);
 const char* toString(BridgeMode value);
 const char* toString(HealthState value);
+const char* toString(HistoryRecoverability value);
+const char* toString(ReinitializationState value);
 const char* toString(FdeStatus value);
 
 }  // namespace uwb_imu_pl

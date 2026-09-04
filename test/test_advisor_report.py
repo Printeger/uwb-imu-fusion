@@ -2,6 +2,7 @@
 """Deterministic fixtures for the advisor-report statistical contract."""
 
 import pathlib
+import os
 import subprocess
 import sys
 import tempfile
@@ -137,7 +138,11 @@ class AdvisorReportContract(unittest.TestCase):
         self.assertEqual(selected.epoch.tolist(), [1, 2])
 
     def test_benchmark_fault_duration_output_range_digest_and_resume(self):
-        binary = ROOT.parents[1] / "devel/.private/uwb_imu_pl/lib/uwb_imu_pl/advisor_paired_benchmark"
+        configured = os.environ.get("UWB_IMU_PL_ADVISOR_BINARY")
+        build_binary = pathlib.Path.cwd() / "devel/lib/uwb_imu_pl/advisor_paired_benchmark"
+        binary = pathlib.Path(configured) if configured else build_binary
+        if not binary.is_file():
+            binary = ROOT.parents[1] / "devel/.private/uwb_imu_pl/lib/uwb_imu_pl/advisor_paired_benchmark"
         if not binary.is_file():
             self.skipTest("advisor_paired_benchmark has not been built")
         with tempfile.TemporaryDirectory() as directory:

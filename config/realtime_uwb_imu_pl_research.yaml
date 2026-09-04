@@ -52,7 +52,7 @@ fault_models:
     enabled: true
     epoch_single_anchor_bias: true
     persistent_anchor_bias: true
-    ramp_bias: false
+    ramp_bias: true
     prior_probability_bound: 1.0e-4
     p_md: 1.0e-3
   imu:

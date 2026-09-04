@@ -21,6 +21,7 @@ const char* toString(FaultKind v) {
   switch (v) {
     case FaultKind::AnchorBiasEpochIndependent: return "ANCHOR_BIAS_EPOCH_INDEPENDENT";
     case FaultKind::AnchorBiasPersistentConstant: return "ANCHOR_BIAS_PERSISTENT_CONSTANT";
+    case FaultKind::AnchorBiasRamp: return "ANCHOR_BIAS_RAMP";
     case FaultKind::AccelAxisIntervalConstant: return "ACCEL_AXIS_INTERVAL_CONSTANT";
     case FaultKind::GyroAxisIntervalConstant: return "GYRO_AXIS_INTERVAL_CONSTANT";
     case FaultKind::HardwareBarrier: return "HARDWARE_BARRIER";
@@ -65,6 +66,26 @@ const char* toString(HealthState v) {
     case HealthState::Quarantined: return "QUARANTINED";
     case HealthState::RecoveryTest: return "RECOVERY_TEST";
     case HealthState::Failed: return "FAILED";
+  }
+  return unknown(v);
+}
+const char* toString(HistoryRecoverability v) {
+  switch (v) {
+    case HistoryRecoverability::Recoverable: return "RECOVERABLE";
+    case HistoryRecoverability::Marginalized: return "MARGINALIZED";
+    case HistoryRecoverability::MissingProvenance: return "MISSING_PROVENANCE";
+    case HistoryRecoverability::OnsetBeforeRecoverableBoundary:
+      return "ONSET_BEFORE_RECOVERABLE_BOUNDARY";
+  }
+  return unknown(v);
+}
+const char* toString(ReinitializationState v) {
+  switch (v) {
+    case ReinitializationState::Running: return "RUNNING";
+    case ReinitializationState::Requested: return "REQUESTED";
+    case ReinitializationState::WaitingForTrustedImu:
+      return "WAITING_FOR_TRUSTED_IMU";
+    case ReinitializationState::Reinitialized: return "REINITIALIZED";
   }
   return unknown(v);
 }

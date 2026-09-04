@@ -290,7 +290,7 @@ IntegrityConfig IntegrityConfigLoader::load(
   probability(cfg.fault_models.uwb.prior_probability_bound, "fault_models.uwb.prior_probability_bound");
   probability(cfg.fault_models.uwb.p_md, "fault_models.uwb.p_md");
   if (!cfg.fault_models.uwb.enabled || !cfg.fault_models.uwb.epoch_single_anchor_bias ||
-      !cfg.fault_models.uwb.persistent_anchor_bias || cfg.fault_models.uwb.ramp_bias) {
+      !cfg.fault_models.uwb.persistent_anchor_bias || !cfg.fault_models.uwb.ramp_bias) {
     throw std::runtime_error("fault_models.uwb is outside the initial formal scope");
   }
 

@@ -4,11 +4,13 @@
 #include "uwb_imu_pl/io/run_logger.hpp"
 
 #include <chrono>
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <random>
 #include <string>
+#include <vector>
 
 #ifndef UWB_IMU_PL_GIT_SHA
 #define UWB_IMU_PL_GIT_SHA "unknown"
@@ -35,8 +37,7 @@ int main(int argc, char** argv) {
     const auto config = uwb_imu_pl::IntegrityConfigLoader::load(argv[1]);
     const int epochs = std::stoi(argv[3]);
     if (epochs <= 0 || config.incremental.fixed_lag_epochs != 200 ||
-        config.output.write_residuals || !config.output.write_timing ||
-        config.output.write_global_diagnostics) {
+        !config.output.write_timing || config.output.write_global_diagnostics) {
       throw std::runtime_error("performance config/epoch contract mismatch");
     }
     uwb_imu_pl::RunLogger logger(argv[2], false, true);
@@ -62,6 +63,7 @@ int main(int argc, char** argv) {
     std::mt19937_64 random(config.seed);
     std::normal_distribution<double> normal;
     uwb_imu_pl::RunSummary summary;
+    std::vector<double> candidate_wall_ms;
     summary.status = "IMPLEMENTED_UNVERIFIED";
     for (int epoch_index = 0; epoch_index < epochs; ++epoch_index) {
       const double time = (epoch_index+1)*.05;
@@ -104,6 +106,11 @@ int main(int argc, char** argv) {
           std::chrono::steady_clock::now()-start).count();
       logger.writeState(result.state);
       logger.writeIntegrity(result);
+      for (const auto& candidate : result.candidate_audit) {
+        if (std::isfinite(candidate.wall_ms)) {
+          candidate_wall_ms.push_back(candidate.wall_ms);
+        }
+      }
       const std::size_t epoch = estimator.currentEpoch();
       auto timing = [&](const std::string& stage, double value, bool success=true) {
         uwb_imu_pl::TimingRecord record;
@@ -141,6 +148,18 @@ int main(int argc, char** argv) {
       summary.core_total_ms += core_ms;
     }
     summary.detail = "deterministic Week-4 figure-eight performance benchmark";
+    if (!candidate_wall_ms.empty()) {
+      std::sort(candidate_wall_ms.begin(), candidate_wall_ms.end());
+      auto percentile = [&](double p) {
+        const std::size_t index = static_cast<std::size_t>(std::ceil(
+            p * static_cast<double>(candidate_wall_ms.size()))) - 1;
+        return candidate_wall_ms[std::min(index, candidate_wall_ms.size() - 1)];
+      };
+      std::cout << "candidate_wall_ms p50=" << percentile(0.50)
+                << " p95=" << percentile(0.95)
+                << " p99=" << percentile(0.99)
+                << " max=" << candidate_wall_ms.back() << '\n';
+    }
     logger.writeSummary(summary);
   } catch (const std::exception& error) {
     std::cerr << error.what() << '\n';

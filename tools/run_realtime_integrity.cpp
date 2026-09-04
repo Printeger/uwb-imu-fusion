@@ -308,6 +308,20 @@ class RealtimeNode {
         event.imu.angular_velocity.x, event.imu.angular_velocity.y,
         event.imu.angular_velocity.z};
     pipeline_->ingestImu(measurement);
+    if (const auto seed = pipeline_->pendingReinitializationSeed()) {
+      logger_->writeEvent(event.timestamp, "REINITIALIZATION_START",
+          "request_id=" + std::to_string(
+              pipeline_->reinitializationDirective().request_id.value()));
+      const auto inflated = pipeline_->reinitializationPriorSigmas(
+          config_.realtime.prior_sigmas);
+      auto replacement = std::make_unique<uwb_imu_pl::IncrementalUwbImuEstimator>(
+          config_, config_.realtime.lever_arm_body_m);
+      replacement->initialize(*seed, inflated);
+      pipeline_->completeReinitialization(replacement.get(), measurement);
+      estimator_ = std::move(replacement);
+      logger_->writeEvent(event.timestamp, "REINITIALIZATION_COMPLETE",
+          "trusted strictly-increasing finite IMU boundary accepted");
+    }
     last_processed_imu_ = event.timestamp;
     last_imu_measurement_ = measurement;
   }
@@ -545,6 +559,13 @@ class RealtimeNode {
     status.stale_state = output.stale_state;
     status.controlled_reinitialization_required =
         output.controlled_reinitialization_required;
+    status.historical_groups_removed = output.historical_groups_removed;
+    status.historical_groups_added = output.historical_groups_added;
+    status.recovery_epoch_begin = output.recovery_epoch_begin;
+    status.recovery_epoch_end = output.recovery_epoch_end;
+    status.reinitialization_request_id = output.reinitialization_request_id;
+    status.reinitialization_phase = output.reinitialization_phase;
+    status.reinitialization_reason = output.reinitialization_reason;
     integrity_publisher_.publish(status);
 
     diagnostic_msgs::DiagnosticArray diagnostics;

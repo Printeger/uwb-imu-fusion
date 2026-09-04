@@ -84,7 +84,10 @@ TEST(RunLogger, V4SchemaHasExactHeadersAndStructuredSummary) {
             "base_graph_version,linearization_version,selected_action_id,"
             "selected_action_type,fde_status,bridge_pl_x,bridge_pl_y,bridge_pl_z,"
             "history_provenance_valid,backend_updates,stale_state,"
-            "controlled_reinitialization_required,reason");
+            "controlled_reinitialization_required,historical_groups_removed,"
+            "historical_groups_added,recovery_epoch_begin,recovery_epoch_end,"
+            "reinitialization_request_id,reinitialization_phase,"
+            "reinitialization_reason,reason");
   EXPECT_EQ(firstLine(directory + "/timing.csv"),
             "timestamp_ns,epoch,stage,wall_ms,problem_size,hypothesis_count,"
             "factor_count,cold_warm,success");
