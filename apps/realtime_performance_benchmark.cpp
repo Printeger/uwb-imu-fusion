@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <random>
 #include <string>
@@ -64,6 +65,8 @@ int main(int argc, char** argv) {
     std::normal_distribution<double> normal;
     uwb_imu_pl::RunSummary summary;
     std::vector<double> candidate_wall_ms;
+    const bool force_candidate_stress =
+        std::getenv("UWB_IMU_PL_BENCHMARK_FORCE_ALARM") != nullptr;
     summary.status = "IMPLEMENTED_UNVERIFIED";
     for (int epoch_index = 0; epoch_index < epochs; ++epoch_index) {
       const double time = (epoch_index+1)*.05;
@@ -97,20 +100,29 @@ int main(int argc, char** argv) {
         measurement.sigma_m = config.realtime.range_sigma_m;
         measurement.range_m = (position(time)-anchor.position_world_m).norm() +
             measurement.sigma_m*normal(random);
+        if (force_candidate_stress && epoch_index >= 60 &&
+            anchor.id == config.anchors.front().id) {
+          measurement.range_m += 5.0;
+        }
         batch.measurements.push_back(measurement);
       }
       const std::uint64_t marginalizations_before = estimator.marginalizationCount();
       const auto start = std::chrono::steady_clock::now();
-      const auto result = pipeline.processUwbBatch(batch);
+      auto result = pipeline.processUwbBatch(batch);
       const double core_ms = std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now()-start).count();
-      logger.writeState(result.state);
-      logger.writeIntegrity(result);
       for (const auto& candidate : result.candidate_audit) {
         if (std::isfinite(candidate.wall_ms)) {
           candidate_wall_ms.push_back(candidate.wall_ms);
         }
       }
+      // Gate D keeps candidate and transaction evidence, but suppresses the
+      // multi-gigabyte per-epoch hypothesis/ledger snapshots that are not
+      // part of the timing verdict and perturb RSS/I/O measurements.
+      result.hypothesis_audit.clear();
+      result.health_audit.clear();
+      logger.writeState(result.state);
+      logger.writeIntegrity(result);
       const std::size_t epoch = estimator.currentEpoch();
       auto timing = [&](const std::string& stage, double value, bool success=true) {
         uwb_imu_pl::TimingRecord record;
@@ -118,7 +130,8 @@ int main(int argc, char** argv) {
         record.stage = stage; record.wall_ms = value;
         record.problem_size = batch.measurements.size();
         record.hypothesis_count = result.sensitivities.size();
-        record.factor_count = estimator.factorCount(); record.cold = epoch <= 100;
+        record.factor_count = estimator.factorCount();
+        record.cold = epoch_index < 100;
         record.success = success; logger.writeTiming(record);
       };
       timing("imu_preintegration", estimator.lastImuPreintegrationMs());

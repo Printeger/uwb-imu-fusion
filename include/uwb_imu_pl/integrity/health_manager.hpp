@@ -23,6 +23,7 @@ struct HealthRecord {
   std::uint32_t suspicion_count = 0;
   std::uint32_t shadow_pass_count = 0;
   std::uint32_t recovery_pass_count = 0;
+  std::uint32_t recovery_reset_count = 0;
 };
 
 struct HealthTransition {

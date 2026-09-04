@@ -60,14 +60,20 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
   ProtectionLevelV2Result result;
   result.bridge_component_m = bridge_margin.cwiseAbs();
   if (!hypotheses || !candidate.valid || !detector.numerically_valid ||
-      window.protected_state_map.cols() != candidate.covariance.rows() ||
+      window.protected_state_map.cols() != candidate.state_increment.rows() ||
       window.protected_state_map.rows() != 3) {
     result.reason = "invalid post-FDE candidate/protected-state map";
     return result;
   }
-  const Eigen::Matrix3d protected_covariance =
-      window.protected_state_map * candidate.covariance *
-      window.protected_state_map.transpose();
+  const Eigen::MatrixXd covariance_protected_transpose =
+      candidate.covarianceTimes(window.protected_state_map.transpose());
+  if (covariance_protected_transpose.rows() !=
+      window.protected_state_map.cols()) {
+    result.reason = "candidate covariance solve failed";
+    return result;
+  }
+  const Eigen::Matrix3d protected_covariance = window.protected_state_map *
+      covariance_protected_transpose;
   if (!protected_covariance.allFinite() ||
       (protected_covariance.diagonal().array() <= 0.0).any()) {
     result.reason = "post-FDE protected covariance is invalid";
@@ -90,19 +96,24 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
   result.nominal_component_m = nominal_k *
       protected_covariance.diagonal().cwiseSqrt();
   result.fault_component_m.setZero();
-  const Eigen::MatrixXd& h = candidate.retained_jacobian;
-  const Eigen::MatrixXd gain = candidate.covariance * h.transpose();
   for (auto& hypothesis : *hypotheses) {
     const Eigen::MatrixXd fault_map = fault_map_provider(hypothesis);
-    if (fault_map.rows() != h.rows() || fault_map.cols() == 0 ||
+    if (fault_map.rows() != candidate.rows || fault_map.cols() == 0 ||
         !fault_map.allFinite()) {
       hypothesis.monitored = false;
       hypothesis.monitorability.reason = "post-FDE fault map row mismatch";
       result.reason = "remaining hypothesis cannot be mapped post-FDE";
       return result;
     }
-    const Eigen::MatrixXd projected = fault_map - h * gain * fault_map;
-    const Eigen::MatrixXd gram = projected.transpose() * projected;
+    const Eigen::MatrixXd cross = candidate.normalCross(fault_map);
+    const Eigen::MatrixXd covariance_cross = candidate.covarianceTimes(cross);
+    if (cross.rows() != candidate.state_increment.rows() ||
+        covariance_cross.rows() != cross.rows()) {
+      result.reason = "candidate normal cross-product failed";
+      return result;
+    }
+    const Eigen::MatrixXd gram = fault_map.transpose() * fault_map -
+        cross.transpose() * covariance_cross;
     Eigen::JacobiSVD<Eigen::MatrixXd> svd(gram);
     const auto singular = svd.singularValues();
     const double largest = singular.size() ? singular(0) : 0.0;
@@ -129,7 +140,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
       return result;
     }
     const Eigen::MatrixXd protected_fault =
-        window.protected_state_map * gain * fault_map;
+        window.protected_state_map * covariance_cross;
     Eigen::Vector3d slopes;
     for (int axis = 0; axis < 3; ++axis) {
       const Eigen::VectorXd response = protected_fault.row(axis).transpose();

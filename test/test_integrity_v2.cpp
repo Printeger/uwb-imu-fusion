@@ -419,6 +419,30 @@ TEST(IntegrityV2RankUpdate, RejectsUnresolvedRemovalBeforeSelection) {
   EXPECT_EQ(dense.reason, fast.reason);
 }
 
+TEST(IntegrityV2RankUpdate, OnlinePathKeepsOnlySharedBaseAndLowRankCorrections) {
+  const auto window = syntheticWindow();
+  uwb_imu_pl::ExclusionAction action;
+  action.id = uwb_imu_pl::ExclusionActionId(2);
+  action.groups_to_remove = {uwb_imu_pl::FactorGroupId(3)};
+  uwb_imu_pl::RankUpdateConfig config;
+  config.rank_tolerance = 1e-12;
+  config.max_condition_number = 1e10;
+  config.max_linearization_step_norm = 10.0;
+  config.materialize_dense_oracle_fields = false;
+  const uwb_imu_pl::RankUpdateEvaluator evaluator(config);
+  const auto candidate = evaluator.evaluate(evaluator.factorizeOnce(window), action);
+  const auto dense = uwb_imu_pl::DenseCandidateOracle(config).evaluate(window, action);
+  ASSERT_TRUE(candidate.valid) << candidate.reason;
+  ASSERT_TRUE(candidate.shared_base_covariance);
+  EXPECT_EQ(candidate.covariance.size(), 0);
+  EXPECT_EQ(candidate.retained_jacobian.size(), 0);
+  EXPECT_EQ(candidate.retained_jacobian_view, nullptr);
+  EXPECT_TRUE(candidate.covarianceTimes(Eigen::MatrixXd::Identity(
+      window.H.cols(), window.H.cols())).isApprox(dense.covariance, 1e-10));
+  EXPECT_NEAR(candidate.statistic, dense.statistic, 1e-10);
+  EXPECT_NEAR(candidate.information_logdet, dense.information_logdet, 1e-10);
+}
+
 TEST(IntegrityV2Detector, UsesSquaredParityDofAndUnionBound) {
   const auto window = syntheticWindow();
   uwb_imu_pl::DetectorRiskContext risk;
@@ -507,4 +531,27 @@ TEST(IntegrityV2Health, QuarantineRequiresConsecutiveRecovery) {
   EXPECT_EQ(health.fail("accel:x", "hardware barrier").current,
             uwb_imu_pl::HealthState::Failed);
   EXPECT_FALSE(health.allowedInFormalEstimator("accel:x"));
+}
+
+TEST(IntegrityV2Health, RecoveryFailureResetsCountersAndRequarantines) {
+  uwb_imu_pl::HealthConfigV2 config;
+  config.suspect_evidence_count = 1;
+  config.recovery_shadow_passes = 2;
+  config.recovery_test_passes = 10;
+  uwb_imu_pl::HealthManager health(config);
+  health.registerSource("accel:x", uwb_imu_pl::SensorType::ImuAccelerometer);
+  health.observeEvidence("accel:x", true);
+  health.quarantine("accel:x", "exclude");
+  health.observeShadowRecovery("accel:x", true);
+  health.observeShadowRecovery("accel:x", true);
+  for (int pass = 1; pass < 5; ++pass) {
+    health.observeShadowRecovery("accel:x", true);
+  }
+  EXPECT_EQ(health.state("accel:x"), uwb_imu_pl::HealthState::RecoveryTest);
+  health.observeShadowRecovery("accel:x", false);
+  EXPECT_EQ(health.state("accel:x"), uwb_imu_pl::HealthState::Quarantined);
+  ASSERT_EQ(health.snapshot().size(), 1u);
+  EXPECT_EQ(health.snapshot().front().shadow_pass_count, 0u);
+  EXPECT_EQ(health.snapshot().front().recovery_pass_count, 0u);
+  EXPECT_EQ(health.snapshot().front().recovery_reset_count, 1u);
 }

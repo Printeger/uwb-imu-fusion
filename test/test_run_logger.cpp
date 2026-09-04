@@ -55,8 +55,8 @@ TEST(RunLogger, OptionalCsvCreationFollowsConfiguration) {
   boost::filesystem::remove_all(enabled);
 }
 
-TEST(RunLogger, V4SchemaHasExactHeadersAndStructuredSummary) {
-  const std::string directory = "/tmp/uwb_imu_pl_logger_v2";
+TEST(RunLogger, V5SchemaHasExactHeadersAndStructuredSummary) {
+  const std::string directory = "/tmp/uwb_imu_pl_logger_v5";
   boost::filesystem::remove_all(directory);
   {
     uwb_imu_pl::RunLogger logger(directory, true, true);
@@ -93,6 +93,19 @@ TEST(RunLogger, V4SchemaHasExactHeadersAndStructuredSummary) {
             "factor_count,cold_warm,success");
   EXPECT_EQ(firstLine(directory + "/events.csv"),
             "timestamp_ns,sequence,event,detail");
+  EXPECT_EQ(firstLine(directory + "/hypotheses.csv"),
+            "timestamp_ns,window_id,hypothesis_id,fault_unit_ids,physical_source_ids,sensor,"
+            "fault_kind,mode_ids,onset_epoch,onset_time_ns,parameter_dimension,"
+            "fault_rank,sigma_min,sigma_max,condition_number,slope_x,slope_y,"
+            "slope_z,boundary_direction_gram,noncentrality_boundary,prior_bound,p_md_allocation,"
+            "hmi_allocation,monitorable,plausible,conditioned_statistic,"
+            "log_evidence,reason");
+  EXPECT_EQ(firstLine(directory + "/candidates.csv"),
+            "timestamp_ns,window_id,action_id,action_type,physical_source_ids,removed_group_ids,"
+            "added_group_ids,bridge_mode,cardinality,valid,post_detector_passed,"
+            "covers_plausible_set,statistic,threshold,rank,dof,condition_number,"
+            "information_logdet,risk_allocation,hpl_m,vpl_m,selected,"
+            "evaluation_wall_ms,reason");
   EXPECT_TRUE(boost::filesystem::exists(directory + "/ground_truth.csv"));
   EXPECT_TRUE(boost::filesystem::exists(directory + "/fault_truth.csv"));
   EXPECT_TRUE(boost::filesystem::exists(directory + "/transactions.csv"));
@@ -137,8 +150,8 @@ TEST(RunLogger, NumericallyInvalidConditionalIsNotMarkedFormal) {
   boost::filesystem::remove_all(directory);
 }
 
-TEST(RunLogger, V4AuditTablesWriteDataRows) {
-  const std::string directory = "/tmp/uwb_imu_pl_logger_v4_audit";
+TEST(RunLogger, V5AuditTablesWriteDataRows) {
+  const std::string directory = "/tmp/uwb_imu_pl_logger_v5_audit";
   boost::filesystem::remove_all(directory);
   {
     uwb_imu_pl::RunLogger logger(directory, false, false);
@@ -146,11 +159,34 @@ TEST(RunLogger, V4AuditTablesWriteDataRows) {
     output.timestamp = uwb_imu_pl::TimestampNs(42);
     output.transaction_id = 7;
     output.window_id = 8;
-    output.hypothesis_audit.push_back({1, "11;12", 1e-4, 1e-3, 1e-6,
-                                       true, true, 2.0, 3.0, "ok"});
-    output.candidate_audit.push_back({2, "UWB_ANCHOR_EXCLUSION", 1, true,
-                                     true, true, 1.0, 4.0, 3, 2, 5.0,
-                                     0.5, 0.7, true, "ok"});
+    uwb_imu_pl::HypothesisAuditRecord hypothesis;
+    hypothesis.hypothesis_id = 1;
+    hypothesis.fault_unit_ids = "11;12";
+    hypothesis.physical_source_ids = "uwb:1;imu_accel:0:interval:4";
+    hypothesis.sensor = "UWB";
+    hypothesis.fault_kind = "ANCHOR_BIAS_RAMP";
+    hypothesis.mode_ids = "4";
+    hypothesis.parameter_dimension = 2;
+    hypothesis.prior_bound = 1e-4;
+    hypothesis.p_md_allocation = 1e-3;
+    hypothesis.hmi_allocation = 1e-6;
+    hypothesis.monitorable = true;
+    hypothesis.plausible = true;
+    hypothesis.reason = "ok";
+    output.hypothesis_audit.push_back(hypothesis);
+    uwb_imu_pl::CandidateAuditRecord candidate;
+    candidate.action_id = 2;
+    candidate.action_type = "UWB_ANCHOR_EXCLUSION";
+    candidate.physical_source_ids = "uwb:1";
+    candidate.removed_group_ids = "11";
+    candidate.bridge_mode = "NONE";
+    candidate.cardinality = 1;
+    candidate.valid = true;
+    candidate.post_detector_passed = true;
+    candidate.covers_plausible_set = true;
+    candidate.selected = true;
+    candidate.reason = "ok";
+    output.candidate_audit.push_back(candidate);
     uwb_imu_pl::FactorLedgerAuditRecord factor;
     factor.factor_id = 3;
     factor.group_id = 4;

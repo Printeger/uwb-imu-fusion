@@ -166,8 +166,9 @@ IntegrityConfig IntegrityConfigLoader::load(
       "fault_models", "fde", "bridge", "health", "risk",
       "robust_shadow", "output", "realtime", "anchors"});
   cfg.schema_version = required<std::string>(root, "schema_version", "root");
-  if (cfg.schema_version != "uwb-imu-pl/v4") {
-    throw std::runtime_error("schema_version must be uwb-imu-pl/v4");
+  if (cfg.schema_version != "uwb-imu-pl/v4" &&
+      cfg.schema_version != "uwb-imu-pl/v5") {
+    throw std::runtime_error("schema_version must be uwb-imu-pl/v4 or uwb-imu-pl/v5");
   }
   cfg.seed = required<std::uint64_t>(root, "seed", "root");
 

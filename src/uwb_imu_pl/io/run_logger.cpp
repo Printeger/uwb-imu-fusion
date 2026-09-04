@@ -53,6 +53,26 @@ std::string joinIds(const std::vector<std::uint64_t>& ids) {
   return out.str();
 }
 
+template <typename Id>
+std::string joinStrongIds(const std::vector<Id>& ids) {
+  std::ostringstream out;
+  for (std::size_t i = 0; i < ids.size(); ++i) {
+    if (i) out << ';';
+    out << ids[i].value();
+  }
+  return out.str();
+}
+
+std::string joinVector(const Eigen::VectorXd& values) {
+  std::ostringstream out;
+  out << std::setprecision(17);
+  for (Eigen::Index i = 0; i < values.size(); ++i) {
+    if (i) out << ';';
+    out << values(i);
+  }
+  return out.str();
+}
+
 void requireOpen(const std::ofstream& stream, const std::string& path) {
   if (!stream) throw std::runtime_error("cannot open run output: " + path);
 }
@@ -134,21 +154,30 @@ RunLogger::RunLogger(const std::string& output_directory,
   transactions_ << "timestamp_ns,transaction_id,window_id,base_graph_version,"
                    "linearization_version,selected_action_id,fde_status,"
                    "backend_updates,stale_state,reinitialization_required\n";
-  hypotheses_ << "timestamp_ns,window_id,hypothesis_id,fault_unit_ids,prior_bound,"
-                 "p_md_allocation,hmi_allocation,monitorable,plausible,"
-                 "conditioned_statistic,log_evidence,reason\n";
-  candidates_ << "timestamp_ns,window_id,action_id,action_type,cardinality,valid,"
+  hypotheses_ << "timestamp_ns,window_id,hypothesis_id,fault_unit_ids,physical_source_ids,sensor,"
+                 "fault_kind,mode_ids,onset_epoch,onset_time_ns,parameter_dimension,"
+                 "fault_rank,sigma_min,sigma_max,condition_number,slope_x,slope_y,"
+                 "slope_z,boundary_direction_gram,noncentrality_boundary,prior_bound,p_md_allocation,"
+                 "hmi_allocation,monitorable,plausible,conditioned_statistic,"
+                 "log_evidence,reason\n";
+  candidates_ << "timestamp_ns,window_id,action_id,action_type,physical_source_ids,removed_group_ids,"
+                 "added_group_ids,bridge_mode,cardinality,valid,"
                  "post_detector_passed,covers_plausible_set,statistic,threshold,"
-                 "rank,dof,condition_number,hpl_m,vpl_m,selected,wall_ms,reason\n";
+                 "rank,dof,condition_number,information_logdet,risk_allocation,"
+                 "hpl_m,vpl_m,selected,evaluation_wall_ms,reason\n";
   factor_ledger_ << "factor_id,group_id,sensor,factor_kind,lifecycle,epoch_begin,"
                     "epoch_end,time_begin_ns,time_end_ns,backend_slot,"
                     "noise_model_id,model_id,health,source_ids,measurement_ids,"
                     "fault_units,commit_graph_version,removed_graph_version,"
                     "replacement_group_id,replaces_group_id,recovery_epoch\n";
   health_ << "timestamp_ns,source_id,sensor,previous_state,current_state,trigger,"
-             "suspicion_count,shadow_pass_count,recovery_pass_count\n";
+             "evidence_statistic,evidence_threshold,plausible_hypothesis_ids,"
+             "selected_action_id,suspicion_count,shadow_pass_count,"
+             "recovery_pass_count,bridge_count,recovery_reset_count\n";
   bridge_ << "timestamp_ns,transaction_id,mode,consecutive_epochs,duration_s,"
-             "integrity_model,calibration_id,bound_x,bound_y,bound_z,status\n";
+             "model_id,dt_s,optimization_covariance_diagonal,integrity_model,"
+             "calibration_id,bound_x,bound_y,bound_z,control_available,active,"
+             "timeout,status\n";
 }
 
 void RunLogger::writeResolvedConfig(const std::string& yaml) const {
@@ -167,6 +196,14 @@ void RunLogger::writeManifest(const RunManifest& m) const {
       << "  \"git_dirty\": " << (m.git_dirty ? "true" : "false") << ",\n"
       << "  \"config_path\": " << json(m.config_path) << ",\n"
       << "  \"config_hash\": " << json(m.config_hash) << ",\n"
+      << "  \"protocol_sha256\": " << json(m.protocol_sha256) << ",\n"
+      << "  \"protocol_path\": " << json(m.protocol_path) << ",\n"
+      << "  \"raw_inventory_path\": " << json(m.raw_inventory_path) << ",\n"
+      << "  \"raw_inventory_sha256\": " << json(m.raw_inventory_sha256) << ",\n"
+      << "  \"artifact_checksum_path\": " << json(m.artifact_checksum_path) << ",\n"
+      << "  \"seed_domain\": " << json(m.seed_domain) << ",\n"
+      << "  \"attempt\": " << m.attempt << ",\n"
+      << "  \"failure_catalog_path\": " << json(m.failure_catalog_path) << ",\n"
       << "  \"seed\": " << m.seed << ",\n"
       << "  \"fixed_lag_epochs\": " << m.fixed_lag_epochs << ",\n"
       << "  \"execution_command\": " << json(m.execution_command) << ",\n"
@@ -261,6 +298,14 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
   for (const auto& h : o.hypothesis_audit) {
     hypotheses_ << o.timestamp.value() << ',' << o.window_id << ','
                 << h.hypothesis_id << ',' << csv(h.fault_unit_ids) << ','
+                << csv(h.physical_source_ids) << ','
+                << csv(h.sensor) << ',' << csv(h.fault_kind) << ','
+                << csv(h.mode_ids) << ',' << h.onset_epoch << ','
+                << h.onset_time_ns << ',' << h.parameter_dimension << ','
+                << h.fault_rank << ',' << h.sigma_min << ',' << h.sigma_max
+                << ',' << h.condition_number << ',' << h.slope_xyz.x() << ','
+                << h.slope_xyz.y() << ',' << h.slope_xyz.z() << ','
+                << h.boundary_direction_gram << ',' << h.noncentrality_boundary << ','
                 << h.prior_bound << ',' << h.p_md_allocation << ','
                 << h.hmi_allocation << ',' << h.monitorable << ','
                 << h.plausible << ',' << h.conditioned_statistic << ','
@@ -269,11 +314,16 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
   for (const auto& c : o.candidate_audit) {
     candidates_ << o.timestamp.value() << ',' << o.window_id << ','
                 << c.action_id << ',' << csv(c.action_type) << ','
-                << c.cardinality << ',' << c.valid << ','
+                << csv(c.physical_source_ids) << ','
+                << csv(c.removed_group_ids) << ',' << csv(c.added_group_ids)
+                << ',' << csv(c.bridge_mode) << ',' << c.cardinality << ','
+                << c.valid << ','
                 << c.post_detector_passed << ',' << c.covers_plausible_set << ','
                 << c.statistic << ',' << c.threshold << ',' << c.rank << ','
-                << c.dof << ',' << c.condition_number << ',' << c.hpl_m << ','
-                << c.vpl_m << ',' << c.selected << ',' << c.wall_ms << ','
+                << c.dof << ',' << c.condition_number << ','
+                << c.information_logdet << ',' << c.risk_allocation << ','
+                << c.hpl_m << ',' << c.vpl_m << ',' << c.selected << ','
+                << c.wall_ms << ','
                 << csv(c.reason) << '\n';
   }
   for (const auto& f : o.factor_ledger_audit) {
@@ -292,16 +342,22 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
     health_ << o.timestamp.value() << ',' << csv(h.source_id) << ','
             << csv(h.sensor) << ',' << csv(h.previous_state) << ','
             << csv(h.current_state) << ',' << csv(h.trigger) << ','
+            << h.evidence_statistic << ',' << h.evidence_threshold << ','
+            << csv(h.plausible_hypothesis_ids) << ',' << h.selected_action_id << ','
             << h.suspicion_count << ',' << h.shadow_pass_count << ','
-            << h.recovery_pass_count << '\n';
+            << h.recovery_pass_count << ',' << h.bridge_count << ','
+            << h.recovery_reset_count << '\n';
   }
   if (o.bridge_audit) {
     const auto& b = *o.bridge_audit;
     bridge_ << o.timestamp.value() << ',' << o.transaction_id << ','
             << csv(b.mode) << ',' << b.consecutive_epochs << ','
-            << b.duration_s << ',' << csv(b.integrity_model) << ','
+            << b.duration_s << ',' << csv(b.model_id) << ',' << b.dt_s << ','
+            << csv(joinVector(b.optimization_covariance_diagonal)) << ','
+            << csv(b.integrity_model) << ','
             << csv(b.calibration_id) << ',' << b.bound.x() << ','
-            << b.bound.y() << ',' << b.bound.z() << ',' << csv(b.status)
+            << b.bound.y() << ',' << b.bound.z() << ',' << b.control_available
+            << ',' << b.active << ',' << b.timeout << ',' << csv(b.status)
             << '\n';
   }
 }
@@ -400,6 +456,15 @@ RunManifest makeRunManifest(const IntegrityConfig& config,
   manifest.git_dirty = git_dirty;
   manifest.config_path = config.source_path;
   manifest.config_hash = config.config_hash;
+  // Standalone runs have no campaign protocol. Campaign tooling replaces
+  // these sentinel values with the frozen SHA-256/inventory metadata before
+  // an artifact can be finalized as formal evidence.
+  manifest.protocol_path = "UNAVAILABLE";
+  manifest.protocol_sha256 = std::string(64, '0');
+  manifest.raw_inventory_path = "UNAVAILABLE";
+  manifest.raw_inventory_sha256 = std::string(64, '0');
+  manifest.artifact_checksum_path = "UNAVAILABLE";
+  manifest.failure_catalog_path = "UNAVAILABLE";
   manifest.resolved_config = config.resolved_yaml;
   manifest.seed = config.seed;
   manifest.fixed_lag_epochs = config.incremental.fixed_lag_epochs;

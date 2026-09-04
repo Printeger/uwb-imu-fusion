@@ -463,10 +463,32 @@ gate 全为 `PASS`、manifest SHA/clean 状态一致且 checksum 反向校验通
 WEEK4_FOUNDATION_CLOSED
 ```
 
-这个口径仍不覆盖 persistent-fault PL、FDE、rare-event certification、多同时
-故障或非线性余项认证。Method B 始终只写 shadow sidecar；即使 600/600 通过也
-不会启用在线路径。WSL2 性能结果只适用于该次 hypervisor/CPU 环境，不能外推到
-裸机。
+### Integrity V2 round-two campaign
+
+第二轮协议固定在 `config/integrity_round2_protocol.json`，总控入口是
+`tools/run_integrity_round2.py`。结果目录由代码 SHA 与协议 SHA-256 共同命名，
+正式 `build`/`run` 会拒绝 dirty worktree；`--limit-cells` 仅用于 smoke，最终状态
+必为 `INVALID`，不能形成门禁证据。
+
+```bash
+python3 tools/run_integrity_round2.py prepare
+python3 tools/run_integrity_round2.py build
+python3 tools/run_integrity_round2.py calibrate
+python3 tools/run_integrity_round2.py pilot
+python3 tools/run_integrity_round2.py run
+python3 tools/run_integrity_round2.py analyze
+python3 tools/run_integrity_round2.py finalize
+```
+
+正式矩阵规模很大，不应在开发机上把缩小样本伪装成完成。`finalize` 只有在 A–I
+机器可读 verdict 全为 `PASS` 时才设置 `gates_a_to_i_complete=true`；无论结果如何，
+本轮仍保持 `IMPLEMENTED_UNVERIFIED`、`formal_eligible=false`、
+`gate_j_complete=false`。
+
+这个口径仍不构成 rare-event certification、Gate J 产品标定、独立审查或
+包络外非线性余项认证；fixed-lag 已边缘化先验中的迟检恢复也继续 fail closed。
+Method B 始终只写 shadow sidecar，不会由本 campaign 启用在线路径。任何性能
+结果只适用于 manifest 记录的 CPU/affinity/环境，不能外推到其他机器。
 
 `simulator/` 提供完整的 UWB-IMU 仿真管道，覆盖轨迹生成 → 传感器仿真 → 录包 → 离线 FGO 处理 → 精度评测的全流程。
 

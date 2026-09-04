@@ -3,6 +3,7 @@
 
 import argparse
 import csv
+import hashlib
 import json
 import math
 import pathlib
@@ -31,6 +32,20 @@ V4_HEADERS.update({
     "bridge.csv": "timestamp_ns,transaction_id,mode,consecutive_epochs,duration_s,integrity_model,calibration_id,bound_x,bound_y,bound_z,status",
     "fault_truth.csv": "timestamp_ns,sequence,anchor_id,fault_mode,active,outage,injected_bias_m,true_range_m,sensor_type,fault_kind,axis,epoch_begin,epoch_end,injected_value,injected_units",
 })
+V4_LEGACY_HEADERS = dict(V4_HEADERS)
+V4_LEGACY_HEADERS.update({
+    "integrity.csv": V2_HEADERS["integrity.csv"][:-len(",reason")] +
+        ",transaction_id,window_id,base_graph_version,linearization_version,selected_action_id,selected_action_type,fde_status,bridge_pl_x,bridge_pl_y,bridge_pl_z,history_provenance_valid,backend_updates,stale_state,controlled_reinitialization_required,reason",
+    "candidates.csv": "timestamp_ns,window_id,action_id,action_type,cardinality,valid,post_detector_passed,covers_plausible_set,statistic,threshold,rank,dof,condition_number,hpl_m,vpl_m,selected,reason",
+    "factor_ledger.csv": "factor_id,group_id,sensor,factor_kind,lifecycle,epoch_begin,epoch_end,time_begin_ns,time_end_ns,backend_slot,noise_model_id,model_id,health",
+})
+V5_HEADERS = dict(V4_HEADERS)
+V5_HEADERS.update({
+    "hypotheses.csv": "timestamp_ns,window_id,hypothesis_id,fault_unit_ids,physical_source_ids,sensor,fault_kind,mode_ids,onset_epoch,onset_time_ns,parameter_dimension,fault_rank,sigma_min,sigma_max,condition_number,slope_x,slope_y,slope_z,boundary_direction_gram,noncentrality_boundary,prior_bound,p_md_allocation,hmi_allocation,monitorable,plausible,conditioned_statistic,log_evidence,reason",
+    "candidates.csv": "timestamp_ns,window_id,action_id,action_type,physical_source_ids,removed_group_ids,added_group_ids,bridge_mode,cardinality,valid,post_detector_passed,covers_plausible_set,statistic,threshold,rank,dof,condition_number,information_logdet,risk_allocation,hpl_m,vpl_m,selected,evaluation_wall_ms,reason",
+    "health.csv": "timestamp_ns,source_id,sensor,previous_state,current_state,trigger,evidence_statistic,evidence_threshold,plausible_hypothesis_ids,selected_action_id,suspicion_count,shadow_pass_count,recovery_pass_count,bridge_count,recovery_reset_count",
+    "bridge.csv": "timestamp_ns,transaction_id,mode,consecutive_epochs,duration_s,model_id,dt_s,optimization_covariance_diagonal,integrity_model,calibration_id,bound_x,bound_y,bound_z,control_available,active,timeout,status",
+})
 
 
 def fail(message):
@@ -55,6 +70,19 @@ def fnv1a64(payload):
     return f"{value:016x}"
 
 
+def sha256(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def rows(path):
+    with path.open(newline="", encoding="utf-8") as stream:
+        return sum(1 for _ in csv.DictReader(stream))
+
+
 def validate_monotonic(path, strict):
     previous = None
     with path.open(newline="", encoding="utf-8") as stream:
@@ -68,7 +96,8 @@ def validate_monotonic(path, strict):
             previous = current
 
 
-def validate_v2(directory, manifest, expected_headers=V2_HEADERS):
+def validate_v2(directory, manifest, expected_headers=V2_HEADERS,
+                strict_timestamps=True):
     required = {"states.csv", "integrity.csv", "events.csv", "ground_truth.csv",
                 "fault_truth.csv", "summary.json", "resolved_config.yaml"}
     for name in required:
@@ -78,8 +107,8 @@ def validate_v2(directory, manifest, expected_headers=V2_HEADERS):
         path = directory / name
         if path.exists() and header(path) != expected:
             fail(f"{name}: header mismatch")
-    validate_monotonic(directory / "states.csv", True)
-    validate_monotonic(directory / "integrity.csv", True)
+    validate_monotonic(directory / "states.csv", strict_timestamps)
+    validate_monotonic(directory / "integrity.csv", strict_timestamps)
     validate_monotonic(directory / "events.csv", False)
 
     with (directory / "events.csv").open(newline="", encoding="utf-8") as stream:
@@ -136,7 +165,12 @@ def validate_v3(directory, manifest):
 
 
 def validate_v4(directory, manifest):
-    validate_v2(directory, manifest, V4_HEADERS)
+    selected_headers = V4_HEADERS
+    if ((directory / "integrity.csv").is_file() and
+            header(directory / "integrity.csv") ==
+            V4_LEGACY_HEADERS["integrity.csv"]):
+        selected_headers = V4_LEGACY_HEADERS
+    validate_v2(directory, manifest, selected_headers)
     for name in ("transactions.csv", "hypotheses.csv", "candidates.csv",
                  "factor_ledger.csv", "health.csv", "bridge.csv"):
         if not (directory / name).is_file():
@@ -165,6 +199,187 @@ def validate_v4(directory, manifest):
         fail("formal_eligible cannot be true without complete Gate J evidence")
 
 
+def id_set(value, field):
+    if value == "":
+        return set()
+    try:
+        result = {int(item) for item in value.split(";")}
+    except ValueError as error:
+        fail(f"{field}: malformed ID list")
+    if any(item <= 0 for item in result):
+        fail(f"{field}: IDs must be positive")
+    return result
+
+
+def validate_checksum_file(directory, relative):
+    path = directory / relative
+    if not path.is_file():
+        fail(f"missing checksum file: {relative}")
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        match = re.fullmatch(r"([0-9a-f]{64})  (.+)", line)
+        if not match:
+            fail(f"{relative}:{line_number}: malformed checksum row")
+        artifact = pathlib.PurePosixPath(match.group(2))
+        if artifact.is_absolute() or ".." in artifact.parts:
+            fail(f"{relative}:{line_number}: unsafe checksum path")
+        target = directory / pathlib.Path(artifact)
+        if not target.is_file() or sha256(target) != match.group(1):
+            fail(f"{relative}:{line_number}: checksum mismatch")
+
+
+def validate_v5(directory, manifest):
+    # Rejected attempts legitimately repeat the last committed state time.
+    validate_v2(directory, manifest, V5_HEADERS, strict_timestamps=False)
+    for name in ("transactions.csv", "hypotheses.csv", "candidates.csv",
+                 "factor_ledger.csv", "health.csv", "bridge.csv"):
+        if not (directory / name).is_file():
+            fail(f"missing required v5 artifact: {name}")
+    resolved = (directory / "resolved_config.yaml").read_bytes()
+    if fnv1a64(resolved) != manifest["config_hash"].lower():
+        fail("resolved_config.yaml: content does not match config_hash")
+    for field in ("protocol_sha256", "raw_inventory_sha256"):
+        value = manifest.get(field)
+        if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
+            fail(f"run_manifest.json: {field} must be 64 lowercase hex digits")
+    for field in ("protocol_path", "raw_inventory_path",
+                  "artifact_checksum_path", "seed_domain",
+                  "failure_catalog_path", "execution_command"):
+        if not isinstance(manifest.get(field), str) or not manifest[field].strip():
+            fail(f"run_manifest.json: {field} must be non-empty")
+    if not isinstance(manifest.get("attempt"), int) or manifest["attempt"] < 1:
+        fail("run_manifest.json: attempt must be a positive integer")
+    protocol_path = manifest["protocol_path"]
+    if protocol_path != "UNAVAILABLE":
+        protocol = directory / protocol_path
+        if not protocol.is_file() or sha256(protocol) != manifest["protocol_sha256"]:
+            fail("protocol artifact is missing or does not match protocol_sha256")
+    failure_catalog = manifest["failure_catalog_path"]
+    if failure_catalog != "UNAVAILABLE" and not (directory / failure_catalog).is_file():
+        fail("failure catalog artifact is missing")
+
+    transactions = {}
+    transaction_actions = {}
+    timestamp_windows = {}
+    with (directory / "transactions.csv").open(newline="", encoding="utf-8") as stream:
+        for line, row in enumerate(csv.DictReader(stream), 2):
+            transaction = int(row["transaction_id"])
+            window = int(row["window_id"])
+            if transaction <= 0 or window <= 0:
+                fail(f"transactions.csv:{line}: zero transaction/window ID")
+            if transaction in transactions:
+                fail(f"transactions.csv:{line}: duplicate transaction ID")
+            transactions[transaction] = window
+            transaction_actions[window] = int(row["selected_action_id"])
+            timestamp_windows[int(row["timestamp_ns"])] = window
+            if int(row["backend_updates"]) not in (0, 1):
+                fail(f"transactions.csv:{line}: backend_updates must be zero or one")
+
+    windows = set(transactions.values())
+    hypothesis_ids = set()
+    with (directory / "hypotheses.csv").open(newline="", encoding="utf-8") as stream:
+        for line, row in enumerate(csv.DictReader(stream), 2):
+            if int(row["window_id"]) not in windows:
+                fail(f"hypotheses.csv:{line}: dangling window_id")
+            identifier = int(row["hypothesis_id"])
+            key = (int(row["window_id"]), identifier)
+            if identifier <= 0 or key in hypothesis_ids:
+                fail(f"hypotheses.csv:{line}: invalid/duplicate hypothesis ID")
+            hypothesis_ids.add(key)
+            id_set(row["fault_unit_ids"], f"hypotheses.csv:{line}:fault_unit_ids")
+            id_set(row["mode_ids"], f"hypotheses.csv:{line}:mode_ids")
+            if not row["physical_source_ids"].strip():
+                fail(f"hypotheses.csv:{line}: physical_source_ids must be non-empty")
+            if int(row["parameter_dimension"]) <= 0:
+                fail(f"hypotheses.csv:{line}: parameter_dimension must be positive")
+            if row["reason"].strip() == "":
+                fail(f"hypotheses.csv:{line}: reason must be non-empty")
+
+    candidate_actions = {}
+    selected_actions = {}
+    with (directory / "candidates.csv").open(newline="", encoding="utf-8") as stream:
+        for line, row in enumerate(csv.DictReader(stream), 2):
+            window = int(row["window_id"])
+            if window not in windows:
+                fail(f"candidates.csv:{line}: dangling window_id")
+            action = int(row["action_id"])
+            key = (window, action)
+            if action <= 0 or key in candidate_actions:
+                fail(f"candidates.csv:{line}: invalid/duplicate action ID")
+            candidate_actions[key] = row
+            id_set(row["removed_group_ids"], f"candidates.csv:{line}:removed_group_ids")
+            id_set(row["added_group_ids"], f"candidates.csv:{line}:added_group_ids")
+            boolean(row["valid"], f"candidates.csv:{line}:valid")
+            boolean(row["selected"], f"candidates.csv:{line}:selected")
+            if row["selected"] in ("1", "true", "True"):
+                if window in selected_actions:
+                    fail(f"candidates.csv:{line}: multiple selected actions in window")
+                selected_actions[window] = action
+            if row["valid"] in ("0", "false", "False") and not row["reason"].strip():
+                fail(f"candidates.csv:{line}: invalid candidate needs a reason")
+            if float(row["evaluation_wall_ms"]) < 0:
+                fail(f"candidates.csv:{line}: negative evaluation time")
+    for window, action in transaction_actions.items():
+        if action and selected_actions.get(window) != action:
+            fail(f"transactions.csv: selected action {action} is absent for window {window}")
+
+    factor_ids = set()
+    group_ids = set()
+    with (directory / "factor_ledger.csv").open(newline="", encoding="utf-8") as stream:
+        for line, row in enumerate(csv.DictReader(stream), 2):
+            factor = int(row["factor_id"])
+            group = int(row["group_id"])
+            if factor <= 0 or group <= 0:
+                fail(f"factor_ledger.csv:{line}: invalid factor/group ID")
+            factor_ids.add(factor)
+            group_ids.add(group)
+            id_set(row["measurement_ids"], f"factor_ledger.csv:{line}:measurement_ids")
+            commit = int(row["commit_graph_version"])
+            removed = int(row["removed_graph_version"])
+            if removed and removed < commit:
+                fail(f"factor_ledger.csv:{line}: removed version precedes commit")
+            replacement = int(row["replacement_group_id"])
+            replaces = int(row["replaces_group_id"])
+            if replacement and replaces:
+                fail(f"factor_ledger.csv:{line}: both replacement directions are set")
+
+    with (directory / "candidates.csv").open(newline="", encoding="utf-8") as stream:
+        for line, row in enumerate(csv.DictReader(stream), 2):
+            referenced = id_set(row["removed_group_ids"], "removed_group_ids")
+            if not referenced.issubset(group_ids):
+                fail(f"candidates.csv:{line}: removed group missing from ledger")
+
+    with (directory / "health.csv").open(newline="", encoding="utf-8") as stream:
+        for line, row in enumerate(csv.DictReader(stream), 2):
+            timestamp = int(row["timestamp_ns"])
+            window = timestamp_windows.get(timestamp)
+            for hypothesis in id_set(row["plausible_hypothesis_ids"],
+                                     f"health.csv:{line}:plausible_hypothesis_ids"):
+                if window is None or (window, hypothesis) not in hypothesis_ids:
+                    fail(f"health.csv:{line}: dangling plausible hypothesis ID")
+
+    inventory_path = manifest["raw_inventory_path"]
+    if inventory_path != "UNAVAILABLE":
+        inventory = directory / inventory_path
+        if not inventory.is_file() or sha256(inventory) != manifest["raw_inventory_sha256"]:
+            fail("raw inventory is missing or checksum does not match")
+        payload = json.loads(inventory.read_text(encoding="utf-8"))
+        entries = payload.get("artifacts")
+        if not isinstance(entries, list):
+            fail("raw inventory artifacts must be a list")
+        for entry in entries:
+            relative_artifact = pathlib.PurePosixPath(entry["path"])
+            if relative_artifact.is_absolute() or ".." in relative_artifact.parts:
+                fail(f"raw inventory unsafe path: {entry.get('path')}")
+            artifact = directory / pathlib.Path(relative_artifact)
+            if not artifact.is_file() or sha256(artifact) != entry["sha256"]:
+                fail(f"raw inventory mismatch: {entry.get('path')}")
+            if artifact.suffix == ".csv" and rows(artifact) != entry["rows"]:
+                fail(f"raw inventory row-count mismatch: {entry['path']}")
+    checksum_path = manifest["artifact_checksum_path"]
+    if checksum_path != "UNAVAILABLE":
+        validate_checksum_file(directory, checksum_path)
+
+
 def validate(directory):
     manifest_path = directory / "run_manifest.json"
     if not manifest_path.is_file():
@@ -173,7 +388,7 @@ def validate(directory):
         manifest = json.load(stream)
     version = manifest.get("schema_version")
     if version not in ("uwb-imu-pl/v1", "uwb-imu-pl/v2", "uwb-imu-pl/v3",
-                       "uwb-imu-pl/v4"):
+                       "uwb-imu-pl/v4", "uwb-imu-pl/v5"):
         fail(f"unsupported schema_version: {version!r}")
     for field, kind in (("git_sha", str), ("config_hash", str),
                         ("seed", int), ("git_dirty", bool)):
@@ -183,7 +398,9 @@ def validate(directory):
         fail("run_manifest.json: empty git_sha")
     if not re.fullmatch(r"[0-9a-fA-F]{16}", manifest["config_hash"]):
         fail("run_manifest.json: config_hash is not 16 hexadecimal digits")
-    if version == "uwb-imu-pl/v4":
+    if version == "uwb-imu-pl/v5":
+        validate_v5(directory, manifest)
+    elif version == "uwb-imu-pl/v4":
         validate_v4(directory, manifest)
     elif version == "uwb-imu-pl/v3":
         validate_v3(directory, manifest)

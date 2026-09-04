@@ -58,6 +58,7 @@ HealthTransition HealthManager::observeShadowRecovery(const std::string& id,
   if (found == records_.end()) throw std::out_of_range("unknown health source");
   auto& record = found->second;
   if (!passed) {
+    ++record.recovery_reset_count;
     record.shadow_pass_count = 0;
     record.recovery_pass_count = 0;
     if (record.state == HealthState::RecoveryTest) {

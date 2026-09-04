@@ -217,6 +217,21 @@ struct StageTiming {
 struct HypothesisAuditRecord {
   std::uint64_t hypothesis_id = 0;
   std::string fault_unit_ids;
+  std::string physical_source_ids;
+  std::string sensor;
+  std::string fault_kind;
+  std::string mode_ids;
+  std::uint64_t onset_epoch = 0;
+  std::int64_t onset_time_ns = 0;
+  int parameter_dimension = 0;
+  int fault_rank = 0;
+  double sigma_min = 0.0;
+  double sigma_max = 0.0;
+  double condition_number = std::numeric_limits<double>::infinity();
+  Eigen::Vector3d slope_xyz = Eigen::Vector3d::Constant(
+      std::numeric_limits<double>::infinity());
+  double boundary_direction_gram = 0.0;
+  double noncentrality_boundary = std::numeric_limits<double>::infinity();
   double prior_bound = 0.0;
   double p_md_allocation = 0.0;
   double hmi_allocation = 0.0;
@@ -230,6 +245,10 @@ struct HypothesisAuditRecord {
 struct CandidateAuditRecord {
   std::uint64_t action_id = 0;
   std::string action_type;
+  std::string physical_source_ids;
+  std::string removed_group_ids;
+  std::string added_group_ids;
+  std::string bridge_mode;
   int cardinality = 0;
   bool valid = false;
   bool post_detector_passed = false;
@@ -239,6 +258,8 @@ struct CandidateAuditRecord {
   int rank = 0;
   int dof = 0;
   double condition_number = std::numeric_limits<double>::infinity();
+  double information_logdet = -std::numeric_limits<double>::infinity();
+  double risk_allocation = 0.0;
   double hpl_m = std::numeric_limits<double>::infinity();
   double vpl_m = std::numeric_limits<double>::infinity();
   bool selected = false;
@@ -276,18 +297,30 @@ struct HealthAuditRecord {
   std::string previous_state;
   std::string current_state;
   std::string trigger;
+  double evidence_statistic = std::numeric_limits<double>::infinity();
+  double evidence_threshold = std::numeric_limits<double>::infinity();
+  std::string plausible_hypothesis_ids;
+  std::uint64_t selected_action_id = 0;
   std::uint32_t suspicion_count = 0;
   std::uint32_t shadow_pass_count = 0;
   std::uint32_t recovery_pass_count = 0;
+  std::uint32_t bridge_count = 0;
+  std::uint32_t recovery_reset_count = 0;
 };
 
 struct BridgeAuditRecord {
   std::string mode = "NONE";
   std::uint32_t consecutive_epochs = 0;
   double duration_s = 0.0;
+  std::string model_id;
+  double dt_s = 0.0;
+  Eigen::VectorXd optimization_covariance_diagonal;
   std::string integrity_model;
   std::string calibration_id;
   Eigen::Vector3d bound = Eigen::Vector3d::Zero();
+  bool control_available = false;
+  bool active = false;
+  bool timeout = false;
   std::string status;
 };
 
@@ -313,7 +346,7 @@ struct IntegrityOutput {
   // True when the current UWB has valid model/capability/provenance inputs.
   // Risk-budget or alert-limit unavailability does not clear this flag.
   bool measurement_model_valid = false;
-  // V4 transaction/FDE audit. Zero IDs mean the legacy V1 facade was used.
+  // V4+ transaction/FDE audit. Zero IDs mean the legacy V1 facade was used.
   std::uint64_t transaction_id = 0;
   std::uint64_t window_id = 0;
   std::uint64_t base_graph_version = 0;
@@ -343,12 +376,20 @@ struct IntegrityOutput {
 };
 
 struct RunManifest {
-  std::string schema_version = "uwb-imu-pl/v4";
+  std::string schema_version = "uwb-imu-pl/v5";
   std::string created_utc;
   std::string git_sha;
   bool git_dirty = false;
   std::string config_path;
   std::string config_hash;
+  std::string protocol_sha256;
+  std::string protocol_path;
+  std::string raw_inventory_path;
+  std::string raw_inventory_sha256;
+  std::string artifact_checksum_path;
+  std::string seed_domain = "standalone";
+  std::uint32_t attempt = 1;
+  std::string failure_catalog_path;
   std::string resolved_config;
   std::uint64_t seed = 0;
   std::uint32_t fixed_lag_epochs = 0;

@@ -238,6 +238,10 @@ target_compile_definitions(realtime_performance_benchmark PRIVATE
 target_link_libraries(realtime_performance_benchmark
   ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
 
+add_executable(integrity_round2_scenario apps/integrity_round2_scenario.cpp)
+target_link_libraries(integrity_round2_scenario
+  ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
+
 add_executable(advisor_paired_benchmark apps/advisor_paired_benchmark.cpp)
 target_link_libraries(advisor_paired_benchmark
   ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
@@ -264,6 +268,10 @@ catkin_install_python(PROGRAMS
   tools/analyze_week4_performance.py
   tools/week4_common.py
   tools/run_week4_validation.py
+  tools/round2_common.py
+  tools/run_integrity_round2.py
+  tools/run_round2_analytic_mc.py
+  tools/run_round2_performance.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -331,4 +339,9 @@ if(CATKIN_ENABLE_TESTING)
     COMMAND ${CMAKE_COMMAND} -E env
       PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools
       python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_advisor_report.py)
+
+  add_test(NAME test_round2_tools
+    COMMAND ${CMAKE_COMMAND} -E env
+      PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools
+      python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_round2_tools.py)
 endif()

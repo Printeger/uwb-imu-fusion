@@ -10,8 +10,12 @@
 
 #include <algorithm>
 #include <Eigen/Cholesky>
+#include <array>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
+#include <future>
+#include <iterator>
 #include <map>
 #include <set>
 #include <stdexcept>
@@ -1043,6 +1047,14 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
     output.linearization_version = transaction.base_version.linpoint_version;
     output.measurement_group_size = batch.measurements.size();
     output.protection_level.label = IntegrityLabel::ImplementedUnverified;
+    auto stage_start = std::chrono::steady_clock::now();
+    auto record_stage = [&](const std::string& name, bool success = true) {
+      const auto now = std::chrono::steady_clock::now();
+      output.stage_timings.push_back({name,
+          std::chrono::duration<double, std::milli>(now - stage_start).count(),
+          success});
+      stage_start = now;
+    };
     // Health transitions are staged with the transaction.  They become
     // externally visible only after commit/discard finalizes the epoch.
     HealthManager pending_health = health_;
@@ -1097,9 +1109,22 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
         record.previous_state = toString(entry.state);
         record.current_state = toString(entry.state);
         record.trigger = "EPOCH_SNAPSHOT";
+        record.evidence_statistic = output.detector.statistic;
+        record.evidence_threshold = output.detector.threshold;
+        for (const auto& hypothesis : output.hypothesis_audit) {
+          if (!hypothesis.plausible) continue;
+          if (!record.plausible_hypothesis_ids.empty()) {
+            record.plausible_hypothesis_ids += ';';
+          }
+          record.plausible_hypothesis_ids +=
+              std::to_string(hypothesis.hypothesis_id);
+        }
+        record.selected_action_id = output.selected_action_id;
         record.suspicion_count = entry.suspicion_count;
         record.shadow_pass_count = entry.shadow_pass_count;
         record.recovery_pass_count = entry.recovery_pass_count;
+        record.bridge_count = consecutive_bridge_epochs_;
+        record.recovery_reset_count = entry.recovery_reset_count;
         output.health_audit.push_back(std::move(record));
       }
     };
@@ -1107,6 +1132,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
     IntegrityWindowRequest request;
     request.epochs = cfg.integrity_window.epochs;
     const auto window = estimator_->buildIntegrityWindow(transaction, request);
+    record_stage("integrity_window", window.model_valid);
     output.window_id = window.id.value();
     output.history_provenance_valid =
         window.capabilities.history_provenance_valid;
@@ -1119,6 +1145,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
         cfg.integrity_window.max_condition_number;
     const DetectorResultV2 all_in =
         JointWindowDetector().evaluate(window, detector_risk);
+    record_stage("all_in_detector", all_in.numerically_valid);
     output.detector.detector_type =
         "joint_window_whitened_parity_squared_norm";
     output.detector.statistic = all_in.squared_parity_statistic;
@@ -1236,6 +1263,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
         auto evidence = HypothesisEvidenceEvaluator(evidence_config).evaluateAll(
             window, models.modes, &models.hypotheses,
             all_in.squared_threshold);
+        record_stage("hypothesis_evidence", true);
         bool hardware_barrier = false;
         struct SourceEvidence {
           SensorType sensor = SensorType::Unknown;
@@ -1286,8 +1314,24 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
             }
           }
         }
-        models.actions = HypothesisGenerator(generator_config)
-            .actionsForPlausibleSet(window, transaction, models, evidence);
+        if (all_in.passed && !hardware_barrier) {
+          ExclusionAction keep;
+          keep.id = ExclusionActionId(1);
+          keep.action_model_id = "KEEP_ALL";
+          models.actions = {keep};
+        } else {
+          models.actions = HypothesisGenerator(generator_config)
+              .actionsForPlausibleSet(window, transaction, models, evidence);
+        }
+        std::map<double, double> noncentrality_boundaries;
+        for (const auto& hypothesis : models.hypotheses) {
+          if (!noncentrality_boundaries.count(hypothesis.p_md_allocation)) {
+            noncentrality_boundaries[hypothesis.p_md_allocation] =
+                IntegrityMonitor::noncentralityBoundary(
+                    all_in.dof, all_in.squared_threshold,
+                    hypothesis.p_md_allocation);
+          }
+        }
         for (std::size_t i = 0; i < models.hypotheses.size(); ++i) {
           const auto& hypothesis = models.hypotheses[i];
           HypothesisAuditRecord record;
@@ -1295,6 +1339,50 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
           for (std::size_t j = 0; j < hypothesis.units.size(); ++j) {
             if (j) record.fault_unit_ids += ';';
             record.fault_unit_ids += std::to_string(hypothesis.units[j].value());
+            const auto unit = std::find_if(models.units.begin(), models.units.end(),
+                [&](const FaultUnit& value) {
+                  return value.id == hypothesis.units[j];
+                });
+            if (unit != models.units.end()) {
+              if (!record.physical_source_ids.empty()) {
+                record.physical_source_ids += ';';
+              }
+              record.physical_source_ids += unit->physical_source_id;
+            }
+          }
+          std::set<std::string> sensors;
+          std::set<std::string> kinds;
+          record.onset_epoch = std::numeric_limits<std::uint64_t>::max();
+          record.onset_time_ns = std::numeric_limits<std::int64_t>::max();
+          for (const auto mode_id : hypothesis.modes) {
+            if (!record.mode_ids.empty()) record.mode_ids += ';';
+            record.mode_ids += std::to_string(mode_id.value());
+            const auto mode = std::find_if(models.modes.begin(), models.modes.end(),
+                [&](const FaultModeBasis& value) { return value.id == mode_id; });
+            if (mode == models.modes.end()) continue;
+            sensors.insert(toString(mode->sensor));
+            kinds.insert(toString(mode->kind));
+            record.onset_epoch = std::min<std::uint64_t>(
+                record.onset_epoch, mode->onset_epoch);
+            record.onset_time_ns = std::min(
+                record.onset_time_ns, mode->onset_time.value());
+            record.parameter_dimension += mode->parameter_dimension;
+          }
+          auto join_strings = [](const std::set<std::string>& values) {
+            std::string joined;
+            for (const auto& value : values) {
+              if (!joined.empty()) joined += ';';
+              joined += value;
+            }
+            return joined;
+          };
+          record.sensor = join_strings(sensors);
+          record.fault_kind = join_strings(kinds);
+          if (record.onset_epoch == std::numeric_limits<std::uint64_t>::max()) {
+            record.onset_epoch = 0;
+          }
+          if (record.onset_time_ns == std::numeric_limits<std::int64_t>::max()) {
+            record.onset_time_ns = 0;
           }
           record.prior_bound = hypothesis.prior_probability_bound;
           record.p_md_allocation = hypothesis.p_md_allocation;
@@ -1305,6 +1393,19 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
             record.conditioned_statistic = evidence[i].conditioned_statistic;
             record.log_evidence = evidence[i].log_evidence;
             record.reason = evidence[i].monitorability.reason;
+            if (record.reason.empty()) record.reason = "MONITORABLE";
+            record.fault_rank = evidence[i].monitorability.rank;
+            record.sigma_min = evidence[i].monitorability.sigma_min;
+            record.sigma_max = evidence[i].monitorability.sigma_max;
+            record.condition_number = evidence[i].monitorability.condition_number;
+            record.slope_xyz = evidence[i].monitorability.protected_slopes;
+            if (evidence[i].fault_gram.rows() > 0) {
+              const int direction = evidence[i].fault_gram.rows() == 2 ? 1 : 0;
+              record.boundary_direction_gram =
+                  evidence[i].fault_gram(direction, direction);
+            }
+            record.noncentrality_boundary =
+                noncentrality_boundaries.at(hypothesis.p_md_allocation);
           }
           output.hypothesis_audit.push_back(std::move(record));
         }
@@ -1315,14 +1416,22 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
             cfg.integrity_window.max_condition_number;
         rank_config.max_linearization_step_norm =
             cfg.integrity_window.max_linearization_step_norm;
+        rank_config.materialize_dense_oracle_fields = false;
         const RankUpdateEvaluator evaluator(rank_config);
         const BaseCandidateKernel base = evaluator.factorizeOnce(window);
         std::vector<CandidateEvaluation> candidates;
         std::map<std::uint64_t, ProtectionLevelV2Result> candidate_pl;
         candidates.reserve(models.actions.size());
-        for (const auto& action : models.actions) {
+        struct EvaluatedAction {
+          CandidateEvaluation candidate;
+          ProtectionLevelV2Result protection_level;
+          bool has_protection_level = false;
+        };
+        const auto evaluate_action = [&](const ExclusionAction& action) {
+          EvaluatedAction evaluated;
           const auto candidate_start = std::chrono::steady_clock::now();
-          CandidateEvaluation candidate = evaluator.evaluate(base, action);
+          CandidateEvaluation& candidate = evaluated.candidate;
+          candidate = evaluator.evaluate(base, action);
           const DetectorResultV2 post =
               JointWindowDetector().evaluateCandidate(candidate, detector_risk);
           candidate.squared_threshold = post.squared_threshold;
@@ -1350,8 +1459,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
                 }
                 const BridgeUncertainty uncertainty = BridgeFactory().uncertainty(
                     *bridge_transaction, cfg.bridge.generic);
-                const Eigen::MatrixXd bridge_gain =
-                    candidate.covariance * added.jacobian_whitened.transpose();
+                const Eigen::MatrixXd bridge_gain = candidate.covarianceTimes(
+                    added.jacobian_whitened.transpose());
                 bridge_margin += BridgeFactory().propagateBoxMargin(
                     window.protected_state_map, bridge_gain,
                     uncertainty.deterministic_bound);
@@ -1368,7 +1477,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
                 }
               }
               Eigen::MatrixXd map = Eigen::MatrixXd::Zero(
-                  candidate.retained_jacobian.rows(), columns);
+                  candidate.rows, columns);
               int column = 0;
               for (const auto id : hypothesis.modes) {
                 const auto found = projected_modes.mode_maps.find(id.value());
@@ -1378,11 +1487,11 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
               }
               return map;
             };
-            const ProtectionLevelV2Result pl =
-                ProtectionLevelV2().computeStreaming(
+            evaluated.protection_level = ProtectionLevelV2().computeStreaming(
                     window, candidate, post, &projected_modes.hypotheses,
                     fault_map_provider, cfg.risk_v2, bridge_margin);
-            candidate_pl[action.id.value()] = pl;
+            evaluated.has_protection_level = true;
+            const auto& pl = evaluated.protection_level;
             candidate.pl_xyz_m = pl.pl_xyz_m;
             candidate.hpl_m = pl.hpl_m;
             candidate.vpl_m = pl.vpl_m;
@@ -1393,8 +1502,47 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
           }
           candidate.wall_ms = std::chrono::duration<double, std::milli>(
               std::chrono::steady_clock::now() - candidate_start).count();
-          candidates.push_back(std::move(candidate));
+          return evaluated;
+        };
+        // Exactly four immutable workers are used on the production path.
+        // Workers only read the frozen transaction/window/model set. Results
+        // are merged and sorted by action ID before FDE, making scheduling
+        // irrelevant to the winner.
+        constexpr std::size_t kCandidateWorkers = 4;
+        const char* worker_override = std::getenv("UWB_IMU_PL_CANDIDATE_WORKERS");
+        const std::size_t active_workers = worker_override &&
+            std::string(worker_override) == "1" ? 1 : kCandidateWorkers;
+        std::vector<std::future<std::vector<EvaluatedAction>>> futures;
+        futures.reserve(active_workers);
+        for (std::size_t worker = 0; worker < active_workers; ++worker) {
+          futures.push_back(std::async(std::launch::async, [&, worker]() {
+            std::vector<EvaluatedAction> local;
+            for (std::size_t index = worker; index < models.actions.size();
+                 index += active_workers) {
+              local.push_back(evaluate_action(models.actions[index]));
+            }
+            return local;
+          }));
         }
+        std::vector<EvaluatedAction> evaluated_actions;
+        for (auto& future : futures) {
+          auto local = future.get();
+          evaluated_actions.insert(evaluated_actions.end(),
+                                   std::make_move_iterator(local.begin()),
+                                   std::make_move_iterator(local.end()));
+        }
+        std::sort(evaluated_actions.begin(), evaluated_actions.end(),
+                  [](const EvaluatedAction& left, const EvaluatedAction& right) {
+          return left.candidate.action.id < right.candidate.action.id;
+        });
+        for (auto& evaluated : evaluated_actions) {
+          if (evaluated.has_protection_level) {
+            candidate_pl[evaluated.candidate.action.id.value()] =
+                evaluated.protection_level;
+          }
+          candidates.push_back(std::move(evaluated.candidate));
+        }
+        record_stage("candidate_evaluation", true);
         DetectorResultV2 fde_trigger = all_in;
         if (hardware_barrier) {
           fde_trigger.passed = false;
@@ -1402,10 +1550,29 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
         }
         FdeDecision decision = FdeManager().decide(
             fde_trigger, models.hypotheses, evidence, &candidates, cfg.risk_v2);
+        record_stage("fde_decision", true);
         for (const auto& candidate : candidates) {
           CandidateAuditRecord record;
           record.action_id = candidate.action.id.value();
           record.action_type = candidate.action.action_model_id;
+          for (const auto& source : candidate.action.physical_source_ids) {
+            if (!record.physical_source_ids.empty()) {
+              record.physical_source_ids += ';';
+            }
+            record.physical_source_ids += source;
+          }
+          auto join_group_ids = [](const std::vector<FactorGroupId>& ids) {
+            std::string joined;
+            for (const auto id : ids) {
+              if (!joined.empty()) joined += ';';
+              joined += std::to_string(id.value());
+            }
+            return joined;
+          };
+          record.removed_group_ids = join_group_ids(
+              candidate.action.groups_to_remove);
+          record.added_group_ids = join_group_ids(candidate.action.groups_to_add);
+          record.bridge_mode = toString(candidate.action.bridge_mode);
           record.cardinality = candidate.action.exclusion_cardinality;
           record.valid = candidate.valid;
           record.post_detector_passed = candidate.post_detector_passed;
@@ -1415,6 +1582,9 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
           record.rank = candidate.rank;
           record.dof = candidate.dof;
           record.condition_number = candidate.condition_number;
+          record.information_logdet = candidate.information_logdet;
+          record.risk_allocation = cfg.risk_v2.p_hmi_total /
+              std::max<std::size_t>(1, models.actions.size());
           record.hpl_m = candidate.hpl_m;
           record.vpl_m = candidate.vpl_m;
           record.selected = candidate.selected;
@@ -1520,10 +1690,18 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
             bridge.mode = toString(action.bridge_mode);
             bridge.consecutive_epochs = consecutive_bridge_epochs_;
             bridge.duration_s = duration;
+            bridge.model_id = "GENERIC_KINEMATIC_CV";
+            bridge.dt_s = transaction.end.seconds() - transaction.begin.seconds();
             bridge.integrity_model = "DETERMINISTIC_BOX";
             bridge.calibration_id = cfg.bridge.generic.calibration_id;
-            bridge.bound = BridgeFactory().uncertainty(
-                transaction, cfg.bridge.generic).deterministic_bound.head<3>();
+            const BridgeUncertainty bridge_uncertainty =
+                BridgeFactory().uncertainty(transaction, cfg.bridge.generic);
+            bridge.optimization_covariance_diagonal =
+                bridge_uncertainty.optimization_covariance.diagonal();
+            bridge.bound = bridge_uncertainty.deterministic_bound.head<3>();
+            bridge.control_available = false;
+            bridge.active = true;
+            bridge.timeout = false;
             bridge.status = "ACTIVE";
             output.bridge_audit = bridge;
             if (consecutive_bridge_epochs_ > cfg.bridge.max_consecutive_epochs ||
@@ -1542,6 +1720,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
               output.protection_level.reason =
                   "BRIDGE_TIMEOUT; CONTROLLED_REINITIALIZATION_REQUIRED";
               output.bridge_audit->status = "BRIDGE_TIMEOUT";
+              output.bridge_audit->timeout = true;
+              output.bridge_audit->active = false;
               const auto request = reinitializer_.request(
                   FdeStatus::BridgeTimeout, "BRIDGE_TIMEOUT",
                   estimator_->currentState());

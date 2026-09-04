@@ -1,5 +1,5 @@
 # Research-only example. It is not a certified safety configuration.
-schema_version: uwb-imu-pl/v4
+schema_version: uwb-imu-pl/v5
 seed: 20260901
 
 snapshot:
@@ -129,7 +129,7 @@ robust_shadow:
 
 output:
   root: results/realtime_uwb_imu_pl
-  schema_version: uwb-imu-pl/v4
+  schema_version: uwb-imu-pl/v5
   write_residuals: true
   write_timing: true
   # Full-graph residual is a separately calibrated diagnostic and is disabled

@@ -64,7 +64,7 @@ TEST(IntegrityConfig, LoadsStrictResearchConfiguration) {
   EXPECT_DOUBLE_EQ(config.imu.max_gap_s, 0.02);
   EXPECT_EQ(config.risk.hypotheses.size(), config.anchors.size());
   EXPECT_FALSE(config.incremental.enable_method_b);
-  EXPECT_EQ(config.schema_version, "uwb-imu-pl/v4");
+  EXPECT_EQ(config.schema_version, "uwb-imu-pl/v5");
   EXPECT_DOUBLE_EQ(config.detector.p_fa_per_test, 1.0e-6);
   EXPECT_EQ(config.detector.continuity_horizon_tests, 1000u);
   EXPECT_EQ(config.integrity_window.epochs, 20u);
@@ -83,7 +83,7 @@ TEST(IntegrityConfig, LoadsStrictResearchConfiguration) {
 TEST(IntegrityConfig, RejectsMissingRequiredFieldInEverySection) {
   const std::string base = readConfig();
   const std::string fields[] = {
-      "schema_version: uwb-imu-pl/v4\n",
+      "schema_version: uwb-imu-pl/v5\n",
       "seed: 20260901\n",
       "  dimensions: 3\n",
       "  relinearize_threshold: 0.1\n",
@@ -134,6 +134,17 @@ TEST(IntegrityConfig, RuntimeOverrideAcceptsFullHistoryAndFixedLag) {
                   "fixed_lag_epochs: " + std::to_string(value)),
               std::string::npos);
   }
+}
+
+TEST(IntegrityConfig, RetainsV4ConfigurationReadCompatibility) {
+  std::string legacy = readConfig();
+  while (legacy.find("uwb-imu-pl/v5") != std::string::npos) {
+    legacy = replaceOnce(legacy, "uwb-imu-pl/v5", "uwb-imu-pl/v4");
+  }
+  const auto loaded = uwb_imu_pl::IntegrityConfigLoader::load(
+      writeTemp(legacy, 41));
+  EXPECT_EQ(loaded.schema_version, "uwb-imu-pl/v4");
+  EXPECT_EQ(loaded.output.schema_version, "uwb-imu-pl/v4");
 }
 
 TEST(IntegrityConfig, RuntimeOverrideRejectsIllegalValues) {

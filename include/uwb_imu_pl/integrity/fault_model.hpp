@@ -97,6 +97,7 @@ struct FaultModeEvidence {
   double conditioned_statistic = std::numeric_limits<double>::infinity();
   double explained_energy = 0.0;
   double log_evidence = -std::numeric_limits<double>::infinity();
+  Eigen::MatrixXd fault_gram;
   MonitorabilityResult monitorability;
   bool plausible = false;
 };

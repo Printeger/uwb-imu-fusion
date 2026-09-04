@@ -128,7 +128,7 @@ struct OutputConfig {
   bool write_residuals = true;
   bool write_timing = true;
   bool write_global_diagnostics = false;
-  std::string schema_version = "uwb-imu-pl/v4";
+  std::string schema_version = "uwb-imu-pl/v5";
   bool write_factor_ledger = true;
   bool write_window_rows = false;
   bool write_hypothesis_evidence = true;
@@ -154,7 +154,7 @@ struct RealtimeConfig {
 };
 
 struct IntegrityConfig {
-  std::string schema_version = "uwb-imu-pl/v4";
+  std::string schema_version = "uwb-imu-pl/v5";
   std::uint64_t seed = 0;
   SnapshotConfig snapshot;
   IncrementalConfig incremental;
