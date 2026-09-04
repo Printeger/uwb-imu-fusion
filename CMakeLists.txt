@@ -121,6 +121,7 @@ include_directories(
 # =============================================
 add_library(${PROJECT_NAME}
   src/uwb_imu_pl/common/types.cpp
+  src/uwb_imu_pl/common/integrity_ids.cpp
   src/uwb_imu_pl/config/integrity_config.cpp
   src/uwb_imu_pl/io/run_logger.cpp
   src/uwb_imu_pl/integrity/estimation_snapshot.cpp
@@ -129,6 +130,17 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/integrity/dense_oracle.cpp
   src/uwb_imu_pl/factors/realtime_factors.cpp
   src/uwb_imu_pl/estimation/incremental_estimator.cpp
+  src/uwb_imu_pl/estimation/factor_ledger.cpp
+  src/uwb_imu_pl/estimation/integrity_window_snapshot.cpp
+  src/uwb_imu_pl/estimation/rank_update_kernel.cpp
+  src/uwb_imu_pl/integrity/joint_window_detector.cpp
+  src/uwb_imu_pl/integrity/hypothesis_evidence.cpp
+  src/uwb_imu_pl/integrity/hypothesis_generator.cpp
+  src/uwb_imu_pl/integrity/fde_manager.cpp
+  src/uwb_imu_pl/integrity/protection_level_v2.cpp
+  src/uwb_imu_pl/integrity/health_manager.cpp
+  src/uwb_imu_pl/integrity/imu_fault_subspace.cpp
+  src/uwb_imu_pl/factors/kinematic_bridge_factor.cpp
   src/config.cpp
   src/data_loader.cpp
   src/outlier_filter.cpp
@@ -301,6 +313,11 @@ if(CATKIN_ENABLE_TESTING)
 
   catkin_add_gtest(test_dense_oracle test/test_dense_oracle.cpp test/test_main.cpp)
   target_link_libraries(test_dense_oracle ${PROJECT_NAME} ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_integrity_v2 test/test_integrity_v2.cpp test/test_main.cpp)
+  target_compile_definitions(test_integrity_v2 PRIVATE
+    UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(test_integrity_v2 ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
 
   add_rostest(test/realtime_integrity_viz.test)
 

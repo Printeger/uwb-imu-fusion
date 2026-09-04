@@ -183,6 +183,13 @@ class RealtimeNode {
     record.outage = message->outage;
     record.injected_bias_m = message->injected_bias_m;
     record.true_range_m = message->true_range_m;
+    record.sensor_type = message->sensor_type;
+    record.fault_kind = message->fault_kind;
+    record.axis = message->axis;
+    record.epoch_begin = message->epoch_begin;
+    record.epoch_end = message->epoch_end;
+    record.injected_value = message->injected_value;
+    record.injected_units = message->injected_units;
     logger_->writeFaultTruth(record);
   }
 
@@ -506,7 +513,7 @@ class RealtimeNode {
     status.retained_epochs = estimator_ ? estimator_->retainedEpochs() : 0;
     status.marginalization_count =
         estimator_ ? estimator_->marginalizationCount() : 0;
-    status.historical_fault_provenance = false;
+    status.historical_fault_provenance = output.history_provenance_valid;
     status.queue_depth = metrics.queue_depth;
     status.sensor_to_process_ms = metrics.sensor_to_process_ms;
     status.sensor_to_publish_ms = sensorLagMs(output.timestamp);
@@ -523,6 +530,21 @@ class RealtimeNode {
     status.hmi_risk_requirement = output.protection_level.hmi_risk_requirement;
     status.config_hash = config_.config_hash;
     status.reason = output.protection_level.reason;
+    status.transaction_id = output.transaction_id;
+    status.window_id = output.window_id;
+    status.base_graph_version = output.base_graph_version;
+    status.linearization_version = output.linearization_version;
+    status.selected_action_id = output.selected_action_id;
+    status.selected_action_type = output.selected_action_type;
+    status.fde_status = output.fde_status;
+    for (int axis = 0; axis < 3; ++axis) {
+      status.bridge_component_m[axis] = output.bridge_component_m(axis);
+    }
+    status.history_provenance_valid = output.history_provenance_valid;
+    status.backend_updates = output.backend_updates;
+    status.stale_state = output.stale_state;
+    status.controlled_reinitialization_required =
+        output.controlled_reinitialization_required;
     integrity_publisher_.publish(status);
 
     diagnostic_msgs::DiagnosticArray diagnostics;

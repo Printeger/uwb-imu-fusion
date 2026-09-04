@@ -25,3 +25,15 @@ float64 hmi_risk_requirement
 uint64[3] maximizing_anchor_id
 string config_hash
 string reason
+uint64 transaction_id
+uint64 window_id
+uint64 base_graph_version
+uint64 linearization_version
+uint64 selected_action_id
+string selected_action_type
+string fde_status
+float64[3] bridge_component_m
+bool history_provenance_valid
+uint32 backend_updates
+bool stale_state
+bool controlled_reinitialization_required

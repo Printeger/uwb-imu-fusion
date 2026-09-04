@@ -1,0 +1,38 @@
+#pragma once
+
+#include "uwb_imu_pl/integrity/fde_manager.hpp"
+
+namespace uwb_imu_pl {
+
+struct ProtectionLevelV2Result {
+  Eigen::Vector3d pl_xyz_m = Eigen::Vector3d::Constant(
+      std::numeric_limits<double>::infinity());
+  Eigen::Vector3d nominal_component_m = Eigen::Vector3d::Constant(
+      std::numeric_limits<double>::infinity());
+  Eigen::Vector3d fault_component_m = Eigen::Vector3d::Zero();
+  Eigen::Vector3d bridge_component_m = Eigen::Vector3d::Zero();
+  double hpl_m = std::numeric_limits<double>::infinity();
+  double vpl_m = std::numeric_limits<double>::infinity();
+  double allocated_outcome_risk = std::numeric_limits<double>::infinity();
+  bool risk_budget_valid = false;
+  bool model_valid = false;
+  bool formal_eligible = false;
+  Availability availability = Availability::Unavailable;
+  std::string reason;
+};
+
+class ProtectionLevelV2 {
+ public:
+  ProtectionLevelV2Result compute(
+      const LinearizedIntegrityWindow& window,
+      const CandidateEvaluation& candidate,
+      const DetectorResultV2& detector,
+      std::vector<FaultHypothesisV2>* remaining_hypotheses,
+      const RiskBudgetV2& risk,
+      const Eigen::Vector3d& bridge_margin_m = Eigen::Vector3d::Zero()) const;
+
+  static double detectionBoundaryNoncentralitySquared(
+      int dof, double squared_threshold, double p_md);
+};
+
+}  // namespace uwb_imu_pl

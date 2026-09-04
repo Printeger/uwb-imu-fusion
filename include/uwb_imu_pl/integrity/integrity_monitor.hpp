@@ -2,6 +2,7 @@
 
 #include "uwb_imu_pl/common/types.hpp"
 #include "uwb_imu_pl/estimation/snapshot_estimator.hpp"
+#include "uwb_imu_pl/integrity/health_manager.hpp"
 
 #include <memory>
 
@@ -72,6 +73,9 @@ class RealtimeIntegrityPipeline {
  private:
   IncrementalUwbImuEstimator* estimator_;
   IntegrityMonitor monitor_;
+  HealthManager health_;
+  std::uint32_t consecutive_bridge_epochs_ = 0;
+  std::optional<TimestampNs> bridge_start_timestamp_;
 };
 
 }  // namespace uwb_imu_pl

@@ -64,8 +64,18 @@ TEST(IntegrityConfig, LoadsStrictResearchConfiguration) {
   EXPECT_DOUBLE_EQ(config.imu.max_gap_s, 0.02);
   EXPECT_EQ(config.risk.hypotheses.size(), config.anchors.size());
   EXPECT_FALSE(config.incremental.enable_method_b);
+  EXPECT_EQ(config.schema_version, "uwb-imu-pl/v4");
+  EXPECT_DOUBLE_EQ(config.detector.p_fa_per_test, 1.0e-6);
+  EXPECT_EQ(config.detector.continuity_horizon_tests, 1000u);
+  EXPECT_EQ(config.integrity_window.epochs, 20u);
+  EXPECT_EQ(config.integrity_window.recovery_margin_epochs, 10u);
+  EXPECT_EQ(config.fault_models.max_cardinality, 2u);
+  EXPECT_EQ(config.fde.max_candidate_count, 128u);
+  EXPECT_TRUE(config.incremental.single_transaction_per_epoch);
   EXPECT_TRUE(config.incremental.fixed_lag_epochs == 0u ||
-              config.incremental.fixed_lag_epochs >= 2u);
+              config.incremental.fixed_lag_epochs >
+                  config.integrity_window.epochs +
+                  config.integrity_window.recovery_margin_epochs);
   EXPECT_FALSE(config.resolved_yaml.empty());
   EXPECT_EQ(config.resolved_yaml.back(), '\n');
 }
@@ -73,11 +83,19 @@ TEST(IntegrityConfig, LoadsStrictResearchConfiguration) {
 TEST(IntegrityConfig, RejectsMissingRequiredFieldInEverySection) {
   const std::string base = readConfig();
   const std::string fields[] = {
+      "schema_version: uwb-imu-pl/v4\n",
       "seed: 20260901\n",
       "  dimensions: 3\n",
       "  relinearize_threshold: 0.1\n",
       "  accelerometer_sigma: 0.10\n",
-      "  p_fa: 1.0e-5\n",
+      "  p_fa_per_test: 1.0e-6\n",
+      "integrity_window:\n",
+      "fault_models:\n",
+      "fde:\n",
+      "bridge:\n",
+      "health:\n",
+      "risk:\n",
+      "robust_shadow:\n",
       "  root: results/realtime_uwb_imu_pl\n",
       "  world_frame: world\n",
       "anchors:\n"};
@@ -108,7 +126,7 @@ TEST(IntegrityConfig, RejectsInvalidRiskAndUnsupportedOnlineModes) {
 }
 
 TEST(IntegrityConfig, RuntimeOverrideAcceptsFullHistoryAndFixedLag) {
-  for (const std::uint32_t value : {0u, 2u, 400u}) {
+  for (const std::uint32_t value : {0u, 31u, 400u}) {
     const auto loaded = uwb_imu_pl::IntegrityConfigLoader::load(
         kResearchConfig, std::to_string(value));
     EXPECT_EQ(loaded.incremental.fixed_lag_epochs, value);

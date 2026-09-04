@@ -19,6 +19,18 @@ V2_HEADERS = {
     "ground_truth.csv": "timestamp_ns,px,py,pz,qw,qx,qy,qz",
     "fault_truth.csv": "timestamp_ns,sequence,anchor_id,fault_mode,active,outage,injected_bias_m,true_range_m",
 }
+V4_HEADERS = dict(V2_HEADERS)
+V4_HEADERS.update({
+    "integrity.csv": V2_HEADERS["integrity.csv"][:-len(",reason")] +
+        ",transaction_id,window_id,base_graph_version,linearization_version,selected_action_id,selected_action_type,fde_status,bridge_pl_x,bridge_pl_y,bridge_pl_z,history_provenance_valid,backend_updates,stale_state,controlled_reinitialization_required,reason",
+    "transactions.csv": "timestamp_ns,transaction_id,window_id,base_graph_version,linearization_version,selected_action_id,fde_status,backend_updates,stale_state,reinitialization_required",
+    "hypotheses.csv": "timestamp_ns,window_id,hypothesis_id,fault_unit_ids,prior_bound,p_md_allocation,hmi_allocation,monitorable,plausible,conditioned_statistic,log_evidence,reason",
+    "candidates.csv": "timestamp_ns,window_id,action_id,action_type,cardinality,valid,post_detector_passed,covers_plausible_set,statistic,threshold,rank,dof,condition_number,hpl_m,vpl_m,selected,reason",
+    "factor_ledger.csv": "factor_id,group_id,sensor,factor_kind,lifecycle,epoch_begin,epoch_end,time_begin_ns,time_end_ns,backend_slot,noise_model_id,model_id,health",
+    "health.csv": "timestamp_ns,source_id,sensor,previous_state,current_state,trigger,suspicion_count,shadow_pass_count,recovery_pass_count",
+    "bridge.csv": "timestamp_ns,transaction_id,mode,consecutive_epochs,duration_s,integrity_model,calibration_id,bound_x,bound_y,bound_z,status",
+    "fault_truth.csv": "timestamp_ns,sequence,anchor_id,fault_mode,active,outage,injected_bias_m,true_range_m,sensor_type,fault_kind,axis,epoch_begin,epoch_end,injected_value,injected_units",
+})
 
 
 def fail(message):
@@ -56,13 +68,13 @@ def validate_monotonic(path, strict):
             previous = current
 
 
-def validate_v2(directory, manifest):
+def validate_v2(directory, manifest, expected_headers=V2_HEADERS):
     required = {"states.csv", "integrity.csv", "events.csv", "ground_truth.csv",
                 "fault_truth.csv", "summary.json", "resolved_config.yaml"}
     for name in required:
         if not (directory / name).is_file():
             fail(f"missing required v2 artifact: {name}")
-    for name, expected in V2_HEADERS.items():
+    for name, expected in expected_headers.items():
         path = directory / name
         if path.exists() and header(path) != expected:
             fail(f"{name}: header mismatch")
@@ -123,6 +135,36 @@ def validate_v3(directory, manifest):
         fail("resolved_config.yaml: fixed_lag_epochs does not match manifest")
 
 
+def validate_v4(directory, manifest):
+    validate_v2(directory, manifest, V4_HEADERS)
+    for name in ("transactions.csv", "hypotheses.csv", "candidates.csv",
+                 "factor_ledger.csv", "health.csv", "bridge.csv"):
+        if not (directory / name).is_file():
+            fail(f"missing required v4 artifact: {name}")
+    fixed_lag = manifest.get("fixed_lag_epochs")
+    if not isinstance(fixed_lag, int) or isinstance(fixed_lag, bool):
+        fail("run_manifest.json: fixed_lag_epochs must be an integer")
+    resolved = (directory / "resolved_config.yaml").read_bytes()
+    if fnv1a64(resolved) != manifest["config_hash"].lower():
+        fail("resolved_config.yaml: content does not match config_hash")
+    scope = manifest.get("scope")
+    evidence = manifest.get("gate_j_evidence")
+    if not isinstance(scope, dict) or not isinstance(evidence, dict):
+        fail("v4 manifest requires machine-readable scope and gate_j_evidence")
+    formal = manifest.get("formal_eligible")
+    if not isinstance(formal, bool):
+        fail("v4 manifest formal_eligible must be boolean")
+    evidence_complete = (evidence.get("gates_a_to_i_complete") is True and
+                         evidence.get("independent_review_complete") is True and
+                         all(isinstance(evidence.get(key), str) and
+                             evidence[key].strip() for key in
+                             ("risk_calibration_id",
+                              "noise_overbound_calibration_id",
+                              "bridge_calibration_id")))
+    if formal and not evidence_complete:
+        fail("formal_eligible cannot be true without complete Gate J evidence")
+
+
 def validate(directory):
     manifest_path = directory / "run_manifest.json"
     if not manifest_path.is_file():
@@ -130,7 +172,8 @@ def validate(directory):
     with manifest_path.open(encoding="utf-8") as stream:
         manifest = json.load(stream)
     version = manifest.get("schema_version")
-    if version not in ("uwb-imu-pl/v1", "uwb-imu-pl/v2", "uwb-imu-pl/v3"):
+    if version not in ("uwb-imu-pl/v1", "uwb-imu-pl/v2", "uwb-imu-pl/v3",
+                       "uwb-imu-pl/v4"):
         fail(f"unsupported schema_version: {version!r}")
     for field, kind in (("git_sha", str), ("config_hash", str),
                         ("seed", int), ("git_dirty", bool)):
@@ -140,7 +183,9 @@ def validate(directory):
         fail("run_manifest.json: empty git_sha")
     if not re.fullmatch(r"[0-9a-fA-F]{16}", manifest["config_hash"]):
         fail("run_manifest.json: config_hash is not 16 hexadecimal digits")
-    if version == "uwb-imu-pl/v3":
+    if version == "uwb-imu-pl/v4":
+        validate_v4(directory, manifest)
+    elif version == "uwb-imu-pl/v3":
         validate_v3(directory, manifest)
     elif version == "uwb-imu-pl/v2":
         validate_v2(directory, manifest)

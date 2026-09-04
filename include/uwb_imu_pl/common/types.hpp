@@ -214,6 +214,74 @@ struct StageTiming {
   bool success = true;
 };
 
+struct HypothesisAuditRecord {
+  std::uint64_t hypothesis_id = 0;
+  std::string fault_unit_ids;
+  double prior_bound = 0.0;
+  double p_md_allocation = 0.0;
+  double hmi_allocation = 0.0;
+  bool monitorable = false;
+  bool plausible = false;
+  double conditioned_statistic = std::numeric_limits<double>::infinity();
+  double log_evidence = -std::numeric_limits<double>::infinity();
+  std::string reason;
+};
+
+struct CandidateAuditRecord {
+  std::uint64_t action_id = 0;
+  std::string action_type;
+  int cardinality = 0;
+  bool valid = false;
+  bool post_detector_passed = false;
+  bool covers_plausible_set = false;
+  double statistic = std::numeric_limits<double>::infinity();
+  double threshold = std::numeric_limits<double>::infinity();
+  int rank = 0;
+  int dof = 0;
+  double condition_number = std::numeric_limits<double>::infinity();
+  double hpl_m = std::numeric_limits<double>::infinity();
+  double vpl_m = std::numeric_limits<double>::infinity();
+  bool selected = false;
+  std::string reason;
+};
+
+struct FactorLedgerAuditRecord {
+  std::uint64_t factor_id = 0;
+  std::uint64_t group_id = 0;
+  std::string sensor;
+  std::string factor_kind;
+  std::string lifecycle;
+  std::size_t epoch_begin = 0;
+  std::size_t epoch_end = 0;
+  TimestampNs time_begin;
+  TimestampNs time_end;
+  std::string backend_slot;
+  std::string noise_model_id;
+  std::string model_id;
+  std::string health;
+};
+
+struct HealthAuditRecord {
+  std::string source_id;
+  std::string sensor;
+  std::string previous_state;
+  std::string current_state;
+  std::string trigger;
+  std::uint32_t suspicion_count = 0;
+  std::uint32_t shadow_pass_count = 0;
+  std::uint32_t recovery_pass_count = 0;
+};
+
+struct BridgeAuditRecord {
+  std::string mode = "NONE";
+  std::uint32_t consecutive_epochs = 0;
+  double duration_s = 0.0;
+  std::string integrity_model;
+  std::string calibration_id;
+  Eigen::Vector3d bound = Eigen::Vector3d::Zero();
+  std::string status;
+};
+
 struct IntegrityOutput {
   TimestampNs timestamp;
   NavigationState state;
@@ -236,12 +304,30 @@ struct IntegrityOutput {
   // True when the current UWB has valid model/capability/provenance inputs.
   // Risk-budget or alert-limit unavailability does not clear this flag.
   bool measurement_model_valid = false;
+  // V4 transaction/FDE audit. Zero IDs mean the legacy V1 facade was used.
+  std::uint64_t transaction_id = 0;
+  std::uint64_t window_id = 0;
+  std::uint64_t base_graph_version = 0;
+  std::uint64_t linearization_version = 0;
+  std::uint64_t selected_action_id = 0;
+  std::string selected_action_type = "KEEP_ALL";
+  std::string fde_status = "NOT_TRIGGERED";
+  Eigen::Vector3d bridge_component_m = Eigen::Vector3d::Zero();
+  bool history_provenance_valid = false;
+  std::uint32_t backend_updates = 0;
+  bool stale_state = false;
+  bool controlled_reinitialization_required = false;
   std::vector<ResidualRecord> residual_records;
   std::vector<StageTiming> stage_timings;
+  std::vector<HypothesisAuditRecord> hypothesis_audit;
+  std::vector<CandidateAuditRecord> candidate_audit;
+  std::vector<FactorLedgerAuditRecord> factor_ledger_audit;
+  std::vector<HealthAuditRecord> health_audit;
+  std::optional<BridgeAuditRecord> bridge_audit;
 };
 
 struct RunManifest {
-  std::string schema_version = "uwb-imu-pl/v3";
+  std::string schema_version = "uwb-imu-pl/v4";
   std::string created_utc;
   std::string git_sha;
   bool git_dirty = false;
@@ -258,6 +344,20 @@ struct RunManifest {
   std::uint64_t ram_bytes = 0;
   std::string gtsam_version;
   std::string eigen_version;
+  std::string maturity = "IMPLEMENTED_UNVERIFIED";
+  bool formal_eligible = false;
+  std::string protected_state = "body_origin_position_world";
+  std::string detector = "joint_window_residual_chi_square";
+  std::string pl_method = "residual_failure_mode_slope";
+  std::uint32_t window_epochs = 20;
+  std::uint32_t monitored_fault_cardinality = 2;
+  std::string bridge_model = "kinematic_cv_bounded";
+  std::string history_recovery = "active_window_only_maturity_delay";
+  std::string risk_calibration_id;
+  std::string noise_overbound_calibration_id;
+  std::string bridge_calibration_id;
+  bool gates_a_to_i_complete = false;
+  bool independent_review_complete = false;
 };
 
 struct TimingRecord {
@@ -300,6 +400,13 @@ struct FaultTruthRecord {
   bool outage = false;
   double injected_bias_m = 0.0;
   double true_range_m = std::numeric_limits<double>::quiet_NaN();
+  std::string sensor_type = "UWB";
+  std::string fault_kind = "anchor_range_bias";
+  int axis = -1;
+  std::uint64_t epoch_begin = 0;
+  std::uint64_t epoch_end = 0;
+  double injected_value = 0.0;
+  std::string injected_units = "m";
 };
 
 struct RunSummary {

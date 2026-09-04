@@ -42,6 +42,12 @@ class RunLogger {
   std::ofstream events_;
   std::ofstream ground_truth_;
   std::ofstream fault_truth_;
+  std::ofstream transactions_;
+  std::ofstream hypotheses_;
+  std::ofstream candidates_;
+  std::ofstream factor_ledger_;
+  std::ofstream health_;
+  std::ofstream bridge_;
   bool write_residuals_ = true;
   bool write_timing_ = true;
   std::uint64_t next_event_sequence_ = 1;

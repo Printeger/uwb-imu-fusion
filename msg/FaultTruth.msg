@@ -6,3 +6,10 @@ bool active
 bool outage
 float64 injected_bias_m
 float64 true_range_m
+string sensor_type
+string fault_kind
+int32 axis
+uint64 epoch_begin
+uint64 epoch_end
+float64 injected_value
+string injected_units

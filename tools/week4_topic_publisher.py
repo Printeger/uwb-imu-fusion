@@ -33,7 +33,9 @@ def schedule(scenario: str, epochs: int, start_ns: int = 1_000_000_000,
              period_ns: int = 50_000_000) -> list[Epoch]:
     valid = {"delayed_stale_uwb", "uwb_drop_resume", "imu_gap",
              "anchor_set_8_7_8", "fault_step", "fault_ramp",
-             "fault_magnitude_sweep", "fault_outage"}
+             "fault_magnitude_sweep", "fault_outage", "imu_accel_step",
+             "imu_gyro_step", "imu_accel_ramp", "imu_bias_jump",
+             "imu_saturation", "imu_dropout", "imu_timestamp_gap"}
     if scenario not in valid or epochs < 12:
         raise ValueError("unknown scenario or fewer than 12 epochs")
     output = []
@@ -42,8 +44,14 @@ def schedule(scenario: str, epochs: int, start_ns: int = 1_000_000_000,
         publish_uwb = not (scenario == "uwb_drop_resume" and epochs//3 <= index < 2*epochs//3)
         anchor_count = 7 if scenario == "anchor_set_8_7_8" and \
             epochs//3 <= index < 2*epochs//3 else 8
-        active = scenario.startswith("fault_") and index >= epochs//3
-        mode = scenario[len("fault_"):] if scenario.startswith("fault_") else "none"
+        active = (scenario.startswith("fault_") or scenario.startswith("imu_")) \
+            and index >= epochs//3
+        if scenario.startswith("fault_"):
+            mode = scenario[len("fault_"):]
+        elif scenario.startswith("imu_"):
+            mode = scenario[len("imu_"):]
+        else:
+            mode = "none"
         outage = active and mode == "outage"
         if mode == "step": magnitude = 1.0 if active else 0.0
         elif mode == "ramp": magnitude = max(0.0, (index-epochs//3)*.02)
@@ -51,6 +59,12 @@ def schedule(scenario: str, epochs: int, start_ns: int = 1_000_000_000,
             levels = (0.1, .25, .5, 1., 2.)
             magnitude = levels[min(len(levels)-1,
                 max(0, index-epochs//3)*len(levels)//max(1, 2*epochs//3))] if active else 0.0
+        elif mode in ("accel_step", "gyro_step", "bias_jump"):
+            magnitude = 1.0 if active else 0.0
+        elif mode == "accel_ramp":
+            magnitude = max(0.0, (index-epochs//3)*.02)
+        elif mode == "saturation":
+            magnitude = 1000.0 if active else 0.0
         else: magnitude = 0.0
         if scenario == "delayed_stale_uwb" and index == epochs//2:
             stamp -= 3*period_ns  # explicitly older than already published epochs
@@ -74,7 +88,9 @@ def main() -> int:
     parser.add_argument("scenario", choices=[
         "delayed_stale_uwb", "uwb_drop_resume", "imu_gap",
         "anchor_set_8_7_8", "fault_step", "fault_ramp",
-        "fault_magnitude_sweep", "fault_outage"])
+        "fault_magnitude_sweep", "fault_outage", "imu_accel_step",
+        "imu_gyro_step", "imu_accel_ramp", "imu_bias_jump",
+        "imu_saturation", "imu_dropout", "imu_timestamp_gap"])
     parser.add_argument("--epochs", type=int, default=120)
     parser.add_argument("--rate-scale", type=float, default=10.0,
                         help="wall-clock acceleration; timestamps remain 20/200 Hz")
@@ -102,8 +118,10 @@ def main() -> int:
         # Ten 200 Hz samples for every UWB epoch. imu_gap deliberately omits a
         # span longer than configured max_gap_s.
         for substep in range(10):
-            if args.scenario == "imu_gap" and epoch.index == args.epochs//2 and \
-                    2 <= substep <= 7:
+            gap_scenario = args.scenario in ("imu_gap", "imu_timestamp_gap")
+            dropout = args.scenario == "imu_dropout" and epoch.fault_active
+            if (gap_scenario and epoch.index == args.epochs//2 and
+                    2 <= substep <= 7) or (dropout and substep % 2 == 0):
                 continue
             imu = Imu()
             imu.header.seq = sequence
@@ -112,6 +130,15 @@ def main() -> int:
             imu.header.frame_id = "base_link"
             imu.orientation.w = 1.0
             imu.linear_acceleration.z = 9.80665
+            if epoch.fault_active:
+                if args.scenario in ("imu_accel_step", "imu_accel_ramp"):
+                    imu.linear_acceleration.x += epoch.injected_bias_m
+                elif args.scenario == "imu_gyro_step":
+                    imu.angular_velocity.x += epoch.injected_bias_m
+                elif args.scenario == "imu_bias_jump":
+                    imu.linear_acceleration.y += epoch.injected_bias_m
+                elif args.scenario == "imu_saturation":
+                    imu.linear_acceleration.x = epoch.injected_bias_m
             imu.orientation_covariance[0] = -1.0
             imu_pub.publish(imu)
             sequence += 1
@@ -127,6 +154,17 @@ def main() -> int:
         truth.injected_bias_m = epoch.injected_bias_m
         ax, ay, az = ANCHORS[epoch.fault_anchor_id-1]
         truth.true_range_m = math.sqrt((x-ax)**2+(y-ay)**2+(z-az)**2)
+        imu_fault = args.scenario.startswith("imu_")
+        truth.sensor_type = "IMU" if imu_fault else "UWB"
+        truth.fault_kind = epoch.fault_mode if imu_fault else "anchor_range_bias"
+        truth.axis = 0 if args.scenario in ("imu_accel_step", "imu_accel_ramp",
+                                             "imu_gyro_step", "imu_saturation") \
+            else (1 if args.scenario == "imu_bias_jump" else -1)
+        truth.epoch_begin = epoch.index
+        truth.epoch_end = epoch.index
+        truth.injected_value = epoch.injected_bias_m
+        truth.injected_units = "rad/s" if args.scenario == "imu_gyro_step" \
+            else ("m/s^2" if imu_fault else "m")
         truth_pub.publish(truth)
         sequence += 1
         if epoch.publish_uwb:
@@ -140,7 +178,8 @@ def main() -> int:
                 node = LinktrackNode2()
                 node.id = anchor_id
                 node.dis = math.sqrt((x-ax)**2+(y-ay)**2+(z-az)**2)
-                if anchor_id == epoch.fault_anchor_id:
+                if not args.scenario.startswith("imu_") and \
+                        anchor_id == epoch.fault_anchor_id:
                     node.dis += epoch.injected_bias_m
                 node.fp_rssi = -60.0
                 node.rx_rssi = -65.0

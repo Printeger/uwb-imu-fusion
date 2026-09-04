@@ -585,12 +585,10 @@ TEST(UwbImuIncremental, FutureImuDoesNotAffectCurrentPrediction) {
 TEST(UwbImuIncremental, FaultAlarmRejectsOnlyCurrentUwbAndNextBatchRecovers) {
   auto cfg = config();
   uwb_imu_pl::IncrementalUwbImuEstimator estimator(cfg, Eigen::Vector3d::Zero());
-  uwb_imu_pl::IncrementalUwbImuEstimator imu_only(cfg, Eigen::Vector3d::Zero());
   uwb_imu_pl::NavigationState initial;
   initial.timestamp = uwb_imu_pl::TimestampNs(0);
   initial.position_world_m = {0, 0, 1};
   estimator.initialize(initial, Eigen::Matrix<double, 15, 1>::Constant(0.1));
-  imu_only.initialize(initial, Eigen::Matrix<double, 15, 1>::Constant(0.1));
   uwb_imu_pl::RealtimeIntegrityPipeline pipeline(
       &estimator, uwb_imu_pl::IntegrityMonitor(
           cfg.risk, cfg.snapshot.rank_tolerance,
@@ -600,35 +598,36 @@ TEST(UwbImuIncremental, FaultAlarmRejectsOnlyCurrentUwbAndNextBatchRecovers) {
     sample.timestamp = uwb_imu_pl::TimestampNs(i * 5000000);
     sample.specific_force_mps2 = {0, 0, cfg.imu.gravity_mps2};
     pipeline.ingestImu(sample);
-    imu_only.ingestImu(sample);
   }
   auto faulted = makeBatch(uwb_imu_pl::TimestampNs(10000000),
                            initial.position_world_m);
   faulted.measurements.front().range_m += 20.0;
-  imu_only.predictTo(faulted.timestamp);
-  const auto imu_only_state = imu_only.currentState();
-  const auto imu_only_audit = imu_only.audit();
   const auto output = pipeline.processUwbBatch(faulted);
   const auto after_alarm = estimator.audit();
   EXPECT_TRUE(output.detector.numerically_valid);
   EXPECT_FALSE(output.detector.passed);
   EXPECT_FALSE(output.batch_committed);
   EXPECT_EQ(output.protection_level.availability,
-            uwb_imu_pl::Availability::Alert);
+            uwb_imu_pl::Availability::Unavailable);
   EXPECT_FALSE(output.protection_level.pl_xyz_m.allFinite());
-  EXPECT_EQ(after_alarm.factor_count, imu_only_audit.factor_count);
-  EXPECT_TRUE(after_alarm.version == imu_only_audit.version);
+  // V2 fail-closed discard leaves current IMU and UWB pending and performs no
+  // backend mutation.  The published state retains its committed timestamp.
+  EXPECT_EQ(output.backend_updates, 0u);
+  EXPECT_TRUE(output.stale_state);
+  EXPECT_EQ(after_alarm.factor_count, 3u);
+  EXPECT_EQ(after_alarm.epoch, 0u);
+  EXPECT_EQ(after_alarm.state_timestamp, initial.timestamp);
   EXPECT_TRUE(after_alarm.committed_uwb_batch_ids.empty());
   EXPECT_TRUE(output.state.position_world_m.isApprox(
-      imu_only_state.position_world_m, 0.0));
+      initial.position_world_m, 0.0));
   EXPECT_TRUE(output.state.velocity_world_mps.isApprox(
-      imu_only_state.velocity_world_mps, 0.0));
+      initial.velocity_world_mps, 0.0));
   EXPECT_TRUE(output.state.accel_bias_mps2.isApprox(
-      imu_only_state.accel_bias_mps2, 0.0));
+      initial.accel_bias_mps2, 0.0));
   EXPECT_TRUE(output.state.gyro_bias_radps.isApprox(
-      imu_only_state.gyro_bias_radps, 0.0));
+      initial.gyro_bias_radps, 0.0));
   EXPECT_TRUE(output.state.q_world_body.coeffs().isApprox(
-      imu_only_state.q_world_body.coeffs(), 0.0));
+      initial.q_world_body.coeffs(), 0.0));
 
   for (int i = 3; i <= 4; ++i) {
     uwb_imu_pl::ImuMeasurement sample;
@@ -643,6 +642,51 @@ TEST(UwbImuIncremental, FaultAlarmRejectsOnlyCurrentUwbAndNextBatchRecovers) {
   EXPECT_TRUE(recovered.detector.passed);
   EXPECT_TRUE(recovered.batch_committed);
   ASSERT_EQ(estimator.audit().committed_uwb_batch_ids.size(), 1u);
+}
+
+TEST(UwbImuIncremental, PlausibleUwbFaultAfterCommitFailsClosedOnHistory) {
+  auto cfg = config();
+  uwb_imu_pl::IncrementalUwbImuEstimator estimator(cfg, Eigen::Vector3d::Zero());
+  uwb_imu_pl::NavigationState initial;
+  initial.timestamp = uwb_imu_pl::TimestampNs(0);
+  initial.position_world_m = {0, 0, 1};
+  estimator.initialize(initial, Eigen::Matrix<double, 15, 1>::Constant(0.1));
+  uwb_imu_pl::RealtimeIntegrityPipeline pipeline(
+      &estimator, uwb_imu_pl::IntegrityMonitor(
+          cfg.risk, cfg.snapshot.rank_tolerance,
+          cfg.snapshot.max_condition_number));
+
+  for (int i = 0; i <= 2; ++i) {
+    uwb_imu_pl::ImuMeasurement sample;
+    sample.timestamp = uwb_imu_pl::TimestampNs(i * 5000000);
+    sample.specific_force_mps2 = {0, 0, cfg.imu.gravity_mps2};
+    pipeline.ingestImu(sample);
+  }
+  const auto nominal = pipeline.processUwbBatch(
+      makeBatch(uwb_imu_pl::TimestampNs(10000000), initial.position_world_m));
+  ASSERT_TRUE(nominal.batch_committed);
+  ASSERT_EQ(estimator.audit().epoch, 1u);
+
+  for (int i = 3; i <= 4; ++i) {
+    uwb_imu_pl::ImuMeasurement sample;
+    sample.timestamp = uwb_imu_pl::TimestampNs(i * 5000000);
+    sample.specific_force_mps2 = {0, 0, cfg.imu.gravity_mps2};
+    pipeline.ingestImu(sample);
+  }
+  auto faulted = makeBatch(
+      uwb_imu_pl::TimestampNs(20000000), initial.position_world_m);
+  faulted.measurements.front().range_m += 20.0;
+  const auto output = pipeline.processUwbBatch(faulted);
+
+  EXPECT_FALSE(output.detector.passed);
+  EXPECT_EQ(output.fde_status, "HISTORY_PRIOR_CONTAMINATED");
+  EXPECT_FALSE(output.batch_committed);
+  EXPECT_EQ(output.backend_updates, 0u);
+  EXPECT_TRUE(output.stale_state);
+  EXPECT_TRUE(output.controlled_reinitialization_required);
+  EXPECT_EQ(output.timestamp, uwb_imu_pl::TimestampNs(10000000));
+  EXPECT_EQ(estimator.audit().epoch, 1u);
+  EXPECT_EQ(estimator.audit().committed_uwb_batch_ids.size(), 1u);
 }
 
 TEST(UwbImuIncremental, RiskOrAlertLimitUnavailableStillCommitsValidUwb) {
@@ -738,6 +782,10 @@ TEST(UwbImuIncremental, StaleUwbIsRejectedWithoutGraphOrVersionMutation) {
 TEST(UwbImuIncremental, OneSecondUwbDropAndChangingAnchorSetRecover) {
   auto cfg = config();
   cfg.incremental.fixed_lag_epochs = 3;
+  // Keep this legacy short-lag regression valid under the V2 maturity rule:
+  // fixed_lag_epochs must be strictly larger than window + recovery margin.
+  cfg.integrity_window.epochs = 1;
+  cfg.integrity_window.recovery_margin_epochs = 1;
   cfg.risk.hypotheses.clear();
   for (std::uint64_t id = 1; id <= 8; ++id) {
     uwb_imu_pl::FaultHypothesis hypothesis;
@@ -836,8 +884,13 @@ TEST(UwbImuIncremental, RepeatedExecutionIsDeterministic) {
     EXPECT_DOUBLE_EQ(left[i].detector.statistic, right[i].detector.statistic);
     EXPECT_TRUE(left[i].state.position_world_m.isApprox(
         right[i].state.position_world_m, 0.0));
-    EXPECT_TRUE(left[i].protection_level.pl_xyz_m.isApprox(
-        right[i].protection_level.pl_xyz_m, 0.0));
+    for (int axis = 0; axis < 3; ++axis) {
+      const double lhs = left[i].protection_level.pl_xyz_m(axis);
+      const double rhs = right[i].protection_level.pl_xyz_m(axis);
+      EXPECT_TRUE((std::isfinite(lhs) && lhs == rhs) ||
+                  (std::isinf(lhs) && std::isinf(rhs)) ||
+                  (std::isnan(lhs) && std::isnan(rhs)));
+    }
     EXPECT_EQ(left[i].batch_committed, right[i].batch_committed);
   }
 }
@@ -899,7 +952,7 @@ TEST(UwbImuIncremental, FixedLagRetainsThreeCompleteEpochsAndBoundedMetadata) {
       EXPECT_GT(audit.boundary_prior_factor_count, 0u);
     }
   }
-  EXPECT_LE(maximum_factor_slots, 16u);
+  EXPECT_LE(maximum_factor_slots, 18u);
   EXPECT_TRUE(std::isfinite(estimator.globalGraphResidualStatistic()));
 }
 

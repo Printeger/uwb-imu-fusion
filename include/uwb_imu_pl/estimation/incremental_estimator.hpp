@@ -3,12 +3,16 @@
 #include "uwb_imu_pl/common/types.hpp"
 #include "uwb_imu_pl/config/integrity_config.hpp"
 #include "uwb_imu_pl/integrity/estimation_snapshot.hpp"
+#include "uwb_imu_pl/estimation/epoch_transaction.hpp"
+#include "uwb_imu_pl/estimation/factor_ledger.hpp"
+#include "uwb_imu_pl/estimation/integrity_window_snapshot.hpp"
 
 #include <gtsam/navigation/CombinedImuFactor.h>
 #include <gtsam/navigation/ImuBias.h>
 #include <gtsam/nonlinear/ISAM2.h>
 
 #include <deque>
+#include <map>
 #include <memory>
 #include <optional>
 
@@ -84,17 +88,31 @@ class IncrementalUwbImuEstimator {
   void ingestImu(const ImuMeasurement& measurement);
   void validateUwbBatch(const UwbBatch& batch) const;
 
-  // Method A lifecycle. predictTo commits only IMU/history and creates the
-  // current state key. preMeasurementSnapshot is read-only and guarantees the
-  // returned prior excludes the supplied UWB group.
+  EpochTransaction prepareEpoch(const UwbBatch& batch);
+  LinearizedIntegrityWindow buildIntegrityWindow(
+      const EpochTransaction& transaction,
+      const IntegrityWindowRequest& request) const;
+  LinearizedFactorBlock buildPendingFactorBlock(
+      const EpochTransaction& transaction, FactorGroupId group) const;
+  CommitReceipt commitEpoch(EpochTransaction&& transaction,
+                            const EpochCommitPlan& plan);
+  DiscardReceipt discardEpoch(EpochTransaction&& transaction,
+                              const DiscardReason& reason);
+
+  // Deprecated V1 adapter. It delegates to one V2 transaction and never
+  // performs the historical two-update backend path.
+  [[deprecated("use prepareEpoch/buildIntegrityWindow/commitEpoch")]]
   void predictTo(TimestampNs timestamp);
+  [[deprecated("use buildIntegrityWindow")]]
   std::shared_ptr<const EstimationSnapshot> preMeasurementSnapshot(
       const UwbBatch& batch);
+  [[deprecated("use commitEpoch")]]
   void commitUwbBatch(const UwbBatch& batch);
+  [[deprecated("use commitEpoch/discardEpoch")]]
   void rejectUwbBatch(const UwbBatch& batch, const std::string& reason);
 
   NavigationState currentState() const;
-  bool hasPendingEpoch() const { return pending_epoch_; }
+  bool hasPendingEpoch() const { return active_transaction_id_.has_value(); }
   double lastNoUwbUpdateMs() const { return last_no_uwb_update_ms_; }
   double lastMarginalMs() const { return last_marginal_ms_; }
   double lastUwbUpdateMs() const { return last_uwb_update_ms_; }
@@ -112,7 +130,10 @@ class IncrementalUwbImuEstimator {
   bool globalDiagnosticsEnabled() const {
     return config_.output.write_global_diagnostics;
   }
+  const IntegrityConfig& config() const { return config_; }
   EstimatorAudit audit() const;
+  const FactorLedger& factorLedger() const { return factor_ledger_; }
+  std::uint64_t backendUpdateCount() const { return backend_update_count_; }
 
   // Method B candidate: computes the leave-current-out information downdate
   // and gates it numerically. It is never used by the formal output unless the
@@ -129,15 +150,38 @@ class IncrementalUwbImuEstimator {
       const Eigen::VectorXd& current_uwb_linear_measurement) const;
 
  private:
+  struct CommittedEpochRecord {
+    EpochTransaction transaction;
+    std::vector<FactorGroupId> selected_groups;
+  };
+  struct BackendUpdateAudit {
+    std::size_t marginalized_epochs = 0;
+    std::vector<std::size_t> new_factor_slots;
+    std::vector<std::size_t> removed_factor_slots;
+    std::vector<gtsam::Key> marginalized_keys;
+    std::vector<std::size_t> boundary_factor_slots;
+  };
+  EpochTransaction prepareTransaction(TimestampNs timestamp,
+                                      const UwbBatch* batch);
+  void attachUwbGroups(EpochTransaction* transaction,
+                       const UwbBatch& batch) const;
+  CurrentStatePrior pendingCurrentPrior(
+      const EpochTransaction& transaction) const;
+  LinearizedFactorBlock linearizePendingGroup(
+      const PendingFactorGroup& group, const EpochTransaction& transaction,
+      const Eigen::MatrixXd& full_jacobian,
+      const Eigen::VectorXd& rhs) const;
   void queryCurrentState();
   CurrentStatePrior queryCurrentPrior(TimestampNs timestamp);
   Eigen::Matrix<double, 15, 15> currentJointMarginal() const;
   const gtsam::ISAM2& backendIsam() const;
   const gtsam::NonlinearFactorGraph& activeGraph() const;
-  std::size_t backendUpdate(
+  BackendUpdateAudit backendUpdate(
       const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
-      std::size_t timestamp_epoch, bool add_timestamps);
+      std::size_t timestamp_epoch, bool add_timestamps,
+      const std::vector<std::size_t>& remove_factor_slots = {});
   void pruneRetainedMetadata();
+  Eigen::Matrix<double, 15, 15> jointMarginal(std::size_t epoch) const;
 
   IntegrityConfig config_;
   Eigen::Vector3d lever_arm_body_m_;
@@ -152,10 +196,13 @@ class IncrementalUwbImuEstimator {
   std::size_t epoch_ = 0;
   TimestampNs state_timestamp_;
   bool initialized_ = false;
-  bool pending_epoch_ = false;
+  bool pending_epoch_ = false;  // retained in EstimatorAudit ABI
   bool current_uwb_committed_ = false;
   std::optional<BatchId> pending_batch_id_;
   std::deque<std::pair<std::size_t, BatchId>> committed_uwb_batches_;
+  std::deque<CommittedEpochRecord> committed_epochs_;
+  std::map<std::size_t, NavigationState> state_history_;
+  std::map<std::size_t, Eigen::Matrix<double, 15, 15>> prefix_covariances_;
   std::uint64_t marginalization_count_ = 0;
   std::uint64_t ordering_version_ = 1;
   std::uint64_t graph_version_ = 0;
@@ -166,6 +213,13 @@ class IncrementalUwbImuEstimator {
   double last_imu_preintegration_ms_ = 0.0;
   double last_state_query_ms_ = 0.0;
   double last_snapshot_extraction_ms_ = 0.0;
+  FactorLedger factor_ledger_;
+  std::optional<TransactionId> active_transaction_id_;
+  std::optional<EpochTransaction> adapter_transaction_;
+  std::uint64_t next_transaction_id_ = 1;
+  std::uint64_t next_window_id_ = 1;
+  std::uint64_t backend_update_count_ = 0;
+  bool backend_poisoned_ = false;
 };
 
 }  // namespace uwb_imu_pl

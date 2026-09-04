@@ -75,6 +75,12 @@ RunLogger::RunLogger(const std::string& output_directory,
   events_.open(directory_ + "/events.csv");
   ground_truth_.open(directory_ + "/ground_truth.csv");
   fault_truth_.open(directory_ + "/fault_truth.csv");
+  transactions_.open(directory_ + "/transactions.csv");
+  hypotheses_.open(directory_ + "/hypotheses.csv");
+  candidates_.open(directory_ + "/candidates.csv");
+  factor_ledger_.open(directory_ + "/factor_ledger.csv");
+  health_.open(directory_ + "/health.csv");
+  bridge_.open(directory_ + "/bridge.csv");
   requireOpen(states_, directory_ + "/states.csv");
   if (write_residuals_) requireOpen(residuals_, directory_ + "/residuals.csv");
   requireOpen(integrity_, directory_ + "/integrity.csv");
@@ -82,6 +88,12 @@ RunLogger::RunLogger(const std::string& output_directory,
   requireOpen(events_, directory_ + "/events.csv");
   requireOpen(ground_truth_, directory_ + "/ground_truth.csv");
   requireOpen(fault_truth_, directory_ + "/fault_truth.csv");
+  requireOpen(transactions_, directory_ + "/transactions.csv");
+  requireOpen(hypotheses_, directory_ + "/hypotheses.csv");
+  requireOpen(candidates_, directory_ + "/candidates.csv");
+  requireOpen(factor_ledger_, directory_ + "/factor_ledger.csv");
+  requireOpen(health_, directory_ + "/health.csv");
+  requireOpen(bridge_, directory_ + "/bridge.csv");
   states_ << "timestamp_ns,state_id,px,py,pz,qw,qx,qy,qz,vx,vy,vz,bax,bay,baz,bgx,bgy,bgz\n";
   if (write_residuals_) {
     residuals_ << "timestamp_ns,factor_id,anchor_id,row_role,raw,whitened\n";
@@ -92,7 +104,11 @@ RunLogger::RunLogger(const std::string& output_directory,
                 "conditional_statistic,conditional_threshold,conditional_dof,"
                 "conditional_passed,conditional_formal,pl_x,pl_y,pl_z,hpl_m,"
                 "vpl_m,availability,label,formal_eligible,risk_budget_valid,"
-                "allocated_hmi_risk,hmi_risk_requirement,batch_committed,reason\n";
+                "allocated_hmi_risk,hmi_risk_requirement,batch_committed,"
+                "transaction_id,window_id,base_graph_version,linearization_version,"
+                "selected_action_id,selected_action_type,fde_status,bridge_pl_x,"
+                "bridge_pl_y,bridge_pl_z,history_provenance_valid,backend_updates,"
+                "stale_state,controlled_reinitialization_required,reason\n";
   if (write_timing_) {
     timing_ << "timestamp_ns,epoch,stage,wall_ms,problem_size,hypothesis_count,"
                "factor_count,cold_warm,success\n";
@@ -100,7 +116,24 @@ RunLogger::RunLogger(const std::string& output_directory,
   events_ << "timestamp_ns,sequence,event,detail\n";
   ground_truth_ << "timestamp_ns,px,py,pz,qw,qx,qy,qz\n";
   fault_truth_ << "timestamp_ns,sequence,anchor_id,fault_mode,active,outage,"
-                  "injected_bias_m,true_range_m\n";
+                  "injected_bias_m,true_range_m,sensor_type,fault_kind,axis,"
+                  "epoch_begin,epoch_end,injected_value,injected_units\n";
+  transactions_ << "timestamp_ns,transaction_id,window_id,base_graph_version,"
+                   "linearization_version,selected_action_id,fde_status,"
+                   "backend_updates,stale_state,reinitialization_required\n";
+  hypotheses_ << "timestamp_ns,window_id,hypothesis_id,fault_unit_ids,prior_bound,"
+                 "p_md_allocation,hmi_allocation,monitorable,plausible,"
+                 "conditioned_statistic,log_evidence,reason\n";
+  candidates_ << "timestamp_ns,window_id,action_id,action_type,cardinality,valid,"
+                 "post_detector_passed,covers_plausible_set,statistic,threshold,"
+                 "rank,dof,condition_number,hpl_m,vpl_m,selected,reason\n";
+  factor_ledger_ << "factor_id,group_id,sensor,factor_kind,lifecycle,epoch_begin,"
+                    "epoch_end,time_begin_ns,time_end_ns,backend_slot,"
+                    "noise_model_id,model_id,health\n";
+  health_ << "timestamp_ns,source_id,sensor,previous_state,current_state,trigger,"
+             "suspicion_count,shadow_pass_count,recovery_pass_count\n";
+  bridge_ << "timestamp_ns,transaction_id,mode,consecutive_epochs,duration_s,"
+             "integrity_model,calibration_id,bound_x,bound_y,bound_z,status\n";
 }
 
 void RunLogger::writeResolvedConfig(const std::string& yaml) const {
@@ -128,7 +161,26 @@ void RunLogger::writeManifest(const RunManifest& m) const {
       << "  \"cpu\": " << json(m.cpu) << ",\n"
       << "  \"ram_bytes\": " << m.ram_bytes << ",\n"
       << "  \"gtsam_version\": " << json(m.gtsam_version) << ",\n"
-      << "  \"eigen_version\": " << json(m.eigen_version) << "\n}\n";
+      << "  \"eigen_version\": " << json(m.eigen_version) << ",\n"
+      << "  \"maturity\": " << json(m.maturity) << ",\n"
+      << "  \"formal_eligible\": "
+      << (m.formal_eligible ? "true" : "false") << ",\n"
+      << "  \"scope\": {\"protected_state\": " << json(m.protected_state)
+      << ", \"detector\": " << json(m.detector)
+      << ", \"pl_method\": " << json(m.pl_method)
+      << ", \"window_epochs\": " << m.window_epochs
+      << ", \"max_fault_cardinality\": " << m.monitored_fault_cardinality
+      << ", \"bridge_model\": " << json(m.bridge_model)
+      << ", \"history_recovery\": " << json(m.history_recovery) << "},\n"
+      << "  \"gate_j_evidence\": {\"risk_calibration_id\": "
+      << json(m.risk_calibration_id)
+      << ", \"noise_overbound_calibration_id\": "
+      << json(m.noise_overbound_calibration_id)
+      << ", \"bridge_calibration_id\": " << json(m.bridge_calibration_id)
+      << ", \"gates_a_to_i_complete\": "
+      << (m.gates_a_to_i_complete ? "true" : "false")
+      << ", \"independent_review_complete\": "
+      << (m.independent_review_complete ? "true" : "false") << "}\n}\n";
 }
 
 void RunLogger::writeState(const NavigationState& s) {
@@ -170,7 +222,62 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
              << toString(p.availability) << ',' << toString(p.label) << ','
              << p.formal_eligible << ',' << p.risk_budget_valid << ','
              << p.allocated_hmi_risk << ',' << p.hmi_risk_requirement << ','
-             << o.batch_committed << ',' << csv(p.reason) << '\n';
+             << o.batch_committed << ',' << o.transaction_id << ','
+             << o.window_id << ',' << o.base_graph_version << ','
+             << o.linearization_version << ',' << o.selected_action_id << ','
+             << csv(o.selected_action_type) << ',' << csv(o.fde_status) << ','
+             << o.bridge_component_m.x() << ',' << o.bridge_component_m.y() << ','
+             << o.bridge_component_m.z() << ',' << o.history_provenance_valid << ','
+             << o.backend_updates << ',' << o.stale_state << ','
+             << o.controlled_reinitialization_required << ','
+             << csv(p.reason) << '\n';
+  transactions_ << o.timestamp.value() << ',' << o.transaction_id << ','
+                << o.window_id << ',' << o.base_graph_version << ','
+                << o.linearization_version << ',' << o.selected_action_id << ','
+                << csv(o.fde_status) << ',' << o.backend_updates << ','
+                << o.stale_state << ','
+                << o.controlled_reinitialization_required << '\n';
+  for (const auto& h : o.hypothesis_audit) {
+    hypotheses_ << o.timestamp.value() << ',' << o.window_id << ','
+                << h.hypothesis_id << ',' << csv(h.fault_unit_ids) << ','
+                << h.prior_bound << ',' << h.p_md_allocation << ','
+                << h.hmi_allocation << ',' << h.monitorable << ','
+                << h.plausible << ',' << h.conditioned_statistic << ','
+                << h.log_evidence << ',' << csv(h.reason) << '\n';
+  }
+  for (const auto& c : o.candidate_audit) {
+    candidates_ << o.timestamp.value() << ',' << o.window_id << ','
+                << c.action_id << ',' << csv(c.action_type) << ','
+                << c.cardinality << ',' << c.valid << ','
+                << c.post_detector_passed << ',' << c.covers_plausible_set << ','
+                << c.statistic << ',' << c.threshold << ',' << c.rank << ','
+                << c.dof << ',' << c.condition_number << ',' << c.hpl_m << ','
+                << c.vpl_m << ',' << c.selected << ',' << csv(c.reason) << '\n';
+  }
+  for (const auto& f : o.factor_ledger_audit) {
+    factor_ledger_ << f.factor_id << ',' << f.group_id << ',' << csv(f.sensor)
+                   << ',' << csv(f.factor_kind) << ',' << csv(f.lifecycle) << ','
+                   << f.epoch_begin << ',' << f.epoch_end << ','
+                   << f.time_begin.value() << ',' << f.time_end.value() << ','
+                   << csv(f.backend_slot) << ',' << csv(f.noise_model_id) << ','
+                   << csv(f.model_id) << ',' << csv(f.health) << '\n';
+  }
+  for (const auto& h : o.health_audit) {
+    health_ << o.timestamp.value() << ',' << csv(h.source_id) << ','
+            << csv(h.sensor) << ',' << csv(h.previous_state) << ','
+            << csv(h.current_state) << ',' << csv(h.trigger) << ','
+            << h.suspicion_count << ',' << h.shadow_pass_count << ','
+            << h.recovery_pass_count << '\n';
+  }
+  if (o.bridge_audit) {
+    const auto& b = *o.bridge_audit;
+    bridge_ << o.timestamp.value() << ',' << o.transaction_id << ','
+            << csv(b.mode) << ',' << b.consecutive_epochs << ','
+            << b.duration_s << ',' << csv(b.integrity_model) << ','
+            << csv(b.calibration_id) << ',' << b.bound.x() << ','
+            << b.bound.y() << ',' << b.bound.z() << ',' << csv(b.status)
+            << '\n';
+  }
 }
 
 void RunLogger::writeTiming(TimestampNs t, const std::string& stage,
@@ -224,7 +331,11 @@ void RunLogger::writeFaultTruth(const FaultTruthRecord& record) {
   fault_truth_ << record.timestamp.value() << ',' << record.sequence << ','
                << record.anchor_id.value() << ',' << csv(record.fault_mode)
                << ',' << record.active << ',' << record.outage << ','
-               << record.injected_bias_m << ',' << record.true_range_m << '\n';
+               << record.injected_bias_m << ',' << record.true_range_m << ','
+               << csv(record.sensor_type) << ',' << csv(record.fault_kind) << ','
+               << record.axis << ',' << record.epoch_begin << ','
+               << record.epoch_end << ',' << record.injected_value << ','
+               << csv(record.injected_units) << '\n';
 }
 
 void RunLogger::writeSummary(const std::string& status,
@@ -266,6 +377,13 @@ RunManifest makeRunManifest(const IntegrityConfig& config,
   manifest.resolved_config = config.resolved_yaml;
   manifest.seed = config.seed;
   manifest.fixed_lag_epochs = config.incremental.fixed_lag_epochs;
+  manifest.schema_version = config.schema_version;
+  manifest.window_epochs = config.integrity_window.epochs;
+  manifest.monitored_fault_cardinality = config.fault_models.max_cardinality;
+  manifest.bridge_calibration_id = config.bridge.generic.calibration_id;
+  manifest.risk_calibration_id = config.risk_v2.calibration_id;
+  manifest.noise_overbound_calibration_id =
+      config.imu.noise_overbound_calibration_id;
   manifest.execution_command = execution_command;
 #ifdef NDEBUG
   manifest.build_type = "Release";
