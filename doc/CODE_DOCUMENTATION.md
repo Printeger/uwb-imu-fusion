@@ -100,17 +100,18 @@ flowchart TD
 
 **关键处理 — 加速度单位转换**:
 
-许多 IMU 驱动（如 Livox）发布的 `linear_acceleration` 以 **g 为单位**（即 $1.0 = 1g$），而 GTSAM 预积分期望 **m/s²**。因此代码中做显式缩放：
+许多 IMU 驱动（如 Livox）发布的 `linear_acceleration` 以 **g 为单位**（即 $1.0 = 1g$），而 GTSAM 预积分期望 **m/s²**。仿真系统直接以 m/s² 发布。因此通过 `imu_acc_in_g` 标志条件缩放：
 
 ```cpp
-const double g_scale = cfg_.gravity;  // 通常 9.81
+// config.h: bool imu_acc_in_g = true;  // true=硬件IMU(g单位), false=仿真IMU(m/s²)
+const double g_scale = cfg_.imu_acc_in_g ? cfg_.gravity : 1.0;
 s.acc = Eigen::Vector3d(
     imu_msg->linear_acceleration.x * g_scale,
     imu_msg->linear_acceleration.y * g_scale,
     imu_msg->linear_acceleration.z * g_scale);
 ```
 
-**诊断**: 读取完成后，代码检查前 200 个样本的加速度范数均值，若 $\ll 9.81$ 则输出警告。
+**诊断**: 读取完成后，代码检查前 200 个样本的加速度范数均值，若 $\ll 9.81$ 则输出警告，提示用户检查 `imu_acc_in_g` 设置。
 
 陀螺仪数据直接使用原始值（rad/s），无需转换：
 ```cpp
@@ -670,8 +671,8 @@ flowchart TD
     INPUT["全图 + 初始 Values<br/>uwb_indices"] --> S0
 
     subgraph Stage0 ["Stage 0: Pre-Warming LM"]
-        S0A["标准 LM, maxIter=3<br/>(无鲁棒加权)"]
-        S0A --> S0B["大幅降低 IMU 预测误差<br/>(10^10 → 10^3 量级)"]
+        S0A["标准 LM, 自适应迭代<br/>(error>1e8→30, >1e4→15, else→10)<br/>无鲁棒加权"]
+        S0B["大幅降低 IMU 预测误差<br/>(10^10 → 10^3 量级)"]
     end
 
     S0B --> A
@@ -705,11 +706,14 @@ flowchart TD
 
 **设计必要性**: 初始 IMU 预测轨迹（零偏置初始化）可产生 $10^9\sim 10^{11}$ 量级的初始代价。若 GNC+TLS + `setKnownInliers` 直接在此初始值上运行，IMU 主导的误差将迫使所有 UWB 权重趋近于零，导致灾难性外点剔除（93%+ UWB 因子丢失）。
 
-**实现**: 在 GNC 之前先运行 3 次标准 LM 迭代（无鲁棒加权，所有因子等权），将代价降低数个数量级（$10^{10}\to 10^3$），使 GNC 能在合理的解上正确区分 NLOS 外点与内点。
+**实现**: 在 GNC 之前先运行自适应次数的标准 LM 迭代（无鲁棒加权，所有因子等权），将代价降低数个数量级（$10^{10}\to 10^3$），使 GNC 能在合理的解上正确区分 NLOS 外点与内点。迭代次数根据初始误差量级自适应调整：
 
 ```cpp
 LevenbergMarquardtParams prewarm_params = lm_params;
-prewarm_params.setMaxIterations(3);
+int prewarm_iters = (out.initial_error > 1e8)   ? 30
+                    : (out.initial_error > 1e4) ? 15
+                                                : 10;
+prewarm_params.setMaxIterations(prewarm_iters);
 Values prewarmed = initial;
 {
   LevenbergMarquardtOptimizer preopt(graph, prewarmed, prewarm_params);
@@ -717,6 +721,8 @@ Values prewarmed = initial;
 }
 // prewarmed 作为 GNC 的初始值, 而非原始 initial
 ```
+
+误差极大时（$>10^8$，典型零偏置初始化）需要 30 次迭代将代价降到合理区间；误差中等（$10^4\sim 10^8$）用 15 次；误差已较小时仅需 10 次，避免浪费时间。
 
 ### 9.4 Stage A — GNC+TLS 鲁棒退火
 
@@ -760,9 +766,11 @@ out.gnc_weights   = gnc.getWeights();  // size = graph.size()
 | 中间 | $\mu$ 递减 | 非凸性增加，NLOS 外点权重被压低 |
 | 收敛 | $\mu \to \mu_{\min}$ | $w_i \approx 1$（内点），$w_i \to 0$（外点） |
 
-**硬判**: GNC 收敛后，仅 $w_i <$ `gnc_weight_thresh`（默认 **0.01**，保守值）的极端外点被预剔除。主要的 NLOS 外点剔除由后续 $\chi^2$ 回环（Stage B）负责。这避免了 GNC 在初始误差较大时将过多有效 UWB 约束误判为外点。
+**硬判**: GNC 收敛后，仅 $w_i <$ `gnc_weight_thresh` 的极端外点被预剔除。
 
-**GNC + χ² 双保险设计**: GNC 的 TLS 权重提供软降权（优化时减少外点影响），χ² 回环提供硬剔除（统计检验确定外点）；GNC 权重预剔除仅作为可选的极端外点加速手段（默认阈值 0.01，极其保守）。
+**重要 — TLS 负权重问题**: 在真实数据上，TLS 核可能产生**负权重**（$w_i < 0$），此时基于正阈值（如 0.01）的硬判完全失效。对此的应对策略是设置 `gnc_weight_thresh = -1.0` 完全绕过 GNC 权重预判，将外点剔除全部交由后续 $\chi^2$ 回环（Stage B）负责。仿真数据（理想 LOS 条件）无此问题，0.01 阈值正常工作。
+
+**GNC + χ² 双保险设计**: GNC 的 TLS 权重提供软降权（优化时减少外点影响），χ² 回环提供硬剔除（统计检验确定外点）；GNC 权重预剔除作为可选加速手段，在真实数据上通常需要用 `-1.0` 关闭以避免 TLS 负权重误伤内点。
 
 ### 9.5 Stage B — $\chi^2$ 硬剔除
 
@@ -777,7 +785,7 @@ $$\chi^2_i = 2 \cdot \texttt{error}_i = \|e_i(x)\|^2_{\Sigma_i}$$
 // src/optimizer.cpp: ChiSquareReject()
 for each UWB factor i:
     chi2_i = 2 * factor->error(values)     // = ||r/sigma||²
-    threshold = Chi2inv(0.99, factor->dim())  // 99% confidence, dof=1
+    threshold = Chi2inv(cfg_.chi2_reject_prob, factor->dim())  // 可配置置信度 (默认 0.99)
     if chi2_i > threshold:
         reject factor i
 ```
@@ -955,9 +963,18 @@ timestamp tx ty tz qx qy qz qw
 
 **文件**: `src/trajectory_io.cpp` → `ComputeATE()`
 
-对每个估计帧，在 GT 中找最近时间戳的帧（简单最近邻，非 Umeyama 对齐）：
+首先对时间戳做最近邻匹配，然后在匹配的点对上执行 **SE(3) Umeyama 对齐**（`AlignSE3`）：
 
-$$\text{ATE}_{\text{RMSE}} = \sqrt{\frac{1}{N} \sum_{i=1}^{N} ||\mathbf{p}_i^{\text{est}} - \mathbf{p}_i^{\text{gt}}||^2}$$
+1. 计算两组点的质心 $\bar{\mathbf{p}}_{\text{est}}$, $\bar{\mathbf{p}}_{\text{gt}}$
+2. 构建互协方差矩阵 $\mathbf{H} = \sum (\mathbf{p}_i^{\text{est}} - \bar{\mathbf{p}}_{\text{est}})(\mathbf{p}_i^{\text{gt}} - \bar{\mathbf{p}}_{\text{gt}})^T$
+3. SVD 分解 $\mathbf{H} = \mathbf{U}\mathbf{S}\mathbf{V}^T$，得旋转 $\mathbf{R} = \mathbf{V}\mathbf{U}^T$（带行列式符号检测防镜像）
+4. 平移 $\mathbf{t} = \bar{\mathbf{p}}_{\text{gt}} - \mathbf{R}\bar{\mathbf{p}}_{\text{est}}$，尺度固定为 1.0（刚体变换）
+
+对齐后计算各点误差及统计量：
+
+$$\text{ATE}_{\text{RMSE}} = \sqrt{\frac{1}{N} \sum_{i=1}^{N} ||\mathbf{R} \cdot \mathbf{p}_i^{\text{est}} + \mathbf{t} - \mathbf{p}_i^{\text{gt}}||^2}$$
+
+**设计必要性**: 估计轨迹和 GT 通常在不同坐标系下（如 World 系 vs VICON/Mocap 系），不做 SE(3) 对齐会得到数千米的虚假 ATE。Umeyama 算法提供闭式最小二乘最优刚体变换。
 
 ### 13.3 RPE — 相对位姿误差
 
@@ -1048,38 +1065,39 @@ anchors:
 # ============= 外参 =============
 extrinsics:
   lever_arm_init: [0.0, 0.0, 0.0]   # UWB天线在IMU系初始位置
-  calib_lever: false                 # 是否在线标定杆臂
+  calib_lever: true                  # 是否在线标定杆臂
   lever_prior_sigma: 0.05            # 杆臂先验标准差
 
 # ============= 在线标定开关 =============
 calibration:
-  calib_anchor: false                # 在线修正锚点位置
-  calib_range_bias: false            # 在线标定测距偏置
+  calib_anchor: true                 # 在线修正锚点位置
+  calib_range_bias: true             # 在线标定测距偏置
   range_bias_sigma: 0.05             # 偏置先验标准差
   calib_td: false                    # 在线标定时间偏移 (预留)
-  td_init: 0.0                       # 时间偏移初值
+  td_init: 0.03                      # 时间偏移初值 (s)
 
 # ============= IMU 噪声 =============
 imu:
+  imu_acc_in_g: true                 # true=硬件IMU(g单位需×9.81), false=仿真IMU(m/s²)
   sigma_a: 0.1                       # 加速度计白噪声 (m/s²)
   sigma_g: 0.01                      # 陀螺仪白噪声 (rad/s)
-  sigma_wa: 0.001                    # 加速度计随机游走 (m/s³)
+  sigma_wa: 0.01                     # 加速度计随机游走 (m/s³)
   sigma_wg: 2.0e-5                   # 陀螺仪随机游走 (rad/s²)
   gravity: 9.81                      # 重力大小
 
 # ============= UWB 噪声 & 过滤 =============
 uwb:
-  sigma_range: 0.15                  # 基础测距标准差 (m)
+  sigma_range: 0.10                  # 基础测距标准差 (m)
   v_max: 3.0                         # 最大速度用于自适应协方差
   nlos_rssi_diff: 6.0                # NLOS RSSI 差值阈值 (dB)
   min_range: 0.3                     # 最小有效距离 (m)
   max_range: 100.0                   # 最大有效距离 (m)
-  dist_consistency_thresh: 2.0       # 距离一致性阈值 (m)
+  dist_consistency_thresh: 1.0       # 距离一致性阈值 (m)
   warmup_frames: 20                  # 预热帧数
 
 # ============= 求解器 (含 GNC 鲁棒优化) =============
 solver:
-  lm_max_iter: 200                   # LM 最大迭代次数 (GNC 内层 & clean 精修共用)
+  lm_max_iter: 100                   # LM 最大迭代次数 (GNC 内层 & clean 精修共用)
   rel_error_tol: 1.0e-6              # 相对误差收敛阈值
   abs_error_tol: 1.0e-8              # 绝对误差收敛阈值
   # --- GNC (Graduated Non-Convexity) TLS 退火 ---
@@ -1087,7 +1105,7 @@ solver:
   gnc_max_iter: 50                   # GNC 外循环最大迭代
   gnc_rel_cost_tol: 1.0e-5           # GNC 相对代价收敛阈值
   gnc_inlier_prob: 0.99              # 内点代价阈值的卡方置信度
-  gnc_weight_thresh: 0.01            # GNC 权重硬判内/外点门限 (保守: w<0.01 才预剔除，χ² 回环负责主要剔除)
+  gnc_weight_thresh: 0.01            # GNC权重硬判门限 (真实数据TLS负权重时设-1.0绕过, 纯χ²剔除)
   # --- 卡方剔除回环 (post-GNC) ---
   chi2_reject_prob: 0.99             # 逐因子卡方剔除置信度 (0.99 = 宽松, 0.95 = 严格)
   max_rejection_rounds: 3            # 卡方剔除回环最大轮次
