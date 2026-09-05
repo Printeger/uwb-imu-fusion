@@ -1,0 +1,47 @@
+Script started on 2026-09-05 10:30:03+00:00 [<not executed on terminal>]
+CURRENT_INHERITED_ENVIRONMENT
+CMAKE_PREFIX_PATH=/home/dev/ws_rl/devel:/home/dev/ws_LIU/devel:/opt/ros/noetic
+ROS_PACKAGE_PATH=/home/dev/ws_rl/src:/home/dev/ws_LIU/src/glim:/home/dev/ws_LIU/src/livox_ros_driver2:/home/dev/ws_LIU/src/FAST_LIO:/home/dev/ws_LIU/src/nlink_parser:/home/dev/ws_LIU/src/Coco-LIC-UWB:/home/dev/ws_LIU/src/open_vins/ov_core:/home/dev/ws_LIU/src/liu:/opt/ros/noetic/share
+LD_LIBRARY_PATH=/home/dev/ws_rl/devel/lib:/home/dev/ws_LIU/devel/lib:/opt/ros/noetic/lib
+PYTHONPATH=/home/dev/ws_rl/devel/lib/python3/dist-packages:/home/dev/ws_LIU/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages
+rospack find uwb_imu_fgo
+[rospack] Error: package 'uwb_imu_fgo' not found
+exit_code=1
+rospack find uwb_driver
+[rospack] Error: package 'uwb_driver' not found
+exit_code=1
+rospack find isas_msgs
+[rospack] Error: package 'isas_msgs' not found
+exit_code=1
+OPT_ROS_NOETIC_ONLY
+CMAKE_PREFIX_PATH=/opt/ros/noetic
+ROS_PACKAGE_PATH=/opt/ros/noetic/share
+LD_LIBRARY_PATH=/opt/ros/noetic/lib
+PYTHONPATH=/opt/ros/noetic/lib/python3/dist-packages
+rospack find uwb_imu_fgo
+[rospack] Error: package 'uwb_imu_fgo' not found
+exit_code=1
+rospack find uwb_driver
+[rospack] Error: package 'uwb_driver' not found
+exit_code=1
+rospack find isas_msgs
+[rospack] Error: package 'isas_msgs' not found
+exit_code=1
+OLD_WS_OVERLAY
+CMAKE_PREFIX_PATH=/home/dev/ws_uwb/devel:/home/dev/ws_rl/devel:/home/dev/ws_LIU/devel:/opt/ros/noetic
+ROS_PACKAGE_PATH=/home/dev/ws_uwb/src/uwb-imu-fusion:/home/dev/ws_rl/src:/home/dev/ws_LIU/src/glim:/home/dev/ws_LIU/src/livox_ros_driver2:/home/dev/ws_LIU/src/FAST_LIO:/home/dev/ws_LIU/src/nlink_parser:/home/dev/ws_LIU/src/Coco-LIC-UWB:/home/dev/ws_LIU/src/open_vins/ov_core:/home/dev/ws_LIU/src/liu:/opt/ros/noetic/share
+LD_LIBRARY_PATH=/home/dev/ws_uwb/devel/lib:/home/dev/ws_rl/devel/lib:/home/dev/ws_LIU/devel/lib:/opt/ros/noetic/lib
+PYTHONPATH=/home/dev/ws_uwb/devel/lib/python3/dist-packages:/home/dev/ws_rl/devel/lib/python3/dist-packages:/home/dev/ws_LIU/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages
+rospack find uwb_imu_fgo
+/home/dev/ws_uwb/src/uwb-imu-fusion
+exit_code=0
+rospack find uwb_driver
+[rospack] Error: package 'uwb_driver' not found
+exit_code=1
+rospack find isas_msgs
+[rospack] Error: package 'isas_msgs' not found
+exit_code=1
+resolved executable candidates
+/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_node
+
+Script done on 2026-09-05 10:30:03+00:00 [COMMAND_EXIT_CODE="0"]

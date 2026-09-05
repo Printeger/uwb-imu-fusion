@@ -1,0 +1,1560 @@
+FILE src/outlier_filter.cpp LINES 1-30
+     1	#include "uifgo/outlier_filter.h"
+     2	#include <cmath>
+     3	
+     4	namespace uifgo {
+     5	
+     6	OutlierFilter::OutlierFilter(const Config& cfg) : cfg_(cfg) {}
+     7	
+     8	std::vector<UwbRange> OutlierFilter::PreFilter(const UwbFrame& frame) const {
+     9	  std::vector<UwbRange> retained;
+    10	  for (const auto& r : frame.ranges) {
+    11	    // NLOS: rx_rssi - fp_rssi > threshold => multipath
+    12	    if (r.rx_rssi - r.fp_rssi > cfg_.nlos_rssi_diff) continue;
+    13	    // Range bounds
+    14	    if (r.dist < cfg_.min_range || r.dist > cfg_.max_range) continue;
+    15	    retained.push_back(r);
+    16	  }
+    17	  return retained;
+    18	}
+    19	
+    20	bool OutlierFilter::ConsistencyCheck(const UwbRange& range,
+    21	                                      const gtsam::Point3& tag_pred_world,
+    22	                                      const gtsam::Point3& anchor_pos,
+    23	                                      bool warmed_up) const {
+    24	  if (!warmed_up) return true;
+    25	  double predicted = (gtsam::Vector3(tag_pred_world) - gtsam::Vector3(anchor_pos)).norm();
+    26	  return std::abs(predicted - range.dist) <= cfg_.dist_consistency_thresh;
+    27	}
+    28	
+    29	}  // namespace uifgo
+FILE include/uifgo/types.h LINES 1-50
+     1	#pragma once
+     2	
+     3	#include <gtsam/base/Vector.h>
+     4	#include <gtsam/geometry/Point3.h>
+     5	#include <gtsam/geometry/Pose3.h>
+     6	
+     7	#include <Eigen/Core>
+     8	#include <Eigen/Geometry>
+     9	#include <string>
+    10	#include <unordered_map>
+    11	#include <vector>
+    12	
+    13	namespace uifgo {
+    14	
+    15	// --- Raw sensor samples ---
+    16	
+    17	struct ImuSample {
+    18	  double t;              // seconds
+    19	  Eigen::Vector3d acc;   // m/s^2, body frame
+    20	  Eigen::Vector3d gyro;  // rad/s, body frame
+    21	  Eigen::Quaterniond orientation = Eigen::Quaterniond::Identity();
+    22	  bool has_orientation = false;
+    23	};
+    24	
+    25	struct UwbRange {
+    26	  int anchor_id;   // anchor identifier
+    27	  double dist;     // measured range (m)
+    28	  double fp_rssi;  // first-path RSSI (dB)
+    29	  double rx_rssi;  // total received RSSI (dB)
+    30	};
+    31	
+    32	struct UwbFrame {
+    33	  double t;  // seconds (rosbag timestamp)
+    34	  int tag_id;
+    35	  std::vector<UwbRange> ranges;
+    36	};
+    37	
+    38	// --- Configuration ---
+    39	
+    40	struct AnchorConfig {
+    41	  int id;
+    42	  gtsam::Point3 pos;   // nominal world-frame position
+    43	  double prior_sigma;  // prior std for anchor position correction (m)
+    44	};
+    45	
+    46	// --- Per-keyframe output state ---
+    47	
+    48	struct NavState {
+    49	  double t;
+    50	  gtsam::Pose3 T;     // body -> world
+FILE src/uwb_factor.cpp LINES 1-70
+     1	#include "uifgo/uwb_factor.h"
+     2	#include <gtsam/nonlinear/ExpressionFactor.h>
+     3	#include <gtsam/slam/expressions.h>
+     4	#include <gtsam/nonlinear/expressions.h>
+     5	
+     6	namespace uifgo {
+     7	using namespace gtsam;
+     8	
+     9	// Helper: build range expression rho = ||antenna - (anchor_nominal + dA[opt])||
+    10	static Double_ BuildRange(const Point3_& antenna, const Point3& A_nom,
+    11	                          bool calib_anchor, Key anchor_key) {
+    12	  if (calib_anchor) {
+    13	    auto f = [A_nom](const Point3& ant, const Point3& dA,
+    14	                     OptionalJacobian<1,3> Ha, OptionalJacobian<1,3> Hd) -> double {
+    15	      Vector3 d = ant - (A_nom + dA);
+    16	      double n = d.norm();
+    17	      if (n > 1e-9) { if(Ha) *Ha = d.transpose()/n; if(Hd) *Hd = -d.transpose()/n; }
+    18	      else { if(Ha) *Ha = Matrix13::Zero(); if(Hd) *Hd = Matrix13::Zero(); }
+    19	      return n;
+    20	    };
+    21	    return Double_(f, antenna, Point3_(anchor_key));
+    22	  } else {
+    23	    auto f = [A_nom](const Point3& ant, OptionalJacobian<1,3> H) -> double {
+    24	      Vector3 d = ant - A_nom;
+    25	      double n = d.norm();
+    26	      if (n > 1e-9) { if(H) *H = d.transpose()/n; } else { if(H) *H = Matrix13::Zero(); }
+    27	      return n;
+    28	    };
+    29	    return Double_(f, antenna);
+    30	  }
+    31	}
+    32	
+    33	NonlinearFactor::shared_ptr MakeUwbFactor(
+    34	    Key pose_key, Key lever_key, Key anchor_key, Key bias_key,
+    35	    const Point3& anchor_nominal, const Point3& lever_init,
+    36	    double measured_range, double sigma,
+    37	    bool calib_lever, bool calib_anchor, bool calib_bias) {
+    38	
+    39	  Pose3_  pose_(pose_key);
+    40	  Point3_ lever_   = calib_lever ? Point3_(lever_key) : Point3_(lever_init);
+    41	  Point3_ antenna_ = transformFrom(pose_, lever_);
+    42	
+    43	  Double_ rho = BuildRange(antenna_, anchor_nominal, calib_anchor, anchor_key);
+    44	
+    45	  Double_ predicted = calib_bias ? (rho + Double_(bias_key)) : rho;
+    46	
+    47	  auto noise = noiseModel::Isotropic::Sigma(1, sigma);
+    48	  return boost::make_shared<ExpressionFactor<double>>(noise, measured_range, predicted);
+    49	}
+    50	
+    51	}  // namespace uifgo
+FILE src/graph_builder.cpp LINES 1-175
+     1	#include "uifgo/graph_builder.h"
+     2	
+     3	#include <gtsam/inference/Symbol.h>
+     4	#include <gtsam/navigation/CombinedImuFactor.h>
+     5	#include <gtsam/navigation/NavState.h>
+     6	#include <gtsam/slam/PriorFactor.h>
+     7	
+     8	#include <cmath>
+     9	#include <iostream>
+    10	
+    11	#include "uifgo/imu_preint.h"
+    12	#include "uifgo/uwb_factor.h"
+    13	
+    14	namespace uifgo {
+    15	using namespace gtsam;
+    16	using symbol_shorthand::A;  // Point3 anchor correction
+    17	using symbol_shorthand::B;  // imuBias::ConstantBias
+    18	using symbol_shorthand::L;  // Point3 lever arm
+    19	using symbol_shorthand::V;  // Vector3 velocity
+    20	using symbol_shorthand::X;  // Pose3
+    21	using symbol_shorthand::Z;  // double range bias
+    22	
+    23	GraphBuilder::GraphBuilder(const Config& cfg)
+    24	    : cfg_(cfg), anchors_(cfg.anchors) {}
+    25	
+    26	gtsam::Key GraphBuilder::lever_key() const { return L(0); }
+    27	gtsam::Key GraphBuilder::anchor_key(int m) const { return A(m); }
+    28	gtsam::Key GraphBuilder::bias_key(int m) const { return Z(m); }
+    29	
+    30	double GraphBuilder::AdaptiveSigma(double dt_since_last) const {
+    31	  double extra = (dt_since_last > 0) ? (cfg_.v_max * dt_since_last / 3.0) : 0.0;
+    32	  return std::sqrt(cfg_.sigma_range * cfg_.sigma_range + extra * extra);
+    33	}
+    34	
+    35	void GraphBuilder::AddUwbFactorsForFrame(size_t kf_idx, const UwbFrame& frame,
+    36	                                         NonlinearFactorGraph* graph,
+    37	                                         std::vector<size_t>* uwb_indices,
+    38	                                         Values* values, bool first_frame) {
+    39	  for (const UwbRange& r : frame.ranges) {
+    40	    int m = r.anchor_id;
+    41	
+    42	    // Lookup nominal anchor position
+    43	    auto it = std::find_if(anchors_.begin(), anchors_.end(),
+    44	                           [m](const AnchorConfig& a) { return a.id == m; });
+    45	    if (it == anchors_.end()) {
+    46	      std::cerr << "Warning: unknown anchor " << m << " in frame kf=" << kf_idx
+    47	                << "\n";
+    48	      continue;
+    49	    }
+    50	    const Point3& A_m = it->pos;
+    51	
+    52	    // Time-adaptive sigma
+    53	    double dt_last = 0.0;
+    54	    auto tit = last_anchor_time_.find(m);
+    55	    if (tit != last_anchor_time_.end()) {
+    56	      dt_last = frame.t - tit->second;
+    57	    }
+    58	    double sigma = AdaptiveSigma(dt_last);
+    59	    last_anchor_time_[m] = frame.t;
+    60	
+    61	    auto factor =
+    62	        MakeUwbFactor(X(kf_idx), lever_key(), anchor_key(m), bias_key(m), A_m,
+    63	                      cfg_.lever_arm_init, r.dist, sigma, cfg_.calib_lever,
+    64	                      cfg_.calib_anchor, cfg_.calib_range_bias);
+    65	
+    66	    size_t idx = graph->size();
+    67	    graph->add(factor);
+    68	    uwb_indices->push_back(idx);
+    69	  }
+    70	}
+    71	
+    72	void GraphBuilder::Build(const std::vector<UwbFrame>& uwb_kf,
+    73	                         const std::vector<ImuSample>& imu,
+    74	                         const InitResult& init, NonlinearFactorGraph* graph,
+    75	                         Values* values, std::vector<size_t>* uwb_indices) {
+    76	  const size_t N = uwb_kf.size();
+    77	  if (N < 2) {
+    78	    std::cerr << "GraphBuilder: need >= 2 keyframes, got " << N << "\n";
+    79	    return;
+    80	  }
+    81	
+    82	  graph->resize(0);
+    83	  values->clear();
+    84	  uwb_indices->clear();
+    85	  last_anchor_time_.clear();
+    86	
+    87	  // Bias vector
+    88	  const imuBias::ConstantBias bias0(init.ba0, init.bg0);
+    89	
+    90	  // --- Step 1: First keyframe priors + initial Values ---
+    91	  auto posePriorNoise = noiseModel::Diagonal::Sigmas(
+    92	      (Vector(6) << 0.01, 0.01, 0.01, 0.05, 0.05, 0.05).finished());
+    93	  auto velPriorNoise = noiseModel::Isotropic::Sigma(3, 0.1);
+    94	  auto biasPriorNoise = noiseModel::Isotropic::Sigma(6, 0.01);
+    95	
+    96	  graph->addPrior(X(0), init.T0, posePriorNoise);
+    97	  graph->addPrior(V(0), init.v0, velPriorNoise);
+    98	  graph->addPrior(B(0), bias0, biasPriorNoise);
+    99	
+   100	  values->insert(X(0), init.T0);
+   101	  values->insert(V(0), init.v0);
+   102	  values->insert(B(0), bias0);
+   103	
+   104	  // --- Step 2: Calibration variables + loose priors ---
+   105	  if (cfg_.calib_lever) {
+   106	    values->insert(lever_key(), cfg_.lever_arm_init);
+   107	    graph->addPrior(lever_key(), cfg_.lever_arm_init,
+   108	                    noiseModel::Isotropic::Sigma(3, cfg_.lever_prior_sigma));
+   109	  }
+   110	  for (const auto& a : anchors_) {
+   111	    if (cfg_.calib_anchor) {
+   112	      values->insert(anchor_key(a.id), Point3(0, 0, 0));
+   113	      graph->addPrior(anchor_key(a.id), Point3(0, 0, 0),
+   114	                      noiseModel::Isotropic::Sigma(3, a.prior_sigma));
+   115	    }
+   116	    if (cfg_.calib_range_bias) {
+   117	      values->insert<double>(bias_key(a.id), 0.0);
+   118	      graph->addPrior<double>(
+   119	          bias_key(a.id), 0.0,
+   120	          noiseModel::Isotropic::Sigma(1, cfg_.range_bias_sigma));
+   121	    }
+   122	  }
+   123	
+   124	  // --- Step 3: UWB factors for first frame ---
+   125	  AddUwbFactorsForFrame(0, uwb_kf[0], graph, uwb_indices, values, true);
+   126	
+   127	  // --- Step 4: Loop keyframes ---
+   128	  ImuPreintegrator pim(cfg_, init.gravity_world);
+   129	  size_t i_imu = 0;
+   130	  while (i_imu < imu.size() && imu[i_imu].t <= uwb_kf[0].t) ++i_imu;
+   131	
+   132	  Pose3 prev_pose = init.T0;
+   133	  Vector3 prev_vel = init.v0;
+   134	  imuBias::ConstantBias prev_bias = bias0;
+   135	
+   136	  for (size_t k = 1; k < N; ++k) {
+   137	    // --- 4a: IMU preintegration ---
+   138	    pim.Reset(prev_bias);
+   139	    i_imu = IntegrateBetween(imu, i_imu, uwb_kf[k - 1].t, uwb_kf[k].t, &pim);
+   140	
+   141	    // --- 4b: CombinedImuFactor ---
+   142	    graph->add(CombinedImuFactor(X(k - 1), V(k - 1), X(k), V(k), B(k - 1), B(k),
+   143	                                 pim.Pim()));
+   144	
+   145	    // --- 4c: Predict initial values ---
+   146	    gtsam::NavState pred =
+   147	        pim.Pim().predict(gtsam::NavState(prev_pose, prev_vel), prev_bias);
+   148	    values->insert(X(k), pred.pose());
+   149	    values->insert(V(k), pred.velocity());
+   150	    values->insert(B(k), prev_bias);
+   151	
+   152	    // --- 4d: UWB factors ---
+   153	    AddUwbFactorsForFrame(k, uwb_kf[k], graph, uwb_indices, values, false);
+   154	
+   155	    prev_pose = pred.pose();
+   156	    prev_vel = pred.velocity();
+   157	  }
+   158	
+   159	  std::cout << "GraphBuilder: " << N << " keyframes, " << graph->size()
+   160	            << " factors (" << uwb_indices->size() << " UWB).\n";
+   161	}
+   162	
+   163	}  // namespace uifgo
+FILE src/config.cpp LINES 50-80
+    50	  // --- Extrinsics ---
+    51	  if (node["extrinsics"]) {
+    52	    auto ex = node["extrinsics"];
+    53	    if (ex["lever_arm_init"]) {
+    54	      auto la = ex["lever_arm_init"].as<std::vector<double>>();
+    55	      cfg.lever_arm_init = gtsam::Point3(la[0], la[1], la[2]);
+    56	    }
+    57	    if (ex["calib_lever"]) cfg.calib_lever = ex["calib_lever"].as<bool>();
+    58	    if (ex["lever_prior_sigma"])
+    59	      cfg.lever_prior_sigma = ex["lever_prior_sigma"].as<double>();
+    60	  }
+    61	
+    62	  // --- Calibration ---
+    63	  if (node["calibration"]) {
+    64	    auto cal = node["calibration"];
+    65	    if (cal["calib_anchor"]) cfg.calib_anchor = cal["calib_anchor"].as<bool>();
+    66	    if (cal["calib_range_bias"])
+    67	      cfg.calib_range_bias = cal["calib_range_bias"].as<bool>();
+    68	    if (cal["range_bias_sigma"])
+    69	      cfg.range_bias_sigma = cal["range_bias_sigma"].as<double>();
+    70	    if (cal["calib_td"]) cfg.calib_td = cal["calib_td"].as<bool>();
+    71	    if (cal["td_init"]) cfg.td_init = cal["td_init"].as<double>();
+    72	  }
+    73	
+    74	  // --- IMU ---
+    75	  if (node["imu"]) {
+    76	    auto im = node["imu"];
+    77	    if (im["sigma_a"]) cfg.sigma_a = im["sigma_a"].as<double>();
+    78	    if (im["sigma_g"]) cfg.sigma_g = im["sigma_g"].as<double>();
+    79	    if (im["sigma_wa"]) cfg.sigma_wa = im["sigma_wa"].as<double>();
+    80	    if (im["sigma_wg"]) cfg.sigma_wg = im["sigma_wg"].as<double>();
+FILE src/logger.cpp LINES 1-205
+     1	#include "uifgo/logger.h"
+     2	
+     3	#include <gtsam/geometry/Pose3.h>
+     4	#include <gtsam/inference/Symbol.h>
+     5	#include <sys/stat.h>
+     6	#include <unistd.h>
+     7	
+     8	#include <boost/filesystem.hpp>
+     9	#include <ctime>
+    10	#include <iomanip>
+    11	#include <iostream>
+    12	#include <sstream>
+    13	
+    14	namespace fs = boost::filesystem;
+    15	
+    16	namespace uifgo {
+    17	
+    18	// ===========================================================================
+    19	// Lifecycle
+    20	// ===========================================================================
+    21	Logger::~Logger() { Close(); }
+    22	
+    23	std::string Logger::Timestamp() {
+    24	  auto t = std::time(nullptr);
+    25	  auto tm = *std::localtime(&t);
+    26	  std::ostringstream ss;
+    27	  ss << std::put_time(&tm, "%Y-%m-%d_%H-%M-%S");
+    28	  return ss.str();
+    29	}
+    30	
+    31	std::string Logger::Init(const std::string& config_dir,
+    32	                         const std::string& bag_path) {
+    33	  config_dir_ = config_dir;
+    34	
+    35	  // Derive a short, human-readable name from the bag filename
+    36	  std::string bag_short = fs::path(bag_path).stem().string();
+    37	  if (bag_short.size() > 50) bag_short = bag_short.substr(0, 50);
+    38	
+    39	  log_dir_ = config_dir + "/../logs/" + Timestamp() + "_" + bag_short;
+    40	  if (!fs::exists(log_dir_)) {
+    41	    fs::create_directories(log_dir_);
+    42	  }
+    43	  enabled_ = true;
+    44	  std::cout << "[Logger] " << log_dir_ << "\n";
+    45	  return log_dir_;
+    46	}
+    47	
+    48	// ===========================================================================
+    49	// Config snapshot
+    50	// ===========================================================================
+    51	void Logger::LogConfig(const Config& cfg) {
+    52	  if (!enabled_) return;
+    53	  std::ofstream f(log_dir_ + "/config.yaml");
+    54	  if (!f) return;
+    55	  f << "# Config snapshot — " << Timestamp() << "\n\n";
+    56	  f << "anchors:\n";
+    57	  for (const auto& a : cfg.anchors) {
+    58	    f << "  - {id: " << a.id << ", pos: [" << a.pos.x() << ", " << a.pos.y()
+    59	      << ", " << a.pos.z() << "], prior_sigma: " << a.prior_sigma << "}\n";
+    60	  }
+    61	  f << "\ncalib_lever: " << cfg.calib_lever << "\n";
+    62	  f << "calib_anchor: " << cfg.calib_anchor << "\n";
+    63	  f << "calib_range_bias: " << cfg.calib_range_bias << "\n";
+    64	  f << "lever_prior_sigma: " << cfg.lever_prior_sigma << "\n";
+    65	  f << "sigma_range: " << cfg.sigma_range << "\n";
+    66	  f << "gnc_mu_step: " << cfg.gnc_mu_step << "\n";
+    67	  f << "gnc_max_iter: " << cfg.gnc_max_iter << "\n";
+    68	  f << "gnc_inlier_prob: " << cfg.gnc_inlier_prob << "\n";
+    69	  f << "gnc_weight_thresh: " << cfg.gnc_weight_thresh << "\n";
+    70	  f << "chi2_reject_prob: " << cfg.chi2_reject_prob << "\n";
+    71	  f << "max_rejection_rounds: " << cfg.max_rejection_rounds << "\n";
+    72	  f << "kf_step: " << cfg.kf_step << "\n";
+    73	  f << "lm_max_iter: " << cfg.lm_max_iter << "\n";
+    74	  f << "use_imu_orientation_init: " << cfg.use_imu_orientation_init << "\n";
+    75	  f << "imu_orientation_world: " << cfg.imu_orientation_world << "\n";
+    76	  f << "bag_path: " << cfg.bag_path << "\n";
+    77	  f << "dataset_interface: " << cfg.data_interface << "\n";
+    78	  if (cfg.data_interface == "mcd") {
+    79	    f << "imu_bag_path: " << cfg.imu_bag_path << "\n";
+    80	    f << "uwb_bag_path: " << cfg.uwb_bag_path << "\n";
+    81	    f << "gt_csv_path: " << cfg.gt_csv_path << "\n";
+    82	  }
+    83	  f.close();
+    84	}
+    85	
+    86	// ===========================================================================
+    87	// Per-pass optimization metrics
+    88	// ===========================================================================
+    89	void Logger::LogPass(const std::string& pass_name,
+    90	                     const OptimizerResult& result, double elapsed_sec,
+    91	                     size_t n_factors, size_t n_uwb) {
+    92	  if (!enabled_) return;
+    93	  EnsureOpen();
+    94	  if (!opt_header_) {
+    95	    opt_csv_
+    96	        << "pass,initial_error,final_error,reduced_chi2,"
+    97	        << "inliers,outliers,n_factors,n_uwb,elapsed_sec,num_reject_rounds\n";
+    98	    opt_header_ = true;
+    99	  }
+   100	  opt_csv_ << "\"" << pass_name << "\"," << result.initial_error << ","
+   101	           << result.final_error << "," << result.reduced_chi2 << ","
+   102	           << result.inlier_uwb_indices.size() << ","
+   103	           << result.outlier_uwb_indices.size() << "," << n_factors << ","
+   104	           << n_uwb << "," << elapsed_sec << "," << result.num_rejection_rounds
+   105	           << "\n";
+   106	  opt_csv_.flush();
+   107	}
+   108	
+   109	// ===========================================================================
+   110	// Per-keyframe state trace
+   111	// ===========================================================================
+   112	void Logger::LogStateTrace(const std::vector<NavState>& traj) {
+   113	  if (!enabled_ || traj.empty()) return;
+   114	  EnsureOpen();
+   115	  if (!state_header_) {
+   116	    state_csv_ << "t,x,y,z,qw,qx,qy,qz,vx,vy,vz\n";
+   117	    state_header_ = true;
+   118	  }
+   119	  for (const auto& s : traj) {
+   120	    auto p = s.T.translation();
+   121	    auto q = s.T.rotation().toQuaternion();
+   122	    state_csv_ << std::fixed << std::setprecision(6) << s.t << "," << p.x()
+   123	               << "," << p.y() << "," << p.z() << "," << q.w() << "," << q.x()
+   124	               << "," << q.y() << "," << q.z() << "," << s.v.x() << ","
+   125	               << s.v.y() << "," << s.v.z() << "\n";
+   126	  }
+   127	  state_csv_.flush();
+   128	}
+   129	
+   130	// ===========================================================================
+   131	// Per-anchor per-keyframe residuals
+   132	// ===========================================================================
+   133	void Logger::LogResiduals(const std::vector<NavState>& traj,
+   134	                          const std::vector<UwbFrame>& filtered_uwb,
+   135	                          const std::vector<AnchorConfig>& anchors) {
+   136	  if (!enabled_ || traj.empty()) return;
+   137	  EnsureOpen();
+   138	  if (!resid_header_) {
+   139	    resid_csv_ << "kf_idx,t";
+   140	    for (const auto& a : anchors)
+   141	      resid_csv_ << ",resid_a" << a.id << ",n_a" << a.id;
+   142	    resid_csv_ << "\n";
+   143	    resid_header_ = true;
+   144	  }
+   145	  for (size_t i = 0; i < traj.size() && i < filtered_uwb.size(); ++i) {
+   146	    resid_csv_ << i << "," << std::fixed << std::setprecision(6) << traj[i].t;
+   147	    for (const auto& a : anchors) {
+   148	      double sum_r2 = 0.0;
+   149	      int count = 0;
+   150	      for (const auto& r : filtered_uwb[i].ranges) {
+   151	        if (r.anchor_id != a.id) continue;
+   152	        double pred = (Eigen::Vector3d(traj[i].T.translation()) -
+   153	                       Eigen::Vector3d(a.pos.x(), a.pos.y(), a.pos.z()))
+   154	                          .norm();
+   155	        double res = pred - r.dist;
+   156	        sum_r2 += res * res;
+   157	        ++count;
+   158	      }
+   159	      double rmse = (count > 0) ? std::sqrt(sum_r2 / count) : -1.0;
+   160	      resid_csv_ << "," << rmse << "," << count;
+   161	    }
+   162	    resid_csv_ << "\n";
+   163	  }
+   164	  resid_csv_.flush();
+   165	}
+   166	
+   167	// ===========================================================================
+   168	// Covariance diagonal over keyframes
+   169	// ===========================================================================
+   170	void Logger::LogCovarianceDiag(const std::vector<NavState>& traj,
+   171	                               const OptimizerResult& /*opt_result*/,
+   172	                               const Config& /*cfg*/) {
+   173	  if (!enabled_ || traj.empty()) return;
+   174	  EnsureOpen();
+   175	  if (!cov_header_) {
+   176	    cov_csv_ << "kf_idx,t,sigma_x,sigma_y,sigma_z\n";
+   177	    cov_header_ = true;
+   178	  }
+   179	  // Covariance extraction requires marginals from Optimizer.
+   180	  // Write -1.0 as placeholder; real implementation connects to
+   181	  // Optimizer::PoseCovariance() after marginal computation.
+   182	  for (size_t i = 0; i < traj.size(); ++i) {
+   183	    cov_csv_ << i << "," << std::fixed << std::setprecision(6) << traj[i].t
+   184	             << ",-1.0,-1.0,-1.0\n";
+   185	  }
+   186	  cov_csv_.flush();
+   187	}
+   188	
+   189	// ===========================================================================
+   190	// Ground truth comparison
+   191	// ===========================================================================
+   192	void Logger::LogGtComparison(double ate_rmse, double p50, double p95,
+   193	                             double p99, double max_err, size_t matched_frames,
+   194	                             size_t gt_total) {
+   195	  if (!enabled_) return;
+   196	  std::ofstream f(log_dir_ + "/gt_comparison.csv");
+   197	  if (!f) return;
+   198	  f << std::fixed << std::setprecision(4);
+   199	  f << "metric,value\n";
+   200	  f << "ATE_RMSE," << ate_rmse << "\n";
+   201	  f << "P50," << p50 << "\n";
+   202	  f << "P95," << p95 << "\n";
+   203	  f << "P99," << p99 << "\n";
+   204	  f << "MaxError," << max_err << "\n";
+   205	  f << "MatchedFrames," << matched_frames << "\n";
+FILE src/optimizer.cpp LINES 1-190
+     1	#include "uifgo/optimizer.h"
+     2	
+     3	#include <gtsam/inference/Symbol.h>
+     4	#include <gtsam/nonlinear/GncOptimizer.h>
+     5	#include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
+     6	#include <gtsam/nonlinear/Marginals.h>
+     7	
+     8	#include <cmath>
+     9	#include <iostream>
+    10	#include <set>
+    11	
+    12	namespace uifgo {
+    13	using namespace gtsam;
+    14	using symbol_shorthand::A;
+    15	using symbol_shorthand::L;
+    16	using symbol_shorthand::X;
+    17	
+    18	Optimizer::Optimizer(const Config& cfg) : cfg_(cfg) {}
+    19	
+    20	gtsam::NonlinearFactorGraph Optimizer::BuildCleanGraph(
+    21	    const NonlinearFactorGraph& full, const std::set<size_t>& uwb_set,
+    22	    const std::set<size_t>& rejected) const {
+    23	  NonlinearFactorGraph clean;
+    24	  for (size_t i = 0; i < full.size(); ++i) {
+    25	    if (!full.at(i)) continue;
+    26	    if (uwb_set.count(i) && rejected.count(i)) continue;
+    27	    clean.add(full.at(i));
+    28	  }
+    29	  return clean;
+    30	}
+    31	
+    32	std::vector<size_t> Optimizer::ChiSquareReject(
+    33	    const NonlinearFactorGraph& full, const Values& values,
+    34	    const std::set<size_t>& uwb_set,
+    35	    const std::set<size_t>& already_rejected) const {
+    36	  std::vector<size_t> newly;
+    37	  for (size_t i = 0; i < full.size(); ++i) {
+    38	    if (!uwb_set.count(i) || already_rejected.count(i)) continue;
+    39	    auto f = full.at(i);
+    40	    if (!f) continue;
+    41	    double chi2 = 2.0 * f->error(values);
+    42	    double thresh = Chi2inv(cfg_.chi2_reject_prob, (size_t)f->dim());
+    43	    if (chi2 > thresh) {
+    44	      newly.push_back(i);
+    45	    }
+    46	  }
+    47	  return newly;
+    48	}
+    49	
+    50	double Optimizer::ReducedChi2(const NonlinearFactorGraph& g,
+    51	                              const Values& v) const {
+    52	  double chi2 = 2.0 * g.error(v);
+    53	  size_t m = 0;
+    54	  for (size_t i = 0; i < g.size(); ++i) {
+    55	    auto f = g.at(i);
+    56	    if (f) m += f->dim();
+    57	  }
+    58	  size_t n = v.dim();
+    59	  size_t nu = (m > n) ? (m - n) : 1;
+    60	  return chi2 / static_cast<double>(nu);
+    61	}
+    62	
+    63	OptimizerResult Optimizer::Optimize(const NonlinearFactorGraph& graph,
+    64	                                    const Values& initial,
+    65	                                    const std::vector<size_t>& uwb_indices) {
+    66	  OptimizerResult out;
+    67	  std::set<size_t> uwb_set(uwb_indices.begin(), uwb_indices.end());
+    68	
+    69	  // --- LM params (shared by GNC inner loop and clean refinement) ---
+    70	  LevenbergMarquardtParams lm_params;
+    71	  lm_params.setMaxIterations(cfg_.lm_max_iter);
+    72	  lm_params.setRelativeErrorTol(cfg_.lm_rel_tol);
+    73	  lm_params.setAbsoluteErrorTol(cfg_.lm_abs_tol);
+    74	  lm_params.setLinearSolverType("SEQUENTIAL_CHOLESKY");  // avoid TBB segfault
+    75	
+    76	  out.initial_error = graph.error(initial);
+    77	  std::cout << "  [Stage 0/3] Pre-warming LM... " << std::flush;
+    78	
+    79	  // ============ Stage 0: Pre-warming LM (no robust weighting) ============
+    80	  // The initial IMU-predicted trajectory can have huge errors (10^9–10^11)
+    81	  // with zero-bias initialization. If GNC+TLS with setKnownInliers runs
+    82	  // directly on this, the IMU-dominated cost forces all UWB weights to
+    83	  // near-zero, causing catastrophic outlier rejection.
+    84	  //
+    85	  // Standard LM iterations on the full graph reduce the initial error
+    86	  // by orders of magnitude, bringing the solution into a regime where GNC
+    87	  // can correctly distinguish NLOS outliers from inliers.
+    88	  LevenbergMarquardtParams prewarm_params = lm_params;
+    89	  int prewarm_iters = (out.initial_error > 1e8)   ? 30
+    90	                      : (out.initial_error > 1e4) ? 15
+    91	                                                  : 10;
+    92	  prewarm_params.setMaxIterations(prewarm_iters);
+    93	  Values prewarmed = initial;
+    94	  {
+    95	    LevenbergMarquardtOptimizer preopt(graph, prewarmed, prewarm_params);
+    96	    prewarmed = preopt.optimize();
+    97	  }
+    98	  std::cout << "done (error " << out.initial_error << " -> "
+    99	            << graph.error(prewarmed) << ", " << prewarm_iters << " iters)\n";
+   100	  std::cout << "  [Stage 1/3] GNC+TLS annealing... " << std::flush;
+   101	
+   102	  // ====================== Stage A: GNC + TLS ======================
+   103	  // Build known-inliers index vector: all non-UWB factors (IMU preintegration
+   104	  // and priors) are pinned as inliers so that GNC's robustness budget is
+   105	  // solely spent on identifying UWB NLOS outliers (design doc §15.1.1).
+   106	  std::vector<size_t> known_inliers;
+   107	  for (size_t i = 0; i < graph.size(); ++i)
+   108	    if (!uwb_set.count(i)) known_inliers.push_back(i);
+   109	
+   110	  GncParams<LevenbergMarquardtParams> gncParams(lm_params);
+   111	  gncParams.setLossType(GncLossType::TLS);   // Truncated Least Squares
+   112	  gncParams.setKnownInliers(known_inliers);  // pin IMU/priors
+   113	  gncParams.setMuStep(cfg_.gnc_mu_step);
+   114	  gncParams.setMaxIterations(cfg_.gnc_max_iter);
+   115	  gncParams.setRelativeCostTol(cfg_.gnc_rel_cost_tol);
+   116	
+   117	  GncOptimizer<GncParams<LevenbergMarquardtParams>> gnc(graph, prewarmed,
+   118	                                                        gncParams);
+   119	  // Auto-set per-factor inlier cost thresholds from chi2 quantile:
+   120	  //   barc^2 = 0.5 * chi2inv(gnc_inlier_prob, dim)
+   121	  gnc.setInlierCostThresholdsAtProbability(cfg_.gnc_inlier_prob);
+   122	  Values gnc_result = gnc.optimize();
+   123	  out.gnc_weights = gnc.getWeights();  // size = graph.size(), inliers ~1
+   124	
+   125	  std::cout << "done (weights [" << out.gnc_weights.minCoeff() << ", "
+   126	            << out.gnc_weights.maxCoeff() << "])\n";
+   127	  std::cout << "  [Stage 2/3] chi2 rejection + clean LM refine... "
+   128	            << std::flush;
+   129	
+   130	  // --- Hard-reject UWB factors with GNC weight below threshold ---
+   131	  std::set<size_t> rejected;
+   132	  for (size_t idx : uwb_indices)
+   133	    if (out.gnc_weights(idx) < cfg_.gnc_weight_thresh) rejected.insert(idx);
+   134	
+   135	  // ============ Stage B: Chi-square rejection loop on clean graph ============
+   136	  // The clean graph removes GNC-rejected factors; the follow-up chi2 loop
+   137	  // catches "grey-zone" outliers (w ~0.3-0.7) that GNC didn't fully reject.
+   138	  Values refined = gnc_result;
+   139	  int round = 0;
+   140	  for (; round < cfg_.max_rejection_rounds; ++round) {
+   141	    NonlinearFactorGraph clean = BuildCleanGraph(graph, uwb_set, rejected);
+   142	    LevenbergMarquardtOptimizer lmopt(clean, refined, lm_params);
+   143	    refined = lmopt.optimize();
+   144	
+   145	    auto newly = ChiSquareReject(graph, refined, uwb_set, rejected);
+   146	    if (newly.empty()) {
+   147	      clean_graph_ = clean;
+   148	      break;
+   149	    }
+   150	    rejected.insert(newly.begin(), newly.end());
+   151	  }
+   152	
+   153	  // If max rounds reached, build final clean graph and do one last LM refine
+   154	  if (round == cfg_.max_rejection_rounds) {
+   155	    clean_graph_ = BuildCleanGraph(graph, uwb_set, rejected);
+   156	    LevenbergMarquardtOptimizer lmopt(clean_graph_, refined, lm_params);
+   157	    refined = lmopt.optimize();
+   158	  }
+   159	
+   160	  // --- Result assembly ---
+   161	  out.values = refined;
+   162	  out.reduced_chi2 = ReducedChi2(clean_graph_, refined);
+   163	  out.num_rejection_rounds = round;
+   164	  out.outlier_uwb_indices.assign(rejected.begin(), rejected.end());
+   165	  for (size_t idx : uwb_indices) {
+   166	    if (!rejected.count(idx)) out.inlier_uwb_indices.push_back(idx);
+   167	  }
+   168	  out.final_error = clean_graph_.error(refined);
+   169	
+   170	  result_values_ = refined;
+   171	  solved_ = true;
+   172	
+   173	  std::cout << "done (chi2=" << out.reduced_chi2
+   174	            << ", inliers=" << out.inlier_uwb_indices.size() << "/"
+   175	            << uwb_indices.size()
+   176	            << ", outliers=" << out.outlier_uwb_indices.size()
+   177	            << ", #reject-rounds=" << out.num_rejection_rounds << ")\n";
+   178	  return out;
+   179	}
+   180	
+   181	// ============ Stage C: Marginals ============
+   182	Matrix Optimizer::Covariance(Key key) const {
+   183	  if (!solved_)
+   184	    throw std::runtime_error("Optimizer::Covariance requires Optimize first");
+   185	  try {
+   186	    Marginals marg(clean_graph_, result_values_, Marginals::CHOLESKY);
+   187	    return marg.marginalCovariance(key);
+   188	  } catch (const std::exception& e) {
+   189	    std::cerr << "Marginals failed for key " << key << ": " << e.what() << "\n";
+   190	    return Matrix();
+FILE tools/run_offline.cpp LINES 120-180
+   120	    }
+   121	  });
+   122	  ROS_INFO("TF broadcaster started (world→map).");
+   123	
+   124	  // --- Load config ---
+   125	  std::string config_path;
+   126	  nh.param<std::string>("config_path", config_path, "");
+   127	  if (config_path.empty()) {
+   128	    std::cerr << "ERROR: config_path parameter required.\n"
+   129	              << "Usage: rosrun uwb_imu_fgo uwb_imu_fgo_node "
+   130	                 "_config_path:=/path/to/slam.yaml\n";
+   131	    return 1;
+   132	  }
+   133	  if (!fs::exists(config_path)) {
+   134	    std::cerr << "ERROR: config file not found: " << config_path << "\n";
+   135	    return 1;
+   136	  }
+   137	
+   138	  auto t_start = std::chrono::high_resolution_clock::now();
+   139	  std::string config_dir = fs::path(config_path).parent_path().string();
+   140	  std::string data_dir = fs::path(config_dir).parent_path().string() + "/data";
+   141	  if (!fs::exists(data_dir)) fs::create_directories(data_dir);
+   142	
+   143	  std::cout << "============================================\n";
+   144	  std::cout << " UWB-IMU FGO — Batch Multi-Pass Processing\n";
+   145	  std::cout << " Config: " << config_path << "\n";
+   146	  std::cout << "============================================\n";
+   147	
+   148	  // ============ M1: Config & Data Loading ============
+   149	  std::cout << "\n[1/6] Loading data from rosbag..." << std::flush;
+   150	  auto t1 = std::chrono::high_resolution_clock::now();
+   151	  uifgo::Config base_cfg = uifgo::ConfigLoader::Load(config_path);
+   152	  const bool is_mcd = base_cfg.data_interface == "mcd";
+   153	  const bool is_viral = base_cfg.data_interface == "viral";
+   154	  const bool is_viunet = base_cfg.data_interface == "viunet";
+   155	  const bool is_miluv = base_cfg.data_interface == "miluv";
+   156	  const bool is_sfuise = base_cfg.data_interface == "sfuise";
+   157	  std::string imu_bag_path;
+   158	  std::string uwb_bag_path;
+   159	  std::string gt_csv_path;
+   160	  std::string bag_path;  // primary bag, also used as the run/log identifier
+   161	  if (is_mcd) {
+   162	    imu_bag_path =
+   163	        uifgo::ConfigLoader::ResolveBagPath(config_dir, base_cfg.imu_bag_path);
+   164	    uwb_bag_path =
+   165	        uifgo::ConfigLoader::ResolveBagPath(config_dir, base_cfg.uwb_bag_path);
+   166	    gt_csv_path =
+   167	        uifgo::ConfigLoader::ResolveBagPath(config_dir, base_cfg.gt_csv_path);
+   168	    bag_path = uwb_bag_path;
+   169	    std::cout << "Interface: MCD split bags + CSV GT\n";
+   170	    std::cout << "IMU bag:   " << imu_bag_path << "\n";
+   171	    std::cout << "UWB bag:   " << uwb_bag_path << "\n";
+   172	    std::cout << "GT CSV:    " << gt_csv_path << "\n";
+   173	  } else if (is_viral) {
+   174	    bag_path =
+   175	        uifgo::ConfigLoader::ResolveBagPath(config_dir, base_cfg.bag_path);
+   176	    // Override topics for VIRAL dataset convention.
+   177	    base_cfg.imu_topic = base_cfg.viral_imu_topic;
+   178	    base_cfg.uwb_topic = base_cfg.viral_uwb_topic;
+   179	    base_cfg.vicon_topic = base_cfg.viral_gt_topic;
+   180	    base_cfg.gt_odom_topic = "";
+FILE tools/run_offline.cpp LINES 300-355
+   300	                << " auto-discovered anchors.\n";
+   301	    }
+   302	  } else {
+   303	    load_ok = loader.LoadFromBag(bag_path, &imu_samples, &uwb_frames);
+   304	  }
+   305	  if (!load_ok) {
+   306	    std::cerr << "ERROR: failed to load data from bag.\n";
+   307	    return 1;
+   308	  }
+   309	  auto t1e = std::chrono::high_resolution_clock::now();
+   310	  std::cout << " done (" << std::chrono::duration<double>(t1e - t1).count()
+   311	            << "s, " << imu_samples.size() << " IMU, " << uwb_frames.size()
+   312	            << " UWB frames)\n";
+   313	
+   314	  // --- Outlier pre-filtering ---
+   315	  std::cout << "[2/6] Pre-filtering + keyframe downsampling..." << std::flush;
+   316	  auto t2 = std::chrono::high_resolution_clock::now();
+   317	  uifgo::OutlierFilter filter(base_cfg);
+   318	  std::vector<uifgo::UwbFrame> filtered_uwb;
+   319	  for (const auto& f : uwb_frames) {
+   320	    auto retained = filter.PreFilter(f);
+   321	    if (!retained.empty()) {
+   322	      uifgo::UwbFrame ff = f;
+   323	      ff.ranges = retained;
+   324	      filtered_uwb.push_back(ff);
+   325	    }
+   326	  }
+   327	  std::cout << "UWB frames: " << uwb_frames.size() << " → "
+   328	            << filtered_uwb.size() << " (after NLOS/range filter)\n";
+   329	
+   330	  // Keyframe downsampling
+   331	  if (base_cfg.kf_step > 1) {
+   332	    std::vector<uifgo::UwbFrame> downsampled;
+   333	    for (size_t i = 0; i < filtered_uwb.size(); i += base_cfg.kf_step) {
+   334	      downsampled.push_back(filtered_uwb[i]);
+   335	    }
+   336	    std::cout << "Keyframes:  " << filtered_uwb.size() << " → "
+   337	              << downsampled.size() << " (step=" << base_cfg.kf_step << ")\n";
+   338	    filtered_uwb = downsampled;
+   339	  }
+   340	  auto t2e = std::chrono::high_resolution_clock::now();
+   341	  std::cout << " done (" << std::chrono::duration<double>(t2e - t2).count()
+   342	            << "s, " << filtered_uwb.size() << " keyframes)\n";
+   343	
+   344	  if (filtered_uwb.empty()) {
+   345	    std::cerr << "ERROR: no UWB data after filtering.\n";
+   346	    return 1;
+   347	  }
+   348	
+   349	  // ============ M2: Initialization ============
+   350	  std::cout
+   351	      << "[3/6] Initialization (static detect + trilateration + yaw align)..."
+   352	      << std::flush;
+   353	  auto t3 = std::chrono::high_resolution_clock::now();
+   354	  uifgo::Initializer init(base_cfg);
+   355	  auto init_result = init.Run(imu_samples, filtered_uwb);
+FILE tools/run_offline.cpp LINES 360-550
+   360	  // ============ M5-M7: Multi-Pass Optimization ============
+   361	  std::cout << "[4/6] Multi-pass optimization...\n";
+   362	  auto t4 = std::chrono::high_resolution_clock::now();
+   363	  // Pass 1 — All calibration OFF: GNC+TLS robust trajectory initialization
+   364	  //         (setKnownInliers pins IMU/priors; only UWB factors are weighted)
+   365	  auto cfg_pass1 = base_cfg;
+   366	  cfg_pass1.calib_lever = false;
+   367	  cfg_pass1.calib_anchor = false;
+   368	  cfg_pass1.calib_range_bias = false;
+   369	  auto res1 = RunPass(cfg_pass1, filtered_uwb, imu_samples, init_result,
+   370	                      "Pass 1: GNC Robust Init (no calib)");
+   371	  auto best_values = res1.values;
+   372	  auto best_inliers = res1.inlier_uwb_indices;
+   373	
+   374	  // If calibration is enabled in config, run progressive passes
+   375	  if (base_cfg.calib_range_bias || base_cfg.calib_anchor ||
+   376	      base_cfg.calib_lever) {
+   377	    bool need_final_pass = false;  // true if Pass Final adds new calib vars
+   378	
+   379	    // Pass 2 — Open range bias only
+   380	    if (base_cfg.calib_range_bias) {
+   381	      auto cfg_pass2 = base_cfg;
+   382	      cfg_pass2.calib_lever = false;
+   383	      cfg_pass2.calib_anchor = false;
+   384	      cfg_pass2.calib_range_bias = true;
+   385	      auto res2 = RunPass(cfg_pass2, filtered_uwb, imu_samples, init_result,
+   386	                          "Pass 2: Open range bias");
+   387	      if (res2.reduced_chi2 < res1.reduced_chi2 * 1.5) {
+   388	        best_values = res2.values;
+   389	        best_inliers = res2.inlier_uwb_indices;
+   390	      } else {
+   391	        std::cout << "  [WARN] range bias calib degraded chi2, keeping Pass 1 "
+   392	                     "result.\n";
+   393	      }
+   394	    }
+   395	
+   396	    // Pass 3 — Open anchor correction
+   397	    if (base_cfg.calib_anchor) {
+   398	      auto cfg_pass3 = base_cfg;
+   399	      cfg_pass3.calib_lever = false;
+   400	      cfg_pass3.calib_anchor = true;
+   401	      cfg_pass3.calib_range_bias = base_cfg.calib_range_bias;
+   402	      auto res3 = RunPass(cfg_pass3, filtered_uwb, imu_samples, init_result,
+   403	                          "Pass 3: Open anchor calib");
+   404	      if (res3.reduced_chi2 < res1.reduced_chi2 * 1.5) {
+   405	        best_values = res3.values;
+   406	        best_inliers = res3.inlier_uwb_indices;
+   407	      }
+   408	      // If lever is disabled, Pass 3 already covers all enabled calib vars
+   409	      if (!base_cfg.calib_lever)
+   410	        need_final_pass = false;
+   411	      else
+   412	        need_final_pass = true;
+   413	    }
+   414	
+   415	    // Pass 4 — Open lever arm
+   416	    if (base_cfg.calib_lever) {
+   417	      auto cfg_pass4 = base_cfg;
+   418	      cfg_pass4.calib_lever = true;
+   419	      cfg_pass4.calib_anchor = base_cfg.calib_anchor;
+   420	      cfg_pass4.calib_range_bias = base_cfg.calib_range_bias;
+   421	      auto res4 = RunPass(cfg_pass4, filtered_uwb, imu_samples, init_result,
+   422	                          "Pass 4: Open lever arm");
+   423	      if (res4.reduced_chi2 < res1.reduced_chi2 * 1.5) {
+   424	        best_values = res4.values;
+   425	        best_inliers = res4.inlier_uwb_indices;
+   426	      }
+   427	      need_final_pass = true;  // Pass 4 only opens lever; final joint needed
+   428	    }
+   429	
+   430	    // Pass Final — All calibration open, joint refinement
+   431	    // Only run when it actually adds new calibration variables vs prior passes.
+   432	    if (need_final_pass) {
+   433	      auto res_final = RunPass(base_cfg, filtered_uwb, imu_samples, init_result,
+   434	                               "Pass Final: All calib joint");
+   435	      if (res_final.reduced_chi2 < res1.reduced_chi2 * 2.0) {
+   436	        best_values = res_final.values;
+   437	        best_inliers = res_final.inlier_uwb_indices;
+   438	      }
+   439	    } else {
+   440	      std::cout << "\n>>> Skipping Pass Final (all enabled calib vars already "
+   441	                   "covered by Pass 3).\n";
+   442	    }
+   443	    std::cout << "\n>>> Final result adopted from best pass.\n";
+   444	  }
+   445	
+   446	  auto t4e = std::chrono::high_resolution_clock::now();
+   447	  std::cout << "  optimization done ("
+   448	            << std::chrono::duration<double>(t4e - t4).count() << "s)\n";
+   449	
+   450	  // ============ M7: Covariance on best result ============
+   451	  std::cout << "[5/6] Covariance diagnostics..." << std::flush;
+   452	  auto t5 = std::chrono::high_resolution_clock::now();
+   453	  // Build a clean graph for marginalization using the best result directly,
+   454	  // without re-optimizing (best_values is already optimal from multi-pass).
+   455	  uifgo::GraphBuilder final_builder(base_cfg);
+   456	  gtsam::NonlinearFactorGraph final_graph;
+   457	  gtsam::Values final_init;
+   458	  std::vector<size_t> final_uwb_idx;
+   459	  final_builder.Build(filtered_uwb, imu_samples, init_result, &final_graph,
+   460	                      &final_init, &final_uwb_idx);
+   461	  uifgo::Optimizer final_opt(base_cfg);
+   462	  // Use best_values as initial guess so the optimizer starts near the optimum;
+   463	  // this makes the subsequent LM solve fast (often 1–2 iterations).
+   464	  final_opt.Optimize(final_graph, best_values, final_uwb_idx);
+   465	
+   466	  // Covariance diagnostics
+   467	  std::cout << "\n============ Covariance Diagnostics ============\n";
+   468	  try {
+   469	    auto P0 = final_opt.PoseCovariance(0);
+   470	    if (P0.rows() > 0) {
+   471	      std::cout << "Pose[0] σ_xyz: " << std::sqrt(P0(0, 0)) << " "
+   472	                << std::sqrt(P0(1, 1)) << " " << std::sqrt(P0(2, 2))
+   473	                << " (m)\n";
+   474	    }
+   475	
+   476	    size_t mid = filtered_uwb.size() / 2;
+   477	    auto Pm = final_opt.PoseCovariance(mid);
+   478	    if (Pm.rows() > 0) {
+   479	      std::cout << "Pose[" << mid << "] σ_xyz: " << std::sqrt(Pm(0, 0)) << " "
+   480	                << std::sqrt(Pm(1, 1)) << " " << std::sqrt(Pm(2, 2))
+   481	                << " (m)\n";
+   482	    }
+   483	
+   484	    auto Pn = final_opt.PoseCovariance(filtered_uwb.size() - 1);
+   485	    if (Pn.rows() > 0) {
+   486	      std::cout << "Pose[" << filtered_uwb.size() - 1
+   487	                << "] σ_xyz: " << std::sqrt(Pn(0, 0)) << " "
+   488	                << std::sqrt(Pn(1, 1)) << " " << std::sqrt(Pn(2, 2))
+   489	                << " (m)\n";
+   490	    }
+   491	
+   492	    // --- Per-keyframe σ_z diagnostic (every 10th keyframe) ---
+   493	    std::cout << "\n--- Per-Keyframe σ_z (height uncertainty) ---\n";
+   494	    size_t kf_count = filtered_uwb.size();
+   495	    for (size_t k = 0; k < kf_count; k += std::max(size_t(1), kf_count / 20)) {
+   496	      auto Pk = final_opt.PoseCovariance(k);
+   497	      if (Pk.rows() == 0) continue;
+   498	      double sigma_z = std::sqrt(Pk(2, 2));
+   499	      std::cout << "  KF[" << k << "] σ_z=" << sigma_z << " m";
+   500	      if (k > 0 && k % 5 == 0) std::cout << "\n";
+   501	    }
+   502	    std::cout << "\n";
+   503	
+   504	    if (base_cfg.calib_lever) {
+   505	      auto PL = final_opt.LeverCovariance();
+   506	      std::cout << "Lever σ: " << std::sqrt(PL(0, 0)) << " "
+   507	                << std::sqrt(PL(1, 1)) << " " << std::sqrt(PL(2, 2))
+   508	                << " (m)\n";
+   509	    }
+   510	    for (const auto& a : base_cfg.anchors) {
+   511	      if (base_cfg.calib_anchor) {
+   512	        auto PA = final_opt.AnchorCovariance(a.id);
+   513	        if (PA.rows() == 3)
+   514	          std::cout << "Anchor[" << a.id << "] σ: " << std::sqrt(PA(0, 0))
+   515	                    << " " << std::sqrt(PA(1, 1)) << " " << std::sqrt(PA(2, 2))
+   516	                    << " (m)\n";
+   517	      }
+   518	    }
+   519	  } catch (const std::exception& e) {
+   520	    std::cout << "Marginals: " << e.what()
+   521	              << " (some variables not observable)\n";
+   522	  }
+   523	
+   524	  auto t5e = std::chrono::high_resolution_clock::now();
+   525	  std::cout << " done (" << std::chrono::duration<double>(t5e - t5).count()
+   526	            << "s)\n";
+   527	
+   528	  // ============ M8: Output ============
+   529	  std::cout << "[6/6] Writing output..." << std::flush;
+   530	  auto t6 = std::chrono::high_resolution_clock::now();
+   531	  std::vector<double> kf_times;
+   532	  for (const auto& f : filtered_uwb) kf_times.push_back(f.t);
+   533	  auto traj = uifgo::TrajectoryIO::ExtractTrajectory(best_values, kf_times);
+   534	
+   535	  // --- Log state trace, residuals, covariance ---
+   536	  if (logger.enabled()) {
+   537	    logger.LogStateTrace(traj);
+   538	    logger.LogResiduals(traj, filtered_uwb, base_cfg.anchors);
+   539	    logger.LogCovarianceDiag(traj, res1, base_cfg);
+   540	    // Log Pass 1 baseline metrics
+   541	    logger.LogPass("Pass1_RobustInit", res1, 0.0, final_graph.size(),
+   542	                   final_uwb_idx.size());
+   543	  }
+   544	
+   545	  uifgo::TrajectoryIO::WriteTum(data_dir + "/trajectory.txt", traj);
+   546	  uifgo::TrajectoryIO::WriteCalib(data_dir + "/calibration.txt", best_values,
+   547	                                  base_cfg.anchors);
+   548	
+   549	  // --- Copy trajectory + calibration to log dir ---
+   550	  if (logger.enabled()) {
+FILE tools/run_offline.cpp LINES 650-705
+   650	            << "s)\n";
+   651	  auto t_end = std::chrono::high_resolution_clock::now();
+   652	  double elapsed = std::chrono::duration<double>(t_end - t_start).count();
+   653	
+   654	  std::cout << "\n============================================\n";
+   655	  std::cout << " FINAL SUMMARY\n";
+   656	  std::cout << "============================================\n";
+   657	  std::cout << "Keyframes:        " << filtered_uwb.size() << "\n";
+   658	  std::cout << "Total factors:    " << final_graph.size() << "\n";
+   659	  std::cout << "UWB inliers:      " << best_inliers.size() << " / "
+   660	            << final_uwb_idx.size() << "\n";
+   661	  std::cout << "Trajectory length:" << kf_times.back() - kf_times.front()
+   662	            << " s\n";
+   663	
+   664	  // Per-anchor range statistics from best_values
+   665	  std::cout << "\nPer-Anchor Residuals (on best result):\n";
+   666	  std::map<int, double> anchor_rmse_map;
+   667	  for (const auto& a : base_cfg.anchors) {
+   668	    double sum_r2 = 0;
+   669	    int count = 0;
+   670	    for (size_t ki = 0; ki < filtered_uwb.size(); ++ki) {
+   671	      for (const auto& r : filtered_uwb[ki].ranges) {
+   672	        if (r.anchor_id != a.id) continue;
+   673	        gtsam::Pose3 Tk = best_values.at<gtsam::Pose3>(gtsam::Symbol('x', ki));
+   674	        gtsam::Point3 tag = Tk.translation();
+   675	        double pred = (gtsam::Vector3(tag) - gtsam::Vector3(a.pos)).norm();
+   676	        double res = pred - r.dist;
+   677	        sum_r2 += res * res;
+   678	        ++count;
+   679	      }
+   680	    }
+   681	    if (count > 0) {
+   682	      double rmse = std::sqrt(sum_r2 / count);
+   683	      anchor_rmse_map[a.id] = rmse;
+   684	      std::cout << "  Anchor #" << a.id << ": " << count
+   685	                << " ranges, RMSE=" << rmse << " m\n";
+   686	    }
+   687	  }
+   688	
+   689	  std::cout << "\nElapsed:           " << elapsed << " s\n";
+   690	  std::cout << "ATE RMSE:           " << ate_rmse << " m\n";
+   691	  std::cout << "P95 Error:          " << p95 << " m\n";
+   692	  std::cout << "Output:             " << data_dir << "/trajectory.txt\n";
+   693	  std::cout << "GroundTruth:        " << data_dir << "/groundtruth.txt\n";
+   694	  std::cout << "Calibration:        " << data_dir << "/calibration.txt\n";
+   695	
+   696	  // ============ Synthetic Anchor Ablation ============
+   697	  if (base_cfg.synthetic_enabled && stats.ok && !gt_traj.empty()) {
+   698	    std::cout << "\n============================================\n";
+   699	    std::cout << " SYNTHETIC ANCHOR ABLATION STUDY\n";
+   700	    std::cout << "============================================\n";
+   701	    std::cout << "Baseline ATE: " << stats.rmse << " m (" << stats.matched
+   702	              << " matched poses)\n";
+   703	    std::cout << "Noise sigma:  " << base_cfg.synthetic_sigma_range << " m\n";
+   704	    std::cout << "Synth anchors: " << base_cfg.synthetic_anchors.size()
+   705	              << " defined\n";
+FILE tools/run_offline.cpp LINES 860-895
+   860	                << std::setw(4) << r.tot << " | " << r.c2 << "\n";
+   861	    }
+   862	    std::cout << "============================================\n";
+   863	  }
+   864	
+   865	  // --- Log Summary ---
+   866	  if (logger.enabled()) {
+   867	    logger.LogSummary(elapsed, filtered_uwb.size(), final_graph.size(),
+   868	                      best_inliers.size(), final_uwb_idx.size(), ate_rmse, p95,
+   869	                      anchor_rmse_map);
+   870	    logger.Close();
+   871	  }
+   872	
+   873	  // ============ M9: RViz Visualization ============
+   874	  {
+   875	    uifgo::VizPublisher viz(nh);
+   876	    viz.PublishAll(base_cfg, best_values, traj, gt_traj, filtered_uwb,
+   877	                   final_graph, &res1, ate_rmse, p95, elapsed);
+   878	
+   879	    ROS_INFO("Visualization published. TF is live. Press Ctrl-C to exit.");
+   880	    ros::Rate r(10);
+   881	    while (ros::ok()) {
+   882	      ros::spinOnce();
+   883	      r.sleep();
+   884	    }
+   885	  }
+   886	
+   887	  // Clean up TF thread
+   888	  tf_running.store(false);
+   889	  if (tf_thread.joinable()) tf_thread.join();
+   890	
+   891	  return 0;
+   892	}
+FILE src/trajectory_io.cpp LINES 150-270
+   150	  // 6. Translation t = c_gt - scale * R * c_est
+   151	  Eigen::Vector3d t = c_gt - scale * R * c_est;
+   152	
+   153	  if (R_out) *R_out = R;
+   154	  if (t_out) *t_out = t;
+   155	  if (scale_out) *scale_out = scale;
+   156	  return true;
+   157	}
+   158	
+   159	ATEStats TrajectoryIO::ComputeATE(const std::vector<NavState>& est,
+   160	                                  const std::vector<NavState>& gt) {
+   161	  ATEStats stats;
+   162	  if (est.empty() || gt.empty()) return stats;
+   163	
+   164	  // --- Match timestamps and collect position pairs ---
+   165	  std::vector<Eigen::Vector3d> est_pts, gt_pts;
+   166	  std::vector<size_t> est_idx;  // track which est frames were matched
+   167	  est_pts.reserve(est.size());
+   168	  gt_pts.reserve(est.size());
+   169	  est_idx.reserve(est.size());
+   170	
+   171	  for (size_t i = 0; i < est.size(); ++i) {
+   172	    double t = est[i].t;
+   173	    auto it = std::lower_bound(
+   174	        gt.begin(), gt.end(), t,
+   175	        [](const NavState& g, double tval) { return g.t < tval; });
+   176	    if (it == gt.end()) continue;
+   177	    const NavState* g = nullptr;
+   178	    if (it == gt.begin()) {
+   179	      g = &(*it);
+   180	    } else {
+   181	      double d1 = it->t - t;
+   182	      double d0 = t - (it - 1)->t;
+   183	      g = (d0 < d1) ? &(*(it - 1)) : &(*it);
+   184	    }
+   185	    est_pts.push_back(Eigen::Vector3d(est[i].T.translation().x(),
+   186	                                      est[i].T.translation().y(),
+   187	                                      est[i].T.translation().z()));
+   188	    gt_pts.push_back(Eigen::Vector3d(g->T.translation().x(),
+   189	                                     g->T.translation().y(),
+   190	                                     g->T.translation().z()));
+   191	    est_idx.push_back(i);
+   192	  }
+   193	
+   194	  if (est_pts.size() < 3) {
+   195	    std::cerr << "ComputeATE: too few matched poses (" << est_pts.size()
+   196	              << ") for alignment.\n";
+   197	    return stats;
+   198	  }
+   199	
+   200	  // --- SE(3) Umeyama alignment ---
+   201	  Eigen::Matrix3d R_align;
+   202	  Eigen::Vector3d t_align;
+   203	  double scale;
+   204	  if (!AlignSE3(est_pts, gt_pts, &R_align, &t_align, &scale)) {
+   205	    std::cerr << "ComputeATE: SE(3) alignment failed.\n";
+   206	    return stats;
+   207	  }
+   208	
+   209	  stats.scale = scale;
+   210	  stats.T_align = gtsam::Pose3(gtsam::Rot3(R_align), gtsam::Point3(t_align));
+   211	  stats.matched = est_pts.size();
+   212	
+   213	  // --- Compute aligned errors ---
+   214	  std::vector<double> errors;
+   215	  errors.reserve(est_pts.size());
+   216	  double sum_err = 0.0, sum_err2 = 0.0;
+   217	  for (size_t i = 0; i < est_pts.size(); ++i) {
+   218	    Eigen::Vector3d aligned = scale * R_align * est_pts[i] + t_align;
+   219	    double err = (aligned - gt_pts[i]).norm();
+   220	    errors.push_back(err);
+   221	    sum_err += err;
+   222	    sum_err2 += err * err;
+   223	  }
+   224	
+   225	  std::sort(errors.begin(), errors.end());
+   226	  size_t n = errors.size();
+   227	  stats.rmse = std::sqrt(sum_err2 / n);
+   228	  stats.mean_err = sum_err / n;
+   229	  stats.p50 = errors[n * 50 / 100];
+   230	  stats.p95 = errors[n * 95 / 100];
+   231	  stats.p99 = errors[n * 99 / 100];
+   232	  stats.max_err = errors.back();
+   233	  stats.ok = true;
+   234	  return stats;
+   235	}
+   236	
+   237	double TrajectoryIO::ComputeRPE(const std::vector<NavState>& est,
+   238	                                const std::vector<NavState>& gt,
+   239	                                double segment_duration) {
+   240	  if (est.size() < 2 || gt.size() < 2) return -1.0;
+   241	  double sum_err2 = 0.0;
+   242	  size_t count = 0;
+   243	  for (size_t i = 0; i + 1 < est.size(); ++i) {
+   244	    double dt = est[i + 1].t - est[i].t;
+   245	    if (std::abs(dt - segment_duration) > 0.5 * segment_duration) continue;
+   246	    auto it_i =
+   247	        std::lower_bound(gt.begin(), gt.end(), est[i].t,
+   248	                         [](const NavState& g, double t) { return g.t < t; });
+   249	    auto it_j =
+   250	        std::lower_bound(gt.begin(), gt.end(), est[i + 1].t,
+   251	                         [](const NavState& g, double t) { return g.t < t; });
+   252	    if (it_i == gt.end() || it_j == gt.end()) continue;
+   253	    gtsam::Vector3 d_est = gtsam::Vector3(est[i + 1].T.translation()) -
+   254	                           gtsam::Vector3(est[i].T.translation());
+   255	    gtsam::Vector3 d_gt = gtsam::Vector3(it_j->T.translation()) -
+   256	                          gtsam::Vector3(it_i->T.translation());
+   257	    gtsam::Vector3 err = d_est - d_gt;
+   258	    sum_err2 += err.dot(err);
+   259	    ++count;
+   260	  }
+   261	  return (count > 0) ? std::sqrt(sum_err2 / count) : -1.0;
+   262	}
+   263	
+   264	}  // namespace uifgo
+FILE CMakeLists.txt LINES 1-90
+     1	cmake_minimum_required(VERSION 3.0.2)
+     2	project(uwb_imu_fgo)
+     3	
+     4	set(CMAKE_CXX_STANDARD 17)
+     5	set(CMAKE_CXX_STANDARD_REQUIRED ON)
+     6	set(CMAKE_BUILD_TYPE "Release")
+     7	set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g -Wno-sign-compare -Wno-unused -Wno-comment -pthread")
+     8	
+     9	# --- Catkin ---
+    10	find_package(catkin REQUIRED COMPONENTS
+    11	  roscpp
+    12	  rosbag
+    13	  sensor_msgs
+    14	  std_msgs
+    15	  geometry_msgs
+    16	  nav_msgs
+    17	  tf
+    18	  nodelet
+    19	  message_generation
+    20	  eigen_conversions
+    21	  visualization_msgs
+    22	  uwb_driver
+    23	  isas_msgs
+    24	)
+    25	
+    26	add_message_files(
+    27	  FILES
+    28	  LinktrackNode2.msg
+    29	  LinktrackNodeframe3.msg
+    30	  McdLinktrackNodeframe3.msg
+    31	  LinktrackTagframe0.msg
+    32	  AuxCommand.msg
+    33	  Corrections.msg
+    34	  Gains.msg
+    35	  LQRTrajectory.msg
+    36	  Odometry.msg
+    37	  OutputData.msg
+    38	  PPROutputData.msg
+    39	  PolynomialTrajectory.msg
+    40	  PositionCommand.msg
+    41	  SO3Command.msg
+    42	  Serial.msg
+    43	  StatusData.msg
+    44	  TRPYCommand.msg
+    45	)
+    46	
+    47	generate_messages(
+    48	  DEPENDENCIES
+    49	  std_msgs
+    50	  geometry_msgs
+    51	  nav_msgs
+    52	)
+    53	
+    54	catkin_package(
+    55	  INCLUDE_DIRS include
+    56	  LIBRARIES ${PROJECT_NAME}
+    57	  CATKIN_DEPENDS
+    58	    roscpp
+    59	    rosbag
+    60	    sensor_msgs
+    61	    std_msgs
+    62	    geometry_msgs
+    63	    nav_msgs
+    64	    tf
+    65	    message_runtime
+    66	    eigen_conversions
+    67	    visualization_msgs
+    68	    uwb_driver
+    69	)
+    70	
+    71	# --- GTSAM (≥ 4.2 required for GncOptimizer / setInlierCostThresholdsAtProbability) ---
+    72	find_package(GTSAM 4.2 REQUIRED)
+    73	if(GTSAM_FOUND)
+    74	  include_directories(${GTSAM_INCLUDE_DIR})
+    75	  message(STATUS "GTSAM found: ${GTSAM_INCLUDE_DIR} (version: ${GTSAM_VERSION})")
+    76	endif()
+    77	
+    78	# --- Eigen3 ---
+    79	find_package(Eigen3 REQUIRED)
+    80	if(Eigen3_FOUND)
+    81	  include_directories(${EIGEN3_INCLUDE_DIR})
+    82	endif()
+    83	
+    84	# --- yaml-cpp ---
+    85	find_package(yaml-cpp REQUIRED)
+    86	
+    87	# --- Boost ---
+    88	find_package(Boost REQUIRED COMPONENTS filesystem iostreams program_options system serialization thread)
+    89	if(Boost_FOUND)
+    90	  include_directories(${Boost_INCLUDE_DIRS})
+FILE CMakeLists.txt LINES 165-205
+   165	  simulator/scripts/odom_to_path.py
+   166	  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+   167	)
+   168	
+   169	# =============================================
+   170	# Unit Tests (GoogleTest)
+   171	# =============================================
+   172	if(GTest_FOUND)
+   173	  enable_testing()
+   174	
+   175	  catkin_add_gtest(test_config test/test_config.cpp)
+   176	  target_link_libraries(test_config ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+   177	
+   178	  catkin_add_gtest(test_outlier test/test_outlier.cpp)
+   179	  target_link_libraries(test_outlier ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+   180	
+   181	  catkin_add_gtest(test_trilaterate test/test_trilaterate.cpp)
+   182	  target_link_libraries(test_trilaterate ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+   183	
+   184	  catkin_add_gtest(test_imu_preint test/test_imu_preint.cpp)
+   185	  target_link_libraries(test_imu_preint ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+   186	
+   187	  catkin_add_gtest(test_uwb_factor test/test_uwb_factor.cpp)
+   188	  target_link_libraries(test_uwb_factor ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+   189	
+   190	  catkin_add_gtest(test_graph_builder test/test_graph_builder.cpp)
+   191	  target_link_libraries(test_graph_builder ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+   192	
+   193	  catkin_add_gtest(test_optimizer test/test_optimizer.cpp)
+   194	  target_link_libraries(test_optimizer ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+   195	endif()
+FILE src/bag_loader.cpp LINES 780-1050
+FILE simulator/src/uwb_twr_sim.cpp LINES 20-210
+    20	#include <Eigen/Dense>
+    21	#include <cmath>
+    22	#include <map>
+    23	#include <random>
+    24	#include <string>
+    25	#include <vector>
+    26	
+    27	class UwbTwrSim {
+    28	 public:
+    29	  UwbTwrSim(ros::NodeHandle& nh) : nh_(nh), rng_(std::random_device{}()) {
+    30	    nh_.param("num_anchors", N_, 4);
+    31	    nh_.param("superframe_period", T_sf_, 0.10);
+    32	    nh_.param("pub_rate", pub_rate_, 20.0);  // output rate [Hz]
+    33	    nh_.param("ranging_mode", mode_str_, std::string("DS"));
+    34	    nh_.param("range_noise_std", sigma_, 0.06);
+    35	    nh_.param("range_bias_const", b0_, 0.02);
+    36	    nh_.param("per_link_bias_max", bmax_, 0.05);
+    37	    nh_.param("clock_ppm", ppm_, 20.0);
+    38	    nh_.param("max_range", max_range_, 80.0);
+    39	    nh_.param("packet_loss_prob", ploss_, 0.02);
+    40	    nh_.param("odom_timeout", odom_to_, 0.20);
+    41	    nh_.param("nlos_probability", nlos_p_, 0.05);
+    42	    nh_.param("nlos_bias_mean", nlos_mean_, 0.40);
+    43	    nh_.param("rssi_tx_power", P_tx_, -45.0);
+    44	    nh_.param("rssi_path_loss_n", n_p_, 2.2);
+    45	    nh_.param("rssi_ref_dist", d0_, 1.0);
+    46	    nh_.param("rssi_shadowing_std", s_sh_, 2.0);
+    47	    nh_.param("fp_offset_los", fp_lo_, 3.0);
+    48	    nh_.param("fp_offset_nlos", fp_nl_, 8.0);
+    49	    nh_.param("battery_voltage", batt_v_, 4.10f);
+    50	    int seed;
+    51	    nh_.param("random_seed", seed, 0);
+    52	    if (seed != 0) rng_.seed(seed);
+    53	
+    54	    // Load anchor positions from ROS param
+    55	    XmlRpc::XmlRpcValue anc;
+    56	    if (nh_.getParam("anchors", anc) &&
+    57	        anc.getType() == XmlRpc::XmlRpcValue::TypeArray) {
+    58	      for (int i = 0; i < anc.size(); ++i) {
+    59	        Anchor a;
+    60	        a.id = anc[i]["id"];
+    61	        a.pos =
+    62	            Eigen::Vector3d((double)anc[i]["pos"][0], (double)anc[i]["pos"][1],
+    63	                            (double)anc[i]["pos"][2]);
+    64	        anchors_.push_back(a);
+    65	        ROS_INFO("  Loaded anchor %d @ [%.2f, %.2f, %.2f]", a.id, a.pos.x(),
+    66	                 a.pos.y(), a.pos.z());
+    67	      }
+    68	      N_ = anchors_.size();
+    69	    }
+    70	    if (anchors_.empty()) {
+    71	      ROS_WARN("No anchors loaded from param, generating %d default anchors.",
+    72	               N_);
+    73	      double R = 5.0;
+    74	      for (int i = 0; i < N_; ++i) {
+    75	        Anchor a;
+    76	        a.id = i + 1;
+    77	        a.pos = Eigen::Vector3d(R * cos(2 * M_PI * i / N_),
+    78	                                R * sin(2 * M_PI * i / N_), 1.8);
+    79	        anchors_.push_back(a);
+    80	      }
+    81	    }
+    82	    ROS_INFO("UwbTwrSim: total anchors = %d", (int)anchors_.size());
+    83	
+    84	    // Auto-align superframe to pub rate: T_sf = 1/pub_rate ensures every
+    85	    // publish captures a complete TDMA cycle with all N anchors ranged.
+    86	    double T_sf_user = T_sf_;
+    87	    if (pub_rate_ > 0) {
+    88	      T_sf_ = 1.0 / pub_rate_;  // one full superframe per publish interval
+    89	    }
+    90	    tau_ = T_sf_ / N_;
+    91	    int m = (mode_str_ == "DS") ? 3 : 2;
+    92	    double t_msg;
+    93	    nh_.param("msg_air_time", t_msg, 0.0015);
+    94	    kmax_ = std::max(1, (int)(tau_ / (m * t_msg)));
+    95	    c_ss_ = 2.0;
+    96	    c_ds_ = 0.05;
+    97	
+    98	    // Per-link biases
+    99	    blink_.resize(N_, std::vector<double>(N_, 0));
+   100	    std::uniform_real_distribution<double> ub(-bmax_, bmax_);
+   101	    for (int i = 0; i < N_; ++i)
+   102	      for (int j = 0; j < N_; ++j)
+   103	        if (i != j) blink_[i][j] = ub(rng_);
+   104	
+   105	    clk_.resize(N_, 0);
+   106	    nlos_exp_ = std::exponential_distribution<double>(1.0 / nlos_mean_);
+   107	
+   108	    std::string odom_topic;
+   109	    nh_.param("odom_topic", odom_topic, std::string("/sim/odom"));
+   110	    odom_sub_ = nh_.subscribe(odom_topic, 10, &UwbTwrSim::odomCb, this);
+   111	    pub_ = nh_.advertise<uwb_imu_fgo::LinktrackNodeframe3>(
+   112	        "/nlink_linktrack_nodeframe3", 10);
+   113	    viz_anchor_pub_ = nh_.advertise<visualization_msgs::Marker>(
+   114	        "/uwb_sim/anchor_markers", 100, true);  // high queue, latched
+   115	    viz_line_pub_ =
+   116	        nh_.advertise<visualization_msgs::Marker>("/uwb_sim/range_lines", 100);
+   117	    timer_ = nh_.createTimer(ros::Duration(tau_), &UwbTwrSim::onSlot, this);
+   118	    pub_timer_ = nh_.createTimer(ros::Duration(1.0 / pub_rate_),
+   119	                                 &UwbTwrSim::onPublish, this);
+   120	    viz_timer_ = nh_.createTimer(ros::Duration(0.1), &UwbTwrSim::onViz, this);
+   121	
+   122	    publishAnchorMarkers();
+   123	    double slots_per_pub = (1.0 / pub_rate_) / tau_;
+   124	    int est_anchors_per_msg = (int)(slots_per_pub * kmax_);
+   125	    ROS_INFO(
+   126	        "UwbTwrSim: %d anchors, T_sf=%.3fs (auto-align to pub_rate=%.1f Hz), "
+   127	        "tau=%.4fs, kmax=%d → ~%d ranges/msg",
+   128	        N_, T_sf_, pub_rate_, tau_, kmax_, est_anchors_per_msg);
+   129	  }
+   130	
+   131	 private:
+   132	  struct Anchor {
+   133	    int id;
+   134	    Eigen::Vector3d pos;
+   135	  };
+   136	  struct Drone {
+   137	    Eigen::Vector3d p;
+   138	    ros::Time t;
+   139	    bool ok = false;
+   140	  };
+   141	
+   142	  void odomCb(const nav_msgs::Odometry::ConstPtr& m) {
+   143	    drone_.p = {m->pose.pose.position.x, m->pose.pose.position.y,
+   144	                m->pose.pose.position.z};
+   145	    drone_.t = m->header.stamp;
+   146	    drone_.ok = true;
+   147	  }
+   148	
+   149	  void onSlot(const ros::TimerEvent&) {
+   150	    int i = slot_;
+   151	    ros::Time now = ros::Time::now();
+   152	    clk_[i] += ppm_ * 1e-6 * tau_;
+   153	    if (!drone_.ok || (now - drone_.t).toSec() > odom_to_) {
+   154	      slot_ = (slot_ + 1) % N_;
+   155	      return;
+   156	    }
+   157	
+   158	    int cnt = 0;
+   159	    for (int off = 0; off < N_ && cnt < kmax_; ++off) {
+   160	      int j = (i + off) % N_;
+   161	      double d = (drone_.p - anchors_[j].pos).norm();
+   162	      if (d > max_range_) continue;
+   163	      if (uni_(rng_) < ploss_) continue;
+   164	
+   165	      bool nlos = uni_(rng_) < nlos_p_;
+   166	      last_ranges_[anchors_[j].id] = {anchors_[j].pos, d, nlos};
+   167	      double eps = (mode_str_ == "DS") ? (clk_[i] - clk_[j]) * c_ds_
+   168	                                       : (clk_[i] - clk_[j]) * c_ss_;
+   169	      double dd = d * (1.0 + eps) + b0_ + blink_[i][j];
+   170	      if (nlos) dd += nlos_exp_(rng_);
+   171	      dd += gauss_(rng_) * sigma_;
+   172	
+   173	      uwb_imu_fgo::LinktrackNode2 nd;
+   174	      nd.role = 1;
+   175	      nd.id = anchors_[j].id;
+   176	      nd.dis = (float)std::max(0.0, dd);
+   177	      double dist = std::max(d, 0.1);
+   178	      nd.rx_rssi = (float)(P_tx_ - 10 * n_p_ * log10(dist / d0_) +
+   179	                           shadow_(rng_) * s_sh_);
+   180	      nd.fp_rssi = nd.rx_rssi - (float)(nlos ? (fp_lo_ + fp_nl_) : fp_lo_);
+   181	      pending_map_[anchors_[j].id] = nd;  // dedup: keep latest per anchor
+   182	      ++cnt;
+   183	    }
+   184	    slot_ = (slot_ + 1) % N_;
+   185	  }
+   186	
+   187	  void onPublish(const ros::TimerEvent&) {
+   188	    if (pending_map_.empty()) return;
+   189	
+   190	    uwb_imu_fgo::LinktrackNodeframe3 f;
+   191	    ros::Time now = ros::Time::now();
+   192	    f.header.stamp = now;
+   193	    f.id = tag_id_;
+   194	    f.role = 0;
+   195	    f.local_time = (uint64_t)(now.toSec() * 1e6);
+   196	    f.system_time = (uint32_t)(now.toSec() * 1e3);
+   197	    f.voltage = batt_v_;
+   198	
+   199	    for (auto& kv : pending_map_) {
+   200	      f.nodes.push_back(kv.second);
+   201	    }
+   202	    pub_.publish(f);
+   203	    pending_map_.clear();
+   204	  }
+   205	
+   206	  void publishAnchorMarkers() {
+   207	    for (const auto& a : anchors_) {
+   208	      visualization_msgs::Marker m;
+   209	      m.header.frame_id = "world";
+   210	      m.header.stamp = ros::Time::now();

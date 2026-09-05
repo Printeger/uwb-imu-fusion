@@ -1,0 +1,88 @@
+8e901962a4b381fbc83adc884ac2b1ac39359a61cc39a8776bc21bd1510bb5dc  /home/dev/Dataset/vicon/2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle.bag
+path: /home/dev/Dataset/vicon/2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle.bag
+version: 2.0
+duration: 123.314095
+start: 1761292135.419596
+end: 1761292258.733691
+size: 576006616
+messages: 749484
+indexed: True
+compression: none
+types:
+    - type: geometry_msgs/PoseStamped
+      md5: d3812c3cbc69362b77dc0b19b345f8f5
+    - type: geometry_msgs/TwistStamped
+      md5: 98d34b0043a2093cf9d9345ab6eef12e
+    - type: livox_ros_driver2/CustomMsg
+      md5: e4d6829bdfe657cb6c21a746c86b21a6
+    - type: nlink_parser/LinktrackNodeframe3
+      md5: fbed6583ea0d58e22f93b8b83d7468e1
+    - type: rosgraph_msgs/Log
+      md5: acffd30cd6b6de30f120938c17c593fb
+    - type: sensor_msgs/Imu
+      md5: 6a62c6daae103f4ff57a132d6f95cec2
+    - type: tf2_msgs/TFMessage
+      md5: 94810edda583a504dfda3829e70d7eec
+topics:
+    - topic: /livox/imu
+      type: sensor_msgs/Imu
+      messages: 24627
+    - topic: /livox/lidar
+      type: livox_ros_driver2/CustomMsg
+      messages: 1231
+    - topic: /nlink_linktrack_nodeframe3
+      type: nlink_parser/LinktrackNodeframe3
+      messages: 6157
+    - topic: /rosout
+      type: rosgraph_msgs/Log
+      messages: 19
+    - topic: /tf
+      type: tf2_msgs/TFMessage
+      messages: 181470
+    - topic: /vrpn_client_node/tas_uwb_0/accel
+      type: geometry_msgs/TwistStamped
+      messages: 33037
+    - topic: /vrpn_client_node/tas_uwb_0/pose
+      type: geometry_msgs/PoseStamped
+      messages: 33108
+    - topic: /vrpn_client_node/tas_uwb_0/twist
+      type: geometry_msgs/TwistStamped
+      messages: 33048
+    - topic: /vrpn_client_node/tas_uwb_1/accel
+      type: geometry_msgs/TwistStamped
+      messages: 36443
+    - topic: /vrpn_client_node/tas_uwb_1/pose
+      type: geometry_msgs/PoseStamped
+      messages: 36479
+    - topic: /vrpn_client_node/tas_uwb_1/twist
+      type: geometry_msgs/TwistStamped
+      messages: 36458
+    - topic: /vrpn_client_node/tas_uwb_2/accel
+      type: geometry_msgs/TwistStamped
+      messages: 36402
+    - topic: /vrpn_client_node/tas_uwb_2/pose
+      type: geometry_msgs/PoseStamped
+      messages: 36439
+    - topic: /vrpn_client_node/tas_uwb_2/twist
+      type: geometry_msgs/TwistStamped
+      messages: 36411
+    - topic: /vrpn_client_node/tas_uwb_3/accel
+      type: geometry_msgs/TwistStamped
+      messages: 36363
+    - topic: /vrpn_client_node/tas_uwb_3/pose
+      type: geometry_msgs/PoseStamped
+      messages: 36395
+    - topic: /vrpn_client_node/tas_uwb_3/twist
+      type: geometry_msgs/TwistStamped
+      messages: 36380
+    - topic: /vrpn_client_node/tas_uwb_4/accel
+      type: geometry_msgs/TwistStamped
+      messages: 36322
+    - topic: /vrpn_client_node/tas_uwb_4/pose
+      type: geometry_msgs/PoseStamped
+      messages: 36356
+    - topic: /vrpn_client_node/tas_uwb_4/twist
+      type: geometry_msgs/TwistStamped
+      messages: 36339
+
+duplicate_path=/home/dev/Dataset/vicon/NLOS/48/2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle.bag size=0 mtime=2025-11-08 18:41:00.000000000 +0000

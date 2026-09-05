@@ -1,0 +1,35 @@
+Script started on 2026-09-05 10:36:43+00:00 [<not executed on terminal>]
+2026-09-05T10:36:43Z
+/home/dev/3rdparty/gtsam/build/gtsam/libgtsam.so
+/home/dev/3rdparty/gtsam/build/gtsam/libgtsam.so.4
+/home/dev/3rdparty/gtsam/build/gtsam/libgtsam.so.4.0.3
+/home/dev/3rdparty/gtsam/build/gtsam_unstable/libgtsam_unstable.so
+/home/dev/3rdparty/gtsam/build/gtsam_unstable/libgtsam_unstable.so.4
+/home/dev/3rdparty/gtsam/build/gtsam_unstable/libgtsam_unstable.so.4.0.3
+/home/dev/3rdparty/gtsam_points/build_codex/libgtsam_points.so
+/usr/lib/libgtsam.so.4
+/usr/local/lib/libgtsam.so
+/usr/local/lib/libgtsam.so.4
+/usr/local/lib/libgtsam.so.4.0.3
+/usr/local/lib/libgtsam_unstable.so
+/usr/local/lib/libgtsam_unstable.so.4
+/usr/local/lib/libgtsam_unstable.so.4.0.3
+local gtsam source revision
+6425000775da29c93719f37dce3f2de38a0064ec
+4.0.3-dirty
+/home/dev/3rdparty/gtsam/gtsam/config.h.in:21:#define GTSAM_VERSION_MAJOR @GTSAM_VERSION_MAJOR@
+/home/dev/3rdparty/gtsam/gtsam/config.h.in:22:#define GTSAM_VERSION_MINOR @GTSAM_VERSION_MINOR@
+/home/dev/3rdparty/gtsam/gtsam/config.h.in:23:#define GTSAM_VERSION_PATCH @GTSAM_VERSION_PATCH@
+/home/dev/3rdparty/gtsam/gtsam/config.h.in:25:#define GTSAM_VERSION_STRING "@GTSAM_VERSION_STRING@"
+/home/dev/3rdparty/gtsam/gtsam/CMakeLists.txt:96:set(gtsam_version   ${GTSAM_VERSION_MAJOR}.${GTSAM_VERSION_MINOR}.${GTSAM_VERSION_PATCH})
+/home/dev/3rdparty/gtsam/gtsam/CMakeLists.txt:97:set(gtsam_soversion ${GTSAM_VERSION_MAJOR})
+/home/dev/3rdparty/gtsam/build/gtsam_extra.cmake:6:set (GTSAM_VERSION_STRING "4.0.3")
+/home/dev/3rdparty/gtsam/build/gtsam/config.h:21:#define GTSAM_VERSION_MAJOR 4
+/home/dev/3rdparty/gtsam/build/gtsam/config.h:22:#define GTSAM_VERSION_MINOR 0
+/home/dev/3rdparty/gtsam/build/gtsam/config.h:23:#define GTSAM_VERSION_PATCH 3
+/home/dev/3rdparty/gtsam/build/gtsam/config.h:25:#define GTSAM_VERSION_STRING "4.0.3"
+required symbol providers
+MISSING /home/dev/3rdparty/gtsam/build/gtsam/libgtsam.so.4.0.3
+MISSING /usr/local/lib/libgtsam.so.4.0.3
+
+Script done on 2026-09-05 10:36:44+00:00 [COMMAND_EXIT_CODE="0"]

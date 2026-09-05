@@ -1,0 +1,32 @@
+Script started on 2026-09-05 10:30:15+00:00 [<not executed on terminal>]
+2026-09-05T10:30:16Z
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeCache.txt:369:GTSAM_INCLUDE_DIR:PATH=/usr/local/lib/cmake/GTSAM/../../../include
+catkin_tools_prebuild
+uwb_imu_fgo
+/home/dev/ws_LIU/src/Coco-LIC-UWB/package.xml
+/home/dev/ws_LIU/src/FAST_LIO/package.xml
+/home/dev/ws_LIU/src/GCOPTER-main/gcopter/package.xml
+/home/dev/ws_LIU/src/GCOPTER-main/map_gen/mockamap/package.xml
+/home/dev/ws_LIU/src/ToySLAM/GraphGNSSLibV1.1/global_fusion/package.xml
+/home/dev/ws_LIU/src/ToySLAM/GraphGNSSLibV1.1/rviz_satellite/package.xml
+/home/dev/ws_LIU/src/ToySLAM/gnss_comm/package.xml
+/home/dev/ws_LIU/src/ToySLAM/lidar_subscriber/package.xml
+/home/dev/ws_LIU/src/ToySLAM/ndt_omp/package.xml
+/home/dev/ws_LIU/src/ToySLAM/nlosexclusion/package.xml
+/home/dev/ws_LIU/src/awesome-uwb-localization/package.xml
+/home/dev/ws_LIU/src/glim/package.xml
+/home/dev/ws_LIU/src/liu/package.xml
+/home/dev/ws_LIU/src/livox_ros_driver2/package.xml
+/home/dev/ws_LIU/src/nlink_parser/extern/serial/package.xml
+/home/dev/ws_LIU/src/nlink_parser/package.xml
+/home/dev/ws_LIU/src/open_vins/ov_core/package.xml
+/home/dev/ws_LIU/src/open_vins/ov_data/package.xml
+/home/dev/ws_LIU/src/open_vins/ov_eval/package.xml
+/home/dev/ws_LIU/src/open_vins/ov_init/package.xml
+/home/dev/ws_LIU/src/open_vins/ov_msckf/package.xml
+/home/dev/ws_rl/src/ros1/map_manager/package.xml
+/home/dev/ws_rl/src/ros1/navigation_runner/package.xml
+/home/dev/ws_rl/src/ros1/onboard_detector/package.xml
+/home/dev/ws_rl/src/ros1/uav_simulator/package.xml
+
+Script done on 2026-09-05 10:30:16+00:00 [COMMAND_EXIT_CODE="0"]

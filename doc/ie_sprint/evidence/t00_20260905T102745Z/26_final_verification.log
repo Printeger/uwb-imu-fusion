@@ -1,0 +1,41 @@
+UTC=2026-09-05T15:25:08Z
+PWD=/home/dev/ws_uwb_ie/src/uwb-imu-fusion
+BRANCH=feature/uwb-imu-fusion-ie-postprocessing
+HEAD=28d8e9fff8fe08f2210553f4fc1d78e44191f014
+FROZEN_HASHES
+8ac373919823d755d9c1b4ceb807527432d16b69d368042e19aa56d93dc67144  doc/v2/paper_structure.tex
+b9bb63b65ebdb8a505bf99b26181318c6c64da1a72817b08cfa61315e2333bdb  doc/v2/v2_roadmap.md
+SOURCE_CONFIG_DIFF_CHECK
+git_diff_quiet_exit=0
+TRACKED_DIFF_WHITESPACE_CHECK
+git_diff_check_exit=0
+UNTRACKED_DOC_WHITESPACE_CHECK
+AGENTS.md no_index_exit=1 whitespace_output_bytes=0
+doc/ie_sprint/STATUS.md no_index_exit=1 whitespace_output_bytes=0
+doc/ie_sprint/REPO_AUDIT.md no_index_exit=1 whitespace_output_bytes=0
+MARKDOWN_LOCAL_LINK_CHECK
+checked=106 missing=0
+link_check_exit=0
+DOC_HASHES_AND_LINES
+2e95a7fe49ccf79eec1746355b5e4640e91fdbbe2c385f170ef9052272b2f265  AGENTS.md
+40a9d400f65f3e4d127d853e4d5219660d2ba4df70e35cc0b017994ffb2fc29a  doc/ie_sprint/STATUS.md
+7c54e1b224996553d8a640191e67dc64ffde8ccd4a91f0da099b5e8bb94f5e1e  doc/ie_sprint/REPO_AUDIT.md
+   38 AGENTS.md
+   76 doc/ie_sprint/STATUS.md
+  185 doc/ie_sprint/REPO_AUDIT.md
+  299 total
+FULL_GIT_STATUS
+## feature/uwb-imu-fusion-ie-postprocessing...origin/feature/uwb-imu-fusion-ie-postprocessing
+?? AGENTS.md
+?? doc/ie_sprint/REPO_AUDIT.md
+?? doc/ie_sprint/STATUS.md
+?? doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/config/config_effective.yaml
+?? doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/config/config_original.yaml
+?? doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/ros_home/log/latest
+?? doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/ros_home/roscore-11322.pid
+?? doc/ie_sprint/evidence/t00_20260905T102745Z/gtsam_probe/CMakeLists.txt
+?? doc/ie_sprint/evidence/t00_20260905T102745Z/probe_bags.sh
+?? doc/ie_sprint/evidence/t00_20260905T102745Z/probe_ros_overlay.sh
+?? doc/ie_sprint/evidence/t00_20260905T102745Z/run_baseline_old.sh
+?? doc/ie_sprint/evidence/t00_20260905T102745Z/run_build_current.sh
+?? doc/ie_sprint/evidence/t00_20260905T102745Z/verify_final.sh

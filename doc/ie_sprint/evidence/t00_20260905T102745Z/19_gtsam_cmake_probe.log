@@ -1,0 +1,22 @@
+Script started on 2026-09-05 10:39:03+00:00 [<not executed on terminal>]
+-- The CXX compiler identification is GNU 9.4.0
+-- Check for working CXX compiler: /usr/bin/c++
+-- Check for working CXX compiler: /usr/bin/c++ -- works
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+CMake Error at CMakeLists.txt:3 (find_package):
+  Could not find a configuration file for package "GTSAM" that is compatible
+  with requested version "4.2".
+
+  The following configuration files were considered but not accepted:
+
+    /usr/local/lib/cmake/GTSAM/GTSAMConfig.cmake, version: 4.0.3
+
+
+
+-- Configuring incomplete, errors occurred!
+See also "/home/dev/ws_uwb_ie/src/uwb-imu-fusion/doc/ie_sprint/evidence/t00_20260905T102745Z/gtsam_probe/build/CMakeFiles/CMakeOutput.log".
+
+Script done on 2026-09-05 10:39:03+00:00 [COMMAND_EXIT_CODE="1"]

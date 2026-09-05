@@ -1,0 +1,14 @@
+Script started on 2026-09-05 10:31:14+00:00 [<not executed on terminal>]
+bash: /home/dev/ws_slam/devel/setup.bash: No such file or directory
+CMAKE_PREFIX_PATH=/opt/ros/noetic
+LD_LIBRARY_PATH=/opt/ros/noetic/lib
+PYTHONPATH=/opt/ros/noetic/lib/python3/dist-packages
+ROS_PACKAGE_PATH=/opt/ros/noetic/share
+[rospack] Error: package 'uwb_imu_fgo' not found
+rospack uwb_imu_fgo exit_code=1
+[rospack] Error: package 'uwb_driver' not found
+rospack uwb_driver exit_code=1
+[rospack] Error: package 'isas_msgs' not found
+rospack isas_msgs exit_code=1
+
+Script done on 2026-09-05 10:31:14+00:00 [COMMAND_EXIT_CODE="0"]

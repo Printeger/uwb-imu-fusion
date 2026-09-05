@@ -1,0 +1,272 @@
+FILE src/data_loader.cpp LINES 780-1050
+   780	                       gtsam::Point3(px, py, pz));
+   781	    s.v = gtsam::Vector3::Zero();
+   782	    s.ba = gtsam::Vector3::Zero();
+   783	    s.bg = gtsam::Vector3::Zero();
+   784	    gt.push_back(s);
+   785	  }
+   786	  f.close();
+   787	  std::sort(gt.begin(), gt.end(),
+   788	            [](const NavState& a, const NavState& b) { return a.t < b.t; });
+   789	  std::cout << "DataLoader(MILUV): loaded " << gt.size() << " GT poses\n";
+   790	  return gt;
+   791	}
+   792	
+   793	// ===================================================================
+   794	// SFUISE ISAS-Walk Dataset Loader (rosbag: isas_msgs + sensor_msgs)
+   795	// ===================================================================
+   796	
+   797	bool DataLoader::LoadSfuiseBag(const std::string& data_dir, int sequence,
+   798	                               std::vector<ImuSample>* out_imu,
+   799	                               std::vector<UwbFrame>* out_uwb,
+   800	                               std::vector<AnchorConfig>* out_anchors) {
+   801	  if (data_dir.empty()) {
+   802	    std::cerr << "DataLoader(SFUISE): empty data dir.\n";
+   803	    return false;
+   804	  }
+   805	
+   806	  std::string bag_path =
+   807	      data_dir + "/ISAS-Walk" + std::to_string(sequence) + ".bag";
+   808	  if (!boost::filesystem::exists(bag_path)) {
+   809	    std::cerr << "DataLoader(SFUISE): bag not found: " << bag_path << "\n";
+   810	    return false;
+   811	  }
+   812	
+   813	  rosbag::Bag bag;
+   814	  try {
+   815	    bag.open(bag_path, rosbag::bagmode::Read);
+   816	  } catch (const std::exception& e) {
+   817	    std::cerr << "DataLoader(SFUISE): failed to open bag: " << e.what() << "\n";
+   818	    return false;
+   819	  }
+   820	
+   821	  const std::string& imu_topic = cfg_.sfuise_imu_topic;
+   822	  const std::string& uwb_topic = cfg_.sfuise_uwb_topic;
+   823	  const std::string& anchor_topic = cfg_.sfuise_anchor_topic;
+   824	
+   825	  // --- First pass: discover anchor positions from /anchor_list ---
+   826	  std::map<int, gtsam::Point3> anchor_pos;
+   827	  std::map<int, int> anchor_count;
+   828	  int anchor_msgs_seen = 0;
+   829	  const int anchor_msg_limit = 20;  // same as SFUISE code
+   830	  {
+   831	    rosbag::View anchor_view(bag, rosbag::TopicQuery({anchor_topic}));
+   832	    for (const auto& m : anchor_view) {
+   833	      if (anchor_msgs_seen >= anchor_msg_limit) break;
+   834	      auto alist = m.instantiate<isas_msgs::Anchorlist>();
+   835	      if (!alist) continue;
+   836	      ++anchor_msgs_seen;
+   837	      for (const auto& a : alist->anchor) {
+   838	        gtsam::Point3 p(a.position.x, a.position.y, a.position.z);
+   839	        int aid = static_cast<int>(a.id);
+   840	        if (anchor_count.find(aid) == anchor_count.end()) {
+   841	          anchor_pos[aid] = p;
+   842	          anchor_count[aid] = 1;
+   843	        } else {
+   844	          int n = anchor_count[aid] + 1;
+   845	          anchor_pos[aid] =
+   846	              anchor_pos[aid] * (double(n - 1) / n) + p * (1.0 / n);
+   847	          anchor_count[aid] = n;
+   848	        }
+   849	      }
+   850	    }
+   851	  }
+   852	
+   853	  if (anchor_pos.empty()) {
+   854	    std::cerr << "DataLoader(SFUISE): no anchors discovered on " << anchor_topic
+   855	              << "\n";
+   856	  } else {
+   857	    for (const auto& kv : anchor_pos) {
+   858	      AnchorConfig ac;
+   859	      ac.id = kv.first;
+   860	      ac.pos = kv.second;
+   861	      ac.prior_sigma = 0.10;
+   862	      out_anchors->push_back(ac);
+   863	    }
+   864	    std::cout << "DataLoader(SFUISE): auto-discovered " << anchor_pos.size()
+   865	              << " anchors (" << anchor_msgs_seen << " messages):\n";
+   866	    for (const auto& kv : anchor_pos)
+   867	      std::cout << "  Anchor #" << kv.first << " @ [" << kv.second.x() << ", "
+   868	                << kv.second.y() << ", " << kv.second.z() << "]\n";
+   869	  }
+   870	
+   871	  // --- Second pass: load IMU + UWB ---
+   872	  std::vector<std::string> topics = {imu_topic, uwb_topic};
+   873	  rosbag::View view_full;
+   874	  view_full.addQuery(bag);
+   875	  ros::Time time_start =
+   876	      view_full.getBeginTime() + ros::Duration(cfg_.bag_start);
+   877	  ros::Time time_finish = (cfg_.bag_durr < 0)
+   878	                              ? view_full.getEndTime()
+   879	                              : time_start + ros::Duration(cfg_.bag_durr);
+   880	  rosbag::View view;
+   881	  view.addQuery(bag, rosbag::TopicQuery(topics), time_start, time_finish);
+   882	
+   883	  if (view.size() == 0) {
+   884	    std::cerr << "DataLoader(SFUISE): no messages on topics " << imu_topic
+   885	              << " / " << uwb_topic << "\n";
+   886	    bag.close();
+   887	    return false;
+   888	  }
+   889	
+   890	  std::cout << "DataLoader(SFUISE): loading bag " << bag_path << " ("
+   891	            << view.size() << " messages)\n";
+   892	
+   893	  out_imu->clear();
+   894	  out_uwb->clear();
+   895	
+   896	  // SFUISE Waveshare Sense HAT: acc in m/s² (acc_ratio=false), gyro in rad/s
+   897	  const double g_scale = cfg_.imu_acc_in_g ? cfg_.gravity : 1.0;
+   898	
+   899	  // Accumulated ranges within the current time-window group.
+   900	  UwbFrame pending_frame;
+   901	  bool have_pending = false;
+   902	  size_t uwb_msg_count = 0, uwb_range_count = 0, uwb_valid_count = 0;
+   903	
+   904	  for (const rosbag::MessageInstance& m : view) {
+   905	    std::string topic = m.getTopic();
+   906	
+   907	    if (topic == imu_topic) {
+   908	      auto imu_msg = m.instantiate<sensor_msgs::Imu>();
+   909	      if (!imu_msg) continue;
+   910	
+   911	      ImuSample s;
+   912	      s.t = imu_msg->header.stamp.toSec();
+   913	      s.acc = Eigen::Vector3d(imu_msg->linear_acceleration.x * g_scale,
+   914	                              imu_msg->linear_acceleration.y * g_scale,
+   915	                              imu_msg->linear_acceleration.z * g_scale);
+   916	      s.gyro = Eigen::Vector3d(imu_msg->angular_velocity.x,
+   917	                               imu_msg->angular_velocity.y,
+   918	                               imu_msg->angular_velocity.z);
+   919	      SetImuOrientation(*imu_msg, &s);
+   920	      out_imu->push_back(s);
+   921	
+   922	    } else if (topic == uwb_topic) {
+   923	      auto stick = m.instantiate<isas_msgs::RTLSStick>();
+   924	      if (!stick) continue;
+   925	      ++uwb_msg_count;
+   926	
+   927	      const double t_msg = stick->header.stamp.toSec();
+   928	      const int tag_id = static_cast<int>(stick->id);
+   929	
+   930	      // Collect all valid ranges from this RTLSStick.
+   931	      std::vector<UwbRange> valid_ranges;
+   932	      for (const auto& rg : stick->ranges) {
+   933	        if (rg.ra == 0) continue;  // ra==0 = invalid/old data
+   934	        UwbRange r;
+   935	        r.anchor_id = static_cast<int>(rg.id);
+   936	        r.dist = rg.range;
+   937	        r.fp_rssi = rg.fpp;  // first path power
+   938	        r.rx_rssi = rg.rxp;  // received power
+   939	        valid_ranges.push_back(r);
+   940	      }
+   941	      uwb_range_count += stick->ranges.size();
+   942	      uwb_valid_count += valid_ranges.size();
+   943	
+   944	      if (valid_ranges.empty()) continue;
+   945	
+   946	      if (cfg_.sfuise_uwb_group_window <= 0.0) {
+   947	        // No grouping: every RTLSStick becomes its own UwbFrame.
+   948	        UwbFrame frame;
+   949	        frame.t = t_msg;
+   950	        frame.tag_id = tag_id;
+   951	        frame.ranges = std::move(valid_ranges);
+   952	        out_uwb->push_back(frame);
+   953	      } else {
+   954	        // Group ranges within the time window.
+   955	        if (!have_pending) {
+   956	          pending_frame.t = t_msg;
+   957	          pending_frame.tag_id = tag_id;
+   958	          pending_frame.ranges = valid_ranges;
+   959	          have_pending = true;
+   960	        } else if (t_msg - pending_frame.t <= cfg_.sfuise_uwb_group_window) {
+   961	          pending_frame.ranges.insert(pending_frame.ranges.end(),
+   962	                                      valid_ranges.begin(), valid_ranges.end());
+   963	        } else {
+   964	          out_uwb->push_back(pending_frame);
+   965	          pending_frame.t = t_msg;
+   966	          pending_frame.tag_id = tag_id;
+   967	          pending_frame.ranges = std::move(valid_ranges);
+   968	        }
+   969	      }
+   970	    }
+   971	  }
+   972	
+   973	  // Flush last pending frame.
+   974	  if (have_pending && !pending_frame.ranges.empty()) {
+   975	    out_uwb->push_back(pending_frame);
+   976	  }
+   977	
+   978	  bag.close();
+   979	
+   980	  // Sort by time.
+   981	  std::sort(out_imu->begin(), out_imu->end(),
+   982	            [](const ImuSample& a, const ImuSample& b) { return a.t < b.t; });
+   983	  std::sort(out_uwb->begin(), out_uwb->end(),
+   984	            [](const UwbFrame& a, const UwbFrame& b) { return a.t < b.t; });
+   985	
+   986	  std::cout << "DataLoader(SFUISE): loaded " << out_imu->size()
+   987	            << " IMU samples, " << out_uwb->size() << " UWB frames ("
+   988	            << uwb_msg_count << " RTLSStick msgs, " << uwb_valid_count << "/"
+   989	            << uwb_range_count << " valid ranges).\n";
+   990	  PrintImuDiagnostic(*out_imu);
+   991	
+   992	  return !out_imu->empty() && !out_uwb->empty();
+   993	}
+   994	
+   995	std::vector<NavState> DataLoader::LoadGroundTruthSfuise(
+   996	    const std::string& bag_path) {
+   997	  std::vector<NavState> gt;
+   998	  const std::string& gt_topic = cfg_.sfuise_gt_topic;
+   999	  if (gt_topic.empty()) {
+  1000	    std::cout << "LoadGroundTruth(SFUISE): no GT topic configured.\n";
+  1001	    return gt;
+  1002	  }
+  1003	
+  1004	  rosbag::Bag bag;
+  1005	  try {
+  1006	    bag.open(bag_path, rosbag::bagmode::Read);
+  1007	  } catch (const std::exception& e) {
+  1008	    std::cerr << "LoadGroundTruth(SFUISE): cannot open bag: " << e.what()
+  1009	              << "\n";
+  1010	    return gt;
+  1011	  }
+  1012	
+  1013	  rosbag::View view;
+  1014	  view.addQuery(bag, rosbag::TopicQuery({gt_topic}));
+  1015	  if (view.size() == 0) {
+  1016	    std::cerr << "LoadGroundTruth(SFUISE): no messages on " << gt_topic << "\n";
+  1017	    bag.close();
+  1018	    return gt;
+  1019	  }
+  1020	
+  1021	  for (const auto& m : view) {
+  1022	    auto tf_msg = m.instantiate<geometry_msgs::TransformStamped>();
+  1023	    if (!tf_msg) continue;
+  1024	    NavState s;
+  1025	    s.t = tf_msg->header.stamp.toSec();
+  1026	    auto& q = tf_msg->transform.rotation;
+  1027	    auto& p = tf_msg->transform.translation;
+  1028	    s.T = gtsam::Pose3(gtsam::Rot3::Quaternion(q.w, q.x, q.y, q.z),
+  1029	                       gtsam::Point3(p.x, p.y, p.z));
+  1030	    s.v = gtsam::Vector3::Zero();
+  1031	    s.ba = gtsam::Vector3::Zero();
+  1032	    s.bg = gtsam::Vector3::Zero();
+  1033	    gt.push_back(s);
+  1034	  }
+  1035	  bag.close();
+  1036	  std::cout << "LoadGroundTruth(SFUISE): " << gt.size() << " GT poses from "
+  1037	            << gt_topic << "\n";
+  1038	  return gt;
+  1039	}
+  1040	
+  1041	std::vector<NavState> DataLoader::LoadGroundTruth(const std::string& bag_path) {
+  1042	  std::vector<NavState> gt;
+  1043	  if (gt_topic_.empty()) {
+  1044	    std::cout << "LoadGroundTruth: no vicon topic configured, skipping.\n";
+  1045	    return gt;
+  1046	  }
+  1047	
+  1048	  rosbag::Bag bag;
+  1049	  try {
+  1050	    bag.open(bag_path, rosbag::bagmode::Read);

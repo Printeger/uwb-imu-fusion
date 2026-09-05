@@ -1,0 +1,13 @@
+Script started on 2026-09-05 10:31:47+00:00 [<not executed on terminal>]
+UTC=2026-09-05T10:31:47Z
+PWD=/home/dev/ws_uwb_ie
+COMMAND=/usr/bin/time -v catkin build uwb_imu_fgo --no-status
+CMAKE_PREFIX_PATH=/opt/ros/noetic
+ROS_PACKAGE_PATH=/opt/ros/noetic/share
+LD_LIBRARY_PATH=/opt/ros/noetic/lib
+PYTHONPATH=/opt/ros/noetic/lib/python3/dist-packages
+SOURCE_HEAD=28d8e9fff8fe08f2210553f4fc1d78e44191f014
+/home/dev/ws_uwb_ie/src/uwb-imu-fusion/doc/ie_sprint/evidence/t00_20260905T102745Z/run_build_current.sh: line 16: /usr/bin/time: No such file or directory
+BUILD_EXIT_CODE=127
+
+Script done on 2026-09-05 10:31:47+00:00 [COMMAND_EXIT_CODE="127"]

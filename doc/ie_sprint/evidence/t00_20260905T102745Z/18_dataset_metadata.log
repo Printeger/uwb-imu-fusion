@@ -1,0 +1,131 @@
+Script started on 2026-09-05 10:37:59+00:00 [<not executed on terminal>]
+2026-09-05T10:37:59Z
+named external inputs
+SFUISE metadata
+/home/dev/ws_uwb/src/SFUISE/LICENSE
+/home/dev/ws_uwb/src/SFUISE/README.md
+/home/dev/ws_uwb/src/SFUISE/README.md:41:* Example for running sfuise on [UTIL](https://utiasdsl.github.io/util-uwb-dataset/) (TDoA-inertial):
+/home/dev/ws_uwb/src/SFUISE/README.md:43:# Change anchor_path in config_test_util.yaml
+/home/dev/ws_uwb/src/SFUISE/README.md:47:* Example for running sfuise on [ISAS-Walk](https://github.com/KIT-ISAS/SFUISE/tree/main/dataset) (ToA-inertial, own data set):
+/home/dev/ws_uwb/src/SFUISE/README.md:57:We hereby recommend reading [lie-spline-experiments](https://gitlab.com/tum-vision/lie-spline-experiments) for reference. The IMU integration was derived from [VINS-Fusion](https://github.com/HKUST-Aerial-Robotics/VINS-Fusion).
+/home/dev/ws_uwb/src/SFUISE/README.md:58:## License
+/home/dev/ws_uwb/src/SFUISE/README.md:59:The source code is released under [GPLv3](https://www.gnu.org/licenses/) license.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:1:                    GNU GENERAL PUBLIC LICENSE
+/home/dev/ws_uwb/src/SFUISE/LICENSE:6: of this license document, but changing it is not allowed.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:10:  The GNU General Public License is a free, copyleft license for
+/home/dev/ws_uwb/src/SFUISE/LICENSE:13:  The licenses for most software and other practical works are designed
+/home/dev/ws_uwb/src/SFUISE/LICENSE:15:the GNU General Public License is intended to guarantee your freedom to
+/home/dev/ws_uwb/src/SFUISE/LICENSE:18:GNU General Public License for most of our software; it applies also to
+/home/dev/ws_uwb/src/SFUISE/LICENSE:23:price.  Our General Public Licenses are designed to make sure that you
+/home/dev/ws_uwb/src/SFUISE/LICENSE:41:(1) assert copyright on the software, and (2) offer you this License
+/home/dev/ws_uwb/src/SFUISE/LICENSE:75:  "This License" refers to version 3 of the GNU General Public License.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:80:  "The Program" refers to any copyrightable work licensed under this
+/home/dev/ws_uwb/src/SFUISE/LICENSE:81:License.  Each licensee is addressed as "you".  "Licensees" and
+/home/dev/ws_uwb/src/SFUISE/LICENSE:107:extent that warranties are provided), that licensees may convey the
+/home/dev/ws_uwb/src/SFUISE/LICENSE:108:work under this License, and how to view a copy of this License.  If
+/home/dev/ws_uwb/src/SFUISE/LICENSE:156:  All rights granted under this License are granted for the term of
+/home/dev/ws_uwb/src/SFUISE/LICENSE:158:conditions are met.  This License explicitly affirms your unlimited
+/home/dev/ws_uwb/src/SFUISE/LICENSE:160:covered work is covered by this License only if the output, given its
+/home/dev/ws_uwb/src/SFUISE/LICENSE:161:content, constitutes a covered work.  This License acknowledges your
+/home/dev/ws_uwb/src/SFUISE/LICENSE:165:convey, without conditions so long as your license otherwise remains
+/home/dev/ws_uwb/src/SFUISE/LICENSE:169:the terms of this License in conveying all material for which you do
+/home/dev/ws_uwb/src/SFUISE/LICENSE:189:is effected by exercising rights under this License with respect to
+/home/dev/ws_uwb/src/SFUISE/LICENSE:200:keep intact all notices stating that this License and any
+/home/dev/ws_uwb/src/SFUISE/LICENSE:203:recipients a copy of this License along with the Program.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:218:    released under this License and any conditions added under section
+/home/dev/ws_uwb/src/SFUISE/LICENSE:222:    c) You must license the entire work, as a whole, under this
+/home/dev/ws_uwb/src/SFUISE/LICENSE:223:    License to anyone who comes into possession of a copy.  This
+/home/dev/ws_uwb/src/SFUISE/LICENSE:224:    License will therefore apply, along with any applicable section 7
+/home/dev/ws_uwb/src/SFUISE/LICENSE:226:    regardless of how they are packaged.  This License gives no
+/home/dev/ws_uwb/src/SFUISE/LICENSE:227:    permission to license the work in any other way, but it does not
+/home/dev/ws_uwb/src/SFUISE/LICENSE:242:in an aggregate does not cause this License to apply to the other
+/home/dev/ws_uwb/src/SFUISE/LICENSE:249:machine-readable Corresponding Source under the terms of this License,
+/home/dev/ws_uwb/src/SFUISE/LICENSE:263:    product that is covered by this License, on a durable physical
+/home/dev/ws_uwb/src/SFUISE/LICENSE:346:License by making exceptions from one or more of its conditions.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:348:be treated as though they were included in this License, to the extent
+/home/dev/ws_uwb/src/SFUISE/LICENSE:352:this License without regard to the additional permissions.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:361:  Notwithstanding any other provision of this License, for material you
+/home/dev/ws_uwb/src/SFUISE/LICENSE:363:that material) supplement the terms of this License with terms:
+/home/dev/ws_uwb/src/SFUISE/LICENSE:366:    terms of sections 15 and 16 of this License; or
+/home/dev/ws_uwb/src/SFUISE/LICENSE:391:governed by this License along with a term that is a further
+/home/dev/ws_uwb/src/SFUISE/LICENSE:392:restriction, you may remove that term.  If a license document contains
+/home/dev/ws_uwb/src/SFUISE/LICENSE:394:License, you may add to a covered work material governed by the terms
+/home/dev/ws_uwb/src/SFUISE/LICENSE:395:of that license document, provided that the further restriction does
+/home/dev/ws_uwb/src/SFUISE/LICENSE:396:not survive such relicensing or conveying.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:404:form of a separately written license, or stated as exceptions;
+/home/dev/ws_uwb/src/SFUISE/LICENSE:410:provided under this License.  Any attempt otherwise to propagate or
+/home/dev/ws_uwb/src/SFUISE/LICENSE:412:this License (including any patent licenses granted under the third
+/home/dev/ws_uwb/src/SFUISE/LICENSE:415:  However, if you cease all violation of this License, then your
+/home/dev/ws_uwb/src/SFUISE/LICENSE:416:license from a particular copyright holder is reinstated (a)
+/home/dev/ws_uwb/src/SFUISE/LICENSE:418:finally terminates your license, and (b) permanently, if the copyright
+/home/dev/ws_uwb/src/SFUISE/LICENSE:422:  Moreover, your license from a particular copyright holder is
+/home/dev/ws_uwb/src/SFUISE/LICENSE:425:received notice of violation of this License (for any work) from that
+/home/dev/ws_uwb/src/SFUISE/LICENSE:430:licenses of parties who have received copies or rights from you under
+/home/dev/ws_uwb/src/SFUISE/LICENSE:431:this License.  If your rights have been terminated and not permanently
+/home/dev/ws_uwb/src/SFUISE/LICENSE:432:reinstated, you do not qualify to receive new licenses for the same
+/home/dev/ws_uwb/src/SFUISE/LICENSE:437:  You are not required to accept this License in order to receive or
+/home/dev/ws_uwb/src/SFUISE/LICENSE:441:nothing other than this License grants you permission to propagate or
+/home/dev/ws_uwb/src/SFUISE/LICENSE:443:not accept this License.  Therefore, by modifying or propagating a
+/home/dev/ws_uwb/src/SFUISE/LICENSE:444:covered work, you indicate your acceptance of this License to do so.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:449:receives a license from the original licensors, to run, modify and
+/home/dev/ws_uwb/src/SFUISE/LICENSE:450:propagate that work, subject to this License.  You are not responsible
+/home/dev/ws_uwb/src/SFUISE/LICENSE:451:for enforcing compliance by third parties with this License.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:458:licenses to the work the party's predecessor in interest had or could
+/home/dev/ws_uwb/src/SFUISE/LICENSE:464:rights granted or affirmed under this License.  For example, you may
+/home/dev/ws_uwb/src/SFUISE/LICENSE:465:not impose a license fee, royalty, or other charge for exercise of
+/home/dev/ws_uwb/src/SFUISE/LICENSE:466:rights granted under this License, and you may not initiate litigation
+/home/dev/ws_uwb/src/SFUISE/LICENSE:474:License of the Program or a work on which the Program is based.  The
+/home/dev/ws_uwb/src/SFUISE/LICENSE:475:work thus licensed is called the contributor's "contributor version".
+/home/dev/ws_uwb/src/SFUISE/LICENSE:480:by this License, of making, using, or selling its contributor version,
+/home/dev/ws_uwb/src/SFUISE/LICENSE:484:patent sublicenses in a manner consistent with the requirements of
+/home/dev/ws_uwb/src/SFUISE/LICENSE:485:this License.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:488:patent license under the contributor's essential patent claims, to
+/home/dev/ws_uwb/src/SFUISE/LICENSE:492:  In the following three paragraphs, a "patent license" is any express
+/home/dev/ws_uwb/src/SFUISE/LICENSE:495:sue for patent infringement).  To "grant" such a patent license to a
+/home/dev/ws_uwb/src/SFUISE/LICENSE:499:  If you convey a covered work, knowingly relying on a patent license,
+/home/dev/ws_uwb/src/SFUISE/LICENSE:501:to copy, free of charge and under the terms of this License, through a
+/home/dev/ws_uwb/src/SFUISE/LICENSE:505:patent license for this particular work, or (3) arrange, in a manner
+/home/dev/ws_uwb/src/SFUISE/LICENSE:506:consistent with the requirements of this License, to extend the patent
+/home/dev/ws_uwb/src/SFUISE/LICENSE:507:license to downstream recipients.  "Knowingly relying" means you have
+/home/dev/ws_uwb/src/SFUISE/LICENSE:508:actual knowledge that, but for the patent license, your conveying the
+/home/dev/ws_uwb/src/SFUISE/LICENSE:515:covered work, and grant a patent license to some of the parties
+/home/dev/ws_uwb/src/SFUISE/LICENSE:517:or convey a specific copy of the covered work, then the patent license
+/home/dev/ws_uwb/src/SFUISE/LICENSE:521:  A patent license is "discriminatory" if it does not include within
+/home/dev/ws_uwb/src/SFUISE/LICENSE:524:specifically granted under this License.  You may not convey a covered
+/home/dev/ws_uwb/src/SFUISE/LICENSE:530:patent license (a) in connection with copies of the covered work
+/home/dev/ws_uwb/src/SFUISE/LICENSE:534:or that patent license was granted, prior to 28 March 2007.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:536:  Nothing in this License shall be construed as excluding or limiting
+/home/dev/ws_uwb/src/SFUISE/LICENSE:537:any implied license or other defenses to infringement that may
+/home/dev/ws_uwb/src/SFUISE/LICENSE:543:otherwise) that contradict the conditions of this License, they do not
+/home/dev/ws_uwb/src/SFUISE/LICENSE:544:excuse you from the conditions of this License.  If you cannot convey a
+/home/dev/ws_uwb/src/SFUISE/LICENSE:545:covered work so as to satisfy simultaneously your obligations under this
+/home/dev/ws_uwb/src/SFUISE/LICENSE:546:License and any other pertinent obligations, then as a consequence you may
+/home/dev/ws_uwb/src/SFUISE/LICENSE:550:License would be to refrain entirely from conveying the Program.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:552:  13. Use with the GNU Affero General Public License.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:554:  Notwithstanding any other provision of this License, you have
+/home/dev/ws_uwb/src/SFUISE/LICENSE:555:permission to link or combine any covered work with a work licensed
+/home/dev/ws_uwb/src/SFUISE/LICENSE:556:under version 3 of the GNU Affero General Public License into a single
+/home/dev/ws_uwb/src/SFUISE/LICENSE:558:License will continue to apply to the part which is the covered work,
+/home/dev/ws_uwb/src/SFUISE/LICENSE:559:but the special requirements of the GNU Affero General Public License,
+/home/dev/ws_uwb/src/SFUISE/LICENSE:563:  14. Revised Versions of this License.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:566:the GNU General Public License from time to time.  Such new versions will
+/home/dev/ws_uwb/src/SFUISE/LICENSE:572:Public License "or any later version" applies to it, you have the
+/home/dev/ws_uwb/src/SFUISE/LICENSE:576:GNU General Public License, you may choose any version ever published
+/home/dev/ws_uwb/src/SFUISE/LICENSE:580:versions of the GNU General Public License can be used, that proxy's
+/home/dev/ws_uwb/src/SFUISE/LICENSE:584:  Later license versions may give you additional or different
+/home/dev/ws_uwb/src/SFUISE/LICENSE:638:    it under the terms of the GNU General Public License as published by
+/home/dev/ws_uwb/src/SFUISE/LICENSE:639:    the Free Software Foundation, either version 3 of the License, or
+/home/dev/ws_uwb/src/SFUISE/LICENSE:645:    GNU General Public License for more details.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:647:    You should have received a copy of the GNU General Public License
+/home/dev/ws_uwb/src/SFUISE/LICENSE:648:    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:661:parts of the General Public License.  Of course, your program's commands
+/home/dev/ws_uwb/src/SFUISE/LICENSE:667:<https://www.gnu.org/licenses/>.
+/home/dev/ws_uwb/src/SFUISE/LICENSE:669:  The GNU General Public License does not permit incorporating your program
+/home/dev/ws_uwb/src/SFUISE/LICENSE:673:Public License instead of this License.  But first, please read
+/home/dev/ws_uwb/src/SFUISE/LICENSE:674:<https://www.gnu.org/licenses/why-not-lgpl.html>.
+local message MD5
+fbed6583ea0d58e22f93b8b83d7468e1
+Cannot locate [isas_msgs/RTLSStick]
+Cannot locate [isas_msgs/Anchorlist]
+
+Script done on 2026-09-05 10:38:00+00:00 [COMMAND_EXIT_CODE="0"]

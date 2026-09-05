@@ -1,0 +1,12 @@
+2026-09-05T10:51:42Z
+BASELINE_RELATED_PROCESSES
+  69631   33646 Ss   /bin/bash -lc { date -u +%FT%TZ echo 'BASELINE_RELATED_PROCESSES' ps -eo pid,ppid,stat,args | rg '11322|uwb_imu_fgo_node|roscore' || true echo 'BASELINE_RESULT_FILES' find doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1 -maxdepth 3 -type f -printf '%p %s bytes\n' | sort echo 'TRAJECTORY_LIKE_FILES' find doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1 -maxdepth 4 -type f \( -name 'trajectory*' -o -name 'groundtruth*' -o -name 'residuals.csv' -o -name 'covariance_diag.csv' \) -print } > doc/ie_sprint/evidence/t00_20260905T102745Z/27_process_cleanup_and_outputs.log cat doc/ie_sprint/evidence/t00_20260905T102745Z/27_process_cleanup_and_outputs.log
+  69636   69631 R    rg 11322|uwb_imu_fgo_node|roscore
+BASELINE_RESULT_FILES
+doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/config/config_effective.yaml 1977 bytes
+doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/config/config_original.yaml 1953 bytes
+doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/ros_home/roscore-11322.pid 5 bytes
+doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/roscore.log 981 bytes
+doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/stderr.log 218 bytes
+doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/stdout.log 0 bytes
+TRAJECTORY_LIKE_FILES

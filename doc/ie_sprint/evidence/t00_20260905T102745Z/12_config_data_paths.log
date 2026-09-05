@@ -1,0 +1,20 @@
+Script started on 2026-09-05 10:32:36+00:00 [<not executed on terminal>]
+2026-09-05T10:32:36Z
+config/mcd_tuhh_night_09.yaml:11:  imu_bag_path: "../data/tuhh_night_09_vn200.bag"
+config/mcd_tuhh_night_09.yaml:12:  uwb_bag_path: "../data/tuhh_night_09_ltpb.bag"
+config/mcd_tuhh_night_09.yaml:13:  gt_csv_path: "../data/gt_pose_inW.csv"
+config/miluv_circular_synthetic.yaml:11:  imu_csv: "imu_px4.csv"
+config/miluv_circular_synthetic.yaml:12:  uwb_csv: "uwb_range.csv"
+config/miluv_circular_synthetic.yaml:13:  gt_csv: "mocap.csv"
+config/tnp_03.yaml:10:# 使用: rosrun uwb_imu_fgo uwb_imu_fgo_node _config_path:=config/tnp_03.yaml
+config/tnp_03.yaml:18:  bag_path: "../data/tnp_03/tnp_03_fusion.bag"
+config/viunet_00.yaml:25:  imu_csv: "imu/data.csv"
+config/viunet_00.yaml:26:  uwb_csv: "uwb/data.csv"
+config/viunet_00.yaml:27:  gt_csv:  "gt/data.csv"
+config/viunet_00.yaml:9:# 使用: rosrun uwb_imu_fgo uwb_imu_fgo_node _config_path:=config/viunet_00.yaml
+config/viunet_01.yaml:20:  imu_csv: "imu/data.csv"
+config/viunet_01.yaml:21:  uwb_csv: "uwb/data.csv"
+config/viunet_01.yaml:22:  gt_csv:  "gt/data.csv"
+config/viunet_01.yaml:9:# 使用: rosrun uwb_imu_fgo uwb_imu_fgo_node _config_path:=config/viunet_01.yaml
+
+Script done on 2026-09-05 10:32:36+00:00 [COMMAND_EXIT_CODE="0"]

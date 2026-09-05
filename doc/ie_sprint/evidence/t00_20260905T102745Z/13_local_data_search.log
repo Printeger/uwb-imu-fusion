@@ -1,0 +1,155 @@
+Script started on 2026-09-05 10:32:56+00:00 [<not executed on terminal>]
+2026-09-05T10:32:56Z
+top-level candidate roots
+/data MISSING
+/datasets MISSING
+4.0K	/mnt
+/mnt
+4.0K	/media
+/media
+/home/dev/data MISSING
+/home/dev/datasets MISSING
+/home/dev/ws_uwb/data MISSING
+/home/dev/ws_uwb_ie/data MISSING
+8.0K	/home/dev/ws_uwb/src/uwb-imu-fusion/data
+/home/dev/ws_uwb/src/uwb-imu-fusion/data
+8.0K	/home/dev/ws_uwb_ie/src/uwb-imu-fusion/data
+/home/dev/ws_uwb_ie/src/uwb-imu-fusion/data
+recording files under home/dev
+2673818914	2015-11-04T19:32:34.0000000000	/home/dev/AAE5306_Lab/data/MH_01_easy.bag
+1754007505	2026-01-24T07:32:24.0743821930	/home/dev/Dataset/AAE4011/campus_small_dataset.bag
+1493936313	2025-10-12T09:03:19.7257280020	/home/dev/Dataset/building/2025-04-25-11-30-21_uwb_lidar_imu.bag
+1571782656	2025-12-15T06:45:23.9163713230	/home/dev/Dataset/building/2025-04-25-11-30-21_uwb_lidar_imu_ros2/2025-04-25-11-30-21_uwb_lidar_imu_ros2.db3
+3498111758	2025-11-05T11:09:50.4303242170	/home/dev/Dataset/building/2025-04-25-11-31-55_gt.bag
+464464774	2025-11-04T08:24:31.4920846150	/home/dev/Dataset/calib/2025-10-31-16-05-17.bag
+1067393	2025-12-18T09:01:39.9311809840	/home/dev/Dataset/ntu_day01/ntu_day_01_ltpb.bag
+568196474	2025-12-18T09:03:27.0663327680	/home/dev/Dataset/ntu_day01/ntu_day_01_mid70.bag
+28992448381	2025-10-14T07:30:09.5955983120	/home/dev/Dataset/scipark/small_loop.bag
+5716244370	2026-03-05T08:38:24.0790136310	/home/dev/Dataset/shanghai_uav/realsense_bag_2025-12-19-15-29-43.bag
+344492569	2025-10-24T08:07:27.0000000000	/home/dev/Dataset/vicon/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag
+315996988	2025-10-24T08:07:10.0000000000	/home/dev/Dataset/vicon/2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle.bag
+576006616	2025-10-24T08:07:56.0000000000	/home/dev/Dataset/vicon/2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle.bag
+315996988	2025-11-08T18:40:00.0000000000	/home/dev/Dataset/vicon/NLOS/46/2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle.bag
+0	2025-11-08T18:41:00.0000000000	/home/dev/Dataset/vicon/NLOS/48/2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle.bag
+4272079313	2025-11-04T08:43:54.3591592360	/home/dev/Dataset/wuxi_road_1031/2025-10-31-16-07-30.bag
+3669653684	2025-11-04T08:35:05.9814140100	/home/dev/Dataset/wuxi_road_1031/2025-10-31-16-26-39.bag
+1403562114	2025-12-18T11:15:15.8982776250	/home/dev/Dataset/wuxi_road_1031/wuxi_road_251031.bag
+5716244370	2026-03-05T11:22:18.3321892280	/home/dev/code/ws_ctiap/src/iap/data/realsense_bag_2025-12-19-15-29-43.bag
+5728727040	2026-03-05T11:38:48.9662067780	/home/dev/code/ws_ctiap/src/iap/data/realsense_ros2/realsense_ros2.db3
+136579435	2026-04-28T16:18:26.3337243790	/home/dev/code/ws_iap/src/iap/data/demo6_truth_control_iap_input/demo6_truth_control_iap_input_0.mcap
+5728727040	2026-03-05T11:38:48.9662067780	/home/dev/code/ws_iap/src/iap/data/realsense_ros2/realsense_ros2.db3
+210473843	2026-06-04T07:46:07.9207249290	/home/dev/code/ws_iap/src/iap/results/araim_validation/real_time_test/test_araim_gnss_open_sky_20260604T074459Z_with_constellation_hypo/test_araim_gnss_open_sky_20260604T074459Z_0.mcap
+226097639	2026-06-04T13:53:32.3777502820	/home/dev/code/ws_iap/src/iap/results/araim_validation/real_time_test/test_araim_gnss_open_sky_20260604T135219Z_without_constellation_hypo/test_araim_gnss_open_sky_20260604T135219Z_0.mcap
+89947479	2026-06-04T14:18:32.9053383430	/home/dev/code/ws_iap/src/iap/results/araim_validation/real_time_test/test_araim_gnss_open_sky_20260604T141803Z/test_araim_gnss_open_sky_20260604T141803Z_0.mcap
+599636952	2026-06-06T13:34:05.0196347660	/home/dev/code/ws_iap/src/iap/results/araim_validation/real_time_test/test_araim_lidar_corridor_degenerate_20260606T133253Z/test_araim_lidar_corridor_degenerate_20260606T133253Z_0.mcap
+726536903	2026-06-06T14:10:08.4175978170	/home/dev/code/ws_iap/src/iap/results/araim_validation/real_time_test/test_araim_lidar_corridor_degenerate_20260606T140837Z/test_araim_lidar_corridor_degenerate_20260606T140837Z_0.mcap
+569711427	2026-06-06T15:40:06.2171772530	/home/dev/code/ws_iap/src/iap/results/araim_validation/real_time_test/test_araim_lidar_corridor_degenerate_20260606T153859Z/test_araim_lidar_corridor_degenerate_20260606T153859Z_0.mcap
+591030634	2026-06-07T08:34:39.6458283740	/home/dev/code/ws_iap/src/iap/results/araim_validation/real_time_test/test_araim_lidar_corridor_degenerate_20260607T083328Z/test_araim_lidar_corridor_degenerate_20260607T083328Z_0.mcap
+1229750986	2026-06-06T12:44:26.0537010580	/home/dev/code/ws_iap/src/iap/results/araim_validation/real_time_test/test_araim_lidar_feature_rich_20260606T124316Z/test_araim_lidar_feature_rich_20260606T124316Z_0.mcap
+1705956919	2026-06-06T13:58:14.4583642450	/home/dev/code/ws_iap/src/iap/results/araim_validation/real_time_test/test_araim_lidar_feature_rich_20260606T135644Z/test_araim_lidar_feature_rich_20260606T135644Z_0.mcap
+877545967	2026-08-26T03:28:41.0522473150	/home/dev/code/ws_iap/src/iap/results/icra27/icra069/live/icra-p0-p5-live-safe-normal-002/bags/test_planner_icra_p0_p5_qualification_safe_normal_lidar_corridor_degenerate_20260826T032711Z/test_planner_icra_p0_p5_qualification_safe_normal_lidar_corridor_degenerate_20260826T032711Z_0.mcap
+2248683	2025-10-10T11:44:40.8570440180	/home/dev/ws_LIU/src/awesome-uwb-localization/bag/data_example.bag
+3215961	2025-12-16T09:37:41.9275826770	/home/dev/ws_slam/src/SFUISE/dataset/ISAS-Walk1.bag
+4109272	2025-12-16T09:37:41.9360846220	/home/dev/ws_slam/src/SFUISE/dataset/ISAS-Walk2.bag
+4414454	2025-12-16T09:37:41.9452259100	/home/dev/ws_slam/src/SFUISE/dataset/ISAS-Walk3.bag
+2237050	2025-12-17T03:25:09.6720507830	/home/dev/ws_slam/src/Tightly_Coupled_UWB-IMU_Fusion/bag/0612_hw1.bag
+2287354	2025-12-17T03:25:09.6774772530	/home/dev/ws_slam/src/Tightly_Coupled_UWB-IMU_Fusion/bag/0612_hw2.bag
+2234438	2025-12-17T03:25:09.6884845120	/home/dev/ws_slam/src/Tightly_Coupled_UWB-IMU_Fusion/bag/0612_hw3.bag
+516684	2025-12-17T03:25:09.7030368470	/home/dev/ws_slam/src/Tightly_Coupled_UWB-IMU_Fusion/bag/20250409/1.bag
+7793895	2025-12-17T03:25:09.7107136770	/home/dev/ws_slam/src/Tightly_Coupled_UWB-IMU_Fusion/bag/20250409/2.bag
+3511528	2025-12-17T03:25:09.7180146220	/home/dev/ws_slam/src/Tightly_Coupled_UWB-IMU_Fusion/bag/20250409/3.bag
+3542591	2025-12-17T03:25:09.7192640530	/home/dev/ws_slam/src/Tightly_Coupled_UWB-IMU_Fusion/bag/loosely_all_filter.bag
+3413816	2025-12-17T03:25:09.7252944480	/home/dev/ws_slam/src/Tightly_Coupled_UWB-IMU_Fusion/bag/tightly_all_filter.bag
+1034082	2025-12-15T08:49:35.3854974710	/home/dev/ws_uav_setup/deps/realsense/unit-tests/resources/single_depth_color_640x480.bag
+3215961	2026-06-07T10:29:37.3037396670	/home/dev/ws_uwb/src/SFUISE/dataset/ISAS-Walk1.bag
+4109272	2026-06-07T10:29:37.3111022970	/home/dev/ws_uwb/src/SFUISE/dataset/ISAS-Walk2.bag
+4414454	2026-06-07T10:29:37.3190925810	/home/dev/ws_uwb/src/SFUISE/dataset/ISAS-Walk3.bag
+2248683	2026-06-07T10:36:28.5990194820	/home/dev/ws_uwb/src/awesome-uwb-localization/bag/data_example.bag
+dataset-named directories
+/home/dev/3rdparty/gtsam/build/gtsam/slam/tests/CMakeFiles/testDataset.dir
+/home/dev/3rdparty/gtsam/build/gtsam/slam/tests/CMakeFiles/testDataset.run.dir
+/home/dev/3rdparty/gtsam/build/gtsam/slam/tests/CMakeFiles/testDataset.valgrind.dir
+/home/dev/Dataset
+/home/dev/Dataset/scripts/pic_tim/pic_vicon46
+/home/dev/Dataset/scripts/pic_tim/pic_vicon_los
+/home/dev/Dataset/scripts/results/scene3_Vicon_LOS
+/home/dev/Dataset/scripts/results/scene3_Vicon_NLOS
+/home/dev/Dataset/vicon
+/home/dev/Dataset/vicon/LOS/liosam_vicon_los
+/home/dev/Dataset/vicon/NLOS/48/liosam_vicon_nlos_48
+/home/dev/Dataset/vicon/NLOS/liosam_vicon_nlos_46
+/home/dev/NavRL/isaac-training/third_party/rl/torchrl/data/datasets
+/home/dev/code/ws_cliu/src/LIUO/config/vicon
+/home/dev/code/ws_iap/src/C-LIUO/config/vicon
+/home/dev/experiments/vicon_anchor_calibration
+/home/dev/results/scene3_Vicon_LOS
+/home/dev/results/scene3_Vicon_NLOS
+/home/dev/ws_LIU/build/cocolic/CMakeFiles/_run_tests_cocolic_nosetests_test.test_vicon_anchor_calibration.py.dir
+/home/dev/ws_LIU/build/cocolic/CMakeFiles/run_tests_cocolic_nosetests_test.test_vicon_anchor_calibration.py.dir
+/home/dev/ws_LIU/src/Coco-LIC-UWB/config/vicon
+/home/dev/ws_LIU/src/Coco-LIC-UWB/data/vicon
+/home/dev/ws_LIU/src/Coco-LIC-UWB/docs/TIM_revision/pic/pic_vicon46
+/home/dev/ws_LIU/src/Coco-LIC-UWB/docs/TIM_revision/pic/pic_vicon_los
+/home/dev/ws_LIU/src/ToySLAM/GraphGNSSLibV1.1/global_fusion/dataset
+/home/dev/ws_LIU/src/open_vins/docs/img/datasets
+/home/dev/ws_slam/.catkin_tools/profiles/default/packages/sfuise
+/home/dev/ws_slam/.catkin_tools/profiles/default/packages/sfuise_msgs
+/home/dev/ws_slam/build/sfuise
+/home/dev/ws_slam/build/sfuise/CMakeFiles/sfuise_msgs_generate_messages_cpp.dir
+/home/dev/ws_slam/build/sfuise/CMakeFiles/sfuise_msgs_generate_messages_eus.dir
+/home/dev/ws_slam/build/sfuise/CMakeFiles/sfuise_msgs_generate_messages_lisp.dir
+/home/dev/ws_slam/build/sfuise/CMakeFiles/sfuise_msgs_generate_messages_nodejs.dir
+/home/dev/ws_slam/build/sfuise/CMakeFiles/sfuise_msgs_generate_messages_py.dir
+/home/dev/ws_slam/build/sfuise/catkin_generated/stamps/sfuise
+/home/dev/ws_slam/build/sfuise_msgs
+/home/dev/ws_slam/build/sfuise_msgs/CMakeFiles/_sfuise_msgs_generate_messages_check_deps_Calib.dir
+/home/dev/ws_slam/build/sfuise_msgs/CMakeFiles/_sfuise_msgs_generate_messages_check_deps_Estimate.dir
+/home/dev/ws_slam/build/sfuise_msgs/CMakeFiles/_sfuise_msgs_generate_messages_check_deps_Knot.dir
+/home/dev/ws_slam/build/sfuise_msgs/CMakeFiles/_sfuise_msgs_generate_messages_check_deps_Offset.dir
+/home/dev/ws_slam/build/sfuise_msgs/CMakeFiles/_sfuise_msgs_generate_messages_check_deps_Spline.dir
+/home/dev/ws_slam/build/sfuise_msgs/CMakeFiles/sfuise_msgs_gencpp.dir
+/home/dev/ws_slam/build/sfuise_msgs/CMakeFiles/sfuise_msgs_generate_messages.dir
+/home/dev/ws_slam/build/sfuise_msgs/CMakeFiles/sfuise_msgs_generate_messages_cpp.dir
+/home/dev/ws_slam/build/sfuise_msgs/CMakeFiles/sfuise_msgs_generate_messages_eus.dir
+/home/dev/ws_slam/build/sfuise_msgs/CMakeFiles/sfuise_msgs_generate_messages_lisp.dir
+/home/dev/ws_slam/build/sfuise_msgs/CMakeFiles/sfuise_msgs_generate_messages_nodejs.dir
+/home/dev/ws_slam/build/sfuise_msgs/CMakeFiles/sfuise_msgs_generate_messages_py.dir
+/home/dev/ws_slam/build/sfuise_msgs/CMakeFiles/sfuise_msgs_geneus.dir
+/home/dev/ws_slam/build/sfuise_msgs/CMakeFiles/sfuise_msgs_genlisp.dir
+/home/dev/ws_slam/build/sfuise_msgs/CMakeFiles/sfuise_msgs_gennodejs.dir
+/home/dev/ws_slam/build/sfuise_msgs/CMakeFiles/sfuise_msgs_genpy.dir
+/home/dev/ws_slam/build/sfuise_msgs/catkin_generated/stamps/sfuise_msgs
+/home/dev/ws_slam/devel/.private/sfuise
+/home/dev/ws_slam/devel/.private/sfuise/lib/sfuise
+/home/dev/ws_slam/devel/.private/sfuise/share/sfuise
+/home/dev/ws_slam/devel/.private/sfuise_msgs
+/home/dev/ws_slam/devel/.private/sfuise_msgs/include/sfuise_msgs
+/home/dev/ws_slam/devel/.private/sfuise_msgs/lib/python3/dist-packages/sfuise_msgs
+/home/dev/ws_slam/devel/.private/sfuise_msgs/share/common-lisp/ros/sfuise_msgs
+/home/dev/ws_slam/devel/.private/sfuise_msgs/share/gennodejs/ros/sfuise_msgs
+/home/dev/ws_slam/devel/.private/sfuise_msgs/share/roseus/ros/sfuise_msgs
+/home/dev/ws_slam/devel/.private/sfuise_msgs/share/sfuise_msgs
+/home/dev/ws_slam/devel/include/sfuise_msgs
+/home/dev/ws_slam/devel/lib/python3/dist-packages/sfuise_msgs
+/home/dev/ws_slam/devel/lib/sfuise
+/home/dev/ws_slam/devel/share/common-lisp/ros/sfuise_msgs
+/home/dev/ws_slam/devel/share/gennodejs/ros/sfuise_msgs
+/home/dev/ws_slam/devel/share/roseus/ros/sfuise_msgs
+/home/dev/ws_slam/devel/share/sfuise
+/home/dev/ws_slam/devel/share/sfuise_msgs
+/home/dev/ws_slam/logs/sfuise
+/home/dev/ws_slam/logs/sfuise_msgs
+/home/dev/ws_slam/src/LIO-SAM-MID360/doc/vicon_los
+/home/dev/ws_slam/src/LIO-SAM-MID360/doc/vicon_nlos_46
+/home/dev/ws_slam/src/LIO-SAM-MID360/doc/vicon_nlos_48
+/home/dev/ws_slam/src/SFUISE
+/home/dev/ws_slam/src/SFUISE/dataset
+/home/dev/ws_slam/src/SFUISE/sfuise
+/home/dev/ws_slam/src/SFUISE/sfuise_msgs
+/home/dev/ws_uwb/src/C-LIUO/config/vicon
+/home/dev/ws_uwb/src/SFUISE
+/home/dev/ws_uwb/src/SFUISE/dataset
+/home/dev/ws_uwb/src/SFUISE/sfuise
+/home/dev/ws_uwb/src/SFUISE/sfuise_msgs
+
+Script done on 2026-09-05 10:32:57+00:00 [COMMAND_EXIT_CODE="0"]

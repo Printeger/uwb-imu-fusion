@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.0.2)
+project(t00_gtsam_probe LANGUAGES CXX)
+find_package(GTSAM 4.2 REQUIRED)
+message(STATUS "T00_GTSAM_DIR=${GTSAM_DIR}")
+message(STATUS "T00_GTSAM_VERSION=${GTSAM_VERSION}")
+message(STATUS "T00_GTSAM_INCLUDE_DIR=${GTSAM_INCLUDE_DIR}")

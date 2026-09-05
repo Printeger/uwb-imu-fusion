@@ -1,0 +1,30 @@
+... logging to /home/dev/ws_uwb_ie/src/uwb-imu-fusion/doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/ros_home/log/a4f2c384-a915-11f1-8935-2231b48a98a9/roslaunch-9b6e620d8300-57273.log
+Checking log directory for disk usage. This may take a while.
+Press Ctrl-C to interrupt
+Done checking log file disk usage. Usage is <1GB.
+]2;roscore
+[1mstarted roslaunch server http://9b6e620d8300:35827/[0m
+ros_comm version 1.17.4
+
+
+SUMMARY
+========
+
+PARAMETERS
+ * /rosdistro: noetic
+ * /rosversion: 1.17.4
+
+NODES
+
+auto-starting new master
+[1mprocess[master]: started with pid [57314][0m
+[1mROS_MASTER_URI=http://9b6e620d8300:11322/[0m
+]2;roscore http://9b6e620d8300:11322/
+[1msetting /run_id to a4f2c384-a915-11f1-8935-2231b48a98a9[0m
+[1mprocess[rosout-1]: started with pid [57350][0m
+started core service [/rosout]
+[rosout-1] killing on exit
+[master] killing on exit
+shutting down processing monitor...
+... shutting down processing monitor complete
+[1mdone[0m

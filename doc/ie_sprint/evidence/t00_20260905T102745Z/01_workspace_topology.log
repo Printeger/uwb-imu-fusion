@@ -1,0 +1,55 @@
+Script started on 2026-09-05 10:28:21+00:00 [<not executed on terminal>]
+2026-09-05T10:28:21Z
+drwxrwxrwx 7 root root 4096 Sep  5 09:19 /home/dev/ws_uwb
+drwxrwxrwx 7 root root 4096 Sep  5 09:24 /home/dev/ws_uwb/src
+drwxr-xr-x 3 root root 4096 Sep  5 09:32 /home/dev/ws_uwb_ie
+drwxr-xr-x 3 root root 4096 Sep  5 09:32 /home/dev/ws_uwb_ie/src
+/home/dev/ws_uwb_ie
+/home/dev/ws_uwb
+/home/dev/ws_uwb/src/C-LIUO/package.xml
+/home/dev/ws_uwb/src/SFUISE/cf_msgs/package.xml
+/home/dev/ws_uwb/src/SFUISE/isas_msgs/package.xml
+/home/dev/ws_uwb/src/SFUISE/sfuise/package.xml
+/home/dev/ws_uwb/src/SFUISE/sfuise_msgs/package.xml
+/home/dev/ws_uwb/src/awesome-uwb-localization/package.xml
+/home/dev/ws_uwb/src/uwb-imu-fusion/package.xml
+/home/dev/ws_uwb/src/uwb-imu-positioning/common_msgs/package.xml
+/home/dev/ws_uwb/src/uwb-imu-positioning/uwb-imu-positioning/package.xml
+/home/dev/ws_uwb_ie/src/uwb-imu-fusion/package.xml
+/home/dev/ws_uwb/devel/_setup_util.py -> /home/dev/ws_uwb/devel/.private/catkin_tools_prebuild/_setup_util.py
+/home/dev/ws_uwb/devel/env.sh -> /home/dev/ws_uwb/devel/.private/catkin_tools_prebuild/env.sh
+/home/dev/ws_uwb/devel/local_setup.bash -> /home/dev/ws_uwb/devel/.private/catkin_tools_prebuild/local_setup.bash
+/home/dev/ws_uwb/devel/local_setup.fish -> /home/dev/ws_uwb/devel/.private/catkin_tools_prebuild/local_setup.fish
+/home/dev/ws_uwb/devel/local_setup.sh -> /home/dev/ws_uwb/devel/.private/catkin_tools_prebuild/local_setup.sh
+/home/dev/ws_uwb/devel/local_setup.zsh -> /home/dev/ws_uwb/devel/.private/catkin_tools_prebuild/local_setup.zsh
+/home/dev/ws_uwb/devel/setup.bash -> /home/dev/ws_uwb/devel/.private/catkin_tools_prebuild/setup.bash
+/home/dev/ws_uwb/devel/setup.fish -> /home/dev/ws_uwb/devel/.private/catkin_tools_prebuild/setup.fish
+/home/dev/ws_uwb/devel/setup.sh -> /home/dev/ws_uwb/devel/.private/catkin_tools_prebuild/setup.sh
+/home/dev/ws_uwb/devel/setup.zsh -> /home/dev/ws_uwb/devel/.private/catkin_tools_prebuild/setup.zsh
+/home/dev/ws_uwb_ie/.catkin_workspace: MISSING
+/home/dev/ws_uwb/.catkin_workspace: MISSING
+/home/dev/ws_uwb_ie/devel/.catkin: MISSING
+/home/dev/ws_uwb/devel/.catkin: /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/.catkin_tools
+/home/dev/ws_uwb/.catkin_tools/profiles
+/home/dev/ws_uwb/build
+/home/dev/ws_uwb/build/catkin_tools_prebuild
+/home/dev/ws_uwb/build/uwb_imu_fgo
+/home/dev/ws_uwb/devel
+/home/dev/ws_uwb/devel/.private
+/home/dev/ws_uwb/devel/include
+/home/dev/ws_uwb/devel/lib
+/home/dev/ws_uwb/devel/share
+/home/dev/ws_uwb/logs
+/home/dev/ws_uwb/logs/catkin_tools_prebuild
+/home/dev/ws_uwb/logs/uwb_imu_fgo
+/home/dev/ws_uwb/src
+/home/dev/ws_uwb/src/C-LIUO
+/home/dev/ws_uwb/src/SFUISE
+/home/dev/ws_uwb/src/awesome-uwb-localization
+/home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/src/uwb-imu-positioning
+/home/dev/ws_uwb_ie/src
+/home/dev/ws_uwb_ie/src/uwb-imu-fusion
+
+Script done on 2026-09-05 10:28:21+00:00 [COMMAND_EXIT_CODE="0"]

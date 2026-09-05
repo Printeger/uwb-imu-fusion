@@ -1,0 +1,34 @@
+Script started on 2026-09-05 10:36:24+00:00 [TERM="dumb" TTY="/dev/pts/4" COLUMNS="80" LINES="24"]
+RUN_ID=t00_baseline_sfuise_walk1_old_cfe6d29
+UTC_START=2026-09-05T10:36:25Z
+PWD=/home/dev/ws_uwb_ie/src/uwb-imu-fusion/doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1
+COMMAND=/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_node _config_path:=/home/dev/ws_uwb_ie/src/uwb-imu-fusion/doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/config/config_effective.yaml
+ROS_MASTER_URI=http://127.0.0.1:11322
+CMAKE_PREFIX_PATH=/home/dev/ws_uwb/devel:/home/dev/ws_rl/devel:/home/dev/ws_LIU/devel:/opt/ros/noetic
+ROS_PACKAGE_PATH=/home/dev/ws_uwb/src/uwb-imu-fusion:/home/dev/ws_rl/src:/home/dev/ws_LIU/src/glim:/home/dev/ws_LIU/src/livox_ros_driver2:/home/dev/ws_LIU/src/FAST_LIO:/home/dev/ws_LIU/src/nlink_parser:/home/dev/ws_LIU/src/Coco-LIC-UWB:/home/dev/ws_LIU/src/open_vins/ov_core:/home/dev/ws_LIU/src/liu:/opt/ros/noetic/share
+LD_LIBRARY_PATH=/home/dev/ws_uwb/devel/lib:/home/dev/ws_rl/devel/lib:/home/dev/ws_LIU/devel/lib:/opt/ros/noetic/lib
+OLD_SOURCE_HEAD=cfe6d29cc2a0077d9a0b958461d1615aa5e9079e
+CURRENT_SOURCE_HEAD=28d8e9fff8fe08f2210553f4fc1d78e44191f014
+96e7415d1f5391f0cf43fdd78d08728166a90add94167b78d2110d62b36b0ad8  /home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_node
+968e621ad413c7c16ac2ccee3c703d74b42040507b57637bae7cdda725091125  /home/dev/ws_uwb_ie/src/uwb-imu-fusion/doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/config/config_effective.yaml
+0d61f4b85a9df1062d8e8bba988fbb559fa2767d4c1d21d6e3e3bb6d514c2df0  /home/dev/ws_uwb_ie/src/uwb-imu-fusion/doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/config/config_original.yaml
+ca577e3666ad5876aa8347289a98793b8da0e68b5db459f2d7d69a6adcacd944  /home/dev/ws_uwb/src/SFUISE/dataset/ISAS-Walk1.bag
+BINARY_STAT=/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_node size=15156712 mtime=2026-06-11 08:11:08.201637947 +0000
+ROS_MASTER_READY=1
+TERMINATION=NATURAL_EXIT
+NODE_EXIT_CODE=127
+WALL_SECONDS=0.105
+PEAK_RSS_KIB=8
+UTC_END=2026-09-05T10:36:25Z
+OUTPUT_FILES
+1977	/home/dev/ws_uwb_ie/src/uwb-imu-fusion/doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/config/config_effective.yaml
+1953	/home/dev/ws_uwb_ie/src/uwb-imu-fusion/doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/config/config_original.yaml
+5	/home/dev/ws_uwb_ie/src/uwb-imu-fusion/doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/ros_home/roscore-11322.pid
+0	/home/dev/ws_uwb_ie/src/uwb-imu-fusion/doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/roscore.log
+218	/home/dev/ws_uwb_ie/src/uwb-imu-fusion/doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/stderr.log
+0	/home/dev/ws_uwb_ie/src/uwb-imu-fusion/doc/ie_sprint/evidence/t00_20260905T102745Z/baseline_sfuise_walk1/stdout.log
+STDOUT_TAIL
+STDERR_TAIL
+/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_node: symbol lookup error: /home/dev/ws_uwb/devel/lib/libuwb_imu_fgo.so: undefined symbol: _ZNK5gtsam15NonlinearFactor5errorERKNS_12HybridValuesE
+
+Script done on 2026-09-05 10:36:26+00:00 [COMMAND_EXIT_CODE="127"]

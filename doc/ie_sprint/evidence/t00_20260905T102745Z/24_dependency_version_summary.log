@@ -1,0 +1,133 @@
+2026-09-05T10:43:20Z
+ROS_AND_TOOLCHAIN
+noetic
+0.8.12
+catkin_tools 0.9.4 (C) 2014-2026 Open Source Robotics Foundation
+catkin_tools is released under the Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+---
+Using Python 3.8.10 (default, Mar 18 2025, 20:04:55) [GCC 9.4.0]
+cmake version 3.16.3
+c++ (Ubuntu 9.4.0-1ubuntu1~20.04.2) 9.4.0
+APT_PACKAGE_VERSIONS
+ros-noetic-ros-base 1.5.0-1focal.20250521.010531
+exit_code=0
+ros-noetic-catkin 0.8.12-1focal.20250426.001935
+exit_code=0
+libeigen3-dev 3.3.7-2
+exit_code=0
+libboost-dev 1.71.0.0ubuntu2
+exit_code=0
+libyaml-cpp-dev 0.6.2-4ubuntu1
+exit_code=0
+libarmadillo-dev 1:9.800.4+dfsg-1build1
+exit_code=0
+libgtest-dev 1.10.0-2
+exit_code=0
+GTSAM_CONFIG
+# This is a basic version file for the Config-mode of find_package().
+# It is used by write_basic_package_version_file() as input file for configure_file()
+# to create a version-file which can be installed along a config.cmake file.
+#
+# The created file sets PACKAGE_VERSION_EXACT if the current version string and
+# the requested version string are exactly the same and it sets
+# PACKAGE_VERSION_COMPATIBLE if the current version is >= requested version,
+# but only if the requested major version is the same as the current one.
+# The variable CVF_VERSION must be set before calling configure_file().
+
+
+set(PACKAGE_VERSION "4.0.3")
+
+if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)
+  set(PACKAGE_VERSION_COMPATIBLE FALSE)
+else()
+
+  if("4.0.3" MATCHES "^([0-9]+)\\.")
+    set(CVF_VERSION_MAJOR "${CMAKE_MATCH_1}")
+  else()
+    set(CVF_VERSION_MAJOR "4.0.3")
+  endif()
+
+  if(PACKAGE_FIND_VERSION_MAJOR STREQUAL CVF_VERSION_MAJOR)
+    set(PACKAGE_VERSION_COMPATIBLE TRUE)
+  else()
+    set(PACKAGE_VERSION_COMPATIBLE FALSE)
+  endif()
+
+  if(PACKAGE_FIND_VERSION STREQUAL PACKAGE_VERSION)
+      set(PACKAGE_VERSION_EXACT TRUE)
+  endif()
+endif()
+
+
+PROJECT_REQUIRED_PACKAGES
+    10	find_package(catkin REQUIRED COMPONENTS
+    11	  roscpp
+    12	  rosbag
+    13	  sensor_msgs
+    14	  std_msgs
+    15	  geometry_msgs
+    16	  nav_msgs
+    17	  tf
+    18	  nodelet
+    19	  message_generation
+    20	  eigen_conversions
+    21	  visualization_msgs
+    22	  uwb_driver
+    23	  isas_msgs
+    24	)
+    25	
+    26	add_message_files(
+    27	  FILES
+    28	  LinktrackNode2.msg
+    29	  LinktrackNodeframe3.msg
+    30	  McdLinktrackNodeframe3.msg
+    31	  LinktrackTagframe0.msg
+    32	  AuxCommand.msg
+    33	  Corrections.msg
+    34	  Gains.msg
+    35	  LQRTrajectory.msg
+    36	  Odometry.msg
+    37	  OutputData.msg
+    38	  PPROutputData.msg
+    39	  PolynomialTrajectory.msg
+    40	  PositionCommand.msg
+    41	  SO3Command.msg
+    42	  Serial.msg
+    43	  StatusData.msg
+    44	  TRPYCommand.msg
+    45	)
+    46	
+    47	generate_messages(
+    48	  DEPENDENCIES
+    49	  std_msgs
+    50	  geometry_msgs
+    51	  nav_msgs
+    52	)
+    53	
+    54	catkin_package(
+    55	  INCLUDE_DIRS include
+    56	  LIBRARIES ${PROJECT_NAME}
+    57	  CATKIN_DEPENDS
+    58	    roscpp
+    59	    rosbag
+    60	    sensor_msgs
+    61	    std_msgs
+    62	    geometry_msgs
+    63	    nav_msgs
+    64	    tf
+    65	    message_runtime
+    66	    eigen_conversions
+    67	    visualization_msgs
+    68	    uwb_driver
+    69	)
+    70	
+    71	# --- GTSAM (≥ 4.2 required for GncOptimizer / setInlierCostThresholdsAtProbability) ---
+    72	find_package(GTSAM 4.2 REQUIRED)
+    73	if(GTSAM_FOUND)
+    74	  include_directories(${GTSAM_INCLUDE_DIR})
+    75	  message(STATUS "GTSAM found: ${GTSAM_INCLUDE_DIR} (version: ${GTSAM_VERSION})")
+    76	endif()
+    77	
+    78	# --- Eigen3 ---
+    79	find_package(Eigen3 REQUIRED)
+    80	if(Eigen3_FOUND)

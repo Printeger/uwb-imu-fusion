@@ -1,0 +1,96 @@
+Script started on 2026-09-05 10:39:14+00:00 [<not executed on terminal>]
+2026-09-05T10:39:14Z
+[35m[0m[0m
+[36mProfile:[0m                     [33mdefault[0m[0m
+[36mExtending:[0m          [32m[cached][0m[0m [33m/opt/ros/noetic[0m[0m
+[36mWorkspace:[0m                   [33m/home/dev/ws_uwb_ie[0m[0m
+[35m[0m[0m
+[36mBuild Space:[0m        [32m[exists][0m[0m [33m/home/dev/ws_uwb_ie/build[0m[0m
+[36mDevel Space:[0m        [32m[exists][0m[0m [33m/home/dev/ws_uwb_ie/devel[0m[0m
+[36mInstall Space:[0m      [34m[unused][0m[0m [33m/home/dev/ws_uwb_ie/install[0m[0m
+[36mLog Space:[0m          [32m[exists][0m[0m [33m/home/dev/ws_uwb_ie/logs[0m[0m
+[36mSource Space:[0m       [32m[exists][0m[0m [33m/home/dev/ws_uwb_ie/src[0m[0m
+[36mDESTDIR:[0m            [34m[unused][0m[0m [33mNone[0m[0m
+[35m[0m[0m
+[36mDevel Space Layout:[0m          [33mlinked[0m[0m
+[36mInstall Space Layout:[0m        [33mNone[0m[0m
+[35m[0m[0m
+[36mAdditional CMake Args:[0m       [33mNone[0m[0m
+[36mAdditional Make Args:[0m        [33mNone[0m[0m
+[36mAdditional catkin Make Args:[0m [33mNone[0m[0m
+[36mInternal Make Job Server:[0m    [33mTrue[0m[0m
+[36mCache Job Environments:[0m      [33mFalse[0m[0m
+[35m[0m[0m
+[36mBuildlisted Packages:[0m        [33mNone[0m[0m
+[36mSkiplisted Packages:[0m         [33mNone[0m[0m
+[35m[0m[0m
+
+
+[31m[0m[0m
+[1m[31mWARNING:[0m
+[0mYour
+current
+environment's
+CMAKE_PREFIX_PATH
+is
+different
+from
+the
+cached
+CMAKE_PREFIX_PATH
+used
+the
+last
+time
+this
+workspace
+was
+built.
+
+If
+you
+want
+to
+use
+a
+different
+CMAKE_PREFIX_PATH
+you
+should
+call
+[33m`catkin
+clean`[0m
+to
+remove
+all
+references
+to
+the
+previous
+CMAKE_PREFIX_PATH.
+
+[36mCached
+CMAKE_PREFIX_PATH:[0m
+	[33m/opt/ros/noetic[0m
+[36mCurrent
+CMAKE_PREFIX_PATH:[0m
+	[33m/home/dev/ws_rl/devel:/home/dev/ws_LIU/devel:/opt/ros/noetic[0m[0m
+[31m[0m[0m
+
+[35m-[0m [36muwb_imu_fgo[0m[0m
+53:CMAKE_CXX_COMPILER:FILEPATH=/usr/bin/c++
+374:catkin_DIR:PATH=/opt/ros/noetic/share/catkin/cmake
+543:uwb_driver_DIR:PATH=uwb_driver_DIR-NOTFOUND
+653:CMAKE_HOME_DIRECTORY:INTERNAL=/home/dev/ws_uwb_ie/src/uwb-imu-fusion
+test_config.cpp
+test_graph_builder.cpp
+test_imu_preint.cpp
+test_optimizer.cpp
+test_outlier.cpp
+test_trilaterate.cpp
+test_uwb_factor.cpp
+TEST_COMMAND=catkin test uwb_imu_fgo
+TEST_STATUS=NOT_RUN
+TEST_REASON=current-commit configure failed before targets were generated (missing uwb_driver); per T00 dependency rule tests were not executed
+
+Script done on 2026-09-05 10:39:14+00:00 [COMMAND_EXIT_CODE="0"]

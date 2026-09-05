@@ -1,0 +1,131 @@
+Script started on 2026-09-05 10:28:40+00:00 [<not executed on terminal>]
+2026-09-05T10:28:40Z
+main
+cfe6d29cc2a0077d9a0b958461d1615aa5e9079e
+## main...origin/main
+/home/dev/ws_uwb/src/uwb-imu-fusion
+ .../src/uwb-imu-fusion/.git/COMMIT_EDITMSG}        |    1 +
+ .../ws_uwb_ie/src/uwb-imu-fusion/.git/FETCH_HEAD}  |    1 +
+ .../src/uwb-imu-fusion/.git/HEAD                   |    2 +-
+ .../src/uwb-imu-fusion/.git/config                 |    7 +-
+ .../src/uwb-imu-fusion/.git/index                  |  Bin 61546 -> 61809 bytes
+ .../src/uwb-imu-fusion/.git/logs/HEAD              |    4 +-
+ .../feature/uwb-imu-fusion-ie-postprocessing}      |    2 +
+ .../src/uwb-imu-fusion/.git/logs/refs/heads/main   |    2 +-
+ .../.git/logs/refs/remotes/origin/HEAD             |    2 +-
+ .../feature/uwb-imu-fusion-ie-postprocessing}      |    2 +
+ .../28/d8e9fff8fe08f2210553f4fc1d78e44191f014}     |  Bin 0 -> 148 bytes
+ .../62/bad379d0cf0472d65deb221ffd99e666f7116b}     |  Bin 0 -> 484 bytes
+ .../8e/62d2f80c753d169b666327d40a7271c4caf247}     |  Bin 0 -> 37363 bytes
+ .../92/c12d23bf8657fbd89f7ed377067a4355ed3680}     |  Bin 0 -> 101 bytes
+ .../c6/cbe8ccd5b9d5b3d072aee161570fbc1e36e0c2}     |  Bin 0 -> 69 bytes
+ .../f0/62f8c2c881c38012789dd49f55673c546bd548}     |  Bin 0 -> 21666 bytes
+ .../feature/uwb-imu-fusion-ie-postprocessing}      |    1 +
+ .../feature/uwb-imu-fusion-ie-postprocessing}      |    1 +
+ .../dev/ws_uwb_ie/src/uwb-imu-fusion/AGENTS.md}    |   38 +
+ .../uwb-imu-fusion/doc/ie_sprint/REPO_AUDIT.md}    |  113 ++
+ .../src/uwb-imu-fusion/doc/ie_sprint/STATUS.md}    |   74 ++
+ .../t00_20260905T102745Z/00_start_snapshot.log}    |   23 +
+ .../01_workspace_topology.log}                     |   55 +
+ .../t00_20260905T102745Z/02_source_identity.log}   |    0
+ .../src/uwb-imu-fusion/doc/v1}/00-overview.md      |    0
+ .../doc/v1}/01-awesome-uwb-localization.md         |    0
+ .../src/uwb-imu-fusion/doc/v1}/02-SFUISE.md        |    0
+ .../doc/v1}/03-uwb-imu-positioning.md              |    0
+ .../uwb-imu-fusion/doc/v1}/CODE_DOCUMENTATION.md   |    0
+ .../src/uwb-imu-fusion/doc/v1}/dev.tex             |    0
+ .../doc/v1}/experimental_results.pdf               |  Bin
+ .../doc/v1}/experimental_results.tex               |    0
+ .../src/uwb-imu-fusion/doc/v1}/uwb_sim.tex         |    0
+ .../src/uwb-imu-fusion/doc/v2/paper_structure.tex} |  593 ++++++++++
+ .../src/uwb-imu-fusion/doc/v2/v2_roadmap.md}       | 1153 ++++++++++++++++++++
+ 35 files changed, 2069 insertions(+), 5 deletions(-)
+/home/dev/ws_uwb/src/uwb-imu-positioning/uwb-imu-positioning/package.xml
+3:  <name>uwb-imu-positioning</name>
+35:  <!--   <build_depend>message_generation</build_depend> -->
+43:  <build_depend>common_msgs</build_depend>
+44:  <build_depend>octomap</build_depend>
+45:  <build_depend>roscpp</build_depend>
+46:  <build_depend>rospy</build_depend>
+47:  <build_depend>std_msgs</build_depend>
+48:  <build_depend>tf</build_depend>
+49:  <build_depend>libpcl-all-dev</build_depend>
+50:  <build_depend>cv_bridge</build_depend>
+51:  <build_depend>pcl_conversions</build_depend>
+52:  <build_depend>pcl_ros</build_depend>
+53:  <build_depend>pcl_msgs</build_depend>
+54:  <build_depend>tf_conversions</build_depend>
+
+/home/dev/ws_uwb_ie/src/uwb-imu-fusion/package.xml
+3:  <name>uwb_imu_fgo</name>
+12:  <build_depend>roscpp</build_depend>
+13:  <build_depend>rosbag</build_depend>
+14:  <build_depend>sensor_msgs</build_depend>
+15:  <build_depend>std_msgs</build_depend>
+16:  <build_depend>geometry_msgs</build_depend>
+17:  <build_depend>nav_msgs</build_depend>
+18:  <build_depend>tf</build_depend>
+19:  <build_depend>message_generation</build_depend>
+20:  <build_depend>eigen_conversions</build_depend>
+21:  <build_depend>visualization_msgs</build_depend>
+22:  <build_depend>nodelet</build_depend>
+23:  <build_depend>uwb_driver</build_depend>
+24:  <build_depend>isas_msgs</build_depend>
+26:  <exec_depend>roscpp</exec_depend>
+27:  <exec_depend>rosbag</exec_depend>
+28:  <exec_depend>sensor_msgs</exec_depend>
+29:  <exec_depend>std_msgs</exec_depend>
+30:  <exec_depend>geometry_msgs</exec_depend>
+31:  <exec_depend>nav_msgs</exec_depend>
+32:  <exec_depend>tf</exec_depend>
+33:  <exec_depend>message_runtime</exec_depend>
+34:  <exec_depend>eigen_conversions</exec_depend>
+35:  <exec_depend>visualization_msgs</exec_depend>
+36:  <exec_depend>nodelet</exec_depend>
+37:  <exec_depend>uwb_driver</exec_depend>
+38:  <exec_depend>isas_msgs</exec_depend>
+
+/home/dev/ws_uwb/src/uwb-imu-positioning/common_msgs/package.xml
+3:  <name>common_msgs</name>
+35:  <!--   <build_depend>message_generation</build_depend> -->
+43:  <build_depend>angles</build_depend>
+44:  <build_depend>geometry_msgs</build_depend>
+45:  <build_depend>roscpp</build_depend>
+46:  <build_depend>rospy</build_depend>
+47:  <build_depend>sensor_msgs</build_depend>
+48:  <build_depend>std_msgs</build_depend>
+49:  <build_depend>tf</build_depend>
+50:  <build_depend>message_generation</build_depend>
+
+/home/dev/ws_uwb/src/SFUISE/isas_msgs/package.xml
+3:  <name>isas_msgs</name>
+9:  <build_depend>std_msgs</build_depend>
+11:  <exec_depend>std_msgs</exec_depend>
+12:  <exec_depend>message_runtime</exec_depend>
+
+/home/dev/ws_uwb/src/SFUISE/sfuise/package.xml
+3:  <name>sfuise</name>
+13:  <depend>roscpp</depend>
+14:  <depend>std_msgs</depend>
+15:  <depend>nav_msgs</depend>
+16:  <depend>sensor_msgs</depend>
+17:  <depend>geometry_msgs</depend>
+18:  <depend>message_generation</depend>
+19:  <depend>message_runtime</depend>
+20:  <depend>cf_msgs</depend>
+21:  <depend>isas_msgs</depend>
+22:  <depend>sfuise_msgs</depend>
+
+/home/dev/ws_uwb/src/SFUISE/cf_msgs/package.xml
+3:  <name>cf_msgs</name>
+9:  <build_depend>std_msgs</build_depend>
+11:  <exec_depend>std_msgs</exec_depend>
+12:  <exec_depend>message_runtime</exec_depend>
+
+/home/dev/ws_uwb/src/SFUISE/sfuise_msgs/package.xml
+3:  <name>sfuise_msgs</name>
+9:  <build_depend>geometry_msgs</build_depend>
+11:  <exec_depend>geometry_msgs</exec_depend>
+12:  <exec_depend>message_runtime</exec_depend>
+
+Script done on 2026-09-05 10:28:40+00:00 [COMMAND_EXIT_CODE="0"]

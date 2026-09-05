@@ -1,0 +1,169 @@
+Script started on 2026-09-05 10:28:57+00:00 [<not executed on terminal>]
+2026-09-05T10:28:57Z
+R100	doc/00-overview.md	doc/v1/00-overview.md
+R100	doc/01-awesome-uwb-localization.md	doc/v1/01-awesome-uwb-localization.md
+R100	doc/02-SFUISE.md	doc/v1/02-SFUISE.md
+R100	doc/03-uwb-imu-positioning.md	doc/v1/03-uwb-imu-positioning.md
+R100	doc/CODE_DOCUMENTATION.md	doc/v1/CODE_DOCUMENTATION.md
+R100	doc/dev.tex	doc/v1/dev.tex
+R100	doc/experimental_results.pdf	doc/v1/experimental_results.pdf
+R100	doc/experimental_results.tex	doc/v1/experimental_results.tex
+R100	doc/uwb_sim.tex	doc/v1/uwb_sim.tex
+A	doc/v2/paper_structure.tex
+A	doc/v2/v2_roadmap.md
+ doc/{ => v1}/00-overview.md                 |    0
+ doc/{ => v1}/01-awesome-uwb-localization.md |    0
+ doc/{ => v1}/02-SFUISE.md                   |    0
+ doc/{ => v1}/03-uwb-imu-positioning.md      |    0
+ doc/{ => v1}/CODE_DOCUMENTATION.md          |    0
+ doc/{ => v1}/dev.tex                        |    0
+ doc/{ => v1}/experimental_results.pdf       |  Bin
+ doc/{ => v1}/experimental_results.tex       |    0
+ doc/{ => v1}/uwb_sim.tex                    |    0
+ doc/v2/paper_structure.tex                  |  593 ++++++++++++++
+ doc/v2/v2_roadmap.md                        | 1153 +++++++++++++++++++++++++++
+ 11 files changed, 1746 insertions(+)
+/home/dev/ws_uwb/src/C-LIUO/package.xml
+/home/dev/ws_uwb/src/SFUISE/cf_msgs/package.xml
+/home/dev/ws_uwb/src/SFUISE/isas_msgs/package.xml
+/home/dev/ws_uwb/src/SFUISE/sfuise/package.xml
+/home/dev/ws_uwb/src/SFUISE/sfuise_msgs/package.xml
+/home/dev/ws_uwb/src/awesome-uwb-localization/package.xml
+/home/dev/ws_uwb/src/uwb-imu-fusion/package.xml
+/home/dev/ws_uwb/src/uwb-imu-positioning/common_msgs/package.xml
+/home/dev/ws_uwb/src/uwb-imu-positioning/uwb-imu-positioning/package.xml
+/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/libuwb_imu_fgo.so
+/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/pkgconfig/uwb_imu_fgo.pc
+/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_node
+/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/share/common-lisp/ros/uwb_imu_fgo/msg/uwb_imu_fgo-msg.asd
+/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/share/uwb_imu_fgo/cmake/uwb_imu_fgo-msg-extras.cmake
+/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/share/uwb_imu_fgo/cmake/uwb_imu_fgo-msg-paths.cmake
+/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/share/uwb_imu_fgo/cmake/uwb_imu_fgoConfig-version.cmake
+/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/share/uwb_imu_fgo/cmake/uwb_imu_fgoConfig.cmake
+79:CMAKE_CXX_COMPILER:FILEPATH=/usr/bin/c++
+366:GTSAM_DIR:PATH=/usr/local/lib/cmake/GTSAM
+466:catkin_DIR:PATH=/opt/ros/noetic/share/catkin/cmake
+744:CMAKE_HOME_DIRECTORY:INTERNAL=/home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeCache.txt:635:uwb_imu_fgo_SOURCE_DIR:STATIC=/home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeCache.txt:744:CMAKE_HOME_DIRECTORY:INTERNAL=/home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/rosgraph_msgs_generate_messages_lisp.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/rosgraph_msgs_generate_messages_lisp.dir/build.make:70:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/rosgraph_msgs_generate_messages_lisp.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_imu_preint.dir/DependInfo.cmake:7:  "/home/dev/ws_uwb/src/uwb-imu-fusion/test/test_imu_preint.cpp" "/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_imu_preint.dir/test/test_imu_preint.cpp.o"
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_imu_preint.dir/DependInfo.cmake:33:  "/home/dev/ws_uwb/src/uwb-imu-fusion/include"
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf_generate_messages_py.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf_generate_messages_py.dir/build.make:70:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf_generate_messages_py.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/visualization_msgs_generate_messages_cpp.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/visualization_msgs_generate_messages_cpp.dir/build.make:70:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/visualization_msgs_generate_messages_cpp.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_imu_preint.dir/flags.make:9:CXX_INCLUDES = -I/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/include -I/home/dev/ws_uwb/src/uwb-imu-fusion/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp -isystem /usr/include/eigen3 -isystem /usr/local/include/gtsam/3rdparty/SuiteSparse_config -isystem /usr/local/include/gtsam/3rdparty/CCOLAMD -isystem /usr/local/include/gtsam/3rdparty/metis -isystem /usr/local/include/gtsam/3rdparty/cephes 
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/_run_tests_uwb_imu_fgo_gtest_test_optimizer.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/_run_tests_uwb_imu_fgo_gtest_test_optimizer.dir/build.make:74:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/_run_tests_uwb_imu_fgo_gtest_test_optimizer.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_graph_builder.dir/DependInfo.cmake:7:  "/home/dev/ws_uwb/src/uwb-imu-fusion/test/test_graph_builder.cpp" "/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_graph_builder.dir/test/test_graph_builder.cpp.o"
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_graph_builder.dir/DependInfo.cmake:33:  "/home/dev/ws_uwb/src/uwb-imu-fusion/include"
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf2_msgs_generate_messages_lisp.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf2_msgs_generate_messages_lisp.dir/build.make:70:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf2_msgs_generate_messages_lisp.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_graph_builder.dir/flags.make:9:CXX_INCLUDES = -I/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/include -I/home/dev/ws_uwb/src/uwb-imu-fusion/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp -isystem /usr/include/eigen3 -isystem /usr/local/include/gtsam/3rdparty/SuiteSparse_config -isystem /usr/local/include/gtsam/3rdparty/CCOLAMD -isystem /usr/local/include/gtsam/3rdparty/metis -isystem /usr/local/include/gtsam/3rdparty/cephes 
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf_generate_messages_lisp.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf_generate_messages_lisp.dir/build.make:70:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf_generate_messages_lisp.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf_generate_messages_nodejs.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf_generate_messages_nodejs.dir/build.make:70:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf_generate_messages_nodejs.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_imu_preint.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_imu_preint.dir/build.make:61:CMakeFiles/test_imu_preint.dir/test/test_imu_preint.cpp.o: /home/dev/ws_uwb/src/uwb-imu-fusion/test/test_imu_preint.cpp
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_imu_preint.dir/build.make:63:	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/test_imu_preint.dir/test/test_imu_preint.cpp.o -c /home/dev/ws_uwb/src/uwb-imu-fusion/test/test_imu_preint.cpp
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_imu_preint.dir/build.make:67:	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dev/ws_uwb/src/uwb-imu-fusion/test/test_imu_preint.cpp > CMakeFiles/test_imu_preint.dir/test/test_imu_preint.cpp.i
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_imu_preint.dir/build.make:71:	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dev/ws_uwb/src/uwb-imu-fusion/test/test_imu_preint.cpp -o CMakeFiles/test_imu_preint.dir/test/test_imu_preint.cpp.s
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_imu_preint.dir/build.make:188:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_imu_preint.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/_run_tests_uwb_imu_fgo.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/_run_tests_uwb_imu_fgo.dir/build.make:70:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/_run_tests_uwb_imu_fgo.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_graph_builder.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_graph_builder.dir/build.make:61:CMakeFiles/test_graph_builder.dir/test/test_graph_builder.cpp.o: /home/dev/ws_uwb/src/uwb-imu-fusion/test/test_graph_builder.cpp
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_graph_builder.dir/build.make:63:	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/test_graph_builder.dir/test/test_graph_builder.cpp.o -c /home/dev/ws_uwb/src/uwb-imu-fusion/test/test_graph_builder.cpp
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_graph_builder.dir/build.make:67:	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dev/ws_uwb/src/uwb-imu-fusion/test/test_graph_builder.cpp > CMakeFiles/test_graph_builder.dir/test/test_graph_builder.cpp.i
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_graph_builder.dir/build.make:71:	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dev/ws_uwb/src/uwb-imu-fusion/test/test_graph_builder.cpp -o CMakeFiles/test_graph_builder.dir/test/test_graph_builder.cpp.s
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_graph_builder.dir/build.make:188:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_graph_builder.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages.dir/build.make:70:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/CMakeDirectoryInformation.cmake:5:set(CMAKE_RELATIVE_PATH_TOP_SOURCE "/home/dev/ws_uwb/src/uwb-imu-fusion")
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_py.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_py.dir/build.make:63:/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/python3/dist-packages/uwb_imu_fgo/msg/_LinktrackNode2.py: /home/dev/ws_uwb/src/uwb-imu-fusion/msg/LinktrackNode2.msg
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_py.dir/build.make:65:	catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/genpy/cmake/../../../lib/genpy/genmsg_py.py /home/dev/ws_uwb/src/uwb-imu-fusion/msg/LinktrackNode2.msg -Iuwb_imu_fgo:/home/dev/ws_uwb/src/uwb-imu-fusion/msg -Istd_msgs:/opt/ros/noetic/share/std_msgs/cmake/../msg -p uwb_imu_fgo -o /home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/python3/dist-packages/uwb_imu_fgo/msg
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_py.dir/build.make:68:/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/python3/dist-packages/uwb_imu_fgo/msg/_LinktrackNodeframe3.py: /home/dev/ws_uwb/src/uwb-imu-fusion/msg/LinktrackNodeframe3.msg
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_py.dir/build.make:70:/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/python3/dist-packages/uwb_imu_fgo/msg/_LinktrackNodeframe3.py: /home/dev/ws_uwb/src/uwb-imu-fusion/msg/LinktrackNode2.msg
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_py.dir/build.make:72:	catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/genpy/cmake/../../../lib/genpy/genmsg_py.py /home/dev/ws_uwb/src/uwb-imu-fusion/msg/LinktrackNodeframe3.msg -Iuwb_imu_fgo:/home/dev/ws_uwb/src/uwb-imu-fusion/msg -Istd_msgs:/opt/ros/noetic/share/std_msgs/cmake/../msg -p uwb_imu_fgo -o /home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/python3/dist-packages/uwb_imu_fgo/msg
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_py.dir/build.make:75:/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/python3/dist-packages/uwb_imu_fgo/msg/_LinktrackTagframe0.py: /home/dev/ws_uwb/src/uwb-imu-fusion/msg/LinktrackTagframe0.msg
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_py.dir/build.make:77:	catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/genpy/cmake/../../../lib/genpy/genmsg_py.py /home/dev/ws_uwb/src/uwb-imu-fusion/msg/LinktrackTagframe0.msg -Iuwb_imu_fgo:/home/dev/ws_uwb/src/uwb-imu-fusion/msg -Istd_msgs:/opt/ros/noetic/share/std_msgs/cmake/../msg -p uwb_imu_fgo -o /home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/python3/dist-packages/uwb_imu_fgo/msg
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_py.dir/build.make:105:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_py.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_config.dir/DependInfo.cmake:7:  "/home/dev/ws_uwb/src/uwb-imu-fusion/test/test_config.cpp" "/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_config.dir/test/test_config.cpp.o"
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_config.dir/DependInfo.cmake:33:  "/home/dev/ws_uwb/src/uwb-imu-fusion/include"
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/run_tests.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/run_tests.dir/build.make:70:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/run_tests.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_eus.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_eus.dir/build.make:63:/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/share/roseus/ros/uwb_imu_fgo/msg/LinktrackNode2.l: /home/dev/ws_uwb/src/uwb-imu-fusion/msg/LinktrackNode2.msg
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_eus.dir/build.make:65:	catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/geneus/cmake/../../../lib/geneus/gen_eus.py /home/dev/ws_uwb/src/uwb-imu-fusion/msg/LinktrackNode2.msg -Iuwb_imu_fgo:/home/dev/ws_uwb/src/uwb-imu-fusion/msg -Istd_msgs:/opt/ros/noetic/share/std_msgs/cmake/../msg -p uwb_imu_fgo -o /home/dev/ws_uwb/devel/.private/uwb_imu_fgo/share/roseus/ros/uwb_imu_fgo/msg
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_eus.dir/build.make:68:/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/share/roseus/ros/uwb_imu_fgo/msg/LinktrackNodeframe3.l: /home/dev/ws_uwb/src/uwb-imu-fusion/msg/LinktrackNodeframe3.msg
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_eus.dir/build.make:70:/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/share/roseus/ros/uwb_imu_fgo/msg/LinktrackNodeframe3.l: /home/dev/ws_uwb/src/uwb-imu-fusion/msg/LinktrackNode2.msg
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_eus.dir/build.make:72:	catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/geneus/cmake/../../../lib/geneus/gen_eus.py /home/dev/ws_uwb/src/uwb-imu-fusion/msg/LinktrackNodeframe3.msg -Iuwb_imu_fgo:/home/dev/ws_uwb/src/uwb-imu-fusion/msg -Istd_msgs:/opt/ros/noetic/share/std_msgs/cmake/../msg -p uwb_imu_fgo -o /home/dev/ws_uwb/devel/.private/uwb_imu_fgo/share/roseus/ros/uwb_imu_fgo/msg
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_eus.dir/build.make:75:/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/share/roseus/ros/uwb_imu_fgo/msg/LinktrackTagframe0.l: /home/dev/ws_uwb/src/uwb-imu-fusion/msg/LinktrackTagframe0.msg
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_eus.dir/build.make:77:	catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/geneus/cmake/../../../lib/geneus/gen_eus.py /home/dev/ws_uwb/src/uwb-imu-fusion/msg/LinktrackTagframe0.msg -Iuwb_imu_fgo:/home/dev/ws_uwb/src/uwb-imu-fusion/msg -Istd_msgs:/opt/ros/noetic/share/std_msgs/cmake/../msg -p uwb_imu_fgo -o /home/dev/ws_uwb/devel/.private/uwb_imu_fgo/share/roseus/ros/uwb_imu_fgo/msg
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_eus.dir/build.make:102:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo_generate_messages_eus.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_config.dir/flags.make:9:CXX_INCLUDES = -I/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/include -I/home/dev/ws_uwb/src/uwb-imu-fusion/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp -isystem /usr/include/eigen3 -isystem /usr/local/include/gtsam/3rdparty/SuiteSparse_config -isystem /usr/local/include/gtsam/3rdparty/CCOLAMD -isystem /usr/local/include/gtsam/3rdparty/metis -isystem /usr/local/include/gtsam/3rdparty/cephes 
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/sensor_msgs_generate_messages_cpp.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/sensor_msgs_generate_messages_cpp.dir/build.make:70:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/sensor_msgs_generate_messages_cpp.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/nav_msgs_generate_messages_lisp.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/nav_msgs_generate_messages_lisp.dir/build.make:70:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/nav_msgs_generate_messages_lisp.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/topic_tools_generate_messages_nodejs.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/topic_tools_generate_messages_nodejs.dir/build.make:70:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/topic_tools_generate_messages_nodejs.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/topic_tools_generate_messages_lisp.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/topic_tools_generate_messages_lisp.dir/build.make:70:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/topic_tools_generate_messages_lisp.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf2_msgs_generate_messages_eus.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf2_msgs_generate_messages_eus.dir/build.make:70:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf2_msgs_generate_messages_eus.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_config.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_config.dir/build.make:61:CMakeFiles/test_config.dir/test/test_config.cpp.o: /home/dev/ws_uwb/src/uwb-imu-fusion/test/test_config.cpp
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_config.dir/build.make:63:	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/test_config.dir/test/test_config.cpp.o -c /home/dev/ws_uwb/src/uwb-imu-fusion/test/test_config.cpp
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_config.dir/build.make:67:	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dev/ws_uwb/src/uwb-imu-fusion/test/test_config.cpp > CMakeFiles/test_config.dir/test/test_config.cpp.i
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_config.dir/build.make:71:	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dev/ws_uwb/src/uwb-imu-fusion/test/test_config.cpp -o CMakeFiles/test_config.dir/test/test_config.cpp.s
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_config.dir/build.make:188:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/test_config.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/std_msgs_generate_messages_nodejs.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/std_msgs_generate_messages_nodejs.dir/build.make:70:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/std_msgs_generate_messages_nodejs.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf_generate_messages_cpp.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf_generate_messages_cpp.dir/build.make:70:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/tf_generate_messages_cpp.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/run_tests_uwb_imu_fgo_gtest_test_config.dir/build.make:46:CMAKE_SOURCE_DIR = /home/dev/ws_uwb/src/uwb-imu-fusion
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/run_tests_uwb_imu_fgo_gtest_test_config.dir/build.make:74:	cd /home/dev/ws_uwb/build/uwb_imu_fgo && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/src/uwb-imu-fusion /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo /home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/run_tests_uwb_imu_fgo_gtest_test_config.dir/DependInfo.cmake --color=$(COLOR)
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:5: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/config.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:6: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/optimizer.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:7: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/types.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:8: /home/dev/ws_uwb/src/uwb-imu-fusion/src/chi2.cpp
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:201: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/config.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:202: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/types.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:203: /home/dev/ws_uwb/src/uwb-imu-fusion/src/config.cpp
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:398: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/config.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:399: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/data_loader.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:400: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/types.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:401: /home/dev/ws_uwb/src/uwb-imu-fusion/src/data_loader.cpp
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:648: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/config.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:649: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/graph_builder.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:650: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/imu_preint.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:651: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/initializer.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:652: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/types.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:653: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/uwb_factor.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:654: /home/dev/ws_uwb/src/uwb-imu-fusion/src/graph_builder.cpp
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:847: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/config.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:848: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/imu_preint.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:849: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/types.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:850: /home/dev/ws_uwb/src/uwb-imu-fusion/src/imu_preint.cpp
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:1043: /home/dev/ws_uwb/src/uwb-imu-fusion/src/imu_sync.cpp
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:1045: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/config.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:1046: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/initializer.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:1047: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/types.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:1048: /home/dev/ws_uwb/src/uwb-imu-fusion/src/initializer.cpp
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:1241: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/config.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:1242: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/logger.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:1243: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/optimizer.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:1244: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/types.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:1245: /home/dev/ws_uwb/src/uwb-imu-fusion/src/logger.cpp
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:1438: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/config.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:1439: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/optimizer.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:1440: /home/dev/ws_uwb/src/uwb-imu-fusion/include/uifgo/types.h
+/home/dev/ws_uwb/build/uwb_imu_fgo/CMakeFiles/uwb_imu_fgo.dir/depend.internal:1441: /home/dev/ws_uwb/src/uwb-imu-fusion/src/optimizer.cpp
+/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/run_offline: cannot open `/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/run_offline' (No such file or directory)
+
+Script done on 2026-09-05 10:28:57+00:00 [COMMAND_EXIT_CODE="0"]

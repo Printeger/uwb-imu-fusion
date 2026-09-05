@@ -1,0 +1,162 @@
+Script started on 2026-09-05 10:30:39+00:00 [<not executed on terminal>]
+2026-09-05T10:30:39Z
+GTSAMConfigVersion.cmake
+# This is a basic version file for the Config-mode of find_package().
+# It is used by write_basic_package_version_file() as input file for configure_file()
+# to create a version-file which can be installed along a config.cmake file.
+#
+# The created file sets PACKAGE_VERSION_EXACT if the current version string and
+# the requested version string are exactly the same and it sets
+# PACKAGE_VERSION_COMPATIBLE if the current version is >= requested version,
+# but only if the requested major version is the same as the current one.
+# The variable CVF_VERSION must be set before calling configure_file().
+
+
+set(PACKAGE_VERSION "4.0.3")
+
+if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)
+  set(PACKAGE_VERSION_COMPATIBLE FALSE)
+else()
+
+  if("4.0.3" MATCHES "^([0-9]+)\\.")
+    set(CVF_VERSION_MAJOR "${CMAKE_MATCH_1}")
+  else()
+    set(CVF_VERSION_MAJOR "4.0.3")
+  endif()
+
+  if(PACKAGE_FIND_VERSION_MAJOR STREQUAL CVF_VERSION_MAJOR)
+    set(PACKAGE_VERSION_COMPATIBLE TRUE)
+  else()
+    set(PACKAGE_VERSION_COMPATIBLE FALSE)
+  endif()
+
+  if(PACKAGE_FIND_VERSION STREQUAL PACKAGE_VERSION)
+      set(PACKAGE_VERSION_EXACT TRUE)
+  endif()
+endif()
+
+
+# if the installed project requested no architecture check, don't perform the check
+if("FALSE")
+  return()
+endif()
+
+# if the installed or the using project don't have CMAKE_SIZEOF_VOID_P set, ignore it:
+if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "" OR "8" STREQUAL "")
+  return()
+endif()
+
+# check that the installed version has the same 32/64bit-ness as the one which is currently searching:
+if(NOT CMAKE_SIZEOF_VOID_P STREQUAL "8")
+  math(EXPR installedBits "8 * 8")
+  set(PACKAGE_VERSION "${PACKAGE_VERSION} (${installedBits}bit)")
+  set(PACKAGE_VERSION_UNSUITABLE TRUE)
+endif()
+GTSAMConfig.cmake version references
+/usr/local/lib/cmake/GTSAM/GTSAM-exports-release.cmake:6:set(CMAKE_IMPORT_FILE_VERSION 1)
+/usr/local/lib/cmake/GTSAM/GTSAM-exports-release.cmake:59:set(CMAKE_IMPORT_FILE_VERSION)
+/usr/local/lib/cmake/GTSAM/GTSAMConfigVersion.cmake:5:# The created file sets PACKAGE_VERSION_EXACT if the current version string and
+/usr/local/lib/cmake/GTSAM/GTSAMConfigVersion.cmake:7:# PACKAGE_VERSION_COMPATIBLE if the current version is >= requested version,
+/usr/local/lib/cmake/GTSAM/GTSAMConfigVersion.cmake:12:set(PACKAGE_VERSION "4.0.3")
+/usr/local/lib/cmake/GTSAM/GTSAMConfigVersion.cmake:14:if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)
+/usr/local/lib/cmake/GTSAM/GTSAMConfigVersion.cmake:15:  set(PACKAGE_VERSION_COMPATIBLE FALSE)
+/usr/local/lib/cmake/GTSAM/GTSAMConfigVersion.cmake:19:    set(CVF_VERSION_MAJOR "${CMAKE_MATCH_1}")
+/usr/local/lib/cmake/GTSAM/GTSAMConfigVersion.cmake:21:    set(CVF_VERSION_MAJOR "4.0.3")
+/usr/local/lib/cmake/GTSAM/GTSAMConfigVersion.cmake:25:    set(PACKAGE_VERSION_COMPATIBLE TRUE)
+/usr/local/lib/cmake/GTSAM/GTSAMConfigVersion.cmake:27:    set(PACKAGE_VERSION_COMPATIBLE FALSE)
+/usr/local/lib/cmake/GTSAM/GTSAMConfigVersion.cmake:30:  if(PACKAGE_FIND_VERSION STREQUAL PACKAGE_VERSION)
+/usr/local/lib/cmake/GTSAM/GTSAMConfigVersion.cmake:31:      set(PACKAGE_VERSION_EXACT TRUE)
+/usr/local/lib/cmake/GTSAM/GTSAMConfigVersion.cmake:49:  set(PACKAGE_VERSION "${PACKAGE_VERSION} (${installedBits}bit)")
+/usr/local/lib/cmake/GTSAM/GTSAMConfigVersion.cmake:50:  set(PACKAGE_VERSION_UNSUITABLE TRUE)
+/usr/local/lib/cmake/GTSAM/GTSAM-exports.cmake:13:set(CMAKE_IMPORT_FILE_VERSION 1)
+/usr/local/lib/cmake/GTSAM/GTSAM-exports.cmake:32:  set(CMAKE_IMPORT_FILE_VERSION)
+/usr/local/lib/cmake/GTSAM/GTSAM-exports.cmake:120:set(CMAKE_IMPORT_FILE_VERSION)
+/usr/local/lib/cmake/GTSAM/gtsam_extra.cmake:5:set (GTSAM_VERSION_NUMERIC 40003)
+/usr/local/lib/cmake/GTSAM/gtsam_extra.cmake:6:set (GTSAM_VERSION_STRING "4.0.3")
+/usr/local/include/gtsam/config.h:21:#define GTSAM_VERSION_MAJOR 4
+/usr/local/include/gtsam/config.h:22:#define GTSAM_VERSION_MINOR 0
+/usr/local/include/gtsam/config.h:23:#define GTSAM_VERSION_PATCH 3
+/usr/local/include/gtsam/config.h:24:#define GTSAM_VERSION_NUMERIC 40003
+/usr/local/include/gtsam/config.h:25:#define GTSAM_VERSION_STRING "4.0.3"
+GTSAM libraries
+/usr/local/lib/libgtsam.so -> libgtsam.so.4
+/usr/local/lib/libgtsam.so.4 -> libgtsam.so.4.0.3
+/usr/local/lib/libgtsam.so.4.0.3 -> 
+/usr/local/lib/libgtsam_unstable.so -> libgtsam_unstable.so.4
+/usr/local/lib/libgtsam_unstable.so.4 -> libgtsam_unstable.so.4.0.3
+/usr/local/lib/libgtsam_unstable.so.4.0.3 -> 
+old binary linkage
+	linux-vdso.so.1 (0x00007d54df645000)
+	libuwb_imu_fgo.so => /home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/libuwb_imu_fgo.so (0x00007d54df541000)
+	libtf.so => /opt/ros/noetic/lib/libtf.so (0x00007d54df512000)
+	libroscpp.so => /opt/ros/noetic/lib/libroscpp.so (0x00007d54df361000)
+	libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007d54df301000)
+	libboost_filesystem.so.1.71.0 => /lib/x86_64-linux-gnu/libboost_filesystem.so.1.71.0 (0x00007d54df2e3000)
+	librosconsole.so => /opt/ros/noetic/lib/librosconsole.so (0x00007d54df27e000)
+	libroscpp_serialization.so => /opt/ros/noetic/lib/libroscpp_serialization.so (0x00007d54df279000)
+	librostime.so => /opt/ros/noetic/lib/librostime.so (0x00007d54df24c000)
+	libgtsam.so.4 => /usr/local/lib/libgtsam.so.4 (0x00007d54dedd2000)
+	libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007d54debf0000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007d54deaa1000)
+	libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007d54dea84000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007d54de892000)
+	librosbag_storage.so => /opt/ros/noetic/lib/librosbag_storage.so (0x00007d54de80c000)
+	libcpp_common.so => /opt/ros/noetic/lib/libcpp_common.so (0x00007d54de7fe000)
+	libyaml-cpp.so.0.6 => /lib/x86_64-linux-gnu/libyaml-cpp.so.0.6 (0x00007d54de7a3000)
+	libtf2_ros.so => /opt/ros/noetic/lib/libtf2_ros.so (0x00007d54de6eb000)
+	libtf2.so => /opt/ros/noetic/lib/libtf2.so (0x00007d54de6ad000)
+	libxmlrpcpp.so => /opt/ros/noetic/lib/libxmlrpcpp.so (0x00007d54de689000)
+	libboost_thread.so.1.71.0 => /lib/x86_64-linux-gnu/libboost_thread.so.1.71.0 (0x00007d54de65d000)
+	libboost_chrono.so.1.71.0 => /lib/x86_64-linux-gnu/libboost_chrono.so.1.71.0 (0x00007d54de64f000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007d54df647000)
+	librosconsole_log4cxx.so => /opt/ros/noetic/lib/librosconsole_log4cxx.so (0x00007d54de62f000)
+	librosconsole_backend_interface.so => /opt/ros/noetic/lib/librosconsole_backend_interface.so (0x00007d54de628000)
+	liblog4cxx.so.10 => /lib/x86_64-linux-gnu/liblog4cxx.so.10 (0x00007d54de44a000)
+	libboost_regex.so.1.71.0 => /lib/x86_64-linux-gnu/libboost_regex.so.1.71.0 (0x00007d54de34a000)
+	libboost_serialization.so.1.71.0 => /lib/x86_64-linux-gnu/libboost_serialization.so.1.71.0 (0x00007d54de306000)
+	libboost_timer.so.1.71.0 => /lib/x86_64-linux-gnu/libboost_timer.so.1.71.0 (0x00007d54de2fc000)
+	libmetis-gtsam.so => /usr/local/lib/libmetis-gtsam.so (0x00007d54de289000)
+	libclass_loader.so => /opt/ros/noetic/lib/libclass_loader.so (0x00007d54de25c000)
+	libroslib.so => /opt/ros/noetic/lib/libroslib.so (0x00007d54de241000)
+	libtinyxml2.so.6 => /lib/x86_64-linux-gnu/libtinyxml2.so.6 (0x00007d54de22a000)
+	libroslz4.so => /opt/ros/noetic/lib/libroslz4.so (0x00007d54de223000)
+	libconsole_bridge.so.0.4 => /lib/x86_64-linux-gnu/libconsole_bridge.so.0.4 (0x00007d54de21b000)
+	libbz2.so.1.0 => /lib/x86_64-linux-gnu/libbz2.so.1.0 (0x00007d54de208000)
+	libactionlib.so => /opt/ros/noetic/lib/libactionlib.so (0x00007d54de1e7000)
+	libapr-1.so.0 => /lib/x86_64-linux-gnu/libapr-1.so.0 (0x00007d54de1ae000)
+	libaprutil-1.so.0 => /lib/x86_64-linux-gnu/libaprutil-1.so.0 (0x00007d54de180000)
+	libicui18n.so.66 => /lib/x86_64-linux-gnu/libicui18n.so.66 (0x00007d54dde81000)
+	libicuuc.so.66 => /lib/x86_64-linux-gnu/libicuuc.so.66 (0x00007d54ddc99000)
+	libPocoFoundation.so.62 => /lib/x86_64-linux-gnu/libPocoFoundation.so.62 (0x00007d54ddae1000)
+	librospack.so => /opt/ros/noetic/lib/librospack.so (0x00007d54dda92000)
+	liblz4.so.1 => /lib/x86_64-linux-gnu/liblz4.so.1 (0x00007d54dda71000)
+	libuuid.so.1 => /lib/x86_64-linux-gnu/libuuid.so.1 (0x00007d54dda68000)
+	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007d54dda60000)
+	libcrypt.so.1 => /lib/x86_64-linux-gnu/libcrypt.so.1 (0x00007d54dda25000)
+	libexpat.so.1 => /lib/x86_64-linux-gnu/libexpat.so.1 (0x00007d54dd9f7000)
+	libicudata.so.66 => /lib/x86_64-linux-gnu/libicudata.so.66 (0x00007d54dbf36000)
+	librt.so.1 => /lib/x86_64-linux-gnu/librt.so.1 (0x00007d54dbf2c000)
+	libpcre.so.3 => /lib/x86_64-linux-gnu/libpcre.so.3 (0x00007d54dbeb7000)
+	libz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007d54dbe9b000)
+	libboost_program_options.so.1.71.0 => /lib/x86_64-linux-gnu/libboost_program_options.so.1.71.0 (0x00007d54dbe0c000)
+	libpython3.8.so.1.0 => /lib/x86_64-linux-gnu/libpython3.8.so.1.0 (0x00007d54db8b6000)
+	libutil.so.1 => /lib/x86_64-linux-gnu/libutil.so.1 (0x00007d54db8b1000)
+package versions
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+CMake package locations
+/usr/lib/cmake/eigen3/Eigen3ConfigVersion.cmake
+/usr/lib/x86_64-linux-gnu/cmake/yaml-cpp/yaml-cpp-config-version.cmake
+
+Script done on 2026-09-05 10:30:39+00:00 [COMMAND_EXIT_CODE="0"]

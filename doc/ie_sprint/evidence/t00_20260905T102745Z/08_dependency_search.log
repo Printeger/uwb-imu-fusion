@@ -1,0 +1,44 @@
+Script started on 2026-09-05 10:30:57+00:00 [<not executed on terminal>]
+2026-09-05T10:30:57Z
+libarmadillo-dev	1:9.800.4+dfsg-1build1
+libboost-dev:amd64	1.71.0.0ubuntu2
+libboost-filesystem-dev:amd64	1.71.0.0ubuntu2
+libboost-iostreams-dev:amd64	1.71.0.0ubuntu2
+libboost-program-options-dev:amd64	1.71.0.0ubuntu2
+libboost-serialization-dev:amd64	1.71.0.0ubuntu2
+libboost-system-dev:amd64	1.71.0.0ubuntu2
+libboost-thread-dev:amd64	1.71.0.0ubuntu2
+libeigen3-dev	3.3.7-2
+libgtest-dev:amd64	1.10.0-2
+libyaml-cpp-dev	0.6.2-4ubuntu1
+ros-noetic-catkin	0.8.12-1focal.20250426.001935
+ros-noetic-ros-base	1.5.0-1focal.20250521.010531
+Package armadillo was not found in the pkg-config search path.
+Perhaps you should add the directory containing `armadillo.pc'
+to the PKG_CONFIG_PATH environment variable
+No package 'armadillo' found
+317 /tmp/t00_package_candidates.txt
+/home/dev/ws_slam/.catkin_tools/profiles/default/packages/isas_msgs/package.xml
+/home/dev/ws_uwb/src/SFUISE/isas_msgs/package.xml
+/home/dev/ws_slam/src/SFUISE/isas_msgs/package.xml
+/home/dev/ws_slam/.catkin_tools/profiles/default/packages/isas_msgs
+/home/dev/ws_slam/build/isas_msgs
+/home/dev/ws_slam/build/isas_msgs/catkin_generated/stamps/isas_msgs
+/home/dev/ws_slam/devel/.private/isas_msgs
+/home/dev/ws_slam/devel/.private/isas_msgs/include/isas_msgs
+/home/dev/ws_slam/devel/.private/isas_msgs/lib/python3/dist-packages/isas_msgs
+/home/dev/ws_slam/devel/.private/isas_msgs/share/common-lisp/ros/isas_msgs
+/home/dev/ws_slam/devel/.private/isas_msgs/share/gennodejs/ros/isas_msgs
+/home/dev/ws_slam/devel/.private/isas_msgs/share/isas_msgs
+/home/dev/ws_slam/devel/.private/isas_msgs/share/roseus/ros/isas_msgs
+/home/dev/ws_slam/devel/include/isas_msgs
+/home/dev/ws_slam/devel/lib/python3/dist-packages/isas_msgs
+/home/dev/ws_slam/devel/share/common-lisp/ros/isas_msgs
+/home/dev/ws_slam/devel/share/gennodejs/ros/isas_msgs
+/home/dev/ws_slam/devel/share/isas_msgs
+/home/dev/ws_slam/devel/share/roseus/ros/isas_msgs
+/home/dev/ws_slam/logs/isas_msgs
+/home/dev/ws_slam/src/SFUISE/isas_msgs
+/home/dev/ws_uwb/src/SFUISE/isas_msgs
+
+Script done on 2026-09-05 10:30:58+00:00 [COMMAND_EXIT_CODE="0"]

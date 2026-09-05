@@ -1,0 +1,75 @@
+2026-09-05T10:43:57Z
+CALIBRATION_ARTIFACT_HASHES
+6b93c6a902375a0b68921c743326223a688fed5cd5c3ba01044b86194c5cb34c  /home/dev/experiments/vicon_anchor_calibration/1a810aa/calibration_report.md
+16a38de4e9cd6f58bcb8ca1f4c6ca5a286adb7a658547420caa3645f1876f8a4  /home/dev/experiments/vicon_anchor_calibration/1a810aa/calibration.json
+69587a07f8e202ec5df7c190b4450e6bff4638b98e4f23fdc8a2b9f936161d09  /home/dev/experiments/vicon_anchor_calibration/1a810aa/indoor_vicon_los_anchors_gt.yaml
+CALIBRATION_REPORT
+# Vicon Anchor Recalibration
+
+- Status: **PASSED**
+- Model: physical Vicon rigid-body origins are UWB antenna centers
+- Mapping: `p_anchor_solver = R_GV * median(p_anchor_vicon) + t_GV`
+- Scale alignment: disabled
+- UWB ranges: diagnostics only; never used to move anchor ground truth
+
+## indoor_los
+
+- time offset: 0.011200 s
+- overlap: 1.000000
+- median / trimmed-80 RMSE: 0.014498 / 0.014076 m
+
+| Anchor | Vicon median [m] | Solver position [m] | 95% bootstrap radius [m] | Range bias median [m] |
+|---:|---|---|---:|---:|
+| 1 | -2.128212740, 2.299648951, 1.607422307 | -2.214530162, 2.288953606, 1.323444930 | 0.009254 | 0.378873 |
+| 2 | 2.902884634, 2.166742778, 1.614489180 | 2.817871125, 2.226164002, 1.348930919 | 0.009133 | 0.318955 |
+| 3 | 3.091502469, -1.533358377, 1.593158136 | 3.057733863, -1.470643181, 1.402435898 | 0.007611 | 0.308315 |
+| 4 | -2.235108704, -1.445099039, 1.581819981 | -2.269518966, -1.456680497, 1.372649987 | 0.009074 | 0.206211 |
+
+## indoor_nlos
+
+- time offset: 0.006100 s
+- overlap: 1.000000
+- median / trimmed-80 RMSE: 0.023554 / 0.024791 m
+
+| Anchor | Vicon median [m] | Solver position [m] | 95% bootstrap radius [m] | Range bias median [m] |
+|---:|---|---|---:|---:|
+| 1 | -2.095340005, 2.281849805, 1.603665037 | -2.170984037, 2.295914276, 1.372429354 | 0.012206 | 0.411836 |
+| 2 | 2.903149231, 2.167529157, 1.614111746 | 2.828688764, 2.259453484, 1.368495220 | 0.010217 | 0.330581 |
+| 3 | 3.098976430, -1.533483989, 1.588667996 | 3.082098989, -1.438053217, 1.395354926 | 0.014688 | 0.330849 |
+| 4 | -2.234211859, -1.444003850, 1.579153457 | -2.251840783, -1.431615748, 1.401648712 | 0.015112 | 0.301385 |
+
+## Validation
+
+All calibration acceptance checks passed.
+CALIBRATION_PROVENANCE_FIELDS
+278:        "path": "/home/dev/Dataset/vicon/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag",
+283:        "path": "/home/dev/experiments/vicon_anchor_calibration/v2_reference/los/attempts/0002/trajectory.txt",
+325:      "time_offset_definition": "vicon_query_time = odom_time + time_offset_s",
+331:      "time_offset_s": 0.01120000000000005,
+632:        "path": "/home/dev/Dataset/vicon/2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle.bag",
+637:        "path": "/home/dev/experiments/vicon_anchor_calibration/v2_reference/nlos/attempts/0002/trajectory.txt",
+679:      "time_offset_definition": "vicon_query_time = odom_time + time_offset_s",
+685:      "time_offset_s": 0.006100000000000043,
+729:    "anchor_vicon_origin": "uwb_antenna_center",
+730:    "moving_tag_origin": "imu_origin",
+GT_ANCHOR_HEADER
+schema_version: 1
+dataset: indoor_vicon_los
+frame: solver_global
+frame_definition: dataset-specific initial IMU-origin global frame used by the solver
+measurement_origin: imu_origin
+truth_status: verified
+source: /home/dev/experiments/vicon_anchor_calibration/1a810aa/calibration_report.md
+source_rule: position_solver = R_GV * median(position_vicon_world) + t_GV
+anchors:
+- id: 1
+  position_m:
+  - -2.214530161706892
+  - 2.2889536061158924
+  - 1.3234449300279654
+- id: 2
+  position_m:
+ACTIVE_CONFIG_HASHES
+f53c802819838ff70f25620f5dc9b631ff310d9b828b3c12d43fa1ed816d7499  config/vicon_test.yaml
+0d61f4b85a9df1062d8e8bba988fbb559fa2767d4c1d21d6e3e3bb6d514c2df0  config/sfuise_walk1.yaml
+de3cab9ff670f6a5ab1d23ee2086c15df069e27f7358e9810136b6f2a1162e2f  data/anchor_pose.yaml

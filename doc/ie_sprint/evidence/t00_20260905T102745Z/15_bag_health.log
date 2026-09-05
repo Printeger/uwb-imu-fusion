@@ -1,0 +1,448 @@
+Script started on 2026-09-05 10:34:44+00:00 [<not executed on terminal>]
+BAG=/home/dev/Dataset/vicon/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag
+4b973dd5a6faa8a4b523017feaccb59f4f085e50592a114a963dbd9a816de8be  /home/dev/Dataset/vicon/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag
+path: /home/dev/Dataset/vicon/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag
+version: 2.0
+duration: 73.549494
+start: 1761291088.437531
+end: 1761291161.987025
+size: 344492569
+messages: 454450
+indexed: True
+compression: none
+types:
+    - type: geometry_msgs/PoseStamped
+      md5: d3812c3cbc69362b77dc0b19b345f8f5
+    - type: geometry_msgs/TwistStamped
+      md5: 98d34b0043a2093cf9d9345ab6eef12e
+    - type: livox_ros_driver2/CustomMsg
+      md5: e4d6829bdfe657cb6c21a746c86b21a6
+    - type: nlink_parser/LinktrackNodeframe3
+      md5: fbed6583ea0d58e22f93b8b83d7468e1
+    - type: rosgraph_msgs/Log
+      md5: acffd30cd6b6de30f120938c17c593fb
+    - type: sensor_msgs/Imu
+      md5: 6a62c6daae103f4ff57a132d6f95cec2
+    - type: tf2_msgs/TFMessage
+      md5: 94810edda583a504dfda3829e70d7eec
+topics:
+    - topic: /livox/imu
+      type: sensor_msgs/Imu
+      messages: 14680
+    - topic: /livox/lidar
+      type: livox_ros_driver2/CustomMsg
+      messages: 734
+    - topic: /nlink_linktrack_nodeframe3
+      type: nlink_parser/LinktrackNodeframe3
+      messages: 3669
+    - topic: /rosout
+      type: rosgraph_msgs/Log
+      messages: 19
+    - topic: /tf
+      type: tf2_msgs/TFMessage
+      messages: 110152
+    - topic: /vrpn_client_node/tas_uwb_0/accel
+      type: geometry_msgs/TwistStamped
+      messages: 21537
+    - topic: /vrpn_client_node/tas_uwb_0/pose
+      type: geometry_msgs/PoseStamped
+      messages: 21535
+    - topic: /vrpn_client_node/tas_uwb_0/twist
+      type: geometry_msgs/TwistStamped
+      messages: 21536
+    - topic: /vrpn_client_node/tas_uwb_1/accel
+      type: geometry_msgs/TwistStamped
+      messages: 21754
+    - topic: /vrpn_client_node/tas_uwb_1/pose
+      type: geometry_msgs/PoseStamped
+      messages: 21765
+    - topic: /vrpn_client_node/tas_uwb_1/twist
+      type: geometry_msgs/TwistStamped
+      messages: 21764
+    - topic: /vrpn_client_node/tas_uwb_2/accel
+      type: geometry_msgs/TwistStamped
+      messages: 21736
+    - topic: /vrpn_client_node/tas_uwb_2/pose
+      type: geometry_msgs/PoseStamped
+      messages: 21756
+    - topic: /vrpn_client_node/tas_uwb_2/twist
+      type: geometry_msgs/TwistStamped
+      messages: 21741
+    - topic: /vrpn_client_node/tas_uwb_3/accel
+      type: geometry_msgs/TwistStamped
+      messages: 21684
+    - topic: /vrpn_client_node/tas_uwb_3/pose
+      type: geometry_msgs/PoseStamped
+      messages: 21695
+    - topic: /vrpn_client_node/tas_uwb_3/twist
+      type: geometry_msgs/TwistStamped
+      messages: 21692
+    - topic: /vrpn_client_node/tas_uwb_4/accel
+      type: geometry_msgs/TwistStamped
+      messages: 21651
+    - topic: /vrpn_client_node/tas_uwb_4/pose
+      type: geometry_msgs/PoseStamped
+      messages: 21686
+    - topic: /vrpn_client_node/tas_uwb_4/twist
+      type: geometry_msgs/TwistStamped
+      messages: 21664
+
+ROSBAG_INFO_EXIT_CODE=0
+BAG=/home/dev/Dataset/vicon/2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle.bag
+fc3ccb3079184d9f2aea550ea69d9adce3bca19f585e44bff4b5687c2acefe61  /home/dev/Dataset/vicon/2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle.bag
+path: /home/dev/Dataset/vicon/2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle.bag
+version: 2.0
+duration: 67.783005
+start: 1761291987.325502
+end: 1761292055.108507
+size: 315996988
+messages: 411856
+indexed: True
+compression: none
+types:
+    - type: geometry_msgs/PoseStamped
+      md5: d3812c3cbc69362b77dc0b19b345f8f5
+    - type: geometry_msgs/TwistStamped
+      md5: 98d34b0043a2093cf9d9345ab6eef12e
+    - type: livox_ros_driver2/CustomMsg
+      md5: e4d6829bdfe657cb6c21a746c86b21a6
+    - type: nlink_parser/LinktrackNodeframe3
+      md5: fbed6583ea0d58e22f93b8b83d7468e1
+    - type: rosgraph_msgs/Log
+      md5: acffd30cd6b6de30f120938c17c593fb
+    - type: sensor_msgs/Imu
+      md5: 6a62c6daae103f4ff57a132d6f95cec2
+    - type: tf2_msgs/TFMessage
+      md5: 94810edda583a504dfda3829e70d7eec
+topics:
+    - topic: /livox/imu
+      type: sensor_msgs/Imu
+      messages: 13508
+    - topic: /livox/lidar
+      type: livox_ros_driver2/CustomMsg
+      messages: 675
+    - topic: /nlink_linktrack_nodeframe3
+      type: nlink_parser/LinktrackNodeframe3
+      messages: 3377
+    - topic: /rosout
+      type: rosgraph_msgs/Log
+      messages: 19
+    - topic: /tf
+      type: tf2_msgs/TFMessage
+      messages: 99673
+    - topic: /vrpn_client_node/tas_uwb_0/accel
+      type: geometry_msgs/TwistStamped
+      messages: 18089
+    - topic: /vrpn_client_node/tas_uwb_0/pose
+      type: geometry_msgs/PoseStamped
+      messages: 18092
+    - topic: /vrpn_client_node/tas_uwb_0/twist
+      type: geometry_msgs/TwistStamped
+      messages: 18092
+    - topic: /vrpn_client_node/tas_uwb_1/accel
+      type: geometry_msgs/TwistStamped
+      messages: 20060
+    - topic: /vrpn_client_node/tas_uwb_1/pose
+      type: geometry_msgs/PoseStamped
+      messages: 20069
+    - topic: /vrpn_client_node/tas_uwb_1/twist
+      type: geometry_msgs/TwistStamped
+      messages: 20063
+    - topic: /vrpn_client_node/tas_uwb_2/accel
+      type: geometry_msgs/TwistStamped
+      messages: 20035
+    - topic: /vrpn_client_node/tas_uwb_2/pose
+      type: geometry_msgs/PoseStamped
+      messages: 20052
+    - topic: /vrpn_client_node/tas_uwb_2/twist
+      type: geometry_msgs/TwistStamped
+      messages: 20042
+    - topic: /vrpn_client_node/tas_uwb_3/accel
+      type: geometry_msgs/TwistStamped
+      messages: 20000
+    - topic: /vrpn_client_node/tas_uwb_3/pose
+      type: geometry_msgs/PoseStamped
+      messages: 20027
+    - topic: /vrpn_client_node/tas_uwb_3/twist
+      type: geometry_msgs/TwistStamped
+      messages: 20014
+    - topic: /vrpn_client_node/tas_uwb_4/accel
+      type: geometry_msgs/TwistStamped
+      messages: 19980
+    - topic: /vrpn_client_node/tas_uwb_4/pose
+      type: geometry_msgs/PoseStamped
+      messages: 19999
+    - topic: /vrpn_client_node/tas_uwb_4/twist
+      type: geometry_msgs/TwistStamped
+      messages: 19990
+
+ROSBAG_INFO_EXIT_CODE=0
+BAG=/home/dev/Dataset/calib/2025-10-31-16-05-17.bag
+4df6f86ddb15e3ade1e476bbdfd297070bd756eef5a0fb503ed4e189fbd964fa  /home/dev/Dataset/calib/2025-10-31-16-05-17.bag
+path: /home/dev/Dataset/calib/2025-10-31-16-05-17.bag
+version: 2.0
+duration: 119.072078
+start: 1761897917.916972
+end: 1761898036.989050
+size: 464464774
+messages: 33554
+indexed: True
+compression: none
+types:
+    - type: gnss_comm/GnssEphemMsg
+      md5: b4346f99e431c870e392a438684c0fe8
+    - type: gnss_comm/GnssEphemMsgarray
+      md5: 31054b3280a005cf30c1076c7645b85e
+    - type: gnss_comm/GnssGloEphemMsg
+      md5: 6893dee0d8b1c9325a6693f3488e0144
+    - type: gnss_comm/GnssPVTSolnMsg
+      md5: d18171357d7a159f76d4d7c0b12fb631
+    - type: gnss_comm/GnssTimePulseInfoMsg
+      md5: de306035e295e3c4b1e0771a216b495a
+    - type: gnss_comm/StampedFloat64Array
+      md5: fb60495edd59d3fcf90e173153ae8a9a
+    - type: livox_ros_driver2/CustomMsg
+      md5: e4d6829bdfe657cb6c21a746c86b21a6
+    - type: nlink_parser/LinktrackNodeframe3
+      md5: fbed6583ea0d58e22f93b8b83d7468e1
+    - type: rosgraph_msgs/Log
+      md5: acffd30cd6b6de30f120938c17c593fb
+    - type: sensor_msgs/Imu
+      md5: 6a62c6daae103f4ff57a132d6f95cec2
+    - type: sensor_msgs/NavSatFix
+      md5: 2d3a8cd499b9b4a0249fb98fd05cfa48
+topics:
+    - topic: /livox/imu
+      type: sensor_msgs/Imu
+      messages: 23778
+    - topic: /livox/lidar
+      type: livox_ros_driver2/CustomMsg
+      messages: 1189
+    - topic: /nlink_linktrack_nodeframe3
+      type: nlink_parser/LinktrackNodeframe3
+      messages: 5944
+    - topic: /rosout
+      type: rosgraph_msgs/Log
+      messages: 12
+    - topic: /ublox_driver/ephem
+      type: gnss_comm/GnssEphemMsg
+      messages: 893
+    - topic: /ublox_driver/glo_ephem
+      type: gnss_comm/GnssGloEphemMsg
+      messages: 230
+    - topic: /ublox_driver/gnssephemarray
+      type: gnss_comm/GnssEphemMsgarray
+      messages: 181
+    - topic: /ublox_driver/iono_params
+      type: gnss_comm/StampedFloat64Array
+      messages: 63
+    - topic: /ublox_driver/receiver_lla
+      type: sensor_msgs/NavSatFix
+      messages: 600
+    - topic: /ublox_driver/receiver_pvt
+      type: gnss_comm/GnssPVTSolnMsg
+      messages: 600
+    - topic: /ublox_driver/time_pulse_info
+      type: gnss_comm/GnssTimePulseInfoMsg
+      messages: 64
+
+ROSBAG_INFO_EXIT_CODE=0
+BAG=/home/dev/ws_uwb/src/SFUISE/dataset/ISAS-Walk1.bag
+ca577e3666ad5876aa8347289a98793b8da0e68b5db459f2d7d69a6adcacd944  /home/dev/ws_uwb/src/SFUISE/dataset/ISAS-Walk1.bag
+path: /home/dev/ws_uwb/src/SFUISE/dataset/ISAS-Walk1.bag
+version: 2.0
+duration: 62.701007
+start: 1664959673.401605
+end: 1664959736.102612
+size: 3215961
+messages: 10917
+indexed: True
+compression: none
+types:
+    - type: fraunhofer_rtls_flare/Anchorlist
+      md5: 7248f0d15651f8a373974ffc835d4f12
+    - type: fraunhofer_rtls_flare/RTLSStick
+      md5: d1e586e41f6c8ce27448de7c6dd14cc0
+    - type: geometry_msgs/PoseStamped
+      md5: d3812c3cbc69362b77dc0b19b345f8f5
+    - type: geometry_msgs/TransformStamped
+      md5: b5764a33bfeb3588febc2682852579b0
+    - type: sensor_msgs/Imu
+      md5: 6a62c6daae103f4ff57a132d6f95cec2
+topics:
+    - topic: /anchor_list
+      type: fraunhofer_rtls_flare/Anchorlist
+      messages: 970
+    - topic: /rtls_flares
+      type: fraunhofer_rtls_flare/RTLSStick
+      messages: 970
+    - topic: /rtls_pose
+      type: geometry_msgs/PoseStamped
+      messages: 970
+    - topic: /vive/transform/tracker_1_ref
+      type: geometry_msgs/TransformStamped
+      messages: 3168
+    - topic: /waveshare_sense_hat_b
+      type: sensor_msgs/Imu
+      messages: 4839
+
+ROSBAG_INFO_EXIT_CODE=0
+BAG=/home/dev/ws_uwb/src/SFUISE/dataset/ISAS-Walk2.bag
+dea07fd11d5776226be6b390574c4b3789c48cfdce6a1731996981f3f91c453c  /home/dev/ws_uwb/src/SFUISE/dataset/ISAS-Walk2.bag
+path: /home/dev/ws_uwb/src/SFUISE/dataset/ISAS-Walk2.bag
+version: 2.0
+duration: 78.532506
+start: 1664959754.601667
+end: 1664959833.134173
+size: 4109272
+messages: 13921
+indexed: True
+compression: none
+types:
+    - type: fraunhofer_rtls_flare/Anchorlist
+      md5: 7248f0d15651f8a373974ffc835d4f12
+    - type: fraunhofer_rtls_flare/RTLSStick
+      md5: d1e586e41f6c8ce27448de7c6dd14cc0
+    - type: geometry_msgs/PoseStamped
+      md5: d3812c3cbc69362b77dc0b19b345f8f5
+    - type: geometry_msgs/TransformStamped
+      md5: b5764a33bfeb3588febc2682852579b0
+    - type: sensor_msgs/Imu
+      md5: 6a62c6daae103f4ff57a132d6f95cec2
+topics:
+    - topic: /anchor_list
+      type: fraunhofer_rtls_flare/Anchorlist
+      messages: 1241
+    - topic: /rtls_flares
+      type: fraunhofer_rtls_flare/RTLSStick
+      messages: 1241
+    - topic: /rtls_pose
+      type: geometry_msgs/PoseStamped
+      messages: 1241
+    - topic: /vive/transform/tracker_1_ref
+      type: geometry_msgs/TransformStamped
+      messages: 3969
+    - topic: /waveshare_sense_hat_b
+      type: sensor_msgs/Imu
+      messages: 6229
+
+ROSBAG_INFO_EXIT_CODE=0
+BAG=/home/dev/ws_uwb/src/SFUISE/dataset/ISAS-Walk3.bag
+45df7ffe69b9d8c8be7784414ffcdc6e0f4674d0d7b8db3541e567e757bae0a0  /home/dev/ws_uwb/src/SFUISE/dataset/ISAS-Walk3.bag
+path: /home/dev/ws_uwb/src/SFUISE/dataset/ISAS-Walk3.bag
+version: 2.0
+duration: 84.154618
+start: 1664959844.321200
+end: 1664959928.475818
+size: 4414454
+messages: 14964
+indexed: True
+compression: none
+types:
+    - type: fraunhofer_rtls_flare/Anchorlist
+      md5: 7248f0d15651f8a373974ffc835d4f12
+    - type: fraunhofer_rtls_flare/RTLSStick
+      md5: d1e586e41f6c8ce27448de7c6dd14cc0
+    - type: geometry_msgs/PoseStamped
+      md5: d3812c3cbc69362b77dc0b19b345f8f5
+    - type: geometry_msgs/TransformStamped
+      md5: b5764a33bfeb3588febc2682852579b0
+    - type: sensor_msgs/Imu
+      md5: 6a62c6daae103f4ff57a132d6f95cec2
+topics:
+    - topic: /anchor_list
+      type: fraunhofer_rtls_flare/Anchorlist
+      messages: 1339
+    - topic: /rtls_flares
+      type: fraunhofer_rtls_flare/RTLSStick
+      messages: 1339
+    - topic: /rtls_pose
+      type: geometry_msgs/PoseStamped
+      messages: 1339
+    - topic: /vive/transform/tracker_1_ref
+      type: geometry_msgs/TransformStamped
+      messages: 4263
+    - topic: /waveshare_sense_hat_b
+      type: sensor_msgs/Imu
+      messages: 6684
+
+ROSBAG_INFO_EXIT_CODE=0
+BAG=/home/dev/ws_uwb/src/awesome-uwb-localization/bag/data_example.bag
+25900cb237e9c01f8d1a82e8098add940aa9a8ec8cba3a4d21bdba02938abbc9  /home/dev/ws_uwb/src/awesome-uwb-localization/bag/data_example.bag
+path: /home/dev/ws_uwb/src/awesome-uwb-localization/bag/data_example.bag
+version: 2.0
+duration: 45.124783
+start: 1491129341.216487
+end: 1491129386.341271
+size: 2248683
+messages: 7923
+indexed: True
+compression: none
+types:
+    - type: sensor_msgs/Imu
+      md5: 6a62c6daae103f4ff57a132d6f95cec2
+    - type: uwb_driver/UwbRange
+      md5: 1b3efd633e416bfcfbaaf891dd23ac23
+    - type: vicon_xb/viconPoseMsg
+      md5: fab0fdc6fc90b6bb8b835232ab19b103
+topics:
+    - topic: /imu/data
+      type: sensor_msgs/Imu
+      messages: 4514
+    - topic: /uwb_endorange_info
+      type: uwb_driver/UwbRange
+      messages: 1444
+    - topic: /vicon_xb/viconPoseTopic
+      type: vicon_xb/viconPoseMsg
+      messages: 1965
+
+ROSBAG_INFO_EXIT_CODE=0
+BAG=/home/dev/Dataset/ntu_day01/ntu_day_01_mid70.bag
+c0a131c77e356826d4297e07f44ddd02384984b1ca548da4bd54555305ab9d68  /home/dev/Dataset/ntu_day01/ntu_day_01_mid70.bag
+path: /home/dev/Dataset/ntu_day01/ntu_day_01_mid70.bag
+version: 2.0
+duration: 602.300246
+start: 1644823131.500129
+end: 1644823733.800375
+size: 568196474
+messages: 6024
+indexed: True
+compression: bz2
+uncompressed: 1143290574
+compressed: 567854536
+types:
+    - type: livox_ros_driver/CustomMsg
+      md5: e4d6829bdfe657cb6c21a746c86b21a6
+topics:
+    - topic: /livox/lidar
+      type: livox_ros_driver/CustomMsg
+      messages: 6024
+
+ROSBAG_INFO_EXIT_CODE=0
+BAG=/home/dev/Dataset/ntu_day01/ntu_day_01_ltpb.bag
+6cff2cb1613a75a761b923759e60ad8f8acb9ee296bf7c01f49d93b66be5a3a0  /home/dev/Dataset/ntu_day01/ntu_day_01_ltpb.bag
+path: /home/dev/Dataset/ntu_day01/ntu_day_01_ltpb.bag
+version: 2.0
+duration: 602.323253
+start: 1644823131.490328
+end: 1644823733.813581
+size: 1067393
+messages: 23172
+indexed: True
+compression: bz2
+uncompressed: 2842528
+compressed: 781826
+types:
+    - type: nlink_parser/LinktrackNodeframe3
+      md5: 65282ec6a662cc1b5611b247c9b6c483
+topics:
+    - topic: /ltp_tag0/nlnf3
+      type: nlink_parser/LinktrackNodeframe3
+      messages: 11591
+    - topic: /ltp_tag1/nlnf3
+      type: nlink_parser/LinktrackNodeframe3
+      messages: 11581
+
+ROSBAG_INFO_EXIT_CODE=0
+
+Script done on 2026-09-05 10:34:50+00:00 [COMMAND_EXIT_CODE="0"]

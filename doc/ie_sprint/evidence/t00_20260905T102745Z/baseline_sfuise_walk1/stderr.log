@@ -1,0 +1,1 @@
+/home/dev/ws_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_node: symbol lookup error: /home/dev/ws_uwb/devel/lib/libuwb_imu_fgo.so: undefined symbol: _ZNK5gtsam15NonlinearFactor5errorERKNS_12HybridValuesE

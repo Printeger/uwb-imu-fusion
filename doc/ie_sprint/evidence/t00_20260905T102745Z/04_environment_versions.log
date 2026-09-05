@@ -1,0 +1,32 @@
+Script started on 2026-09-05 10:29:24+00:00 [<not executed on terminal>]
+2026-09-05T10:29:24Z
+CMAKE_PREFIX_PATH=/home/dev/ws_rl/devel:/home/dev/ws_LIU/devel:/opt/ros/noetic
+LD_LIBRARY_PATH=/home/dev/ws_rl/devel/lib:/home/dev/ws_LIU/devel/lib:/opt/ros/noetic/lib
+PATH=/root/.nvm/versions/node/v20.20.2/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/root/.codex/tmp/arg0/codex-arg07IxyUq:/root/.nvm/versions/node/v20.20.2/bin:/opt/ros/noetic/bin:/root/.vscode-server/data/User/globalStorage/github.copilot-chat/debugCommand:/root/.vscode-server/data/User/globalStorage/github.copilot-chat/copilotCli:/root/.vscode-server/bin/7e7950df89d055b5a378379db9ee14290772148a/bin/remote-cli:/root/miniconda3/bin:/root/miniconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+PYTHONPATH=/home/dev/ws_rl/devel/lib/python3/dist-packages:/home/dev/ws_LIU/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages
+/opt/ros/noetic/bin/rospack
+/usr/bin/rosversion
+/usr/bin/catkin
+/opt/ros/noetic/bin/catkin_make
+/usr/bin/cmake
+/usr/bin/c++
+noetic
+<unversioned>
+0.8.12
+catkin_tools 0.9.4 (C) 2014-2026 Open Source Robotics Foundation
+catkin_tools is released under the Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+---
+Using Python 3.8.10 (default, Mar 18 2025, 20:04:55) [GCC 9.4.0]
+cmake version 3.16.3
+
+CMake suite maintained and supported by Kitware (kitware.com/cmake).
+c++ (Ubuntu 9.4.0-1ubuntu1~20.04.2) 9.4.0
+Copyright (C) 2019 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+GNU ld (GNU Binutils for Ubuntu) 2.34
+Python 3.13.9
+0.29.1
+
+Script done on 2026-09-05 10:29:25+00:00 [COMMAND_EXIT_CODE="0"]
