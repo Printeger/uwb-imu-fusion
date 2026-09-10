@@ -1500,3 +1500,61 @@ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
+
+
+TEST(SegmentRefitter, ExactZeroResidualMetadataAcceptsGtsamNegativeZero) {
+  auto fixture = MakeRefitFixture(0.4);
+  // Set a real noncandidate range to exactly its prediction at these Values.
+  // ExpressionFactor returns -0 while the arithmetic residual returns +0.
+  auto& record = fixture.plan.observations.at(1);
+  const auto pose = fixture.values.at<gtsam::Pose3>(X(record.keyframe_id));
+  const auto anchor = fixture.cfg.anchors.at(1).pos;
+  record.raw_range = (pose.transformFrom(fixture.cfg.lever_arm_init) - anchor).norm();
+  for (const auto& meta : fixture.metadata) {
+    if (meta.obs_id == record.obs_id)
+      fixture.graph.at(meta.factor_index) = uifgo::MakeUwbFactor(
+          X(record.keyframe_id), 0, 0, 0, anchor,
+          fixture.cfg.lever_arm_init, record.raw_range, record.nominal_sigma,
+          false, false, false, 0.0);
+  }
+  auto support = uifgo::ToSupportPartition(fixture.support);
+  support.solver_config_hash = "a19-policy-sha256:signed-zero-regression";
+  uifgo::DevelopmentStage2Request request;
+  request.policy = "PAPER_CERTIFIED_PAIR_REDUCTION_V1";
+  request.role = "development";
+  request.implementation_identity = support.solver_config_hash;
+  bool reached = false;
+  request.conditional_navigation = [&](size_t,
+      const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
+      const uifgo::CheckedLmOptions&,
+      const std::vector<uifgo::DevelopmentRefitRangeConstant>& ranges) {
+    reached = true;
+    for (const auto& range : ranges) {
+      if (range.obs_id != record.obs_id) continue;
+      const auto factor = boost::dynamic_pointer_cast<gtsam::NoiseModelFactor>(
+          graph.at(range.factor_index));
+      const double actual = factor->unwhitenedError(values)[0];
+      EXPECT_EQ(actual, 0.0);
+      EXPECT_TRUE(std::signbit(actual));
+      EXPECT_EQ(range.expected_unwhitened_residual, 0.0);
+      EXPECT_FALSE(std::signbit(range.expected_unwhitened_residual));
+    }
+    uifgo::CheckedLmResult result;
+    result.values = values;
+    result.reason = "SIGNED_ZERO_CALLBACK_REACHED";
+    return result;
+  };
+  const auto result = uifgo::SegmentRefitter(uifgo::RefitOptions{}).RunDevelopmentStage2(
+      fixture.graph, fixture.values, fixture.metadata, fixture.plan,
+      fixture.cfg, support, &request);
+  EXPECT_TRUE(reached) << result.reason;
+  EXPECT_EQ(result.reason, "SIGNED_ZERO_CALLBACK_REACHED");
+  // A genuine changed measurement is still rejected before callback.
+  reached = false;
+  record.raw_range += 0.001;
+  const auto invalid = uifgo::SegmentRefitter(uifgo::RefitOptions{}).RunDevelopmentStage2(
+      fixture.graph, fixture.values, fixture.metadata, fixture.plan,
+      fixture.cfg, support, &request);
+  EXPECT_FALSE(reached);
+  EXPECT_EQ(invalid.status, uifgo::SegmentRefitStatus::INVALID_INPUT);
+}

@@ -2,6 +2,10 @@
 
 本文件是工程协作与任务交接的统一入口。它记录事实和任务状态，不代替方法合同或实验合同。
 
+## Git 交付与本地存储维护（2026-09-10）
+
+按用户授权提交 T10 收口代码、文档和精简结果摘要；完整本地运行目录由 `.gitignore` 排除，保留必要回归输入。参见 [Git 证据范围](evidence/README.md)。清理中断 pack 和旧本地自动检查点，不改写正式分支历史；仍保留当前会话的活动 capture。此维护不增加科学运行、不改变 C2-C，T11/T12 仍为 `NOT_RUN`。本次提交前 Python 回归实际 4/4 通过（冻结阶段的历史记录仍保留原计数）。
+
 ## 冻结材料
 
 按以下顺序阅读：
@@ -50,7 +54,7 @@ roadmap 所称的 `UWB_IMU_IE_System_Centered_Structure_v3.tex` / `Structure_v3`
 | T07 deterministic scenario/cache | `DONE` | `REVIEW_ACCEPTED_DEVELOPMENT_ENGINEERING_SCOPE`；T07-R01--R03 均已独立复审接受。见 [`T07_IMPLEMENTATION.md`](T07_IMPLEMENTATION.md)、[最终收口证据](evidence/t07_final_review_20260907T070102Z/VERIFICATION.md) 与 [自包含归档修复](evidence/t07_closeout_fix_20260907T072733Z/VERIFICATION.md) |
 | T08 冻结决策、最终联合推断与一次 fallback | `DONE` | `REVIEW_ACCEPTED_DEVELOPMENT_ENGINEERING_SCOPE`；R01/R03 保留各自限定 scope，R02 为 `REVIEW_ACCEPTED_EXCEPTION_TIMING_SCOPE`。见 [最终独立复审收口](evidence/t08_final_review_20260907T121510Z/VERIFICATION.md) |
 | T09 统一基线、缓存、批量执行与评估 | `DONE` | `REVIEW_ACCEPTED_DEVELOPMENT_ENGINEERING_SCOPE / AUTOMATIC_E2E_BLOCKED_BY_T07_STAGE1`；最终独立复审接受 R03-B，并与此前已接受的 R01–R08 合并关闭 T09 development-engineering 范围。真实 final 保持 `41/627`，parent canonical-v2 内容身份、ledger/mask/audit 与 failure accounting 反例通过。见 [最终独立复审收口](evidence/t09_final_rereview_closeout_20260908T065646Z/VERIFICATION.md)。这不是 automatic accepted-candidate 科学证据、正式 RQ、C1–C3 支持或 T10 gate lock |
-| T10 validation/gate | `IN_PROGRESS` | R08 已执行预登记的2条validation基础轨迹×6场景固定P1矩阵：12/12各签票至多一次，8条走完Stage1→Stage2→score及五策略final，3条首次算法失败、1条系统中断均保留且无retry。8条score均为1/1 eligible；三gate在所有可评分输入上Use/Suppress完全相同。7条可配对structured结果中，历史RMSE 1好6差、P95 0好7差；LOS两条均无有效final，代价UNAVAILABLE。评价前冻结1320项且复核无hash mismatch，estimator truth open 0。仍不锁gate、不运行test、不升级C1–C3。[R08交付](evidence/t10_a19_r08_validation_compare_20260910T115109Z/VERIFICATION.md) |
+| T10 validation/gate | `DONE` | `FROZEN_C2_C_USER_SCOPED_CLOSEOUT`：仅本轮授权收缩范围完成。两base step2×A/B/C，N=6400I/1600I/3200I；30/30 final有效，s_fit/full_gate决定全同，structured RMSE1好5差/P95全差。LOS20102独立对照通过、20101对照数值失败保留。原完整T10/held-out验收未完成，T11/T12未运行。[收口](T10_CLOSEOUT.md) |
 | T11 prefix | `NOT_STARTED` | prefix 与 U13 `NOT_RUN` |
 | T12 正式指标 | `NOT_STARTED` | locked metrics、正式 RQ 与 U14 `NOT_RUN` |
 | T13 论文结果与发布 | `NOT_STARTED` | 正式论文数字、图表与 release `NOT_RUN` |
@@ -87,6 +91,16 @@ T10 保持 IN_PROGRESS；A08 图级 FD 15/18 限制保留。
 不进入chain/Stage2/gate，不运行held-out，不改solver/Jacobian或/usr/local。
 
 ## 当前任务与停止边界
+
+本轮单工作包已完成并冻结：[T10_CLOSEOUT.md](T10_CLOSEOUT.md)，唯一裁决 **C2-C**。
+普通 correctness、六输入诊断、重启恢复和磁盘精简均在本包闭环；原完整T10实验未冒称验收。
+T10不扩展；下一优先T11，随后T12，本轮均 NOT_RUN。旧记录下文保留为历史，不覆盖当前边界。
+用户追加授权删除可再生成/编译中间证据，精简34.15 GiB；原完整冻结包保留范围见 retention_20260910。
+
+2026-09-10 用户已授权实施 T10 单工作包收口，替代旧完整计划及逐轮停止边界。
+先集中 correctness，再两条既有 validation step2 × A/B/C 六输入（A 可审计复用），不调参、不新增 solver/seed/test。
+范围收缩 amendment 已由用户本轮明确确认；C2 按 C 优先、再 A/B 的冻结证据规则裁决，T11/T12 仅交接。
+运行前登记：[单一 manifest](T10_CLOSEOUT_MANIFEST.json)。当前为实施中，尚未冻结或验收。
 
 2026-09-10 用户要求停止逐轮最小修复，改为T10完整交付方案。
 已制定 [T10完整交付计划与总任务prompt](T10_COMPLETE_DELIVERY_PLAN.md)，替代尚未执行的R09最小建议：

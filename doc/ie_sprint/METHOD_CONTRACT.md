@@ -713,3 +713,15 @@ role envelope bound to the old split reservations and carries its content hash
 through Stage1, Stage2 and final graph/Values identity. Legacy development
 identity remains unchanged. The fixed P1 and gate working point are evaluated,
 not selected or locked, under [`T10_A19_R08_PROTOCOL.md`](T10_A19_R08_PROTOCOL.md).
+
+## T10 单工作包收口授权 amendment
+
+用户本轮明确授权以 `T10_CLOSEOUT_MANIFEST.json` 的有限诊断及 C2 裁决替代旧 T10 扩展计划。
+模型、评分、P1、solver 与阈值不改；仅普通 correctness 修复、两条既有 validation step2 的 A/B/C、LOS 验收及失败分类。
+不执行正式 held-out RQ3，不据此声称完成原完整实验合同。普通修复在同包内完成并保留旧失败/受影响重跑身份。
+C2-C 优先：恢复收益缺少跨两基础轨迹重复支持则降为探索性；否则按冻结证据决定 A 或 B。
+T10 可冻结负结论，工程失败不能标验收通过，T11/T12 仍 NOT_RUN。
+
+本收缩工作包已冻结为 **C2-C**，见 `T10_CLOSEOUT.md`。η与现有gate代码保留作诊断/探索性比较；
+稳定恢复收益和η增量操作收益未获支持，不授予正式held-out gate准入。T11/T12尚未运行。
+用户另授权删除可再生成的中间转储/重复二进制；原完整归档的当前保留范围以retention账本为准。

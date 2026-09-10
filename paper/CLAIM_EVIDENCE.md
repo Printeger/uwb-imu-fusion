@@ -1,6 +1,25 @@
 # UWB-IMU-IE claim–evidence ledger
 
-状态：`T01_DONE_T02_DONE_T03_DONE_T04_DONE_T05_DONE_T06_DONE_T07_DONE_T08_DONE_T09_DONE_REVIEW_ACCEPTED_DEVELOPMENT_ENGINEERING_SCOPE_T10_IN_PROGRESS_A04_REVIEW_ACCEPTED_A05_REVIEW_ACCEPTED_LIMITED_ENGINEERING_SCOPE_A06_REVIEW_ACCEPTED_BOUNDED_SCOPE_A07_REVIEW_ACCEPTED_BOUNDED_SCOPE_A08_REVIEW_ACCEPTED_LIMITED_ENGINEERING_SCOPE_A09_REVIEW_ACCEPTED_BOUNDED_SCOPE_A10_REVIEW_ACCEPTED_BOUNDED_SCOPE_A11_REVIEW_ACCEPTED_BOUNDED_SCOPE_A12_REVIEW_ACCEPTED_BOUNDED_SCOPE_A13_REVIEW_ACCEPTED_BOUNDED_SCOPE_A14_REVIEW_ACCEPTED_BOUNDED_SCOPE_A15_REVIEW_ACCEPTED_BOUNDED_SCOPE_A16_REVIEW_ACCEPTED_BOUNDED_SCOPE_A17_REVIEW_ACCEPTED_BOUNDED_SCOPE_A18_REVIEW_ACCEPTED_BOUNDED_SCOPE_A19_REVIEW_ACCEPTED_FAILED_RUN_DIAGNOSIS_SCOPE_A19_R01_ENGINEERING_FIXED_FRESH_RUN_FAILED_BEFORE_STAGE1_A19_R02_STOPPED_AT_FIRST_ALGORITHMIC_FAILURE_A19_R03_ENGINEERING_PASSED_FRESH_RUN_SIGSEGV_BEFORE_STAGE1_TRACE_A19_R04_CRASH_ROOT_FIXED_FIRST_STAGE1_IDENTITY_FAILURE_A19_R05_IDENTITY_FIXED_STAGE2_CONVERGED_EXPORT_FAILED_BEFORE_SCORE_A19_R06_AUTOMATIC_SCORE_COMPLETE_PAIRED_REFERENCE_FAILED_A19_R07_UNBLINDED_DEVELOPMENT_PAIRED_REFERENCE_COMPLETE_A19_R08_LIMITED_VALIDATION_MATRIX_8_OF_12_SCORED_NO_GATE_LOCK`
+状态：`T10_FROZEN_C2_C_USER_SCOPED_CLOSEOUT / T11_T12_NOT_RUN`
+
+
+## 当前 T10 claim 裁决（覆盖下方历史状态）
+
+**C2-C：recoverability characterization / exploratory structured correction。**
+Rc/η/s machinery 在已测试域内实现并验证；改变 noise/count 后 N=6400I/1600I/3200I，
+跨条件原固定映射不再成立，但六输入 s_fit/full_gate 实际决定相同。
+Structured recovery 的历史 RMSE 为1好5差、P95为0好6差；稳定轨迹收益和 η 增量操作收益均 **NOT SUPPORTED**。
+不得再以“safe recovery policy”或“η 是必需操作门控”作为已验证主贡献；保留数学诊断及探索性代码。
+
+- **SUPPORTED（限定工程域）：** Rc/η/s计算、signed-zero metadata修复、真实零候选生产接口。
+- **PARTIALLY SUPPORTED：** 有限合成全链；LOS20102独立all-range对照通过，20101对照数值失败且相对代价UNAVAILABLE。
+- **NOT SUPPORTED：** 稳定恢复轨迹收益、η门控增量、两条LOS均无退化，以及由实现存在推导的性能主张。
+- **NOT YET TESTED：** T11 future-context、T12新真实/公共数据、正式held-out RQ3及完整C1/C3。
+
+重启损坏的新run原始冻结/评价sidecar不能回溯为完整盲测证据；现存最终产物经重建清单后独立复算。
+用户授权精简34.15GiB可再生成中间证据，旧完整archive状态不再作为当前可用性承诺。
+[最终收口和全部数值来源](../doc/ie_sprint/T10_CLOSEOUT.md)。本次完成仅指用户授权收缩范围，非原完整T10实验验收。
+
 
 ## T10-A19-R05 independent review boundary
 
@@ -81,9 +100,9 @@ joint four-way AND.  C1--C3 remain unchanged.  See the
 
 | Claim | Implementation/source expected | Experiment/run IDs expected | Figure/table expected | Current status and limitations |
 |---|---|---|---|---|
-| C1：可复现的 full-trajectory raw-range UWB–IMU pipeline，策略可替换，输出来自一致 final graph/Values | T02 paper input/fixed-beta path；T08 `InferenceResult`；T09 isolated runner/evaluator；source commit + build log | RQ1 simulation、controlled UGV、一个 public dataset；至少一次完整 rerun；run manifests/hashes | `tab:system_results`；architecture figure；artifact manifest | `PARTIAL_T08_FINAL_INFERENCE_DEVELOPMENT_ONLY/PARTIAL_T09_ENGINEERING_ONLY`：T09 已在 development engineering scope 内最终独立复审接受，真实 final 保持 `41/627` 且身份/完整性反例均拒绝；但没有跨数据正式 v2 RQ、锁定指标、正式 rerun 或闭合的外部 provenance，故 C1 不为 `SUPPORTED` |
-| C2：四阶段 segment NLOS 模块，使用 candidate-excluded marginal information 与冻结 group Use/Suppress，并在 final graph 保留 accepted `c_s` | T03 golden matrices；T04 segment factor/constrained refit；T05 `F/G/N/R,eta,s,gamma`；T06 discovery/partition；T08 final/fallback；U01–U12 | RQ2 repeated LOS + sustained 1/2/3-link/ramp；RQ3 automatic-discovery end-to-end matched-cache gate comparison；fixed-partition constant/ramp 只作 `DEBUG_DIAGNOSTIC_ONLY`；failure/fallback runs | `tab:main`；`fig:headline`；automatic E2E decision/final score CSV；另列 fixed-partition DEBUG 表 | `PARTIAL_T08_FINAL_INFERENCE_DEVELOPMENT_ONLY/PARTIAL_T09_ENGINEERING_ONLY/PARTIAL_T10_A09_DEVELOPMENT_CACHE_ONLY`：本轮指挥会话已接受 A08 paper-only prior Jacobian fix；A09 仅增 refit cap 后 step/ramp Stage 2 在 outer 66/124 收敛并封存两个 cache，但 1/3 个 group 全部不 eligible、score unavailable。A09 已由本轮指挥会话限定接受；A10限定交付已接受；A12限定诊断已由指挥接受；A13确认未声明K=I6协方差项；其唯一方案已在A14技术接受并显式opt-in实施，1680静态/127工程回归通过，但唯一step pilot首block未驻点且lambda耗尽，无Stage2/score，不构成端到端成功；A15复现该17calls末态，指定方向支持线性差值数值分辨力/linked规则限制而非导数修复，A16固定trial1高精度/独立区间确认下降2.59734e-13，残差误差只解释其与稳定GN差异的79.26%；A17仅将其实现为默认关闭首block原型，唯一fresh step20calls/43trials满足原驻点AND，但未进入chain/Stage1后续/Stage2，不支持自动全链路成功；A14历史失败不变；A11限定诊断已由指挥接受；A12单step call50静态恢复通过，A150次精确复现A11，B仅diagonalDamping但两臂不驻点且未达预登记改善判据；A11三条冻结P1的50次终态复现，六个实际方向图级18/18和factor6678/6678通过，但同optimizer续至200次仍不驻点、没有chain/新Stage2/评分；内部 rel tol 置零仍是明确 solver 语义变化，development cache/fixed debug 不替代正式自动闭环；gate、fixed `beta`、split/provenance 与正式 RQ 均未锁定，故 C2 不为 `SUPPORTED` ；R08有限矩阵仅8/12可评分、三gate不区分、structured收益不重复且LOS不可评，仍不足以支持C2 |
-| C3：受控证据与 artifact 分离 portability、decision quality、multi-link NLOS 和 future-context，命令/配置可追溯 | T07 deterministic truth sidecar；T09 manifests/cache/evaluator；T10 locked gate；T11 no-leak prefix；T12 locked metrics；T13 generated figures/tables/release | RQ1–RQ4 locked run IDs；RQ3 两个隔离 cache namespace；RQ4 common-linearization 独立 manifest/cache；U13/U14；failed/zero-coverage/fallback ledger；artifact reproduction run | `fig:headline`、`fig:context`、system/main tables、machine-readable metrics | `PARTIAL_T07_INPUT_ENGINEERING_LOCAL_ONLY/PARTIAL_T08_FINAL_INFERENCE_DEVELOPMENT_ONLY/PARTIAL_T09_ENGINEERING_ONLY/BLOCKED_EXTERNAL`：failure/NA/run-unit 分母、request/cache/path 分层，以及 factor-audit/ledger 双向完整性和 parent canonical-v2 内容身份均已在 T09 development engineering scope 内独立复审接受。T10–T13、U13/U14 正式范围、正式 RQ、数据许可和独立标定未闭合，C3 不为 `SUPPORTED` ；R08已完成split绑定的有限synthetic validation冻结/评价，但3失败+1中断、LOS与held-out/test缺失，仍不足以支持C3 |
+| C1：可复现的 full-trajectory raw-range UWB–IMU pipeline，策略可替换，输出来自一致 final graph/Values | T02 paper input/fixed-beta path；T08 `InferenceResult`；T09 isolated runner/evaluator；source commit + build log | RQ1 simulation、controlled UGV、一个 public dataset；至少一次完整 rerun；run manifests/hashes | `tab:system_results`；architecture figure；artifact manifest | `PARTIALLY_SUPPORTED_ENGINEERING_ONLY`：有限合成输入上的实现、final输出与正确性有证据；T10负结果不自动证明系统性能。跨真实/public的新端到端证据及完整rerun要求留待T12，不升级完整C1。 |
+| C2：recoverability characterization / exploratory structured correction；保留 Rc/η/s 与 live-c 分段联合图 | T03 golden matrices；T04 segment factor/constrained refit；T05 `F/G/N/R,eta,s,gamma`；T06 discovery/partition；T08 final/fallback；U01–U12 | RQ2 repeated LOS + sustained 1/2/3-link/ramp；RQ3 automatic-discovery end-to-end matched-cache gate comparison；fixed-partition constant/ramp 只作 `DEBUG_DIAGNOSTIC_ONLY`；failure/fallback runs | `tab:main`；`fig:headline`；automatic E2E decision/final score CSV；另列 fixed-partition DEBUG 表 | `C2-C / NOT_SUPPORTED_OPERATIONAL_BENEFIT`：六输入 N 改变但 s_fit/full_gate 决定全同；structured RMSE1好5差、P95全差。工程正确性有证据，稳定恢复轨迹收益与η增量未支持。LOS20101对照失败、20102完整对照通过；重启冻结sidecar缺口及精简范围见 [T10_CLOSEOUT](../doc/ie_sprint/T10_CLOSEOUT.md)。T11/T12/held-out未运行。 |
+| C3：受控证据与 artifact 分离 portability、decision quality、multi-link NLOS 和 future-context，命令/配置可追溯 | T07 deterministic truth sidecar；T09 manifests/cache/evaluator；T10 locked gate；T11 no-leak prefix；T12 locked metrics；T13 generated figures/tables/release | RQ1–RQ4 locked run IDs；RQ3 两个隔离 cache namespace；RQ4 common-linearization 独立 manifest/cache；U13/U14；failed/zero-coverage/fallback ledger；artifact reproduction run | `fig:headline`、`fig:context`、system/main tables、machine-readable metrics | `PARTIALLY_SUPPORTED_INFRASTRUCTURE / FULL_EMPIRICAL_CLAIM_NOT_YET_TESTED`：命令、保留输入/结果与失败记账存在；T10仅有限validation负结果。完整RQ1–RQ4、U13和正式held-out未完成。用户已授权精简旧中间归档，不能声称旧完整archive仍全部可验证。 |
 
 ## T10-A19-R03 崩溃后复审边界
 

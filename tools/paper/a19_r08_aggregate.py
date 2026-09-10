@@ -42,7 +42,7 @@ def write_csv(path, rows):
         path.write_text("")
         return
     with path.open("w", newline="", encoding="utf-8") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(stream, fieldnames=list(dict.fromkeys(key for row in rows for key in row)))
         writer.writeheader()
         writer.writerows(rows)
 
@@ -72,7 +72,7 @@ def main():
             segments = csv_rows(output / "segments.csv")
             scores = csv_rows(output / "scores.csv")
             evaluation = json_object(root / "evaluation" / f"{cell}.json")
-            if pipeline and pipeline.get("status") == "SCORED":
+            if pipeline and pipeline.get("status") in ("SCORED", "NO_CANDIDATES"):
                 matrix_status = "SCORED"
                 reason = ""
             elif pipeline and pipeline.get("status"):
@@ -84,7 +84,11 @@ def main():
             else:
                 matrix_status = "NOT_RUN"
                 reason = "NO_TICKET"
-            candidate_count = sum(int(row.get("obs_count", 0)) for row in partition)
+            partition_known = bool(stage1.get("status") == "CONVERGED" and
+                                   (output / "stage1/partition.csv").is_file() and
+                                   (output / "stage1/partition.csv").stat().st_size > 0)
+            score_known = bool(pipeline and pipeline.get("status") in ("SCORED", "NO_CANDIDATES"))
+            candidate_count = sum(int(row.get("obs_count", 0)) for row in partition) if partition_known else None
             score_groups = len(scores)
             eligible = sum(row.get("eligible") in ("1", "true") for row in scores)
             unavailable = sum(row.get("status") != "OK" for row in scores)
@@ -111,12 +115,12 @@ def main():
                 "stage2_outer": stage2.get("outers", ""),
                 "stage2_elapsed_s": stage2.get("elapsed_seconds", ""),
                 "candidate_observations": candidate_count,
-                "segments": len(partition),
-                "short_segments": sum(row.get("short_support") in ("1", "true") for row in partition),
-                "boundary_segments": sum(row.get("boundary") in ("1", "true") for row in segments),
-                "groups": score_groups,
-                "eligible_groups": eligible,
-                "unavailable_groups": unavailable,
+                "segments": len(partition) if partition_known else None,
+                "short_segments": sum(row.get("short_support") in ("1", "true") for row in partition) if partition_known else None,
+                "boundary_segments": sum(row.get("boundary") in ("1", "true") for row in segments) if score_known else None,
+                "groups": score_groups if score_known else None,
+                "eligible_groups": eligible if score_known else None,
+                "unavailable_groups": unavailable if score_known else None,
                 "fit_only_decisions": ";".join(decision_vectors["fit_only"]),
                 "s_fit_decisions": ";".join(decision_vectors["s_fit"]),
                 "full_gate_decisions": ";".join(decision_vectors["full_gate"]),
@@ -156,10 +160,10 @@ def main():
                         "final_used_candidates": "", "full_rmse_m": "", "full_p95_m": "",
                         "full_matches": "", "historical_rmse_m": "", "historical_p95_m": "",
                         "historical_matches": "", "delta_rmse_vs_suppress_m": "",
-                        "delta_p95_vs_suppress_m": "", "accepted_bias_rmse_status": "UNAVAILABLE",
-                        "accepted_bias_rmse_m": "", "bad_correction_rate_status": "UNAVAILABLE",
-                        "bad_correction_rate": "", "good_rejection_rate_status": "UNAVAILABLE",
-                        "good_rejection_rate": "", "candidate_use_coverage": "",
+                        "delta_p95_vs_suppress_m": "", "decision_accepted_bias_rmse_status": "UNAVAILABLE",
+                        "decision_accepted_bias_rmse_m": "", "decision_bad_correction_rate_status": "UNAVAILABLE",
+                        "decision_bad_correction_rate": "", "decision_good_rejection_rate_status": "UNAVAILABLE",
+                        "decision_good_rejection_rate": "", "candidate_use_coverage": "",
                         "eligible_use_coverage": "", "overall_retained_fraction": "",
                         "fallback_attempted": "", "fallback_status": "", "final_elapsed_s": "",
                         "unavailable_reason": reason,
@@ -191,15 +195,17 @@ def main():
                     "historical_matches": historical["matches"],
                     "delta_rmse_vs_suppress_m": value(delta["rmse_m"]),
                     "delta_p95_vs_suppress_m": value(delta["p95_m"]),
-                    "accepted_bias_rmse_status": status(accepted_bias),
-                    "accepted_bias_rmse_m": value(accepted_bias),
-                    "bad_correction_rate_status": status(bad),
-                    "bad_correction_rate": value(bad),
-                    "good_rejection_rate_status": status(rejection),
-                    "good_rejection_rate": value(rejection),
+                    "decision_accepted_bias_rmse_status": status(accepted_bias),
+                    "decision_accepted_bias_rmse_m": value(accepted_bias),
+                    "decision_bad_correction_rate_status": status(bad),
+                    "decision_bad_correction_rate": value(bad),
+                    "decision_good_rejection_rate_status": status(rejection),
+                    "decision_good_rejection_rate": value(rejection),
                     "candidate_use_coverage": value(coverage["candidate_use_coverage"]),
                     "eligible_use_coverage": value(coverage["eligible_use_coverage"]),
                     "overall_retained_fraction": value(coverage["overall_retained_fraction"]),
+                    "final_accepted_bias_rmse_m": value(result["final_time"]["accepted_bias_rmse_m"]),
+                    "final_bad_correction_rate": value(result["final_time"]["bad_correction_rate"]),
                     "fallback_attempted": fallback.get("attempted"),
                     "fallback_status": fallback.get("status"),
                     "final_elapsed_s": result["elapsed_seconds"],

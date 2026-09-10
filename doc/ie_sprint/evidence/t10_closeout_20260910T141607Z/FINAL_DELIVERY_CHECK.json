@@ -1,0 +1,12 @@
+{
+  "C2": "C2-C",
+  "T10_frozen": true,
+  "T11": "NOT_RUN",
+  "T12": "NOT_RUN",
+  "evidence_root_size": "2.3 GiB",
+  "git_diff_check_exit_code": 0,
+  "removed_GiB": 34.151249882765114,
+  "source_manifest": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/FINAL_SOURCE_MANIFEST.json",
+  "status": "PASS",
+  "windows_C_free_last_observed": "about 19 GiB"
+}

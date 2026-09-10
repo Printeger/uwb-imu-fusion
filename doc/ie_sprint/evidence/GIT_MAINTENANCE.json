@@ -1,0 +1,16 @@
+{
+  "reason": "User authorized removal of reproducible intermediates and reduction of .git",
+  "removed_local_checkpoint_refs": [
+    "c837ada84d1fb61adf40094f6287c008133e2ed6 refs/codex/turn-diffs/checkpoints/3780d6106e6018827b5cfa167797ccc94d2ab27ee27b08dcf22214992e4b41c8/c4a4c7c1278fcfe6c2f21d686ed31a5ce3632515a3a078627c7b85805d6b969d/1789046729156/9aca9faa-c434-4779-823a-b91adcd519de",
+    "73303b07c030fc02f82a213eb583e84383ff2f43 refs/codex/turn-diffs/checkpoints/5d3b0b4cf676915a68141626b61d4ab757884bc18e0866f0408270c333ada8dc/cefd99cba8ee63d4337163932aa8516932065a727be417507d738aaf06aebad7/1789027591027/d49a7420-4d44-49fd-98cc-102d688a4119",
+    "af0c00f946e86a277e7c5653a22e0d80b2586243 refs/codex/turn-diffs/checkpoints/636a24737638dcf3916dd3a5735633abc748c3c9536578fc4705389c0cda679c/2076daffe3bc721a437f0cbce3f932a42c467f9a7d2c39e20718a40636aa72a2/1789004431819/5d236241-0ed3-4397-92a3-e1469dc708cd",
+    "4e0c88f86e786c6689a07b9d92e4f7848bb29479 refs/codex/turn-diffs/checkpoints/6b69ae85f29ad70138eb6dc1bc28db903523eb1d6a9e5aae936b233ba4e1eed7/9bbaaece63e420e226b2cab4f625ddf9efae58438c96d453aa52dfe49d58d560/1788804199944/a77a909f-99ce-4549-b515-9221c379ea66",
+    "1f60b933f503b7522f6929bd8ac6f4b2c8a91341 refs/codex/turn-diffs/checkpoints/94c1a24c9a2caa5cb5f1b3b6507219d8e92121f2bc297e1bdb85f8cf559fd493/7085be954a1c1fc4928f2c26ab6f5fd1fdf4b7614c4aba7bd30c7faafc6ff401/1788758249328/eb7a3f14-4e83-492e-ab60-69f08876788f",
+    "60aaf29d0470be1c6bc683a99e6f44bcb0da5e23 refs/codex/turn-diffs/checkpoints/a5176eb434111b362589781981759357861dbd7d13bcbbe162ad01e3f9315e4e/a5778194fb3d6416770da409997897293ffb2eb3ca7b4dacc1628f2275a97244/1788772195974/33e3839f-844c-4a28-81a4-8cd80b3f4801",
+    "f1f9a4a2ff9deabafb001183001f7b1fbb70ce9f refs/codex/turn-diffs/checkpoints/ecd9c89a0b9213e3e6eca16bb5de37459a83723b9439a54000f029312b1917ea/7d549336910dbc05bbb57f9f9cbbdf11a5ee52cccf59219cd7b4140bee72c500/1788880437586/ca9a5e89-aab0-4ce1-b96c-5790918cd3ea"
+  ],
+  "preserved": "All branch, tag, remote refs, reflogs and working files; no history rewrite or force push",
+  "temporary_pack_bytes_removed": 308969508,
+  "after_gc_bytes": 2146675224,
+  "remaining": "Active current-session capture retained; deleting it while in use was avoided"
+}

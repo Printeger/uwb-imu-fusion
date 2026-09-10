@@ -1,0 +1,7 @@
+{
+  "authorization": "User explicitly requested keeping only essential results and deleting regenerable/rebuildable intermediates after disk-full reboot.",
+  "created_utc": "2026-09-10T15:32:17.682476+00:00",
+  "retained": "Raw inputs, source/configs, commands, status/failed attempts, certificates, final graph/Values, N/R/F/G, trajectories, evaluation, provenance and original manifests.",
+  "candidate_files": 36628,
+  "candidate_bytes": 36669625341
+}

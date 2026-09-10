@@ -1,0 +1,532 @@
+[
+  {
+    "source": "tools/paper/a18_finalize.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a18_finalize.py",
+    "sha256": "d942eaa9a6b6ef1d112d2173fc6e45beefcd31b090581146f3c913937575b627"
+  },
+  {
+    "source": "tools/paper/a19_authorize.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_authorize.py",
+    "sha256": "64f888861d855364d45a54f2e12f7c20ba4190a5a9bbd519622eb3080c0daaef"
+  },
+  {
+    "source": "tools/paper/a13_imu_covariance_probe.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a13_imu_covariance_probe.cpp",
+    "sha256": "21625ba2a2557be1919213ca4bb6ec4e5da6e306c7f80f79a13e4a5b4f4005e4"
+  },
+  {
+    "source": "tools/paper/a17_archive.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a17_archive.py",
+    "sha256": "4e07edf8f6d86b0fb7218b36200587e5e82cec2145032f81080ba8b1e10a9aad"
+  },
+  {
+    "source": "tools/paper/a18_interval.h",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a18_interval.h",
+    "sha256": "52dec8bd979142c0c00b5f7aa40d9e752963c2aaee7c47f47bed3ab27b852c7e"
+  },
+  {
+    "source": "tools/paper/a19_r01_gate.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r01_gate.py",
+    "sha256": "7c65c45e0e4e302837ca11683c45a491e42323ecb239f89c29a9324385fc6eb3"
+  },
+  {
+    "source": "tools/paper/a19_r02_preflight.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r02_preflight.py",
+    "sha256": "74012bed07866858c09e6c5a1eed1e2dfed7c61ab809206e671b5c8405eaa798"
+  },
+  {
+    "source": "tools/paper/a18_audit.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a18_audit.py",
+    "sha256": "40793bb5143a5c9d4cf8dfda59661db3e95c2d822f56180f3405162125b003dd"
+  },
+  {
+    "source": "tools/paper/a15_static_recompute.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a15_static_recompute.cpp",
+    "sha256": "367b24bdd5218f72bc8d2169e0ee08f5190d935502b524c4e88c9b7730cbb65f"
+  },
+  {
+    "source": "tools/paper/generate_synthetic_input.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/generate_synthetic_input.py",
+    "sha256": "446b2c0f2bab0c458530ca1c0da873ff780c799d1a8a05c4b869fd59a1f2aa09"
+  },
+  {
+    "source": "tools/paper/a18_static.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a18_static.cpp",
+    "sha256": "52dae135cd9d4aa0fe27cbe12f80d686efa576e649ae2ed77d3cef3fa4b34698"
+  },
+  {
+    "source": "tools/paper/a14_single_pilot.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a14_single_pilot.py",
+    "sha256": "1f108993708432b7e61fc0c9be93e069750b46390111ccefc72bc5c2baa2d436"
+  },
+  {
+    "source": "tools/paper/a19_r03_pipeline.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r03_pipeline.cpp",
+    "sha256": "927b0dc34d96f6a397faa81b570c195eac526dcf1d8835b886ab111eead022b7"
+  },
+  {
+    "source": "tools/paper/a19_r03_launch.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r03_launch.py",
+    "sha256": "2706d90dff34d6a8332343a0e397f1299af37861360d51ae185a30cde325f597"
+  },
+  {
+    "source": "tools/paper/audit_a12_checkpoint.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/audit_a12_checkpoint.py",
+    "sha256": "8a9237210e02ea85bc85197ef678b5c9bd05c63cb3fc5ba09544d2097f90c772"
+  },
+  {
+    "source": "tools/paper/a16_archive.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a16_archive.py",
+    "sha256": "f907494c94145985abea98a1ef5a6f0f04f53af2a5634fda6a377fb78f2666e3"
+  },
+  {
+    "source": "tools/paper/audit_a11_first_block.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/audit_a11_first_block.py",
+    "sha256": "1b4cd40165addeb63fd2d94f087ae5390d217b7145d99f083f00c7098d8ad1b7"
+  },
+  {
+    "source": "tools/paper/a18_nonzero_check.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a18_nonzero_check.py",
+    "sha256": "1fa78f003594b73f2129f92ff2014051b8551a05cc0379b4af1b4e24160fdf64"
+  },
+  {
+    "source": "tools/paper/a19_r05_preflight.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r05_preflight.py",
+    "sha256": "752f30693591580576bf5e875ab2dabd6213755f19eff644d665e635105672ac"
+  },
+  {
+    "source": "tools/paper/a19_r04_authorize.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r04_authorize.py",
+    "sha256": "96a6f4eb6e526a2e74f964aa1289bf623b5febd193289ed1e2dd6ecd690bdcc1"
+  },
+  {
+    "source": "tools/paper/archive_a14_delivery.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/archive_a14_delivery.py",
+    "sha256": "7dfe3570821caea0a7e7c2348ee0e464d47dae249ad6421a43da293adbb88040"
+  },
+  {
+    "source": "tools/paper/a14_imu_model_regression.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a14_imu_model_regression.cpp",
+    "sha256": "18463cef1567bbbeec784e46036bb45d18d3d554497f30c5e638f4386fc17728"
+  },
+  {
+    "source": "tools/paper/a16_finalize.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a16_finalize.py",
+    "sha256": "0079f51e9ba78638e80eda2c2801df9622a2666256b132e36d1ef2a7a3d18200"
+  },
+  {
+    "source": "tools/paper/a18_stage1.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a18_stage1.cpp",
+    "sha256": "4f07724598aa98851bc4d277fc06d3916cfa393b2bedf94e5948c05d7d0a9d76"
+  },
+  {
+    "source": "tools/paper/run_a10_development_pilot.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/run_a10_development_pilot.py",
+    "sha256": "147957838717a875db2cd6a1366d67dc2d5c48c32d6c751782265b43d78513b9"
+  },
+  {
+    "source": "tools/paper/audit_a13_covariance.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/audit_a13_covariance.py",
+    "sha256": "3068f48dbe18167e884ad357148920bd3b10f66db0be0a1a14a507e3e73dee6b"
+  },
+  {
+    "source": "tools/paper/check_a11_closeout.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/check_a11_closeout.py",
+    "sha256": "d9647f3a73875faa1839cdbf6330c8e4229550d64b142574a74960b00a42feb7"
+  },
+  {
+    "source": "tools/paper/a19_r04_pipeline.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r04_pipeline.cpp",
+    "sha256": "a3120e6e7b133eee6ddfdadaf9c52b1a971c904928b644c226c015ab928f96f4"
+  },
+  {
+    "source": "tools/paper/a17_first_block.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a17_first_block.cpp",
+    "sha256": "4eede1ba9d6490640fbc1b1a79c441a47946fdf7850ee9227d4f4e3820c64e49"
+  },
+  {
+    "source": "tools/paper/a19_r01_status.h",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r01_status.h",
+    "sha256": "a3e47ad329cfcd58a6f9960d13584c94e2a9579a98bc0ec1ad6ba57417b58cc0"
+  },
+  {
+    "source": "tools/paper/run_experiments.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/run_experiments.py",
+    "sha256": "4dad8f58a1e6b7071a1c5bf7b0a9bb49806626daa747c3d403e08686dffbb0d4"
+  },
+  {
+    "source": "tools/paper/a19_r01_authorize.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r01_authorize.py",
+    "sha256": "b5f2212e45c7e792898cf91589e8c1c4eb415ab578f6aac77c6ed5fab5630370"
+  },
+  {
+    "source": "tools/paper/a15_capture_once.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a15_capture_once.py",
+    "sha256": "e5ea74615eeb1df9d251f8d980a7ed07eb2037783d505d1aaffb4817092d7de1"
+  },
+  {
+    "source": "tools/paper/run_a11_first_block.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/run_a11_first_block.py",
+    "sha256": "7f1ca80753f0f30fd823922ca619129b1caa87b3bdd9b6fa714cfee4b6c01011"
+  },
+  {
+    "source": "tools/paper/check_a14_engineering.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/check_a14_engineering.py",
+    "sha256": "2370b866014eee7404d3b38316bf1e82faaebe2bcc16b9a3af766100cfe711ce"
+  },
+  {
+    "source": "tools/paper/t10_closeout.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/t10_closeout.py",
+    "sha256": "b3d0f63ae1b77368ad1fe813adbb2a010d69cb74b98a3f5d94584647f971512e"
+  },
+  {
+    "source": "tools/paper/a18_certificate.h",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a18_certificate.h",
+    "sha256": "9b2534215624b5f5e25124d998facb779a430a99809dbbab70238f1aab8339c8"
+  },
+  {
+    "source": "tools/paper/a14_run_regressions.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a14_run_regressions.py",
+    "sha256": "28f9b91d32d54bc88d53b65db42b74cfb0b308a29ef97cfb2d0cb4c65c2df1b0"
+  },
+  {
+    "source": "tools/paper/archive_a13_checkpoint.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/archive_a13_checkpoint.py",
+    "sha256": "5545f4b49dac297cbc327f1eb561235fdf5198409673afccd39b1b6707f3200a"
+  },
+  {
+    "source": "tools/paper/t06_chain_solver_probe.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/t06_chain_solver_probe.cpp",
+    "sha256": "9b87ee158610ad4c10ae44229b1722063850958d4a9987eefb6e3cd464c53329"
+  },
+  {
+    "source": "tools/paper/generate_t07_scenario.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/generate_t07_scenario.cpp",
+    "sha256": "0b0e2b38edaa3f82ac7a2c07158f7eacc6650e22b3e6ae5a4f871e0e6e606c9a"
+  },
+  {
+    "source": "tools/paper/a19_r04_preflight.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r04_preflight.py",
+    "sha256": "ae70e9d9ec08b2bb5ee59e2ea626ea54ce78d206b8e877e070d51fb586e4cbaa"
+  },
+  {
+    "source": "tools/paper/a12_checkpoint_probe.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a12_checkpoint_probe.cpp",
+    "sha256": "260fbc88c0a9523cebf7db3561f3eab73729170dce544a30d7a169c8fa3fb1b7"
+  },
+  {
+    "source": "tools/paper/export_ground_truth.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/export_ground_truth.cpp",
+    "sha256": "14706e53bf13086ae57f99537eb1f4fcfd5705cbb45ae682c7368a84ca832f3e"
+  },
+  {
+    "source": "tools/paper/a19_r06_evaluate.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r06_evaluate.py",
+    "sha256": "9cf36105eb6ca393f752a4f5ec8b8c12f94f8c72160251d3eb3e65af1276c9f0"
+  },
+  {
+    "source": "tools/paper/a17_gate_checks.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a17_gate_checks.py",
+    "sha256": "746c149fad2a576d04f8281c9cf91ed626deaba34f1e69c497ed6775f81fd4f2"
+  },
+  {
+    "source": "tools/paper/t07_scenario_injector.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/t07_scenario_injector.cpp",
+    "sha256": "dd5ee181e4c00faf4476a3436ddf56acf5b21ef01723d4cd7eb22174b5866932"
+  },
+  {
+    "source": "tools/paper/a19_r04_launch.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r04_launch.py",
+    "sha256": "bd337aa956101c4ed034638c3c4974036178a6bc2abc96c0224bb8c585b651f0"
+  },
+  {
+    "source": "tools/paper/audit_a10_pilot.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/audit_a10_pilot.py",
+    "sha256": "7c733d712a2463ad5c3163b6bab7555e912e2c962f608a8f7ef376b183ca4b05"
+  },
+  {
+    "source": "tools/paper/a14_verify_delivery.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a14_verify_delivery.py",
+    "sha256": "2a5f892fe7e699b4f1c6766375518759f95bc7a6a0a1101b8a2570c877a3bec8"
+  },
+  {
+    "source": "tools/paper/a18_check_pairs.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a18_check_pairs.py",
+    "sha256": "39a0551bf134c44e082f9fe5b5180e9c1f7d004d924970d337f0c3ebcd18d2d3"
+  },
+  {
+    "source": "tools/paper/a16_mpfr.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a16_mpfr.py",
+    "sha256": "4cc2ad7233033c677577c6d54bccbf918f1dd46add8600b458057de788dfde6c"
+  },
+  {
+    "source": "tools/paper/check_synthetic_input.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/check_synthetic_input.py",
+    "sha256": "4dfc2d933048d6511cda194b03db25a22e4ec88d09733c72855307529af3ace4"
+  },
+  {
+    "source": "tools/paper/a17_finalize.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a17_finalize.py",
+    "sha256": "2f5229f3d6f1e6dff45aa753eaccc449e31b3a56d60ad50d78fdcfbc582acb23"
+  },
+  {
+    "source": "tools/paper/a19_r08_aggregate.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r08_aggregate.py",
+    "sha256": "5c73b8a2eb0db5f10fa1c0d721e21bbdb43924c29303f98a6a0f34e9e6c77cda"
+  },
+  {
+    "source": "tools/paper/evaluate_runs.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/evaluate_runs.py",
+    "sha256": "41c7c3fbfcbedc910731b0eb53f1c2bd5412f18bba633d70affa66e29c03cb5e"
+  },
+  {
+    "source": "tools/paper/a18_live_graph.h",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a18_live_graph.h",
+    "sha256": "86ff7f2bc38e18142e0215179ab6db28cce101ad292487ed6af70a6cca3daf1a"
+  },
+  {
+    "source": "tools/paper/a17_audit_results.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a17_audit_results.py",
+    "sha256": "5ca059396ba01e22978f23caca8a11084a769dcdb68df258bd77783dcdb484b0"
+  },
+  {
+    "source": "tools/paper/a19_r03_preflight.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r03_preflight.py",
+    "sha256": "79b5f08fd6eba0c128856bc7e720c6e9cadadb9271b2db5fe2a620173f5ac0aa"
+  },
+  {
+    "source": "tools/paper/a19_r02_launch.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r02_launch.py",
+    "sha256": "909bfd429ea59ae6ad27d38aa23736a5811e6f64da51e89891398cad26383032"
+  },
+  {
+    "source": "tools/paper/a19_r08_run_matrix.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r08_run_matrix.py",
+    "sha256": "e9124f2303788606e07208f7cccf5d0436e98f98eeb3bdaf869a081e4eaacf02"
+  },
+  {
+    "source": "tools/paper/a19_r03_archived_guard.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r03_archived_guard.py",
+    "sha256": "02f96d7744f390e7feef605f702fd9a729bb1776e2b70a976dc4d75c218e7c2c"
+  },
+  {
+    "source": "tools/paper/a19_r05_launch.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r05_launch.py",
+    "sha256": "412b077a908550850eb0ac37b7e965db7468c4aab1e9f491e4847628ed603688"
+  },
+  {
+    "source": "tools/paper/a18_tests.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a18_tests.cpp",
+    "sha256": "c5a188ef59848ce1c69bb180a436cf87c61932623d53b46824b680d976dfb693"
+  },
+  {
+    "source": "tools/paper/a19_r01_integration.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r01_integration.cpp",
+    "sha256": "2b7fbba4b5ec3c4ce86abef1d393307adf0ca38dbfc0bcc21a742f85acd18a2d"
+  },
+  {
+    "source": "tools/paper/a19_r05_evaluate_handshake.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r05_evaluate_handshake.py",
+    "sha256": "48cdca6a226e93f85251619d3183a424fb87911ce7c7bba003a370603beb91e4"
+  },
+  {
+    "source": "tools/paper/a16_closeout_checks.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a16_closeout_checks.py",
+    "sha256": "ba3f4c6d1db18a221a3f6286a2cc5ada22cccb4330bf9c6af80cd0295eddd545"
+  },
+  {
+    "source": "tools/paper/a14_engineering_gate.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a14_engineering_gate.py",
+    "sha256": "6a780cd39889db49d426f08b2a149a5e0149f2611560da7f3a0b8200a6fc051b"
+  },
+  {
+    "source": "tools/paper/a16_summarize.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a16_summarize.py",
+    "sha256": "e396c99419cee1ddf587ea38bc9f81b05e500b395236dbf668b7e3aa912c76bf"
+  },
+  {
+    "source": "tools/paper/a14_closeout.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a14_closeout.py",
+    "sha256": "00e9bc56b2ad18ac7b70d359c1f070da9ddb7a9b39b1e7d340e405b1b3a8ba7d"
+  },
+  {
+    "source": "tools/paper/t07_run_logged_command.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/t07_run_logged_command.py",
+    "sha256": "36d55eee6c0e1bf7cb2126981126c5b4da471f4ef2fb3cccada920d888c6d8ae"
+  },
+  {
+    "source": "tools/paper/a18_archive.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a18_archive.py",
+    "sha256": "65f2ddb48542627b409804c6289330b0c23e5caaa926568a5f6a6357b95c3ff1"
+  },
+  {
+    "source": "tools/paper/a19_stage2_score.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_stage2_score.cpp",
+    "sha256": "61d57d50b5c25beec0704afb2d9f47b19e52f2f5e4b7803bc67f9ddc709ff172"
+  },
+  {
+    "source": "tools/paper/audit_a12_arms.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/audit_a12_arms.py",
+    "sha256": "82b12b7baa61d4d465206555e28635f48c3944586eb613756070121e8ff2c4f2"
+  },
+  {
+    "source": "tools/paper/check_a12_closeout.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/check_a12_closeout.py",
+    "sha256": "f2f75b319c72e05a521f0c1816ac7346bda0319314f1871b45fe85977dab42ab"
+  },
+  {
+    "source": "tools/paper/a19_r02_authorize.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r02_authorize.py",
+    "sha256": "00a308cf01346c46d9e28f3b6584cecf538b72767cccd4a4900942fa32fc2348"
+  },
+  {
+    "source": "tools/paper/audit_t07_base.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/audit_t07_base.py",
+    "sha256": "18ee434dc96f9e627b6a7275e5510cb57ab4ee06965781316e22ac1c74402622"
+  },
+  {
+    "source": "tools/paper/a19_r03_guard_tests.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r03_guard_tests.cpp",
+    "sha256": "e4fc42427f1b7ef7656da88bc9749be5184e73a5547ae5ffffdf2b4ccd681d04"
+  },
+  {
+    "source": "tools/paper/a19_r08_prepare.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r08_prepare.py",
+    "sha256": "02fa071eb5a8707b4b507ee59bdb7ffdce845ec2bb4c4bf78b4bde68d2eb208c"
+  },
+  {
+    "source": "tools/paper/archive_a12_checkpoint.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/archive_a12_checkpoint.py",
+    "sha256": "31bc24331c709e53b842f6ed220d71a5ae3a7f6c3d3d694f97af23e917715afc"
+  },
+  {
+    "source": "tools/paper/a17_graph_io.h",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a17_graph_io.h",
+    "sha256": "18518a1bee4f7975e25e2f9bf4b65233d4a4ada703302aad39366281170cdde1"
+  },
+  {
+    "source": "tools/paper/a17_authorize_and_run.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a17_authorize_and_run.py",
+    "sha256": "a0b2dd70d44b35ed2b9e32c6d58077bcaa4f6a5cbe4c37546d3662161a487b32"
+  },
+  {
+    "source": "tools/paper/a19_r04_evaluate_mixed_fixture.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r04_evaluate_mixed_fixture.py",
+    "sha256": "a0520b32ddd3a07af293b4fa2925d8390668c6305eb621580190131c709ee991"
+  },
+  {
+    "source": "tools/paper/a18_build.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a18_build.py",
+    "sha256": "7f209faf914f15998557076079d1c8ebfdccc3ebdfdb40cc5f0b1801778d64b4"
+  },
+  {
+    "source": "tools/paper/a15_finalize_evidence.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a15_finalize_evidence.py",
+    "sha256": "e3bf4f4240c87dfdbd288bd6944bbb4ab350f1291c9da56fc6c314e1267ae1dc"
+  },
+  {
+    "source": "tools/paper/a19_r03_authorize.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r03_authorize.py",
+    "sha256": "e3cf2818017a6e6240501425adf0cbacf6c4bf79114078d70f8b33d8d2b8422a"
+  },
+  {
+    "source": "tools/paper/a19_r08_pipeline.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r08_pipeline.cpp",
+    "sha256": "f7b91887101291d4922ae47e0bad462d5c4dcfe9cc8883a597e24b09c6dd78c2"
+  },
+  {
+    "source": "tools/paper/check_a13_closeout.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/check_a13_closeout.py",
+    "sha256": "08b46ced348d27a137e8af420e24721ef0fedb69b7f53028016c41def2661df3"
+  },
+  {
+    "source": "tools/paper/a16_reference.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a16_reference.py",
+    "sha256": "d03b0f772e80e212707c06fc5d7bb0bb4d4efe645d298ee9bf3e28ec328483ad"
+  },
+  {
+    "source": "tools/paper/a18_authorize.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a18_authorize.py",
+    "sha256": "ba0e6ae4fd40fb33b8e2992a502250effd0b9f5aeee0d1e1c8e62454a676dac6"
+  },
+  {
+    "source": "tools/paper/summarize_a11_progress.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/summarize_a11_progress.py",
+    "sha256": "1583cc04ee301b9a3f276ccc172d4744ad9022bda61609727cf31fa08dce46af"
+  },
+  {
+    "source": "tools/paper/a17_certificate_worker.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a17_certificate_worker.py",
+    "sha256": "fbd5886a1b35ade5e85dddf47a18839ae12cde20327e783c8a9a4a2a07afa19c"
+  },
+  {
+    "source": "tools/paper/a17_certificate_tests.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a17_certificate_tests.py",
+    "sha256": "f28ddd68473bea561ed535d168228621a39c2d7bbc0e58c8456e7497cafb630a"
+  },
+  {
+    "source": "tools/paper/a19_r02_finalize.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r02_finalize.py",
+    "sha256": "a0a79eb8595df39295d9bd02872b90314f29db0a30e9bf1af26b1e13688b8de7"
+  },
+  {
+    "source": "tools/paper/a19_r08_evaluate.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r08_evaluate.py",
+    "sha256": "183dd31d1af8fe4c6bdc7121d2b9af141aa85769c81c5e2585566d1fbb98e305"
+  },
+  {
+    "source": "tools/paper/reference_recoverability.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/reference_recoverability.py",
+    "sha256": "bfb55bb0a68aa65ff31faff7f603bf9eda3cbdc7cf3d39588a2547711a0eea46"
+  },
+  {
+    "source": "tools/paper/a18_optimizer.h",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a18_optimizer.h",
+    "sha256": "242a47cb892bb7ec56696d2e31fc238f062d54100e3da5fd64a5da1015a42c05"
+  },
+  {
+    "source": "tools/paper/a15_archive.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a15_archive.py",
+    "sha256": "b8d3dd262af2bea49108b9329d4e518480d96cbd5241ffa0c5c3610b0036aaa6"
+  },
+  {
+    "source": "tools/paper/a14_run_logged.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a14_run_logged.py",
+    "sha256": "89044d904358dbf744cd54ffeea2426a3cd6f26004ebb9ff04184543b0bff4ef"
+  },
+  {
+    "source": "tools/paper/a16_export_endpoints.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a16_export_endpoints.cpp",
+    "sha256": "f87a6ed48932dca746f60068aa0e634dd106e7a6eb6ce49c17e5c7e042515d93"
+  },
+  {
+    "source": "tools/paper/a19_r05_authorize.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a19_r05_authorize.py",
+    "sha256": "100efa9b6a8b09b4b84f4006ac83b0fbae66251795119933b72aa538ac04bf87"
+  },
+  {
+    "source": "tools/paper/a15_summarize.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/tools/paper/a15_summarize.py",
+    "sha256": "da7d6d0250978b0beac4cb78a340e4c2fc272f92a46dba376f7d0650f7c681af"
+  },
+  {
+    "source": "src/nlos_refit.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/src/nlos_refit.cpp",
+    "sha256": "09c537d703b4c8c625ae33351e35e842260b6071f4e6f63e91f810423169ed6b"
+  },
+  {
+    "source": "test/test_nlos_refit.cpp",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/test/test_nlos_refit.cpp",
+    "sha256": "dd7b074025bf2baed01b33739b5af98843756732bdd8d6e578a0b78185e7608f"
+  },
+  {
+    "source": "test/test_t10_closeout.py",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/test/test_t10_closeout.py",
+    "sha256": "15563c6028a79d85e1ec194f68ac2208fe53a90e43275a03559fbbff4c673ba6"
+  },
+  {
+    "source": "doc/ie_sprint/T10_CLOSEOUT_MANIFEST.json",
+    "path": "doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/source/doc/ie_sprint/T10_CLOSEOUT_MANIFEST.json",
+    "sha256": "7c4fbeb0f677cb6d4a321dbb021d03d080ec01b9b6f23762a8423d3ebbbf3d04"
+  }
+]

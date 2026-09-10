@@ -1,0 +1,18 @@
+{
+  "base_recording_id": "synthetic-6644ceb628680e460d4eb173a6be624304af11e07c1ae31be319d59555690cf1",
+  "base_source_sha256": "sha256:6644ceb628680e460d4eb173a6be624304af11e07c1ae31be319d59555690cf1",
+  "cache_id": "sha256:c6276e9b5cec6ce2579ddd781a0bbb3d21b19a61f2016bd4a75c771b61b6171a",
+  "imu_count": 1601,
+  "imu_file": "imu.csv",
+  "imu_sha256": "sha256:74428e79b8d168b5141742749531968b9bdf4c287a700e22853f21a7e9f83bd5",
+  "imu_units": "acc_mps2,gyro_radps,orientation_quaternion_wxyz",
+  "recording_time_origin_s": 0.0,
+  "schema": "t07_estimator_cache_v1",
+  "time_basis": "sensor_time_from_recording_origin",
+  "uwb_file": "uwb_observations.csv",
+  "uwb_message_count": 41,
+  "uwb_message_grouping": "source_message_index",
+  "uwb_observation_count": 328,
+  "uwb_sha256": "sha256:e2e7164ae364147dfcfde6b363b22e2b4694d30b576b24dc3dd468f016e08b52",
+  "uwb_units": "time_s,range_m,rssi_dbm"
+}

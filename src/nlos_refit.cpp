@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstring>
 #include <limits>
+#include <iomanip>
 #include <map>
 #include <set>
 #include <sstream>
@@ -436,8 +437,12 @@ bool RangeFactorMatchesExpected(
   const auto actual_error = actual_expression->unwhitenedError(values);
   const auto expected_error = expected_expression->unwhitenedError(values);
   if (actual_error.size() != 1 || expected_error.size() != 1 ||
-      !Binary64Equal(actual_error[0], expected_unwhitened_residual) ||
-      !Binary64Equal(expected_error[0], expected_unwhitened_residual))
+      // Residual equality is numerical, not an artifact identity comparison.
+      // GTSAM ExpressionFactor can return -0 for an exact fit while the
+      // independent arithmetic residual is +0. No nonzero tolerance is added.
+      !std::isfinite(expected_unwhitened_residual) ||
+      actual_error[0] != expected_unwhitened_residual ||
+      expected_error[0] != expected_unwhitened_residual)
     return false;
   const auto actual_linear =
       boost::dynamic_pointer_cast<gtsam::JacobianFactor>(
@@ -1008,8 +1013,30 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
                 conditional_graph.at(range.factor_index), conditional_initial,
                 range.measurement, range.sigma,
                 range.expected_unwhitened_residual))
-          return fail(SegmentRefitStatus::INVALID_INPUT,
-                      "conditional range metadata does not match graph");
+        {
+          std::ostringstream detail;
+          detail << std::setprecision(17)
+                 << "conditional range metadata does not match graph; obs_id="
+                 << range.obs_id << "; factor=" << range.factor_index
+                 << "; outer=" << outer << "; beta=" << range.fixed_beta
+                 << "; c=" << range.segment_amplitude
+                 << "; conditional_beta=" << range.conditional_beta
+                 << "; expected_residual=" << range.expected_unwhitened_residual;
+          if (range.factor_index < conditional_graph.size()) {
+            const auto factor = boost::dynamic_pointer_cast<
+                gtsam::ExpressionFactor<double>>(
+                    conditional_graph.at(range.factor_index));
+            if (factor) {
+              detail << "; measured=" << factor->measured()
+                     << "; expected_measurement=" << range.measurement
+                     << "; actual_residual="
+                     << factor->unwhitenedError(conditional_initial)[0]
+                     << "; pose=" << gtsam::DefaultKeyFormatter(range.pose_key)
+                     << "; sigma=" << range.sigma;
+            }
+          }
+          return fail(SegmentRefitStatus::INVALID_INPUT, detail.str());
+        }
       }
     }
     CheckedLmOptions lm_options;

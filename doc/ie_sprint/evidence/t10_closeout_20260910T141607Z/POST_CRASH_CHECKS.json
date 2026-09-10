@@ -1,0 +1,58 @@
+[
+  {
+    "argv": [
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/test_nlos_refit"
+    ],
+    "elapsed_s": 0.19298484799992366,
+    "exit_code": 0,
+    "log": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/post_crash_check_0.log"
+  },
+  {
+    "argv": [
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/test_nlos_inference"
+    ],
+    "elapsed_s": 0.14876287700008106,
+    "exit_code": 0,
+    "log": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/post_crash_check_1.log"
+  },
+  {
+    "argv": [
+      "python3",
+      "test/test_t10_closeout.py"
+    ],
+    "elapsed_s": 1.472974819000001,
+    "exit_code": 0,
+    "log": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/post_crash_check_2.log"
+  },
+  {
+    "argv": [
+      "python3",
+      "test/test_t10_closeout.py",
+      "--verify-los",
+      "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_02_seed20102_los_A"
+    ],
+    "elapsed_s": 0.4608872060000522,
+    "exit_code": 0,
+    "log": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/post_crash_check_3.log"
+  },
+  {
+    "argv": [
+      "python3",
+      "tools/paper/a19_r08_aggregate.py",
+      "--evidence-root",
+      "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/r08_corrected_tables"
+    ],
+    "elapsed_s": 0.22778575600000295,
+    "exit_code": 0,
+    "log": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/post_crash_check_4.log"
+  },
+  {
+    "argv": [
+      "python3",
+      "tools/paper/t10_closeout_report.py"
+    ],
+    "elapsed_s": 0.34134347799999887,
+    "exit_code": 0,
+    "log": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/post_crash_check_5.log"
+  }
+]

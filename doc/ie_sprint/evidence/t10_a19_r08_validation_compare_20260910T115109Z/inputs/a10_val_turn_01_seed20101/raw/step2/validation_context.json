@@ -1,0 +1,19 @@
+{
+  "admission_sha256": "sha256:c438b8491b7f27695f54626620bb7d62721c96405170e51348160bd015a01117",
+  "ancestry_group": "a10_val_turn_01",
+  "base_trajectory_id": "a10_val_turn_01",
+  "budget_id": "T10_A19_R08_BTOTAL14400_SCHEDULED10800_RESERVE3600",
+  "cache_id": "sha256:c6276e9b5cec6ce2579ddd781a0bbb3d21b19a61f2016bd4a75c771b61b6171a",
+  "metric_implementation_sha256": "sha256:c8e551b64b6cb8dcfcd30f8dce3eb853341ee129c77c3700027fdbef786c6945",
+  "nominal_noise_sha256": "sha256:934add0d65a68c1eca7108384d70dfb70b211330b957d389231b75bc76f2006a",
+  "raw_input_manifest_sha256": "sha256:654034644186db81f6fee5f16b99ed35a29378b1515c053673d66e80d901457c",
+  "recording_id": "synthetic-6644ceb628680e460d4eb173a6be624304af11e07c1ae31be319d59555690cf1",
+  "reservation_key": "a10_val_turn_01_seed20101",
+  "role": "validation",
+  "scenario_id": "step2",
+  "schema": "uifgo_t10_validation_admission_v1",
+  "seed": 20101,
+  "split_sha256": "sha256:09129a9f9a1954e9f38102cabb20e9f309779f3b588eb77285d68ac7e0a8172a",
+  "synthetic_assumptions_sha256": "sha256:ff17e4f53d7e981ab2ffc8e4976a000b0f33cd5c73595b57dea3f4b478553ecf",
+  "truth_paths_forbidden": true
+}

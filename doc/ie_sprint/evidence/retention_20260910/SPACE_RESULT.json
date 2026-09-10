@@ -1,0 +1,22 @@
+{
+  "evidence_directory_after": "2.3 GiB (du -sh)",
+  "host_C_free_after": "approximately 19 GiB at final df verification, up from 1.5 GiB",
+  "host_C_free_immediately_after": "approximately 1.5 GiB",
+  "limitation": "WSL trim reported logical discarded bytes, not physical Windows bytes freed; physical reclamation was delayed. No WSL shutdown or offline compaction performed.",
+  "removed_bytes": 36669625341,
+  "wsl_fstrim": {
+    "argv": [
+      "wsl.exe",
+      "-d",
+      "Ubuntu-20.04",
+      "-u",
+      "root",
+      "--",
+      "fstrim",
+      "-v",
+      "/"
+    ],
+    "exit_code": 0,
+    "reported_trimmed_bytes": 865949593600
+  }
+}

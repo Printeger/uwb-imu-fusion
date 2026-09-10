@@ -852,8 +852,24 @@ int main(int argc, char** argv) {
     }
 
     const auto score_started = std::chrono::steady_clock::now();
-    const auto scores = ScoreRefitRecoverability(
-        refit, discovery.partition, plan, fixture.cfg);
+    const bool no_candidates = discovery.partition.segments.empty();
+    std::vector<GroupRecoverabilityScore> scores;
+    if (no_candidates) {
+      if (refit.status != SegmentRefitStatus::CONVERGED ||
+          !refit.segments.empty())
+        throw std::runtime_error("INVALID_EMPTY_SUPPORT_REFIT");
+      for (const auto key : refit.values.keys())
+        if (gtsam::Symbol(key).chr() == 'c')
+          throw std::runtime_error("EMPTY_SUPPORT_HAS_LIVE_C");
+    } else {
+      scores = ScoreRefitRecoverability(
+          refit, discovery.partition, plan, fixture.cfg);
+    }
+    fs::create_directories(out + "/scoring");
+    WriteAtomicText(out + "/scoring/status.json",
+        no_candidates
+          ? "{\"status\":\"not_applicable\",\"reason\":\"NOT_APPLICABLE_NO_CANDIDATES\",\"computed\":false,\"eta\":null,\"s_m\":null,\"gamma\":null}\n"
+          : "{\"status\":\"executed\",\"computed\":true}\n");
     const double score_seconds = std::chrono::duration<double>(
         std::chrono::steady_clock::now() - score_started).count();
     size_t eligible = 0, unavailable = 0;
@@ -1147,9 +1163,10 @@ int main(int argc, char** argv) {
     }
     {
       auto f = output(out + "/pipeline_status.json");
-      f << "{\"status\":\"SCORED\",\"Stage1\":\"CONVERGED\","
-           "\"Stage2\":\"CONVERGED\",\"scoring\":\"EXECUTED\","
-           "\"segments\":" << refit.segments.size() << ",\"groups\":"
+      f << "{\"status\":\"" << (no_candidates ? "NO_CANDIDATES" : "SCORED")
+        << "\",\"Stage1\":\"CONVERGED\",\"Stage2\":\"CONVERGED\",\"scoring\":\""
+        << (no_candidates ? "NOT_APPLICABLE_NO_CANDIDATES" : "EXECUTED")
+        << "\",\"segments\":" << refit.segments.size() << ",\"groups\":"
         << scores.size() << ",\"eligible\":" << eligible
         << ",\"unavailable\":" << unavailable
         << ",\"final_attempted\":" << final_exits.size()

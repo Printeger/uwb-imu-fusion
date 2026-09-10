@@ -1,0 +1,227 @@
+{
+  "base": {
+    "generator_sha256": "sha256:9efaafe9e26bfe36ff868a2597406e41e31a0d99bbde0bb667cd08277e60eada",
+    "generator_version": "uifgo_total_synthetic_v1",
+    "motion": {
+      "base_trajectory_id": "a10_val_turn_01",
+      "rate_radps": 0.38,
+      "static_s": 2.2,
+      "tau_s": 0.8,
+      "x_amplitude_m": 0.95,
+      "y_amplitude_m": 0.5,
+      "yaw_amplitude_rad": 0.35,
+      "z_amplitude_m": 0.08,
+      "z_origin_m": 1.1
+    },
+    "numpy_version": "1.24.4",
+    "rng": "NumPy PCG64 SeedSequence([seed,stream_id]); streams 0/1/2 UWB/accel/gyro",
+    "role": "validation",
+    "seed": 20101,
+    "sensor_assumptions": {
+      "accel_bias_mps2": [
+        0.003,
+        -0.002,
+        0.004
+      ],
+      "accel_noise_density": 0.002,
+      "anchors_m": [
+        [
+          -3.0,
+          -3.0,
+          0.0
+        ],
+        [
+          -3.0,
+          -3.0,
+          3.0
+        ],
+        [
+          -3.0,
+          3.0,
+          0.0
+        ],
+        [
+          -3.0,
+          3.0,
+          3.0
+        ],
+        [
+          3.0,
+          -3.0,
+          0.0
+        ],
+        [
+          3.0,
+          -3.0,
+          3.0
+        ],
+        [
+          3.0,
+          3.0,
+          0.0
+        ],
+        [
+          3.0,
+          3.0,
+          3.0
+        ]
+      ],
+      "beta_m": [
+        0.03,
+        -0.02,
+        0.04,
+        -0.01,
+        0.02,
+        -0.03,
+        0.01,
+        -0.04
+      ],
+      "bias_random_walk_generated": false,
+      "clock_drift": 0.0,
+      "duration_s": 8.0,
+      "extra_random_nlos": false,
+      "gravity_world_mps2": [
+        0.0,
+        0.0,
+        -9.81
+      ],
+      "gyro_bias_radps": [
+        0.0002,
+        -0.0001,
+        0.00015
+      ],
+      "gyro_noise_density": 0.0002,
+      "imu_hz": 200,
+      "lever_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "packet_dropouts": false,
+      "range_sigma_m": 0.05,
+      "time_offset_s": 0.0,
+      "uwb_hz": 5
+    }
+  },
+  "base_source_sha256": "sha256:6644ceb628680e460d4eb173a6be624304af11e07c1ae31be319d59555690cf1",
+  "calibration_provenance": "EXACT_SYNTHETIC_ASSUMPTIONS",
+  "dynamic_bias_protocol": {
+    "interval_closed_s": [
+      3.0,
+      6.0
+    ],
+    "ramp_gentle_slope_mps": {
+      "1": 0.05,
+      "2": 0.075
+    },
+    "ramp_start_m": {
+      "1": 0.2,
+      "2": 0.3
+    },
+    "ramp_steep_slope_mps": {
+      "1": 0.2,
+      "2": 0.25
+    },
+    "step1_m": {
+      "1": 0.6
+    },
+    "step2_m": {
+      "1": 0.6,
+      "2": 0.9
+    },
+    "step3_m": {
+      "1": 0.6,
+      "2": 0.9,
+      "3": 0.7
+    }
+  },
+  "payload_sha256": {
+    "evaluation/imu_latent.csv": "sha256:3e982d0e5ff2cd569a952024932eb03dec056f6d29b98af350b8581643f3a63c",
+    "evaluation/los_range_truth.csv": "sha256:f8db39fd7c3b99a15d725b9e77d52dc3114a0036597a8109a3d389b9cd7f3dbb",
+    "evaluation/motion.csv": "sha256:dd90ac7c27e86aee617e1253fc6cfcf9ed9e0311443f155b265eb6db188b55d4",
+    "evaluation/ramp_gentle_range_truth.csv": "sha256:d464a0803525fb7a964c945b34407586a5db0785a8de16acbec2751ee1f978d9",
+    "evaluation/ramp_steep_range_truth.csv": "sha256:77a655baff5a6496fbdf4b0a796894c79d9410b1394ef3732b6f417e509dc646",
+    "evaluation/step1_range_truth.csv": "sha256:468800d98fbbebfe5b5c191e08c00d9a21b7497f0b3a5730ad613100196d8630",
+    "evaluation/step2_range_truth.csv": "sha256:915619df47e72d6bb95ff6f896e1f2139a8f232afe6234e1e2735a008c140118",
+    "evaluation/step3_range_truth.csv": "sha256:7d1485db59e237f55984f0477b15e02ab0787250e9747055f6373b587f2dea2b",
+    "raw/los/imu.csv": "sha256:74428e79b8d168b5141742749531968b9bdf4c287a700e22853f21a7e9f83bd5",
+    "raw/los/input_manifest.json": "sha256:7c722f7023e1d8bdfed9d9abc8ad72d0a9afefef5c81a9e331bfe6d306b4c5be",
+    "raw/los/uwb_observations.csv": "sha256:42e18af87f7ddc57fc4997abeb21240eef5ef13b15e7c5c2ea6eb0a3fe0b8f42",
+    "raw/los/validation_context.json": "sha256:18b21ba23219b9fa531ed96812e9e0394df8a303e9b1954fe0843504d7862cf7",
+    "raw/ramp_gentle/imu.csv": "sha256:74428e79b8d168b5141742749531968b9bdf4c287a700e22853f21a7e9f83bd5",
+    "raw/ramp_gentle/input_manifest.json": "sha256:e34d3d0ebdbb8bdd9e83cd973455bc9c5f7b2c19ed4a6715854e99e93ce9ef8b",
+    "raw/ramp_gentle/uwb_observations.csv": "sha256:123b3b34ee1d2d585be8bb4372a184ab258e8bc1ba52d3f6a184f166575096c9",
+    "raw/ramp_gentle/validation_context.json": "sha256:b3af8250fa84c37ccbf792ac15602c8c0610eb98b525dd953e7c38b11c2a0728",
+    "raw/ramp_steep/imu.csv": "sha256:74428e79b8d168b5141742749531968b9bdf4c287a700e22853f21a7e9f83bd5",
+    "raw/ramp_steep/input_manifest.json": "sha256:87c0cee3ffa702fcb9e44ccd90479f31ce6736b88f9a07b8fe092afc161ee3c4",
+    "raw/ramp_steep/uwb_observations.csv": "sha256:ecfcba6d7ba6c43b76e7eb9ee4befa731e54bf73907476a1d993e0879aae9125",
+    "raw/ramp_steep/validation_context.json": "sha256:8ddcc4215a9dda83d7ce2b799f0b870214dd8147b67e28ce2abd1d22eb547b95",
+    "raw/step1/imu.csv": "sha256:74428e79b8d168b5141742749531968b9bdf4c287a700e22853f21a7e9f83bd5",
+    "raw/step1/input_manifest.json": "sha256:8eae448c527ac71d64745eb6a36872813a4166093eda7fa0998d1602e85723d1",
+    "raw/step1/uwb_observations.csv": "sha256:edc0a6b0c7849c1f4010e370d889a17f99babfd90b890c65ddf92b735999706b",
+    "raw/step1/validation_context.json": "sha256:b3ac93c3fa0c57831216a50aed5b475c350931a1441f17a491e7c5b1ebb15e2f",
+    "raw/step2/imu.csv": "sha256:74428e79b8d168b5141742749531968b9bdf4c287a700e22853f21a7e9f83bd5",
+    "raw/step2/input_manifest.json": "sha256:654034644186db81f6fee5f16b99ed35a29378b1515c053673d66e80d901457c",
+    "raw/step2/uwb_observations.csv": "sha256:e2e7164ae364147dfcfde6b363b22e2b4694d30b576b24dc3dd468f016e08b52",
+    "raw/step2/validation_context.json": "sha256:8d8579a957be8f18ea5285cf8651504416919927704bc6cb01793f7663a32a6b",
+    "raw/step3/imu.csv": "sha256:74428e79b8d168b5141742749531968b9bdf4c287a700e22853f21a7e9f83bd5",
+    "raw/step3/input_manifest.json": "sha256:23fcb658aa83b97dc1f27b1ac65b1147a3d2f75dd9699b501e86bf8a67232262",
+    "raw/step3/uwb_observations.csv": "sha256:945e1b4b9ea1d5945dab9e0289c4b3787f42075f097ac50599825d75ca09ce5c",
+    "raw/step3/validation_context.json": "sha256:187dd4fc3e73daf22af3690b32f906a3922a363b45c0f4634d88ca1e9c7c6e69"
+  },
+  "python_version": "3.8.10",
+  "recording_id": "synthetic-6644ceb628680e460d4eb173a6be624304af11e07c1ae31be319d59555690cf1",
+  "scenarios": {
+    "los": {
+      "cache_id": "sha256:88b3fd53b5a0797bf06d30682689c03d0f87b2523618b85ba981c0ee9ebb5e6e",
+      "context": "raw/los/validation_context.json",
+      "input": "raw/los/input_manifest.json",
+      "truth": "evaluation/los_range_truth.csv",
+      "truth_semantics": "TOTAL_SYNTHETIC_LATENT_DYNAMIC_EXCESS_PATH"
+    },
+    "ramp_gentle": {
+      "cache_id": "sha256:c8aaba071014146687fe29aaacb532ccd6d603d4f8ac205f5e00fe045304d098",
+      "context": "raw/ramp_gentle/validation_context.json",
+      "input": "raw/ramp_gentle/input_manifest.json",
+      "truth": "evaluation/ramp_gentle_range_truth.csv",
+      "truth_semantics": "TOTAL_SYNTHETIC_LATENT_DYNAMIC_EXCESS_PATH"
+    },
+    "ramp_steep": {
+      "cache_id": "sha256:c9d55211b99580fc0812749e8d40eb70d6451c05bd3d6bffcfbd1a35db9dcc67",
+      "context": "raw/ramp_steep/validation_context.json",
+      "input": "raw/ramp_steep/input_manifest.json",
+      "truth": "evaluation/ramp_steep_range_truth.csv",
+      "truth_semantics": "TOTAL_SYNTHETIC_LATENT_DYNAMIC_EXCESS_PATH"
+    },
+    "step1": {
+      "cache_id": "sha256:1144dcb3b5e5f36f5f8da19c236e06dbef50cd8e600ef3318fb1269aa0aaba08",
+      "context": "raw/step1/validation_context.json",
+      "input": "raw/step1/input_manifest.json",
+      "truth": "evaluation/step1_range_truth.csv",
+      "truth_semantics": "TOTAL_SYNTHETIC_LATENT_DYNAMIC_EXCESS_PATH"
+    },
+    "step2": {
+      "cache_id": "sha256:c6276e9b5cec6ce2579ddd781a0bbb3d21b19a61f2016bd4a75c771b61b6171a",
+      "context": "raw/step2/validation_context.json",
+      "input": "raw/step2/input_manifest.json",
+      "truth": "evaluation/step2_range_truth.csv",
+      "truth_semantics": "TOTAL_SYNTHETIC_LATENT_DYNAMIC_EXCESS_PATH"
+    },
+    "step3": {
+      "cache_id": "sha256:98d4dbc58f06439b7be2764e37eb7f76d0609fbf0a50566c7c02beef0315b57b",
+      "context": "raw/step3/validation_context.json",
+      "input": "raw/step3/input_manifest.json",
+      "truth": "evaluation/step3_range_truth.csv",
+      "truth_semantics": "TOTAL_SYNTHETIC_LATENT_DYNAMIC_EXCESS_PATH"
+    }
+  },
+  "schema": "uifgo_total_synthetic_v1",
+  "validation_identity": {
+    "admission_sha256": "sha256:c438b8491b7f27695f54626620bb7d62721c96405170e51348160bd015a01117",
+    "ancestry_group": "a10_val_turn_01",
+    "budget_id": "T10_A19_R08_BTOTAL14400_SCHEDULED10800_RESERVE3600",
+    "metric_implementation_sha256": "sha256:c8e551b64b6cb8dcfcd30f8dce3eb853341ee129c77c3700027fdbef786c6945",
+    "reservation_key": "a10_val_turn_01_seed20101",
+    "split_sha256": "sha256:09129a9f9a1954e9f38102cabb20e9f309779f3b588eb77285d68ac7e0a8172a"
+  }
+}

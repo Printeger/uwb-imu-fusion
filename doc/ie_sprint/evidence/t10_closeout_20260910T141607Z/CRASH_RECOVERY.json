@@ -1,0 +1,224 @@
+{
+  "action": "Retain damaged records; reconstruct retention-aware freeze and independently recompute evaluation from surviving final artifacts; no optimizer rerun.",
+  "limitation": "The lost new-run original pre-evaluation hash lists cannot be independently reverified. Reconstructed lists are labelled post-crash; prior truth exposure does not become unseen validation.",
+  "records": [
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_A/FREEZE.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_A/crash_history/FREEZE.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_A/evaluation.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_A/crash_history/evaluation.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_A/EVALUATION_RUN.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_A/crash_history/EVALUATION_RUN.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_A/evaluation.log",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_A/crash_history/evaluation.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_B/FREEZE.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_B/crash_history/FREEZE.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_B/evaluation.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_B/crash_history/evaluation.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_B/EVALUATION_RUN.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_B/crash_history/EVALUATION_RUN.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_B/evaluation.log",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_B/crash_history/evaluation.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_C/FREEZE.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_C/crash_history/FREEZE.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_C/evaluation.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_C/crash_history/evaluation.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_C/EVALUATION_RUN.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_C/crash_history/EVALUATION_RUN.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_C/evaluation.log",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_01_seed20101_step2_C/crash_history/evaluation.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_A/FREEZE.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_A/crash_history/FREEZE.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_A/evaluation.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_A/crash_history/evaluation.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_A/EVALUATION_RUN.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_A/crash_history/EVALUATION_RUN.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_A/evaluation.log",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_A/crash_history/evaluation.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_B/FREEZE.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_B/crash_history/FREEZE.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_B/evaluation.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_B/crash_history/evaluation.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_B/EVALUATION_RUN.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_B/crash_history/EVALUATION_RUN.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_B/evaluation.log",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_B/crash_history/evaluation.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_C/FREEZE.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_C/crash_history/FREEZE.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_C/evaluation.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_C/crash_history/evaluation.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_C/EVALUATION_RUN.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_C/crash_history/EVALUATION_RUN.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_C/evaluation.log",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/science/a10_val_turn_02_seed20102_step2_C/crash_history/evaluation.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_01_seed20101_los_A/FREEZE.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_01_seed20101_los_A/crash_history/FREEZE.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_01_seed20101_los_A/evaluation.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_01_seed20101_los_A/crash_history/evaluation.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_01_seed20101_los_A/EVALUATION_RUN.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_01_seed20101_los_A/crash_history/EVALUATION_RUN.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_01_seed20101_los_A/evaluation.log",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_01_seed20101_los_A/crash_history/evaluation.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_02_seed20102_los_A/FREEZE.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_02_seed20102_los_A/crash_history/FREEZE.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_02_seed20102_los_A/evaluation.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_02_seed20102_los_A/crash_history/evaluation.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_02_seed20102_los_A/EVALUATION_RUN.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_02_seed20102_los_A/crash_history/EVALUATION_RUN.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_02_seed20102_los_A/evaluation.log",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/los/a10_val_turn_02_seed20102_los_A/crash_history/evaluation.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/metadata_regression/a10_val_turn_02_seed20102_ramp_steep_A/FREEZE.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/metadata_regression/a10_val_turn_02_seed20102_ramp_steep_A/crash_history/FREEZE.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/metadata_regression/a10_val_turn_02_seed20102_ramp_steep_A/evaluation.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/metadata_regression/a10_val_turn_02_seed20102_ramp_steep_A/crash_history/evaluation.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/metadata_regression/a10_val_turn_02_seed20102_ramp_steep_A/EVALUATION_RUN.json",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/metadata_regression/a10_val_turn_02_seed20102_ramp_steep_A/crash_history/EVALUATION_RUN.json",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/metadata_regression/a10_val_turn_02_seed20102_ramp_steep_A/evaluation.log",
+      "preserved_at": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/metadata_regression/a10_val_turn_02_seed20102_ramp_steep_A/crash_history/evaluation.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    }
+  ],
+  "state": "FINAL_ESTIMATES_RETAINED_EVALUATION_AND_FREEZE_SIDECARS_ZERO_LENGTH_AFTER_REBOOT",
+  "utc": "2026-09-10T15:33:56.360719+00:00"
+}

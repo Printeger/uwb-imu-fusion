@@ -1,0 +1,591 @@
+{
+  "C2_disposition": "C2-C",
+  "freeze_scope": "POST_CRASH_RECONSTRUCTED_RETAINED_ARTIFACTS_NOT_ORIGINAL_COMPLETE_FREEZE",
+  "limitations": [
+    "No complete GTSAM graph reoptimization/reconstruction in this independent check.",
+    "Lost original new-run freeze sidecars disclosed in CRASH_RECOVERY.json."
+  ],
+  "reason": "No repeated trajectory benefit: 1/6 RMSE improvement, 0/6 P95 improvement; full_gate and s_fit decisions identical on all six inputs.",
+  "retained_frozen_payload_checks": 10558,
+  "score_checks": [
+    {
+      "N_scale": 6400.0,
+      "condition": "A",
+      "fixed_6400_mapping_error": 1.1102230246251565e-16,
+      "seed": 20101
+    },
+    {
+      "N_scale": 1600.0,
+      "condition": "B",
+      "fixed_6400_mapping_error": 0.4482670460073651,
+      "seed": 20101
+    },
+    {
+      "N_scale": 3200.0,
+      "condition": "C",
+      "fixed_6400_mapping_error": 0.2961441138417578,
+      "seed": 20101
+    },
+    {
+      "N_scale": 6400.0,
+      "condition": "A",
+      "fixed_6400_mapping_error": 1.1102230246251565e-16,
+      "seed": 20102
+    },
+    {
+      "N_scale": 1600.0,
+      "condition": "B",
+      "fixed_6400_mapping_error": 0.44663646746174457,
+      "seed": 20102
+    },
+    {
+      "N_scale": 3200.0,
+      "condition": "C",
+      "fixed_6400_mapping_error": 0.29412326010506107,
+      "seed": 20102
+    }
+  ],
+  "status": "PASS",
+  "trajectory_checks": [
+    {
+      "case": "a10_val_turn_01_seed20101_step2_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_B",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_B",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_B",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_B",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_B",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_B",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_B",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_B",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_B",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_B",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_C",
+      "field": "trajectory_full",
+      "matches": 21,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_C",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 8,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_C",
+      "field": "trajectory_full",
+      "matches": 21,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_C",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 8,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_C",
+      "field": "trajectory_full",
+      "matches": 21,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_C",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 8,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_C",
+      "field": "trajectory_full",
+      "matches": 21,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_C",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 8,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_C",
+      "field": "trajectory_full",
+      "matches": 21,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_step2_C",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 8,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_B",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_B",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_B",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_B",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_B",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_B",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_B",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_B",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_B",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_B",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_C",
+      "field": "trajectory_full",
+      "matches": 21,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_C",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 8,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_C",
+      "field": "trajectory_full",
+      "matches": 21,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_C",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 8,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_C",
+      "field": "trajectory_full",
+      "matches": 21,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_C",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 8,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_C",
+      "field": "trajectory_full",
+      "matches": 21,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_C",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 8,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_C",
+      "field": "trajectory_full",
+      "matches": 21,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_step2_C",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 8,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_los_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_los_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_los_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_los_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_los_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_los_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_los_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_los_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_los_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_01_seed20101_los_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_los_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_los_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_los_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_los_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_los_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_los_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_los_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_los_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_los_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_los_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_ramp_steep_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_ramp_steep_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "fit_only"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_ramp_steep_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_ramp_steep_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "full_gate"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_ramp_steep_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_ramp_steep_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "s_fit"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_ramp_steep_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_ramp_steep_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "structured_debias"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_ramp_steep_A",
+      "field": "trajectory_full",
+      "matches": 41,
+      "policy": "suppress_all"
+    },
+    {
+      "case": "a10_val_turn_02_seed20102_ramp_steep_A",
+      "field": "trajectory_historical_3_6_s",
+      "matches": 16,
+      "policy": "suppress_all"
+    }
+  ]
+}

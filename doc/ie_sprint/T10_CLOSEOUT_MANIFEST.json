@@ -1,0 +1,72 @@
+{
+  "schema": "T10_CLOSEOUT_MANIFEST_V1",
+  "registered_utc": "2026-09-10T14:16:07.312383+00:00",
+  "evidence_root": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z",
+  "role": "validation",
+  "bases": [
+    20101,
+    20102
+  ],
+  "scenario": "step2",
+  "conditions": {
+    "A": {
+      "sigma_m": 0.05,
+      "uwb_hz": 5,
+      "reuse": "only if unaffected"
+    },
+    "B": {
+      "sigma_m": 0.1,
+      "uwb_hz": 5,
+      "noise": "same PCG64 stream, doubled range noise"
+    },
+    "C": {
+      "sigma_m": 0.05,
+      "uwb_hz": 2.5,
+      "selection": "original source_message_index % 2 == 0 before initialization; original obs_id"
+    }
+  },
+  "thresholds": {
+    "tau_eta": 0.1,
+    "tau_s_m": 0.1,
+    "tau_gamma": 1.0,
+    "epsilon_bad_m": 0.2
+  },
+  "policies": [
+    "suppress_all",
+    "structured_debias",
+    "fit_only",
+    "s_fit",
+    "full_gate"
+  ],
+  "correctness": [
+    "LOS full production chain and both existing LOS",
+    "one bounded ramp metadata root cause",
+    "no-C exhaustion propagation only",
+    "unknown counts and decision/final labels"
+  ],
+  "limits": {
+    "per_input_process_tree_s": 700,
+    "total_compute_s": 14400,
+    "scheduled_s": 10800,
+    "correctness_reserve_s": 3600,
+    "ramp_diagnostic_reproductions": 1,
+    "science_attempts_per_input": 1
+  },
+  "c2_priority": [
+    "C: no repeated structured-vs-suppression trajectory benefit or insufficient valid pairs",
+    "A: repeated nonredundancy, changed decisions and operational improvement across both bases without contradictory failure/P95/coverage",
+    "B: recovery supported but eta incremental benefit unproven"
+  ],
+  "no_threshold_or_solver_changes": true,
+  "test_T11_T12": "NOT_RUN",
+  "before_sha256": {
+    "tools/paper/a19_r08_aggregate.py": "9a700b5421a8f137cf0de56ca365b76260e76164dacbef2694a8338f05b56d05",
+    "tools/paper/a19_r08_run_matrix.py": "e9124f2303788606e07208f7cccf5d0436e98f98eeb3bdaf869a081e4eaacf02",
+    "tools/paper/a19_r08_prepare.py": "02fa071eb5a8707b4b507ee59bdb7ffdce845ec2bb4c4bf78b4bde68d2eb208c",
+    "tools/paper/a19_r08_pipeline.cpp": "8d367ffb86278d7cf20509b4597c4edfce0e077aa1eeff41457a4ca920bb0975",
+    "tools/paper/a19_r08_evaluate.py": "c8e551b64b6cb8dcfcd30f8dce3eb853341ee129c77c3700027fdbef786c6945",
+    "src/nlos_refit.cpp": "6ee2a95012bcf4db1263735a532919a0467cfa4c270a2a0658092b493a42e6af",
+    "test/test_nlos_refit.cpp": "4ba51beaf1616cf5e1f31e7c39ae212e6efc5839308ff962a4a06a25923825e4",
+    "tools/paper/generate_synthetic_input.py": "446b2c0f2bab0c458530ca1c0da873ff780c799d1a8a05c4b869fd59a1f2aa09"
+  }
+}

@@ -8,6 +8,7 @@ import datetime
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 
 import numpy as np
@@ -62,6 +63,28 @@ def rate(numerator, denominator):
             "unit": "observation"}
 
 
+def write_result(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    with temporary.open("w") as stream:
+        stream.write(json.dumps(data, indent=2, sort_keys=True, allow_nan=False) + "\n")
+        stream.flush()
+        os.fsync(stream.fileno())
+    temporary.replace(path)
+    directory_fd = os.open(str(path.parent), os.O_DIRECTORY)
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
+def same_gate_decisions(gates):
+    # Reason strings describe policy-specific tests; only group Use/Suppress
+    # vectors determine whether policies made different decisions.
+    return len({tuple((row[0], row[1]) for row in decisions)
+                for decisions in gates.values()}) == 1
+
+
 def rmse(errors):
     return math.sqrt(sum(value * value for value in errors) / len(errors))
 
@@ -98,6 +121,13 @@ def trajectory(path, motion, interval=None):
             "matches": len(errors), "association": "EXACT_OR_LINEAR_INTERPOLATION"}
 
 
+def same_gate_decisions(gates):
+    # Policy-specific reason strings do not constitute a different Use/Suppress.
+    vectors = {tuple((row[0], row[1]) for row in records)
+               for records in gates.values()}
+    return len(vectors) == 1
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-root", type=Path, required=True)
@@ -120,6 +150,15 @@ def main():
         if not path.is_file() or sha(path) != item["sha256"]:
             raise ValueError("frozen payload mismatch: " + str(path))
 
+    pipeline = obj(root / "pipeline_status.json") if (root / "pipeline_status.json").is_file() else {}
+    if pipeline.get("status") not in ("SCORED", "NO_CANDIDATES"):
+        result = {"schema": "T10_CLOSEOUT_FAILED_EVALUATION_V1",
+                  "status": "UNAVAILABLE", "reason": pipeline.get("reason", "INCOMPLETE_PRODUCER"),
+                  "pipeline": pipeline, "scores": None, "policies": {},
+                  "truth_read": False, "candidate_observations": None}
+        write_result(args.output, result)
+        print(json.dumps({"status": "FAILURE_ACCOUNTED", "truth_read": False}))
+        return
     decision_manifest = obj(root / "decisions/manifest.json")
     if decision_manifest.get("truth_read") is not False:
         raise ValueError("decision manifest does not precede truth")
@@ -189,6 +228,24 @@ def main():
     policies = {}
     for policy in POLICIES:
         final = root / "final" / policy
+        required = ("validation_status.json", "final_inference_summary.json", "final_masks.csv", "fallback_attempt.json")
+        if any(not (final / name).is_file() or (final / name).stat().st_size == 0 for name in required):
+            reason = ((final / "child_failure.txt").read_text().strip()
+                      if (final / "child_failure.txt").is_file() else "MISSING_OR_INCOMPLETE_FINAL_EXPORT")
+            policies[policy] = {
+                "status": {"valid_estimate": False, "status": reason}, "summary_status": "ESTIMATION_FAILED",
+                "accepted_candidate_observations": None, "final_used_candidate_observations": None,
+                "trajectory_full": unavailable_trajectory(reason),
+                "trajectory_historical_3_6_s": unavailable_trajectory(reason),
+                "decision_time": {name: unavailable(reason) for name in
+                    ("accepted_bias_rmse_m", "bad_correction_rate", "good_correction_rejection_rate")},
+                "final_time": {name: unavailable(reason) for name in
+                    ("applied_bias_field_rmse_m", "accepted_bias_rmse_m", "bad_correction_rate")},
+                "coverage": {name: unavailable(reason) for name in
+                    ("candidate_use_coverage", "eligible_use_coverage", "overall_retained_fraction")},
+                "fallback": {"attempted": None, "status": "UNKNOWN_NOT_EXPORTED"},
+                "elapsed_seconds": final_times.get(policy)}
+            continue
         status = obj(final / "validation_status.json")
         summary = obj(final / "final_inference_summary.json")
         valid = status.get("valid_estimate") is True
@@ -246,6 +303,7 @@ def main():
             "final_time": {
                 "applied_bias_field_rmse_m": (metric(
                     rmse(list(final_errors.values())), len(final_errors), "m")
+                    if valid and final_errors else metric(None, 0, "m")
                     if valid else unavailable("ESTIMATION_FAILED", "m")),
                 "accepted_bias_rmse_m": (metric(rmse(accepted_errors),
                                                  len(accepted_errors), "m")
@@ -289,7 +347,11 @@ def main():
     los_reference = None
     if args.scenario == "los":
         final = root / "final/all_range"
-        status = obj(final / "validation_status.json")
+        status = (obj(final / "validation_status.json") if (final / "validation_status.json").is_file()
+                  else {"valid_estimate": False, "status": "ESTIMATION_FAILED",
+                        "reason": ((final / "child_failure.txt").read_text().strip()
+                                   if (final / "child_failure.txt").is_file()
+                                   else "MISSING_FINAL_EXPORT")})
         valid = status.get("valid_estimate") is True
         all_range_full = (trajectory(final / "trajectory.tum", motion) if valid
                           else unavailable_trajectory("ESTIMATION_FAILED"))
@@ -297,6 +359,7 @@ def main():
                                             (3.0, 6.0)) if valid
                                 else unavailable_trajectory("ESTIMATION_FAILED"))
         suppress_full = policies["suppress_all"]["trajectory_full"]
+        paired_valid = valid and suppress_full["rmse_m"]["value"] is not None
         los_reference = {
             "status": status, "trajectory_full": all_range_full,
             "trajectory_historical_3_6_s": all_range_historical,
@@ -304,15 +367,17 @@ def main():
                 "rmse_m": metric(suppress_full["rmse_m"]["value"] -
                                  all_range_full["rmse_m"]["value"],
                                  suppress_full["matches"], "m")
-                if valid else unavailable("ESTIMATION_FAILED", "m"),
+                if paired_valid else unavailable("ESTIMATION_FAILED", "m"),
                 "p95_m": metric(suppress_full["p95_m"]["value"] -
                                 all_range_full["p95_m"]["value"],
                                 suppress_full["matches"], "m")
-                if valid else unavailable("ESTIMATION_FAILED", "m")},
+                if paired_valid else unavailable("ESTIMATION_FAILED", "m")},
             "tolerance": {"rmse_m": 0.05, "p95_m": 0.10},
-            "degradation_unacceptable": (not valid or
+            "comparison_status": "AVAILABLE" if paired_valid else "UNAVAILABLE",
+            "degradation_unacceptable": (
                 suppress_full["rmse_m"]["value"] - all_range_full["rmse_m"]["value"] > .05 or
-                suppress_full["p95_m"]["value"] - all_range_full["p95_m"]["value"] > .10)}
+                suppress_full["p95_m"]["value"] - all_range_full["p95_m"]["value"] > .10)
+                if paired_valid else None}
     result = {
         "schema": "T10_A19_R08_LIMITED_SYNTHETIC_VALIDATION_EVALUATION_V1",
         "evaluation_label": "LIMITED_SYNTHETIC_VALIDATION",
@@ -326,18 +391,16 @@ def main():
         "time_association": "EXACT_OR_LINEAR_INTERPOLATION",
         "historical_interval_closed_s": [3.0, 6.0],
         "epsilon_bad_m": 0.20, "candidate_observations": len(candidate_obs),
+        "recoverability": ({"status": "not_applicable", "reason": "NOT_APPLICABLE_NO_CANDIDATES",
+                            "computed": False, "eta": None, "s_m": None, "gamma": None}
+                           if not candidate_obs else {"status": "executed", "computed": True}),
         "scores": score_summary, "policies": policies,
         "gate_decisions": gate_decisions, "los_all_range_reference": los_reference,
-        "three_gates_identical": len({json.dumps(value, sort_keys=True)
-                                      for value in gate_decisions.values()}) == 1,
+        "three_gates_identical": same_gate_decisions(gate_decisions),
         "limitations": ["TWO_VALIDATION_BASE_TRAJECTORIES_ONLY",
                         "NO_GENERALIZATION_OR_STATISTICAL_SIGNIFICANCE",
                         "NO_FORMAL_GATE_LOCK_OR_CLAIM_UPGRADE"]}
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    temporary = args.output.with_suffix(args.output.suffix + ".tmp")
-    temporary.write_text(json.dumps(result, indent=2, sort_keys=True,
-                                    allow_nan=False) + "\n")
-    temporary.replace(args.output)
+    write_result(args.output, result)
     print(json.dumps({"status": "PASS", "policies": len(policies),
                       "candidate_observations": len(candidate_obs),
                       "three_gates_identical": result["three_gates_identical"]}))

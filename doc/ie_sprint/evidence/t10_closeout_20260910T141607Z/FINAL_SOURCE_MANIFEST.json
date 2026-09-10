@@ -1,0 +1,106 @@
+{
+  "binary_copies": "NOT_STORED_USER_RETENTION_POLICY",
+  "files": [
+    {
+      "path": "doc/ie_sprint/EXPERIMENT_CONTRACT.md",
+      "sha256": "sha256:5a9e60db7023892ee41ec8ba327dadaec5c25f2991902baf9a2c60be0551eca6",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/doc/ie_sprint/EXPERIMENT_CONTRACT.md"
+    },
+    {
+      "path": "doc/ie_sprint/METHOD_CONTRACT.md",
+      "sha256": "sha256:b5ad80c7115923babfef46e3cd13a3e8fbcb1534112e420dc27d48843a1f2ffe",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/doc/ie_sprint/METHOD_CONTRACT.md"
+    },
+    {
+      "path": "doc/ie_sprint/STATUS.md",
+      "sha256": "sha256:7c911732d887dbc28928daf463231fc80eac3c707fee9a2c819afcc0380c05d4",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/doc/ie_sprint/STATUS.md"
+    },
+    {
+      "path": "doc/ie_sprint/T10_COMPLETE_DELIVERY_PLAN.md",
+      "sha256": "sha256:9a59e4630e6ecb56315c082b0125e0c5bf13dbebec0e9bbf5de14ef6d594cee8",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/doc/ie_sprint/T10_COMPLETE_DELIVERY_PLAN.md"
+    },
+    {
+      "path": "doc/ie_sprint/T10_READINESS.md",
+      "sha256": "sha256:61aaaa8e0bfd3d2493c2df82cfe844cab8e0f409aab42408f317b54c290d3438",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/doc/ie_sprint/T10_READINESS.md"
+    },
+    {
+      "path": "paper/CLAIM_EVIDENCE.md",
+      "sha256": "sha256:a18e3b4dbe16e90e80424f99f8daf7240e44c571ef66ac7b45a876a5dc1c9861",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/paper/CLAIM_EVIDENCE.md"
+    },
+    {
+      "path": "src/nlos_refit.cpp",
+      "sha256": "sha256:09c537d703b4c8c625ae33351e35e842260b6071f4e6f63e91f810423169ed6b",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/src/nlos_refit.cpp"
+    },
+    {
+      "path": "test/test_nlos_refit.cpp",
+      "sha256": "sha256:dd7b074025bf2baed01b33739b5af98843756732bdd8d6e578a0b78185e7608f",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/test/test_nlos_refit.cpp"
+    },
+    {
+      "path": "tools/paper/a17_graph_io.h",
+      "sha256": "sha256:18518a1bee4f7975e25e2f9bf4b65233d4a4ada703302aad39366281170cdde1",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/tools/paper/a17_graph_io.h"
+    },
+    {
+      "path": "tools/paper/a18_stage1.cpp",
+      "sha256": "sha256:4f07724598aa98851bc4d277fc06d3916cfa393b2bedf94e5948c05d7d0a9d76",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/tools/paper/a18_stage1.cpp"
+    },
+    {
+      "path": "tools/paper/a19_r08_aggregate.py",
+      "sha256": "sha256:5c73b8a2eb0db5f10fa1c0d721e21bbdb43924c29303f98a6a0f34e9e6c77cda",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/tools/paper/a19_r08_aggregate.py"
+    },
+    {
+      "path": "tools/paper/a19_r08_evaluate.py",
+      "sha256": "sha256:d2b60e2cba0b63035f731552de3dc5823d8d7897617b551321cf30186dda1682",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/tools/paper/a19_r08_evaluate.py"
+    },
+    {
+      "path": "tools/paper/a19_r08_pipeline.cpp",
+      "sha256": "sha256:f7b91887101291d4922ae47e0bad462d5c4dcfe9cc8883a597e24b09c6dd78c2",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/tools/paper/a19_r08_pipeline.cpp"
+    },
+    {
+      "path": "tools/paper/t10_closeout.py",
+      "sha256": "sha256:53ea97b5311c21aec2d71bb3ce374509e80cdd5ba4c8386fc5bed8ebce2be29d",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/tools/paper/t10_closeout.py"
+    },
+    {
+      "path": "tools/paper/t10_closeout_report.py",
+      "sha256": "sha256:363625482367d7669f035fa6333f20957a62d0923bc24eba1c29841ec0d729c2",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/tools/paper/t10_closeout_report.py"
+    },
+    {
+      "path": "tools/paper/verify_t10_closeout.py",
+      "sha256": "sha256:33df70c1c651dff14fcea715d992e566fd1235e90a9be08789b3061a3c2234c5",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/tools/paper/verify_t10_closeout.py"
+    },
+    {
+      "path": "tools/paper/prune_sprint_intermediates.py",
+      "sha256": "sha256:94b5c2501e214c351e4e821848f3641c1c3a152518d47743668160ce5da33992",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/tools/paper/prune_sprint_intermediates.py"
+    },
+    {
+      "path": "test/test_t10_closeout.py",
+      "sha256": "sha256:c0f49d5b97d233460c17c2f4491f5685079f882bb846037671cd1462bb137fd1",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/test/test_t10_closeout.py"
+    },
+    {
+      "path": "doc/ie_sprint/T10_CLOSEOUT_MANIFEST.json",
+      "sha256": "sha256:7c4fbeb0f677cb6d4a321dbb021d03d080ec01b9b6f23762a8423d3ebbbf3d04",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/doc/ie_sprint/T10_CLOSEOUT_MANIFEST.json"
+    },
+    {
+      "path": "doc/ie_sprint/T10_CLOSEOUT.md",
+      "sha256": "sha256:85238135e8fdb42c712f17ab7ec81fa565b00a25185c9eeff8d3e70281888b98",
+      "snapshot": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/final_sources/doc/ie_sprint/T10_CLOSEOUT.md"
+    }
+  ],
+  "runtime_identity_sources": "per-case context.json; live library hashes verified"
+}

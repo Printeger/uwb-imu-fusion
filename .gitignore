@@ -81,3 +81,30 @@ qtcreator-*
 # Catkin custom files
 CATKIN_IGNORE
 data/*.bag
+
+# Rebuildable native artifacts and experiment scratch
+*.o
+*.a
+*.so
+*.so.*
+*.bag
+*.tar.gz
+*.tar.zst
+*.trace
+/delete_candidates.txt
+
+# Local sprint runs: retain on disk, publish only curated summaries below.
+# Already tracked historical evidence remains tracked.
+/doc/ie_sprint/evidence/*
+!/doc/ie_sprint/evidence/README.md
+!/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/
+/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/*
+!/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/*.json
+!/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/*_RESULTS.csv
+!/doc/ie_sprint/evidence/t10_closeout_20260910T141607Z/*.md
+!/doc/ie_sprint/evidence/retention_20260910/
+/doc/ie_sprint/evidence/retention_20260910/*
+!/doc/ie_sprint/evidence/retention_20260910/POLICY.json
+!/doc/ie_sprint/evidence/retention_20260910/RESULT.json
+!/doc/ie_sprint/evidence/retention_20260910/SPACE_RESULT.json
+!/doc/ie_sprint/evidence/GIT_MAINTENANCE.json
