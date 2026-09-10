@@ -1,0 +1,29 @@
+{
+  "argv": [
+    "/usr/bin/time",
+    "-v",
+    "-o",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/attempts/a10_val_turn_01_seed20101_step2/resources.txt",
+    "/usr/bin/timeout",
+    "--signal=KILL",
+    "--kill-after=5s",
+    "700s",
+    "/usr/bin/strace",
+    "-f",
+    "-e",
+    "trace=openat,open,execve",
+    "-o",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/attempts/a10_val_turn_01_seed20101_step2/file_access.trace",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/a19_r08_pipeline",
+    "--policy",
+    "PAPER_CERTIFIED_PAIR_REDUCTION_V1+PAPER_STAGE2_INEXACT_HANDOFF_V1",
+    "validation-stage1-stage2-score",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_01_seed20101_step2.yaml",
+    "ORIGINAL_RAW_NO_CHECKPOINT",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_01_seed20101_step2.json",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/attempts/a10_val_turn_01_seed20101_step2/output"
+  ],
+  "cwd": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie",
+  "runner_sha256": "41e1f5d71d92773896ac115dd131f49dbf7be6a441aa55c4093047ca79c8c6d8",
+  "started_utc": "2026-09-10T12:22:19.897869+00:00"
+}

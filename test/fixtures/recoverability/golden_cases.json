@@ -1,0 +1,2543 @@
+{
+  "cases": [
+    {
+      "F": [
+        [],
+        [],
+        []
+      ],
+      "G": [
+        [
+          2.0,
+          0.0
+        ],
+        [
+          0.0,
+          3.0
+        ],
+        [
+          1.0,
+          1.0
+        ]
+      ],
+      "N": [
+        [
+          5.0,
+          1.0
+        ],
+        [
+          1.0,
+          10.0
+        ]
+      ],
+      "R": [
+        [
+          5.0,
+          1.0
+        ],
+        [
+          1.0,
+          10.0
+        ]
+      ],
+      "analytic_expectation": {
+        "eta": 1.0,
+        "status": "OK"
+      },
+      "description": "No nuisance columns: R=N and eta=1.",
+      "expected": {
+        "E": [
+          [
+            2.0,
+            0.0
+          ],
+          [
+            0.0,
+            3.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "F_scaled": [
+          [],
+          [],
+          []
+        ],
+        "N": [
+          [
+            5.0,
+            1.0
+          ],
+          [
+            1.0,
+            10.0
+          ]
+        ],
+        "R": [
+          [
+            5.0,
+            1.0
+          ],
+          [
+            1.0,
+            10.0
+          ]
+        ],
+        "audits": {
+          "N_minus_R_min_eigenvalue_m2_inv": 0.0,
+          "R_symmetry_error": 0.0,
+          "full_scaled_F_normal_residual_diagnostic": 0.0,
+          "retained_projection_orthogonality": 0.0,
+          "roundoff_model": {
+            "N_minus_R_psd_m2_inv": 1.8105663463727342e-13,
+            "eigen_gamma": 2.2204460492503136e-16,
+            "gram_gamma": 3.3306690738754706e-16,
+            "model": "binary64 gamma_k forward-error bound",
+            "projection_information_floor_m2_inv": 2.010132445354457e-28,
+            "projection_residual_m_inv": 1.4177913969813954e-14,
+            "projector_gamma": 5.551115123125786e-16,
+            "safety_factor": 8.0,
+            "scale_for_N_minus_R": "spectral scales of N and R, not the spectrum of N-R",
+            "unit_roundoff": 1.1102230246251565e-16
+          }
+        },
+        "column_equilibration": {
+          "application": "two_stage_scale_safe_division",
+          "column_scales": [],
+          "exact_zero_column_indices": [],
+          "mathematical_scale": "d_j=1/||F[:,j]||_2",
+          "null_numeric_meaning": "finite binary64 representation unavailable",
+          "original_column_norms": [],
+          "rule": "nonzero F columns divided by max-absolute value then by the scaled 2-norm; exact zero is decided from original elements"
+        },
+        "eta": 1.0,
+        "eta_raw": 1.0000000000000002,
+        "rank": {
+          "F_scaled": 0,
+          "N": 2,
+          "R": 2
+        },
+        "s_is_infinite": false,
+        "s_m": 0.45608320050960743,
+        "schema_version": "recoverability-golden-v2",
+        "shape": {
+          "amplitude_columns": 2,
+          "nuisance_columns": 0,
+          "rows": 3
+        },
+        "spectrum": {
+          "F_scaled_singular_values_desc": [],
+          "N_eigenvalues_asc_m2_inv": [
+            4.807417596432748,
+            10.192582403567252
+          ],
+          "N_minus_R_eigenvalues_asc_m2_inv": [
+            0.0,
+            0.0
+          ],
+          "R_eigenvalues_asc_m2_inv": [
+            4.807417596432748,
+            10.192582403567252
+          ],
+          "generalized_R_N_eigenvalues_asc": [
+            1.0000000000000002,
+            1.0000000000000004
+          ]
+        },
+        "status": "OK",
+        "status_detail": "ALL_NUMERICAL_AUDITS_PASSED",
+        "thresholds_used": {
+          "F_rank": 1e-12,
+          "N_minus_R_psd_m2_inv": 1.8105663463727342e-13,
+          "N_positive_definite_m2_inv": 1.0192582403567252e-09,
+          "R_positive_definite_m2_inv": 1.0192582403567252e-09,
+          "R_projection_roundoff_floor_m2_inv": 2.010132445354457e-28,
+          "R_psd_m2_inv": 1.0192582403567252e-09,
+          "R_symmetry": 1e-09,
+          "projection_residual_roundoff_m_inv": 1.4177913969813954e-14,
+          "retained_projection_orthogonality": 3.872983346207417e-10
+        },
+        "tolerances": {
+          "comparison_atol": 1e-10,
+          "comparison_rtol": 1e-07,
+          "eta_abs": 1e-12,
+          "pd_abs_m2_inv": 1e-12,
+          "pd_rel": 1e-10,
+          "projection_abs": 1e-12,
+          "projection_rel": 1e-10,
+          "psd_abs_m2_inv": 1e-12,
+          "psd_rel": 1e-10,
+          "rank_abs": 1e-12,
+          "rank_rel": 1e-10,
+          "roundoff_safety_factor": 8.0,
+          "symmetry_abs": 1e-12,
+          "symmetry_rel": 1e-10
+        },
+        "units": {
+          "F": "whitened residual per nuisance local coordinate",
+          "G": "m^-1",
+          "N": "m^-2",
+          "R": "m^-2",
+          "eta": "1",
+          "s": "m"
+        }
+      },
+      "id": "known_navigation"
+    },
+    {
+      "F": [
+        [
+          1.0
+        ]
+      ],
+      "G": [
+        [
+          1.0
+        ]
+      ],
+      "N": [
+        [
+          1.0
+        ]
+      ],
+      "R": [
+        [
+          0.0
+        ]
+      ],
+      "analytic_expectation": {
+        "A_invertible": true,
+        "R": [
+          [
+            0.0
+          ]
+        ],
+        "s_is_infinite": true,
+        "status": "RANK_DEFICIENT"
+      },
+      "description": "z=x+c: A=1 is invertible but G lies in col(F).",
+      "expected": {
+        "E": [
+          [
+            0.0
+          ]
+        ],
+        "F_scaled": [
+          [
+            1.0
+          ]
+        ],
+        "N": [
+          [
+            1.0
+          ]
+        ],
+        "R": [
+          [
+            0.0
+          ]
+        ],
+        "audits": {
+          "N_minus_R_min_eigenvalue_m2_inv": 1.0,
+          "R_symmetry_error": 0.0,
+          "full_scaled_F_normal_residual_diagnostic": 0.0,
+          "retained_projection_orthogonality": 0.0,
+          "roundoff_model": {
+            "N_minus_R_psd_m2_inv": 8.881784197001255e-15,
+            "eigen_gamma": 1.1102230246251568e-16,
+            "gram_gamma": 1.1102230246251568e-16,
+            "model": "binary64 gamma_k forward-error bound",
+            "projection_information_floor_m2_inv": 1.26217744835362e-29,
+            "projection_residual_m_inv": 3.5527136788005025e-15,
+            "projector_gamma": 4.440892098500628e-16,
+            "safety_factor": 8.0,
+            "scale_for_N_minus_R": "spectral scales of N and R, not the spectrum of N-R",
+            "unit_roundoff": 1.1102230246251565e-16
+          }
+        },
+        "column_equilibration": {
+          "application": "two_stage_scale_safe_division",
+          "column_scales": [
+            1.0
+          ],
+          "exact_zero_column_indices": [],
+          "mathematical_scale": "d_j=1/||F[:,j]||_2",
+          "null_numeric_meaning": "finite binary64 representation unavailable",
+          "original_column_norms": [
+            1.0
+          ],
+          "rule": "nonzero F columns divided by max-absolute value then by the scaled 2-norm; exact zero is decided from original elements"
+        },
+        "eta": 0.0,
+        "eta_raw": 0.0,
+        "rank": {
+          "F_scaled": 1,
+          "N": 1,
+          "R": 0
+        },
+        "s_is_infinite": true,
+        "s_m": null,
+        "schema_version": "recoverability-golden-v2",
+        "shape": {
+          "amplitude_columns": 1,
+          "nuisance_columns": 1,
+          "rows": 1
+        },
+        "spectrum": {
+          "F_scaled_singular_values_desc": [
+            1.0
+          ],
+          "N_eigenvalues_asc_m2_inv": [
+            1.0
+          ],
+          "N_minus_R_eigenvalues_asc_m2_inv": [
+            1.0
+          ],
+          "R_eigenvalues_asc_m2_inv": [
+            0.0
+          ],
+          "generalized_R_N_eigenvalues_asc": [
+            0.0
+          ]
+        },
+        "status": "RANK_DEFICIENT",
+        "status_detail": "R_NOT_POSITIVE_DEFINITE_AT_DECLARED_TOLERANCE",
+        "thresholds_used": {
+          "F_rank": 1e-10,
+          "N_minus_R_psd_m2_inv": 8.881784197001255e-15,
+          "N_positive_definite_m2_inv": 1e-10,
+          "R_positive_definite_m2_inv": 1e-12,
+          "R_projection_roundoff_floor_m2_inv": 1.26217744835362e-29,
+          "R_psd_m2_inv": 1e-12,
+          "R_symmetry": 1e-12,
+          "projection_residual_roundoff_m_inv": 3.5527136788005025e-15,
+          "retained_projection_orthogonality": 1e-10
+        },
+        "tolerances": {
+          "comparison_atol": 1e-10,
+          "comparison_rtol": 1e-07,
+          "eta_abs": 1e-12,
+          "pd_abs_m2_inv": 1e-12,
+          "pd_rel": 1e-10,
+          "projection_abs": 1e-12,
+          "projection_rel": 1e-10,
+          "psd_abs_m2_inv": 1e-12,
+          "psd_rel": 1e-10,
+          "rank_abs": 1e-12,
+          "rank_rel": 1e-10,
+          "roundoff_safety_factor": 8.0,
+          "symmetry_abs": 1e-12,
+          "symmetry_rel": 1e-10
+        },
+        "units": {
+          "F": "whitened residual per nuisance local coordinate",
+          "G": "m^-1",
+          "N": "m^-2",
+          "R": "m^-2",
+          "eta": "1",
+          "s": "m"
+        }
+      },
+      "id": "scalar_confounding"
+    },
+    {
+      "F": [
+        [
+          1e-200
+        ]
+      ],
+      "G": [
+        [
+          1.0
+        ]
+      ],
+      "N": [
+        [
+          1.0
+        ]
+      ],
+      "R": [
+        [
+          0.0
+        ]
+      ],
+      "analytic_expectation": {
+        "R": [
+          [
+            0.0
+          ]
+        ],
+        "rank_F_scaled": 1,
+        "s_is_infinite": true,
+        "status": "RANK_DEFICIENT"
+      },
+      "description": "A nonzero 1e-200 nuisance column must not underflow to an exact-zero column.",
+      "expected": {
+        "E": [
+          [
+            0.0
+          ]
+        ],
+        "F_scaled": [
+          [
+            1.0
+          ]
+        ],
+        "N": [
+          [
+            1.0
+          ]
+        ],
+        "R": [
+          [
+            0.0
+          ]
+        ],
+        "audits": {
+          "N_minus_R_min_eigenvalue_m2_inv": 1.0,
+          "R_symmetry_error": 0.0,
+          "full_scaled_F_normal_residual_diagnostic": 0.0,
+          "retained_projection_orthogonality": 0.0,
+          "roundoff_model": {
+            "N_minus_R_psd_m2_inv": 8.881784197001255e-15,
+            "eigen_gamma": 1.1102230246251568e-16,
+            "gram_gamma": 1.1102230246251568e-16,
+            "model": "binary64 gamma_k forward-error bound",
+            "projection_information_floor_m2_inv": 1.26217744835362e-29,
+            "projection_residual_m_inv": 3.5527136788005025e-15,
+            "projector_gamma": 4.440892098500628e-16,
+            "safety_factor": 8.0,
+            "scale_for_N_minus_R": "spectral scales of N and R, not the spectrum of N-R",
+            "unit_roundoff": 1.1102230246251565e-16
+          }
+        },
+        "column_equilibration": {
+          "application": "two_stage_scale_safe_division",
+          "column_scales": [
+            1e+200
+          ],
+          "exact_zero_column_indices": [],
+          "mathematical_scale": "d_j=1/||F[:,j]||_2",
+          "null_numeric_meaning": "finite binary64 representation unavailable",
+          "original_column_norms": [
+            1e-200
+          ],
+          "rule": "nonzero F columns divided by max-absolute value then by the scaled 2-norm; exact zero is decided from original elements"
+        },
+        "eta": 0.0,
+        "eta_raw": 0.0,
+        "rank": {
+          "F_scaled": 1,
+          "N": 1,
+          "R": 0
+        },
+        "s_is_infinite": true,
+        "s_m": null,
+        "schema_version": "recoverability-golden-v2",
+        "shape": {
+          "amplitude_columns": 1,
+          "nuisance_columns": 1,
+          "rows": 1
+        },
+        "spectrum": {
+          "F_scaled_singular_values_desc": [
+            1.0
+          ],
+          "N_eigenvalues_asc_m2_inv": [
+            1.0
+          ],
+          "N_minus_R_eigenvalues_asc_m2_inv": [
+            1.0
+          ],
+          "R_eigenvalues_asc_m2_inv": [
+            0.0
+          ],
+          "generalized_R_N_eigenvalues_asc": [
+            0.0
+          ]
+        },
+        "status": "RANK_DEFICIENT",
+        "status_detail": "R_NOT_POSITIVE_DEFINITE_AT_DECLARED_TOLERANCE",
+        "thresholds_used": {
+          "F_rank": 1e-10,
+          "N_minus_R_psd_m2_inv": 8.881784197001255e-15,
+          "N_positive_definite_m2_inv": 1e-10,
+          "R_positive_definite_m2_inv": 1e-12,
+          "R_projection_roundoff_floor_m2_inv": 1.26217744835362e-29,
+          "R_psd_m2_inv": 1e-12,
+          "R_symmetry": 1e-12,
+          "projection_residual_roundoff_m_inv": 3.5527136788005025e-15,
+          "retained_projection_orthogonality": 1e-10
+        },
+        "tolerances": {
+          "comparison_atol": 1e-10,
+          "comparison_rtol": 1e-07,
+          "eta_abs": 1e-12,
+          "pd_abs_m2_inv": 1e-12,
+          "pd_rel": 1e-10,
+          "projection_abs": 1e-12,
+          "projection_rel": 1e-10,
+          "psd_abs_m2_inv": 1e-12,
+          "psd_rel": 1e-10,
+          "rank_abs": 1e-12,
+          "rank_rel": 1e-10,
+          "roundoff_safety_factor": 8.0,
+          "symmetry_abs": 1e-12,
+          "symmetry_rel": 1e-10
+        },
+        "units": {
+          "F": "whitened residual per nuisance local coordinate",
+          "G": "m^-1",
+          "N": "m^-2",
+          "R": "m^-2",
+          "eta": "1",
+          "s": "m"
+        }
+      },
+      "id": "extreme_small_nuisance_scale"
+    },
+    {
+      "F": [
+        [
+          1e+200
+        ]
+      ],
+      "G": [
+        [
+          1.0
+        ]
+      ],
+      "N": [
+        [
+          1.0
+        ]
+      ],
+      "R": [
+        [
+          0.0
+        ]
+      ],
+      "analytic_expectation": {
+        "R": [
+          [
+            0.0
+          ]
+        ],
+        "rank_F_scaled": 1,
+        "s_is_infinite": true,
+        "status": "RANK_DEFICIENT"
+      },
+      "description": "A nonzero 1e200 nuisance column must normalize without overflow.",
+      "expected": {
+        "E": [
+          [
+            0.0
+          ]
+        ],
+        "F_scaled": [
+          [
+            1.0
+          ]
+        ],
+        "N": [
+          [
+            1.0
+          ]
+        ],
+        "R": [
+          [
+            0.0
+          ]
+        ],
+        "audits": {
+          "N_minus_R_min_eigenvalue_m2_inv": 1.0,
+          "R_symmetry_error": 0.0,
+          "full_scaled_F_normal_residual_diagnostic": 0.0,
+          "retained_projection_orthogonality": 0.0,
+          "roundoff_model": {
+            "N_minus_R_psd_m2_inv": 8.881784197001255e-15,
+            "eigen_gamma": 1.1102230246251568e-16,
+            "gram_gamma": 1.1102230246251568e-16,
+            "model": "binary64 gamma_k forward-error bound",
+            "projection_information_floor_m2_inv": 1.26217744835362e-29,
+            "projection_residual_m_inv": 3.5527136788005025e-15,
+            "projector_gamma": 4.440892098500628e-16,
+            "safety_factor": 8.0,
+            "scale_for_N_minus_R": "spectral scales of N and R, not the spectrum of N-R",
+            "unit_roundoff": 1.1102230246251565e-16
+          }
+        },
+        "column_equilibration": {
+          "application": "two_stage_scale_safe_division",
+          "column_scales": [
+            1e-200
+          ],
+          "exact_zero_column_indices": [],
+          "mathematical_scale": "d_j=1/||F[:,j]||_2",
+          "null_numeric_meaning": "finite binary64 representation unavailable",
+          "original_column_norms": [
+            1e+200
+          ],
+          "rule": "nonzero F columns divided by max-absolute value then by the scaled 2-norm; exact zero is decided from original elements"
+        },
+        "eta": 0.0,
+        "eta_raw": 0.0,
+        "rank": {
+          "F_scaled": 1,
+          "N": 1,
+          "R": 0
+        },
+        "s_is_infinite": true,
+        "s_m": null,
+        "schema_version": "recoverability-golden-v2",
+        "shape": {
+          "amplitude_columns": 1,
+          "nuisance_columns": 1,
+          "rows": 1
+        },
+        "spectrum": {
+          "F_scaled_singular_values_desc": [
+            1.0
+          ],
+          "N_eigenvalues_asc_m2_inv": [
+            1.0
+          ],
+          "N_minus_R_eigenvalues_asc_m2_inv": [
+            1.0
+          ],
+          "R_eigenvalues_asc_m2_inv": [
+            0.0
+          ],
+          "generalized_R_N_eigenvalues_asc": [
+            0.0
+          ]
+        },
+        "status": "RANK_DEFICIENT",
+        "status_detail": "R_NOT_POSITIVE_DEFINITE_AT_DECLARED_TOLERANCE",
+        "thresholds_used": {
+          "F_rank": 1e-10,
+          "N_minus_R_psd_m2_inv": 8.881784197001255e-15,
+          "N_positive_definite_m2_inv": 1e-10,
+          "R_positive_definite_m2_inv": 1e-12,
+          "R_projection_roundoff_floor_m2_inv": 1.26217744835362e-29,
+          "R_psd_m2_inv": 1e-12,
+          "R_symmetry": 1e-12,
+          "projection_residual_roundoff_m_inv": 3.5527136788005025e-15,
+          "retained_projection_orthogonality": 1e-10
+        },
+        "tolerances": {
+          "comparison_atol": 1e-10,
+          "comparison_rtol": 1e-07,
+          "eta_abs": 1e-12,
+          "pd_abs_m2_inv": 1e-12,
+          "pd_rel": 1e-10,
+          "projection_abs": 1e-12,
+          "projection_rel": 1e-10,
+          "psd_abs_m2_inv": 1e-12,
+          "psd_rel": 1e-10,
+          "rank_abs": 1e-12,
+          "rank_rel": 1e-10,
+          "roundoff_safety_factor": 8.0,
+          "symmetry_abs": 1e-12,
+          "symmetry_rel": 1e-10
+        },
+        "units": {
+          "F": "whitened residual per nuisance local coordinate",
+          "G": "m^-1",
+          "N": "m^-2",
+          "R": "m^-2",
+          "eta": "1",
+          "s": "m"
+        }
+      },
+      "id": "extreme_large_nuisance_scale"
+    },
+    {
+      "F": [
+        [
+          1.0
+        ],
+        [
+          1.0
+        ],
+        [
+          1.0
+        ]
+      ],
+      "G": [
+        [
+          10000000000.0
+        ],
+        [
+          10000000000.0
+        ],
+        [
+          10000000000.0
+        ]
+      ],
+      "N": [
+        [
+          3e+20
+        ]
+      ],
+      "R": [
+        [
+          7.275957614183426e-12
+        ]
+      ],
+      "analytic_expectation": {
+        "mathematical_R": [
+          [
+            0.0
+          ]
+        ],
+        "s_is_infinite": true,
+        "status": "RANK_DEFICIENT"
+      },
+      "description": "G=1e10 F is exactly confounded; projection roundoff cannot create finite information.",
+      "expected": {
+        "E": [
+          [
+            0.0
+          ],
+          [
+            -1.9073486328125e-06
+          ],
+          [
+            -1.9073486328125e-06
+          ]
+        ],
+        "F_scaled": [
+          [
+            0.5773502691896258
+          ],
+          [
+            0.5773502691896258
+          ],
+          [
+            0.5773502691896258
+          ]
+        ],
+        "N": [
+          [
+            3e+20
+          ]
+        ],
+        "R": [
+          [
+            7.275957614183426e-12
+          ]
+        ],
+        "audits": {
+          "N_minus_R_min_eigenvalue_m2_inv": 3e+20,
+          "R_symmetry_error": 0.0,
+          "full_scaled_F_normal_residual_diagnostic": 2.2024164931855234e-06,
+          "retained_projection_orthogonality": 2.2024164931855234e-06,
+          "roundoff_model": {
+            "N_minus_R_psd_m2_inv": 4263256.414560604,
+            "eigen_gamma": 1.1102230246251568e-16,
+            "gram_gamma": 3.3306690738754706e-16,
+            "model": "binary64 gamma_k forward-error bound",
+            "projection_information_floor_m2_inv": 8.51969777638694e-09,
+            "projection_residual_m_inv": 9.230220894641114e-05,
+            "projector_gamma": 6.661338147750944e-16,
+            "safety_factor": 8.0,
+            "scale_for_N_minus_R": "spectral scales of N and R, not the spectrum of N-R",
+            "unit_roundoff": 1.1102230246251565e-16
+          }
+        },
+        "column_equilibration": {
+          "application": "two_stage_scale_safe_division",
+          "column_scales": [
+            0.5773502691896258
+          ],
+          "exact_zero_column_indices": [],
+          "mathematical_scale": "d_j=1/||F[:,j]||_2",
+          "null_numeric_meaning": "finite binary64 representation unavailable",
+          "original_column_norms": [
+            1.7320508075688772
+          ],
+          "rule": "nonzero F columns divided by max-absolute value then by the scaled 2-norm; exact zero is decided from original elements"
+        },
+        "eta": 2.4253192047278083e-32,
+        "eta_raw": 2.4253192047278083e-32,
+        "rank": {
+          "F_scaled": 1,
+          "N": 1,
+          "R": 0
+        },
+        "s_is_infinite": true,
+        "s_m": null,
+        "schema_version": "recoverability-golden-v2",
+        "shape": {
+          "amplitude_columns": 1,
+          "nuisance_columns": 1,
+          "rows": 3
+        },
+        "spectrum": {
+          "F_scaled_singular_values_desc": [
+            1.0
+          ],
+          "N_eigenvalues_asc_m2_inv": [
+            3e+20
+          ],
+          "N_minus_R_eigenvalues_asc_m2_inv": [
+            3e+20
+          ],
+          "R_eigenvalues_asc_m2_inv": [
+            7.275957614183426e-12
+          ],
+          "generalized_R_N_eigenvalues_asc": [
+            2.4253192047278083e-32
+          ]
+        },
+        "status": "RANK_DEFICIENT",
+        "status_detail": "R_NOT_POSITIVE_DEFINITE_AT_DECLARED_TOLERANCE",
+        "thresholds_used": {
+          "F_rank": 1e-10,
+          "N_minus_R_psd_m2_inv": 4263256.414560604,
+          "N_positive_definite_m2_inv": 30000000000.0,
+          "R_positive_definite_m2_inv": 8.51969777638694e-09,
+          "R_projection_roundoff_floor_m2_inv": 8.51969777638694e-09,
+          "R_psd_m2_inv": 1e-12,
+          "R_symmetry": 1e-12,
+          "projection_residual_roundoff_m_inv": 9.230220894641114e-05,
+          "retained_projection_orthogonality": 1.7320508075688772
+        },
+        "tolerances": {
+          "comparison_atol": 1e-10,
+          "comparison_rtol": 1e-07,
+          "eta_abs": 1e-12,
+          "pd_abs_m2_inv": 1e-12,
+          "pd_rel": 1e-10,
+          "projection_abs": 1e-12,
+          "projection_rel": 1e-10,
+          "psd_abs_m2_inv": 1e-12,
+          "psd_rel": 1e-10,
+          "rank_abs": 1e-12,
+          "rank_rel": 1e-10,
+          "roundoff_safety_factor": 8.0,
+          "symmetry_abs": 1e-12,
+          "symmetry_rel": 1e-10
+        },
+        "units": {
+          "F": "whitened residual per nuisance local coordinate",
+          "G": "m^-1",
+          "N": "m^-2",
+          "R": "m^-2",
+          "eta": "1",
+          "s": "m"
+        }
+      },
+      "id": "scaled_complete_confounding"
+    },
+    {
+      "F": [
+        [
+          -0.7196126036616686
+        ],
+        [
+          -0.08898196796664617
+        ],
+        [
+          0.05933026952132415
+        ],
+        [
+          -0.20389520345987927
+        ],
+        [
+          -0.5791562235819454
+        ],
+        [
+          -0.30614480861013815
+        ]
+      ],
+      "G": [
+        [
+          -30.040694659004963,
+          -15.029897764651837
+        ],
+        [
+          -61.49306987426392,
+          18.166846263469424
+        ],
+        [
+          -12.81533686015166,
+          -94.79174669264178
+        ],
+        [
+          8.01244984863999,
+          18.15789853162673
+        ],
+        [
+          5.02967351020658,
+          5.13308718007666
+        ],
+        [
+          71.15074978387733,
+          -10.125945185438164
+        ]
+      ],
+      "N": [
+        [
+          10000.0,
+          2.6294171519287953e-13
+        ],
+        [
+          2.6294171519287953e-13,
+          10000.000000000004
+        ]
+      ],
+      "R": [
+        [
+          10000.0,
+          2.6294171519287953e-13
+        ],
+        [
+          2.6294171519287953e-13,
+          10000.000000000004
+        ]
+      ],
+      "analytic_expectation": {
+        "N": [
+          [
+            10000.0,
+            0.0
+          ],
+          [
+            0.0,
+            10000.0
+          ]
+        ],
+        "R": [
+          [
+            10000.0,
+            0.0
+          ],
+          [
+            0.0,
+            10000.0
+          ]
+        ],
+        "roundoff_may_make_N_minus_R_indefinite": true,
+        "status": "OK"
+      },
+      "description": "Saved orthogonal case whose computed N-R has a tiny negative eigenvalue within the binary64 bound.",
+      "expected": {
+        "E": [
+          [
+            -30.04069465900496,
+            -15.029897764651837
+          ],
+          [
+            -61.49306987426392,
+            18.166846263469424
+          ],
+          [
+            -12.81533686015166,
+            -94.79174669264178
+          ],
+          [
+            8.01244984863999,
+            18.15789853162673
+          ],
+          [
+            5.029673510206582,
+            5.13308718007666
+          ],
+          [
+            71.15074978387733,
+            -10.125945185438164
+          ]
+        ],
+        "F_scaled": [
+          [
+            -0.7196126036616687
+          ],
+          [
+            -0.08898196796664619
+          ],
+          [
+            0.059330269521324155
+          ],
+          [
+            -0.2038952034598793
+          ],
+          [
+            -0.5791562235819454
+          ],
+          [
+            -0.30614480861013815
+          ]
+        ],
+        "N": [
+          [
+            10000.0,
+            2.6294171519287953e-13
+          ],
+          [
+            2.6294171519287953e-13,
+            10000.000000000004
+          ]
+        ],
+        "R": [
+          [
+            10000.0,
+            2.6294171519287953e-13
+          ],
+          [
+            2.6294171519287953e-13,
+            10000.000000000004
+          ]
+        ],
+        "audits": {
+          "N_minus_R_min_eigenvalue_m2_inv": 0.0,
+          "R_symmetry_error": 0.0,
+          "full_scaled_F_normal_residual_diagnostic": 3.552713678800501e-15,
+          "retained_projection_orthogonality": 3.552713678800501e-15,
+          "roundoff_model": {
+            "N_minus_R_psd_m2_inv": 3.197442310920455e-10,
+            "eigen_gamma": 2.2204460492503136e-16,
+            "gram_gamma": 6.661338147750944e-16,
+            "model": "binary64 gamma_k forward-error bound",
+            "projection_information_floor_m2_inv": 7.888609052210137e-25,
+            "projection_residual_m_inv": 8.881784197001263e-13,
+            "projector_gamma": 1.1102230246251577e-15,
+            "safety_factor": 8.0,
+            "scale_for_N_minus_R": "spectral scales of N and R, not the spectrum of N-R",
+            "unit_roundoff": 1.1102230246251565e-16
+          }
+        },
+        "column_equilibration": {
+          "application": "two_stage_scale_safe_division",
+          "column_scales": [
+            1.0000000000000002
+          ],
+          "exact_zero_column_indices": [],
+          "mathematical_scale": "d_j=1/||F[:,j]||_2",
+          "null_numeric_meaning": "finite binary64 representation unavailable",
+          "original_column_norms": [
+            0.9999999999999999
+          ],
+          "rule": "nonzero F columns divided by max-absolute value then by the scaled 2-norm; exact zero is decided from original elements"
+        },
+        "eta": 1.0,
+        "eta_raw": 1.0,
+        "rank": {
+          "F_scaled": 1,
+          "N": 2,
+          "R": 2
+        },
+        "s_is_infinite": false,
+        "s_m": 0.01,
+        "schema_version": "recoverability-golden-v2",
+        "shape": {
+          "amplitude_columns": 2,
+          "nuisance_columns": 1,
+          "rows": 6
+        },
+        "spectrum": {
+          "F_scaled_singular_values_desc": [
+            1.0
+          ],
+          "N_eigenvalues_asc_m2_inv": [
+            10000.0,
+            10000.000000000004
+          ],
+          "N_minus_R_eigenvalues_asc_m2_inv": [
+            0.0,
+            0.0
+          ],
+          "R_eigenvalues_asc_m2_inv": [
+            10000.0,
+            10000.000000000004
+          ],
+          "generalized_R_N_eigenvalues_asc": [
+            1.0,
+            1.0
+          ]
+        },
+        "status": "OK",
+        "status_detail": "ALL_NUMERICAL_AUDITS_PASSED",
+        "thresholds_used": {
+          "F_rank": 1e-10,
+          "N_minus_R_psd_m2_inv": 3.197442310920455e-10,
+          "N_positive_definite_m2_inv": 1.0000000000000004e-06,
+          "R_positive_definite_m2_inv": 1.0000000000000004e-06,
+          "R_projection_roundoff_floor_m2_inv": 7.888609052210137e-25,
+          "R_psd_m2_inv": 1.0000000000000004e-06,
+          "R_symmetry": 1.0000000000000004e-06,
+          "projection_residual_roundoff_m_inv": 8.881784197001263e-13,
+          "retained_projection_orthogonality": 1.4142135623730952e-08
+        },
+        "tolerances": {
+          "comparison_atol": 1e-10,
+          "comparison_rtol": 1e-07,
+          "eta_abs": 1e-12,
+          "pd_abs_m2_inv": 1e-12,
+          "pd_rel": 1e-10,
+          "projection_abs": 1e-12,
+          "projection_rel": 1e-10,
+          "psd_abs_m2_inv": 1e-12,
+          "psd_rel": 1e-10,
+          "rank_abs": 1e-12,
+          "rank_rel": 1e-10,
+          "roundoff_safety_factor": 8.0,
+          "symmetry_abs": 1e-12,
+          "symmetry_rel": 1e-10
+        },
+        "units": {
+          "F": "whitened residual per nuisance local coordinate",
+          "G": "m^-1",
+          "N": "m^-2",
+          "R": "m^-2",
+          "eta": "1",
+          "s": "m"
+        }
+      },
+      "id": "orthogonal_roundoff_psd"
+    },
+    {
+      "F": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "G": [
+        [
+          0.0
+        ],
+        [
+          1.0
+        ],
+        [
+          1.0
+        ]
+      ],
+      "N": [
+        [
+          2.0
+        ]
+      ],
+      "R": [
+        [
+          2.0
+        ]
+      ],
+      "analytic_expectation": {
+        "N": [
+          [
+            2.0
+          ]
+        ],
+        "R": [
+          [
+            2.0
+          ]
+        ],
+        "eta": 1.0,
+        "exact_zero_column_indices": [
+          1
+        ],
+        "rank_F_scaled": 1,
+        "status": "OK"
+      },
+      "description": "An exact zero nuisance column does not destroy independent amplitude information.",
+      "expected": {
+        "E": [
+          [
+            0.0
+          ],
+          [
+            1.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "F_scaled": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "N": [
+          [
+            2.0
+          ]
+        ],
+        "R": [
+          [
+            2.0
+          ]
+        ],
+        "audits": {
+          "N_minus_R_min_eigenvalue_m2_inv": 0.0,
+          "R_symmetry_error": 0.0,
+          "full_scaled_F_normal_residual_diagnostic": 0.0,
+          "retained_projection_orthogonality": 0.0,
+          "roundoff_model": {
+            "N_minus_R_psd_m2_inv": 3.552713678800503e-14,
+            "eigen_gamma": 1.1102230246251568e-16,
+            "gram_gamma": 3.3306690738754706e-16,
+            "model": "binary64 gamma_k forward-error bound",
+            "projection_information_floor_m2_inv": 5.679798517591294e-29,
+            "projection_residual_m_inv": 7.536443801682126e-15,
+            "projector_gamma": 6.661338147750944e-16,
+            "safety_factor": 8.0,
+            "scale_for_N_minus_R": "spectral scales of N and R, not the spectrum of N-R",
+            "unit_roundoff": 1.1102230246251565e-16
+          }
+        },
+        "column_equilibration": {
+          "application": "two_stage_scale_safe_division",
+          "column_scales": [
+            1.0,
+            1.0
+          ],
+          "exact_zero_column_indices": [
+            1
+          ],
+          "mathematical_scale": "d_j=1/||F[:,j]||_2",
+          "null_numeric_meaning": "finite binary64 representation unavailable",
+          "original_column_norms": [
+            1.0,
+            0.0
+          ],
+          "rule": "nonzero F columns divided by max-absolute value then by the scaled 2-norm; exact zero is decided from original elements"
+        },
+        "eta": 0.9999999999999998,
+        "eta_raw": 0.9999999999999998,
+        "rank": {
+          "F_scaled": 1,
+          "N": 1,
+          "R": 1
+        },
+        "s_is_infinite": false,
+        "s_m": 0.7071067811865475,
+        "schema_version": "recoverability-golden-v2",
+        "shape": {
+          "amplitude_columns": 1,
+          "nuisance_columns": 2,
+          "rows": 3
+        },
+        "spectrum": {
+          "F_scaled_singular_values_desc": [
+            1.0,
+            0.0
+          ],
+          "N_eigenvalues_asc_m2_inv": [
+            2.0
+          ],
+          "N_minus_R_eigenvalues_asc_m2_inv": [
+            0.0
+          ],
+          "R_eigenvalues_asc_m2_inv": [
+            2.0
+          ],
+          "generalized_R_N_eigenvalues_asc": [
+            0.9999999999999998
+          ]
+        },
+        "status": "OK",
+        "status_detail": "ALL_NUMERICAL_AUDITS_PASSED",
+        "thresholds_used": {
+          "F_rank": 1e-10,
+          "N_minus_R_psd_m2_inv": 3.552713678800503e-14,
+          "N_positive_definite_m2_inv": 2e-10,
+          "R_positive_definite_m2_inv": 2e-10,
+          "R_projection_roundoff_floor_m2_inv": 5.679798517591294e-29,
+          "R_psd_m2_inv": 2e-10,
+          "R_symmetry": 2e-10,
+          "projection_residual_roundoff_m_inv": 7.536443801682126e-15,
+          "retained_projection_orthogonality": 1.4142135623730953e-10
+        },
+        "tolerances": {
+          "comparison_atol": 1e-10,
+          "comparison_rtol": 1e-07,
+          "eta_abs": 1e-12,
+          "pd_abs_m2_inv": 1e-12,
+          "pd_rel": 1e-10,
+          "projection_abs": 1e-12,
+          "projection_rel": 1e-10,
+          "psd_abs_m2_inv": 1e-12,
+          "psd_rel": 1e-10,
+          "rank_abs": 1e-12,
+          "rank_rel": 1e-10,
+          "roundoff_safety_factor": 8.0,
+          "symmetry_abs": 1e-12,
+          "symmetry_rel": 1e-10
+        },
+        "units": {
+          "F": "whitened residual per nuisance local coordinate",
+          "G": "m^-1",
+          "N": "m^-2",
+          "R": "m^-2",
+          "eta": "1",
+          "s": "m"
+        }
+      },
+      "id": "irrelevant_nuisance_nullspace"
+    },
+    {
+      "F": [
+        [
+          1.0,
+          1.0
+        ],
+        [
+          0.0,
+          1e-09
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "G": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "N": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "R": [
+        [
+          4.930380657631324e-32,
+          0.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "analytic_expectation": {
+        "default_rank_F_scaled": 2,
+        "default_status": "RANK_DEFICIENT",
+        "gate_eligible_from_sweep": false,
+        "tolerance_sensitive": true
+      },
+      "description": "A near-null nuisance direction can absorb one of two amplitudes when retained.",
+      "expected": {
+        "E": [
+          [
+            4.788642533787063e-26,
+            0.0
+          ],
+          [
+            2.220446049250313e-16,
+            0.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "F_scaled": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            0.0,
+            1e-09
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "N": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "R": [
+          [
+            4.930380657631324e-32,
+            0.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "audits": {
+          "N_minus_R_min_eigenvalue_m2_inv": 0.0,
+          "R_symmetry_error": 0.0,
+          "full_scaled_F_normal_residual_diagnostic": 2.741457109466263e-25,
+          "retained_projection_orthogonality": 2.2204460492503128e-16,
+          "roundoff_model": {
+            "N_minus_R_psd_m2_inv": 2.4868995751603525e-14,
+            "eigen_gamma": 2.2204460492503136e-16,
+            "gram_gamma": 3.3306690738754706e-16,
+            "model": "binary64 gamma_k forward-error bound",
+            "projection_information_floor_m2_inv": 6.389773332290208e-29,
+            "projection_residual_m_inv": 7.993605777301135e-15,
+            "projector_gamma": 9.992007221626419e-16,
+            "safety_factor": 8.0,
+            "scale_for_N_minus_R": "spectral scales of N and R, not the spectrum of N-R",
+            "unit_roundoff": 1.1102230246251565e-16
+          }
+        },
+        "column_equilibration": {
+          "application": "two_stage_scale_safe_division",
+          "column_scales": [
+            1.0,
+            1.0
+          ],
+          "exact_zero_column_indices": [],
+          "mathematical_scale": "d_j=1/||F[:,j]||_2",
+          "null_numeric_meaning": "finite binary64 representation unavailable",
+          "original_column_norms": [
+            1.0,
+            1.0
+          ],
+          "rule": "nonzero F columns divided by max-absolute value then by the scaled 2-norm; exact zero is decided from original elements"
+        },
+        "eta": 4.930380657631324e-32,
+        "eta_raw": 4.930380657631324e-32,
+        "rank": {
+          "F_scaled": 2,
+          "N": 2,
+          "R": 1
+        },
+        "s_is_infinite": true,
+        "s_m": null,
+        "schema_version": "recoverability-golden-v2",
+        "shape": {
+          "amplitude_columns": 2,
+          "nuisance_columns": 2,
+          "rows": 3
+        },
+        "spectrum": {
+          "F_scaled_singular_values_desc": [
+            1.4142135623730951,
+            7.071067811865476e-10
+          ],
+          "N_eigenvalues_asc_m2_inv": [
+            1.0,
+            1.0
+          ],
+          "N_minus_R_eigenvalues_asc_m2_inv": [
+            0.0,
+            1.0
+          ],
+          "R_eigenvalues_asc_m2_inv": [
+            4.930380657631324e-32,
+            1.0
+          ],
+          "generalized_R_N_eigenvalues_asc": [
+            4.930380657631324e-32,
+            1.0
+          ]
+        },
+        "status": "RANK_DEFICIENT",
+        "status_detail": "R_NOT_POSITIVE_DEFINITE_AT_DECLARED_TOLERANCE",
+        "thresholds_used": {
+          "F_rank": 1.4142135623730953e-10,
+          "N_minus_R_psd_m2_inv": 2.4868995751603525e-14,
+          "N_positive_definite_m2_inv": 1e-10,
+          "R_positive_definite_m2_inv": 1e-10,
+          "R_projection_roundoff_floor_m2_inv": 6.389773332290208e-29,
+          "R_psd_m2_inv": 1e-10,
+          "R_symmetry": 1e-10,
+          "projection_residual_roundoff_m_inv": 7.993605777301135e-15,
+          "retained_projection_orthogonality": 1.4142135623730953e-10
+        },
+        "tolerances": {
+          "comparison_atol": 1e-10,
+          "comparison_rtol": 1e-07,
+          "eta_abs": 1e-12,
+          "pd_abs_m2_inv": 1e-12,
+          "pd_rel": 1e-10,
+          "projection_abs": 1e-12,
+          "projection_rel": 1e-10,
+          "psd_abs_m2_inv": 1e-12,
+          "psd_rel": 1e-10,
+          "rank_abs": 1e-12,
+          "rank_rel": 1e-10,
+          "roundoff_safety_factor": 8.0,
+          "symmetry_abs": 1e-12,
+          "symmetry_rel": 1e-10
+        },
+        "units": {
+          "F": "whitened residual per nuisance local coordinate",
+          "G": "m^-1",
+          "N": "m^-2",
+          "R": "m^-2",
+          "eta": "1",
+          "s": "m"
+        }
+      },
+      "id": "near_degenerate_multi_amplitude",
+      "rank_tolerance_sensitivity": [
+        {
+          "R_eigenvalues_asc_m2_inv": [
+            4.930380657631324e-32,
+            1.0
+          ],
+          "eta": 4.930380657631324e-32,
+          "rank_F_scaled": 2,
+          "rank_R": 1,
+          "rank_rel": 1e-12,
+          "s_is_infinite": true,
+          "s_m": null,
+          "status": "RANK_DEFICIENT"
+        },
+        {
+          "R_eigenvalues_asc_m2_inv": [
+            4.930380657631324e-32,
+            1.0
+          ],
+          "eta": 4.930380657631324e-32,
+          "rank_F_scaled": 2,
+          "rank_R": 1,
+          "rank_rel": 1e-10,
+          "s_is_infinite": true,
+          "s_m": null,
+          "status": "RANK_DEFICIENT"
+        },
+        {
+          "R_eigenvalues_asc_m2_inv": [
+            1.0,
+            1.0
+          ],
+          "eta": 1.0,
+          "rank_F_scaled": 1,
+          "rank_R": 2,
+          "rank_rel": 1e-08,
+          "s_is_infinite": false,
+          "s_m": 1.0,
+          "status": "OK"
+        }
+      ],
+      "sensitivity_status": "TOLERANCE_SENSITIVE_NOT_GATE_ELIGIBLE"
+    },
+    {
+      "F": [
+        []
+      ],
+      "G": [
+        [
+          0.01
+        ]
+      ],
+      "N": [
+        [
+          0.0001
+        ]
+      ],
+      "R": [
+        [
+          0.0001
+        ]
+      ],
+      "analytic_expectation": {
+        "N": [
+          [
+            0.0001
+          ]
+        ],
+        "R": [
+          [
+            0.0001
+          ]
+        ],
+        "eta": 1.0,
+        "s_m": 100.0,
+        "status": "OK"
+      },
+      "description": "N=R=1e-4 m^-2 gives eta=1 but s=100 m.",
+      "expected": {
+        "E": [
+          [
+            0.01
+          ]
+        ],
+        "F_scaled": [
+          []
+        ],
+        "N": [
+          [
+            0.0001
+          ]
+        ],
+        "R": [
+          [
+            0.0001
+          ]
+        ],
+        "audits": {
+          "N_minus_R_min_eigenvalue_m2_inv": 0.0,
+          "R_symmetry_error": 0.0,
+          "full_scaled_F_normal_residual_diagnostic": 0.0,
+          "retained_projection_orthogonality": 0.0,
+          "roundoff_model": {
+            "N_minus_R_psd_m2_inv": 7.105427357601004e-19,
+            "eigen_gamma": 1.1102230246251568e-16,
+            "gram_gamma": 1.1102230246251568e-16,
+            "model": "binary64 gamma_k forward-error bound",
+            "projection_information_floor_m2_inv": 3.1554436208840487e-34,
+            "projection_residual_m_inv": 1.7763568394002508e-17,
+            "projector_gamma": 2.2204460492503136e-16,
+            "safety_factor": 8.0,
+            "scale_for_N_minus_R": "spectral scales of N and R, not the spectrum of N-R",
+            "unit_roundoff": 1.1102230246251565e-16
+          }
+        },
+        "column_equilibration": {
+          "application": "two_stage_scale_safe_division",
+          "column_scales": [],
+          "exact_zero_column_indices": [],
+          "mathematical_scale": "d_j=1/||F[:,j]||_2",
+          "null_numeric_meaning": "finite binary64 representation unavailable",
+          "original_column_norms": [],
+          "rule": "nonzero F columns divided by max-absolute value then by the scaled 2-norm; exact zero is decided from original elements"
+        },
+        "eta": 1.0,
+        "eta_raw": 1.0,
+        "rank": {
+          "F_scaled": 0,
+          "N": 1,
+          "R": 1
+        },
+        "s_is_infinite": false,
+        "s_m": 100.0,
+        "schema_version": "recoverability-golden-v2",
+        "shape": {
+          "amplitude_columns": 1,
+          "nuisance_columns": 0,
+          "rows": 1
+        },
+        "spectrum": {
+          "F_scaled_singular_values_desc": [],
+          "N_eigenvalues_asc_m2_inv": [
+            0.0001
+          ],
+          "N_minus_R_eigenvalues_asc_m2_inv": [
+            0.0
+          ],
+          "R_eigenvalues_asc_m2_inv": [
+            0.0001
+          ],
+          "generalized_R_N_eigenvalues_asc": [
+            1.0
+          ]
+        },
+        "status": "OK",
+        "status_detail": "ALL_NUMERICAL_AUDITS_PASSED",
+        "thresholds_used": {
+          "F_rank": 1e-12,
+          "N_minus_R_psd_m2_inv": 7.105427357601004e-19,
+          "N_positive_definite_m2_inv": 1e-12,
+          "R_positive_definite_m2_inv": 1e-12,
+          "R_projection_roundoff_floor_m2_inv": 3.1554436208840487e-34,
+          "R_psd_m2_inv": 1e-12,
+          "R_symmetry": 1e-12,
+          "projection_residual_roundoff_m_inv": 1.7763568394002508e-17,
+          "retained_projection_orthogonality": 1e-12
+        },
+        "tolerances": {
+          "comparison_atol": 1e-10,
+          "comparison_rtol": 1e-07,
+          "eta_abs": 1e-12,
+          "pd_abs_m2_inv": 1e-12,
+          "pd_rel": 1e-10,
+          "projection_abs": 1e-12,
+          "projection_rel": 1e-10,
+          "psd_abs_m2_inv": 1e-12,
+          "psd_rel": 1e-10,
+          "rank_abs": 1e-12,
+          "rank_rel": 1e-10,
+          "roundoff_safety_factor": 8.0,
+          "symmetry_abs": 1e-12,
+          "symmetry_rel": 1e-10
+        },
+        "units": {
+          "F": "whitened residual per nuisance local coordinate",
+          "G": "m^-1",
+          "N": "m^-2",
+          "R": "m^-2",
+          "eta": "1",
+          "s": "m"
+        }
+      },
+      "id": "weak_absolute_information"
+    },
+    {
+      "F": [
+        [
+          1.0
+        ],
+        [
+          1.0
+        ],
+        [
+          1.0
+        ]
+      ],
+      "G": [
+        [
+          1.0
+        ],
+        [
+          1.0
+        ],
+        [
+          1.0
+        ]
+      ],
+      "N": [
+        [
+          3.0
+        ]
+      ],
+      "R": [
+        [
+          1.232595164407831e-32
+        ]
+      ],
+      "analytic_expectation": {
+        "invariance_example_m": {
+          "beta": 0.2,
+          "beta_shifted": 0.1,
+          "c": 0.7,
+          "c_shifted": 0.8,
+          "shift_d": 0.1
+        },
+        "s_is_infinite": true,
+        "status": "RANK_DEFICIENT"
+      },
+      "description": "A free static beta and dynamic c share the same measurement direction.",
+      "expected": {
+        "E": [
+          [
+            1.1102230246251565e-16
+          ],
+          [
+            0.0
+          ],
+          [
+            0.0
+          ]
+        ],
+        "F_scaled": [
+          [
+            0.5773502691896258
+          ],
+          [
+            0.5773502691896258
+          ],
+          [
+            0.5773502691896258
+          ]
+        ],
+        "N": [
+          [
+            3.0
+          ]
+        ],
+        "R": [
+          [
+            1.232595164407831e-32
+          ]
+        ],
+        "audits": {
+          "N_minus_R_min_eigenvalue_m2_inv": 3.0,
+          "R_symmetry_error": 0.0,
+          "full_scaled_F_normal_residual_diagnostic": 6.409875621278547e-17,
+          "retained_projection_orthogonality": 6.409875621278546e-17,
+          "roundoff_model": {
+            "N_minus_R_psd_m2_inv": 4.2632564145606036e-14,
+            "eigen_gamma": 1.1102230246251568e-16,
+            "gram_gamma": 3.3306690738754706e-16,
+            "model": "binary64 gamma_k forward-error bound",
+            "projection_information_floor_m2_inv": 8.51969777638694e-29,
+            "projection_residual_m_inv": 9.230220894641113e-15,
+            "projector_gamma": 6.661338147750944e-16,
+            "safety_factor": 8.0,
+            "scale_for_N_minus_R": "spectral scales of N and R, not the spectrum of N-R",
+            "unit_roundoff": 1.1102230246251565e-16
+          }
+        },
+        "column_equilibration": {
+          "application": "two_stage_scale_safe_division",
+          "column_scales": [
+            0.5773502691896258
+          ],
+          "exact_zero_column_indices": [],
+          "mathematical_scale": "d_j=1/||F[:,j]||_2",
+          "null_numeric_meaning": "finite binary64 representation unavailable",
+          "original_column_norms": [
+            1.7320508075688772
+          ],
+          "rule": "nonzero F columns divided by max-absolute value then by the scaled 2-norm; exact zero is decided from original elements"
+        },
+        "eta": 4.108650548026104e-33,
+        "eta_raw": 4.108650548026104e-33,
+        "rank": {
+          "F_scaled": 1,
+          "N": 1,
+          "R": 0
+        },
+        "s_is_infinite": true,
+        "s_m": null,
+        "schema_version": "recoverability-golden-v2",
+        "shape": {
+          "amplitude_columns": 1,
+          "nuisance_columns": 1,
+          "rows": 3
+        },
+        "spectrum": {
+          "F_scaled_singular_values_desc": [
+            1.0
+          ],
+          "N_eigenvalues_asc_m2_inv": [
+            3.0
+          ],
+          "N_minus_R_eigenvalues_asc_m2_inv": [
+            3.0
+          ],
+          "R_eigenvalues_asc_m2_inv": [
+            1.232595164407831e-32
+          ],
+          "generalized_R_N_eigenvalues_asc": [
+            4.108650548026104e-33
+          ]
+        },
+        "status": "RANK_DEFICIENT",
+        "status_detail": "R_NOT_POSITIVE_DEFINITE_AT_DECLARED_TOLERANCE",
+        "thresholds_used": {
+          "F_rank": 1e-10,
+          "N_minus_R_psd_m2_inv": 4.2632564145606036e-14,
+          "N_positive_definite_m2_inv": 3e-10,
+          "R_positive_definite_m2_inv": 1e-12,
+          "R_projection_roundoff_floor_m2_inv": 8.51969777638694e-29,
+          "R_psd_m2_inv": 1e-12,
+          "R_symmetry": 1e-12,
+          "projection_residual_roundoff_m_inv": 9.230220894641113e-15,
+          "retained_projection_orthogonality": 1.7320508075688773e-10
+        },
+        "tolerances": {
+          "comparison_atol": 1e-10,
+          "comparison_rtol": 1e-07,
+          "eta_abs": 1e-12,
+          "pd_abs_m2_inv": 1e-12,
+          "pd_rel": 1e-10,
+          "projection_abs": 1e-12,
+          "projection_rel": 1e-10,
+          "psd_abs_m2_inv": 1e-12,
+          "psd_rel": 1e-10,
+          "rank_abs": 1e-12,
+          "rank_rel": 1e-10,
+          "roundoff_safety_factor": 8.0,
+          "symmetry_abs": 1e-12,
+          "symmetry_rel": 1e-10
+        },
+        "units": {
+          "F": "whitened residual per nuisance local coordinate",
+          "G": "m^-1",
+          "N": "m^-2",
+          "R": "m^-2",
+          "eta": "1",
+          "s": "m"
+        }
+      },
+      "id": "static_beta_translation_ambiguity"
+    },
+    {
+      "F": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0
+        ],
+        [
+          1.0,
+          1.0
+        ],
+        [
+          1.0,
+          -1.0
+        ],
+        [
+          0.5,
+          0.25
+        ]
+      ],
+      "G": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          1.0
+        ],
+        [
+          1.0,
+          -0.5
+        ]
+      ],
+      "N": [
+        [
+          3.0,
+          0.5
+        ],
+        [
+          0.5,
+          2.25
+        ]
+      ],
+      "R": [
+        [
+          0.8427672955974841,
+          -0.11949685534591209
+        ],
+        [
+          -0.11949685534591209,
+          2.0691823899371067
+        ]
+      ],
+      "analytic_expectation": {
+        "projector_equals_schur": true,
+        "status": "OK"
+      },
+      "description": "Well-conditioned full-column-rank F for projector/Schur equivalence.",
+      "expected": {
+        "E": [
+          [
+            0.2201257861635223,
+            -0.2327044025157232
+          ],
+          [
+            0.2767295597484276,
+            1.050314465408805
+          ],
+          [
+            -0.50314465408805,
+            -0.1823899371069181
+          ],
+          [
+            -0.056603773584905426,
+            0.7169811320754718
+          ],
+          [
+            0.679245283018868,
+            -0.6037735849056604
+          ]
+        ],
+        "F_scaled": [
+          [
+            0.5547001962252291,
+            0.0
+          ],
+          [
+            0.0,
+            0.5714285714285714
+          ],
+          [
+            0.5547001962252291,
+            0.5714285714285714
+          ],
+          [
+            0.5547001962252291,
+            -0.5714285714285714
+          ],
+          [
+            0.2773500981126146,
+            0.14285714285714285
+          ]
+        ],
+        "N": [
+          [
+            3.0,
+            0.5
+          ],
+          [
+            0.5,
+            2.25
+          ]
+        ],
+        "R": [
+          [
+            0.8427672955974841,
+            -0.11949685534591209
+          ],
+          [
+            -0.11949685534591209,
+            2.0691823899371067
+          ]
+        ],
+        "audits": {
+          "N_minus_R_min_eigenvalue_m2_inv": 0.002693081849862028,
+          "R_symmetry_error": 0.0,
+          "full_scaled_F_normal_residual_diagnostic": 5.12657078584664e-16,
+          "retained_projection_orthogonality": 5.281321503460325e-16,
+          "roundoff_model": {
+            "N_minus_R_psd_m2_inv": 9.664715276607212e-14,
+            "eigen_gamma": 2.2204460492503136e-16,
+            "gram_gamma": 5.551115123125786e-16,
+            "model": "binary64 gamma_k forward-error bound",
+            "projection_information_floor_m2_inv": 3.1021955097816365e-28,
+            "projection_residual_m_inv": 1.7613050586941594e-14,
+            "projector_gamma": 1.2212453270876738e-15,
+            "safety_factor": 8.0,
+            "scale_for_N_minus_R": "spectral scales of N and R, not the spectrum of N-R",
+            "unit_roundoff": 1.1102230246251565e-16
+          }
+        },
+        "column_equilibration": {
+          "application": "two_stage_scale_safe_division",
+          "column_scales": [
+            0.5547001962252291,
+            0.5714285714285714
+          ],
+          "exact_zero_column_indices": [],
+          "mathematical_scale": "d_j=1/||F[:,j]||_2",
+          "null_numeric_meaning": "finite binary64 representation unavailable",
+          "original_column_norms": [
+            1.8027756377319946,
+            1.75
+          ],
+          "rule": "nonzero F columns divided by max-absolute value then by the scaled 2-norm; exact zero is decided from original elements"
+        },
+        "eta": 0.26643755245076944,
+        "eta_raw": 0.26643755245076944,
+        "rank": {
+          "F_scaled": 2,
+          "N": 2,
+          "R": 2
+        },
+        "s_is_infinite": false,
+        "s_m": 1.096828539573021,
+        "schema_version": "recoverability-golden-v2",
+        "shape": {
+          "amplitude_columns": 2,
+          "nuisance_columns": 2,
+          "rows": 5
+        },
+        "spectrum": {
+          "F_scaled_singular_values_desc": [
+            1.0196182827840605,
+            0.9799890598432636
+          ],
+          "N_eigenvalues_asc_m2_inv": [
+            2.0,
+            3.25
+          ],
+          "N_minus_R_eigenvalues_asc_m2_inv": [
+            0.002693081849862028,
+            2.3353572326155474
+          ],
+          "R_eigenvalues_asc_m2_inv": [
+            0.8312325004023983,
+            2.0807171851321926
+          ],
+          "generalized_R_N_eigenvalues_asc": [
+            0.26643755245076944,
+            0.9986809768187027
+          ]
+        },
+        "status": "OK",
+        "status_detail": "ALL_NUMERICAL_AUDITS_PASSED",
+        "thresholds_used": {
+          "F_rank": 1.0196182827840605e-10,
+          "N_minus_R_psd_m2_inv": 9.664715276607212e-14,
+          "N_positive_definite_m2_inv": 3.25e-10,
+          "R_positive_definite_m2_inv": 2.0807171851321928e-10,
+          "R_projection_roundoff_floor_m2_inv": 3.1021955097816365e-28,
+          "R_psd_m2_inv": 2.0807171851321928e-10,
+          "R_symmetry": 2.0691823899371068e-10,
+          "projection_residual_roundoff_m_inv": 1.7613050586941594e-14,
+          "retained_projection_orthogonality": 2.29128784747792e-10
+        },
+        "tolerances": {
+          "comparison_atol": 1e-10,
+          "comparison_rtol": 1e-07,
+          "eta_abs": 1e-12,
+          "pd_abs_m2_inv": 1e-12,
+          "pd_rel": 1e-10,
+          "projection_abs": 1e-12,
+          "projection_rel": 1e-10,
+          "psd_abs_m2_inv": 1e-12,
+          "psd_rel": 1e-10,
+          "rank_abs": 1e-12,
+          "rank_rel": 1e-10,
+          "roundoff_safety_factor": 8.0,
+          "symmetry_abs": 1e-12,
+          "symmetry_rel": 1e-10
+        },
+        "units": {
+          "F": "whitened residual per nuisance local coordinate",
+          "G": "m^-1",
+          "N": "m^-2",
+          "R": "m^-2",
+          "eta": "1",
+          "s": "m"
+        }
+      },
+      "id": "full_rank_projector_schur",
+      "schur_R": [
+        [
+          0.8427672955974841,
+          -0.11949685534591198
+        ],
+        [
+          -0.11949685534591198,
+          2.069182389937107
+        ]
+      ]
+    },
+    {
+      "F": [
+        [
+          1.0
+        ],
+        [
+          1.0
+        ]
+      ],
+      "G": [
+        [
+          0.0
+        ],
+        [
+          1.0
+        ]
+      ],
+      "N": [
+        [
+          1.0
+        ]
+      ],
+      "R": [
+        [
+          0.5
+        ]
+      ],
+      "analytic_expectation": {
+        "R": [
+          [
+            0.5
+          ]
+        ],
+        "eta": 0.5,
+        "s_m": 1.4142135623730951
+      },
+      "description": "Historical scalar model with navigation precision a=1 and candidate precision w=1.",
+      "expected": {
+        "E": [
+          [
+            -0.4999999999999999
+          ],
+          [
+            0.5000000000000001
+          ]
+        ],
+        "F_scaled": [
+          [
+            0.7071067811865475
+          ],
+          [
+            0.7071067811865475
+          ]
+        ],
+        "N": [
+          [
+            1.0
+          ]
+        ],
+        "R": [
+          [
+            0.5
+          ]
+        ],
+        "audits": {
+          "N_minus_R_min_eigenvalue_m2_inv": 0.5,
+          "R_symmetry_error": 0.0,
+          "full_scaled_F_normal_residual_diagnostic": 1.1102230246251565e-16,
+          "retained_projection_orthogonality": 1.1102230246251565e-16,
+          "roundoff_model": {
+            "N_minus_R_psd_m2_inv": 1.2878587085651822e-14,
+            "eigen_gamma": 1.1102230246251568e-16,
+            "gram_gamma": 2.2204460492503136e-16,
+            "model": "binary64 gamma_k forward-error bound",
+            "projection_information_floor_m2_inv": 1.9721522630525318e-29,
+            "projection_residual_m_inv": 4.4408920985006285e-15,
+            "projector_gamma": 5.551115123125786e-16,
+            "safety_factor": 8.0,
+            "scale_for_N_minus_R": "spectral scales of N and R, not the spectrum of N-R",
+            "unit_roundoff": 1.1102230246251565e-16
+          }
+        },
+        "column_equilibration": {
+          "application": "two_stage_scale_safe_division",
+          "column_scales": [
+            0.7071067811865475
+          ],
+          "exact_zero_column_indices": [],
+          "mathematical_scale": "d_j=1/||F[:,j]||_2",
+          "null_numeric_meaning": "finite binary64 representation unavailable",
+          "original_column_norms": [
+            1.4142135623730951
+          ],
+          "rule": "nonzero F columns divided by max-absolute value then by the scaled 2-norm; exact zero is decided from original elements"
+        },
+        "eta": 0.5,
+        "eta_raw": 0.5,
+        "rank": {
+          "F_scaled": 1,
+          "N": 1,
+          "R": 1
+        },
+        "s_is_infinite": false,
+        "s_m": 1.414213562373095,
+        "schema_version": "recoverability-golden-v2",
+        "shape": {
+          "amplitude_columns": 1,
+          "nuisance_columns": 1,
+          "rows": 2
+        },
+        "spectrum": {
+          "F_scaled_singular_values_desc": [
+            1.0
+          ],
+          "N_eigenvalues_asc_m2_inv": [
+            1.0
+          ],
+          "N_minus_R_eigenvalues_asc_m2_inv": [
+            0.5
+          ],
+          "R_eigenvalues_asc_m2_inv": [
+            0.5
+          ],
+          "generalized_R_N_eigenvalues_asc": [
+            0.5
+          ]
+        },
+        "status": "OK",
+        "status_detail": "ALL_NUMERICAL_AUDITS_PASSED",
+        "thresholds_used": {
+          "F_rank": 1e-10,
+          "N_minus_R_psd_m2_inv": 1.2878587085651822e-14,
+          "N_positive_definite_m2_inv": 1e-10,
+          "R_positive_definite_m2_inv": 5e-11,
+          "R_projection_roundoff_floor_m2_inv": 1.9721522630525318e-29,
+          "R_psd_m2_inv": 5e-11,
+          "R_symmetry": 5e-11,
+          "projection_residual_roundoff_m_inv": 4.4408920985006285e-15,
+          "retained_projection_orthogonality": 1e-10
+        },
+        "tolerances": {
+          "comparison_atol": 1e-10,
+          "comparison_rtol": 1e-07,
+          "eta_abs": 1e-12,
+          "pd_abs_m2_inv": 1e-12,
+          "pd_rel": 1e-10,
+          "projection_abs": 1e-12,
+          "projection_rel": 1e-10,
+          "psd_abs_m2_inv": 1e-12,
+          "psd_rel": 1e-10,
+          "rank_abs": 1e-12,
+          "rank_rel": 1e-10,
+          "roundoff_safety_factor": 8.0,
+          "symmetry_abs": 1e-12,
+          "symmetry_rel": 1e-10
+        },
+        "units": {
+          "F": "whitened residual per nuisance local coordinate",
+          "G": "m^-1",
+          "N": "m^-2",
+          "R": "m^-2",
+          "eta": "1",
+          "s": "m"
+        }
+      },
+      "id": "future_information_base"
+    },
+    {
+      "F": [
+        [
+          1.0
+        ],
+        [
+          1.0
+        ],
+        [
+          1.7320508075688772
+        ]
+      ],
+      "G": [
+        [
+          0.0
+        ],
+        [
+          1.0
+        ],
+        [
+          0.0
+        ]
+      ],
+      "N": [
+        [
+          1.0
+        ]
+      ],
+      "R": [
+        [
+          0.7999999999999999
+        ]
+      ],
+      "analytic_expectation": {
+        "R": [
+          [
+            0.8
+          ]
+        ],
+        "eta": 0.8,
+        "s_m": 1.118033988749895,
+        "same_historical_amplitude_model": true
+      },
+      "description": "Same historical model plus future navigation precision f=3; G is zero on the new row.",
+      "expected": {
+        "E": [
+          [
+            -0.19999999999999998
+          ],
+          [
+            0.7999999999999999
+          ],
+          [
+            -0.3464101615137755
+          ]
+        ],
+        "F_scaled": [
+          [
+            0.4472135954999579
+          ],
+          [
+            0.4472135954999579
+          ],
+          [
+            0.7745966692414833
+          ]
+        ],
+        "N": [
+          [
+            1.0
+          ]
+        ],
+        "R": [
+          [
+            0.7999999999999999
+          ]
+        ],
+        "audits": {
+          "N_minus_R_min_eigenvalue_m2_inv": 0.20000000000000007,
+          "R_symmetry_error": 0.0,
+          "full_scaled_F_normal_residual_diagnostic": 5.551115123125783e-17,
+          "retained_projection_orthogonality": 5.551115123125783e-17,
+          "roundoff_model": {
+            "N_minus_R_psd_m2_inv": 1.7053025658242413e-14,
+            "eigen_gamma": 1.1102230246251568e-16,
+            "gram_gamma": 3.3306690738754706e-16,
+            "model": "binary64 gamma_k forward-error bound",
+            "projection_information_floor_m2_inv": 2.839899258795647e-29,
+            "projection_residual_m_inv": 5.329070518200755e-15,
+            "projector_gamma": 6.661338147750944e-16,
+            "safety_factor": 8.0,
+            "scale_for_N_minus_R": "spectral scales of N and R, not the spectrum of N-R",
+            "unit_roundoff": 1.1102230246251565e-16
+          }
+        },
+        "column_equilibration": {
+          "application": "two_stage_scale_safe_division",
+          "column_scales": [
+            0.4472135954999579
+          ],
+          "exact_zero_column_indices": [],
+          "mathematical_scale": "d_j=1/||F[:,j]||_2",
+          "null_numeric_meaning": "finite binary64 representation unavailable",
+          "original_column_norms": [
+            2.23606797749979
+          ],
+          "rule": "nonzero F columns divided by max-absolute value then by the scaled 2-norm; exact zero is decided from original elements"
+        },
+        "eta": 0.7999999999999999,
+        "eta_raw": 0.7999999999999999,
+        "rank": {
+          "F_scaled": 1,
+          "N": 1,
+          "R": 1
+        },
+        "s_is_infinite": false,
+        "s_m": 1.118033988749895,
+        "schema_version": "recoverability-golden-v2",
+        "shape": {
+          "amplitude_columns": 1,
+          "nuisance_columns": 1,
+          "rows": 3
+        },
+        "spectrum": {
+          "F_scaled_singular_values_desc": [
+            1.0
+          ],
+          "N_eigenvalues_asc_m2_inv": [
+            1.0
+          ],
+          "N_minus_R_eigenvalues_asc_m2_inv": [
+            0.20000000000000007
+          ],
+          "R_eigenvalues_asc_m2_inv": [
+            0.7999999999999999
+          ],
+          "generalized_R_N_eigenvalues_asc": [
+            0.7999999999999999
+          ]
+        },
+        "status": "OK",
+        "status_detail": "ALL_NUMERICAL_AUDITS_PASSED",
+        "thresholds_used": {
+          "F_rank": 1e-10,
+          "N_minus_R_psd_m2_inv": 1.7053025658242413e-14,
+          "N_positive_definite_m2_inv": 1e-10,
+          "R_positive_definite_m2_inv": 8e-11,
+          "R_projection_roundoff_floor_m2_inv": 2.839899258795647e-29,
+          "R_psd_m2_inv": 8e-11,
+          "R_symmetry": 8e-11,
+          "projection_residual_roundoff_m_inv": 5.329070518200755e-15,
+          "retained_projection_orthogonality": 1e-10
+        },
+        "tolerances": {
+          "comparison_atol": 1e-10,
+          "comparison_rtol": 1e-07,
+          "eta_abs": 1e-12,
+          "pd_abs_m2_inv": 1e-12,
+          "pd_rel": 1e-10,
+          "projection_abs": 1e-12,
+          "projection_rel": 1e-10,
+          "psd_abs_m2_inv": 1e-12,
+          "psd_rel": 1e-10,
+          "rank_abs": 1e-12,
+          "rank_rel": 1e-10,
+          "roundoff_safety_factor": 8.0,
+          "symmetry_abs": 1e-12,
+          "symmetry_rel": 1e-10
+        },
+        "units": {
+          "F": "whitened residual per nuisance local coordinate",
+          "G": "m^-1",
+          "N": "m^-2",
+          "R": "m^-2",
+          "eta": "1",
+          "s": "m"
+        }
+      },
+      "id": "future_information_augmented"
+    }
+  ],
+  "comparison_policy": {
+    "byte_identity": "same-environment reproducibility check only",
+    "floating_point_fields": "comparison_atol/comparison_rtol",
+    "strict_fields": "case identity, status, dimensions, types, keys, list lengths, and ordering"
+  },
+  "forbidden_information": [
+    "LM damping",
+    "diagonal jitter",
+    "artificial prior",
+    "discarded L1 curvature",
+    "discarded TV curvature"
+  ],
+  "generator": "tools/paper/reference_recoverability.py --generate-fixtures",
+  "input_contract": "F and G are already whitened; G remains in physical metre amplitude coordinates.",
+  "relations": {
+    "future_information": {
+      "augmented_case": "future_information_augmented",
+      "base_case": "future_information_base",
+      "expected": "N unchanged, R and eta increase, s decreases"
+    }
+  },
+  "roundoff_policy": {
+    "N_minus_R": "binary64 gamma_k bound scaled by N and R spectra; no fixed absolute floor and no scaling by the N-R spectrum",
+    "R_rank": "declared PD tolerance plus squared projector forward-error bound; unresolved projection residuals cannot yield finite s"
+  },
+  "schema_version": "recoverability-golden-v2",
+  "status_definitions": {
+    "INVALID_INPUT": "CLI input shape, finiteness, or tolerance validation failed",
+    "INVALID_NOMINAL_INFORMATION": "N is not positive definite, so eta is undefined",
+    "NUMERICAL_FAILURE": "decomposition or declared numerical audit failed",
+    "OK": "audits pass and R is positive definite at the declared numerical tolerance",
+    "RANK_DEFICIENT": "R has a direction at/below the PD tolerance; s is infinite"
+  },
+  "tolerance_scope": "These are numerical golden-test tolerances only. They are not tau_eta, tau_s, tau_gamma, validation-locked gates, or experiment parameters.",
+  "tolerances": {
+    "comparison_atol": 1e-10,
+    "comparison_rtol": 1e-07,
+    "eta_abs": 1e-12,
+    "pd_abs_m2_inv": 1e-12,
+    "pd_rel": 1e-10,
+    "projection_abs": 1e-12,
+    "projection_rel": 1e-10,
+    "psd_abs_m2_inv": 1e-12,
+    "psd_rel": 1e-10,
+    "rank_abs": 1e-12,
+    "rank_rel": 1e-10,
+    "roundoff_safety_factor": 8.0,
+    "symmetry_abs": 1e-12,
+    "symmetry_rel": 1e-10
+  }
+}

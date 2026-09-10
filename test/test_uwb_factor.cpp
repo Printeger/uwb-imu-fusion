@@ -65,6 +65,35 @@ TEST(UwbFactor, WithBiasResidual) {
   EXPECT_NEAR(err, expected, 1e-6);
 }
 
+TEST(UwbFactor, FixedBetaUsesRawMeasurementWithoutOnlineKey) {
+  Point3 anchor(5.0, 4.0, 1.0);
+  Point3 lever_init(0.10, 0.0, -0.05);
+  Pose3 T(Rot3::RzRyRx(0.1, -0.2, 0.3), Point3(1.0, 2.0, 0.5));
+  const double sigma = 0.1;
+  const double fixed_beta = 0.3;  // synthetic fixture, not calibration
+  const double rho = (T.transformFrom(lever_init) - anchor).norm();
+  const double raw_z = rho + fixed_beta;
+  auto f = uifgo::MakeUwbFactor(X(0), L(0), A(0), Z(0), anchor, lever_init,
+                                raw_z, sigma, false, false, false,
+                                fixed_beta);
+  Values values;
+  values.insert(X(0), T);
+  EXPECT_EQ(f->keys().size(), 1u);
+  EXPECT_EQ(f->keys()[0], X(0));
+  EXPECT_NEAR(f->error(values), 0.0, 1e-12);
+  EXPECT_DOUBLE_EQ(uifgo::RangeForGeometryInitialization(raw_z, fixed_beta),
+                   rho);
+  EXPECT_DOUBLE_EQ(uifgo::UwbResidual(rho, raw_z, fixed_beta), 0.0);
+}
+
+TEST(UwbFactor, RejectsFixedAndOnlineBiasTogether) {
+  EXPECT_THROW(
+      uifgo::MakeUwbFactor(X(0), L(0), A(0), Z(0), Point3(1, 0, 0),
+                           Point3(0, 0, 0), 1.3, 0.1, false, false, true,
+                           0.3),
+      std::invalid_argument);
+}
+
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

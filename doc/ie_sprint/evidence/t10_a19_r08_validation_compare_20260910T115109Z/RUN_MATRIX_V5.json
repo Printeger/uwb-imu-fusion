@@ -1,0 +1,28 @@
+{
+  "already_consumed_no_retry": [
+    "a10_val_turn_01_seed20101_los",
+    "a10_val_turn_01_seed20101_ramp_gentle",
+    "a10_val_turn_01_seed20101_ramp_steep",
+    "a10_val_turn_01_seed20101_step1",
+    "a10_val_turn_01_seed20101_step2",
+    "a10_val_turn_01_seed20101_step3",
+    "a10_val_turn_02_seed20102_los",
+    "a10_val_turn_02_seed20102_ramp_gentle",
+    "a10_val_turn_02_seed20102_step1",
+    "a10_val_turn_02_seed20102_step2",
+    "a10_val_turn_02_seed20102_step3"
+  ],
+  "order": [
+    {
+      "base": "a10_val_turn_02_seed20102",
+      "config": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_02_seed20102_ramp_steep.yaml",
+      "context": "doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts_v2/a10_val_turn_02_seed20102_ramp_steep.json",
+      "raw": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_02_seed20102/raw/ramp_steep/input_manifest.json",
+      "scenario": "ramp_steep",
+      "seed": 20102
+    }
+  ],
+  "recovery_rule": "ONLY_NEVER_TICKETED_NEVER_STARTED_CELL; NO RETRY OF CONSUMED CELLS",
+  "role": "validation",
+  "schema": "T10_A19_R08_FIXED_MATRIX_CRASH_CONTINUATION_V5"
+}

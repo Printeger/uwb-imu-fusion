@@ -9,6 +9,7 @@
 #include <set>
 
 #include "uifgo/imu_preint.h"
+#include "uifgo/uwb_factor.h"
 
 namespace uifgo {
 
@@ -258,7 +259,12 @@ InitResult Initializer::Run(const std::vector<ImuSample>& imu,
 
     for (size_t i = 0; i < kMaxLookAhead; ++i) {
       for (const auto& r : uwb_frames[i].ranges) {
-        accumulated.push_back(r);
+        // Correct a local geometry copy; keep the raw observation unchanged.
+        UwbRange geometry_range = r;
+        geometry_range.dist = RangeForGeometryInitialization(
+            r.dist,
+            FixedBetaForLink(cfg_, uwb_frames[i].tag_id, r.anchor_id));
+        accumulated.push_back(geometry_range);
         anchor_ids_seen.insert(r.anchor_id);
       }
       if (anchor_ids_seen.size() >= 3) break;  // enough unique anchors
@@ -356,7 +362,9 @@ double Initializer::AlignYaw(
         // Antenna position in world
         gtsam::Point3 ant = T_k.transformFrom(cfg_.lever_arm_init);
         double pred = (gtsam::Vector3(ant) - gtsam::Vector3(it->second)).norm();
-        double err = pred - r.dist;
+        const double fixed_beta =
+            FixedBetaForLink(cfg_, uwb_frames[kf_idx].tag_id, r.anchor_id);
+        double err = UwbResidual(pred, r.dist, fixed_beta);
         cost += err * err;
         ++n_ranges;
       }

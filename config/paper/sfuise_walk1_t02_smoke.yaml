@@ -1,0 +1,51 @@
+# T02 development smoke only. The empty fixed-beta map records that an
+# independent LOS calibration is unavailable; it does not assert beta=0.
+dataset:
+  interface: sfuise
+
+sfuise:
+  data_dir: ../../data/SFUISE
+  sequence: 1
+  uwb_group_window: 0.0
+
+anchors: []
+
+extrinsics:
+  lever_arm_init: [0.1, -0.025, 0.0]
+  calib_lever: false
+
+calibration:
+  calib_anchor: false
+  calib_range_bias: false
+  calib_td: false
+  td_init: 0.0
+  fixed_beta_by_link: {}
+
+imu:
+  sigma_a: 0.357
+  sigma_g: 0.19
+  sigma_wa: 0.044
+  sigma_wg: 0.018
+  gravity: 9.81
+  imu_acc_in_g: false
+
+initialization:
+  use_imu_orientation: false
+  imu_orientation_world: enu
+
+uwb:
+  sigma_range: 0.15
+  v_max: 2.0
+  nlos_rssi_diff: 8.0
+  min_range: 0.3
+  max_range: 60.0
+
+solver:
+  lm_max_iter: 200
+  rel_error_tol: 1.0e-6
+  abs_error_tol: 1.0e-8
+
+keyframe:
+  step: 8
+  min_interval: 0.0
+  yaw_align_frames: 0

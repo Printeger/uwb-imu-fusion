@@ -1,0 +1,15 @@
+{
+  "attempt_count": 1,
+  "base": "a10_val_turn_01_seed20101",
+  "elapsed_s": 75.47213311499945,
+  "exit_code": 0,
+  "finished_utc": "2026-09-10T12:35:03.136957+00:00",
+  "forbidden_truth_open_count": 0,
+  "forbidden_truth_open_lines": [],
+  "ordinal": 2,
+  "reserved_s": 700.0,
+  "reserved_utc": "2026-09-10T12:33:47.626529+00:00",
+  "run_id": "a10_val_turn_01_seed20101_ramp_gentle",
+  "scenario": "ramp_gentle",
+  "status": "COMPLETE"
+}

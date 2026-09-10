@@ -93,6 +93,7 @@ endif()
 
 # --- GoogleTest ---
 find_package(GTest REQUIRED)
+find_package(PythonInterp REQUIRED)
 
 # --- Armadillo (simulator: ODE integrator) ---
 find_package(Armadillo REQUIRED)
@@ -124,6 +125,19 @@ add_library(${PROJECT_NAME}
   src/chi2.cpp
   src/trajectory_io.cpp
   src/logger.cpp
+  src/hash_utils.cpp
+  src/paper_input.cpp
+  src/t07_scenario_cache.cpp
+  src/nlos_solver_utils.cpp
+  src/nlos_discovery.cpp
+  src/nlos_refit.cpp
+  src/nlos_recoverability.cpp
+  src/nlos_scoring.cpp
+  src/nlos_inference.cpp
+  src/nlos_inference_io.cpp
+  src/paper_methods.cpp
+  src/paper_run_io.cpp
+  src/paper_stage2_cache.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -154,6 +168,73 @@ target_link_libraries(uwb_imu_fgo_node
 )
 
 add_dependencies(uwb_imu_fgo_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+# Thin batch entry for the paper input path. It intentionally bypasses the
+# legacy Optimizer GNC/rejection loop; it supports the T02 all-range graph and
+# the T04 oracle-support debug refit.
+add_executable(uwb_imu_fgo_paper_runner tools/run_ie_paper.cpp)
+target_link_libraries(uwb_imu_fgo_paper_runner
+  ${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+  gtsam
+  gtsam_unstable
+  ${Boost_LIBRARIES}
+  yaml-cpp
+)
+add_dependencies(uwb_imu_fgo_paper_runner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_executable(export_ground_truth tools/paper/export_ground_truth.cpp)
+target_link_libraries(export_ground_truth
+  ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam ${Boost_LIBRARIES} yaml-cpp)
+add_dependencies(export_ground_truth ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+# T07 generation code is deliberately isolated from the estimator library and
+# paper runner. The runner can only read the self-contained estimator cache.
+add_library(t07_scenario_generation
+  tools/paper/t07_scenario_injector.cpp
+)
+target_link_libraries(t07_scenario_generation
+  ${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES} yaml-cpp)
+add_dependencies(t07_scenario_generation ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_executable(generate_t07_scenario tools/paper/generate_t07_scenario.cpp)
+target_link_libraries(generate_t07_scenario
+  t07_scenario_generation ${PROJECT_NAME} ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES} yaml-cpp)
+add_dependencies(generate_t07_scenario ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_executable(t06_chain_solver_probe tools/paper/t06_chain_solver_probe.cpp)
+target_link_libraries(t06_chain_solver_probe ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam yaml-cpp)
+add_dependencies(t06_chain_solver_probe ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+# R04 keeps the development-only certified runner inside the project build so
+# header-defined Eigen/GTSAM factor types use the same compile ABI as core.
+add_executable(a19_r04_pipeline tools/paper/a19_r04_pipeline.cpp)
+target_link_libraries(a19_r04_pipeline
+  ${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+  gtsam
+  ${Boost_LIBRARIES}
+  yaml-cpp
+  /usr/lib/x86_64-linux-gnu/libmpfr.so.6
+  /usr/lib/x86_64-linux-gnu/libgmp.so.10
+)
+add_dependencies(a19_r04_pipeline ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+# Opt-in R08 validation envelope. It shares the production estimator library
+# and certified implementation; the separate executable keeps legacy R04/R07
+# entry modes and identities unchanged.
+add_executable(a19_r08_pipeline tools/paper/a19_r08_pipeline.cpp)
+target_link_libraries(a19_r08_pipeline
+  ${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+  gtsam
+  ${Boost_LIBRARIES}
+  yaml-cpp
+  /usr/lib/x86_64-linux-gnu/libmpfr.so.6
+  /usr/lib/x86_64-linux-gnu/libgmp.so.10
+)
+add_dependencies(a19_r08_pipeline ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 # =============================================
 # Simulator — quadrotor dynamics + SO3 control
@@ -192,4 +273,80 @@ if(GTest_FOUND)
 
   catkin_add_gtest(test_optimizer test/test_optimizer.cpp)
   target_link_libraries(test_optimizer ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_paper_input test/test_paper_input.cpp)
+  target_link_libraries(test_paper_input ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_t07_scenario test/test_t07_scenario.cpp)
+  target_link_libraries(test_t07_scenario t07_scenario_generation ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_nlos_refit test/test_nlos_refit.cpp)
+  target_link_libraries(test_nlos_refit ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_nlos_discovery test/test_nlos_discovery.cpp)
+  target_link_libraries(test_nlos_discovery ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_nlos_recoverability test/test_nlos_recoverability.cpp)
+  target_link_libraries(test_nlos_recoverability ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+  target_compile_definitions(test_nlos_recoverability PRIVATE
+    UIFGO_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+
+  catkin_add_gtest(test_nlos_inference test/test_nlos_inference.cpp)
+  target_link_libraries(test_nlos_inference ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_paper_methods test/test_paper_methods.cpp)
+  target_link_libraries(test_paper_methods ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_paper_stage2_cache test/test_paper_stage2_cache.cpp)
+  target_link_libraries(test_paper_stage2_cache ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+
+  add_test(NAME test_t04_runner_contract
+    COMMAND ${PYTHON_EXECUTABLE} -B
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_t04_runner_contract.py
+      --runner $<TARGET_FILE:uwb_imu_fgo_paper_runner>
+      --source-config
+        ${CMAKE_CURRENT_SOURCE_DIR}/config/paper/sim_circle_t04_oracle_debug.yaml
+      --bag
+        ${CMAKE_CURRENT_SOURCE_DIR}/data/sim_circle_2026-06-15-16-04-35.bag)
+
+  add_test(NAME test_t06_chain_reference
+    COMMAND ${PYTHON_EXECUTABLE} -B
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_t06_chain_reference.py
+      --solver $<TARGET_FILE:t06_chain_solver_probe>)
+
+  add_test(NAME test_t06_runner_contract
+    COMMAND ${PYTHON_EXECUTABLE} -B
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_t06_runner_contract.py
+      --runner $<TARGET_FILE:uwb_imu_fgo_paper_runner>
+      --source-config
+        ${CMAKE_CURRENT_SOURCE_DIR}/config/paper/sim_circle_t06_automatic_discovery.yaml
+      --bag
+        ${CMAKE_CURRENT_SOURCE_DIR}/data/sim_circle_2026-06-15-16-04-35.bag)
+
+  add_test(NAME test_t08_runner_contract
+    COMMAND ${PYTHON_EXECUTABLE} -B
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_t08_runner_contract.py
+      --runner $<TARGET_FILE:uwb_imu_fgo_paper_runner>
+      --config
+        ${CMAKE_CURRENT_SOURCE_DIR}/config/paper/sim_circle_t08_oracle_development.yaml)
+
+  add_test(NAME test_t09_runner_contract
+    COMMAND ${PYTHON_EXECUTABLE} -B
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_t09_runner_contract.py)
+
+  add_test(NAME test_t09_evaluator
+    COMMAND ${PYTHON_EXECUTABLE} -B
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_t09_evaluator.py)
+  add_test(NAME test_t09_review_fix
+    COMMAND ${PYTHON_EXECUTABLE} -B
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_t09_review_fix.py)
+  add_test(NAME test_t09_evaluator_artifact_graph
+    COMMAND ${PYTHON_EXECUTABLE} -B
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_t09_evaluator_artifact_graph.py)
+  add_test(NAME test_t09_comparability_boundary
+    COMMAND ${PYTHON_EXECUTABLE} -B
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_t09_comparability_boundary.py)
+  add_test(NAME test_t09_rereview_fix
+    COMMAND ${PYTHON_EXECUTABLE} -B
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_t09_rereview_fix.py)
 endif()

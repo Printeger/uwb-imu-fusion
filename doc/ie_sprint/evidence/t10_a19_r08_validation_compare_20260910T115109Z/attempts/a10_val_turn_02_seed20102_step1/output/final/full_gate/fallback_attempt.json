@@ -1,0 +1,11 @@
+{
+  "schema": "t08_fallback_attempt_v1",
+  "inference_id": "t08inference-sha256:3ab56af0ed2efe1bb4a435f0144a3de478e19259d9315a47ae5032b2f3654e5a",
+  "attempted": false,
+  "attempt_count": 0,
+  "trigger_reason": "",
+  "recovery_failure_reason": "",
+  "status": "NOT_TRIGGERED",
+  "fallback_solver_status": "NOT_RUN",
+  "fallback_failure_reason": ""
+}

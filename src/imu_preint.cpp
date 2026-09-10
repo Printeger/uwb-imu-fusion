@@ -1,30 +1,106 @@
 #include "uifgo/imu_preint.h"
 
 #include <gtsam/base/numericalDerivative.h>
+#include <gtsam/config.h>
+#include <iomanip>
+#include <sstream>
+#include "uifgo/hash_utils.h"
 #include <gtsam/navigation/PreintegrationParams.h>
 
 namespace uifgo {
 
 ImuPreintegrator::ImuPreintegrator(const Config& cfg,
-                                   const gtsam::Vector3& gravity_world) {
-  // MakeSharedU expects positive gravity magnitude; internally sets
-  // n_gravity = (0,0,-g) for Z-up world frame.
-  // gravity_world is (0,0,-g), so we pass |g| = cfg.gravity directly.
-  (void)gravity_world;  // kept for API compatibility
-  auto p = gtsam::PreintegratedCombinedMeasurements::Params::MakeSharedU(
-      cfg.gravity);
+                                   const gtsam::Vector3& gravity_world, ImuCovarianceModel model) {
+  (void)ImuCovarianceModelName(model);  // Reject invalid enum casts, never fall back.
+  // The caller owns the world-frame gravity convention. Previously this
+  // argument was ignored and every instance silently used ENU -cfg.gravity,
+  // contradicting the public API and zero-gravity tests.
+  using Params = gtsam::PreintegratedCombinedMeasurements::Params;
+  boost::shared_ptr<Params> p(new Params(gravity_world));
   p->accelerometerCovariance =
       Eigen::Matrix3d::Identity() * cfg.sigma_a * cfg.sigma_a;
   p->gyroscopeCovariance =
       Eigen::Matrix3d::Identity() * cfg.sigma_g * cfg.sigma_g;
   p->integrationCovariance =
-      Eigen::Matrix3d::Identity() * 1e-9;  // small integration noise
+      Eigen::Matrix3d::Identity() * 1e-9;  // m^2/s, retained engineering integration approximation
   p->biasAccCovariance =
       Eigen::Matrix3d::Identity() * cfg.sigma_wa * cfg.sigma_wa;
   p->biasOmegaCovariance =
       Eigen::Matrix3d::Identity() * cfg.sigma_wg * cfg.sigma_wg;
+  // Conditional on unknown live B_i/B_j: biasHat is only a linearization point.
+  // No independent per-sample integration-bias random source in this model.
+  if (model == ImuCovarianceModel::PAPER_IMU_CONDITIONAL_LIVE_BIAS_V1)
+    p->biasAccOmegaInt.setZero();
   params_ = p;
   pim_ = gtsam::PreintegratedCombinedMeasurements(params_);
+}
+
+std::string ImuCovarianceParametersCanonical(
+    const gtsam::PreintegrationCombinedParams& p, ImuCovarianceModel model) {
+  std::ostringstream out;
+  out << "uifgo-imu-covariance-identity-v1\n" << ImuCovarianceModelName(model)
+      << "\nGTSAM-4.2-Combined-native-FQ-v1;theta,p,v,ba,bg;right-end-interpolated-v1\n";
+#ifdef GTSAM_TANGENT_PREINTEGRATION
+  out << "TANGENT_PREINTEGRATION\n";
+#else
+  out << "MANIFOLD_PREINTEGRATION\n";
+#endif
+#ifdef GTSAM_USE_QUATERNIONS
+  out << "ROT3_QUATERNIONS\n";
+#else
+  out << "ROT3_MATRIX\n";
+#endif
+#ifdef GTSAM_ROT3_EXPMAP
+  out << "ROT3_EXPMAP\n";
+#else
+  out << "ROT3_CAYLEY\n";
+#endif
+  out << std::hexfloat;
+  auto matrix = [&](const char* name, const gtsam::Matrix& m) {
+    out << name << ':' << m.rows() << ',' << m.cols() << '\n';
+    for (int i = 0; i < m.rows(); ++i) {
+      for (int j = 0; j < m.cols(); ++j) out << m(i,j) << ',';
+      out << '\n';
+    }
+  };
+  matrix("Qa[(m/s2)^2*s]", p.accelerometerCovariance);
+  matrix("Qg[(rad/s)^2*s]", p.gyroscopeCovariance);
+  matrix("Qi[m2/s]", p.integrationCovariance);
+  matrix("Qba[(m/s2)^2/s]", p.biasAccCovariance);
+  matrix("Qbg[(rad/s)^2/s]", p.biasOmegaCovariance);
+  matrix("K[aux-density]", p.biasAccOmegaInt);
+  matrix("gravity_world[m/s2]", p.n_gravity);
+  out << "second_order_coriolis:" << p.use2ndOrderCoriolis << '\n';
+  out << "omega_coriolis:" << bool(p.omegaCoriolis) << '\n';
+  if (p.omegaCoriolis) matrix("omega", *p.omegaCoriolis);
+  out << "body_P_sensor:" << bool(p.body_P_sensor) << '\n';
+  if (p.body_P_sensor) matrix("body_P_sensor", p.body_P_sensor->matrix());
+  return out.str();
+}
+
+std::string ImuCovarianceModelIdentity(const Config& cfg,
+    const gtsam::Vector3& gravity_world, ImuCovarianceModel model) {
+  const ImuPreintegrator pim(cfg, gravity_world, model);
+  return "imu-covariance-sha256:" +
+      Sha256Hex(ImuCovarianceParametersCanonical(*pim.Params(), model));
+}
+
+bool PaperImuCovarianceModelMatchesGraph(const gtsam::NonlinearFactorGraph& graph,
+    const Config& cfg, std::string* reason) {
+  for (const auto& f : graph) {
+    const auto imu = boost::dynamic_pointer_cast<gtsam::CombinedImuFactor>(f);
+    if (!imu) continue;
+    const auto& p = imu->preintegratedMeasurements().p();
+    const auto actual = "imu-covariance-sha256:" + Sha256Hex(
+        ImuCovarianceParametersCanonical(p, cfg.paper_imu_covariance_model));
+    if (actual != ImuCovarianceModelIdentity(cfg, gtsam::Vector3(0, 0, -cfg.gravity),
+                                            cfg.paper_imu_covariance_model)) {
+      if (reason) *reason = "PAPER_IMU_COVARIANCE_MODEL_GRAPH_MISMATCH";
+      return false;
+    }
+  }
+  if (reason) reason->clear();
+  return true;
 }
 
 void ImuPreintegrator::Reset(const gtsam::imuBias::ConstantBias& bias) {

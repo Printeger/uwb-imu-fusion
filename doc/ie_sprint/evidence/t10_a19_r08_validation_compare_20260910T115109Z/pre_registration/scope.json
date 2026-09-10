@@ -1,0 +1,42 @@
+{
+  "budgets_s": {
+    "automatic": 900,
+    "per_final": 900,
+    "per_input_science": 5400,
+    "reserve_not_auto_consumed": 3600,
+    "scheduled": 10800,
+    "total": 14400
+  },
+  "concurrency": 1,
+  "consumable": false,
+  "envelope_schema": "uifgo_t10_validation_admission_v1",
+  "estimated_12_input_wall_s": 1003.03325742,
+  "gate": {
+    "epsilon_bad_m": 0.2,
+    "tau_eta": 0.1,
+    "tau_gamma": 1.0,
+    "tau_s_m": 0.1
+  },
+  "protocol": "doc/ie_sprint/T10_A19_R08_PROTOCOL.md",
+  "protocol_sha256": "babcbbf7e8aa1cc54fe9398171f6bcd07cd70283a01cc54363cc82372fb54bf0",
+  "registered_utc": "2026-09-10T11:51:10.081008+00:00",
+  "reservation_audit": "NOT_GENERATED_NOT_RUN; no seed20101/20102 generation/evaluation artifacts found before registration",
+  "reservations": [
+    "a10_val_turn_01_seed20101",
+    "a10_val_turn_02_seed20102"
+  ],
+  "role": "validation",
+  "scenario_order": [
+    "los",
+    "step1",
+    "step2",
+    "step3",
+    "ramp_gentle",
+    "ramp_steep"
+  ],
+  "schema": "T10_A19_R08_PREREGISTRATION_V1",
+  "seed10101": "PERMANENT_DEVELOPMENT_NO_RETURN",
+  "support": "P1",
+  "test_reservations": "FORBIDDEN_NOT_GENERATED_NOT_READ_NOT_RUN",
+  "truth_boundary": "FREEZE_ALL_12_DECISIONS_FINALS_CODE_CONFIG_IDENTITIES_BEFORE_INDEPENDENT_VALIDATION_TRUTH_OPEN"
+}

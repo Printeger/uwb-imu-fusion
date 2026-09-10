@@ -1,0 +1,8 @@
+schema: t09_fixed_partition_v1
+RQ3_FIXED_PARTITION_DIAGNOSTIC_DEBUG_ONLY: true
+recipe_hash: sha256:development-support-only-no-amplitude
+segments:
+  - segment_id: t09-fixed-anchor-1-development
+    link: "1:1"
+    start_time: 1781510684.4
+    end_time: 1781510688.4

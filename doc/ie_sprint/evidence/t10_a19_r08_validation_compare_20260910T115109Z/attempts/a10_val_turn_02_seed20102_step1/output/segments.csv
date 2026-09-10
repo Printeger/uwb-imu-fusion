@@ -1,0 +1,2 @@
+segment_id,ordinal,stage1_merge_amplitude_m,stage2_refit_amplitude_m,amplitude_m,boundary,short_support,truth_m,postfit_gamma
+auto-segment-sha256:a3fedafc8b1fe3b5648ef8890ce3ee0cd6d0a498dc6d07333219c5a77793bd30,0,0.56761607839219297,0.59188183307798237,0.59188183307798237,0,0,NA,1.8635059414505455

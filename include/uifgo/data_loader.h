@@ -68,7 +68,8 @@ class DataLoader {
   bool LoadSfuiseBag(const std::string& data_dir, int sequence,
                      std::vector<ImuSample>* out_imu,
                      std::vector<UwbFrame>* out_uwb,
-                     std::vector<AnchorConfig>* out_anchors);
+                     std::vector<AnchorConfig>* out_anchors,
+                     bool preserve_invalid_ranges = false);
 
   // Load SFUISE ground truth from VIVE TransformStamped in rosbag.
   std::vector<NavState> LoadGroundTruthSfuise(const std::string& bag_path);

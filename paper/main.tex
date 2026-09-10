@@ -1,0 +1,626 @@
+\IfFileExists{IEEEtran.cls}{%
+  \documentclass[conference]{IEEEtran}%
+}{%
+  % Local T01 verification fallback; the submission build still requires IEEEtran.
+  \documentclass[10pt,twocolumn]{article}%
+}
+
+% ============================================================================
+% UWB-IMU-IE -- REVISED STRUCTURE V3, 2026-09-05
+% BASIS: the uploaded System_Centered_Structure.tex, discussion_v2, and
+%        claude_advice_to_v2.md. This is a WRITING / IMPLEMENTATION CONTRACT,
+%        not a completed empirical paper or a verified software release.
+%
+% POSITIONING: a full-trajectory post-processing SYSTEM with one focused
+% methodological core. Neither an eta-formula paper nor a new bias-model paper.
+%
+% MAIN CHANGES FROM V2
+%  1. Put the local analysis INSIDE the method; remove the separate theorem tour.
+%  2. Use MARGINAL bias information; "conditional" describes fixed support/model.
+%  3. Use a rank-aware residual projection; no artificial information from LM.
+%  4. eta measures RELATIVE separability; add an absolute uncertainty check
+%     computed from the SAME small matrix, not a new estimator.
+%  5. gamma is an EMPIRICAL post-fit diagnostic, not independent validation or
+%     a certificate of model correctness. Remove undefined effective dof.
+%  6. Remove ALL candidate ranges from a common reference graph; evaluate each
+%     overlap group against that same reference. This is a deliberate,
+%     conservative simplification that prevents acceptance decisions depending
+%     on another candidate group that is later removed.
+%  7. Freeze support/group decisions, NOT accepted bias amplitudes. Keep their
+%     correlations with trajectory/static bias in the final joint graph.
+%  8. Replace the Brownian bias-bridge proposal with a scalar illustration using
+%     the SAME constant-segment amplitude model as the implemented refit.
+%  9. Reorder evidence: system -> primary result -> gate validity -> future data.
+% 10. Two wide figures only. Compact single-column tables/figures elsewhere.
+%
+% KEEP: full-batch inference, adopted L1+TV support discovery, debiased segment
+% refit, binary use/suppress, multi-link tests, prefix experiments, mismatch,
+% one external dataset adapter, manifests, actual release evidence.
+% DO NOT ADD: real-time fixed-lag implementation, new sensors, simultaneous
+% anchor/lever-arm/time-offset calibration, full UAV campaign, universal T/L
+% threshold, global observability, new whiteness test as a main method, full
+% covariance calibration / NEES claims, or a new uncertainty-learning module.
+%
+% MAIN-EXPERIMENT DEFAULTS TO FREEZE BEFORE TESTING
+% Surveyed anchors; calibrated lever arm and clocks; static beta fixed from an
+% INDEPENDENT LOS calibration, with uncertainty reported. Prior-constrained
+% beta is an optional sensitivity test, and must enter the nuisance block.
+% Gaussian prewhitening uses independently estimated nominal noise. No
+% residual-dependent robust weight is allowed to make gamma self-fulfilling.
+% Same input, initialization, noise/calibration, keyframes, and solver settings
+% across comparisons. No full-run initialization or full-run support in a
+% truncated-prefix END-TO-END experiment.
+%
+% INTERNAL 8-PAGE WRITING BUDGET, INCLUDING FLOATS AND REFERENCES
+% Abstract+Intro 0.80 | Related 0.45 | System 1.15 | Method+analysis 2.10 |
+% Experiments 2.50 | Discussion+Conclusion 0.25 | References 0.75 = 8.00.
+% This is NOT a verified venue page-limit statement. Check the target call.
+% Put long proofs, positioning matrix, full metric grid, and engineering
+% checklist in supplementary material / repository. Do not shrink fonts.
+%
+% BUILD: from paper/, run pdflatex -interaction=nonstopmode -halt-on-error
+% main.tex twice. The local T01 environment lacks IEEEtran/algorithm packages,
+% so this working copy has explicit article/list fallbacks for compile checking.
+% Optional internal technical notes:
+% pdflatex -jobname=UWB_IMU_IE_v3_with_notes \
+%   '\def\withnotes{1}\input{UWB_IMU_IE_System_Centered_Structure_v3.tex}'
+% ============================================================================
+
+\usepackage{amsmath,amssymb,amsthm,bm,mathtools}
+\usepackage{booktabs,array,tabularx}
+\usepackage{graphicx}
+\IfFileExists{algorithm.sty}{%
+  \usepackage{algorithm}%
+}{%
+  \newenvironment{algorithm}[1][]{\begin{figure}[##1]}{\end{figure}}%
+}
+\IfFileExists{algpseudocode.sty}{%
+  \usepackage{algpseudocode}%
+}{%
+  \newenvironment{algorithmic}[1][]{\begin{enumerate}}{\end{enumerate}}%
+  \newcommand{\Require}{\item[\textbf{Input:}]}%
+  \newcommand{\State}{\item}%
+  \newcommand{\For}[1]{\item \textbf{for }##1\textbf{ do}}%
+  \newcommand{\EndFor}{\item[]\textbf{end for}}%
+}
+\IfFileExists{cite.sty}{\usepackage{cite}}{}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+\newtheorem{proposition}{Proposition}
+\newtheorem{remark}{Remark}
+\newtheorem{example}{Example}
+\newcommand{\R}{\mathbb R}
+\newcommand{\X}{\mathcal X}
+\newcommand{\E}{\mathcal E}
+\newcommand{\C}{\mathcal C}
+\newcommand{\A}{\mathcal A}
+\newcommand{\Sg}{\mathcal S}
+\newcommand{\K}{\mathcal K}
+\newcommand{\N}{\mathbf N}
+\newcommand{\Rc}{\mathbf R}
+\newcommand{\rank}{\operatorname{rank}}
+\newcommand{\diag}{\operatorname{diag}}
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\todo}[1]{\textcolor{red!70!black}{\textbf{[TO COMPLETE: #1]}}}
+\newcommand{\plan}[1]{\textit{Writing target: #1}}
+\newcommand{\figureplan}[2]{\fbox{\parbox[c][#1][c]{0.94\linewidth}{\centering\small #2}}}
+\newif\iftechnicalnotes
+\ifdefined\withnotes\technicalnotestrue\else\technicalnotesfalse\fi
+
+\title{UWB-IMU-IE: A Full-Trajectory UWB--Inertial\
+Post-Processing System with Recoverability-Guided NLOS Handling}
+\author{Anonymous Authors}
+\begin{document}
+\maketitle
+
+\noindent\fbox{\parbox{0.96\columnwidth}{\small\textbf{T01 working-draft status.}
+The equations, proposition, proof, four-stage method, and planned evaluation are
+carried over from the frozen structure.  T00 has verified only the legacy backend
+build and one repeatable legacy run.  The NLOS module, paper runner, locked
+calibration, and RQ1--RQ4 experiments remain unimplemented or unrun.}}
+
+\begin{abstract}
+Offline UWB--inertial post-processing can exploit future measurements to revise historical estimates, but it also needs explicit control of calibration, robustness, uncertainty diagnostics, and evaluation provenance. This T01 working draft defines the planned UWB-IMU-IE system and its evidence contract. The frozen NLOS method uses nonnegative temporally structured support discovery, an unregularized constrained segment refit, candidate-excluded marginal information, and a frozen group-level use-or-suppress rule. Accepted bias states remain in the intended final joint graph rather than becoming exact corrections. At this revision, only the legacy backend build and one repeatable legacy run have been verified; the NLOS implementation and RQ1--RQ4 results are explicitly pending. \todo{Replace this status text only with locked implementation and experiment evidence; do not invent results.}
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+\paragraph{Start from the task, not a feature inventory.}
+The target is accurate, inspectable \emph{offline} reconstruction from raw UWB and IMU recordings. The defining system capability is full-trajectory relinearization: a later clean observation can influence an earlier obstructed interval. Dataset adapters, calibration records, diagnostics, and run manifests make this capability testable rather than merely adding software features.
+
+\paragraph{One technical obstacle.}
+Persistent NLOS can corrupt several links simultaneously. Suppression avoids explicitly trusting a biased range but may weaken useful geometric constraints. Conversely, fitting an excess-range variable is not sufficient evidence that its value is reliable: navigation error and bias may be locally interchangeable, and a selected temporal model may be wrong. Existing bias estimators and offline backends must be acknowledged \cite{tan2026,yu2026,lu2026}.
+
+\paragraph{Focused question.}
+\emph{How can a full-trajectory UWB--inertial post-processing system decide when to retain a structured NLOS-bias estimate, using local separability and model-fit evidence, and what changes when future clean context becomes available?}
+This is not a claim of guaranteed safe recovery or of a universal obstruction-duration threshold.
+
+\paragraph{Intended contributions, pending evidence.}
+\textbf{C1---System capability.} The intended claim is a reproducible full-trajectory raw-range UWB--inertial pipeline with interchangeable processing policies and graph-consistent diagnostic outputs. T00 currently supports only the narrower legacy build/run fact.
+\textbf{C2---Focused processing method.} The frozen design is a segment-level NLOS module combining adopted support discovery, debiased refitting, candidate-excluded marginal-information assessment, and frozen use/suppress decisions with uncertainty-preserving final inference. It is not implemented at T01.
+\textbf{C3---Evidence and artifact.} The planned evaluation separates system portability, empirical decision quality, multi-link NLOS performance, and future-context effects, with traceable commands and configurations. Those experiments are not run at T01.
+
+\paragraph{Claim boundary.}
+No novelty is claimed for IMU preintegration, tight coupling, robust kernels, nonnegative bias variables, temporal regularization, Schur complementation, or batch optimization individually. The contribution must be demonstrated at the system-capability and validated processing-policy levels.
+
+\section{Related Work and Positioning}
+\label{sec:related}
+\subsection{Robust estimation and explicit bias handling}
+\plan{One paragraph on robust losses/rejection, one on explicit bias estimation.}
+IMU preintegration is an adopted component \cite{forster2015}. The track-constrained UWB/IMU method of Tan et al.\ and the UWB-only HBR-PGD framework of Yu et al.\ are close bias-handling references \cite{tan2026,yu2026}. The decoupled UWB backend is relevant to offline ranging-error refinement \cite{lu2026}. Do not equate ``offline experiments'' with full-trajectory temporal smoothing or with released code.
+
+\subsection{What this paper must distinguish}
+The intended distinction is a \emph{specific latent bias block} evaluated after accounting for navigation uncertainty, rather than a generic residual score or undifferentiated local curvature. Candidate measurements are absent from the reference graph and then enter the joint block exactly once. This is \emph{not} a held-out-data estimator or an independence guarantee. HBR-PGD-style information weighting must be discussed accurately; a trace-of-curvature comparator is a diagnostic baseline, not a reimplementation of that complete method.
+
+\subsection{System positioning and source audit}
+\plan{One compact paragraph on verified open estimators and dataset pipelines.}
+Move the full capability matrix to the repository/supplement. Retain evidence columns for raw UWB/IMU, time horizon, explicit bias, diagnostic definition, and artifact availability. Mark unverified cells ``not established from reviewed material'', not ``No''. \todo{Read complete closest methods and identify one verified open-system comparator; the supplied discussion is not a substitute for primary-source verification.}
+
+\section{UWB-IMU-IE System}
+\label{sec:system}
+\subsection{Scope and interfaces}
+The main experiments require surveyed anchors, a calibrated lever arm, synchronized clocks, and an independent LOS calibration of static link bias. These prerequisites are not yet established for the current local data. Optional estimated calibration states remain system extensions, not headline contributions. No real-time guarantee, fixed-lag implementation, new sensor integration, or full UAV validation is required by this paper.
+
+The contracted paper-path interface, to be implemented after T01, is
+\emph{recording + calibration + configuration $\rightarrow$ final graph/state + diagnostics + manifest}.
+It will record input and configuration hashes, software revision, seeds, units/frames, keyframe policy, solver settings, candidate/support masks, accepted groups, calibration provenance, and output status. Calibration and uncertainty assumptions are part of the experiment, not hidden preprocessing. This interface is a contract, not a claim that the roadmap's suggested runner or metadata types already exist.
+
+\begin{figure*}[t]
+\centering
+\figureplan{0.90in}{FIGURE 1 --- System architecture.\\
+Raw IMU/UWB + calibration + manifest $\rightarrow$ adapter/time validation\\
+$\rightarrow$ initialization and full-trajectory graph $\rightarrow$ NLOS policy\\
+$\rightarrow$ final joint graph $\rightarrow$ diagnostics, evaluator, reproducible outputs.\\
+Highlight only the candidate discovery--assessment--selection block as the focused method.}
+\caption{Planned architecture figure. Existing estimator components, the focused NLOS module, and the reproducibility interface should be visually distinct.}
+\label{fig:architecture}
+\end{figure*}
+
+\subsection{State, measurements, and base graph}
+At keyframe $k$, let
+\begin{equation}
+ \mathbf x_k=(\mathbf R_k,\mathbf p_k,\mathbf v_k,
+                   \mathbf b^a_k,\mathbf b^g_k),\qquad
+ \X=\{\mathbf x_k\}_{k=0}^{N}.
+\end{equation}
+The calibrated antenna lever arm is $\bm\ell$; anchor $m$ is at $\mathbf a_m$. The range model is
+\begin{align}
+ h_{km}(\X)&=\|\mathbf p_k+\mathbf R_k\bm\ell-\mathbf a_m\|_2,\\
+ z_{km}&=h_{km}(\X)+\beta_m+b_{km}+\epsilon_{km},
+ \quad b_{km}\geq0.\label{eq:measurement}
+\end{align}
+The signed static offset $\beta_m$ is distinct from dynamic nonnegative excess path $b_{km}$. The complete range residual can be negative. IMU biases use $\mathbf b^a,\mathbf b^g$; segment amplitudes will use $c_s$, avoiding ambiguous notation.
+
+The base objective combines gauge/initial-state priors, IMU preintegration factors, and raw-range factors. Measurements are associated with their actual timestamps through the declared keyframe/interpolation rule; nearest-keyframe approximation, if used, must be documented and bounded. Ground truth is used only for independent calibration/evaluation, never as a hidden navigation factor.
+
+\subsection{Validated capabilities, not configuration flags}
+At T00, the current C++/GTSAM package built successfully in the current workspace. The existing suite executed 38 tests with two failures in the IMU preintegration gravity-parameter semantics. The legacy SFUISE Walk1 path ran twice in isolated directories; both runs produced byte-identical trajectory, ground-truth, and calibration outputs and an aligned ATE RMSE of $0.169642\,\mathrm m$. This is evidence for that legacy path only. It does not validate a paper runner, the NLOS stages, graph-consistent residual/covariance output, raw-frame ATE, simulation, controlled UGV NLOS, or another public-data adapter.
+
+\subsection{Artifact contract}
+The intended release contains source, build environment, tests, one example dataset/configuration, baseline commands, masks, manifests, and scripts regenerating the reported results. At T01, the two contracts, this working draft, the claim--evidence ledger, and T00 logs exist locally; no v2 release artifact exists. Distinguish \emph{implemented}, \emph{tested}, and \emph{released}. \todo{Insert the actual anonymous repository/archive only after it exists; restore ``open-source'' to the title only when supported.}
+
+\section{Recoverability-Guided NLOS Processing}
+\label{sec:method}
+This section preserves the frozen method definition. Its equations and proposition
+specify the implementation target; they are not evidence that Stages 1--4 are
+present in the repository. The implementation status and unresolved parameters
+are tracked in the T01 method contract.
+\subsection{Stage 1: adopted support discovery}
+Write $J_0=J_{\mathrm{prior}}+J_{\mathrm{IMU}}+J_\beta$ and $w_i=\sigma_i^{-2}$, with $i=(k,m)$. Discover candidate support using
+\begin{equation}
+ \begin{aligned}
+ \min_{\X,\bm\beta,\mathbf b\geq0}\quad
+ &J_0+\frac12\sum_{i\in\E}w_i(h_i+\beta_{m(i)}+b_i-z_i)^2\\
+ &+\lambda_1\|\mathbf b\|_1+\lambda_{\rm TV}\|D\mathbf b\|_1.
+ \end{aligned}
+ \label{eq:discovery}
+\end{equation}
+Here $D$ differences consecutive valid samples \emph{within each link}. Split chains at packet gaps exceeding a fixed threshold; specify time/gap conventions. Freeze activity thresholds, minimum segment sample count/duration, and change-point rules using validation data. These choices determine the model and must not be tuned on test labels.
+
+\paragraph{Static-bias reference.}
+Without a reference, $\beta'_m=\beta_m-d$ and $b'_{km}=b_{km}+d$ preserve predictions when feasible. In the noiseless known-trajectory limit, imposing $\min_k b_{km}=0$ selects $\beta_m=\min_k(z_{km}-h_{km})$; merely assuming that an unknown true LOS epoch exists does not make an unconstrained optimization unique. The main configuration instead fixes $\beta_m$ from independent LOS calibration. This ambiguity is a short motivation, not a headline theorem.
+
+\subsection{Stage 2: debiased segment refit}
+Let $\widehat\Sg=\{\Sg_s\}$ be disjoint per-link constant-amplitude segments, and let $\C$ be their union of measurements. Use $b_i=c_s\geq0$ for $i\in\Sg_s$ and $b_i=0$ otherwise. Refit $\X,\bm\beta,\mathbf c$ without either the $\ell_1$ amplitude penalty or TV jump penalty, keeping the segment partition fixed. This removes penalty-induced shrinkage \emph{conditional on the selected partition}; it does not remove support-selection error or segment-model mismatch.
+
+Positive fitted amplitudes are analyzed as interior variables. Boundary or too-short segments are flagged as insufficient evidence, rather than assigned spuriously exact Gaussian uncertainty. The minimum-count rule also prevents one-sample segments from always passing a zero post-fit residual check.
+
+\subsection{Stage 3a: a common candidate-excluded reference}
+\label{sec:reference}
+Form $\mathcal G_0$ from priors, IMU factors, and noncandidate range factors, excluding \emph{all} ranges in $\C$. The term ``noncandidate'' does not assert true LOS; missed NLOS remains a failure mode. Reference masks and any nonnegative robust weights are fixed and logged at the scoring linearization; the information proxy is the positive-semidefinite Gauss--Newton quadratic, not the exact nonconvex robust Hessian.
+
+Group temporally overlapping segments by connected components of their interval-overlap graph. For a group $\A$, add only its own candidate ranges to $\mathcal G_0$ and retain its amplitudes $\mathbf c_\A$. This conservative reference prevents one group from borrowing confidence from another group that the policy later suppresses. Its score is not an if-and-only-if test of recoverability in the full graph with every candidate retained.
+
+Let $\delta\mathbf y$ include \emph{all uncertain nuisance states}: pose, velocity, IMU biases, and static $\beta$ if estimated. Do not hold these states fixed when claiming to account for their uncertainty. At the debiased linearization, write the whitened perturbation model
+\begin{equation}
+ \begin{bmatrix}\mathbf J_{\rm ref}\\W_\A^{1/2}H_y\end{bmatrix}\delta\mathbf y
+ +\begin{bmatrix}0\\W_\A^{1/2}H_c\end{bmatrix}\delta\mathbf c_\A
+ =F\delta\mathbf y+G\delta\mathbf c_\A.
+ \label{eq:fg}
+\end{equation}
+$\mathbf J_{\rm ref}$ is the reference Jacobian and $H_c$ is the segment-incidence matrix. No independent amplitude prior is used in the main refit. In particular, discarded $\ell_1$/TV penalties must not reappear as fictitious Gaussian precision. Levenberg--Marquardt damping is also not measurement information.
+
+\subsection{Stage 3b: marginal information and its limits}
+\label{sec:information}
+Define
+\begin{equation}
+ A=F^\top F,\quad B=F^\top G,\quad
+ \N_\A=G^\top G,\quad P_F=FF^\dagger.
+ \label{eq:blocks}
+\end{equation}
+With nonempty disjoint segments and positive retained weights, $\N_\A\succ0$. The rank-aware reduced information is
+\begin{equation}
+ \boxed{\Rc_{c,\A}=G^\top(I-P_F)G.}
+ \label{eq:projection}
+\end{equation}
+When $A\succ0$, this is the usual Schur complement
+\begin{equation}
+ \Rc_{c,\A}=\N_\A-B^\top A^{-1}B.
+ \label{eq:schur}
+\end{equation}
+In a proper local Gaussian model this is \emph{marginal precision} of the amplitudes after eliminating $\mathbf y$. In contrast, $\N_\A$ is their precision \emph{conditional on known nuisance states} \cite{paskin2002}. If $F$ is rank deficient, Eq.~\eqref{eq:projection} remains a profile-information quadratic on identifiable directions; it does not by itself define a normalized posterior over unconstrained nuisance states. Use rank-revealing QR/SVD or equivalent sparse elimination, not dense projector formation.
+
+\begin{proposition}[Local segment separability in the reference-plus-group model]
+\label{prop:separability}
+For the fixed-support linearized model,
+\begin{equation}
+ \delta\mathbf c^\top\Rc_{c,\A}\delta\mathbf c
+ =\min_{\delta\mathbf y}\|F\delta\mathbf y+G\delta\mathbf c\|_2^2.
+ \label{eq:profile}
+\end{equation}
+Thus $\Rc_{c,\A}\succ0$ exactly when no nonzero amplitude perturbation can be absorbed by nuisance perturbations with zero local cost. Also $0\preceq\Rc_{c,\A}\preceq\N_\A$.
+\end{proposition}
+\begin{proof}
+Least-squares elimination projects $G\delta\mathbf c$ onto the orthogonal complement of $\operatorname{col}(F)$. Since $I-P_F$ is an orthogonal projector, the identity and both inequalities follow.
+\end{proof}
+
+The normalized separability score is
+\begin{equation}
+ \eta_\A=\lambda_{\min}
+ (\N_\A^{-1/2}\Rc_{c,\A}\N_\A^{-1/2})\in[0,1].
+ \label{eq:eta}
+\end{equation}
+It measures the \emph{fraction of nominal bias information retained}, not the absolute accuracy of a correction. Define a companion absolute uncertainty scale from the same matrix:
+\begin{equation}
+ s_\A=\begin{cases}
+  [\lambda_{\min}(\Rc_{c,\A})]^{-1/2},&\Rc_{c,\A}\succ0,\\
+  +\infty,&\text{otherwise}.
+ \end{cases}
+ \label{eq:sigma}
+\end{equation}
+Because every $c_s$ is in metres, $s_\A$ is in metres; for a proper Gaussian it is the worst-direction standard deviation. No inverse/pseudoinverse trace is used to hide a null direction. For example, $\Rc_c=\N=10^{-4}\,\mathrm{m}^{-2}$ gives $\eta=1$ but $s=100\,\mathrm m$.
+
+\paragraph{Simultaneous links and inertial conditioning.}
+Stacking overlapping amplitudes in Eq.~\eqref{eq:projection} tests their \emph{joint} weakest combination, rather than counting surviving anchors. Geometry enters $H_y$; inertial conditioning enters $\mathbf J_{\rm ref}$ together with retained ranges and genuine priors. Component information matrices add before eliminating shared nuisance states, not generally after independent Schur reductions. A full IMU observability theorem is not needed for this claim.
+
+\subsection{Stage 3c: empirical model-fit evidence}
+With nominal, independently calibrated $\sigma_i$, use the deliberately simple score
+\begin{equation}
+ \gamma_s=\frac{1}{n_s}\sum_{i\in\Sg_s}
+       \left(\frac{h_i+\beta_{m(i)}+\hat c_s-z_i}{\sigma_i}\right)^2,
+ \qquad n_s=|\Sg_s|.
+ \label{eq:gamma}
+\end{equation}
+This is average squared normalized \emph{post-fit} residual, not reduced chi-square, NIS, or an independent validation sample. It depends on sample count, leverage, and selected partition. Thresholds are calibrated empirically using separate recordings/seeds and inspected by segment length. Do not whiten by residual-inflated covariance or adaptive robust weights that would automatically conceal poor fit.
+
+Passing $\gamma_s$ does not establish that a constant-bias model is correct: slowly varying bias can be absorbed by trajectory error or selected into short segments. The main scope therefore retains an empirical check and explicitly measures its failures. A lag-one residual correlation diagnostic is optional supplementary analysis, not an additional default gate.
+
+\subsection{Stage 4: frozen group decisions and final joint inference}
+For an eligible overlap group, the main policy is
+\begin{equation}
+ \textsc{Use}(\A)\iff
+ \eta_\A\geq\tau_\eta\ \land\ s_\A\leq\tau_s\
+ \land\ \max_{s\in\A}\gamma_s\leq\tau_\gamma.
+ \label{eq:policy}
+\end{equation}
+A rank failure or inadequate segment support fails the rule. Groups are accepted or suppressed as units; partial re-selection within a jointly scored group is not silently substituted. $\tau_s$ expresses the correction-error tolerance in metres; all thresholds are fixed before test evaluation.
+
+Freeze partitions and use/suppress decisions, \emph{not} the accepted amplitudes. With $\mathcal U$ the accepted groups, optimize
+\begin{equation}
+ \min_{\X,\bm\beta,\mathbf c_{\mathcal U}\geq0}
+ J_{\mathcal G_0}+\frac12\sum_{\A\in\mathcal U}\sum_{i\in\A}
+ w_i\big(h_i+\beta_{m(i)}+c_{s(i)}-z_i\big)^2.
+ \label{eq:final}
+\end{equation}
+Suppressed candidate ranges are absent; each accepted raw range appears once. Do not also insert its corrected pseudo-range or use a same-data point bias estimate as an independent exact calibration. Keeping $c_s$ preserves bias--trajectory correlations and shared-segment uncertainty.
+
+At the final linearization, audit the same reference-plus-group diagnostics and label them separately from decision-time scores. Export full-final-graph covariances separately when defined. If the final solution is rank-invalid or violates the frozen acceptance checks, perform one conservative fallback with all candidates suppressed and flag the recovery attempt as failed. There is no iterative re-admission loop or general nonlinear convergence guarantee. Report fallback frequency and fallback cost.
+
+\begin{algorithm}[t]
+\caption{Four-stage NLOS module within UWB-IMU-IE}
+\label{alg:module}
+\begin{algorithmic}[1]
+\Require Validated recording, calibration, frozen configuration
+\State Initialize and build the conventional batch graph
+\State Discover support using Eq.~\eqref{eq:discovery}
+\State Freeze segments; refit without $\ell_1$/TV penalties
+\State Build common reference $\mathcal G_0$ excluding $\C$
+\For{each eligible overlap group $\A$}
+ \State Form $F,G$ with full nuisance-state uncertainty
+ \State Compute $\Rc_{c,\A},\eta_\A,s_\A,\{\gamma_s\}$
+ \State Freeze group decision using Eq.~\eqref{eq:policy}
+\EndFor
+\State Jointly refit accepted amplitudes and navigation states
+\State Audit final graph; use suppression fallback if required
+\State Export final states, masks, both score sets, and manifest
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{What future context changes}
+\label{sec:future_analysis}
+For the \emph{same} historical amplitudes, support, priors, and linearization in a proper Gaussian model, adding a future observation $z_f$ gives the standard identity
+\begin{equation}
+ P_c^+=P_c-K_{cf}S_f^{-1}K_{cf}^\top\preceq P_c,
+ \label{eq:future}
+\end{equation}
+where $K_{cf}=\Cov(c,z_f\mid\mathcal D)$ and $S_f=\Var(z_f\mid\mathcal D)\succ0$ \cite{paskin2002}. The reduction is nonzero iff $K_{cf}\neq0$; all amplitude directions improve strictly only if this cross-covariance has full row rank. This is an explanatory identity, not a novel theorem and not a guarantee of lower realized nonlinear estimation error.
+
+\begin{example}[Future support under the implemented segment model]
+Let a fixed segment mean satisfy $\bar z=x+c+e$, with noise precision $w$, external precision $a>0$ on the scalar navigation error $x$, and no prior on constant amplitude $c$. Let valid future information increase the external precision by $f(H)\geq0$. Then
+\begin{equation}
+ \eta(H)=\frac{a+f(H)}{w+a+f(H)},\qquad
+ P_c(H)=\frac1w+\frac1{a+f(H)}.
+ \label{eq:scalar_future}
+\end{equation}
+Future context helps through its connection to the historical navigation state, with a candidate-noise floor $1/w$. This illustration uses the same constant-amplitude refit, not a newly introduced random-walk bias process.
+\end{example}
+
+\section{Experimental Evaluation}
+\label{sec:experiments}
+All tables and figures in this section are explicit plans with unfilled results.
+No v2 run has been executed at T01, and the legacy aligned ATE reported in the
+System section is not a v2 main result or an independent raw-frame benchmark.
+\subsection{Evidence map and data roles}
+\textbf{RQ1: system capability} asks whether the same backend, evaluation contract, and provenance work across simulation, controlled data, and one public UWB--IMU dataset.
+\textbf{RQ2: end-to-end value} asks whether the selected configuration improves sustained multi-link NLOS without unacceptable LOS degradation.
+\textbf{RQ3: decision validity} asks whether the diagnostics add predictive and downstream value beyond simpler gates on held-out runs.
+\textbf{RQ4: future context} asks how prefix length changes the same historical interval under matched model/tuning.
+These are distinct claims; public data without trustworthy bias labels validate portability/trajectory estimates, not bias recoverability.
+
+\begin{table}[t]
+\centering\small
+\caption{Evidence allocation. Entries are planned, not measured results.}
+\label{tab:evidence}
+\begin{tabularx}{\columnwidth}{@{}lXX@{}}
+\toprule
+Question & Main evidence & Primary display\\
+\midrule
+RQ1 & Three data types; rerun/time/memory audit & Table~\ref{tab:system_results}\\
+RQ2 & Repeated LOS and sustained multi-link UGV runs & Table~\ref{tab:main}, Fig.~\ref{fig:headline}\\
+RQ3 & Held-out gates, mismatch and low-information cases & Fig.~\ref{fig:headline}\\
+RQ4 & Matched prefixes, fixed historical interval & Fig.~\ref{fig:context}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Controlled UGV protocol and calibration references}
+Use the planned $5\,\mathrm m\times5\,\mathrm m$ motion-capture volume and a surveyed eight-anchor deployment. Add two modest motion profiles, for example a low-turn back-and-forth path and a turning loop/figure-eight. They test different observed conditioning; they do not constitute a complete 3-D inertial-excitation study. Report speed/acceleration summaries and run-to-run path variation.
+
+Prioritize LOS, one-link long obstruction, and sustained two-/three-link obstruction. Short bursts can be supplementary. Use repeated runs and paired evaluation of the same recording for each method. Select equal-cardinality anchor subsets from geometry, without looking at estimator errors, to vary conditioning within one deployment. Keep anchor-count ablations separate. Do not call subset selection a full coplanar-versus-3-D deployment experiment.
+
+Define the measured excess-range \emph{reference}, not noise-free bias truth, as
+\begin{equation}
+ b^{\rm ref}_{km}=z_{km}-h_{km}(\X^{\rm GT})-
+                         \widehat\beta_m^{\rm LOS}.
+ \label{eq:reference_bias}
+\end{equation}
+Its uncertainty includes UWB random range noise, motion capture, anchor survey, lever arm, static calibration, and timing errors, with correlations when relevant. Approximate propagation is
+\begin{equation}
+ \sigma_{b,\rm ref}^2\simeq\sigma_z^2+J_q\Sigma_qJ_q^\top,
+ \label{eq:reference_budget}
+\end{equation}
+where $q$ stacks calibrated geometric/timing quantities. Use separate LOS data for $\widehat\beta$. Scripted obstruction times are protocol labels, not perfect packet-wise propagation labels. Report transition buffers and near-noise-floor ambiguity. Synthetic latent $b^\star$ is the primary bias-error ground truth; real $b^{\rm ref}$ is a noisy agreement check, especially because $z_{km}$ also enters estimation.
+
+\subsection{Baselines and a minimal ablation ladder}
+Use all-range batch; a preselected Huber/Cauchy batch; a fixed rejection policy; structured bias only; structured bias plus debiasing; and the complete module. Add two \emph{gate comparators} to the debiased estimator: fit-only and absolute-uncertainty-plus-fit. The latter is essential: the proposed normalized $\eta$ must justify its value beyond $s_\A$ and generic curvature, not only beyond residual magnitude. Include an $\eta$-only gate in simulation to expose its scale and model-mismatch limitations.
+
+All gate comparators share the same candidate supports and debiased candidates for the diagnostic experiment, and use the same final joint refit. State when a comparator is not a full prior-method reproduction. Use oracle bias correction/obstruction-label rejection only as labelled references in simulation, not universal performance bounds. Noise and geometry can make dropping every obstructed range suboptimal.
+
+\subsection{RQ1: measured system capability}
+\begin{table}[t]
+\centering\small
+\caption{System results to fill only from completed runs. Stage-level runtime includes scoring and any fallback.}
+\label{tab:system_results}
+\begin{tabularx}{\columnwidth}{@{}lXXXX@{}}
+\toprule
+Data & Run count & Time & RAM & Rerun $\Delta$\\
+\midrule
+Simulation & TBD & TBD & TBD & TBD\\
+Controlled UGV & TBD & TBD & TBD & TBD\\
+Public UWB--IMU & TBD & TBD & TBD & TBD\\
+\bottomrule
+\end{tabularx}
+\end{table}
+Report actual adapter/calibration compatibility and unsupported fields. Compare runtime/memory as trajectory length grows on subsampled existing recordings; no new collection campaign is needed. Report sparse-elimination strategy, number/size of candidate groups, and scoring overhead, not just optimizer runtime.
+
+\subsection{RQ2: primary trajectory result and LOS control}
+\begin{table}[t]
+\centering\small
+\caption{Compact primary result table. Use paired run-level summaries and intervals; give complete scenario matrices in the artifact.}
+\label{tab:main}
+\begin{tabularx}{\columnwidth}{@{}lXXXX@{}}
+\toprule
+Method & LOS ATE & NLOS ATE & P95 & Fail.\\
+\midrule
+All ranges & TBD & TBD & TBD & TBD\\
+Robust loss & TBD & TBD & TBD & TBD\\
+Rejection & TBD & TBD & TBD & TBD\\
+Structured bias & TBD & TBD & TBD & TBD\\
++ debias & TBD & TBD & TBD & TBD\\
++ fit gate & TBD & TBD & TBD & TBD\\
++ $s$/fit gate & TBD & TBD & TBD & TBD\\
+Full module & TBD & TBD & TBD & TBD\\
+\bottomrule
+\end{tabularx}
+\end{table}
+Use raw-frame ATE as primary after an \emph{independently determined} map-to-ground-truth transform. Aligned ATE/RPE, per-axis errors, and bias-agreement summaries belong in the expanded results. Predeclare trajectory failure, recovery fallback, and acceptable LOS degradation separately. Do not average failed runs away.
+
+\subsection{RQ3: decision quality is a headline experiment}
+\label{sec:rq3}
+Split by complete recording/trajectory/seed, not by temporally adjacent packets. At matched acceptance coverage, compare accepted-bias error and harmful-acceptance frequency for residual-only, generic-curvature, $s$-plus-fit, and full gates. Define ``harmful correction'' before testing, using synthetic true bias and a correction-error tolerance; evaluate downstream trajectory impact separately. Segment decisions are correlated, so confidence intervals resample runs/seeds, not individual packets.
+
+Include matched constant bursts and mismatched within-burst ramps. Sweep a small, predeclared set of ramp slopes including nearly flat and clearly varying cases; add one range-noise/observation-count sweep to expose high-$\eta$ but low absolute information. Report rejected good corrections as well as accepted bad ones. The objective is calibrated trade-offs, not a promise that $\gamma$ rejects every mismatch.
+
+Run both a \emph{fixed-partition diagnostic} to isolate model mismatch and the actual end-to-end support-discovery pipeline, which may split a ramp into many short segments. Report segment count/length alongside $\gamma$. Thresholds and any choice to add a whiteness check cannot be selected after inspecting the final test sweep.
+
+\begin{figure*}[t]
+\centering
+\figureplan{1.12in}{FIGURE 2 --- Headline evidence, not only a successful example.\\
+Left: representative sustained multi-link sequence with obstruction masks,\\
+trajectory errors, estimated amplitudes, and use/suppress decisions.\\
+Right: held-out risk--coverage / harmful-acceptance comparison for simple gates\\
+and the full rule, including matched, ramp-mismatch, and low-information cases.\\
+Show uncertainty across runs; include failures and the operating point.}
+\caption{Planned headline figure coupling the main system behavior with evidence for the decision rule. This is the second and final wide float in the main paper.}
+\label{fig:headline}
+\end{figure*}
+
+\subsection{RQ4: matched future-context experiment}
+For a scripted burst ending at $t_b$, process prefixes ending at $t_b+H$ for $H\in\{0\,\mathrm s,2\,\mathrm s,5\,\mathrm s,\text{full}\}$, interpreting ``full'' as the complete recording, not a numerical duration. Score the same historical burst interval in every run. $H=0$ means no post-burst clean context, not a strictly causal estimate at every time inside the burst.
+
+The end-to-end prefix run must redo initialization/support discovery/refit using only that prefix and independent calibration. It must not inherit full-trajectory states, supports, thresholds, or future-dependent noise estimates. A separate common-linearization, fixed-partition diagnostic may test Eq.~\eqref{eq:future}; mark it as analysis, not the online pipeline. Empirical nonlinear $\eta(H)$ need not be monotonic if support, geometry linearization, or nominal information changes.
+
+\begin{figure}[t]
+\centering
+\figureplan{0.78in}{FIGURE 3 --- Historical bias/trajectory error vs future horizon.\\
+Use the same evaluation interval and matched configuration.\\
+Report both support changes and fixed-model diagnostic trends.}
+\caption{Planned future-context result. The claim concerns information access in offline prefixes, not fixed-lag computational performance.}
+\label{fig:context}
+\end{figure}
+
+\subsection{Minimum evidence and claim fallback}
+C1 needs an actual reproducible cross-dataset artifact and measured system behavior, not a feature list. C2 needs an incremental held-out improvement over credible simple gates at matched coverage/cost, together with no unacceptable LOS degradation. It does not require $\eta$ alone to beat every uncertainty statistic in every regime. If $\eta$ adds no value beyond $s$/fit, simplify the gate and narrow the method claim instead of forcing the formula into the paper. If even the full gate is unhelpful, retain the diagnostic as exploratory; system positioning alone does not guarantee publishability. C3 needs reproducible future-context effects in at least one predeclared regime, with failures and limitations reported.
+
+\section{Discussion and Conclusion}
+\label{sec:conclusion}
+The intended conclusion is an evidence-backed system result: full-trajectory UWB--inertial post-processing with traceable NLOS decisions and final-graph-consistent uncertainty handling. The local score does not certify model truth, unbiasedness, or global nonlinear observability. Limitations include selected-support uncertainty, nuisance calibration errors, missed NLOS in the reference graph, a conservative all-candidate-excluded reference, limited geometry diversity from one anchor deployment, and offline resource requirements. \todo{Replace this writing target with quantified findings and verified release status.}
+
+\begin{thebibliography}{9}
+\bibitem{forster2015}
+C. Forster, L. Carlone, F. Dellaert, and D. Scaramuzza,
+``On-manifold preintegration for real-time visual-inertial odometry,''
+arXiv:1512.02363, 2015.
+\bibitem{paskin2002}
+M. A. Paskin, ``Thin junction tree filters for simultaneous localization and mapping,''
+University of California, Berkeley, Tech. Rep. UCB/CSD-02-1198,
+2002, revised May 2003, Appendix A.2.
+\bibitem{tan2026}
+R.-Z. Tan, J.-F. Chen, and W.-N. He,
+``NLoS mitigation with propagation reliability estimation for track-constrained UWB/IMU fusion localization,''
+\emph{Sensors}, vol. 26, no. 15, Art. 4680, 2026,
+doi: 10.3390/s26154680.
+\bibitem{yu2026}
+Z. Yu, Q. Liu, and Y. Qian,
+``Heteroscedastic bias-robust projected gradient descent for UWB localization in complex indoor environments,''
+\emph{Sensors}, vol. 26, no. 14, Art. 4578, 2026,
+doi: 10.3390/s26144578.
+\bibitem{lu2026}
+C. Lu, Z. Guo, X. Qi, L. Mo, and L. Liu,
+``A decoupled backend optimizer for UWB localization in NLOS environments,''
+\emph{Measurement}, vol. 276, Art. 121494, 2026,
+doi: 10.1016/j.measurement.2026.121494.
+% Expand the final bibliography after checking full texts. The primary-source
+% pages/abstracts verify bibliographic identity and broad scope, NOT every
+% detailed comparison claimed in the earlier conversation's novelty matrix.
+\end{thebibliography}
+
+\iftechnicalnotes
+\clearpage
+\appendices
+\section{Internal Mathematical and Implementation Notes}
+\label{app:math}
+These notes explain corrections to the uploaded V2 structure. They are not part of the main-paper page budget and do not introduce an additional estimator.
+
+\subsection{Invertibility is not the recoverability condition}
+Take one scalar measurement $z=x+c+e$ with precision $w>0$ and no external information on $x$. Then
+\begin{equation}
+ \begin{gathered}
+ \Lambda_0=0,\quad A=w>0,\quad B=N=w,\\
+ R_c=w-w^2/w=0.
+ \end{gathered}
+\end{equation}
+The nuisance block is invertible but $x$ and $c$ are inseparable. Conversely, an unconstrained nuisance direction invisible to $G$ can make $A$ singular without destroying every amplitude direction. Hence neither ``candidate-only support makes $A$ singular'' nor ``any $\Lambda_0$ singularity forces $\eta=0$'' is generally correct. Recoverability depends on whether the bias effect lies in $\operatorname{col}(F)$.
+
+For $A=F^\top F$, $B=F^\top G$, $\operatorname{range}(B)\subseteq\operatorname{range}(A)$ automatically. Consequently
+\begin{equation}
+ R_c=N-B^\top A^\dagger B=G^\top(I-FF^\dagger)G.
+\end{equation}
+The pseudoinverse here constructs an orthogonal projection; it is not used to assign zero variance to an unobservable bias direction. Those directions receive $s=+\infty$. Gauge fixing does not justify adding fictitious precision to physical weak directions.
+
+\subsection{Score interpretation and units}
+The generalized Rayleigh quotient is
+\begin{equation}
+ \eta=\min_{v\ne0}\frac{v^\top R_cv}{v^\top Nv}.
+\end{equation}
+It is invariant to a consistent invertible reparameterization of the amplitude block, whereas a trace of an unscaled mixed-unit navigation Hessian is not a defensible generic comparator. Compute generalized eigenvalues without explicitly forming $N^{-1/2}$ when numerically preferable. Log relative and absolute rank tolerances, nuisance-column scaling, and noise units; inspect sensitivity near the rank threshold.
+
+The ratio can decrease when more noisy candidate samples are added while the external navigation uncertainty remains unchanged. In the scalar example, increasing $w$ gives $\eta=a/(w+a)$ smaller even though $P_c=1/w+1/a$ decreases. Therefore do not claim a universal monotonic relation between $\eta$ and bias RMSE across changing sample counts/noise levels. Match or stratify these factors and use $s$ for absolute scale.
+
+\subsection{Navigation information is a different quantity}
+The original effective-navigation corollary is algebraically valid but not the same quantity as $\eta$. Eliminating amplitudes with no independent prior gives
+\begin{equation}
+ \Delta\Lambda_y=H_y^\top\big[W-WH_c
+ (H_c^\top WH_c)^{-1}H_c^\top W\big]H_y\succeq0.
+ \label{eq:nav_note}
+\end{equation}
+For a free bias on every measurement, $H_c=I$ and this contribution vanishes. For one shared amplitude, only the weighted common-offset direction is removed; differential information can remain. Nevertheless, if all $H_y$ rows are identical, even a shared constant amplitude can remove all candidate navigation information. A well-estimated amplitude is therefore not synonymous with large navigation gain; the end-to-end trajectory experiment is indispensable.
+
+With one range and a genuine independent bias prior $\lambda_b$, the old navigation-retention fraction was $\lambda_b/(w+\lambda_b)$. The new scalar bias-separability score with navigation precision $a$ is $a/(w+a)$. These use different nuisance eliminations and must not be called the same score. The navigation-information formula belongs here as explanation, not as a new required metric or gate.
+
+\subsection{Static bias, nuisance blocks, and prior provenance}
+Fixing $\beta$ is a declared experimental condition. When $\beta$ is estimated, include its perturbation and actual calibration prior in $\mathbf y$. Estimating $\beta$ in the optimizer but holding it fixed in score computation would overstate amplitude recoverability.
+
+A reduced reference obtained by eliminating variables can contain cross-information between remaining variables. Do not replace a general reduced block by a block-diagonal prior without justification. The main construction avoids this issue by retaining all uncertain nuisance variables in $F$ and setting the amplitude prior to zero. If future extensions use genuine amplitude priors or cross-priors, derive their full joint block rather than patching a scalar precision into the existing formula.
+
+\subsection{Why the common reference helps the frozen policy}
+At fixed linearization, each other accepted group contributes nonnegative reduced information to the common nuisance state after eliminating its own amplitudes. Thus adding such groups cannot increase the local marginal covariance for a group scored against $\mathcal G_0$ plus itself. The bound is conservative and relies on fixed valid factors/support; nonlinear relinearization and false noncandidate labels can still invalidate its practical interpretation. The final audit/fallback addresses implementation consistency, not a global safety guarantee.
+
+Partial use of a jointly evaluated group would require a fresh score for the actual retained subset. The main policy instead accepts/suppresses the whole overlap group. This costs some coverage but avoids an additional subset-selection algorithm under the time-constrained scope.
+
+\subsection{Why fitted corrections are not exact measurements}
+For two ranges sharing a fitted $c$, a separate corrected-range likelihood treating $\hat c$ as fixed discards their shared estimation uncertainty and correlation with $\mathbf y$. Even adding $\Var(\hat c)$ independently to each range variance is not exact when $\hat c$ was estimated from the same ranges. The clean implementation is Eq.~\eqref{eq:final}, with original measurements and latent amplitudes appearing once. A valid square-root Schur reduction of that same joint graph is an equivalent implementation; an independent pseudo-measurement copy is not.
+
+\subsection{Future-context derivation and rejected alternative}
+For $\bar z=x+c+e$, the information matrix is
+\begin{equation}
+ \begin{bmatrix}a+f+w&w\\w&w\end{bmatrix}.
+\end{equation}
+Eliminating $x$ gives $R_c=w(a+f)/(w+a+f)$, proving Eq.~\eqref{eq:scalar_future}. $f$ is effective future information transmitted to $x$, not elapsed time alone. If no informative future factor connects to $x$, $f=0$ regardless of recording length.
+
+The proposed random-walk bridge result
+$\Var(b_j\mid b_0,b_{n+1})=q_bj(n+1-j)/(n+1)$
+is correct for an unconstrained Gaussian random walk with known endpoints. It is not the implemented nonnegative piecewise-constant support model; a zero-to-zero Gaussian bridge also allows negative values. Its unqualified use would create a model--theory mismatch. Keep it out of the main paper, rather than adding a new dynamic bias process just to justify the lemma.
+
+\subsection{Residual checks and honest uncertainty}
+Conditioning on a selected support does not undo the fact that the support was chosen from the same observations. Post-fit residual covariance generally differs from the measurement covariance and depends on leverage and prior information. Neither $n_s-1$ nor an unspecified effective degree of freedom establishes an exact chi-square law for a joint constrained smoother. The empirical $\gamma$ intentionally avoids that claim. A passing value is compatible with structured unmodeled error and cannot certify safety.
+
+The primary evidence is independent-run predictive evaluation and downstream effects. Within-run leave-block-out prediction can be informative as a supplementary stress test, but is not necessary to add to the operational four-stage pipeline now.
+
+\section{Internal Experimental and Writing Checklist}
+\subsection{What is mandatory before extensive data collection}
+Freeze support/change-point extraction, packet-gap treatment, independent static calibration, nuisance-state list, candidate-exclusion policy, numerical rank tolerance, overlap grouping, actual final factor construction, and failure/fallback rules. These are missing specifications to complete the present method, not new research directions.
+
+Implement small linear tests for: known navigation ($R_c=N$); scalar confounding ($R_c=0$ with invertible $A$); irrelevant nuisance nullspace; near-singular multi-amplitude group; high $\eta$ with large $s$; static-bias ambiguity; projector/Schur equivalence; finite-difference Jacobians; and future covariance reduction under a common model. Verify that enabling LM damping changes solver steps but not the reported physical information.
+
+\subsection{Smallest useful empirical program}
+Start with synthetic constant versus ramp bias and controlled noise/sample-count sweeps, compare fit-only and $s$-plus-fit against the full gate, then freeze the operational gate. Collect repeated LOS and long multi-link UGV runs on two motion profiles. Reuse those recordings for anchor subsets, gate ablations, and prefix tests. Validate one public dataset through the same adapter/evaluator contract. No second hardware campaign, full combinatorial geometry matrix, or real-time baseline is required.
+
+\subsection{Metrics and source restrictions}
+Use run-level paired statistics, accepted-correction risk at matched coverage, false accept/reject rates, trajectory degradation, and runtime/memory overhead. Retain full raw/aligned ATE, RPE, per-axis errors, and segment statistics in machine-readable results. F1 for scripted obstruction is not the same task as predicting whether correction is beneficial. Mark unverified primary-source comparisons as unknown. Do not assume ``hardware-calibrated simulation'' unless noise parameters were measured independently.
+
+\subsection{Float and narrative budget}
+Main paper: two wide figures (architecture and headline evidence), one narrow future-context figure, and three compact narrow tables (evidence allocation, system results, main results). If the evidence table is redundant, turn it into text first. Move setup photographs/layouts, a full novelty matrix, full context/metric grids, and long proofs to the artifact/supplement. Exact float heights, not the mere count, determine feasibility; retain readable fonts and rebuild early.
+
+\subsection{Priorities and stop rules}
+\textbf{Required corrections:} terminology, rank handling, absolute uncertainty, empirical gamma wording, static calibration, nuisance completeness, final graph construction, prefix leakage controls, and held-out gate validation.
+\textbf{Low-cost additions:} second motion profile, modest ramp sweep, scoring overhead, manifest/rerun tests.
+\textbf{Optional:} residual whiteness plots, second public dataset, physical anchor redeployment, navigation-information visualization.
+\textbf{Deferred:} global observability, universal duration ratio, real-time fixed lag, self-calibration theory, new sensors, and broad UAV validation.
+
+The method claim must follow the evidence. A successful open artifact does not automatically replace a failed method result; nor must a useful system be artificially reframed as a deep theorem paper. Remove any unsupported ``safe'', ``first'', ``always'', or precise novelty-score claim.
+\fi
+\end{document}

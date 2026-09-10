@@ -1,0 +1,15 @@
+{
+  "schema": "T10_A19_R08_TRUTH_ACCESS_AUDIT_V1",
+  "estimator_attempts": 12,
+  "estimator_forbidden_truth_open_count": 0,
+  "estimator_trace_tokens": ["/evaluation/", "range_truth", "motion.csv", "ground_truth"],
+  "decisions_and_finals_frozen_before_evaluation": true,
+  "global_freeze": "PRE_EVALUATION_FREEZE.json",
+  "global_freeze_sha256": "a9cad7811856e7582f6665cf02ec1923626496c3313598eb5c6b9ea8ceb42fe1",
+  "freeze_scope_clarification": "PRE_EVALUATION_FREEZE_SCOPE_CLARIFICATION.json",
+  "truth_first_opened_utc": "2026-09-10T12:56:16.814205+00:00",
+  "evaluation_only_truth_reader": "tools/paper/a19_r08_evaluate.py",
+  "evaluation_runs": 8,
+  "metadata_exposure_before_freeze": "Generation code and generation_manifest metadata were inspected to verify scenario construction and truth-path separation; evaluation CSV payloads were not opened. This was recorded before the evaluator phase and does not restore or claim hidden generation semantics.",
+  "test_reservations_30101_30103": "NOT_GENERATED_NOT_READ_NOT_RUN"
+}

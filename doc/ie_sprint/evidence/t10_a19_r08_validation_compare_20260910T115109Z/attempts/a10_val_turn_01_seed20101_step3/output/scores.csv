@@ -1,0 +1,2 @@
+group_id,ordinals,eligible,valid_score_exported,status,eta,s_m,s_is_infinite,numerical_reason,linearization_id
+group_0,2;0;1,1,1,OK,0.58418041610311289,0.016354471568803881,0,all sparse numerical audits passed,t05lin-sha256:d8a99e3f3569ef545aa500ee2bdfdb9f5fefcd989bb6604d14bdfa59c617532f

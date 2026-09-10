@@ -1,0 +1,15 @@
+{
+  "attempt_count": 1,
+  "base": "a10_val_turn_02_seed20102",
+  "elapsed_s": 48.40584183499959,
+  "exit_code": 0,
+  "finished_utc": "2026-09-10T12:37:37.892683+00:00",
+  "forbidden_truth_open_count": 0,
+  "forbidden_truth_open_lines": [],
+  "ordinal": 5,
+  "reserved_s": 700.0,
+  "reserved_utc": "2026-09-10T12:36:49.458589+00:00",
+  "run_id": "a10_val_turn_02_seed20102_step1",
+  "scenario": "step1",
+  "status": "COMPLETE"
+}

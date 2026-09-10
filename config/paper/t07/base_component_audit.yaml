@@ -1,0 +1,60 @@
+schema: t07_base_component_audit_v1
+fixture_scope: FROZEN_DEVELOPMENT_FIXTURE_ONLY
+base_source:
+  path: data/sim_circle_2026-06-15-16-04-35.bag
+  size_bytes: 1997677517
+  mtime_local: "2026-06-15T16:05:58.953208006+08:00"
+base_source_sha256: "sha256:038e8158c07da81d684e39d97f79d053c0c6603f48cad922e583e8096d1ba991"
+base_recording_id: "content-fnv1a64:56d97b371751f1cb"
+recording_time_origin_s: 1781510676.6478176
+truth_semantics: INJECTED_COMPONENT_ONLY
+total_latent_bias_status: UNKNOWN
+generation_provenance_status: UNRESOLVED_RUNTIME_SNAPSHOT_AND_RANDOM_SEED
+
+frozen_event_selection:
+  time_rule: "sensor_time-origin in [8.0,12.0)"
+  identity_rule: "canonical source tag_id:anchor_id before cropping"
+  per_link_counts:
+    "1:1": 79
+    "1:2": 77
+  applicability: "these counts constrain this fixture only"
+
+audit_command:
+  cwd: REPOSITORY_ROOT
+  argv: "python3 -B tools/paper/audit_t07_base.py --config config/paper/t07/sim_circle_base_full.yaml --simulator-source simulator/src/uwb_twr_sim.cpp --simulator-config simulator/config/uwb_twr_sim.yaml"
+  selection: "all UWB ranges; RSSI class rx_rssi-fp_rssi; publish-time linearly interpolated /sim/odom only for empirical residual audit"
+  result:
+    uwb_message_count: 1595
+    uwb_observation_count: 12498
+    rssi_difference_counts:
+      "3.0": 11872
+      "11.0": 626
+    los_like_publish_time_residual_mean_m: 0.0001088
+    los_like_publish_time_residual_std_m: 0.10153482667104813
+    note: "empirical consistency only; publish time is not per-range acquisition time"
+
+component_findings:
+  random_nlos:
+    status: SOURCE_CANDIDATE_AND_EMPIRICAL_SIGNATURE_NOT_PROVENANCE
+    candidate_setting: "probability=0.05, exponential mean=0.40 m, random_seed=0"
+    observation: "626/12498 observations have exact RSSI difference 11 dB"
+  static_range_bias:
+    status: SOURCE_CANDIDATE_NOT_PROVENANCE
+    candidate_setting: "range_bias_const=0.0 m, per_link_bias_max=0.0 m"
+    warning: "implementation indexes blink by scheduler slot and anchor slot, not stable tag_id:anchor_id"
+  clock_drift:
+    status: SOURCE_CANDIDATE_NOT_PROVENANCE
+    candidate_setting: "clock_ppm=20.0; DS coefficient=0.05"
+    warning: "realized contribution depends on scheduling and loss"
+  gaussian_range_noise:
+    status: SOURCE_CANDIDATE_AND_EMPIRICAL_SIGNATURE_NOT_PROVENANCE
+    candidate_setting: "range_noise_std=0.10 m"
+    observation: "LOS-like publish-time residual standard deviation approximately 0.101535 m"
+  runtime_snapshot:
+    status: UNAVAILABLE
+    reason: "bag does not contain simulator parameter snapshot or realized random seed; current candidate source commit postdates the bag"
+
+interpretation_guard:
+  - "Do not claim known total latent bias."
+  - "Truth sidecar covers only the newly injected deterministic component."
+  - "Do not treat empirical agreement with current source/config as generation provenance."

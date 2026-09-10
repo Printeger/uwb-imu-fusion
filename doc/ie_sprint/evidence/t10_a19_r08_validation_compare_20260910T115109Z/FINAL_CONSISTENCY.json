@@ -1,0 +1,53 @@
+{
+  "aggregate_artifacts": [
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/INPUT_RESULTS.csv",
+      "sha256": "a6ae206cbad7c62fa7509be258af9d8e07c4b38202de6df11611bd316f18c336",
+      "size_bytes": 3386
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/GROUP_RESULTS.csv",
+      "sha256": "a53405b24c8df42a8b4df28fa225b2f49894bf27a29a74eb6717a5a307f8f44f",
+      "size_bytes": 2128
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/PAIRED_RESULTS.csv",
+      "sha256": "fe62b0d1eefff1293accc6eb50e88a9b1927ccbeb05f21592b3cfeef1bcc626c",
+      "size_bytes": 15205
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/EVALUATION_SUMMARY.json",
+      "sha256": "cd6c2cef890cb8fc98879348fe1a10c116a27dce34e8a164b2c52d62ac1841e9",
+      "size_bytes": 2188
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/RESULTS.md",
+      "sha256": "832af0c30e0ea7ad6b0280d98d3edaaeefaca8cdde0a6a50fdb1227f4b5c03de",
+      "size_bytes": 6010
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/TRUTH_ACCESS_AUDIT.json",
+      "sha256": "6c3feda22f13cdc300e13d20eddeff2e88b822ce2f9928500aebb4701e4094a1",
+      "size_bytes": 1032
+    },
+    {
+      "path": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/EVALUATION_RUNS.json",
+      "sha256": "08baefa4ce30a9915937272ff126f5d007e0bf2d1f4702269b44a3499a2abfbd",
+      "size_bytes": 11082
+    }
+  ],
+  "checked_utc": "2026-09-10T13:05:47.649237+00:00",
+  "estimator_truth_open_count": 0,
+  "evaluation_exit_zero": 8,
+  "evaluation_runs": 8,
+  "failed": 3,
+  "interrupted": 1,
+  "matrix_cells": 12,
+  "pre_evaluation_hash_check": "PASS",
+  "pre_evaluation_hash_mismatches": [],
+  "pre_evaluation_payload_count": 1320,
+  "schema": "T10_A19_R08_FINAL_CONSISTENCY_V1",
+  "scored": 8,
+  "test_reservations_untouched": true,
+  "truth_after_freeze": true
+}

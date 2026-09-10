@@ -1,0 +1,10 @@
+{
+  "attempt_count": 1,
+  "consumed": false,
+  "initialization": "ORIGINAL_RAW_NO_CHECKPOINT",
+  "issued_utc": "2026-09-10T12:35:03.138009+00:00",
+  "reservation_key": "a10_val_turn_01_seed20101",
+  "scenario": "ramp_steep",
+  "schema": "T10_A19_R08_VALIDATION_TICKET_V1",
+  "ticket_id": "T10-A19-R08-V4-03"
+}

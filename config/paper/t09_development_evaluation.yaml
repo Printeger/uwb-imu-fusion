@@ -1,0 +1,10 @@
+schema: uifgo_t09_evaluation_v1
+run_units:
+  t07_step_multilink/base_seed_17/full:
+    bias_truth_scope: INJECTED_COMPONENT_ONLY
+  t07_ramp_multilink/base_seed_23/full:
+    bias_truth_scope: INJECTED_COMPONENT_ONLY
+  sim_circle_t06/base_seed_0/full:
+    bias_truth_scope: NONE
+  sim_circle_fixed_partition/base_seed_0/full:
+    bias_truth_scope: NONE

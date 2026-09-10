@@ -6,6 +6,8 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <cstdint>
+#include <limits>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -27,6 +29,22 @@ struct UwbRange {
   double dist;     // measured range (m)
   double fp_rssi;  // first-path RSSI (dB)
   double rx_rssi;  // total received RSSI (dB)
+  // Paper-path metadata. Legacy aggregate initializers leave these defaults.
+  std::uint64_t obs_id = 0;
+  double nominal_sigma = std::numeric_limits<double>::quiet_NaN();
+  bool suspected_nlos = false;
+  // Loader provenance captured before paper-path filtering/group reordering.
+  // max() means that a legacy or synthetic caller did not provide a source
+  // ordinal. source_valid is protocol validity, separate from NLOS suspicion.
+  std::uint64_t source_obs_index = std::numeric_limits<std::uint64_t>::max();
+  std::uint64_t source_message_index =
+      std::numeric_limits<std::uint64_t>::max();
+  std::uint64_t source_range_index =
+      std::numeric_limits<std::uint64_t>::max();
+  double source_time = std::numeric_limits<double>::quiet_NaN();
+  int source_tag_id = std::numeric_limits<int>::min();
+  bool source_valid = true;
+  std::string source_validity_reason;
 };
 
 struct UwbFrame {
@@ -41,6 +59,14 @@ struct AnchorConfig {
   int id;
   gtsam::Point3 pos;   // nominal world-frame position
   double prior_sigma;  // prior std for anchor position correction (m)
+};
+
+// Rebuilt for every graph. factor_index is never a persistent observation ID.
+struct FactorMeta {
+  size_t factor_index = 0;
+  std::uint64_t obs_id = 0;
+  std::string factor_type;
+  std::vector<gtsam::Key> keys;
 };
 
 // --- Per-keyframe output state ---

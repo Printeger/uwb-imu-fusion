@@ -12,7 +12,8 @@ namespace uifgo {
 
 class GraphBuilder {
  public:
-  explicit GraphBuilder(const Config& cfg);
+  explicit GraphBuilder(const Config& cfg, ImuCovarianceModel model =
+      ImuCovarianceModel::LEGACY_GTSAM_COMBINED_DEFAULT_V1);
 
   // Build full factor graph + initial Values from keyframe'd data.
   //
@@ -35,6 +36,7 @@ class GraphBuilder {
 
   // Expose for testing
   const std::vector<AnchorConfig>& anchors() const { return anchors_; }
+  const std::vector<FactorMeta>& factor_meta() const { return factor_meta_; }
 
  private:
   // Add UWB factors for a single keyframe.
@@ -48,8 +50,10 @@ class GraphBuilder {
   double AdaptiveSigma(double dt_since_last) const;
 
   Config cfg_;
+  ImuCovarianceModel imu_covariance_model_;
   std::vector<AnchorConfig> anchors_;
   std::unordered_map<int, double> last_anchor_time_;  // anchor_id -> last seen t
+  std::vector<FactorMeta> factor_meta_;
 
   // constant keys
   gtsam::Key lever_key() const;

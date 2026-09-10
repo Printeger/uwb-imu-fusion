@@ -1,0 +1,23 @@
+{
+  "argv": [
+    "python3",
+    "tools/paper/a19_r08_evaluate.py",
+    "--run-root",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/attempts/a10_val_turn_01_seed20101_step1/output",
+    "--generation-manifest",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/generation_manifest.json",
+    "--freeze-manifest",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/freeze_cells/a10_val_turn_01_seed20101_step1.json",
+    "--scenario",
+    "step1",
+    "--validation-context",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_01_seed20101_step1.json",
+    "--output",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/evaluation/a10_val_turn_01_seed20101_step1.json"
+  ],
+  "cell": "a10_val_turn_01_seed20101_step1",
+  "elapsed_s": 0.27951941399999214,
+  "exit_code": 0,
+  "finished_utc": "2026-09-10T12:56:17.385379+00:00",
+  "scenario": "step1"
+}

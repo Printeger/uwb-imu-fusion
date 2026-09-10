@@ -1,0 +1,435 @@
+{
+  "calibration_provenance": "EXACT_SYNTHETIC_ASSUMPTIONS_NOT_REAL_CALIBRATION",
+  "generator_implemented_scope": "development fixed A10 motion/scenarios only; parameterized held-out extension NOT_IMPLEMENTED",
+  "interval_closed_s": [
+    3.0,
+    6.0
+  ],
+  "planned_scenarios": [
+    {
+      "id": "los",
+      "kind": "none",
+      "links": []
+    },
+    {
+      "amplitudes_m": [
+        0.6
+      ],
+      "id": "step1",
+      "kind": "step",
+      "links": [
+        1
+      ]
+    },
+    {
+      "amplitudes_m": [
+        0.6,
+        0.9
+      ],
+      "id": "step2",
+      "kind": "step",
+      "links": [
+        1,
+        2
+      ]
+    },
+    {
+      "amplitudes_m": [
+        0.6,
+        0.9,
+        0.7
+      ],
+      "id": "step3",
+      "kind": "step",
+      "links": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "ramp_gentle",
+      "kind": "ramp",
+      "links": [
+        1,
+        2
+      ],
+      "slopes_mps": [
+        0.05,
+        0.075
+      ],
+      "start_m": [
+        0.2,
+        0.3
+      ]
+    },
+    {
+      "id": "ramp_steep",
+      "kind": "ramp",
+      "links": [
+        1,
+        2
+      ],
+      "slopes_mps": [
+        0.2,
+        0.25
+      ],
+      "start_m": [
+        0.2,
+        0.3
+      ]
+    }
+  ],
+  "records": [
+    {
+      "actual_cache_ids": {
+        "los": "sha256:b2361c4e4c4b95648eeac8f14d830ce1a180bcf622c440ef7404bb6846a3e1e7",
+        "ramp": "sha256:caa8192b0c1811488bd90acce08ace17f01337e9c122acbce06ae45798ec28ff",
+        "step": "sha256:d0dca8d096f06bc9022408fde98e41f7c8bff02b9428e866d63bf4a4409e26c0"
+      },
+      "actual_recording_id": "synthetic-cee9baa4beba8efc9368925bf55ab9f80b902cd1d5f1669580d04474eb7e228d",
+      "ancestry_group": "a10_dev_turn_01",
+      "base_trajectory_id": "a10_dev_turn_01",
+      "estimator_authorized_this_round": false,
+      "motion": {
+        "base_trajectory_id": "a10_dev_turn_01",
+        "rate_radps": 0.45,
+        "static_s": 2.2,
+        "tau_s": 0.8,
+        "x_amplitude_m": 0.8,
+        "y_amplitude_m": 0.6,
+        "yaw_amplitude_rad": 0.4,
+        "z_amplitude_m": 0.1,
+        "z_origin_m": 1.0
+      },
+      "motion_sha256": "sha256:11ace3796738840c0fa858170d7f57ea35665d18f731c9aa895cc6e348b86a1d",
+      "provenance_spec_sha256": "sha256:d9909871b26b7da9a5a6d6c9ffaaff388e8466d5534c993e009e0e36eca3dd4a",
+      "reservation_key": "a10_dev_turn_01_seed10101",
+      "role": "development",
+      "scenario_ids": [
+        "los",
+        "step2",
+        "ramp_steep"
+      ],
+      "seed": 10101,
+      "sensor_assumptions_sha256": "sha256:ff17e4f53d7e981ab2ffc8e4976a000b0f33cd5c73595b57dea3f4b478553ecf",
+      "status": "A10_PILOT"
+    },
+    {
+      "actual_cache_ids": null,
+      "actual_recording_id": null,
+      "ancestry_group": "a10_dev_turn_01",
+      "base_trajectory_id": "a10_dev_turn_01",
+      "estimator_authorized_this_round": false,
+      "motion": {
+        "base_trajectory_id": "a10_dev_turn_01",
+        "rate_radps": 0.45,
+        "static_s": 2.2,
+        "tau_s": 0.8,
+        "x_amplitude_m": 0.8,
+        "y_amplitude_m": 0.6,
+        "yaw_amplitude_rad": 0.4,
+        "z_amplitude_m": 0.1,
+        "z_origin_m": 1.0
+      },
+      "motion_sha256": "sha256:11ace3796738840c0fa858170d7f57ea35665d18f731c9aa895cc6e348b86a1d",
+      "provenance_spec_sha256": "sha256:d914e52ff1a8644fb63044ecc13626357257abc5a442e5fec931fdf8ef270f30",
+      "reservation_key": "a10_dev_turn_01_seed10102",
+      "role": "development",
+      "scenario_ids": [
+        "los",
+        "step2",
+        "ramp_steep"
+      ],
+      "seed": 10102,
+      "sensor_assumptions_sha256": "sha256:ff17e4f53d7e981ab2ffc8e4976a000b0f33cd5c73595b57dea3f4b478553ecf",
+      "status": "GENERATOR_METAMORPHIC_ONLY"
+    },
+    {
+      "actual_cache_ids": null,
+      "actual_recording_id": null,
+      "ancestry_group": "a10_val_turn_01",
+      "base_trajectory_id": "a10_val_turn_01",
+      "estimator_authorized_this_round": false,
+      "motion": {
+        "base_trajectory_id": "a10_val_turn_01",
+        "rate_radps": 0.38,
+        "static_s": 2.2,
+        "tau_s": 0.8,
+        "x_amplitude_m": 0.95,
+        "y_amplitude_m": 0.5,
+        "yaw_amplitude_rad": 0.35,
+        "z_amplitude_m": 0.08,
+        "z_origin_m": 1.1
+      },
+      "motion_sha256": "sha256:7c17b314d223eb0eac86b2e9ea1782f780b2320756f0fe3bbea09265a370fd84",
+      "provenance_spec_sha256": "sha256:64bd4f86ec68f5f8a6568f9ba0af3e11a5e58a1c9593d19b40a6fc5b95caed5a",
+      "reservation_key": "a10_val_turn_01_seed20101",
+      "role": "validation",
+      "scenario_ids": [
+        "los",
+        "step1",
+        "step2",
+        "step3",
+        "ramp_gentle",
+        "ramp_steep"
+      ],
+      "seed": 20101,
+      "sensor_assumptions_sha256": "sha256:ff17e4f53d7e981ab2ffc8e4976a000b0f33cd5c73595b57dea3f4b478553ecf",
+      "status": "NOT_GENERATED_NOT_RUN"
+    },
+    {
+      "actual_cache_ids": null,
+      "actual_recording_id": null,
+      "ancestry_group": "a10_val_turn_02",
+      "base_trajectory_id": "a10_val_turn_02",
+      "estimator_authorized_this_round": false,
+      "motion": {
+        "base_trajectory_id": "a10_val_turn_02",
+        "rate_radps": 0.52,
+        "static_s": 2.2,
+        "tau_s": 0.8,
+        "x_amplitude_m": 0.65,
+        "y_amplitude_m": 0.85,
+        "yaw_amplitude_rad": 0.55,
+        "z_amplitude_m": 0.12,
+        "z_origin_m": 0.9
+      },
+      "motion_sha256": "sha256:82198cb0d46966e241ad0f5420397518a566f4f8982d67ed5285622b9a476d76",
+      "provenance_spec_sha256": "sha256:09de4bf79f0b85f6b1325b95722ab00194a0577606517e038f0c7aa14503bdf1",
+      "reservation_key": "a10_val_turn_02_seed20102",
+      "role": "validation",
+      "scenario_ids": [
+        "los",
+        "step1",
+        "step2",
+        "step3",
+        "ramp_gentle",
+        "ramp_steep"
+      ],
+      "seed": 20102,
+      "sensor_assumptions_sha256": "sha256:ff17e4f53d7e981ab2ffc8e4976a000b0f33cd5c73595b57dea3f4b478553ecf",
+      "status": "NOT_GENERATED_NOT_RUN"
+    },
+    {
+      "actual_cache_ids": null,
+      "actual_recording_id": null,
+      "ancestry_group": "a10_test_turn_01",
+      "base_trajectory_id": "a10_test_turn_01",
+      "estimator_authorized_this_round": false,
+      "motion": {
+        "base_trajectory_id": "a10_test_turn_01",
+        "rate_radps": 0.41,
+        "static_s": 2.2,
+        "tau_s": 0.8,
+        "x_amplitude_m": 0.9,
+        "y_amplitude_m": 0.7,
+        "yaw_amplitude_rad": 0.45,
+        "z_amplitude_m": 0.09,
+        "z_origin_m": 1.05
+      },
+      "motion_sha256": "sha256:174eba41bc175c91903b0a802c511373991a3a1b3884a4f48600b10ebecc28d0",
+      "provenance_spec_sha256": "sha256:a04e628d7355604842a4b3bf13f4c89ba397c729abdafdadb8985a729ed87825",
+      "reservation_key": "a10_test_turn_01_seed30101",
+      "role": "test",
+      "scenario_ids": [
+        "los",
+        "step1",
+        "step2",
+        "step3",
+        "ramp_gentle",
+        "ramp_steep"
+      ],
+      "seed": 30101,
+      "sensor_assumptions_sha256": "sha256:ff17e4f53d7e981ab2ffc8e4976a000b0f33cd5c73595b57dea3f4b478553ecf",
+      "status": "NOT_GENERATED_NOT_RUN"
+    },
+    {
+      "actual_cache_ids": null,
+      "actual_recording_id": null,
+      "ancestry_group": "a10_test_turn_02",
+      "base_trajectory_id": "a10_test_turn_02",
+      "estimator_authorized_this_round": false,
+      "motion": {
+        "base_trajectory_id": "a10_test_turn_02",
+        "rate_radps": 0.49,
+        "static_s": 2.2,
+        "tau_s": 0.8,
+        "x_amplitude_m": 0.7,
+        "y_amplitude_m": 0.9,
+        "yaw_amplitude_rad": 0.5,
+        "z_amplitude_m": 0.13,
+        "z_origin_m": 0.95
+      },
+      "motion_sha256": "sha256:1259e098fba1fbb1feae91b93c525d5bd58e840aa7dedcd61de2398471140eb9",
+      "provenance_spec_sha256": "sha256:01996bf5f10fd2e0fbcdb664a8cab1f4569c77805661701b764d12185d07bbdc",
+      "reservation_key": "a10_test_turn_02_seed30102",
+      "role": "test",
+      "scenario_ids": [
+        "los",
+        "step1",
+        "step2",
+        "step3",
+        "ramp_gentle",
+        "ramp_steep"
+      ],
+      "seed": 30102,
+      "sensor_assumptions_sha256": "sha256:ff17e4f53d7e981ab2ffc8e4976a000b0f33cd5c73595b57dea3f4b478553ecf",
+      "status": "NOT_GENERATED_NOT_RUN"
+    },
+    {
+      "actual_cache_ids": null,
+      "actual_recording_id": null,
+      "ancestry_group": "a10_test_turn_03",
+      "base_trajectory_id": "a10_test_turn_03",
+      "estimator_authorized_this_round": false,
+      "motion": {
+        "base_trajectory_id": "a10_test_turn_03",
+        "rate_radps": 0.34,
+        "static_s": 2.2,
+        "tau_s": 0.8,
+        "x_amplitude_m": 1.0,
+        "y_amplitude_m": 0.55,
+        "yaw_amplitude_rad": 0.3,
+        "z_amplitude_m": 0.07,
+        "z_origin_m": 1.15
+      },
+      "motion_sha256": "sha256:36ab620ddab039f84ad5613493178980c5a5cd07f3163002624087aedbca068c",
+      "provenance_spec_sha256": "sha256:af39b014e79d1e49908e74ce01ba00ffcc81a207177b2f120a9a1ffddb409f97",
+      "reservation_key": "a10_test_turn_03_seed30103",
+      "role": "test",
+      "scenario_ids": [
+        "los",
+        "step1",
+        "step2",
+        "step3",
+        "ramp_gentle",
+        "ramp_steep"
+      ],
+      "seed": 30103,
+      "sensor_assumptions_sha256": "sha256:ff17e4f53d7e981ab2ffc8e4976a000b0f33cd5c73595b57dea3f4b478553ecf",
+      "status": "NOT_GENERATED_NOT_RUN"
+    },
+    {
+      "actual_cache_ids": null,
+      "actual_recording_id": null,
+      "ancestry_group": "a10_cal_turn_01",
+      "base_trajectory_id": "a10_cal_turn_01",
+      "estimator_authorized_this_round": false,
+      "motion": {
+        "base_trajectory_id": "a10_cal_turn_01",
+        "rate_radps": 0.3,
+        "static_s": 2.2,
+        "tau_s": 0.8,
+        "x_amplitude_m": 0.5,
+        "y_amplitude_m": 0.4,
+        "yaw_amplitude_rad": 0.25,
+        "z_amplitude_m": 0.05,
+        "z_origin_m": 1.2
+      },
+      "motion_sha256": "sha256:30ac41d3eb9634275a183228936eb3556efaa7c32d19326e19c9e957f7e63f8e",
+      "provenance_spec_sha256": "sha256:7aaef169d5cbd41699fb5c25ba4afc07b333a310d479b17845f7654cb796233a",
+      "reservation_key": "a10_cal_turn_01_seed40101",
+      "role": "calibration",
+      "scenario_ids": [
+        "los"
+      ],
+      "seed": 40101,
+      "sensor_assumptions_sha256": "sha256:ff17e4f53d7e981ab2ffc8e4976a000b0f33cd5c73595b57dea3f4b478553ecf",
+      "status": "NOT_GENERATED_NOT_RUN"
+    }
+  ],
+  "role_upgrade_allowed": false,
+  "schema": "t10_a10_split_proposal_v1",
+  "sensor_assumptions": {
+    "accel_bias_mps2": [
+      0.003,
+      -0.002,
+      0.004
+    ],
+    "accel_noise_density": 0.002,
+    "anchors_m": [
+      [
+        -3.0,
+        -3.0,
+        0.0
+      ],
+      [
+        -3.0,
+        -3.0,
+        3.0
+      ],
+      [
+        -3.0,
+        3.0,
+        0.0
+      ],
+      [
+        -3.0,
+        3.0,
+        3.0
+      ],
+      [
+        3.0,
+        -3.0,
+        0.0
+      ],
+      [
+        3.0,
+        -3.0,
+        3.0
+      ],
+      [
+        3.0,
+        3.0,
+        0.0
+      ],
+      [
+        3.0,
+        3.0,
+        3.0
+      ]
+    ],
+    "beta_m": [
+      0.03,
+      -0.02,
+      0.04,
+      -0.01,
+      0.02,
+      -0.03,
+      0.01,
+      -0.04
+    ],
+    "bias_random_walk_generated": false,
+    "clock_drift": 0.0,
+    "duration_s": 8.0,
+    "extra_random_nlos": false,
+    "gravity_world_mps2": [
+      0.0,
+      0.0,
+      -9.81
+    ],
+    "gyro_bias_radps": [
+      0.0002,
+      -0.0001,
+      0.00015
+    ],
+    "gyro_noise_density": 0.0002,
+    "imu_hz": 200,
+    "lever_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "packet_dropouts": false,
+    "range_sigma_m": 0.05,
+    "time_offset_s": 0.0,
+    "uwb_hz": 5
+  },
+  "split_unit": [
+    "base_trajectory",
+    "recording_ancestry",
+    "seed"
+  ],
+  "status": "PROPOSED_NOT_ADMITTED"
+}

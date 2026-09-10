@@ -1,0 +1,106 @@
+{
+  "order": [
+    {
+      "base": "a10_val_turn_01_seed20101",
+      "config": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_01_seed20101_los.yaml",
+      "context": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_01_seed20101_los.json",
+      "raw": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/raw/los/input_manifest.json",
+      "scenario": "los",
+      "seed": 20101
+    },
+    {
+      "base": "a10_val_turn_01_seed20101",
+      "config": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_01_seed20101_step1.yaml",
+      "context": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_01_seed20101_step1.json",
+      "raw": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/raw/step1/input_manifest.json",
+      "scenario": "step1",
+      "seed": 20101
+    },
+    {
+      "base": "a10_val_turn_01_seed20101",
+      "config": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_01_seed20101_step2.yaml",
+      "context": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_01_seed20101_step2.json",
+      "raw": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/raw/step2/input_manifest.json",
+      "scenario": "step2",
+      "seed": 20101
+    },
+    {
+      "base": "a10_val_turn_01_seed20101",
+      "config": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_01_seed20101_step3.yaml",
+      "context": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_01_seed20101_step3.json",
+      "raw": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/raw/step3/input_manifest.json",
+      "scenario": "step3",
+      "seed": 20101
+    },
+    {
+      "base": "a10_val_turn_01_seed20101",
+      "config": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_01_seed20101_ramp_gentle.yaml",
+      "context": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_01_seed20101_ramp_gentle.json",
+      "raw": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/raw/ramp_gentle/input_manifest.json",
+      "scenario": "ramp_gentle",
+      "seed": 20101
+    },
+    {
+      "base": "a10_val_turn_01_seed20101",
+      "config": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_01_seed20101_ramp_steep.yaml",
+      "context": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_01_seed20101_ramp_steep.json",
+      "raw": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/raw/ramp_steep/input_manifest.json",
+      "scenario": "ramp_steep",
+      "seed": 20101
+    },
+    {
+      "base": "a10_val_turn_02_seed20102",
+      "config": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_02_seed20102_los.yaml",
+      "context": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_02_seed20102_los.json",
+      "raw": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_02_seed20102/raw/los/input_manifest.json",
+      "scenario": "los",
+      "seed": 20102
+    },
+    {
+      "base": "a10_val_turn_02_seed20102",
+      "config": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_02_seed20102_step1.yaml",
+      "context": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_02_seed20102_step1.json",
+      "raw": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_02_seed20102/raw/step1/input_manifest.json",
+      "scenario": "step1",
+      "seed": 20102
+    },
+    {
+      "base": "a10_val_turn_02_seed20102",
+      "config": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_02_seed20102_step2.yaml",
+      "context": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_02_seed20102_step2.json",
+      "raw": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_02_seed20102/raw/step2/input_manifest.json",
+      "scenario": "step2",
+      "seed": 20102
+    },
+    {
+      "base": "a10_val_turn_02_seed20102",
+      "config": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_02_seed20102_step3.yaml",
+      "context": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_02_seed20102_step3.json",
+      "raw": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_02_seed20102/raw/step3/input_manifest.json",
+      "scenario": "step3",
+      "seed": 20102
+    },
+    {
+      "base": "a10_val_turn_02_seed20102",
+      "config": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_02_seed20102_ramp_gentle.yaml",
+      "context": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_02_seed20102_ramp_gentle.json",
+      "raw": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_02_seed20102/raw/ramp_gentle/input_manifest.json",
+      "scenario": "ramp_gentle",
+      "seed": 20102
+    },
+    {
+      "base": "a10_val_turn_02_seed20102",
+      "config": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_02_seed20102_ramp_steep.yaml",
+      "context": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_02_seed20102_ramp_steep.json",
+      "raw": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_02_seed20102/raw/ramp_steep/input_manifest.json",
+      "scenario": "ramp_steep",
+      "seed": 20102
+    }
+  ],
+  "reserve_not_consumed_s": 3600,
+  "role": "validation",
+  "scheduled_wall_limit_s": 10800,
+  "schema": "T10_A19_R08_FIXED_MATRIX_V1",
+  "science_support": "P1",
+  "total_allocation_s": 14400
+}

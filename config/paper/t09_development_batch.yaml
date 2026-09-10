@@ -1,0 +1,51 @@
+schema: uifgo_t09_batch_v2
+role: development
+parameter_provenance: T09_DEVELOPMENT_ENGINEERING_TEST_ONLY
+run_units:
+  - run_unit_id: t07_step_multilink/base_seed_17/full
+    recording_id: t07_step_multilink
+    base_trajectory_id: sim_circle_base
+    seed: 17
+    prefix_identity: full
+    config: t07/step_cache_smoke.yaml
+    cells:
+      - {mode: all_range, execution_type: BASELINE_TRAJECTORY, path: DIRECT_COMMON_PREPARATION}
+      - {mode: robust_huber, execution_type: BASELINE_TRAJECTORY, path: DIRECT_COMMON_PREPARATION, robust_scale: 1.345}
+      - {mode: fixed_rejection, execution_type: BASELINE_TRAJECTORY, path: DIRECT_COMMON_PREPARATION, rejection_threshold_sigma: 3.0}
+      - {mode: structured_bias_only, execution_type: STAGE1_TRAJECTORY, path: AUTO_DISCOVERY}
+      - {mode: structured_debias, execution_type: AUTOMATIC_STAGE2_TRAJECTORY, path: AUTO_DISCOVERY, producer_id: step-auto}
+      - {mode: fit_only, execution_type: CACHE_DIAGNOSTIC, path: AUTO_DISCOVERY, producer_id: step-auto, operating_point_id: fit-dev, thresholds: {tau_gamma: 1000000.0}}
+      - {mode: s_fit, execution_type: CACHE_DIAGNOSTIC, path: AUTO_DISCOVERY, producer_id: step-auto, operating_point_id: s-fit-dev, thresholds: {tau_s_m: 1000000.0, tau_gamma: 1000000.0}}
+      - {mode: full_gate, execution_type: CACHE_DIAGNOSTIC, path: AUTO_DISCOVERY, producer_id: step-auto, operating_point_id: full-dev, thresholds: {tau_eta: 0.0, tau_s_m: 1000000.0, tau_gamma: 1000000.0}}
+  - run_unit_id: t07_ramp_multilink/base_seed_23/full
+    recording_id: t07_ramp_multilink
+    base_trajectory_id: sim_circle_base
+    seed: 23
+    prefix_identity: full
+    config: t07/ramp_cache_smoke.yaml
+    cells:
+      - {mode: all_range, execution_type: BASELINE_TRAJECTORY, path: DIRECT_COMMON_PREPARATION}
+      - {mode: structured_debias, execution_type: AUTOMATIC_STAGE2_TRAJECTORY, path: AUTO_DISCOVERY, producer_id: ramp-auto}
+      - {mode: full_gate, execution_type: CACHE_DIAGNOSTIC, path: AUTO_DISCOVERY, producer_id: ramp-auto, operating_point_id: full-dev, thresholds: {tau_eta: 0.0, tau_s_m: 1000000.0, tau_gamma: 1000000.0}}
+  - run_unit_id: sim_circle_t06/base_seed_0/full
+    recording_id: sim_circle_t06
+    base_trajectory_id: sim_circle
+    seed: 0
+    prefix_identity: full
+    config: sim_circle_t06_automatic_discovery.yaml
+    cells:
+      - {mode: all_range, execution_type: BASELINE_TRAJECTORY, path: DIRECT_COMMON_PREPARATION}
+      - {mode: robust_cauchy, execution_type: BASELINE_TRAJECTORY, path: DIRECT_COMMON_PREPARATION, robust_scale: 2.3849}
+      - {mode: structured_debias, execution_type: AUTOMATIC_STAGE2_TRAJECTORY, path: AUTO_DISCOVERY, producer_id: circle-auto}
+      - {mode: fit_only, execution_type: CACHE_DIAGNOSTIC, path: AUTO_DISCOVERY, producer_id: circle-auto, operating_point_id: fit-dev, thresholds: {tau_gamma: 1000000.0}}
+      - {mode: nominal_curvature, execution_type: CACHE_DIAGNOSTIC, path: AUTO_DISCOVERY, producer_id: circle-auto, operating_point_id: nominal-dev, thresholds: {tau_N_m2_inv: 0.0}}
+  - run_unit_id: sim_circle_fixed_partition/base_seed_0/full
+    recording_id: sim_circle_fixed_partition_debug
+    base_trajectory_id: sim_circle
+    seed: 0
+    prefix_identity: full
+    config: t09_fixed_partition_development.yaml
+    cells:
+      - {mode: structured_debias, execution_type: CACHE_PRODUCER, path: FIXED_PARTITION_DEBUG, producer_id: fixed-debug}
+      - {mode: eta_only, execution_type: CACHE_DIAGNOSTIC, path: FIXED_PARTITION_DEBUG, producer_id: fixed-debug, operating_point_id: eta-dev, thresholds: {tau_eta: 0.0}}
+      - {mode: full_gate, execution_type: CACHE_DIAGNOSTIC, path: FIXED_PARTITION_DEBUG, producer_id: fixed-debug, operating_point_id: full-dev, thresholds: {tau_eta: 0.0, tau_s_m: 1000000.0, tau_gamma: 1000000.0}}

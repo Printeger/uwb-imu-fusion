@@ -1,0 +1,15 @@
+{
+  "attempt_count": 1,
+  "base": "a10_val_turn_02_seed20102",
+  "elapsed_s": 22.722541107003053,
+  "exit_code": 2,
+  "finished_utc": "2026-09-10T12:36:49.457727+00:00",
+  "forbidden_truth_open_count": 0,
+  "forbidden_truth_open_lines": [],
+  "ordinal": 4,
+  "reserved_s": 700.0,
+  "reserved_utc": "2026-09-10T12:36:26.709897+00:00",
+  "run_id": "a10_val_turn_02_seed20102_los",
+  "scenario": "los",
+  "status": "FAILED"
+}

@@ -1,0 +1,42 @@
+{
+  "actual_consumed_s": 203.81292919000188,
+  "entries": [
+    {
+      "attempt_count": 1,
+      "base": "a10_val_turn_01_seed20101",
+      "elapsed_s": 16.91638711199994,
+      "exit_code": 1,
+      "finished_utc": "2026-09-10T12:21:31.317427+00:00",
+      "forbidden_truth_open_count": 0,
+      "forbidden_truth_open_lines": [],
+      "ordinal": 1,
+      "reserved_s": 700.0,
+      "reserved_utc": "2026-09-10T12:21:14.370450+00:00",
+      "run_id": "a10_val_turn_01_seed20101_los",
+      "scenario": "los",
+      "status": "FAILED"
+    },
+    {
+      "attempt_count": 1,
+      "base": "a10_val_turn_01_seed20101",
+      "elapsed_s": 48.54654207800195,
+      "exit_code": 0,
+      "finished_utc": "2026-09-10T12:22:19.896609+00:00",
+      "forbidden_truth_open_count": 0,
+      "forbidden_truth_open_lines": [],
+      "ordinal": 2,
+      "reserved_s": 700.0,
+      "reserved_utc": "2026-09-10T12:21:31.318052+00:00",
+      "run_id": "a10_val_turn_01_seed20101_step1",
+      "scenario": "step1",
+      "status": "COMPLETE"
+    }
+  ],
+  "initial_engineering_generation_prepare_s": 138.35,
+  "parallelism": 1,
+  "per_cell_reservation_s": 700.0,
+  "reserve_not_automatically_consumed_s": 3600.0,
+  "scheduled_limit_s": 10800.0,
+  "schema": "T10_A19_R08_DURABLE_BUDGET_LEDGER_V1",
+  "total_allocation_s": 14400.0
+}

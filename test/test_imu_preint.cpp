@@ -72,6 +72,14 @@ TEST(ImuPreintegrator, ForwardAcceleration) {
   EXPECT_NEAR(pred.pose().translation().x(), 2.0, 0.05);
 }
 
+TEST(ImuPreintegrator, UsesCallerGravityVector) {
+  uifgo::Config cfg;
+  cfg.gravity = 9.81;
+  const gtsam::Vector3 supplied(0.4, -0.2, -3.0);
+  uifgo::ImuPreintegrator pim(cfg, supplied);
+  EXPECT_TRUE(pim.Params()->n_gravity.isApprox(supplied, 1e-12));
+}
+
 TEST(ImuSync, InterpolateImu) {
   std::vector<uifgo::ImuSample> imu = {
     {0.0, gtsam::Vector3(0,0,0), gtsam::Vector3(0,0,0)},
@@ -115,4 +123,20 @@ TEST(ImuSync, IntegrateBetween) {
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
+}
+
+TEST(ImuPreintegration, A14ExplicitModelAndLegacyDefaultIdentity) {
+  uifgo::Config cfg;
+  const gtsam::Vector3 gravity(0,0,-cfg.gravity);
+  const auto conditional = uifgo::ImuCovarianceModel::PAPER_IMU_CONDITIONAL_LIVE_BIAS_V1;
+  uifgo::ImuPreintegrator legacy(cfg, gravity), paper(cfg,gravity,conditional);
+  EXPECT_EQ((legacy.Params()->biasAccOmegaInt-gtsam::I_6x6).norm(), 0);
+  EXPECT_EQ(paper.Params()->biasAccOmegaInt.norm(), 0);
+  auto a=uifgo::ImuCovarianceModelIdentity(cfg,gravity,conditional);
+  EXPECT_NE(a,uifgo::ImuCovarianceModelIdentity(cfg,gravity,
+      uifgo::ImuCovarianceModel::LEGACY_GTSAM_COMBINED_DEFAULT_V1));
+  EXPECT_NE(a,uifgo::ImuCovarianceModelIdentity(cfg,gtsam::Vector3(0,0,-9.8),conditional));
+  cfg.sigma_a*=2;
+  EXPECT_NE(a,uifgo::ImuCovarianceModelIdentity(cfg,gravity,conditional));
+  EXPECT_THROW(uifgo::ImuPreintegrator(cfg,gravity,static_cast<uifgo::ImuCovarianceModel>(88)), std::invalid_argument);
 }

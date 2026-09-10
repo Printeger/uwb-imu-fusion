@@ -1,0 +1,798 @@
+{
+  "base_trajectory_id": "a10_val_turn_01",
+  "bias_truth_sha256": "7d1485db59e237f55984f0477b15e02ab0787250e9747055f6373b587f2dea2b",
+  "candidate_observations": 48,
+  "epsilon_bad_m": 0.2,
+  "evaluation_label": "LIMITED_SYNTHETIC_VALIDATION",
+  "frame": "RAW_SYNTHETIC_GENERATOR_FRAME",
+  "gate_decisions": {
+    "fit_only": [
+      [
+        "group_0",
+        "USE",
+        "USE_ALL_REQUIRED_PREDICATES_PASSED"
+      ]
+    ],
+    "full_gate": [
+      [
+        "group_0",
+        "USE",
+        "USE_ALL_THRESHOLDS_PASSED"
+      ]
+    ],
+    "s_fit": [
+      [
+        "group_0",
+        "USE",
+        "USE_ALL_REQUIRED_PREDICATES_PASSED"
+      ]
+    ]
+  },
+  "generation_manifest_sha256": "c353508c5d4a81dcec8c0c586c6d2bca9ecb284ab87a537567c94729de1ad8ad",
+  "historical_interval_closed_s": [
+    3.0,
+    6.0
+  ],
+  "limitations": [
+    "TWO_VALIDATION_BASE_TRAJECTORIES_ONLY",
+    "NO_GENERALIZATION_OR_STATISTICAL_SIGNIFICANCE",
+    "NO_FORMAL_GATE_LOCK_OR_CLAIM_UPGRADE"
+  ],
+  "los_all_range_reference": null,
+  "motion_truth_sha256": "dd90ac7c27e86aee617e1253fc6cfcf9ed9e0311443f155b265eb6db188b55d4",
+  "policies": {
+    "fit_only": {
+      "accepted_candidate_observations": 48,
+      "coverage": {
+        "candidate_use_coverage": {
+          "denominator": 48,
+          "numerator": 48,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 1.0
+        },
+        "eligible_use_coverage": {
+          "denominator": 48,
+          "numerator": 48,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 1.0
+        },
+        "overall_retained_fraction": {
+          "denominator": 328,
+          "numerator": 328,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 1.0
+        }
+      },
+      "decision_time": {
+        "accepted_bias_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612931636142
+        },
+        "bad_correction_rate": {
+          "denominator": 48,
+          "numerator": 0,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 0.0
+        },
+        "candidate_bias_field_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612931636142
+        },
+        "good_correction_rejection_rate": {
+          "denominator": 48,
+          "numerator": 0,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 0.0
+        }
+      },
+      "elapsed_seconds": 1.00302346,
+      "fallback": {
+        "attempt_count": 0,
+        "attempted": false,
+        "fallback_failure_reason": "",
+        "fallback_solver_status": "NOT_RUN",
+        "inference_id": "t08inference-sha256:17c51b3d408fe4ac039aac19fcc12e51faa26b9a65441ddd5f137f743344b27c",
+        "recovery_failure_reason": "",
+        "schema": "t08_fallback_attempt_v1",
+        "status": "NOT_TRIGGERED",
+        "trigger_reason": ""
+      },
+      "final_time": {
+        "accepted_bias_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612699789534
+        },
+        "applied_bias_field_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612699789534
+        },
+        "bad_correction_rate": {
+          "denominator": 48,
+          "numerator": 0,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 0.0
+        }
+      },
+      "final_used_candidate_observations": 48,
+      "historical_delta_vs_suppress_all": {
+        "p95_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.0005538507559157621
+        },
+        "rmse_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.0005529240490687089
+        }
+      },
+      "status": {
+        "consumable": false,
+        "policy": "fit_only",
+        "status": "OK",
+        "valid_estimate": true
+      },
+      "summary_status": "OK",
+      "suppressed_segments": [],
+      "trajectory_full": {
+        "association": "EXACT_OR_LINEAR_INTERPOLATION",
+        "matches": 41,
+        "p95_m": {
+          "denominator": 41,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.025533597641036642
+        },
+        "rmse_m": {
+          "denominator": 41,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.014632994067822213
+        }
+      },
+      "trajectory_historical_3_6_s": {
+        "association": "EXACT_OR_LINEAR_INTERPOLATION",
+        "matches": 16,
+        "p95_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.015294114286874438
+        },
+        "rmse_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010088650874982164
+        }
+      },
+      "used_segments": [
+        "auto-segment-sha256:05c1d6f20689126d7c5f96c227a17c1c05efd8458bb88a664e44e49489633ae3",
+        "auto-segment-sha256:26f7e63c29165eb217926d7400087b4bf8601262cf4bd0c07217a2b75dda2a05",
+        "auto-segment-sha256:9011a4635be6432a400f5a467adb6574adae80a5efe554a77ce74f3c065021ce"
+      ]
+    },
+    "full_gate": {
+      "accepted_candidate_observations": 48,
+      "coverage": {
+        "candidate_use_coverage": {
+          "denominator": 48,
+          "numerator": 48,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 1.0
+        },
+        "eligible_use_coverage": {
+          "denominator": 48,
+          "numerator": 48,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 1.0
+        },
+        "overall_retained_fraction": {
+          "denominator": 328,
+          "numerator": 328,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 1.0
+        }
+      },
+      "decision_time": {
+        "accepted_bias_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612931636142
+        },
+        "bad_correction_rate": {
+          "denominator": 48,
+          "numerator": 0,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 0.0
+        },
+        "candidate_bias_field_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612931636142
+        },
+        "good_correction_rejection_rate": {
+          "denominator": 48,
+          "numerator": 0,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 0.0
+        }
+      },
+      "elapsed_seconds": 0.903470338,
+      "fallback": {
+        "attempt_count": 0,
+        "attempted": false,
+        "fallback_failure_reason": "",
+        "fallback_solver_status": "NOT_RUN",
+        "inference_id": "t08inference-sha256:17c51b3d408fe4ac039aac19fcc12e51faa26b9a65441ddd5f137f743344b27c",
+        "recovery_failure_reason": "",
+        "schema": "t08_fallback_attempt_v1",
+        "status": "NOT_TRIGGERED",
+        "trigger_reason": ""
+      },
+      "final_time": {
+        "accepted_bias_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612699789534
+        },
+        "applied_bias_field_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612699789534
+        },
+        "bad_correction_rate": {
+          "denominator": 48,
+          "numerator": 0,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 0.0
+        }
+      },
+      "final_used_candidate_observations": 48,
+      "historical_delta_vs_suppress_all": {
+        "p95_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.0005538507559157621
+        },
+        "rmse_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.0005529240490687089
+        }
+      },
+      "status": {
+        "consumable": false,
+        "policy": "full_gate",
+        "status": "OK",
+        "valid_estimate": true
+      },
+      "summary_status": "OK",
+      "suppressed_segments": [],
+      "trajectory_full": {
+        "association": "EXACT_OR_LINEAR_INTERPOLATION",
+        "matches": 41,
+        "p95_m": {
+          "denominator": 41,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.025533597641036642
+        },
+        "rmse_m": {
+          "denominator": 41,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.014632994067822213
+        }
+      },
+      "trajectory_historical_3_6_s": {
+        "association": "EXACT_OR_LINEAR_INTERPOLATION",
+        "matches": 16,
+        "p95_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.015294114286874438
+        },
+        "rmse_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010088650874982164
+        }
+      },
+      "used_segments": [
+        "auto-segment-sha256:05c1d6f20689126d7c5f96c227a17c1c05efd8458bb88a664e44e49489633ae3",
+        "auto-segment-sha256:26f7e63c29165eb217926d7400087b4bf8601262cf4bd0c07217a2b75dda2a05",
+        "auto-segment-sha256:9011a4635be6432a400f5a467adb6574adae80a5efe554a77ce74f3c065021ce"
+      ]
+    },
+    "s_fit": {
+      "accepted_candidate_observations": 48,
+      "coverage": {
+        "candidate_use_coverage": {
+          "denominator": 48,
+          "numerator": 48,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 1.0
+        },
+        "eligible_use_coverage": {
+          "denominator": 48,
+          "numerator": 48,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 1.0
+        },
+        "overall_retained_fraction": {
+          "denominator": 328,
+          "numerator": 328,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 1.0
+        }
+      },
+      "decision_time": {
+        "accepted_bias_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612931636142
+        },
+        "bad_correction_rate": {
+          "denominator": 48,
+          "numerator": 0,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 0.0
+        },
+        "candidate_bias_field_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612931636142
+        },
+        "good_correction_rejection_rate": {
+          "denominator": 48,
+          "numerator": 0,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 0.0
+        }
+      },
+      "elapsed_seconds": 1.003158715,
+      "fallback": {
+        "attempt_count": 0,
+        "attempted": false,
+        "fallback_failure_reason": "",
+        "fallback_solver_status": "NOT_RUN",
+        "inference_id": "t08inference-sha256:17c51b3d408fe4ac039aac19fcc12e51faa26b9a65441ddd5f137f743344b27c",
+        "recovery_failure_reason": "",
+        "schema": "t08_fallback_attempt_v1",
+        "status": "NOT_TRIGGERED",
+        "trigger_reason": ""
+      },
+      "final_time": {
+        "accepted_bias_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612699789534
+        },
+        "applied_bias_field_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612699789534
+        },
+        "bad_correction_rate": {
+          "denominator": 48,
+          "numerator": 0,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 0.0
+        }
+      },
+      "final_used_candidate_observations": 48,
+      "historical_delta_vs_suppress_all": {
+        "p95_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.0005538507559157621
+        },
+        "rmse_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.0005529240490687089
+        }
+      },
+      "status": {
+        "consumable": false,
+        "policy": "s_fit",
+        "status": "OK",
+        "valid_estimate": true
+      },
+      "summary_status": "OK",
+      "suppressed_segments": [],
+      "trajectory_full": {
+        "association": "EXACT_OR_LINEAR_INTERPOLATION",
+        "matches": 41,
+        "p95_m": {
+          "denominator": 41,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.025533597641036642
+        },
+        "rmse_m": {
+          "denominator": 41,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.014632994067822213
+        }
+      },
+      "trajectory_historical_3_6_s": {
+        "association": "EXACT_OR_LINEAR_INTERPOLATION",
+        "matches": 16,
+        "p95_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.015294114286874438
+        },
+        "rmse_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010088650874982164
+        }
+      },
+      "used_segments": [
+        "auto-segment-sha256:05c1d6f20689126d7c5f96c227a17c1c05efd8458bb88a664e44e49489633ae3",
+        "auto-segment-sha256:26f7e63c29165eb217926d7400087b4bf8601262cf4bd0c07217a2b75dda2a05",
+        "auto-segment-sha256:9011a4635be6432a400f5a467adb6574adae80a5efe554a77ce74f3c065021ce"
+      ]
+    },
+    "structured_debias": {
+      "accepted_candidate_observations": 48,
+      "coverage": {
+        "candidate_use_coverage": {
+          "denominator": 48,
+          "numerator": 48,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 1.0
+        },
+        "eligible_use_coverage": {
+          "denominator": 48,
+          "numerator": 48,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 1.0
+        },
+        "overall_retained_fraction": {
+          "denominator": 328,
+          "numerator": 328,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 1.0
+        }
+      },
+      "decision_time": {
+        "accepted_bias_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612931636142
+        },
+        "bad_correction_rate": {
+          "denominator": 48,
+          "numerator": 0,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 0.0
+        },
+        "candidate_bias_field_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612931636142
+        },
+        "good_correction_rejection_rate": {
+          "denominator": 48,
+          "numerator": 0,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 0.0
+        }
+      },
+      "elapsed_seconds": 0.902745761,
+      "fallback": {
+        "attempt_count": 0,
+        "attempted": false,
+        "fallback_failure_reason": "",
+        "fallback_solver_status": "NOT_RUN",
+        "inference_id": "t08inference-sha256:17c51b3d408fe4ac039aac19fcc12e51faa26b9a65441ddd5f137f743344b27c",
+        "recovery_failure_reason": "",
+        "schema": "t08_fallback_attempt_v1",
+        "status": "NOT_TRIGGERED",
+        "trigger_reason": ""
+      },
+      "final_time": {
+        "accepted_bias_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612699789534
+        },
+        "applied_bias_field_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612699789534
+        },
+        "bad_correction_rate": {
+          "denominator": 48,
+          "numerator": 0,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 0.0
+        }
+      },
+      "final_used_candidate_observations": 48,
+      "historical_delta_vs_suppress_all": {
+        "p95_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.0005538507559157621
+        },
+        "rmse_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.0005529240490687089
+        }
+      },
+      "status": {
+        "consumable": false,
+        "policy": "structured_debias",
+        "status": "OK",
+        "valid_estimate": true
+      },
+      "summary_status": "OK",
+      "suppressed_segments": [],
+      "trajectory_full": {
+        "association": "EXACT_OR_LINEAR_INTERPOLATION",
+        "matches": 41,
+        "p95_m": {
+          "denominator": 41,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.025533597641036642
+        },
+        "rmse_m": {
+          "denominator": 41,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.014632994067822213
+        }
+      },
+      "trajectory_historical_3_6_s": {
+        "association": "EXACT_OR_LINEAR_INTERPOLATION",
+        "matches": 16,
+        "p95_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.015294114286874438
+        },
+        "rmse_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010088650874982164
+        }
+      },
+      "used_segments": [
+        "auto-segment-sha256:05c1d6f20689126d7c5f96c227a17c1c05efd8458bb88a664e44e49489633ae3",
+        "auto-segment-sha256:26f7e63c29165eb217926d7400087b4bf8601262cf4bd0c07217a2b75dda2a05",
+        "auto-segment-sha256:9011a4635be6432a400f5a467adb6574adae80a5efe554a77ce74f3c065021ce"
+      ]
+    },
+    "suppress_all": {
+      "accepted_candidate_observations": 0,
+      "coverage": {
+        "candidate_use_coverage": {
+          "denominator": 48,
+          "numerator": 0,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 0.0
+        },
+        "eligible_use_coverage": {
+          "denominator": 48,
+          "numerator": 0,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 0.0
+        },
+        "overall_retained_fraction": {
+          "denominator": 328,
+          "numerator": 280,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 0.8536585365853658
+        }
+      },
+      "decision_time": {
+        "accepted_bias_rmse_m": {
+          "denominator": 0,
+          "status": "UNDEFINED",
+          "unit": "m",
+          "value": null
+        },
+        "bad_correction_rate": {
+          "denominator": 0,
+          "numerator": 0,
+          "status": "UNDEFINED",
+          "unit": "observation",
+          "value": null
+        },
+        "candidate_bias_field_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.010680612931636142
+        },
+        "good_correction_rejection_rate": {
+          "denominator": 48,
+          "numerator": 48,
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 1.0
+        }
+      },
+      "elapsed_seconds": 1.404504666,
+      "fallback": {
+        "attempt_count": 0,
+        "attempted": false,
+        "fallback_failure_reason": "",
+        "fallback_solver_status": "NOT_RUN",
+        "inference_id": "t08inference-sha256:ba03c468d5792319764dc8f863d9baaa1d57b7000ecee4bd470a7b3cecde2905",
+        "recovery_failure_reason": "",
+        "schema": "t08_fallback_attempt_v1",
+        "status": "NOT_TRIGGERED",
+        "trigger_reason": ""
+      },
+      "final_time": {
+        "accepted_bias_rmse_m": {
+          "denominator": 0,
+          "status": "UNDEFINED",
+          "unit": "m",
+          "value": null
+        },
+        "applied_bias_field_rmse_m": {
+          "denominator": 48,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.7438637868140463
+        },
+        "bad_correction_rate": {
+          "denominator": 0,
+          "numerator": 0,
+          "status": "UNDEFINED",
+          "unit": "observation",
+          "value": null
+        }
+      },
+      "final_used_candidate_observations": 0,
+      "historical_delta_vs_suppress_all": {
+        "p95_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.0
+        },
+        "rmse_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.0
+        }
+      },
+      "status": {
+        "consumable": false,
+        "policy": "suppress_all",
+        "status": "ZERO_ACCEPTED",
+        "valid_estimate": true
+      },
+      "summary_status": "ZERO_ACCEPTED",
+      "suppressed_segments": [
+        "auto-segment-sha256:05c1d6f20689126d7c5f96c227a17c1c05efd8458bb88a664e44e49489633ae3",
+        "auto-segment-sha256:26f7e63c29165eb217926d7400087b4bf8601262cf4bd0c07217a2b75dda2a05",
+        "auto-segment-sha256:9011a4635be6432a400f5a467adb6574adae80a5efe554a77ce74f3c065021ce"
+      ],
+      "trajectory_full": {
+        "association": "EXACT_OR_LINEAR_INTERPOLATION",
+        "matches": 41,
+        "p95_m": {
+          "denominator": 41,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.02474232773655237
+        },
+        "rmse_m": {
+          "denominator": 41,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.014118337490612441
+        }
+      },
+      "trajectory_historical_3_6_s": {
+        "association": "EXACT_OR_LINEAR_INTERPOLATION",
+        "matches": 16,
+        "p95_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.014740263530958676
+        },
+        "rmse_m": {
+          "denominator": 16,
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.009535726825913455
+        }
+      },
+      "used_segments": []
+    }
+  },
+  "reservation_key": "a10_val_turn_01_seed20101",
+  "scenario_id": "step3",
+  "schema": "T10_A19_R08_LIMITED_SYNTHETIC_VALIDATION_EVALUATION_V1",
+  "scores": [
+    {
+      "eligible": "1",
+      "eta": "0.58418041610311289",
+      "group_id": "group_0",
+      "linearization_id": "t05lin-sha256:d8a99e3f3569ef545aa500ee2bdfdb9f5fefcd989bb6604d14bdfa59c617532f",
+      "numerical_reason": "all sparse numerical audits passed",
+      "ordinals": "2;0;1",
+      "s_m": "0.016354471568803881",
+      "status": "OK"
+    }
+  ],
+  "three_gates_identical": false,
+  "time_association": "EXACT_OR_LINEAR_INTERPOLATION",
+  "truth_first_opened_after_freeze_utc": "2026-09-10T12:56:17.790873+00:00"
+}

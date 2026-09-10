@@ -1,0 +1,65 @@
+{
+  "created_utc": "2026-09-10T13:01:02.051562+00:00",
+  "failed_cells": 3,
+  "independently_evaluated_cells": 8,
+  "interpretation": [
+    "No gate policy produced a different Use/Suppress vector from another gate policy on any scored cell.",
+    "The limited matrix does not show a repeated trajectory benefit from retaining structured corrections.",
+    "This is two-base synthetic validation characterization, without gate lock, generalization, significance, or claim upgrade."
+  ],
+  "interrupted_cells": 1,
+  "matrix_cells": 12,
+  "pipeline_scored_cells": 8,
+  "schema": "T10_A19_R08_LIMITED_VALIDATION_AGGREGATE_V1",
+  "structured_comparable_cells": 7,
+  "structured_deltas": [
+    {
+      "base": "a10_val_turn_01_seed20101",
+      "p95_delta_m": 0.0005787427064164012,
+      "rmse_delta_m": 0.00045332025701391374,
+      "scenario": "step1"
+    },
+    {
+      "base": "a10_val_turn_01_seed20101",
+      "p95_delta_m": 0.0008653740201587795,
+      "rmse_delta_m": 0.000746240265124062,
+      "scenario": "step2"
+    },
+    {
+      "base": "a10_val_turn_01_seed20101",
+      "p95_delta_m": 0.0005538507559157621,
+      "rmse_delta_m": 0.0005529240490687089,
+      "scenario": "step3"
+    },
+    {
+      "base": "a10_val_turn_01_seed20101",
+      "p95_delta_m": 0.04375870660715091,
+      "rmse_delta_m": 0.02818340683785226,
+      "scenario": "ramp_steep"
+    },
+    {
+      "base": "a10_val_turn_02_seed20102",
+      "p95_delta_m": 0.0002567940311374445,
+      "rmse_delta_m": -0.00021940362528398774,
+      "scenario": "step1"
+    },
+    {
+      "base": "a10_val_turn_02_seed20102",
+      "p95_delta_m": 0.0014098771603330423,
+      "rmse_delta_m": 0.0003200047283524812,
+      "scenario": "step2"
+    },
+    {
+      "base": "a10_val_turn_02_seed20102",
+      "p95_delta_m": 0.0007893313304687365,
+      "rmse_delta_m": 0.00011532239410824013,
+      "scenario": "step3"
+    }
+  ],
+  "structured_historical_p95_better_cells": 0,
+  "structured_historical_p95_worse_cells": 7,
+  "structured_historical_rmse_better_cells": 1,
+  "structured_historical_rmse_worse_cells": 6,
+  "three_gate_decision_differences": [],
+  "truth_first_opened_utc_min": "2026-09-10T12:56:16.814205+00:00"
+}

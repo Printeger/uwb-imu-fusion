@@ -8,7 +8,17 @@
 
 namespace uifgo {
 
+enum class ImuCovarianceModel {
+  LEGACY_GTSAM_COMBINED_DEFAULT_V1,
+  PAPER_IMU_CONDITIONAL_LIVE_BIAS_V1,
+};
+const char* ImuCovarianceModelName(ImuCovarianceModel model);
+ImuCovarianceModel ParseImuCovarianceModel(const std::string& name);
+
 struct Config {
+  // Explicit paper opt-in. Legacy entry points keep their default constructor.
+  ImuCovarianceModel paper_imu_covariance_model =
+      ImuCovarianceModel::LEGACY_GTSAM_COMBINED_DEFAULT_V1;
   // --- Dataset interface ---
   // "original": one rosbag containing IMU/UWB and optional ROS GT topics.
   // "mcd": split IMU/UWB bags plus pose_inW-style CSV ground truth.
@@ -18,6 +28,12 @@ struct Config {
   std::string imu_bag_path = "";
   std::string uwb_bag_path = "";
   std::string gt_csv_path = "";
+  // T07 self-contained estimator input cache.  The cache stores already
+  // normalized IMU samples and final observed UWB ranges; it never contains
+  // scenario recipes, injected-component truth, or support labels.
+  std::string t07_cache_manifest = "";
+  double t07_cache_start_s = 0.0;
+  double t07_cache_duration_s = -1.0;
 
   // --- VIRAL dataset settings ---
   // Requester node IDs on the UAV (e.g. 200, 201). All seen requesters
@@ -101,14 +117,20 @@ struct Config {
   bool calib_range_bias = true;
   double range_bias_sigma = 0.05;
 
+  // Fixed static LOS range bias in metres, keyed by "tag_id:anchor_id".
+  // This constant path is mutually exclusive with calib_range_bias.
+  // An empty map means calibration is unavailable/unused; it is not an
+  // assertion that every link has a calibrated zero bias.
+  std::map<std::string, double> fixed_beta_by_link;
+
   bool calib_td = false;
   double td_init = 0.03;  // IMU-UWB time offset (s)
 
   // --- IMU noise ---
-  double sigma_a = 0.1;      // accel noise (m/s^2)
-  double sigma_g = 0.01;     // gyro noise (rad/s)
-  double sigma_wa = 0.01;    // accel random walk (m/s^3)
-  double sigma_wg = 2.0e-5;  // gyro random walk (rad/s^2)
+  double sigma_a = 0.1;      // accel density (m/s^2)/sqrt(Hz)
+  double sigma_g = 0.01;     // gyro density (rad/s)/sqrt(Hz)
+  double sigma_wa = 0.01;    // accel bias RW (m/s^2)/sqrt(s)
+  double sigma_wg = 2.0e-5;  // gyro bias RW (rad/s)/sqrt(s)
   double gravity = 9.81;
   bool imu_acc_in_g =
       true;  // true=multiply by gravity (Livox), false=raw (sim)
@@ -133,6 +155,65 @@ struct Config {
   int lm_max_iter = 100;
   double lm_rel_tol = 1.0e-6;
   double lm_abs_tol = 1.0e-8;
+
+  // --- Paper-path NLOS debug/refit (T04) ---
+  // "disabled" preserves the T02 all-range path. "oracle_debug" and
+  // "fixed_partition_debug" read only their isolated support manifests.
+  // "automatic_discovery" is the T06
+  // development-only discovery/refit/score path and cannot read that manifest.
+  std::string nlos_mode = "disabled";
+  std::string oracle_support_path = "";
+  bool score_recoverability = false;
+  // T08 is an explicit opt-in layered on oracle_debug or
+  // automatic_discovery.  Gate numbers have no defaults: current fixtures
+  // must identify them as development-only pending validation.
+  bool final_inference_enabled = false;
+  double gate_tau_eta = std::numeric_limits<double>::quiet_NaN();
+  double gate_tau_s_m = std::numeric_limits<double>::quiet_NaN();
+  double gate_tau_gamma = std::numeric_limits<double>::quiet_NaN();
+  std::string gate_parameter_provenance;
+  double refit_boundary_epsilon_m = 1.0e-9;
+  double refit_relative_objective_tolerance = 1.0e-8;
+  double refit_scaled_step_tolerance = 1.0e-6;
+  double refit_projected_gradient_tolerance = 1.0e-8;
+  // Maximum final joint objective gradient with respect to one normalized
+  // free navigation coordinate. See RefitOptions for the physical scales.
+  double refit_navigation_stationarity_tolerance_objective = 1.0e-6;
+  double refit_gradient_roundoff_safety_factor = 8.0;
+  double refit_pose_rotation_scale_rad = 1.0;
+  double refit_pose_translation_scale_m = 1.0;
+  double refit_velocity_scale_mps = 1.0;
+  double refit_accel_bias_scale_mps2 = 1.0;
+  double refit_gyro_bias_scale_radps = 1.0;
+  double refit_segment_amplitude_scale_m = 1.0;
+  int max_refit_iterations = 20;
+  int oracle_short_min_count_debug = 2;
+  double oracle_short_min_duration_debug = 0.01;
+
+  // --- T06 automatic support discovery (pending scientific validation) ---
+  double discovery_lambda_l1 = 0.05;
+  double discovery_lambda_tv = 0.10;
+  double discovery_gap_threshold_s = 1.0;
+  double discovery_active_bias_min_m = 0.02;
+  double discovery_change_point_min_m = 0.05;
+  double discovery_merge_max_difference_m = 0.05;
+  int discovery_short_min_count = 2;
+  double discovery_short_min_duration_s = 0.01;
+  int discovery_max_outer_iterations = 50;
+  // A02 development-only numerical policy. The default preserves the
+  // accepted Stage-1 conditional solve behavior.
+  std::string discovery_conditional_navigation_policy =
+      "GTSAM_CHECK_ONLY_V1";
+  double discovery_scaled_step_tolerance = 1e-6;
+  double discovery_observation_bias_scale_m = 1.0;
+  double discovery_rho_scale = 1.0;
+  double discovery_primal_abs_tolerance_m = 1e-8;
+  double discovery_primal_rel_tolerance = 1e-6;
+  double discovery_dual_abs_tolerance_objective_per_m = 1e-8;
+  double discovery_dual_rel_tolerance = 1e-6;
+  double discovery_kkt_tolerance_objective_per_m = 1e-8;
+  double discovery_tv_subgradient_tolerance_objective_per_m = 1e-8;
+  int discovery_admm_max_iterations = 10000;
 
   // --- GNC (Graduated Non-Convexity) with TLS kernel ---
   double gnc_mu_step = 1.4;        // mu homotopy step (GTSAM default)
@@ -177,5 +258,9 @@ class ConfigLoader {
   static std::string ResolveBagPath(const std::string& config_dir,
                                     const std::string& bag_path);
 };
+
+std::string RangeLinkKey(int tag_id, int anchor_id);
+bool ParseRangeLinkKey(const std::string& link, int* tag_id, int* anchor_id);
+double FixedBetaForLink(const Config& cfg, int tag_id, int anchor_id);
 
 }  // namespace uifgo

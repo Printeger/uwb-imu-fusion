@@ -13,7 +13,7 @@
 | 鲁棒策略 | IRLS 迭代加权 + $\chi^2$ 硬剔除回环 |
 | 在线标定 | 杆臂 $t_{UI}$、锚点偏移 $\delta A_m$、每锚点测距偏置 $\beta_m$（多趟渐进打开） |
 | 噪声模型 | 时间自适应 $\sigma^2 = \sigma_r^2 + (v_{\max} \cdot \Delta t / 3)^2$ |
-| NLOS 过滤 | RSSI 差值法: `rx_rssi - fp_rssi > 6 dB` → 丢弃 |
+| NLOS 过滤 | legacy 入口按 RSSI 差值丢弃；T02 paper 入口保留合法 suspected NLOS 并记录 mask |
 
 ## 2. 项目结构
 
@@ -102,8 +102,67 @@ source devel/setup.bash
 
 ```bash
 catkin test uwb_imu_fgo
-# 预期: 36 tests, 0 errors, 0 failures
+# 当前 T02 review 实测: 68 tests, 0 errors, 0 failures
 ```
+
+### 5.1 T02 paper 输入 smoke
+
+该入口复用 C++ loader、initializer、IMU preintegration、GraphBuilder 和 UWB factor，只运行一次
+`all_valid_no_rejection` LM graph。它不会调用 legacy `Optimizer::Optimize` 的 GNC/拒绝流程，也尚未实现
+discovery、segment refit、评分、gate 或 covariance。
+
+以下命令已在当前 `/home/mint` 工作区实际运行并正常退出；复审证据使用新的隔离目录
+`doc/ie_sprint/evidence/t02_review_20260906T090000Z/runs/sfuise_walk1_review_acceptance_final`：
+
+```bash
+source /home/mint/ws_fusion_uwb/devel/setup.bash
+/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner \
+  --config /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/config/paper/sfuise_walk1_t02_smoke.yaml \
+  --output-root /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t02_review_20260906T090000Z/runs \
+  --run-id sfuise_walk1_review_acceptance_final
+```
+
+每次运行创建唯一子目录并写入 observation ledger、input-plan hash、配置快照、同一 final graph/Values
+导出的 trajectory/IMU bias/residual 及 capability status。观测身份由 bag 内容标识、源 UWB message 序号和
+message 内 range 序号组成，序号在完整 recording 上分配后再应用裁剪。T02 只支持单 tag、固定外参、
+`td_init=0` 和 SFUISE `uwb_group_window=0`；其他值会显式失败。非空 `fixed_beta_by_link` 必须使用规范
+`tag_id:anchor_id` 键并完整覆盖本次 plan 使用的链路。示例配置的 map 为空，manifest 明确记录
+`MISSING_CALIBRATION_DEVELOPMENT_ONLY`，不能解释为已标定的零偏置。
+
+paper runner 只在 LM 至少执行一次、目标与导航状态均有限且满足配置收敛条件后输出成功状态。成功或失败
+状态均记录实际迭代和终止信息；未收敛 run 不导出 trajectory、bias 或 residual 作为有效估计。
+
+### 5.2 T09 development batch 与 evaluator
+
+T09 的 paper 工具位于 `tools/paper/`：batch runner 先预登记 `run_unit × method × execution_type`，为每次
+进程调用创建唯一目录，并把 baseline、automatic/fixed Stage 2 cache 与 diagnostic/final 依赖分别调度。
+estimator effective config 会移除 GT/truth/label/oracle 字段；fixed-partition 仅允许精确 DEBUG 标签的无幅值
+support manifest。以下是 development engineering 验收命令，不是 T10 locked 或正式论文实验：
+
+```bash
+cd /home/mint/ws_fusion_uwb
+/usr/bin/catkin build uwb_imu_fgo --no-status
+cmake --build build/uwb_imu_fgo --target tests -j2
+
+cd /home/mint/ws_fusion_uwb/build/uwb_imu_fgo
+ctest --output-on-failure
+
+source /home/mint/ws_fusion_uwb/devel/setup.bash
+cd /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie
+python3 -B tools/paper/run_experiments.py \
+  --manifest config/paper/t09_development_batch.yaml \
+  --runner /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner \
+  --output-root /tmp/uifgo_t09_development_<unique>
+
+python3 -B tools/paper/evaluate_runs.py \
+  --batch-manifest /tmp/uifgo_t09_development_<unique>/batch_manifest.json \
+  --evaluation-manifest config/paper/t09_development_evaluation.yaml
+```
+
+batch 只在 schema、调度、identity 或 artifact 完整性损坏时非零退出；预登记 estimator failure 会保留为
+cell 终态并使 batch 状态成为 `COMPLETE_WITH_RUN_FAILURES`。当前 T07 step/ramp 的 automatic Stage 1 预期
+仍为 `MAX_OUTER_ITERATIONS`，不得通过改变停止条件制造成功。完整本地验收边界和 machine-readable 结果见
+[`doc/ie_sprint/evidence/t09_20260907T143701Z/VERIFICATION.md`](doc/ie_sprint/evidence/t09_20260907T143701Z/VERIFICATION.md)。
 
 ## 6. 配置文件说明
 
@@ -435,7 +494,7 @@ python3 tools/analyze_log.py logs/2026-06-15_16-09-35_sim_circle/
 | `angular_velocity` | 角速度 (rad/s) | Z-up，右手法则 |
 | `orientation` | 有效四元数 | `R_body_to_world` |
 
-> ⚠️ 仿真 IMU 单位为 **m/s²**，配置 `imu_acc_in_g: false`。  
+> ⚠️ 仿真 IMU 单位为 **m/s²**，配置 `imu_acc_in_g: false`。
 > 原始 Livox IMU 单位为 **g-units**，配置 `imu_acc_in_g: true`。
 
 #### 仿真 UWB (`/nlink_linktrack_nodeframe3` — `LinktrackNodeframe3`)

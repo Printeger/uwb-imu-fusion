@@ -7,6 +7,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <stdexcept>
 
 #include "uifgo/imu_preint.h"
 #include "uifgo/uwb_factor.h"
@@ -20,8 +21,10 @@ using symbol_shorthand::V;  // Vector3 velocity
 using symbol_shorthand::X;  // Pose3
 using symbol_shorthand::Z;  // double range bias
 
-GraphBuilder::GraphBuilder(const Config& cfg)
-    : cfg_(cfg), anchors_(cfg.anchors) {}
+GraphBuilder::GraphBuilder(const Config& cfg, ImuCovarianceModel model)
+    : cfg_(cfg), imu_covariance_model_(model), anchors_(cfg.anchors) {
+  (void)ImuCovarianceModelName(model);
+}
 
 gtsam::Key GraphBuilder::lever_key() const { return L(0); }
 gtsam::Key GraphBuilder::anchor_key(int m) const { return A(m); }
@@ -49,23 +52,38 @@ void GraphBuilder::AddUwbFactorsForFrame(size_t kf_idx, const UwbFrame& frame,
     }
     const Point3& A_m = it->pos;
 
-    // Time-adaptive sigma
-    double dt_last = 0.0;
-    auto tit = last_anchor_time_.find(m);
-    if (tit != last_anchor_time_.end()) {
-      dt_last = frame.t - tit->second;
+    // Paper inputs carry a strategy-independent sigma snapshot. Legacy inputs
+    // keep the old adaptive computation because nominal_sigma is NaN.
+    double sigma = r.nominal_sigma;
+    if (!std::isfinite(sigma)) {
+      double dt_last = 0.0;
+      auto tit = last_anchor_time_.find(m);
+      if (tit != last_anchor_time_.end()) {
+        dt_last = frame.t - tit->second;
+      }
+      sigma = AdaptiveSigma(dt_last);
     }
-    double sigma = AdaptiveSigma(dt_last);
+    if (!(sigma > 0.0) || !std::isfinite(sigma)) {
+      throw std::runtime_error("GraphBuilder: invalid nominal sigma");
+    }
     last_anchor_time_[m] = frame.t;
+
+    const double fixed_beta = FixedBetaForLink(cfg_, frame.tag_id, m);
 
     auto factor =
         MakeUwbFactor(X(kf_idx), lever_key(), anchor_key(m), bias_key(m), A_m,
                       cfg_.lever_arm_init, r.dist, sigma, cfg_.calib_lever,
-                      cfg_.calib_anchor, cfg_.calib_range_bias);
+                      cfg_.calib_anchor, cfg_.calib_range_bias, fixed_beta);
 
     size_t idx = graph->size();
     graph->add(factor);
     uwb_indices->push_back(idx);
+    FactorMeta meta;
+    meta.factor_index = idx;
+    meta.obs_id = r.obs_id;
+    meta.factor_type = "uwb_range";
+    meta.keys.assign(factor->keys().begin(), factor->keys().end());
+    factor_meta_.push_back(std::move(meta));
   }
 }
 
@@ -74,6 +92,10 @@ void GraphBuilder::Build(const std::vector<UwbFrame>& uwb_kf,
                          const InitResult& init, NonlinearFactorGraph* graph,
                          Values* values, std::vector<size_t>* uwb_indices) {
   const size_t N = uwb_kf.size();
+  if (cfg_.calib_range_bias && !cfg_.fixed_beta_by_link.empty()) {
+    throw std::invalid_argument(
+        "GraphBuilder: fixed and online range bias are mutually exclusive");
+  }
   if (N < 2) {
     std::cerr << "GraphBuilder: need >= 2 keyframes, got " << N << "\n";
     return;
@@ -83,6 +105,7 @@ void GraphBuilder::Build(const std::vector<UwbFrame>& uwb_kf,
   values->clear();
   uwb_indices->clear();
   last_anchor_time_.clear();
+  factor_meta_.clear();
 
   // Bias vector
   const imuBias::ConstantBias bias0(init.ba0, init.bg0);
@@ -125,7 +148,7 @@ void GraphBuilder::Build(const std::vector<UwbFrame>& uwb_kf,
   AddUwbFactorsForFrame(0, uwb_kf[0], graph, uwb_indices, values, true);
 
   // --- Step 4: Loop keyframes ---
-  ImuPreintegrator pim(cfg_, init.gravity_world);
+  ImuPreintegrator pim(cfg_, init.gravity_world, imu_covariance_model_);
   size_t i_imu = 0;
   while (i_imu < imu.size() && imu[i_imu].t <= uwb_kf[0].t) ++i_imu;
 

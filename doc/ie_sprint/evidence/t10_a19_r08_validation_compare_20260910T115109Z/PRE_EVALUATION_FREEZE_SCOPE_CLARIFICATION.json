@@ -1,0 +1,25 @@
+{
+  "all_five_final_estimates_valid_cells": [
+    "a10_val_turn_01_seed20101_ramp_steep",
+    "a10_val_turn_01_seed20101_step1",
+    "a10_val_turn_01_seed20101_step2",
+    "a10_val_turn_01_seed20101_step3",
+    "a10_val_turn_02_seed20102_step1",
+    "a10_val_turn_02_seed20102_step2",
+    "a10_val_turn_02_seed20102_step3"
+  ],
+  "clarification": "A scored cell remains independently evaluable when one or more final estimates failed; failures must be reported as UNAVAILABLE.",
+  "parent_freeze_sha256": "a9cad7811856e7582f6665cf02ec1923626496c3313598eb5c6b9ea8ceb42fe1",
+  "pipeline_scored_cells": [
+    "a10_val_turn_01_seed20101_ramp_gentle",
+    "a10_val_turn_01_seed20101_ramp_steep",
+    "a10_val_turn_01_seed20101_step1",
+    "a10_val_turn_01_seed20101_step2",
+    "a10_val_turn_01_seed20101_step3",
+    "a10_val_turn_02_seed20102_step1",
+    "a10_val_turn_02_seed20102_step2",
+    "a10_val_turn_02_seed20102_step3"
+  ],
+  "recorded_before_truth_open_utc": "2026-09-10T12:56:16.434514+00:00",
+  "schema": "T10_A19_R08_PRE_EVALUATION_FREEZE_SCOPE_CLARIFICATION_V1"
+}

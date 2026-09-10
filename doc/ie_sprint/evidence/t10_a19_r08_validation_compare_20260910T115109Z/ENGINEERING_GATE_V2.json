@@ -1,0 +1,17 @@
+{
+  "checks": {
+    "actual_no_c_recovery_fallback": "engineering/fix_v2_suppress_fixture/summary.json",
+    "new_abi_runner": true,
+    "source_dispatch_check": "engineering/fix_v2_dispatch_source_check.log",
+    "truth_opened": false,
+    "validation_full_raw_prepare_zero_optimizer": "engineering/fix_v2_prepare_los/prepare_status.json"
+  },
+  "continuation": "only 11 previously unrun fixed rows; consumed base01/los ticket remains FAILED",
+  "failed_row_retry": false,
+  "fix": "dispatch empty partition to PAPER_CERTIFIED_PAIR_REDUCTION_V1 with allow_inexact_handoff=false",
+  "passed_utc": "2026-09-10T12:28:47.437693+00:00",
+  "preserved_failed_science_ticket": "T10-A19-R08-01",
+  "root_cause": "empty automatic partition was incorrectly given the nonempty-C Stage2 inexact-handoff request",
+  "schema": "T10_A19_R08_ENGINEERING_GATE_V2",
+  "status": "PASS_AFTER_SHARED_ZERO_C_DISPATCH_FIX"
+}

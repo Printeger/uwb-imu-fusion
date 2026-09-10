@@ -1,0 +1,189 @@
+{
+  "runs": [
+    {
+      "argv": [
+        "python3",
+        "tools/paper/a19_r08_evaluate.py",
+        "--run-root",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/attempts/a10_val_turn_01_seed20101_ramp_gentle/output",
+        "--generation-manifest",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/generation_manifest.json",
+        "--freeze-manifest",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/freeze_cells/a10_val_turn_01_seed20101_ramp_gentle.json",
+        "--scenario",
+        "ramp_gentle",
+        "--validation-context",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts_v2/a10_val_turn_01_seed20101_ramp_gentle.json",
+        "--output",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/evaluation/a10_val_turn_01_seed20101_ramp_gentle.json"
+      ],
+      "cell": "a10_val_turn_01_seed20101_ramp_gentle",
+      "elapsed_s": 0.31671127900006013,
+      "exit_code": 0,
+      "finished_utc": "2026-09-10T12:56:16.848901+00:00",
+      "scenario": "ramp_gentle"
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/paper/a19_r08_evaluate.py",
+        "--run-root",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/attempts/a10_val_turn_01_seed20101_ramp_steep/output",
+        "--generation-manifest",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/generation_manifest.json",
+        "--freeze-manifest",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/freeze_cells/a10_val_turn_01_seed20101_ramp_steep.json",
+        "--scenario",
+        "ramp_steep",
+        "--validation-context",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts_v2/a10_val_turn_01_seed20101_ramp_steep.json",
+        "--output",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/evaluation/a10_val_turn_01_seed20101_ramp_steep.json"
+      ],
+      "cell": "a10_val_turn_01_seed20101_ramp_steep",
+      "elapsed_s": 0.2538327219999701,
+      "exit_code": 0,
+      "finished_utc": "2026-09-10T12:56:17.103846+00:00",
+      "scenario": "ramp_steep"
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/paper/a19_r08_evaluate.py",
+        "--run-root",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/attempts/a10_val_turn_01_seed20101_step1/output",
+        "--generation-manifest",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/generation_manifest.json",
+        "--freeze-manifest",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/freeze_cells/a10_val_turn_01_seed20101_step1.json",
+        "--scenario",
+        "step1",
+        "--validation-context",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_01_seed20101_step1.json",
+        "--output",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/evaluation/a10_val_turn_01_seed20101_step1.json"
+      ],
+      "cell": "a10_val_turn_01_seed20101_step1",
+      "elapsed_s": 0.27951941399999214,
+      "exit_code": 0,
+      "finished_utc": "2026-09-10T12:56:17.385379+00:00",
+      "scenario": "step1"
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/paper/a19_r08_evaluate.py",
+        "--run-root",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/attempts/a10_val_turn_01_seed20101_step2/output",
+        "--generation-manifest",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/generation_manifest.json",
+        "--freeze-manifest",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/freeze_cells/a10_val_turn_01_seed20101_step2.json",
+        "--scenario",
+        "step2",
+        "--validation-context",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_01_seed20101_step2.json",
+        "--output",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/evaluation/a10_val_turn_01_seed20101_step2.json"
+      ],
+      "cell": "a10_val_turn_01_seed20101_step2",
+      "elapsed_s": 0.22171284900002775,
+      "exit_code": 0,
+      "finished_utc": "2026-09-10T12:56:17.608211+00:00",
+      "scenario": "step2"
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/paper/a19_r08_evaluate.py",
+        "--run-root",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/attempts/a10_val_turn_01_seed20101_step3/output",
+        "--generation-manifest",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/generation_manifest.json",
+        "--freeze-manifest",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/freeze_cells/a10_val_turn_01_seed20101_step3.json",
+        "--scenario",
+        "step3",
+        "--validation-context",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts_v2/a10_val_turn_01_seed20101_step3.json",
+        "--output",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/evaluation/a10_val_turn_01_seed20101_step3.json"
+      ],
+      "cell": "a10_val_turn_01_seed20101_step3",
+      "elapsed_s": 0.2312058380000508,
+      "exit_code": 0,
+      "finished_utc": "2026-09-10T12:56:17.840216+00:00",
+      "scenario": "step3"
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/paper/a19_r08_evaluate.py",
+        "--run-root",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/attempts/a10_val_turn_02_seed20102_step1/output",
+        "--generation-manifest",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_02_seed20102/generation_manifest.json",
+        "--freeze-manifest",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/freeze_cells/a10_val_turn_02_seed20102_step1.json",
+        "--scenario",
+        "step1",
+        "--validation-context",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts_v2/a10_val_turn_02_seed20102_step1.json",
+        "--output",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/evaluation/a10_val_turn_02_seed20102_step1.json"
+      ],
+      "cell": "a10_val_turn_02_seed20102_step1",
+      "elapsed_s": 0.21464471000001595,
+      "exit_code": 0,
+      "finished_utc": "2026-09-10T12:56:18.055785+00:00",
+      "scenario": "step1"
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/paper/a19_r08_evaluate.py",
+        "--run-root",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/attempts/a10_val_turn_02_seed20102_step2/output",
+        "--generation-manifest",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_02_seed20102/generation_manifest.json",
+        "--freeze-manifest",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/freeze_cells/a10_val_turn_02_seed20102_step2.json",
+        "--scenario",
+        "step2",
+        "--validation-context",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts_v2/a10_val_turn_02_seed20102_step2.json",
+        "--output",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/evaluation/a10_val_turn_02_seed20102_step2.json"
+      ],
+      "cell": "a10_val_turn_02_seed20102_step2",
+      "elapsed_s": 0.20938635300001351,
+      "exit_code": 0,
+      "finished_utc": "2026-09-10T12:56:18.266050+00:00",
+      "scenario": "step2"
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/paper/a19_r08_evaluate.py",
+        "--run-root",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/attempts/a10_val_turn_02_seed20102_step3/output",
+        "--generation-manifest",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_02_seed20102/generation_manifest.json",
+        "--freeze-manifest",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/freeze_cells/a10_val_turn_02_seed20102_step3.json",
+        "--scenario",
+        "step3",
+        "--validation-context",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts_v2/a10_val_turn_02_seed20102_step3.json",
+        "--output",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/evaluation/a10_val_turn_02_seed20102_step3.json"
+      ],
+      "cell": "a10_val_turn_02_seed20102_step3",
+      "elapsed_s": 0.22497951700006524,
+      "exit_code": 0,
+      "finished_utc": "2026-09-10T12:56:18.492276+00:00",
+      "scenario": "step3"
+    }
+  ],
+  "schema": "T10_A19_R08_INDEPENDENT_EVALUATION_RUNS_V1"
+}

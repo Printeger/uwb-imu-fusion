@@ -1,0 +1,27 @@
+{
+  "actual_consumed_s": 1652.690470722,
+  "entries": [
+    {
+      "attempt_count": 1,
+      "base": "a10_val_turn_02_seed20102",
+      "elapsed_s": 52.690470721999986,
+      "exit_code": 1,
+      "finished_utc": "2026-09-10T12:52:55.369406+00:00",
+      "forbidden_truth_open_count": 0,
+      "forbidden_truth_open_lines": [],
+      "ordinal": 1,
+      "reserved_s": 700.0,
+      "reserved_utc": "2026-09-10T12:52:02.644394+00:00",
+      "run_id": "a10_val_turn_02_seed20102_ramp_steep",
+      "scenario": "ramp_steep",
+      "status": "FAILED"
+    }
+  ],
+  "initial_engineering_generation_prepare_s": 1600.0,
+  "parallelism": 1,
+  "per_cell_reservation_s": 700.0,
+  "reserve_not_automatically_consumed_s": 3600.0,
+  "scheduled_limit_s": 10800.0,
+  "schema": "T10_A19_R08_DURABLE_BUDGET_LEDGER_V1",
+  "total_allocation_s": 14400.0
+}

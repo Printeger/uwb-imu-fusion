@@ -1,0 +1,1 @@
+{"status":"CONVERGED","reason":"ALL_JOINT_STOP_CONDITIONS_SATISFIED","converged":true,"outers":24,"calls":102,"trials":196,"accepted":102,"rejected":94,"unresolved":0,"inexact_handoffs":0,"certificate_seconds":13.083352841,"elapsed_seconds":23.676368850999999}

@@ -1,0 +1,11 @@
+{
+  "actual_consumed_s": 300.0,
+  "entries": [],
+  "initial_engineering_generation_prepare_s": 300.0,
+  "parallelism": 1,
+  "per_cell_reservation_s": 700.0,
+  "reserve_not_automatically_consumed_s": 3600.0,
+  "scheduled_limit_s": 10800.0,
+  "schema": "T10_A19_R08_DURABLE_BUDGET_LEDGER_V1",
+  "total_allocation_s": 14400.0
+}

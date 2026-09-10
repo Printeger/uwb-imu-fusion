@@ -1,0 +1,7 @@
+schema: t04_oracle_support_v1
+T04_ORACLE_SUPPORT_DEBUG_ONLY: true
+segments:
+  - segment_id: sim-circle-anchor-1-debug
+    link: "1:1"
+    start_time: 1781510684.4
+    end_time: 1781510688.4

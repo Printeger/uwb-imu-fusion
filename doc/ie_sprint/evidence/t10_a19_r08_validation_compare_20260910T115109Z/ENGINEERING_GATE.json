@@ -1,0 +1,78 @@
+{
+  "checks": {
+    "actual_no_c_recovery_fallback": {
+      "pass": true,
+      "summary": "engineering/suppress_fixture/summary.json"
+    },
+    "base01_full_raw_prepare": {
+      "optimizer_calls": 0,
+      "pass": true,
+      "status": "engineering/prepare_base01/prepare_status.json"
+    },
+    "base02_full_raw_prepare": {
+      "optimizer_calls": 0,
+      "pass": true,
+      "status": "engineering/prepare_base02/prepare_status.json"
+    },
+    "cmake_abi_build": {
+      "exit_code": 0,
+      "log": "engineering/build.log",
+      "pass": true
+    },
+    "cross_role_test_parent_truth_cli_rejection": {
+      "exit_codes": [
+        2,
+        2,
+        2
+      ],
+      "pass": true
+    },
+    "development_compatibility": {
+      "initial_failure_preserved": "legacy non-target anchor incorrectly raised unknown scenario",
+      "pass": true,
+      "retry_log": "engineering/development_generator_compat_retry.log"
+    },
+    "fresh_parent_leaf_and_atomic_status": {
+      "pass": true
+    },
+    "inference_zero_mixed_fallback_regression": {
+      "log": "engineering/test_inference.log",
+      "pass": true,
+      "tests": 20
+    },
+    "outer_budget_ledger": {
+      "pass": true,
+      "per_cell_reservation_s": 700,
+      "reserve_s": 3600,
+      "scheduled_s": 10800
+    },
+    "per_final_process_timeout": {
+      "limit_s": 900,
+      "pass": true
+    },
+    "refit_regression": {
+      "log": "engineering/test_refit.log",
+      "pass": true,
+      "tests": 27
+    },
+    "scenario_truth_fixture_semantics": {
+      "log": "engineering/generator_semantics.log",
+      "pass": true,
+      "truth_source": "analytic fixture only; no validation evaluation payload opened"
+    },
+    "validation_identity_unit": {
+      "log": "engineering/test_discovery.log",
+      "pass": true,
+      "tests": 2
+    }
+  },
+  "limitations": [
+    "mixed/zero-eligible production graph behavior is exercised by linked C++ inference regression; actual no-C callback/fallback is exercised by the runner fixture",
+    "no validation truth payload opened"
+  ],
+  "measured_scheduled_cost_s": 138.35,
+  "passed_utc": "2026-09-10T12:20:54.821950+00:00",
+  "schema": "T10_A19_R08_ENGINEERING_GATE_V1",
+  "science_ticket_issued_after_gate": true,
+  "status": "PASS"
+}

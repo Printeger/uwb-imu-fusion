@@ -1,0 +1,41 @@
+# Frozen development fixture used only by the T07 cache generator.
+dataset:
+  interface: original
+
+anchors:
+  - {id: 1, pos: [-5.0, -5.0, 1.0], prior_sigma: 0.1}
+  - {id: 2, pos: [-5.0, -5.0, 5.0], prior_sigma: 0.1}
+  - {id: 3, pos: [-5.0, 5.0, 1.0], prior_sigma: 0.1}
+  - {id: 4, pos: [-5.0, 5.0, 5.0], prior_sigma: 0.1}
+  - {id: 5, pos: [5.0, -5.0, 1.0], prior_sigma: 0.1}
+  - {id: 6, pos: [5.0, -5.0, 5.0], prior_sigma: 0.1}
+  - {id: 7, pos: [5.0, 5.0, 1.0], prior_sigma: 0.1}
+  - {id: 8, pos: [5.0, 5.0, 5.0], prior_sigma: 0.1}
+
+imu:
+  sigma_a: 0.1
+  sigma_g: 0.01
+  sigma_wa: 0.01
+  sigma_wg: 2.0e-5
+  gravity: 9.81
+  imu_acc_in_g: false
+
+uwb:
+  sigma_range: 0.1
+  v_max: 2.0
+  nlos_rssi_diff: 6.0
+  min_range: 0.1
+  max_range: 50.0
+
+topics:
+  imu: /sim/imu
+  uwb: /nlink_linktrack_nodeframe3
+  gt_odom: /sim/odom
+
+bag:
+  path: ../../../data/sim_circle_2026-06-15-16-04-35.bag
+  start: 0.0
+  durr: -1.0
+
+keyframe:
+  step: 10

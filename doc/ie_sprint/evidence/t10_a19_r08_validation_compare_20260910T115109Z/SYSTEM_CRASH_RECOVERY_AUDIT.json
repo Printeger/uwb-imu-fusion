@@ -1,0 +1,15 @@
+{
+  "consumed_partial_no_retry": [
+    "a10_val_turn_01_seed20101_step2",
+    "a10_val_turn_02_seed20102_ramp_gentle"
+  ],
+  "only_continued_cell": "a10_val_turn_02_seed20102_ramp_steep",
+  "reason": "System interruption left no live process; only this matrix cell had no attempt directory or ticket consumption.",
+  "recorded_utc": "2026-09-10T12:52:02.560158+00:00",
+  "running_processes_observed": [],
+  "schema": "T10_A19_R08_SYSTEM_CRASH_RECOVERY_AUDIT_V1",
+  "scientific_failures_no_retry": [
+    "a10_val_turn_01_seed20101_los",
+    "a10_val_turn_02_seed20102_los"
+  ]
+}

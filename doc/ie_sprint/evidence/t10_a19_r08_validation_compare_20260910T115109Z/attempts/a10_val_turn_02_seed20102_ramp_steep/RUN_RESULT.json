@@ -1,0 +1,15 @@
+{
+  "attempt_count": 1,
+  "base": "a10_val_turn_02_seed20102",
+  "elapsed_s": 52.690470721999986,
+  "exit_code": 1,
+  "finished_utc": "2026-09-10T12:52:55.369406+00:00",
+  "forbidden_truth_open_count": 0,
+  "forbidden_truth_open_lines": [],
+  "ordinal": 1,
+  "reserved_s": 700.0,
+  "reserved_utc": "2026-09-10T12:52:02.644394+00:00",
+  "run_id": "a10_val_turn_02_seed20102_ramp_steep",
+  "scenario": "ramp_steep",
+  "status": "FAILED"
+}

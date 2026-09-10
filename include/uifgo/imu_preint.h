@@ -5,6 +5,7 @@
 #include <gtsam/navigation/CombinedImuFactor.h>
 #include <gtsam/navigation/ImuBias.h>
 #include <gtsam/base/Vector.h>
+#include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <boost/shared_ptr.hpp>
 #include <vector>
 
@@ -14,7 +15,8 @@ namespace uifgo {
 // Manages reset-integrate-predict lifecycle for one IMU segment.
 class ImuPreintegrator {
  public:
-  ImuPreintegrator(const Config& cfg, const gtsam::Vector3& gravity_world);
+  ImuPreintegrator(const Config& cfg, const gtsam::Vector3& gravity_world,
+      ImuCovarianceModel model = ImuCovarianceModel::LEGACY_GTSAM_COMBINED_DEFAULT_V1);
 
   // Reset internal state and set bias for new integration segment.
   void Reset(const gtsam::imuBias::ConstantBias& bias);
@@ -35,6 +37,17 @@ class ImuPreintegrator {
   boost::shared_ptr<gtsam::PreintegratedCombinedMeasurements::Params> params_;
   gtsam::PreintegratedCombinedMeasurements pim_;
 };
+
+// Canonical identity of actual parameters and the native propagation convention.
+std::string ImuCovarianceParametersCanonical(
+    const gtsam::PreintegrationCombinedParams& params, ImuCovarianceModel model);
+std::string ImuCovarianceModelIdentity(const Config& cfg,
+    const gtsam::Vector3& gravity_world, ImuCovarianceModel model);
+
+// Paper consumption guard for a supplied graph, including cached rebuilds.
+// Empty-IMU engineering graphs remain legal; actual Combined PIMs must match.
+bool PaperImuCovarianceModelMatchesGraph(const gtsam::NonlinearFactorGraph& graph,
+    const Config& cfg, std::string* reason = nullptr);
 
 // Linear interpolation of IMU samples to exact time t.
 ImuSample InterpolateImu(const std::vector<ImuSample>& imu, double t);

@@ -1,0 +1,2 @@
+group_id,eligible,decision,reason,eta_pass,s_pass,gamma_pass,max_gamma,linearization_id
+group_0,1,USE,USE_STRUCTURED_DEBIAS_NO_GATE,0,0,0,0.940734,t05lin-sha256:fbef45ea55b0056189a6080ec3d0bc194c3e5c0a1891ca6faae17cb38331fdc4

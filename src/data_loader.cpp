@@ -59,6 +59,25 @@ void SetImuOrientation(const sensor_msgs::Imu& msg, ImuSample* sample) {
   sample->has_orientation = true;
 }
 
+bool InBagWindow(const rosbag::MessageInstance& message,
+                 const ros::Time& begin, const ros::Time& end) {
+  return message.getTime() >= begin && message.getTime() <= end;
+}
+
+void AttachSourceProvenance(UwbFrame* frame,
+                            std::uint64_t source_message_index,
+                            std::uint64_t* source_obs_index) {
+  for (size_t range_index = 0; range_index < frame->ranges.size();
+       ++range_index) {
+    UwbRange& range = frame->ranges[range_index];
+    range.source_obs_index = (*source_obs_index)++;
+    range.source_message_index = source_message_index;
+    range.source_range_index = range_index;
+    range.source_time = frame->t;
+    range.source_tag_id = frame->tag_id;
+  }
+}
+
 }  // namespace
 
 DataLoader::DataLoader(const Config& cfg)
@@ -108,11 +127,15 @@ bool DataLoader::LoadFromBag(const std::string& bag_path,
 
   out_imu->clear();
   out_uwb->clear();
+  std::uint64_t source_obs_index = 0;
+  std::uint64_t source_message_index = 0;
+  rosbag::View source_view(bag, rosbag::TopicQuery(topics));
 
-  for (const rosbag::MessageInstance& m : view) {
+  for (const rosbag::MessageInstance& m : source_view) {
     std::string topic = m.getTopic();
 
     if (topic == imu_topic_) {
+      if (!InBagWindow(m, time_start, time_finish)) continue;
       sensor_msgs::Imu::ConstPtr imu_msg = m.instantiate<sensor_msgs::Imu>();
       if (!imu_msg) continue;
 
@@ -131,6 +154,7 @@ bool DataLoader::LoadFromBag(const std::string& bag_path,
       out_imu->push_back(s);
 
     } else if (topic == uwb_topic_) {
+      const std::uint64_t message_index = source_message_index++;
       // Original project message. MessageInstance checks the ROS MD5, so MCD's
       // uint32 local_time variant is handled by the second definition below.
       auto uwb_msg = m.instantiate<uwb_imu_fgo::LinktrackNodeframe3>();
@@ -142,6 +166,9 @@ bool DataLoader::LoadFromBag(const std::string& bag_path,
         if (!mcd_msg) continue;
         frame = ConvertUwbFrame(*mcd_msg);
       }
+
+      AttachSourceProvenance(&frame, message_index, &source_obs_index);
+      if (!InBagWindow(m, time_start, time_finish)) continue;
 
       if (!frame.ranges.empty()) {
         out_uwb->push_back(frame);
@@ -201,6 +228,7 @@ bool DataLoader::LoadFromBags(const std::string& imu_bag_path,
 
   out_imu->clear();
   out_uwb->clear();
+  std::uint64_t source_obs_index = 0;
   rosbag::View imu_view(imu_bag, rosbag::TopicQuery({imu_topic_}), common_begin,
                         common_end);
   rosbag::View uwb_view(uwb_bag, rosbag::TopicQuery({uwb_topic_}), common_begin,
@@ -236,6 +264,8 @@ bool DataLoader::LoadFromBags(const std::string& imu_bag_path,
       }
       frame = ConvertUwbFrame(*mcd);
     }
+    for (auto& range : frame.ranges)
+      range.source_obs_index = source_obs_index++;
     if (!frame.ranges.empty()) out_uwb->push_back(std::move(frame));
   }
   imu_bag.close();
@@ -797,7 +827,8 @@ std::vector<NavState> DataLoader::LoadGroundTruthMiluv(
 bool DataLoader::LoadSfuiseBag(const std::string& data_dir, int sequence,
                                std::vector<ImuSample>* out_imu,
                                std::vector<UwbFrame>* out_uwb,
-                               std::vector<AnchorConfig>* out_anchors) {
+                               std::vector<AnchorConfig>* out_anchors,
+                               bool preserve_invalid_ranges) {
   if (data_dir.empty()) {
     std::cerr << "DataLoader(SFUISE): empty data dir.\n";
     return false;
@@ -900,11 +931,15 @@ bool DataLoader::LoadSfuiseBag(const std::string& data_dir, int sequence,
   UwbFrame pending_frame;
   bool have_pending = false;
   size_t uwb_msg_count = 0, uwb_range_count = 0, uwb_valid_count = 0;
+  std::uint64_t source_obs_index = 0;
+  std::uint64_t source_message_index = 0;
+  rosbag::View source_view(bag, rosbag::TopicQuery(topics));
 
-  for (const rosbag::MessageInstance& m : view) {
+  for (const rosbag::MessageInstance& m : source_view) {
     std::string topic = m.getTopic();
 
     if (topic == imu_topic) {
+      if (!InBagWindow(m, time_start, time_finish)) continue;
       auto imu_msg = m.instantiate<sensor_msgs::Imu>();
       if (!imu_msg) continue;
 
@@ -920,51 +955,66 @@ bool DataLoader::LoadSfuiseBag(const std::string& data_dir, int sequence,
       out_imu->push_back(s);
 
     } else if (topic == uwb_topic) {
+      const std::uint64_t message_index = source_message_index++;
       auto stick = m.instantiate<isas_msgs::RTLSStick>();
       if (!stick) continue;
-      ++uwb_msg_count;
-
+      const bool selected = InBagWindow(m, time_start, time_finish);
       const double t_msg = stick->header.stamp.toSec();
       const int tag_id = static_cast<int>(stick->id);
+      if (selected) ++uwb_msg_count;
 
-      // Collect all valid ranges from this RTLSStick.
-      std::vector<UwbRange> valid_ranges;
-      for (const auto& rg : stick->ranges) {
-        if (rg.ra == 0) continue;  // ra==0 = invalid/old data
+      // Capture source ordinals before grouping. The paper path preserves
+      // protocol-invalid entries in its ledger; legacy callers retain the
+      // historical behavior through preserve_invalid_ranges=false.
+      std::vector<UwbRange> decoded_ranges;
+      for (size_t range_index = 0; range_index < stick->ranges.size();
+           ++range_index) {
+        const auto& rg = stick->ranges[range_index];
         UwbRange r;
         r.anchor_id = static_cast<int>(rg.id);
         r.dist = rg.range;
         r.fp_rssi = rg.fpp;  // first path power
         r.rx_rssi = rg.rxp;  // received power
-        valid_ranges.push_back(r);
+        r.source_obs_index = source_obs_index++;
+        r.source_message_index = message_index;
+        r.source_range_index = range_index;
+        r.source_time = t_msg;
+        r.source_tag_id = tag_id;
+        r.source_valid = rg.ra != 0;
+        if (!r.source_valid)
+          r.source_validity_reason = "PROTOCOL_INVALID_RA_ZERO";
+        if (selected && (r.source_valid || preserve_invalid_ranges))
+          decoded_ranges.push_back(std::move(r));
+        if (selected && rg.ra != 0) ++uwb_valid_count;
       }
-      uwb_range_count += stick->ranges.size();
-      uwb_valid_count += valid_ranges.size();
+      if (selected) uwb_range_count += stick->ranges.size();
 
-      if (valid_ranges.empty()) continue;
+      if (!selected) continue;
+      if (decoded_ranges.empty()) continue;
 
       if (cfg_.sfuise_uwb_group_window <= 0.0) {
         // No grouping: every RTLSStick becomes its own UwbFrame.
         UwbFrame frame;
         frame.t = t_msg;
         frame.tag_id = tag_id;
-        frame.ranges = std::move(valid_ranges);
+        frame.ranges = std::move(decoded_ranges);
         out_uwb->push_back(frame);
       } else {
         // Group ranges within the time window.
         if (!have_pending) {
           pending_frame.t = t_msg;
           pending_frame.tag_id = tag_id;
-          pending_frame.ranges = valid_ranges;
+          pending_frame.ranges = decoded_ranges;
           have_pending = true;
         } else if (t_msg - pending_frame.t <= cfg_.sfuise_uwb_group_window) {
           pending_frame.ranges.insert(pending_frame.ranges.end(),
-                                      valid_ranges.begin(), valid_ranges.end());
+                                      decoded_ranges.begin(),
+                                      decoded_ranges.end());
         } else {
           out_uwb->push_back(pending_frame);
           pending_frame.t = t_msg;
           pending_frame.tag_id = tag_id;
-          pending_frame.ranges = std::move(valid_ranges);
+          pending_frame.ranges = std::move(decoded_ranges);
         }
       }
     }

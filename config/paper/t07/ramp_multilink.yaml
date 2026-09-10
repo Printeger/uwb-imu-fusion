@@ -1,0 +1,21 @@
+schema: t07_scenario_v1
+scenario_id: sim_circle_ramp_multilink_dev
+scenario_seed: 7002
+time_basis: sensor_time_from_recording_origin
+events:
+  - id: ramp_link_1_1
+    link: "1:1"
+    start_s: 8.0
+    end_s: 12.0
+    shape: ramp
+    start_amplitude_m: 0.2
+    slope_m_per_s: 0.05
+    expected_match_count: 79
+  - id: ramp_link_1_2
+    link: "1:2"
+    start_s: 8.0
+    end_s: 12.0
+    shape: ramp
+    start_amplitude_m: 0.3
+    slope_m_per_s: 0.075
+    expected_match_count: 77

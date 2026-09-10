@@ -1,0 +1,2 @@
+group_id,eligible,decision,reason,eta_pass,s_pass,gamma_pass,max_gamma,linearization_id
+group_0,1,SUPPRESS,SUPPRESS_ALL_REFERENCE_POLICY,0,0,0,1.864812,t05lin-sha256:60f7fc784da568795e9789c9a0af25ec22561d185ac4df25732f9b9dda2cb4af

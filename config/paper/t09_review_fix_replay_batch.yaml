@@ -1,0 +1,39 @@
+schema: uifgo_t09_batch_v2
+role: development
+parameter_provenance: T09_DEVELOPMENT_ENGINEERING_TEST_ONLY
+run_units:
+  - run_unit_id: sim_circle_fixed_partition/review_fix_seed_0/full
+    recording_id: sim_circle_fixed_partition_debug
+    base_trajectory_id: sim_circle
+    seed: 0
+    prefix_identity: full
+    config: t09_fixed_partition_development.yaml
+    cells:
+      - mode: structured_debias
+        execution_type: CACHE_PRODUCER
+        path: FIXED_PARTITION_DEBUG
+        producer_id: fixed-review-producer
+      - mode: fit_only
+        execution_type: CACHE_DIAGNOSTIC
+        path: FIXED_PARTITION_DEBUG
+        producer_id: fixed-review-producer
+        operating_point_id: fit-tight
+        thresholds: {tau_gamma: 0.0}
+      - mode: fit_only
+        execution_type: CACHE_DIAGNOSTIC
+        path: FIXED_PARTITION_DEBUG
+        producer_id: fixed-review-producer
+        operating_point_id: fit-wide
+        thresholds: {tau_gamma: 1000000.0}
+      - mode: fit_only
+        execution_type: FINAL_TRAJECTORY
+        path: FIXED_PARTITION_DEBUG
+        producer_id: fixed-review-producer
+        operating_point_id: fit-final
+        thresholds: {tau_gamma: 1000000.0}
+      - mode: full_gate
+        execution_type: FINAL_TRAJECTORY
+        path: FIXED_PARTITION_DEBUG
+        producer_id: fixed-review-producer
+        operating_point_id: full-final
+        thresholds: {tau_eta: 0.0, tau_s_m: 1000000.0, tau_gamma: 1000000.0}

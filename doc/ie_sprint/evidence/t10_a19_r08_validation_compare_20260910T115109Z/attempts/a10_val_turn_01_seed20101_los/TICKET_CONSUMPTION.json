@@ -1,0 +1,11 @@
+{
+  "attempt_count": 1,
+  "consumed": true,
+  "consumed_utc": "2026-09-10T12:21:14.399530+00:00",
+  "initialization": "ORIGINAL_RAW_NO_CHECKPOINT",
+  "issued_utc": "2026-09-10T12:21:14.370911+00:00",
+  "reservation_key": "a10_val_turn_01_seed20101",
+  "scenario": "los",
+  "schema": "T10_A19_R08_VALIDATION_TICKET_V1",
+  "ticket_id": "T10-A19-R08-01"
+}

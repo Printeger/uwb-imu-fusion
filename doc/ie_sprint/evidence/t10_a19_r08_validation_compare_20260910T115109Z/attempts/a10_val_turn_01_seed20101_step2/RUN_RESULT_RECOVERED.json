@@ -1,0 +1,11 @@
+{
+  "exit_code": "UNKNOWN_PARENT_INTERRUPTED_AFTER_PIPELINE_STATUS",
+  "final_successes": 5,
+  "forbidden_truth_open_count": 0,
+  "pipeline_terminal": true,
+  "reconstructed_utc": "2026-09-10T12:32:06.329457+00:00",
+  "retry": false,
+  "run_id": "a10_val_turn_01_seed20101_step2",
+  "schema": "T10_A19_R08_RECOVERED_TERMINAL_RESULT_V1",
+  "status": "COMPLETE_ESTIMATOR_ORCHESTRATOR_INTERRUPTED_AFTER_TERMINAL_OUTPUT"
+}

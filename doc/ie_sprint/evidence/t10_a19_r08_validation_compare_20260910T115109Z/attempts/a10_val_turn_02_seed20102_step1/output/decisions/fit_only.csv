@@ -1,0 +1,2 @@
+group_id,eligible,decision,reason,eta_pass,s_pass,gamma_pass,max_gamma,linearization_id
+group_0,1,SUPPRESS,SUPPRESS_GAMMA_ABOVE_THRESHOLD,1,1,0,1.863506,t05lin-sha256:2bd9c56c14081dea1b73c0358dd72c203cf0746e2683d4329e6d97e4fc5a5d0e

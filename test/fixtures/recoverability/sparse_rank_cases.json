@@ -1,0 +1,117 @@
+{
+  "schema_version": "recoverability-sparse-rank-v1",
+  "frozen_rank_rule": "sigma_j > max(1e-12, 1e-10*sigma_max) after nuisance-column 2-norm equilibration",
+  "cases": [
+    {
+      "id": "command_counterexample",
+      "F": [[1.0, 1.0], [0.0, 1.5e-10]],
+      "G": [[0.0], [1.0]],
+      "frozen_singular_values": [1.414213562373095, 1.0606601717798214e-10],
+      "frozen_threshold": 1.414213562373095e-10,
+      "frozen_rank": 1,
+      "frozen_R": [[1.0]],
+      "naive_eigen_qr_rank": 2,
+      "naive_eigen_qr_R": [[0.0]],
+      "allowed_sparse_status": ["SPARSE_RANK_UNCERTAIN"]
+    },
+    {
+      "id": "below_frozen_threshold",
+      "F": [[1.0, 1.0], [0.0, 2.0e-12]],
+      "G": [[0.0], [1.0]],
+      "frozen_singular_values": [1.414213562373095, 1.4142135623730952e-12],
+      "frozen_threshold": 1.414213562373095e-10,
+      "frozen_rank": 1,
+      "frozen_R": [[1.0]],
+      "naive_eigen_qr_rank": 1,
+      "allowed_sparse_status": ["SPARSE_RANK_UNCERTAIN"]
+    },
+    {
+      "id": "at_frozen_threshold_roundoff_edge",
+      "F": [[1.0, 1.0], [0.0, 2.0e-10]],
+      "G": [[0.0], [1.0]],
+      "frozen_singular_values": [1.414213562373095, 1.4142135623730953e-10],
+      "frozen_threshold": 1.414213562373095e-10,
+      "frozen_rank": 2,
+      "frozen_R": [[0.0]],
+      "naive_eigen_qr_rank": 2,
+      "allowed_sparse_status": ["SPARSE_RANK_UNCERTAIN"]
+    },
+    {
+      "id": "above_frozen_threshold",
+      "F": [[1.0, 1.0], [0.0, 2.0e-8]],
+      "G": [[0.0], [1.0]],
+      "frozen_singular_values": [1.414213562373095, 1.414213562373095e-8],
+      "frozen_threshold": 1.414213562373095e-10,
+      "frozen_rank": 2,
+      "frozen_R": [[0.0]],
+      "naive_eigen_qr_rank": 2,
+      "allowed_sparse_status": ["RANK_DEFICIENT"]
+    },
+    {
+      "id": "nuisance_column_permutation",
+      "F": [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]],
+      "G": [[1.0], [0.0], [0.0]],
+      "frozen_singular_values": [1.224744871391589, 0.7071067811865475],
+      "frozen_threshold": 1.224744871391589e-10,
+      "frozen_rank": 2,
+      "frozen_R": [[0.3333333333333332]],
+      "naive_eigen_qr_rank": 2,
+      "allowed_sparse_status": ["OK"]
+    },
+    {
+      "id": "exact_duplicate_column",
+      "F": [[1.0, 1.0], [0.0, 0.0], [1.0, 1.0]],
+      "G": [[0.0], [1.0], [0.0]],
+      "frozen_singular_values": [1.414213562373095, 7.850462293418876e-17],
+      "frozen_threshold": 1.414213562373095e-10,
+      "frozen_rank": 1,
+      "frozen_R": [[1.0]],
+      "naive_eigen_qr_rank": 1,
+      "allowed_sparse_status": ["OK"]
+    },
+    {
+      "id": "all_zero_F",
+      "F": [[0.0, 0.0], [0.0, 0.0]],
+      "G": [[1.0], [2.0]],
+      "frozen_singular_values": [0.0, 0.0],
+      "frozen_threshold": 1.0e-12,
+      "frozen_rank": 0,
+      "frozen_R": [[5.0]],
+      "naive_eigen_qr_rank": 0,
+      "allowed_sparse_status": ["OK"]
+    },
+    {
+      "id": "underdetermined_rows_less_than_columns",
+      "F": [[1.0, 0.0, 1.0], [0.0, 1.0, 1.0]],
+      "G": [[1.0], [0.0]],
+      "frozen_singular_values": [1.414213562373095, 1.0],
+      "frozen_threshold": 1.414213562373095e-10,
+      "frozen_rank": 2,
+      "frozen_R": [[7.08724620211692e-32]],
+      "naive_eigen_qr_rank": 2,
+      "allowed_sparse_status": ["SPARSE_RANK_UNCERTAIN"]
+    },
+    {
+      "id": "irrelevant_exact_zero_column",
+      "F": [[1.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
+      "G": [[0.0], [1.0], [0.0]],
+      "frozen_singular_values": [1.0, 0.0],
+      "frozen_threshold": 1.0e-10,
+      "frozen_rank": 1,
+      "frozen_R": [[1.0]],
+      "naive_eigen_qr_rank": 1,
+      "allowed_sparse_status": ["OK"]
+    },
+    {
+      "id": "multiple_numerical_rank_deficiency",
+      "F": [[1.0, 1.0, 1.0], [0.0, 2.0e-12, 0.0], [0.0, 0.0, 2.0e-12]],
+      "G": [[0.0], [1.0], [1.0]],
+      "frozen_singular_values": [1.7320508075688774, 2.0e-12, 1.1547005383792512e-12],
+      "frozen_threshold": 1.7320508075688775e-10,
+      "frozen_rank": 1,
+      "frozen_R": [[2.0]],
+      "naive_eigen_qr_rank": 1,
+      "allowed_sparse_status": ["SPARSE_RANK_UNCERTAIN"]
+    }
+  ]
+}

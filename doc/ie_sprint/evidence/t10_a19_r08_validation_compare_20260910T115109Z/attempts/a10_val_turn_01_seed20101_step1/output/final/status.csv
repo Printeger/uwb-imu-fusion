@@ -1,0 +1,6 @@
+policy,exit_code,timed_out,hard_limit_seconds,elapsed_seconds
+suppress_all,0,0,900,0.80222925199999995
+structured_debias,0,0,900,0.90309905000000001
+fit_only,0,0,900,0.90254828899999995
+s_fit,0,0,900,1.0028132729999999
+full_gate,0,0,900,1.003081471

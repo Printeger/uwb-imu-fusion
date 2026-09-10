@@ -1,0 +1,29 @@
+{
+  "argv": [
+    "/usr/bin/time",
+    "-v",
+    "-o",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/attempts/a10_val_turn_01_seed20101_ramp_steep/resources.txt",
+    "/usr/bin/timeout",
+    "--signal=KILL",
+    "--kill-after=5s",
+    "700s",
+    "/usr/bin/strace",
+    "-f",
+    "-e",
+    "trace=openat,open,execve",
+    "-o",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/attempts/a10_val_turn_01_seed20101_ramp_steep/file_access.trace",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/a19_r08_pipeline_v2",
+    "--policy",
+    "PAPER_CERTIFIED_PAIR_REDUCTION_V1+PAPER_STAGE2_INEXACT_HANDOFF_V1",
+    "validation-stage1-stage2-score",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_01_seed20101_ramp_steep.yaml",
+    "ORIGINAL_RAW_NO_CHECKPOINT",
+    "doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts_v2/a10_val_turn_01_seed20101_ramp_steep.json",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/attempts/a10_val_turn_01_seed20101_ramp_steep/output"
+  ],
+  "cwd": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie",
+  "runner_sha256": "b11f832830edb045825baf2e71978f0724607397d1661642beda488b6b5e8d60",
+  "started_utc": "2026-09-10T12:35:03.138171+00:00"
+}

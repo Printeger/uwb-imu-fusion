@@ -1,0 +1,60 @@
+# T09/RQ3 fixed-partition cache smoke. This is debug-only and never counts as
+# automatic discovery evidence.
+dataset: {interface: original}
+anchors:
+  - {id: 1, pos: [-5.0, -5.0, 1.0], prior_sigma: 0.1}
+  - {id: 2, pos: [-5.0, -5.0, 5.0], prior_sigma: 0.1}
+  - {id: 3, pos: [-5.0, 5.0, 1.0], prior_sigma: 0.1}
+  - {id: 4, pos: [-5.0, 5.0, 5.0], prior_sigma: 0.1}
+  - {id: 5, pos: [5.0, -5.0, 1.0], prior_sigma: 0.1}
+  - {id: 6, pos: [5.0, -5.0, 5.0], prior_sigma: 0.1}
+  - {id: 7, pos: [5.0, 5.0, 1.0], prior_sigma: 0.1}
+  - {id: 8, pos: [5.0, 5.0, 5.0], prior_sigma: 0.1}
+extrinsics: {lever_arm_init: [0.0, 0.0, 0.0], calib_lever: false}
+calibration:
+  calib_anchor: false
+  calib_range_bias: false
+  calib_td: false
+  td_init: 0.0
+  fixed_beta_by_link: {}
+imu:
+  sigma_a: 0.1
+  sigma_g: 0.01
+  sigma_wa: 0.01
+  sigma_wg: 2.0e-5
+  gravity: 9.81
+  imu_acc_in_g: false
+uwb:
+  sigma_range: 0.1
+  v_max: 2.0
+  nlos_rssi_diff: 6.0
+  min_range: 0.1
+  max_range: 50.0
+  dist_consistency_thresh: 2.0
+  warmup_frames: 20
+solver: {lm_max_iter: 50, rel_error_tol: 1.0e-6, abs_error_tol: 1.0e-8}
+keyframe: {step: 10, min_interval: 0.0, yaw_align_frames: 0}
+topics: {imu: /sim/imu, uwb: /nlink_linktrack_nodeframe3}
+bag:
+  path: ../../data/sim_circle_2026-06-15-16-04-35.bag
+  start: 8.0
+  durr: 4.0
+nlos:
+  mode: fixed_partition_debug
+  oracle_support: t09_fixed_partition_development_manifest.yaml
+  score_recoverability: true
+  boundary_epsilon_m: 1.0e-9
+  relative_objective_tolerance: 1.0e-8
+  scaled_step_tolerance: 1.0e-6
+  projected_gradient_tolerance: 1.0e-8
+  navigation_stationarity_tolerance_objective: 1.0e-6
+  gradient_roundoff_safety_factor: 8.0
+  pose_rotation_scale_rad: 1.0
+  pose_translation_scale_m: 1.0
+  velocity_scale_mps: 1.0
+  accel_bias_scale_mps2: 1.0
+  gyro_bias_scale_radps: 1.0
+  segment_amplitude_scale_m: 1.0
+  max_refit_iterations: 20
+  short_min_count_debug: 2
+  short_min_duration_debug: 0.01
