@@ -308,6 +308,32 @@ TEST(ConfigLoader, AutomaticDiscoveryParametersAreExplicitAndOracleIsForbidden) 
   EXPECT_THROW(uifgo::ConfigLoader::Load(path), std::runtime_error);
 }
 
+TEST(ConfigLoader, ImuAidedFdeHasIndependentStrictConfiguration) {
+  const std::string path = "/tmp/test_imu_aided_fde.yaml";
+  const auto write = [&](double probability, bool oracle, bool temporal) {
+    std::ofstream f(path);
+    f << "solver:\n  chi2_reject_prob: " << probability << "\n"
+      << "nlos:\n  mode: imu_aided_fde\n"
+      << "  score_recoverability: true\n";
+    if (oracle) f << "  oracle_support: forbidden.yaml\n";
+    if (temporal)
+      f << "  gap_threshold_s: 1.0\n"
+        << "  discovery_short_min_count: 2\n"
+        << "  discovery_short_min_duration_s: 0.01\n";
+  };
+  write(0.99, false, true);
+  const auto cfg = uifgo::ConfigLoader::Load(path);
+  EXPECT_EQ(cfg.nlos_mode, "imu_aided_fde");
+  EXPECT_DOUBLE_EQ(cfg.chi2_reject_prob, 0.99);
+
+  write(0.95, false, true);
+  EXPECT_THROW(uifgo::ConfigLoader::Load(path), std::runtime_error);
+  write(0.99, true, true);
+  EXPECT_THROW(uifgo::ConfigLoader::Load(path), std::runtime_error);
+  write(0.99, false, false);
+  EXPECT_THROW(uifgo::ConfigLoader::Load(path), std::runtime_error);
+}
+
 TEST(ConfigLoader, FixedBetaByLink) {
   const std::string path = "/tmp/test_fixed_beta.yaml";
   std::ofstream f(path);

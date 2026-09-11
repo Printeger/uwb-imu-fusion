@@ -33,10 +33,12 @@
 #include "uifgo/hash_utils.h"
 #include "uifgo/initializer.h"
 #include "uifgo/nlos_discovery.h"
+#include "uifgo/nlos_fde.h"
 #include "uifgo/nlos_inference.h"
 #include "uifgo/nlos_inference_io.h"
 #include "uifgo/nlos_refit.h"
 #include "uifgo/nlos_scoring.h"
+#include "uifgo/optimizer.h"
 #include "uifgo/paper_input.h"
 #include "uifgo/paper_methods.h"
 #include "uifgo/paper_pose_prior_factor.h"
@@ -437,8 +439,26 @@ std::string FinalRefitScoreConfigHash(const uifgo::Config& cfg) {
 }
 
 std::string Stage1ProducerConfigHash(const uifgo::Config& cfg,
-                                     bool automatic_discovery) {
-  if (automatic_discovery) return DiscoverySolverConfigHash(cfg);
+                                     const uifgo::FdeContext* fde_context) {
+  if (cfg.nlos_mode == "automatic_discovery")
+    return DiscoverySolverConfigHash(cfg);
+  if (cfg.nlos_mode == "imu_aided_fde") {
+    if (!fde_context)
+      throw std::invalid_argument("FDE Stage1 identity context is required");
+    uifgo::FdeOptions options;
+    options.chi2_probability = cfg.chi2_reject_prob;
+    options.chi2_degrees_of_freedom = 1;
+    options.gap_threshold_s = cfg.discovery_gap_threshold_s;
+    options.minimum_count =
+        static_cast<size_t>(cfg.discovery_short_min_count);
+    options.minimum_duration_s = cfg.discovery_short_min_duration_s;
+    options.preliminary_lm.max_iterations = cfg.lm_max_iter;
+    options.preliminary_lm.relative_tolerance = cfg.lm_rel_tol;
+    options.preliminary_lm.absolute_tolerance = cfg.lm_abs_tol;
+    options.preliminary_lm.policy =
+        uifgo::ConditionalLmPolicy::GTSAM_CHECK_ONLY_V1;
+    return uifgo::ComputeFdeIdentity(options, *fde_context);
+  }
   return "sha256:" + uifgo::Sha256Hex(
       std::string("uifgo-t09-stage1-config-v2\n") +
       uifgo::PaperPosePriorJacobianIdentity() +
@@ -577,7 +597,8 @@ void ValidateSupportedConfig(const uifgo::Config& cfg) {
   }
   if (cfg.nlos_mode == "oracle_debug" ||
       cfg.nlos_mode == "fixed_partition_debug" ||
-      cfg.nlos_mode == "automatic_discovery") {
+      cfg.nlos_mode == "automatic_discovery" ||
+      cfg.nlos_mode == "imu_aided_fde") {
     if (cfg.max_refit_iterations <= 0 ||
         cfg.oracle_short_min_count_debug < 0 ||
         !std::isfinite(cfg.oracle_short_min_duration_debug) ||
@@ -1164,6 +1185,75 @@ void WriteSupportPartition(const fs::path& path,
     out << "]}";
   }
   out << "\n  ]\n}\n";
+}
+
+void WriteFdeArtifacts(const fs::path& run_dir,
+                       const uifgo::FdeResult& result,
+                       const uifgo::FdeOptions& options) {
+  {
+    auto out = Open(run_dir / "fde_status.json");
+    out << std::setprecision(17)
+        << "{\n  \"schema\": \"uifgo_fde_status_v1\",\n"
+        << "  \"provider\": \"" << JsonEscape(result.provider) << "\",\n"
+        << "  \"provider_version\": \""
+        << JsonEscape(result.provider_version) << "\",\n"
+        << "  \"status\": \"" << uifgo::FdeStatusName(result.status)
+        << "\",\n  \"reason\": \"" << JsonEscape(result.reason) << "\",\n"
+        << "  \"identity_hash\": \"" << JsonEscape(result.identity_hash)
+        << "\",\n  \"reference_converged\": "
+        << (result.reference.converged ? "true" : "false")
+        << ",\n  \"reference_reason\": \""
+        << JsonEscape(result.reference.reason) << "\",\n"
+        << "  \"reference_iterations\": " << result.reference.iterations
+        << ",\n  \"chi2_probability\": " << options.chi2_probability
+        << ",\n  \"chi2_degrees_of_freedom\": "
+        << options.chi2_degrees_of_freedom
+        << ",\n  \"chi2_threshold\": "
+        << JsonNumberOrNull(result.chi2_threshold)
+        << ",\n  \"planned_count\": " << result.planned_count
+        << ",\n  \"tested_count\": " << result.tested_count
+        << ",\n  \"fault_count\": " << result.fault_count
+        << ",\n  \"positive_candidate_count\": "
+        << result.positive_candidate_count
+        << ",\n  \"raw_run_count\": " << result.raw_run_count
+        << ",\n  \"filtered_run_count\": " << result.filtered_run_count
+        << ",\n  \"retained_segment_count\": "
+        << result.retained_segment_count
+        << ",\n  \"partition_hash\": \""
+        << JsonEscape(result.partition.partition_hash)
+        << "\",\n  \"gt_read\": false\n}\n";
+  }
+  {
+    auto out = Open(run_dir / "fde_observations.csv");
+    out << "obs_id,source_frame_index,source_message_index,source_range_index,"
+           "source_observation_index,tag_id,anchor_id,sensor_time,valid,planned,"
+           "keyframe_id,factor_index,ledger_nominal_sigma_m,tested,residual_m,"
+           "factor_sigma_m,standardized_residual,statistic,fault_detected,"
+           "positive_excess,nlos_candidate,raw_segment_id,segment_id,"
+           "segment_ordinal,candidate_filter_reason\n"
+        << std::setprecision(17);
+    for (const auto& row : result.observations) {
+      out << row.obs_id << ',' << row.source_frame_index << ','
+          << row.source_message_index << ',' << row.source_range_index << ','
+          << row.source_observation_index << ',' << row.tag_id << ','
+          << row.anchor_id << ',' << JsonNumberOrNull(row.sensor_time) << ','
+          << row.valid << ',' << row.planned << ',' << row.keyframe_id << ',';
+      if (row.factor_index == std::numeric_limits<size_t>::max()) out << "";
+      else out << row.factor_index;
+      out << ',' << JsonNumberOrNull(row.ledger_nominal_sigma_m) << ','
+          << row.tested << ',' << JsonNumberOrNull(row.residual_m) << ','
+          << JsonNumberOrNull(row.factor_sigma_m) << ','
+          << JsonNumberOrNull(row.standardized_residual) << ','
+          << JsonNumberOrNull(row.statistic) << ',' << row.fault_detected << ','
+          << row.positive_excess << ',' << row.nlos_candidate << ','
+          << row.raw_segment_id << ',' << row.segment_id << ',';
+      if (row.segment_ordinal == std::numeric_limits<size_t>::max()) out << "";
+      else out << row.segment_ordinal;
+      out << ',' << row.candidate_filter_reason << '\n';
+    }
+  }
+  WriteSupportPartition(run_dir / "support_partition.json", result.partition);
+  WriteSupportPartition(run_dir / "partition.json", result.partition);
 }
 
 uifgo::SupportPartition ReadSupportPartition(const fs::path& path) {
@@ -2349,6 +2439,7 @@ int main(int argc, char** argv) {
   bool oracle_debug_run = false;
   bool fixed_partition_debug_run = false;
   bool automatic_discovery_run = false;
+  bool imu_aided_fde_run = false;
   bool segment_refit_estimate_exported = false;
   std::string failure_stage;
   double stage1_seconds = std::numeric_limits<double>::quiet_NaN();
@@ -2378,6 +2469,12 @@ int main(int argc, char** argv) {
     oracle_debug_run = cfg.nlos_mode == "oracle_debug";
     fixed_partition_debug_run = cfg.nlos_mode == "fixed_partition_debug";
     automatic_discovery_run = cfg.nlos_mode == "automatic_discovery";
+    imu_aided_fde_run = cfg.nlos_mode == "imu_aided_fde";
+    const bool estimated_support_run =
+        automatic_discovery_run || imu_aided_fde_run;
+    if (imu_aided_fde_run && args.method == "structured_bias_only")
+      throw std::invalid_argument(
+          "structured_bias_only is incompatible with imu_aided_fde");
     ValidateSupportedConfig(cfg);
     const fs::path output_root = fs::absolute(args.output_root);
     fs::create_directories(output_root);
@@ -2506,6 +2603,19 @@ int main(int argc, char** argv) {
         common_identity_context.solver_config_sha256;
     const std::string common_preparation_id =
         uifgo::ComputeCommonPreparationId(common_input);
+    uifgo::FdeContext fde_context;
+    fde_context.input_plan_hash = plan.plan_sha256;
+    fde_context.source_hash = source_sha256;
+    // Bind only Stage1/common preparation semantics. Batch-generated final
+    // configs legitimately differ in Stage4-only gate fields and file bytes.
+    fde_context.config_hash = common_identity_context.config_sha256;
+    fde_context.calibration_hash =
+        CalibrationContextHash(cfg, init.gravity_world);
+    fde_context.solver_config_hash = common_identity_context.solver_config_sha256;
+    fde_context.common_preparation_id = common_preparation_id;
+    fde_context.physical_graph_hash =
+        common_content_identity.graph_linearization_sha256;
+    fde_context.initial_values_hash = common_content_identity.values_sha256;
     {
       auto out = Open(run_dir / "common_preparation.json");
       out << "{\n  \"schema\": \"uifgo_t09_common_preparation_v1\",\n"
@@ -2555,13 +2665,14 @@ int main(int argc, char** argv) {
       if (cache.source_identity != source_sha256)
         throw std::runtime_error("CACHE_SOURCE_IDENTITY_MISMATCH");
       if ((cache.cache_namespace == uifgo::Stage2CacheNamespace::AUTO_DISCOVERY &&
-           cfg.nlos_mode != "automatic_discovery") ||
+           cfg.nlos_mode != "automatic_discovery" &&
+           cfg.nlos_mode != "imu_aided_fde") ||
           (cache.cache_namespace == uifgo::Stage2CacheNamespace::FIXED_PARTITION_DEBUG &&
            cfg.nlos_mode != "fixed_partition_debug"))
         throw std::runtime_error("CACHE_NAMESPACE_CONFIG_PATH_MISMATCH");
-      const std::string expected_stage1_config = Stage1ProducerConfigHash(
-          cfg, cache.cache_namespace ==
-                   uifgo::Stage2CacheNamespace::AUTO_DISCOVERY);
+      const std::string expected_stage1_config =
+          Stage1ProducerConfigHash(cfg, imu_aided_fde_run ? &fde_context
+                                                         : nullptr);
       if (cache.stage1_config_sha256 != expected_stage1_config)
         throw std::runtime_error("CACHE_STAGE1_CONFIG_INCOMPATIBLE");
       if (cache.stage2_refit_config_sha256 != Stage2RefitConfigHash(cfg))
@@ -2570,6 +2681,11 @@ int main(int argc, char** argv) {
         throw std::runtime_error("CACHE_STAGE3_SCORE_CONFIG_INCOMPATIBLE");
 
       const auto support = ReadSupportPartition(cache_root / "partition.json");
+      if ((imu_aided_fde_run &&
+           support.provider != uifgo::kImuAidedFdeProvider) ||
+          (automatic_discovery_run &&
+           support.provider != "automatic_discovery"))
+        throw std::runtime_error("CACHE_STAGE1_PROVIDER_INCOMPATIBLE");
       if (!support.input_plan_hash.empty() &&
           support.input_plan_hash != plan.plan_sha256)
         throw std::runtime_error("CACHE_INPUT_PLAN_IDENTITY_MISMATCH");
@@ -2620,7 +2736,9 @@ int main(int argc, char** argv) {
         throw std::runtime_error("CACHE_STAGE2_GRAPH_VALUES_IDENTITY_MISMATCH");
       // Fixed-offset policy needs the full physical R and amplitude column map.
       // Recompute at the verified immutable Stage2 graph/Values, with zero optimizer calls.
-      const auto decision_scores = (args.method == "lcb_partial" || args.method == "lcb_fixed_full")
+      const auto decision_scores = (!support.segments.empty() &&
+                                    (args.method == "lcb_partial" ||
+                                     args.method == "lcb_fixed_full"))
           ? uifgo::ScoreRefitRecoverability(stage2, support, plan, cfg)
           : ReadCachedScores(cache_root);
 
@@ -2884,7 +3002,7 @@ int main(int argc, char** argv) {
     }
 
     if (oracle_debug_run || fixed_partition_debug_run ||
-        automatic_discovery_run) {
+        automatic_discovery_run || imu_aided_fde_run) {
       uifgo::SupportPartition support;
       fs::path support_path;
       uifgo::DiscoveryResult discovery;
@@ -2913,7 +3031,7 @@ int main(int argc, char** argv) {
             "sha256:" + uifgo::Sha256Hex("t09-fixed-refit:" + config_sha256);
         fs::copy_file(support_path, run_dir / "oracle_support.yaml");
         failure_stage = "ORACLE_REFIT";
-      } else {
+      } else if (automatic_discovery_run) {
         failure_stage = "AUTOMATIC_DISCOVERY";
         uifgo::DiscoveryOptions discovery_options;
         discovery_options.fused_lasso.lambda_l1 = cfg.discovery_lambda_l1;
@@ -3568,6 +3686,60 @@ int main(int argc, char** argv) {
         support = discovery.partition;
         refit_initial = discovery.navigation_values;
         failure_stage = "AUTOMATIC_STAGE2_REFIT";
+      } else {
+        failure_stage = "IMU_AIDED_FDE";
+        uifgo::FdeOptions fde_options;
+        fde_options.chi2_probability = cfg.chi2_reject_prob;
+        fde_options.chi2_degrees_of_freedom = 1;
+        fde_options.gap_threshold_s = cfg.discovery_gap_threshold_s;
+        fde_options.minimum_count =
+            static_cast<size_t>(cfg.discovery_short_min_count);
+        fde_options.minimum_duration_s =
+            cfg.discovery_short_min_duration_s;
+        fde_options.preliminary_lm.max_iterations = cfg.lm_max_iter;
+        fde_options.preliminary_lm.relative_tolerance = cfg.lm_rel_tol;
+        fde_options.preliminary_lm.absolute_tolerance = cfg.lm_abs_tol;
+        fde_options.preliminary_lm.policy =
+            uifgo::ConditionalLmPolicy::GTSAM_CHECK_ONLY_V1;
+        const auto stage1_started = std::chrono::steady_clock::now();
+        const auto fde = uifgo::ImuAidedFdeSupportProvider(fde_options).Run(
+            graph, initial, builder.factor_meta(), plan, cfg, fde_context);
+        stage1_seconds = std::chrono::duration<double>(
+            std::chrono::steady_clock::now() - stage1_started).count();
+        WriteFdeArtifacts(run_dir, fde, fde_options);
+        if (!fde.success()) {
+          {
+            auto capability = Open(run_dir / "capability_status.json");
+            capability
+                << "{\n  \"debug_label\": \"RQ3_IMU_AIDED_FDE_STAGE1\",\n"
+                << "  \"discovery\": \"FAILED_"
+                << uifgo::FdeStatusName(fde.status)
+                << "\",\n  \"segment_refit\": \"NOT_RUN\",\n"
+                << "  \"recoverability_score\": \"NOT_RUN\",\n"
+                << "  \"gate\": \"NOT_RUN_STAGE1_FAILED\",\n"
+                << "  \"fallback\": \"NOT_RUN_STAGE1_FAILED\",\n"
+                << "  \"covariance\": \"NOT_COMPUTED\",\n"
+                << "  \"output_semantics\": \"NO_VALID_ESTIMATE_STAGE1_FAILED\"\n}\n";
+          }
+          const double elapsed = std::chrono::duration<double>(
+              std::chrono::steady_clock::now() - started).count();
+          auto out = Open(run_dir / "run_status.json");
+          out << "{\n  \"status\": \"FAILED\",\n  \"exit_code\": 1,\n"
+              << "  \"debug_label\": \"RQ3_IMU_AIDED_FDE_STAGE1\",\n"
+              << "  \"failure_stage\": \"IMU_AIDED_FDE\",\n"
+              << "  \"fde_status\": \"" << uifgo::FdeStatusName(fde.status)
+              << "\",\n  \"reason\": \"" << JsonEscape(fde.reason)
+              << "\",\n  \"stage2_refit_run\": false,\n"
+              << "  \"gate_or_fallback_run\": false,\n"
+              << "  \"elapsed_seconds\": " << JsonNumberOrNull(elapsed)
+              << ",\n  \"stage1_seconds\": "
+              << JsonNumberOrNull(stage1_seconds)
+              << ",\n  \"stage2_seconds\": null\n}\n";
+          return 1;
+        }
+        support = fde.partition;
+        refit_initial = fde.reference.values;
+        failure_stage = "FDE_STAGE2_REFIT";
       }
 
       uifgo::RefitOptions options;
@@ -3661,13 +3833,20 @@ int main(int argc, char** argv) {
             << ",\n  \"strategy\": \""
             << (cfg.final_inference_enabled
                     ? "t08_frozen_group_final_inference"
-                    : (automatic_discovery_run
-                           ? "automatic_discovery_refit_score"
+                    : (estimated_support_run
+                           ? (imu_aided_fde_run
+                                  ? "imu_aided_fde_refit_score"
+                                  : "automatic_discovery_refit_score")
                            : "oracle_debug_segment_refit"))
+            << "\",\n  \"stage1_provider\": \""
+            << (imu_aided_fde_run
+                    ? uifgo::kImuAidedFdeProvider
+                    : (automatic_discovery_run ? "automatic_discovery"
+                                               : support.provider))
             << "\",\n  \"debug_label\": \""
             << (cfg.final_inference_enabled
                     ? uifgo::kT08DevelopmentGateLabel
-                    : (automatic_discovery_run
+                    : (estimated_support_run
                            ? uifgo::kT06AutomaticDiscoveryLabel
                            : uifgo::kT04OracleDebugLabel))
             << "\",\n  \"gt_read\": false,\n"
@@ -3681,13 +3860,15 @@ int main(int argc, char** argv) {
         out << "paper_path: true\nstrategy: "
             << (cfg.final_inference_enabled
                     ? "t08_frozen_group_final_inference\n"
-                    : (automatic_discovery_run
-                           ? "automatic_discovery_refit_score\n"
+                    : (estimated_support_run
+                           ? (imu_aided_fde_run
+                                  ? "imu_aided_fde_refit_score\n"
+                                  : "automatic_discovery_refit_score\n")
                            : "oracle_debug_segment_refit\n"))
             << "debug_label: "
             << (cfg.final_inference_enabled
                     ? uifgo::kT08DevelopmentGateLabel
-                    : (automatic_discovery_run
+                    : (estimated_support_run
                            ? uifgo::kT06AutomaticDiscoveryLabel
                            : uifgo::kT04OracleDebugLabel))
             << '\n';
@@ -3737,10 +3918,10 @@ int main(int argc, char** argv) {
             << "\nconditional_lm_relative_tolerance: " << cfg.lm_rel_tol
             << "\nconditional_lm_absolute_tolerance: " << cfg.lm_abs_tol
             << "\nshort_min_count_debug: "
-            << (automatic_discovery_run ? cfg.discovery_short_min_count
+            << (estimated_support_run ? cfg.discovery_short_min_count
                                         : cfg.oracle_short_min_count_debug)
             << "\nshort_min_duration_debug_s: "
-            << (automatic_discovery_run
+            << (estimated_support_run
                     ? cfg.discovery_short_min_duration_s
                     : cfg.oracle_short_min_duration_debug)
             << "\nshort_threshold_is_t05_gate: false"
@@ -3819,6 +4000,25 @@ int main(int argc, char** argv) {
               << "\ndiscovery_context_hash: "
               << support.discovery_context_hash
               << "\nparameter_provenance: PENDING_VALIDATION_DEVELOPMENT_ONLY\n";
+        } else if (imu_aided_fde_run) {
+          out << "fde_provider: " << uifgo::kImuAidedFdeProvider
+              << "\nfde_identity_version: "
+              << uifgo::kImuAidedFdeIdentityVersion
+              << "\nchi2_probability: " << cfg.chi2_reject_prob
+              << "\nchi2_degrees_of_freedom: 1"
+              << "\nchi2_threshold: " << uifgo::Chi2inv(0.99, 1)
+              << "\ngap_threshold_s: " << cfg.discovery_gap_threshold_s
+              << "\nminimum_count: " << cfg.discovery_short_min_count
+              << "\nminimum_duration_s: "
+              << cfg.discovery_short_min_duration_s
+              << "\npreliminary_lm_policy: GTSAM_CHECK_ONLY_V1"
+              << "\ninput_plan_hash_sha256: " << plan.plan_sha256
+              << "\nsource_hash_sha256: " << source_sha256
+              << "\ncalibration_hash_sha256: " << support.calibration_hash
+              << "\nsolver_config_hash_sha256: "
+              << support.solver_config_hash
+              << "\nfde_context_hash: " << support.discovery_context_hash
+              << "\nparameter_provenance: 0911_FDE_STEP1_FROZEN\n";
         }
       }
       {
@@ -3827,19 +4027,19 @@ int main(int argc, char** argv) {
               << "  \"debug_label\": \""
               << (cfg.final_inference_enabled
                       ? uifgo::kT08DevelopmentGateLabel
-                      : (automatic_discovery_run
+                      : (estimated_support_run
                              ? uifgo::kT06AutomaticDiscoveryLabel
                              : uifgo::kT04OracleDebugLabel))
             << "\",\n"
             << "  \"discovery\": \""
-            << (automatic_discovery_run ? "CONVERGED_STAGE1"
+            << (estimated_support_run ? "CONVERGED_STAGE1"
                                         : "NOT_IMPLEMENTED_T04")
             << "\",\n"
             << "  \"segment_refit\": \""
             << (refit.converged()
-                    ? (automatic_discovery_run ? "T06_STAGE2_CONVERGED"
+                    ? (estimated_support_run ? "T06_STAGE2_CONVERGED"
                                                : "T04_ORACLE_DEBUG_CONVERGED")
-                    : (automatic_discovery_run ? "T06_STAGE2_FAILED"
+                    : (estimated_support_run ? "T06_STAGE2_FAILED"
                                                : "T04_ORACLE_DEBUG_FAILED"))
             << "\",\n"
             << "  \"recoverability_score\": \""
@@ -3867,7 +4067,7 @@ int main(int argc, char** argv) {
             << "  \"debug_label\": \""
             << (cfg.final_inference_enabled
                     ? uifgo::kT08DevelopmentGateLabel
-                    : (automatic_discovery_run
+                    : (estimated_support_run
                            ? uifgo::kT06AutomaticDiscoveryLabel
                            : uifgo::kT04OracleDebugLabel))
             << "\",\n"
@@ -3934,7 +4134,7 @@ int main(int argc, char** argv) {
               << "{\n  \"schema\": \"uifgo_t09_stage2_producer_context_v1\",\n"
               << "  \"stage1_config_sha256\": \""
               << JsonEscape(Stage1ProducerConfigHash(
-                     cfg, automatic_discovery_run))
+                     cfg, imu_aided_fde_run ? &fde_context : nullptr))
               << "\",\n  \"stage2_refit_config_sha256\": \""
               << JsonEscape(Stage2RefitConfigHash(cfg))
               << "\",\n  \"stage3_score_config_sha256\": \""
@@ -4070,7 +4270,7 @@ int main(int argc, char** argv) {
           out << "{\n  \"debug_label\": \""
               << uifgo::kT08DevelopmentGateLabel << "\",\n"
               << "  \"discovery\": \""
-              << (automatic_discovery_run ? "CONVERGED_STAGE1"
+              << (estimated_support_run ? "CONVERGED_STAGE1"
                                           : "ORACLE_DEBUG_INPUT")
               << "\",\n  \"segment_refit\": \"CONVERGED_STAGE2\",\n"
               << "  \"recoverability_score\": \"DECISION_SET_RETAINED\",\n"
@@ -4216,12 +4416,12 @@ int main(int argc, char** argv) {
         {
           auto out = Open(run_dir / "capability_status.json");
           out << "{\n  \"debug_label\": \""
-              << (automatic_discovery_run
+              << (estimated_support_run
                       ? uifgo::kT06AutomaticDiscoveryLabel
                       : uifgo::kT05OracleScoreDebugLabel)
               << "\",\n"
               << "  \"discovery\": \""
-              << (automatic_discovery_run ? "CONVERGED_STAGE1"
+              << (estimated_support_run ? "CONVERGED_STAGE1"
                                           : "NOT_IMPLEMENTED_T05")
               << "\",\n"
               << "  \"segment_refit\": \"CONVERGED\",\n"
@@ -4239,7 +4439,7 @@ int main(int argc, char** argv) {
           auto out = Open(run_dir / "run_status.json");
           out << "{\n  \"status\": \"PARTIAL_STAGE2_OK_SCORE_UNAVAILABLE\",\n"
               << "  \"exit_code\": 1,\n  \"debug_label\": \""
-              << (automatic_discovery_run
+              << (estimated_support_run
                       ? uifgo::kT06AutomaticDiscoveryLabel
                       : uifgo::kT05OracleScoreDebugLabel)
               << "\",\n"
@@ -4275,11 +4475,11 @@ int main(int argc, char** argv) {
         auto out = Open(run_dir / "run_status.json");
         out << std::setprecision(17)
             << "{\n  \"status\": \""
-            << (automatic_discovery_run && no_candidates ? "NO_CANDIDATES"
+            << (estimated_support_run && no_candidates ? "NO_CANDIDATES"
                                                          : "OK")
             << "\",\n  \"exit_code\": 0,\n"
             << "  \"debug_label\": \""
-            << (automatic_discovery_run
+            << (estimated_support_run
                     ? uifgo::kT06AutomaticDiscoveryLabel
                     : (cfg.score_recoverability
                            ? uifgo::kT05OracleScoreDebugLabel
@@ -4339,7 +4539,7 @@ int main(int argc, char** argv) {
       }
       std::cout << "paper runner OK: " << run_dir << '\n'
                 << "debug_label="
-                << (automatic_discovery_run
+                << (estimated_support_run
                         ? uifgo::kT06AutomaticDiscoveryLabel
                         : (cfg.score_recoverability
                                ? uifgo::kT05OracleScoreDebugLabel
@@ -4508,11 +4708,11 @@ int main(int argc, char** argv) {
         out << "{\n  \"status\": \"FAILED\",\n  \"exit_code\": 1,\n"
             << "  \"reason\": \"" << JsonEscape(error.what()) << "\"";
         if ((oracle_debug_run || fixed_partition_debug_run ||
-             automatic_discovery_run) &&
+             automatic_discovery_run || imu_aided_fde_run) &&
             failure_stage == "RECOVERABILITY_SCORE" &&
             segment_refit_estimate_exported) {
           out << ",\n  \"debug_label\": \""
-              << (automatic_discovery_run
+              << ((automatic_discovery_run || imu_aided_fde_run)
                       ? uifgo::kT06AutomaticDiscoveryLabel
                       : uifgo::kT05OracleScoreDebugLabel)
               << "\",\n"
@@ -4523,9 +4723,9 @@ int main(int argc, char** argv) {
               << "  \"valid_score_exported\": false,\n"
               << "  \"gate_or_fallback_run\": false";
         } else if (oracle_debug_run || fixed_partition_debug_run ||
-                   automatic_discovery_run) {
+                   automatic_discovery_run || imu_aided_fde_run) {
           out << ",\n  \"debug_label\": \""
-              << (automatic_discovery_run
+              << ((automatic_discovery_run || imu_aided_fde_run)
                       ? uifgo::kT06AutomaticDiscoveryLabel
                       : uifgo::kT04OracleDebugLabel)
               << "\",\n"

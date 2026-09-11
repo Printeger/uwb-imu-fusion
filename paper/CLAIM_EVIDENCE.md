@@ -1,8 +1,24 @@
 # UWB-IMU-IE claim–evidence ledger
 
-状态：`T10_FROZEN_C2_C / T11_FROZEN_T11_C_LIMITED_SCOPE_U13_INCOMPLETE / 0911_STEP2_EXECUTED_METHOD_COMPARISON_BLOCKED_STAGE1`
+状态：`T10_FROZEN_C2_C / T11_FROZEN_T11_C_LIMITED_SCOPE_U13_INCOMPLETE / 0911_FDE_EXECUTED_NEGATIVE_INCOMPLETE`
 
 阅读范围：下方按 T00–T10、Axx/Rxx 命名的阶段证据节均为**历史快照**。其中“当前状态”“本轮”、`IN_PROGRESS`、`NOT_RUN` 和“下一步”仅描述当时阶段；任务状态及后续安排已由本文当前裁决、汇总表和准入检查取代，不构成新的执行计划。
+
+## 当前 0911 residual-FDE claim 边界
+
+论文主 Stage1 已改为 `imu_aided_residual_fde_v1`：reference graph residual 按 factor sigma 做固定
+$p=0.99$/1-DoF 双边检测，只聚合 `r<0` 的 positive-excess fault；legacy `automatic_discovery` 未删除。
+构建、29/29 CTest 和 Walk1 `[8,11]s` smoke 通过。smoke 为合法 zero-candidate，Stage2 cache 正常发布，
+四个 candidate-dependent final 复用同一 cache；FDE artifacts 完整且无 discovery/ADMM/outer trace。
+
+六输入冻结矩阵的结果为负/不完整：3 个 SFUISE FDE reference 成功但均为 zero-candidate，随后 unchanged
+raw Stage2 stop test 失败；MiLUV random/circular 与 Vicon 在 preliminary LM 达到最大迭代。6/6 producer
+均未发布 cache，24 个 candidate-dependent final 因而为 `PARENT_CACHE_UNAVAILABLE`。独立 Cauchy 4/6
+产生轨迹，另外 2/6 final LM 失败。锁定 GT hash 已由 evaluator 核验，但 FDE candidate-dependent 方法没有
+可配对轨迹，RMSE/P95/horizontal/vertical、coverage 和 LCB 相对 suppress 改变量均 `UNAVAILABLE`。
+该轮只支持 FDE 工程实现、fail-closed/cache 隔离与完整失败记账；不支持精度收益、完整 ARAIM、certified
+integrity、正式 held-out/RQ/U14 或 C1–C3 升级。T10=C2-C、T11=C 保持不变。见
+[`FDE_STAGE1_RESULT.md`](../doc/ie_0911/FDE_STAGE1_RESULT.md)。
 
 ## 当前 0911 STEP2 claim 边界
 
@@ -124,9 +140,9 @@ joint four-way AND.  C1--C3 remain unchanged.  See the
 
 | Claim | Implementation/source expected | Experiment/run IDs expected | Figure/table expected | Current status and limitations |
 |---|---|---|---|---|
-| C1：可复现的 full-trajectory raw-range UWB–IMU pipeline，策略可替换，输出来自一致 final graph/Values | T02 paper input/fixed-beta path；T08 `InferenceResult`；T09 isolated runner/evaluator；source commit + build log | RQ1 simulation、controlled UGV、一个 public dataset；至少一次完整 rerun；run manifests/hashes | `tab:system_results`；architecture figure；artifact manifest | `PARTIALLY_SUPPORTED_ENGINEERING_ONLY`：有限合成实现与正确性有证据；0911 STEP2 的真实 full producer 8/8 在 Stage1 失败，Cauchy 5/8 成功但严重漂移，未提供新的完整端到端方法证据，不升级完整C1。 |
-| C2：recoverability characterization / exploratory structured correction；保留 Rc/η/s 与 live-c 分段联合图 | T03 golden matrices；T04 segment factor/constrained refit；T05 `F/G/N/R,eta,s,gamma`；T06 discovery/partition；T08 final/fallback；U01–U12 | RQ2 repeated LOS + sustained 1/2/3-link/ramp；RQ3 automatic-discovery end-to-end matched-cache gate comparison；fixed-partition constant/ramp 只作 `DEBUG_DIAGNOSTIC_ONLY`；failure/fallback runs | `tab:main`；`fig:headline`；automatic E2E decision/final score CSV；另列 fixed-partition DEBUG 表 | `C2-C / NOT_SUPPORTED_OPERATIONAL_BENEFIT`：T10负裁决保持。0911 STEP2 无 Stage2 cache 或任何 suppress/structured/LCB 配对，不能新增收益方向；全额消融也无辨别力。原完整 formal held-out RQ3仍未完成。 |
-| C3：受控证据与 artifact 分离 portability、decision quality、multi-link NLOS 和 future-context，命令/配置可追溯 | T07 deterministic truth sidecar；T09 manifests/cache/evaluator；T10 locked gate；T11 no-leak prefix；T12 locked metrics；T13 generated figures/tables/release | RQ1–RQ4 locked run IDs；RQ3 两个隔离 cache namespace；RQ4 common-linearization 独立 manifest/cache；U13/U14；failed/zero-coverage/fallback ledger；artifact reproduction run | `fig:headline`、`fig:context`、system/main tables、machine-readable metrics | `PARTIALLY SUPPORTED（基础设施） / FROZEN NEGATIVE/INCOMPLETE RESULT`：0911 STEP2 增加隔离 manifest、六份 GT hash、38 行全分母及失败/配对 unavailable 记账；但 8/8 producer Stage1 失败、无 U14/formal held-out，故只加强可追溯失败证据，不升级完整 C3。 |
+| C1：可复现的 full-trajectory raw-range UWB–IMU pipeline，策略可替换，输出来自一致 final graph/Values | T02 paper input/fixed-beta path；T08 `InferenceResult`；T09 isolated runner/evaluator；source commit + build log | RQ1 simulation、controlled UGV、一个 public dataset；至少一次完整 rerun；run manifests/hashes | `tab:system_results`；architecture figure；artifact manifest | `PARTIALLY_SUPPORTED_ENGINEERING_ONLY`：FDE Stage1、隔离 artifacts、provider-aware cache 和 zero-candidate smoke 全链有工程证据；六输入 6/6 producer 未发布 cache，不能新增完整端到端方法或精度证据。 |
+| C2：recoverability characterization / exploratory structured correction；保留 Rc/η/s 与 live-c 分段联合图 | T03 golden matrices；T04 segment factor/constrained refit；T05 `F/G/N/R,eta,s,gamma`；FDE/legacy partition；T08 final/fallback；U01–U12 | RQ2 repeated LOS + sustained 1/2/3-link/ramp；RQ3 automatic-discovery end-to-end matched-cache gate comparison；fixed-partition constant/ramp 只作 `DEBUG_DIAGNOSTIC_ONLY`；failure/fallback runs | `tab:main`；`fig:headline`；automatic E2E decision/final score CSV；另列 fixed-partition DEBUG 表 | `C2-C / NOT_SUPPORTED_OPERATIONAL_BENEFIT`：T10负裁决保持。当前 FDE 六输入无 Stage2 cache 或 suppress/structured/LCB 配对，四项 paired 指标和 coverage 变化均 unavailable；原完整 formal held-out RQ3仍未完成。 |
+| C3：受控证据与 artifact 分离 portability、decision quality、multi-link NLOS 和 future-context，命令/配置可追溯 | T07 deterministic truth sidecar；T09 manifests/cache/evaluator；T10 locked gate；T11 no-leak prefix；T12 locked metrics；T13 generated figures/tables/release | RQ1–RQ4 locked run IDs；RQ3 两个隔离 cache namespace；RQ4 common-linearization 独立 manifest/cache；U13/U14；failed/zero-coverage/fallback ledger；artifact reproduction run | `fig:headline`、`fig:context`、system/main tables、machine-readable metrics | `PARTIALLY SUPPORTED（基础设施） / FROZEN NEGATIVE/INCOMPLETE RESULT`：当前轮新增 FDE status/observation/partition artifacts、provider-aware cache、六份锁定 GT 核验和 30 行全分母聚合；但 6/6 producer 无 cache、无 candidate-dependent final、无 U14/formal held-out，故不升级完整 C3。 |
 
 ## T10-A19-R03 崩溃后复审边界（历史快照，状态已取代）
 

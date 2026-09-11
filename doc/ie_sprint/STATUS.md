@@ -1,5 +1,27 @@
 # UWB-IMU-IE sprint 状态
 
+## 0911-FDE-STEP1 用户授权 amendment（2026-09-11）
+
+当前任务：`DONE / IMPLEMENTED_AND_ENGINEERING_VERIFIED / SIX_INPUT_NEGATIVE_INCOMPLETE`。本轮用户实施计划替代此前 STEP2 结束后的停止边界，授权论文主代码路径
+新增 `imu_aided_fde` Stage1，同时完整保留 `automatic_discovery` 为 legacy/development。
+FDE 先用与 fixed-rejection 共享的 preliminary tightly-coupled LM，在实际 planned raw UWB factor 上按
+`r=h+beta-z`、factor `sigma`、1-DoF `Chi2inv(0.99)=6.6349` 做双边 fault detection；只将
+`r<0` 的 fault 作为正 excess-range candidate。按 `(tag,anchor,time,obs_id)` 稳定排序，健康观测与严格
+`gap>T_gap` 切段，`count>=n_min && duration>=T_min` 才保留。空候选仍为 Stage1 success 并运行既有
+raw Stage2；无 GT/oracle 输入。该前端属于 RAIM/FDE family，不是完整 ARAIM 或 certified integrity。
+
+Stage2、共同参考 `R_c`、local sigma、LCB、suppress、final graph/Values 与一次 fallback 定义不变；
+FDE final 不使用 live-C rescore 的规则不因本 amendment 改写。新增 provider-aware identity/artifacts，
+legacy/FDE cache 不互用；FDE 不与 `structured_bias_only` 组合。范围仅为实现、工程测试、Walk1 起始后
+`[8,11]s` smoke、六输入五方法串行运行与冻结 GT 的独立评价；失败、fallback、zero-candidate/
+zero-coverage 原样保留，不调概率、temporal 参数、kappa、区间或阈值，不提交或 push。
+工程门 29/29 CTest 和 Walk1 `[8,11]s` 最终 smoke 均通过；smoke 是合法 zero-candidate，raw Stage2 与
+四个 final 共用同一 cache。六输入中 3 个 FDE reference 成功但 zero-candidate raw Stage2 失败，3 个
+reference LM 达到最大迭代；6/6 producer 无 cache，24 个 candidate-dependent final 均 parent unavailable。
+锁定 GT 评价和 30 行聚合已生成，paired 四指标与 coverage 变化全部 unavailable；未调参或重跑算法。
+T10=C2-C、T11=C、C1–C3 与冻结论文结构/roadmap 不变。最终结果见
+[`../ie_0911/FDE_STAGE1_RESULT.md`](../ie_0911/FDE_STAGE1_RESULT.md)。
+
 ## 0911-STEP2 真实精度实验（2026-09-11）
 
 用户授权的第二个且最后一个开发工作包已执行并停止：
@@ -55,7 +77,10 @@ roadmap 所称的 `UWB_IMU_IE_System_Centered_Structure_v3.tex` / `Structure_v3`
 
 ## 项目定位
 
-本项目是可复现的 UWB–IMU 全轨迹后处理系统：复用现有 C++/GTSAM 后端，实现非负 L1/TV 支撑发现、去正则分段 refit、在排除全部候选的共同参考图上进行 `eta/s/gamma` 评分，以及组级 Use/Suppress 和最终联合推断。实验分别用于验证系统能力、多链路 NLOS 效果、门控价值和未来观测作用。
+本项目是可复现的 UWB–IMU 全轨迹后处理系统：复用现有 C++/GTSAM 后端；当前论文路径以 IMU-aided
+residual FDE 生成 temporal support，再执行去正则分段 refit、candidate-excluded `eta/s/gamma` 评分和
+冻结 final；原非负 L1/TV 自动发现保留为 legacy/development。实验分别用于验证系统能力、多链路 NLOS
+效果、门控价值和未来观测作用，当前六输入结果不支持运行收益。
 
 ## 仓库快照
 
@@ -93,6 +118,7 @@ roadmap 所称的 `UWB_IMU_IE_System_Centered_Structure_v3.tex` / `Structure_v3`
 | T11 prefix | `DONE` | `FROZEN_T11_C_LIMITED_SCOPE`：6 fresh + 2 U13 已执行；科学 4/6 全链、8/8 final 有效；20101 H0/H1 Stage1失败，完整U13仅20102 PASS；truth未读、指标NOT_RUN。[收口](T11_CLOSEOUT.md) |
 | T12 正式指标 | `DONE_0911_LIMITED_DEVELOPMENT_BLOCKED` | 0911 STEP2 限定矩阵已执行；5条 Cauchy conditional aligned 轨迹，候选方法8/8条件均被 Stage1/cache 阻塞；正式 locked/held-out RQ 与 U14 仍 `NOT_RUN`。见 [`STEP2_RESULTS.md`](../ie_0911/STEP2_RESULTS.md) |
 | T13 论文结果与发布 | `NOT_STARTED` | 正式论文数字、图表与 release `NOT_RUN` |
+| 0911 residual-FDE amendment | `DONE_NEGATIVE_INCOMPLETE` | FDE 工程门与 short smoke 通过；六输入 6/6 producer 无 cache、24 个 candidate-dependent final unavailable；见 [`FDE_STAGE1_RESULT.md`](../ie_0911/FDE_STAGE1_RESULT.md) |
 
 ## A14 指挥接受与实施前登记
 

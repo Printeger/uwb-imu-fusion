@@ -1,5 +1,7 @@
 #include "uifgo/paper_methods.h"
 
+#include "uifgo/nlos_fde.h"
+
 #include <gtsam/linear/NoiseModel.h>
 #include <Eigen/Eigenvalues>
 
@@ -294,30 +296,25 @@ BaselineResult RunPaperBaseline(
     if (options.method == PaperMethod::FIXED_REJECTION) {
       if (!FiniteNonnegative(options.rejection_threshold_sigma))
         throw std::invalid_argument("fixed rejection threshold is invalid");
-      result.preliminary = RunCheckedConditionalLm(
+      result.preliminary = RunPreliminaryTightlyCoupledLm(
           base_graph, common_initial_values, options.lm);
       if (!result.preliminary.converged) {
         result.reason = "PRELIMINARY_LM_FAILED:" + result.preliminary.reason;
         return result;
       }
       std::set<size_t> rejected_indices;
-      for (const auto& item : uwb_by_index) {
-        const auto noise_factor = boost::dynamic_pointer_cast<
-            gtsam::NoiseModelFactor>(base_graph.at(item.first));
-        if (!noise_factor)
-          throw std::runtime_error("fixed rejection UWB factor type invalid");
-        const gtsam::Vector residual =
-            noise_factor->unwhitenedError(result.preliminary.values);
-        const auto sigmas = noise_factor->noiseModel()->sigmas();
-        if (residual.size() != 1 || sigmas.size() != 1 ||
-            !(sigmas[0] > 0.0) || !residual.allFinite())
-          throw std::runtime_error("fixed rejection residual/sigma invalid");
-        const double q = std::abs(residual[0]) / sigmas[0];
+      const auto preliminary_residuals = ReadScalarUwbFactorResiduals(
+          base_graph, result.preliminary.values, base_uwb_metadata);
+      for (const auto& residual : preliminary_residuals) {
+        const auto item = uwb_by_index.find(residual.factor_index);
+        if (item == uwb_by_index.end())
+          throw std::runtime_error("fixed rejection residual metadata missing");
+        const double q = std::abs(residual.residual_m) / residual.sigma_m;
         if (FixedRejectionKeeps(q, options.rejection_threshold_sigma))
-          result.kept_uwb_obs_ids.push_back(item.second->obs_id);
+          result.kept_uwb_obs_ids.push_back(item->second->obs_id);
         else {
-          rejected_indices.insert(item.first);
-          result.rejected_uwb_obs_ids.push_back(item.second->obs_id);
+          rejected_indices.insert(item->first);
+          result.rejected_uwb_obs_ids.push_back(item->second->obs_id);
         }
       }
       result.final_factor_metadata = RetainedMetadata(

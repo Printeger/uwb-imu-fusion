@@ -58,27 +58,11 @@ keyframe:
 debug:
   log: false
 nlos:
-  mode: automatic_discovery
+  mode: imu_aided_fde
   score_recoverability: true
-  lambda_l1: 0.05
-  lambda_tv: 0.1
   gap_threshold_s: 1.0
-  active_bias_min_m: 0.02
-  change_point_min_m: 0.05
-  merge_max_difference_m: 0.05
   discovery_short_min_count: 2
   discovery_short_min_duration_s: 0.01
-  discovery_max_outer_iterations: 50
-  discovery_scaled_step_tolerance: 1.0e-06
-  discovery_observation_bias_scale_m: 1.0
-  rho_scale: 1.0
-  admm_primal_abs_tolerance_m: 1.0e-08
-  admm_primal_rel_tolerance: 1.0e-06
-  admm_dual_abs_tolerance_objective_per_m: 1.0e-08
-  admm_dual_rel_tolerance: 1.0e-06
-  admm_kkt_tolerance_objective_per_m: 1.0e-08
-  admm_tv_subgradient_tolerance_objective_per_m: 1.0e-08
-  admm_max_iterations: 10000
   boundary_epsilon_m: 1.0e-09
   relative_objective_tolerance: 1.0e-08
   scaled_step_tolerance: 1.0e-06

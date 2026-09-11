@@ -116,14 +116,15 @@ Post-Processing System with Recoverability-Guided NLOS Handling}
 \begin{document}
 \maketitle
 
-\noindent\fbox{\parbox{0.96\columnwidth}{\small\textbf{T01 working-draft status.}
-The equations, proposition, proof, four-stage method, and planned evaluation are
-carried over from the frozen structure.  T00 has verified only the legacy backend
-build and one repeatable legacy run.  The NLOS module, paper runner, locked
-calibration, and RQ1--RQ4 experiments remain unimplemented or unrun.}}
+\noindent\fbox{\parbox{0.96\columnwidth}{\small\textbf{0911 FDE engineering status.}
+The paper path now uses an IMU-aided residual FDE Stage~1 and retains the prior
+regularized discovery path as legacy/development code.  Engineering tests and a
+short Walk1 smoke pass.  In the frozen six-input run, three references failed and
+three zero-candidate runs failed the unchanged raw Stage~2 stop test, so no
+candidate-dependent final trajectory or paired accuracy claim is available.}}
 
 \begin{abstract}
-Offline UWB--inertial post-processing can exploit future measurements to revise historical estimates, but it also needs explicit control of calibration, robustness, uncertainty diagnostics, and evaluation provenance. This T01 working draft defines the planned UWB-IMU-IE system and its evidence contract. The frozen NLOS method uses nonnegative temporally structured support discovery, an unregularized constrained segment refit, candidate-excluded marginal information, and a frozen group-level use-or-suppress rule. Accepted bias states remain in the intended final joint graph rather than becoming exact corrections. At this revision, only the legacy backend build and one repeatable legacy run have been verified; the NLOS implementation and RQ1--RQ4 results are explicitly pending. \todo{Replace this status text only with locked implementation and experiment evidence; do not invent results.}
+Offline UWB--inertial post-processing can exploit future measurements to revise historical estimates, but it also needs explicit control of calibration, robustness, uncertainty diagnostics, and evaluation provenance. The implemented paper path uses an IMU-aided residual fault-detection-and-exclusion (FDE) front end, temporal positive-excess aggregation, an unregularized constrained segment refit, candidate-excluded marginal information, and frozen final policies. Accepted live bias states remain in the intended final joint graph; the LCB variants instead apply their separately specified fixed offsets. This residual front end belongs to the RAIM/FDE family, but it is neither a complete ARAIM implementation nor a certified integrity method. The present six-input evidence is negative/incomplete and supports no paired accuracy improvement claim.
 \end{abstract}
 
 \section{Introduction}
@@ -140,7 +141,7 @@ This is not a claim of guaranteed safe recovery or of a universal obstruction-du
 
 \paragraph{Intended contributions, pending evidence.}
 \textbf{C1---System capability.} The intended claim is a reproducible full-trajectory raw-range UWB--inertial pipeline with interchangeable processing policies and graph-consistent diagnostic outputs. T00 currently supports only the narrower legacy build/run fact.
-\textbf{C2---Focused processing method.} The frozen design is a segment-level NLOS module combining adopted support discovery, debiased refitting, candidate-excluded marginal-information assessment, and frozen use/suppress decisions with uncertainty-preserving final inference. It is not implemented at T01.
+\textbf{C2---Focused processing method.} The implemented segment-level NLOS module combines residual FDE support generation, debiased refitting, candidate-excluded marginal-information assessment, and frozen final decisions. Its current six-input operational benefit is not supported.
 \textbf{C3---Evidence and artifact.} The planned evaluation separates system portability, empirical decision quality, multi-link NLOS performance, and future-context effects, with traceable commands and configurations. Those experiments are not run at T01.
 
 \paragraph{Claim boundary.}
@@ -204,21 +205,30 @@ The intended release contains source, build environment, tests, one example data
 
 \section{Recoverability-Guided NLOS Processing}
 \label{sec:method}
-This section preserves the frozen method definition. Its equations and proposition
-specify the implementation target; they are not evidence that Stages 1--4 are
-present in the repository. The implementation status and unresolved parameters
-are tracked in the T01 method contract.
-\subsection{Stage 1: adopted support discovery}
-Write $J_0=J_{\mathrm{prior}}+J_{\mathrm{IMU}}+J_\beta$ and $w_i=\sigma_i^{-2}$, with $i=(k,m)$. Discover candidate support using
+This section follows the current method contract.  Implementation presence is
+separate from evidence of accuracy or integrity performance.
+\subsection{Stage 1: IMU-aided residual FDE}
+First solve the tightly coupled raw-range/IMU reference graph.  For every valid,
+planned scalar range factor, use the factor's own unwhitened residual and noise,
 \begin{equation}
- \begin{aligned}
- \min_{\X,\bm\beta,\mathbf b\geq0}\quad
- &J_0+\frac12\sum_{i\in\E}w_i(h_i+\beta_{m(i)}+b_i-z_i)^2\\
- &+\lambda_1\|\mathbf b\|_1+\lambda_{\rm TV}\|D\mathbf b\|_1.
- \end{aligned}
+ r_i=h_i(\widehat\X)+\beta_{m(i)}-z_i,\qquad
+ q_i=r_i/\sigma_i,\qquad T_i=q_i^2.
  \label{eq:discovery}
 \end{equation}
-Here $D$ differences consecutive valid samples \emph{within each link}. Split chains at packet gaps exceeding a fixed threshold; specify time/gap conventions. Freeze activity thresholds, minimum segment sample count/duration, and change-point rules using validation data. These choices determine the model and must not be tuned on test labels.
+With one degree of freedom and $p=0.99$, declare a two-sided fault only when
+$T_i>\chi^2_{1,0.99}=6.6349$; equality is retained.  Because positive excess
+range gives $r_i<0$ under this residual convention, a Stage~1 NLOS candidate
+must satisfy both the fault test and $r_i<0$.  A large positive residual remains
+in the diagnostic ledger but is not an NLOS candidate.
+
+Sort candidates deterministically by tag, anchor, time, and observation ID.
+A healthy observation on the same link closes the current run, and a candidate
+gap closes it only when the gap is strictly greater than the frozen threshold.
+Retain runs meeting both the minimum count and duration; filtered candidates
+remain visible in the observation artifact.  Stage~1 uses no amplitude,
+change-point, merge, $\ell_1$/TV, ADMM, or outer-loop criterion.  Ground truth
+and oracle support are unavailable to the producer.  This is a RAIM/FDE-family
+residual front end, not complete ARAIM and not a certified integrity monitor.
 
 \paragraph{Static-bias reference.}
 Without a reference, $\beta'_m=\beta_m-d$ and $b'_{km}=b_{km}+d$ preserve predictions when feasible. In the noiseless known-trajectory limit, imposing $\min_k b_{km}=0$ selects $\beta_m=\min_k(z_{km}-h_{km})$; merely assuming that an unknown true LOS epoch exists does not make an unconstrained optimization unique. The main configuration instead fixes $\beta_m$ from independent LOS calibration. This ambiguity is a short motivation, not a headline theorem.
@@ -335,7 +345,7 @@ At the final linearization, audit the same reference-plus-group diagnostics and 
 \begin{algorithmic}[1]
 \Require Validated recording, calibration, frozen configuration
 \State Initialize and build the conventional batch graph
-\State Discover support using Eq.~\eqref{eq:discovery}
+\State Run the strict residual FDE test in Eq.~\eqref{eq:discovery}
 \State Freeze segments; refit without $\ell_1$/TV penalties
 \State Build common reference $\mathcal G_0$ excluding $\C$
 \For{each eligible overlap group $\A$}

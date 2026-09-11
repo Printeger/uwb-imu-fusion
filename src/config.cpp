@@ -364,7 +364,8 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
   }
   if (cfg.nlos_mode != "disabled" && cfg.nlos_mode != "oracle_debug" &&
       cfg.nlos_mode != "fixed_partition_debug" &&
-      cfg.nlos_mode != "automatic_discovery")
+      cfg.nlos_mode != "automatic_discovery" &&
+      cfg.nlos_mode != "imu_aided_fde")
     throw std::runtime_error("Unsupported nlos.mode: " + cfg.nlos_mode);
   if (cfg.discovery_conditional_navigation_policy !=
           "GTSAM_CHECK_ONLY_V1" &&
@@ -408,12 +409,45 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
             "automatic_discovery requires explicit nlos." + key);
     }
   }
+  if (cfg.nlos_mode == "imu_aided_fde") {
+    const auto nl = node["nlos"];
+    if (nl["oracle_support"].IsDefined())
+      throw std::runtime_error(
+          "nlos.oracle_support field is forbidden for imu_aided_fde mode");
+    if (!nl["score_recoverability"].IsDefined() ||
+        !nl["score_recoverability"].as<bool>())
+      throw std::runtime_error(
+          "imu_aided_fde requires score_recoverability: true");
+    const std::vector<std::string> required = {
+        "gap_threshold_s", "discovery_short_min_count",
+        "discovery_short_min_duration_s"};
+    for (const auto& key : required) {
+      if (!nl[key].IsDefined())
+        throw std::runtime_error(
+            "imu_aided_fde requires explicit nlos." + key);
+    }
+    if (!node["solver"] ||
+        !node["solver"]["chi2_reject_prob"].IsDefined())
+      throw std::runtime_error(
+          "imu_aided_fde requires explicit solver.chi2_reject_prob");
+    if (cfg.chi2_reject_prob != 0.99)
+      throw std::runtime_error(
+          "imu_aided_fde requires solver.chi2_reject_prob exactly 0.99");
+    if (!std::isfinite(cfg.discovery_gap_threshold_s) ||
+        cfg.discovery_gap_threshold_s < 0.0 ||
+        cfg.discovery_short_min_count <= 0 ||
+        !std::isfinite(cfg.discovery_short_min_duration_s) ||
+        cfg.discovery_short_min_duration_s < 0.0)
+      throw std::runtime_error(
+          "imu_aided_fde temporal support parameters are invalid");
+  }
   if (cfg.final_inference_enabled) {
     const auto nl = node["nlos"];
     if (cfg.nlos_mode != "oracle_debug" &&
-        cfg.nlos_mode != "automatic_discovery")
+        cfg.nlos_mode != "automatic_discovery" &&
+        cfg.nlos_mode != "imu_aided_fde")
       throw std::runtime_error(
-          "final_inference_enabled requires oracle_debug or automatic_discovery");
+          "final_inference_enabled requires oracle_debug, automatic_discovery, or imu_aided_fde");
     if (!cfg.score_recoverability)
       throw std::runtime_error(
           "final_inference_enabled requires score_recoverability: true");

@@ -740,3 +740,32 @@ T10 可冻结负结论，工程失败不能标验收通过，T11/T12 仍 NOT_RUN
 仅实现、工程测试、SFUISE Walk1 起始后 [8,11]s 固定 smoke、六输入四方法加载/启动检查；
 第二步精度矩阵 NOT_RUN，不按结果调 kappa/区间/阈值，不自动 push。
 T10=C2-C、T11=C 与 C1–C3 限制不变，旧结果/默认/用户材料保护。
+
+## 0911-FDE-STEP1 residual Stage1 amendment（2026-09-11）
+
+用户本轮明确授权论文主代码路径以 `imu_aided_fde` 替代上述 L1/TV Stage1；上述
+`automatic_discovery` 数学与历史证据继续作为 legacy/development 保留，不被重写。FDE 的 production
+输入仅为同一 physical graph/initial Values、factor metadata、冻结 input plan、配置、calibration/common
+preparation identity；禁止 GT、oracle support、obstruction label 或 future-only 数据。
+
+FDE reference 是与 fixed-rejection 共享的 preliminary tightly-coupled LM。对每个且仅每个
+`valid && planned` 的真实 `uwb_range` factor，核对 obs/factor/graph/Values 一一身份并直接读取
+`r=factor->unwhitenedError(reference_values)[0]=h+beta-z` 与
+`sigma=factor->noiseModel()->sigmas()[0]`。定义 `q=r/sigma`、`T=q^2`；固定 1 DoF、
+`p=0.99`、阈值 `6.6348966010212145`。只有严格 `T>threshold` 为双边 fault，等号保留；
+`positive_excess=(r<0)`，candidate 当且仅当 fault 与 positive excess 同时成立。正 residual fault
+只保留诊断，不进入 candidate。
+
+Temporal aggregation 按 `(tag_id,anchor_id,timestamp,obs_id)` 稳定排序。同 link 的健康 planned
+观测立即结束当前 run；相邻 candidate 的 gap 只有严格 `>T_gap` 才断开，等号不分。最大 run 仅在
+`count>=n_min && duration>=T_min` 时进入 `SupportPartition`；短 run 仍在 observation artifact 中保存
+candidate 与过滤原因。segment ordinal/ID、partition hash 必须确定性生成，不使用幅值、change-point、
+merge、L1/TV、ADMM 或 outer loop。reference LM 成功且全部 observation test 完成即返回 SUCCESS，
+包括空 partition；随后空 partition 走既有 raw Stage2。reference 或输入校验失败显式失败且不发布 Stage2
+cache。该方法是 RAIM/FDE-family residual front end，不是完整 ARAIM、保护级计算或 certified integrity。
+
+本 amendment 不改变 Stage2 无正则受约束 refit、共同 candidate-excluded `R_c`、local sigma、LCB、
+固定补偿、suppress/final graph/Values 与一次 fallback 定义。`structured_bias_only` 只属于旧 Stage1，
+不得与 FDE 组合。FDE provider/version、p/DoF/threshold、temporal 与 preliminary LM、physical graph/
+Values、plan/input/preparation/calibration identity 必须进入 producer/cache identity；final replay 同时核对
+mode、Stage1 hash 与 `SupportPartition.provider=imu_aided_residual_fde_v1`，legacy/FDE cache 不得互用。

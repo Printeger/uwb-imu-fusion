@@ -51,3 +51,20 @@
 仅实现、工程测试、SFUISE Walk1 起始后 [8,11]s 固定 smoke、六输入四方法加载/启动检查；
 第二步精度矩阵 NOT_RUN，不按结果调 kappa/区间/阈值，不自动 push。
 T10=C2-C、T11=C 与 C1–C3 限制不变，旧结果/默认/用户材料保护。
+
+## 0911-FDE-STEP1 用户授权 amendment（2026-09-11）
+
+本轮用户实施计划授权把论文主代码路径的 Stage1 从 `automatic_discovery` 改为
+`imu_aided_fde`；旧 L1/TV automatic provider、历史结果和默认行为继续作为
+legacy/development 保留。FDE 只在不读取 GT/oracle 的 preliminary tightly-coupled
+graph/Values 上，对每个 planned raw UWB factor 使用其实际 unwhitened residual 和 factor
+noise 做 1-DoF、`p=0.99` 的双边卡方 fault detection；只把 `r<0` 的 fault 作为正 excess-range
+candidate，再按既有 gap/min-count/min-duration 做确定性逐 link 聚合。它属于
+RAIM/FDE-family residual front end，不是完整 ARAIM 或 certified integrity method。
+
+本轮保留 Stage2、共同参考 `R_c`、local sigma、LCB、suppress/final graph 与一次 fallback
+定义；FDE 空候选仍为成功并进入既有 raw Stage2。`structured_bias_only` 不与 FDE 组合；
+FDE producer artifacts/cache identity 必须 provider-aware，legacy/FDE cache 不得互用。
+仅按用户计划实施、工程测试、Walk1 起始后 `[8,11]s` smoke 和六输入五方法串行检查/评价；
+不按结果调整概率、temporal 参数、kappa、区间或阈值，不自动提交或 push。T10=C2-C、
+T11=C 和 C1–C3 限制不变，冻结结构/roadmap、旧结果与 `doc/v2/ie_0911/` 受保护。

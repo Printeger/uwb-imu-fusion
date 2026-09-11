@@ -485,3 +485,26 @@ T10 可冻结负结论，工程失败不能标验收通过，T11/T12 仍 NOT_RUN
 仅实现、工程测试、SFUISE Walk1 起始后 [8,11]s 固定 smoke、六输入四方法加载/启动检查；
 第二步精度矩阵 NOT_RUN，不按结果调 kappa/区间/阈值，不自动 push。
 T10=C2-C、T11=C 与 C1–C3 限制不变，旧结果/默认/用户材料保护。
+
+## 0911-FDE-STEP1 实验与 artifact amendment（2026-09-11）
+
+本轮开发/portability 运行把论文主 producer 的 Stage1 固定为 `imu_aided_fde`，旧
+`automatic_discovery` 配置、测试、cache 与结果仅作 legacy/development 对照并继续保留。FDE 配置必须
+显式给出 gap/min-count/min-duration，并要求 `solver.chi2_reject_prob=0.99`；拒绝其他概率、oracle
+support 与 `structured_bias_only` 组合，不要求 L1/TV、ADMM、activity/change/merge/outer-loop 参数。
+
+每个 FDE producer 不论成功或失败都必须写 `fde_status.json`、`fde_observations.csv` 和
+`support_partition.json`；成功 producer 另写与后者字节相同的兼容 `partition.json` 并按既有 Stage2
+schema发布 cache。`fde_status.json` 至少保存 provider/version、reference solve、p/DoF/threshold、
+planned/tested/fault/positive-candidate/raw/filtered/retained 计数、partition identity 和 `gt_read=false`。
+`AUTO_DISCOVERY` 调度/cache namespace 名称为历史兼容保留，但准入按 provider-aware Stage1/context/
+payload hash 隔离；FDE payload 强制包含三个 FDE artifacts，legacy payload不追加该要求。
+
+工程门后仅在新隔离目录运行 Walk1 起始后 `[8,11]s` smoke，再串行运行已有六输入的
+`robust_cauchy`、`suppress_all`、`structured_debias`、`lcb_partial`、`lcb_fixed_full`。每个数据集的
+structured producer 只运行一次，其四个 candidate-dependent final 必须引用同一 cache ID、partition hash
+与 Stage2 Values；Cauchy 保持独立 disabled path。估计器运行与 hash 冻结后才由 evaluator 读取既有锁定
+GT，报告 aligned RMSE/P95/horizontal/vertical RMSE 与 trajectory coverage；LCB improvement 定义为
+`suppress_all-lcb_partial`，百分比以 suppress 为分母，零分母记 unavailable。所有失败、fallback、空候选、
+zero-coverage 原样保留，不按结果调参或重跑算法。该批次不是正式 held-out test，不升级 T10=C2-C、
+T11=C 或 C1–C3。

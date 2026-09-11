@@ -508,6 +508,10 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
                   producer: dict) -> dict:
     status = read_json(run_dir / "run_status.json") or {}
     capability = read_json(run_dir / "capability_status.json") or {}
+    input_manifest = read_json(run_dir / "input_manifest.json") or {}
+    fde_status = read_json(run_dir / "fde_status.json")
+    is_fde = input_manifest.get("stage1_provider") == \
+        "imu_aided_residual_fde_v1"
     if not (run_dir / "trajectory.tum").is_file():
         raise RuntimeError("Stage-2 cache producer has no trajectory")
     payload_names = [name for name in (
@@ -515,11 +519,28 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
         "support_snapshot.csv", "segments.csv", "factor_metadata.csv",
         "refit_iterations.csv", "scores_decision.csv", "segment_fit_scores.csv",
         "groups.csv", "trajectory.tum", "imu_bias.csv", "stage2_values.csv",
-        "stage2_content_identity.json", "stage2_producer_context.json")
+        "stage2_content_identity.json", "stage2_producer_context.json",
+        "fde_status.json", "fde_observations.csv", "support_partition.json")
         if (run_dir / name).is_file()]
     required = STAGE2_REPLAY_REQUIRED_PAYLOADS | {"trajectory.tum", "imu_bias.csv"}
+    if is_fde:
+        required |= {"fde_status.json", "fde_observations.csv",
+                     "support_partition.json"}
     if not required.issubset(payload_names):
         raise RuntimeError("Stage-2 cache producer payload is incomplete")
+    if is_fde:
+        if (fde_status or {}).get("provider") != \
+                "imu_aided_residual_fde_v1" or \
+                (fde_status or {}).get("status") != "SUCCESS" or \
+                (fde_status or {}).get("gt_read") is not False:
+            raise RuntimeError("FDE cache producer status/provider is invalid")
+        if (run_dir / "support_partition.json").read_bytes() != \
+                (run_dir / "partition.json").read_bytes():
+            raise RuntimeError(
+                "FDE compatibility partition is not byte-equivalent")
+        partition_doc = read_json(run_dir / "partition.json") or {}
+        if partition_doc.get("provider") != "imu_aided_residual_fde_v1":
+            raise RuntimeError("FDE support partition provider is invalid")
     groups = list(csv.DictReader((run_dir / "groups.csv").open(
         newline="", encoding="utf-8")))
     scores = list(csv.DictReader((run_dir / "scores_decision.csv").open(
@@ -548,7 +569,7 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
         "debug_label": ("RQ3_FIXED_PARTITION_DIAGNOSTIC_DEBUG_ONLY"
                         if fixed_debug else "RQ3_AUTO_DISCOVERY_END_TO_END"),
         "common_preparation_id": common_id,
-        "source_identity": (read_json(run_dir / "input_manifest.json") or {}).get(
+        "source_identity": input_manifest.get(
             "source_hash_sha256", "UNAVAILABLE"),
         "producer_common_config_sha256": common_config_sha256,
         "producer_stage2_config_sha256": stage2_config_sha256,
@@ -573,6 +594,9 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
         "score_status": score_status,
         "producer_status": status.get("status", "UNKNOWN"),
         "producer_capability": capability.get("recoverability_score", "UNKNOWN"),
+        "stage1_provider": ("imu_aided_residual_fde_v1" if is_fde
+                            else input_manifest.get("stage1_provider",
+                                                    "automatic_discovery")),
         **producer,
         "payloads": payloads,
     }
@@ -845,6 +869,10 @@ def main() -> int:
 
             source = Path(cell["config"])
             raw_config = yaml.safe_load(source.read_text(encoding="utf-8"))
+            if (raw_config.get("nlos", {}).get("mode") == "imu_aided_fde" and
+                    mode == "structured_bias_only"):
+                raise ValueError(
+                    "structured_bias_only is incompatible with imu_aided_fde")
             fixed_debug = spec.get("cache_namespace") == "FIXED_PARTITION_DEBUG"
             resolve_config_paths(raw_config, source.parent)
             effective = strip_truth(raw_config, fixed_debug)

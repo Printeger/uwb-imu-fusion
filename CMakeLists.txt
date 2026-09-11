@@ -133,6 +133,7 @@ add_library(${PROJECT_NAME}
   src/paper_input.cpp
   src/t07_scenario_cache.cpp
   src/nlos_solver_utils.cpp
+  src/nlos_fde.cpp
   src/nlos_discovery.cpp
   src/nlos_refit.cpp
   src/nlos_recoverability.cpp
@@ -290,6 +291,9 @@ if(GTest_FOUND)
   catkin_add_gtest(test_nlos_discovery test/test_nlos_discovery.cpp)
   target_link_libraries(test_nlos_discovery ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
 
+  catkin_add_gtest(test_nlos_fde test/test_nlos_fde.cpp)
+  target_link_libraries(test_nlos_fde ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+
   catkin_add_gtest(test_nlos_recoverability test/test_nlos_recoverability.cpp)
   target_link_libraries(test_nlos_recoverability ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
   target_compile_definitions(test_nlos_recoverability PRIVATE
@@ -303,6 +307,10 @@ if(GTest_FOUND)
 
   catkin_add_gtest(test_paper_stage2_cache test/test_paper_stage2_cache.cpp)
   target_link_libraries(test_paper_stage2_cache ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+
+  add_test(NAME test_fde_runner_contract
+    COMMAND ${PYTHON_EXECUTABLE} -B
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_fde_runner_contract.py)
 
   add_test(NAME test_t04_runner_contract
     COMMAND ${PYTHON_EXECUTABLE} -B

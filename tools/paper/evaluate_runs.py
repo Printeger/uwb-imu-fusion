@@ -322,6 +322,11 @@ def paired_aligned_metrics(run_dir: Path, suppress_dir: Path, scenario: dict):
         "rmse_improvement_vs_suppress_m": None,
         "rmse_improvement_vs_suppress_pct": None,
         "p95_improvement_vs_suppress_m": None,
+        "p95_improvement_vs_suppress_pct": None,
+        "horizontal_rmse_improvement_vs_suppress_m": None,
+        "horizontal_rmse_improvement_vs_suppress_pct": None,
+        "vertical_rmse_improvement_vs_suppress_m": None,
+        "vertical_rmse_improvement_vs_suppress_pct": None,
     }
     method_path = run_dir / "trajectory.tum"
     suppress_path = suppress_dir / "trajectory.tum"
@@ -366,17 +371,31 @@ def paired_aligned_metrics(run_dir: Path, suppress_dir: Path, scenario: dict):
         rotation = Vt.T @ D @ U.T
         aligned = ((rotation @ est.T).T + gt_points.mean(axis=0) -
                    rotation @ est.mean(axis=0))
-        return np.linalg.norm(aligned - gt_points, axis=1)
+        delta = aligned - gt_points
+        return {
+            "ate": np.linalg.norm(delta, axis=1),
+            "horizontal": np.linalg.norm(delta[:, :2], axis=1),
+            "vertical": np.abs(delta[:, 2]),
+        }
 
     method_errors = errors(method)
     suppress_errors = errors(suppress)
     if method_errors is None or suppress_errors is None:
         return dict(unavailable_pair, reason="SE3_ALIGNMENT_DEGENERATE",
                     matched_gt_count=len(common))
-    method_rmse = float(np.sqrt(np.mean(method_errors ** 2)))
-    suppress_rmse = float(np.sqrt(np.mean(suppress_errors ** 2)))
-    method_p95 = float(np.percentile(method_errors, 95))
-    suppress_p95 = float(np.percentile(suppress_errors, 95))
+    def rmse(values):
+        return float(np.sqrt(np.mean(values ** 2)))
+
+    method_rmse = rmse(method_errors["ate"])
+    suppress_rmse = rmse(suppress_errors["ate"])
+    method_p95 = float(np.percentile(method_errors["ate"], 95))
+    suppress_p95 = float(np.percentile(suppress_errors["ate"], 95))
+    method_horizontal = rmse(method_errors["horizontal"])
+    suppress_horizontal = rmse(suppress_errors["horizontal"])
+    method_vertical = rmse(method_errors["vertical"])
+    suppress_vertical = rmse(suppress_errors["vertical"])
+    def percent(improvement, denominator):
+        return None if denominator == 0.0 else 100.0 * improvement / denominator
     return {
         "status": "AVAILABLE", "reason": "",
         "matched_gt_count": len(common),
@@ -392,6 +411,20 @@ def paired_aligned_metrics(run_dir: Path, suppress_dir: Path, scenario: dict):
             "UNDEFINED_ZERO_DENOMINATOR" if suppress_rmse == 0.0 else
             "AVAILABLE"),
         "p95_improvement_vs_suppress_m": suppress_p95 - method_p95,
+        "p95_improvement_vs_suppress_pct": percent(
+            suppress_p95 - method_p95, suppress_p95),
+        "method_aligned_horizontal_rmse_m": method_horizontal,
+        "suppress_aligned_horizontal_rmse_m": suppress_horizontal,
+        "horizontal_rmse_improvement_vs_suppress_m": (
+            suppress_horizontal - method_horizontal),
+        "horizontal_rmse_improvement_vs_suppress_pct": percent(
+            suppress_horizontal - method_horizontal, suppress_horizontal),
+        "method_aligned_vertical_rmse_m": method_vertical,
+        "suppress_aligned_vertical_rmse_m": suppress_vertical,
+        "vertical_rmse_improvement_vs_suppress_m": (
+            suppress_vertical - method_vertical),
+        "vertical_rmse_improvement_vs_suppress_pct": percent(
+            suppress_vertical - method_vertical, suppress_vertical),
         "alignment": "SE3_SCALE_FIXED_ONE",
     }
 
@@ -1314,6 +1347,34 @@ def main():
                     "rmse_improvement_vs_suppress_pct": None,
                     "p95_improvement_vs_suppress_m": None,
                 }
+            def trajectory_coverage(metric_row):
+                trajectory = metric_row.get("trajectory", {})
+                matched = trajectory.get("matched_count", {}).get("value")
+                unmatched = trajectory.get("unmatched_count", {}).get("value")
+                denominator = ((matched or 0) + (unmatched or 0)
+                               if matched is not None and unmatched is not None
+                               else 0)
+                return None if denominator == 0 else matched / denominator
+            method_coverage = trajectory_coverage(row)
+            suppress_coverage = trajectory_coverage(suppress or {})
+            if method_coverage is None or suppress_coverage is None:
+                paired.update({
+                    "coverage_change_status": "UNAVAILABLE",
+                    "coverage_percentage_point_change_vs_suppress": None,
+                    "coverage_relative_change_vs_suppress_pct": None})
+            else:
+                paired.update({
+                    "coverage_change_status": (
+                        "UNDEFINED_ZERO_DENOMINATOR"
+                        if suppress_coverage == 0.0 else "AVAILABLE"),
+                    "method_trajectory_coverage": method_coverage,
+                    "suppress_trajectory_coverage": suppress_coverage,
+                    "coverage_percentage_point_change_vs_suppress":
+                        100.0 * (method_coverage - suppress_coverage),
+                    "coverage_relative_change_vs_suppress_pct": (
+                        None if suppress_coverage == 0.0 else
+                        100.0 * (method_coverage - suppress_coverage) /
+                        suppress_coverage)})
             row["paired_vs_suppress"] = paired
             paired_improvements.append({
                 "cell_id": row["cell_id"], "run_unit_id": row["run_unit_id"],

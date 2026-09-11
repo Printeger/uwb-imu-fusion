@@ -159,8 +159,9 @@ struct Config {
   // --- Paper-path NLOS debug/refit (T04) ---
   // "disabled" preserves the T02 all-range path. "oracle_debug" and
   // "fixed_partition_debug" read only their isolated support manifests.
-  // "automatic_discovery" is the T06
-  // development-only discovery/refit/score path and cannot read that manifest.
+  // "automatic_discovery" is the legacy T06 L1/TV development path.
+  // "imu_aided_fde" is the 0911 residual-FDE paper producer and cannot read
+  // an oracle manifest.
   std::string nlos_mode = "disabled";
   std::string oracle_support_path = "";
   bool score_recoverability = false;
