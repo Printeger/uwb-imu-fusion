@@ -1099,3 +1099,17 @@ C1/C2/C3 均不升级。第二步完整矩阵、正式指标/held-out、论文�
 DONE / BENEFIT_EVIDENCE_INSUFFICIENT。授权与结果见 `doc/ie_sprint/NLOS_INJECTION_PROTOCOL.md`、`doc/ie_0911/NLOS_INJECTION_EXPERIMENT_RESULT.md`。HEAD46d37f6算法和科学参数hash未变。6 clean、4 admitted injected完成；2 injected保留clean Cauchy失败而跳过。72方法条目中57成功、3失败、12跳过。用户暂停中断另列，续跑未重试算法失败或已完成项。
 
 全部10个场景temporal support为空，4 injected新增偏置检测TP=0；LCB/suppression轨迹相同来自空support行为，没有实际恢复补偿，不能作为检测后LCB优越性证据。唯一有效normal/low配对Walk3收益均0，未观察到低冗余放大收益；不推断统计显著性。完整CTest30/30、指标工程测试7/7、四对实际初值/计划/噪声和共享上游检查通过仅支持工程正确性。Range provenance缺口仍UNAVAILABLE。T10=C2-C、T11=C、C1–C3不升级。
+
+## 0912 PL conditional RAIM/FDE：preflight 工程证据与停止裁决
+
+[协议](../doc/ie_sprint/PL_CONDITIONAL_RAIM_PROTOCOL.md)与
+[结果](../doc/ie_0911/PL_CONDITIONAL_RAIM_PREFLIGHT.md)支持限定工程事实：锁定 PL conditional equations、
+detect-before-commit 的 15 维 prior、unique LOAO、healthy-subset commit、PL gap reinitialize、连续
+support 与 truth-blind shadow artifacts 已实现；独立 fixture 和 8/8 定向测试通过。该代码仍是
+preflight-only，不是 production provider。
+
+锁定 Walk1 clean retained support 为 0；injected 的 30/30 planned affected IDs 全部被检测，但目标
+affected group alarm 为 0，最大统计量 `4.86052305024` 低于对应门限 `30.8561899404`，故正式裁决
+`PL_CONDITIONAL_PREFLIGHT_FAIL_MISSED_AFFECTED_GROUP_ALARM`。target unique isolation/persistent overlap
+后续门、production/cache、Stage2、六方法和定位指标均 NOT_RUN/NOT_EVALUABLE。本结果不支持检测召回、
+完整 ARAIM、certified integrity 或恢复收益；不产生论文数字，不升级 T10=C2-C、T11=C 或 C1--C3。

@@ -1,3 +1,19 @@
+# 0912-PL-CONDITIONAL-RAIM-FDE 当前任务
+
+`DONE / PREFLIGHT_FAIL_MISSED_AFFECTED_GROUP_ALARM / PRODUCTION_AND_E2E_NOT_RUN`。用户授权实施
+[`PL_CONDITIONAL_RAIM_PROTOCOL.md`](PL_CONDITIONAL_RAIM_PROTOCOL.md)，替代上一个未执行的
+Projected GLRT v5 计划。当前只允许提取锁定 PL commit 的 conditional detector 合同，新增
+source-neutral core、shadow replay、独立 evaluator 和工程测试，并在 locked Walk1 clean/injected
+上执行 truth-blind preflight。实际 clean retained support 为 0，第一门通过；injected 的 30/30 planned
+affected IDs 全部进入检测组，但 affected alarm 为 0，最大 `T=4.86052305024`、对应门限
+`30.8561899404`，第二门失败。第三、四门、provider 注册、production、Stage2/final 和 E2E 依协议
+全部 NOT_RUN；没有调参或扩大输入。完整结果见
+[`../ie_0911/PL_CONDITIONAL_RAIM_PREFLIGHT.md`](../ie_0911/PL_CONDITIONAL_RAIM_PREFLIGHT.md)。
+IE 基线 `d82d794e79f2d2550d6815ed687dff170af0e593`，
+PL 基线 `ae54fb8ca55dfbfaf64fe45615b6bcd106548a93`，recovery backend 基线
+`cf287b4fec9bc5689317f302ccf4cdd927bfba81`。不调 detector/temporal/Stage2/kappa，不扩展 Walk2/3/
+低冗余，保护旧结果、默认和 `doc/v2/ie_0911/`。仅按协议的普通、非 force 提交/推送流程交付。
+
 # 0912-WINDOWED-FDE-E2E 当前任务
 
 `DONE / ENGINEERING_PASS / DETECTOR_GATE_FAIL_MISSED_INJECTION / LOCALIZATION_NOT_EVALUABLE`。

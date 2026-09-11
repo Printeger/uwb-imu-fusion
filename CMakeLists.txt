@@ -137,6 +137,7 @@ add_library(${PROJECT_NAME}
   src/fde_math.cpp
   src/fde_grouped.cpp
   src/fde_windowed.cpp
+  src/pl_conditional_raim.cpp
   src/nlos_discovery.cpp
   src/nlos_refit.cpp
   src/nlos_recoverability.cpp
@@ -190,6 +191,21 @@ target_link_libraries(uwb_imu_fgo_paper_runner
   yaml-cpp
 )
 add_dependencies(uwb_imu_fgo_paper_runner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+# Independent locked-PL equation fixture; deliberately does not link the IE
+# conditional core so parity tests cannot share implementation code.
+add_executable(pl_conditional_reference_fixture
+  tools/paper/pl_conditional_reference_fixture.cpp)
+target_link_libraries(pl_conditional_reference_fixture ${Boost_LIBRARIES})
+
+# Truth-blind preflight-only shadow replay. This is intentionally separate
+# from the production paper runner and does not register a Stage1 provider.
+add_executable(pl_conditional_preflight tools/run_pl_conditional_preflight.cpp)
+target_link_libraries(pl_conditional_preflight
+  ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable
+  ${Boost_LIBRARIES} yaml-cpp)
+add_dependencies(pl_conditional_preflight
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_executable(export_ground_truth tools/paper/export_ground_truth.cpp)
 target_link_libraries(export_ground_truth
@@ -296,6 +312,9 @@ if(GTest_FOUND)
 
   catkin_add_gtest(test_nlos_fde test/test_nlos_fde.cpp)
   target_link_libraries(test_nlos_fde ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_pl_conditional_raim test/test_pl_conditional_raim.cpp)
+  target_link_libraries(test_pl_conditional_raim ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
 
   catkin_add_gtest(test_nlos_recoverability test/test_nlos_recoverability.cpp)
   target_link_libraries(test_nlos_recoverability ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})

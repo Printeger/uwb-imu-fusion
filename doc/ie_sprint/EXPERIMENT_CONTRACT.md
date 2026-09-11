@@ -532,3 +532,34 @@ truth，要求 target-link production support 有 temporal overlap。任一 dete
 同一 v4 Stage2 cache、partition 与 Values，并核对 E2E support 与 screen support 完全一致。轨迹只报告
 aligned ATE 及配套 P95/horizontal/vertical/coverage；定位收益只按协议中的严格 paired RMSE 规则裁决。
 本轮不运行 Walk2/3 或低冗余矩阵，不构成正式 held-out、总体 detector 保证或 C1--C3 claim 升级。
+
+## 0912 PL conditional RAIM/FDE locked Walk1 amendment
+
+用户授权 [`PL_CONDITIONAL_RAIM_PROTOCOL.md`](PL_CONDITIONAL_RAIM_PROTOCOL.md) 的单一 locked
+Walk1 development preflight 与条件式 production E2E。复用旧 manifest 的 normal clean/injected、
+seed 911、link `27956:20276`、闭区间 `[1664959678.3077347,1664959686.3077347]`、
+`+0.5m`、30 planned affected IDs 与原 keyframe plan。clean/injected detector 在不接收 truth
+参数且 truth 路径隐藏的独立进程中运行；产物封存后独立 evaluator 才可读 truth，
+并依次要求：(1) clean support 为 0；(2) affected groups 至少一次 alarm；(3) 至少一次
+unique isolation 命中 target anchor；(4) truth-blind persistent support 命中 target link 且与 truth
+在时间或 obs IDs 上重叠。唯一通过状态为 `PL_CONDITIONAL_PREFLIGHT_PASS`；任一门失败则
+production 和 E2E 全部 `NOT_RUN`，不调概率、temporal、kappa、区间或阈值。
+
+Preflight 通过后才可新增显式互斥配置 `nlos.pl_conditional_raim_fde_test=true`，并先逐
+epoch 证明 production 与 sealed preflight 在 obs/order、alarm、hypotheses、isolation、commit policy 和
+support 上精确一致，浮点量在 `1e-12+1e-10*scale` 内。production clean 必须 0 support，
+injected 必须与 sealed support 一致并由 truth evaluator 证明 target overlap。通过后串行
+`all_range`、`robust_cauchy`、`suppress_all`、`structured_debias`、`lcb_fixed_full`、
+`lcb_partial`；后四者共享单一新 provider support、partition、Stage2 Values 和 payload identity。
+
+独立 evaluator 报告 RMSE/P95/horizontal/vertical/coverage/optimizer/fallback 以及各 recovery 相对
+suppress 差值。缺指标为 `NOT_EVALUABLE`；否则只以严格 `lcb_partial RMSE < suppress_all RMSE`
+判定收益。分开输出 preflight、production detector、backend 和 localization 四项 verdict。本轮不运行
+Walk2/3/低冗余，不构成 formal held-out、总体 detector 保证或 C1--C3 升级。
+
+0912 preflight 实际结果：clean detector-only 运行 0 retained support，第一门 PASS；injected 的
+30/30 planned affected IDs 均被分组检测，但 affected alarm 为 0，第二门 FAIL。独立 evaluator 在
+detector artifacts 封存后才读取 truth，file-open trace 的 forbidden truth/oracle open 为 0。第三门
+target unique isolation、第四门 persistent target overlap 按串行门标为
+`NOT_RUN_PREVIOUS_GATE_FAILED`；production detector、六方法、backend 与 localization 全部
+`NOT_RUN/NOT_EVALUABLE`。不允许根据该结果调整任何冻结参数。

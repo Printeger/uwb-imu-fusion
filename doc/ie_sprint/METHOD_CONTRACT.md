@@ -791,3 +791,40 @@ provider/version/partition rule 固定为 `imu_aided_windowed_fde_v4`、
 `FDE_WINDOWED_DYADIC_BONFERRONI_MERGE_V4`。v4 identity/artifacts/cache 显式隔离；Stage2、
 共同参考 Rc、local sigma、LCB、final graph/Values 与一次 fallback 均不变。该 detector 是
 RAIM/FDE-family development front end，不是 ARAIM、certified integrity 或总体误报保证。
+
+## 0912 PL conditional RAIM/FDE amendment
+
+用户授权 [`PL_CONDITIONAL_RAIM_PROTOCOL.md`](PL_CONDITIONAL_RAIM_PROTOCOL.md) 的串行
+preflight/production 定义与停止门。方法来自锁定 PL commit
+`ae54fb8ca55dfbfaf64fe45615b6bcd106548a93`：当前 group 提交前，从只含 IMU 预测和旧 UWB
+历史的 iSAM2/Bayes-tree 状态取 `X,V,B` 15×15 joint marginal `P`。物理 innovation
+`ν=z-h`，`H=∂(h-z)/∂x`，`W=L^{-1}`，内部 `ν_w=Wν,H_w=WH`。因此
+`S_w=H_w P H_w^T+I`，`T=ν_w^T S_w^{-1}ν_w`，DoF 是当前 group 测量数，
+`p_fa=1e-5`，PASS 当且仅当 `T<=chi2^{-1}(1-p_fa,DoF)`。
+
+IE v1 group 是同一 `PaperInputPlan.keyframe_id` 的全部 planned observations，按 keyframe 时间和
+稳定 source order 处理，每个 physical anchor 每组至多一条，违规 fail-closed。keyframe 0--4
+是因果 bootstrap，不计 detector 指标；从 keyframe 5 开始 detect-before-commit。group PASS 提交
+整组；alarm 时对每个 physical anchor 构造 leave-one-anchor-out 子集，各假设共用同一 prior
+且互不提交。恰好一个子集 PASS 才是 unique isolation；0 个为 `FDE_UNISOLATED_FAULT`，
+多于 1 个为 `FDE_ISOLATION_AMBIGUOUS`。不以 statistic、failure slope、truth 或 RMSE 排名。
+unique isolation 只在被隔离行的原始 PL innovation `z-h>0` 时生成 candidate，并只提交
+healthy subset；ambiguous/unisolated/数值失败不提交整组并记录 prior degradation。
+
+candidate 使用现有 same-link、严格 `gap>1s`、`count>=2`、`duration>=0.01s` 语义生成
+source-neutral `SupportPartition`；任何非 candidate planned row 中断该 link 连续 run。shadow 状态、
+innovation、detector amplitude 或 PL failure slope 不得进入 Stage2/final。只有 sealed preflight 为
+`PL_CONDITIONAL_PREFLIGHT_PASS` 才可注册 provider `pl_conditional_raim_fde_v1`、version
+`UIFGO_PL_CONDITIONAL_RAIM_FDE_V1` 和 rule
+`PL_CONDITIONAL_UNIQUE_LOAO_POSITIVE_TEMPORAL_V1`。新旧 provider/cache 必须双向隔离；Stage2、
+Rc/local sigma、kappa、LCB/full、final graph/Values/solver/fallback 保持冻结。该前端是
+RAIM/FDE-family development detector，不是完整 ARAIM 或 certified integrity method。
+
+0912 PL conditional preflight 收口：source-neutral equations、unique LOAO 与 shadow replay 已按锁定
+定义实现并完成定向工程验证；IE `ExpressionFactor` 的物理 residual 取实际 factor，`X(k)` Jacobian
+通过同一 factor 的中心数值导数提取，以绕开 linked GTSAM 通用 derivative-vector 断言。每个新 epoch
+的 `X,V,B` 初值由上一 shadow estimate 和同一 Combined IMU preintegration 实时预测，
+不复用 batch 全局开环 seed；初始化输入严格裁至 keyframe 4。
+Walk1 clean 第一门通过，但 injected 30 个 affected group 全部未 alarm，唯一裁决为
+`PL_CONDITIONAL_PREFLIGHT_FAIL_MISSED_AFFECTED_GROUP_ALARM`。停止门已经触发，故本 amendment 的
+production provider/cache/replay 接口没有实现或注册，Stage2/final 科学语义未改变。
