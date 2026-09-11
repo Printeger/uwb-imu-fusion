@@ -1,0 +1,1 @@
+["cmake", "--build", "/home/mint/ws_fusion_uwb/build/uwb_imu_fgo", "--target", "uwb_imu_fgo_paper_runner", "a19_r08_pipeline", "test_nlos_inference", "test_nlos_recoverability", "test_nlos_refit", "test_paper_methods", "-j2"]

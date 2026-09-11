@@ -168,7 +168,7 @@ void WriteSparseCsv(const std::string& path,
 
 #include "t11_diagnostics.h"
 
-int RunSuppressCertifiedEngineering(const std::string& output_root) {
+int RunSuppressCertifiedEngineering(const std::string& output_root, bool lcb = false, bool full_offset = false) {
   if (!fs::create_directory(output_root))
     throw std::runtime_error("OUTPUT_EXISTS");
   fs::create_directories(output_root + "/normal/recovery");
@@ -285,6 +285,16 @@ int RunSuppressCertifiedEngineering(const std::string& output_root) {
   refit_options.max_refit_iterations = 50;
   refit_options.lm_relative_tolerance = 1e-10;
   refit_options.lm_absolute_tolerance = 1e-12;
+  if (lcb) {
+    auto ranges_file=output(output_root+"/input_ranges.csv");
+    ranges_file << "obs_id,keyframe_id,raw_z_m,sigma_m,beta_m,ax,ay,az,lx,ly,lz\n";
+    for(const auto& row:plan.observations) {
+      const auto a=std::find_if(cfg.anchors.begin(),cfg.anchors.end(),[&](const auto& x){return x.id==row.anchor_id;});
+      ranges_file << row.obs_id << ',' << row.keyframe_id << ',' << row.raw_range << ',' << row.nominal_sigma << ",0,"
+                  << a->pos.x() << ',' << a->pos.y() << ',' << a->pos.z() << ','
+                  << cfg.lever_arm_init.x() << ',' << cfg.lever_arm_init.y() << ',' << cfg.lever_arm_init.z() << '\n';
+    }
+  }
   const auto stage2 = SegmentRefitter(refit_options).Run(
       graph, initial, metadata, plan, cfg, support);
   if (!stage2.converged())
@@ -321,14 +331,14 @@ int RunSuppressCertifiedEngineering(const std::string& output_root) {
             const Values& values, const CheckedLmOptions& options,
             const std::vector<DevelopmentRefitRangeConstant>& constants) {
           ++*callback_count;
-          if (conditional_graph.size() != 10 || values.size() != 6 ||
-              constants.size() != 4 ||
+          if ((!lcb && conditional_graph.size() != 10) || values.size() != 6 ||
+              (!lcb && constants.size() != 4) ||
               options.policy != ConditionalLmPolicy::
                   GTSAM_CHECK_AND_NAVIGATION_STATIONARITY_CONTINUE_LAMBDA_SEARCH_V2)
             throw std::runtime_error("R07_ENGINEERING_NO_C_SHAPE_OR_POLICY");
           for (const auto& item : constants) {
-            if (item.candidate || item.segment_amplitude != 0.0 ||
-                item.conditional_beta != item.fixed_beta ||
+            if ((!lcb && (item.candidate || item.segment_amplitude != 0.0)) ||
+                item.conditional_beta != item.fixed_beta + item.segment_amplitude ||
                 item.factor_index >= conditional_graph.size() ||
                 conditional_graph.at(item.factor_index)->keys() !=
                     gtsam::KeyVector{item.pose_key})
@@ -350,16 +360,16 @@ int RunSuppressCertifiedEngineering(const std::string& output_root) {
   auto normal_fallback = make_request(
       output_root + "/normal/fallback", &normal_fallback_callbacks);
   const auto normal = FinalInferenceEngine(
-      gate, refit_options, {}, {}, FinalGatePolicy::SUPPRESS_ALL, nullptr,
+      gate, refit_options, {}, {}, lcb ? (full_offset ? FinalGatePolicy::LCB_FIXED_FULL : FinalGatePolicy::LCB_PARTIAL) : FinalGatePolicy::SUPPRESS_ALL, nullptr,
       &normal_recovery, &normal_fallback)
       .Run(graph, metadata, stage2, support, scores, plan, cfg, identity);
   if (!normal.valid_estimate() || normal_recovery_callbacks == 0 ||
       normal_fallback_callbacks != 0 || normal.fallback.attempted ||
-      normal.factor_audit.accepted_candidate_count != 0 ||
-      normal.factor_audit.suppressed_candidate_count != 4 ||
+      normal.factor_audit.accepted_candidate_count != (lcb ? 4u : 0u) ||
+      normal.factor_audit.suppressed_candidate_count != (lcb ? 0u : 4u) ||
       normal.factor_audit.noncandidate_reference_count != 4 ||
-      normal.final_graph.size() != 10 || normal.final_values.size() != 6)
-    throw std::runtime_error("R07_ENGINEERING_NORMAL_RECOVERY_FAILED");
+      normal.final_graph.size() != (lcb ? 14u : 10u) || normal.final_values.size() != 6)
+    throw std::runtime_error("R07_ENGINEERING_NORMAL_RECOVERY_FAILED:"+normal.reason+":"+normal.fallback.recovery_failure_reason);
 
   size_t forced_recovery_callbacks = 0;
   size_t forced_fallback_callbacks = 0;
@@ -372,7 +382,7 @@ int RunSuppressCertifiedEngineering(const std::string& output_root) {
   InferenceTestHooks hooks;
   hooks.force_recovery_failure = true;
   const auto fallback = FinalInferenceEngine(
-      gate, refit_options, {}, hooks, FinalGatePolicy::SUPPRESS_ALL, nullptr,
+      gate, refit_options, {}, hooks, lcb ? (full_offset ? FinalGatePolicy::LCB_FIXED_FULL : FinalGatePolicy::LCB_PARTIAL) : FinalGatePolicy::SUPPRESS_ALL, nullptr,
       &forced_recovery, &forced_fallback)
       .Run(graph, metadata, stage2, support, scores, plan, cfg, identity);
   if (!fallback.valid_estimate() ||
@@ -397,7 +407,7 @@ int RunSuppressCertifiedEngineering(const std::string& output_root) {
   WriteInferenceArtifacts(output_root + "/forced_fallback/final", fallback);
   auto summary = output(output_root + "/summary.json");
   summary
-      << "{\"schema\":\"T10_A19_R07_SUPPRESS_CERTIFIED_ENGINEERING_V1\","
+      << "{\"schema\":\"IE0911_OR_R07_CERTIFIED_ENGINEERING_V1\","
          "\"status\":\"PASS\",\"actual_certified_callback\":true,"
          "\"policy\":\""
       << kCertifiedPolicy
@@ -432,6 +442,14 @@ int main(int argc, char** argv) {
   bool stage2_callback_active = false;
   Totals stage1_totals, stage2_totals;
   try {
+    if (argc == 3 && std::string(argv[1]) == "--ie0911-full-engineering") {
+      compact_diagnostic_output = true;
+      return RunSuppressCertifiedEngineering(fs::absolute(argv[2]).string(), true, true);
+    }
+    if (argc == 3 && std::string(argv[1]) == "--ie0911-fixed-engineering") {
+      compact_diagnostic_output = true;
+      return RunSuppressCertifiedEngineering(fs::absolute(argv[2]).string(), true);
+    }
     if (argc == 5 && std::string(argv[1]) == "--policy" &&
         std::string(argv[2]) == kR03Policy &&
         (std::string(argv[3]) == "development-suppress-policy-engineering" ||

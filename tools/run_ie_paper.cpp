@@ -59,6 +59,8 @@ constexpr char kRunnerElapsedSemantics[] =
     "RUNNER_WALL_FROM_MAIN_ENTRY_THROUGH_FINAL_STATUS_PREPARATION";
 
 struct Args {
+  bool prepare_only = false;
+  std::string anchor_ids;
   std::string config_path;
   std::string output_root;
   std::string run_id;
@@ -149,7 +151,9 @@ Args ParseArgs(int argc, char** argv) {
       if (i + 1 >= argc) throw std::invalid_argument(name + " needs a value");
       return std::string(argv[++i]);
     };
-    if (arg == "--config")
+    if (arg == "--prepare-only") args.prepare_only = true;
+    else if (arg == "--anchor-ids") args.anchor_ids = take(arg);
+    else if (arg == "--config")
       args.config_path = take(arg);
     else if (arg == "--output-root")
       args.output_root = take(arg);
@@ -229,8 +233,8 @@ Args ParseArgs(int argc, char** argv) {
     throw std::invalid_argument(
         "--diagnostic-exact-lm-direction cannot enable fixed-checkpoint "
         "shadow recovery");
-  if ((args.execution_type == "FINAL_TRAJECTORY") !=
-      !args.stage2_cache_manifest.empty())
+  if (!args.prepare_only && ((args.execution_type == "FINAL_TRAJECTORY") !=
+      !args.stage2_cache_manifest.empty()))
     throw std::invalid_argument(
         "FINAL_TRAJECTORY requires exactly one Stage-2 cache manifest");
   if (args.run_id.find('/') != std::string::npos || args.run_id == "." ||
@@ -490,6 +494,28 @@ LoadedInput LoadData(const std::string& config_dir, uifgo::Config* cfg,
     RebuildAnchorSigmas(cfg);
     return LoadedFileInput(
         dir + "/ISAS-Walk" + std::to_string(cfg->sfuise_sequence) + ".bag");
+  }
+  if (cfg->data_interface == "miluv") {
+    if (cfg->miluv_uwb_group_window != 0.0 || !cfg->miluv_tag_levers.count(10))
+      throw std::invalid_argument("MILUV paper requires group_window=0 and configured tag 10 lever");
+    const std::string dir = uifgo::ConfigLoader::ResolveBagPath(config_dir,cfg->miluv_data_dir);
+    std::vector<uifgo::AnchorConfig> unused_anchors;
+    if (!loader.LoadMiluvCsv(dir,imu,uwb,&unused_anchors)) throw std::runtime_error("MILUV CSV loader failed");
+    cfg->lever_arm_init=cfg->miluv_tag_levers.at(10);
+    if (imu->empty() || uwb->empty()) throw std::runtime_error("MILUV empty input");
+    const double origin=std::min(imu->front().t,uwb->front().t);
+    const double begin=origin+cfg->bag_start;
+    const double end=cfg->bag_durr<0 ? std::numeric_limits<double>::infinity() : begin+cfg->bag_durr;
+    imu->erase(std::remove_if(imu->begin(),imu->end(),[&](const auto& x){return x.t<begin || x.t>end;}),imu->end());
+    uwb->erase(std::remove_if(uwb->begin(),uwb->end(),[&](const auto& x){return x.tag_id!=10 || x.t<begin || x.t>end;}),uwb->end());
+    const std::string base=dir+"/"+cfg->miluv_robot_dir+"/";
+    auto loaded=LoadedFileInput(base+cfg->miluv_uwb_csv);
+    loaded.source_hash_sha256="sha256:"+uifgo::Sha256Hex(
+        loaded.source_hash_sha256+uifgo::Sha256FileHex(base+cfg->miluv_imu_csv));
+    loaded.recording_id="miluv-"+uifgo::Sha256Hex(loaded.source_hash_sha256);
+    loaded.recording_time_origin_s=origin;
+    RebuildAnchorSigmas(cfg);
+    return loaded;
   }
   if (cfg->data_interface == "original") {
     const std::string bag = uifgo::ConfigLoader::ResolveBagPath(
@@ -2366,6 +2392,18 @@ int main(int argc, char** argv) {
     if (imu.empty() || raw_uwb.empty() || cfg.anchors.empty())
       throw std::runtime_error("loader returned incomplete IMU/UWB/anchor data");
 
+    if (!args.anchor_ids.empty()) {
+      std::set<int> selected;
+      std::istringstream ids(args.anchor_ids); std::string id;
+      while(std::getline(ids,id,',')) selected.insert(std::stoi(id));
+      for(int wanted:selected) {
+        if(std::none_of(cfg.anchors.begin(),cfg.anchors.end(),[&](const auto& a){return a.id==wanted;}))
+          throw std::invalid_argument("selected anchor absent from real input configuration");
+      }
+      cfg.anchors.erase(std::remove_if(cfg.anchors.begin(),cfg.anchors.end(),
+          [&](const auto& a){return !selected.count(a.id);}),cfg.anchors.end());
+      RebuildAnchorSigmas(&cfg);
+    }
     const std::string& source = loaded.source;
     const std::string& source_hash = loaded.source_hash_fnv1a64;
     const std::string& source_sha256 = loaded.source_hash_sha256;
@@ -2485,6 +2523,17 @@ int main(int argc, char** argv) {
          args.execution_type == "FINAL_TRAJECTORY"))
       throw std::runtime_error("A15_INITIAL_IDENTITY_OR_CONFIG_GATE_FAILED");
 
+    if (args.prepare_only) {
+      if (!args.method.empty()) (void)uifgo::PaperMethodByName(args.method);
+      auto out=Open(run_dir / "run_status.json");
+      out << "{\"status\":\"PREPARED_ONLY\",\"optimizer_calls\":0,\"imu_count\":"
+          << imu.size() << ",\"planned_observations\":" << planned
+          << ",\"keyframes\":" << plan.keyframes.size()
+          << ",\"method\":\"" << JsonEscape(args.method)
+          << "\",\"anchors\":" << cfg.anchors.size()
+          << ",\"source_sha256\":\"" << source_sha256 << "\"}\n";
+      return 0;
+    }
     // T09 Stage-4 cache replay is a separate entry point.  It performs common
     // preparation, restores typed Stage-2 Values, rebuilds the frozen Stage-2
     // graph for content verification, and then enters the unchanged T08 final
@@ -2563,10 +2612,22 @@ int main(int argc, char** argv) {
               cache.stage2_graph_linearization_sha256 ||
           rebuilt_identity.values_sha256 != cache.stage2_values_sha256)
         throw std::runtime_error("CACHE_STAGE2_GRAPH_VALUES_IDENTITY_MISMATCH");
-      const auto decision_scores = ReadCachedScores(cache_root);
+      // Fixed-offset policy needs the full physical R and amplitude column map.
+      // Recompute at the verified immutable Stage2 graph/Values, with zero optimizer calls.
+      const auto decision_scores = (args.method == "lcb_partial" || args.method == "lcb_fixed_full")
+          ? uifgo::ScoreRefitRecoverability(stage2, support, plan, cfg)
+          : ReadCachedScores(cache_root);
 
       uifgo::FinalGatePolicy final_policy = uifgo::FinalGatePolicy::FULL_GATE;
-      if (args.method == "fit_only")
+      if (args.method == "lcb_partial")
+        final_policy = uifgo::FinalGatePolicy::LCB_PARTIAL;
+      else if (args.method == "lcb_fixed_full")
+        final_policy = uifgo::FinalGatePolicy::LCB_FIXED_FULL;
+      else if (args.method == "suppress_all")
+        final_policy = uifgo::FinalGatePolicy::SUPPRESS_ALL;
+      else if (args.method == "structured_debias")
+        final_policy = uifgo::FinalGatePolicy::STRUCTURED_DEBIAS;
+      else if (args.method == "fit_only")
         final_policy = uifgo::FinalGatePolicy::FIT_ONLY;
       else if (args.method == "s_fit")
         final_policy = uifgo::FinalGatePolicy::S_FIT;
@@ -3909,7 +3970,15 @@ int main(int argc, char** argv) {
         failure_stage = "T08_FINAL_INFERENCE";
         uifgo::FinalGatePolicy final_policy =
             uifgo::FinalGatePolicy::FULL_GATE;
-        if (args.method == "fit_only")
+        if (args.method == "lcb_partial")
+        final_policy = uifgo::FinalGatePolicy::LCB_PARTIAL;
+      else if (args.method == "lcb_fixed_full")
+        final_policy = uifgo::FinalGatePolicy::LCB_FIXED_FULL;
+      else if (args.method == "suppress_all")
+        final_policy = uifgo::FinalGatePolicy::SUPPRESS_ALL;
+      else if (args.method == "structured_debias")
+        final_policy = uifgo::FinalGatePolicy::STRUCTURED_DEBIAS;
+      else if (args.method == "fit_only")
           final_policy = uifgo::FinalGatePolicy::FIT_ONLY;
         else if (args.method == "s_fit")
           final_policy = uifgo::FinalGatePolicy::S_FIT;

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="41" failures="0" disabled="0" errors="0" time="0.008" timestamp="2026-09-11T12:00:43" name="AllTests">
+  <testsuite name="FusedLasso" tests="5" failures="0" disabled="0" errors="0" time="0.001" timestamp="2026-09-11T12:00:43">
+    <testcase name="SinglePointMatchesAnalyticNonnegativeL1Solution" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="FusedLasso" />
+    <testcase name="NoBiasAndConstantSegmentHaveExpectedSolutions" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="FusedLasso" />
+    <testcase name="ZeroRegularizersRecoverWeightedPointwiseRamp" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="FusedLasso" />
+    <testcase name="RhoScaleChangesConvergencePathNotDeclaredSolution" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="FusedLasso" />
+    <testcase name="NonConvergenceIsExplicit" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="FusedLasso" />
+  </testsuite>
+  <testsuite name="PaperPosePriorFactor" tests="2" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-11T12:00:43">
+    <testcase name="PreservesLinkedResidualAndCorrectsPoseRetractJacobian" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="PaperPosePriorFactor" />
+    <testcase name="ReplacementIsExplicitAndPreservesGraphObjective" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="PaperPosePriorFactor" />
+  </testsuite>
+  <testsuite name="HashUtils" tests="1" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-11T12:00:43">
+    <testcase name="Sha256KnownVector" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="HashUtils" />
+  </testsuite>
+  <testsuite name="Partition" tests="8" failures="0" disabled="0" errors="0" time="0.001" timestamp="2026-09-11T12:00:43">
+    <testcase name="GapInactiveChangeEqualityAndShortAreStrict" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="Partition" />
+    <testcase name="GapEqualityConnectsAndStrictlyGreaterGapBreaks" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="Partition" />
+    <testcase name="A01IsSinglePassWithRecomputedAccumulatorAndOriginalNext" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="Partition" />
+    <testcase name="EqualityMergeAndImmutableHashAreDeterministic" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="Partition" />
+    <testcase name="NoActiveObservationProducesHashedEmptyPartition" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="Partition" />
+    <testcase name="StableWeightedRepresentativeHandlesOverflowAndNonuniformWeights" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="Partition" />
+    <testcase name="Sha256SnapshotIncludesSolverAndExternalContext" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="Partition" />
+    <testcase name="ConditionalNavigationPolicyChangesSupportIdentity" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="Partition" />
+  </testsuite>
+  <testsuite name="A02ParameterConsistency" tests="3" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-11T12:00:43">
+    <testcase name="MatchingParametersAreAcceptedByStandalonePartitionEntry" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="A02ParameterConsistency" />
+    <testcase name="ToleranceRoundoffAndEveryScaleMismatchAreRejectedAtBothEntries" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="A02ParameterConsistency" />
+    <testcase name="DefaultPolicyIgnoresUnusedConditionalStationarityCopies" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="A02ParameterConsistency" />
+  </testsuite>
+  <testsuite name="CheckedConditionalLmPolicyV2" tests="3" failures="0" disabled="0" errors="0" time="0.002" timestamp="2026-09-11T12:00:43">
+    <testcase name="FixedFailureEquivalentContinuesSearchAndAcceptsRealDescent" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="CheckedConditionalLmPolicyV2" />
+    <testcase name="CallCapAndLambdaExhaustionRemainExplicitFailures" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="CheckedConditionalLmPolicyV2" />
+    <testcase name="StationaryNonzeroResidualExhaustionBoundaryIsPreserved" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="CheckedConditionalLmPolicyV2" />
+  </testsuite>
+  <testsuite name="CheckedConditionalLmDiagnostics" tests="6" failures="0" disabled="0" errors="0" time="0.002" timestamp="2026-09-11T12:00:43">
+    <testcase name="NormalReturnTrialAccountingMatchesIndependentFactorObservations" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="CheckedConditionalLmDiagnostics" />
+    <testcase name="TriggerPredicatesRecomputeAuthoritativeLinkedGtsamDecision" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="CheckedConditionalLmDiagnostics" />
+    <testcase name="OneIterationLimitIsNotMisreportedAsConvergence" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="CheckedConditionalLmDiagnostics" />
+    <testcase name="OptionalBranchAndFiniteDifferenceCapturePreservesSolverResult" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="CheckedConditionalLmDiagnostics" />
+    <testcase name="ActualLinkedTryDeltaIsCompletePreciseAndRoundTripsNavigationKeys" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="CheckedConditionalLmDiagnostics" />
+    <testcase name="FixedCheckpointRecoveryIsExplicitShadowAndUsesMatchedStart" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="CheckedConditionalLmDiagnostics" />
+  </testsuite>
+  <testsuite name="CheckedConditionalLmPolicy" tests="7" failures="0" disabled="0" errors="0" time="0.001" timestamp="2026-09-11T12:00:43">
+    <testcase name="ExceptionAccountingUsesConfirmedCountsAndMarksIncompleteTrial" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="CheckedConditionalLmPolicy" />
+    <testcase name="ExceptionAccountingPreservesEarlierConfirmedNormalReturnCounts" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="CheckedConditionalLmPolicy" />
+    <testcase name="GenericConvergenceContinuesUntilStationarityOrOriginalBudget" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="CheckedConditionalLmPolicy" />
+    <testcase name="SimultaneousGenericAndStationarityStopMatchesDefault" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="CheckedConditionalLmPolicy" />
+    <testcase name="InvalidStationarityAuditFailsWithoutReturningValues" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="CheckedConditionalLmPolicy" />
+    <testcase name="ZeroPreviousErrorPreservesMathematicalPredicatesAndShortCircuit" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="CheckedConditionalLmPolicy" />
+    <testcase name="NonfiniteAndExceptionPathsCannotReportSuccess" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="CheckedConditionalLmPolicy" />
+  </testsuite>
+  <testsuite name="DiscoveryStopping" tests="1" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-11T12:00:43">
+    <testcase name="CombinedStepUsesGtsamLocalCoordinatesAndBiasScale" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="DiscoveryStopping" />
+  </testsuite>
+  <testsuite name="Stage1RegularizedResult" tests="1" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-11T12:00:43">
+    <testcase name="UsesOnePhysicalGraphAndOnlyValidPlannedBiases" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="Stage1RegularizedResult" />
+  </testsuite>
+  <testsuite name="A11FirstBlock" tests="2" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-11T12:00:43">
+    <testcase name="FullDirectionGateRejectsMissingFactorFailedPointAndWrongDelta" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="A11FirstBlock" />
+    <testcase name="EarlyOriginalConvergencePreservesValuesLambdaAndSkipsShadowSolve" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="A11FirstBlock" />
+  </testsuite>
+  <testsuite name="T10A19R05Identity" tests="1" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-11T12:00:43">
+    <testcase name="ExactSharedRequestAcceptedAndEveryProtectedFieldFailsClosed" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="T10A19R05Identity" />
+  </testsuite>
+  <testsuite name="T10A19R08ValidationIdentity" tests="1" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-11T12:00:43">
+    <testcase name="ValidationEnvelopeIsBoundAndLegacyRequestCannotCarryIt" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="T10A19R08ValidationIdentity" />
+  </testsuite>
+</testsuites>

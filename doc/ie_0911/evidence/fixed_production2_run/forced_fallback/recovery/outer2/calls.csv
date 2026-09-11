@@ -1,0 +1,2 @@
+call,error,lambda,trials,accepted,rejected,unresolved,generic,stationarity_valid,stationary,max_scaled_gradient,roundoff,certificate_s,reason
+1,3.9905846309514628,1.0000000000000002e-06,1,1,0,0,1,1,1,7.3828568258882399e-11,9.9316372328252517e-13,0.001176776,CONDITIONAL_LM_CONVERGED_AND_NAVIGATION_STATIONARY

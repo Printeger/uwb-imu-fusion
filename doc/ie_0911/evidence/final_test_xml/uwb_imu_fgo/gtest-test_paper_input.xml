@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="9" failures="0" disabled="0" errors="0" time="0.001" timestamp="2026-09-11T12:00:43" name="AllTests">
+  <testsuite name="PaperInput" tests="9" failures="0" disabled="0" errors="0" time="0.001" timestamp="2026-09-11T12:00:43">
+    <testcase name="LegalHighRssiDifferenceRemainsInPool" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="PaperInput" />
+    <testcase name="SourceInvalidEntryIsLedgeredBeforeValidityFiltering" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="PaperInput" />
+    <testcase name="LoaderSourceOrdinalKeepsObsIdAcrossInputReordering" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="PaperInput" />
+    <testcase name="RawLedgerUsesPerObservationTimeTagAndSourceIdentity" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="PaperInput" />
+    <testcase name="StrategyMasksKeepIdsKeyframesAndSigmaSnapshot" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="PaperInput" />
+    <testcase name="SyntheticFixedBetaCorrectsInitializationOnceAndAddsNoKey" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="PaperInput" />
+    <testcase name="PaperFixedBetaRequiresCoverageWhenConfigured" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="PaperInput" />
+    <testcase name="PaperFixedBetaRejectsConfiguredUnknownAnchor" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="PaperInput" />
+    <testcase name="MultipleTagsFailExplicitly" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="PaperInput" />
+  </testsuite>
+</testsuites>

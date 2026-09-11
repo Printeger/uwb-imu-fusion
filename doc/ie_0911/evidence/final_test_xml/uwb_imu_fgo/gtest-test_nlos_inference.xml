@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="24" failures="0" disabled="0" errors="0" time="0.113" timestamp="2026-09-11T12:00:43" name="AllTests">
+  <testsuite name="T08Decision" tests="3" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-11T12:00:43">
+    <testcase name="EqualityOnEtaSAndGammaPassesAtomically" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="T08Decision" />
+    <testcase name="StableReasonsCoverThresholdInvalidRankShortAndBoundary" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="T08Decision" />
+    <testcase name="GateMustBeFiniteExplicitAndDevelopmentOnly" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="T08Decision" />
+  </testsuite>
+  <testsuite name="T10A19R03Decision" tests="1" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-11T12:00:43">
+    <testcase name="SuppressAllAndStructuredDebiasHaveExplicitSemantics" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="T10A19R03Decision" />
+  </testsuite>
+  <testsuite name="T08Inference" tests="14" failures="0" disabled="0" errors="0" time="0.085" timestamp="2026-09-11T12:00:43">
+    <testcase name="AtomicAcceptedGroupHasLiveCAndExactRawFactorMasks" status="run" result="completed" time="0.009" timestamp="2026-09-11T12:00:43" classname="T08Inference" />
+    <testcase name="FrozenPolicySeparatesAcceptedSuppressedAndReferenceInOneFinalGraph" status="run" result="completed" time="0.002" timestamp="2026-09-11T12:00:43" classname="T08Inference" />
+    <testcase name="TwoIndependentGroupsUseAndSuppressRemainAtomicThroughFullEngine" status="run" result="completed" time="0.005" timestamp="2026-09-11T12:00:43" classname="T08Inference" />
+    <testcase name="ZeroEligibleAndZeroAcceptedHaveExplicitStatusAndFrozenMasks" status="run" result="completed" time="0.009" timestamp="2026-09-11T12:00:43" classname="T08Inference" />
+    <testcase name="NoCandidatesUsesReferenceGraphWithoutFallback" status="run" result="completed" time="0.002" timestamp="2026-09-11T12:00:43" classname="T08Inference" />
+    <testcase name="ForcedRecoveryFailureFallsBackExactlyOnceFromReference" status="run" result="completed" time="0.002" timestamp="2026-09-11T12:00:43" classname="T08Inference" />
+    <testcase name="ActualFinalAcceptanceFailurePreservesRecoveryScoresAndFallsBackOnce" status="run" result="completed" time="0.003" timestamp="2026-09-11T12:00:43" classname="T08Inference" />
+    <testcase name="ActualFinalAcceptanceFailureThenForcedFallbackFailureRetainsBoth" status="run" result="completed" time="0.008" timestamp="2026-09-11T12:00:43" classname="T08Inference" />
+    <testcase name="AutomaticEngineeringFixtureReachesInferenceWithoutOracleOrGtInput" status="run" result="completed" time="0.008" timestamp="2026-09-11T12:00:43" classname="T08Inference" />
+    <testcase name="ForcedFallbackFailureReturnsNoValidGraphOrTrajectoryState" status="run" result="completed" time="0.004" timestamp="2026-09-11T12:00:43" classname="T08Inference" />
+    <testcase name="DevelopmentSuppressRecoveryAndFallbackUseSeparateNoCRequests" status="run" result="completed" time="0.004" timestamp="2026-09-11T12:00:43" classname="T08Inference" />
+    <testcase name="CovarianceAvailableAndUnavailableAreExplicit" status="run" result="completed" time="0.012" timestamp="2026-09-11T12:00:43" classname="T08Inference" />
+    <testcase name="FinalExportsHaveOneInferenceIdentityAndNoLegacyPolicyState" status="run" result="completed" time="0.01" timestamp="2026-09-11T12:00:43" classname="T08Inference" />
+    <testcase name="ArtifactWriterAcceptsOnlyOneInferenceResultIdentity" status="run" result="completed" time="0.006" timestamp="2026-09-11T12:00:43" classname="T08Inference" />
+  </testsuite>
+  <testsuite name="T08Identity" tests="2" failures="0" disabled="0" errors="0" time="0.013" timestamp="2026-09-11T12:00:43">
+    <testcase name="DistinguishesValuesAndFactorNumbersWithEqualStructureAndTotalError" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="T08Identity" />
+    <testcase name="ArtifactExportRejectsValuesChangedAfterIdentitySeal" status="run" result="completed" time="0.013" timestamp="2026-09-11T12:00:43" classname="T08Identity" />
+  </testsuite>
+  <testsuite name="NlosInference" tests="4" failures="0" disabled="0" errors="0" time="0.015" timestamp="2026-09-11T12:00:43">
+    <testcase name="LcbForcedFallbackRetainsFrozenIdentity" status="run" result="completed" time="0.006" timestamp="2026-09-11T12:00:43" classname="NlosInference" />
+    <testcase name="LcbZeroAndMissingMappingSuppress" status="run" result="completed" time="0.005" timestamp="2026-09-11T12:00:43" classname="NlosInference" />
+    <testcase name="FixedOffsetResidualAndPoseJacobian" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="NlosInference" />
+    <testcase name="LcbAmplitudeColumnPermutationPreservesDecisions" status="run" result="completed" time="0.004" timestamp="2026-09-11T12:00:43" classname="NlosInference" />
+  </testsuite>
+</testsuites>

@@ -1,0 +1,14 @@
+{
+  "command": [
+    "python3",
+    "tools/paper/evaluate_runs.py",
+    "--batch-manifest",
+    "doc/ie_0911/evidence/smoke2_runs/batch_manifest.json",
+    "--evaluation-manifest",
+    "doc/ie_0911/evidence/smoke_evaluation.yaml",
+    "--output",
+    "doc/ie_0911/evidence/smoke_metrics.json"
+  ],
+  "exit_code": 0,
+  "wall_seconds": 0.23730182199869887
+}

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <functional>
 #include <set>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -241,6 +242,13 @@ class SegmentRefitter {
       const std::set<size_t>& accepted_segment_ordinals,
       const DevelopmentStage2Request* development_request) const;
 
+  SegmentRefitResult RunFixedOffsets(
+      const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
+      const std::vector<FactorMeta>& metadata, const PaperInputPlan& plan,
+      const Config& cfg, const SupportPartition& support,
+      const std::map<size_t,double>& offsets,
+      const DevelopmentStage2Request* request = nullptr) const;
+
  private:
   SegmentRefitResult RunFrozenCandidatePolicyImpl(
       const gtsam::NonlinearFactorGraph& base_graph,
@@ -250,7 +258,8 @@ class SegmentRefitter {
       const SupportPartition& frozen_full_support,
       const std::set<size_t>& accepted_segment_ordinals,
       bool execute_optimization,
-      const DevelopmentStage2Request* development_request) const;
+      const DevelopmentStage2Request* development_request,
+      const std::map<size_t,double>* fixed_offsets = nullptr) const;
   RefitOptions options_;
 };
 

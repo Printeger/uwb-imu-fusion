@@ -1,0 +1,11 @@
+{
+  "schema": "t08_fallback_attempt_v1",
+  "inference_id": "t08inference-sha256:424f079b6b0161c751ded6ccf65389189932e473c72c5dfe4a8c2dc454c6c8d9",
+  "attempted": true,
+  "attempt_count": 1,
+  "trigger_reason": "RECOVERY_ATTEMPT_INVALID",
+  "recovery_failure_reason": "TEST_ONLY_FORCED_RECOVERY_FAILURE",
+  "status": "SUCCESS",
+  "fallback_solver_status": "CONVERGED",
+  "fallback_failure_reason": ""
+}

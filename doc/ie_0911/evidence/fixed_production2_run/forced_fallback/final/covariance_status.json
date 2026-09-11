@@ -1,0 +1,10 @@
+{
+  "schema": "t08_full_final_graph_covariance_v1",
+  "inference_id": "t08inference-sha256:8987100be12fb80fe42ac29fa4048a44b02f902bb76125760008038b1274d20d",
+  "status": "AVAILABLE",
+  "reason": "FULL_FINAL_GRAPH_MARGINALS_COMPUTED",
+  "source": "FULL_FINAL_GRAPH_MARGINAL_COVARIANCE",
+  "factorization": "GTSAM_CHOLESKY",
+  "reference_group_R_c_is_covariance": false,
+  "block_count": 6
+}

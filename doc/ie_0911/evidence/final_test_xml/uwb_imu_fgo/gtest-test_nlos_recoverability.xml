@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="7" failures="0" disabled="0" errors="0" time="0.008" timestamp="2026-09-11T12:00:43" name="AllTests">
+  <testsuite name="NlosRecoverability" tests="7" failures="0" disabled="0" errors="0" time="0.008" timestamp="2026-09-11T12:00:43">
+    <testcase name="SparseRankCasesRespectFrozenReferenceBoundary" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="NlosRecoverability" />
+    <testcase name="TriangularAndDuplicateMultiplicityRequireFullSpectrumCertificate" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="NlosRecoverability" />
+    <testcase name="WeakInformationCrossScaleAndNonfiniteOptionsAreAudited" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="NlosRecoverability" />
+    <testcase name="OriginalT03FixturesMatchOnSupportedDomain" status="run" result="completed" time="0.005" timestamp="2026-09-11T12:00:43" classname="NlosRecoverability" />
+    <testcase name="PermutationAndExactDependencyKeepColumnMapping" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="NlosRecoverability" />
+    <testcase name="NonfiniteAndLostResolutionNeverExportFiniteS" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="NlosRecoverability" />
+    <testcase name="LcbInverseDiagonalAndInvalidInputs" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="NlosRecoverability" />
+  </testsuite>
+</testsuites>

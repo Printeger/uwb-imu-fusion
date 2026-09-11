@@ -1,0 +1,86 @@
+{
+  "status": "PASS",
+  "prepared": 24,
+  "inputs": {
+    "sfuise_walk1": {
+      "common_preparation_id": "t09common-sha256:cfb37151c99fbdab7db8df10fa3ea5dd04dd144f7d16260b805ee8e7b2ced6b2",
+      "counts": {
+        "status": "PREPARED_ONLY",
+        "optimizer_calls": 0,
+        "imu_count": 4839,
+        "planned_observations": 1074,
+        "keyframes": 229,
+        "method": "robust_cauchy",
+        "anchors": 5,
+        "source_sha256": "sha256:ca577e3666ad5876aa8347289a98793b8da0e68b5db459f2d7d69a6adcacd944"
+      }
+    },
+    "sfuise_walk2": {
+      "common_preparation_id": "t09common-sha256:5efb6f5bd0b16187210c3a902f3c6afcf84a0181a6ac94cbd63705a6c5d07c30",
+      "counts": {
+        "status": "PREPARED_ONLY",
+        "optimizer_calls": 0,
+        "imu_count": 6229,
+        "planned_observations": 1357,
+        "keyframes": 293,
+        "method": "robust_cauchy",
+        "anchors": 5,
+        "source_sha256": "sha256:dea07fd11d5776226be6b390574c4b3789c48cfdce6a1731996981f3f91c453c"
+      }
+    },
+    "sfuise_walk3": {
+      "common_preparation_id": "t09common-sha256:1cd1116c876ef4a294e57cd8b516993f82d6f3ece52e93467c470b2c430b7deb",
+      "counts": {
+        "status": "PREPARED_ONLY",
+        "optimizer_calls": 0,
+        "imu_count": 6684,
+        "planned_observations": 1483,
+        "keyframes": 314,
+        "method": "robust_cauchy",
+        "anchors": 5,
+        "source_sha256": "sha256:45df7ffe69b9d8c8be7784414ffcdc6e0f4674d0d7b8db3541e567e757bae0a0"
+      }
+    },
+    "miluv_random": {
+      "common_preparation_id": "t09common-sha256:26b7b7910c434d3c199cde652fbfcaf8aedd1ed233d1799f2ead1a6dd2ce9e3c",
+      "counts": {
+        "status": "PREPARED_ONLY",
+        "optimizer_calls": 0,
+        "imu_count": 42317,
+        "planned_observations": 2427,
+        "keyframes": 2427,
+        "method": "robust_cauchy",
+        "anchors": 6,
+        "source_sha256": "sha256:8154f05351c43f855c47671818517e74527e63d31a3c6f30aef9224967a5a1e2"
+      }
+    },
+    "miluv_circular": {
+      "common_preparation_id": "t09common-sha256:29cce84a8b71a9dc7badacbc2311269822512a7090658e618c81316cc896870b",
+      "counts": {
+        "status": "PREPARED_ONLY",
+        "optimizer_calls": 0,
+        "imu_count": 27738,
+        "planned_observations": 1587,
+        "keyframes": 1587,
+        "method": "robust_cauchy",
+        "anchors": 6,
+        "source_sha256": "sha256:d76cfea1db7e0317d51f561cb2dd56c8300cfd5050007639d5925affa105ea91"
+      }
+    },
+    "vicon_test": {
+      "common_preparation_id": "t09common-sha256:c09dd9fc0450b835a8460239de864730e7af97aa0a5f8c031ef92f5d4da2c874",
+      "counts": {
+        "status": "PREPARED_ONLY",
+        "optimizer_calls": 0,
+        "imu_count": 14680,
+        "planned_observations": 1447,
+        "keyframes": 367,
+        "method": "robust_cauchy",
+        "anchors": 4,
+        "source_sha256": "sha256:4b973dd5a6faa8a4b523017feaccb59f4f085e50592a114a963dbd9a816de8be"
+      }
+    }
+  },
+  "miluv_crop_source_rows_preserved": 106,
+  "real_anchor_subset_before_initialization": true
+}

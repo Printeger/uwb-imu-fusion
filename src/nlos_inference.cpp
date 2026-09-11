@@ -20,6 +20,7 @@
 #include <typeinfo>
 
 #include "uifgo/hash_utils.h"
+#include "uifgo/uwb_factor.h"
 
 namespace uifgo {
 namespace {
@@ -91,7 +92,8 @@ SupportPartition AcceptedSupport(
 
 FinalFactorAudit AuditFinalFactors(
     const SegmentRefitResult& refit, const SupportPartition& support,
-    const std::set<size_t>& accepted, const PaperInputPlan& plan) {
+    const std::set<size_t>& accepted, const PaperInputPlan& plan,
+    bool fixed_mode = false) {
   FinalFactorAudit audit;
   std::unordered_map<std::uint64_t, const SupportSegment*> candidate_by_obs;
   for (const auto& segment : support.segments) {
@@ -156,6 +158,12 @@ FinalFactorAudit AuditFinalFactors(
                          metadata_by_obs[observation.obs_id][0]->keys.end(),
                          expected_c) !=
                    metadata_by_obs[observation.obs_id][0]->keys.end();
+      if (fixed_mode) {
+        row.classification = "ACCEPTED_CANDIDATE_RAW_WITH_FIXED_OFFSET";
+        row.ok = row.final_factor_count == 1 &&
+            metadata_by_obs[observation.obs_id].size() == 1 &&
+            metadata_by_obs[observation.obs_id][0]->factor_type == "uwb_fixed_offset_range";
+      }
       ++audit.accepted_candidate_count;
     } else {
       row.classification = "SUPPRESSED_CANDIDATE";
@@ -169,10 +177,15 @@ FinalFactorAudit AuditFinalFactors(
 
   bool keys_ok = true;
   for (const auto& segment : support.segments) {
-    const bool should_exist = accepted.count(segment.segment_ordinal) != 0;
+    const bool should_exist = !fixed_mode && accepted.count(segment.segment_ordinal) != 0;
     const bool exists = refit.values.exists(
         gtsam::Symbol('c', segment.segment_ordinal));
     keys_ok = keys_ok && should_exist == exists;
+  }
+  if (fixed_mode) {
+    for (auto key : refit.values.keys()) keys_ok = keys_ok && gtsam::Symbol(key).chr() != 'c';
+    for (const auto& factor : refit.graph)
+      for (auto key : factor->keys()) keys_ok = keys_ok && gtsam::Symbol(key).chr() != 'c';
   }
   audit.ok = rows_ok && keys_ok && audit.corrected_pseudo_range_count == 0 &&
              refit.factor_metadata.size() == refit.graph.size();
@@ -363,6 +376,17 @@ std::string InferenceId(const InferenceResult& result) {
   for (const auto& mask : result.frozen_masks)
     bytes << mask.obs_id << ':' << mask.candidate << ':' << mask.decision_use
           << ':' << mask.final_use << ':' << mask.fallback_use << '\n';
+  if (!result.requested_fixed_method.empty()) {
+    AppendString(&bytes, result.requested_fixed_method);
+    AppendString(&bytes, result.actual_fixed_method);
+    AppendDouble(&bytes, result.fixed_kappa);
+    for (const auto& c : result.fixed_compensations) {
+      AppendUint64(&bytes, c.segment_ordinal); AppendString(&bytes,c.segment_id);
+      AppendDouble(&bytes,c.c_hat_stage2_m); AppendDouble(&bytes,c.sigma_c_local_m);
+      AppendDouble(&bytes,c.delta_c_fixed_m); bytes << c.use << c.sigma_available;
+      AppendString(&bytes,c.reason);
+    }
+  }
   return "t08inference-sha256:" + Sha256Hex(bytes.str());
 }
 
@@ -475,6 +499,8 @@ const char* GroupDecisionName(GroupDecision decision) {
 
 const char* FinalGatePolicyName(FinalGatePolicy policy) {
   switch (policy) {
+    case FinalGatePolicy::LCB_PARTIAL: return "lcb_partial";
+    case FinalGatePolicy::LCB_FIXED_FULL: return "lcb_fixed_full";
     case FinalGatePolicy::SUPPRESS_ALL: return "suppress_all";
     case FinalGatePolicy::STRUCTURED_DEBIAS: return "structured_debias";
     case FinalGatePolicy::FULL_GATE: return "full_gate";
@@ -488,6 +514,8 @@ const char* FinalGatePolicyName(FinalGatePolicy policy) {
 std::vector<GroupDecisionRecord> FreezeGroupDecisions(
     const std::vector<GroupRecoverabilityScore>& scores,
     const GateThresholds& thresholds, FinalGatePolicy policy) {
+  if (policy == FinalGatePolicy::LCB_PARTIAL || policy == FinalGatePolicy::LCB_FIXED_FULL)
+    throw std::invalid_argument("LCB requires Stage2 amplitude/key mapping");
   std::string threshold_reason;
   if (!ValidDevelopmentGateThresholds(thresholds, &threshold_reason))
     throw std::invalid_argument(threshold_reason);
@@ -702,14 +730,32 @@ InferenceResult FinalInferenceEngine::Run(
     return result;
   }
 
+  const bool fixed_mode = policy_ == FinalGatePolicy::LCB_PARTIAL ||
+                          policy_ == FinalGatePolicy::LCB_FIXED_FULL;
+  std::map<size_t,double> fixed_offsets;
+  if (fixed_mode) {
+    result.requested_fixed_method = FinalGatePolicyName(policy_);
+    result.actual_fixed_method = result.requested_fixed_method;
+  }
   const auto decision_started = Clock::now();
   try {
     result.decisions = FreezeGroupDecisions(decision_scores, thresholds_,
-                                            policy_);
+                                            fixed_mode ? FinalGatePolicy::SUPPRESS_ALL : policy_);
   } catch (const std::exception& error) {
     result.reason = std::string("DECISION_INPUT_INVALID: ") + error.what();
     finish();
     return result;
+  }
+  if (fixed_mode) {
+    result.fixed_compensations = FreezeFixedCompensations(stage2_refit, decision_scores,
+                                  policy_ == FinalGatePolicy::LCB_FIXED_FULL);
+    for (const auto& c : result.fixed_compensations)
+      if (c.use) fixed_offsets.emplace(c.segment_ordinal,c.delta_c_fixed_m);
+    for (auto& d : result.decisions) {
+      d.reason_code = "LCB_PER_SEGMENT_SEE_FIXED_COMPENSATIONS";
+      for (size_t ordinal : d.group.segment_ordinals)
+        if (fixed_offsets.count(ordinal)) d.decision = GroupDecision::USE;
+    }
   }
   result.timing.decision_seconds = SecondsSince(decision_started);
   result.frozen_masks = BuildMasks(frozen_full_support, result.decisions, plan);
@@ -746,12 +792,28 @@ InferenceResult FinalInferenceEngine::Run(
                       decision.group.segment_ordinals.end());
   }
 
+  if (fixed_mode) {
+    accepted.clear();
+    for (const auto& c : result.fixed_compensations) if(c.use) accepted.insert(c.segment_ordinal);
+    for(auto& mask: result.frozen_masks) {
+      if(!mask.candidate) continue;
+      mask.decision_use = false;
+      for(const auto& c:result.fixed_compensations) if(c.segment_id==mask.segment_id) {
+        mask.decision_use=c.use; mask.reason_code=c.reason;
+      }
+    }
+  }
   SegmentRefitResult recovery;
   bool recovery_ok = true;
   std::string recovery_failure;
   const auto recovery_started = Clock::now();
   if (frozen_full_support.segments.empty()) {
     recovery = stage2_refit;
+  } else if (fixed_mode) {
+    recovery = SegmentRefitter(refit_options_).RunFixedOffsets(
+        frozen_raw_graph, stage2_refit.values, frozen_raw_uwb_metadata,
+        plan, cfg, frozen_full_support, fixed_offsets,
+        development_empty_recovery_request_);
   } else if (development_refit_request_ && !accepted.empty()) {
     recovery = SegmentRefitter(refit_options_)
         .RunDevelopmentFrozenCandidatePolicy(
@@ -785,7 +847,31 @@ InferenceResult FinalInferenceEngine::Run(
 
   if (recovery_ok) {
     result.factor_audit = AuditFinalFactors(
-        recovery, frozen_full_support, accepted, plan);
+        recovery, frozen_full_support, accepted, plan, fixed_mode);
+    if (fixed_mode && result.factor_audit.ok) {
+      for (const auto& meta : recovery.factor_metadata) {
+        if (meta.factor_type != "uwb_fixed_offset_range") continue;
+        const auto obs = std::find_if(plan.observations.begin(),plan.observations.end(),
+            [&](const auto& r){return r.obs_id==meta.obs_id;});
+        const auto c = std::find_if(result.fixed_compensations.begin(),result.fixed_compensations.end(),
+            [&](const auto& r){return r.segment_id==meta.segment_id && r.use;});
+        if (obs==plan.observations.end() || c==result.fixed_compensations.end()) {
+          result.factor_audit.ok=false; result.factor_audit.reason="FIXED_OFFSET_MAPPING_MISSING"; break;
+        }
+        const auto anchor=std::find_if(cfg.anchors.begin(),cfg.anchors.end(),
+            [&](const auto& a){return a.id==obs->anchor_id;});
+        if(anchor==cfg.anchors.end()) {result.factor_audit.ok=false;result.factor_audit.reason="FIXED_ANCHOR_MISSING";break;}
+        const auto expected=MakeFixedOffsetUwbFactor(gtsam::Symbol('x',obs->keyframe_id),
+            anchor->pos,cfg.lever_arm_init,obs->raw_range,obs->nominal_sigma,
+            FixedBetaForLink(cfg,obs->tag_id,obs->anchor_id),c->delta_c_fixed_m);
+        const auto actual=boost::dynamic_pointer_cast<gtsam::NoiseModelFactor>(recovery.graph.at(meta.factor_index));
+        const auto reference=boost::dynamic_pointer_cast<gtsam::NoiseModelFactor>(expected);
+        if(!actual || (actual->unwhitenedError(recovery.values)-reference->unwhitenedError(recovery.values)).norm()>1e-12 ||
+            (actual->linearize(recovery.values)->augmentedJacobian()-reference->linearize(recovery.values)->augmentedJacobian()).norm()>1e-12) {
+          result.factor_audit.ok=false; result.factor_audit.reason="FIXED_OFFSET_FACTOR_CONTENT_MISMATCH";break;
+        }
+      }
+    }
     if (!result.factor_audit.ok) {
       recovery_ok = false;
       recovery_failure = "RECOVERY_FACTOR_AUDIT_FAILED: " +
@@ -795,7 +881,11 @@ InferenceResult FinalInferenceEngine::Run(
     }
   }
 
-  if (recovery_ok && !accepted.empty()) {
+  if (recovery_ok && fixed_mode) {
+    SetInapplicableFinalScores(result.decisions,
+        "NOT_APPLICABLE_FIXED_OFFSET_NO_LIVE_C", &result.recovery_final_scores);
+    result.recovery_attempt.acceptance_audit_status = "PASSED_FIXED_GRAPH_AUDIT";
+  } else if (recovery_ok && !accepted.empty()) {
     const auto score_started = Clock::now();
     try {
       const SupportPartition accepted_support =
@@ -827,7 +917,7 @@ InferenceResult FinalInferenceEngine::Run(
         final_score.linearization_id = "t08final-sha256:" + Sha256Hex(
             decision.group.group_id + ":" + found->linearization_id);
         auto final_decision = FreezeGroupDecisions({*found}, thresholds_,
-                                                   policy_);
+                                                   fixed_mode ? FinalGatePolicy::SUPPRESS_ALL : policy_);
         if (final_decision.size() != 1 ||
             final_decision.front().decision != GroupDecision::USE) {
           recovery_ok = false;
@@ -960,6 +1050,7 @@ InferenceResult FinalInferenceEngine::Run(
     result.final_result_refit.execution_status = "FINAL_RESULT_FROM_FALLBACK";
     result.final_result_refit.acceptance_audit_status = "NOT_APPLICABLE";
     used_fallback = true;
+    if (fixed_mode) result.actual_fixed_method = "suppress_all";
   } else if (frozen_full_support.segments.empty()) {
     result.status = InferenceStatus::NO_CANDIDATES;
     result.reason = "NO_CANDIDATES_FINAL_REFERENCE_GRAPH";
@@ -1002,3 +1093,52 @@ InferenceResult FinalInferenceEngine::Run(
 }
 
 }  // namespace uifgo
+
+namespace uifgo {
+std::vector<FixedCompensation> FreezeFixedCompensations(
+    const SegmentRefitResult& stage2,
+    const std::vector<GroupRecoverabilityScore>& scores, bool full_variant) {
+  std::vector<FixedCompensation> output;
+  for (const auto& segment : stage2.segments) {
+    FixedCompensation c;
+    c.segment_ordinal=segment.segment_ordinal; c.segment_id=segment.segment_id;
+    c.c_hat_stage2_m=segment.amplitude_m;
+    c.reason="SUPPRESS_LOCAL_SIGMA_UNAVAILABLE";
+    size_t memberships=0;
+    for (const auto& score:scores) {
+      if (!OrdinalSet(score.group).count(segment.segment_ordinal)) continue;
+      ++memberships;
+      if (!score.eligible || !score.valid_score_exported || segment.boundary ||
+          segment.short_support_debug || !std::isfinite(segment.amplitude_m) ||
+          segment.amplitude_m<=0 || !stage2.values.exists(segment.amplitude_key) ||
+          stage2.values.at<double>(segment.amplitude_key)!=segment.amplitude_m) continue;
+      const auto sigma=LocalAmplitudeSigmas(score.numerical);
+      if(sigma.empty()) continue;
+      std::map<size_t,gtsam::Key> columns;
+      std::set<gtsam::Key> keys;
+      bool valid=true;
+      for(const auto& col:score.key_columns) if(col.role=="GROUP_AMPLITUDE") {
+        valid=valid && col.dimension==1 && keys.insert(col.key).second &&
+              columns.emplace(col.offset,col.key).second &&
+              gtsam::Symbol(col.key).chr()=='c' &&
+              OrdinalSet(score.group).count(gtsam::Symbol(col.key).index());
+      }
+      if(!valid || columns.size()!=sigma.size() || keys.size()!=score.group.segment_ordinals.size()) continue;
+      size_t index=0;
+      for(const auto& col:columns) {
+        if(col.second==segment.amplitude_key) {
+          c.sigma_c_local_m=sigma[index]; c.sigma_available=true;
+          const double partial=std::max(0.0,segment.amplitude_m-2.0*sigma[index]);
+          c.use=partial>0;
+          c.delta_c_fixed_m=c.use ? (full_variant ? segment.amplitude_m : partial) : 0.0;
+          c.reason=c.use ? "USE_POSITIVE_LCB_FIXED_OFFSET" : "SUPPRESS_ZERO_LCB";
+        }
+        ++index;
+      }
+    }
+    if(memberships!=1) { c.use=false; c.delta_c_fixed_m=0; c.reason="SUPPRESS_GROUP_MAPPING_INVALID"; }
+    output.push_back(c);
+  }
+  return output;
+}
+}

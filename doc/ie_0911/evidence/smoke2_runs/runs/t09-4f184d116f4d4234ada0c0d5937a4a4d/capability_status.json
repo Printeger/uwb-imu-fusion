@@ -1,0 +1,10 @@
+{
+  "debug_label": "T06_AUTOMATIC_DISCOVERY_DEVELOPMENT_ONLY",
+  "discovery": "FAILED_MAX_OUTER_ITERATIONS",
+  "segment_refit": "NOT_RUN",
+  "recoverability_score": "NOT_RUN",
+  "gate": "NOT_IMPLEMENTED",
+  "fallback": "NOT_IMPLEMENTED",
+  "covariance": "NOT_COMPUTED",
+  "output_semantics": "NO_VALID_ESTIMATE_STAGE1_FAILED"
+}

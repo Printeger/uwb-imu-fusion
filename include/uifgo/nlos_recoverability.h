@@ -103,6 +103,10 @@ struct RecoverabilityResult {
   }
 };
 
+// Empty vector means unavailable; never uses a pseudoinverse or diagonal jitter.
+std::vector<double> LocalAmplitudeSigmas(const RecoverabilityResult& result,
+                                        std::string* reason = nullptr);
+
 RecoverabilityResult ComputeSparseRecoverability(
     const Eigen::SparseMatrix<double>& F_whitened,
     const Eigen::MatrixXd& G_whitened,

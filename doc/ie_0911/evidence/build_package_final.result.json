@@ -1,0 +1,13 @@
+{
+  "command": [
+    "catkin",
+    "build",
+    "uwb_imu_fgo",
+    "--no-status",
+    "--summarize",
+    "--jobs",
+    "2"
+  ],
+  "exit_code": 0,
+  "wall_seconds": 4.555845274999228
+}

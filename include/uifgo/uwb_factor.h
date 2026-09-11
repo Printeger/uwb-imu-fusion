@@ -52,6 +52,12 @@ gtsam::NonlinearFactor::shared_ptr MakeSegmentUwbFactor(
     const gtsam::Point3& lever_init,
     double measured_range, double sigma, double fixed_beta);
 
+// 0911 fixed dynamic compensation; raw measurement and static beta stay distinct.
+gtsam::NonlinearFactor::shared_ptr MakeFixedOffsetUwbFactor(
+    gtsam::Key pose_key, const gtsam::Point3& anchor,
+    const gtsam::Point3& lever, double raw_range, double sigma,
+    double fixed_beta, double delta_c_fixed);
+
 // Test/sensitivity factor with both an online static Z(m) nuisance and a live
 // segment C(s). The production T05 runner still rejects online calibration.
 gtsam::NonlinearFactor::shared_ptr MakeOnlineBetaSegmentUwbFactor(

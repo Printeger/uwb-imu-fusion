@@ -1,0 +1,9 @@
+{
+  "time_association": {
+    "policy": "nearest_within_tolerance",
+    "tolerance_s": 0.02
+  },
+  "raw_frame": "UNAVAILABLE_INDEPENDENT_TRANSFORM_AND_GT_POINT",
+  "aligned": "DEVELOPMENT_ONLY_POINT_PROVENANCE_UNVERIFIED",
+  "range_reference": "UNAVAILABLE"
+}

@@ -1,0 +1,1 @@
+["timeout", "900", "python3", "tools/paper/run_experiments.py", "--manifest", "config/paper/ie0911/smoke_batch.yaml", "--runner", "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner", "--output-root", "doc/ie_0911/evidence/smoke2_runs"]

@@ -1,0 +1,2 @@
+inference_id,phase,group_id,segment_ordinals,status,eligible,evaluated,valid_score_exported,eta,s_m,s_is_infinite,max_gamma,numerical_status,linearization_id
+t08inference-sha256:424f079b6b0161c751ded6ccf65389189932e473c72c5dfe4a8c2dc454c6c8d9,FINAL,group_0,0;1,FALLBACK_ALL_CANDIDATES_SUPPRESSED_NO_FINAL_C_KEY_NO_READMISSION,0,0,0,,,,,NOT_EVALUATED,NOT_APPLICABLE

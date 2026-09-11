@@ -1,3 +1,4 @@
+#include <Eigen/Cholesky>
 #include "uifgo/nlos_recoverability.h"
 
 #include <Eigen/Eigenvalues>
@@ -556,4 +557,40 @@ RecoverabilityResult ComputeSparseRecoverability(
   return out;
 }
 
+}  // namespace uifgo
+
+namespace uifgo {
+std::vector<double> LocalAmplitudeSigmas(const RecoverabilityResult& r,
+                                        std::string* reason) {
+  auto fail = [&](const char* why) { if (reason) *reason = why;
+    return std::vector<double>{}; };
+  const auto n = r.R.rows();
+  if (r.status != RecoverabilityStatus::OK || n == 0 || r.R.cols() != n ||
+      r.R_rank != n || r.amplitude_columns != static_cast<size_t>(n) ||
+      !r.R.allFinite() || !std::isfinite(r.R_rank_pd_threshold) ||
+      r.R_rank_pd_threshold < 0)
+    return fail("LOCAL_SIGMA_INVALID_OR_RANK_DEFICIENT");
+  const RecoverabilityOptions tol;
+  if ((r.R-r.R.transpose()).norm() > tol.symmetry_absolute_tolerance +
+      tol.symmetry_relative_tolerance*r.R.norm())
+    return fail("LOCAL_SIGMA_ASYMMETRIC");
+  const Eigen::MatrixXd symmetric = 0.5*(r.R+r.R.transpose());
+  Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eig(symmetric);
+  if (eig.info()!=Eigen::Success || !eig.eigenvalues().allFinite() ||
+      eig.eigenvalues().minCoeff() <= std::max(r.R_rank_pd_threshold,
+        std::max(tol.pd_absolute_tolerance_m2_inv,
+                 tol.pd_relative_tolerance*eig.eigenvalues().cwiseAbs().maxCoeff())))
+    return fail("LOCAL_SIGMA_NOT_POSITIVE_DEFINITE");
+  Eigen::LLT<Eigen::MatrixXd> llt(symmetric);
+  if (llt.info()!=Eigen::Success) return fail("LOCAL_SIGMA_CHOLESKY_FAILED");
+  std::vector<double> result;
+  for (Eigen::Index i=0;i<n;++i) {
+    const Eigen::VectorXd x=llt.solve(Eigen::VectorXd::Unit(n,i));
+    if (llt.info()!=Eigen::Success || !x.allFinite() || !(x[i]>0))
+      return fail("LOCAL_SIGMA_SOLVE_FAILED");
+    result.push_back(std::sqrt(x[i]));
+  }
+  if(reason) *reason="LOCAL_SIGMA_AVAILABLE";
+  return result;
+}
 }  // namespace uifgo

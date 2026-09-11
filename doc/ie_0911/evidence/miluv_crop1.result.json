@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner",
+    "--config",
+    "doc/ie_0911/evidence/miluv_crop_config.yaml",
+    "--output-root",
+    "doc/ie_0911/evidence/extra_prepares",
+    "--run-id",
+    "miluv_crop",
+    "--method",
+    "lcb_partial",
+    "--prepare-only"
+  ],
+  "exit_code": 0,
+  "wall_seconds": 0.19007033700108877
+}

@@ -70,6 +70,10 @@ catkin_package(
 
 # --- GTSAM (≥ 4.2 required for GncOptimizer / setInlierCostThresholdsAtProbability) ---
 find_package(GTSAM 4.2 REQUIRED)
+# Bind unstable to the same installation instead of a system -l search that
+# can silently mix incompatible GTSAM ABIs.
+find_package(GTSAM_UNSTABLE REQUIRED CONFIG
+  PATHS "${GTSAM_DIR}/../GTSAM_UNSTABLE" NO_DEFAULT_PATH)
 if(GTSAM_FOUND)
   include_directories(${GTSAM_INCLUDE_DIR})
   message(STATUS "GTSAM found: ${GTSAM_INCLUDE_DIR} (version: ${GTSAM_VERSION})")
@@ -333,6 +337,9 @@ if(GTest_FOUND)
   add_test(NAME test_t09_runner_contract
     COMMAND ${PYTHON_EXECUTABLE} -B
       ${CMAKE_CURRENT_SOURCE_DIR}/test/test_t09_runner_contract.py)
+
+  add_test(NAME test_ie0911_evaluator
+    COMMAND ${PYTHON_EXECUTABLE} -B ${CMAKE_CURRENT_SOURCE_DIR}/test/test_ie0911_evaluator.py)
 
   add_test(NAME test_t09_evaluator
     COMMAND ${PYTHON_EXECUTABLE} -B

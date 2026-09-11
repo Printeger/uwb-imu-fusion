@@ -1,0 +1,2 @@
+inference_id,phase,group_id,segment_ordinals,status,eligible,evaluated,valid_score_exported,eta,s_m,s_is_infinite,max_gamma,numerical_status,linearization_id
+t08inference-sha256:f449b27074315d841c9141ab0dff83a06e5809844e7cb7bc4105c3ccb95a7ad4,DECISION,group_0,0;1,OK,1,1,1,0.9601621018868759,0.036081345674699519,0,1.6324215833822296e-21,OK,t05lin-sha256:0286fc28a84ecc31ae3b2b973f3694e871bbb58b92e55f96f562a69403e288cb

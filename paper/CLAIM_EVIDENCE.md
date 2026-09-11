@@ -1009,3 +1009,15 @@ C1–C3原状态不变；本轮没有论文数字、图表、正式风险/轨迹
 
 A11不提出无依据的Jacobian修复。唯一最小后续提案是封存P1 step call50的静态线性系统尺度/条件数与
 阻尼比例审计，不调用iterate；本轮NOT_RUN。C1–C3原状态不变，A10 validation提案不升格为准入。
+
+
+## 0911 第一步固定部分补偿：工程证据，非 claim 升级
+
+用户授权仅 `lcb_partial` / 同 LCB 集合 `lcb_fixed_full` 的固定 offset amendment，旧联合 live-C 方法和默认配置保留。
+[STEP1_RESULT](../doc/ie_0911/STEP1_RESULT.md) 记录实际 catkin 构建、CTest 26/26（GTest 161 项）、
+24/24 六输入四方法 prepare-only、实际 certified production 非零补偿与独立 16 条最终残差重算。
+局部 sigma、Stage2 幅值和冻结补偿分列；不把固定补偿称为最终 bias 后验或已校准安全概率。
+
+真实 Walk1 起始后 [8,11]s robust Cauchy 有 development aligned 评价，但自动 Stage1 原 50 outer 上限失败，
+Stage2 和候选 final 未运行；不存在真实 LCB 精度收益证据。标定/GT 点/许可限制、T10=C2-C、T11=C 保留，
+C1/C2/C3 均不升级。第二步完整矩阵、正式指标/held-out、论文数字与 release NOT_RUN。

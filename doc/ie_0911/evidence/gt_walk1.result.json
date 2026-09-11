@@ -1,0 +1,11 @@
+{
+  "command": [
+    "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/export_ground_truth",
+    "--config",
+    "config/paper/ie0911/walk1_smoke.yaml",
+    "--output-directory",
+    "doc/ie_0911/evidence/evaluation_truth_walk1"
+  ],
+  "exit_code": 0,
+  "wall_seconds": 0.09535092899932351
+}

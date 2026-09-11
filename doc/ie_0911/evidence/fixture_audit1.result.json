@@ -1,0 +1,11 @@
+{
+  "command": [
+    "python3",
+    "tools/paper/ie0911_audit_fixture.py",
+    "doc/ie_0911/evidence/fixed_production2_run",
+    "doc/ie_0911/evidence/full_production1_run",
+    "doc/ie_0911/evidence/fixture_audit1.json"
+  ],
+  "exit_code": 0,
+  "wall_seconds": 0.21883363100096176
+}

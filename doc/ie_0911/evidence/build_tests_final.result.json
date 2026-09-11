@@ -1,0 +1,12 @@
+{
+  "command": [
+    "cmake",
+    "--build",
+    "/home/mint/ws_fusion_uwb/build/uwb_imu_fgo",
+    "--target",
+    "tests",
+    "-j2"
+  ],
+  "exit_code": 0,
+  "wall_seconds": 58.45214336200115
+}

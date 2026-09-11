@@ -1,0 +1,20 @@
+{
+  "command": [
+    "/usr/bin/time",
+    "-v",
+    "-o",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_0911/evidence/smoke2_runs/runs/.t09-b9c90d3ed8b94c5a89a5797ca75d4b6b.time",
+    "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner",
+    "--config",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_0911/evidence/smoke2_runs/effective_configs/t09-b9c90d3ed8b94c5a89a5797ca75d4b6b.yaml",
+    "--output-root",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_0911/evidence/smoke2_runs/runs",
+    "--run-id",
+    "t09-b9c90d3ed8b94c5a89a5797ca75d4b6b",
+    "--execution-type",
+    "BASELINE_TRAJECTORY",
+    "--method",
+    "robust_cauchy"
+  ],
+  "exit_code": 0
+}

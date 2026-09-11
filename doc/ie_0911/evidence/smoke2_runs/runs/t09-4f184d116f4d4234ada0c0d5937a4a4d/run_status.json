@@ -1,0 +1,16 @@
+{
+  "status": "FAILED",
+  "exit_code": 1,
+  "debug_label": "T06_AUTOMATIC_DISCOVERY_DEVELOPMENT_ONLY",
+  "failure_stage": "AUTOMATIC_DISCOVERY",
+  "discovery_status": "MAX_OUTER_ITERATIONS",
+  "reason": "Stage-1 reached outer iteration limit before all stop conditions",
+  "stage2_refit_run": false,
+  "gate_or_fallback_run": false,
+  "elapsed_seconds_semantics": "RUNNER_WALL_FROM_MAIN_ENTRY_THROUGH_FINAL_STATUS_PREPARATION",
+  "elapsed_seconds": 0.16919123999999999,
+  "stage1_seconds": 0.11371526999999999,
+  "stage2_seconds": null,
+  "stage3_decision_score_seconds": null,
+  "stage4_engine_seconds": null
+}

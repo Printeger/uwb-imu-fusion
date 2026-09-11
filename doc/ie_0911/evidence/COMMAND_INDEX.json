@@ -1,0 +1,455 @@
+[
+  {
+    "name": "build1",
+    "exit_code": 1,
+    "command": [
+      "catkin",
+      "build",
+      "uwb_imu_fgo",
+      "--no-status",
+      "--summarize",
+      "--jobs",
+      "2"
+    ],
+    "log": "doc/ie_0911/evidence/build1.log"
+  },
+  {
+    "name": "anchor_subset1",
+    "exit_code": 0,
+    "wall_seconds": 0.06617484300113574,
+    "result": "doc/ie_0911/evidence/anchor_subset1.result.json",
+    "command": [
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner",
+      "--config",
+      "config/paper/ie0911/walk1_smoke.yaml",
+      "--output-root",
+      "doc/ie_0911/evidence/extra_prepares",
+      "--run-id",
+      "anchor_subset",
+      "--method",
+      "lcb_partial",
+      "--prepare-only",
+      "--anchor-ids",
+      "7475,9524,10548,15155"
+    ]
+  },
+  {
+    "name": "build2",
+    "exit_code": 2,
+    "wall_seconds": 42.18154238600073,
+    "result": "doc/ie_0911/evidence/build2.result.json",
+    "command": [
+      "cmake",
+      "--build",
+      "/home/mint/ws_fusion_uwb/build/uwb_imu_fgo",
+      "--target",
+      "uwb_imu_fgo_paper_runner",
+      "test_nlos_inference",
+      "test_nlos_recoverability",
+      "test_nlos_refit",
+      "test_paper_methods",
+      "-j2"
+    ]
+  },
+  {
+    "name": "build3",
+    "exit_code": 2,
+    "wall_seconds": 129.580416625,
+    "result": "doc/ie_0911/evidence/build3.result.json",
+    "command": [
+      "cmake",
+      "--build",
+      "/home/mint/ws_fusion_uwb/build/uwb_imu_fgo",
+      "--target",
+      "uwb_imu_fgo_paper_runner",
+      "test_nlos_inference",
+      "test_nlos_recoverability",
+      "test_nlos_refit",
+      "test_paper_methods",
+      "-j2"
+    ]
+  },
+  {
+    "name": "build4",
+    "exit_code": 0,
+    "wall_seconds": 157.34338782899977,
+    "result": "doc/ie_0911/evidence/build4.result.json",
+    "command": [
+      "cmake",
+      "--build",
+      "/home/mint/ws_fusion_uwb/build/uwb_imu_fgo",
+      "--target",
+      "uwb_imu_fgo_paper_runner",
+      "a19_r08_pipeline",
+      "test_nlos_inference",
+      "test_nlos_recoverability",
+      "test_nlos_refit",
+      "test_paper_methods",
+      "-j2"
+    ]
+  },
+  {
+    "name": "build5",
+    "exit_code": 0,
+    "wall_seconds": 86.59422844000073,
+    "result": "doc/ie_0911/evidence/build5.result.json",
+    "command": [
+      "cmake",
+      "--build",
+      "/home/mint/ws_fusion_uwb/build/uwb_imu_fgo",
+      "--target",
+      "a19_r08_pipeline",
+      "test_nlos_inference",
+      "-j2"
+    ]
+  },
+  {
+    "name": "build_package_final",
+    "exit_code": 0,
+    "wall_seconds": 4.555845274999228,
+    "result": "doc/ie_0911/evidence/build_package_final.result.json",
+    "command": [
+      "catkin",
+      "build",
+      "uwb_imu_fgo",
+      "--no-status",
+      "--summarize",
+      "--jobs",
+      "2"
+    ]
+  },
+  {
+    "name": "build_tests_final",
+    "exit_code": 0,
+    "wall_seconds": 58.45214336200115,
+    "result": "doc/ie_0911/evidence/build_tests_final.result.json",
+    "command": [
+      "cmake",
+      "--build",
+      "/home/mint/ws_fusion_uwb/build/uwb_imu_fgo",
+      "--target",
+      "tests",
+      "-j2"
+    ]
+  },
+  {
+    "name": "ctest_final",
+    "exit_code": 0,
+    "wall_seconds": 126.3955553550004,
+    "result": "doc/ie_0911/evidence/ctest_final.result.json",
+    "command": [
+      "cmake",
+      "-E",
+      "chdir",
+      "/home/mint/ws_fusion_uwb/build/uwb_imu_fgo",
+      "ctest",
+      "--output-on-failure"
+    ]
+  },
+  {
+    "name": "evaluate_smoke1",
+    "exit_code": 0,
+    "wall_seconds": 0.23730182199869887,
+    "result": "doc/ie_0911/evidence/evaluate_smoke1.result.json",
+    "command": [
+      "python3",
+      "tools/paper/evaluate_runs.py",
+      "--batch-manifest",
+      "doc/ie_0911/evidence/smoke2_runs/batch_manifest.json",
+      "--evaluation-manifest",
+      "doc/ie_0911/evidence/smoke_evaluation.yaml",
+      "--output",
+      "doc/ie_0911/evidence/smoke_metrics.json"
+    ]
+  },
+  {
+    "name": "fixed_production1",
+    "exit_code": 0,
+    "wall_seconds": 0.04915448599967931,
+    "result": "doc/ie_0911/evidence/fixed_production1.result.json",
+    "command": [
+      "timeout",
+      "120",
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/a19_r08_pipeline",
+      "--ie0911-fixed-engineering",
+      "doc/ie_0911/evidence/fixed_production1_run"
+    ]
+  },
+  {
+    "name": "fixed_production2",
+    "exit_code": 0,
+    "wall_seconds": 0.045411240000248654,
+    "result": "doc/ie_0911/evidence/fixed_production2.result.json",
+    "command": [
+      "timeout",
+      "120",
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/a19_r08_pipeline",
+      "--ie0911-fixed-engineering",
+      "doc/ie_0911/evidence/fixed_production2_run"
+    ]
+  },
+  {
+    "name": "fixture_audit1",
+    "exit_code": 0,
+    "wall_seconds": 0.21883363100096176,
+    "result": "doc/ie_0911/evidence/fixture_audit1.result.json",
+    "command": [
+      "python3",
+      "tools/paper/ie0911_audit_fixture.py",
+      "doc/ie_0911/evidence/fixed_production2_run",
+      "doc/ie_0911/evidence/full_production1_run",
+      "doc/ie_0911/evidence/fixture_audit1.json"
+    ]
+  },
+  {
+    "name": "full_production1",
+    "exit_code": 0,
+    "wall_seconds": 0.03271709300133807,
+    "result": "doc/ie_0911/evidence/full_production1.result.json",
+    "command": [
+      "timeout",
+      "120",
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/a19_r08_pipeline",
+      "--ie0911-full-engineering",
+      "doc/ie_0911/evidence/full_production1_run"
+    ]
+  },
+  {
+    "name": "gt_walk1",
+    "exit_code": 0,
+    "wall_seconds": 0.09535092899932351,
+    "result": "doc/ie_0911/evidence/gt_walk1.result.json",
+    "command": [
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/export_ground_truth",
+      "--config",
+      "config/paper/ie0911/walk1_smoke.yaml",
+      "--output-directory",
+      "doc/ie_0911/evidence/evaluation_truth_walk1"
+    ]
+  },
+  {
+    "name": "inference1",
+    "exit_code": 1,
+    "wall_seconds": 0.11328598899854114,
+    "result": "doc/ie_0911/evidence/inference1.result.json",
+    "command": [
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/test_nlos_inference"
+    ]
+  },
+  {
+    "name": "inference2",
+    "exit_code": 1,
+    "wall_seconds": 0.10174652099885861,
+    "result": "doc/ie_0911/evidence/inference2.result.json",
+    "command": [
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/test_nlos_inference"
+    ]
+  },
+  {
+    "name": "inference3",
+    "exit_code": 126,
+    "wall_seconds": null,
+    "result": "doc/ie_0911/evidence/inference3.result.json",
+    "command": [
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/test_nlos_inference"
+    ]
+  },
+  {
+    "name": "inference4",
+    "exit_code": 0,
+    "wall_seconds": 0.10498438300055568,
+    "result": "doc/ie_0911/evidence/inference4.result.json",
+    "command": [
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/test_nlos_inference"
+    ]
+  },
+  {
+    "name": "input_audit1",
+    "exit_code": 0,
+    "wall_seconds": 0.2294913080004335,
+    "result": "doc/ie_0911/evidence/input_audit1.result.json",
+    "command": [
+      "python3",
+      "tools/paper/ie0911_audit_inputs.py",
+      "doc/ie_0911/evidence/startup2_runs",
+      "doc/ie_0911/evidence/input_audit1.json"
+    ]
+  },
+  {
+    "name": "input_audit2",
+    "exit_code": 0,
+    "wall_seconds": 0.549481169999126,
+    "result": "doc/ie_0911/evidence/input_audit2.result.json",
+    "command": [
+      "python3",
+      "tools/paper/ie0911_audit_inputs.py",
+      "doc/ie_0911/evidence/startup2_runs",
+      "doc/ie_0911/evidence/input_audit2.json"
+    ]
+  },
+  {
+    "name": "methods1",
+    "exit_code": 0,
+    "wall_seconds": 0.012112690999856568,
+    "result": "doc/ie_0911/evidence/methods1.result.json",
+    "command": [
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/test_paper_methods"
+    ]
+  },
+  {
+    "name": "miluv_crop1",
+    "exit_code": 0,
+    "wall_seconds": 0.19007033700108877,
+    "result": "doc/ie_0911/evidence/miluv_crop1.result.json",
+    "command": [
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner",
+      "--config",
+      "doc/ie_0911/evidence/miluv_crop_config.yaml",
+      "--output-root",
+      "doc/ie_0911/evidence/extra_prepares",
+      "--run-id",
+      "miluv_crop",
+      "--method",
+      "lcb_partial",
+      "--prepare-only"
+    ]
+  },
+  {
+    "name": "python1",
+    "exit_code": 0,
+    "wall_seconds": 0.3243319220000558,
+    "result": "doc/ie_0911/evidence/python1.result.json",
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "test",
+      "-p",
+      "test_*evaluator*.py"
+    ]
+  },
+  {
+    "name": "python2",
+    "exit_code": 0,
+    "wall_seconds": 0.23923869100144657,
+    "result": "doc/ie_0911/evidence/python2.result.json",
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "test",
+      "-p",
+      "test_*evaluator*.py"
+    ]
+  },
+  {
+    "name": "python_runner1",
+    "exit_code": 0,
+    "wall_seconds": 0.6852456720007467,
+    "result": "doc/ie_0911/evidence/python_runner1.result.json",
+    "command": [
+      "python3",
+      "test/test_t09_runner_contract.py"
+    ]
+  },
+  {
+    "name": "python_runner2",
+    "exit_code": 0,
+    "wall_seconds": 0.6168876690007892,
+    "result": "doc/ie_0911/evidence/python_runner2.result.json",
+    "command": [
+      "python3",
+      "test/test_t09_runner_contract.py"
+    ]
+  },
+  {
+    "name": "recoverability1",
+    "exit_code": 0,
+    "wall_seconds": 0.02057916000012483,
+    "result": "doc/ie_0911/evidence/recoverability1.result.json",
+    "command": [
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/test_nlos_recoverability"
+    ]
+  },
+  {
+    "name": "refit1",
+    "exit_code": 0,
+    "wall_seconds": 0.06200051699852338,
+    "result": "doc/ie_0911/evidence/refit1.result.json",
+    "command": [
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/test_nlos_refit"
+    ]
+  },
+  {
+    "name": "smoke1",
+    "exit_code": 2,
+    "wall_seconds": 0.36847705200125347,
+    "result": "doc/ie_0911/evidence/smoke1.result.json",
+    "command": [
+      "timeout",
+      "900",
+      "python3",
+      "tools/paper/run_experiments.py",
+      "--manifest",
+      "config/paper/ie0911/smoke_batch.yaml",
+      "--runner",
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner",
+      "--output-root",
+      "doc/ie_0911/evidence/smoke1_runs"
+    ]
+  },
+  {
+    "name": "smoke2",
+    "exit_code": 0,
+    "wall_seconds": 0.6372978589988634,
+    "result": "doc/ie_0911/evidence/smoke2.result.json",
+    "command": [
+      "timeout",
+      "900",
+      "python3",
+      "tools/paper/run_experiments.py",
+      "--manifest",
+      "config/paper/ie0911/smoke_batch.yaml",
+      "--runner",
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner",
+      "--output-root",
+      "doc/ie_0911/evidence/smoke2_runs"
+    ]
+  },
+  {
+    "name": "startup1",
+    "exit_code": 0,
+    "wall_seconds": 12.345970266000222,
+    "result": "doc/ie_0911/evidence/startup1.result.json",
+    "command": [
+      "python3",
+      "tools/paper/ie0911_startup.py",
+      "--manifest",
+      "config/paper/ie0911/six_inputs.yaml",
+      "--runner",
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner",
+      "--output",
+      "doc/ie_0911/evidence/startup1_runs"
+    ]
+  },
+  {
+    "name": "startup2",
+    "exit_code": 0,
+    "wall_seconds": 13.327000639999824,
+    "result": "doc/ie_0911/evidence/startup2.result.json",
+    "command": [
+      "python3",
+      "tools/paper/ie0911_startup.py",
+      "--manifest",
+      "config/paper/ie0911/six_inputs.yaml",
+      "--runner",
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner",
+      "--output",
+      "doc/ie_0911/evidence/startup2_runs"
+    ]
+  }
+]

@@ -1,0 +1,2 @@
+call,trial_in_call,total_trial,lambda_before,lambda_after,delta_norm,error_before,error_native_trial,status,fidelity_lower_binary64,accepted_total,rejected_total,unresolved_total,elapsed_s,artifact
+1,1,1,1.0000000000000001e-05,1.0000000000000002e-06,5.6672255201235547e-12,3.9905846309514783,3.9905846309514628,ACCEPT,1262.5231449661194,1,0,0,0.001545622,call1_trial1

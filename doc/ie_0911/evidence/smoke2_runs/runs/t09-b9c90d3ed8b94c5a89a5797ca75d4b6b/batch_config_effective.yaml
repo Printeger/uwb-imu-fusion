@@ -1,0 +1,102 @@
+anchors: []
+bag:
+  durr: 3.0
+  start: 8.0
+calibration:
+  calib_anchor: false
+  calib_range_bias: false
+  calib_td: false
+  fixed_beta_by_link: {}
+  range_bias_sigma: 0.05
+  td_init: 0.0
+dataset:
+  interface: sfuise
+debug:
+  log: false
+extrinsics:
+  calib_lever: false
+  lever_arm_init:
+  - 0.1
+  - -0.025
+  - 0.0
+  lever_prior_sigma: 0.05
+imu:
+  gravity: 9.81
+  imu_acc_in_g: false
+  sigma_a: 0.357
+  sigma_g: 0.19
+  sigma_wa: 0.044
+  sigma_wg: 0.018
+initialization:
+  imu_orientation_world: enu
+  use_imu_orientation: false
+keyframe:
+  step: 4
+  yaw_align_frames: 0
+nlos:
+  accel_bias_scale_mps2: 1.0
+  active_bias_min_m: 0.02
+  admm_dual_abs_tolerance_objective_per_m: 1.0e-08
+  admm_dual_rel_tolerance: 1.0e-06
+  admm_kkt_tolerance_objective_per_m: 1.0e-08
+  admm_max_iterations: 10000
+  admm_primal_abs_tolerance_m: 1.0e-08
+  admm_primal_rel_tolerance: 1.0e-06
+  admm_tv_subgradient_tolerance_objective_per_m: 1.0e-08
+  boundary_epsilon_m: 1.0e-09
+  change_point_min_m: 0.05
+  discovery_max_outer_iterations: 50
+  discovery_observation_bias_scale_m: 1.0
+  discovery_scaled_step_tolerance: 1.0e-06
+  discovery_short_min_count: 2
+  discovery_short_min_duration_s: 0.01
+  final_inference_enabled: false
+  gap_threshold_s: 1.0
+  gate_parameter_provenance: T08_GATE_DEVELOPMENT_ONLY_PENDING_VALIDATION
+  gradient_roundoff_safety_factor: 8.0
+  gyro_bias_scale_radps: 1.0
+  lambda_l1: 0.05
+  lambda_tv: 0.1
+  max_refit_iterations: 50
+  merge_max_difference_m: 0.05
+  mode: disabled
+  navigation_stationarity_tolerance_objective: 1.0e-06
+  pose_rotation_scale_rad: 1.0
+  pose_translation_scale_m: 1.0
+  projected_gradient_tolerance: 1.0e-08
+  relative_objective_tolerance: 1.0e-08
+  rho_scale: 1.0
+  scaled_step_tolerance: 1.0e-06
+  score_recoverability: false
+  segment_amplitude_scale_m: 1.0
+  tau_eta: 0.1
+  tau_gamma: 1.0
+  tau_s_m: 0.1
+  velocity_scale_mps: 1.0
+sfuise:
+  anchor_topic: /anchor_list
+  data_dir: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/data/SFUISE
+  gt_topic: /vive/transform/tracker_1_ref
+  imu_topic: /waveshare_sense_hat_b
+  sequence: 1
+  uwb_group_window: 0.0
+  uwb_topic: /rtls_flares
+solver:
+  abs_error_tol: 1.0e-08
+  chi2_reject_prob: 0.99
+  gnc_inlier_prob: 0.99
+  gnc_max_iter: 20
+  gnc_mu_step: 1.4
+  gnc_rel_cost_tol: 0.0001
+  gnc_weight_thresh: -1.0
+  lm_max_iter: 100
+  max_rejection_rounds: 3
+  rel_error_tol: 1.0e-06
+uwb:
+  dist_consistency_thresh: 2.0
+  max_range: 60.0
+  min_range: 0.3
+  nlos_rssi_diff: 8.0
+  sigma_range: 0.15
+  v_max: 2.0
+  warmup_frames: 20

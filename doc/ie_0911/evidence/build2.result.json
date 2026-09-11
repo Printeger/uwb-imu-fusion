@@ -1,0 +1,16 @@
+{
+  "command": [
+    "cmake",
+    "--build",
+    "/home/mint/ws_fusion_uwb/build/uwb_imu_fgo",
+    "--target",
+    "uwb_imu_fgo_paper_runner",
+    "test_nlos_inference",
+    "test_nlos_recoverability",
+    "test_nlos_refit",
+    "test_paper_methods",
+    "-j2"
+  ],
+  "exit_code": 2,
+  "wall_seconds": 42.18154238600073
+}

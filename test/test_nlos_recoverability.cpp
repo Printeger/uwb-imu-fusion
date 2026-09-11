@@ -296,3 +296,24 @@ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
+
+TEST(NlosRecoverability, LcbInverseDiagonalAndInvalidInputs) {
+  uifgo::RecoverabilityResult r;
+  r.status=uifgo::RecoverabilityStatus::OK;
+  r.R.resize(2,2); r.R << 4,3,3,9;
+  r.R_rank=2; r.amplitude_columns=2; r.R_rank_pd_threshold=1e-10;
+  auto s=uifgo::LocalAmplitudeSigmas(r);
+  ASSERT_EQ(s.size(),2u);
+  EXPECT_NEAR(s[0],std::sqrt(1.0/3.0),1e-12);
+  EXPECT_NEAR(s[1],std::sqrt(4.0/27.0),1e-12);
+  EXPECT_GT(s[0],1.0/std::sqrt(r.R(0,0)));
+  r.R << 9,3,3,4;
+  auto perm=uifgo::LocalAmplitudeSigmas(r);
+  ASSERT_EQ(perm.size(),2u); EXPECT_DOUBLE_EQ(perm[1],s[0]);
+  r.R << 1,1,1,1; EXPECT_TRUE(uifgo::LocalAmplitudeSigmas(r).empty());
+  r.R << 1,2,2,1; EXPECT_TRUE(uifgo::LocalAmplitudeSigmas(r).empty());
+  r.R(0,0)=std::numeric_limits<double>::quiet_NaN();
+  EXPECT_TRUE(uifgo::LocalAmplitudeSigmas(r).empty());
+  r.R.setIdentity(); r.status=uifgo::RecoverabilityStatus::RANK_DEFICIENT;
+  EXPECT_TRUE(r.valid_score()); EXPECT_TRUE(uifgo::LocalAmplitudeSigmas(r).empty());
+}

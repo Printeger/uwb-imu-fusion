@@ -130,3 +130,6 @@ data/*.bag
 !/doc/ie_sprint/evidence/t11_20260910T160942Z/REPRODUCE.md
 !/doc/ie_sprint/evidence/t11_20260910T160942Z/RETENTION.json
 !/doc/ie_sprint/evidence/t11_20260910T160942Z/FINAL_FREEZE.json
+
+# 0911 local engineering runs; selected compact evidence is force-added to Git.
+/doc/ie_0911/evidence/*

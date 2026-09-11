@@ -1,0 +1,3 @@
+segment_ordinal,segment_id,c_hat_stage2_m,sigma_c_local_m,sigma_available,delta_c_fixed_m,decision_use,final_use,reason
+0,r07-segment-0,0.39999999994194146,0.036036185607444378,1,0.39999999994194146,1,0,USE_POSITIVE_LCB_FIXED_OFFSET
+1,r07-segment-1,0.29999999994662963,0.036041928700793063,1,0.29999999994662963,1,0,USE_POSITIVE_LCB_FIXED_OFFSET

@@ -1,0 +1,214 @@
+schema: uifgo_t09_batch_v2
+role: development
+parameter_provenance: IE0911_DEVELOPMENT_TEST_ONLY_PENDING_VALIDATION
+run_units:
+- run_unit_id: sfuise_walk1
+  recording_id: sfuise_walk1
+  base_trajectory_id: sfuise_walk1
+  seed: 0
+  prefix_identity: full
+  config: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/config/paper/ie0911/sfuise_walk1.yaml
+  cells:
+  - mode: robust_cauchy
+    execution_type: BASELINE_TRAJECTORY
+    path: DIRECT_COMMON_PREPARATION
+    robust_scale: 2.3849
+  - mode: structured_debias
+    execution_type: CACHE_PRODUCER
+    path: AUTO_DISCOVERY
+    producer_id: shared
+  - mode: suppress_all
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: structured_debias
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: lcb_partial
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: lcb_fixed_full
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+- run_unit_id: sfuise_walk2
+  recording_id: sfuise_walk2
+  base_trajectory_id: sfuise_walk2
+  seed: 0
+  prefix_identity: full
+  config: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/config/paper/ie0911/sfuise_walk2.yaml
+  cells:
+  - mode: robust_cauchy
+    execution_type: BASELINE_TRAJECTORY
+    path: DIRECT_COMMON_PREPARATION
+    robust_scale: 2.3849
+  - mode: structured_debias
+    execution_type: CACHE_PRODUCER
+    path: AUTO_DISCOVERY
+    producer_id: shared
+  - mode: suppress_all
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: structured_debias
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: lcb_partial
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: lcb_fixed_full
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+- run_unit_id: sfuise_walk3
+  recording_id: sfuise_walk3
+  base_trajectory_id: sfuise_walk3
+  seed: 0
+  prefix_identity: full
+  config: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/config/paper/ie0911/sfuise_walk3.yaml
+  cells:
+  - mode: robust_cauchy
+    execution_type: BASELINE_TRAJECTORY
+    path: DIRECT_COMMON_PREPARATION
+    robust_scale: 2.3849
+  - mode: structured_debias
+    execution_type: CACHE_PRODUCER
+    path: AUTO_DISCOVERY
+    producer_id: shared
+  - mode: suppress_all
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: structured_debias
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: lcb_partial
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: lcb_fixed_full
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+- run_unit_id: miluv_random
+  recording_id: miluv_random
+  base_trajectory_id: miluv_random
+  seed: 0
+  prefix_identity: full
+  config: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/config/paper/ie0911/miluv_random.yaml
+  cells:
+  - mode: robust_cauchy
+    execution_type: BASELINE_TRAJECTORY
+    path: DIRECT_COMMON_PREPARATION
+    robust_scale: 2.3849
+  - mode: structured_debias
+    execution_type: CACHE_PRODUCER
+    path: AUTO_DISCOVERY
+    producer_id: shared
+  - mode: suppress_all
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: structured_debias
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: lcb_partial
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: lcb_fixed_full
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+- run_unit_id: miluv_circular
+  recording_id: miluv_circular
+  base_trajectory_id: miluv_circular
+  seed: 0
+  prefix_identity: full
+  config: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/config/paper/ie0911/miluv_circular.yaml
+  cells:
+  - mode: robust_cauchy
+    execution_type: BASELINE_TRAJECTORY
+    path: DIRECT_COMMON_PREPARATION
+    robust_scale: 2.3849
+  - mode: structured_debias
+    execution_type: CACHE_PRODUCER
+    path: AUTO_DISCOVERY
+    producer_id: shared
+  - mode: suppress_all
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: structured_debias
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: lcb_partial
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: lcb_fixed_full
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+- run_unit_id: vicon_test
+  recording_id: vicon_test
+  base_trajectory_id: vicon_test
+  seed: 0
+  prefix_identity: full
+  config: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/config/paper/ie0911/vicon_test.yaml
+  cells:
+  - mode: robust_cauchy
+    execution_type: BASELINE_TRAJECTORY
+    path: DIRECT_COMMON_PREPARATION
+    robust_scale: 2.3849
+  - mode: structured_debias
+    execution_type: CACHE_PRODUCER
+    path: AUTO_DISCOVERY
+    producer_id: shared
+  - mode: suppress_all
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: structured_debias
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: lcb_partial
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}
+  - mode: lcb_fixed_full
+    execution_type: FINAL_TRAJECTORY
+    path: AUTO_DISCOVERY
+    producer_id: shared
+    thresholds: {}

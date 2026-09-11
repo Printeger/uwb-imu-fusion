@@ -542,6 +542,20 @@ InferenceArtifactWriteResult WriteInferenceArtifacts(
              << '\n';
   }
   {
+    if (!result.requested_fixed_method.empty()) {
+      auto fixed = OpenNew(root / "fixed_compensations.csv", &written);
+      fixed << std::setprecision(17)
+            << "segment_ordinal,segment_id,c_hat_stage2_m,sigma_c_local_m,sigma_available,delta_c_fixed_m,decision_use,final_use,reason\n";
+      for (const auto& c : result.fixed_compensations)
+        fixed << c.segment_ordinal << ',' << c.segment_id << ',' << c.c_hat_stage2_m
+              << ',' << c.sigma_c_local_m
+              << ',' << c.sigma_available << ',' << c.delta_c_fixed_m << ',' << c.use
+              << ',' << (c.use && !result.fallback.attempted) << ',' << c.reason << '\n';
+      auto method = OpenNew(root / "fixed_method.csv", &written);
+      method << "requested,actual,kappa,uncertainty_semantics\n"
+             << result.requested_fixed_method << ',' << result.actual_fixed_method
+             << ",2,STAGE2_LOCAL_DIAGNOSTIC_NOT_FINAL_BIAS_POSTERIOR\n";
+    }
     auto output = OpenNew(root / "residuals.csv", &written);
     output << "inference_id,factor_index,obs_id,factor_type,segment_id,"
               "residual_coordinate,residual_value\n"

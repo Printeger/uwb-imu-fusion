@@ -256,6 +256,8 @@ def trajectory_metrics(run_dir: Path, scenario: dict):
                           for _, g in matches])
     if T_GE_raw is not None and T_Q_I_raw is not None and provenance:
         raw_errors = np.linalg.norm(est_raw-gt_points, axis=1)
+        result.update(summarize_errors(np.linalg.norm((est_raw-gt_points)[:,:2],axis=1), "raw_frame_horizontal"))
+        result.update(summarize_errors(np.abs((est_raw-gt_points)[:,2]), "raw_frame_height"))
         result.update(summarize_errors(raw_errors, "raw_frame_ATE"))
         result["raw_frame_axis_rmse_m"] = metric(
             [float(x) for x in np.sqrt(np.mean((est_raw-gt_points)**2, axis=0))],
@@ -272,6 +274,8 @@ def trajectory_metrics(run_dir: Path, scenario: dict):
         result["aligned_ATE_rmse_m"] = unavailable(
             "UNAVAILABLE_INSUFFICIENT_MATCHES", "SE3_ALIGNMENT_DEGENERATE", "m")
     else:
+        result.update(summarize_errors(np.linalg.norm((aligned-gt_points)[:,:2],axis=1), "aligned_horizontal"))
+        result.update(summarize_errors(np.abs((aligned-gt_points)[:,2]), "aligned_height"))
         result.update(summarize_errors(np.linalg.norm(aligned-gt_points, axis=1),
                                        "aligned_ATE"))
     horizon = float(scenario.get("rpe_horizon_s", 1.0))
@@ -337,8 +341,10 @@ def matrix_quaternion(R):
 
 
 def csv_rows(path):
-    return (list(csv.DictReader(path.open(newline="", encoding="utf-8")))
-            if path and path.is_file() else [])
+    if not path or not path.is_file():
+        return []
+    with path.open(newline="", encoding="utf-8") as stream:
+        return list(csv.DictReader(stream))
 
 
 def csv_bool(row: dict, field: str, artifact: str):
@@ -496,7 +502,7 @@ def verify_final_artifacts(run_dir: Path, status: dict, cell: dict,
                 if fallback_use or (final_use and not decision_use):
                     raise ValueError("candidate final mask flags are inconsistent")
                 expected_classification = (
-                    "ACCEPTED_CANDIDATE_RAW_WITH_LIVE_C" if final_use else
+                    ("ACCEPTED_CANDIDATE_RAW_WITH_FIXED_OFFSET" if (run_dir / "fixed_method.csv").is_file() else "ACCEPTED_CANDIDATE_RAW_WITH_LIVE_C") if final_use else
                     "SUPPRESSED_CANDIDATE")
                 semantic_expected_count = int(final_use)
 
@@ -712,6 +718,9 @@ def bias_correction_metrics(run_dir: Path, scenario: dict,
                     and str(row.get("final_use", "")).lower() in {"1", "true"}}
                 final_amplitudes = {row["segment_id"]: float(row["amplitude_m"])
                                     for row in csv_rows(run_dir / "segment_bias.csv")}
+                if (run_dir / "fixed_compensations.csv").is_file():
+                    final_amplitudes = {row["segment_id"]: float(row["delta_c_fixed_m"])
+                        for row in csv_rows(run_dir / "fixed_compensations.csv") if row["final_use"] == "1"}
                 segment_by_obs = {str(obs): segment["segment_id"]
                                   for segment in partition.get("segments", [])
                                   for obs in segment.get("obs_ids", [])}
@@ -852,6 +861,75 @@ def score_and_support_diagnostics(run_dir: Path,
     }
 
 
+def range_reference_metrics(run_dir: Path, scenario: dict, parent_dir=None):
+    """Evaluation-only noisy geometric agreement, never latent bias truth.
+
+    Reference CSV: obs_id, geometric_range_m, fixed_beta_m. The manifest must
+    bind its hash and independent frame/point/time/beta provenance explicitly.
+    No fitted trajectory/residual is accepted as a geometric reference.
+    """
+    na = unavailable("UNAVAILABLE_REFERENCE_PROVENANCE",
+                     "INDEPENDENT_GEOMETRY_BETA_TIME_REFERENCE_MISSING", "m")
+    if not run_dir or not scenario.get("range_reference_csv"):
+        return na
+    required = ("range_reference_sha256", "range_reference_provenance")
+    if any(not scenario.get(key) for key in required):
+        raise ValueError("range reference lacks hash or provenance")
+    provenance = scenario["range_reference_provenance"]
+    if not isinstance(provenance, dict) or any(not provenance.get(key) for key in
+            ("independent_geometry", "frame", "point", "time", "fixed_beta")):
+        raise ValueError("range reference provenance is incomplete")
+    path = Path(scenario["range_reference_csv"])
+    if file_sha256(path) != scenario["range_reference_sha256"]:
+        raise ValueError("range reference hash mismatch")
+    reference = {}
+    for row in csv_rows(path):
+        key = row["obs_id"]
+        if key in reference:
+            raise ValueError("duplicate reference obs_id")
+        values = float(row["geometric_range_m"]), float(row["fixed_beta_m"])
+        if not all(math.isfinite(x) for x in values) or values[0] < 0:
+            raise ValueError("invalid geometric reference")
+        reference[key] = values
+    source = run_dir / "observations.csv"
+    if not source.is_file() and parent_dir:
+        source = parent_dir / "observations.csv"
+    observations = csv_rows(source)
+    masks = {r["obs_id"]: r for r in csv_rows(run_dir / "final_masks.csv")}
+    corrections = {r["segment_id"]: float(r["delta_c_fixed_m"])
+                   for r in csv_rows(run_dir / "fixed_compensations.csv")}
+    if not corrections:
+        corrections = {r["segment_id"]: float(r["amplitude_m"])
+                       for r in csv_rows(run_dir / "segment_bias.csv")}
+    raw_all, before, after = [], [], []
+    seen = set()
+    for row in observations:
+        key = row["obs_id"]
+        if key in seen:
+            raise ValueError("duplicate observation identity")
+        seen.add(key)
+        if key not in reference:
+            continue
+        geometry, beta = reference[key]
+        raw = float(row["raw_z_m"])-beta-geometry
+        if not math.isfinite(raw):
+            raise ValueError("nonfinite raw reference error")
+        raw_all.append(abs(raw))
+        mask = masks.get(key, {})
+        if mask.get("candidate") == "1" and mask.get("final_use") == "1":
+            correction = corrections.get(mask["segment_id"])
+            if correction is None or not math.isfinite(correction):
+                raise ValueError("restored observation lacks correction")
+            before.append(abs(raw)); after.append(abs(raw-correction))
+    result = {"semantics": "NOISY_GEOMETRIC_MEASUREMENT_REFERENCE_NOT_BIAS_TRUTH",
+              "reference_sha256": scenario["range_reference_sha256"],
+              "matched_raw_count": len(raw_all), "restored_pair_count": len(before)}
+    for values, name in ((raw_all,"raw_pool"),(before,"restored_before"),(after,"restored_after")):
+        result.update(summarize_errors(np.asarray(values),name) if values else
+                      {name+"_rmse_m": unavailable("UNDEFINED_ZERO_COVERAGE", "NO_MATCHED_OBSERVATIONS", "m")})
+    return result
+
+
 def validate_evaluation_manifest(path: Path):
     with path.open(encoding="utf-8") as stream:
         value = yaml.safe_load(stream)
@@ -875,6 +953,10 @@ def validate_evaluation_manifest(path: Path):
                 raise ValueError("GT evaluation units must be m_s_rad")
             if file_sha256(gt) != scenario["ground_truth_sha256"]:
                 raise ValueError("ground-truth source hash mismatch")
+        if scenario.get("range_reference_csv"):
+            reference = Path(scenario["range_reference_csv"])
+            if not reference.is_absolute():
+                scenario["range_reference_csv"] = str((path.parent / reference).resolve())
         if scenario.get("bias_truth"):
             truth = Path(scenario["bias_truth"])
             if not truth.is_absolute():
@@ -1089,9 +1171,8 @@ def main():
                 "trajectory_harm": unavailable(
                     "UNAVAILABLE_UNPAIRED_USE_SUPPRESS_TRAJECTORIES",
                     "REQUIRES_MATCHED_USE_AND_SUPPRESS_FINAL_REQUESTS", "m"),
-                "measurement_reference_agreement": unavailable(
-                    "UNAVAILABLE_REFERENCE_PROVENANCE",
-                    "INDEPENDENT_BETA_GEOMETRY_TIME_UNCERTAINTY_REFERENCE_MISSING", "m"),
+                "measurement_reference_agreement": range_reference_metrics(
+                    run_dir, scenario, parent_cache_dir),
                 "covariance": {"status": covariance_doc.get(
                     "status", status.get("covariance_status",
                                          "NOT_APPLICABLE_OR_UNAVAILABLE")),

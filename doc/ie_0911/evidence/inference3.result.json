@@ -1,0 +1,5 @@
+{
+  "exit_code": 126,
+  "execution": "NOT_LAUNCHED",
+  "reason": "PermissionError errno13: test executable was still being linked; build5 had not yet completed"
+}

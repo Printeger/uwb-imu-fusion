@@ -1,0 +1,3 @@
+inference_id,keyframe_id,sensor_time,bax,bay,baz,bgx,bgy,bgz
+t08inference-sha256:424f079b6b0161c751ded6ccf65389189932e473c72c5dfe4a8c2dc454c6c8d9,0,0,0,0,0,0,0,0
+t08inference-sha256:424f079b6b0161c751ded6ccf65389189932e473c72c5dfe4a8c2dc454c6c8d9,1,1,0,0,0,0,0,0

@@ -1,0 +1,7 @@
+{
+  "command": [
+    "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/test_nlos_inference"
+  ],
+  "exit_code": 0,
+  "wall_seconds": 0.10498438300055568
+}

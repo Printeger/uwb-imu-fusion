@@ -1,0 +1,1 @@
+["python3", "tools/paper/ie0911_startup.py", "--manifest", "config/paper/ie0911/six_inputs.yaml", "--runner", "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner", "--output", "doc/ie_0911/evidence/startup2_runs"]

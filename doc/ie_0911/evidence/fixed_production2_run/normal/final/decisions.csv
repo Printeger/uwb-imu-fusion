@@ -1,0 +1,2 @@
+inference_id,group_id,start_time,end_time,segment_ordinals,decision,reason_code,eligible,eta_pass,s_pass,gamma_pass,max_gamma,max_gamma_available,decision_linearization_id
+t08inference-sha256:f449b27074315d841c9141ab0dff83a06e5809844e7cb7bc4105c3ccb95a7ad4,group_0,0,1,0;1,USE,LCB_PER_SEGMENT_SEE_FIXED_COMPENSATIONS,1,0,0,0,1.6324215833822296e-21,1,t05lin-sha256:0286fc28a84ecc31ae3b2b973f3694e871bbb58b92e55f96f562a69403e288cb

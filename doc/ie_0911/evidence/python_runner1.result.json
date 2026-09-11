@@ -1,0 +1,8 @@
+{
+  "command": [
+    "python3",
+    "test/test_t09_runner_contract.py"
+  ],
+  "exit_code": 0,
+  "wall_seconds": 0.6852456720007467
+}

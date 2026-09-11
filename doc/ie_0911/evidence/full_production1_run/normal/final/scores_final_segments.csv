@@ -1,0 +1,3 @@
+inference_id,phase,group_id,segment_ordinal,segment_id,evaluated,gamma,gamma_available,short_support_debug,boundary,linearization_id,status
+t08inference-sha256:9ff7b14bdc754b42567408357c1e79fedb09721e34459e7a0f58cf193ed022ce,FINAL_RESULT,group_0,0,,0,,0,,,NOT_APPLICABLE,NOT_APPLICABLE_FIXED_OFFSET_NO_LIVE_C
+t08inference-sha256:9ff7b14bdc754b42567408357c1e79fedb09721e34459e7a0f58cf193ed022ce,FINAL_RESULT,group_0,1,,0,,0,,,NOT_APPLICABLE,NOT_APPLICABLE_FIXED_OFFSET_NO_LIVE_C

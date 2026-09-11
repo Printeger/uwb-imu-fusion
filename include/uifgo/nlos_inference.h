@@ -37,6 +37,8 @@ enum class GroupDecision { USE, SUPPRESS };
 const char* GroupDecisionName(GroupDecision decision);
 
 enum class FinalGatePolicy {
+  LCB_PARTIAL,
+  LCB_FIXED_FULL,
   SUPPRESS_ALL,
   STRUCTURED_DEBIAS,
   FULL_GATE,
@@ -63,6 +65,20 @@ std::vector<GroupDecisionRecord> FreezeGroupDecisions(
     const std::vector<GroupRecoverabilityScore>& scores,
     const GateThresholds& thresholds,
     FinalGatePolicy policy = FinalGatePolicy::FULL_GATE);
+
+struct FixedCompensation {
+  size_t segment_ordinal = 0;
+  std::string segment_id;
+  double c_hat_stage2_m = 0.0;
+  double sigma_c_local_m = 0.0;
+  bool sigma_available = false;
+  double delta_c_fixed_m = 0.0;
+  bool use = false;
+  std::string reason;
+};
+std::vector<FixedCompensation> FreezeFixedCompensations(
+    const SegmentRefitResult& stage2,
+    const std::vector<GroupRecoverabilityScore>& scores, bool full_variant);
 
 struct FrozenObservationMask {
   std::uint64_t obs_id = 0;
@@ -200,6 +216,11 @@ struct InferenceResult {
   InferenceIdentityContext identity_context;
   InferenceContentIdentity content_identity;
   GateThresholds gate_thresholds;
+  // Empty preserves historical identity bytes.
+  std::string requested_fixed_method;
+  std::string actual_fixed_method;
+  double fixed_kappa = 2.0;
+  std::vector<FixedCompensation> fixed_compensations;
   gtsam::NonlinearFactorGraph final_graph;
   gtsam::Values final_values;
   std::vector<double> final_keyframe_times_s;

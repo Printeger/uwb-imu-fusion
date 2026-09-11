@@ -723,7 +723,9 @@ bool DataLoader::LoadMiluvCsv(const std::string& data_dir,
     UwbFrame pending_frame;
     bool have_pending = false;
 
+    std::uint64_t source_row = 0;
     while (std::getline(f, line)) {
+      const auto row_id = source_row++;
       if (line.empty()) continue;
       // Parse: range, from_id, to_id, ...(29 columns)... , timestamp
       // Some columns contain bracket-format values that break istringstream >>,
@@ -742,6 +744,11 @@ bool DataLoader::LoadMiluvCsv(const std::string& data_dir,
       if (t < 0.001) continue;
 
       UwbRange r;
+      r.source_obs_index = row_id;
+      r.source_message_index = row_id;
+      r.source_range_index = 0;
+      r.source_time = t;
+      r.source_tag_id = from_id;
       r.anchor_id = to_id;
       r.dist = range;
       r.fp_rssi = 0.0;

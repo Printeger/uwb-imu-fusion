@@ -1,0 +1,142 @@
+dataset:
+  interface: miluv
+miluv:
+  data_dir: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/data/MILUV/default_1_random3_0
+  uwb_group_window: 0.0
+  tag_levers:
+    10: &id001
+    - 0.13189
+    - -0.17245
+    - -0.05249
+    11:
+    - -0.17542
+    - 0.15712
+    - -0.05307
+anchors:
+- id: 0
+  pos:
+  - 3.2738
+  - 3.464
+  - 1.8093
+  prior_sigma: 0.1
+- id: 1
+  pos:
+  - 3.1864
+  - 0.2739
+  - 1.5885
+  prior_sigma: 0.1
+- id: 2
+  pos:
+  - 2.8505
+  - -2.9231
+  - 1.8974
+  prior_sigma: 0.1
+- id: 3
+  pos:
+  - -2.4976
+  - -3.5018
+  - 1.7731
+  prior_sigma: 0.1
+- id: 4
+  pos:
+  - -2.9579
+  - 0.6128
+  - 1.6571
+  prior_sigma: 0.1
+- id: 5
+  pos:
+  - -2.7347
+  - 3.6585
+  - 1.8903
+  prior_sigma: 0.1
+extrinsics:
+  lever_arm_init: *id001
+  calib_lever: false
+  lever_prior_sigma: 0.05
+calibration:
+  calib_anchor: false
+  calib_range_bias: false
+  range_bias_sigma: 0.1
+  calib_td: false
+  td_init: 0.0
+  fixed_beta_by_link: {}
+imu:
+  sigma_a: 0.002
+  sigma_g: 0.0005
+  sigma_wa: 0.0002
+  sigma_wg: 4.0e-05
+  gravity: 9.81
+  imu_acc_in_g: false
+initialization:
+  use_imu_orientation: false
+  imu_orientation_world: enu
+uwb:
+  sigma_range: 0.15
+  v_max: 3.0
+  min_range: 0.3
+  max_range: 30.0
+  dist_consistency_thresh: 3.0
+  warmup_frames: 30
+solver:
+  lm_max_iter: 200
+  gnc_mu_step: 1.4
+  gnc_max_iter: 100
+  gnc_rel_cost_tol: 1.0e-05
+  gnc_inlier_prob: 0.99
+  gnc_weight_thresh: -1.0
+  chi2_reject_prob: 0.99
+  max_rejection_rounds: 3
+keyframe:
+  step: 3
+  yaw_align_frames: 0
+debug:
+  log: true
+topics:
+  imu: ''
+  uwb: ''
+  vicon: ''
+  gt_odom: ''
+bag:
+  path: ''
+  start: 0.0
+  durr: -1.0
+nlos:
+  mode: automatic_discovery
+  score_recoverability: true
+  lambda_l1: 0.05
+  lambda_tv: 0.1
+  gap_threshold_s: 1.0
+  active_bias_min_m: 0.02
+  change_point_min_m: 0.05
+  merge_max_difference_m: 0.05
+  discovery_short_min_count: 2
+  discovery_short_min_duration_s: 0.01
+  discovery_max_outer_iterations: 50
+  discovery_scaled_step_tolerance: 1.0e-06
+  discovery_observation_bias_scale_m: 1.0
+  rho_scale: 1.0
+  admm_primal_abs_tolerance_m: 1.0e-08
+  admm_primal_rel_tolerance: 1.0e-06
+  admm_dual_abs_tolerance_objective_per_m: 1.0e-08
+  admm_dual_rel_tolerance: 1.0e-06
+  admm_kkt_tolerance_objective_per_m: 1.0e-08
+  admm_tv_subgradient_tolerance_objective_per_m: 1.0e-08
+  admm_max_iterations: 10000
+  boundary_epsilon_m: 1.0e-09
+  relative_objective_tolerance: 1.0e-08
+  scaled_step_tolerance: 1.0e-06
+  projected_gradient_tolerance: 1.0e-08
+  navigation_stationarity_tolerance_objective: 1.0e-06
+  gradient_roundoff_safety_factor: 8.0
+  pose_rotation_scale_rad: 1.0
+  pose_translation_scale_m: 1.0
+  velocity_scale_mps: 1.0
+  accel_bias_scale_mps2: 1.0
+  gyro_bias_scale_radps: 1.0
+  segment_amplitude_scale_m: 1.0
+  max_refit_iterations: 50
+  final_inference_enabled: true
+  tau_eta: 0.1
+  tau_s_m: 0.1
+  tau_gamma: 1.0
+  gate_parameter_provenance: T08_GATE_DEVELOPMENT_ONLY_PENDING_VALIDATION

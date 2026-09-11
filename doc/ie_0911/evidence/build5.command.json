@@ -1,0 +1,1 @@
+["cmake", "--build", "/home/mint/ws_fusion_uwb/build/uwb_imu_fgo", "--target", "a19_r08_pipeline", "test_nlos_inference", "-j2"]

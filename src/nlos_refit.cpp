@@ -463,7 +463,8 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
     const SupportPartition& support,
     const std::set<size_t>& accepted_segment_ordinals,
     bool execute_optimization,
-    const DevelopmentStage2Request* development_request) const {
+    const DevelopmentStage2Request* development_request,
+    const std::map<size_t,double>* fixed_offsets) const {
   SegmentRefitResult result;
   auto fail = [&](SegmentRefitStatus status, const std::string& reason) {
     result.status = status;
@@ -616,13 +617,17 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
         if (anchor_it == anchors.end())
           return fail(SegmentRefitStatus::INVALID_INPUT,
                       "support observation has no anchor");
-        const auto factor = MakeSegmentUwbFactor(
+        const auto factor = fixed_offsets ? MakeFixedOffsetUwbFactor(
+            X(record.keyframe_id), anchor_it->second, cfg.lever_arm_init,
+            record.raw_range, record.nominal_sigma,
+            FixedBetaForLink(cfg, record.tag_id, record.anchor_id),
+            fixed_offsets->at(segment.segment_ordinal)) : MakeSegmentUwbFactor(
             X(record.keyframe_id), C(segment.segment_ordinal), anchor_it->second,
             cfg.lever_arm_init, record.raw_range, record.nominal_sigma,
             FixedBetaForLink(cfg, record.tag_id, record.anchor_id));
         output_meta.factor_index = result.graph.size();
         result.graph.add(factor);
-        output_meta.factor_type = "uwb_segment_range";
+        output_meta.factor_type = fixed_offsets ? "uwb_fixed_offset_range" : "uwb_segment_range";
         output_meta.segment_id = segment.segment_id;
         output_meta.keys.assign(factor->keys().begin(), factor->keys().end());
       }
@@ -635,7 +640,7 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
     if (gtsam::Symbol(key).chr() == 'c') result.values.erase(key);
   }
   for (const auto& segment : support.segments) {
-    if (!accepted_segment_ordinals.count(segment.segment_ordinal)) continue;
+    if (fixed_offsets || !accepted_segment_ordinals.count(segment.segment_ordinal)) continue;
     const gtsam::Key key = C(segment.segment_ordinal);
     const double initial_amplitude = base_values.exists(key)
                                          ? base_values.at<double>(key)
@@ -647,6 +652,7 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
                 "joint graph and Values keys differ after reconstruction");
   bool selected_values_finite = true;
   for (size_t ordinal : accepted_segment_ordinals) {
+    if (fixed_offsets) continue;
     selected_values_finite = selected_values_finite &&
         result.values.exists(C(ordinal)) &&
         std::isfinite(result.values.at<double>(C(ordinal)));
@@ -685,7 +691,7 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
   // An empty automatic partition is not a shortcut. Re-optimize the shared
   // raw graph with no C(s), L1, or TV terms and export this Stage-2 state only
   // if the navigation solve itself succeeds.
-  if (accepted_segment_ordinals.empty()) {
+  if (accepted_segment_ordinals.empty() || fixed_offsets) {
     if (development_request && development_request->allow_inexact_handoff)
       return fail(SegmentRefitStatus::INVALID_INPUT,
                   "DEVELOPMENT_NO_C_FORBIDS_INEXACT_HANDOFF");
@@ -714,7 +720,7 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
         std::set<std::uint64_t> range_obs_ids;
         for (size_t index = 0; index < result.factor_metadata.size(); ++index) {
           const auto& meta = result.factor_metadata[index];
-          if (meta.factor_type != "uwb_range") continue;
+          if (meta.factor_type != "uwb_range" && meta.factor_type != "uwb_fixed_offset_range") continue;
           const auto record_it = records.find(meta.obs_id);
           if (record_it == records.end() || meta.factor_index != index ||
               meta.keys !=
@@ -733,12 +739,14 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
           const double geometric =
               (pose.transformFrom(cfg.lever_arm_init) - anchor_it->second)
                   .norm();
+          const double delta = meta.factor_type == "uwb_fixed_offset_range"
+              ? fixed_offsets->at(segment_by_obs.at(record.obs_id)->segment_ordinal) : 0.0;
           const double expected_residual =
-              UwbResidual(geometric, record.raw_range, fixed_beta, 0.0);
+              UwbResidual(geometric, record.raw_range, fixed_beta + delta, 0.0);
           const auto expected_factor = MakeUwbFactor(
               X(record.keyframe_id), 0, 0, 0, anchor_it->second,
               cfg.lever_arm_init, record.raw_range, record.nominal_sigma,
-              false, false, false, fixed_beta);
+              false, false, false, fixed_beta + delta);
           if (!RangeFactorMatchesExpected(
                   result.graph.at(index), expected_factor, before_values,
                   record.raw_range, record.nominal_sigma, expected_residual) ||
@@ -753,17 +761,18 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
           range.lever = cfg.lever_arm_init;
           range.measurement = record.raw_range;
           range.sigma = record.nominal_sigma;
-          range.conditional_beta = fixed_beta;
+          range.conditional_beta = fixed_beta + delta;
           range.obs_id = record.obs_id;
-          range.candidate = false;
+          range.candidate = meta.factor_type == "uwb_fixed_offset_range";
           range.fixed_beta = fixed_beta;
-          range.segment_amplitude = 0.0;
+          range.segment_amplitude = delta;
           range.expected_unwhitened_residual = expected_residual;
           development_ranges.push_back(std::move(range));
         }
         size_t expected_range_count = 0;
         for (const auto& meta : result.factor_metadata)
-          expected_range_count += meta.factor_type == "uwb_range";
+          expected_range_count += meta.factor_type == "uwb_range" ||
+                                  meta.factor_type == "uwb_fixed_offset_range";
         if (development_ranges.size() != expected_range_count)
           return fail(SegmentRefitStatus::INVALID_INPUT,
                       "development no-C range metadata is incomplete");
@@ -1264,3 +1273,21 @@ SegmentRefitResult SegmentRefitter::Run(
 }
 
 }  // namespace uifgo
+
+namespace uifgo {
+SegmentRefitResult SegmentRefitter::RunFixedOffsets(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
+    const std::vector<FactorMeta>& metadata, const PaperInputPlan& plan,
+    const Config& cfg, const SupportPartition& support,
+    const std::map<size_t,double>& offsets,
+    const DevelopmentStage2Request* request) const {
+  std::set<size_t> accepted;
+  for(const auto& item:offsets) {
+    if(!std::isfinite(item.second) || item.second<=0)
+      throw std::invalid_argument("fixed offset must be finite and positive");
+    accepted.insert(item.first);
+  }
+  return RunFrozenCandidatePolicyImpl(graph,values,metadata,plan,cfg,support,
+                                      accepted,true,request,&offsets);
+}
+}

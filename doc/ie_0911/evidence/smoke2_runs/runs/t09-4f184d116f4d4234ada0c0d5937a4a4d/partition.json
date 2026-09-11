@@ -1,0 +1,17 @@
+{
+  "schema": "t06_automatic_support_v2",
+  "provider": "automatic_discovery",
+  "hash_algorithm": "SHA-256",
+  "partition_rule_version": "T06_A01_SINGLE_PASS_V2",
+  "discovery_context_hash": "sha256:b2aa3d6627f47149da3c8a59f5a43074016e8f6ca5fadf972f3254b9327e0dce",
+  "input_plan_hash": "sha256:c4b08e478d2f026125991a6d1ca04096cce95837c309833b7fb1ef3115fa30f4",
+  "source_hash": "sha256:ca577e3666ad5876aa8347289a98793b8da0e68b5db459f2d7d69a6adcacd944",
+  "config_hash": "sha256:f7356480fa00ebd091882b61eb1690ad5b3ea1542b6d5f0d7e62c39cfb6659d0",
+  "calibration_hash": "sha256:07332ae4f260fe62aeddfda597363b9a308a32f16afa48ed004f32ee1566ee90",
+  "solver_config_hash": "sha256:6902bbbf85473b91a42ecc6c89d2335ce27ef15cc2aa1bde6c58035557e3b895",
+  "discovery_snapshot_hash": "sha256:410f4bdeda01ef6123a99d5fca20fc109d7d406bec609009b213e307090750ea",
+  "partition_hash": "",
+  "stage2_partition_frozen": true,
+  "segments": [
+  ]
+}

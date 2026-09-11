@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="28" failures="0" disabled="0" errors="0" time="0.054" timestamp="2026-09-11T12:00:43" name="AllTests">
+  <testsuite name="SegmentUwbFactor" tests="1" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-11T12:00:43">
+    <testcase name="ResidualKeysAndWhitenedManifoldJacobian" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="SegmentUwbFactor" />
+  </testsuite>
+  <testsuite name="OracleSupportProvider" tests="3" failures="0" disabled="0" errors="0" time="0.001" timestamp="2026-09-11T12:00:43">
+    <testcase name="AcceptsClosedIntervalAndRecordsShortStatus" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="OracleSupportProvider" />
+    <testcase name="RejectsAmplitudeUnknownAndDuplicateOwnership" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="OracleSupportProvider" />
+    <testcase name="RejectsCrossLinkUnplannedAndEmptyInterval" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="OracleSupportProvider" />
+  </testsuite>
+  <testsuite name="SegmentRefitter" tests="13" failures="0" disabled="0" errors="0" time="0.012" timestamp="2026-09-11T12:00:43">
+    <testcase name="KnownNavigationUpdateIsExactAndProjected" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="SegmentRefitter" />
+    <testcase name="JointSmallGraphConvergesWithOneSharedLiveCAndNoPrior" status="run" result="completed" time="0.007" timestamp="2026-09-11T12:00:43" classname="SegmentRefitter" />
+    <testcase name="A19DevelopmentStage2LocalCallbackCapturesAllRangesAndRejectsWrongIdentity" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="SegmentRefitter" />
+    <testcase name="A19R03QualifiedInexactHandoffRunsCUpdateAndStillRequiresJointAnd" status="run" result="completed" time="0.003" timestamp="2026-09-11T12:00:43" classname="SegmentRefitter" />
+    <testcase name="A19DevelopmentRejectsRangeContractMismatchesBeforeCallback" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="SegmentRefitter" />
+    <testcase name="ZeroAmplitudeStopsAtBoundaryWithValidKkt" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="SegmentRefitter" />
+    <testcase name="OneOuterIterationFailsAndGraphMismatchIsExplicit" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="SegmentRefitter" />
+    <testcase name="EmptyPartitionStillRunsSharedRawStage2Refit" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="SegmentRefitter" />
+    <testcase name="EmptyPartitionDoesNotMaskRawStage2Failure" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="SegmentRefitter" />
+    <testcase name="EmptyPartitionCannotConvergeWithoutFinalStationarity" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="SegmentRefitter" />
+    <testcase name="ConditionalLmFailureIsExplicit" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="SegmentRefitter" />
+    <testcase name="AmplitudeKktAndLmStagnationDoNotReplaceJointNavigationStationarity" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="SegmentRefitter" />
+    <testcase name="ExactZeroResidualMetadataAcceptsGtsamNegativeZero" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="SegmentRefitter" />
+  </testsuite>
+  <testsuite name="PaperRunIo" tests="1" failures="0" disabled="0" errors="0" time="0.005" timestamp="2026-09-11T12:00:43">
+    <testcase name="ProductionStage2BundleRoundTripsAllLiveTypesAndFailsClosed" status="run" result="completed" time="0.005" timestamp="2026-09-11T12:00:43" classname="PaperRunIo" />
+  </testsuite>
+  <testsuite name="NlosScoring" tests="9" failures="0" disabled="0" errors="0" time="0.03" timestamp="2026-09-11T12:00:43">
+    <testcase name="ClosedIntervalsUseTransitiveOverlapWithoutEpsilon" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="NlosScoring" />
+    <testcase name="RealGtsamWhitenedGraphExcludesRhsAndScoresCandidateOnce" status="run" result="completed" time="0.006" timestamp="2026-09-11T12:00:43" classname="NlosScoring" />
+    <testcase name="RejectsInvalidGraphMetadataSupportAndPlanBeforeScoring" status="run" result="completed" time="0.004" timestamp="2026-09-11T12:00:43" classname="NlosScoring" />
+    <testcase name="LinearizationIdHashesCanonicalPhysicalLinearization" status="run" result="completed" time="0.003" timestamp="2026-09-11T12:00:43" classname="NlosScoring" />
+    <testcase name="MeasurementRhsChangeDoesNotEnterInformationColumns" status="run" result="completed" time="0.003" timestamp="2026-09-11T12:00:43" classname="NlosScoring" />
+    <testcase name="ShortAndBoundaryRemainStage2ResultsButDoNotExportScore" status="run" result="completed" time="0.002" timestamp="2026-09-11T12:00:43" classname="NlosScoring" />
+    <testcase name="PhysicalInformationIsIndependentOfLmDampingSettings" status="run" result="completed" time="0.004" timestamp="2026-09-11T12:00:43" classname="NlosScoring" />
+    <testcase name="ExcludedOtherCandidateGroupCannotAffectCurrentGroup" status="run" result="completed" time="0.006" timestamp="2026-09-11T12:00:43" classname="NlosScoring" />
+    <testcase name="OnlineBetaIsNuisanceAndItsRealPriorResolvesConfounding" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="NlosScoring" />
+  </testsuite>
+  <testsuite name="AutomaticEngineeringPipeline" tests="1" failures="0" disabled="0" errors="0" time="0.006" timestamp="2026-09-11T12:00:43">
+    <testcase name="NonemptyEligibleCandidateReachesValidScoreWithoutOracleOrGt" status="run" result="completed" time="0.006" timestamp="2026-09-11T12:00:43" classname="AutomaticEngineeringPipeline" />
+  </testsuite>
+</testsuites>

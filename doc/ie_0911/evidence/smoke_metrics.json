@@ -1,0 +1,1222 @@
+{
+  "aggregate": {
+    "automatic_discovery_failure_fraction": {
+      "denominator": 1,
+      "numerator": 1,
+      "reason": "",
+      "status": "AVAILABLE",
+      "unit": "run_unit",
+      "value": 1.0
+    },
+    "diagnostic_cell_unavailable_fraction": {
+      "denominator": 0,
+      "numerator": 0,
+      "reason": "ZERO_DENOMINATOR",
+      "status": "UNDEFINED_ZERO_DENOMINATOR",
+      "unit": "run_unit",
+      "value": null
+    },
+    "diagnostic_cell_unavailable_fraction_by_policy_path": {},
+    "fallback_attempt_fraction": {},
+    "fallback_success_fraction": {},
+    "final_estimation_failure_fraction": {
+      "lcb_fixed_full/t09point-sha256:570570a508c8e5da15a69e8ef44ebd11be5d20eb88c5764ee44ed24e3293a265/AUTO_DISCOVERY": {
+        "denominator": 1,
+        "numerator": 1,
+        "reason": "",
+        "status": "AVAILABLE",
+        "unit": "run_unit",
+        "value": 1.0
+      },
+      "lcb_partial/t09point-sha256:ec664a6c866ab7de53f71fa83c56f3fd25a716a898391b0052ce0b46b837799e/AUTO_DISCOVERY": {
+        "denominator": 1,
+        "numerator": 1,
+        "reason": "",
+        "status": "AVAILABLE",
+        "unit": "run_unit",
+        "value": 1.0
+      },
+      "structured_debias/t09point-sha256:eae04a37457093274d53adf18878dd9667e716f51e721a1a1191b441b2987540/AUTO_DISCOVERY": {
+        "denominator": 1,
+        "numerator": 1,
+        "reason": "",
+        "status": "AVAILABLE",
+        "unit": "run_unit",
+        "value": 1.0
+      },
+      "suppress_all/t09point-sha256:65c757a15b5c9984366d4a74c65901c991d2fe7a220f279305f31d0872d8e9f2/AUTO_DISCOVERY": {
+        "denominator": 1,
+        "numerator": 1,
+        "reason": "",
+        "status": "AVAILABLE",
+        "unit": "run_unit",
+        "value": 1.0
+      }
+    },
+    "independent_sample_unit": "run_unit_id",
+    "recovery_failure_fraction": {},
+    "recovery_final_audit_failure_fraction": {},
+    "recovery_solve_failure_fraction": {},
+    "rerun_disagreement": {},
+    "score_unavailable_group_fraction": {},
+    "trajectory_failure_fraction": {
+      "lcb_fixed_full/t09point-sha256:570570a508c8e5da15a69e8ef44ebd11be5d20eb88c5764ee44ed24e3293a265/AUTO_DISCOVERY": {
+        "denominator": 1,
+        "numerator": 1,
+        "reason": "",
+        "status": "AVAILABLE",
+        "unit": "run_unit",
+        "value": 1.0
+      },
+      "lcb_partial/t09point-sha256:ec664a6c866ab7de53f71fa83c56f3fd25a716a898391b0052ce0b46b837799e/AUTO_DISCOVERY": {
+        "denominator": 1,
+        "numerator": 1,
+        "reason": "",
+        "status": "AVAILABLE",
+        "unit": "run_unit",
+        "value": 1.0
+      },
+      "robust_cauchy/default/DIRECT_COMMON_PREPARATION": {
+        "denominator": 1,
+        "numerator": 0,
+        "reason": "",
+        "status": "AVAILABLE",
+        "unit": "run_unit",
+        "value": 0.0
+      },
+      "structured_debias/t09point-sha256:eae04a37457093274d53adf18878dd9667e716f51e721a1a1191b441b2987540/AUTO_DISCOVERY": {
+        "denominator": 1,
+        "numerator": 1,
+        "reason": "",
+        "status": "AVAILABLE",
+        "unit": "run_unit",
+        "value": 1.0
+      },
+      "suppress_all/t09point-sha256:65c757a15b5c9984366d4a74c65901c991d2fe7a220f279305f31d0872d8e9f2/AUTO_DISCOVERY": {
+        "denominator": 1,
+        "numerator": 1,
+        "reason": "",
+        "status": "AVAILABLE",
+        "unit": "run_unit",
+        "value": 1.0
+      }
+    }
+  },
+  "batch_status": "COMPLETE_WITH_RUN_FAILURES",
+  "run_metrics": [
+    {
+      "aggregate_stratum": "robust_cauchy/default/DIRECT_COMMON_PREPARATION",
+      "bias_correction": {
+        "accepted_bias_field_RMSE": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "BIAS_TRUTH_IS_NOT_TOTAL_SYNTHETIC_LATENT",
+          "status": "UNAVAILABLE_INCOMPLETE_BIAS_TRUTH",
+          "unit": "",
+          "value": null
+        },
+        "bad_correction_rate": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "BIAS_TRUTH_IS_NOT_TOTAL_SYNTHETIC_LATENT",
+          "status": "UNAVAILABLE_INCOMPLETE_BIAS_TRUTH",
+          "unit": "",
+          "value": null
+        },
+        "candidate_bias_field_RMSE": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "BIAS_TRUTH_IS_NOT_TOTAL_SYNTHETIC_LATENT",
+          "status": "UNAVAILABLE_INCOMPLETE_BIAS_TRUTH",
+          "unit": "",
+          "value": null
+        },
+        "good_correction_rejection_rate": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "BIAS_TRUTH_IS_NOT_TOTAL_SYNTHETIC_LATENT",
+          "status": "UNAVAILABLE_INCOMPLETE_BIAS_TRUTH",
+          "unit": "",
+          "value": null
+        }
+      },
+      "cache_id": null,
+      "cell_id": "t09cell-sha256:29632f1fdfd5a0a6992b05dd57f996b5e3282c9bb65863f4fb616422b632fa21",
+      "cell_status": "COMPLETE",
+      "covariance": {
+        "reason": "",
+        "source": "FULL_FINAL_GRAPH_MARGINAL_COVARIANCE",
+        "status": "NOT_APPLICABLE_OR_UNAVAILABLE"
+      },
+      "coverage": {
+        "candidate_use_coverage": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "METHOD_HAS_NO_GROUP_GATE",
+          "status": "NOT_APPLICABLE_METHOD_NO_GATE",
+          "unit": "observation",
+          "value": null
+        },
+        "eligible_use_coverage": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "METHOD_HAS_NO_GROUP_GATE",
+          "status": "NOT_APPLICABLE_METHOD_NO_GATE",
+          "unit": "observation",
+          "value": null
+        },
+        "overall_retained_fraction": {
+          "denominator": 217,
+          "numerator": 55,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "observation",
+          "value": 0.2534562211981567
+        }
+      },
+      "execution_type": "BASELINE_TRAJECTORY",
+      "final_request_id": null,
+      "inference_id": null,
+      "measurement_reference_agreement": {
+        "denominator": null,
+        "numerator": null,
+        "reason": "INDEPENDENT_GEOMETRY_BETA_TIME_REFERENCE_MISSING",
+        "status": "UNAVAILABLE_REFERENCE_PROVENANCE",
+        "unit": "m",
+        "value": null
+      },
+      "mode": "robust_cauchy",
+      "operating_point_id": null,
+      "path": "DIRECT_COMMON_PREPARATION",
+      "producer_id": null,
+      "residual_score": {},
+      "residual_score_semantics": "DECISION_FINAL_SEPARATE_POSTFIT_RESIDUAL_NOT_BIAS_TRUTH",
+      "resources": {
+        "measured": {
+          "peak_rss_kib": 31264,
+          "wall_seconds": 0.07481369900051504
+        },
+        "reported_or_estimated": {
+          "artifact_export_seconds": null,
+          "fallback_seconds": null,
+          "runner_total_wall_seconds": 0.060173125,
+          "runner_total_wall_semantics": null,
+          "score_overhead_seconds": null,
+          "stage1_seconds": null,
+          "stage2_seconds": null,
+          "stage3_score_seconds": null,
+          "stage4_covariance_seconds": null,
+          "stage4_decision_seconds": null,
+          "stage4_recovery_refit_seconds": null,
+          "stage4_seconds": null
+        }
+      },
+      "run_unit_id": "sfuise_walk1",
+      "support": {
+        "boundary_segment_count": 0,
+        "group_count": 0,
+        "groups": [],
+        "segment_count": 0,
+        "segments": [],
+        "short_segment_count": 0
+      },
+      "trajectory": {
+        "RPE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.19689686608359241
+        },
+        "RPE_rotation_rmse_rad": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "rad",
+          "value": 0.03139078505521996
+        },
+        "aligned_ATE_max_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.1698895679664829
+        },
+        "aligned_ATE_mean_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.1081762298152581
+        },
+        "aligned_ATE_p50_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.10970064702013313
+        },
+        "aligned_ATE_p95_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.1592241293049921
+        },
+        "aligned_ATE_p99_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.16775648023418477
+        },
+        "aligned_ATE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.11332248327594485
+        },
+        "aligned_height_max_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.05764128988870493
+        },
+        "aligned_height_mean_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.03788200035133863
+        },
+        "aligned_height_p50_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.04470638889292164
+        },
+        "aligned_height_p95_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.05502665087729733
+        },
+        "aligned_height_p99_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.05711836208642341
+        },
+        "aligned_height_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.04167218367499714
+        },
+        "aligned_horizontal_max_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.1624424064868323
+        },
+        "aligned_horizontal_mean_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.09983680345447189
+        },
+        "aligned_horizontal_p50_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.09989411833510572
+        },
+        "aligned_horizontal_p95_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.1505935346692082
+        },
+        "aligned_horizontal_p99_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.1600726321233075
+        },
+        "aligned_horizontal_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "m",
+          "value": 0.10538222963851211
+        },
+        "evaluation_interval_s": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "s",
+          "value": [
+            1664959681.4310582,
+            1664959684.2461708
+          ]
+        },
+        "matched_count": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "pose",
+          "value": 12
+        },
+        "raw_frame_ATE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "T_G_E_T_Q_I_OR_PROVENANCE_MISSING",
+          "status": "UNAVAILABLE_FRAME_OR_POINT_PROVENANCE",
+          "unit": "m",
+          "value": null
+        },
+        "time_delta_max_s": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "s",
+          "value": 0.009275436401367188
+        },
+        "time_delta_mean_s": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "s",
+          "value": 0.005005160967508952
+        },
+        "time_delta_p95_s": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "s",
+          "value": 0.009234261512756348
+        },
+        "unmatched_count": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "",
+          "status": "AVAILABLE",
+          "unit": "pose",
+          "value": 0
+        }
+      },
+      "trajectory_harm": {
+        "denominator": null,
+        "numerator": null,
+        "reason": "REQUIRES_MATCHED_USE_AND_SUPPRESS_FINAL_REQUESTS",
+        "status": "UNAVAILABLE_UNPAIRED_USE_SUPPRESS_TRAJECTORIES",
+        "unit": "m",
+        "value": null
+      }
+    },
+    {
+      "aggregate_stratum": "structured_debias/default/AUTO_DISCOVERY",
+      "bias_correction": {
+        "accepted_bias_field_RMSE": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "BIAS_TRUTH_IS_NOT_TOTAL_SYNTHETIC_LATENT",
+          "status": "UNAVAILABLE_INCOMPLETE_BIAS_TRUTH",
+          "unit": "",
+          "value": null
+        },
+        "bad_correction_rate": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "BIAS_TRUTH_IS_NOT_TOTAL_SYNTHETIC_LATENT",
+          "status": "UNAVAILABLE_INCOMPLETE_BIAS_TRUTH",
+          "unit": "",
+          "value": null
+        },
+        "candidate_bias_field_RMSE": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "BIAS_TRUTH_IS_NOT_TOTAL_SYNTHETIC_LATENT",
+          "status": "UNAVAILABLE_INCOMPLETE_BIAS_TRUTH",
+          "unit": "",
+          "value": null
+        },
+        "good_correction_rejection_rate": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "BIAS_TRUTH_IS_NOT_TOTAL_SYNTHETIC_LATENT",
+          "status": "UNAVAILABLE_INCOMPLETE_BIAS_TRUTH",
+          "unit": "",
+          "value": null
+        }
+      },
+      "cache_id": null,
+      "cell_id": "t09cell-sha256:ffdf850dc6929292c3717926a498b0f35ed92fe865b1c2dd0bede8412136fbbf",
+      "cell_status": "COMPLETE_WITH_RUN_FAILURE",
+      "covariance": {
+        "reason": "",
+        "source": "FULL_FINAL_GRAPH_MARGINAL_COVARIANCE",
+        "status": "NOT_APPLICABLE_OR_UNAVAILABLE"
+      },
+      "coverage": {
+        "candidate_use_coverage": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "METHOD_HAS_NO_GROUP_GATE",
+          "status": "NOT_APPLICABLE_METHOD_NO_GATE",
+          "unit": "observation",
+          "value": null
+        },
+        "eligible_use_coverage": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "METHOD_HAS_NO_GROUP_GATE",
+          "status": "NOT_APPLICABLE_METHOD_NO_GATE",
+          "unit": "observation",
+          "value": null
+        },
+        "overall_retained_fraction": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "NO_VALID_FINAL_GRAPH",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "observation",
+          "value": null
+        }
+      },
+      "execution_type": "CACHE_PRODUCER",
+      "final_request_id": null,
+      "inference_id": null,
+      "measurement_reference_agreement": {
+        "denominator": null,
+        "numerator": null,
+        "reason": "INDEPENDENT_GEOMETRY_BETA_TIME_REFERENCE_MISSING",
+        "status": "UNAVAILABLE_REFERENCE_PROVENANCE",
+        "unit": "m",
+        "value": null
+      },
+      "mode": "structured_debias",
+      "operating_point_id": null,
+      "path": "AUTO_DISCOVERY",
+      "producer_id": "shared",
+      "residual_score": {},
+      "residual_score_semantics": "DECISION_FINAL_SEPARATE_POSTFIT_RESIDUAL_NOT_BIAS_TRUTH",
+      "resources": {
+        "measured": {
+          "peak_rss_kib": 32060,
+          "wall_seconds": 0.18297790300130146
+        },
+        "reported_or_estimated": {
+          "artifact_export_seconds": null,
+          "fallback_seconds": null,
+          "runner_total_wall_seconds": 0.16919124,
+          "runner_total_wall_semantics": "RUNNER_WALL_FROM_MAIN_ENTRY_THROUGH_FINAL_STATUS_PREPARATION",
+          "score_overhead_seconds": null,
+          "stage1_seconds": 0.11371527,
+          "stage2_seconds": null,
+          "stage3_score_seconds": null,
+          "stage4_covariance_seconds": null,
+          "stage4_decision_seconds": null,
+          "stage4_recovery_refit_seconds": null,
+          "stage4_seconds": null
+        }
+      },
+      "run_unit_id": "sfuise_walk1",
+      "support": {
+        "boundary_segment_count": 0,
+        "group_count": 0,
+        "groups": [],
+        "segment_count": 0,
+        "segments": [],
+        "short_segment_count": 0
+      },
+      "trajectory": {
+        "RPE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        },
+        "RPE_rotation_rmse_rad": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        },
+        "aligned_ATE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        },
+        "raw_frame_ATE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        }
+      },
+      "trajectory_harm": {
+        "denominator": null,
+        "numerator": null,
+        "reason": "REQUIRES_MATCHED_USE_AND_SUPPRESS_FINAL_REQUESTS",
+        "status": "UNAVAILABLE_UNPAIRED_USE_SUPPRESS_TRAJECTORIES",
+        "unit": "m",
+        "value": null
+      }
+    },
+    {
+      "aggregate_stratum": "suppress_all/t09point-sha256:65c757a15b5c9984366d4a74c65901c991d2fe7a220f279305f31d0872d8e9f2/AUTO_DISCOVERY",
+      "bias_correction": {
+        "accepted_bias_field_RMSE": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ARTIFACT_MISSING",
+          "unit": "",
+          "value": null
+        },
+        "bad_correction_rate": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ARTIFACT_MISSING",
+          "unit": "",
+          "value": null
+        },
+        "candidate_bias_field_RMSE": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ARTIFACT_MISSING",
+          "unit": "",
+          "value": null
+        },
+        "good_correction_rejection_rate": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ARTIFACT_MISSING",
+          "unit": "",
+          "value": null
+        }
+      },
+      "cache_id": null,
+      "cell_id": "t09cell-sha256:d801841167c8913b3f5fad6f5a153c49146bcb38cf12d5514d2a08e083c175cd",
+      "cell_status": "PARENT_CACHE_UNAVAILABLE",
+      "covariance": {
+        "reason": "",
+        "source": "FULL_FINAL_GRAPH_MARGINAL_COVARIANCE",
+        "status": "NOT_APPLICABLE_OR_UNAVAILABLE"
+      },
+      "coverage": {
+        "candidate_use_coverage": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_UPSTREAM_FAILURE",
+          "unit": "",
+          "value": null
+        },
+        "eligible_use_coverage": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_UPSTREAM_FAILURE",
+          "unit": "",
+          "value": null
+        },
+        "overall_retained_fraction": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "",
+          "value": null
+        }
+      },
+      "execution_type": "FINAL_TRAJECTORY",
+      "final_request_id": null,
+      "inference_id": null,
+      "measurement_reference_agreement": {
+        "denominator": null,
+        "numerator": null,
+        "reason": "INDEPENDENT_GEOMETRY_BETA_TIME_REFERENCE_MISSING",
+        "status": "UNAVAILABLE_REFERENCE_PROVENANCE",
+        "unit": "m",
+        "value": null
+      },
+      "mode": "suppress_all",
+      "operating_point_id": "t09point-sha256:65c757a15b5c9984366d4a74c65901c991d2fe7a220f279305f31d0872d8e9f2",
+      "path": "AUTO_DISCOVERY",
+      "producer_id": "shared",
+      "residual_score": {},
+      "residual_score_semantics": "CELL_NOT_EXECUTED",
+      "resources": {
+        "measured": {
+          "peak_rss_kib": null,
+          "wall_seconds": null
+        },
+        "reported_or_estimated": {
+          "artifact_export_seconds": null,
+          "fallback_seconds": null,
+          "runner_total_wall_seconds": null,
+          "runner_total_wall_semantics": null,
+          "score_overhead_seconds": null,
+          "stage1_seconds": null,
+          "stage2_seconds": null,
+          "stage3_score_seconds": null,
+          "stage4_covariance_seconds": null,
+          "stage4_decision_seconds": null,
+          "stage4_recovery_refit_seconds": null,
+          "stage4_seconds": null
+        }
+      },
+      "run_unit_id": "sfuise_walk1",
+      "support": {},
+      "trajectory": {
+        "RPE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        },
+        "RPE_rotation_rmse_rad": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        },
+        "aligned_ATE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        },
+        "raw_frame_ATE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        }
+      },
+      "trajectory_harm": {
+        "denominator": null,
+        "numerator": null,
+        "reason": "REQUIRES_MATCHED_USE_AND_SUPPRESS_FINAL_REQUESTS",
+        "status": "UNAVAILABLE_UNPAIRED_USE_SUPPRESS_TRAJECTORIES",
+        "unit": "m",
+        "value": null
+      }
+    },
+    {
+      "aggregate_stratum": "structured_debias/t09point-sha256:eae04a37457093274d53adf18878dd9667e716f51e721a1a1191b441b2987540/AUTO_DISCOVERY",
+      "bias_correction": {
+        "accepted_bias_field_RMSE": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ARTIFACT_MISSING",
+          "unit": "",
+          "value": null
+        },
+        "bad_correction_rate": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ARTIFACT_MISSING",
+          "unit": "",
+          "value": null
+        },
+        "candidate_bias_field_RMSE": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ARTIFACT_MISSING",
+          "unit": "",
+          "value": null
+        },
+        "good_correction_rejection_rate": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ARTIFACT_MISSING",
+          "unit": "",
+          "value": null
+        }
+      },
+      "cache_id": null,
+      "cell_id": "t09cell-sha256:5795f3e9c572113afb6868152a196a90185b8a08b561391be257ec63a3c65571",
+      "cell_status": "PARENT_CACHE_UNAVAILABLE",
+      "covariance": {
+        "reason": "",
+        "source": "FULL_FINAL_GRAPH_MARGINAL_COVARIANCE",
+        "status": "NOT_APPLICABLE_OR_UNAVAILABLE"
+      },
+      "coverage": {
+        "candidate_use_coverage": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_UPSTREAM_FAILURE",
+          "unit": "",
+          "value": null
+        },
+        "eligible_use_coverage": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_UPSTREAM_FAILURE",
+          "unit": "",
+          "value": null
+        },
+        "overall_retained_fraction": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "",
+          "value": null
+        }
+      },
+      "execution_type": "FINAL_TRAJECTORY",
+      "final_request_id": null,
+      "inference_id": null,
+      "measurement_reference_agreement": {
+        "denominator": null,
+        "numerator": null,
+        "reason": "INDEPENDENT_GEOMETRY_BETA_TIME_REFERENCE_MISSING",
+        "status": "UNAVAILABLE_REFERENCE_PROVENANCE",
+        "unit": "m",
+        "value": null
+      },
+      "mode": "structured_debias",
+      "operating_point_id": "t09point-sha256:eae04a37457093274d53adf18878dd9667e716f51e721a1a1191b441b2987540",
+      "path": "AUTO_DISCOVERY",
+      "producer_id": "shared",
+      "residual_score": {},
+      "residual_score_semantics": "CELL_NOT_EXECUTED",
+      "resources": {
+        "measured": {
+          "peak_rss_kib": null,
+          "wall_seconds": null
+        },
+        "reported_or_estimated": {
+          "artifact_export_seconds": null,
+          "fallback_seconds": null,
+          "runner_total_wall_seconds": null,
+          "runner_total_wall_semantics": null,
+          "score_overhead_seconds": null,
+          "stage1_seconds": null,
+          "stage2_seconds": null,
+          "stage3_score_seconds": null,
+          "stage4_covariance_seconds": null,
+          "stage4_decision_seconds": null,
+          "stage4_recovery_refit_seconds": null,
+          "stage4_seconds": null
+        }
+      },
+      "run_unit_id": "sfuise_walk1",
+      "support": {},
+      "trajectory": {
+        "RPE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        },
+        "RPE_rotation_rmse_rad": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        },
+        "aligned_ATE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        },
+        "raw_frame_ATE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        }
+      },
+      "trajectory_harm": {
+        "denominator": null,
+        "numerator": null,
+        "reason": "REQUIRES_MATCHED_USE_AND_SUPPRESS_FINAL_REQUESTS",
+        "status": "UNAVAILABLE_UNPAIRED_USE_SUPPRESS_TRAJECTORIES",
+        "unit": "m",
+        "value": null
+      }
+    },
+    {
+      "aggregate_stratum": "lcb_partial/t09point-sha256:ec664a6c866ab7de53f71fa83c56f3fd25a716a898391b0052ce0b46b837799e/AUTO_DISCOVERY",
+      "bias_correction": {
+        "accepted_bias_field_RMSE": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ARTIFACT_MISSING",
+          "unit": "",
+          "value": null
+        },
+        "bad_correction_rate": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ARTIFACT_MISSING",
+          "unit": "",
+          "value": null
+        },
+        "candidate_bias_field_RMSE": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ARTIFACT_MISSING",
+          "unit": "",
+          "value": null
+        },
+        "good_correction_rejection_rate": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ARTIFACT_MISSING",
+          "unit": "",
+          "value": null
+        }
+      },
+      "cache_id": null,
+      "cell_id": "t09cell-sha256:633410fd52e58538aa979c3bef2791771d487cd4d34f08495689297a1916ddb2",
+      "cell_status": "PARENT_CACHE_UNAVAILABLE",
+      "covariance": {
+        "reason": "",
+        "source": "FULL_FINAL_GRAPH_MARGINAL_COVARIANCE",
+        "status": "NOT_APPLICABLE_OR_UNAVAILABLE"
+      },
+      "coverage": {
+        "candidate_use_coverage": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_UPSTREAM_FAILURE",
+          "unit": "",
+          "value": null
+        },
+        "eligible_use_coverage": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_UPSTREAM_FAILURE",
+          "unit": "",
+          "value": null
+        },
+        "overall_retained_fraction": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "",
+          "value": null
+        }
+      },
+      "execution_type": "FINAL_TRAJECTORY",
+      "final_request_id": null,
+      "inference_id": null,
+      "measurement_reference_agreement": {
+        "denominator": null,
+        "numerator": null,
+        "reason": "INDEPENDENT_GEOMETRY_BETA_TIME_REFERENCE_MISSING",
+        "status": "UNAVAILABLE_REFERENCE_PROVENANCE",
+        "unit": "m",
+        "value": null
+      },
+      "mode": "lcb_partial",
+      "operating_point_id": "t09point-sha256:ec664a6c866ab7de53f71fa83c56f3fd25a716a898391b0052ce0b46b837799e",
+      "path": "AUTO_DISCOVERY",
+      "producer_id": "shared",
+      "residual_score": {},
+      "residual_score_semantics": "CELL_NOT_EXECUTED",
+      "resources": {
+        "measured": {
+          "peak_rss_kib": null,
+          "wall_seconds": null
+        },
+        "reported_or_estimated": {
+          "artifact_export_seconds": null,
+          "fallback_seconds": null,
+          "runner_total_wall_seconds": null,
+          "runner_total_wall_semantics": null,
+          "score_overhead_seconds": null,
+          "stage1_seconds": null,
+          "stage2_seconds": null,
+          "stage3_score_seconds": null,
+          "stage4_covariance_seconds": null,
+          "stage4_decision_seconds": null,
+          "stage4_recovery_refit_seconds": null,
+          "stage4_seconds": null
+        }
+      },
+      "run_unit_id": "sfuise_walk1",
+      "support": {},
+      "trajectory": {
+        "RPE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        },
+        "RPE_rotation_rmse_rad": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        },
+        "aligned_ATE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        },
+        "raw_frame_ATE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        }
+      },
+      "trajectory_harm": {
+        "denominator": null,
+        "numerator": null,
+        "reason": "REQUIRES_MATCHED_USE_AND_SUPPRESS_FINAL_REQUESTS",
+        "status": "UNAVAILABLE_UNPAIRED_USE_SUPPRESS_TRAJECTORIES",
+        "unit": "m",
+        "value": null
+      }
+    },
+    {
+      "aggregate_stratum": "lcb_fixed_full/t09point-sha256:570570a508c8e5da15a69e8ef44ebd11be5d20eb88c5764ee44ed24e3293a265/AUTO_DISCOVERY",
+      "bias_correction": {
+        "accepted_bias_field_RMSE": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ARTIFACT_MISSING",
+          "unit": "",
+          "value": null
+        },
+        "bad_correction_rate": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ARTIFACT_MISSING",
+          "unit": "",
+          "value": null
+        },
+        "candidate_bias_field_RMSE": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ARTIFACT_MISSING",
+          "unit": "",
+          "value": null
+        },
+        "good_correction_rejection_rate": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ARTIFACT_MISSING",
+          "unit": "",
+          "value": null
+        }
+      },
+      "cache_id": null,
+      "cell_id": "t09cell-sha256:ff38cbd21eda68b357665fc4dec65f6fabb33f56d92102d5578b8dea2ffc5181",
+      "cell_status": "PARENT_CACHE_UNAVAILABLE",
+      "covariance": {
+        "reason": "",
+        "source": "FULL_FINAL_GRAPH_MARGINAL_COVARIANCE",
+        "status": "NOT_APPLICABLE_OR_UNAVAILABLE"
+      },
+      "coverage": {
+        "candidate_use_coverage": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_UPSTREAM_FAILURE",
+          "unit": "",
+          "value": null
+        },
+        "eligible_use_coverage": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_UPSTREAM_FAILURE",
+          "unit": "",
+          "value": null
+        },
+        "overall_retained_fraction": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "CELL_NOT_EXECUTED",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "",
+          "value": null
+        }
+      },
+      "execution_type": "FINAL_TRAJECTORY",
+      "final_request_id": null,
+      "inference_id": null,
+      "measurement_reference_agreement": {
+        "denominator": null,
+        "numerator": null,
+        "reason": "INDEPENDENT_GEOMETRY_BETA_TIME_REFERENCE_MISSING",
+        "status": "UNAVAILABLE_REFERENCE_PROVENANCE",
+        "unit": "m",
+        "value": null
+      },
+      "mode": "lcb_fixed_full",
+      "operating_point_id": "t09point-sha256:570570a508c8e5da15a69e8ef44ebd11be5d20eb88c5764ee44ed24e3293a265",
+      "path": "AUTO_DISCOVERY",
+      "producer_id": "shared",
+      "residual_score": {},
+      "residual_score_semantics": "CELL_NOT_EXECUTED",
+      "resources": {
+        "measured": {
+          "peak_rss_kib": null,
+          "wall_seconds": null
+        },
+        "reported_or_estimated": {
+          "artifact_export_seconds": null,
+          "fallback_seconds": null,
+          "runner_total_wall_seconds": null,
+          "runner_total_wall_semantics": null,
+          "score_overhead_seconds": null,
+          "stage1_seconds": null,
+          "stage2_seconds": null,
+          "stage3_score_seconds": null,
+          "stage4_covariance_seconds": null,
+          "stage4_decision_seconds": null,
+          "stage4_recovery_refit_seconds": null,
+          "stage4_seconds": null
+        }
+      },
+      "run_unit_id": "sfuise_walk1",
+      "support": {},
+      "trajectory": {
+        "RPE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        },
+        "RPE_rotation_rmse_rad": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        },
+        "aligned_ATE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        },
+        "raw_frame_ATE_rmse_m": {
+          "denominator": null,
+          "numerator": null,
+          "reason": "VALID_FINAL_TRAJECTORY_MISSING",
+          "status": "UNAVAILABLE_ESTIMATION_FAILURE",
+          "unit": "m",
+          "value": null
+        }
+      },
+      "trajectory_harm": {
+        "denominator": null,
+        "numerator": null,
+        "reason": "REQUIRES_MATCHED_USE_AND_SUPPRESS_FINAL_REQUESTS",
+        "status": "UNAVAILABLE_UNPAIRED_USE_SUPPRESS_TRAJECTORIES",
+        "unit": "m",
+        "value": null
+      }
+    }
+  ],
+  "schema": "uifgo_t09_evaluation_result_v1"
+}

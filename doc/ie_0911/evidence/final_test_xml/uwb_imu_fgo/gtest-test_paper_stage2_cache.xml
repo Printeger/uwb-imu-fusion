@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="8" failures="0" disabled="0" errors="0" time="0.003" timestamp="2026-09-11T12:00:43" name="AllTests">
+  <testsuite name="PaperStage2Cache" tests="7" failures="0" disabled="0" errors="0" time="0.003" timestamp="2026-09-11T12:00:43">
+    <testcase name="ProducerBinaryAndAbiInvalidateIdentity" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="PaperStage2Cache" />
+    <testcase name="ProducerSemanticConfigurationInvalidatesIdentity" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="PaperStage2Cache" />
+    <testcase name="CacheIdentityMatchesPythonCanonicalVector" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="PaperStage2Cache" />
+    <testcase name="NamespacesAreContentSeparatedAndPartialScoresPublish" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="PaperStage2Cache" />
+    <testcase name="FixedNamespaceRequiresExactDebugLabel" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="PaperStage2Cache" />
+    <testcase name="ProducerConfigurationIdentityMustBeTyped" status="run" result="completed" time="0.001" timestamp="2026-09-11T12:00:43" classname="PaperStage2Cache" />
+    <testcase name="A14PublishedCrossModelConsumerRejection" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="PaperStage2Cache" />
+  </testsuite>
+  <testsuite name="PaperRunIo" tests="1" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-11T12:00:43">
+    <testcase name="IdentityDomainsDoNotConflateRequestAndInference" status="run" result="completed" time="0" timestamp="2026-09-11T12:00:43" classname="PaperRunIo" />
+  </testsuite>
+</testsuites>

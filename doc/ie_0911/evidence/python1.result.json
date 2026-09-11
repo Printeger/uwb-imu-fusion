@@ -1,0 +1,14 @@
+{
+  "command": [
+    "python3",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "test",
+    "-p",
+    "test_*evaluator*.py"
+  ],
+  "exit_code": 0,
+  "wall_seconds": 0.3243319220000558
+}

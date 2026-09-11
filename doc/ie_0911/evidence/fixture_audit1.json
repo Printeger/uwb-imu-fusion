@@ -1,0 +1,64 @@
+{
+  "status": "PASS",
+  "same_lcb_restoration_set": true,
+  "runs": [
+    {
+      "root": "doc/ie_0911/evidence/fixed_production2_run",
+      "residual_count": 8,
+      "max_residual_difference_m": 0.0,
+      "compensations": [
+        {
+          "segment_ordinal": "0",
+          "segment_id": "r07-segment-0",
+          "c_hat_stage2_m": "0.39999999994194146",
+          "sigma_c_local_m": "0.036036185607444378",
+          "sigma_available": "1",
+          "delta_c_fixed_m": "0.32792762872705272",
+          "decision_use": "1",
+          "final_use": "1",
+          "reason": "USE_POSITIVE_LCB_FIXED_OFFSET"
+        },
+        {
+          "segment_ordinal": "1",
+          "segment_id": "r07-segment-1",
+          "c_hat_stage2_m": "0.29999999994662963",
+          "sigma_c_local_m": "0.036041928700793063",
+          "sigma_available": "1",
+          "delta_c_fixed_m": "0.2279161425450435",
+          "decision_use": "1",
+          "final_use": "1",
+          "reason": "USE_POSITIVE_LCB_FIXED_OFFSET"
+        }
+      ]
+    },
+    {
+      "root": "doc/ie_0911/evidence/full_production1_run",
+      "residual_count": 8,
+      "max_residual_difference_m": 0.0,
+      "compensations": [
+        {
+          "segment_ordinal": "0",
+          "segment_id": "r07-segment-0",
+          "c_hat_stage2_m": "0.39999999994194146",
+          "sigma_c_local_m": "0.036036185607444378",
+          "sigma_available": "1",
+          "delta_c_fixed_m": "0.39999999994194146",
+          "decision_use": "1",
+          "final_use": "1",
+          "reason": "USE_POSITIVE_LCB_FIXED_OFFSET"
+        },
+        {
+          "segment_ordinal": "1",
+          "segment_id": "r07-segment-1",
+          "c_hat_stage2_m": "0.29999999994662963",
+          "sigma_c_local_m": "0.036041928700793063",
+          "sigma_available": "1",
+          "delta_c_fixed_m": "0.29999999994662963",
+          "decision_use": "1",
+          "final_use": "1",
+          "reason": "USE_POSITIVE_LCB_FIXED_OFFSET"
+        }
+      ]
+    }
+  ]
+}

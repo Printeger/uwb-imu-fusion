@@ -13,6 +13,9 @@ namespace uifgo {
 namespace {
 
 const std::vector<PaperMethodSpec> kRegistry = {
+    {PaperMethod::LCB_PARTIAL, "lcb_partial", PaperExecutionType::FINAL_TRAJECTORY, false, true, true},
+    {PaperMethod::LCB_FIXED_FULL, "lcb_fixed_full", PaperExecutionType::FINAL_TRAJECTORY, false, true, true},
+    {PaperMethod::SUPPRESS_ALL, "suppress_all", PaperExecutionType::FINAL_TRAJECTORY, false, true, true},
     {PaperMethod::ALL_RANGE, "all_range",
      PaperExecutionType::BASELINE_TRAJECTORY, false, false, true},
     {PaperMethod::ROBUST_HUBER, "robust_huber",

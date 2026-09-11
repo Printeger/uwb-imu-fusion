@@ -1,0 +1,13 @@
+{
+  "schema": "uifgo_t09_run_manifest_v1",
+  "run_id": "t09-b9c90d3ed8b94c5a89a5797ca75d4b6b",
+  "canonical_mode": "robust_cauchy",
+  "execution_type": "BASELINE_TRAJECTORY",
+  "common_preparation_id": "t09common-sha256:e71e8671351d78fe53e7aef25ee1b24dcd6ce2f83fe04c052e63cf1e0a8816f9",
+  "final_request_id": null,
+  "inference_id": "UNAVAILABLE:NOT_T08_FINAL_ENGINE",
+  "graph_linearization_sha256": "t08graphlin-sha256:e167fd06aa0a3347c119fde7586b940a922bf5e09c38f5dc7f2e626e3757d7a8",
+  "values_sha256": "t08values-sha256:6ee96f32539d22b68db7c0f3083af392b4509da2bfa2370b22348327252912c0",
+  "context_sha256": "t08context-sha256:944d8d22ec2d4f9eeb5481e6d3dfd79c0af9d2e046ea722d47e46109717175ad",
+  "export_verification_status": "BASELINE_FACTOR_AUDIT_OK"
+}

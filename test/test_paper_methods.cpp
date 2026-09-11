@@ -42,7 +42,7 @@ PolicyThresholds Thresholds() {
 
 TEST(PaperMethods, RegistryContainsEveryContractModeExactlyOnce) {
   const auto& registry = CanonicalPaperMethodRegistry();
-  EXPECT_EQ(registry.size(), 12u);
+  EXPECT_EQ(registry.size(), 15u);
   std::set<std::string> names;
   for (const auto& item : registry) names.insert(item.canonical_name);
   EXPECT_EQ(names.size(), registry.size());

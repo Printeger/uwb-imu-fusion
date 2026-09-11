@@ -1,0 +1,10 @@
+{
+  "command": [
+    "python3",
+    "tools/paper/ie0911_audit_inputs.py",
+    "doc/ie_0911/evidence/startup2_runs",
+    "doc/ie_0911/evidence/input_audit2.json"
+  ],
+  "exit_code": 0,
+  "wall_seconds": 0.549481169999126
+}

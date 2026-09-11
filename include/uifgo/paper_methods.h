@@ -14,6 +14,9 @@
 namespace uifgo {
 
 enum class PaperMethod {
+  LCB_PARTIAL,
+  LCB_FIXED_FULL,
+  SUPPRESS_ALL,
   ALL_RANGE,
   ROBUST_HUBER,
   ROBUST_CAUCHY,

@@ -1,5 +1,6 @@
 #include "uifgo/nlos_inference.h"
 #include "uifgo/nlos_inference_io.h"
+#include "uifgo/paper_run_io.h"
 #include "uifgo/nlos_discovery.h"
 #include "uifgo/hash_utils.h"
 
@@ -497,6 +498,15 @@ TEST(T08Inference, NoCandidatesUsesReferenceGraphWithoutFallback) {
   EXPECT_TRUE(result.decisions.empty());
   EXPECT_TRUE(result.final_scores.empty());
   EXPECT_EQ(result.factor_audit.noncandidate_reference_count, 8u);
+  for(auto policy : {uifgo::FinalGatePolicy::LCB_PARTIAL,uifgo::FinalGatePolicy::LCB_FIXED_FULL}) {
+    const auto fixed=uifgo::FinalInferenceEngine(DevelopmentGate(),fixture.options,{}, {},policy).Run(
+        fixture.input.graph,fixture.input.metadata,fixture.stage2,fixture.input.support,{},
+        fixture.input.plan,fixture.input.cfg,IdentityContext());
+    ASSERT_TRUE(fixed.valid_estimate()) << fixed.reason;
+    EXPECT_EQ(fixed.status,uifgo::InferenceStatus::NO_CANDIDATES);
+    EXPECT_TRUE(fixed.fixed_compensations.empty());
+    EXPECT_FALSE(fixed.fallback.attempted);
+  }
   MaybeWriteEvidence("no_candidates", result);
 }
 
@@ -923,4 +933,109 @@ TEST(T08Inference, ArtifactWriterAcceptsOnlyOneInferenceResultIdentity) {
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
+}
+
+TEST(NlosInference, LcbForcedFallbackRetainsFrozenIdentity) {
+  auto fixture=MakeStage2();
+  fixture.input.support.solver_config_hash="a19-policy-sha256:ie0911-fixture";
+  uifgo::DevelopmentStage2Request request;
+  request.policy="PAPER_CERTIFIED_PAIR_REDUCTION_V1";
+  request.role="development";
+  request.implementation_identity=fixture.input.support.solver_config_hash;
+  request.conditional_navigation=[](size_t,const gtsam::NonlinearFactorGraph& g,
+      const gtsam::Values& v,const uifgo::CheckedLmOptions& o,
+      const std::vector<uifgo::DevelopmentRefitRangeConstant>& c) {
+    return uifgo::RunCheckedConditionalLm(g,v,o);
+  };
+  ASSERT_TRUE(fixture.stage2.converged());
+  auto run=[&](uifgo::FinalGatePolicy policy, uifgo::InferenceTestHooks hooks=uifgo::InferenceTestHooks{}) {
+    return uifgo::FinalInferenceEngine(DevelopmentGate(1,0,0),fixture.options,{},hooks,policy,nullptr,&request,&request).Run(
+        fixture.input.graph,fixture.input.metadata,fixture.stage2,fixture.input.support,
+        fixture.scores,fixture.input.plan,fixture.input.cfg,IdentityContext());
+  };
+  uifgo::InferenceTestHooks forced; forced.force_recovery_failure=true;
+  const auto partial=run(uifgo::FinalGatePolicy::LCB_PARTIAL,forced);
+  ASSERT_TRUE(partial.valid_estimate()) << partial.reason;
+  // A deterministic fallback test; successful nonzero recovery is required
+  // separately by the actual certified production fixture.
+  ASSERT_TRUE(partial.fallback.attempted);
+  EXPECT_EQ(partial.actual_fixed_method,"suppress_all");
+  EXPECT_EQ(partial.fallback.attempt_count,1u);
+  for(auto key:partial.final_values.keys()) EXPECT_NE(gtsam::Symbol(key).chr(),'c');
+  EXPECT_TRUE(partial.final_segments.empty());
+  ASSERT_TRUE(uifgo::VerifyInferenceContentIdentity(partial));
+  const auto full=run(uifgo::FinalGatePolicy::LCB_FIXED_FULL);
+  ASSERT_TRUE(full.valid_estimate()) << full.reason;
+  ASSERT_EQ(full.fixed_compensations.size(),partial.fixed_compensations.size());
+  for(size_t i=0;i<partial.fixed_compensations.size();++i) {
+    const auto& c=partial.fixed_compensations[i];
+    EXPECT_EQ(c.use,full.fixed_compensations[i].use);
+    if(c.use) {
+      EXPECT_DOUBLE_EQ(c.delta_c_fixed_m,std::max(0.0,c.c_hat_stage2_m-2*c.sigma_c_local_m));
+      EXPECT_DOUBLE_EQ(full.fixed_compensations[i].delta_c_fixed_m,c.c_hat_stage2_m);
+    }
+  }
+  auto changed=partial; changed.fixed_compensations[0].delta_c_fixed_m+=0.01;
+  EXPECT_FALSE(uifgo::VerifyInferenceContentIdentity(changed));
+  const auto root=boost::filesystem::temp_directory_path()/boost::filesystem::unique_path("ie0911-%%%%-%%%%");
+  boost::filesystem::create_directory(root);
+  const auto artifacts=uifgo::WriteInferenceArtifacts(root.string(),partial);
+  EXPECT_TRUE(uifgo::VerifyInferenceExport(root.string(),partial,artifacts.files).ok);
+  std::cout << "IE0911_FIXED_FIXTURE_ARTIFACTS=" << root.string() << '\n';
+  uifgo::InferenceTestHooks hooks; hooks.force_recovery_failure=true;
+  const auto fallback=run(uifgo::FinalGatePolicy::LCB_PARTIAL,hooks);
+  EXPECT_TRUE(fallback.valid_estimate()) << fallback.reason;
+  EXPECT_EQ(fallback.actual_fixed_method,"suppress_all");
+  EXPECT_EQ(fallback.fallback.attempt_count,1u);
+}
+
+TEST(NlosInference, LcbZeroAndMissingMappingSuppress) {
+  auto f=MakeStage2(); ASSERT_TRUE(f.stage2.converged());
+  EXPECT_TRUE(uifgo::FreezeFixedCompensations({}, {},false).empty());
+  for(auto& segment:f.stage2.segments) {
+    segment.amplitude_m=1e-6;
+    f.stage2.values.update<double>(segment.amplitude_key,segment.amplitude_m);
+  }
+  auto rows=uifgo::FreezeFixedCompensations(f.stage2,f.scores,false);
+  for(const auto& row:rows) { EXPECT_FALSE(row.use); EXPECT_EQ(row.delta_c_fixed_m,0); }
+  for(auto& score:f.scores) score.key_columns.clear();
+  rows=uifgo::FreezeFixedCompensations(f.stage2,f.scores,false);
+  for(const auto& row:rows) EXPECT_FALSE(row.sigma_available);
+}
+
+TEST(NlosInference, FixedOffsetResidualAndPoseJacobian) {
+  const gtsam::Pose3 pose(gtsam::Rot3::RzRyRx(0.1,-0.2,0.3),gtsam::Point3(1,2,3));
+  const gtsam::Point3 anchor(4,-1,2), lever(0.1,-0.2,0.05);
+  const auto factor=uifgo::MakeFixedOffsetUwbFactor(X(0),anchor,lever,5.0,0.2,-0.1,0.4);
+  gtsam::Values values; values.insert(X(0),pose);
+  auto noise=boost::dynamic_pointer_cast<gtsam::NoiseModelFactor>(factor);
+  std::vector<gtsam::Matrix> H(1);
+  auto residual=noise->unwhitenedError(values,H);
+  EXPECT_NEAR(residual[0],(pose.transformFrom(lever)-anchor).norm()-0.1+0.4-5.0,1e-12);
+  for(int j=0;j<6;++j) {
+    gtsam::Vector6 delta=gtsam::Vector6::Zero();delta[j]=1e-6;
+    auto plus=values,minus=values;
+    plus.update(X(0),pose.retract(delta));minus.update(X(0),pose.retract(-delta));
+    EXPECT_NEAR(H[0](0,j),(noise->unwhitenedError(plus)[0]-noise->unwhitenedError(minus)[0])/2e-6,1e-8);
+  }
+  EXPECT_EQ(factor->keys().size(),1u);
+}
+
+TEST(NlosInference, LcbAmplitudeColumnPermutationPreservesDecisions) {
+  auto f=MakeStage2();ASSERT_TRUE(f.stage2.converged());
+  const auto before=uifgo::FreezeFixedCompensations(f.stage2,f.scores,false);
+  for(auto& score:f.scores) {
+    std::vector<uifgo::KeyColumnMeta*> cols;
+    for(auto& c:score.key_columns) if(c.role=="GROUP_AMPLITUDE") cols.push_back(&c);
+    ASSERT_EQ(cols.size(),2u);
+    std::swap(cols[0]->key,cols[1]->key);
+    score.numerical.R.row(0).swap(score.numerical.R.row(1));
+    score.numerical.R.col(0).swap(score.numerical.R.col(1));
+  }
+  const auto after=uifgo::FreezeFixedCompensations(f.stage2,f.scores,false);
+  ASSERT_EQ(before.size(),after.size());
+  for(size_t i=0;i<before.size();++i) {
+    EXPECT_EQ(before[i].use,after[i].use);
+    EXPECT_NEAR(before[i].sigma_c_local_m,after[i].sigma_c_local_m,1e-12);
+  }
 }

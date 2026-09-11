@@ -117,3 +117,16 @@ double RangeForGeometryInitialization(double measured_range,
 }
 
 }  // namespace uifgo
+
+namespace uifgo {
+gtsam::NonlinearFactor::shared_ptr MakeFixedOffsetUwbFactor(
+    gtsam::Key pose_key, const gtsam::Point3& anchor,
+    const gtsam::Point3& lever, double raw_range, double sigma,
+    double fixed_beta, double delta) {
+  if (!std::isfinite(delta) || delta < 0 || !std::isfinite(raw_range) ||
+      !std::isfinite(sigma) || sigma <= 0 || !std::isfinite(fixed_beta+delta))
+    throw std::invalid_argument("invalid fixed dynamic offset factor");
+  return MakeUwbFactor(pose_key,0,0,0,anchor,lever,raw_range,sigma,
+                       false,false,false,fixed_beta+delta);
+}
+}

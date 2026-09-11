@@ -1,0 +1,1 @@
+["catkin", "build", "uwb_imu_fgo", "--no-status", "--summarize", "--jobs", "2"]

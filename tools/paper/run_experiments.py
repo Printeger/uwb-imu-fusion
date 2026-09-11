@@ -29,6 +29,7 @@ import yaml
 
 
 CANONICAL_MODES = {
+    "lcb_partial", "lcb_fixed_full", "suppress_all",
     "all_range", "robust_huber", "robust_cauchy", "fixed_rejection",
     "structured_bias_only", "structured_debias", "fit_only", "s_fit",
     "full_gate", "eta_only", "nominal_curvature", "oracle_reference",
@@ -90,7 +91,7 @@ def validate_mode_execution_path(cell: dict) -> None:
                    (mode == "structured_debias" and execution in {
                        "CACHE_PRODUCER", "AUTOMATIC_STAGE2_TRAJECTORY"}) or
                    (mode in DIAGNOSTICS and execution == "CACHE_DIAGNOSTIC") or
-                   (mode in {"fit_only", "s_fit", "full_gate"} and
+                   (mode in {"fit_only", "s_fit", "full_gate", "lcb_partial", "lcb_fixed_full", "suppress_all", "structured_debias"} and
                     execution == "FINAL_TRAJECTORY") or
                    (mode == "eta_only" and execution == "FINAL_TRAJECTORY" and
                     cell.get("synthetic_final") is True))
@@ -98,7 +99,7 @@ def validate_mode_execution_path(cell: dict) -> None:
         allowed = ((mode == "structured_debias" and
                     execution == "CACHE_PRODUCER") or
                    (mode in DIAGNOSTICS and execution == "CACHE_DIAGNOSTIC") or
-                   (mode in {"fit_only", "s_fit", "full_gate"} and
+                   (mode in {"fit_only", "s_fit", "full_gate", "lcb_partial", "lcb_fixed_full", "suppress_all", "structured_debias"} and
                     execution == "FINAL_TRAJECTORY") or
                    (mode == "eta_only" and execution == "FINAL_TRAJECTORY" and
                     cell.get("synthetic_final") is True))
@@ -273,6 +274,10 @@ def producer_provenance(runner: Path) -> dict:
         "producer_toolchain_sha256": identity("t09toolchain", {
             "runner": file_sha(runner),
             "batch_scheduler": file_sha(Path(__file__).resolve()),
+            "source_contents": {str(p.relative_to(repository)): file_sha(p)
+                for directory in ("src", "include", "tools")
+                for p in sorted((repository / directory).rglob("*"))
+                if p.is_file() and p.suffix in {".cpp", ".h", ".py"}},
         }),
     }
 
@@ -288,7 +293,7 @@ def atomic_json(path: Path, value: object) -> None:
 
 def resolve_config_paths(config: dict, base: Path) -> None:
     candidates = [("bag", "path"), ("dataset", "cache_manifest"),
-                  ("nlos", "oracle_support")]
+                  ("nlos", "oracle_support"), ("sfuise", "data_dir"), ("miluv", "data_dir")]
     for section, key in candidates:
         value = config.get(section, {}).get(key)
         if isinstance(value, str) and value and not Path(value).is_absolute():
@@ -478,6 +483,9 @@ def runner_call(runner: Path, config: Path, output_root: Path, run_id: str,
     completed = subprocess.run(command, text=True, capture_output=True, env=env,
                                check=False)
     wall = time.monotonic() - start
+    run_directory = output_root / run_id
+    if run_directory.is_dir():
+        atomic_json(run_directory / "command.json", {"command":command, "exit_code":completed.returncode})
     resource = output_root / f".{run_id}.time"
     rss = time_rss(resource)
     resource.unlink(missing_ok=True)
@@ -839,7 +847,7 @@ def main() -> int:
                 # The dedicated cache-replay entry point controls Stage 4;
                 # leaving this false prevents the legacy inline Stage1/2 path.
                 effective.setdefault("nlos", {})["final_inference_enabled"] = False
-                thresholds = spec["thresholds"]
+                thresholds = spec.get("thresholds", {})
                 # Config validation retains the T08 three-threshold shape; a
                 # policy consumes only the fields declared by its truth table.
                 effective["nlos"]["tau_eta"] = float(thresholds.get("tau_eta", 0.0))
@@ -896,14 +904,19 @@ def main() -> int:
             if status_doc is None:
                 raise RuntimeError("runner produced missing or invalid run_status.json")
             common_doc = read_json(run_dir / "common_preparation.json")
-            if common_doc is None or not common_doc.get("common_preparation_id"):
-                raise RuntimeError("runner produced no valid common preparation identity")
             attempt = {"run_id": run_id, "exit_code": code,
                        "measured_wall_seconds": wall,
                        "measured_peak_rss_kib": rss,
                        "run_status": status_doc.get("status")}
             cell["attempts"].append(attempt)
             cell.update(run_id=run_id, run_directory=str(run_dir))
+            if common_doc is None or not common_doc.get("common_preparation_id"):
+                if code == 0:
+                    raise RuntimeError("successful runner produced no common preparation identity")
+                cell["status"] = "COMPLETE_WITH_RUN_FAILURE"
+                cell["reason"] = "COMMON_PREPARATION_FAILED:" + status_doc.get("reason", "UNKNOWN")
+                atomic_json(output_root / "batch_manifest.json", batch)
+                continue
             actual_common = common_doc["common_preparation_id"]
             prior_common = common_by_unit.setdefault(cell["run_unit_id"],
                                                      actual_common)

@@ -1,0 +1,14 @@
+run_units:
+  sfuise_walk1:
+    T_G_E: null
+    T_Q_I: null
+    bias_truth_scope: NONE
+    frame_point_provenance: null
+    ground_truth: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_0911/evidence/evaluation_truth_walk1/ground_truth.tum
+    ground_truth_sha256: sha256:2bd90465cc6f9445e94c75087a293c36cfc25a4ac1165654a9765431c8816c33
+    time_association:
+      policy: nearest_within_tolerance
+      tolerance_s: 0.02
+    time_base: sensor_header_stamp
+    units: m_s_rad
+schema: uifgo_t09_evaluation_v1

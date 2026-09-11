@@ -1,0 +1,5 @@
+inference_id,factor_index,obs_id,factor_type,segment_id,residual_coordinate,residual_value
+t08inference-sha256:424f079b6b0161c751ded6ccf65389189932e473c72c5dfe4a8c2dc454c6c8d9,3,70002,uwb_range,,0,8.8817841970012523e-16
+t08inference-sha256:424f079b6b0161c751ded6ccf65389189932e473c72c5dfe4a8c2dc454c6c8d9,4,70003,uwb_range,,0,-0
+t08inference-sha256:424f079b6b0161c751ded6ccf65389189932e473c72c5dfe4a8c2dc454c6c8d9,8,70006,uwb_range,,0,-0
+t08inference-sha256:424f079b6b0161c751ded6ccf65389189932e473c72c5dfe4a8c2dc454c6c8d9,9,70007,uwb_range,,0,-0

@@ -1,0 +1,18 @@
+{
+  "schema": "t08_final_content_identity_v2",
+  "inference_id": "t08inference-sha256:9ff7b14bdc754b42567408357c1e79fedb09721e34459e7a0f58cf193ed022ce",
+  "graph_content_semantics": "factor-order/type/keys/error/whitened-final-linearization-augmented-Jacobian; IEEE-754 bits",
+  "values_content_semantics": "key/type/canonical state coordinates; IEEE-754 bits",
+  "graph_linearization_sha256": "t08graphlin-sha256:3da20290be264fa3b81171497ca3acfe08043fc1a44fbf7c6076f7fe7690d829",
+  "values_sha256": "t08values-sha256:d3af3af7cb06b1666f9a292a12d45fd1c69a80cc4304b0b3369c9957a5f6fad1",
+  "context_sha256": "t08context-sha256:05822327b9c4feea37ef50338b0d1f95da6e453d239765b73094591fa011578d",
+  "input_sha256": "sha256:e8270dc0bf18c5cdc7f39ddab8334ba8b85aee8ec23bbe7f770176e1fd8246ac",
+  "config_sha256": "sha256:e6bafb82b0e5ffdf1f655a5fdfc33049057b6435debc7e254c6cc2ce3aabf1eb",
+  "input_plan_sha256": "sha256:72f039cac35c9609769b4caf2e33257a2f222c785cb583aee9ca58552cb74187",
+  "support_partition_sha256": "sha256:239a6d3a4222426a09cd83a41024b1617862e1bdb18c9ef74ae094e05cf76047",
+  "calibration_sha256": "sha256:87287a3b359fcce86bd68230951c447fe9c301612b5303c443c5c7088170a949",
+  "solver_config_sha256": "a19-policy-sha256:1581ce17bd48dbe3903aae7ca4ec2ab313b7f7aa2757c9bbe3a96d5be0ebab72",
+  "validation_context_sha256": "",
+  "run_id_semantics": "external execution namespace; not part of content ID",
+  "linearization_id_semantics": "per-group decision/recovery score identity; distinct from final inference content ID"
+}

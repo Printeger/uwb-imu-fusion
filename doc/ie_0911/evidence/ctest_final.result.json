@@ -1,0 +1,12 @@
+{
+  "command": [
+    "cmake",
+    "-E",
+    "chdir",
+    "/home/mint/ws_fusion_uwb/build/uwb_imu_fgo",
+    "ctest",
+    "--output-on-failure"
+  ],
+  "exit_code": 0,
+  "wall_seconds": 126.3955553550004
+}

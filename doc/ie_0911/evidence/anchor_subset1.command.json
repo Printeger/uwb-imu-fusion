@@ -1,0 +1,1 @@
+["/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner", "--config", "config/paper/ie0911/walk1_smoke.yaml", "--output-root", "doc/ie_0911/evidence/extra_prepares", "--run-id", "anchor_subset", "--method", "lcb_partial", "--prepare-only", "--anchor-ids", "7475,9524,10548,15155"]

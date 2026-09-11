@@ -1,0 +1,9 @@
+{
+  "schema": "uifgo_t09_truth_export_v1",
+  "source": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/data/SFUISE/ISAS-Walk1.bag",
+  "source_sha256": "sha256:ca577e3666ad5876aa8347289a98793b8da0e68b5db459f2d7d69a6adcacd944",
+  "config_sha256": "sha256:548ec0d0502578260782cc4f10fb11873efbcc360eb668cf0350a1c480a908ca",
+  "pose_count": 3168,
+  "trajectory_sha256": "sha256:2bd90465cc6f9445e94c75087a293c36cfc25a4ac1165654a9765431c8816c33",
+  "estimator_input": false
+}
