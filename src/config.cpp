@@ -219,7 +219,7 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
     auto nl = node["nlos"];
     if (!nl.IsMap()) throw std::runtime_error("nlos must be a map");
     const std::set<std::string> allowed = {
-        "mode", "oracle_support", "boundary_epsilon_m",
+        "mode", "fde_grouped_test", "oracle_support", "boundary_epsilon_m",
         "relative_objective_tolerance", "scaled_step_tolerance",
         "projected_gradient_tolerance",
         "navigation_stationarity_tolerance_objective",
@@ -310,6 +310,8 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
       cfg.discovery_lambda_l1 = nl["lambda_l1"].as<double>();
     if (nl["lambda_tv"])
       cfg.discovery_lambda_tv = nl["lambda_tv"].as<double>();
+    if (nl["fde_grouped_test"])
+      cfg.fde_grouped_test = nl["fde_grouped_test"].as<bool>();
     if (nl["gap_threshold_s"])
       cfg.discovery_gap_threshold_s = nl["gap_threshold_s"].as<double>();
     if (nl["active_bias_min_m"])

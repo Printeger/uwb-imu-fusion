@@ -449,6 +449,7 @@ std::string Stage1ProducerConfigHash(const uifgo::Config& cfg,
     if (!fde_context)
       throw std::invalid_argument("FDE Stage1 identity context is required");
     uifgo::FdeOptions options;
+    options.grouped_test = cfg.fde_grouped_test;
     options.chi2_probability = cfg.chi2_reject_prob;
     options.chi2_degrees_of_freedom = 1;
     options.gap_threshold_s = cfg.discovery_gap_threshold_s;
@@ -1238,6 +1239,13 @@ void WriteFdeArtifacts(const fs::path& run_dir,
         << ",\n  \"fault_count\": " << result.fault_count
         << ",\n  \"positive_candidate_count\": "
         << result.positive_candidate_count
+        << ",\n  \"pointwise_positive_candidate_count\": "
+        << std::count_if(result.observations.begin(), result.observations.end(),
+            [](const auto& row) { return row.tested && row.fault_detected && row.positive_excess; })
+        << ",\n  \"grouped_status\": \"" << JsonEscape(result.grouped_status) << "\""
+        << ",\n  \"group_test_count\": "
+        << std::count_if(result.group_tests.begin(), result.group_tests.end(),
+            [](const auto& group) { return group.test.valid; })
         << ",\n  \"raw_run_count\": " << result.raw_run_count
         << ",\n  \"filtered_run_count\": " << result.filtered_run_count
         << ",\n  \"retained_segment_count\": "
@@ -1276,6 +1284,29 @@ void WriteFdeArtifacts(const fs::path& run_dir,
           << JsonNumberOrNull(row.residual_variance_m2) << ','
           << JsonNumberOrNull(row.measurement_standardized_residual_diagnostic) << ','
           << row.test_status << ',' << result.normalization.linearization_identity << '\n';
+    }
+  }
+  if (options.grouped_test) {
+    auto tests = Open(run_dir / "fde_group_tests.csv");
+    tests << std::setprecision(17)
+          << "group,tag_id,anchor_id,start_time,end_time,count,status,rank,statistic,threshold,gls_signed_residual_m,positive_excess,grouped_status,null_component_norm\n";
+    auto covariance = Open(run_dir / "fde_group_covariance.csv");
+    covariance << std::setprecision(17) << "group,obs_id_row,obs_id_column,covariance_whitened\n";
+    auto spectrum = Open(run_dir / "fde_group_spectrum.csv");
+    spectrum << std::setprecision(17) << "group,index,eigenvalue,rank_threshold\n";
+    for (size_t k = 0; k < result.group_tests.size(); ++k) {
+      const auto& g = result.group_tests[k];
+      tests << k << ',' << g.tag_id << ',' << g.anchor_id << ',' << g.start_time
+            << ',' << g.end_time << ',' << g.obs_ids.size() << ',' << g.status
+            << ',' << g.test.rank << ',' << JsonNumberOrNull(g.test.statistic)
+            << ',' << JsonNumberOrNull(g.test.threshold) << ','
+            << JsonNumberOrNull(g.gls_signed_residual_m) << ',' << g.positive_excess
+            << ',' << result.grouped_status << ',' << g.test.null_component_norm << '\n';
+      for (int j = 0; j < g.test.spectrum.size(); ++j)
+        spectrum << k << ',' << j << ',' << g.test.spectrum[j] << ',' << g.test.rank_threshold << '\n';
+      for (int j = 0; j < g.covariance.rows(); ++j)
+        for (int l = 0; l < g.covariance.cols(); ++l)
+          covariance << k << ',' << g.obs_ids[j] << ',' << g.obs_ids[l] << ',' << g.covariance(j,l) << '\n';
     }
   }
   WriteSupportPartition(run_dir / "support_partition.json", result.partition);
@@ -2712,7 +2743,7 @@ int main(int argc, char** argv) {
 
       const auto support = ReadSupportPartition(cache_root / "partition.json");
       if ((imu_aided_fde_run &&
-           support.provider != uifgo::kImuAidedFdeProvider) ||
+           support.provider != uifgo::FdeProvider(cfg.fde_grouped_test)) ||
           (automatic_discovery_run &&
            support.provider != "automatic_discovery"))
         throw std::runtime_error("CACHE_STAGE1_PROVIDER_INCOMPATIBLE");
@@ -2761,7 +2792,7 @@ int main(int argc, char** argv) {
             !imu_aided_fde_run || !support.segments.empty() ||
             evidence["status"].as<std::string>() != "SUCCESS" ||
             !evidence["reference_converged"].as<bool>() ||
-            evidence["provider"].as<std::string>() != uifgo::kImuAidedFdeProvider ||
+            evidence["provider"].as<std::string>() != uifgo::FdeProvider(cfg.fde_grouped_test) ||
             evidence["planned_count"].as<size_t>() != planned ||
             evidence["tested_count"].as<size_t>() != planned ||
             empty["solver_status"].as<std::string>() != "SUCCESS_EMPTY" ||
@@ -3770,6 +3801,7 @@ int main(int argc, char** argv) {
       } else {
         failure_stage = "IMU_AIDED_FDE";
         uifgo::FdeOptions fde_options;
+        fde_options.grouped_test = cfg.fde_grouped_test;
         fde_options.chi2_probability = cfg.chi2_reject_prob;
         fde_options.chi2_degrees_of_freedom = 1;
         fde_options.gap_threshold_s = cfg.discovery_gap_threshold_s;
@@ -3938,7 +3970,7 @@ int main(int argc, char** argv) {
                            : "oracle_debug_segment_refit"))
             << "\",\n  \"stage1_provider\": \""
             << (imu_aided_fde_run
-                    ? uifgo::kImuAidedFdeProvider
+                    ? uifgo::FdeProvider(cfg.fde_grouped_test)
                     : (automatic_discovery_run ? "automatic_discovery"
                                                : support.provider))
             << "\",\n  \"debug_label\": \""
@@ -4099,9 +4131,10 @@ int main(int argc, char** argv) {
               << support.discovery_context_hash
               << "\nparameter_provenance: PENDING_VALIDATION_DEVELOPMENT_ONLY\n";
         } else if (imu_aided_fde_run) {
-          out << "fde_provider: " << uifgo::kImuAidedFdeProvider
+          out << "fde_grouped_test: " << (cfg.fde_grouped_test ? "true" : "false")
+              << "\nfde_provider: " << uifgo::FdeProvider(cfg.fde_grouped_test)
               << "\nfde_identity_version: "
-              << uifgo::kImuAidedFdeIdentityVersion
+              << uifgo::FdeVersion(cfg.fde_grouped_test)
               << "\nchi2_probability: " << cfg.chi2_reject_prob
               << "\nchi2_degrees_of_freedom: 1"
               << "\nchi2_threshold: " << uifgo::Chi2inv(0.99, 1)

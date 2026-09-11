@@ -534,10 +534,9 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
     input_manifest = read_json(run_dir / "input_manifest.json") or {}
     fde_status = read_json(run_dir / "fde_status.json")
     provider = input_manifest.get("stage1_provider", "")
-    if provider.startswith("imu_aided") and provider != "imu_aided_postfit_fde_v2":
+    if provider.startswith("imu_aided") and provider not in {"imu_aided_postfit_fde_v2", "imu_aided_grouped_fde_v3"}:
         raise RuntimeError("obsolete FDE provider cannot publish a current cache")
-    is_fde = input_manifest.get("stage1_provider") == \
-        "imu_aided_postfit_fde_v2"
+    is_fde = provider in {"imu_aided_postfit_fde_v2", "imu_aided_grouped_fde_v3"}
     if not (run_dir / "trajectory.tum").is_file():
         raise RuntimeError("Stage-2 cache producer has no trajectory")
     payload_names = [name for name in (
@@ -547,17 +546,20 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
         "groups.csv", "trajectory.tum", "imu_bias.csv", "stage2_values.csv",
         "stage2_content_identity.json", "stage2_producer_context.json",
         "fde_status.json", "fde_observations.csv", "support_partition.json",
-        "stage2_refit_status.json", "raw_reference.json")
+        "stage2_refit_status.json", "raw_reference.json",
+        "fde_group_tests.csv", "fde_group_covariance.csv", "fde_group_spectrum.csv")
         if (run_dir / name).is_file()]
     required = STAGE2_REPLAY_REQUIRED_PAYLOADS | {"trajectory.tum", "imu_bias.csv"}
     if is_fde:
         required |= {"fde_status.json", "fde_observations.csv",
                      "support_partition.json"}
+    if provider == "imu_aided_grouped_fde_v3":
+        required |= {"fde_group_tests.csv", "fde_group_covariance.csv", "fde_group_spectrum.csv"}
     if not required.issubset(payload_names):
         raise RuntimeError("Stage-2 cache producer payload is incomplete")
     if is_fde:
         if (fde_status or {}).get("provider") != \
-                "imu_aided_postfit_fde_v2" or \
+                provider or \
                 (fde_status or {}).get("status") != "SUCCESS" or \
                 (fde_status or {}).get("gt_read") is not False:
             raise RuntimeError("FDE cache producer status/provider is invalid")
@@ -566,7 +568,7 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
             raise RuntimeError(
                 "FDE compatibility partition is not byte-equivalent")
         partition_doc = read_json(run_dir / "partition.json") or {}
-        if partition_doc.get("provider") != "imu_aided_postfit_fde_v2":
+        if partition_doc.get("provider") != provider:
             raise RuntimeError("FDE support partition provider is invalid")
     groups = list(csv.DictReader((run_dir / "groups.csv").open(
         newline="", encoding="utf-8")))
@@ -645,7 +647,7 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
         "score_status": score_status,
         "producer_status": status.get("status", "UNKNOWN"),
         "producer_capability": capability.get("recoverability_score", "UNKNOWN"),
-        "stage1_provider": ("imu_aided_postfit_fde_v2" if is_fde
+        "stage1_provider": (provider if is_fde
                             else input_manifest.get("stage1_provider",
                                                     "automatic_discovery")),
         **producer,

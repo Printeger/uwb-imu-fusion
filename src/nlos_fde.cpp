@@ -18,12 +18,20 @@
 #include "uifgo/optimizer.h"
 #include "uifgo/nlos_inference.h"
 #include <gtsam/linear/GaussianFactorGraph.h>
+#include <Eigen/Eigenvalues>
 
 namespace uifgo {
 
 const char kImuAidedFdeProvider[] = "imu_aided_postfit_fde_v2";
 const char kImuAidedFdeIdentityVersion[] =
     "UIFGO_IMU_AIDED_POSTFIT_FDE_IDENTITY_V2";
+
+const char* FdeProvider(bool grouped) {
+  return grouped ? "imu_aided_grouped_fde_v3" : kImuAidedFdeProvider;
+}
+const char* FdeVersion(bool grouped) {
+  return grouped ? "UIFGO_IMU_AIDED_GROUPED_FDE_IDENTITY_V3" : kImuAidedFdeIdentityVersion;
+}
 
 namespace {
 
@@ -285,8 +293,9 @@ const char* FdeStatusName(FdeStatus status) {
 std::string ComputeFdeIdentity(const FdeOptions& options,
                                const FdeContext& context) {
   std::ostringstream canonical;
-  canonical << kImuAidedFdeIdentityVersion << '\n';
-  Field(&canonical, kImuAidedFdeProvider);
+  canonical << FdeVersion(options.grouped_test) << '\n';
+  Field(&canonical, FdeProvider(options.grouped_test));
+  if (options.grouped_test) Field(&canonical, "MAXIMAL_PLANNED_LINK_GAP_V1_FULL_P_GLS_SIGN_P099");
   Field(&canonical, Binary64(options.chi2_probability));
   Field(&canonical, std::to_string(options.chi2_degrees_of_freedom));
   Field(&canonical, Binary64(Chi2inv(options.chi2_probability,
@@ -406,9 +415,9 @@ SupportPartition BuildFdeSupportPartition(
 
   SupportPartition partition;
   partition.schema = "uifgo_fde_support_v1";
-  partition.provider = kImuAidedFdeProvider;
+  partition.provider = FdeProvider(options.grouped_test);
   partition.hash_algorithm = "SHA-256";
-  partition.partition_rule_version = "FDE_TEMPORAL_RUN_V1";
+  partition.partition_rule_version = options.grouped_test ? "FDE_GROUPED_GAP_THEN_TEMPORAL_V3" : "FDE_TEMPORAL_RUN_V1";
   partition.input_plan_hash = context.input_plan_hash;
   partition.source_hash = context.source_hash;
   partition.config_hash = context.config_hash;
@@ -475,7 +484,7 @@ SegmentRefitResult ReuseEmptyFdeReference(
   try {
     if (!fde.success() || !fde.reference.converged ||
         !fde.normalization.projection.valid || !fde.partition.segments.empty() ||
-        fde.partition.provider != kImuAidedFdeProvider ||
+        fde.partition.provider != FdeProvider(cfg.fde_grouped_test) ||
         fde.planned_count == 0 || fde.tested_count != fde.planned_count)
       throw std::invalid_argument("SUCCESS_EMPTY_PRECONDITIONS_FAILED");
     RequireRawGaussianReference(fde.raw_reference, graph, initial);
@@ -514,6 +523,8 @@ FdeResult ImuAidedFdeSupportProvider::Run(
     const PaperInputPlan& plan, const Config& cfg,
     const FdeContext& context, const RawGaussianReference* prepared) const {
   FdeResult result;
+  result.provider = FdeProvider(options_.grouped_test);
+  result.provider_version = FdeVersion(options_.grouped_test);
   result.chi2_threshold = Chi2inv(options_.chi2_probability,
                                   options_.chi2_degrees_of_freedom);
   auto fail = [&](FdeStatus status, const std::string& reason) {
@@ -585,7 +596,7 @@ FdeResult ImuAidedFdeSupportProvider::Run(
 
     result.identity_hash = ComputeFdeIdentity(options_, context);
     result.partition.schema = "uifgo_fde_support_v1";
-    result.partition.provider = kImuAidedFdeProvider;
+    result.partition.provider = FdeProvider(options_.grouped_test);
     result.partition.hash_algorithm = "SHA-256";
     result.partition.partition_rule_version = "FDE_TEMPORAL_RUN_V1";
     result.partition.input_plan_hash = context.input_plan_hash;
@@ -622,6 +633,9 @@ FdeResult ImuAidedFdeSupportProvider::Run(
     if (result.tested_count != result.planned_count)
       return fail(FdeStatus::OBSERVATION_TEST_FAILED,
                   "not every planned observation was tested exactly once");
+    if (options_.grouped_test) {
+      ApplyFullGraphGroupedFde(base_graph, result.reference.values, base_uwb_factor_metadata, options_, &result);
+    }
     result.partition = BuildFdeSupportPartition(
         &result.observations, options_, context, &result.raw_run_count,
         &result.filtered_run_count);

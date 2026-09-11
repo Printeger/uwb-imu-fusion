@@ -1,8 +1,14 @@
 # UWB-IMU-IE claim–evidence ledger
 
-状态：`T10_FROZEN_C2_C / T11_FROZEN_T11_C_LIMITED_SCOPE_U13_INCOMPLETE / 0911_RECOVERY_FDE_V2_LOCALIZATION_ENGINEERING_PASS_ZERO_CANDIDATE`
+状态：`T10_FROZEN_C2_C / T11_FROZEN_T11_C_LIMITED_SCOPE_U13_INCOMPLETE / 0911_FDE_FORENSICS_ENGINEERING_PASS_WALK1_GATE_FAILED`
 
 阅读范围：下方按 T00–T10、Axx/Rxx 命名的阶段证据节均为**历史快照**。其中“当前状态”“本轮”、`IN_PROGRESS`、`NOT_RUN` 和“下一步”仅描述当时阶段；任务状态及后续安排已由本文当前裁决、汇总表和准入检查取代，不构成新的执行计划。
+
+## 当前 0911 FDE forensic / grouped V3 claim 边界
+
+[完整取证与固定验收](../doc/ie_0911/FDE_FORENSIC_AND_FIX_RESULT.md)：111 raw / 30 planned 的注入、physical measurement、prefit sign与identity核验通过。原30条truth-window aggregate显著，但一次共同hold-out求解达到原迭代上限，masking与功效结论保持INCONCLUSIVE。按预先封存裁决仅实现opt-in C grouped provider，默认V2不变；完整CTest31/31及双向cache拒绝通过。
+
+Walk1 clean/injected各六方法和共享producer实际完成，均零segment。clean aligned RMSE约0.164m；injected all-range及四recovery约0.199m、Cauchy约0.197m。冻结最大连续组未检出新增偏置，真阳性0/30；扩大矩阵NOT_RUN_WALK1_GATE_FAILED。只支持本输入plumbing与受测数学/工程正确性，不支持检测召回改善、独立masking确认、calibrated integrity或LCB恢复收益。T10=C2-C、T11=C、C1–C3不升级；保留全部历史负结果。
 
 ## 当前 0911 Recovery / post-fit FDE v2 claim 边界
 

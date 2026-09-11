@@ -1,3 +1,7 @@
+# 0911-FDE-FORENSICS 当前任务
+
+`DONE / ENGINEERING_PASS / WALK1_GATE_FAILED`。按 [任务卡与 amendment](FDE_FORENSIC_PROTOCOL.md) 完成原算法取证、封存裁决、唯一 C 分支 grouped FDE 和固定 Walk1 六方法验收。见 [完整结果](../ie_0911/FDE_FORENSIC_AND_FIX_RESULT.md)。完整 CTest 31/31；physical +0.5m / prefit −0.5m 精确核验，原 truth-window aggregate 显著，hold-out 求解失败故 masking INCONCLUSIVE。新最大连续组两侧均零 support；clean RMSE约0.164m满足门，injected无TP，扩大矩阵 `NOT_RUN_WALK1_GATE_FAILED`。Stage2/recovery数值逻辑、默认、旧结果与受保护材料保留；T10=C2-C、T11=C、C1–C3不升级。任务结束，不调参；用户随后明确授权提交并推送本轮实现，受保护的未跟踪 `doc/v2/ie_0911/` 不纳入提交。
+
 # 0911-NLOS-INJECTION 当前任务
 
 `DONE / EXECUTED_ZERO_RECOVERY_SUPPORT / BENEFIT_EVIDENCE_INSUFFICIENT`。用户授权恢复后的剩余实验和独立评价均完成；[机器生成结果](../ie_0911/NLOS_INJECTION_EXPERIMENT_RESULT.md)、[协议](NLOS_INJECTION_PROTOCOL.md)。12个scenario条目：6 clean、4 injected执行，另2 injected因clean Cauchy失败跳过。六方法长表72行：57成功、3个Cauchy算法失败、12跳过；10个共享producer完成，另1次用户暂停中断保留。

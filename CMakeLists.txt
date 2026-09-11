@@ -134,6 +134,8 @@ add_library(${PROJECT_NAME}
   src/t07_scenario_cache.cpp
   src/nlos_solver_utils.cpp
   src/nlos_fde.cpp
+  src/fde_math.cpp
+  src/fde_grouped.cpp
   src/nlos_discovery.cpp
   src/nlos_refit.cpp
   src/nlos_recoverability.cpp
@@ -375,4 +377,13 @@ add_dependencies(export_sfuise_input ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catki
 
 if(CATKIN_ENABLE_TESTING)
  add_test(NAME test_nlos_injection COMMAND ${PYTHON_EXECUTABLE} -B ${CMAKE_CURRENT_SOURCE_DIR}/test/test_nlos_injection.py)
+endif()
+
+# Truth-derived hold-outs are accepted only by this independent forensic binary.
+add_executable(uwb_imu_fgo_fde_forensics tools/run_fde_forensics.cpp)
+target_link_libraries(uwb_imu_fgo_fde_forensics ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable ${Boost_LIBRARIES} yaml-cpp)
+add_dependencies(uwb_imu_fgo_fde_forensics ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(test_fde_math test/test_fde_math.cpp)
+  target_link_libraries(test_fde_math ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable ${GTEST_LIBRARIES})
 endif()

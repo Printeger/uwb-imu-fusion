@@ -194,6 +194,7 @@ struct Config {
   // --- T06 automatic support discovery (pending scientific validation) ---
   double discovery_lambda_l1 = 0.05;
   double discovery_lambda_tv = 0.10;
+  bool fde_grouped_test = false;  // Explicit V3 opt-in; legacy V2 unchanged.
   double discovery_gap_threshold_s = 1.0;
   double discovery_active_bias_min_m = 0.02;
   double discovery_change_point_min_m = 0.05;

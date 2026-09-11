@@ -10,6 +10,7 @@
 #include <gtsam/nonlinear/Values.h>
 
 #include "uifgo/config.h"
+#include "uifgo/fde_math.h"
 #include "uifgo/nlos_solver_utils.h"
 #include "uifgo/nlos_support.h"
 #include "uifgo/nlos_recoverability.h"
@@ -62,7 +63,11 @@ FdeNormalization ComputeFdeNormalization(
     const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
     const std::vector<FactorMeta>& metadata);
 
+const char* FdeProvider(bool grouped);
+const char* FdeVersion(bool grouped);
+
 struct FdeOptions {
+  bool grouped_test = false;
   double chi2_probability = 0.99;
   size_t chi2_degrees_of_freedom = 1;
   double gap_threshold_s = 1.0;
@@ -123,6 +128,23 @@ struct FdeContext {
   std::string initial_values_hash;
 };
 
+struct FdeGroupTest {
+  int tag_id = 0, anchor_id = 0;
+  double start_time = 0, end_time = 0;
+  std::vector<std::uint64_t> obs_ids;
+  std::string status;
+  FdeQuadraticTest test;
+  double gls_signed_residual_m = std::numeric_limits<double>::quiet_NaN();
+  Eigen::MatrixXd covariance;
+  bool positive_excess = false;
+};
+// Pure covariance/temporal front-end; rows correspond to tested observations.
+std::vector<FdeGroupTest> ApplyGroupedFdeTests(
+    std::vector<FdeObservationRecord>* observations,
+    const Eigen::MatrixXd& residual_covariance_whitened,
+    const std::vector<std::uint64_t>& covariance_obs_ids,
+    const FdeOptions& options, std::string* status);
+
 struct FdeResult {
   FdeStatus status = FdeStatus::INVALID_INPUT;
   std::string reason;
@@ -133,6 +155,8 @@ struct FdeResult {
   CheckedLmResult reference;
   RawGaussianReference raw_reference;
   FdeNormalization normalization;
+  std::vector<FdeGroupTest> group_tests;
+  std::string grouped_status = "NOT_APPLICABLE_V2";
   std::vector<FdeObservationRecord> observations;
   SupportPartition partition;
   size_t planned_count = 0;
@@ -145,6 +169,10 @@ struct FdeResult {
 
   bool success() const { return status == FdeStatus::SUCCESS; }
 };
+
+void ApplyFullGraphGroupedFde(const gtsam::NonlinearFactorGraph& graph,
+    const gtsam::Values& values, const std::vector<FactorMeta>& metadata,
+    const FdeOptions& options, FdeResult* result);
 
 // Pure residual classification and temporal aggregation entry points used by
 // deterministic boundary tests. Classification is strict at the threshold.
