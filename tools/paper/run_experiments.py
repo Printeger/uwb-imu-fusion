@@ -510,8 +510,11 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
     capability = read_json(run_dir / "capability_status.json") or {}
     input_manifest = read_json(run_dir / "input_manifest.json") or {}
     fde_status = read_json(run_dir / "fde_status.json")
+    provider = input_manifest.get("stage1_provider", "")
+    if provider.startswith("imu_aided") and provider != "imu_aided_postfit_fde_v2":
+        raise RuntimeError("obsolete FDE provider cannot publish a current cache")
     is_fde = input_manifest.get("stage1_provider") == \
-        "imu_aided_residual_fde_v1"
+        "imu_aided_postfit_fde_v2"
     if not (run_dir / "trajectory.tum").is_file():
         raise RuntimeError("Stage-2 cache producer has no trajectory")
     payload_names = [name for name in (
@@ -520,7 +523,8 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
         "refit_iterations.csv", "scores_decision.csv", "segment_fit_scores.csv",
         "groups.csv", "trajectory.tum", "imu_bias.csv", "stage2_values.csv",
         "stage2_content_identity.json", "stage2_producer_context.json",
-        "fde_status.json", "fde_observations.csv", "support_partition.json")
+        "fde_status.json", "fde_observations.csv", "support_partition.json",
+        "stage2_refit_status.json", "raw_reference.json")
         if (run_dir / name).is_file()]
     required = STAGE2_REPLAY_REQUIRED_PAYLOADS | {"trajectory.tum", "imu_bias.csv"}
     if is_fde:
@@ -530,7 +534,7 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
         raise RuntimeError("Stage-2 cache producer payload is incomplete")
     if is_fde:
         if (fde_status or {}).get("provider") != \
-                "imu_aided_residual_fde_v1" or \
+                "imu_aided_postfit_fde_v2" or \
                 (fde_status or {}).get("status") != "SUCCESS" or \
                 (fde_status or {}).get("gt_read") is not False:
             raise RuntimeError("FDE cache producer status/provider is invalid")
@@ -539,7 +543,7 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
             raise RuntimeError(
                 "FDE compatibility partition is not byte-equivalent")
         partition_doc = read_json(run_dir / "partition.json") or {}
-        if partition_doc.get("provider") != "imu_aided_residual_fde_v1":
+        if partition_doc.get("provider") != "imu_aided_postfit_fde_v2":
             raise RuntimeError("FDE support partition provider is invalid")
     groups = list(csv.DictReader((run_dir / "groups.csv").open(
         newline="", encoding="utf-8")))
@@ -549,8 +553,32 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
             row.get("group_id") for row in scores}:
         raise RuntimeError("Stage-2 score table does not cover every frozen group")
     if not fixed_debug and capability.get("discovery") not in {
-            "CONVERGED_STAGE1", "NO_CANDIDATES"}:
+            "CONVERGED_STAGE1", "SUCCESS_FDE_STAGE1", "NO_CANDIDATES"}:
         raise RuntimeError("automatic cache producer did not pass Stage-1 admission")
+    stage2_evidence = read_json(run_dir / "stage2_refit_status.json") or {}
+    stage2_status = stage2_evidence.get("solver_status", status.get("segment_refit_status"))
+    if stage2_status is None and not is_fde:
+        # Older legacy fixture/producers explicitly report successful refit in capability.
+        stage2_status = "CONVERGED" if "CONVERGED" in str(capability.get("segment_refit", "")) else None
+    if stage2_status not in {"CONVERGED", "SUCCESS_EMPTY"}:
+        raise RuntimeError("Stage-2 did not report a successful solver status")
+    if stage2_status == "SUCCESS_EMPTY":
+        reference = read_json(run_dir / "raw_reference.json") or {}
+        content = read_json(run_dir / "stage2_content_identity.json") or {}
+        if (reference.get("graph_identity") != content.get("graph_linearization_sha256") or
+                reference.get("values_identity") != content.get("values_sha256") or
+                not content.get("graph_linearization_sha256") or
+                not content.get("values_sha256")):
+            raise RuntimeError("SUCCESS_EMPTY reference graph/Values identity mismatch")
+        if (not is_fde or not reference.get("success") or
+                not fde_status.get("reference_converged") or
+                fde_status.get("planned_count", 0) <= 0 or
+                fde_status.get("tested_count") != fde_status.get("planned_count") or
+                partition_doc.get("segments") != [] or
+                stage2_evidence.get("optimizer_calls") != 0 or
+                stage2_evidence.get("alternating_stop_conditions") != "NOT_APPLICABLE" or
+                list(csv.DictReader((run_dir / "refit_iterations.csv").open()))):
+            raise RuntimeError("SUCCESS_EMPTY reference/test/partition/zero-optimizer audit failed")
     payloads = [{"name": name, "sha256": file_sha(run_dir / name)}
                 for name in sorted(payload_names)]
     score_status = ("COMPLETE" if status.get("exit_code") == 0 else
@@ -590,11 +618,11 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
         "factor_metadata_sha256": file_sha(run_dir / "factor_metadata.csv"),
         "stage2_trace_sha256": file_sha(run_dir / "refit_iterations.csv"),
         "score_table_sha256": file_sha(run_dir / "scores_decision.csv"),
-        "stage2_status": "CONVERGED",
+        "stage2_status": stage2_status,
         "score_status": score_status,
         "producer_status": status.get("status", "UNKNOWN"),
         "producer_capability": capability.get("recoverability_score", "UNKNOWN"),
-        "stage1_provider": ("imu_aided_residual_fde_v1" if is_fde
+        "stage1_provider": ("imu_aided_postfit_fde_v2" if is_fde
                             else input_manifest.get("stage1_provider",
                                                     "automatic_discovery")),
         **producer,

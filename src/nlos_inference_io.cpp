@@ -458,7 +458,9 @@ InferenceArtifactWriteResult WriteInferenceArtifacts(
            << Json(result.fallback_refit_attempt.execution_status)
            << "\",\n  \"final_result_refit_source\": \""
            << Json(result.final_result_refit.execution_status)
-           << "\",\n  \"recovery_refit_iteration_count\": "
+           << "\",\n  \"final_optimizer_calls\": "
+           << (result.final_result_refit.solver_status == "SUCCESS_EMPTY" ? "0" : "null")
+           << ",\n  \"recovery_refit_iteration_count\": "
            << result.recovery_attempt.iterations.size()
            << ",\n  \"fallback_refit_iteration_count\": "
            << result.fallback_refit_attempt.iterations.size()

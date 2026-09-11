@@ -3,6 +3,7 @@
 #include "uifgo/paper_run_io.h"
 #include "uifgo/nlos_discovery.h"
 #include "uifgo/hash_utils.h"
+#include "uifgo/nlos_fde.h"
 
 #include <boost/filesystem.hpp>
 #include <gtsam/inference/Symbol.h>
@@ -508,6 +509,47 @@ TEST(T08Inference, NoCandidatesUsesReferenceGraphWithoutFallback) {
     EXPECT_FALSE(fixed.fallback.attempted);
   }
   MaybeWriteEvidence("no_candidates", result);
+}
+
+TEST(T08Inference, FdeSuccessEmptyReusesExactReferenceForFourFinals) {
+  auto input=MakeFixture(false,false);
+  input.cfg.nlos_mode="imu_aided_fde";
+  uifgo::FdeOptions options;
+  options.preliminary_lm.max_iterations=50;
+  uifgo::FdeContext context{"plan","source","config",IdentityContext().calibration_sha256,"solver","common","graph","values"};
+  const auto fde=uifgo::ImuAidedFdeSupportProvider(options).Run(
+      input.graph,input.values,input.metadata,input.plan,input.cfg,context);
+  ASSERT_TRUE(fde.success()) << fde.reason;
+  ASSERT_TRUE(fde.partition.segments.empty());
+  uifgo::RefitOptions refit_options;
+  const auto stage2=uifgo::ReuseEmptyFdeReference(input.graph,input.values,input.metadata,
+      input.plan,input.cfg,fde,refit_options);
+  ASSERT_TRUE(stage2.successful()) << stage2.reason;
+  EXPECT_FALSE(stage2.converged());
+  EXPECT_EQ(stage2.status,uifgo::SegmentRefitStatus::SUCCESS_EMPTY);
+  EXPECT_TRUE(stage2.iterations.empty());
+  const auto expected=uifgo::ComputeInferenceContentIdentity(stage2.graph,stage2.values,IdentityContext());
+  for(auto policy : {uifgo::FinalGatePolicy::SUPPRESS_ALL,uifgo::FinalGatePolicy::STRUCTURED_DEBIAS,
+                    uifgo::FinalGatePolicy::LCB_PARTIAL,uifgo::FinalGatePolicy::LCB_FIXED_FULL}) {
+    const auto final=uifgo::FinalInferenceEngine(DevelopmentGate(),refit_options,{}, {},policy).Run(
+        input.graph,input.metadata,stage2,fde.partition,{},input.plan,input.cfg,IdentityContext());
+    ASSERT_TRUE(final.valid_estimate()) << final.reason;
+    EXPECT_TRUE(final.recovery_attempt.iterations.empty());
+    EXPECT_FALSE(final.recovery_attempt.executed);
+    EXPECT_FALSE(final.fallback.attempted);
+    EXPECT_EQ(final.content_identity.values_sha256,expected.values_sha256);
+    EXPECT_EQ(final.content_identity.graph_linearization_sha256,expected.graph_linearization_sha256);
+  }
+  auto incomplete=fde;--incomplete.tested_count;
+  EXPECT_FALSE(uifgo::ReuseEmptyFdeReference(input.graph,input.values,input.metadata,
+      input.plan,input.cfg,incomplete,refit_options).successful());
+  auto nonempty=fde;nonempty.partition.segments=input.support.segments;
+  EXPECT_FALSE(uifgo::ReuseEmptyFdeReference(input.graph,input.values,input.metadata,
+      input.plan,input.cfg,nonempty,refit_options).successful());
+  auto changed=stage2;changed.graph[0]=input.graph[1];
+  const auto rejected=uifgo::FinalInferenceEngine(DevelopmentGate(),refit_options).Run(
+      input.graph,input.metadata,changed,fde.partition,{},input.plan,input.cfg,IdentityContext());
+  EXPECT_FALSE(rejected.valid_estimate());
 }
 
 TEST(T08Inference, ForcedRecoveryFailureFallsBackExactlyOnceFromReference) {

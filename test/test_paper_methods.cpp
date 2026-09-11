@@ -1,4 +1,7 @@
 #include <gtest/gtest.h>
+#include <iomanip>
+#include "uifgo/paper_robust_noise.h"
+#include <gtsam/linear/JacobianFactor.h>
 
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/PriorFactor.h>
@@ -110,6 +113,65 @@ TEST(PaperMethods, FinalEnginePoliciesUseTheSameRequiredPredicates) {
   EXPECT_EQ(FreezeGroupDecisions(
                 {score}, gate, FinalGatePolicy::ETA_ONLY)[0].reason_code,
             "SUPPRESS_REQUIRED_SCORE_UNAVAILABLE");
+}
+
+TEST(PaperMethods, StandardRobustLossMatchesFiniteDifferenceAndLinearization) {
+  const auto kernel = gtsam::noiseModel::mEstimator::Cauchy::Create(2.3849);
+  const auto noise = boost::make_shared<PaperRobustNoise>(kernel,
+      gtsam::noiseModel::Isotropic::Sigma(1, 0.15));
+  const gtsam::Key key = gtsam::Symbol('z', 0);
+  gtsam::PriorFactor<double> factor(key, 0.0, noise);
+  gtsam::Values values; values.insert<double>(key, 0.6);
+  auto plus = values, minus = values;
+  plus.update<double>(key, 0.600001); minus.update<double>(key, 0.599999);
+  std::cout << std::setprecision(17) << "LINKED_ROBUST_LOSS actual=" << factor.error(values)
+            << " expected=" << kernel->loss(4.0) << " finite_difference="
+            << (factor.error(plus)-factor.error(minus))/2e-6
+            << " expected_gradient=" << kernel->weight(4.0)*0.6/(0.15*0.15) << std::endl;
+  EXPECT_NEAR(factor.error(values), kernel->loss(4.0), 1e-12);
+  const auto linear = boost::dynamic_pointer_cast<gtsam::JacobianFactor>(factor.linearize(values));
+  ASSERT_TRUE(linear);
+  const auto ab = linear->jacobian();
+  const double gradient = -(ab.first.transpose()*ab.second)[0];
+  EXPECT_NEAR((factor.error(plus)-factor.error(minus))/2e-6, gradient, 1e-8);
+  const auto huber = gtsam::noiseModel::mEstimator::Huber::Create(1.345);
+  gtsam::PriorFactor<double> hf(key, 0.0, boost::make_shared<PaperRobustNoise>(huber,
+      gtsam::noiseModel::Isotropic::Sigma(1, 0.15)));
+  EXPECT_NEAR(hf.error(values), huber->loss(4.0), 1e-12);
+  EXPECT_NEAR((hf.error(plus)-hf.error(minus))/2e-6, huber->weight(4.)*.6/(.15*.15), 1e-8);
+}
+
+TEST(PaperMethods, RawWarmStartRestoresRobustBasinAndAllRangeReusesSolve) {
+  const gtsam::Key key = gtsam::Symbol('z', 0);
+  gtsam::NonlinearFactorGraph graph;
+  graph.add(gtsam::PriorFactor<double>(
+      key, 0.0, gtsam::noiseModel::Isotropic::Sigma(1, 100.0)));
+  graph.add(gtsam::PriorFactor<double>(
+      key, 2.0, gtsam::noiseModel::Isotropic::Sigma(1, 0.1)));
+  gtsam::Values initial;
+  initial.insert<double>(key, 1000.0);
+  FactorMeta meta;
+  meta.factor_index = 1; meta.obs_id = 42;
+  meta.factor_type = "uwb_range"; meta.keys = {key};
+  BaselineOptions options;
+  options.parameter_provenance = "TEST_ONLY";
+  options.robust_scale = 2.3849;
+  options.lm.max_iterations = 20;
+  const auto raw = RunPaperBaseline(graph, initial, {meta}, options);
+  ASSERT_TRUE(raw.valid) << raw.reason;
+  ASSERT_TRUE(raw.preliminary.converged);
+  EXPECT_EQ(raw.final_values.at<double>(key), raw.preliminary.values.at<double>(key));
+  EXPECT_EQ(raw.final.iterations, raw.preliminary.iterations);
+  options.method = PaperMethod::ROBUST_CAUCHY;
+  const auto robust = RunPaperBaseline(graph, initial, {meta}, options);
+  ASSERT_TRUE(robust.valid) << robust.reason;
+  EXPECT_EQ(robust.preliminary.values.at<double>(key), raw.preliminary.values.at<double>(key));
+  EXPECT_NEAR(robust.final_values.at<double>(key), 2.0, 1e-4);
+  options.lm.max_iterations = 1;
+  const auto failed = RunPaperBaseline(graph, initial, {meta}, options);
+  EXPECT_FALSE(failed.valid);
+  EXPECT_EQ(failed.reason.find("PRELIMINARY_LM_FAILED:"), 0u);
+  EXPECT_EQ(failed.final.iterations, 0u);
 }
 
 TEST(PaperMethods, FixedRejectionIsSingleFrozenMaskWithEqualityRetained) {

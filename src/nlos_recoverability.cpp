@@ -557,6 +557,89 @@ RecoverabilityResult ComputeSparseRecoverability(
   return out;
 }
 
+ResidualProjectionResult ComputeSparseResidualProjectionDiagonal(
+    const Sparse& A, const std::vector<size_t>& selected_rows,
+    const RecoverabilityOptions& options) {
+  ResidualProjectionResult out;
+  auto fail = [&](const std::string& reason) {
+    out.valid = false; out.reason = reason; out.diagonal.clear(); return out;
+  };
+  if (!OptionsValid(options) || A.rows() <= 0 || A.cols() > A.rows())
+    return fail("INVALID_OR_UNDERDETERMINED_REFERENCE");
+  for (const auto row : selected_rows)
+    if (row >= static_cast<size_t>(A.rows())) return fail("INVALID_UWB_ROW");
+  Sparse F = A;
+  for (int column = 0; column < F.cols(); ++column) {
+    const double norm = StableSparseColumnNorm(F, column);
+    if (!std::isfinite(norm) || norm <= 0.0)
+      return fail("SPARSE_RANK_UNCERTAIN_ZERO_OR_NONFINITE_COLUMN");
+    for (Sparse::InnerIterator it(F, column); it; ++it) it.valueRef() /= norm;
+  }
+  F.makeCompressed();
+  if (F.cols() == 0) {
+    out.diagonal.assign(selected_rows.size(), 1.0);
+    out.rank = 0; out.valid = true; out.reason = "OK_NO_UNKNOWNS"; return out;
+  }
+  Eigen::SparseQR<Sparse, Eigen::COLAMDOrdering<int>> qr;
+  qr.setPivotThreshold(0.0);
+  ++out.qr_factorizations;
+  qr.compute(F);
+  if (qr.info() != Eigen::Success) return fail("SPARSE_QR_FAILED");
+  out.rank = qr.rank();
+  if (out.rank != F.cols()) return fail("SPARSE_RANK_UNCERTAIN");
+  const Sparse full_R = qr.matrixR();
+  // SparseQR's R can have unsorted inner indices. Assemble through triplets
+  // exactly as the existing recoverability certificate does.
+  std::vector<Triplet> r_entries;
+  for (int column = 0; column < full_R.cols(); ++column)
+    for (Sparse::InnerIterator it(full_R, column); it; ++it)
+      if (it.row() < F.cols()) r_entries.emplace_back(it.row(), column, it.value());
+  Sparse R(F.cols(), F.cols());
+  R.setFromTriplets(r_entries.begin(), r_entries.end());
+  R.makeCompressed();
+  const auto inverse = BoundTriangularInverseFrobenius(R);
+  const double spectral_upper = std::sqrt(static_cast<double>(F.cols()));
+  out.rank_threshold_upper = std::max(options.rank_absolute_tolerance,
+      options.rank_relative_tolerance * spectral_upper);
+  const double backward_error = options.roundoff_safety_factor *
+      GammaK(F.rows() + F.cols()) * spectral_upper;
+  out.sigma_min_lower = inverse.valid
+      ? std::max(0.0, 1.0 / inverse.inverse_norm_upper - backward_error) : 0.0;
+  if (!inverse.valid || !std::isfinite(out.sigma_min_lower) ||
+      out.sigma_min_lower <= out.rank_threshold_upper)
+    return fail("SPARSE_RANK_UNCERTAIN_CERTIFICATE");
+  const auto condition = EstimateTriangularConditionOneNorm(
+      R, options.condition_estimator_max_iterations);
+  out.projection_residual_floor = options.roundoff_safety_factor *
+      condition.condition * GammaK(F.rows() + 2 * F.cols() + 1);
+  if (!condition.converged || !std::isfinite(out.projection_residual_floor) ||
+      out.projection_residual_floor >= 1.0)
+    return fail("NUMERICAL_RESOLUTION_LOST");
+  const double fnorm = F.norm();
+  for (const auto row : selected_rows) {
+    Eigen::VectorXd unit = Eigen::VectorXd::Zero(F.rows());
+    unit[row] = 1.0;
+    const Eigen::VectorXd solution = qr.solve(unit);
+    if (qr.info() != Eigen::Success || !solution.allFinite())
+      return fail("PROJECTION_SOLVE_FAILED");
+    const Eigen::VectorXd residual = unit - F * solution;
+    const double norm = residual.norm();
+    const double d = residual.squaredNorm();
+    const double orth = (F.transpose() * residual).norm() / fnorm;
+    const double tolerance = options.orthogonality_absolute_tolerance / fnorm +
+        options.orthogonality_relative_tolerance + out.projection_residual_floor;
+    if (!residual.allFinite() || !std::isfinite(d) || !std::isfinite(orth) ||
+        orth > tolerance || d > 1.0 + tolerance ||
+        std::abs(residual[row] - d) > tolerance)
+      return fail("PROJECTION_ORTHOGONALITY_OR_DIAGONAL_AUDIT_FAILED");
+    if (norm <= out.projection_residual_floor || d <= 0.0)
+      return fail("RESIDUAL_VARIANCE_UNRESOLVED");
+    out.diagonal.push_back(d);
+  }
+  out.valid = true; out.reason = "OK_FULL_GAUSSIAN_POSTFIT_PROJECTOR";
+  return out;
+}
+
 }  // namespace uifgo
 
 namespace uifgo {

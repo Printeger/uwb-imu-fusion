@@ -1,10 +1,16 @@
 # UWB-IMU-IE claim–evidence ledger
 
-状态：`T10_FROZEN_C2_C / T11_FROZEN_T11_C_LIMITED_SCOPE_U13_INCOMPLETE / 0911_FDE_EXECUTED_NEGATIVE_INCOMPLETE`
+状态：`T10_FROZEN_C2_C / T11_FROZEN_T11_C_LIMITED_SCOPE_U13_INCOMPLETE / 0911_RECOVERY_FDE_V2_LOCALIZATION_ENGINEERING_PASS_ZERO_CANDIDATE`
 
 阅读范围：下方按 T00–T10、Axx/Rxx 命名的阶段证据节均为**历史快照**。其中“当前状态”“本轮”、`IN_PROGRESS`、`NOT_RUN` 和“下一步”仅描述当时阶段；任务状态及后续安排已由本文当前裁决、汇总表和准入检查取代，不构成新的执行计划。
 
-## 当前 0911 residual-FDE claim 边界
+## 当前 0911 Recovery / post-fit FDE v2 claim 边界
+
+定位门通过：fresh legacy（GT读取禁用）/paper all-range/Cauchy full Walk1锁定aligned RMSE为0.169642149/0.163853268/0.163847231m，均229匹配、0未匹配。paper raw Gaussian LM共同reference及paper-only标准robust loss修复有受控运行与梯度测试证据。FDE provider更新为`imu_aided_postfit_fde_v2`，完整Gaussian白化与一次稀疏QR的残差方差归一化已验证；旧provider结果不复用。
+
+最终CTest29/29；固定[8,11]s smoke与full Walk1五方法均完成，55/1074条planned全检、零fault/零segment。实际SUCCESS_EMPTY Stage2及四final零优化，graph/Values一致，轨迹、bias、residual和可计算协方差一致。full四final RMSE均0.163853268m，仅支持真实空集合工程链；没有非空补偿证据，不支持恢复收益、策略等价或calibrated integrity claim。六输入30项prepare通过，其它输入精度矩阵NOT_RUN。旧六输入失败证据保留，不以本轮Walk1覆盖。T10=C2-C、T11=C、C1–C3不升级。见[本轮结果与完整命令](../doc/ie_0911/RECOVERY_FDE_V2_RESULT.md)。
+
+## 历史 0911 residual-FDE v1 claim 边界
 
 论文主 Stage1 已改为 `imu_aided_residual_fde_v1`：reference graph residual 按 factor sigma 做固定
 $p=0.99$/1-DoF 双边检测，只聚合 `r<0` 的 positive-excess fault；legacy `automatic_discovery` 未删除。

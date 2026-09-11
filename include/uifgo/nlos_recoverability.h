@@ -112,4 +112,22 @@ RecoverabilityResult ComputeSparseRecoverability(
     const Eigen::MatrixXd& G_whitened,
     const RecoverabilityOptions& options = RecoverabilityOptions());
 
+// Diagonal residual projector for selected whitened rows. One QR, bounded
+// vector workspace, no dense inverse or full projector. Rank uncertainty is
+// fail-closed; columns represent every actual unknown in the reference graph.
+struct ResidualProjectionResult {
+  bool valid = false;
+  std::string reason;
+  std::vector<double> diagonal;
+  size_t qr_factorizations = 0;
+  int rank = -1;
+  double sigma_min_lower = 0.0;
+  double rank_threshold_upper = 0.0;
+  double projection_residual_floor = 0.0;
+};
+ResidualProjectionResult ComputeSparseResidualProjectionDiagonal(
+    const Eigen::SparseMatrix<double>& A_whitened,
+    const std::vector<size_t>& selected_rows,
+    const RecoverabilityOptions& options = RecoverabilityOptions());
+
 }  // namespace uifgo

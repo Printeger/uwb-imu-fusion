@@ -158,6 +158,7 @@ struct DevelopmentStage2Request {
 
 enum class SegmentRefitStatus {
   CONVERGED,
+  SUCCESS_EMPTY,
   INVALID_INPUT,
   NONPOSITIVE_OR_NONFINITE_DENOMINATOR,
   CONDITIONAL_LM_FAILED,
@@ -182,8 +183,9 @@ struct SegmentRefitResult {
   std::vector<RefitIteration> iterations;
   std::vector<InexactHandoffAudit> inexact_handoffs;
 
-  bool converged() const {
-    return status == SegmentRefitStatus::CONVERGED;
+  bool converged() const { return status == SegmentRefitStatus::CONVERGED; }
+  bool successful() const {
+    return converged() || status == SegmentRefitStatus::SUCCESS_EMPTY;
   }
 };
 

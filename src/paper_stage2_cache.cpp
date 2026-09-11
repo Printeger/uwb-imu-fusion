@@ -139,7 +139,7 @@ bool ValidateStage2CacheManifest(const Stage2CacheManifest& manifest,
       manifest.stage2_refit_config_sha256.rfind("sha256:", 0) != 0 ||
       manifest.stage3_score_config_sha256.rfind("sha256:", 0) != 0)
     return fail("CACHE_PRODUCER_CONFIG_IDENTITY_INVALID");
-  if (manifest.stage2_status != "CONVERGED")
+  if (manifest.stage2_status != "CONVERGED" && manifest.stage2_status != "SUCCESS_EMPTY")
     return fail("CACHE_STAGE2_NOT_CONVERGED");
   if (manifest.score_status != "COMPLETE" &&
       manifest.score_status != "COMPLETE_WITH_SCORE_UNAVAILABLE")
@@ -149,6 +149,14 @@ bool ValidateStage2CacheManifest(const Stage2CacheManifest& manifest,
     if (!SafePayloadName(payload.name) ||
         payload.sha256.rfind("sha256:", 0) != 0)
       return fail("CACHE_PAYLOAD_IDENTITY_INVALID");
+  if (manifest.stage2_status == "SUCCESS_EMPTY") {
+    for (const auto* required : {"fde_status.json", "support_partition.json",
+                                 "stage2_refit_status.json", "raw_reference.json"}) {
+      bool found = false;
+      for (const auto& payload : manifest.payloads) found |= payload.name == required;
+      if (!found) return fail("CACHE_SUCCESS_EMPTY_EVIDENCE_MISSING");
+    }
+  }
   const std::string actual = ComputeStage2CacheId(manifest);
   if (!manifest.cache_id.empty() && manifest.cache_id != actual)
     return fail("CACHE_ID_MISMATCH");

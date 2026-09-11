@@ -1193,7 +1193,7 @@ void WriteFdeArtifacts(const fs::path& run_dir,
   {
     auto out = Open(run_dir / "fde_status.json");
     out << std::setprecision(17)
-        << "{\n  \"schema\": \"uifgo_fde_status_v1\",\n"
+        << "{\n  \"schema\": \"uifgo_fde_status_v2\",\n"
         << "  \"provider\": \"" << JsonEscape(result.provider) << "\",\n"
         << "  \"provider_version\": \""
         << JsonEscape(result.provider_version) << "\",\n"
@@ -1210,6 +1210,11 @@ void WriteFdeArtifacts(const fs::path& run_dir,
         << options.chi2_degrees_of_freedom
         << ",\n  \"chi2_threshold\": "
         << JsonNumberOrNull(result.chi2_threshold)
+        << ",\n  \"linearization_identity\": \"" << result.normalization.linearization_identity
+        << "\",\n  \"normalization_status\": \"" << JsonEscape(result.normalization.projection.reason)
+        << "\",\n  \"qr_factorizations\": " << result.normalization.projection.qr_factorizations
+        << ",\n  \"reference_rank\": " << result.normalization.projection.rank
+        << ",\n  \"projection_residual_floor\": " << JsonNumberOrNull(result.normalization.projection.projection_residual_floor)
         << ",\n  \"planned_count\": " << result.planned_count
         << ",\n  \"tested_count\": " << result.tested_count
         << ",\n  \"fault_count\": " << result.fault_count
@@ -1230,7 +1235,7 @@ void WriteFdeArtifacts(const fs::path& run_dir,
            "keyframe_id,factor_index,ledger_nominal_sigma_m,tested,residual_m,"
            "factor_sigma_m,standardized_residual,statistic,fault_detected,"
            "positive_excess,nlos_candidate,raw_segment_id,segment_id,"
-           "segment_ordinal,candidate_filter_reason\n"
+           "segment_ordinal,candidate_filter_reason,residual_variance_m2,measurement_standardized_residual_diagnostic,test_status,linearization_identity\n"
         << std::setprecision(17);
     for (const auto& row : result.observations) {
       out << row.obs_id << ',' << row.source_frame_index << ','
@@ -1249,7 +1254,10 @@ void WriteFdeArtifacts(const fs::path& run_dir,
           << row.raw_segment_id << ',' << row.segment_id << ',';
       if (row.segment_ordinal == std::numeric_limits<size_t>::max()) out << "";
       else out << row.segment_ordinal;
-      out << ',' << row.candidate_filter_reason << '\n';
+      out << ',' << row.candidate_filter_reason << ','
+          << JsonNumberOrNull(row.residual_variance_m2) << ','
+          << JsonNumberOrNull(row.measurement_standardized_residual_diagnostic) << ','
+          << row.test_status << ',' << result.normalization.linearization_identity << '\n';
     }
   }
   WriteSupportPartition(run_dir / "support_partition.json", result.partition);
@@ -2440,6 +2448,7 @@ int main(int argc, char** argv) {
   bool fixed_partition_debug_run = false;
   bool automatic_discovery_run = false;
   bool imu_aided_fde_run = false;
+  std::string exported_refit_status = "NOT_RUN";
   bool segment_refit_estimate_exported = false;
   std::string failure_stage;
   double stage1_seconds = std::numeric_limits<double>::quiet_NaN();
@@ -2580,7 +2589,7 @@ int main(int argc, char** argv) {
             std::to_string(cfg.lm_max_iter) + ":" +
             std::to_string(cfg.lm_rel_tol) + ":" +
             std::to_string(cfg.lm_abs_tol) + ":" +
-            uifgo::PaperPosePriorJacobianIdentity());
+            uifgo::PaperPosePriorJacobianIdentity() + ":PAPER_RAW_REFERENCE_LM_V2:PAPER_STANDARD_ROBUST_LOSS_V2");
     const auto common_content_identity =
         uifgo::ComputeInferenceContentIdentity(
             graph, initial, common_identity_context);
@@ -2592,7 +2601,7 @@ int main(int argc, char** argv) {
     common_input.input_plan_sha256 = plan.plan_sha256;
     common_input.nominal_sigma_sha256 =
         "sha256:" + uifgo::Sha256Hex("sigma:" + plan.plan_sha256);
-    common_input.initialization_rule = "T02_SHARED_INITIALIZER_V1";
+    common_input.initialization_rule = "PAPER_RAW_REFERENCE_LM_V2";
     common_input.initial_values_sha256 = common_content_identity.values_sha256;
     common_input.calibration_sha256 = CalibrationContextHash(cfg, init.gravity_world);
     common_input.physical_graph_sha256 =
@@ -2715,12 +2724,31 @@ int main(int argc, char** argv) {
       options.lm_max_iterations = cfg.lm_max_iter;
       options.lm_relative_tolerance = cfg.lm_rel_tol;
       options.lm_absolute_tolerance = cfg.lm_abs_tol;
-      const uifgo::SegmentRefitResult stage2 =
+      uifgo::SegmentRefitResult stage2 =
           uifgo::SegmentRefitter(options).RunFrozenCandidatePolicy(
               graph, restored_values, builder.factor_meta(), plan, cfg,
               support, all_segments, false);
-      if (!stage2.converged())
+      if (!stage2.successful())
         throw std::runtime_error("CACHE_STAGE2_REBUILD_FAILED: " + stage2.reason);
+      if (cache.stage2_status == "SUCCESS_EMPTY") {
+        const auto evidence = YAML::LoadFile((cache_root / "fde_status.json").string());
+        const auto empty = YAML::LoadFile((cache_root / "stage2_refit_status.json").string());
+        const auto reference = YAML::LoadFile((cache_root / "raw_reference.json").string());
+        if (!reference["success"].as<bool>() ||
+            reference["graph_identity"].as<std::string>() != cache.stage2_graph_linearization_sha256 ||
+            reference["values_identity"].as<std::string>() != cache.stage2_values_sha256 ||
+            !imu_aided_fde_run || !support.segments.empty() ||
+            evidence["status"].as<std::string>() != "SUCCESS" ||
+            !evidence["reference_converged"].as<bool>() ||
+            evidence["provider"].as<std::string>() != uifgo::kImuAidedFdeProvider ||
+            evidence["planned_count"].as<size_t>() != planned ||
+            evidence["tested_count"].as<size_t>() != planned ||
+            empty["solver_status"].as<std::string>() != "SUCCESS_EMPTY" ||
+            empty["optimizer_calls"].as<size_t>() != 0)
+          throw std::runtime_error("CACHE_SUCCESS_EMPTY_EVIDENCE_MISMATCH");
+        stage2.status = uifgo::SegmentRefitStatus::SUCCESS_EMPTY;
+        stage2.reason = "SUCCESS_EMPTY_VERIFIED_CACHE_REPLAY_NO_OPTIMIZATION";
+      }
       uifgo::InferenceIdentityContext stage2_check_context;
       stage2_check_context.input_sha256 = source_sha256;
       stage2_check_context.config_sha256 = "CACHE_REPLAY_CONTENT_CHECK";
@@ -2907,6 +2935,38 @@ int main(int argc, char** argv) {
       return 0;
     }
 
+    uifgo::RawGaussianReference shared_reference;
+    uifgo::FdeResult fde_result;
+    if ((cfg.nlos_mode == "disabled" && !args.method.empty()) || imu_aided_fde_run) {
+      failure_stage = "PAPER_RAW_REFERENCE_LM_V2";
+      uifgo::CheckedLmOptions raw_options;
+      raw_options.max_iterations = cfg.lm_max_iter;
+      raw_options.relative_tolerance = cfg.lm_rel_tol;
+      raw_options.absolute_tolerance = cfg.lm_abs_tol;
+      shared_reference = uifgo::PrepareRawGaussianReference(graph, initial, raw_options);
+        {
+          auto out = Open(run_dir / "raw_reference.json");
+          out << "{\n  \"schema\": \"PAPER_RAW_REFERENCE_LM_V2\",\n"
+              << "  \"objective_before\": " << JsonNumberOrNull(graph.error(initial))
+              << ",\n  \"success\": " << (shared_reference.solve.converged ? "true" : "false")
+              << ",\n  \"reason\": \"" << JsonEscape(shared_reference.solve.reason)
+              << "\",\n  \"iterations\": " << shared_reference.solve.iterations;
+          if (shared_reference.solve.converged) {
+            const auto id = uifgo::ComputeInferenceContentIdentity(
+                graph, shared_reference.solve.values, common_identity_context);
+            double max_position_norm = 0.0;
+            for (size_t k = 0; k < keyframes.size(); ++k)
+              max_position_norm = std::max(max_position_norm,
+                  shared_reference.solve.values.at<gtsam::Pose3>(gtsam::Symbol('x', k)).translation().norm());
+            out << ",\n  \"objective_after\": " << JsonNumberOrNull(graph.error(shared_reference.solve.values))
+                << ",\n  \"max_position_norm_m\": " << JsonNumberOrNull(max_position_norm)
+                << ",\n  \"graph_identity\": \"" << id.graph_linearization_sha256
+                << "\",\n  \"values_identity\": \"" << id.values_sha256 << "\"";
+          }
+          out << "\n}\n";
+        }
+    }
+
     if (!args.method.empty()) {
       const auto& method = uifgo::PaperMethodByName(args.method);
       if (method.default_execution_type ==
@@ -2941,7 +3001,7 @@ int main(int argc, char** argv) {
               "fixed rejection requires explicit UIFGO_T09_REJECTION_THRESHOLD_SIGMA");
         failure_stage = "T09_BASELINE";
         const auto baseline = uifgo::RunPaperBaseline(
-            graph, initial, builder.factor_meta(), baseline_options);
+            graph, initial, builder.factor_meta(), baseline_options, &shared_reference);
         if (baseline.valid) {
           WriteTrajectory(run_dir, keyframes, baseline.final_values);
           WriteBiases(run_dir, keyframes, baseline.final_values);
@@ -3702,10 +3762,11 @@ int main(int argc, char** argv) {
         fde_options.preliminary_lm.policy =
             uifgo::ConditionalLmPolicy::GTSAM_CHECK_ONLY_V1;
         const auto stage1_started = std::chrono::steady_clock::now();
-        const auto fde = uifgo::ImuAidedFdeSupportProvider(fde_options).Run(
-            graph, initial, builder.factor_meta(), plan, cfg, fde_context);
+        fde_result = uifgo::ImuAidedFdeSupportProvider(fde_options).Run(
+            graph, initial, builder.factor_meta(), plan, cfg, fde_context, &shared_reference);
         stage1_seconds = std::chrono::duration<double>(
             std::chrono::steady_clock::now() - stage1_started).count();
+        const auto& fde = fde_result;
         WriteFdeArtifacts(run_dir, fde, fde_options);
         if (!fde.success()) {
           {
@@ -3767,24 +3828,33 @@ int main(int argc, char** argv) {
       options.lm_absolute_tolerance = cfg.lm_abs_tol;
       const auto stage2_started = std::chrono::steady_clock::now();
       const uifgo::SegmentRefitResult refit =
-          uifgo::SegmentRefitter(options).Run(
-              graph, refit_initial, builder.factor_meta(), plan, cfg, support);
+          (imu_aided_fde_run && support.segments.empty())
+              ? uifgo::ReuseEmptyFdeReference(graph, initial, builder.factor_meta(),
+                    plan, cfg, fde_result, options)
+              : uifgo::SegmentRefitter(options).Run(
+                    graph, refit_initial, builder.factor_meta(), plan, cfg, support);
       stage2_seconds = std::chrono::duration<double>(
           std::chrono::steady_clock::now() - stage2_started).count();
+      exported_refit_status = uifgo::SegmentRefitStatusName(refit.status);
       WriteRefitIterations(run_dir, refit);
-      if (cfg.final_inference_enabled) {
+      if (cfg.final_inference_enabled || imu_aided_fde_run) {
         WriteRefitIterations(run_dir, refit,
                              "stage2_refit_iterations.csv");
         auto stage2_status = Open(run_dir / "stage2_refit_status.json");
         stage2_status
             << "{\n  \"schema\": \"t08_stage2_refit_diagnostics_v1\",\n"
             << "  \"phase\": \"STAGE2_DEBIASED_REFIT\",\n"
-            << "  \"execution_status\": \"EXECUTED\",\n"
-            << "  \"solver_status\": \""
+            << "  \"execution_status\": \""
+            << (refit.status == uifgo::SegmentRefitStatus::SUCCESS_EMPTY ? "REFERENCE_REUSED" : "EXECUTED")
+            << "\",\n  \"solver_status\": \""
             << uifgo::SegmentRefitStatusName(refit.status)
             << "\",\n  \"stop_reason\": \"" << JsonEscape(refit.reason)
             << "\",\n  \"iteration_count\": " << refit.iterations.size()
-            << ",\n  \"estimate_semantics\": "
+            << ",\n  \"optimizer_calls\": "
+            << (refit.status == uifgo::SegmentRefitStatus::SUCCESS_EMPTY ? "0" : "null")
+            << ",\n  \"alternating_stop_conditions\": \""
+            << (refit.status == uifgo::SegmentRefitStatus::SUCCESS_EMPTY ? "NOT_APPLICABLE" : "APPLICABLE")
+            << "\",\n  \"estimate_semantics\": "
                "\"INTERMEDIATE_NOT_A_VALID_T08_FINAL_EXPORT_SOURCE\"\n}\n";
       }
 
@@ -4032,15 +4102,11 @@ int main(int argc, char** argv) {
                              : uifgo::kT04OracleDebugLabel))
             << "\",\n"
             << "  \"discovery\": \""
-            << (estimated_support_run ? "CONVERGED_STAGE1"
+            << (imu_aided_fde_run ? "SUCCESS_FDE_STAGE1" : estimated_support_run ? "CONVERGED_STAGE1"
                                         : "NOT_IMPLEMENTED_T04")
             << "\",\n"
             << "  \"segment_refit\": \""
-            << (refit.converged()
-                    ? (estimated_support_run ? "T06_STAGE2_CONVERGED"
-                                               : "T04_ORACLE_DEBUG_CONVERGED")
-                    : (estimated_support_run ? "T06_STAGE2_FAILED"
-                                               : "T04_ORACLE_DEBUG_FAILED"))
+            << uifgo::SegmentRefitStatusName(refit.status)
             << "\",\n"
             << "  \"recoverability_score\": \""
             << (cfg.score_recoverability ? "PENDING_AFTER_STAGE2"
@@ -4060,7 +4126,7 @@ int main(int argc, char** argv) {
       const double elapsed = std::chrono::duration<double>(
                                  std::chrono::steady_clock::now() - started)
                                  .count();
-      if (!refit.converged()) {
+      if (!refit.successful()) {
         auto out = Open(run_dir / "run_status.json");
         out << std::setprecision(17)
             << "{\n  \"status\": \"FAILED\",\n  \"exit_code\": 1,\n"
@@ -4270,9 +4336,9 @@ int main(int argc, char** argv) {
           out << "{\n  \"debug_label\": \""
               << uifgo::kT08DevelopmentGateLabel << "\",\n"
               << "  \"discovery\": \""
-              << (estimated_support_run ? "CONVERGED_STAGE1"
+              << (imu_aided_fde_run ? "SUCCESS_FDE_STAGE1" : estimated_support_run ? "CONVERGED_STAGE1"
                                           : "ORACLE_DEBUG_INPUT")
-              << "\",\n  \"segment_refit\": \"CONVERGED_STAGE2\",\n"
+              << "\",\n  \"segment_refit\": \"" << uifgo::SegmentRefitStatusName(refit.status) << "\",\n"
               << "  \"recoverability_score\": \"DECISION_SET_RETAINED\",\n"
               << "  \"gate\": \"FROZEN_GROUP_POLICY\",\n"
               << "  \"fallback\": \""
@@ -4421,10 +4487,10 @@ int main(int argc, char** argv) {
                       : uifgo::kT05OracleScoreDebugLabel)
               << "\",\n"
               << "  \"discovery\": \""
-              << (estimated_support_run ? "CONVERGED_STAGE1"
+              << (imu_aided_fde_run ? "SUCCESS_FDE_STAGE1" : estimated_support_run ? "CONVERGED_STAGE1"
                                           : "NOT_IMPLEMENTED_T05")
               << "\",\n"
-              << "  \"segment_refit\": \"CONVERGED\",\n"
+              << "  \"segment_refit\": \"" << uifgo::SegmentRefitStatusName(refit.status) << "\",\n"
               << "  \"segment_refit_estimate_exported\": true,\n"
               << "  \"recoverability_score\": \""
               << recoverability_summary << "\",\n"
@@ -4443,7 +4509,7 @@ int main(int argc, char** argv) {
                       ? uifgo::kT06AutomaticDiscoveryLabel
                       : uifgo::kT05OracleScoreDebugLabel)
               << "\",\n"
-              << "  \"segment_refit_status\": \"CONVERGED\",\n"
+              << "  \"segment_refit_status\": \"" << uifgo::SegmentRefitStatusName(refit.status) << "\",\n"
               << "  \"segment_refit_estimate_exported\": true,\n"
               << "  \"recoverability_status\": \""
               << recoverability_summary << "\",\n"
@@ -4462,7 +4528,7 @@ int main(int argc, char** argv) {
         out << "{\n  \"debug_label\": \""
             << uifgo::kT06AutomaticDiscoveryLabel << "\",\n"
             << "  \"discovery\": \"NO_CANDIDATES\",\n"
-            << "  \"segment_refit\": \"RAW_STAGE2_CONVERGED\",\n"
+            << "  \"segment_refit\": \"" << uifgo::SegmentRefitStatusName(refit.status) << "\",\n"
             << "  \"segment_refit_estimate_exported\": true,\n"
             << "  \"recoverability_score\": \"NOT_APPLICABLE_NO_CANDIDATES\",\n"
             << "  \"valid_score_exported\": false,\n"
@@ -4485,8 +4551,8 @@ int main(int argc, char** argv) {
                            ? uifgo::kT05OracleScoreDebugLabel
                            : uifgo::kT04OracleDebugLabel))
             << "\",\n"
-            << "  \"solver_status\": \"CONVERGED\",\n"
-            << "  \"segment_refit_status\": \"CONVERGED\",\n"
+            << "  \"solver_status\": \"" << uifgo::SegmentRefitStatusName(refit.status) << "\",\n"
+            << "  \"segment_refit_status\": \"" << uifgo::SegmentRefitStatusName(refit.status) << "\",\n"
             << "  \"segment_refit_estimate_exported\": true,\n"
             << "  \"recoverability_status\": \""
             << recoverability_summary << "\",\n"
@@ -4717,7 +4783,7 @@ int main(int argc, char** argv) {
                       : uifgo::kT05OracleScoreDebugLabel)
               << "\",\n"
               << "  \"failure_stage\": \"RECOVERABILITY_SCORE\",\n"
-              << "  \"segment_refit_status\": \"CONVERGED\",\n"
+              << "  \"segment_refit_status\": \"" << exported_refit_status << "\",\n"
               << "  \"segment_refit_estimate_exported\": true,\n"
               << "  \"recoverability_status\": \"EXCEPTION\",\n"
               << "  \"valid_score_exported\": false,\n"

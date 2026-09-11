@@ -116,15 +116,17 @@ Post-Processing System with Recoverability-Guided NLOS Handling}
 \begin{document}
 \maketitle
 
-\noindent\fbox{\parbox{0.96\columnwidth}{\small\textbf{0911 FDE engineering status.}
-The paper path now uses an IMU-aided residual FDE Stage~1 and retains the prior
-regularized discovery path as legacy/development code.  Engineering tests and a
-short Walk1 smoke pass.  In the frozen six-input run, three references failed and
-three zero-candidate runs failed the unchanged raw Stage~2 stop test, so no
-candidate-dependent final trajectory or paired accuracy claim is available.}}
+\noindent\fbox{\parbox{0.96\columnwidth}{\small\textbf{0911 post-fit FDE v2 engineering status.}
+A checked raw Gaussian reference and a paper-only robust-loss consistency fix
+restore full Walk1 localization (legacy/all-range/Cauchy aligned RMSE:
+0.169642/0.163853/0.163847\,m). Complete Gaussian post-fit normalization and
+audited zero-optimizer empty-support reuse pass 29 CTests, the fixed smoke,
+and all five full Walk1 methods. Both runs have zero candidates; they do not
+establish correction benefits. The historical six-input failures remain valid
+historical evidence; other inputs receive prepare checks only in this revision.}}
 
 \begin{abstract}
-Offline UWB--inertial post-processing can exploit future measurements to revise historical estimates, but it also needs explicit control of calibration, robustness, uncertainty diagnostics, and evaluation provenance. The implemented paper path uses an IMU-aided residual fault-detection-and-exclusion (FDE) front end, temporal positive-excess aggregation, an unregularized constrained segment refit, candidate-excluded marginal information, and frozen final policies. Accepted live bias states remain in the intended final joint graph; the LCB variants instead apply their separately specified fixed offsets. This residual front end belongs to the RAIM/FDE family, but it is neither a complete ARAIM implementation nor a certified integrity method. The present six-input evidence is negative/incomplete and supports no paired accuracy improvement claim.
+Offline UWB--inertial post-processing can exploit future measurements to revise historical estimates, but it also needs explicit control of calibration, robustness, uncertainty diagnostics, and evaluation provenance. The implemented paper path uses an IMU-aided residual fault-detection-and-exclusion (FDE) front end, temporal positive-excess aggregation, an unregularized constrained segment refit, candidate-excluded marginal information, and frozen final policies. Accepted live bias states remain in the intended final joint graph; the LCB variants instead apply their separately specified fixed offsets. This residual front end belongs to the RAIM/FDE family, but it is neither a complete ARAIM implementation nor a certified integrity method. The historical six-input evidence is negative/incomplete. The present Walk1 localization recovery and empty-support results establish engineering behavior, with no evidence of candidate correction benefits.
 \end{abstract}
 
 \section{Introduction}
@@ -208,13 +210,23 @@ The intended release contains source, build environment, tests, one example data
 This section follows the current method contract.  Implementation presence is
 separate from evidence of accuracy or integrity performance.
 \subsection{Stage 1: IMU-aided residual FDE}
-First solve the tightly coupled raw-range/IMU reference graph.  For every valid,
-planned scalar range factor, use the factor's own unwhitened residual and noise,
-\begin{equation}
- r_i=h_i(\widehat\X)+\beta_{m(i)}-z_i,\qquad
- q_i=r_i/\sigma_i,\qquad T_i=q_i^2.
+First solve the complete Gaussian raw-range/IMU reference graph with checked
+LM. Its Values initialize robust baselines and serve directly as the all-range
+and FDE reference. Linearize that same graph with all actual unknowns and full
+IMU covariance whitening. For whitened Jacobian $A$ and scalar range row $j(i)$,
+\begin{align}
+ d_i&=[I-AA^\dagger]_{j(i),j(i)},\quad [Q_r]_{ii}=\sigma_i^2d_i,\\
+ r_i&=h_i(\widehat\X)+\beta_{m(i)}-z_i,\quad
+ w_i=\frac{r_i}{\sqrt{[Q_r]_{ii}}},\quad T_i=w_i^2.
  \label{eq:discovery}
-\end{equation}
+\end{align}
+This is the local Gaussian residual covariance and local test normalization
+\cite{kuusniemi2005}. A single sparse QR and selected unit-vector solves compute
+the diagonals without a dense inverse or full projector. Uncertain rank or
+unresolved variance fails explicitly; damping and artificial priors are absent.
+The measurement-normalized $r_i/\sigma_i$ is a separately named diagnostic.
+Data-dependent initialization priors and calibration gaps remain limitations;
+a per-observation one-percent level is not a sequence-level false-alarm rate.
 With one degree of freedom and $p=0.99$, declare a two-sided fault only when
 $T_i>\chi^2_{1,0.99}=6.6349$; equality is retained.  Because positive excess
 range gives $r_i<0$ under this residual convention, a Stage~1 NLOS candidate
@@ -234,6 +246,12 @@ residual front end, not complete ARAIM and not a certified integrity monitor.
 Without a reference, $\beta'_m=\beta_m-d$ and $b'_{km}=b_{km}+d$ preserve predictions when feasible. In the noiseless known-trajectory limit, imposing $\min_k b_{km}=0$ selects $\beta_m=\min_k(z_{km}-h_{km})$; merely assuming that an unknown true LOS epoch exists does not make an unconstrained optimization unique. The main configuration instead fixes $\beta_m$ from independent LOS calibration. This ambiguity is a short motivation, not a headline theorem.
 
 \subsection{Stage 2: debiased segment refit}
+If FDE succeeds with all planned observations tested and an empty partition,
+\texttt{SUCCESS\_EMPTY} reuses the audited reference graph and Values. Stage~2
+and the four identical candidate-policy finals invoke no optimizer; alternating
+refit stopping conditions are not applicable. A nonempty partition with all
+candidates suppressed retains the original final/fallback path.
+
 Let $\widehat\Sg=\{\Sg_s\}$ be disjoint per-link constant-amplitude segments, and let $\C$ be their union of measurements. Use $b_i=c_s\geq0$ for $i\in\Sg_s$ and $b_i=0$ otherwise. Refit $\X,\bm\beta,\mathbf c$ without either the $\ell_1$ amplitude penalty or TV jump penalty, keeping the segment partition fixed. This removes penalty-induced shrinkage \emph{conditional on the selected partition}; it does not remove support-selection error or segment-model mismatch.
 
 Positive fitted amplitudes are analyzed as interior variables. Boundary or too-short segments are flagged as insufficient evidence, rather than assigned spuriously exact Gaussian uncertainty. The minimum-count rule also prevents one-sample segments from always passing a zero post-fit residual check.
@@ -510,6 +528,8 @@ C1 needs an actual reproducible cross-dataset artifact and measured system behav
 The intended conclusion is an evidence-backed system result: full-trajectory UWB--inertial post-processing with traceable NLOS decisions and final-graph-consistent uncertainty handling. The local score does not certify model truth, unbiasedness, or global nonlinear observability. Limitations include selected-support uncertainty, nuisance calibration errors, missed NLOS in the reference graph, a conservative all-candidate-excluded reference, limited geometry diversity from one anchor deployment, and offline resource requirements. \todo{Replace this writing target with quantified findings and verified release status.}
 
 \begin{thebibliography}{9}
+\bibitem{kuusniemi2005}
+H. Kuusniemi, ``User-Level Reliability and Quality Monitoring in Satellite-Based Personal Navigation, Ph.D. dissertation, Tampere University of Technology, 2005, Sec.~5.1, Eqs.~54 and~60.
 \bibitem{forster2015}
 C. Forster, L. Carlone, F. Dellaert, and D. Scaramuzza,
 ``On-manifold preintegration for real-time visual-inertial odometry,''

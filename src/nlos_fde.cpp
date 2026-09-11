@@ -16,12 +16,14 @@
 
 #include "uifgo/hash_utils.h"
 #include "uifgo/optimizer.h"
+#include "uifgo/nlos_inference.h"
+#include <gtsam/linear/GaussianFactorGraph.h>
 
 namespace uifgo {
 
-const char kImuAidedFdeProvider[] = "imu_aided_residual_fde_v1";
+const char kImuAidedFdeProvider[] = "imu_aided_postfit_fde_v2";
 const char kImuAidedFdeIdentityVersion[] =
-    "UIFGO_IMU_AIDED_RESIDUAL_FDE_IDENTITY_V1";
+    "UIFGO_IMU_AIDED_POSTFIT_FDE_IDENTITY_V2";
 
 namespace {
 
@@ -72,6 +74,7 @@ std::string SnapshotHash(const std::vector<FdeObservationRecord>& records,
               << row.planned << ',' << row.factor_index << ',' << row.tested
               << ',' << Binary64(row.residual_m) << ','
               << Binary64(row.factor_sigma_m) << ','
+              << Binary64(row.residual_variance_m2) << ',' << row.test_status << ','
               << Binary64(row.standardized_residual) << ','
               << Binary64(row.statistic) << ',' << row.fault_detected << ','
               << row.positive_excess << ',' << row.nlos_candidate << '\n';
@@ -108,6 +111,117 @@ std::string RawSegmentId(const FdeObservationRecord& first,
 }
 
 }  // namespace
+
+namespace {
+std::string ReferenceIdentity(const gtsam::NonlinearFactorGraph& graph,
+                              const gtsam::Values& values) {
+  InferenceIdentityContext context;
+  context.input_sha256 = context.config_sha256 = context.input_plan_sha256 =
+      context.support_partition_sha256 = context.calibration_sha256 =
+      context.solver_config_sha256 = "PAPER_RAW_REFERENCE_LM_V2";
+  const auto id = ComputeInferenceContentIdentity(graph, values, context);
+  return Sha256Hex(id.graph_linearization_sha256 + id.values_sha256);
+}
+void RequireGaussianGraph(const gtsam::NonlinearFactorGraph& graph) {
+  for (const auto& factor : graph) {
+    const auto noise = boost::dynamic_pointer_cast<gtsam::NoiseModelFactor>(factor);
+    if (!noise || !boost::dynamic_pointer_cast<gtsam::noiseModel::Gaussian>(noise->noiseModel()) ||
+        noise->noiseModel()->isConstrained())
+      throw std::invalid_argument("REFERENCE_REQUIRES_COMPLETE_GAUSSIAN_GRAPH");
+  }
+}
+}
+
+RawGaussianReference PrepareRawGaussianReference(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& initial,
+    const CheckedLmOptions& options) {
+  RawGaussianReference result;
+  RequireGaussianGraph(graph);
+  result.graph = graph;
+  result.initial_identity = ReferenceIdentity(graph, initial);
+  result.objective_before = graph.error(initial);
+  result.solve = RunPreliminaryTightlyCoupledLm(graph, initial, options);
+  if (result.solve.converged) {
+    result.final_identity = ReferenceIdentity(graph, result.solve.values);
+    result.objective_after = graph.error(result.solve.values);
+    RequireRawGaussianReference(result, graph, initial);
+  }
+  return result;
+}
+
+void RequireRawGaussianReference(const RawGaussianReference& reference,
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& initial) {
+  RequireGaussianGraph(graph);
+  if (!reference.solve.converged || !std::isfinite(reference.objective_before) ||
+      !std::isfinite(reference.objective_after) ||
+      !GraphAndValuesKeysMatch(graph, reference.solve.values) ||
+      reference.initial_identity != ReferenceIdentity(graph, initial) ||
+      reference.final_identity != ReferenceIdentity(graph, reference.solve.values) ||
+      reference.final_identity != ReferenceIdentity(reference.graph, reference.solve.values) ||
+      graph.error(reference.solve.values) != reference.objective_after)
+    throw std::invalid_argument("RAW_REFERENCE_SOLVE_OR_CONTENT_IDENTITY_MISMATCH");
+}
+
+FdeNormalization ComputeFdeNormalization(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
+    const std::vector<FactorMeta>& metadata) {
+  FdeNormalization out;
+  try {
+    RequireGaussianGraph(graph);
+    const auto residuals = ReadScalarUwbFactorResiduals(graph, values, metadata);
+    const auto linear = graph.linearize(values);
+    gtsam::Ordering ordering;
+    for (const auto& item : values) ordering.push_back(item.key);
+    size_t rows = 0, columns = 0;
+    const auto entries = linear->sparseJacobian(ordering, rows, columns);
+    if (columns != values.dim() + 1)
+      throw std::runtime_error("FDE_FULL_UNKNOWN_DIMENSION_MISMATCH");
+    std::vector<Eigen::Triplet<double>> triplets;
+    std::ostringstream canonical;
+    canonical << "IMU_AIDED_POSTFIT_LINEARIZATION_V2\n" << ReferenceIdentity(graph, values);
+    for (const auto& e : entries) {
+      const int row = std::get<0>(e), column = std::get<1>(e);
+      const double value = std::get<2>(e);
+      if (!std::isfinite(value) || row < 0 || column < 0 ||
+          row >= static_cast<int>(rows) || column >= static_cast<int>(columns))
+        throw std::runtime_error("FDE_INVALID_WHITENED_JACOBIAN_ENTRY");
+      canonical << '\n' << row << ',' << column << ',' << Binary64(value);
+      if (column < static_cast<int>(columns - 1)) triplets.emplace_back(row, column, value);
+    }
+    Eigen::SparseMatrix<double> A(rows, columns - 1);
+    A.setFromTriplets(triplets.begin(), triplets.end()); A.makeCompressed();
+    std::vector<size_t> offsets;
+    size_t offset = 0;
+    for (size_t i = 0; i < graph.size(); ++i) {
+      offsets.push_back(offset);
+      if (!linear->at(i)) throw std::runtime_error("FDE_NULL_LINEAR_FACTOR");
+      const size_t n = linear->at(i)->augmentedJacobian().rows();
+      if (n != graph.at(i)->dim()) throw std::runtime_error("FDE_FACTOR_ROW_DIMENSION_MISMATCH");
+      offset += n;
+    }
+    if (offset != rows) throw std::runtime_error("FDE_FACTOR_ROW_COVERAGE_MISMATCH");
+    std::vector<size_t> selected;
+    for (const auto& residual : residuals) {
+      selected.push_back(offsets.at(residual.factor_index));
+      canonical << '\n' << residual.obs_id << ',' << residual.factor_index << ',' << selected.back();
+    }
+    out.linearization_identity = "sha256:" + Sha256Hex(canonical.str());
+    out.projection = ComputeSparseResidualProjectionDiagonal(A, selected);
+    if (!out.projection.valid) return out;
+    for (size_t i = 0; i < residuals.size(); ++i) {
+      const double sigma = residuals[i].sigma_m;
+      const double variance = sigma * sigma * out.projection.diagonal[i];
+      if (!std::isfinite(variance) || variance <= 0.0)
+        throw std::runtime_error("FDE_RESIDUAL_VARIANCE_NONFINITE_OR_UNRESOLVED");
+      out.residual_variance_m2.push_back(variance);
+    }
+  } catch (const std::exception& error) {
+    out.projection.valid = false;
+    out.projection.reason = error.what();
+    out.residual_variance_m2.clear();
+  }
+  return out;
+}
 
 CheckedLmResult RunPreliminaryTightlyCoupledLm(
     const gtsam::NonlinearFactorGraph& graph,
@@ -197,15 +311,20 @@ std::string ComputeFdeIdentity(const FdeOptions& options,
 }
 
 void ClassifyFdeResidual(double residual_m, double factor_sigma_m,
+                         double residual_variance_m2,
                          const FdeOptions& options,
                          FdeObservationRecord* record) {
   if (!record || !OptionsValid(options) || !std::isfinite(residual_m) ||
-      !std::isfinite(factor_sigma_m) || !(factor_sigma_m > 0.0))
+      !std::isfinite(factor_sigma_m) || !(factor_sigma_m > 0.0) ||
+      !std::isfinite(residual_variance_m2) || !(residual_variance_m2 > 0.0))
     throw std::invalid_argument("FDE residual classification input invalid");
   record->tested = true;
   record->residual_m = residual_m;
   record->factor_sigma_m = factor_sigma_m;
-  record->standardized_residual = residual_m / factor_sigma_m;
+  record->residual_variance_m2 = residual_variance_m2;
+  record->measurement_standardized_residual_diagnostic = residual_m / factor_sigma_m;
+  record->standardized_residual = residual_m / std::sqrt(residual_variance_m2);
+  record->test_status = "TESTED_POSTFIT_GAUSSIAN_V2";
   record->statistic = record->standardized_residual *
                       record->standardized_residual;
   const double threshold = Chi2inv(options.chi2_probability,
@@ -348,18 +467,61 @@ SupportPartition BuildFdeSupportPartition(
   return partition;
 }
 
+SegmentRefitResult ReuseEmptyFdeReference(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& initial,
+    const std::vector<FactorMeta>& metadata, const PaperInputPlan& plan,
+    const Config& cfg, const FdeResult& fde, const RefitOptions& options) {
+  SegmentRefitResult result;
+  try {
+    if (!fde.success() || !fde.reference.converged ||
+        !fde.normalization.projection.valid || !fde.partition.segments.empty() ||
+        fde.partition.provider != kImuAidedFdeProvider ||
+        fde.planned_count == 0 || fde.tested_count != fde.planned_count)
+      throw std::invalid_argument("SUCCESS_EMPTY_PRECONDITIONS_FAILED");
+    RequireRawGaussianReference(fde.raw_reference, graph, initial);
+    if (ReferenceIdentity(graph, fde.reference.values) != fde.raw_reference.final_identity)
+      throw std::invalid_argument("SUCCESS_EMPTY_REFERENCE_VALUES_MISMATCH");
+    size_t tested = 0;
+    for (const auto& row : fde.observations) {
+      if (!row.valid || !row.planned) continue;
+      if (!row.tested || !std::isfinite(row.residual_variance_m2) ||
+          row.residual_variance_m2 <= 0.0)
+        throw std::invalid_argument("SUCCESS_EMPTY_OBSERVATION_TEST_INCOMPLETE");
+      ++tested;
+    }
+    if (tested != fde.planned_count) throw std::invalid_argument("SUCCESS_EMPTY_COUNT_MISMATCH");
+    result = SegmentRefitter(options).RunFrozenCandidatePolicy(
+        graph, fde.reference.values, metadata, plan, cfg, fde.partition, {}, false);
+    if (!result.successful() || !result.iterations.empty() ||
+        ReferenceIdentity(result.graph, result.values) != fde.raw_reference.final_identity)
+      throw std::invalid_argument("SUCCESS_EMPTY_GRAPH_RECONSTRUCTION_MISMATCH:" + result.reason);
+    result.graph = fde.raw_reference.graph;
+    result.values = fde.raw_reference.solve.values;
+    result.status = SegmentRefitStatus::SUCCESS_EMPTY;
+    result.reason = "SUCCESS_EMPTY_REFERENCE_REUSED_ALTERNATING_CONDITIONS_NOT_APPLICABLE";
+  } catch (const std::exception& error) {
+    result.status = SegmentRefitStatus::INVALID_INPUT;
+    result.reason = error.what();
+    result.graph = {}; result.values.clear();
+  }
+  return result;
+}
+
 FdeResult ImuAidedFdeSupportProvider::Run(
     const gtsam::NonlinearFactorGraph& base_graph,
     const gtsam::Values& base_values,
     const std::vector<FactorMeta>& base_uwb_factor_metadata,
     const PaperInputPlan& plan, const Config& cfg,
-    const FdeContext& context) const {
+    const FdeContext& context, const RawGaussianReference* prepared) const {
   FdeResult result;
   result.chi2_threshold = Chi2inv(options_.chi2_probability,
                                   options_.chi2_degrees_of_freedom);
   auto fail = [&](FdeStatus status, const std::string& reason) {
     result.status = status;
     result.reason = reason;
+    for (auto& row : result.observations)
+      if (row.valid && row.planned && !row.tested)
+        row.test_status = "NOT_TESTED_FDE_FAILED:" + reason;
     return result;
   };
   try {
@@ -432,17 +594,26 @@ FdeResult ImuAidedFdeSupportProvider::Run(
     result.partition.calibration_hash = context.calibration_hash;
     result.partition.solver_config_hash = context.solver_config_hash;
     result.partition.discovery_context_hash = result.identity_hash;
-    result.reference = RunPreliminaryTightlyCoupledLm(
+    result.raw_reference = prepared ? *prepared : PrepareRawGaussianReference(
         base_graph, base_values, options_.preliminary_lm);
+    result.reference = result.raw_reference.solve;
     if (!result.reference.converged)
       return fail(FdeStatus::REFERENCE_LM_FAILED,
                   "PRELIMINARY_LM_FAILED:" + result.reference.reason);
 
+    RequireRawGaussianReference(result.raw_reference, base_graph, base_values);
+    result.normalization = ComputeFdeNormalization(
+        base_graph, result.reference.values, base_uwb_factor_metadata);
+    if (!result.normalization.projection.valid)
+      return fail(FdeStatus::OBSERVATION_TEST_FAILED,
+                  result.normalization.projection.reason);
     const auto residuals = ReadScalarUwbFactorResiduals(
         base_graph, result.reference.values, base_uwb_factor_metadata);
+    size_t residual_index = 0;
     for (const auto& residual : residuals) {
       auto& row = result.observations.at(row_by_obs.at(residual.obs_id));
-      ClassifyFdeResidual(residual.residual_m, residual.sigma_m, options_,
+      ClassifyFdeResidual(residual.residual_m, residual.sigma_m,
+                          result.normalization.residual_variance_m2.at(residual_index++), options_,
                           &row);
       ++result.tested_count;
       result.fault_count += row.fault_detected;

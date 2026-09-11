@@ -1,5 +1,9 @@
 # UWB-IMU-IE sprint 状态
 
+## 0911-RECOVERY-FDE-V2 当前任务
+
+`DONE / LOCALIZATION_AND_ENGINEERING_GATES_PASS / WALK1_ZERO_CANDIDATE`。实施前授权见 [当前任务卡与 amendment](RECOVERY_FDE_V2_PROTOCOL.md)，[完整结果与命令](../ie_0911/RECOVERY_FDE_V2_RESULT.md)。fresh legacy/all-range/Cauchy full Walk1 aligned RMSE=0.169642149/0.163853268/0.163847231m，定位门通过；修复paper-only robust loss与IRLS不一致。完整Gaussian post-fit FDE、SUCCESS_EMPTY和同graph/Values零优化复用已实现。最终CTest29/29；固定smoke与full Walk1五方法均完成，分别55/1074条planned全检、零候选，Stage2及四final optimizer=0，协方差AVAILABLE。六输入五方法30项prepare通过，其它输入精度矩阵NOT_RUN。历史边界以下保留；T10=C2-C、T11=C、C1–C3不升级。用户于任务完成后明确授权提交并推送本轮实现；受保护的未跟踪 `doc/v2/ie_0911/` 不纳入提交。
+
 ## 0911-FDE-STEP1 用户授权 amendment（2026-09-11）
 
 当前任务：`DONE / IMPLEMENTED_AND_ENGINEERING_VERIFIED / SIX_INPUT_NEGATIVE_INCOMPLETE`。本轮用户实施计划替代此前 STEP2 结束后的停止边界，授权论文主代码路径

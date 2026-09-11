@@ -350,6 +350,8 @@ const char* SegmentRefitStatusName(SegmentRefitStatus status) {
   switch (status) {
     case SegmentRefitStatus::CONVERGED:
       return "CONVERGED";
+    case SegmentRefitStatus::SUCCESS_EMPTY:
+      return "SUCCESS_EMPTY";
     case SegmentRefitStatus::INVALID_INPUT:
       return "INVALID_INPUT";
     case SegmentRefitStatus::NONPOSITIVE_OR_NONFINITE_DENOMINATOR:

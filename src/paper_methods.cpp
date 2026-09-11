@@ -1,12 +1,16 @@
 #include "uifgo/paper_methods.h"
 
 #include "uifgo/nlos_fde.h"
+#include "uifgo/paper_robust_noise.h"
 
 #include <gtsam/linear/NoiseModel.h>
 #include <Eigen/Eigenvalues>
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
+#include <iostream>
+#include <iomanip>
 #include <set>
 #include <stdexcept>
 #include <unordered_map>
@@ -135,7 +139,7 @@ gtsam::NonlinearFactorGraph RobustGraph(
     else
       estimator = gtsam::noiseModel::mEstimator::Cauchy::Create(scale);
     output.add(noise_factor->cloneWithNewNoiseModel(
-        gtsam::noiseModel::Robust::Create(estimator, base_noise)));
+        boost::make_shared<PaperRobustNoise>(estimator, base_noise)));
   }
   return output;
 }
@@ -279,7 +283,7 @@ BaselineResult RunPaperBaseline(
     const gtsam::NonlinearFactorGraph& base_graph,
     const gtsam::Values& common_initial_values,
     const std::vector<FactorMeta>& base_uwb_metadata,
-    const BaselineOptions& options) {
+    const BaselineOptions& options, const RawGaussianReference* prepared) {
   BaselineResult result;
   try {
     ValidateBaselineInputs(base_graph, common_initial_values,
@@ -293,15 +297,17 @@ BaselineResult RunPaperBaseline(
       throw std::invalid_argument("baseline parameter provenance is required");
     const auto uwb_by_index = MetadataByIndex(base_uwb_metadata);
 
+    const auto reference = prepared ? *prepared : PrepareRawGaussianReference(
+        base_graph, common_initial_values, options.lm);
+    result.preliminary = reference.solve;
+    if (!result.preliminary.converged) {
+      result.reason = "PRELIMINARY_LM_FAILED:" + result.preliminary.reason;
+      return result;
+    }
+    RequireRawGaussianReference(reference, base_graph, common_initial_values);
     if (options.method == PaperMethod::FIXED_REJECTION) {
       if (!FiniteNonnegative(options.rejection_threshold_sigma))
         throw std::invalid_argument("fixed rejection threshold is invalid");
-      result.preliminary = RunPreliminaryTightlyCoupledLm(
-          base_graph, common_initial_values, options.lm);
-      if (!result.preliminary.converged) {
-        result.reason = "PRELIMINARY_LM_FAILED:" + result.preliminary.reason;
-        return result;
-      }
       std::set<size_t> rejected_indices;
       const auto preliminary_residuals = ReadScalarUwbFactorResiduals(
           base_graph, result.preliminary.values, base_uwb_metadata);
@@ -339,8 +345,24 @@ BaselineResult RunPaperBaseline(
           result.final_graph, base_uwb_metadata, none, &unused);
       for (const auto& item : uwb_by_index)
         result.kept_uwb_obs_ids.push_back(item.second->obs_id);
-      result.final = RunCheckedConditionalLm(
-          result.final_graph, common_initial_values, options.lm);
+      CheckedLmDiagnosticRequest diagnostic;
+      diagnostic.finite_difference_steps = {1e-4, 1e-5, 1e-6};
+      const bool capture = std::getenv("UIFGO_BASELINE_DIAGNOSTIC") != nullptr;
+      result.final = options.method == PaperMethod::ALL_RANGE
+          ? result.preliminary
+          : RunCheckedConditionalLm(
+                result.final_graph, result.preliminary.values, options.lm,
+                capture ? &diagnostic : nullptr);
+      if (capture) {
+        for (const auto& call : result.final.diagnostic.calls)
+          std::cout << std::setprecision(17) << "BASELINE_CALL "
+                    << call.call_index << ' ' << call.error_before << ' '
+                    << call.error_after << ' ' << call.lambda_after << ' '
+                    << call.accepted_values_delta_norm << '\n';
+        for (const auto& f : result.final.diagnostic.factors)
+          std::cout << "BASELINE_FACTOR " << f.factor_index << ' '
+                    << f.error_at_capture_start << ' ' << f.error_at_capture_final << '\n';
+      }
     }
     if (!result.final.converged) {
       result.reason = "FINAL_LM_FAILED:" + result.final.reason;

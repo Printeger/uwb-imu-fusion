@@ -41,7 +41,7 @@ if method == "structured_debias":
         "stage2_refit_config_sha256":"sha256:stage2",
         "stage3_score_config_sha256":"sha256:stage3"}))
     (run / "input_manifest.json").write_text(json.dumps({"source_hash_sha256":"sha256:x"}))
-    (run / "capability_status.json").write_text(json.dumps({"discovery":"CONVERGED_STAGE1","recoverability_score":"ONE_OR_MORE_GROUP_SCORES_UNAVAILABLE"}))
+    (run / "capability_status.json").write_text(json.dumps({"segment_refit":"CONVERGED","discovery":"CONVERGED_STAGE1","recoverability_score":"ONE_OR_MORE_GROUP_SCORES_UNAVAILABLE"}))
     (run / "run_status.json").write_text(json.dumps({"status":"PARTIAL_STAGE2_OK_SCORE_UNAVAILABLE","exit_code":1,"reason":"partial"}))
     sys.exit(1)
 (run / "baseline_factor_audit.csv").write_text("obs_id,final_use,reason\n1,1,RETAINED\n2,1,RETAINED\n")

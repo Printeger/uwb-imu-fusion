@@ -13,6 +13,8 @@
 
 namespace uifgo {
 
+struct RawGaussianReference;
+
 enum class PaperMethod {
   LCB_PARTIAL,
   LCB_FIXED_FULL,
@@ -101,6 +103,7 @@ BaselineResult RunPaperBaseline(
     const gtsam::NonlinearFactorGraph& base_graph,
     const gtsam::Values& common_initial_values,
     const std::vector<FactorMeta>& base_uwb_metadata,
-    const BaselineOptions& options);
+    const BaselineOptions& options,
+    const RawGaussianReference* prepared = nullptr);
 
 }  // namespace uifgo

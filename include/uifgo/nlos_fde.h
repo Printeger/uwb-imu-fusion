@@ -12,6 +12,8 @@
 #include "uifgo/config.h"
 #include "uifgo/nlos_solver_utils.h"
 #include "uifgo/nlos_support.h"
+#include "uifgo/nlos_recoverability.h"
+#include "uifgo/nlos_refit.h"
 #include "uifgo/paper_input.h"
 #include "uifgo/types.h"
 
@@ -36,6 +38,29 @@ CheckedLmResult RunPreliminaryTightlyCoupledLm(
 std::vector<PreliminaryUwbResidual> ReadScalarUwbFactorResiduals(
     const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
     const std::vector<FactorMeta>& uwb_factor_metadata);
+
+struct RawGaussianReference {
+  gtsam::NonlinearFactorGraph graph;
+  CheckedLmResult solve;
+  std::string initial_identity;
+  std::string final_identity;
+  double objective_before = std::numeric_limits<double>::quiet_NaN();
+  double objective_after = std::numeric_limits<double>::quiet_NaN();
+};
+RawGaussianReference PrepareRawGaussianReference(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& initial,
+    const CheckedLmOptions& options);
+void RequireRawGaussianReference(const RawGaussianReference& reference,
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& initial);
+
+struct FdeNormalization {
+  std::string linearization_identity;
+  ResidualProjectionResult projection;
+  std::vector<double> residual_variance_m2;
+};
+FdeNormalization ComputeFdeNormalization(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
+    const std::vector<FactorMeta>& metadata);
 
 struct FdeOptions {
   double chi2_probability = 0.99;
@@ -63,6 +88,9 @@ struct FdeObservationRecord {
   bool tested = false;
   double residual_m = std::numeric_limits<double>::quiet_NaN();
   double factor_sigma_m = std::numeric_limits<double>::quiet_NaN();
+  double residual_variance_m2 = std::numeric_limits<double>::quiet_NaN();
+  double measurement_standardized_residual_diagnostic = std::numeric_limits<double>::quiet_NaN();
+  std::string test_status = "NOT_TESTED";
   double standardized_residual = std::numeric_limits<double>::quiet_NaN();
   double statistic = std::numeric_limits<double>::quiet_NaN();
   bool fault_detected = false;
@@ -103,6 +131,8 @@ struct FdeResult {
   std::string identity_hash;
   double chi2_threshold = std::numeric_limits<double>::quiet_NaN();
   CheckedLmResult reference;
+  RawGaussianReference raw_reference;
+  FdeNormalization normalization;
   std::vector<FdeObservationRecord> observations;
   SupportPartition partition;
   size_t planned_count = 0;
@@ -119,6 +149,7 @@ struct FdeResult {
 // Pure residual classification and temporal aggregation entry points used by
 // deterministic boundary tests. Classification is strict at the threshold.
 void ClassifyFdeResidual(double residual_m, double factor_sigma_m,
+                         double residual_variance_m2,
                          const FdeOptions& options,
                          FdeObservationRecord* record);
 SupportPartition BuildFdeSupportPartition(
@@ -128,6 +159,11 @@ SupportPartition BuildFdeSupportPartition(
 
 std::string ComputeFdeIdentity(const FdeOptions& options,
                                const FdeContext& context);
+
+SegmentRefitResult ReuseEmptyFdeReference(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& initial,
+    const std::vector<FactorMeta>& metadata, const PaperInputPlan& plan,
+    const Config& cfg, const FdeResult& fde, const RefitOptions& options);
 
 class ImuAidedFdeSupportProvider {
  public:
@@ -139,7 +175,8 @@ class ImuAidedFdeSupportProvider {
                 const gtsam::Values& base_values,
                 const std::vector<FactorMeta>& base_uwb_factor_metadata,
                 const PaperInputPlan& plan, const Config& cfg,
-                const FdeContext& context) const;
+                const FdeContext& context,
+                const RawGaussianReference* prepared = nullptr) const;
 
  private:
   FdeOptions options_;

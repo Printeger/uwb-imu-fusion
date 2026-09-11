@@ -339,7 +339,7 @@ std::vector<GroupRecoverabilityScore> ScoreRefitRecoverability(
     const SegmentRefitResult& refit, const SupportPartition& support,
     const PaperInputPlan& plan, const Config& cfg,
     const RecoverabilityOptions& options) {
-  if (!refit.converged())
+  if (!refit.successful())
     throw std::invalid_argument("recoverability requires converged Stage 2");
   if (cfg.calib_lever || cfg.calib_anchor || cfg.calib_td)
     throw std::invalid_argument("scoring input has unsupported free calibration");
@@ -551,7 +551,7 @@ std::vector<GroupRecoverabilityScore> ScoreFinalRefitRecoverability(
       if (!accepted.count(obs_id)) intentionally_absent.insert(obs_id);
     }
   }
-  if (!final_refit.converged())
+  if (!final_refit.successful())
     throw std::invalid_argument("final recoverability requires converged refit");
   if (cfg.calib_lever || cfg.calib_anchor || cfg.calib_td)
     throw std::invalid_argument("final scoring input has unsupported free calibration");

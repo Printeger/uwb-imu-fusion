@@ -429,8 +429,9 @@ void EnsureExplicitScoreRows(
 
 RefitAttemptDiagnostics AttemptDiagnostics(const SegmentRefitResult& refit) {
   RefitAttemptDiagnostics output;
-  output.executed = true;
-  output.execution_status = refit.converged() ? "SUCCEEDED" : "FAILED";
+  output.executed = refit.status != SegmentRefitStatus::SUCCESS_EMPTY;
+  output.execution_status = refit.status == SegmentRefitStatus::SUCCESS_EMPTY
+      ? "REUSED_REFERENCE_ZERO_OPTIMIZER_CALLS" : (refit.successful() ? "SUCCEEDED" : "FAILED");
   output.solver_status = SegmentRefitStatusName(refit.status);
   output.stop_reason = refit.reason;
   output.iterations = refit.iterations;
@@ -724,10 +725,33 @@ InferenceResult FinalInferenceEngine::Run(
     finish();
     return result;
   }
-  if (!stage2_refit.converged()) {
+  if (!stage2_refit.successful()) {
     result.reason = "STAGE2_REFIT_NOT_CONVERGED";
     finish();
     return result;
+  }
+
+  if (stage2_refit.status == SegmentRefitStatus::SUCCESS_EMPTY) {
+    if (!frozen_full_support.segments.empty() || !stage2_refit.segments.empty() ||
+        !stage2_refit.iterations.empty() ||
+        frozen_full_support.provider != "imu_aided_postfit_fde_v2") {
+      result.reason = "SUCCESS_EMPTY_NONEMPTY_SUPPORT_OR_TRACE";
+      finish(); return result;
+    }
+    const auto rebuilt = SegmentRefitter(refit_options_).RunFrozenCandidatePolicy(
+        frozen_raw_graph, stage2_refit.values, frozen_raw_uwb_metadata, plan, cfg,
+        frozen_full_support, {}, false);
+    if (!rebuilt.successful()) {
+      result.reason = "SUCCESS_EMPTY_FINAL_REBUILD_FAILED:" + rebuilt.reason;
+      finish(); return result;
+    }
+    const auto actual = ComputeInferenceContentIdentity(stage2_refit.graph, stage2_refit.values, identity_context);
+    const auto expected = ComputeInferenceContentIdentity(rebuilt.graph, rebuilt.values, identity_context);
+    if (actual.graph_linearization_sha256 != expected.graph_linearization_sha256 ||
+        actual.values_sha256 != expected.values_sha256) {
+      result.reason = "SUCCESS_EMPTY_FINAL_GRAPH_IDENTITY_MISMATCH";
+      finish(); return result;
+    }
   }
 
   const bool fixed_mode = policy_ == FinalGatePolicy::LCB_PARTIAL ||
@@ -833,7 +857,7 @@ InferenceResult FinalInferenceEngine::Run(
   }
   result.timing.recovery_refit_seconds = SecondsSince(recovery_started);
   result.recovery_attempt = AttemptDiagnostics(recovery);
-  if (!recovery.converged()) {
+  if (!recovery.successful()) {
     recovery_ok = false;
     recovery_failure = std::string("RECOVERY_REFIT_FAILED_") +
                        SegmentRefitStatusName(recovery.status) + ": " +
@@ -993,7 +1017,7 @@ InferenceResult FinalInferenceEngine::Run(
     result.fallback_refit_attempt = AttemptDiagnostics(fallback);
     result.fallback.fallback_solver_status =
         SegmentRefitStatusName(fallback.status);
-    if (!fallback.converged()) {
+    if (!fallback.successful()) {
       result.fallback_refit_attempt.acceptance_audit_status =
           "FAILED_BEFORE_AUDIT";
       result.fallback_refit_attempt.acceptance_failure_reason =

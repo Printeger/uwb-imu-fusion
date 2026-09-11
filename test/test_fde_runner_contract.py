@@ -21,10 +21,10 @@ def write(path, value):
 def make_run(root: Path, fde: bool) -> Path:
     run = root / ("fde" if fde else "legacy")
     run.mkdir()
-    write(run / "run_status.json", json.dumps({"exit_code": 0, "status": "OK"}))
+    write(run / "run_status.json", json.dumps({"exit_code": 0, "status": "OK", "segment_refit_status": "CONVERGED"}))
     write(run / "capability_status.json", json.dumps({
         "discovery": "NO_CANDIDATES", "recoverability_score": "COMPLETE"}))
-    provider = "imu_aided_residual_fde_v1" if fde else "automatic_discovery"
+    provider = "imu_aided_postfit_fde_v2" if fde else "automatic_discovery"
     write(run / "input_manifest.json", json.dumps({
         "source_hash_sha256": "sha256:source", "stage1_provider": provider}))
     write(run / "stage2_producer_context.json", json.dumps({
@@ -72,7 +72,7 @@ def main():
         payloads = {item["name"] for item in fde_manifest["payloads"]}
         assert {"fde_status.json", "fde_observations.csv",
                 "support_partition.json"}.issubset(payloads)
-        assert fde_manifest["stage1_provider"] == "imu_aided_residual_fde_v1"
+        assert fde_manifest["stage1_provider"] == "imu_aided_postfit_fde_v2"
         assert not any("discovery_iteration" in name or "admm" in name or
                        "outer_trace" in name for name in payloads)
 
@@ -80,6 +80,19 @@ def main():
         legacy_manifest = publish(legacy, root / "cache-legacy")
         assert legacy_manifest["stage1_provider"] == "automatic_discovery"
         assert legacy_manifest["cache_id"] != fde_manifest["cache_id"]
+
+        obsolete_root = root / "obsolete-run"
+        obsolete_root.mkdir()
+        obsolete = make_run(obsolete_root, True)
+        old_input = json.loads((obsolete / "input_manifest.json").read_text())
+        old_input["stage1_provider"] = "imu_aided_fde_v1"
+        write(obsolete / "input_manifest.json", json.dumps(old_input))
+        try:
+            publish(obsolete, root / "cache-obsolete")
+        except RuntimeError as error:
+            assert "obsolete FDE provider" in str(error)
+        else:
+            raise AssertionError("obsolete FDE cache was admitted")
 
         incomplete_root = root / "incomplete-run"
         incomplete_root.mkdir()
@@ -91,6 +104,50 @@ def main():
             assert "incomplete" in str(error)
         else:
             raise AssertionError("incomplete FDE cache was admitted")
+        # A genuine SUCCESS_EMPTY carries independent reference/test evidence,
+        # and no alternating optimizer trace. Corruption must fail publication.
+        empty_root = root / "empty-run"
+        empty_root.mkdir()
+        empty = make_run(empty_root, True)
+        partition = json.dumps({"provider": "imu_aided_postfit_fde_v2", "segments": []})
+        for name in ("partition.json", "support_partition.json"):
+            write(empty / name, partition)
+        write(empty / "refit_iterations.csv", "outer_iteration\n")
+        write(empty / "raw_reference.json", json.dumps({"success": True, "graph_identity": "sha256:graph", "values_identity": "sha256:values"}))
+        evidence = {"provider": "imu_aided_postfit_fde_v2", "status": "SUCCESS", "gt_read": False,
+                    "reference_converged": True, "planned_count": 8, "tested_count": 8}
+        write(empty / "fde_status.json", json.dumps(evidence))
+        write(empty / "stage2_refit_status.json", json.dumps({"solver_status": "SUCCESS_EMPTY",
+              "optimizer_calls": 0, "alternating_stop_conditions": "NOT_APPLICABLE"}))
+        admitted = publish(empty, root / "cache-empty")
+        assert admitted["stage2_status"] == "SUCCESS_EMPTY"
+        write(empty / "raw_reference.json", json.dumps({"success": True, "graph_identity": "sha256:wrong", "values_identity": "sha256:values"}))
+        try:
+            publish(empty, root / "cache-wrong-graph")
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("reference graph identity mismatch admitted")
+        write(empty / "raw_reference.json", json.dumps({"success": True, "graph_identity": "sha256:graph", "values_identity": "sha256:values"}))
+        for field, bad in (("reference_converged", False), ("tested_count", 7)):
+            corrupt = dict(evidence, **{field: bad})
+            write(empty / "fde_status.json", json.dumps(corrupt))
+            try:
+                publish(empty, root / ("cache-bad-" + field))
+            except RuntimeError:
+                pass
+            else:
+                raise AssertionError("invalid empty reference admitted: " + field)
+        write(empty / "fde_status.json", json.dumps(evidence))
+        nonempty = json.dumps({"provider": "imu_aided_postfit_fde_v2", "segments": [{"id": "s"}]})
+        for name in ("partition.json", "support_partition.json"):
+            write(empty / name, nonempty)
+        try:
+            publish(empty, root / "cache-all-suppress")
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("nonempty/all-suppress confused with empty")
     print("FDE runner/cache contracts: PASS")
 
 
