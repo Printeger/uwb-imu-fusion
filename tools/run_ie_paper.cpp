@@ -393,9 +393,17 @@ std::string GateThresholdsHash(double tau_eta, double tau_s_m,
 
 std::string Stage2RefitConfigHash(const uifgo::Config& cfg) {
   std::ostringstream canonical;
-  canonical << "uifgo-t14-stage2-refit-config-v1\n"
+  canonical << "uifgo-stage2-refit-config-terminal-stationarity-recovery-v3\n"
             << uifgo::ImuCovarianceModelIdentity(cfg, gtsam::Vector3(0, 0, -cfg.gravity), cfg.paper_imu_covariance_model) << '\n'
             << uifgo::PaperPosePriorJacobianIdentity() << '\n'
+            << "nonempty_conditional_policy="
+            << uifgo::ConditionalLmPolicyName(uifgo::ConditionalLmPolicy::
+                   GTSAM_CHECK_AND_NAVIGATION_STATIONARITY_CONTINUE_LAMBDA_SEARCH_V2)
+            << '\n'
+            << "strict_trigger=OBJECTIVE_STEP_C_KKT_PASS_NAVIGATION_FAIL_V1\n"
+            << "fixed_checkpoint_recovery=IDENTICAL_GRAPH_VALUES_RESET_LAMBDA_V2\n"
+            << "checkpoint_restart_limit=max_refit_iterations\n"
+            << "total_call_budget=max_refit_iterations_times_lm_max_iter\n"
             << Binary64Token(cfg.refit_boundary_epsilon_m) << '\n'
             << Binary64Token(cfg.refit_relative_objective_tolerance) << '\n'
             << Binary64Token(cfg.refit_scaled_step_tolerance) << '\n'
@@ -983,7 +991,10 @@ void WriteRefitIterations(const fs::path& run_dir,
          "navigation_gradient_roundoff_allowance_objective,"
          "navigation_stationarity_tolerance_objective,"
          "allowed_objective_increase,objective_ok,step_ok,kkt_ok,"
-         "navigation_stationarity_ok\n";
+         "navigation_stationarity_ok,"
+         "conditional_fixed_checkpoint_recovery_used,"
+         "conditional_fixed_checkpoint_restart_count,"
+         "conditional_inner_status\n";
   out << std::setprecision(17);
   for (const auto& trace : result.iterations) {
     out << trace.outer_iteration << ',' << trace.conditional_lm_iterations
@@ -1001,7 +1012,10 @@ void WriteRefitIterations(const fs::path& run_dir,
         << trace.navigation_stationarity_tolerance_objective << ','
         << trace.allowed_objective_increase << ',' << trace.objective_ok << ','
         << trace.step_ok << ',' << trace.kkt_ok << ','
-        << trace.navigation_stationarity_ok << '\n';
+        << trace.navigation_stationarity_ok << ','
+        << trace.conditional_fixed_checkpoint_recovery_used << ','
+        << trace.conditional_fixed_checkpoint_restart_count << ','
+        << CsvEscape(trace.conditional_inner_status) << '\n';
   }
 }
 

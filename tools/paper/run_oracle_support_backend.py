@@ -15,7 +15,7 @@ import nlos_experiment_common as common
 
 
 LOCKED_ROOT = Path("/home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01")
-BASELINE_HEAD = "15b32f5afa01c5a0f8bc432bbac78c53bfa36420"
+BASELINE_HEAD = "3db4f3175fc647ac5a24e3de771e7e41ceddf4e7"
 METHODS = ("suppress_all", "structured_debias", "lcb_fixed_full", "lcb_partial")
 
 

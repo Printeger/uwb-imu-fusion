@@ -731,6 +731,59 @@ TEST(CheckedConditionalLmPolicyV2,
   EXPECT_TRUE(recovered.last_qualification_stationarity.stationary);
 }
 
+TEST(CheckedConditionalLmPolicyV2,
+     FixedCheckpointRecoveryKeepsObjectiveAndReachesStationarity) {
+  using gtsam::symbol_shorthand::X;
+  gtsam::NonlinearFactorGraph graph;
+  graph.add(boost::make_shared<QuadraticRecoveryFactor>(X(0)));
+  gtsam::Values initial;
+  initial.insert(X(0), gtsam::Pose3());
+
+  uifgo::CheckedLmOptions options;
+  options.max_iterations = 1;
+  options.relative_tolerance = 1e-6;
+  options.absolute_tolerance = 1e-8;
+  options.policy = uifgo::ConditionalLmPolicy::
+      GTSAM_CHECK_AND_NAVIGATION_STATIONARITY_CONTINUE_LAMBDA_SEARCH_V2;
+  const auto one_block =
+      uifgo::RunCheckedConditionalLm(graph, initial, options);
+  ASSERT_FALSE(one_block.converged);
+
+  const auto recovered =
+      uifgo::RunCheckedConditionalLmWithFixedCheckpointRecovery(
+          graph, initial, options, 50, 50);
+  ASSERT_TRUE(recovered.converged) << recovered.reason;
+  EXPECT_TRUE(recovered.fixed_checkpoint_recovery_used);
+  EXPECT_GT(recovered.fixed_checkpoint_restart_count, 0u);
+  EXPECT_TRUE(recovered.last_qualification_stationarity.valid);
+  EXPECT_TRUE(recovered.last_qualification_stationarity.stationary);
+  EXPECT_LE(recovered.last_qualification_stationarity
+                .max_scaled_gradient_objective,
+            options.navigation_stationarity_tolerance_objective +
+                recovered.last_qualification_stationarity
+                    .roundoff_allowance_objective);
+  EXPECT_LT(graph.error(recovered.values), graph.error(initial));
+  EXPECT_TRUE(uifgo::GraphAndValuesKeysMatch(graph, recovered.values));
+
+  const auto invalid =
+      uifgo::RunCheckedConditionalLmWithFixedCheckpointRecovery(
+          graph, initial, options, 0, 50);
+  EXPECT_FALSE(invalid.converged);
+  EXPECT_TRUE(invalid.values.empty());
+  EXPECT_EQ(invalid.reason,
+            "CONDITIONAL_LM_FIXED_CHECKPOINT_RECOVERY_INVALID_OPTIONS");
+
+  const auto exhausted =
+      uifgo::RunCheckedConditionalLmWithFixedCheckpointRecovery(
+          graph, initial, options, 50, 1);
+  EXPECT_FALSE(exhausted.converged);
+  EXPECT_TRUE(exhausted.values.empty());
+  EXPECT_EQ(
+      exhausted.reason,
+      "CONDITIONAL_LM_FIXED_CHECKPOINT_RECOVERY_TOTAL_BUDGET_EXHAUSTED");
+  EXPECT_EQ(exhausted.convergence.iterate_call_count, 1u);
+}
+
 TEST(CheckedConditionalLmDiagnostics,
      NormalReturnTrialAccountingMatchesIndependentFactorObservations) {
   using gtsam::symbol_shorthand::X;

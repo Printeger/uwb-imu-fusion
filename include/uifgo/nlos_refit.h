@@ -78,6 +78,16 @@ struct RefitIteration {
   size_t conditional_lm_iterations = 0;
   int conditional_lm_inner_iterations = 0;
   double conditional_lm_lambda = 0.0;
+  double conditional_objective = 0.0;
+  double conditional_scaled_navigation_step = 0.0;
+  double navigation_gradient_before_c_update = 0.0;
+  double navigation_roundoff_before_c_update = 0.0;
+  std::uint64_t dominant_key_before_c_update = 0;
+  size_t dominant_coordinate_before_c_update = 0;
+  std::string dominant_category_before_c_update;
+  double dominant_native_gradient_before_c_update = 0.0;
+  double dominant_scale_before_c_update = 0.0;
+  double dominant_absolute_factor_gradient_sum_before_c_update = 0.0;
   double objective_before = 0.0;
   double objective_after = 0.0;
   double relative_objective_change = 0.0;
@@ -90,6 +100,12 @@ struct RefitIteration {
   double max_gyro_bias_gradient_objective_per_radps = 0.0;
   double max_scaled_navigation_gradient_objective = 0.0;
   double navigation_gradient_roundoff_allowance_objective = 0.0;
+  std::uint64_t dominant_navigation_key_after_c_update = 0;
+  size_t dominant_navigation_coordinate_after_c_update = 0;
+  std::string dominant_navigation_category_after_c_update;
+  double dominant_navigation_native_gradient_after_c_update = 0.0;
+  double dominant_navigation_scale_after_c_update = 0.0;
+  double dominant_navigation_absolute_factor_gradient_sum_after_c_update = 0.0;
   double navigation_stationarity_tolerance_objective = 0.0;
   double allowed_objective_increase = 0.0;
   bool objective_ok = false;
@@ -97,7 +113,20 @@ struct RefitIteration {
   bool kkt_ok = false;
   bool navigation_stationarity_ok = false;
   bool conditional_inexact_handoff = false;
+  bool conditional_fixed_checkpoint_recovery_used = false;
+  size_t conditional_fixed_checkpoint_restart_count = 0;
   std::string conditional_inner_status;
+  struct SegmentBlockUpdate {
+    std::string segment_id;
+    size_t segment_ordinal = 0;
+    double c_before_m = 0.0;
+    double c_after_m = 0.0;
+    double delta_c_m = 0.0;
+    double gradient_after_objective_per_m = 0.0;
+    double kkt_violation_after = 0.0;
+    bool boundary_after = false;
+  };
+  std::vector<SegmentBlockUpdate> segment_updates;
 };
 
 struct SegmentEstimate {

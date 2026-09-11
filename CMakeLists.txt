@@ -383,6 +383,16 @@ endif()
 add_executable(uwb_imu_fgo_fde_forensics tools/run_fde_forensics.cpp)
 target_link_libraries(uwb_imu_fgo_fde_forensics ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable ${Boost_LIBRARIES} yaml-cpp)
 add_dependencies(uwb_imu_fgo_fde_forensics ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+# Independent, non-publishing Stage-2 stationarity diagnostic. It accepts an
+# oracle support location, but never an injection amplitude.
+add_executable(uwb_imu_fgo_stage2_stationarity_forensics
+  tools/run_stage2_stationarity_forensics.cpp)
+target_link_libraries(uwb_imu_fgo_stage2_stationarity_forensics
+  ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable
+  ${Boost_LIBRARIES} yaml-cpp)
+add_dependencies(uwb_imu_fgo_stage2_stationarity_forensics
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(test_fde_math test/test_fde_math.cpp)
   target_link_libraries(test_fde_math ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable ${GTEST_LIBRARIES})

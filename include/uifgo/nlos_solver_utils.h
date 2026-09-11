@@ -30,6 +30,15 @@ struct NavigationStationarityAudit {
   double max_gyro_bias_gradient_objective_per_radps = 0.0;
   double max_scaled_gradient_objective = 0.0;
   double roundoff_allowance_objective = 0.0;
+  std::uint64_t dominant_key = 0;
+  std::string dominant_key_name;
+  size_t dominant_coordinate = 0;
+  std::string dominant_category;
+  double dominant_native_gradient_objective = 0.0;
+  double dominant_physical_scale = 0.0;
+  double dominant_scaled_gradient_objective = 0.0;
+  double dominant_absolute_factor_gradient_sum_objective = 0.0;
+  double dominant_roundoff_allowance_objective = 0.0;
   bool stationary = false;
 };
 
@@ -397,6 +406,8 @@ struct CheckedLmResult {
   NavigationStationarityAudit last_qualification_stationarity;
   CheckedLmDiagnosticCapture diagnostic;
   InexactHandoffAudit inexact_handoff;
+  bool fixed_checkpoint_recovery_used = false;
+  size_t fixed_checkpoint_restart_count = 0;
 };
 
 struct ScaledStepAudit {
@@ -419,10 +430,28 @@ CheckedLmResult RunCheckedConditionalLm(
     const CheckedLmOptions& options,
     const CheckedLmDiagnosticRequest* diagnostic_request);
 
+// Reuses the V2 checked LM on an identical fixed-C graph when its configured
+// call block ends before navigation stationarity or exhausts lambda. Each
+// restart begins at the exact last accepted Values and otherwise uses the same
+// options. No checkpoint is returned as a successful/inexact solution.
+CheckedLmResult RunCheckedConditionalLmWithFixedCheckpointRecovery(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& initial,
+    const CheckedLmOptions& options, size_t max_restarts,
+    size_t max_total_calls);
+
 NavigationStationarityAudit AuditNavigationStationarity(
     const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
     const NavigationScales& scales, double tolerance_objective,
     double roundoff_safety_factor);
+
+// Uses the same local-coordinate convention and analytic gradient as the
+// checked-LM diagnostic. This overload exposes a caller-selected navigation
+// coordinate so independent audits can sample more than the dominant entry.
+CheckedLmFiniteDifferenceDiagnostics
+CheckNavigationCoordinateByFiniteDifference(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
+    const NavigationScales& scales, gtsam::Key key, size_t coordinate,
+    const std::vector<double>& steps);
 
 // Uses Values::localCoordinates for all navigation manifold coordinates and
 // combines that step with an explicitly scaled Euclidean dynamic-bias block.

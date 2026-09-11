@@ -655,6 +655,86 @@ double NavigationCoordinateScale(char symbol, Eigen::Index coordinate,
   return std::numeric_limits<double>::quiet_NaN();
 }
 
+CheckedLmFiniteDifferenceDiagnostics CheckGradientCoordinateByFiniteDifference(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
+    const NavigationScales& scales, gtsam::Key key,
+    Eigen::Index coordinate, const std::vector<double>& steps) {
+  CheckedLmFiniteDifferenceDiagnostics output;
+  if (steps.empty()) {
+    output.reason = "finite-difference step grid is empty";
+    return output;
+  }
+  for (double step : steps) {
+    if (!(step > 0.0) || !std::isfinite(step)) {
+      output.reason = "finite-difference step grid is invalid";
+      return output;
+    }
+  }
+  try {
+    const auto linear = graph.linearize(values);
+    if (!linear) {
+      output.reason = "finite-difference linearization returned null";
+      return output;
+    }
+    const gtsam::VectorValues gradient = linear->gradientAtZero();
+    if (!values.exists(key) || !gradient.exists(key) || coordinate < 0 ||
+        coordinate >= gradient.at(key).size()) {
+      output.reason = "finite-difference coordinate is absent";
+      return output;
+    }
+    std::string unit;
+    const char symbol = gtsam::Symbol(key).chr();
+    const double scale = NavigationCoordinateScale(
+        symbol, coordinate, gradient.at(key).size(), scales, &unit);
+    if (!std::isfinite(scale)) {
+      output.reason = "finite-difference coordinate is not navigation";
+      return output;
+    }
+    output.key = gtsam::DefaultKeyFormatter(key);
+    output.key_value = key;
+    output.coordinate = static_cast<size_t>(coordinate);
+    output.dimension = gradient.at(key).size();
+    output.coordinate_unit = unit;
+    output.coordinate_scale = scale;
+    output.objective = graph.error(values);
+    output.analytic_gradient = gradient.at(key)[coordinate];
+    output.scaled_analytic_gradient = output.analytic_gradient * scale;
+    for (double step : steps) {
+      gtsam::VectorValues plus_delta = values.zeroVectors();
+      gtsam::VectorValues minus_delta = values.zeroVectors();
+      plus_delta.at(key)[coordinate] = step;
+      minus_delta.at(key)[coordinate] = -step;
+      CheckedLmFiniteDifferencePoint point;
+      point.step = step;
+      point.objective_plus = graph.error(values.retract(plus_delta));
+      point.objective_minus = graph.error(values.retract(minus_delta));
+      point.objective_change_plus = point.objective_plus - output.objective;
+      point.objective_change_minus = point.objective_minus - output.objective;
+      point.central_derivative =
+          (point.objective_plus - point.objective_minus) / (2.0 * step);
+      point.absolute_difference_from_analytic =
+          std::abs(point.central_derivative - output.analytic_gradient);
+      point.agreement_tolerance =
+          5e-9 + 5e-3 * std::abs(output.analytic_gradient);
+      point.agrees = point.absolute_difference_from_analytic <=
+                     point.agreement_tolerance;
+      output.points.push_back(point);
+    }
+    output.valid = std::isfinite(output.objective) &&
+                   std::isfinite(output.analytic_gradient) &&
+                   std::isfinite(output.scaled_analytic_gradient);
+    for (const auto& point : output.points)
+      output.valid = output.valid && std::isfinite(point.objective_plus) &&
+                     std::isfinite(point.objective_minus) &&
+                     std::isfinite(point.central_derivative);
+    output.reason = output.valid ? "OK" : "NONFINITE_FINITE_DIFFERENCE";
+  } catch (const std::exception& error) {
+    output.reason = std::string("finite-difference diagnostic failed: ") +
+                    error.what();
+  }
+  return output;
+}
+
 CheckedLmFiniteDifferenceDiagnostics CheckDominantGradientByFiniteDifference(
     const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
     const NavigationScales& scales, const std::vector<double>& steps) {
@@ -707,45 +787,8 @@ CheckedLmFiniteDifferenceDiagnostics CheckDominantGradientByFiniteDifference(
       output.reason = "no declared navigation coordinate in gradient";
       return output;
     }
-    output.key = gtsam::DefaultKeyFormatter(dominant_key);
-    output.key_value = dominant_key;
-    output.coordinate = static_cast<size_t>(dominant_coordinate);
-    output.dimension = gradient.at(dominant_key).size();
-    output.coordinate_unit = dominant_unit;
-    output.coordinate_scale = dominant_scale;
-    output.objective = graph.error(values);
-    output.analytic_gradient = dominant_gradient;
-    output.scaled_analytic_gradient = dominant_gradient * dominant_scale;
-    for (double step : steps) {
-      gtsam::VectorValues plus_delta = values.zeroVectors();
-      gtsam::VectorValues minus_delta = values.zeroVectors();
-      plus_delta.at(dominant_key)[dominant_coordinate] = step;
-      minus_delta.at(dominant_key)[dominant_coordinate] = -step;
-      CheckedLmFiniteDifferencePoint point;
-      point.step = step;
-      point.objective_plus = graph.error(values.retract(plus_delta));
-      point.objective_minus = graph.error(values.retract(minus_delta));
-      point.objective_change_plus = point.objective_plus - output.objective;
-      point.objective_change_minus = point.objective_minus - output.objective;
-      point.central_derivative =
-          (point.objective_plus - point.objective_minus) / (2.0 * step);
-      point.absolute_difference_from_analytic =
-          std::abs(point.central_derivative - output.analytic_gradient);
-      point.agreement_tolerance =
-          5e-9 + 5e-3 * std::abs(output.analytic_gradient);
-      point.agrees =
-          point.absolute_difference_from_analytic <= point.agreement_tolerance;
-      output.points.push_back(point);
-    }
-    output.valid =
-        std::isfinite(output.objective) &&
-        std::isfinite(output.analytic_gradient) &&
-        std::isfinite(output.scaled_analytic_gradient);
-    for (const auto& point : output.points)
-      output.valid = output.valid && std::isfinite(point.objective_plus) &&
-                     std::isfinite(point.objective_minus) &&
-                     std::isfinite(point.central_derivative);
-    output.reason = output.valid ? "OK" : "NONFINITE_FINITE_DIFFERENCE";
+    output = CheckGradientCoordinateByFiniteDifference(
+        graph, values, scales, dominant_key, dominant_coordinate, steps);
   } catch (const std::exception& error) {
     output.reason = std::string("finite-difference diagnostic failed: ") +
                     error.what();
@@ -1004,6 +1047,20 @@ void FinalizeCheckedLmDiagnostic(
 
 }  // namespace
 
+CheckedLmFiniteDifferenceDiagnostics
+CheckNavigationCoordinateByFiniteDifference(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
+    const NavigationScales& scales, gtsam::Key key, size_t coordinate,
+    const std::vector<double>& steps) {
+  if (coordinate > static_cast<size_t>(std::numeric_limits<Eigen::Index>::max())) {
+    CheckedLmFiniteDifferenceDiagnostics output;
+    output.reason = "finite-difference coordinate is out of range";
+    return output;
+  }
+  return CheckGradientCoordinateByFiniteDifference(
+      graph, values, scales, key, static_cast<Eigen::Index>(coordinate), steps);
+}
+
 bool FirstBlockDerivativesConsistent(const CheckedLmDiagnosticCapture& capture) {
   if (!capture.first_block_budget_diagnostic || capture.calls.size() != 50 ||
       capture.graph_factor_count == 0 || capture.values_key_count == 0 ||
@@ -1048,10 +1105,11 @@ CheckedLmResult RunCheckedConditionalLm(
   return RunCheckedConditionalLm(graph, initial, options, nullptr);
 }
 
-CheckedLmResult RunCheckedConditionalLm(
+CheckedLmResult RunCheckedConditionalLmImpl(
     const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& initial,
     const CheckedLmOptions& options,
-    const CheckedLmDiagnosticRequest* diagnostic_request) {
+    const CheckedLmDiagnosticRequest* diagnostic_request,
+    bool retain_recoverable_terminal_values) {
   CheckedLmResult result;
   result.convergence.policy_version = ConditionalLmPolicyName(options.policy);
   result.convergence.stationarity_qualification_enabled =
@@ -1351,6 +1409,8 @@ CheckedLmResult RunCheckedConditionalLm(
         result.convergence.check_status =
             "NOT_EVALUATED_LAMBDA_SEARCH_EXHAUSTED";
         result.reason = "CONDITIONAL_LM_LAMBDA_SEARCH_EXHAUSTED";
+        if (retain_recoverable_terminal_values)
+          result.values = optimizer.values();
         finalize_diagnostic();
         return result;
       }
@@ -1480,6 +1540,8 @@ CheckedLmResult RunCheckedConditionalLm(
     } else {
       result.reason = "CONDITIONAL_LM_MAX_ITERATIONS";
     }
+    if (retain_recoverable_terminal_values)
+      result.values = optimizer.values();
     finalize_diagnostic();
   } catch (const std::exception& error) {
     result.convergence.check_status =
@@ -1489,6 +1551,126 @@ CheckedLmResult RunCheckedConditionalLm(
     result.reason = std::string("CONDITIONAL_LM_EXCEPTION: ") + error.what();
   }
   return result;
+}
+
+CheckedLmResult RunCheckedConditionalLm(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& initial,
+    const CheckedLmOptions& options,
+    const CheckedLmDiagnosticRequest* diagnostic_request) {
+  return RunCheckedConditionalLmImpl(graph, initial, options,
+                                     diagnostic_request, false);
+}
+
+CheckedLmResult RunCheckedConditionalLmWithFixedCheckpointRecovery(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& initial,
+    const CheckedLmOptions& options, size_t max_restarts,
+    size_t max_total_calls) {
+  CheckedLmResult invalid;
+  if (!UsesContinuousLambdaSearchV2(options.policy) || max_restarts == 0 ||
+      max_total_calls == 0 || options.max_iterations <= 0) {
+    invalid.reason = "CONDITIONAL_LM_FIXED_CHECKPOINT_RECOVERY_INVALID_OPTIONS";
+    return invalid;
+  }
+  gtsam::Values checkpoint = initial;
+  double checkpoint_objective = graph.error(checkpoint);
+  if (!std::isfinite(checkpoint_objective) ||
+      !GraphAndValuesKeysMatch(graph, checkpoint)) {
+    invalid.reason = "CONDITIONAL_LM_FIXED_CHECKPOINT_RECOVERY_INVALID_START";
+    return invalid;
+  }
+
+  size_t total_iterations = 0;
+  int total_inner_iterations = 0;
+  size_t total_iterate_calls = 0;
+  size_t total_lambda_trials = 0;
+  size_t total_rejected_trials = 0;
+  size_t total_accepted_updates = 0;
+  size_t total_no_update_returns = 0;
+  for (size_t attempt = 0; attempt <= max_restarts; ++attempt) {
+    if (total_iterate_calls >= max_total_calls) {
+      invalid.reason =
+          "CONDITIONAL_LM_FIXED_CHECKPOINT_RECOVERY_TOTAL_BUDGET_EXHAUSTED";
+      invalid.fixed_checkpoint_recovery_used = attempt > 0;
+      invalid.fixed_checkpoint_restart_count = attempt;
+      invalid.iterations = total_iterations;
+      invalid.inner_iterations = total_inner_iterations;
+      invalid.convergence.iterate_call_count = total_iterate_calls;
+      invalid.convergence.lambda_trial_count = total_lambda_trials;
+      invalid.convergence.rejected_lambda_trial_count = total_rejected_trials;
+      invalid.convergence.accepted_update_count = total_accepted_updates;
+      invalid.convergence.no_update_return_count = total_no_update_returns;
+      return invalid;
+    }
+    auto attempt_options = options;
+    attempt_options.max_iterations = static_cast<int>(std::min<size_t>(
+        static_cast<size_t>(options.max_iterations),
+        max_total_calls - total_iterate_calls));
+    CheckedLmResult result = RunCheckedConditionalLmImpl(
+        graph, checkpoint, attempt_options, nullptr, true);
+
+    total_iterations += result.iterations;
+    total_inner_iterations += result.inner_iterations;
+    total_iterate_calls += result.convergence.iterate_call_count;
+    total_lambda_trials += result.convergence.lambda_trial_count;
+    total_rejected_trials +=
+        result.convergence.rejected_lambda_trial_count;
+    total_accepted_updates += result.convergence.accepted_update_count;
+    total_no_update_returns += result.convergence.no_update_return_count;
+    result.iterations = total_iterations;
+    result.inner_iterations = total_inner_iterations;
+    result.convergence.iterate_call_count = total_iterate_calls;
+    result.convergence.lambda_trial_count = total_lambda_trials;
+    result.convergence.rejected_lambda_trial_count = total_rejected_trials;
+    result.convergence.accepted_update_count = total_accepted_updates;
+    result.convergence.no_update_return_count = total_no_update_returns;
+    result.fixed_checkpoint_recovery_used = attempt > 0;
+    result.fixed_checkpoint_restart_count = attempt;
+    if (result.converged) {
+      if (attempt > 0)
+        result.reason =
+            "CONDITIONAL_LM_CONVERGED_AFTER_FIXED_CHECKPOINT_RECOVERY";
+      return result;
+    }
+
+    const bool recoverable =
+        result.reason == "CONDITIONAL_LM_STATIONARITY_NOT_REACHED" ||
+        result.reason == "CONDITIONAL_LM_LAMBDA_SEARCH_EXHAUSTED" ||
+        result.reason == "CONDITIONAL_LM_MAX_ITERATIONS";
+    if (!recoverable || result.values.empty()) {
+      result.values.clear();
+      return result;
+    }
+    const double next_objective = graph.error(result.values);
+    const auto audit = AuditNavigationStationarity(
+        graph, result.values, options.navigation_scales,
+        options.navigation_stationarity_tolerance_objective,
+        options.gradient_roundoff_safety_factor);
+    const double allowance = Binary64ObjectiveIncreaseAllowance(
+        checkpoint_objective, next_objective);
+    if (!GraphAndValuesKeysMatch(graph, result.values) || !audit.valid ||
+        !std::isfinite(next_objective) ||
+        next_objective > checkpoint_objective + allowance) {
+      result.converged = false;
+      result.values.clear();
+      result.reason =
+          "CONDITIONAL_LM_FIXED_CHECKPOINT_RECOVERY_INVALID_CHECKPOINT";
+      return result;
+    }
+    checkpoint = result.values;
+    checkpoint_objective = next_objective;
+  }
+  invalid.reason =
+      "CONDITIONAL_LM_FIXED_CHECKPOINT_RECOVERY_RESTART_LIMIT_EXHAUSTED";
+  invalid.fixed_checkpoint_recovery_used = true;
+  invalid.fixed_checkpoint_restart_count = max_restarts;
+  invalid.iterations = total_iterations;
+  invalid.inner_iterations = total_inner_iterations;
+  invalid.convergence.iterate_call_count = total_iterate_calls;
+  invalid.convergence.lambda_trial_count = total_lambda_trials;
+  invalid.convergence.rejected_lambda_trial_count = total_rejected_trials;
+  invalid.convergence.accepted_update_count = total_accepted_updates;
+  invalid.convergence.no_update_return_count = total_no_update_returns;
+  return invalid;
 }
 
 NavigationStationarityAudit AuditNavigationStationarity(
@@ -1559,24 +1741,30 @@ NavigationStationarityAudit AuditNavigationStationarity(
       for (Eigen::Index j = 0; j < grad.size(); ++j) {
         double scale = 0.0;
         double* category = nullptr;
+        const char* category_name = nullptr;
         if (symbol == 'x' && grad.size() == 6) {
           if (j < 3) {
             scale = scales.pose_rotation_rad;
             category = &audit.max_pose_rotation_gradient_objective_per_rad;
+            category_name = "pose_rotation";
           } else {
             scale = scales.pose_translation_m;
             category = &audit.max_pose_translation_gradient_objective_per_m;
+            category_name = "pose_translation";
           }
         } else if (symbol == 'v' && grad.size() == 3) {
           scale = scales.velocity_mps;
           category = &audit.max_velocity_gradient_objective_per_mps;
+          category_name = "velocity";
         } else if (symbol == 'b' && grad.size() == 6) {
           if (j < 3) {
             scale = scales.accel_bias_mps2;
             category = &audit.max_accel_bias_gradient_objective_per_mps2;
+            category_name = "accelerometer_bias";
           } else {
             scale = scales.gyro_bias_radps;
             category = &audit.max_gyro_bias_gradient_objective_per_radps;
+            category_name = "gyro_bias";
           }
         } else {
           audit.reason = "no declared scale for free key " +
@@ -1591,6 +1779,17 @@ NavigationStationarityAudit AuditNavigationStationarity(
           return audit;
         }
         *category = std::max(*category, native);
+        if (scaled > audit.dominant_scaled_gradient_objective) {
+          audit.dominant_key = key;
+          audit.dominant_key_name = gtsam::DefaultKeyFormatter(key);
+          audit.dominant_coordinate = static_cast<size_t>(j);
+          audit.dominant_category = category_name;
+          audit.dominant_native_gradient_objective = grad[j];
+          audit.dominant_physical_scale = scale;
+          audit.dominant_scaled_gradient_objective = scaled;
+          audit.dominant_absolute_factor_gradient_sum_objective = abs_sum[j];
+          audit.dominant_roundoff_allowance_objective = allowance;
+        }
         audit.max_scaled_gradient_objective =
             std::max(audit.max_scaled_gradient_objective, scaled);
         audit.roundoff_allowance_objective =

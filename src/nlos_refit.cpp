@@ -100,6 +100,12 @@ struct NavigationStationarityAudit {
   double max_gyro_bias_gradient_objective_per_radps = 0.0;
   double max_scaled_navigation_gradient_objective = 0.0;
   double roundoff_allowance_objective = 0.0;
+  gtsam::Key dominant_key = 0;
+  size_t dominant_coordinate = 0;
+  std::string dominant_category;
+  double dominant_native_gradient_objective = 0.0;
+  double dominant_physical_scale = 0.0;
+  double dominant_absolute_factor_gradient_sum_objective = 0.0;
   bool stationarity_ok = true;
 };
 
@@ -161,28 +167,34 @@ NavigationStationarityAudit AuditNavigationStationarity(
       for (Eigen::Index j = 0; j < key_gradient.size(); ++j) {
         double scale = 0.0;
         double* category_maximum = nullptr;
+        const char* category_name = nullptr;
         if (symbol == 'x' && key_gradient.size() == 6) {
           if (j < 3) {
             scale = options.pose_rotation_scale_rad;
             category_maximum =
                 &audit.max_pose_rotation_gradient_objective_per_rad;
+            category_name = "pose_rotation";
           } else {
             scale = options.pose_translation_scale_m;
             category_maximum =
                 &audit.max_pose_translation_gradient_objective_per_m;
+            category_name = "pose_translation";
           }
         } else if (symbol == 'v' && key_gradient.size() == 3) {
           scale = options.velocity_scale_mps;
           category_maximum = &audit.max_velocity_gradient_objective_per_mps;
+          category_name = "velocity";
         } else if (symbol == 'b' && key_gradient.size() == 6) {
           if (j < 3) {
             scale = options.accel_bias_scale_mps2;
             category_maximum =
                 &audit.max_accel_bias_gradient_objective_per_mps2;
+            category_name = "accelerometer_bias";
           } else {
             scale = options.gyro_bias_scale_radps;
             category_maximum =
                 &audit.max_gyro_bias_gradient_objective_per_radps;
+            category_name = "gyro_bias";
           }
         } else {
           audit.status = SegmentRefitStatus::INVALID_INPUT;
@@ -201,6 +213,16 @@ NavigationStationarityAudit AuditNavigationStationarity(
           return audit;
         }
         *category_maximum = std::max(*category_maximum, native_gradient);
+        if (scaled_gradient >
+            audit.max_scaled_navigation_gradient_objective) {
+          audit.dominant_key = key;
+          audit.dominant_coordinate = static_cast<size_t>(j);
+          audit.dominant_category = category_name;
+          audit.dominant_native_gradient_objective = key_gradient[j];
+          audit.dominant_physical_scale = scale;
+          audit.dominant_absolute_factor_gradient_sum_objective =
+              key_absolute_sum[j];
+        }
         audit.max_scaled_navigation_gradient_objective =
             std::max(audit.max_scaled_navigation_gradient_objective,
                      scaled_gradient);
@@ -701,20 +723,27 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
     lm_options.max_iterations = options_.lm_max_iterations;
     lm_options.relative_tolerance = options_.lm_relative_tolerance;
     lm_options.absolute_tolerance = options_.lm_absolute_tolerance;
-    if (development_request) {
-      lm_options.policy = ConditionalLmPolicy::
-          GTSAM_CHECK_AND_NAVIGATION_STATIONARITY_CONTINUE_LAMBDA_SEARCH_V2;
-      lm_options.navigation_scales = RefitNavigationScales(options_);
-      lm_options.navigation_stationarity_tolerance_objective =
-          options_.navigation_stationarity_tolerance_objective;
-      lm_options.gradient_roundoff_safety_factor =
-          options_.gradient_roundoff_safety_factor;
-    }
     double previous_objective = result.graph.error(result.values);
     if (!std::isfinite(previous_objective))
       return fail(SegmentRefitStatus::NONFINITE_VALUE,
                   "raw Stage-2 initial objective is nonfinite");
+    const size_t total_conditional_call_budget =
+        options_.max_refit_iterations *
+        static_cast<size_t>(options_.lm_max_iterations);
+    size_t conditional_calls_used = 0;
+    bool require_strict_navigation_qualification = false;
     for (size_t outer = 1; outer <= options_.max_refit_iterations; ++outer) {
+      lm_options.policy = ConditionalLmPolicy::
+          GTSAM_CHECK_ONLY_V1;
+      if (development_request || require_strict_navigation_qualification) {
+        lm_options.policy = ConditionalLmPolicy::
+            GTSAM_CHECK_AND_NAVIGATION_STATIONARITY_CONTINUE_LAMBDA_SEARCH_V2;
+        lm_options.navigation_scales = RefitNavigationScales(options_);
+        lm_options.navigation_stationarity_tolerance_objective =
+            options_.navigation_stationarity_tolerance_objective;
+        lm_options.gradient_roundoff_safety_factor =
+            options_.gradient_roundoff_safety_factor;
+      }
       const gtsam::Values before_values = result.values;
       std::vector<DevelopmentRefitRangeConstant> development_ranges;
       if (development_request) {
@@ -783,7 +812,15 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
           ? development_request->conditional_navigation(
                 outer, result.graph, before_values, lm_options,
                 development_ranges)
-          : RunCheckedConditionalLm(result.graph, before_values, lm_options);
+          : require_strict_navigation_qualification
+                ? RunCheckedConditionalLmWithFixedCheckpointRecovery(
+                      result.graph, before_values, lm_options,
+                      options_.max_refit_iterations,
+                      total_conditional_call_budget -
+                          conditional_calls_used)
+                : RunCheckedConditionalLm(result.graph, before_values,
+                                          lm_options);
+      conditional_calls_used += lm.convergence.iterate_call_count;
       if (development_request &&
           (lm.inexact_handoff.enabled || lm.inexact_handoff.qualified ||
            lm.inexact_handoff.handoff_count != 0))
@@ -820,6 +857,10 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
       trace.conditional_lm_iterations = lm.iterations;
       trace.conditional_lm_inner_iterations = lm.inner_iterations;
       trace.conditional_lm_lambda = lm.lambda;
+      trace.conditional_fixed_checkpoint_recovery_used =
+          lm.fixed_checkpoint_recovery_used;
+      trace.conditional_fixed_checkpoint_restart_count =
+          lm.fixed_checkpoint_restart_count;
       trace.objective_before = previous_objective;
       trace.objective_after = objective;
       trace.relative_objective_change = relative_change;
@@ -860,6 +901,9 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
             : "ALL_CANDIDATES_SUPPRESSED_RAW_STAGE2_ALL_APPLICABLE_STOP_CONDITIONS_SATISFIED";
         return result;
       }
+      require_strict_navigation_qualification =
+          trace.objective_ok && trace.step_ok && trace.kkt_ok &&
+          !trace.navigation_stationarity_ok;
     }
     return fail(SegmentRefitStatus::MAX_REFIT_ITERATIONS,
                 "raw Stage-2 applicable stop conditions were not all satisfied");
@@ -920,6 +964,17 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
     return fail(SegmentRefitStatus::NONFINITE_VALUE,
                 "initial joint objective is nonfinite");
 
+  const size_t total_conditional_call_budget =
+      options_.max_refit_iterations *
+      static_cast<size_t>(options_.lm_max_iterations);
+  size_t conditional_calls_used = 0;
+  // Preserve the established alternating path until its objective, step and
+  // C-block conditions say that only navigation stationarity is missing.
+  // The next fixed-C solve is then qualified by the stricter V2 policy and its
+  // checkpoint recovery. This avoids handing a nonstationary checkpoint to a
+  // terminal C update without changing the scientific objective or the
+  // ordinary alternating trajectory.
+  bool require_strict_conditional_qualification = false;
   for (size_t outer = 1; outer <= options_.max_refit_iterations; ++outer) {
     const gtsam::Values before = result.values;
     gtsam::NonlinearFactorGraph conditional_graph;
@@ -1054,7 +1109,7 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
     lm_options.max_iterations = options_.lm_max_iterations;
     lm_options.relative_tolerance = options_.lm_relative_tolerance;
     lm_options.absolute_tolerance = options_.lm_absolute_tolerance;
-    if (development_request) {
+    if (development_request || require_strict_conditional_qualification) {
       lm_options.policy = ConditionalLmPolicy::
           GTSAM_CHECK_AND_NAVIGATION_STATIONARITY_CONTINUE_LAMBDA_SEARCH_V2;
       lm_options.navigation_scales = RefitNavigationScales(options_);
@@ -1062,6 +1117,8 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
           options_.navigation_stationarity_tolerance_objective;
       lm_options.gradient_roundoff_safety_factor =
           options_.gradient_roundoff_safety_factor;
+    }
+    if (development_request) {
       if (development_request->allow_inexact_handoff &&
           accepted_segment_ordinals.empty())
         return fail(SegmentRefitStatus::INVALID_INPUT,
@@ -1074,8 +1131,15 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
         ? development_request->conditional_navigation(
               outer, conditional_graph, conditional_initial, lm_options,
               development_ranges)
-        : RunCheckedConditionalLm(conditional_graph, conditional_initial,
-                                  lm_options);
+        : require_strict_conditional_qualification
+              ? RunCheckedConditionalLmWithFixedCheckpointRecovery(
+                    conditional_graph, conditional_initial, lm_options,
+                    options_.max_refit_iterations,
+                    total_conditional_call_budget -
+                        conditional_calls_used)
+              : RunCheckedConditionalLm(conditional_graph,
+                                        conditional_initial, lm_options);
+    conditional_calls_used += lm.convergence.iterate_call_count;
     const bool inexact_handoff =
         !lm.converged && lm.reason == "INNER_NUMERICAL_STALL_INEXACT" &&
         lm.inexact_handoff.qualified &&
@@ -1087,7 +1151,23 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
     if (inexact_handoff)
       result.inexact_handoffs.push_back(lm.inexact_handoff);
 
+    const auto conditional_stationarity = uifgo::AuditNavigationStationarity(
+        conditional_graph, lm.values, RefitNavigationScales(options_),
+        options_.navigation_stationarity_tolerance_objective,
+        options_.gradient_roundoff_safety_factor);
+    if (!conditional_stationarity.valid)
+      return fail(SegmentRefitStatus::NONFINITE_VALUE,
+                  "conditional navigation audit failed: " +
+                      conditional_stationarity.reason);
+    const double conditional_scaled_step = MaxScaledValuesStep(
+        conditional_initial, lm.values, RefitNavigationScales(options_),
+        options_.segment_amplitude_scale_m);
+    if (!std::isfinite(conditional_scaled_step))
+      return fail(SegmentRefitStatus::NONFINITE_VALUE,
+                  "conditional navigation step is nonfinite");
+
     gtsam::Values after = lm.values;
+    std::vector<RefitIteration::SegmentBlockUpdate> segment_updates;
     for (const auto& segment : support.segments) {
       if (!accepted_segment_ordinals.count(segment.segment_ordinal)) continue;
       std::vector<double> raw_ranges;
@@ -1114,6 +1194,13 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
             SegmentRefitStatus::NONPOSITIVE_OR_NONFINITE_DENOMINATOR,
             "segment closed-form update has invalid numerator/denominator");
       }
+      RefitIteration::SegmentBlockUpdate block;
+      block.segment_id = segment.segment_id;
+      block.segment_ordinal = segment.segment_ordinal;
+      block.c_before_m = before.at<double>(C(segment.segment_ordinal));
+      block.c_after_m = update.amplitude_m;
+      block.delta_c_m = block.c_after_m - block.c_before_m;
+      segment_updates.push_back(block);
       after.insert<double>(C(segment.segment_ordinal),
                            update.amplitude_m);
     }
@@ -1151,6 +1238,19 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
         update_segment_records(after, &estimates, &max_kkt);
     if (estimate_status != SegmentRefitStatus::CONVERGED)
       return fail(estimate_status, "segment KKT audit is nonfinite");
+    for (auto& block : segment_updates) {
+      const auto estimate = std::find_if(
+          estimates.begin(), estimates.end(), [&](const SegmentEstimate& item) {
+            return item.segment_ordinal == block.segment_ordinal;
+          });
+      if (estimate == estimates.end())
+        return fail(SegmentRefitStatus::INVALID_INPUT,
+                    "segment block audit has no matching estimate");
+      block.gradient_after_objective_per_m =
+          estimate->gradient_objective_per_m;
+      block.kkt_violation_after = estimate->kkt_violation;
+      block.boundary_after = estimate->boundary;
+    }
     const auto stationarity =
         AuditNavigationStationarity(result.graph, after, options_);
     if (stationarity.status != SegmentRefitStatus::CONVERGED)
@@ -1161,6 +1261,29 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
     trace.conditional_lm_iterations = lm.iterations;
     trace.conditional_lm_inner_iterations = lm.inner_iterations;
     trace.conditional_lm_lambda = lm.lambda;
+    trace.conditional_fixed_checkpoint_recovery_used =
+        lm.fixed_checkpoint_recovery_used;
+    trace.conditional_fixed_checkpoint_restart_count =
+        lm.fixed_checkpoint_restart_count;
+    trace.conditional_objective = conditional_graph.error(lm.values);
+    trace.conditional_scaled_navigation_step = conditional_scaled_step;
+    trace.navigation_gradient_before_c_update =
+        conditional_stationarity.max_scaled_gradient_objective;
+    trace.navigation_roundoff_before_c_update =
+        conditional_stationarity.roundoff_allowance_objective;
+    trace.dominant_key_before_c_update =
+        conditional_stationarity.dominant_key;
+    trace.dominant_coordinate_before_c_update =
+        conditional_stationarity.dominant_coordinate;
+    trace.dominant_category_before_c_update =
+        conditional_stationarity.dominant_category;
+    trace.dominant_native_gradient_before_c_update =
+        conditional_stationarity.dominant_native_gradient_objective;
+    trace.dominant_scale_before_c_update =
+        conditional_stationarity.dominant_physical_scale;
+    trace.dominant_absolute_factor_gradient_sum_before_c_update =
+        conditional_stationarity
+            .dominant_absolute_factor_gradient_sum_objective;
     trace.objective_before = previous_objective;
     trace.objective_after = objective;
     trace.relative_objective_change = relative_change;
@@ -1180,6 +1303,17 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
         stationarity.max_scaled_navigation_gradient_objective;
     trace.navigation_gradient_roundoff_allowance_objective =
         stationarity.roundoff_allowance_objective;
+    trace.dominant_navigation_key_after_c_update = stationarity.dominant_key;
+    trace.dominant_navigation_coordinate_after_c_update =
+        stationarity.dominant_coordinate;
+    trace.dominant_navigation_category_after_c_update =
+        stationarity.dominant_category;
+    trace.dominant_navigation_native_gradient_after_c_update =
+        stationarity.dominant_native_gradient_objective;
+    trace.dominant_navigation_scale_after_c_update =
+        stationarity.dominant_physical_scale;
+    trace.dominant_navigation_absolute_factor_gradient_sum_after_c_update =
+        stationarity.dominant_absolute_factor_gradient_sum_objective;
     trace.navigation_stationarity_tolerance_objective =
         options_.navigation_stationarity_tolerance_objective;
     trace.allowed_objective_increase = increase_tolerance;
@@ -1190,6 +1324,7 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
     trace.navigation_stationarity_ok = stationarity.stationarity_ok;
     trace.conditional_inexact_handoff = inexact_handoff;
     trace.conditional_inner_status = lm.reason;
+    trace.segment_updates = std::move(segment_updates);
     result.iterations.push_back(trace);
     if (development_request && development_request->outer_observer)
       development_request->outer_observer(trace);
@@ -1202,6 +1337,9 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
       result.reason = "ALL_JOINT_STOP_CONDITIONS_SATISFIED";
       return result;
     }
+    require_strict_conditional_qualification =
+        trace.objective_ok && trace.step_ok && trace.kkt_ok &&
+        !trace.navigation_stationarity_ok;
   }
   return fail(SegmentRefitStatus::MAX_REFIT_ITERATIONS,
               "joint stop conditions were not all satisfied");

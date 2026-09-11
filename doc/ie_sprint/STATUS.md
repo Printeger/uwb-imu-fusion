@@ -1,3 +1,19 @@
+# 0911-STAGE2-STATIONARITY-REPAIR 当前任务
+
+`DONE / RECOVERY_BACKEND_OPERATIONAL_AFTER_CORRECTNESS_FIX / LOCALIZATION_BENEFIT_OBSERVED`。
+按 [任务卡与 amendment](STAGE2_STATIONARITY_REPAIR_PROTOCOL.md) 和
+[完整结果](../ie_0911/STAGE2_STATIONARITY_REPAIR_RESULT.md)，在实际 HEAD `3db4f317` 上封存 A--C
+诊断后只实施 D2。raw-reference 的 numerical gradient floor 同样远高于 `1e-6`；Stage2 dominant
+`x186[4]` gradient `0.0750243859` 经有限差分确认。原 50/100/200 outer 的 C-update 前后均保持该值，
+故根因是 generic conditional LM 对 fixed-C 子问题过早数值停止，而不是 C-update coupling；D1/D3
+均未实施。最小修复只在 objective/step/C-KKT 已通过而 navigation 未通过时，复用既有 V2 和同
+graph/Values fixed-checkpoint recovery；模型、预算、全部阈值、FDE/Rc/sigma/LCB/final/evaluator均冻结。
+完整 CTest/GTest 370/370；锁定 oracle Stage2 在 outer42 达到 navigation `7.10213e-7`，估计
+`c_hat=0.471346m`、`sigma=0.075074m`、LCB=`0.321198m`。四个 final 均有效且无 fallback；LCB
+RMSE `0.170086m` 比 suppress `0.181637m` 低 `0.011551m`（`6.3592%`）。仅支持单一 oracle-backend
+development sanity check，不是 detector E2E；T10=C2-C、T11=C、C1--C3不升级。用户随后明确授权
+将本轮交付提交并推送到当前 Git 分支；受保护的未跟踪 `doc/v2/ie_0911/` 不纳入提交。
+
 # 0911-ORACLE-SUPPORT-BACKEND 当前任务
 
 `DONE / RECOVERY_BACKEND_NOT_OPERATIONAL`。按 [任务卡与 amendment](ORACLE_SUPPORT_BACKEND_PROTOCOL.md) 在实际 HEAD `15b32f5a` 上完成 Walk1 normal oracle-support backend scientific sanity check；[完整结果](../ie_0911/ORACLE_SUPPORT_BACKEND_RESULT.md)。30/30 planned support IDs 与锁定目标 link 精确对齐，estimator 进程树未读取 injection amplitude 或 GT。非空 Stage2 实际执行 50 次 conditional optimizer call、累计 110 LM iterations/359 inner trials；objective、step、非负 KKT 最终通过，但 navigation stationarity `0.0750243859` 未达到冻结 `1e-6` 容差，返回 `MAX_REFIT_ITERATIONS`。未发布 cache，Rc/sigma/LCB 与四个 final 均不可用；没有放宽容差、导出未收敛 `c_hat`、算法重试或 correctness 修改。按 Case B 唯一裁决 `RECOVERY_BACKEND_NOT_OPERATIONAL`，low redundancy 为 `NOT_RUN_NORMAL_BACKEND_NOT_OPERATIONAL`，停止 detector 开发。FDE/Stage2/Rc/LCB/optimizer/evaluator源码与 HEAD hash 一致。用户随后明确授权提交并推送本轮交付；受保护的未跟踪 `doc/v2/ie_0911/` 不纳入提交。

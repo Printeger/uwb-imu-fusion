@@ -1,14 +1,25 @@
 # UWB-IMU-IE claim–evidence ledger
 
-状态：`T10_FROZEN_C2_C / T11_FROZEN_T11_C_LIMITED_SCOPE_U13_INCOMPLETE / 0911_ORACLE_BACKEND_NOT_OPERATIONAL`
+状态：`T10_FROZEN_C2_C / T11_FROZEN_T11_C_LIMITED_SCOPE_U13_INCOMPLETE / 0911_ORACLE_BACKEND_OPERATIONAL_AFTER_CORRECTNESS_FIX`
 
 阅读范围：下方按 T00–T10、Axx/Rxx 命名的阶段证据节均为**历史快照**。其中“当前状态”“本轮”、`IN_PROGRESS`、`NOT_RUN` 和“下一步”仅描述当时阶段；任务状态及后续安排已由本文当前裁决、汇总表和准入检查取代，不构成新的执行计划。
 
 ## 当前 0911 oracle-support backend claim 边界
 
-[完整结果](../doc/ie_0911/ORACLE_SUPPORT_BACKEND_RESULT.md)：在实际 HEAD `15b32f5a` 和锁定 Walk1 normal +0.5m injection 上，oracle 只提供 30 个 planned obs IDs、link 与区间；estimator 进程树没有 amplitude/GT 输入。既有 source-neutral `SupportPartition` 成功接收 30/30 target observations，非空 Stage2 实际运行 50 次 conditional optimizer call，但冻结 navigation stationarity 未满足，最终为 `MAX_REFIT_ITERATIONS`，没有有效 `c_hat`/Values/cache。
+[stationarity repair 完整结果](../doc/ie_0911/STAGE2_STATIONARITY_REPAIR_RESULT.md) 取代此前
+[未修复负结果](../doc/ie_0911/ORACLE_SUPPORT_BACKEND_RESULT.md) 作为当前 backend 状态。实际 HEAD
+`3db4f317` 的封存诊断确认 `x186[4]` 的 `0.0750243859` 梯度是真实 objective derivative；原
+50/100/200 outer 在 C update 前后都不变，根因是 fixed-C conditional LM 的 generic numerical stop，
+不是 C coupling 或 gradient bug。唯一 D2 修复复用既有 V2 和相同 graph/Values checkpoint recovery，
+未改 objective、model、budget、任何 threshold 或 FDE。
 
-因此 Rc、local sigma、LCB/full correction 和四个 candidate final 均不可用，不能计算 LCB-vs-suppress 定位收益；唯一裁决为 `RECOVERY_BACKEND_NOT_OPERATIONAL`。low redundancy 按预声明门为 `NOT_RUN_NORMAL_BACKEND_NOT_OPERATIONAL`。这项结果只支持 oracle plumbing 与 Stage2 失败定位，不支持 detector E2E、bias estimation、recoverability、bounded compensation 或 localization-benefit claim；暂停 detector 开发，T10=C2-C、T11=C、C1–C3不升级。
+同一 Walk1 normal +0.5m、30-ID oracle 场景中，estimator 仍无 amplitude/GT 输入；Stage2 在 outer42
+满足原 joint contract，得到 `c_hat=0.471346m`，Rc rank1、`sigma_c=0.075074m`，LCB correction
+`0.321198m`。suppress/structured/full/LCB final 均有效且无 fallback。冻结 evaluator 的 LCB RMSE
+`0.170086m` 比 suppress `0.181637m` 低 `0.011551m`（`6.3592%`），故当前限定裁决为
+`RECOVERY_BACKEND_OPERATIONAL_AFTER_CORRECTNESS_FIX`，并单独记录
+`LOCALIZATION_BENEFIT_OBSERVED`。这只支持单一锁定 oracle-support development sanity check；不支持
+detector E2E、泛化收益、formal held-out/RQ 或 calibrated uncertainty。T10=C2-C、T11=C、C1–C3不升级。
 
 ## 当前 0911 FDE forensic / grouped V3 claim 边界
 
