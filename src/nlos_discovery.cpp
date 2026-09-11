@@ -1118,6 +1118,23 @@ DiscoveryResult AutomaticSupportProvider::RunDevelopmentStage1(
     trace.max_navigation_scaled_step = scaled_step.max_navigation_step;
     trace.max_bias_scaled_step = scaled_step.max_bias_step;
     trace.combined_scaled_step = scaled_step.max_combined_step;
+    std::ostringstream active_identity;
+    active_identity << "uifgo-stage1-active-set-v1\n";
+    for (size_t index = 0; index < result.snapshot.size(); ++index) {
+      const bool was_active =
+          bias_before[index] >= options_.active_bias_min_m;
+      const bool is_active =
+          result.snapshot[index].bias_m >= options_.active_bias_min_m;
+      if (is_active) {
+        ++trace.active_bias_count;
+        active_identity << result.snapshot[index].obs_id << '\n';
+      }
+      if (!was_active && is_active) ++trace.active_set_added_count;
+      if (was_active && !is_active) ++trace.active_set_removed_count;
+    }
+    trace.active_set_symmetric_difference_count =
+        trace.active_set_added_count + trace.active_set_removed_count;
+    trace.active_set_sha256 = Sha256Id(active_identity.str());
     trace.navigation_gradient_objective =
         stationarity.max_scaled_gradient_objective;
     trace.navigation_roundoff_allowance_objective =

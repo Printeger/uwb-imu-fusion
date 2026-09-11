@@ -1315,7 +1315,9 @@ void WriteDiscoveryArtifacts(const fs::path& run_dir,
     out << "outer_iteration,conditional_lm_iterations,objective_before,"
            "objective_after,allowed_objective_increase,"
            "relative_objective_change,max_navigation_scaled_step,"
-           "max_bias_scaled_step,combined_scaled_step,max_chain_kkt_objective_per_m,"
+           "max_bias_scaled_step,combined_scaled_step,active_bias_count,"
+           "active_set_sha256,active_set_added_count,active_set_removed_count,"
+           "active_set_symmetric_difference_count,max_chain_kkt_objective_per_m,"
            "max_chain_primal_residual_m,"
            "max_chain_dual_residual_objective_per_m,"
            "navigation_gradient_objective,"
@@ -1397,7 +1399,11 @@ void WriteDiscoveryArtifacts(const fs::path& run_dir,
           << trace.relative_objective_change << ','
           << trace.max_navigation_scaled_step << ','
           << trace.max_bias_scaled_step << ',' << trace.combined_scaled_step
-          << ','
+          << ',' << trace.active_bias_count << ','
+          << CsvEscape(trace.active_set_sha256) << ','
+          << trace.active_set_added_count << ','
+          << trace.active_set_removed_count << ','
+          << trace.active_set_symmetric_difference_count << ','
           << trace.max_chain_kkt_objective_per_m << ','
           << trace.max_chain_primal_residual_m << ','
           << trace.max_chain_dual_residual_objective_per_m << ','

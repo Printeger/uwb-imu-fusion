@@ -313,6 +313,89 @@ def trajectory_metrics(run_dir: Path, scenario: dict):
     return result
 
 
+def paired_aligned_metrics(run_dir: Path, suppress_dir: Path, scenario: dict):
+    """Evaluate both methods on the identical set of associated GT poses."""
+    unavailable_pair = {
+        "status": "UNAVAILABLE",
+        "reason": "PAIRED_TRAJECTORY_OR_GT_UNAVAILABLE",
+        "matched_gt_count": None,
+        "rmse_improvement_vs_suppress_m": None,
+        "rmse_improvement_vs_suppress_pct": None,
+        "p95_improvement_vs_suppress_m": None,
+    }
+    method_path = run_dir / "trajectory.tum"
+    suppress_path = suppress_dir / "trajectory.tum"
+    if (not method_path.is_file() or not suppress_path.is_file() or
+            not scenario or not scenario.get("ground_truth")):
+        return unavailable_pair
+    gt = load_tum(Path(scenario["ground_truth"]))
+
+    def indexed_matches(path):
+        matches, _ = match_trajectories(
+            load_tum(path), gt, scenario["time_association"])
+        result = {}
+        for pair in matches:
+            key = f"{pair[1][0]:.9f}"
+            if key in result:
+                raise ValueError("duplicate GT point in paired trajectory")
+            result[key] = pair
+        return result
+
+    method = indexed_matches(method_path)
+    suppress = indexed_matches(suppress_path)
+    common = sorted(set(method) & set(suppress), key=float)
+    if len(common) < 3:
+        return dict(unavailable_pair, reason="FEWER_THAN_THREE_COMMON_GT_POINTS",
+                    matched_gt_count=len(common))
+    T_Q_I_raw = scenario.get("T_Q_I")
+    lever = (np.asarray(T_Q_I_raw, dtype=float).reshape(4, 4)[:3, 3]
+             if T_Q_I_raw is not None else np.zeros(3))
+
+    def errors(indexed):
+        est = np.array([indexed[key][0][1] for key in common])
+        gt_points = np.array([
+            transform_point(np.eye(4), indexed[key][1][1],
+                            indexed[key][1][2], lever) for key in common])
+        est_centered = est - est.mean(axis=0)
+        gt_centered = gt_points - gt_points.mean(axis=0)
+        if np.linalg.matrix_rank(est_centered) < 2:
+            return None
+        U, _, Vt = np.linalg.svd(est_centered.T @ gt_centered)
+        D = np.eye(3)
+        D[2, 2] = np.linalg.det(Vt.T @ U.T)
+        rotation = Vt.T @ D @ U.T
+        aligned = ((rotation @ est.T).T + gt_points.mean(axis=0) -
+                   rotation @ est.mean(axis=0))
+        return np.linalg.norm(aligned - gt_points, axis=1)
+
+    method_errors = errors(method)
+    suppress_errors = errors(suppress)
+    if method_errors is None or suppress_errors is None:
+        return dict(unavailable_pair, reason="SE3_ALIGNMENT_DEGENERATE",
+                    matched_gt_count=len(common))
+    method_rmse = float(np.sqrt(np.mean(method_errors ** 2)))
+    suppress_rmse = float(np.sqrt(np.mean(suppress_errors ** 2)))
+    method_p95 = float(np.percentile(method_errors, 95))
+    suppress_p95 = float(np.percentile(suppress_errors, 95))
+    return {
+        "status": "AVAILABLE", "reason": "",
+        "matched_gt_count": len(common),
+        "method_aligned_ATE_rmse_m": method_rmse,
+        "suppress_aligned_ATE_rmse_m": suppress_rmse,
+        "method_aligned_ATE_p95_m": method_p95,
+        "suppress_aligned_ATE_p95_m": suppress_p95,
+        "rmse_improvement_vs_suppress_m": suppress_rmse - method_rmse,
+        "rmse_improvement_vs_suppress_pct": (
+            None if suppress_rmse == 0.0 else
+            100.0 * (suppress_rmse - method_rmse) / suppress_rmse),
+        "rmse_improvement_pct_status": (
+            "UNDEFINED_ZERO_DENOMINATOR" if suppress_rmse == 0.0 else
+            "AVAILABLE"),
+        "p95_improvement_vs_suppress_m": suppress_p95 - method_p95,
+        "alignment": "SE3_SCALE_FIXED_ONE",
+    }
+
+
 def matrix_quaternion(R):
     """Stable xyzw conversion for already validated rotation matrices."""
     trace = float(np.trace(R))
@@ -1164,6 +1247,7 @@ def main():
                 "inference_id": status.get("inference_id"),
                 "aggregate_stratum": stratum,
                 "cell_status": cell["status"], "trajectory": trajectory,
+                "run_directory": str(run_dir) if run_dir else None,
                 "coverage": coverage, "bias_correction": bias_metrics,
                 "residual_score": score_support["score_tables"],
                 "residual_score_semantics": score_support["score_semantics"],
@@ -1207,6 +1291,34 @@ def main():
                         "artifact_export_seconds": status.get(
                             "inference_artifact_export_seconds")}},
             })
+        paired_improvements = []
+        suppress_by_unit_path = {}
+        for row in run_metrics:
+            if (row["mode"] == "suppress_all" and
+                    row["execution_type"] == "FINAL_TRAJECTORY"):
+                suppress_by_unit_path[(row["run_unit_id"], row["path"])] = row
+        for row in run_metrics:
+            if row["execution_type"] != "FINAL_TRAJECTORY":
+                continue
+            suppress = suppress_by_unit_path.get((row["run_unit_id"], row["path"]))
+            scenario = evaluation["run_units"].get(row["run_unit_id"], {})
+            if suppress and row.get("run_directory") and suppress.get("run_directory"):
+                paired = paired_aligned_metrics(
+                    Path(row["run_directory"]), Path(suppress["run_directory"]),
+                    scenario)
+            else:
+                paired = {
+                    "status": "UNAVAILABLE", "reason": "SUPPRESS_PAIR_UNAVAILABLE",
+                    "matched_gt_count": None,
+                    "rmse_improvement_vs_suppress_m": None,
+                    "rmse_improvement_vs_suppress_pct": None,
+                    "p95_improvement_vs_suppress_m": None,
+                }
+            row["paired_vs_suppress"] = paired
+            paired_improvements.append({
+                "cell_id": row["cell_id"], "run_unit_id": row["run_unit_id"],
+                "mode": row["mode"], "path": row["path"], **paired})
+
         aggregate = {
             "trajectory_failure_fraction": {
                 key: fraction(values) for key, values in trajectory_outcomes.items()},
@@ -1244,6 +1356,7 @@ def main():
         }
         result = {"schema": "uifgo_t09_evaluation_result_v1",
                   "batch_status": batch["status"], "run_metrics": run_metrics,
+                  "paired_improvements_vs_suppress": paired_improvements,
                   "aggregate": aggregate}
         atomic_json(output_path, result)
         csv_path = output_path.with_suffix(".csv")

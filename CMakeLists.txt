@@ -340,6 +340,8 @@ if(GTest_FOUND)
 
   add_test(NAME test_ie0911_evaluator
     COMMAND ${PYTHON_EXECUTABLE} -B ${CMAKE_CURRENT_SOURCE_DIR}/test/test_ie0911_evaluator.py)
+  add_test(NAME test_ie0911_step2
+    COMMAND ${PYTHON_EXECUTABLE} -B ${CMAKE_CURRENT_SOURCE_DIR}/test/test_ie0911_step2.py)
 
   add_test(NAME test_t09_evaluator
     COMMAND ${PYTHON_EXECUTABLE} -B

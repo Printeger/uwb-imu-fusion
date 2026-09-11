@@ -341,6 +341,13 @@ def load_manifest(path: Path) -> dict:
         if unit["run_unit_id"] in seen_units:
             raise ValueError("duplicate run_unit_id")
         seen_units.add(unit["run_unit_id"])
+        anchor_ids = unit.get("anchor_ids")
+        if anchor_ids is not None:
+            if (not isinstance(anchor_ids, list) or not anchor_ids or
+                    any(not isinstance(value, int) for value in anchor_ids) or
+                    len(set(anchor_ids)) != len(anchor_ids)):
+                raise ValueError("run unit anchor_ids must be a nonempty unique integer list")
+            unit["anchor_ids"] = sorted(anchor_ids)
         if not isinstance(unit["cells"], list) or not unit["cells"]:
             raise ValueError("run unit cells must be nonempty")
         seen_cells: set[tuple[str, str, str]] = set()
@@ -466,6 +473,7 @@ def runner_call(runner: Path, config: Path, output_root: Path, run_id: str,
                 method: str | None, execution_type: str,
                 cache_manifest: Path | None,
                 operating_point_id: str | None,
+                anchor_ids: list[int] | None,
                 env_extra: dict[str, str]) -> tuple[int, float, str, str, int | None]:
     command = ["/usr/bin/time", "-v", "-o", str(output_root / f".{run_id}.time"),
                str(runner), "--config", str(config), "--output-root",
@@ -477,6 +485,8 @@ def runner_call(runner: Path, config: Path, output_root: Path, run_id: str,
         command += ["--stage2-cache-manifest", str(cache_manifest)]
     if operating_point_id:
         command += ["--operating-point-id", operating_point_id]
+    if anchor_ids:
+        command += ["--anchor-ids", ",".join(str(value) for value in anchor_ids)]
     env = os.environ.copy()
     env.update(env_extra)
     start = time.monotonic()
@@ -731,6 +741,7 @@ def main() -> int:
             common_id = identity("t09common", {
                 "run_unit": {key: unit[key] for key in (
                     "recording_id", "base_trajectory_id", "seed", "prefix_identity")},
+                "anchor_ids": unit.get("anchor_ids", []),
                 "config": common_config_view(estimator_config),
             })
             for raw in unit["cells"]:
@@ -751,6 +762,7 @@ def main() -> int:
                     "execution_type": spec["execution_type"],
                     "path": spec["path"],
                     "producer_id": spec.get("producer_id"),
+                    "anchor_ids": unit.get("anchor_ids", []),
                     "operating_point_id": spec.get("operating_point_id"),
                     "common_preparation_request_id": common_id,
                     "requested_common_config_sha256": requested_common_config,
@@ -893,7 +905,7 @@ def main() -> int:
             code, wall, stdout, stderr, rss = runner_call(
                 runner, effective_path, output_root / "runs", run_id,
                 method_arg, cell["execution_type"], parent_manifest,
-                cell.get("operating_point_id"), env_extra)
+                cell.get("operating_point_id"), cell.get("anchor_ids"), env_extra)
             run_dir = output_root / "runs" / run_id
             if not run_dir.exists():
                 raise RuntimeError("runner did not create its declared run directory")

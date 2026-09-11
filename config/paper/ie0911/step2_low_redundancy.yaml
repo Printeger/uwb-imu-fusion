@@ -1,0 +1,30 @@
+schema: uifgo_t09_batch_v2
+role: development
+parameter_provenance: IE0911_DEVELOPMENT_TEST_ONLY_PENDING_VALIDATION
+run_units:
+- run_unit_id: sfuise_walk1_low4
+  recording_id: sfuise_walk1
+  base_trajectory_id: sfuise_walk1
+  seed: 0
+  prefix_identity: full_low_redundancy_real_anchors_7475_9524_10548_15155
+  config: sfuise_walk1.yaml
+  anchor_ids: [7475, 9524, 10548, 15155]
+  cells:
+  - {mode: robust_cauchy, execution_type: BASELINE_TRAJECTORY, path: DIRECT_COMMON_PREPARATION, robust_scale: 2.3849}
+  - {mode: structured_debias, execution_type: CACHE_PRODUCER, path: AUTO_DISCOVERY, producer_id: shared}
+  - {mode: suppress_all, execution_type: FINAL_TRAJECTORY, path: AUTO_DISCOVERY, producer_id: shared, thresholds: {}}
+  - {mode: structured_debias, execution_type: FINAL_TRAJECTORY, path: AUTO_DISCOVERY, producer_id: shared, thresholds: {}}
+  - {mode: lcb_partial, execution_type: FINAL_TRAJECTORY, path: AUTO_DISCOVERY, producer_id: shared, thresholds: {}}
+- run_unit_id: miluv_circular_low4
+  recording_id: miluv_circular
+  base_trajectory_id: miluv_circular
+  seed: 0
+  prefix_identity: full_low_redundancy_real_anchors_0_1_3_4
+  config: miluv_circular.yaml
+  anchor_ids: [0, 1, 3, 4]
+  cells:
+  - {mode: robust_cauchy, execution_type: BASELINE_TRAJECTORY, path: DIRECT_COMMON_PREPARATION, robust_scale: 2.3849}
+  - {mode: structured_debias, execution_type: CACHE_PRODUCER, path: AUTO_DISCOVERY, producer_id: shared}
+  - {mode: suppress_all, execution_type: FINAL_TRAJECTORY, path: AUTO_DISCOVERY, producer_id: shared, thresholds: {}}
+  - {mode: structured_debias, execution_type: FINAL_TRAJECTORY, path: AUTO_DISCOVERY, producer_id: shared, thresholds: {}}
+  - {mode: lcb_partial, execution_type: FINAL_TRAJECTORY, path: AUTO_DISCOVERY, producer_id: shared, thresholds: {}}

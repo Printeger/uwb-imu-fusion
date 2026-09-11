@@ -1,0 +1,66 @@
+{
+  "schema": "uifgo_ie0911_step2_protocol_v1",
+  "created_utc": "2026-09-11T05:49:01Z",
+  "role": "development_conditional_evaluation",
+  "baseline_commit": "0ba0755922854a95bb52aa0428daf68283aab37c",
+  "dirty_source_bundle_sha256": {
+    "CMakeLists.txt": "c10f9bacd2e0061f607561b138dc53237192d900c28442ebb6426e7f15bc2053",
+    "include/uifgo/nlos_discovery.h": "18439e4cd3098cfac9612a18a0301e3afbb18bc46799d6e3da8e0d45bbd2c184",
+    "src/nlos_discovery.cpp": "38f463850d1215e338856e5d320352795236f6c202a116a8a7e7f49faf73a28e",
+    "tools/run_ie_paper.cpp": "6e0e7f6e3a84f3628474e01ce6e7f17fa9494a92520b3cdd80d27048834cb0f6",
+    "tools/paper/run_experiments.py": "7e22baac46915212b2bc5bf949d456f7ef9d4e6adad335f689977e0dabc6e0b6",
+    "tools/paper/evaluate_runs.py": "a7ef2af054926a1640b45002d8d688db986ab857d0be4b379d79799759f4d275",
+    "test/test_ie0911_step2.py": "a4cd1fecb65e18173b200a4a3c13c1070571b10796d30e6bb67e2db4e42f6ad1"
+  },
+  "runner": {
+    "path": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner",
+    "sha256": "025ffad222a435b192c470ff41fdfa6256ab3652982e63911305392909ded86b"
+  },
+  "truth_exporter": {
+    "path": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_fgo/lib/uwb_imu_fgo/export_ground_truth",
+    "sha256": "9a0e33a92dc3891e47352a7f4e4fa6c44616b941bcd18df2c9d0598ab921caeb",
+    "estimator_input": false
+  },
+  "schedule": {
+    "manifest": "config/paper/ie0911/six_inputs.yaml",
+    "manifest_sha256": "c125cde2be1b5075bf48b5d625b98239bcde8ddf6bdffaeb5a475b63195f33fb",
+    "execution": "serial",
+    "main_output_root": "/home/mint/ws_fusion_uwb/res/ie0911_step2_main_20260911_01",
+    "truth_output_root": "/home/mint/ws_fusion_uwb/res/ie0911_step2_truth_20260911_01",
+    "wall_budget_seconds": 43200,
+    "rerun_policy": "no_algorithm_retry; ordinary_wiring_fix_invalidates_all_affected_results"
+  },
+  "frozen_method": {
+    "kappa": 2.0,
+    "stage1_max_outer_iterations": 50,
+    "methods": ["robust_cauchy", "suppress_all", "structured_debias", "lcb_partial"],
+    "full_compensation_diagnostic": "lcb_fixed_full",
+    "primary_full_compensation_condition": "miluv_circular/full",
+    "other_full_compensation_cells": "transparent_additional_diagnostics",
+    "parameter_change_or_result_based_selection": false
+  },
+  "inputs": [
+    {"run_unit_id": "sfuise_walk1", "requested_span": "full; bag.start=0,durr=-1", "tag": "loader_native", "anchor_ids": [7475, 9524, 10548, 15155, 20276]},
+    {"run_unit_id": "sfuise_walk2", "requested_span": "full; bag.start=0,durr=-1", "tag": "loader_native", "anchor_ids": [7475, 9524, 10548, 15155, 20276]},
+    {"run_unit_id": "sfuise_walk3", "requested_span": "full; bag.start=0,durr=-1", "tag": "loader_native", "anchor_ids": [7475, 9524, 10548, 15155, 20276]},
+    {"run_unit_id": "miluv_random", "requested_span": "full; bag.start=0,durr=-1", "tag": 10, "anchor_ids": [0, 1, 2, 3, 4, 5]},
+    {"run_unit_id": "miluv_circular", "requested_span": "full; bag.start=0,durr=-1", "tag": 10, "anchor_ids": [0, 1, 2, 3, 4, 5]},
+    {"run_unit_id": "vicon_test", "requested_span": "full; bag.start=0,durr=-1", "tag": "configured_topic", "anchor_ids": [1, 2, 3, 4]}
+  ],
+  "low_redundancy_rule": {
+    "run_only_if_fewer_than_four_main_producers_share_stage1_failure": true,
+    "sfuise_walk1_anchor_ids": [7475, 9524, 10548, 15155],
+    "miluv_circular_anchor_ids": [0, 1, 3, 4],
+    "methods": ["robust_cauchy", "suppress_all", "structured_debias", "lcb_partial"]
+  },
+  "systemic_blocker_rule": "at_least_four_main_producers_fail_with_MAX_OUTER_ITERATIONS",
+  "evaluation": {
+    "primary": "conditional per-run SE(3)-aligned ATE with scale fixed to one",
+    "raw_frame": "only if fixed frame and rigid-point provenance is established",
+    "pairing": "intersection of valid associated GT points for method and suppress_all",
+    "minimum_matched_points": 3,
+    "sim3_forbidden": true,
+    "range_reference": "N/A unless independent anchor/lever/time/static-beta provenance is established"
+  },
+  "claim_constraints": ["T10=C2-C", "T11=C", "C1-C3_NOT_UPGRADED", "no_third_step", "no_auto_push"]
+}

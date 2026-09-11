@@ -1,5 +1,17 @@
 # UWB-IMU-IE sprint 状态
 
+## 0911-STEP2 真实精度实验（2026-09-11）
+
+用户授权的第二个且最后一个开发工作包已执行并停止：
+`EXECUTED_WITH_STAGE1_BLOCKED_METHOD_COMPARISONS / STRICT_SYSTEMIC_MAX_OUTER_RULE_NOT_TRIGGERED`。
+[完整结果](../ie_0911/STEP2_RESULTS.md)。六条 full 输入和两个预冻结低冗余条件均实际运行；独立 Cauchy
+得到 5 条轨迹（其余 3 条 final LM 失败），但六个主 producer 与两个低冗余 producer 全部在 Stage1 失败，
+所有 suppress/structured/LCB/full final 因 cache unavailable 未运行。严格“至少四个主 producer 同为
+MAX_OUTER_ITERATIONS”规则未触发（实际 2/6），但新方法真实精度比较仍被 Stage1 两类失败完全阻塞。
+LCB逐序列收益、低冗余收益、主全额消融差异均 UNAVAILABLE；range reference provenance 不闭合，统一 N/A。
+最终 CTest 27/27；首次陈旧测试 ABI 导致的2个SIGSEGV及修复后重跑均保留。T10=C2-C、T11=C、C1–C3
+不升级；不进入第三步、不调参数、不自动 push。
+
 ## 0911-STEP1 用户授权 amendment（2026-09-11）
 
 本轮用户实施计划授权第一步 LCB 固定部分补偿及同集合全额消融，替代旧下一任务边界。
@@ -79,7 +91,7 @@ roadmap 所称的 `UWB_IMU_IE_System_Centered_Structure_v3.tex` / `Structure_v3`
 | T09 统一基线、缓存、批量执行与评估 | `DONE` | `REVIEW_ACCEPTED_DEVELOPMENT_ENGINEERING_SCOPE / AUTOMATIC_E2E_BLOCKED_BY_T07_STAGE1`；最终独立复审接受 R03-B，并与此前已接受的 R01–R08 合并关闭 T09 development-engineering 范围。真实 final 保持 `41/627`，parent canonical-v2 内容身份、ledger/mask/audit 与 failure accounting 反例通过。见 [最终独立复审收口](evidence/t09_final_rereview_closeout_20260908T065646Z/VERIFICATION.md)。这不是 automatic accepted-candidate 科学证据、正式 RQ、C1–C3 支持或 T10 gate lock |
 | T10 validation/gate | `DONE` | `FROZEN_C2_C_USER_SCOPED_CLOSEOUT`：仅本轮授权收缩范围完成。两base step2×A/B/C，N=6400I/1600I/3200I；30/30 final有效，s_fit/full_gate决定全同，structured RMSE1好5差/P95全差。LOS20102独立对照通过、20101对照数值失败保留。原完整T10/held-out验收未完成，T11/T12未运行。[收口](T10_CLOSEOUT.md) |
 | T11 prefix | `DONE` | `FROZEN_T11_C_LIMITED_SCOPE`：6 fresh + 2 U13 已执行；科学 4/6 全链、8/8 final 有效；20101 H0/H1 Stage1失败，完整U13仅20102 PASS；truth未读、指标NOT_RUN。[收口](T11_CLOSEOUT.md) |
-| T12 正式指标 | `NOT_STARTED` | locked metrics、正式 RQ 与 U14 `NOT_RUN` |
+| T12 正式指标 | `DONE_0911_LIMITED_DEVELOPMENT_BLOCKED` | 0911 STEP2 限定矩阵已执行；5条 Cauchy conditional aligned 轨迹，候选方法8/8条件均被 Stage1/cache 阻塞；正式 locked/held-out RQ 与 U14 仍 `NOT_RUN`。见 [`STEP2_RESULTS.md`](../ie_0911/STEP2_RESULTS.md) |
 | T13 论文结果与发布 | `NOT_STARTED` | 正式论文数字、图表与 release `NOT_RUN` |
 
 ## A14 指挥接受与实施前登记
@@ -113,9 +125,11 @@ T10 保持 IN_PROGRESS；A08 图级 FD 15/18 限制保留。
 只观察 outer1 首 conditional block；第49/50实际接受完整delta通过原FD判据才可在同一optimizer续至总200次。
 不进入chain/Stage2/gate，不运行held-out，不改solver/Jacobian或/usr/local。
 
-## 当前任务结论与下一任务（2026-09-11）
+## 当前任务结论与停止边界（2026-09-11）
 
-[T11_CLOSEOUT.md](T11_CLOSEOUT.md) 已按用户限定工作包完成并冻结，唯一裁决 **T11-C**。完整U13未通过，不能声称正式RQ4验收；六份固定模型数值核验通过仅作诊断记录。T10保持C2-C，C1/C2/C3不升级。**下一唯一任务为T12：先核实既有真实/公共输入的标定、参考与时间语义，再执行冻结实现/指标的限定评估**；本轮T12 NOT_RUN。下方旧T10/T11停止文本仅历史记录。
+[T11_CLOSEOUT.md](T11_CLOSEOUT.md) 保持唯一裁决 **T11-C**。其后的用户授权 0911 STEP2 已作为最后一个
+开发工作包执行并停止；完整结果见 [`STEP2_RESULTS.md`](../ie_0911/STEP2_RESULTS.md)。本轮没有进入第三步，
+没有正式 held-out 准入或 claim 升级。下方旧 T10/T11/T12“下一任务”文本均为历史记录。
 
 ## T11 当前授权（2026-09-11）
 

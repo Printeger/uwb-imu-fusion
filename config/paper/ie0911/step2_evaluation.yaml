@@ -1,0 +1,44 @@
+schema: uifgo_t09_evaluation_v1
+run_units:
+  sfuise_walk1: &sfuise_walk1
+    ground_truth: /home/mint/ws_fusion_uwb/res/ie0911_step2_truth_20260911_01/sfuise_walk1/ground_truth.tum
+    ground_truth_sha256: sha256:2bd90465cc6f9445e94c75087a293c36cfc25a4ac1165654a9765431c8816c33
+    units: m_s_rad
+    time_base: sensor_header_stamp
+    T_G_E: null
+    T_Q_I: null
+    frame_point_provenance: null
+    bias_truth_scope: NONE
+    time_association: {policy: nearest_within_tolerance, tolerance_s: 0.02}
+  sfuise_walk2:
+    <<: *sfuise_walk1
+    ground_truth: /home/mint/ws_fusion_uwb/res/ie0911_step2_truth_20260911_01/sfuise_walk2/ground_truth.tum
+    ground_truth_sha256: sha256:8c47d2cc5a26864b35ae5d13d486ad44bfc764e43cc781d9735c21438fdf1717
+  sfuise_walk3:
+    <<: *sfuise_walk1
+    ground_truth: /home/mint/ws_fusion_uwb/res/ie0911_step2_truth_20260911_01/sfuise_walk3/ground_truth.tum
+    ground_truth_sha256: sha256:fd4d5c1ea0e645c244f05f182e975e9dcb39873416f89f1b7b89086633bfe026
+  miluv_random: &miluv_random
+    ground_truth: /home/mint/ws_fusion_uwb/res/ie0911_step2_truth_20260911_01/miluv_random/ground_truth.tum
+    ground_truth_sha256: sha256:86f3f0cb47ac600c991d0981407498caca8e0fbca8809c926c30cea52c9e03e9
+    units: m_s_rad
+    time_base: miluv_dataset_seconds
+    T_G_E: null
+    T_Q_I: null
+    frame_point_provenance: null
+    bias_truth_scope: NONE
+    time_association: {policy: nearest_within_tolerance, tolerance_s: 0.02}
+  miluv_circular:
+    <<: *miluv_random
+    ground_truth: /home/mint/ws_fusion_uwb/res/ie0911_step2_truth_20260911_01/miluv_circular/ground_truth.tum
+    ground_truth_sha256: sha256:68fccbe02e5e26ba31c886ea32638475d85e466342d26394295dcba96691a8a9
+  vicon_test:
+    ground_truth: /home/mint/ws_fusion_uwb/res/ie0911_step2_truth_20260911_01/vicon_test/ground_truth.tum
+    ground_truth_sha256: sha256:b8e6d6f51135cacdb36501c63b8f6e77f29624c3bfe78fd6d2f4195ed58a29d7
+    units: m_s_rad
+    time_base: ros_sensor_header_stamp
+    T_G_E: null
+    T_Q_I: null
+    frame_point_provenance: null
+    bias_truth_scope: NONE
+    time_association: {policy: nearest_within_tolerance, tolerance_s: 0.02}

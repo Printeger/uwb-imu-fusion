@@ -168,6 +168,11 @@ struct DiscoveryIteration {
   double max_navigation_scaled_step = 0.0;
   double max_bias_scaled_step = 0.0;
   double combined_scaled_step = 0.0;
+  size_t active_bias_count = 0;
+  std::string active_set_sha256;
+  size_t active_set_added_count = 0;
+  size_t active_set_removed_count = 0;
+  size_t active_set_symmetric_difference_count = 0;
   double max_chain_kkt_objective_per_m = 0.0;
   double max_chain_primal_residual_m = 0.0;
   double max_chain_dual_residual_objective_per_m = 0.0;

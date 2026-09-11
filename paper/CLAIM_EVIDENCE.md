@@ -1,8 +1,22 @@
 # UWB-IMU-IE claim–evidence ledger
 
-状态：`T10_FROZEN_C2_C / T11_FROZEN_T11_C_LIMITED_SCOPE_U13_INCOMPLETE / T12_NOT_STARTED`
+状态：`T10_FROZEN_C2_C / T11_FROZEN_T11_C_LIMITED_SCOPE_U13_INCOMPLETE / 0911_STEP2_EXECUTED_METHOD_COMPARISON_BLOCKED_STAGE1`
 
 阅读范围：下方按 T00–T10、Axx/Rxx 命名的阶段证据节均为**历史快照**。其中“当前状态”“本轮”、`IN_PROGRESS`、`NOT_RUN` 和“下一步”仅描述当时阶段；任务状态及后续安排已由本文当前裁决、汇总表和准入检查取代，不构成新的执行计划。
+
+## 当前 0911 STEP2 claim 边界
+
+第二个且最后一个 development 工作包已执行六条 full 输入、两个真实 anchor 低冗余条件及独立 GT 评价。
+六个主 producer 和两个低冗余 producer 全部在 Stage1 失败，未生成任何可供 suppress/structured/LCB/full
+使用的 Stage2 cache；因此 LCB 相对 suppress/structured 的轨迹收益、低冗余恢复收益和预指定 MILUV
+circular 全额补偿消融差异全部为 `UNAVAILABLE`，不支持正向、负向或等价 claim。严格的“至少四个主
+producer 同为 MAX_OUTER”规则没有触发（2/6），但候选方法精度矩阵事实上被 Stage1 完全阻塞。
+
+独立 robust Cauchy 仅 5/8 条件生成轨迹；其 full-record conditional SE(3)-aligned ATE 为数百至上千米，
+表明这些成功输出也发生严重漂移。固定 frame/刚体点和独立 range-reference provenance 未闭合，raw-frame
+与真实测距参考均不报告。该结果只支持可追溯的负/缺失证据与失败记账，不升级 C1、C2 或 C3，不改变
+T10=C2-C、T11=C，也不构成 formal held-out/RQ/U14 验收。见
+[`STEP2_RESULTS.md`](../doc/ie_0911/STEP2_RESULTS.md) 和隔离的 38 行机器表。
 
 
 ## 当前 T11 claim 边界
@@ -110,9 +124,9 @@ joint four-way AND.  C1--C3 remain unchanged.  See the
 
 | Claim | Implementation/source expected | Experiment/run IDs expected | Figure/table expected | Current status and limitations |
 |---|---|---|---|---|
-| C1：可复现的 full-trajectory raw-range UWB–IMU pipeline，策略可替换，输出来自一致 final graph/Values | T02 paper input/fixed-beta path；T08 `InferenceResult`；T09 isolated runner/evaluator；source commit + build log | RQ1 simulation、controlled UGV、一个 public dataset；至少一次完整 rerun；run manifests/hashes | `tab:system_results`；architecture figure；artifact manifest | `PARTIALLY_SUPPORTED_ENGINEERING_ONLY`：有限合成输入上的实现、final输出与正确性有证据；T10负结果不自动证明系统性能。跨真实/public的新端到端证据及完整rerun要求留待T12，不升级完整C1。 |
-| C2：recoverability characterization / exploratory structured correction；保留 Rc/η/s 与 live-c 分段联合图 | T03 golden matrices；T04 segment factor/constrained refit；T05 `F/G/N/R,eta,s,gamma`；T06 discovery/partition；T08 final/fallback；U01–U12 | RQ2 repeated LOS + sustained 1/2/3-link/ramp；RQ3 automatic-discovery end-to-end matched-cache gate comparison；fixed-partition constant/ramp 只作 `DEBUG_DIAGNOSTIC_ONLY`；failure/fallback runs | `tab:main`；`fig:headline`；automatic E2E decision/final score CSV；另列 fixed-partition DEBUG 表 | `C2-C / NOT_SUPPORTED_OPERATIONAL_BENEFIT`：六输入 N 改变但 s_fit/full_gate 决定全同；structured RMSE1好5差、P95全差。工程正确性有证据，稳定恢复轨迹收益与η增量未支持。LOS20101对照失败、20102完整对照通过；重启冻结sidecar缺口及精简范围见 [T10_CLOSEOUT](../doc/ie_sprint/T10_CLOSEOUT.md)。T11限定工作包已执行并冻结T11-C，固定模型诊断有效但不支持正式E2E RQ4；T12未开始，原完整正式held-out RQ3未完成或获验收。 |
-| C3：受控证据与 artifact 分离 portability、decision quality、multi-link NLOS 和 future-context，命令/配置可追溯 | T07 deterministic truth sidecar；T09 manifests/cache/evaluator；T10 locked gate；T11 no-leak prefix；T12 locked metrics；T13 generated figures/tables/release | RQ1–RQ4 locked run IDs；RQ3 两个隔离 cache namespace；RQ4 common-linearization 独立 manifest/cache；U13/U14；failed/zero-coverage/fallback ledger；artifact reproduction run | `fig:headline`、`fig:context`、system/main tables、machine-readable metrics | `PARTIALLY SUPPORTED（基础设施） / FROZEN NEGATIVE/INCOMPLETE RESULT（T10/T11有限实证）`：命令、保留输入/结果与失败记账存在；T10有限validation冻结C2-C。T11固定模型诊断有效；20102完整U13通过、20101下游未到达，整体U13不完整，truth评价NOT RUN BY PROTOCOL。完整RQ1–RQ4及正式held-out未完成，T12为NOT_STARTED。用户已授权精简旧中间归档，不能声称旧完整archive仍全部可验证。 |
+| C1：可复现的 full-trajectory raw-range UWB–IMU pipeline，策略可替换，输出来自一致 final graph/Values | T02 paper input/fixed-beta path；T08 `InferenceResult`；T09 isolated runner/evaluator；source commit + build log | RQ1 simulation、controlled UGV、一个 public dataset；至少一次完整 rerun；run manifests/hashes | `tab:system_results`；architecture figure；artifact manifest | `PARTIALLY_SUPPORTED_ENGINEERING_ONLY`：有限合成实现与正确性有证据；0911 STEP2 的真实 full producer 8/8 在 Stage1 失败，Cauchy 5/8 成功但严重漂移，未提供新的完整端到端方法证据，不升级完整C1。 |
+| C2：recoverability characterization / exploratory structured correction；保留 Rc/η/s 与 live-c 分段联合图 | T03 golden matrices；T04 segment factor/constrained refit；T05 `F/G/N/R,eta,s,gamma`；T06 discovery/partition；T08 final/fallback；U01–U12 | RQ2 repeated LOS + sustained 1/2/3-link/ramp；RQ3 automatic-discovery end-to-end matched-cache gate comparison；fixed-partition constant/ramp 只作 `DEBUG_DIAGNOSTIC_ONLY`；failure/fallback runs | `tab:main`；`fig:headline`；automatic E2E decision/final score CSV；另列 fixed-partition DEBUG 表 | `C2-C / NOT_SUPPORTED_OPERATIONAL_BENEFIT`：T10负裁决保持。0911 STEP2 无 Stage2 cache 或任何 suppress/structured/LCB 配对，不能新增收益方向；全额消融也无辨别力。原完整 formal held-out RQ3仍未完成。 |
+| C3：受控证据与 artifact 分离 portability、decision quality、multi-link NLOS 和 future-context，命令/配置可追溯 | T07 deterministic truth sidecar；T09 manifests/cache/evaluator；T10 locked gate；T11 no-leak prefix；T12 locked metrics；T13 generated figures/tables/release | RQ1–RQ4 locked run IDs；RQ3 两个隔离 cache namespace；RQ4 common-linearization 独立 manifest/cache；U13/U14；failed/zero-coverage/fallback ledger；artifact reproduction run | `fig:headline`、`fig:context`、system/main tables、machine-readable metrics | `PARTIALLY SUPPORTED（基础设施） / FROZEN NEGATIVE/INCOMPLETE RESULT`：0911 STEP2 增加隔离 manifest、六份 GT hash、38 行全分母及失败/配对 unavailable 记账；但 8/8 producer Stage1 失败、无 U14/formal held-out，故只加强可追溯失败证据，不升级完整 C3。 |
 
 ## T10-A19-R03 崩溃后复审边界（历史快照，状态已取代）
 
