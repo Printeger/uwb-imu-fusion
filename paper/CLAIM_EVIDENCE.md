@@ -1,17 +1,21 @@
 # UWB-IMU-IE claim–evidence ledger
 
-状态：`T10_FROZEN_C2_C / T11_FROZEN_C_LIMITED_SCOPE_U13_INCOMPLETE / T12_NOT_RUN`
+状态：`T10_FROZEN_C2_C / T11_FROZEN_T11_C_LIMITED_SCOPE_U13_INCOMPLETE / T12_NOT_STARTED`
+
+阅读范围：下方按 T00–T10、Axx/Rxx 命名的阶段证据节均为**历史快照**。其中“当前状态”“本轮”、`IN_PROGRESS`、`NOT_RUN` 和“下一步”仅描述当时阶段；任务状态及后续安排已由本文当前裁决、汇总表和准入检查取代，不构成新的执行计划。
 
 
 ## 当前 T11 claim 边界
 
-唯一裁决 **T11-C**：六 fresh 科学前缀实际4条全链成功、2条Stage1失败；20102完整U13精确通过，20101仅已到达失败阶段一致，整体U13未通过。两条fresh H2的固定模型六行数值/行语义/SVD核验通过，保持diagnostic_fixed_model；不能覆盖U13准入或作为端到端收益证据。truth未读，历史bias/轨迹指标NOT_RUN，不填论文数字。
+限定预登记工作包已执行并冻结，唯一裁决 **T11-C / FROZEN NEGATIVE/INCOMPLETE RESULT**：六个 fresh 科学前缀均已尝试，4/6完成全链；20101 H=0/H=1在Stage1失败且未重试。20102完整U13精确通过；20101仅已到达失败阶段一致，下游未到达，完整U13为NOT_RUN_INCOMPLETE_CHAIN，因此整体U13未通过。已完成比较未显示未来数据泄漏，不能把未完成链视为完整通过。
 
-限定工程证据包括物理前缀、原始ID、初始化/积分边界、compact数值一致和一条完整U13；C1/C2/C3不整体升级，T10 C2-C不变。下一仅T12既有输入语义核实与限定评估。[T11完整收口](../doc/ie_sprint/T11_CLOSEOUT.md)。
+两条fresh H2的固定模型六行数值/行语义/SVD核验通过：**SUPPORTED（限定 mechanistic/diagnostic 域）**，提供有效且机制一致的信息证据；不能覆盖U13准入或作为端到端收益证据。正式E2E RQ4验证未成功完成。预登记truth gate未满足，truth未读，历史bias/轨迹评价为 **NOT RUN BY PROTOCOL / NOT_RUN_U13_NOT_PASSED**，不填论文数字。不计划T11重试或rescue。
+
+限定工程证据包括物理前缀、原始ID、初始化/积分边界、compact数值一致和一条完整U13；这些是system/implementation证据，与上述mechanistic/diagnostic证据及未获支持的E2E empirical claim分开记账。C1/C2/C3不整体升级，T10 C2-C不变。T12为 **NOT_STARTED / NOT_RUN**，是下一科学执行任务：既有输入语义核实与限定评估。[T11完整收口](../doc/ie_sprint/T11_CLOSEOUT.md)。
 
 ## 当前 T10 claim 裁决（覆盖下方历史状态）
 
-**C2-C：recoverability characterization / exploratory structured correction。**
+**T10已按用户收缩范围执行并冻结，C2-C：recoverability characterization / exploratory structured correction。**
 Rc/η/s machinery 在已测试域内实现并验证；改变 noise/count 后 N=6400I/1600I/3200I，
 跨条件原固定映射不再成立，但六输入 s_fit/full_gate 实际决定相同。
 Structured recovery 的历史 RMSE 为1好5差、P95为0好6差；稳定轨迹收益和 η 增量操作收益均 **NOT SUPPORTED**。
@@ -19,15 +23,15 @@ Structured recovery 的历史 RMSE 为1好5差、P95为0好6差；稳定轨迹�
 
 - **SUPPORTED（限定工程域）：** Rc/η/s计算、signed-zero metadata修复、真实零候选生产接口。
 - **PARTIALLY SUPPORTED：** 有限合成全链；LOS20102独立all-range对照通过，20101对照数值失败且相对代价UNAVAILABLE。
-- **NOT SUPPORTED：** 稳定恢复轨迹收益、η门控增量、两条LOS均无退化，以及由实现存在推导的性能主张。
-- **NOT YET TESTED：** T12新真实/公共数据、正式held-out RQ3及完整C1/C3。T11已执行限定工作包，状态以上方T11-C边界为准。
+- **NOT SUPPORTED：** 稳定恢复轨迹收益、η门控增量、安全操作恢复策略、两条LOS均无退化，以及由实现存在推导的性能主张。
+- **NOT YET TESTED：** T12新真实/公共数据及原完整正式held-out RQ3；完整C1/C3验证要求尚未满足，已有有限工程与诊断证据保留。T11已执行限定工作包，状态以上方T11-C边界为准。
 
 重启损坏的新run原始冻结/评价sidecar不能回溯为完整盲测证据；现存最终产物经重建清单后独立复算。
 用户授权精简34.15GiB可再生成中间证据，旧完整archive状态不再作为当前可用性承诺。
 [最终收口和全部数值来源](../doc/ie_sprint/T10_CLOSEOUT.md)。本次完成仅指用户授权收缩范围，非原完整T10实验验收。
 
 
-## T10-A19-R05 independent review boundary
+## T10-A19-R05 independent review boundary（历史快照，状态已取代）
 
 Read-only review cross-checked per-block counts, recorded terminal thresholds and current mapped binary hashes.
 The outer24 joint gradient is 6.3933990901e-7 and all four recorded conditions pass after one outer15 handoff.
@@ -107,10 +111,10 @@ joint four-way AND.  C1--C3 remain unchanged.  See the
 | Claim | Implementation/source expected | Experiment/run IDs expected | Figure/table expected | Current status and limitations |
 |---|---|---|---|---|
 | C1：可复现的 full-trajectory raw-range UWB–IMU pipeline，策略可替换，输出来自一致 final graph/Values | T02 paper input/fixed-beta path；T08 `InferenceResult`；T09 isolated runner/evaluator；source commit + build log | RQ1 simulation、controlled UGV、一个 public dataset；至少一次完整 rerun；run manifests/hashes | `tab:system_results`；architecture figure；artifact manifest | `PARTIALLY_SUPPORTED_ENGINEERING_ONLY`：有限合成输入上的实现、final输出与正确性有证据；T10负结果不自动证明系统性能。跨真实/public的新端到端证据及完整rerun要求留待T12，不升级完整C1。 |
-| C2：recoverability characterization / exploratory structured correction；保留 Rc/η/s 与 live-c 分段联合图 | T03 golden matrices；T04 segment factor/constrained refit；T05 `F/G/N/R,eta,s,gamma`；T06 discovery/partition；T08 final/fallback；U01–U12 | RQ2 repeated LOS + sustained 1/2/3-link/ramp；RQ3 automatic-discovery end-to-end matched-cache gate comparison；fixed-partition constant/ramp 只作 `DEBUG_DIAGNOSTIC_ONLY`；failure/fallback runs | `tab:main`；`fig:headline`；automatic E2E decision/final score CSV；另列 fixed-partition DEBUG 表 | `C2-C / NOT_SUPPORTED_OPERATIONAL_BENEFIT`：六输入 N 改变但 s_fit/full_gate 决定全同；structured RMSE1好5差、P95全差。工程正确性有证据，稳定恢复轨迹收益与η增量未支持。LOS20101对照失败、20102完整对照通过；重启冻结sidecar缺口及精简范围见 [T10_CLOSEOUT](../doc/ie_sprint/T10_CLOSEOUT.md)。T11/T12/held-out未运行。 |
-| C3：受控证据与 artifact 分离 portability、decision quality、multi-link NLOS 和 future-context，命令/配置可追溯 | T07 deterministic truth sidecar；T09 manifests/cache/evaluator；T10 locked gate；T11 no-leak prefix；T12 locked metrics；T13 generated figures/tables/release | RQ1–RQ4 locked run IDs；RQ3 两个隔离 cache namespace；RQ4 common-linearization 独立 manifest/cache；U13/U14；failed/zero-coverage/fallback ledger；artifact reproduction run | `fig:headline`、`fig:context`、system/main tables、machine-readable metrics | `PARTIALLY_SUPPORTED_INFRASTRUCTURE / FULL_EMPIRICAL_CLAIM_NOT_YET_TESTED`：命令、保留输入/结果与失败记账存在；T10仅有限validation负结果。完整RQ1–RQ4、U13和正式held-out未完成。用户已授权精简旧中间归档，不能声称旧完整archive仍全部可验证。 |
+| C2：recoverability characterization / exploratory structured correction；保留 Rc/η/s 与 live-c 分段联合图 | T03 golden matrices；T04 segment factor/constrained refit；T05 `F/G/N/R,eta,s,gamma`；T06 discovery/partition；T08 final/fallback；U01–U12 | RQ2 repeated LOS + sustained 1/2/3-link/ramp；RQ3 automatic-discovery end-to-end matched-cache gate comparison；fixed-partition constant/ramp 只作 `DEBUG_DIAGNOSTIC_ONLY`；failure/fallback runs | `tab:main`；`fig:headline`；automatic E2E decision/final score CSV；另列 fixed-partition DEBUG 表 | `C2-C / NOT_SUPPORTED_OPERATIONAL_BENEFIT`：六输入 N 改变但 s_fit/full_gate 决定全同；structured RMSE1好5差、P95全差。工程正确性有证据，稳定恢复轨迹收益与η增量未支持。LOS20101对照失败、20102完整对照通过；重启冻结sidecar缺口及精简范围见 [T10_CLOSEOUT](../doc/ie_sprint/T10_CLOSEOUT.md)。T11限定工作包已执行并冻结T11-C，固定模型诊断有效但不支持正式E2E RQ4；T12未开始，原完整正式held-out RQ3未完成或获验收。 |
+| C3：受控证据与 artifact 分离 portability、decision quality、multi-link NLOS 和 future-context，命令/配置可追溯 | T07 deterministic truth sidecar；T09 manifests/cache/evaluator；T10 locked gate；T11 no-leak prefix；T12 locked metrics；T13 generated figures/tables/release | RQ1–RQ4 locked run IDs；RQ3 两个隔离 cache namespace；RQ4 common-linearization 独立 manifest/cache；U13/U14；failed/zero-coverage/fallback ledger；artifact reproduction run | `fig:headline`、`fig:context`、system/main tables、machine-readable metrics | `PARTIALLY SUPPORTED（基础设施） / FROZEN NEGATIVE/INCOMPLETE RESULT（T10/T11有限实证）`：命令、保留输入/结果与失败记账存在；T10有限validation冻结C2-C。T11固定模型诊断有效；20102完整U13通过、20101下游未到达，整体U13不完整，truth评价NOT RUN BY PROTOCOL。完整RQ1–RQ4及正式held-out未完成，T12为NOT_STARTED。用户已授权精简旧中间归档，不能声称旧完整archive仍全部可验证。 |
 
-## T10-A19-R03 崩溃后复审边界
+## T10-A19-R03 崩溃后复审边界（历史快照，状态已取代）
 
 指挥会话核对封存SIGSEGV、源码与当前runner/core/GTSAM/MPFR/GMP身份；原始崩溃栈未提供，根因未定。
 启动预检未覆盖真实raw初始化建图正路径，五final实际共用自动流程900s timeout，既有T09 evaluator
@@ -352,12 +356,12 @@ A08历史图级15/18及UNKNOWN限制保留。T10 IN_PROGRESS，C1–C3保持原P
 - [ ] U06 fixed/online beta score-column 完整性；test-only online `Z(m)` + real prior/去 prior混淆与 fixed-beta 单次残差在 T05 测试支持域 `PASS_REVIEW_ACCEPTED`，但真实 fixed value 缺失
 - [ ] U07 projector/Schur/C++ sparse 全对照；T03 Python 与 T05 C++ sparse 支持域对照均已接受，临界/不可证明秩显式不评分；仍不等于通用误差证明
 - [x] U08–U12 C++ factor/score/final correctness；U08–U10 既有范围已复审，U11 `REVIEW_ACCEPTED_DEVELOPMENT_ENGINEERING_SCOPE`；T08 R01/R03 保留限定 scope，R02 为 `REVIEW_ACCEPTED_EXCEPTION_TIMING_SCOPE`
-- [ ] automatic discovery，不读 oracle/GT；T06 实际短输入、空 partition 与非空 eligible 工程小图在 development engineering scope 内 `REVIEW_ACCEPTED`，但未做正式 RQ，真实短输入无有效 score
+- [ ] automatic discovery，不读 oracle/GT；T06限定工程证据保留；T10有限全链与T11的4/6科学前缀已完成，未完成原完整正式RQ验证，不能以实现或有限执行升级完整claim。
 - [ ] RQ3 fixed-partition constant/ramp mismatch diagnostic 使用预声明分段并全程标 DEBUG；T09 仅运行 development smoke 并验证 cache namespace，正式 mismatch/RQ `NOT_RUN`，不能替代上一项
-- [ ] RQ3 automatic discovery 使用独立 cache，报告全部自动段的数量/长度和 decision/final `gamma`；R08 已在两条synthetic validation base的固定12输入中完成8条score/final，保留3失败+1中断；三gate未区分且structured收益不重复，LOS代价仍UNAVAILABLE；正式 matched-cache RQ/held-out仍 `NOT_RUN`
+- [ ] RQ3 automatic discovery 使用独立 cache，报告全部自动段的数量/长度和 decision/final `gamma`；T10用户收缩范围六输入、30/30 final有效，s_fit/full_gate决定相同，稳定structured收益 **NOT SUPPORTED**；LOS20102独立对照成功，20101失败且相对代价UNAVAILABLE。原完整正式held-out RQ3未完成或获验收；有限比较不替代该验证程序。
 - [ ] independent fixed beta calibration；`BLOCKED_EXTERNAL`
 - [ ] held-out gate increment at matched coverage/cost；RQ3 `NOT_RUN`
-- [ ] no unacceptable LOS degradation under prelocked tolerance；RQ2 `NOT_RUN`
+- [ ] no unacceptable LOS degradation under prelocked tolerance；**NOT SUPPORTED**：T10 LOS20102独立对照通过，20101对照数值失败；原完整RQ2验证未完成。
 - [ ] accepted `c_s` retained and fallback traced；T08 R01 已在 development engineering scope 独立接受，但仍非正式 RQ；本轮 R02 不修改该实现
 
 若 full gate 对 `s+fit` 无增量，按冻结材料收窄/简化政策 claim；若完整 gate 也无效，将诊断降为探索性。
@@ -365,10 +369,11 @@ A08历史图级15/18及UNKNOWN限制保留。T10 IN_PROGRESS，C1–C3保持原P
 
 ### C3
 
-- [ ] split/locked gate/test labels 无泄漏；T10-A19-R08完成绑定split的有限synthetic validation characterization，冻结后才读取truth，test未接触；8/12可评分、LOS无有效final、三gate未区分，因此gate lock/held-out/test仍 `NOT_RUN`
-- [ ] deterministic truth sidecar 与相同缓存 gate comparison；T07 input/truth isolation 与复现已独立复审接受，T10 仅完成 same-cache 准入审查，正式 matched-cache gate `NOT_RUN`
-- [ ] prefix 在初始化前裁剪且 U13 通过；T11 `NOT_RUN`
-- [ ] development-only zero-candidate/eligible/accepted、failure/fallback 分母与状态保留；普通 failure/NA/run-unit 分母及 R03-B audit-domain/ledger、parent canonical-v2 内容身份已在 T09 development engineering scope 内独立复审接受；T10 precheck 已要求正式 ledger 保留失败/零覆盖，但 validation 与正式 U14 仍 `NOT_RUN`
+- [ ] split/locked gate/test labels 无泄漏；T10有限validation已执行并冻结C2-C，未取得原完整gate lock/held-out验收；原始冻结sidecar缺口不能回溯为完整盲测证据。T11冻结T11-C，整体U13未通过，truth gate未满足且未读取truth。
+- [ ] deterministic truth sidecar 与相同缓存 gate comparison；T07 input/truth isolation 与复现已独立复审接受，T10有限same-cache比较已执行；原完整正式held-out RQ3未完成或获验收。
+- [x] prefix 在初始化前物理裁剪；T11限定工程核验通过。
+- [ ] 完整U13；20102完整通过，20101因Stage1失败未到达下游而不完整，整体未通过；已完成比较未显示未来数据泄漏。
+- [ ] development-only zero-candidate/eligible/accepted、failure/fallback 分母与状态保留；T09限定工程证据保留；T10有限validation与T11前缀尝试已执行并保留失败/零覆盖记账，不能据此宣称正式U14通过。
 - [ ] locked metrics 生成论文数字与图；T12/T13 `NOT_RUN`
 - [ ] 数据发表权限与 artifact 许可；`BLOCKED_EXTERNAL`
 
@@ -377,12 +382,12 @@ A08历史图级15/18及UNKNOWN限制保留。T10 IN_PROGRESS，C1–C3保持原P
 - `paper/main.tex` 中保留的 bibliographic entries 尚未完成全文与一手来源核验；当前不宣称 related-work
   对比已经验证。
 - System 段只加入 T00 可定位的 legacy 实测事实；其 aligned ATE 没有填入 v2 RQ 表。
-- RQ1–RQ4、所有 v2 表格数字与 figure evidence 均为 `NOT_RUN/TBD`；没有用 TODO 或文件存在代替实验。
+- T10有限比较已执行并冻结C2-C；T11限定工作包及固定模型诊断已执行并冻结T11-C，诊断证据有效，正式E2E RQ4验证未完成，truth指标 **NOT RUN BY PROTOCOL**。原完整RQ1–RQ4验证程序未完成，T12为NOT_STARTED；不得把这些有限证据写成完整v2实证支持，也不得统称为全部NOT_RUN。
 - A01 已由本轮用户指挥/审查会话技术接受，T06-R01–R05 修复与 U11 fixture 已在 development engineering
   scope 内独立复审接受；当前没有
   claim 将其写成正式已验证能力。未来任何 claim 收窄/变更先更新本表与 `STATUS.md`。
 
-## T01 review 覆盖与证据边界
+## T01 review 覆盖与证据边界（历史快照，状态已取代）
 
 | Review 项 | 合同落点 | 对 claim 的约束 | 当前状态 |
 |---|---|---|---|
@@ -719,7 +724,7 @@ R01-A/B、R02-A、R03-A/B/C、R04-A 定向修复见
   `AUTOMATIC_E2E_BLOCKED_BY_T07_STAGE1`；T06 partial-score 与 fixed-partition DEBUG 均不能替代 automatic E2E。
   数据许可、独立 fixed beta 及标定/GT 等外部 provenance 缺口仍在，C1–C3 继续不为 `SUPPORTED`。
 
-## T10 precheck 与 Stage 1 诊断证据边界
+## T10 precheck 与 Stage 1 诊断证据边界（历史快照，状态已取代）
 
 当前状态：`IN_PROGRESS/A04_REVIEW_ACCEPTED/A05_REVIEW_ACCEPTED_LIMITED_ENGINEERING_SCOPE/A06_REVIEW_ACCEPTED_BOUNDED_SCOPE/A07_REVIEW_ACCEPTED_BOUNDED_SCOPE/A08_REVIEW_ACCEPTED_LIMITED_ENGINEERING_SCOPE/A09_REVIEW_ACCEPTED_BOUNDED_SCOPE_A10_REVIEW_ACCEPTED_BOUNDED_SCOPE_A11_REVIEW_ACCEPTED_BOUNDED_SCOPE_A12_REVIEW_ACCEPTED_BOUNDED_SCOPE_A13_LOCAL_DIRECTED_AUDIT_COMPLETE_AWAITING_REVIEW`。准入报告见
 [`T10_READINESS.md`](../doc/ie_sprint/T10_READINESS.md)，前置检查证据见
@@ -753,7 +758,7 @@ R01-A/B、R02-A、R03-A/B/C、R04-A 定向修复见
 - 正式 validation、sweep、matched-cache gate、locked gate、test、完整 19-cell batch、正式 RQ/U14、T11–T13、
   locked metrics 和论文图表均 `NOT_RUN`。C1–C3 的表格状态和复选框保持未满足，不升级为 `SUPPORTED`。
 
-## T10 A02 development policy 证据边界
+## T10 A02 development policy 证据边界（历史快照，含以下各阶段记录）
 
 A02 完整证据见
 [`t10_conditional_stationarity_policy_20260908T091614Z`](../doc/ie_sprint/evidence/t10_conditional_stationarity_policy_20260908T091614Z/VERIFICATION.md)。
