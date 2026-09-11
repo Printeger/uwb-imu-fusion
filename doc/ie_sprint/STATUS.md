@@ -55,7 +55,7 @@ roadmap 所称的 `UWB_IMU_IE_System_Centered_Structure_v3.tex` / `Structure_v3`
 | T08 冻结决策、最终联合推断与一次 fallback | `DONE` | `REVIEW_ACCEPTED_DEVELOPMENT_ENGINEERING_SCOPE`；R01/R03 保留各自限定 scope，R02 为 `REVIEW_ACCEPTED_EXCEPTION_TIMING_SCOPE`。见 [最终独立复审收口](evidence/t08_final_review_20260907T121510Z/VERIFICATION.md) |
 | T09 统一基线、缓存、批量执行与评估 | `DONE` | `REVIEW_ACCEPTED_DEVELOPMENT_ENGINEERING_SCOPE / AUTOMATIC_E2E_BLOCKED_BY_T07_STAGE1`；最终独立复审接受 R03-B，并与此前已接受的 R01–R08 合并关闭 T09 development-engineering 范围。真实 final 保持 `41/627`，parent canonical-v2 内容身份、ledger/mask/audit 与 failure accounting 反例通过。见 [最终独立复审收口](evidence/t09_final_rereview_closeout_20260908T065646Z/VERIFICATION.md)。这不是 automatic accepted-candidate 科学证据、正式 RQ、C1–C3 支持或 T10 gate lock |
 | T10 validation/gate | `DONE` | `FROZEN_C2_C_USER_SCOPED_CLOSEOUT`：仅本轮授权收缩范围完成。两base step2×A/B/C，N=6400I/1600I/3200I；30/30 final有效，s_fit/full_gate决定全同，structured RMSE1好5差/P95全差。LOS20102独立对照通过、20101对照数值失败保留。原完整T10/held-out验收未完成，T11/T12未运行。[收口](T10_CLOSEOUT.md) |
-| T11 prefix | `NOT_STARTED` | prefix 与 U13 `NOT_RUN` |
+| T11 prefix | `DONE` | `FROZEN_T11_C_LIMITED_SCOPE`：6 fresh + 2 U13 已执行；科学 4/6 全链、8/8 final 有效；20101 H0/H1 Stage1失败，完整U13仅20102 PASS；truth未读、指标NOT_RUN。[收口](T11_CLOSEOUT.md) |
 | T12 正式指标 | `NOT_STARTED` | locked metrics、正式 RQ 与 U14 `NOT_RUN` |
 | T13 论文结果与发布 | `NOT_STARTED` | 正式论文数字、图表与 release `NOT_RUN` |
 
@@ -89,6 +89,14 @@ T10 保持 IN_PROGRESS；A08 图级 FD 15/18 限制保留。
 本轮执行 [A11 有限协议](T10_A11_PROTOCOL.md)：只用冻结 P1 三场景 seed10101，最多3进程/每次120s，
 只观察 outer1 首 conditional block；第49/50实际接受完整delta通过原FD判据才可在同一optimizer续至总200次。
 不进入chain/Stage2/gate，不运行held-out，不改solver/Jacobian或/usr/local。
+
+## 当前任务结论与下一任务（2026-09-11）
+
+[T11_CLOSEOUT.md](T11_CLOSEOUT.md) 已按用户限定工作包完成并冻结，唯一裁决 **T11-C**。完整U13未通过，不能声称正式RQ4验收；六份固定模型数值核验通过仅作诊断记录。T10保持C2-C，C1/C2/C3不升级。**下一唯一任务为T12：先核实既有真实/公共输入的标定、参考与时间语义，再执行冻结实现/指标的限定评估**；本轮T12 NOT_RUN。下方旧T10/T11停止文本仅历史记录。
+
+## T11 当前授权（2026-09-11）
+
+用户给定实施计划替代下方 T10 历史停止边界。仅 condition A/step2/20101–20102，H=0/1/2，历史 [3,6]s；两种 final、两条 U13 和 fresh H2 固定模型诊断。单一 [T11_MANIFEST.json](T11_MANIFEST.json) 在实现/运行前登记。保留已见 validation 身份，不锁 gate，不升级 C1/C2/C3；T10 C2-C 不变。下一任务只为 T12 输入语义核实及限定评估。
 
 ## 当前任务与停止边界
 

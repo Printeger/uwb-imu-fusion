@@ -108,3 +108,25 @@ data/*.bag
 !/doc/ie_sprint/evidence/retention_20260910/RESULT.json
 !/doc/ie_sprint/evidence/retention_20260910/SPACE_RESULT.json
 !/doc/ie_sprint/evidence/GIT_MAINTENANCE.json
+
+# T11 compact closeout summaries; raw runs and repeated diagnostics stay local.
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/
+/doc/ie_sprint/evidence/t11_20260910T160942Z/*
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/PREFIX_RESULTS.csv
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/FIXED_MODEL_RESULTS.csv
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/GROUP_DETAILS.json
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/CONTEXT_FIGURE_DATA.json
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/U13_RESULT.json
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/DECISION.json
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/FINAL_DELIVERY_CHECK.json
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/FIXED_MODEL_AUDIT.json
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/FIXED_GOLDEN_AUDIT.json
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/RUN_LEDGER.json
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/EXECUTION_BINDING.json
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/REPORTING_BINDING.json
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/REPORTING_FINAL_BINDING.json
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/BOUNDARY_ENGINEERING.json
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/GOLDEN_RUN.json
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/REPRODUCE.md
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/RETENTION.json
+!/doc/ie_sprint/evidence/t11_20260910T160942Z/FINAL_FREEZE.json

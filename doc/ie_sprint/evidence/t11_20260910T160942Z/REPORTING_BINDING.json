@@ -1,0 +1,18 @@
+{
+  "changes_since_execution_binding": [
+    "two missing timing-only exclusions, following preregistered rule",
+    "derive successful candidate counts from frozen partition",
+    "separate final solver status from truth evaluation availability",
+    "failure and zero-coverage engineering tests",
+    "independent existing SVD golden comparison on saved fixed-model rows"
+  ],
+  "estimator_runner_unchanged": true,
+  "master_sha256": "sha256:30b6df98e38a2fe73fe2b831a995588dd3c5dbb9a9ca077d0fd389c3fc9f6ae5",
+  "no_method_or_numeric_tolerance_change": true,
+  "sources": {
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/test/test_t11_prefix.py": "sha256:7b562121a83a5a177e9abaa192c3a8ae42461f7e3107bc894378fcdc112c8284",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/tools/paper/t11_evaluate.py": "sha256:129fa4d029fdf0187aebc4a1196c551c5a16e33fe0f3815b19dc017b5989dd8a",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/tools/paper/t11_golden_audit.py": "sha256:535f5e33cda0aa64c7932ecfe651b8866242fc54d8f9a1215518230ca4e7c682",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/tools/paper/t11_verify.py": "sha256:28a386c8e0bdd562a2dcd225d9151856eda65ba0f8c18a721fd1911e69351d82"
+  }
+}

@@ -166,6 +166,8 @@ void WriteSparseCsv(const std::string& path,
       file << item.row() << ',' << item.col() << ',' << item.value() << '\n';
 }
 
+#include "t11_diagnostics.h"
+
 int RunSuppressCertifiedEngineering(const std::string& output_root) {
   if (!fs::create_directory(output_root))
     throw std::runtime_error("OUTPUT_EXISTS");
@@ -432,8 +434,9 @@ int main(int argc, char** argv) {
   try {
     if (argc == 5 && std::string(argv[1]) == "--policy" &&
         std::string(argv[2]) == kR03Policy &&
-        std::string(argv[3]) ==
-            "development-suppress-policy-engineering") {
+        (std::string(argv[3]) == "development-suppress-policy-engineering" ||
+         std::string(argv[3]) == "development-suppress-policy-engineering-compact")) {
+      compact_diagnostic_output = std::string(argv[3]) == "development-suppress-policy-engineering-compact";
       return RunSuppressCertifiedEngineering(
           fs::absolute(argv[4]).string());
     }
@@ -518,6 +521,11 @@ int main(int argc, char** argv) {
     if (!prepare_only) ::alarm(900);
 
     const auto validation_node = YAML::LoadFile(validation_context_path);
+    const bool t11_mode = bool(validation_node["t11"]);
+    if (t11_mode) {
+      compact_diagnostic_output = validation_node["t11"]["compact_output"].as<bool>();
+      t11::CheckPrefix(config, validation_node, out);
+    }
     const std::set<std::string> allowed_scenarios = {
         "los", "step1", "step2", "step3", "ramp_gentle", "ramp_steep"};
     if (validation_node["schema"].as<std::string>() !=
@@ -603,12 +611,14 @@ int main(int argc, char** argv) {
     if (range_index != initial_ranges.size())
       throw std::runtime_error("RAW_FACTOR_METADATA_IDENTITY");
 
+    if (t11_mode) t11::AuditGraph(fixture, plan, cache, out);
     DiscoveryContext context;
     context.input_plan_hash = plan.plan_sha256;
     context.source_hash = sid;
     context.config_hash = fixture.ctx.config_sha256;
     context.calibration_hash = "sha256:" +
         Sha256Hex(fixture.ctx.config_sha256 + "fixed-synthetic-assumptions");
+    if (t11_mode) context.calibration_hash = t11::Calibration(config, out);
     context.solver_config_hash = sid;
     context.validation_context_sha256 = validation_context_sha256;
     fixture.ctx.validation_context_sha256 = validation_context_sha256;
@@ -725,6 +735,14 @@ int main(int argc, char** argv) {
 
     // R3 checkpoint: atomically persist this run's actual immutable discovery
     // snapshot and partition before any Stage-2 object can be constructed.
+    if (t11_mode) {
+      auto exact = output(out + "/stage1/snapshot_exact.csv");
+      exact << "obs_id,bias_m,weight,sensor_time,chain_id,active_run_id\n";
+      for (const auto& row : discovery.snapshot)
+        exact << row.obs_id << ',' << row.bias_m << ',' << row.weight << ',' << row.sensor_time << ',' << row.chain_id << ',' << row.active_run_id << '\n';
+      auto nav = output(out + "/stage1/navigation_exact.csv");
+      nav << "phase,index,name,row,column,hex,bits\n"; values(nav, "STAGE1", discovery.navigation_values);
+    }
     const size_t candidate_observations = a19r01::WriteStage1Checkpoint(
         out, discovery.snapshot, discovery.partition);
     stage1_completed = true;
@@ -979,11 +997,21 @@ int main(int argc, char** argv) {
                     std::to_string(score_seconds) +
                     ",\"consumable\":false}\n");
 
+    if (t11_mode && validation_node["t11"]["cutoff_s"].as<double>() == 8) {
+      try { t11::FixedModel(scores, refit, plan, cache, out); }
+      catch (const std::exception& e) {
+        fs::create_directories(out + "/diagnostic_fixed_model");
+        WriteAtomicText(out + "/diagnostic_fixed_model/status.json",
+          "{\"status\":\"FAILED\",\"reason\":\"" + a19r01::JsonEscape(e.what()) + "\"}\n");
+      }
+    }
+    std::vector<FinalPolicySpec> selected_policies(kFinalPolicies.begin(), kFinalPolicies.end());
+    if (t11_mode) selected_policies = {{"full_gate", FinalGatePolicy::FULL_GATE}, {"structured_debias", FinalGatePolicy::STRUCTURED_DEBIAS}};
     // Freeze every preregistered decision before any final optimizer runs.
     // The independent evaluator is a separate post-run process and no truth
     // path is accepted anywhere in this executable.
     fs::create_directories(out + "/decisions");
-    for (const auto& spec : kFinalPolicies) {
+    for (const auto& spec : selected_policies) {
       const auto decisions = FreezeGroupDecisions(
           scores, R03Thresholds(), spec.policy);
       auto decision_file = output(out + "/decisions/" + spec.name + ".csv");
@@ -1024,7 +1052,7 @@ int main(int argc, char** argv) {
       std::cout.flush();
       std::cerr.flush();
       std::vector<FinalPolicySpec> scheduled_policies(
-          kFinalPolicies.begin(), kFinalPolicies.end());
+          selected_policies.begin(), selected_policies.end());
       if (scenario_id == "los")
         scheduled_policies.push_back(
             {"all_range", uifgo::FinalGatePolicy::SUPPRESS_ALL});

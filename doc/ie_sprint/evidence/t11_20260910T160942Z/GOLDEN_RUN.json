@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "python3",
+    "tools/paper/t11_golden_audit.py"
+  ],
+  "elapsed_s": null,
+  "environment": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  },
+  "exit_code": 0,
+  "result": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t11_20260910T160942Z/FIXED_GOLDEN_AUDIT.json",
+  "source": "actual tool execution, elapsed not measured"
+}

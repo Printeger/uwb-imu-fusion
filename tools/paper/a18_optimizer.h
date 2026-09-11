@@ -6,6 +6,8 @@
 #include <gtsam/nonlinear/internal/LevenbergMarquardtState.h>
 #include <gtsam/linear/linearExceptions.h>
 namespace fs=std::filesystem;
+// Explicit diagnostic I/O only; never participates in numerical decisions.
+inline bool compact_diagnostic_output = false;
 struct Reply {std::string status;double fidelity=0;};
 class CertifiedLm:public LevenbergMarquardtOptimizer {
  using State=gtsam::internal::LevenbergMarquardtState;
@@ -31,9 +33,9 @@ class CertifiedLm:public LevenbergMarquardtOptimizer {
     auto data=live_.pair(base,trial,delta,*linear);
 	    auto cert=a18::certify(data);
     certificate_seconds+=std::chrono::duration<double>(std::chrono::steady_clock::now()-cb).count();
-    a18::dump(dir,data);writeLinear(dir,*linear,delta);
+    if (!compact_diagnostic_output) { a18::dump(dir,data);writeLinear(dir,*linear,delta); }
     a18::write(dir+"/certificate.json",cert);
-    {auto detail=dir+"/certificate_details";fs::create_directory(detail);a18::writeDetails(detail,cert);}
+    if (!compact_diagnostic_output) {auto detail=dir+"/certificate_details";fs::create_directory(detail);a18::writeDetails(detail,cert);}
 	    reply.status=cert.decision.status;reply.fidelity=cert.decision.fidelity;
 	    uifgo::InexactHandoffTrialAudit guard;guard.trial_index=local;guard.certificate_valid=true;guard.certificate_status=reply.status;guard.predicted_lo=cert.P.lo.d(a18::DOWN);guard.predicted_hi=cert.P.hi.d(a18::UP);guard.actual_decrease_lo=cert.D.lo.d(a18::DOWN);guard.actual_decrease_hi=cert.D.hi.d(a18::UP);guard.scaled_navigation_step=uifgo::MaxScaledValuesStep(base,trial,scales_,1.0);last_search.push_back(std::move(guard));
     if(reply.status!="ACCEPT"&&reply.status!="REJECT")failure=reply.status+":"+cert.decision.reason;

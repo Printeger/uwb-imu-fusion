@@ -1,0 +1,15 @@
+{
+  "estimator_unchanged": true,
+  "previous": "sha256:53afe191b4c3ee096703ae6a4ad1399d2997c448c97920ae0c25ebb69702d06a",
+  "reporting_repairs": [
+    "serialize numpy boolean checks as native bool",
+    "retain solver status/coverage without opening truth",
+    "explicit support additions/removals"
+  ],
+  "sources": {
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/test/test_t11_prefix.py": "sha256:7b562121a83a5a177e9abaa192c3a8ae42461f7e3107bc894378fcdc112c8284",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/tools/paper/t11_evaluate.py": "sha256:653b428c1fae1d2cd652a1fe190df3ca67cc5b5d7389dd03afa9c569d5220493",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/tools/paper/t11_golden_audit.py": "sha256:535f5e33cda0aa64c7932ecfe651b8866242fc54d8f9a1215518230ca4e7c682",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/tools/paper/t11_verify.py": "sha256:476623e88a8f9bea6aacb462fb27fbaa57f3f63cbc512e0f86a4a6a821d00f46"
+  }
+}

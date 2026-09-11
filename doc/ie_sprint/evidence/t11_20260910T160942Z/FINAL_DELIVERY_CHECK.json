@@ -1,0 +1,18 @@
+{
+  "T12": "NOT_RUN",
+  "U13_complete_pass_count": 1,
+  "U13_overall": "NOT_PASSED",
+  "U13_replays": 2,
+  "fallback_count": 0,
+  "freeze_mismatches": [],
+  "freeze_payload_count": 7459,
+  "runner_unchanged_during_all_runs": true,
+  "science_chain_failures": 2,
+  "science_chain_successes": 4,
+  "science_finals_valid": 8,
+  "science_runs": 6,
+  "sparse_golden_cases_passed": 6,
+  "status": "PASS_LIMITED_DELIVERY_NOT_FULL_U13",
+  "truth_read": false,
+  "verdict": "T11-C"
+}

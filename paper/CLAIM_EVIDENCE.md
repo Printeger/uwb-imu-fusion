@@ -1,7 +1,13 @@
 # UWB-IMU-IE claim–evidence ledger
 
-状态：`T10_FROZEN_C2_C_USER_SCOPED_CLOSEOUT / T11_T12_NOT_RUN`
+状态：`T10_FROZEN_C2_C / T11_FROZEN_C_LIMITED_SCOPE_U13_INCOMPLETE / T12_NOT_RUN`
 
+
+## 当前 T11 claim 边界
+
+唯一裁决 **T11-C**：六 fresh 科学前缀实际4条全链成功、2条Stage1失败；20102完整U13精确通过，20101仅已到达失败阶段一致，整体U13未通过。两条fresh H2的固定模型六行数值/行语义/SVD核验通过，保持diagnostic_fixed_model；不能覆盖U13准入或作为端到端收益证据。truth未读，历史bias/轨迹指标NOT_RUN，不填论文数字。
+
+限定工程证据包括物理前缀、原始ID、初始化/积分边界、compact数值一致和一条完整U13；C1/C2/C3不整体升级，T10 C2-C不变。下一仅T12既有输入语义核实与限定评估。[T11完整收口](../doc/ie_sprint/T11_CLOSEOUT.md)。
 
 ## 当前 T10 claim 裁决（覆盖下方历史状态）
 
@@ -14,7 +20,7 @@ Structured recovery 的历史 RMSE 为1好5差、P95为0好6差；稳定轨迹�
 - **SUPPORTED（限定工程域）：** Rc/η/s计算、signed-zero metadata修复、真实零候选生产接口。
 - **PARTIALLY SUPPORTED：** 有限合成全链；LOS20102独立all-range对照通过，20101对照数值失败且相对代价UNAVAILABLE。
 - **NOT SUPPORTED：** 稳定恢复轨迹收益、η门控增量、两条LOS均无退化，以及由实现存在推导的性能主张。
-- **NOT YET TESTED：** T11 future-context、T12新真实/公共数据、正式held-out RQ3及完整C1/C3。
+- **NOT YET TESTED：** T12新真实/公共数据、正式held-out RQ3及完整C1/C3。T11已执行限定工作包，状态以上方T11-C边界为准。
 
 重启损坏的新run原始冻结/评价sidecar不能回溯为完整盲测证据；现存最终产物经重建清单后独立复算。
 用户授权精简34.15GiB可再生成中间证据，旧完整archive状态不再作为当前可用性承诺。

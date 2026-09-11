@@ -1,0 +1,9 @@
+{
+  "C1_C2_C3": "NOT_UPGRADED",
+  "T10": "C2-C",
+  "U13": "NOT_PASSED",
+  "fixed_model": "PASS",
+  "freeze_sha256": "sha256:b8e85f1424f8b3d03223a082c8f060a918da4403c07ff7e7458e7b5baf61de32",
+  "truth_read": false,
+  "verdict": "T11-C"
+}

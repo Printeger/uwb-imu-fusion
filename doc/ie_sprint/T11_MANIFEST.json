@@ -1,0 +1,146 @@
+{
+  "T10": "C2-C_UNCHANGED",
+  "T12": "NOT_RUN",
+  "authorization": "User supplied T11 implementation plan, 2026-09-11",
+  "before_sources": {
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/nlos_recoverability.h": "sha256:cbdb5d0a690d17f0b54c6bcde4c19fbc7bb92baba2f2dab0b6de11781433ad7e",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/tools/paper/a17_graph_io.h": "sha256:18518a1bee4f7975e25e2f9bf4b65233d4a4ada703302aad39366281170cdde1",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/tools/paper/a18_optimizer.h": "sha256:242a47cb892bb7ec56696d2e31fc238f062d54100e3da5fd64a5da1015a42c05",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/tools/paper/a19_r08_pipeline.cpp": "sha256:f7b91887101291d4922ae47e0bad462d5c4dcfe9cc8883a597e24b09c6dd78c2"
+  },
+  "budget": {
+    "U13_replays": 2,
+    "automatic_s": 900,
+    "each_final_s": 900,
+    "scheduled_max_s": 21600,
+    "science_prefixes": 6,
+    "science_retries": 0,
+    "serial": true,
+    "total_with_correctness_reserve_s": 28800
+  },
+  "comparison": {
+    "N": "exact invariant in fixed model",
+    "Rc_increment_PSD": "lambda_min(delta) >= -(atol+rtol*max(norm(R_previous,2),norm(R_next,2)))",
+    "U13": "exact normalized binary64/scientific fields; exclude only paths, timing, provenance-derived IDs; incomplete chain is NOT_RUN, never PASS",
+    "atol": 1e-10,
+    "covariance": "only when both Rc positive definite",
+    "effect": "strict improvement > atol+rtol*max(abs(previous),abs(next))",
+    "rtol": 1e-07,
+    "sparse_options": "unchanged RecoverabilityOptions defaults; source hash bound at execution freeze"
+  },
+  "condition": "A",
+  "dependencies": {
+    "core_sha256": "sha256:e71243db4b93fc62d23107a95653a44347124bfaa96b02b21727a8630db2c44f",
+    "gmp_sha256": "sha256:adce2ea41ec466959525ddc6ac1582bc513641866b72d393f0a85b3c00c001a0",
+    "gtsam_sha256": "sha256:00d83aa618194aefc4b2011e1d29bd9aba107a8b5e0ee8e946eb2455351219da",
+    "mpfr_sha256": "sha256:a26d33d5ef03fc24363a6249b66fea68e75d754f6f730bf47d19cb8edb9cc914"
+  },
+  "evidence_root": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t11_20260910T160942Z",
+  "expected_counts": {
+    "0": [
+      248,
+      1201
+    ],
+    "1": [
+      288,
+      1401
+    ],
+    "2": [
+      328,
+      1601
+    ]
+  },
+  "exposure": "PREVIOUSLY_SEEN_VALIDATION_NOT_HELD_OUT",
+  "final_policies": [
+    "full_gate",
+    "structured_debias"
+  ],
+  "fixed_model": {
+    "basis": "this fresh H2 Stage2 Values, original priors/nominal weights; whole groups within [3,6]",
+    "label": "RQ4_FUTURE_COMMON_LINEARIZATION_DIAGNOSTIC",
+    "no_basis_substitution": true,
+    "rows": "UWB sensor time; IMU both actual endpoint keyframes and sample dependencies; original nuisance columns including zero columns"
+  },
+  "history_s": [
+    3,
+    6
+  ],
+  "horizons_s": [
+    0,
+    1,
+    2
+  ],
+  "implementation_freeze": "EXECUTION_BINDING.json before first science; immutable hash reference to this manifest",
+  "inputs": [
+    {
+      "config_hash": "sha256:29ff89a3680ff575fa4b34078ce42838487b5c0d5a62d8fd63ae1b86bcc091c2",
+      "hashes": {
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/raw/step2/imu.csv": "sha256:74428e79b8d168b5141742749531968b9bdf4c287a700e22853f21a7e9f83bd5",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/raw/step2/input_manifest.json": "sha256:654034644186db81f6fee5f16b99ed35a29378b1515c053673d66e80d901457c",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/raw/step2/uwb_observations.csv": "sha256:e2e7164ae364147dfcfde6b363b22e2b4694d30b576b24dc3dd468f016e08b52",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/raw/step2/validation_context.json": "sha256:8d8579a957be8f18ea5285cf8651504416919927704bc6cb01793f7663a32a6b"
+      },
+      "row": {
+        "base": "a10_val_turn_01_seed20101",
+        "config": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_01_seed20101_step2.yaml",
+        "context": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_01_seed20101_step2.json",
+        "raw": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_01_seed20101/raw/step2/input_manifest.json",
+        "scenario": "step2",
+        "seed": 20101
+      }
+    },
+    {
+      "config_hash": "sha256:3690215a150fff57f5ff1fc4cb1cf649a9c4a4884ffbc7f4f9b3da08aee2f09a",
+      "hashes": {
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_02_seed20102/raw/step2/imu.csv": "sha256:3bfa869197ef932fd5523cd5fbf2eadbb7569b0fd444f591be3c02f32c3ad984",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_02_seed20102/raw/step2/input_manifest.json": "sha256:5f744fb2101e366404093df45e8da637c4edb1b8190c7ff05ceb3c7c50671949",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_02_seed20102/raw/step2/uwb_observations.csv": "sha256:38344876789765418a3912a2fe1bfff4d7eceecf76772a377944d765f3c04ff4",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_02_seed20102/raw/step2/validation_context.json": "sha256:0c84fc9988200c86c4ad5a6c2cb75cb5ca2b960452dfd8886cd7cfd25202c486"
+      },
+      "row": {
+        "base": "a10_val_turn_02_seed20102",
+        "config": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/configs/a10_val_turn_02_seed20102_step2.yaml",
+        "context": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/contexts/a10_val_turn_02_seed20102_step2.json",
+        "raw": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t10_a19_r08_validation_compare_20260910T115109Z/inputs/a10_val_turn_02_seed20102/raw/step2/input_manifest.json",
+        "scenario": "step2",
+        "seed": 20102
+      }
+    }
+  ],
+  "metrics": {
+    "bias": "fixed original history obs IDs, actual final correction else zero; accepted-only RMSE undefined at zero coverage",
+    "trajectory": "common timestamps [3,6], existing raw-frame RMSE/P95, no post-fit alignment",
+    "truth_access": "independent evaluator only after ALL artifacts frozen AND U13 PASS"
+  },
+  "order": [
+    "20101_H0",
+    "20102_H0",
+    "20101_U13",
+    "20102_U13",
+    "20101_H1",
+    "20102_H1",
+    "20101_H2",
+    "20102_H2"
+  ],
+  "registered_utc": "2026-09-10T16:09:42.294454+00:00",
+  "role": "validation",
+  "scenario": "step2",
+  "schema": "T11_MANIFEST_V1",
+  "seeds": [
+    20101,
+    20102
+  ],
+  "source_commit": "b21a60ace62bc48c9b06a236b14ac4973751d232",
+  "status": "REGISTERED_BEFORE_IMPLEMENTATION",
+  "thresholds": {
+    "epsilon_bad_m": 0.2,
+    "eta": 0.1,
+    "gamma": 1.0,
+    "s_m": 0.1
+  },
+  "verdict_priority": [
+    "C: U13 not PASS, or semantically checked fixed diagnostic failed/unavailable/no resolved effect",
+    "A: diagnostic valid; both bases comparable historical groups show resolved weakest Rc increase and s decrease without H1 reversal; eta consistent when N matches",
+    "B: diagnostic information effect valid but E2E weak/mixed/nonmonotonic/unmatched"
+  ]
+}
