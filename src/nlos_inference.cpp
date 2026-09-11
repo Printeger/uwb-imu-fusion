@@ -734,8 +734,12 @@ InferenceResult FinalInferenceEngine::Run(
   if (stage2_refit.status == SegmentRefitStatus::SUCCESS_EMPTY) {
     if (!frozen_full_support.segments.empty() || !stage2_refit.segments.empty() ||
         !stage2_refit.iterations.empty() ||
-        frozen_full_support.provider != (cfg.fde_grouped_test ?
-            "imu_aided_grouped_fde_v3" : "imu_aided_postfit_fde_v2")) {
+        frozen_full_support.provider !=
+            (cfg.fde_windowed_test
+                 ? "imu_aided_windowed_fde_v4"
+                 : (cfg.fde_grouped_test
+                        ? "imu_aided_grouped_fde_v3"
+                        : "imu_aided_postfit_fde_v2"))) {
       result.reason = "SUCCESS_EMPTY_NONEMPTY_SUPPORT_OR_TRACE";
       finish(); return result;
     }

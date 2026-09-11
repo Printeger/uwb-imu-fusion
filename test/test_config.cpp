@@ -334,6 +334,27 @@ TEST(ConfigLoader, ImuAidedFdeHasIndependentStrictConfiguration) {
   EXPECT_THROW(uifgo::ConfigLoader::Load(path), std::runtime_error);
 }
 
+TEST(ConfigLoader, WindowedFdeIsExplicitAndMutuallyExclusiveWithGroupedV3) {
+  const std::string path = "/tmp/test_windowed_fde.yaml";
+  const auto write = [&](bool grouped, bool windowed) {
+    std::ofstream f(path);
+    f << "solver:\n  chi2_reject_prob: 0.99\n"
+      << "nlos:\n  mode: imu_aided_fde\n"
+      << "  score_recoverability: true\n"
+      << "  fde_grouped_test: " << (grouped ? "true" : "false") << "\n"
+      << "  fde_windowed_test: " << (windowed ? "true" : "false") << "\n"
+      << "  gap_threshold_s: 1.0\n"
+      << "  discovery_short_min_count: 2\n"
+      << "  discovery_short_min_duration_s: 0.01\n";
+  };
+  write(false, true);
+  const auto cfg = uifgo::ConfigLoader::Load(path);
+  EXPECT_FALSE(cfg.fde_grouped_test);
+  EXPECT_TRUE(cfg.fde_windowed_test);
+  write(true, true);
+  EXPECT_THROW(uifgo::ConfigLoader::Load(path), std::runtime_error);
+}
+
 TEST(ConfigLoader, FixedBetaByLink) {
   const std::string path = "/tmp/test_fixed_beta.yaml";
   std::ofstream f(path);

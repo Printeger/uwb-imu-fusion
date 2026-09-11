@@ -1,3 +1,22 @@
+# 0912-WINDOWED-FDE-E2E 当前任务
+
+`DONE / ENGINEERING_PASS / DETECTOR_GATE_FAIL_MISSED_INJECTION / LOCALIZATION_NOT_EVALUABLE`。
+用户授权实施
+[Windowed FDE v4 与锁定 Walk1 E2E 协议](WINDOWED_FDE_E2E_PROTOCOL.md)，替代 grouped FDE
+Walk1 gate failed 后的停止边界。实施基线为实际 HEAD `cf287b4fec9bc5689317f302ccf4cdd927bfba81`，
+工作树仅有受保护的未跟踪 `doc/v2/ie_0911/`。v2/v3 与 legacy 默认保留；v4 仅由显式
+`nlos.fde_windowed_test=true` 启用，固定 dyadic 50%-overlap window bank、chain-local Bonferroni、
+full `P_gg` covariance test、负 GLS 与 observation-union merge。Stage2、Rc/local sigma、kappa、
+LCB、final/fallback、evaluator 与四个 backend 文件冻结。工程门未通过前 Walk1 `NOT_RUN`；
+detector screen 未通过则不运行 E2E，不调 policy、不扩大 Walk2/3/低冗余矩阵。T10=C2-C、T11=C、
+C1--C3 限制不变；本任务获授权按限定路径提交并正常 push，禁止 force/rebase。
+
+[完整结果](../ie_0911/WINDOWED_FDE_E2E_RESULT.md)：工程门权威汇总 384 tests、0 errors/failures/skipped；
+锁定 Walk1 clean 1074/1074 完整测试、1010 windows、0 support，clean gate 通过。injected 同样完整测试，
+但 30 个 planned injected IDs 上 TP=0、FP=0、FN=30，目标窗口最大统计量 `49.205998` 仍低于 Bonferroni
+门限 `72.950243`；因此 injected gate 失败，六方法、Stage2/Rc/sigma/LCB/final 与扩大矩阵按预登记规则
+全部 NOT_RUN。未调 detector policy；四个冻结 backend、论文结构和 roadmap 哈希不变。
+
 # 0911-STAGE2-STATIONARITY-REPAIR 当前任务
 
 `DONE / RECOVERY_BACKEND_OPERATIONAL_AFTER_CORRECTNESS_FIX / LOCALIZATION_BENEFIT_OBSERVED`。

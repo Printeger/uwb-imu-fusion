@@ -518,3 +518,17 @@ T11=C 或 C1–C3。
 ## 0911 NLOS injection experiment amendment
 
 用户授权 [NLOS_INJECTION_PROTOCOL.md](NLOS_INJECTION_PROTOCOL.md) 限定 semi-synthetic 实验与评价接口；算法基线46d37f6冻结。旧合同及历史结果保留，C1–C3不升级。
+
+## 0912 Windowed FDE v4 locked Walk1 amendment
+
+用户授权 [`WINDOWED_FDE_E2E_PROTOCOL.md`](WINDOWED_FDE_E2E_PROTOCOL.md) 的单一 locked Walk1
+development E2E。只复用旧 manifest 中 normal clean/injected、seed 911、固定 link/window/+0.5m 与
+同一 input/truth hashes；只在隔离 effective config 启用 v4。先 truth-hidden clean detector-only，
+要求零 retained segment；再 truth-hidden injected detector-only，artifacts 冻结后由独立 evaluator 读取
+truth，要求 target-link production support 有 temporal overlap。任一 detector gate 失败立即停止 estimator，
+不调 probability/window/temporal/kappa/threshold。
+
+两个 screen 通过后才在同一 injected input 串行运行六方法；四个 candidate-dependent final 必须共享
+同一 v4 Stage2 cache、partition 与 Values，并核对 E2E support 与 screen support 完全一致。轨迹只报告
+aligned ATE 及配套 P95/horizontal/vertical/coverage；定位收益只按协议中的严格 paired RMSE 规则裁决。
+本轮不运行 Walk2/3 或低冗余矩阵，不构成正式 held-out、总体 detector 保证或 C1--C3 claim 升级。

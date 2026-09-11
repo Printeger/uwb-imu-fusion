@@ -195,6 +195,7 @@ struct Config {
   double discovery_lambda_l1 = 0.05;
   double discovery_lambda_tv = 0.10;
   bool fde_grouped_test = false;  // Explicit V3 opt-in; legacy V2 unchanged.
+  bool fde_windowed_test = false;  // Explicit V4 opt-in; mutually exclusive with V3.
   double discovery_gap_threshold_s = 1.0;
   double discovery_active_bias_min_m = 0.02;
   double discovery_change_point_min_m = 0.05;

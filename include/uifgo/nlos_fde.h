@@ -63,11 +63,12 @@ FdeNormalization ComputeFdeNormalization(
     const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
     const std::vector<FactorMeta>& metadata);
 
-const char* FdeProvider(bool grouped);
-const char* FdeVersion(bool grouped);
+const char* FdeProvider(bool grouped, bool windowed = false);
+const char* FdeVersion(bool grouped, bool windowed = false);
 
 struct FdeOptions {
   bool grouped_test = false;
+  bool windowed_test = false;
   double chi2_probability = 0.99;
   size_t chi2_degrees_of_freedom = 1;
   double gap_threshold_s = 1.0;
@@ -138,6 +139,71 @@ struct FdeGroupTest {
   Eigen::MatrixXd covariance;
   bool positive_excess = false;
 };
+
+struct FdeContinuousChain {
+  std::string chain_id;
+  int tag_id = 0;
+  int anchor_id = 0;
+  double start_time = std::numeric_limits<double>::quiet_NaN();
+  double end_time = std::numeric_limits<double>::quiet_NaN();
+  std::vector<std::uint64_t> obs_ids;
+  size_t multiplicity = 0;
+};
+
+struct FdeLocalWindow {
+  std::string chain_id;
+  std::string window_id;
+  int tag_id = 0;
+  int anchor_id = 0;
+  size_t first_chain_index = 0;
+  size_t last_chain_index = 0;
+  double start_time = std::numeric_limits<double>::quiet_NaN();
+  double end_time = std::numeric_limits<double>::quiet_NaN();
+  std::vector<std::uint64_t> obs_ids;
+  std::string obs_ids_sha256;
+  size_t multiplicity = 0;
+  double family_alpha = 0.01;
+  double raw_probability = 0.99;
+  double adjusted_probability = std::numeric_limits<double>::quiet_NaN();
+  FdeQuadraticTest test;
+  double adjusted_threshold = std::numeric_limits<double>::quiet_NaN();
+  bool adjusted_rejected = false;
+  double gls_signed_residual_m = std::numeric_limits<double>::quiet_NaN();
+  bool positive_excess = false;
+  bool count_eligible = false;
+  bool duration_eligible = false;
+  bool significant = false;
+  std::string status;
+  std::string merged_segment_id;
+  Eigen::MatrixXd covariance;
+};
+
+struct FdeMergedWindowSegment {
+  std::string chain_id;
+  std::string segment_id;
+  int tag_id = 0;
+  int anchor_id = 0;
+  double start_time = std::numeric_limits<double>::quiet_NaN();
+  double end_time = std::numeric_limits<double>::quiet_NaN();
+  std::vector<std::uint64_t> obs_ids;
+  std::vector<std::string> window_ids;
+  bool count_eligible = false;
+  bool duration_eligible = false;
+  bool retained_before_isolation = false;
+  bool published = false;
+  std::string status;
+};
+
+struct FdeResult;
+
+// Pure v4 covariance/window/merge front-end. The covariance rows and ids cover
+// every valid planned observation exactly once. It updates observation support
+// and fills the v4-only diagnostic/result fields, including the partition.
+void ApplyWindowedFdeTests(
+    std::vector<FdeObservationRecord>* observations,
+    const Eigen::MatrixXd& residual_covariance_whitened,
+    const std::vector<std::uint64_t>& covariance_obs_ids,
+    const FdeOptions& options, const FdeContext& context, FdeResult* result);
 // Pure covariance/temporal front-end; rows correspond to tested observations.
 std::vector<FdeGroupTest> ApplyGroupedFdeTests(
     std::vector<FdeObservationRecord>* observations,
@@ -157,6 +223,13 @@ struct FdeResult {
   FdeNormalization normalization;
   std::vector<FdeGroupTest> group_tests;
   std::string grouped_status = "NOT_APPLICABLE_V2";
+  std::vector<FdeContinuousChain> continuous_chains;
+  std::vector<FdeLocalWindow> local_windows;
+  std::vector<FdeMergedWindowSegment> merged_segments;
+  std::string windowed_status = "NOT_APPLICABLE_V2_V3";
+  size_t covariance_window_count = 0;
+  size_t significant_window_count = 0;
+  size_t merged_segment_count = 0;
   std::vector<FdeObservationRecord> observations;
   SupportPartition partition;
   size_t planned_count = 0;
@@ -173,6 +246,9 @@ struct FdeResult {
 void ApplyFullGraphGroupedFde(const gtsam::NonlinearFactorGraph& graph,
     const gtsam::Values& values, const std::vector<FactorMeta>& metadata,
     const FdeOptions& options, FdeResult* result);
+void ApplyFullGraphWindowedFde(const gtsam::NonlinearFactorGraph& graph,
+    const gtsam::Values& values, const std::vector<FactorMeta>& metadata,
+    const FdeOptions& options, const FdeContext& context, FdeResult* result);
 
 // Pure residual classification and temporal aggregation entry points used by
 // deterministic boundary tests. Classification is strict at the threshold.

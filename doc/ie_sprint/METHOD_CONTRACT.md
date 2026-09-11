@@ -775,3 +775,19 @@ mode、Stage1 hash 与 `SupportPartition.provider=imu_aided_residual_fde_v1`，l
 本轮用户授权 [RECOVERY_FDE_V2_PROTOCOL.md](RECOVERY_FDE_V2_PROTOCOL.md) 的完整定义与验收边界。该版本替代 paper 共同初值、FDE 空候选重复 refit、旧 r/sigma detector 规则；历史文本作为旧版本保留。实施状态 IN_PROGRESS，未经运行的门均 NOT_RUN。非空 Stage2/LCB/live-C/fallback 原规则保持。
 
 0911-RECOVERY-FDE-V2 收口：定位门、完整CTest29/29、固定smoke/full Walk1五方法和30项prepare已通过；真实零候选只支持空集合工程链。实际阈值保留旧查表6.6349；详见 [结果与限制](../ie_0911/RECOVERY_FDE_V2_RESULT.md)。历史条款不回写，C1–C3不升级。
+
+## 0912 Windowed FDE v4 amendment
+
+用户授权 [`WINDOWED_FDE_E2E_PROTOCOL.md`](WINDOWED_FDE_E2E_PROTOCOL.md) 的完整定义与停止门。
+该 opt-in v4 不改写 v2/v3：按原严格 gap 形成每 link continuous chain，在 chain 内用
+`base=max(4,n_min)`、上限64、50% overlap、唯一右对齐尾窗的 dyadic bank；所有实际 covariance
+window 均进入 chain-local Bonferroni multiplicity。每窗在同一 full Gaussian linearization 的
+`P_gg` 子矩阵上用原 rank-aware quadratic 与 GLS 伪逆阈值；严格 adjusted rejection 且 GLS<0，
+再加原 count/duration 才 significant。重叠/相邻 significant window 仅合并观测 ID 精确 union，
+多 link 有 retained segment 则歧义且空 support。pointwise test 只作诊断，不是 window 前置。
+
+provider/version/partition rule 固定为 `imu_aided_windowed_fde_v4`、
+`UIFGO_IMU_AIDED_WINDOWED_FDE_IDENTITY_V4`、
+`FDE_WINDOWED_DYADIC_BONFERRONI_MERGE_V4`。v4 identity/artifacts/cache 显式隔离；Stage2、
+共同参考 Rc、local sigma、LCB、final graph/Values 与一次 fallback 均不变。该 detector 是
+RAIM/FDE-family development front end，不是 ARAIM、certified integrity 或总体误报保证。

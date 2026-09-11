@@ -123,6 +123,7 @@ def main() -> int:
     nlos["short_min_count_debug"] = nlos["discovery_short_min_count"]
     nlos["short_min_duration_debug"] = nlos["discovery_short_min_duration_s"]
     nlos.pop("fde_grouped_test", None)
+    nlos.pop("fde_windowed_test", None)
     config_path = output / f"walk1_{args.regime}_oracle.yaml"
     config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
 

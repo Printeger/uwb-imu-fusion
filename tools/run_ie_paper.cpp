@@ -458,6 +458,7 @@ std::string Stage1ProducerConfigHash(const uifgo::Config& cfg,
       throw std::invalid_argument("FDE Stage1 identity context is required");
     uifgo::FdeOptions options;
     options.grouped_test = cfg.fde_grouped_test;
+    options.windowed_test = cfg.fde_windowed_test;
     options.chi2_probability = cfg.chi2_reject_prob;
     options.chi2_degrees_of_freedom = 1;
     options.gap_threshold_s = cfg.discovery_gap_threshold_s;
@@ -1188,8 +1189,17 @@ void WriteSupportPartition(const fs::path& path,
   auto out = Open(path);
   out << std::setprecision(17)
       << "{\n  \"schema\": \"uifgo_t09_support_partition_v1\",\n"
-      << "  \"provider\": \"" << JsonEscape(partition.provider) << "\",\n"
-      << "  \"partition_hash\": \"" << JsonEscape(partition.partition_hash)
+      << "  \"provider\": \"" << JsonEscape(partition.provider) << "\",\n";
+  if (partition.provider == "imu_aided_windowed_fde_v4")
+    out << "  \"partition_rule_version\": \""
+        << JsonEscape(partition.partition_rule_version) << "\",\n"
+        << "  \"hash_algorithm\": \""
+        << JsonEscape(partition.hash_algorithm) << "\",\n"
+        << "  \"discovery_context_hash\": \""
+        << JsonEscape(partition.discovery_context_hash) << "\",\n"
+        << "  \"discovery_snapshot_hash\": \""
+        << JsonEscape(partition.discovery_snapshot_hash) << "\",\n";
+  out << "  \"partition_hash\": \"" << JsonEscape(partition.partition_hash)
       << "\",\n  \"input_plan_hash\": \""
       << JsonEscape(partition.input_plan_hash) << "\",\n  \"source_hash\": \""
       << JsonEscape(partition.source_hash) << "\",\n  \"config_hash\": \""
@@ -1257,9 +1267,18 @@ void WriteFdeArtifacts(const fs::path& run_dir,
         << std::count_if(result.observations.begin(), result.observations.end(),
             [](const auto& row) { return row.tested && row.fault_detected && row.positive_excess; })
         << ",\n  \"grouped_status\": \"" << JsonEscape(result.grouped_status) << "\""
+        << ",\n  \"windowed_status\": \"" << JsonEscape(result.windowed_status) << "\""
         << ",\n  \"group_test_count\": "
         << std::count_if(result.group_tests.begin(), result.group_tests.end(),
             [](const auto& group) { return group.test.valid; })
+        << ",\n  \"continuous_chain_count\": "
+        << result.continuous_chains.size()
+        << ",\n  \"covariance_window_count\": "
+        << result.covariance_window_count
+        << ",\n  \"significant_window_count\": "
+        << result.significant_window_count
+        << ",\n  \"merged_segment_count\": "
+        << result.merged_segment_count
         << ",\n  \"raw_run_count\": " << result.raw_run_count
         << ",\n  \"filtered_run_count\": " << result.filtered_run_count
         << ",\n  \"retained_segment_count\": "
@@ -1323,8 +1342,76 @@ void WriteFdeArtifacts(const fs::path& run_dir,
           covariance << k << ',' << g.obs_ids[j] << ',' << g.obs_ids[l] << ',' << g.covariance(j,l) << '\n';
     }
   }
+  if (options.windowed_test) {
+    {
+      auto windows = Open(run_dir / "fde_local_windows.csv");
+      windows << std::setprecision(17)
+              << "chain_id,window_id,tag_id,anchor_id,first_chain_index,last_chain_index,start_time,end_time,count,obs_ids,obs_ids_sha256,m,family_alpha,raw_probability,adjusted_probability,rank,statistic,raw_threshold,adjusted_threshold,adjusted_rejected,gls_signed_residual_m,positive_excess,count_eligible,duration_eligible,significant,status,merged_segment_id,null_component_norm,rank_threshold\n";
+      for (const auto& window : result.local_windows) {
+        std::ostringstream ids;
+        for (size_t j = 0; j < window.obs_ids.size(); ++j) {
+          if (j) ids << ';';
+          ids << window.obs_ids[j];
+        }
+        windows << window.chain_id << ',' << window.window_id << ','
+                << window.tag_id << ',' << window.anchor_id << ','
+                << window.first_chain_index << ',' << window.last_chain_index
+                << ',' << JsonNumberOrNull(window.start_time) << ','
+                << JsonNumberOrNull(window.end_time) << ','
+                << window.obs_ids.size() << ",\"" << ids.str() << "\","
+                << window.obs_ids_sha256 << ',' << window.multiplicity << ','
+                << window.family_alpha << ',' << window.raw_probability << ','
+                << JsonNumberOrNull(window.adjusted_probability) << ','
+                << window.test.rank << ','
+                << JsonNumberOrNull(window.test.statistic) << ','
+                << JsonNumberOrNull(window.test.threshold) << ','
+                << JsonNumberOrNull(window.adjusted_threshold) << ','
+                << window.adjusted_rejected << ','
+                << JsonNumberOrNull(window.gls_signed_residual_m) << ','
+                << window.positive_excess << ',' << window.count_eligible << ','
+                << window.duration_eligible << ',' << window.significant << ','
+                << window.status << ',' << window.merged_segment_id << ','
+                << JsonNumberOrNull(window.test.null_component_norm) << ','
+                << JsonNumberOrNull(window.test.rank_threshold) << '\n';
+      }
+    }
+    {
+      auto summary = Open(run_dir / "fde_windowed_summary.json");
+      summary << std::setprecision(17)
+              << "{\n  \"schema\": \"uifgo_fde_windowed_summary_v4\",\n"
+              << "  \"provider\": \"" << JsonEscape(result.provider) << "\",\n"
+              << "  \"provider_version\": \""
+              << JsonEscape(result.provider_version) << "\",\n"
+              << "  \"partition_rule\": \"FDE_WINDOWED_DYADIC_BONFERRONI_MERGE_V4\",\n"
+              << "  \"window_policy\": {\"base_count\": \"max(4,minimum_count)\", \"sizes\": \"dyadic_to_min(64,chain_count)\", \"stride\": \"max(1,size/2)\", \"right_aligned_tail\": \"unique_if_needed\"},\n"
+              << "  \"multiplicity_policy\": \"all_generated_and_executed_full_size_windows_per_chain\",\n"
+              << "  \"merge_policy\": \"observation_set_overlap_or_direct_adjacency_exact_union_with_original_count_duration_refilter\",\n"
+              << "  \"family_alpha\": 0.01,\n"
+              << "  \"raw_probability\": 0.99,\n"
+              << "  \"status\": \"" << uifgo::FdeStatusName(result.status) << "\",\n"
+              << "  \"reason\": \"" << JsonEscape(result.reason) << "\",\n"
+              << "  \"windowed_status\": \""
+              << JsonEscape(result.windowed_status) << "\",\n"
+              << "  \"continuous_chain_count\": "
+              << result.continuous_chains.size() << ",\n"
+              << "  \"generated_window_count\": "
+              << result.local_windows.size() << ",\n"
+              << "  \"covariance_test_count\": "
+              << result.covariance_window_count << ",\n"
+              << "  \"significant_window_count\": "
+              << result.significant_window_count << ",\n"
+              << "  \"merged_segment_count\": "
+              << result.merged_segment_count << ",\n"
+              << "  \"retained_segment_count\": "
+              << result.retained_segment_count << ",\n"
+              << "  \"partition_hash\": \""
+              << JsonEscape(result.partition.partition_hash) << "\",\n"
+              << "  \"gt_read\": false\n}\n";
+    }
+  }
   WriteSupportPartition(run_dir / "support_partition.json", result.partition);
-  WriteSupportPartition(run_dir / "partition.json", result.partition);
+  if (!options.windowed_test || result.success())
+    WriteSupportPartition(run_dir / "partition.json", result.partition);
 }
 
 uifgo::SupportPartition ReadSupportPartition(const fs::path& path) {
@@ -1333,6 +1420,14 @@ uifgo::SupportPartition ReadSupportPartition(const fs::path& path) {
   output.schema = node["schema"].as<std::string>();
   output.provider = node["provider"].as<std::string>();
   output.partition_hash = node["partition_hash"].as<std::string>();
+  if (node["partition_rule_version"])
+    output.partition_rule_version = node["partition_rule_version"].as<std::string>();
+  if (node["hash_algorithm"])
+    output.hash_algorithm = node["hash_algorithm"].as<std::string>();
+  if (node["discovery_context_hash"])
+    output.discovery_context_hash = node["discovery_context_hash"].as<std::string>();
+  if (node["discovery_snapshot_hash"])
+    output.discovery_snapshot_hash = node["discovery_snapshot_hash"].as<std::string>();
   if (node["input_plan_hash"]) output.input_plan_hash = node["input_plan_hash"].as<std::string>();
   if (node["source_hash"]) output.source_hash = node["source_hash"].as<std::string>();
   if (node["config_hash"]) output.config_hash = node["config_hash"].as<std::string>();
@@ -2757,7 +2852,8 @@ int main(int argc, char** argv) {
 
       const auto support = ReadSupportPartition(cache_root / "partition.json");
       if ((imu_aided_fde_run &&
-           support.provider != uifgo::FdeProvider(cfg.fde_grouped_test)) ||
+           support.provider != uifgo::FdeProvider(cfg.fde_grouped_test,
+                                                  cfg.fde_windowed_test)) ||
           (automatic_discovery_run &&
            support.provider != "automatic_discovery"))
         throw std::runtime_error("CACHE_STAGE1_PROVIDER_INCOMPATIBLE");
@@ -2806,7 +2902,9 @@ int main(int argc, char** argv) {
             !imu_aided_fde_run || !support.segments.empty() ||
             evidence["status"].as<std::string>() != "SUCCESS" ||
             !evidence["reference_converged"].as<bool>() ||
-            evidence["provider"].as<std::string>() != uifgo::FdeProvider(cfg.fde_grouped_test) ||
+            evidence["provider"].as<std::string>() !=
+                uifgo::FdeProvider(cfg.fde_grouped_test,
+                                   cfg.fde_windowed_test) ||
             evidence["planned_count"].as<size_t>() != planned ||
             evidence["tested_count"].as<size_t>() != planned ||
             empty["solver_status"].as<std::string>() != "SUCCESS_EMPTY" ||
@@ -3816,6 +3914,7 @@ int main(int argc, char** argv) {
         failure_stage = "IMU_AIDED_FDE";
         uifgo::FdeOptions fde_options;
         fde_options.grouped_test = cfg.fde_grouped_test;
+        fde_options.windowed_test = cfg.fde_windowed_test;
         fde_options.chi2_probability = cfg.chi2_reject_prob;
         fde_options.chi2_degrees_of_freedom = 1;
         fde_options.gap_threshold_s = cfg.discovery_gap_threshold_s;
@@ -3984,7 +4083,8 @@ int main(int argc, char** argv) {
                            : "oracle_debug_segment_refit"))
             << "\",\n  \"stage1_provider\": \""
             << (imu_aided_fde_run
-                    ? uifgo::FdeProvider(cfg.fde_grouped_test)
+                    ? uifgo::FdeProvider(cfg.fde_grouped_test,
+                                         cfg.fde_windowed_test)
                     : (automatic_discovery_run ? "automatic_discovery"
                                                : support.provider))
             << "\",\n  \"debug_label\": \""
@@ -4146,9 +4246,12 @@ int main(int argc, char** argv) {
               << "\nparameter_provenance: PENDING_VALIDATION_DEVELOPMENT_ONLY\n";
         } else if (imu_aided_fde_run) {
           out << "fde_grouped_test: " << (cfg.fde_grouped_test ? "true" : "false")
-              << "\nfde_provider: " << uifgo::FdeProvider(cfg.fde_grouped_test)
+              << "\nfde_windowed_test: " << (cfg.fde_windowed_test ? "true" : "false")
+              << "\nfde_provider: " << uifgo::FdeProvider(
+                     cfg.fde_grouped_test, cfg.fde_windowed_test)
               << "\nfde_identity_version: "
-              << uifgo::FdeVersion(cfg.fde_grouped_test)
+              << uifgo::FdeVersion(cfg.fde_grouped_test,
+                                   cfg.fde_windowed_test)
               << "\nchi2_probability: " << cfg.chi2_reject_prob
               << "\nchi2_degrees_of_freedom: 1"
               << "\nchi2_threshold: " << uifgo::Chi2inv(0.99, 1)

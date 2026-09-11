@@ -219,7 +219,7 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
     auto nl = node["nlos"];
     if (!nl.IsMap()) throw std::runtime_error("nlos must be a map");
     const std::set<std::string> allowed = {
-        "mode", "fde_grouped_test", "oracle_support", "boundary_epsilon_m",
+        "mode", "fde_grouped_test", "fde_windowed_test", "oracle_support", "boundary_epsilon_m",
         "relative_objective_tolerance", "scaled_step_tolerance",
         "projected_gradient_tolerance",
         "navigation_stationarity_tolerance_objective",
@@ -312,6 +312,8 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
       cfg.discovery_lambda_tv = nl["lambda_tv"].as<double>();
     if (nl["fde_grouped_test"])
       cfg.fde_grouped_test = nl["fde_grouped_test"].as<bool>();
+    if (nl["fde_windowed_test"])
+      cfg.fde_windowed_test = nl["fde_windowed_test"].as<bool>();
     if (nl["gap_threshold_s"])
       cfg.discovery_gap_threshold_s = nl["gap_threshold_s"].as<double>();
     if (nl["active_bias_min_m"])
@@ -435,6 +437,9 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
     if (cfg.chi2_reject_prob != 0.99)
       throw std::runtime_error(
           "imu_aided_fde requires solver.chi2_reject_prob exactly 0.99");
+    if (cfg.fde_grouped_test && cfg.fde_windowed_test)
+      throw std::runtime_error(
+          "nlos.fde_grouped_test and nlos.fde_windowed_test are mutually exclusive");
     if (!std::isfinite(cfg.discovery_gap_threshold_s) ||
         cfg.discovery_gap_threshold_s < 0.0 ||
         cfg.discovery_short_min_count <= 0 ||

@@ -164,7 +164,7 @@ def main() -> None:
     oracle_compare = copy.deepcopy(oracle_config)
     permitted_oracle_fields = {
         "mode", "oracle_support", "short_min_count_debug",
-        "short_min_duration_debug", "fde_grouped_test",
+        "short_min_duration_debug", "fde_grouped_test", "fde_windowed_test",
     }
     for document in (locked_compare, oracle_compare):
         for key in permitted_oracle_fields:

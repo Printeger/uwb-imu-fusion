@@ -26,10 +26,16 @@ const char kImuAidedFdeProvider[] = "imu_aided_postfit_fde_v2";
 const char kImuAidedFdeIdentityVersion[] =
     "UIFGO_IMU_AIDED_POSTFIT_FDE_IDENTITY_V2";
 
-const char* FdeProvider(bool grouped) {
+const char* FdeProvider(bool grouped, bool windowed) {
+  if (grouped && windowed)
+    throw std::invalid_argument("FDE_V3_V4_OPTIONS_MUTUALLY_EXCLUSIVE");
+  if (windowed) return "imu_aided_windowed_fde_v4";
   return grouped ? "imu_aided_grouped_fde_v3" : kImuAidedFdeProvider;
 }
-const char* FdeVersion(bool grouped) {
+const char* FdeVersion(bool grouped, bool windowed) {
+  if (grouped && windowed)
+    throw std::invalid_argument("FDE_V3_V4_OPTIONS_MUTUALLY_EXCLUSIVE");
+  if (windowed) return "UIFGO_IMU_AIDED_WINDOWED_FDE_IDENTITY_V4";
   return grouped ? "UIFGO_IMU_AIDED_GROUPED_FDE_IDENTITY_V3" : kImuAidedFdeIdentityVersion;
 }
 
@@ -49,7 +55,8 @@ void Field(std::ostringstream* out, const std::string& value) {
 }
 
 bool OptionsValid(const FdeOptions& options) {
-  return options.chi2_probability == 0.99 &&
+  return !(options.grouped_test && options.windowed_test) &&
+         options.chi2_probability == 0.99 &&
          options.chi2_degrees_of_freedom == 1 &&
          std::isfinite(options.gap_threshold_s) &&
          options.gap_threshold_s >= 0.0 && options.minimum_count > 0 &&
@@ -293,9 +300,15 @@ const char* FdeStatusName(FdeStatus status) {
 std::string ComputeFdeIdentity(const FdeOptions& options,
                                const FdeContext& context) {
   std::ostringstream canonical;
-  canonical << FdeVersion(options.grouped_test) << '\n';
-  Field(&canonical, FdeProvider(options.grouped_test));
+  canonical << FdeVersion(options.grouped_test, options.windowed_test) << '\n';
+  Field(&canonical, FdeProvider(options.grouped_test, options.windowed_test));
   if (options.grouped_test) Field(&canonical, "MAXIMAL_PLANNED_LINK_GAP_V1_FULL_P_GLS_SIGN_P099");
+  if (options.windowed_test) {
+    Field(&canonical, "FDE_WINDOWED_DYADIC_BONFERRONI_MERGE_V4");
+    Field(&canonical, "BASE_MAX_4_NMIN_DYADIC_CAP64_STRIDE_HALF_RIGHT_TAIL");
+    Field(&canonical, "CHAIN_LOCAL_BONFERRONI_ALL_EXECUTED_WINDOWS_ALPHA_0P01");
+    Field(&canonical, "FULL_PWW_GLS_NEGATIVE_EXACT_OBS_UNION_MERGE");
+  }
   Field(&canonical, Binary64(options.chi2_probability));
   Field(&canonical, std::to_string(options.chi2_degrees_of_freedom));
   Field(&canonical, Binary64(Chi2inv(options.chi2_probability,
@@ -415,7 +428,7 @@ SupportPartition BuildFdeSupportPartition(
 
   SupportPartition partition;
   partition.schema = "uifgo_fde_support_v1";
-  partition.provider = FdeProvider(options.grouped_test);
+  partition.provider = FdeProvider(options.grouped_test, options.windowed_test);
   partition.hash_algorithm = "SHA-256";
   partition.partition_rule_version = options.grouped_test ? "FDE_GROUPED_GAP_THEN_TEMPORAL_V3" : "FDE_TEMPORAL_RUN_V1";
   partition.input_plan_hash = context.input_plan_hash;
@@ -484,7 +497,8 @@ SegmentRefitResult ReuseEmptyFdeReference(
   try {
     if (!fde.success() || !fde.reference.converged ||
         !fde.normalization.projection.valid || !fde.partition.segments.empty() ||
-        fde.partition.provider != FdeProvider(cfg.fde_grouped_test) ||
+        fde.partition.provider != FdeProvider(cfg.fde_grouped_test,
+                                              cfg.fde_windowed_test) ||
         fde.planned_count == 0 || fde.tested_count != fde.planned_count)
       throw std::invalid_argument("SUCCESS_EMPTY_PRECONDITIONS_FAILED");
     RequireRawGaussianReference(fde.raw_reference, graph, initial);
@@ -523,8 +537,10 @@ FdeResult ImuAidedFdeSupportProvider::Run(
     const PaperInputPlan& plan, const Config& cfg,
     const FdeContext& context, const RawGaussianReference* prepared) const {
   FdeResult result;
-  result.provider = FdeProvider(options_.grouped_test);
-  result.provider_version = FdeVersion(options_.grouped_test);
+  result.provider = FdeProvider(options_.grouped_test, options_.windowed_test);
+  result.provider_version = FdeVersion(options_.grouped_test,
+                                       options_.windowed_test);
+  if (options_.windowed_test) result.windowed_status = "WINDOWED_NOT_RUN";
   result.chi2_threshold = Chi2inv(options_.chi2_probability,
                                   options_.chi2_degrees_of_freedom);
   auto fail = [&](FdeStatus status, const std::string& reason) {
@@ -596,9 +612,12 @@ FdeResult ImuAidedFdeSupportProvider::Run(
 
     result.identity_hash = ComputeFdeIdentity(options_, context);
     result.partition.schema = "uifgo_fde_support_v1";
-    result.partition.provider = FdeProvider(options_.grouped_test);
+    result.partition.provider = FdeProvider(options_.grouped_test,
+                                            options_.windowed_test);
     result.partition.hash_algorithm = "SHA-256";
-    result.partition.partition_rule_version = "FDE_TEMPORAL_RUN_V1";
+    result.partition.partition_rule_version = options_.windowed_test
+        ? "FDE_WINDOWED_DYADIC_BONFERRONI_MERGE_V4"
+        : "FDE_TEMPORAL_RUN_V1";
     result.partition.input_plan_hash = context.input_plan_hash;
     result.partition.source_hash = context.source_hash;
     result.partition.config_hash = context.config_hash;
@@ -633,12 +652,18 @@ FdeResult ImuAidedFdeSupportProvider::Run(
     if (result.tested_count != result.planned_count)
       return fail(FdeStatus::OBSERVATION_TEST_FAILED,
                   "not every planned observation was tested exactly once");
-    if (options_.grouped_test) {
+    if (options_.windowed_test) {
+      ApplyFullGraphWindowedFde(base_graph, result.reference.values,
+                                base_uwb_factor_metadata, options_, context,
+                                &result);
+    } else if (options_.grouped_test) {
       ApplyFullGraphGroupedFde(base_graph, result.reference.values, base_uwb_factor_metadata, options_, &result);
     }
-    result.partition = BuildFdeSupportPartition(
-        &result.observations, options_, context, &result.raw_run_count,
-        &result.filtered_run_count);
+    if (!options_.windowed_test) {
+      result.partition = BuildFdeSupportPartition(
+          &result.observations, options_, context, &result.raw_run_count,
+          &result.filtered_run_count);
+    }
     result.retained_segment_count = result.partition.segments.size();
     if (result.partition.discovery_context_hash != result.identity_hash)
       return fail(FdeStatus::PARTITION_INVALID,

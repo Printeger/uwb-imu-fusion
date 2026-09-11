@@ -6,7 +6,9 @@
 #include <stdexcept>
 namespace uifgo {
 double FdeChiSquareQuantile(size_t dof, double probability) {
-  if (!dof || probability != .99) throw std::invalid_argument("FDE requires positive DoF and p=.99");
+  if (!dof || !std::isfinite(probability) || probability <= 0.0 ||
+      probability >= 1.0)
+    throw std::invalid_argument("FDE requires positive DoF and probability in (0,1)");
   return boost::math::quantile(boost::math::chi_squared_distribution<double>(dof),probability);
 }
 FdeQuadraticTest FdeCovarianceTest(const Eigen::VectorXd& e,const Eigen::MatrixXd& C) {

@@ -1069,6 +1069,19 @@ C1–C3原状态不变；本轮没有论文数字、图表、正式风险/轨迹
 A11不提出无依据的Jacobian修复。唯一最小后续提案是封存P1 step call50的静态线性系统尺度/条件数与
 阻尼比例审计，不调用iterate；本轮NOT_RUN。C1–C3原状态不变，A10 validation提案不升格为准入。
 
+## 0912 Windowed FDE v4：工程证据与负 Walk1 gate
+
+[协议](../doc/ie_sprint/WINDOWED_FDE_E2E_PROTOCOL.md)与
+[结果](../doc/ie_0911/WINDOWED_FDE_E2E_RESULT.md)支持以下有限工程事实：显式 v4 provider 使用 FullGraph
+covariance 子块、chain-local Bonferroni、负 GLS 和确定性 exact-union merge；dilution/clean/merge/
+multiplicity/correlated/sign/ambiguity/cache 边界随完整 384/384 测试通过。v2/v3 默认及 replay 保留，四个
+Stage2/Rc backend 相对实施基线无差异。
+
+锁定 Walk1 clean 的 1010 windows 未产生支持；injected 在 30 个 planned added-component IDs 上
+TP=0、FP=0、FN=30，目标 link 最大 adjusted ratio 为 0.674515，故 detector gate 失败。六方法 E2E、
+Stage2 接收、local sigma/LCB 与定位收益均 NOT_RUN/NOT_EVALUABLE。该单次 clean 不是总体误报保证，负 gate
+也不授权调参或扩大矩阵；不是 held-out/正式论文数字。T10=C2-C、T11=C、C1--C3 均不升级。
+
 
 ## 0911 第一步固定部分补偿：工程证据，非 claim 升级
 

@@ -136,6 +136,7 @@ add_library(${PROJECT_NAME}
   src/nlos_fde.cpp
   src/fde_math.cpp
   src/fde_grouped.cpp
+  src/fde_windowed.cpp
   src/nlos_discovery.cpp
   src/nlos_refit.cpp
   src/nlos_recoverability.cpp

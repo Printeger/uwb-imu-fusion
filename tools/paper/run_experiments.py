@@ -534,9 +534,12 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
     input_manifest = read_json(run_dir / "input_manifest.json") or {}
     fde_status = read_json(run_dir / "fde_status.json")
     provider = input_manifest.get("stage1_provider", "")
-    if provider.startswith("imu_aided") and provider not in {"imu_aided_postfit_fde_v2", "imu_aided_grouped_fde_v3"}:
+    current_fde_providers = {
+        "imu_aided_postfit_fde_v2", "imu_aided_grouped_fde_v3",
+        "imu_aided_windowed_fde_v4"}
+    if provider.startswith("imu_aided") and provider not in current_fde_providers:
         raise RuntimeError("obsolete FDE provider cannot publish a current cache")
-    is_fde = provider in {"imu_aided_postfit_fde_v2", "imu_aided_grouped_fde_v3"}
+    is_fde = provider in current_fde_providers
     if not (run_dir / "trajectory.tum").is_file():
         raise RuntimeError("Stage-2 cache producer has no trajectory")
     payload_names = [name for name in (
@@ -547,7 +550,8 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
         "stage2_content_identity.json", "stage2_producer_context.json",
         "fde_status.json", "fde_observations.csv", "support_partition.json",
         "stage2_refit_status.json", "raw_reference.json",
-        "fde_group_tests.csv", "fde_group_covariance.csv", "fde_group_spectrum.csv")
+        "fde_group_tests.csv", "fde_group_covariance.csv", "fde_group_spectrum.csv",
+        "fde_local_windows.csv", "fde_windowed_summary.json")
         if (run_dir / name).is_file()]
     required = STAGE2_REPLAY_REQUIRED_PAYLOADS | {"trajectory.tum", "imu_bias.csv"}
     if is_fde:
@@ -555,6 +559,8 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
                      "support_partition.json"}
     if provider == "imu_aided_grouped_fde_v3":
         required |= {"fde_group_tests.csv", "fde_group_covariance.csv", "fde_group_spectrum.csv"}
+    if provider == "imu_aided_windowed_fde_v4":
+        required |= {"fde_local_windows.csv", "fde_windowed_summary.json"}
     if not required.issubset(payload_names):
         raise RuntimeError("Stage-2 cache producer payload is incomplete")
     if is_fde:
