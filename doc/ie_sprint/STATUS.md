@@ -1,3 +1,7 @@
+# 0911-ORACLE-SUPPORT-BACKEND 当前任务
+
+`DONE / RECOVERY_BACKEND_NOT_OPERATIONAL`。按 [任务卡与 amendment](ORACLE_SUPPORT_BACKEND_PROTOCOL.md) 在实际 HEAD `15b32f5a` 上完成 Walk1 normal oracle-support backend scientific sanity check；[完整结果](../ie_0911/ORACLE_SUPPORT_BACKEND_RESULT.md)。30/30 planned support IDs 与锁定目标 link 精确对齐，estimator 进程树未读取 injection amplitude 或 GT。非空 Stage2 实际执行 50 次 conditional optimizer call、累计 110 LM iterations/359 inner trials；objective、step、非负 KKT 最终通过，但 navigation stationarity `0.0750243859` 未达到冻结 `1e-6` 容差，返回 `MAX_REFIT_ITERATIONS`。未发布 cache，Rc/sigma/LCB 与四个 final 均不可用；没有放宽容差、导出未收敛 `c_hat`、算法重试或 correctness 修改。按 Case B 唯一裁决 `RECOVERY_BACKEND_NOT_OPERATIONAL`，low redundancy 为 `NOT_RUN_NORMAL_BACKEND_NOT_OPERATIONAL`，停止 detector 开发。FDE/Stage2/Rc/LCB/optimizer/evaluator源码与 HEAD hash 一致。用户随后明确授权提交并推送本轮交付；受保护的未跟踪 `doc/v2/ie_0911/` 不纳入提交。
+
 # 0911-FDE-FORENSICS 当前任务
 
 `DONE / ENGINEERING_PASS / WALK1_GATE_FAILED`。按 [任务卡与 amendment](FDE_FORENSIC_PROTOCOL.md) 完成原算法取证、封存裁决、唯一 C 分支 grouped FDE 和固定 Walk1 六方法验收。见 [完整结果](../ie_0911/FDE_FORENSIC_AND_FIX_RESULT.md)。完整 CTest 31/31；physical +0.5m / prefit −0.5m 精确核验，原 truth-window aggregate 显著，hold-out 求解失败故 masking INCONCLUSIVE。新最大连续组两侧均零 support；clean RMSE约0.164m满足门，injected无TP，扩大矩阵 `NOT_RUN_WALK1_GATE_FAILED`。Stage2/recovery数值逻辑、默认、旧结果与受保护材料保留；T10=C2-C、T11=C、C1–C3不升级。任务结束，不调参；用户随后明确授权提交并推送本轮实现，受保护的未跟踪 `doc/v2/ie_0911/` 不纳入提交。

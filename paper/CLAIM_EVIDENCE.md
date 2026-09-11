@@ -1,8 +1,14 @@
 # UWB-IMU-IE claim–evidence ledger
 
-状态：`T10_FROZEN_C2_C / T11_FROZEN_T11_C_LIMITED_SCOPE_U13_INCOMPLETE / 0911_FDE_FORENSICS_ENGINEERING_PASS_WALK1_GATE_FAILED`
+状态：`T10_FROZEN_C2_C / T11_FROZEN_T11_C_LIMITED_SCOPE_U13_INCOMPLETE / 0911_ORACLE_BACKEND_NOT_OPERATIONAL`
 
 阅读范围：下方按 T00–T10、Axx/Rxx 命名的阶段证据节均为**历史快照**。其中“当前状态”“本轮”、`IN_PROGRESS`、`NOT_RUN` 和“下一步”仅描述当时阶段；任务状态及后续安排已由本文当前裁决、汇总表和准入检查取代，不构成新的执行计划。
+
+## 当前 0911 oracle-support backend claim 边界
+
+[完整结果](../doc/ie_0911/ORACLE_SUPPORT_BACKEND_RESULT.md)：在实际 HEAD `15b32f5a` 和锁定 Walk1 normal +0.5m injection 上，oracle 只提供 30 个 planned obs IDs、link 与区间；estimator 进程树没有 amplitude/GT 输入。既有 source-neutral `SupportPartition` 成功接收 30/30 target observations，非空 Stage2 实际运行 50 次 conditional optimizer call，但冻结 navigation stationarity 未满足，最终为 `MAX_REFIT_ITERATIONS`，没有有效 `c_hat`/Values/cache。
+
+因此 Rc、local sigma、LCB/full correction 和四个 candidate final 均不可用，不能计算 LCB-vs-suppress 定位收益；唯一裁决为 `RECOVERY_BACKEND_NOT_OPERATIONAL`。low redundancy 按预声明门为 `NOT_RUN_NORMAL_BACKEND_NOT_OPERATIONAL`。这项结果只支持 oracle plumbing 与 Stage2 失败定位，不支持 detector E2E、bias estimation、recoverability、bounded compensation 或 localization-benefit claim；暂停 detector 开发，T10=C2-C、T11=C、C1–C3不升级。
 
 ## 当前 0911 FDE forensic / grouped V3 claim 边界
 
