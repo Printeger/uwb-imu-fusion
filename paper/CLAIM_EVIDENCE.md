@@ -1057,3 +1057,9 @@ A11不提出无依据的Jacobian修复。唯一最小后续提案是封存P1 ste
 真实 Walk1 起始后 [8,11]s robust Cauchy 有 development aligned 评价，但自动 Stage1 原 50 outer 上限失败，
 Stage2 和候选 final 未运行；不存在真实 LCB 精度收益证据。标定/GT 点/许可限制、T10=C2-C、T11=C 保留，
 C1/C2/C3 均不升级。第二步完整矩阵、正式指标/held-out、论文数字与 release NOT_RUN。
+
+## 0911 frozen-algorithm real-data injection experiment
+
+DONE / BENEFIT_EVIDENCE_INSUFFICIENT。授权与结果见 `doc/ie_sprint/NLOS_INJECTION_PROTOCOL.md`、`doc/ie_0911/NLOS_INJECTION_EXPERIMENT_RESULT.md`。HEAD46d37f6算法和科学参数hash未变。6 clean、4 admitted injected完成；2 injected保留clean Cauchy失败而跳过。72方法条目中57成功、3失败、12跳过。用户暂停中断另列，续跑未重试算法失败或已完成项。
+
+全部10个场景temporal support为空，4 injected新增偏置检测TP=0；LCB/suppression轨迹相同来自空support行为，没有实际恢复补偿，不能作为检测后LCB优越性证据。唯一有效normal/low配对Walk3收益均0，未观察到低冗余放大收益；不推断统计显著性。完整CTest30/30、指标工程测试7/7、四对实际初值/计划/噪声和共享上游检查通过仅支持工程正确性。Range provenance缺口仍UNAVAILABLE。T10=C2-C、T11=C、C1–C3不升级。

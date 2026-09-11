@@ -34,6 +34,7 @@
 #include "uifgo/initializer.h"
 #include "uifgo/nlos_discovery.h"
 #include "uifgo/nlos_fde.h"
+#include <functional>
 #include "uifgo/nlos_inference.h"
 #include "uifgo/nlos_inference_io.h"
 #include "uifgo/nlos_refit.h"
@@ -62,6 +63,7 @@ constexpr char kRunnerElapsedSemantics[] =
 
 struct Args {
   bool prepare_only = false;
+  bool stop_after_fde = false;
   std::string anchor_ids;
   std::string config_path;
   std::string output_root;
@@ -154,6 +156,7 @@ Args ParseArgs(int argc, char** argv) {
       return std::string(argv[++i]);
     };
     if (arg == "--prepare-only") args.prepare_only = true;
+    else if (arg == "--stop-after-fde") args.stop_after_fde = true;
     else if (arg == "--anchor-ids") args.anchor_ids = take(arg);
     else if (arg == "--config")
       args.config_path = take(arg);
@@ -500,7 +503,8 @@ LoadedInput LoadedFileInput(const std::string& source) {
 
 LoadedInput LoadData(const std::string& config_dir, uifgo::Config* cfg,
                      std::vector<uifgo::ImuSample>* imu,
-                     std::vector<uifgo::UwbFrame>* uwb) {
+                     std::vector<uifgo::UwbFrame>* uwb,
+                     const std::string& input_config_path) {
   uifgo::DataLoader loader(*cfg);
   if (cfg->data_interface == "sfuise") {
     const std::string dir = uifgo::ConfigLoader::ResolveBagPath(
@@ -549,6 +553,20 @@ LoadedInput LoadData(const std::string& config_dir, uifgo::Config* cfg,
     fs::path manifest(cfg->t07_cache_manifest);
     if (manifest.is_relative()) manifest = fs::path(config_dir) / manifest;
     manifest = fs::canonical(fs::absolute(manifest));
+    const auto envelope = YAML::LoadFile(manifest.string());
+    if (envelope["schema"] && envelope["schema"].as<std::string>() == "nlos_measurement_cache_v2") {
+      // Strictly reject experiment truth/recipe fields, even if ConfigLoader would ignore them.
+      std::function<void(const YAML::Node&)> guard = [&](const YAML::Node& node) {
+        if (node.IsMap()) for (const auto& kv : node) {
+          const auto key = kv.first.as<std::string>();
+          if (key.find("truth") != std::string::npos || key.find("injection") != std::string::npos ||
+              key.find("affected") != std::string::npos || key.find("recipe") != std::string::npos)
+            throw std::runtime_error("forbidden experiment input field: " + key);
+          guard(kv.second);
+        } else if (node.IsSequence()) for (const auto& value : node) guard(value);
+      };
+      guard(YAML::LoadFile(input_config_path));
+    }
     auto cache = uifgo::LoadT07ScenarioCache(
         manifest.string(), cfg->t07_cache_start_s,
         cfg->t07_cache_duration_s);
@@ -2484,6 +2502,9 @@ int main(int argc, char** argv) {
     if (imu_aided_fde_run && args.method == "structured_bias_only")
       throw std::invalid_argument(
           "structured_bias_only is incompatible with imu_aided_fde");
+    if (args.stop_after_fde && (!imu_aided_fde_run || args.prepare_only ||
+        args.execution_type == "FINAL_TRAJECTORY" || !args.stage2_cache_manifest.empty()))
+      throw std::invalid_argument("stop-after-fde requires a fresh FDE producer");
     ValidateSupportedConfig(cfg);
     const fs::path output_root = fs::absolute(args.output_root);
     fs::create_directories(output_root);
@@ -2500,7 +2521,7 @@ int main(int argc, char** argv) {
     std::vector<uifgo::ImuSample> imu;
     std::vector<uifgo::UwbFrame> raw_uwb;
     const LoadedInput loaded =
-        LoadData(config_path.parent_path().string(), &cfg, &imu, &raw_uwb);
+        LoadData(config_path.parent_path().string(), &cfg, &imu, &raw_uwb, config_path.string());
     if (imu.empty() || raw_uwb.empty() || cfg.anchors.empty())
       throw std::runtime_error("loader returned incomplete IMU/UWB/anchor data");
 
@@ -3797,6 +3818,13 @@ int main(int argc, char** argv) {
               << JsonNumberOrNull(stage1_seconds)
               << ",\n  \"stage2_seconds\": null\n}\n";
           return 1;
+        }
+        if (args.stop_after_fde) {
+          auto out = Open(run_dir / "run_status.json");
+          out << "{\"status\":\"FDE_SCREEN_COMPLETE\",\"exit_code\":0,"
+                 "\"stage2_refit_run\":false,\"stage2_cache_published\":false,"
+                 "\"gate_or_fallback_run\":false,\"gt_read\":false}\n";
+          return 0;
         }
         support = fde.partition;
         refit_initial = fde.reference.values;

@@ -119,12 +119,14 @@ T07ScenarioCache LoadT07ScenarioCache(const std::string& manifest_path,
     throw std::invalid_argument("invalid T07 cache window");
   const fs::path manifest = fs::canonical(fs::absolute(manifest_path));
   const YAML::Node root = YAML::LoadFile(manifest.string());
-  const std::set<std::string> allowed = {
+  std::set<std::string> allowed = {
       "schema", "cache_id", "base_recording_id", "base_source_sha256",
       "time_basis", "recording_time_origin_s", "imu_units", "uwb_units",
       "uwb_message_grouping", "imu_file", "imu_sha256", "imu_count",
       "uwb_file", "uwb_sha256", "uwb_observation_count",
       "uwb_message_count"};
+  const bool v2 = root["schema"] && root["schema"].as<std::string>() == "nlos_measurement_cache_v2";
+  if (v2) allowed.insert("transform_sha256");
   if (!root.IsMap()) throw std::runtime_error("T07 cache manifest is not a map");
   for (const auto& kv : root) {
     const std::string key = kv.first.as<std::string>();
@@ -135,7 +137,7 @@ T07ScenarioCache LoadT07ScenarioCache(const std::string& manifest_path,
   for (const auto& key : required)
     if (!root[key].IsDefined())
       throw std::runtime_error("missing T07 cache field: " + key);
-  if (root["schema"].as<std::string>() != kT07EstimatorCacheSchema ||
+  if ((!v2 && root["schema"].as<std::string>() != kT07EstimatorCacheSchema) ||
       root["time_basis"].as<std::string>() !=
           "sensor_time_from_recording_origin" ||
       root["imu_units"].as<std::string>() !=
@@ -170,10 +172,17 @@ T07ScenarioCache LoadT07ScenarioCache(const std::string& manifest_path,
   if (imu_sha != root["imu_sha256"].as<std::string>() ||
       uwb_sha != root["uwb_sha256"].as<std::string>())
     throw std::runtime_error("T07 cache payload hash mismatch");
-  const std::string expected_id = T07CacheCanonicalId(
+  std::string expected_id = T07CacheCanonicalId(
       result.base_recording_id, result.base_source_sha256,
       result.recording_time_origin_s, imu_sha, uwb_sha, result.full_imu_count,
       result.full_uwb_observation_count, result.full_uwb_message_count);
+  if (v2) {
+    const std::string transform = root["transform_sha256"].as<std::string>();
+    if (transform.size() != 71 || transform.substr(0, 7) != "sha256:" ||
+        transform.find_first_not_of("0123456789abcdef", 7) != std::string::npos)
+      throw std::runtime_error("invalid opaque transform hash");
+    expected_id = "sha256:" + Sha256Hex("nlos_measurement_cache_v2\n" + expected_id + "\n" + transform + "\n");
+  }
   if (result.cache_id != expected_id)
     throw std::runtime_error("T07 cache_id does not match manifest/payload");
 

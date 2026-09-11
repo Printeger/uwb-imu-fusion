@@ -514,3 +514,7 @@ T11=C 或 C1–C3。
 本轮用户授权 [RECOVERY_FDE_V2_PROTOCOL.md](RECOVERY_FDE_V2_PROTOCOL.md) 的完整定义与验收边界。该版本替代 paper 共同初值、FDE 空候选重复 refit、旧 r/sigma detector 规则；历史文本作为旧版本保留。实施状态 IN_PROGRESS，未经运行的门均 NOT_RUN。非空 Stage2/LCB/live-C/fallback 原规则保持。
 
 0911-RECOVERY-FDE-V2 收口：定位门、完整CTest29/29、固定smoke/full Walk1五方法和30项prepare已通过；真实零候选只支持空集合工程链。实际阈值保留旧查表6.6349；详见 [结果与限制](../ie_0911/RECOVERY_FDE_V2_RESULT.md)。历史条款不回写，C1–C3不升级。
+
+## 0911 NLOS injection experiment amendment
+
+用户授权 [NLOS_INJECTION_PROTOCOL.md](NLOS_INJECTION_PROTOCOL.md) 限定 semi-synthetic 实验与评价接口；算法基线46d37f6冻结。旧合同及历史结果保留，C1–C3不升级。

@@ -18,6 +18,7 @@ import math
 import os
 from pathlib import Path
 import shutil
+import signal
 import struct
 import subprocess
 import sys
@@ -490,8 +491,30 @@ def runner_call(runner: Path, config: Path, output_root: Path, run_id: str,
     env = os.environ.copy()
     env.update(env_extra)
     start = time.monotonic()
-    completed = subprocess.run(command, text=True, capture_output=True, env=env,
-                               check=False)
+    wall_limit = env.get("UIFGO_EXPERIMENT_WALL_LIMIT_S")
+    if wall_limit is None:
+        completed = subprocess.run(command, text=True, capture_output=True, env=env,
+                                   check=False)
+    else:
+        if wall_limit != "1800":
+            raise ValueError("experiment wall limit must be frozen 1800 seconds")
+        process = subprocess.Popen(command, text=True, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, env=env, start_new_session=True)
+        try:
+            stdout, stderr = process.communicate(timeout=1800)
+            completed = subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            stdout, stderr = process.communicate()
+            completed = subprocess.CompletedProcess(command, 124, stdout, stderr)
+            run_directory = output_root / run_id
+            run_directory.mkdir(exist_ok=True)
+            previous = read_json(run_directory / "run_status.json")
+            if previous:
+                atomic_json(run_directory / "run_status_before_timeout.json", previous)
+            atomic_json(run_directory / "run_status.json", {
+                "status": "TIMEOUT", "exit_code": 124,
+                "reason": "ESTIMATOR_PROCESS_TREE_1800_S_WALL_LIMIT"})
     wall = time.monotonic() - start
     run_directory = output_root / run_id
     if run_directory.is_dir():

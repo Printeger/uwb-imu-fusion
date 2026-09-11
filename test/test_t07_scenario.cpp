@@ -420,6 +420,30 @@ TEST(T07Scenario, SemanticRehashCannotHideNoncanonicalPayloadOrder) {
   fs::remove_all(root);
 }
 
+TEST(T07Scenario, NlosV2OpaqueIdentityAndTruthRejection) {
+ namespace fs = boost::filesystem;
+ const auto root=fs::temp_directory_path()/fs::unique_path("nlos-v2-%%%%%%");fs::create_directories(root);
+ WriteAudit(root/"audit.yaml");
+ auto scenario=uifgo::InjectT07Scenario({Imu(100),Imu(101),Imu(102),Imu(103)},Frames(4),kRecordingId,Recipe(),kOrigin,true);
+ std::string id,path;
+ uifgo::WriteT07ScenarioCache(scenario,Recipe(),kRecordingId,"sha256:base",(root/"audit.yaml").string(),(root/"cache").string(),(root/"truth").string(),&id,&path);
+ auto m=YAML::LoadFile(path);m["schema"]="nlos_measurement_cache_v2";
+ const std::string transform="sha256:"+uifgo::Sha256Hex("spec/subset");m["transform_sha256"]=transform;
+ m["cache_id"]="sha256:"+uifgo::Sha256Hex("nlos_measurement_cache_v2\n"+id+"\n"+transform+"\n");
+ auto save=[&](){YAML::Emitter e;e.SetDoublePrecision(17);e<<m;WriteText(path,e.c_str());};save();
+ fs::remove_all(root/"truth");fs::remove(root/"audit.yaml");
+ const auto loaded=uifgo::LoadT07ScenarioCache(path,0,-1);
+ ASSERT_EQ(loaded.uwb.size(),scenario.uwb.size());
+ for(size_t i=0;i<loaded.uwb.size();++i)for(size_t j=0;j<loaded.uwb[i].ranges.size();++j){
+ EXPECT_EQ(loaded.uwb[i].ranges[j].dist,scenario.uwb[i].ranges[j].dist);
+ EXPECT_EQ(loaded.uwb[i].ranges[j].obs_id,scenario.uwb[i].ranges[j].obs_id);}
+ m["transform_sha256"]="sha256:"+uifgo::Sha256Hex("other scenario");save();
+ EXPECT_THROW(uifgo::LoadT07ScenarioCache(path,0,-1),std::runtime_error);
+ m["transform_sha256"]=transform;m["truth_path"]="unavailable";save();
+ EXPECT_THROW(uifgo::LoadT07ScenarioCache(path,0,-1),std::runtime_error);
+ fs::remove_all(root);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {

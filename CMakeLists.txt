@@ -367,3 +367,12 @@ if(GTest_FOUND)
     COMMAND ${PYTHON_EXECUTABLE} -B
       ${CMAKE_CURRENT_SOURCE_DIR}/test/test_t09_rereview_fix.py)
 endif()
+
+# Experiment-only export; algorithm library is shared with the paper runner.
+add_executable(export_sfuise_input tools/paper/export_sfuise_input.cpp)
+target_link_libraries(export_sfuise_input ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam yaml-cpp)
+add_dependencies(export_sfuise_input ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+if(CATKIN_ENABLE_TESTING)
+ add_test(NAME test_nlos_injection COMMAND ${PYTHON_EXECUTABLE} -B ${CMAKE_CURRENT_SOURCE_DIR}/test/test_nlos_injection.py)
+endif()

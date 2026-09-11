@@ -1,3 +1,13 @@
+# 0911-NLOS-INJECTION 当前任务
+
+`DONE / EXECUTED_ZERO_RECOVERY_SUPPORT / BENEFIT_EVIDENCE_INSUFFICIENT`。用户授权恢复后的剩余实验和独立评价均完成；[机器生成结果](../ie_0911/NLOS_INJECTION_EXPERIMENT_RESULT.md)、[协议](NLOS_INJECTION_PROTOCOL.md)。12个scenario条目：6 clean、4 injected执行，另2 injected因clean Cauchy失败跳过。六方法长表72行：57成功、3个Cauchy算法失败、12跳过；10个共享producer完成，另1次用户暂停中断保留。
+
+四个injected均无新增偏置真阳性，10个执行场景temporal support均为空；LCB/suppression相同，不能证明检测后恢复优势。唯一完整normal/low配对Walk3收益均0，未观察到低冗余收益放大。四对实际计划/噪声/原始初值一致；六clean门精确planned时间核验未改变准入；算法/科学参数/冻结材料hash一致。完整CTest30/30、新指标工程测试7/7。Table A/B、全部失败/命令/封存身份见证据目录 `/home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01`。
+
+历史[暂停交接](NLOS_INJECTION_PAUSE_HANDOFF.md)已由RESUME.json COMPLETE解除；已完成项和算法失败项未重试。T10=C2-C、T11=C、C1–C3不升级。完成本轮后停止，sensitivity/新算法/新phase/提交/push均未执行。
+
+用户随后明确授权将本轮实现与报告提交并推送到当前Git分支。原未跟踪 `doc/v2/ie_0911/` 保留；完整运行数据、二进制和大体积证据仍留本地，Git报告中的绝对证据路径指向原工作空间。
+
 # UWB-IMU-IE sprint 状态
 
 ## 0911-RECOVERY-FDE-V2 当前任务
