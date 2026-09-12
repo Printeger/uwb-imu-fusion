@@ -866,3 +866,22 @@ commit、cache 或 trajectory。本 amendment 不注册 production provider/mode
 0912 CUSUM preflight 收口：frozen 实现逐项保持上述定义。F0--F3 通过，但 detected target
 excursion 额外覆盖 37 个 unaffected rows，precision=0.447761，未达到锁定 F4 门。dynamic replay 与
 production admission 因而没有运行，也不构成方法 claim；结果后未修改 parameter/reset/backfill/termination。
+
+## 0912 PL bidirectional CUSUM support amendment
+
+用户授权 [`PL_BIDIRECTIONAL_CUSUM_SUPPORT_PROTOCOL.md`](../ie_0911/PL_BIDIRECTIONAL_CUSUM_SUPPORT_PROTOCOL.md)
+的封闭 offline support admission。forward `conditional_z` CUSUM 是唯一 alarm/onset detector，其既有
+signal/math、`kappa/h`、recurrence/reset/crossing/last-zero、first alarm、split/calibration、identity 与
+artifacts 全部冻结。新增 backward pass 只在完整 recording 后对每 link 按 descending physical time 用
+同一 `conditional_z`、`B=max(0,B+x-0.5)` 做 non-causal offset closure；其 threshold 只由原 clean
+calibration partition 的 `max(5,B_cal_max+1)` 决定。
+
+final candidate 仅为 exact `(tag,anchor,obs_id)` 上 forward AND backward，不加 padding/tolerance/merge/
+fallback。Backward 不能创造 detection 或改 alarm/latency。模块保持 diagnostic-only，不注册 production
+provider/mode，不反馈 estimator，不触及 Stage2/Rc/final/localization。
+
+0912 收口：上述 forward 定义与 identity 未变；clean-only backward rule 实际得到
+`h_backward=7.0234689587858714`。冻结与 always-commit dynamic shadow 均由 exact Boolean intersection
+得到 target TP/FP/FN=30/0/0，healthy segment=0；CONTROL/SHADOW scientific artifacts 字节一致。
+这只构成后续 production integration admission，不把 backward closure 描述为 causal/online detector，
+也不升级 formal integrity、总体检测或 localization claim。

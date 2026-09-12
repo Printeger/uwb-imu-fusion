@@ -139,6 +139,7 @@ add_library(${PROJECT_NAME}
   src/fde_windowed.cpp
   src/pl_conditional_raim.cpp
   src/pl_persistent_cusum.cpp
+  src/pl_bidirectional_support.cpp
   src/nlos_discovery.cpp
   src/nlos_refit.cpp
   src/nlos_recoverability.cpp
@@ -215,6 +216,15 @@ add_executable(pl_persistent_cusum_preflight
 target_link_libraries(pl_persistent_cusum_preflight
   ${PROJECT_NAME} ${Boost_LIBRARIES})
 add_dependencies(pl_persistent_cusum_preflight
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+# Offline, diagnostic-only backward closure and exact forward/backward
+# intersection. It does not register a production provider or estimator tap.
+add_executable(pl_bidirectional_cusum_preflight
+  tools/run_pl_bidirectional_cusum_preflight.cpp)
+target_link_libraries(pl_bidirectional_cusum_preflight
+  ${PROJECT_NAME} ${Boost_LIBRARIES})
+add_dependencies(pl_bidirectional_cusum_preflight
   ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_executable(export_ground_truth tools/paper/export_ground_truth.cpp)
@@ -328,6 +338,9 @@ if(GTest_FOUND)
 
   catkin_add_gtest(test_pl_persistent_cusum test/test_pl_persistent_cusum.cpp)
   target_link_libraries(test_pl_persistent_cusum ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_pl_bidirectional_support test/test_pl_bidirectional_support.cpp)
+  target_link_libraries(test_pl_bidirectional_support ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
 
   catkin_add_gtest(test_nlos_recoverability test/test_nlos_recoverability.cpp)
   target_link_libraries(test_nlos_recoverability ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})

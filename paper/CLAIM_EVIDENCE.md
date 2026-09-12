@@ -1140,3 +1140,17 @@ tail probability 为 0.4331。相同 30 identities 上，target conditional z in
 该证据不是新 detector、阈值标定、总体误报/召回保证或 localization benefit；没有运行 Stage2/final，
 也不能把 30 帧描述统计当作已验证 sequential test。CUSUM/GLR 仅是需另立任务的可能方向；C1--C3、
 T10=C2-C 与 T11=C 均不升级。
+
+## 0912 PL bidirectional CUSUM support admission
+
+[协议](../doc/ie_0911/PL_BIDIRECTIONAL_CUSUM_SUPPORT_PROTOCOL.md)与
+[结果](../doc/ie_0911/PL_BIDIRECTIONAL_CUSUM_SUPPORT_RESULT.md)支持一个限定 development admission：
+既有 forward detector 参数、identity、alarm 与 onset 不变；clean-only calibrated backward non-causal
+closure 和 exact link/obs-ID intersection 在 locked Walk1 frozen 与 always-commit dynamic shadow 中均得到
+TP/FP/FN=30/0/0、healthy segment=0。Backward held-out clean 为 0 alarm/0 segment；dynamic
+CONTROL/SHADOW 的 commit、measurement、state、trajectory 和 conditional artifacts 字节一致，最大 state
+差为 0。forward first alarm 仍为 affected #15。
+
+这只支持 `BIDIRECTIONAL_CUSUM_SUPPORT_PASS_FOR_PRODUCTION_ADMISSION`，不等于 production provider 已接入，
+也不是 causal online endpoint、formal integrity/general-dataset detector guarantee 或 localization benefit。
+Stage2/Rc/recovery/final/ATE/RMSE 均未运行，C1--C3、T10=C2-C 与 T11=C 不升级。

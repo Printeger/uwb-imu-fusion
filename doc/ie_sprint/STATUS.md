@@ -1,3 +1,20 @@
+# 0912-PL-BIDIRECTIONAL-CUSUM-SUPPORT 当前任务
+
+`DONE / BIDIRECTIONAL_CUSUM_SUPPORT_PASS_FOR_PRODUCTION_ADMISSION`。用户授权执行
+[`PL_BIDIRECTIONAL_CUSUM_SUPPORT_PROTOCOL.md`](../ie_0911/PL_BIDIRECTIONAL_CUSUM_SUPPORT_PROTOCOL.md)：
+上一轮 forward detector/math/identity/`kappa=0.5`/`h=7.0234689587858723`/alarm/onset 与 sealed evidence
+完全冻结；只新增 truth-blind、descending-time backward CUSUM non-causal offset closure，threshold 仅由原
+clean calibration partition 按 `max(5,B_cal_max+1)` 得到。final support 严格按同 link/obs_id 的 forward
+AND backward intersection，无 padding/rescue。先执行 B0--B4；全过才继续 always-commit dynamic
+CONTROL/SHADOW。实际 backward clean calibration 得到 `B_max=6.0234689587858714`、
+`h_backward=7.0234689587858714`；held-out clean 0 alarm/0 segment。冻结与动态交集均为
+TP/FP/FN=30/0/0、precision=recall=1，healthy segment=0，first alarm 保持 affected #15。动态
+CONTROL/SHADOW 的 commit/measurement/state/trajectory/conditional artifacts 全部字节一致，最大 state
+差为 0；truth-blind forbidden opens=0。完整结果见
+[`PL_BIDIRECTIONAL_CUSUM_SUPPORT_RESULT.md`](../ie_0911/PL_BIDIRECTIONAL_CUSUM_SUPPORT_RESULT.md)。
+production integration、estimator feedback、Stage2/Rc/final/ATE/RMSE 均未运行。完成后普通非 force push，
+保护未跟踪 `doc/v2/ie_0911/`。
+
 # 0912-PL-PERSISTENT-CUSUM-PREFLIGHT 当前任务
 
 `DONE / CUSUM_PREFLIGHT_FAIL_SUPPORT_QUALITY / DYNAMIC_NOT_RUN`。用户授权执行

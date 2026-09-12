@@ -30,7 +30,9 @@
 #include "uifgo/initializer.h"
 #include "uifgo/paper_input.h"
 #include "uifgo/paper_pose_prior_factor.h"
+#include "uifgo/pl_bidirectional_support.h"
 #include "uifgo/pl_conditional_raim.h"
+#include "uifgo/pl_persistent_cusum.h"
 #include "uifgo/t07_scenario_cache.h"
 
 namespace fs = boost::filesystem;
@@ -51,6 +53,28 @@ class ShadowFixedLagBackend final
 struct Args {
   std::string config;
   std::string output;
+  std::string dynamic_role;
+  std::string detector_partition = "all";
+  std::string forward_calibration;
+  std::string backward_calibration;
+};
+
+struct StateSnapshot {
+  size_t keyframe = 0;
+  double time = 0.0;
+  gtsam::Pose3 pose;
+  gtsam::Vector3 velocity = gtsam::Vector3::Zero();
+  gtsam::imuBias::ConstantBias bias;
+};
+
+struct Calibration {
+  double kappa = 0.5;
+  double threshold = 0.0;
+  double validation_start = -std::numeric_limits<double>::infinity();
+  double validation_end = std::numeric_limits<double>::infinity();
+  std::string artifact_hash;
+  std::string split_hash;
+  std::string clean_input_hash;
 };
 
 struct Epoch {
@@ -92,6 +116,10 @@ Args Parse(int argc, char** argv) {
     };
     if (arg == "--config") args.config = take();
     else if (arg == "--output-dir") args.output = take();
+    else if (arg == "--dynamic-role") args.dynamic_role = take();
+    else if (arg == "--detector-partition") args.detector_partition = take();
+    else if (arg == "--forward-calibration") args.forward_calibration = take();
+    else if (arg == "--backward-calibration") args.backward_calibration = take();
     else if (arg == "--help") {
       std::cout << "Usage: pl_conditional_preflight --config FILE --output-dir DIR\n";
       std::exit(0);
@@ -101,7 +129,71 @@ Args Parse(int argc, char** argv) {
   }
   if (args.config.empty() || args.output.empty())
     throw std::invalid_argument("--config and --output-dir are required");
+  if (!args.dynamic_role.empty() && args.dynamic_role != "control" &&
+      args.dynamic_role != "shadow")
+    throw std::invalid_argument("--dynamic-role must be control or shadow");
+  if (args.detector_partition != "all" &&
+      args.detector_partition != "validation")
+    throw std::invalid_argument("--detector-partition must be all or validation");
+  if (args.dynamic_role == "shadow" &&
+      (args.forward_calibration.empty() || args.backward_calibration.empty()))
+    throw std::invalid_argument(
+        "shadow role requires forward and backward calibration artifacts");
   return args;
+}
+
+std::string ReadAll(const fs::path& path) {
+  std::ifstream in(path.string(), std::ios::binary);
+  if (!in) throw std::runtime_error("cannot read " + path.string());
+  std::ostringstream out;
+  out << in.rdbuf();
+  return out.str();
+}
+
+double JsonNumber(const std::string& json, const std::string& name) {
+  const std::string token = "\"" + name + "\"";
+  auto p = json.find(token);
+  if (p == std::string::npos || (p = json.find(':', p + token.size())) ==
+                                    std::string::npos)
+    throw std::runtime_error("missing JSON number " + name);
+  return std::stod(json.substr(p + 1));
+}
+
+std::string JsonString(const std::string& json, const std::string& name) {
+  const std::string token = "\"" + name + "\"";
+  auto p = json.find(token);
+  if (p == std::string::npos || (p = json.find(':', p + token.size())) ==
+                                    std::string::npos ||
+      (p = json.find('"', p + 1)) == std::string::npos)
+    throw std::runtime_error("missing JSON string " + name);
+  const auto end = json.find('"', p + 1);
+  if (end == std::string::npos)
+    throw std::runtime_error("malformed JSON string " + name);
+  return json.substr(p + 1, end - p - 1);
+}
+
+Calibration ReadForwardCalibration(const fs::path& path) {
+  const auto json = ReadAll(path);
+  Calibration result;
+  result.kappa = JsonNumber(json, "kappa");
+  result.threshold = JsonNumber(json, "h_locked");
+  result.validation_start = JsonNumber(json, "validation_start");
+  result.validation_end = JsonNumber(json, "validation_end");
+  result.split_hash = JsonString(json, "clean_split_manifest_hash");
+  result.clean_input_hash = JsonString(json, "calibration_input_hash");
+  result.artifact_hash = "sha256:" + uifgo::Sha256FileHex(path.string());
+  return result;
+}
+
+Calibration ReadBackwardCalibration(const fs::path& path) {
+  const auto json = ReadAll(path);
+  Calibration result;
+  result.kappa = JsonNumber(json, "kappa_backward");
+  result.threshold = JsonNumber(json, "h_backward");
+  result.split_hash = JsonString(json, "original_clean_split_manifest_hash");
+  result.clean_input_hash = JsonString(json, "original_clean_input_hash");
+  result.artifact_hash = "sha256:" + uifgo::Sha256FileHex(path.string());
+  return result;
 }
 
 std::ofstream Open(const fs::path& path) {
@@ -327,6 +419,122 @@ void WritePartition(const fs::path& path,
   out << "\n  ]\n}\n";
 }
 
+void WriteDynamicScientificLogs(
+    const fs::path& output, const std::vector<StateSnapshot>& states,
+    const std::vector<Epoch>& epochs,
+    const std::vector<uifgo::ObservationRecord>& observations) {
+  {
+    auto out = Open(output / "runtime_commit_log.csv");
+    out << "sequence,keyframe_id,timestamp,uwb_commit_count,update_count\n"
+        << std::setprecision(17);
+    for (size_t i = 0; i < states.size(); ++i) {
+      size_t count = 0;
+      for (const auto& epoch : epochs)
+        if (epoch.keyframe == states[i].keyframe)
+          count = epoch.ids.size();
+      out << i << ',' << states[i].keyframe << ',' << states[i].time << ','
+          << count << ',' << (count ? 2 : 1) << '\n';
+    }
+  }
+  {
+    auto out = Open(output / "measurement_decision_log.csv");
+    out << "keyframe_id,timestamp,tag_id,anchor_id,obs_id,accepted,reason\n"
+        << std::setprecision(17);
+    for (const auto& row : observations) {
+      if (!row.valid || !row.planned) continue;
+      out << row.keyframe_id << ',' << row.sensor_time << ',' << row.tag_id
+          << ',' << row.anchor_id << ',' << row.obs_id
+          << ",1,PRODUCTION_RAW_UWB_COMMIT\n";
+    }
+  }
+  {
+    auto out = Open(output / "state_commit_log.csv");
+    out << "sequence,keyframe_id,timestamp,qx,qy,qz,qw,px,py,pz,vx,vy,vz,bax,bay,baz,bgx,bgy,bgz\n"
+        << std::setprecision(17);
+    for (size_t i = 0; i < states.size(); ++i) {
+      const auto& state = states[i];
+      const auto q = state.pose.rotation().toQuaternion();
+      const auto p = state.pose.translation();
+      const auto ba = state.bias.accelerometer();
+      const auto bg = state.bias.gyroscope();
+      out << i << ',' << state.keyframe << ',' << state.time << ',' << q.x()
+          << ',' << q.y() << ',' << q.z() << ',' << q.w() << ',' << p.x()
+          << ',' << p.y() << ',' << p.z() << ',' << state.velocity.x() << ','
+          << state.velocity.y() << ',' << state.velocity.z() << ',' << ba.x()
+          << ',' << ba.y() << ',' << ba.z() << ',' << bg.x() << ',' << bg.y()
+          << ',' << bg.z() << '\n';
+    }
+  }
+  {
+    auto out = Open(output / "trajectory.tum");
+    out << std::setprecision(17);
+    for (const auto& state : states) {
+      const auto q = state.pose.rotation().toQuaternion();
+      const auto p = state.pose.translation();
+      out << state.time << ' ' << p.x() << ' ' << p.y() << ' ' << p.z() << ' '
+          << q.x() << ' ' << q.y() << ' ' << q.z() << ' ' << q.w() << '\n';
+    }
+  }
+}
+
+void WriteDynamicCusum(
+    const fs::path& output, const uifgo::PlCusumResult& forward,
+    const uifgo::PlBackwardCusumResult& backward,
+    const uifgo::PlBidirectionalSupportResult& final_support) {
+  {
+    auto out = Open(output / "dynamic_cusum_trace.csv");
+    out << "timestamp,group_id,keyframe_id,source_order,tag_id,anchor_id,obs_id,conditional_z,diagnostic_valid,kappa,h_locked,increment,G_before,G_after,reset,reset_reason,excursion_id,excursion_start_time,threshold_crossing,first_alarm_for_excursion,candidate\n"
+        << std::setprecision(17);
+    for (const auto& row : forward.trace) {
+      out << row.input.timestamp << ',' << row.input.group_id << ','
+          << row.input.keyframe_id << ',' << row.input.source_order << ','
+          << row.input.tag_id << ',' << row.input.anchor_id << ','
+          << row.input.obs_id << ',' << row.input.conditional_z << ','
+          << row.input.diagnostic_valid << ",0.5,," << row.increment << ','
+          << row.g_before << ',' << row.g_after << ',' << row.reset << ','
+          << row.reset_reason << ',' << row.excursion_id << ',';
+      WriteFiniteOrEmpty(&out, row.excursion_start_time);
+      out << ',' << row.threshold_crossing << ','
+          << row.first_alarm_for_excursion << ',' << row.candidate << '\n';
+    }
+  }
+  {
+    auto out = Open(output / "dynamic_backward_trace.csv");
+    out << "timestamp,group_id,keyframe_id,source_order,tag_id,anchor_id,obs_id,conditional_z,diagnostic_valid,reverse_index,increment,B_before,B_after,reset,reset_reason,reverse_excursion_id,reverse_excursion_start_time,threshold_crossing,first_crossing_for_excursion,backward_candidate\n"
+        << std::setprecision(17);
+    for (const auto& row : backward.trace) {
+      out << row.input.timestamp << ',' << row.input.group_id << ','
+          << row.input.keyframe_id << ',' << row.input.source_order << ','
+          << row.input.tag_id << ',' << row.input.anchor_id << ','
+          << row.input.obs_id << ',' << row.input.conditional_z << ','
+          << row.input.diagnostic_valid << ',' << row.reverse_index << ','
+          << row.increment << ',' << row.b_before << ',' << row.b_after << ','
+          << row.reset << ',' << row.reset_reason << ','
+          << row.reverse_excursion_id << ',';
+      WriteFiniteOrEmpty(&out, row.reverse_excursion_start_time);
+      out << ',' << row.threshold_crossing << ','
+          << row.first_crossing_for_excursion << ','
+          << row.backward_candidate << '\n';
+    }
+  }
+  {
+    auto out = Open(output / "dynamic_cusum_candidates.csv");
+    out << "timestamp,keyframe_id,tag_id,anchor_id,obs_id,forward_candidate,backward_candidate,final_candidate,segment_id,segment_ordinal\n"
+        << std::setprecision(17);
+    for (const auto& row : final_support.rows) {
+      out << row.input.timestamp << ',' << row.input.keyframe_id << ','
+          << row.input.tag_id << ',' << row.input.anchor_id << ','
+          << row.input.obs_id << ',' << row.forward_candidate << ','
+          << row.backward_candidate << ',' << row.final_candidate << ','
+          << row.segment_id << ',';
+      if (row.segment_ordinal != std::numeric_limits<size_t>::max())
+        out << row.segment_ordinal;
+      out << '\n';
+    }
+  }
+  WritePartition(output / "dynamic_cusum_support.json", final_support.support);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -426,6 +634,7 @@ int main(int argc, char** argv) {
         new ShadowFixedLagBackend(200.0, params));
     std::set<std::uint64_t> committed;
     std::vector<Epoch> epochs;
+    std::vector<StateSnapshot> dynamic_states;
     std::vector<uifgo::PlConditionalCandidateRecord> candidate_rows;
     std::map<std::uint64_t,size_t> candidate_index;
     for (const auto& row : plan.observations) {
@@ -472,7 +681,17 @@ int main(int argc, char** argv) {
         SeedFromShadowPrediction(*backend, k, non_uwb[k], graph, &new_values);
       }
       backend->update(prediction, new_values, Timestamps(new_values, k));
-      if (groups[k].empty()) continue;
+      if (groups[k].empty()) {
+        if (!args.dynamic_role.empty()) {
+          const auto estimate = backend->calculateEstimate();
+          dynamic_states.push_back(
+              {k, plan.keyframes[k].sensor_time,
+               estimate.at<gtsam::Pose3>(X(k)),
+               estimate.at<gtsam::Vector3>(V(k)),
+               estimate.at<gtsam::imuBias::ConstantBias>(B(k))});
+        }
+        continue;
+      }
       Epoch epoch;
       epoch.keyframe = k;
       epoch.time = plan.keyframes[k].sensor_time;
@@ -583,12 +802,28 @@ int main(int argc, char** argv) {
             row.candidate = true;
         }
       }
+      // Dynamic CONTROL and SHADOW both use the production raw-UWB commit
+      // policy. The historical group statistic remains diagnostic and cannot
+      // reject, reweight, or otherwise affect a dynamic replay measurement.
+      if (!args.dynamic_role.empty()) {
+        epoch.result.committed_rows.resize(groups[k].size());
+        for (size_t i = 0; i < groups[k].size(); ++i)
+          epoch.result.committed_rows[i] = i;
+      }
       gtsam::NonlinearFactorGraph commit_graph;
       for (const auto row : epoch.result.committed_rows) {
         commit_graph.push_back(graph.at(factor_indices.at(row)));
         committed.insert(epoch.ids.at(row));
       }
       if (!commit_graph.empty()) backend->update(commit_graph);
+      if (!args.dynamic_role.empty()) {
+        const auto estimate = backend->calculateEstimate();
+        dynamic_states.push_back(
+            {k, plan.keyframes[k].sensor_time,
+             estimate.at<gtsam::Pose3>(X(k)),
+             estimate.at<gtsam::Vector3>(V(k)),
+             estimate.at<gtsam::imuBias::ConstantBias>(B(k))});
+      }
       epochs.push_back(std::move(epoch));
     }
 
@@ -603,6 +838,89 @@ int main(int argc, char** argv) {
         context, 4, 200, 0.02, 0.1, 200);
     const auto support = uifgo::BuildPlConditionalSupport(
         &candidate_rows, 1.0, 2, 0.01, context);
+
+    std::unique_ptr<uifgo::PlCusumResult> dynamic_forward;
+    std::unique_ptr<uifgo::PlBackwardCusumResult> dynamic_backward;
+    std::unique_ptr<uifgo::PlBidirectionalSupportResult> dynamic_final;
+    Calibration forward_calibration;
+    Calibration backward_calibration;
+    std::vector<uifgo::PlCusumInputRow> dynamic_rows;
+    if (args.dynamic_role == "shadow") {
+      forward_calibration = ReadForwardCalibration(args.forward_calibration);
+      backward_calibration = ReadBackwardCalibration(args.backward_calibration);
+      if (forward_calibration.kappa != 0.5 ||
+          std::abs(forward_calibration.threshold -
+                   7.0234689587858723) > 1e-15)
+        throw std::runtime_error("DYNAMIC_FORWARD_CALIBRATION_NOT_LOCKED");
+      if (backward_calibration.kappa != 0.5 ||
+          backward_calibration.split_hash != forward_calibration.split_hash ||
+          backward_calibration.clean_input_hash !=
+              forward_calibration.clean_input_hash)
+        throw std::runtime_error("DYNAMIC_BACKWARD_CALIBRATION_NOT_LOCKED");
+      for (const auto& epoch : epochs) {
+        if (epoch.keyframe <= 4) continue;
+        if (args.detector_partition == "validation" &&
+            (epoch.time < forward_calibration.validation_start ||
+             epoch.time > forward_calibration.validation_end))
+          continue;
+        for (const auto& row : epoch.anchor_diagnostics) {
+          uifgo::PlCusumInputRow input;
+          input.timestamp = epoch.time;
+          input.group_id = "pl-group-" + std::to_string(epoch.keyframe);
+          input.keyframe_id = epoch.keyframe;
+          input.source_order = row.source_order;
+          input.tag_id = row.tag_id;
+          input.anchor_id = row.anchor_id;
+          input.obs_id = row.obs_id;
+          input.conditional_z = row.conditional.conditional_z;
+          input.diagnostic_valid = row.conditional.numerically_valid;
+          dynamic_rows.push_back(std::move(input));
+        }
+      }
+      uifgo::PlCusumOptions forward_options;
+      forward_options.kappa = forward_calibration.kappa;
+      forward_options.threshold = forward_calibration.threshold;
+      forward_options.gap_threshold_s = 1.0;
+      forward_options.calibration_hash = forward_calibration.artifact_hash;
+      forward_options.split_manifest_hash = forward_calibration.split_hash;
+      dynamic_forward.reset(new uifgo::PlCusumResult(
+          uifgo::EvaluatePlPersistentCusum(dynamic_rows, forward_options)));
+      uifgo::PlBackwardCusumOptions backward_options;
+      backward_options.kappa = backward_calibration.kappa;
+      backward_options.threshold = backward_calibration.threshold;
+      backward_options.gap_threshold_s = 1.0;
+      backward_options.original_clean_split_manifest_hash =
+          backward_calibration.split_hash;
+      backward_options.original_clean_input_hash =
+          backward_calibration.clean_input_hash;
+      backward_options.calibration_hash = backward_calibration.artifact_hash;
+      dynamic_backward.reset(new uifgo::PlBackwardCusumResult(
+          uifgo::EvaluatePlBackwardCusum(dynamic_rows, backward_options)));
+      if (!dynamic_forward->valid || !dynamic_backward->valid)
+        throw std::runtime_error("DYNAMIC_CUSUM_EVALUATION_FAILED");
+      std::vector<uifgo::PlBidirectionalMembershipRow> forward_membership;
+      std::vector<uifgo::PlBidirectionalMembershipRow> backward_membership;
+      for (const auto& row : dynamic_forward->trace) {
+        uifgo::PlBidirectionalMembershipRow item;
+        item.input = row.input;
+        item.forward_candidate = row.candidate;
+        forward_membership.push_back(std::move(item));
+      }
+      for (const auto& row : dynamic_backward->trace) {
+        uifgo::PlBidirectionalMembershipRow item;
+        item.input = row.input;
+        item.backward_candidate = row.backward_candidate;
+        backward_membership.push_back(std::move(item));
+      }
+      dynamic_final.reset(new uifgo::PlBidirectionalSupportResult(
+          uifgo::IntersectPlCusumSupport(
+              forward_membership, backward_membership,
+              dynamic_forward->detector_identity,
+              dynamic_backward->closure_identity, 1.0)));
+      if (!dynamic_final->valid)
+        throw std::runtime_error("DYNAMIC_SUPPORT_INTERSECTION_FAILED:" +
+                                 dynamic_final->status);
+    }
 
     {
       auto out = Open(output / "pl_conditional_epochs.csv");
@@ -784,6 +1102,56 @@ int main(int argc, char** argv) {
           << "  \"retained_segment_count\":" << support.segments.size() << ",\n"
           << "  \"partition_hash\":\"" << support.partition_hash << "\",\n"
           << "  \"gt_read\":false,\n  \"oracle_read\":false\n}\n";
+    }
+    if (!args.dynamic_role.empty()) {
+      WriteDynamicScientificLogs(output, dynamic_states, epochs,
+                                 plan.observations);
+      fs::copy_file(output / "pl_conditional_innovations.csv",
+                    output / "dynamic_conditional_trace.csv");
+      if (args.dynamic_role == "shadow")
+        WriteDynamicCusum(output, *dynamic_forward, *dynamic_backward,
+                          *dynamic_final);
+      auto out = Open(output / "dynamic_status.json");
+      out << std::setprecision(17)
+          << "{\n  \"schema\":\"uifgo_pl_bidirectional_dynamic_shadow_v1\",\n"
+          << "  \"role\":\"" << args.dynamic_role << "\",\n"
+          << "  \"commit_policy\":\"PRODUCTION_RAW_UWB_COMMIT_ALL_V1\",\n"
+          << "  \"observer_feedback_to_estimator\":false,\n"
+          << "  \"group_statistic_used_for_candidate_decision\":false,\n"
+          << "  \"group_statistic_used_for_commit_decision\":false,\n"
+          << "  \"truth_access_count\":0,\n"
+          << "  \"keyframe_count\":" << dynamic_states.size() << ",\n"
+          << "  \"committed_measurement_count\":" << committed.size();
+      if (args.dynamic_role == "shadow") {
+        out << ",\n  \"detector_partition\":\""
+            << args.detector_partition << "\",\n"
+            << "  \"forward_detector_identity\":\""
+            << dynamic_forward->detector_identity << "\",\n"
+            << "  \"backward_closure_identity\":\""
+            << dynamic_backward->closure_identity << "\",\n"
+            << "  \"final_support_identity\":\""
+            << dynamic_final->support_identity << "\",\n"
+            << "  \"detector_row_count\":" << dynamic_rows.size() << ",\n"
+            << "  \"forward_alarm_count\":"
+            << dynamic_forward->alarm_count << ",\n"
+            << "  \"forward_alarm_link_count\":"
+            << dynamic_forward->alarm_link_count << ",\n"
+            << "  \"forward_segment_count\":"
+            << dynamic_forward->segment_count << ",\n"
+            << "  \"forward_max_G\":" << dynamic_forward->max_g << ",\n"
+            << "  \"backward_alarm_count\":"
+            << dynamic_backward->alarm_count << ",\n"
+            << "  \"backward_alarm_link_count\":"
+            << dynamic_backward->alarm_link_count << ",\n"
+            << "  \"backward_segment_count\":"
+            << dynamic_backward->segment_count << ",\n"
+            << "  \"backward_max_B\":" << dynamic_backward->max_b << ",\n"
+            << "  \"final_segment_count\":"
+            << dynamic_final->support.segments.size() << "\n";
+      } else {
+        out << "\n";
+      }
+      out << "}\n";
     }
     return 0;
   } catch (const std::exception& error) {

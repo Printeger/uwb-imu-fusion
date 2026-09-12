@@ -603,3 +603,19 @@ production integration 或 claim 升级。
 precision=0.4477611940、recall=1.0；held-out clean 与 healthy anchors 均 zero-alarm/zero-segment。
 按预登记顺序，dynamic CONTROL/SHADOW、D0--D4、scientific PASS 后的 package-wide tests 以及所有
 recovery/localization 工作均为 `NOT_RUN_DUE_TO_EARLIER_FAILURE`。
+
+## 0912 PL bidirectional CUSUM frozen/dynamic admission amendment
+
+本轮 byte-verify 上一轮 forward evidence 并复用其 sealed clean split/calibration，禁止重新切分或重算
+forward threshold。backward calibration/held-out validation/injected/intersection 分属 truth-blind A--D
+进程，support seal 后 E 才读 target/interval/30 IDs。Frozen B0--B4 固定要求 forward regression、backward
+clean zero alarm/segment、intersection target precision/recall 各>=0.80 且 healthy segment=0。只有全过才
+执行 always-commit dynamic CONTROL/SHADOW non-interference、clean、detection、support gates。首门失败
+即封存并停止，不 adaptive rescue；production、Stage2/Rc/final/ATE/RMSE 均不运行。
+
+0912 bidirectional admission 收口：B0--B4 全部通过；backward held-out clean 为 0 alarm/0 segment，
+冻结交集 TP/FP/FN=30/0/0。随后按协议执行的 dynamic CONTROL/SHADOW scientific artifacts 全部
+SHA-256 exact、最大 state 差 0；dynamic clean 为 0/0，dynamic target alarm 仍为 affected #15，最终
+TP/FP/FN=30/0/0，healthy segment=0。唯一成功裁决为
+`BIDIRECTIONAL_CUSUM_SUPPORT_PASS_FOR_PRODUCTION_ADMISSION`。production provider、Stage2/Rc/final、
+recovery 和定位指标仍为 `NOT_RUN/NOT_EVALUATED`。
