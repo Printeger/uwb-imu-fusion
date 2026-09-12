@@ -1,3 +1,19 @@
+# 0912-PL-PERSISTENT-CUSUM-PREFLIGHT 当前任务
+
+`DONE / CUSUM_PREFLIGHT_FAIL_SUPPORT_QUALITY / DYNAMIC_NOT_RUN`。用户授权执行
+[`PL_PERSISTENT_CUSUM_PREFLIGHT_PROTOCOL.md`](../ie_0911/PL_PERSISTENT_CUSUM_PREFLIGHT_PROTOCOL.md)：
+只用 PL per-anchor `conditional_z`，固定 `G=max(0,G+x-0.5)`、clean 60% temporal calibration / 1s guard /
+held-out validation、`h=max(5,G_cal_max+1)`、last-zero backfill 与 1s gap/invalid reset。group chi-square
+完全退出 candidate decision。先完成 frozen F0--F4；全部 PASS 后才执行 always-commit CONTROL/SHADOW
+dynamic D0--D4。禁止 production provider/mode/commit feedback/cache、Stage2/Rc/final/ATE/RMSE、任何
+adaptive rescue。实际 F0--F3 PASS：held-out clean 0 alarm/0 segment；target 在 affected #15 报警，
+30/30 覆盖且 healthy 0 alarm/0 segment。但 locked last-zero segment 在 injection 后继续 10.242171s，
+TP/FP/FN=30/37/0、precision=0.447761<0.80、recall=1，故 F4 唯一停止裁决为
+`CUSUM_PREFLIGHT_FAIL_SUPPORT_QUALITY`。依协议 dynamic D0--D4、完整 ctest、production、Stage2/Rc/final/
+ATE/RMSE 全部 `NOT_RUN_DUE_TO_EARLIER_FAILURE`；没有 rescue/sweep。直接 CUSUM 12/12 与旧 conditional
+13/13 通过，truth-blind successful forbidden opens=0。结果见
+[`PL_PERSISTENT_CUSUM_PREFLIGHT.md`](../ie_0911/PL_PERSISTENT_CUSUM_PREFLIGHT.md)。完成后普通非 force push。
+
 # 0912-PL-THRESHOLD-SIGNAL-AUDIT 当前任务
 
 `DONE / GROUP_STATISTIC_TASK_MISMATCH_PERSISTENT_PER_ANCHOR_SIGNAL_PRESENT`。用户授权执行

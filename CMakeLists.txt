@@ -138,6 +138,7 @@ add_library(${PROJECT_NAME}
   src/fde_grouped.cpp
   src/fde_windowed.cpp
   src/pl_conditional_raim.cpp
+  src/pl_persistent_cusum.cpp
   src/nlos_discovery.cpp
   src/nlos_refit.cpp
   src/nlos_recoverability.cpp
@@ -205,6 +206,15 @@ target_link_libraries(pl_conditional_preflight
   ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable
   ${Boost_LIBRARIES} yaml-cpp)
 add_dependencies(pl_conditional_preflight
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+# Truth-blind frozen-signal CUSUM preflight. It is diagnostic-only and does
+# not register a production Stage1 provider or nlos.mode.
+add_executable(pl_persistent_cusum_preflight
+  tools/run_pl_persistent_cusum_preflight.cpp)
+target_link_libraries(pl_persistent_cusum_preflight
+  ${PROJECT_NAME} ${Boost_LIBRARIES})
+add_dependencies(pl_persistent_cusum_preflight
   ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_executable(export_ground_truth tools/paper/export_ground_truth.cpp)
@@ -315,6 +325,9 @@ if(GTest_FOUND)
 
   catkin_add_gtest(test_pl_conditional_raim test/test_pl_conditional_raim.cpp)
   target_link_libraries(test_pl_conditional_raim ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_pl_persistent_cusum test/test_pl_persistent_cusum.cpp)
+  target_link_libraries(test_pl_persistent_cusum ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
 
   catkin_add_gtest(test_nlos_recoverability test/test_nlos_recoverability.cpp)
   target_link_libraries(test_nlos_recoverability ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})

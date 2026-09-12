@@ -583,3 +583,23 @@ support、cache 或论文收益 claim；所有下一 detector 均 `NOT_RUN`。
 rows，得到 injected target conditional mean 1.0926 sigma、正号 1.0、`Z_sum=5.9846`，paired
 `Z_delta=6.6220`；healthy 最大正向 paired shift 为 0。唯一裁决为 B。file-open forbidden count=0；
 Stage2/recovery/E2E、support/cache、threshold 写回和下一 detector 均未执行。
+
+## 0912 PL persistent CUSUM frozen/dynamic admission amendment
+
+本轮数据角色仅限同一 sealed Walk1 clean conditional artifact 内预先冻结的 temporal calibration 与
+held-out validation，以及 locked injected development gate。split 固定为有效 clean 时间跨度 60% 点，
+两侧各留 0.5s、总 1s guard；manifest 在任何 CUSUM statistic 前 seal。calibration 只能决定
+`G_calibration_max` 与 `h=max(5,G_calibration_max+1)`，不得访问 validation statistic、injected、truth、
+target 或注入 metadata；validation CUSUM state 从零开始。
+
+Frozen admission 依次要求 integrity、held-out clean 0 alarm/segment、target index<=15 且 alarm 在注入区间、
+healthy 0 alarm/segment、target precision/recall 各>=0.80。仅全部通过才运行 raw CONTROL/SHADOW dynamic
+always-commit replay，并依次要求 non-interference、dynamic held-out clean、target latency、specificity 和
+同样 support quality。Truth 仅由 detector artifacts seal 后的 evaluator 读取。失败后禁止修改 split、
+`kappa/h`、gap/reset/backfill/termination、注入或 gates。本轮没有 recovery、trajectory metric、正式
+production integration 或 claim 升级。
+
+0912 CUSUM admission 收口：F0/F1/F2/F3 通过、F4 失败。target TP/FP/FN=30/37/0，
+precision=0.4477611940、recall=1.0；held-out clean 与 healthy anchors 均 zero-alarm/zero-segment。
+按预登记顺序，dynamic CONTROL/SHADOW、D0--D4、scientific PASS 后的 package-wide tests 以及所有
+recovery/localization 工作均为 `NOT_RUN_DUE_TO_EARLIER_FAILURE`。

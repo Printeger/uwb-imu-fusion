@@ -847,3 +847,22 @@ invalid covariance 必须显式失败。row additive quadratic contribution 与 
 `Z_sum=5.9846`、paired `Z_delta=6.6220`，healthy 无正向 paired shift，故裁决
 `GROUP_STATISTIC_TASK_MISMATCH_PERSISTENT_PER_ANCHOR_SIGNAL_PRESENT`。这些累计量仍只是 post-seal
 diagnostic，不是 detector 或 support score；本 amendment 不授权生产阈值修改或 sequential detector。
+
+## 0912 PL persistent per-link CUSUM preflight amendment
+
+用户授权 [`PL_PERSISTENT_CUSUM_PREFLIGHT_PROTOCOL.md`](../ie_0911/PL_PERSISTENT_CUSUM_PREFLIGHT_PROTOCOL.md)
+的封闭 development admission。candidate decision 的唯一科学输入改为有效 PL per-anchor
+`conditional_z`；旧 group chi-square/omnibus/LOAO 保留历史诊断但完全不参与 CUSUM。每个
+`(tag_id,anchor_id)` 独立执行 `G=max(0,G+conditional_z-0.5)`；`kappa=0.5`、`gap>1s` reset、invalid/
+nonfinite reset、`G>=h` inclusive crossing、last-zero onset backfill 和 `G==0` termination 均冻结。
+
+Threshold 只由 sealed clean calibration partition 的全 link 最大 G 定义为
+`h=max(5,G_calibration_max+1)`；held-out validation 从全零状态独立运行。该值是 development design/
+calibration rule，不是 formal integrity guarantee。Frozen 与 dynamic always-commit shadow 必须调用同一
+source-neutral core/identity；observer 不得改变任何 estimator factor、weight、update、measurement/state
+commit、cache 或 trajectory。本 amendment 不注册 production provider/mode，不改变现有 conditional
+数学，不运行 Stage2/Rc/final/recovery 或定位评价。
+
+0912 CUSUM preflight 收口：frozen 实现逐项保持上述定义。F0--F3 通过，但 detected target
+excursion 额外覆盖 37 个 unaffected rows，precision=0.447761，未达到锁定 F4 门。dynamic replay 与
+production admission 因而没有运行，也不构成方法 claim；结果后未修改 parameter/reset/backfill/termination。

@@ -4,6 +4,20 @@
 
 阅读范围：下方按 T00–T10、Axx/Rxx 命名的阶段证据节均为**历史快照**。其中“当前状态”“本轮”、`IN_PROGRESS`、`NOT_RUN` 和“下一步”仅描述当时阶段；任务状态及后续安排已由本文当前裁决、汇总表和准入检查取代，不构成新的执行计划。
 
+## 0912 PL persistent CUSUM admission evidence boundary
+
+[冻结协议](../doc/ie_0911/PL_PERSISTENT_CUSUM_PREFLIGHT_PROTOCOL.md)先于统计量封存；
+[完整结果](../doc/ie_0911/PL_PERSISTENT_CUSUM_PREFLIGHT.md)只支持 source-neutral per-link one-sided CUSUM
+实现和 bounded frozen replay。clean temporal calibration 与 held-out validation 由 1 s guard 分离，
+`kappa=0.5`、`G_cal_max=6.023469`、`h=7.023469`；held-out clean 0 alarm/0 segment。injected target 在
+affected #15 报警，30/30 recall、healthy 0 alarm/0 segment，但 last-zero excursion 额外覆盖 37 个
+unaffected target rows，precision 仅 0.447761，未达到预登记 0.80。因此唯一裁决
+`CUSUM_PREFLIGHT_FAIL_SUPPORT_QUALITY`，不满足 production admission。
+
+该结果不支持 dynamic production-commit detectability、observer non-interference、recovery 或 localization
+收益；F4 后 dynamic、Stage2/Rc/final/ATE/RMSE 均按协议 NOT_RUN。无 parameter rescue，Processes A--D
+truth/GT/oracle successful forbidden opens 为0。C1--C3、T10=C2-C、T11=C均不升级。
+
 ## 当前 0911 oracle-support backend claim 边界
 
 [stationarity repair 完整结果](../doc/ie_0911/STAGE2_STATIONARITY_REPAIR_RESULT.md) 取代此前
