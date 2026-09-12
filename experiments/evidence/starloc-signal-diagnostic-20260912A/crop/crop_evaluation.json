@@ -1,0 +1,58 @@
+{
+  "comparison": "COMMON_VALID_TIMES_SE3_SCALE1_NO_WINDOW_REALIGN",
+  "interval_s": [
+    0.098236299,
+    218.13626641
+  ],
+  "lock_id": "6f51e7157b489b652da58eb5cc1cdd84222fbbede2118a719c5c77af84268aea",
+  "rows": [
+    {
+      "ATE_P95_m": 725.2494519312351,
+      "ATE_RMSE_m": 375.92891335866216,
+      "Window_RMSE_m": 407.5168879848377,
+      "coverage": 0.9926639156350298,
+      "evaluated_samples": 2165,
+      "method": "robust_cauchy",
+      "recording": "zigzag_s4",
+      "status": "SUCCESS",
+      "variant": "uncropped",
+      "window_samples": 881
+    },
+    {
+      "ATE_P95_m": 732.5295316279347,
+      "ATE_RMSE_m": 371.74715906810957,
+      "Window_RMSE_m": 406.0503307976598,
+      "coverage": 0.9926639156350298,
+      "evaluated_samples": 2165,
+      "method": "robust_cauchy",
+      "recording": "zigzag_s4",
+      "status": "SUCCESS",
+      "variant": "cropped",
+      "window_samples": 881
+    },
+    {
+      "ATE_P95_m": 1.0692759849891567,
+      "ATE_RMSE_m": 0.4293261011704836,
+      "Window_RMSE_m": 0.5725793824884613,
+      "coverage": 0.9935809261806511,
+      "evaluated_samples": 2167,
+      "method": "SFUISE-ToA",
+      "recording": "zigzag_s4",
+      "status": "SUCCESS",
+      "variant": "uncropped",
+      "window_samples": 882
+    },
+    {
+      "ATE_P95_m": 1.3814778383609718,
+      "ATE_RMSE_m": 0.8505124935359977,
+      "Window_RMSE_m": 0.9694602792496282,
+      "coverage": 0.9935809261806511,
+      "evaluated_samples": 2167,
+      "method": "SFUISE-ToA",
+      "recording": "zigzag_s4",
+      "status": "SUCCESS",
+      "variant": "cropped",
+      "window_samples": 882
+    }
+  ]
+}

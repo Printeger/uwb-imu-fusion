@@ -1,0 +1,45 @@
+{
+  "engineering_fixtures": {
+    "base": {
+      "exit_code": 0,
+      "tests": 20,
+      "command": "/usr/bin/python3 -m unittest discover -s experiments/scripts -p test_recover_vs_reject.py"
+    },
+    "admitted": {
+      "exit_code": 0,
+      "tests": 3,
+      "command": "/usr/bin/python3 -m unittest discover -s experiments/scripts -p test_rr_admitted.py"
+    }
+  },
+  "clock_cli_reproduction": {
+    "exit_code": 0,
+    "exact_match": true,
+    "command": "/usr/bin/python3 experiments/scripts/diagnose_starloc_clock.py --output /home/mint/ws_fusion_uwb/evaluator_private/icra/rr_gt_admission_20260912/clock_reproduction"
+  },
+  "historical_final_parser": {
+    "status": "PASS",
+    "cases": 4,
+    "outcomes": [
+      "NO_CANDIDATES",
+      "ZERO_ACCEPTED",
+      "RECOVERED",
+      "NO_CANDIDATES"
+    ],
+    "role": "ENGINEERING_ONLY_NO_METRICS_REUSED"
+  },
+  "preflight_attempts": {
+    "A": {
+      "status": "FAILED",
+      "reason": "SFUISE_SYSTEM_LAPACK_ALTERNATIVES_LINK_NOT_MOUNTED",
+      "scientific_tasks": 0
+    },
+    "B": {
+      "status": "PASS",
+      "scientific_tasks": 0
+    },
+    "C": {
+      "status": "PASS",
+      "scientific_tasks": 0
+    }
+  }
+}

@@ -1,0 +1,13 @@
+recording,method,ATE_RMSE_m,ATE_P95_m,Window_RMSE_m,evaluated_samples,coverage,window_samples
+zigzag_s4,suppress_all,,,,0,0.0,0
+zigzag_s4,lcb_fixed_full,,,,0,0.0,0
+zigzag_s4,robust_cauchy,,,,0,0.0,0
+zigzag_s4,SFUISE-ToA,,,,0,0.0,0
+loop-3d_s3,suppress_all,,,,0,0.0,0
+loop-3d_s3,lcb_fixed_full,,,,0,0.0,0
+loop-3d_s3,robust_cauchy,,,,0,0.0,0
+loop-3d_s3,SFUISE-ToA,,,,0,0.0,0
+zigzag_s3,suppress_all,,,,0,0.0,0
+zigzag_s3,lcb_fixed_full,,,,0,0.0,0
+zigzag_s3,robust_cauchy,,,,0,0.0,0
+zigzag_s3,SFUISE-ToA,,,,0,0.0,0

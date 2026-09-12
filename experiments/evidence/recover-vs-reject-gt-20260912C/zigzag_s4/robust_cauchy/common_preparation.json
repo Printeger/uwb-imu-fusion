@@ -1,0 +1,7 @@
+{
+  "schema": "uifgo_t09_common_preparation_v1",
+  "common_preparation_id": "t09common-sha256:4988798ac867825aaf9c61f94197c31d01082d74911de4d0c0e8019f4e8eb0aa",
+  "graph_linearization_sha256": "t08graphlin-sha256:a615dea5f5dc3b27652f8cbe339e15a15a6b311ebd3139f2951659cbfa65b1de",
+  "values_sha256": "t08values-sha256:744a79bea3042f40049ac49a0ff1b10a6b066985fb532466e5c644467d159614",
+  "context_sha256": "t08context-sha256:155e1e0c8d6fe0886cb9b1525b6cae3f242ea5b7cefb580eb87c5c806e149b53"
+}

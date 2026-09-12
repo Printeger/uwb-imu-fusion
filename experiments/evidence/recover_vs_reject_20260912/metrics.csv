@@ -1,0 +1,13 @@
+recording,method,status,failure,ATE_RMSE_m,Window_RMSE_m,ATE_P95_m,range_before_RMSE_m,range_after_RMSE_m,range_count,recovered_range_count,candidate_observations,candidate_segments,decision_accepted_segments,final_accepted_segments,coverage,fallback,exit_code
+zigzag_s4,suppress_all,NOT_RUN,BLOCKED_GEOMETRY_OR_IMU,,,,,,,,,,,,,,
+zigzag_s4,lcb_fixed_full,NOT_RUN,BLOCKED_GEOMETRY_OR_IMU,,,,,,,,,,,,,,
+zigzag_s4,robust_cauchy,NOT_RUN,BLOCKED_GEOMETRY_OR_IMU,,,,,,,,,,,,,,
+zigzag_s4,SFUISE-ToA,NOT_RUN,BLOCKED_GEOMETRY_OR_IMU,,,,,,,,,,,,,,
+loop-3d_s3,suppress_all,NOT_RUN,BLOCKED_GEOMETRY_OR_IMU,,,,,,,,,,,,,,
+loop-3d_s3,lcb_fixed_full,NOT_RUN,BLOCKED_GEOMETRY_OR_IMU,,,,,,,,,,,,,,
+loop-3d_s3,robust_cauchy,NOT_RUN,BLOCKED_GEOMETRY_OR_IMU,,,,,,,,,,,,,,
+loop-3d_s3,SFUISE-ToA,NOT_RUN,BLOCKED_GEOMETRY_OR_IMU,,,,,,,,,,,,,,
+zigzag_s3,suppress_all,NOT_RUN,BLOCKED_GEOMETRY_OR_IMU,,,,,,,,,,,,,,
+zigzag_s3,lcb_fixed_full,NOT_RUN,BLOCKED_GEOMETRY_OR_IMU,,,,,,,,,,,,,,
+zigzag_s3,robust_cauchy,NOT_RUN,BLOCKED_GEOMETRY_OR_IMU,,,,,,,,,,,,,,
+zigzag_s3,SFUISE-ToA,NOT_RUN,BLOCKED_GEOMETRY_OR_IMU,,,,,,,,,,,,,,

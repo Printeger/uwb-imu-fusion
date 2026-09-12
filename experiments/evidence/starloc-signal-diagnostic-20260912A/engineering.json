@@ -1,0 +1,21 @@
+{
+  "first_fixture_attempt": "INVALID_FIXTURE_HEADER: int count serialized 101.0; all real native inputs correctly use .17g integer formatting",
+  "initial_native_attempt": "INVALID_ABI_EXCLUDED: standalone harness omitted -march=native required by existing Eigen library build; preserve first native artifacts, only native_abi_matched used",
+  "native_build_flags": "g++ -std=c++17 -O2 -march=native -Iinclude -I/usr/include/eigen3; links unchanged libuwb_imu_fgo/libgtsam",
+  "native_fixture": {
+    "command": [
+      "/tmp/starloc_preintegration_check_native",
+      "/home/mint/ws_fusion_uwb/evaluator_private/icra/starloc_signal_20260912A/native_abi_matched/fixture_integer_header.txt",
+      "/home/mint/ws_fusion_uwb/evaluator_private/icra/starloc_signal_20260912A/native_abi_matched/fixture_integer_header.csv"
+    ],
+    "errors": [
+      0.0,
+      0.0,
+      7.105427357601002e-15,
+      2.1316282072803006e-14
+    ],
+    "exit_code": 0
+  },
+  "no_backend_rebuild": true,
+  "python_fixture_tests": 3
+}

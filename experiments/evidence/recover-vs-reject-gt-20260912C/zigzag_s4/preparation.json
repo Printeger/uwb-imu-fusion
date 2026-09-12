@@ -1,0 +1,8 @@
+{
+  "beta": "UNCORRECTED_MISSING_CALIBRATION",
+  "geometry_status": "GT_ASSISTED_APPROXIMATE",
+  "input_manifest_sha256": "78665d14e5c5b40dc1b6d1796a50ab0ce28126e92489d4464441d18e7bd89e60",
+  "quality_fields": "NEUTRAL_ZERO_PLACEHOLDERS",
+  "raw_source_row_mapping": "source_message_index=zero_based_source_csv_row; source_range_index=0",
+  "status": "CACHE_PUBLISHED_NOT_YET_CPP_PREPARED"
+}

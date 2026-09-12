@@ -1,0 +1,15 @@
+{
+  "status": "FAILED",
+  "exit_code": 1,
+  "debug_label": "T08_GATE_DEVELOPMENT_ONLY_PENDING_VALIDATION",
+  "reason": "CONDITIONAL_LM_FIXED_CHECKPOINT_RECOVERY_RESTART_LIMIT_EXHAUSTED",
+  "solver_status": "CONDITIONAL_LM_FAILED",
+  "valid_estimate_exported": false,
+  "refit_outer_iterations": 1,
+  "elapsed_seconds_semantics": "RUNNER_WALL_FROM_MAIN_ENTRY_THROUGH_FINAL_STATUS_PREPARATION",
+  "elapsed_seconds": 89.593716494000006,
+  "stage1_seconds": 6.115672311,
+  "stage2_seconds": 78.472639989000001,
+  "stage3_decision_score_seconds": null,
+  "stage4_engine_seconds": null
+}

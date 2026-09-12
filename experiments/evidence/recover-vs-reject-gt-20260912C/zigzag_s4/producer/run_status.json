@@ -1,0 +1,17 @@
+{
+  "status": "FAILED",
+  "exit_code": 1,
+  "reason": "PL_CONDITIONAL_BOOTSTRAP_IMU_EMPTY",
+  "elapsed_seconds_semantics": "RUNNER_WALL_FROM_MAIN_ENTRY_THROUGH_FINAL_STATUS_PREPARATION",
+  "elapsed_seconds": 10.097202047,
+  "stage1_seconds": null,
+  "stage2_seconds": null,
+  "stage3_decision_score_seconds": null,
+  "stage4_engine_seconds": null,
+  "stage4_decision_seconds": null,
+  "stage4_recovery_refit_seconds": null,
+  "stage4_final_score_seconds": null,
+  "stage4_fallback_seconds": null,
+  "stage4_covariance_seconds": null,
+  "inference_artifact_export_seconds": null
+}

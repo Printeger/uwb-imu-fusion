@@ -1,0 +1,8 @@
+{
+  "status": "OK",
+  "exit_code": 0,
+  "canonical_mode": "robust_cauchy",
+  "reason": "BASELINE_FINAL_LM_AND_FACTOR_AUDIT_OK",
+  "valid_estimate_exported": true,
+  "elapsed_seconds": 56.621886781999997
+}

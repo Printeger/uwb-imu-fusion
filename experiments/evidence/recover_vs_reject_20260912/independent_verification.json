@@ -1,0 +1,27 @@
+{
+  "status": "PASS",
+  "method_cells": 12,
+  "paired_rows": 3,
+  "accounted_tasks": 15,
+  "scientific_processes": 0,
+  "checks": [
+    {
+      "recording": "zigzag_s4",
+      "reference_rows": 49809,
+      "prior_audit_max_abs_difference_m": 0.0,
+      "all_events": 14
+    },
+    {
+      "recording": "loop-3d_s3",
+      "reference_rows": 23566,
+      "prior_audit_max_abs_difference_m": 0.0,
+      "all_events": 4
+    },
+    {
+      "recording": "zigzag_s3",
+      "reference_rows": 47372,
+      "prior_audit_max_abs_difference_m": 0.0,
+      "all_events": 12
+    }
+  ]
+}

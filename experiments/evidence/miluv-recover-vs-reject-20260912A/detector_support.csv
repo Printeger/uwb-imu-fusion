@@ -1,0 +1,11 @@
+recording,valid,candidate_observations,candidate_segments,status,support_hash
+default_1_random3_0,False,,,"
+Indeterminant linear system detected while working near variable
+8646911284551352564 (Symbol: x244).
+
+Thrown when a linear system is ill-posed.  The most common cause for this
+error is having underconstrained variables.  Mathematically, the system is
+underdetermined.  See the GTSAM Doxygen documentation at
+http://borg.cc.gatech.edu/ on gtsam::IndeterminantLinearSystemException for
+more information.",
+default_1_circular3D_0,True,0,0,SUCCESS_SUPPORT_FROZEN,sha256:007a8ca473dc1331fbbc5bd3d9c144b91a2d10df49f4c42db4a7b0b84d99fcc4

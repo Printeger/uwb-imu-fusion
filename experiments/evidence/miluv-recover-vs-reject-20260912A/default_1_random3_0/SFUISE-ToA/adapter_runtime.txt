@@ -1,0 +1,9 @@
+schema=sfuise_adapter_runtime_v1
+measurement_mode=ABSOLUTE_TOA
+reference_point=BODY_IMU_ORIGIN
+sampling_source=TOA_SENSOR_TIMESTAMPS_NO_GT
+estimate_messages=2050
+calibration_messages=149
+toa_timestamps=7279
+trajectory_samples=7276
+native_average_window_runtime=40.292527739024429

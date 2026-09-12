@@ -1,0 +1,38 @@
+[
+  {
+    "absolute_difference_m": 1.8189894035458565e-12,
+    "gt_axis_span_m": [
+      3.956486810420639,
+      3.8746905349185363,
+      1.400812624784882
+    ],
+    "independent_SE3_RMSE_m": 8065.734836134123,
+    "method": "SFUISE-ToA",
+    "raw_estimate_axis_span_m": [
+      14982.053313001417,
+      5969.784388909082,
+      17058.299118996743
+    ],
+    "recording": "default_1_random3_0",
+    "status": "PASS_METRIC_REPRODUCTION_NOT_ACCURACY",
+    "trajectory_rows": 7276
+  },
+  {
+    "absolute_difference_m": 0.0,
+    "gt_axis_span_m": [
+      3.7607121685938516,
+      3.776408852893299,
+      1.5838639775191143
+    ],
+    "independent_SE3_RMSE_m": 67.80777460114233,
+    "method": "SFUISE-ToA",
+    "raw_estimate_axis_span_m": [
+      277.9037414545425,
+      140.62398035542142,
+      58.167063751981416
+    ],
+    "recording": "default_1_circular3D_0",
+    "status": "PASS_METRIC_REPRODUCTION_NOT_ACCURACY",
+    "trajectory_rows": 4756
+  }
+]

@@ -1,0 +1,9 @@
+recording,method,ATE_RMSE_m,ATE_P95_m,Window_RMSE_m,evaluated_samples,coverage,window_samples
+default_1_random3_0,suppress_all,,,,0,0.0,0
+default_1_random3_0,lcb_fixed_full,,,,0,0.0,0
+default_1_random3_0,robust_cauchy,,,,0,0.0,0
+default_1_random3_0,SFUISE-ToA,,,,0,0.0,0
+default_1_circular3D_0,suppress_all,,,,0,0.0,0
+default_1_circular3D_0,lcb_fixed_full,,,,0,0.0,0
+default_1_circular3D_0,robust_cauchy,,,,0,0.0,0
+default_1_circular3D_0,SFUISE-ToA,,,,0,0.0,0

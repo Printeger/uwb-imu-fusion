@@ -1,0 +1,9 @@
+{
+  "experiments/scripts/check_starloc_native_preintegration.py": "d84ae3bac32885c0561ed64fce2bff098072feb0be977ef688bb8f426b5b1129",
+  "experiments/scripts/diagnose_starloc_signals.py": "8a0f9b39d0db9304ab26c8f58a4daebff55f695900ab767c1bba7e22fe5497e3",
+  "experiments/scripts/evaluate_starloc_crop_diagnostic.py": "647895c59badce5a65fdb4325958cce6d3723f40c3c5e9be3ebebb55e4e0d5d2",
+  "experiments/scripts/report_starloc_signals.py": "e86f9cb0dab47c5fb1201faecc7671fffaafc5286492850e73394965522d4875",
+  "experiments/scripts/run_starloc_crop_diagnostic.py": "d8438a567459a5e4314f9b2b0cad7c4061b93ef0e90009b59c5bc9a47d0e7446",
+  "experiments/scripts/starloc_preintegration_check.cpp": "12ecf8e7ef0694432bceaf4e76fff35f757b9e948846291af3ec13caa1efa4da",
+  "experiments/scripts/test_starloc_signals.py": "b85e6438206cbbbe84fb023b9bf67cb6a2b8f447558fb34be1da68f31b4decd3"
+}

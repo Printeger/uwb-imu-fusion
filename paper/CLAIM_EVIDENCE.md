@@ -1,3 +1,74 @@
+# 0912 数据替代候选核对（未启动新矩阵）
+
+用户要求再换数据。本轮建议先以ISAS Walk1/3既有定位运行证据检查基础链；其Vive不符合旧Vicon/GNSS限定，且未审计出真实持续正误差，不能直接充当原RR准入。
+已有范围内own_vicon no_obstacle（2025-10-24-15-31-28）曾有2.2403s合格正误差段，可作有限真实候选；4anchor/近似共点/旧config不符需保留，不能按文件名判断LOS。
+own obstacle两条与HUEC不满足旧持续段门槛；UTIL是TDoA需改测量模型，NTU VIRAL只有3anchor且参考为laser prism，均非当前直接替代。
+依据[既有审计](../experiments/OBSTACLE_RANGE_AUDIT.md)与[ISAS运行](../experiments/SFUISE_BASELINE.md)及作者官方资料。本轮仅推荐，不下载、改合同或运行科学任务，claim不升级。
+
+# 0912 STAR-loc 六项信号/裁剪验证完成
+
+[诊断报告](../experiments/STARLOC_SIGNAL_DIAGNOSTIC.md)：支持rad/s、原始specific-force量纲及旧等效轴；独立信号时延较GT标签时延多约30ms，未写回。
+GT/gyro局部显著矛盾及低运动约2°重力方向残差尚未源头闭合，不能认定输入已精确标定或GT/数据集一定失效。
+GT初值/零bias的原生短时预积分只验证局部一致性，非端到端导航精度；1486窗口及工程失败均留证。
+zigzag_s4首23条UWB裁剪控制解除BOOTSTRAP_IMU_EMPTY，但producer继续数值失败；Cauchy仍发散，SF共同时间ATE0.429326→0.850512m变差。
+三个受控科学进程各一次，未改旧时延/轴/噪声/detector/LCB，没有有效RR或恢复收益新证据，C1–C3/T10/T11不升级。
+
+# 0912 STAR-loc 输入解释复核（无科学重跑）
+
+[复核证据](../experiments/STARLOC_INPUT_RECHECK.md)：CSV附带GT位姿支持原时间偏移符号，实际cache只加一次；acc模长约9.8且未乘除g。
+GT标注同步不等于物理IMU同步；README的acc/gyro轴系与GT辅助等效变换仍未源头闭合。
+不宣称已证明接入完全正确；原失败/冻结参数不变，无新恢复收益或claim升级。
+
+# 0912 MILUV Recover vs Reject：矩阵完成，机制收益未验证
+
+[逐录制报告](../experiments/MILUV_RECOVER_VS_REJECT.md)、[锁定证据](../experiments/evidence/miluv-recover-vs-reject-20260912A/lock.json)。
+仅此前审计合格的random3/circular3D，tag10/全6anchor/完整输入，原始测量及作者body/IMU共点近似；development非held-out。
+26工程fixture及真实prepare/ROS往返/SF启动通过，科学6/10树无参数重试。两个producer未发布Stage2 cache，RR四格NOT_RUN、两差值NA。
+random3 PL线性系统不定；circular3D是有效空support之后raw reference LM失败，不是LCB拒绝全部恢复。
+Cauchy两条LM失败；SFUISE两条虽导出但ATE=8065.734836/67.807775m，独立SE3验证一致，属于负结果。
+全部失败/空候选/零覆盖保留；不支持Recover胜过Reject，不证明数据集本身无效或根因一定是外参，不升级C1–C3/T10/T11。
+未修改核心、检测器/LCB/噪声/求解参数，未commit/push；原STAR-loc证据保持。
+
+# 0912 暂停STAR-loc并评估替代数据
+
+用户要求暂停STAR-loc，原失败/发散证据完整保留。MILUV两条default序列仅被推荐为
+真实正误差development候选，尚无本轮基础定位或恢复收益证据；ISAS仅复用既有工程参照事实。
+替代矩阵NOT_RUN，未改变C1–C3/T10/T11或held-out状态。
+
+# 0912 Recover vs Reject GT-assisted development：完成运行、未验证恢复收益
+
+[最终报告](../experiments/RECOVER_VS_REJECT.md)支持测量接入、隔离运行与负结果记账，不支持Recover胜出。
+用户授权GT辅助坐标/符号/时钟判断后，共同diag(1,-1,-1)与三条常量时间偏移冻结；
+物理IMU原点仍是近似，完整上游处理不可唯一逆推。这批GT已曝光，不是独立标定或held-out。
+23工程fixture与三条真实prepare/ROS往返/零测量启动通过；科学9/15任务，12方法格为
+5正常导出、1失败、6NOT_RUN。三个producer分别因bootstrap无IMU、Stage2固定重启耗尽、
+PL线性系统不定失败，全部RR差值NA，不能把它们写成zero gain或LCB拒绝全部段。
+5条导出中4条严重发散；Cauchy两zigzag ATE=376.269171/20640.156012m，SFUISE三条
+ATE=0.429247/3512.803949/14494.767833m。独立SE3实现和原始轨迹跨度已复核；正常退出不等于定位成功。
+所有负结果、solver失败和实际命令/hash保留，静态beta未校正；没有按结果调参、重跑或改核心。
+C1–C3、T10=C2-C、T11=C不升级，无正式恢复机制/跨数据集优越性证据，无commit/push。
+
+# 0912 Recover vs Reject development 历史准入阻塞
+
+[原交付](../experiments/evidence/recover-vs-reject-gt-20260912C/previous_blocked_report.md)：固定zigzag_s4/loop-3d_s3/zigzag_s3全部
+BLOCKED_GEOMETRY_OR_IMU；作者CSV加速度符号、测量原点与上游处理来源未闭合，不用GT猜测。
+20/20工程fixture通过，独立核对120747条测量参考与30个完整正误差事件；仅支持白名单、
+隔离、评价数学和失败记账工程能力。实际科学运行0/15，12方法格与3配对差值NA。
+真实v2 cache/C++ prepare/PL Stage2/final/SFUISE桥未运行，成功调度与桥接尚未接通。
+这些窗口是evaluator-only总正误差诊断，不是detector support/NLOS truth或恢复收益。
+保留T10=C2-C、T11=C、C1–C3；非held-out，未改核心/默认/旧审计，未提交/push。
+
+# 0912 obstacle raw-range qualification audit
+
+[统一审计报告](../experiments/OBSTACLE_RANGE_AUDIT.md)：806条recording/静态配置完成审计，
+9/9工程测试与806条独立summary复核通过；568889条有效Vicon/GNSS参考残差。
+STAR-loc zigzag_s4 tag1→anchor7/6确有持续正误差平台（19.146/14.668s，段均值0.728/0.614m），
+不是逐包NLOS标签、独立动态bias truth或recovery收益。own obstacle与HUEC动态NLOS更适合
+后续selectivity候选；不能由未运行的定位声称no-harm。MILUV obstacle采样太稀，持续性未定。
+SFUISE Vive/HUEC静态laser在本轮GT类型限制下NA；保留几何/共点/时钟不确定性及失败历史。
+这是evaluator-only development曝光，非held-out；不升级C1–C3、T10=C2-C、T11=C。
+无estimator/recovery/benchmark运行或核心修改。
+
 # 0912 canonical +1m/10s Walk1 pipeline smoke
 
 CANONICAL_PIPELINE_PASS，仅单案例工程验证：10 backend成功、无fallback；独立clean/corrupted前端；

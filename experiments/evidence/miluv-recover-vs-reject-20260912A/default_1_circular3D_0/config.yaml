@@ -1,0 +1,120 @@
+anchors:
+- id: 0
+  pos:
+  - 3.273827392578125
+  - 3.46404736328125
+  - 1.8093309326171876
+  prior_sigma: 0.1
+- id: 1
+  pos:
+  - 3.186386962890625
+  - 0.2739448547363281
+  - 1.5884853515625
+  prior_sigma: 0.1
+- id: 2
+  pos:
+  - 2.850500244140625
+  - -2.923056884765625
+  - 1.89742041015625
+  prior_sigma: 0.1
+- id: 3
+  pos:
+  - -2.497634521484375
+  - -3.5018203125
+  - 1.7730911865234376
+  prior_sigma: 0.1
+- id: 4
+  pos:
+  - -2.95793310546875
+  - 0.6128419189453125
+  - 1.65714208984375
+  prior_sigma: 0.1
+- id: 5
+  pos:
+  - -2.734676513671875
+  - 3.65854248046875
+  - 1.890254638671875
+  prior_sigma: 0.1
+bag:
+  durr: -1.0
+  start: 0.0
+calibration:
+  calib_anchor: false
+  calib_range_bias: false
+  calib_td: false
+  fixed_beta_by_link: {}
+  range_bias_sigma: 0.05
+  td_init: 0.0
+dataset:
+  cache_duration_s: -1.0
+  cache_manifest: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/miluv-recover-vs-reject-20260912A/default_1_circular3D_0/input/input_manifest.json
+  cache_start_s: 0.0
+  interface: t07_cache
+debug:
+  log: false
+extrinsics:
+  calib_lever: false
+  lever_arm_init:
+  - 0.13189
+  - -0.17245
+  - -0.05249
+  lever_prior_sigma: 0.05
+imu:
+  gravity: 9.81
+  imu_acc_in_g: false
+  sigma_a: 0.357
+  sigma_g: 0.19
+  sigma_wa: 0.044
+  sigma_wg: 0.018
+initialization:
+  imu_orientation_world: enu
+  use_imu_orientation: false
+keyframe:
+  step: 4
+  yaw_align_frames: 0
+nlos:
+  mode: pl_bidirectional_cusum
+  cusum_forward_kappa: 0.5
+  cusum_forward_h: 7.023468958785872
+  cusum_backward_kappa: 0.5
+  cusum_backward_h: 7.023468958785871
+  gap_threshold_s: 1.0
+  cusum_parameter_provenance: PL_BIDIRECTIONAL_CUSUM_SUPPORT_20260912_LOCKED
+  score_recoverability: true
+  final_inference_enabled: true
+  boundary_epsilon_m: 1.0e-09
+  relative_objective_tolerance: 1.0e-08
+  scaled_step_tolerance: 1.0e-06
+  projected_gradient_tolerance: 1.0e-08
+  navigation_stationarity_tolerance_objective: 1.0e-06
+  gradient_roundoff_safety_factor: 8.0
+  pose_rotation_scale_rad: 1.0
+  pose_translation_scale_m: 1.0
+  velocity_scale_mps: 1.0
+  accel_bias_scale_mps2: 1.0
+  gyro_bias_scale_radps: 1.0
+  segment_amplitude_scale_m: 1.0
+  max_refit_iterations: 50
+  tau_eta: 0.1
+  tau_s_m: 0.1
+  tau_gamma: 1.0
+  gate_parameter_provenance: T08_GATE_DEVELOPMENT_ONLY_PENDING_VALIDATION
+solver:
+  abs_error_tol: 1.0e-08
+  chi2_reject_prob: 0.99
+  gnc_inlier_prob: 0.99
+  gnc_max_iter: 20
+  gnc_mu_step: 1.4
+  gnc_rel_cost_tol: 0.0001
+  gnc_weight_thresh: -1.0
+  lm_max_iter: 100
+  max_rejection_rounds: 3
+  rel_error_tol: 1.0e-06
+uwb:
+  dist_consistency_thresh: 2.0
+  max_range: 60.0
+  min_range: 0.3
+  nlos_rssi_diff: 8.0
+  sigma_range: 0.15
+  v_max: 2.0
+  warmup_frames: 20

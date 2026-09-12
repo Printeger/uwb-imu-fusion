@@ -1,0 +1,27 @@
+{
+  "status": "AUDIT_COMPLETE_WITH_REFERENCE_LIMITATIONS",
+  "evaluator_run": "/home/mint/ws_fusion_uwb/evaluator_private/icra/obstacle_audit/20260912T111904Z-cbdedc41",
+  "report_directory": "/home/mint/ws_fusion_uwb/evaluator_private/icra/obstacle_audit/20260912T111904Z-cbdedc41/report-da32f56f",
+  "commands": [
+    {"command": "/usr/bin/python3 experiments/scripts/test_obstacle_range_audit.py", "exit_code": 0, "log": "tests.log", "tests_passed": 9},
+    {"command": "/usr/bin/python3 experiments/scripts/audit_obstacle_ranges.py", "exit_code": 0, "log": "evaluation.log"},
+    {"command": "/usr/bin/python3 experiments/scripts/summarize_obstacle_audit.py /home/mint/ws_fusion_uwb/evaluator_private/icra/obstacle_audit/20260912T111904Z-cbdedc41", "exit_code": 0, "log": "summary_final.log"}
+  ],
+  "recordings": 806,
+  "tag_anchor_summaries": 1078,
+  "anchor_summaries": 996,
+  "evaluated_range_rows": 568889,
+  "figures": 13,
+  "source_changes": 0,
+  "retained_failed_evaluator_runs": [
+    {"run": "20260912T111344Z-afb80d7c", "exit_code": 1, "status": "SUPERSEDED_GEOMETRY_AND_STATIC_PARSER"},
+    {"run": "20260912T111707Z-2b07ed17", "exit_code": 1, "status": "SUPERSEDED_TWO_INVALID_TIME_RECORDINGS"}
+  ],
+  "retained_failed_summary": {"log": "summary.log", "exit_code": 1, "cause": "ALL_NA_COLUMN_RELOAD_TYPE"},
+  "estimator": "NOT_RUN",
+  "recovery": "NOT_RUN",
+  "localization_benchmark": "NOT_RUN",
+  "core_build": "NOT_RUN",
+  "git_commit_push": "NOT_RUN",
+  "exposure": "DEVELOPMENT_NOT_HELD_OUT"
+}

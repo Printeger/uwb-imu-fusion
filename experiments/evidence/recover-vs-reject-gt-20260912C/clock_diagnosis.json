@@ -1,0 +1,41 @@
+[
+  {
+    "gt_pose_rmse_after": 0.001089496379020081,
+    "gt_pose_rmse_before": 0.042257022084396585,
+    "half_offsets_s": [
+      0.1765109600896509,
+      0.17825848073993142
+    ],
+    "imu_to_uwb_offset_s": 0.17732079243899532,
+    "matched_count": 36053,
+    "recording": "zigzag_s4",
+    "scale": 1.0,
+    "source": "GT_TO_GT_PUBLISHED_POSE_CORRESPONDENCE_NOT_ESTIMATOR_ERROR"
+  },
+  {
+    "gt_pose_rmse_after": 0.0018302655749184251,
+    "gt_pose_rmse_before": 0.3827741173984989,
+    "half_offsets_s": [
+      0.7898805492453334,
+      0.7896882620167247
+    ],
+    "imu_to_uwb_offset_s": 0.7897756014598921,
+    "matched_count": 10140,
+    "recording": "loop-3d_s3",
+    "scale": 1.0,
+    "source": "GT_TO_GT_PUBLISHED_POSE_CORRESPONDENCE_NOT_ESTIMATOR_ERROR"
+  },
+  {
+    "gt_pose_rmse_after": 0.002424168417658453,
+    "gt_pose_rmse_before": 0.6768643001838542,
+    "half_offsets_s": [
+      -1.4276979191251613,
+      -1.4256468604907884
+    ],
+    "imu_to_uwb_offset_s": -1.4263104959892783,
+    "matched_count": 20599,
+    "recording": "zigzag_s3",
+    "scale": 1.0,
+    "source": "GT_TO_GT_PUBLISHED_POSE_CORRESPONDENCE_NOT_ESTIMATOR_ERROR"
+  }
+]

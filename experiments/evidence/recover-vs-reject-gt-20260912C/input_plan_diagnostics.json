@@ -1,0 +1,65 @@
+[
+  {
+    "recording": "zigzag_s4",
+    "planned_anchor_counts": {
+      "4": 822,
+      "5": 1324,
+      "6": 2288,
+      "7": 1788,
+      "9": 823,
+      "10": 1323,
+      "11": 2299,
+      "12": 1786
+    },
+    "bootstrap_first5_anchor_ids": [
+      10,
+      5,
+      10,
+      5,
+      10
+    ],
+    "bootstrap_cutoff_s": 0.0685052899999999
+  },
+  {
+    "recording": "loop-3d_s3",
+    "planned_anchor_counts": {
+      "4": 1307,
+      "5": 367,
+      "6": 722,
+      "7": 550,
+      "9": 1303,
+      "10": 370,
+      "11": 725,
+      "12": 548
+    },
+    "bootstrap_first5_anchor_ids": [
+      4,
+      10,
+      6,
+      11,
+      6
+    ],
+    "bootstrap_cutoff_s": 0.0910974559999999
+  },
+  {
+    "recording": "zigzag_s3",
+    "planned_anchor_counts": {
+      "4": 1249,
+      "5": 1471,
+      "6": 1139,
+      "7": 2056,
+      "9": 1251,
+      "10": 1470,
+      "11": 1150,
+      "12": 2057
+    },
+    "bootstrap_first5_anchor_ids": [
+      9,
+      4,
+      9,
+      4,
+      9
+    ],
+    "bootstrap_cutoff_s": 0.167261628
+  }
+]

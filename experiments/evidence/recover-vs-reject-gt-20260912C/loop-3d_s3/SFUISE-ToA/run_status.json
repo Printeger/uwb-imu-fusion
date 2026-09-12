@@ -1,0 +1,39 @@
+{
+  "status": "SUCCESS",
+  "commands": [
+    [
+      "roscore",
+      "-p",
+      "11450"
+    ],
+    [
+      "/home/mint/ws_fusion_uwb/evaluator_private/icra/sfuise_baseline/build_ws/devel/lib/sfuise/EstimationInterface",
+      "__name:=EstimationInterface",
+      "/SplineFusion/sys_calib:=/sfuise_adapter/interface_calib_blocked"
+    ],
+    [
+      "/home/mint/ws_fusion_uwb/evaluator_private/icra/sfuise_baseline/build_ws/devel/lib/sfuise/SplineFusion",
+      "__name:=SplineFusion"
+    ],
+    [
+      "/home/mint/ws_fusion_uwb/evaluator_private/icra/sfuise_baseline/build_ws/devel/lib/sfuise_baseline_adapter/sfuise_trajectory_adapter",
+      "__name:=sfuise_trajectory_adapter",
+      "_output_path:=/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/recover-vs-reject-gt-20260912C/loop-3d_s3/sfuise/trajectory.tum",
+      "_metadata_path:=/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/recover-vs-reject-gt-20260912C/loop-3d_s3/sfuise/adapter_runtime.txt"
+    ],
+    [
+      "rosbag",
+      "play",
+      "--quiet",
+      "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/recover-vs-reject-gt-20260912C/loop-3d_s3/measurements.bag",
+      "--topics",
+      "/rr/imu",
+      "/rtls_flares",
+      "/anchor_list"
+    ]
+  ],
+  "gt_available": false,
+  "estimate_origin": "IMU_ORIGIN_RIG_AXES",
+  "exit_code": 0,
+  "wall_time_s": 109.89389273099368
+}

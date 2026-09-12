@@ -1,0 +1,33 @@
+{
+  "crop": [
+    {
+      "command": "python3 experiments/scripts/run_starloc_crop_diagnostic.py prepare --run experiments/results/starloc-crop-diagnostic-20260912A",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 experiments/scripts/run_starloc_crop_diagnostic.py preflight --run experiments/results/starloc-crop-diagnostic-20260912A",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 experiments/scripts/run_starloc_crop_diagnostic.py execute --run experiments/results/starloc-crop-diagnostic-20260912A",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 experiments/scripts/run_starloc_crop_diagnostic.py verify --run experiments/results/starloc-crop-diagnostic-20260912A",
+      "exit_code": 0
+    }
+  ],
+  "evaluation": {
+    "command": "python3 experiments/scripts/evaluate_starloc_crop_diagnostic.py --run experiments/results/starloc-crop-diagnostic-20260912A",
+    "exit_code": 0
+  },
+  "signal": {
+    "command": "python3 experiments/scripts/diagnose_starloc_signals.py --output /home/mint/ws_fusion_uwb/evaluator_private/icra/starloc_signal_20260912A",
+    "exit_code": 0
+  },
+  "source_hash_recheck": "PASS",
+  "tests": {
+    "command": "python3 -m unittest discover -s experiments/scripts -p test_starloc_signals.py -v",
+    "exit_code": 0
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "backend_sha256": "30a227792610dac16f9139a09a292e732de5db0f5bb4d72430cca85d2b7f088d",
+  "binary_sha256": "214da4418581a9f03148e27a2913dc2f9e0e64d0e3a54ebdbecea6e8350992f7",
+  "command": [
+    "/tmp/starloc_preintegration_check_native",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/starloc_signal_20260912A/native_abi_matched/native_input.txt",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/starloc_signal_20260912A/native_abi_matched/native_output.csv"
+  ],
+  "exit_code": 0,
+  "semantics": "EXISTING_IntegrateBetween_RIGHT_ENDPOINT_GTSAM_COMBINED_ZERO_BIAS_GT_START_NO_GRAPH_SOLVE",
+  "source_sha256": "12ecf8e7ef0694432bceaf4e76fff35f757b9e948846291af3ec13caa1efa4da"
+}

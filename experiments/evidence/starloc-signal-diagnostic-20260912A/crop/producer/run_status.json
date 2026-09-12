@@ -1,0 +1,8 @@
+{
+  "status": "FAILED",
+  "exit_code": 1,
+  "failure_stage": "PL_BIDIRECTIONAL_CUSUM_STAGE1",
+  "reason": "\nIndeterminant linear system detected while working near variable\n8646911284551352426 (Symbol: x106).\n\nThrown when a linear system is ill-posed.  The most common cause for this\nerror is having underconstrained variables.  Mathematically, the system is\nunderdetermined.  See the GTSAM Doxygen documentation at\nhttp://borg.cc.gatech.edu/ on gtsam::IndeterminantLinearSystemException for\nmore information.",
+  "gt_read": false,
+  "oracle_support_read": false
+}

@@ -1,0 +1,53 @@
+[
+  {
+    "recording": "zigzag_s4",
+    "failure_reason": "PL_CONDITIONAL_BOOTSTRAP_IMU_EMPTY",
+    "wall_time_s": 10.097202047
+  },
+  {
+    "recording": "loop-3d_s3",
+    "failure_reason": "CONDITIONAL_LM_FIXED_CHECKPOINT_RECOVERY_RESTART_LIMIT_EXHAUSTED",
+    "wall_time_s": 89.593716494,
+    "refit_trace": [
+      {
+        "outer_iteration": 1,
+        "conditional_lm_iterations": 0,
+        "conditional_lm_inner_iterations": 10,
+        "conditional_lm_lambda": 100000,
+        "objective_before": 16464581472118.545,
+        "objective_after": 16464581472118.545,
+        "relative_objective_change": 0,
+        "scaled_state_step": 4.100850028e-17,
+        "max_kkt_violation": 0,
+        "max_pose_rotation_gradient_objective_per_rad": 293592.1561620711,
+        "max_pose_translation_gradient_objective_per_m": 1076672.5106646193,
+        "max_velocity_gradient_objective_per_mps": 0.0,
+        "max_accel_bias_gradient_objective_per_mps2": 4.186118935e-17,
+        "max_gyro_bias_gradient_objective_per_radps": 4.219052443e-17,
+        "max_scaled_navigation_gradient_objective": 1076672.5106646193,
+        "navigation_gradient_roundoff_allowance_objective": 1.12716e-05,
+        "navigation_stationarity_tolerance_objective": 1e-06,
+        "allowed_objective_increase": 0.2339757752,
+        "objective_ok": 1,
+        "step_ok": 1,
+        "kkt_ok": 1,
+        "navigation_stationarity_ok": 0,
+        "conditional_fixed_checkpoint_recovery_used": 0,
+        "conditional_fixed_checkpoint_restart_count": 0,
+        "conditional_inner_status": "CONDITIONAL_LM_CONVERGED"
+      }
+    ]
+  },
+  {
+    "recording": "zigzag_s3",
+    "failure_reason": "\nIndeterminant linear system detected while working near variable\n8646911284551355382 (Symbol: x3062).\n\nThrown when a linear system is ill-posed.  The most common cause for this\nerror is having underconstrained variables.  Mathematically, the system is\nunderdetermined.  See the GTSAM Doxygen documentation at\nhttp://borg.cc.gatech.edu/ on gtsam::IndeterminantLinearSystemException for\nmore information.",
+    "wall_time_s": null,
+    "x3062_time_s": 52.378824171,
+    "imu_bracket_s": [
+      52.37507794401072,
+      52.39236793401072
+    ],
+    "imu_bracket_duration_s": 0.017289990000001865,
+    "causation": "The largest global IMU gap is not local to x3062; singularity root cause is not established from this exception."
+  }
+]

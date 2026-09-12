@@ -1,0 +1,274 @@
+{
+  "core_files": {
+    "/home/mint/ws_fusion_uwb/devel/lib/libuwb_imu_fgo.so": "30a227792610dac16f9139a09a292e732de5db0f5bb4d72430cca85d2b7f088d",
+    "/home/mint/ws_fusion_uwb/devel/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner": "d08ec4e48c3fff2434b644ffa284d73194e8216a423d9d4784ad844d8737a334",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/sfuise_baseline/build_ws/devel/lib/sfuise/EstimationInterface": "74aebfcb29acce305f4179fead134f1ef1c334b6540db40f58ead9c4188cff51",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/sfuise_baseline/build_ws/devel/lib/sfuise/SplineFusion": "87759292cfb8da9f555b044451def48a41e05134b5f8dd7b6f7016be0e29a500",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/sfuise_baseline/build_ws/devel/lib/sfuise_baseline_adapter/sfuise_trajectory_adapter": "7638a25226ee0fe99a2b5686db8384de6582a92c7219c6062590346357145cc2",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/config/paper/ie0911/sfuise_walk1_pl_bidirectional_clean.yaml": "c2b208cb80dc2972d51ff2b9498a6c26d73f146db8f3f5446b3d8d264d330538",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/v2/paper_structure.tex": "8ac373919823d755d9c1b4ceb807527432d16b69d368042e19aa56d93dc67144",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/v2/v2_roadmap.md": "b9bb63b65ebdb8a505bf99b26181318c6c64da1a72817b08cfa61315e2333bdb",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/compare_algorithm/SFUISE/sfuise/config/config_test_isas-walk1.yaml": "f72d12585cec7b57ad7dd155de3d014c37d33a56670041f75aa1aea67d6b8de8",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/compare_algorithm/SFUISE/sfuise/include/Accumulator.h": "8868d806419033f0f1b0d21622db2a950dc317c95191ce56ee760dc7856a03d6",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/compare_algorithm/SFUISE/sfuise/include/Linearizer.h": "1bc6d54e8ecf629f0994a9d7c6de0afa3af91ac6e16a06d5446b00afc2f4d93f",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/compare_algorithm/SFUISE/sfuise/include/Residuals.h": "c095790870c372f0a8304babd249a337ad38754095c2bebdf4050801580d8d7c",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/compare_algorithm/SFUISE/sfuise/include/SplineState.h": "d7647b8762c4e64807849a9dfea2199d8fdacbc635fdafc50057db704cccd481",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/compare_algorithm/SFUISE/sfuise/include/utils/PoseVisualization.h": "00b742b3e50ea0da3acdd08953712ee35bcb258bd698a71fa764be42a454e6df",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/compare_algorithm/SFUISE/sfuise/include/utils/common_utils.h": "6463941e035451de1c43047fdb7421aef78933b5da6db2e3c532a5ca68da42a2",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/compare_algorithm/SFUISE/sfuise/include/utils/math_tools.h": "d07c961cc7dd3276919de7108f850885096a682c05af7dcd325e88fb054f1735",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/compare_algorithm/SFUISE/sfuise/include/utils/tic_toc.h": "fb8e26347723e9eb1a10611a21c071da6ca7e32913ebc184e285e9493ce08ff9",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/compare_algorithm/SFUISE/sfuise/src/EstimationInterface.cpp": "2f7bd1e6ad10ced44e5f3ae725e2750abec3d2b57409627b386f6b60146a6cd5",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/compare_algorithm/SFUISE/sfuise/src/SplineFusion.cpp": "bfd3f1e25d98a7486fa3b435023af9dca1236c0a8de4a86793c52ad0f11e48d1",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/config.h": "a08dd237a955b051d90c95a2813950656162933998251d224eb7bd06df3ef154",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/data_loader.h": "ee95907d699c76dfa8a6c0e5727fbd7467dc937015e35d45334a1b86ce42496e",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/fde_math.h": "c1f0a6ff869756b6b4d231fc9a8dea67379cb6d181e7bccc1f287d9f2b0d4e98",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/graph_builder.h": "45d16274a16206aecd7cbb4233d2ee6ddc7ce6e5016eef19aacd24388a354f09",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/hash_utils.h": "99ed873b2180a8a631a08cd0eca9f70356522fa11e03495c80db8d2ff1119998",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/imu_preint.h": "f222dec2fb1704d411e97c68ad45ea1343d1718882c64c49ff69a6c0199de79a",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/initializer.h": "c93c1f897e82896c85df96b69bd811b73c40f17654836ac6bc8146b25398e1e8",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/logger.h": "d7b23bfb12ff41fcbefa694ef699d8b1d09aaa64c41e0e237d7caa69dd738eee",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/nlos_discovery.h": "18439e4cd3098cfac9612a18a0301e3afbb18bc46799d6e3da8e0d45bbd2c184",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/nlos_fde.h": "afa0e54e4d13d5b9a51fd6af204834a4bc4857f65053a7171914a40bfbcdc8f3",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/nlos_inference.h": "bcdca16b7a792885c43547395b2a61233846d07bf7682b20ac80481bba620cda",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/nlos_inference_io.h": "9638927e55ccf5c4203529c8022ad2c0bf63a659c4643b287929761688a1c8ed",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/nlos_recoverability.h": "7942dcc1aeedb7d42d43d5f651973a3946bf2af761122a69eb1e01e0707f0dfa",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/nlos_refit.h": "a0bcc1de76092e31110644936d40048276e228c75efc5977b153aac56c97c5ca",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/nlos_scoring.h": "f107154df0a0522f97d0426b24b83241cae06bb16cff99062e1512271959d897",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/nlos_solver_utils.h": "ad44f7e7750a1cd26faddd208edc127c1e00527d3883b0a7f10d95b5fa587454",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/nlos_support.h": "2a838604bdb5cb979563c95678cee127cf37a95155d95f1274232f9e57b6534a",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/optimizer.h": "d6e87c7ac34bf0e2375255bacaf3b12e26548f6c40ebb49698760c70b8c458a1",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/outlier_filter.h": "4a3b722530e040aab4bfc0c04dd2834284c00dc724e3743a364c00e4fd7e1c5c",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/paper_input.h": "5a765d1151e28d3bb92fc93e9e569da1147b954541fbc3ea880343909c41112d",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/paper_methods.h": "ba38334c81665c45a20be2d9f149de98aade8065894c2a52ad9c9d2763efcce6",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/paper_pose_prior_factor.h": "2f5d1361b8091fae894f80a4a7424359a400bd38972a748687fd7a3c36d67699",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/paper_robust_noise.h": "300292cf8715e961dec26543a07ef436b45e4220efe34a45ca327a26cc95bdd4",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/paper_run_io.h": "5ef84cf82606e05fbd13ced32a947260d912ec8fd17fc89c552ed6f296ffa254",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/paper_stage2_cache.h": "d707c7f5a9cebb8bda8477185b1b38691c4a9d3c06eb697c39e10e6cad80ba26",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/pl_bidirectional_provider.h": "aca1bc5084d9ba3a803e1bcbf16e10de7bdd036e02de030125ab7503a72336af",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/pl_bidirectional_support.h": "fdd130f696716c888c2b06054b6a254c5fd2ada2aa57aea499fe2d0a6c44bd16",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/pl_conditional_raim.h": "02fc210e37418c054793783555b9ceefd42369d00e2ea0aed6aa3fb745f83c0e",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/pl_persistent_cusum.h": "e83547b6837daf73b6d986f312cd27d4a7bd8ee4304f33628abd8a3bfa565c7c",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/t07_scenario_cache.h": "8f4cbeffc721d1c4110d53d25f1fa6a30e1742f665016773c7021abdd7e67ef4",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/t07_scenario_injector.h": "22155ac1c4febf723b01bd7223ff1f2884ef3fb880d4293088de1c03000c9e6a",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/trajectory_io.h": "61621afb81d70e1b31c4b3da13c44e4714b94e91afdffd2a37923c6b89e9baa6",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/types.h": "c547b4e8305603b1089f15983e7f244bf5d2add6b7750d034cb6d4b2c0beca17",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/uwb_factor.h": "066cec752c3765b29cc2e09c42f843703ce078f0a6ce18959f7b2e2d8d1ba9ff",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/include/uifgo/visualizer.h": "819383519aea681b2063c08e91cd6f30ec79e74c7216dc9b335b24cc3534b8ec",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/chi2.cpp": "a591c45a526212ec7f180eb00ba36d6f1f15f647be49ac585d3576de4b1407cc",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/config.cpp": "4fb306549ef592d48467084de3677b93b7d2860ac84e4f982e4a8f36355ee292",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/data_loader.cpp": "3dc827646038546a80cc141e4a383cf435659abaa2cdee5e7fbf0070d46703b9",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/fde_grouped.cpp": "fdc772d5297a3fadf1764948a1745eb94903b4a37f10de9364195d07328e84df",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/fde_math.cpp": "7c0dc5d38e088673b5772111ab2fcaec737904e2cb6e7867e7468e72e565cb5a",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/fde_windowed.cpp": "21bbbc68b2854e6a926863d34115bce125f3ddecd60aa67c026d10caae77e9d1",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/graph_builder.cpp": "32fc7c4c4d6b740e21a23f0e5c0d9a7911ca5025b260380b458a11ce81f96e39",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/hash_utils.cpp": "48ada285197c918ff5a84b33a907274c7041d18c97f336afafd2ac9f82f87f54",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/imu_preint.cpp": "1ef14ee12d75dd76c1b8b51b0f832f392ec1ce6d2bce13796a40a1a103b85218",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/imu_sync.cpp": "607e618bd3c0666c64ae7ccce4cac1ab3b1be44bd07e9887e5a1b0d4d5269422",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/initializer.cpp": "66b948c71b307a76e8eda7966edc745193f9921f26a04d17a726c28003180a91",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/logger.cpp": "9fe2b17ec02b3811e8d5d020f7481e0764c77f132ca75a2b6d7da9434a01a93d",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/nlos_discovery.cpp": "38f463850d1215e338856e5d320352795236f6c202a116a8a7e7f49faf73a28e",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/nlos_fde.cpp": "04cf0c7b08add32d3647fd9067b0e4692c0d463a44ee6f3c73d987349e1e0d2c",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/nlos_inference.cpp": "c0c323acffe33cf0102e8e7a8805baf2b5e55142d96e360ab83e25b5a75a4f16",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/nlos_inference_io.cpp": "06bb0b0a4cf70064b241319295997bf001747aaa34c8f00b0cde31d6529741b1",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/nlos_recoverability.cpp": "cd9b631bdebddd7fdbfcf35af615984d302e5359b2531f255bf624f4dac11cdd",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/nlos_refit.cpp": "3c74724387956d930ad4e9fe711d1af9f1b3db4cd69430f2e31b8087e1be5d4b",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/nlos_scoring.cpp": "71a6190f21153e99a3fd8e035bf9e6b85e63df1c1c9097e03ac4bcceb4593dff",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/nlos_solver_utils.cpp": "3a33d96e057d13c529ecb64dd599ae1f646be7878accb7604d68cbe5df5a8839",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/optimizer.cpp": "a4e068bf137be3d8d994f1be61534958de4dd81340fac97dc54b657c26df547b",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/outlier_filter.cpp": "1204e7b22ffb4f63e7ffe64b5d915b0db5b9142f8c2fbbddb87ffbeccbcdffe7",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/paper_input.cpp": "0347416d06116ace169efb89f369196a3a889939a98ece05d31e7c9e68da4f86",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/paper_methods.cpp": "e8daf174f2138237da9565503f1a852cda32525a434ff38636b6a9de446c6faf",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/paper_run_io.cpp": "a3fd9c9ede6d06d14b8c9b59ddc54b461192ac20bef9e7533af8b77943478e28",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/paper_stage2_cache.cpp": "adc8c79bf0fc77dd180199abf3a6c06a74c04d72ef8e77269a63aefa361b869d",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/pl_bidirectional_provider.cpp": "8b99fd0b186eacd26c6bf10b8ca53006f0989fb96026264793bc1c832ec6315f",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/pl_bidirectional_support.cpp": "4d6716c9157bafa11314ad3f4151b5e37dd1067dde356bfd3dbf666a453ec1dc",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/pl_conditional_raim.cpp": "c3e8762b7637696a7712602aa32ba433c753d50a7d2910a4519ad7c8e1556424",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/pl_persistent_cusum.cpp": "17addb6da7227eec0302d4742d431eaefd4c9f25d1feaf01ca48c0ca0ea51660",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/t07_scenario_cache.cpp": "37b01271e61599548c4324e651d13f09f71f0e4d4521487ca4adad7bde7e46e2",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/trajectory_io.cpp": "940c1f26810232280a29d86eec0ce36a4023f20e1826ab09e12e9595bbf69f98",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/uwb_factor.cpp": "f7ae4f1969bf93edee7ce3cabf780e1a3da168555ad9519f7785509b2c4c831f",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/src/visualizer.cpp": "57090542fe384ad4494161e036454cdf2aa32f01aa187f8634b675dba899b962",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/tools/paper/run_experiments.py": "b107c695b1d0f8668b59135c61d5cdbd46f288bdbc2a28dbf5f81fc3043f5515",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/tools/run_ie_paper.cpp": "da395054d71d8e33fa1d260dba5b6187894253e22043933da71f434399498f16",
+    "/opt/ros/noetic/lib/libclass_loader.so": "0bd50c1e664ce28f5e01b8f32aa86e1058429957108b2e219dcdab7dccb03d86",
+    "/opt/ros/noetic/lib/libcpp_common.so": "7ca7b67d2f06d897cbbadc51343c75312accf25916eeed71dacd275b3c39ee2e",
+    "/opt/ros/noetic/lib/librosbag_storage.so": "6cb309fbee958c8fd04adcd3c097ab58f33d5b0ecba7c46bf26737288a7a7ec4",
+    "/opt/ros/noetic/lib/librosconsole.so": "6a2606bec588ad94ab2492e8bdc20423e99782625e11e454b9b8c16057b1dc1c",
+    "/opt/ros/noetic/lib/librosconsole_backend_interface.so": "99092c95434fa4be7a8963649a996034784e4f6c6033f55063efd411829adafc",
+    "/opt/ros/noetic/lib/librosconsole_log4cxx.so": "d0e1afe985f5db3d2b191fcd388ddecd91ba15920ae7132e84f3f43ff3e8fe0d",
+    "/opt/ros/noetic/lib/libroscpp_serialization.so": "054c5e661490c61927d798a0513807766a005b6854f309b780290bb6ca6881d4",
+    "/opt/ros/noetic/lib/libroslib.so": "18098c35c4c73b0e1e0ab72c0a84ccb7f9ba42c01a8ac9633bf036de295d5a7e",
+    "/opt/ros/noetic/lib/libroslz4.so": "aaf85d4a232794e44d18110caa0bbf1cb56cb8eabbb512dd7bffa0e297cc3c12",
+    "/opt/ros/noetic/lib/librospack.so": "0de703b0f8f6e2c8e2f99dbd6b112835dcd9b4b6f7c92039433f1cb2dda532ec",
+    "/opt/ros/noetic/lib/librostime.so": "3d7fe2addb37ca107726c4c3d28d54379f1efad6c58682d1a4f11b1aa4a0e907"
+  },
+  "dirty_tracked_diff_sha256": "f5059198a74a5eb78f68bb54f0a356d236dd745624bd37eb3a99a9aba808d072",
+  "evaluation": {
+    "alignment": "SE3_SCALE_1_FULL_COMMON_INTERVAL",
+    "difference": "recover_minus_reject",
+    "extrapolation": false,
+    "grid_hz": 10,
+    "gt_max_bracket_s": 0.05,
+    "nearest_tolerance_s": 0.02,
+    "reference": "tag10_antenna",
+    "window_error_m": 0.5,
+    "window_max_gap_s": 1.0,
+    "window_min_count": 5,
+    "window_min_duration_s": 2.0
+  },
+  "geometry": {
+    "acceleration": "SPECIFIC_FORCE_MPS2",
+    "anchors": {
+      "0": [
+        3.273827392578125,
+        3.46404736328125,
+        1.8093309326171876
+      ],
+      "1": [
+        3.186386962890625,
+        0.2739448547363281,
+        1.5884853515625
+      ],
+      "2": [
+        2.850500244140625,
+        -2.923056884765625,
+        1.89742041015625
+      ],
+      "3": [
+        -2.497634521484375,
+        -3.5018203125,
+        1.7730911865234376
+      ],
+      "4": [
+        -2.95793310546875,
+        0.6128419189453125,
+        1.65714208984375
+      ],
+      "5": [
+        -2.734676513671875,
+        3.65854248046875,
+        1.890254638671875
+      ]
+    },
+    "author_commit": "399ad46f4e6e88c3c98b40aae33fe8e2c6719cff",
+    "axis_transform": [
+      [
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "beta": "UNCORRECTED_MISSING_CALIBRATION",
+    "constellation": "0",
+    "gyro": "BODY_RADPS",
+    "imu_bias_removal": false,
+    "lever_body_m": [
+      0.13189,
+      -0.17245,
+      -0.05249
+    ],
+    "origin_status": "AUTHOR_BODY_IMU_COLOCATION_APPROXIMATION",
+    "tag_id": 10,
+    "time": "PUBLISHED_COMMON_RELATIVE_SECONDS_NO_SECOND_TIMESHIFT"
+  },
+  "git_commit": "64459d1efc43756d780b2c1543ec9dfcc15c5f38",
+  "implementation": {
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/MILUV_RECOVER_VS_REJECT_PROTOCOL.md": "9f363b09a9d930913e2094b1f7f6aa96f9b78ce2d630ff849d809c8fa23cc202",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/scripts/audit_obstacle_ranges.py": "b593d151d4e59d62bc93a5fcbcbf6c61d162ac516be4338144414aed5362aecd",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/scripts/evaluate_miluv_rr.py": "cadd5f19367e413c4b4864da2e0b790bf7eed138129214ca0c855be1653dd5ca",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/scripts/evaluate_recover_vs_reject.py": "b6d89ef3aec0c8847dae8ff7b0b98e84aca1eb557c1a722bd890ab1cc5b96f9f",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/scripts/rr_admitted.py": "c63f6bce6f2fdbf2ad23722619d64e1878c6d91e80a4914e90b3b54d2f761f1e",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/scripts/rr_evaluate.py": "26b64a8e81598ed5d5b54be777edfc45f08cc394630d56e0eee86273a898ca15",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/scripts/rr_sfuise_worker.py": "e7a096568b853f7d48bb97a31fc511ed73cb4e17930f2a6d10c96d45c7f32165",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/scripts/run_miluv_recover_vs_reject.py": "2c6bfecaa1bdbef7b62009c32147934dd3e8089c178baf4f6d81f20b767b7030",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/scripts/run_recover_vs_reject.py": "185e0f32f38a732423f1c231e604e6cfd44f571a9247ec22f589fbea74ba2397",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/scripts/test_miluv_rr.py": "e8939bc714e35c10f9da1c3e24776bff290f7108d967a13a9d011ee256fe0f67"
+  },
+  "lock_id": "f4d13c9f5f118f0dc4314277f801fc40053f6698781156b8f3103edf9df27144",
+  "methods": [
+    "suppress_all",
+    "lcb_fixed_full",
+    "robust_cauchy",
+    "SFUISE-ToA"
+  ],
+  "prepared_hashes": {
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/miluv-recover-vs-reject-20260912A/default_1_circular3D_0/cauchy.yaml": "9b8addc239a18b8c56103edae48b596da9e05d9e4f8849568f77c27178111b00",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/miluv-recover-vs-reject-20260912A/default_1_circular3D_0/config.yaml": "d996fc57f668ecedbfc0829ed35d69c0e871c706b171ed20cee3e4b6f093ca14",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/miluv-recover-vs-reject-20260912A/default_1_circular3D_0/input/imu.csv": "4e00e00833a84cbbe29b68be413da7864ca814cf6e18d8234deb7de68d519eae",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/miluv-recover-vs-reject-20260912A/default_1_circular3D_0/input/input_manifest.json": "def78e5f573d95238b3d3a8dcced5c44eb16c11a102ce42b3859fcd8a4f97e25",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/miluv-recover-vs-reject-20260912A/default_1_circular3D_0/input/uwb_observations.csv": "47d311e52656140f1f5b629d04f01cfab8c66bbb7a1df179b40905d198bf0964",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/miluv-recover-vs-reject-20260912A/default_1_circular3D_0/sfuise.yaml": "469e10695a4bec9167b544260e1369c38b087a5c46c821b5ff6d25db5fab8ec8",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/miluv-recover-vs-reject-20260912A/default_1_random3_0/cauchy.yaml": "4288c78769c50ccb6be57ccbcb31dfcf1831378054c51f8bd590313d440fcf11",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/miluv-recover-vs-reject-20260912A/default_1_random3_0/config.yaml": "8f3cfed045fb314bb169963b026c8c42a6e04827e9c8c3df05fe4f871357423f",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/miluv-recover-vs-reject-20260912A/default_1_random3_0/input/imu.csv": "b38495fa6546ed45f735f41259549e4bbaef815b470b2928cc778cc2634b9731",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/miluv-recover-vs-reject-20260912A/default_1_random3_0/input/input_manifest.json": "84ebe0aa539675aaa5bd83f692c9cf4ed3ad3c5767d60b7d6996c4623af2e7ae",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/miluv-recover-vs-reject-20260912A/default_1_random3_0/input/uwb_observations.csv": "2012ec3b40db2660dd520539f6d3b77e9b740c6462997e42c26fe3f8d747588f",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/miluv-recover-vs-reject-20260912A/default_1_random3_0/sfuise.yaml": "469e10695a4bec9167b544260e1369c38b087a5c46c821b5ff6d25db5fab8ec8"
+  },
+  "recordings": [
+    "default_1_random3_0",
+    "default_1_circular3D_0"
+  ],
+  "role": "DEVELOPMENT_PREVIOUSLY_AUDITED_NOT_HELD_OUT",
+  "rows": [
+    {
+      "imu_count": 42317,
+      "input": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/miluv-recover-vs-reject-20260912A/default_1_random3_0/input/input_manifest.json",
+      "interval_s": [
+        0.2673609256744385,
+        205.220773935318
+      ],
+      "measurement_id": "sha256:3711b930508092ee5f9bf84ab6d3743054a0588bf7cb9fcd1467e4a0dbc59029",
+      "recording": "default_1_random3_0",
+      "tag_id": 10,
+      "uwb_count": 7279
+    },
+    {
+      "imu_count": 27738,
+      "input": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/miluv-recover-vs-reject-20260912A/default_1_circular3D_0/input/input_manifest.json",
+      "interval_s": [
+        0.29639482498168945,
+        135.3311791419983
+      ],
+      "measurement_id": "sha256:adad985235aef45412c08c469517855ad59ecd254cb72ec7731eddc9c0c5c6d0",
+      "recording": "default_1_circular3D_0",
+      "tag_id": 10,
+      "uwb_count": 4760
+    }
+  ],
+  "schema": "MILUV_RR_LOCK_V1",
+  "scientific_budget": {
+    "max_tasks": 10,
+    "retries": 0,
+    "seconds_per_tree": 1800
+  },
+  "source_hashes": {
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/miluv_rr_sources_20260912/miluv__data.py": "2b706d1b2da3007cc6052b0be28424ded1abbdaad2697bae650304d923a7478d",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/miluv_rr_sources_20260912/miluv__utils.py": "dce4a0fa78744b70c183838f6f1bb000aef16775c6c098f929e186ecb8e822a6",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/miluv_rr_sources_20260912/preprocess__read_bags.py": "ad9ab6c5bdbf9df53f83e7e341678fcd7d36aa5bee60c584d0704ecd64f22493",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/obstacle_audit/20260912T111904Z-cbdedc41/report-da32f56f/persistent_links.csv": "5b39cd1f3f798237c7c7795a42d785b77f1d73f44092e19772231478930f6469",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/obstacle_audit/20260912T111904Z-cbdedc41/sources/anchors.yaml": "4e38cef90d8db1cc0fed2a51aa2b67fee3a637140d4bdb685c1608472b5bb4f3",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/obstacle_audit/20260912T111904Z-cbdedc41/sources/cleanup_csv.py": "0798479fc0476a2dbbee644875fc0d04423d0c9c965ebfa42a9ca35aad820dbb",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/obstacle_audit/20260912T111904Z-cbdedc41/sources/experiments.csv": "8b66ed2185c7b68dc67ce285a1f481175b21cec7613bff8b732f841d2b79dc3c",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/obstacle_audit/20260912T111904Z-cbdedc41/sources/process_uwb.py": "e5e32fc672effec2af9ab21b14d3406d534bc27da1d85eba06766936493f4e3b",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/obstacle_audit/20260912T111904Z-cbdedc41/sources/tags.yaml": "6499c59ebfd498d3077d00c3fbecc3c873112641f25d1f1473b94b1a63be3215",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/data/MILUV/default_1_circular3D_0/ifo001/imu_px4.csv": "5763f1da6ee760e192dc9acd31ccb3860e452dba4f145bf2c1159e6fc28647ff",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/data/MILUV/default_1_circular3D_0/ifo001/mocap.csv": "b508cc1479b697a1eb49ad5e259d1ade8501e1cf3d7821202bfa603e234d43e5",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/data/MILUV/default_1_circular3D_0/ifo001/uwb_range.csv": "8fc39328e537ed0b01f083a2355b78d7f497ba0aec58b257775ae4fcb6033def",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/data/MILUV/default_1_circular3D_0/timeshift.yaml": "442cbf0c76ef7d76ca2d9ac672fbb55ea781ac73ea23fde20e634488de6314a1",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/data/MILUV/default_1_random3_0/ifo001/imu_px4.csv": "0412852862463031ba8736eb22e58ea9fedb7df3f65f9f1ac739ab22047c9fa7",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/data/MILUV/default_1_random3_0/ifo001/mocap.csv": "08bb608c14050f83a4f40711f09d8c281e4d6560663852ec3b7e0a3b021d5855",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/data/MILUV/default_1_random3_0/ifo001/uwb_range.csv": "05e4423870f001bbb1e6136c260e80055b694ddae20648e6b51c77cb14e64330",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/data/MILUV/default_1_random3_0/timeshift.yaml": "49223925d316d98200c1ecf9038bc9c491930798eb28ab602c03386c8b29dc77"
+  }
+}

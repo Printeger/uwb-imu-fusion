@@ -1,0 +1,50 @@
+topic_imu: /rr/imu
+topic_uwb: /rtls_flares
+topic_anchor_list: /anchor_list
+topic_ground_truth: /rr/NO_GT
+if_tdoa: false
+uwb_frequency: 40
+imu_frequency: 125
+acc_ratio: false
+gyro_unit: false
+window_size: 100
+uwb_sample_coeff: 1
+imu_sample_coeff: 1
+control_point_fps: 10
+max_iter: 5
+n_window_calib: 50
+offset:
+- 0.13189
+- -0.17245
+- -0.05249
+accel_var_inv:
+- 7.8483
+- 7.8483
+- 7.8483
+gyro_var_inv:
+- 27.5646
+- 27.5646
+- 27.5646
+bias_accel_var_inv:
+- 514.9887
+- 514.9887
+- 514.9887
+bias_gyro_var_inv:
+- 2950.668
+- 2950.668
+- 2950.668
+w_uwb: 7
+w_accel: 1
+w_gyro: 1
+w_bias_accel: 1
+w_bias_gyro: 1
+if_reject_uwb: true
+reject_uwb_thresh: 0.3
+reject_uwb_window_width: 0.5
+toa_offset:
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0

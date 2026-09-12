@@ -1,0 +1,35 @@
+{
+  "status": "DELIVERY_COMPLETE_WITH_SCIENTIFIC_FAILURES",
+  "stages": {
+    "prepare": {
+      "command": "/usr/bin/python3 experiments/scripts/run_recover_vs_reject.py prepare --gt-assisted --run /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/recover-vs-reject-gt-20260912C",
+      "exit_code": 0
+    },
+    "preflight": {
+      "command": "/usr/bin/python3 experiments/scripts/run_recover_vs_reject.py preflight --gt-assisted --run /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/recover-vs-reject-gt-20260912C",
+      "exit_code": 0
+    },
+    "execute": {
+      "command": "/usr/bin/python3 experiments/scripts/run_recover_vs_reject.py execute --gt-assisted --run /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/recover-vs-reject-gt-20260912C",
+      "exit_code": 0
+    },
+    "evaluate": {
+      "command": "/usr/bin/python3 experiments/scripts/run_recover_vs_reject.py evaluate --gt-assisted --run /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/recover-vs-reject-gt-20260912C",
+      "exit_code": 0
+    },
+    "verify": {
+      "command": "/usr/bin/python3 experiments/scripts/run_recover_vs_reject.py verify --gt-assisted --run /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/recover-vs-reject-gt-20260912C",
+      "exit_code": 0
+    }
+  },
+  "engineering_fixture_tests_passed": 23,
+  "method_units": 12,
+  "paired_rows": 3,
+  "RR_pairs_available": 0,
+  "scientific_process_trees": 9,
+  "timeout_count": 0,
+  "external_retries": 0,
+  "independent_SE3_checks": 5,
+  "core_and_source_hashes": "PASS",
+  "no_commit_or_push": true
+}

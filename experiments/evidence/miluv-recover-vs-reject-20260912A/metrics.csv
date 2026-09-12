@@ -1,0 +1,9 @@
+recording,method,status,failure,exit_code,ATE_RMSE_m,ATE_P95_m,Window_RMSE_m,evaluated_samples,coverage,candidate_observations,candidate_segments,decision_accepted_segments,final_accepted_segments,fallback,range_before_RMSE_m,range_after_RMSE_m,range_count,recovered_range_count,recovered_before_RMSE_m,recovered_after_RMSE_m,window_samples
+default_1_random3_0,suppress_all,NOT_RUN,PRODUCER_FAILED,,,,,0,0.0,,,,,,,,,,,,
+default_1_random3_0,lcb_fixed_full,NOT_RUN,PRODUCER_FAILED,,,,,0,0.0,,,,,,,,,,,,
+default_1_random3_0,robust_cauchy,FAILURE,PRELIMINARY_LM_FAILED:CONDITIONAL_LM_MAX_ITERATIONS,1,,,,0,0.0,,,,,,,,,,,,
+default_1_random3_0,SFUISE-ToA,SUCCESS,,0,8065.734836134121,15415.26147583362,9971.821813896737,1599,0.78,,,,,False,0.3306402074768426,0.3306402074768426,1820,0,,,86
+default_1_circular3D_0,suppress_all,NOT_RUN,PRODUCER_FAILED,,,,,0,0.0,,,,,,,,,,,,
+default_1_circular3D_0,lcb_fixed_full,NOT_RUN,PRODUCER_FAILED,,,,,0,0.0,,,,,,,,,,,,
+default_1_circular3D_0,robust_cauchy,FAILURE,PRELIMINARY_LM_FAILED:CONDITIONAL_LM_MAX_ITERATIONS,1,,,,0,0.0,,,,,,,,,,,,
+default_1_circular3D_0,SFUISE-ToA,SUCCESS,,0,67.80777460114233,177.53382128014078,31.224641547843493,1043,0.772020725388601,,,,,False,0.3537933112048373,0.3537933112048373,1189,0,,,48

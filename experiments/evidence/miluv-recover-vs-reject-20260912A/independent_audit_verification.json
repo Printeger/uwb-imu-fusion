@@ -1,0 +1,18 @@
+[
+  {
+    "event_count": 2,
+    "prior_audit_max_geometry_difference_m": 0.0,
+    "recording": "default_1_random3_0",
+    "reference_count": 7279,
+    "window_union_count": 2,
+    "window_union_duration_s": 10.445497274398804
+  },
+  {
+    "event_count": 2,
+    "prior_audit_max_geometry_difference_m": 0.0,
+    "recording": "default_1_circular3D_0",
+    "reference_count": 4759,
+    "window_union_count": 1,
+    "window_union_duration_s": 6.080972671508787
+  }
+]

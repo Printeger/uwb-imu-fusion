@@ -1,0 +1,8 @@
+{
+  "bias": "ZERO_NOT_FITTED",
+  "estimator_runs": 0,
+  "gt_initialization": "LOCAL_CLOSURE_ONLY",
+  "protocol_sha256": "0a367dfebc343d0acf019a8e6f8afcab001ec771eb4304319dbb7a680651ca3e",
+  "role": "GT_ASSISTED_LOCAL_DIAGNOSTIC_NOT_ESTIMATOR",
+  "script_sha256": "8a0f9b39d0db9304ab26c8f58a4daebff55f695900ab767c1bba7e22fe5497e3"
+}

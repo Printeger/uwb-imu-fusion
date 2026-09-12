@@ -8,7 +8,20 @@ figures/*
 # Keep compact, curated experiment evidence; raw estimator/evaluator runs stay local.
 !evidence/
 !evidence/**/
-!evidence/**/*.log
+
+# Per-process logs, plots, and dense per-window diagnostic tables are reproducible
+# from the locked manifests and summary JSON/CSV files. Keep them local so routine
+# experiment commits stay small; already tracked historical files remain tracked.
+evidence/**/*.log
+evidence/**/*.png
+evidence/**/*_closure.csv
+evidence/**/*_time_loss.csv
+evidence/**/native_closure.csv
+
+# These compact figures are linked directly from the checked-in reports.
+!evidence/**/audit_diagnostic.png
+!evidence/**/trajectory_errors.png
+!evidence/**/rotation_closure.png
 
 # Local third-party checkout; record its commit instead of vendoring its Git tree.
 compare_algorithm/SFUISE/

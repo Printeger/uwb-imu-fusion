@@ -1,0 +1,8 @@
+{
+  "status": "ESTIMATION_FAILED",
+  "exit_code": 1,
+  "canonical_mode": "robust_cauchy",
+  "reason": "FINAL_LM_FAILED:CONDITIONAL_LM_MAX_ITERATIONS",
+  "valid_estimate_exported": false,
+  "elapsed_seconds": 43.738296931000001
+}

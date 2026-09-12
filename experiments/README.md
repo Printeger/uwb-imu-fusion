@@ -1,5 +1,7 @@
 # ICRA 实验基础设施使用说明
 
+MILUV真实正误差development RR运行已完成并保留全部失败：[逐录制报告](MILUV_RECOVER_VS_REJECT.md)、[冻结协议](MILUV_RECOVER_VS_REJECT_PROTOCOL.md)。两条RR均因producer未发布Stage2而NA，未验证恢复收益。
+
 数据合同和准入边界见 [DATASET_MANIFEST.md](DATASET_MANIFEST.md)。当前 v2 inventory 有 39 条实际 recording，覆盖 HUEC、MILUV、own_vicon、SFUISE 和 starloc；没有正式 VAL/TEST，所有 recording 仍为 `NOT_ADMITTED`。
 
 目录用途：
@@ -65,3 +67,12 @@ Canonical controlled positive-bias smoke：见 [CONTROLLED_INJECTION.md](CONTROL
 SFUISE absolute-ToA baseline adapter、Walk1/2/3复现命令、统一主表与失败记录见
 [SFUISE_BASELINE.md](SFUISE_BASELINE.md)。该路径拒绝TDoA，SFUISE运行时不播放GT，也不接收本方法
 detector/recovery信息。
+
+五数据集 obstacle 原始测距资格审计（不运行 estimator/recovery）：见
+[OBSTACLE_RANGE_AUDIT.md](OBSTACLE_RANGE_AUDIT.md)。包含逐recording/anchor的原始误差、
+正尾、连续段、dropout与nominal对照；Vive/laser GT不满足本轮约束的记录明确NA。
+
+- [Recover vs Reject GT辅助development结果](RECOVER_VS_REJECT.md)：三条固定STAR-loc完整录制；
+  `run_recover_vs_reject.py prepare|preflight|execute|evaluate|verify --gt-assisted --run <独立目录>`。
+  23项工程fixture与真实C++/ROS桥通过；9个科学任务完成，5正常导出（其中4严重发散）、1失败、6依赖方法NOT_RUN。
+  三个producer均失败，RR差值全NA，未验证恢复收益。原点保留近似，不能声称独立标定；旧阻塞报告随证据归档。

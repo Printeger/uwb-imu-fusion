@@ -1,0 +1,112 @@
+{
+  "lock_id": "87b967cb66bb38c151499958473da55a126d6033b67d4fdc5e27f3a40ecdf756",
+  "scientific_processes_started": 0,
+  "status": "BLOCKED_GEOMETRY_OR_IMU",
+  "tasks": [
+    {
+      "exit_code": null,
+      "reason": "BLOCKED_GEOMETRY_OR_IMU",
+      "recording": "zigzag_s4",
+      "status": "NOT_RUN",
+      "task": "producer"
+    },
+    {
+      "exit_code": null,
+      "reason": "BLOCKED_GEOMETRY_OR_IMU",
+      "recording": "zigzag_s4",
+      "status": "NOT_RUN",
+      "task": "suppress_all"
+    },
+    {
+      "exit_code": null,
+      "reason": "BLOCKED_GEOMETRY_OR_IMU",
+      "recording": "zigzag_s4",
+      "status": "NOT_RUN",
+      "task": "lcb_fixed_full"
+    },
+    {
+      "exit_code": null,
+      "reason": "BLOCKED_GEOMETRY_OR_IMU",
+      "recording": "zigzag_s4",
+      "status": "NOT_RUN",
+      "task": "robust_cauchy"
+    },
+    {
+      "exit_code": null,
+      "reason": "BLOCKED_GEOMETRY_OR_IMU",
+      "recording": "zigzag_s4",
+      "status": "NOT_RUN",
+      "task": "SFUISE-ToA"
+    },
+    {
+      "exit_code": null,
+      "reason": "BLOCKED_GEOMETRY_OR_IMU",
+      "recording": "loop-3d_s3",
+      "status": "NOT_RUN",
+      "task": "producer"
+    },
+    {
+      "exit_code": null,
+      "reason": "BLOCKED_GEOMETRY_OR_IMU",
+      "recording": "loop-3d_s3",
+      "status": "NOT_RUN",
+      "task": "suppress_all"
+    },
+    {
+      "exit_code": null,
+      "reason": "BLOCKED_GEOMETRY_OR_IMU",
+      "recording": "loop-3d_s3",
+      "status": "NOT_RUN",
+      "task": "lcb_fixed_full"
+    },
+    {
+      "exit_code": null,
+      "reason": "BLOCKED_GEOMETRY_OR_IMU",
+      "recording": "loop-3d_s3",
+      "status": "NOT_RUN",
+      "task": "robust_cauchy"
+    },
+    {
+      "exit_code": null,
+      "reason": "BLOCKED_GEOMETRY_OR_IMU",
+      "recording": "loop-3d_s3",
+      "status": "NOT_RUN",
+      "task": "SFUISE-ToA"
+    },
+    {
+      "exit_code": null,
+      "reason": "BLOCKED_GEOMETRY_OR_IMU",
+      "recording": "zigzag_s3",
+      "status": "NOT_RUN",
+      "task": "producer"
+    },
+    {
+      "exit_code": null,
+      "reason": "BLOCKED_GEOMETRY_OR_IMU",
+      "recording": "zigzag_s3",
+      "status": "NOT_RUN",
+      "task": "suppress_all"
+    },
+    {
+      "exit_code": null,
+      "reason": "BLOCKED_GEOMETRY_OR_IMU",
+      "recording": "zigzag_s3",
+      "status": "NOT_RUN",
+      "task": "lcb_fixed_full"
+    },
+    {
+      "exit_code": null,
+      "reason": "BLOCKED_GEOMETRY_OR_IMU",
+      "recording": "zigzag_s3",
+      "status": "NOT_RUN",
+      "task": "robust_cauchy"
+    },
+    {
+      "exit_code": null,
+      "reason": "BLOCKED_GEOMETRY_OR_IMU",
+      "recording": "zigzag_s3",
+      "status": "NOT_RUN",
+      "task": "SFUISE-ToA"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "schema": "t08_stage2_refit_diagnostics_v1",
+  "phase": "STAGE2_DEBIASED_REFIT",
+  "execution_status": "EXECUTED",
+  "solver_status": "CONDITIONAL_LM_FAILED",
+  "stop_reason": "CONDITIONAL_LM_FIXED_CHECKPOINT_RECOVERY_RESTART_LIMIT_EXHAUSTED",
+  "iteration_count": 1,
+  "optimizer_calls": null,
+  "alternating_stop_conditions": "APPLICABLE",
+  "estimate_semantics": "INTERMEDIATE_NOT_A_VALID_T08_FINAL_EXPORT_SOURCE"
+}

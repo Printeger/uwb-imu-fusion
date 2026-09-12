@@ -1,0 +1,4 @@
+recording,delta_RR_m,delta_RR_NLOS_m,interpretation,fallback,comparison_status,common_samples,four_method_common_samples
+zigzag_s4,,,NA,,NOT_RUN_GEOMETRY_OR_IMU,,
+loop-3d_s3,,,NA,,NOT_RUN_GEOMETRY_OR_IMU,,
+zigzag_s3,,,NA,,NOT_RUN_GEOMETRY_OR_IMU,,

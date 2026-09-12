@@ -1,0 +1,55 @@
+{
+  "fixture_counts": {
+    "admitted_final_masks": 3,
+    "common": 20,
+    "miluv": 3
+  },
+  "initial_environment_attempt": {
+    "command": "python /tmp/build_miluv_eval.py",
+    "exit_code": 127,
+    "reason": "python unavailable; system python3 used before preparation"
+  },
+  "sfuise_frequency_note": "40/125 metadata frozen; sample_coeff=1 bypasses frequency gating in pinned EstimationInterface.cpp:309-319; original message timestamps retained",
+  "stages": [
+    {
+      "command": "python3 experiments/scripts/run_miluv_recover_vs_reject.py prepare --run experiments/results/miluv-recover-vs-reject-20260912A",
+      "exit_code": 0,
+      "stage": "prepare"
+    },
+    {
+      "command": "python3 experiments/scripts/run_miluv_recover_vs_reject.py preflight --run experiments/results/miluv-recover-vs-reject-20260912A",
+      "exit_code": 0,
+      "stage": "preflight"
+    },
+    {
+      "command": "python3 experiments/scripts/run_miluv_recover_vs_reject.py verify --run experiments/results/miluv-recover-vs-reject-20260912A",
+      "exit_code": 0,
+      "stage": "verify"
+    },
+    {
+      "command": "python3 experiments/scripts/run_miluv_recover_vs_reject.py execute --run experiments/results/miluv-recover-vs-reject-20260912A",
+      "exit_code": 0,
+      "stage": "execute"
+    },
+    {
+      "command": "python3 experiments/scripts/run_miluv_recover_vs_reject.py evaluate --run experiments/results/miluv-recover-vs-reject-20260912A",
+      "exit_code": 0,
+      "stage": "evaluate"
+    }
+  ],
+  "status": "PASS",
+  "test_commands": [
+    {
+      "command": "python3 -m unittest discover -s experiments/scripts -p test_recover_vs_reject.py -v",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 -m unittest discover -s experiments/scripts -p test_miluv_rr.py -v",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 -m unittest discover -s experiments/scripts -p test_rr_admitted.py -v",
+      "exit_code": 0
+    }
+  ]
+}

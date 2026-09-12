@@ -1,0 +1,87 @@
+[
+  {
+    "recording": "zigzag_s4",
+    "method": "robust_cauchy",
+    "independent_SE3_RMSE_m": 376.2691708030655,
+    "reported_RMSE_m": 376.2691708030655,
+    "raw_trajectory_axis_span_m": [
+      370.54122433588196,
+      277.244569265195,
+      1190.4857140942563
+    ],
+    "gt_axis_span_m": [
+      5.68600727951249,
+      5.3274693788270735,
+      0.038386260249492654
+    ],
+    "status": "MATCH"
+  },
+  {
+    "recording": "zigzag_s4",
+    "method": "SFUISE-ToA",
+    "independent_SE3_RMSE_m": 0.42924698533131933,
+    "reported_RMSE_m": 0.4292469853313196,
+    "raw_trajectory_axis_span_m": [
+      5.870233189909995,
+      5.760635320093364,
+      2.313167315674854
+    ],
+    "gt_axis_span_m": [
+      5.68600727951249,
+      5.3274693788270735,
+      0.038386260249492654
+    ],
+    "status": "MATCH"
+  },
+  {
+    "recording": "loop-3d_s3",
+    "method": "SFUISE-ToA",
+    "independent_SE3_RMSE_m": 3512.8039490766546,
+    "reported_RMSE_m": 3512.803949076655,
+    "raw_trajectory_axis_span_m": [
+      8297.806408713299,
+      8688.179967302742,
+      1813.370315847591
+    ],
+    "gt_axis_span_m": [
+      5.212141058071188,
+      5.592702155970862,
+      1.040243231663664
+    ],
+    "status": "MATCH"
+  },
+  {
+    "recording": "zigzag_s3",
+    "method": "robust_cauchy",
+    "independent_SE3_RMSE_m": 20640.15601209342,
+    "reported_RMSE_m": 20640.15601209343,
+    "raw_trajectory_axis_span_m": [
+      67917.99141521894,
+      502.9628549829647,
+      12933.027482999723
+    ],
+    "gt_axis_span_m": [
+      5.664343534838115,
+      5.584150342793697,
+      0.8531913216026852
+    ],
+    "status": "MATCH"
+  },
+  {
+    "recording": "zigzag_s3",
+    "method": "SFUISE-ToA",
+    "independent_SE3_RMSE_m": 14494.76783333507,
+    "reported_RMSE_m": 14494.76783333508,
+    "raw_trajectory_axis_span_m": [
+      27637.800722550786,
+      7055.661033569318,
+      42111.81869486176
+    ],
+    "gt_axis_span_m": [
+      5.664343534838115,
+      5.584150342793697,
+      0.8531913216026852
+    ],
+    "status": "MATCH"
+  }
+]

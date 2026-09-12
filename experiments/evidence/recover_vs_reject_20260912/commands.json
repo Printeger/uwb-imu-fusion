@@ -1,0 +1,70 @@
+[
+  {
+    "argv": [
+      "/usr/bin/python3",
+      "experiments/scripts/test_recover_vs_reject.py"
+    ],
+    "exit_code": 0,
+    "log": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/evidence/recover_vs_reject_20260912/engineering.log"
+  },
+  {
+    "argv": [
+      "/usr/bin/python3",
+      "experiments/scripts/run_recover_vs_reject.py",
+      "prepare",
+      "--run",
+      "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/recover-vs-reject-20260912T122319Z"
+    ],
+    "cwd": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie",
+    "started": "2026-09-12T12:23:20.581303+00:00",
+    "exit_code": 2,
+    "log": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/evidence/recover_vs_reject_20260912/prepare.log"
+  },
+  {
+    "argv": [
+      "/usr/bin/python3",
+      "experiments/scripts/run_recover_vs_reject.py",
+      "execute",
+      "--run",
+      "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/recover-vs-reject-20260912T122319Z"
+    ],
+    "cwd": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie",
+    "started": "2026-09-12T12:23:22.868599+00:00",
+    "exit_code": 2,
+    "log": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/evidence/recover_vs_reject_20260912/execute.log"
+  },
+  {
+    "argv": [
+      "/usr/bin/python3",
+      "experiments/scripts/run_recover_vs_reject.py",
+      "evaluate",
+      "--run",
+      "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/recover-vs-reject-20260912T122319Z"
+    ],
+    "cwd": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie",
+    "started": "2026-09-12T12:23:23.293172+00:00",
+    "exit_code": 2,
+    "log": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/evidence/recover_vs_reject_20260912/evaluate.log"
+  },
+  {
+    "argv": [
+      "/usr/bin/python3",
+      "experiments/scripts/run_recover_vs_reject.py",
+      "verify",
+      "--run",
+      "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/recover-vs-reject-20260912T122319Z"
+    ],
+    "cwd": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie",
+    "started": "2026-09-12T12:23:57.392725+00:00",
+    "exit_code": 0,
+    "log": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/evidence/recover_vs_reject_20260912/verify.log"
+  },
+  {
+    "argv": [
+      "/usr/bin/python3",
+      "experiments/evidence/recover_vs_reject_20260912/verify_delivery.py"
+    ],
+    "exit_code": 0,
+    "log": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/evidence/recover_vs_reject_20260912/independent_verification.json"
+  }
+]

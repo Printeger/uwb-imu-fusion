@@ -1,0 +1,11 @@
+{
+  "GT_topics": [],
+  "bag_sha256": "a9c8b9afa2f7cbfeccef0859938252ae539b5ecd02bc8b51e460d0e0ad0f22c7",
+  "body": "IMU_ORIGIN_RIG_AXES",
+  "imu_rows": 11508,
+  "max_range_float32_error_m": 1.7763568394002505e-15,
+  "max_timestamp_error_s": 1.0000036354540498e-09,
+  "status": "PASS",
+  "support_inputs": [],
+  "uwb_rows": 23566
+}

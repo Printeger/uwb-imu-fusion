@@ -1,0 +1,405 @@
+{
+  "anchors_sha256": "4d7476ff36d9f88db66cf8101ce17d8225e5fa1faf63ff4226418512a945dd64",
+  "beta_status": "MISSING_CALIBRATION_UNCORRECTED",
+  "config_template": {
+    "anchors": [
+      {
+        "id": 7475,
+        "pos": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "prior_sigma": 0.1
+      },
+      {
+        "id": 9524,
+        "pos": [
+          2.6099998950958248,
+          2.670000076293945,
+          0.0
+        ],
+        "prior_sigma": 0.1
+      },
+      {
+        "id": 10548,
+        "pos": [
+          5.519999980926512,
+          0.05000000074505807,
+          1.8600000143051145
+        ],
+        "prior_sigma": 0.1
+      },
+      {
+        "id": 15155,
+        "pos": [
+          3.1199998855590825,
+          -2.5899999141693106,
+          1.8500000238418581
+        ],
+        "prior_sigma": 0.1
+      },
+      {
+        "id": 20276,
+        "pos": [
+          5.500000000000001,
+          0.0,
+          0.0
+        ],
+        "prior_sigma": 0.1
+      }
+    ],
+    "bag": {
+      "durr": -1.0,
+      "start": 0.0
+    },
+    "calibration": {
+      "calib_anchor": false,
+      "calib_range_bias": false,
+      "calib_td": false,
+      "fixed_beta_by_link": {},
+      "range_bias_sigma": 0.05,
+      "td_init": 0.0
+    },
+    "dataset": {
+      "cache_duration_s": -1.0,
+      "cache_manifest": "/home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk1_normal_clean/input_manifest.json",
+      "cache_start_s": 0.0,
+      "interface": "t07_cache"
+    },
+    "debug": {
+      "log": false
+    },
+    "extrinsics": {
+      "calib_lever": false,
+      "lever_arm_init": [
+        0.1,
+        -0.025,
+        0.0
+      ],
+      "lever_prior_sigma": 0.05
+    },
+    "imu": {
+      "gravity": 9.81,
+      "imu_acc_in_g": false,
+      "sigma_a": 0.357,
+      "sigma_g": 0.19,
+      "sigma_wa": 0.044,
+      "sigma_wg": 0.018
+    },
+    "initialization": {
+      "imu_orientation_world": "enu",
+      "use_imu_orientation": false
+    },
+    "keyframe": {
+      "step": 4,
+      "yaw_align_frames": 0
+    },
+    "nlos": {
+      "accel_bias_scale_mps2": 1.0,
+      "boundary_epsilon_m": 1e-09,
+      "cusum_backward_h": 7.023468958785871,
+      "cusum_backward_kappa": 0.5,
+      "cusum_forward_h": 7.023468958785872,
+      "cusum_forward_kappa": 0.5,
+      "cusum_parameter_provenance": "PL_BIDIRECTIONAL_CUSUM_SUPPORT_20260912_LOCKED",
+      "final_inference_enabled": true,
+      "gap_threshold_s": 1.0,
+      "gate_parameter_provenance": "T08_GATE_DEVELOPMENT_ONLY_PENDING_VALIDATION",
+      "gradient_roundoff_safety_factor": 8.0,
+      "gyro_bias_scale_radps": 1.0,
+      "max_refit_iterations": 50,
+      "mode": "pl_bidirectional_cusum",
+      "navigation_stationarity_tolerance_objective": 1e-06,
+      "pose_rotation_scale_rad": 1.0,
+      "pose_translation_scale_m": 1.0,
+      "projected_gradient_tolerance": 1e-08,
+      "relative_objective_tolerance": 1e-08,
+      "scaled_step_tolerance": 1e-06,
+      "score_recoverability": true,
+      "segment_amplitude_scale_m": 1.0,
+      "tau_eta": 0.1,
+      "tau_gamma": 1.0,
+      "tau_s_m": 0.1,
+      "velocity_scale_mps": 1.0
+    },
+    "solver": {
+      "abs_error_tol": 1e-08,
+      "chi2_reject_prob": 0.99,
+      "gnc_inlier_prob": 0.99,
+      "gnc_max_iter": 20,
+      "gnc_mu_step": 1.4,
+      "gnc_rel_cost_tol": 0.0001,
+      "gnc_weight_thresh": -1.0,
+      "lm_max_iter": 100,
+      "max_rejection_rounds": 3,
+      "rel_error_tol": 1e-06
+    },
+    "uwb": {
+      "dist_consistency_thresh": 2.0,
+      "max_range": 60.0,
+      "min_range": 0.3,
+      "nlos_rssi_diff": 8.0,
+      "sigma_range": 0.15,
+      "v_max": 2.0,
+      "warmup_frames": 20
+    }
+  },
+  "evaluation": {
+    "alignment": "SE3_SCALE_1_FULL_COMMON_INTERVAL",
+    "difference": "recover_minus_reject",
+    "extrapolation": false,
+    "grid_hz": 10,
+    "gt_max_bracket_s": 0.05,
+    "nearest_tolerance_s": 0.02,
+    "reference": "tag1_antenna",
+    "window_error_m": 0.5,
+    "window_max_gap_s": 1.0,
+    "window_min_count": 5,
+    "window_min_duration_s": 2.0
+  },
+  "frozen_files": {
+    "config/paper/ie0911/sfuise_walk1_pl_bidirectional_clean.yaml": "c2b208cb80dc2972d51ff2b9498a6c26d73f146db8f3f5446b3d8d264d330538",
+    "doc/v2/paper_structure.tex": "8ac373919823d755d9c1b4ceb807527432d16b69d368042e19aa56d93dc67144",
+    "doc/v2/v2_roadmap.md": "b9bb63b65ebdb8a505bf99b26181318c6c64da1a72817b08cfa61315e2333bdb",
+    "experiments/compare_algorithm/SFUISE/sfuise/include/Accumulator.h": "8868d806419033f0f1b0d21622db2a950dc317c95191ce56ee760dc7856a03d6",
+    "experiments/compare_algorithm/SFUISE/sfuise/include/Linearizer.h": "1bc6d54e8ecf629f0994a9d7c6de0afa3af91ac6e16a06d5446b00afc2f4d93f",
+    "experiments/compare_algorithm/SFUISE/sfuise/include/Residuals.h": "c095790870c372f0a8304babd249a337ad38754095c2bebdf4050801580d8d7c",
+    "experiments/compare_algorithm/SFUISE/sfuise/include/SplineState.h": "d7647b8762c4e64807849a9dfea2199d8fdacbc635fdafc50057db704cccd481",
+    "experiments/compare_algorithm/SFUISE/sfuise/include/utils/PoseVisualization.h": "00b742b3e50ea0da3acdd08953712ee35bcb258bd698a71fa764be42a454e6df",
+    "experiments/compare_algorithm/SFUISE/sfuise/include/utils/common_utils.h": "6463941e035451de1c43047fdb7421aef78933b5da6db2e3c532a5ca68da42a2",
+    "experiments/compare_algorithm/SFUISE/sfuise/include/utils/math_tools.h": "d07c961cc7dd3276919de7108f850885096a682c05af7dcd325e88fb054f1735",
+    "experiments/compare_algorithm/SFUISE/sfuise/include/utils/tic_toc.h": "fb8e26347723e9eb1a10611a21c071da6ca7e32913ebc184e285e9493ce08ff9",
+    "experiments/compare_algorithm/SFUISE/sfuise/src/EstimationInterface.cpp": "2f7bd1e6ad10ced44e5f3ae725e2750abec3d2b57409627b386f6b60146a6cd5",
+    "experiments/compare_algorithm/SFUISE/sfuise/src/SplineFusion.cpp": "bfd3f1e25d98a7486fa3b435023af9dca1236c0a8de4a86793c52ad0f11e48d1",
+    "include/uifgo/config.h": "a08dd237a955b051d90c95a2813950656162933998251d224eb7bd06df3ef154",
+    "include/uifgo/data_loader.h": "ee95907d699c76dfa8a6c0e5727fbd7467dc937015e35d45334a1b86ce42496e",
+    "include/uifgo/fde_math.h": "c1f0a6ff869756b6b4d231fc9a8dea67379cb6d181e7bccc1f287d9f2b0d4e98",
+    "include/uifgo/graph_builder.h": "45d16274a16206aecd7cbb4233d2ee6ddc7ce6e5016eef19aacd24388a354f09",
+    "include/uifgo/hash_utils.h": "99ed873b2180a8a631a08cd0eca9f70356522fa11e03495c80db8d2ff1119998",
+    "include/uifgo/imu_preint.h": "f222dec2fb1704d411e97c68ad45ea1343d1718882c64c49ff69a6c0199de79a",
+    "include/uifgo/initializer.h": "c93c1f897e82896c85df96b69bd811b73c40f17654836ac6bc8146b25398e1e8",
+    "include/uifgo/logger.h": "d7b23bfb12ff41fcbefa694ef699d8b1d09aaa64c41e0e237d7caa69dd738eee",
+    "include/uifgo/nlos_discovery.h": "18439e4cd3098cfac9612a18a0301e3afbb18bc46799d6e3da8e0d45bbd2c184",
+    "include/uifgo/nlos_fde.h": "afa0e54e4d13d5b9a51fd6af204834a4bc4857f65053a7171914a40bfbcdc8f3",
+    "include/uifgo/nlos_inference.h": "bcdca16b7a792885c43547395b2a61233846d07bf7682b20ac80481bba620cda",
+    "include/uifgo/nlos_inference_io.h": "9638927e55ccf5c4203529c8022ad2c0bf63a659c4643b287929761688a1c8ed",
+    "include/uifgo/nlos_recoverability.h": "7942dcc1aeedb7d42d43d5f651973a3946bf2af761122a69eb1e01e0707f0dfa",
+    "include/uifgo/nlos_refit.h": "a0bcc1de76092e31110644936d40048276e228c75efc5977b153aac56c97c5ca",
+    "include/uifgo/nlos_scoring.h": "f107154df0a0522f97d0426b24b83241cae06bb16cff99062e1512271959d897",
+    "include/uifgo/nlos_solver_utils.h": "ad44f7e7750a1cd26faddd208edc127c1e00527d3883b0a7f10d95b5fa587454",
+    "include/uifgo/nlos_support.h": "2a838604bdb5cb979563c95678cee127cf37a95155d95f1274232f9e57b6534a",
+    "include/uifgo/optimizer.h": "d6e87c7ac34bf0e2375255bacaf3b12e26548f6c40ebb49698760c70b8c458a1",
+    "include/uifgo/outlier_filter.h": "4a3b722530e040aab4bfc0c04dd2834284c00dc724e3743a364c00e4fd7e1c5c",
+    "include/uifgo/paper_input.h": "5a765d1151e28d3bb92fc93e9e569da1147b954541fbc3ea880343909c41112d",
+    "include/uifgo/paper_methods.h": "ba38334c81665c45a20be2d9f149de98aade8065894c2a52ad9c9d2763efcce6",
+    "include/uifgo/paper_pose_prior_factor.h": "2f5d1361b8091fae894f80a4a7424359a400bd38972a748687fd7a3c36d67699",
+    "include/uifgo/paper_robust_noise.h": "300292cf8715e961dec26543a07ef436b45e4220efe34a45ca327a26cc95bdd4",
+    "include/uifgo/paper_run_io.h": "5ef84cf82606e05fbd13ced32a947260d912ec8fd17fc89c552ed6f296ffa254",
+    "include/uifgo/paper_stage2_cache.h": "d707c7f5a9cebb8bda8477185b1b38691c4a9d3c06eb697c39e10e6cad80ba26",
+    "include/uifgo/pl_bidirectional_provider.h": "aca1bc5084d9ba3a803e1bcbf16e10de7bdd036e02de030125ab7503a72336af",
+    "include/uifgo/pl_bidirectional_support.h": "fdd130f696716c888c2b06054b6a254c5fd2ada2aa57aea499fe2d0a6c44bd16",
+    "include/uifgo/pl_conditional_raim.h": "02fc210e37418c054793783555b9ceefd42369d00e2ea0aed6aa3fb745f83c0e",
+    "include/uifgo/pl_persistent_cusum.h": "e83547b6837daf73b6d986f312cd27d4a7bd8ee4304f33628abd8a3bfa565c7c",
+    "include/uifgo/t07_scenario_cache.h": "8f4cbeffc721d1c4110d53d25f1fa6a30e1742f665016773c7021abdd7e67ef4",
+    "include/uifgo/t07_scenario_injector.h": "22155ac1c4febf723b01bd7223ff1f2884ef3fb880d4293088de1c03000c9e6a",
+    "include/uifgo/trajectory_io.h": "61621afb81d70e1b31c4b3da13c44e4714b94e91afdffd2a37923c6b89e9baa6",
+    "include/uifgo/types.h": "c547b4e8305603b1089f15983e7f244bf5d2add6b7750d034cb6d4b2c0beca17",
+    "include/uifgo/uwb_factor.h": "066cec752c3765b29cc2e09c42f843703ce078f0a6ce18959f7b2e2d8d1ba9ff",
+    "include/uifgo/visualizer.h": "819383519aea681b2063c08e91cd6f30ec79e74c7216dc9b335b24cc3534b8ec",
+    "src/chi2.cpp": "a591c45a526212ec7f180eb00ba36d6f1f15f647be49ac585d3576de4b1407cc",
+    "src/config.cpp": "4fb306549ef592d48467084de3677b93b7d2860ac84e4f982e4a8f36355ee292",
+    "src/data_loader.cpp": "3dc827646038546a80cc141e4a383cf435659abaa2cdee5e7fbf0070d46703b9",
+    "src/fde_grouped.cpp": "fdc772d5297a3fadf1764948a1745eb94903b4a37f10de9364195d07328e84df",
+    "src/fde_math.cpp": "7c0dc5d38e088673b5772111ab2fcaec737904e2cb6e7867e7468e72e565cb5a",
+    "src/fde_windowed.cpp": "21bbbc68b2854e6a926863d34115bce125f3ddecd60aa67c026d10caae77e9d1",
+    "src/graph_builder.cpp": "32fc7c4c4d6b740e21a23f0e5c0d9a7911ca5025b260380b458a11ce81f96e39",
+    "src/hash_utils.cpp": "48ada285197c918ff5a84b33a907274c7041d18c97f336afafd2ac9f82f87f54",
+    "src/imu_preint.cpp": "1ef14ee12d75dd76c1b8b51b0f832f392ec1ce6d2bce13796a40a1a103b85218",
+    "src/imu_sync.cpp": "607e618bd3c0666c64ae7ccce4cac1ab3b1be44bd07e9887e5a1b0d4d5269422",
+    "src/initializer.cpp": "66b948c71b307a76e8eda7966edc745193f9921f26a04d17a726c28003180a91",
+    "src/logger.cpp": "9fe2b17ec02b3811e8d5d020f7481e0764c77f132ca75a2b6d7da9434a01a93d",
+    "src/nlos_discovery.cpp": "38f463850d1215e338856e5d320352795236f6c202a116a8a7e7f49faf73a28e",
+    "src/nlos_fde.cpp": "04cf0c7b08add32d3647fd9067b0e4692c0d463a44ee6f3c73d987349e1e0d2c",
+    "src/nlos_inference.cpp": "c0c323acffe33cf0102e8e7a8805baf2b5e55142d96e360ab83e25b5a75a4f16",
+    "src/nlos_inference_io.cpp": "06bb0b0a4cf70064b241319295997bf001747aaa34c8f00b0cde31d6529741b1",
+    "src/nlos_recoverability.cpp": "cd9b631bdebddd7fdbfcf35af615984d302e5359b2531f255bf624f4dac11cdd",
+    "src/nlos_refit.cpp": "3c74724387956d930ad4e9fe711d1af9f1b3db4cd69430f2e31b8087e1be5d4b",
+    "src/nlos_scoring.cpp": "71a6190f21153e99a3fd8e035bf9e6b85e63df1c1c9097e03ac4bcceb4593dff",
+    "src/nlos_solver_utils.cpp": "3a33d96e057d13c529ecb64dd599ae1f646be7878accb7604d68cbe5df5a8839",
+    "src/optimizer.cpp": "a4e068bf137be3d8d994f1be61534958de4dd81340fac97dc54b657c26df547b",
+    "src/outlier_filter.cpp": "1204e7b22ffb4f63e7ffe64b5d915b0db5b9142f8c2fbbddb87ffbeccbcdffe7",
+    "src/paper_input.cpp": "0347416d06116ace169efb89f369196a3a889939a98ece05d31e7c9e68da4f86",
+    "src/paper_methods.cpp": "e8daf174f2138237da9565503f1a852cda32525a434ff38636b6a9de446c6faf",
+    "src/paper_run_io.cpp": "a3fd9c9ede6d06d14b8c9b59ddc54b461192ac20bef9e7533af8b77943478e28",
+    "src/paper_stage2_cache.cpp": "adc8c79bf0fc77dd180199abf3a6c06a74c04d72ef8e77269a63aefa361b869d",
+    "src/pl_bidirectional_provider.cpp": "8b99fd0b186eacd26c6bf10b8ca53006f0989fb96026264793bc1c832ec6315f",
+    "src/pl_bidirectional_support.cpp": "4d6716c9157bafa11314ad3f4151b5e37dd1067dde356bfd3dbf666a453ec1dc",
+    "src/pl_conditional_raim.cpp": "c3e8762b7637696a7712602aa32ba433c753d50a7d2910a4519ad7c8e1556424",
+    "src/pl_persistent_cusum.cpp": "17addb6da7227eec0302d4742d431eaefd4c9f25d1feaf01ca48c0ca0ea51660",
+    "src/t07_scenario_cache.cpp": "37b01271e61599548c4324e651d13f09f71f0e4d4521487ca4adad7bde7e46e2",
+    "src/trajectory_io.cpp": "940c1f26810232280a29d86eec0ce36a4023f20e1826ab09e12e9595bbf69f98",
+    "src/uwb_factor.cpp": "f7ae4f1969bf93edee7ce3cabf780e1a3da168555ad9519f7785509b2c4c831f",
+    "src/visualizer.cpp": "57090542fe384ad4494161e036454cdf2aa32f01aa187f8634b675dba899b962",
+    "tools/paper/run_experiments.py": "b107c695b1d0f8668b59135c61d5cdbd46f288bdbc2a28dbf5f81fc3043f5515",
+    "tools/run_ie_paper.cpp": "da395054d71d8e33fa1d260dba5b6187894253e22043933da71f434399498f16"
+  },
+  "geometry_sha256": "abff7c149386e96e15ac07a68b838701019b7fbac9938ec70444ce2de6376029",
+  "git_commit": "64459d1efc43756d780b2c1543ec9dfcc15c5f38",
+  "implementation": {
+    "experiments/scripts/evaluate_recover_vs_reject.py": "0d8c5a830423439b64bf090c586f3e2d2fbe24a5fb3e3e87f03d584cb58617de",
+    "experiments/scripts/run_recover_vs_reject.py": "41fd4bb6c125c6fa3042d21605a8a29f572fc868b2295b22705d3e674a7f1c76",
+    "experiments/scripts/test_recover_vs_reject.py": "b6fcb33ff6d3e5d2e4dd592ebfdc3a43ab8d320922e8495234c2d37a30224e75"
+  },
+  "lock_id": "87b967cb66bb38c151499958473da55a126d6033b67d4fdc5e27f3a40ecdf756",
+  "methods": [
+    "suppress_all",
+    "lcb_fixed_full",
+    "robust_cauchy",
+    "SFUISE-ToA"
+  ],
+  "per_tree_timeout_s": 1800,
+  "protocol_sha256": "60d36bb6d9ca93670f70004ac78f7eddd129334daf6993ab54d5b9bf8f3db915",
+  "recordings": [
+    "zigzag_s4",
+    "loop-3d_s3",
+    "zigzag_s3"
+  ],
+  "role": "development",
+  "rows": [
+    {
+      "anchor_ids": [
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12
+      ],
+      "cache_status": "NOT_PUBLISHED_UNRESOLVED_IMU",
+      "imu_interval_s": [
+        -0.08000637,
+        217.95901111
+      ],
+      "imu_max_gap_s": 0.18543744000001539,
+      "imu_nonmonotonic": 0,
+      "imu_rows": 36538,
+      "interval_s": [
+        0.001876611,
+        218.13626641
+      ],
+      "measurement_id": "2b0a80dd4b521189bd3709a3a33ed977711822074f76fae894463f7130b8e417",
+      "reasons": [
+        "ACCELERATION_SIGN_AND_UPSTREAM_TRANSFORM_UNRESOLVED",
+        "ACCELERATION_ORIGIN_UNRESOLVED"
+      ],
+      "recording": "zigzag_s4",
+      "source_row_count": 49809,
+      "source_sha256": {
+        "calib.json": "535e30a63418bd7f5cb240c5a0cfa958af7948776b0b37aecf41b92745cbfb74",
+        "imu.csv": "65b049973e76a29bf1a02d912e480fc22b8854795bba5097c5d148b62c862d80",
+        "uwb.csv": "a5be5d48ced5672201efc254beed2067f4a882a26d8e820ad625358578877ffc"
+      },
+      "staging_sha256": {
+        "imu_source.csv": "e4c8bb374c29519cfe4ae910f3953b4d4c85c3b3b1638455a530deff61c60a9d",
+        "obs_id_map.csv": "f8da81630334f96ed0a012d3fc8824066cd455e073309952631d89e837ad03aa",
+        "uwb_source.csv": "c9bfebb5f7b78a7e449a0c2ff9bf55d8aae730c0c2e5a599ce7380ab586ef46d"
+      },
+      "status": "BLOCKED_GEOMETRY_OR_IMU",
+      "tag1_rows": 49809,
+      "uwb_nonmonotonic": 0
+    },
+    {
+      "anchor_ids": [
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12
+      ],
+      "cache_status": "NOT_PUBLISHED_UNRESOLVED_IMU",
+      "imu_interval_s": [
+        -0.78394041,
+        98.9673584
+      ],
+      "imu_max_gap_s": 0.03461503999999849,
+      "imu_nonmonotonic": 0,
+      "imu_rows": 11508,
+      "interval_s": [
+        0.001141071,
+        99.770066735
+      ],
+      "measurement_id": "9599d5962ea8efbb4bbdd00825c8b994e4d31378d7f3cc2a2a9663106d9e0d3d",
+      "reasons": [
+        "ACCELERATION_SIGN_AND_UPSTREAM_TRANSFORM_UNRESOLVED",
+        "ACCELERATION_ORIGIN_UNRESOLVED"
+      ],
+      "recording": "loop-3d_s3",
+      "source_row_count": 23566,
+      "source_sha256": {
+        "calib.json": "d8a24657bab1dafd80f2e2449742dbe1322f6d6cbcb00585c831c43502955a80",
+        "imu.csv": "440df4b0d912eedb4d5a98014acacc6bb6988a13a26c124eb7a35dd19681b3de",
+        "uwb.csv": "5a57fe667f9dec68b9ae3829e0b8b1171bd53d0098000ce419fb7ac2d2b36905"
+      },
+      "staging_sha256": {
+        "imu_source.csv": "c86b2c1a7e3d0d849604819b35808c9fcf465685ae6234d79b84ec7de137b4b0",
+        "obs_id_map.csv": "7e84f9ee33841d527098a65a0a7a7fbb423cd47e9d6862627e4bd0f8ee5f9ee5",
+        "uwb_source.csv": "19ae4b0b3ccff5440d67e5a3a4f8426240da9ac5e242bca60627013a5ef9d05d"
+      },
+      "status": "BLOCKED_GEOMETRY_OR_IMU",
+      "tag1_rows": 23566,
+      "uwb_nonmonotonic": 0
+    },
+    {
+      "anchor_ids": [
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12
+      ],
+      "cache_status": "NOT_PUBLISHED_UNRESOLVED_IMU",
+      "imu_interval_s": [
+        1.5168534,
+        202.99995612
+      ],
+      "imu_max_gap_s": 0.26208512000000184,
+      "imu_nonmonotonic": 0,
+      "imu_rows": 23096,
+      "interval_s": [
+        0.100713323,
+        201.582838955
+      ],
+      "measurement_id": "0c7cc2424ed294e75a6689e87a344c531986d973b0bec8ec5e7ec6148806584b",
+      "reasons": [
+        "ACCELERATION_SIGN_AND_UPSTREAM_TRANSFORM_UNRESOLVED",
+        "ACCELERATION_ORIGIN_UNRESOLVED"
+      ],
+      "recording": "zigzag_s3",
+      "source_row_count": 47372,
+      "source_sha256": {
+        "calib.json": "9654154718300e1c8216572335c6478992ae7cf7ea8723dae86653299606d32e",
+        "imu.csv": "1ed84d411bde1af2803f9e4a9788b534835bc0c4ff4cf16a2230a6916916ef07",
+        "uwb.csv": "b9f9f32dde9a17ec61387efdef60a759e2a0fb5eb9b92a4b8a197f4deaeb0c6f"
+      },
+      "staging_sha256": {
+        "imu_source.csv": "e8a12f02273e5717edfaa00e1909cc851012184bb8fdf894b94d9bb5560e3f80",
+        "obs_id_map.csv": "92bdeb213ad4cf0d5e178bd6cb2f58f687bc25848a09e2485da9adc0d9bdbd7e",
+        "uwb_source.csv": "960c561411f3b95a1e1df66f0c4c2369aab774e17ab6a767329a92b53ca6b443"
+      },
+      "status": "BLOCKED_GEOMETRY_OR_IMU",
+      "tag1_rows": 47372,
+      "uwb_nonmonotonic": 0
+    }
+  ],
+  "schema": "ICRA_RECOVER_REJECT_LOCK_V1",
+  "task_budget": 15
+}

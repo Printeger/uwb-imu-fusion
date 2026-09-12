@@ -1,0 +1,528 @@
+{
+  "schema": "STARLOC_GT_ASSISTED_ADMISSION_V2",
+  "scope": "GT_ASSISTED_DEVELOPMENT_NOT_INDEPENDENT_CALIBRATION",
+  "source_diagnosis": "/home/mint/ws_fusion_uwb/evaluator_private/icra/rr_gt_admission_20260912/correct_clock/diagnosis.json",
+  "common_geometry": {
+    "T_camera_imu": [
+      [
+        0.9999885261064961,
+        0.0026764189112331296,
+        -0.003972963273047736,
+        -0.0020000000949949026
+      ],
+      [
+        -0.0026724182897442357,
+        0.9999959170817108,
+        0.0010119290453297729,
+        -0.023000003769993782
+      ],
+      [
+        0.003975655397797072,
+        -0.0010013000148482985,
+        0.9999915957459033,
+        0.0002200000308221206
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "T_camera_rig": [
+      [
+        -0.013826426346624149,
+        -0.9993933380260069,
+        -0.0319653850863405,
+        0.1520278098644209
+      ],
+      [
+        -0.004086264652457927,
+        -0.031911699029142065,
+        0.9994823389666596,
+        0.043721053299353586
+      ],
+      [
+        -0.9998960607861563,
+        0.013949887967654673,
+        -0.0036425609148554583,
+        0.012373544004985942
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "T_rig_imu": [
+      [
+        -0.01779058966658725,
+        -0.0031220573370101057,
+        -0.9998368605314059,
+        0.014554574811170496
+      ],
+      [
+        -0.9992411297377372,
+        -0.034600331988964776,
+        0.017888031381424037,
+        0.15589400885942953
+      ],
+      [
+        -0.03465053476881,
+        0.9993963526970853,
+        -0.002504127791796684,
+        -0.06171868989438356
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "lever_imu_m": [
+      0.26672359932121376,
+      0.1695522409961438,
+      0.19531191596542344
+    ],
+    "tag_in_rig_m": [
+      -0.186,
+      -0.113,
+      0.098
+    ]
+  },
+  "lever_body_m": [
+    -0.2005545748111705,
+    -0.26889400885942955,
+    0.15971868989438356
+  ],
+  "body_frame": "ORIGIN_IMU_AXES_RIG",
+  "origin_status": "APPROXIMATE_PHYSICAL_SENSOR_ORIGIN_NOT_IDENTIFIABLE",
+  "upstream_status": "EQUIVALENT_FIXED_TRANSFORM_INFERRED_NOT_SOURCE_CODE_RECONSTRUCTION",
+  "recordings": {
+    "zigzag_s4": {
+      "recording": "zigzag_s4",
+      "status": "ADMITTED_GT_ASSISTED_APPROXIMATE",
+      "clock": {
+        "gt_pose_rmse_after": 0.001089496379020081,
+        "gt_pose_rmse_before": 0.042257022084396585,
+        "half_offsets_s": [
+          0.1765109600896509,
+          0.17825848073993142
+        ],
+        "imu_to_uwb_offset_s": 0.17732079243899532,
+        "matched_count": 36053,
+        "recording": "zigzag_s4",
+        "scale": 1.0,
+        "source": "GT_TO_GT_PUBLISHED_POSE_CORRESPONDENCE_NOT_ESTIMATOR_ERROR"
+      },
+      "imu": {
+        "acceleration_origin": "IMU",
+        "angular_velocity_origin": "IMU",
+        "acceleration_semantics": "SPECIFIC_FORCE",
+        "upstream_processing_source": "GT_ASSISTED_EQUIVALENT_TRANSFORM_WITH_UNIDENTIFIED_HISTORY",
+        "transform_source": "RR_GT_ASSISTED_ADMISSION_V2",
+        "R_imu_acc": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            -0.0,
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -0.0,
+            -1.0
+          ]
+        ],
+        "R_imu_gyro": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            -0.0,
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -0.0,
+            -1.0
+          ]
+        ],
+        "time_offset_s": 0.17732079243899532
+      },
+      "diagnostics": {
+        "acc": {
+          "R_rig_acc": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              -0.0,
+              -1.0,
+              -0.0
+            ],
+            [
+              -0.0,
+              -0.0,
+              -1.0
+            ]
+          ],
+          "mean_error": [
+            -0.2130675633975904,
+            -0.2813340098451948,
+            -0.10001510338194759
+          ],
+          "median_norm": 0.40392720922866887,
+          "rmse": 0.44861684080638015,
+          "sign": 1
+        },
+        "gyro": {
+          "R_rig_gyro": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              -0.0,
+              -1.0,
+              -0.0
+            ],
+            [
+              -0.0,
+              -0.0,
+              -1.0
+            ]
+          ],
+          "mean_error": [
+            -0.00042727433235682685,
+            -0.000854054457379838,
+            -0.0007041925374855067
+          ],
+          "median_norm": 0.012371884717421901,
+          "rmse": 0.021658781920791962
+        },
+        "origin_rig": {
+          "mean_error": [
+            -0.2131913235469891,
+            -0.28528771797627167,
+            -0.09987358515418139
+          ],
+          "median_norm": 0.4042928619273243,
+          "rmse": 0.44606573532078275
+        },
+        "origin_imu": {
+          "mean_error": [
+            -0.2130675633975904,
+            -0.2813340098451948,
+            -0.10001510338194759
+          ],
+          "median_norm": 0.40392720922866887,
+          "rmse": 0.44861684080638015
+        },
+        "origin_signal": {
+          "mean_error": [
+            0.0001237601493983063,
+            0.00395370813107708,
+            -0.00014151822776641037
+          ],
+          "median_norm": 0.01656155986344134,
+          "rmse": 0.03703672589030737
+        }
+      }
+    },
+    "loop-3d_s3": {
+      "recording": "loop-3d_s3",
+      "status": "ADMITTED_GT_ASSISTED_APPROXIMATE",
+      "clock": {
+        "gt_pose_rmse_after": 0.0018302655749184251,
+        "gt_pose_rmse_before": 0.3827741173984989,
+        "half_offsets_s": [
+          0.7898805492453334,
+          0.7896882620167247
+        ],
+        "imu_to_uwb_offset_s": 0.7897756014598921,
+        "matched_count": 10140,
+        "recording": "loop-3d_s3",
+        "scale": 1.0,
+        "source": "GT_TO_GT_PUBLISHED_POSE_CORRESPONDENCE_NOT_ESTIMATOR_ERROR"
+      },
+      "imu": {
+        "acceleration_origin": "IMU",
+        "angular_velocity_origin": "IMU",
+        "acceleration_semantics": "SPECIFIC_FORCE",
+        "upstream_processing_source": "GT_ASSISTED_EQUIVALENT_TRANSFORM_WITH_UNIDENTIFIED_HISTORY",
+        "transform_source": "RR_GT_ASSISTED_ADMISSION_V2",
+        "R_imu_acc": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            -0.0,
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -0.0,
+            -1.0
+          ]
+        ],
+        "R_imu_gyro": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            -0.0,
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -0.0,
+            -1.0
+          ]
+        ],
+        "time_offset_s": 0.7897756014598921
+      },
+      "diagnostics": {
+        "acc": {
+          "R_rig_acc": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              -0.0,
+              -1.0,
+              -0.0
+            ],
+            [
+              -0.0,
+              -0.0,
+              -1.0
+            ]
+          ],
+          "mean_error": [
+            -0.1611800852677832,
+            -0.15059186113569065,
+            -0.20541756409577833
+          ],
+          "median_norm": 0.400810741074063,
+          "rmse": 0.5626482821927216,
+          "sign": 1
+        },
+        "gyro": {
+          "R_rig_gyro": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              -0.0,
+              -1.0,
+              -0.0
+            ],
+            [
+              -0.0,
+              -0.0,
+              -1.0
+            ]
+          ],
+          "mean_error": [
+            -0.0015773018913611987,
+            -0.0006496110947720209,
+            -0.000882574192772747
+          ],
+          "median_norm": 0.03534735840632554,
+          "rmse": 0.12997796832604205
+        },
+        "origin_rig": {
+          "mean_error": [
+            -0.16073325425725865,
+            -0.17161222599599368,
+            -0.2045201548827937
+          ],
+          "median_norm": 0.3768063920876805,
+          "rmse": 0.5365929974569262
+        },
+        "origin_imu": {
+          "mean_error": [
+            -0.1611800852677832,
+            -0.15059186113569065,
+            -0.20541756409577833
+          ],
+          "median_norm": 0.400810741074063,
+          "rmse": 0.5626482821927216
+        },
+        "origin_signal": {
+          "mean_error": [
+            -0.00044683101052458697,
+            0.021020364860303283,
+            -0.0008974092129843754
+          ],
+          "median_norm": 0.08913891586160988,
+          "rmse": 0.14771672159625868
+        }
+      }
+    },
+    "zigzag_s3": {
+      "recording": "zigzag_s3",
+      "status": "ADMITTED_GT_ASSISTED_APPROXIMATE",
+      "clock": {
+        "gt_pose_rmse_after": 0.002424168417658453,
+        "gt_pose_rmse_before": 0.6768643001838542,
+        "half_offsets_s": [
+          -1.4276979191251613,
+          -1.4256468604907884
+        ],
+        "imu_to_uwb_offset_s": -1.4263104959892783,
+        "matched_count": 20599,
+        "recording": "zigzag_s3",
+        "scale": 1.0,
+        "source": "GT_TO_GT_PUBLISHED_POSE_CORRESPONDENCE_NOT_ESTIMATOR_ERROR"
+      },
+      "imu": {
+        "acceleration_origin": "IMU",
+        "angular_velocity_origin": "IMU",
+        "acceleration_semantics": "SPECIFIC_FORCE",
+        "upstream_processing_source": "GT_ASSISTED_EQUIVALENT_TRANSFORM_WITH_UNIDENTIFIED_HISTORY",
+        "transform_source": "RR_GT_ASSISTED_ADMISSION_V2",
+        "R_imu_acc": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            -0.0,
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -0.0,
+            -1.0
+          ]
+        ],
+        "R_imu_gyro": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            -0.0,
+            -1.0,
+            -0.0
+          ],
+          [
+            -0.0,
+            -0.0,
+            -1.0
+          ]
+        ],
+        "time_offset_s": -1.4263104959892783
+      },
+      "diagnostics": {
+        "acc": {
+          "R_rig_acc": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              -0.0,
+              -1.0,
+              -0.0
+            ],
+            [
+              -0.0,
+              -0.0,
+              -1.0
+            ]
+          ],
+          "mean_error": [
+            -0.11312590452052443,
+            -0.11596353831974864,
+            -0.1668872339913261
+          ],
+          "median_norm": 0.38421588879909185,
+          "rmse": 1.1126922193305782,
+          "sign": 1
+        },
+        "gyro": {
+          "R_rig_gyro": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              -0.0,
+              -1.0,
+              -0.0
+            ],
+            [
+              -0.0,
+              -0.0,
+              -1.0
+            ]
+          ],
+          "mean_error": [
+            -0.00010970749564113774,
+            -0.0005768196999221391,
+            -0.00014490815994486558
+          ],
+          "median_norm": 0.02914884214723048,
+          "rmse": 0.5236471096947449
+        },
+        "origin_rig": {
+          "mean_error": [
+            -0.11039646241776833,
+            -0.15263615616437604,
+            -0.16698350022169092
+          ],
+          "median_norm": 0.36886441451872193,
+          "rmse": 1.0285197030505424
+        },
+        "origin_imu": {
+          "mean_error": [
+            -0.11312590452052443,
+            -0.11596353831974864,
+            -0.1668872339913261
+          ],
+          "median_norm": 0.38421588879909185,
+          "rmse": 1.1126922193305782
+        },
+        "origin_signal": {
+          "mean_error": [
+            -0.0027294421027562413,
+            0.036672617844627275,
+            9.626623036470072e-05
+          ],
+          "median_norm": 0.06557326134126648,
+          "rmse": 0.3520487923851412
+        }
+      }
+    }
+  }
+}

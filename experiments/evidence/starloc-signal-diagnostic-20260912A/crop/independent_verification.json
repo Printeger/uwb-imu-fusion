@@ -1,0 +1,27 @@
+{
+  "imu_payload_identical": true,
+  "metrics": [
+    {
+      "independent_RMSE_m": 375.9289133586623,
+      "method": "robust_cauchy",
+      "variant": "uncropped"
+    },
+    {
+      "independent_RMSE_m": 371.74715906810917,
+      "method": "robust_cauchy",
+      "variant": "cropped"
+    },
+    {
+      "independent_RMSE_m": 0.42932610117048364,
+      "method": "SFUISE-ToA",
+      "variant": "uncropped"
+    },
+    {
+      "independent_RMSE_m": 0.8505124935359973,
+      "method": "SFUISE-ToA",
+      "variant": "cropped"
+    }
+  ],
+  "raw_uwb_retained_rows_exact": true,
+  "status": "PASS"
+}

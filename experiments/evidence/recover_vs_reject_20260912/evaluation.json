@@ -1,0 +1,32 @@
+{
+  "audit": [
+    {
+      "event_count": 14,
+      "plot": "/home/mint/ws_fusion_uwb/evaluator_private/icra/recover_vs_reject/recover-vs-reject-20260912T122319Z/zigzag_s4/audit_diagnostic.png",
+      "recording": "zigzag_s4",
+      "reference_count": 49809,
+      "window_union_count": 11,
+      "window_union_duration_s": 89.49765490700001
+    },
+    {
+      "event_count": 4,
+      "plot": "/home/mint/ws_fusion_uwb/evaluator_private/icra/recover_vs_reject/recover-vs-reject-20260912T122319Z/loop-3d_s3/audit_diagnostic.png",
+      "recording": "loop-3d_s3",
+      "reference_count": 23566,
+      "window_union_count": 4,
+      "window_union_duration_s": 20.811029865
+    },
+    {
+      "event_count": 12,
+      "plot": "/home/mint/ws_fusion_uwb/evaluator_private/icra/recover_vs_reject/recover-vs-reject-20260912T122319Z/zigzag_s3/audit_diagnostic.png",
+      "recording": "zigzag_s3",
+      "reference_count": 47372,
+      "window_union_count": 8,
+      "window_union_duration_s": 33.12772561399998
+    }
+  ],
+  "lock_id": "87b967cb66bb38c151499958473da55a126d6033b67d4fdc5e27f3a40ecdf756",
+  "private_directory": "/home/mint/ws_fusion_uwb/evaluator_private/icra/recover_vs_reject/recover-vs-reject-20260912T122319Z",
+  "scientific_metrics": "NOT_RUN",
+  "status": "BLOCKED_GEOMETRY_OR_IMU"
+}

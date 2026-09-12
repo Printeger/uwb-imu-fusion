@@ -1,0 +1,4 @@
+recording,event_count,window_union_count,window_union_duration_s,reference_count,plot
+zigzag_s4,14,11,89.49765490700001,49809,/home/mint/ws_fusion_uwb/evaluator_private/icra/recover_vs_reject/recover-vs-reject-gt-20260912C/zigzag_s4/audit_diagnostic.png
+loop-3d_s3,4,4,20.811029865,23566,/home/mint/ws_fusion_uwb/evaluator_private/icra/recover_vs_reject/recover-vs-reject-gt-20260912C/loop-3d_s3/audit_diagnostic.png
+zigzag_s3,12,8,33.12772561399998,47372,/home/mint/ws_fusion_uwb/evaluator_private/icra/recover_vs_reject/recover-vs-reject-gt-20260912C/zigzag_s3/audit_diagnostic.png

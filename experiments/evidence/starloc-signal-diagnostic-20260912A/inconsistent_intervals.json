@@ -1,0 +1,24 @@
+[
+  {
+    "GT_quaternion_norm_max_deviation": 3.3306690738754696e-16,
+    "GT_rate_max_radps": 18.34475999293102,
+    "gyro_rate_max_radps": 0.6782113894943583,
+    "interval_s": [
+      128,
+      133
+    ],
+    "reason": "LARGE_PHYSICAL_GYRO_GT_INCONSISTENCY_SOURCE_NOT_IDENTIFIED",
+    "recording": "zigzag_s3"
+  },
+  {
+    "GT_quaternion_norm_max_deviation": 3.3306690738754696e-16,
+    "GT_rate_max_radps": 3.272235328202529,
+    "gyro_rate_max_radps": 0.8500707794252492,
+    "interval_s": [
+      70,
+      73
+    ],
+    "reason": "LARGE_PHYSICAL_GYRO_GT_INCONSISTENCY_SOURCE_NOT_IDENTIFIED",
+    "recording": "loop-3d_s3"
+  }
+]

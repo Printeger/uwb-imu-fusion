@@ -1,0 +1,23 @@
+{
+  "schema": "STARLOC_GEOMETRY_ADMISSION_V1",
+  "review_date": "2026-09-12",
+  "source_findings": {
+    "author_readme": "https://github.com/utiasASRL/starloc/blob/d3ad541/README.md",
+    "paper": "https://arxiv.org/html/2309.05518v1",
+    "manufacturer": "https://docs.stereolabs.com/docs/development/zed-sdk/modules/sensors/imu",
+    "acceleration_axes": "README declares rig frame, m/s^2",
+    "angular_velocity_axes": "README declares IMU frame, rad/s",
+    "acceleration_sign": "UNKNOWN_CSV_PROCESSING; manufacturer SDK documentation does not establish author CSV transformation",
+    "acceleration_measurement_origin": "UNKNOWN: expressing a vector in rig coordinates does not establish whether origin was shifted",
+    "upstream_processing": "No CSV-generation/IMU-transform implementation in reviewed local author repository; paper processing section describes camera/UWB calibration, not IMU transformation",
+    "camera_imu": "Manufacturer transform is published in calib.json; insufficient by itself to establish CSV axes/sign/origin",
+    "camera_rig": "Do not adopt per-recording tf_cam_rig: source offers GT-optimized extrinsics; CAD frame diagram is independent approximate geometry but does not specify IMU CSV processing",
+    "tag1": "Paper section 3.1: s3 and s4 radio tag1 occupies CAD location 3, not location 1",
+    "anchors": "v2 identity layout, all 8 radio IDs; no v1 GT-derived ID mapping required"
+  },
+  "recordings": {
+    "zigzag_s4": {"status": "BLOCKED_GEOMETRY_OR_IMU", "reasons": ["ACCELERATION_SIGN_AND_UPSTREAM_TRANSFORM_UNRESOLVED", "ACCELERATION_ORIGIN_UNRESOLVED"]},
+    "loop-3d_s3": {"status": "BLOCKED_GEOMETRY_OR_IMU", "reasons": ["ACCELERATION_SIGN_AND_UPSTREAM_TRANSFORM_UNRESOLVED", "ACCELERATION_ORIGIN_UNRESOLVED"]},
+    "zigzag_s3": {"status": "BLOCKED_GEOMETRY_OR_IMU", "reasons": ["ACCELERATION_SIGN_AND_UPSTREAM_TRANSFORM_UNRESOLVED", "ACCELERATION_ORIGIN_UNRESOLVED"]}
+  }
+}

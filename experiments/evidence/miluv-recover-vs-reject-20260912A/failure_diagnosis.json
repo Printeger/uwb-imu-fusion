@@ -1,0 +1,91 @@
+{
+  "interpretation": "PL linear system/conditional LM failures; no evidence sufficient to assign cause solely to geometry or data quality",
+  "root_cause": "NOT_IDENTIFIED_NO_PARAMETER_RETRY",
+  "rows": [
+    {
+      "bootstrap": [
+        {
+          "anchor_id": 5,
+          "raw_time": 0.2673609256744384
+        },
+        {
+          "anchor_id": 3,
+          "raw_time": 0.3334925174713134
+        },
+        {
+          "anchor_id": 2,
+          "raw_time": 0.4283497333526611
+        },
+        {
+          "anchor_id": 5,
+          "raw_time": 0.5805921554565429
+        },
+        {
+          "anchor_id": 3,
+          "raw_time": 0.6588249206542968
+        }
+      ],
+      "candidate_observations": null,
+      "candidate_segments": null,
+      "detector_valid": false,
+      "failure_variable": "x244",
+      "imu_first_s": 0.1386222839355468,
+      "imu_max_gap_s": 0.043998003005981445,
+      "imu_median_gap_s": 0.00400996208190918,
+      "local_imu_bracket_s": 0.0040018558502197266,
+      "planned_anchor_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "producer_failure": "\nIndeterminant linear system detected while working near variable\n8646911284551352564 (Symbol: x244).\n\nThrown when a linear system is ill-posed.  The most common cause for this\nerror is having underconstrained variables.  Mathematically, the system is\nunderdetermined.  See the GTSAM Doxygen documentation at\nhttp://borg.cc.gatech.edu/ on gtsam::IndeterminantLinearSystemException for\nmore information.",
+      "recording": "default_1_random3_0",
+      "stage2_cache_published": false,
+      "variable_time_s": 27.802630186080933
+    },
+    {
+      "bootstrap": [
+        {
+          "anchor_id": 1,
+          "raw_time": 0.2963948249816894
+        },
+        {
+          "anchor_id": 0,
+          "raw_time": 0.3371906280517578
+        },
+        {
+          "anchor_id": 5,
+          "raw_time": 0.4844844341278076
+        },
+        {
+          "anchor_id": 3,
+          "raw_time": 0.56484055519104
+        },
+        {
+          "anchor_id": 2,
+          "raw_time": 0.6589243412017822
+        }
+      ],
+      "candidate_observations": 0,
+      "candidate_segments": 0,
+      "detector_valid": true,
+      "imu_first_s": 0.133453369140625,
+      "imu_max_gap_s": 0.03998208045959473,
+      "imu_median_gap_s": 0.004010915756225586,
+      "planned_anchor_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "producer_failure": "PL_RAW_REFERENCE_FAILED:CONDITIONAL_LM_MAX_ITERATIONS",
+      "recording": "default_1_circular3D_0",
+      "stage2_cache_published": false
+    }
+  ]
+}
