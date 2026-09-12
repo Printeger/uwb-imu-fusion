@@ -619,3 +619,19 @@ SHA-256 exact、最大 state 差 0；dynamic clean 为 0/0，dynamic target alar
 TP/FP/FN=30/0/0，healthy segment=0。唯一成功裁决为
 `BIDIRECTIONAL_CUSUM_SUPPORT_PASS_FOR_PRODUCTION_ADMISSION`。production provider、Stage2/Rc/final、
 recovery 和定位指标仍为 `NOT_RUN/NOT_EVALUATED`。
+
+## 0912 PL CUSUM production integration / accuracy amendment
+
+本轮按
+[`PL_CUSUM_E2E_INTEGRATION_ACCURACY_PROTOCOL.md`](../ie_0911/PL_CUSUM_E2E_INTEGRATION_ACCURACY_PROTOCOL.md)
+执行单一 locked Walk1 clean/+0.5 m injected development E2E。先 byte-verify prior seal，再要求 production
+clean zero support/no-op 与 injected support 对 sealed dynamic shadow 在 obs/link/segment/alarm 上 exact；
+任一失败按最早 verdict 停止，不重算 calibration 或调 detector。其后只复用当前冻结 Stage2、score、
+gate、fixed compensation、final factor audit 与一次 fallback。
+
+primary recovery 为 `lcb_fixed_full`，唯一 rejection comparator 为共享同一 support 的 `suppress_all`；
+range evaluator 在 scientific artifacts seal 后按 obs_id 精确配对 30 条 clean/injected measurement，要求
+recovered RMSE 严格改善。trajectory evaluator 复用 `evaluate_runs.py` 的 scale=1 SE(3) aligned ATE/RPE，
+并在 common matched GT timestamps 上要求 primary RMSE 严格优于 suppress 且 p95 不差，才能给
+`E2E_FULL_SYSTEM_PASS_DEVELOPMENT`。链路技术通过后执行 six-input non-gating diagnostic，不用其结果调参、
+换 primary 或扩大 claim。所有失败、zero/fallback/unavailable 原样进入结果；本轮不是 formal held-out test。

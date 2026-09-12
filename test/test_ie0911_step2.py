@@ -55,6 +55,25 @@ def test_scheduler_accepts_and_canonicalizes_real_anchor_ids():
         assert captured["command"][index + 1] == "0,1,3,4"
 
 
+def test_scheduler_pl_bidirectional_override_is_exact_and_fail_closed():
+    scheduler = load("step2_scheduler_override", ROOT / "tools/paper/run_experiments.py")
+    config = {"nlos": {"mode": "imu_aided_fde", "tau_eta": 0.1}}
+    unit = {"nlos_override": dict(scheduler.PL_BIDIRECTIONAL_LOCKED_OVERRIDE)}
+    scheduler.apply_unit_nlos_override(config, unit)
+    assert config["nlos"]["mode"] == "pl_bidirectional_cusum"
+    assert config["nlos"]["cusum_forward_h"] == 7.0234689587858723
+    assert config["nlos"]["tau_eta"] == 0.1
+
+    invalid = dict(scheduler.PL_BIDIRECTIONAL_LOCKED_OVERRIDE)
+    invalid["cusum_forward_h"] = 7.0
+    try:
+        scheduler.apply_unit_nlos_override({}, {"nlos_override": invalid})
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("non-locked PL detector override unexpectedly accepted")
+
+
 def test_paired_metrics_use_common_gt_points_and_positive_improvement():
     evaluator = load("step2_evaluator", ROOT / "tools/paper/evaluate_runs.py")
     with tempfile.TemporaryDirectory(prefix="ie0911-step2-pair-") as tmp:
@@ -86,4 +105,5 @@ def test_paired_metrics_use_common_gt_points_and_positive_improvement():
 
 if __name__ == "__main__":
     test_scheduler_accepts_and_canonicalizes_real_anchor_ids()
+    test_scheduler_pl_bidirectional_override_is_exact_and_fail_closed()
     test_paired_metrics_use_common_gt_points_and_positive_improvement()

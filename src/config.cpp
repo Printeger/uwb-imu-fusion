@@ -230,6 +230,9 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
         "short_min_count_debug", "short_min_duration_debug",
         "score_recoverability", "final_inference_enabled", "tau_eta",
         "tau_s_m", "tau_gamma", "gate_parameter_provenance",
+        "cusum_forward_kappa", "cusum_forward_h",
+        "cusum_backward_kappa", "cusum_backward_h",
+        "cusum_parameter_provenance",
         "lambda_l1", "lambda_tv",
         "gap_threshold_s", "active_bias_min_m", "change_point_min_m",
         "merge_max_difference_m", "discovery_short_min_count",
@@ -253,6 +256,17 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
       cfg.oracle_support_path = nl["oracle_support"].as<std::string>();
     if (nl["score_recoverability"])
       cfg.score_recoverability = nl["score_recoverability"].as<bool>();
+    if (nl["cusum_forward_kappa"])
+      cfg.cusum_forward_kappa = nl["cusum_forward_kappa"].as<double>();
+    if (nl["cusum_forward_h"])
+      cfg.cusum_forward_h = nl["cusum_forward_h"].as<double>();
+    if (nl["cusum_backward_kappa"])
+      cfg.cusum_backward_kappa = nl["cusum_backward_kappa"].as<double>();
+    if (nl["cusum_backward_h"])
+      cfg.cusum_backward_h = nl["cusum_backward_h"].as<double>();
+    if (nl["cusum_parameter_provenance"])
+      cfg.cusum_parameter_provenance =
+          nl["cusum_parameter_provenance"].as<std::string>();
     if (nl["final_inference_enabled"])
       cfg.final_inference_enabled = nl["final_inference_enabled"].as<bool>();
     if (nl["tau_eta"])
@@ -369,7 +383,8 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
   if (cfg.nlos_mode != "disabled" && cfg.nlos_mode != "oracle_debug" &&
       cfg.nlos_mode != "fixed_partition_debug" &&
       cfg.nlos_mode != "automatic_discovery" &&
-      cfg.nlos_mode != "imu_aided_fde")
+      cfg.nlos_mode != "imu_aided_fde" &&
+      cfg.nlos_mode != "pl_bidirectional_cusum")
     throw std::runtime_error("Unsupported nlos.mode: " + cfg.nlos_mode);
   if (cfg.discovery_conditional_navigation_policy !=
           "GTSAM_CHECK_ONLY_V1" &&
@@ -448,13 +463,54 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
       throw std::runtime_error(
           "imu_aided_fde temporal support parameters are invalid");
   }
+  if (cfg.nlos_mode == "pl_bidirectional_cusum") {
+    const auto nl = node["nlos"];
+    if (nl["oracle_support"].IsDefined())
+      throw std::runtime_error(
+          "nlos.oracle_support field is forbidden for pl_bidirectional_cusum mode");
+    const std::vector<std::string> required = {
+        "cusum_forward_kappa", "cusum_forward_h",
+        "cusum_backward_kappa", "cusum_backward_h", "gap_threshold_s",
+        "cusum_parameter_provenance", "score_recoverability",
+        "final_inference_enabled"};
+    for (const auto& key : required) {
+      if (!nl[key].IsDefined())
+        throw std::runtime_error(
+            "pl_bidirectional_cusum requires explicit nlos." + key);
+    }
+    if (!cfg.score_recoverability || !cfg.final_inference_enabled)
+      throw std::runtime_error(
+          "pl_bidirectional_cusum requires score_recoverability and final_inference_enabled true");
+    if (!std::isfinite(cfg.cusum_forward_kappa) ||
+        !std::isfinite(cfg.cusum_forward_h) ||
+        !std::isfinite(cfg.cusum_backward_kappa) ||
+        !std::isfinite(cfg.cusum_backward_h) ||
+        !std::isfinite(cfg.discovery_gap_threshold_s) ||
+        cfg.cusum_forward_kappa < 0.0 || cfg.cusum_forward_h <= 0.0 ||
+        cfg.cusum_backward_kappa < 0.0 || cfg.cusum_backward_h <= 0.0 ||
+        cfg.discovery_gap_threshold_s < 0.0)
+      throw std::runtime_error(
+          "pl_bidirectional_cusum parameters are non-finite or outside their domains");
+    if (cfg.cusum_forward_kappa != 0.5 ||
+        cfg.cusum_forward_h != 7.0234689587858723 ||
+        cfg.cusum_backward_kappa != 0.5 ||
+        cfg.cusum_backward_h != 7.0234689587858714 ||
+        cfg.discovery_gap_threshold_s != 1.0)
+      throw std::runtime_error(
+          "pl_bidirectional_cusum parameters do not match the admitted frozen values");
+    if (cfg.cusum_parameter_provenance !=
+        "PL_BIDIRECTIONAL_CUSUM_SUPPORT_20260912_LOCKED")
+      throw std::runtime_error(
+          "pl_bidirectional_cusum parameter provenance is not the admitted lock");
+  }
   if (cfg.final_inference_enabled) {
     const auto nl = node["nlos"];
     if (cfg.nlos_mode != "oracle_debug" &&
         cfg.nlos_mode != "automatic_discovery" &&
-        cfg.nlos_mode != "imu_aided_fde")
+        cfg.nlos_mode != "imu_aided_fde" &&
+        cfg.nlos_mode != "pl_bidirectional_cusum")
       throw std::runtime_error(
-          "final_inference_enabled requires oracle_debug, automatic_discovery, or imu_aided_fde");
+          "final_inference_enabled requires oracle_debug, automatic_discovery, imu_aided_fde, or pl_bidirectional_cusum");
     if (!cfg.score_recoverability)
       throw std::runtime_error(
           "final_inference_enabled requires score_recoverability: true");

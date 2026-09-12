@@ -4,9 +4,28 @@
 #include <sstream>
 #include <vector>
 
+#include "uifgo/pl_bidirectional_provider.h"
 #include "uifgo/pl_bidirectional_support.h"
 
 namespace {
+
+TEST(PlBidirectionalProductionProvider, LockedParameterIdentityIsDeterministic) {
+  uifgo::Config cfg;
+  cfg.cusum_forward_kappa = 0.5;
+  cfg.cusum_forward_h = 7.0234689587858723;
+  cfg.cusum_backward_kappa = 0.5;
+  cfg.cusum_backward_h = 7.0234689587858714;
+  cfg.discovery_gap_threshold_s = 1.0;
+  cfg.cusum_parameter_provenance =
+      "PL_BIDIRECTIONAL_CUSUM_SUPPORT_20260912_LOCKED";
+  const auto first = uifgo::PlBidirectionalParameterIdentity(cfg);
+  const auto second = uifgo::PlBidirectionalParameterIdentity(cfg);
+  EXPECT_EQ(first, second);
+  EXPECT_EQ(std::string(uifgo::kPlBidirectionalProductionProvider),
+            "PL_BIDIRECTIONAL_CUSUM_V1");
+  cfg.cusum_forward_h = 7.0;
+  EXPECT_NE(first, uifgo::PlBidirectionalParameterIdentity(cfg));
+}
 
 uifgo::PlCusumInputRow Row(double time, int anchor, double z,
                            std::uint64_t obs, bool valid = true) {

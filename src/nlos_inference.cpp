@@ -20,6 +20,7 @@
 #include <typeinfo>
 
 #include "uifgo/hash_utils.h"
+#include "uifgo/pl_bidirectional_provider.h"
 #include "uifgo/uwb_factor.h"
 
 namespace uifgo {
@@ -382,6 +383,9 @@ std::string InferenceId(const InferenceResult& result) {
     AppendDouble(&bytes, result.fixed_kappa);
     for (const auto& c : result.fixed_compensations) {
       AppendUint64(&bytes, c.segment_ordinal); AppendString(&bytes,c.segment_id);
+      AppendUint64(&bytes, static_cast<std::uint64_t>(c.tag_id));
+      AppendUint64(&bytes, static_cast<std::uint64_t>(c.anchor_id));
+      AppendUint64(&bytes, c.candidate_observation_count);
       AppendDouble(&bytes,c.c_hat_stage2_m); AppendDouble(&bytes,c.sigma_c_local_m);
       AppendDouble(&bytes,c.delta_c_fixed_m); bytes << c.use << c.sigma_available;
       AppendString(&bytes,c.reason);
@@ -732,14 +736,17 @@ InferenceResult FinalInferenceEngine::Run(
   }
 
   if (stage2_refit.status == SegmentRefitStatus::SUCCESS_EMPTY) {
+    const std::string expected_empty_provider =
+        cfg.nlos_mode == "pl_bidirectional_cusum"
+            ? kPlBidirectionalProductionProvider
+            : (cfg.fde_windowed_test
+                   ? "imu_aided_windowed_fde_v4"
+                   : (cfg.fde_grouped_test
+                          ? "imu_aided_grouped_fde_v3"
+                          : "imu_aided_postfit_fde_v2"));
     if (!frozen_full_support.segments.empty() || !stage2_refit.segments.empty() ||
         !stage2_refit.iterations.empty() ||
-        frozen_full_support.provider !=
-            (cfg.fde_windowed_test
-                 ? "imu_aided_windowed_fde_v4"
-                 : (cfg.fde_grouped_test
-                        ? "imu_aided_grouped_fde_v3"
-                        : "imu_aided_postfit_fde_v2"))) {
+        frozen_full_support.provider != expected_empty_provider) {
       result.reason = "SUCCESS_EMPTY_NONEMPTY_SUPPORT_OR_TRACE";
       finish(); return result;
     }
@@ -1131,6 +1138,8 @@ std::vector<FixedCompensation> FreezeFixedCompensations(
   for (const auto& segment : stage2.segments) {
     FixedCompensation c;
     c.segment_ordinal=segment.segment_ordinal; c.segment_id=segment.segment_id;
+    c.tag_id=segment.tag_id; c.anchor_id=segment.anchor_id;
+    c.candidate_observation_count=segment.observation_count;
     c.c_hat_stage2_m=segment.amplitude_m;
     c.reason="SUPPRESS_LOCAL_SIGMA_UNAVAILABLE";
     size_t memberships=0;
@@ -1166,6 +1175,11 @@ std::vector<FixedCompensation> FreezeFixedCompensations(
       }
     }
     if(memberships!=1) { c.use=false; c.delta_c_fixed_m=0; c.reason="SUPPRESS_GROUP_MAPPING_INVALID"; }
+    if (!std::isfinite(c.delta_c_fixed_m) || c.delta_c_fixed_m < 0.0 ||
+        (std::isfinite(c.c_hat_stage2_m) && c.c_hat_stage2_m >= 0.0 &&
+         c.delta_c_fixed_m > c.c_hat_stage2_m)) {
+      throw std::runtime_error("FIXED_COMPENSATION_INVARIANT_VIOLATION");
+    }
     output.push_back(c);
   }
   return output;

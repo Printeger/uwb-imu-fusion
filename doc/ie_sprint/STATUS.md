@@ -1,3 +1,29 @@
+# 0912-PL-CUSUM-PRODUCTION-E2E 当前任务
+
+`DONE / E2E_FULL_SYSTEM_PASS_DEVELOPMENT`。用户授权执行
+[`PL_CUSUM_E2E_INTEGRATION_ACCURACY_PROTOCOL.md`](../ie_0911/PL_CUSUM_E2E_INTEGRATION_ACCURACY_PROTOCOL.md)：
+只把已 admission 的 PL `conditional_z`、forward CUSUM 与 backward non-causal closure 接入正式
+`nlos.mode=pl_bidirectional_cusum`，随后复用现有 Stage2、recoverability、四种 final policy/factor audit
+和 evaluator。detector 参数、support 交集、输入、Stage2/gate/LCB 数值与评价协议均冻结；production
+support 必须先与 sealed dynamic shadow exact 等价，失败即停。controlled Walk1 clean/injected 为主门，
+primary=`lcb_fixed_full`、rejection=`suppress_all`；range 必须按 obs_id 与 clean 配对，定位必须在 common
+GT samples 上比较 aligned ATE RMSE/P95。核心技术链通过后才运行 six-input non-gating diagnostic。
+新 evidence root 为
+`/home/mint/ws_fusion_uwb/res/pl_cusum_e2e_integration_accuracy_20260912T041820Z`。
+正式 provider `PL_BIDIRECTIONAL_CUSUM_V1` 的 clean support 为空，injected support 与 admitted
+dynamic shadow 的 link、30 个 obs_id、边界、segment 和 affected #15 alarm 全部 exact；Stage2 在 outer42
+收敛，`c_hat=0.47134578518036691m`。primary `lcb_fixed_full` 接受 1/1 段，paired range RMSE 从
+`0.5m` 降到 `0.02865421481963315m`（改善 94.269157%）。相同 229 GT samples 上，primary ATE RMSE
+`0.16314948912901142m` 比 suppress `0.18163686608072543m` 低 `0.018487376951714013m`
+（10.178207%），p95 同时改善 `0.05617643125209176m`。四 policy factor audit、truth blind、clean byte-exact
+no-op、两次 replay 92/92 scientific comparisons、直接 GTest 100/100、完整 CTest 34/34 与 package build
+均通过。six-input 非门控诊断为 0 better/1 worse/1 tied/4 unavailable，不能扩展为一般优越性。
+完整结果见
+[`PL_CUSUM_E2E_INTEGRATION_ACCURACY_RESULT.md`](../ie_0911/PL_CUSUM_E2E_INTEGRATION_ACCURACY_RESULT.md)；
+下一步冻结方法并运行 final multidataset experiments，不再改 detector/recovery。
+开始 HEAD 与远端均为 `9c592ba9a4e4624ecd9f131d0435f57e42ce08d7`；唯一既有工作树项为受保护、
+未跟踪的 `doc/v2/ie_0911/`，不得读取、修改或提交。
+
 # 0912-PL-BIDIRECTIONAL-CUSUM-SUPPORT 当前任务
 
 `DONE / BIDIRECTIONAL_CUSUM_SUPPORT_PASS_FOR_PRODUCTION_ADMISSION`。用户授权执行

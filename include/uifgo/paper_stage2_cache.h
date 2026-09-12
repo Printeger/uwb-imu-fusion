@@ -5,7 +5,11 @@
 
 namespace uifgo {
 
-enum class Stage2CacheNamespace { AUTO_DISCOVERY, FIXED_PARTITION_DEBUG };
+enum class Stage2CacheNamespace {
+  AUTO_DISCOVERY,
+  FIXED_PARTITION_DEBUG,
+  PL_BIDIRECTIONAL_CUSUM
+};
 const char* Stage2CacheNamespaceName(Stage2CacheNamespace value);
 
 struct Stage2CachePayload {

@@ -1,0 +1,89 @@
+schema: uifgo_t09_batch_v2
+role: development
+parameter_provenance: IE0912_PL_BIDIRECTIONAL_LOCKED_PENDING_VALIDATION
+run_units:
+- run_unit_id: sfuise_walk1
+  recording_id: sfuise_walk1
+  base_trajectory_id: sfuise_walk1
+  seed: 0
+  prefix_identity: full
+  config: sfuise_walk1.yaml
+  nlos_override: &pl
+    mode: pl_bidirectional_cusum
+    cusum_forward_kappa: 0.5
+    cusum_forward_h: 7.0234689587858723
+    cusum_backward_kappa: 0.5
+    cusum_backward_h: 7.0234689587858714
+    gap_threshold_s: 1.0
+    cusum_parameter_provenance: PL_BIDIRECTIONAL_CUSUM_SUPPORT_20260912_LOCKED
+    score_recoverability: true
+    final_inference_enabled: true
+  cells: &cells
+  - mode: robust_cauchy
+    execution_type: BASELINE_TRAJECTORY
+    path: DIRECT_COMMON_PREPARATION
+    robust_scale: 2.3849
+  - mode: structured_debias
+    execution_type: CACHE_PRODUCER
+    path: PL_BIDIRECTIONAL_CUSUM
+    producer_id: shared
+  - mode: suppress_all
+    execution_type: FINAL_TRAJECTORY
+    path: PL_BIDIRECTIONAL_CUSUM
+    producer_id: shared
+    thresholds: {}
+  - mode: structured_debias
+    execution_type: FINAL_TRAJECTORY
+    path: PL_BIDIRECTIONAL_CUSUM
+    producer_id: shared
+    thresholds: {}
+  - mode: lcb_partial
+    execution_type: FINAL_TRAJECTORY
+    path: PL_BIDIRECTIONAL_CUSUM
+    producer_id: shared
+    thresholds: {}
+  - mode: lcb_fixed_full
+    execution_type: FINAL_TRAJECTORY
+    path: PL_BIDIRECTIONAL_CUSUM
+    producer_id: shared
+    thresholds: {}
+- run_unit_id: sfuise_walk2
+  recording_id: sfuise_walk2
+  base_trajectory_id: sfuise_walk2
+  seed: 0
+  prefix_identity: full
+  config: sfuise_walk2.yaml
+  nlos_override: *pl
+  cells: *cells
+- run_unit_id: sfuise_walk3
+  recording_id: sfuise_walk3
+  base_trajectory_id: sfuise_walk3
+  seed: 0
+  prefix_identity: full
+  config: sfuise_walk3.yaml
+  nlos_override: *pl
+  cells: *cells
+- run_unit_id: miluv_random
+  recording_id: miluv_random
+  base_trajectory_id: miluv_random
+  seed: 0
+  prefix_identity: full
+  config: miluv_random.yaml
+  nlos_override: *pl
+  cells: *cells
+- run_unit_id: miluv_circular
+  recording_id: miluv_circular
+  base_trajectory_id: miluv_circular
+  seed: 0
+  prefix_identity: full
+  config: miluv_circular.yaml
+  nlos_override: *pl
+  cells: *cells
+- run_unit_id: vicon_test
+  recording_id: vicon_test
+  base_trajectory_id: vicon_test
+  seed: 0
+  prefix_identity: full
+  config: vicon_test.yaml
+  nlos_override: *pl
+  cells: *cells

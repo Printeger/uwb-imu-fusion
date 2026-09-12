@@ -1,0 +1,58 @@
+schema: uifgo_t09_batch_v2
+role: development
+parameter_provenance: IE0912_PL_BIDIRECTIONAL_LOCKED_PENDING_VALIDATION
+run_units:
+- run_unit_id: walk1_clean_locked
+  recording_id: sfuise_walk1_normal_clean
+  base_trajectory_id: sfuise_walk1
+  seed: 0
+  prefix_identity: full
+  config: sfuise_walk1_pl_bidirectional_clean.yaml
+  cells:
+  - mode: robust_cauchy
+    execution_type: BASELINE_TRAJECTORY
+    path: DIRECT_COMMON_PREPARATION
+    robust_scale: 2.3849
+  - mode: structured_debias
+    execution_type: CACHE_PRODUCER
+    path: PL_BIDIRECTIONAL_CUSUM
+    producer_id: shared
+  - &clean_suppress
+    mode: suppress_all
+    execution_type: FINAL_TRAJECTORY
+    path: PL_BIDIRECTIONAL_CUSUM
+    producer_id: shared
+    thresholds: {tau_eta: 0.1, tau_s_m: 0.1, tau_gamma: 1.0}
+  - <<: *clean_suppress
+    mode: structured_debias
+  - <<: *clean_suppress
+    mode: lcb_partial
+  - <<: *clean_suppress
+    mode: lcb_fixed_full
+- run_unit_id: walk1_injected_plus_0p5_locked
+  recording_id: sfuise_walk1_normal_injected
+  base_trajectory_id: sfuise_walk1
+  seed: 0
+  prefix_identity: full
+  config: sfuise_walk1_pl_bidirectional_injected.yaml
+  cells:
+  - mode: robust_cauchy
+    execution_type: BASELINE_TRAJECTORY
+    path: DIRECT_COMMON_PREPARATION
+    robust_scale: 2.3849
+  - mode: structured_debias
+    execution_type: CACHE_PRODUCER
+    path: PL_BIDIRECTIONAL_CUSUM
+    producer_id: shared
+  - &injected_suppress
+    mode: suppress_all
+    execution_type: FINAL_TRAJECTORY
+    path: PL_BIDIRECTIONAL_CUSUM
+    producer_id: shared
+    thresholds: {tau_eta: 0.1, tau_s_m: 0.1, tau_gamma: 1.0}
+  - <<: *injected_suppress
+    mode: structured_debias
+  - <<: *injected_suppress
+    mode: lcb_partial
+  - <<: *injected_suppress
+    mode: lcb_fixed_full

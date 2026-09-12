@@ -62,12 +62,37 @@ FINAL_ONLY_NLOS_KEYS = {
     "final_inference_enabled",
 }
 
+PL_BIDIRECTIONAL_LOCKED_OVERRIDE = {
+    "mode": "pl_bidirectional_cusum",
+    "cusum_forward_kappa": 0.5,
+    "cusum_forward_h": 7.0234689587858723,
+    "cusum_backward_kappa": 0.5,
+    "cusum_backward_h": 7.0234689587858714,
+    "gap_threshold_s": 1.0,
+    "cusum_parameter_provenance":
+        "PL_BIDIRECTIONAL_CUSUM_SUPPORT_20260912_LOCKED",
+    "score_recoverability": True,
+    "final_inference_enabled": True,
+}
+
+
+def apply_unit_nlos_override(config: dict, unit: dict) -> None:
+    """Apply the one admitted six-input detector override, fail closed."""
+    override = unit.get("nlos_override")
+    if override is None:
+        return
+    if override != PL_BIDIRECTIONAL_LOCKED_OVERRIDE:
+        raise ValueError("nlos_override must equal the locked PL bidirectional configuration")
+    config.setdefault("nlos", {}).update(copy.deepcopy(override))
+
 
 def infer_path(cell: dict) -> str:
     if cell.get("path"):
         return str(cell["path"])
     if cell.get("cache_namespace") == "FIXED_PARTITION_DEBUG":
         return "FIXED_PARTITION_DEBUG"
+    if cell.get("cache_namespace") == "PL_BIDIRECTIONAL_CUSUM":
+        return "PL_BIDIRECTIONAL_CUSUM"
     if cell.get("mode") == "oracle_reference":
         return "EVALUATION_ONLY"
     if cell.get("mode") in BASELINES:
@@ -104,6 +129,12 @@ def validate_mode_execution_path(cell: dict) -> None:
                     execution == "FINAL_TRAJECTORY") or
                    (mode == "eta_only" and execution == "FINAL_TRAJECTORY" and
                     cell.get("synthetic_final") is True))
+    elif path == "PL_BIDIRECTIONAL_CUSUM":
+        allowed = ((mode == "structured_debias" and
+                    execution == "CACHE_PRODUCER") or
+                   (mode in {"lcb_partial", "lcb_fixed_full", "suppress_all",
+                             "structured_debias"} and
+                    execution == "FINAL_TRAJECTORY"))
     elif path == "EVALUATION_ONLY":
         allowed = mode == "oracle_reference" and execution == "EVALUATION_REFERENCE"
     if not allowed:
@@ -113,6 +144,7 @@ def validate_mode_execution_path(cell: dict) -> None:
     expected_namespace = {
         "AUTO_DISCOVERY": "AUTO_DISCOVERY",
         "FIXED_PARTITION_DEBUG": "FIXED_PARTITION_DEBUG",
+        "PL_BIDIRECTIONAL_CUSUM": "PL_BIDIRECTIONAL_CUSUM",
     }.get(path)
     if (cell.get("cache_namespace") and expected_namespace and
             cell["cache_namespace"] != expected_namespace):
@@ -351,6 +383,9 @@ def load_manifest(path: Path) -> dict:
             unit["anchor_ids"] = sorted(anchor_ids)
         if not isinstance(unit["cells"], list) or not unit["cells"]:
             raise ValueError("run unit cells must be nonempty")
+        if "nlos_override" in unit:
+            probe = {}
+            apply_unit_nlos_override(probe, unit)
         seen_cells: set[tuple[str, str, str]] = set()
         for raw in unit["cells"]:
             cell = {"mode": raw} if isinstance(raw, str) else raw
@@ -533,6 +568,7 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
     capability = read_json(run_dir / "capability_status.json") or {}
     input_manifest = read_json(run_dir / "input_manifest.json") or {}
     fde_status = read_json(run_dir / "fde_status.json")
+    pl_status = read_json(run_dir / "production_detector_status.json")
     provider = input_manifest.get("stage1_provider", "")
     current_fde_providers = {
         "imu_aided_postfit_fde_v2", "imu_aided_grouped_fde_v3",
@@ -540,6 +576,7 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
     if provider.startswith("imu_aided") and provider not in current_fde_providers:
         raise RuntimeError("obsolete FDE provider cannot publish a current cache")
     is_fde = provider in current_fde_providers
+    is_pl = provider == "PL_BIDIRECTIONAL_CUSUM_V1"
     if not (run_dir / "trajectory.tum").is_file():
         raise RuntimeError("Stage-2 cache producer has no trajectory")
     payload_names = [name for name in (
@@ -549,6 +586,8 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
         "groups.csv", "trajectory.tum", "imu_bias.csv", "stage2_values.csv",
         "stage2_content_identity.json", "stage2_producer_context.json",
         "fde_status.json", "fde_observations.csv", "support_partition.json",
+        "production_detector_status.json", "production_cusum_trace.csv",
+        "production_support.json", "production_support_partition.json",
         "stage2_refit_status.json", "raw_reference.json",
         "fde_group_tests.csv", "fde_group_covariance.csv", "fde_group_spectrum.csv",
         "fde_local_windows.csv", "fde_windowed_summary.json")
@@ -557,12 +596,18 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
     if is_fde:
         required |= {"fde_status.json", "fde_observations.csv",
                      "support_partition.json"}
+    if is_pl:
+        required |= {"production_detector_status.json",
+                     "production_cusum_trace.csv", "production_support.json",
+                     "production_support_partition.json",
+                     "support_partition.json"}
     if provider == "imu_aided_grouped_fde_v3":
         required |= {"fde_group_tests.csv", "fde_group_covariance.csv", "fde_group_spectrum.csv"}
     if provider == "imu_aided_windowed_fde_v4":
         required |= {"fde_local_windows.csv", "fde_windowed_summary.json"}
     if not required.issubset(payload_names):
         raise RuntimeError("Stage-2 cache producer payload is incomplete")
+    partition_doc = read_json(run_dir / "partition.json") or {}
     if is_fde:
         if (fde_status or {}).get("provider") != \
                 provider or \
@@ -573,9 +618,21 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
                 (run_dir / "partition.json").read_bytes():
             raise RuntimeError(
                 "FDE compatibility partition is not byte-equivalent")
-        partition_doc = read_json(run_dir / "partition.json") or {}
         if partition_doc.get("provider") != provider:
             raise RuntimeError("FDE support partition provider is invalid")
+    if is_pl:
+        if ((pl_status or {}).get("provider") != provider or
+                (pl_status or {}).get("valid") is not True or
+                (pl_status or {}).get("support_frozen_before_stage2") is not True or
+                (pl_status or {}).get("gt_or_oracle_read") is not False):
+            raise RuntimeError("PL cache producer status/provider is invalid")
+        if ((run_dir / "support_partition.json").read_bytes() !=
+                (run_dir / "partition.json").read_bytes() or
+                (run_dir / "production_support_partition.json").read_bytes() !=
+                (run_dir / "partition.json").read_bytes()):
+            raise RuntimeError("PL frozen support artifacts are not byte-equivalent")
+        if partition_doc.get("provider") != provider:
+            raise RuntimeError("PL support partition provider is invalid")
     groups = list(csv.DictReader((run_dir / "groups.csv").open(
         newline="", encoding="utf-8")))
     scores = list(csv.DictReader((run_dir / "scores_decision.csv").open(
@@ -601,10 +658,15 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
                 not content.get("graph_linearization_sha256") or
                 not content.get("values_sha256")):
             raise RuntimeError("SUCCESS_EMPTY reference graph/Values identity mismatch")
-        if (not is_fde or not reference.get("success") or
-                not fde_status.get("reference_converged") or
-                fde_status.get("planned_count", 0) <= 0 or
-                fde_status.get("tested_count") != fde_status.get("planned_count") or
+        provider_empty_valid = (
+            (is_fde and reference.get("success") and
+             fde_status.get("reference_converged") and
+             fde_status.get("planned_count", 0) > 0 and
+             fde_status.get("tested_count") == fde_status.get("planned_count")) or
+            (is_pl and reference.get("success") and
+             pl_status.get("final_segment_count") == 0 and
+             pl_status.get("candidate_observation_count") == 0))
+        if (not provider_empty_valid or
                 partition_doc.get("segments") != [] or
                 stage2_evidence.get("optimizer_calls") != 0 or
                 stage2_evidence.get("alternating_stop_conditions") != "NOT_APPLICABLE" or
@@ -626,7 +688,9 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
         "schema": "uifgo_t09_stage2_cache_v2",
         "cache_namespace": namespace,
         "debug_label": ("RQ3_FIXED_PARTITION_DIAGNOSTIC_DEBUG_ONLY"
-                        if fixed_debug else "RQ3_AUTO_DISCOVERY_END_TO_END"),
+                        if fixed_debug else
+                        "PL_BIDIRECTIONAL_CUSUM_PRODUCTION_E2E"
+                        if is_pl else "RQ3_AUTO_DISCOVERY_END_TO_END"),
         "common_preparation_id": common_id,
         "source_identity": input_manifest.get(
             "source_hash_sha256", "UNAVAILABLE"),
@@ -653,7 +717,7 @@ def publish_cache(run_dir: Path, cache_root: Path, namespace: str,
         "score_status": score_status,
         "producer_status": status.get("status", "UNKNOWN"),
         "producer_capability": capability.get("recoverability_score", "UNKNOWN"),
-        "stage1_provider": (provider if is_fde
+        "stage1_provider": (provider if (is_fde or is_pl)
                             else input_manifest.get("stage1_provider",
                                                     "automatic_discovery")),
         **producer,
@@ -819,6 +883,7 @@ def main() -> int:
             if not source_config.is_file():
                 raise ValueError(f"config does not exist: {source_config}")
             config_doc = yaml.safe_load(source_config.read_text(encoding="utf-8"))
+            apply_unit_nlos_override(config_doc, unit)
             resolve_config_paths(config_doc, source_config.parent)
             estimator_config = strip_truth(config_doc, False)
             common_id = identity("t09common", {
@@ -928,6 +993,9 @@ def main() -> int:
 
             source = Path(cell["config"])
             raw_config = yaml.safe_load(source.read_text(encoding="utf-8"))
+            apply_unit_nlos_override(raw_config, unit)
+            pl_mode = raw_config.get("nlos", {}).get("mode") == \
+                "pl_bidirectional_cusum"
             if (raw_config.get("nlos", {}).get("mode") == "imu_aided_fde" and
                     mode == "structured_bias_only"):
                 raise ValueError(
@@ -941,11 +1009,13 @@ def main() -> int:
                 effective["nlos"]["final_inference_enabled"] = False
             elif cell["execution_type"] in {"CACHE_PRODUCER",
                                              "AUTOMATIC_STAGE2_TRAJECTORY"}:
-                effective.setdefault("nlos", {})["final_inference_enabled"] = False
+                if not pl_mode:
+                    effective.setdefault("nlos", {})["final_inference_enabled"] = False
             elif cell["execution_type"] == "FINAL_TRAJECTORY":
                 # The dedicated cache-replay entry point controls Stage 4;
                 # leaving this false prevents the legacy inline Stage1/2 path.
-                effective.setdefault("nlos", {})["final_inference_enabled"] = False
+                if not pl_mode:
+                    effective.setdefault("nlos", {})["final_inference_enabled"] = False
                 thresholds = spec.get("thresholds", {})
                 # Config validation retains the T08 three-threshold shape; a
                 # policy consumes only the fields declared by its truth table.

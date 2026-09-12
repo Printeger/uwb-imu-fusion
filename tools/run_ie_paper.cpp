@@ -45,6 +45,7 @@
 #include "uifgo/paper_pose_prior_factor.h"
 #include "uifgo/paper_run_io.h"
 #include "uifgo/paper_stage2_cache.h"
+#include "uifgo/pl_bidirectional_provider.h"
 #include "uifgo/imu_preint.h"
 #include <gtsam/navigation/CombinedImuFactor.h>
 #include "uifgo/t07_scenario_cache.h"
@@ -64,6 +65,7 @@ constexpr char kRunnerElapsedSemantics[] =
 struct Args {
   bool prepare_only = false;
   bool stop_after_fde = false;
+  bool stop_after_support = false;
   std::string anchor_ids;
   std::string config_path;
   std::string output_root;
@@ -157,6 +159,7 @@ Args ParseArgs(int argc, char** argv) {
     };
     if (arg == "--prepare-only") args.prepare_only = true;
     else if (arg == "--stop-after-fde") args.stop_after_fde = true;
+    else if (arg == "--stop-after-support") args.stop_after_support = true;
     else if (arg == "--anchor-ids") args.anchor_ids = take(arg);
     else if (arg == "--config")
       args.config_path = take(arg);
@@ -472,6 +475,10 @@ std::string Stage1ProducerConfigHash(const uifgo::Config& cfg,
         uifgo::ConditionalLmPolicy::GTSAM_CHECK_ONLY_V1;
     return uifgo::ComputeFdeIdentity(options, *fde_context);
   }
+  if (cfg.nlos_mode == "pl_bidirectional_cusum")
+    return "sha256:" + uifgo::Sha256Hex(
+        std::string("uifgo-pl-bidirectional-stage1-config-v1\n") +
+        uifgo::PlBidirectionalParameterIdentity(cfg) + "\n");
   return "sha256:" + uifgo::Sha256Hex(
       std::string("uifgo-t09-stage1-config-v2\n") +
       uifgo::PaperPosePriorJacobianIdentity() +
@@ -626,7 +633,8 @@ void ValidateSupportedConfig(const uifgo::Config& cfg) {
   if (cfg.nlos_mode == "oracle_debug" ||
       cfg.nlos_mode == "fixed_partition_debug" ||
       cfg.nlos_mode == "automatic_discovery" ||
-      cfg.nlos_mode == "imu_aided_fde") {
+      cfg.nlos_mode == "imu_aided_fde" ||
+      cfg.nlos_mode == "pl_bidirectional_cusum") {
     if (cfg.max_refit_iterations <= 0 ||
         cfg.oracle_short_min_count_debug < 0 ||
         !std::isfinite(cfg.oracle_short_min_duration_debug) ||
@@ -1035,6 +1043,9 @@ void WriteFactorMetadata(const fs::path& run_dir,
 void WriteSegments(const fs::path& run_dir,
                    const uifgo::SegmentRefitResult& result,
                    const uifgo::Config& cfg) {
+  const bool production_pl = cfg.nlos_mode == "pl_bidirectional_cusum";
+  const bool discovery_thresholds =
+      cfg.nlos_mode == "automatic_discovery" || production_pl;
   auto out = Open(run_dir / "segments.csv");
   out << "segment_id,segment_ordinal,c_key,tag_id,anchor_id,obs_count,"
          "start_time,end_time,duration_s,amplitude_m,"
@@ -1051,17 +1062,19 @@ void WriteSegments(const fs::path& run_dir,
         << segment.amplitude_m << ',' << segment.gradient_objective_per_m << ','
         << segment.kkt_violation << ',' << segment.boundary << ','
         << segment.short_support_debug << ','
-        << (cfg.nlos_mode == "automatic_discovery"
+        << (discovery_thresholds
                 ? cfg.discovery_short_min_count
                 : cfg.oracle_short_min_count_debug)
         << ','
-        << (cfg.nlos_mode == "automatic_discovery"
+        << (discovery_thresholds
                 ? cfg.discovery_short_min_duration_s
                 : cfg.oracle_short_min_duration_debug)
         << ','
-        << (cfg.nlos_mode == "automatic_discovery"
-                ? uifgo::kT06AutomaticDiscoveryLabel
-                : uifgo::kT04OracleDebugLabel)
+        << (production_pl
+                ? uifgo::kPlBidirectionalProductionVersion
+                : (cfg.nlos_mode == "automatic_discovery"
+                       ? uifgo::kT06AutomaticDiscoveryLabel
+                       : uifgo::kT04OracleDebugLabel))
         << '\n';
   }
 }
@@ -1190,15 +1203,14 @@ void WriteSupportPartition(const fs::path& path,
   out << std::setprecision(17)
       << "{\n  \"schema\": \"uifgo_t09_support_partition_v1\",\n"
       << "  \"provider\": \"" << JsonEscape(partition.provider) << "\",\n";
-  if (partition.provider == "imu_aided_windowed_fde_v4")
-    out << "  \"partition_rule_version\": \""
-        << JsonEscape(partition.partition_rule_version) << "\",\n"
-        << "  \"hash_algorithm\": \""
-        << JsonEscape(partition.hash_algorithm) << "\",\n"
-        << "  \"discovery_context_hash\": \""
-        << JsonEscape(partition.discovery_context_hash) << "\",\n"
-        << "  \"discovery_snapshot_hash\": \""
-        << JsonEscape(partition.discovery_snapshot_hash) << "\",\n";
+  out << "  \"partition_rule_version\": \""
+      << JsonEscape(partition.partition_rule_version) << "\",\n"
+      << "  \"hash_algorithm\": \""
+      << JsonEscape(partition.hash_algorithm) << "\",\n"
+      << "  \"discovery_context_hash\": \""
+      << JsonEscape(partition.discovery_context_hash) << "\",\n"
+      << "  \"discovery_snapshot_hash\": \""
+      << JsonEscape(partition.discovery_snapshot_hash) << "\",\n";
   out << "  \"partition_hash\": \"" << JsonEscape(partition.partition_hash)
       << "\",\n  \"input_plan_hash\": \""
       << JsonEscape(partition.input_plan_hash) << "\",\n  \"source_hash\": \""
@@ -1228,6 +1240,125 @@ void WriteSupportPartition(const fs::path& path,
     out << "]}";
   }
   out << "\n  ]\n}\n";
+}
+
+void WritePlBidirectionalArtifacts(
+    const fs::path& run_dir,
+    const uifgo::PlBidirectionalProviderResult& result) {
+  {
+    auto out = Open(run_dir / "production_detector_status.json");
+    out << std::setprecision(17)
+        << "{\n  \"schema\": \"uifgo_pl_bidirectional_production_status_v1\",\n"
+        << "  \"mode\": \"pl_bidirectional_cusum\",\n"
+        << "  \"provider\": \""
+        << uifgo::kPlBidirectionalProductionProvider << "\",\n"
+        << "  \"status\": \"" << JsonEscape(result.status) << "\",\n"
+        << "  \"valid\": " << (result.valid ? "true" : "false") << ",\n"
+        << "  \"provider_identity\": \""
+        << JsonEscape(result.provider_identity) << "\",\n"
+        << "  \"detector_parameter_identity\": \""
+        << JsonEscape(result.detector_parameter_identity) << "\",\n"
+        << "  \"signal_identity\": \""
+        << JsonEscape(result.signal_identity) << "\",\n"
+        << "  \"forward_detector_identity\": \""
+        << JsonEscape(result.forward.detector_identity) << "\",\n"
+        << "  \"backward_closure_identity\": \""
+        << JsonEscape(result.backward.closure_identity) << "\",\n"
+        << "  \"admitted_support_identity\": \""
+        << JsonEscape(result.support_identity) << "\",\n"
+        << "  \"support_hash\": \""
+        << JsonEscape(result.final_support.support.partition_hash) << "\",\n"
+        << "  \"signal_row_count\": " << result.signal_rows.size() << ",\n"
+        << "  \"committed_uwb_count\": " << result.committed_uwb_count << ",\n"
+        << "  \"forward_alarm_count\": " << result.forward.alarm_count << ",\n"
+        << "  \"backward_alarm_count\": " << result.backward.alarm_count << ",\n"
+        << "  \"final_segment_count\": "
+        << result.final_support.support.segments.size() << ",\n"
+        << "  \"candidate_observation_count\": "
+        << std::count_if(result.final_support.rows.begin(),
+                         result.final_support.rows.end(),
+                         [](const auto& row) { return row.final_candidate; })
+        << ",\n  \"max_imu_gap_s\": "
+        << JsonNumberOrNull(result.max_imu_gap_s) << ",\n"
+        << "  \"imu_gap_event_count\": " << result.imu_gap_event_count
+        << ",\n  \"support_frozen_before_stage2\": true,\n"
+        << "  \"gt_read\": false,\n"
+        << "  \"oracle_support_read\": false,\n"
+        << "  \"gt_or_oracle_read\": false\n}\n";
+  }
+  {
+    auto out = Open(run_dir / "production_cusum_trace.csv");
+    out << "timestamp,group_id,keyframe_id,source_order,tag_id,anchor_id,obs_id,conditional_z,diagnostic_valid,forward_increment,G_before,G_after,forward_reset,forward_threshold_crossing,forward_first_alarm,forward_candidate,backward_candidate,final_candidate,segment_id,segment_ordinal\n"
+        << std::setprecision(17);
+    std::map<std::tuple<int, int, std::uint64_t>,
+             const uifgo::PlBackwardCusumTraceRow*> backward;
+    for (const auto& row : result.backward.trace)
+      backward[{row.input.tag_id, row.input.anchor_id, row.input.obs_id}] = &row;
+    std::map<std::tuple<int, int, std::uint64_t>,
+             const uifgo::PlBidirectionalMembershipRow*> final_rows;
+    for (const auto& row : result.final_support.rows)
+      final_rows[{row.input.tag_id, row.input.anchor_id, row.input.obs_id}] = &row;
+    for (const auto& row : result.forward.trace) {
+      const auto key = std::make_tuple(row.input.tag_id, row.input.anchor_id,
+                                       row.input.obs_id);
+      const auto* back = backward.at(key);
+      const auto* final = final_rows.at(key);
+      out << row.input.timestamp << ',' << CsvEscape(row.input.group_id) << ','
+          << row.input.keyframe_id << ',' << row.input.source_order << ','
+          << row.input.tag_id << ',' << row.input.anchor_id << ','
+          << row.input.obs_id << ','
+          << CsvNumberOrEmpty(row.input.conditional_z) << ','
+          << row.input.diagnostic_valid << ','
+          << CsvNumberOrEmpty(row.increment) << ',' << row.g_before << ','
+          << row.g_after << ',' << row.reset << ',' << row.threshold_crossing
+          << ',' << row.first_alarm_for_excursion << ',' << row.candidate
+          << ',' << back->backward_candidate << ',' << final->final_candidate
+          << ',' << CsvEscape(final->segment_id) << ',';
+      if (final->segment_ordinal != std::numeric_limits<size_t>::max())
+        out << final->segment_ordinal;
+      out << '\n';
+    }
+  }
+  WriteSupportPartition(run_dir / "production_support.json",
+                        result.final_support.support);
+  WriteSupportPartition(run_dir / "production_support_partition.json",
+                        result.final_support.support);
+  WriteSupportPartition(run_dir / "support_partition.json",
+                        result.final_support.support);
+}
+
+uifgo::SegmentRefitResult ReuseEmptyPlReference(
+    const gtsam::NonlinearFactorGraph& graph,
+    const gtsam::Values& initial,
+    const std::vector<uifgo::FactorMeta>& metadata,
+    const uifgo::PaperInputPlan& plan, const uifgo::Config& cfg,
+    const uifgo::SupportPartition& support,
+    const uifgo::RawGaussianReference& reference,
+    const uifgo::RefitOptions& options) {
+  uifgo::SegmentRefitResult result;
+  try {
+    if (!support.segments.empty() ||
+        support.provider != uifgo::kPlBidirectionalProductionProvider ||
+        !reference.solve.converged)
+      throw std::invalid_argument("PL_SUCCESS_EMPTY_PRECONDITIONS_FAILED");
+    uifgo::RequireRawGaussianReference(reference, graph, initial);
+    result = uifgo::SegmentRefitter(options).RunFrozenCandidatePolicy(
+        graph, reference.solve.values, metadata, plan, cfg, support, {}, false);
+    if (!result.successful() || !result.iterations.empty())
+      throw std::invalid_argument(
+          "PL_SUCCESS_EMPTY_GRAPH_RECONSTRUCTION_MISMATCH:" + result.reason);
+    result.graph = reference.graph;
+    result.values = reference.solve.values;
+    result.status = uifgo::SegmentRefitStatus::SUCCESS_EMPTY;
+    result.reason =
+        "SUCCESS_EMPTY_REFERENCE_REUSED_ALTERNATING_CONDITIONS_NOT_APPLICABLE";
+  } catch (const std::exception& error) {
+    result.status = uifgo::SegmentRefitStatus::INVALID_INPUT;
+    result.reason = error.what();
+    result.graph = {};
+    result.values.clear();
+  }
+  return result;
 }
 
 void WriteFdeArtifacts(const fs::path& run_dir,
@@ -2606,6 +2737,7 @@ int main(int argc, char** argv) {
   bool fixed_partition_debug_run = false;
   bool automatic_discovery_run = false;
   bool imu_aided_fde_run = false;
+  bool pl_bidirectional_cusum_run = false;
   std::string exported_refit_status = "NOT_RUN";
   bool segment_refit_estimate_exported = false;
   std::string failure_stage;
@@ -2637,14 +2769,23 @@ int main(int argc, char** argv) {
     fixed_partition_debug_run = cfg.nlos_mode == "fixed_partition_debug";
     automatic_discovery_run = cfg.nlos_mode == "automatic_discovery";
     imu_aided_fde_run = cfg.nlos_mode == "imu_aided_fde";
+    pl_bidirectional_cusum_run =
+        cfg.nlos_mode == "pl_bidirectional_cusum";
     const bool estimated_support_run =
-        automatic_discovery_run || imu_aided_fde_run;
+        automatic_discovery_run || imu_aided_fde_run ||
+        pl_bidirectional_cusum_run;
     if (imu_aided_fde_run && args.method == "structured_bias_only")
       throw std::invalid_argument(
           "structured_bias_only is incompatible with imu_aided_fde");
     if (args.stop_after_fde && (!imu_aided_fde_run || args.prepare_only ||
         args.execution_type == "FINAL_TRAJECTORY" || !args.stage2_cache_manifest.empty()))
       throw std::invalid_argument("stop-after-fde requires a fresh FDE producer");
+    if (args.stop_after_support &&
+        (!pl_bidirectional_cusum_run || args.prepare_only ||
+         args.execution_type == "FINAL_TRAJECTORY" ||
+         !args.stage2_cache_manifest.empty()))
+      throw std::invalid_argument(
+          "stop-after-support requires a fresh PL production provider run");
     ValidateSupportedConfig(cfg);
     const fs::path output_root = fs::absolute(args.output_root);
     fs::create_directories(output_root);
@@ -2697,8 +2838,7 @@ int main(int argc, char** argv) {
     }
     WriteObservations(run_dir, plan, mask);
 
-    uifgo::Initializer initializer(cfg);
-    const auto init = initializer.Run(imu, keyframes);
+    const auto init = uifgo::Initializer(cfg).Run(imu, keyframes);
     if (!init.ok) throw std::runtime_error("initializer failed");
 
     uifgo::GraphBuilder builder(cfg, cfg.paper_imu_covariance_model);
@@ -2838,7 +2978,9 @@ int main(int argc, char** argv) {
            cfg.nlos_mode != "automatic_discovery" &&
            cfg.nlos_mode != "imu_aided_fde") ||
           (cache.cache_namespace == uifgo::Stage2CacheNamespace::FIXED_PARTITION_DEBUG &&
-           cfg.nlos_mode != "fixed_partition_debug"))
+           cfg.nlos_mode != "fixed_partition_debug") ||
+          (cache.cache_namespace == uifgo::Stage2CacheNamespace::PL_BIDIRECTIONAL_CUSUM &&
+           cfg.nlos_mode != "pl_bidirectional_cusum"))
         throw std::runtime_error("CACHE_NAMESPACE_CONFIG_PATH_MISMATCH");
       const std::string expected_stage1_config =
           Stage1ProducerConfigHash(cfg, imu_aided_fde_run ? &fde_context
@@ -2854,6 +2996,8 @@ int main(int argc, char** argv) {
       if ((imu_aided_fde_run &&
            support.provider != uifgo::FdeProvider(cfg.fde_grouped_test,
                                                   cfg.fde_windowed_test)) ||
+          (pl_bidirectional_cusum_run &&
+           support.provider != uifgo::kPlBidirectionalProductionProvider) ||
           (automatic_discovery_run &&
            support.provider != "automatic_discovery"))
         throw std::runtime_error("CACHE_STAGE1_PROVIDER_INCOMPATIBLE");
@@ -2893,20 +3037,35 @@ int main(int argc, char** argv) {
       if (!stage2.successful())
         throw std::runtime_error("CACHE_STAGE2_REBUILD_FAILED: " + stage2.reason);
       if (cache.stage2_status == "SUCCESS_EMPTY") {
-        const auto evidence = YAML::LoadFile((cache_root / "fde_status.json").string());
         const auto empty = YAML::LoadFile((cache_root / "stage2_refit_status.json").string());
         const auto reference = YAML::LoadFile((cache_root / "raw_reference.json").string());
+        bool provider_evidence_valid = false;
+        if (pl_bidirectional_cusum_run) {
+          const auto evidence = YAML::LoadFile(
+              (cache_root / "production_detector_status.json").string());
+          provider_evidence_valid =
+              evidence["valid"].as<bool>() &&
+              evidence["provider"].as<std::string>() ==
+                  uifgo::kPlBidirectionalProductionProvider &&
+              evidence["final_segment_count"].as<size_t>() == 0 &&
+              evidence["candidate_observation_count"].as<size_t>() == 0 &&
+              evidence["support_frozen_before_stage2"].as<bool>();
+        } else if (imu_aided_fde_run) {
+          const auto evidence = YAML::LoadFile(
+              (cache_root / "fde_status.json").string());
+          provider_evidence_valid =
+              evidence["status"].as<std::string>() == "SUCCESS" &&
+              evidence["reference_converged"].as<bool>() &&
+              evidence["provider"].as<std::string>() ==
+                  uifgo::FdeProvider(cfg.fde_grouped_test,
+                                     cfg.fde_windowed_test) &&
+              evidence["planned_count"].as<size_t>() == planned &&
+              evidence["tested_count"].as<size_t>() == planned;
+        }
         if (!reference["success"].as<bool>() ||
             reference["graph_identity"].as<std::string>() != cache.stage2_graph_linearization_sha256 ||
             reference["values_identity"].as<std::string>() != cache.stage2_values_sha256 ||
-            !imu_aided_fde_run || !support.segments.empty() ||
-            evidence["status"].as<std::string>() != "SUCCESS" ||
-            !evidence["reference_converged"].as<bool>() ||
-            evidence["provider"].as<std::string>() !=
-                uifgo::FdeProvider(cfg.fde_grouped_test,
-                                   cfg.fde_windowed_test) ||
-            evidence["planned_count"].as<size_t>() != planned ||
-            evidence["tested_count"].as<size_t>() != planned ||
+            !provider_evidence_valid || !support.segments.empty() ||
             empty["solver_status"].as<std::string>() != "SUCCESS_EMPTY" ||
             empty["optimizer_calls"].as<size_t>() != 0)
           throw std::runtime_error("CACHE_SUCCESS_EMPTY_EVIDENCE_MISMATCH");
@@ -3101,7 +3260,9 @@ int main(int argc, char** argv) {
 
     uifgo::RawGaussianReference shared_reference;
     uifgo::FdeResult fde_result;
-    if ((cfg.nlos_mode == "disabled" && !args.method.empty()) || imu_aided_fde_run) {
+    uifgo::PlBidirectionalProviderResult pl_provider_result;
+    if ((cfg.nlos_mode == "disabled" && !args.method.empty()) ||
+        imu_aided_fde_run || pl_bidirectional_cusum_run) {
       failure_stage = "PAPER_RAW_REFERENCE_LM_V2";
       uifgo::CheckedLmOptions raw_options;
       raw_options.max_iterations = cfg.lm_max_iter;
@@ -3226,7 +3387,8 @@ int main(int argc, char** argv) {
     }
 
     if (oracle_debug_run || fixed_partition_debug_run ||
-        automatic_discovery_run || imu_aided_fde_run) {
+        automatic_discovery_run || imu_aided_fde_run ||
+        pl_bidirectional_cusum_run) {
       uifgo::SupportPartition support;
       fs::path support_path;
       uifgo::DiscoveryResult discovery;
@@ -3910,6 +4072,96 @@ int main(int argc, char** argv) {
         support = discovery.partition;
         refit_initial = discovery.navigation_values;
         failure_stage = "AUTOMATIC_STAGE2_REFIT";
+      } else if (pl_bidirectional_cusum_run) {
+        failure_stage = "PL_BIDIRECTIONAL_CUSUM_STAGE1";
+        constexpr size_t kPlBootstrapLastKeyframe = 4;
+        if (keyframes.size() <= kPlBootstrapLastKeyframe)
+          throw std::runtime_error("PL_CONDITIONAL_INSUFFICIENT_KEYFRAMES");
+        const double bootstrap_cutoff =
+            keyframes[kPlBootstrapLastKeyframe].t;
+        std::vector<uifgo::UwbFrame> bootstrap_keyframes(
+            keyframes.begin(),
+            keyframes.begin() + kPlBootstrapLastKeyframe + 1);
+        std::vector<uifgo::ImuSample> bootstrap_imu;
+        for (const auto& sample : imu) {
+          if (sample.t > bootstrap_cutoff + 1e-12) break;
+          bootstrap_imu.push_back(sample);
+        }
+        if (bootstrap_imu.empty())
+          throw std::runtime_error("PL_CONDITIONAL_BOOTSTRAP_IMU_EMPTY");
+        const auto pl_init =
+            uifgo::Initializer(cfg).Run(bootstrap_imu, bootstrap_keyframes);
+        if (!pl_init.ok)
+          throw std::runtime_error("PL_CONDITIONAL_INITIALIZER_FAILED");
+        uifgo::GraphBuilder pl_builder(cfg, cfg.paper_imu_covariance_model);
+        gtsam::NonlinearFactorGraph pl_graph;
+        gtsam::Values pl_initial;
+        std::vector<size_t> pl_uwb_indices;
+        pl_builder.Build(keyframes, imu, pl_init, &pl_graph, &pl_initial,
+                         &pl_uwb_indices);
+        if (uifgo::ReplacePosePriorsForPaperPath(&pl_graph) != 1)
+          throw std::runtime_error(
+              "PL_CONDITIONAL_POSE_PRIOR_REPLACEMENT_FAILED");
+        uifgo::InferenceIdentityContext pl_content_context =
+            common_identity_context;
+        pl_content_context.config_sha256 =
+            "pl-provider-bootstrap:" + plan.plan_sha256;
+        const auto pl_content_identity =
+            uifgo::ComputeInferenceContentIdentity(
+                pl_graph, pl_initial, pl_content_context);
+        uifgo::PlBidirectionalProviderContext pl_context;
+        pl_context.source_hash = source_sha256;
+        pl_context.config_hash = common_identity_context.config_sha256;
+        pl_context.calibration_hash =
+            CalibrationContextHash(cfg, init.gravity_world);
+        pl_context.solver_config_hash =
+            common_identity_context.solver_config_sha256;
+        pl_context.common_preparation_id = common_preparation_id;
+        pl_context.physical_graph_hash =
+            pl_content_identity.graph_linearization_sha256;
+        pl_context.initial_values_hash = pl_content_identity.values_sha256;
+        const auto stage1_started = std::chrono::steady_clock::now();
+        pl_provider_result =
+            uifgo::PlBidirectionalCusumSupportProvider().Run(
+                pl_graph, pl_initial, pl_builder.factor_meta(), plan, imu, cfg,
+                pl_context);
+        stage1_seconds = std::chrono::duration<double>(
+            std::chrono::steady_clock::now() - stage1_started).count();
+        WritePlBidirectionalArtifacts(run_dir, pl_provider_result);
+        if (!pl_provider_result.valid) {
+          auto out = Open(run_dir / "run_status.json");
+          out << "{\n  \"status\": \"FAILED\",\n  \"exit_code\": 1,\n"
+              << "  \"failure_stage\": \"PL_BIDIRECTIONAL_CUSUM_STAGE1\",\n"
+              << "  \"reason\": \""
+              << JsonEscape(pl_provider_result.status) << "\",\n"
+              << "  \"gt_read\": false,\n"
+              << "  \"oracle_support_read\": false\n}\n";
+          return 1;
+        }
+        support = pl_provider_result.final_support.support;
+        if (args.stop_after_support) {
+          auto out = Open(run_dir / "run_status.json");
+          out << "{\n  \"status\": \"PL_PRODUCTION_SUPPORT_FROZEN\",\n"
+              << "  \"exit_code\": 0,\n"
+              << "  \"stage2_refit_run\": false,\n"
+              << "  \"final_inference_run\": false,\n"
+              << "  \"support_hash\": \""
+              << JsonEscape(support.partition_hash) << "\",\n"
+              << "  \"candidate_count\": "
+              << std::count_if(
+                     pl_provider_result.final_support.rows.begin(),
+                     pl_provider_result.final_support.rows.end(),
+                     [](const auto& row) { return row.final_candidate; })
+              << ",\n  \"segment_count\": " << support.segments.size()
+              << ",\n  \"gt_read\": false,\n"
+              << "  \"oracle_support_read\": false\n}\n";
+          return 0;
+        }
+        if (!shared_reference.solve.converged)
+          throw std::runtime_error("PL_RAW_REFERENCE_FAILED:" +
+                                   shared_reference.solve.reason);
+        refit_initial = shared_reference.solve.values;
+        failure_stage = "PL_BIDIRECTIONAL_STAGE2_REFIT";
       } else {
         failure_stage = "IMU_AIDED_FDE";
         uifgo::FdeOptions fde_options;
@@ -4004,13 +4256,18 @@ int main(int argc, char** argv) {
           (imu_aided_fde_run && support.segments.empty())
               ? uifgo::ReuseEmptyFdeReference(graph, initial, builder.factor_meta(),
                     plan, cfg, fde_result, options)
+              : (pl_bidirectional_cusum_run && support.segments.empty())
+                    ? ReuseEmptyPlReference(
+                          graph, initial, builder.factor_meta(), plan, cfg,
+                          support, shared_reference, options)
               : uifgo::SegmentRefitter(options).Run(
                     graph, refit_initial, builder.factor_meta(), plan, cfg, support);
       stage2_seconds = std::chrono::duration<double>(
           std::chrono::steady_clock::now() - stage2_started).count();
       exported_refit_status = uifgo::SegmentRefitStatusName(refit.status);
       WriteRefitIterations(run_dir, refit);
-      if (cfg.final_inference_enabled || imu_aided_fde_run) {
+      if (cfg.final_inference_enabled || imu_aided_fde_run ||
+          pl_bidirectional_cusum_run) {
         WriteRefitIterations(run_dir, refit,
                              "stage2_refit_iterations.csv");
         auto stage2_status = Open(run_dir / "stage2_refit_status.json");
@@ -4336,7 +4593,8 @@ int main(int argc, char** argv) {
         return 1;
       }
 
-      if (!cfg.final_inference_enabled) {
+      if (!cfg.final_inference_enabled ||
+          args.execution_type == "CACHE_PRODUCER") {
         WriteTrajectory(run_dir, keyframes, refit.values);
         WriteBiases(run_dir, keyframes, refit.values);
         WriteSegmentResiduals(run_dir, cfg, plan, support, refit);
@@ -4416,7 +4674,8 @@ int main(int argc, char** argv) {
           cfg.score_recoverability && no_candidates
               ? "NOT_APPLICABLE_NO_CANDIDATES"
               : "DISABLED_T04";
-      if (cfg.final_inference_enabled) {
+      if (cfg.final_inference_enabled &&
+          args.execution_type != "CACHE_PRODUCER") {
         failure_stage = "T08_FINAL_INFERENCE";
         uifgo::FinalGatePolicy final_policy =
             uifgo::FinalGatePolicy::FULL_GATE;

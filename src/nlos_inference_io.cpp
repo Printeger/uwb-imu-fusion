@@ -547,9 +547,11 @@ InferenceArtifactWriteResult WriteInferenceArtifacts(
     if (!result.requested_fixed_method.empty()) {
       auto fixed = OpenNew(root / "fixed_compensations.csv", &written);
       fixed << std::setprecision(17)
-            << "segment_ordinal,segment_id,c_hat_stage2_m,sigma_c_local_m,sigma_available,delta_c_fixed_m,decision_use,final_use,reason\n";
+            << "segment_ordinal,segment_id,tag_id,anchor_id,candidate_observation_count,c_hat_stage2_m,sigma_c_local_m,sigma_available,delta_c_fixed_m,decision_use,final_use,reason\n";
       for (const auto& c : result.fixed_compensations)
-        fixed << c.segment_ordinal << ',' << c.segment_id << ',' << c.c_hat_stage2_m
+        fixed << c.segment_ordinal << ',' << c.segment_id << ',' << c.tag_id
+              << ',' << c.anchor_id << ',' << c.candidate_observation_count
+              << ',' << c.c_hat_stage2_m
               << ',' << c.sigma_c_local_m
               << ',' << c.sigma_available << ',' << c.delta_c_fixed_m << ',' << c.use
               << ',' << (c.use && !result.fallback.attempted) << ',' << c.reason << '\n';

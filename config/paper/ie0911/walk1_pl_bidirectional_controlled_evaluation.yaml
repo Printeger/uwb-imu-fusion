@@ -1,0 +1,14 @@
+schema: uifgo_t09_evaluation_v1
+run_units:
+  walk1_clean_locked: &walk1
+    ground_truth: /home/mint/ws_fusion_uwb/res/ie0911_step2_truth_20260911_01/sfuise_walk1/ground_truth.tum
+    ground_truth_sha256: sha256:2bd90465cc6f9445e94c75087a293c36cfc25a4ac1165654a9765431c8816c33
+    units: m_s_rad
+    time_base: sensor_header_stamp
+    T_G_E: null
+    T_Q_I: null
+    frame_point_provenance: null
+    bias_truth_scope: NONE
+    time_association: {policy: nearest_within_tolerance, tolerance_s: 0.02}
+  walk1_injected_plus_0p5_locked:
+    <<: *walk1

@@ -55,9 +55,15 @@ std::string Required(const YAML::Node& node, const char* key) {
 }  // namespace
 
 const char* Stage2CacheNamespaceName(Stage2CacheNamespace value) {
-  return value == Stage2CacheNamespace::AUTO_DISCOVERY
-             ? "AUTO_DISCOVERY"
-             : "FIXED_PARTITION_DEBUG";
+  switch (value) {
+    case Stage2CacheNamespace::AUTO_DISCOVERY:
+      return "AUTO_DISCOVERY";
+    case Stage2CacheNamespace::FIXED_PARTITION_DEBUG:
+      return "FIXED_PARTITION_DEBUG";
+    case Stage2CacheNamespace::PL_BIDIRECTIONAL_CUSUM:
+      return "PL_BIDIRECTIONAL_CUSUM";
+  }
+  return "UNKNOWN";
 }
 
 void RequireStage2CommonPreparation(const Stage2CacheManifest& manifest,
@@ -150,8 +156,13 @@ bool ValidateStage2CacheManifest(const Stage2CacheManifest& manifest,
         payload.sha256.rfind("sha256:", 0) != 0)
       return fail("CACHE_PAYLOAD_IDENTITY_INVALID");
   if (manifest.stage2_status == "SUCCESS_EMPTY") {
-    for (const auto* required : {"fde_status.json", "support_partition.json",
-                                 "stage2_refit_status.json", "raw_reference.json"}) {
+    const char* provider_evidence =
+        manifest.cache_namespace == Stage2CacheNamespace::PL_BIDIRECTIONAL_CUSUM
+            ? "production_detector_status.json"
+            : "fde_status.json";
+    for (const auto* required : {provider_evidence, "support_partition.json",
+                                 "stage2_refit_status.json",
+                                 "raw_reference.json"}) {
       bool found = false;
       for (const auto& payload : manifest.payloads) found |= payload.name == required;
       if (!found) return fail("CACHE_SUCCESS_EMPTY_EVIDENCE_MISSING");
@@ -258,6 +269,8 @@ Stage2CacheManifest ReadStage2CacheManifest(
     manifest.cache_namespace = Stage2CacheNamespace::AUTO_DISCOVERY;
   else if (cache_namespace == "FIXED_PARTITION_DEBUG")
     manifest.cache_namespace = Stage2CacheNamespace::FIXED_PARTITION_DEBUG;
+  else if (cache_namespace == "PL_BIDIRECTIONAL_CUSUM")
+    manifest.cache_namespace = Stage2CacheNamespace::PL_BIDIRECTIONAL_CUSUM;
   else
     throw std::runtime_error("unknown Stage-2 cache namespace");
   manifest.debug_label = Required(node, "debug_label");

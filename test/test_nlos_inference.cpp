@@ -1039,7 +1039,18 @@ TEST(NlosInference, LcbZeroAndMissingMappingSuppress) {
     f.stage2.values.update<double>(segment.amplitude_key,segment.amplitude_m);
   }
   auto rows=uifgo::FreezeFixedCompensations(f.stage2,f.scores,false);
-  for(const auto& row:rows) { EXPECT_FALSE(row.use); EXPECT_EQ(row.delta_c_fixed_m,0); }
+  ASSERT_EQ(rows.size(), f.stage2.segments.size());
+  for(size_t i=0;i<rows.size();++i) {
+    const auto& row=rows[i];
+    EXPECT_EQ(row.tag_id, f.stage2.segments[i].tag_id);
+    EXPECT_EQ(row.anchor_id, f.stage2.segments[i].anchor_id);
+    EXPECT_EQ(row.candidate_observation_count,
+              f.stage2.segments[i].observation_count);
+    EXPECT_FALSE(row.use);
+    EXPECT_EQ(row.delta_c_fixed_m,0);
+    EXPECT_GE(row.delta_c_fixed_m, 0.0);
+    EXPECT_LE(row.delta_c_fixed_m, row.c_hat_stage2_m);
+  }
   for(auto& score:f.scores) score.key_columns.clear();
   rows=uifgo::FreezeFixedCompensations(f.stage2,f.scores,false);
   for(const auto& row:rows) EXPECT_FALSE(row.sigma_available);

@@ -69,6 +69,9 @@ std::vector<GroupDecisionRecord> FreezeGroupDecisions(
 struct FixedCompensation {
   size_t segment_ordinal = 0;
   std::string segment_id;
+  int tag_id = 0;
+  int anchor_id = 0;
+  size_t candidate_observation_count = 0;
   double c_hat_stage2_m = 0.0;
   double sigma_c_local_m = 0.0;
   bool sigma_available = false;

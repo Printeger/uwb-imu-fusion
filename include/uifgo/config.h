@@ -165,6 +165,15 @@ struct Config {
   std::string nlos_mode = "disabled";
   std::string oracle_support_path = "";
   bool score_recoverability = false;
+  // Production PL CUSUM fields deliberately have no usable defaults.  The
+  // pl_bidirectional_cusum mode must state every frozen scientific parameter.
+  double cusum_forward_kappa =
+      std::numeric_limits<double>::quiet_NaN();
+  double cusum_forward_h = std::numeric_limits<double>::quiet_NaN();
+  double cusum_backward_kappa =
+      std::numeric_limits<double>::quiet_NaN();
+  double cusum_backward_h = std::numeric_limits<double>::quiet_NaN();
+  std::string cusum_parameter_provenance;
   // T08 is an explicit opt-in layered on oracle_debug or
   // automatic_discovery.  Gate numbers have no defaults: current fixtures
   // must identify them as development-only pending validation.

@@ -355,6 +355,64 @@ TEST(ConfigLoader, WindowedFdeIsExplicitAndMutuallyExclusiveWithGroupedV3) {
   EXPECT_THROW(uifgo::ConfigLoader::Load(path), std::runtime_error);
 }
 
+TEST(ConfigLoader, PlBidirectionalCusumIsFrozenExplicitAndTruthBlind) {
+  const std::string path = "/tmp/test_pl_bidirectional_cusum.yaml";
+  const auto write = [&](const std::string& omitted,
+                         const std::string& forward_h,
+                         bool oracle) {
+    std::ofstream f(path);
+    f << "nlos:\n  mode: pl_bidirectional_cusum\n";
+    if (omitted != "score_recoverability")
+      f << "  score_recoverability: true\n";
+    if (omitted != "final_inference_enabled")
+      f << "  final_inference_enabled: true\n";
+    if (omitted != "cusum_forward_kappa")
+      f << "  cusum_forward_kappa: 0.5\n";
+    if (omitted != "cusum_forward_h")
+      f << "  cusum_forward_h: " << forward_h << "\n";
+    if (omitted != "cusum_backward_kappa")
+      f << "  cusum_backward_kappa: 0.5\n";
+    if (omitted != "cusum_backward_h")
+      f << "  cusum_backward_h: 7.0234689587858714\n";
+    if (omitted != "gap_threshold_s")
+      f << "  gap_threshold_s: 1.0\n";
+    if (omitted != "cusum_parameter_provenance")
+      f << "  cusum_parameter_provenance: "
+           "PL_BIDIRECTIONAL_CUSUM_SUPPORT_20260912_LOCKED\n";
+    f << "  tau_eta: 0.4\n"
+      << "  tau_s_m: 0.8\n"
+      << "  tau_gamma: 1.2\n"
+      << "  gate_parameter_provenance: "
+         "T08_GATE_DEVELOPMENT_ONLY_PENDING_VALIDATION\n";
+    if (oracle) f << "  oracle_support: forbidden.yaml\n";
+  };
+  write("", "7.0234689587858723", false);
+  const auto cfg = uifgo::ConfigLoader::Load(path);
+  EXPECT_EQ(cfg.nlos_mode, "pl_bidirectional_cusum");
+  EXPECT_TRUE(cfg.score_recoverability);
+  EXPECT_TRUE(cfg.final_inference_enabled);
+  EXPECT_DOUBLE_EQ(cfg.cusum_forward_kappa, 0.5);
+  EXPECT_DOUBLE_EQ(cfg.cusum_forward_h, 7.0234689587858723);
+  EXPECT_DOUBLE_EQ(cfg.cusum_backward_h, 7.0234689587858714);
+  EXPECT_DOUBLE_EQ(cfg.discovery_gap_threshold_s, 1.0);
+
+  for (const std::string& omitted : {
+           "score_recoverability", "final_inference_enabled",
+           "cusum_forward_kappa", "cusum_forward_h",
+           "cusum_backward_kappa", "cusum_backward_h", "gap_threshold_s",
+           "cusum_parameter_provenance"}) {
+    write(omitted, "7.0234689587858723", false);
+    EXPECT_THROW(uifgo::ConfigLoader::Load(path), std::runtime_error)
+        << omitted;
+  }
+  write("", ".nan", false);
+  EXPECT_THROW(uifgo::ConfigLoader::Load(path), std::runtime_error);
+  write("", "7.1", false);
+  EXPECT_THROW(uifgo::ConfigLoader::Load(path), std::runtime_error);
+  write("", "7.0234689587858723", true);
+  EXPECT_THROW(uifgo::ConfigLoader::Load(path), std::runtime_error);
+}
+
 TEST(ConfigLoader, FixedBetaByLink) {
   const std::string path = "/tmp/test_fixed_beta.yaml";
   std::ofstream f(path);

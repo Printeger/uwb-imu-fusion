@@ -1154,3 +1154,21 @@ CONTROL/SHADOW 的 commit、measurement、state、trajectory 和 conditional art
 这只支持 `BIDIRECTIONAL_CUSUM_SUPPORT_PASS_FOR_PRODUCTION_ADMISSION`，不等于 production provider 已接入，
 也不是 causal online endpoint、formal integrity/general-dataset detector guarantee 或 localization benefit。
 Stage2/Rc/recovery/final/ATE/RMSE 均未运行，C1--C3、T10=C2-C 与 T11=C 不升级。
+
+## 0912 PL bidirectional production E2E controlled evidence
+
+`E2E_FULL_SYSTEM_PASS_DEVELOPMENT` is supported only for the locked controlled
+SFUISE Walk1 `+0.5 m` persistent-NLOS experiment. The production provider finds
+the admitted 30-observation support without truth access; Stage2 converges at
+`c_hat=0.47134578518036691 m`; primary fixed compensation reduces exact-obs-id
+paired range RMSE from `0.5 m` to `0.02865421481963315 m`; and, on the same 229
+GT samples, primary aligned ATE RMSE is `0.16314948912901142 m` versus
+`0.18163686608072543 m` for suppressing the same observations, with p95 also
+lower. See
+[`PL_CUSUM_E2E_INTEGRATION_ACCURACY_RESULT.md`](../doc/ie_0911/PL_CUSUM_E2E_INTEGRATION_ACCURACY_RESULT.md)
+and evidence root
+`/home/mint/ws_fusion_uwb/res/pl_cusum_e2e_integration_accuracy_20260912T041820Z`.
+
+This does not upgrade C2 to a general recovery-superiority claim: the non-gating
+six-input diagnostic has 0 better, 1 worse, 1 tied, and 4 unavailable run units.
+T10 remains `C2-C`; formal final multidataset evidence remains required.

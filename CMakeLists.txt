@@ -140,6 +140,7 @@ add_library(${PROJECT_NAME}
   src/pl_conditional_raim.cpp
   src/pl_persistent_cusum.cpp
   src/pl_bidirectional_support.cpp
+  src/pl_bidirectional_provider.cpp
   src/nlos_discovery.cpp
   src/nlos_refit.cpp
   src/nlos_recoverability.cpp

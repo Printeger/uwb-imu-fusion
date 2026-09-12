@@ -885,3 +885,21 @@ provider/mode，不反馈 estimator，不触及 Stage2/Rc/final/localization。
 得到 target TP/FP/FN=30/0/0，healthy segment=0；CONTROL/SHADOW scientific artifacts 字节一致。
 这只构成后续 production integration admission，不把 backward closure 描述为 causal/online detector，
 也不升级 formal integrity、总体检测或 localization claim。
+
+## 0912 PL bidirectional CUSUM production E2E amendment
+
+用户授权
+[`PL_CUSUM_E2E_INTEGRATION_ACCURACY_PROTOCOL.md`](../ie_0911/PL_CUSUM_E2E_INTEGRATION_ACCURACY_PROTOCOL.md)
+的 production integration。新增且仅新增正式模式 `pl_bidirectional_cusum`；它在与已通过 dynamic shadow
+相同的 pre-commit always-commit runtime 位置收集既有 PL `conditional_z`，直接复用已 admission 的
+forward/backward core，并按 exact `(tag_id,anchor_id,obs_id)` Boolean AND 冻结 `SupportPartition`。
+forward/backward `kappa/h`、1 s gap、reset/crossing/backfill/termination、signal mathematics、clean split、
+calibration 和 support 定义全部冻结；Stage2 前完成 DETECTION→FREEZE，Stage2/final 不得反向改变 support。
+
+冻结 partition 进入现有无 L1/TV、非负 `c_s` Stage2、共同 candidate-excluded `R_c` 与现有 final engine。
+主恢复固定为 `lcb_fixed_full`，拒绝对照为 `suppress_all`；`structured_debias` 与 `lcb_partial` 仅作辅助。
+所有 final policy 共用同一 support/cache/base graph，fixed-full 沿用现有 `delta=c_hat_stage2`，partial 沿用
+`max(0,c_hat_stage2-2 sigma_c_local)`，不修改 gate、solver、LCB 或 factor 语义。production detector、
+Stage2、scoring、gate、compensation 与 final optimizer 禁止读取 GT/oracle/truth/injection/clean pair；
+range 和 trajectory truth 只由封存后的独立 evaluator 使用。本 amendment 只支持 locked controlled Walk1
+development E2E 与条件式 six-input diagnostic，不升级 formal integrity、总体泛化或 C1--C3 claim。
