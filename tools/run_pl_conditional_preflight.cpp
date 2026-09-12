@@ -61,6 +61,19 @@ struct Epoch {
   std::string committed_before_hash;
   size_t committed_before_count = 0;
   uifgo::PlConditionalGroupResult result;
+  struct AnchorDiagnostic {
+    size_t source_order = 0;
+    int tag_id = 0;
+    int anchor_id = 0;
+    std::uint64_t obs_id = 0;
+    double physical_innovation_m = std::numeric_limits<double>::quiet_NaN();
+    double measurement_variance_m2 = std::numeric_limits<double>::quiet_NaN();
+    double prior_projected_variance_m2 =
+        std::numeric_limits<double>::quiet_NaN();
+    double innovation_variance_m2 = std::numeric_limits<double>::quiet_NaN();
+    uifgo::PlConditionalRowDiagnostic conditional;
+  };
+  std::vector<AnchorDiagnostic> anchor_diagnostics;
 };
 
 struct ImuGapEvent {
@@ -95,6 +108,10 @@ std::ofstream Open(const fs::path& path) {
   std::ofstream out(path.string());
   if (!out) throw std::runtime_error("cannot write " + path.string());
   return out;
+}
+
+void WriteFiniteOrEmpty(std::ostream* out, double value) {
+  if (std::isfinite(value)) *out << value;
 }
 
 std::string Escape(const std::string& text) {
@@ -528,6 +545,34 @@ int main(int argc, char** argv) {
           input.physical_covariance(i,i) = sigma * sigma;
           input.physical_innovation[i] = -residual[0];
         }
+        const Eigen::MatrixXd physical_innovation_covariance =
+            input.physical_jacobian * input.prior_covariance *
+                input.physical_jacobian.transpose() +
+            input.physical_covariance;
+        const auto row_diagnostics = uifgo::EvaluatePlConditionalRows(
+            input.physical_innovation, physical_innovation_covariance);
+        if (row_diagnostics.rows.size() != n)
+          throw std::runtime_error(
+              "PL_CONDITIONAL_ROW_DIAGNOSTIC_DIMENSION_INVALID:" +
+              row_diagnostics.status);
+        epoch.anchor_diagnostics.reserve(n);
+        for (size_t i = 0; i < n; ++i) {
+          Epoch::AnchorDiagnostic diagnostic;
+          diagnostic.source_order = i;
+          diagnostic.tag_id = groups[k][i]->tag_id;
+          diagnostic.anchor_id = groups[k][i]->anchor_id;
+          diagnostic.obs_id = groups[k][i]->obs_id;
+          diagnostic.physical_innovation_m = input.physical_innovation[i];
+          diagnostic.measurement_variance_m2 =
+              input.physical_covariance(i, i);
+          diagnostic.prior_projected_variance_m2 =
+              (input.physical_jacobian.row(i) * input.prior_covariance *
+               input.physical_jacobian.row(i).transpose())(0, 0);
+          diagnostic.innovation_variance_m2 =
+              physical_innovation_covariance(i, i);
+          diagnostic.conditional = row_diagnostics.rows[i];
+          epoch.anchor_diagnostics.push_back(std::move(diagnostic));
+        }
         epoch.result = uifgo::EvaluatePlConditionalLoao(
             input, epoch.anchors, epoch.ids);
         for (size_t i = 0; i < groups[k].size(); ++i) {
@@ -601,6 +646,59 @@ int main(int argc, char** argv) {
             << ',' << h.decision.status << ',' << h.decision.statistic << ','
             << h.decision.threshold << ',' << h.decision.dof << ','
             << h.decision.passed << '\n';
+      }
+    }
+    {
+      auto out = Open(output / "pl_per_anchor_innovations.csv");
+      out << "timestamp,group_id,keyframe_id,source_order,tag_id,anchor_id,obs_id,nu_m,R_mm,prior_projected_variance_m,S_mm,marginal_z,diagnostic_valid,invalid_reason\n";
+      out << std::setprecision(17);
+      for (const auto& e : epochs) {
+        if (e.keyframe <= 4) continue;
+        for (const auto& row : e.anchor_diagnostics) {
+          out << e.time << ",pl-group-" << e.keyframe << ',' << e.keyframe
+              << ',' << row.source_order << ',' << row.tag_id << ','
+              << row.anchor_id << ',' << row.obs_id << ',';
+          WriteFiniteOrEmpty(&out, row.physical_innovation_m);
+          out << ',';
+          WriteFiniteOrEmpty(&out, row.measurement_variance_m2);
+          out << ',';
+          WriteFiniteOrEmpty(&out, row.prior_projected_variance_m2);
+          out << ',';
+          WriteFiniteOrEmpty(&out, row.innovation_variance_m2);
+          out << ',';
+          WriteFiniteOrEmpty(&out, row.conditional.marginal_z);
+          out << ',' << row.conditional.numerically_valid << ','
+              << row.conditional.invalid_reason << '\n';
+        }
+      }
+    }
+    {
+      auto out = Open(output / "pl_conditional_innovations.csv");
+      out << "timestamp,group_id,keyframe_id,source_order,tag_id,anchor_id,obs_id,conditional_nu_m,conditional_variance_m2,conditional_z,additive_group_contribution,conditional_quadratic_increment,group_statistic,dof,diagnostic_valid,invalid_reason\n";
+      out << std::setprecision(17);
+      for (const auto& e : epochs) {
+        if (e.keyframe <= 4) continue;
+        for (const auto& row : e.anchor_diagnostics) {
+          out << e.time << ",pl-group-" << e.keyframe << ',' << e.keyframe
+              << ',' << row.source_order << ',' << row.tag_id << ','
+              << row.anchor_id << ',' << row.obs_id << ',';
+          WriteFiniteOrEmpty(&out, row.conditional.conditional_innovation);
+          out << ',';
+          WriteFiniteOrEmpty(&out, row.conditional.conditional_variance);
+          out << ',';
+          WriteFiniteOrEmpty(&out, row.conditional.conditional_z);
+          out << ',';
+          WriteFiniteOrEmpty(
+              &out, row.conditional.additive_quadratic_contribution);
+          out << ',';
+          WriteFiniteOrEmpty(
+              &out, row.conditional.conditional_quadratic_increment);
+          out << ',';
+          WriteFiniteOrEmpty(&out, e.result.omnibus.statistic);
+          out << ',' << e.result.omnibus.dof << ','
+              << row.conditional.numerically_valid << ','
+              << row.conditional.invalid_reason << '\n';
+        }
       }
     }
     {

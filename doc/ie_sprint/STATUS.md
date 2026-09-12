@@ -1,3 +1,16 @@
+# 0912-PL-THRESHOLD-SIGNAL-AUDIT 当前任务
+
+`DONE / GROUP_STATISTIC_TASK_MISMATCH_PERSISTENT_PER_ANCHOR_SIGNAL_PRESENT`。用户授权执行
+[`PL_THRESHOLD_SIGNAL_AUDIT_PROTOCOL.md`](PL_THRESHOLD_SIGNAL_AUDIT_PROTOCOL.md)：复用 f2ee3f0d sealed
+Walk1 clean/injected 与锁定 PL `ae54fb8c` conditional replay，只做 group threshold sweep、逐 anchor
+marginal/conditional innovation、clean/injected identity pairing、variance/contribution decomposition 和
+persistent-signal 描述性诊断。[结果](../ie_0911/PL_THRESHOLD_SIGNAL_AUDIT.md)：原数字逐项复现；
+`P_FA<=0.10` 的六档 sweep 均为 clean 0/224、affected 0/30，最大 T 的 DoF=5 upper-tail probability
+为 0.433138，故 threshold 不是可合理小调即可解决。target conditional z injected mean 1.0926、30/30
+正向、`Z_sum=5.9846`，paired `Z_delta=6.6220`；healthy 没有同等级正向 paired shift。统计 truth-blind
+生成并封存，detector forbidden open=0；production detector/config/cache 未改，Stage2/Rc/LCB/recovery
+与下一 detector 全部 `NOT_RUN/NOT_IMPLEMENTED`。按用户规则完成后停止。
+
 # 0912-PL-CONDITIONAL-RAIM-FDE 当前任务
 
 `DONE / PREFLIGHT_FAIL_MISSED_AFFECTED_GROUP_ALARM / PRODUCTION_AND_E2E_NOT_RUN`。用户授权实施

@@ -1113,3 +1113,16 @@ affected group alarm 为 0，最大统计量 `4.86052305024` 低于对应门限 
 `PL_CONDITIONAL_PREFLIGHT_FAIL_MISSED_AFFECTED_GROUP_ALARM`。target unique isolation/persistent overlap
 后续门、production/cache、Stage2、六方法和定位指标均 NOT_RUN/NOT_EVALUABLE。本结果不支持检测召回、
 完整 ARAIM、certified integrity 或恢复收益；不产生论文数字，不升级 T10=C2-C、T11=C 或 C1--C3。
+
+## 0912 PL threshold / persistent-signal：root-cause diagnostic
+
+[协议](../doc/ie_sprint/PL_THRESHOLD_SIGNAL_AUDIT_PROTOCOL.md)与
+[结果](../doc/ie_0911/PL_THRESHOLD_SIGNAL_AUDIT.md)只支持一个 locked Walk1 diagnostic 事实：保持原
+group T/DoF 时，从 `P_FA=1e-5` 放宽至 0.10 仍是 clean 0/224、affected 0/30；最大 T 的 DoF=5
+tail probability 为 0.4331。相同 30 identities 上，target conditional z injected mean=1.0926、
+`Z_sum=5.9846`，相对 clean 的 `Z_delta=6.6220`，且 healthy 无同等级正向 paired shift。因此本数据
+支持“single-epoch group statistic 与 persistent per-anchor candidate task 不匹配”的诊断裁决。
+
+该证据不是新 detector、阈值标定、总体误报/召回保证或 localization benefit；没有运行 Stage2/final，
+也不能把 30 帧描述统计当作已验证 sequential test。CUSUM/GLR 仅是需另立任务的可能方向；C1--C3、
+T10=C2-C 与 T11=C 均不升级。

@@ -563,3 +563,23 @@ detector artifacts 封存后才读取 truth，file-open trace 的 forbidden trut
 target unique isolation、第四门 persistent target overlap 按串行门标为
 `NOT_RUN_PREVIOUS_GATE_FAILED`；production detector、六方法、backend 与 localization 全部
 `NOT_RUN/NOT_EVALUABLE`。不允许根据该结果调整任何冻结参数。
+
+## 0912 PL threshold / persistent-signal diagnostic amendment
+
+本轮只复用既有 locked Walk1 clean/injected scenario cache 和 f2ee3f0d causal shadow replay，不重新生成
+输入、不运行 Stage2/recovery/E2E。先在两个不接收 truth 的隔离进程中复现原 224 clean groups/0 alarms、
+30 affected groups/0 alarms 和最大 `T`；同时生成逐 row `nu,R,HPH^T,S,marginal z,conditional z` 与
+quadratic decomposition 并封存。独立 evaluator 封存后才读旧 injection truth，按 group/anchor/obs identity
+精确配对。
+
+离线 sweep 固定为 `P_FA={1e-5,1e-4,1e-3,1e-2,0.05,0.10}`，每档按实际 DoF 报 threshold、clean
+alarm fraction 与 affected recall；不是 parameter selection。persistent statistics 固定为 N、mean、median、
+sample std、P10/P90、NLOS-direction sign fraction、max absolute、`sum(z)/sqrt(N)` 与逐 epoch cumulative
+signed sum。target 与同组 healthy anchors同时报告。最终只允许协议 A/B/C/D 裁决，不产生 trajectory、
+support、cache 或论文收益 claim；所有下一 detector 均 `NOT_RUN`。
+
+0912 diagnostic 实际完成：clean 224/0 与 affected 30/0、最大 T=4.86052305024 均复现；六档
+`P_FA=1e-5...0.10` 的 affected recall 全为 0。statistics seal 后独立 truth evaluator 精确配对 30 target
+rows，得到 injected target conditional mean 1.0926 sigma、正号 1.0、`Z_sum=5.9846`，paired
+`Z_delta=6.6220`；healthy 最大正向 paired shift 为 0。唯一裁决为 B。file-open forbidden count=0；
+Stage2/recovery/E2E、support/cache、threshold 写回和下一 detector 均未执行。

@@ -146,6 +146,111 @@ PlConditionalDecision EvaluatePlConditional(const PlConditionalInput& input) {
   return output;
 }
 
+PlConditionalRowsResult EvaluatePlConditionalRows(
+    const Eigen::VectorXd& physical_innovation,
+    const Eigen::MatrixXd& physical_innovation_covariance) {
+  PlConditionalRowsResult output;
+  const Eigen::Index n = physical_innovation.size();
+  if (n <= 0 || physical_innovation_covariance.rows() != n ||
+      physical_innovation_covariance.cols() != n ||
+      !physical_innovation.allFinite() ||
+      !physical_innovation_covariance.allFinite() ||
+      !Symmetric(physical_innovation_covariance)) {
+    output.status = "INVALID_DIMENSION_OR_NONFINITE_INPUT";
+    return output;
+  }
+  Eigen::LDLT<Eigen::MatrixXd> full_ldlt(
+      physical_innovation_covariance);
+  if (full_ldlt.info() != Eigen::Success || !full_ldlt.isPositive()) {
+    output.status = "INNOVATION_COVARIANCE_NOT_SPD";
+    return output;
+  }
+  const Eigen::VectorXd solved = full_ldlt.solve(physical_innovation);
+  output.statistic = physical_innovation.dot(solved);
+  if (!solved.allFinite() || !std::isfinite(output.statistic)) {
+    output.status = "FULL_SOLVE_NONFINITE";
+    return output;
+  }
+  output.rows.resize(static_cast<size_t>(n));
+  for (Eigen::Index m = 0; m < n; ++m) {
+    auto& row = output.rows[static_cast<size_t>(m)];
+    row.row = static_cast<size_t>(m);
+    const double marginal_variance = physical_innovation_covariance(m, m);
+    if (!(marginal_variance > 0.0) || !std::isfinite(marginal_variance)) {
+      row.invalid_reason = "MARGINAL_VARIANCE_NOT_POSITIVE";
+      continue;
+    }
+    row.marginal_z = physical_innovation[m] / std::sqrt(marginal_variance);
+    row.additive_quadratic_contribution =
+        physical_innovation[m] * solved[m];
+    if (n == 1) {
+      row.conditional_innovation = physical_innovation[m];
+      row.conditional_variance = marginal_variance;
+    } else {
+      Eigen::VectorXd nu_rest(n - 1);
+      Eigen::VectorXd s_rest_m(n - 1);
+      Eigen::MatrixXd s_rest(n - 1, n - 1);
+      Eigen::Index rr = 0;
+      for (Eigen::Index i = 0; i < n; ++i) {
+        if (i == m) continue;
+        nu_rest[rr] = physical_innovation[i];
+        s_rest_m[rr] = physical_innovation_covariance(i, m);
+        Eigen::Index cc = 0;
+        for (Eigen::Index j = 0; j < n; ++j) {
+          if (j == m) continue;
+          s_rest(rr, cc++) = physical_innovation_covariance(i, j);
+        }
+        ++rr;
+      }
+      Eigen::LDLT<Eigen::MatrixXd> rest_ldlt(s_rest);
+      if (rest_ldlt.info() != Eigen::Success || !rest_ldlt.isPositive()) {
+        row.invalid_reason = "CONDITIONING_SUBSET_NOT_SPD";
+        continue;
+      }
+      const Eigen::VectorXd solved_nu = rest_ldlt.solve(nu_rest);
+      const Eigen::VectorXd solved_cov = rest_ldlt.solve(s_rest_m);
+      if (!solved_nu.allFinite() || !solved_cov.allFinite()) {
+        row.invalid_reason = "CONDITIONING_SUBSET_SOLVE_NONFINITE";
+        continue;
+      }
+      row.conditional_innovation =
+          physical_innovation[m] - s_rest_m.dot(solved_nu);
+      row.conditional_variance =
+          marginal_variance - s_rest_m.dot(solved_cov);
+    }
+    if (!(row.conditional_variance > 0.0) ||
+        !std::isfinite(row.conditional_innovation) ||
+        !std::isfinite(row.conditional_variance)) {
+      row.invalid_reason = "CONDITIONAL_VARIANCE_NOT_POSITIVE_OR_NONFINITE";
+      continue;
+    }
+    row.conditional_z =
+        row.conditional_innovation / std::sqrt(row.conditional_variance);
+    row.conditional_quadratic_increment =
+        row.conditional_innovation * row.conditional_innovation /
+        row.conditional_variance;
+    if (!std::isfinite(row.marginal_z) ||
+        !std::isfinite(row.additive_quadratic_contribution) ||
+        !std::isfinite(row.conditional_z) ||
+        !std::isfinite(row.conditional_quadratic_increment)) {
+      row.invalid_reason = "ROW_DIAGNOSTIC_NONFINITE";
+      continue;
+    }
+    row.numerically_valid = true;
+    row.invalid_reason.clear();
+  }
+  if (!std::all_of(output.rows.begin(), output.rows.end(),
+                   [](const PlConditionalRowDiagnostic& row) {
+                     return row.numerically_valid;
+                   })) {
+    output.status = "ONE_OR_MORE_ROW_DIAGNOSTICS_INVALID";
+    return output;
+  }
+  output.numerically_valid = true;
+  output.status = "OK";
+  return output;
+}
+
 const char* PlConditionalGroupOutcomeName(PlConditionalGroupOutcome outcome) {
   switch (outcome) {
     case PlConditionalGroupOutcome::BOOTSTRAP_HISTORY:

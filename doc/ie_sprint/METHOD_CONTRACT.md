@@ -828,3 +828,22 @@ RAIM/FDE-family development detector，不是完整 ARAIM 或 certified integrit
 Walk1 clean 第一门通过，但 injected 30 个 affected group 全部未 alarm，唯一裁决为
 `PL_CONDITIONAL_PREFLIGHT_FAIL_MISSED_AFFECTED_GROUP_ALARM`。停止门已经触发，故本 amendment 的
 production provider/cache/replay 接口没有实现或注册，Stage2/final 科学语义未改变。
+
+## 0912 PL threshold / persistent-signal diagnostic amendment
+
+用户授权 [`PL_THRESHOLD_SIGNAL_AUDIT_PROTOCOL.md`](PL_THRESHOLD_SIGNAL_AUDIT_PROTOCOL.md) 的只读统计
+诊断。它不改变上述 PL detector、`p_fa=1e-5`、grouping、commit/isolation/support 或任何 production
+identity。沿用 physical `nu=z-h` 与完整 `S=HPH^T+R`；正 excess range 的预注册方向为正 `nu`。
+
+新增 source-neutral Gaussian row diagnostic：marginal `z_m=nu_m/sqrt(S_mm)`，以及以 LDLT/等价稳定
+solve 得到的 `nu_{m|-m}`、`S_{m|-m}`、`z_{m|-m}`。禁止 explicit inverse、jitter、damping 或人为 prior；
+invalid covariance 必须显式失败。row additive quadratic contribution 与 conditional increment 仅用于解释
+固定 group `T`，不得成为 detector/isolation/support score。六档 chi-square threshold 只离线评估，不写回
+配置。所有统计先 truth-blind 生成和封存，truth 之后只作配对标注。B 裁决仅允许建议另立 sequential
+任务，本轮不实现 CUSUM/GLR；C 裁决停止该 detector 研究方向。Stage2/Rc/LCB/final 均不运行。
+
+0912 diagnostic 收口：锁定重放与原 epochs 字节一致；六档 group sweep 至 `P_FA=0.10` 仍为 affected
+0/30，最大 T 若要刚好触发需 nominal tail 0.433138。target conditional sequence 的 injected
+`Z_sum=5.9846`、paired `Z_delta=6.6220`，healthy 无正向 paired shift，故裁决
+`GROUP_STATISTIC_TASK_MISMATCH_PERSISTENT_PER_ANCHOR_SIGNAL_PRESENT`。这些累计量仍只是 post-seal
+diagnostic，不是 detector 或 support score；本 amendment 不授权生产阈值修改或 sequential detector。

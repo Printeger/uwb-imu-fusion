@@ -79,6 +79,80 @@ TEST(PlConditionalCore, RejectsInvalidCovariance) {
   EXPECT_FALSE(uifgo::EvaluatePlConditional(input).numerically_valid);
 }
 
+TEST(PlConditionalRows, DiagonalCovarianceKeepsMarginalValues) {
+  Eigen::Vector2d nu(2.0, -3.0);
+  Eigen::Matrix2d s = Eigen::Matrix2d::Zero();
+  s(0,0) = 4.0;
+  s(1,1) = 9.0;
+  const auto result = uifgo::EvaluatePlConditionalRows(nu, s);
+  ASSERT_TRUE(result.numerically_valid);
+  ASSERT_EQ(result.rows.size(), 2u);
+  Near(2.0, result.rows[0].conditional_innovation);
+  Near(4.0, result.rows[0].conditional_variance);
+  Near(1.0, result.rows[0].conditional_z);
+  Near(-3.0, result.rows[1].conditional_innovation);
+  Near(9.0, result.rows[1].conditional_variance);
+  Near(-1.0, result.rows[1].conditional_z);
+}
+
+TEST(PlConditionalRows, CorrelatedSpdMatchesAnalyticTwoAnchorFormula) {
+  Eigen::Vector2d nu(2.0, 3.0);
+  Eigen::Matrix2d s;
+  s << 4.0, 1.0, 1.0, 9.0;
+  const auto result = uifgo::EvaluatePlConditionalRows(nu, s);
+  ASSERT_TRUE(result.numerically_valid);
+  Near(2.0 - 3.0 / 9.0, result.rows[0].conditional_innovation);
+  Near(4.0 - 1.0 / 9.0, result.rows[0].conditional_variance);
+  Near(3.0 - 2.0 / 4.0, result.rows[1].conditional_innovation);
+  Near(9.0 - 1.0 / 4.0, result.rows[1].conditional_variance);
+}
+
+TEST(PlConditionalRows, NearSingularButValidCovarianceRemainsFinite) {
+  constexpr double rho = 0.999999;
+  Eigen::Vector2d nu(1.0, 1.0);
+  Eigen::Matrix2d s;
+  s << 1.0, rho, rho, 1.0;
+  const auto result = uifgo::EvaluatePlConditionalRows(nu, s);
+  ASSERT_TRUE(result.numerically_valid);
+  for (const auto& row : result.rows) {
+    Near(1.0 - rho, row.conditional_innovation);
+    Near(1.0 - rho * rho, row.conditional_variance);
+    EXPECT_TRUE(std::isfinite(row.conditional_z));
+  }
+}
+
+TEST(PlConditionalRows, TwoAnchorQuadraticDecompositionIsConsistent) {
+  Eigen::Vector2d nu(2.0, 3.0);
+  Eigen::Matrix2d s;
+  s << 4.0, 1.0, 1.0, 9.0;
+  const auto result = uifgo::EvaluatePlConditionalRows(nu, s);
+  ASSERT_TRUE(result.numerically_valid);
+  const double additive_sum = result.rows[0].additive_quadratic_contribution +
+                              result.rows[1].additive_quadratic_contribution;
+  Near(result.statistic, additive_sum);
+  const double without_zero = nu[1] * nu[1] / s(1,1);
+  Near(result.statistic - without_zero,
+       result.rows[0].conditional_quadratic_increment);
+}
+
+TEST(PlConditionalRows, FiveAnchorDiagonalAnalyticCase) {
+  Eigen::VectorXd nu(5);
+  nu << 1.0, -2.0, 3.0, -4.0, 5.0;
+  Eigen::MatrixXd s = Eigen::MatrixXd::Zero(5,5);
+  s.diagonal() << 1.0, 4.0, 9.0, 16.0, 25.0;
+  const auto result = uifgo::EvaluatePlConditionalRows(nu, s);
+  ASSERT_TRUE(result.numerically_valid);
+  ASSERT_EQ(result.rows.size(), 5u);
+  for (size_t i = 0; i < result.rows.size(); ++i) {
+    Near(nu[static_cast<Eigen::Index>(i)],
+         result.rows[i].conditional_innovation);
+    Near(s(static_cast<Eigen::Index>(i), static_cast<Eigen::Index>(i)),
+         result.rows[i].conditional_variance);
+    Near(i % 2 == 0 ? 1.0 : -1.0, result.rows[i].conditional_z);
+  }
+  Near(5.0, result.statistic);
+}
+
 TEST(PlConditionalIsolation, PositiveAndReverseFaultUseSignOnlyAfterUnique) {
   auto positive = Input(3);
   positive.physical_innovation[0] = 10.0;

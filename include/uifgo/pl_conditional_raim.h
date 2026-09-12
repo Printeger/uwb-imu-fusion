@@ -52,6 +52,35 @@ struct PlConditionalDecision {
 // innovation test. It has no graph, truth, support, or commit side effects.
 PlConditionalDecision EvaluatePlConditional(const PlConditionalInput& input);
 
+struct PlConditionalRowDiagnostic {
+  size_t row = 0;
+  bool numerically_valid = false;
+  std::string invalid_reason = "NOT_EVALUATED";
+  double marginal_z = std::numeric_limits<double>::quiet_NaN();
+  double conditional_innovation = std::numeric_limits<double>::quiet_NaN();
+  double conditional_variance = std::numeric_limits<double>::quiet_NaN();
+  double conditional_z = std::numeric_limits<double>::quiet_NaN();
+  // nu_m * (S^-1 nu)_m; signed row term whose sum equals full statistic.
+  double additive_quadratic_contribution =
+      std::numeric_limits<double>::quiet_NaN();
+  // nu_{m|-m}^2 / S_{m|-m} = T_full - T_without_m.
+  double conditional_quadratic_increment =
+      std::numeric_limits<double>::quiet_NaN();
+};
+
+struct PlConditionalRowsResult {
+  bool numerically_valid = false;
+  std::string status = "NOT_EVALUATED";
+  double statistic = std::numeric_limits<double>::quiet_NaN();
+  std::vector<PlConditionalRowDiagnostic> rows;
+};
+
+// Diagnostic-only Gaussian row decomposition for physical nu and S. Uses
+// stable factorizations and never forms an explicit inverse.
+PlConditionalRowsResult EvaluatePlConditionalRows(
+    const Eigen::VectorXd& physical_innovation,
+    const Eigen::MatrixXd& physical_innovation_covariance);
+
 struct PlConditionalHypothesis {
   int excluded_anchor_id = 0;
   std::vector<std::uint64_t> retained_obs_ids;
