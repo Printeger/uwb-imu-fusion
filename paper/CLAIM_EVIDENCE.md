@@ -1237,3 +1237,14 @@ and evidence root
 This does not upgrade C2 to a general recovery-superiority claim: the non-gating
 six-input diagnostic has 0 better, 1 worse, 1 tied, and 4 unavailable run units.
 T10 remains `C2-C`; formal final multidataset evidence remains required.
+
+## 0912 SFUISE ToA baseline adapter
+
+The development comparison in [SFUISE_BASELINE.md](../experiments/SFUISE_BASELINE.md) establishes an
+adapter and reproducible evaluation path, rather than a paper claim. Unmodified SFUISE commit `75bf5a32`
+ran successfully in absolute-ToA mode on ISAS Walk1/2/3 without GT playback or detector/recovery input.
+Its adapter trajectories and four sealed method trajectories were evaluated by the same evaluator,
+per-sequence interval, nearest-0.02 s association, tracker/body assumption and scale-fixed SE3 alignment.
+SFUISE aligned ATE RMSE was 0.109076557/0.075431056/0.079883493 m; Walk2 Robust FGO remains an explicit
+estimation failure and NA. The body/tracker extrinsic is still an assumed identity and the comparison is
+not held-out, so these values do not upgrade C1--C3, T10 or T11.

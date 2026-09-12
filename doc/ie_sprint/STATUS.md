@@ -1,3 +1,25 @@
+# 0912-ICRA-SFUISE-TOA-BASELINE-ADAPTER 用户授权 amendment
+
+`DONE / COMPLETE_WITH_RETAINED_FAILURES`。只为 ISAS Walk1/2/3 建立未修改 SFUISE `75bf5a32` 的 ToA baseline adapter，
+拒绝 TDoA，不向 SFUISE 提供本方法 detector/recovery/cache。SFUISE直接读取与本方法measurement
+cache具有相同source SHA的原始bag；bag播放排除GT topic。独立ROS adapter只消费SFUISE spline、
+online frame calibration和ToA时间戳，将UWB/map中的body/IMU原点轨迹写为TUM schema；不使用GT采样。
+所有方法随后统一使用各序列同一GT、由raw UWB首末时间固定的区间、nearest 0.02s、tracker/IMU
+同点假设和per-trajectory SE3 scale=1 alignment。不得为SFUISE另选区间、关联或alignment。
+
+本轮SFUISE三条序列实际fresh运行；现有本方法clean artifacts仅作为已封存输入复用并重新评价，
+不把旧指标直接抄入主表。Base/Robust来自对应clean baseline，suppress/lcb来自对应clean E2E；
+失败、fallback、缺trajectory均保留NA。该比较是development/portability，不是正式held-out，
+不修改任何核心算法或参数，不扩大数据集，不提交/push。
+[协议与交付](../../experiments/SFUISE_BASELINE.md)。
+
+实际 SFUISE 三段 fresh ToA 运行均成功且不播放 GT，统一导出967/1239/1338个轨迹样本；同一 evaluator
+得到 Walk1/2/3 ATE RMSE=0.109076557/0.075431056/0.079883493m。本方法其余列重新评价封存trajectory；
+Walk2 Robust保留 `FINAL_LM_FAILED:CONDITIONAL_LM_MAX_ITERATIONS` 和NA，其余11格成功。SFUISE没有读取
+detector/recovery/oracle；三条bag hash与本方法cache source hash一致。5/5 adapter工程测试、catkin build、
+三段运行及15格统一评价通过。TDoA、其他数据、矩阵/sweep、正式外参标定和held-out结论NOT_RUN；
+tracker/body单位外参仍是开发假设，不升级论文claim。
+
 # 0912-ICRA-REPOSITORY-PUBLISH 用户授权 amendment
 
 `DONE / PUBLISH_PREFLIGHT_PASS`。用户明确授权把当前实验基础设施、文档和紧凑证据提交并推送至当前

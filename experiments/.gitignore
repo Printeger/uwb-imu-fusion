@@ -9,3 +9,6 @@ figures/*
 !evidence/
 !evidence/**/
 !evidence/**/*.log
+
+# Local third-party checkout; record its commit instead of vendoring its Git tree.
+compare_algorithm/SFUISE/

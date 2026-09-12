@@ -61,3 +61,7 @@ GT/派生 range CSV 只保存在工作空间 evaluator_private/icra 下，不进
 
 Canonical controlled positive-bias smoke：见 [CONTROLLED_INJECTION.md](CONTROLLED_INJECTION.md)，
 固定Walk1/anchor20276/+1m/10s，clean与corrupted独立运行；无sweep。
+
+SFUISE absolute-ToA baseline adapter、Walk1/2/3复现命令、统一主表与失败记录见
+[SFUISE_BASELINE.md](SFUISE_BASELINE.md)。该路径拒绝TDoA，SFUISE运行时不播放GT，也不接收本方法
+detector/recovery信息。
