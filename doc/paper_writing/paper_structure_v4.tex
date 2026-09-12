@@ -1,0 +1,406 @@
+% !TeX program = xelatex
+% Author-facing writing blueprint, not a completed submission.
+% Companion: experiment_design_v4.md
+% Audited public commit: 439282c2790ab1414ca9b276dd61a18b5e1643a8
+\documentclass[UTF8,fontset=fandol,11pt,a4paper]{ctexart}
+\usepackage[margin=23mm,headheight=15pt]{geometry}
+\usepackage{amsmath,amssymb,bm,booktabs,longtable,tabularx,array}
+\usepackage{enumitem,xcolor,xurl,hyperref,fancyhdr}
+\hypersetup{colorlinks=true,linkcolor=black,urlcolor=blue,citecolor=black,
+ pdftitle={UWB--IMU Persistent NLOS Paper Structure v4},
+ pdfauthor={Research writing blueprint}}
+\setlength{\parskip}{5pt}
+\setlength{\parindent}{1.6em}
+\setlength{\emergencystretch}{3em}
+\setlist{nosep,leftmargin=1.8em}
+\renewcommand{\arraystretch}{1.2}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{UWB--IMU 持续 NLOS：论文重构 v4}
+\fancyhead[R]{2026-09-12}
+\fancyfoot[C]{\thepage}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\todo}[1]{\textbf{[待实验填写：#1]}}
+\newcommand{\eng}[1]{\begin{quote}\small #1\end{quote}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\title{\textbf{持续 NLOS 检测与选择性测距恢复}\\[3pt]
+\Large UWB--IMU 离线定位论文结构 v4\\[5pt]
+\normalsize 中文写作蓝图、英文核心段落、代码边界与证据合同}
+\author{基于最新公开实现重构；配套实验文件：\code{experiment_design_v4.md}}
+\date{2026 年 9 月 12 日}
+\begin{document}
+\maketitle
+
+\noindent\textbf{版本锚点。} 本次核验的分支为 \code{feature/uwb-imu-fusion-ie-postprocessing}，公开最新提交为
+\code{439282c2790ab1414ca9b276dd61a18b5e1643a8}。以该提交的实现为准，不以旧 roadmap、旧方法草稿或分支页面的缓存摘要为准。这里做了代码与公开报告的静态审阅，\textbf{没有在本次环境编译或重跑估计器}。仓库报告中的结果只作为已有开发证据；以下实验节是待执行方案，不能原样当作已完成结果投稿。\cite{commit,e2e}
+
+\noindent\textbf{文件用途。} 本文件可用 XeLaTeX 编译为作者工作稿；不是最终 IEEE 双栏排版。英文标题、问题句、贡献、方法方程、章节小标题与图注可移入目标会议模板。中文指导段和证据审计不进入投稿正文。配套 Markdown 给出 E0--E9 的具体数据、方法、指标和图表。
+
+\tableofcontents
+\newpage
+
+\section{先改论文定位，而不是给旧贡献换名字}
+
+\subsection{建议题目}
+\eng{\textbf{Persistent-NLOS Detection and Selective Range Recovery for Offline UWB--Inertial Localization}}
+中文：\textbf{面向离线 UWB--惯性定位的持续 NLOS 检测与选择性测距恢复。}
+
+备选更突出研究问题的题目：
+\eng{\textbf{From Rejection to Recovery: Persistent-NLOS Handling in Offline UWB--Inertial Localization}}
+若最终恢复证据不足，而检测器充分验证，应退回 detection-aware offline estimation；不要坚持使用 ``recovery improves localization'' 的标题承诺。
+
+目前不建议把 \emph{integrity-guaranteed}、\emph{certified recoverability}、\emph{globally identifiable} 或 ``普遍优于拒绝'' 放到题目。``Recoverability-aware'' 可以作为文中局部诊断的描述，但需要 E5 证明其与实际可估程度/恢复收益的关系；不能只因代码导出了一个矩阵就当成已验证贡献。
+
+\subsection{新的核心问题句}
+\eng{When do temporally persistent UWB range biases provide useful information after correction, rather than simply being rejected, and how can an offline UWB--inertial estimator detect, estimate, and selectively reuse such measurements without conflating detection confidence with localization benefit?}
+
+人话版本：\textbf{先找出哪条测距持续有问题，再估计它偏了多少；只有判断值得用时才补偿后放回定位。最后必须证明：这样比直接丢掉更好，并解释哪些情况下反而不该恢复。}
+
+这与原来“提出全套可恢复性理论，再让系统验证理论”的写法不同。现在应以\textbf{已经实现的检测--重估--筛选--离线重优化流程}为主体；局部信息分析为其提供解释，实验决定能宣称多大收益。
+
+\subsection{从旧设计到当前实现的改写清单}
+\begin{longtable}{p{0.22\textwidth}p{0.34\textwidth}p{0.35\textwidth}}
+\toprule
+旧叙事/模块 & 当前应写的内容 & 对贡献的处理\\
+\midrule\endhead
+L1/TV 发现稀疏、持续 bias 场 & 主检测路径为预提交条件创新，正向/反向 CUSUM 构造同一链路的候选支持 & L1/TV 不是本轮主算法；保留为历史或可选基线，不混写\\
+全批量图内发现所有 NLOS & 信号由 fixed-lag 前端产生；支持构建和最终估计为离线流程 & 解释前端和后端的信息预算，不能全都称为纯 batch detector\\
+双向处理等于反向惯性平滑 & 反向的是同一条件创新序列的 CUSUM 处理 & 不声称存在未实现的 backward IMU filter\\
+冻结支持但始终保留 live bias & 当前主方法 \code{lcb_fixed_full} 冻结支持及用于 final graph 的补偿幅度 & live-C \code{structured_debias} 是对照，不是与主方法相同的后验语义\\
+LCB 是实际补偿距离 & 主方法先用正 LCB 决定准入，再减完整 \(\hat c\) & \code{lcb_partial} 才用 LCB 幅度；不得对调名称\\
+\(\eta,s,\gamma\) 三重门是所有策略统一主干 & 当前 fixed 路径的实际准入要按 eligible、局部 sigma 和正 LCB 描述 & 老 gate 可做消融/诊断，不能画成未经调用的主串联路径\\
+恢复后的后验自然保留所有相关性 & fixed-offset final graph 条件于估计补偿量；不等于对 bias 完整边缘化 & 删除完整后验/完整性保证；披露条件不确定性\\
+未来信息必然提高历史可辨识性与精度 & 需要专门前缀实验，且固定支持与自动支持要分开 & E8 未充分完成则降为讨论，不再单列贡献\\
+六个输入能运行就是泛化贡献 & 重点是精度、无害性、失败率与跨独立记录效果 & 数据读取/复现是必要工程条件，不替代科学结果\\
+\bottomrule
+\end{longtable}
+以上主路径与策略区别由生产 provider、条件创新、最终策略及评分实现核对。\cite{provider,conditional,inference,recoverability,scoring}
+
+\section{新的贡献：两条技术主线，一条实证贡献}
+
+\subsection{C1：持续异常支持的构建，而非“发明 CUSUM”}
+\textbf{建议定位：} 将预提交的 per-link 条件创新与离线双向时间累积结合，产生按原始观测身份冻结的持续异常支持；让后续偏置估计不再依赖被轨迹拟合吸收后的残差分割。
+
+\eng{We develop a link-wise persistent-fault support construction procedure for offline UWB--inertial estimation. It accumulates pre-commit conditional innovations and uses a backward pass to refine the support of sustained positive range anomalies before bias estimation.}
+
+\textbf{新意边界：} 条件高斯创新、CUSUM 和正向/反向扫描都是已有工具，不应称其公式本身原创。可以争取的是\emph{针对持续 UWB 正偏差的具体信号、支持构造和后端耦合设计}。需要 E3 在相近误报预算下拆分“信号选择、时间累积、双向支持”三部分，否则容易被认为只是在已有估计器外包一层阈值。
+
+\subsection{C2：有条件的测距恢复与明确的拒绝对照}
+\textbf{建议定位：} 冻结支持后，估计分段非负 bias；利用消去轨迹等干扰量后的局部信息计算 bias 尺度，并据此决定是否把补偿测距放回最终图。主张的是有选择的利用，而不是“检测到就一律补偿”。
+
+\eng{We integrate support-frozen segment-bias estimation with a local uncertainty-based admission rule and fixed-offset range reuse. The resulting offline estimator explicitly distinguishes correction from rejection, and retains the latter when a candidate cannot support an admissible correction.}
+
+\textbf{新意边界：} 非负 bias、Schur 消元、补偿测距和局部标准差本身都不是独立数学新发现。贡献必须落在\emph{为什么这套选择性流程能在指定条件下保留有用约束，并改善定位}。E4 是核心：同支持比较 B3/B4/B5/P，同 mask 比较 full/partial，且分别报告距离和轨迹。不能仅凭补偿量为正证明“安全恢复”。
+
+\subsection{C3：恢复收益和失败条件的系统性证据}
+\textbf{建议定位：} 真实遮挡、半合成配对和可控仿真共同刻画恢复的收益与边界，尤其是低冗余、弱运动激励和模型失配。系统开源与失败记录增强可复现性，但不单独凑成一个算法创新。
+
+\eng{We provide a controlled evaluation that separates support detection, range correction, and trajectory improvement, and characterizes the regimes in which recovery helps or hurts relative to rejection under changing geometry, motion, and NLOS characteristics.}
+
+这句是\textbf{待完成实验后的贡献模板}。只有 E1--E7 完成并支持相应结论后才能写成已完成语态。具体的跨数据集数量、改善比例和成功率都留给最终结果，不在这里预填。若只有少数条件改善，C3 就明确写条件性结论，不藏输例。
+
+\subsection{贡献--实现--证据对应表}
+\begin{longtable}{p{0.12\textwidth}p{0.25\textwidth}p{0.25\textwidth}p{0.26\textwidth}}
+\toprule
+主张 & 代码主体 & 必须证据 & 证据不足时\\
+\midrule\endhead
+C1 & 生产 CUSUM provider、条件创新与累积内核 & E2 长期 nominal；E3 分层检测消融；E6 多故障 & 只称采用该 detector，不宣称优越\\
+C2 & segment refit；\code{nlos_inference.cpp}；局部评分 & E1 定位；E4 同支持/同 mask 后端；E5 退化 & 恢复降为实验模块，拒绝保留主地位\\
+C3 & 统一离线执行与审计产物 & 真实独立 GT、跨记录测试、条件分析、全体失败率 & 减少数据泛化与机制解释的范围\\
+未来信息 & 当前离线支持/后端可利用后续数据 & E8 固定支持与自动支持两组 & 不保留独立贡献\\
+概率保证 & 当前不足以直接对应 & E9 全流水线统计校准及适当理论 & 从题目、摘要、结论删除\\
+\bottomrule
+\end{longtable}
+
+\section{现有开发结果在文章中怎么用}
+
+\subsection{允许作为动机，不允许充当完整主实验}
+
+仓库受控 Walk1 报告中，相同评估协议下 P 的 ATE RMSE 约为 0.16315 m，剔除对照约为 0.18164 m；这是约 10.18\% 的相对改善。该报告同时给出六输入诊断的 0 改善、1 退化、1 持平、4 不可用。因此现在可以说\textbf{已出现值得继续验证的恢复收益案例}，不能说\textbf{已验证广泛精度优势}。这些数值未在本次审查中重跑。\cite{e2e}
+
+这组数值采用 SE(3) 对齐，不能宣传为已校准世界坐标下的绝对精度。报告里的 clean-paired injected-component removal 也不是相对于几何真值的完整测距误差。论文最终最好把它作为开发案例或替换为新 TEST 的统计结果。\cite{e2e}
+
+\subsection{不能把不同等级的“成功”混在一起}
+
+代码构建/单元测试通过是工程成功；支持命中是检测成功；bias 接近真值是估计成功；补偿后定位优于剔除才是本文想证明的系统收益。没有候选而返回正常轨迹，不等于“成功恢复 NLOS”。恢复尝试失败后返回 suppress fallback，也不能统计为恢复成功。
+
+已经用于选 detector、gate 或参数的旧三条 Walk 和其他已见输入都在开发证据层。对同一数据重跑能证明确定性，不会创造新的独立样本。
+
+\section{投稿正文的建议结构}
+
+\subsection{Abstract：问题、方法、边界、证据，四句话}
+
+\eng{Persistent non-line-of-sight range biases can remain temporally coherent and are not necessarily handled well by isolated outlier rejection. We present an offline UWB--inertial framework that constructs link-wise candidate intervals from accumulated conditional innovations, estimates nonnegative segment biases on frozen supports, and selectively reuses bias-corrected ranges using a local uncertainty-based admission rule. We evaluate detection, range correction, and trajectory accuracy separately on \todo{真实数据族、独立记录数、半合成和仿真范围}, with direct rejection and sensor-matched robust estimators as baselines. The results show \todo{已验证收益、无害性结果及重要失败条件}, without asserting that correction is universally preferable to rejection.}
+
+\textbf{写作要求：} 第一句保留 ``can''，避免断言所有鲁棒核都会失效。最后一句只填 TEST 结论。若真实数据未验证恢复有效，必须改变摘要，而不是只把“真实”二字删掉却保留广泛应用结论。
+
+\subsection{I. Introduction（建议 5 个段落）}
+
+\textbf{P1 场景与问题：} 离线 UWB--IMU 后处理面对持续测距偏差。目标不是实时避障或系统安全认证，而是高质量历史轨迹与异常解释。
+
+\textbf{P2 为什么不只做鲁棒降权：} 降权或剔除可以防止坏观测主导估计，但会损失信息；当几何和剩余约束不足时，准确恢复可能有价值。这里是研究动机，不是预先认定恢复一定赢。
+
+\textbf{P3 真正困难：} 轨迹误差和 bias 相互吸收；瞬时检验难处理弱但持续异常；错误支持污染偏置估计；偏置被估出来不等于该补偿能改善轨迹。
+
+\textbf{P4 方案摘要：} 用预提交条件创新构造支持，冻结后再估 bias，以局部信息筛选，最后对补偿观测离线重优化。给 F1；一句说明 fixed-lag signal producer 与 offline final inference 的分工。
+
+\textbf{P5 贡献：} 使用 C1--C3 的文字，紧跟实验范围限定。不再在 Introduction 里承诺全局可识别性、95\% 保护级或低冗余必然恢复成功。
+
+\subsection{II. Related Work（围绕差异，不按期刊档次筛选）}
+
+\textbf{A. UWB--inertial estimation and offline smoothing.} 用 SFUISE 等说明已有紧耦合估计；本文不是第一个 UWB--IMU 因子图或离线平滑器。比较的是持续异常支持和选择性恢复流程。\cite{sfuise}
+
+\textbf{B. Robust rejection and bias mitigation.} 讨论 robust kernels、门控、显式 bias 与 NLOS 模式估计。NR-UIO 以及 HBR-PGD 等是必须认真定位的相关工作；不因发表渠道而忽略已有偏置建模。对于未复现的工作不编数值比较。\cite{nruio,hbr}
+
+\textbf{C. Temporal fault detection and selective reuse.} 将时间持续性与多时刻一致性作为相关方向。MR-ULINS 的输入包含 LiDAR，不能当作与 UWB--IMU 完全传感器匹配的主性能对手；可作为不同信息来源下的相关工作。\cite{mrulins}
+
+\textbf{差异表建议：} 列输入传感器、在线/离线、是否显式估计 bias、支持是瞬时/时间段、是否提供拒绝与恢复的同支持比较。不写未经穷尽检索验证的 ``first''。本次检索用于定位，不是穷尽性的 novelty certification。
+
+\subsection{III. Problem Formulation and System Overview}
+
+\textbf{输入与范围。} 固定位置 anchor、已知或独立标定的 tag--IMU 外参和静态测距偏置、同步后的原始 UWB 距离与 IMU。当前稿不扩展到联合在线 anchor/lever/time calibration、移动 anchor 协作定位或 TDOA；公开数据具有这些附加字段，不意味着本文使用了它们。
+
+状态写成
+\begin{equation}
+ \bm\theta=\{\mathbf R_k,\mathbf p_k,\mathbf v_k,
+ \mathbf b^a_k,\mathbf b^g_k\}_{k=0}^{K}.
+\end{equation}
+链路 \(\ell=(\text{tag},\text{anchor})\) 的绝对距离模型为
+\begin{equation}
+ z_{k\ell}=\underbrace{\|\mathbf p_k+\mathbf R_k\mathbf l_{\rm tag}
+              -\mathbf a_\ell\|}_{d_{k\ell}(\bm\theta)}
+       +\beta_\ell+c_{j(k,\ell)}+\epsilon_{k\ell},
+ \qquad c_j\geq 0.
+ \label{eq:range}
+\end{equation}
+\(\beta_\ell\) 是独立标定的静态偏移，不是本次持续故障的 \(c_j\)；候选支持外令该附加项为零。\(c_j\) 在一个冻结的链路段内常值，是模型近似，不是所有真实 NLOS 的物理定律。观测总误差受噪声与其他因素影响，可以出现负残差；不能把“额外路径长度通常为正”写成“所有实际误差都严格为正”。
+
+\textbf{系统框图 F1 应只保留六个模块：}
+输入/物理模型；预提交条件创新；双向 CUSUM 与支持冻结；分段 bias 重估；局部信息与准入；fixed-offset 最终图。画成 2\(\times\)3 紧凑布局，不再画一条很长的流水线。GT、注入标签和 clean counterpart 在单独的 evaluation 区域，不能有箭头进入 estimator。
+
+\textbf{可因果使用与离线使用分开。} 前向报警可以记录延迟；反向支持和最终批量重估使用未来数据。因此系统整体是离线后处理，不能用 forward alarm latency 当作完整系统实时性。
+
+\subsection{IV. Persistent Candidate Support from Conditional Innovations}
+
+\subsubsection{A. Pre-commit signal construction}
+在某个观测组进入前端更新之前，以当前预测构造
+\begin{equation}
+ \bm\nu_k=\mathbf z_k-\mathbf h(\hat{\bm\theta}^{-}_k),
+ \qquad \mathbf S_k=\mathbf H_k\mathbf P_k^{-}\mathbf H_k^\top+\bm\Sigma_k.
+\end{equation}
+当前组中的第 \(m\) 个观测以其他观测为条件，形成
+\begin{align}
+ \nu_{m|-m}&=\nu_m-\mathbf S_{m,-m}\mathbf S_{-m,-m}^{-1}\bm\nu_{-m},\\
+ s_{m|-m}&=S_{mm}-\mathbf S_{m,-m}\mathbf S_{-m,-m}^{-1}\mathbf S_{-m,m},\\
+ u_m&=\nu_{m|-m}/\sqrt{s_{m|-m}}.
+ \label{eq:conditional}
+\end{align}
+若组内只有一个测量，条件量退化为其 marginal 量；多链路条件化的收益依赖实际分组，不能假设每个时刻都同时有多个 anchor。实现中的无效协方差/重复 anchor 等状态需显式记录。\cite{conditional,provider}
+
+\textbf{必须披露：} ``pre-commit'' 排除了当前组对当前信号的拟合，但并不保证历史 prior 没被过去 NLOS 污染。当前信号生产器在诊断后仍提交该组原始 UWB；检测不是一套未声明的在线 reject-feedback filter。这个设计及其多故障局限用 E3/E6 检验。\cite{provider}
+
+\subsubsection{B. Forward accumulation and backward support refinement}
+对每条链路按其观测顺序运行单边累计统计量，例如
+\begin{equation}
+ G^{\rightarrow}_{\ell,n}=
+ \max\{0,G^{\rightarrow}_{\ell,n-1}+u_{\ell,n}-\kappa_f\},
+ \qquad G^{\rightarrow}_{\ell,n}>h_f\ \text{触发报警}.
+ \label{eq:cusum}
+\end{equation}
+反向过程使用同一已生成信号的倒序序列，以及其冻结参数。\textbf{这不是一个反向 IMU 状态估计器。} 统计量、报警事件和最终段内 membership 是三个不同对象：具体的 reset、gap 与段支持回填规则必须随代码版本说明，不能把 \(G>h\) 的单点集合直接替代最终候选支持。\cite{provider}
+
+最终支持在相同的原始观测身份上作交集，概念上记作
+\begin{equation}
+ \mathcal S_\ell=\mathcal S^{\rightarrow}_\ell\cap
+                  \mathcal S^{\leftarrow}_\ell,
+\end{equation}
+再按既定分段规则建立候选段。主文解释其作用是限制尾部污染与固定支持；是否提高 recall/precision 由 E3 回答，不预设一定优于单向。阈值在独立 nominal/CAL 数据锁定；其经验校准不是严格的全时域误报概率保证。
+
+\subsubsection{C. Operational details and support freezing}
+列出 bootstrap、gap、keyframe 分组、链路排序、参数来源和输出身份。当前固定滞后以 epoch 计，不应写成秒；不同采样率/分组会改变物理时间跨度。支持在后端 bias 重估之前冻结，防止看到恢复效果后改边界。完整参数和 provenance 放补充材料；算法正文不需要充满 hash 名称。
+
+\subsection{V. Support-Frozen Bias Estimation and Selective Range Reuse}
+
+\subsubsection{A. Segment-bias refit}
+冻结支持后求解具有 IMU/先验和物理测距项的非负分段估计，概念目标写为
+\begin{equation}
+ (\hat{\bm\theta},\hat{\mathbf c})=
+ \arg\min_{\bm\theta,\mathbf c\geq0}
+ \mathcal L_{\rm IMU,prior}(\bm\theta)+
+ \sum_{(k,\ell)\in\mathcal O}
+ \frac{\big(d_{k\ell}(\bm\theta)+\beta_\ell+c_{j(k,\ell)}-z_{k\ell}\big)^2}
+ {\sigma_{k\ell}^2}.
+ \label{eq:refit}
+\end{equation}
+这里不再用用于 support discovery 的 L1/TV 惩罚估计本轮主偏置幅度。实际的边界活动、短支持、停止准则和数值失败按实现记录。不要把达到最大迭代次数一概写成收敛，也不要在没有独立验证时把局部解称作全局最优。
+
+\subsubsection{B. Local bias information after nuisance elimination}
+对被评分的候选组，在规定的共同参考构造和线性化处，将白化 Jacobian 分为 nuisance 列 \(\mathbf F\) 与该组 bias 列 \(\mathbf G\)。其局部消元信息写为
+\begin{equation}
+ \mathbf R_c=\mathbf G^\top(\mathbf I-\mathbf P_F)\mathbf G,
+ \qquad \mathbf P_F=\mathbf F\mathbf F^\dagger.
+ \label{eq:rc}
+\end{equation}
+只在秩和数值正定检查通过时，使用
+\begin{equation}
+ \sigma_{c,j}=\sqrt{[\mathbf R_c^{-1}]_{jj}}.
+ \label{eq:sigma}
+\end{equation}
+它的作用是说明：排除可由轨迹等变量解释的方向后，数据对 bias 留下多少局部约束。实现采用数值求解而非要求显式求大矩阵逆。评分参考图的选择和候选组构造要与 \code{nlos_scoring.cpp} 一致，不能随主张变化偷偷把同一候选又当独立验证数据。\cite{recoverability,scoring}
+
+这是标准局部最小二乘/消元几何的应用，不是全局可观性定理，也不是留出数据上的恢复验证。\(\eta\)、\(s\)、fit diagnostic 可作为附加诊断；不把旧版每个指标都提升成一条新贡献。边界 \(c=0\)、模型失配与选择效应都会限制高斯近似解释。
+
+\subsubsection{C. Positive-LCB admission and the actual correction amplitude}
+令 \(\mathcal E_j\) 表示实现中的 eligibility、有效映射、非边界、非短支持与有效局部 sigma 等前提。当前 fixed 路径的核心规则为
+\begin{align}
+ L_j&=\max\{0,\hat c_j-2\sigma_{c,j}\},\\
+ a_j&=\mathbb I\{\mathcal E_j\ \text{成立且 }L_j>0\},\\
+ \delta_j^{\rm full}&=a_j\hat c_j,
+ &\delta_j^{\rm partial}&=a_jL_j.
+ \label{eq:lcb}
+\end{align}
+\textbf{主方法 P = \code{lcb_fixed_full}。} 它不是保守地只减 LCB；它以正 LCB 为准入后减完整 \(\hat c_j\)。\code{lcb_partial} 是不同幅度策略。若以后把 partial 改为主方法，需要新的预先冻结版本和实验，不能在看完 TEST 后按赢家改称主方法。\cite{inference}
+
+这里 ``LCB'' 是实现中的局部规则名称，本文不声称它是经过全流程校准的 95\% 单侧下界。常数 2 在方法中明确给出；多重检测、相关噪声和支持选择下的覆盖率需要 E9，不能直接沿用理想高斯解释。
+
+\subsubsection{D. Fixed-offset final graph and rejection fallback}
+被接受的测距使用 \(z^{\rm corr}_{k\ell}=z_{k\ell}-\delta_j\)；不属于候选的测距保持不变；被拒绝候选不进入最终图。final fixed-offset 目标仍优化轨迹，但 \(\delta_j\) 不再是 live 变量。
+
+每条被采用的原始 UWB 观测在最终图出现一次，不把 corrected range 与原始 range 同时加进去。恢复失败后可回退到全部候选剔除；成功回退与成功恢复分开记账。\code{structured_debias} 保留 live-C 的比较路径，其门控和后验语义不可与 fixed 模式混为一谈。\cite{inference}
+
+\textbf{不确定性限制。} 固定图给出的协方差条件于估计出的补偿值，没有自动传播补偿估计、支持选择及其与轨迹的全部相关性。因此可报告 conditional graph covariance，但不能把它解释为完整系统可信区间，更不能因观测未重复就断言统计独立性已解决。
+
+\subsection{VI. Experimental Evaluation}
+
+\textbf{A. Datasets and protocol（T1，F2）。} 清楚分开 ISAS 的三条 Walk、自己的四 anchor 真实采集、MILUV 等外部数据族、半合成版本和仿真。三条序列不是三个独立数据集。声明哪些用于开发、哪些 untouched test。缺乏逐观测 NLOS 标签的普通公开序列不称为真 LOS。\cite{sfuise,miluv,starloc}
+
+\textbf{B. Baselines and information budgets。} 同图 Cauchy/Huber 或合格强鲁棒基线、同支持 suppress、live-C、partial、full；SFUISE 作外部基线并标明其信息预算。主比较为 P 对 B3，不只挑非鲁棒 LS。额外传感器的算法分组呈现。
+
+\textbf{C. Localization under real and nominal conditions（E1/E2，T2/F3）。} 主终点是 recording 级位置 RMSE 配对差；报告 P95、相对位移误差、完成率和 fallback。正常数据检查非劣而非只看是否触发候选。世界坐标与对齐坐标结果分开。
+
+\textbf{D. Detection ablation（E3，T3/F4）。} 分别评价 conditional 信号、时间积累和反向支持的作用。在相似 nominal 误报预算下比较。首次 forward alarm 延迟与离线边界精度分开报告。
+
+\textbf{E. Does range recovery improve localization?（E4，T3/F5）。} 同支持/同 mask 比较后端；分别呈现注入分量、独立几何距离和轨迹三个层次。展示接受/拒绝段及失败，不只挑被正确恢复的段。
+
+\textbf{F. Geometry, motion and mismatch（E5/E6，F6/F7）。} 展示恢复胜过/输给剔除的条件，包含弱几何、弱运动、双故障、ramp/相关波动与 dropout。真实遮挡必须出现，不能全是匹配常值模型的注入。
+
+\textbf{G. Runtime and failure accounting（E7，T4）。} 分阶段报告完整链路成本；把各阶段失败与成功 fallback 分开。主表有全部计划运行的分母。
+
+\textbf{H. Future information（仅 E8 完成时）。} 若未保留未来信息贡献，就不强行增加本小节。若保留，同时给固定支持的后端机制实验和每个前缀独立自动检测的全系统实验；只评分共同历史区间。
+
+\subsection{VII. Discussion and Limitations}
+
+\textbf{必须回答五个问题：} 为什么某些场景剔除更好？常值 bias 模型在哪些真实遮挡下失配？多链路同时异常是否污染条件创新？局部 sigma 能否预测有益恢复而不仅是数值可解？fixed-offset 的不确定性解释有哪些限制？
+
+明确未覆盖移动 anchor、未知在线标定、TDOA、全轨迹无正常初始化、概率完整性和所有传感器硬件泛化。若当前适用范围是单个 tag 对固定 anchors，就如实写；不要因 legacy adapter 存在而扩大方法范围。
+
+\subsection{VIII. Conclusion}
+\eng{This work studies persistent-NLOS handling as a selective information-reuse problem in offline UWB--inertial localization. The proposed pipeline separates candidate support construction, segment-bias estimation, and final range reuse. Within \todo{正式验证范围}, it yields \todo{定位与无害性结论}, while \todo{明确失败条件} remain better handled by rejection or indicate insufficient information.}
+
+结论只回答 Introduction 提出的问题。不能在 Conclusion 突然把局部诊断升级成完整性保证，或把半合成改善升级成真实应用成熟度。
+
+\section{两段应保留的数学解释：简短但能挡住关键误解}
+
+\subsection{减小测距不保证更接近真值}
+设理想化的真实正偏差为 \(b>0\)，无其他误差。减去 \(\delta>0\) 后，绝对误差改善的条件是
+\begin{equation}
+ |b-\delta|<b \quad\Longleftrightarrow\quad 0<\delta<2b.
+\end{equation}
+因此仅保证 \(z-\delta<z\)，或 \(0\leq\delta\leq\hat c\)，不保证距离更准：\(\hat c\) 可能偏大。存在噪声和相关估计时，令原总距离误差为 \(e\)，则
+\begin{equation}
+ \E[(e-\delta)^2]-\E[e^2]=\E[\delta^2]-2\E[e\delta].
+\end{equation}
+其符号不由“正补偿”决定。论文应把这里当作恢复需要实证比较的理由，而非承诺某个简单 clipping 就能带来定位无害性。
+
+\subsection{full-fixed 与 live-C 得到相近位置解并不反常}
+对于相同支持、权重、先验与目标 \(J(\theta,c)\)，若联合解 \((\theta^*,c^*)\) 已满足
+\(\nabla_\theta J(\theta^*,c^*)=0\)，把 \(c\) 固定为 \(c^*\) 后，\(\theta^*\) 仍是条件目标的驻点。这不保证非线性全局唯一，也不覆盖不同 gate 或边界处理，但说明\textbf{冻结一个已经充分收敛的偏置，通常不会凭空产生新的独立信息}。
+
+因此 P 与 B4 轨迹相近时，不必解释成失败，也不能把很小数值差包装成新性能突破。真正的比较是偏置估计与准入机制是否让系统比强鲁棒基线和拒绝对照更有用；fixed 与 live 的区别还包括计算和不确定性语义。
+
+\section{图表、篇幅与写作验收}
+
+\subsection{主图与图注模板}
+\textbf{F1. System overview.}
+\eng{Overview of the offline UWB--inertial pipeline. Pre-commit conditional innovations are accumulated to construct and freeze link-wise candidate supports. Segment biases are estimated before local admission and fixed-offset range reuse. Ground truth and intervention labels are used for evaluation only.}
+
+\textbf{F3. Paired localization differences.}
+\eng{Recording-level position RMSE differences between selective recovery and rejection using the same detected supports. Negative values favor recovery. Nominal, physically obstructed, and semi-synthetic recordings are reported separately, with completion and fallback counts.}
+
+\textbf{F4. Detection support.}
+\eng{Conditional innovations, forward alarms, and final bidirectional candidate membership for a representative persistent anomaly. Alarm latency and offline boundary errors are distinct metrics; aggregate detection comparisons use matched nominal false-alarm budgets.}
+
+\textbf{F5. Three-level evaluation.}
+\eng{Evaluation separates removal of the injected error component, geometric range error against an independent reference, and trajectory improvement. Improvements in the first quantity do not by themselves establish improvements in the other two.}
+
+\textbf{F6. Recovery regime.}
+\eng{Recovery-versus-rejection performance under controlled anchor geometry and motion conditions. Accuracy differences are presented together with admission and failure rates, including regimes in which rejection is preferable.}
+
+所有图注都在对应实验完成后使用。F2 必须来自实际装置/采集场景，不用生成的概念图片冒充实验照片。图表尺寸按最终双栏可读性设计，禁止把几十个模块挤成一条长图。
+
+\subsection{篇幅分配（仅排版建议，不是会议规则）}
+若正文空间约八页，可先按以下比例安排：Introduction 约 1 页；Related Work 约半页；Problem/overview 约半页；detector 约 1 页；selective recovery 约 1.5 页；experiments 约 2.5 页；discussion/conclusion 约半页。参考文献和会议页数规则需按目标 venue 另行核对。
+
+最优先保住 T2 主精度和完成率、T3 消融、F4 检测机制、F6 条件图。技术推导、阈值校准曲线、完整失败表、F7 和可选 F8 放补充。不是每个旧模块都值得主文篇幅。
+
+\subsection{投稿前的证据门槛}
+\begin{enumerate}
+ \item 主方法名、参数与 final policy 和冻结代码完全一致，图中没有未调用的主模块。
+ \item 至少有真实物理遮挡、独立 GT 和独立 recording 的恢复定位比较；若没有，修改真实泛化主张。
+ \item P 对直接剔除和强鲁棒基线公平比较；同支持与 native-policy 比较区别清楚。
+ \item 检测、测距、轨迹三层指标分开；失败和 fallback 进入总分母。
+ \item 每个贡献至少有一个直接对应的实验，不靠单元测试或原理图充当证据。
+ \item 所有 ``better''、``safe''、``identifiable''、``generalizes'' 都有明确条件；没有证据的保证删除。
+\end{enumerate}
+
+如果正式结果只支持部分条件改善，就写\textbf{条件性选择性恢复}；如果只支持检测，就收窄到检测贡献。这不是措辞游戏，而是让论文的问题、方法与证据保持一致。任何版本都不能保证录用，但这种结构可以直接回应公平性、真实性、机制和边界四类核心质疑。
+
+\section{代码与写作维护约定}
+
+将本稿与实验方案和论文代码版本绑定。修复数据适配或算法后保留旧版开发结果，给新实验新 commit/hash；不能覆盖旧文件后仍用旧版本名。旧设计中 L1/TV、三重 gate、future-identifiability 和 live-C full-posterior 相关段落应逐项检索，不让它们残留在摘要、架构图、图注和结论。
+
+实现过、测试过、具有科学优势是三个不同标签。\textbf{新的 paper structure 可以现在冻结为写作方向；带定量优势的摘要和结论必须等正式实验填写。} 配套 \code{experiment_design_v4.md} 是实验执行合同；其中明确标记的 matched-mask、额外基线和汇总输出需要实现时，不能提前宣称已有。
+
+\begin{thebibliography}{99}
+\small
+\bibitem{commit} Printeger, ``Integrate bidirectional CUSUM production E2E,'' commit 439282c2790ab1414ca9b276dd61a18b5e1643a8, inspected 2026-09-12.
+\url{https://github.com/Printeger/uwb-imu-fusion/commit/439282c2790ab1414ca9b276dd61a18b5e1643a8}.
+
+\bibitem{e2e} Repository development report, \code{PL_CUSUM_E2E_INTEGRATION_ACCURACY_RESULT.md}, same commit. Reported experiments were not independently rerun in this review.
+\url{https://raw.githubusercontent.com/Printeger/uwb-imu-fusion/439282c2790ab1414ca9b276dd61a18b5e1643a8/doc/ie_0911/PL_CUSUM_E2E_INTEGRATION_ACCURACY_RESULT.md}.
+
+\bibitem{provider} Production support provider, \code{src/pl_bidirectional_provider.cpp}, same commit.
+\url{https://raw.githubusercontent.com/Printeger/uwb-imu-fusion/439282c2790ab1414ca9b276dd61a18b5e1643a8/src/pl_bidirectional_provider.cpp}.
+
+\bibitem{conditional} Conditional-innovation implementation, \code{src/pl_conditional_raim.cpp}, same commit.
+\url{https://raw.githubusercontent.com/Printeger/uwb-imu-fusion/439282c2790ab1414ca9b276dd61a18b5e1643a8/src/pl_conditional_raim.cpp}.
+
+\bibitem{inference} Final policies and \code{FreezeFixedCompensations}, \code{src/nlos_inference.cpp}, same commit.
+\url{https://raw.githubusercontent.com/Printeger/uwb-imu-fusion/439282c2790ab1414ca9b276dd61a18b5e1643a8/src/nlos_inference.cpp}.
+
+\bibitem{recoverability} Local information and amplitude-scale implementation, \code{src/nlos_recoverability.cpp}, same commit.
+\url{https://raw.githubusercontent.com/Printeger/uwb-imu-fusion/439282c2790ab1414ca9b276dd61a18b5e1643a8/src/nlos_recoverability.cpp}.
+
+\bibitem{scoring} Candidate-group scoring, \code{src/nlos_scoring.cpp}, same commit.
+\url{https://raw.githubusercontent.com/Printeger/uwb-imu-fusion/439282c2790ab1414ca9b276dd61a18b5e1643a8/src/nlos_scoring.cpp}.
+
+\bibitem{sfuise} KIT-ISAS, SFUISE official repository and dataset entry points.
+\url{https://github.com/KIT-ISAS/SFUISE}.
+
+\bibitem{miluv} M. A. Shalaby et al., ``MILUV: A Multi-UAV Indoor Localization dataset with UWB and Vision,'' author manuscript and official devkit.
+\url{https://arxiv.org/html/2504.14376v1}; \url{https://www.decar.ca/miluv/}.
+
+\bibitem{starloc} F. D\"umbgen et al., ``STAR-loc: Dataset for STereo And Range-based localization,'' 2023.
+\url{https://arxiv.org/abs/2309.05518}; \url{https://github.com/utiasASRL/starloc}.
+
+\bibitem{nruio} ``NR-UIO: NLOS-Robust UWB-Inertial Odometry Based on Interacting Multiple Model and NLOS Factor Estimation,'' Sensors, 2021.
+\url{https://www.mdpi.com/1424-8220/21/23/7886}.
+
+\bibitem{hbr} ``Heteroscedastic Bias-Robust Projected Gradient Descent for UWB Localization in Complex Indoor Environments,'' Sensors, 2026.
+\url{https://www.mdpi.com/1424-8220/26/14/4578}.
+
+\bibitem{mrulins} T. Zhang et al., ``MR-ULINS: A Tightly-Coupled UWB-LiDAR-Inertial Estimator with Multi-Epoch Outlier Rejection,'' author manuscript, 2024.
+\url{https://arxiv.org/abs/2408.05719}.
+\end{thebibliography}
+\end{document}

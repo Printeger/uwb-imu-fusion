@@ -58,6 +58,7 @@ msg/_*.py
 # OS
 .DS_Store
 Thumbs.db
+*:Zone.Identifier
 .cproject
 
 # qcreator stuff
@@ -81,6 +82,13 @@ qtcreator-*
 # Catkin custom files
 CATKIN_IGNORE
 data/*.bag
+
+# Local datasets and evaluator outputs are referenced by manifests/hashes only.
+/data/
+/evaluator_private/
+
+# Protected local paper drafts supplied outside the tracked sprint tree.
+/doc/v2/ie_0911/
 
 # Rebuildable native artifacts and experiment scratch
 *.o

@@ -1,0 +1,23 @@
+{
+  "comparison": [
+    {
+      "method": "M0",
+      "all_metric_fields_exact": true
+    },
+    {
+      "method": "M1",
+      "all_metric_fields_exact": true
+    },
+    {
+      "method": "M3",
+      "all_metric_fields_exact": true
+    },
+    {
+      "method": "M4",
+      "all_metric_fields_exact": true
+    }
+  ],
+  "before": "experiments/results/walk1-clean-20260912T092140Z-2732b6b82486",
+  "after": "experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3",
+  "GT_private_directory_mounted": false
+}

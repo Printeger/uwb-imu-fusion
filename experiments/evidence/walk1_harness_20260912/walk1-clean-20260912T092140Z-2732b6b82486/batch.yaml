@@ -1,0 +1,38 @@
+schema: uifgo_t09_batch_v2
+role: development
+parameter_provenance: IE0912_PL_BIDIRECTIONAL_LOCKED_PENDING_VALIDATION
+run_units:
+- run_unit_id: isas_walk1_clean
+  recording_id: ISAS-Walk1
+  base_trajectory_id: ISAS-Walk1
+  seed: 911
+  prefix_identity: full_original_crop
+  config: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/config/paper/ie0911/sfuise_walk1_pl_bidirectional_clean.yaml
+  cells:
+  - mode: all_range
+    execution_type: BASELINE_TRAJECTORY
+    path: DIRECT_COMMON_PREPARATION
+  - mode: robust_cauchy
+    robust_scale: 2.3849
+    execution_type: BASELINE_TRAJECTORY
+    path: DIRECT_COMMON_PREPARATION
+  - mode: structured_debias
+    execution_type: CACHE_PRODUCER
+    path: PL_BIDIRECTIONAL_CUSUM
+    producer_id: shared
+  - mode: suppress_all
+    execution_type: FINAL_TRAJECTORY
+    path: PL_BIDIRECTIONAL_CUSUM
+    producer_id: shared
+    thresholds:
+      tau_eta: 0.1
+      tau_s_m: 0.1
+      tau_gamma: 1.0
+  - mode: lcb_fixed_full
+    execution_type: FINAL_TRAJECTORY
+    path: PL_BIDIRECTIONAL_CUSUM
+    producer_id: shared
+    thresholds:
+      tau_eta: 0.1
+      tau_s_m: 0.1
+      tau_gamma: 1.0

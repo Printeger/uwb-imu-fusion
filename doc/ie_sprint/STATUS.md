@@ -1,3 +1,114 @@
+# 0912-ICRA-REPOSITORY-PUBLISH 用户授权 amendment
+
+`DONE / PUBLISH_PREFLIGHT_PASS`。用户明确授权把当前实验基础设施、文档和紧凑证据提交并推送至当前
+`feature/uwb-imu-fusion-ie-postprocessing` 分支，同时更新 ignore 规则，禁止提交大型数据集与运行产物。
+本次纳入 experiments 源码/合同/manifest/小型 evidence、论文证据索引与 repo truth 文档；
+排除 19 GB `data/`、73 MB `experiments/results/`、evaluator 私有目录、构建产物、系统下载标记，
+并继续保护本地 `doc/v2/ie_0911/` 材料。提交前要求测试通过、暂存区无 data/ 和大于 5 MiB 文件，
+远端无领先提交；普通 push，不 force/rebase。
+
+# 0912-ICRA-CANONICAL-INJECTION 用户授权 amendment
+
+`DONE / CANONICAL_PIPELINE_PASS`。只做 ISAS Walk1 clean/corrupted 各一次四方法 pipeline smoke，无 sweep。
+预先固定 tag27956/anchor20276，onset=recording_time_origin+8s=1664959684.9745398，
+offset=1664959694.9745398，半开区间 [onset,offset)，constant +1.0m。
+对该 link/window 所有 raw observation 加1，保留source validity/全部非range字段，IMU/GT不改。
+仅 evaluator 私有路径保存 injection truth/affected IDs，estimator 只读 measurement cache。
+两条件各fresh前端与Stage2，不复用clean轨迹/innovation/cache；四方法参数保持现有配置。
+NLOS-window RMSE使用全评价区间同一SE3 alignment后按注入窗口取误差，不重对齐窗口。
+Recover−Reject=M4−M3，负值表示改善；range另报告精确clean配对注入分量误差及带假设几何误差。
+继承已授权单位外参/同一时基的 evaluator假设标记；不把注入分量当total NLOS truth。
+失败/空support/fallback均保留，不调参/重试算法，不提交/push。
+[协议与交付](../../experiments/CONTROLLED_INJECTION.md)。
+
+实际10/10 backend成功，无failure/fallback；162 raw/144 valid/36 planned注入，corrupted TP36/FP0/FN0。
+Stage2 c_hat=1.058388062m；M4恢复36观测注入分量RMSE=0.058388062m（before1m）。
+同229 GT样本，M4−M3 ATE=-0.014782224m，39样本窗口RMSE差=-0.066876872m。
+单位外参假设几何range误差反增，完整保留；不升级真实GT/论文claim。
+3+5+15工程tests exit0；estimator无重跑/调参/sweep；evaluator两次均exit0仅补充统一窗口字段。
+
+# 0912-ICRA-RANGE-IDENTITY-ASSUMPTION 用户授权 amendment
+
+`DONE / EVALUATED_ASSUMPTIONS`。用户明确授权在官方外参/时钟关系缺失时，以最可能的单位变换和同一时基重跑 evaluator。
+本次预先固定 T_anchor_GT=I4、T_marker_IMU=I4、GT_time_to_sensor={scale:1,offset_s:0}；
+保留官方 IMU→tag lever 和 beta=-toa_offset，既有 GT gap/插值/观测集合保持。
+仅允许显式 opt-in 的 ASSUMED_GEOMETRY_AND_CLOCK 诊断，假设不伪装为独立标定/官方事实；
+不通过误差大小搜索外参或时钟，不改 estimator，不重跑 estimator，不覆盖旧 UNAVAILABLE 结果。
+结果仅为条件于上述假设的 range residual，不升级正式 GT/论文 claim。详见
+[预登记与结果](../../experiments/RANGE_IDENTITY_ASSUMPTION.md)。
+
+实际 evaluator exit0；19400行/17064有效（每方法4266），四方法 raw/corrected RMSE=1.696637133m，
+MAE=1.511731778m，signed median=-1.389659918m，absolute P95=2.679216685m。
+15/15工程测试exit0；GT隔离未改；核心算法/参数/estimator运行 NOT_RUN；旧结果保留。
+
+# 0912-ICRA-RANGE-GT-EVALUATOR 当前任务 / 用户授权 amendment
+
+`DONE / ENGINEERING_AND_ISOLATION_PASS / REAL_RANGE_BLOCKED_CALIBRATION`。用户授权 per-observation 几何 GT range error 与按 anchor/segment
+汇总，限 ISAS Walk1；不改 estimator/CUSUM/recovery。独立静态 beta、T_anchor_GT、marker→IMU
+与 IMU→tag lever 必须有标定来源，否则输出 UNAVAILABLE，不能以零/identity/轨迹拟合代替。
+新增 evaluator 私有路径与 estimator mount namespace 隔离、GT gap 限制和工程泄漏反例。
+复用已封存 smoke 观测，只允许必要隔离 smoke；不扩展数据/精度矩阵，不提交/push。
+新 range association 固定线性位置+SLERP、最大 GT bracket gap 0.05s，精确 timestamp 直接关联；
+不修改既有 trajectory evaluator 数学协议。[完整交付](../../experiments/RANGE_EVALUATOR.md)。
+官方 SFUISE 75bf5a32 已确认 offset 与升序 anchor 的 beta=-toa_offset；不写回 estimator。
+15/15 range/isolation测试、5/5 harness测试；隔离四方法smoke exit0，与隔离前229样本指标exact。
+首次动态库隔离加载exit127保留，修复仅显式library search path。
+私有 range_metrics.csv 19400行、range_summary.csv 80行；真实GT/error零可用，exit2明确缺
+T_anchor_GT、T_marker_IMU、GT_time_to_sensor。没有以identity/零/轨迹拟合补齐。
+核心算法/参数未改，真实非空恢复/其他输入/核心build/CTest NOT_RUN；无提交或push。
+
+# 0912-ICRA-FIVE-DATASET-VALIDATION 当前任务 / 用户恢复授权
+
+`DONE / FIVE_FAMILY_MANIFEST_VALIDATION_PASS / EXPERIMENT_ADMISSION_NOT_GRANTED / ESTIMATOR_NOT_RUN`。
+用户恢复此前暂停的五数据集基础设施任务；[合同与 inventory](../../experiments/DATASET_MANIFEST.md)、
+[验证结果](../../experiments/DATA_VALIDATION.md)。v2 manifest 已由本地只读内容盘点绑定 39 条实际 recording：
+HUEC 8、MILUV 3、own_vicon 3、SFUISE 3、starloc 22；无 family template。最终 inspector/build/
+全文件 SHA validator/15 项工程反例均 exit0，validator 为 0 errors、42 warnings，并明确输出
+`FIVE_FAMILY_MANIFEST_VALIDATION=PASS`。36 条本地内容无登记异常；3 条保留问题：HUEC 一条辅助
+RSSI 为 `-inf`，两个 own_vicon 源 bag 无 index、仅在临时副本 reindex 后恢复扫描，原数据未改。
+6 条已知开发暴露为 DEV，33 条未知暴露保持 UNASSIGNED，0 VAL/TEST；全部 `NOT_ADMITTED`。
+TDoA/range difference 由 schema、policy、validator 和测试明确拒绝。未改/未运行 estimator、CUSUM、
+recovery、核心配置或参数；batch/accuracy/core build/CTest NOT_RUN，不提交/push。T10=C2-C、T11=C、
+C1–C3 不升级。
+
+# 0912-ICRA-WALK1-HARNESS 当前任务 / 用户授权 amendment
+
+`DONE / SMOKE_PASS_DEVELOPMENT`。用户新任务取代五类数据验证：只做 ISAS Walk1 clean 四方法
+M0=all_range、M1=robust_cauchy、M3=suppress_all、M4=lcb_fixed_full harness 和一次 smoke。
+复用现有 scheduler/runner/evaluator；M3/M4 共用一次新的 Stage2 producer。不接其他数据集。
+不改 estimator/CUSUM/recovery 数学或参数；固定原 full Walk1 clean 配置和 evaluator，
+每方法记录身份、时间/失败及统一 CSV，保留所有未执行项。当前分支保持不变，不提交/push。
+[协议](../../experiments/HARNESS.md) / [完整结果与失败](../../experiments/HARNESS_RESULT.md)。
+最终四方法同229 GT samples：M0/M3/M4 aligned ATE RMSE=0.163853268m，M1=0.163847231m；
+M3/M4零候选、无fallback，仅tracker参考点开发代理指标。5/5工程测试通过。
+首次Python3.8 preflight失败与首次cache namespace接线失败完整保留；只修harness，没有改核心。
+大矩阵/其他输入/核心build/CTest/新truth访问审计 NOT_RUN。T10=C2-C、T11=C、C1–C3 不升级。
+
+# 0912-ICRA-DATASET-MANIFEST 当前任务 / 用户授权 scope amendment
+
+`DONE / STATIC_INFRASTRUCTURE_PASS / EXPERIMENTS_NOT_RUN`。本轮用户授权建立 experiments/、统一 dataset manifest
+与静态 validator；仅调研 data/HUEC、MILUV、own_vicon、SFUISE、starloc。
+只为 ISAS Walk1/2/3 建 recording entry，其他 family 仅未验证模板。明确拒绝 TDoA；
+保留原始数据、已有 dirty 工作树与历史证据；不改 estimator/CUSUM/recovery/参数，不跑批量实验。
+Walk1/2/3 按既有开发暴露记录归 DEV，不升级 held-out。此登记仅扩展基础设施任务边界，
+不改方法或旧实验合同定义；任务卡与数据合同见 ../../experiments/DATASET_MANIFEST.md。
+交付 [数据合同](../../experiments/DATASET_MANIFEST.md)、JSON manifest/schema、只读 metadata inspector、
+validator 与使用说明。3 条 ISAS DEV entry，其他4类仅模板；TDoA 明确拒绝。
+[验证记录](../../experiments/VERIFICATION.md)：metadata inspection exit0、静态+SHA核对 exit0、
+12/12 工程测试 exit0；7个未准入/模板警告如实保留。核心算法与配置未改，batch/accuracy NOT_RUN。
+T10=C2-C、T11=C、C1–C3 不升级；不提交或 push。
+
+# 0912-PAPER-REPO-TRUTH-AUDIT
+
+`DONE / SOURCE_AUDIT_ONLY`。按用户 PROMPT 1 完成当前 HEAD
+`439282c2790ab1414ca9b276dd61a18b5e1643a8` 的生产路径审计，交付
+[`01_REPO_TRUTH.md`](../paper_writing/01_REPO_TRUTH.md)。核对实际 PL provider、conditional-z、
+双向 CUSUM、支持冻结、Stage2、局部信息、LCB、final graph 与 fallback；明确 v4 的 `>` 与
+代码 `>=`、主策略与默认值、空 beta 标定表、PL 无最小支持时长/数量过滤、上游失败不保证
+fallback 等差异。仅新增审计和同步状态/claim 索引，不改生产代码、配置或算法；本轮 build/
+tests/estimator/accuracy 均 `NOT_RUN`。既有 E2E 数字仅引用原报告，T10=C2-C、T11=C 与
+C1–C3 不升级；未提交或 push。原用户材料与受保护目录保留。
+
 # 0912-PL-CUSUM-PRODUCTION-E2E 当前任务
 
 `DONE / E2E_FULL_SYSTEM_PASS_DEVELOPMENT`。用户授权执行

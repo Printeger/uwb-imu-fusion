@@ -1,0 +1,22 @@
+{
+  "sfuise/config/config_test_isas-walk1.yaml": {
+    "path": "/home/mint/ws_fusion_uwb/evaluator_private/icra/sources/SFUISE-75bf5a32/config_test_isas-walk1.yaml",
+    "sha256": "f72d12585cec7b57ad7dd155de3d014c37d33a56670041f75aa1aea67d6b8de8",
+    "url": "https://github.com/KIT-ISAS/SFUISE/blob/75bf5a32f1a8e5c3046a5bd1a1ddf659fa996f7d/sfuise/config/config_test_isas-walk1.yaml"
+  },
+  "sfuise/src/EstimationInterface.cpp": {
+    "path": "/home/mint/ws_fusion_uwb/evaluator_private/icra/sources/SFUISE-75bf5a32/EstimationInterface.cpp",
+    "sha256": "2f7bd1e6ad10ced44e5f3ae725e2750abec3d2b57409627b386f6b60146a6cd5",
+    "url": "https://github.com/KIT-ISAS/SFUISE/blob/75bf5a32f1a8e5c3046a5bd1a1ddf659fa996f7d/sfuise/src/EstimationInterface.cpp"
+  },
+  "sfuise/src/SplineFusion.cpp": {
+    "path": "/home/mint/ws_fusion_uwb/evaluator_private/icra/sources/SFUISE-75bf5a32/SplineFusion.cpp",
+    "sha256": "bfd3f1e25d98a7486fa3b435023af9dca1236c0a8de4a86793c52ad0f11e48d1",
+    "url": "https://github.com/KIT-ISAS/SFUISE/blob/75bf5a32f1a8e5c3046a5bd1a1ddf659fa996f7d/sfuise/src/SplineFusion.cpp"
+  },
+  "sfuise/include/Residuals.h": {
+    "path": "/home/mint/ws_fusion_uwb/evaluator_private/icra/sources/SFUISE-75bf5a32/Residuals.h",
+    "sha256": "c095790870c372f0a8304babd249a337ad38754095c2bebdf4050801580d8d7c",
+    "url": "https://github.com/KIT-ISAS/SFUISE/blob/75bf5a32f1a8e5c3046a5bd1a1ddf659fa996f7d/sfuise/include/Residuals.h"
+  }
+}

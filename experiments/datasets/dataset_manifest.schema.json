@@ -1,0 +1,141 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ICRA five-family dataset inventory v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "path_base", "measurement_policy", "inventory_artifact", "recordings"],
+  "properties": {
+    "schema_version": {"const": "icra_dataset_manifest_v2"},
+    "path_base": {"const": "repository_root"},
+    "measurement_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accepted", "rejected"],
+      "properties": {
+        "accepted": {"const": ["ABSOLUTE_TOA", "ABSOLUTE_TWR", "ABSOLUTE_RANGE"]},
+        "rejected": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "inventory_artifact": {"$ref": "#/definitions/fileIdentity"},
+    "recordings": {
+      "type": "array", "minItems": 5,
+      "items": {"$ref": "#/definitions/recording"}
+    }
+  },
+  "definitions": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "value", "evidence", "notes"],
+      "properties": {
+        "status": {"enum": ["OBSERVED", "SOURCE_DECLARED", "UNKNOWN", "NOT_APPLICABLE"]},
+        "value": {},
+        "evidence": {
+          "type": "array", "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "notes": {"type": "string", "minLength": 1}
+      }
+    },
+    "fileIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/definitions/sha256"}
+      }
+    },
+    "recordingFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "path", "sha256"],
+      "properties": {
+        "role": {
+          "enum": ["RAW_CONTAINER", "UWB", "IMU", "GT", "TIME_SYNC", "CALIBRATION", "ANCHOR_COORDINATES"]
+        },
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/definitions/sha256"}
+      }
+    },
+    "localValidation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_pointer", "outcome", "source_content_checked", "checks", "issues"],
+      "properties": {
+        "artifact_pointer": {"type": "string", "minLength": 1},
+        "outcome": {"enum": ["PASS", "PASS_WITH_RECORDED_ISSUES"]},
+        "source_content_checked": {"const": true},
+        "checks": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "issues": {
+          "type": "array", "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "recording": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dataset_family", "recording_id", "raw_data_path", "raw_sha256", "recording_files",
+        "uwb_measurement_type", "measurement_type_evidence", "tag_ids", "anchor_ids",
+        "anchor_coordinates_source", "imu_source", "gt_source", "gt_reference_point",
+        "tag_imu_extrinsics", "gt_extrinsics", "time_units", "time_synchronization",
+        "range_calibration", "physical_obstruction", "role", "split_group_id",
+        "used_during_method_development", "development_use_evidence", "license",
+        "metadata_status", "local_validation", "formal_admission", "estimator_runs_this_task",
+        "unresolved_items"
+      ],
+      "properties": {
+        "dataset_family": {"enum": ["HUEC", "MILUV", "own_vicon", "SFUISE", "starloc"]},
+        "recording_id": {"type": "string", "minLength": 1},
+        "raw_data_path": {"type": "string", "minLength": 1},
+        "raw_sha256": {"$ref": "#/definitions/sha256"},
+        "recording_files": {
+          "type": "array", "minItems": 1,
+          "items": {"$ref": "#/definitions/recordingFile"}
+        },
+        "uwb_measurement_type": {"enum": ["ABSOLUTE_TOA", "ABSOLUTE_TWR", "ABSOLUTE_RANGE"]},
+        "measurement_type_evidence": {
+          "type": "array", "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "tag_ids": {"$ref": "#/definitions/fact"},
+        "anchor_ids": {"$ref": "#/definitions/fact"},
+        "anchor_coordinates_source": {"$ref": "#/definitions/fact"},
+        "imu_source": {"$ref": "#/definitions/fact"},
+        "gt_source": {"$ref": "#/definitions/fact"},
+        "gt_reference_point": {"$ref": "#/definitions/fact"},
+        "tag_imu_extrinsics": {"$ref": "#/definitions/fact"},
+        "gt_extrinsics": {"$ref": "#/definitions/fact"},
+        "time_units": {"$ref": "#/definitions/fact"},
+        "time_synchronization": {"$ref": "#/definitions/fact"},
+        "range_calibration": {"$ref": "#/definitions/fact"},
+        "physical_obstruction": {"$ref": "#/definitions/fact"},
+        "role": {"enum": ["DEV", "VAL", "TEST", "UNASSIGNED"]},
+        "split_group_id": {"type": ["string", "null"], "minLength": 1},
+        "used_during_method_development": {"type": ["boolean", "null"]},
+        "development_use_evidence": {
+          "type": "array", "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "license": {"$ref": "#/definitions/fact"},
+        "metadata_status": {"enum": ["LOCAL_CONTENT_VALIDATED", "LOCAL_CONTENT_VALIDATED_WITH_RECORDED_ISSUES"]},
+        "local_validation": {"$ref": "#/definitions/localValidation"},
+        "formal_admission": {"const": "NOT_ADMITTED"},
+        "estimator_runs_this_task": {"const": "NOT_RUN"},
+        "unresolved_items": {
+          "type": "array", "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

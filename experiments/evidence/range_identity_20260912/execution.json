@@ -1,0 +1,12 @@
+{
+  "command": "python3 experiments/scripts/evaluate_range_gt.py --batch-dir experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3 --calibration /home/mint/ws_fusion_uwb/evaluator_private/icra/walk1_range_identity_assumed.json --allow-identity-assumptions",
+  "exit_code": 0,
+  "estimator_launched": false,
+  "output_dir": "/home/mint/ws_fusion_uwb/evaluator_private/icra/range/range-17cd8b00ede14cdf9d52a48f323f9afe",
+  "artifacts": {
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/range/range-17cd8b00ede14cdf9d52a48f323f9afe/evaluation_status.json": "3d90d2b49d0f51c2e45e4478c8c8944c83f08f479617ad0e733024f95f75ff99",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/range/range-17cd8b00ede14cdf9d52a48f323f9afe/range_metrics.csv": "3d897b611a074ea808f4959faf2f702a7582698d24050bf766b1b4d4ad6f3c3b",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/range/range-17cd8b00ede14cdf9d52a48f323f9afe/calibration_snapshot.json": "dc61d1df45588e463e7e2bd5c6e2aa800ed6d0d69f06f5f738c8639cb2e2f2ad",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/range/range-17cd8b00ede14cdf9d52a48f323f9afe/range_summary.csv": "424163c209a953c7ee35afbe800914030ab1c43624d7222808a43642f7ec2c5c"
+  }
+}

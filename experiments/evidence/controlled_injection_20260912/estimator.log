@@ -1,0 +1,3 @@
+{"verdict": "SMOKE_PASS", "output": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/controlled-20260912T100525Z-89b5c73afbb2/clean", "methods": [["M0", 0.1638532681570079], ["M1", 0.16384723094111373], ["M3", 0.1638532681570079], ["M4", 0.1638532681570079]]}
+{"verdict": "SMOKE_PASS", "output": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/controlled-20260912T100525Z-89b5c73afbb2/corrupted", "methods": [["M0", 0.3100802541816831], ["M1", 0.28151685979159996], ["M3", 0.18509482719126524], ["M4", 0.17031260321021524]]}
+CONTROLLED_OUTPUT=/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/controlled-20260912T100525Z-89b5c73afbb2

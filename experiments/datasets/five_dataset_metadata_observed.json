@@ -1,0 +1,5584 @@
+{
+  "HUEC": {
+    "Dynamic_measurements/LOS/Trajectory_A/Case_1": {
+      "anchor_coordinates_first_message_m": {
+        "12": [
+          0.69,
+          0.87,
+          0.5
+        ],
+        "3": [
+          2.5775,
+          0.87,
+          1.97
+        ],
+        "5": [
+          2.5775,
+          -0.87,
+          1.97
+        ],
+        "9": [
+          2.5775,
+          -0.87,
+          0.5
+        ]
+      },
+      "anchor_ids": [
+        "12",
+        "3",
+        "5",
+        "9"
+      ],
+      "bag_indexed": true,
+      "bag_time_s": {
+        "end": 1744743144.78991,
+        "start": 1744742909.1645555
+      },
+      "bytes": 33441099,
+      "raw_data_path": "data/HUEC/Dynamic_measurements/LOS/Trajectory_A/Case_1/combined.bag",
+      "sha256": "7406860e461b583c49cca2fab61aebfd8b8e33ca64e2be01720bd58c0ff3c8f8",
+      "tag_id_status": "NOT_PRESENT_IN_ANCHOR_MESSAGE",
+      "tag_ids": [],
+      "topics": {
+        "/dwm1001/anchor12": {
+          "declared_count": 2160,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2160,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1734501718.1163466,
+            "min_s": 1734501485.318214,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2160
+        },
+        "/dwm1001/anchor3": {
+          "declared_count": 1917,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1917,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1734501718.2150712,
+            "min_s": 1734501485.3173957,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1917
+        },
+        "/dwm1001/anchor5": {
+          "declared_count": 2134,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2134,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1734501718.1180353,
+            "min_s": 1734501485.3163438,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2134
+        },
+        "/dwm1001/anchor9": {
+          "declared_count": 2194,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2194,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1734501718.1172798,
+            "min_s": 1734501485.315058,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2194
+        },
+        "/imu/data": {
+          "declared_count": 47047,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 47047,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1734501720.6696315,
+            "min_s": 1734501485.4298973,
+            "negative_values": 0
+          },
+          "message_type": "sensor_msgs/Imu",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 47047
+        },
+        "/odometry/local_gps": {
+          "declared_count": 1824,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1824,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1734501719.500332,
+            "min_s": 1734501487.8753269,
+            "negative_values": 0
+          },
+          "message_type": "nav_msgs/Odometry",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1824
+        }
+      }
+    },
+    "Dynamic_measurements/LOS/Trajectory_A/Case_2": {
+      "anchor_coordinates_first_message_m": {
+        "12": [
+          0.34,
+          -0.87,
+          0.5
+        ],
+        "3": [
+          2.5775,
+          -0.87,
+          1.97
+        ],
+        "5": [
+          -0.37,
+          -0.13,
+          1.39
+        ],
+        "9": [
+          2.31,
+          0.87,
+          0.5
+        ]
+      },
+      "anchor_ids": [
+        "12",
+        "3",
+        "5",
+        "9"
+      ],
+      "bag_indexed": true,
+      "bag_time_s": {
+        "end": 1744743537.1622539,
+        "start": 1744743280.3910449
+      },
+      "bytes": 36163690,
+      "raw_data_path": "data/HUEC/Dynamic_measurements/LOS/Trajectory_A/Case_2/combined.bag",
+      "sha256": "4dfe2bdba2d28491d13c366f91148ea81d30210a6b4c0176e0cd34d8b19e7961",
+      "tag_id_status": "NOT_PRESENT_IN_ANCHOR_MESSAGE",
+      "tag_ids": [],
+      "topics": {
+        "/dwm1001/anchor12": {
+          "declared_count": 2146,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2146,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733129774.5076306,
+            "min_s": 1733129523.6089523,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2146
+        },
+        "/dwm1001/anchor3": {
+          "declared_count": 1923,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1923,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733129774.4093773,
+            "min_s": 1733129523.610712,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1923
+        },
+        "/dwm1001/anchor5": {
+          "declared_count": 2005,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2005,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733129774.4104238,
+            "min_s": 1733129523.6099782,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2005
+        },
+        "/dwm1001/anchor9": {
+          "declared_count": 2145,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2145,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733129774.4114745,
+            "min_s": 1733129523.6076133,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2145
+        },
+        "/imu/data": {
+          "declared_count": 51038,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 51038,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733129778.8638105,
+            "min_s": 1733129523.6789942,
+            "negative_values": 0
+          },
+          "message_type": "sensor_msgs/Imu",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 51038
+        },
+        "/odometry/local_gps": {
+          "declared_count": 1993,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1993,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733129776.1245043,
+            "min_s": 1733129527.124501,
+            "negative_values": 0
+          },
+          "message_type": "nav_msgs/Odometry",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1993
+        }
+      }
+    },
+    "Dynamic_measurements/LOS/Trajectory_B/Case_3": {
+      "anchor_coordinates_first_message_m": {
+        "12": [
+          -0.05,
+          0.87,
+          0.5
+        ],
+        "3": [
+          2.21,
+          0.19,
+          1.79
+        ],
+        "5": [
+          -0.36,
+          -0.46,
+          1.97
+        ],
+        "9": [
+          0.71,
+          -0.87,
+          0.61
+        ]
+      },
+      "anchor_ids": [
+        "12",
+        "3",
+        "5",
+        "9"
+      ],
+      "bag_indexed": true,
+      "bag_time_s": {
+        "end": 1744741662.9873366,
+        "start": 1744741477.3678102
+      },
+      "bytes": 26403711,
+      "raw_data_path": "data/HUEC/Dynamic_measurements/LOS/Trajectory_B/Case_3/combined.bag",
+      "sha256": "7526a531e69982f1c583f49db37eaa6403beacc2f247fb125ec53bcdd2ac7282",
+      "tag_id_status": "NOT_PRESENT_IN_ANCHOR_MESSAGE",
+      "tag_ids": [],
+      "topics": {
+        "/dwm1001/anchor12": {
+          "declared_count": 1729,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1729,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733038146.3180215,
+            "min_s": 1733037964.6182,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1729
+        },
+        "/dwm1001/anchor3": {
+          "declared_count": 1538,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1538,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733038146.3164167,
+            "min_s": 1733037964.6173706,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1538
+        },
+        "/dwm1001/anchor5": {
+          "declared_count": 1687,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1687,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733038146.4152286,
+            "min_s": 1733037964.6164234,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1687
+        },
+        "/dwm1001/anchor9": {
+          "declared_count": 1691,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1691,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733038146.4164295,
+            "min_s": 1733037964.6152143,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1691
+        },
+        "/imu/data": {
+          "declared_count": 37019,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 37019,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733038149.8540561,
+            "min_s": 1733037964.7643902,
+            "negative_values": 0
+          },
+          "message_type": "sensor_msgs/Imu",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 37019
+        },
+        "/odometry/local_gps": {
+          "declared_count": 1451,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1451,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733038148.4999611,
+            "min_s": 1733037967.2499619,
+            "negative_values": 0
+          },
+          "message_type": "nav_msgs/Odometry",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1451
+        }
+      }
+    },
+    "Dynamic_measurements/LOS/Trajectory_B/Case_4": {
+      "anchor_coordinates_first_message_m": {
+        "12": [
+          -2.58,
+          -0.87,
+          1.97
+        ],
+        "3": [
+          2.58,
+          -0.87,
+          1.97
+        ],
+        "5": [
+          -2.58,
+          0.87,
+          1.97
+        ],
+        "9": [
+          -1.79,
+          0.87,
+          0.5
+        ]
+      },
+      "anchor_ids": [
+        "12",
+        "3",
+        "5",
+        "9"
+      ],
+      "bag_indexed": true,
+      "bag_time_s": {
+        "end": 1744741908.8099976,
+        "start": 1744741707.8273559
+      },
+      "bytes": 28565842,
+      "raw_data_path": "data/HUEC/Dynamic_measurements/LOS/Trajectory_B/Case_4/combined.bag",
+      "sha256": "d246c35b5912c145fb3abc9fd29aead8a99394cbd5984ec64011226a4bfd39ec",
+      "tag_id_status": "NOT_PRESENT_IN_ANCHOR_MESSAGE",
+      "tag_ids": [],
+      "topics": {
+        "/dwm1001/anchor12": {
+          "declared_count": 1847,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1847,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730020486.5760849,
+            "min_s": 1730020288.3773603,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1847
+        },
+        "/dwm1001/anchor3": {
+          "declared_count": 1694,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1694,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730020486.477813,
+            "min_s": 1730020288.3760898,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1694
+        },
+        "/dwm1001/anchor5": {
+          "declared_count": 1839,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1839,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730020486.479867,
+            "min_s": 1730020288.3792415,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1839
+        },
+        "/dwm1001/anchor9": {
+          "declared_count": 1873,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1873,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730020486.478931,
+            "min_s": 1730020288.378338,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1873
+        },
+        "/imu/data": {
+          "declared_count": 40020,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 40020,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730020488.320706,
+            "min_s": 1730020288.2254589,
+            "negative_values": 0
+          },
+          "message_type": "sensor_msgs/Imu",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 40020
+        },
+        "/odometry/local_gps": {
+          "declared_count": 1547,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1547,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730020483.4999747,
+            "min_s": 1730020290.2499712,
+            "negative_values": 0
+          },
+          "message_type": "nav_msgs/Odometry",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1547
+        }
+      }
+    },
+    "Dynamic_measurements/NLOS/Trajectory_A/Case_1": {
+      "anchor_coordinates_first_message_m": {
+        "12": [
+          0.69,
+          0.87,
+          0.5
+        ],
+        "3": [
+          2.5775,
+          -0.87,
+          1.97
+        ],
+        "5": [
+          2.5775,
+          0.87,
+          1.97
+        ],
+        "9": [
+          2.5775,
+          -0.87,
+          0.5
+        ]
+      },
+      "anchor_ids": [
+        "12",
+        "3",
+        "5",
+        "9"
+      ],
+      "bag_indexed": true,
+      "bag_time_s": {
+        "end": 1744739760.1513522,
+        "start": 1744739445.1841557
+      },
+      "bytes": 43570984,
+      "raw_data_path": "data/HUEC/Dynamic_measurements/NLOS/Trajectory_A/Case_1/combined.bag",
+      "sha256": "d2e398b69a224cf94707a929d442b95bbb0d83049e4af1de589da3708b08c02e",
+      "tag_id_status": "NOT_PRESENT_IN_ANCHOR_MESSAGE",
+      "tag_ids": [],
+      "topics": {
+        "/dwm1001/anchor12": {
+          "declared_count": 2401,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2401,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1732085409.6736555,
+            "min_s": 1732085150.5723307,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2401
+        },
+        "/dwm1001/anchor3": {
+          "declared_count": 2186,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2186,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1732085409.6728787,
+            "min_s": 1732085150.5715463,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2186
+        },
+        "/dwm1001/anchor5": {
+          "declared_count": 2417,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2417,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1732085409.8704607,
+            "min_s": 1732085150.5729864,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2417
+        },
+        "/dwm1001/anchor9": {
+          "declared_count": 2443,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2443,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1732085409.8717284,
+            "min_s": 1732085150.570451,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2443
+        },
+        "/imu/data": {
+          "declared_count": 62927,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 62927,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1732085465.3151586,
+            "min_s": 1732085150.6876855,
+            "negative_values": 0
+          },
+          "message_type": "sensor_msgs/Imu",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 62927
+        },
+        "/odometry/local_gps": {
+          "declared_count": 2489,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2489,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1732085463.4999733,
+            "min_s": 1732085152.499972,
+            "negative_values": 0
+          },
+          "message_type": "nav_msgs/Odometry",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2489
+        }
+      }
+    },
+    "Dynamic_measurements/NLOS/Trajectory_A/Case_2": {
+      "anchor_coordinates_first_message_m": {
+        "12": [
+          2.31,
+          0.87,
+          0.5
+        ],
+        "3": [
+          2.5775,
+          -0.87,
+          1.97
+        ],
+        "5": [
+          -0.37,
+          -0.13,
+          1.39
+        ],
+        "9": [
+          0.335,
+          -0.87,
+          0.5
+        ]
+      },
+      "anchor_ids": [
+        "12",
+        "3",
+        "5",
+        "9"
+      ],
+      "bag_indexed": true,
+      "bag_time_s": {
+        "end": 1744740170.2619405,
+        "start": 1744739892.1787539
+      },
+      "bytes": 38900912,
+      "raw_data_path": "data/HUEC/Dynamic_measurements/NLOS/Trajectory_A/Case_2/combined.bag",
+      "sha256": "2ebaf60fcb8c59f4a045319ed4a5d69d68896b722824775ba5dc3680a68c19aa",
+      "tag_id_status": "NOT_PRESENT_IN_ANCHOR_MESSAGE",
+      "tag_ids": [],
+      "topics": {
+        "/dwm1001/anchor12": {
+          "declared_count": 2425,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2425,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730041659.848398,
+            "min_s": 1730041400.547453,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2425
+        },
+        "/dwm1001/anchor3": {
+          "declared_count": 2203,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2203,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730041659.8469813,
+            "min_s": 1730041400.7474556,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2203
+        },
+        "/dwm1001/anchor5": {
+          "declared_count": 2179,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2179,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730041659.8477592,
+            "min_s": 1730041400.6490777,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [
+            {
+              "fields": [
+                "rssi"
+              ],
+              "message_ordinal_in_topic": 1156,
+              "time_s": 1730041547.8471816
+            }
+          ],
+          "nonfinite_fields": {
+            "rssi": 1
+          },
+          "nonfinite_selected_messages": 1,
+          "scanned_count": 2179
+        },
+        "/dwm1001/anchor9": {
+          "declared_count": 2349,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2349,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730041659.9460547,
+            "min_s": 1730041400.4460108,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2349
+        },
+        "/imu/data": {
+          "declared_count": 55523,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 55523,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730041678.020349,
+            "min_s": 1730041400.4096532,
+            "negative_values": 0
+          },
+          "message_type": "sensor_msgs/Imu",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 55523
+        },
+        "/odometry/local_gps": {
+          "declared_count": 2038,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2038,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730041658.6247795,
+            "min_s": 1730041403.9997723,
+            "negative_values": 0
+          },
+          "message_type": "nav_msgs/Odometry",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2038
+        }
+      }
+    },
+    "Dynamic_measurements/NLOS/Trajectory_B/Case_3": {
+      "anchor_coordinates_first_message_m": {
+        "12": [
+          -0.05,
+          0.87,
+          0.5
+        ],
+        "3": [
+          2.21,
+          0.19,
+          1.79
+        ],
+        "5": [
+          -0.36,
+          -0.46,
+          1.97
+        ],
+        "9": [
+          0.71,
+          -0.87,
+          0.61
+        ]
+      },
+      "anchor_ids": [
+        "12",
+        "3",
+        "5",
+        "9"
+      ],
+      "bag_indexed": true,
+      "bag_time_s": {
+        "end": 1744740380.0581596,
+        "start": 1744740205.1668046
+      },
+      "bytes": 24893421,
+      "raw_data_path": "data/HUEC/Dynamic_measurements/NLOS/Trajectory_B/Case_3/combined.bag",
+      "sha256": "c70134ca176735e019d732bfa745b9f4f2122cb2551f7cabd6b1cdf6ea0a2cf1",
+      "tag_id_status": "NOT_PRESENT_IN_ANCHOR_MESSAGE",
+      "tag_ids": [],
+      "topics": {
+        "/dwm1001/anchor12": {
+          "declared_count": 1620,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1620,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733053428.850058,
+            "min_s": 1733053256.7492611,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1620
+        },
+        "/dwm1001/anchor3": {
+          "declared_count": 1494,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1494,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733053428.8507962,
+            "min_s": 1733053256.747907,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1494
+        },
+        "/dwm1001/anchor5": {
+          "declared_count": 1566,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1566,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733053428.8491435,
+            "min_s": 1733053256.7508273,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1566
+        },
+        "/dwm1001/anchor9": {
+          "declared_count": 1617,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1617,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733053428.9478939,
+            "min_s": 1733053256.7500703,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1617
+        },
+        "/imu/data": {
+          "declared_count": 34934,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 34934,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733053431.4790597,
+            "min_s": 1733053256.813691,
+            "negative_values": 0
+          },
+          "message_type": "sensor_msgs/Imu",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 34934
+        },
+        "/odometry/local_gps": {
+          "declared_count": 1371,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1371,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1733053430.6254048,
+            "min_s": 1733053259.3754065,
+            "negative_values": 0
+          },
+          "message_type": "nav_msgs/Odometry",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1371
+        }
+      }
+    },
+    "Dynamic_measurements/NLOS/Trajectory_B/Case_4": {
+      "anchor_coordinates_first_message_m": {
+        "12": [
+          -2.58,
+          -0.87,
+          1.97
+        ],
+        "3": [
+          2.58,
+          -0.87,
+          1.97
+        ],
+        "5": [
+          -2.58,
+          0.87,
+          1.97
+        ],
+        "9": [
+          -1.79,
+          0.87,
+          0.5
+        ]
+      },
+      "anchor_ids": [
+        "12",
+        "3",
+        "5",
+        "9"
+      ],
+      "bag_indexed": true,
+      "bag_time_s": {
+        "end": 1744740600.2397716,
+        "start": 1744740419.629461
+      },
+      "bytes": 25340146,
+      "raw_data_path": "data/HUEC/Dynamic_measurements/NLOS/Trajectory_B/Case_4/combined.bag",
+      "sha256": "6079c5aeba2c4030fa0a60617fe086f0a4b8c78bc69041bbf3a2c85d9fccf2f8",
+      "tag_id_status": "NOT_PRESENT_IN_ANCHOR_MESSAGE",
+      "tag_ids": [],
+      "topics": {
+        "/dwm1001/anchor12": {
+          "declared_count": 1594,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1594,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730017698.6781852,
+            "min_s": 1730017526.478717,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1594
+        },
+        "/dwm1001/anchor3": {
+          "declared_count": 1445,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1445,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730017698.67885,
+            "min_s": 1730017526.4780483,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1445
+        },
+        "/dwm1001/anchor5": {
+          "declared_count": 1612,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1612,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730017698.6772735,
+            "min_s": 1730017526.476065,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1612
+        },
+        "/dwm1001/anchor9": {
+          "declared_count": 1629,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1629,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730017698.6760924,
+            "min_s": 1730017526.4771535,
+            "negative_values": 0
+          },
+          "message_type": "localizer_dwm1001/Anchor",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1629
+        },
+        "/imu/data": {
+          "declared_count": 35646,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 35646,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730017704.819763,
+            "min_s": 1730017526.5946128,
+            "negative_values": 0
+          },
+          "message_type": "sensor_msgs/Imu",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 35646
+        },
+        "/odometry/local_gps": {
+          "declared_count": 1371,
+          "header_or_message_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1371,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1730017699.8751733,
+            "min_s": 1730017528.6251698,
+            "negative_values": 0
+          },
+          "message_type": "nav_msgs/Odometry",
+          "nonfinite_examples": [],
+          "nonfinite_fields": {},
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1371
+        }
+      }
+    }
+  },
+  "MILUV": {
+    "cirObstacles_1_random3_0": {
+      "gt": {
+        "bytes": 3157812,
+        "columns": [
+          "timestamp",
+          "pose.position.x",
+          "pose.position.y",
+          "pose.position.z",
+          "pose.orientation.x",
+          "pose.orientation.y",
+          "pose.orientation.z",
+          "pose.orientation.w"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/MILUV/cirObstacles_1_random3_0/ifo001/mocap.csv",
+        "rows": 20669,
+        "sha256": "338101f301c76c903abe5918759604aed6600f4ec3fc96c0f2366e1c1b7e7feb",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 20669,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 207.20949745178223,
+          "min_s": 0.341890811920166,
+          "negative_values": 0
+        }
+      },
+      "imu": {
+        "bytes": 5488952,
+        "columns": [
+          "timestamp",
+          "angular_velocity.x",
+          "angular_velocity.y",
+          "angular_velocity.z",
+          "linear_acceleration.x",
+          "linear_acceleration.y",
+          "linear_acceleration.z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/MILUV/cirObstacles_1_random3_0/ifo001/imu_px4.csv",
+        "rows": 40941,
+        "sha256": "fcb573dce68beb669a1c3875b01ecbd579d5f0bbbc03c0d38bfcf6caae29423c",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 40941,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 207.20628190040588,
+          "min_s": 0.1059117317199707,
+          "negative_values": 0
+        }
+      },
+      "timeshift": {
+        "bytes": 48,
+        "path": "data/MILUV/cirObstacles_1_random3_0/timeshift.yaml",
+        "sha256": "320a9e9c0c1fa8aa3ff34e53e01ae42645bb97abd80b733c1a8afe15a0fb2510",
+        "text": [
+          "timeshift_ns: 305651903",
+          "timeshift_s: 1706819226"
+        ]
+      },
+      "uwb": {
+        "bytes": 573184,
+        "columns": [
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "r_iw_a_ifo001",
+          "q_ai_ifo001",
+          "gt_range",
+          "bias",
+          "pair",
+          "del_t1",
+          "del_t2",
+          "del_t3",
+          "del_t4",
+          "range_raw",
+          "bias_raw",
+          "tx1_raw",
+          "tx2_raw",
+          "tx3_raw",
+          "rx1_raw",
+          "rx2_raw",
+          "rx3_raw",
+          "std",
+          "timestamp"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "10",
+            "11"
+          ],
+          "to_id": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/MILUV/cirObstacles_1_random3_0/ifo001/uwb_range.csv",
+        "rows": 954,
+        "sha256": "868d2381310098142b91b51002e8a1c93566a37933634c562c2e51869ad44000",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 954,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 207.157484292984,
+          "min_s": 0.37018299102783203,
+          "negative_values": 0
+        }
+      }
+    },
+    "default_1_circular3D_0": {
+      "gt": {
+        "bytes": 2048266,
+        "columns": [
+          "timestamp",
+          "pose.position.x",
+          "pose.position.y",
+          "pose.position.z",
+          "pose.orientation.x",
+          "pose.orientation.y",
+          "pose.orientation.z",
+          "pose.orientation.w"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/MILUV/default_1_circular3D_0/ifo001/mocap.csv",
+        "rows": 13475,
+        "sha256": "b508cc1479b697a1eb49ad5e259d1ade8501e1cf3d7821202bfa603e234d43e5",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 13475,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 135.33817720413208,
+          "min_s": 0.24693584442138672,
+          "negative_values": 0
+        }
+      },
+      "imu": {
+        "bytes": 3725116,
+        "columns": [
+          "timestamp",
+          "angular_velocity.x",
+          "angular_velocity.y",
+          "angular_velocity.z",
+          "linear_acceleration.x",
+          "linear_acceleration.y",
+          "linear_acceleration.z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/MILUV/default_1_circular3D_0/ifo001/imu_px4.csv",
+        "rows": 27738,
+        "sha256": "5763f1da6ee760e192dc9acd31ccb3860e452dba4f145bf2c1159e6fc28647ff",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 27738,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 135.33311414718628,
+          "min_s": 0.133453369140625,
+          "negative_values": 0
+        }
+      },
+      "timeshift": {
+        "bytes": 48,
+        "path": "data/MILUV/default_1_circular3D_0/timeshift.yaml",
+        "sha256": "442cbf0c76ef7d76ca2d9ac672fbb55ea781ac73ea23fde20e634488de6314a1",
+        "text": [
+          "timeshift_ns: 718282461",
+          "timeshift_s: 1706797618"
+        ]
+      },
+      "uwb": {
+        "bytes": 5704219,
+        "columns": [
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "r_iw_a_ifo001",
+          "q_ai_ifo001",
+          "gt_range",
+          "bias",
+          "pair",
+          "del_t1",
+          "del_t2",
+          "del_t3",
+          "del_t4",
+          "range_raw",
+          "bias_raw",
+          "tx1_raw",
+          "tx2_raw",
+          "tx3_raw",
+          "rx1_raw",
+          "rx2_raw",
+          "rx3_raw",
+          "std",
+          "timestamp"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "10",
+            "11"
+          ],
+          "to_id": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/MILUV/default_1_circular3D_0/ifo001/uwb_range.csv",
+        "rows": 9515,
+        "sha256": "8fc39328e537ed0b01f083a2355b78d7f497ba0aec58b257775ae4fcb6033def",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 9515,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 135.3311791419983,
+          "min_s": 0.26915502548217773,
+          "negative_values": 0
+        }
+      }
+    },
+    "default_1_random3_0": {
+      "gt": {
+        "bytes": 3123830,
+        "columns": [
+          "timestamp",
+          "pose.position.x",
+          "pose.position.y",
+          "pose.position.z",
+          "pose.orientation.x",
+          "pose.orientation.y",
+          "pose.orientation.z",
+          "pose.orientation.w"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/MILUV/default_1_random3_0/ifo001/mocap.csv",
+        "rows": 20455,
+        "sha256": "08bb608c14050f83a4f40711f09d8c281e4d6560663852ec3b7e0a3b021d5855",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 20455,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 205.228577375412,
+          "min_s": 0.2638823986053467,
+          "negative_values": 0
+        }
+      },
+      "imu": {
+        "bytes": 5675545,
+        "columns": [
+          "timestamp",
+          "angular_velocity.x",
+          "angular_velocity.y",
+          "angular_velocity.z",
+          "linear_acceleration.x",
+          "linear_acceleration.y",
+          "linear_acceleration.z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/MILUV/default_1_random3_0/ifo001/imu_px4.csv",
+        "rows": 42317,
+        "sha256": "0412852862463031ba8736eb22e58ea9fedb7df3f65f9f1ac739ab22047c9fa7",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 42317,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 205.22724151611328,
+          "min_s": 0.13862228393554688,
+          "negative_values": 0
+        }
+      },
+      "timeshift": {
+        "bytes": 48,
+        "path": "data/MILUV/default_1_random3_0/timeshift.yaml",
+        "sha256": "49223925d316d98200c1ecf9038bc9c491930798eb28ab602c03386c8b29dc77",
+        "text": [
+          "timeshift_ns: 805730581",
+          "timeshift_s: 1706797874"
+        ]
+      },
+      "uwb": {
+        "bytes": 8747251,
+        "columns": [
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "r_iw_a_ifo001",
+          "q_ai_ifo001",
+          "gt_range",
+          "bias",
+          "pair",
+          "del_t1",
+          "del_t2",
+          "del_t3",
+          "del_t4",
+          "range_raw",
+          "bias_raw",
+          "tx1_raw",
+          "tx2_raw",
+          "tx3_raw",
+          "rx1_raw",
+          "rx2_raw",
+          "rx3_raw",
+          "std",
+          "timestamp"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "10",
+            "11"
+          ],
+          "to_id": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/MILUV/default_1_random3_0/ifo001/uwb_range.csv",
+        "rows": 14544,
+        "sha256": "05e4423870f001bbb1e6136c260e80055b694ddae20648e6b51c77cb14e64330",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 14544,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 205.220773935318,
+          "min_s": 0.2673609256744385,
+          "negative_values": 0
+        }
+      }
+    }
+  },
+  "SFUISE": {
+    "ISAS-Walk1": {
+      "anchor_coordinates_first_message_m": {
+        "10548": [
+          5.519999980926514,
+          0.05000000074505806,
+          1.8600000143051147
+        ],
+        "15155": [
+          3.119999885559082,
+          -2.5899999141693115,
+          1.850000023841858
+        ],
+        "20276": [
+          5.5,
+          0.0,
+          0.0
+        ],
+        "7475": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "9524": [
+          2.609999895095825,
+          2.6700000762939453,
+          0.0
+        ]
+      },
+      "anchor_ids": [
+        "10548",
+        "15155",
+        "20276",
+        "7475",
+        "9524"
+      ],
+      "bag_indexed": true,
+      "bag_time_s": {
+        "end": 1664959736.1026118,
+        "start": 1664959673.4016051
+      },
+      "bytes": 3215961,
+      "raw_data_path": "data/SFUISE/ISAS-Walk1.bag",
+      "sha256": "ca577e3666ad5876aa8347289a98793b8da0e68b5db459f2d7d69a6adcacd944",
+      "tag_ids": [
+        "27956"
+      ],
+      "topics": {
+        "/anchor_list": {
+          "declared_count": 970,
+          "frames": [],
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 970,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1664959736.0856504,
+            "min_s": 1664959676.9910486,
+            "negative_values": 0
+          },
+          "message_type": "fraunhofer_rtls_flare/Anchorlist",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 970
+        },
+        "/rtls_flares": {
+          "declared_count": 970,
+          "frames": [
+            "RTLS/27956"
+          ],
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 970,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1664959736.082964,
+            "min_s": 1664959676.9893188,
+            "negative_values": 0
+          },
+          "message_type": "fraunhofer_rtls_flare/RTLSStick",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 970
+        },
+        "/vive/transform/tracker_1_ref": {
+          "declared_count": 3168,
+          "frames": [
+            "vive/reference",
+            "vive/tracker_1"
+          ],
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 3168,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1664959736.7403524,
+            "min_s": 1664959673.400324,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/TransformStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 3168
+        },
+        "/waveshare_sense_hat_b": {
+          "declared_count": 4839,
+          "frames": [
+            "Waveshare_Sense_HAT_B/IMU"
+          ],
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 4839,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1664959736.0899863,
+            "min_s": 1664959676.9745398,
+            "negative_values": 0
+          },
+          "message_type": "sensor_msgs/Imu",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 4839
+        }
+      }
+    },
+    "ISAS-Walk2": {
+      "anchor_coordinates_first_message_m": {
+        "10548": [
+          5.519999980926514,
+          0.05000000074505806,
+          1.8600000143051147
+        ],
+        "15155": [
+          3.119999885559082,
+          -2.5899999141693115,
+          1.850000023841858
+        ],
+        "20276": [
+          5.5,
+          0.0,
+          0.0
+        ],
+        "7475": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "9524": [
+          2.609999895095825,
+          2.6700000762939453,
+          0.0
+        ]
+      },
+      "anchor_ids": [
+        "10548",
+        "15155",
+        "20276",
+        "7475",
+        "9524"
+      ],
+      "bag_indexed": true,
+      "bag_time_s": {
+        "end": 1664959833.1341727,
+        "start": 1664959754.6016667
+      },
+      "bytes": 4109272,
+      "raw_data_path": "data/SFUISE/ISAS-Walk2.bag",
+      "sha256": "dea07fd11d5776226be6b390574c4b3789c48cfdce6a1731996981f3f91c453c",
+      "tag_ids": [
+        "27956"
+      ],
+      "topics": {
+        "/anchor_list": {
+          "declared_count": 1241,
+          "frames": [],
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1241,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1664959833.0593765,
+            "min_s": 1664959757.032356,
+            "negative_values": 0
+          },
+          "message_type": "fraunhofer_rtls_flare/Anchorlist",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1241
+        },
+        "/rtls_flares": {
+          "declared_count": 1241,
+          "frames": [
+            "RTLS/27956"
+          ],
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1241,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1664959833.0566537,
+            "min_s": 1664959757.0306275,
+            "negative_values": 0
+          },
+          "message_type": "fraunhofer_rtls_flare/RTLSStick",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1241
+        },
+        "/vive/transform/tracker_1_ref": {
+          "declared_count": 3969,
+          "frames": [
+            "vive/reference",
+            "vive/tracker_1"
+          ],
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 3969,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1664959833.9603515,
+            "min_s": 1664959754.6003141,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/TransformStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 3969
+        },
+        "/waveshare_sense_hat_b": {
+          "declared_count": 6229,
+          "frames": [
+            "Waveshare_Sense_HAT_B/IMU"
+          ],
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 6229,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1664959833.121514,
+            "min_s": 1664959757.02777,
+            "negative_values": 0
+          },
+          "message_type": "sensor_msgs/Imu",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 6229
+        }
+      }
+    },
+    "ISAS-Walk3": {
+      "anchor_coordinates_first_message_m": {
+        "10548": [
+          5.519999980926514,
+          0.05000000074505806,
+          1.8600000143051147
+        ],
+        "15155": [
+          3.119999885559082,
+          -2.5899999141693115,
+          1.850000023841858
+        ],
+        "20276": [
+          5.5,
+          0.0,
+          0.0
+        ],
+        "7475": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "9524": [
+          2.609999895095825,
+          2.6700000762939453,
+          0.0
+        ]
+      },
+      "anchor_ids": [
+        "10548",
+        "15155",
+        "20276",
+        "7475",
+        "9524"
+      ],
+      "bag_indexed": true,
+      "bag_time_s": {
+        "end": 1664959928.475818,
+        "start": 1664959844.3212
+      },
+      "bytes": 4414454,
+      "raw_data_path": "data/SFUISE/ISAS-Walk3.bag",
+      "sha256": "45df7ffe69b9d8c8be7784414ffcdc6e0f4674d0d7b8db3541e567e757bae0a0",
+      "tag_ids": [
+        "27956"
+      ],
+      "topics": {
+        "/anchor_list": {
+          "declared_count": 1339,
+          "frames": [],
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1339,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1664959928.437195,
+            "min_s": 1664959846.8236134,
+            "negative_values": 0
+          },
+          "message_type": "fraunhofer_rtls_flare/Anchorlist",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1339
+        },
+        "/rtls_flares": {
+          "declared_count": 1339,
+          "frames": [
+            "RTLS/27956"
+          ],
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 1339,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1664959928.4344728,
+            "min_s": 1664959846.821863,
+            "negative_values": 0
+          },
+          "message_type": "fraunhofer_rtls_flare/RTLSStick",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 1339
+        },
+        "/vive/transform/tracker_1_ref": {
+          "declared_count": 4263,
+          "frames": [
+            "vive/reference",
+            "vive/tracker_1"
+          ],
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 4263,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1664959929.560327,
+            "min_s": 1664959844.320348,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/TransformStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 4263
+        },
+        "/waveshare_sense_hat_b": {
+          "declared_count": 6684,
+          "frames": [
+            "Waveshare_Sense_HAT_B/IMU"
+          ],
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 6684,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1664959928.4630733,
+            "min_s": 1664959846.803711,
+            "negative_values": 0
+          },
+          "message_type": "sensor_msgs/Imu",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 6684
+        }
+      }
+    }
+  },
+  "generated_at_utc": "2026-09-12T09:55:02.746033+00:00",
+  "own_vicon": {
+    "2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle": {
+      "anchor_ids": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "bag_time_s": {
+        "end": 1761291161.9870248,
+        "start": 1761291088.4375308
+      },
+      "bytes": 344492569,
+      "content_bytes_after_optional_reindex": 344492569,
+      "inspection_source": "ORIGINAL_READ_ONLY",
+      "original_bag_indexed": true,
+      "raw_data_path": "data/own_vicon/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag",
+      "sha256": "4b973dd5a6faa8a4b523017feaccb59f4f085e50592a114a963dbd9a816de8be",
+      "tag_ids": [
+        "0"
+      ],
+      "topics": {
+        "/livox/imu": {
+          "declared_count": 14680,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 14680,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761291161.9843142,
+            "min_s": 1761291088.590441,
+            "negative_values": 0
+          },
+          "message_type": "sensor_msgs/Imu",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 14680
+        },
+        "/nlink_linktrack_nodeframe3": {
+          "declared_count": 3669,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 3669,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761291161.9598286,
+            "min_s": 1761291088.5993288,
+            "negative_values": 0
+          },
+          "message_type": "nlink_parser/LinktrackNodeframe3",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 3669
+        },
+        "/vrpn_client_node/tas_uwb_0/pose": {
+          "declared_count": 21535,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 21535,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761291161.9836056,
+            "min_s": 1761291088.6002886,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/PoseStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 21535
+        },
+        "/vrpn_client_node/tas_uwb_1/pose": {
+          "declared_count": 21765,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 21765,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761291161.9667408,
+            "min_s": 1761291088.4428873,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/PoseStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 21765
+        },
+        "/vrpn_client_node/tas_uwb_2/pose": {
+          "declared_count": 21756,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 21756,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761291161.9703507,
+            "min_s": 1761291088.460002,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/PoseStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 21756
+        },
+        "/vrpn_client_node/tas_uwb_3/pose": {
+          "declared_count": 21695,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 21695,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761291161.9705076,
+            "min_s": 1761291088.594501,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/PoseStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 21695
+        },
+        "/vrpn_client_node/tas_uwb_4/pose": {
+          "declared_count": 21686,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 21686,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761291161.9773881,
+            "min_s": 1761291088.5835154,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/PoseStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 21686
+        }
+      },
+      "vicon_first_position_m": {
+        "/vrpn_client_node/tas_uwb_0/pose": [
+          -0.005778130788107278,
+          -0.02343969614207953,
+          0.19455844997888386
+        ],
+        "/vrpn_client_node/tas_uwb_1/pose": [
+          -2.1281494997090658,
+          2.299624135493613,
+          1.6075289395364196
+        ],
+        "/vrpn_client_node/tas_uwb_2/pose": [
+          2.9038852699147855,
+          2.168146489736102,
+          1.6142153420499903
+        ],
+        "/vrpn_client_node/tas_uwb_3/pose": [
+          3.090910160737735,
+          -1.5331932879129682,
+          1.5933242548007276
+        ],
+        "/vrpn_client_node/tas_uwb_4/pose": [
+          -2.23514457024993,
+          -1.4450767714731676,
+          1.5818286166610305
+        ]
+      }
+    },
+    "2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle": {
+      "anchor_ids": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "bag_time_s": {
+        "end": 1761291998.960301,
+        "start": 1761291987.3255022
+      },
+      "bytes": 315996988,
+      "content_bytes_after_optional_reindex": 53638485,
+      "inspection_source": "TEMP_COPY_REINDEXED_READ_ONLY_SOURCE",
+      "original_bag_indexed": false,
+      "original_open_error": "Unindexed bag",
+      "raw_data_path": "data/own_vicon/2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle.bag",
+      "sha256": "19280261417a207432505d2cda7cd35acdf0dcde3e6165a58df558e531da6956",
+      "tag_ids": [
+        "0"
+      ],
+      "temporary_reindex_exit_code": 0,
+      "topics": {
+        "/livox/imu": {
+          "declared_count": 2279,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2279,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761291998.9589908,
+            "min_s": 1761291987.569,
+            "negative_values": 0
+          },
+          "message_type": "sensor_msgs/Imu",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2279
+        },
+        "/nlink_linktrack_nodeframe3": {
+          "declared_count": 569,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 569,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761291998.9432302,
+            "min_s": 1761291987.5838113,
+            "negative_values": 0
+          },
+          "message_type": "nlink_parser/LinktrackNodeframe3",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 569
+        },
+        "/vrpn_client_node/tas_uwb_0/pose": {
+          "declared_count": 3346,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 3346,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761291998.94672,
+            "min_s": 1761291987.57881,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/PoseStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 3346
+        },
+        "/vrpn_client_node/tas_uwb_1/pose": {
+          "declared_count": 3412,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 3412,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761291998.9588625,
+            "min_s": 1761291987.4055712,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/PoseStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 3412
+        },
+        "/vrpn_client_node/tas_uwb_2/pose": {
+          "declared_count": 3400,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 3400,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761291998.946359,
+            "min_s": 1761291987.4256172,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/PoseStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 3400
+        },
+        "/vrpn_client_node/tas_uwb_3/pose": {
+          "declared_count": 3387,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 3387,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761291998.9464712,
+            "min_s": 1761291987.439179,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/PoseStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 3387
+        },
+        "/vrpn_client_node/tas_uwb_4/pose": {
+          "declared_count": 3383,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 3383,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761291998.946574,
+            "min_s": 1761291987.4556153,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/PoseStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 3383
+        }
+      },
+      "vicon_first_position_m": {
+        "/vrpn_client_node/tas_uwb_0/pose": [
+          0.006885528563366494,
+          -0.014407549388073053,
+          0.1938960208826181
+        ],
+        "/vrpn_client_node/tas_uwb_1/pose": [
+          -2.095409067435364,
+          2.2818037567435923,
+          1.6037656590621407
+        ],
+        "/vrpn_client_node/tas_uwb_2/pose": [
+          2.90228944534625,
+          2.1655912127969383,
+          1.6149454378590178
+        ],
+        "/vrpn_client_node/tas_uwb_3/pose": [
+          3.0991496907938307,
+          -1.5315097843169543,
+          1.5883868244955777
+        ],
+        "/vrpn_client_node/tas_uwb_4/pose": [
+          -2.235288134155611,
+          -1.4452032246521553,
+          1.5818330924373416
+        ]
+      }
+    },
+    "2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle": {
+      "anchor_ids": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "bag_time_s": {
+        "end": 1761292147.1644785,
+        "start": 1761292135.4195962
+      },
+      "bytes": 576006616,
+      "content_bytes_after_optional_reindex": 54509828,
+      "inspection_source": "TEMP_COPY_REINDEXED_READ_ONLY_SOURCE",
+      "original_bag_indexed": false,
+      "original_open_error": "Unindexed bag",
+      "raw_data_path": "data/own_vicon/2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle.bag",
+      "sha256": "402201faec2109cd14e6f3e9eb9e7267a12de87f9832d0bc59ac0ac063f72f63",
+      "tag_ids": [
+        "0"
+      ],
+      "temporary_reindex_exit_code": 0,
+      "topics": {
+        "/livox/imu": {
+          "declared_count": 2313,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 2313,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761292147.1594164,
+            "min_s": 1761292135.5992594,
+            "negative_values": 0
+          },
+          "message_type": "sensor_msgs/Imu",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 2313
+        },
+        "/nlink_linktrack_nodeframe3": {
+          "declared_count": 578,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 578,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761292147.1444464,
+            "min_s": 1761292135.604716,
+            "negative_values": 0
+          },
+          "message_type": "nlink_parser/LinktrackNodeframe3",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 578
+        },
+        "/vrpn_client_node/tas_uwb_0/pose": {
+          "declared_count": 3407,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 3407,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761292147.1598415,
+            "min_s": 1761292135.60731,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/PoseStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 3407
+        },
+        "/vrpn_client_node/tas_uwb_1/pose": {
+          "declared_count": 3441,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 3441,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761292147.1577847,
+            "min_s": 1761292135.5382168,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/PoseStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 3441
+        },
+        "/vrpn_client_node/tas_uwb_2/pose": {
+          "declared_count": 3437,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 3437,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761292147.158072,
+            "min_s": 1761292135.5554092,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/PoseStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 3437
+        },
+        "/vrpn_client_node/tas_uwb_3/pose": {
+          "declared_count": 3425,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 3425,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761292147.158295,
+            "min_s": 1761292135.5740254,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/PoseStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 3425
+        },
+        "/vrpn_client_node/tas_uwb_4/pose": {
+          "declared_count": 3420,
+          "header_time": {
+            "backward_steps_in_file_order": 0,
+            "count": 3420,
+            "duplicate_steps_in_file_order": 0,
+            "max_s": 1761292147.158474,
+            "min_s": 1761292135.5773401,
+            "negative_values": 0
+          },
+          "message_type": "geometry_msgs/PoseStamped",
+          "nonfinite_selected_messages": 0,
+          "scanned_count": 3420
+        }
+      },
+      "vicon_first_position_m": {
+        "/vrpn_client_node/tas_uwb_0/pose": [
+          0.0068628262775642995,
+          -0.006691810619261281,
+          0.1941676796136219
+        ],
+        "/vrpn_client_node/tas_uwb_1/pose": [
+          -2.095118115641345,
+          2.2818285484376246,
+          1.6030404540874594
+        ],
+        "/vrpn_client_node/tas_uwb_2/pose": [
+          2.9037060206877348,
+          2.167453417294571,
+          1.6140115128949821
+        ],
+        "/vrpn_client_node/tas_uwb_3/pose": [
+          3.0980139060746166,
+          -1.5343069406951517,
+          1.5905396300517884
+        ],
+        "/vrpn_client_node/tas_uwb_4/pose": [
+          -2.2342608260604244,
+          -1.4439678240997371,
+          1.5793429737782179
+        ]
+      }
+    }
+  },
+  "scope": "READ_ONLY_METADATA_AND_SELECTED_FIELD_VALIDATION_NO_ESTIMATOR",
+  "source_data_modified": false,
+  "starloc": {
+    "apriltag_s3": {
+      "anchor_coordinates": {
+        "bytes": 469,
+        "path": "data/starloc/mocap/uwb_markers_v2.csv",
+        "sha256": "4d7476ff36d9f88db66cf8101ce17d8225e5fa1faf63ff4226418512a945dd64"
+      },
+      "calibration": {
+        "bytes": 638,
+        "finite": true,
+        "path": "data/starloc/data/apriltag_s3/calib.json",
+        "sha256": "0d6793f9c79b02c80090622fe1b3d60120c4dc9db2e314282686eaf21b70005e"
+      },
+      "dataset_params": {
+        "group": "other",
+        "landmarks": "v2",
+        "name": "apriltag_s3",
+        "setup": "s3",
+        "tags": "tags_1.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 7094435,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/apriltag_s3/imu.csv",
+        "rows": 13396,
+        "sha256": "1353c3905c1ed198d06c7eeaa29267336c0e9690c6c01a33434050393071a3fa",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 13396,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 117.74094102,
+          "min_s": 1.43538838,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 13913396,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/apriltag_s3/uwb.csv",
+        "rows": 27056,
+        "sha256": "3eb74594692c80c83fa7ca7f7a02a68ac9f5b21647b74e017852ac69b9bdac6f",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 27056,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 116.311950141,
+          "min_s": 0.001744935,
+          "negative_values": 0
+        }
+      }
+    },
+    "eight_s2": {
+      "anchor_coordinates": {
+        "bytes": 468,
+        "path": "data/starloc/mocap/uwb_markers_v1.csv",
+        "sha256": "60d2dd40d99ee254727bbdde0d5d74fcd79ff7f6e752b4c2607b58e442958c69"
+      },
+      "calibration": {
+        "bytes": 635,
+        "finite": true,
+        "path": "data/starloc/data/eight_s2/calib.json",
+        "sha256": "182b1f1199298f80751b8861ab72638593d87086d9d92fbb6ec14e0fe3e82b4a"
+      },
+      "dataset_params": {
+        "group": "eight",
+        "landmarks": "v1",
+        "name": "eight_s2",
+        "setup": "s2",
+        "tags": "tags_2.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 2849625,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/eight_s2/imu.csv",
+        "rows": 5383,
+        "sha256": "0e0c39e0326a6490082a9a85dd1d2325db445388bc31fb87ea863bbe137d85dd",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 5383,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 49.22586754,
+          "min_s": 0.11419241,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 5588482,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1",
+            "2"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/eight_s2/uwb.csv",
+        "rows": 10873,
+        "sha256": "eb5c9b036a4928baea5e3c2167c8321565db6ebafdd66c4e707c295430023411",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 10873,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 49.225849269,
+          "min_s": 2.2659e-05,
+          "negative_values": 0
+        }
+      }
+    },
+    "eight_s3": {
+      "anchor_coordinates": {
+        "bytes": 469,
+        "path": "data/starloc/mocap/uwb_markers_v2.csv",
+        "sha256": "4d7476ff36d9f88db66cf8101ce17d8225e5fa1faf63ff4226418512a945dd64"
+      },
+      "calibration": {
+        "bytes": 636,
+        "finite": true,
+        "path": "data/starloc/data/eight_s3/calib.json",
+        "sha256": "3d8c04b5a459ffcdd07fec8fcde60eb29aaecfd09ef7af9e2a068ad05d92c564"
+      },
+      "dataset_params": {
+        "group": "eight",
+        "landmarks": "v2",
+        "name": "eight_s3",
+        "setup": "s3",
+        "tags": "tags_1.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 5960382,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/eight_s3/imu.csv",
+        "rows": 11264,
+        "sha256": "15f8d60253ac5d8bf976412fc5cb5d2861fc6a8f3e1476367b437eca17a6b3e3",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 11264,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 99.92547887,
+          "min_s": 1.58413897,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 11960384,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/eight_s3/uwb.csv",
+        "rows": 23256,
+        "sha256": "77b96b1a64c85dd3264b130768f66d48c3ba1a28913824ed0bc3fe032c8fba26",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 23256,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 98.496226779,
+          "min_s": 6.7199e-05,
+          "negative_values": 0
+        }
+      }
+    },
+    "ell_s3": {
+      "anchor_coordinates": {
+        "bytes": 469,
+        "path": "data/starloc/mocap/uwb_markers_v2.csv",
+        "sha256": "4d7476ff36d9f88db66cf8101ce17d8225e5fa1faf63ff4226418512a945dd64"
+      },
+      "calibration": {
+        "bytes": 634,
+        "finite": true,
+        "path": "data/starloc/data/ell_s3/calib.json",
+        "sha256": "fdca51a2caff91fb77d3c93926cfdbd12af69bfc3ff309cb25896056b7bd1bee"
+      },
+      "dataset_params": {
+        "group": "other",
+        "landmarks": "v2",
+        "name": "ell_s3",
+        "setup": "s3",
+        "tags": "tags_1.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 6642791,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/ell_s3/imu.csv",
+        "rows": 12535,
+        "sha256": "6f349d9fef136c002d9d27af6082b19f118003436dab9e5a2f57193de3f35288",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 12535,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 112.03624472,
+          "min_s": -9.807e-05,
+          "negative_values": 1
+        }
+      },
+      "uwb": {
+        "bytes": 13634443,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/ell_s3/uwb.csv",
+        "rows": 26481,
+        "sha256": "985932efe37799bc0487fa94fae5127721417e53004477724d071990bf53ce28",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 26481,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 110.935764215,
+          "min_s": 0.000796632,
+          "negative_values": 0
+        }
+      }
+    },
+    "grid_s3": {
+      "anchor_coordinates": {
+        "bytes": 469,
+        "path": "data/starloc/mocap/uwb_markers_v2.csv",
+        "sha256": "4d7476ff36d9f88db66cf8101ce17d8225e5fa1faf63ff4226418512a945dd64"
+      },
+      "calibration": {
+        "bytes": 637,
+        "finite": true,
+        "path": "data/starloc/data/grid_s3/calib.json",
+        "sha256": "ccb95c011254778d0864130139e092c5fc52f22e17182f80b82e3a33253c94e2"
+      },
+      "dataset_params": {
+        "group": "other",
+        "landmarks": "v2",
+        "name": "grid_s3",
+        "setup": "s3",
+        "tags": "tags_1.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 6916610,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/grid_s3/imu.csv",
+        "rows": 13055,
+        "sha256": "c19f3e4b5a973f0b965fd6897dc85f4471f1c42f73d591f64b41dbd9ea24870e",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 13055,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 113.95523024,
+          "min_s": 1.1378353,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 13978212,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/grid_s3/uwb.csv",
+        "rows": 27130,
+        "sha256": "b1fee36f13c112a91516d88f1f41767d3da5b6f32d86e6eabf4424060a2e50fd",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 27130,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 112.847364304,
+          "min_s": 0.001468459,
+          "negative_values": 0
+        }
+      }
+    },
+    "loop-2d-fast_s1": {
+      "anchor_coordinates": {
+        "bytes": 468,
+        "path": "data/starloc/mocap/uwb_markers_v1.csv",
+        "sha256": "60d2dd40d99ee254727bbdde0d5d74fcd79ff7f6e752b4c2607b58e442958c69"
+      },
+      "calibration": {
+        "bytes": 637,
+        "finite": true,
+        "path": "data/starloc/data/loop-2d-fast_s1/calib.json",
+        "sha256": "75f1cb60fb8227a700b2d190a44c4b72ddb8c0fb6803896028858202a9638e81"
+      },
+      "dataset_params": {
+        "group": "loop-2d-fast",
+        "landmarks": "v1",
+        "name": "loop-2d-fast_s1",
+        "setup": "s1",
+        "tags": "tags_2.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 2102548,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d-fast_s1/imu.csv",
+        "rows": 3989,
+        "sha256": "05bdb53e9864962eaf2a14b6e27a848fb58cf7cc4851294698e92b30c862ab64",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 3989,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 35.61543095,
+          "min_s": 1.44835357,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 3900867,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1",
+            "2"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d-fast_s1/uwb.csv",
+        "rows": 7602,
+        "sha256": "cd4da1bf896be8ad3b02f55c03afbadbbe5dd91d0cf097e0deaed0bd88c8583d",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 7602,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 34.188952196,
+          "min_s": 0.000448815,
+          "negative_values": 0
+        }
+      }
+    },
+    "loop-2d-fast_s2": {
+      "anchor_coordinates": {
+        "bytes": 468,
+        "path": "data/starloc/mocap/uwb_markers_v1.csv",
+        "sha256": "60d2dd40d99ee254727bbdde0d5d74fcd79ff7f6e752b4c2607b58e442958c69"
+      },
+      "calibration": {
+        "bytes": 639,
+        "finite": true,
+        "path": "data/starloc/data/loop-2d-fast_s2/calib.json",
+        "sha256": "1af9d46acf1cda1a5b02c41269947a0f7caae0333b57ddb733d3a9a3fea701a7"
+      },
+      "dataset_params": {
+        "group": "loop-2d-fast",
+        "landmarks": "v1",
+        "name": "loop-2d-fast_s2",
+        "setup": "s2",
+        "tags": "tags_2.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 2102299,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d-fast_s2/imu.csv",
+        "rows": 3989,
+        "sha256": "1bf45f40dce91b3e31d8ac43c8d17be8b06ee4c225201e0dac99909ece482ba4",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 3989,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 34.7510322,
+          "min_s": -0.00157785,
+          "negative_values": 1
+        }
+      },
+      "uwb": {
+        "bytes": 3957943,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1",
+            "2"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d-fast_s2/uwb.csv",
+        "rows": 7725,
+        "sha256": "faa678cbcb00692c5061e021984788eae665d3a67b5a65a548a237a2f4aed4b2",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 7725,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 34.753331113,
+          "min_s": 0.000990059,
+          "negative_values": 0
+        }
+      }
+    },
+    "loop-2d-fast_s3": {
+      "anchor_coordinates": {
+        "bytes": 469,
+        "path": "data/starloc/mocap/uwb_markers_v2.csv",
+        "sha256": "4d7476ff36d9f88db66cf8101ce17d8225e5fa1faf63ff4226418512a945dd64"
+      },
+      "calibration": {
+        "bytes": 641,
+        "finite": true,
+        "path": "data/starloc/data/loop-2d-fast_s3/calib.json",
+        "sha256": "e6e99a9b0ac3c5b39a3a558c4ff659958a111153ab08521d3fd97366bcc717c9"
+      },
+      "dataset_params": {
+        "group": "loop-2d-fast",
+        "landmarks": "v2",
+        "name": "loop-2d-fast_s3",
+        "setup": "s3",
+        "tags": "tags_1.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 3321239,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d-fast_s3/imu.csv",
+        "rows": 6288,
+        "sha256": "6de764200d082a99e2bc1ab7c2a3f7f47e016697bcf27d9df75164cc7ab66ad2",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 6288,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 54.70599052,
+          "min_s": -0.69683931,
+          "negative_values": 79
+        }
+      },
+      "uwb": {
+        "bytes": 6765216,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d-fast_s3/uwb.csv",
+        "rows": 13187,
+        "sha256": "97e0df2bd78c202fd16a1cfce1e3b6462539a07032f9f4ffa8a3b863b8ae4d0d",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 13187,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 55.497804036,
+          "min_s": 0.003133953,
+          "negative_values": 0
+        }
+      }
+    },
+    "loop-2d-v2_s5": {
+      "anchor_coordinates": {
+        "bytes": 227,
+        "path": "data/starloc/mocap/uwb_markers_v3.csv",
+        "sha256": "9cf67b28ab7230cd7f4675f427d319efc28ee9d71ad6f1f13aeb1fd412990f93"
+      },
+      "calibration": {
+        "bytes": 639,
+        "finite": true,
+        "path": "data/starloc/data/loop-2d-v2_s5/calib.json",
+        "sha256": "0cb146851da8f7470ce6c870271d1659b703ce3d30886cfd1968fd5f267f6f01"
+      },
+      "dataset_params": {
+        "group": "other",
+        "landmarks": "v3",
+        "name": "loop-2d-v2_s5",
+        "setup": "s5",
+        "tags": "tags_1.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 5256557,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d-v2_s5/imu.csv",
+        "rows": 9947,
+        "sha256": "e2b8c798967f1db22b45359bcc1c20bf5e78ef9da006289baa4bd389a73c6970",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 9947,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 84.84157821,
+          "min_s": 1.43564567,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 856680,
+        "columns": [
+          "time_s",
+          "to_id",
+          "range",
+          "from_id",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1"
+          ],
+          "to_id": [
+            "11",
+            "12",
+            "4",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d-v2_s5/uwb.csv",
+        "rows": 3340,
+        "sha256": "d999830759d02062dd97ecce5233df0bace16950f942e87089764384df284141",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 3340,
+          "duplicate_steps_in_file_order": 21,
+          "max_s": 83.414160098,
+          "min_s": 0.011416802,
+          "negative_values": 0
+        }
+      }
+    },
+    "loop-2d_s1": {
+      "anchor_coordinates": {
+        "bytes": 468,
+        "path": "data/starloc/mocap/uwb_markers_v1.csv",
+        "sha256": "60d2dd40d99ee254727bbdde0d5d74fcd79ff7f6e752b4c2607b58e442958c69"
+      },
+      "calibration": {
+        "bytes": 639,
+        "finite": true,
+        "path": "data/starloc/data/loop-2d_s1/calib.json",
+        "sha256": "99d41c03ded7b70bad5dab71e26513773b1c9b522a49af64044d746dee69b051"
+      },
+      "dataset_params": {
+        "group": "loop-2d",
+        "landmarks": "v1",
+        "name": "loop-2d_s1",
+        "setup": "s1",
+        "tags": "tags_2.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 3907638,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d_s1/imu.csv",
+        "rows": 7409,
+        "sha256": "efaddc8e53a8414d0dba8a9f2410199e3364c6402767e49cfef11982006e8dee",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 7409,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 66.99640235,
+          "min_s": 1.53186475,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 7884136,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1",
+            "2"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d_s1/uwb.csv",
+        "rows": 15374,
+        "sha256": "88651009aac8c0e4be063b71e8bd2bee3f54fa34d2f7a0bf03c0539f93c7ffa7",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 15374,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 65.578636649,
+          "min_s": 3.4728e-05,
+          "negative_values": 0
+        }
+      }
+    },
+    "loop-2d_s2": {
+      "anchor_coordinates": {
+        "bytes": 468,
+        "path": "data/starloc/mocap/uwb_markers_v1.csv",
+        "sha256": "60d2dd40d99ee254727bbdde0d5d74fcd79ff7f6e752b4c2607b58e442958c69"
+      },
+      "calibration": {
+        "bytes": 642,
+        "finite": true,
+        "path": "data/starloc/data/loop-2d_s2/calib.json",
+        "sha256": "e2f9a6a70dd7e8cc2ef5237faeb5616ffe9aec803c66d1e00fe5402a73a43ed5"
+      },
+      "dataset_params": {
+        "group": "loop-2d",
+        "landmarks": "v1",
+        "name": "loop-2d_s2",
+        "setup": "s2",
+        "tags": "tags_2.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 5223185,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d_s2/imu.csv",
+        "rows": 9900,
+        "sha256": "05f3818eef1d1a0a49178b363c2ffb4cbb65bd095a45cde6154fe47945b49fb0",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 9900,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 87.95606367,
+          "min_s": 1.1963212,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 10016189,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1",
+            "2"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d_s2/uwb.csv",
+        "rows": 19528,
+        "sha256": "525c1b11e2b2ab05f97f69b3b219edc1ae3efb10cb193a42f65dd820a6a2d67f",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 19528,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 86.852956157,
+          "min_s": 0.099277858,
+          "negative_values": 0
+        }
+      }
+    },
+    "loop-2d_s3": {
+      "anchor_coordinates": {
+        "bytes": 469,
+        "path": "data/starloc/mocap/uwb_markers_v2.csv",
+        "sha256": "4d7476ff36d9f88db66cf8101ce17d8225e5fa1faf63ff4226418512a945dd64"
+      },
+      "calibration": {
+        "bytes": 638,
+        "finite": true,
+        "path": "data/starloc/data/loop-2d_s3/calib.json",
+        "sha256": "e9ae87f6c89f361507c5943c9978c72deae76af572c9253a88ce466641426b0e"
+      },
+      "dataset_params": {
+        "group": "loop-2d",
+        "landmarks": "v2",
+        "name": "loop-2d_s3",
+        "setup": "s3",
+        "tags": "tags_1.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 6349716,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d_s3/imu.csv",
+        "rows": 12013,
+        "sha256": "32ba1ee530680608a39d4445253bd7eb0ccff304384a474b65c5a4c27c2c0b2f",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 12013,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 106.24831679,
+          "min_s": 1.11013926,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 12745215,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d_s3/uwb.csv",
+        "rows": 24827,
+        "sha256": "d31b7cad71745dd0df0b075c720c6db4a4a41fea0ee5b795c0d8b003b3b80280",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 24827,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 105.146663851,
+          "min_s": 0.000922387,
+          "negative_values": 0
+        }
+      }
+    },
+    "loop-2d_s4": {
+      "anchor_coordinates": {
+        "bytes": 469,
+        "path": "data/starloc/mocap/uwb_markers_v2.csv",
+        "sha256": "4d7476ff36d9f88db66cf8101ce17d8225e5fa1faf63ff4226418512a945dd64"
+      },
+      "calibration": {
+        "bytes": 634,
+        "finite": true,
+        "path": "data/starloc/data/loop-2d_s4/calib.json",
+        "sha256": "861224501bff06822e3d41fc294cad78ba53ea5032f36f3bdaca4df40416ec7d"
+      },
+      "dataset_params": {
+        "group": "loop-2d",
+        "landmarks": "v2",
+        "name": "loop-2d_s4",
+        "setup": "s4",
+        "tags": "tags_1.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 13438701,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d_s4/imu.csv",
+        "rows": 25378,
+        "sha256": "6ca3d72e885e515eba44b15a3f8b772141b0a65b338e6533f253f9c003e3f254",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 25378,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 193.32787541,
+          "min_s": 0.94080366,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 21347521,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d_s4/uwb.csv",
+        "rows": 41607,
+        "sha256": "bfff652ffed5e0442399908ffaaae53a5f772acde4846dce79096fcefb2f6ee6",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 41607,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 192.393344349,
+          "min_s": 1.219219277,
+          "negative_values": 0
+        }
+      }
+    },
+    "loop-2d_s5": {
+      "anchor_coordinates": {
+        "bytes": 227,
+        "path": "data/starloc/mocap/uwb_markers_v3.csv",
+        "sha256": "9cf67b28ab7230cd7f4675f427d319efc28ee9d71ad6f1f13aeb1fd412990f93"
+      },
+      "calibration": {
+        "bytes": 638,
+        "finite": true,
+        "path": "data/starloc/data/loop-2d_s5/calib.json",
+        "sha256": "32c734c161a4df65f25f7411c5c6888943e86ad1de053601e71710aba9a49d30"
+      },
+      "dataset_params": {
+        "group": "loop-2d",
+        "landmarks": "v3",
+        "name": "loop-2d_s5",
+        "setup": "s5",
+        "tags": "tags_1.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 4228400,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d_s5/imu.csv",
+        "rows": 7985,
+        "sha256": "077f96ba4c3e62813e46ea95ff0119e95a68c86b2075c0406259e82d50483fed",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 7985,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 68.42395926,
+          "min_s": 1.5313766,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 687302,
+        "columns": [
+          "time_s",
+          "to_id",
+          "range",
+          "from_id",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1"
+          ],
+          "to_id": [
+            "11",
+            "12",
+            "4",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-2d_s5/uwb.csv",
+        "rows": 2680,
+        "sha256": "7942c96401917da0a09cef606fcde77c433d240686128bac6c359f3225081afb",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 2680,
+          "duplicate_steps_in_file_order": 14,
+          "max_s": 66.912881369,
+          "min_s": 0.020989913,
+          "negative_values": 0
+        }
+      }
+    },
+    "loop-3d-z_s3": {
+      "anchor_coordinates": {
+        "bytes": 469,
+        "path": "data/starloc/mocap/uwb_markers_v2.csv",
+        "sha256": "4d7476ff36d9f88db66cf8101ce17d8225e5fa1faf63ff4226418512a945dd64"
+      },
+      "calibration": {
+        "bytes": 630,
+        "finite": true,
+        "path": "data/starloc/data/loop-3d-z_s3/calib.json",
+        "sha256": "b56a661fbdc618bb7185eeb54a5f95efd7b24d80ba80fa5a9469a576704bc6d6"
+      },
+      "dataset_params": {
+        "group": "other",
+        "landmarks": "v2",
+        "name": "loop-3d-z_s3",
+        "setup": "s3",
+        "tags": "tags_1.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 9015013,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-3d-z_s3/imu.csv",
+        "rows": 17018,
+        "sha256": "f9a18fc78c3c0dfda3fd02acc928497c8dca70de399dbe7d7edaa36bc1e7ca1f",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 17018,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 151.31256158,
+          "min_s": 1.20878891,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 18329441,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-3d-z_s3/uwb.csv",
+        "rows": 35640,
+        "sha256": "9f4cc2188698b2faedd0e9cc46c1ffdbe703f83eb501d931b80f21dcec7f371a",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 35640,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 150.225228073,
+          "min_s": 0.00171601,
+          "negative_values": 0
+        }
+      }
+    },
+    "loop-3d_s1": {
+      "anchor_coordinates": {
+        "bytes": 468,
+        "path": "data/starloc/mocap/uwb_markers_v1.csv",
+        "sha256": "60d2dd40d99ee254727bbdde0d5d74fcd79ff7f6e752b4c2607b58e442958c69"
+      },
+      "calibration": {
+        "bytes": 638,
+        "finite": true,
+        "path": "data/starloc/data/loop-3d_s1/calib.json",
+        "sha256": "bf623c065b4ea81675404c9bf0034e6e4f3c5e41a0fda676a84544f0e315fe68"
+      },
+      "dataset_params": {
+        "group": "loop-3d",
+        "landmarks": "v1",
+        "name": "loop-3d_s1",
+        "setup": "s1",
+        "tags": "tags_2.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 5291061,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-3d_s1/imu.csv",
+        "rows": 10021,
+        "sha256": "c0ed9ba0946d9074ad2bfb5556fe3f08cf10faf26c109feb5ba233e6a9332cbe",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 10021,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 88.99930012,
+          "min_s": 1.44632015,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 10147888,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1",
+            "2"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-3d_s1/uwb.csv",
+        "rows": 19762,
+        "sha256": "a978765ca484dc2b046886e15a91bbb7a6c5e7274ed90b36cfcc71931ef4a0b5",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 19762,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 87.577036443,
+          "min_s": 0.002906041,
+          "negative_values": 0
+        }
+      }
+    },
+    "loop-3d_s2": {
+      "anchor_coordinates": {
+        "bytes": 468,
+        "path": "data/starloc/mocap/uwb_markers_v1.csv",
+        "sha256": "60d2dd40d99ee254727bbdde0d5d74fcd79ff7f6e752b4c2607b58e442958c69"
+      },
+      "calibration": {
+        "bytes": 636,
+        "finite": true,
+        "path": "data/starloc/data/loop-3d_s2/calib.json",
+        "sha256": "50dfdf186ec03b78ab5015d060b08f4017fd8b919db9a6af44415d3e7beb95cd"
+      },
+      "dataset_params": {
+        "group": "loop-3d",
+        "landmarks": "v1",
+        "name": "loop-3d_s2",
+        "setup": "s2",
+        "tags": "tags_2.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 4815612,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-3d_s2/imu.csv",
+        "rows": 9125,
+        "sha256": "d3333da4fcfaaacf27b784bd50bbd6e93c4d41f1cc0ce778529a30afe43a39dc",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 9125,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 80.31227073,
+          "min_s": 0.02831067,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 8800881,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1",
+            "2"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-3d_s2/uwb.csv",
+        "rows": 17156,
+        "sha256": "70633007114034bf63d35d80423ee6cc447e669e675be5a1023ea4881f9cf940",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 17156,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 80.309918146,
+          "min_s": 0.00062454,
+          "negative_values": 0
+        }
+      }
+    },
+    "loop-3d_s3": {
+      "anchor_coordinates": {
+        "bytes": 469,
+        "path": "data/starloc/mocap/uwb_markers_v2.csv",
+        "sha256": "4d7476ff36d9f88db66cf8101ce17d8225e5fa1faf63ff4226418512a945dd64"
+      },
+      "calibration": {
+        "bytes": 639,
+        "finite": true,
+        "path": "data/starloc/data/loop-3d_s3/calib.json",
+        "sha256": "d8a24657bab1dafd80f2e2449742dbe1322f6d6cbcb00585c831c43502955a80"
+      },
+      "dataset_params": {
+        "group": "loop-3d",
+        "landmarks": "v2",
+        "name": "loop-3d_s3",
+        "setup": "s3",
+        "tags": "tags_1.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 6075878,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-3d_s3/imu.csv",
+        "rows": 11508,
+        "sha256": "440df4b0d912eedb4d5a98014acacc6bb6988a13a26c124eb7a35dd19681b3de",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 11508,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 98.9673584,
+          "min_s": -0.78394041,
+          "negative_values": 85
+        }
+      },
+      "uwb": {
+        "bytes": 12098219,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-3d_s3/uwb.csv",
+        "rows": 23566,
+        "sha256": "5a57fe667f9dec68b9ae3829e0b8b1171bd53d0098000ce419fb7ac2d2b36905",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 23566,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 99.770066735,
+          "min_s": 0.001141071,
+          "negative_values": 0
+        }
+      }
+    },
+    "loop-3d_s5": {
+      "anchor_coordinates": {
+        "bytes": 227,
+        "path": "data/starloc/mocap/uwb_markers_v3.csv",
+        "sha256": "9cf67b28ab7230cd7f4675f427d319efc28ee9d71ad6f1f13aeb1fd412990f93"
+      },
+      "calibration": {
+        "bytes": 638,
+        "finite": true,
+        "path": "data/starloc/data/loop-3d_s5/calib.json",
+        "sha256": "acff843f38e0021dfe5dc35c5c45e530d8d2c53a5d769cf5ad8d7ed4036afc41"
+      },
+      "dataset_params": {
+        "group": "loop-3d",
+        "landmarks": "v3",
+        "name": "loop-3d_s5",
+        "setup": "s5",
+        "tags": "tags_1.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 2204724,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-3d_s5/imu.csv",
+        "rows": 4158,
+        "sha256": "d1c35bbc5b9ad432fcec7d398d4cdec6460f386e6018a6f4cf537259d125683f",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 4158,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 36.47003316,
+          "min_s": 1.44672333,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 361080,
+        "columns": [
+          "time_s",
+          "to_id",
+          "range",
+          "from_id",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1"
+          ],
+          "to_id": [
+            "11",
+            "12",
+            "4",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/loop-3d_s5/uwb.csv",
+        "rows": 1404,
+        "sha256": "045ab36be3b535ace8da282fc467bdd05e82f9c6a3b4b3cac85f55356f8466d5",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 1404,
+          "duplicate_steps_in_file_order": 5,
+          "max_s": 35.028858631,
+          "min_s": 0.026746119,
+          "negative_values": 0
+        }
+      }
+    },
+    "zigzag_s2": {
+      "anchor_coordinates": {
+        "bytes": 468,
+        "path": "data/starloc/mocap/uwb_markers_v1.csv",
+        "sha256": "60d2dd40d99ee254727bbdde0d5d74fcd79ff7f6e752b4c2607b58e442958c69"
+      },
+      "calibration": {
+        "bytes": 633,
+        "finite": true,
+        "path": "data/starloc/data/zigzag_s2/calib.json",
+        "sha256": "2c4936085c04853d2bf3867711a7ddee634de00009fde2109f34b3ade2511c0f"
+      },
+      "dataset_params": {
+        "group": "zigzag",
+        "landmarks": "v1",
+        "name": "zigzag_s2",
+        "setup": "s2",
+        "tags": "tags_2.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 4607865,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/zigzag_s2/imu.csv",
+        "rows": 8704,
+        "sha256": "a8237200e36d2f5ded9fde4bcc6a162fc1dc81b43f37a4e8701fc373910c7355",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 8704,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 78.01773615,
+          "min_s": 0.1354813,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 9223840,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1",
+            "2"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/zigzag_s2/uwb.csv",
+        "rows": 17970,
+        "sha256": "4c8f946a618cdff47e7aebf40f1a2630d44bbd9e823d74de7deabc11b8236572",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 17970,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 78.036641843,
+          "min_s": 0.001440461,
+          "negative_values": 0
+        }
+      }
+    },
+    "zigzag_s3": {
+      "anchor_coordinates": {
+        "bytes": 469,
+        "path": "data/starloc/mocap/uwb_markers_v2.csv",
+        "sha256": "4d7476ff36d9f88db66cf8101ce17d8225e5fa1faf63ff4226418512a945dd64"
+      },
+      "calibration": {
+        "bytes": 637,
+        "finite": true,
+        "path": "data/starloc/data/zigzag_s3/calib.json",
+        "sha256": "9654154718300e1c8216572335c6478992ae7cf7ea8723dae86653299606d32e"
+      },
+      "dataset_params": {
+        "group": "zigzag",
+        "landmarks": "v2",
+        "name": "zigzag_s3",
+        "setup": "s3",
+        "tags": "tags_1.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 12204900,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/zigzag_s3/imu.csv",
+        "rows": 23096,
+        "sha256": "1ed84d411bde1af2803f9e4a9788b534835bc0c4ff4cf16a2230a6916916ef07",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 23096,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 202.99995612,
+          "min_s": 1.5168534,
+          "negative_values": 0
+        }
+      },
+      "uwb": {
+        "bytes": 24321512,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/zigzag_s3/uwb.csv",
+        "rows": 47372,
+        "sha256": "b9f9f32dde9a17ec61387efdef60a759e2a0fb5eb9b92a4b8a197f4deaeb0c6f",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 47372,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 201.582838955,
+          "min_s": 0.100713323,
+          "negative_values": 0
+        }
+      }
+    },
+    "zigzag_s4": {
+      "anchor_coordinates": {
+        "bytes": 469,
+        "path": "data/starloc/mocap/uwb_markers_v2.csv",
+        "sha256": "4d7476ff36d9f88db66cf8101ce17d8225e5fa1faf63ff4226418512a945dd64"
+      },
+      "calibration": {
+        "bytes": 636,
+        "finite": true,
+        "path": "data/starloc/data/zigzag_s4/calib.json",
+        "sha256": "535e30a63418bd7f5cb240c5a0cfa958af7948776b0b37aecf41b92745cbfb74"
+      },
+      "dataset_params": {
+        "group": "zigzag",
+        "landmarks": "v2",
+        "name": "zigzag_s4",
+        "setup": "s4",
+        "tags": "tags_1.config"
+      },
+      "imu_and_embedded_gt": {
+        "bytes": 19372774,
+        "columns": [
+          "time_s",
+          "orientation_x",
+          "orientation_y",
+          "orientation_z",
+          "orientation_w",
+          "orientation_covariance_0",
+          "orientation_covariance_1",
+          "orientation_covariance_2",
+          "orientation_covariance_3",
+          "orientation_covariance_4",
+          "orientation_covariance_5",
+          "orientation_covariance_6",
+          "orientation_covariance_7",
+          "orientation_covariance_8",
+          "angular_velocity_x",
+          "angular_velocity_y",
+          "angular_velocity_z",
+          "angular_velocity_covariance_0",
+          "angular_velocity_covariance_1",
+          "angular_velocity_covariance_2",
+          "angular_velocity_covariance_3",
+          "angular_velocity_covariance_4",
+          "angular_velocity_covariance_5",
+          "angular_velocity_covariance_6",
+          "angular_velocity_covariance_7",
+          "angular_velocity_covariance_8",
+          "linear_acceleration_x",
+          "linear_acceleration_y",
+          "linear_acceleration_z",
+          "linear_acceleration_covariance_0",
+          "linear_acceleration_covariance_1",
+          "linear_acceleration_covariance_2",
+          "linear_acceleration_covariance_3",
+          "linear_acceleration_covariance_4",
+          "linear_acceleration_covariance_5",
+          "linear_acceleration_covariance_6",
+          "linear_acceleration_covariance_7",
+          "linear_acceleration_covariance_8",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z"
+        ],
+        "duplicate_columns": [],
+        "ids": {},
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/zigzag_s4/imu.csv",
+        "rows": 36538,
+        "sha256": "65b049973e76a29bf1a02d912e480fc22b8854795bba5097c5d148b62c862d80",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 36538,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 217.95901111,
+          "min_s": -0.08000637,
+          "negative_values": 15
+        }
+      },
+      "uwb": {
+        "bytes": 25631274,
+        "columns": [
+          "time_s",
+          "range",
+          "from_id",
+          "to_id",
+          "tx1",
+          "rx1",
+          "tx2",
+          "rx2",
+          "tx3",
+          "rx3",
+          "fpp1",
+          "fpp2",
+          "skew1",
+          "skew2",
+          "x",
+          "y",
+          "z",
+          "w",
+          "rot_x",
+          "rot_y",
+          "rot_z",
+          "tag_pos_x",
+          "tag_pos_y",
+          "tag_pos_z",
+          "bias",
+          "gt_range",
+          "range_calib",
+          "bias_calib",
+          "std"
+        ],
+        "duplicate_columns": [],
+        "ids": {
+          "from_id": [
+            "1"
+          ],
+          "to_id": [
+            "10",
+            "11",
+            "12",
+            "4",
+            "5",
+            "6",
+            "7",
+            "9"
+          ]
+        },
+        "malformed_selected_rows": 0,
+        "missing_required_columns": [],
+        "nonfinite_selected_rows": 0,
+        "path": "data/starloc/data/zigzag_s4/uwb.csv",
+        "rows": 49809,
+        "sha256": "a5be5d48ced5672201efc254beed2067f4a882a26d8e820ad625358578877ffc",
+        "time": {
+          "backward_steps_in_file_order": 0,
+          "count": 49809,
+          "duplicate_steps_in_file_order": 0,
+          "max_s": 218.13626641,
+          "min_s": 0.001876611,
+          "negative_values": 0
+        }
+      }
+    }
+  }
+}

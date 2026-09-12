@@ -1,0 +1,35 @@
+{
+  "estimator_command": "python3 experiments/scripts/run_controlled_smoke.py --estimate-only",
+  "estimator_exit_code": 0,
+  "evaluation_command": "python3 experiments/scripts/evaluate_controlled_smoke.py --experiment-dir experiments/results/controlled-20260912T100525Z-89b5c73afbb2",
+  "evaluation_exit_code": 0,
+  "evaluator_passes": 2,
+  "evaluator_second_pass_reason": "Add NLOS-window fields to unified trajectory_metrics.csv; estimator not rerun",
+  "output_dir": "/home/mint/ws_fusion_uwb/evaluator_private/icra/controlled/controlled-20260912T100525Z-89b5c73afbb2/evaluation-9dc25a2dcf214d18b6d926ab2803e90c",
+  "private_artifacts": {
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/controlled/controlled-20260912T100525Z-89b5c73afbb2/evaluation-9dc25a2dcf214d18b6d926ab2803e90c/detection_support.csv": "1f248a0a86b5f480604a38f7c07f326d24df0df3604b8da8e3830296742cd957",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/controlled/controlled-20260912T100525Z-89b5c73afbb2/evaluation-9dc25a2dcf214d18b6d926ab2803e90c/trajectory_metrics.csv": "703806283422392a1b5a0a005678d2f61f46eb7b08bb2324ce391c77755b7577",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/controlled/controlled-20260912T100525Z-89b5c73afbb2/evaluation-9dc25a2dcf214d18b6d926ab2803e90c/summary.json": "4b71d03652471b155ef1914a07aca56ad5f59ccca982783527c3dcdf03546089",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/controlled/controlled-20260912T100525Z-89b5c73afbb2/evaluation-9dc25a2dcf214d18b6d926ab2803e90c/clean_paired_range.csv": "6665eae49a610bf47822ccb749fe1016d0c26e394813e0ed5be36c5d61322fd8",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/controlled/controlled-20260912T100525Z-89b5c73afbb2/evaluation-9dc25a2dcf214d18b6d926ab2803e90c/estimated_segment_bias.csv": "c2ea3ce317f57d9505b9e1670eca1e033ef001e8cbac69f04e8f11ee60661b54",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/controlled/controlled-20260912T100525Z-89b5c73afbb2/evaluation-9dc25a2dcf214d18b6d926ab2803e90c/clean_range.log": "915fe3e5c38c0ff3407b8582bdcef6920df104d8a4c6dcfda7c7f00045d7f697",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/controlled/controlled-20260912T100525Z-89b5c73afbb2/evaluation-9dc25a2dcf214d18b6d926ab2803e90c/corrupted_range.log": "40ac582e1acdb9706b510b908dbcdafd7e14f02cea483a52cc09733f900fd8d3",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/controlled/controlled-20260912T100525Z-89b5c73afbb2/evaluation-9dc25a2dcf214d18b6d926ab2803e90c/detection_metrics.csv": "d8c5017943c609b5cdc6dbae3b56d19f2c174ea182fc1415235884938ba38fa3",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/controlled/controlled-20260912T100525Z-89b5c73afbb2/evaluation-9dc25a2dcf214d18b6d926ab2803e90c/paired_difference.csv": "3b1423c458ae474a8258e54d2dfaa4d84916c5fb3ae47096f032a4c05516d214",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/controlled/controlled-20260912T100525Z-89b5c73afbb2/evaluation-9dc25a2dcf214d18b6d926ab2803e90c/corrupted_paired_range.csv": "98ee3521cd4ffcdbb4f71b6fa5d7400d6eac8450232ee68b8530c649245092e5",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/controlled/controlled-20260912T100525Z-89b5c73afbb2/evaluation-9dc25a2dcf214d18b6d926ab2803e90c/range_summary.csv": "d9aff660ca02d9268747bce91998146a9216ff3c02933751a5f22538ac88df06"
+  },
+  "tests": {
+    "test_controlled_injection.py": 0,
+    "test_walk1_harness.py": 0,
+    "test_range_gt.py": 0
+  },
+  "delivered_script_sha256": {
+    "canonical_injection.py": "efafa1efb502092830dff9b70e45075cc71a1a5221e415c14277446b750527c6",
+    "run_controlled_smoke.py": "8366cbde42bb1ac75f848c8d577dc254471012e753ded72974cfd6fd79abd8c3",
+    "evaluate_controlled_smoke.py": "430af571d56a3614d4f01e04574a7be655da7a82bcb731e49c6b61755fe2a72e",
+    "run_walk1_smoke.py": "629a3645ee91815713317bb7486d2462790de017b13e8c1a4a817d1fbc0ac48a",
+    "estimator_isolation.py": "d60af1fd067d30a7b9ed7a965cdc5181aaa5b7e210ebfd6ce7f48f91bafe4b3d",
+    "evaluate_range_gt.py": "8219f8740d32bc17c0035dd075c2be4b3faeaf8609cd06d5ca5991a749c8972d"
+  }
+}

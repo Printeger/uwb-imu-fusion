@@ -1,0 +1,311 @@
+{
+  "ISAS-Walk1": {
+    "anchor_coordinates_first_message_m": {
+      "10548": [
+        5.519999980926514,
+        0.05000000074505806,
+        1.8600000143051147
+      ],
+      "15155": [
+        3.119999885559082,
+        -2.5899999141693115,
+        1.850000023841858
+      ],
+      "20276": [
+        5.5,
+        0.0,
+        0.0
+      ],
+      "7475": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "9524": [
+        2.609999895095825,
+        2.6700000762939453,
+        0.0
+      ]
+    },
+    "anchor_ids": [
+      "10548",
+      "15155",
+      "20276",
+      "7475",
+      "9524"
+    ],
+    "frames": {
+      "/rtls_flares": [
+        "RTLS/27956"
+      ],
+      "/rtls_pose": [
+        ""
+      ],
+      "/vive/transform/tracker_1_ref": [
+        "vive/reference"
+      ],
+      "/waveshare_sense_hat_b": [
+        "Waveshare_Sense_HAT_B/IMU"
+      ],
+      "gt_child": [
+        "vive/tracker_1"
+      ]
+    },
+    "header_time_ns": {
+      "/rtls_flares": {
+        "backward_steps": 0,
+        "max": 1664959736082964019,
+        "min": 1664959676989318950
+      },
+      "/rtls_pose": {
+        "backward_steps": 0,
+        "max": 1664959736082964019,
+        "min": 1664959676989318950
+      },
+      "/vive/transform/tracker_1_ref": {
+        "backward_steps": 0,
+        "max": 1664959736740352392,
+        "min": 1664959673400324106
+      },
+      "/waveshare_sense_hat_b": {
+        "backward_steps": 0,
+        "max": 1664959736089986427,
+        "min": 1664959676974539702
+      }
+    },
+    "raw_data_path": "data/SFUISE/ISAS-Walk1.bag",
+    "scope": "METADATA_ONLY_NO_ESTIMATOR_NO_GT_POSE_EXPORT",
+    "sha256": "ca577e3666ad5876aa8347289a98793b8da0e68b5db459f2d7d69a6adcacd944",
+    "tag_ids": [
+      "27956"
+    ],
+    "topics": {
+      "/anchor_list": {
+        "count": 970,
+        "message_type": "fraunhofer_rtls_flare/Anchorlist"
+      },
+      "/rtls_flares": {
+        "count": 970,
+        "message_type": "fraunhofer_rtls_flare/RTLSStick"
+      },
+      "/rtls_pose": {
+        "count": 970,
+        "message_type": "geometry_msgs/PoseStamped"
+      },
+      "/vive/transform/tracker_1_ref": {
+        "count": 3168,
+        "message_type": "geometry_msgs/TransformStamped"
+      },
+      "/waveshare_sense_hat_b": {
+        "count": 4839,
+        "message_type": "sensor_msgs/Imu"
+      }
+    }
+  },
+  "ISAS-Walk2": {
+    "anchor_coordinates_first_message_m": {
+      "10548": [
+        5.519999980926514,
+        0.05000000074505806,
+        1.8600000143051147
+      ],
+      "15155": [
+        3.119999885559082,
+        -2.5899999141693115,
+        1.850000023841858
+      ],
+      "20276": [
+        5.5,
+        0.0,
+        0.0
+      ],
+      "7475": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "9524": [
+        2.609999895095825,
+        2.6700000762939453,
+        0.0
+      ]
+    },
+    "anchor_ids": [
+      "10548",
+      "15155",
+      "20276",
+      "7475",
+      "9524"
+    ],
+    "frames": {
+      "/rtls_flares": [
+        "RTLS/27956"
+      ],
+      "/rtls_pose": [
+        ""
+      ],
+      "/vive/transform/tracker_1_ref": [
+        "vive/reference"
+      ],
+      "/waveshare_sense_hat_b": [
+        "Waveshare_Sense_HAT_B/IMU"
+      ],
+      "gt_child": [
+        "vive/tracker_1"
+      ]
+    },
+    "header_time_ns": {
+      "/rtls_flares": {
+        "backward_steps": 0,
+        "max": 1664959833056653771,
+        "min": 1664959757030627554
+      },
+      "/rtls_pose": {
+        "backward_steps": 0,
+        "max": 1664959833056653771,
+        "min": 1664959757030627554
+      },
+      "/vive/transform/tracker_1_ref": {
+        "backward_steps": 0,
+        "max": 1664959833960351467,
+        "min": 1664959754600314140
+      },
+      "/waveshare_sense_hat_b": {
+        "backward_steps": 0,
+        "max": 1664959833121514092,
+        "min": 1664959757027770002
+      }
+    },
+    "raw_data_path": "data/SFUISE/ISAS-Walk2.bag",
+    "scope": "METADATA_ONLY_NO_ESTIMATOR_NO_GT_POSE_EXPORT",
+    "sha256": "dea07fd11d5776226be6b390574c4b3789c48cfdce6a1731996981f3f91c453c",
+    "tag_ids": [
+      "27956"
+    ],
+    "topics": {
+      "/anchor_list": {
+        "count": 1241,
+        "message_type": "fraunhofer_rtls_flare/Anchorlist"
+      },
+      "/rtls_flares": {
+        "count": 1241,
+        "message_type": "fraunhofer_rtls_flare/RTLSStick"
+      },
+      "/rtls_pose": {
+        "count": 1241,
+        "message_type": "geometry_msgs/PoseStamped"
+      },
+      "/vive/transform/tracker_1_ref": {
+        "count": 3969,
+        "message_type": "geometry_msgs/TransformStamped"
+      },
+      "/waveshare_sense_hat_b": {
+        "count": 6229,
+        "message_type": "sensor_msgs/Imu"
+      }
+    }
+  },
+  "ISAS-Walk3": {
+    "anchor_coordinates_first_message_m": {
+      "10548": [
+        5.519999980926514,
+        0.05000000074505806,
+        1.8600000143051147
+      ],
+      "15155": [
+        3.119999885559082,
+        -2.5899999141693115,
+        1.850000023841858
+      ],
+      "20276": [
+        5.5,
+        0.0,
+        0.0
+      ],
+      "7475": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "9524": [
+        2.609999895095825,
+        2.6700000762939453,
+        0.0
+      ]
+    },
+    "anchor_ids": [
+      "10548",
+      "15155",
+      "20276",
+      "7475",
+      "9524"
+    ],
+    "frames": {
+      "/rtls_flares": [
+        "RTLS/27956"
+      ],
+      "/rtls_pose": [
+        ""
+      ],
+      "/vive/transform/tracker_1_ref": [
+        "vive/reference"
+      ],
+      "/waveshare_sense_hat_b": [
+        "Waveshare_Sense_HAT_B/IMU"
+      ],
+      "gt_child": [
+        "vive/tracker_1"
+      ]
+    },
+    "header_time_ns": {
+      "/rtls_flares": {
+        "backward_steps": 0,
+        "max": 1664959928434472691,
+        "min": 1664959846821862991
+      },
+      "/rtls_pose": {
+        "backward_steps": 0,
+        "max": 1664959928434472691,
+        "min": 1664959846821862991
+      },
+      "/vive/transform/tracker_1_ref": {
+        "backward_steps": 0,
+        "max": 1664959929560327053,
+        "min": 1664959844320348024
+      },
+      "/waveshare_sense_hat_b": {
+        "backward_steps": 0,
+        "max": 1664959928463073300,
+        "min": 1664959846803710860
+      }
+    },
+    "raw_data_path": "data/SFUISE/ISAS-Walk3.bag",
+    "scope": "METADATA_ONLY_NO_ESTIMATOR_NO_GT_POSE_EXPORT",
+    "sha256": "45df7ffe69b9d8c8be7784414ffcdc6e0f4674d0d7b8db3541e567e757bae0a0",
+    "tag_ids": [
+      "27956"
+    ],
+    "topics": {
+      "/anchor_list": {
+        "count": 1339,
+        "message_type": "fraunhofer_rtls_flare/Anchorlist"
+      },
+      "/rtls_flares": {
+        "count": 1339,
+        "message_type": "fraunhofer_rtls_flare/RTLSStick"
+      },
+      "/rtls_pose": {
+        "count": 1339,
+        "message_type": "geometry_msgs/PoseStamped"
+      },
+      "/vive/transform/tracker_1_ref": {
+        "count": 4263,
+        "message_type": "geometry_msgs/TransformStamped"
+      },
+      "/waveshare_sense_hat_b": {
+        "count": 6684,
+        "message_type": "sensor_msgs/Imu"
+      }
+    }
+  }
+}

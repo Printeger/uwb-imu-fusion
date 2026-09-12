@@ -1,0 +1,5 @@
+{
+  "reason": "Python 3.8 lacks str.removeprefix; first preflight failed before estimator",
+  "exit_code": 1,
+  "estimator": "NOT_RUN"
+}

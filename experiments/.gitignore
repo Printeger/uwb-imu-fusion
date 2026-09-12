@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+results/*
+!results/README.md
+figures/*
+!figures/README.md
+
+# Keep compact, curated experiment evidence; raw estimator/evaluator runs stay local.
+!evidence/
+!evidence/**/
+!evidence/**/*.log

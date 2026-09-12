@@ -1,0 +1,41 @@
+{
+  "schema": "isas_range_evaluator_v1",
+  "estimator_input": false,
+  "estimator_launched": false,
+  "association": {
+    "policy": "linear_position_slerp_orientation",
+    "max_bracket_gap_s": 0.05,
+    "exact_timestamp": "direct",
+    "extrapolation": "forbidden"
+  },
+  "output_dir": "/home/mint/ws_fusion_uwb/evaluator_private/icra/range/range-73415e57bce94794bff29a3ebb150826",
+  "batch_dir": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3",
+  "status": "UNAVAILABLE_CALIBRATION",
+  "missing_calibration": [
+    "T_anchor_GT",
+    "T_marker_IMU",
+    "GT_time_to_sensor"
+  ],
+  "observation_count": 19400,
+  "evaluated_count": 0,
+  "sources_sha256": {
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/walk1_range_calibration.json": "0bc2a048d1cc991ed6a0b3412f338f7776da66dccf8524f646fdeba4cd86c546",
+    "/home/mint/ws_fusion_uwb/evaluator_private/icra/sources/SFUISE-75bf5a32/config_test_isas-walk1.yaml": "f72d12585cec7b57ad7dd155de3d014c37d33a56670041f75aa1aea67d6b8de8",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/data/SFUISE/ISAS-Walk1.bag": "ca577e3666ad5876aa8347289a98793b8da0e68b5db459f2d7d69a6adcacd944",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3/runs.csv": "416878fc6151dfd6fe9bb0cb39147ce713aef68f7b375be6f416fa729796c875",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3/batch/batch_manifest.json": "b26fef2b68ce69c6df9507b9ba13d14add5bc311953f5e4963cfe8c673ceb216",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3/batch/runs/t09-155ef78ae61d44d2be9a2c407d10a7a7/run_status.json": "3303c9eac24cc11704e338de015d2b57d472e8979ec03f361a1927a28343452d",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3/batch/runs/t09-155ef78ae61d44d2be9a2c407d10a7a7/observations.csv": "df58c490aaa2862a3930144fbcb7aef95980752b7013fba1002f40e299da92ec",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3/batch/runs/t09-c1eedc192bb84008a042a98956f4bd8c/run_status.json": "6f538671bfa02486932cac09f4c68d7f3a9692a528b31ab0f424c8197d2eaa7b",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3/batch/runs/t09-c1eedc192bb84008a042a98956f4bd8c/observations.csv": "df58c490aaa2862a3930144fbcb7aef95980752b7013fba1002f40e299da92ec",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3/batch/runs/t09-1f0e03a0e7d041afa8949ed510722817/run_status.json": "840b4993d0048ea6f0a56b7d976659a31a4c83208feff1bb4e433927b4f07914",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3/batch/runs/t09-1f0e03a0e7d041afa8949ed510722817/observations.csv": "df58c490aaa2862a3930144fbcb7aef95980752b7013fba1002f40e299da92ec",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3/batch/runs/t09-1f0e03a0e7d041afa8949ed510722817/final_masks.csv": "d2558a3085282eb85c237bba331ae11a468419f6967e16cef9eaa03c906dc4d4",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3/batch/caches/bc405b2373961cfcb068f717683cb906868ddd63163b47ba0a30f93fa3777b8f/stage2_cache_manifest.json": "0f9067f7a44d76c2559427f677a18b1457e35778304f483eb779db1daccfa5c3",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3/batch/caches/bc405b2373961cfcb068f717683cb906868ddd63163b47ba0a30f93fa3777b8f/segments.csv": "7b43996756ee41934e84c91e479cfc8d798f0ca769f87531259fea4354466eba",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3/batch/runs/t09-afa183aba147479883afe94a8bc21cb7/run_status.json": "aef23a0dfdccb81709a11f6a6754f7c9c2f87b8327340331afcb2007bc083168",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3/batch/runs/t09-afa183aba147479883afe94a8bc21cb7/observations.csv": "df58c490aaa2862a3930144fbcb7aef95980752b7013fba1002f40e299da92ec",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3/batch/runs/t09-afa183aba147479883afe94a8bc21cb7/final_masks.csv": "5ad4e6495a60a2d81f5454100022bca9d904323236c599fd2b113fd8be13a1a3",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T094703Z-d8f65646d1f3/batch/runs/t09-afa183aba147479883afe94a8bc21cb7/fixed_compensations.csv": "274249e50b3f806e1ea49be411342c5c87dfd768a53cd83679225f7a3cefd8f1"
+  }
+}

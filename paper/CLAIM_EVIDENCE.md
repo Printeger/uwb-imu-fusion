@@ -1,4 +1,69 @@
+# 0912 canonical +1m/10s Walk1 pipeline smoke
+
+CANONICAL_PIPELINE_PASS，仅单案例工程验证：10 backend成功、无fallback；独立clean/corrupted前端；
+TP36/FP0/FN0，c_hat=1.058388062m；同229 GT样本，M4−M3 ATE=-0.014782224m，
+窗口39样本差=-0.066876872m。36条恢复观测注入分量RMSE 1→0.058388062m。
+几何range假设误差反增，不能以注入分量代替真实range truth；不升级C1–C3/held-out结论。
+[完整结果、负结果、协议和证据](../experiments/CONTROLLED_INJECTION.md)。无调参/sweep/核心改动。
+
+# 0912 Walk1 identity/common-clock evaluator diagnostic
+
+用户授权单位外参与同一时基假设，evaluator exit0，每方法4266有效range样本，
+RMSE=1.696637133m；四方法无动态补偿，raw/corrected 相同。
+仅 ASSUMED_GEOMETRY_AND_CLOCK 条件诊断，非独立校准的range truth，不升级C1–C3。
+[协议、机器产物和限制](../experiments/RANGE_IDENTITY_ASSUMPTION.md)。无estimator重跑/调参。
+
 # UWB-IMU-IE claim–evidence ledger
+
+## 0912 per-range evaluator and physical isolation
+
+[Range evaluator evidence](../experiments/RANGE_EVALUATOR.md) supports geometry/lever/gap/
+compensation engineering fixtures, 15 range/isolation tests and 5 harness tests. Actual bwrap
+backend smoke reproduces the previous four-method trajectory metrics exactly; GT and derived
+range CSV paths are not mounted. Official SFUISE constants establish evaluator-only
+beta=-toa_offset and ID mapping, not an independently validated full GT geometry chain.
+19,400 observation rows and 80 summaries are exported with zero available geometric range
+errors because GT-to-anchor, marker-to-IMU and clock calibration remain missing. This is
+UNAVAILABLE_CALIBRATION, not a real-range accuracy result. No core estimator/CUSUM/recovery
+changes, no oracle labels or GT feedback, and no C1–C3 / T10=C2-C / T11=C upgrades.
+
+## 0912 ICRA Walk1 harness
+
+[Harness result](../experiments/HARNESS_RESULT.md): M0/M1/M3/M4 use the existing scheduler,
+runner and evaluator; the final clean smoke has the same 229 matched GT samples, all four
+methods successful, and no fallback. M3/M4 are empty-support no-ops. Five engineering tests
+pass. Prior preflight and cache-namespace wiring failures remain recorded. These are tracker-point
+development proxy metrics with unresolved extrinsics, not formal benchmark or recovery-benefit
+claims. No estimator/CUSUM/recovery mathematics or parameters changed; T10=C2-C, T11=C and
+C1–C3 limitations remain. The previously paused five-family data validation was later resumed and
+completed under the separately bounded infrastructure claim below.
+
+## 0912 ICRA dataset infrastructure
+
+[Dataset contract and inventory](../experiments/DATASET_MANIFEST.md) v2 records 39 actual local
+recordings: HUEC 8, MILUV 3, own_vicon 3, SFUISE 3, and starloc 22. The read-only content artifact,
+manifest and all constituent files are SHA-bound; schema/semantics/hash validation has 0 errors and
+15 engineering rejection tests pass. Absolute ToA/TWR/range only; TDoA and range differences are
+rejected. [Validation result](../experiments/DATA_VALIDATION.md) preserves one nonfinite HUEC auxiliary
+RSSI and two unindexed own_vicon source bags whose content was scanned only through temporary
+reindexed copies. Six known development recordings are DEV; 33 unknown-exposure recordings remain
+UNASSIGNED, with no VAL/TEST. Missing calibration, GT extrinsics, clock and data permission provenance
+remain explicit; all 39 entries are NOT_ADMITTED. This supports only five-family manifest infrastructure
+validation, not dataset scientific admission, an estimator/accuracy claim, or a C1–C3 upgrade;
+T10=C2-C and T11=C remain.
+
+## 0912 repository truth audit index
+
+[`01_REPO_TRUTH.md`](../doc/paper_writing/01_REPO_TRUTH.md) anchors the actual production
+paper path to HEAD `439282c2790ab1414ca9b276dd61a18b5e1643a8`: PL conditional-z,
+bidirectional CUSUM support, Stage2 and explicit primary `lcb_fixed_full`.
+This is a source/configuration/test-source/report audit, with no new experiment or test execution.
+It records discrepancies with the supplied v4 blueprint and bounds fallback and uncertainty claims.
+The [existing production E2E report](../doc/ie_0911/PL_CUSUM_E2E_INTEGRATION_ACCURACY_RESULT.md)
+supports its controlled Walk1 development case, while its six-input diagnostic reports
+0 better / 1 worse / 1 tied / 4 unavailable. Older sections below are historical snapshots,
+including the failed forward-only admission result; they do not describe the later integrated
+bidirectional path. No new scientific claim upgrade: T10=C2-C, T11=C and C1–C3 limits remain.
 
 状态：`T10_FROZEN_C2_C / T11_FROZEN_T11_C_LIMITED_SCOPE_U13_INCOMPLETE / 0911_ORACLE_BACKEND_OPERATIONAL_AFTER_CORRECTNESS_FIX`
 

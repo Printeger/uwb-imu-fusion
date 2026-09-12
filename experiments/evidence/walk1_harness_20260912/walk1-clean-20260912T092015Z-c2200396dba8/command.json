@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/scripts/run_walk1_smoke.py",
+    "--worker",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/results/walk1-clean-20260912T092015Z-c2200396dba8",
+    "--runner",
+    "/home/mint/ws_fusion_uwb/devel/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner"
+  ],
+  "cwd": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie",
+  "end_time": "2026-09-12T09:20:20.810000+00:00",
+  "exit_code": 0,
+  "start_time": "2026-09-12T09:20:15.398963+00:00"
+}

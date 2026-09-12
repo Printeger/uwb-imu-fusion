@@ -1,0 +1,25 @@
+{
+  "config_sha256": "c2b208cb80dc2972d51ff2b9498a6c26d73f146db8f3f5446b3d8d264d330538",
+  "evaluator_protocol": {
+    "alignment_mode": "SE3_SCALE_1_PER_TRAJECTORY",
+    "evaluation_interval_s": [
+      1664959676.9893188,
+      1664959736.082964
+    ],
+    "gt_reference_point": "vive/tracker_1 origin; tracker-to-IMU extrinsics UNKNOWN",
+    "metric_scope": "DEVELOPMENT_TRACKER_PROXY_NOT_CALIBRATED_BODY_ERROR",
+    "rpe_horizon_s": 1.0,
+    "time_association": {
+      "policy": "nearest_within_tolerance",
+      "tolerance_s": 0.02
+    }
+  },
+  "evaluator_protocol_hash": "4dab6d7473084e227db8844c41b80e55104e15df95c531d09597e0cf6c096746",
+  "evaluator_sha256": "a5999d3ea44b88453e2efaf4461b45cfaea9bf3aedcf9a845bbfe7e0d8807c48",
+  "git_commit": "439282c2790ab1414ca9b276dd61a18b5e1643a8",
+  "gt_sha256": "2bd90465cc6f9445e94c75087a293c36cfc25a4ac1165654a9765431c8816c33",
+  "harness_sha256": "966fef4453f812fb8aebf749b8bcdc07e8a47d9b2b54437b2d0f1397835a974a",
+  "input_manifest_sha256": "7af404c8580ecf0b9f9d2742bbc56d03ed9a592172603d3df0e8a0d569e22c0e",
+  "runner_sha256": "d08ec4e48c3fff2434b644ffa284d73194e8216a423d9d4784ad844d8737a334",
+  "tracked_diff_hash": "1fb9412b7a0011d6f47573c41e064b74932fa0de2a2db31380c24e61d6107f70"
+}
