@@ -185,10 +185,11 @@ void ValidateScoreInputs(const SegmentRefitResult& refit,
     if (observation.obs_id == 0 ||
         !observations.emplace(observation.obs_id, &observation).second)
       throw std::invalid_argument("plan contains zero or duplicate obs_id");
-    if (observation.valid && observation.planned &&
+    const auto& measurement = MeasurementForObservation(plan, observation);
+    if (measurement.estimator_usable && measurement.selected &&
         !intentionally_absent.count(observation.obs_id)) {
-      if (!(observation.nominal_sigma > 0.0) ||
-          !std::isfinite(observation.nominal_sigma) ||
+      if (!(measurement.sensor_sigma > 0.0) ||
+          !std::isfinite(measurement.sensor_sigma) ||
           !std::isfinite(observation.raw_range))
         throw std::invalid_argument("planned observation has invalid numerics");
       planned_observations.insert(observation.obs_id);
@@ -207,8 +208,12 @@ void ValidateScoreInputs(const SegmentRefitResult& refit,
       throw std::invalid_argument("support segment identity or extent is invalid");
     for (std::uint64_t obs_id : segment.obs_ids) {
       const auto observation = observations.find(obs_id);
-      if (observation == observations.end() || !observation->second->valid ||
-          !observation->second->planned ||
+      if (observation == observations.end())
+        throw std::invalid_argument(
+            "support segment references unknown observation");
+      const auto& measurement =
+          MeasurementForObservation(plan, *observation->second);
+      if (!measurement.estimator_usable || !measurement.selected ||
           observation->second->tag_id != segment.tag_id ||
           observation->second->anchor_id != segment.anchor_id ||
           !support_by_obs.emplace(obs_id, &segment).second)
@@ -261,8 +266,11 @@ void ValidateScoreInputs(const SegmentRefitResult& refit,
         meta.factor_type != "uwb_segment_range")
       throw std::invalid_argument("factor type is not in the scoring whitelist");
     const auto observation = observations.find(meta.obs_id);
-    if (observation == observations.end() || !observation->second->valid ||
-        !observation->second->planned ||
+    if (observation == observations.end())
+      throw std::invalid_argument("UWB obs_id mapping is invalid or duplicated");
+    const auto& measurement =
+        MeasurementForObservation(plan, *observation->second);
+    if (!measurement.estimator_usable || !measurement.selected ||
         !mapped_observations.insert(meta.obs_id).second)
       throw std::invalid_argument("UWB obs_id mapping is invalid or duplicated");
     const auto candidate = support_by_obs.find(meta.obs_id);
@@ -270,7 +278,7 @@ void ValidateScoreInputs(const SegmentRefitResult& refit,
       if (candidate != support_by_obs.end() || !meta.segment_id.empty() ||
           has_amplitude ||
           std::find(actual_keys.begin(), actual_keys.end(),
-                    gtsam::Symbol('x', observation->second->keyframe_id)) ==
+                    gtsam::Symbol('x', measurement.keyframe_id)) ==
               actual_keys.end())
         throw std::invalid_argument("noncandidate UWB factor metadata is inconsistent");
       continue;
@@ -281,7 +289,7 @@ void ValidateScoreInputs(const SegmentRefitResult& refit,
     const gtsam::Key expected_amplitude =
         gtsam::Symbol('c', candidate->second->segment_ordinal);
     if (std::find(actual_keys.begin(), actual_keys.end(),
-                  gtsam::Symbol('x', observation->second->keyframe_id)) ==
+                  gtsam::Symbol('x', measurement.keyframe_id)) ==
         actual_keys.end())
       throw std::invalid_argument("candidate factor has wrong pose key");
     size_t expected_count = 0;
@@ -486,8 +494,10 @@ std::vector<GroupRecoverabilityScore> ScoreRefitRecoverability(
       double sum = 0.0;
       for (std::uint64_t obs_id : segment.obs_ids) {
         const ObservationRecord& observation = *observations.at(obs_id);
+        const auto& measurement =
+            MeasurementForObservation(plan, observation);
         const auto pose = refit.values.at<gtsam::Pose3>(
-            gtsam::Symbol('x', observation.keyframe_id));
+            gtsam::Symbol('x', measurement.keyframe_id));
         const auto anchor = std::find_if(
             cfg.anchors.begin(), cfg.anchors.end(),
             [&](const AnchorConfig& item) { return item.id == observation.anchor_id; });
@@ -503,7 +513,7 @@ std::vector<GroupRecoverabilityScore> ScoreRefitRecoverability(
             online_beta +
             refit.values.at<double>(gtsam::Symbol('c', ordinal)) -
             observation.raw_range;
-        const double normalized = residual / observation.nominal_sigma;
+        const double normalized = residual / measurement.sensor_sigma;
         sum += normalized * normalized;
       }
       SegmentFitScore fit;
@@ -569,7 +579,7 @@ std::vector<GroupRecoverabilityScore> ScoreFinalRefitRecoverability(
   PaperInputPlan final_plan = plan;
   for (auto& observation : final_plan.observations) {
     if (intentionally_absent.count(observation.obs_id))
-      observation.planned = false;
+      MutableMeasurementForObservation(&final_plan, observation).selected = false;
   }
   return ScoreRefitRecoverability(final_refit, accepted_support, final_plan,
                                   cfg, options);

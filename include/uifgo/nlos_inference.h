@@ -20,8 +20,12 @@
 
 namespace uifgo {
 
-constexpr const char* kT08DevelopmentGateLabel =
+// Core-facing semantic name. The historical task-card spelling remains as a
+// compatibility alias because it is part of existing YAML/artifact identity.
+constexpr const char* kDevelopmentGateProvenance =
     "T08_GATE_DEVELOPMENT_ONLY_PENDING_VALIDATION";
+constexpr const char* kT08DevelopmentGateLabel =
+    kDevelopmentGateProvenance;
 
 struct GateThresholds {
   double tau_eta = 0.0;
@@ -159,7 +163,7 @@ struct InferenceIdentityContext {
 };
 
 struct InferenceContentIdentity {
-  std::string schema = "t08_final_content_identity_v2";
+  std::string schema = "t08_final_content_identity_v3";
   std::string graph_linearization_sha256;
   std::string values_sha256;
   std::string context_sha256;
@@ -195,6 +199,7 @@ struct RefitAttemptDiagnostics {
   std::string stop_reason = "NOT_RUN";
   std::string acceptance_audit_status = "NOT_RUN";
   std::string acceptance_failure_reason;
+  SolverCertificate solver_certificate;
   std::vector<RefitIteration> iterations;
 };
 
@@ -242,13 +247,17 @@ struct InferenceResult {
   RefitAttemptDiagnostics fallback_refit_attempt;
   RefitAttemptDiagnostics final_result_refit;
   FinalFactorAudit factor_audit;
+  // Certificate of the selected final graph/Values. Recovery and fallback
+  // attempts retain their own copies in RefitAttemptDiagnostics.
+  SolverCertificate solver_certificate;
   FinalCovarianceResult final_graph_covariance;
   FallbackAttempt fallback;
   InferenceTiming timing;
 
   bool valid_estimate() const {
     return status != InferenceStatus::ESTIMATION_FAILED &&
-           !final_graph.empty() && !final_values.empty() && factor_audit.ok;
+           !final_graph.empty() && !final_values.empty() && factor_audit.ok &&
+           solver_certificate.certified_success();
   }
 };
 

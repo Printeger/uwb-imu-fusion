@@ -174,11 +174,20 @@ Fixture MakeFixture(bool separated_groups = false,
       observation.tag_id = 7;
       observation.anchor_id = anchor.id;
       observation.raw_range = raw;
-      observation.valid = true;
-      observation.planned = true;
-      observation.keyframe_id = k;
-      observation.nominal_sigma = 0.05;
+      observation.ledger_index = fixture.plan.observations.size();
+      observation.source_valid = true;
+      observation.source_validity_reason = "SOURCE_VALID";
+      uifgo::MeasurementPlanEntry measurement;
+      measurement.obs_id = obs_id;
+      measurement.observation_index = observation.ledger_index;
+      measurement.estimator_usable = true;
+      measurement.usability_reason = "ESTIMATOR_USABLE";
+      measurement.selected = true;
+      measurement.selection_reason = "SELECTED_EXACT_STATE_FRAME";
+      measurement.keyframe_id = k;
+      measurement.sensor_sigma = 0.05;
       fixture.plan.observations.push_back(observation);
+      fixture.plan.measurements.push_back(measurement);
       if (candidate_observation)
         fixture.support.segments[anchor.id - 1].obs_ids.push_back(obs_id);
       ++obs_id;
@@ -354,6 +363,10 @@ TEST(T08Inference, AtomicAcceptedGroupHasLiveCAndExactRawFactorMasks) {
   const auto result = RunEngine(fixture, DevelopmentGate());
   ASSERT_TRUE(result.valid_estimate()) << result.reason;
   EXPECT_EQ(result.status, uifgo::InferenceStatus::OK);
+  EXPECT_TRUE(result.solver_certificate.certified_success());
+  EXPECT_TRUE(result.recovery_attempt.solver_certificate.certified_success());
+  EXPECT_TRUE(result.solver_certificate.temporal_integrity_passed);
+  EXPECT_TRUE(result.solver_certificate.navigation_stationarity_passed);
   ASSERT_EQ(result.decisions.size(), 1u);
   EXPECT_EQ(result.decisions[0].decision, uifgo::GroupDecision::USE);
   EXPECT_TRUE(result.final_values.exists(C(0)));
@@ -929,7 +942,7 @@ TEST(T08Inference, ArtifactWriterAcceptsOnlyOneInferenceResultIdentity) {
   ASSERT_TRUE(boost::filesystem::create_directory(root));
   const auto written =
       uifgo::WriteInferenceArtifacts(root.string(), result);
-  EXPECT_GE(written.files.size(), 23u);
+  EXPECT_GE(written.files.size(), 24u);
   for (const std::string& required : {
            "decisions.csv", "scores_decision.csv", "scores_final.csv",
            "scores_decision_segments.csv",
@@ -938,6 +951,7 @@ TEST(T08Inference, ArtifactWriterAcceptsOnlyOneInferenceResultIdentity) {
            "scores_final_segments.csv", "recovery_refit_iterations.csv",
            "fallback_refit_iterations.csv", "final_refit_iterations.csv",
            "final_inference_summary.json", "fallback_attempt.json",
+           "solver_certificate.json",
            "final_content_identity.json",
            "final_factor_audit.csv", "covariance_status.json",
            "covariance.csv", "trajectory.tum", "imu_bias.csv",
@@ -1001,6 +1015,9 @@ TEST(NlosInference, LcbForcedFallbackRetainsFrozenIdentity) {
   // A deterministic fallback test; successful nonzero recovery is required
   // separately by the actual certified production fixture.
   ASSERT_TRUE(partial.fallback.attempted);
+  EXPECT_TRUE(partial.solver_certificate.certified_success());
+  EXPECT_TRUE(
+      partial.fallback_refit_attempt.solver_certificate.certified_success());
   EXPECT_EQ(partial.actual_fixed_method,"suppress_all");
   EXPECT_EQ(partial.fallback.attempt_count,1u);
   for(auto key:partial.final_values.keys()) EXPECT_NE(gtsam::Symbol(key).chr(),'c');

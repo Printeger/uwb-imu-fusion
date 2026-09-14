@@ -1,0 +1,7 @@
+cusum_backward_h: 7.023468958785871
+cusum_backward_kappa: 0.5
+cusum_forward_h: 7.023468958785872
+cusum_forward_kappa: 0.5
+cusum_parameter_provenance: PL_BIDIRECTIONAL_CUSUM_SUPPORT_20260912_LOCKED
+gap_threshold_s: 1.0
+mode: pl_bidirectional_cusum

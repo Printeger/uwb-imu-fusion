@@ -42,6 +42,59 @@ struct NavigationStationarityAudit {
   bool stationary = false;
 };
 
+enum class SolverCertificateStatus {
+  NOT_EVALUATED,
+  CERTIFIED_SUCCESS,
+  CERTIFIED_FAILURE,
+};
+
+const char* SolverCertificateStatusName(SolverCertificateStatus status);
+
+// The optimizer's termination result is evidence carried into this request;
+// it is deliberately not the certificate itself.  There is no GT, ATE,
+// oracle, or trajectory-error input on this boundary.
+struct SolverCertificateRequest {
+  bool termination_success = false;
+  std::string termination_reason = "NOT_REPORTED";
+  bool factor_integrity_passed = false;
+  std::string factor_integrity_reason = "NOT_EVALUATED";
+  bool solver_specific_checks_passed = true;
+  std::string solver_specific_checks_reason = "NOT_APPLICABLE";
+  std::vector<double> state_times_s;
+  bool require_navigation_stationarity = true;
+  NavigationScales navigation_scales;
+  double navigation_stationarity_tolerance_objective = 1e-6;
+  double gradient_roundoff_safety_factor = 8.0;
+};
+
+struct SolverCertificate {
+  std::string policy_version = "PAPER_SOLVER_CERTIFICATE_V1";
+  SolverCertificateStatus status = SolverCertificateStatus::NOT_EVALUATED;
+  std::string reason = "NOT_EVALUATED";
+  bool termination_success = false;
+  std::string termination_reason = "NOT_REPORTED";
+  bool state_values_finite = false;
+  std::string state_values_reason = "NOT_EVALUATED";
+  bool objective_finite = false;
+  double final_objective = std::numeric_limits<double>::quiet_NaN();
+  bool graph_values_keys_match = false;
+  bool factor_integrity_passed = false;
+  std::string factor_integrity_reason = "NOT_EVALUATED";
+  bool temporal_integrity_applicable = false;
+  bool temporal_integrity_passed = false;
+  std::string temporal_integrity_reason = "NOT_EVALUATED";
+  bool solver_specific_checks_passed = false;
+  std::string solver_specific_checks_reason = "NOT_EVALUATED";
+  bool navigation_stationarity_applicable = false;
+  bool navigation_stationarity_passed = false;
+  NavigationStationarityAudit navigation_stationarity;
+  double max_position_norm_m = std::numeric_limits<double>::quiet_NaN();
+
+  bool certified_success() const {
+    return status == SolverCertificateStatus::CERTIFIED_SUCCESS;
+  }
+};
+
 enum class ConditionalLmPolicy {
   GTSAM_CHECK_ONLY_V1,
   GTSAM_CHECK_AND_NAVIGATION_STATIONARITY_V1,
@@ -430,6 +483,13 @@ CheckedLmResult RunCheckedConditionalLm(
     const CheckedLmOptions& options,
     const CheckedLmDiagnosticRequest* diagnostic_request);
 
+// Initialization-only adapter: preserves the checked solver's failure status
+// while retaining its last accepted finite Values so the caller can perform a
+// final stationarity qualification. It does not retry, restart, or change LM.
+CheckedLmResult RunCheckedConditionalLmRetainingTerminalForInitialization(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& initial,
+    const CheckedLmOptions& options);
+
 // Reuses the V2 checked LM on an identical fixed-C graph when its configured
 // call block ends before navigation stationarity or exhausts lambda. Each
 // restart begins at the exact last accepted Values and otherwise uses the same
@@ -443,6 +503,13 @@ NavigationStationarityAudit AuditNavigationStationarity(
     const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
     const NavigationScales& scales, double tolerance_objective,
     double roundoff_safety_factor);
+
+// One authoritative scientific-success qualification shared by paper
+// baselines and final IE inference. It performs no optimization and never
+// changes graph, Values, damping, or termination behavior.
+SolverCertificate CertifySolverResult(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
+    const SolverCertificateRequest& request);
 
 // Uses the same local-coordinate convention and analytic gradient as the
 // checked-LM diagnostic. This overload exposes a caller-selected navigation

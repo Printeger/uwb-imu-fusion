@@ -1,0 +1,24 @@
+- files:
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk1_normal_clean/imu.csv: f4ff3415d17c5d0d98233a8a096b7870ed49885cb00a5797122e6fd81c148880
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk1_normal_clean/input_manifest.json: 7af404c8580ecf0b9f9d2742bbc56d03ed9a592172603d3df0e8a0d569e22c0e
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk1_normal_clean/uwb_observations.csv: 310a51528d1dc4d56882a714eb1551cf81aebcd3d79791c37495588a6e9eb2f0
+  manifest: /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk1_normal_clean/input_manifest.json
+  raw_bag_sha256: sha256:ca577e3666ad5876aa8347289a98793b8da0e68b5db459f2d7d69a6adcacd944
+  role: development
+  sequence: Walk1
+- files:
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk2_normal_clean/imu.csv: 5867cb6dbda7914daabbd6a4d4e89ab74891ac621f581ff93385172e00ef9e7d
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk2_normal_clean/input_manifest.json: 0d4ba977bc185ef19aeb48e8c38c0d1c93914c7b6ff5bacd736a85bd7857004a
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk2_normal_clean/uwb_observations.csv: 82d2e94a4ded1bcbac247440e968e1c1f08cb9b26b7fe2fe25fc53cad71a50bf
+  manifest: /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk2_normal_clean/input_manifest.json
+  raw_bag_sha256: sha256:dea07fd11d5776226be6b390574c4b3789c48cfdce6a1731996981f3f91c453c
+  role: development
+  sequence: Walk2
+- files:
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk3_normal_clean/imu.csv: d5f02cd52d1317e2e57af09e060bacd1809131070ac45e3e2ff55b1a110b0575
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk3_normal_clean/input_manifest.json: 7f2bda96f69c4f890f40d3a06cbb0ca626b0921ffccef8389ce65e1dae7a1785
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk3_normal_clean/uwb_observations.csv: c61d46f7d064ad444d807d7147d1f935248127f9a351547d15975656584324f2
+  manifest: /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk3_normal_clean/input_manifest.json
+  raw_bag_sha256: sha256:45df7ffe69b9d8c8be7784414ffcdc6e0f4674d0d7b8db3541e567e757bae0a0
+  role: development
+  sequence: Walk3

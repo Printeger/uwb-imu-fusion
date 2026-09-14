@@ -30,7 +30,7 @@ gtsam::Key GraphBuilder::lever_key() const { return L(0); }
 gtsam::Key GraphBuilder::anchor_key(int m) const { return A(m); }
 gtsam::Key GraphBuilder::bias_key(int m) const { return Z(m); }
 
-double GraphBuilder::AdaptiveSigma(double dt_since_last) const {
+double GraphBuilder::LegacyAdaptiveSigma(double dt_since_last) const {
   double extra = (dt_since_last > 0) ? (cfg_.v_max * dt_since_last / 3.0) : 0.0;
   return std::sqrt(cfg_.sigma_range * cfg_.sigma_range + extra * extra);
 }
@@ -52,16 +52,18 @@ void GraphBuilder::AddUwbFactorsForFrame(size_t kf_idx, const UwbFrame& frame,
     }
     const Point3& A_m = it->pos;
 
-    // Paper inputs carry a strategy-independent sigma snapshot. Legacy inputs
-    // keep the old adaptive computation because nominal_sigma is NaN.
     double sigma = r.nominal_sigma;
-    if (!std::isfinite(sigma)) {
+    if (r.noise_semantics ==
+        UwbNoiseSemantics::LEGACY_SELECTED_GAP_ADAPTIVE_V1) {
       double dt_last = 0.0;
       auto tit = last_anchor_time_.find(m);
       if (tit != last_anchor_time_.end()) {
         dt_last = frame.t - tit->second;
       }
-      sigma = AdaptiveSigma(dt_last);
+      sigma = LegacyAdaptiveSigma(dt_last);
+    } else if (r.noise_semantics !=
+               UwbNoiseSemantics::FIXED_SENSOR_SIGMA_V2) {
+      throw std::runtime_error("GraphBuilder: unknown UWB noise semantics");
     }
     if (!(sigma > 0.0) || !std::isfinite(sigma)) {
       throw std::runtime_error("GraphBuilder: invalid nominal sigma");

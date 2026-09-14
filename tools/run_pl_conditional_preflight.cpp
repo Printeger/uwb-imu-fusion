@@ -422,7 +422,7 @@ void WritePartition(const fs::path& path,
 void WriteDynamicScientificLogs(
     const fs::path& output, const std::vector<StateSnapshot>& states,
     const std::vector<Epoch>& epochs,
-    const std::vector<uifgo::ObservationRecord>& observations) {
+    const uifgo::PaperInputPlan& plan) {
   {
     auto out = Open(output / "runtime_commit_log.csv");
     out << "sequence,keyframe_id,timestamp,uwb_commit_count,update_count\n"
@@ -440,9 +440,11 @@ void WriteDynamicScientificLogs(
     auto out = Open(output / "measurement_decision_log.csv");
     out << "keyframe_id,timestamp,tag_id,anchor_id,obs_id,accepted,reason\n"
         << std::setprecision(17);
-    for (const auto& row : observations) {
-      if (!row.valid || !row.planned) continue;
-      out << row.keyframe_id << ',' << row.sensor_time << ',' << row.tag_id
+    for (const auto& row : plan.observations) {
+      const auto& measurement =
+          uifgo::MeasurementForObservation(plan, row);
+      if (!measurement.estimator_usable || !measurement.selected) continue;
+      out << measurement.keyframe_id << ',' << row.sensor_time << ',' << row.tag_id
           << ',' << row.anchor_id << ',' << row.obs_id
           << ",1,PRODUCTION_RAW_UWB_COMMIT\n";
     }
@@ -615,8 +617,12 @@ int main(int argc, char** argv) {
     }
     std::vector<std::vector<const uifgo::ObservationRecord*>> groups(
         plan.keyframes.size());
-    for (const auto& row : plan.observations)
-      if (row.valid && row.planned) groups[row.keyframe_id].push_back(&row);
+    for (const auto& row : plan.observations) {
+      const auto& measurement =
+          uifgo::MeasurementForObservation(plan, row);
+      if (measurement.estimator_usable && measurement.selected)
+        groups[measurement.keyframe_id].push_back(&row);
+    }
     for (auto& group : groups) {
       std::stable_sort(group.begin(), group.end(), [](const auto* a,
                                                        const auto* b) {
@@ -638,12 +644,14 @@ int main(int argc, char** argv) {
     std::vector<uifgo::PlConditionalCandidateRecord> candidate_rows;
     std::map<std::uint64_t,size_t> candidate_index;
     for (const auto& row : plan.observations) {
-      if (!row.valid || !row.planned) continue;
+      const auto& measurement =
+          uifgo::MeasurementForObservation(plan, row);
+      if (!measurement.estimator_usable || !measurement.selected) continue;
       uifgo::PlConditionalCandidateRecord candidate;
       candidate.obs_id = row.obs_id;
       candidate.tag_id = row.tag_id;
       candidate.anchor_id = row.anchor_id;
-      candidate.keyframe_id = row.keyframe_id;
+      candidate.keyframe_id = measurement.keyframe_id;
       candidate.sensor_time = row.sensor_time;
       candidate.planned = true;
       candidate.reason = "NOT_EVALUATED";
@@ -757,9 +765,12 @@ int main(int argc, char** argv) {
               noise_factor->noiseModel()->sigmas().size() != 1)
             throw std::runtime_error("PL_CONDITIONAL_FACTOR_MODEL_INVALID");
           const double sigma = noise_factor->noiseModel()->sigmas()[0];
-          if (std::abs(sigma - groups[k][i]->nominal_sigma) >
+          const double planned_sigma =
+              uifgo::MeasurementForObservation(plan, *groups[k][i])
+                  .sensor_sigma;
+          if (std::abs(sigma - planned_sigma) >
               1e-12 + 1e-10 * std::max(std::abs(sigma),
-                                        std::abs(groups[k][i]->nominal_sigma)))
+                                        std::abs(planned_sigma)))
             throw std::runtime_error("PL_CONDITIONAL_SIGMA_IDENTITY_MISMATCH");
           input.physical_covariance(i,i) = sigma * sigma;
           input.physical_innovation[i] = -residual[0];
@@ -1105,7 +1116,7 @@ int main(int argc, char** argv) {
     }
     if (!args.dynamic_role.empty()) {
       WriteDynamicScientificLogs(output, dynamic_states, epochs,
-                                 plan.observations);
+                                 plan);
       fs::copy_file(output / "pl_conditional_innovations.csv",
                     output / "dynamic_conditional_trace.csv");
       if (args.dynamic_role == "shadow")

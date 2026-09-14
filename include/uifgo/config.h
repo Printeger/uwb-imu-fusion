@@ -139,6 +139,10 @@ struct Config {
   // imu_orientation_world is "enu" or "ned" (converted to ENU internally).
   bool use_imu_orientation_init = false;
   std::string imu_orientation_world = "enu";
+  // Paper common-initialization fixed-lag horizon (s). This legacy field name
+  // remains for config compatibility; it is the sole initializer lag value
+  // and is independent of observation selection/noise.
+  double initialization_progression_horizon_s = 0.25;
 
   // --- UWB noise & adaptive ---
   double sigma_range = 0.10;  // base range std (m)

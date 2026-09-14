@@ -9,6 +9,14 @@ import subprocess
 import tempfile
 import time
 
+from runner_fixed_sigma_fixture import (
+    assert_fail_closed,
+    assert_fixed_sigma_ledger,
+    create_cache,
+    make_config as make_fixture_config,
+    write_support,
+)
+
 
 GATE_LABEL = "T08_GATE_DEVELOPMENT_ONLY_PENDING_VALIDATION"
 
@@ -75,9 +83,15 @@ def main() -> int:
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="uifgo-t08-runner-test-") as temp:
         root = pathlib.Path(temp)
+        manifest_path = create_cache(root)
+        support_path = root / "support.yaml"
+        write_support(support_path)
+        config = root / "fixed_sigma.yaml"
+        make_fixture_config(args.config.resolve(), config, manifest_path,
+                            support_path)
         external_started = time.perf_counter()
         completed = subprocess.run(
-            [str(args.runner.resolve()), "--config", str(args.config.resolve()),
+            [str(args.runner.resolve()), "--config", str(config),
              "--output-root", str(root), "--run-id", "normal"],
             text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             check=False,
@@ -96,12 +110,20 @@ def main() -> int:
         capability = strict_json(run / "capability_status.json")
         identity = strict_json(run / "final_content_identity.json")
         stage2_status = strict_json(run / "stage2_refit_status.json")
+        certificate = strict_json(run / "solver_certificate.json")
         strict_json(run / "input_manifest.json")
+        assert_fixed_sigma_ledger(run, expected_count=40)
         inference_id = summary["inference_id"]
         if not inference_id.startswith("t08inference-sha256:"):
             raise AssertionError(f"bad inference identity: {inference_id}")
         if summary["status"] != "OK" or not summary["valid_estimate"]:
             raise AssertionError(f"normal T08 inference did not pass: {summary}")
+        if (certificate.get("status") != "CERTIFIED_SUCCESS" or
+                certificate.get("termination_success") is not True or
+                certificate.get("factor_integrity_passed") is not True or
+                certificate.get("navigation_stationarity_passed") is not True or
+                certificate.get("gt_ate_truth_oracle_inputs") is not False):
+            raise AssertionError(f"solver certificate did not pass: {certificate}")
         if summary["gate_parameter_provenance"] != GATE_LABEL:
             raise AssertionError("development-only gate provenance missing")
         if summary["fallback_attempt_count"] > 1:
@@ -211,7 +233,7 @@ def main() -> int:
             raise AssertionError("corrected pseudo-range metadata present")
 
         repeated = subprocess.run(
-            [str(args.runner.resolve()), "--config", str(args.config.resolve()),
+            [str(args.runner.resolve()), "--config", str(config),
              "--output-root", str(root), "--run-id", "repeat"],
             text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             check=False,
@@ -229,20 +251,13 @@ def main() -> int:
         # A deterministic one-iteration Stage-2 failure must use the same
         # runner-wall definition, while all later stages remain not run.
         failure_config = root / "stage2_failure.yaml"
-        config_text = args.config.resolve().read_text(encoding="utf-8")
+        config_text = config.read_text(encoding="utf-8")
         marker = "  max_refit_iterations: 20\n"
-        bag_marker = "  path: ../../data/sim_circle_2026-06-15-16-04-35.bag\n"
-        support_marker = "  oracle_support: sim_circle_t04_oracle_support.yaml\n"
+        support_marker = f"  oracle_support: {support_path.resolve()}\n"
         if (config_text.count(marker) != 1 or
-                config_text.count(bag_marker) != 1 or
                 config_text.count(support_marker) != 1):
             raise AssertionError("cannot create deterministic Stage-2 failure config")
-        bag_path = (args.config.resolve().parent /
-                    "../../data/sim_circle_2026-06-15-16-04-35.bag").resolve()
-        support_path = (args.config.resolve().parent /
-                        "sim_circle_t04_oracle_support.yaml").resolve()
-        absolute_config = config_text.replace(
-            bag_marker, f"  path: {bag_path}\n")
+        absolute_config = config_text
         failure_config.write_text(
             absolute_config.replace(marker, "  max_refit_iterations: 1\n")
             .replace(support_marker, f"  oracle_support: {support_path}\n"),
@@ -357,6 +372,23 @@ def main() -> int:
                     f"non-applicable LmFailure stage {name} has duration")
         if (lm_run / "trajectory.tum").exists():
             raise AssertionError("LmFailure exported a trajectory")
+
+        historical = subprocess.run(
+            [str(args.runner.resolve()), "--config", str(args.config.resolve()),
+             "--output-root", str(root), "--run-id", "historical_sim_circle"],
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            check=False)
+        if historical.returncode == 0:
+            raise AssertionError("historical sim-circle fixture unexpectedly succeeded")
+        historical_status = assert_fail_closed(root / "historical_sim_circle")
+        if (historical_status.get("solver_status") !=
+                "CONDITIONAL_LM_FAILED" or
+                historical_status.get("reason") !=
+                "CONDITIONAL_LM_MAX_ITERATIONS" or
+                historical_status.get("stage3_decision_score_seconds") is not None or
+                historical_status.get("stage4_engine_seconds") is not None):
+            raise AssertionError(
+                f"historical fail-closed semantics changed: {historical_status}")
 
     print("T08 runner strict artifact, timing, and content identity checks passed")
     return 0

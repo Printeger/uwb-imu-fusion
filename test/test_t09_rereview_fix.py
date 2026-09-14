@@ -43,7 +43,7 @@ def main():
     request = {
         "stage2_cache_id": "t09stage2cache-sha256:shared",
         "canonical_mode": "fit_only",
-        "policy_version": "T09_FIT_ONLY_FINAL_AUDIT_V1",
+        "policy_version": "T09_FIT_ONLY_FINAL_AUDIT_V2_SOLVER_CERTIFICATE",
         "thresholds_sha256": lo_hash,
         "threshold_provenance": "TEST_ONLY",
         "final_refit_score_config_sha256": "sha256:final",

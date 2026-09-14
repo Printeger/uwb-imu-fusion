@@ -1,3 +1,596 @@
+# 0914 BASE_FGO_THREE_CELL_STABILITY_AUDIT — DONE / 0 OF 3 CERTIFIED
+
+三个不涉及 IE 的当前 Base-FGO cell 已各运行一次，统一以 unchanged Cauchy final
+通过原 `PAPER_SOLVER_CERTIFICATE_V1` 为稳定可用判据。三者 X/V/B 全有限、Huber
+intermediate gate 全 PASS、Cauchy raw 全报 converged，但 certificate 全以
+`NAVIGATION_STATIONARITY_FAILED:NOT_STATIONARY` 拒绝，故 0/3 稳定可用。
+
+Simulation clean：160 states/1412 factors/1250 UWB，sigma=0.1m；Cauchy 0 updates，objective
+5424.636806556538，max scaled gradient=43.86699425427338。Walk1 step=4：229/1305/1074，
+Cauchy 28 updates，objective=271.6411267996103，gradient=0.5243199396112124。Walk1 step=1：
+913/3191/2276，Cauchy 43 updates，objective=621.775894312065，gradient=4.531465978234358。
+全部无trajectory，GT未读，IE未运行，未调参。报告见
+[`BASE_FGO_THREE_CELL_STABILITY_REPORT.md`](../../docs/refactor/BASE_FGO_THREE_CELL_STABILITY_REPORT.md)。
+
+# 0914 COMPLETE_HUBER_TO_CAUCHY_WARM_START — FAIL / STOPPED AT FINAL CERTIFICATE
+
+`INTERMEDIATE_OPTIMIZATION_SEED` 已与 `CERTIFIED_FINAL_ESTIMATE` 显式分离；有限但未认证
+Huber terminal 只在 truth-free finite/key/objective/residual/既有物理包络 gate 通过后作为
+Cauchy initial Values，硬禁 trajectory 导出与 GT 评价。focused 12/12、initializer 13/13、
+T04/T06/T08 3/3、core 522/522、Gate05 与 full CTest 36/36 全通过；initializer 未修改。
+
+唯一锁定 Walk1 chain 复用 913 states/3191 factors/2276 UWB、0.15m sigma、Huber 1.345、
+Cauchy 2.3849 与 100-call budget。Huber raw 14 iterations/converged，objective=844.0200102086894，
+certificate 以 max scaled gradient=3.6007261482860535 失败，但 intermediate seed gate PASS。随后
+unchanged Cauchy 实际运行 43 iterations/converged，objective=621.775894312065，最终 certificate
+仍以 `NAVIGATION_STATIONARITY_FAILED:NOT_STATIONARY`、max scaled gradient=4.531465978234358 失败。
+无 trajectory，GT 未读，无后续修补/调参。报告见
+[`HUBER_CAUCHY_WARM_START_REPORT.md`](../../docs/refactor/HUBER_CAUCHY_WARM_START_REPORT.md)。
+`ALL_UWB_CORRECTNESS_FAIL`。
+
+# 0914 UPDATE_RUNNER_LINEARIZATION_CONTRACT_AFTER_INITIALIZER_CHANGE — EXPECTED MIGRATION
+
+`EXPECTED_INITIALIZER_LINEARIZATION_MIGRATION`。当前同一physical graph在pre-common reference Values上精确复现
+历史`a029fb...`/`51a986...`；627/64 obs、8 states、74 factors/64 UWB/7 PIM，factor type/key、
+UWB range/sigma/anchor/lever、PIM interval与topology的独立指纹均冻结为`PHYSICAL_GRAPH_IDENTITY`。
+只有common initializer输出Values变为`1a6cb7...`，对应当前线性化`cd46d0...`，故当前合同已迁移且历史值保留。
+
+T04/T06/T08 3/3、initializer 13/13、Gate05 architecture、core 516/516、full CTest 36/36全通过。
+随后锁定Walk1 913-state initialization与`INITIALIZATION_SEED_QUALITY_V1`通过；未改Cauchy Base FGO
+原始termination为converged但certificate以`max_scaled_navigation_gradient=6.3016170371536822`拒绝。
+唯一Huber-1.345阶段也以`3.6007261482860535`非驻点被certificate拒绝，且fail-closed runner不导出未认证
+Values，因此无合法handoff继续Cauchy warm-start；未新增中间Values通道，GT未读取。报告见
+[`UPDATE_RUNNER_LINEARIZATION_CONTRACT_AFTER_INITIALIZER_CHANGE_REPORT.md`](../../docs/refactor/UPDATE_RUNNER_LINEARIZATION_CONTRACT_AFTER_INITIALIZER_CHANGE_REPORT.md)。
+
+# 0914 FIXED_LAG_BOUNDARY_SEMANTICS_FIX — FAILED / STOPPED AT RUNNER IDENTITY REGRESSION
+
+`IE_CORE_STABILIZATION_FAILED / BOUNDARY_SEMANTICS_IMPLEMENTED / WALK1_NOT_RUN`。0.25s lag现只约束
+free/reoptimized maximal suffix；其immediate predecessor是允许更旧的fixed boundary，跨boundary物理IMU
+bridge保留。新增free/boundary span诊断和非法PIM duration fail-closed；lag、cadence、fixtures、Huber、sigma、
+LM、seed gate、certificate、final estimator与IE数学未改。initializer 13/13通过，1s cadence已自然退化为
+previous fixed boundary + current free state。
+
+重链接paper runner后，T04/T06/T08均不再出现`STATE_CADENCE_EXCEEDS_FIXED_LAG_HORIZON`，但三项历史
+sim-circle检查均因冻结`graph_linearization_sha256`不匹配而失败：expected
+`t08graphlin-sha256:a029fb09830efd4d17d24900cc594e25bdef7c317b5dea78602af2ccb85709e7`，actual
+`t08graphlin-sha256:cd46d08fca3a104e35fae843fbca68288dfa2e07e07039c6e6f071fa28d6cced`；actual initialization
+identity为V4且7/7 prefix接受。按用户禁止修改测试期望及自动追加micro-fix的要求，在首个真实新回归T04
+立即STOP。core、Gate05 architecture、full CTest、锁定913-state Walk1、Gate06、fallback与GT评价均
+`NOT_RUN_AFTER_RUNNER_IDENTITY_REGRESSION`。报告见
+[`FIXED_LAG_BOUNDARY_SEMANTICS_FIX_REPORT.md`](../../docs/refactor/FIXED_LAG_BOUNDARY_SEMANTICS_FIX_REPORT.md)。
+
+# 0914 IE-CORE-STABILIZATION-FINAL — FAILED / STOPPED AT REGRESSION GATE
+
+`IE_CORE_STABILIZATION_FAILED / IMPLEMENTED_NOT_ACCEPTED / LOCKED_WALK1_NOT_RUN`。已将
+`INITIALIZATION_SEED_QUALITY_V1` 与未修改的 `PAPER_SOLVER_CERTIFICATE_V1` 分离：保留0.25s fixed-lag、
+Huber 1.345、fixed sigma、physical graph与原LM/retry，局部非驻点只作诊断；新增truth-free局部及全序列
+seed gate。定向initializer 11/11、Gate05 architecture guard、catkin core 512/512均通过。
+
+完整 `ctest --output-on-failure` exit 8：36项中33通过，`test_t04_runner_contract`、
+`test_t06_runner_contract`、`test_t08_runner_contract`因其合成状态cadence为1s、超过冻结0.25s lag而统一以
+`INITIALIZATION_FAILED:STATE_CADENCE_EXCEEDS_FIXED_LAG_HORIZON`失败。按Prompt规定的 regression failure
+立即STOP；未改lag、测试输入或阈值。故913-state Walk1 seed audit、Gate06 Cauchy、Huber→Cauchy、GT评价与
+IE实验全部 `NOT_RUN`。完整交付见
+[`IE_CORE_STABILIZATION_FINAL_REPORT.md`](../../docs/refactor/IE_CORE_STABILIZATION_FINAL_REPORT.md)。
+
+# 0914 REFACTOR-GATE-06R-E bounded fixed-lag common initializer — FAIL
+
+`IMPLEMENTED / FOCUSED_TESTS_8_OF_8_PASS / COMMON_INITIALIZATION_FIXED_LAG_FAIL /
+GATE06_RERUN_BLOCKED`。共同初始化已迁移为唯一既有 `0.25s` horizon 的 bounded fixed-lag causal window：
+固定最早 boundary，联合优化其后 X/V/B，lag 外状态永久冻结，窗口通过原全部资格后原子提交；失败仍返回
+空 full Values，不恢复开环 tail。生产 sigma/Huber/LM/retry/threshold、physical final graph、certificate
+与 IE 均未改。
+
+唯一有效锁定 Walk1 initialization-only audit 构建 913 states、2276 UWB/3191 total factors；前124个
+frontier 接受，第125个以 `max_scaled_gradient=0.0011026163512872778 > 1e-5`、dominant `x125`、
+`CONDITIONAL_LM_STATIONARITY_NOT_REACHED` 首次失败并 exit1。按任务 STOP 未调 lag/门限/retry/Huber/sigma/
+solver，未运行后续 core/architecture gate、Gate06 final、GT/ATE 或 IE。frontier51 已包含于接受集合；
+权威对照仍为 one-state `1.0741484355758502e-5` FAIL 与 Gate06R-D fixed-lag `4.905753878e-6` PASS。
+因无完整 Initial Values，全段状态、残差、Cauchy weight 和 per-anchor 分布均不得从 partial iterate 生成。
+完整报告见 [`COMMON_INITIALIZATION_FIXED_LAG_REPORT.md`](../../docs/refactor/COMMON_INITIALIZATION_FIXED_LAG_REPORT.md)，
+证据见 `experiments/icra2027/dev/COMMON_INITIALIZATION_FIXED_LAG_WALK1/audit_final/`。当前不可以执行 Gate06。
+
+# 0914 REFACTOR-GATE-06R-D frontier-51 diagnosis — ROOT CAUSE IDENTIFIED
+
+`DONE / DIAGNOSTIC_ONLY / GATE06R_D_ROOT_CAUSE_IDENTIFIED /
+ONE_STATE_FRONTIER_CONDITIONING_FAILURE`。Walk1 frontier45--50 均复现接受，solver gradient 无系统恶化；
+state51 的 IMU prediction 相对 state50 局部连续，5 个 anchor 的 robust residual 同量级且无单 anchor 主导。
+一状态 terminal 的 whitened Jacobian/normal matrix 均 full rank 15，condition estimate=`68.0784`，不是秩亏；
+但 fixed-boundary IMU 与 UWB gradient L2 各约 `44.590215` 且近乎抵消，留下 translation-z
+`1.0741484355758502e-5 > 1e-5` 的确定性资格平台。额外一次完全相同 continuation 零更新且未跨线，排除
+“增加一次 retry 即通过”。固定 state48、联合优化 states49--51 的同定义 causal `0.25s` window（实际跨度
+`0.1994388103s`，3 IMU + 10 UWB）以 `4.905753878e-6` 在相同门限下通过，全部状态 finite。
+
+完整报告见 [`COMMON_INITIALIZATION_FRONTIER51_DIAGNOSIS.md`](../../docs/refactor/COMMON_INITIALIZATION_FRONTIER51_DIAGNOSIS.md)，
+最终隔离证据为 `experiments/icra2027/dev/COMMON_INITIALIZATION_FRONTIER51_DIAGNOSIS/run3/`。本轮未读取
+GT/ATE/truth/oracle，未运行 Gate06/final estimator/IE，未改生产 initializer、retry、门限、Huber、sigma、
+LM/lambda、物理 graph 或论文方法。最窄建议是现有一状态 fast path 失败后使用固定 0.25s causal joint-window
+并按原全部资格原子提交；**仅建议，未实施**。Gate06 rerun 仍 blocked，下一步须新 Prompt 明确授权修复。
+
+# 0914 REFACTOR-GATE-06R-A causal common initialization — FAIL
+
+`IMPLEMENTED / ENGINEERING_TESTS_PASS / COMMON_INITIALIZATION_REPAIR_FAIL /
+GATE06_RERUN_BLOCKED`。已在 estimator/initialization 层用 truth-free causal UWB-aided progressive
+initializer 替换 paper common Initial Values 的整段 open-loop tail：保留首状态，每次仅扩展一个 state，
+用实际 PIM 预测、已接受前态的 exact fixed boundary、当前时刻实际 UWB factor 及 initializer-only Huber
+`1.345` 建局部图；只有 finite/key/objective/`1e-5` navigation stationarity 全部通过才提交。失败结果
+`Values` 为空，绝不回退或导出 59 秒开环 tail。唯一新增工程参数冻结为
+`initialization.progression_horizon_s=0.25s`；最终物理 graph、fixed sigma、Cauchy `2.3849`、生产 LM/
+certificate、ledger/association 与 IE Stage1--4 不变。
+
+实施期勘误保持透明：预登记 `1.0s` 在纯 synthetic drift fixture 第二局部块耗尽冻结 100-call LM 预算；
+在任何 Walk1/GT/ATE repair audit 前一次性收紧至 `0.25s`，未 sweep。局部 checked LM 只允许一次同图、
+同参数、exact last-accepted Values continuation，并计 retry；不得第二次 retry 或放宽门限。
+
+最终锁定 Walk1 initialization-only audit 构建同一 913 states、2276 UWB/3191 total physical graph，但
+只接受前 50 个 causal prefix；第 51 个被评估后，唯一 continuation 仍以
+`max_scaled_gradient=1.0741484355758502e-05 > 1e-5`、dominant `x51`、
+`CONDITIONAL_LM_LAMBDA_SEARCH_EXHAUSTED` 拒绝。失败 frontier time=`1664959680.3226264s`，
+failure/retry=`1/1`，initializer runtime=`0.066330588999999995s`。因此没有 full returned Initial Values，
+position/velocity/displacement、raw/standardized residual、per-anchor residual 与 final-Cauchy weight 的
+post-repair full-sequence 分布全部明确 `NOT_AVAILABLE_NO_FULL_INITIAL_VALUES`，不能拿 partial iterate 冒充。
+
+定向 initializer 6/6、architecture guard exit0、最终 full core regression 502 tests / 0 failures、focused
+build 与 `git diff --check` 均通过。最终 audit exit1 是预期 fail-closed 证据；记录
+`gt_truth_oracle_read=false`、`final_estimator_run=false`、`ie_stages_run=false`。完整报告见
+[`COMMON_INITIALIZATION_REPAIR_REPORT.md`](../../docs/refactor/COMMON_INITIALIZATION_REPAIR_REPORT.md)，最终证据见
+`experiments/icra2027/dev/COMMON_INITIALIZATION_REPAIR_WALK1/audit_final/`。Gate06 final、GT/ATE/evaluator 和
+IE stages 均 `NOT_RUN`；最窄剩余失败为 state51 单状态局部初始化在冻结判据下仍未驻点。**当前不可以执行
+下一个 Gate06 rerun Prompt。**
+
+# 0913 REFACTOR-GATE-06D optimization-basin diagnosis — DONE
+
+`DONE / DIAGNOSTIC_ONLY / PRIMARY_ROOT_CAUSE=DENSE_INITIALIZATION_FAILURE /
+GATE06D_ROOT_CAUSE_IDENTIFIED`。复用 Gate06 精确 Walk1 step=1 config、账本、代表集合、graph 与 common
+initial Values，在首个 optimizer update 前审计 913 states、2276 UWB/3191 total factors。初始位置模
+median/max=`162.809/1188.033m`，速度模=`15.370/63.037m/s`；状态0测距局部一致，但 open-loop IMU seed
+随全记录单调漂移，约55.94s即超过1000m。2276条factor的 observation/state timestamp mismatch
+min/median/P95/max均为0；obs/key/anchor、world-body/lever方程、固定0.15m sigma全部通过；912条相邻
+Combined IMU keys、时间与PIM dt全部通过。step1/step4复用同一 preparation/GraphBuilder，step4初值亦有
+同量级漂移，未发现 association 或 frame-construction bug。
+
+初始绝对UWB residual mean/median/P95/max=`299.043/162.397/1010.496/1184.936m`，`|q|` median
+=1082.645；Cauchy median weight=`4.853e-6`，94.332%权重<0.5、81.371%<1e-3，故在iteration0已大多
+位于Cauchy capture basin外。按条件各一次同图/同初值/同solver100-call replay：Cauchy精确复现Gate06，
+100次仍非驻点、末次delta=5.739；Huber把median `|q|` 拉至1.105但100次仍非驻点且末次delta=41.345；
+Gaussian仅接受一次delta=3477.55，第二次lambda到1e5后raw generic termination，但驻点梯度
+951232、median `|q|`=1181.655，不能算科学成功。extended budget `NOT_RUN`。Cauchy capture weakness为
+次因，dense LM conditioning只观察到症状、未获主因归类。
+
+完整报告为 `docs/refactor/ALL_UWB_OPTIMIZATION_DIAGNOSIS.md`，证据为
+`experiments/icra2027/dev/ALL_UWB_OPTIMIZATION_DIAGNOSIS/`；独立诊断target构建通过，architecture guard
+exit0。未读取GT/ATE/truth/oracle，未改生产行为、checked-in solver/noise/kernel、IE方法或claim，未修复、
+tuning、retry、sweep、extended run、commit/push。**Gate06D已按STOP结束；下一步需要新的明确 Prompt
+授权 versioned common-initialization-only repair，不能自动开始。**
+
+# 0913 REFACTOR-GATE-06 all-UWB correctness validation — FAIL
+
+`ALL_UWB_CORRECTNESS_FAIL`。按 Prompt 6 只运行一次 canonical SFUISE Walk1 clean：`state_step=1`、
+fixed sigma 0.15m、全部 estimator-usable correlation representatives、既有 `robust_cauchy` scale 2.3849
+和 solver certificate。输入 4850 raw / 4266 source-valid+usable；1990 个 exact stale repeat 被保留在 ledger
+但不重复实例化，最终 attempted graph 为 913 states、2276 UWB / 3191 total factors，每 correlation group
+最多一个 likelihood。23.94m 两条记录均保留，仅第一条进入 factor 921；在未认证 terminal iterate 中其
+`|q|=135.000482`、weight `0.000311985`、objective fraction `0.0404196%`，不是单点目标主导。
+
+唯一 attempt exit 1：robust conditional LM 用满固定 100 次后仍从 56832.304628 降至 56797.576034，
+末次 accepted Values delta norm 5.73936，termination 为 `CONDITIONAL_LM_MAX_ITERATIONS`。因此
+`PAPER_SOLVER_CERTIFICATE_V1=NOT_EVALUATED`、`valid_estimate_exported=false`，无 trajectory、final objective、
+max position norm 或 ATE/P50/P95；GT 未挂载且后处理未读取。最窄剩余机制为 all-UWB robust graph 在冻结
+100 次内未收敛/认证，不能推断仅增加预算即可修复。完整报告为
+`docs/refactor/ALL_UWB_CORRECTNESS_REPORT.md`，隔离 science 已封存，旧 D0 目录 hash 未变；未 retry、调参、
+改 IE 数学、插值/B-spline/continuous-time 或 paper claim，未commit/push。**Prompt 6 已按失败规则停止；
+当前不能执行下一 Prompt，且 `doc/v3/v3.md` 没有第 7 个 Prompt。**
+
+# 0913 REFACTOR-GATE-05R-B fixed-sigma runner contract recovery — DONE
+
+`DONE / GATE05R_PASS / STRUCTURAL_REFACTOR_ACCEPTED_AFTER_GATE05R /
+PROMPT_6_UNBLOCKED`。按 Gate05R-A 诊断只恢复 T04/T06/T08 测试合同，不改生产源码、checked-in config、
+fixed sigma、solver/threshold/certificate 或方法数学。新增 test-only 解析 fixture：401 IMU、5 UWB message、
+40 raw/valid/planned observation、5 states、47 factors/40 UWB likelihood，全部 planned sigma 固定 0.1m；
+1:1 链路在 `[1,4]s` 有四条解析定义的 +0.4m excess。无随机数、GT/ATE、参数搜索或论文证据用途。
+
+三个既有 CTest 注册均形成双子例：T04 正例通过 oracle Stage2 和 CSV/JSON/segment linkage；T06 正例通过
+真实 automatic discovery、重复运行 partition identity exact 和 Stage2；T08 正例通过 Stage2、recoverability、
+final recover/suppress、covariance/artifact identity，并产生 `PAPER_SOLVER_CERTIFICATE_V1 /
+CERTIFIED_SUCCESS`。原 sim-circle 627 raw/64 planned/8 states、input-plan/initial-Values/physical-graph hashes
+均冻结为负例：T04/T08 保持 `CONDITIONAL_LM_FAILED / CONDITIONAL_LM_MAX_ITERATIONS`，T06 保持
+`AUTOMATIC_DISCOVERY / CONDITIONAL_LM_FAILED` 且 Stage2 未运行；均不得导出 trajectory、成功 certificate
+或 final summary。
+
+最终按固定顺序执行：T04 1/1、T06 1/1、T08 1/1、组合 3/3、Gate05 focused core 6/6、architecture
+guard 1/1、full CTest 35/35，全部零失败；最终 full CTest 用时 36.94s。Gate05 历史报告只追加 resolution，
+完整报告为 `docs/refactor/REFACTOR_GATE_05R_B_REPORT.md`。未运行 dense/正式矩阵/Prompt6，未调参，
+未commit/push。**现在可以在下一条明确用户指令后执行 Prompt 6；本轮已停止。**
+
+# 0913 REFACTOR-GATE-05R-A runner failure attribution — DONE
+
+`DONE / DIAGNOSTIC_ONLY / FIRST_FAIL=GATE02 / GATE05_REGRESSION_REJECTED /
+GATE06_NOT_READY`。T04/T06/T08 最后实际通过点均为 detached pre-Gate-02
+`e9d821e9`；首次可归因失败点均为 Gate-02 的 `FIXED_SENSOR_SIGMA_V2` 转换。
+三项 raw 627、selected 64、selected obs_id、8 states、74 factors/64 UWB、初始 Values hash
+保持一致，但 56/64 条 sigma 从历史 0.1--0.3489435751m 改为固定 0.1m，总 UWB precision
+增至 5.069739 倍，单因子最高 12.176162 倍。当前代码仅临时恢复 adaptive sigma 后三份现行
+runner contract 全部 exit0；反向重建的 Gate05 前单体 runner 在 fixed sigma 下三份均 exit1，
+与当前 Stage/reason 相同。T08 真实 Gate05 前后稳定产物仍 byte-exact（仅 timing 不同）。因此
+三项统一分类 `EARLIER_INTENDED_SEMANTIC_CHANGE_STALE_CONTRACT`，不是 Gate05 regression。
+
+Gate03 robust noise 经源码数据流审计只存在于 Huber/Cauchy baseline 分支；Stage1、SegmentRefitter、
+recoverability 与 final inference 均接收原始 Gaussian graph，未发生 robust factor 泄漏。正常 50 次
+内层上限属于 PATTERN4；仅在临时 config 把 `lm_max_iter` 50→200 后，三项首个 conditional LM
+均在 63 次达到原判据，但 T04/T08 转为 outer20 `MAX_REFIT_ITERATIONS`，T06 转为 outer50
+`MAX_OUTER_ITERATIONS`，平台区 navigation stationarity 仍失败（PATTERN2），故不能归为纯 inner
+solver budget。Gate02/03/04 的 catkin aggregate 未覆盖 plain `add_test` runner CTests，是旧 contract
+长期未显露的审计缺口。完整报告为 `docs/refactor/REFACTOR_GATE_05R_A_DIAGNOSIS.md`。
+
+本轮未修改生产源码、checked-in config/test expectation、solver/noise/threshold/certificate，未修复、
+未调参、未运行 dense/Prompt6、未commit/push。建议后续在单独授权下用 fixed-sigma deterministic
+success fixtures 重建三项 runner contract，并保留当前 sim-circle case 为 fail-closed conditioning
+regression。**当前仍不可执行 Prompt 6。**
+
+# 0913 REFACTOR-GATE-05 structural cleanup — BLOCKED
+
+`IMPLEMENTED / BUILD_PASS / REGRESSION_GATE_BLOCKED / GATE06_NOT_READY`。按
+`doc/v3/v3.md` Prompt 5 完成结构抽取并在 Gate 05 停止：原 5432 行
+`tools/run_ie_paper.cpp` 现为 5 行入口，应用编排迁至 `tools/paper/run_ie_app.cpp`；新增无实验标签依赖的
+`uifgo::PrepareEstimatorCore`，统一返回 input plan、selection mask、keyframes、初始化、physical graph、
+initial Values、UWB factor indices 与 metadata。应用层继续调用既有 baseline、Stage1 provider、refit、
+recoverability、final inference、certificate 和 artifact 模块。T04/T06/T08 字符串仅保留为等值兼容 alias；
+未改观测/完整性、noise/kernel、support/PL/CUSUM、refit、score/gate、final policy、solver 参数或证书数学。
+
+`python3 -B test/test_refactor_gate05_architecture.py` exit 0；最终
+`catkin build uwb_imu_fgo --no-deps --summarize` exit 0。focused core/architecture 7 项全部通过；全量
+`ctest --output-on-failure` 为 32/35，通过其余全部 core、T09 和 evaluator 测试，但
+`test_t04_runner_contract`、`test_t06_runner_contract`、`test_t08_runner_contract` 均在既有
+`CONDITIONAL_LM_MAX_ITERATIONS` 路径失败。重构前 T08 同配置也已实际 exit 1；其前后 10 个稳定产物及
+`stage2_refit_status.json` byte-exact，`run_status.json` 只差 wall-clock timing，说明当前失败语义保持，
+但不满足 Prompt 5 的“all regression tests pass”硬验收。不能在 behavior-preserving Gate 内静默修改 solver
+或测试期望来掩盖失败。
+
+完整报告为 `docs/refactor/REFACTOR_GATE_05_REPORT.md`，架构为
+`docs/refactor/IE_CORE_V2_ARCHITECTURE.md`，核心合同和 claim-evidence 已同步。未运行 dense-state 科学实验、
+正式矩阵、sweep/tuning，未commit/push、未覆盖用户历史结果。**当前不可以执行 Prompt 6**；需用户另行授权
+诊断并恢复三个 runner contract，或显式 amendment Gate-05 验收条件。
+
+# 0913 REFACTOR-GATE-04 solver certificate — DONE
+
+`DONE / SOLVER_CERTIFICATE_ESTABLISHED / GATE05_READY`。按 `doc/v3/v3.md`
+Prompt 4 完成 Gate 04 并停止。新增共享、fail-closed 的
+`PAPER_SOLVER_CERTIFICATE_V1`，严格分离原始 LM/GTSAM termination 与科学可用性：证书同时要求
+受支持状态有限、最终物理 objective 有限、graph/Values key 完全一致、调用路径 factor integrity、适用时
+有限严格递增且与连续 `X(k)` 一一对应的 timeline、既有 solver-specific 检查，以及复用
+`AuditNavigationStationarity` 的最终同图/同 Values 驻点检查。证书接口不接收 GT/ATE/truth/oracle；最大位置
+范数仅为诊断，不决定成功。
+
+Base FGO 四个 baseline 与 final IE recovery/fallback 均接入同一证书。只有 `CERTIFIED_SUCCESS` 才可设置
+valid 并导出 trajectory/bias；baseline 证书失败清空 final Values，final IE recovery 证书失败只允许既有一次
+suppress-all fallback，fallback 仍需独立证书，双失败不发布有效结果。runner/manifest/summary 分别保存原始
+termination 与 certificate status/reason，并输出 `solver_certificate.json`；final content/summary 与受影响 T09
+policy identity 已升级，旧 termination-only 产物不能静默冒充新证据。未改 LM 参数、初始化、noise/kernel、
+detector/refit/recoverability/final factor 数学或 scientific threshold。
+
+回归 A--D 均通过：正常图、baseline 和 final IE fixture 可认证；伪造
+`CONDITIONAL_LM_CONVERGED_SMALL_OBJECTIVE_CHANGE` 的 10m 非驻点状态保留原 termination，但得到
+`CERTIFIED_FAILURE/NAVIGATION_STATIONARITY_FAILED`；artifact 同时保留两种状态；证书 API 无 GT 输入。
+`catkin build uwb_imu_fgo --no-deps --summarize` exit 0（最终 build log
+`/home/mint/ws_fusion_uwb/logs/uwb_imu_fgo/build.make.204.log`）；最终 focused CTest 4/4 PASS；
+`catkin run_tests uwb_imu_fgo` exit 0，488 tests / 0 errors / 0 failures / 0 skipped（result log
+`/home/mint/ws_fusion_uwb/logs/uwb_imu_fgo/test.results.040.log`）。两个 final IE JSON fixture 经
+`python3 -m json.tool` 验证通过。
+
+旧 D2 目录存在，但没有可重建同一证书所需的最终 GTSAM graph/typed Values；fresh dense full-recording
+重跑不属于 cheap replay 且超出本 Gate，故 `D2_CERTIFICATE_REPLAY=NOT_RUN`，以确定性 synthetic regression
+覆盖灾难终止模式。完整报告为 `docs/refactor/REFACTOR_GATE_04_REPORT.md`，核心合同已追加 Gate04 snapshot，
+METHOD/EXPERIMENT 合同在源码修改前登记 amendment。未运行正式数据/完整矩阵、未调参、未commit/push、
+未覆盖用户既有改动。Gate04 无 blocker；可在新的人工指令后执行 Prompt 5（Gate 05），本轮未启动。
+
+# 0913 REFACTOR-GATE-03 UWB integrity / robust baseline — DONE
+
+`DONE / INTEGRITY_AND_ROBUST_BASELINE_ESTABLISHED / GATE04_READY`。按
+`doc/v3/v3.md` Prompt 3 完成 Gate 03 并停止。paper input 新增独立 integrity/correlation 层，显式区分
+`SOURCE_INVALID`、source-valid 但 `ESTIMATOR_UNUSABLE`、`USABLE`、`STALE_REPEAT` 与
+`suspected_nlos`。精确重复仅限相同 tag/anchor 的 binary64 range、FP/RX RSSI、source-validity payload，
+且只在同 source message 或相邻 message 的同 range slot 中成链；所有 raw row、独立 `obs_id` 与 provenance
+保留，每组至多实例化一个 likelihood representative，不实现一般相关模型，不使用 temporal jump/residual/
+duration/NLOS suspicion 去删除观测。integrity hash 独立于 state step，组合身份升级为 `paper_input_v4`。
+
+既有 `robust_huber`/`robust_cauchy` 继续复用 `PaperRobustNoise` 和显式 standardized-residual scale/provenance，
+但改为从共同 initial Values 直接优化 robust graph；runner 不再先执行可能被灾难 UWB 拖坏的 raw-Gaussian
+warm start，并在 baseline manifest 记录初始化路径。`all_range` 仍是 plain-Gaussian stress/ablation 对照，
+fixed rejection 仍使用 raw-Gaussian reference。100-sigma 合成冲突中 plain Gaussian 偏移超过4m，而 Cauchy
+保持在非 UWB 约束 0.1m 内。FDE Stage1 audit row 新增直接来自 ledger 的 raw range 与完整 source ordinals，
+不参与 detector 数学。persistent positive bias 与 RSSI suspected-NLOS fixture 均未被 integrity 前端删除。
+
+`catkin build uwb_imu_fgo --no-deps --summarize` exit 0；
+`catkin test uwb_imu_fgo --no-deps --summarize` exit 0，484 tests / 0 errors / 0 failures / 0 skipped。
+报告为 `docs/refactor/REFACTOR_GATE_03_REPORT.md`，核心合同已追加 Gate03 snapshot；METHOD/EXPERIMENT
+合同在源码修改前登记 amendment。未改 CUSUM、PL、support/refit/recoverability/final policy、threshold、solver
+success semantics、scientific lock/claim；未运行正式数据或完整实验矩阵，未调参，未commit/push，未覆盖用户
+既有改动。Gate03 无 blocker；可在新的人工指令后执行 Prompt 4（Solver Certificate）。
+
+# 0913 REFACTOR-GATE-02 measurement semantics decoupling — DONE
+
+`DONE / MEASUREMENT_SEMANTICS_DECOUPLED / GATE03_READY`。按 `doc/v3/v3.md` Prompt 2
+完成输入/测量语义拆分，并在 Gate 02 停止。`ObservationRecord` 现仅保存 raw source ledger
+身份、provenance、原始测量、`source_valid` 及 `suspected_nlos`；新
+`MeasurementPlanEntry` 独立保存 `estimator_usable`、selection/reason、state association 与
+`sensor_sigma`。ledger 在 state timeline 前构造；ledger/state/measurement 各自散列，组合身份升级为
+`paper_input_v3`。`state_step>1` 的测量减少现在是明确的 exact-frame subsampling policy；
+`state_step=1` 选择全部 estimator-usable UWB。
+
+paper path 每条观测的 `sensor_sigma=Config::sigma_range`，不再依赖 selected same-link gap、顺序或
+state density。旧 gap-adaptive 计算保留在显式 `LEGACY_SELECTED_GAP_ADAPTIVE_V1` 边界，paper
+materialization 显式使用 `FIXED_SENSOR_SIGMA_V2`。历史 observations CSV 字段在输出边界兼容映射，
+`AllPlannedObservationMask` 保留为 alias，既有结果未修改或重解释。删除 ledger 中 estimator 字段所需的
+Stage1/refit/inference/scoring/PL/runner/preflight/forensic tool 调整均为 typed measurement lookup 的
+机械迁移；未改 IE detector、grouping、refit、recoverability、inference、factor/solver 数学、阈值、
+科学 lock 或结论。statistical-independence/duplicate policy、success qualification 与公共 Stage1 evidence
+interface 明确保留给后续 Gate。
+
+新增 Gate 02 回归覆盖 raw ledger/`obs_id` 跨 state step 不变、sensor sigma 不变、state 与
+measurement plan 显式变化但 source ledger 不变、step=1 全量 usable UWB、legacy noise marker。
+`catkin build uwb_imu_fgo --no-deps --summarize` exit 0；
+`catkin test uwb_imu_fgo --no-deps --summarize` exit 0，480 tests / 0 errors / 0 failures /
+0 skipped。报告为 `docs/refactor/REFACTOR_GATE_02_REPORT.md`，合同已追加 Gate 02 compliance
+snapshot。未运行实验矩阵，未commit/push，未覆盖用户既有改动。Gate 02 无 blocker；可在新的人工
+指令后执行 Prompt 3。
+
+# 0913 REFACTOR-GATE-01 architecture freeze / regression contract — DONE
+
+`DONE / CONTRACT_AND_CHARACTERIZATION_ONLY / GATE02_READY`。按
+`doc/v3/v3.md` 的 Prompt 1 完成现状冻结，未开始 Prompt 2。新增
+`docs/refactor/IE_CORE_V2_CONTRACT.md`，明确 raw ledger、state plan、measurement plan、
+sensor sigma、solver termination 与 scientific success 的边界及 A--G 七项未来不变量；新增
+`docs/refactor/REFACTOR_GATE_01_REPORT.md`，给出实际 production call graph、逐文件/函数耦合点、
+当前合规差距和下一 Gate 的严格编辑面。
+
+审计确认：`BuildPaperInputPlan` 当前同时承担 source ledger、`kf_step` state/measurement selection
+和基于 last planned same-link 时间的 adaptive sigma；因此 state density 会同时改变 UWB 因子集合与
+共同观测 sigma。protocol/model validity 仍合并为 `valid`，statistical independence 无显式语义，
+不同 provenance 的重复 payload 会成为独立因子。paper path 保留 `suspected_nlos`，legacy
+`OutlierFilter::PreFilter` 则删除。默认 `GTSAM_CHECK_ONLY_V1` 的 generic termination 可在独立
+stationarity audit 不通过时产生 `CONDITIONAL_LM_CONVERGED`，而 baseline 继续映射为 `valid/OK`；
+故 solver termination 尚非 scientific success certificate。Stage1 已有 obs/factor/residual 部分证据，
+但缺少统一的 provenance + raw/standardized residual typed interface。
+
+仅在 `test/test_paper_input.cpp` 与 `test/test_nlos_discovery.cpp` 新增 3 个 current-behavior
+characterization tests：冻结 `kf_step` 同时改变选择与共同观测 sigma、重复 payload 当前成为独立因子、
+generic convergence 不证明 stationarity。`catkin build uwb_imu_fgo --no-deps --summarize` exit 0；
+`catkin test uwb_imu_fgo --no-deps --summarize` exit 0，472 tests / 0 errors / 0 failures / 0 skipped；
+新增 focused tests 3/3 PASS。只有文档/测试/本 STATUS 记录发生变化，未改 production source、配置、
+算法、threshold、solver 参数、scientific lock、既有实验结论或数字，未运行大实验矩阵，未覆盖用户
+未提交修改，未commit/push。Gate 01 无 blocker；可以在人工指令后执行 Prompt 2。
+
+# 0913 DEV-DENSE-01 Walk1 state-density feasibility — DONE
+
+`DONE / DEVELOPMENT_ONLY / DENSE_STATE_RECOMMENDATION=NOT_WORTH_IT`。正式 Walk1 B0 的实际
+`keyframe.step=4`；step=4/2/1 三个非重复 variant 各完成唯一一次 Base FGO `all_range` 科学运行。
+唯一科学配置变化为 `keyframe.step`；输入、初始化、因子、noise、solver、编译二进制、CPU/thread
+policy 与 R1 evaluator/common-GT 227 点保持。没有运行 robust/detector/recovery 或 fresh SFUISE，
+没有 solver retry、runtime replicate 或结果后调参。
+
+D0/D1/D2 分别为 229/457/913 states，实际 final UWB factors 为 1074/2135/4266，
+占 4266 条有效 range 的 25.176%/50.047%/100%；因此降 step 确实使实际入图测距约增至
+1.988x/3.972x。aligned ATE RMSE 分别为 0.164026011/0.325667331/309.384218981 m：
+step=2 退化 0.161641321 m（+98.546%）；step=1 虽导出trajectory且实现报告 conditional convergence，
+但仅2次迭代、final objective 1.495864129e10、最大位置范数1071.115m，是必须保留的灾难性坏解，
+不是可用收敛。D1相对D0 runtime/state/RSS为1.523x/1.996x/1.380x；D2为
+0.835x/3.987x/1.792x，其中较短runtime来自坏解提前停止，不能解释为效率收益。
+
+三组 observation/final-factor/temporal 审计均通过：无重复或漏用planned UWB factor、无timestamp
+reorder、IMU缺口或零时长预积分。D0 fresh trajectory与旧正式Walk1 B0 byte-exact。相同227个
+common-GT点上，最低ATE的dense variant D1不仅未追回D0到既有SFUISE 0.109906074m的差距，
+反而扩大0.161641321m；剩余差距0.215761258m。raw-frame ATE因独立frame/reference-point外参未闭合
+继续UNAVAILABLE。
+
+协议、唯一run、逐anchor/IMU/factor账本、完整CSV/Markdown、PDF/PNG和结论均在
+[`experiments/icra2027/dev/DENSE_STATE_WALK1/`](../../experiments/icra2027/dev/DENSE_STATE_WALK1/)。
+执行命令 `python3 experiments/icra2027/dev/DENSE_STATE_WALK1/run_dense_state.py` exit 0；报告后处理
+未重跑科学任务。最终 verification 全PASS；formal protected tree 前后SHA256同为
+`41f97964449f61e8931bcb0c411ba2f71c68f7d30cfcfcf43a1bd7fc4e84c725`。正式 R0--R6、FROZEN_*、
+canonical manifest、Table I/II/III、paper assets 和 backbone 均未覆盖；C1--C3/T10/T11不升级，
+未commit/push。本实验到此停止，等待人工决定。
+
+# 0913 R6 Engineering Repair + Exact Replay — DONE
+
+`DONE / R6_REPAIR_15_ATTEMPTED / ENGINEERING_FAILURES=0 / RECOVERY_CLAIM=NOT_SUPPORTED`。
+用户附件授权的纯工程修复与同15-case精确重放已完成。manifest SHA256
+`c0e38c35c8e6117eb317f53540bf5e34c60fef7d2163f6c96aae755c0140bbca` 与原正式lock一致；
+科学fingerprint仍为 `1ba97bad7c2f8dddd8c5325628485ed5da91fb572315a4dafb6b809025f9fc96`。
+所有科学源码/二进制、B0_CURRENT、solver/迭代/容差、初始化、CUSUM/LCB、input numeric payload、
+SF配置、evaluator/GT association/alignment和GO/NO-GO判据均未改；原R6-LF-v2等2529项旧文件hash通过。
+
+修复前先输出actual dependency DAG与分类表：原22个PARENT_CACHE_UNAVAILABLE和11个
+OFFLINE_INFERENCE_TREATMENT_UNAVAILABLE全部源于11个真实scientific parent失败，未发现成功cache/treatment丢失。
+新增 `experiments/icra2027/run_r6_case.py`，case-local parent固定在 `runs/R6_REPAIR/<case_id>/parent/`，
+显式external cache绑定、producer/config/input/payload seal、completed-case resume核验；
+新replay在 `runs/R6_REPAIR_REPLAY/<case_id>/engineering-r1/`，无engineering retry。
+新dependency状态用blocked_by_scientific_parent_failure，保留实际solver/fallback原因。
+canonical corrected/rejected CSV与treatment YAML保留全部support/accepted IDs和sigma/LCB/补偿、共享hash。
+保持原final-use semantics：native final acceptance之后导出SF recovery；不把decision-only修正冒充正式接受。
+
+实际preflight exit0：15/15 C++ loader与7项工程测试；原GO/NO-GO实现回归exit0；实际完成case resume
+exit0且所有文件不变。`run_r6_case.py --all` exit0；指标生成exit0；最终独立产物核验exit0。
+15个detector support与30份可用native trajectory全部和旧LF-v2 byte-exact；34次SF运行全部input/isolation/transport通过。
+105方法行=64可评价、8实际方法数值失败、33被scientific parent阻塞（正式metrics仍保留41 failed行）；
+另11个aux parent数值失败，失败scientific进程共19；2/15 case七方法全部可评价。
+parent根因=3 raw preliminary LM上限、2 Stage2 checkpoint restart上限、6 Stage2 max refit；
+独立baseline有6行preliminary失败，另2行Reject最终求解及原一次fallback失败。
+工程性阻塞0；33个旧泛化依赖错误已明确归因，不能声称凭工程修复救回33条科学结果。
+
+Native RR有效2，ATE/fault各1改善，median delta -0.007448032/-0.033491587 m。
+SF RR有效4，ATE/fault各2改善，median delta -0.001865990/0.004875516 m。
+SF_RECOVER−SF_NATIVE median 0.001386381 m。
+按原>=12有效配对、ATE/fault各>=10/15改善、两个median<0规则仍NOT_SUPPORTED。
+报告：`experiments/icra2027/audits/R6_REPAIR_REPORT.md`、`E2_GO_NOGO_REPAIRED.md`；
+五张 `metrics/E2_canonical_*_repaired.csv`、`R6_dependency_status.csv`及hash/命令/失败ledger完整交付。
+在R6停止，不建议直接以恢复收益主张扩展R7–R9；未运行R7–R10、新数据/sweep/tuning，未commit/push。
+T10=C2-C、T11=C和C1–C3限制保持。
+
+# 0913 R6 LF 格式修复与 fresh rerun amendment
+
+`DONE / R6_ALL_15_ATTEMPTED / RECOVERY_CLAIM=NOT_SUPPORTED`。
+用户明确授权“修复格式并重跑”。仅将上一轮注入缓存 CRLF 规范为 LF，
+原始无效清单、输入、运行与交付资产全部保留；新版本清单和输入独立冻结，15 个 case 的
+anchor/window/bias/affected IDs 及所有科学配置不变。先运行实际 C++ cache loader 预检，
+再 fresh 运行 R6 七方法；R3/R4/R5 复用，普通 solver failure 保留后继续，不调参、不启动 R7–R10。
+
+实际 LF-v2 fingerprint `1ba97bad7c2f8dddd8c5325628485ed5da91fb572315a4dafb6b809025f9fc96`。
+新清单 `experiments/icra2027/manifests/injection_manifest_canonical_v2.yaml` 在运行前冻结；
+原 canonical 文件仍是不可变的无效 v1，所有旧输入/run 原位保留，旧 E2 交付资产在
+`experiments/icra2027/attempts/R6-CRLF-invalid/` 保留。新运行在 `runs/R6-LF-v2/`。
+实际既有 C++ cache loader 15/15 PASS；旧 CRLF 回归仍按预期表头失败。
+初版 probe 误传 duration=0 导致空窗口，改为 loader 全程 sentinel -1 后通过，原失败与源码已保留；
+这只改诊断 harness，没有改科学输入或核心库。10/10 工程测试及15/15独立测量/隔离复核通过。
+
+15 case 均处理完，105行=64 completed/41 failed；七方法均可评价2 case，其余13 case至少一方法失败。
+Walk3 A10548/A20276 的 Reject 各尝试一次 fallback，均失败（固定 checkpoint 总预算耗尽），
+没有成功 fallback；no-candidate case=0。Native RR 有效配对2，ATE/fault改善各1，median delta
+-0.007448/-0.033492m；SF有效配对4，改善各2，median delta -0.001866/+0.004876m。
+不把失败或缺配对记作零误差。Detector event recall=1.0，median precision=0.202247、recall=1.0、
+F1=0.336449；局部 bias 误差不是未知真实父数据 bias truth。
+按原 >=12 有效配对、>=10/15 ATE与fault均改善规则，`RECOVERY_CLAIM=NOT_SUPPORTED`，不宣称所有case均无收益。
+E2全部CSV、Table II CSV/LaTeX、预指定Walk1/A10548 FIG2 PDF/PNG/源CSV和总报告均已保存。
+代表图缺失恢复轨迹明确标注，caption说明 corrected列在恢复不可用时等于raw，不能冒充成功SF_RECOVER。
+最终报告 `experiments/icra2027/audits/R3_R6_EXECUTION_SUMMARY.md`；下一步为R6 GO/NO-GO审阅与失败证据分析，
+不自动进入R7，不调参、不提交/push；历史C1–C3/T10/T11不升级。
+
+# 0913 R3–R6 连续执行 / 当前用户授权 amendment
+
+`R3_PASS / R4_PASS / R5_COMPLETED_WITH_FAILURES / R6_STOPPED_INVALID_INPUT`。
+用户指定B0_CURRENT为正式backbone，连续R3→R4→R5→R6，不逐阶段确认。
+仅ISAS Walk1/2/3、controlled positive ToA injection；B1/B2/B3与clean优化关闭。
+保持现有数学、参数、scheduling、evaluator和alignment；冻结后不结果调参。
+R3重新验证clean PL bidirectional CUSUM；R4导出同support的measurement treatment并以相同官方SFUISE配置
+运行Native/Reject/Recover。R5 clean及R6全部15case按用户定义保留失败/空集合/fallback，不因算法失败停止。
+SF_RECOVER仅对final-use accepted IDs减去固定补偿；未接受range保持原样（不伪装成native suppress factor）。
+GT/truth仅evaluator；bwrap显式measurement allowlist隔离native与SF进程。
+固定窗口先用recording origin+8s至+18s，运行前检查bootstrap/GT覆盖/各link有效planned测量后冻结15case；
+不满足则按确定性的逐整秒向后扫描首次合格窗口，不看算法结果。代表Walk1/第3升序anchor10548；
+仅technical invalid可用Walk2/10548。RR fault delta按Recover−Reject解读用户排版中的星号。
+clean等价容差先固定position1e-3m、rotation1e-3rad、ATE1e-3m。普通run failure继续。
+稳定改善的操作化规则在scientific config冻结前记录，分类不自动升级历史C1–C3/T10/T11。
+R6后停止，不启动R7–R10、不提交/push。仅用户列举的数据/隔离/配置冻结/比较有效性错误允许提前停止。
+
+阶段结果：R3 PASS（detector 三条有效；clean candidates=0/344/89；Walk2 Stage2
+MAX_REFIT_ITERATIONS保留，非detector失败），R4 PASS，R5 fresh native 全部已尝试并保存21行。
+R4首次bwrap系统库挂载失败保留；原1×回放出现开头消息缺失，修复wrapper订阅就绪/回放连接等待，
+未改SFUISE源码、配置或sensor timestamps。完整转发验证后，Walk1三个SF输入语义相同，
+位置差/ATE差0，姿态差<6e-8rad，满足冻结1mm/1mrad/1mm容差。Walk2/3 clean有候选，不要求空集合等价；
+Walk2 SF_RECOVER因Stage2失败明确failed。证据在 `experiments/icra2027/runs/R4-transport-ready/`。
+R3–R6主fingerprint `dd6b26fa7ba68dbd240188b843917582f2d140b9e28f029da0402a56f18dbfc0`。
+
+R5 B0/SF clean ATE(m)：Walk1 0.164026/0.111077、Walk2 0.222031/0.074158、
+Walk3 0.178215/0.081656；Table I明确保留SF更准。Walk2 robust LM失败、native Reject/Recover
+parent cache unavailable、SF_RECOVER无恢复输入，均保留。Walk3 Reject/Recover为0.168558/0.171638。
+
+R6因用户提前停止条件6（正式比较无效的输入错误）停止：本agent错误复用了metrics CSV writer，
+生成CRLF表头，未在冻结前做native精确表头预检；C++ T07 loader要求LF，因而在初始化/solver之前
+拒绝输入。15case清单SHA `c7676d2b0a8551d98e1b6188a39c4cc96cd722b9fe3e9a5e43acc22365266b9b`
+及全部输入保持原样，未改hash重跑。8case尝试native输入、7case未启动；5条未配对SF_NATIVE完成，
+3条SF运行中止；有效配对case=0。没有detector执行结果，不能记作no_candidates，也不能归为算法负结果。
+`RECOVERY_CLAIM=NOT_EVALUATED_INVALID_INPUT`。E2 105行run ledger、15行pairwise/detection、逐range与
+零段header文件、输入格式审计、logs/configs/hashes全部保留；Table II/FIG2明确标记input-invalid诊断资产，
+不是已完成的科学结果。最终报告 `experiments/icra2027/audits/R3_R6_EXECUTION_SUMMARY.md`。
+下一步精确为R6.1–R6.3：LF序列化/parser-only预检及明确授权的新版本manifest，再恢复R6；
+不原地修改已冻结清单，不调任何科学参数，不启动R7–R10，不提交/push。
+
+# 0913 R2.5 B1 static ToA input-parity 用户授权 amendment
+
+`DONE / INPUT_PARITY_MEASURED_WITH_TWO_FAILURES / NO_CLEAN_ATE_GAIN_OBSERVED`。
+用户明确授权原样采用 SFUISE 作者 dataset-specific offsets，独立 calibration recording
+provenance 未验证，仅作 input-parity analysis。按 R2 已审计升序 anchor
+7475/9524/10548/15155/20276，native beta=-offset，即0.0700/-0.1539/0.0751/-0.1409/0.0247m，
+通过既有 fixed_beta_by_link 常量入factor恰好一次，raw ranges不改。仅 fresh B1 Walk1/2/3，
+复用冻结 B0/SF_NATIVE 和 R1/R2 exact common GT sets（227/292/313）。不改state rate、scheduling、
+topology、IMU、detector/recovery、evaluator/alignment，不运行B2/B3或注入，不按结果调参。
+配置唯一差分必须是fixed_beta_by_link；旧文件hash、观测账本、final masks、state times和共同GT集合
+在交付时核验。每条最多一次科学run、1800s沿用原预算，失败保留。无提交/push，C1–C3/T10/T11不升级。
+结果写入 `../../experiments/icra2027/metrics/B1_calibration.csv` 与对应审计报告。
+
+[R2.5结果](../../experiments/icra2027/audits/B1_calibration_result.md)：fresh batch
+`B1_CAL-20260912T162119Z-8fb6f7e0`仅3个B1科学run；Walk1/Walk2 backend exit1，均为
+`PRELIMINARY_LM_FAILED:CONDITIONAL_LM_MAX_ITERATIONS`（100次），未导出trajectory，ATE/delta保持NA。
+Walk3 backend exit0，313个冻结共同GT，ATE=0.185746300m vs B0=0.178214618m，
+delta=+0.007531682m、relative=+4.226186%；P95=0.315575735m、RPE1s=0.482899931m。
+三条observations/IMU模型转储/构图规模与B0一致；Walk3 final mask/state times一致。
+既有initializer对局部副本用z-beta作trilateration，三条初值随beta变化，代码未改；这是constant机制
+整体input-parity效果，不是固定初值factor-only对照。406受保护文件hash通过，4项既有evaluator测试通过。
+科学执行后只补充失败/初始化核验与重读评价，未重跑科学任务、未调参，B2/B3/注入均NOT_RUN。
+9行结果完整保留6个复用源与3个fresh B1；原R1/R2指标和报告不覆盖，无提交/push，claim不升级。
+
+# 0913 ICRA v6 R0→R1→R2 用户授权 amendment
+
+`R0_LOCAL_REPRODUCED / R1_ALIGNED_ONLY_AUDIT_COMPLETE / R2_AUDIT_COMPLETE_MATRIX_BLOCKED`。
+当前任务替代旧下一任务边界，按 `../ICRA_experiment_roadmap_v6.md`
+仅执行 ISAS Walk1/2/3 clean 的 provenance、frame/reference-point、static calibration 与
+range density 审计。B3 提高离散状态频率必须在本轮结果交付后另行决定；R3–R11、注入、
+simulation、其他数据集、detector/recovery 调参及提交/push 均不执行。
+在 `experiments/icra2027/` 隔离保存配置、fingerprint、命令、失败与可机读指标；保护已有 dirty
+初始化修复、历史材料和冻结结构。R1 使用共同 GT 样本；无独立 frame mapping 时 raw 差值仅为
+未对齐坐标诊断，正式 raw-frame ATE 保持 UNAVAILABLE。官方 offset 的来源准入与应用符号分别审计；
+不以作者配置存在冒充独立标定。只复用既有 C++/GTSAM backend，GT 不进入估计器。
+
+[当前报告](../../experiments/icra2027/audits/backbone_parity_report.md)：R0 原 Walk1 clean 五任务流水线
+exit0，fresh B0 Walk1/2/3 各一次且全部实际 final 成功；R0/B0 Walk1 trajectory 字节一致。
+fingerprint `bc4b4a9f250e33549999c3bc20f618221f516e98a380b52cf4fbeeabad1575ce`；319源码、9输入文件、
+binary/依赖未变，dirty source patch 对干净 commit 可应用；独立 clean-checkout rebuild 为 NOT_RUN。
+SFUISE 复用原三条封存 trajectory，source bag SHA 核验后重新评价。共同 GT 数227/292/313，B0/SFUISE
+aligned ATE为0.164026/0.109906、0.222031/0.075122、0.178215/0.081656m。原坐标偏差主要可由
+全局刚体差异解释，但缺独立world/point外参，不作为已追回的估计精度，raw-frame ATE仍UNAVAILABLE。
+3条有效测距4266/5544/5931、最终入图1074/1357/1483；被选frame内无漏用。额外可精确关联到
+现有state的有效测距均0，单独B2需要新的时间近似或增加state，当前均未执行。官方offset的顺序/符号/单位
+已确认，但独立标定来源未确认；B1 NOT_RUN，B2 NOT_RUN，不能宣称已测量calibration/density收益。
+仅等待用户对原作者offset作独立性未验证的development对照的范围选择；不自动启动B3。
+4项 evaluator fixtures、bag headers/anchor配置核验与交付校验通过。evaluator首次字段名错误exit1保留说明，
+修正后仅重评，不重跑science。未改核心、旧结果/默认/用户初始化修复，未提交或push，claim不升级。
+
+# 0912 own_vicon 初始化 correctness 修复 / 当前用户授权 amendment
+
+`DONE / BASE_FGO_RECOVERED / STAGE2_STILL_FAILED / NO_VALID_RR_PAIR`。用户授权先修复三项直接阻塞，再用同一条
+`2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle` 做 fresh development 全流程：
+(1) trilateration 只提交降低目标的有限 LM 步，拒绝步不改变状态，只有实际收敛才返回成功；
+(2) 静止判定的加速度模方差阈值改由配置 `sigma_a^2` 给出，移除硬编码 `0.01`；
+(3) 每次运行由 anchor 几何自动识别近共面情形并使用2.5D初始化。2.5D只读取 anchor 坐标和首批原始
+range，以最佳拟合平面求平面内位置及两侧候选；先按原始range目标选侧，数值不可分时仅用anchor世界坐标
+中朝 `z=0` 的独立高度侧信息，仍不可分则明确失败。不读 moving-tag Vicon、不拟合高度或测距偏差。
+
+本次 correctness amendment 已实现：2.5D是否启用及侧别均不由recording配置显式指定；detector、LCB、
+range/IMU噪声数值、solver、评价和一次 fallback 定义未改。32项C++定向/回归测试与24项Python流程/RR测试通过，
+paper runner重建通过。fresh run `experiments/results/own-vicon-flow-initfix-20260912A` 的prepare/preflight/
+execute/verify均exit0；锁核验通过。
+
+实际静止方差0.0308523，小于配置 `sigma_a^2=0.127449`，重力对齐启用。anchor singular ratio
+0.000325028自动触发2.5D，raw-range目标选择下侧，p0由旧z=-5.827m改善为z=-0.526m。
+producer raw reference首次成功（55 iter，objective 1.0144452069e9→4267.5272，max position norm 3.914m），
+并冻结253候选/8段；但Stage2经过28个outer、约298.9s后因navigation stationarity始终不满足而以
+`CONDITIONAL_LM_FIXED_CHECKPOINT_RECOVERY_TOTAL_BUDGET_EXHAUSTED`失败，无cache，故RR两格NOT_RUN、差值NA。
+
+Cauchy基础FGO首次成功导出完整73.36s/918 pose轨迹，ATE/窗口/P95为0.951271/0.467489/1.693017m；
+10Hz网格在0.02s nearest条件下匹配360点、覆盖0.4905，不是轨迹只导出一半。SFUISE为
+0.297530/0.268811/0.377887m、725点。两者range before/after均0.440256m。
+[结果](../../experiments/OWN_VICON_INITIALIZATION_FIX.md)与
+[协议](../../experiments/OWN_VICON_INITIALIZATION_FIX_PROTOCOL.md)。首次标准evaluator仍触发已知异构字段
+序列化错误，封存后wrapper只重写CSV并成功；未重跑科学任务。失败与NA保留，不升级C1--C3/T10/T11或held-out，
+未提交或push。
+
+# 0912 own_vicon 15-31-28 单条全流程检查
+
+`DONE / PARTIAL_FLOW_ONLY / NO_VALID_RR_PAIR`。[协议](../../experiments/OWN_VICON_FLOW_PROTOCOL.md)与
+[逐方法结果](../../experiments/OWN_VICON_FLOW.md)。完整bag/tag0/4anchor，Livox acc固定g×9.81、gyro rad/s、
+header共同时基；bag内静态Vicon anchor中位位置和tag/IMU零杆臂仅为`USER_APPROXIMATE_COLOCATION`。
+4项输入test、C++/Cauchy prepare共同初值、14479 range/14680 IMU ROS往返和SF probe通过。
+
+唯一科学run `experiments/results/own-vicon-flow-20260912C` 实际3/5树：CUSUM冻结260候选/10段且不读GT，
+但producer随后在raw-reference LM 100次上限失败，无Stage2；RR两格NOT_RUN、两差值NA。Cauchy preliminary LM
+同样失败。SFUISE成功，ATE/窗口/P95为0.297893/0.268623/0.380129m，726样本、覆盖0.9891；range
+before/after均0.440256m。1个评价窗口2.240277s，与旧审计一致。
+
+日志显示首帧trilateration z=-5.827m；anchor高度跨度0.03267m，中心几何最小/最大奇异值比3.25e-4，
+GT-only PDOP中位/P95为7.48/20.17，且首帧range有约0.33--0.40m未校正正偏差。支持近共面几何、静态正偏差、
+无静止段identity orientation共同造成初始化困难的解释，但不作唯一归因；SF成功说明bag并非普遍不可用。
+A/B均为科学前adapter合同失败并保留；C科学无重跑。首次evaluator序列化失败后仅用封存后wrapper重读科学产物。
+锁/hash最终通过，不调参数、不升级C1–C3/T10/T11/held-out，不自动提交或push。
+
 # 0912 数据替代候选核对（未启动新矩阵）
 
 用户要求再换数据。本轮建议先以ISAS Walk1/3既有定位运行证据检查基础链；其Vive不符合旧Vicon/GNSS限定，且未审计出真实持续正误差，不能直接充当原RR准入。
@@ -1593,3 +2186,50 @@ external wall0.688s/RSS27396KiB；无retry，truth/GT未读，raw/config/GTSAM�
 [A14完整交付](evidence/t10_a14_conditional_imu_20260909T142807Z/VERIFICATION.md)保留源码/配置/输入/库/命令/负结果；T10 IN_PROGRESS、A14本地限定交付完成待审。
 A12负结果、A08历史15/18/UNKNOWN及C1–C3限制保留；validation/test/T11/scheduler/gate/final NOT_RUN；不默认迁移或升级claim。
 本轮停止，不自行执行后续末态诊断。
+
+
+# 0913 ICRA v6 英文实验章节与导师汇报稿 — DONE
+
+`DONE / WRITING_ONLY / NO_NEW_SCIENTIFIC_RUNS`。用户授权按 v6 Q1–Q4 整理独立英文
+LaTeX/PDF，保留负结果并向导师汇报。交付于
+[`paper/icra_experiment_report/`](../../paper/icra_experiment_report/README.md)：
+6页正文＋1页证据索引、4张矢量图及PNG、3张CSV/LaTeX表、源码与数据快照/哈希、构建说明。
+采用随稿保存且未修改的官方 IEEE RAS PaperCept `ieeeconf.cls`。
+
+主无注入表仅用 R5；R1、B1和Walk1状态密度分别标注。注入主结果用 repaired 五CSV：
+105方法行=64可评价、8直接数值失败、33 scientific-parent 阻塞，Native/SF RR有效配对2/4。
+解释Walk1/A9524零接受补偿不能作为SF bias-recovery收益；保留Walk1/A20276单例明显收益及
+Walk3两对SF退化；总体稳定恢复收益仍不支持。代表图保留预指定Walk1/A10548，使用repaired
+SF轨迹与原stored alignment重建并核验ATE；无恢复输出明确缺失。Q4仿真和R7–R10保持NOT_RUN，
+设计示意不包含虚构结果；sigma不可用不直接归因于弱几何或不可辨识。
+
+实际 `python3 paper/icra_experiment_report/prepare_sources.py` exit0；
+`python3 paper/icra_experiment_report/build.py --review` exit0（生成资产、两次pdflatex、系统libgs渲染）。
+7页逐页视觉检查完成，无overfull或未解析引用。首次探索编译的caption超链接宏错误已记录并修复，
+仅为文稿修复。数据行/配对差值/共同GT/封存summary/42份输入hash核验通过。
+最终完整性核验见稿件 `logs/preservation_verification.json` 与 `logs/build_verification.json`。
+本轮不运行estimator、simulation、sweep，不改科学代码、配置、评价器、冻结论文结构或历史结果；
+已有dirty初始化改动保留。本文件与CLAIM_EVIDENCE仅追加写作交付；
+T10=C2-C、T11=C、C1–C3不升级，未commit/push。
+
+
+# 0914 English advisor slides — DONE / WRITING ONLY
+
+用户授权整理 5–6 页英文导师汇报，强调 IE 整理工作的价值、未启用 NLOS 扩展时已存在的
+基线差距、恢复的积极单例及后续任务。交付
+[`6-page English slides`](../../paper/ie_supervisor_slides_20260914/README.md)：
+可编辑 PPTX、6 页 PDF、4 张新绘制的证据图（PDF/PNG）、图表 CSV、25 份来源快照与哈希、
+英文备注及约五分钟讲稿。未覆盖完整 manuscript main.tex 或旧报告。
+
+R5 Base-only 三 Walk 差距支持“无需启用补偿即可出现该差距”，不推断所有实现问题的历史归属。
+R6 Walk1/A20276 明确为结果选取的解释性正例，非预指定代表样本；105 行的 64/8/33 状态和
+Native/SF 2/4 有效配对、退化及零补偿限制保留。早期 Gate06D 初值漂移与后续 36/36 工程回归、
+913-state seed gate 通过区分展示；后续最终求解认证仍未通过，无新全轨迹 ATE。
+未把当前独立进行的 warm-start 任务宣布完成。
+
+实际 `python3 paper/ie_supervisor_slides_20260914/build_slides.py` exit0；
+`python3 paper/ie_supervisor_slides_20260914/render_review.py` exit0。
+源哈希、统计、文本边界、PPTX XML/关系及实际 6 页 PDF 渲染核验通过；逐页视觉检查完成。
+原生 PowerPoint/LibreOffice 渲染 NOT_RUN（未安装）；未安装依赖、未运行新科学实验、未修改
+方法/评价器/冻结结果。仅新增文稿目录并追加 STATUS/CLAIM_EVIDENCE；T10=C2-C、T11=C、
+C1–C3 不升级。无 commit/push。本交付不替代顶部当前实现任务。

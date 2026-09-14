@@ -3,15 +3,170 @@
 #include <gtsam/navigation/ImuBias.h>
 #include <gtsam/navigation/NavState.h>
 
+#include <Eigen/Eigenvalues>
+#include <Eigen/SVD>
+
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <set>
+#include <unordered_map>
 
 #include "uifgo/imu_preint.h"
 #include "uifgo/uwb_factor.h"
 
 namespace uifgo {
+
+namespace {
+
+constexpr double kCoplanarSingularValueRatio = 1e-3;
+constexpr double kHorizontalPlaneMinAbsNormalZ = 0.9;
+
+double RangeSquaredCost(const Eigen::Vector3d& p,
+                        const std::vector<gtsam::Point3>& anchors,
+                        const std::vector<double>& ranges) {
+  double cost = 0.0;
+  for (size_t i = 0; i < anchors.size(); ++i) {
+    const double residual =
+        (p - gtsam::Vector3(anchors[i])).norm() - ranges[i];
+    cost += residual * residual;
+  }
+  return cost;
+}
+
+bool IsLocallyObservable(const Eigen::Matrix3d& hessian) {
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eig(hessian);
+  if (eig.info() != Eigen::Success || !eig.eigenvalues().allFinite()) {
+    return false;
+  }
+  const double largest = eig.eigenvalues().maxCoeff();
+  const double smallest = eig.eigenvalues().minCoeff();
+  return largest > 1e-12 && smallest > 1e-10 * largest;
+}
+
+// Construct a 2.5D seed from a near-horizontal anchor plane.  Both mirror
+// solutions are evaluated against the actual 3D anchors.  If their range
+// objectives are numerically indistinguishable, the world-frame z=0 plane is
+// used as independent height-side information only when it selects one side
+// uniquely.  This routine consumes no trajectory/GT state.
+bool Coplanar2p5dSeed(const std::vector<gtsam::Point3>& anchors,
+                     const std::vector<double>& ranges,
+                     Eigen::Vector3d* seed) {
+  if (anchors.size() < 3 || anchors.size() != ranges.size() || !seed) {
+    return false;
+  }
+
+  Eigen::Vector3d centroid = Eigen::Vector3d::Zero();
+  for (const auto& anchor : anchors) centroid += gtsam::Vector3(anchor);
+  centroid /= static_cast<double>(anchors.size());
+
+  Eigen::MatrixXd centered(anchors.size(), 3);
+  for (size_t i = 0; i < anchors.size(); ++i) {
+    centered.row(i) = (gtsam::Vector3(anchors[i]) - centroid).transpose();
+  }
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(centered, Eigen::ComputeThinV);
+  if (svd.singularValues().size() != 3 ||
+      !svd.singularValues().allFinite()) {
+    return false;
+  }
+  const Eigen::Vector3d singular = svd.singularValues();
+  if (singular[0] <= 1e-12 || singular[1] <= 1e-6 * singular[0] ||
+      singular[2] / singular[0] > kCoplanarSingularValueRatio) {
+    return false;
+  }
+
+  Eigen::Vector3d axis_u = svd.matrixV().col(0);
+  Eigen::Vector3d axis_v = svd.matrixV().col(1);
+  Eigen::Vector3d normal = svd.matrixV().col(2);
+  if (normal.z() < 0.0) normal = -normal;
+  if (std::abs(normal.z()) < kHorizontalPlaneMinAbsNormalZ) return false;
+
+  std::vector<Eigen::Vector2d> planar;
+  planar.reserve(anchors.size());
+  for (const auto& anchor : anchors) {
+    const Eigen::Vector3d delta = gtsam::Vector3(anchor) - centroid;
+    planar.emplace_back(axis_u.dot(delta), axis_v.dot(delta));
+  }
+
+  Eigen::MatrixXd lhs(anchors.size() - 1, 2);
+  Eigen::VectorXd rhs(anchors.size() - 1);
+  for (size_t i = 1; i < anchors.size(); ++i) {
+    const Eigen::Vector2d delta = planar[i] - planar[0];
+    lhs.row(i - 1) = (2.0 * delta).transpose();
+    rhs[i - 1] = planar[i].squaredNorm() - planar[0].squaredNorm() -
+                 ranges[i] * ranges[i] + ranges[0] * ranges[0];
+  }
+  Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr(lhs);
+  if (qr.rank() < 2) return false;
+  const Eigen::Vector2d planar_position = qr.solve(rhs);
+  if (!planar_position.allFinite()) return false;
+
+  std::vector<double> normal_distance_squared;
+  normal_distance_squared.reserve(anchors.size());
+  for (size_t i = 0; i < anchors.size(); ++i) {
+    const double d2 = ranges[i] * ranges[i] -
+                      (planar_position - planar[i]).squaredNorm();
+    const double tolerance = 1e-9 * std::max(1.0, ranges[i] * ranges[i]);
+    if (d2 >= -tolerance) normal_distance_squared.push_back(std::max(0.0, d2));
+  }
+  if (normal_distance_squared.size() < 2) return false;
+  const size_t mid = normal_distance_squared.size() / 2;
+  std::nth_element(normal_distance_squared.begin(),
+                   normal_distance_squared.begin() + mid,
+                   normal_distance_squared.end());
+  double median_d2 = normal_distance_squared[mid];
+  if (normal_distance_squared.size() % 2 == 0) {
+    const double lower = *std::max_element(normal_distance_squared.begin(),
+                                           normal_distance_squared.begin() + mid);
+    median_d2 = 0.5 * (lower + median_d2);
+  }
+  if (!std::isfinite(median_d2) || median_d2 <= 1e-12) return false;
+
+  const Eigen::Vector3d in_plane =
+      centroid + axis_u * planar_position.x() + axis_v * planar_position.y();
+  const double normal_distance = std::sqrt(median_d2);
+  const Eigen::Vector3d positive = in_plane + normal_distance * normal;
+  const Eigen::Vector3d negative = in_plane - normal_distance * normal;
+  const double positive_cost = RangeSquaredCost(positive, anchors, ranges);
+  const double negative_cost = RangeSquaredCost(negative, anchors, ranges);
+  if (!std::isfinite(positive_cost) || !std::isfinite(negative_cost)) {
+    return false;
+  }
+
+  const double cost_tolerance =
+      1e-10 * std::max({1.0, positive_cost, negative_cost});
+  const char* side_source = nullptr;
+  if (positive_cost + cost_tolerance < negative_cost) {
+    *seed = positive;
+    side_source = "raw_range_objective";
+  } else if (negative_cost + cost_tolerance < positive_cost) {
+    *seed = negative;
+    side_source = "raw_range_objective";
+  } else {
+    const double positive_zero_distance = std::abs(positive.z());
+    const double negative_zero_distance = std::abs(negative.z());
+    const double z_tolerance = 1e-9 * std::max(
+        {1.0, positive_zero_distance, negative_zero_distance});
+    if (positive_zero_distance + z_tolerance < negative_zero_distance) {
+      *seed = positive;
+      side_source = "anchor_world_zero_height_side";
+    } else if (negative_zero_distance + z_tolerance < positive_zero_distance) {
+      *seed = negative;
+      side_source = "anchor_world_zero_height_side";
+    } else {
+      std::cerr << "Trilaterate: coplanar mirror side is ambiguous.\n";
+      return false;
+    }
+  }
+
+  std::cout << "Trilaterate: automatic 2.5D seed, singular ratio="
+            << singular[2] / singular[0] << ", side_source=" << side_source
+            << ", seed=" << seed->transpose() << "\n";
+  return seed->allFinite();
+}
+
+}  // namespace
 
 Initializer::Initializer(const Config& cfg) : cfg_(cfg) {}
 
@@ -26,15 +181,21 @@ bool Initializer::DetectStatic(const std::vector<ImuSample>& imu, size_t i0,
     sum_norm2 += norm * norm;
   }
   double mean = sum_norm / n;
-  double var = sum_norm2 / n - mean * mean;
+  double var = std::max(0.0, sum_norm2 / n - mean * mean);
   if (accel_norm_mean) *accel_norm_mean = mean;
 
-  // Static if accelerometer norm variance is very small
-  // and mean is close to gravity
-  static const double kStaticVarThresh = 0.01;  // (m/s^2)^2
-  static const double kGravityTol = 1.0;        // m/s^2
-  return (var < kStaticVarThresh) &&
-         (std::abs(mean - cfg_.gravity) < kGravityTol);
+  // Bind the existing acceleration-norm variance test to the configured IMU
+  // noise rather than a dataset-independent source-code constant.
+  const double static_var_threshold = cfg_.sigma_a * cfg_.sigma_a;
+  static const double kGravityTol = 1.0;  // m/s^2
+  const bool is_static = std::isfinite(static_var_threshold) &&
+                         static_var_threshold > 0.0 &&
+                         var <= static_var_threshold &&
+                         std::abs(mean - cfg_.gravity) < kGravityTol;
+  std::cout << "Initializer: static test accel_norm_var=" << var
+            << ", configured_threshold=" << static_var_threshold
+            << ", accel_norm_mean=" << mean << "\n";
+  return is_static;
 }
 
 bool Initializer::Trilaterate(const std::vector<UwbRange>& ranges,
@@ -54,14 +215,23 @@ bool Initializer::Trilaterate(const std::vector<UwbRange>& ranges,
     r.push_back(range.dist);
   }
 
-  if (A.size() < 3) {
+  if (!p_out || A.size() < 3) {
     std::cerr << "Trilaterate: need >= 3 anchors, got " << A.size() << "\n";
     return false;
   }
 
-  // Initial guess: centroid of anchors
-  gtsam::Point3 p(0, 0, 0);
-  for (const auto& a : A) p = p + gtsam::Point3(gtsam::Vector3(a) / A.size());
+  for (size_t i = 0; i < A.size(); ++i) {
+    if (!gtsam::Vector3(A[i]).allFinite() || !std::isfinite(r[i]) ||
+        r[i] <= 0.0) {
+      std::cerr << "Trilaterate: invalid anchor/range input.\n";
+      return false;
+    }
+  }
+
+  Eigen::Vector3d p = Eigen::Vector3d::Zero();
+  for (const auto& a : A) p += gtsam::Vector3(a);
+  p /= static_cast<double>(A.size());
+  const bool automatic_2p5d = Coplanar2p5dSeed(A, r, &p);
 
   // Gauss-Newton: minimize sum (||A_i - p|| - r_i)^2
   // With Levenberg-Marquardt damping for stability (co-planar anchors etc.)
@@ -70,7 +240,8 @@ bool Initializer::Trilaterate(const std::vector<UwbRange>& ranges,
   const int kMaxIters = 50;
 
   double lambda = kDamping;
-  double prev_cost = 1e30;
+  bool converged = false;
+  bool accepted_any = false;
 
   for (int iter = 0; iter < kMaxIters; ++iter) {
     Eigen::Matrix3d H = Eigen::Matrix3d::Zero();
@@ -78,14 +249,22 @@ bool Initializer::Trilaterate(const std::vector<UwbRange>& ranges,
     double cost = 0.0;
 
     for (size_t i = 0; i < A.size(); ++i) {
-      Eigen::Vector3d d = gtsam::Vector3(p) - gtsam::Vector3(A[i]);
+      Eigen::Vector3d d = p - gtsam::Vector3(A[i]);
       double dn = d.norm();
+      const double e = dn - r[i];  // residual
+      cost += e * e;
       if (dn < 1e-9) continue;
       Eigen::Vector3d u = d / dn;  // unit vector from anchor to p
-      double e = dn - r[i];        // residual
       H += u * u.transpose();
       b -= u * e;
-      cost += e * e;
+    }
+    if (!std::isfinite(cost) || !H.allFinite() || !b.allFinite()) return false;
+
+    const double gradient_tolerance = 1e-10 * std::max(1.0, std::sqrt(cost));
+    if (b.lpNorm<Eigen::Infinity>() <= gradient_tolerance &&
+        IsLocallyObservable(H)) {
+      converged = true;
+      break;
     }
 
     // LM damping: H_damped = H + lambda * diag(H)
@@ -94,7 +273,10 @@ bool Initializer::Trilaterate(const std::vector<UwbRange>& ranges,
     H_damped(1, 1) += lambda * std::max(H(1, 1), 1e-6);
     H_damped(2, 2) += lambda * std::max(H(2, 2), 1e-6);
 
-    Eigen::Vector3d dp = H_damped.ldlt().solve(b);
+    Eigen::LDLT<Eigen::Matrix3d> ldlt(H_damped);
+    if (ldlt.info() != Eigen::Success) return false;
+    Eigen::Vector3d dp = ldlt.solve(b);
+    if (ldlt.info() != Eigen::Success || !dp.allFinite()) return false;
 
     // Clamp step size to prevent divergence
     double step_norm = dp.norm();
@@ -102,20 +284,37 @@ bool Initializer::Trilaterate(const std::vector<UwbRange>& ranges,
       dp *= kMaxStep / step_norm;
     }
 
-    p = gtsam::Point3(gtsam::Vector3(p) + dp);
+    const Eigen::Vector3d candidate = p + dp;
+    const double candidate_cost = RangeSquaredCost(candidate, A, r);
 
-    // LM lambda adjustment
-    if (cost < prev_cost) {
-      lambda *= 0.5;  // reduce damping, trust the model more
-      prev_cost = cost;
+    // Commit only a finite step that lowers the objective.  A rejected step
+    // must not leak into either the next linearization point or p_out.
+    if (candidate.allFinite() && std::isfinite(candidate_cost) &&
+        candidate_cost < cost) {
+      const double relative_decrease =
+          (cost - candidate_cost) / std::max(1.0, cost);
+      p = candidate;
+      accepted_any = true;
+      lambda = std::max(1e-12, lambda * 0.5);
+      if ((dp.norm() < 1e-3 || relative_decrease < 1e-12 ||
+           candidate_cost < 1e-12) &&
+          IsLocallyObservable(H)) {
+        converged = true;
+        break;
+      }
     } else {
-      lambda *= 3.0;  // increase damping, be more cautious
+      lambda *= 3.0;
+      if (!std::isfinite(lambda) || lambda > 1e18) break;
     }
-
-    if (dp.norm() < 1e-3 || (cost < 1e-6 && iter > 3)) break;
   }
 
-  *p_out = p;
+  if (!converged || !p.allFinite()) {
+    std::cerr << "Trilaterate: failed to converge"
+              << (automatic_2p5d ? " after automatic 2.5D seeding" : "")
+              << (accepted_any ? ".\n" : " without an accepted step.\n");
+    return false;
+  }
+  *p_out = gtsam::Point3(p);
   return true;
 }
 

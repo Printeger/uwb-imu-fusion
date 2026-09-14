@@ -314,8 +314,11 @@ PlBidirectionalProviderResult PlBidirectionalCusumSupportProvider::Run(
     }
     std::vector<std::vector<const ObservationRecord*>> groups(
         plan.keyframes.size());
-    for (const auto& row : plan.observations)
-      if (row.valid && row.planned) groups[row.keyframe_id].push_back(&row);
+    for (const auto& row : plan.observations) {
+      const auto& measurement = MeasurementForObservation(plan, row);
+      if (measurement.estimator_usable && measurement.selected)
+        groups[measurement.keyframe_id].push_back(&row);
+    }
     for (auto& group : groups) {
       std::stable_sort(group.begin(), group.end(), [](const auto* a,
                                                        const auto* b) {
@@ -406,9 +409,11 @@ PlBidirectionalProviderResult PlBidirectionalCusumSupportProvider::Run(
             throw std::runtime_error("PL_CONDITIONAL_POSE_JACOBIAN_INVALID");
           input.physical_jacobian.block<1, 6>(i, 0) = pose_jacobian;
           const double sigma = noise_factor->noiseModel()->sigmas()[0];
-          if (std::abs(sigma - groups[k][i]->nominal_sigma) >
+          const double planned_sigma =
+              MeasurementForObservation(plan, *groups[k][i]).sensor_sigma;
+          if (std::abs(sigma - planned_sigma) >
               1e-12 + 1e-10 * std::max(std::abs(sigma),
-                                        std::abs(groups[k][i]->nominal_sigma)))
+                                        std::abs(planned_sigma)))
             throw std::runtime_error("PL_CONDITIONAL_SIGMA_IDENTITY_MISMATCH");
           input.physical_covariance(i, i) = sigma * sigma;
           input.physical_innovation[i] = -residual[0];

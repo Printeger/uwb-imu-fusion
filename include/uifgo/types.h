@@ -16,6 +16,15 @@ namespace uifgo {
 
 // --- Raw sensor samples ---
 
+enum class UwbNoiseSemantics {
+  // Historical GraphBuilder behavior: sigma grows with the elapsed time since
+  // the previously instantiated same-anchor factor.
+  LEGACY_SELECTED_GAP_ADAPTIVE_V1,
+  // IE core v2 behavior: nominal_sigma is the observation's fixed sensor
+  // sigma and is independent of estimator selection/state density.
+  FIXED_SENSOR_SIGMA_V2,
+};
+
 struct ImuSample {
   double t;              // seconds
   Eigen::Vector3d acc;   // m/s^2, body frame
@@ -33,6 +42,8 @@ struct UwbRange {
   std::uint64_t obs_id = 0;
   double nominal_sigma = std::numeric_limits<double>::quiet_NaN();
   bool suspected_nlos = false;
+  UwbNoiseSemantics noise_semantics =
+      UwbNoiseSemantics::LEGACY_SELECTED_GAP_ADAPTIVE_V1;
   // Loader provenance captured before paper-path filtering/group reordering.
   // max() means that a legacy or synthetic caller did not provide a source
   // ordinal. source_valid is protocol validity, separate from NLOS suspicion.

@@ -172,12 +172,20 @@ Config ConfigLoader::Load(const std::string& yaml_path) {
     if (init["imu_orientation_world"])
       cfg.imu_orientation_world =
           init["imu_orientation_world"].as<std::string>();
+    if (init["progression_horizon_s"])
+      cfg.initialization_progression_horizon_s =
+          init["progression_horizon_s"].as<double>();
   }
   if (cfg.imu_orientation_world != "enu" &&
       cfg.imu_orientation_world != "ned") {
     throw std::runtime_error(
         "Unsupported initialization.imu_orientation_world: " +
         cfg.imu_orientation_world);
+  }
+  if (!(cfg.initialization_progression_horizon_s > 0.0) ||
+      !std::isfinite(cfg.initialization_progression_horizon_s)) {
+    throw std::runtime_error(
+        "initialization.progression_horizon_s must be finite and positive");
   }
 
   // --- UWB ---

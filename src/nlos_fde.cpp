@@ -555,6 +555,7 @@ FdeResult ImuAidedFdeSupportProvider::Run(
     result.observations.reserve(plan.observations.size());
     std::unordered_map<std::uint64_t, size_t> row_by_obs;
     for (const auto& input : plan.observations) {
+      const auto& measurement = MeasurementForObservation(plan, input);
       FdeObservationRecord row;
       row.obs_id = input.obs_id;
       row.source_frame_index = input.source_frame_index;
@@ -564,20 +565,24 @@ FdeResult ImuAidedFdeSupportProvider::Run(
       row.tag_id = input.tag_id;
       row.anchor_id = input.anchor_id;
       row.sensor_time = input.sensor_time;
-      row.valid = input.valid;
-      row.planned = input.planned;
-      row.keyframe_id = input.keyframe_id;
-      row.ledger_nominal_sigma_m = input.nominal_sigma;
-      row.candidate_filter_reason = input.valid && input.planned
+      row.raw_range_m = input.raw_range;
+      row.valid = measurement.estimator_usable;
+      row.planned = measurement.selected;
+      row.keyframe_id = measurement.keyframe_id;
+      row.ledger_nominal_sigma_m = measurement.sensor_sigma;
+      row.candidate_filter_reason =
+          measurement.estimator_usable && measurement.selected
                                           ? "PENDING_TEST"
-                                          : (input.valid ? "NOT_PLANNED"
-                                                         : "INVALID_INPUT_ROW");
+                                          : (measurement.estimator_usable
+                                                 ? "NOT_PLANNED"
+                                                 : "INVALID_INPUT_ROW");
       if (input.obs_id == 0 ||
           !row_by_obs.emplace(input.obs_id, result.observations.size()).second)
         return fail(FdeStatus::INVALID_INPUT,
                     "plan contains invalid or duplicate obs_id");
       result.observations.push_back(std::move(row));
-      result.planned_count += input.valid && input.planned;
+      result.planned_count +=
+          measurement.estimator_usable && measurement.selected;
     }
     if (!OptionsValid(options_) || !ContextValid(context) ||
         cfg.nlos_mode != "imu_aided_fde" || cfg.calib_lever ||

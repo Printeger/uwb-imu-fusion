@@ -1,5 +1,13 @@
 # UWB-IMU-IE 方法合同（T01）
 
+## 2026-09-14 runner identity separation amendment
+
+本修改仅澄清工程合同身份，不改方法。`PHYSICAL_GRAPH_IDENTITY`使用common initializer之前的
+确定性reference Values对实际physical graph做factor-level residual/Jacobian指纹；
+`INITIALIZATION_LINEARIZATION_IDENTITY`使用common initializer交付的当前Initial Values。前者在initializer
+重设计前后必须不变；后者可在物理图不变且迁移证据完整时更新冻结值。两者均保留原
+factor type/key/error/augmented-Jacobian粒度，不弱化factor-level assertion。
+
 状态：`T01_DONE`
 
 冻结依据：[`../v2/paper_structure.tex`](../v2/paper_structure.tex)、[`../v2/v2_roadmap.md`](../v2/v2_roadmap.md)
@@ -903,3 +911,218 @@ calibration 和 support 定义全部冻结；Stage2 前完成 DETECTION→FREEZE
 Stage2、scoring、gate、compensation 与 final optimizer 禁止读取 GT/oracle/truth/injection/clean pair；
 range 和 trajectory truth 只由封存后的独立 evaluator 使用。本 amendment 只支持 locked controlled Walk1
 development E2E 与条件式 six-input diagnostic，不升级 formal integrity、总体泛化或 C1--C3 claim。
+
+## 0913 REFACTOR-GATE-03 UWB integrity / robust baseline amendment
+
+用户以 `doc/v3/v3.md` Prompt 3 授权本轮 correctness repair。paper input 在不删除任何 raw ledger 行的
+前提下新增显式 integrity/correlation 层：`SOURCE_INVALID`、`ESTIMATOR_UNUSABLE`、`USABLE` 与
+`STALE_REPEAT` 分开表示，`suspected_nlos` 仍是独立诊断标签，不能使观测 source-invalid、unusable 或
+被 ledger 删除。unknown anchor 属于 source-valid 但 estimator-unusable；非有限 payload 或 source
+protocol invalid 才属于 source-invalid。
+
+精确重复只按完整相关 payload 的 binary64 值（range、FP RSSI、RX RSSI、source-validity payload）以及
+相同 tag/anchor 判定，并且只允许同一 source message 内的重复项，或相邻 source-message ordinal中相同
+source-range slot 的重复链。每个 raw row 保留自身 `obs_id` 和完整 provenance；重复链共享稳定 correlation
+group。state association 后每组最多实例化一个 UWB likelihood representative，其余行只在 measurement
+plan 中标记不选择。不得用近似相等、时间跳变、持续时长、RSSI suspicion 或 estimator residual 构造重复组；
+不得建立一般相关噪声模型。
+
+鲁棒保护只作用于既有 `robust_huber` / `robust_cauchy` baseline navigation solve：UWB factor 继续使用现有
+`PaperRobustNoise` 与显式 dimensionless standardized-residual scale，并直接从共同 initial Values 优化鲁棒
+graph，不再把可能已被灾难离群点拖坏的 raw Gaussian solve 当作必需 warm start。既有 Huber 1.345、Cauchy
+2.3849 配置与 provenance 机制保持，不依据 GT 调参。`all_range` 保留为明确的 plain-Gaussian stress/
+ablation comparator；fixed rejection 仍需其冻结 raw-Gaussian residual reference。IE 的 preliminary graph/
+Values、FDE/CUSUM/PL 的判断数学、refit、recoverability、scoring、Stage2/final factor 和 solver 参数完全
+不改；FDE Stage1 audit row 仅增加从 ledger 直接复制的 raw range/provenance evidence，不进入计算。
+
+## 0913 REFACTOR-GATE-04 solver certificate amendment
+
+用户以 `doc/v3/v3.md` Prompt 4 授权本轮 correctness repair。优化器的原始 termination 成功及原因必须
+原样保留，但不得单独映射为科学成功。新增一个 paper production 共享的、fail-closed 的
+`PAPER_SOLVER_CERTIFICATE_V1`，至少同时核对：最终 Values 中所有受支持状态有限、最终物理 graph
+objective 有限、graph/Values key 集一致、调用路径的 factor integrity 通过、存在 state timeline 时其
+时间有限且严格递增并与连续 `X(k)` 一一对应，以及在同一最终 graph/Values 上用既有物理尺度、`1e-6`
+objective/normalized-coordinate 容差和 binary64 roundoff safety factor `8` 得到有效且通过的
+`AuditNavigationStationarity`。Stage2/Stage4 原有非负 KKT、目标非增、scaled step 与 factor 唯一性
+审计仍是调用路径的必要条件，不能由 certificate 绕过。
+
+证书输入接口不包含 GT、ATE、truth、oracle、trajectory error 或位置范数阈值；有限的最大位置范数只可
+作为诊断输出，不能据此调参或决定成功。无导航变量的纯数值单元 fixture 可显式把 timeline/stationarity
+标为不适用，但 paper runner 的 Base FGO 与 final IE 必须提供 state timeline 并通过驻点审计。证书失败
+统一为 `CERTIFIED_FAILURE`，不得导出/发布为有效轨迹或 `CONVERGED`；final IE recovery 证书失败沿用
+既有一次 all-candidate suppression fallback，fallback 也必须独立通过同一证书。LM damping、初始化、
+迭代预算、所有 noise/kernel、detector/refit/recoverability/final factor 数学与科学 threshold 均不改变。
+
+## 0913 REFACTOR-GATE-05 behavior-preserving architecture amendment
+
+用户以 `doc/v3/v3.md` Prompt 5 授权本轮只做结构清理。唯一允许的生产行为是 Gate04 已冻结的
+ledger/state/measurement planning、integrity、factor、solver certificate、Stage1、Stage2、score、decision、
+final graph 与 artifact 语义；所有公式、浮点运算顺序、阈值、solver 参数、provider/cache identity、fallback
+和 legacy 兼容行为保持不变。顶层可执行入口、应用编排、estimator preparation、IE core 与实验/provenance
+适配器必须形成显式依赖方向；实验任务名和 debug/lock 标签只作为兼容解析或 artifact provenance 的不透明
+数据，不得成为新 core 数学分支。历史 YAML、CLI、artifact 名称和 schema 保持兼容。
+
+本 Gate 只允许可逐项回归的机械抽取及必要的 typed boundary；不得借结构清理改变 candidate、segment/group、
+refit、recoverability、policy、trajectory、objective 或 certificate 结果。若无法在上述边界内完成，应停止并
+登记 blocker，不以重写估计器或实验结果补偿结构缺口。
+
+## 0913 REFACTOR-GATE-05R-B fixed-sigma runner-contract amendment
+
+用户授权仅恢复 T04/T06/T08 的测试合同：每个现有 runner CTest 必须同时覆盖一个 test-only、确定性的
+`FIXED_SENSOR_SIGMA_V2` 成功 fixture，以及原 sim-circle fixed-sigma 的 fail-closed 负例。正例必须走真实
+application/CLI 和对应 Stage1/Stage2/recoverability/final/certificate 路径，不 mock provider；fixture 不得用
+GT/ATE 或参数搜索选取，也不是论文科学证据。负例继续要求原失败 stage/category、无成功 certificate、无
+无效下游产物，并且不得把 `MAX_ITERATIONS`/`MAX_REFIT_ITERATIONS` 改判成功。
+
+本轮只允许改 runner test、test fixture/utility 与 Gate05/05R 文档。paper path 的固定 sigma、观测/状态与
+integrity 语义、robust baseline scope、support/refit/recoverability/final 数学、所有 scientific threshold、
+LM damping/容差/预算、solver certificate 及 Gate05 依赖方向全部保持。禁止恢复 adaptive sigma、为历史负例
+删观测或调参、修改生产估计器、运行 dense/Prompt6。只有 full CTest 零失败、三项双子例和 architecture guard
+全部通过，才可把 Gate05 标为 `STRUCTURAL_REFACTOR_ACCEPTED_AFTER_GATE05R`。
+
+## 0913 REFACTOR-GATE-06 all-UWB correctness amendment
+
+本轮只执行 `doc/v3/v3.md` Prompt 6 的单次 SFUISE Walk1 clean correctness gate。主运行固定为
+`keyframe.step=1`、全部 estimator-usable 且具有独立 likelihood 代表资格的 UWB、
+`FIXED_SENSOR_SIGMA_V2` 的 `sigma_range=0.15m`，以及现有 `robust_cauchy` baseline。Cauchy
+standardized-residual scale 固定为既有 2.3849，参数来源仅为历史冻结 baseline，不根据本轮
+GT、ATE 或残差调整。robust graph 仍从 common initial Values 直接求解，不引入 raw-Gaussian
+warm start。
+
+原始 ledger 中每条观测及 suspected-NLOS 标记必须保留；完全重复仍按
+`EXACT_PAYLOAD_STALE_REPEAT_V1` 共享 correlation group，每组最多一个 UWB likelihood。本轮是
+baseline correctness 运行，不启动 Stage1/Stage2/final IE；“IE 仍可接收 persistent-NLOS 信息”只能由
+共享 input plan 中的保留和已建立的 Stage1 evidence 边界回答，不得宣称本轮实际执行了
+NLOS detector/recovery。
+
+最终 standardized residual 定义为 `q=(h+beta-z)/sigma_range`，Cauchy 权重为
+`w=1/(1+(q/2.3849)^2)`，单因子 robust objective 贡献为
+`0.5*2.3849^2*log(1+(q/2.3849)^2)`。这些诊断只从已封存的同一 final trajectory、原始观测、
+anchor/lever/beta 配置和 solver objective 计算，不回写估计器。必须保留原 optimizer termination 和
+`PAPER_SOLVER_CERTIFICATE_V1`；只有 `CERTIFIED_SUCCESS` 才可导出有效轨迹。不改 IE 数学、
+solver/noise/kernel 参数、插值、B-spline、continuous-time state 或论文 claim。
+
+## 0913 REFACTOR-GATE-06D optimization-basin diagnosis amendment
+
+本轮只执行用户授权的 Gate06D truth-free 诊断，不修复估计器。诊断必须复用 Gate06 锁定的 Walk1
+step=1 输入账本、usable 集合、重复代表、graph topology、初始 `Values`、IMU/先验、固定
+`sigma_range=0.15m`、solver 参数与 100-call budget；先审计初始状态、逐 UWB observation-to-state
+关联、初始 raw residual/standardized residual/既有 Cauchy 权重，以及 anchor/world-body/lever/factor key/
+相邻 IMU interval 构造。若发现关联或 factor/frame correctness bug，停止 loss replay 并只报告该 bug。
+
+只有上述审计未发现 correctness bug 时，才允许在独立 diagnostic-only 工具中把同一 base graph 的 UWB
+noise wrapper 分别替换为现有 Cauchy scale `2.3849`、现有 Huber parameter `1.345` 或 plain Gaussian，
+各一次从完全相同 initial `Values` 运行；不得改变生产入口、checked-in 参数、sigma、initialization、
+factor mask、LM budget/termination、IMU 模型或任何 IE Stage1--4 定义。diagnostic terminal `Values` 即使
+未收敛也只能用于有限性、驻点、raw residual 和位置模审计，不得作为有效 trajectory 导出。GT、ATE、
+truth/oracle 全程不可读；本 amendment 不授权 extended-budget 作为生产修复，也不授权实现任何 repair。
+
+## 0913 REFACTOR-GATE-06R-A causal common-initialization amendment
+
+用户在 Gate06D 已确定 `DENSE_INITIALIZATION_FAILURE` 后，授权仅替换 paper estimator 的共同
+`Initial Values` 生成方式。保留既有首状态的 truth-free 静止检测、重力/姿态、trilateration 与可选 yaw
+初始化；禁止继续以该首状态一次性开环 IMU 预测整段 recording 作为共同初值。新增的 progressive
+initializer 以固定校准的同一 `X/V/B`、实际 `CombinedImuFactor` 和实际 raw UWB factor 为输入，按时间
+从前向后处理有界局部窗口；每个窗口的新状态由最近已接受边界状态和同一 PIM 预测，仅使用 timestamp
+不晚于当前 frontier 的测量求解。已提交状态不被后续窗口覆盖，因而未来测量不能改变较早 frontier 的
+已接受输出。
+
+初始化局部图允许将现有 UWB Gaussian noise 仅在 initializer 内包装为既有
+`PaperRobustNoise(Huber, 1.345)`；该尺度固定继承，不调参。初始化求解必须复用 checked LM 和现有
+navigation stationarity/有限性/key 一致性检查。局部边界约束只属于初始化条件，不进入或替换最终物理
+图中的 prior/IMU/UWB factor。initializer 最终只返回一份完整有限的 `X/V/B Values`；最终 Base FGO 图、
+UWB sensor sigma、Cauchy `2.3849`、LM 参数、solver certificate 以及 Stage1--4 数学全部保持不变。
+
+唯一新增 progression 工程参数为 `initialization.progression_horizon_s`，单位秒，语义是相邻 causal
+frontier 的最大时间跨度；paper common initializer 的固定值为 `0.25 s`。checkpoint 仅由冻结 state
+timestamps 和该时长确定，不依赖 validity、selected count、sigma、residual、GT/ATE 或 NLOS 标签，不做
+sweep。任一局部窗口求解、驻点、有限性或身份审计失败即返回 `INITIALIZATION_FAILED`，记录 frontier
+index/time/state，且不得回退到整段 open-loop seed。此次 amendment 不授权 EKF/iSAM2、插值、另一套
+estimator、最终 Gate06 solve、IE stages 或论文 claim 升级。
+
+实施期工程勘误：最初登记的 `1.0 s` 在不读取真实数据/GT/ATE 的确定性 drift fixture 上，使第二局部块
+耗尽冻结 100-call LM 预算；在任何 Walk1 repair audit 运行前，将唯一 cadence 一次性收紧并冻结为
+`0.25 s`，以保持每个 causal extension 为短局部块。该勘误仅依据工程收敛失败，不是参数 sweep，失败
+记录不得删除。initializer 驻点审计复用既有五类物理尺度与 binary64 roundoff，使用固定
+`1e-5 objective/normalized-coordinate` 的 initialization-only 数值资格；它不进入最终 LM/certificate。
+
+若首个 checked-LM block 只因预算或 lambda-search 结束，且保留 finite、同 key、目标有限的
+last-accepted Values 但尚未达到上述驻点资格，允许从该精确 Values 对同一局部图执行至多一次确定性
+continuation；policy、100-call block、容差、图和数据全部不变。continuation 必须计入 retry；第二块后
+仍不合格即 fail closed。禁止更多 retry、预算档位或参数 sweep。
+
+## 0914 REFACTOR-GATE-06R-D frontier-51 diagnostic amendment
+
+用户授权只诊断 Gate06R-A 的 Walk1 frontier 51，不实施修复。诊断必须从同一 raw 输入、plan、物理 graph
+和首状态重放已冻结的逐 state causal initializer，并审计 accepted frontier 45--50、frontier 51 首块与当前
+唯一 continuation 的 exact terminal。允许从失败 terminal 额外运行相同 graph/Huber/sigma/LM/`1e-5`
+资格的 continuation block，但仅作诊断，不能写回生产 retry。另建同一 frontier 51、只用其 timestamp 及
+更早观测、固定最早边界的既有 `0.25 s` joint sliding-window 对照；窗口长度不得调整。
+
+局部线性化只用现有 factor/Jacobian machinery，报告 whitened Jacobian/normal rank、谱、condition、弱方向
+及 IMU-boundary/UWB/bias gradient 分解；不得加入 damping、jitter、prior 或改图。全程禁止 GT/ATE/future
+measurement、生产 initializer/solver/noise/threshold/retry、final Base FGO、certificate 与 IE Stage1--4
+修改。结果只可归入任务卡 A--F 的最窄有证据原因，并给出下一 repair 建议，不自动实施。
+
+## 0914 REFACTOR-GATE-06R-E bounded fixed-lag common initializer amendment
+
+用户依据 Gate06R-D 的 `ONE_STATE_FRONTIER_CONDITIONING_FAILURE` 诊断，授权只把 production common
+initializer 从固定全部历史、仅优化 frontier 的零滞后形式改为有界 fixed-lag causal initializer。唯一时长
+继续使用既有 `initialization.progression_horizon_s=0.25s`，其实际语义迁移为 initializer-only fixed-lag
+horizon；不新增第二时长参数、不 sweep。frontier `k` 的 boundary 是满足
+`t_k-t_boundary<=0.25s` 的最早已有 state；boundary 的 X/V/B 固定，只联合优化其后的全部 X/V/B 至 k。
+窗口只包含这些相邻 physical CombinedImuFactor 和关联 state timestamp 不晚于 frontier 的实际 UWB
+representative；UWB 仅克隆并包装现有 Huber 1.345，sigma/测量/factor 不变。
+
+窗口通过既有 checked LM、一次同图 continuation、finite/key/objective 和 `1e-5` navigation stationarity
+全部资格后，才原子写回窗口内全部自由 state。随 boundary 前移而离开 lag 的 state 永久冻结；lag 内近期
+state 允许后续窗口修订。因此术语固定为 `BOUNDED_FIXED_LAG_CAUSAL_INITIALIZER`，不得声称 strict
+zero-lag causality。任何窗口失败仍返回空完整 Values 和 `INITIALIZATION_FAILED`，不得恢复全记录开环 tail。
+raw ledger、repeat/group/association、physical final graph、sensor/IMU noise、anchor/lever、final Cauchy/LM/
+certificate、PL/CUSUM 与 IE Stage1--4 全部冻结。本轮不运行 final Gate06、GT/ATE 或 IE stages。
+
+## 0914 IE-CORE-STABILIZATION-FINAL initialization-seed contract amendment
+
+用户明确纠正初始化与科学求解认证混用：`INITIALIZATION_SEED_QUALITY` 仅是 truth-free basin-entry 工程
+资格，必须与未修改的 `PAPER_SOLVER_CERTIFICATE_V1` 分离。保留现有 0.25s bounded fixed-lag causal
+initializer、物理 CombinedImu/UWB factors、代表集合、固定 sigma、Huber 1.345、LM 参数与一次 continuation；
+局部 `1e-5` stationarity 继续完整记录为诊断，但 MAX_ITERATIONS、LAMBDA_SEARCH_EXHAUSTED 或非驻点本身
+不再否决有限且质量合格的 seed，也不得称为 certified convergence。
+
+局部 seed gate 只检查 graph/key/time、有限 X/V/B/objective、terminal objective 不劣于 entering seed（只加
+binary64 roundoff allowance），以及相对固定 boundary 的位置/速度变化未超过由既有 `max_range`、`v_max`
+与窗口时长导出的 catastrophe envelope；无有效 terminal Values 或任一检查失败仍 fail closed。全913-state
+完成后，在同一物理 graph/Values 上执行一次 truth-free full seed gate：全部状态/预测/residual有限，最大位置
+模不超过 anchor 世界坐标最大模加 `max_range`，median绝对raw residual不超过 `max_range`，且 production
+Cauchy 下 weight<0.5 的比例必须小于0.9。以上是防止复现 Gate06D 千米尾和94.3%沉默图的固定工程边界，
+不读取ATE、不调整科学阈值。
+
+只有 full seed gate、全部回归/architecture/full CTest 通过才自动运行原 Gate06 Cauchy；其失败时仅允许一次
+同图/同sigma/同LM/Huber1.345 warm-start，再从其terminal Values运行原Cauchy。最终成功仍只由未修改的
+Solver Certificate决定；不得增加其他fallback、budget、kernel或参数搜索，IE Stage1--4保持冻结。
+
+## 0914 FIXED_LAG_BOUNDARY_SEMANTICS_FIX amendment
+
+用户授权窄幅 correctness/compatibility 修复：`initialization.progression_horizon_s=0.25s` 只约束可重新
+优化的历史状态，不约束相邻记录状态的最大采样间隔。frontier `k` 的 free states 是满足
+`t_k-t_i<=0.25s` 的最大后缀；若该后缀前存在状态，则其 immediate predecessor 作为 fixed boundary，
+即使 boundary 年龄或 boundary→首个free state的物理IMU间隔超过0.25s，也必须保留该桥接factor。
+首状态仍是不可重开的初始固定边界；时间戳不递增、缺失/非法IMU覆盖或PIM时长、key/finite/seed-quality
+失败继续fail closed。删除仅因cadence大于lag而失败的条件，不改lag、Huber、sigma、LM/retry、seed gate、
+final graph/estimator、Solver Certificate或IE数学；initializer identity按boundary semantics版本化。
+
+## 0914 COMPLETE_HUBER_TO_CAUCHY_WARM_START amendment
+
+用户授权实现已冻结 fallback 的缺失 handoff：`INTERMEDIATE_OPTIMIZATION_SEED` 是仅供同一
+Base-FGO chain 后续求解使用的显式类型，与 `CERTIFIED_FINAL_ESTIMATE` 分离。Huber 1.345
+的 last-accepted terminal 可保留原 raw termination、stationarity 和失败 certificate；不得标记
+converged/certified、不得作为 scientific trajectory 导出，也不得传入 GT evaluator。
+
+中间种子 gate 不要求最终 stationarity/certificate，但必须要求 graph/Values keys 一致、
+全部 X/V/B 与 objective 有限、UWB residual/sigma 有限、terminal objective 不高于 Huber
+entering objective 加 binary64 roundoff allowance，且状态不超过既有 initializer full-seed 使用的
+position/velocity catastrophe envelope。包络只由现有 anchor、`max_range`、`v_max` 与已冻结
+0.25s horizon 导出，不新增可调参数。gate 通过后只运行一次原 unchanged Cauchy
+2.3849 Base FGO；其原 Solver Certificate 是唯一 `CERTIFIED_FINAL_ESTIMATE` 准入。本
+amendment 不修改 initializer、graph/factor、ledger/representative、sigma、IMU/prior、LM/budget
+或 IE Stage1--4。

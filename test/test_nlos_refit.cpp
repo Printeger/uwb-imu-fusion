@@ -40,6 +40,25 @@ struct TempYaml {
   ~TempYaml() { boost::filesystem::remove(path); }
 };
 
+void AddSelectedObservation(uifgo::PaperInputPlan* plan,
+                            uifgo::ObservationRecord record,
+                            size_t keyframe_id, double sensor_sigma) {
+  record.ledger_index = plan->observations.size();
+  record.source_valid = true;
+  record.source_validity_reason = "SOURCE_VALID";
+  uifgo::MeasurementPlanEntry measurement;
+  measurement.obs_id = record.obs_id;
+  measurement.observation_index = record.ledger_index;
+  measurement.estimator_usable = true;
+  measurement.usability_reason = "ESTIMATOR_USABLE";
+  measurement.selected = true;
+  measurement.selection_reason = "SELECTED_EXACT_STATE_FRAME";
+  measurement.keyframe_id = keyframe_id;
+  measurement.sensor_sigma = sensor_sigma;
+  plan->observations.push_back(std::move(record));
+  plan->measurements.push_back(std::move(measurement));
+}
+
 uifgo::PaperInputPlan ParserPlan() {
   uifgo::PaperInputPlan plan;
   plan.keyframes = {{0, 0, 1.0, 7}, {1, 1, 2.0, 7}};
@@ -50,11 +69,7 @@ uifgo::PaperInputPlan ParserPlan() {
     record.tag_id = 7;
     record.anchor_id = (i % 2) + 1;
     record.raw_range = 4.0;
-    record.valid = true;
-    record.planned = true;
-    record.keyframe_id = i / 2;
-    record.nominal_sigma = 0.1;
-    plan.observations.push_back(record);
+    AddSelectedObservation(&plan, record, i / 2, 0.1);
   }
   return plan;
 }
@@ -135,11 +150,7 @@ RefitFixture MakeRefitFixture(double candidate_amplitude) {
       record.tag_id = 7;
       record.anchor_id = anchor.id;
       record.raw_range = raw;
-      record.valid = true;
-      record.planned = true;
-      record.keyframe_id = k;
-      record.nominal_sigma = 0.05;
-      fixture.plan.observations.push_back(record);
+      AddSelectedObservation(&fixture.plan, record, k, 0.05);
       if (candidate) segment.obs_ids.push_back(obs_id);
       ++obs_id;
     }
@@ -249,7 +260,7 @@ TEST(OracleSupportProvider, RejectsAmplitudeUnknownAndDuplicateOwnership) {
 
 TEST(OracleSupportProvider, RejectsCrossLinkUnplannedAndEmptyInterval) {
   auto plan = ParserPlan();
-  plan.observations[0].planned = false;
+  plan.measurements[0].selected = false;
   TempYaml cross_link(
       "schema: t04_oracle_support_v1\n"
       "T04_ORACLE_SUPPORT_DEBUG_ONLY: true\n"
@@ -673,7 +684,7 @@ TEST(SegmentRefitter,
     fixture->plan.observations[1].raw_range += 0.25;
   });
   run_case("sigma", [](RefitFixture* fixture) {
-    fixture->plan.observations[1].nominal_sigma = 0.075;
+    fixture->plan.measurements[1].sensor_sigma = 0.075;
   });
   run_case("anchor", [](RefitFixture* fixture) {
     fixture->cfg.anchors[1].pos.x() += 0.3;
@@ -1052,10 +1063,12 @@ TEST(NlosScoring, MeasurementRhsChangeDoesNotEnterInformationColumns) {
           return item.id == record->anchor_id;
         });
     ASSERT_NE(anchor, fixture.cfg.anchors.end());
+    const auto& measurement =
+        uifgo::MeasurementForObservation(fixture.plan, *record);
     changed.graph.replace(index, uifgo::MakeSegmentUwbFactor(
-        X(record->keyframe_id), C(0), anchor->pos,
+        X(measurement.keyframe_id), C(0), anchor->pos,
         fixture.cfg.lever_arm_init, record->raw_range + 3.0,
-        record->nominal_sigma, 0.0));
+        measurement.sensor_sigma, 0.0));
     replaced = true;
     break;
   }
@@ -1190,8 +1203,10 @@ TEST(NlosScoring, ExcludedOtherCandidateGroupCannotAffectCurrentGroup) {
         [&](const uifgo::AnchorConfig& item) {
           return item.id == record->anchor_id;
         });
+    const auto& measurement =
+        uifgo::MeasurementForObservation(fixture.plan, *record);
     changed.graph.replace(index, uifgo::MakeSegmentUwbFactor(
-        X(record->keyframe_id), C(1), anchor->pos,
+        X(measurement.keyframe_id), C(1), anchor->pos,
         fixture.cfg.lever_arm_init, record->raw_range + 10.0, 0.5, 0.0));
   }
   const auto perturbed = uifgo::ScoreRefitRecoverability(
@@ -1265,11 +1280,8 @@ TEST(NlosScoring, OnlineBetaIsNuisanceAndItsRealPriorResolvesConfounding) {
   observation.obs_id = 42;
   observation.tag_id = 7;
   observation.anchor_id = 1;
-  observation.keyframe_id = 0;
   observation.raw_range = raw;
-  observation.nominal_sigma = sigma;
-  observation.valid = observation.planned = true;
-  plan.observations.push_back(observation);
+  AddSelectedObservation(&plan, observation, 0, sigma);
 
   const auto with_prior = uifgo::ScoreRefitRecoverability(
       refit, support, plan, cfg);
@@ -1507,14 +1519,18 @@ TEST(SegmentRefitter, ExactZeroResidualMetadataAcceptsGtsamNegativeZero) {
   // Set a real noncandidate range to exactly its prediction at these Values.
   // ExpressionFactor returns -0 while the arithmetic residual returns +0.
   auto& record = fixture.plan.observations.at(1);
-  const auto pose = fixture.values.at<gtsam::Pose3>(X(record.keyframe_id));
+  const auto& measurement =
+      uifgo::MeasurementForObservation(fixture.plan, record);
+  const auto pose =
+      fixture.values.at<gtsam::Pose3>(X(measurement.keyframe_id));
   const auto anchor = fixture.cfg.anchors.at(1).pos;
   record.raw_range = (pose.transformFrom(fixture.cfg.lever_arm_init) - anchor).norm();
   for (const auto& meta : fixture.metadata) {
     if (meta.obs_id == record.obs_id)
       fixture.graph.at(meta.factor_index) = uifgo::MakeUwbFactor(
-          X(record.keyframe_id), 0, 0, 0, anchor,
-          fixture.cfg.lever_arm_init, record.raw_range, record.nominal_sigma,
+          X(measurement.keyframe_id), 0, 0, 0, anchor,
+          fixture.cfg.lever_arm_init, record.raw_range,
+          measurement.sensor_sigma,
           false, false, false, 0.0);
   }
   auto support = uifgo::ToSupportPartition(fixture.support);

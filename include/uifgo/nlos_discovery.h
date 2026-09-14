@@ -17,8 +17,10 @@
 
 namespace uifgo {
 
-constexpr const char* kT06AutomaticDiscoveryLabel =
+constexpr const char* kAutomaticDiscoveryDevelopmentProvenance =
     "T06_AUTOMATIC_DISCOVERY_DEVELOPMENT_ONLY";
+constexpr const char* kT06AutomaticDiscoveryLabel =
+    kAutomaticDiscoveryDevelopmentProvenance;
 
 enum class FusedLassoStatus {
   CONVERGED,

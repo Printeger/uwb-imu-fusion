@@ -121,6 +121,7 @@ add_library(${PROJECT_NAME}
   src/data_loader.cpp
   src/outlier_filter.cpp
   src/initializer.cpp
+  src/common_initializer.cpp
   src/imu_preint.cpp
   src/imu_sync.cpp
   src/uwb_factor.cpp
@@ -130,6 +131,7 @@ add_library(${PROJECT_NAME}
   src/trajectory_io.cpp
   src/logger.cpp
   src/hash_utils.cpp
+  src/estimator_core.cpp
   src/paper_input.cpp
   src/t07_scenario_cache.cpp
   src/nlos_solver_utils.cpp
@@ -184,7 +186,10 @@ add_dependencies(uwb_imu_fgo_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_E
 # Thin batch entry for the paper input path. It intentionally bypasses the
 # legacy Optimizer GNC/rejection loop; it supports the T02 all-range graph and
 # the T04 oracle-support debug refit.
-add_executable(uwb_imu_fgo_paper_runner tools/run_ie_paper.cpp)
+add_executable(uwb_imu_fgo_paper_runner
+  tools/run_ie_paper.cpp
+  tools/paper/run_ie_app.cpp
+)
 target_link_libraries(uwb_imu_fgo_paper_runner
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
@@ -316,6 +321,9 @@ if(GTest_FOUND)
   catkin_add_gtest(test_graph_builder test/test_graph_builder.cpp)
   target_link_libraries(test_graph_builder ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
 
+  catkin_add_gtest(test_common_initializer test/test_common_initializer.cpp)
+  target_link_libraries(test_common_initializer ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
+
   catkin_add_gtest(test_optimizer test/test_optimizer.cpp)
   target_link_libraries(test_optimizer ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
 
@@ -395,6 +403,10 @@ if(GTest_FOUND)
     COMMAND ${PYTHON_EXECUTABLE} -B
       ${CMAKE_CURRENT_SOURCE_DIR}/test/test_t09_runner_contract.py)
 
+  add_test(NAME test_refactor_gate05_architecture
+    COMMAND ${PYTHON_EXECUTABLE} -B
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_refactor_gate05_architecture.py)
+
   add_test(NAME test_ie0911_evaluator
     COMMAND ${PYTHON_EXECUTABLE} -B ${CMAKE_CURRENT_SOURCE_DIR}/test/test_ie0911_evaluator.py)
   add_test(NAME test_ie0911_step2
@@ -439,6 +451,26 @@ target_link_libraries(uwb_imu_fgo_stage2_stationarity_forensics
   ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable
   ${Boost_LIBRARIES} yaml-cpp)
 add_dependencies(uwb_imu_fgo_stage2_stationarity_forensics
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+# Gate06D truth-free optimization-basin diagnostic. This target is separate
+# from the production paper runner and never publishes estimator outputs.
+add_executable(uwb_imu_fgo_all_uwb_optimization_diagnosis
+  tools/run_all_uwb_optimization_diagnosis.cpp)
+target_link_libraries(uwb_imu_fgo_all_uwb_optimization_diagnosis
+  ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable
+  ${Boost_LIBRARIES} yaml-cpp)
+add_dependencies(uwb_imu_fgo_all_uwb_optimization_diagnosis
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+# Gate06R-D truth-free frontier-51 diagnostic. This reconstructs local
+# initialization problems without changing or publishing production results.
+add_executable(uwb_imu_fgo_frontier51_diagnosis
+  tools/run_common_initialization_frontier51_diagnosis.cpp)
+target_link_libraries(uwb_imu_fgo_frontier51_diagnosis
+  ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable
+  ${Boost_LIBRARIES} yaml-cpp)
+add_dependencies(uwb_imu_fgo_frontier51_diagnosis
   ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(test_fde_math test/test_fde_math.cpp)

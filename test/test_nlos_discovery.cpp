@@ -1444,6 +1444,37 @@ TEST(CheckedConditionalLmPolicy,
   EXPECT_GE(result.convergence.qualification_seconds, 0.0);
 }
 
+TEST(CheckedConditionalLmCharacterization,
+     DefaultGenericConvergenceDoesNotCertifyStationarity) {
+  using gtsam::symbol_shorthand::X;
+  gtsam::NonlinearFactorGraph graph;
+  graph.add(gtsam::PriorFactor<gtsam::Pose3>(
+      X(0), gtsam::Pose3(),
+      gtsam::noiseModel::Isotropic::Sigma(6, 1.0)));
+  gtsam::Values initial;
+  initial.insert(X(0), gtsam::Pose3(
+      gtsam::Rot3::RzRyRx(0.4, 0.2, -0.3),
+      gtsam::Point3(4.0, -3.0, 2.0)));
+
+  uifgo::CheckedLmOptions options;
+  options.max_iterations = 1;
+  options.relative_tolerance = 1.0;
+  options.absolute_tolerance = 1e9;
+  options.policy = uifgo::ConditionalLmPolicy::GTSAM_CHECK_ONLY_V1;
+  const auto result =
+      uifgo::RunCheckedConditionalLm(graph, initial, options);
+  ASSERT_TRUE(result.converged) << result.reason;
+  EXPECT_EQ(result.reason, "CONDITIONAL_LM_CONVERGED");
+
+  // This is a characterization of the current default, not the desired
+  // scientific-success rule: linked GTSAM termination can be true while an
+  // independent navigation stationarity audit is still false.
+  const auto audit = uifgo::AuditNavigationStationarity(
+      graph, result.values, options.navigation_scales, 0.0, 1.0);
+  ASSERT_TRUE(audit.valid) << audit.reason;
+  EXPECT_FALSE(audit.stationary);
+}
+
 TEST(CheckedConditionalLmPolicy,
      SimultaneousGenericAndStationarityStopMatchesDefault) {
   using gtsam::symbol_shorthand::X;
@@ -1613,15 +1644,31 @@ TEST(Stage1RegularizedResult, UsesOnePhysicalGraphAndOnlyValidPlannedBiases) {
   valid.tag_id = 1;
   valid.anchor_id = 2;
   valid.raw_range = 1.4;
-  valid.valid = true;
-  valid.planned = true;
-  valid.keyframe_id = 0;
-  valid.nominal_sigma = 1.0;
+  valid.ledger_index = 0;
+  valid.source_valid = true;
+  valid.source_validity_reason = "SOURCE_VALID";
   auto invalid = valid;
   invalid.obs_id = 8;
-  invalid.valid = false;
-  invalid.planned = false;
+  invalid.ledger_index = 1;
+  invalid.source_valid = false;
+  invalid.source_validity_reason = "SOURCE_INVALID";
   plan.observations = {valid, invalid};
+  uifgo::MeasurementPlanEntry selected;
+  selected.obs_id = 7;
+  selected.observation_index = 0;
+  selected.estimator_usable = true;
+  selected.usability_reason = "ESTIMATOR_USABLE";
+  selected.selected = true;
+  selected.selection_reason = "SELECTED_EXACT_STATE_FRAME";
+  selected.keyframe_id = 0;
+  selected.sensor_sigma = 1.0;
+  uifgo::MeasurementPlanEntry rejected;
+  rejected.obs_id = 8;
+  rejected.observation_index = 1;
+  rejected.usability_reason = "SOURCE_INVALID";
+  rejected.selection_reason = "NOT_ESTIMATOR_USABLE";
+  rejected.sensor_sigma = 1.0;
+  plan.measurements = {selected, rejected};
   uifgo::DiscoveryResult discovery;
   discovery.status = uifgo::DiscoveryStatus::CONVERGED;
   discovery.navigation_values = values;

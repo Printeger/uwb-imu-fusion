@@ -1,3 +1,212 @@
+# 0914 Base FGO three-cell stability audit：0/3 certified
+
+[`BASE_FGO_THREE_CELL_STABILITY_REPORT.md`](../docs/refactor/BASE_FGO_THREE_CELL_STABILITY_REPORT.md)
+只运行 Simulation clean、Walk1 sparse step=4 和 Walk1 all-UWB step=1 三个非IE cell。三者
+finite terminal 与 intermediate gate 均正常，但 unchanged Cauchy final 的 max scaled gradient 分别为
+43.86699425427338、0.5243199396112124、4.531465978234358，全部未过原 Solver Certificate。
+因此证据只支持“能生成有限 terminal”，不支持这三类基本场景中任何一类已稳定可用。
+无trajectory/GT/ATE，不升级 C1--C3/T10/T11；单次每 cell 也不构成统计稳定性结论。
+
+# 0914 Huber→Cauchy warm-start 已完成，最终 certificate 仍失败
+
+[`HUBER_CAUCHY_WARM_START_REPORT.md`](../docs/refactor/HUBER_CAUCHY_WARM_START_REPORT.md)
+证明工程上已分离不可发布的 `INTERMEDIATE_OPTIMIZATION_SEED` 和唯一可发布的
+`CERTIFIED_FINAL_ESTIMATE`。全部回归通过；锁定 Walk1 Huber terminal 在原 certificate 失败
+的同时通过 truth-free intermediate gate，使 unchanged Cauchy final solve 完整运行。Cauchy raw
+termination 为 converged，但 max scaled gradient=4.531465978234358，仍被原
+`PAPER_SOLVER_CERTIFICATE_V1` 以非驻点拒绝。无trajectory、GT/ATE/P50/P95未运行，故本证据仅支持
+warm-start contract 正确执行与 fail-closed 导出边界，不支持 all-UWB correctness、定位精度、
+方法收益或 C1--C3/T10/T11 升级。`ALL_UWB_CORRECTNESS_FAIL`。
+
+# 0914 runner initializer-linearization contract migration
+
+[`UPDATE_RUNNER_LINEARIZATION_CONTRACT_AFTER_INITIALIZER_CHANGE_REPORT.md`](../docs/refactor/UPDATE_RUNNER_LINEARIZATION_CONTRACT_AFTER_INITIALIZER_CHANGE_REPORT.md)
+将T04/T06/T08身份分离为不变的`PHYSICAL_GRAPH_IDENTITY`和可版本化的
+`INITIALIZATION_LINEARIZATION_IDENTITY`。当前图在旧reference Values上精确复现
+`a029fb...`/`51a986...`，新initializer输出为`cd46d0...`/`1a6cb7...`；因此只支持
+`EXPECTED_INITIALIZER_LINEARIZATION_MIGRATION`的工程合同结论。回归36/36和Walk1 seed gate通过，但
+Cauchy及后续Huber均未通过Solver Certificate，无GT评价。不支持定位精度、方法收益或C1--C3升级。
+
+# 0914 FIXED_LAG_BOUNDARY_SEMANTICS_FIX：cadence语义已修，runner identity回归STOP
+
+[`FIXED_LAG_BOUNDARY_SEMANTICS_FIX_REPORT.md`](../docs/refactor/FIXED_LAG_BOUNDARY_SEMANTICS_FIX_REPORT.md)
+记录了V4 boundary语义：0.25s只限制可重优化free suffix，允许更旧的immediate predecessor固定边界并保留
+物理IMU bridge。initializer 13/13通过，含1s cadence、dense multi-state、未来隔离、lag外冻结、bridge及
+缺失/零时长PIM fail-closed；没有改变科学参数或IE数学。
+
+重链接后的T04/T06/T08均越过旧cadence失败，但历史sim-circle冻结linearization identity由`a029…`变为
+`cd46…`，三项测试按原期望失败。依Prompt停止且未改测试期望，core/architecture/full CTest、Walk1、
+Gate06/fallback/GT均NOT_RUN。本结果不支持完整913-state seed、all-UWB正确性、精度或C1--C3升级；结论为
+`IE_CORE_STABILIZATION_FAILED`。
+
+# 0914 IE-CORE-STABILIZATION-FINAL：seed/certificate 已分离，完整回归门失败
+
+[`IE_CORE_STABILIZATION_FINAL_REPORT.md`](../docs/refactor/IE_CORE_STABILIZATION_FINAL_REPORT.md)
+记录了 `INITIALIZATION_SEED_QUALITY_V1` 的实现：局部非驻点终止可在有限、结构一致、目标未劣化、状态
+物理局部且UWB残差未灾难恶化时作为近似seed提交；原始LM termination和stationarity继续记录。
+`PAPER_SOLVER_CERTIFICATE_V1` 未修改，且同一非驻点Values作为final estimate时仍被定向回归拒绝。
+
+initializer 11/11、Gate05 architecture及catkin core 512/512通过，但完整CTest仅33/36：T04/T06/T08
+runner合同fixture的1s状态cadence被冻结0.25s fixed-lag前置检查拒绝。依照任务STOP边界，锁定Walk1
+913-state initialization、Gate06、fallback、GT评价及IE实验均未运行。因此本轮只支持合同分离已实现和
+回归阻塞已定位，不支持完整seed恢复、all-UWB正确性、精度或任何C1--C3提升。最终结论为
+`IE_CORE_STABILIZATION_FAILED`。
+
+# 0914 REFACTOR-GATE-06R-E：fixed-lag 通过 frontier51，但全段在 frontier125 失败
+
+[fixed-lag 修复报告](../docs/refactor/COMMON_INITIALIZATION_FIXED_LAG_REPORT.md)记录了 initialization-only
+`BOUNDED_FIXED_LAG_CAUSAL_INITIALIZER` 的实现。唯一 `0.25s` lag、Huber `1.345`、fixed sigma、checked LM、
+一次 continuation 与 `1e-5` 资格均未调；final physical graph、Cauchy/certificate 与 IE 数学未改。
+定向测试8/8通过，但独立复现 one-state fail/fixed-lag pass 的专门 unit fixture 未在强制STOP前补齐。
+
+锁定 Walk1 step1 初始化审计的前124个frontier接受（因此越过frontier51），第125个以
+`max_scaled_gradient=0.0011026163512872778`、dominant `x125` 被拒并返回空full Values。GT/ATE、final FGO、
+IE stages均未运行；core/architecture回归在失败后按STOP记为NOT_RUN。故该证据只支持“fixed-lag实现仍然
+fail closed”以及“原frontier51不再是首个阻塞点”，不支持完整初始化恢复、Cauchy capture恢复、定位精度、
+方法收益或Gate06解锁。`COMMON_INITIALIZATION_FIXED_LAG_FAIL`，C1--C3/T10/T11不升级。
+
+# 0914 REFACTOR-GATE-06R-A：因果共同初始化实现通过工程门，但 Walk1 全段初始化失败
+
+[共同初始化修复报告](../docs/refactor/COMMON_INITIALIZATION_REPAIR_REPORT.md)记录了只作用于 Initial Values
+的 truth-free causal UWB-aided progressive initializer。确定性 initializer 6/6、architecture guard 和
+502项 core regression 均通过；物理 final graph、fixed sigma、Cauchy、生产 solver/certificate 和 IE 数学
+未改。失败 prefix 不返回 full open-loop tail，故该实现支持“已消除静默开环 fallback”这一工程正确性结论。
+
+锁定 SFUISE Walk1 step1 audit 仅接受 50 个 prefix，第51个在唯一允许的同图同参数 continuation 后仍以
+`max_scaled_gradient=1.0741484355758502e-05 > 1e-5` 被拒；initializer 返回空 `Values`。因此不存在合法的
+全段 post-repair 位置、速度、残差或 Cauchy 权重分布，Gate06 final、GT/ATE 与 IE stages 均 `NOT_RUN`。
+这不支持定位精度、UWB capture 已恢复、方法收益或增加预算/放宽门限的主张；Gate06 rerun仍 blocked，
+C1--C3、T10=C2-C 与 T11=C 均不升级。
+
+# 0913 REFACTOR-GATE-06D：只定位初始优化盆地，不新增论文 claim
+
+[Gate06D 诊断报告](../docs/refactor/ALL_UWB_OPTIMIZATION_DIAGNOSIS.md)在不读取 GT/ATE/truth/oracle 的
+边界内确认：Gate06 exact common initial Values 已产生全记录 open-loop 漂移，位置模 median/max 为
+162.809/1188.033m；全部2276条UWB association、anchor/frame/lever/factor equation、固定sigma与912条
+IMU interval审计通过。初始Cauchy median weight仅4.853e-6，说明多数测距在iteration0已脱离局部capture
+basin。Cauchy/Huber/Gaussian同图同初值对照均未得到通过驻点资格的结果；Gaussian raw generic termination
+明确为非驻点坏解。
+
+这只支持 `DENSE_INITIALIZATION_FAILURE` 的软件诊断归因，并把Cauchy capture weakness列为次因；不支持
+定位精度、方法收益、loss优越性、增加iteration、参数迁移或正式实验结论。Gate06仍FAIL，C1--C3、
+T10=C2-C与T11=C不升级；repair、Gate06 rerun和论文数字均未执行。
+
+# 0913 REFACTOR-GATE-04：termination 不再等于科学成功
+
+[Gate 04 工程报告](../docs/refactor/REFACTOR_GATE_04_REPORT.md)只支持一项 correctness 结论：Base FGO
+与 final IE 现在共用 `PAPER_SOLVER_CERTIFICATE_V1`，并分别记录 optimizer termination 和
+`CERTIFIED_SUCCESS`/`CERTIFIED_FAILURE`。只有同时通过有限状态/objective、graph/Values key、factor、
+适用 timeline、既有 solver-specific 检查与同一最终图/Values 上的 navigation stationarity，结果才可标记
+valid 和导出轨迹。确定性 10m 非驻点 fixture 即使携带 small-objective-change 成功 termination，也被证书
+拒绝；正常 baseline、recovery 与 fallback fixtures 仍通过。全包回归 488/488 通过。
+
+这不是定位精度、收敛率、完整性保证或方法优势证据。证书不读取 GT/ATE/truth/oracle，位置范数只作诊断；
+旧 D2 因无可重放 final graph/typed Values 记为 `NOT_RUN`，没有 fresh dense 或正式数据运行。历史指标和失败
+不重解释，C1--C3、T10=C2-C、T11=C 不升级。
+
+# 0913 DEV-DENSE-01：提高 Walk1 state/range density 未追回 clean ATE 差距
+
+[开发协议与完整产物](../experiments/icra2027/dev/DENSE_STATE_WALK1/)只改变 Base FGO
+`keyframe.step=4/2/1`，三组各唯一一次 scientific run，共用冻结输入、二进制、solver、线程策略和
+R1 evaluator 的227个Walk1 common-GT点。states为229/457/913，final used UWB为
+1074/2135/4266（有效4266的25.176%/50.047%/100%）；factor与IMU temporal审计均PASS。
+
+aligned ATE RMSE为0.164026011/0.325667331/309.384218981m。step=2虽将used UWB提高1.988x，
+ATE仍恶化98.546%；step=1使用全部有效range，但其conditional termination仅2次迭代，final objective
+1.495864129e10、最大位置范数1071.115m，是保留在表中的数值坏解。最低ATE dense variant相对既有
+SFUISE 0.109906074m没有追回差距，反而扩大0.161641321m。裁决
+`DENSE_STATE_RECOMMENDATION=NOT_WORTH_IT`；这只否定本次冻结联合 state-rate/keyframe-subsampling
+开发对照，不是纯measurement-density因果结论，也不证明其他schedule/solver不可行。
+raw-frame ATE仍UNAVAILABLE；没有fresh SFUISE、调参、正式backbone/Table变更或claim升级。
+formal protected tree前后hash一致，C1--C3/T10/T11状态不变。
+
+# 0913 R6 Engineering Repair + Exact Replay：工程闭合，恢复主张仍未获支持
+
+同15-case LF-v2 manifest/SHA、科学配置与输入完全冻结，fresh replay全部完成。
+[修复报告](../experiments/icra2027/audits/R6_REPAIR_REPORT.md)与
+[repaired GO/NO-GO](../experiments/icra2027/audits/E2_GO_NOGO_REPAIRED.md)为本轮入口；旧结果不覆盖。
+原22个cache unavailable与11个treatment unavailable全部追溯到11个真实失败parent，
+并非成功产物丢失。新增case-local parent、显式cache引用、错误归因、resume seal与treatment hash；
+preflight/测试/实际replay/最终验证通过，工程故障0，但不等于15个科学case成功。
+
+105行仍为64可评价、41 failed，其中33为scientific parent阻塞；仅2case七方法可评价。
+Native RR有效2、ATE/fault各1改善；SF RR有效4、各2改善。
+Native median ΔATE/Δfault=-0.007448032/-0.033491587 m；
+SF=-0.001865990/0.004875516 m。
+15份support、30份可用native轨迹与旧版byte-exact；SF为同输入/config下fresh run，未要求solver位级一致。
+原判据裁决 `RECOVERY_CLAIM=NOT_SUPPORTED`，不是“所有case均无收益”。
+检测event recall=1.0，median precision=0.202247、F1=0.336449；
+bias误差仍只相对injected component，未知parent latent bias不冒充truth；sigma为局部诊断。
+这些结果不升级physical NLOS、未见held-out泛化、独立标定provenance或历史C1–C3/T10/T11。
+R6已停止，R7–R10没有执行，无参数调整、commit或push。
+
+# 0913 R6 LF-only 修复与完整 fresh attempt：恢复整体主张未获支持
+
+用户授权修复格式并重跑。15个原窗口/anchor/+1m/10s/affected IDs不变，仅CRLF→LF，
+新manifest v2与独立run目录；旧无效输入、运行和资产完整保留。实际C++ parser15/15、
+工程测试10/10、输入/处理/隔离复核15/15通过，科学源码/配置/clean指标哈希未变。
+R3/R4/R5复用。新fingerprint `1ba97bad7c2f8dddd8c5325628485ed5da91fb572315a4dafb6b809025f9fc96`。
+
+R6所有15case均已处理；105方法行中64 completed、41 failed，只有2case七方法均可评价。
+Native Recover−Reject仅2个有效配对，ATE/fault均1个改善；SF有4个有效配对，均2个改善。
+Native median ΔATE/Δfault=-0.007448/-0.033492m；SF=-0.001866/+0.004876m。
+2个Reject fallback尝试均失败，不能标记成功fallback；没有no-candidate case。
+Detector event recall=15/15，但median precision=0.202247、F1=0.336449，不能仅凭event recall宣称高质量support。
+按原冻结稳定性规则，`RECOVERY_CLAIM=NOT_SUPPORTED`；这不是“所有case无收益”的结论，
+而是有效配对稀少、失败率高，未建立两backbone上的一致改善。Stage2/最终求解失败原样保留。
+
+实际E2 CSV、Table II、FIG2和[总报告](../experiments/icra2027/audits/R3_R6_EXECUTION_SUMMARY.md)已生成。
+FIG2保持Walk1/A10548 primary；缺失Recover轨迹和不可用bias/LCB明确说明，不因结果换case。
+只支持已暴露ISAS Walk1/2/3上controlled injection的有限结果；不支持physical NLOS、held-out泛化或
+独立calibration provenance，不升级C1–C3/T10/T11。下一步R6 GO/NO-GO审阅；R7–R10未启动、未调参。
+
+# 0913 R3–R6：R5 clean已测量；R6输入无效，恢复claim不可评价（旧v1归档记录）
+
+B0_CURRENT冻结；native beta=0、原PL CUSUM/LCB/IMU/solver不变。R3 clean候选0/344/89；
+Walk2 Stage2 MAX_REFIT_ITERATIONS保留，不能宣称三条clean无候选或已证实no-harm。
+R4同官方配置measurement-only adapter通过；开头ROS传输漏消息的无效检查保留，
+订阅就绪修复后Walk1完整传感器流一致，三种SF clean位置与ATE差0、姿态差<6e-8rad。
+R5 21行正式clean结果和Table I已保存，B0/SF ATE为0.164026/0.111077、0.222031/0.074158、
+0.178215/0.081656m。Walk2 robust/native Reject/Recover/SF_RECOVER失败保留；
+Walk3 Recover 0.171638m不优于Reject 0.168558m。不能宣称三条clean均成功或全局no-harm。
+R6因本agent的CSV CRLF序列化错误被native parser在求解前拒绝，8case输入尝试、7case未启动，
+有效配对case=0；15case manifest和输入保持冻结未改。5条SF_NATIVE仅未配对诊断，不能支持恢复claim。
+`RECOVERY_CLAIM=NOT_EVALUATED_INVALID_INPUT`，不是RESULT D / NOT_SUPPORTED；detector未执行不等于空候选。
+E2 CSV、Table II及FIG2明确标注input-invalid/诊断或NOT_RUN，不能进入论文作为恢复精度证据。
+详见[执行总报告](../experiments/icra2027/audits/R3_R6_EXECUTION_SUMMARY.md)与
+[输入有效性NO-GO](../experiments/icra2027/audits/E2_GO_NOGO.md)。
+不从工程PASS推断Recover收益，不升级历史C1–C3/T10/T11；未启动R7–R10、未调参、未提交/push。
+仅controlled injected-component、已暴露development recordings；不是物理NLOS或独立held-out泛化证据。
+
+# 0913 R2.5 static ToA input-parity：两失败、一条ATE退化
+
+[R2.5结果](../experiments/icra2027/audits/B1_calibration_result.md)与[9行CSV](../experiments/icra2027/metrics/B1_calibration.csv)。
+B1三条各fresh一次；Walk1/2在原preliminary LM 100次上限失败（exit1），ATE/delta为NA。
+Walk3成功（exit0），冻结313共同GT下aligned ATE由0.178214618变为0.185746300m，
+差值+0.007531682m/+4.226186%。没有观察到static offset追回clean ATE的证据，失败不省略。
+作者dataset-specific offsets的独立calibration recording来源未验证，仅input-parity analysis。
+既有beta机制也作用于初始化局部geometry副本；不是固定初值factor-only对照。
+state schedule、观测/noise账本、IMU模型和构图规模保持，旧evaluator/GT集合不变；B2/B3/注入未运行。
+不支持NLOS恢复、held-out或独立标定claim，不升级C1–C3/T10/T11。
+
+# 0913 ICRA v6 R0–R2 clean audit：R2 对照未完成
+
+[报告](../experiments/icra2027/audits/backbone_parity_report.md)：R0本机原Walk1 clean流水线通过、
+fresh B0三条成功，R0/B0 Walk1轨迹字节一致；独立clean-checkout重建NOT_RUN。共同GT数227/292/313，
+B0/SFUISE aligned ATE为0.164026/0.109906、0.222031/0.075122、0.178215/0.081656m。
+SF三轨迹为封存源重新评价。统一样本不等于独立外参闭合，raw-frame ATE仍UNAVAILABLE，reference point仅proxy。
+静态offset独立标定来源未确认，B1 NOT_RUN；当前state时刻额外可用range为0，B2 NOT_RUN，
+未证明calibration/density/state-rate可追回多少精度。B3未启动。只支持development审计/复现，
+不支持NLOS恢复、跨数据集、held-out或任何C1–C3升级，T10=C2-C/T11=C不变。
+
+# 0912 own_vicon 15-31-28：部分流程通过，无 RR 配对
+
+[单条结果](../experiments/OWN_VICON_FLOW.md)：完整bag的cache/C++ prepare/ROS往返/SFUISE均通过；
+SFUISE ATE RMSE=0.297893m。冻结CUSUM先冻结260候选/10段，但producer raw-reference LM达到100次上限，
+未发布Stage2，故suppress/lcb均NOT_RUN、RR差值NA；Cauchy preliminary LM也失败。
+4 anchor近共面（高度跨度0.03267m，中心奇异值比3.25e-4），首帧未校正正偏差和identity orientation可解释
+高度初始化困难，但单次诊断不能唯一归因。结果只支持输入桥和SF参考可运行，不支持Recover收益、跨数据集或held-out claim。
+
 # 0912 数据替代候选核对（未启动新矩阵）
 
 用户要求再换数据。本轮建议先以ISAS Walk1/3既有定位运行证据检查基础链；其Vive不符合旧Vicon/GNSS限定，且未审计出真实持续正误差，不能直接充当原RR准入。
@@ -1319,3 +1528,126 @@ per-sequence interval, nearest-0.02 s association, tracker/body assumption and s
 SFUISE aligned ATE RMSE was 0.109076557/0.075431056/0.079883493 m; Walk2 Robust FGO remains an explicit
 estimation failure and NA. The body/tracker extrinsic is still an assumed identity and the comparison is
 not held-out, so these values do not upgrade C1--C3, T10 or T11.
+
+## 0912 own_vicon initialization correctness evidence
+
+[OWN_VICON_INITIALIZATION_FIX.md](../experiments/OWN_VICON_INITIALIZATION_FIX.md) supports a limited
+engineering conclusion on the single development recording `15-31-28`: the configured-noise static test and automatic
+near-coplanar 2.5D seed remove the previous initialization/raw-reference failure. The raw reference converges, and the
+unchanged robust Cauchy path exports a full-duration trajectory with aligned ATE RMSE `0.951271317 m` where the prior run
+had no trajectory. SFUISE remains better at `0.297529563 m` on its independently produced trajectory.
+
+This evidence does not establish Recover versus Reject benefit. The frozen support has 253 observations in 8 segments,
+but Stage2 ends with `CONDITIONAL_LM_FIXED_CHECKPOINT_RECOVERY_TOTAL_BUDGET_EXHAUSTED`; no shared cache or valid RR pair
+exists, so both deltas remain NA. The geometry and zero-lever assumptions remain development-only and C1--C3, T10 and
+T11 are unchanged.
+
+
+## 0913 ICRA v6 supervisor experiment chapter (writing only)
+
+The [independent English chapter](icra_experiment_report/experimental_evaluation.pdf) and
+[source/evidence guide](icra_experiment_report/README.md) reorganize existing R1/R2/R5 and repaired R6
+evidence by v6 Q1–Q4. The six-page chapter plus one-page source index includes four data-backed/design
+figures and three generated tables. No new estimator, simulation, sweep, or tuning run was performed.
+
+The chapter preserves nominal SFUISE superiority on the available aligned comparison, the 105-row
+repaired ledger (64 evaluable, 8 directly failed, 33 blocked by scientific parent failure), and only
+2 native / 4 SF valid RR pairs. Walk1/A9524 has no accepted correction: its SF comparison cannot be
+attributed to bias recovery. Walk1/A20276 supplies a case-specific positive effect; the available
+Walk3 SF pairs deteriorate. This does not establish stable recovery superiority or repeatable transfer
+gains. Q4's 12-condition/240-trial simulation is explicitly NOT_RUN; its figure is a design, not evidence
+of an operating region. Missing local sigma is not asserted to prove unidentifiability.
+
+Document compilation, rendering and source/metric consistency checks support the integrity of this
+writing artifact only. They do not upgrade C1–C3, T10=C2-C, T11=C, physical-NLOS validation, or held-out
+generalization. Historical claims, source outputs, defaults and frozen paper materials are preserved.
+
+## 0913 REFACTOR-GATE-05 structural cleanup (engineering only)
+
+The Gate-05 architecture extraction is not scientific evidence and upgrades no
+paper claim. `run_ie_paper.cpp` is now a five-line application entry and the
+source-neutral estimator preparation sequence is available through
+`PrepareEstimatorCore`; production core dependencies point away from experiment
+programs. Deterministic core regressions and a pre/post T08 failure snapshot
+support behavior preservation for the exercised paths.
+
+Gate-05 acceptance is nevertheless blocked: full CTest is 32/35, with T04,
+T06 and T08 runner contracts all reaching existing
+`CONDITIONAL_LM_MAX_ITERATIONS` paths. No solver setting or scientific rule was
+changed to mask those failures, and no dense experiment was run. Therefore this
+work does not authorize Prompt 6 and does not alter C1--C3, T10=C2-C, T11=C,
+formal result tables or historical evidence.
+
+## 0913 REFACTOR-GATE-05R-A failure attribution (diagnostic only)
+
+The three red runner contracts upgrade no scientific claim and invalidate no
+historical paper result. Restricted reconstruction identifies detached
+pre-Gate-02 `e9d821e9` as the last actual PASS and the Gate-02 fixed-sensor-sigma
+transition as the first causal FAIL for T04, T06 and T08. Raw and selected
+observations, state/factor counts and initial Values remain equal, while the
+fixture's aggregate UWB precision increases by 5.069739 times. A temporary
+adaptive-sigma reversal makes all three current contracts pass; a reconstructed
+pre-Gate-05 monolith with fixed sigma makes all three fail at the current stage
+and reason. Gate-03 robust factors are proven baseline-local and do not enter
+Stage1/refit/recoverability/final inference.
+
+Increasing only the temporary inner LM cap from 50 to 200 lets the first
+conditional solve proceed at iteration 63, but all three runs subsequently hit
+their unchanged outer limit with navigation stationarity false. Thus the
+evidence does not support a pure iteration-budget explanation or a Gate-05
+regression. Classification is
+`EARLIER_INTENDED_SEMANTIC_CHANGE_STALE_CONTRACT`; repair is NOT_RUN and full
+CTest remains blocked. This diagnostic changes no C1--C3, T10=C2-C, T11=C,
+formal metric, solver certificate or paper result, and does not authorize
+Prompt 6.
+
+## 0913 REFACTOR-GATE-05R-B runner contract recovery (engineering only)
+
+[Gate-05R-B report](../docs/refactor/REFACTOR_GATE_05R_B_REPORT.md) supports
+only a software-contract conclusion. T04/T06/T08 now each exercise a small
+deterministic `FIXED_SENSOR_SIGMA_V2` success fixture through the real CLI and
+retain the complete historical sim-circle input as an explicit fail-closed
+negative regression. The positive fixture has 40 planned 0.1 m-sigma UWB
+observations, five states and 40 UWB likelihood terms; T06 uses the real
+automatic provider and repeats its partition identity, while T08 reaches a
+valid final graph/Values and `PAPER_SOLVER_CERTIFICATE_V1 / CERTIFIED_SUCCESS`.
+
+The negative subcases freeze the diagnosed 627/64 raw/planned observations,
+eight states, input-plan/initial-Values/graph identities and conditional-LM
+failure categories, and reject trajectory, successful certificate or final
+result publication. Focused core tests passed 6/6, the Gate-05 dependency guard
+passed 1/1, and full CTest passed 35/35. No production source, scientific
+configuration, threshold, solver rule or method mathematics changed.
+
+These synthetic tests are not dataset or paper evidence and add no accuracy,
+NLOS-detection, recovery-benefit, covariance-calibration, integrity or
+generalization claim. C1--C3, T10=C2-C, T11=C, formal tables and all historical
+results remain unchanged. Gate-05 is structurally accepted after Gate-05R;
+Prompt 6 is unblocked administratively but was not run by this task.
+# 0914 REFACTOR-GATE-06R-D：只定位 frontier-51 单状态条件化失败
+
+[`COMMON_INITIALIZATION_FRONTIER51_DIAGNOSIS.md`](../docs/refactor/COMMON_INITIALIZATION_FRONTIER51_DIAGNOSIS.md)
+在不读取 GT/ATE/truth/oracle、且不运行 Gate06/final estimator/IE 的边界内确认：frontier51 的一状态
+Jacobian 与 normal matrix 均 full rank 15，condition estimate 为 68.0784；失败由 fixed-boundary IMU/UWB
+大梯度近乎抵消后留下的 translation-z `1.0741484355758502e-5` 资格平台触发。额外完全相同 continuation
+零更新且不跨 `1e-5`；固定 causal 边界并联合优化 states49--51 则以 `4.905753878e-6` 通过相同资格。
+
+这只支持 `ONE_STATE_FRONTIER_CONDITIONING_FAILURE` 的工程诊断归因，其中 conditioning 指过度受限的一状态
+条件问题，不宣称矩阵秩亏。它不支持定位精度、方法收益、放宽门限、增加 retry、改变 kernel/sigma/LM 或
+正式实验结论；建议的 0.25s failure fallback 尚未实现，Gate06 仍 blocked，C1--C3、T10=C2-C 与 T11=C
+均不升级。
+
+
+## 2026-09-14 English advisor presentation (writing-only; no claim upgrade)
+
+Delivered [six English slides, PDF/PPTX and evidence](ie_supervisor_slides_20260914/README.md),
+with a positive but bounded account of system consolidation and recovery progress.
+The Base-only Walk comparison establishes a gap without applying the extension; it does not
+assign every implementation issue to legacy code. The outcome-selected Walk1/A20276 recovery
+example is accompanied by all-case availability, 2/4 valid native/SF pairs, regressions and
+zero-admission qualifications. It does not replace the preregistered Walk1/A10548 example.
+The earlier seed-drift audit is distinguished from subsequent regression/seed-gate passes;
+engineering progress is not a new accuracy result. All scientific claim levels, T10=C2-C,
+T11=C and C1–C3 limitations remain unchanged. No estimator or new scientific experiment ran.
+Validation: both build and actual PDF-render commands exit 0; six pages visually reviewed;
+PPTX structure/relationships checked, native Office rendering unavailable.

@@ -1,9 +1,9 @@
 // Independent diagnostic binary. Reuse the exact existing loader/export helpers
 // without exposing any hold-out/truth argument in the production executable.
 #define Open OriginalPaperOpen
-#define main uifgo_original_paper_main
-#include "run_ie_paper.cpp"
-#undef main
+#define RunIePaperApplication uifgo_original_paper_application
+#include "paper/run_ie_app.cpp"
+#undef RunIePaperApplication
 #undef Open
 #include "uifgo/fde_math.h"
 #include <gtsam/nonlinear/ExpressionFactor.h>

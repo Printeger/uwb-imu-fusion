@@ -109,6 +109,22 @@ TEST(ConfigLoader, McdDatasetInterface) {
   EXPECT_EQ(cfg.imu_orientation_world, "ned");
 }
 
+TEST(ConfigLoader, CommonInitializationProgressionHorizon) {
+  const std::string path = "/tmp/test_common_initialization_horizon.yaml";
+  {
+    std::ofstream f(path);
+    f << "initialization:\n  progression_horizon_s: 0.4\n";
+  }
+  EXPECT_DOUBLE_EQ(uifgo::ConfigLoader::Load(path)
+                       .initialization_progression_horizon_s,
+                   0.4);
+  {
+    std::ofstream f(path);
+    f << "initialization:\n  progression_horizon_s: 0.0\n";
+  }
+  EXPECT_THROW(uifgo::ConfigLoader::Load(path), std::runtime_error);
+}
+
 TEST(ConfigLoader, T07CacheInterfaceIsStrictAndUsesSensorTimeWindow) {
   const std::string path = "/tmp/test_t07_cache_dataset.yaml";
   {

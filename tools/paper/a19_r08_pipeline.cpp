@@ -268,11 +268,20 @@ int RunSuppressCertifiedEngineering(const std::string& output_root, bool lcb = f
       observation.tag_id = 7;
       observation.anchor_id = anchor.id;
       observation.raw_range = raw;
-      observation.valid = true;
-      observation.planned = true;
-      observation.keyframe_id = k;
-      observation.nominal_sigma = 0.05;
+      observation.ledger_index = plan.observations.size();
+      observation.source_valid = true;
+      observation.source_validity_reason = "SOURCE_VALID";
+      MeasurementPlanEntry measurement;
+      measurement.obs_id = obs_id;
+      measurement.observation_index = observation.ledger_index;
+      measurement.estimator_usable = true;
+      measurement.usability_reason = "ESTIMATOR_USABLE";
+      measurement.selected = true;
+      measurement.selection_reason = "SELECTED_EXACT_STATE_FRAME";
+      measurement.keyframe_id = k;
+      measurement.sensor_sigma = 0.05;
       plan.observations.push_back(observation);
+      plan.measurements.push_back(measurement);
       if (candidate)
         support.segments.at(anchor.id - 1).obs_ids.push_back(obs_id);
       ++obs_id;
@@ -289,8 +298,9 @@ int RunSuppressCertifiedEngineering(const std::string& output_root, bool lcb = f
     auto ranges_file=output(output_root+"/input_ranges.csv");
     ranges_file << "obs_id,keyframe_id,raw_z_m,sigma_m,beta_m,ax,ay,az,lx,ly,lz\n";
     for(const auto& row:plan.observations) {
+      const auto& measurement = MeasurementForObservation(plan, row);
       const auto a=std::find_if(cfg.anchors.begin(),cfg.anchors.end(),[&](const auto& x){return x.id==row.anchor_id;});
-      ranges_file << row.obs_id << ',' << row.keyframe_id << ',' << row.raw_range << ',' << row.nominal_sigma << ",0,"
+      ranges_file << row.obs_id << ',' << measurement.keyframe_id << ',' << row.raw_range << ',' << measurement.sensor_sigma << ",0,"
                   << a->pos.x() << ',' << a->pos.y() << ',' << a->pos.z() << ','
                   << cfg.lever_arm_init.x() << ',' << cfg.lever_arm_init.y() << ',' << cfg.lever_arm_init.z() << '\n';
     }
@@ -619,7 +629,7 @@ int main(int argc, char** argv) {
     const auto initial_ranges = ranges(fixture);
     size_t range_index = 0;
     for (const auto& observation : plan.observations) {
-      if (!observation.planned) continue;
+      if (!MeasurementForObservation(plan, observation).selected) continue;
       FactorMeta meta;
       meta.factor_index = initial_ranges.at(range_index++).factor_index;
       meta.factor_type = "uwb_range";

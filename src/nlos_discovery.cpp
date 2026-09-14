@@ -896,10 +896,11 @@ DiscoveryResult AutomaticSupportProvider::RunDevelopmentStage1(
 
   std::vector<const ObservationRecord*> ordered;
   for (const auto& record : plan.observations) {
-    if (record.valid && record.planned) {
+    const auto& measurement = MeasurementForObservation(plan, record);
+    if (measurement.estimator_usable && measurement.selected) {
       if (!factor_by_obs.count(record.obs_id) ||
-          !(record.nominal_sigma > 0.0) ||
-          !std::isfinite(record.nominal_sigma))
+          !(measurement.sensor_sigma > 0.0) ||
+          !std::isfinite(measurement.sensor_sigma))
         return fail(DiscoveryStatus::INVALID_INPUT,
                     "planned observation/factor coverage is invalid");
       ordered.push_back(&record);
@@ -915,12 +916,14 @@ DiscoveryResult AutomaticSupportProvider::RunDevelopmentStage1(
 
   result.snapshot.reserve(ordered.size());
   for (const auto* record : ordered) {
+    const auto& measurement = MeasurementForObservation(plan, *record);
     DiscoveryObservation item;
     item.obs_id = record->obs_id;
     item.tag_id = record->tag_id;
     item.anchor_id = record->anchor_id;
     item.sensor_time = record->sensor_time;
-    item.weight = 1.0 / (record->nominal_sigma * record->nominal_sigma);
+    item.weight =
+        1.0 / (measurement.sensor_sigma * measurement.sensor_sigma);
     result.snapshot.push_back(item);
   }
   AssignDiscoveryChains(&result.snapshot, options_.gap_threshold_s);
@@ -945,16 +948,17 @@ DiscoveryResult AutomaticSupportProvider::RunDevelopmentStage1(
         continue;
       }
       const auto& record = *records.at(found->second);
+      const auto& measurement = MeasurementForObservation(plan, record);
       const double bias = snapshot.at(snapshot_index.at(found->second)).bias_m;
       const double conditional_beta =
           FixedBetaForLink(cfg, record.tag_id, record.anchor_id) + bias;
       if (development_request)
-        development_ranges.push_back({index, X(record.keyframe_id),
+        development_ranges.push_back({index, X(measurement.keyframe_id),
             anchors.at(record.anchor_id), cfg.lever_arm_init, record.raw_range,
-            record.nominal_sigma, conditional_beta, record.obs_id});
+            measurement.sensor_sigma, conditional_beta, record.obs_id});
       graph.add(MakeUwbFactor(
-          X(record.keyframe_id), 0, 0, 0, anchors.at(record.anchor_id),
-          cfg.lever_arm_init, record.raw_range, record.nominal_sigma, false,
+          X(measurement.keyframe_id), 0, 0, 0, anchors.at(record.anchor_id),
+          cfg.lever_arm_init, record.raw_range, measurement.sensor_sigma, false,
           false, false,
           conditional_beta));
     }
@@ -1022,7 +1026,9 @@ DiscoveryResult AutomaticSupportProvider::RunDevelopmentStage1(
       std::vector<double> e, weights, warm;
       for (size_t i = begin; i < end; ++i) {
         const auto& record = *records.at(result.snapshot[i].obs_id);
-        const auto pose = lm.values.at<gtsam::Pose3>(X(record.keyframe_id));
+        const auto& measurement = MeasurementForObservation(plan, record);
+        const auto pose =
+            lm.values.at<gtsam::Pose3>(X(measurement.keyframe_id));
         const gtsam::Point3 antenna = pose.transformFrom(cfg.lever_arm_init);
         const double geometric =
             (gtsam::Vector3(antenna) -
@@ -1255,7 +1261,8 @@ Stage1RegularizedResult BuildStage1RegularizedResult(
         if (observation == plan_by_obs.end() || bias == bias_by_obs.end())
           return fail("STAGE1_FACTOR_OBSERVATION_MAPPING_INCOMPLETE");
         const ObservationRecord& obs = *observation->second;
-        if (!obs.valid || !obs.planned)
+        const auto& measurement = MeasurementForObservation(plan, obs);
+        if (!measurement.estimator_usable || !measurement.selected)
           return fail("STAGE1_FACTOR_REFERENCES_UNPLANNED_OBSERVATION");
         const auto anchor = std::find_if(
             cfg.anchors.begin(), cfg.anchors.end(),
@@ -1266,10 +1273,10 @@ Stage1RegularizedResult BuildStage1RegularizedResult(
             FixedBetaForLink(cfg, obs.tag_id, obs.anchor_id) +
             bias->second->bias_m;
         auto factor = MakeUwbFactor(
-            X(obs.keyframe_id), gtsam::Symbol('l', 0),
+            X(measurement.keyframe_id), gtsam::Symbol('l', 0),
             gtsam::Symbol('a', obs.anchor_id),
             gtsam::Symbol('z', obs.anchor_id), anchor->pos,
-            cfg.lever_arm_init, obs.raw_range, obs.nominal_sigma, false,
+            cfg.lever_arm_init, obs.raw_range, measurement.sensor_sigma, false,
             false, false, fixed_dynamic);
         result.physical_graph.add(factor);
         output_meta = *meta->second;
@@ -1287,8 +1294,11 @@ Stage1RegularizedResult BuildStage1RegularizedResult(
     std::map<size_t, std::vector<const DiscoveryObservation*>> chains;
     for (const auto& item : discovery.snapshot) {
       const auto plan_item = plan_by_obs.find(item.obs_id);
-      if (plan_item == plan_by_obs.end() || !plan_item->second->valid ||
-          !plan_item->second->planned)
+      if (plan_item == plan_by_obs.end())
+        continue;
+      const auto& measurement =
+          MeasurementForObservation(plan, *plan_item->second);
+      if (!measurement.estimator_usable || !measurement.selected)
         continue;
       result.objective_l1 += options.fused_lasso.lambda_l1 * item.bias_m;
       chains[item.chain_id].push_back(&item);

@@ -119,12 +119,27 @@ PaperInputPlan OneObservationPlan(double ledger_sigma) {
   plan.plan_sha256 = "plan";
   ObservationRecord row;
   row.obs_id = 42;
+  row.source_frame_index = 5;
+  row.source_message_index = 17;
+  row.source_range_index = 3;
+  row.source_observation_index = 29;
   row.sensor_time = 1.0;
-  row.valid = true;
-  row.planned = true;
-  row.nominal_sigma = ledger_sigma;
+  row.raw_range = 7.25;
   row.anchor_id = 1;
+  row.ledger_index = 0;
+  row.source_valid = true;
+  row.source_validity_reason = "SOURCE_VALID";
   plan.observations.push_back(row);
+  MeasurementPlanEntry measurement;
+  measurement.obs_id = row.obs_id;
+  measurement.observation_index = 0;
+  measurement.estimator_usable = true;
+  measurement.usability_reason = "ESTIMATOR_USABLE";
+  measurement.selected = true;
+  measurement.selection_reason = "SELECTED_EXACT_STATE_FRAME";
+  measurement.keyframe_id = 0;
+  measurement.sensor_sigma = ledger_sigma;
+  plan.measurements.push_back(measurement);
   return plan;
 }
 
@@ -155,6 +170,11 @@ TEST(NlosFde, ProviderUsesFactorNoiseAndEmptyCandidateIsSuccess) {
       graph, initial, {meta}, OneObservationPlan(1e-6), cfg, Context());
   ASSERT_TRUE(result.success()) << result.reason;
   ASSERT_EQ(result.observations.size(), 1u);
+  EXPECT_DOUBLE_EQ(result.observations[0].raw_range_m, 7.25);
+  EXPECT_EQ(result.observations[0].source_frame_index, 5u);
+  EXPECT_EQ(result.observations[0].source_message_index, 17u);
+  EXPECT_EQ(result.observations[0].source_range_index, 3u);
+  EXPECT_EQ(result.observations[0].source_observation_index, 29u);
   EXPECT_DOUBLE_EQ(result.observations[0].factor_sigma_m, 1.0);
   EXPECT_GT(result.observations[0].statistic, Chi2inv(0.99, 1));
   EXPECT_TRUE(result.observations[0].nlos_candidate);

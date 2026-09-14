@@ -133,7 +133,8 @@ FinalFactorAudit AuditFinalFactors(
 
   bool rows_ok = true;
   for (const auto& observation : plan.observations) {
-    if (!observation.valid || !observation.planned) continue;
+    const auto& measurement = MeasurementForObservation(plan, observation);
+    if (!measurement.estimator_usable || !measurement.selected) continue;
     FinalFactorAuditRow row;
     row.obs_id = observation.obs_id;
     row.final_factor_count = count_by_obs[observation.obs_id];
@@ -222,7 +223,8 @@ std::vector<FrozenObservationMask> BuildMasks(
   for (const auto& observation : plan.observations) {
     FrozenObservationMask mask;
     mask.obs_id = observation.obs_id;
-    if (!observation.valid || !observation.planned) {
+    const auto& measurement = MeasurementForObservation(plan, observation);
+    if (!measurement.estimator_usable || !measurement.selected) {
       mask.reason_code = "NOT_IN_FROZEN_VALID_PLAN";
       output.push_back(std::move(mask));
       continue;
@@ -363,8 +365,13 @@ std::string IdentityContextHash(const InferenceIdentityContext& context) {
 
 std::string InferenceId(const InferenceResult& result) {
   std::ostringstream bytes;
-  bytes << "uifgo-t08-inference-content-bound-v2\n";
+  bytes << "uifgo-t08-inference-content-bound-v3\n";
   AppendString(&bytes, InferenceStatusName(result.status));
+  AppendString(&bytes, result.solver_certificate.policy_version);
+  AppendString(&bytes, SolverCertificateStatusName(
+                           result.solver_certificate.status));
+  AppendString(&bytes, result.solver_certificate.reason);
+  AppendString(&bytes, result.solver_certificate.termination_reason);
   AppendString(&bytes, result.content_identity.graph_linearization_sha256);
   AppendString(&bytes, result.content_identity.values_sha256);
   AppendString(&bytes, result.content_identity.context_sha256);
@@ -442,6 +449,47 @@ RefitAttemptDiagnostics AttemptDiagnostics(const SegmentRefitResult& refit) {
   return output;
 }
 
+SolverCertificate CertifyFinalRefit(
+    const SegmentRefitResult& refit, const FinalFactorAudit& factor_audit,
+    const PaperInputPlan& plan, const RefitOptions& options) {
+  SolverCertificateRequest request;
+  request.termination_success = refit.successful();
+  request.termination_reason =
+      std::string(SegmentRefitStatusName(refit.status)) + ":" + refit.reason;
+  request.factor_integrity_passed = factor_audit.ok;
+  request.factor_integrity_reason = factor_audit.reason;
+  request.solver_specific_checks_passed = refit.successful();
+  request.solver_specific_checks_reason =
+      refit.successful() ? "REFIT_SUCCESS_WITH_INDEPENDENT_FINAL_RECHECK"
+                         : "REFIT_STATUS_NOT_SUCCESSFUL";
+  if (!refit.iterations.empty()) {
+    const auto& last = refit.iterations.back();
+    request.solver_specific_checks_passed =
+        request.solver_specific_checks_passed && last.objective_ok &&
+        last.step_ok && last.kkt_ok && last.navigation_stationarity_ok;
+    request.solver_specific_checks_reason =
+        request.solver_specific_checks_passed
+            ? "REFIT_OBJECTIVE_STEP_KKT_AND_STATIONARITY_TRACE_PASSED"
+            : "REFIT_FINAL_TRACE_CHECK_FAILED";
+  }
+  for (const auto& keyframe : plan.keyframes)
+    request.state_times_s.push_back(keyframe.sensor_time);
+  request.navigation_scales.pose_rotation_rad =
+      options.pose_rotation_scale_rad;
+  request.navigation_scales.pose_translation_m =
+      options.pose_translation_scale_m;
+  request.navigation_scales.velocity_mps = options.velocity_scale_mps;
+  request.navigation_scales.accel_bias_mps2 =
+      options.accel_bias_scale_mps2;
+  request.navigation_scales.gyro_bias_radps =
+      options.gyro_bias_scale_radps;
+  request.navigation_stationarity_tolerance_objective =
+      options.navigation_stationarity_tolerance_objective;
+  request.gradient_roundoff_safety_factor =
+      options.gradient_roundoff_safety_factor;
+  return CertifySolverResult(refit.graph, refit.values, request);
+}
+
 }  // namespace
 
 InferenceContentIdentity ComputeInferenceContentIdentity(
@@ -492,7 +540,7 @@ bool ValidDevelopmentGateThresholds(const GateThresholds& thresholds,
   if (thresholds.tau_eta < 0.0 || thresholds.tau_eta > 1.0 ||
       thresholds.tau_s_m < 0.0 || thresholds.tau_gamma < 0.0)
     return fail("gate thresholds are outside their declared domains");
-  if (thresholds.parameter_provenance != kT08DevelopmentGateLabel)
+  if (thresholds.parameter_provenance != kDevelopmentGateProvenance)
     return fail("T08 gate provenance must remain development-only pending validation");
   if (reason) reason->clear();
   return true;
@@ -897,8 +945,9 @@ InferenceResult FinalInferenceEngine::Run(
         const auto anchor=std::find_if(cfg.anchors.begin(),cfg.anchors.end(),
             [&](const auto& a){return a.id==obs->anchor_id;});
         if(anchor==cfg.anchors.end()) {result.factor_audit.ok=false;result.factor_audit.reason="FIXED_ANCHOR_MISSING";break;}
-        const auto expected=MakeFixedOffsetUwbFactor(gtsam::Symbol('x',obs->keyframe_id),
-            anchor->pos,cfg.lever_arm_init,obs->raw_range,obs->nominal_sigma,
+        const auto& measurement = MeasurementForObservation(plan, *obs);
+        const auto expected=MakeFixedOffsetUwbFactor(gtsam::Symbol('x',measurement.keyframe_id),
+            anchor->pos,cfg.lever_arm_init,obs->raw_range,measurement.sensor_sigma,
             FixedBetaForLink(cfg,obs->tag_id,obs->anchor_id),c->delta_c_fixed_m);
         const auto actual=boost::dynamic_pointer_cast<gtsam::NoiseModelFactor>(recovery.graph.at(meta.factor_index));
         const auto reference=boost::dynamic_pointer_cast<gtsam::NoiseModelFactor>(expected);
@@ -912,6 +961,20 @@ InferenceResult FinalInferenceEngine::Run(
       recovery_ok = false;
       recovery_failure = "RECOVERY_FACTOR_AUDIT_FAILED: " +
                          result.factor_audit.reason;
+      result.recovery_attempt.acceptance_audit_status = "FAILED";
+      result.recovery_attempt.acceptance_failure_reason = recovery_failure;
+    }
+  }
+
+  if (recovery_ok) {
+    result.recovery_attempt.solver_certificate = CertifyFinalRefit(
+        recovery, result.factor_audit, plan, refit_options_);
+    result.solver_certificate =
+        result.recovery_attempt.solver_certificate;
+    if (!result.recovery_attempt.solver_certificate.certified_success()) {
+      recovery_ok = false;
+      recovery_failure = "RECOVERY_SOLVER_CERTIFICATE_FAILED:" +
+          result.recovery_attempt.solver_certificate.reason;
       result.recovery_attempt.acceptance_audit_status = "FAILED";
       result.recovery_attempt.acceptance_failure_reason = recovery_failure;
     }
@@ -1072,6 +1135,32 @@ InferenceResult FinalInferenceEngine::Run(
       finish();
       return result;
     }
+    result.fallback_refit_attempt.solver_certificate = CertifyFinalRefit(
+        fallback, fallback_audit, plan, refit_options_);
+    if (!result.fallback_refit_attempt.solver_certificate
+             .certified_success()) {
+      result.fallback_refit_attempt.acceptance_audit_status = "FAILED";
+      result.fallback_refit_attempt.acceptance_failure_reason =
+          result.fallback_refit_attempt.solver_certificate.reason;
+      SetInapplicableFinalScores(
+          result.decisions, "ESTIMATION_FAILED_NO_CERTIFIED_FINAL_SOLUTION",
+          &result.final_scores);
+      result.fallback.status = "FAILED";
+      result.fallback.fallback_failure_reason =
+          "FALLBACK_SOLVER_CERTIFICATE_FAILED:" +
+          result.fallback_refit_attempt.solver_certificate.reason;
+      result.status = InferenceStatus::ESTIMATION_FAILED;
+      result.reason = recovery_failure + "; " +
+                      result.fallback.fallback_failure_reason;
+      SetFinalMaskUse(&result.frozen_masks, true, false);
+      result.final_result_refit = result.fallback_refit_attempt;
+      result.final_result_refit.execution_status =
+          "NO_CERTIFIED_FINAL_RESULT";
+      result.solver_certificate =
+          result.fallback_refit_attempt.solver_certificate;
+      finish();
+      return result;
+    }
     recovery = std::move(fallback);
     SetInapplicableFinalScores(
         result.decisions,
@@ -1106,6 +1195,9 @@ InferenceResult FinalInferenceEngine::Run(
     result.final_result_refit = result.recovery_attempt;
     result.final_result_refit.execution_status = "FINAL_RESULT_FROM_RECOVERY";
   }
+
+  result.solver_certificate =
+      result.final_result_refit.solver_certificate;
 
   result.final_graph = std::move(recovery.graph);
   result.final_values = std::move(recovery.values);

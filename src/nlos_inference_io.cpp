@@ -356,6 +356,55 @@ InferenceArtifactWriteResult WriteInferenceArtifacts(
            << Json(result.fallback.fallback_failure_reason) << "\"\n}\n";
   }
   {
+    const auto& certificate = result.solver_certificate;
+    auto output = OpenNew(root / "solver_certificate.json", &written);
+    output << "{\n  \"schema\": \""
+           << Json(certificate.policy_version)
+           << "\",\n  \"inference_id\": \"" << Json(result.inference_id)
+           << "\",\n  \"status\": \""
+           << SolverCertificateStatusName(certificate.status)
+           << "\",\n  \"reason\": \"" << Json(certificate.reason)
+           << "\",\n  \"termination_success\": "
+           << (certificate.termination_success ? "true" : "false")
+           << ",\n  \"termination_reason\": \""
+           << Json(certificate.termination_reason)
+           << "\",\n  \"state_values_finite\": "
+           << (certificate.state_values_finite ? "true" : "false")
+           << ",\n  \"state_values_reason\": \""
+           << Json(certificate.state_values_reason)
+           << "\",\n  \"objective_finite\": "
+           << (certificate.objective_finite ? "true" : "false")
+           << ",\n  \"final_objective\": "
+           << NumberOrNull(certificate.final_objective)
+           << ",\n  \"graph_values_keys_match\": "
+           << (certificate.graph_values_keys_match ? "true" : "false")
+           << ",\n  \"factor_integrity_passed\": "
+           << (certificate.factor_integrity_passed ? "true" : "false")
+           << ",\n  \"factor_integrity_reason\": \""
+           << Json(certificate.factor_integrity_reason)
+           << "\",\n  \"temporal_integrity_applicable\": "
+           << (certificate.temporal_integrity_applicable ? "true" : "false")
+           << ",\n  \"temporal_integrity_passed\": "
+           << (certificate.temporal_integrity_passed ? "true" : "false")
+           << ",\n  \"temporal_integrity_reason\": \""
+           << Json(certificate.temporal_integrity_reason)
+           << "\",\n  \"solver_specific_checks_passed\": "
+           << (certificate.solver_specific_checks_passed ? "true" : "false")
+           << ",\n  \"solver_specific_checks_reason\": \""
+           << Json(certificate.solver_specific_checks_reason)
+           << "\",\n  \"navigation_stationarity_passed\": "
+           << (certificate.navigation_stationarity_passed ? "true" : "false")
+           << ",\n  \"navigation_stationarity_reason\": \""
+           << Json(certificate.navigation_stationarity.reason)
+           << "\",\n  \"max_scaled_navigation_gradient\": "
+           << NumberOrNull(certificate.navigation_stationarity.max_scaled_gradient_objective)
+           << ",\n  \"navigation_gradient_roundoff_allowance\": "
+           << NumberOrNull(certificate.navigation_stationarity.roundoff_allowance_objective)
+           << ",\n  \"max_position_norm_m_diagnostic_only\": "
+           << NumberOrNull(certificate.max_position_norm_m)
+           << ",\n  \"gt_ate_truth_oracle_inputs\": false\n}\n";
+  }
+  {
     auto output = OpenNew(root / "covariance_status.json", &written);
     output << "{\n  \"schema\": \"t08_full_final_graph_covariance_v1\",\n"
            << "  \"inference_id\": \"" << Json(result.inference_id)
@@ -426,12 +475,18 @@ InferenceArtifactWriteResult WriteInferenceArtifacts(
   }
   {
     auto output = OpenNew(root / "final_inference_summary.json", &written);
-    output << "{\n  \"schema\": \"t08_inference_summary_v2\",\n"
+    output << "{\n  \"schema\": \"t08_inference_summary_v3\",\n"
            << "  \"inference_id\": \"" << Json(result.inference_id)
            << "\",\n  \"status\": \"" << InferenceStatusName(result.status)
            << "\",\n  \"reason\": \"" << Json(result.reason)
            << "\",\n  \"valid_estimate\": "
            << (result.valid_estimate() ? "true" : "false")
+           << ",\n  \"termination_status\": \""
+           << Json(result.solver_certificate.termination_reason)
+           << "\",\n  \"solver_certificate_status\": \""
+           << SolverCertificateStatusName(result.solver_certificate.status)
+           << "\",\n  \"solver_certificate_reason\": \""
+           << Json(result.solver_certificate.reason) << "\""
            << ",\n  \"final_graph_factor_count\": "
            << result.final_graph.size()
            << ",\n  \"final_values_count\": " << result.final_values.size()

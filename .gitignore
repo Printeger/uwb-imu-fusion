@@ -141,3 +141,25 @@ data/*.bag
 
 # 0911 local engineering runs; selected compact evidence is force-added to Git.
 /doc/ie_0911/evidence/*
+
+# ICRA experiment outputs are locally reproducible and can be very large.
+# Keep top-level experiment code plus configs/manifests versioned; exclude raw
+# inputs, executions, metrics, rendered assets, and audit snapshots.
+/experiments/icra2027/attempts/
+/experiments/icra2027/audits/
+/experiments/icra2027/dev/
+/experiments/icra2027/exports/
+/experiments/icra2027/figures/
+/experiments/icra2027/inputs/
+/experiments/icra2027/logs/
+/experiments/icra2027/metrics/
+/experiments/icra2027/paper_assets/
+/experiments/icra2027/runs/
+/experiments/icra2027/tables/
+/experiments/icra2027/cache_parser_probe.cpp
+/experiments/icra2027/configs/source_worktree.patch
+
+# Generated publication/review bundles. Their source evidence remains local;
+# compact engineering conclusions live under docs/ and paper/CLAIM_EVIDENCE.md.
+/paper/icra_experiment_report/
+/paper/ie_supervisor_slides_20260914/

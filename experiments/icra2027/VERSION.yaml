@@ -1,0 +1,538 @@
+build:
+- CMAKE_BUILD_TYPE:STRING=Release
+- CMAKE_CXX_COMPILER:FILEPATH=/usr/bin/c++
+- Eigen3_DIR:PATH=/usr/lib/cmake/eigen3
+- GTSAM_DIR:PATH=/usr/local/lib/cmake/GTSAM
+compiler: 'c++ (Ubuntu 9.4.0-1ubuntu1~20.04.2) 9.4.0
+
+  Copyright (C) 2019 Free Software Foundation, Inc.
+
+  This is free software; see the source for copying conditions.  There is NO
+
+  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.'
+cpu: 'Architecture:                            x86_64
+
+  CPU op-mode(s):                          32-bit, 64-bit
+
+  Byte Order:                              Little Endian
+
+  Address sizes:                           46 bits physical, 48 bits virtual
+
+  CPU(s):                                  18
+
+  On-line CPU(s) list:                     0-17
+
+  Thread(s) per core:                      2
+
+  Core(s) per socket:                      9
+
+  Socket(s):                               1
+
+  NUMA node(s):                            1
+
+  Vendor ID:                               GenuineIntel
+
+  CPU family:                              6
+
+  Model:                                   170
+
+  Model name:                              Intel(R) Core(TM) Ultra 5 125H
+
+  Stepping:                                4
+
+  CPU MHz:                                 2995.200
+
+  BogoMIPS:                                5990.40
+
+  Virtualization:                          VT-x
+
+  Hypervisor vendor:                       Microsoft
+
+  Virtualization type:                     full
+
+  L1d cache:                               432 KiB
+
+  L1i cache:                               576 KiB
+
+  L2 cache:                                18 MiB
+
+  L3 cache:                                18 MiB
+
+  NUMA node0 CPU(s):                       0-17
+
+  Vulnerability Gather data sampling:      Not affected
+
+  Vulnerability Ghostwrite:                Not affected
+
+  Vulnerability Indirect target selection: Not affected
+
+  Vulnerability Itlb multihit:             Not affected
+
+  Vulnerability L1tf:                      Not affected
+
+  Vulnerability Mds:                       Not affected
+
+  Vulnerability Meltdown:                  Not affected
+
+  Vulnerability Mmio stale data:           Not affected
+
+  Vulnerability Old microcode:             Not affected
+
+  Vulnerability Reg file data sampling:    Not affected
+
+  Vulnerability Retbleed:                  Mitigation; Enhanced IBRS
+
+  Vulnerability Spec rstack overflow:      Not affected
+
+  Vulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled
+  via prctl
+
+  Vulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and
+  __user pointer sanitization
+
+  Vulnerability Spectre v2:                Mitigation; Enhanced / Automatic IBRS;
+  IBPB conditional; PBRSB-eIBRS SW sequence; BHI BHI_DIS_S
+
+  Vulnerability Srbds:                     Not affected
+
+  Vulnerability Tsa:                       Not affected
+
+  Vulnerability Tsx async abort:           Not affected
+
+  Vulnerability Vmscape:                   Not affected
+
+  Flags:                                   fpu vme de pse tsc msr pae mce cx8 apic
+  sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb
+  rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid tsc_known_freq
+  pni pclmulqdq vmx ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer
+  aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch ssbd ibrs ibpb stibp
+  ibrs_enhanced tpr_shadow ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2
+  erms invpcid rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves
+  avx_vnni vnmi umip waitpkg gfni vaes vpclmulqdq rdpid movdiri movdir64b fsrm md_clear
+  serialize ibt flush_l1d arch_capabilities'
+evaluator_sha256: a5999d3ea44b88453e2efaf4461b45cfaea9bf3aedcf9a845bbfe7e0d8807c48
+fingerprint: bc4b4a9f250e33549999c3bc20f618221f516e98a380b52cf4fbeeabad1575ce
+git_branch: feature/uwb-imu-fusion-ie-postprocessing
+git_commit: e9d821e960f725e064ca32fd9e475e529ac5f501
+initial_worktree_status: "M doc/ie_sprint/EXPERIMENT_CONTRACT.md\n M doc/ie_sprint/STATUS.md\n\
+  \ M include/uifgo/initializer.h\n M paper/CLAIM_EVIDENCE.md\n M src/initializer.cpp\n\
+  \ M test/test_trilaterate.cpp\n?? doc/ICRA_experiment_roadmap_v6.md\n?? experiments/OWN_VICON_FLOW.md\n\
+  ?? experiments/OWN_VICON_FLOW_PROTOCOL.md\n?? experiments/OWN_VICON_INITIALIZATION_FIX.md\n\
+  ?? experiments/OWN_VICON_INITIALIZATION_FIX_PROTOCOL.md\n?? experiments/evidence/own-vicon-initialization-fix-20260912A/\n\
+  ?? experiments/icra2027/\n?? experiments/scripts/evaluate_own_vicon_flow.py\n??\
+  \ experiments/scripts/evaluate_own_vicon_flow_postsealed.py\n?? experiments/scripts/run_own_vicon_flow.py\n\
+  ?? experiments/scripts/test_own_vicon_flow.py"
+inputs:
+- files:
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk1_normal_clean/imu.csv: f4ff3415d17c5d0d98233a8a096b7870ed49885cb00a5797122e6fd81c148880
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk1_normal_clean/input_manifest.json: 7af404c8580ecf0b9f9d2742bbc56d03ed9a592172603d3df0e8a0d569e22c0e
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk1_normal_clean/uwb_observations.csv: 310a51528d1dc4d56882a714eb1551cf81aebcd3d79791c37495588a6e9eb2f0
+  manifest: /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk1_normal_clean/input_manifest.json
+  raw_bag_sha256: sha256:ca577e3666ad5876aa8347289a98793b8da0e68b5db459f2d7d69a6adcacd944
+  role: development
+  sequence: Walk1
+- files:
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk2_normal_clean/imu.csv: 5867cb6dbda7914daabbd6a4d4e89ab74891ac621f581ff93385172e00ef9e7d
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk2_normal_clean/input_manifest.json: 0d4ba977bc185ef19aeb48e8c38c0d1c93914c7b6ff5bacd736a85bd7857004a
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk2_normal_clean/uwb_observations.csv: 82d2e94a4ded1bcbac247440e968e1c1f08cb9b26b7fe2fe25fc53cad71a50bf
+  manifest: /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk2_normal_clean/input_manifest.json
+  raw_bag_sha256: sha256:dea07fd11d5776226be6b390574c4b3789c48cfdce6a1731996981f3f91c453c
+  role: development
+  sequence: Walk2
+- files:
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk3_normal_clean/imu.csv: d5f02cd52d1317e2e57af09e060bacd1809131070ac45e3e2ff55b1a110b0575
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk3_normal_clean/input_manifest.json: 7f2bda96f69c4f890f40d3a06cbb0ca626b0921ffccef8389ce65e1dae7a1785
+    /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk3_normal_clean/uwb_observations.csv: c61d46f7d064ad444d807d7147d1f935248127f9a351547d15975656584324f2
+  manifest: /home/mint/ws_fusion_uwb/res/nlos_injection_20260911_01/inputs/sfuise_walk3_normal_clean/input_manifest.json
+  raw_bag_sha256: sha256:45df7ffe69b9d8c8be7784414ffcdc6e0f4674d0d7b8db3541e567e757bae0a0
+  role: development
+  sequence: Walk3
+linked_libraries:
+  /home/mint/ws_fusion_uwb/devel/lib/libuwb_imu_fgo.so: 734577e1a0abeb76c32005cdc0dc7d421db963eaed15688fa40d47922107fae2
+  /lib/x86_64-linux-gnu/libPocoFoundation.so.62: ea3c583458469a4d6fa12a8c98cf6557cb9308d49fe6756897d8ce617df50c9e
+  /lib/x86_64-linux-gnu/libapr-1.so.0: f002556ea2645376d2358992f402d224b35142c262adc0fb56217159c4951320
+  /lib/x86_64-linux-gnu/libaprutil-1.so.0: d532af8eccfede0733a7dc321b606ac3cc63e916a7966262a064a917f52b1da8
+  /lib/x86_64-linux-gnu/libboost_chrono.so.1.71.0: d1b51a0aaec8675081523ab596742813c14ede4832c529c1cca2f25d3aee5050
+  /lib/x86_64-linux-gnu/libboost_filesystem.so.1.71.0: e1ba3a5cf611782b0dd5d7981edd06504edcb867482d2929213ae655a98d0ae2
+  /lib/x86_64-linux-gnu/libboost_program_options.so.1.71.0: 16a89b0d75de54bfef18b479eb1d38710e5c242246a17baffa11eb4f2d544663
+  /lib/x86_64-linux-gnu/libboost_regex.so.1.71.0: 8ba016f96cf59ea484eb77a800bdaa2020e6a3dde60b1d320b2cf807a4aedaf2
+  /lib/x86_64-linux-gnu/libboost_serialization.so.1.71.0: e1cd1dfdb60c9ac2e9c168cf2f0958a5ece96084604d21f7933250f5845bf1e8
+  /lib/x86_64-linux-gnu/libboost_timer.so.1.71.0: 83e9597dda3f11709b591b2d89b50deda1035acffe18b1908c44c5cab430964a
+  /lib/x86_64-linux-gnu/libbz2.so.1.0: 4488544d0a32b1e38d369342f219677ee621a2f16e64f529e4776c7322bc86d3
+  /lib/x86_64-linux-gnu/libc.so.6: 53b909551f8e581120ddc2d24cfb5df76c52e3c2e2a5dac0d202b25638b3e902
+  /lib/x86_64-linux-gnu/libconsole_bridge.so.0.4: 3008f31164aced8976b266973a20cf5355b70ae38c60f0405e578c2bee194a43
+  /lib/x86_64-linux-gnu/libcrypt.so.1: 5744b3669e4574920dfac2b33207db4e8cb501df88ef28c3801ba0673a7c7d6f
+  /lib/x86_64-linux-gnu/libdl.so.2: e0d0cace80b627e50ca3f7b621b64917677c27c74077080854d57cf4e548edc6
+  /lib/x86_64-linux-gnu/libexpat.so.1: 78f843a1bedfa4446d888d3ac0a501bbd27c08d3ef35999cbf6afc2592b357d6
+  /lib/x86_64-linux-gnu/libgcc_s.so.1: 489803ded8a4d803e2c792763a2767c12185f5764b7bba080742d14ef2452b27
+  /lib/x86_64-linux-gnu/libicudata.so.66: 50b039da86ab40fed973954892aa52b0b833127b94103ec62b71c1e0891ce5ed
+  /lib/x86_64-linux-gnu/libicui18n.so.66: e6b2f6fdf6f473bd529526a06b1e1bb6dab4a9998da941346711f1805dd42816
+  /lib/x86_64-linux-gnu/libicuuc.so.66: d41e9287614412b6e95f809773a5f0f86ee3763a7d5f0db4856e79f64f7c8dab
+  /lib/x86_64-linux-gnu/liblog4cxx.so.10: 5693f25a8d6fc9582486b8ae34ce72a16f4d976319eaa813587d13ac56c7ebcc
+  /lib/x86_64-linux-gnu/liblz4.so.1: d6574e34006e27cfb5d00dc75018cc06832d0bbc9e1b35316b9c03148355f0a0
+  /lib/x86_64-linux-gnu/libm.so.6: a0e70f48f02a399e8dd37f861a99e226c285a9daf50a25d19fff7ccf18b97f9c
+  /lib/x86_64-linux-gnu/libpcre.so.3: fb2fc875c7902c8c80045c93957d9aa45f5d80e096f74baa4ecf80f25e40752d
+  /lib/x86_64-linux-gnu/libpthread.so.0: af27ed906f6185e0143b9c0d0da287788efa7eb6b2639e44d48fb2939415fdc5
+  /lib/x86_64-linux-gnu/libpython3.8.so.1.0: 20490b457242c6ed9a6a081ea04996aea3f8fa7a988d2ce869794919f9ce09ee
+  /lib/x86_64-linux-gnu/librt.so.1: fd90f6cc09dda34e0fefeaba5bc60533773c4240f9e7ef672c508b1d610c425e
+  /lib/x86_64-linux-gnu/libstdc++.so.6: 26916e7389a561537a0510661fc75538cea236139346f3dbe21bc64ba65605bf
+  /lib/x86_64-linux-gnu/libtbb.so.2: 26115b1a00c49e84d314e3f75eab0c752a2dfb20a61c60897f5656b1db239cba
+  /lib/x86_64-linux-gnu/libtbbmalloc.so.2: 14147fcfadccacb4ddf94738143a3fa999a065a303dda898da8ab057cfb483b4
+  /lib/x86_64-linux-gnu/libtinyxml2.so.6: a1be9bbef257c1657ba73570bd8c60702c6a87549ee34d5dfebddf4dd559d403
+  /lib/x86_64-linux-gnu/libutil.so.1: bf3fc8a2b1a9c61a720d246159df980be573721210ab1430e90dd13378e55160
+  /lib/x86_64-linux-gnu/libuuid.so.1: 5255c40077f560d9572f60e8c1b85333bd409ac5daeee326e5c1bb3273dca0a9
+  /lib/x86_64-linux-gnu/libyaml-cpp.so.0.6: b8a2d129e9b39d03ad7dade4eaa4eb1327a2562e203c17b50bcd8eb117d1ed7e
+  /lib/x86_64-linux-gnu/libz.so.1: ccfda8d7e0d2f77c8a4feb2febbae057edab668d7d7ee6410e2c517724c056c8
+  /opt/ros/noetic/lib/libclass_loader.so: 0bd50c1e664ce28f5e01b8f32aa86e1058429957108b2e219dcdab7dccb03d86
+  /opt/ros/noetic/lib/libcpp_common.so: 7ca7b67d2f06d897cbbadc51343c75312accf25916eeed71dacd275b3c39ee2e
+  /opt/ros/noetic/lib/librosbag_storage.so: 6cb309fbee958c8fd04adcd3c097ab58f33d5b0ecba7c46bf26737288a7a7ec4
+  /opt/ros/noetic/lib/librosconsole.so: 6a2606bec588ad94ab2492e8bdc20423e99782625e11e454b9b8c16057b1dc1c
+  /opt/ros/noetic/lib/librosconsole_backend_interface.so: 99092c95434fa4be7a8963649a996034784e4f6c6033f55063efd411829adafc
+  /opt/ros/noetic/lib/librosconsole_log4cxx.so: d0e1afe985f5db3d2b191fcd388ddecd91ba15920ae7132e84f3f43ff3e8fe0d
+  /opt/ros/noetic/lib/libroscpp_serialization.so: 054c5e661490c61927d798a0513807766a005b6854f309b780290bb6ca6881d4
+  /opt/ros/noetic/lib/libroslib.so: 18098c35c4c73b0e1e0ab72c0a84ccb7f9ba42c01a8ac9633bf036de295d5a7e
+  /opt/ros/noetic/lib/libroslz4.so: aaf85d4a232794e44d18110caa0bbf1cb56cb8eabbb512dd7bffa0e297cc3c12
+  /opt/ros/noetic/lib/librospack.so: 0de703b0f8f6e2c8e2f99dbd6b112835dcd9b4b6f7c92039433f1cb2dda532ec
+  /opt/ros/noetic/lib/librostime.so: 3d7fe2addb37ca107726c4c3d28d54379f1efad6c58682d1a4f11b1aa4a0e907
+  /usr/local/lib/libgtsam.so.4: 00d83aa618194aefc4b2011e1d29bd9aba107a8b5e0ee8e946eb2455351219da
+  /usr/local/lib/libgtsam_unstable.so.4: 7e54a7f4603b30b755f9f0036034e19c9f753c985c82af83c1551b23a9358c23
+  /usr/local/lib/libmetis-gtsam.so: 0a9c286ec13c815313fbe004d9969c3ae0ff08523f38efb575ca785e98f24d2b
+missing_provenance:
+- independent tracker-to-IMU transform
+- independent UWB-to-VIVE transform
+- official ToA offset calibration procedure/recording
+python: 3.8.10
+runner: /home/mint/ws_fusion_uwb/devel/lib/uwb_imu_fgo/uwb_imu_fgo_paper_runner
+runner_sha256: 7cda4dfcda28f45975a8175ad85c937f0230ded267588dc2a5c6da78d3b64569
+schema: icra2027_provenance_v1
+sfuise_commit: 75bf5a32f1a8e5c3046a5bd1a1ddf659fa996f7d
+sfuise_configs:
+  experiments/compare_algorithm/SFUISE/sfuise/config/config_test_isas-walk1.yaml: f72d12585cec7b57ad7dd155de3d014c37d33a56670041f75aa1aea67d6b8de8
+  experiments/compare_algorithm/SFUISE/sfuise/config/config_test_isas-walk2.yaml: cc1350ead5078db350a8e9995a2da9567c8949fd4d858f8f5838ebae187df89a
+  experiments/compare_algorithm/SFUISE/sfuise/config/config_test_isas-walk3.yaml: 02ecd63c16098c2032c81add7460d4dedf58988c78ff2e11e0d56725c679b684
+source_files:
+  CMakeLists.txt: 61691ba749415f8fe5872cb2b3bbca1b5f7448bd3edebca140edfe1c634ab213
+  config/mcd_tuhh_night_09.yaml: fcf0c7d26a1729b98fcb80f15e0a3dc0f35e01dc5bc3ad98855503a358769ea4
+  config/miluv_circular.yaml: af971335ee3490e12b4ed47129a300a30ae5213a2262e31a83e0d6c2638c0cf6
+  config/miluv_circular_synthetic.yaml: 305b20afd1ea3181f418961d87cb69c1f986f8b3734327fc2a2a3bec2cd86f9d
+  config/miluv_dop_n7.yaml: 0b640e4f5274dec1a9fa0d54478e44031c906834bf7e8c63d4ff3d51cca92b95
+  config/miluv_dop_n8.yaml: a10879e46e6198d6d7868300855d0e0cc676cce9c305066c43ea3578ec957ba5
+  config/miluv_random.yaml: 234f314bc6a6c1b012779921aa3b37a8857946d5a6a31abfb064d6c2312bb30f
+  config/paper/ie0911/miluv_circular.yaml: a2acceeaa70f87748de2cc010242aed3bdfb9ed6aec7a0d91feaacb7a1a36753
+  config/paper/ie0911/miluv_random.yaml: d9280d6577342734a67ed6d43bd3a226e275cf9944400166cf4db7581d0d8b82
+  config/paper/ie0911/sfuise_walk1.yaml: 5f6a30c3d77c6083bcadcbdc2da76ecaa6e7a7950888ed5ec3bee7f70e24975b
+  config/paper/ie0911/sfuise_walk1_pl_bidirectional_clean.yaml: c2b208cb80dc2972d51ff2b9498a6c26d73f146db8f3f5446b3d8d264d330538
+  config/paper/ie0911/sfuise_walk1_pl_bidirectional_injected.yaml: 9f299c27577847cfbb0357a65921e54e7837a1379bf72810f9d269e5668b86ab
+  config/paper/ie0911/sfuise_walk2.yaml: 0e6468dc9158d849fa9190c799172a3f6f9dad03d4d66d57575b99c088990575
+  config/paper/ie0911/sfuise_walk3.yaml: 09c677928fff113e05d4ee0e709ae92f4b9bd6cef0c54f22f4d61b5a2a33bc6e
+  config/paper/ie0911/six_inputs.yaml: c125cde2be1b5075bf48b5d625b98239bcde8ddf6bdffaeb5a475b63195f33fb
+  config/paper/ie0911/six_inputs_pl_bidirectional_cusum.yaml: 3553ceceb974a970d7bbe490d93510c97a023cf833d8cf4163a1ac2c9392ee0f
+  config/paper/ie0911/smoke_batch.yaml: c689a06fa71e15c78d4e66415e69409a8cca96504101af641d8ba6f69b37f928
+  config/paper/ie0911/step2_evaluation.yaml: 909497e9690907ebea1595cc18dadabe055f245abb4707f732c8dfa35b880d20
+  config/paper/ie0911/step2_low_redundancy.yaml: 0f48b2add6e3e7a0a99959c407d4efe2cea6ca9d80f0ce5c8de3fb82258362a5
+  config/paper/ie0911/step2_low_redundancy_evaluation.yaml: 4998e3d5051ebb71c54412b01a085edfd77d60fb630c598c1e8f41b9983ded2f
+  config/paper/ie0911/vicon_test.yaml: c54782dc49ac4456f6c5d9a3416e82cfc0f7099d47cddc34f24abf4795fb7b81
+  config/paper/ie0911/walk1_pl_bidirectional_controlled.yaml: c2f8e6d799aee210eb1ff9c023c45318d799c45e59a3c6ae3e794968eb727ea4
+  config/paper/ie0911/walk1_pl_bidirectional_controlled_evaluation.yaml: a51d6fe9e69d1fc38a900cba51235c881ebe64e9f2c201ba4a3086be7d3b0b63
+  config/paper/ie0911/walk1_pl_bidirectional_injected_primary_audit.yaml: d40cf6daeb93d629fe55e41c41f0ce66c871cbcc48b450da9426903fab01251c
+  config/paper/ie0911/walk1_smoke.yaml: 66232985589c7c50c6838d24edc0bd4174c4bc7f354e3041fe8fd0293d41d28a
+  config/paper/sfuise_walk1_t02_smoke.yaml: 8be6fbce8170cb8f73eb1e7f93d56bea34bc722e4cde0a7a696a77f6b8071154
+  config/paper/sim_circle_t04_oracle_debug.yaml: 947f712397033eb5d9dd3131ce2030e091c948c68e0396fb13907948baa6c9e6
+  config/paper/sim_circle_t04_oracle_debug_max1.yaml: 7313f4c5fea9304667118f05ca3e240ab025ff06b559cc10f25b9efe97a21262
+  config/paper/sim_circle_t04_oracle_support.yaml: 48ee93d5c946045dda22a079f5de7dbe863e64f255048985786e71b75d41b72a
+  config/paper/sim_circle_t05_oracle_score_debug.yaml: 83873f5f02a334c2a5f51449f5c9fe8ec9a02dbf59356a6254c8c78566f73cbc
+  config/paper/sim_circle_t06_automatic_discovery.yaml: 3de15a780c165f43419c15604a89bd4f451f326c7e880ffc87246ac4616c3849
+  config/paper/sim_circle_t08_oracle_development.yaml: c5534561bd8bef55e45c7014db01cbaec7b01ecbd988c4f47b0d3b316967e5e8
+  config/paper/t07/base_component_audit.yaml: 18b212801d028c0e9f7e1296af4abcab3fa327521d580004dea5296a4c2386fe
+  config/paper/t07/ramp_cache_smoke.yaml: 357ca642b3fddc3ae48204955a9b5966ccfa406ad5f239208df0d2a36bb179a1
+  config/paper/t07/ramp_multilink.yaml: 0bbc7adb9599b041e1efb9c95c71b76aa04d97ac11d445f1d59570db39ab61cd
+  config/paper/t07/sim_circle_base_full.yaml: d0e8451f1452414fa283e496c906f30b79a9fdda4adf6dc66f699893e2c784e9
+  config/paper/t07/step_cache_smoke.yaml: b04464a8fb23921b2cd2fd5dc8ff754b38ec60421f09b45ccfdd1d80edf14919
+  config/paper/t07/step_multilink.yaml: 2a972039b868e8a3c214134584ef86a554bbd40e4463c47b6b2adc379852eede
+  config/paper/t09_development_batch.yaml: 6b895e94e078dc14db3d5e74d2461cb6396722029866fa8683c9da1a3fa74e53
+  config/paper/t09_development_evaluation.yaml: 8fdc425a24da077d75ca32b0b936d36f67f9cadb32505964730e62077a586156
+  config/paper/t09_fixed_partition_development.yaml: 366e1f67de04d656c3e6393de4979c425c573022eec4b551d6fb847b09fd0d0a
+  config/paper/t09_fixed_partition_development_manifest.yaml: 924c05343ac06b9426d22ea73b3dfe9656760d979600a2df6bd0eb76a6752e28
+  config/paper/t09_review_fix_replay_batch.yaml: 9e5e74bb041050e3aadcb4856ab4937ad6fdf06c29a2b1abf223c740e98887f0
+  config/sfuise_dop_n6.yaml: f2839615f294f2661d1995380120a1a850f5035d4a8b10398946e48e1071ddcc
+  config/sfuise_dop_n7.yaml: 125502221fa8a4a2ffb152d308518c6308ef1407fdbd89e61455c48647689960
+  config/sfuise_dop_n8.yaml: b1a839ed2f80a6f09f3ca831f5e695e6fe77380c4e6b3869a41a19db198649eb
+  config/sfuise_w2_dop_n6.yaml: 38c1cd27f788bc93524ee4c3600ec177f05a86d891707fd07d6daa75ca9b52ab
+  config/sfuise_w2_dop_n7.yaml: 6a1966ccd234e7c7be5d40b05855048e52102ce3b7e540d794ffd34939173563
+  config/sfuise_w2_dop_n8.yaml: 02eddb763699417b23db409f4bcd631ba374ed5d6ecc88feeb3aaf8e3c2d23bd
+  config/sfuise_w3_dop_n6.yaml: c8af2afc2d0048b1f8d6529b7331791c5380f5d96e5d63f4739f303bdf9c3d33
+  config/sfuise_w3_dop_n7.yaml: 13f9d77558fb688cdbd9f0669aa10da0281f864c2fa4fbfa88729b8567ccda20
+  config/sfuise_w3_dop_n8.yaml: 2ea60d32d10c2425492459792971976be18bb3a5df9c11d28569750c94988be9
+  config/sfuise_walk1.yaml: 0d61f4b85a9df1062d8e8bba988fbb559fa2767d4c1d21d6e3e3bb6d514c2df0
+  config/sfuise_walk1_synthetic.yaml: ab6929a860f9a2d521f9c6c5ed24f7b9e483c117404d6ecef8fab0ff91e37537
+  config/sfuise_walk2.yaml: 7807bfb789fb37abf71f88489859f8e1ae52ef7ada1e4d600038df3fcacfe59c
+  config/sfuise_walk3.yaml: 196dad2e49e8a7537d5f2133792428baab5a4a1e32b31e887d67562a15a71c34
+  config/sim_circle.yaml: b36fae36e39d7ce7ca264c12c47f77cacdfaec1fd02208118485530786f48b2c
+  config/slam.yaml: 55a36c0a693a7fecbb5b67cd4bb240e57369dfd48442ff630c767ebc4002d4fe
+  config/tnp_03.yaml: 80b536f8de23c7bfce34e206aadb03a70c65b6561261aa5950a4fdbe6a879ef8
+  config/uwb_fgo_viz.rviz: b9f2636a228022867ccef68ae747bcce7e8e1eb0b0c117aae96aaf5dcf93dde4
+  config/vicon_test.yaml: f53c802819838ff70f25620f5dc9b631ff310d9b828b3c12d43fa1ed816d7499
+  config/viunet_00.yaml: a878cc182c0ccd9e0448e825143c6c0c0596cc1582987e9022ef5b3d13bdf91c
+  config/viunet_01.yaml: aa33b084bb64b67081fb0dc6dce73e268c821373d34665a0b8186b40ec2a83ce
+  experiments/scripts/audit_obstacle_ranges.py: b593d151d4e59d62bc93a5fcbcbf6c61d162ac516be4338144414aed5362aecd
+  experiments/scripts/build_dataset_manifest.py: dbb147d8fa9928e82bb259dc1e2c9ddb183bdb8d54f59d2094037814ee913752
+  experiments/scripts/canonical_injection.py: efafa1efb502092830dff9b70e45075cc71a1a5221e415c14277446b750527c6
+  experiments/scripts/check_starloc_native_preintegration.py: d84ae3bac32885c0561ed64fce2bff098072feb0be977ef688bb8f426b5b1129
+  experiments/scripts/diagnose_starloc_clock.py: f068292cb81c9f45575850ea549640690d6c85fac57b20bf6e181708241d2d01
+  experiments/scripts/diagnose_starloc_imu.py: cfe4ab0b098ab291cadc96bc176a81d50bd9606705c6ab905eb7db1efe21f82e
+  experiments/scripts/diagnose_starloc_signals.py: 8a0f9b39d0db9304ab26c8f58a4daebff55f695900ab767c1bba7e22fe5497e3
+  experiments/scripts/estimator_isolation.py: d60af1fd067d30a7b9ed7a965cdc5181aaa5b7e210ebfd6ce7f48f91bafe4b3d
+  experiments/scripts/evaluate_controlled_smoke.py: 430af571d56a3614d4f01e04574a7be655da7a82bcb731e49c6b61755fe2a72e
+  experiments/scripts/evaluate_miluv_rr.py: cadd5f19367e413c4b4864da2e0b790bf7eed138129214ca0c855be1653dd5ca
+  experiments/scripts/evaluate_own_vicon_flow.py: 9e8ff871d5d54962dc0942f3ee7966cd5a3a78ba2a3cf5ac842bfc3b6f9a0ae9
+  experiments/scripts/evaluate_own_vicon_flow_postsealed.py: 539491c2039d238d0555ce7cfbc92cd3c9b6a0d86f26a61a1e0e3748077d8adc
+  experiments/scripts/evaluate_range_gt.py: 8219f8740d32bc17c0035dd075c2be4b3faeaf8609cd06d5ca5991a749c8972d
+  experiments/scripts/evaluate_recover_vs_reject.py: b6d89ef3aec0c8847dae8ff7b0b98e84aca1eb557c1a722bd890ab1cc5b96f9f
+  experiments/scripts/evaluate_sfuise_baseline.py: 80aef8e1d6cb70991d70b5913f877b084a863cc73bfd6a6bffb972db93886275
+  experiments/scripts/evaluate_starloc_crop_diagnostic.py: 647895c59badce5a65fdb4325958cce6d3723f40c3c5e9be3ebebb55e4e0d5d2
+  experiments/scripts/inspect_dataset_metadata.py: b98e7af80c88a758d2c9627daa4d41e5b1912b535d30d38f4314801c6ef40f82
+  experiments/scripts/inspect_sfuise_metadata.py: 8df2e6a82c3cdd6dc313cc94c5506fd91c732f3c9344fc3ac73ecf64a8d9052a
+  experiments/scripts/report_miluv_rr.py: c1d107eef8cf875247ad55c730374ce314b5bd757b14864efe31aefe621c33c5
+  experiments/scripts/report_rr_admitted.py: b92cb57a30179b9873a0571849e8edd3acccc755b365438ce6739346bb8f9cb6
+  experiments/scripts/report_starloc_signals.py: e86f9cb0dab47c5fb1201faecc7671fffaafc5286492850e73394965522d4875
+  experiments/scripts/rr_admitted.py: c63f6bce6f2fdbf2ad23722619d64e1878c6d91e80a4914e90b3b54d2f761f1e
+  experiments/scripts/rr_evaluate.py: 26b64a8e81598ed5d5b54be777edfc45f08cc394630d56e0eee86273a898ca15
+  experiments/scripts/rr_sfuise_worker.py: e7a096568b853f7d48bb97a31fc511ed73cb4e17930f2a6d10c96d45c7f32165
+  experiments/scripts/run_controlled_smoke.py: 8366cbde42bb1ac75f848c8d577dc254471012e753ded72974cfd6fd79abd8c3
+  experiments/scripts/run_miluv_recover_vs_reject.py: 2c6bfecaa1bdbef7b62009c32147934dd3e8089c178baf4f6d81f20b767b7030
+  experiments/scripts/run_own_vicon_flow.py: eef43753af3b62e35bf35abb7ebab9ac7813d8d90676b7739559ba027f7b904e
+  experiments/scripts/run_recover_vs_reject.py: 185e0f32f38a732423f1c231e604e6cfd44f571a9247ec22f589fbea74ba2397
+  experiments/scripts/run_sfuise_toa.py: bf9f890bff8a93e776ecdfad5daae733367892d27b7986cf262dd149a8b9a832
+  experiments/scripts/run_starloc_crop_diagnostic.py: d8438a567459a5e4314f9b2b0cad7c4061b93ef0e90009b59c5bc9a47d0e7446
+  experiments/scripts/run_walk1_smoke.py: 629a3645ee91815713317bb7486d2462790de017b13e8c1a4a817d1fbc0ac48a
+  experiments/scripts/starloc_preintegration_check.cpp: 12ecf8e7ef0694432bceaf4e76fff35f757b9e948846291af3ec13caa1efa4da
+  experiments/scripts/summarize_obstacle_audit.py: 1fea5eaa22443c675499fc8f4c024d589a833e61c6daeea028cdd82f1e16b4af
+  experiments/scripts/test_controlled_injection.py: 4080d2cebfae79709a5e8d18130cba9efed33757747aeb5b70ab7c4529016318
+  experiments/scripts/test_miluv_rr.py: e8939bc714e35c10f9da1c3e24776bff290f7108d967a13a9d011ee256fe0f67
+  experiments/scripts/test_obstacle_range_audit.py: 7260af8252a68b939755c3040ec976920a206d7113ed589f9a0bcf71610928a1
+  experiments/scripts/test_own_vicon_flow.py: 0f6d93c6f7e58972f1d385b5ede6d8ce2457dc9b9a5375365f3a4c25067caaff
+  experiments/scripts/test_range_gt.py: 1c7cc026116cfb50e1cd57c1ac5438d6f818500a669bf234dfed4fc68a64d112
+  experiments/scripts/test_recover_vs_reject.py: c17ff2693134ad413069976156ea9ca8b5f1f925ed428eb2edd41c15074c2feb
+  experiments/scripts/test_rr_admitted.py: 45256abc376d17b30b8928c9cb80bcaabe73ae939d1c56ade234786aa8dc3f0e
+  experiments/scripts/test_sfuise_baseline.py: 3eeadcf76602587162d4a7db8784167b58843906ea0dc4c89780f39ab7f833f6
+  experiments/scripts/test_starloc_signals.py: b85e6438206cbbbe84fb023b9bf67cb6a2b8f447558fb34be1da68f31b4decd3
+  experiments/scripts/test_validate_manifest.py: 7e34ceb67f0c4eddeefe95eeb2c311907a8bfc8cfcc5f89f4e1716d425a6627c
+  experiments/scripts/test_walk1_harness.py: 53de4848345201f8ce029495cc91ee9864abfbfc18f7e0af4f3c74da5603d346
+  experiments/scripts/validate_manifest.py: ff58f40bb97e087a3cb9931e522943f62628c22a31858fea5e0d0710a67ad482
+  include/uifgo/config.h: a08dd237a955b051d90c95a2813950656162933998251d224eb7bd06df3ef154
+  include/uifgo/data_loader.h: ee95907d699c76dfa8a6c0e5727fbd7467dc937015e35d45334a1b86ce42496e
+  include/uifgo/fde_math.h: c1f0a6ff869756b6b4d231fc9a8dea67379cb6d181e7bccc1f287d9f2b0d4e98
+  include/uifgo/graph_builder.h: 45d16274a16206aecd7cbb4233d2ee6ddc7ce6e5016eef19aacd24388a354f09
+  include/uifgo/hash_utils.h: 99ed873b2180a8a631a08cd0eca9f70356522fa11e03495c80db8d2ff1119998
+  include/uifgo/imu_preint.h: f222dec2fb1704d411e97c68ad45ea1343d1718882c64c49ff69a6c0199de79a
+  include/uifgo/initializer.h: e912c2a3894dac338a49db2b233b6e07b46b389c95f45e06d2579c23196f5713
+  include/uifgo/logger.h: d7b23bfb12ff41fcbefa694ef699d8b1d09aaa64c41e0e237d7caa69dd738eee
+  include/uifgo/nlos_discovery.h: 18439e4cd3098cfac9612a18a0301e3afbb18bc46799d6e3da8e0d45bbd2c184
+  include/uifgo/nlos_fde.h: afa0e54e4d13d5b9a51fd6af204834a4bc4857f65053a7171914a40bfbcdc8f3
+  include/uifgo/nlos_inference.h: bcdca16b7a792885c43547395b2a61233846d07bf7682b20ac80481bba620cda
+  include/uifgo/nlos_inference_io.h: 9638927e55ccf5c4203529c8022ad2c0bf63a659c4643b287929761688a1c8ed
+  include/uifgo/nlos_recoverability.h: 7942dcc1aeedb7d42d43d5f651973a3946bf2af761122a69eb1e01e0707f0dfa
+  include/uifgo/nlos_refit.h: a0bcc1de76092e31110644936d40048276e228c75efc5977b153aac56c97c5ca
+  include/uifgo/nlos_scoring.h: f107154df0a0522f97d0426b24b83241cae06bb16cff99062e1512271959d897
+  include/uifgo/nlos_solver_utils.h: ad44f7e7750a1cd26faddd208edc127c1e00527d3883b0a7f10d95b5fa587454
+  include/uifgo/nlos_support.h: 2a838604bdb5cb979563c95678cee127cf37a95155d95f1274232f9e57b6534a
+  include/uifgo/optimizer.h: d6e87c7ac34bf0e2375255bacaf3b12e26548f6c40ebb49698760c70b8c458a1
+  include/uifgo/outlier_filter.h: 4a3b722530e040aab4bfc0c04dd2834284c00dc724e3743a364c00e4fd7e1c5c
+  include/uifgo/paper_input.h: 5a765d1151e28d3bb92fc93e9e569da1147b954541fbc3ea880343909c41112d
+  include/uifgo/paper_methods.h: ba38334c81665c45a20be2d9f149de98aade8065894c2a52ad9c9d2763efcce6
+  include/uifgo/paper_pose_prior_factor.h: 2f5d1361b8091fae894f80a4a7424359a400bd38972a748687fd7a3c36d67699
+  include/uifgo/paper_robust_noise.h: 300292cf8715e961dec26543a07ef436b45e4220efe34a45ca327a26cc95bdd4
+  include/uifgo/paper_run_io.h: 5ef84cf82606e05fbd13ced32a947260d912ec8fd17fc89c552ed6f296ffa254
+  include/uifgo/paper_stage2_cache.h: d707c7f5a9cebb8bda8477185b1b38691c4a9d3c06eb697c39e10e6cad80ba26
+  include/uifgo/pl_bidirectional_provider.h: aca1bc5084d9ba3a803e1bcbf16e10de7bdd036e02de030125ab7503a72336af
+  include/uifgo/pl_bidirectional_support.h: fdd130f696716c888c2b06054b6a254c5fd2ada2aa57aea499fe2d0a6c44bd16
+  include/uifgo/pl_conditional_raim.h: 02fc210e37418c054793783555b9ceefd42369d00e2ea0aed6aa3fb745f83c0e
+  include/uifgo/pl_persistent_cusum.h: e83547b6837daf73b6d986f312cd27d4a7bd8ee4304f33628abd8a3bfa565c7c
+  include/uifgo/t07_scenario_cache.h: 8f4cbeffc721d1c4110d53d25f1fa6a30e1742f665016773c7021abdd7e67ef4
+  include/uifgo/t07_scenario_injector.h: 22155ac1c4febf723b01bd7223ff1f2884ef3fb880d4293088de1c03000c9e6a
+  include/uifgo/trajectory_io.h: 61621afb81d70e1b31c4b3da13c44e4714b94e91afdffd2a37923c6b89e9baa6
+  include/uifgo/types.h: c547b4e8305603b1089f15983e7f244bf5d2add6b7750d034cb6d4b2c0beca17
+  include/uifgo/uwb_factor.h: 066cec752c3765b29cc2e09c42f843703ce078f0a6ce18959f7b2e2d8d1ba9ff
+  include/uifgo/visualizer.h: 819383519aea681b2063c08e91cd6f30ec79e74c7216dc9b335b24cc3534b8ec
+  src/chi2.cpp: a591c45a526212ec7f180eb00ba36d6f1f15f647be49ac585d3576de4b1407cc
+  src/config.cpp: 4fb306549ef592d48467084de3677b93b7d2860ac84e4f982e4a8f36355ee292
+  src/data_loader.cpp: 3dc827646038546a80cc141e4a383cf435659abaa2cdee5e7fbf0070d46703b9
+  src/fde_grouped.cpp: fdc772d5297a3fadf1764948a1745eb94903b4a37f10de9364195d07328e84df
+  src/fde_math.cpp: 7c0dc5d38e088673b5772111ab2fcaec737904e2cb6e7867e7468e72e565cb5a
+  src/fde_windowed.cpp: 21bbbc68b2854e6a926863d34115bce125f3ddecd60aa67c026d10caae77e9d1
+  src/graph_builder.cpp: 32fc7c4c4d6b740e21a23f0e5c0d9a7911ca5025b260380b458a11ce81f96e39
+  src/hash_utils.cpp: 48ada285197c918ff5a84b33a907274c7041d18c97f336afafd2ac9f82f87f54
+  src/imu_preint.cpp: 1ef14ee12d75dd76c1b8b51b0f832f392ec1ce6d2bce13796a40a1a103b85218
+  src/imu_sync.cpp: 607e618bd3c0666c64ae7ccce4cac1ab3b1be44bd07e9887e5a1b0d4d5269422
+  src/initializer.cpp: e7ef707689313105d5c20154008a5b79e38b1081f0d0ec1080dc28861053c6e1
+  src/logger.cpp: 9fe2b17ec02b3811e8d5d020f7481e0764c77f132ca75a2b6d7da9434a01a93d
+  src/nlos_discovery.cpp: 38f463850d1215e338856e5d320352795236f6c202a116a8a7e7f49faf73a28e
+  src/nlos_fde.cpp: 04cf0c7b08add32d3647fd9067b0e4692c0d463a44ee6f3c73d987349e1e0d2c
+  src/nlos_inference.cpp: c0c323acffe33cf0102e8e7a8805baf2b5e55142d96e360ab83e25b5a75a4f16
+  src/nlos_inference_io.cpp: 06bb0b0a4cf70064b241319295997bf001747aaa34c8f00b0cde31d6529741b1
+  src/nlos_recoverability.cpp: cd9b631bdebddd7fdbfcf35af615984d302e5359b2531f255bf624f4dac11cdd
+  src/nlos_refit.cpp: 3c74724387956d930ad4e9fe711d1af9f1b3db4cd69430f2e31b8087e1be5d4b
+  src/nlos_scoring.cpp: 71a6190f21153e99a3fd8e035bf9e6b85e63df1c1c9097e03ac4bcceb4593dff
+  src/nlos_solver_utils.cpp: 3a33d96e057d13c529ecb64dd599ae1f646be7878accb7604d68cbe5df5a8839
+  src/optimizer.cpp: a4e068bf137be3d8d994f1be61534958de4dd81340fac97dc54b657c26df547b
+  src/outlier_filter.cpp: 1204e7b22ffb4f63e7ffe64b5d915b0db5b9142f8c2fbbddb87ffbeccbcdffe7
+  src/paper_input.cpp: 0347416d06116ace169efb89f369196a3a889939a98ece05d31e7c9e68da4f86
+  src/paper_methods.cpp: e8daf174f2138237da9565503f1a852cda32525a434ff38636b6a9de446c6faf
+  src/paper_run_io.cpp: a3fd9c9ede6d06d14b8c9b59ddc54b461192ac20bef9e7533af8b77943478e28
+  src/paper_stage2_cache.cpp: adc8c79bf0fc77dd180199abf3a6c06a74c04d72ef8e77269a63aefa361b869d
+  src/pl_bidirectional_provider.cpp: 8b99fd0b186eacd26c6bf10b8ca53006f0989fb96026264793bc1c832ec6315f
+  src/pl_bidirectional_support.cpp: 4d6716c9157bafa11314ad3f4151b5e37dd1067dde356bfd3dbf666a453ec1dc
+  src/pl_conditional_raim.cpp: c3e8762b7637696a7712602aa32ba433c753d50a7d2910a4519ad7c8e1556424
+  src/pl_persistent_cusum.cpp: 17addb6da7227eec0302d4742d431eaefd4c9f25d1feaf01ca48c0ca0ea51660
+  src/t07_scenario_cache.cpp: 37b01271e61599548c4324e651d13f09f71f0e4d4521487ca4adad7bde7e46e2
+  src/trajectory_io.cpp: 940c1f26810232280a29d86eec0ce36a4023f20e1826ab09e12e9595bbf69f98
+  src/uwb_factor.cpp: f7ae4f1969bf93edee7ce3cabf780e1a3da168555ad9519f7785509b2c4c831f
+  src/visualizer.cpp: 57090542fe384ad4494161e036454cdf2aa32f01aa187f8634b675dba899b962
+  tools/paper/a12_checkpoint_probe.cpp: 260fbc88c0a9523cebf7db3561f3eab73729170dce544a30d7a169c8fa3fb1b7
+  tools/paper/a13_imu_covariance_probe.cpp: 21625ba2a2557be1919213ca4bb6ec4e5da6e306c7f80f79a13e4a5b4f4005e4
+  tools/paper/a14_closeout.py: 00e9bc56b2ad18ac7b70d359c1f070da9ddb7a9b39b1e7d340e405b1b3a8ba7d
+  tools/paper/a14_engineering_gate.py: 6a780cd39889db49d426f08b2a149a5e0149f2611560da7f3a0b8200a6fc051b
+  tools/paper/a14_imu_model_regression.cpp: 18463cef1567bbbeec784e46036bb45d18d3d554497f30c5e638f4386fc17728
+  tools/paper/a14_run_logged.py: 89044d904358dbf744cd54ffeea2426a3cd6f26004ebb9ff04184543b0bff4ef
+  tools/paper/a14_run_regressions.py: 28f9b91d32d54bc88d53b65db42b74cfb0b308a29ef97cfb2d0cb4c65c2df1b0
+  tools/paper/a14_single_pilot.py: 1f108993708432b7e61fc0c9be93e069750b46390111ccefc72bc5c2baa2d436
+  tools/paper/a14_verify_delivery.py: 2a5f892fe7e699b4f1c6766375518759f95bc7a6a0a1101b8a2570c877a3bec8
+  tools/paper/a15_archive.py: b8d3dd262af2bea49108b9329d4e518480d96cbd5241ffa0c5c3610b0036aaa6
+  tools/paper/a15_capture_once.py: e5ea74615eeb1df9d251f8d980a7ed07eb2037783d505d1aaffb4817092d7de1
+  tools/paper/a15_finalize_evidence.py: e3bf4f4240c87dfdbd288bd6944bbb4ab350f1291c9da56fc6c314e1267ae1dc
+  tools/paper/a15_static_recompute.cpp: 367b24bdd5218f72bc8d2169e0ee08f5190d935502b524c4e88c9b7730cbb65f
+  tools/paper/a15_summarize.py: da7d6d0250978b0beac4cb78a340e4c2fc272f92a46dba376f7d0650f7c681af
+  tools/paper/a16_archive.py: f907494c94145985abea98a1ef5a6f0f04f53af2a5634fda6a377fb78f2666e3
+  tools/paper/a16_closeout_checks.py: ba3f4c6d1db18a221a3f6286a2cc5ada22cccb4330bf9c6af80cd0295eddd545
+  tools/paper/a16_export_endpoints.cpp: f87a6ed48932dca746f60068aa0e634dd106e7a6eb6ce49c17e5c7e042515d93
+  tools/paper/a16_finalize.py: 0079f51e9ba78638e80eda2c2801df9622a2666256b132e36d1ef2a7a3d18200
+  tools/paper/a16_mpfr.py: 4cc2ad7233033c677577c6d54bccbf918f1dd46add8600b458057de788dfde6c
+  tools/paper/a16_reference.py: d03b0f772e80e212707c06fc5d7bb0bb4d4efe645d298ee9bf3e28ec328483ad
+  tools/paper/a16_summarize.py: e396c99419cee1ddf587ea38bc9f81b05e500b395236dbf668b7e3aa912c76bf
+  tools/paper/a17_archive.py: 4e07edf8f6d86b0fb7218b36200587e5e82cec2145032f81080ba8b1e10a9aad
+  tools/paper/a17_audit_results.py: 5ca059396ba01e22978f23caca8a11084a769dcdb68df258bd77783dcdb484b0
+  tools/paper/a17_authorize_and_run.py: a0b2dd70d44b35ed2b9e32c6d58077bcaa4f6a5cbe4c37546d3662161a487b32
+  tools/paper/a17_certificate_tests.py: f28ddd68473bea561ed535d168228621a39c2d7bbc0e58c8456e7497cafb630a
+  tools/paper/a17_certificate_worker.py: fbd5886a1b35ade5e85dddf47a18839ae12cde20327e783c8a9a4a2a07afa19c
+  tools/paper/a17_finalize.py: 2f5229f3d6f1e6dff45aa753eaccc449e31b3a56d60ad50d78fdcfbc582acb23
+  tools/paper/a17_first_block.cpp: 4eede1ba9d6490640fbc1b1a79c441a47946fdf7850ee9227d4f4e3820c64e49
+  tools/paper/a17_gate_checks.py: 746c149fad2a576d04f8281c9cf91ed626deaba34f1e69c497ed6775f81fd4f2
+  tools/paper/a17_graph_io.h: 18518a1bee4f7975e25e2f9bf4b65233d4a4ada703302aad39366281170cdde1
+  tools/paper/a18_archive.py: 65f2ddb48542627b409804c6289330b0c23e5caaa926568a5f6a6357b95c3ff1
+  tools/paper/a18_audit.py: 40793bb5143a5c9d4cf8dfda59661db3e95c2d822f56180f3405162125b003dd
+  tools/paper/a18_authorize.py: ba0e6ae4fd40fb33b8e2992a502250effd0b9f5aeee0d1e1c8e62454a676dac6
+  tools/paper/a18_build.py: 7f209faf914f15998557076079d1c8ebfdccc3ebdfdb40cc5f0b1801778d64b4
+  tools/paper/a18_certificate.h: 9b2534215624b5f5e25124d998facb779a430a99809dbbab70238f1aab8339c8
+  tools/paper/a18_check_pairs.py: 39a0551bf134c44e082f9fe5b5180e9c1f7d004d924970d337f0c3ebcd18d2d3
+  tools/paper/a18_finalize.py: d942eaa9a6b6ef1d112d2173fc6e45beefcd31b090581146f3c913937575b627
+  tools/paper/a18_interval.h: 52dec8bd979142c0c00b5f7aa40d9e752963c2aaee7c47f47bed3ab27b852c7e
+  tools/paper/a18_live_graph.h: 86ff7f2bc38e18142e0215179ab6db28cce101ad292487ed6af70a6cca3daf1a
+  tools/paper/a18_nonzero_check.py: 1fa78f003594b73f2129f92ff2014051b8551a05cc0379b4af1b4e24160fdf64
+  tools/paper/a18_optimizer.h: d535bc389f3eea208c30f5d5044c6d109d68b00d17296e2ac511578a7adddc7b
+  tools/paper/a18_stage1.cpp: 4f07724598aa98851bc4d277fc06d3916cfa393b2bedf94e5948c05d7d0a9d76
+  tools/paper/a18_static.cpp: 52dae135cd9d4aa0fe27cbe12f80d686efa576e649ae2ed77d3cef3fa4b34698
+  tools/paper/a18_tests.cpp: c5a188ef59848ce1c69bb180a436cf87c61932623d53b46824b680d976dfb693
+  tools/paper/a19_authorize.py: 64f888861d855364d45a54f2e12f7c20ba4190a5a9bbd519622eb3080c0daaef
+  tools/paper/a19_r01_authorize.py: b5f2212e45c7e792898cf91589e8c1c4eb415ab578f6aac77c6ed5fab5630370
+  tools/paper/a19_r01_gate.py: 7c65c45e0e4e302837ca11683c45a491e42323ecb239f89c29a9324385fc6eb3
+  tools/paper/a19_r01_integration.cpp: 2b7fbba4b5ec3c4ce86abef1d393307adf0ca38dbfc0bcc21a742f85acd18a2d
+  tools/paper/a19_r01_status.h: a3e47ad329cfcd58a6f9960d13584c94e2a9579a98bc0ec1ad6ba57417b58cc0
+  tools/paper/a19_r02_authorize.py: 00a308cf01346c46d9e28f3b6584cecf538b72767cccd4a4900942fa32fc2348
+  tools/paper/a19_r02_finalize.py: a0a79eb8595df39295d9bd02872b90314f29db0a30e9bf1af26b1e13688b8de7
+  tools/paper/a19_r02_launch.py: 909bfd429ea59ae6ad27d38aa23736a5811e6f64da51e89891398cad26383032
+  tools/paper/a19_r02_preflight.py: 74012bed07866858c09e6c5a1eed1e2dfed7c61ab809206e671b5c8405eaa798
+  tools/paper/a19_r03_archived_guard.py: 02f96d7744f390e7feef605f702fd9a729bb1776e2b70a976dc4d75c218e7c2c
+  tools/paper/a19_r03_authorize.py: e3cf2818017a6e6240501425adf0cbacf6c4bf79114078d70f8b33d8d2b8422a
+  tools/paper/a19_r03_guard_tests.cpp: e4fc42427f1b7ef7656da88bc9749be5184e73a5547ae5ffffdf2b4ccd681d04
+  tools/paper/a19_r03_launch.py: 2706d90dff34d6a8332343a0e397f1299af37861360d51ae185a30cde325f597
+  tools/paper/a19_r03_pipeline.cpp: 927b0dc34d96f6a397faa81b570c195eac526dcf1d8835b886ab111eead022b7
+  tools/paper/a19_r03_preflight.py: 79b5f08fd6eba0c128856bc7e720c6e9cadadb9271b2db5fe2a620173f5ac0aa
+  tools/paper/a19_r04_authorize.py: 96a6f4eb6e526a2e74f964aa1289bf623b5febd193289ed1e2dd6ecd690bdcc1
+  tools/paper/a19_r04_evaluate_mixed_fixture.py: a0520b32ddd3a07af293b4fa2925d8390668c6305eb621580190131c709ee991
+  tools/paper/a19_r04_launch.py: bd337aa956101c4ed034638c3c4974036178a6bc2abc96c0224bb8c585b651f0
+  tools/paper/a19_r04_pipeline.cpp: a3120e6e7b133eee6ddfdadaf9c52b1a971c904928b644c226c015ab928f96f4
+  tools/paper/a19_r04_preflight.py: ae70e9d9ec08b2bb5ee59e2ea626ea54ce78d206b8e877e070d51fb586e4cbaa
+  tools/paper/a19_r05_authorize.py: 100efa9b6a8b09b4b84f4006ac83b0fbae66251795119933b72aa538ac04bf87
+  tools/paper/a19_r05_evaluate_handshake.py: 48cdca6a226e93f85251619d3183a424fb87911ce7c7bba003a370603beb91e4
+  tools/paper/a19_r05_launch.py: 412b077a908550850eb0ac37b7e965db7468c4aab1e9f491e4847628ed603688
+  tools/paper/a19_r05_preflight.py: 752f30693591580576bf5e875ab2dabd6213755f19eff644d665e635105672ac
+  tools/paper/a19_r06_evaluate.py: 9cf36105eb6ca393f752a4f5ec8b8c12f94f8c72160251d3eb3e65af1276c9f0
+  tools/paper/a19_r08_aggregate.py: 5c73b8a2eb0db5f10fa1c0d721e21bbdb43924c29303f98a6a0f34e9e6c77cda
+  tools/paper/a19_r08_evaluate.py: d2b60e2cba0b63035f731552de3dc5823d8d7897617b551321cf30186dda1682
+  tools/paper/a19_r08_pipeline.cpp: dbe38b3c29d5e55f5bd61af8fad27a7e01ebd69b72e38dff6bc0e34fbd1e2ef4
+  tools/paper/a19_r08_prepare.py: 02fa071eb5a8707b4b507ee59bdb7ffdce845ec2bb4c4bf78b4bde68d2eb208c
+  tools/paper/a19_r08_run_matrix.py: e9124f2303788606e07208f7cccf5d0436e98f98eeb3bdaf869a081e4eaacf02
+  tools/paper/a19_stage2_score.cpp: 61d57d50b5c25beec0704afb2d9f47b19e52f2f5e4b7803bc67f9ddc709ff172
+  tools/paper/archive_a12_checkpoint.py: 31bc24331c709e53b842f6ed220d71a5ae3a7f6c3d3d694f97af23e917715afc
+  tools/paper/archive_a13_checkpoint.py: 5545f4b49dac297cbc327f1eb561235fdf5198409673afccd39b1b6707f3200a
+  tools/paper/archive_a14_delivery.py: 7dfe3570821caea0a7e7c2348ee0e464d47dae249ad6421a43da293adbb88040
+  tools/paper/audit_a10_pilot.py: 7c733d712a2463ad5c3163b6bab7555e912e2c962f608a8f7ef376b183ca4b05
+  tools/paper/audit_a11_first_block.py: 1b4cd40165addeb63fd2d94f087ae5390d217b7145d99f083f00c7098d8ad1b7
+  tools/paper/audit_a12_arms.py: 82b12b7baa61d4d465206555e28635f48c3944586eb613756070121e8ff2c4f2
+  tools/paper/audit_a12_checkpoint.py: 8a9237210e02ea85bc85197ef678b5c9bd05c63cb3fc5ba09544d2097f90c772
+  tools/paper/audit_a13_covariance.py: 3068f48dbe18167e884ad357148920bd3b10f66db0be0a1a14a507e3e73dee6b
+  tools/paper/audit_fde_freeze.py: 44fec893dddcfe2dd9587edde6c432ca15bb6e380979ff567a2254225342a92c
+  tools/paper/audit_t07_base.py: 18ee434dc96f9e627b6a7275e5510cb57ab4ee06965781316e22ac1c74402622
+  tools/paper/audit_windowed_fde_walk1.py: 595324d37c965dcfaacb8b47dec2cf0d9e02251f42e154221d4aaa8e106cd908
+  tools/paper/check_a11_closeout.py: d9647f3a73875faa1839cdbf6330c8e4229550d64b142574a74960b00a42feb7
+  tools/paper/check_a12_closeout.py: f2f75b319c72e05a521f0c1816ac7346bda0319314f1871b45fe85977dab42ab
+  tools/paper/check_a13_closeout.py: 08b46ced348d27a137e8af420e24721ef0fedb69b7f53028016c41def2661df3
+  tools/paper/check_a14_engineering.py: 2370b866014eee7404d3b38316bf1e82faaebe2bcc16b9a3af766100cfe711ce
+  tools/paper/check_synthetic_input.py: 4dfc2d933048d6511cda194b03db25a22e4ec88d09733c72855307529af3ace4
+  tools/paper/evaluate_nlos_clean_gate.py: dc678f34f9017d726a609d7ccff906d92a6b20d7a2d1a273e4f3a9ebdabb42c0
+  tools/paper/evaluate_pl_bidirectional_cusum.py: 51bb39002ca710a06be37ca91f456c5eee91496e2272077444c5af08d8f8a21d
+  tools/paper/evaluate_pl_bidirectional_dynamic.py: 0453363e9bdf62a559b626446cae0d7166d67a58c3431dd740bac17e01219941
+  tools/paper/evaluate_pl_conditional_preflight.py: e1d2ec9f885e2d7c3da776a4dfdae8111bae5501415904705ce4cad995fa0e61
+  tools/paper/evaluate_pl_persistent_cusum_preflight.py: a45673f5bbcb96cb758679683fc62c154ae5123361c17168cf5f132709fe4f74
+  tools/paper/evaluate_pl_threshold_signal_audit.py: 7de50a1f908fb8d221986a3a690a5abe69e16a83ac4c0582d0efbffee211754a
+  tools/paper/evaluate_range_recovery.py: 85036dde1762f9e2453957829971e8faeac2514368dc565d7ce3ad8283085f98
+  tools/paper/evaluate_runs.py: a5999d3ea44b88453e2efaf4461b45cfaea9bf3aedcf9a845bbfe7e0d8807c48
+  tools/paper/export_ground_truth.cpp: 14706e53bf13086ae57f99537eb1f4fcfd5705cbb45ae682c7368a84ca832f3e
+  tools/paper/export_sfuise_input.cpp: b5b5ce9dac625d1c7a30b07e149a4abf6f7874c307e7309d0136a4a3c325b9b9
+  tools/paper/fde_forensic_command.py: d3b761a7fb9a8fe7bfee3f41b653c4d1f40798a9148b61214db80b62484a04e7
+  tools/paper/generate_synthetic_input.py: 446b2c0f2bab0c458530ca1c0da873ff780c799d1a8a05c4b869fd59a1f2aa09
+  tools/paper/generate_t07_scenario.cpp: 0b0e2b38edaa3f82ac7a2c07158f7eacc6650e22b3e6ae5a4f871e0e6e606c9a
+  tools/paper/ie0911_audit_fixture.py: 3e3b0b41d47ba3a254129cd6cff854f921dd98594e644a918734b04f2333471f
+  tools/paper/ie0911_audit_inputs.py: 94a3b1fcff216a9021620fc48e77dbe69bbf331da505ff298d8461b0f721ff1e
+  tools/paper/ie0911_fde_aggregate.py: 44456d31b7c9d69dbfa46676cf4ec54e4c0c405cef20c8a9541ad6798d4b24e9
+  tools/paper/ie0911_logged.py: c55da75bac65f030a3599bcac0ea313ea410780f69bdb36cdc265c450313b33e
+  tools/paper/ie0911_startup.py: 7ab4e1da1f434a7bad343e86154776611d46a58da8ca459c8064b8a3bd6db82c
+  tools/paper/ie0911_step2_aggregate.py: f8bb4e7a5f30da73aacc72ac41ec276dc70bee20ba0d1cfb37e264b68a046a02
+  tools/paper/nlos_experiment_common.py: fea7445d545fddee2b5a1b4f2fa0129308b00e04754ae2ec6b5d8ebf41832352
+  tools/paper/nlos_injection.py: e3abcad7fe9051e614367b97aeae906612190d1138e2fd90326f2c605301df79
+  tools/paper/nlos_injection_metrics.py: 99ff2ff8556704359b598f7c233531fd04c8e8a348588c2eb72c13b21662d8c2
+  tools/paper/pl_conditional_reference_fixture.cpp: 64b707aa4f71b6bfafc4d4e2d4a7c49aa2504069907c9148f5d1278c6c375be1
+  tools/paper/prune_sprint_intermediates.py: 94b5c2501e214c351e4e821848f3641c1c3a152518d47743668160ce5da33992
+  tools/paper/reference_recoverability.py: bfb55bb0a68aa65ff31faff7f603bf9eda3cbdc7cf3d39588a2547711a0eea46
+  tools/paper/report_fde_forensics.py: 0161aa0e38c6010436ad974573b64c1379060de098c091383830613588445a83
+  tools/paper/report_fde_walk1_acceptance.py: c0bab0e0ecb62c4f386d6005b31ac1e6c8a80716c84b309a92b5fcd2d04353f1
+  tools/paper/report_nlos_injection.py: 17a9390b77d8826a9730337fd5a308e9132edc273f56d02e10d03565f89d495c
+  tools/paper/report_oracle_support_backend.py: 1057e582c61a82572004821b5fbed5f7adcff418232df2beb9b50a5acdb22781
+  tools/paper/report_stage2_stationarity_repair.py: 7bcfb1943c51be53ce541bedaecedf4b24e7653e8d44495411e82bc05ec21c13
+  tools/paper/resume_nlos_injection_experiment.py: c9492dc67c9185f220347717b8bf44a889ea73be19a334602e09e0374d6c03dd
+  tools/paper/run_a10_development_pilot.py: 147957838717a875db2cd6a1366d67dc2d5c48c32d6c751782265b43d78513b9
+  tools/paper/run_a11_first_block.py: 7f1ca80753f0f30fd823922ca619129b1caa87b3bdd9b6fa714cfee4b6c01011
+  tools/paper/run_experiments.py: b107c695b1d0f8668b59135c61d5cdbd46f288bdbc2a28dbf5f81fc3043f5515
+  tools/paper/run_fde_walk1_acceptance.py: 2244762d046aeeab1a5e242f03c4fde6b2c7e0e54d932376b9c55b55f067dd57
+  tools/paper/run_nlos_injection_experiment.py: b2292cfb1ff2db15194d6f4c3d72fd5d5beff91e783985baa4b99de1c089b05d
+  tools/paper/run_oracle_support_backend.py: fd0a0429a99ebf788d31a4264d7b3fa272aeb82c412b621a0a6630886620800f
+  tools/paper/run_windowed_fde_engineering_gate.py: 169d927087115731403f3c49d234065f680097135b687a8637d4b6f1ea48acf2
+  tools/paper/run_windowed_fde_walk1.py: 9c3625b4ad45ca7c68e2fe2933565cc69213b6c36935571f32cdb22eca3b9b4a
+  tools/paper/summarize_a11_progress.py: 1583cc04ee301b9a3f276ccc172d4744ad9022bda61609727cf31fa08dce46af
+  tools/paper/t06_chain_solver_probe.cpp: 9b87ee158610ad4c10ae44229b1722063850958d4a9987eefb6e3cd464c53329
+  tools/paper/t07_run_logged_command.py: 36d55eee6c0e1bf7cb2126981126c5b4da471f4ef2fb3cccada920d888c6d8ae
+  tools/paper/t07_scenario_injector.cpp: dd5ee181e4c00faf4476a3436ddf56acf5b21ef01723d4cd7eb22174b5866932
+  tools/paper/t10_closeout.py: 53ea97b5311c21aec2d71bb3ce374509e80cdd5ba4c8386fc5bed8ebce2be29d
+  tools/paper/t10_closeout_report.py: 363625482367d7669f035fa6333f20957a62d0923bc24eba1c29841ec0d729c2
+  tools/paper/t11_diagnostics.h: e64f8dd91525e9972f188aacec150763f198e87973ab3f4e81c15115419099c6
+  tools/paper/t11_evaluate.py: 653b428c1fae1d2cd652a1fe190df3ca67cc5b5d7389dd03afa9c569d5220493
+  tools/paper/t11_golden_audit.py: 535f5e33cda0aa64c7932ecfe651b8866242fc54d8f9a1215518230ca4e7c682
+  tools/paper/t11_prefix.py: 8dbb0a33ff11eab0e878d052a7c5590762591face129fae3ab32b0793f2c54ef
+  tools/paper/t11_verify.py: 476623e88a8f9bea6aacb462fb27fbaa57f3f63cbc512e0f86a4a6a821d00f46
+  tools/paper/verify_t10_closeout.py: 33df70c1c651dff14fcea715d992e566fd1235e90a9be08789b3061a3c2234c5
+source_worktree_patch_sha256: f18ab7b8ab308e1c22a00121f899f30e9eb54c66c1a8d3544faa2f3a29d7870c
+starting_config_sha256: c2b208cb80dc2972d51ff2b9498a6c26d73f146db8f3f5446b3d8d264d330538
+thread_environment:
+  MKL_NUM_THREADS: UNSET
+  OMP_NUM_THREADS: UNSET
+  OPENBLAS_NUM_THREADS: UNSET

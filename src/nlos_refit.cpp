@@ -47,14 +47,16 @@ void RequireAllowedKeys(const YAML::Node& node, const Container& allowed,
 
 const ObservationRecord& RequireObservation(
     std::uint64_t obs_id,
-    const std::unordered_map<std::uint64_t, const ObservationRecord*>& records) {
+    const std::unordered_map<std::uint64_t, const ObservationRecord*>& records,
+    const PaperInputPlan& plan) {
   const auto it = records.find(obs_id);
   if (it == records.end()) {
     throw std::invalid_argument("oracle support references unknown obs_id " +
                                 std::to_string(obs_id));
   }
   const ObservationRecord& record = *it->second;
-  if (!record.valid || !record.planned) {
+  const auto& measurement = MeasurementForObservation(plan, record);
+  if (!measurement.estimator_usable || !measurement.selected) {
     throw std::invalid_argument("oracle support references invalid/unplanned obs_id " +
                                 std::to_string(obs_id));
   }
@@ -262,7 +264,8 @@ OracleSupport OracleSupportProvider::Load(const std::string& yaml_path,
   const bool t09_fixed_schema = root["schema"] &&
       root["schema"].as<std::string>() == "t09_fixed_partition_v1";
   const char* required_label =
-      t09_fixed_schema ? kRq3FixedPartitionDebugLabel : kT04OracleDebugLabel;
+      t09_fixed_schema ? kRq3FixedPartitionDebugLabel
+                       : kOracleSupportDebugProvenance;
   RequireAllowedKeys(root,
                      std::set<std::string>{"schema", required_label,
                                            "recipe_hash", "segments"},
@@ -332,7 +335,9 @@ OracleSupport OracleSupportProvider::Load(const std::string& yaml_path,
       if (!std::isfinite(start) || !std::isfinite(end) || start > end)
         throw std::invalid_argument("oracle interval must be finite and closed");
       for (const auto& record : plan.observations) {
-        if (record.valid && record.planned && record.tag_id == segment.tag_id &&
+        const auto& measurement = MeasurementForObservation(plan, record);
+        if (measurement.estimator_usable && measurement.selected &&
+            record.tag_id == segment.tag_id &&
             record.anchor_id == segment.anchor_id &&
             record.sensor_time >= start && record.sensor_time <= end) {
           segment.obs_ids.push_back(record.obs_id);
@@ -345,7 +350,7 @@ OracleSupport OracleSupportProvider::Load(const std::string& yaml_path,
     double actual_start = std::numeric_limits<double>::infinity();
     double actual_end = -std::numeric_limits<double>::infinity();
     for (std::uint64_t obs_id : segment.obs_ids) {
-      const ObservationRecord& record = RequireObservation(obs_id, records);
+      const ObservationRecord& record = RequireObservation(obs_id, records, plan);
       if (record.tag_id != segment.tag_id ||
           record.anchor_id != segment.anchor_id) {
         throw std::invalid_argument("oracle segment crosses its declared link");
@@ -579,7 +584,8 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
     }
   }
   for (const auto& record : plan.observations) {
-    if (record.valid && record.planned &&
+    const auto& measurement = MeasurementForObservation(plan, record);
+    if (measurement.estimator_usable && measurement.selected &&
         raw_factor_by_obs.count(record.obs_id) != 1) {
       return fail(SegmentRefitStatus::INVALID_INPUT,
                   "every planned raw obs_id must map to exactly one factor");
@@ -623,6 +629,7 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
     } else {
       output_meta.obs_id = raw_it->second;
       const auto& record = *records.at(raw_it->second);
+      const auto& measurement = MeasurementForObservation(plan, record);
       const auto segment_it = segment_by_obs.find(raw_it->second);
       if (segment_it == segment_by_obs.end()) {
         output_meta.factor_index = result.graph.size();
@@ -642,12 +649,12 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
           return fail(SegmentRefitStatus::INVALID_INPUT,
                       "support observation has no anchor");
         const auto factor = fixed_offsets ? MakeFixedOffsetUwbFactor(
-            X(record.keyframe_id), anchor_it->second, cfg.lever_arm_init,
-            record.raw_range, record.nominal_sigma,
+            X(measurement.keyframe_id), anchor_it->second, cfg.lever_arm_init,
+            record.raw_range, measurement.sensor_sigma,
             FixedBetaForLink(cfg, record.tag_id, record.anchor_id),
             fixed_offsets->at(segment.segment_ordinal)) : MakeSegmentUwbFactor(
-            X(record.keyframe_id), C(segment.segment_ordinal), anchor_it->second,
-            cfg.lever_arm_init, record.raw_range, record.nominal_sigma,
+            X(measurement.keyframe_id), C(segment.segment_ordinal), anchor_it->second,
+            cfg.lever_arm_init, record.raw_range, measurement.sensor_sigma,
             FixedBetaForLink(cfg, record.tag_id, record.anchor_id));
         output_meta.factor_index = result.graph.size();
         result.graph.add(factor);
@@ -753,12 +760,15 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
           const auto& meta = result.factor_metadata[index];
           if (meta.factor_type != "uwb_range" && meta.factor_type != "uwb_fixed_offset_range") continue;
           const auto record_it = records.find(meta.obs_id);
-          if (record_it == records.end() || meta.factor_index != index ||
-              meta.keys !=
-                  std::vector<gtsam::Key>{X(record_it->second->keyframe_id)})
+          if (record_it == records.end() || meta.factor_index != index)
             return fail(SegmentRefitStatus::INVALID_INPUT,
                         "development no-C range metadata is inconsistent");
           const auto& record = *record_it->second;
+          const auto& measurement = MeasurementForObservation(plan, record);
+          if (meta.keys !=
+              std::vector<gtsam::Key>{X(measurement.keyframe_id)})
+            return fail(SegmentRefitStatus::INVALID_INPUT,
+                        "development no-C range metadata is inconsistent");
           const auto anchor_it = anchors.find(record.anchor_id);
           if (anchor_it == anchors.end())
             return fail(SegmentRefitStatus::INVALID_INPUT,
@@ -766,7 +776,7 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
           const double fixed_beta =
               FixedBetaForLink(cfg, record.tag_id, record.anchor_id);
           const auto pose =
-              before_values.at<gtsam::Pose3>(X(record.keyframe_id));
+              before_values.at<gtsam::Pose3>(X(measurement.keyframe_id));
           const double geometric =
               (pose.transformFrom(cfg.lever_arm_init) - anchor_it->second)
                   .norm();
@@ -775,23 +785,23 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
           const double expected_residual =
               UwbResidual(geometric, record.raw_range, fixed_beta + delta, 0.0);
           const auto expected_factor = MakeUwbFactor(
-              X(record.keyframe_id), 0, 0, 0, anchor_it->second,
-              cfg.lever_arm_init, record.raw_range, record.nominal_sigma,
+              X(measurement.keyframe_id), 0, 0, 0, anchor_it->second,
+              cfg.lever_arm_init, record.raw_range, measurement.sensor_sigma,
               false, false, false, fixed_beta + delta);
           if (!RangeFactorMatchesExpected(
                   result.graph.at(index), expected_factor, before_values,
-                  record.raw_range, record.nominal_sigma, expected_residual) ||
+                  record.raw_range, measurement.sensor_sigma, expected_residual) ||
               !range_factor_indices.insert(index).second ||
               !range_obs_ids.insert(record.obs_id).second)
             return fail(SegmentRefitStatus::INVALID_INPUT,
                         "development no-C range does not match raw graph");
           DevelopmentRefitRangeConstant range;
           range.factor_index = index;
-          range.pose_key = X(record.keyframe_id);
+          range.pose_key = X(measurement.keyframe_id);
           range.anchor = anchor_it->second;
           range.lever = cfg.lever_arm_init;
           range.measurement = record.raw_range;
-          range.sigma = record.nominal_sigma;
+          range.sigma = measurement.sensor_sigma;
           range.conditional_beta = fixed_beta + delta;
           range.obs_id = record.obs_id;
           range.candidate = meta.factor_type == "uwb_fixed_offset_range";
@@ -919,7 +929,8 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
       double gradient = 0.0;
       for (std::uint64_t obs_id : segment.obs_ids) {
         const auto& record = *records.at(obs_id);
-        const auto pose = values.at<gtsam::Pose3>(X(record.keyframe_id));
+        const auto& measurement = MeasurementForObservation(plan, record);
+        const auto pose = values.at<gtsam::Pose3>(X(measurement.keyframe_id));
         const gtsam::Point3 antenna = pose.transformFrom(cfg.lever_arm_init);
         const double geometric =
             (gtsam::Vector3(antenna) -
@@ -929,7 +940,8 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
             geometric, record.raw_range,
             FixedBetaForLink(cfg, record.tag_id, record.anchor_id),
             values.at<double>(C(segment.segment_ordinal)));
-        const double weight = 1.0 / (record.nominal_sigma * record.nominal_sigma);
+        const double weight =
+            1.0 / (measurement.sensor_sigma * measurement.sensor_sigma);
         gradient += weight * residual;
       }
       const double amplitude = values.at<double>(C(segment.segment_ordinal));
@@ -990,6 +1002,7 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
         continue;
       }
       const auto& record = *records.at(meta.obs_id);
+      const auto& measurement = MeasurementForObservation(plan, record);
       const bool candidate = meta.factor_type == "uwb_segment_range";
       const double fixed_beta =
           FixedBetaForLink(cfg, record.tag_id, record.anchor_id);
@@ -1008,16 +1021,16 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
       if (anchor_it == anchors.end())
         return fail(SegmentRefitStatus::INVALID_INPUT,
                     "conditional range has no configured anchor");
-      const auto pose = before.at<gtsam::Pose3>(X(record.keyframe_id));
+      const auto pose = before.at<gtsam::Pose3>(X(measurement.keyframe_id));
       const double geometric =
           (pose.transformFrom(cfg.lever_arm_init) - anchor_it->second).norm();
       const double expected_residual = UwbResidual(
           geometric, record.raw_range, conditional_beta, 0.0);
       const auto conditional_factor = MakeUwbFactor(
-          X(record.keyframe_id), 0, 0, 0, anchors.at(record.anchor_id),
-          cfg.lever_arm_init, record.raw_range, record.nominal_sigma, false,
+          X(measurement.keyframe_id), 0, 0, 0, anchors.at(record.anchor_id),
+          cfg.lever_arm_init, record.raw_range, measurement.sensor_sigma, false,
           false, false, conditional_beta);
-      if (meta.keys != std::vector<gtsam::Key>{X(record.keyframe_id)} &&
+      if (meta.keys != std::vector<gtsam::Key>{X(measurement.keyframe_id)} &&
           meta.factor_type == "uwb_range")
         return fail(SegmentRefitStatus::INVALID_INPUT,
                     "reference range metadata pose key is inconsistent");
@@ -1028,7 +1041,7 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
       if (development_request && !candidate &&
           !RangeFactorMatchesExpected(result.graph.at(index),
                                       conditional_factor, before,
-                                      record.raw_range, record.nominal_sigma,
+                                      record.raw_range, measurement.sensor_sigma,
                                       expected_residual))
         return fail(SegmentRefitStatus::INVALID_INPUT,
                     "reference range factor does not match plan/calibration");
@@ -1036,11 +1049,11 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
       if (development_request) {
         DevelopmentRefitRangeConstant range;
         range.factor_index = conditional_graph.size() - 1;
-        range.pose_key = X(record.keyframe_id);
+        range.pose_key = X(measurement.keyframe_id);
         range.anchor = anchor_it->second;
         range.lever = cfg.lever_arm_init;
         range.measurement = record.raw_range;
-        range.sigma = record.nominal_sigma;
+        range.sigma = measurement.sensor_sigma;
         range.conditional_beta = conditional_beta;
         range.obs_id = record.obs_id;
         range.candidate = candidate;
@@ -1175,7 +1188,8 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
       std::vector<double> nominal_sigmas;
       for (std::uint64_t obs_id : segment.obs_ids) {
         const auto& record = *records.at(obs_id);
-        const auto pose = after.at<gtsam::Pose3>(X(record.keyframe_id));
+        const auto& measurement = MeasurementForObservation(plan, record);
+        const auto pose = after.at<gtsam::Pose3>(X(measurement.keyframe_id));
         const gtsam::Point3 antenna = pose.transformFrom(cfg.lever_arm_init);
         const double geometric =
             (gtsam::Vector3(antenna) -
@@ -1185,7 +1199,7 @@ SegmentRefitResult SegmentRefitter::RunFrozenCandidatePolicyImpl(
         geometry_plus_beta.push_back(
             geometric +
             FixedBetaForLink(cfg, record.tag_id, record.anchor_id));
-        nominal_sigmas.push_back(record.nominal_sigma);
+        nominal_sigmas.push_back(measurement.sensor_sigma);
       }
       const auto update = ComputeNonnegativeSegmentAmplitude(
           raw_ranges, geometry_plus_beta, nominal_sigmas);

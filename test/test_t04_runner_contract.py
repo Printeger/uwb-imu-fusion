@@ -9,6 +9,14 @@ import re
 import subprocess
 import tempfile
 
+from runner_fixed_sigma_fixture import (
+    assert_fail_closed,
+    assert_fixed_sigma_ledger,
+    create_cache,
+    make_config as make_fixture_config,
+    write_support,
+)
+
 
 DEBUG_LABEL = "T04_ORACLE_SUPPORT_DEBUG_ONLY"
 ESTIMATE_FILES = {
@@ -20,9 +28,10 @@ ESTIMATE_FILES = {
 }
 
 
-def make_config(source: pathlib.Path, destination: pathlib.Path,
-                support: pathlib.Path, bag: pathlib.Path) -> None:
+def make_historical_config(source: pathlib.Path, destination: pathlib.Path,
+                           bag: pathlib.Path) -> None:
     text = source.read_text(encoding="utf-8")
+    support = (source.parent / "sim_circle_t04_oracle_support.yaml").resolve()
     text, support_count = re.subn(
         r"(?m)^  oracle_support:.*$",
         f"  oracle_support: {support}",
@@ -63,29 +72,25 @@ def read_csv(path: pathlib.Path):
 
 
 def check_csv_round_trip(runner: pathlib.Path, source_config: pathlib.Path,
-                         bag: pathlib.Path, root: pathlib.Path) -> None:
+                         manifest: pathlib.Path, root: pathlib.Path) -> None:
     expected_id = 'segment,with"quote\nand newline'
     support = root / "csv_support.yaml"
-    support.write_text(
-        "schema: t04_oracle_support_v1\n"
-        f"{DEBUG_LABEL}: true\n"
-        "segments:\n"
-        "  - segment_id: |-\n"
-        "      segment,with\"quote\n"
-        "      and newline\n"
-        "    link: \"1:1\"\n"
-        "    start_time: 1781510684.4\n"
-        "    end_time: 1781510688.4\n",
-        encoding="utf-8",
-    )
+    write_support(support, expected_id)
     config = root / "csv_config.yaml"
-    make_config(source_config, config, support, bag)
+    make_fixture_config(source_config, config, manifest, support)
     completed = run(runner, config, root, "csv_round_trip")
     if completed.returncode != 0:
         raise AssertionError(
             f"CSV runner failed ({completed.returncode}):\n{completed.stderr}"
         )
     run_dir = root / "csv_round_trip"
+    assert_fixed_sigma_ledger(run_dir, expected_count=40)
+    status = json.loads((run_dir / "run_status.json").read_text("utf-8"))
+    if (status.get("status") != "OK" or
+            status.get("solver_status") != "CONVERGED" or
+            status.get("solver_termination") !=
+            "ALL_JOINT_STOP_CONDITIONS_SATISFIED"):
+        raise AssertionError(f"fixed-sigma success did not converge: {status}")
     _, segments = read_csv(run_dir / "segments.csv")
     _, factors = read_csv(run_dir / "factor_metadata.csv")
     _, residuals = read_csv(run_dir / "residuals.csv")
@@ -108,7 +113,7 @@ def check_csv_round_trip(runner: pathlib.Path, source_config: pathlib.Path,
 
 def check_invalid_manifest_json(runner: pathlib.Path,
                                 source_config: pathlib.Path,
-                                bag: pathlib.Path,
+                                manifest: pathlib.Path,
                                 root: pathlib.Path) -> None:
     support = root / "invalid_support.yaml"
     support.write_text(
@@ -117,8 +122,8 @@ def check_invalid_manifest_json(runner: pathlib.Path,
         "segments:\n"
         "  - segment_id: s0\n"
         "    link: \"1:1\"\n"
-        "    start_time: 1781510684.4\n"
-        "    end_time: 1781510688.4\n"
+        "    start_time: 1.0\n"
+        "    end_time: 4.0\n"
         "? |-\n"
         "  unknown\n"
         "  field\n"
@@ -126,7 +131,7 @@ def check_invalid_manifest_json(runner: pathlib.Path,
         encoding="utf-8",
     )
     config = root / "invalid_config.yaml"
-    make_config(source_config, config, support, bag)
+    make_fixture_config(source_config, config, manifest, support)
     completed = run(runner, config, root, "invalid_manifest")
     if completed.returncode == 0:
         raise AssertionError("invalid manifest unexpectedly succeeded")
@@ -148,6 +153,19 @@ def check_invalid_manifest_json(runner: pathlib.Path,
         raise AssertionError(f"invalid manifest exported estimates: {present}")
 
 
+def check_historical_failure(runner: pathlib.Path, source_config: pathlib.Path,
+                             bag: pathlib.Path, root: pathlib.Path) -> None:
+    config = root / "historical_sim_circle.yaml"
+    make_historical_config(source_config, config, bag)
+    completed = run(runner, config, root, "historical_sim_circle")
+    if completed.returncode == 0:
+        raise AssertionError("historical sim-circle fixture unexpectedly succeeded")
+    status = assert_fail_closed(root / "historical_sim_circle")
+    if (status.get("solver_status") != "CONDITIONAL_LM_FAILED" or
+            status.get("reason") != "CONDITIONAL_LM_MAX_ITERATIONS"):
+        raise AssertionError(f"historical fail-closed semantics changed: {status}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--runner", type=pathlib.Path, required=True)
@@ -156,12 +174,16 @@ def main() -> int:
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="uifgo-t04-runner-test-") as temp:
         root = pathlib.Path(temp)
+        manifest = create_cache(root)
         check_csv_round_trip(args.runner.resolve(), args.source_config.resolve(),
-                             args.bag.resolve(), root)
+                             manifest, root)
         check_invalid_manifest_json(
             args.runner.resolve(), args.source_config.resolve(),
-            args.bag.resolve(), root
+            manifest, root
         )
+        check_historical_failure(args.runner.resolve(),
+                                 args.source_config.resolve(),
+                                 args.bag.resolve(), root)
     print("T04 runner CSV/JSON contract checks passed")
     return 0
 

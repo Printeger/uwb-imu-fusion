@@ -86,6 +86,9 @@ struct FdeObservationRecord {
   int tag_id = 0;
   int anchor_id = 0;
   double sensor_time = std::numeric_limits<double>::quiet_NaN();
+  // Immutable source measurement copied into the Stage-1 evidence row. It is
+  // diagnostic/provenance data and is never reconstructed from a residual.
+  double raw_range_m = std::numeric_limits<double>::quiet_NaN();
   bool valid = false;
   bool planned = false;
   size_t keyframe_id = 0;

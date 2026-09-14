@@ -19,8 +19,10 @@
 
 namespace uifgo {
 
-constexpr const char* kT04OracleDebugLabel =
+constexpr const char* kOracleSupportDebugProvenance =
     "T04_ORACLE_SUPPORT_DEBUG_ONLY";
+constexpr const char* kT04OracleDebugLabel =
+    kOracleSupportDebugProvenance;
 constexpr const char* kRq3FixedPartitionDebugLabel =
     "RQ3_FIXED_PARTITION_DIAGNOSTIC_DEBUG_ONLY";
 

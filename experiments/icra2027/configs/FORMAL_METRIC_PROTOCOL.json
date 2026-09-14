@@ -1,0 +1,31 @@
+{
+  "timing": "seconds; SF playback 1x; up to three independent case workers, wall runtime not a speed ranking",
+  "robust_baseline": "existing robust_cauchy with locked historical default scale 2.3849",
+  "detector_domain": "planned raw-factor observation IDs; truth restricted to this same domain",
+  "precision_empty": "0 if no predicted positives; recall 0 if truth positive and no detections",
+  "event_detected": "at least one target truth-positive planned observation in frozen detector support",
+  "delay": "first forward threshold crossing on target anchor within [start,end), minus start; otherwise unavailable",
+  "onset_offset": "earliest start/latest end of target support segments intersecting truth window minus respective truth boundary",
+  "false_positive_duration": "sum of disjoint per-link candidate segment spans outside target truth interval; other links entirely false",
+  "bias_errors": "estimated total static-excluded excess minus injected component (1 m target/in-window, 0 otherwise); parent latent bias unknown",
+  "fault_RMSE": "same full-trajectory common-GT SE3 alignment; error restricted to [start,end)",
+  "no_GT_or_truth_estimation": true,
+  "method_ids": [
+    "FGO_BASE",
+    "FGO_ROBUST",
+    "FGO_REJECT",
+    "FGO_RECOVER_FULL",
+    "SF_NATIVE",
+    "SF_REJECT",
+    "SF_RECOVER"
+  ],
+  "source_hashes": {
+    "experiments/icra2027/formal_benchmark.py": "fbec4d3d486714a49b33542ba88ab2041341702399f4c3eeb3a94741916f3dfa",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/formal_evaluate.py": "b962977957c1fc2a7041bf4602026c31bca35eac56c04723ed8968ae36d7f89d",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/formal_injection.py": "2083f4a8b773d3310e275152680301246cd4f8a24168341fa24b88a709604343",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/formal_treatment.py": "0dd2012ddf9ae949022d1f64a0eafc2db4fd4be1342dad9304be20dd892ea5df",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/formal_sf_worker.py": "e09937875d2ad65ebd1bd64fa17930a4fdcad2218885b68a942d347841e6a2e2",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/formal_transport_probe.py": "082229398635d472459bd2b4604bcc9809d167ea94bfa516e57fb676a22032d4"
+  },
+  "sha256": "f1593e93944e444f23b6e1eedec7ae6350413c5cc5f76e5f7c135c1d0e1dfc04"
+}

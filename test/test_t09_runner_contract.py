@@ -55,7 +55,7 @@ if "--execution-type" in args and value("--execution-type") == "FINAL_TRAJECTORY
         "%s=%s\n" % (name, struct.pack(">d", float(nlos.get(name, 0.0))).hex())
         for name in ("tau_eta", "tau_s_m", "tau_gamma"))
     threshold_hash = "sha256:" + hashlib.sha256(threshold_text.encode()).hexdigest()
-    policy = "T09_%s_FINAL_AUDIT_V1" % method.upper()
+    policy = "T09_%s_FINAL_AUDIT_V2_SOLVER_CERTIFICATE" % method.upper()
     fields = [cache["cache_id"], method, policy, threshold_hash,
               "T08_GATE_DEVELOPMENT_ONLY_PENDING_VALIDATION",
               "sha256:final-config", "sha256:solver",

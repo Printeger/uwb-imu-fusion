@@ -47,7 +47,7 @@ class GraphBuilder {
                               bool first_frame);
 
   // Time-adaptive sigma computation.
-  double AdaptiveSigma(double dt_since_last) const;
+  double LegacyAdaptiveSigma(double dt_since_last) const;
 
   Config cfg_;
   ImuCovarianceModel imu_covariance_model_;

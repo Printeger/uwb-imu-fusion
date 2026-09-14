@@ -264,11 +264,20 @@ int RunSuppressCertifiedEngineering(const std::string& output_root) {
       observation.tag_id = 7;
       observation.anchor_id = anchor.id;
       observation.raw_range = raw;
-      observation.valid = true;
-      observation.planned = true;
-      observation.keyframe_id = k;
-      observation.nominal_sigma = 0.05;
+      observation.ledger_index = plan.observations.size();
+      observation.source_valid = true;
+      observation.source_validity_reason = "SOURCE_VALID";
+      MeasurementPlanEntry measurement;
+      measurement.obs_id = obs_id;
+      measurement.observation_index = observation.ledger_index;
+      measurement.estimator_usable = true;
+      measurement.usability_reason = "ESTIMATOR_USABLE";
+      measurement.selected = true;
+      measurement.selection_reason = "SELECTED_EXACT_STATE_FRAME";
+      measurement.keyframe_id = k;
+      measurement.sensor_sigma = 0.05;
       plan.observations.push_back(observation);
+      plan.measurements.push_back(measurement);
       if (candidate)
         support.segments.at(anchor.id - 1).obs_ids.push_back(obs_id);
       ++obs_id;
@@ -538,7 +547,7 @@ int main(int argc, char** argv) {
     const auto initial_ranges = ranges(fixture);
     size_t range_index = 0;
     for (const auto& observation : plan.observations) {
-      if (!observation.planned) continue;
+      if (!MeasurementForObservation(plan, observation).selected) continue;
       FactorMeta meta;
       meta.factor_index = initial_ranges.at(range_index++).factor_index;
       meta.factor_type = "uwb_range";

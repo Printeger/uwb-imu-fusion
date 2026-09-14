@@ -1,5 +1,76 @@
 # UWB-IMU-IE 实验合同（T01）
 
+## 2026-09-14 runner initialization-linearization migration audit
+
+T04/T06/T08只允许在下列审计全部通过后迁移当前线性化哈希：raw/selected `obs_id`、
+state timestamps/count、factor count/type/key sequence、UWB range/sigma/anchor/lever arm、IMU/PIM interval/duration以及
+physical topology与历史合同一致；并且同一当前physical graph在历史pre-common reference Values上精确复现
+旧Values和graph-linearization指纹。旧值保留为`PHYSICAL_GRAPH_IDENTITY`，新common-initializer Values及其
+线性化指纹作为`INITIALIZATION_LINEARIZATION_IDENTITY`。任一物理语义不同则停止，不修改expected hash。
+
+## 0913 DEV-DENSE-01 Walk1 state-density feasibility amendment
+
+本轮是与正式 R0--R6 隔离的 development-only 可行性实验，只回答 Base FGO clean ATE 中
+低频离散状态/UWB keyframe subsampling 的可能贡献。正式 Walk1 B0 的实际 step=4 记为
+`D0_CURRENT`，另做 step=2/1；若实际值重复则不制造重复 variant。所有 variant 复用同一
+Walk1 raw measurement cache、beta、anchor/lever、IMU/UWB noise、初始化、all-range Gaussian
+graph、LM solver/budget/tolerance、同一已有 runner binary、measurement-only isolation 与 CPU/thread
+policy。禁止 robust、reject、detector、recovery 和 fresh SFUISE，也禁止为高密度失败改变求解参数。
+
+R1 `FROZEN_EVALUATOR` 的 Walk1 common-GT timestamps、nearest tolerance、scale-fixed SE(3)
+alignment 与 1s RPE 定义保持；如任一成功输出不能覆盖完整冻结集合，则另取所有成功 variant 的
+共同子集并显式报告，不能把输出点数差异写成精度收益。raw-frame provenance 未闭合，未对齐
+坐标差只能作 diagnostic。每 variant 恰好一次完整 scientific run；runtime重复 NOT_RUN。
+预登记解释阈值：material ATE improvement 同时要求 `>=0.010 m` 且 `>=5%`；obvious UWB increase
+要求 used multiplier `>=1.5`；acceptable cost 要求 runtime `<=5x` 且可用时 peak RSS `<=3x`；
+`>20x` runtime、solver failure 或 factor/temporal integrity failure 视为不可接受。PROMISING 要求
+material+acceptable+integrity；MARGINAL 要求成功、used明显增加且改善 `>0.001 m`，或 material
+但成本在5--20x；否则 NOT_WORTH_IT。该规则只裁决本开发实验，不迁移正式 backbone。
+
+输出根固定为 `experiments/icra2027/dev/DENSE_STATE_WALK1/`，保存隔离 run、配置、命令、hash、
+逐 observation/anchor utilization、逐 IMU interval 审计、solver status/iterations、estimator runtime、
+total wall 和 GNU time peak RSS。正式 metrics/tables/figures/paper_assets 与 canonical manifest 不写。
+实验结论不升级 C1--C3、T10/T11 或正式 R2/R3 状态；只将结果登记为 development evidence。
+
+## 0913 R3–R6 连续执行 amendment
+
+本轮用户冻结B0_CURRENT，授权三条ISAS clean及3×5个+1m/10s/constant单anchor ToA case，
+并将offline treatment送入未改SFUISE；不运行B1/B2/B3或R7之后。沿用此前已完整暴露的Walk数据，
+本轮formal指预登记受控benchmark，不把它们重新标为独立未见held-out，不声称physical NLOS。
+用户本轮全部流程与停止条件优先。科学freeze后detector/recovery/solver/evaluator/injection均不调参。
+SF三方法使用同一每recording官方config；仅支持集合的删除或final accepted range的减补偿，
+不传GT/truth/oracle、c估计或support文件到SF。未接受的SF_RECOVER observation保持原样。
+原final native raw factor不重复，导航/残差等仍取同final Values。downstream corrected range是声明的
+measurement-treatment实验，不将它等同于原联合graph的后验，也不向SF添加bias prior/variance模型。
+缺producer/cache/final的策略保留failed及dependency原因；普通failure继续所有其余case。
+使用R1/R2锁定common GT sets和原score/association，fault窗口仅取同一全段SE3拟合后的误差子集。
+R4预登记等价容差position1mm/rotation1mrad/ATE1mm。所有正式CSV采用用户method IDs与终态，
+记录git/config/input/fingerprint，旧结果保护。R6结束分类并停止，无自动R7或参数迭代。
+
+## 0913 R2.5 作者 static ToA values input-parity amendment
+
+用户明确解除R2对本次B1 development对照的独立标定来源停止门；这不证明独立calibration provenance。
+仅将官方升序anchor offsets的负值写入现有fixed_beta_by_link，三条Walk clean各fresh一次，B0/SF复用。
+冻结R1/R2已有common GT timestamps、evaluator、alignment；任何缺失匹配都不能通过缩小共同集合补救。
+仅fixed beta常量变化，raw/state schedule/topology/IMU/算法策略保持；不运行B2/B3/注入，不结果调参。
+报告 delta=B1-B0，relative=100*(B1-B0)/B0；NA/失败保留，原始审计/指标文件不覆盖。
+这些offsets是SFUISE作者配置提供的dataset-specific values；repository/paper没有证明它们来自
+独立calibration recording，因此本实验用于input-parity analysis，而不宣称独立calibration provenance。
+
+## 0913 ICRA v6 R0–R2 当前范围 amendment
+
+本轮用户授权只执行 ISAS Walk1/2/3 clean provenance、frame/reference-point、static calibration 和
+range-density 公平性审计。替代旧下一任务边界；历史合同/结果保留，T10=C2-C、T11=C、C1–C3不升级。
+见 `../../experiments/icra2027/README.md` 与 `../../experiments/icra2027/audits/backbone_parity_report.md`。
+R1 在原 nearest-GT≤0.02s 基础上，每个GT时刻保留最接近的一条estimate，再取比较方法的共同GT交集；
+不插值estimate，不拟合时移/尺度。未知world/point外参时 raw-frame ATE 保持UNAVAILABLE，未对齐坐标
+误差单列diagnostic，SE3 aligned ATE以tracker/body共点近似的development误差报告，拟合不回写estimator。
+RPE采用共同GT时刻上1s后首个≤0.02s误差的配对和现有SE3相对位姿误差公式；未知tracker姿态外参限制保留。
+官方static offset仅在独立标定来源准入后才能作为独立标定B1；来源未闭合时不得静默应用或宣称独立性。
+B2不得为了利用不同timestamp的range而静默引入nearest-state近似/插值；更改kf_step会同时更改state rate，
+不计为纯density收益。B3与R3之后工作保持NOT_RUN，等待本轮结果后的明确决定。所有输入GT隔离、配置/hash、
+实际final factor计数、失败/未运行记录、源产物复用与新运行身份按本合同保留。
+
 状态：`T01_DONE`
 
 方法前置：[`METHOD_CONTRACT.md`](METHOD_CONTRACT.md)
@@ -618,7 +689,21 @@ clean zero alarm/segment、intersection target precision/recall 各>=0.80 且 he
 SHA-256 exact、最大 state 差 0；dynamic clean 为 0/0，dynamic target alarm 仍为 affected #15，最终
 TP/FP/FN=30/0/0，healthy segment=0。唯一成功裁决为
 `BIDIRECTIONAL_CUSUM_SUPPORT_PASS_FOR_PRODUCTION_ADMISSION`。production provider、Stage2/Rc/final、
-recovery 和定位指标仍为 `NOT_RUN/NOT_EVALUATED`。
+ recovery 和定位指标仍为 `NOT_RUN/NOT_EVALUATED`。
+
+## 0912 own_vicon 15-31-28 single-recording flow amendment
+
+本轮只用 `data/own_vicon/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag` 做一次完整
+development 流程检查。输入为完整 header-stamp UWB/IMU；每个原始 node range 保留 message/range/observation
+序号和稳定 `obs_id`。Livox acceleration 依现有 loader 固定乘 9.81 从 g 转为 specific force m/s²，gyro 为
+rad/s，不用 GT 拟合轴、时移或 bias。四个 anchor 取同 bag 各静态 Vicon topic 中位位置，tag0、IMU 和 rig
+采用零杆臂近似；moving tag Vicon 仅在 estimator artifacts 封存后由 evaluator 读取。
+
+方法固定为一个 `pl_bidirectional_cusum` producer、共享 Stage2 cache 的 `suppress_all`/`lcb_fixed_full`、
+`robust_cauchy` 和原生 `SFUISE-ToA`。冻结 Walk1 clean 参数、Cauchy scale 2.3849、SFUISE zero ToA offset；
+最多5个科学进程树、1800s/树、无算法重试。评价沿用10 Hz、estimate 0.02s、GT bracket 0.05s、scale=1
+SE3 和正误差窗口定义。该单条曾在 evaluator-only 审计中出现一个2.240277s正误差段，但几何仅
+`USER_APPROXIMATE_COLOCATION`；流程成功不能升级为精度、NLOS truth、跨数据集或 Recover 优越性结论。
 
 ## 0912 PL CUSUM production integration / accuracy amendment
 
@@ -635,3 +720,213 @@ recovered RMSE 严格改善。trajectory evaluator 复用 `evaluate_runs.py` 的
 并在 common matched GT timestamps 上要求 primary RMSE 严格优于 suppress 且 p95 不差，才能给
 `E2E_FULL_SYSTEM_PASS_DEVELOPMENT`。链路技术通过后执行 six-input non-gating diagnostic，不用其结果调参、
 换 primary 或扩大 claim。所有失败、zero/fallback/unavailable 原样进入结果；本轮不是 formal held-out test。
+
+## 0912 own_vicon initialization correctness amendment
+
+用户授权在重跑同一 own-vicon LOS recording 前修复初始化的三个直接阻塞。Trilateration 的 LM 候选点
+必须先计算同一 range least-squares 目标；仅有限且严格降低目标的步可以写回状态，拒绝步只提高 damping。
+返回 `true` 必须对应有限解和数值收敛，迭代耗尽、非有限分解或未收敛返回 `false`，且不得发布未收敛点。
+
+静止判定继续使用首2秒 acceleration norm variance 与 gravity magnitude，但方差阈值固定为当前
+IMU 配置的 `sigma_a^2`，不再使用源码常数 `0.01 (m/s^2)^2`。这只是将既有判据绑定到预先配置的
+IMU noise，不按本 recording 的残差或 GT 调整 `sigma_a`。
+
+每次初始化从当前 anchor 几何自动判断是否近共面，不增加 recording 侧别配置。固定判断为中心化 anchor
+最小/最大 singular-value ratio `<=1e-3`，且最佳拟合平面的法向与世界 Z 夹角不超过约25.8度
+（`|n_z|>=0.9`）。满足时在平面内用首批原始 range 做差分最小二乘，再由非负法向距离平方的中位数生成
+两侧候选；先选择实际3D raw-range平方目标严格较小的一侧。若两侧目标在数值容差内不可分，只在anchor
+平面不穿过世界 `z=0` 且两候选到 `z=0` 距离可分时选择更接近 `z=0` 的一侧，作为由anchor坐标系给出的
+非GT高度侧信息；仍不可分则明确失败。禁止读取 moving-tag Vicon、GT 高度、逐 recording 拟合高度、beta
+或噪声。非近共面几何保持普通3D初始化。
+
+工程测试和构建通过后，按
+[`OWN_VICON_INITIALIZATION_FIX_PROTOCOL.md`](../../experiments/OWN_VICON_INITIALIZATION_FIX_PROTOCOL.md)
+在新隔离目录重跑原四方法流程。CUSUM/LCB/Cauchy scale/SFUISE offset/评价/预算均沿用上一冻结协议，
+无算法参数重试；保留全部失败、fallback、空 support 和负收益。
+
+实际 fresh run `own-vicon-flow-initfix-20260912A` 通过工程门与锁核验。自动静止判定启用重力对齐；
+anchor singular ratio `0.000325028` 触发2.5D，raw-range objective选择下侧，最终trilateration
+`p0=[-0.0216184,-0.0852544,-0.526389]m`。raw reference收敛并发布成功状态，证明原初始化阻塞已解除。
+producer随后在既有Stage2固定checkpoint机制耗尽总预算，未发布cache；253候选/8段仍被冻结，两个RR方法
+依合同NOT_RUN、差值NA。Cauchy成功导出918 pose完整时域轨迹，ATE RMSE `0.951271317m`；SFUISE ATE
+`0.297529563m`。本结果只支持初始化correctness与基础FGO可运行，不支持Stage2或Recover收益。
+
+## 0913 REFACTOR-GATE-03 engineering-only amendment
+
+本轮只实现和验证 `doc/v3/v3.md` Prompt 3 的 integrity/correlation 语义及既有鲁棒 baseline 的求解入口
+保护，不运行正式数据、精度矩阵或科学比较，也不据结果调 robust scale。新的 input-plan identity 必须包含
+integrity plan/hash，避免与 Gate02 或历史 cache 混用。`all_range` 继续是 plain-Gaussian 对照；
+`robust_huber` / `robust_cauchy` 继续是独立方法，并沿用其显式 scale/provenance。任何历史 run、metric、
+claim 或论文数字都不得重解释。Gate04 solver certificate 为 `NOT_RUN`，本轮仍不得把 generic optimizer
+termination 升级为 scientific success。
+
+## 0913 REFACTOR-GATE-04 engineering-only amendment
+
+本轮只实现和验证 `doc/v3/v3.md` Prompt 4 的 solver-success 语义。Base FGO 与 final IE 的 run/artifact
+必须同时记录原始 optimizer termination 和独立 `PAPER_SOLVER_CERTIFICATE_V1`；只有
+`CERTIFIED_SUCCESS` 才能令 `valid_estimate_exported=true`。证书不得读取 GT/ATE/truth/oracle，也不使用
+旧 D2 的 ATE 作为判据。若旧 D2 不能低成本重放，则只运行确定性 synthetic/unit regression；不运行正式
+数据、dense rerun 或完整实验矩阵，不改变 LM、初始化、noise、robust kernel、NLOS 方法或阈值，不重解释
+历史结果。certificate 语义改变使受影响的旧 success/cache 身份不能被静默当作新 certified evidence。
+
+## 0913 REFACTOR-GATE-05 engineering-only amendment
+
+本轮只执行 `doc/v3/v3.md` Prompt 5 的 behavior-preserving 结构清理和确定性工程回归。改造前后至少核对
+raw/selected observation IDs、state/factor 数量、candidate/support/segment/group、Stage2 refit、score、
+decision、trajectory/objective 与 `PAPER_SOLVER_CERTIFICATE_V1`；可使用既有 deterministic unit/integration
+fixtures 与失败语义快照，不运行正式数据、dense-state 重跑、精度矩阵、sweep 或参数选择。运行时动态耗时
+字段不作为逐字节相等要求，其余可稳定 artifact 优先作精确比较。
+
+旧 YAML/CLI/artifact schema 继续可解析；任务卡、debug label、scientific lock 和 provenance 属于实验协议
+边界，不得反向决定 estimator/IE core 数学。所有历史结果、metric、claim 与论文数字保持原解释，不因文件
+重排而升级、作废或重算。Gate05 完成后必须停止，等待新的明确指令才可执行 Prompt 6。
+
+## 0913 REFACTOR-GATE-05R-B test-fixture-only amendment
+
+本轮只执行现有 T04/T06/T08 runner CTest 内的双子例合同恢复。test-only fixed-sigma 正例必须记录来源、
+确定性、sigma、observation/state/UWB factor 数、support/candidate 与成功/certificate 条件；不得用 GT/ATE
+调 fixture，不做参数 sweep。原 sim-circle 输入保持完整，只作为当前已诊断 fixed-sigma 数值失败的负例，
+断言 fail-closed 语义且不依赖 wall-clock。验证顺序固定为单项 T04、T06、T08，三项组合，Gate05 focused
+core，architecture guard，最后 full CTest；只有零失败才更新 Gate05 历史报告的追加 resolution。
+
+不得修改 checked-in production config/solver/noise/threshold、不得运行正式数据矩阵或 dense/Prompt6、不得
+重解释任何历史科学结果。fixture 和 contract 产物只支持软件行为，不支持论文 claim；不自动 commit/push。
+
+## 0913 REFACTOR-GATE-06 single-run correctness amendment
+
+本轮只允许一个 canonical SFUISE Walk1 clean 主运行：复用 DEV-DENSE-01 的同一 t07 cache、
+anchor/extrinsic/IMU/solver 配置，只使用已存在的 step=1 配置，方法为 `robust_cauchy`、
+scale=2.3849。运行前锁定 commit、dirty-worktree hash、runner/library/config/input/evaluator/GT hash 和单 cell
+batch；一个方法一次 attempt，1800s 超时，不 retry、sweep、tuning 或 runtime replicate。可开启
+`UIFGO_BASELINE_DIAGNOSTIC=1` 以完整记录 LM call/iteration 和 factor-error 诊断；该开关不参与
+求解状态或停止判定，runtime 明确标记为 instrumented run。
+
+估计器进程不接收 GT/truth/oracle；scientific artifacts 封存后才由现有 Walk1 evaluator 读取
+既有 GT，使用冻结 common-GT timestamps 和 scale=1 SE(3) alignment 报 ATE RMSE/P50/P95。历史
+D0 直接复用 DEV-DENSE-01 已封存数字，不重跑；对照必须标记 `OLD PIPELINE vs REPAIRED PIPELINE`，
+不得作为受控 state-density ablation，也不复用旧 `DENSE_STATE_RECOMMENDATION` 裁决新系统。
+
+运行前固定 correctness 判定：唯一 attempt 必须 exit 0、导出有效轨迹，optimizer termination
+成功且 `PAPER_SOLVER_CERTIFICATE_V1/CERTIFIED_SUCCESS`；所有 final state/objective/UWB residual 有限；
+state_step=1 下每个 selected correlation group 恰好一个 final UWB factor，不允许 stale repeat 倍增信息；
+23.94m glitch 两条原始记录必须在 provenance 中，但只允许一个 likelihood，且任一 glitch
+likelihood 的 Cauchy 贡献不得超过 total final objective 的 50%(“dominates”的严格多数定义)。
+最大位置模、aligned ATE/P50/P95 作为物理合理性诊断完整报告，不增加 Gate04 证书未定义的
+轨迹误差硬门。任一硬门失败则 verdict 为 `ALL_UWB_CORRECTNESS_FAIL`，只定位最窄机制并停止；
+全部通过才能为 `ALL_UWB_CORRECTNESS_PASS`。无论结果均不推导“all UWB 更好/更差”或修改 paper claim。
+
+## 0913 REFACTOR-GATE-06D diagnostic-only amendment
+
+本轮只复用 Gate06 已锁定的单一 Walk1 clean step=1 cell 做 optimization-basin 归因，不读取 evaluator、
+GT、ATE、truth 或 oracle，也不生成论文指标。先从首个 optimizer update 前的同一 graph/initial Values
+导出状态、逐 UWB 关联、逐 anchor residual/weight 与 graph/frame/IMU interval 审计；发现关联或构图
+correctness bug 即停止后续 solver 对照。
+
+在无 correctness bug 的条件下，允许三个隔离 diagnostic replay：R0 既有 Cauchy `2.3849`、R1 既有
+Huber `1.345`、R2 plain Gaussian。三者除 UWB loss wrapper 外的 ledger、usable/representative mask、
+states、initial Values、factor topology、IMU、priors、sigma、solver 参数与 100-call budget 必须相同；
+每个 replay 恰好一次，不 sweep、不 tuning、不 retry。未收敛 terminal Values 只作标明 uncertified 的
+诊断，不能导出有效估计。可选 larger-budget Cauchy 本轮默认 `NOT_RUN`，只有在前三项仍不能归因时才可
+一次性执行，且不得写回配置或解释为生产预算修复。最终只形成
+`docs/refactor/ALL_UWB_OPTIMIZATION_DIAGNOSIS.md`、隔离机器可读证据和 `STATUS.md` 记录；不修改生产算法、
+scientific result、Gate06 verdict 或 C1--C3 claim。
+
+## 0913 REFACTOR-GATE-06R-A initialization-only engineering amendment
+
+本轮只实现并验证因果 UWB-aided progressive common initializer。配置只新增一个
+`initialization.progression_horizon_s=0.25` 秒工程参数；不得依据 GT、ATE、最终残差或本轮输出调整，
+也不得 sweep。单个局部块仅允许 METHOD_CONTRACT 登记的一次同图、同参数 continuation，并须计入
+retry；不得做第二次 retry。确定性测试必须覆盖：future measurement 不影响已完成 prefix、ledger 与独立
+selected obs IDs 不变、实际 UWB factor 与固定 sigma 不变、prefix 失败无整段 open-loop fallback、局部
+drift fixture 被周期性 UWB 校正、给定相同 returned Initial Values 时最终图构建不变，以及 Gate05
+architecture guard。
+
+工程门后只允许重建 Gate06D 同一 SFUISE Walk1 clean、`state_step=1`、all-usable correlation
+representatives、fixed `0.15 m` sigma 的初始化，并在无 GT/truth/oracle 环境中审计 state/position/velocity/
+displacement、raw/standardized UWB residual、最终 Cauchy `2.3849` 将看到的 weight、per-anchor 分布、
+finite、prefix/failure/retry/runtime。该运行到共同 Initial Values 即停止；Base FGO final LM、certificate、
+ATE/evaluator、Stage1/Stage2/final IE 全部 `NOT_RUN`。PASS 不使用 ATE，且要求消除原百至千米 open-loop
+tail、全段有限、最终 Cauchy 不再几乎沉默全图、全部定向/core/architecture 回归通过。结果只写
+`docs/refactor/COMMON_INITIALIZATION_REPAIR_REPORT.md` 与隔离 engineering evidence，不覆盖 Gate06/D
+旧证据，不升级 C1--C3，不自动 commit/push。
+
+实施期勘误记录：原预登记 `1.0 s` 在 synthetic drift fixture 的第二局部块耗尽 100-call LM 预算；未接触
+Walk1/GT/ATE 前，仅一次收紧为上述 `0.25 s` 并冻结，不继续试档、不依据后续初始化 audit 调整。
+
+## 0914 REFACTOR-GATE-06R-D diagnostic-only amendment
+
+本轮只运行同一锁定 SFUISE Walk1 clean step1 的 frontier 45--51 初始化诊断。独立 diagnostic executable
+可保存局部 state/UWB/LM/Jacobian 证据；不得由生产入口消费或导出 trajectory。顺序固定为：重放并审计
+45--50 趋势；审计51首块和既有 continuation；从其 exact failed terminal 运行有界 identical continuation
+诊断；最后运行唯一 `0.25 s` causal joint-window comparison。额外 continuation 不是 retry 参数实验，窗口
+不是 sweep；所有输出目录隔离且记录命令、输入/config、`gt_truth_oracle_read=false`。
+
+若相同 continuation 越过原 `1e-5`，只按任务卡判断是否满足 marginal cliff；若 joint window 改善，仍不
+自动授权生产改动。Gate06 final、GT/ATE/evaluator、IE stages 全部 `NOT_RUN`。最终只写
+`docs/refactor/COMMON_INITIALIZATION_FRONTIER51_DIAGNOSIS.md`、机器证据、STATUS/claim-evidence，并以
+`GATE06R_D_ROOT_CAUSE_IDENTIFIED` 或 `GATE06R_D_UNRESOLVED` 停止。
+
+## 0914 REFACTOR-GATE-06R-E fixed-lag repair amendment
+
+本轮只实现 common initialization 的 bounded fixed-lag formulation 和确定性工程测试；唯一真实输入运行
+是同一锁定 SFUISE Walk1、state_step=1、全部 estimator-usable UWB representatives 的 initialization-only
+audit。lag 固定沿用 0.25s，不调 threshold/retry/Huber/sigma/LM，不读取 GT/ATE，不运行 Base-FGO final
+solve、certificate 或 IE stages。测试必须覆盖 frontier future invariance、lag 外 state immutable、one-state
+失败而 fixed-lag 同参数通过、ledger/selected/sigma/final graph 不变、失败无 full Values、local graph 不改
+physical graph、无 future factor 与 Gate05 architecture guard。
+
+Walk1 只允许一次完整 audit；若任一后续 frontier 失败立即停止且不得调参。PASS 必须返回全部913 states、
+每窗通过原 `1e-5` 资格、全状态有限、无百至千米 open-loop residual tail、final Cauchy seed 不再几乎全部
+沉默，并通过 initializer/core/architecture 回归。输出隔离目录与
+`docs/refactor/COMMON_INITIALIZATION_FIXED_LAG_REPORT.md`；PASS 仅解锁 Gate06 下一独立 Prompt，不能在本轮
+执行 Gate06 或升级论文 claim。
+
+## 0914 IE-CORE-STABILIZATION-FINAL closure amendment
+
+本轮授权以同一锁定 SFUISE Walk1 clean、state_step=1、全部2276 estimator-usable independent UWB
+representatives、固定0.15m sigma与相同physical graph完成一次 full initialization。局部非驻点不再单独STOP，
+但结构/数值/catastrophic local seed失败仍立即停止；全序列只执行一次无GT seed-quality gate并完整输出状态、
+窗口termination/stationarity、UWB residual/q、production-Cauchy weight与per-anchor统计。不得用Walk1 ATE调
+seed gate、lag、Huber、sigma、LM、retry或任何参数。
+
+若full seed gate失败即STOP；若通过，自动运行原Gate06 unchanged Cauchy。仅当该solve未获未修改的
+Solver Certificate成功时，授权恰好一次 Huber1.345 warm-start→unchanged Cauchy final fallback，两阶段仍
+无GT且预算/图/测量完全相同。只有certified trajectory导出后现有evaluator才可读取GT计算ATE/P50/P95，
+不得据此改参数。工程测试、core regression、Gate05 architecture和full CTest必须先通过；任何回归失败STOP。
+最终只交付 `docs/refactor/IE_CORE_STABILIZATION_FINAL_REPORT.md`，不启动IE实验、不commit/push。
+
+## 0914 FIXED_LAG_BOUNDARY_SEMANTICS_FIX execution amendment
+
+本轮仅修复fixed-lag boundary/free-state选择语义，不改0.25s、fixture/state cadence或任何数值/科学参数。
+必须以确定性测试覆盖稀疏1s cadence退化为previous fixed boundary + current free state、Walk1-like dense
+multi-state free suffix、lag外不可重开、无future factor、跨旧boundary物理IMU bridge，以及缺失/非法IMU
+interval fail closed。依次要求initializer、T04/T06/T08、core、Gate05 architecture与full CTest全部通过。
+
+只有全部回归零失败才执行同一锁定Walk1一次913-state initialization；full truth-free seed gate通过才继续
+原Gate06 Cauchy，必要时仅一次既授权Huber1.345→unchanged Cauchy。只有未修改Solver Certificate成功并
+导出trajectory后才可评价GT；不得调参或自动追加micro-fix。新结构/数值失败立即STOP，交付
+`docs/refactor/FIXED_LAG_BOUNDARY_SEMANTICS_FIX_REPORT.md`，不运行IE实验、不commit/push。
+
+## 0914 COMPLETE_HUBER_TO_CAUCHY_WARM_START execution amendment
+
+本轮先以确定性测试证明：未认证但有限的 Huber terminal 可仅作中间种子，不可导出或
+评价 GT；非有限/非法 key/灾难性 terminal 被拒绝；Cauchy final 仍须原 certificate；
+initializer 与 physical graph 不变。依次运行 focused、initializer、T04/T06/T08、core、Gate05
+architecture 与 full CTest，任一失败即停止 scientific run。
+
+全部回归通过后，仅运行一次锁定 SFUISE Walk1 913-state chain：已资格化初始种子 →
+Huber 1.345 → truth-free intermediate gate → unchanged Cauchy 2.3849 → 原 Solver Certificate。
+三阶段独立记录 objective/state/residual/q/weight/termination/stationarity/finite 证据。Huber
+certificate 失败可与 intermediate gate PASS 并存，但 GT 必须保持未读；只有 Cauchy
+certificate 成功并导出有效 trajectory 后才运行既有 evaluator。若 final Cauchy 失败，
+精确记录首个最终数值失败并 STOP，不调参、不追加 fallback/micro-fix。
+
+## 0914 BASE_FGO_THREE_CELL_STABILITY_AUDIT amendment
+
+用户新授权在不运行 IE 的边界内执行三个隔离 Base-FGO cell：冻结 sim-circle clean
+fixture、SFUISE Walk1 `keyframe.step=4`、SFUISE Walk1 `keyframe.step=1`。三者统一复用当前
+common initializer、Huber 1.345 intermediate gate、unchanged Cauchy 2.3849 与原 Solver Certificate；
+每个 cell 只运行一次，不调整 state step 外任何冻结 config，不增 budget/retry/fallback，不读
+GT/不评价ATE，不运行 Stage1--4。Simulation 保留 fixture 的 sigma=0.1m，Walk1 保留
+sigma=0.15m。“稳定工作”仅当 Cauchy final raw solve 有有限 terminal 且原 certificate 成功；
+raw termination、intermediate gate、certificate、trajectory export 分别报告，不以一次通过声称统计可靠性。

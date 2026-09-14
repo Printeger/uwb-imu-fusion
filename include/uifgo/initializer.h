@@ -22,12 +22,14 @@ class Initializer {
  public:
   explicit Initializer(const Config& cfg);
 
-  // Detect static interval in [i0, i1) using accel norm variance.
+  // Detect static interval in [i0, i1) using accel norm variance.  The
+  // variance threshold is derived from Config::sigma_a.
   bool DetectStatic(const std::vector<ImuSample>& imu, size_t i0, size_t i1,
                     double* accel_norm_mean = nullptr);
 
-  // UWB trilateration: Gauss-Newton on sum-of-squared range errors.
-  // Requires >= 4 non-coplanar anchors for 3D observability.
+  // UWB trilateration: accepted-step LM on sum-of-squared range errors.
+  // Near-coplanar, near-horizontal anchor layouts are detected automatically
+  // and receive a geometry/range-only 2.5D seed before the 3D refinement.
   bool Trilaterate(const std::vector<UwbRange>& ranges,
                    const std::vector<AnchorConfig>& anchors,
                    gtsam::Point3* p_out);

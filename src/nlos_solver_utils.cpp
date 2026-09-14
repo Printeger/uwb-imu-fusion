@@ -2,6 +2,8 @@
 
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/linear/GaussianFactorGraph.h>
+#include <gtsam/navigation/ImuBias.h>
+#include <gtsam/geometry/Pose3.h>
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 
 #include <algorithm>
@@ -18,6 +20,17 @@
 #include <utility>
 
 namespace uifgo {
+
+const char* SolverCertificateStatusName(SolverCertificateStatus status) {
+  switch (status) {
+    case SolverCertificateStatus::NOT_EVALUATED: return "NOT_EVALUATED";
+    case SolverCertificateStatus::CERTIFIED_SUCCESS:
+      return "CERTIFIED_SUCCESS";
+    case SolverCertificateStatus::CERTIFIED_FAILURE:
+      return "CERTIFIED_FAILURE";
+  }
+  return "CERTIFIED_FAILURE";
+}
 
 const char* ConditionalLmPolicyName(ConditionalLmPolicy policy) {
   switch (policy) {
@@ -45,6 +58,56 @@ bool GraphAndValuesKeysMatch(const gtsam::NonlinearFactorGraph& graph,
 }
 
 namespace {
+
+bool SolverCertificateValuesFinite(const gtsam::Values& values,
+                                   double* max_position_norm_m,
+                                   std::string* reason) {
+  if (values.empty()) {
+    *reason = "VALUES_EMPTY";
+    return false;
+  }
+  *max_position_norm_m = 0.0;
+  try {
+    for (gtsam::Key key : values.keys()) {
+      const char symbol = gtsam::Symbol(key).chr();
+      bool finite = false;
+      if (symbol == 'x') {
+        const auto pose = values.at<gtsam::Pose3>(key);
+        finite = pose.matrix().allFinite();
+        if (finite)
+          *max_position_norm_m =
+              std::max(*max_position_norm_m, pose.translation().norm());
+      } else if (symbol == 'v' || symbol == 'a' || symbol == 'l') {
+        finite = values.at<gtsam::Vector3>(key).allFinite();
+      } else if (symbol == 'b') {
+        const auto bias =
+            values.at<gtsam::imuBias::ConstantBias>(key);
+        finite = bias.accelerometer().allFinite() &&
+                 bias.gyroscope().allFinite();
+      } else if (symbol == 'c' || symbol == 'z') {
+        finite = std::isfinite(values.at<double>(key));
+      } else {
+        *reason = "UNSUPPORTED_STATE_KEY:" +
+                  gtsam::DefaultKeyFormatter(key);
+        return false;
+      }
+      if (!finite) {
+        *reason = "NONFINITE_STATE_KEY:" +
+                  gtsam::DefaultKeyFormatter(key);
+        return false;
+      }
+    }
+  } catch (const std::exception& error) {
+    *reason = std::string("STATE_VALUE_READ_FAILED:") + error.what();
+    return false;
+  }
+  if (!std::isfinite(*max_position_norm_m)) {
+    *reason = "NONFINITE_MAX_POSITION_NORM";
+    return false;
+  }
+  *reason = "ALL_SUPPORTED_STATE_VALUES_FINITE";
+  return true;
+}
 
 class TeeCaptureStreambuf final : public std::streambuf {
  public:
@@ -1561,6 +1624,12 @@ CheckedLmResult RunCheckedConditionalLm(
                                      diagnostic_request, false);
 }
 
+CheckedLmResult RunCheckedConditionalLmRetainingTerminalForInitialization(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& initial,
+    const CheckedLmOptions& options) {
+  return RunCheckedConditionalLmImpl(graph, initial, options, nullptr, true);
+}
+
 CheckedLmResult RunCheckedConditionalLmWithFixedCheckpointRecovery(
     const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& initial,
     const CheckedLmOptions& options, size_t max_restarts,
@@ -1805,6 +1874,127 @@ NavigationStationarityAudit AuditNavigationStationarity(
                    error.what();
   }
   return audit;
+}
+
+SolverCertificate CertifySolverResult(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
+    const SolverCertificateRequest& request) {
+  SolverCertificate certificate;
+  certificate.status = SolverCertificateStatus::CERTIFIED_FAILURE;
+  certificate.termination_success = request.termination_success;
+  certificate.termination_reason = request.termination_reason;
+  certificate.factor_integrity_passed = request.factor_integrity_passed;
+  certificate.factor_integrity_reason = request.factor_integrity_reason;
+  certificate.solver_specific_checks_passed =
+      request.solver_specific_checks_passed;
+  certificate.solver_specific_checks_reason =
+      request.solver_specific_checks_reason;
+
+  certificate.state_values_finite = SolverCertificateValuesFinite(
+      values, &certificate.max_position_norm_m,
+      &certificate.state_values_reason);
+  certificate.graph_values_keys_match =
+      !graph.empty() && GraphAndValuesKeysMatch(graph, values);
+  try {
+    certificate.final_objective = graph.error(values);
+    certificate.objective_finite =
+        std::isfinite(certificate.final_objective);
+  } catch (const std::exception&) {
+    certificate.objective_finite = false;
+  }
+
+  certificate.temporal_integrity_applicable =
+      !request.state_times_s.empty();
+  if (!certificate.temporal_integrity_applicable) {
+    certificate.temporal_integrity_passed =
+        !request.require_navigation_stationarity;
+    certificate.temporal_integrity_reason =
+        request.require_navigation_stationarity
+            ? "REQUIRED_STATE_TIMELINE_MISSING"
+            : "NOT_APPLICABLE_NO_STATE_TIMELINE";
+  } else {
+    certificate.temporal_integrity_passed = true;
+    certificate.temporal_integrity_reason =
+        "FINITE_STRICTLY_INCREASING_CONTIGUOUS_X_TIMELINE";
+    for (size_t k = 0; k < request.state_times_s.size(); ++k) {
+      const double time = request.state_times_s[k];
+      if (!std::isfinite(time) ||
+          (k > 0 && !(time > request.state_times_s[k - 1])) ||
+          !values.exists(gtsam::Symbol('x', k))) {
+        certificate.temporal_integrity_passed = false;
+        certificate.temporal_integrity_reason =
+            "STATE_TIMELINE_NONFINITE_NONINCREASING_OR_X_MISSING";
+        break;
+      }
+    }
+    if (certificate.temporal_integrity_passed) {
+      size_t pose_count = 0;
+      for (gtsam::Key key : values.keys())
+        pose_count += gtsam::Symbol(key).chr() == 'x';
+      if (pose_count != request.state_times_s.size()) {
+        certificate.temporal_integrity_passed = false;
+        certificate.temporal_integrity_reason =
+            "STATE_TIMELINE_AND_X_COUNT_MISMATCH";
+      }
+    }
+  }
+
+  certificate.navigation_stationarity_applicable =
+      request.require_navigation_stationarity;
+  if (certificate.navigation_stationarity_applicable &&
+      certificate.state_values_finite &&
+      certificate.graph_values_keys_match && certificate.objective_finite) {
+    certificate.navigation_stationarity = AuditNavigationStationarity(
+        graph, values, request.navigation_scales,
+        request.navigation_stationarity_tolerance_objective,
+        request.gradient_roundoff_safety_factor);
+    certificate.navigation_stationarity_passed =
+        certificate.navigation_stationarity.valid &&
+        certificate.navigation_stationarity.stationary;
+  } else if (!certificate.navigation_stationarity_applicable) {
+    certificate.navigation_stationarity_passed = true;
+    certificate.navigation_stationarity.reason =
+        "NOT_APPLICABLE_NO_NAVIGATION_CERTIFICATE_REQUESTED";
+  } else {
+    certificate.navigation_stationarity.reason =
+        "NOT_EVALUATED_PRIOR_CERTIFICATE_CHECK_FAILED";
+  }
+
+  const bool passed =
+      certificate.termination_success && certificate.state_values_finite &&
+      certificate.objective_finite &&
+      certificate.graph_values_keys_match &&
+      certificate.factor_integrity_passed &&
+      certificate.temporal_integrity_passed &&
+      certificate.solver_specific_checks_passed &&
+      certificate.navigation_stationarity_passed;
+  if (passed) {
+    certificate.status = SolverCertificateStatus::CERTIFIED_SUCCESS;
+    certificate.reason = "ALL_SOLVER_CERTIFICATE_CHECKS_PASSED";
+    return certificate;
+  }
+
+  if (!certificate.termination_success)
+    certificate.reason = "TERMINATION_NOT_SUCCESSFUL";
+  else if (!certificate.state_values_finite)
+    certificate.reason = certificate.state_values_reason;
+  else if (!certificate.objective_finite)
+    certificate.reason = "FINAL_OBJECTIVE_NONFINITE";
+  else if (!certificate.graph_values_keys_match)
+    certificate.reason = "FINAL_GRAPH_VALUES_KEY_MISMATCH";
+  else if (!certificate.factor_integrity_passed)
+    certificate.reason = "FACTOR_INTEGRITY_FAILED:" +
+                         certificate.factor_integrity_reason;
+  else if (!certificate.temporal_integrity_passed)
+    certificate.reason = "TEMPORAL_INTEGRITY_FAILED:" +
+                         certificate.temporal_integrity_reason;
+  else if (!certificate.solver_specific_checks_passed)
+    certificate.reason = "SOLVER_SPECIFIC_CHECK_FAILED:" +
+                         certificate.solver_specific_checks_reason;
+  else
+    certificate.reason = "NAVIGATION_STATIONARITY_FAILED:" +
+                         certificate.navigation_stationarity.reason;
+  return certificate;
 }
 
 namespace {

@@ -10,6 +10,13 @@ import re
 import subprocess
 import tempfile
 
+from runner_fixed_sigma_fixture import (
+    assert_fail_closed,
+    assert_fixed_sigma_ledger,
+    create_cache,
+    make_config as make_fixture_config,
+)
+
 
 def load_strict_json(path: pathlib.Path) -> dict:
     def reject_constant(value):
@@ -132,14 +139,16 @@ def main() -> int:
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="uifgo-t06-runner-test-") as temp:
         root = pathlib.Path(temp)
+        manifest_path = create_cache(root)
         config = root / "automatic.yaml"
-        text = args.source_config.read_text(encoding="utf-8")
-        text, count = re.subn(
+        historical_text = args.source_config.read_text(encoding="utf-8")
+        historical_text, count = re.subn(
             r"(?m)^  path:.*sim_circle_2026-06-15-16-04-35\.bag$",
-            f"  path: {args.bag.resolve()}", text)
-        if count != 1 or "oracle_support" in text:
+            f"  path: {args.bag.resolve()}", historical_text)
+        if count != 1 or "oracle_support" in historical_text:
             raise AssertionError("automatic config must contain one bag and no oracle input")
-        config.write_text(text, encoding="utf-8")
+        text = make_fixture_config(
+            args.source_config.resolve(), config, manifest_path)
 
         invalid_cases = {
             "score_disabled": re.sub(
@@ -386,6 +395,7 @@ def main() -> int:
             discovery_rows = list(csv.DictReader(stream))
         if not discovery_rows:
             raise AssertionError("automatic run has no discovery trace")
+        assert_fixed_sigma_ledger(run, expected_count=40)
         for row in discovery_rows:
             verify_stage1_diagnostic_row(row)
         with (run / "segments.csv").open(newline="", encoding="utf-8") as stream:
@@ -397,6 +407,20 @@ def main() -> int:
             raise AssertionError(capability)
         if capability.get("fallback") != "NOT_IMPLEMENTED":
             raise AssertionError(capability)
+        if status.get("solver_termination") != \
+                "ALL_JOINT_STOP_CONDITIONS_SATISFIED":
+            raise AssertionError(status)
+
+        repeated = subprocess.run(
+            [str(args.runner.resolve()), "--config", str(config),
+             "--output-root", str(root), "--run-id", "automatic_repeat"],
+            text=True, capture_output=True, check=False)
+        if repeated.returncode != completed.returncode:
+            raise AssertionError("automatic fixed-sigma exit was not deterministic")
+        repeated_partition = json.loads(
+            (root / "automatic_repeat" / "partition.json").read_text("utf-8"))
+        if repeated_partition != partition:
+            raise AssertionError("automatic support identity was not deterministic")
 
         # Force an empty frozen partition. This still has to execute the
         # shared raw Stage-2 navigation refit and export its graph/Values;
@@ -483,6 +507,24 @@ def main() -> int:
                 ("objective_ok", "step_ok", "kkt_ok",
                  "navigation_stationarity_ok")):
             raise AssertionError(failed_trace)
+
+        historical_config = root / "historical_sim_circle.yaml"
+        historical_config.write_text(historical_text, encoding="utf-8")
+        historical = subprocess.run(
+            [str(args.runner.resolve()), "--config", str(historical_config),
+             "--output-root", str(root), "--run-id", "historical_sim_circle"],
+            text=True, capture_output=True, check=False)
+        if historical.returncode == 0:
+            raise AssertionError("historical sim-circle fixture unexpectedly succeeded")
+        historical_status = assert_fail_closed(root / "historical_sim_circle")
+        if (historical_status.get("failure_stage") != "AUTOMATIC_DISCOVERY" or
+                historical_status.get("discovery_status") !=
+                "CONDITIONAL_LM_FAILED" or
+                historical_status.get("reason") !=
+                "CONDITIONAL_LM_MAX_ITERATIONS" or
+                historical_status.get("stage2_refit_run") is not False):
+            raise AssertionError(
+                f"historical fail-closed semantics changed: {historical_status}")
     print("T06 automatic runner no-oracle Stage-2 contract passed")
     return 0
 

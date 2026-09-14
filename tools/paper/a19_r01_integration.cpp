@@ -121,11 +121,20 @@ Fixture MakeMixedFixture() {
       record.tag_id = 7;
       record.anchor_id = anchor.id;
       record.raw_range = raw;
-      record.valid = true;
-      record.planned = true;
-      record.keyframe_id = k;
-      record.nominal_sigma = 0.05;
+      record.ledger_index = fixture.plan.observations.size();
+      record.source_valid = true;
+      record.source_validity_reason = "SOURCE_VALID";
+      MeasurementPlanEntry measurement;
+      measurement.obs_id = obs_id;
+      measurement.observation_index = record.ledger_index;
+      measurement.estimator_usable = true;
+      measurement.usability_reason = "ESTIMATOR_USABLE";
+      measurement.selected = true;
+      measurement.selection_reason = "SELECTED_EXACT_STATE_FRAME";
+      measurement.keyframe_id = k;
+      measurement.sensor_sigma = 0.05;
       fixture.plan.observations.push_back(record);
+      fixture.plan.measurements.push_back(measurement);
       if (candidate) segment.obs_ids.push_back(obs_id);
       ++obs_id;
     }
@@ -303,10 +312,11 @@ int RunConstructorFailure(const std::string& out) {
   // ranges.  LiveGraph must fail in its constructor before iterate().
   const auto& meta = fixture.metadata.front();
   const auto& obs = fixture.plan.observations.front();
-  incomplete.push_back({meta.factor_index, X(obs.keyframe_id),
+  const auto& measurement = MeasurementForObservation(fixture.plan, obs);
+  incomplete.push_back({meta.factor_index, X(measurement.keyframe_id),
                         fixture.cfg.anchors.front().pos,
                         fixture.cfg.lever_arm_init, obs.raw_range,
-                        obs.nominal_sigma, 0.125, obs.obs_id});
+                        measurement.sensor_sigma, 0.125, obs.obs_id});
   LevenbergMarquardtParams params;
   params.relativeErrorTol = 0;
   params.setLinearSolverType("SEQUENTIAL_CHOLESKY");
@@ -339,9 +349,10 @@ int RunPartialFailure(const std::string& out) {
     Require(anchor != fixture.cfg.anchors.end(), "PARTIAL_ANCHOR");
     const double beta = fixture.cfg.fixed_beta_by_link.at(
         std::string("7:") + std::to_string(obs.anchor_id));
-    ranges.push_back({meta.factor_index, X(obs.keyframe_id), anchor->pos,
+    const auto& measurement = MeasurementForObservation(fixture.plan, obs);
+    ranges.push_back({meta.factor_index, X(measurement.keyframe_id), anchor->pos,
                       fixture.cfg.lever_arm_init, obs.raw_range,
-                      obs.nominal_sigma, beta, obs.obs_id});
+                      measurement.sensor_sigma, beta, obs.obs_id});
   }
   CheckedLmOptions options;
   options.max_iterations = 1;

@@ -1,0 +1,71 @@
+{
+  "sha256": "c7676d2b0a8551d98e1b6188a39c4cc96cd722b9fe3e9a5e43acc22365266b9b",
+  "input_hashes": {
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/inputs/case-a4c38e61d38b1f93/input_manifest.json": "a3e35901581aed571d515455a55b58ed103cbb0294d516dc84a6cee4203c667c",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/inputs/case-6af6d70b83b9f309/input_manifest.json": "ddaedcf976a69426f7bf89cade66de722abcf2e881528c8f460fb1dfa6fa4499",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/inputs/case-f89094b769d8d9fa/input_manifest.json": "da488e4112735d1d25b072bcc0271c22f2749a1a4e8cc23d514313314c43df6b",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/inputs/case-9681a1fc7c2be0d7/input_manifest.json": "484f415ee73396e7b0d7e160b2b6236ff86bdc071bfa98753454480bdfa8b22a",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/inputs/case-4dde26f9bfb5f4f4/input_manifest.json": "ed3215e93adea93e2ffcedcd9cc513be8005d957c2282b377da7210f89581c9b",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/inputs/case-9b556b4101767c97/input_manifest.json": "9ef1a9b9ff0ff70840881966225f051a92fededbbc707b6f76a695ebc50e1d21",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/inputs/case-33786ff4e975b900/input_manifest.json": "5fd0deb091ac1a7094b9d99fab26ed77ec9a20277b3b1ace8cdf18eee249d3f9",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/inputs/case-38e231efaefd7419/input_manifest.json": "b3f4dd45214d573487deb2668ed6c0e14f0c2cd5ce787509c63e05bae39e0fe5",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/inputs/case-ff20b4276644a920/input_manifest.json": "62cd3ba8cb4c35d9420418212a545a7669cbc3751c8c70d276705cb3ade8dd2e",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/inputs/case-cf4a70f792b75873/input_manifest.json": "01167a50acf460ecb94142cf0340c8321ed8aa2063cb97ae1ac45d00d9ffc51a",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/inputs/case-fef1866a39b854d9/input_manifest.json": "6c9b615f2c165f0e71608bcb8882ddb2c14b06b20f8e568a4f76fd8dbfc198ce",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/inputs/case-60e3119f770bb5de/input_manifest.json": "fb029565e4ed686b4a637b1e122199348b6e17f6d884f38ff4f5732c43d6959d",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/inputs/case-547443036db1438b/input_manifest.json": "626aa47076527aef4447611d61a4f992dcc4931eaa6897f4c88cce9ec08d1736",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/inputs/case-d6c554d678941451/input_manifest.json": "1daa0f4932ebd11aaa3e303c565a5d756bb3e33ccb2a9d1ad6b977dead1d9e6f",
+    "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/experiments/icra2027/inputs/case-ed762eb91a917a22/input_manifest.json": "7931ec4050ef83f12382b41f4c9995cb9afe9f66c30ef59d0062b8a40a954306"
+  },
+  "window_checks": [
+    {
+      "sequence": "Walk1",
+      "offset_s": 8,
+      "start": 1664959684.9745398,
+      "end": 1664959694.9745398,
+      "bootstrap_end": 1664959678.0012374,
+      "planned_counts": {
+        "7475": 38,
+        "9524": 37,
+        "10548": 36,
+        "15155": 38,
+        "20276": 36
+      },
+      "gt_samples": 500,
+      "valid": true
+    },
+    {
+      "sequence": "Walk2",
+      "offset_s": 8,
+      "start": 1664959765.02777,
+      "end": 1664959775.02777,
+      "bootstrap_end": 1664959758.0515113,
+      "planned_counts": {
+        "7475": 39,
+        "9524": 39,
+        "10548": 34,
+        "15155": 34,
+        "20276": 39
+      },
+      "gt_samples": 500,
+      "valid": true
+    },
+    {
+      "sequence": "Walk3",
+      "offset_s": 8,
+      "start": 1664959854.803711,
+      "end": 1664959864.803711,
+      "bootstrap_end": 1664959847.8267074,
+      "planned_counts": {
+        "7475": 39,
+        "9524": 36,
+        "10548": 38,
+        "15155": 38,
+        "20276": 37
+      },
+      "gt_samples": 500,
+      "valid": true
+    }
+  ],
+  "frozen_before_any_R6_method": true
+}

@@ -2,9 +2,9 @@
 // plan, graph construction, initialization, raw reference, refitter, and
 // stationarity utilities. Oracle input contains support identity only.
 #define Open OriginalPaperOpen
-#define main uifgo_original_paper_main
-#include "run_ie_paper.cpp"
-#undef main
+#define RunIePaperApplication uifgo_original_paper_application
+#include "paper/run_ie_app.cpp"
+#undef RunIePaperApplication
 #undef Open
 
 #include <random>

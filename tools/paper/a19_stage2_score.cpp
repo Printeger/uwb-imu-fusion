@@ -142,7 +142,7 @@ int main(int argc, char** argv) {
     const auto initial_ranges = ranges(fixture);
     size_t range_index = 0;
     for (const auto& observation : plan.observations) {
-      if (!observation.planned) continue;
+      if (!MeasurementForObservation(plan, observation).selected) continue;
       FactorMeta meta;
       meta.factor_index = initial_ranges.at(range_index++).factor_index;
       meta.factor_type = "uwb_range";
