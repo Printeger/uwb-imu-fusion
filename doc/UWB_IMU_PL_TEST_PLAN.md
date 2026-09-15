@@ -1,5 +1,9 @@
 # UWB–IMU–PL test ledger
 
+> Archive note (2026-09-15): legacy `uifgo` test rows and compatibility notes
+> below are retained as historical execution evidence. The offline source and
+> tests now live in `archive/legacy-ie` and are no longer active test targets.
+
 Deterministic acceptance status: `PASS` on 2026-09-01. This is the authoritative
 execution ledger for the P0 baseline recovery and P1 M0–M8 correctness work. It
 does not make a certification claim.

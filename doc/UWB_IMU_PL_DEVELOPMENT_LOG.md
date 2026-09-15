@@ -1,5 +1,10 @@
 # UWB–IMU–PL development log
 
+> Archive note (2026-09-15): references below to retained `uifgo`, offline
+> launch files, and batch paths describe historical milestones. Those inactive
+> fork-era files now live in `archive/legacy-ie` and are excluded from the
+> realtime PL build.
+
 Overall delivery status: `IMPLEMENTED_UNVERIFIED`.
 
 ## 2026-09-01 — M0 research contract and infrastructure

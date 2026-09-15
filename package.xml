@@ -2,7 +2,7 @@
 <package format="2">
   <name>uwb_imu_pl</name>
   <version>0.1.0</version>
-  <description>Batch and realtime tightly-coupled UWB-IMU factor graph estimation with research integrity monitoring</description>
+  <description>Realtime tightly-coupled UWB-IMU estimation with integrity monitoring and protection levels</description>
 
   <maintainer email="dev@uwb-imu-fgo.com">UWB-IMU FGO Team</maintainer>
   <license>BSD</license>
@@ -10,35 +10,27 @@
   <buildtool_depend>catkin</buildtool_depend>
 
   <build_depend>roscpp</build_depend>
-  <build_depend>rosbag</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
   <build_depend>nav_msgs</build_depend>
   <build_depend>tf</build_depend>
   <build_depend>message_generation</build_depend>
-  <build_depend>eigen_conversions</build_depend>
   <build_depend>visualization_msgs</build_depend>
   <build_depend>diagnostic_msgs</build_depend>
   <build_depend>nodelet</build_depend>
-  <build_depend>uwb_driver</build_depend>
-  <build_depend>isas_msgs</build_depend>
 
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
-  <exec_depend>rosbag</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
   <exec_depend>tf</exec_depend>
   <exec_depend>message_runtime</exec_depend>
-  <exec_depend>eigen_conversions</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>
   <exec_depend>diagnostic_msgs</exec_depend>
   <exec_depend>nodelet</exec_depend>
-  <exec_depend>uwb_driver</exec_depend>
-  <exec_depend>isas_msgs</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-scipy</exec_depend>
   <exec_depend>python3-yaml</exec_depend>

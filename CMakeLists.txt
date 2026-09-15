@@ -11,7 +11,6 @@ add_compile_options(-Wall -Wno-sign-compare -Wno-unused -Wno-comment -pthread)
 # --- Catkin ---
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-  rosbag
   sensor_msgs
   std_msgs
   geometry_msgs
@@ -19,32 +18,18 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   nodelet
   message_generation
-  eigen_conversions
   visualization_msgs
   diagnostic_msgs
-  uwb_driver
-  isas_msgs
 )
 
 add_message_files(
   FILES
   LinktrackNode2.msg
   LinktrackNodeframe3.msg
-  McdLinktrackNodeframe3.msg
-  LinktrackTagframe0.msg
   AuxCommand.msg
   Corrections.msg
-  Gains.msg
-  LQRTrajectory.msg
-  Odometry.msg
-  OutputData.msg
-  PPROutputData.msg
-  PolynomialTrajectory.msg
   PositionCommand.msg
   SO3Command.msg
-  Serial.msg
-  StatusData.msg
-  TRPYCommand.msg
   IntegrityStatus.msg
   FaultTruth.msg
 )
@@ -61,20 +46,17 @@ catkin_package(
   LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
     roscpp
-    rosbag
     sensor_msgs
     std_msgs
     geometry_msgs
     nav_msgs
     tf
     message_runtime
-    eigen_conversions
     visualization_msgs
     diagnostic_msgs
-    uwb_driver
 )
 
-# --- GTSAM (≥ 4.2 required for GncOptimizer / setInlierCostThresholdsAtProbability) ---
+# --- GTSAM (≥ 4.2; unstable provides IncrementalFixedLagSmoother) ---
 find_package(GTSAM 4.2 REQUIRED)
 find_package(GTSAM_UNSTABLE REQUIRED)
 if(GTSAM_FOUND)
@@ -145,18 +127,6 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/integrity/health_manager.cpp
   src/uwb_imu_pl/integrity/imu_fault_subspace.cpp
   src/uwb_imu_pl/factors/kinematic_bridge_factor.cpp
-  src/config.cpp
-  src/data_loader.cpp
-  src/outlier_filter.cpp
-  src/initializer.cpp
-  src/imu_preint.cpp
-  src/imu_sync.cpp
-  src/uwb_factor.cpp
-  src/graph_builder.cpp
-  src/optimizer.cpp
-  src/chi2.cpp
-  src/trajectory_io.cpp
-  src/logger.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -168,25 +138,6 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-# =============================================
-# ROS Node: uwb_imu_pl_node
-# =============================================
-add_executable(uwb_imu_pl_node
-  tools/run_offline.cpp
-  src/visualizer.cpp
-)
-
-target_link_libraries(uwb_imu_pl_node
-  ${PROJECT_NAME}
-  ${catkin_LIBRARIES}
-  gtsam
-  gtsam_unstable
-  ${Boost_LIBRARIES}
-  yaml-cpp
-)
-
-add_dependencies(uwb_imu_pl_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 execute_process(
   COMMAND git rev-parse HEAD
@@ -261,9 +212,7 @@ target_link_libraries(advisor_paired_benchmark
 add_subdirectory(simulator)
 
 catkin_install_python(PROGRAMS
-  simulator/scripts/trajectory_circle.py
   simulator/scripts/trajectory_realtime.py
-  simulator/scripts/odom_to_path.py
   simulator/scripts/realtime_integrity_viz.py
   tools/validate_run_schema.py
   tools/generate_integrity_report.py
@@ -294,27 +243,6 @@ catkin_install_python(PROGRAMS
 if(CATKIN_ENABLE_TESTING)
   enable_testing()
   find_package(rostest REQUIRED)
-
-  catkin_add_gtest(test_config test/test_config.cpp)
-  target_link_libraries(test_config ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
-
-  catkin_add_gtest(test_outlier test/test_outlier.cpp)
-  target_link_libraries(test_outlier ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
-
-  catkin_add_gtest(test_trilaterate test/test_trilaterate.cpp)
-  target_link_libraries(test_trilaterate ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
-
-  catkin_add_gtest(test_imu_preint test/test_imu_preint.cpp)
-  target_link_libraries(test_imu_preint ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
-
-  catkin_add_gtest(test_uwb_factor test/test_uwb_factor.cpp)
-  target_link_libraries(test_uwb_factor ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
-
-  catkin_add_gtest(test_graph_builder test/test_graph_builder.cpp)
-  target_link_libraries(test_graph_builder ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
-
-  catkin_add_gtest(test_optimizer test/test_optimizer.cpp)
-  target_link_libraries(test_optimizer ${PROJECT_NAME} ${catkin_LIBRARIES} gtsam gtsam_unstable yaml-cpp ${GTEST_LIBRARIES})
 
   catkin_add_gtest(test_snapshot_integrity test/test_snapshot_integrity.cpp test/test_main.cpp)
   target_link_libraries(test_snapshot_integrity ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
