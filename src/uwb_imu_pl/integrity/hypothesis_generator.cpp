@@ -6,6 +6,7 @@
 #include <gtsam/linear/GaussianFactorGraph.h>
 
 #include <algorithm>
+#include <chrono>
 #include <map>
 #include <set>
 #include <sstream>
@@ -460,7 +461,10 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
       local.nominal_predicted_state = occurrence.history->current_state;
       local.preintegration = occurrence.history->preintegration;
       local.raw_imu_slice = occurrence.history->raw_imu_slice;
+      const auto sensitivity_start = std::chrono::steady_clock::now();
       subspaces = ImuFaultSubspaceBuilder().build(local, *block);
+      out.historical_sensitivity_ms += std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - sensitivity_start).count();
     }
     if (!subspaces.analytic_verified) continue;
     for (int axis = 0; axis < 6; ++axis) {
@@ -482,7 +486,7 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
       const Eigen::VectorXd whitened = axis < 3
           ? subspaces.accel_axis[axis] : subspaces.gyro_axis[axis - 3];
       mode.raw_group_maps[occurrence.imu->id] =
-          block->whitener.inverse() * whitened;
+          block->whitener.triangularView<Eigen::Lower>().solve(whitened);
       append_mode(std::move(mode));
     }
   }

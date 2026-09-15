@@ -1,4 +1,5 @@
 #include "uwb_imu_pl/integrity/joint_window_detector.hpp"
+#include "uwb_imu_pl/integrity/statistical_bounds_cache.hpp"
 
 #include <boost/math/distributions/chi_squared.hpp>
 
@@ -14,7 +15,7 @@ double squaredThreshold(int dof, double p_fa) {
   if (dof <= 0 || !std::isfinite(p_fa) || p_fa <= 0.0 || p_fa >= 1.0) {
     return std::numeric_limits<double>::infinity();
   }
-  return boost::math::quantile(boost::math::chi_squared(dof), 1.0 - p_fa);
+  return StatisticalBoundsCache::chiSquaredThreshold(dof, p_fa);
 }
 
 DetectorResultV2 baseResult(int rows, int rank, int dof,

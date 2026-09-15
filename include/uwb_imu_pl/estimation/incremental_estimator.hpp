@@ -55,6 +55,15 @@ struct MethodBCandidatePrior {
   double condition_number = std::numeric_limits<double>::infinity();
 };
 
+struct EstimatorCacheAudit {
+  std::uint64_t factor_block_hits = 0;
+  std::uint64_t factor_block_misses = 0;
+  std::uint64_t invalidations = 0;
+  std::size_t factor_block_entries = 0;
+  std::size_t factor_block_bytes = 0;
+  std::string last_invalidation_reason;
+};
+
 class IncrementalUwbEstimator {
  public:
   explicit IncrementalUwbEstimator(const IncrementalConfig& config);
@@ -134,6 +143,7 @@ class IncrementalUwbImuEstimator {
   EstimatorAudit audit() const;
   const FactorLedger& factorLedger() const { return factor_ledger_; }
   std::uint64_t backendUpdateCount() const { return backend_update_count_; }
+  EstimatorCacheAudit cacheAudit() const;
 
   // Method B candidate: computes the leave-current-out information downdate
   // and gates it numerically. It is never used by the formal output unless the
@@ -160,6 +170,12 @@ class IncrementalUwbImuEstimator {
     std::vector<std::size_t> removed_factor_slots;
     std::vector<gtsam::Key> marginalized_keys;
     std::vector<std::size_t> boundary_factor_slots;
+  };
+  struct FactorBlockCacheEntry {
+    TransactionId transaction_id;
+    LinearizationVersion version;
+    std::uint64_t content_fingerprint = 0;
+    LinearizedFactorBlock block;
   };
   EpochTransaction prepareTransaction(TimestampNs timestamp,
                                       const UwbBatch* batch);
@@ -220,6 +236,8 @@ class IncrementalUwbImuEstimator {
   std::uint64_t next_window_id_ = 1;
   std::uint64_t backend_update_count_ = 0;
   bool backend_poisoned_ = false;
+  mutable std::map<std::uint64_t, FactorBlockCacheEntry> factor_block_cache_;
+  mutable EstimatorCacheAudit cache_audit_;
 };
 
 }  // namespace uwb_imu_pl

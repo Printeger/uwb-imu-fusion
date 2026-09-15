@@ -1,0 +1,77 @@
+{
+  "schema_version": "uwb-imu-pl/round3-development-smoke/v1",
+  "status": "INVALID",
+  "tested_code_sha": "UNFROZEN_ROUND3_WORKTREE",
+  "protocol_sha256": "57e815c9e99bc6dcb1df6ec069df8cf5d3f485a3b2371ab25b83c49863624e49",
+  "gate_d": {
+    "scientific_status": "FAIL",
+    "candidate_count": 128,
+    "candidate_contract_met": true,
+    "workers": 4,
+    "numeric_threads": 1,
+    "warmup_epochs": 100,
+    "measured_epochs": 40,
+    "p99_limit_ms": 40.0,
+    "p50_ms": 3718.19,
+    "p95_ms": 5223.797500000001,
+    "p99_ms": 5639.440299999999,
+    "max_ms": 5880.55,
+    "peak_child_rss_kb": 660188,
+    "single_worker_ablation": "NOT_RUN_AFTER_FAILED_SMOKE"
+  },
+  "bulk_runner_smoke": {
+    "structural_status": "PASS",
+    "canonical_cells": 1,
+    "outcomes": 16,
+    "shards": 4,
+    "workers": 4,
+    "wall_time_s": 521.5128006000014,
+    "cpu_hours_upper": 0.5794586673333348,
+    "peak_runner_rss_kb": 136336,
+    "raw_bytes": 34048,
+    "observed_failure_rate": 0.0,
+    "formal_projected_wall_time_s": 43915680.29112507,
+    "formal_projected_cpu_hours": 48795.200323472294,
+    "formal_projected_disk_bytes": 2867122496,
+    "crash_resume_unit_test": "PASS",
+    "complete_development_pilot": "NOT_RUN"
+  },
+  "gate_h_threshold_replay_smoke": {
+    "structural_status": "PASS",
+    "epochs": 36,
+    "same_frozen_raw_stream": true,
+    "local_threshold_invariant": true,
+    "diagnostic_low_exceedances": 0,
+    "diagnostic_high_exceedances": 0,
+    "hypothesis_count": 61104,
+    "plausible_count": 2479,
+    "selected_action_id": 0,
+    "formal_gate_evidence": false
+  },
+  "gate_i_raw_injection_smoke": {
+    "structural_status": "PASS",
+    "continuous_interval_imu": {
+      "injected_samples": 70,
+      "expected_samples": 70,
+      "exact_schedule_verified": true
+    },
+    "intermittent_3_fault_2_clean": {
+      "injected_samples": 50,
+      "expected_samples": 50,
+      "exact_schedule_verified": true
+    },
+    "formal_gate_evidence": false
+  },
+  "gate_i_late_history_probe": {
+    "scientific_status": "FAIL",
+    "scenario": "late_detection_full_history",
+    "epochs": 55,
+    "detected": true,
+    "detection_delay_epochs": 0,
+    "history_replacement_verified": false,
+    "backend_update_violation": false,
+    "failure_reason": "LATE_HISTORY_REPLACEMENT_NOT_OBSERVED",
+    "formal_gate_evidence": false
+  },
+  "reason": "Development smoke is useful for timing and runner validation but cannot become Gate evidence until a clean round-three code freeze is tested."
+}

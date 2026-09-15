@@ -93,5 +93,6 @@ qtcreator-*
 # Catkin custom files
 CATKIN_IGNORE
 data/*.bag
+/results/integrity_round3/
 # Windows alternate-data-stream metadata copied onto POSIX filesystems.
 *:Zone.Identifier

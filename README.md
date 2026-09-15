@@ -480,6 +480,24 @@ python3 tools/run_integrity_round2.py analyze
 python3 tools/run_integrity_round2.py finalize
 ```
 
+### Integrity V2 round-three closure
+
+第三轮不启动正式 E–I 矩阵。它复用第二轮冻结的门限、样本量和 seed domain，
+并把 pilot 改成四个确定性 JSONL shard 和四个长驻 C++ worker：
+
+```bash
+python3 tools/run_integrity_round3.py prepare
+python3 tools/run_integrity_round3.py pilot
+python3 tools/run_integrity_round3.py analyze
+python3 tools/run_integrity_round3.py finalize
+```
+
+`run` 在 `formal_matrix_authorized=false` 时会 fail closed。完整的 clean
+Debug/Release、88M analytic prerequisite、Gate-D smoke 和 ROS 等价 smoke
+分别由 `build`、`analytic`、`d-smoke`、`ros-smoke` 子命令收集；任何 pilot
+结果都不会被提升为正式 Gate PASS。当前机器审计见
+`doc/evidence/round3_gap_audit.json` 与 `doc/evidence/round3_readiness.json`。
+
 正式矩阵规模很大，不应在开发机上把缩小样本伪装成完成。`finalize` 只有在 A–I
 机器可读 verdict 全为 `PASS` 时才设置 `gates_a_to_i_complete=true`；无论结果如何，
 本轮仍保持 `IMPLEMENTED_UNVERIFIED`、`formal_eligible=false`、
@@ -822,3 +840,41 @@ roslaunch uwb_imu_pl offline_with_viz.launch config_path:=/path/to/slam.yaml
 ## 14. License
 
 BSD
+
+
+### Gate D：P0–P6 开发诊断与冻结重放
+
+P0–P2 的实现、开发计时、数值修复和未覆盖路径见
+[改进报告](doc/evidence/gate-d-p0-p2/report.md) 与
+[机器摘要](doc/evidence/gate-d-p0-p2/summary.json)。这些结果不是正式 Gate D PASS。
+现有第三轮历史证据保持原样；新的诊断附件使用独立 schema，不改变现有 CSV 列的含义。
+
+P3–P6 的数值证书、紧凑故障投影、共享 PL 求解、历史块/统计缓存和常驻线程池
+见 [开发报告](doc/evidence/gate-d-p3-p6/report.md) 与
+[机器摘要](doc/evidence/gate-d-p3-p6/summary.json)。P6 持续拒绝 smoke 的
+`core_total p99=1353.91 ms`，仍未达到 40 ms，且尚无真实全流水线成功 FDE/PL
+性能证据；状态明确保持 `DEVELOPMENT_ONLY`。
+
+```bash
+source ../../devel/setup.bash
+cmake --build ../../build/uwb_imu_pl --target realtime_performance_benchmark candidate_replay gate_d_development test_integrity_v2 -j2
+python3 tools/run_round2_performance.py config/integrity_round3_protocol.json results/gate-d-new-smoke --profile smoke
+```
+
+每次 smoke 使用新的输出目录，runner 保留已有证据。冻结快照只在独立诊断运行中导出：
+设置 `UWB_IMU_PL_REPLAY_EXPORT_DIR` 和逗号分隔的 `UWB_IMU_PL_REPLAY_ATTEMPTS`
+（例如 `101,139,140`），再运行 benchmark；不要用该导出运行计算性能收益。
+仓库已保存最慢窗口及典型拒绝窗口的无损压缩快照和 SHA-256 清单。
+
+```bash
+gzip -dc doc/evidence/gate-d-p0-p2/attempt-139.bin.gz > /tmp/gate-d-139.bin
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 taskset -c 4,5,6,7 \
+  ../../devel/.private/uwb_imu_pl/lib/uwb_imu_pl/candidate_replay /tmp/gate-d-139.bin /tmp/replay.csv 4 3
+```
+
+`candidate_replay` 接受 `SNAPSHOT OUTPUT_CSV [1|4 workers] [repeats] [fast|oracle]`。
+默认重放候选数值内核；`oracle` 是独立 dense 参考路径。
+`UWB_IMU_PL_DISABLE_BLOCK_CACHE=1` 和 `UWB_IMU_PL_DISABLE_EARLY_STEP=1`
+分别用于缓存与提前步长检查的消融。快照保留所有动作和数值阈值；重放不更新 backend。
+`gate_d_development CONFIG OUTPUT_DIR` 实际提交 205 次，再导出窗口并执行一次完整 pipeline，
+用于检查 fixed-lag 边缘化，不能当作正式 FDE 成功证据。

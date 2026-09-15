@@ -1,4 +1,5 @@
 #include "uwb_imu_pl/integrity/protection_level_v2.hpp"
+#include "uwb_imu_pl/integrity/statistical_bounds_cache.hpp"
 
 #include <boost/math/distributions/non_central_chi_squared.hpp>
 #include <boost/math/distributions/normal.hpp>
@@ -14,26 +15,8 @@ namespace uwb_imu_pl {
 
 double ProtectionLevelV2::detectionBoundaryNoncentralitySquared(
     int dof, double threshold, double p_md) {
-  if (dof <= 0 || !std::isfinite(threshold) || threshold <= 0.0 ||
-      !std::isfinite(p_md) || p_md <= 0.0 || p_md >= 1.0) {
-    throw std::invalid_argument("invalid noncentrality boundary inputs");
-  }
-  auto missed = [&](double lambda_squared) {
-    return boost::math::cdf(
-        boost::math::non_central_chi_squared(dof, lambda_squared), threshold);
-  };
-  double lower = 0.0;
-  double upper = 1.0;
-  while (missed(upper) > p_md && upper < 1e12) upper *= 2.0;
-  if (upper >= 1e12 && missed(upper) > p_md) {
-    throw std::runtime_error("cannot bracket noncentrality boundary");
-  }
-  for (int i = 0; i < 120; ++i) {
-    const double middle = 0.5 * (lower + upper);
-    if (missed(middle) > p_md) lower = middle;
-    else upper = middle;
-  }
-  return 0.5 * (lower + upper);
+  return StatisticalBoundsCache::noncentralityBoundary(
+      dof, threshold, p_md);
 }
 
 ProtectionLevelV2Result ProtectionLevelV2::compute(
@@ -65,20 +48,6 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
     result.reason = "invalid post-FDE candidate/protected-state map";
     return result;
   }
-  const Eigen::MatrixXd covariance_protected_transpose =
-      candidate.covarianceTimes(window.protected_state_map.transpose());
-  if (covariance_protected_transpose.rows() !=
-      window.protected_state_map.cols()) {
-    result.reason = "candidate covariance solve failed";
-    return result;
-  }
-  const Eigen::Matrix3d protected_covariance = window.protected_state_map *
-      covariance_protected_transpose;
-  if (!protected_covariance.allFinite() ||
-      (protected_covariance.diagonal().array() <= 0.0).any()) {
-    result.reason = "post-FDE protected covariance is invalid";
-    return result;
-  }
   double allocated = 3.0 * risk.nominal_axis_tail + risk.p_nm +
       risk.p_bridge_escape + risk.p_history_contamination + risk.p_model_escape;
   for (const auto& hypothesis : *hypotheses) {
@@ -90,14 +59,13 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
     result.reason = "outcome-conditioned risk budget does not close";
     return result;
   }
-  const double nominal_tail = std::max(1e-15, risk.nominal_axis_tail);
-  const double nominal_k = boost::math::quantile(
-      boost::math::normal(), 1.0 - 0.5 * nominal_tail);
-  result.nominal_component_m = nominal_k *
-      protected_covariance.diagonal().cwiseSqrt();
-  result.fault_component_m.setZero();
+  std::vector<Eigen::MatrixXd> fault_maps;
+  std::vector<Eigen::MatrixXd> crosses;
+  fault_maps.reserve(hypotheses->size());
+  crosses.reserve(hypotheses->size());
+  int solve_columns = 3;
   for (auto& hypothesis : *hypotheses) {
-    const Eigen::MatrixXd fault_map = fault_map_provider(hypothesis);
+    Eigen::MatrixXd fault_map = fault_map_provider(hypothesis);
     if (fault_map.rows() != candidate.rows || fault_map.cols() == 0 ||
         !fault_map.allFinite()) {
       hypothesis.monitored = false;
@@ -105,13 +73,51 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
       result.reason = "remaining hypothesis cannot be mapped post-FDE";
       return result;
     }
-    const Eigen::MatrixXd cross = candidate.normalCross(fault_map);
-    const Eigen::MatrixXd covariance_cross = candidate.covarianceTimes(cross);
-    if (cross.rows() != candidate.state_increment.rows() ||
-        covariance_cross.rows() != cross.rows()) {
+    Eigen::MatrixXd cross = candidate.normalCross(fault_map);
+    if (cross.rows() != candidate.state_increment.rows()) {
       result.reason = "candidate normal cross-product failed";
       return result;
     }
+    solve_columns += cross.cols();
+    fault_maps.push_back(std::move(fault_map));
+    crosses.push_back(std::move(cross));
+  }
+  Eigen::MatrixXd solve_rhs(candidate.state_increment.rows(), solve_columns);
+  solve_rhs.leftCols<3>() = window.protected_state_map.transpose();
+  int solve_column = 3;
+  for (const auto& cross : crosses) {
+    solve_rhs.middleCols(solve_column, cross.cols()) = cross;
+    solve_column += cross.cols();
+  }
+  const Eigen::MatrixXd covariance_solutions = candidate.covarianceTimes(solve_rhs);
+  if (covariance_solutions.rows() != candidate.state_increment.rows() ||
+      covariance_solutions.cols() != solve_columns) {
+    result.reason = "candidate covariance solve failed";
+    return result;
+  }
+  const Eigen::MatrixXd covariance_protected_transpose =
+      covariance_solutions.leftCols<3>();
+  const Eigen::Matrix3d protected_covariance = window.protected_state_map *
+      covariance_protected_transpose;
+  if (!protected_covariance.allFinite() ||
+      (protected_covariance.diagonal().array() <= 0.0).any()) {
+    result.reason = "post-FDE protected covariance is invalid";
+    return result;
+  }
+  const double nominal_tail = std::max(1e-15, risk.nominal_axis_tail);
+  const double nominal_k = StatisticalBoundsCache::normalTwoSidedMultiplier(
+      nominal_tail);
+  result.nominal_component_m = nominal_k *
+      protected_covariance.diagonal().cwiseSqrt();
+  result.fault_component_m.setZero();
+  solve_column = 3;
+  for (std::size_t index = 0; index < hypotheses->size(); ++index) {
+    auto& hypothesis = (*hypotheses)[index];
+    const Eigen::MatrixXd& fault_map = fault_maps[index];
+    const Eigen::MatrixXd& cross = crosses[index];
+    const Eigen::MatrixXd covariance_cross = covariance_solutions.middleCols(
+        solve_column, cross.cols());
+    solve_column += cross.cols();
     const Eigen::MatrixXd gram = fault_map.transpose() * fault_map -
         cross.transpose() * covariance_cross;
     Eigen::JacobiSVD<Eigen::MatrixXd> svd(gram);
@@ -153,8 +159,8 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
     const double fault_tail = std::max(1e-15, hypothesis.hmi_allocation > 0.0
         ? hypothesis.hmi_allocation / std::max(hypothesis.prior_probability_bound, 1e-15)
         : nominal_tail);
-    const double k_fault = boost::math::quantile(
-        boost::math::normal(), 1.0 - 0.5 * std::min(0.5, fault_tail));
+    const double k_fault = StatisticalBoundsCache::normalTwoSidedMultiplier(
+        std::min(0.5, fault_tail));
     const Eigen::Vector3d component = slopes * lambda + k_fault *
         protected_covariance.diagonal().cwiseSqrt();
     result.fault_component_m = result.fault_component_m.cwiseMax(component);
@@ -175,6 +181,213 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
   } else {
     result.reason = "research V2 implemented; Gate J calibration/review pending";
   }
+  return result;
+}
+
+ProtectionLevelV2Result ProtectionLevelV2::computeShared(
+    const LinearizedIntegrityWindow& window,
+    CandidateEvaluation* candidate,
+    const DetectorResultV2& detector,
+    std::vector<FaultHypothesisV2>* hypotheses,
+    const ProtectionLevelSharedContext& shared,
+    const RiskBudgetV2& risk) const {
+  ProtectionLevelV2Result result;
+  if (!candidate || !hypotheses || !candidate->valid ||
+      !detector.numerically_valid ||
+      window.protected_state_map.cols() != candidate->state_increment.rows() ||
+      window.protected_state_map.rows() != 3) {
+    result.reason = "invalid post-FDE candidate/protected-state map";
+    return result;
+  }
+  double allocated = 3.0 * risk.nominal_axis_tail + risk.p_nm +
+      risk.p_bridge_escape + risk.p_history_contamination + risk.p_model_escape;
+  std::map<std::uint64_t, const Eigen::MatrixXd*> modes;
+  for (const auto& hypothesis : *hypotheses) {
+    allocated += hypothesis.hmi_allocation;
+    for (const auto id : hypothesis.modes) {
+      const auto found = shared.mode_maps.find(id.value());
+      if (found == shared.mode_maps.end() || found->second.rows() != candidate->rows ||
+          found->second.cols() == 0 || !found->second.allFinite()) {
+        result.reason = "remaining hypothesis cannot be mapped post-FDE";
+        return result;
+      }
+      modes.emplace(id.value(), &found->second);
+    }
+  }
+  result.allocated_outcome_risk = allocated;
+  result.risk_budget_valid = allocated <= risk.p_hmi_total;
+  if (!result.risk_budget_valid) {
+    result.reason = "outcome-conditioned risk budget does not close";
+    return result;
+  }
+  struct SolvedMode {
+    const Eigen::MatrixXd* map = nullptr;
+    Eigen::MatrixXd cross;
+    Eigen::Index solve_offset = 0;
+  };
+  std::map<std::uint64_t, SolvedMode> solved_modes;
+  Eigen::Index solve_columns = 3;
+  for (const auto& item : modes) {
+    SolvedMode mode;
+    mode.map = item.second;
+    mode.cross = candidate->normalCross(*item.second);
+    if (mode.cross.rows() != candidate->state_increment.rows()) {
+      result.reason = "candidate normal cross-product failed";
+      return result;
+    }
+    mode.solve_offset = solve_columns;
+    solve_columns += mode.cross.cols();
+    solved_modes.emplace(item.first, std::move(mode));
+  }
+  std::vector<Eigen::Index> bridge_offsets;
+  bridge_offsets.reserve(shared.bridges.size());
+  for (const auto& bridge : shared.bridges) {
+    if (bridge.jacobian_whitened.cols() != candidate->state_increment.rows() ||
+        bridge.jacobian_whitened.rows() != bridge.deterministic_bound.size() ||
+        !bridge.jacobian_whitened.allFinite() ||
+        !bridge.deterministic_bound.allFinite() ||
+        (bridge.deterministic_bound.array() < 0.0).any()) {
+      result.reason = "bridge projection dimensions invalid";
+      return result;
+    }
+    bridge_offsets.push_back(solve_columns);
+    solve_columns += bridge.jacobian_whitened.rows();
+  }
+  Eigen::MatrixXd rhs(candidate->state_increment.rows(), solve_columns);
+  rhs.leftCols<3>() = window.protected_state_map.transpose();
+  for (const auto& item : solved_modes) {
+    rhs.middleCols(item.second.solve_offset, item.second.cross.cols()) =
+        item.second.cross;
+  }
+  for (std::size_t i = 0; i < shared.bridges.size(); ++i) {
+    const auto& bridge = shared.bridges[i];
+    rhs.middleCols(bridge_offsets[i], bridge.jacobian_whitened.rows()) =
+        bridge.jacobian_whitened.transpose();
+  }
+  const Eigen::MatrixXd solutions = candidate->covarianceTimes(rhs);
+  ++candidate->diagnostics.covariance_solve_count;
+  if (solutions.rows() != candidate->state_increment.rows() ||
+      solutions.cols() != solve_columns || !solutions.allFinite()) {
+    result.reason = "candidate covariance solve failed";
+    return result;
+  }
+  const Eigen::MatrixXd protected_solve = solutions.leftCols<3>();
+  const Eigen::Matrix3d protected_covariance =
+      window.protected_state_map * protected_solve;
+  if (!protected_covariance.allFinite() ||
+      (protected_covariance.diagonal().array() <= 0.0).any()) {
+    result.reason = "post-FDE protected covariance is invalid";
+    return result;
+  }
+  result.bridge_component_m.setZero();
+  for (std::size_t i = 0; i < shared.bridges.size(); ++i) {
+    const auto& bridge = shared.bridges[i];
+    const Eigen::MatrixXd gain = solutions.middleCols(
+        bridge_offsets[i], bridge.jacobian_whitened.rows());
+    result.bridge_component_m +=
+        (window.protected_state_map * gain).cwiseAbs() *
+        bridge.deterministic_bound;
+  }
+  const double nominal_tail = std::max(1e-15, risk.nominal_axis_tail);
+  const double nominal_k = StatisticalBoundsCache::normalTwoSidedMultiplier(
+      nominal_tail);
+  const Eigen::Vector3d sigma = protected_covariance.diagonal().cwiseSqrt();
+  result.nominal_component_m = nominal_k * sigma;
+  result.fault_component_m.setZero();
+  std::map<std::pair<std::uint64_t, std::uint64_t>, Eigen::MatrixXd>
+      pair_grams;
+  for (auto& hypothesis : *hypotheses) {
+    Eigen::Index columns = 0;
+    for (const auto id : hypothesis.modes)
+      columns += solved_modes.at(id.value()).map->cols();
+    Eigen::MatrixXd gram = Eigen::MatrixXd::Zero(columns, columns);
+    Eigen::MatrixXd protected_fault(3, columns);
+    Eigen::Index offset = 0;
+    for (const auto left_id : hypothesis.modes) {
+      const auto& left = solved_modes.at(left_id.value());
+      const Eigen::Index left_count = left.map->cols();
+      protected_fault.middleCols(offset, left_count) =
+          window.protected_state_map * solutions.middleCols(
+              left.solve_offset, left_count);
+      Eigen::Index right_offset = 0;
+      for (const auto right_id : hypothesis.modes) {
+        const auto& right = solved_modes.at(right_id.value());
+        const Eigen::Index right_count = right.map->cols();
+        const std::pair<std::uint64_t, std::uint64_t> key{
+            std::min(left_id.value(), right_id.value()),
+            std::max(left_id.value(), right_id.value())};
+        auto found = pair_grams.find(key);
+        if (found == pair_grams.end()) {
+          const auto& first = solved_modes.at(key.first);
+          const auto& second = solved_modes.at(key.second);
+          Eigen::MatrixXd value = first.map->transpose() * (*second.map) -
+              first.cross.transpose() * solutions.middleCols(
+                  second.solve_offset, second.map->cols());
+          found = pair_grams.emplace(key, std::move(value)).first;
+        }
+        gram.block(offset, right_offset, left_count, right_count) =
+            left_id.value() <= right_id.value()
+                ? found->second : found->second.transpose();
+        right_offset += right_count;
+      }
+      offset += left_count;
+    }
+    gram = 0.5 * (gram + gram.transpose());
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(gram);
+    const auto singular = svd.singularValues();
+    const double largest = singular.size() ? singular(0) : 0.0;
+    const double gate = 1e-10 * std::max(1.0, largest);
+    auto& monitor = hypothesis.monitorability;
+    monitor.parameter_dimension = columns;
+    monitor.rank = static_cast<int>((singular.array() > gate).count());
+    const double smallest = monitor.rank > 0 ? singular(monitor.rank - 1) : 0.0;
+    monitor.sigma_min = std::sqrt(std::max(0.0, smallest));
+    monitor.sigma_max = std::sqrt(std::max(0.0, largest));
+    monitor.condition_number = smallest > 0.0 ? largest / smallest
+        : std::numeric_limits<double>::infinity();
+    monitor.monitorable = monitor.rank == columns;
+    hypothesis.monitored = monitor.monitorable;
+    if (!hypothesis.monitored) {
+      result.reason = "remaining post-FDE fault is unmonitorable";
+      return result;
+    }
+    Eigen::LDLT<Eigen::MatrixXd> gram_solve(gram);
+    if (gram_solve.info() != Eigen::Success || !gram_solve.isPositive()) {
+      result.reason = "remaining fault Gram matrix is not SPD";
+      return result;
+    }
+    Eigen::Vector3d slopes;
+    for (int axis = 0; axis < 3; ++axis) {
+      const Eigen::VectorXd response = protected_fault.row(axis).transpose();
+      slopes(axis) = std::sqrt(std::max(
+          0.0, response.dot(gram_solve.solve(response))));
+    }
+    monitor.protected_slopes = slopes;
+    const double lambda = std::sqrt(detectionBoundaryNoncentralitySquared(
+        detector.dof, detector.squared_threshold, hypothesis.p_md_allocation));
+    const double fault_tail = std::max(1e-15, hypothesis.hmi_allocation > 0.0
+        ? hypothesis.hmi_allocation /
+            std::max(hypothesis.prior_probability_bound, 1e-15)
+        : nominal_tail);
+    const double k_fault = StatisticalBoundsCache::normalTwoSidedMultiplier(
+        std::min(0.5, fault_tail));
+    result.fault_component_m = result.fault_component_m.cwiseMax(
+        slopes * lambda + k_fault * sigma);
+  }
+  result.pl_xyz_m = result.nominal_component_m.cwiseMax(
+      result.fault_component_m) + result.bridge_component_m;
+  result.hpl_m = std::hypot(result.pl_xyz_m.x(), result.pl_xyz_m.y());
+  result.vpl_m = result.pl_xyz_m.z();
+  result.model_valid = result.pl_xyz_m.allFinite() && detector.passed;
+  result.availability = result.model_valid &&
+      result.hpl_m <= risk.horizontal_alert_limit_m &&
+      result.vpl_m <= risk.vertical_alert_limit_m
+      ? Availability::Available : Availability::Unavailable;
+  result.formal_eligible = false;
+  if (!detector.passed) result.reason = "post-FDE detector alarm";
+  else if (result.availability != Availability::Available)
+    result.reason = "post-FDE protection level exceeds alert limit";
+  else result.reason = "research V2 implemented; Gate J calibration/review pending";
   return result;
 }
 

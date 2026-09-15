@@ -1,0 +1,56 @@
+[
+  {
+    "path": "results/gate_d_p0_p2/additional_snapshots/attempt-110.bin",
+    "archive": "doc/evidence/gate-d-p0-p2/attempt-110.bin.gz",
+    "schema_version": "uwb-imu-pl/frozen-candidates/v2",
+    "retention_reason": "P2 slowest measured attempt",
+    "bytes": 6708838,
+    "sha256": "45844d776c66dd4d4837728bcffc758c0b12488a3fcff9135d5209b5aa34164f",
+    "archive_sha256": "606c20b53b24077a0ac864eeed28e5d9e161f98d0fcc37270cb5ee885efd5b22"
+  },
+  {
+    "path": "results/gate_d_p0_p2/additional_snapshots/attempt-122.bin",
+    "archive": "doc/evidence/gate-d-p0-p2/attempt-122.bin.gz",
+    "schema_version": "uwb-imu-pl/frozen-candidates/v2",
+    "retention_reason": "P1 slowest measured attempt",
+    "bytes": 6787152,
+    "sha256": "fc7878b12f479c35b97337f4f3d11ad3df560f876af96175000338dddc547534",
+    "archive_sha256": "8cda8c94122c89c71414696a2d60c648af5cd53d2590b45008219d5309383619"
+  },
+  {
+    "path": "results/gate_d_p0_p2/fixed_lag/after-205-commits.bin",
+    "archive": "doc/evidence/gate-d-p0-p2/after-205-commits.bin.gz",
+    "schema_version": "uwb-imu-pl/frozen-candidates/v1",
+    "retention_reason": "fixed-lag window after 205 actual commits",
+    "bytes": 7519635,
+    "sha256": "ff2ece5acbecc271ad9c14b788f69c7d42d696ae4a0b3bc3f8dfec449618f29d",
+    "archive_sha256": "b65738d017ec30ecfa1a09a36d18b64dbc06773949edf2d53bcb665a476e5d6e"
+  },
+  {
+    "path": "results/gate_d_p0_p2/snapshots/attempt-101.bin",
+    "archive": "doc/evidence/gate-d-p0-p2/attempt-101.bin.gz",
+    "schema_version": "uwb-imu-pl/frozen-candidates/v1",
+    "retention_reason": "typical SPD/step rejections",
+    "bytes": 6628069,
+    "sha256": "b2717c4143726162b3b3c383f4b5ac8cb23190a074c35dcb9359b11f8c0d1aa2",
+    "archive_sha256": "b0d3574a51e31bbb2e9037bdc04059fc1fc10cfee05140fa3a8b6298bbd278fe"
+  },
+  {
+    "path": "results/gate_d_p0_p2/snapshots/attempt-139.bin",
+    "archive": "doc/evidence/gate-d-p0-p2/attempt-139.bin.gz",
+    "schema_version": "uwb-imu-pl/frozen-candidates/v1",
+    "retention_reason": "P0 slowest measured attempt; SPD/step rejections",
+    "bytes": 6630426,
+    "sha256": "a46c4e4a66ca47d9638a2383579d25dde01e6ab9f62a6e57d613a1f6ab2c1dd1",
+    "archive_sha256": "7151f8c8dfa709fe58e4bcdbfc55807ddaa31041d0a10948069fa7ba0fb04890"
+  },
+  {
+    "path": "results/gate_d_p0_p2/snapshots/attempt-140.bin",
+    "archive": "doc/evidence/gate-d-p0-p2/attempt-140.bin.gz",
+    "schema_version": "uwb-imu-pl/frozen-candidates/v1",
+    "retention_reason": "typical late step rejections",
+    "bytes": 6787150,
+    "sha256": "d631c665f920a9f1a01c88224bbadcd39c8cff55b60f05df8e17e1f4852eaaf3",
+    "archive_sha256": "587d35339ad3a5720ef36c1619c42c36d89c4129f92f13df0b750ca0cd66ab2e"
+  }
+]

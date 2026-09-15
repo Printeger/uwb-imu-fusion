@@ -132,6 +132,8 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/estimation/incremental_estimator.cpp
   src/uwb_imu_pl/estimation/factor_ledger.cpp
   src/uwb_imu_pl/estimation/integrity_window_snapshot.cpp
+  src/uwb_imu_pl/estimation/candidate_replay.cpp
+  src/uwb_imu_pl/estimation/candidate_worker_pool.cpp
   src/uwb_imu_pl/estimation/rank_update_kernel.cpp
   src/uwb_imu_pl/estimation/reinitialization.cpp
   src/uwb_imu_pl/integrity/joint_window_detector.cpp
@@ -139,6 +141,7 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/integrity/hypothesis_generator.cpp
   src/uwb_imu_pl/integrity/fde_manager.cpp
   src/uwb_imu_pl/integrity/protection_level_v2.cpp
+  src/uwb_imu_pl/integrity/statistical_bounds_cache.cpp
   src/uwb_imu_pl/integrity/health_manager.cpp
   src/uwb_imu_pl/integrity/imu_fault_subspace.cpp
   src/uwb_imu_pl/factors/kinematic_bridge_factor.cpp
@@ -238,6 +241,12 @@ target_compile_definitions(realtime_performance_benchmark PRIVATE
 target_link_libraries(realtime_performance_benchmark
   ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
 
+add_executable(gate_d_development apps/gate_d_development.cpp)
+target_link_libraries(gate_d_development ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
+
+add_executable(candidate_replay apps/candidate_replay.cpp)
+target_link_libraries(candidate_replay ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
+
 add_executable(integrity_round2_scenario apps/integrity_round2_scenario.cpp)
 target_link_libraries(integrity_round2_scenario
   ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
@@ -271,7 +280,11 @@ catkin_install_python(PROGRAMS
   tools/round2_common.py
   tools/run_integrity_round2.py
   tools/run_round2_analytic_mc.py
+  tools/summarize_gate_d_development.py
+  tools/gate_d_diagnostics.py
   tools/run_round2_performance.py
+  tools/run_integrity_round3.py
+  tools/summarize_gate_d_p3_p6.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -344,4 +357,13 @@ if(CATKIN_ENABLE_TESTING)
     COMMAND ${CMAKE_COMMAND} -E env
       PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools
       python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_round2_tools.py)
+
+  add_test(NAME test_gate_d_tools
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools
+      python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_gate_d_tools.py)
+
+  add_test(NAME test_round3_tools
+    COMMAND ${CMAKE_COMMAND} -E env
+      PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools
+      python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_round3_tools.py)
 endif()

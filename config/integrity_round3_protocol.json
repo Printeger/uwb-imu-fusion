@@ -1,0 +1,107 @@
+{
+  "schema_version": "uwb-imu-pl/integrity-round3-protocol/v1",
+  "protocol_name": "integrity-v2-round3",
+  "inherits_frozen_protocol": "config/integrity_round2_protocol.json",
+  "status_vocabulary": ["PASS", "FAIL", "INVALID"],
+  "implementation_maturity": "IMPLEMENTED_UNVERIFIED",
+  "formal_eligible": false,
+  "gate_j_complete": false,
+  "formal_matrix_authorized": false,
+  "parallelism": {"max_workers": 4, "numeric_threads": 1, "jsonl_shards": 4},
+  "seed_domains": {
+    "calibration": {"begin": 1000000, "count": 1000000},
+    "development": {"begin": 3000000, "count": 1000000},
+    "test": {"begin": 5000000, "count": 1000000},
+    "stress": {"begin": 7000000, "count": 1000000}
+  },
+  "sample_counts": {
+    "pilot_per_cell": 16,
+    "test_per_cell": 256,
+    "gate_g_calibration": 1024,
+    "gate_g_held_out": 4096,
+    "gate_g_stress": 512,
+    "gate_i_noisy_per_scenario": 256,
+    "analytic_h0_per_dof": 3000000,
+    "analytic_noncentral_per_cell": 1000000
+  },
+  "boundary_ratios": [0.1, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 5.0],
+  "onset_offsets": [0, 5, 10, 15, 19],
+  "estimator_modes": ["full_history", "fixed_lag_200"],
+  "gate_d": {
+    "build_type": "Release",
+    "fixed_lag_epochs": 200,
+    "candidate_count": 128,
+    "workers": 4,
+    "single_worker_ablation": true,
+    "epochs_per_repeat": 12000,
+    "repeats": 3,
+    "warmup_epochs": 100,
+    "p99_limit_ms": 40.0,
+    "cpu_affinity_required": true
+  },
+  "gate_e": {
+    "geometries": ["normal8", "poor7", "poor6"],
+    "negative_controls": ["near_rank"],
+    "anchors": [1, 2, 3, 4, 5, 6, 7, 8],
+    "fault_modes": ["epoch_step", "persistent", "ramp"]
+  },
+  "gate_f": {
+    "sensors": ["accel", "gyro"],
+    "axes": [0, 1, 2],
+    "motions": ["stationary", "straight", "circle", "high_yaw", "translation_rotation"],
+    "window_lengths": [5, 10, 20, 30],
+    "product_window": 20,
+    "raw_samples_per_interval": 10,
+    "raw_rate_hz": 200
+  },
+  "gate_g": {
+    "motions": ["stationary", "constant_velocity", "acceleration", "braking", "circle", "high_yaw", "combined_motion"],
+    "bridge_lengths": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+    "timeout_epoch": 21,
+    "timeout_seconds": 1.0,
+    "calibration_prefix": "bridge-synth-r2-v1"
+  },
+  "gate_h": {
+    "anchors": [1, 2, 3, 4, 5, 6, 7, 8],
+    "imu_axes": ["accel_x", "accel_y", "accel_z", "gyro_x", "gyro_y", "gyro_z"],
+    "uwb_modes": ["epoch_step", "persistent", "ramp"],
+    "relative_onsets": ["same", "different"],
+    "magnitude_pairs": [[5.0, 1.0], [1.0, 5.0]],
+    "ambiguity": ["single_plausible", "multiple_plausible"],
+    "union_geometries": ["normal8", "poor6"],
+    "diagnostic_threshold_replay": [0.0, 1e300]
+  },
+  "gate_i": {
+    "noisy_scenarios": ["persistent_uwb", "continuous_interval_imu", "intermittent_3_fault_2_clean"],
+    "shadow_passes": 20,
+    "recovery_test_passes": 10,
+    "recovery_refail_pass": 5,
+    "deterministic_sequences": ["health_recovery", "late_detection_full_history", "late_detection_fixed_lag", "bridge_timeout_reinit"]
+  },
+  "ros_equivalence": {
+    "gates": ["E", "F", "G", "H", "I"],
+    "seeds_per_gate": 1,
+    "fields": ["truth_ids", "detector", "selected_action", "protection_level", "health", "reinitialization"]
+  },
+  "statistical_gates": {
+    "familywise_alpha": 0.01,
+    "confidence": 0.95,
+    "monitorable_detection_lower": 0.95,
+    "monitorable_correct_exclusion_lower": 0.95,
+    "normal8_nominal_availability_lower": 0.95,
+    "coverable_fault_availability_lower": 0.90,
+    "p_md_boundary": 0.001
+  },
+  "failure_catalog": {
+    "MISSING_CELL": "required canonical cell absent",
+    "BAD_CHECKSUM": "artifact checksum or row count mismatch",
+    "DIRTY_SHA": "formal run was started from a dirty worktree",
+    "REPLAY_MISMATCH": "same SHA/config/seed did not replay identically",
+    "WORKER_CRASH": "bulk worker stopped before its shard checkpoint",
+    "IDENTITY_MISMATCH": "SHA/cell/domain/ordinal/seed differs on resume",
+    "ASSUMPTION_VIOLATION": "truth is outside the frozen bridge envelope",
+    "HISTORY_PRIOR_CONTAMINATED": "fault onset precedes the recoverable fixed-lag boundary",
+    "SCIENTIFIC_GATE_FAILED": "complete valid evidence did not meet a preregistered threshold",
+    "FORMAL_MATRIX_NOT_RUN": "formal E-I matrix is intentionally not started in round three"
+  }
+}

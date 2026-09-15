@@ -2,7 +2,10 @@
 
 #include "uwb_imu_pl/integrity/fault_model.hpp"
 
+#include <Eigen/Cholesky>
+
 #include <memory>
+#include <cstdint>
 
 namespace uwb_imu_pl {
 
@@ -12,25 +15,76 @@ struct RankUpdateConfig {
   double max_linearization_step_norm = 0.25;
   bool materialize_dense_oracle_fields = true;
   double exact_slow_path_condition = 1e8;
+  bool enable_shared_cache = true;
+  bool enable_early_step_gate = true;
+  bool enable_numerical_certificate = true;
+  bool force_exact_condition_number = false;
+};
+
+// Immutable numerical data derived exactly once from a frozen window.  It is
+// deliberately rebuilt after replay decoding; Eigen decomposition objects are
+// never serialized.
+struct FrozenWindowNumerics {
+  WindowId window_id;
+  LinearizationVersion version;
+  std::uint64_t content_fingerprint = 0;
+  std::shared_ptr<const Eigen::LLT<Eigen::MatrixXd>> information_factorization;
+  Eigen::VectorXd base_state_increment;
+  Eigen::VectorXd parity;
+  std::vector<Eigen::Index> block_row_offsets;
+  double statistic = std::numeric_limits<double>::infinity();
+  double information_logdet = -std::numeric_limits<double>::infinity();
+  double smallest_singular_value = 0.0;
+  double largest_singular_value = 0.0;
+  double smallest_information_lower_bound = 0.0;
+  double largest_information_upper_bound = std::numeric_limits<double>::infinity();
+  int exact_rank = 0;
+  double exact_condition = std::numeric_limits<double>::infinity();
+};
+
+struct RankUpdateScratch {
+  Eigen::MatrixXd update_columns;
+  Eigen::VectorXd update_signs;
+  Eigen::MatrixXd whitened_update;
+  Eigen::MatrixXd small_symmetric;
+};
+
+struct BlockSolveCacheEntry {
+  LinearizedFactorBlock block;
+  Eigen::MatrixXd base_solve;
+};
+struct FrozenBlockSolveCache {
+  WindowId window_id;
+  LinearizationVersion version;
+  std::map<FactorGroupId, std::vector<BlockSolveCacheEntry>> blocks;
 };
 
 struct BaseCandidateKernel {
   WindowId window_id;
   LinearizationVersion version;
+  std::shared_ptr<const FrozenBlockSolveCache> block_cache;
+  std::shared_ptr<const FrozenWindowNumerics> numerics;
   LinearizedIntegrityWindow window;
-  std::shared_ptr<const Eigen::MatrixXd> covariance;
+  std::shared_ptr<const Eigen::LLT<Eigen::MatrixXd>> information_factorization;
   Eigen::VectorXd state_increment;
   double information_logdet = -std::numeric_limits<double>::infinity();
+  double smallest_singular_value = 0.0;
+  int exact_rank = 0;
+  double exact_condition = std::numeric_limits<double>::infinity();
   bool valid = false;
   std::string reason;
 };
 
 struct CandidateEvaluation {
+  CandidateDiagnostics diagnostics;
   ExclusionAction action;
   LinearizationVersion base_version;
   Eigen::VectorXd state_increment;
   Eigen::MatrixXd covariance;
-  std::shared_ptr<const Eigen::MatrixXd> shared_base_covariance;
+  std::shared_ptr<const Eigen::LLT<Eigen::MatrixXd>> shared_base_factorization;
+  // SVD reference covariance operator V diag(1/s^2) V^T; never a full inverse.
+  std::shared_ptr<const Eigen::MatrixXd> reference_vectors;
+  Eigen::VectorXd reference_inverse_squared;
   Eigen::MatrixXd covariance_plus_factor;
   Eigen::MatrixXd covariance_minus_factor;
   const LinearizedIntegrityWindow* window_view = nullptr;
@@ -68,9 +122,15 @@ class RankUpdateEvaluator {
   explicit RankUpdateEvaluator(RankUpdateConfig config = {})
       : config_(config) {}
   BaseCandidateKernel factorizeOnce(
-      const LinearizedIntegrityWindow& window) const;
+      const LinearizedIntegrityWindow& window,
+      const std::vector<ExclusionAction>& actions = {}) const;
+  void buildSharedCache(BaseCandidateKernel* base,
+                        const std::vector<ExclusionAction>& actions) const;
   CandidateEvaluation evaluate(const BaseCandidateKernel& base,
                                const ExclusionAction& action) const;
+  CandidateEvaluation evaluate(const BaseCandidateKernel& base,
+                               const ExclusionAction& action,
+                               RankUpdateScratch* scratch) const;
 
  private:
   RankUpdateConfig config_;

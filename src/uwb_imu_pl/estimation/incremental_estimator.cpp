@@ -24,6 +24,7 @@
 #include <chrono>
 #include <cmath>
 #include <functional>
+#include <cstring>
 #include <numeric>
 #include <set>
 #include <stdexcept>
@@ -39,6 +40,68 @@ class FixedLagBackend final : public gtsam::IncrementalFixedLagSmoother {
 };
 
 namespace {
+
+void cacheHashBytes(std::uint64_t* hash, const void* data, std::size_t size) {
+  const auto* bytes = static_cast<const unsigned char*>(data);
+  for (std::size_t i = 0; i < size; ++i) {
+    *hash ^= bytes[i];
+    *hash *= 1099511628211ULL;
+  }
+}
+template <class T> void cacheHashScalar(std::uint64_t* hash, const T& value) {
+  cacheHashBytes(hash, &value, sizeof(value));
+}
+template <class Derived>
+void cacheHashMatrix(std::uint64_t* hash, const Eigen::MatrixBase<Derived>& value) {
+  const Eigen::Index rows = value.rows(), cols = value.cols();
+  cacheHashScalar(hash, rows); cacheHashScalar(hash, cols);
+  for (Eigen::Index column = 0; column < cols; ++column)
+    for (Eigen::Index row = 0; row < rows; ++row) {
+      const double item = value(row, column);
+      cacheHashScalar(hash, item);
+    }
+}
+void cacheHashText(std::uint64_t* hash, const std::string& value) {
+  cacheHashBytes(hash, value.data(), value.size());
+  const unsigned char separator = 0xff;
+  cacheHashBytes(hash, &separator, 1);
+}
+std::uint64_t factorBlockFingerprint(const PendingFactorGroup& group,
+                                     const EpochTransaction& tx) {
+  std::uint64_t hash = 1469598103934665603ULL;
+  const auto id = group.id.value();
+  cacheHashScalar(&hash, id); cacheHashScalar(&hash, group.kind);
+  cacheHashScalar(&hash, group.sensor); cacheHashScalar(&hash, group.nominal);
+  cacheHashText(&hash, group.noise_model_id); cacheHashText(&hash, group.model_id);
+  cacheHashMatrix(&hash, group.raw_covariance);
+  cacheHashScalar(&hash, tx.previous_epoch); cacheHashScalar(&hash, tx.proposed_epoch);
+  cacheHashScalar(&hash, tx.base_version.graph_version);
+  cacheHashScalar(&hash, tx.base_version.ordering_version);
+  cacheHashScalar(&hash, tx.base_version.noise_model_version);
+  cacheHashScalar(&hash, tx.base_version.linpoint_version);
+  cacheHashMatrix(&hash, tx.previous_state.position_world_m);
+  cacheHashMatrix(&hash, tx.previous_state.velocity_world_mps);
+  cacheHashMatrix(&hash, tx.previous_state.accel_bias_mps2);
+  cacheHashMatrix(&hash, tx.previous_state.gyro_bias_radps);
+  cacheHashMatrix(&hash, tx.nominal_predicted_state.position_world_m);
+  cacheHashMatrix(&hash, tx.nominal_predicted_state.velocity_world_mps);
+  for (const auto key : group.keys) cacheHashScalar(&hash, key);
+  for (const auto id_value : group.source_measurements) {
+    const auto value = id_value.value(); cacheHashScalar(&hash, value);
+  }
+  for (const auto& factor : group.factors) {
+    const auto pointer = reinterpret_cast<std::uintptr_t>(factor.get());
+    cacheHashScalar(&hash, pointer);
+  }
+  return hash;
+}
+
+std::size_t blockBytes(const LinearizedFactorBlock& block) {
+  return sizeof(block) + sizeof(double) * static_cast<std::size_t>(
+      block.jacobian_raw.size() + block.residual_raw.size() +
+      block.covariance.size() + block.whitener.size() +
+      block.jacobian_whitened.size() + block.residual_whitened.size());
+}
 
 gtsam::Key positionKey(std::size_t epoch) { return gtsam::Symbol('p', epoch); }
 gtsam::Key velocityKey(std::size_t epoch) { return gtsam::Symbol('v', epoch); }
@@ -294,7 +357,13 @@ std::shared_ptr<const EstimationSnapshot> IncrementalUwbEstimator::snapshot() co
   auto rows = row_blocks_;
   for (auto& row : rows) row.version = version;
   Eigen::MatrixXd information;
-  if (marginal_.size() > 0) information = marginal_.inverse();
+  if (marginal_.size() > 0) {
+    Eigen::LDLT<Eigen::MatrixXd> solve(marginal_);
+    if (solve.info() == Eigen::Success) {
+      information = solve.solve(Eigen::MatrixXd::Identity(
+          marginal_.rows(), marginal_.cols()));
+    }
+  }
   return std::make_shared<ImmutableEstimationSnapshot>(
       currentState(), version, diagnostics_, std::move(rows), capabilities,
       LinearizationConsistency::Strict, std::nullopt, marginal_, information);
@@ -572,6 +641,13 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
   if (!(state_timestamp_ < timestamp)) throw std::invalid_argument("prediction timestamp must increase");
   if (!imu_boundary_ || imu_boundary_->timestamp != state_timestamp_) {
     throw std::runtime_error("missing causal IMU sample at state boundary");
+  }
+  if (!factor_block_cache_.empty()) {
+    factor_block_cache_.clear();
+    ++cache_audit_.invalidations;
+    cache_audit_.last_invalidation_reason = "new frozen transaction/version";
+    cache_audit_.factor_block_entries = 0;
+    cache_audit_.factor_block_bytes = 0;
   }
 
   const auto start = std::chrono::steady_clock::now();
@@ -1049,37 +1125,33 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     for (const auto& factor : boundary_graph) {
       graph_keys.insert(factor->keys().begin(), factor->keys().end());
     }
-    gtsam::Ordering ordering;
-    int outside_columns = 0;
+    gtsam::KeyVector outside_variables;
+    gtsam::Ordering inside_ordering;
     for (const auto key : graph_keys) {
       if (window_keys.count(key) == 0) {
-        ordering.push_back(key);
-        outside_columns += keyDimension(key);
+        outside_variables.push_back(key);
       }
     }
     for (std::size_t epoch = first_epoch; epoch <= tx.previous_epoch; ++epoch) {
       for (const auto key : {poseKey(epoch), velocityKey(epoch), biasKey(epoch)}) {
-        if (graph_keys.count(key)) ordering.push_back(key);
+        if (graph_keys.count(key)) inside_ordering.push_back(key);
       }
     }
     const auto gaussian = boundary_graph.linearize(*tx.frozen_values);
-    const auto dense = gaussian->jacobian(ordering);
-    const int inside_columns = dense.first.cols() - outside_columns;
-    Eigen::MatrixXd information = dense.first.transpose() * dense.first;
-    Eigen::VectorXd information_rhs = dense.first.transpose() * dense.second;
-    Eigen::MatrixXd reduced_information =
-        information.bottomRightCorner(inside_columns, inside_columns);
-    Eigen::VectorXd reduced_rhs = information_rhs.tail(inside_columns);
-    if (outside_columns > 0) {
-      const Eigen::MatrixXd noo =
-          information.topLeftCorner(outside_columns, outside_columns);
-      const Eigen::MatrixXd now =
-          information.topRightCorner(outside_columns, inside_columns);
-      Eigen::CompleteOrthogonalDecomposition<Eigen::MatrixXd> solve(noo);
-      reduced_information.noalias() -= now.transpose() * solve.solve(now);
-      reduced_rhs.noalias() -= now.transpose() *
-          solve.solve(information_rhs.head(outside_columns));
+    // Eliminate old variables on the sparse factor graph.  The previous code
+    // first formed a dense normal matrix for every fixed-lag variable and then
+    // took a Schur complement, making boundary construction cubic in the full
+    // lag.  Partial QR produces the identical reduced Gaussian model while the
+    // dense eigensolve below is bounded by the requested integrity window.
+    gtsam::GaussianFactorGraph::shared_ptr reduced = gaussian;
+    if (!outside_variables.empty()) {
+      reduced = gaussian->eliminatePartialMultifrontal(
+          outside_variables, gtsam::EliminateQR).second;
     }
+    const auto reduced_system = reduced->hessian(inside_ordering);
+    const int inside_columns = reduced_system.first.cols();
+    Eigen::MatrixXd reduced_information = reduced_system.first;
+    Eigen::VectorXd reduced_rhs = reduced_system.second;
     reduced_information =
         0.5 * (reduced_information + reduced_information.transpose());
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigen(reduced_information);
@@ -1126,9 +1198,28 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
                           EpochTransaction linearization_tx) {
     linearization_tx.base_version = window.version;
     linearization_tx.backend_mutated = false;
-    const auto local = linearizeGroupDense(group, linearization_tx);
-    LinearizedFactorBlock block = linearizePendingGroup(
-        group, linearization_tx, local.first, local.second);
+    const std::uint64_t fingerprint = factorBlockFingerprint(
+        group, linearization_tx);
+    const auto cached = factor_block_cache_.find(group.id.value());
+    LinearizedFactorBlock block;
+    if (cached != factor_block_cache_.end() &&
+        cached->second.transaction_id == tx.id &&
+        cached->second.version == window.version &&
+        cached->second.content_fingerprint == fingerprint) {
+      block = cached->second.block;
+      ++cache_audit_.factor_block_hits;
+    } else {
+      ++cache_audit_.factor_block_misses;
+      const auto local = linearizeGroupDense(group, linearization_tx);
+      block = linearizePendingGroup(
+          group, linearization_tx, local.first, local.second);
+      FactorBlockCacheEntry entry;
+      entry.transaction_id = tx.id;
+      entry.version = window.version;
+      entry.content_fingerprint = fingerprint;
+      entry.block = block;
+      factor_block_cache_[group.id.value()] = std::move(entry);
+    }
     Eigen::MatrixXd embedded_h = Eigen::MatrixXd::Zero(
         block.jacobian_whitened.rows(), total_columns);
     Eigen::MatrixXd embedded_raw = Eigen::MatrixXd::Zero(
@@ -1146,6 +1237,10 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     std::iota(block.window_column_indices.begin(),
               block.window_column_indices.end(), 0);
     window.blocks.push_back(std::move(block));
+    cache_audit_.factor_block_entries = factor_block_cache_.size();
+    cache_audit_.factor_block_bytes = 0;
+    for (const auto& item : factor_block_cache_)
+      cache_audit_.factor_block_bytes += blockBytes(item.second.block);
   };
 
   for (const auto& record : tx.recoverable_history) {
@@ -1247,8 +1342,39 @@ LinearizedFactorBlock IncrementalUwbImuEstimator::buildPendingFactorBlock(
       break;
     }
   }
+  const std::uint64_t fingerprint = factorBlockFingerprint(**found, local);
+  const auto cached = factor_block_cache_.find(id.value());
+  if (cached != factor_block_cache_.end() &&
+      cached->second.transaction_id == tx.id &&
+      cached->second.version == tx.base_version &&
+      cached->second.content_fingerprint == fingerprint) {
+    ++cache_audit_.factor_block_hits;
+    return cached->second.block;
+  }
+  ++cache_audit_.factor_block_misses;
   const auto linear = linearizeGroupDense(**found, local);
-  return linearizePendingGroup(**found, local, linear.first, linear.second);
+  LinearizedFactorBlock block = linearizePendingGroup(
+      **found, local, linear.first, linear.second);
+  FactorBlockCacheEntry entry;
+  entry.transaction_id = tx.id;
+  entry.version = tx.base_version;
+  entry.content_fingerprint = fingerprint;
+  entry.block = block;
+  factor_block_cache_[id.value()] = std::move(entry);
+  cache_audit_.factor_block_entries = factor_block_cache_.size();
+  cache_audit_.factor_block_bytes = 0;
+  for (const auto& item : factor_block_cache_)
+    cache_audit_.factor_block_bytes += blockBytes(item.second.block);
+  return block;
+}
+
+EstimatorCacheAudit IncrementalUwbImuEstimator::cacheAudit() const {
+  EstimatorCacheAudit result = cache_audit_;
+  result.factor_block_entries = factor_block_cache_.size();
+  result.factor_block_bytes = 0;
+  for (const auto& item : factor_block_cache_)
+    result.factor_block_bytes += blockBytes(item.second.block);
+  return result;
 }
 
 void IncrementalUwbImuEstimator::queryCurrentState() {
@@ -1411,7 +1537,10 @@ IncrementalUwbImuEstimator::preMeasurementSnapshot(const UwbBatch& batch) {
   capabilities.consistent_relinearization = true;
   capabilities.fixed_lag = fixed_lag_backend_ != nullptr;
   capabilities.historical_fault_provenance = false;
-  const Eigen::Matrix<double, 15, 15> information = prior.covariance.inverse();
+  Eigen::LDLT<Eigen::Matrix<double, 15, 15>> information_solve(
+      prior.covariance);
+  const Eigen::Matrix<double, 15, 15> information = information_solve.solve(
+      Eigen::Matrix<double, 15, 15>::Identity());
   auto snapshot = std::make_shared<ImmutableEstimationSnapshot>(
       prior.mean, prior.version, diagnostics, std::vector<WhitenedRowBlock>{rows},
       capabilities, LinearizationConsistency::Strict, prior, prior.covariance,
@@ -1818,7 +1947,7 @@ IncrementalUwbImuEstimator::methodBCandidatePrior(
   result.covariance = *covariance;
   result.mean = result.covariance * prior_information_vector;
   Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 15, 15>> eigen(
-      result.covariance.inverse());
+      result.covariance);
   if (!result.mean.allFinite() || eigen.info() != Eigen::Success ||
       eigen.eigenvalues().minCoeff() <= 0.0) return std::nullopt;
   result.condition_number = eigen.eigenvalues().maxCoeff() /

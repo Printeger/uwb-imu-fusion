@@ -1,0 +1,49 @@
+{
+  "ctest_suites": 9,
+  "ctest_failures": 0,
+  "gtest": {
+    "test_integrity_v2": {
+      "tests": 29,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    "test_snapshot_integrity": {
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    "test_integrity_config": {
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    "test_dense_oracle": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    "test_realtime_incremental": {
+      "tests": 24,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    "test_run_logger": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    }
+  },
+  "gate_d_python_cases": 11,
+  "schema_validations": [
+    "p2 smoke v5 + diagnostics v3",
+    "fixed lag v5 + diagnostics v3",
+    "independent worst-window export v5 + diagnostics v3"
+  ],
+  "formal_gate_d_pass": false
+}

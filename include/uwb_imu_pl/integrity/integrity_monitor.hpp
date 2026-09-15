@@ -62,12 +62,14 @@ class IntegrityMonitor {
 };
 
 class IncrementalUwbImuEstimator;
+class CandidateWorkerPool;
 
 // Orchestration layer enforcing "detect before commit" for each UWB group.
 class RealtimeIntegrityPipeline {
  public:
   RealtimeIntegrityPipeline(IncrementalUwbImuEstimator* estimator,
                             IntegrityMonitor monitor);
+  ~RealtimeIntegrityPipeline();
   void ingestImu(const ImuMeasurement& measurement);
   IntegrityOutput processUwbBatch(const UwbBatch& batch);
   const ReinitializationDirective& reinitializationDirective() const {
@@ -90,6 +92,14 @@ class RealtimeIntegrityPipeline {
   ControlledReinitializer reinitializer_;
   std::optional<NavigationState> pending_reinitialization_seed_;
   bool awaiting_first_clean_uwb_ = false;
+  std::uint64_t input_attempt_count_ = 0;
+  std::uint64_t consecutive_rejections_ = 0;
+  IntegrityOutput processUwbBatchImpl(const UwbBatch& batch);
+ public:
+  const IntegrityOutput& lastAttemptOutput() const { return last_attempt_output_; }
+ private:
+  IntegrityOutput last_attempt_output_;
+  std::unique_ptr<CandidateWorkerPool> candidate_workers_;
 };
 
 }  // namespace uwb_imu_pl

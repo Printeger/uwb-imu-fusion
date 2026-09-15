@@ -22,6 +22,7 @@ struct HypothesisGeneratorConfig {
 };
 
 struct GeneratedFaultModelSet {
+  double historical_sensitivity_ms = 0.0;
   std::vector<FaultUnit> units;
   std::vector<FaultModeBasis> modes;
   std::vector<FaultHypothesisV2> hypotheses;

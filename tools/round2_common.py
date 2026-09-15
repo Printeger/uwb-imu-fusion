@@ -61,13 +61,18 @@ def load_protocol(path: pathlib.Path) -> tuple[dict[str, Any], str]:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise InvalidCampaign(f"cannot load protocol: {error}") from error
-    if value.get("schema_version") != "uwb-imu-pl/integrity-round2-protocol/v1":
-        raise InvalidCampaign("unsupported round-two protocol schema")
+    if value.get("schema_version") not in {
+            "uwb-imu-pl/integrity-round2-protocol/v1",
+            "uwb-imu-pl/integrity-round3-protocol/v1"}:
+        raise InvalidCampaign("unsupported integrity campaign protocol schema")
     if value.get("status_vocabulary") != [PASS, FAIL, INVALID]:
         raise InvalidCampaign("protocol status vocabulary is not frozen")
     parallelism = value.get("parallelism", {})
     if parallelism.get("max_workers") != 4 or parallelism.get("numeric_threads") != 1:
         raise InvalidCampaign("protocol must freeze four workers and one numeric thread")
+    if (value.get("schema_version", "").find("round3") >= 0 and
+            parallelism.get("jsonl_shards") != 4):
+        raise InvalidCampaign("round-three protocol must freeze four JSONL shards")
     domains = value.get("seed_domains", {})
     ranges = []
     for name in ("calibration", "development", "test", "stress"):

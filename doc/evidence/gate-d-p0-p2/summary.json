@@ -1,0 +1,1814 @@
+{
+  "schema_version": "uwb-imu-pl/gate-d-p0-p2-development/v1",
+  "status": "DEVELOPMENT_ONLY",
+  "formal_gate_d_pass": false,
+  "phase_status_semantics": "data completeness only; latency_status is the 40 ms verdict",
+  "contract": {
+    "inputs": 12000,
+    "warmup": 100,
+    "measured": 11900,
+    "workers": 4,
+    "candidates_per_input": 128,
+    "repeats": 3,
+    "each_p99_limit_ms": 40
+  },
+  "smoke_affinity": "0,1,2,3",
+  "replay_affinity": "4,5,6,7",
+  "numeric_threads": 1,
+  "phases": {
+    "p0": {
+      "status": "PASS",
+      "workers": 4,
+      "epochs": 140,
+      "returncode": 0,
+      "timing_complete": true,
+      "timing_failures": 0,
+      "core_total": {
+        "count": 40,
+        "p50_ms": 2165.1112405,
+        "p95_ms": 3222.239377949999,
+        "p99_ms": 3537.9262405500003,
+        "max_ms": 3539.23752
+      },
+      "stages": {
+        "prepare": {
+          "count": 40,
+          "p50_ms": 2.4502734999999998,
+          "p95_ms": 3.749148199999999,
+          "p99_ms": 4.641547649999999,
+          "max_ms": 5.048772
+        },
+        "integrity_window": {
+          "count": 40,
+          "p50_ms": 224.29653100000002,
+          "p95_ms": 244.0859671,
+          "p99_ms": 244.81514513,
+          "max_ms": 245.145761
+        },
+        "all_in_detector": {
+          "count": 40,
+          "p50_ms": 5.837773500000001,
+          "p95_ms": 9.601864249999997,
+          "p99_ms": 12.758223569999998,
+          "max_ms": 14.00733
+        },
+        "current_sensitivity": {
+          "count": 40,
+          "p50_ms": 11.3161485,
+          "p95_ms": 15.49494329999999,
+          "p99_ms": 19.847515599999998,
+          "max_ms": 20.414872
+        },
+        "model_generation": {
+          "count": 40,
+          "p50_ms": 61.9527255,
+          "p95_ms": 75.8437634,
+          "p99_ms": 81.22168418,
+          "max_ms": 84.191783
+        },
+        "historical_sensitivity": {
+          "count": 40,
+          "p50_ms": 4.1451405,
+          "p95_ms": 6.082455749999999,
+          "p99_ms": 8.1852,
+          "max_ms": 9.436008000000003
+        },
+        "hypothesis_evidence": {
+          "count": 40,
+          "p50_ms": 420.9476885,
+          "p95_ms": 454.99492215,
+          "p99_ms": 470.17197304,
+          "max_ms": 476.207989
+        },
+        "health_actions": {
+          "count": 40,
+          "p50_ms": 62.139066,
+          "p95_ms": 80.61637774999998,
+          "p99_ms": 86.72936013,
+          "max_ms": 86.996523
+        },
+        "hypothesis_audit": {
+          "count": 40,
+          "p50_ms": 76.506401,
+          "p95_ms": 89.08469199999999,
+          "p99_ms": 91.87474328,
+          "max_ms": 92.647118
+        },
+        "base_factorization": {
+          "count": 40,
+          "p50_ms": 1.359629,
+          "p95_ms": 1.5987867999999998,
+          "p99_ms": 1.7319908899999998,
+          "max_ms": 1.801547
+        },
+        "candidate_evaluation": {
+          "count": 40,
+          "p50_ms": 1246.258533,
+          "p95_ms": 2412.7812547499993,
+          "p99_ms": 2643.27417095,
+          "max_ms": 2647.852535
+        },
+        "fde_decision": {
+          "count": 40,
+          "p50_ms": 5.0838540000000005,
+          "p95_ms": 5.849783099999999,
+          "p99_ms": 6.62928126,
+          "max_ms": 6.830118
+        },
+        "candidate_audit": {
+          "count": 40,
+          "p50_ms": 0.324843,
+          "p95_ms": 0.3914766999999997,
+          "p99_ms": 0.6677749499999999,
+          "max_ms": 0.779196
+        },
+        "finalize_commit_audit": {
+          "count": 40,
+          "p50_ms": 27.7047755,
+          "p95_ms": 31.526127,
+          "p99_ms": 32.84945069,
+          "max_ms": 33.345503
+        },
+        "core_total": {
+          "count": 40,
+          "p50_ms": 2165.1112405,
+          "p95_ms": 3222.239377949999,
+          "p99_ms": 3537.9262405500003,
+          "max_ms": 3539.23752
+        }
+      },
+      "errors": [],
+      "candidate_count": {
+        "expected": 128,
+        "epochs": 40,
+        "min": 128,
+        "max": 128,
+        "contract_met": true
+      },
+      "candidate_counters": {
+        "generated": 5120,
+        "coverage_rejected": 5080,
+        "kernel_evaluated": 5120,
+        "slow_path": 842,
+        "post_passed": 0,
+        "pl_evaluated": 0,
+        "selected": 0,
+        "cache_hits": 0,
+        "recovered_replacement": 0
+      },
+      "numerical_paths": {
+        "P0_LEGACY": 5120
+      },
+      "fallback_reasons": {},
+      "recovered_downstream": {
+        "post_passed": 0,
+        "pl_evaluated": 0,
+        "selected": 0
+      },
+      "candidate_stages": {
+        "kernel_ms": {
+          "count": 5120,
+          "p50_ms": 1.1968085,
+          "p95_ms": 212.2549051500001,
+          "p99_ms": 249.43781541000004,
+          "max_ms": 294.783705
+        },
+        "post_ms": {
+          "count": 5120,
+          "p50_ms": 0.0011884999999999999,
+          "p95_ms": 0.01484215,
+          "p99_ms": 0.019238930000000022,
+          "max_ms": 0.077391
+        }
+      },
+      "peak_child_rss_kb": 659292,
+      "latency_status": "FAIL",
+      "last_attempt": {
+        "schema_version": "uwb-imu-pl/gate-d-diagnostics/v1",
+        "input_attempt_id": "140",
+        "input_timestamp_ns": "7000000000",
+        "transaction_id": "140",
+        "window_id": "140",
+        "graph_version": "61",
+        "ordering_version": "1",
+        "noise_model_version": "1",
+        "linpoint_version": "61",
+        "output_timestamp_ns": "3000000000",
+        "backend_epoch_before": "60",
+        "backend_epoch_after": "60",
+        "pending_duration_s": "4",
+        "raw_imu_samples": "801",
+        "consecutive_rejections": "80",
+        "marginalization_count": "0",
+        "status": "EXECUTED",
+        "reason": ""
+      }
+    },
+    "p1": {
+      "status": "PASS",
+      "workers": 4,
+      "epochs": 140,
+      "returncode": 0,
+      "timing_complete": true,
+      "timing_failures": 0,
+      "core_total": {
+        "count": 40,
+        "p50_ms": 19952.1188035,
+        "p95_ms": 30751.189674699996,
+        "p99_ms": 32772.42992117,
+        "max_ms": 33173.554709
+      },
+      "stages": {
+        "prepare": {
+          "count": 40,
+          "p50_ms": 2.5020105,
+          "p95_ms": 4.84316915,
+          "p99_ms": 5.39897751,
+          "max_ms": 5.645025
+        },
+        "integrity_window": {
+          "count": 40,
+          "p50_ms": 233.1396795,
+          "p95_ms": 335.4179757499999,
+          "p99_ms": 413.6388525,
+          "max_ms": 442.781271
+        },
+        "all_in_detector": {
+          "count": 40,
+          "p50_ms": 5.845859,
+          "p95_ms": 13.527848849999998,
+          "p99_ms": 14.93949347,
+          "max_ms": 15.419555
+        },
+        "current_sensitivity": {
+          "count": 40,
+          "p50_ms": 12.022305,
+          "p95_ms": 18.980659799999994,
+          "p99_ms": 23.529760489999997,
+          "max_ms": 25.669265
+        },
+        "model_generation": {
+          "count": 40,
+          "p50_ms": 65.5858235,
+          "p95_ms": 87.10411054999999,
+          "p99_ms": 98.03484911,
+          "max_ms": 101.894894
+        },
+        "historical_sensitivity": {
+          "count": 40,
+          "p50_ms": 4.090001000000001,
+          "p95_ms": 8.730420399999996,
+          "p99_ms": 9.154297530000001,
+          "max_ms": 9.261693000000001
+        },
+        "hypothesis_evidence": {
+          "count": 40,
+          "p50_ms": 434.57266549999997,
+          "p95_ms": 703.3256382499999,
+          "p99_ms": 761.88191098,
+          "max_ms": 786.664156
+        },
+        "health_actions": {
+          "count": 40,
+          "p50_ms": 63.15512,
+          "p95_ms": 83.99082689999997,
+          "p99_ms": 95.93969428,
+          "max_ms": 98.415082
+        },
+        "hypothesis_audit": {
+          "count": 40,
+          "p50_ms": 81.54387,
+          "p95_ms": 143.91453330000002,
+          "p99_ms": 150.56271547,
+          "max_ms": 153.973393
+        },
+        "base_factorization": {
+          "count": 40,
+          "p50_ms": 175.95181,
+          "p95_ms": 265.09532809999996,
+          "p99_ms": 276.95479264,
+          "max_ms": 280.66378
+        },
+        "candidate_evaluation": {
+          "count": 40,
+          "p50_ms": 18841.06641,
+          "p95_ms": 29034.159155699996,
+          "p99_ms": 30950.47099483,
+          "max_ms": 31255.225966
+        },
+        "fde_decision": {
+          "count": 40,
+          "p50_ms": 5.2014805,
+          "p95_ms": 8.420961199999999,
+          "p99_ms": 9.34227353,
+          "max_ms": 9.424475
+        },
+        "candidate_audit": {
+          "count": 40,
+          "p50_ms": 0.3981575,
+          "p95_ms": 0.7039222999999999,
+          "p99_ms": 0.73709673,
+          "max_ms": 0.74505
+        },
+        "finalize_commit_audit": {
+          "count": 40,
+          "p50_ms": 28.833153000000003,
+          "p95_ms": 37.01583839999998,
+          "p99_ms": 49.56583327999999,
+          "max_ms": 51.859637
+        },
+        "core_total": {
+          "count": 40,
+          "p50_ms": 19952.1188035,
+          "p95_ms": 30751.189674699996,
+          "p99_ms": 32772.42992117,
+          "max_ms": 33173.554709
+        }
+      },
+      "errors": [],
+      "candidate_count": {
+        "expected": 128,
+        "epochs": 40,
+        "min": 128,
+        "max": 128,
+        "contract_met": true
+      },
+      "candidate_counters": {
+        "generated": 5120,
+        "coverage_rejected": 5080,
+        "kernel_evaluated": 5120,
+        "slow_path": 5120,
+        "post_passed": 0,
+        "pl_evaluated": 0,
+        "selected": 0,
+        "cache_hits": 0,
+        "recovered_replacement": 0
+      },
+      "numerical_paths": {
+        "FINAL_JACOBIAN_REFERENCE": 5120
+      },
+      "fallback_reasons": {
+        "unstable normal solve": 5120
+      },
+      "recovered_downstream": {
+        "post_passed": 0,
+        "pl_evaluated": 0,
+        "selected": 0
+      },
+      "candidate_stages": {
+        "kernel_ms": {
+          "count": 5120,
+          "p50_ms": 582.485315,
+          "p95_ms": 945.88198725,
+          "p99_ms": 1047.2690403600006,
+          "max_ms": 1621.917713
+        },
+        "post_ms": {
+          "count": 5120,
+          "p50_ms": 0.0141105,
+          "p95_ms": 0.02176465,
+          "p99_ms": 0.041479220000000025,
+          "max_ms": 0.216784
+        }
+      },
+      "peak_child_rss_kb": 719972,
+      "latency_status": "FAIL",
+      "last_attempt": {
+        "schema_version": "uwb-imu-pl/gate-d-diagnostics/v1",
+        "input_attempt_id": "140",
+        "input_timestamp_ns": "7000000000",
+        "transaction_id": "140",
+        "window_id": "140",
+        "graph_version": "61",
+        "ordering_version": "1",
+        "noise_model_version": "1",
+        "linpoint_version": "61",
+        "output_timestamp_ns": "3000000000",
+        "backend_epoch_before": "60",
+        "backend_epoch_after": "60",
+        "pending_duration_s": "4",
+        "raw_imu_samples": "801",
+        "consecutive_rejections": "80",
+        "marginalization_count": "0",
+        "status": "EXECUTED",
+        "reason": ""
+      }
+    },
+    "p2": {
+      "status": "PASS",
+      "workers": 4,
+      "epochs": 140,
+      "returncode": 0,
+      "timing_complete": true,
+      "timing_failures": 0,
+      "core_total": {
+        "count": 40,
+        "p50_ms": 1645.3528655,
+        "p95_ms": 1820.90517565,
+        "p99_ms": 1855.81972705,
+        "max_ms": 1868.020879
+      },
+      "stages": {
+        "prepare": {
+          "count": 40,
+          "p50_ms": 2.5288055,
+          "p95_ms": 3.255399649999999,
+          "p99_ms": 4.245994509999999,
+          "max_ms": 4.667659
+        },
+        "integrity_window": {
+          "count": 40,
+          "p50_ms": 218.98926749999998,
+          "p95_ms": 238.98940795,
+          "p99_ms": 261.42340766999996,
+          "max_ms": 272.755422
+        },
+        "all_in_detector": {
+          "count": 40,
+          "p50_ms": 5.871442,
+          "p95_ms": 8.316258249999999,
+          "p99_ms": 9.75504617,
+          "max_ms": 10.307558
+        },
+        "current_sensitivity": {
+          "count": 40,
+          "p50_ms": 10.775219,
+          "p95_ms": 13.296279599999998,
+          "p99_ms": 14.461280109999999,
+          "max_ms": 14.919901
+        },
+        "model_generation": {
+          "count": 40,
+          "p50_ms": 55.53102,
+          "p95_ms": 70.51440609999997,
+          "p99_ms": 80.27817658000001,
+          "max_ms": 80.88157600000001
+        },
+        "historical_sensitivity": {
+          "count": 40,
+          "p50_ms": 3.9675075,
+          "p95_ms": 5.7264999,
+          "p99_ms": 6.669168579999999,
+          "max_ms": 6.863106999999999
+        },
+        "hypothesis_evidence": {
+          "count": 40,
+          "p50_ms": 388.588888,
+          "p95_ms": 468.70944955,
+          "p99_ms": 485.06848182,
+          "max_ms": 494.265642
+        },
+        "health_actions": {
+          "count": 40,
+          "p50_ms": 68.1280915,
+          "p95_ms": 82.90499939999998,
+          "p99_ms": 86.99165253999999,
+          "max_ms": 87.014473
+        },
+        "hypothesis_audit": {
+          "count": 40,
+          "p50_ms": 45.426887,
+          "p95_ms": 56.654886499999996,
+          "p99_ms": 62.64942952,
+          "max_ms": 66.302338
+        },
+        "base_factorization": {
+          "count": 40,
+          "p50_ms": 165.121647,
+          "p95_ms": 183.1494453,
+          "p99_ms": 186.16048827,
+          "max_ms": 186.431775
+        },
+        "shared_cache": {
+          "count": 40,
+          "p50_ms": 24.4907355,
+          "p95_ms": 27.8344535,
+          "p99_ms": 28.67985991,
+          "max_ms": 28.819102
+        },
+        "candidate_evaluation": {
+          "count": 40,
+          "p50_ms": 592.2003055,
+          "p95_ms": 680.4935768500001,
+          "p99_ms": 684.53674145,
+          "max_ms": 686.71175
+        },
+        "fde_decision": {
+          "count": 40,
+          "p50_ms": 5.7685195,
+          "p95_ms": 6.9982377,
+          "p99_ms": 7.19377867,
+          "max_ms": 7.201285
+        },
+        "candidate_audit": {
+          "count": 40,
+          "p50_ms": 0.700275,
+          "p95_ms": 1.1775614999999995,
+          "p99_ms": 1.35699872,
+          "max_ms": 1.365521
+        },
+        "discard": {
+          "count": 40,
+          "p50_ms": 0.000891,
+          "p95_ms": 0.001602399999999999,
+          "p99_ms": 0.00217996,
+          "max_ms": 0.00235
+        },
+        "state_audit": {
+          "count": 40,
+          "p50_ms": 7.156195,
+          "p95_ms": 10.31849935,
+          "p99_ms": 10.84297693,
+          "max_ms": 11.053855
+        },
+        "finalize_commit_audit": {
+          "count": 40,
+          "p50_ms": 21.50195,
+          "p95_ms": 29.1365611,
+          "p99_ms": 30.10352686,
+          "max_ms": 30.584446
+        },
+        "core_total": {
+          "count": 40,
+          "p50_ms": 1645.3528655,
+          "p95_ms": 1820.90517565,
+          "p99_ms": 1855.81972705,
+          "max_ms": 1868.020879
+        }
+      },
+      "errors": [],
+      "candidate_count": {
+        "expected": 128,
+        "epochs": 40,
+        "min": 128,
+        "max": 128,
+        "contract_met": true
+      },
+      "candidate_counters": {
+        "generated": 5120,
+        "coverage_rejected": 5080,
+        "kernel_evaluated": 5120,
+        "slow_path": 5120,
+        "post_passed": 0,
+        "pl_evaluated": 0,
+        "selected": 0,
+        "cache_hits": 135787,
+        "recovered_replacement": 0
+      },
+      "numerical_paths": {
+        "QR_CERTIFIED_STEP_REJECTION": 5120
+      },
+      "fallback_reasons": {
+        "QR step certificate": 5120
+      },
+      "recovered_downstream": {
+        "post_passed": 0,
+        "pl_evaluated": 0,
+        "selected": 0
+      },
+      "candidate_stages": {
+        "kernel_ms": {
+          "count": 5120,
+          "p50_ms": 16.162413,
+          "p95_ms": 24.761990100000002,
+          "p99_ms": 30.451926580000002,
+          "max_ms": 63.891598
+        },
+        "post_ms": {
+          "count": 5120,
+          "p50_ms": 0.0018565,
+          "p95_ms": 0.003478,
+          "p99_ms": 0.0047122000000000075,
+          "max_ms": 0.088517
+        }
+      },
+      "peak_child_rss_kb": 626948,
+      "latency_status": "FAIL",
+      "last_attempt": {
+        "schema_version": "uwb-imu-pl/gate-d-diagnostics/v3",
+        "input_attempt_id": "140",
+        "input_timestamp_ns": "7000000000",
+        "transaction_id": "140",
+        "window_id": "140",
+        "graph_version": "61",
+        "ordering_version": "1",
+        "noise_model_version": "1",
+        "linpoint_version": "61",
+        "output_timestamp_ns": "3000000000",
+        "frozen_group_ids": "42001;42002;43001;43002;44001;44002;45001;45002;46001;46002;47001;47002;48001;48002;49001;49002;50001;50002;51001;51002;52001;52002;53001;53002;54001;54002;55001;55002;56001;56002;57001;57002;58001;58002;59001;59002;60001;60002;140000;140001;140002",
+        "backend_epoch_before": "60",
+        "backend_epoch_after": "60",
+        "pending_duration_s": "4",
+        "raw_imu_samples": "801",
+        "consecutive_rejections": "80",
+        "marginalization_count": "0",
+        "status": "EXECUTED",
+        "reason": ""
+      }
+    }
+  },
+  "replays": {
+    "p0_replay101_w1": {
+      "count": 3,
+      "p50_ms": 11526.0,
+      "p95_ms": 12026.58,
+      "p99_ms": 12071.076000000001,
+      "max_ms": 12082.2
+    },
+    "p0_replay101_w4": {
+      "count": 3,
+      "p50_ms": 5781.12,
+      "p95_ms": 5804.061,
+      "p99_ms": 5806.1002,
+      "max_ms": 5806.61
+    },
+    "p0_replay139_w1": {
+      "count": 3,
+      "p50_ms": 10411.5,
+      "p95_ms": 10509.42,
+      "p99_ms": 10518.124,
+      "max_ms": 10520.3
+    },
+    "p0_replay139_w4": {
+      "count": 3,
+      "p50_ms": 4231.25,
+      "p95_ms": 4301.918000000001,
+      "p99_ms": 4308.199600000001,
+      "max_ms": 4309.77
+    },
+    "p0_replay140_w1": {
+      "count": 3,
+      "p50_ms": 3135.22,
+      "p95_ms": 3232.789,
+      "p99_ms": 3241.4618,
+      "max_ms": 3243.63
+    },
+    "p0_replay140_w4": {
+      "count": 3,
+      "p50_ms": 1705.78,
+      "p95_ms": 1726.993,
+      "p99_ms": 1728.8786,
+      "max_ms": 1729.35
+    },
+    "p1_replay101_w1": {
+      "count": 3,
+      "p50_ms": 82103.5,
+      "p95_ms": 85586.32,
+      "p99_ms": 85895.90400000001,
+      "max_ms": 85973.3
+    },
+    "p1_replay101_w4": {
+      "count": 3,
+      "p50_ms": 28215.2,
+      "p95_ms": 28962.83,
+      "p99_ms": 29029.286,
+      "max_ms": 29045.9
+    },
+    "p1_replay139_w1": {
+      "count": 3,
+      "p50_ms": 75487.9,
+      "p95_ms": 77399.23000000001,
+      "p99_ms": 77569.126,
+      "max_ms": 77611.6
+    },
+    "p1_replay139_w4": {
+      "count": 3,
+      "p50_ms": 28215.1,
+      "p95_ms": 28231.75,
+      "p99_ms": 28233.23,
+      "max_ms": 28233.6
+    },
+    "p1_replay140_w1": {
+      "count": 3,
+      "p50_ms": 71938.4,
+      "p95_ms": 79222.73000000001,
+      "p99_ms": 79870.22600000001,
+      "max_ms": 80032.1
+    },
+    "p1_replay140_w4": {
+      "count": 3,
+      "p50_ms": 29643.9,
+      "p95_ms": 30651.18,
+      "p99_ms": 30740.716,
+      "max_ms": 30763.1
+    },
+    "p2_replay101_w1": {
+      "count": 3,
+      "p50_ms": 1863.62,
+      "p95_ms": 2000.4019999999998,
+      "p99_ms": 2012.5603999999998,
+      "max_ms": 2015.6
+    },
+    "p2_replay101_w4": {
+      "count": 3,
+      "p50_ms": 769.592,
+      "p95_ms": 801.4637,
+      "p99_ms": 804.29674,
+      "max_ms": 805.005
+    },
+    "p2_replay139_w1": {
+      "count": 3,
+      "p50_ms": 1984.39,
+      "p95_ms": 2006.9260000000002,
+      "p99_ms": 2008.9292,
+      "max_ms": 2009.43
+    },
+    "p2_replay139_w4": {
+      "count": 3,
+      "p50_ms": 766.907,
+      "p95_ms": 817.1702,
+      "p99_ms": 821.63804,
+      "max_ms": 822.755
+    },
+    "p2_replay140_w1": {
+      "count": 3,
+      "p50_ms": 2035.24,
+      "p95_ms": 2074.642,
+      "p99_ms": 2078.1444,
+      "max_ms": 2079.02
+    },
+    "p2_replay140_w4": {
+      "count": 3,
+      "p50_ms": 820.984,
+      "p95_ms": 853.7737000000001,
+      "p99_ms": 856.68834,
+      "max_ms": 857.417
+    }
+  },
+  "comparisons": {
+    "p0_p1_101": {
+      "status": "COMPARED",
+      "count": 384,
+      "validity_changes": 0,
+      "reason_transitions": {
+        "candidate linearization step gate failed -> candidate linearization step gate failed": 168,
+        "Woodbury downdate inner matrix is not SPD -> candidate linearization step gate failed": 216
+      },
+      "valid_step_norm_comparisons": 0,
+      "valid_step_norm_max_relative_difference": null
+    },
+    "p1_p2_101": {
+      "status": "COMPARED",
+      "count": 384,
+      "validity_changes": 0,
+      "reason_transitions": {
+        "candidate linearization step gate failed -> candidate linearization step gate failed": 384
+      },
+      "valid_step_norm_comparisons": 0,
+      "valid_step_norm_max_relative_difference": null
+    },
+    "p0_workers_101": {
+      "status": "COMPARED",
+      "count": 384,
+      "validity_changes": 0,
+      "reason_transitions": {
+        "candidate linearization step gate failed -> candidate linearization step gate failed": 168,
+        "Woodbury downdate inner matrix is not SPD -> Woodbury downdate inner matrix is not SPD": 216
+      },
+      "valid_step_norm_comparisons": 0,
+      "valid_step_norm_max_relative_difference": null
+    },
+    "p1_workers_101": {
+      "status": "COMPARED",
+      "count": 384,
+      "validity_changes": 0,
+      "reason_transitions": {
+        "candidate linearization step gate failed -> candidate linearization step gate failed": 384
+      },
+      "valid_step_norm_comparisons": 0,
+      "valid_step_norm_max_relative_difference": null
+    },
+    "p2_workers_101": {
+      "status": "COMPARED",
+      "count": 384,
+      "validity_changes": 0,
+      "reason_transitions": {
+        "candidate linearization step gate failed -> candidate linearization step gate failed": 384
+      },
+      "valid_step_norm_comparisons": 0,
+      "valid_step_norm_max_relative_difference": null
+    },
+    "p0_p1_139": {
+      "status": "COMPARED",
+      "count": 384,
+      "validity_changes": 0,
+      "reason_transitions": {
+        "candidate linearization step gate failed -> candidate linearization step gate failed": 156,
+        "Woodbury downdate inner matrix is not SPD -> candidate linearization step gate failed": 228
+      },
+      "valid_step_norm_comparisons": 0,
+      "valid_step_norm_max_relative_difference": null
+    },
+    "p1_p2_139": {
+      "status": "COMPARED",
+      "count": 384,
+      "validity_changes": 0,
+      "reason_transitions": {
+        "candidate linearization step gate failed -> candidate linearization step gate failed": 384
+      },
+      "valid_step_norm_comparisons": 0,
+      "valid_step_norm_max_relative_difference": null
+    },
+    "p0_workers_139": {
+      "status": "COMPARED",
+      "count": 384,
+      "validity_changes": 0,
+      "reason_transitions": {
+        "candidate linearization step gate failed -> candidate linearization step gate failed": 156,
+        "Woodbury downdate inner matrix is not SPD -> Woodbury downdate inner matrix is not SPD": 228
+      },
+      "valid_step_norm_comparisons": 0,
+      "valid_step_norm_max_relative_difference": null
+    },
+    "p1_workers_139": {
+      "status": "COMPARED",
+      "count": 384,
+      "validity_changes": 0,
+      "reason_transitions": {
+        "candidate linearization step gate failed -> candidate linearization step gate failed": 384
+      },
+      "valid_step_norm_comparisons": 0,
+      "valid_step_norm_max_relative_difference": null
+    },
+    "p2_workers_139": {
+      "status": "COMPARED",
+      "count": 384,
+      "validity_changes": 0,
+      "reason_transitions": {
+        "candidate linearization step gate failed -> candidate linearization step gate failed": 384
+      },
+      "valid_step_norm_comparisons": 0,
+      "valid_step_norm_max_relative_difference": null
+    },
+    "p0_p1_140": {
+      "status": "COMPARED",
+      "count": 384,
+      "validity_changes": 0,
+      "reason_transitions": {
+        "candidate linearization step gate failed -> candidate linearization step gate failed": 87,
+        "Woodbury downdate inner matrix is not SPD -> candidate linearization step gate failed": 297
+      },
+      "valid_step_norm_comparisons": 0,
+      "valid_step_norm_max_relative_difference": null
+    },
+    "p1_p2_140": {
+      "status": "COMPARED",
+      "count": 384,
+      "validity_changes": 0,
+      "reason_transitions": {
+        "candidate linearization step gate failed -> candidate linearization step gate failed": 384
+      },
+      "valid_step_norm_comparisons": 0,
+      "valid_step_norm_max_relative_difference": null
+    },
+    "p0_workers_140": {
+      "status": "COMPARED",
+      "count": 384,
+      "validity_changes": 0,
+      "reason_transitions": {
+        "candidate linearization step gate failed -> candidate linearization step gate failed": 87,
+        "Woodbury downdate inner matrix is not SPD -> Woodbury downdate inner matrix is not SPD": 297
+      },
+      "valid_step_norm_comparisons": 0,
+      "valid_step_norm_max_relative_difference": null
+    },
+    "p1_workers_140": {
+      "status": "COMPARED",
+      "count": 384,
+      "validity_changes": 0,
+      "reason_transitions": {
+        "candidate linearization step gate failed -> candidate linearization step gate failed": 384
+      },
+      "valid_step_norm_comparisons": 0,
+      "valid_step_norm_max_relative_difference": null
+    },
+    "p2_workers_140": {
+      "status": "COMPARED",
+      "count": 384,
+      "validity_changes": 0,
+      "reason_transitions": {
+        "candidate linearization step gate failed -> candidate linearization step gate failed": 384
+      },
+      "valid_step_norm_comparisons": 0,
+      "valid_step_norm_max_relative_difference": null
+    }
+  },
+  "artifacts": [
+    {
+      "path": "results/gate_d_p0_p2/additional_snapshots/attempt-110.bin",
+      "bytes": 6708838,
+      "sha256": "45844d776c66dd4d4837728bcffc758c0b12488a3fcff9135d5209b5aa34164f"
+    },
+    {
+      "path": "results/gate_d_p0_p2/additional_snapshots/attempt-122.bin",
+      "bytes": 6787152,
+      "sha256": "fc7878b12f479c35b97337f4f3d11ad3df560f876af96175000338dddc547534"
+    },
+    {
+      "path": "results/gate_d_p0_p2/fixed_lag/after-205-commits.bin",
+      "bytes": 7519635,
+      "sha256": "ff2ece5acbecc271ad9c14b788f69c7d42d696ae4a0b3bc3f8dfec449618f29d"
+    },
+    {
+      "path": "results/gate_d_p0_p2/fixed_lag/run_manifest.json",
+      "bytes": 1490,
+      "sha256": "ad794922fa1418e92b225b64f59b81cab7b3042e47900036ef68c01b07e8590a"
+    },
+    {
+      "path": "results/gate_d_p0_p2/fixed_lag/summary.json",
+      "bytes": 254,
+      "sha256": "7fc6e44df670fd2aedf01a0f2126bcb2d20994827b6adf4b951cb7a7cc4c35f2"
+    },
+    {
+      "path": "results/gate_d_p0_p2/fixed_lag_before_schema3/after-205-commits.bin",
+      "bytes": 7519635,
+      "sha256": "ff2ece5acbecc271ad9c14b788f69c7d42d696ae4a0b3bc3f8dfec449618f29d"
+    },
+    {
+      "path": "results/gate_d_p0_p2/fixed_lag_before_schema3/diagnostic_summary.json",
+      "bytes": 182,
+      "sha256": "2e07ac1fb895f0af9ab56605cc9a64c01263543419bca610083008cafaa77972"
+    },
+    {
+      "path": "results/gate_d_p0_p2/fixed_lag_before_schema3/run_manifest.json",
+      "bytes": 1490,
+      "sha256": "4b96acf03ef00d504a9c0be3a173ec62e1b6ebf9179f477a9afc1901bdcdd7b1"
+    },
+    {
+      "path": "results/gate_d_p0_p2/fixed_lag_before_schema3/summary.json",
+      "bytes": 254,
+      "sha256": "7fc6e44df670fd2aedf01a0f2126bcb2d20994827b6adf4b951cb7a7cc4c35f2"
+    },
+    {
+      "path": "results/gate_d_p0_p2/fixed_lag_summary.json",
+      "bytes": 182,
+      "sha256": "2e07ac1fb895f0af9ab56605cc9a64c01263543419bca610083008cafaa77972"
+    },
+    {
+      "path": "results/gate_d_p0_p2/oracle_replay139.log",
+      "bytes": 39,
+      "sha256": "2c0035a43ed900a7c5c24aedbd999f17c67f065a60d27168810be64b1dc90028"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p0/performance_summary.json",
+      "bytes": 2961,
+      "sha256": "e6eaf6e96f1f6a920a73f83bc05af4d2ab95c9e04d70e3d79bb263b2ed80b0c9"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p0/workers4-repeat1/run_manifest.json",
+      "bytes": 1777,
+      "sha256": "e03e784152a377d46a6801edcb7b016510822a08ea6031247eb71a7cabd5e1d7"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p0/workers4-repeat1/summary.json",
+      "bytes": 250,
+      "sha256": "42843f5c5d92cdfecf76e3d1d2afe3a2f57e633a075f2853ab2aac753792eba9"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p0_binary/candidate_replay",
+      "bytes": 134888,
+      "sha256": "ea50c5696b40215a74a5e2956080ea9bf5d8285ec96d7e78a5fd48cc14167dcd"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p0_binary/libuwb_imu_pl.so",
+      "bytes": 3695232,
+      "sha256": "14a6a40f441583e6cf119849d42a0da9167c9564aa8be7503db2e294beb40d7e"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p0_binary/realtime_performance_benchmark",
+      "bytes": 80440,
+      "sha256": "cffe8a4fff4c9c8c807b3ae675b707ee59f205ab48ac681a6485dfa493c6155e"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p0_export/run_manifest.json",
+      "bytes": 1638,
+      "sha256": "a892a3d7bb3ec21cb18136bd74fad4cccadd3a9cc8728ee519026e568a9f4bec"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p0_export/summary.json",
+      "bytes": 250,
+      "sha256": "35ece5fd8e0c1896807a3779e89d117a04ec858598fc3d678b2c752ff6a707de"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p0_replay101_w1.log",
+      "bytes": 118,
+      "sha256": "21281a5a60779a9590429b26b86c911389544c8444daac32572336675f6326a0"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p0_replay101_w4.log",
+      "bytes": 119,
+      "sha256": "0581f458e848c699d6a08927125a9546d33384e26a4595a283c8f35dba06348b"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p0_replay139_w1.log",
+      "bytes": 119,
+      "sha256": "ad97b69ba0caf3ceafe7063d054814db470a0582a1d67d96b586722b54ae72a3"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p0_replay139_w4.log",
+      "bytes": 120,
+      "sha256": "3a07b535e267d997ae757caa4d1659d69810447016966ac0276e6f96f6f77c9a"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p0_replay140_w1.log",
+      "bytes": 120,
+      "sha256": "1c24b2fdda9e29baabebdf10e81cc5862f2de343a66c96bc391ba6ad13fd51d4"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p0_replay140_w4.log",
+      "bytes": 120,
+      "sha256": "717559f34e7a9219f4acbd37406f830d3c671f1b0fa0fe0952ed328e04a3bd0c"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p1/performance_summary.json",
+      "bytes": 2962,
+      "sha256": "1d5db2e50dd6b33d0113fc3f67e626e8dc1bf4c71be891607e149284162d7851"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p1/workers4-repeat1/run_manifest.json",
+      "bytes": 1777,
+      "sha256": "61d76123ea2e78a6725e1e061de87ed326bb92257cda5a3976570090284f4920"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p1/workers4-repeat1/summary.json",
+      "bytes": 254,
+      "sha256": "b8c7b85ad3e32cf9c8bfd77af1403f16cd2c3750d24c22b346b1fae15e814737"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p1_binary/candidate_replay",
+      "bytes": 118504,
+      "sha256": "5ab58baddd3830a575071f765ba79be2fe24424cec512092e1bff6048ac8535a"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p1_binary/libuwb_imu_pl.so",
+      "bytes": 3729200,
+      "sha256": "20fdae762d0db4d39ac9580f8fff203914524484ddc0696f91bf254dac236923"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p1_binary/realtime_performance_benchmark",
+      "bytes": 80440,
+      "sha256": "cffe8a4fff4c9c8c807b3ae675b707ee59f205ab48ac681a6485dfa493c6155e"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p1_replay101_w1.log",
+      "bytes": 120,
+      "sha256": "116ec4b6e70bed833bb7deeea07e35ff2bd5173e9a6e9bc5295f88ad2e30350f"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p1_replay101_w4.log",
+      "bytes": 120,
+      "sha256": "0d43eb76a8a466e4327c59cbb7bfeae827b33d2f4158165d1c038da9e28db740"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p1_replay139_w1.log",
+      "bytes": 120,
+      "sha256": "37f90e66cd23325fc7159ff3aa6b67687aee12fb7a91a16e34ed0e27c1ccc9fd"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p1_replay139_w4.log",
+      "bytes": 120,
+      "sha256": "7a6dc42c790dc4260de72c308ebdbc563028528d0b57b1c3d8b8059b051f4964"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p1_replay140_w1.log",
+      "bytes": 120,
+      "sha256": "a11c41eb80e7a03066a9679b4fe448e60b85bf56e2bbf346c34048c91562f392"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p1_replay140_w4.log",
+      "bytes": 118,
+      "sha256": "124289399a18891c263ce191e74a92a48f2c74e774ba57ec3d53da850ad5f46d"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2/performance_summary.json",
+      "bytes": 3664,
+      "sha256": "07835c9f0da69c015e880a59579e092c0043206fc04fdaa9cc67e66457e3ebe3"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2/workers4-repeat1/run_manifest.json",
+      "bytes": 1777,
+      "sha256": "e11516b50cc4355f9778dca4f2502b059c53e17c525060a77aa6be3950decccd"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2/workers4-repeat1/summary.json",
+      "bytes": 250,
+      "sha256": "6801bbc0e284694067d0974e20518e913a49bd304aa3da508ccd3872b7f9a46c"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_before_frozen_group_schema/p2_binary/candidate_replay",
+      "bytes": 118952,
+      "sha256": "4588173d8528e7214cd95cd7dd9a130659bdf3da6a533b2d979f81ca7e89efd5"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_before_frozen_group_schema/p2_binary/integrity_round2_scenario",
+      "bytes": 440688,
+      "sha256": "d0b682c63f43a71dcbd64ccf8c3dbf5942ea71c77b75837153051221f03aac35"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_before_frozen_group_schema/p2_binary/libuwb_imu_pl.so",
+      "bytes": 3773992,
+      "sha256": "6bdde95cddf027fa89fc69ffa8e9f17bbebe41d00c856539894b132d4731d71e"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_before_frozen_group_schema/p2_binary/realtime_performance_benchmark",
+      "bytes": 80440,
+      "sha256": "cbda109cef3e85784675af37863459f45e03ee0db0dfdba21f143b094577750d"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_before_frozen_group_schema/performance_summary.json",
+      "bytes": 3735,
+      "sha256": "4a7640e0169f999b55daec5f318c75737951339d33e6a96969f269fdaab06b2c"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_before_frozen_group_schema/replays/p2_replay101_w1.log",
+      "bytes": 120,
+      "sha256": "c188747afcc772d7484eaf1b8e110b54dbbcaa0adf74854bcd35d0fcd71df2a5"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_before_frozen_group_schema/replays/p2_replay101_w4.log",
+      "bytes": 120,
+      "sha256": "0a131cac80cf2a5f404f81986c98c7ed8b2eb8c70e7b576545ab2c96d9e55dc9"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_before_frozen_group_schema/replays/p2_replay139_noearly.log",
+      "bytes": 40,
+      "sha256": "c9bc51445ee2b196241fc239625146098a5813048a0864803674e410c09f7032"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_before_frozen_group_schema/replays/p2_replay139_uncached.log",
+      "bytes": 40,
+      "sha256": "a45ce4f3a309dc40f341a1f6e5ce3c86573d7b310ac8392278554a8767b23d37"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_before_frozen_group_schema/replays/p2_replay139_w1.log",
+      "bytes": 120,
+      "sha256": "bb755c16ecc3f947a7e184ff83357bb5e3cf45f6f0a5b9b4fd1dcc2507bdc23f"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_before_frozen_group_schema/replays/p2_replay139_w4.log",
+      "bytes": 118,
+      "sha256": "a67ada3b1ae6521146acea1ed72a5943850b247a4191362dedb05345e00cb310"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_before_frozen_group_schema/replays/p2_replay140_w1.log",
+      "bytes": 120,
+      "sha256": "00a6e0858d93c4057341b9ce66bfff9a24a088f9609ff455070247a10b128155"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_before_frozen_group_schema/replays/p2_replay140_w4.log",
+      "bytes": 120,
+      "sha256": "13f8073bbd75c016c50b80c1815effea7cd56fa2b10fc0ce0833387be462a06e"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_before_frozen_group_schema/workers4-repeat1/run_manifest.json",
+      "bytes": 1777,
+      "sha256": "b8a28be3990c47dfc7bf24b17ca07d1aae9e90c6394705c2eabc9cb365649568"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_before_frozen_group_schema/workers4-repeat1/summary.json",
+      "bytes": 250,
+      "sha256": "a157dbf68c12791438d233acdefd124cc27d5a6665e2fa1b0b579b6d10bbb4ae"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_binary/candidate_replay",
+      "bytes": 118952,
+      "sha256": "4588173d8528e7214cd95cd7dd9a130659bdf3da6a533b2d979f81ca7e89efd5"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_binary/libuwb_imu_pl.so",
+      "bytes": 3778440,
+      "sha256": "aa7de578c224e5518402bee312048c78abceba63f105bb40ffc9a6d643e2a38b"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_binary/realtime_performance_benchmark",
+      "bytes": 80600,
+      "sha256": "96519e699a1e73086537343509e264595f38006602bf72e13f07a3b07d6236f8"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_replay101_w1.log",
+      "bytes": 119,
+      "sha256": "42de2b18e1ccac4a40ab709ba930842d063928002aa582d6e472cbc98035c3bb"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_replay101_w4.log",
+      "bytes": 120,
+      "sha256": "42efa3ce40f6aadda21fbc41bd47c0b86764901272b66c39cf3a36bcb1e12fdd"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_replay139_noearly.log",
+      "bytes": 38,
+      "sha256": "dea3bdaaef1a7030fb50a0533b8e402087f924e606d3e9e4faa5834dc39c2006"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_replay139_uncached.log",
+      "bytes": 40,
+      "sha256": "4464c69ecc5e153af3cfb7d2d1b92d7ac165d32923019813f01e2bf56f224d94"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_replay139_w1.log",
+      "bytes": 120,
+      "sha256": "d4f287ffd50a445b77c929f3124ec7712ca2b323d76d659137c43979fcb908c5"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_replay139_w4.log",
+      "bytes": 120,
+      "sha256": "fb67313173acd8972ae27dedf20994ed74e299361e2b3a1088dd691c5d18d568"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_replay140_w1.log",
+      "bytes": 120,
+      "sha256": "e233f698c57f8d59baeb12de7954bbf7876092cc698f65bef5bf74f3b4cc2178"
+    },
+    {
+      "path": "results/gate_d_p0_p2/p2_replay140_w4.log",
+      "bytes": 120,
+      "sha256": "83b1fc0cbc97cafd4ac505de3a86bf5041695ffbf1860deb5aca8a0219b3ea8d"
+    },
+    {
+      "path": "results/gate_d_p0_p2/preliminary_matrix_certificate/p2_binary/candidate_replay",
+      "bytes": 118952,
+      "sha256": "4588173d8528e7214cd95cd7dd9a130659bdf3da6a533b2d979f81ca7e89efd5"
+    },
+    {
+      "path": "results/gate_d_p0_p2/preliminary_matrix_certificate/p2_binary/libuwb_imu_pl.so",
+      "bytes": 3773832,
+      "sha256": "cbd51a84b20bcec82f23ead65dc47960e3158e6192b4898395f68a27a66f473a"
+    },
+    {
+      "path": "results/gate_d_p0_p2/preliminary_matrix_certificate/p2_binary/realtime_performance_benchmark",
+      "bytes": 80440,
+      "sha256": "cbda109cef3e85784675af37863459f45e03ee0db0dfdba21f143b094577750d"
+    },
+    {
+      "path": "results/gate_d_p0_p2/preliminary_matrix_certificate/p2_replay101_w1.log",
+      "bytes": 120,
+      "sha256": "9eccb31c62b0cd35996e9af48fd21786e4e2729d9cdacbd7662a135c8a3e4685"
+    },
+    {
+      "path": "results/gate_d_p0_p2/preliminary_matrix_certificate/p2_replay101_w4.log",
+      "bytes": 120,
+      "sha256": "747a5bc84e71e480d7759ec30dd6ce08107d2e955e9e868910519a5e1d7a1354"
+    },
+    {
+      "path": "results/gate_d_p0_p2/preliminary_matrix_certificate/p2_replay139_noearly.log",
+      "bytes": 40,
+      "sha256": "42a311d2893ae867b7485b8f715260e8c46a36c41baf4e58d6e25f882af89158"
+    },
+    {
+      "path": "results/gate_d_p0_p2/preliminary_matrix_certificate/p2_replay139_uncached.log",
+      "bytes": 40,
+      "sha256": "502b99f8b6002b8cf048bd688a90e820c3cf01dd420df21253961dcd59bd5a8c"
+    },
+    {
+      "path": "results/gate_d_p0_p2/preliminary_matrix_certificate/p2_replay139_w1.log",
+      "bytes": 120,
+      "sha256": "1f0f7a1823126ed5345c31d6d98c60fcbcd51ec3e9a822d0b49d5270e5bf9153"
+    },
+    {
+      "path": "results/gate_d_p0_p2/preliminary_matrix_certificate/p2_replay139_w4.log",
+      "bytes": 120,
+      "sha256": "513f02d08dc599dee08d1d62631adc579ab0277cabbff1dc090b80d85c603795"
+    },
+    {
+      "path": "results/gate_d_p0_p2/preliminary_matrix_certificate/p2_replay140_w1.log",
+      "bytes": 118,
+      "sha256": "8dc35a111f9cdd6e1cf5fbcb87dadf2804ddbb18383f2100bb5267a2386a42c8"
+    },
+    {
+      "path": "results/gate_d_p0_p2/preliminary_matrix_certificate/p2_replay140_w4.log",
+      "bytes": 120,
+      "sha256": "a380663d09ed4b6187b1d93e2f73a5f659d5dcfc20e9fe4b76a54a3ec54fbe99"
+    },
+    {
+      "path": "results/gate_d_p0_p2/snapshots/attempt-101.bin",
+      "bytes": 6628069,
+      "sha256": "b2717c4143726162b3b3c383f4b5ac8cb23190a074c35dcb9359b11f8c0d1aa2"
+    },
+    {
+      "path": "results/gate_d_p0_p2/snapshots/attempt-139.bin",
+      "bytes": 6630426,
+      "sha256": "a46c4e4a66ca47d9638a2383579d25dde01e6ab9f62a6e57d613a1f6ab2c1dd1"
+    },
+    {
+      "path": "results/gate_d_p0_p2/snapshots/attempt-140.bin",
+      "bytes": 6787150,
+      "sha256": "d631c665f920a9f1a01c88224bbadcd39c8cff55b60f05df8e17e1f4852eaaf3"
+    },
+    {
+      "path": "results/gate_d_p0_p2/source_manifest.json",
+      "bytes": 485,
+      "sha256": "762dcfb6b3c0aa9402a2f37c3a4aeed49b62a3a8d04514d435575c035bdcc6bd"
+    },
+    {
+      "path": "results/gate_d_p0_p2/success_path_probes/imu_bridge-input.json",
+      "bytes": 308,
+      "sha256": "436f264a1a6e4baa47edcad95f320a00182730f547fdb28ebbcf1b5a9b655138"
+    },
+    {
+      "path": "results/gate_d_p0_p2/success_path_probes/imu_bridge-process.json",
+      "bytes": 44,
+      "sha256": "87ba0c16ab7382abafb3794de183791386a6849e405b82466aa89855f15ad4e7"
+    },
+    {
+      "path": "results/gate_d_p0_p2/success_path_probes/imu_bridge_actual_interval-input.json",
+      "bytes": 358,
+      "sha256": "22aef9015492f0395e05d6d6b6a6ee083105503e1baa6778511882c13ecbe5a7"
+    },
+    {
+      "path": "results/gate_d_p0_p2/success_path_probes/imu_bridge_actual_interval-process.json",
+      "bytes": 44,
+      "sha256": "87ba0c16ab7382abafb3794de183791386a6849e405b82466aa89855f15ad4e7"
+    },
+    {
+      "path": "results/gate_d_p0_p2/success_path_probes/joint_action-input.json",
+      "bytes": 310,
+      "sha256": "2191fb8739f4cdeb91ea508f8b7b7fa5719116065c9a8bedd46a72b50c61fecc"
+    },
+    {
+      "path": "results/gate_d_p0_p2/success_path_probes/joint_action-process.json",
+      "bytes": 44,
+      "sha256": "87ba0c16ab7382abafb3794de183791386a6849e405b82466aa89855f15ad4e7"
+    },
+    {
+      "path": "results/gate_d_p0_p2/success_path_probes/joint_actual_interval-input.json",
+      "bytes": 353,
+      "sha256": "03d53d1e6815e130739705bf56c2ffd2a6dfb67868102c546e2232dc0338801e"
+    },
+    {
+      "path": "results/gate_d_p0_p2/success_path_probes/joint_actual_interval-process.json",
+      "bytes": 44,
+      "sha256": "87ba0c16ab7382abafb3794de183791386a6849e405b82466aa89855f15ad4e7"
+    },
+    {
+      "path": "results/gate_d_p0_p2/success_path_probes/uwb_exclusion-input.json",
+      "bytes": 311,
+      "sha256": "1bbf9c5df61457fc5861207915fb59e91c28393d920e4c540e782dd87c4ecc8e"
+    },
+    {
+      "path": "results/gate_d_p0_p2/success_path_probes/uwb_exclusion-process.json",
+      "bytes": 44,
+      "sha256": "87ba0c16ab7382abafb3794de183791386a6849e405b82466aa89855f15ad4e7"
+    },
+    {
+      "path": "results/gate_d_p0_p2/validation/ctest-final.log",
+      "bytes": 1385,
+      "sha256": "df44fc5172fc28fb7154307c9784e19055d7420bf9e1c694d4e9d67d4a6ffe39"
+    },
+    {
+      "path": "results/gate_d_p0_p2/validation/export-schema.log",
+      "bytes": 61,
+      "sha256": "8bc587771fb282f36c5838961d241fc8d0d54593b8cb4efcc28aa35e564d81c3"
+    },
+    {
+      "path": "results/gate_d_p0_p2/validation/fixed-lag-schema.log",
+      "bytes": 51,
+      "sha256": "1e47a04708be007f654045ff736ed96e5043db0e9a02d74838cd77cadd979874"
+    },
+    {
+      "path": "results/gate_d_p0_p2/validation/gate-d-tools-final.log",
+      "bytes": 110,
+      "sha256": "e6cbbad6e7b47b4ec33a62b4b503cca172728201955b091def9fd9186f21f6b7"
+    },
+    {
+      "path": "results/gate_d_p0_p2/validation/gated-round2-tools-final.log",
+      "bytes": 105,
+      "sha256": "f140f78b5f836018a6dae4bb145448c404c3fa42dfb87fabfac04b31bef1dfa4"
+    },
+    {
+      "path": "results/gate_d_p0_p2/validation/gated-round2-tools.log",
+      "bytes": 1906,
+      "sha256": "7baec20919f66508625bff82836728ed9060705e92abbe13c10097f9c2dfdd16"
+    },
+    {
+      "path": "results/gate_d_p0_p2/validation/gated-round3-tools.log",
+      "bytes": 109,
+      "sha256": "e92bc43dab2e9b08067e3d7df6999a6a3f1f12bb9c1c111d6ad24723692ab3e8"
+    },
+    {
+      "path": "results/gate_d_p0_p2/validation/gated-test-incremental.log",
+      "bytes": 4289,
+      "sha256": "acb1de2e5ba644e91adbe8a4ed13d549f936b41373c9389a279dcf6ded9c2748"
+    },
+    {
+      "path": "results/gate_d_p0_p2/validation/gated-test-logger.log",
+      "bytes": 833,
+      "sha256": "61dbee7e6220b6af079e050cc508a5f2360112d1820faec4e815a11917fbb32c"
+    },
+    {
+      "path": "results/gate_d_p0_p2/validation/gated-test-p1.log",
+      "bytes": 1629,
+      "sha256": "1ae01c9f008b893cda7d781734b4cd88baa6a0a6292020ab218b9bbdd31614ec"
+    },
+    {
+      "path": "results/gate_d_p0_p2/validation/gated-test-p2-first.log",
+      "bytes": 5819,
+      "sha256": "c4bb37c12c88c2ea16a48e4bc4e46ed5f6f7af15fff3ac786c781e76765fc4c7"
+    },
+    {
+      "path": "results/gate_d_p0_p2/validation/gated-test-v2-final.log",
+      "bytes": 5978,
+      "sha256": "43b2eeaa4f8788904621aef323a352174a437e30c5e48afea0a455c95923e4f4"
+    },
+    {
+      "path": "results/gate_d_p0_p2/validation/p2-schema.log",
+      "bytes": 61,
+      "sha256": "4323836f0c6846818365264e0af31860bfde2937e21471968bd3f4fce30e2f2e"
+    },
+    {
+      "path": "results/gate_d_p0_p2/validation/v2-final.log",
+      "bytes": 6505,
+      "sha256": "e1c8abe66517fd9208b437521d96289217517709e0a3590e05e83b430d137e5d"
+    },
+    {
+      "path": "results/gate_d_p0_p2/verify_replay110.log",
+      "bytes": 40,
+      "sha256": "10a078acc90c24687e0e60cb93c86c33c4fe21d8e950053374fe510b8a106646"
+    },
+    {
+      "path": "results/gate_d_p0_p2/worst_window_export/run_manifest.json",
+      "bytes": 1683,
+      "sha256": "d909fbc55d714027498b3c54eabc204af6060bedca206f5395b5856e34cd56fe"
+    },
+    {
+      "path": "results/gate_d_p0_p2/worst_window_export/summary.json",
+      "bytes": 250,
+      "sha256": "6e4489e636347ae3a3949d26dc59b368d10077fb7ea72d9c805e82680b7ece88"
+    }
+  ],
+  "transaction_comparisons": {
+    "p0_p1": {
+      "count_left": 140,
+      "count_right": 140,
+      "changed_fields": {
+        "selected_action_id": 0,
+        "fde_status": 0,
+        "backend_updates": 0,
+        "stale_state": 0,
+        "timestamp_ns": 0
+      }
+    },
+    "p1_p2": {
+      "count_left": 140,
+      "count_right": 140,
+      "changed_fields": {
+        "selected_action_id": 0,
+        "fde_status": 0,
+        "backend_updates": 0,
+        "stale_state": 0,
+        "timestamp_ns": 0
+      }
+    }
+  },
+  "success_path_probes": {
+    "imu_bridge": {
+      "status": "PASS",
+      "failure_reason": "",
+      "detected": false,
+      "correct_exclusion": false,
+      "union_exclusion": false,
+      "ambiguous_exclusion": false,
+      "wrong_exclusion": false,
+      "nominal_false_exclusion": false,
+      "no_valid_candidate": false,
+      "post_fde_detector_passed": true,
+      "coverage_failure": false,
+      "hmi": false,
+      "protected_available": false,
+      "availability_scope": "RESEARCH_GATE_ONLY",
+      "formal_eligible": false,
+      "assumption_violation": false,
+      "backend_update_violation": false,
+      "bridge_coverage_verified": false,
+      "bridge_component_coverage_verified": false,
+      "bridge_control_unavailable": false,
+      "bias_continuity_has_no_maneuver_margin": false,
+      "bridge_timeout_verified": false,
+      "first_clean_uwb_unavailable": false,
+      "history_replacement_verified": false,
+      "history_prior_contaminated": false,
+      "raw_interval_injection_verified": false,
+      "risk_budget_closed": false,
+      "injected_imu_samples": 0,
+      "expected_injected_imu_samples": 0,
+      "epochs": 6,
+      "bridge_epochs_observed": 0,
+      "model_valid_at_evaluation": false,
+      "detector_valid_at_evaluation": false,
+      "selected_sources": "",
+      "plausible_sources": "",
+      "detection_delay_epochs": -1,
+      "boundary_uwb": null,
+      "boundary_imu": null,
+      "geometry_condition": 1.992733586574335,
+      "hypothesis_count": 0,
+      "plausible_count": 0,
+      "diagnostic_low_exceedances": 0,
+      "diagnostic_high_exceedances": 0,
+      "selected_action_id": 0,
+      "monitorability_rank": 0,
+      "monitorability_sigma_min": 0,
+      "monitorability_condition": null,
+      "monitorability_slope_x": null,
+      "monitorability_slope_y": null,
+      "monitorability_slope_z": null,
+      "maximum_error_x": 0.06875412618111042,
+      "maximum_error_y": 0.04244212720878984,
+      "maximum_error_z": 0.11805605218023296,
+      "maximum_bridge_component_x": 0,
+      "maximum_bridge_component_y": 0,
+      "maximum_bridge_component_z": 0,
+      "monitorable": false,
+      "monitorability_classification": "UNAVAILABLE",
+      "local_threshold_invariant": false,
+      "state_machine_verified": false,
+      "ratio": 1.5
+    },
+    "imu_bridge_actual_interval": {
+      "status": "PASS",
+      "failure_reason": "",
+      "detected": true,
+      "correct_exclusion": false,
+      "union_exclusion": false,
+      "ambiguous_exclusion": false,
+      "wrong_exclusion": false,
+      "nominal_false_exclusion": false,
+      "no_valid_candidate": true,
+      "post_fde_detector_passed": true,
+      "coverage_failure": false,
+      "hmi": false,
+      "protected_available": false,
+      "availability_scope": "RESEARCH_GATE_ONLY",
+      "formal_eligible": false,
+      "assumption_violation": false,
+      "backend_update_violation": false,
+      "bridge_coverage_verified": false,
+      "bridge_component_coverage_verified": false,
+      "bridge_control_unavailable": false,
+      "bias_continuity_has_no_maneuver_margin": false,
+      "bridge_timeout_verified": false,
+      "first_clean_uwb_unavailable": false,
+      "history_replacement_verified": false,
+      "history_prior_contaminated": false,
+      "raw_interval_injection_verified": true,
+      "risk_budget_closed": false,
+      "injected_imu_samples": 10,
+      "expected_injected_imu_samples": 10,
+      "epochs": 46,
+      "bridge_epochs_observed": 0,
+      "model_valid_at_evaluation": true,
+      "detector_valid_at_evaluation": true,
+      "selected_sources": "",
+      "plausible_sources": "",
+      "detection_delay_epochs": 20,
+      "boundary_uwb": null,
+      "boundary_imu": 1122.6561437759829,
+      "geometry_condition": 1.992733586574335,
+      "hypothesis_count": 61104,
+      "plausible_count": 978,
+      "diagnostic_low_exceedances": 0,
+      "diagnostic_high_exceedances": 0,
+      "selected_action_id": 0,
+      "monitorability_rank": 1,
+      "monitorability_sigma_min": 0.016717837259219076,
+      "monitorability_condition": 1,
+      "monitorability_slope_x": null,
+      "monitorability_slope_y": null,
+      "monitorability_slope_z": null,
+      "maximum_error_x": 0.09840150344976584,
+      "maximum_error_y": 0.0812384572704092,
+      "maximum_error_z": 0.14779098864349094,
+      "maximum_bridge_component_x": 0,
+      "maximum_bridge_component_y": 0,
+      "maximum_bridge_component_z": 0,
+      "monitorable": true,
+      "monitorability_classification": "MONITORABLE",
+      "local_threshold_invariant": false,
+      "state_machine_verified": false,
+      "ratio": 1.5
+    },
+    "joint_action": {
+      "status": "PASS",
+      "failure_reason": "",
+      "detected": false,
+      "correct_exclusion": false,
+      "union_exclusion": false,
+      "ambiguous_exclusion": false,
+      "wrong_exclusion": false,
+      "nominal_false_exclusion": false,
+      "no_valid_candidate": false,
+      "post_fde_detector_passed": true,
+      "coverage_failure": false,
+      "hmi": false,
+      "protected_available": false,
+      "availability_scope": "RESEARCH_GATE_ONLY",
+      "formal_eligible": false,
+      "assumption_violation": false,
+      "backend_update_violation": false,
+      "bridge_coverage_verified": false,
+      "bridge_component_coverage_verified": false,
+      "bridge_control_unavailable": false,
+      "bias_continuity_has_no_maneuver_margin": false,
+      "bridge_timeout_verified": false,
+      "first_clean_uwb_unavailable": false,
+      "history_replacement_verified": false,
+      "history_prior_contaminated": false,
+      "raw_interval_injection_verified": true,
+      "risk_budget_closed": false,
+      "injected_imu_samples": 0,
+      "expected_injected_imu_samples": 0,
+      "epochs": 6,
+      "bridge_epochs_observed": 0,
+      "model_valid_at_evaluation": false,
+      "detector_valid_at_evaluation": false,
+      "selected_sources": "",
+      "plausible_sources": "",
+      "detection_delay_epochs": -1,
+      "boundary_uwb": null,
+      "boundary_imu": null,
+      "geometry_condition": 1.9903201881324128,
+      "hypothesis_count": 0,
+      "plausible_count": 0,
+      "diagnostic_low_exceedances": 0,
+      "diagnostic_high_exceedances": 0,
+      "selected_action_id": 0,
+      "monitorability_rank": 0,
+      "monitorability_sigma_min": 0,
+      "monitorability_condition": null,
+      "monitorability_slope_x": null,
+      "monitorability_slope_y": null,
+      "monitorability_slope_z": null,
+      "maximum_error_x": 0.09192289345282953,
+      "maximum_error_y": 0.02911263068917033,
+      "maximum_error_z": 0.22941686900074987,
+      "maximum_bridge_component_x": 0,
+      "maximum_bridge_component_y": 0,
+      "maximum_bridge_component_z": 0,
+      "monitorable": false,
+      "monitorability_classification": "UNAVAILABLE",
+      "local_threshold_invariant": true,
+      "state_machine_verified": false,
+      "ratio": 1.5
+    },
+    "joint_actual_interval": {
+      "status": "PASS",
+      "failure_reason": "",
+      "detected": true,
+      "correct_exclusion": false,
+      "union_exclusion": false,
+      "ambiguous_exclusion": false,
+      "wrong_exclusion": false,
+      "nominal_false_exclusion": false,
+      "no_valid_candidate": true,
+      "post_fde_detector_passed": true,
+      "coverage_failure": false,
+      "hmi": false,
+      "protected_available": false,
+      "availability_scope": "RESEARCH_GATE_ONLY",
+      "formal_eligible": false,
+      "assumption_violation": false,
+      "backend_update_violation": false,
+      "bridge_coverage_verified": false,
+      "bridge_component_coverage_verified": false,
+      "bridge_control_unavailable": false,
+      "bias_continuity_has_no_maneuver_margin": false,
+      "bridge_timeout_verified": false,
+      "first_clean_uwb_unavailable": false,
+      "history_replacement_verified": false,
+      "history_prior_contaminated": false,
+      "raw_interval_injection_verified": true,
+      "risk_budget_closed": false,
+      "injected_imu_samples": 10,
+      "expected_injected_imu_samples": 10,
+      "epochs": 36,
+      "bridge_epochs_observed": 0,
+      "model_valid_at_evaluation": true,
+      "detector_valid_at_evaluation": true,
+      "selected_sources": "",
+      "plausible_sources": "",
+      "detection_delay_epochs": 0,
+      "boundary_uwb": 1.439540481325161,
+      "boundary_imu": 673.7917862736958,
+      "geometry_condition": 1.9903201881324128,
+      "hypothesis_count": 61104,
+      "plausible_count": 1467,
+      "diagnostic_low_exceedances": 0,
+      "diagnostic_high_exceedances": 0,
+      "selected_action_id": 0,
+      "monitorability_rank": 1,
+      "monitorability_sigma_min": 0.09855208127970753,
+      "monitorability_condition": 1,
+      "monitorability_slope_x": null,
+      "monitorability_slope_y": null,
+      "monitorability_slope_z": null,
+      "maximum_error_x": 0.15523083235265778,
+      "maximum_error_y": 0.09982459686675556,
+      "maximum_error_z": 0.09057079655670086,
+      "maximum_bridge_component_x": 0,
+      "maximum_bridge_component_y": 0,
+      "maximum_bridge_component_z": 0,
+      "monitorable": true,
+      "monitorability_classification": "MONITORABLE",
+      "local_threshold_invariant": true,
+      "state_machine_verified": false,
+      "ratio": 1.5
+    },
+    "uwb_exclusion": {
+      "status": "PASS",
+      "failure_reason": "",
+      "detected": true,
+      "correct_exclusion": false,
+      "union_exclusion": false,
+      "ambiguous_exclusion": false,
+      "wrong_exclusion": false,
+      "nominal_false_exclusion": false,
+      "no_valid_candidate": true,
+      "post_fde_detector_passed": true,
+      "coverage_failure": false,
+      "hmi": false,
+      "protected_available": false,
+      "availability_scope": "RESEARCH_GATE_ONLY",
+      "formal_eligible": false,
+      "assumption_violation": false,
+      "backend_update_violation": false,
+      "bridge_coverage_verified": false,
+      "bridge_component_coverage_verified": false,
+      "bridge_control_unavailable": false,
+      "bias_continuity_has_no_maneuver_margin": false,
+      "bridge_timeout_verified": false,
+      "first_clean_uwb_unavailable": false,
+      "history_replacement_verified": false,
+      "history_prior_contaminated": false,
+      "raw_interval_injection_verified": true,
+      "risk_budget_closed": false,
+      "injected_imu_samples": 0,
+      "expected_injected_imu_samples": 0,
+      "epochs": 6,
+      "bridge_epochs_observed": 0,
+      "model_valid_at_evaluation": true,
+      "detector_valid_at_evaluation": true,
+      "selected_sources": "",
+      "plausible_sources": "",
+      "detection_delay_epochs": 0,
+      "boundary_uwb": 1.1261816925775008,
+      "boundary_imu": 732.549056795104,
+      "geometry_condition": 1.9866676828885577,
+      "hypothesis_count": 1386,
+      "plausible_count": 76,
+      "diagnostic_low_exceedances": 0,
+      "diagnostic_high_exceedances": 0,
+      "selected_action_id": 0,
+      "monitorability_rank": 1,
+      "monitorability_sigma_min": 9.238059991368516,
+      "monitorability_condition": 1,
+      "monitorability_slope_x": null,
+      "monitorability_slope_y": null,
+      "monitorability_slope_z": null,
+      "maximum_error_x": 0.05927220667796959,
+      "maximum_error_y": 0.0656558954975498,
+      "maximum_error_z": 0.06421217444687821,
+      "maximum_bridge_component_x": 0,
+      "maximum_bridge_component_y": 0,
+      "maximum_bridge_component_z": 0,
+      "monitorable": true,
+      "monitorability_classification": "MONITORABLE",
+      "local_threshold_invariant": false,
+      "state_machine_verified": false,
+      "ratio": 1.5
+    }
+  },
+  "fixed_lag": {
+    "status": "DEVELOPMENT_ONLY",
+    "prior_successful_commits": 205,
+    "marginalization_count": 6,
+    "window_model_valid": 1,
+    "pipeline_backend_updates": 1,
+    "pipeline_fde_status": "NO_VALID_CANDIDATE"
+  },
+  "validation": {
+    "ctest-final.log": {
+      "path": "results/gate_d_p0_p2/validation/ctest-final.log",
+      "tail": "Test project /home/mint/ws_fusion_uwb/build/uwb_imu_pl\n    Start  8: _ctest_uwb_imu_pl_gtest_test_snapshot_integrity\n1/9 Test  #8: _ctest_uwb_imu_pl_gtest_test_snapshot_integrity .....   Passed    0.12 sec\n    Start  9: _ctest_uwb_imu_pl_gtest_test_integrity_config\n2/9 Test  #9: _ctest_uwb_imu_pl_gtest_test_integrity_config .......   Passed    0.19 sec\n    Start 10: _ctest_uwb_imu_pl_gtest_test_run_logger\n3/9 Test #10: _ctest_uwb_imu_pl_gtest_test_run_logger .............   Passed    0.13 sec\n    Start 11: _ctest_uwb_imu_pl_gtest_test_realtime_incremental\n4/9 Test #11: _ctest_uwb_imu_pl_gtest_test_realtime_incremental ...   Passed    0.33 sec\n    Start 13: _ctest_uwb_imu_pl_gtest_test_dense_oracle\n5/9 Test #13: _ctest_uwb_imu_pl_gtest_test_dense_oracle ...........   Passed    0.09 sec\n    Start 14: _ctest_uwb_imu_pl_gtest_test_integrity_v2\n6/9 Test #14: _ctest_uwb_imu_pl_gtest_test_integrity_v2 ...........   Passed    0.20 sec\n    Start 18: test_round2_tools\n7/9 Test #18: test_round2_tools ...................................   Passed    0.87 sec\n    Start 19: test_gate_d_tools\n8/9 Test #19: test_gate_d_tools ...................................   Passed    0.69 sec\n    Start 20: test_round3_tools\n9/9 Test #20: test_round3_tools ...................................   Passed    0.40 sec\n\n100% tests passed, 0 tests failed out of 9\n\nTotal Test time (real) =   3.04 sec\n"
+    },
+    "v2-final.log": {
+      "path": "results/gate_d_p0_p2/validation/v2-final.log",
+      "tail": "erics.EuclideanStepGateBothSidesUsesReferenceNearBoundary (0 ms)\n[ RUN      ] GateDNumerics.MalformedFullChangeRejectedBeforeAnyPartialOperation\n[       OK ] GateDNumerics.MalformedFullChangeRejectedBeforeAnyPartialOperation (0 ms)\n[ RUN      ] GateDNumerics.RankAndConditionThresholdsBothSidesKeepExactDefinitions\n[       OK ] GateDNumerics.RankAndConditionThresholdsBothSidesKeepExactDefinitions (0 ms)\n[----------] 5 tests from GateDNumerics (0 ms total)\n\n[----------] 2 tests from GateDCache\n[ RUN      ] GateDCache.CacheContentVersionWindowAndSwitchRemainEquivalent\n[       OK ] GateDCache.CacheContentVersionWindowAndSwitchRemainEquivalent (0 ms)\n[ RUN      ] GateDCache.EarlyStepSwitchAgreesWithExactFinalJacobian\n[       OK ] GateDCache.EarlyStepSwitchAgreesWithExactFinalJacobian (0 ms)\n[----------] 2 tests from GateDCache (0 ms total)\n\n[----------] 1 test from GateDReplay\n[ RUN      ] GateDReplay.LosslessRoundTripAllBlocksAndActions\n[       OK ] GateDReplay.LosslessRoundTripAllBlocksAndActions (0 ms)\n[----------] 1 test from GateDReplay (0 ms total)\n\n[----------] 1 test from GateDOracle\n[ RUN      ] GateDOracle.RealCurrentHistoricalBridgeAndUnionActionsMatchDenseAndWorkers\n[       OK ] GateDOracle.RealCurrentHistoricalBridgeAndUnionActionsMatchDenseAndWorkers (73 ms)\n[----------] 1 test from GateDOracle (73 ms total)\n\n[----------] 1 test from GateDSelection\n[ RUN      ] GateDSelection.DenseAndOperatorPathsSelectSameSuccessfulExclusion\n[       OK ] GateDSelection.DenseAndOperatorPathsSelectSameSuccessfulExclusion (0 ms)\n[----------] 1 test from GateDSelection (0 ms total)\n\n[----------] 1 test from GateDDiagnostics\n[ RUN      ] GateDDiagnostics.PreparationExceptionKeepsAttemptTimingAndZeroUpdates\n[       OK ] GateDDiagnostics.PreparationExceptionKeepsAttemptTimingAndZeroUpdates (2 ms)\n[----------] 1 test from GateDDiagnostics (2 ms total)\n\n[----------] Global test environment tear-down\n[==========] 29 tests from 16 test suites ran. (94 ms total)\n[  PASSED  ] 29 tests.\n"
+    },
+    "gate-d-tools-final.log": {
+      "path": "results/gate_d_p0_p2/validation/gate-d-tools-final.log",
+      "tail": "...........\n----------------------------------------------------------------------\nRan 11 tests in 0.482s\n\nOK\n"
+    },
+    "p2-schema.log": {
+      "path": "results/gate_d_p0_p2/validation/p2-schema.log",
+      "tail": "PASS: uwb-imu-pl/v5 results/gate_d_p0_p2/p2/workers4-repeat1\n"
+    },
+    "fixed-lag-schema.log": {
+      "path": "results/gate_d_p0_p2/validation/fixed-lag-schema.log",
+      "tail": "PASS: uwb-imu-pl/v5 results/gate_d_p0_p2/fixed_lag\n"
+    }
+  },
+  "success_path_coverage": {
+    "pipeline_successful_exclusion_observed": false,
+    "pipeline_bridge_observed": false,
+    "pipeline_union_exclusion_observed": false
+  }
+}

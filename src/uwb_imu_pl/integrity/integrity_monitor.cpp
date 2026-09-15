@@ -3,7 +3,11 @@
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 #include "uwb_imu_pl/integrity/hypothesis_generator.hpp"
 #include "uwb_imu_pl/integrity/protection_level_v2.hpp"
+#include "uwb_imu_pl/integrity/statistical_bounds_cache.hpp"
 
+#include "uwb_imu_pl/estimation/candidate_replay.hpp"
+#include "uwb_imu_pl/estimation/candidate_worker_pool.hpp"
+#include <boost/filesystem.hpp>
 #include <boost/math/distributions/chi_squared.hpp>
 #include <boost/math/distributions/non_central_chi_squared.hpp>
 #include <boost/math/distributions/normal.hpp>
@@ -14,7 +18,6 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
-#include <future>
 #include <iterator>
 #include <map>
 #include <set>
@@ -25,12 +28,11 @@ namespace {
 
 double chiSquareThreshold(int dof, double p_fa) {
   if (dof <= 0) throw std::invalid_argument("chi-square DOF must be positive");
-  return boost::math::quantile(boost::math::chi_squared(dof), 1.0 - p_fa);
+  return StatisticalBoundsCache::chiSquaredThreshold(dof, p_fa);
 }
 
 double nominalMultiplier(double two_sided_tail) {
-  return boost::math::quantile(boost::math::normal_distribution<double>(),
-                               1.0 - 0.5 * two_sided_tail);
+  return StatisticalBoundsCache::normalTwoSidedMultiplier(two_sided_tail);
 }
 
 Eigen::MatrixXd covarianceForConditional(const UwbBatch& batch) {
@@ -58,27 +60,7 @@ Eigen::MatrixXd covarianceForConditional(const UwbBatch& batch) {
 
 double IntegrityMonitor::noncentralityBoundary(int dof, double threshold,
                                                double p_md) {
-  if (dof <= 0 || threshold <= 0.0 || p_md <= 0.0 || p_md >= 1.0) {
-    throw std::invalid_argument("invalid noncentral chi-square boundary input");
-  }
-  auto missed = [dof, threshold](double lambda) {
-    return boost::math::cdf(
-        boost::math::non_central_chi_squared_distribution<double>(dof, lambda),
-        threshold);
-  };
-  if (missed(0.0) < p_md) return 0.0;
-  double upper = 1.0;
-  while (missed(upper) > p_md && upper < 1e8) upper *= 2.0;
-  if (upper >= 1e8 && missed(upper) > p_md) {
-    throw std::runtime_error("failed to bracket noncentrality boundary");
-  }
-  double lower = 0.0;
-  for (int i = 0; i < 100; ++i) {
-    const double middle = 0.5 * (lower + upper);
-    if (missed(middle) > p_md) lower = middle;
-    else upper = middle;
-  }
-  return upper;
+  return StatisticalBoundsCache::noncentralityBoundary(dof, threshold, p_md);
 }
 
 DetectorResult IntegrityMonitor::snapshotDetector(
@@ -856,6 +838,43 @@ denseRemapRemainingHypothesesOracle(
   return remaining;
 }
 
+struct FrozenCandidateIndexes {
+  std::map<std::uint64_t, const FaultUnit*> units;
+  std::map<std::uint64_t, const FaultModeBasis*> modes;
+  std::map<std::uint64_t, const FaultHypothesisV2*> hypotheses;
+  std::map<std::uint64_t, const FaultHypothesisV2*> single_unit_hypotheses;
+  std::map<std::uint64_t, std::size_t> evidence;
+  std::map<std::uint64_t, const PendingFactorGroup*> groups;
+  std::map<std::uint64_t, const HistoricalEpochContext*> history_by_group;
+  std::map<std::uint64_t, AnchorId> anchor_by_measurement;
+  std::map<std::uint64_t, TimestampNs> time_by_measurement;
+  FrozenCandidateIndexes(const EpochTransaction& tx, const GeneratedFaultModelSet& models,
+                         const std::vector<FaultModeEvidence>& values) {
+    for (const auto& unit : models.units) units.emplace(unit.id.value(), &unit);
+    for (const auto& mode : models.modes) modes.emplace(mode.id.value(), &mode);
+    for (const auto& h : models.hypotheses) {
+      hypotheses.emplace(h.id.value(), &h);
+      if (h.units.size() == 1) single_unit_hypotheses.emplace(h.units.front().value(), &h);
+    }
+    for (std::size_t i=0; i<values.size(); ++i) evidence.emplace(values[i].hypothesis.value(), i);
+    auto batch = [&](const UwbBatch& b) {
+      for (const auto& m : b.measurements) {
+        anchor_by_measurement[m.id.value()] = m.anchor_id;
+        time_by_measurement[m.id.value()] = m.timestamp;
+      }
+    };
+    batch(tx.uwb_batch);
+    for (const auto& group : tx.uwb_groups) groups.emplace(group.id.value(), &group);
+    for (const auto& history : tx.recoverable_history) {
+      batch(history.uwb_batch);
+      for (const auto& group : history.groups) {
+        groups.emplace(group.id.value(), &group);
+        history_by_group.emplace(group.id.value(), &history);
+      }
+    }
+  }
+};
+
 struct ProjectedPostActionModes {
   std::vector<FaultHypothesisV2> hypotheses;
   std::map<std::uint64_t, Eigen::MatrixXd> mode_maps;
@@ -863,7 +882,8 @@ struct ProjectedPostActionModes {
 
 ProjectedPostActionModes projectPostActionModes(
     const LinearizedIntegrityWindow& window, const EpochTransaction& tx,
-    const GeneratedFaultModelSet& models, const ExclusionAction& action) {
+    const GeneratedFaultModelSet& models, const ExclusionAction& action,
+    const FrozenCandidateIndexes& indexes) {
   ProjectedPostActionModes projected;
   for (const auto& hypothesis : models.hypotheses) {
     if (!actionCovers(action, hypothesis)) {
@@ -871,30 +891,14 @@ ProjectedPostActionModes projectPostActionModes(
       projected.hypotheses.back().A.resize(0, 0);
     }
   }
-  std::map<std::uint64_t, AnchorId> anchor_by_measurement;
-  std::map<std::uint64_t, TimestampNs> time_by_measurement;
-  auto index_batch = [&](const UwbBatch& batch) {
-    for (const auto& measurement : batch.measurements) {
-      anchor_by_measurement[measurement.id.value()] = measurement.anchor_id;
-      time_by_measurement[measurement.id.value()] = measurement.timestamp;
-    }
-  };
-  index_batch(tx.uwb_batch);
-  for (const auto& history : tx.recoverable_history) {
-    index_batch(history.uwb_batch);
-  }
+  std::set<std::uint64_t> required_modes;
+  for (const auto& hypothesis : projected.hypotheses)
+    for (const auto id : hypothesis.modes) required_modes.insert(id.value());
+  const auto& anchor_by_measurement = indexes.anchor_by_measurement;
+  const auto& time_by_measurement = indexes.time_by_measurement;
   auto pending_group = [&](FactorGroupId id) -> const PendingFactorGroup* {
-    const auto current = std::find_if(
-        tx.uwb_groups.begin(), tx.uwb_groups.end(),
-        [&](const PendingFactorGroup& group) { return group.id == id; });
-    if (current != tx.uwb_groups.end()) return &*current;
-    for (const auto& history : tx.recoverable_history) {
-      const auto found = std::find_if(
-          history.groups.begin(), history.groups.end(),
-          [&](const PendingFactorGroup& group) { return group.id == id; });
-      if (found != history.groups.end()) return &*found;
-    }
-    return nullptr;
+    const auto found = indexes.groups.find(id.value());
+    return found == indexes.groups.end() ? nullptr : found->second;
   };
   int candidate_rows = 0;
   for (const auto& block : window.blocks) {
@@ -907,6 +911,7 @@ ProjectedPostActionModes projectPostActionModes(
     candidate_rows += block.residual_whitened.size();
   }
   for (const auto& mode : models.modes) {
+    if (!required_modes.count(mode.id.value())) continue;
     Eigen::MatrixXd mode_map = Eigen::MatrixXd::Zero(
         candidate_rows, mode.parameter_dimension);
     int row_offset = 0;
@@ -957,7 +962,8 @@ ProjectedPostActionModes projectPostActionModes(
 RealtimeIntegrityPipeline::RealtimeIntegrityPipeline(
     IncrementalUwbImuEstimator* estimator, IntegrityMonitor monitor)
     : estimator_(estimator), monitor_(std::move(monitor)),
-      health_(estimator ? estimator->config().health : HealthConfigV2{}) {
+      health_(estimator ? estimator->config().health : HealthConfigV2{}),
+      candidate_workers_(new CandidateWorkerPool(4)) {
   if (estimator_ == nullptr) throw std::invalid_argument("estimator must not be null");
   for (const auto& anchor : estimator_->config().anchors) {
     health_.registerSource("anchor:" + std::to_string(anchor.id.value()),
@@ -972,6 +978,8 @@ RealtimeIntegrityPipeline::RealtimeIntegrityPipeline(
   }
   health_.registerSource("generic_bridge", SensorType::Bridge);
 }
+
+RealtimeIntegrityPipeline::~RealtimeIntegrityPipeline() = default;
 
 void RealtimeIntegrityPipeline::ingestImu(const ImuMeasurement& measurement) {
   if (reinitializer_.directive().state == ReinitializationState::Requested) {
@@ -995,6 +1003,7 @@ void RealtimeIntegrityPipeline::completeReinitialization(
     throw std::logic_error("reinitialization completion precondition failed");
   }
   estimator_ = estimator;
+  candidate_workers_->clearScratch();
   estimator_->ingestImu(trusted_boundary);
   pending_reinitialization_seed_.reset();
   consecutive_bridge_epochs_ = 0;
@@ -1022,6 +1031,65 @@ RealtimeIntegrityPipeline::reinitializationPriorSigmas(
 }
 
 IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch) {
+  const auto start = std::chrono::steady_clock::now();
+  const auto before = estimator_->currentEpoch();
+  ++input_attempt_count_;
+  last_attempt_output_ = IntegrityOutput();
+  auto finish = [&](IntegrityOutput& output) {
+    auto& d = output.diagnostics;
+    d.input_attempt_id = input_attempt_count_;
+    d.input_timestamp = batch.timestamp;
+    d.backend_epoch_before = before;
+    d.backend_epoch_after = estimator_->currentEpoch();
+    consecutive_rejections_ = output.backend_updates ? 0 : consecutive_rejections_ + 1;
+    d.consecutive_rejections = consecutive_rejections_;
+    d.marginalization_count = estimator_->marginalizationCount();
+    const auto estimator_cache = estimator_->cacheAudit();
+    const auto statistical_cache = StatisticalBoundsCache::stats();
+    d.factor_block_cache_hits = estimator_cache.factor_block_hits;
+    d.factor_block_cache_misses = estimator_cache.factor_block_misses;
+    d.factor_block_cache_invalidations = estimator_cache.invalidations;
+    d.statistical_cache_hits = statistical_cache.hits;
+    d.statistical_cache_misses = statistical_cache.misses;
+    d.cache_entries = estimator_cache.factor_block_entries +
+        statistical_cache.entries;
+    d.cache_bytes = estimator_cache.factor_block_bytes;
+    d.cache_invalidation_reason = estimator_cache.last_invalidation_reason;
+    const std::vector<std::string> stages = {"prepare", "integrity_window",
+        "all_in_detector", "current_sensitivity", "historical_sensitivity",
+        "model_generation", "hypothesis_evidence", "health_actions", "hypothesis_audit",
+        "base_factorization", "candidate_evaluation", "fde_decision", "candidate_audit",
+        "finalize_commit_audit", "commit", "discard", "state_audit", "shared_cache"};
+    for (const auto& stage : stages) {
+      if (std::none_of(output.stage_timings.begin(), output.stage_timings.end(),
+          [&](const StageTiming& t) { return t.stage == stage; })) {
+        output.stage_timings.push_back({stage, 0.0, true, "SKIPPED", d.reason.empty()
+            ? "upstream gate did not reach stage" : d.reason});
+      }
+    }
+    output.stage_timings.push_back({"core_total", std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - start).count(), d.status != "EXCEPTION",
+        d.status, d.reason});
+  };
+  try {
+    auto output = processUwbBatchImpl(batch);
+    finish(output);
+    return output;
+  } catch (const std::exception& error) {
+    last_attempt_output_.timestamp = estimator_->currentState().timestamp;
+    last_attempt_output_.state = estimator_->currentState();
+    last_attempt_output_.diagnostics.status = "EXCEPTION";
+    last_attempt_output_.diagnostics.reason = error.what();
+    if (last_attempt_output_.stage_timings.empty()) {
+      last_attempt_output_.stage_timings.push_back({"prepare", std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - start).count(), false, "EXCEPTION", error.what()});
+    }
+    finish(last_attempt_output_);
+    throw;
+  }
+}
+
+IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& batch) {
   if (reinitializer_.blocksUwb()) {
     IntegrityOutput output;
     output.timestamp = estimator_->currentState().timestamp;
@@ -1038,10 +1106,22 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
     return output;
   }
   const IntegrityConfig& cfg = estimator_->config();
+  const auto prepare_start = std::chrono::steady_clock::now();
   EpochTransaction transaction = estimator_->prepareEpoch(batch);
+  IntegrityOutput output;
+  std::string executing_stage = "prepare";
+  auto operation_start = prepare_start;
+  auto start_operation = [&](const std::string& name) {
+    executing_stage = name; operation_start = std::chrono::steady_clock::now();
+  };
   try {
-    IntegrityOutput output;
     output.timestamp = batch.timestamp;
+    output.diagnostics.ordering_version = transaction.base_version.ordering_version;
+    output.diagnostics.noise_model_version = transaction.base_version.noise_model_version;
+    output.diagnostics.raw_imu_samples = transaction.raw_imu_slice.size();
+    output.diagnostics.pending_duration_s = transaction.end.seconds() - transaction.begin.seconds();
+    output.stage_timings.push_back({"prepare", std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - prepare_start).count(), true});
     output.transaction_id = transaction.id.value();
     output.base_graph_version = transaction.base_graph_version;
     output.linearization_version = transaction.base_version.linpoint_version;
@@ -1052,13 +1132,15 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
       const auto now = std::chrono::steady_clock::now();
       output.stage_timings.push_back({name,
           std::chrono::duration<double, std::milli>(now - stage_start).count(),
-          success});
+          success, "EXECUTED", success ? "" : "model/numerical gate rejected"});
       stage_start = now;
     };
     // Health transitions are staged with the transaction.  They become
     // externally visible only after commit/discard finalizes the epoch.
     HealthManager pending_health = health_;
     auto capture_state_audit = [&]() {
+      start_operation("state_audit");
+      const auto audit_start = std::chrono::steady_clock::now();
       output.factor_ledger_audit.clear();
       for (const auto& entry : estimator_->factorLedger().entries()) {
         FactorLedgerAuditRecord record;
@@ -1127,13 +1209,19 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
         record.recovery_reset_count = entry.recovery_reset_count;
         output.health_audit.push_back(std::move(record));
       }
+      output.stage_timings.push_back({"state_audit", std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - audit_start).count(), true, "EXECUTED", ""});
     };
 
     IntegrityWindowRequest request;
     request.epochs = cfg.integrity_window.epochs;
+    start_operation("integrity_window");
     const auto window = estimator_->buildIntegrityWindow(transaction, request);
     record_stage("integrity_window", window.model_valid);
     output.window_id = window.id.value();
+    std::set<std::uint64_t> frozen_groups;
+    for (const auto& block : window.blocks) frozen_groups.insert(block.group_id.value());
+    output.diagnostics.frozen_group_ids.assign(frozen_groups.begin(), frozen_groups.end());
     output.history_provenance_valid =
         window.capabilities.history_provenance_valid;
     DetectorRiskContext detector_risk;
@@ -1143,6 +1231,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
     detector_risk.rank_tolerance = cfg.integrity_window.rank_tolerance;
     detector_risk.max_condition_number =
         cfg.integrity_window.max_condition_number;
+    start_operation("all_in_detector");
     const DetectorResultV2 all_in =
         JointWindowDetector().evaluate(window, detector_risk);
     record_stage("all_in_detector", all_in.numerically_valid);
@@ -1160,12 +1249,28 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
         (!cfg.integrity_window.require_history_provenance ||
          window.capabilities.history_provenance_valid);
 
+    auto timed_commit = [&](EpochTransaction&& tx, const EpochCommitPlan& plan) {
+      start_operation("commit");
+      const auto start = std::chrono::steady_clock::now();
+      auto receipt = estimator_->commitEpoch(std::move(tx), plan);
+      output.stage_timings.push_back({"commit", std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - start).count(), true, "EXECUTED", ""});
+      return receipt;
+    };
+    auto timed_discard = [&](EpochTransaction&& tx, const DiscardReason& reason) {
+      start_operation("discard");
+      const auto start = std::chrono::steady_clock::now();
+      auto receipt = estimator_->discardEpoch(std::move(tx), reason);
+      output.stage_timings.push_back({"discard", std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - start).count(), true, "EXECUTED", ""});
+      return receipt;
+    };
     auto commit_best_effort = [&](FdeStatus status,
                                   const std::string& reason) {
       EpochCommitPlan plan = EpochCommitPlan::nominalPlan(transaction);
       plan.fde_status = status;
       plan.best_effort_integrity_unavailable = true;
-      const CommitReceipt receipt = estimator_->commitEpoch(
+      const CommitReceipt receipt = timed_commit(
           std::move(transaction), plan);
       health_ = pending_health;
       output.backend_updates = receipt.backend_updates;
@@ -1182,7 +1287,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
                                    const std::string& detail,
                                    bool reinitialize) {
       DiscardReason reason{status, detail, reinitialize};
-      const DiscardReceipt receipt = estimator_->discardEpoch(
+      const DiscardReceipt receipt = timed_discard(
           std::move(transaction), reason);
       health_ = pending_health;
       output.timestamp = receipt.last_committed_timestamp;
@@ -1214,18 +1319,21 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
           window.reason.empty() ? all_in.reason : window.reason,
           history_invalid);
     } else {
+      start_operation("current_sensitivity");
       const auto imu_block = estimator_->buildPendingFactorBlock(
           transaction, transaction.imu_group.id);
       const auto bridge_block = estimator_->buildPendingFactorBlock(
           transaction, transaction.generic_bridge_group.id);
       const ImuFaultSubspaces imu_subspaces =
           ImuFaultSubspaceBuilder().build(transaction, imu_block);
+      record_stage("current_sensitivity");
       if (!imu_subspaces.analytic_verified) {
         discard_fail_closed(
             FdeStatus::ModelInvalid,
             "analytic IMU sensitivity failed finite-difference verification",
             false);
       } else {
+        start_operation("model_generation");
         HypothesisGeneratorConfig generator_config;
         generator_config.max_cardinality = cfg.fault_models.max_cardinality;
         generator_config.max_candidate_count = cfg.fde.max_candidate_count;
@@ -1254,6 +1362,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
                  cfg.risk_v2.p_model_escape));
         auto models = HypothesisGenerator(generator_config).generate(
             window, transaction, imu_subspaces, bridge_block);
+        record_stage("model_generation");
+        output.stage_timings.back().wall_ms -= models.historical_sensitivity_ms;
+        output.stage_timings.push_back({"historical_sensitivity", models.historical_sensitivity_ms, true});
+        start_operation("hypothesis_evidence");
         HypothesisEvaluationConfig evidence_config;
         evidence_config.rank_tolerance = cfg.integrity_window.rank_tolerance;
         evidence_config.min_fault_gram_sigma =
@@ -1264,6 +1376,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
             window, models.modes, &models.hypotheses,
             all_in.squared_threshold);
         record_stage("hypothesis_evidence", true);
+        start_operation("health_actions");
+        const FrozenCandidateIndexes indexes(transaction, models, evidence);
         bool hardware_barrier = false;
         struct SourceEvidence {
           SensorType sensor = SensorType::Unknown;
@@ -1274,23 +1388,15 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
         for (const auto& unit : models.units) {
           const std::string source = healthSource(unit);
           if (source.empty()) continue;
-          const auto single = std::find_if(models.hypotheses.begin(),
-              models.hypotheses.end(), [&](const FaultHypothesisV2& hypothesis) {
-                return hypothesis.units.size() == 1 &&
-                       hypothesis.units.front() == unit.id;
-              });
-          if (single == models.hypotheses.end()) continue;
-          const auto item = std::find_if(evidence.begin(), evidence.end(),
-              [&](const FaultModeEvidence& value) {
-                return value.hypothesis == single->id;
-              });
+          const auto single = indexes.single_unit_hypotheses.find(unit.id.value());
+          if (single == indexes.single_unit_hypotheses.end()) continue;
+          const auto item = indexes.evidence.find(single->second->id.value());
           auto& aggregate = source_evidence[source];
           aggregate.sensor = unit.sensor;
-          if (item != evidence.end()) {
+          if (item != indexes.evidence.end()) {
             aggregate.suspicious = aggregate.suspicious ||
-                (item->plausible && !all_in.passed);
-            aggregate.evidence_indices.push_back(
-                static_cast<std::size_t>(item - evidence.begin()));
+                (evidence[item->second].plausible && !all_in.passed);
+            aggregate.evidence_indices.push_back(item->second);
           }
         }
         for (auto& source_item : source_evidence) {
@@ -1323,6 +1429,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
           models.actions = HypothesisGenerator(generator_config)
               .actionsForPlausibleSet(window, transaction, models, evidence);
         }
+        record_stage("health_actions");
+        start_operation("hypothesis_audit");
         std::map<double, double> noncentrality_boundaries;
         for (const auto& hypothesis : models.hypotheses) {
           if (!noncentrality_boundaries.count(hypothesis.p_md_allocation)) {
@@ -1339,15 +1447,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
           for (std::size_t j = 0; j < hypothesis.units.size(); ++j) {
             if (j) record.fault_unit_ids += ';';
             record.fault_unit_ids += std::to_string(hypothesis.units[j].value());
-            const auto unit = std::find_if(models.units.begin(), models.units.end(),
-                [&](const FaultUnit& value) {
-                  return value.id == hypothesis.units[j];
-                });
-            if (unit != models.units.end()) {
-              if (!record.physical_source_ids.empty()) {
-                record.physical_source_ids += ';';
-              }
-              record.physical_source_ids += unit->physical_source_id;
+            const auto unit = indexes.units.find(hypothesis.units[j].value());
+            if (unit != indexes.units.end()) {
+              if (!record.physical_source_ids.empty()) record.physical_source_ids += ';';
+              record.physical_source_ids += unit->second->physical_source_id;
             }
           }
           std::set<std::string> sensors;
@@ -1357,15 +1460,12 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
           for (const auto mode_id : hypothesis.modes) {
             if (!record.mode_ids.empty()) record.mode_ids += ';';
             record.mode_ids += std::to_string(mode_id.value());
-            const auto mode = std::find_if(models.modes.begin(), models.modes.end(),
-                [&](const FaultModeBasis& value) { return value.id == mode_id; });
-            if (mode == models.modes.end()) continue;
-            sensors.insert(toString(mode->sensor));
-            kinds.insert(toString(mode->kind));
-            record.onset_epoch = std::min<std::uint64_t>(
-                record.onset_epoch, mode->onset_epoch);
-            record.onset_time_ns = std::min(
-                record.onset_time_ns, mode->onset_time.value());
+            const auto found = indexes.modes.find(mode_id.value());
+            if (found == indexes.modes.end()) continue;
+            const auto* mode = found->second;
+            sensors.insert(toString(mode->sensor)); kinds.insert(toString(mode->kind));
+            record.onset_epoch = std::min<std::uint64_t>(record.onset_epoch, mode->onset_epoch);
+            record.onset_time_ns = std::min(record.onset_time_ns, mode->onset_time.value());
             record.parameter_dimension += mode->parameter_dimension;
           }
           auto join_strings = [](const std::set<std::string>& values) {
@@ -1410,6 +1510,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
           output.hypothesis_audit.push_back(std::move(record));
         }
 
+        record_stage("hypothesis_audit");
+        start_operation("base_factorization");
         RankUpdateConfig rank_config;
         rank_config.rank_tolerance = cfg.integrity_window.rank_tolerance;
         rank_config.max_condition_number =
@@ -1417,80 +1519,147 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
         rank_config.max_linearization_step_norm =
             cfg.integrity_window.max_linearization_step_norm;
         rank_config.materialize_dense_oracle_fields = false;
+        if (const char* destination = std::getenv("UWB_IMU_PL_REPLAY_EXPORT_DIR")) {
+          const char* requested = std::getenv("UWB_IMU_PL_REPLAY_ATTEMPTS");
+          const std::string filter = std::string(",") + (requested ? requested : "") + ",";
+          if (filter.find("," + std::to_string(input_attempt_count_) + ",") != std::string::npos) {
+            boost::filesystem::create_directories(destination);
+            FrozenCandidateReplay replay;
+            replay.input_attempt_id = input_attempt_count_;
+            replay.input_timestamp = batch.timestamp;
+            replay.transaction_id = transaction.id.value();
+            replay.window = window; replay.actions = models.actions; replay.config = rank_config;
+            writeCandidateReplay(std::string(destination) + "/attempt-" +
+                std::to_string(input_attempt_count_) + ".bin", replay);
+          }
+        }
         const RankUpdateEvaluator evaluator(rank_config);
-        const BaseCandidateKernel base = evaluator.factorizeOnce(window);
+        BaseCandidateKernel base = evaluator.factorizeOnce(window);
+        record_stage("base_factorization", base.valid);
+        start_operation("shared_cache");
+        evaluator.buildSharedCache(&base, models.actions);
+        record_stage("shared_cache");
+        start_operation("candidate_evaluation");
         std::vector<CandidateEvaluation> candidates;
         std::map<std::uint64_t, ProtectionLevelV2Result> candidate_pl;
         candidates.reserve(models.actions.size());
         struct EvaluatedAction {
           CandidateEvaluation candidate;
+          DetectorResultV2 post;
           ProtectionLevelV2Result protection_level;
           bool has_protection_level = false;
         };
-        const auto evaluate_action = [&](const ExclusionAction& action) {
-          EvaluatedAction evaluated;
+        std::vector<const ExclusionAction*> action_order;
+        action_order.reserve(models.actions.size());
+        for (const auto& action : models.actions) action_order.push_back(&action);
+        std::sort(action_order.begin(), action_order.end(),
+                  [](const auto* left, const auto* right) {
+          return left->id < right->id;
+        });
+        std::vector<EvaluatedAction> evaluated_actions(action_order.size());
+        constexpr std::size_t kCandidateWorkers = 4;
+        const char* worker_override = std::getenv("UWB_IMU_PL_CANDIDATE_WORKERS");
+        const std::size_t active_workers = worker_override &&
+            std::string(worker_override) == "1" ? 1 : kCandidateWorkers;
+
+        // Phase 1: all numerical kernels and post detectors.  Every action has
+        // a fixed slot; a worker exception is rethrown only after all workers
+        // reach the pool barrier.
+        candidate_workers_->run(action_order.size(), active_workers,
+            [&](std::size_t index, std::size_t, RankUpdateScratch& scratch) {
+          const ExclusionAction& action = *action_order[index];
+          EvaluatedAction& evaluated = evaluated_actions[index];
           const auto candidate_start = std::chrono::steady_clock::now();
           CandidateEvaluation& candidate = evaluated.candidate;
-          candidate = evaluator.evaluate(base, action);
-          const DetectorResultV2 post =
-              JointWindowDetector().evaluateCandidate(candidate, detector_risk);
-          candidate.squared_threshold = post.squared_threshold;
-          candidate.post_detector_passed = post.passed;
-          if (candidate.valid && post.numerically_valid) {
-            Eigen::Vector3d bridge_margin = Eigen::Vector3d::Zero();
+          candidate = evaluator.evaluate(base, action, &scratch);
+          candidate.diagnostics.kernel_evaluated = true;
+          candidate.diagnostics.numerical_valid = candidate.valid;
+          candidate.diagnostics.slow_path = candidate.exact_slow_path;
+          candidate.diagnostics.kernel_ms = std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - candidate_start).count();
+          auto part_start = std::chrono::steady_clock::now();
+          auto part_ms = [&]() {
+            auto now = std::chrono::steady_clock::now();
+            double ms = std::chrono::duration<double, std::milli>(now - part_start).count();
+            part_start = now;
+            return ms;
+          };
+          evaluated.post = JointWindowDetector().evaluateCandidate(
+              candidate, detector_risk);
+          candidate.squared_threshold = evaluated.post.squared_threshold;
+          candidate.post_detector_passed = evaluated.post.passed;
+          candidate.diagnostics.post_ms = part_ms();
+          candidate.wall_ms = std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - candidate_start).count();
+        });
+
+        // Bridge uncertainty depends only on a frozen group/transaction and is
+        // shared by every successful candidate that contains the same bridge.
+        std::map<std::uint64_t, Eigen::VectorXd> bridge_bounds;
+        for (const auto* action : action_order) {
+          if (action->bridge_mode != BridgeMode::GenericKinematic) continue;
+          for (const auto& added : action->added_blocks) {
+            if (added.kind != FactorKind::KinematicBridge ||
+                bridge_bounds.count(added.group_id.value())) continue;
+            const EpochTransaction* bridge_transaction = &transaction;
+            EpochTransaction historical_transaction;
+            const auto historical = indexes.history_by_group.find(added.group_id.value());
+            if (historical != indexes.history_by_group.end()) {
+              const auto& history = *historical->second;
+              historical_transaction.previous_epoch = history.previous_epoch;
+              historical_transaction.proposed_epoch = history.proposed_epoch;
+              historical_transaction.begin = history.begin;
+              historical_transaction.end = history.end;
+              bridge_transaction = &historical_transaction;
+            }
+            bridge_bounds.emplace(added.group_id.value(),
+                BridgeFactory().uncertainty(*bridge_transaction,
+                    cfg.bridge.generic).deterministic_bound);
+          }
+        }
+
+        std::vector<std::size_t> post_passed;
+        for (std::size_t index = 0; index < evaluated_actions.size(); ++index) {
+          const auto& evaluated = evaluated_actions[index];
+          if (evaluated.candidate.valid && evaluated.post.numerically_valid &&
+              evaluated.post.passed) post_passed.push_back(index);
+        }
+        // Phase 2: bridge/fault mapping/PL only for candidates that passed the
+        // post detector.
+        candidate_workers_->run(post_passed.size(), active_workers,
+            [&](std::size_t passed_index, std::size_t, RankUpdateScratch&) {
+          EvaluatedAction& evaluated = evaluated_actions[post_passed[passed_index]];
+          CandidateEvaluation& candidate = evaluated.candidate;
+          const ExclusionAction& action = candidate.action;
+          auto part_start = std::chrono::steady_clock::now();
+          auto part_ms = [&]() {
+            const auto now = std::chrono::steady_clock::now();
+            const double ms = std::chrono::duration<double, std::milli>(now - part_start).count();
+            part_start = now;
+            return ms;
+          };
+            ProtectionLevelSharedContext shared_pl;
             if (action.bridge_mode == BridgeMode::GenericKinematic) {
               for (const auto& added : action.added_blocks) {
                 if (added.kind != FactorKind::KinematicBridge) continue;
-                const EpochTransaction* bridge_transaction = &transaction;
-                EpochTransaction historical_transaction;
-                for (const auto& history : transaction.recoverable_history) {
-                  const auto group = std::find_if(
-                      history.groups.begin(), history.groups.end(),
-                      [&](const PendingFactorGroup& value) {
-                        return value.id == added.group_id;
-                      });
-                  if (group == history.groups.end()) continue;
-                  historical_transaction.previous_epoch = history.previous_epoch;
-                  historical_transaction.proposed_epoch = history.proposed_epoch;
-                  historical_transaction.begin = history.begin;
-                  historical_transaction.end = history.end;
-                  bridge_transaction = &historical_transaction;
-                  break;
-                }
-                const BridgeUncertainty uncertainty = BridgeFactory().uncertainty(
-                    *bridge_transaction, cfg.bridge.generic);
-                const Eigen::MatrixXd bridge_gain = candidate.covarianceTimes(
-                    added.jacobian_whitened.transpose());
-                bridge_margin += BridgeFactory().propagateBoxMargin(
-                    window.protected_state_map, bridge_gain,
-                    uncertainty.deterministic_bound);
+                FrozenBridgeProjection bridge;
+                bridge.jacobian_whitened = added.jacobian_whitened;
+                bridge.deterministic_bound = bridge_bounds.at(
+                    added.group_id.value());
+                shared_pl.bridges.push_back(std::move(bridge));
               }
             }
+            candidate.diagnostics.bridge_ms = part_ms();
             auto projected_modes = projectPostActionModes(
-                window, transaction, models, action);
-            const auto fault_map_provider = [&](const FaultHypothesisV2& hypothesis) {
-              int columns = 0;
-              for (const auto id : hypothesis.modes) {
-                const auto found = projected_modes.mode_maps.find(id.value());
-                if (found != projected_modes.mode_maps.end()) {
-                  columns += found->second.cols();
-                }
-              }
-              Eigen::MatrixXd map = Eigen::MatrixXd::Zero(
-                  candidate.rows, columns);
-              int column = 0;
-              for (const auto id : hypothesis.modes) {
-                const auto found = projected_modes.mode_maps.find(id.value());
-                if (found == projected_modes.mode_maps.end()) continue;
-                map.middleCols(column, found->second.cols()) = found->second;
-                column += found->second.cols();
-              }
-              return map;
-            };
-            evaluated.protection_level = ProtectionLevelV2().computeStreaming(
-                    window, candidate, post, &projected_modes.hypotheses,
-                    fault_map_provider, cfg.risk_v2, bridge_margin);
+                window, transaction, models, action, indexes);
+            shared_pl.mode_maps = std::move(projected_modes.mode_maps);
+            candidate.diagnostics.fault_map_ms = part_ms();
+            evaluated.protection_level = ProtectionLevelV2().computeShared(
+                    window, &candidate, evaluated.post,
+                    &projected_modes.hypotheses, shared_pl, cfg.risk_v2);
             evaluated.has_protection_level = true;
+            candidate.diagnostics.pl_evaluated = true;
+            candidate.diagnostics.pl_ms = part_ms();
             const auto& pl = evaluated.protection_level;
             candidate.pl_xyz_m = pl.pl_xyz_m;
             candidate.hpl_m = pl.hpl_m;
@@ -1499,50 +1668,22 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
             if (!pl.model_valid && candidate.reason.empty()) {
               candidate.reason = pl.reason;
             }
-          }
-          candidate.wall_ms = std::chrono::duration<double, std::milli>(
-              std::chrono::steady_clock::now() - candidate_start).count();
-          return evaluated;
-        };
-        // Exactly four immutable workers are used on the production path.
-        // Workers only read the frozen transaction/window/model set. Results
-        // are merged and sorted by action ID before FDE, making scheduling
-        // irrelevant to the winner.
-        constexpr std::size_t kCandidateWorkers = 4;
-        const char* worker_override = std::getenv("UWB_IMU_PL_CANDIDATE_WORKERS");
-        const std::size_t active_workers = worker_override &&
-            std::string(worker_override) == "1" ? 1 : kCandidateWorkers;
-        std::vector<std::future<std::vector<EvaluatedAction>>> futures;
-        futures.reserve(active_workers);
-        for (std::size_t worker = 0; worker < active_workers; ++worker) {
-          futures.push_back(std::async(std::launch::async, [&, worker]() {
-            std::vector<EvaluatedAction> local;
-            for (std::size_t index = worker; index < models.actions.size();
-                 index += active_workers) {
-              local.push_back(evaluate_action(models.actions[index]));
-            }
-            return local;
-          }));
-        }
-        std::vector<EvaluatedAction> evaluated_actions;
-        for (auto& future : futures) {
-          auto local = future.get();
-          evaluated_actions.insert(evaluated_actions.end(),
-                                   std::make_move_iterator(local.begin()),
-                                   std::make_move_iterator(local.end()));
-        }
-        std::sort(evaluated_actions.begin(), evaluated_actions.end(),
-                  [](const EvaluatedAction& left, const EvaluatedAction& right) {
-          return left.candidate.action.id < right.candidate.action.id;
+          candidate.wall_ms = candidate.diagnostics.kernel_ms +
+              candidate.diagnostics.post_ms + candidate.diagnostics.bridge_ms +
+              candidate.diagnostics.fault_map_ms + candidate.diagnostics.pl_ms;
         });
         for (auto& evaluated : evaluated_actions) {
+          auto& candidate = evaluated.candidate;
+          if (!candidate.diagnostics.pl_evaluated) candidate.diagnostics.skip_reason =
+              !candidate.diagnostics.numerical_valid ? "numerical rejection" : "post detector failed";
           if (evaluated.has_protection_level) {
-            candidate_pl[evaluated.candidate.action.id.value()] =
+            candidate_pl[candidate.action.id.value()] =
                 evaluated.protection_level;
           }
-          candidates.push_back(std::move(evaluated.candidate));
+          candidates.push_back(std::move(candidate));
         }
         record_stage("candidate_evaluation", true);
+        start_operation("fde_decision");
         DetectorResultV2 fde_trigger = all_in;
         if (hardware_barrier) {
           fde_trigger.passed = false;
@@ -1551,8 +1692,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
         FdeDecision decision = FdeManager().decide(
             fde_trigger, models.hypotheses, evidence, &candidates, cfg.risk_v2);
         record_stage("fde_decision", true);
+        start_operation("candidate_audit");
         for (const auto& candidate : candidates) {
           CandidateAuditRecord record;
+          record.diagnostics = candidate.diagnostics;
           record.action_id = candidate.action.id.value();
           record.action_type = candidate.action.action_model_id;
           for (const auto& source : candidate.action.physical_source_ids) {
@@ -1592,6 +1735,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
           record.reason = candidate.reason;
           output.candidate_audit.push_back(std::move(record));
         }
+        record_stage("candidate_audit");
+        start_operation("finalize_commit_audit");
         if (!decision.commit_allowed || !decision.selected_action) {
           if (all_in.passed) {
             commit_best_effort(decision.status, decision.reason);
@@ -1602,7 +1747,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
           reason.controlled_reinitialization_required =
               decision.status == FdeStatus::BridgeTimeout ||
               decision.status == FdeStatus::HistoryPriorContaminated;
-          const DiscardReceipt receipt = estimator_->discardEpoch(
+          const DiscardReceipt receipt = timed_discard(
               std::move(transaction), reason);
           health_ = pending_health;
           output.timestamp = receipt.last_committed_timestamp;
@@ -1700,6 +1845,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
                 bridge_uncertainty.optimization_covariance.diagonal();
             bridge.bound = bridge_uncertainty.deterministic_bound.head<3>();
             bridge.control_available = false;
+            bridge.bias_continuity_maneuver_margin_applied = false;
             bridge.active = true;
             bridge.timeout = false;
             bridge.status = "ACTIVE";
@@ -1709,7 +1855,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
               (void)pending_health.fail("generic_bridge", "BRIDGE_TIMEOUT");
               DiscardReason reason{FdeStatus::BridgeTimeout, "BRIDGE_TIMEOUT",
                                    true};
-              const auto receipt = estimator_->discardEpoch(
+              const auto receipt = timed_discard(
                   std::move(transaction), reason);
               health_ = pending_health;
               output.timestamp = receipt.last_committed_timestamp;
@@ -1743,7 +1889,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
                        id != transaction.generic_bridge_group.id &&
                        id != transaction.generic_bias_continuity_group.id;
               });
-          const CommitReceipt receipt = estimator_->commitEpoch(
+          const CommitReceipt receipt = timed_commit(
               std::move(transaction), plan);
           health_ = pending_health;
           output.backend_updates = receipt.backend_updates;
@@ -1805,11 +1951,29 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
         std::numeric_limits<double>::quiet_NaN();
     output.global_detector.numerically_valid =
         std::isfinite(output.global_detector.statistic);
+    record_stage("finalize_commit_audit");
+    double nested_ms = 0.0;
+    for (const auto& stage : output.stage_timings)
+      if (stage.stage == "commit" || stage.stage == "discard" || stage.stage == "state_audit")
+        nested_ms += stage.wall_ms;
+    output.stage_timings.back().wall_ms = std::max(0.0, output.stage_timings.back().wall_ms - nested_ms);
+    output.stage_timings.back().reason = "excludes separately timed commit/discard/state audit";
     output.global_detector.reason = estimator_->globalDiagnosticsEnabled()
         ? "independent empirical calibration required"
         : "disabled on formal/performance path";
     return output;
   } catch (...) {
+    auto existing = std::find_if(output.stage_timings.begin(), output.stage_timings.end(),
+        [&](const StageTiming& timing) { return timing.stage == executing_stage; });
+    if (existing == output.stage_timings.end()) {
+      output.stage_timings.push_back({executing_stage, 0.0, false, "EXCEPTION", "processing exception"});
+      existing = std::prev(output.stage_timings.end());
+    }
+    existing->wall_ms = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - operation_start).count();
+    existing->status = "EXCEPTION"; existing->success = false;
+    existing->reason = "processing exception; see attempt reason";
+    last_attempt_output_ = std::move(output);
     if (estimator_->hasPendingEpoch()) {
       DiscardReason reason;
       reason.status = FdeStatus::ModelInvalid;

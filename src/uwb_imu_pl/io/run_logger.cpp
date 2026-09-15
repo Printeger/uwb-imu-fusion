@@ -97,6 +97,22 @@ RunLogger::RunLogger(const std::string& output_directory,
     : directory_(output_directory), write_residuals_(write_residuals),
       write_timing_(write_timing) {
   boost::filesystem::create_directories(directory_);
+  timing_links_.open(directory_ + "/diagnostic_timing_links.csv");
+  requireOpen(timing_links_, "diagnostic_timing_links.csv");
+  timing_links_ << "timing_row,input_attempt_id,transaction_id,window_id,stage\n";
+  attempts_.open(directory_ + "/diagnostic_attempts.csv");
+  diagnostic_stages_.open(directory_ + "/diagnostic_stages.csv");
+  diagnostic_candidates_.open(directory_ + "/diagnostic_candidates.csv");
+  requireOpen(attempts_, "diagnostic_attempts.csv");
+  requireOpen(diagnostic_stages_, "diagnostic_stages.csv");
+  requireOpen(diagnostic_candidates_, "diagnostic_candidates.csv");
+  attempts_ << std::setprecision(17);
+  diagnostic_stages_ << std::setprecision(17);
+  diagnostic_candidates_ << std::setprecision(17);
+  const std::string identity = "schema_version,input_attempt_id,input_timestamp_ns,transaction_id,window_id,graph_version,ordering_version,noise_model_version,linpoint_version,output_timestamp_ns,";
+  attempts_ << identity << "frozen_group_ids,backend_epoch_before,backend_epoch_after,pending_duration_s,raw_imu_samples,consecutive_rejections,marginalization_count,factor_block_cache_hits,factor_block_cache_misses,factor_block_cache_invalidations,statistical_cache_hits,statistical_cache_misses,cache_entries,cache_bytes,cache_invalidation_reason,status,reason\n";
+  diagnostic_stages_ << identity << "stage,status,wall_ms,reason\n";
+  diagnostic_candidates_ << identity << "action_id,kernel_evaluated,numerical_valid,post_passed,pl_evaluated,coverage_rejected,selected,slow_path,near_gate,recovered_replacement,numerical_path,fallback_reason,skip_reason,cache_hits,certificate_passed,condition_value_kind,condition_lower_bound,condition_upper_bound,certificate_margin,matrix_free_step_rejected,covariance_solve_count,scratch_reuse_count,kernel_ms,post_ms,bridge_ms,fault_map_ms,pl_ms\n";
   states_.open(directory_ + "/states.csv");
   if (write_residuals_) residuals_.open(directory_ + "/residuals.csv");
   integrity_.open(directory_ + "/integrity.csv");
@@ -289,6 +305,50 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
              << csv(o.reinitialization_phase) << ','
              << csv(o.reinitialization_reason) << ','
              << csv(p.reason) << '\n';
+  if (o.diagnostics.input_attempt_id) {
+    const auto& d = o.diagnostics;
+    auto identity = [&](std::ostream& stream) -> std::ostream& {
+      return stream << "uwb-imu-pl/gate-d-diagnostics/v4," << d.input_attempt_id << ','
+          << d.input_timestamp.value() << ',' << o.transaction_id << ',' << o.window_id << ','
+          << o.base_graph_version << ',' << d.ordering_version << ','
+          << d.noise_model_version << ',' << o.linearization_version << ',' << o.timestamp.value() << ',';
+    };
+    identity(attempts_) << csv(joinIds(d.frozen_group_ids)) << ',' << d.backend_epoch_before << ',' << d.backend_epoch_after << ','
+        << d.pending_duration_s << ',' << d.raw_imu_samples << ',' << d.consecutive_rejections << ','
+        << d.marginalization_count << ',' << d.factor_block_cache_hits << ','
+        << d.factor_block_cache_misses << ',' << d.factor_block_cache_invalidations << ','
+        << d.statistical_cache_hits << ',' << d.statistical_cache_misses << ','
+        << d.cache_entries << ',' << d.cache_bytes << ','
+        << csv(d.cache_invalidation_reason) << ',' << csv(d.status) << ','
+        << csv(d.reason) << '\n';
+    for (const auto& stage : o.stage_timings) {
+      identity(diagnostic_stages_) << csv(stage.stage) << ',' << csv(stage.status) << ',';
+      if (stage.status != "SKIPPED") diagnostic_stages_ << stage.wall_ms;
+      diagnostic_stages_ << ',' << csv(stage.reason) << '\n';
+    }
+    for (const auto& candidate : o.candidate_audit) {
+      const auto& c = candidate.diagnostics;
+      identity(diagnostic_candidates_) << candidate.action_id << ',' << c.kernel_evaluated << ','
+          << c.numerical_valid << ',' << candidate.post_detector_passed << ',' << c.pl_evaluated << ','
+          << !candidate.covers_plausible_set << ',' << candidate.selected << ',' << c.slow_path << ','
+          << c.near_gate << ',' << c.recovered_replacement << ',' << csv(c.numerical_path) << ','
+          << csv(c.fallback_reason) << ',' << csv(c.skip_reason) << ',' << c.cache_hits << ','
+          << c.certificate_passed << ',' << csv(c.condition_value_kind) << ','
+          << c.condition_lower_bound << ',' << c.condition_upper_bound << ','
+          << c.certificate_margin << ',' << c.matrix_free_step_rejected << ','
+          << c.covariance_solve_count << ',' << c.scratch_reuse_count << ',';
+      if (c.kernel_evaluated) diagnostic_candidates_ << c.kernel_ms;
+      diagnostic_candidates_ << ',';
+      if (c.kernel_evaluated) diagnostic_candidates_ << c.post_ms;
+      diagnostic_candidates_ << ',';
+      if (c.pl_evaluated) diagnostic_candidates_ << c.bridge_ms;
+      diagnostic_candidates_ << ',';
+      if (c.pl_evaluated) diagnostic_candidates_ << c.fault_map_ms;
+      diagnostic_candidates_ << ',';
+      if (c.pl_evaluated) diagnostic_candidates_ << c.pl_ms;
+      diagnostic_candidates_ << '\n';
+    }
+  }
   transactions_ << o.timestamp.value() << ',' << o.transaction_id << ','
                 << o.window_id << ',' << o.base_graph_version << ','
                 << o.linearization_version << ',' << o.selected_action_id << ','
@@ -320,8 +380,12 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
                 << c.valid << ','
                 << c.post_detector_passed << ',' << c.covers_plausible_set << ','
                 << c.statistic << ',' << c.threshold << ',' << c.rank << ','
-                << c.dof << ',' << c.condition_number << ','
-                << c.information_logdet << ',' << c.risk_allocation << ','
+                << c.dof << ',';
+    if (c.diagnostics.condition_value_kind == "EXACT_SVD" ||
+        c.diagnostics.condition_value_kind == "EXACT_BASE") {
+      candidates_ << c.condition_number;
+    }
+    candidates_ << ',' << c.information_logdet << ',' << c.risk_allocation << ','
                 << c.hpl_m << ',' << c.vpl_m << ',' << c.selected << ','
                 << c.wall_ms << ','
                 << csv(c.reason) << '\n';
@@ -374,6 +438,9 @@ void RunLogger::writeTiming(TimestampNs t, const std::string& stage,
 
 void RunLogger::writeTiming(const TimingRecord& record) {
   if (!write_timing_) return;
+  ++timing_row_;
+  if (record.input_attempt_id) timing_links_ << timing_row_ << ',' << record.input_attempt_id << ','
+      << record.transaction_id << ',' << record.window_id << ',' << csv(record.stage) << '\n';
   timing_ << record.timestamp.value() << ',' << record.epoch << ','
           << csv(record.stage) << ',' << record.wall_ms << ','
           << record.problem_size << ',' << record.hypothesis_count << ','

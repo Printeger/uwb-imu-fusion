@@ -108,9 +108,18 @@ int main(int argc, char** argv) {
       }
       const std::uint64_t marginalizations_before = estimator.marginalizationCount();
       const auto start = std::chrono::steady_clock::now();
-      auto result = pipeline.processUwbBatch(batch);
+      uwb_imu_pl::IntegrityOutput result;
+      try {
+        result = pipeline.processUwbBatch(batch);
+      } catch (...) {
+        logger.writeIntegrity(pipeline.lastAttemptOutput());
+        throw;
+      }
       const double core_ms = std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now()-start).count();
+      for (auto& stage : result.stage_timings) {
+        if (stage.stage == "core_total") stage.wall_ms = core_ms;
+      }
       for (const auto& candidate : result.candidate_audit) {
         if (std::isfinite(candidate.wall_ms)) {
           candidate_wall_ms.push_back(candidate.wall_ms);
@@ -126,6 +135,8 @@ int main(int argc, char** argv) {
       const std::size_t epoch = estimator.currentEpoch();
       auto timing = [&](const std::string& stage, double value, bool success=true) {
         uwb_imu_pl::TimingRecord record;
+        record.input_attempt_id = result.diagnostics.input_attempt_id;
+        record.transaction_id = result.transaction_id; record.window_id = result.window_id;
         record.timestamp = result.timestamp; record.epoch = epoch;
         record.stage = stage; record.wall_ms = value;
         record.problem_size = batch.measurements.size();
@@ -140,7 +151,8 @@ int main(int argc, char** argv) {
       timing("current_joint_marginal", estimator.lastMarginalMs());
       timing("snapshot_extraction", estimator.lastSnapshotExtractionMs());
       for (const auto& stage : result.stage_timings) {
-        timing(stage.stage, stage.wall_ms, stage.success);
+        if (stage.stage != "core_total" && stage.status == "EXECUTED")
+          timing(stage.stage, stage.wall_ms, stage.success);
       }
       timing(result.batch_committed ? "uwb_commit" : "uwb_reject",
              estimator.lastUwbUpdateMs());

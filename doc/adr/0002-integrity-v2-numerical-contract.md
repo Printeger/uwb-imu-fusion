@@ -36,3 +36,23 @@ All releases produced by this ADR remain `IMPLEMENTED_UNVERIFIED` and
 `formal_eligible=false` until the v4 manifest contains non-empty independent
 risk, noise-overbound, and bridge calibration IDs plus completed independent
 equation/code review.
+
+
+P0–P2 implementation clarification (development evidence only): replacements
+add their alternative whitened blocks before removing the old blocks. All
+changes target the same final normal system, information RHS and residual
+energy. A failed low-rank intermediate triggers a final-Jacobian reference
+check; it is not by itself a final-candidate rejection. Changed candidates
+that reach full checking use exact final-Jacobian SVD rank and condition
+values. KEEP_ALL reuses the exact frozen base result. Neither base-condition
+copying for changed candidates nor a Cholesky diagonal ratio is a pass gate.
+
+The unchanged Euclidean step limit is 0.25. An early rejection requires a
+conservative QR solution-error bound proving that the final solution exceeds
+it; inconclusive or near-boundary cases use the SVD reference. Triangular
+solves and covariance queries are streamed rather than constructing a full
+inverse online. Cache entries are immutable before workers start, scoped to
+one frozen base, and compared against complete block content and versions.
+A post-detector failure skips bridge/fault-map/PL work, while the diagnostic
+attachment retains the separate numerical-validity result. No hypotheses or
+actions are pruned by coverage before kernel execution.

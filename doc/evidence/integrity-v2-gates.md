@@ -78,3 +78,31 @@ Machine-readable manifests therefore keep
   p99 1705.42 ms and max 1743.52 ms; the one-worker p99 was 2221.89 ms. The
   machine result is correctly `FAIL` against the 40 ms requirement. The raw
   smoke artifacts stay outside the repository.
+
+## Round-three closure implementation
+
+Round three keeps the numerical thresholds, sample counts and seed domains from
+round two.  The frozen extension is
+`config/integrity_round3_protocol.json`; `tools/run_integrity_round3.py` refuses
+to start the formal matrix while `formal_matrix_authorized=false`.
+
+The pilot/formal execution path writes exactly four deterministic JSONL task
+shards and feeds each shard to one long-lived C++ `--bulk` worker.  Every output
+row carries and hashes the code SHA, protocol SHA, cell, domain, ordinal, seed
+and shard.  Resume accepts only an exact output prefix; malformed trailing bytes
+are removed, while a complete identity/checksum mismatch invalidates the run.
+The analyzer streams those shards and never materializes the 1,347,332 formal
+outcomes or one future per outcome.
+
+Gate B/C verdicts now come only from named transaction/window/ledger tests.
+The shared analytic H0/noncentral campaign is labelled calibration prerequisite
+and cannot produce a B/C PASS.  Gate H's machine field is produced by replaying
+the same raw stream twice and comparing hypothesis census, plausible count,
+selected action and selected sources; it is no longer a constant.  Gate F/I
+interval faults modify all ten 200 Hz samples in each affected 20 Hz interval,
+including continuous and 3-fault/2-clean schedules.
+
+The committed gap snapshot is `doc/evidence/round3_gap_audit.json` and readiness
+is `doc/evidence/round3_readiness.json`.  They deliberately retain
+`IMPLEMENTED_UNVERIFIED`, `formal_eligible=false`, `gate_j_complete=false` and
+`gates_a_to_i_complete=false`.

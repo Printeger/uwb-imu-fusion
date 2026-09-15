@@ -133,8 +133,32 @@ struct RunResult {
   bool backend_update_violation = false;
   bool replay_key_valid = true;
   bool bridge_coverage_verified = false;
+  bool bridge_component_coverage_verified = true;
   bool bridge_timeout_verified = false;
+  bool bridge_control_unavailable = true;
+  bool bias_continuity_has_no_maneuver_margin = false;
+  bool first_clean_uwb_unavailable = false;
+  bool history_replacement_verified = false;
+  bool history_prior_contaminated = false;
+  bool raw_interval_injection_verified = false;
+  bool threshold_replay_invariant = false;
+  bool risk_budget_closed = false;
   int bridge_epochs_observed = 0;
+  int injected_imu_samples = 0;
+  int expected_injected_imu_samples = 0;
+  int hypothesis_count = 0;
+  int plausible_count = 0;
+  int local_diagnostic_exceedances = 0;
+  int diagnostic_low_exceedances = 0;
+  int diagnostic_high_exceedances = 0;
+  int monitorability_rank = 0;
+  double monitorability_sigma_min = 0.0;
+  double monitorability_condition = std::numeric_limits<double>::infinity();
+  Eigen::Vector3d monitorability_slope = Eigen::Vector3d::Constant(
+      std::numeric_limits<double>::infinity());
+  Eigen::Vector3d maximum_error = Eigen::Vector3d::Zero();
+  Eigen::Vector3d maximum_bridge_component = Eigen::Vector3d::Zero();
+  std::uint64_t selected_action_id = 0;
   bool model_valid_at_evaluation = false;
   bool detector_valid_at_evaluation = false;
   std::string selected_sources;
@@ -280,7 +304,9 @@ bool verifyReinitializationSequence() {
 
 RunResult simulate(const uwb_imu_pl::IntegrityConfig& config,
                    const std::string& cell, std::uint64_t seed,
-                   bool inject, double uwb_boundary, double imu_boundary) {
+                   bool inject, double uwb_boundary, double imu_boundary,
+                   double local_diagnostic_threshold =
+                       std::numeric_limits<double>::infinity()) {
   RunResult result;
   result.boundary_uwb = uwb_boundary;
   result.boundary_imu = imu_boundary;
@@ -298,7 +324,10 @@ RunResult simulate(const uwb_imu_pl::IntegrityConfig& config,
   const double ratio = numberField(cell, "ratio", 1.0);
   const double uwb_ratio = numberField(cell, "uwb_ratio", ratio);
   const double imu_ratio = numberField(cell, "imu_ratio", ratio);
-  const int bridge_length = static_cast<int>(numberField(cell, "bridge_length", 0));
+  const int configured_bridge_length = static_cast<int>(
+      numberField(cell, "bridge_length", 0));
+  const int bridge_length = name == "bridge_timeout_reinit"
+      ? 21 : configured_bridge_length;
   const int anchor_count = activeAnchors(geometry, config.anchors.size());
   const int onset_offset = static_cast<int>(numberField(cell, "onset_offset", 0));
   int uwb_onset = static_cast<int>(numberField(
@@ -360,12 +389,21 @@ RunResult simulate(const uwb_imu_pl::IntegrityConfig& config,
         imu.angular_velocity_radps(component) += config.imu.gyroscope_sigma *
             random.normal(counter, 3 + component);
       }
-      const bool bridge_fault = gate == "G" && epoch >= imu_epoch &&
+      const bool bridge_fault = (gate == "G" || name == "bridge_timeout_reinit") &&
+          epoch >= imu_epoch &&
           epoch < imu_epoch + std::max(1, bridge_length);
-      const bool imu_fault = inject && (epoch == imu_epoch || bridge_fault) &&
+      const bool continuous_fault = name == "continuous_interval_imu" &&
+          epoch >= imu_epoch;
+      const bool intermittent_fault = name == "intermittent_3_fault_2_clean" &&
+          epoch >= imu_epoch && ((epoch - imu_epoch) % 5) < 3;
+      const bool interval_fault = epoch == imu_epoch;
+      const bool imu_fault = inject &&
+          (interval_fault || bridge_fault || continuous_fault || intermittent_fault) &&
           (gate == "F" || gate == "G" || gate == "H" ||
            name.find("imu") != std::string::npos ||
-           name.find("intermittent") != std::string::npos);
+           name.find("intermittent") != std::string::npos ||
+           name == "bridge_timeout_reinit");
+      if (imu_fault) ++result.expected_injected_imu_samples;
       if (imu_fault && std::isfinite(imu_boundary)) {
         const int signed_axis = axis % 3;
         const double sign = (seed & 1) ? 1.0 : -1.0;
@@ -374,6 +412,7 @@ RunResult simulate(const uwb_imu_pl::IntegrityConfig& config,
         } else {
           imu.specific_force_mps2(signed_axis) += sign * imu_ratio * imu_boundary;
         }
+        ++result.injected_imu_samples;
       }
       pipeline.ingestImu(imu);
     }
@@ -404,7 +443,8 @@ RunResult simulate(const uwb_imu_pl::IntegrityConfig& config,
           epoch >= uwb_onset && ((epoch - uwb_onset) % 5) < 3;
       const bool uwb_fault = inject && fault_mode != "nominal" && active &&
           (gate == "E" || gate == "H" || name.find("uwb") != std::string::npos ||
-           name.find("intermittent") != std::string::npos) &&
+           name.find("intermittent") != std::string::npos ||
+           name.find("late_detection") != std::string::npos) &&
           static_cast<int>(anchor_record.id.value()) == target_anchor;
       if (uwb_fault && std::isfinite(uwb_boundary)) {
         double scale = uwb_ratio * uwb_boundary;
@@ -436,6 +476,19 @@ RunResult simulate(const uwb_imu_pl::IntegrityConfig& config,
         output.reinitialization_phase == "REQUESTED") {
       timeout_requested = true;
     }
+    if (!output.historical_groups_removed.empty() &&
+        !output.historical_groups_added.empty() && output.backend_updates == 1) {
+      result.history_replacement_verified = true;
+    }
+    result.history_prior_contaminated = result.history_prior_contaminated ||
+        output.fde_status == "HISTORY_PRIOR_CONTAMINATED";
+    if (output.protection_level.reason.find("first clean UWB") !=
+        std::string::npos) {
+      result.first_clean_uwb_unavailable =
+          output.protection_level.availability ==
+              uwb_imu_pl::Availability::Unavailable &&
+          !output.protection_level.formal_eligible;
+    }
     if (timeout_requested && pipeline.reinitializationDirective().state ==
         uwb_imu_pl::ReinitializationState::Reinitialized) {
       timeout_reinitialized = true;
@@ -444,6 +497,32 @@ RunResult simulate(const uwb_imu_pl::IntegrityConfig& config,
       result.model_valid_at_evaluation = output.measurement_model_valid;
       result.detector_valid_at_evaluation = output.detector.numerically_valid;
       result.evaluation_reason = output.detector.reason;
+      result.hypothesis_count = static_cast<int>(output.hypothesis_audit.size());
+      result.plausible_count = static_cast<int>(std::count_if(
+          output.hypothesis_audit.begin(), output.hypothesis_audit.end(),
+          [](const auto& item) { return item.plausible; }));
+      result.selected_action_id = output.selected_action_id;
+      result.risk_budget_closed = output.protection_level.risk_budget_valid;
+      result.local_diagnostic_exceedances = static_cast<int>(std::count_if(
+          output.detector.local_anchor_scores.begin(),
+          output.detector.local_anchor_scores.end(),
+          [&](double score) { return score > local_diagnostic_threshold; }));
+      const bool gyro = sensor == "gyro" || imu_axis_name.find("gyro") == 0;
+      const std::string expected_source = gate == "E"
+          ? "uwb:" + std::to_string(target_anchor)
+          : std::string(gyro ? "imu_gyro:" : "imu_accel:") +
+                std::to_string(axis) + ":interval:" + std::to_string(imu_epoch);
+      const auto audit = std::find_if(
+          output.hypothesis_audit.begin(), output.hypothesis_audit.end(),
+          [&](const auto& item) {
+            return item.physical_source_ids == expected_source;
+          });
+      if (audit != output.hypothesis_audit.end()) {
+        result.monitorability_rank = audit->fault_rank;
+        result.monitorability_sigma_min = audit->sigma_min;
+        result.monitorability_condition = audit->condition_number;
+        result.monitorability_slope = audit->slope_xyz;
+      }
     }
     if (!inject && epoch == evaluation_epoch) {
       const std::string uwb_kind = fault_mode == "ramp" ? "RAMP" :
@@ -534,6 +613,9 @@ RunResult simulate(const uwb_imu_pl::IntegrityConfig& config,
       }
     }
     const Eigen::Vector3d error = (output.state.position_world_m - truth.position).cwiseAbs();
+    result.maximum_error = result.maximum_error.cwiseMax(error);
+    result.maximum_bridge_component = result.maximum_bridge_component.cwiseMax(
+        output.bridge_component_m.cwiseAbs());
     const Eigen::Vector3d pl = output.protection_level.pl_xyz_m;
     const bool finite_pl = pl.allFinite();
     const bool covered = finite_pl && (error.array() <= pl.array()).all();
@@ -542,6 +624,16 @@ RunResult simulate(const uwb_imu_pl::IntegrityConfig& config,
     }
     if (output.bridge_audit && output.bridge_audit->active && !covered) {
       bridge_covered = false;
+    }
+    if (output.bridge_audit && output.bridge_audit->active) {
+      result.bridge_control_unavailable = result.bridge_control_unavailable &&
+          !output.bridge_audit->control_available;
+      result.bias_continuity_has_no_maneuver_margin =
+          result.bias_continuity_has_no_maneuver_margin ||
+          !output.bridge_audit->bias_continuity_maneuver_margin_applied;
+      if ((error.array() > output.bridge_component_m.array()).any()) {
+        result.bridge_component_coverage_verified = false;
+      }
     }
     if (epoch >= evaluation_epoch) {
       result.protected_available = epoch_research_available &&
@@ -555,7 +647,25 @@ RunResult simulate(const uwb_imu_pl::IntegrityConfig& config,
   result.nominal_false_exclusion = fault_mode == "nominal" &&
       !result.selected_sources.empty();
   result.bridge_coverage_verified = bridge_seen && bridge_covered;
+  result.bridge_control_unavailable = bridge_seen &&
+      result.bridge_control_unavailable;
+  result.bias_continuity_has_no_maneuver_margin = bridge_seen &&
+      result.bias_continuity_has_no_maneuver_margin;
+  if (bridge_seen && result.maximum_bridge_component.maxCoeff() > 0.0) {
+    result.bridge_component_coverage_verified =
+        result.bridge_component_coverage_verified &&
+        (result.maximum_error.array() <=
+         result.maximum_bridge_component.array()).all();
+  } else {
+    result.bridge_component_coverage_verified = false;
+  }
   result.bridge_timeout_verified = timeout_requested && timeout_reinitialized;
+  result.raw_interval_injection_verified = !inject ||
+      !(gate == "F" || name.find("imu") != std::string::npos ||
+        name.find("intermittent") != std::string::npos) ||
+      (result.expected_injected_imu_samples >= 10 &&
+       result.injected_imu_samples == result.expected_injected_imu_samples &&
+       result.injected_imu_samples % 10 == 0);
   return result;
 }
 
@@ -568,16 +678,17 @@ std::string jsonNumber(double value) {
   return stream.str();
 }
 
-}  // namespace
+bool sameDecisionSignature(const RunResult& left, const RunResult& right) {
+  return left.valid == right.valid && left.detected == right.detected &&
+      left.hypothesis_count == right.hypothesis_count &&
+      left.plausible_count == right.plausible_count &&
+      left.selected_action_id == right.selected_action_id &&
+      left.selected_sources == right.selected_sources &&
+      left.plausible_sources == right.plausible_sources;
+}
 
-int main(int argc, char** argv) {
-  if (argc != 4) {
-    std::cerr << "usage: integrity_round2_scenario CONFIG CELL_JSON SEED\n";
-    return 2;
-  }
-  try {
-    const std::string cell = argv[2];
-    const std::uint64_t seed = std::stoull(argv[3]);
+std::string runScenario(const std::string& config_path,
+                        const std::string& cell, std::uint64_t seed) {
     uwb_imu_pl::IntegrityConfigOverrides overrides;
     overrides.seed = seed;
     overrides.fixed_lag_epochs = stringField(cell, "estimator_mode") ==
@@ -585,7 +696,7 @@ int main(int argc, char** argv) {
     overrides.write_residuals = false;
     overrides.write_timing = false;
     overrides.write_global_diagnostics = false;
-    auto config = uwb_imu_pl::IntegrityConfigLoader::load(argv[1], overrides);
+    auto config = uwb_imu_pl::IntegrityConfigLoader::load(config_path, overrides);
     if (stringField(cell, "gate") == "F") {
       config.integrity_window.epochs = static_cast<std::uint32_t>(
           std::max(1.0, numberField(cell, "window", 20)));
@@ -606,11 +717,9 @@ int main(int argc, char** argv) {
                                        std::numeric_limits<double>::infinity(),
                                        std::numeric_limits<double>::infinity());
     if (!nominal.valid) throw std::runtime_error("nominal counterfactual: " + nominal.reason);
-    const RunResult result = simulate(config, cell, seed, true,
-                                      nominal.boundary_uwb,
-                                      nominal.boundary_imu);
-    const bool safety_failure = result.backend_update_violation ||
-        !result.post_fde_detector_passed || result.hmi;
+    RunResult result = simulate(config, cell, seed, true,
+                                nominal.boundary_uwb,
+                                nominal.boundary_imu);
     const std::string gate = stringField(cell, "gate");
     const std::string name = stringField(cell, "name");
     const bool uwb_monitorable = std::isfinite(result.boundary_uwb);
@@ -624,12 +733,44 @@ int main(int argc, char** argv) {
         verifyHealthRecoverySequence(config.health) :
         name == "bridge_timeout_reinit" ?
             (result.bridge_timeout_verified && verifyReinitializationSequence()) : false;
+    std::string expectation_failure;
+    if (name == "health_recovery" && !state_machine_verified) {
+      expectation_failure = "HEALTH_RECOVERY_SEQUENCE_NOT_VERIFIED";
+    } else if (name == "late_detection_full_history" &&
+               !result.history_replacement_verified) {
+      expectation_failure = "LATE_HISTORY_REPLACEMENT_NOT_OBSERVED";
+    } else if (name == "late_detection_fixed_lag" &&
+               !result.history_prior_contaminated) {
+      expectation_failure = "HISTORY_PRIOR_CONTAMINATED_NOT_OBSERVED";
+    } else if (name == "bridge_timeout_reinit" && !state_machine_verified) {
+      expectation_failure = "BRIDGE_TIMEOUT_REINIT_NOT_VERIFIED";
+    }
+    if (gate == "H") {
+      const RunResult diagnostic_low = simulate(
+          config, cell, seed, true, nominal.boundary_uwb, nominal.boundary_imu,
+          0.0);
+      const RunResult diagnostic_high = simulate(
+          config, cell, seed, true, nominal.boundary_uwb, nominal.boundary_imu,
+          std::numeric_limits<double>::infinity());
+      result.diagnostic_low_exceedances =
+          diagnostic_low.local_diagnostic_exceedances;
+      result.diagnostic_high_exceedances =
+          diagnostic_high.local_diagnostic_exceedances;
+      result.threshold_replay_invariant =
+          sameDecisionSignature(diagnostic_low, diagnostic_high);
+    }
+    const bool safety_failure = result.backend_update_violation ||
+        !result.post_fde_detector_passed || result.hmi ||
+        !expectation_failure.empty();
     const std::string status = !result.valid ? "INVALID" :
         (safety_failure ? "FAIL" : "PASS");
-    std::cout << std::setprecision(17)
+    std::ostringstream output;
+    output << std::setprecision(17)
         << "{\"status\":\"" << status << "\","
         << "\"failure_reason\":\"" << (result.valid ?
-              (safety_failure ? "SAFETY_INVARIANT" : "") : "PIPELINE_ERROR") << "\","
+              (!expectation_failure.empty() ? expectation_failure :
+               (safety_failure ? "SAFETY_INVARIANT" : "")) :
+              "PIPELINE_ERROR") << "\","
         << "\"detected\":" << boolean(result.detected) << ','
         << "\"correct_exclusion\":" << boolean(result.correct_exclusion) << ','
         << "\"union_exclusion\":" << boolean(result.union_exclusion) << ','
@@ -648,8 +789,27 @@ int main(int argc, char** argv) {
         << "\"backend_update_violation\":" << boolean(result.backend_update_violation) << ','
         << "\"bridge_coverage_verified\":"
         << boolean(result.bridge_coverage_verified) << ','
+        << "\"bridge_component_coverage_verified\":"
+        << boolean(result.bridge_component_coverage_verified) << ','
+        << "\"bridge_control_unavailable\":"
+        << boolean(result.bridge_control_unavailable) << ','
+        << "\"bias_continuity_has_no_maneuver_margin\":"
+        << boolean(result.bias_continuity_has_no_maneuver_margin) << ','
         << "\"bridge_timeout_verified\":"
         << boolean(result.bridge_timeout_verified) << ','
+        << "\"first_clean_uwb_unavailable\":"
+        << boolean(result.first_clean_uwb_unavailable) << ','
+        << "\"history_replacement_verified\":"
+        << boolean(result.history_replacement_verified) << ','
+        << "\"history_prior_contaminated\":"
+        << boolean(result.history_prior_contaminated) << ','
+        << "\"raw_interval_injection_verified\":"
+        << boolean(result.raw_interval_injection_verified) << ','
+        << "\"risk_budget_closed\":" << boolean(result.risk_budget_closed) << ','
+        << "\"injected_imu_samples\":" << result.injected_imu_samples << ','
+        << "\"expected_injected_imu_samples\":"
+        << result.expected_injected_imu_samples << ','
+        << "\"epochs\":" << result.epochs << ','
         << "\"bridge_epochs_observed\":" << result.bridge_epochs_observed << ','
         << "\"model_valid_at_evaluation\":"
         << boolean(result.model_valid_at_evaluation) << ','
@@ -661,11 +821,68 @@ int main(int argc, char** argv) {
         << "\"boundary_uwb\":" << jsonNumber(result.boundary_uwb) << ','
         << "\"boundary_imu\":" << jsonNumber(result.boundary_imu) << ','
         << "\"geometry_condition\":" << jsonNumber(result.geometry_condition) << ','
+        << "\"hypothesis_count\":" << result.hypothesis_count << ','
+        << "\"plausible_count\":" << result.plausible_count << ','
+        << "\"diagnostic_low_exceedances\":"
+        << result.diagnostic_low_exceedances << ','
+        << "\"diagnostic_high_exceedances\":"
+        << result.diagnostic_high_exceedances << ','
+        << "\"selected_action_id\":" << result.selected_action_id << ','
+        << "\"monitorability_rank\":" << result.monitorability_rank << ','
+        << "\"monitorability_sigma_min\":"
+        << jsonNumber(result.monitorability_sigma_min) << ','
+        << "\"monitorability_condition\":"
+        << jsonNumber(result.monitorability_condition) << ','
+        << "\"monitorability_slope_x\":"
+        << jsonNumber(result.monitorability_slope.x()) << ','
+        << "\"monitorability_slope_y\":"
+        << jsonNumber(result.monitorability_slope.y()) << ','
+        << "\"monitorability_slope_z\":"
+        << jsonNumber(result.monitorability_slope.z()) << ','
+        << "\"maximum_error_x\":" << jsonNumber(result.maximum_error.x()) << ','
+        << "\"maximum_error_y\":" << jsonNumber(result.maximum_error.y()) << ','
+        << "\"maximum_error_z\":" << jsonNumber(result.maximum_error.z()) << ','
+        << "\"maximum_bridge_component_x\":"
+        << jsonNumber(result.maximum_bridge_component.x()) << ','
+        << "\"maximum_bridge_component_y\":"
+        << jsonNumber(result.maximum_bridge_component.y()) << ','
+        << "\"maximum_bridge_component_z\":"
+        << jsonNumber(result.maximum_bridge_component.z()) << ','
         << "\"monitorable\":" << boolean(monitorable) << ','
-        << "\"local_threshold_invariant\":true,"
+        << "\"monitorability_classification\":\""
+        << (monitorable ? "MONITORABLE" : "UNAVAILABLE") << "\","
+        << "\"local_threshold_invariant\":"
+        << boolean(result.threshold_replay_invariant) << ','
         << "\"state_machine_verified\":" << boolean(state_machine_verified) << ','
         << "\"ratio\":" << numberField(cell, "ratio", 1.0)
         << "}\n";
+    return output.str();
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+  if (argc != 3 && argc != 4) {
+    std::cerr << "usage: integrity_round2_scenario CONFIG CELL_JSON SEED\n"
+              << "   or: integrity_round2_scenario --bulk CONFIG\n";
+    return 2;
+  }
+  try {
+    if (argc == 3 && std::string(argv[1]) == "--bulk") {
+      std::string cell;
+      while (std::getline(std::cin, cell)) {
+        if (cell.empty()) continue;
+        const auto seed = static_cast<std::uint64_t>(numberField(cell, "seed", -1));
+        if (seed == static_cast<std::uint64_t>(-1)) {
+          throw std::runtime_error("bulk task has no seed");
+        }
+        std::cout << runScenario(argv[2], cell, seed);
+        std::cout.flush();
+      }
+      return 0;
+    }
+    if (argc != 4) throw std::runtime_error("invalid scenario arguments");
+    std::cout << runScenario(argv[1], argv[2], std::stoull(argv[3]));
   } catch (const std::exception& error) {
     std::cerr << error.what() << '\n';
     return 2;

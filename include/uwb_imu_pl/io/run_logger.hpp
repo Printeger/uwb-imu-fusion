@@ -48,6 +48,11 @@ class RunLogger {
   std::ofstream factor_ledger_;
   std::ofstream health_;
   std::ofstream bridge_;
+  std::ofstream attempts_;
+  std::ofstream timing_links_;
+  std::uint64_t timing_row_ = 0;
+  std::ofstream diagnostic_stages_;
+  std::ofstream diagnostic_candidates_;
   bool write_residuals_ = true;
   bool write_timing_ = true;
   std::uint64_t next_event_sequence_ = 1;

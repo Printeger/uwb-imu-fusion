@@ -212,6 +212,58 @@ struct StageTiming {
   std::string stage;
   double wall_ms = 0.0;
   bool success = true;
+  std::string status = "EXECUTED";
+  std::string reason;
+};
+
+struct CandidateDiagnostics {
+  bool kernel_evaluated = false;
+  bool numerical_valid = false;
+  bool pl_evaluated = false;
+  bool slow_path = false;
+  bool near_gate = false;
+  bool recovered_replacement = false;
+  std::string numerical_path;
+  std::string fallback_reason;
+  std::string skip_reason;
+  std::uint64_t cache_hits = 0;
+  std::uint64_t covariance_solve_count = 0;
+  std::uint64_t scratch_reuse_count = 0;
+  bool certificate_passed = false;
+  bool matrix_free_step_rejected = false;
+  std::string condition_value_kind = "UNCOMPUTED";
+  double condition_lower_bound = std::numeric_limits<double>::quiet_NaN();
+  double condition_upper_bound = std::numeric_limits<double>::quiet_NaN();
+  double certificate_margin = std::numeric_limits<double>::quiet_NaN();
+  double kernel_ms = 0.0;
+  double post_ms = 0.0;
+  double bridge_ms = 0.0;
+  double fault_map_ms = 0.0;
+  double pl_ms = 0.0;
+};
+
+struct AttemptDiagnostics {
+  std::vector<std::uint64_t> frozen_group_ids;
+  std::uint64_t input_attempt_id = 0;
+  TimestampNs input_timestamp;
+  std::uint64_t ordering_version = 0;
+  std::uint64_t noise_model_version = 0;
+  std::uint64_t backend_epoch_before = 0;
+  std::uint64_t backend_epoch_after = 0;
+  std::uint64_t raw_imu_samples = 0;
+  std::uint64_t consecutive_rejections = 0;
+  std::uint64_t marginalization_count = 0;
+  std::uint64_t factor_block_cache_hits = 0;
+  std::uint64_t factor_block_cache_misses = 0;
+  std::uint64_t factor_block_cache_invalidations = 0;
+  std::uint64_t statistical_cache_hits = 0;
+  std::uint64_t statistical_cache_misses = 0;
+  std::size_t cache_entries = 0;
+  std::size_t cache_bytes = 0;
+  std::string cache_invalidation_reason;
+  double pending_duration_s = 0.0;
+  std::string status = "EXECUTED";
+  std::string reason;
 };
 
 struct HypothesisAuditRecord {
@@ -243,6 +295,7 @@ struct HypothesisAuditRecord {
 };
 
 struct CandidateAuditRecord {
+  CandidateDiagnostics diagnostics;
   std::uint64_t action_id = 0;
   std::string action_type;
   std::string physical_source_ids;
@@ -319,12 +372,14 @@ struct BridgeAuditRecord {
   std::string calibration_id;
   Eigen::Vector3d bound = Eigen::Vector3d::Zero();
   bool control_available = false;
+  bool bias_continuity_maneuver_margin_applied = false;
   bool active = false;
   bool timeout = false;
   std::string status;
 };
 
 struct IntegrityOutput {
+  AttemptDiagnostics diagnostics;
   TimestampNs timestamp;
   NavigationState state;
   DetectorResult detector;
@@ -418,6 +473,9 @@ struct RunManifest {
 };
 
 struct TimingRecord {
+  std::uint64_t input_attempt_id = 0;
+  std::uint64_t transaction_id = 0;
+  std::uint64_t window_id = 0;
   TimestampNs timestamp;
   std::uint64_t epoch = 0;
   std::string stage;

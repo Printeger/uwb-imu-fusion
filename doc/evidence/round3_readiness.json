@@ -1,0 +1,23 @@
+{
+  "schema_version": "uwb-imu-pl/round3-readiness/v1",
+  "status": "INVALID",
+  "tested_code_sha": "UNFROZEN_ROUND3_WORKTREE",
+  "protocol_sha256": "57e815c9e99bc6dcb1df6ec069df8cf5d3f485a3b2371ab25b83c49863624e49",
+  "implementation_maturity": "IMPLEMENTED_UNVERIFIED",
+  "formal_eligible": false,
+  "gate_j_complete": false,
+  "gates_a_to_i_complete": false,
+  "formal_matrix_started": false,
+  "gates": {
+    "A": "INVALID",
+    "B": "INVALID",
+    "C": "INVALID",
+    "D": "FAIL",
+    "E": "INVALID",
+    "F": "INVALID",
+    "G": "INVALID",
+    "H": "INVALID",
+    "I": "FAIL"
+  },
+  "reason": "Round-three code freeze, clean dual-build evidence and the full E-I formal matrix are not complete."
+}

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <set>
+#include <map>
 #include <tuple>
 
 namespace uwb_imu_pl {
@@ -72,14 +73,15 @@ FdeDecision FdeManager::decide(
       return decision;
     }
   }
+  std::map<HypothesisId, const FaultHypothesisV2*> hypothesis_index;
+  for (const auto& h : hypotheses) hypothesis_index.emplace(h.id, &h);
   std::vector<std::size_t> eligible;
   for (std::size_t i = 0; i < candidates->size(); ++i) {
     auto& candidate = (*candidates)[i];
     bool covers_all = true;
     for (const auto id : decision.plausible_hypotheses) {
-      const auto found = std::find_if(hypotheses.begin(), hypotheses.end(),
-          [&](const FaultHypothesisV2& h) { return h.id == id; });
-      if (found == hypotheses.end() || !covers(candidate.action, *found)) {
+      const auto found = hypothesis_index.find(id);
+      if (found == hypothesis_index.end() || !covers(candidate.action, *found->second)) {
         covers_all = false;
         break;
       }

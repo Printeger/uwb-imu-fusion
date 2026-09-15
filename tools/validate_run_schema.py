@@ -10,6 +10,9 @@ import pathlib
 import re
 import sys
 
+# Complete 20-epoch hypothesis/evidence ID lists can exceed csv's 128 KiB default.
+csv.field_size_limit(32 * 1024 * 1024)
+
 V1_INTEGRITY = "timestamp_ns,detector,statistic,threshold,dof,passed,global_graph_statistic,uwb_postfit_statistic,conditional_statistic,pl_x,pl_y,pl_z,hpl_m,vpl,availability,label,formal_eligible,risk_budget_valid,allocated_hmi_risk,hmi_risk_requirement,batch_committed,reason"
 V2_HEADERS = {
     "states.csv": "timestamp_ns,state_id,px,py,pz,qw,qx,qy,qz,vx,vy,vz,bax,bay,baz,bgx,bgy,bgz",
@@ -342,11 +345,27 @@ def validate_v5(directory, manifest):
             if replacement and replaces:
                 fail(f"factor_ledger.csv:{line}: both replacement directions are set")
 
+    frozen_groups = {}
+    frozen_candidate_rows = []
+    diagnostic_attempts = directory / "diagnostic_attempts.csv"
+    if diagnostic_attempts.exists():
+        with diagnostic_attempts.open(newline="", encoding="utf-8") as stream:
+            for row in csv.DictReader(stream):
+                if row["schema_version"].endswith(("/v3", "/v4")):
+                    frozen_groups[int(row["input_attempt_id"])] = id_set(row["frozen_group_ids"], "frozen_group_ids")
+        if frozen_groups:
+            with (directory / "diagnostic_candidates.csv").open(newline="", encoding="utf-8") as stream:
+                frozen_candidate_rows = [frozen_groups.get(int(row["input_attempt_id"]))
+                                         for row in csv.DictReader(stream)]
     with (directory / "candidates.csv").open(newline="", encoding="utf-8") as stream:
         for line, row in enumerate(csv.DictReader(stream), 2):
             referenced = id_set(row["removed_group_ids"], "removed_group_ids")
-            if not referenced.issubset(group_ids):
-                fail(f"candidates.csv:{line}: removed group missing from ledger")
+            # Pending factors can be present in the frozen window and then
+            # discarded without ever entering the committed factor ledger.
+            actual = (frozen_candidate_rows[line - 2] if frozen_candidate_rows else group_ids)
+            if actual is None: actual = group_ids
+            if not referenced.issubset(actual):
+                fail(f"candidates.csv:{line}: removed group missing from frozen window/ledger")
 
     with (directory / "health.csv").open(newline="", encoding="utf-8") as stream:
         for line, row in enumerate(csv.DictReader(stream), 2):
@@ -381,6 +400,13 @@ def validate_v5(directory, manifest):
 
 
 def validate(directory):
+    diagnostic_path = directory / "diagnostic_attempts.csv"
+    if diagnostic_path.exists():
+        from gate_d_diagnostics import read_rows, validate_attachments
+        if read_rows(directory, "diagnostic_attempts.csv"):
+            # Core timing linkage is required by the performance runner; other
+            # RunLogger clients may write their timing through another facade.
+            validate_attachments(directory, require_legacy_timing=False)
     manifest_path = directory / "run_manifest.json"
     if not manifest_path.is_file():
         fail("missing run_manifest.json")

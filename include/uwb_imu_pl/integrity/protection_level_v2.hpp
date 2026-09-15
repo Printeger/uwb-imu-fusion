@@ -3,6 +3,7 @@
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
 
 #include <functional>
+#include <map>
 
 namespace uwb_imu_pl {
 
@@ -21,6 +22,17 @@ struct ProtectionLevelV2Result {
   bool formal_eligible = false;
   Availability availability = Availability::Unavailable;
   std::string reason;
+};
+
+struct FrozenBridgeProjection {
+  Eigen::MatrixXd jacobian_whitened;
+  Eigen::VectorXd deterministic_bound;
+};
+
+struct ProtectionLevelSharedContext {
+  // Candidate-row maps keyed by the exact frozen fault-mode ID.
+  std::map<std::uint64_t, Eigen::MatrixXd> mode_maps;
+  std::vector<FrozenBridgeProjection> bridges;
 };
 
 class ProtectionLevelV2 {
@@ -46,6 +58,16 @@ class ProtectionLevelV2 {
       const FaultMapProvider& fault_map_provider,
       const RiskBudgetV2& risk,
       const Eigen::Vector3d& bridge_margin_m = Eigen::Vector3d::Zero()) const;
+
+  // Optimized production path: protected covariance, every unique remaining
+  // mode and all bridge gains share exactly one covarianceTimes() call.
+  ProtectionLevelV2Result computeShared(
+      const LinearizedIntegrityWindow& window,
+      CandidateEvaluation* candidate,
+      const DetectorResultV2& detector,
+      std::vector<FaultHypothesisV2>* remaining_hypotheses,
+      const ProtectionLevelSharedContext& shared,
+      const RiskBudgetV2& risk) const;
 
   static double detectionBoundaryNoncentralitySquared(
       int dof, double squared_threshold, double p_md);
