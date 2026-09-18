@@ -1,5 +1,7 @@
 #include "uwb_imu_pl/integrity/protection_level_v2.hpp"
 #include "uwb_imu_pl/integrity/statistical_bounds_cache.hpp"
+#include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
+#include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
 
 #include <boost/math/distributions/non_central_chi_squared.hpp>
 #include <boost/math/distributions/normal.hpp>
@@ -48,13 +50,9 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
     result.reason = "invalid post-FDE candidate/protected-state map";
     return result;
   }
-  double allocated = 3.0 * risk.nominal_axis_tail + risk.p_nm +
-      risk.p_bridge_escape + risk.p_history_contamination + risk.p_model_escape;
-  for (const auto& hypothesis : *hypotheses) {
-    allocated += hypothesis.hmi_allocation;
-  }
-  result.allocated_outcome_risk = allocated;
-  result.risk_budget_valid = allocated <= risk.p_hmi_total;
+  const RiskBudgetAudit risk_audit = auditRiskBudget(risk, *hypotheses);
+  result.allocated_outcome_risk = risk_audit.total;
+  result.risk_budget_valid = risk_audit.valid;
   if (!result.risk_budget_valid) {
     result.reason = "outcome-conditioned risk budget does not close";
     return result;
@@ -120,6 +118,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
     solve_column += cross.cols();
     const Eigen::MatrixXd gram = fault_map.transpose() * fault_map -
         cross.transpose() * covariance_cross;
+    NumericalWorkCounters::faultGramSvd();
     Eigen::JacobiSVD<Eigen::MatrixXd> svd(gram);
     const auto singular = svd.singularValues();
     const double largest = singular.size() ? singular(0) : 0.0;
@@ -140,6 +139,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
       result.reason = "remaining post-FDE fault is unmonitorable";
       return result;
     }
+    NumericalWorkCounters::faultGramLdlt();
     Eigen::LDLT<Eigen::MatrixXd> gram_solve(gram);
     if (gram_solve.info() != Eigen::Success || !gram_solve.isPositive()) {
       result.reason = "remaining fault Gram matrix is not SPD";
@@ -199,11 +199,8 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
     result.reason = "invalid post-FDE candidate/protected-state map";
     return result;
   }
-  double allocated = 3.0 * risk.nominal_axis_tail + risk.p_nm +
-      risk.p_bridge_escape + risk.p_history_contamination + risk.p_model_escape;
   std::map<std::uint64_t, const Eigen::MatrixXd*> modes;
   for (const auto& hypothesis : *hypotheses) {
-    allocated += hypothesis.hmi_allocation;
     for (const auto id : hypothesis.modes) {
       const auto found = shared.mode_maps.find(id.value());
       if (found == shared.mode_maps.end() || found->second.rows() != candidate->rows ||
@@ -214,8 +211,9 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
       modes.emplace(id.value(), &found->second);
     }
   }
-  result.allocated_outcome_risk = allocated;
-  result.risk_budget_valid = allocated <= risk.p_hmi_total;
+  const RiskBudgetAudit risk_audit = auditRiskBudget(risk, *hypotheses);
+  result.allocated_outcome_risk = risk_audit.total;
+  result.risk_budget_valid = risk_audit.valid;
   if (!result.risk_budget_valid) {
     result.reason = "outcome-conditioned risk budget does not close";
     return result;
@@ -333,6 +331,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
       offset += left_count;
     }
     gram = 0.5 * (gram + gram.transpose());
+    NumericalWorkCounters::faultGramSvd();
     Eigen::JacobiSVD<Eigen::MatrixXd> svd(gram);
     const auto singular = svd.singularValues();
     const double largest = singular.size() ? singular(0) : 0.0;
@@ -348,9 +347,15 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
     monitor.monitorable = monitor.rank == columns;
     hypothesis.monitored = monitor.monitorable;
     if (!hypothesis.monitored) {
-      result.reason = "remaining post-FDE fault is unmonitorable";
+      result.reason = "remaining post-FDE hypothesis " +
+          std::to_string(hypothesis.id.value()) +
+          " is unmonitorable: rank=" + std::to_string(monitor.rank) +
+          "/" + std::to_string(columns) + ";sigma_min=" +
+          std::to_string(monitor.sigma_min) + ";condition=" +
+          std::to_string(monitor.condition_number);
       return result;
     }
+    NumericalWorkCounters::faultGramLdlt();
     Eigen::LDLT<Eigen::MatrixXd> gram_solve(gram);
     if (gram_solve.info() != Eigen::Success || !gram_solve.isPositive()) {
       result.reason = "remaining fault Gram matrix is not SPD";
@@ -376,6 +381,104 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
   }
   result.pl_xyz_m = result.nominal_component_m.cwiseMax(
       result.fault_component_m) + result.bridge_component_m;
+  result.hpl_m = std::hypot(result.pl_xyz_m.x(), result.pl_xyz_m.y());
+  result.vpl_m = result.pl_xyz_m.z();
+  result.model_valid = result.pl_xyz_m.allFinite() && detector.passed;
+  result.availability = result.model_valid &&
+      result.hpl_m <= risk.horizontal_alert_limit_m &&
+      result.vpl_m <= risk.vertical_alert_limit_m
+      ? Availability::Available : Availability::Unavailable;
+  result.formal_eligible = false;
+  if (!detector.passed) result.reason = "post-FDE detector alarm";
+  else if (result.availability != Availability::Available)
+    result.reason = "post-FDE protection level exceeds alert limit";
+  else result.reason = "research V2 implemented; Gate J calibration/review pending";
+  return result;
+}
+
+ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+    const LinearizedIntegrityWindow& window,
+    CandidateEvaluation* candidate,
+    const DetectorResultV2& detector,
+    const std::vector<FaultHypothesisV2>& hypotheses,
+    const std::vector<FaultModeBasis>& modes,
+    const FrozenHypothesisNumerics& frozen,
+    std::uint64_t fault_model_policy_fingerprint,
+    const RiskBudgetV2& risk) const {
+  ProtectionLevelV2Result result;
+  const bool keep_all = candidate && candidate->action.groups_to_remove.empty() &&
+      candidate->action.groups_to_add.empty() && candidate->action.added_blocks.empty();
+  const bool identity_valid = frozen.valid && window.numerics &&
+      frozen.window_id == window.id && frozen.version == window.version &&
+      frozen.window_content_fingerprint ==
+          window.numerics->content_fingerprint &&
+      frozen.window_content_fingerprint == integrityWindowFingerprint(window) &&
+      frozen.numerical_contract_fingerprint ==
+          window.numerics->numerical_contract_fingerprint &&
+      frozen.hypothesis_fingerprint == hypothesisSetFingerprint(hypotheses) &&
+      frozen.fault_mode_fingerprint == faultModeSetFingerprint(modes) &&
+      frozen.fault_model_policy_fingerprint ==
+          fault_model_policy_fingerprint &&
+      frozen.hypothesis_count == hypotheses.size() &&
+      frozen.pl_entries.size() == hypotheses.size();
+  if (!candidate || !candidate->valid || !detector.numerically_valid ||
+      !keep_all || !identity_valid) {
+    NumericalWorkCounters::hypothesisSharedMiss();
+    result.reason = "frozen all-in hypothesis context identity mismatch";
+    return result;
+  }
+  NumericalWorkCounters::hypothesisSharedHit();
+  const RiskBudgetAudit risk_audit = auditRiskBudget(risk, hypotheses);
+  result.allocated_outcome_risk = risk_audit.total;
+  result.risk_budget_valid = risk_audit.valid;
+  if (!result.risk_budget_valid) {
+    result.reason = "outcome-conditioned risk budget does not close";
+    return result;
+  }
+  const Eigen::Matrix3d& protected_covariance = frozen.protected_covariance;
+  if (!protected_covariance.allFinite() ||
+      (protected_covariance.diagonal().array() <= 0.0).any()) {
+    result.reason = "post-FDE protected covariance is invalid";
+    return result;
+  }
+  const double nominal_tail = std::max(1e-15, risk.nominal_axis_tail);
+  const double nominal_k = StatisticalBoundsCache::normalTwoSidedMultiplier(
+      nominal_tail);
+  const Eigen::Vector3d sigma =
+      protected_covariance.diagonal().cwiseSqrt();
+  result.nominal_component_m = nominal_k * sigma;
+  result.fault_component_m.setZero();
+  result.bridge_component_m.setZero();
+  for (std::size_t index = 0; index < hypotheses.size(); ++index) {
+    const auto& hypothesis = hypotheses[index];
+    const auto& cached = frozen.pl_entries[index];
+    if (cached.hypothesis != hypothesis.id || !cached.valid ||
+        !cached.gram_spd || !cached.monitorability.monitorable) {
+      result.reason = "remaining post-FDE hypothesis " +
+          std::to_string(hypothesis.id.value()) +
+          " is unmonitorable: rank=" +
+          std::to_string(cached.monitorability.rank) + "/" +
+          std::to_string(cached.monitorability.parameter_dimension) +
+          ";sigma_min=" + std::to_string(cached.monitorability.sigma_min) +
+          ";condition=" +
+          std::to_string(cached.monitorability.condition_number);
+      return result;
+    }
+    const double lambda = std::sqrt(detectionBoundaryNoncentralitySquared(
+        detector.dof, detector.squared_threshold,
+        hypothesis.p_md_allocation));
+    const double fault_tail = std::max(
+        1e-15, hypothesis.hmi_allocation > 0.0
+            ? hypothesis.hmi_allocation /
+                  std::max(hypothesis.prior_probability_bound, 1e-15)
+            : nominal_tail);
+    const double k_fault = StatisticalBoundsCache::normalTwoSidedMultiplier(
+        std::min(0.5, fault_tail));
+    result.fault_component_m = result.fault_component_m.cwiseMax(
+        cached.protected_slopes * lambda + k_fault * sigma);
+  }
+  result.pl_xyz_m = result.nominal_component_m.cwiseMax(
+      result.fault_component_m);
   result.hpl_m = std::hypot(result.pl_xyz_m.x(), result.pl_xyz_m.y());
   result.vpl_m = result.pl_xyz_m.z();
   result.model_valid = result.pl_xyz_m.allFinite() && detector.passed;

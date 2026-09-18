@@ -1,6 +1,7 @@
 #pragma once
 
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
+#include "uwb_imu_pl/integrity/hypothesis_evidence.hpp"
 
 #include <functional>
 #include <map>
@@ -67,6 +68,20 @@ class ProtectionLevelV2 {
       const DetectorResultV2& detector,
       std::vector<FaultHypothesisV2>* remaining_hypotheses,
       const ProtectionLevelSharedContext& shared,
+      const RiskBudgetV2& risk) const;
+
+  // Exact KEEP_ALL fast path.  Only the portions mathematically identical to
+  // all-in evidence are reused; PL keeps its own rank semantics recorded in
+  // FrozenHypothesisPlEntry.  Any identity mismatch returns an invalid result
+  // and the caller must use the ordinary candidate-specific path.
+  ProtectionLevelV2Result computeFrozenAllIn(
+      const LinearizedIntegrityWindow& window,
+      CandidateEvaluation* candidate,
+      const DetectorResultV2& detector,
+      const std::vector<FaultHypothesisV2>& remaining_hypotheses,
+      const std::vector<FaultModeBasis>& modes,
+      const FrozenHypothesisNumerics& frozen,
+      std::uint64_t fault_model_policy_fingerprint,
       const RiskBudgetV2& risk) const;
 
   static double detectionBoundaryNoncentralitySquared(

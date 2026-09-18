@@ -188,6 +188,27 @@ def validate_v4(directory, manifest):
     evidence = manifest.get("gate_j_evidence")
     if not isinstance(scope, dict) or not isinstance(evidence, dict):
         fail("v4 manifest requires machine-readable scope and gate_j_evidence")
+    policy_fields = ("single_faults_enabled", "double_faults_enabled",
+                     "supported_max_fault_cardinality",
+                     "max_exclusion_cardinality")
+    if any(field in scope for field in policy_fields):
+        if not all(field in scope for field in policy_fields):
+            fail("scope fault policy fields must be emitted together")
+        single = scope["single_faults_enabled"]
+        double = scope["double_faults_enabled"]
+        supported = scope["supported_max_fault_cardinality"]
+        monitored = scope.get("max_fault_cardinality")
+        exclusion = scope["max_exclusion_cardinality"]
+        if not isinstance(single, bool) or not isinstance(double, bool):
+            fail("scope fault enable switches must be boolean")
+        if not single and not double:
+            fail("scope cannot disable every fault hypothesis cardinality")
+        expected = 2 if double else 1
+        if supported != 2 or monitored != expected:
+            fail("scope supported/effective fault cardinality is inconsistent")
+        if (not isinstance(exclusion, int) or isinstance(exclusion, bool) or
+                exclusion < 1 or exclusion > supported):
+            fail("scope max_exclusion_cardinality is invalid")
     formal = manifest.get("formal_eligible")
     if not isinstance(formal, bool):
         fail("v4 manifest formal_eligible must be boolean")
@@ -351,7 +372,8 @@ def validate_v5(directory, manifest):
     if diagnostic_attempts.exists():
         with diagnostic_attempts.open(newline="", encoding="utf-8") as stream:
             for row in csv.DictReader(stream):
-                if row["schema_version"].endswith(("/v3", "/v4")):
+                if row["schema_version"].endswith(
+                        ("/v3", "/v4", "/v5", "/v6", "/v7", "/v8", "/v9", "/v10")):
                     frozen_groups[int(row["input_attempt_id"])] = id_set(row["frozen_group_ids"], "frozen_group_ids")
         if frozen_groups:
             with (directory / "diagnostic_candidates.csv").open(newline="", encoding="utf-8") as stream:

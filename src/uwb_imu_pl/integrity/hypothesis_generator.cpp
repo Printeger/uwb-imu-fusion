@@ -1,12 +1,15 @@
 #include "uwb_imu_pl/integrity/hypothesis_generator.hpp"
+#include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
 
 #include <Eigen/Cholesky>
+#include <Eigen/SVD>
 #include <gtsam/inference/Ordering.h>
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/linear/GaussianFactorGraph.h>
 
 #include <algorithm>
 #include <chrono>
+#include <iomanip>
 #include <map>
 #include <set>
 #include <sstream>
@@ -39,6 +42,96 @@ const LinearizedFactorBlock* blockFor(const LinearizedIntegrityWindow& window,
     offset += block.residual_whitened.size();
   }
   return nullptr;
+}
+
+bool explicitlyMonitored(const LinearizedIntegrityWindow& window,
+                         FactorGroupId id) {
+  const auto found = std::find_if(window.factor_inventory.begin(),
+      window.factor_inventory.end(), [&](const auto& entry) {
+        return entry.group_id == id;
+      });
+  return found != window.factor_inventory.end() &&
+      (found->disposition == FrozenFactorDisposition::ExplicitMeasurement ||
+       found->disposition == FrozenFactorDisposition::PendingExplicit);
+}
+
+void finalizeEffectiveBasis(const LinearizedIntegrityWindow& window,
+                            double rank_tolerance,
+                            FaultModeBasis* mode) {
+  if (!mode || mode->parameter_dimension <= 0) return;
+  const int physical = mode->parameter_dimension;
+  mode->effective_parameter_basis = Eigen::MatrixXd::Identity(physical, physical);
+  mode->effective_parameter_dimension = physical;
+  mode->effective_basis_certified = true;
+  int rows = 0;
+  for (const auto& item : mode->raw_group_maps) {
+    const auto* block = blockFor(window, item.first);
+    if (!block || item.second.rows() != block->residual_raw.size() ||
+        item.second.cols() != physical) {
+      mode->effective_basis_certified = false;
+      return;
+    }
+    rows += item.second.rows();
+  }
+  if (rows == 0) {
+    mode->effective_basis_certified = false;
+    return;
+  }
+  Eigen::MatrixXd map(rows, physical);
+  int offset = 0;
+  for (const auto& item : mode->raw_group_maps) {
+    const auto* block = blockFor(window, item.first);
+    map.middleRows(offset, item.second.rows()) = block->whitener * item.second;
+    offset += item.second.rows();
+  }
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(map, Eigen::ComputeFullV);
+  if (!svd.singularValues().allFinite()) {
+    mode->effective_basis_certified = false;
+    return;
+  }
+  const double largest = svd.singularValues().size()
+      ? svd.singularValues()(0) : 0.0;
+  const double gate = rank_tolerance * std::max(1.0, largest);
+  const int rank = static_cast<int>(
+      (svd.singularValues().array() > gate).count());
+  if (rank <= 0 || rank == physical) return;
+  const Eigen::MatrixXd retained = svd.matrixV().leftCols(rank);
+  const Eigen::MatrixXd discarded = svd.matrixV().rightCols(physical - rank);
+  const Eigen::MatrixXd discarded_map = map * discarded;
+  mode->discarded_measurement_norm = discarded_map.norm();
+  if (window.numerics && window.numerics->information_factorization &&
+      window.protected_state_map.cols() == window.H.cols()) {
+    Eigen::MatrixXd dense = Eigen::MatrixXd::Zero(window.H.rows(), physical);
+    int aggregate_offset = 0;
+    for (const auto& block : window.blocks) {
+      const auto found = mode->raw_group_maps.find(block.group_id);
+      if (found != mode->raw_group_maps.end()) {
+        dense.middleRows(aggregate_offset, found->second.rows()) =
+            block.whitener * found->second;
+      }
+      aggregate_offset += block.residual_whitened.size();
+    }
+    const Eigen::MatrixXd rhs = window.H.transpose() * dense * discarded;
+    const Eigen::MatrixXd response = window.protected_state_map *
+        window.numerics->information_factorization->solve(rhs);
+    mode->discarded_protected_response_norm = response.norm();
+  } else {
+    mode->effective_basis_certified = false;
+    return;
+  }
+  const double measurement_limit = rank_tolerance *
+      std::max(1.0, map.norm()) * 16.0;
+  const double response_limit = rank_tolerance *
+      std::max(1.0, window.protected_state_map.norm()) * 16.0;
+  if (mode->discarded_measurement_norm <= measurement_limit &&
+      mode->discarded_protected_response_norm <= response_limit) {
+    mode->effective_parameter_basis = retained;
+    mode->effective_parameter_dimension = rank;
+  } else {
+    // Leave the physical basis intact so the downstream Gram rank gate fails
+    // closed instead of hiding a protected-state-relevant direction.
+    mode->effective_basis_certified = false;
+  }
 }
 
 const PendingFactorGroup* selectedKind(const HistoricalEpochContext& history,
@@ -110,7 +203,128 @@ std::string actionKey(const ExclusionAction& action) {
   std::ostringstream key;
   for (const auto id : remove) key << 'r' << id << ';';
   for (const auto id : add) key << 'a' << id << ';';
+  key << 'b' << static_cast<int>(action.bridge_mode) << ';';
+  std::vector<const LinearizedFactorBlock*> blocks;
+  for (const auto& block : action.added_blocks) blocks.push_back(&block);
+  std::sort(blocks.begin(), blocks.end(),
+            [](const auto* left, const auto* right) {
+              return left->group_id < right->group_id;
+            });
+  for (const auto* block : blocks) {
+    key << 'g' << block->group_id.value() << ':'
+        << block->jacobian_whitened.rows() << 'x'
+        << block->jacobian_whitened.cols() << ':'
+        << block->residual_whitened.size() << ':'
+        << std::setprecision(17) << block->jacobian_whitened.squaredNorm()
+        << ':' << block->residual_whitened.squaredNorm() << ':'
+        << block->whitening_model_id << ';';
+  }
   return key.str();
+}
+
+template <class DerivedA, class DerivedB>
+bool exactEigenContent(const Eigen::MatrixBase<DerivedA>& left,
+                       const Eigen::MatrixBase<DerivedB>& right) {
+  if (left.rows() != right.rows() || left.cols() != right.cols()) return false;
+  for (Eigen::Index column = 0; column < left.cols(); ++column) {
+    for (Eigen::Index row = 0; row < left.rows(); ++row) {
+      if (left(row, column) != right(row, column)) return false;
+    }
+  }
+  return true;
+}
+
+bool equivalentBlock(const LinearizedFactorBlock& left,
+                     const LinearizedFactorBlock& right) {
+  return left.group_id == right.group_id && left.kind == right.kind &&
+      left.sensor == right.sensor && left.role == right.role &&
+      left.window_column_indices == right.window_column_indices &&
+      left.fault_units == right.fault_units &&
+      left.effective_weight == right.effective_weight &&
+      left.whitening_model_id == right.whitening_model_id &&
+      left.version == right.version &&
+      exactEigenContent(left.jacobian_raw, right.jacobian_raw) &&
+      exactEigenContent(left.residual_raw, right.residual_raw) &&
+      exactEigenContent(left.covariance, right.covariance) &&
+      exactEigenContent(left.whitener, right.whitener) &&
+      exactEigenContent(left.jacobian_whitened, right.jacobian_whitened) &&
+      exactEigenContent(left.residual_whitened, right.residual_whitened);
+}
+
+template <class T>
+std::vector<T> sortedCopy(std::vector<T> values) {
+  std::sort(values.begin(), values.end());
+  return values;
+}
+
+}  // namespace
+
+bool equivalentActionOperation(const ExclusionAction& left,
+                               const ExclusionAction& right) {
+  if (sortedCopy(left.groups_to_remove) != sortedCopy(right.groups_to_remove) ||
+      sortedCopy(left.groups_to_add) != sortedCopy(right.groups_to_add) ||
+      left.bridge_mode != right.bridge_mode ||
+      left.recoverability != right.recoverability ||
+      left.recovery_epoch_begin != right.recovery_epoch_begin ||
+      left.recovery_epoch_end != right.recovery_epoch_end ||
+      left.added_blocks.size() != right.added_blocks.size()) {
+    return false;
+  }
+  std::vector<const LinearizedFactorBlock*> left_blocks, right_blocks;
+  for (const auto& block : left.added_blocks) left_blocks.push_back(&block);
+  for (const auto& block : right.added_blocks) right_blocks.push_back(&block);
+  const auto order = [](const auto* a, const auto* b) {
+    return a->group_id < b->group_id;
+  };
+  std::sort(left_blocks.begin(), left_blocks.end(), order);
+  std::sort(right_blocks.begin(), right_blocks.end(), order);
+  for (std::size_t i = 0; i < left_blocks.size(); ++i) {
+    if (!equivalentBlock(*left_blocks[i], *right_blocks[i])) return false;
+  }
+  return true;
+}
+
+std::string healthSourceId(const FaultUnit& unit) {
+  if (unit.sensor == SensorType::Uwb) {
+    const auto prefix = unit.physical_source_id.rfind("uwb:", 0) == 0
+        ? unit.physical_source_id.substr(4)
+        : std::to_string(unit.id.value());
+    return "anchor:" + prefix;
+  }
+  static const char* axes[] = {"x", "y", "z"};
+  if (unit.axis < 0 || unit.axis >= 3) return {};
+  if (unit.sensor == SensorType::ImuAccelerometer) {
+    return std::string("accel:") + axes[unit.axis];
+  }
+  if (unit.sensor == SensorType::ImuGyroscope) {
+    return std::string("gyro:") + axes[unit.axis];
+  }
+  return {};
+}
+
+namespace {
+
+void mergeCoverage(ExclusionAction* target, const ExclusionAction& source) {
+  auto merge_ids = [](auto* destination, const auto& additions) {
+    for (const auto id : additions) {
+      if (std::find(destination->begin(), destination->end(), id) ==
+          destination->end()) destination->push_back(id);
+    }
+    std::sort(destination->begin(), destination->end());
+  };
+  merge_ids(&target->covered_modes, source.covered_modes);
+  merge_ids(&target->covered_units, source.covered_units);
+  for (const auto& physical : source.physical_source_ids) {
+    if (std::find(target->physical_source_ids.begin(),
+                  target->physical_source_ids.end(), physical) ==
+        target->physical_source_ids.end()) {
+      target->physical_source_ids.push_back(physical);
+    }
+  }
+  std::sort(target->physical_source_ids.begin(),
+            target->physical_source_ids.end());
+  target->exclusion_cardinality = static_cast<int>(
+      target->physical_source_ids.size());
 }
 
 LinearizedFactorBlock replacementUwbBlock(
@@ -320,8 +534,16 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
     const LinearizedIntegrityWindow& window, const EpochTransaction& tx,
     const ImuFaultSubspaces& current_imu,
     const LinearizedFactorBlock&) const {
-  if (!window.model_valid || !current_imu.analytic_verified ||
-      config_.max_cardinality != 2 || config_.max_candidate_count == 0) {
+  if (!window.model_valid || !current_imu.analytic_input_valid ||
+      !current_imu.analytic_computation_valid ||
+      config_.max_model_cardinality != 2 ||
+      config_.max_exclusion_cardinality == 0 ||
+      config_.max_exclusion_cardinality > config_.max_model_cardinality ||
+      config_.max_candidate_count == 0 ||
+      (!config_.single_faults_enabled && !config_.double_faults_enabled) ||
+      (config_.double_faults_enabled &&
+       !config_.include_uwb_accel_combinations &&
+       !config_.include_uwb_gyro_combinations)) {
     throw std::invalid_argument("fault model generation precondition failed");
   }
   GeneratedFaultModelSet out;
@@ -329,7 +551,7 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
   std::map<std::uint64_t, std::vector<const Occurrence*>> anchor_occurrences;
   for (const auto& occurrence : all) {
     if (!occurrence.uwb || !occurrence.batch ||
-        occurrence.epoch < window.detector_first_epoch) continue;
+        !explicitlyMonitored(window, occurrence.uwb->id)) continue;
     for (const auto id : occurrence.uwb->source_measurements) {
       const auto* measurement = measurementById(*occurrence.batch, id);
       if (measurement) anchor_occurrences[measurement->anchor_id.value()].push_back(&occurrence);
@@ -338,6 +560,7 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
 
   std::uint64_t next_mode = 1;
   auto append_mode = [&](FaultModeBasis mode) {
+    finalizeEffectiveBasis(window, config_.rank_tolerance, &mode);
     mode.id = FaultModeId(next_mode++);
     FaultUnit unit;
     unit.id = FaultUnitId(mode.id.value());
@@ -372,6 +595,7 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
       for (const auto& occurrence : all) {
         if (!occurrence.uwb || !occurrence.batch ||
             occurrence.epoch < effective_onset) continue;
+        if (!explicitlyMonitored(window, occurrence.uwb->id)) continue;
         const auto* block = blockFor(window, occurrence.uwb->id);
         if (!block) continue;
         Eigen::MatrixXd raw = Eigen::MatrixXd::Zero(
@@ -451,7 +675,8 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
   }
 
   for (const auto& occurrence : all) {
-    if (!occurrence.imu || occurrence.epoch < window.detector_first_epoch) continue;
+    if (!occurrence.imu ||
+        !explicitlyMonitored(window, occurrence.imu->id)) continue;
     const auto* block = blockFor(window, occurrence.imu->id);
     if (!block) continue;
     ImuFaultSubspaces subspaces = current_imu;
@@ -462,11 +687,12 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
       local.preintegration = occurrence.history->preintegration;
       local.raw_imu_slice = occurrence.history->raw_imu_slice;
       const auto sensitivity_start = std::chrono::steady_clock::now();
-      subspaces = ImuFaultSubspaceBuilder().build(local, *block);
+      subspaces = ImuFaultSubspaceBuilder().buildAnalytic(local, *block);
       out.historical_sensitivity_ms += std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - sensitivity_start).count();
     }
-    if (!subspaces.analytic_verified) continue;
+    if (!subspaces.analytic_input_valid ||
+        !subspaces.analytic_computation_valid) continue;
     for (int axis = 0; axis < 6; ++axis) {
       FaultModeBasis mode;
       mode.kind = axis < 3 ? FaultKind::AccelAxisIntervalConstant
@@ -515,20 +741,47 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
     value.p_md_allocation = all_uwb ? config_.uwb_p_md : config_.imu_p_md;
     out.hypotheses.push_back(std::move(value));
   };
-  for (const auto& mode : out.modes) hypothesis({mode.id});
-  for (const auto& uwb : out.modes) {
-    if (uwb.sensor != SensorType::Uwb) continue;
-    for (const auto& imu : out.modes) {
-      const bool enabled =
-          (imu.sensor == SensorType::ImuAccelerometer &&
-           config_.include_uwb_accel_combinations) ||
-          (imu.sensor == SensorType::ImuGyroscope &&
-           config_.include_uwb_gyro_combinations);
-      if (enabled) hypothesis({uwb.id, imu.id});
+  if (config_.single_faults_enabled) {
+    for (const auto& mode : out.modes) hypothesis({mode.id});
+  }
+  if (config_.double_faults_enabled) {
+    for (const auto& uwb : out.modes) {
+      if (uwb.sensor != SensorType::Uwb) continue;
+      for (const auto& imu : out.modes) {
+        const bool enabled =
+            (imu.sensor == SensorType::ImuAccelerometer &&
+             config_.include_uwb_accel_combinations) ||
+            (imu.sensor == SensorType::ImuGyroscope &&
+             config_.include_uwb_gyro_combinations);
+        if (enabled) hypothesis({uwb.id, imu.id});
+      }
     }
   }
-  const double allocation = out.hypotheses.empty() ? 0.0 :
-      config_.total_hmi_allocation / out.hypotheses.size();
+  for (const auto& value : out.hypotheses) {
+    out.effective_max_cardinality = std::max<std::uint32_t>(
+        out.effective_max_cardinality,
+        static_cast<std::uint32_t>(value.modes.size()));
+    if (value.modes.size() == 1) {
+      const auto& mode = out.modes.at(value.modes.front().value() - 1);
+      if (mode.sensor == SensorType::Uwb) ++out.single_uwb_hypotheses;
+      else if (mode.sensor == SensorType::ImuAccelerometer)
+        ++out.single_accel_hypotheses;
+      else if (mode.sensor == SensorType::ImuGyroscope)
+        ++out.single_gyro_hypotheses;
+    } else if (value.modes.size() == 2) {
+      bool accel = false, gyro = false, uwb = false;
+      for (const auto id : value.modes) {
+        const auto sensor = out.modes.at(id.value() - 1).sensor;
+        uwb = uwb || sensor == SensorType::Uwb;
+        accel = accel || sensor == SensorType::ImuAccelerometer;
+        gyro = gyro || sensor == SensorType::ImuGyroscope;
+      }
+      if (uwb && accel) ++out.double_uwb_accel_hypotheses;
+      else if (uwb && gyro) ++out.double_uwb_gyro_hypotheses;
+    }
+  }
+  const double allocation = conservativeEqualRiskAllocation(
+      config_.total_hmi_allocation, out.hypotheses.size());
   for (auto& value : out.hypotheses) value.hmi_allocation = allocation;
 
   std::uint64_t next_action = 2;
@@ -541,32 +794,76 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
   keep.id = ExclusionActionId(1);
   keep.action_model_id = "KEEP_ALL";
   out.actions.push_back(keep);
-  std::set<std::string> seen;
+  std::map<std::string, std::vector<std::size_t>> seen;
   for (const auto& action : out.single_mode_actions) {
     if (action.recoverability != HistoryRecoverability::Recoverable) continue;
-    if (!seen.insert(actionKey(action)).second) continue;
+    const auto key = actionKey(action);
+    const auto duplicate = seen.find(key);
+    auto equivalent = out.actions.end();
+    if (duplicate != seen.end()) {
+      for (const auto index : duplicate->second) {
+        if (equivalentActionOperation(out.actions[index], action)) {
+          equivalent = out.actions.begin() + index;
+          break;
+        }
+      }
+    }
+    if (equivalent != out.actions.end()) {
+      mergeCoverage(&*equivalent, action);
+      continue;
+    }
     if (out.actions.size() == config_.max_candidate_count) break;
+    seen[key].push_back(out.actions.size());
     out.actions.push_back(action);
   }
   return out;
 }
 
 std::vector<ExclusionAction> HypothesisGenerator::actionsForPlausibleSet(
-    const LinearizedIntegrityWindow&, const EpochTransaction&,
+    const LinearizedIntegrityWindow&, const EpochTransaction& transaction,
     const GeneratedFaultModelSet& models,
-    const std::vector<FaultModeEvidence>& evidence) const {
+    const std::vector<FaultModeEvidence>& evidence,
+    const std::vector<std::string>& mandatory_health_sources) const {
   std::map<std::uint64_t, const ExclusionAction*> singles;
   for (const auto& action : models.single_mode_actions) {
     for (const auto mode : action.covered_modes) singles[mode.value()] = &action;
   }
   std::vector<std::vector<const ExclusionAction*>> requested;
   std::vector<const ExclusionAction*> full;
+  std::vector<const ExclusionAction*> mandatory;
   std::set<std::uint64_t> plausible_anchors;
-  for (const auto& item : evidence) {
-    if (!item.plausible) continue;
+  const auto is_current_group = [&](FactorGroupId group) {
+    if (group == transaction.imu_group.id) return true;
+    return std::any_of(transaction.uwb_groups.begin(),
+        transaction.uwb_groups.end(), [&](const PendingFactorGroup& value) {
+          return value.nominal && value.id == group;
+        });
+  };
+  for (const auto& action : models.single_mode_actions) {
+    if (!std::any_of(action.groups_to_remove.begin(),
+                     action.groups_to_remove.end(), is_current_group)) {
+      continue;
+    }
+    bool required = false;
+    for (const auto unit_id : action.covered_units) {
+      const auto unit = std::find_if(models.units.begin(), models.units.end(),
+          [&](const FaultUnit& value) { return value.id == unit_id; });
+      if (unit != models.units.end() &&
+          std::find(mandatory_health_sources.begin(),
+                    mandatory_health_sources.end(), healthSourceId(*unit)) !=
+              mandatory_health_sources.end()) {
+        required = true;
+        break;
+      }
+    }
+    if (required) mandatory.push_back(&action);
+  }
+  const auto plausible = completePlausibleHypotheses(
+      models.hypotheses, evidence);
+  for (const auto hypothesis_id : plausible) {
     const auto found = std::find_if(models.hypotheses.begin(), models.hypotheses.end(),
         [&](const FaultHypothesisV2& hypothesis) {
-          return hypothesis.id == item.hypothesis;
+          return hypothesis.id == hypothesis_id;
         });
     if (found == models.hypotheses.end()) continue;
     std::vector<const ExclusionAction*> parts;
@@ -583,21 +880,41 @@ std::vector<ExclusionAction> HypothesisGenerator::actionsForPlausibleSet(
         full.push_back(action->second);
       }
     }
+    parts.insert(parts.end(), mandatory.begin(), mandatory.end());
     if (!parts.empty()) requested.push_back(std::move(parts));
   }
+  if (plausible.empty() && !mandatory.empty()) requested.push_back(mandatory);
   std::vector<ExclusionAction> out;
   ExclusionAction keep;
   keep.id = ExclusionActionId(1);
   keep.action_model_id = "KEEP_ALL";
   out.push_back(keep);
-  std::set<std::string> seen;
+  std::map<std::string, std::vector<std::size_t>> seen;
   std::uint64_t id = 2;
   for (const auto& parts : requested) {
     auto action = unite(parts);
+    if (action.exclusion_cardinality >
+        static_cast<int>(config_.max_exclusion_cardinality)) {
+      action.recoverability = HistoryRecoverability::MissingProvenance;
+      action.action_model_id = "CARDINALITY_CONTRACT_REJECTED";
+    }
     const auto key = actionKey(action);
-    if (seen.insert(key).second) {
+    const auto duplicate = seen.find(key);
+    std::optional<std::size_t> equivalent;
+    if (duplicate != seen.end()) {
+      for (const auto index : duplicate->second) {
+        if (equivalentActionOperation(out[index], action)) {
+          equivalent = index;
+          break;
+        }
+      }
+    }
+    if (!equivalent) {
       action.id = ExclusionActionId(id++);
+      seen[key].push_back(out.size());
       out.push_back(std::move(action));
+    } else {
+      mergeCoverage(&out[*equivalent], action);
     }
   }
   std::sort(full.begin(), full.end(), [](const ExclusionAction* left,
@@ -613,13 +930,33 @@ std::vector<ExclusionAction> HypothesisGenerator::actionsForPlausibleSet(
                             const ExclusionAction* right) {
     return left->covered_modes == right->covered_modes;
   }), full.end());
+  full.insert(full.end(), mandatory.begin(), mandatory.end());
   if (!full.empty() && plausible_anchors.size() <= 1) {
     auto union_action = unite(full);
+    if (union_action.exclusion_cardinality >
+        static_cast<int>(config_.max_exclusion_cardinality)) {
+      union_action.recoverability = HistoryRecoverability::MissingProvenance;
+    }
     const auto key = actionKey(union_action);
-    if (seen.insert(key).second) {
+    const auto duplicate = seen.find(key);
+    std::optional<std::size_t> equivalent;
+    if (duplicate != seen.end()) {
+      for (const auto index : duplicate->second) {
+        if (equivalentActionOperation(out[index], union_action)) {
+          equivalent = index;
+          break;
+        }
+      }
+    }
+    if (!equivalent) {
       union_action.id = ExclusionActionId(id++);
       union_action.action_model_id = "FULL_PLAUSIBLE_UNION_RECOVERY";
+      seen[key].push_back(out.size());
       out.push_back(std::move(union_action));
+    } else {
+      mergeCoverage(&out[*equivalent], union_action);
+      out[*equivalent].action_model_id =
+          "FULL_PLAUSIBLE_UNION_RECOVERY";
     }
   }
   if (out.size() > config_.max_candidate_count) {

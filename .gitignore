@@ -8,6 +8,11 @@ srv_gen/
 build_isolated/
 devel_isolated/
 
+# CMake/CTest runtime artifacts created when tests are launched from repo root
+/Testing/
+core
+core.*
+
 # Logs & generated analysis (debug log system)
 # Keep these rules repository-rooted so report assets in nested directories
 # remain visible to Git.

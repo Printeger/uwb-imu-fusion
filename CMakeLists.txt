@@ -122,6 +122,7 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/integrity/hypothesis_evidence.cpp
   src/uwb_imu_pl/integrity/hypothesis_generator.cpp
   src/uwb_imu_pl/integrity/fde_manager.cpp
+  src/uwb_imu_pl/integrity/risk_budget_audit.cpp
   src/uwb_imu_pl/integrity/protection_level_v2.cpp
   src/uwb_imu_pl/integrity/statistical_bounds_cache.cpp
   src/uwb_imu_pl/integrity/health_manager.cpp
@@ -190,6 +191,13 @@ target_compile_definitions(realtime_performance_benchmark PRIVATE
   UWB_IMU_PL_GIT_SHA="${UWB_IMU_PL_GIT_SHA}"
   UWB_IMU_PL_GIT_DIRTY=${UWB_IMU_PL_GIT_DIRTY})
 target_link_libraries(realtime_performance_benchmark
+  ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
+
+add_executable(r0_r1_development apps/r0_r1_development.cpp)
+target_compile_definitions(r0_r1_development PRIVATE
+  UWB_IMU_PL_GIT_SHA="${UWB_IMU_PL_GIT_SHA}"
+  UWB_IMU_PL_GIT_DIRTY=${UWB_IMU_PL_GIT_DIRTY})
+target_link_libraries(r0_r1_development
   ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
 
 add_executable(gate_d_development apps/gate_d_development.cpp)

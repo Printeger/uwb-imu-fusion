@@ -1,0 +1,97 @@
+{
+  "schema": "uwb-imu-pl/r0-closure-r1-numerics/v1",
+  "status": "DEVELOPMENT_ONLY / PARTIALLY_CLOSED",
+  "formal_eligible": false,
+  "gate_d_pass": false,
+  "source": {
+    "head": "e6ded3069bbc4cd5cf98f14257e96f61066685b8",
+    "dirty": true,
+    "implementation_content_sha256": "2905fbc228487681d27b472c674f1f3d78e0c78574179c984817723abcdcb649",
+    "implementation_file_count": 35,
+    "scenario_manifest_sha256": "f556003bbe3dfc5c8f3991dc0bf5543cdddc258b4b00f42b776dbe03fcbd37e4",
+    "runner_sha256": "601a3d86cc73a546554137c51b043064ccbcceb45798055b56a5a6dea61fb0bb",
+    "core_library_sha256": "3406574ff799700e8360626e0d073f01ffe07279a8981386831328b76177d8a1",
+    "four_scenario_replay_core_library_sha256": "1703f9b2e5153cc7ffc4e8b01430e13a80ce670f0736e7915cec019952ddc49c"
+  },
+  "batches": {
+    "A_boundary": "PASS_DEVELOPMENT",
+    "B_ramp_and_uwb": "PARTIAL_SAFE_UNION_NOT_UNIQUE_UWB",
+    "C_imu_joint_recovery": "PARTIAL_IMU_BRIDGE_PASS_JOINT_AND_TIMEOUT_NOT_CLOSED",
+    "D_shared_numerics": "PARTIAL_IMPLEMENTED_TESTED_MATURE_AND_PERFORMANCE_NOT_RUN"
+  },
+  "tests": {
+    "ctest_targets_passed": 13,
+    "ctest_targets_total": 13,
+    "integrity_v2_cpp_tests": 42,
+    "raw_schema_validations_passed": 6,
+    "git_diff_check": "PASS"
+  },
+  "base_work_per_nominal_window": {
+    "before_source_audit": {"svd": 2, "llt": 2, "qr": 1, "state_solves": 3},
+    "after": {"svd": 1, "llt": 1, "qr": 0, "state_solves": 1}
+  },
+  "scenarios": {
+    "A_default_ramp": {
+      "epochs": 30,
+      "committed": 30,
+      "finite_pl": 30,
+      "alarms": 0,
+      "base_svd": 30,
+      "base_llt": 30,
+      "detector_reference_qr": 0
+    },
+    "C_uwb_fde": {
+      "epochs": 28,
+      "raw_uwb_injections": 1,
+      "correct_uwb_source_removed": true,
+      "selected_sources": ["imu_accel:0:interval:25", "uwb:1"],
+      "unique_uwb_isolation": false,
+      "post_detector_passed": true,
+      "hpl_m": 3.79879,
+      "vpl_m": 2.98875,
+      "pl_within_alert_limits": false,
+      "backend_updates_for_selected_commit": 1,
+      "epochs_with_128_kernel_evaluations": 3
+    },
+    "D_imu_bridge": {
+      "epochs": 28,
+      "raw_imu_injections": 10,
+      "raw_accel_x_fault_mps2": 1582.0,
+      "selected_ratio": 1.25,
+      "correct_imu_source_removed": true,
+      "generic_bridge_selected": true,
+      "post_detector_passed": true,
+      "hpl_m": 3.94488,
+      "vpl_m": 3.26066,
+      "pl_within_alert_limits": false,
+      "backend_updates_for_selected_commit": 1
+    },
+    "E_joint": {
+      "epochs": 28,
+      "raw_imu_injections": 10,
+      "raw_uwb_injections": 1,
+      "joint_action_selected": false,
+      "selected_sources": ["imu_accel:0:interval:25"],
+      "status": "NEGATIVE_MINIMAL_REPRO_RETAINED"
+    }
+  },
+  "not_run": [
+    "continuous_bridge_timeout_and_recovery",
+    "220_plus_real_pipeline_marginalization_and_fault",
+    "fixed_affinity_same_condition_performance_comparison",
+    "rss_measurement",
+    "formal_3x12000_campaign",
+    "formal_E_to_I_matrix"
+  ],
+  "results_root": "results/r0-closure-r1-numerics/final",
+  "final_core_replay": {
+    "results_root": "results/r0-closure-r1-numerics/final-contract",
+    "A_default_ramp_epochs": 22,
+    "A_finite_pl": 22,
+    "A_contract_mismatches": 0,
+    "D_generic_bridge_selected": true,
+    "D_hpl_m": 3.94488,
+    "D_vpl_m": 3.26066,
+    "D_contract_mismatches": 0
+  }
+}

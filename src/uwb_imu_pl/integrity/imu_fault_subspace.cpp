@@ -1,4 +1,5 @@
 #include "uwb_imu_pl/integrity/imu_fault_subspace.hpp"
+#include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
 
 #include <gtsam/inference/Symbol.h>
 
@@ -52,7 +53,9 @@ Eigen::MatrixXd ImuFaultSubspaceBuilder::finiteDifference(
     const EpochTransaction& tx, const LinearizedFactorBlock& block) const {
   Eigen::MatrixXd map = Eigen::MatrixXd::Zero(block.residual_whitened.size(), 6);
   for (int axis = 0; axis < 6; ++axis) {
+    NumericalWorkCounters::imuOracleReintegration();
     const auto plus = reintegrate(tx, axis, epsilon_);
+    NumericalWorkCounters::imuOracleReintegration();
     const auto minus = reintegrate(tx, axis, -epsilon_);
     const Eigen::VectorXd derivative =
         (factorError(tx, plus) - factorError(tx, minus)) / (2.0 * epsilon_);
@@ -64,11 +67,19 @@ Eigen::MatrixXd ImuFaultSubspaceBuilder::finiteDifference(
 
 ImuFaultSubspaces ImuFaultSubspaceBuilder::build(
     const EpochTransaction& tx, const LinearizedFactorBlock& block) const {
+  return buildAnalytic(tx, block);
+}
+
+ImuFaultSubspaces ImuFaultSubspaceBuilder::buildAnalytic(
+    const EpochTransaction& tx, const LinearizedFactorBlock& block) const {
+  ImuFaultSubspaces out;
   if (!tx.preintegration || block.kind != FactorKind::CombinedImu ||
       block.whitener.rows() != 15 || block.whitener.cols() != 15 ||
       block.residual_whitened.size() != 15) {
-    throw std::invalid_argument("combined IMU block/preintegration contract invalid");
+    out.analytic_reason = "combined IMU block/preintegration contract invalid";
+    return out;
   }
+  out.analytic_input_valid = true;
   gtsam::CombinedImuFactor factor(1, 2, 3, 4, 5, 6, *tx.preintegration);
   gtsam::Matrix h_bias_i;
   factor.evaluateError(
@@ -81,9 +92,6 @@ ImuFaultSubspaces ImuFaultSubspaceBuilder::build(
   Eigen::Matrix<double, 15, 6> raw = Eigen::Matrix<double, 15, 6>::Zero();
   raw.topRows<9>() = h_bias_i.topRows(9);
   const Eigen::MatrixXd analytic = block.whitener * raw;
-  const Eigen::MatrixXd oracle = finiteDifference(tx, block);
-
-  ImuFaultSubspaces out;
   out.accel_xyz = analytic.leftCols(3);
   out.gyro_xyz = analytic.rightCols(3);
   for (int i = 0; i < 3; ++i) {
@@ -92,10 +100,34 @@ ImuFaultSubspaces ImuFaultSubspaceBuilder::build(
   }
   out.bias_jump_accel = block.whitener.rightCols(6).leftCols(3);
   out.bias_jump_gyro = block.whitener.rightCols(3);
-  out.finite_difference_relative_error =
-      (analytic - oracle).norm() / std::max(1.0, oracle.norm());
-  out.analytic_verified = std::isfinite(out.finite_difference_relative_error) &&
-      out.finite_difference_relative_error <= tolerance_;
+  out.analytic_computation_valid = analytic.allFinite() &&
+      out.bias_jump_accel.allFinite() && out.bias_jump_gyro.allFinite();
+  if (!out.analytic_computation_valid) {
+    out.analytic_reason = "analytic IMU sensitivity contains non-finite values";
+  }
+  return out;
+}
+
+ImuFaultSubspaces ImuFaultSubspaceBuilder::verifyFiniteDifferenceOracle(
+    const EpochTransaction& tx, const LinearizedFactorBlock& block) const {
+  ImuFaultSubspaces out = buildAnalytic(tx, block);
+  if (!out.analytic_input_valid || !out.analytic_computation_valid) return out;
+  const Eigen::MatrixXd oracle = finiteDifference(tx, block);
+  Eigen::MatrixXd analytic(out.accel_xyz.rows(), 6);
+  if (out.accel_xyz.rows() == out.gyro_xyz.rows()) {
+    analytic << out.accel_xyz, out.gyro_xyz;
+  }
+  out.oracle_executed = true;
+  out.oracle_reintegrations = 12;
+  out.oracle_relative_error = analytic.rows() == oracle.rows() &&
+          analytic.cols() == oracle.cols()
+      ? (analytic - oracle).norm() / std::max(1.0, oracle.norm())
+      : std::numeric_limits<double>::infinity();
+  out.oracle_verified = out.analytic_computation_valid &&
+      std::isfinite(out.oracle_relative_error) &&
+      out.oracle_relative_error <= tolerance_;
+  out.finite_difference_relative_error = out.oracle_relative_error;
+  out.analytic_verified = out.oracle_verified;
   return out;
 }
 

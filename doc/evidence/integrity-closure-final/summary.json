@@ -1,0 +1,159 @@
+{
+  "schema": "uwb-imu-pl/integrity-closure-final/v1",
+  "status": "DEVELOPMENT_ONLY / PARTIALLY_CLOSED",
+  "formal_eligible": false,
+  "gate_d_pass": false,
+  "source": {
+    "head": "e6ded3069bbc4cd5cf98f14257e96f61066685b8",
+    "dirty": true,
+    "implementation_content_sha256": "c0ac4d6e66bab7394a13f1693ae3ecfb5a683fa66f7e04be4eca4dbc1d3885b1",
+    "implementation_file_count": 38,
+    "runner_sha256": "92938d2864a05a50da5c784d422a95ce3442734d7d68d5655947e5c0ffc556e7",
+    "loaded_core_library_sha256": "f12314e393b8235838c908cdf5d02f54cd28f37dd3a0606d20db68406dfe90b5",
+    "gtsam_sha256": "00d83aa618194aefc4b2011e1d29bd9aba107a8b5e0ee8e946eb2455351219da",
+    "scenario_manifest_sha256": "f556003bbe3dfc5c8f3991dc0bf5543cdddc258b4b00f42b776dbe03fcbd37e4",
+    "research_config_sha256": "7c465463a64299695ec40c580db7a2ff08a0db845697c5f5dfbed60b03ef9171"
+  },
+  "classification": {
+    "implementation_defects_fixed": [
+      "minimal_plausible_set_used_for_winner_coverage",
+      "health_quarantine_conflated_with_probabilistic_plausibility",
+      "hash_bucket_treated_as_action_equality",
+      "ineligible_actions_evaluated_before_exact_coverage_check",
+      "keep_all_repeated_candidate_factorization",
+      "actual_llt_and_svd_state_solves_undercounted",
+      "development_scenario_yaml_not_applied",
+      "v8_validator_did_not_represent_exact_eligibility_skips"
+    ],
+    "contract_limitations": [
+      "tested_complete_plausible_uwb_set_requires_more_than_two_physical_sources",
+      "tested_imu_and_joint_candidates_have_coverage_or_unchanged_step_gate_failures",
+      "nominal_accel_x_detection_boundary_is_about_1265_815_mps2",
+      "nominal_and_candidate_pl_exceed_current_alert_limits"
+    ],
+    "not_tested": [
+      "successful_raw_uwb_exclusion_under_complete_set",
+      "successful_raw_imu_bridge",
+      "successful_raw_two_source_union",
+      "raw_twenty_bridge_commits_timeout_reinit_and_recovery",
+      "independent_full_graph_boundary_oracle",
+      "new_128_kernel_100_plus_40_smoke",
+      "formal_3x12000_campaign",
+      "formal_E_to_I_matrix"
+    ]
+  },
+  "tests": {
+    "ctest_targets_passed": 13,
+    "ctest_targets_total": 13,
+    "integrity_v2_cpp_tests": 45,
+    "focused_numerical_tests_passed": 6,
+    "diagnostic_tool_tests_passed": 12,
+    "current_schema_validations_passed": 4,
+    "git_diff_check": "PASS"
+  },
+  "behavior": {
+    "default_ramp": {
+      "epochs": 22,
+      "committed": 22,
+      "finite_pl": 22,
+      "alarms": 0,
+      "pl_within_alert_limit": 0,
+      "rss_kib": 338252,
+      "core_ms": {
+        "p50": 2312.81,
+        "p95": 7014.188,
+        "p99": 7543.762,
+        "max": 7671.28
+      },
+      "outer_ms": {
+        "p50": 2314.605,
+        "p95": 7015.426,
+        "p99": 7545.339,
+        "max": 7672.95
+      }
+    },
+    "uwb_recovery": {
+      "epochs": 65,
+      "raw_uwb_injections": 1,
+      "fault_input_committed": false,
+      "clean_commits_after_fault": 40,
+      "maximum_consecutive_rejections": 1,
+      "successful_uwb_exclusion": false,
+      "failure_reason": "complete coverage unions exceed physical-source cardinality two"
+    },
+    "imu_extreme_stress": {
+      "epochs": 28,
+      "raw_imu_injections": 10,
+      "amplitude_mps2": 1582.0,
+      "alarm_attempts": 4,
+      "successful_bridge": false
+    },
+    "joint_negative": {
+      "epochs": 28,
+      "raw_imu_injections": 10,
+      "raw_uwb_injections": 1,
+      "successful_joint_action": false
+    },
+    "mature_fixed_lag": {
+      "epochs": 226,
+      "committed": 224,
+      "finite_pl": 224,
+      "marginalizations": 25,
+      "raw_imu_injections": 10,
+      "raw_uwb_injections": 1,
+      "post_fault_backend_updates": 0,
+      "successful_joint_action": false,
+      "timing_eligible_for_comparison": false
+    }
+  },
+  "imu_calibration": {
+    "source": "imu_accel:0:interval:25",
+    "direction_gram": 0.000123569,
+    "required_noncentrality": 197.993,
+    "boundary_mps2": 1265.81475,
+    "finite_difference_relative_error": 3.4605610249988844e-08,
+    "oracle_reintegrations": 12,
+    "half_boundary_predicted_statistic": 49.481456,
+    "half_boundary_actual_statistic": 49.0208,
+    "relative_prediction_error": 0.00931
+  },
+  "paired_replay": {
+    "epochs": 28,
+    "state_mismatches": 0,
+    "integrity_mismatches": 0,
+    "transaction_mismatches": 0,
+    "optimized": {
+      "kernel_evaluations": 27,
+      "pl_evaluations": 27,
+      "fault_frame_kernel_evaluations": 0,
+      "candidate_reference_svd": 0,
+      "candidate_inner_llt": 0,
+      "rss_kib": 253568,
+      "elapsed_seconds": 87.94
+    },
+    "exhaustive": {
+      "kernel_evaluations": 72,
+      "pl_evaluations": 70,
+      "fault_frame_kernel_evaluations": 45,
+      "candidate_reference_svd": 44,
+      "candidate_inner_llt": 132,
+      "rss_kib": 433264,
+      "elapsed_seconds": 158.05
+    },
+    "shared": {
+      "base_svd": 28,
+      "base_llt": 28,
+      "llt_state_solve_calls": 28,
+      "svd_state_solve_calls": 28,
+      "fault_gram_eigen": 606348,
+      "fault_gram_ldlt": 606348
+    }
+  },
+  "performance_contract": {
+    "core_p99_limit_ms": 40.0,
+    "met": false,
+    "new_128_kernel_campaign_run": false,
+    "results_root": "results/integrity-closure-final"
+  },
+  "ready_for_r3_or_formal_validation": false
+}

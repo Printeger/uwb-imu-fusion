@@ -31,7 +31,7 @@ imu:
   noise_overbound_calibration_id: ""
 
 integrity_window:
-  epochs: 20
+  epochs: 10
   recovery_margin_epochs: 10
   boundary_method: bayes_tree_schur
   rank_tolerance: 1.0e-10
@@ -47,6 +47,8 @@ detector:
   use_squared_norm_statistic: true
 
 fault_models:
+  single_faults_enabled: true
+  double_faults_enabled: false
   max_cardinality: 2
   uwb:
     enabled: true
@@ -81,6 +83,7 @@ fde:
   selection_secondary: minimum_protection_level
   dense_oracle_online_fallback: false
   max_candidate_count: 128
+  max_exclusion_cardinality: 2
 
 bridge:
   generic:

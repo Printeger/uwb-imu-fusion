@@ -792,7 +792,27 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
     context.current_state = stateFromValues(
         *tx.frozen_values, committed.proposed_epoch,
         state_history_.at(committed.proposed_epoch).timestamp);
-    context.groups.push_back(committed.imu_group);
+    const auto selected_in_record = [&](FactorGroupId id) {
+      return std::find(record.selected_groups.begin(),
+                       record.selected_groups.end(), id) !=
+             record.selected_groups.end();
+    };
+    const bool committed_imu_selected =
+        selected_in_record(committed.imu_group.id);
+    if (committed_imu_selected) {
+      context.groups.push_back(committed.imu_group);
+    } else {
+      if (selected_in_record(committed.generic_bridge_group.id)) {
+        context.groups.push_back(committed.generic_bridge_group);
+      }
+      if (selected_in_record(committed.generic_bias_continuity_group.id)) {
+        context.groups.push_back(committed.generic_bias_continuity_group);
+      }
+      if (committed.dynamics_bridge_group &&
+          selected_in_record(committed.dynamics_bridge_group->id)) {
+        context.groups.push_back(*committed.dynamics_bridge_group);
+      }
+    }
     const std::uint64_t history_base =
         tx.id.value() * 1000000ULL + committed.proposed_epoch * 100ULL;
     std::uint64_t replacement_index = 0;
@@ -867,18 +887,20 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
       replacement.recovery_epoch = next_epoch;
       context.groups.push_back(std::move(replacement));
     }
-    PendingFactorGroup historical_bridge = committed.generic_bridge_group;
-    historical_bridge.id = FactorGroupId(history_base + 80);
-    historical_bridge.replaces_group = committed.imu_group.id;
-    historical_bridge.recovery_epoch = next_epoch;
-    context.groups.push_back(std::move(historical_bridge));
-    PendingFactorGroup historical_bias = committed.generic_bias_continuity_group;
-    historical_bias.id = FactorGroupId(history_base + 81);
-    historical_bias.replaces_group = committed.imu_group.id;
-    historical_bias.recovery_epoch = next_epoch;
-    context.groups.push_back(std::move(historical_bias));
-    if (committed.dynamics_bridge_group) {
-      context.groups.push_back(*committed.dynamics_bridge_group);
+    if (committed_imu_selected) {
+      PendingFactorGroup historical_bridge = committed.generic_bridge_group;
+      historical_bridge.id = FactorGroupId(history_base + 80);
+      historical_bridge.replaces_group = committed.imu_group.id;
+      historical_bridge.recovery_epoch = next_epoch;
+      context.groups.push_back(std::move(historical_bridge));
+      PendingFactorGroup historical_bias = committed.generic_bias_continuity_group;
+      historical_bias.id = FactorGroupId(history_base + 81);
+      historical_bias.replaces_group = committed.imu_group.id;
+      historical_bias.recovery_epoch = next_epoch;
+      context.groups.push_back(std::move(historical_bias));
+      if (committed.dynamics_bridge_group) {
+        context.groups.push_back(*committed.dynamics_bridge_group);
+      }
     }
     context.selected_groups = record.selected_groups;
     for (auto& group : context.groups) group.recovery_epoch = next_epoch;
@@ -1042,6 +1064,7 @@ CurrentStatePrior IncrementalUwbImuEstimator::pendingCurrentPrior(
 
 LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     const EpochTransaction& tx, const IntegrityWindowRequest& request) const {
+  const auto preparation_start = std::chrono::steady_clock::now();
   if (!active_transaction_id_ || *active_transaction_id_ != tx.id ||
       tx.backend_mutated || tx.base_graph_version != graph_version_ ||
       tx.ledger_version != factor_ledger_.version() ||
@@ -1071,12 +1094,39 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     return window;
   }
 
+  std::set<gtsam::Key> explicit_window_keys;
+  for (std::size_t epoch = first_epoch; epoch <= tx.previous_epoch; ++epoch) {
+    explicit_window_keys.insert(poseKey(epoch));
+    explicit_window_keys.insert(velocityKey(epoch));
+    explicit_window_keys.insert(biasKey(epoch));
+  }
+  struct HistoricalGroupMetadata {
+    const PendingFactorGroup* group = nullptr;
+    std::size_t epoch = 0;
+  };
+  std::map<std::uint64_t, HistoricalGroupMetadata> historical_groups;
   std::set<std::uint64_t> explicit_group_ids;
   for (const auto& record : tx.recoverable_history) {
-    if (record.proposed_epoch <= first_epoch ||
+    if (record.proposed_epoch < first_epoch ||
         record.proposed_epoch > tx.previous_epoch) continue;
     for (const auto group : record.selected_groups) {
-      explicit_group_ids.insert(group.value());
+      const auto found = std::find_if(record.groups.begin(), record.groups.end(),
+          [&](const PendingFactorGroup& candidate) {
+            return candidate.id == group;
+          });
+      if (found == record.groups.end()) {
+        window.reason = "committed group provenance is incomplete: selected group " +
+            std::to_string(group.value()) + " is absent from epoch " +
+            std::to_string(record.proposed_epoch) + " catalog";
+        return window;
+      }
+      historical_groups[group.value()] = {&*found, record.proposed_epoch};
+      const bool all_keys_in_window = !found->keys.empty() &&
+          std::all_of(found->keys.begin(), found->keys.end(),
+              [&](gtsam::Key key) {
+                return explicit_window_keys.count(key) != 0;
+              });
+      if (all_keys_in_window) explicit_group_ids.insert(group.value());
     }
   }
   std::set<std::size_t> explicit_slots;
@@ -1105,6 +1155,26 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
         (accounting.explicit_window_block != accounting.boundary_input) &&
         frozen.group_id.has_value();
     if (!explicit_block) boundary_graph.push_back(frozen.factor);
+  }
+  std::map<std::uint64_t, FrozenWindowFactorInventoryEntry> frozen_inventory;
+  for (const auto& accounting : window.slot_accounting) {
+    if (!accounting.group_id) continue;
+    auto& entry = frozen_inventory[accounting.group_id->value()];
+    entry.group_id = *accounting.group_id;
+    entry.slots.push_back(accounting.slot);
+    entry.disposition = accounting.explicit_window_block
+        ? FrozenFactorDisposition::ExplicitMeasurement
+        : FrozenFactorDisposition::BoundaryInput;
+    const auto metadata = historical_groups.find(accounting.group_id->value());
+    if (metadata != historical_groups.end()) {
+      entry.epoch = metadata->second.epoch;
+      entry.kind = metadata->second.group->kind;
+      entry.sensor = metadata->second.group->sensor;
+      entry.keys = metadata->second.group->keys;
+    }
+  }
+  for (auto& item : frozen_inventory) {
+    window.factor_inventory.push_back(std::move(item.second));
   }
   window.capabilities.frozen_slot_identity_valid = slot_identity_valid;
   window.capabilities.every_active_factor_accounted_once = slot_identity_valid &&
@@ -1194,6 +1264,11 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     window.capabilities.includes_boundary_prior = true;
   }
 
+  const auto factor_start = std::chrono::steady_clock::now();
+  window.preparation_timing.boundary_and_provenance_ms =
+      std::chrono::duration<double, std::milli>(
+          factor_start - preparation_start).count();
+
   auto append_group = [&](const PendingFactorGroup& group,
                           EpochTransaction linearization_tx) {
     linearization_tx.base_version = window.version;
@@ -1224,12 +1299,24 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
         block.jacobian_whitened.rows(), total_columns);
     Eigen::MatrixXd embedded_raw = Eigen::MatrixXd::Zero(
         block.jacobian_raw.rows(), total_columns);
-    const int offset = static_cast<int>(
-        (linearization_tx.previous_epoch - first_epoch) * 15);
-    embedded_h.block(0, offset, embedded_h.rows(), 30) =
-        block.jacobian_whitened;
-    embedded_raw.block(0, offset, embedded_raw.rows(), 30) =
-        block.jacobian_raw;
+    for (const auto key : group.keys) {
+      const std::size_t epoch = gtsam::Symbol(key).index();
+      if (epoch < first_epoch || epoch > tx.proposed_epoch) {
+        window.reason = "explicit group key is outside integrity window";
+        return;
+      }
+      const int source = transactionColumn(linearization_tx, key);
+      const int destination = static_cast<int>((epoch - first_epoch) * 15) +
+          (gtsam::Symbol(key).chr() == 'x' ? 0 :
+           (gtsam::Symbol(key).chr() == 'v' ? 6 : 9));
+      const int dimension = keyDimension(key);
+      embedded_h.block(0, destination, embedded_h.rows(), dimension) =
+          block.jacobian_whitened.block(0, source, block.jacobian_whitened.rows(),
+                                       dimension);
+      embedded_raw.block(0, destination, embedded_raw.rows(), dimension) =
+          block.jacobian_raw.block(0, source, block.jacobian_raw.rows(),
+                                  dimension);
+    }
     block.jacobian_whitened = std::move(embedded_h);
     block.jacobian_raw = std::move(embedded_raw);
     block.version = window.version;
@@ -1245,7 +1332,7 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
 
   for (const auto& record : tx.recoverable_history) {
     const auto& history = record;
-    if (history.proposed_epoch <= first_epoch ||
+    if (history.proposed_epoch < first_epoch ||
         history.proposed_epoch > tx.previous_epoch) continue;
     EpochTransaction linearization_tx;
     linearization_tx.previous_epoch = history.previous_epoch;
@@ -1260,12 +1347,15 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     std::vector<const PendingFactorGroup*> groups;
     for (const auto& group : history.groups) groups.push_back(&group);
     for (const auto selected_group : history.selected_groups) {
+      if (explicit_group_ids.count(selected_group.value()) == 0) continue;
       const auto group = std::find_if(groups.begin(), groups.end(),
           [&](const PendingFactorGroup* candidate) {
             return candidate->id == selected_group;
           });
       if (group == groups.end()) {
-        window.reason = "committed group provenance is incomplete";
+        window.reason = "committed group provenance is incomplete: explicit group " +
+            std::to_string(selected_group.value()) + " is absent from epoch " +
+            std::to_string(history.proposed_epoch) + " catalog";
         return window;
       }
       append_group(**group, linearization_tx);
@@ -1274,18 +1364,31 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
 
   if (request.include_pending_imu) {
     append_group(tx.imu_group, tx);
+    window.factor_inventory.push_back({
+        tx.imu_group.id, tx.proposed_epoch, tx.imu_group.kind,
+        tx.imu_group.sensor, FrozenFactorDisposition::PendingExplicit,
+        tx.imu_group.keys, {}});
     window.capabilities.includes_pending_imu = true;
   }
   if (request.include_pending_uwb) {
     for (const auto& group : tx.uwb_groups) {
       if (!group.nominal) continue;
       append_group(group, tx);
+      window.factor_inventory.push_back({
+          group.id, tx.proposed_epoch, group.kind, group.sensor,
+          FrozenFactorDisposition::PendingExplicit, group.keys, {}});
     }
     window.capabilities.includes_pending_uwb = !tx.uwb_groups.empty();
   }
   if (request.include_generic_bridge) {
     append_group(tx.generic_bridge_group, tx);
     append_group(tx.generic_bias_continuity_group, tx);
+    for (const auto* group : {&tx.generic_bridge_group,
+                              &tx.generic_bias_continuity_group}) {
+      window.factor_inventory.push_back({
+          group->id, tx.proposed_epoch, group->kind, group->sensor,
+          FrozenFactorDisposition::PendingExplicit, group->keys, {}});
+    }
   }
   window.protected_state_map = Eigen::MatrixXd::Zero(3, total_columns);
   window.protected_state_map.block<3, 6>(
@@ -1299,6 +1402,9 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
       config_.incremental.fixed_lag_epochs == 0 ||
       config_.incremental.fixed_lag_epochs >
           request.epochs + config_.integrity_window.recovery_margin_epochs;
+  window.preparation_timing.factor_linearization_whitening_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - factor_start).count();
   finalizeIntegrityWindow(&window, config_.integrity_window.rank_tolerance,
                           config_.integrity_window.max_condition_number);
   if (!window.capabilities.fixed_lag_maturity_valid) {
@@ -1712,20 +1818,20 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
       {graph_version_, ordering_version_, 1, linpoint_version_});
 
   for (auto& committed : committed_epochs_) {
-    bool changed = false;
+    std::vector<FactorGroupId> removed_from_record;
     for (const auto removed : plan.groups_to_remove) {
       auto selected = std::find(committed.selected_groups.begin(),
                                 committed.selected_groups.end(), removed);
       if (selected != committed.selected_groups.end()) {
         committed.selected_groups.erase(selected);
-        changed = true;
+        removed_from_record.push_back(removed);
       }
     }
-    if (!changed) continue;
+    if (removed_from_record.empty()) continue;
     for (const auto* group : selected_groups) {
       if (group->replaces_group &&
-          std::find(plan.groups_to_remove.begin(), plan.groups_to_remove.end(),
-                    *group->replaces_group) != plan.groups_to_remove.end()) {
+          std::find(removed_from_record.begin(), removed_from_record.end(),
+                    *group->replaces_group) != removed_from_record.end()) {
         committed.selected_groups.push_back(group->id);
         if (group->kind == FactorKind::UwbBatch) {
           committed.transaction.uwb_groups.push_back(*group);
@@ -1742,8 +1848,31 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
   committed_transaction.frozen_values.reset();
   committed_transaction.frozen_slots.clear();
   committed_transaction.recoverable_history.clear();
+
+  // A recovery commit may add replacement groups that belong to older
+  // committed epochs.  Those groups are transferred to the corresponding
+  // records above and must not also be advertised as selected by the current
+  // epoch: the current transaction does not own their factor catalog.  Doing
+  // so makes the very next frozen-window inventory report missing provenance.
+  std::set<std::uint64_t> current_catalog;
+  current_catalog.insert(tx.imu_group.id.value());
+  for (const auto& group : tx.uwb_groups) {
+    current_catalog.insert(group.id.value());
+  }
+  current_catalog.insert(tx.generic_bridge_group.id.value());
+  current_catalog.insert(tx.generic_bias_continuity_group.id.value());
+  if (tx.dynamics_bridge_group) {
+    current_catalog.insert(tx.dynamics_bridge_group->id.value());
+  }
+  std::vector<FactorGroupId> current_selected_groups;
+  for (const auto group : plan.groups_to_add) {
+    if (current_catalog.count(group.value()) != 0) {
+      current_selected_groups.push_back(group);
+    }
+  }
   committed_epochs_.push_back(
-      CommittedEpochRecord{std::move(committed_transaction), plan.groups_to_add});
+      CommittedEpochRecord{std::move(committed_transaction),
+                           std::move(current_selected_groups)});
 
   current_uwb_committed_ = false;
   for (const auto& group : tx.uwb_groups) {

@@ -53,10 +53,11 @@ struct Codec {
   }
 };
 void transfer(Codec& c, FrozenCandidateReplay& r) {
-  std::string schema="uwb-imu-pl/frozen-candidates/v3"; c.text(schema);
+  std::string schema="uwb-imu-pl/frozen-candidates/v4"; c.text(schema);
   if(schema!="uwb-imu-pl/frozen-candidates/v1" &&
       schema!="uwb-imu-pl/frozen-candidates/v2" &&
-      schema!="uwb-imu-pl/frozen-candidates/v3")
+      schema!="uwb-imu-pl/frozen-candidates/v3" &&
+      schema!="uwb-imu-pl/frozen-candidates/v4")
     throw std::runtime_error("unknown replay schema");
   std::uint64_t endian=0x0102030405060708ULL; c.scalar(endian);
   if(endian!=0x0102030405060708ULL) throw std::runtime_error("incompatible replay byte order");
@@ -77,6 +78,14 @@ void transfer(Codec& c, FrozenCandidateReplay& r) {
     bool has=s.group_id.has_value(); c.scalar(has); FactorGroupId id=s.group_id.value_or(FactorGroupId{});
     c.id(id); if(c.in){s.group_id.reset(); if(has) s.group_id=id;}
     c.scalar(s.explicit_window_block); c.scalar(s.boundary_input); c.scalar(s.pointer_identity_valid); });
+  if (schema=="uwb-imu-pl/frozen-candidates/v4") {
+    c.vector(w.factor_inventory,[&](FrozenWindowFactorInventoryEntry& e) {
+      c.id(e.group_id); c.scalar(e.epoch); c.scalar(e.kind); c.scalar(e.sensor);
+      c.scalar(e.disposition);
+      c.vector(e.keys,[&](gtsam::Key& key){ c.scalar(key); });
+      c.vector(e.slots,[&](std::size_t& slot){ c.scalar(slot); });
+    });
+  }
   c.vector(w.blocks,[&](LinearizedFactorBlock& b){c.block(b);});
   // Deduplicate exact serialized content, never ID alone.
   std::map<std::string,std::uint64_t> dictionary;
@@ -115,7 +124,8 @@ void transfer(Codec& c, FrozenCandidateReplay& r) {
     cfg.enable_early_step_gate = false;
     cfg.enable_numerical_certificate = false;
   }
-  if (schema=="uwb-imu-pl/frozen-candidates/v3") {
+  if (schema=="uwb-imu-pl/frozen-candidates/v3" ||
+      schema=="uwb-imu-pl/frozen-candidates/v4") {
     c.scalar(cfg.enable_numerical_certificate);
     c.scalar(cfg.force_exact_condition_number);
   } else if (c.in) {
@@ -134,6 +144,10 @@ FrozenCandidateReplay readCandidateReplay(const std::string& path) {
   std::ifstream in(path,std::ios::binary); if(!in) throw std::runtime_error("cannot open replay: "+path);
   FrozenCandidateReplay r; Codec c{&in,nullptr}; transfer(c,r);
   if(in.peek()!=std::char_traits<char>::eof()) throw std::runtime_error("trailing replay data");
+  // Decomposition objects are process-local and intentionally absent from the
+  // codec. Recreate and rebind them to the decoded content before any replay.
+  finalizeIntegrityWindow(&r.window, r.config.rank_tolerance,
+                          r.config.max_condition_number);
   return r;
 }
 }  // namespace uwb_imu_pl

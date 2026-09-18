@@ -9,6 +9,14 @@
 
 namespace uwb_imu_pl {
 
+// Contract boundary helper shared by runtime and deterministic tests.  The
+// configured epoch and duration values themselves are legal; the first value
+// strictly beyond either limit must fail closed.
+bool bridgeTimeoutExceeded(std::uint32_t consecutive_epochs,
+                           double duration_s,
+                           std::uint32_t max_consecutive_epochs,
+                           double max_duration_s);
+
 class IntegrityMonitor {
  public:
   IntegrityMonitor(RiskBudget risk, double rank_tolerance,

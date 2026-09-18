@@ -117,6 +117,34 @@ Eigen::Vector3d vector3(const YAML::Node& node, const std::string& path) {
 
 }  // namespace
 
+std::uint32_t enabledFaultHypothesisCardinality(
+    const FaultModelsConfig& config) {
+  return config.double_faults_enabled ? 2u : 1u;
+}
+
+std::uint64_t faultModelPolicyFingerprint(const FaultModelsConfig& config) {
+  std::uint64_t hash = 1469598103934665603ULL;
+  auto append = [&](std::uint64_t value) {
+    for (int byte = 0; byte < 8; ++byte) {
+      hash ^= static_cast<unsigned char>((value >> (byte * 8)) & 0xffU);
+      hash *= 1099511628211ULL;
+    }
+  };
+  append(config.single_faults_enabled);
+  append(config.double_faults_enabled);
+  append(config.max_cardinality);
+  append(config.uwb.enabled);
+  append(config.uwb.epoch_single_anchor_bias);
+  append(config.uwb.persistent_anchor_bias);
+  append(config.uwb.ramp_bias);
+  append(config.imu.accel_axis_interval_bias);
+  append(config.imu.gyro_axis_interval_bias);
+  append(config.combinations.uwb_plus_accel);
+  append(config.combinations.uwb_plus_gyro);
+  append(config.combinations.two_uwb);
+  return hash;
+}
+
 IntegrityConfig IntegrityConfigLoader::load(
     const std::string& yaml_path,
     const std::optional<std::string>& fixed_lag_epochs_override) {
@@ -135,6 +163,20 @@ IntegrityConfig IntegrityConfigLoader::load(
   cfg.source_path = yaml_path;
   YAML::Node root = YAML::Load(readAll(yaml_path));
   requireMap(root, "root");
+  // Read compatibility is explicit: legacy YAML resolves to the new,
+  // single-fault-only default and the injected values are serialized and
+  // hashed, so the effective policy is never implicit in the manifest.
+  requireMap(root["fault_models"], "fault_models");
+  if (!root["fault_models"]["single_faults_enabled"]) {
+    root["fault_models"]["single_faults_enabled"] = true;
+  }
+  if (!root["fault_models"]["double_faults_enabled"]) {
+    root["fault_models"]["double_faults_enabled"] = false;
+  }
+  requireMap(root["fde"], "fde");
+  if (!root["fde"]["max_exclusion_cardinality"]) {
+    root["fde"]["max_exclusion_cardinality"] = 2;
+  }
   if (overrides.seed) root["seed"] = *overrides.seed;
   if (overrides.fixed_lag_epochs) {
     requireMap(root["incremental"], "incremental");
@@ -277,7 +319,19 @@ IntegrityConfig IntegrityConfigLoader::load(
   }
 
   const auto fault_models = root["fault_models"];
-  rejectUnknown(fault_models, "fault_models", {"max_cardinality", "uwb", "imu", "combinations"});
+  rejectUnknown(fault_models, "fault_models", {"single_faults_enabled",
+      "double_faults_enabled", "max_cardinality", "uwb", "imu",
+      "combinations"});
+  cfg.fault_models.single_faults_enabled = required<bool>(
+      fault_models, "single_faults_enabled", "fault_models");
+  cfg.fault_models.double_faults_enabled = required<bool>(
+      fault_models, "double_faults_enabled", "fault_models");
+  if (!cfg.fault_models.single_faults_enabled &&
+      !cfg.fault_models.double_faults_enabled) {
+    throw std::runtime_error(
+        "fault_models must enable single_faults_enabled or "
+        "double_faults_enabled");
+  }
   cfg.fault_models.max_cardinality = required<std::uint32_t>(fault_models, "max_cardinality", "fault_models");
   if (cfg.fault_models.max_cardinality != 2) throw std::runtime_error("fault_models.max_cardinality must be 2 for the initial claim");
   const auto uwb_fault = fault_models["uwb"];
@@ -325,13 +379,19 @@ IntegrityConfig IntegrityConfigLoader::load(
   cfg.fault_models.combinations.uwb_plus_gyro = required<bool>(combinations, "uwb_plus_gyro", "fault_models.combinations");
   cfg.fault_models.combinations.two_uwb = required<bool>(combinations, "two_uwb", "fault_models.combinations");
   cfg.fault_models.combinations.assume_independent_priors = required<bool>(combinations, "assume_independent_priors", "fault_models.combinations");
-  if (!cfg.fault_models.combinations.uwb_plus_accel || !cfg.fault_models.combinations.uwb_plus_gyro ||
-      cfg.fault_models.combinations.two_uwb || cfg.fault_models.combinations.assume_independent_priors) {
+  if (cfg.fault_models.combinations.two_uwb ||
+      cfg.fault_models.combinations.assume_independent_priors) {
     throw std::runtime_error("fault_models.combinations is outside the initial formal scope");
+  }
+  if (cfg.fault_models.double_faults_enabled &&
+      !cfg.fault_models.combinations.uwb_plus_accel &&
+      !cfg.fault_models.combinations.uwb_plus_gyro) {
+    throw std::runtime_error(
+        "double_faults_enabled requires uwb_plus_accel or uwb_plus_gyro");
   }
 
   const auto fde = root["fde"];
-  rejectUnknown(fde, "fde", {"trigger", "isolation", "ambiguity_policy", "selection_primary", "selection_secondary", "dense_oracle_online_fallback", "max_candidate_count"});
+  rejectUnknown(fde, "fde", {"trigger", "isolation", "ambiguity_policy", "selection_primary", "selection_secondary", "dense_oracle_online_fallback", "max_candidate_count", "max_exclusion_cardinality"});
   cfg.fde.trigger = required<std::string>(fde, "trigger", "fde");
   cfg.fde.isolation = required<std::string>(fde, "isolation", "fde");
   cfg.fde.ambiguity_policy = required<std::string>(fde, "ambiguity_policy", "fde");
@@ -339,12 +399,16 @@ IntegrityConfig IntegrityConfigLoader::load(
   cfg.fde.selection_secondary = required<std::string>(fde, "selection_secondary", "fde");
   cfg.fde.dense_oracle_online_fallback = required<bool>(fde, "dense_oracle_online_fallback", "fde");
   cfg.fde.max_candidate_count = required<std::uint32_t>(fde, "max_candidate_count", "fde");
+  cfg.fde.max_exclusion_cardinality = required<std::uint32_t>(
+      fde, "max_exclusion_cardinality", "fde");
   if (cfg.fde.trigger != "joint_detector_alarm_or_hardware_barrier" ||
       cfg.fde.isolation != "profile_parity_glrt" ||
       cfg.fde.ambiguity_policy != "union_exclusion_else_unavailable" ||
       cfg.fde.selection_primary != "minimum_cardinality" ||
       cfg.fde.selection_secondary != "minimum_protection_level" ||
-      cfg.fde.dense_oracle_online_fallback || cfg.fde.max_candidate_count == 0) {
+      cfg.fde.dense_oracle_online_fallback || cfg.fde.max_candidate_count == 0 ||
+      cfg.fde.max_exclusion_cardinality == 0 ||
+      cfg.fde.max_exclusion_cardinality > cfg.fault_models.max_cardinality) {
     throw std::runtime_error("fde configuration does not match the v4 research architecture");
   }
 
@@ -524,6 +588,11 @@ IntegrityConfig IntegrityConfigLoader::load(
         "risk.p_hmi_total is smaller than the complete anchor-map allocation");
   }
   return cfg;
+}
+
+std::string IntegrityConfigLoader::hashResolvedYaml(
+    const std::string& resolved_yaml) {
+  return fnv1a64(resolved_yaml);
 }
 
 }  // namespace uwb_imu_pl

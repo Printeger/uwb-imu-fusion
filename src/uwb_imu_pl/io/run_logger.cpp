@@ -103,16 +103,24 @@ RunLogger::RunLogger(const std::string& output_directory,
   attempts_.open(directory_ + "/diagnostic_attempts.csv");
   diagnostic_stages_.open(directory_ + "/diagnostic_stages.csv");
   diagnostic_candidates_.open(directory_ + "/diagnostic_candidates.csv");
+  diagnostic_coverage_.open(directory_ + "/diagnostic_coverage.csv");
+  diagnostic_steps_.open(directory_ + "/diagnostic_state_steps.csv");
   requireOpen(attempts_, "diagnostic_attempts.csv");
   requireOpen(diagnostic_stages_, "diagnostic_stages.csv");
   requireOpen(diagnostic_candidates_, "diagnostic_candidates.csv");
+  requireOpen(diagnostic_coverage_, "diagnostic_coverage.csv");
+  requireOpen(diagnostic_steps_, "diagnostic_state_steps.csv");
   attempts_ << std::setprecision(17);
   diagnostic_stages_ << std::setprecision(17);
   diagnostic_candidates_ << std::setprecision(17);
+  diagnostic_coverage_ << std::setprecision(17);
+  diagnostic_steps_ << std::setprecision(17);
   const std::string identity = "schema_version,input_attempt_id,input_timestamp_ns,transaction_id,window_id,graph_version,ordering_version,noise_model_version,linpoint_version,output_timestamp_ns,";
-  attempts_ << identity << "frozen_group_ids,backend_epoch_before,backend_epoch_after,pending_duration_s,raw_imu_samples,consecutive_rejections,marginalization_count,factor_block_cache_hits,factor_block_cache_misses,factor_block_cache_invalidations,statistical_cache_hits,statistical_cache_misses,cache_entries,cache_bytes,cache_invalidation_reason,status,reason\n";
+  attempts_ << identity << "frozen_group_ids,backend_epoch_before,backend_epoch_after,pending_duration_s,state_age_s,raw_imu_samples,consecutive_rejections,marginalization_count,factor_block_cache_hits,factor_block_cache_misses,factor_block_cache_invalidations,statistical_cache_hits,statistical_cache_misses,cache_entries,cache_bytes,cache_invalidation_reason,base_step_norm,selected_step_norm,risk_nominal,risk_p_nm,risk_bridge,risk_history,risk_model,risk_hypotheses,risk_total,risk_upper_bound,risk_margin,hypothesis_count,single_uwb_hypotheses,single_accel_hypotheses,single_gyro_hypotheses,double_uwb_accel_hypotheses,double_uwb_gyro_hypotheses,effective_fault_cardinality,generated_actions,kernel_evaluated_actions,post_passed_actions,pl_evaluated_actions,selected_actions,base_svd,base_llt,base_state_solves,llt_state_solve_calls,svd_state_solve_calls,detector_reference_qr,candidate_reference_svd,candidate_inner_llt,fault_gram_eigen,fault_gram_svd,fault_gram_ldlt,low_dim_fault_gram,generic_fault_gram_fallback,hypothesis_parallel_blocks,hypothesis_shared_hits,hypothesis_shared_misses,covariance_rhs_solves,covariance_rhs_columns,spectral_rhs_solves,spectral_rhs_columns,numerical_contract_mismatches,imu_oracle_reintegrations,analytic_input_valid,analytic_computation_valid,oracle_executed,oracle_relative_error,oracle_verified,status,reason\n";
   diagnostic_stages_ << identity << "stage,status,wall_ms,reason\n";
   diagnostic_candidates_ << identity << "action_id,kernel_evaluated,numerical_valid,post_passed,pl_evaluated,coverage_rejected,selected,slow_path,near_gate,recovered_replacement,numerical_path,fallback_reason,skip_reason,cache_hits,certificate_passed,condition_value_kind,condition_lower_bound,condition_upper_bound,certificate_margin,matrix_free_step_rejected,covariance_solve_count,scratch_reuse_count,kernel_ms,post_ms,bridge_ms,fault_map_ms,pl_ms\n";
+  diagnostic_coverage_ << identity << "action_id,action_type,plausible_hypothesis_ids,mandatory_health_sources,mandatory_group_ids,covered_mode_ids,removed_group_ids,added_group_ids,uncovered_hypothesis_ids,uncovered_mode_ids,uncovered_group_ids,uncovered_mandatory_group_ids,outcome,reason\n";
+  diagnostic_steps_ << identity << "source,epoch,rotation_norm,position_norm,velocity_norm,accel_bias_norm,gyro_bias_norm,epoch_norm\n";
   states_.open(directory_ + "/states.csv");
   if (write_residuals_) residuals_.open(directory_ + "/residuals.csv");
   integrity_.open(directory_ + "/integrity.csv");
@@ -237,7 +245,14 @@ void RunLogger::writeManifest(const RunManifest& m) const {
       << ", \"detector\": " << json(m.detector)
       << ", \"pl_method\": " << json(m.pl_method)
       << ", \"window_epochs\": " << m.window_epochs
+      << ", \"single_faults_enabled\": "
+      << (m.single_faults_enabled ? "true" : "false")
+      << ", \"double_faults_enabled\": "
+      << (m.double_faults_enabled ? "true" : "false")
+      << ", \"supported_max_fault_cardinality\": "
+      << m.supported_fault_cardinality
       << ", \"max_fault_cardinality\": " << m.monitored_fault_cardinality
+      << ", \"max_exclusion_cardinality\": " << m.max_exclusion_cardinality
       << ", \"bridge_model\": " << json(m.bridge_model)
       << ", \"history_recovery\": " << json(m.history_recovery) << "},\n"
       << "  \"gate_j_evidence\": {\"risk_calibration_id\": "
@@ -308,18 +323,45 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
   if (o.diagnostics.input_attempt_id) {
     const auto& d = o.diagnostics;
     auto identity = [&](std::ostream& stream) -> std::ostream& {
-      return stream << "uwb-imu-pl/gate-d-diagnostics/v4," << d.input_attempt_id << ','
+      return stream << "uwb-imu-pl/gate-d-diagnostics/v10," << d.input_attempt_id << ','
           << d.input_timestamp.value() << ',' << o.transaction_id << ',' << o.window_id << ','
           << o.base_graph_version << ',' << d.ordering_version << ','
           << d.noise_model_version << ',' << o.linearization_version << ',' << o.timestamp.value() << ',';
     };
     identity(attempts_) << csv(joinIds(d.frozen_group_ids)) << ',' << d.backend_epoch_before << ',' << d.backend_epoch_after << ','
-        << d.pending_duration_s << ',' << d.raw_imu_samples << ',' << d.consecutive_rejections << ','
+        << d.pending_duration_s << ',' << d.state_age_s << ',' << d.raw_imu_samples << ',' << d.consecutive_rejections << ','
         << d.marginalization_count << ',' << d.factor_block_cache_hits << ','
         << d.factor_block_cache_misses << ',' << d.factor_block_cache_invalidations << ','
         << d.statistical_cache_hits << ',' << d.statistical_cache_misses << ','
         << d.cache_entries << ',' << d.cache_bytes << ','
-        << csv(d.cache_invalidation_reason) << ',' << csv(d.status) << ','
+        << csv(d.cache_invalidation_reason) << ',' << d.base_step_norm << ','
+        << d.selected_step_norm << ',' << d.risk_nominal << ',' << d.risk_p_nm << ','
+        << d.risk_bridge << ',' << d.risk_history << ',' << d.risk_model << ','
+        << d.risk_hypotheses << ',' << d.risk_total << ',' << d.risk_upper_bound << ','
+        << d.risk_margin << ',' << d.hypothesis_count << ','
+        << d.single_uwb_hypotheses << ',' << d.single_accel_hypotheses << ','
+        << d.single_gyro_hypotheses << ',' << d.double_uwb_accel_hypotheses << ','
+        << d.double_uwb_gyro_hypotheses << ',' << d.effective_fault_cardinality << ','
+        << d.generated_actions << ','
+        << d.kernel_evaluated_actions << ',' << d.post_passed_actions << ','
+        << d.pl_evaluated_actions << ',' << d.selected_actions << ','
+        << d.base_svd << ',' << d.base_llt << ',' << d.base_state_solves << ','
+        << d.llt_state_solve_calls << ',' << d.svd_state_solve_calls << ','
+        << d.detector_reference_qr << ','
+        << d.candidate_reference_svd << ',' << d.candidate_inner_llt << ','
+        << d.fault_gram_eigen << ',' << d.fault_gram_svd << ','
+        << d.fault_gram_ldlt << ',' << d.low_dim_fault_gram << ','
+        << d.generic_fault_gram_fallback << ','
+        << d.hypothesis_parallel_blocks << ','
+        << d.hypothesis_shared_hits << ',' << d.hypothesis_shared_misses << ','
+        << d.covariance_rhs_solves << ',' << d.covariance_rhs_columns << ','
+        << d.spectral_rhs_solves << ',' << d.spectral_rhs_columns << ','
+        << d.numerical_contract_mismatches << ','
+        << d.imu_oracle_reintegrations << ','
+        << d.analytic_input_valid << ',' << d.analytic_computation_valid << ','
+        << d.oracle_executed << ',' << d.oracle_relative_error << ','
+        << d.oracle_verified << ','
+        << csv(d.status) << ','
         << csv(d.reason) << '\n';
     for (const auto& stage : o.stage_timings) {
       identity(diagnostic_stages_) << csv(stage.stage) << ',' << csv(stage.status) << ',';
@@ -347,6 +389,27 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
       diagnostic_candidates_ << ',';
       if (c.pl_evaluated) diagnostic_candidates_ << c.pl_ms;
       diagnostic_candidates_ << '\n';
+    }
+    for (const auto& coverage : o.coverage_audit) {
+      identity(diagnostic_coverage_) << coverage.action_id << ','
+          << csv(coverage.action_type) << ','
+          << csv(coverage.plausible_hypothesis_ids) << ','
+          << csv(coverage.mandatory_health_sources) << ','
+          << csv(coverage.mandatory_group_ids) << ','
+          << csv(coverage.covered_mode_ids) << ','
+          << csv(coverage.removed_group_ids) << ','
+          << csv(coverage.added_group_ids) << ','
+          << csv(coverage.uncovered_hypothesis_ids) << ','
+          << csv(coverage.uncovered_mode_ids) << ','
+          << csv(coverage.uncovered_group_ids) << ','
+          << csv(coverage.uncovered_mandatory_group_ids) << ','
+          << csv(coverage.outcome) << ',' << csv(coverage.reason) << '\n';
+    }
+    for (const auto& step : o.state_step_audit) {
+      identity(diagnostic_steps_) << csv(step.source) << ',' << step.epoch << ','
+          << step.rotation_norm << ',' << step.position_norm << ','
+          << step.velocity_norm << ',' << step.accel_bias_norm << ','
+          << step.gyro_bias_norm << ',' << step.epoch_norm << '\n';
     }
   }
   transactions_ << o.timestamp.value() << ',' << o.transaction_id << ','
@@ -510,6 +573,17 @@ void RunLogger::writeSummary(const RunSummary& summary) const {
       << "  \"detail\": " << json(summary.detail) << "\n}\n";
 }
 
+void RunLogger::flush() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  states_.flush(); residuals_.flush(); integrity_.flush(); timing_.flush();
+  events_.flush(); ground_truth_.flush(); fault_truth_.flush();
+  transactions_.flush(); hypotheses_.flush(); candidates_.flush();
+  factor_ledger_.flush(); health_.flush(); bridge_.flush(); attempts_.flush();
+  timing_links_.flush(); diagnostic_stages_.flush(); diagnostic_candidates_.flush();
+  diagnostic_coverage_.flush();
+  diagnostic_steps_.flush();
+}
+
 RunManifest makeRunManifest(const IntegrityConfig& config,
                             const std::string& git_sha, bool git_dirty,
                             const std::string& execution_command) {
@@ -537,7 +611,12 @@ RunManifest makeRunManifest(const IntegrityConfig& config,
   manifest.fixed_lag_epochs = config.incremental.fixed_lag_epochs;
   manifest.schema_version = config.schema_version;
   manifest.window_epochs = config.integrity_window.epochs;
-  manifest.monitored_fault_cardinality = config.fault_models.max_cardinality;
+  manifest.single_faults_enabled = config.fault_models.single_faults_enabled;
+  manifest.double_faults_enabled = config.fault_models.double_faults_enabled;
+  manifest.supported_fault_cardinality = config.fault_models.max_cardinality;
+  manifest.monitored_fault_cardinality =
+      enabledFaultHypothesisCardinality(config.fault_models);
+  manifest.max_exclusion_cardinality = config.fde.max_exclusion_cardinality;
   manifest.bridge_calibration_id = config.bridge.generic.calibration_id;
   manifest.risk_calibration_id = config.risk_v2.calibration_id;
   manifest.noise_overbound_calibration_id =

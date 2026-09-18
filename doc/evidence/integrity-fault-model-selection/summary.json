@@ -1,0 +1,49 @@
+{
+  "schema_version": "uwb-imu-pl/fault-model-selection-evidence/v1",
+  "date": "2026-09-17",
+  "head": "e6ded3069bbc4cd5cf98f14257e96f61066685b8",
+  "pre_change_source_inventory_sha256": "269f5570e9fa8332a8a8afed23920e4511a6c81c048b7392573e2db12f8417ae",
+  "baseline": {
+    "executable_sha256": "b5b7b5e3b31e20ceb36f49f602de30b8cb8aad76366ce434d462e05136e2a5bd",
+    "library_sha256": "958af2ac4aa5b7588124648e1b1d1f65aa7ce1550fc4bd241dcd12e01dcf0841"
+  },
+  "final": {
+    "executable_sha256": "72af9aa497da3abb8da2037275712fa9981ccf0de105c7d959a244c4a9926c7f",
+    "library_sha256": "f50aad4602b9fcb2a4046f98d8f7bc13e7e4530744fb7b65fd9c4b2a3e4d2e1a"
+  },
+  "policy": {
+    "single_faults_enabled_default": true,
+    "double_faults_enabled_default": false,
+    "supported_max_cardinality": 2,
+    "fde_max_exclusion_cardinality": 2
+  },
+  "steady_hypothesis_census": {
+    "single_only": {"single_uwb": 504, "single_accel": 60, "single_gyro": 60, "double": 0, "total": 624, "effective_cardinality": 1},
+    "double_only": {"single": 0, "uwb_accel": 30240, "uwb_gyro": 30240, "total": 60480, "effective_cardinality": 2},
+    "single_and_double": {"single": 624, "uwb_accel": 30240, "uwb_gyro": 30240, "total": 61104, "effective_cardinality": 2}
+  },
+  "correctness": {
+    "cpp_tests_passed": 98,
+    "python_tests_passed": 38,
+    "old_vs_new_sd_frames": 32,
+    "discrete_decision_changes": 0,
+    "max_absolute_numeric_error": 0.0,
+    "max_relative_numeric_error": 0.0,
+    "expected_diagnostic_only_delta": "FrozenHypothesisNumerics context_bytes increased by 8 for the policy fingerprint"
+  },
+  "performance": {
+    "runs_per_mode": 3,
+    "frames_per_run": 140,
+    "warmup_frames_per_run": 40,
+    "steady_samples_per_mode": 300,
+    "quantile_algorithm": "Hyndman-Fan type 7 linear interpolation",
+    "single_only_core_ms": {"mean": 674.389360, "p50": 628.666500, "p95": 1127.970000, "p99": 1354.072600, "max": 1850.830000},
+    "single_and_double_core_ms": {"mean": 1269.079877, "p50": 919.333000, "p95": 2886.206500, "p99": 5177.267700, "max": 5528.400000},
+    "speedup_sd_over_s": {"mean": 1.881821, "p50": 1.462354, "p95": 2.558762, "p99": 3.823479, "max": 2.986984},
+    "reduction": {"mean": 0.468600, "p50": 0.316171, "p95": 0.609186, "p99": 0.738458, "max": 0.665214},
+    "single_only_p50_over_40ms": 15.716663,
+    "single_only_peak_rss_kb": 231068,
+    "single_and_double_peak_rss_kb": 292360
+  },
+  "formal_eligible": false
+}

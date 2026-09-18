@@ -1,5 +1,6 @@
 #include "uwb_imu_pl/config/integrity_config.hpp"
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
+#include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
 #include "uwb_imu_pl/integrity/integrity_monitor.hpp"
 #include "uwb_imu_pl/io/run_logger.hpp"
 
@@ -35,7 +36,19 @@ int main(int argc, char** argv) {
     return 2;
   }
   try {
-    const auto config = uwb_imu_pl::IntegrityConfigLoader::load(argv[1]);
+    auto config = uwb_imu_pl::IntegrityConfigLoader::load(argv[1]);
+    // This executable historically discarded these records after paying their
+    // formatting cost. Preserve its external log mode while disabling their
+    // creation at the source; numerical risk/action summaries remain.
+    config.output.write_hypothesis_evidence = false;
+    config.output.write_health = false;
+    config.resolved_yaml +=
+        "\n# realtime_performance_benchmark runtime output mode\n"
+        "benchmark_write_hypothesis_evidence: false\n"
+        "benchmark_write_health: false\n";
+    config.config_hash =
+        uwb_imu_pl::IntegrityConfigLoader::hashResolvedYaml(
+            config.resolved_yaml);
     const int epochs = std::stoi(argv[3]);
     if (epochs <= 0 || config.incremental.fixed_lag_epochs != 200 ||
         !config.output.write_timing || config.output.write_global_diagnostics) {
@@ -64,6 +77,7 @@ int main(int argc, char** argv) {
     std::mt19937_64 random(config.seed);
     std::normal_distribution<double> normal;
     uwb_imu_pl::RunSummary summary;
+    uwb_imu_pl::NumericalWorkCounters::reset();
     std::vector<double> candidate_wall_ms;
     const bool force_candidate_stress =
         std::getenv("UWB_IMU_PL_BENCHMARK_FORCE_ALARM") != nullptr;
@@ -125,11 +139,7 @@ int main(int argc, char** argv) {
           candidate_wall_ms.push_back(candidate.wall_ms);
         }
       }
-      // Gate D keeps candidate and transaction evidence, but suppresses the
-      // multi-gigabyte per-epoch hypothesis/ledger snapshots that are not
-      // part of the timing verdict and perturb RSS/I/O measurements.
-      result.hypothesis_audit.clear();
-      result.health_audit.clear();
+      const auto outer_start = std::chrono::steady_clock::now();
       logger.writeState(result.state);
       logger.writeIntegrity(result);
       const std::size_t epoch = estimator.currentEpoch();
@@ -167,10 +177,20 @@ int main(int argc, char** argv) {
             ";active_values=" + std::to_string(estimator.activeValueCount()) +
             ";active_factors=" + std::to_string(estimator.factorCount()));
       }
+      logger.flush();
+      const auto flush_complete = std::chrono::steady_clock::now();
+      const double logging_flush_ms = std::chrono::duration<double, std::milli>(
+          flush_complete - outer_start).count();
+      const double outer_epoch_ms = std::chrono::duration<double, std::milli>(
+          flush_complete - start).count();
+      timing("outer_logging_flush", logging_flush_ms);
+      timing("outer_epoch", outer_epoch_ms);
+      logger.flush();
       summary.processed++;
       summary.committed += result.batch_committed;
       summary.rejected += !result.batch_committed;
       summary.core_total_ms += core_ms;
+      summary.end_to_end_total_ms += outer_epoch_ms;
     }
     summary.detail = "deterministic Week-4 figure-eight performance benchmark";
     if (!candidate_wall_ms.empty()) {
@@ -186,6 +206,23 @@ int main(int argc, char** argv) {
                 << " max=" << candidate_wall_ms.back() << '\n';
     }
     logger.writeSummary(summary);
+    const auto work = uwb_imu_pl::NumericalWorkCounters::snapshot();
+    std::cout << "numerical_work base_svd=" << work.base_svd
+              << " base_llt=" << work.base_llt
+              << " base_state_solves=" << work.base_state_solves
+              << " llt_state_solve_calls=" << work.llt_state_solve_calls
+              << " svd_state_solve_calls=" << work.svd_state_solve_calls
+              << " detector_reference_qr=" << work.detector_reference_qr
+              << " candidate_reference_svd=" << work.candidate_reference_svd
+              << " candidate_inner_llt=" << work.candidate_inner_llt
+              << " covariance_rhs_solves=" << work.covariance_rhs_solves
+              << " covariance_rhs_columns=" << work.covariance_rhs_columns
+              << " spectral_rhs_solves=" << work.spectral_rhs_solves
+              << " spectral_rhs_columns=" << work.spectral_rhs_columns
+              << " numerical_contract_mismatches="
+              << work.numerical_contract_mismatches
+              << " imu_oracle_reintegrations=" << work.imu_oracle_reintegrations
+              << '\n';
   } catch (const std::exception& error) {
     std::cerr << error.what() << '\n';
     return 2;

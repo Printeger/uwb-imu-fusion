@@ -67,10 +67,15 @@ TEST(IntegrityConfig, LoadsStrictResearchConfiguration) {
   EXPECT_EQ(config.schema_version, "uwb-imu-pl/v5");
   EXPECT_DOUBLE_EQ(config.detector.p_fa_per_test, 1.0e-6);
   EXPECT_EQ(config.detector.continuity_horizon_tests, 1000u);
-  EXPECT_EQ(config.integrity_window.epochs, 20u);
+  EXPECT_EQ(config.integrity_window.epochs, 10u);
   EXPECT_EQ(config.integrity_window.recovery_margin_epochs, 10u);
   EXPECT_EQ(config.fault_models.max_cardinality, 2u);
+  EXPECT_TRUE(config.fault_models.single_faults_enabled);
+  EXPECT_FALSE(config.fault_models.double_faults_enabled);
+  EXPECT_EQ(uwb_imu_pl::enabledFaultHypothesisCardinality(
+                config.fault_models), 1u);
   EXPECT_EQ(config.fde.max_candidate_count, 128u);
+  EXPECT_EQ(config.fde.max_exclusion_cardinality, 2u);
   EXPECT_TRUE(config.incremental.single_transaction_per_epoch);
   EXPECT_TRUE(config.incremental.fixed_lag_epochs == 0u ||
               config.incremental.fixed_lag_epochs >
@@ -78,6 +83,67 @@ TEST(IntegrityConfig, LoadsStrictResearchConfiguration) {
                   config.integrity_window.recovery_margin_epochs);
   EXPECT_FALSE(config.resolved_yaml.empty());
   EXPECT_EQ(config.resolved_yaml.back(), '\n');
+}
+
+TEST(IntegrityConfig, SupportsValidFaultCardinalityPolicies) {
+  const std::string base = readConfig();
+  const auto load = [&](bool single, bool double_enabled, int index) {
+    auto text = replaceOnce(
+        base, "  single_faults_enabled: true\n",
+        std::string("  single_faults_enabled: ") +
+            (single ? "true\n" : "false\n"));
+    text = replaceOnce(
+        text, "  double_faults_enabled: false\n",
+        std::string("  double_faults_enabled: ") +
+            (double_enabled ? "true\n" : "false\n"));
+    return uwb_imu_pl::IntegrityConfigLoader::load(writeTemp(text, index));
+  };
+  const auto single = load(true, false, 60);
+  EXPECT_EQ(uwb_imu_pl::enabledFaultHypothesisCardinality(
+                single.fault_models), 1u);
+  const auto both = load(true, true, 61);
+  EXPECT_EQ(uwb_imu_pl::enabledFaultHypothesisCardinality(
+                both.fault_models), 2u);
+  const auto double_only = load(false, true, 62);
+  EXPECT_EQ(uwb_imu_pl::enabledFaultHypothesisCardinality(
+                double_only.fault_models), 2u);
+  EXPECT_EQ(double_only.fde.max_exclusion_cardinality, 2u);
+  auto neither = replaceOnce(base, "  single_faults_enabled: true\n",
+                             "  single_faults_enabled: false\n");
+  expectRejected(neither, 63);
+}
+
+TEST(IntegrityConfig, ValidatesDoubleFaultSubtypesAndLegacyDefaults) {
+  const std::string base = readConfig();
+  auto double_enabled = replaceOnce(base,
+      "  double_faults_enabled: false\n", "  double_faults_enabled: true\n");
+  auto none = replaceOnce(double_enabled, "    uwb_plus_accel: true\n",
+                          "    uwb_plus_accel: false\n");
+  none = replaceOnce(none, "    uwb_plus_gyro: true\n",
+                     "    uwb_plus_gyro: false\n");
+  expectRejected(none, 64);
+  const auto accel_only = uwb_imu_pl::IntegrityConfigLoader::load(
+      writeTemp(replaceOnce(double_enabled, "    uwb_plus_gyro: true\n",
+                            "    uwb_plus_gyro: false\n"), 65));
+  EXPECT_TRUE(accel_only.fault_models.combinations.uwb_plus_accel);
+  EXPECT_FALSE(accel_only.fault_models.combinations.uwb_plus_gyro);
+  expectRejected(replaceOnce(double_enabled, "    two_uwb: false\n",
+                             "    two_uwb: true\n"), 66);
+
+  auto legacy = replaceOnce(base, "  single_faults_enabled: true\n", "");
+  legacy = replaceOnce(legacy, "  double_faults_enabled: false\n", "");
+  legacy = replaceOnce(legacy, "  max_exclusion_cardinality: 2\n", "");
+  const auto loaded = uwb_imu_pl::IntegrityConfigLoader::load(
+      writeTemp(legacy, 67));
+  EXPECT_TRUE(loaded.fault_models.single_faults_enabled);
+  EXPECT_FALSE(loaded.fault_models.double_faults_enabled);
+  EXPECT_EQ(loaded.fde.max_exclusion_cardinality, 2u);
+  EXPECT_NE(loaded.resolved_yaml.find("single_faults_enabled: true"),
+            std::string::npos);
+  EXPECT_NE(loaded.resolved_yaml.find("double_faults_enabled: false"),
+            std::string::npos);
+  EXPECT_NE(loaded.resolved_yaml.find("max_exclusion_cardinality: 2"),
+            std::string::npos);
 }
 
 TEST(IntegrityConfig, RejectsMissingRequiredFieldInEverySection) {
@@ -192,4 +258,15 @@ TEST(IntegrityConfig, UnifiedOverridesAreResolvedAndHashed) {
             std::string::npos);
   EXPECT_NE(loaded.config_hash,
             uwb_imu_pl::IntegrityConfigLoader::load(kResearchConfig).config_hash);
+}
+
+TEST(IntegrityConfig, DevelopmentManifestHashTracksAppendedOverrides) {
+  const auto base = uwb_imu_pl::IntegrityConfigLoader::load(kResearchConfig);
+  const std::string resolved = base.resolved_yaml +
+      "development_formal_eligible: false\n";
+  EXPECT_NE(uwb_imu_pl::IntegrityConfigLoader::hashResolvedYaml(resolved),
+            base.config_hash);
+  EXPECT_EQ(uwb_imu_pl::IntegrityConfigLoader::hashResolvedYaml(
+                base.resolved_yaml),
+            base.config_hash);
 }

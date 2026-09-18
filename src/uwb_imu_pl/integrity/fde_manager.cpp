@@ -1,4 +1,5 @@
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
+#include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
 
 #include <algorithm>
 #include <set>
@@ -46,6 +47,7 @@ FdeDecision FdeManager::decide(
     const std::vector<FaultHypothesisV2>& hypotheses,
     const std::vector<FaultModeEvidence>& evidence,
     std::vector<CandidateEvaluation>* candidates,
+    const std::vector<FactorGroupId>& mandatory_groups,
     const RiskBudgetV2& risk) const {
   FdeDecision decision;
   if (!candidates || !all_in.numerically_valid) {
@@ -53,26 +55,22 @@ FdeDecision FdeManager::decide(
     decision.reason = "joint detector or candidate set invalid";
     return decision;
   }
-  double risk_sum = 3.0 * risk.nominal_axis_tail + risk.p_nm +
-      risk.p_bridge_escape + risk.p_history_contamination + risk.p_model_escape;
-  for (const auto& hypothesis : hypotheses) {
-    risk_sum += hypothesis.hmi_allocation;
-  }
-  if (risk_sum > risk.p_hmi_total) {
+  const RiskBudgetAudit risk_audit = auditRiskBudget(risk, hypotheses);
+  if (!risk_audit.valid) {
     decision.status = FdeStatus::RiskBudgetInvalid;
     decision.reason = "V2 outcome risk budget does not close";
     return decision;
   }
   if (!all_in.passed) {
-    for (const auto& item : evidence) {
-      if (item.plausible) decision.plausible_hypotheses.push_back(item.hypothesis);
-    }
-    if (decision.plausible_hypotheses.empty()) {
+    decision.plausible_hypotheses =
+        completePlausibleHypotheses(hypotheses, evidence);
+    if (decision.plausible_hypotheses.empty() && mandatory_groups.empty()) {
       decision.status = FdeStatus::NoValidCandidate;
       decision.reason = "alarm has no risk-preserving plausible hypothesis";
       return decision;
     }
   }
+  decision.mandatory_exclusion_groups = mandatory_groups;
   std::map<HypothesisId, const FaultHypothesisV2*> hypothesis_index;
   for (const auto& h : hypotheses) hypothesis_index.emplace(h.id, &h);
   std::vector<std::size_t> eligible;
@@ -86,8 +84,17 @@ FdeDecision FdeManager::decide(
         break;
       }
     }
+    if (covers_all) {
+      covers_all = std::all_of(mandatory_groups.begin(), mandatory_groups.end(),
+          [&](FactorGroupId group) {
+            return std::find(candidate.action.groups_to_remove.begin(),
+                             candidate.action.groups_to_remove.end(), group) !=
+                candidate.action.groups_to_remove.end();
+          });
+    }
     candidate.covers_plausible_set = covers_all;
     if (candidate.valid && candidate.post_detector_passed && covers_all &&
+        candidate.action.recoverability == HistoryRecoverability::Recoverable &&
         std::isfinite(candidate.hpl_m) && std::isfinite(candidate.vpl_m)) {
       eligible.push_back(i);
     }

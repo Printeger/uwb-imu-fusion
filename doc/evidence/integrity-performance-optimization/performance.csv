@@ -1,0 +1,41 @@
+experiment,scenario,variant,samples,measure,p50_ms,p95_ms,p99_ms,max_ms,mean_ms,speedup,reduction_percent,notes
+main,A_default_ramp,baseline,300,core_total,3155.690,4718.360,7992.950,27742.300,3517.741,,,three runs; epochs 41-140
+main,A_default_ramp,optimized,300,core_total,744.144,1176.540,1668.990,2389.100,803.261,4.241,76.419,three runs; epochs 41-140
+process,A_default_ramp,baseline_round_1,1,elapsed,,,,,416270,,,140 epochs
+process,A_default_ramp,optimized_round_1,1,elapsed,,,,,113270,3.675,72.792,140 epochs
+process,A_default_ramp,baseline_round_2,1,elapsed,,,,,508330,,,140 epochs
+process,A_default_ramp,optimized_round_2,1,elapsed,,,,,99560,5.106,80.414,140 epochs
+process,A_default_ramp,baseline_round_3,1,elapsed,,,,,414620,,,140 epochs
+process,A_default_ramp,optimized_round_3,1,elapsed,,,,,89730,4.621,78.359,140 epochs
+ablation,A_default_ramp,A_reference,20,core_total,2744.530,3163.310,4021.860,4021.860,2827.152,,,epochs 21-40; one run
+ablation,A_default_ramp,B_shared,20,core_total,1842.800,2182.870,2232.610,2232.610,1887.661,1.489,32.856,incremental versus A
+ablation,A_default_ramp,C_low_dim_batch_1t,20,core_total,1545.280,2167.360,2713.490,2713.490,1709.450,1.193,16.145,incremental versus B
+ablation,A_default_ramp,D_hypothesis_parallel_4t,20,core_total,1483.190,1674.330,1689.630,1689.630,1487.972,1.042,4.018,incremental versus C
+ablation,A_default_ramp,E_window_prep,20,core_total,659.283,872.049,1154.840,1154.840,705.579,2.250,55.550,incremental versus D
+fault,C_uwb_fde,baseline_fault_input_25,1,core_total,1947.930,1947.930,1947.930,1947.930,1947.930,,,fault injection frame
+fault,C_uwb_fde,optimized_fault_input_25,1,core_total,599.208,599.208,599.208,599.208,599.208,3.251,69.239,fault injection frame
+fault,C_uwb_fde,baseline_recovery_26_32,7,core_total,,,,,2534.040,,,mean only
+fault,C_uwb_fde,optimized_recovery_26_32,7,core_total,,,,,608.597,4.164,75.983,mean only
+fault,D_imu_bridge,baseline_fault_input_25,1,core_total,2212.020,2212.020,2212.020,2212.020,2212.020,,,fault injection frame
+fault,D_imu_bridge,optimized_fault_input_25,1,core_total,860.240,860.240,860.240,860.240,860.240,2.571,61.111,fault injection frame
+fault,D_imu_bridge,baseline_rejected_26_32,7,core_total,,,,,2426.529,,,mean only
+fault,D_imu_bridge,optimized_rejected_26_32,7,core_total,,,,,935.038,2.595,61.466,mean only
+fault,E_union,baseline_fault_input_25,1,core_total,1824.050,1824.050,1824.050,1824.050,1824.050,,,fault injection frame
+fault,E_union,optimized_fault_input_25,1,core_total,532.663,532.663,532.663,532.663,532.663,3.424,70.798,fault injection frame
+fault,E_union,baseline_rejected_26_32,7,core_total,,,,,1854.563,,,mean only
+fault,E_union,optimized_rejected_26_32,7,core_total,,,,,670.916,2.764,63.823,mean only
+stage,A_default_ramp,baseline_candidate_evaluation,300,wall,1135.946,1905.739,3032.649,18441.710,,,,nearest-rank per-stage values are not summed
+stage,A_default_ramp,optimized_candidate_evaluation,300,wall,66.751,99.477,173.572,289.045,,17.018,94.124,nearest-rank per-stage values are not summed
+stage,A_default_ramp,baseline_integrity_window,300,wall,946.113,1578.097,2430.656,14621.391,,,,nearest-rank per-stage values are not summed
+stage,A_default_ramp,optimized_integrity_window,300,wall,147.250,261.733,461.779,543.170,,6.426,84.436,nearest-rank per-stage values are not summed
+stage,A_default_ramp,baseline_hypothesis_evidence,300,wall,687.579,1016.816,1869.260,2846.608,,,,nearest-rank per-stage values are not summed
+stage,A_default_ramp,optimized_hypothesis_evidence,300,wall,199.437,331.140,527.459,915.916,,3.448,70.995,nearest-rank per-stage values are not summed
+stage,A_default_ramp,baseline_model_generation,300,wall,179.504,286.699,609.662,2298.740,,,,nearest-rank per-stage values are not summed
+stage,A_default_ramp,optimized_model_generation,300,wall,174.810,262.257,434.472,571.794,,1.027,2.615,nearest-rank per-stage values are not summed
+window_stage,A_default_ramp,optimized_window_svd,300,wall,106.271,172.667,340.203,413.639,,,,
+window_stage,A_default_ramp,optimized_window_fingerprint,300,wall,15.858,24.791,44.698,58.684,,,,
+window_stage,A_default_ramp,optimized_window_boundary_provenance,300,wall,8.652,17.916,45.563,69.078,,,,
+window_stage,A_default_ramp,optimized_window_linearization_whitening,300,wall,8.467,15.861,31.619,56.770,,,,
+window_stage,A_default_ramp,optimized_window_normal_equations,300,wall,6.026,10.534,19.993,21.678,,,,
+window_stage,A_default_ramp,optimized_window_llt_state_solves,300,wall,1.539,3.829,6.400,12.897,,,,
+window_stage,A_default_ramp,optimized_window_dense_assembly,300,wall,0.730,1.503,2.919,3.752,,,,

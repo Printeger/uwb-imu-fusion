@@ -32,6 +32,7 @@ class RunLogger {
   void writeSummary(const std::string& status,
                     const std::string& detail) const;
   void writeSummary(const RunSummary& summary) const;
+  void flush();
 
  private:
   std::string directory_;
@@ -53,6 +54,8 @@ class RunLogger {
   std::uint64_t timing_row_ = 0;
   std::ofstream diagnostic_stages_;
   std::ofstream diagnostic_candidates_;
+  std::ofstream diagnostic_coverage_;
+  std::ofstream diagnostic_steps_;
   bool write_residuals_ = true;
   bool write_timing_ = true;
   std::uint64_t next_event_sequence_ = 1;

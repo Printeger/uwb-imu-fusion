@@ -7,6 +7,8 @@
 
 #include "uwb_imu_pl/estimation/candidate_replay.hpp"
 #include "uwb_imu_pl/estimation/candidate_worker_pool.hpp"
+#include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
+#include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
 #include <boost/filesystem.hpp>
 #include <boost/math/distributions/chi_squared.hpp>
 #include <boost/math/distributions/non_central_chi_squared.hpp>
@@ -24,6 +26,14 @@
 #include <stdexcept>
 
 namespace uwb_imu_pl {
+
+bool bridgeTimeoutExceeded(std::uint32_t consecutive_epochs,
+                           double duration_s,
+                           std::uint32_t max_consecutive_epochs,
+                           double max_duration_s) {
+  return consecutive_epochs > max_consecutive_epochs ||
+      duration_s > max_duration_s;
+}
 namespace {
 
 double chiSquareThreshold(int dof, double p_fa) {
@@ -673,34 +683,62 @@ bool actionCovers(const ExclusionAction& action,
       });
 }
 
-std::string healthSource(const FaultUnit& unit) {
-  if (!unit.physical_source_id.empty()) {
-    if (unit.sensor == SensorType::Uwb &&
-        unit.physical_source_id.rfind("uwb:", 0) == 0) {
-      return "anchor:" + unit.physical_source_id.substr(4);
-    }
-    const auto interval = unit.physical_source_id.find(":interval:");
-    const std::string base = interval == std::string::npos
-        ? unit.physical_source_id : unit.physical_source_id.substr(0, interval);
-    if (base.rfind("imu_accel:", 0) == 0) {
-      static const char* axes[] = {"x", "y", "z"};
-      const int axis = unit.axis;
-      if (axis >= 0 && axis < 3) return std::string("accel:") + axes[axis];
-    }
-    if (base.rfind("imu_gyro:", 0) == 0) {
-      static const char* axes[] = {"x", "y", "z"};
-      const int axis = unit.axis;
-      if (axis >= 0 && axis < 3) return std::string("gyro:") + axes[axis];
+// Pure, frozen-input eligibility check.  A negative result proves that an
+// action cannot become the FDE winner regardless of its numerical kernel or
+// PL result.  The exhaustive development mode bypasses this check so the same
+// frozen input can be used as a decision-equivalence oracle.
+std::string actionIneligibilityReason(
+    const ExclusionAction& action,
+    const LinearizedIntegrityWindow& window,
+    const std::vector<HypothesisId>& plausible,
+    const std::map<std::uint64_t, const FaultHypothesisV2*>& hypotheses,
+    const std::vector<FactorGroupId>& mandatory_groups,
+    std::uint32_t max_cardinality) {
+  if (action.exclusion_cardinality > static_cast<int>(max_cardinality)) {
+    return "cardinality exceeds frozen contract";
+  }
+  if (action.recoverability != HistoryRecoverability::Recoverable) {
+    return "history replacement is not recoverable";
+  }
+  for (const auto id : plausible) {
+    const auto found = hypotheses.find(id.value());
+    if (found == hypotheses.end() || !actionCovers(action, *found->second)) {
+      return "does not cover complete frozen plausible set";
     }
   }
-  static const char* axes[] = {"x", "y", "z"};
-  if (unit.sensor == SensorType::Uwb) {
-    return "anchor:" + std::to_string(unit.id.value());
+  for (const auto group : mandatory_groups) {
+    if (std::find(action.groups_to_remove.begin(), action.groups_to_remove.end(),
+                  group) == action.groups_to_remove.end()) {
+      return "does not satisfy mandatory health exclusion";
+    }
   }
-  if (unit.sensor == SensorType::ImuAccelerometer && unit.axis >= 0 &&
-      unit.axis < 3) return std::string("accel:") + axes[unit.axis];
-  if (unit.sensor == SensorType::ImuGyroscope && unit.axis >= 0 &&
-      unit.axis < 3) return std::string("gyro:") + axes[unit.axis];
+  std::set<std::uint64_t> frozen_groups;
+  for (const auto& block : window.blocks) {
+    frozen_groups.insert(block.group_id.value());
+  }
+  std::set<std::uint64_t> removed;
+  for (const auto group : action.groups_to_remove) {
+    if (!removed.insert(group.value()).second) {
+      return "duplicate removal target";
+    }
+    if (!frozen_groups.count(group.value())) {
+      return "removal target absent from frozen window";
+    }
+  }
+  std::map<std::uint64_t, const LinearizedFactorBlock*> added;
+  for (const auto& block : action.added_blocks) {
+    const auto inserted = added.emplace(block.group_id.value(), &block);
+    if (!inserted.second) return "replacement blocks share a group id";
+  }
+  std::set<std::uint64_t> added_ids;
+  for (const auto group : action.groups_to_add) {
+    if (!added_ids.insert(group.value()).second) {
+      return "duplicate addition target";
+    }
+    if (!added.count(group.value())) {
+      return "addition target has no frozen block content";
+    }
+  }
   return {};
 }
 
@@ -886,10 +924,34 @@ ProjectedPostActionModes projectPostActionModes(
     const FrozenCandidateIndexes& indexes) {
   ProjectedPostActionModes projected;
   for (const auto& hypothesis : models.hypotheses) {
-    if (!actionCovers(action, hypothesis)) {
-      projected.hypotheses.push_back(hypothesis);
-      projected.hypotheses.back().A.resize(0, 0);
+    FaultHypothesisV2 residual = hypothesis;
+    residual.modes.erase(std::remove_if(residual.modes.begin(), residual.modes.end(),
+        [&](FaultModeId id) {
+          return std::find(action.covered_modes.begin(),
+                           action.covered_modes.end(), id) !=
+                 action.covered_modes.end();
+        }), residual.modes.end());
+    residual.units.erase(std::remove_if(residual.units.begin(), residual.units.end(),
+        [&](FaultUnitId id) {
+          return std::find(action.covered_units.begin(),
+                           action.covered_units.end(), id) !=
+                 action.covered_units.end();
+        }), residual.units.end());
+    if (residual.modes.empty() && residual.units.empty()) continue;
+    residual.affected_groups.clear();
+    for (const auto mode_id : residual.modes) {
+      const auto mode = indexes.modes.find(mode_id.value());
+      if (mode == indexes.modes.end()) continue;
+      residual.affected_groups.insert(residual.affected_groups.end(),
+          mode->second->affected_groups.begin(),
+          mode->second->affected_groups.end());
     }
+    std::sort(residual.affected_groups.begin(), residual.affected_groups.end());
+    residual.affected_groups.erase(std::unique(residual.affected_groups.begin(),
+                                               residual.affected_groups.end()),
+                                   residual.affected_groups.end());
+    residual.A.resize(0, 0);
+    projected.hypotheses.push_back(std::move(residual));
   }
   std::set<std::uint64_t> required_modes;
   for (const auto& hypothesis : projected.hypotheses)
@@ -952,8 +1014,65 @@ ProjectedPostActionModes projectPostActionModes(
       }
       row_offset += added.residual_whitened.size();
     }
+    if (mode.effective_basis_certified &&
+        mode.effective_parameter_dimension > 0 &&
+        mode.effective_parameter_basis.rows() == mode.parameter_dimension &&
+        mode.effective_parameter_basis.cols() ==
+            mode.effective_parameter_dimension) {
+      mode_map = mode_map * mode.effective_parameter_basis;
+    }
     projected.mode_maps.emplace(mode.id.value(), std::move(mode_map));
   }
+
+  // A post-action graph can remove every row on which a mode acts (for
+  // example, an epoch-local UWB bias whose complete batch was replaced by a
+  // retained-measurement block).  Such a mode is no longer a fault of the
+  // candidate graph.  Keeping its all-zero map in the post-FDE census makes
+  // the fault Gram rank deficient by construction and incorrectly rejects an
+  // otherwise valid exclusion.  Drop only directions whose *candidate raw
+  // measurement effect* is numerically zero; modes that retain any effect
+  // remain subject to the normal monitorability contract.
+  std::set<std::uint64_t> inactive_modes;
+  for (auto it = projected.mode_maps.begin(); it != projected.mode_maps.end();) {
+    const Eigen::MatrixXd& map = it->second;
+    const double largest = map.size() == 0
+        ? 0.0 : map.cwiseAbs().maxCoeff();
+    if (!std::isfinite(largest) || largest > 1e-12) {
+      ++it;
+      continue;
+    }
+    inactive_modes.insert(it->first);
+    it = projected.mode_maps.erase(it);
+  }
+  std::vector<FaultHypothesisV2> active_hypotheses;
+  active_hypotheses.reserve(projected.hypotheses.size());
+  for (auto& hypothesis : projected.hypotheses) {
+    hypothesis.modes.erase(std::remove_if(
+        hypothesis.modes.begin(), hypothesis.modes.end(),
+        [&](FaultModeId id) { return inactive_modes.count(id.value()) != 0; }),
+        hypothesis.modes.end());
+    if (hypothesis.modes.empty()) continue;
+    hypothesis.affected_groups.clear();
+    for (const auto mode_id : hypothesis.modes) {
+      const auto mode = indexes.modes.find(mode_id.value());
+      if (mode == indexes.modes.end()) continue;
+      for (const auto group : mode->second->affected_groups) {
+        if (std::find(action.groups_to_remove.begin(),
+                      action.groups_to_remove.end(), group) ==
+            action.groups_to_remove.end()) {
+          hypothesis.affected_groups.push_back(group);
+        }
+      }
+    }
+    std::sort(hypothesis.affected_groups.begin(),
+              hypothesis.affected_groups.end());
+    hypothesis.affected_groups.erase(
+        std::unique(hypothesis.affected_groups.begin(),
+                    hypothesis.affected_groups.end()),
+        hypothesis.affected_groups.end());
+    active_hypotheses.push_back(std::move(hypothesis));
+  }
+  projected.hypotheses = std::move(active_hypotheses);
   return projected;
 }
 
@@ -1106,6 +1225,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
     return output;
   }
   const IntegrityConfig& cfg = estimator_->config();
+  const NumericalWorkSnapshot numerical_before =
+      NumericalWorkCounters::snapshot();
   const auto prepare_start = std::chrono::steady_clock::now();
   EpochTransaction transaction = estimator_->prepareEpoch(batch);
   IntegrityOutput output;
@@ -1142,6 +1263,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
       start_operation("state_audit");
       const auto audit_start = std::chrono::steady_clock::now();
       output.factor_ledger_audit.clear();
+      if (cfg.output.write_factor_ledger) {
       for (const auto& entry : estimator_->factorLedger().entries()) {
         FactorLedgerAuditRecord record;
         record.factor_id = entry.factor_id.value();
@@ -1183,7 +1305,9 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         record.recovery_epoch = entry.recovery_epoch;
         output.factor_ledger_audit.push_back(std::move(record));
       }
+      }
       output.health_audit.clear();
+      if (cfg.output.write_health) {
       for (const auto& entry : health_.snapshot()) {
         HealthAuditRecord record;
         record.source_id = entry.source_id;
@@ -1209,6 +1333,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         record.recovery_reset_count = entry.recovery_reset_count;
         output.health_audit.push_back(std::move(record));
       }
+      }
       output.stage_timings.push_back({"state_audit", std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - audit_start).count(), true, "EXECUTED", ""});
     };
@@ -1218,6 +1343,21 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
     start_operation("integrity_window");
     const auto window = estimator_->buildIntegrityWindow(transaction, request);
     record_stage("integrity_window", window.model_valid);
+    const auto& preparation = window.preparation_timing;
+    output.stage_timings.push_back({"window_boundary_provenance",
+        preparation.boundary_and_provenance_ms, true, "EXECUTED", ""});
+    output.stage_timings.push_back({"window_factor_linearization_whitening",
+        preparation.factor_linearization_whitening_ms, true, "EXECUTED", ""});
+    output.stage_timings.push_back({"window_dense_assembly",
+        preparation.dense_assembly_ms, true, "EXECUTED", ""});
+    output.stage_timings.push_back({"window_svd", preparation.svd_ms,
+        true, "EXECUTED", ""});
+    output.stage_timings.push_back({"window_normal_equations",
+        preparation.normal_equations_ms, true, "EXECUTED", ""});
+    output.stage_timings.push_back({"window_llt_state_solves",
+        preparation.llt_and_state_solves_ms, true, "EXECUTED", ""});
+    output.stage_timings.push_back({"window_fingerprint",
+        preparation.fingerprint_ms, true, "EXECUTED", ""});
     output.window_id = window.id.value();
     std::set<std::uint64_t> frozen_groups;
     for (const auto& block : window.blocks) frozen_groups.insert(block.group_id.value());
@@ -1324,18 +1464,38 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           transaction, transaction.imu_group.id);
       const auto bridge_block = estimator_->buildPendingFactorBlock(
           transaction, transaction.generic_bridge_group.id);
-      const ImuFaultSubspaces imu_subspaces =
-          ImuFaultSubspaceBuilder().build(transaction, imu_block);
+      const bool run_imu_fd_oracle =
+          std::getenv("UWB_IMU_PL_IMU_FD_ORACLE") != nullptr;
+      const ImuFaultSubspaces imu_subspaces = run_imu_fd_oracle
+          ? ImuFaultSubspaceBuilder().verifyFiniteDifferenceOracle(
+                transaction, imu_block)
+          : ImuFaultSubspaceBuilder().buildAnalytic(transaction, imu_block);
+      output.diagnostics.analytic_input_valid =
+          imu_subspaces.analytic_input_valid;
+      output.diagnostics.analytic_computation_valid =
+          imu_subspaces.analytic_computation_valid;
+      output.diagnostics.oracle_executed = imu_subspaces.oracle_executed;
+      output.diagnostics.oracle_relative_error =
+          imu_subspaces.oracle_relative_error;
+      output.diagnostics.oracle_verified = imu_subspaces.oracle_verified;
       record_stage("current_sensitivity");
-      if (!imu_subspaces.analytic_verified) {
+      if (!imu_subspaces.analytic_input_valid ||
+          !imu_subspaces.analytic_computation_valid) {
         discard_fail_closed(
             FdeStatus::ModelInvalid,
-            "analytic IMU sensitivity failed finite-difference verification",
+            "analytic IMU sensitivity input/computation invalid",
             false);
       } else {
         start_operation("model_generation");
         HypothesisGeneratorConfig generator_config;
-        generator_config.max_cardinality = cfg.fault_models.max_cardinality;
+        generator_config.single_faults_enabled =
+            cfg.fault_models.single_faults_enabled;
+        generator_config.double_faults_enabled =
+            cfg.fault_models.double_faults_enabled;
+        generator_config.max_model_cardinality =
+            cfg.fault_models.max_cardinality;
+        generator_config.max_exclusion_cardinality =
+            cfg.fde.max_exclusion_cardinality;
         generator_config.max_candidate_count = cfg.fde.max_candidate_count;
         generator_config.uwb_prior_bound =
             cfg.fault_models.uwb.prior_probability_bound;
@@ -1354,28 +1514,103 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         generator_config.include_persistent_uwb =
             cfg.fault_models.uwb.persistent_anchor_bias;
         generator_config.include_ramp_uwb = cfg.fault_models.uwb.ramp_bias;
-        generator_config.total_hmi_allocation = std::max(
-            0.0, cfg.risk_v2.p_hmi_total -
-                (3.0 * cfg.risk_v2.nominal_axis_tail + cfg.risk_v2.p_nm +
-                 cfg.risk_v2.p_bridge_escape +
-                 cfg.risk_v2.p_history_contamination +
-                 cfg.risk_v2.p_model_escape));
+        generator_config.total_hmi_allocation =
+            conservativeRemainingHypothesisRisk(cfg.risk_v2);
+        generator_config.rank_tolerance =
+            cfg.integrity_window.rank_tolerance;
         auto models = HypothesisGenerator(generator_config).generate(
             window, transaction, imu_subspaces, bridge_block);
+        output.diagnostics.generated_actions = models.actions.size();
+        const RiskBudgetAudit risk_audit =
+            auditRiskBudget(cfg.risk_v2, models.hypotheses);
+        output.diagnostics.risk_nominal = risk_audit.nominal;
+        output.diagnostics.risk_p_nm = risk_audit.p_nm;
+        output.diagnostics.risk_bridge = risk_audit.bridge;
+        output.diagnostics.risk_history = risk_audit.history;
+        output.diagnostics.risk_model = risk_audit.model;
+        output.diagnostics.risk_hypotheses = risk_audit.hypotheses;
+        output.diagnostics.risk_total = risk_audit.total;
+        output.diagnostics.risk_upper_bound = risk_audit.upper_bound;
+        output.diagnostics.risk_margin = risk_audit.margin;
+        output.diagnostics.hypothesis_count = risk_audit.hypothesis_count;
+        output.diagnostics.single_uwb_hypotheses =
+            models.single_uwb_hypotheses;
+        output.diagnostics.single_accel_hypotheses =
+            models.single_accel_hypotheses;
+        output.diagnostics.single_gyro_hypotheses =
+            models.single_gyro_hypotheses;
+        output.diagnostics.double_uwb_accel_hypotheses =
+            models.double_uwb_accel_hypotheses;
+        output.diagnostics.double_uwb_gyro_hypotheses =
+            models.double_uwb_gyro_hypotheses;
+        output.diagnostics.effective_fault_cardinality =
+            risk_audit.effective_max_cardinality;
+        if (risk_audit.single_fault_hypothesis_count !=
+                models.single_uwb_hypotheses +
+                    models.single_accel_hypotheses +
+                    models.single_gyro_hypotheses ||
+            risk_audit.double_fault_hypothesis_count !=
+                models.double_uwb_accel_hypotheses +
+                    models.double_uwb_gyro_hypotheses ||
+            risk_audit.other_cardinality_hypothesis_count != 0 ||
+            risk_audit.effective_max_cardinality !=
+                models.effective_max_cardinality) {
+          throw std::logic_error(
+              "generated fault census and risk audit disagree");
+        }
         record_stage("model_generation");
         output.stage_timings.back().wall_ms -= models.historical_sensitivity_ms;
         output.stage_timings.push_back({"historical_sensitivity", models.historical_sensitivity_ms, true});
         start_operation("hypothesis_evidence");
         HypothesisEvaluationConfig evidence_config;
         evidence_config.rank_tolerance = cfg.integrity_window.rank_tolerance;
+        evidence_config.max_condition_number =
+            cfg.integrity_window.max_condition_number;
         evidence_config.min_fault_gram_sigma =
             cfg.fault_models.imu.min_fault_gram_sigma;
         evidence_config.max_fault_gram_condition =
             cfg.fault_models.imu.max_fault_gram_condition;
+        evidence_config.enable_shared_context =
+            std::getenv("UWB_IMU_PL_DISABLE_HYPOTHESIS_SHARED") == nullptr;
+        evidence_config.enable_low_dim_batch =
+            std::getenv("UWB_IMU_PL_DISABLE_HYPOTHESIS_BATCH") == nullptr;
+        evidence_config.retain_detailed_results =
+            cfg.output.write_hypothesis_evidence ||
+            std::getenv("UWB_IMU_PL_IMU_CALIBRATION_AUDIT") != nullptr;
+        constexpr std::size_t kCandidateWorkers = 4;
+        const char* worker_override = std::getenv("UWB_IMU_PL_CANDIDATE_WORKERS");
+        std::size_t active_workers = kCandidateWorkers;
+        if (worker_override) {
+          try {
+            active_workers = std::max<std::size_t>(1, std::min<std::size_t>(
+                kCandidateWorkers, static_cast<std::size_t>(
+                    std::stoul(worker_override))));
+          } catch (...) {
+            throw std::invalid_argument(
+                "UWB_IMU_PL_CANDIDATE_WORKERS must be an integer in [1,4]");
+          }
+        }
+        evidence_config.hypothesis_workers = active_workers;
+        evidence_config.fault_model_policy_fingerprint =
+            faultModelPolicyFingerprint(cfg.fault_models);
+        std::shared_ptr<const FrozenHypothesisNumerics>
+            shared_hypothesis_numerics;
         auto evidence = HypothesisEvidenceEvaluator(evidence_config).evaluateAll(
             window, models.modes, &models.hypotheses,
-            all_in.squared_threshold);
+            all_in.squared_threshold, &shared_hypothesis_numerics,
+            candidate_workers_.get());
         record_stage("hypothesis_evidence", true);
+        if (shared_hypothesis_numerics && !output.stage_timings.empty()) {
+          const auto& shared = *shared_hypothesis_numerics;
+          output.stage_timings.back().reason =
+              "effective_dimensions=1:" +
+              std::to_string(shared.dimension_one_count) + ",2:" +
+              std::to_string(shared.dimension_two_count) + ",3:" +
+              std::to_string(shared.dimension_three_count) + ",other:" +
+              std::to_string(shared.dimension_other_count) +
+              ";context_bytes=" + std::to_string(shared.bytes) +
+              ";worker_blocks=" + std::to_string(shared.worker_blocks);
+        }
         start_operation("health_actions");
         const FrozenCandidateIndexes indexes(transaction, models, evidence);
         bool hardware_barrier = false;
@@ -1386,7 +1621,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         };
         std::map<std::string, SourceEvidence> source_evidence;
         for (const auto& unit : models.units) {
-          const std::string source = healthSource(unit);
+          const std::string source = healthSourceId(unit);
           if (source.empty()) continue;
           const auto single = indexes.single_unit_hypotheses.find(unit.id.value());
           if (single == indexes.single_unit_hypotheses.end()) continue;
@@ -1399,6 +1634,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             aggregate.evidence_indices.push_back(item->second);
           }
         }
+        std::vector<std::string> mandatory_health_sources;
+        std::vector<FactorGroupId> mandatory_exclusion_groups;
         for (auto& source_item : source_evidence) {
           const std::string& source = source_item.first;
           auto& aggregate = source_item.second;
@@ -1411,12 +1648,23 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           }
           if (!pending_health.allowedInFormalEstimator(source)) {
             hardware_barrier = true;
-            // A known unavailable source is an exclusion trigger.  Protect
-            // any remaining component of a combination through its own
-            // single-unit hypothesis instead of forcing every superset into
-            // the ambiguity union.
-            for (const auto index : aggregate.evidence_indices) {
-              evidence[index].plausible = true;
+            mandatory_health_sources.push_back(source);
+            const bool is_uwb = source.rfind("anchor:", 0) == 0;
+            FactorGroupId group = transaction.imu_group.id;
+            if (is_uwb) {
+              const auto nominal = std::find_if(
+                  transaction.uwb_groups.begin(), transaction.uwb_groups.end(),
+                  [](const PendingFactorGroup& value) { return value.nominal; });
+              if (nominal == transaction.uwb_groups.end()) {
+                throw std::logic_error(
+                    "quarantined UWB source has no pending nominal group");
+              }
+              group = nominal->id;
+            }
+            if (std::find(mandatory_exclusion_groups.begin(),
+                          mandatory_exclusion_groups.end(), group) ==
+                mandatory_exclusion_groups.end()) {
+              mandatory_exclusion_groups.push_back(group);
             }
           }
         }
@@ -1427,10 +1675,35 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           models.actions = {keep};
         } else {
           models.actions = HypothesisGenerator(generator_config)
-              .actionsForPlausibleSet(window, transaction, models, evidence);
+              .actionsForPlausibleSet(window, transaction, models, evidence,
+                                      mandatory_health_sources);
+        }
+        const bool exhaustive_candidates =
+            std::getenv("UWB_IMU_PL_EXHAUSTIVE_CANDIDATES") != nullptr;
+        const std::vector<HypothesisId> frozen_plausible =
+            (!all_in.passed || hardware_barrier)
+                ? completePlausibleHypotheses(models.hypotheses, evidence)
+                : std::vector<HypothesisId>{};
+        std::map<std::uint64_t, const FaultHypothesisV2*> frozen_hypotheses;
+        for (const auto& hypothesis : models.hypotheses) {
+          frozen_hypotheses.emplace(hypothesis.id.value(), &hypothesis);
+        }
+        std::map<std::uint64_t, std::string> action_ineligibility;
+        std::vector<ExclusionAction> kernel_actions;
+        kernel_actions.reserve(models.actions.size());
+        for (const auto& action : models.actions) {
+          std::string reason = actionIneligibilityReason(
+              action, window, frozen_plausible, frozen_hypotheses,
+              mandatory_exclusion_groups,
+              cfg.fde.max_exclusion_cardinality);
+          if (!reason.empty()) action_ineligibility.emplace(action.id.value(), reason);
+          if (exhaustive_candidates || reason.empty()) kernel_actions.push_back(action);
         }
         record_stage("health_actions");
         start_operation("hypothesis_audit");
+        const bool calibration_hypothesis_audit =
+            std::getenv("UWB_IMU_PL_IMU_CALIBRATION_AUDIT") != nullptr;
+        if (cfg.output.write_hypothesis_evidence || calibration_hypothesis_audit) {
         std::map<double, double> noncentrality_boundaries;
         for (const auto& hypothesis : models.hypotheses) {
           if (!noncentrality_boundaries.count(hypothesis.p_md_allocation)) {
@@ -1442,13 +1715,26 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         }
         for (std::size_t i = 0; i < models.hypotheses.size(); ++i) {
           const auto& hypothesis = models.hypotheses[i];
+          if (!cfg.output.write_hypothesis_evidence) {
+            bool target = hypothesis.modes.size() == 1;
+            if (target) {
+              const auto mode = indexes.modes.find(hypothesis.modes.front().value());
+              target = mode != indexes.modes.end() &&
+                  mode->second->sensor == SensorType::ImuAccelerometer &&
+                  mode->second->axis == 0;
+            }
+            if (!target) continue;
+          }
           HypothesisAuditRecord record;
           record.hypothesis_id = hypothesis.id.value();
+          const bool format_hypothesis_strings = true;
           for (std::size_t j = 0; j < hypothesis.units.size(); ++j) {
-            if (j) record.fault_unit_ids += ';';
-            record.fault_unit_ids += std::to_string(hypothesis.units[j].value());
+            if (format_hypothesis_strings) {
+              if (j) record.fault_unit_ids += ';';
+              record.fault_unit_ids += std::to_string(hypothesis.units[j].value());
+            }
             const auto unit = indexes.units.find(hypothesis.units[j].value());
-            if (unit != indexes.units.end()) {
+            if (format_hypothesis_strings && unit != indexes.units.end()) {
               if (!record.physical_source_ids.empty()) record.physical_source_ids += ';';
               record.physical_source_ids += unit->second->physical_source_id;
             }
@@ -1458,8 +1744,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           record.onset_epoch = std::numeric_limits<std::uint64_t>::max();
           record.onset_time_ns = std::numeric_limits<std::int64_t>::max();
           for (const auto mode_id : hypothesis.modes) {
-            if (!record.mode_ids.empty()) record.mode_ids += ';';
-            record.mode_ids += std::to_string(mode_id.value());
+            if (format_hypothesis_strings) {
+              if (!record.mode_ids.empty()) record.mode_ids += ';';
+              record.mode_ids += std::to_string(mode_id.value());
+            }
             const auto found = indexes.modes.find(mode_id.value());
             if (found == indexes.modes.end()) continue;
             const auto* mode = found->second;
@@ -1476,8 +1764,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             }
             return joined;
           };
-          record.sensor = join_strings(sensors);
-          record.fault_kind = join_strings(kinds);
+          if (format_hypothesis_strings) {
+            record.sensor = join_strings(sensors);
+            record.fault_kind = join_strings(kinds);
+          }
           if (record.onset_epoch == std::numeric_limits<std::uint64_t>::max()) {
             record.onset_epoch = 0;
           }
@@ -1492,8 +1782,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             record.plausible = evidence[i].plausible;
             record.conditioned_statistic = evidence[i].conditioned_statistic;
             record.log_evidence = evidence[i].log_evidence;
-            record.reason = evidence[i].monitorability.reason;
-            if (record.reason.empty()) record.reason = "MONITORABLE";
+            if (format_hypothesis_strings) {
+              record.reason = evidence[i].monitorability.reason;
+              if (record.reason.empty()) record.reason = "MONITORABLE";
+            }
             record.fault_rank = evidence[i].monitorability.rank;
             record.sigma_min = evidence[i].monitorability.sigma_min;
             record.sigma_max = evidence[i].monitorability.sigma_max;
@@ -1509,8 +1801,12 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           }
           output.hypothesis_audit.push_back(std::move(record));
         }
-
         record_stage("hypothesis_audit");
+        } else {
+          output.stage_timings.push_back({"hypothesis_audit", 0.0, true,
+              "SKIPPED", "disabled by output.write_hypothesis_evidence"});
+          stage_start = std::chrono::steady_clock::now();
+        }
         start_operation("base_factorization");
         RankUpdateConfig rank_config;
         rank_config.rank_tolerance = cfg.integrity_window.rank_tolerance;
@@ -1535,9 +1831,28 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         }
         const RankUpdateEvaluator evaluator(rank_config);
         BaseCandidateKernel base = evaluator.factorizeOnce(window);
+        output.diagnostics.base_step_norm = base.state_increment.norm();
+        auto append_step_audit = [&](const Eigen::VectorXd& increment,
+                                     const std::string& source) {
+          for (const auto& layout : window.state_layout) {
+            if (layout.dimension < 15 || layout.column_offset < 0 ||
+                layout.column_offset + 15 > increment.size()) continue;
+            StateStepAuditRecord record;
+            record.source = source; record.epoch = layout.epoch;
+            const Eigen::Index offset = layout.column_offset;
+            record.rotation_norm = increment.segment(offset, 3).norm();
+            record.position_norm = increment.segment(offset + 3, 3).norm();
+            record.velocity_norm = increment.segment(offset + 6, 3).norm();
+            record.accel_bias_norm = increment.segment(offset + 9, 3).norm();
+            record.gyro_bias_norm = increment.segment(offset + 12, 3).norm();
+            record.epoch_norm = increment.segment(offset, 15).norm();
+            output.state_step_audit.push_back(std::move(record));
+          }
+        };
+        append_step_audit(base.state_increment, "BASE");
         record_stage("base_factorization", base.valid);
         start_operation("shared_cache");
-        evaluator.buildSharedCache(&base, models.actions);
+        evaluator.buildSharedCache(&base, kernel_actions);
         record_stage("shared_cache");
         start_operation("candidate_evaluation");
         std::vector<CandidateEvaluation> candidates;
@@ -1557,16 +1872,28 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           return left->id < right->id;
         });
         std::vector<EvaluatedAction> evaluated_actions(action_order.size());
-        constexpr std::size_t kCandidateWorkers = 4;
-        const char* worker_override = std::getenv("UWB_IMU_PL_CANDIDATE_WORKERS");
-        const std::size_t active_workers = worker_override &&
-            std::string(worker_override) == "1" ? 1 : kCandidateWorkers;
-
+        std::vector<std::size_t> kernel_action_indices;
+        kernel_action_indices.reserve(action_order.size());
+        for (std::size_t index = 0; index < action_order.size(); ++index) {
+          const auto& action = *action_order[index];
+          const auto rejected = action_ineligibility.find(action.id.value());
+          if (!exhaustive_candidates && rejected != action_ineligibility.end()) {
+            auto& candidate = evaluated_actions[index].candidate;
+            candidate.action = action;
+            candidate.base_version = window.version;
+            candidate.reason = "SKIPPED_INELIGIBLE: " + rejected->second;
+            candidate.diagnostics.skip_reason = candidate.reason;
+            candidate.diagnostics.numerical_valid = false;
+          } else {
+            kernel_action_indices.push_back(index);
+          }
+        }
         // Phase 1: all numerical kernels and post detectors.  Every action has
         // a fixed slot; a worker exception is rethrown only after all workers
         // reach the pool barrier.
-        candidate_workers_->run(action_order.size(), active_workers,
-            [&](std::size_t index, std::size_t, RankUpdateScratch& scratch) {
+        candidate_workers_->run(kernel_action_indices.size(), active_workers,
+            [&](std::size_t work_index, std::size_t, RankUpdateScratch& scratch) {
+          const std::size_t index = kernel_action_indices[work_index];
           const ExclusionAction& action = *action_order[index];
           EvaluatedAction& evaluated = evaluated_actions[index];
           const auto candidate_start = std::chrono::steady_clock::now();
@@ -1650,13 +1977,25 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               }
             }
             candidate.diagnostics.bridge_ms = part_ms();
-            auto projected_modes = projectPostActionModes(
-                window, transaction, models, action, indexes);
-            shared_pl.mode_maps = std::move(projected_modes.mode_maps);
-            candidate.diagnostics.fault_map_ms = part_ms();
-            evaluated.protection_level = ProtectionLevelV2().computeShared(
-                    window, &candidate, evaluated.post,
-                    &projected_modes.hypotheses, shared_pl, cfg.risk_v2);
+            const bool unchanged_action = action.groups_to_remove.empty() &&
+                action.groups_to_add.empty() && action.added_blocks.empty();
+            if (unchanged_action && shared_hypothesis_numerics) {
+              candidate.diagnostics.fault_map_ms = part_ms();
+              evaluated.protection_level = ProtectionLevelV2().computeFrozenAllIn(
+                  window, &candidate, evaluated.post, models.hypotheses,
+                  models.modes,
+                  *shared_hypothesis_numerics,
+                  faultModelPolicyFingerprint(cfg.fault_models),
+                  cfg.risk_v2);
+            } else {
+              auto projected_modes = projectPostActionModes(
+                  window, transaction, models, action, indexes);
+              shared_pl.mode_maps = std::move(projected_modes.mode_maps);
+              candidate.diagnostics.fault_map_ms = part_ms();
+              evaluated.protection_level = ProtectionLevelV2().computeShared(
+                  window, &candidate, evaluated.post,
+                  &projected_modes.hypotheses, shared_pl, cfg.risk_v2);
+            }
             evaluated.has_protection_level = true;
             candidate.diagnostics.pl_evaluated = true;
             candidate.diagnostics.pl_ms = part_ms();
@@ -1674,13 +2013,25 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         });
         for (auto& evaluated : evaluated_actions) {
           auto& candidate = evaluated.candidate;
-          if (!candidate.diagnostics.pl_evaluated) candidate.diagnostics.skip_reason =
-              !candidate.diagnostics.numerical_valid ? "numerical rejection" : "post detector failed";
+          if (!candidate.diagnostics.pl_evaluated &&
+              candidate.diagnostics.skip_reason.empty()) {
+            candidate.diagnostics.skip_reason =
+                !candidate.diagnostics.numerical_valid
+                    ? "numerical rejection" : "post detector failed";
+          }
           if (evaluated.has_protection_level) {
             candidate_pl[candidate.action.id.value()] =
                 evaluated.protection_level;
           }
           candidates.push_back(std::move(candidate));
+        }
+        for (const auto& candidate : candidates) {
+          output.diagnostics.kernel_evaluated_actions +=
+              candidate.diagnostics.kernel_evaluated;
+          output.diagnostics.post_passed_actions +=
+              candidate.post_detector_passed;
+          output.diagnostics.pl_evaluated_actions +=
+              candidate.diagnostics.pl_evaluated;
         }
         record_stage("candidate_evaluation", true);
         start_operation("fde_decision");
@@ -1690,14 +2041,16 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           fde_trigger.reason = "quarantined/failed source hardware barrier";
         }
         FdeDecision decision = FdeManager().decide(
-            fde_trigger, models.hypotheses, evidence, &candidates, cfg.risk_v2);
+            fde_trigger, models.hypotheses, evidence, &candidates,
+            mandatory_exclusion_groups, cfg.risk_v2);
         record_stage("fde_decision", true);
         start_operation("candidate_audit");
         for (const auto& candidate : candidates) {
           CandidateAuditRecord record;
           record.diagnostics = candidate.diagnostics;
           record.action_id = candidate.action.id.value();
-          record.action_type = candidate.action.action_model_id;
+          if (cfg.output.write_candidates) {
+            record.action_type = candidate.action.action_model_id;
           for (const auto& source : candidate.action.physical_source_ids) {
             if (!record.physical_source_ids.empty()) {
               record.physical_source_ids += ';';
@@ -1716,6 +2069,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               candidate.action.groups_to_remove);
           record.added_group_ids = join_group_ids(candidate.action.groups_to_add);
           record.bridge_mode = toString(candidate.action.bridge_mode);
+          }
           record.cardinality = candidate.action.exclusion_cardinality;
           record.valid = candidate.valid;
           record.post_detector_passed = candidate.post_detector_passed;
@@ -1732,8 +2086,73 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           record.vpl_m = candidate.vpl_m;
           record.selected = candidate.selected;
           record.wall_ms = candidate.wall_ms;
-          record.reason = candidate.reason;
+          if (cfg.output.write_candidates) record.reason = candidate.reason;
           output.candidate_audit.push_back(std::move(record));
+          if (cfg.output.write_candidates) {
+            CoverageAuditRecord coverage;
+            coverage.action_id = candidate.action.id.value();
+            coverage.action_type = candidate.action.action_model_id;
+            auto append = [](std::string* target, std::uint64_t value) {
+              if (!target->empty()) *target += ';';
+              *target += std::to_string(value);
+            };
+            for (const auto id : decision.plausible_hypotheses) {
+              append(&coverage.plausible_hypothesis_ids, id.value());
+              const auto hypothesis = indexes.hypotheses.find(id.value());
+              if (hypothesis == indexes.hypotheses.end() ||
+                  actionCovers(candidate.action, *hypothesis->second)) continue;
+              append(&coverage.uncovered_hypothesis_ids, id.value());
+              for (const auto mode : hypothesis->second->modes) {
+                append(&coverage.uncovered_mode_ids, mode.value());
+              }
+              for (const auto group : hypothesis->second->affected_groups) {
+                append(&coverage.uncovered_group_ids, group.value());
+              }
+            }
+            for (const auto& source : mandatory_health_sources) {
+              if (!coverage.mandatory_health_sources.empty()) {
+                coverage.mandatory_health_sources += ';';
+              }
+              coverage.mandatory_health_sources += source;
+            }
+            for (const auto group : decision.mandatory_exclusion_groups) {
+              append(&coverage.mandatory_group_ids, group.value());
+              if (std::find(candidate.action.groups_to_remove.begin(),
+                            candidate.action.groups_to_remove.end(), group) ==
+                  candidate.action.groups_to_remove.end()) {
+                append(&coverage.uncovered_mandatory_group_ids, group.value());
+              }
+            }
+            for (const auto mode : candidate.action.covered_modes) {
+              append(&coverage.covered_mode_ids, mode.value());
+            }
+            for (const auto group : candidate.action.groups_to_remove) {
+              append(&coverage.removed_group_ids, group.value());
+            }
+            for (const auto group : candidate.action.groups_to_add) {
+              append(&coverage.added_group_ids, group.value());
+            }
+            if (candidate.action.exclusion_cardinality >
+                static_cast<int>(cfg.fde.max_exclusion_cardinality)) {
+              coverage.outcome = "CARDINALITY_CONTRACT";
+              coverage.reason = "action physical-source cardinality exceeds configured maximum";
+            } else if (candidate.action.recoverability !=
+                       HistoryRecoverability::Recoverable) {
+              coverage.outcome = "UNRECOVERABLE";
+              coverage.reason = "action replacement/bridge provenance is incomplete";
+            } else if (!coverage.uncovered_hypothesis_ids.empty() ||
+                       !coverage.uncovered_mandatory_group_ids.empty()) {
+              coverage.outcome = "COVERAGE_GAP";
+              coverage.reason = "action does not cover the frozen plausible set and mandatory exclusions";
+            } else if (!candidate.valid) {
+              coverage.outcome = "NUMERICAL_REJECTION";
+              coverage.reason = candidate.reason;
+            } else {
+              coverage.outcome = candidate.selected ? "SELECTED" : "COVERED";
+              coverage.reason = candidate.reason;
+            }
+            output.coverage_audit.push_back(std::move(coverage));
+          }
         }
         record_stage("candidate_audit");
         start_operation("finalize_commit_audit");
@@ -1793,6 +2212,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           plan.recovery_epoch_begin = action.recovery_epoch_begin;
           plan.recovery_epoch_end = action.recovery_epoch_end;
           auto record_relation = [&](const PendingFactorGroup& group) {
+            if (std::find(plan.groups_to_add.begin(), plan.groups_to_add.end(),
+                          group.id) == plan.groups_to_add.end()) {
+              return;
+            }
             if (group.replaces_group) {
               plan.replacement_relations[group.replaces_group->value()] =
                   group.id.value();
@@ -1814,7 +2237,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               const auto unit = std::find_if(models.units.begin(), models.units.end(),
                   [&](const FaultUnit& value) { return value.id == covered; });
               if (unit != models.units.end()) {
-                const std::string source = healthSource(*unit);
+                const std::string source = healthSourceId(*unit);
                 if (!source.empty() &&
                     pending_health.allowedInFormalEstimator(source)) {
                   (void)pending_health.quarantine(source, action.action_model_id);
@@ -1850,8 +2273,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             bridge.timeout = false;
             bridge.status = "ACTIVE";
             output.bridge_audit = bridge;
-            if (consecutive_bridge_epochs_ > cfg.bridge.max_consecutive_epochs ||
-                duration > cfg.bridge.max_duration_s) {
+            if (bridgeTimeoutExceeded(
+                    consecutive_bridge_epochs_, duration,
+                    cfg.bridge.max_consecutive_epochs,
+                    cfg.bridge.max_duration_s)) {
               (void)pending_health.fail("generic_bridge", "BRIDGE_TIMEOUT");
               DiscardReason reason{FdeStatus::BridgeTimeout, "BRIDGE_TIMEOUT",
                                    true};
@@ -1909,6 +2334,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           const auto selected = std::find_if(candidates.begin(), candidates.end(),
               [](const CandidateEvaluation& value) { return value.selected; });
           if (selected != candidates.end()) {
+            output.diagnostics.selected_actions = 1;
+            output.diagnostics.selected_step_norm =
+                selected->state_increment.norm();
+            append_step_audit(selected->state_increment, "SELECTED");
             const auto pl = candidate_pl.find(selected->action.id.value());
             if (pl != candidate_pl.end()) {
               output.protection_level.pl_xyz_m = pl->second.pl_xyz_m;
@@ -1961,6 +2390,57 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
     output.global_detector.reason = estimator_->globalDiagnosticsEnabled()
         ? "independent empirical calibration required"
         : "disabled on formal/performance path";
+    output.diagnostics.state_age_s = batch.timestamp.seconds() -
+        output.timestamp.seconds();
+    const NumericalWorkSnapshot numerical_after =
+        NumericalWorkCounters::snapshot();
+    output.diagnostics.base_svd = numerical_after.base_svd - numerical_before.base_svd;
+    output.diagnostics.base_llt = numerical_after.base_llt - numerical_before.base_llt;
+    output.diagnostics.base_state_solves =
+        numerical_after.base_state_solves - numerical_before.base_state_solves;
+    output.diagnostics.llt_state_solve_calls =
+        numerical_after.llt_state_solve_calls - numerical_before.llt_state_solve_calls;
+    output.diagnostics.svd_state_solve_calls =
+        numerical_after.svd_state_solve_calls - numerical_before.svd_state_solve_calls;
+    output.diagnostics.detector_reference_qr =
+        numerical_after.detector_reference_qr - numerical_before.detector_reference_qr;
+    output.diagnostics.candidate_reference_svd =
+        numerical_after.candidate_reference_svd - numerical_before.candidate_reference_svd;
+    output.diagnostics.candidate_inner_llt =
+        numerical_after.candidate_inner_llt - numerical_before.candidate_inner_llt;
+    output.diagnostics.fault_gram_eigen =
+        numerical_after.fault_gram_eigen - numerical_before.fault_gram_eigen;
+    output.diagnostics.fault_gram_svd =
+        numerical_after.fault_gram_svd - numerical_before.fault_gram_svd;
+    output.diagnostics.fault_gram_ldlt =
+        numerical_after.fault_gram_ldlt - numerical_before.fault_gram_ldlt;
+    output.diagnostics.low_dim_fault_gram =
+        numerical_after.low_dim_fault_gram - numerical_before.low_dim_fault_gram;
+    output.diagnostics.generic_fault_gram_fallback =
+        numerical_after.generic_fault_gram_fallback -
+        numerical_before.generic_fault_gram_fallback;
+    output.diagnostics.hypothesis_parallel_blocks =
+        numerical_after.hypothesis_parallel_blocks -
+        numerical_before.hypothesis_parallel_blocks;
+    output.diagnostics.hypothesis_shared_hits =
+        numerical_after.hypothesis_shared_hits -
+        numerical_before.hypothesis_shared_hits;
+    output.diagnostics.hypothesis_shared_misses =
+        numerical_after.hypothesis_shared_misses -
+        numerical_before.hypothesis_shared_misses;
+    output.diagnostics.covariance_rhs_solves =
+        numerical_after.covariance_rhs_solves - numerical_before.covariance_rhs_solves;
+    output.diagnostics.covariance_rhs_columns =
+        numerical_after.covariance_rhs_columns - numerical_before.covariance_rhs_columns;
+    output.diagnostics.spectral_rhs_solves =
+        numerical_after.spectral_rhs_solves - numerical_before.spectral_rhs_solves;
+    output.diagnostics.spectral_rhs_columns =
+        numerical_after.spectral_rhs_columns - numerical_before.spectral_rhs_columns;
+    output.diagnostics.numerical_contract_mismatches =
+        numerical_after.numerical_contract_mismatches -
+        numerical_before.numerical_contract_mismatches;
+    output.diagnostics.imu_oracle_reintegrations =
+        numerical_after.imu_oracle_reintegrations - numerical_before.imu_oracle_reintegrations;
     return output;
   } catch (...) {
     auto existing = std::find_if(output.stage_timings.begin(), output.stage_timings.end(),

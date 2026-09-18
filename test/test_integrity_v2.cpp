@@ -1,6 +1,7 @@
 #include "uwb_imu_pl/config/integrity_config.hpp"
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 #include "uwb_imu_pl/estimation/rank_update_kernel.hpp"
+#include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
 #include "uwb_imu_pl/estimation/reinitialization.hpp"
 #include "uwb_imu_pl/factors/kinematic_bridge_factor.hpp"
 #include "uwb_imu_pl/factors/realtime_factors.hpp"
@@ -11,6 +12,7 @@
 #include "uwb_imu_pl/integrity/imu_fault_subspace.hpp"
 #include "uwb_imu_pl/integrity/joint_window_detector.hpp"
 #include "uwb_imu_pl/integrity/protection_level_v2.hpp"
+#include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
 
 #include <gtest/gtest.h>
 #include <gtsam/base/numericalDerivative.h>
@@ -58,7 +60,7 @@ uwb_imu_pl::LinearizedIntegrityWindow syntheticWindow() {
   window.protected_state_map = Eigen::MatrixXd::Zero(3, 2);
   window.protected_state_map(0, 0) = 1.0;
   window.protected_state_map(1, 1) = 1.0;
-  uwb_imu_pl::finalizeIntegrityWindow(&window, 1e-12, 1e10);
+  uwb_imu_pl::finalizeIntegrityWindow(&window, 1e-10, 1e10);
   return window;
 }
 
@@ -136,10 +138,16 @@ TEST(IntegrityV2Transaction, PrepareAndDiscardNeverMutateBackend) {
   const auto bias_bridge_block = estimator.buildPendingFactorBlock(
       transaction, transaction.generic_bias_continuity_group.id);
   EXPECT_EQ(bias_bridge_block.residual_whitened.size(), 6);
-  const auto sensitivity =
-      uwb_imu_pl::ImuFaultSubspaceBuilder().build(transaction, imu_block);
-  EXPECT_TRUE(sensitivity.analytic_verified)
-      << sensitivity.finite_difference_relative_error;
+  const auto analytic =
+      uwb_imu_pl::ImuFaultSubspaceBuilder().buildAnalytic(transaction, imu_block);
+  EXPECT_TRUE(analytic.analytic_input_valid);
+  EXPECT_TRUE(analytic.analytic_computation_valid);
+  EXPECT_FALSE(analytic.oracle_executed);
+  EXPECT_FALSE(analytic.oracle_verified);
+  const auto sensitivity = uwb_imu_pl::ImuFaultSubspaceBuilder()
+      .verifyFiniteDifferenceOracle(transaction, imu_block);
+  EXPECT_TRUE(sensitivity.oracle_verified) << sensitivity.oracle_relative_error;
+  EXPECT_EQ(sensitivity.oracle_reintegrations, 12u);
   const auto receipt = estimator.discardEpoch(
       std::move(transaction), {uwb_imu_pl::FdeStatus::ModelInvalid, "test", false});
   EXPECT_EQ(receipt.backend_updates, 0u);
@@ -163,6 +171,66 @@ TEST(IntegrityV2Transaction, CommitIsOneAtomicBackendUpdateAndLedgerIsComplete) 
   EXPECT_EQ(estimator.backendUpdateCount(), 2u);
   EXPECT_EQ(estimator.currentEpoch(), 1u);
   EXPECT_TRUE(estimator.factorLedger().hasCompleteActiveProvenance());
+}
+
+TEST(IntegrityV2Transaction, BoundaryInventoryKeepsFirstStateUwbExplicitExactlyOnce) {
+  using namespace uwb_imu_pl;
+  auto config = researchConfig();
+  IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+  NavigationState initial;
+  initial.position_world_m = {0, 0, 1};
+  estimator.initialize(initial, config.realtime.prior_sigmas);
+  ImuMeasurement boundary;
+  boundary.timestamp = TimestampNs(0);
+  boundary.specific_force_mps2 = {0, 0, config.imu.gravity_mps2};
+  estimator.ingestImu(boundary);
+  for (std::size_t epoch = 1; epoch <= 22; ++epoch) {
+    for (int sample = 1; sample <= 10; ++sample) {
+      ImuMeasurement imu;
+      imu.id = MeasurementId(epoch * 1000 + sample);
+      imu.timestamp = TimestampNs(static_cast<std::int64_t>(
+          ((epoch - 1) * 10 + sample) * 5000000));
+      imu.specific_force_mps2 = {0, 0, config.imu.gravity_mps2};
+      estimator.ingestImu(imu);
+    }
+    auto input = batch(config, static_cast<std::int64_t>(epoch * 50000000));
+    for (std::size_t row = 0; row < input.measurements.size(); ++row) {
+      input.measurements[row].id = MeasurementId(epoch * 100 + row + 1);
+      input.measurements[row].factor_id = FactorId(epoch * 100 + row + 1);
+    }
+    auto transaction = estimator.prepareEpoch(input);
+    const auto window = estimator.buildIntegrityWindow(
+        transaction, IntegrityWindowRequest{});
+    ASSERT_TRUE(window.model_valid) << "epoch=" << epoch << ": " << window.reason;
+    if (epoch >= 19) {
+      for (const auto& slot : window.slot_accounting) {
+        EXPECT_NE(slot.explicit_window_block, slot.boundary_input)
+            << "epoch=" << epoch << " slot=" << slot.slot;
+      }
+      if (epoch >= 21) {
+        const std::size_t first = epoch - 20;
+        const auto uwb = std::find_if(window.factor_inventory.begin(),
+            window.factor_inventory.end(), [&](const auto& entry) {
+              return entry.epoch == first && entry.kind == FactorKind::UwbBatch;
+            });
+        const auto imu = std::find_if(window.factor_inventory.begin(),
+            window.factor_inventory.end(), [&](const auto& entry) {
+              return entry.epoch == first && entry.kind == FactorKind::CombinedImu;
+            });
+        ASSERT_NE(uwb, window.factor_inventory.end());
+        ASSERT_NE(imu, window.factor_inventory.end());
+        EXPECT_EQ(uwb->disposition,
+                  FrozenFactorDisposition::ExplicitMeasurement);
+        EXPECT_EQ(imu->disposition, FrozenFactorDisposition::BoundaryInput);
+        EXPECT_TRUE(std::any_of(window.blocks.begin(), window.blocks.end(),
+            [&](const auto& value) { return value.group_id == uwb->group_id; }));
+        EXPECT_FALSE(std::any_of(window.blocks.begin(), window.blocks.end(),
+            [&](const auto& value) { return value.group_id == imu->group_id; }));
+      }
+    }
+    const auto plan = EpochCommitPlan::nominalPlan(transaction);
+    estimator.commitEpoch(std::move(transaction), plan);
+  }
 }
 
 TEST(IntegrityV2Transaction, ReusingFinalizedTransactionFailsWithoutMutation) {
@@ -246,6 +314,12 @@ TEST(IntegrityV2FaultModel, GeneratesCompactUwbModesAndEveryImuAxis) {
       EXPECT_EQ(mode.affected_groups.size(), 1u);
       if (mode.kind == uwb_imu_pl::FaultKind::AnchorBiasRamp) {
         EXPECT_EQ(mode.parameter_dimension, 2);
+        EXPECT_TRUE(mode.effective_basis_certified);
+        EXPECT_EQ(mode.effective_parameter_dimension, 1);
+        EXPECT_EQ(mode.effective_parameter_basis.rows(), 2);
+        EXPECT_EQ(mode.effective_parameter_basis.cols(), 1);
+        EXPECT_LE(mode.discarded_measurement_norm, 1e-12);
+        EXPECT_LE(mode.discarded_protected_response_norm, 1e-12);
       }
     } else {
       ++imu_modes;
@@ -260,6 +334,50 @@ TEST(IntegrityV2FaultModel, GeneratesCompactUwbModesAndEveryImuAxis) {
     return hypothesis.A.size() == 0 && !hypothesis.modes.empty() &&
            !hypothesis.affected_groups.empty();
   }));
+
+  uwb_imu_pl::HypothesisGeneratorConfig both_config;
+  both_config.single_faults_enabled = true;
+  both_config.double_faults_enabled = true;
+  const auto both = uwb_imu_pl::HypothesisGenerator(both_config).generate(
+      window, transaction, imu_maps, bridge_block);
+  EXPECT_EQ(both.modes.size(), models.modes.size());
+  EXPECT_EQ(both.single_uwb_hypotheses, 3 * config.anchors.size());
+  EXPECT_EQ(both.single_accel_hypotheses, 3u);
+  EXPECT_EQ(both.single_gyro_hypotheses, 3u);
+  EXPECT_EQ(both.double_uwb_accel_hypotheses,
+            9 * config.anchors.size());
+  EXPECT_EQ(both.double_uwb_gyro_hypotheses,
+            9 * config.anchors.size());
+  EXPECT_EQ(both.effective_max_cardinality, 2u);
+  ASSERT_FALSE(both.hypotheses.empty());
+  EXPECT_DOUBLE_EQ(both.hypotheses.front().hmi_allocation,
+                   both_config.total_hmi_allocation / both.hypotheses.size());
+
+  auto double_only_config = both_config;
+  double_only_config.single_faults_enabled = false;
+  const auto double_only =
+      uwb_imu_pl::HypothesisGenerator(double_only_config).generate(
+          window, transaction, imu_maps, bridge_block);
+  EXPECT_EQ(double_only.modes.size(), models.modes.size());
+  EXPECT_EQ(double_only.single_uwb_hypotheses, 0u);
+  EXPECT_EQ(double_only.single_accel_hypotheses, 0u);
+  EXPECT_EQ(double_only.single_gyro_hypotheses, 0u);
+  EXPECT_EQ(double_only.hypotheses.size(),
+            both.double_uwb_accel_hypotheses +
+                both.double_uwb_gyro_hypotheses);
+  EXPECT_TRUE(std::all_of(double_only.hypotheses.begin(),
+                          double_only.hypotheses.end(), [](const auto& h) {
+    return h.modes.size() == 2;
+  }));
+
+  auto gyro_only_config = double_only_config;
+  gyro_only_config.include_uwb_accel_combinations = false;
+  const auto gyro_only =
+      uwb_imu_pl::HypothesisGenerator(gyro_only_config).generate(
+          window, transaction, imu_maps, bridge_block);
+  EXPECT_EQ(gyro_only.double_uwb_accel_hypotheses, 0u);
+  EXPECT_EQ(gyro_only.double_uwb_gyro_hypotheses,
+            both.double_uwb_gyro_hypotheses);
   estimator.discardEpoch(std::move(transaction),
       {uwb_imu_pl::FdeStatus::ModelInvalid, "test complete", false});
 }
@@ -369,6 +487,13 @@ TEST(IntegrityV2Transaction, HistoricalUwbReplacementCommitsAtomically) {
   auto plan = uwb_imu_pl::EpochCommitPlan::nominalPlan(transaction);
   plan.groups_to_remove = {historical_uwb->id};
   plan.groups_to_add.push_back(replacement->id);
+  plan.groups_to_add.erase(std::remove(plan.groups_to_add.begin(),
+                                       plan.groups_to_add.end(),
+                                       transaction.imu_group.id),
+                           plan.groups_to_add.end());
+  plan.groups_to_add.push_back(transaction.generic_bridge_group.id);
+  plan.groups_to_add.push_back(
+      transaction.generic_bias_continuity_group.id);
   plan.replacement_relations[historical_uwb->id.value()] = replacement->id.value();
   plan.recovery_epoch_begin = history.proposed_epoch;
   plan.recovery_epoch_end = history.proposed_epoch;
@@ -382,6 +507,26 @@ TEST(IntegrityV2Transaction, HistoricalUwbReplacementCommitsAtomically) {
   EXPECT_FALSE(receipt.historical_groups_added.empty());
   EXPECT_TRUE(estimator.factorLedger().activeSlots(historical_id).empty());
   EXPECT_FALSE(estimator.factorLedger().activeSlots(replacement_id).empty());
+
+  // The historical replacement belongs only to epoch 1, while the bridge
+  // pair belongs to epoch 2.  The next inventory must recover both catalogs
+  // without attributing either group to the wrong committed epoch.
+  for (int i = 5; i <= 6; ++i) {
+    uwb_imu_pl::ImuMeasurement measurement;
+    measurement.id = uwb_imu_pl::MeasurementId(100 + i);
+    measurement.timestamp = uwb_imu_pl::TimestampNs(i * 5000000);
+    measurement.specific_force_mps2 = {0, 0, config.imu.gravity_mps2};
+    estimator.ingestImu(measurement);
+  }
+  auto next = estimator.prepareEpoch(batch(config, 30000000));
+  const auto next_window = estimator.buildIntegrityWindow(
+      next, uwb_imu_pl::IntegrityWindowRequest{});
+  EXPECT_TRUE(next_window.capabilities.complete_factor_provenance)
+      << next_window.reason;
+  EXPECT_EQ(next_window.reason.find("provenance is incomplete"),
+            std::string::npos) << next_window.reason;
+  estimator.discardEpoch(std::move(next),
+      {uwb_imu_pl::FdeStatus::ModelInvalid, "catalog regression complete", false});
 }
 
 TEST(IntegrityV2Reinitialization, ExecutesControlledStateSequence) {
@@ -409,6 +554,15 @@ TEST(IntegrityV2Reinitialization, ExecutesControlledStateSequence) {
             uwb_imu_pl::ReinitializationState::Running);
 }
 
+TEST(IntegrityV2Reinitialization, BridgeTimeoutAcceptsBoundaryAndRejectsFirstExcess) {
+  using namespace uwb_imu_pl;
+  EXPECT_FALSE(bridgeTimeoutExceeded(20, 1.0, 20, 1.0));
+  EXPECT_TRUE(bridgeTimeoutExceeded(21, 1.0, 20, 1.0));
+  EXPECT_TRUE(bridgeTimeoutExceeded(
+      20, std::nextafter(1.0, 2.0), 20, 1.0));
+  EXPECT_FALSE(bridgeTimeoutExceeded(19, 0.999999999, 20, 1.0));
+}
+
 TEST(IntegrityV2Window, RejectsFixedLagWithoutMaturityMargin) {
   auto config = researchConfig();
   config.incremental.fixed_lag_epochs =
@@ -430,7 +584,8 @@ TEST(IntegrityV2Window, RejectsFixedLagWithoutMaturityMargin) {
 }
 
 TEST(IntegrityV2RankUpdate, MatchesIndependentDenseOracle) {
-  const auto window = syntheticWindow();
+  auto window = syntheticWindow();
+  uwb_imu_pl::finalizeIntegrityWindow(&window, 1e-12, 1e10);
   ASSERT_TRUE(window.model_valid) << window.reason;
   uwb_imu_pl::ExclusionAction action;
   action.id = uwb_imu_pl::ExclusionActionId(2);
@@ -461,7 +616,8 @@ TEST(IntegrityV2RankUpdate, RejectsUnresolvedRemovalBeforeSelection) {
 }
 
 TEST(IntegrityV2RankUpdate, OnlinePathKeepsOnlySharedBaseAndLowRankCorrections) {
-  const auto window = syntheticWindow();
+  auto window = syntheticWindow();
+  uwb_imu_pl::finalizeIntegrityWindow(&window, 1e-12, 1e10);
   uwb_imu_pl::ExclusionAction action;
   action.id = uwb_imu_pl::ExclusionActionId(2);
   action.groups_to_remove = {uwb_imu_pl::FactorGroupId(3)};
@@ -499,6 +655,7 @@ TEST(IntegrityV2Detector, UsesSquaredParityDofAndUnionBound) {
 TEST(IntegrityV2ProtectionLevel, RecomputesPostCandidateAndStaysResearchOnly) {
   auto window = syntheticWindow();
   window.protected_state_map.row(2) = window.protected_state_map.row(0);
+  uwb_imu_pl::finalizeIntegrityWindow(&window, 1e-12, 1e10);
   uwb_imu_pl::ExclusionAction keep;
   keep.id = uwb_imu_pl::ExclusionActionId(1);
   const uwb_imu_pl::RankUpdateConfig config{1e-12, 1e10, 10.0};
@@ -530,6 +687,179 @@ TEST(IntegrityV2ProtectionLevel, RecomputesPostCandidateAndStaysResearchOnly) {
   EXPECT_TRUE(remaining[1].monitored);
 }
 
+TEST(IntegrityV2ProtectionLevel,
+     FrozenEvidenceContextMatchesKeepAllAndInvalidatesOnMutation) {
+  using namespace uwb_imu_pl;
+  auto window = syntheticWindow();
+  window.protected_state_map.row(2) = window.protected_state_map.row(0);
+  finalizeIntegrityWindow(&window, 1e-10, 1e10);
+
+  FaultModeBasis uwb;
+  uwb.id = FaultModeId(1);
+  uwb.sensor = SensorType::Uwb;
+  uwb.parameter_dimension = 1;
+  uwb.raw_group_maps[FactorGroupId(2)] =
+      (Eigen::Vector3d() << 1.0, 0.25, -0.5).finished();
+  FaultModeBasis imu;
+  imu.id = FaultModeId(2);
+  imu.sensor = SensorType::ImuAccelerometer;
+  imu.parameter_dimension = 1;
+  imu.raw_group_maps[FactorGroupId(3)] =
+      (Eigen::Vector2d() << 0.5, 1.0).finished();
+  std::vector<FaultModeBasis> modes{uwb, imu};
+  auto make_hypothesis = [](std::uint64_t id,
+                            std::initializer_list<FaultModeId> mode_ids) {
+    FaultHypothesisV2 value;
+    value.id = HypothesisId(id);
+    value.modes.assign(mode_ids.begin(), mode_ids.end());
+    value.prior_probability_bound = 1e-4;
+    value.p_md_allocation = 1e-3;
+    value.hmi_allocation = 1e-6;
+    return value;
+  };
+  std::vector<FaultHypothesisV2> reference_hypotheses{
+      make_hypothesis(1, {FaultModeId(1)}),
+      make_hypothesis(2, {FaultModeId(2)}),
+      make_hypothesis(3, {FaultModeId(1), FaultModeId(2)})};
+  auto optimized_hypotheses = reference_hypotheses;
+  HypothesisEvaluationConfig reference_config;
+  reference_config.enable_shared_context = false;
+  reference_config.enable_low_dim_batch = false;
+  const auto reference_evidence = HypothesisEvidenceEvaluator(reference_config)
+      .evaluateAll(window, modes, &reference_hypotheses, 100.0);
+  HypothesisEvaluationConfig optimized_config;
+  optimized_config.hypothesis_workers = 4;
+  CandidateWorkerPool pool(4);
+  std::shared_ptr<const FrozenHypothesisNumerics> frozen;
+  const auto optimized_evidence = HypothesisEvidenceEvaluator(optimized_config)
+      .evaluateAll(window, modes, &optimized_hypotheses, 100.0, &frozen, &pool);
+  ASSERT_TRUE(frozen && frozen->valid) << (frozen ? frozen->reason : "missing");
+  ASSERT_EQ(reference_evidence.size(), optimized_evidence.size());
+  EXPECT_EQ(frozen->low_dimensional_count, optimized_hypotheses.size());
+  EXPECT_EQ(frozen->generic_fallback_count, 0u);
+  for (std::size_t i = 0; i < reference_evidence.size(); ++i) {
+    EXPECT_EQ(reference_hypotheses[i].monitored,
+              optimized_hypotheses[i].monitored);
+    EXPECT_EQ(reference_evidence[i].plausible, optimized_evidence[i].plausible);
+    EXPECT_NEAR(reference_evidence[i].conditioned_statistic,
+                optimized_evidence[i].conditioned_statistic, 1e-12);
+    EXPECT_NEAR(reference_evidence[i].explained_energy,
+                optimized_evidence[i].explained_energy, 1e-12);
+    EXPECT_TRUE(reference_evidence[i].fault_gram.isApprox(
+        optimized_evidence[i].fault_gram, 1e-12));
+  }
+
+  ExclusionAction keep;
+  keep.id = ExclusionActionId(1);
+  keep.action_model_id = "KEEP_ALL";
+  RankUpdateConfig rank_config{1e-10, 1e10, 10.0};
+  const RankUpdateEvaluator evaluator(rank_config);
+  auto candidate = evaluator.evaluate(evaluator.factorizeOnce(window), keep);
+  ASSERT_TRUE(candidate.valid) << candidate.reason;
+  DetectorRiskContext detector_risk;
+  detector_risk.p_fa_per_test = 1e-6;
+  const auto detector = JointWindowDetector().evaluateCandidate(
+      candidate, detector_risk);
+  ProtectionLevelSharedContext ordinary_context;
+  ordinary_context.mode_maps[1] = Eigen::MatrixXd::Zero(window.H.rows(), 1);
+  ordinary_context.mode_maps[1].middleRows(2, 3) = uwb.raw_group_maps.begin()->second;
+  ordinary_context.mode_maps[2] = Eigen::MatrixXd::Zero(window.H.rows(), 1);
+  ordinary_context.mode_maps[2].bottomRows(2) = imu.raw_group_maps.begin()->second;
+  auto ordinary_hypotheses = optimized_hypotheses;
+  auto ordinary_candidate = candidate;
+  const auto ordinary = ProtectionLevelV2().computeShared(
+      window, &ordinary_candidate, detector, &ordinary_hypotheses,
+      ordinary_context, RiskBudgetV2{});
+  auto frozen_candidate = candidate;
+  const auto reused = ProtectionLevelV2().computeFrozenAllIn(
+      window, &frozen_candidate, detector, optimized_hypotheses,
+      modes,
+      *frozen, frozen->fault_model_policy_fingerprint, RiskBudgetV2{});
+  ASSERT_EQ(ordinary.model_valid, reused.model_valid);
+  EXPECT_TRUE(ordinary.pl_xyz_m.isApprox(reused.pl_xyz_m, 1e-12));
+  EXPECT_NEAR(ordinary.hpl_m, reused.hpl_m, 1e-12);
+  EXPECT_NEAR(ordinary.vpl_m, reused.vpl_m, 1e-12);
+
+  const auto stale_policy = ProtectionLevelV2().computeFrozenAllIn(
+      window, &frozen_candidate, detector, optimized_hypotheses, modes,
+      *frozen, frozen->fault_model_policy_fingerprint + 1, RiskBudgetV2{});
+  EXPECT_FALSE(stale_policy.model_valid);
+  EXPECT_NE(stale_policy.reason.find("identity mismatch"), std::string::npos);
+
+  auto changed_modes = modes;
+  changed_modes[0].raw_group_maps.begin()->second(0, 0) =
+      std::nextafter(changed_modes[0].raw_group_maps.begin()->second(0, 0),
+                     10.0);
+  const auto stale_mode = ProtectionLevelV2().computeFrozenAllIn(
+      window, &frozen_candidate, detector, optimized_hypotheses,
+      changed_modes, *frozen, frozen->fault_model_policy_fingerprint,
+      RiskBudgetV2{});
+  EXPECT_FALSE(stale_mode.model_valid);
+  EXPECT_NE(stale_mode.reason.find("identity mismatch"), std::string::npos);
+
+  window.H(0, 0) = std::nextafter(window.H(0, 0), 10.0);
+  const auto stale = ProtectionLevelV2().computeFrozenAllIn(
+      window, &frozen_candidate, detector, optimized_hypotheses,
+      modes,
+      *frozen, frozen->fault_model_policy_fingerprint, RiskBudgetV2{});
+  EXPECT_FALSE(stale.model_valid);
+  EXPECT_NE(stale.reason.find("identity mismatch"), std::string::npos);
+}
+
+TEST(IntegrityV2ProtectionLevel,
+     FixedLowDimKeepsSingularStatusAndUncommonDimensionFallsBack) {
+  using namespace uwb_imu_pl;
+  auto window = syntheticWindow();
+  finalizeIntegrityWindow(&window, 1e-10, 1e10);
+  FaultModeBasis first;
+  first.id = FaultModeId(11);
+  first.sensor = SensorType::Uwb;
+  first.parameter_dimension = 1;
+  first.raw_group_maps[FactorGroupId(2)] = Eigen::Vector3d::Ones();
+  auto duplicate = first;
+  duplicate.id = FaultModeId(12);
+  FaultModeBasis uncommon;
+  uncommon.id = FaultModeId(13);
+  uncommon.sensor = SensorType::ImuAccelerometer;
+  uncommon.parameter_dimension = 4;
+  Eigen::Matrix<double, 3, 4> uncommon_map;
+  uncommon_map << 1.0, 0.0, 0.0, 1.0,
+                  0.0, 1.0, 0.0, 1.0,
+                  0.0, 0.0, 1.0, 1.0;
+  uncommon.raw_group_maps[FactorGroupId(2)] = uncommon_map;
+  const std::vector<FaultModeBasis> modes{first, duplicate, uncommon};
+  FaultHypothesisV2 singular;
+  singular.id = HypothesisId(11);
+  singular.modes = {first.id, duplicate.id};
+  FaultHypothesisV2 dynamic;
+  dynamic.id = HypothesisId(12);
+  dynamic.modes = {uncommon.id};
+  std::vector<FaultHypothesisV2> reference{singular, dynamic};
+  auto optimized = reference;
+  HypothesisEvaluationConfig reference_config;
+  reference_config.enable_shared_context = false;
+  reference_config.enable_low_dim_batch = false;
+  const auto reference_evidence = HypothesisEvidenceEvaluator(reference_config)
+      .evaluateAll(window, modes, &reference, 100.0);
+  std::shared_ptr<const FrozenHypothesisNumerics> frozen;
+  const auto optimized_evidence = HypothesisEvidenceEvaluator()
+      .evaluateAll(window, modes, &optimized, 100.0, &frozen);
+  ASSERT_TRUE(frozen && frozen->valid);
+  ASSERT_EQ(reference_evidence.size(), optimized_evidence.size());
+  EXPECT_EQ(frozen->low_dimensional_count, 1u);
+  EXPECT_EQ(frozen->generic_fallback_count, 1u);
+  for (std::size_t i = 0; i < optimized.size(); ++i) {
+    EXPECT_EQ(reference[i].monitored, optimized[i].monitored);
+    EXPECT_EQ(reference[i].monitorability.rank,
+              optimized[i].monitorability.rank);
+    EXPECT_EQ(reference_evidence[i].plausible,
+              optimized_evidence[i].plausible);
+    EXPECT_TRUE(reference_evidence[i].fault_gram.isApprox(
+        optimized_evidence[i].fault_gram, 1e-12));
+  }
+  EXPECT_FALSE(optimized[0].monitored);
+}
+
 TEST(IntegrityV2Fde, CoversEntirePlausibleSetBeforeSelection) {
   uwb_imu_pl::DetectorResultV2 detector;
   detector.numerically_valid = true;
@@ -555,10 +885,96 @@ TEST(IntegrityV2Fde, CoversEntirePlausibleSetBeforeSelection) {
   both.action.exclusion_cardinality = 2;
   std::vector<uwb_imu_pl::CandidateEvaluation> candidates{one, both};
   const auto decision = uwb_imu_pl::FdeManager().decide(
-      detector, {h1, h2}, {e1, e2}, &candidates, uwb_imu_pl::RiskBudgetV2{});
+      detector, {h1, h2}, {e1, e2}, &candidates, {},
+      uwb_imu_pl::RiskBudgetV2{});
   ASSERT_TRUE(decision.selected_action.has_value());
   EXPECT_EQ(decision.selected_action->id, both.action.id);
   EXPECT_EQ(decision.status, uwb_imu_pl::FdeStatus::AmbiguousUnionExclusion);
+}
+
+TEST(IntegrityV2Fde, PlausibleStrictSupersetRetainsCoverageDutyInSelection) {
+  using namespace uwb_imu_pl;
+  DetectorResultV2 detector;
+  detector.numerically_valid = true;
+  detector.passed = false;
+  FaultHypothesisV2 singleton;
+  singleton.id = HypothesisId(1);
+  singleton.modes = {FaultModeId(11)};
+  FaultHypothesisV2 superset;
+  superset.id = HypothesisId(2);
+  superset.modes = {FaultModeId(11), FaultModeId(12)};
+  FaultModeEvidence e1, e2;
+  e1.hypothesis = singleton.id;
+  e2.hypothesis = superset.id;
+  e1.plausible = e2.plausible = true;
+  CandidateEvaluation only_uwb;
+  only_uwb.valid = true;
+  only_uwb.post_detector_passed = true;
+  only_uwb.hpl_m = only_uwb.vpl_m = 1.0;
+  only_uwb.action.id = ExclusionActionId(1);
+  only_uwb.action.covered_modes = {FaultModeId(11)};
+  only_uwb.action.exclusion_cardinality = 1;
+  std::vector<CandidateEvaluation> candidates{only_uwb};
+  const auto decision = FdeManager().decide(
+      detector, {singleton, superset}, {e1, e2}, &candidates,
+      {}, RiskBudgetV2{});
+  EXPECT_EQ(decision.plausible_hypotheses,
+            (std::vector<HypothesisId>{singleton.id, superset.id}));
+  EXPECT_FALSE(decision.selected_action.has_value());
+  EXPECT_FALSE(decision.commit_allowed);
+  EXPECT_EQ(decision.status, FdeStatus::AmbiguousUnavailable);
+  EXPECT_FALSE(candidates.front().covers_plausible_set);
+}
+
+TEST(IntegrityV2Fde, ActionDedupRejectsSameShapeAndNormDifferentContent) {
+  using namespace uwb_imu_pl;
+  ExclusionAction left, right;
+  left.groups_to_remove = right.groups_to_remove = {FactorGroupId(10)};
+  left.groups_to_add = right.groups_to_add = {FactorGroupId(11)};
+  left.bridge_mode = right.bridge_mode = BridgeMode::GenericKinematic;
+  LinearizedFactorBlock a, b;
+  a.group_id = b.group_id = FactorGroupId(11);
+  a.version = b.version = {1, 2, 3, 4};
+  a.jacobian_whitened = Eigen::Matrix2d::Identity();
+  b.jacobian_whitened = (Eigen::Matrix2d() << 0.0, 1.0, 1.0, 0.0).finished();
+  a.residual_whitened = Eigen::Vector2d(1.0, 0.0);
+  b.residual_whitened = Eigen::Vector2d(0.0, 1.0);
+  ASSERT_DOUBLE_EQ(a.jacobian_whitened.squaredNorm(),
+                   b.jacobian_whitened.squaredNorm());
+  ASSERT_DOUBLE_EQ(a.residual_whitened.squaredNorm(),
+                   b.residual_whitened.squaredNorm());
+  left.added_blocks = {a};
+  right.added_blocks = {b};
+  EXPECT_FALSE(equivalentActionOperation(left, right));
+  right.added_blocks = left.added_blocks;
+  EXPECT_TRUE(equivalentActionOperation(left, right));
+}
+
+TEST(IntegrityV2Fde, MandatoryGroupIsIndependentOfProbabilisticPlausibility) {
+  using namespace uwb_imu_pl;
+  DetectorResultV2 barrier;
+  barrier.numerically_valid = true;
+  barrier.passed = false;
+  CandidateEvaluation keep, exclude;
+  keep.valid = exclude.valid = true;
+  keep.post_detector_passed = exclude.post_detector_passed = true;
+  keep.hpl_m = keep.vpl_m = exclude.hpl_m = exclude.vpl_m = 1.0;
+  keep.action.id = ExclusionActionId(1);
+  keep.action.action_model_id = "KEEP_ALL";
+  exclude.action.id = ExclusionActionId(2);
+  exclude.action.action_model_id = "UWB_CURRENT_HEALTH_BARRIER";
+  exclude.action.groups_to_remove = {FactorGroupId(77)};
+  exclude.action.exclusion_cardinality = 1;
+  std::vector<CandidateEvaluation> candidates{keep, exclude};
+  const auto decision = FdeManager().decide(
+      barrier, {}, {}, &candidates, {FactorGroupId(77)}, RiskBudgetV2{});
+  ASSERT_TRUE(decision.selected_action.has_value());
+  EXPECT_EQ(decision.selected_action->id, ExclusionActionId(2));
+  EXPECT_TRUE(decision.plausible_hypotheses.empty());
+  EXPECT_EQ(decision.mandatory_exclusion_groups,
+            (std::vector<FactorGroupId>{FactorGroupId(77)}));
+  EXPECT_FALSE(candidates[0].covers_plausible_set);
+  EXPECT_TRUE(candidates[1].covers_plausible_set);
 }
 
 TEST(IntegrityV2Health, QuarantineRequiresConsecutiveRecovery) {
@@ -618,7 +1034,7 @@ TEST(GateDNumerics, CompleteReplacementSurvivesSingularDeletionIntermediate) {
                    block(2, Eigen::MatrixXd::Zero(1, 2), Eigen::VectorXd::Constant(1, .03), window.version)};
   window.protected_state_map = Eigen::MatrixXd::Zero(3, 2);
   window.protected_state_map.topRows(2).setIdentity();
-  finalizeIntegrityWindow(&window, 1e-12, 1e10);
+  finalizeIntegrityWindow(&window, 1e-10, 1e10);
   ASSERT_TRUE(window.model_valid) << window.reason;
   ExclusionAction action;
   action.groups_to_remove = {FactorGroupId(1)};
@@ -644,6 +1060,31 @@ TEST(GateDNumerics, CompleteReplacementSurvivesSingularDeletionIntermediate) {
   EXPECT_EQ(singular.reason, "candidate rank loss");
 }
 
+TEST(GateDNumerics, FrozenNumericalContractMismatchFailsClosed) {
+  using namespace uwb_imu_pl;
+  auto window = syntheticWindow();
+  DetectorRiskContext detector;
+  detector.rank_tolerance = 2e-12;
+  detector.max_condition_number = 1e10;
+  const auto detected = JointWindowDetector().evaluate(window, detector);
+  EXPECT_FALSE(detected.numerically_valid);
+  EXPECT_NE(detected.reason.find("numerical-contract-mismatched"),
+            std::string::npos);
+
+  RankUpdateConfig rank;
+  rank.rank_tolerance = 2e-12;
+  rank.max_condition_number = 1e10;
+  const auto base = RankUpdateEvaluator(rank).factorizeOnce(window);
+  EXPECT_FALSE(base.valid);
+  EXPECT_NE(base.reason.find("stale frozen-window numerics"),
+            std::string::npos);
+
+  finalizeIntegrityWindow(&window, detector.rank_tolerance,
+                          detector.max_condition_number);
+  EXPECT_TRUE(JointWindowDetector().evaluate(window, detector).numerically_valid);
+  EXPECT_TRUE(RankUpdateEvaluator(rank).factorizeOnce(window).valid);
+}
+
 TEST(GateDNumerics, FinalSvdRejectsConditionHiddenByCholeskyDiagonal) {
   using namespace uwb_imu_pl;
   LinearizedIntegrityWindow window;
@@ -651,7 +1092,7 @@ TEST(GateDNumerics, FinalSvdRejectsConditionHiddenByCholeskyDiagonal) {
   Eigen::MatrixXd h(3, 2); h << 1, 1000, 0, 1, 0, 0;
   window.blocks = {block(1, h, Eigen::Vector3d(.01, .001, .02), window.version),
                   block(2, 1000 * Eigen::Matrix2d::Identity(), Eigen::Vector2d::Zero(), window.version)};
-  finalizeIntegrityWindow(&window, 1e-12, 1e10);
+  finalizeIntegrityWindow(&window, 1e-10, 1e4);
   ASSERT_LT(window.condition_number, 2);
   Eigen::LLT<Eigen::MatrixXd> misleading(h.transpose()*h);
   ASSERT_EQ(misleading.info(), Eigen::Success);
@@ -676,7 +1117,7 @@ TEST(GateDNumerics, EuclideanStepGateBothSidesUsesReferenceNearBoundary) {
     auto window = syntheticWindow();
     Eigen::Vector2d delta(.15, .2); delta *= scale;
     for (auto& b : window.blocks) b.residual_whitened = b.jacobian_whitened * delta;
-    finalizeIntegrityWindow(&window, 1e-12, 1e10);
+    finalizeIntegrityWindow(&window, 1e-10, 1e10);
     RankUpdateConfig config; config.materialize_dense_oracle_fields = false;
     const RankUpdateEvaluator evaluator(config);
     const auto result = evaluator.evaluate(evaluator.factorizeOnce(window), ExclusionAction{});
@@ -744,10 +1185,11 @@ TEST(GateDCache, CacheContentVersionWindowAndSwitchRemainEquivalent) {
   auto stale = a; stale.added_blocks.front().version.linpoint_version++;
   EXPECT_FALSE(cached.evaluate(base, stale).valid);
   auto next = window; next.id = WindowId(999);
+  finalizeIntegrityWindow(&next, 1e-10, 1e10);
   EXPECT_EQ(cached.factorizeOnce(next, actions).block_cache->window_id, next.id);
   next.version.noise_model_version++;
   for (auto& b : next.blocks) b.version = next.version;
-  finalizeIntegrityWindow(&next, 1e-12, 1e10);
+  finalizeIntegrityWindow(&next, 1e-10, 1e10);
   EXPECT_FALSE(cached.evaluate(cached.factorizeOnce(next, actions), a).valid);
 }
 
@@ -755,7 +1197,7 @@ TEST(GateDCache, EarlyStepSwitchAgreesWithExactFinalJacobian) {
   using namespace uwb_imu_pl;
   auto window = syntheticWindow();
   for(auto& b:window.blocks) b.residual_whitened = b.jacobian_whitened * Eigen::Vector2d(1,2);
-  finalizeIntegrityWindow(&window, 1e-12, 1e10);
+  finalizeIntegrityWindow(&window, 1e-10, 1e10);
   RankUpdateConfig config; config.materialize_dense_oracle_fields = false;
   const RankUpdateEvaluator early(config);
   config.enable_early_step_gate = false;
@@ -900,10 +1342,11 @@ TEST(GateDNumerics, RankAndConditionThresholdsBothSidesKeepExactDefinitions) {
     h(0,0)=1; h(1,1)=(rank_gate?1e-10:1e-4)*side;
     w.blocks={block(1,h,Eigen::Vector3d::Zero(),w.version),
               block(2,Eigen::Matrix2d::Identity(),Eigen::Vector2d::Zero(),w.version)};
-    finalizeIntegrityWindow(&w,1e-12,1e12);
     RankUpdateConfig config; config.materialize_dense_oracle_fields=false;
     config.rank_tolerance=rank_gate?1e-10:1e-12;
     config.max_condition_number=rank_gate?1e12:1e4;
+    finalizeIntegrityWindow(&w, config.rank_tolerance,
+                            config.max_condition_number);
     ExclusionAction a; a.groups_to_remove={FactorGroupId(2)};
     const RankUpdateEvaluator evaluator(config);
     const auto c=evaluator.evaluate(evaluator.factorizeOnce(w),a);
@@ -924,6 +1367,7 @@ TEST(GateDNumerics, RankAndConditionThresholdsBothSidesKeepExactDefinitions) {
 TEST(GateDSelection, DenseAndOperatorPathsSelectSameSuccessfulExclusion) {
   using namespace uwb_imu_pl;
   auto w=syntheticWindow(); w.protected_state_map.row(2)=w.protected_state_map.row(0);
+  finalizeIntegrityWindow(&w, 1e-10, 1e10);
   ExclusionAction keep; keep.id=ExclusionActionId(1); keep.action_model_id="KEEP_ALL";
   ExclusionAction exclude; exclude.id=ExclusionActionId(2); exclude.action_model_id="UWB_EXCLUSION";
   exclude.groups_to_remove={FactorGroupId(3)}; exclude.covered_units={FaultUnitId(11)};
@@ -949,8 +1393,8 @@ TEST(GateDSelection, DenseAndOperatorPathsSelectSameSuccessfulExclusion) {
   fault.affected_groups=exclude.groups_to_remove;
   FaultModeEvidence evidence; evidence.hypothesis=fault.id; evidence.plausible=true;
   DetectorResultV2 alarm; alarm.numerically_valid=true; alarm.passed=false;
-  const auto f=FdeManager().decide(alarm,{fault},{evidence},&fast,RiskBudgetV2{});
-  const auto d=FdeManager().decide(alarm,{fault},{evidence},&dense,RiskBudgetV2{});
+  const auto f=FdeManager().decide(alarm,{fault},{evidence},&fast,{},RiskBudgetV2{});
+  const auto d=FdeManager().decide(alarm,{fault},{evidence},&dense,{},RiskBudgetV2{});
   ASSERT_TRUE(f.commit_allowed); ASSERT_TRUE(d.commit_allowed);
   EXPECT_EQ(f.selected_action->id,exclude.id); EXPECT_EQ(f.selected_action->id,d.selected_action->id);
   EXPECT_EQ(f.status,FdeStatus::SuccessUwbExclusion); EXPECT_EQ(f.status,d.status);
@@ -1006,6 +1450,7 @@ TEST(GateDProtectionLevel, SharedModesUseOneCombinedCovarianceSolve) {
   using namespace uwb_imu_pl;
   auto window = syntheticWindow();
   window.protected_state_map.row(2) = window.protected_state_map.row(0);
+  finalizeIntegrityWindow(&window, 1e-10, 1e10);
   RankUpdateConfig config;
   config.materialize_dense_oracle_fields = false;
   config.max_linearization_step_norm = 10.0;
@@ -1106,4 +1551,179 @@ TEST(GateDHistoryCache, FrozenFactorContentHitsAndMutationMisses) {
   EXPECT_TRUE(first.jacobian_whitened.isApprox(second.jacobian_whitened, 0));
   estimator.discardEpoch(std::move(transaction),
       {FdeStatus::ModelInvalid, "cache test complete", false});
+}
+
+TEST(IntegrityV2Numerics, FrozenWindowSharesOneBaseSvdAndLlt) {
+  uwb_imu_pl::NumericalWorkCounters::reset();
+  auto window = syntheticWindow();
+  uwb_imu_pl::DetectorRiskContext detector_risk;
+  detector_risk.max_condition_number = 1e10;
+  const auto detector = uwb_imu_pl::JointWindowDetector().evaluate(
+      window, detector_risk);
+  std::vector<uwb_imu_pl::FaultHypothesisV2> hypotheses;
+  (void)uwb_imu_pl::HypothesisEvidenceEvaluator().evaluateAll(
+      window, &hypotheses, detector.squared_threshold);
+  const auto base = uwb_imu_pl::RankUpdateEvaluator().factorizeOnce(window);
+  ASSERT_TRUE(base.valid) << base.reason;
+  uwb_imu_pl::ExclusionAction keep;
+  keep.id = uwb_imu_pl::ExclusionActionId(1);
+  keep.action_model_id = "KEEP_ALL";
+  const auto unchanged = uwb_imu_pl::RankUpdateEvaluator().evaluate(base, keep);
+  ASSERT_TRUE(unchanged.valid) << unchanged.reason;
+  EXPECT_EQ(unchanged.diagnostics.numerical_path, "KEEP_BASE_CANONICAL");
+  EXPECT_NEAR(unchanged.statistic, window.numerics->statistic, 1e-12);
+  const auto counts = uwb_imu_pl::NumericalWorkCounters::snapshot();
+  EXPECT_EQ(counts.base_svd, 1u);
+  EXPECT_EQ(counts.base_llt, 1u);
+  EXPECT_EQ(counts.base_state_solves, 2u);
+  EXPECT_EQ(counts.llt_state_solve_calls, 1u);
+  EXPECT_EQ(counts.svd_state_solve_calls, 1u);
+  EXPECT_EQ(counts.detector_reference_qr, 0u);
+  EXPECT_EQ(counts.candidate_reference_svd, 0u);
+}
+
+TEST(IntegrityV2Numerics, RejectsReuseAfterAnyFrozenIdentityMutation) {
+  using namespace uwb_imu_pl;
+  const RankUpdateEvaluator evaluator;
+  for (int mutation = 0; mutation < 8; ++mutation) {
+    auto window = syntheticWindow();
+    const auto base = evaluator.factorizeOnce(window);
+    ASSERT_TRUE(base.valid) << mutation << ": " << base.reason;
+    switch (mutation) {
+      case 0: ++window.version.graph_version; break;
+      case 1: ++window.version.ordering_version; break;
+      case 2: ++window.version.noise_model_version; break;
+      case 3: ++window.version.linpoint_version; break;
+      case 4: window.H(0, 0) = std::nextafter(window.H(0, 0), 10.0); break;
+      case 5: window.protected_state_map(0, 0) = 2.0; break;
+      case 6: window.blocks.front().covariance(0, 0) = 2.0; break;
+      case 7:
+        window.state_layout.push_back(
+            {9, {gtsam::Symbol('x', 9)}, 0, 1, false});
+        break;
+    }
+    const auto candidate = evaluator.evaluate(base, ExclusionAction{});
+    EXPECT_FALSE(candidate.valid) << mutation;
+    if (mutation < 4) {
+      EXPECT_EQ(candidate.reason, "candidate frozen block/version is invalid");
+    } else {
+      EXPECT_NE(candidate.diagnostics.fallback_reason.find("stale frozen numerics"),
+                std::string::npos) << mutation << ": " << candidate.reason;
+    }
+  }
+}
+
+TEST(IntegrityV2Risk, EqualAllocationNeverOvershootsAndRealExcessFails) {
+  uwb_imu_pl::RiskBudgetV2 risk;
+  const std::size_t count = 1386;
+  std::vector<uwb_imu_pl::FaultHypothesisV2> hypotheses(count);
+  const double available =
+      uwb_imu_pl::conservativeRemainingHypothesisRisk(risk);
+  const double allocation =
+      uwb_imu_pl::conservativeEqualRiskAllocation(available, count);
+  for (auto& hypothesis : hypotheses) hypothesis.hmi_allocation = allocation;
+  const auto closed = uwb_imu_pl::auditRiskBudget(risk, hypotheses);
+  EXPECT_TRUE(closed.valid);
+  EXPECT_GE(closed.margin, 0.0);
+  hypotheses.front().hmi_allocation += 1e-12;
+  const auto exceeded = uwb_imu_pl::auditRiskBudget(risk, hypotheses);
+  EXPECT_FALSE(exceeded.valid);
+  EXPECT_LT(exceeded.margin, 0.0);
+}
+
+TEST(IntegrityV2ImuOracle, AnalyticProductionHasZeroReintegrationAcrossMotions) {
+  using namespace uwb_imu_pl;
+  struct Motion {
+    double duration_s;
+    Eigen::Vector3d velocity;
+    Eigen::Vector3d acceleration;
+    Eigen::Vector3d angular_rate;
+    Eigen::Vector3d accel_bias;
+    Eigen::Vector3d gyro_bias;
+    Eigen::Quaterniond orientation;
+  };
+  const std::vector<Motion> motions{
+      {0.02, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(),
+       Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(),
+       Eigen::Vector3d::Zero(), Eigen::Quaterniond::Identity()},
+      {0.05, Eigen::Vector3d(0.4, -0.2, 0.1), Eigen::Vector3d::Zero(),
+       Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(),
+       Eigen::Vector3d::Zero(), Eigen::Quaterniond::Identity()},
+      {0.10, Eigen::Vector3d(0.2, 0.1, 0.0), Eigen::Vector3d(0.7, -0.3, 0.2),
+       Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(),
+       Eigen::Vector3d::Zero(), Eigen::Quaterniond::Identity()},
+      {0.05, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(),
+       Eigen::Vector3d(0.0, 0.0, 0.4), Eigen::Vector3d::Zero(),
+       Eigen::Vector3d::Zero(), Eigen::Quaterniond::Identity()},
+      {0.075, Eigen::Vector3d(0.1, 0.2, -0.1), Eigen::Vector3d(0.2, 0.1, 0.0),
+       Eigen::Vector3d(0.2, -0.15, 0.3), Eigen::Vector3d::Zero(),
+       Eigen::Vector3d::Zero(),
+       Eigen::Quaterniond(Eigen::AngleAxisd(0.35, Eigen::Vector3d(1, 2, 3).normalized()))},
+      {0.05, Eigen::Vector3d(0.3, 0.0, 0.0), Eigen::Vector3d::Zero(),
+       Eigen::Vector3d(0.1, -0.05, 0.2), Eigen::Vector3d(0.03, -0.02, 0.01),
+       Eigen::Vector3d(0.002, -0.003, 0.001), Eigen::Quaterniond::Identity()},
+      // Long-pending oracle-cost observation: production remains zero, while
+      // the explicit oracle is still exactly six central differences.
+      {0.50, Eigen::Vector3d(0.2, 0.2, 0.0), Eigen::Vector3d(0.1, 0.0, 0.0),
+       Eigen::Vector3d(0.1, 0.2, -0.1), Eigen::Vector3d::Zero(),
+       Eigen::Vector3d::Zero(), Eigen::Quaterniond::Identity()},
+  };
+  for (const auto& motion : motions) {
+    auto config = researchConfig();
+    IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+    NavigationState initial;
+    initial.timestamp = TimestampNs(0);
+    initial.position_world_m = {0, 0, 1};
+    initial.velocity_world_mps = motion.velocity;
+    initial.accel_bias_mps2 = motion.accel_bias;
+    initial.gyro_bias_radps = motion.gyro_bias;
+    initial.q_world_body = motion.orientation;
+    estimator.initialize(initial, config.realtime.prior_sigmas);
+    const int samples = static_cast<int>(std::llround(motion.duration_s / 0.005));
+    for (int sample = 0; sample <= samples; ++sample) {
+      ImuMeasurement imu;
+      imu.id = MeasurementId(sample + 1);
+      imu.timestamp = TimestampNs(sample * 5000000LL);
+      imu.specific_force_mps2 = motion.acceleration + motion.accel_bias +
+          Eigen::Vector3d(0, 0, config.imu.gravity_mps2);
+      imu.angular_velocity_radps = motion.angular_rate + motion.gyro_bias;
+      estimator.ingestImu(imu);
+    }
+    auto input = batch(config, static_cast<std::int64_t>(
+        std::llround(motion.duration_s * 1e9)));
+    auto transaction = estimator.prepareEpoch(input);
+    const auto imu_block = estimator.buildPendingFactorBlock(
+        transaction, transaction.imu_group.id);
+    NumericalWorkCounters::reset();
+    const auto analytic = ImuFaultSubspaceBuilder().buildAnalytic(
+        transaction, imu_block);
+    EXPECT_TRUE(analytic.analytic_input_valid);
+    EXPECT_TRUE(analytic.analytic_computation_valid);
+    EXPECT_FALSE(analytic.oracle_executed);
+    EXPECT_EQ(NumericalWorkCounters::snapshot().imu_oracle_reintegrations, 0u);
+    const auto verified = ImuFaultSubspaceBuilder()
+        .verifyFiniteDifferenceOracle(transaction, imu_block);
+    EXPECT_TRUE(verified.oracle_verified) << motion.duration_s << ": "
+                                         << verified.oracle_relative_error;
+    EXPECT_EQ(verified.oracle_reintegrations, 12u);
+    EXPECT_EQ(NumericalWorkCounters::snapshot().imu_oracle_reintegrations, 12u);
+    estimator.discardEpoch(std::move(transaction),
+        {FdeStatus::ModelInvalid, "oracle development test", false});
+  }
+}
+
+TEST(IntegrityV2ImuOracle, InvalidAnalyticInputIsReportedWithoutOracle) {
+  const uwb_imu_pl::EpochTransaction transaction;
+  const uwb_imu_pl::LinearizedFactorBlock block;
+  const auto result = uwb_imu_pl::ImuFaultSubspaceBuilder().buildAnalytic(
+      transaction, block);
+  EXPECT_FALSE(result.analytic_input_valid);
+  EXPECT_FALSE(result.analytic_computation_valid);
+  EXPECT_FALSE(result.oracle_executed);
+  EXPECT_FALSE(result.analytic_reason.empty());
+  const auto oracle =
+      uwb_imu_pl::ImuFaultSubspaceBuilder().verifyFiniteDifferenceOracle(
+          transaction, block);
+  EXPECT_FALSE(oracle.oracle_executed);
+  EXPECT_EQ(oracle.oracle_reintegrations, 0u);
 }

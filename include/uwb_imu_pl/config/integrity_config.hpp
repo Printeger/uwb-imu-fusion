@@ -82,6 +82,8 @@ struct CombinationFaultModelConfig {
 };
 
 struct FaultModelsConfig {
+  bool single_faults_enabled = true;
+  bool double_faults_enabled = false;
   std::uint32_t max_cardinality = 2;
   UwbFaultModelConfig uwb;
   ImuFaultModelConfig imu;
@@ -96,7 +98,15 @@ struct FdeConfigV2 {
   std::string selection_secondary = "minimum_protection_level";
   bool dense_oracle_online_fallback = false;
   std::uint32_t max_candidate_count = 128;
+  // Independent of the monitored hypothesis cardinality.  A single-fault
+  // census can still require a conservative union action covering multiple
+  // indistinguishable single-fault explanations.
+  std::uint32_t max_exclusion_cardinality = 2;
 };
+
+std::uint32_t enabledFaultHypothesisCardinality(
+    const FaultModelsConfig& config);
+std::uint64_t faultModelPolicyFingerprint(const FaultModelsConfig& config);
 
 struct BridgeConfigV2 {
   GenericBridgeSpec generic;
@@ -200,6 +210,9 @@ class IntegrityConfigLoader {
           std::nullopt);
   static IntegrityConfig load(const std::string& yaml_path,
                               const IntegrityConfigOverrides& overrides);
+  // Used by explicit development-only runtime manifests after appending a
+  // complete description of non-research configuration overrides.
+  static std::string hashResolvedYaml(const std::string& resolved_yaml);
 };
 
 }  // namespace uwb_imu_pl

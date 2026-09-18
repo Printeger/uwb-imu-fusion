@@ -1,0 +1,166 @@
+{
+  "schema": "uwb-imu-pl/integrity-performance-optimization/v1",
+  "date": "2026-09-16",
+  "head": "e6ded3069bbc4cd5cf98f14257e96f61066685b8e",
+  "baseline_workspace_content_sha256": "dad3ae23a90fce5f0cf0dad39c351f281f22da8c73824637dfc4b34bf5305065",
+  "final_workspace_content_sha256_before_report": "10c0f327ad2fc66edf2ff108d6bf184228a0f5a2af256d6d090cb5f361297bf2",
+  "artifacts": {
+    "baseline_executable_sha256": "92938d2864a05a50da5c784d422a95ce3442734d7d68d5655947e5c0ffc556e7",
+    "baseline_library_sha256": "f12314e393b8235838c908cdf5d02f54cd28f37dd3a0606d20db68406dfe90b5",
+    "optimized_executable_sha256": "b5b7b5e3b31e20ceb36f49f602de30b8cb8aad76366ce434d462e05136e2a5bd",
+    "optimized_library_sha256": "958af2ac4aa5b7588124648e1b1d1f65aa7ce1550fc4bd241dcd12e01dcf0841",
+    "gtsam_sha256": "00d83aa618194aefc4b2011e1d29bd9aba107a8b5e0ee8e946eb2455351219da",
+    "config_sha256": "7c465463a64299695ec40c580db7a2ff08a0db845697c5f5dfbed60b03ef9171",
+    "scenario_manifest_sha256": "f556003bbe3dfc5c8f3991dc0bf5543cdddc258b4b00f42b776dbe03fcbd37e4"
+  },
+  "environment": {
+    "build_type": "Release",
+    "compiler": "/usr/bin/c++ GCC 9.4.0",
+    "cpu": "Intel Core Ultra 5 125H (WSL2, 18 logical CPUs)",
+    "affinity": "0,2,4,6 (four distinct physical cores)",
+    "worker_budget": 4,
+    "numeric_threads": 1,
+    "seed": 20260901,
+    "diagnostic_level": "development default; no per-hypothesis audit for performance",
+    "quantile": "nearest-rank: sorted[ceil(p*n)-1]"
+  },
+  "main": {
+    "scenario": "A_default_ramp",
+    "runs_per_variant": 3,
+    "warmup_epochs": 40,
+    "sample_epochs_per_run": 100,
+    "pooled_samples_per_variant": 300,
+    "baseline_core_ms": {
+      "p50": 3155.690,
+      "p95": 4718.360,
+      "p99": 7992.950,
+      "max": 27742.300,
+      "mean": 3517.741
+    },
+    "optimized_core_ms": {
+      "p50": 744.144,
+      "p95": 1176.540,
+      "p99": 1668.990,
+      "max": 2389.100,
+      "mean": 803.261
+    },
+    "p50_speedup": 4.2407,
+    "p50_reduction": 0.7642,
+    "p95_speedup": 4.0104,
+    "p95_reduction": 0.7506,
+    "process_elapsed_seconds": {
+      "baseline": [416.27, 508.33, 414.62],
+      "optimized": [113.27, 99.56, 89.73]
+    },
+    "peak_rss_kib": {
+      "baseline": [371148, 370080, 372056],
+      "optimized": [286800, 288168, 288988],
+      "median_reduction": 0.2236
+    },
+    "steady_work_over_three_runs": {
+      "hypotheses": 18331200,
+      "hypotheses_per_epoch": 61104,
+      "generated_candidates_per_epoch": 128,
+      "actual_candidate_kernels_per_epoch": 1,
+      "actual_pl_evaluations_per_epoch": 1,
+      "base_svd": 300,
+      "base_llt": 300,
+      "state_solves": 600,
+      "optimized_shared_hits": 300,
+      "optimized_shared_misses": 0,
+      "optimized_parallel_blocks": 1200,
+      "optimized_low_dimensional_hypotheses": 18331200,
+      "optimized_generic_fallbacks": 0,
+      "covariance_rhs_solve_calls": 300,
+      "baseline_covariance_rhs_columns": 235200,
+      "optimized_covariance_rhs_columns": 236100,
+      "numerical_contract_mismatches": 0
+    }
+  },
+  "full_window_shape": {
+    "hypotheses": 61104,
+    "effective_dimension_1": 464,
+    "effective_dimension_2": 41440,
+    "effective_dimension_3": 19200,
+    "other_dimensions": 0,
+    "shared_context_bytes": 8799264,
+    "worker_blocks": 4
+  },
+  "correctness": {
+    "full_audit_hypothesis_rows": 480684,
+    "discrete_mismatches": 0,
+    "finite_inf_nan_class_mismatches": 0,
+    "state_max_abs_error": 0.0,
+    "protection_level_max_abs_error": 0.0,
+    "candidate_numeric_max_abs_error_excluding_timing": 0.0,
+    "diagnostic_max_abs_error": {
+      "field": "condition_number",
+      "value_at_csv_precision": 0.01
+    },
+    "diagnostic_max_relative_error": {
+      "field": "log_evidence",
+      "value": 2.5944824e-4,
+      "corresponding_abs_error": 2.7e-23
+    },
+    "diagnostic_max_meaningful_relative_error": {
+      "field": "conditioned_statistic",
+      "value": 7.4796e-6
+    },
+    "cpp_tests_passed": 96,
+    "python_tests_passed": 13,
+    "mature_epochs": 226,
+    "marginalizations": 25,
+    "mature_schema_validation": "PASS"
+  },
+  "stage_p50_ms": {
+    "baseline": {
+      "candidate_evaluation": 1135.946,
+      "integrity_window": 946.113,
+      "hypothesis_evidence": 687.579,
+      "model_generation": 179.504
+    },
+    "optimized": {
+      "candidate_evaluation": 66.751,
+      "integrity_window": 147.250,
+      "hypothesis_evidence": 199.437,
+      "model_generation": 174.810,
+      "window_svd": 106.271
+    }
+  },
+  "ablation": {
+    "samples_per_variant": 20,
+    "p50_ms": {
+      "A_reference": 2744.530,
+      "B_shared": 1842.800,
+      "C_low_dim_batch_single_thread": 1545.280,
+      "D_hypothesis_parallel": 1483.190,
+      "E_window_preparation": 659.283
+    },
+    "incremental_reduction": {
+      "shared_A_to_B": 0.32856,
+      "low_dim_batch_B_to_C": 0.16145,
+      "hypothesis_parallel_C_to_D": 0.04018,
+      "window_preparation_D_to_E": 0.55550
+    }
+  },
+  "fault_core_ms": {
+    "C_uwb_fde": {
+      "fault_input_25": {"baseline": 1947.930, "optimized": 599.208},
+      "recovery_input_26_32_mean": {"baseline": 2534.040, "optimized": 608.597}
+    },
+    "D_imu_bridge": {
+      "fault_input_25": {"baseline": 2212.020, "optimized": 860.240},
+      "rejected_input_26_32_mean": {"baseline": 2426.529, "optimized": 935.038}
+    },
+    "E_union": {
+      "fault_input_25": {"baseline": 1824.050, "optimized": 532.663},
+      "rejected_input_26_32_mean": {"baseline": 1854.563, "optimized": 670.916}
+    }
+  },
+  "target": {
+    "core_wall_ms": 40.0,
+    "normal_p50_met": false,
+    "normal_p95_met": false,
+    "fault_frames_met": false
+  }
+}

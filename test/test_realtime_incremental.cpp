@@ -824,7 +824,14 @@ TEST(UwbImuIncremental, OneSecondUwbDropAndChangingAnchorSetRecover) {
         uwb_imu_pl::TimestampNs(
             static_cast<std::int64_t>(uwb_times_ms[epoch]) * 1000000LL),
         initial.position_world_m, counts[epoch]));
-    EXPECT_EQ(output.detector.dof, static_cast<int>(counts[epoch]));
+    // A one-interval integrity window has two states.  UWB attached only to
+    // the boundary state remains an explicit monitored block, so after the
+    // first epoch the joint-window residual DOF includes both the boundary
+    // and current UWB groups (each factor exactly once).
+    const auto expected_window_uwb = counts[epoch] +
+        (epoch == 0 ? 0U : counts[epoch - 1]);
+    EXPECT_EQ(output.detector.dof,
+              static_cast<int>(expected_window_uwb));
     EXPECT_EQ(output.measurement_group_size, counts[epoch]);
     EXPECT_TRUE(output.measurement_model_valid) << output.detector.reason;
     EXPECT_TRUE(output.batch_committed) << output.detector.reason;

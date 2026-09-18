@@ -15,6 +15,10 @@ from round2_common import (CounterRng, boundary_amplitude, enumerate_cells,
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PROTOCOL = ROOT / "config/integrity_round2_protocol.json"
+TEST_BIN_DIR = pathlib.Path(os.environ.get(
+    "UWB_IMU_PL_TEST_BIN_DIR",
+    ROOT.parent.parent /
+    "devel/.private/uwb_imu_pl/lib/uwb_imu_pl"))
 
 
 class RoundTwoProtocolTests(unittest.TestCase):
@@ -78,8 +82,7 @@ class RoundTwoProtocolTests(unittest.TestCase):
             self.assertIn("cannot follow build=PENDING", completed.stderr)
 
     def test_cpp_raw_stream_runner_replays_short_fixture(self):
-        executable = (ROOT.parent.parent /
-            "devel/.private/uwb_imu_pl/lib/uwb_imu_pl/integrity_round2_scenario")
+        executable = TEST_BIN_DIR / "integrity_round2_scenario"
         if not executable.is_file():
             self.skipTest("C++ scenario runner is not built")
         cell = json.dumps({"gate": "E", "id": "unit-replay",
@@ -98,14 +101,14 @@ class RoundTwoProtocolTests(unittest.TestCase):
         self.assertEqual(json.loads(left)["status"], "PASS")
 
     def test_v5_run_validator_checks_inventory_and_protocol_digest(self):
-        executable = (ROOT.parent.parent /
-            "devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark")
+        executable = TEST_BIN_DIR / "realtime_performance_benchmark"
         if not executable.is_file():
             self.skipTest("performance runner is not built")
         with tempfile.TemporaryDirectory() as temporary:
             run = pathlib.Path(temporary) / "run"
             environment = os.environ.copy()
-            library_paths = [ROOT.parent.parent / "devel/.private/uwb_imu_pl/lib",
+            library_paths = [TEST_BIN_DIR.parent,
+                             ROOT.parent.parent / "devel/.private/uwb_imu_pl/lib",
                              ROOT.parent.parent / "devel/lib",
                              pathlib.Path("/opt/ros/noetic/lib")]
             environment["LD_LIBRARY_PATH"] = ":".join(map(str, library_paths)) + (

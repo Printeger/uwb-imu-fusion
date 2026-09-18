@@ -23,6 +23,7 @@ struct FdeDecision {
   FdeStatus status = FdeStatus::NotTriggered;
   std::optional<ExclusionAction> selected_action;
   std::vector<HypothesisId> plausible_hypotheses;
+  std::vector<FactorGroupId> mandatory_exclusion_groups;
   bool commit_allowed = false;
   bool integrity_available = false;
   std::string reason;
@@ -34,6 +35,7 @@ class FdeManager {
                      const std::vector<FaultHypothesisV2>& hypotheses,
                      const std::vector<FaultModeEvidence>& evidence,
                      std::vector<CandidateEvaluation>* candidates,
+                     const std::vector<FactorGroupId>& mandatory_groups,
                      const RiskBudgetV2& risk) const;
 };
 

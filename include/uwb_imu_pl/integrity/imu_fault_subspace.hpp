@@ -16,6 +16,16 @@ struct ImuFaultSubspaces {
   Eigen::MatrixXd bias_jump_gyro;
   double finite_difference_relative_error =
       std::numeric_limits<double>::infinity();
+  bool analytic_input_valid = false;
+  bool analytic_computation_valid = false;
+  bool oracle_executed = false;
+  double oracle_relative_error = std::numeric_limits<double>::infinity();
+  bool oracle_verified = false;
+  std::uint32_t oracle_reintegrations = 0;
+  std::string analytic_reason;
+  // Compatibility aliases for diagnostic readers predating R1. They mirror
+  // oracle_relative_error/oracle_verified and are false/infinite when the
+  // production path intentionally does not execute the oracle.
   bool analytic_verified = false;
   std::string residual_ordering = "rotation,position,velocity,bias_accel,bias_gyro";
   std::string frame_contract = "GTSAM Pose3 local tangent; IMU sample body frame";
@@ -27,6 +37,12 @@ class ImuFaultSubspaceBuilder {
                                    double verification_tolerance = 2e-4)
       : epsilon_(finite_difference_epsilon), tolerance_(verification_tolerance) {}
   ImuFaultSubspaces build(
+      const EpochTransaction& transaction,
+      const LinearizedFactorBlock& combined_imu_block) const;
+  ImuFaultSubspaces buildAnalytic(
+      const EpochTransaction& transaction,
+      const LinearizedFactorBlock& combined_imu_block) const;
+  ImuFaultSubspaces verifyFiniteDifferenceOracle(
       const EpochTransaction& transaction,
       const LinearizedFactorBlock& combined_imu_block) const;
 

@@ -21,27 +21,6 @@ struct RankUpdateConfig {
   bool force_exact_condition_number = false;
 };
 
-// Immutable numerical data derived exactly once from a frozen window.  It is
-// deliberately rebuilt after replay decoding; Eigen decomposition objects are
-// never serialized.
-struct FrozenWindowNumerics {
-  WindowId window_id;
-  LinearizationVersion version;
-  std::uint64_t content_fingerprint = 0;
-  std::shared_ptr<const Eigen::LLT<Eigen::MatrixXd>> information_factorization;
-  Eigen::VectorXd base_state_increment;
-  Eigen::VectorXd parity;
-  std::vector<Eigen::Index> block_row_offsets;
-  double statistic = std::numeric_limits<double>::infinity();
-  double information_logdet = -std::numeric_limits<double>::infinity();
-  double smallest_singular_value = 0.0;
-  double largest_singular_value = 0.0;
-  double smallest_information_lower_bound = 0.0;
-  double largest_information_upper_bound = std::numeric_limits<double>::infinity();
-  int exact_rank = 0;
-  double exact_condition = std::numeric_limits<double>::infinity();
-};
-
 struct RankUpdateScratch {
   Eigen::MatrixXd update_columns;
   Eigen::VectorXd update_signs;
@@ -64,7 +43,7 @@ struct BaseCandidateKernel {
   LinearizationVersion version;
   std::shared_ptr<const FrozenBlockSolveCache> block_cache;
   std::shared_ptr<const FrozenWindowNumerics> numerics;
-  LinearizedIntegrityWindow window;
+  const LinearizedIntegrityWindow* window_view = nullptr;
   std::shared_ptr<const Eigen::LLT<Eigen::MatrixXd>> information_factorization;
   Eigen::VectorXd state_increment;
   double information_logdet = -std::numeric_limits<double>::infinity();

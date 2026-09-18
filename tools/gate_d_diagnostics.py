@@ -5,7 +5,7 @@ import math
 
 SCHEMA = "uwb-imu-pl/gate-d-diagnostics/v1"
 IDENTITY = "schema_version input_attempt_id input_timestamp_ns transaction_id window_id graph_version ordering_version noise_model_version linpoint_version output_timestamp_ns".split()
-STAGES = set("prepare integrity_window all_in_detector current_sensitivity historical_sensitivity model_generation hypothesis_evidence health_actions hypothesis_audit base_factorization candidate_evaluation fde_decision candidate_audit finalize_commit_audit core_total".split())
+STAGES = set("prepare integrity_window window_boundary_provenance window_factor_linearization_whitening window_dense_assembly window_svd window_normal_equations window_llt_state_solves window_fingerprint all_in_detector current_sensitivity historical_sensitivity model_generation hypothesis_evidence health_actions hypothesis_audit base_factorization candidate_evaluation fde_decision candidate_audit finalize_commit_audit core_total".split())
 
 
 def read_rows(directory, name):
@@ -29,7 +29,7 @@ def validate_attachments(directory, epochs=None, warmup=100, expected_candidates
     if ids != expected:
         raise ValueError("missing, duplicate or unordered input attempt IDs")
     indexed = dict(zip(ids, attempts))
-    if any(row["schema_version"] not in (SCHEMA, "uwb-imu-pl/gate-d-diagnostics/v2", "uwb-imu-pl/gate-d-diagnostics/v3", "uwb-imu-pl/gate-d-diagnostics/v4") for row in attempts):
+    if any(row["schema_version"] not in (SCHEMA, "uwb-imu-pl/gate-d-diagnostics/v2", "uwb-imu-pl/gate-d-diagnostics/v3", "uwb-imu-pl/gate-d-diagnostics/v4", "uwb-imu-pl/gate-d-diagnostics/v5", "uwb-imu-pl/gate-d-diagnostics/v6", "uwb-imu-pl/gate-d-diagnostics/v7", "uwb-imu-pl/gate-d-diagnostics/v8", "uwb-imu-pl/gate-d-diagnostics/v9", "uwb-imu-pl/gate-d-diagnostics/v10") for row in attempts):
         raise ValueError("unsupported diagnostic schema")
     by_stage, by_candidate = defaultdict(dict), defaultdict(dict)
     for rows, target, field in ((stages, by_stage, "stage"), (candidates, by_candidate, "action_id")):
@@ -127,16 +127,27 @@ def validate_attachments(directory, epochs=None, warmup=100, expected_candidates
         if set(current) != set(old):
             raise ValueError("candidate attachment missing or mismatched")
         for key, candidate in current.items():
-            if candidate["kernel_evaluated"] != "1":
+            eligibility_skip = (row["schema_version"].endswith(("/v8", "/v9", "/v10")) and
+                                candidate["kernel_evaluated"] == "0" and
+                                candidate["skip_reason"].startswith("SKIPPED_INELIGIBLE:"))
+            if candidate["kernel_evaluated"] != "1" and not eligibility_skip:
                 raise ValueError("candidate kernel was not executed")
-            for field in ("kernel_ms", "post_ms"):
-                finite(candidate[field])
+            if eligibility_skip:
+                if any(candidate[field] for field in
+                       ("kernel_ms", "post_ms", "bridge_ms", "fault_map_ms", "pl_ms")):
+                    raise ValueError("ineligible candidate has fabricated duration")
+                if candidate["numerical_valid"] != "0" or candidate["pl_evaluated"] != "0":
+                    raise ValueError("ineligible candidate has fabricated numerical result")
+            else:
+                for field in ("kernel_ms", "post_ms"):
+                    finite(candidate[field])
             for field in ("bridge_ms", "fault_map_ms", "pl_ms"):
                 if candidate["pl_evaluated"] == "1":
                     finite(candidate[field])
                 elif candidate[field] or not candidate["skip_reason"]:
                     raise ValueError("uncomputed candidate stage lacks skip reason")
-            if row["schema_version"].endswith(("/v3", "/v4")):
+            if row["schema_version"].endswith(
+                    ("/v3", "/v4", "/v5", "/v6", "/v7", "/v8", "/v9", "/v10")):
                 frozen = set(filter(None, row["frozen_group_ids"].split(";")))
                 removed = set(filter(None, old[key]["removed_group_ids"].split(";")))
                 if not removed.issubset(frozen):

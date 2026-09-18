@@ -30,7 +30,9 @@ class DiagnosticsTest(unittest.TestCase):
                     selected="0", slow_path="0", near_gate="0", recovered_replacement="0",
                     numerical_path="LOW_RANK", fallback_reason="", skip_reason="numerical rejection",
                     cache_hits="0", kernel_ms="1", post_ms=".1", bridge_ms="", fault_map_ms="", pl_ms=""))
-                legacy.append(dict(timestamp_ns="100", window_id=str(attempt), action_id=str(action), evaluation_wall_ms="1"))
+                legacy.append(dict(timestamp_ns="100", window_id=str(attempt),
+                                   action_id=str(action), removed_group_ids="",
+                                   evaluation_wall_ms="1"))
             transactions.append(dict(timestamp_ns="100", transaction_id=str(attempt), window_id=str(attempt), base_graph_version="1", linearization_version="4"))
             timing.append(dict(timestamp_ns="100", epoch="1", stage="core_total", wall_ms="1", cold_warm="cold" if attempt <= 100 else "warm", success="1"))
         for name, rows in (("diagnostic_attempts", attempts), ("diagnostic_stages", stages),
@@ -83,6 +85,29 @@ class DiagnosticsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "outside actual frozen window"):
             validate_attachments(self.path, 101, expected_candidates=128, require_legacy_timing=False)
 
+    def test_v9_and_v10_schema_validation_use_actual_frozen_window(self):
+        for version in ("v9", "v10"):
+            for name in ("diagnostic_attempts", "diagnostic_stages",
+                         "diagnostic_candidates"):
+                for row in self.data[name]:
+                    row["schema_version"] = (
+                        "uwb-imu-pl/gate-d-diagnostics/" + version)
+            for row in self.data["diagnostic_attempts"]:
+                row["frozen_group_ids"] = "1;2;3"
+            for row in self.data["candidates"]:
+                row["removed_group_ids"] = "3"
+            self.save()
+            validate_attachments(self.path, 101, expected_candidates=128,
+                                 require_legacy_timing=False)
+            self.data["candidates"][-1]["removed_group_ids"] = "4"
+            self.save()
+            with self.assertRaisesRegex(ValueError,
+                                        "outside actual frozen window"):
+                validate_attachments(self.path, 101,
+                                     expected_candidates=128,
+                                     require_legacy_timing=False)
+            self.data["candidates"][-1]["removed_group_ids"] = "3"
+
     def test_reinit_may_reuse_transaction_and_window_ids(self):
         for name in ("diagnostic_attempts", "diagnostic_stages", "diagnostic_candidates"):
             for row in self.data[name]:
@@ -132,6 +157,26 @@ class DiagnosticsTest(unittest.TestCase):
     def test_kernel_not_executed(self):
         self.data["diagnostic_candidates"][-1]["kernel_evaluated"] = "0"
         self.assertEqual(self.verdict()["status"], "INVALID")
+
+    def test_v8_and_v9_exact_eligibility_skip_have_no_fabricated_numerics(self):
+        for version in ("v8", "v9"):
+            with self.subTest(version=version):
+                row = self.data["diagnostic_candidates"][-1]
+                for name in ("diagnostic_attempts", "diagnostic_stages",
+                             "diagnostic_candidates"):
+                    for item in self.data[name]:
+                        item["schema_version"] = (
+                            "uwb-imu-pl/gate-d-diagnostics/" + version)
+                for item in self.data["diagnostic_attempts"]:
+                    item["frozen_group_ids"] = ""
+                row.update(kernel_evaluated="0", numerical_valid="0",
+                           pl_evaluated="0", kernel_ms="", post_ms="",
+                           bridge_ms="", fault_map_ms="", pl_ms="",
+                           skip_reason="SKIPPED_INELIGIBLE: coverage gap")
+                self.assertEqual(self.verdict()["status"], "PASS")
+                row["kernel_ms"] = "1"
+                self.assertEqual(self.verdict()["status"], "INVALID")
+                row["kernel_ms"] = ""
 
     def test_process_failure_and_empty_output_have_complete_summary(self):
         result = summarize_run(self.path, 101, 4, 128, 2)

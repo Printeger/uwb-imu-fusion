@@ -1,4 +1,5 @@
 #include "uwb_imu_pl/estimation/rank_update_kernel.hpp"
+#include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
 
 #include <Eigen/Cholesky>
 #include <Eigen/SVD>
@@ -10,7 +11,6 @@
 #include <cmath>
 #include <chrono>
 #include <set>
-#include <cstring>
 
 namespace uwb_imu_pl {
 namespace {
@@ -31,45 +31,6 @@ bool sameBlock(const LinearizedFactorBlock& a, const LinearizedFactorBlock& b) {
       sameMatrix(a.residual_whitened, b.residual_whitened) &&
       sameMatrix(a.jacobian_raw, b.jacobian_raw) && sameMatrix(a.residual_raw, b.residual_raw) &&
       sameMatrix(a.covariance, b.covariance) && sameMatrix(a.whitener, b.whitener);
-}
-
-void hashBytes(std::uint64_t* hash, const void* data, std::size_t size) {
-  const auto* bytes = static_cast<const unsigned char*>(data);
-  for (std::size_t i = 0; i < size; ++i) {
-    *hash ^= bytes[i];
-    *hash *= 1099511628211ULL;
-  }
-}
-
-template <class Derived>
-void hashMatrix(std::uint64_t* hash, const Eigen::MatrixBase<Derived>& matrix) {
-  const Eigen::Index rows = matrix.rows(), cols = matrix.cols();
-  hashBytes(hash, &rows, sizeof(rows)); hashBytes(hash, &cols, sizeof(cols));
-  for (Eigen::Index column = 0; column < cols; ++column)
-    for (Eigen::Index row = 0; row < rows; ++row) {
-      const double value = matrix(row, column);
-      hashBytes(hash, &value, sizeof(value));
-    }
-}
-
-std::uint64_t windowFingerprint(const LinearizedIntegrityWindow& window) {
-  std::uint64_t hash = 1469598103934665603ULL;
-  const auto id = window.id.value();
-  hashBytes(&hash, &id, sizeof(id));
-  hashBytes(&hash, &window.version.graph_version, sizeof(window.version.graph_version));
-  hashBytes(&hash, &window.version.ordering_version, sizeof(window.version.ordering_version));
-  hashBytes(&hash, &window.version.noise_model_version, sizeof(window.version.noise_model_version));
-  hashBytes(&hash, &window.version.linpoint_version, sizeof(window.version.linpoint_version));
-  hashMatrix(&hash, window.H); hashMatrix(&hash, window.z);
-  hashMatrix(&hash, window.base_information);
-  hashMatrix(&hash, window.base_information_rhs);
-  for (const auto& block : window.blocks) {
-    const auto group = block.group_id.value();
-    hashBytes(&hash, &group, sizeof(group));
-    hashMatrix(&hash, block.jacobian_whitened);
-    hashMatrix(&hash, block.residual_whitened);
-  }
-  return hash;
 }
 
 struct SpectralCertificate {
@@ -258,6 +219,7 @@ bool candidateRows(const LinearizedIntegrityWindow& window,
 
 bool covarianceFromInformation(const Eigen::MatrixXd& information,
                                Eigen::MatrixXd* covariance) {
+  NumericalWorkCounters::candidateInnerLlt();
   Eigen::LLT<Eigen::MatrixXd> llt(information);
   if (llt.info() != Eigen::Success) return false;
   covariance->setIdentity(information.rows(), information.cols());
@@ -269,6 +231,7 @@ bool covarianceFromInformation(const Eigen::MatrixXd& information,
 void finishCandidate(CandidateEvaluation* result, const Eigen::MatrixXd& h,
                      const Eigen::VectorXd& z, double rank_tolerance,
                      double max_condition, double max_step) {
+  NumericalWorkCounters::candidateReferenceSvd();
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(h);
   const auto s = svd.singularValues();
   const double largest = s.size() ? s(0) : 0.0;
@@ -281,6 +244,7 @@ void finishCandidate(CandidateEvaluation* result, const Eigen::MatrixXd& h,
                                              : std::numeric_limits<double>::infinity();
   const Eigen::VectorXd residual = z - h * result->state_increment;
   result->statistic = residual.squaredNorm();
+  NumericalWorkCounters::candidateInnerLlt();
   Eigen::LLT<Eigen::MatrixXd> llt(h.transpose() * h);
   if (llt.info() == Eigen::Success) {
     result->information_logdet =
@@ -357,7 +321,7 @@ BaseCandidateKernel RankUpdateEvaluator::factorizeOnce(
   BaseCandidateKernel base;
   base.window_id = window.id;
   base.version = window.version;
-  base.window = window;
+  base.window_view = &window;
   if (!window.model_valid) {
     base.reason = "invalid base window: " + window.reason;
     return base;
@@ -374,58 +338,34 @@ BaseCandidateKernel RankUpdateEvaluator::factorizeOnce(
         !window.protected_state_map.allFinite()))) {
     base.reason = "invalid base matrix dimensions/finiteness"; return base;
   }
-  Eigen::JacobiSVD<Eigen::MatrixXd> svd(window.H);
-  const auto singular = svd.singularValues();
-  const double largest = singular.size() ? singular(0) : 0.0;
-  base.exact_rank = (singular.array() > config_.rank_tolerance * std::max(1.0, largest)).count();
-  base.smallest_singular_value = base.exact_rank ? singular(base.exact_rank - 1) : 0.0;
-  base.exact_condition = base.smallest_singular_value > 0 ? largest / base.smallest_singular_value
-      : std::numeric_limits<double>::infinity();
-  auto factorization =
-      std::make_shared<Eigen::LLT<Eigen::MatrixXd>>(window.base_information);
-  if (factorization->info() != Eigen::Success) {
-    base.reason = "base information is not SPD";
+  if (!window.numerics || !window.numerics->valid ||
+      !(window.numerics->window_id == window.id) ||
+      !(window.numerics->version == window.version) ||
+      window.numerics->content_fingerprint != integrityWindowFingerprint(window) ||
+      window.numerics->numerical_contract_fingerprint !=
+          numericalContractFingerprint(config_.rank_tolerance,
+                                       config_.max_condition_number)) {
+    if (window.numerics &&
+        window.numerics->numerical_contract_fingerprint !=
+            numericalContractFingerprint(config_.rank_tolerance,
+                                         config_.max_condition_number)) {
+      NumericalWorkCounters::numericalContractMismatch();
+    }
+    base.reason = "missing, invalid, or stale frozen-window numerics";
     return base;
   }
-  base.information_factorization = factorization;
-  base.state_increment = factorization->solve(window.base_information_rhs);
-  base.information_logdet = 2.0 * factorization->matrixL().toDenseMatrix()
-      .diagonal().array().log().sum();
+  base.numerics = window.numerics;
+  base.information_factorization = window.numerics->information_factorization;
+  base.state_increment = window.numerics->base_state_increment;
+  base.information_logdet = window.numerics->information_logdet;
+  base.exact_rank = window.numerics->exact_rank;
+  base.smallest_singular_value = window.numerics->smallest_singular_value;
+  base.exact_condition = window.numerics->exact_condition;
   // A large all-in step is itself a fault symptom. Keep the one-time base
   // factorization usable so exclusion candidates can recover; apply the
   // linearization-step gate independently to every candidate below.
   base.valid = base.state_increment.allFinite();
   if (!base.valid) base.reason = "base solution contains non-finite values";
-  if (base.valid) {
-    auto numerics = std::make_shared<FrozenWindowNumerics>();
-    numerics->window_id = window.id;
-    numerics->version = window.version;
-    numerics->content_fingerprint = windowFingerprint(window);
-    numerics->information_factorization = factorization;
-    numerics->base_state_increment = base.state_increment;
-    numerics->parity = window.z - window.H * base.state_increment;
-    numerics->statistic = numerics->parity.squaredNorm();
-    numerics->information_logdet = base.information_logdet;
-    numerics->smallest_singular_value = base.smallest_singular_value;
-    numerics->largest_singular_value = largest;
-    numerics->exact_rank = base.exact_rank;
-    numerics->exact_condition = base.exact_condition;
-    const double singular_error = 128.0 * std::numeric_limits<double>::epsilon() *
-        std::max(window.H.rows(), window.H.cols()) * std::max(1.0, largest);
-    const double singular_lower = std::max(
-        0.0, base.smallest_singular_value - singular_error);
-    const double singular_upper = largest + singular_error;
-    numerics->smallest_information_lower_bound = singular_lower * singular_lower;
-    numerics->largest_information_upper_bound = singular_upper * singular_upper;
-    numerics->block_row_offsets.reserve(window.blocks.size() + 1);
-    Eigen::Index offset = 0;
-    for (const auto& block : window.blocks) {
-      numerics->block_row_offsets.push_back(offset);
-      offset += block.jacobian_whitened.rows();
-    }
-    numerics->block_row_offsets.push_back(offset);
-    base.numerics = std::move(numerics);
-  }
   buildSharedCache(&base, actions);
   return base;
 }
@@ -434,7 +374,8 @@ void RankUpdateEvaluator::buildSharedCache(BaseCandidateKernel* kernel,
     const std::vector<ExclusionAction>& actions) const {
   if (!kernel) return;
   auto& base = *kernel;
-  const auto& window = base.window;
+  if (!base.window_view) return;
+  const auto& window = *base.window_view;
   base.block_cache.reset();
   if (base.valid && config_.enable_shared_cache && !actions.empty() &&
       !std::getenv("UWB_IMU_PL_DISABLE_BLOCK_CACHE")) {
@@ -444,7 +385,9 @@ void RankUpdateEvaluator::buildSharedCache(BaseCandidateKernel* kernel,
       if (!validBlock(block, window)) return;
       auto& entries = cache->blocks[block.group_id];
       if (std::any_of(entries.begin(), entries.end(), [&](const auto& e) { return sameBlock(e.block, block); })) return;
-      entries.push_back({block, base.information_factorization->solve(block.jacobian_whitened.transpose())});
+      entries.push_back({block, solveFrozenInformation(
+          *base.numerics, window.base_information,
+          block.jacobian_whitened.transpose())});
     };
     std::set<FactorGroupId> removals;
     for (const auto& action : actions) {
@@ -468,7 +411,12 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
   const auto start = std::chrono::steady_clock::now();
   result.action = action;
   result.base_version = base.version;
-  result.window_view = &base.window;
+  if (!base.window_view) {
+    result.reason = "base window view is unavailable";
+    return result;
+  }
+  const auto& window = *base.window_view;
+  result.window_view = base.window_view;
   result.diagnostics.kernel_evaluated = true;
   result.diagnostics.numerical_path = "ADD_THEN_REMOVE_SVD";
   auto done = [&]() {
@@ -481,18 +429,24 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
   };
   if (!base.valid) { result.reason = base.reason; return done(); }
   // Validate the complete change before any Eigen operation or early gate.
-  if (!validateAction(base.window, action, &result.reason)) return done();
+  if (!validateAction(window, action, &result.reason)) return done();
+  if (!base.numerics ||
+      base.numerics->content_fingerprint != integrityWindowFingerprint(window)) {
+    result.reason = "missing or stale frozen numerics";
+    result.diagnostics.fallback_reason = result.reason;
+    return done();
+  }
   result.shared_base_factorization = base.information_factorization;
-  Eigen::VectorXd rhs = base.window.base_information_rhs;
+  Eigen::VectorXd rhs = window.base_information_rhs;
   std::vector<const LinearizedFactorBlock*> additions, removals;
   for (const auto& b : action.added_blocks) additions.push_back(&b);
-  for (const auto& b : base.window.blocks)
+  for (const auto& b : window.blocks)
     if (groupSelected(b.group_id, action.groups_to_remove)) removals.push_back(&b);
   auto order = [](auto& blocks) {
     std::stable_sort(blocks.begin(), blocks.end(), [](auto* a, auto* b) { return a->group_id < b->group_id; });
   };
   order(additions); order(removals);
-  double energy = base.window.z.squaredNorm();
+  double energy = window.z.squaredNorm();
   double energy_scale = energy;
   result.information_logdet = base.information_logdet;
   Eigen::Index update_count = 0;
@@ -503,7 +457,7 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
   Eigen::MatrixXd& update_columns = scratch ? scratch->update_columns : local_update;
   Eigen::VectorXd& update_signs = scratch ? scratch->update_signs : local_signs;
   if (scratch && update_columns.size() != 0) ++result.diagnostics.scratch_reuse_count;
-  update_columns.resize(base.window.H.cols(), update_count);
+  update_columns.resize(window.H.cols(), update_count);
   update_signs.resize(update_count);
   Eigen::Index update_offset = 0;
   auto append_update = [&](const std::vector<const LinearizedFactorBlock*>& blocks,
@@ -529,7 +483,7 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
     if (blocks.empty()) return;
     Eigen::Index rows = 0;
     for (auto* b : blocks) rows += b->jacobian_whitened.rows();
-    Eigen::MatrixXd j(rows, base.window.H.cols());
+    Eigen::MatrixXd j(rows, window.H.cols());
     Eigen::VectorXd z(rows);
     Eigen::Index offset = 0;
     for (auto* b : blocks) {
@@ -556,11 +510,13 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
         }
       }
       if (!hit) cj.middleCols(cache_offset, block->jacobian_whitened.rows()) =
-          base.information_factorization->solve(block->jacobian_whitened.transpose());
+          solveFrozenInformation(*base.numerics, window.base_information,
+              block->jacobian_whitened.transpose());
       cache_offset += block->jacobian_whitened.rows();
     }
     if (!add && !additions.empty()) {
       const Eigen::MatrixXd legacy_inner = Eigen::MatrixXd::Identity(rows, rows) - j * cj;
+      NumericalWorkCounters::candidateInnerLlt();
       legacy_deletion_failed = Eigen::LLT<Eigen::MatrixXd>(legacy_inner).info() != Eigen::Success;
     }
     // Addition first: the downdate operates on C_add, so an absent/singular
@@ -569,6 +525,7 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
       cj.noalias() -= result.covariance_minus_factor * (result.covariance_minus_factor.transpose() * j.transpose());
     Eigen::MatrixXd inner = Eigen::MatrixXd::Identity(rows, rows) + (add ? 1.0 : -1.0) * j * cj;
     inner = (0.5 * (inner + inner.transpose())).eval();
+    NumericalWorkCounters::candidateInnerLlt();
     Eigen::LLT<Eigen::MatrixXd> factor(inner);
     if (factor.info() != Eigen::Success || !cj.allFinite()) {
       request_reference(add ? "addition inner failure" : "final downdate inner failure");
@@ -581,18 +538,64 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
   };
   change(additions, true);
   change(removals, false);
-  result.rows = base.window.H.rows();
+  result.rows = window.H.rows();
   for (auto* b : additions) result.rows += b->jacobian_whitened.rows();
   for (auto* b : removals) result.rows -= b->jacobian_whitened.rows();
   if (!rhs.allFinite() || !std::isfinite(energy)) {
     result.reason = "candidate contains non-finite information or residual energy"; return done();
   }
-  result.state_increment = result.covarianceTimes(rhs);
+  const bool keep = additions.empty() && removals.empty();
+  // KEEP_ALL reuses the frozen base solve. It still traverses the numerical
+  // certificates below so near-step, ill-conditioned, and cancellation cases
+  // retain the exact reference behavior required by the numerical contract.
+  if (keep) result.state_increment = base.numerics->base_state_increment;
+  else result.state_increment = result.covarianceTimes(rhs);
   Eigen::MatrixXd h;
   Eigen::VectorXd z;
-  const bool keep = additions.empty() && removals.empty();
-  if (!base.numerics || base.numerics->content_fingerprint != windowFingerprint(base.window)) {
-    request_reference("missing or stale frozen numerics");
+  const double keep_step = result.state_increment.norm();
+  const double keep_gate_band =
+      1e-7 * config_.max_linearization_step_norm;
+  if (keep && std::isfinite(keep_step) &&
+      keep_step < config_.max_linearization_step_norm - keep_gate_band) {
+    // The unchanged candidate is exactly the finalized frozen window.  Its
+    // direct parity statistic avoids the cancellation-prone E-z'A^-1z form,
+    // and its rank/condition/logdet already came from the canonical base SVD.
+    // Re-running a candidate SVD here adds no independent protection.
+    result.rank = base.exact_rank;
+    result.dof = base.numerics->dof;
+    result.condition_number = base.exact_condition;
+    result.information_logdet = base.numerics->information_logdet;
+    result.statistic = base.numerics->statistic;
+    result.diagnostics.certificate_passed = true;
+    result.diagnostics.condition_value_kind = "EXACT_BASE";
+    result.diagnostics.numerical_path = "KEEP_BASE_CANONICAL";
+    result.valid = result.state_increment.allFinite() &&
+        std::isfinite(result.statistic) &&
+        std::isfinite(result.information_logdet) &&
+        result.rank == window.H.cols() && result.dof > 0 &&
+        result.condition_number <= config_.max_condition_number &&
+        result.state_increment.norm() <= config_.max_linearization_step_norm;
+    if (!result.valid) {
+      if (result.rank != window.H.cols()) result.reason = "candidate rank loss";
+      else if (result.dof <= 0) result.reason = "candidate has no residual dof";
+      else if (result.condition_number > config_.max_condition_number)
+        result.reason = "candidate condition gate failed";
+      else if (result.state_increment.norm() > config_.max_linearization_step_norm)
+        result.reason = "candidate linearization step gate failed";
+      else result.reason = "candidate contains non-finite values";
+    }
+    if (config_.materialize_dense_oracle_fields) {
+      if (!candidateRows(window, action, &h, &z)) {
+        result.valid = false;
+        result.reason = "candidate row materialization failed";
+        return done();
+      }
+      result.covariance = result.covarianceTimes(
+          Eigen::MatrixXd::Identity(h.cols(), h.cols()));
+      result.retained_jacobian = std::move(h);
+      result.retained_residual = std::move(z);
+    }
+    return done();
   }
   SpectralCertificate certificate;
   if (!needs_reference && config_.enable_numerical_certificate &&
@@ -608,7 +611,7 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
     else if (!certificate.condition_passed) request_reference("condition certificate inconclusive");
     else if (config_.force_exact_condition_number) request_reference("exact condition requested");
     else {
-      result.rank = base.window.H.cols();
+      result.rank = window.H.cols();
       result.dof = result.rows - result.rank;
       result.condition_number = keep ? base.exact_condition
                                      : std::numeric_limits<double>::quiet_NaN();
@@ -623,7 +626,7 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
   if (!needs_reference && result.dof <= 0) {
     result.reason = "candidate has no residual dof"; return done();
   }
-  Eigen::VectorXd normal_residual = rhs - base.window.base_information * result.state_increment;
+  Eigen::VectorXd normal_residual = rhs - window.base_information * result.state_increment;
   for (auto* block : additions) normal_residual.noalias() -=
       block->jacobian_whitened.transpose() *
       (block->jacobian_whitened * result.state_increment);
@@ -662,11 +665,11 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
   if (!std::isfinite(subtracted) || (energy_scale > 0.0 && subtracted <= 1e-8 * energy_scale))
     request_reference("residual energy cancellation");
   if (!needs_reference && result.state_increment.norm() <= config_.max_linearization_step_norm &&
-      base.window.protected_state_map.cols() == base.window.H.cols()) {
-    const Eigen::MatrixXd protected_rhs = base.window.protected_state_map.transpose();
+      window.protected_state_map.cols() == window.H.cols()) {
+    const Eigen::MatrixXd protected_rhs = window.protected_state_map.transpose();
     const Eigen::MatrixXd protected_solve = result.covarianceTimes(protected_rhs);
     Eigen::MatrixXd covariance_residual = protected_rhs -
-        base.window.base_information * protected_solve;
+        window.base_information * protected_solve;
     for (auto* block : additions) covariance_residual.noalias() -=
         block->jacobian_whitened.transpose() *
         (block->jacobian_whitened * protected_solve);
@@ -680,11 +683,12 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
       request_reference("protected covariance solve residual");
   }
   if (needs_reference) {
-    if (!candidateRows(base.window, action, &h, &z)) {
+    if (!candidateRows(window, action, &h, &z)) {
       result.reason = "candidate removal block is absent from frozen window"; return done();
     }
     // Reference solve uses the final whitened Jacobian, not its squared normal
     // equations. Keep only an operator for covariance queries online.
+    NumericalWorkCounters::candidateReferenceSvd();
     Eigen::JacobiSVD<Eigen::MatrixXd> reference(h, Eigen::ComputeThinU | Eigen::ComputeThinV);
     const auto singular = reference.singularValues();
     const double largest = singular.size() ? singular(0) : 0.0;
@@ -722,7 +726,8 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
     }
   }
   result.statistic = needs_reference ? (z - h * result.state_increment).squaredNorm()
-                                     : std::max(0.0, subtracted);
+                                     : (keep ? base.numerics->statistic
+                                             : std::max(0.0, subtracted));
   result.valid = result.state_increment.allFinite() && std::isfinite(result.statistic) &&
       std::isfinite(result.information_logdet) &&
       (result.diagnostics.certificate_passed ||
@@ -735,7 +740,7 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
   }
   result.diagnostics.recovered_replacement = legacy_deletion_failed && result.valid;
   if (config_.materialize_dense_oracle_fields) {
-    if (h.size() == 0 && !candidateRows(base.window, action, &h, &z)) {
+    if (h.size() == 0 && !candidateRows(window, action, &h, &z)) {
       result.valid = false; result.reason = "candidate row materialization failed"; return done();
     }
     result.covariance = result.covarianceTimes(Eigen::MatrixXd::Identity(h.cols(), h.cols()));

@@ -1,0 +1,74 @@
+schema: uwb-imu-pl/r0-r1-development/v1
+development_only: true
+formal_eligible: false
+seed: 20260901
+stream:
+  imu_hz: 200
+  uwb_hz: 20
+  truth_initial_position_m: [0.0, 0.0, 1.2]
+  truth_initial_velocity_mps: [0.45, 0.45, 0.0]
+  yaw_rate_radps: 0.20
+  lever_arm_body_m: [0.30, 0.20, 0.15]
+  measurement_realization: covariance_mean
+scenarios:
+  A_nominal:
+    initial_velocity_mps: [0.45, 0.45, 0.0]
+    uwb_ramp_enabled: false
+  A_default_ramp:
+    initial_velocity_mps: [0.45, 0.45, 0.0]
+    uwb_ramp_enabled: true
+  B_initial_velocity_error:
+    initial_velocity_mps: [0.0, 0.0, 0.0]
+    uwb_ramp_enabled: false
+  C_uwb_fde:
+    fault_epoch: 25
+    raw_anchor_id: first_configured_anchor
+    raw_range_bias_m: 2.25
+    uwb_ramp_enabled: false
+  D_imu_bridge:
+    fault_epoch: 25
+    raw_imu_axis: accel_x
+    raw_imu_samples: 10
+    calibration:
+      nominal_counterfactual_boundary_mps2: 1265.6
+      scanned_ratios: [0.75, 1.0, 1.25, 1.5, 2.0]
+      selected_ratio: 1.25
+    raw_accel_bias_mps2: 1582.0
+    uwb_ramp_enabled: false
+  E_union:
+    fault_epoch: 25
+    raw_anchor_id: first_configured_anchor
+    raw_range_bias_m: 2.25
+    raw_imu_axis: accel_x
+    raw_imu_samples: 10
+    calibration:
+      nominal_counterfactual_boundary_mps2: 1265.6
+      scanned_ratios: [0.75, 1.0, 1.25, 1.5, 2.0]
+      selected_ratio: 1.25
+    raw_accel_bias_mps2: 1582.0
+    uwb_ramp_enabled: false
+  F_ramp_unmonitorable:
+    uwb_ramp_enabled: true
+  F_low_redundancy:
+    anchor_count: 4
+    uwb_ramp_enabled: false
+  G_continuous_rejection:
+    fault_epoch_begin: 5
+    fault_epoch_end: 40
+    all_anchor_raw_range_bias_m: 5.0
+    uwb_ramp_enabled: false
+  G_bridge_timeout:
+    fault_epoch_begin: 25
+    fault_epoch_end: 50
+    raw_imu_axis: accel_x
+    raw_accel_bias_mps2: 1582.0
+    uwb_ramp_enabled: false
+  H_mature_union:
+    minimum_epochs: 226
+    fault_epoch: 225
+    raw_anchor_id: first_configured_anchor
+    raw_range_bias_m: 2.25
+    raw_imu_axis: accel_x
+    raw_imu_samples: 10
+    raw_accel_bias_mps2: 1582.0
+    uwb_ramp_enabled: false

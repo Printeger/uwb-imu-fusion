@@ -1,0 +1,129 @@
+{
+  "schema": "uwb-imu-pl/r0-r1-evidence/v1",
+  "status": "DEVELOPMENT_ONLY / PARTIALLY_IMPLEMENTED",
+  "formal_eligible": false,
+  "gate_d_pass_claimed": false,
+  "head": "e6ded3069bbc4cd5cf98f14257e96f61066685b8",
+  "git_dirty": true,
+  "implementation_patch_sha256": "cf805ddb227d71f7d398bda6df29ea3668a05a4555a3b216eef48916473253eb",
+  "scenario_manifest_sha256": "42f60c01b562473bf91aa2bebfe889eef52f194c899851d9d1f71f27835316a1",
+  "binaries": {
+    "r0_r1_development_sha256": "781b2f9d923583376827c8765bb4339485fb2f9ab015667eff3a655bfe8209a2",
+    "realtime_performance_benchmark_sha256": "c2814d9544145a7031506ff18969aa6b0fdccdec4fa1e033734dd2cba2c9cf05",
+    "build_type": "Release",
+    "compiler": "GCC 9.4.0",
+    "gtsam": "4.2a5",
+    "eigen": "3.3.7"
+  },
+  "fixed_conditions": {
+    "seed": 20260901,
+    "imu_hz": 200,
+    "uwb_hz": 20,
+    "candidate_workers": 4,
+    "numeric_threads": 1,
+    "cpu_affinity": "0-3",
+    "cpu": "Intel(R) Core(TM) Ultra 5 125H",
+    "base_config": "config/realtime_uwb_imu_pl_research.yaml",
+    "development_positive_override": "uwb_ramp_enabled=false",
+    "raw_artifact_root": "results/r0-r1/final-current"
+  },
+  "root_causes": [
+    {
+      "id": "floating_risk_allocation",
+      "confirmed": true,
+      "baseline_excess_approx": 1.58e-18,
+      "fix": "high-precision audit and one-ULP conservative equal allocation",
+      "true_overbudget_still_fails": true
+    },
+    {
+      "id": "commit_relation_for_unadded_bridge_group",
+      "confirmed": true,
+      "fix": "record relation and health only for groups_to_add"
+    },
+    {
+      "id": "mature_boundary_hypothesis_unmonitorable",
+      "confirmed": true,
+      "fix_in_this_round": false,
+      "decision_required": "history-risk/eligibility or R2 coverage semantics"
+    },
+    {
+      "id": "imu_fault_does_not_trigger_detector",
+      "confirmed": true,
+      "amplitude_mps2": 12.5,
+      "counterfactual_1_25x_calibration": "NOT_RUN"
+    }
+  ],
+  "r1_normal_per_window_work": {
+    "before_source_audit": {
+      "base_svd": 2,
+      "base_llt": 2,
+      "detector_qr": 1,
+      "base_state_solves": 3,
+      "measurement_kind": "static source audit"
+    },
+    "after_runtime": {
+      "base_svd": 1,
+      "base_llt": 1,
+      "detector_reference_qr": 0,
+      "base_state_solves": 1,
+      "measurement_kind": "actual decomposition/solve counters"
+    }
+  },
+  "scenarios": {
+    "A_nominal": {"epochs": 30, "commits": 30, "alarms": 0, "finite_pl": 20, "pl_within_alert": 0, "formal": 0},
+    "B_initial_velocity_error": {"epochs": 30, "commits": 30, "alarms": 0, "finite_pl": 18, "pl_within_alert": 0, "formal": 0},
+    "C_uwb_fde": {"epochs": 30, "raw_uwb_injections": 1, "alarms": 1, "correct_exclusion": false, "fault_epoch_status": "AMBIGUOUS_UNAVAILABLE", "fault_epoch_kernel_evaluated": 45, "fault_epoch_post_passed": 43, "fault_epoch_pl_evaluated": 43},
+    "D_imu_bridge": {"epochs": 30, "raw_imu_injections": 10, "alarms": 0, "generic_bridge_selected": false},
+    "E_union": {"epochs": 30, "raw_uwb_injections": 1, "raw_imu_injections": 10, "alarms": 1, "correct_union_selected": false, "fault_epoch_status": "AMBIGUOUS_UNAVAILABLE", "fault_epoch_kernel_evaluated": 45, "fault_epoch_post_passed": 3, "fault_epoch_pl_evaluated": 3},
+    "F_ramp_unmonitorable": {"epochs": 5, "finite_pl": 0, "expected_fail_closed": true},
+    "F_low_redundancy": {"epochs": 10, "finite_pl": 10, "pl_within_alert": 0},
+    "G_continuous_rejection": {"epochs": 45, "raw_uwb_injections": 288, "rejections": 36, "max_pending_s": 1.85, "max_state_age_s": 1.80, "max_raw_imu_samples": 371, "max_consecutive_rejections": 36},
+    "G_bridge_timeout": {"epochs": 52, "raw_imu_injections": 260, "alarms": 0, "bridge_selected": false, "timeout_reached": false, "reinitialization_requests": 0},
+    "H_mature_union": {"epochs": 226, "commits": 225, "rejections": 1, "marginalizations": 26, "fault_epoch": 225, "fault_epoch_backend_updates": 0, "correct_union_selected": false}
+  },
+  "replay": {
+    "snapshot_sha256": "2cef39153865a05e46ee80fc486cbedeac0d95c309090abc35a617af5d131f0e",
+    "actions": 128,
+    "fast_workers_4_ms": 322.691,
+    "fast_workers_1_ms": 814.073,
+    "dense_oracle_workers_1_ms": 12498.1,
+    "workers_1_4_deterministic": true,
+    "fast_oracle_bad_rows": 0,
+    "max_relative_statistic_error": 9.668959403841238e-44,
+    "max_relative_logdet_error": 5.653201377475676e-13,
+    "max_relative_step_error": 5.561469381808133e-29
+  },
+  "forced_128_action_performance": {
+    "samples": 140,
+    "epochs_with_128_kernel_evaluations": 69,
+    "kernel_evaluations": 9728,
+    "pl_evaluations": 1,
+    "baseline_core_ms": {"p50": 1047.74, "p95": 1307.182, "p99": 1341.7918, "max": 1357.68, "total": 126846},
+    "after_core_ms": {"p50": 958.442, "p95": 1189.4195, "p99": 1215.0729, "max": 1246.61, "total": 111375},
+    "after_outer_epoch_ms": {"p50": 959.9005, "p95": 1191.0495, "p99": 1216.5785, "max": 1248.42, "total": 111530},
+    "baseline_outer_epoch": "NOT_AVAILABLE",
+    "baseline_rss_kib": 618644,
+    "after_rss_kib": 583600,
+    "after_work_counts": {"base_svd": 140, "base_llt": 140, "base_state_solves": 140, "detector_reference_qr": 0, "candidate_reference_svd": 80, "candidate_inner_llt": 28764, "covariance_rhs_solves": 140, "oracle_reintegrations": 0}
+  },
+  "tests": {
+    "release_build": "PASS",
+    "catkin_package": {"passed": 178, "errors": 0, "failed": 0, "skipped": 0},
+    "cpp": {"passed": 88, "failed": 0},
+    "python": {"passed": 46, "failed": 0},
+    "rostest": {"passed": 1, "failed": 0},
+    "schema_validation_directories": 12,
+    "schema_validation": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "not_completed": [
+    "successful raw-stream UWB FDE",
+    "successful raw-stream IMU generic bridge",
+    "successful raw-stream joint/union exclusion",
+    "raw-stream bridge timeout and controlled reinitialization",
+    "nominal-counterfactual 1.25x fault amplitude calibration",
+    "formal 3x12000 campaign",
+    "complete Gates E-I statistical matrix",
+    "Gate D PASS or formal risk closure"
+  ]
+}

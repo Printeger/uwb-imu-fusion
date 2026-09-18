@@ -6,7 +6,10 @@
 namespace uwb_imu_pl {
 
 struct HypothesisGeneratorConfig {
-  std::uint32_t max_cardinality = 2;
+  bool single_faults_enabled = true;
+  bool double_faults_enabled = false;
+  std::uint32_t max_model_cardinality = 2;
+  std::uint32_t max_exclusion_cardinality = 2;
   std::uint32_t max_candidate_count = 128;
   double uwb_prior_bound = 1e-4;
   double accel_prior_bound = 1e-5;
@@ -14,6 +17,7 @@ struct HypothesisGeneratorConfig {
   double uwb_p_md = 1e-3;
   double imu_p_md = 1e-3;
   double total_hmi_allocation = 9e-6;
+  double rank_tolerance = 1e-10;
   bool include_uwb_accel_combinations = true;
   bool include_uwb_gyro_combinations = true;
   bool include_epoch_independent_uwb = true;
@@ -28,7 +32,23 @@ struct GeneratedFaultModelSet {
   std::vector<FaultHypothesisV2> hypotheses;
   std::vector<ExclusionAction> actions;
   std::vector<ExclusionAction> single_mode_actions;
+  std::size_t single_uwb_hypotheses = 0;
+  std::size_t single_accel_hypotheses = 0;
+  std::size_t single_gyro_hypotheses = 0;
+  std::size_t double_uwb_accel_hypotheses = 0;
+  std::size_t double_uwb_gyro_hypotheses = 0;
+  std::uint32_t effective_max_cardinality = 0;
 };
+
+// Exact second-stage check for canonical-action deduplication.  The compact
+// key is only an index; equal keys never authorize merging without this full
+// operation/content comparison.
+bool equivalentActionOperation(const ExclusionAction& left,
+                               const ExclusionAction& right);
+
+// Stable hardware-health identity.  IMU interval identity remains on the
+// FaultUnit; this projection is used only for the source quarantine barrier.
+std::string healthSourceId(const FaultUnit& unit);
 
 // Generates only the initial V2 claim: physical single-anchor UWB faults,
 // six interval-constant IMU axes, and one-anchor-plus-one-IMU-axis modes.
@@ -47,7 +67,8 @@ class HypothesisGenerator {
       const LinearizedIntegrityWindow& window,
       const EpochTransaction& transaction,
       const GeneratedFaultModelSet& models,
-      const std::vector<FaultModeEvidence>& evidence) const;
+      const std::vector<FaultModeEvidence>& evidence,
+      const std::vector<std::string>& mandatory_health_sources = {}) const;
 
  private:
   HypothesisGeneratorConfig config_;

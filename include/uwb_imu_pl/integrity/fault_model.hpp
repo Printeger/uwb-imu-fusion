@@ -34,7 +34,15 @@ struct FaultModeBasis {
   int axis = -1;
   std::size_t onset_epoch = 0;
   TimestampNs onset_time;
+  // Physical dimension remains the risk/model identity.  The effective basis
+  // is recomputed for every frozen window and may remove only directions that
+  // have zero raw measurement and protected-state effect in this window.
   int parameter_dimension = 0;
+  int effective_parameter_dimension = 0;
+  Eigen::MatrixXd effective_parameter_basis;
+  double discarded_measurement_norm = 0.0;
+  double discarded_protected_response_norm = 0.0;
+  bool effective_basis_certified = false;
   std::map<FactorGroupId, Eigen::MatrixXd> raw_group_maps;
   std::vector<FactorGroupId> affected_groups;
   std::vector<MeasurementId> affected_measurements;
@@ -46,6 +54,7 @@ struct FaultModeBasis {
 struct MonitorabilityResult {
   int rank = 0;
   int parameter_dimension = 0;
+  int physical_parameter_dimension = 0;
   double sigma_min = 0.0;
   double sigma_max = 0.0;
   double condition_number = std::numeric_limits<double>::infinity();

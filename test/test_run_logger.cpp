@@ -125,6 +125,16 @@ TEST(RunLogger, V5SchemaHasExactHeadersAndStructuredSummary) {
             std::string::npos);
   EXPECT_NE(manifest_json.find("\"execution_command\":"),
             std::string::npos);
+  EXPECT_NE(manifest_json.find("\"single_faults_enabled\": true"),
+            std::string::npos);
+  EXPECT_NE(manifest_json.find("\"double_faults_enabled\": false"),
+            std::string::npos);
+  EXPECT_NE(manifest_json.find("\"supported_max_fault_cardinality\": 2"),
+            std::string::npos);
+  EXPECT_NE(manifest_json.find("\"max_fault_cardinality\": 1"),
+            std::string::npos);
+  EXPECT_NE(manifest_json.find("\"max_exclusion_cardinality\": 2"),
+            std::string::npos);
   boost::filesystem::remove_all(directory);
 }
 

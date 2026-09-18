@@ -1,5 +1,6 @@
 #include "uwb_imu_pl/integrity/joint_window_detector.hpp"
 #include "uwb_imu_pl/integrity/statistical_bounds_cache.hpp"
+#include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
 
 #include <boost/math/distributions/chi_squared.hpp>
 
@@ -51,12 +52,50 @@ DetectorResultV2 JointWindowDetector::evaluate(
     out.reason = "invalid integrity window: " + window.reason;
     return out;
   }
-  Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr(window.H);
-  qr.setThreshold(risk.rank_tolerance);
-  const Eigen::VectorXd increment = qr.solve(window.z);
-  const double statistic = (window.z - window.H * increment).squaredNorm();
-  auto out = baseResult(window.H.rows(), qr.rank(),
-                        window.H.rows() - qr.rank(), statistic, risk);
+  if (!window.numerics || !window.numerics->valid ||
+      window.numerics->content_fingerprint != integrityWindowFingerprint(window) ||
+      window.numerics->numerical_contract_fingerprint !=
+          numericalContractFingerprint(risk.rank_tolerance,
+                                       risk.max_condition_number)) {
+    if (window.numerics &&
+        window.numerics->numerical_contract_fingerprint !=
+            numericalContractFingerprint(risk.rank_tolerance,
+                                         risk.max_condition_number)) {
+      NumericalWorkCounters::numericalContractMismatch();
+    }
+    DetectorResultV2 out;
+    out.window_id = window.id;
+    out.reason = "missing, stale, or numerical-contract-mismatched frozen-window numerics";
+    return out;
+  }
+  int rank = window.numerics->exact_rank;
+  double statistic = window.numerics->statistic;
+  // Preserve an independent Jacobian-space reference near the original
+  // condition gate. Normal well-conditioned windows perform no QR.
+  if (window.numerics->exact_condition >= risk.max_condition_number / 10.0) {
+    NumericalWorkCounters::detectorReferenceQr();
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr(window.H);
+    qr.setThreshold(risk.rank_tolerance);
+    const Eigen::VectorXd increment = qr.solve(window.z);
+    const double reference_statistic =
+        (window.z - window.H * increment).squaredNorm();
+    const double scale = std::max({1.0, std::abs(statistic),
+                                   std::abs(reference_statistic)});
+    if (qr.rank() != rank ||
+        std::abs(reference_statistic - statistic) >
+            window.numerics->numerical_contract.reference_relative_tolerance *
+                scale) {
+      DetectorResultV2 out;
+      out.window_id = window.id;
+      out.rows = window.H.rows();
+      out.rank = rank;
+      out.dof = window.H.rows() - rank;
+      out.reason = "shared/reference detector mismatch";
+      return out;
+    }
+  }
+  auto out = baseResult(window.H.rows(), rank,
+                        window.H.rows() - rank, statistic, risk);
   out.window_id = window.id;
   if (window.condition_number > risk.max_condition_number) {
     out.numerically_valid = false;
