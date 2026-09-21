@@ -56,11 +56,13 @@ struct CoverageEnvelope {
   std::vector<FaultModeId> covered_modes;
   std::vector<CoverageInclusionProof> proofs;
   bool dominant = false;
-  // One-sided dominance (P6/C-round): the envelope is accepted only when
-  // B_env >= B_leaf * (1 - relative_epsilon), where the relative epsilon only
-  // absorbs binary64 noise in the shared identity (observed ~1e-16).  The
-  // reported margin is non-negative whenever the envelope is accepted, and the
-  // raw ratio stays available for audit in `dominance_ratio`.
+  // One-sided relative dominance (P7, implemented in P7 commit): the envelope
+  // is accepted only when ratio = B_env / B_leaf >= 1 - dominance_tolerance.
+  // `dominance_margin` is the **raw** ratio - 1 (minimum over the covered
+  // leaves), so an accepted envelope satisfies margin >= -dominance_tolerance;
+  // the tolerance is only a binary64 noise floor for the shared identity
+  // (observed identity noise ~1e-16), never a licence to under-cover a leaf.
+  // `dominance_ratio` carries the same minimum as a raw ratio for audit.
   double dominance_margin = 0.0;
   double dominance_ratio = 0.0;
   bool accepted = false;
@@ -76,6 +78,16 @@ struct CoverageCapacity {
   double inclusion_tolerance = 1e-9;
   double dominance_tolerance = 1e-9;
 };
+
+// Decision rule for the dominance obligation, exposed so the narrow-band
+// behaviour can be unit tested directly: an envelope is dominant iff
+// env_slope >= leaf_slope * (1 - relative_tolerance).  A non-positive leaf
+// bound (no monitorable direction) is trivially dominant.
+bool envelopeDominanceAccepts(double envelope_slope, double leaf_slope,
+                              double relative_tolerance);
+
+// Raw margin ratio - 1 used when the envelope is accepted.
+double envelopeDominanceMargin(double envelope_slope, double leaf_slope);
 
 struct CoverageCertificate {
   std::size_t hypothesis_count = 0;

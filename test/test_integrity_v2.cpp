@@ -2760,3 +2760,56 @@ TEST(GateAttribution, StepAttributionNamesPhysicalBlocksAndDominantEpoch) {
   EXPECT_EQ(stateStepAttribution(window, Eigen::VectorXd()),
             "step attribution: empty increment");
 }
+
+// ---------------------------------------------------------------------------
+// P7/S0-2: narrow-band regression for the one-sided relative dominance rule.
+// The old absolute rule (env + tol >= leaf) accepted a 1e-7 relative shortfall;
+// the relative rule must reject it while keeping binary64 noise accepted.
+// ---------------------------------------------------------------------------
+TEST(EnvelopeDominance, OneSidedRelativeRuleRejectsNarrowBandShortfall) {
+  using namespace uwb_imu_pl;
+  const double leaf = 0.37;
+  const double tolerance = 1e-9;
+  // 1e-7 relative shortfall: rejected (this is the case the old absolute rule
+  // wrongly accepted).
+  const double shortfall = leaf * (1.0 - 1e-7);
+  EXPECT_FALSE(envelopeDominanceAccepts(shortfall, leaf, tolerance));
+  EXPECT_LT(envelopeDominanceMargin(shortfall, leaf), -1e-8);
+  EXPECT_LT(envelopeDominanceMargin(shortfall, leaf), -tolerance);
+  // 1e-10 relative shortfall: inside the binary64 noise floor: accepted, with a
+  // raw margin >= -tolerance.
+  const double noise = leaf * (1.0 - 1e-10);
+  EXPECT_TRUE(envelopeDominanceAccepts(noise, leaf, tolerance));
+  const double noise_margin = envelopeDominanceMargin(noise, leaf);
+  EXPECT_GE(noise_margin, -tolerance);
+  EXPECT_LT(noise_margin, 0.0);
+  // Exact and dominant envelopes.
+  EXPECT_TRUE(envelopeDominanceAccepts(leaf, leaf, tolerance));
+  EXPECT_GE(envelopeDominanceMargin(leaf, leaf), 0.0);
+  EXPECT_TRUE(envelopeDominanceAccepts(2.0 * leaf, leaf, tolerance));
+  EXPECT_NEAR(envelopeDominanceMargin(2.0 * leaf, leaf), 1.0, 1e-15);
+  // Degenerate leaf (no monitorable direction) is trivially dominated; a
+  // non-finite input is never accepted.
+  EXPECT_TRUE(envelopeDominanceAccepts(0.0, 0.0, tolerance));
+  EXPECT_FALSE(envelopeDominanceAccepts(
+      std::numeric_limits<double>::quiet_NaN(), leaf, tolerance));
+  EXPECT_FALSE(envelopeDominanceAccepts(
+      std::numeric_limits<double>::infinity(), leaf, tolerance));
+
+  // The same rule drives the builder: a scaled-group envelope (exactly equal
+  // bounds) is accepted with a margin inside the noise floor.
+  auto fixture = makeCompactFixture();
+  FaultModeBasis group;
+  group.id = FaultModeId(10);
+  group.sensor = SensorType::Uwb;
+  group.parameter_dimension = 1;
+  group.raw_group_maps[FactorGroupId(2)] = Eigen::Vector3d::Constant(0.5);
+  const auto certificate = buildGroupedCoverageCertificate(
+      fixture.window, {fixture.modes[0]}, {group});
+  ASSERT_EQ(certificate.envelopes.size(), 1u);
+  const auto& envelope = certificate.envelopes.front();
+  EXPECT_TRUE(envelope.accepted) << envelope.reason;
+  EXPECT_GE(envelope.dominance_margin, -1e-9);
+  EXPECT_GE(envelope.dominance_ratio, 1.0 - 1e-9);
+  EXPECT_TRUE(envelope.dominant);
+}

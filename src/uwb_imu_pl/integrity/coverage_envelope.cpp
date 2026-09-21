@@ -208,6 +208,23 @@ ModeBound boundOf(const LinearizedIntegrityWindow& window,
 
 }  // namespace
 
+bool envelopeDominanceAccepts(double envelope_slope, double leaf_slope,
+                              double relative_tolerance) {
+  if (!std::isfinite(envelope_slope) || !std::isfinite(leaf_slope)) return false;
+  if (leaf_slope <= 0.0) return true;  // no monitorable leaf direction
+  const double tolerance = std::isfinite(relative_tolerance)
+      ? std::max(0.0, relative_tolerance) : 0.0;
+  return envelope_slope >= leaf_slope * (1.0 - tolerance);
+}
+
+double envelopeDominanceMargin(double envelope_slope, double leaf_slope) {
+  if (!std::isfinite(envelope_slope) || !std::isfinite(leaf_slope) ||
+      leaf_slope <= 0.0) {
+    return 0.0;
+  }
+  return envelope_slope / leaf_slope - 1.0;
+}
+
 const char* toString(CoverageLabel label) {
   switch (label) {
     case CoverageLabel::Exact:
@@ -288,7 +305,6 @@ CoverageCertificate buildGroupedCoverageCertificate(
     envelope.id = next_envelope_id;
     envelope.group = group.id;
     envelope.dominance_margin = std::numeric_limits<double>::infinity();
-    envelope.dominance_ratio = std::numeric_limits<double>::infinity();
     envelope.dominance_ratio = std::numeric_limits<double>::infinity();
     bool envelope_ok = group_map.valid;
     const Eigen::MatrixXd gram_group =
@@ -374,16 +390,23 @@ CoverageCertificate buildGroupedCoverageCertificate(
         envelope_ok = false;
         break;
       }
-      if (envelope_bound.slope + capacity.dominance_tolerance <
-          leaf_bound.slope) {
+      // One-sided relative dominance: ratio >= 1 - tolerance.  The tolerance
+      // is only a binary64 noise floor for the shared identity; it never
+      // permits a systematic under-covering of the leaf.
+      if (!envelopeDominanceAccepts(envelope_bound.slope, leaf_bound.slope,
+                                    capacity.dominance_tolerance)) {
         envelope.reason = "envelope bound is below the leaf exact bound";
         envelope_ok = false;
         break;
       }
       if (leaf_bound.slope > 0.0) {
-        envelope.dominance_margin = std::min(
-            envelope.dominance_margin,
-            envelope_bound.slope / leaf_bound.slope - 1.0);
+        const double margin =
+            envelopeDominanceMargin(envelope_bound.slope, leaf_bound.slope);
+        const double ratio = margin + 1.0;
+        envelope.dominance_ratio =
+            members == 0 ? ratio : std::min(envelope.dominance_ratio, ratio);
+        envelope.dominance_margin =
+            members == 0 ? margin : std::min(envelope.dominance_margin, margin);
       }
       envelope.proofs.push_back(std::move(proof));
       envelope.covered_modes.push_back(leaf.mode->id);
