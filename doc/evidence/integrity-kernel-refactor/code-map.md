@@ -247,3 +247,15 @@
 | `apps/r0_r1_development.cpp`、`apps/gate_d_development.cpp` | 修改 | 摘要追加 B4 计数器；诊断导出 app 保持 eager 实体（`lazy_action_entities=false`） |
 | `test/test_integrity_v2.cpp`、`test/test_fault_manifest.cpp` | 新增/修改 | `B3Risk.*`（4）、`B3ZeroSpace.*`（2）、`B4LazyFde.*`（2）；v14 断言 |
 | `tools/gate_d_diagnostics.py`、`tools/validate_run_schema.py` | 修改 | 接受 v14 诊断 schema |
+
+## 附：C1-b 边界构造替换——**未发生**（2026-09-21，阻塞记录）
+
+* 现状：`buildIntegrityWindow` 的边界段仍为 partial-QR + 特征分解
+  （`src/uwb_imu_pl/estimation/incremental_estimator.cpp:1210-1271`）；
+  `boundary_summary_id = "partial_qr_schur_boundary"` 与
+  `validity_assumptions = "history_nominal_boundary_only"` 未变化且仍然正确。
+* 替代关系（待 C1-b 落地时按此记录）：`BoundaryPrior` 特征分解块 →
+  `buildHistoryFaultSummary()` 的 `(R_b,d_b)`（含 `T_b` 故障响应与经
+  `DetectorOnlyRows` 进入的 `(F_b,d_perp)`）。
+* 阻塞原因与所需输入：`history-summary-b1c-blockers.md §1.1`；本轮已交付的
+  配置/缓存/版本载体见同文 §2。

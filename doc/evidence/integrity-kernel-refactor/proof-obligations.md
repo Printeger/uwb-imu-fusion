@@ -271,3 +271,28 @@ Householder 正消元（先消 `x_o`，再按 `x_b` 支持分块）；无正规�
   适配）、生命周期（§7.6 行 1–7）、容量键、冷启动枚举、重线性化绑定、跨边界新场景
   与管线级 oracle（`HIS-01..06`）待 C1-b/C1-c；C2 未开始。上述模块级恒等式
   **不**构成任何管线等价声明。
+
+## 18.（C1-c 本轮）容量键、缓存身份与版本绑定载体；B1 管线接入阻塞
+
+* **命题（容量键，C1c-C2 配置层）**：`history.{max_summary_rows, max_fault_columns,
+  max_perp_rows, capacity_action}` 严格加载：未知键 / 缺键 / 非法 action 硬错误；
+  节缺省 = 零容量默认（`REFUSE`）；"绝不静默丢最旧故障"语义冻结。
+  * **本轮状态**：`IMPLEMENTED`（配置层；超限执行语义随 C1-b 阻塞）。
+  * **证据**：`IntegrityConfig.HistoryCapacityKeysAreStrictlyLoaded`；
+    `history-summary-b1c-blockers.md §2.1`。
+* **命题（缓存身份，B5）**：统计缓存键必须覆盖 summary 绑定与 envelope 全轴——
+  `StatisticalBoundKey::history_summary_version` 与 `envelope_kind` 均参与
+  `NoncentralKey`（修复 `envelope_kind` 只声明未哈希的静默别名缺陷）；版本变化
+  不得命中旧条目。
+  * **本轮状态**：`IMPLEMENTED`。
+  * **证据**：`B3Risk.HistorySummaryVersionIsPartOfCacheIdentity`。
+* **命题（版本绑定载体，C3）**：摘要绑定 = `linearization / whitening / mode_set /
+  capacity` 四分量；`digestHistorySummaryVersion` 确定性且对任一分量敏感（改
+  human-readable id 不算绑定）。
+  * **本轮状态**：`IMPLEMENTED`（载体与摘要；生产侧填充随 C1-b 阻塞）。
+  * **证据**：`HistoryFaultSummary.HISM2VersionDigestBindsAllComponents`。
+* **阻塞（NOT_RUN，原因+所需输入）**：B1（历史故障参数化 → 摘要接入
+  `buildIntegrityWindow`）、B2–B4、B6 生产者、B7、B8、C1c-C1（§7.6 行 1–7）、
+  C1c-C4（v15）、D1–D3 均因 B1 阻塞；逐条代码位置、原因与所需输入见
+  `history-summary-b1c-blockers.md §1`（影响面清单见其 §5）。本轮**未**做任何
+  B1-lite / default-off 半成品集成（理由见同文 §3）。

@@ -437,3 +437,48 @@ identity/parity/solution 残差、前向界、detector_only_rows、策略与可�
 * 哈希：`hashes-C1C2.txt` 按机械规则最后重生成（base `c6544d5` → 代码提交
   `bc5722c` ∪ 证据树，排除自身与瞬态 `__pycache__/`）；**115 条，115/115 OK**。
   不 push；无格式化步骤。
+
+## 13. C1-b/C1-c 本轮：交付（C2/B5/C3 载体）与阻塞（B1）2026-09-21
+
+**S0-A 第五次格式化事件（例行程序：先对照再回退，不深挖）**
+
+* 外部工具改写 3 个 C1-a 文件：`history_fault_summary.hpp/.cpp`、
+  `test_history_fault_summary.cpp`（include 重排、行连接/断行、对齐空格）。
+* token 对照：白空格无关的 token 多重集**逐一相同**（1926 / 2542 / 8257 tokens；
+  先前 `tr` 口径的"差异"仅为行连接处的空白 token 边界伪差，本回合改用正则
+  tokenizer 复核）。
+* 处置：`git restore` 3 文件；工作树恢复；`hashes-C1C2` **115/115 OK，零失配**。
+
+**S0-B 基线**：HEAD=`4e5c1ad`；`catkin build` + `catkin run_tests` →
+**322 tests / 0 errors / 0 failures**（本轮起点）。
+
+**本轮交付（代码提交 `23f6e18`）**
+
+* C1c-C2 配置层：`history.{max_summary_rows,max_fault_columns,max_perp_rows,
+  capacity_action}` 严格加载（未知键/缺键/非法动作拒绝；节缺省=零容量默认）——
+  `IntegrityConfig.HistoryCapacityKeysAreStrictlyLoaded`。
+* B5：`StatisticalBoundKey.history_summary_version` + `envelope_kind` 进入
+  `NoncentralKey`（修复"只声明未哈希"的静默别名缺陷）——
+  `B3Risk.HistorySummaryVersionIsPartOfCacheIdentity`。
+* C3 载体：`HistorySummaryVersion` + `digestHistorySummaryVersion`——
+  `HistoryFaultSummary.HISM2VersionDigestBindsAllComponents`。
+* 全量测试：**328 tests / 0 errors / 0 failures**（= 322 + 2×3）。
+* validation：`UWB_IMU_PL_VALIDATION_SHA=23f6e18 python3
+  tools/integrity/run_validation.py --all` → **32 PASS / 0 FAIL / 18 NOT_RUN**
+  （新 `HIS-C1`/`HIS-V1` 均 PASS；`run_sha=23f6e18`）。runner `--all` 的派生
+  工件副作用处置同 §12（两个 oracle JSON 恢复为提交状态，陈旧转储会产出环境性
+  降级，非回归）。
+* 哈希：机械规则最后重生成（base `4e5c1ad` → 代码提交 `23f6e18` ∪ 证据树，
+  排除自身与瞬态 `__pycache__/`）；**123 条，123/123 OK**。不 push；无格式化。
+
+**B1 核心阻塞（不闭合；逐条见 `history-summary-b1c-blockers.md`）**
+
+* 原因：①历史故障列无构造路径（生成器要求窗口块，被消元组为
+  `UnrecoverableHistory`，`hypothesis_generator.cpp:675-700` /
+  `integrity_window_snapshot.hpp:62-79`）；②行抽取口径待 GTSAM 原型验证
+  （`incremental_estimator.cpp:1221-1224` 现为正规矩阵口径）；③20+ 数值敏感
+  断言与外部 oracle 需同轮重基线（影响面清单见 blockers §5）。
+* 所需输入：历史故障参数化子系统 → 生命周期/容量执行语义决策 → 行抽取原型 →
+  全量重基线。
+* 未做 B1-lite / default-off 半成品集成（纪律说明见 blockers §3）；`auto_shrink`
+  仓库无设置点（grep 0 命中），"保持关闭"无需改动。

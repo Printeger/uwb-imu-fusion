@@ -1,17 +1,17 @@
-# sha256 of the retained evidence tree and the repository files changed by the C1-a round.
-# Generated 2026-09-21T10:45:46Z.
-# Base c6544d5 (P7) -> code commit bc5722c (C1-a); evidence commit = HEAD.
+# sha256 of the retained evidence tree and the repository files changed by the C1-b/C1-c round.
+# Generated 2026-09-21T11:07:42Z.
+# Base 4e5c1ad (C1-a evidence) -> code commit 23f6e18 (C1-c partial); evidence commit = HEAD.
 # File list is MECHANICAL: git diff --name-only <base>..<head>  UNION  evidence tree
 # (the round's own hash file is excluded: it cannot hash itself; __pycache__/ is transient).
 # format: sha256  path (relative to the repository root)
-8940de0e317a68f3a73395fcf7a1b53f4d3df60390ac548dd851dee3c8aec823  CMakeLists.txt
+dd3d6e01c52c91008ebed5a76573a6c3454ccfb3cdc358fbbd1b705d79f1fc26  config/realtime_uwb_imu_pl_research.yaml
 35740b6d3be41e8085fa77e0f4f2cfebd19344518e9cc9bfa8ad9cbdf1412fb7  doc/evidence/integrity-kernel-refactor/.gitignore
 f8ec2874fcbf59b5508dfa95c912f16343b76a7ed31d152f1106e2008f5e1e73  doc/evidence/integrity-kernel-refactor/agent-instructions.txt
 0e836f583b971a1f6e475313d510023092bb3126e322422a0960329ffce82152  doc/evidence/integrity-kernel-refactor/baseline-report.md
 70a37372fe1c01a8608ade257204ee09d3713db91652eaa488257de24743aad4  doc/evidence/integrity-kernel-refactor/census-summary.md
 94c5819559e5ea9e1831c0f40cfd51c9c6f32b1aeadf97dedf2907873843dbf8  doc/evidence/integrity-kernel-refactor/census.json
-4fdccce3a9fb23b3adc9603ade7b39ad5ea27b3e7fc813ba3dba37bbd9722963  doc/evidence/integrity-kernel-refactor/code-map.md
-01b45d9a606bb2c09b2d7b2c06d3f71444db87b011b02423011c3f4da3a21ac7  doc/evidence/integrity-kernel-refactor/config-migration.md
+f029919d24b81e322b47b87e7ac9533d825463060154b680a0d1c51bed71c62a  doc/evidence/integrity-kernel-refactor/code-map.md
+6f6e7e36235ee43d768d5022a1f5540057bd46b104431b0b80e5b0b94d8fecd2  doc/evidence/integrity-kernel-refactor/config-migration.md
 11fe0558f7f4d83de293d914f60a079c399e7a71dd8e93ea4f960358ce41809c  doc/evidence/integrity-kernel-refactor/configs/research-double-faults-census.yaml
 6f63b327d076c45521277b799c2634da268c83a0e794aeb005c6245fbdb775d1  doc/evidence/integrity-kernel-refactor/configs/research-epochs20-census.yaml
 0540287cd1c644a3ac3339be2b0713b0d758301c6a9bb3ee1f2309e0e123d715  doc/evidence/integrity-kernel-refactor/coverage-envelopes.md
@@ -25,10 +25,11 @@ e8c936765ea5ab39e26f78c08ab1ad674e570d6443fd923b022896bf9a0b02cd  doc/evidence/i
 130ac657cb3ea193817d81380e514bbc8a05eff29f25474e4b8bf98343ae977f  doc/evidence/integrity-kernel-refactor/hashes-B2.txt
 9eca182d86aee786ba91ff70a11de4cefec1275b35b8dc31fb2cea19dfce8b5e  doc/evidence/integrity-kernel-refactor/hashes-B3.txt
 31dfffabb93ae2d882d1f057320b0ec2523f710c7b4027708e881b6e1ce3aa6e  doc/evidence/integrity-kernel-refactor/hashes.txt
+402065eecaffeb2e07329c513bb9e210fced4947b292e239307c761f71e55ae3  doc/evidence/integrity-kernel-refactor/history-summary-b1c-blockers.md
 d028866d3adda6d41d337cd36a217c80ba7be81fd66a67798d86d41d9f326756  doc/evidence/integrity-kernel-refactor/history-summary-design.md
 213e883774c70871771ef002348f057a7107fbda0565d33f10ddbf48657e71b3  doc/evidence/integrity-kernel-refactor/history-summary-module.md
 61dfa8ab6642651026f7731b7b72746e2b6bfa317e4db6a6d5101d5d90a259ee  doc/evidence/integrity-kernel-refactor/oracle-results.json
-0b24af847a4d92ee910fd2222e59f74df3f37f58e7cde9e257906e3d65a4b1f2  doc/evidence/integrity-kernel-refactor/proof-obligations.md
+cd88cc32741c3e8ff8eb17670d22d500a7d89d6d16a71554223d925eb0b3609b  doc/evidence/integrity-kernel-refactor/proof-obligations.md
 208d4a0297847b891983dfc2263b6477fd246c7a6ee29d19f8b94d79dc84e384  doc/evidence/integrity-kernel-refactor/prune-log.md
 249dac48cd35a116295f78ff40e0766a1576ca516834b8400bb0de54f5a1e6c3  doc/evidence/integrity-kernel-refactor/raw/b1_square_root_tests.log
 efd8f990a7fe8b8474ec68c063efb8f5baf40fd972dd93ed4298a7b736618a60  doc/evidence/integrity-kernel-refactor/raw/build-release.log
@@ -100,10 +101,11 @@ a1a9326212dbc624dcbb46f4cf88b80f3a74cfabd909649ce9343ef00c485be3  doc/evidence/i
 873461e6d55c5d1b1c7b1fb0c0a85e4ed0d8ec7ed780ab59209fd556e258c77b  doc/evidence/integrity-kernel-refactor/raw/validation_b3b4.log
 835effe069864f5ce4a855e176dac8f5624efd59c74bf1f8407c9d3a1d5b274a  doc/evidence/integrity-kernel-refactor/raw/validation_c0.log
 55b313644cd17ae381b92545f671e061877f8c3fcbdd110755fb423b69cad9e2  doc/evidence/integrity-kernel-refactor/raw/validation_c1a.log
+877167c0ff3ae690bf619e90311b7e8de3da822af9e00747df2bdd6361d65a56  doc/evidence/integrity-kernel-refactor/raw/validation_c1c.log
 835effe069864f5ce4a855e176dac8f5624efd59c74bf1f8407c9d3a1d5b274a  doc/evidence/integrity-kernel-refactor/raw/validation_p7.log
 fc51a27d6ddbf3cb6498932a1caeb08173b3ff640fe7a773c5e346193c988250  doc/evidence/integrity-kernel-refactor/remote-head.txt
 6d1279a3f8d2ba193e346f3bc8a7800924d8fa5eb77d9f88b1b2dd360157a7e6  doc/evidence/integrity-kernel-refactor/risk-and-lazy-fde.md
-0220436e22ce81f64e56a1cb653ce5a94661f4466f13ee23d6424138cc3b0c18  doc/evidence/integrity-kernel-refactor/runbook.md
+1ce1462f9f89bb308769961f90e95c914c46f513c659d56f422b07c1561286ae  doc/evidence/integrity-kernel-refactor/runbook.md
 20f697d968c20ccf131cbfa34d44fbf5c4a54b2b808bbe3d73863253eddbbc21  doc/evidence/integrity-kernel-refactor/square-root-context.md
 69a04a3fc3d299287160fdc43bfc89786dc83d915cd9241a99203df41882e968  doc/evidence/integrity-kernel-refactor/square-root-oracle.json
 59c5aaf79eaeb696fc1c3d4ec073701e87557dbbf34fb1568885cb59862aec23  doc/evidence/integrity-kernel-refactor/storage-inventory.md
@@ -113,9 +115,15 @@ fc51a27d6ddbf3cb6498932a1caeb08173b3ff640fe7a773c5e346193c988250  doc/evidence/i
 e484cf5f4e90f757e1d2a7dd7416026174245e825ea1f1180fb9e90a6affacc0  doc/evidence/integrity-kernel-refactor/tools/oracle_compare.py
 9bf646a2754cfd425708346bbcfdef86ff874f5048528dc18c2f737c41efab0e  doc/evidence/integrity-kernel-refactor/tools/replay_io.py
 e864d4f73487e3b38b1a519e3333ffdfcb63b4816122e88bd16ac3f5618ec668  doc/evidence/integrity-kernel-refactor/tracked-files.txt
-bb93c35e9baf32c8376ec3dae73b187c033cabd88d218ccec0308408ec3d07a8  doc/evidence/integrity-kernel-refactor/validation-manifest.json
-5b2224701a104279032f63ff4e4ca98c750ad773f92598b7cbf13e2f8b2e169f  doc/evidence/integrity-kernel-refactor/validation-report.json
+b3e1b1da9353eb0f5bb2854023f069fcf49c7781b5215b27ec29ba63e5303bd4  doc/evidence/integrity-kernel-refactor/validation-manifest.json
+50416943fb0e45ab8923860a62d3832926045953852410c29c40fc250284d88a  doc/evidence/integrity-kernel-refactor/validation-report.json
 b3b0b9ee2ed32a7d516022a3690eb325d2b1c5fb0d1166e1617cd3c114b3cb88  doc/evidence/integrity-kernel-refactor/worktree-before.txt
-1d525b709d76b9ab454e8bef6f470b17dacf8709c16b5039740d06554e92da84  include/uwb_imu_pl/integrity/history_fault_summary.hpp
-216721ba79c79e7146aceffbc041f502c8017ef6f8ee16635a120e7f0e8732f2  src/uwb_imu_pl/integrity/history_fault_summary.cpp
-bf42a50edc3ffae50f866028bac6ea0e2113243463edfe0b11ee6c4709e354b4  test/test_history_fault_summary.cpp
+0ee0354228e44a938ee847b6d74c67977804d552303559ba63801cd483dd07cf  include/uwb_imu_pl/config/integrity_config.hpp
+0ec7d421a2afff4f3bacb8a5a43e15075f878a2f3b2c631d798cfede2444f174  include/uwb_imu_pl/integrity/history_fault_summary.hpp
+15ef780fed25bea70ebdf17947bc6e621d6e0d91ec57049f336a47db9084e2b6  include/uwb_imu_pl/integrity/statistical_bounds_cache.hpp
+f5b050c1c7f3211ebbcc6a14b866da4e42f4276696bdd2c2786cf98e72a1c61c  src/uwb_imu_pl/config/integrity_config.cpp
+e0a44017a599e1e41452d7455df57992ecb129c389b71d26657c6c8ddb748662  src/uwb_imu_pl/integrity/history_fault_summary.cpp
+715a046fe2b721798a20ee7349d734617dbd551576f885a35c13aabaf0659dd2  src/uwb_imu_pl/integrity/statistical_bounds_cache.cpp
+1527cf571e507ed0ce9aa876a51d1c6b9c5f30fe70122d9db3aaabc82bacd450  test/test_history_fault_summary.cpp
+fab0e4023642dafdb7c300afc0927653b234b4246a72e36da788ff2662e5bdfd  test/test_integrity_config.cpp
+81c93d1392f5d586d07939e56a955c4205e6e6ba748e91d6723f78198afff70a  test/test_integrity_v2.cpp

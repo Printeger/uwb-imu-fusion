@@ -242,7 +242,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。"
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。"
   },
   {
    "id": "HIS-02",
@@ -253,7 +253,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。"
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。"
   },
   {
    "id": "HIS-03",
@@ -264,7 +264,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "v11 identity 已导出 history_lineage_id 字段（当前 NOT_AVAILABLE_IN_SCHEMA），为 C 准备接口 | C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。"
+   "note": "v11 identity 已导出 history_lineage_id 字段（当前 NOT_AVAILABLE_IN_SCHEMA），为 C 准备接口 | C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。"
   },
   {
    "id": "HIS-04",
@@ -275,7 +275,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。"
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。"
   },
   {
    "id": "HIS-05",
@@ -286,7 +286,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。"
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。"
   },
   {
    "id": "HIS-06",
@@ -297,7 +297,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。"
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。"
   },
   {
    "id": "HIS-M1",
@@ -312,6 +312,33 @@
     "history-summary-design.md"
    ],
    "note": "C1-a：两段 Householder 消元（无正规方程、无求逆，输出平方根形式）；符号约定 boundaryMeanShiftForFault = R_b^-1 T_b f 与 conditionalBoundaryMeanDelta 互为相反数；管线接入/生命周期/容量键/冷启动/重线性化绑定为 C1-b/C1-c NOT_RUN"
+  },
+  {
+   "id": "HIS-C1",
+   "description": "history 容量键严格加载：max_summary_rows/max_fault_columns/max_perp_rows/capacity_action（默认 REFUSE；未知键/缺键/非法动作拒绝；节缺省=零容量默认）",
+   "owner_work_package": "C",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_integrity_config --gtest_filter=IntegrityConfig.HistoryCapacityKeysAreStrictlyLoaded"
+   ],
+   "evidence": [
+    "history-summary-b1c-blockers.md",
+    "config-migration.md"
+   ],
+   "note": "C1-c/C2 配置层本轮完成；超限执行语义（不可用+计数）随 C1-b 摘要路径（阻塞）"
+  },
+  {
+   "id": "HIS-V1",
+   "description": "统计缓存身份覆盖 history_summary_version；envelope_kind 纳入 NoncentralKey（修复只声明未哈希的静默别名缺陷）",
+   "owner_work_package": "C",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_integrity_v2 --gtest_filter=B3Risk.HistorySummaryVersionIsPartOfCacheIdentity"
+   ],
+   "evidence": [
+    "history-summary-b1c-blockers.md"
+   ],
+   "note": "C1-c/B5 本轮完成；绑定摘要 digestHistorySummaryVersion 见 history_fault_summary.hpp（测试 HISM2VersionDigestBindsAllComponents）"
   },
   {
    "id": "DET-01",

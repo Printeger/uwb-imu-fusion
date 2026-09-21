@@ -91,3 +91,19 @@ G 帧证据 `raw/runs_p2/G_continuous_rejection`）。
 * 不改变检测器/PL/证据/故障模型的数学。
 * 不实现平方根内核、历史摘要、分组包络、惰性 FDE（B/C/D 阶段）。
 * 不删除 legacy 键的读取支持；旧配置在给出警告后继续可用。
+
+## 6. history 容量键（C1-c/C2 新增，2026-09-21）
+
+| 键 | 类型 | 默认 | 语义 |
+|---|---|---|---|
+| `history.max_summary_rows` | u64 | 0 | 摘要行数容量（0 = 摘要路径未启用） |
+| `history.max_fault_columns` | u64 | 0 | 摘要故障列容量 |
+| `history.max_perp_rows` | u64 | 0 | 检测（`ν_⊥`）行容量 |
+| `history.capacity_action` | 枚举 | `REFUSE` | 超限动作：`REFUSE` / `RESET` / `STOP_PROTECTED` |
+
+* 严格加载：节缺省 = 全部默认；节存在时**四个键全部必需**；未知键、未知动作、
+  缺键一律硬错误（测试 `IntegrityConfig.HistoryCapacityKeysAreStrictlyLoaded`）。
+* resolved dump 规范化补齐该节，config hash 覆盖。
+* **执行语义（超限 → 不可用并计数）尚未接入**：摘要路径（C1-b）本身被阻塞
+  （`history-summary-b1c-blockers.md §1.1`）；"绝不静默丢最旧故障"为冻结语义，
+  不存在 `DROP_OLDEST` 一类动作（测试断言其被拒绝）。
