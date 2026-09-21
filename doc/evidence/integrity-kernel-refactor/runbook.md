@@ -304,3 +304,33 @@ identity/parity/solution 残差、前向界、detector_only_rows、策略与可�
 
 提交纪律：两个相邻提交 ① 代码 `e40e2ef` ② 证据（本文件所属提交，含以 ① SHA 生成的
 `validation-report.json` 与 `hashes-B3.txt`）；不 push；不提交/删除路线图文档。
+
+## 10. P6（C 包 Stage 0 + C1/C2 设计冻结）2026-09-21
+
+**Stage 0-a 工作树卫生（第二次同类事件）**
+
+* 现象：6 个已提交文件被改写（`git diff --stat` 1519+/1171−）。
+* 判定：token 多重集对照 → 6 文件 body token 序列与 include 集合**逐一相同** ⇒ 纯格式化。
+* 触发源：文件写入时刻 **17:45:17**，同一窗口内 `~/.codex/`（`logs_2.sqlite` 17:34、
+  目录 17:46）处于活动状态——即**另一个 CLI agent（Codex）会话**在本工作区运行；
+  与 P5 事件（15:47 批次、Local History `source` 为空、无 `.clang-format`）同型。
+* 处置：`git restore -- include src`（6 文件）；`sha256sum -c hashes-B3.txt` 复核 **101/101 OK**；
+  工作树只剩未跟踪路线图文档。规则沿用 §7/§9；本 agent 流程仍无任何格式化步骤。
+* 结论（两次事件合并）：格式化 pass 来自**本仓库之外的 agent/编辑器侧**，不由本 agent 引入；
+  若后续仍复现，建议由用户侧确认其工具链（Codex/编辑器）并统一约定。
+
+**Stage 0-b/c 小项**
+
+* 支配性单侧保守：`CoverageEnvelope` 增加 `dominance_ratio`（原始比值，审计用），
+  接受条件改为 `ratio >= 1 − dominance_tolerance`（相对 eps=1e-9，只吸收 binary64 噪声，
+  实测共享恒等式噪声 ~1e-16），`dominance_margin = max(0, ratio−1)` ⇒ **接受时非负**；
+  拒绝路径与 `B2Coverage.*` 6 例仍全 PASS。
+* gate 归因：`stateStepAttribution()`（`joint_window_detector`）把窗口增量按 `state_layout`
+  分段为 rotation/position/velocity/accel_bias/gyro_bias 幅值并指出主导历元与块；
+  监测器仅在 step-gate 拒绝时把它追加到 `reason` 与 `skip_reason`（阈值/判定不变）。
+  回归：`GateAttribution.*` PASS；G 场景 40/40 拒绝候选带归因，离散/PL 与 P5 逐帧 0 差异。
+* validation 清单：去重（FDE-01/02 重复项），FDE-01/02 映射到 B4LazyFde.*，PRV-02 note 更新到 v14，
+  新增 GAT-01；报告以本轮代码提交 SHA 生成。
+
+**C1/C2**：设计冻结见 `history-summary-design.md`（表示、符号约定、生命周期表、容量动作、
+重线性化规则、冷启动、oracle 计划、C2 接口、实现触点、未执行原因）。实现与验证本轮 NOT_RUN。

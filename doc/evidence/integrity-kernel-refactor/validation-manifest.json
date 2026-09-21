@@ -239,8 +239,10 @@
    "owner_work_package": "C",
    "status": "NOT_STARTED",
    "commands": [],
-   "evidence": [],
-   "note": ""
+   "evidence": [
+    "history-summary-design.md"
+   ],
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10）"
   },
   {
    "id": "HIS-02",
@@ -248,8 +250,10 @@
    "owner_work_package": "C",
    "status": "NOT_STARTED",
    "commands": [],
-   "evidence": [],
-   "note": ""
+   "evidence": [
+    "history-summary-design.md"
+   ],
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10）"
   },
   {
    "id": "HIS-03",
@@ -258,9 +262,9 @@
    "status": "NOT_STARTED",
    "commands": [],
    "evidence": [
-    "raw/runs_p2/*/diagnostic_snapshot_identity.csv"
+    "history-summary-design.md"
    ],
-   "note": "v11 identity 已导出 history_lineage_id 字段（当前 NOT_AVAILABLE_IN_SCHEMA），为 C 准备接口"
+   "note": "v11 identity 已导出 history_lineage_id 字段（当前 NOT_AVAILABLE_IN_SCHEMA），为 C 准备接口 | C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10）"
   },
   {
    "id": "HIS-04",
@@ -268,8 +272,10 @@
    "owner_work_package": "C",
    "status": "NOT_STARTED",
    "commands": [],
-   "evidence": [],
-   "note": ""
+   "evidence": [
+    "history-summary-design.md"
+   ],
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10）"
   },
   {
    "id": "HIS-05",
@@ -277,8 +283,10 @@
    "owner_work_package": "C",
    "status": "NOT_STARTED",
    "commands": [],
-   "evidence": [],
-   "note": ""
+   "evidence": [
+    "history-summary-design.md"
+   ],
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10）"
   },
   {
    "id": "HIS-06",
@@ -286,8 +294,10 @@
    "owner_work_package": "C/D",
    "status": "NOT_STARTED",
    "commands": [],
-   "evidence": [],
-   "note": ""
+   "evidence": [
+    "history-summary-design.md"
+   ],
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10）"
   },
   {
    "id": "DET-01",
@@ -308,8 +318,10 @@
    "owner_work_package": "C",
    "status": "NOT_STARTED",
    "commands": [],
-   "evidence": [],
-   "note": ""
+   "evidence": [
+    "history-summary-design.md"
+   ],
+   "note": "| C-round: 双通道公式与 fault-span 义务已冻结（history-summary-design.md §8）；实现与验证本轮 NOT_RUN"
   },
   {
    "id": "DET-03",
@@ -317,8 +329,10 @@
    "owner_work_package": "C",
    "status": "NOT_STARTED",
    "commands": [],
-   "evidence": [],
-   "note": ""
+   "evidence": [
+    "history-summary-design.md"
+   ],
+   "note": "| C-round: 双通道公式与 fault-span 义务已冻结（history-summary-design.md §8）；实现与验证本轮 NOT_RUN"
   },
   {
    "id": "DET-04",
@@ -326,28 +340,36 @@
    "owner_work_package": "C/D",
    "status": "NOT_STARTED",
    "commands": [],
-   "evidence": [],
-   "note": ""
+   "evidence": [
+    "history-summary-design.md"
+   ],
+   "note": "| C-round: 双通道公式与 fault-span 义务已冻结（history-summary-design.md §8）；实现与验证本轮 NOT_RUN"
   },
   {
    "id": "FDE-01",
-   "description": "健康普通帧；无动作/桥接 eager 构造，灵敏度仍在",
+   "description": "健康普通帧不构造动作实体/桥接块，PL 灵敏度仍在（B4 惰性 FDE）",
    "owner_work_package": "B",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [
-    "raw/runs_p2/A_nominal"
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_integrity_v2 --gtest_filter=B4LazyFde.FDE01HealthyFrameBuildsNoActionEntitiesButKeepsSensitivity"
    ],
-   "note": "当前实现仍 eager；惰性化属 B4"
+   "evidence": [
+    "risk-and-lazy-fde.md"
+   ],
+   "note": "惰性生成：single_mode_actions 按需构造（幂等），KEEP_ALL 常驻；A_nominal 实测 action_entities_constructed=0、bridge_blocks_built=0、candidate_graph_built=0、action_entities_deferred=5930，而模式 map 与 hmi_allocation 完整（PL 灵敏度完整）"
   },
   {
    "id": "FDE-02",
-   "description": "隔离后恢复需 evidence；惰性化不破坏健康状态机",
-   "owner_work_package": "B/C",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [],
-   "note": ""
+   "description": "惰性化不破坏健康状态机；隔离路径在需要时构造证据；动作 ID 稳定（B4）",
+   "owner_work_package": "B",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_integrity_v2 --gtest_filter=B4LazyFde.FDE02IsolationPathStillMaterializesEvidenceOnDemand"
+   ],
+   "evidence": [
+    "risk-and-lazy-fde.md"
+   ],
+   "note": "pending_health.observeEvidence 未删除（A_nominal evidence_calls_health_path=420）；报警帧在 actionsForPlausibleSet 时才构造实体且 KEEP_ALL id=1、模式动作 id 与 eager 路径逐一致；7 场景 FDE/选择/提交离散差异 0"
   },
   {
    "id": "FDE-03",
@@ -392,7 +414,7 @@
   },
   {
    "id": "PRV-02",
-   "description": "P2 新增：v11 诊断导出（failure 记账列 + 独立 identity 表）",
+   "description": "v14 诊断：attempts 新列（风险账本 + 覆盖证书）、hypotheses 新列（coverage_label/envelope_id）、square-root 表",
    "owner_work_package": "A",
    "status": "MAPPED",
    "commands": [
@@ -401,7 +423,7 @@
    "evidence": [
     "raw/runs_p2/A_nominal/diagnostic_snapshot_identity.csv"
    ],
-   "note": "v12 diagnostics: new attempts/file export + square-root table; schema string v12 asserted"
+   "note": "v14 diagnostics: risk ledger terms + coverage certificate columns per attempt, coverage labels per hypothesis; schema list accepts v11..v14"
   },
   {
    "id": "PRV-03",
@@ -551,30 +573,17 @@
    "note": "同一假设界内 tau 通道经 Lambda、噪声通道经 k*sigma 同时进入；提高门限必须提高非中心性"
   },
   {
-   "id": "FDE-01",
-   "description": "健康普通帧无 eager 动作实体/桥接块，PL 灵敏度仍在",
+   "id": "GAT-01",
+   "description": "step gate 拒绝附物理归因（rotation/position/velocity/bias 幅值与主导块），阈值与判定逻辑不变",
    "owner_work_package": "B",
    "status": "MAPPED",
    "commands": [
-    "{bin}/test_integrity_v2 --gtest_filter=B4LazyFde.FDE01HealthyFrameBuildsNoActionEntitiesButKeepsSensitivity"
+    "{bin}/test_integrity_v2 --gtest_filter=GateAttribution.StepAttributionNamesPhysicalBlocksAndDominantEpoch"
    ],
    "evidence": [
-    "risk-and-lazy-fde.md"
+    "history-summary-design.md"
    ],
-   "note": "惰性生成：single_mode_actions 按需构造（幂等），KEEP_ALL 常驻；A_nominal 实测 action_entities_constructed=0、bridge_blocks_built=0、candidate_graph_built=0、action_entities_deferred=5930，而模式 map 与 hmi_allocation 完整"
-  },
-  {
-   "id": "FDE-02",
-   "description": "惰性化不破坏健康状态机；隔离路径仍在需要时构造证据；动作 ID 稳定",
-   "owner_work_package": "B",
-   "status": "MAPPED",
-   "commands": [
-    "{bin}/test_integrity_v2 --gtest_filter=B4LazyFde.FDE02IsolationPathStillMaterializesEvidenceOnDemand"
-   ],
-   "evidence": [
-    "risk-and-lazy-fde.md"
-   ],
-   "note": "pending_health.observeEvidence 未被删除（A_nominal evidence_calls_health_path=420）；隔离路径调用 actionsForPlausibleSet 时才构造实体且 KEEP_ALL id=1、模式动作 id 与 eager 路径逐一致；7 场景 FDE/选择/提交离散差异 0"
+   "note": "stateStepAttribution() 由窗口 state_layout 分段（每历元 15 维：rotation/position/velocity/accel_bias/gyro_bias），监测器只在 step-gate 拒绝时追加到 reason 与 skip_reason；G 场景 45 帧实测 40/40 拒绝候选带归因（dominant=velocity(epoch 4/5)），离散与 PL 与 P5 逐帧 0 差异"
   }
  ]
 }

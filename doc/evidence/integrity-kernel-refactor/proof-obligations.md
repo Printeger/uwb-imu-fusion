@@ -209,3 +209,19 @@
 * **命题（B4）**：健康普通帧不构造动作实体/桥接块，PL 灵敏度完整；惰性化不破坏健康状态机。
   * **本轮状态**：`IMPLEMENTED`（`ensureActionEntities` 幂等；计数为证）。
   * **证据**：`B4LazyFde.*`；A_nominal 四个计数（0/0/0/5930）与证据路径计数（30/420）。
+
+## 16.（P6/C 包 Stage 0）支配性单侧化与 step gate 归因
+
+* **命题（支配性）**：包络接受必须单侧——`B_env >= B_leaf·(1−ε)`，ε 只吸收共享恒等式的
+  binary64 噪声（实测 ~1e-16，取 1e-9，留 7 个数量级余量），且接受时导出 `dominance_margin >= 0`；
+  原始比值另存 `dominance_ratio` 供审计。
+  * **本轮状态**：`IMPLEMENTED`（`CoverageEnvelope::{dominance_margin,dominance_ratio}`，
+    接受条件 `ratio >= 1 − dominance_tolerance`）。
+  * **证据**：`B2Coverage.*`（6 例，含零核拒绝用例）。
+* **命题（gate 归因）**：0.25 步长 gate 的阈值与判定逻辑不变；被拒绝候选的 reason 必须给出
+  物理归因（rotation/position/velocity/accel_bias/gyro_bias 幅值与主导历元/块）。
+  * **本轮状态**：`IMPLEMENTED`（`stateStepAttribution()` + 监测器仅追加 reason/skip_reason）。
+  * **证据**：`GateAttribution.*`；G 场景 40/40 拒绝候选带归因且离散/PL 与 P5 逐帧 0 差异。
+* **未执行（NOT_RUN）**：C1 的摘要替换/生命周期/重线性化/oracle/新场景（A1–A6）与
+  C2 的双通道检测/PL/fault-span/模型误差通道（B0–B5）；设计与义务已冻结于
+  `history-summary-design.md`。

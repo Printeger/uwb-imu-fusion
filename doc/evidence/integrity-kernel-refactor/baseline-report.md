@@ -237,3 +237,14 @@ PL/detector/evidence/fault-model/rank-update 数学均未改动。与 A1/A2 相�
 | 正常帧桥接块 | 急切构造 | **0** |
 | 场景离散差异（vs P5 基线） | — | **0**（7 场景，PL 全部单侧上升） |
 | 验证调度 | 22 PASS / 0 FAIL / 20 NOT_RUN（P4 口径） | **22 PASS / 0 FAIL / 20 NOT_RUN**（新增 RSK-01..03、FDE-01/02 → 下一轮 27/0/20） |
+
+## 11. P6（C 包 Stage 0）观测
+
+| 项 | P5/B3+B4 | P6/C-Stage0 |
+|---|---|---|
+| 测试 | 300 / 0 fail | **302 / 0 fail** |
+| 验证调度 | 22 PASS / 0 FAIL / 20 NOT_RUN | **28 PASS / 0 FAIL / 18 NOT_RUN**（RSK-01..03、FDE-01/02、GAT-01 入册） |
+| 支配性 | `env + 1e-9 ≥ leaf`（绝对容差） | **单侧相对**：`ratio ≥ 1−1e-9`，接受时 `dominance_margin ≥ 0`，另存 `dominance_ratio` |
+| G 帧 gate 归因 | 仅 step 范数 | **40/40 拒绝候选带 rotation/position/velocity/bias 幅值与主导块**（阈值/判定不变，离散/PL 与 P5 逐帧 0 差异） |
+| C1/C2 | — | **设计冻结**（`history-summary-design.md`）；A1–A6、B0–B5 **NOT_RUN** |
+| 工作树卫生 | 15:47 格式化事件（回退） | 17:45 同型事件（Codex 侧活动），回退后 hashes-B3 101/101 OK |
