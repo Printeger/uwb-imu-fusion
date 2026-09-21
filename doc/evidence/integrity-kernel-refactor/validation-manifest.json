@@ -1,0 +1,419 @@
+{
+  "schema": "uwb-imu-pl/validation-manifest/1",
+  "produced_by": "P2 (workpackage A, batch A3+A4)",
+  "id_source": "doc/UWB_IMU_PL_Codex_开发路线图.md section 7 test table",
+  "status_vocabulary": ["MAPPED", "NOT_STARTED"],
+  "run_status_vocabulary": ["PASS", "FAIL", "NOT_RUN", "SKIP_WITH_REASON"],
+  "binary_dir": "{ws}/devel/.private/uwb_imu_pl/lib/uwb_imu_pl",
+  "workspace_root_default": "/home/mint/ws_fusion_uwb",
+  "items": [
+    {
+      "id": "CFG-01",
+      "description": "新旧 YAML 一致/冲突、launch 覆盖；生效值、错误分支、hash 与运行一致",
+      "owner_work_package": "A",
+      "status": "MAPPED",
+      "commands": [
+        "{bin}/test_integrity_config",
+        "{bin}/test_fault_manifest --gtest_filter=ConfigMigration.EpochsIntervalsConflictRejected:ConfigMigration.LegacyOnlyFieldsGainWarningsAndCanonicalKeys:ConfigMigration.OrderAndLegacyFlagConflictRejected"
+      ],
+      "evidence": [
+        "raw/run_tests_p2.log",
+        "raw/runs_p2/A_nominal/resolved_config.yaml",
+        "effective-config.yaml",
+        "hashes.txt"
+      ],
+      "note": "生效值/hash 链在 resolved_config.yaml + effective-config.yaml；启动期冲突分支为 ConfigMigration 三个用例"
+    },
+    {
+      "id": "CFG-02",
+      "description": "order=1、order=2、未知 family；单双故障集合准确；未支持族拒绝",
+      "owner_work_package": "A",
+      "status": "MAPPED",
+      "commands": [
+        "{bin}/test_fault_manifest --gtest_filter=FaultManifest.*:ConfigMigration.StartupRejectsManifestWithEnabledUnsupportedFamily"
+      ],
+      "evidence": [
+        "config/integrity_fault_manifest.yaml",
+        "fault-manifest-resolved.yaml"
+      ],
+      "note": "manifest 词表/结构规则 + 启动期拒绝；bounded set 只允许 NOT_IMPLEMENTED 声明（D3）"
+    },
+    {
+      "id": "CFG-03",
+      "description": "固定基站、运动位置/姿态变化；启动通过不掩盖运行时退化",
+      "owner_work_package": "A/B",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [
+        "raw/runs_p2/A_nominal",
+        "raw/runs_p2/H_mature_union"
+      ],
+      "note": "现有场景 A/H 在固定基站+运动轨迹下运行通过，但无专门的运行时退化验证用例"
+    },
+    {
+      "id": "GEO-01",
+      "description": "§6 A4 两行解析 LS：P/G/Gamma/s^2 精确对应，PL 有限",
+      "owner_work_package": "A/B",
+      "status": "MAPPED",
+      "commands": [
+        "{bin}/test_integrity_reference --gtest_filter=ReferenceFixture.TwoRowScalarLeastSquares"
+      ],
+      "evidence": ["oracle-results.json"],
+      "note": "解析 fixture 独立实现（无生产求解器）；PL 有限性由 O5 斜率有限覆盖"
+    },
+    {
+      "id": "GEO-02",
+      "description": "一维完全不可检测故障；返回危险零空间，不误诊成大字典问题",
+      "owner_work_package": "A/B",
+      "status": "MAPPED",
+      "commands": [
+        "{bin}/test_integrity_reference --gtest_filter=ReferenceFixture.OneDimensionalUndetectableFault"
+      ],
+      "evidence": ["oracle-results.json"],
+      "note": "Gamma=0 -> 非有限斜率 + DANGEROUS_FAULT_NULLSPACE 分类（不允许 inf==inf 通过）"
+    },
+    {
+      "id": "GEO-03",
+      "description": "多个备选一维模式，K 大于 ν；不因 K 或总字典列数而统一拒绝",
+      "owner_work_package": "B",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": ["census.json"],
+      "note": "K=20 census 观测（624 假设/61104 动作）仅作输入事实，需 B 阶段专门用例"
+    },
+    {
+      "id": "GEO-04",
+      "description": "q>ν 的无害 nuisance 零空间；在结构性证据下保留有限位置 bound",
+      "owner_work_package": "A/B",
+      "status": "MAPPED",
+      "commands": [
+        "{bin}/test_integrity_reference --gtest_filter=ReferenceFixture.HarmlessNuisanceNullspaceKeepsFiniteBound"
+      ],
+      "evidence": ["oracle-results.json"],
+      "note": "保守界按 sum(v_i^T g)^2/sigma_i 计算，G=(0,1/2) 有限"
+    },
+    {
+      "id": "GEO-05",
+      "description": "双故障残差相消；单故障有限、组合危险，交叉项不可省略",
+      "owner_work_package": "B",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": "需要在 B 阶段扩展组合模板"
+    },
+    {
+      "id": "MOD-01",
+      "description": "UWB 瞬时/阶跃/ramp，丢包与非均匀时刻；真实时间支撑、末端退化、单位与白化",
+      "owner_work_package": "A/B",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": ["raw/runs_p2/F_ramp_unmonitorable"],
+      "note": "F 场景提供 ramp 停用证据；模板级验证未建立"
+    },
+    {
+      "id": "MOD-02",
+      "description": "IMU 原始样本 ± 故障、多步长重积分；映射方向、量纲、bias/坐标约定正确",
+      "owner_work_package": "A/B",
+      "status": "MAPPED",
+      "commands": [
+        "{bin}/test_integrity_v2 --gtest_filter=IntegrityV2ImuOracle.*"
+      ],
+      "evidence": ["oracle-results.json"],
+      "note": "多步长有限差分 sweep（5 eps、60 次重积分）对照解析灵敏度；D1 参考中心以 C=[0|R] 有限差分锁定"
+    },
+    {
+      "id": "MOD-03",
+      "description": "区间内部 onset、跨窗口持续 step；非整区间模板不能误用完整 bias Jacobian",
+      "owner_work_package": "B/C",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "MOD-04",
+      "description": "同器件多轴共因、两个事件共享参数；事件阶数、参数拼接、先验账本一致",
+      "owner_work_package": "A/B",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": ["config/integrity_fault_manifest.yaml"],
+      "note": "manifest 已声明 imu_accel_xyz_common_cause=NOT_IMPLEMENTED（bounded set 不实现，D3）；验证用例待 B"
+    },
+    {
+      "id": "MOD-05",
+      "description": "有效有界幅值、但检测零空间危险；用集合支撑界而非误套无界判据；集合失效风险记账",
+      "owner_work_package": "B/C",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": "bounded set 当前一律 NOT_IMPLEMENTED，避免能力声明超出实现"
+    },
+    {
+      "id": "NUM-01",
+      "description": "状态缩放、变量/因子排序、列主元；物理输出与 bound 不变；C 同步转换",
+      "owner_work_package": "B",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": ["fixtures/frames.json"],
+      "note": "A4 已冻结 C=[0|R] 与 protected_state_map 约定，供 B 使用"
+    },
+    {
+      "id": "NUM-02",
+      "description": "纯检测行 H=0、A/z 非零；不丢检测信息与自由度",
+      "owner_work_package": "B/C",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "NUM-03",
+      "description": "极小奇异值、近零 covariance difference；不做任意 regularization/负值截零；可靠回退",
+      "owner_work_package": "B",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "NUM-04",
+      "description": "SparseQR pattern 不变/改变；合法复用与失效；不能使用旧 R",
+      "owner_work_package": "B",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "COV-01",
+      "description": "template 与有效 free envelope；相同模型/风险下 slope 支配；不假定 recent-k 包含早期模板",
+      "owner_work_package": "B",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "COV-02",
+      "description": "辅助子集恒等式；适用行子集下 covariance difference 与投影相符",
+      "owner_work_package": "A/B",
+      "status": "MAPPED_PARTIAL",
+      "commands": [
+        "{bin}/test_integrity_reference --gtest_filter=ReferenceFixture.TemplateAndRecentProfileAreNotNested:ReferenceFixture.RemovingProcessConstraintKeepsFiniteSlope"
+      ],
+      "evidence": ["oracle-results.json"],
+      "note": "已证明 template 与 recent 不嵌套、去过程约束后 slope 有限且严格变大；完整子集恒等式留给 B"
+    },
+    {
+      "id": "COV-03",
+      "description": "不适用子集：相关白化/历史污染/template；拒绝 EXACT 或标记合法外包络",
+      "owner_work_package": "B/C",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "COV-04",
+      "description": "分组提前停止与时间耗尽；全部叶节点始终有有效覆盖；否则不可用",
+      "owner_work_package": "B/D",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "HIS-01",
+      "description": "完整历史与摘要，多个消元顺序；Sigma_p/G/Gamma/代价/df 等价，不只比轨迹",
+      "owner_work_package": "C",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "HIS-02",
+      "description": "原始 IMU/UWB 故障跨左边界；故障影响与检测信息持续保留",
+      "owner_work_package": "C",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "HIS-03",
+      "description": "old/new 数据归属重复或漏记；lineage 检查失败；无增加冗余假象",
+      "owner_work_package": "C",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": ["raw/runs_p2/*/diagnostic_snapshot_identity.csv"],
+      "note": "v11 identity 已导出 history_lineage_id 字段（当前 NOT_AVAILABLE_IN_SCHEMA），为 C 准备接口"
+    },
+    {
+      "id": "HIS-04",
+      "description": "历史重线性化、权重/白化改变；重建/有效包络/不可用，不重新贴版本号",
+      "owner_work_package": "C",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "HIS-05",
+      "description": "运行中阶数/family 改变；缺交叉历史时必须重建或拒绝",
+      "owner_work_package": "C",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "HIS-06",
+      "description": "参数/内存容量满、故障结束后残留；不静默遗忘，不把停止注入视为恢复",
+      "owner_work_package": "C/D",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "DET-01",
+      "description": "单/双通道，nu=0 边界；能量、阈值、Lambda 与 risk proof ID 一致",
+      "owner_work_package": "B/C",
+      "status": "MAPPED_PARTIAL",
+      "commands": [
+        "{bin}/test_integrity_reference --gtest_filter=ReferenceFixture.TwoRowScalarLeastSquares"
+      ],
+      "evidence": ["oracle-results.json"],
+      "note": "oracle O1/O2/O6 复核能量/阈值/非中心度约定（含 lambda^2=Lambda）；risk proof ID 记账属 B/C"
+    },
+    {
+      "id": "DET-02",
+      "description": "只有合并检测方向才能监测的故障；W 的核测试与联合分区 bound 正确",
+      "owner_work_package": "C",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "DET-03",
+      "description": "历史 fault-span 投影；Gamma/score 保持，df 正确，漏掉声明方向时拒绝",
+      "owner_work_package": "C",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "DET-04",
+      "description": "最近故障/长期故障/旧纯噪声增长；定量比较池化与分离布局，不宣称普遍单调",
+      "owner_work_package": "C/D",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "FDE-01",
+      "description": "健康普通帧；无动作/桥接 eager 构造，灵敏度仍在",
+      "owner_work_package": "B",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": ["raw/runs_p2/A_nominal"],
+      "note": "当前实现仍 eager；惰性化属 B4"
+    },
+    {
+      "id": "FDE-02",
+      "description": "隔离后恢复需 evidence；惰性化不破坏健康状态机",
+      "owner_work_package": "B/C",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "FDE-03",
+      "description": "错排、漏排、两故障、旧先验污染；未满足 post-selection 证明不得恢复发布",
+      "owner_work_package": "C",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "FDE-04",
+      "description": "IMU 区间修复/桥接失败；合法参考转移或不可用；不增加虚假 Gaussian 信息",
+      "owner_work_package": "C",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "FDE-05",
+      "description": "共享参考的多个候选中心/多个不同参考；同参考共用失败事件；不同参考选择不能少记风险",
+      "owner_work_package": "C",
+      "status": "NOT_STARTED",
+      "commands": [],
+      "evidence": [],
+      "note": ""
+    },
+    {
+      "id": "PRV-01",
+      "description": "P2 新增：冻结窗口 replay bin 与运行 CSV 的 identity 绑定（v5）",
+      "owner_work_package": "A",
+      "status": "MAPPED",
+      "commands": [
+        "{bin}/test_fault_manifest --gtest_filter=ResultIdentity.*:DiagnosticsV11.*",
+        "{python} {ev}/tools/oracle_compare.py"
+      ],
+      "evidence": ["oracle-results.json"],
+      "note": "O0 逐帧校验 snapshot_id/identity_digest/config_digest/body_origin"
+    },
+    {
+      "id": "PRV-02",
+      "description": "P2 新增：v11 诊断导出（failure 记账列 + 独立 identity 表）",
+      "owner_work_package": "A",
+      "status": "MAPPED",
+      "commands": [
+        "{bin}/test_fault_manifest --gtest_filter=DiagnosticsV11.LoggerExportsFailureAccountingAndIdentityColumns"
+      ],
+      "evidence": ["raw/runs_p2/A_nominal/diagnostic_snapshot_identity.csv"],
+      "note": "schema 字符串、新增 attempts 列、identity 表 header+row"
+    },
+    {
+      "id": "PRV-03",
+      "description": "P2 新增：失败分类学（12 码 + None + UnknownText）与既有 reason 文本映射",
+      "owner_work_package": "A",
+      "status": "MAPPED",
+      "commands": [
+        "{bin}/test_fault_manifest --gtest_filter=FailureTaxonomy.*"
+      ],
+      "evidence": ["include/uwb_imu_pl/common/failure_reason.hpp"],
+      "note": "linearization/deadline/resource 标记 check_implemented=false"
+    },
+    {
+      "id": "PRV-04",
+      "description": "P2 新增：独立参考/解析 fixture 全组（8 项含反例）",
+      "owner_work_package": "A",
+      "status": "MAPPED",
+      "commands": [
+        "{bin}/test_integrity_reference"
+      ],
+      "evidence": ["oracle-results.json"],
+      "note": "不调用生产求解器；白化/组装/固定几何 rank/有限差分 C 锁定"
+    },
+    {
+      "id": "PRV-05",
+      "description": "P2 新增：独立 Python oracle 对照（8 窗口 x O0..O7）",
+      "owner_work_package": "A",
+      "status": "MAPPED",
+      "commands": [
+        "{python} {ev}/tools/oracle_compare.py"
+      ],
+      "evidence": ["oracle-results.json"],
+      "note": "57 PASS / 0 FAIL / 7 NOT_RUN（NOT_RUN 均为 FULL_AUDIT 未开导致的真实缺数据）"
+    }
+  ]
+}

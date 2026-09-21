@@ -52,12 +52,57 @@ struct Codec {
     if(in) { x.reset(); if(has) x=static_cast<std::size_t>(v); }
   }
 };
+void transferIdentity(Codec& c, IntegritySnapshotIdentity& identity) {
+  if (c.in) {
+    identity = IntegritySnapshotIdentity{};
+    identity.snapshot_id = kNotAvailableInSchema;
+    identity.source_revision = kNotAvailableInSchema;
+    identity.config_digest = kNotAvailableInSchema;
+    identity.manifest_digest = kNotAvailableInSchema;
+    identity.state_solution_id = kNotAvailableInSchema;
+    identity.frame_id = kNotAvailableInSchema;
+    identity.position_reference = kNotAvailableInSchema;
+    identity.tangent_convention = kNotAvailableInSchema;
+    identity.state_scale = kNotAvailableInSchema;
+    identity.output_jacobian_contract = kNotAvailableInSchema;
+    identity.whitening_id = kNotAvailableInSchema;
+    identity.noise_model_id = kNotAvailableInSchema;
+    identity.boundary_summary_id = kNotAvailableInSchema;
+    identity.history_lineage_id = kNotAvailableInSchema;
+    identity.protected_reference_center = kNotAvailableInSchema;
+    identity.active_observation_index = kNotAvailableInSchema;
+    identity.coverage_epoch = kNotAvailableInSchema;
+    identity.validity_assumptions = kNotAvailableInSchema;
+  }
+  c.text(identity.snapshot_id);
+  c.text(identity.source_revision);
+  c.text(identity.config_digest);
+  c.text(identity.manifest_digest);
+  c.text(identity.state_solution_id);
+  c.scalar(identity.sensor_timestamp_ns);
+  c.text(identity.frame_id);
+  c.text(identity.position_reference);
+  c.text(identity.tangent_convention);
+  c.text(identity.state_scale);
+  c.text(identity.output_jacobian_contract);
+  c.text(identity.whitening_id);
+  c.text(identity.noise_model_id);
+  c.text(identity.boundary_summary_id);
+  c.text(identity.history_lineage_id);
+  c.text(identity.protected_reference_center);
+  c.text(identity.active_observation_index);
+  c.text(identity.coverage_epoch);
+  c.text(identity.validity_assumptions);
+  c.text(identity.identity_digest);
+}
+
 void transfer(Codec& c, FrozenCandidateReplay& r) {
-  std::string schema="uwb-imu-pl/frozen-candidates/v4"; c.text(schema);
-  if(schema!="uwb-imu-pl/frozen-candidates/v1" &&
-      schema!="uwb-imu-pl/frozen-candidates/v2" &&
-      schema!="uwb-imu-pl/frozen-candidates/v3" &&
-      schema!="uwb-imu-pl/frozen-candidates/v4")
+    std::string schema="uwb-imu-pl/frozen-candidates/v5"; c.text(schema);
+    if(schema!="uwb-imu-pl/frozen-candidates/v1" &&
+        schema!="uwb-imu-pl/frozen-candidates/v2" &&
+        schema!="uwb-imu-pl/frozen-candidates/v3" &&
+        schema!="uwb-imu-pl/frozen-candidates/v4" &&
+        schema!="uwb-imu-pl/frozen-candidates/v5")
     throw std::runtime_error("unknown replay schema");
   std::uint64_t endian=0x0102030405060708ULL; c.scalar(endian);
   if(endian!=0x0102030405060708ULL) throw std::runtime_error("incompatible replay byte order");
@@ -78,7 +123,8 @@ void transfer(Codec& c, FrozenCandidateReplay& r) {
     bool has=s.group_id.has_value(); c.scalar(has); FactorGroupId id=s.group_id.value_or(FactorGroupId{});
     c.id(id); if(c.in){s.group_id.reset(); if(has) s.group_id=id;}
     c.scalar(s.explicit_window_block); c.scalar(s.boundary_input); c.scalar(s.pointer_identity_valid); });
-  if (schema=="uwb-imu-pl/frozen-candidates/v4") {
+  if (schema=="uwb-imu-pl/frozen-candidates/v4" ||
+      schema=="uwb-imu-pl/frozen-candidates/v5") {
     c.vector(w.factor_inventory,[&](FrozenWindowFactorInventoryEntry& e) {
       c.id(e.group_id); c.scalar(e.epoch); c.scalar(e.kind); c.scalar(e.sensor);
       c.scalar(e.disposition);
@@ -125,13 +171,39 @@ void transfer(Codec& c, FrozenCandidateReplay& r) {
     cfg.enable_numerical_certificate = false;
   }
   if (schema=="uwb-imu-pl/frozen-candidates/v3" ||
-      schema=="uwb-imu-pl/frozen-candidates/v4") {
+      schema=="uwb-imu-pl/frozen-candidates/v4" ||
+      schema=="uwb-imu-pl/frozen-candidates/v5") {
     c.scalar(cfg.enable_numerical_certificate);
     c.scalar(cfg.force_exact_condition_number);
   } else if (c.in) {
     // v1/v2 artifacts retain their original P2 numerical semantics.
     cfg.enable_numerical_certificate = false;
     cfg.force_exact_condition_number = true;
+  }
+  if (schema=="uwb-imu-pl/frozen-candidates/v5") {
+    transferIdentity(c, r.identity);
+  } else if (c.in) {
+    r.identity = IntegritySnapshotIdentity{};
+    r.identity.snapshot_id = kNotAvailableInSchema;
+    r.identity.source_revision = kNotAvailableInSchema;
+    r.identity.config_digest = kNotAvailableInSchema;
+    r.identity.manifest_digest = kNotAvailableInSchema;
+    r.identity.state_solution_id = kNotAvailableInSchema;
+    r.identity.frame_id = kNotAvailableInSchema;
+    r.identity.position_reference = kNotAvailableInSchema;
+    r.identity.tangent_convention = kNotAvailableInSchema;
+    r.identity.state_scale = kNotAvailableInSchema;
+    r.identity.output_jacobian_contract = kNotAvailableInSchema;
+    r.identity.whitening_id = kNotAvailableInSchema;
+    r.identity.noise_model_id = kNotAvailableInSchema;
+    r.identity.boundary_summary_id = kNotAvailableInSchema;
+    r.identity.history_lineage_id = kNotAvailableInSchema;
+    r.identity.protected_reference_center = kNotAvailableInSchema;
+    r.identity.active_observation_index = kNotAvailableInSchema;
+    r.identity.coverage_epoch = kNotAvailableInSchema;
+    r.identity.validity_assumptions = kNotAvailableInSchema;
+    r.identity.identity_digest = kNotAvailableInSchema;
+    r.identity.sensor_timestamp_ns = 0;
   }
 }
 }  // namespace

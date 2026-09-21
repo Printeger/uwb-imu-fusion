@@ -1,5 +1,6 @@
 #include "uwb_imu_pl/integrity/integrity_monitor.hpp"
 
+#include "uwb_imu_pl/common/failure_reason.hpp"
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 #include "uwb_imu_pl/integrity/hypothesis_generator.hpp"
 #include "uwb_imu_pl/integrity/protection_level_v2.hpp"
@@ -20,9 +21,11 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
+#include <iomanip>
 #include <iterator>
 #include <map>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 
 namespace uwb_imu_pl {
@@ -1343,6 +1346,54 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
     start_operation("integrity_window");
     const auto window = estimator_->buildIntegrityWindow(transaction, request);
     record_stage("integrity_window", window.model_valid);
+    // A3: freeze the result identity block.  Only schema-provided values are
+    // used; fields the schema cannot supply are marked NOT_AVAILABLE_IN_SCHEMA
+    // instead of being fabricated.
+    {
+      IntegritySnapshotIdentity& identity = output.snapshot_identity;
+      std::ostringstream fingerprint;
+      fingerprint << std::hex << std::setfill('0') << std::setw(16)
+                  << integrityWindowFingerprint(window);
+      identity.snapshot_id = "window:" + std::to_string(window.id.value()) +
+          ":transaction:" + std::to_string(transaction.id.value());
+      identity.source_revision = kNotAvailableInSchema;
+      identity.config_digest = cfg.config_hash.empty()
+          ? kNotAvailableInSchema : cfg.config_hash;
+      identity.manifest_digest = cfg.fault_manifest
+          ? cfg.fault_manifest->digest : kNotAvailableInSchema;
+      identity.state_solution_id = kNotAvailableInSchema;
+      identity.sensor_timestamp_ns = batch.timestamp.value();
+      identity.frame_id = cfg.realtime.world_frame;
+      identity.position_reference = "body_origin";
+      identity.tangent_convention =
+          "gtsam_pose3_local_rotation_then_body_translation";
+      identity.state_scale = "identity";
+      identity.output_jacobian_contract =
+          "[0_3x3 | R] on the final epoch pose block (body origin position)";
+      identity.whitening_id = "frozen_block_whitener:" + fingerprint.str();
+      identity.noise_model_id = "per_block_frozen_noise_model";
+      identity.boundary_summary_id = window.capabilities.includes_boundary_prior
+          ? "partial_qr_schur_boundary" : "NONE";
+      identity.history_lineage_id = kNotAvailableInSchema;
+      identity.protected_reference_center = "body_origin";
+      std::set<std::uint64_t> frozen_groups;
+      for (const auto& block : window.blocks) {
+        frozen_groups.insert(block.group_id.value());
+      }
+      std::ostringstream groups;
+      bool first_group = true;
+      for (const auto group : frozen_groups) {
+        if (!first_group) groups << ';';
+        first_group = false;
+        groups << group;
+      }
+      identity.active_observation_index = groups.str();
+      identity.coverage_epoch = kNotAvailableInSchema;
+      identity.validity_assumptions =
+          "frozen_linearization;active_window_fault_support;"
+          "history_nominal_boundary_only";
+      identityDigest(&identity);
+    }
     const auto& preparation = window.preparation_timing;
     output.stage_timings.push_back({"window_boundary_provenance",
         preparation.boundary_and_provenance_ms, true, "EXECUTED", ""});
@@ -1405,6 +1456,32 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           std::chrono::steady_clock::now() - start).count(), true, "EXECUTED", ""});
       return receipt;
     };
+    // A3 failure accounting.  Codes come from the frozen taxonomy; the legacy
+    // status/reason text stays untouched.  Checks the online path did not
+    // reach are recorded as NOT_EVALUATED instead of being implied to pass.
+    std::vector<FailureReason> failure_reasons;
+    std::vector<std::string> not_evaluated_checks;
+    auto note_failure = [&](const std::string& text) {
+      const FailureReason reason = classifyFailureReason(text);
+      if (reason != FailureReason::None) failure_reasons.push_back(reason);
+    };
+    auto note_not_evaluated = [&](const char* check) {
+      for (const auto& existing : not_evaluated_checks) {
+        if (existing == check) return;
+      }
+      not_evaluated_checks.emplace_back(check);
+    };
+    auto finalize_failure_accounting = [&]() {
+      output.diagnostics.all_failures = joinFailureReasons(failure_reasons);
+      output.diagnostics.primary_failure = failure_reasons.empty()
+          ? "NONE" : toString(failure_reasons.front());
+      std::ostringstream joined;
+      for (std::size_t i = 0; i < not_evaluated_checks.size(); ++i) {
+        if (i) joined << ';';
+        joined << not_evaluated_checks[i];
+      }
+      output.diagnostics.not_evaluated_checks = joined.str();
+    };
     auto commit_best_effort = [&](FdeStatus status,
                                   const std::string& reason) {
       EpochCommitPlan plan = EpochCommitPlan::nominalPlan(transaction);
@@ -1421,6 +1498,9 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
       output.protection_level.availability = Availability::Unavailable;
       output.protection_level.formal_eligible = false;
       output.protection_level.reason = reason;
+      note_failure(reason);
+      note_not_evaluated("POST_FDE_DETECTOR_AND_PL");
+      note_not_evaluated("ATOMIC_CERTIFIED_PUBLISH");
       capture_state_audit();
     };
     auto discard_fail_closed = [&](FdeStatus status,
@@ -1447,6 +1527,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             toString(reinitializer_.directive().state);
         output.reinitialization_reason = detail;
       }
+      note_failure(detail);
+      note_not_evaluated("HYPOTHESIS_EVIDENCE");
+      note_not_evaluated("CANDIDATE_NUMERICS");
+      note_not_evaluated("POST_FDE_DETECTOR_AND_PL");
       capture_state_audit();
     };
 
@@ -1478,6 +1562,30 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
       output.diagnostics.oracle_relative_error =
           imu_subspaces.oracle_relative_error;
       output.diagnostics.oracle_verified = imu_subspaces.oracle_verified;
+      if (run_imu_fd_oracle) {
+        // A4: multi-step sweep (both signs per step, several step sizes).
+        const ImuFaultSubspaces sweep = ImuFaultSubspaceBuilder()
+            .verifyFiniteDifferenceSweep(transaction, imu_block);
+        auto joinNumbers = [](const std::vector<double>& values) {
+          std::ostringstream joined;
+          joined << std::setprecision(10);
+          for (std::size_t i = 0; i < values.size(); ++i) {
+            if (i) joined << ';';
+            joined << values[i];
+          }
+          return joined.str();
+        };
+        output.diagnostics.oracle_sweep_executed = sweep.sweep_executed;
+        output.diagnostics.oracle_sweep_verified = sweep.sweep_verified;
+        output.diagnostics.oracle_sweep_worst_relative_error =
+            sweep.sweep_worst_relative_error;
+        output.diagnostics.oracle_sweep_reintegrations =
+            sweep.sweep_reintegrations;
+        output.diagnostics.oracle_sweep_epsilons =
+            joinNumbers(sweep.sweep_epsilons);
+        output.diagnostics.oracle_sweep_relative_errors =
+            joinNumbers(sweep.sweep_relative_errors);
+      }
       record_stage("current_sensitivity");
       if (!imu_subspaces.analytic_input_valid ||
           !imu_subspaces.analytic_computation_valid) {
@@ -1825,6 +1933,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             replay.input_timestamp = batch.timestamp;
             replay.transaction_id = transaction.id.value();
             replay.window = window; replay.actions = models.actions; replay.config = rank_config;
+            replay.identity = output.snapshot_identity;
             writeCandidateReplay(std::string(destination) + "/attempt-" +
                 std::to_string(input_attempt_count_) + ".bin", replay);
           }
@@ -2034,6 +2143,16 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               candidate.diagnostics.pl_evaluated;
         }
         record_stage("candidate_evaluation", true);
+        for (const auto& candidate : candidates) {
+          if (!candidate.valid && !candidate.reason.empty()) {
+            note_failure(candidate.reason);
+          }
+          if (!candidate.diagnostics.pl_evaluated &&
+              candidate.diagnostics.skip_reason.rfind(
+                  "SKIPPED_INELIGIBLE", 0) == 0) {
+            note_not_evaluated("POST_FDE_DETECTOR_AND_PL");
+          }
+        }
         start_operation("fde_decision");
         DetectorResultV2 fde_trigger = all_in;
         if (hardware_barrier) {
@@ -2044,6 +2163,9 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             fde_trigger, models.hypotheses, evidence, &candidates,
             mandatory_exclusion_groups, cfg.risk_v2);
         record_stage("fde_decision", true);
+        if (!decision.commit_allowed || !decision.selected_action) {
+          note_failure(decision.reason);
+        }
         start_operation("candidate_audit");
         for (const auto& candidate : candidates) {
           CandidateAuditRecord record;
@@ -2155,6 +2277,13 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           }
         }
         record_stage("candidate_audit");
+        for (const auto& coverage : output.coverage_audit) {
+          if (coverage.outcome == "COVERAGE_GAP" ||
+              coverage.outcome == "UNRECOVERABLE" ||
+              coverage.outcome == "CARDINALITY_CONTRACT") {
+            note_failure(coverage.reason);
+          }
+        }
         start_operation("finalize_commit_audit");
         if (!decision.commit_allowed || !decision.selected_action) {
           if (all_in.passed) {
@@ -2300,6 +2429,9 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               output.reinitialization_phase =
                   toString(reinitializer_.directive().state);
               output.reinitialization_reason = "BRIDGE_TIMEOUT";
+              note_failure("BRIDGE_TIMEOUT");
+              note_not_evaluated("ATOMIC_CERTIFIED_PUBLISH");
+              finalize_failure_accounting();
               capture_state_audit();
               return output;
             }
@@ -2441,6 +2573,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         numerical_before.numerical_contract_mismatches;
     output.diagnostics.imu_oracle_reintegrations =
         numerical_after.imu_oracle_reintegrations - numerical_before.imu_oracle_reintegrations;
+    finalize_failure_accounting();
     return output;
   } catch (...) {
     auto existing = std::find_if(output.stage_timings.begin(), output.stage_timings.end(),

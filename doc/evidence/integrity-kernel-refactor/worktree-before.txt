@@ -1,0 +1,12 @@
+2026-09-21T03:37:19Z
+--- git branch --show-current
+feature/realtime-uwb-imu-pl
+--- git rev-parse HEAD
+2772b3a1e3584b25c889239421404f550fba9f5d
+--- git status --short
+?? "doc/UWB_IMU_PL_Codex_\345\274\200\345\217\221\350\267\257\347\272\277\345\233\276.md"
+?? doc/evidence/integrity-kernel-refactor/
+--- git remote -v
+origin	git@github.com:Printeger/uwb-imu-fusion.git (fetch)
+origin	git@github.com:Printeger/uwb-imu-fusion.git (push)
+--- git submodule status

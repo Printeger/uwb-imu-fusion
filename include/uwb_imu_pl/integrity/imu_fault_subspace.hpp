@@ -22,6 +22,14 @@ struct ImuFaultSubspaces {
   double oracle_relative_error = std::numeric_limits<double>::infinity();
   bool oracle_verified = false;
   std::uint32_t oracle_reintegrations = 0;
+  // A4: multi-step sweep over epsilons (recorded, not a single hand-picked h).
+  bool sweep_executed = false;
+  bool sweep_verified = false;
+  double sweep_worst_relative_error =
+      std::numeric_limits<double>::infinity();
+  std::vector<double> sweep_epsilons;
+  std::vector<double> sweep_relative_errors;
+  std::uint32_t sweep_reintegrations = 0;
   std::string analytic_reason;
   // Compatibility aliases for diagnostic readers predating R1. They mirror
   // oracle_relative_error/oracle_verified and are false/infinite when the
@@ -45,11 +53,18 @@ class ImuFaultSubspaceBuilder {
   ImuFaultSubspaces verifyFiniteDifferenceOracle(
       const EpochTransaction& transaction,
       const LinearizedFactorBlock& combined_imu_block) const;
+  // A4: central differences over a bracket of step sizes.  Both +/- directions
+  // are used per step; the recorded sequence supports a convergence statement
+  // instead of a single-step comparison.
+  ImuFaultSubspaces verifyFiniteDifferenceSweep(
+      const EpochTransaction& transaction,
+      const LinearizedFactorBlock& combined_imu_block,
+      const std::vector<double>& epsilons = {1e-4, 5e-5, 2e-5, 1e-5, 1e-6}) const;
 
  private:
   Eigen::MatrixXd finiteDifference(
       const EpochTransaction& transaction,
-      const LinearizedFactorBlock& block) const;
+      const LinearizedFactorBlock& block, double epsilon) const;
   double epsilon_;
   double tolerance_;
 };

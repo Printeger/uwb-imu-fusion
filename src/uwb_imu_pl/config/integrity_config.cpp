@@ -115,6 +115,94 @@ Eigen::Vector3d vector3(const YAML::Node& node, const std::string& path) {
   return value;
 }
 
+std::string resolveRelativePath(const std::string& base_file,
+                                const std::string& path) {
+  if (path.empty() || path.front() == '/') return path;
+  const auto slash = base_file.find_last_of('/');
+  if (slash == std::string::npos) return path;
+  return base_file.substr(0, slash + 1) + path;
+}
+
+bool manifestLists(const std::vector<std::string>& values,
+                   const std::string& value) {
+  return std::find(values.begin(), values.end(), value) != values.end();
+}
+
+const FaultManifestEvent* manifestEvent(const FaultManifest& manifest,
+                                        const std::string& event_id) {
+  for (const auto& event : manifest.events) {
+    if (event.event_id == event_id) return &event;
+  }
+  return nullptr;
+}
+
+// Cross-checks the manifest against the enabled configuration switches.  The
+// checks fail closed: an enabled model whose event is missing from the
+// manifest, declared NOT_IMPLEMENTED, or outside an enabled family rejects the
+// configuration instead of being demoted silently.
+void validateFaultManifestAgainstConfig(const IntegrityConfig& cfg,
+                                        const FaultManifest& manifest) {
+  const int declared_order = cfg.fault_models.double_faults_enabled ? 2 : 1;
+  if (manifest.max_fault_order < declared_order) {
+    throw std::runtime_error(
+        "fault manifest supports max_fault_order=" +
+        std::to_string(manifest.max_fault_order) +
+        " but the configuration declares order=" +
+        std::to_string(declared_order));
+  }
+  const auto require_event = [&](const char* event_id, bool enabled,
+                                 const char* family_id) {
+    const FaultManifestEvent* event = manifestEvent(manifest, event_id);
+    if (!event) {
+      throw std::runtime_error(std::string("fault manifest is missing event ") +
+                               event_id);
+    }
+    if (!enabled) return;
+    if (event->evidence_status == "NOT_IMPLEMENTED") {
+      throw std::runtime_error(std::string("event ") + event_id +
+                               " is enabled but declared NOT_IMPLEMENTED");
+    }
+    if (!manifestLists(manifest.enabled_single_families, family_id)) {
+      throw std::runtime_error(std::string("event ") + event_id +
+                               " is enabled but family " + family_id +
+                               " is not enabled");
+    }
+    if (!FaultManifestLoader::modelTypeImplemented(event->model_type)) {
+      throw std::runtime_error(std::string("event ") + event_id +
+                               " uses unsupported model_type " +
+                               event->model_type);
+    }
+  };
+  require_event("uwb_anchor_epoch_independent_bias",
+                cfg.fault_models.uwb.epoch_single_anchor_bias,
+                "uwb_single_anchor");
+  require_event("uwb_anchor_persistent_bias",
+                cfg.fault_models.uwb.persistent_anchor_bias,
+                "uwb_single_anchor");
+  require_event("uwb_anchor_affine_ramp", cfg.fault_models.uwb.ramp_bias,
+                "uwb_single_anchor");
+  require_event("imu_accel_axis_interval_bias",
+                cfg.fault_models.imu.accel_axis_interval_bias,
+                "imu_single_axis");
+  require_event("imu_gyro_axis_interval_bias",
+                cfg.fault_models.imu.gyro_axis_interval_bias,
+                "imu_single_axis");
+  const bool pair_enabled =
+      cfg.fault_models.double_faults_enabled &&
+      (cfg.fault_models.combinations.uwb_plus_accel ||
+       cfg.fault_models.combinations.uwb_plus_gyro);
+  if (pair_enabled && !manifestLists(manifest.enabled_pair_families, "uwb_imu")) {
+    throw std::runtime_error(
+        "configured UWB x IMU combinations require the declared pair family "
+        "uwb_imu in the fault manifest");
+  }
+  if (manifestLists(manifest.unsupported_families, "two_uwb") &&
+      cfg.fault_models.combinations.two_uwb) {
+    throw std::runtime_error(
+        "two_uwb is declared unsupported by the generator but enabled");
+  }
+}
+
 }  // namespace
 
 std::uint32_t enabledFaultHypothesisCardinality(
@@ -163,10 +251,14 @@ IntegrityConfig IntegrityConfigLoader::load(
   cfg.source_path = yaml_path;
   YAML::Node root = YAML::Load(readAll(yaml_path));
   requireMap(root, "root");
-  // Read compatibility is explicit: legacy YAML resolves to the new,
-  // single-fault-only default and the injected values are serialized and
-  // hashed, so the effective policy is never implicit in the manifest.
-  requireMap(root["fault_models"], "fault_models");
+  // A3 migration: remember which fault-order keys the user actually wrote so
+  // that order/flags conflicts are rejected instead of silently overwritten.
+  const bool has_single_flag =
+      static_cast<bool>(root["fault_models"]["single_faults_enabled"]);
+  const bool has_double_flag =
+      static_cast<bool>(root["fault_models"]["double_faults_enabled"]);
+  const bool has_max_fault_order =
+      static_cast<bool>(root["fault_models"]["max_fault_order"]);
   if (!root["fault_models"]["single_faults_enabled"]) {
     root["fault_models"]["single_faults_enabled"] = true;
   }
@@ -280,17 +372,51 @@ IntegrityConfig IntegrityConfigLoader::load(
   positive(cfg.imu.max_gap_s, "imu.max_gap_s");
 
   const auto window = root["integrity_window"];
-  rejectUnknown(window, "integrity_window", {"epochs", "recovery_margin_epochs",
+  rejectUnknown(window, "integrity_window", {"epochs", "intervals",
+      "recovery_margin_epochs",
       "boundary_method", "rank_tolerance", "max_condition_number",
       "max_linearization_step_norm", "require_history_provenance"});
-  cfg.integrity_window.epochs = required<std::uint32_t>(window, "epochs", "integrity_window");
+  // A3 migration: `intervals` is the canonical name; `epochs` is a deprecated
+  // alias for the same interval count.  Supplying both with different values
+  // is rejected instead of picking one silently.
+  {
+    const auto epochs_node = window["epochs"];
+    const auto intervals_node = window["intervals"];
+    if (!epochs_node && !intervals_node) {
+      throw std::runtime_error(
+          "integrity_window requires epochs or intervals");
+    }
+    if (epochs_node && intervals_node) {
+      const auto epochs_value = epochs_node.as<std::uint32_t>();
+      const auto intervals_value = intervals_node.as<std::uint32_t>();
+      if (epochs_value != intervals_value) {
+        throw std::runtime_error(
+            "integrity_window.epochs conflicts with integrity_window.intervals");
+      }
+      cfg.migration_warnings.push_back(
+          "integrity_window.epochs duplicated integrity_window.intervals; "
+          "remove the legacy alias");
+    } else if (epochs_node) {
+      cfg.migration_warnings.push_back(
+          "integrity_window.epochs is a deprecated alias of intervals "
+          "(interval count, nodes = intervals + 1)");
+    }
+    cfg.integrity_window.epochs = epochs_node
+        ? epochs_node.as<std::uint32_t>() : intervals_node.as<std::uint32_t>();
+    root["integrity_window"]["intervals"] = cfg.integrity_window.epochs;
+    root["integrity_window"]["epochs"] = cfg.integrity_window.epochs;
+  }
   cfg.integrity_window.recovery_margin_epochs = required<std::uint32_t>(window, "recovery_margin_epochs", "integrity_window");
   cfg.integrity_window.boundary_method = required<std::string>(window, "boundary_method", "integrity_window");
   cfg.integrity_window.rank_tolerance = required<double>(window, "rank_tolerance", "integrity_window");
   cfg.integrity_window.max_condition_number = required<double>(window, "max_condition_number", "integrity_window");
   cfg.integrity_window.max_linearization_step_norm = required<double>(window, "max_linearization_step_norm", "integrity_window");
   cfg.integrity_window.require_history_provenance = required<bool>(window, "require_history_provenance", "integrity_window");
-  if (cfg.integrity_window.epochs == 0) throw std::runtime_error("integrity_window.epochs must be > 0");
+  if (cfg.integrity_window.epochs == 0) throw std::runtime_error("integrity_window.intervals must be > 0");
+  cfg.migration_warnings.push_back(
+      "integrity_window.max_linearization_step_norm retained unchanged: the "
+      "0.25 mixed-unit Euclidean step gate remains a candidate admissibility "
+      "check; physical-scale linearization diagnostics are deferred to B/C");
   if (cfg.integrity_window.boundary_method != "bayes_tree_schur") throw std::runtime_error("integrity_window.boundary_method must be bayes_tree_schur");
   positive(cfg.integrity_window.rank_tolerance, "integrity_window.rank_tolerance");
   positive(cfg.integrity_window.max_condition_number, "integrity_window.max_condition_number");
@@ -320,8 +446,8 @@ IntegrityConfig IntegrityConfigLoader::load(
 
   const auto fault_models = root["fault_models"];
   rejectUnknown(fault_models, "fault_models", {"single_faults_enabled",
-      "double_faults_enabled", "max_cardinality", "uwb", "imu",
-      "combinations"});
+      "double_faults_enabled", "max_cardinality", "max_fault_order",
+      "manifest_path", "uwb", "imu", "combinations"});
   cfg.fault_models.single_faults_enabled = required<bool>(
       fault_models, "single_faults_enabled", "fault_models");
   cfg.fault_models.double_faults_enabled = required<bool>(
@@ -331,6 +457,41 @@ IntegrityConfig IntegrityConfigLoader::load(
     throw std::runtime_error(
         "fault_models must enable single_faults_enabled or "
         "double_faults_enabled");
+  }
+  // A3 migration: max_fault_order is the canonical declared order.  Legacy
+  // flags remain readable; a conflict between the two spellings is rejected.
+  if (has_max_fault_order) {
+    const int order = fault_models["max_fault_order"].as<int>();
+    if (order != 1 && order != 2) {
+      throw std::runtime_error("fault_models.max_fault_order must be 1 or 2");
+    }
+    const int derived = cfg.fault_models.double_faults_enabled ? 2 : 1;
+    if ((has_single_flag || has_double_flag) && order != derived) {
+      throw std::runtime_error(
+          "fault_models.max_fault_order conflicts with legacy "
+          "single_faults_enabled/double_faults_enabled");
+    }
+    if (!has_single_flag && !has_double_flag) {
+      cfg.fault_models.single_faults_enabled = true;
+      cfg.fault_models.double_faults_enabled = (order == 2);
+      root["fault_models"]["single_faults_enabled"] = true;
+      root["fault_models"]["double_faults_enabled"] = (order == 2);
+      cfg.migration_warnings.push_back(
+          "fault_models.max_fault_order=" + std::to_string(order) +
+          " derived legacy single/double flags (order-only declaration)");
+    }
+    cfg.fault_models.max_fault_order = order;
+  } else {
+    cfg.fault_models.max_fault_order =
+        cfg.fault_models.double_faults_enabled ? 2 : 1;
+    cfg.migration_warnings.push_back(
+        "legacy fault_models.single_faults_enabled/double_faults_enabled "
+        "mapped to max_fault_order=" +
+        std::to_string(*cfg.fault_models.max_fault_order));
+  }
+  root["fault_models"]["max_fault_order"] = *cfg.fault_models.max_fault_order;
+  if (fault_models["manifest_path"]) {
+    cfg.fault_models.manifest_path = fault_models["manifest_path"].as<std::string>();
   }
   cfg.fault_models.max_cardinality = required<std::uint32_t>(fault_models, "max_cardinality", "fault_models");
   if (cfg.fault_models.max_cardinality != 2) throw std::runtime_error("fault_models.max_cardinality must be 2 for the initial claim");
@@ -586,6 +747,46 @@ IntegrityConfig IntegrityConfigLoader::load(
   if (!std::isfinite(allocated_hmi) || allocated_hmi > cfg.risk.p_hmi_total) {
     throw std::runtime_error(
         "risk.p_hmi_total is smaller than the complete anchor-map allocation");
+  }
+
+  // A3: optional fault manifest.  When declared it must be loadable and must
+  // agree with the enabled fault-model switches; unsupported families are
+  // rejected at startup instead of being silently accepted.
+  if (!cfg.fault_models.manifest_path.empty()) {
+    const std::string manifest_path =
+        resolveRelativePath(yaml_path, cfg.fault_models.manifest_path);
+    FaultManifest manifest = FaultManifestLoader::load(manifest_path);
+    validateFaultManifestAgainstConfig(cfg, manifest);
+    if (manifest.protected_quantity != "position_xyz" ||
+        manifest.position_reference != "body_origin") {
+      throw std::runtime_error(
+          "fault manifest protected_quantity/position_reference must match the "
+          "declared body-origin position protection");
+    }
+    cfg.fault_manifest = std::move(manifest);
+  }
+
+  // Migration notes and the resolved fault manifest are part of the hashed
+  // resolved configuration so a mismatch can never be silent.  Re-emit the
+  // YAML first so migrated canonical keys (max_fault_order, intervals) appear
+  // in the effective dump.
+  if (!cfg.migration_warnings.empty() || cfg.fault_manifest) {
+    cfg.resolved_yaml = emitResolvedYaml(root);
+    cfg.resolved_yaml += "\n# --- migration notes (informational) ---\n";
+    for (const auto& warning : cfg.migration_warnings) {
+      cfg.resolved_yaml += "# " + warning + "\n";
+    }
+    if (cfg.fault_manifest) {
+      cfg.resolved_yaml += "# resolved_fault_manifest_id: " +
+          cfg.fault_manifest->manifest_id + "\n";
+      cfg.resolved_yaml += "# resolved_fault_manifest_digest: " +
+          cfg.fault_manifest->digest + "\n";
+      cfg.resolved_yaml += "# --- resolved fault manifest (read-only copy) ---\n";
+      std::istringstream lines(cfg.fault_manifest->resolved_yaml);
+      std::string line;
+      while (std::getline(lines, line)) cfg.resolved_yaml += "# " + line + "\n";
+    }
+    cfg.config_hash = fnv1a64(cfg.resolved_yaml);
   }
   return cfg;
 }

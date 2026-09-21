@@ -1,0 +1,9 @@
+# AGENTS.md / agent instruction files search (git root: /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl, date 2026-09-21T03:37:30Z)
+# command: find . -name AGENTS.md -not -path './.git/*' -print
+# command: find . \( -name 'AGENTS.md' -o -name '.github/copilot-instructions.md' -o -name 'CLAUDE.md' -o -name '.cursorrules' \) -not -path './.git/*' -print
+# => empty result means no agent instruction file present
+--- supplementary search (corrected) 2026-09-21T03:37:34Z
+# find . -iname 'agents.md' -o -iname 'claude.md' -o -iname 'copilot-instructions.md' -o -iname '.cursorrules' (excluding .git)
+# ls .github (may not exist)
+.github: not present
+# conclusion: no AGENTS.md/agent-instruction file in repo; conventions come from README.md, CMakeLists.txt, doc/UWB_IMU_PL_V2_DEVELOPMENT_HANDBOOK.md, doc/adr/

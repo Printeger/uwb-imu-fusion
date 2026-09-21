@@ -373,7 +373,7 @@ def validate_v5(directory, manifest):
         with diagnostic_attempts.open(newline="", encoding="utf-8") as stream:
             for row in csv.DictReader(stream):
                 if row["schema_version"].endswith(
-                        ("/v3", "/v4", "/v5", "/v6", "/v7", "/v8", "/v9", "/v10")):
+                        ("/v3", "/v4", "/v5", "/v6", "/v7", "/v8", "/v9", "/v10", "/v11")):
                     frozen_groups[int(row["input_attempt_id"])] = id_set(row["frozen_group_ids"], "frozen_group_ids")
         if frozen_groups:
             with (directory / "diagnostic_candidates.csv").open(newline="", encoding="utf-8") as stream:

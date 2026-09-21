@@ -1,4 +1,5 @@
 #pragma once
+#include "uwb_imu_pl/common/integrity_identity.hpp"
 #include "uwb_imu_pl/estimation/rank_update_kernel.hpp"
 #include <string>
 
@@ -10,6 +11,9 @@ struct FrozenCandidateReplay {
   LinearizedIntegrityWindow window;
   std::vector<ExclusionAction> actions;
   RankUpdateConfig config;
+  // A3: frozen result identity block (schema v5).  Older v1-v4 artifacts decode
+  // with NOT_AVAILABLE_IN_SCHEMA placeholders instead of fabricated values.
+  IntegritySnapshotIdentity identity;
 };
 // Versioned, lossless binary diagnostic artifact. Never enabled by default.
 void writeCandidateReplay(const std::string& path, const FrozenCandidateReplay& replay);

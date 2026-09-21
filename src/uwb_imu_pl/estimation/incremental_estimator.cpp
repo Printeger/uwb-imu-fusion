@@ -1259,6 +1259,13 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     boundary.whitener = boundary.covariance;
     boundary.effective_weight = 1.0;
     boundary.whitening_model_id = "frozen_graph_partial_qr_schur";
+    // A3: the condensed boundary prior also touches every window column (its
+    // dense block spans the full window).  Filling the indices keeps
+    // diagnostics/census analysis consistent with the regular blocks instead
+    // of reporting zero touched columns.
+    boundary.window_column_indices.resize(total_columns);
+    std::iota(boundary.window_column_indices.begin(),
+              boundary.window_column_indices.end(), 0);
     boundary.version = tx.base_version;
     window.blocks.push_back(std::move(boundary));
     window.capabilities.includes_boundary_prior = true;

@@ -31,11 +31,7 @@ imu:
   noise_overbound_calibration_id: ""
 
 integrity_window:
-  # A3: `intervals` is the canonical name (interval count; the frozen window
-  # then holds intervals+1 state nodes).  `epochs` is a deprecated alias kept
-  # for older readers; both must agree when both are present.
-  intervals: 10
-  epochs: 10
+  epochs: 20
   recovery_margin_epochs: 10
   boundary_method: bayes_tree_schur
   rank_tolerance: 1.0e-10
@@ -53,14 +49,9 @@ detector:
 fault_models:
   single_faults_enabled: true
   double_faults_enabled: false
-  max_cardinality: 2
-  # A3: canonical declared order (1 = single events; 2 adds declared pair
-  # families).  Legacy single_/double_faults_enabled above remain readable and
-  # must agree, otherwise loading fails.
   max_fault_order: 1
-  # A3: strict fault manifest (relative to this file).  Enabled models must be
-  # declared and implemented there; unsupported families reject at startup.
-  manifest_path: integrity_fault_manifest.yaml
+  manifest_path: ../../../../config/integrity_fault_manifest.yaml
+  max_cardinality: 2
   uwb:
     enabled: true
     epoch_single_anchor_bias: true

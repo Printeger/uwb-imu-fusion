@@ -1,0 +1,1509 @@
+{
+ "produced_by": "tools/oracle_compare.py",
+ "algorithm": "independent numpy/scipy reimplementation (no production solver)",
+ "source_revision": "2772b3a1e3584b25c889239421404f550fba9f5d",
+ "tolerance_source": {
+  "csv_printed": "6-significant-digit ostream default -> rel 1e-5",
+  "strict_linear": "ADR 0002 well-conditioned rel 1e-9 (used elsewhere)",
+  "moderate_linear": "ADR 0002 near-gate rel 1e-7 (used elsewhere)",
+  "whitening_assembly": "abs 1e-12 relative to block scale"
+ },
+ "detector": {
+  "p_fa_per_test": 1e-06,
+  "source": "detector.p_fa_per_test"
+ },
+ "cases": [
+  {
+   "case": "A_nominal_30",
+   "note": "healthy frozen window, anchor template active",
+   "bin": "raw/replay_p2/A_nominal/exports/attempt-30.bin",
+   "bin_sha256": "3730c22054d4651507b066de87e7e277b652f297c88b16cf68ead7ffe8dab17d",
+   "csv_dir": "raw/runs_p2/A_nominal",
+   "attempt": 30,
+   "window": {
+    "m": 253,
+    "n": 165,
+    "rank": 165,
+    "dof": 88,
+    "condition_number": 328352.7291013592
+   },
+   "identity": {
+    "snapshot_id": "window:30:transaction:30",
+    "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
+    "config_digest": "fbca498476c5af11",
+    "manifest_digest": "d2a01e7343f5c357",
+    "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
+    "sensor_timestamp_ns": 1500000000,
+    "frame_id": "world",
+    "position_reference": "body_origin",
+    "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
+    "state_scale": "identity",
+    "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
+    "whitening_id": "frozen_block_whitener:b1a986f29306c561",
+    "noise_model_id": "per_block_frozen_noise_model",
+    "boundary_summary_id": "partial_qr_schur_boundary",
+    "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
+    "protected_reference_center": "body_origin",
+    "active_observation_index": "20002;21001;21002;22001;22002;23001;23002;24001;24002;25001;25002;26001;26002;27001;27002;28001;28002;29001;29002;30000;30001;30002",
+    "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
+    "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
+    "identity_digest": "77a94a3673648aaf"
+   },
+   "items": [
+    {
+     "id": "O0",
+     "case": "A_nominal_30",
+     "description": "v5 bin identity binding to run CSV",
+     "status": "PASS",
+     "oracle": {
+      "snapshot_id": "window:30:transaction:30",
+      "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
+      "config_digest": "fbca498476c5af11",
+      "manifest_digest": "d2a01e7343f5c357",
+      "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
+      "sensor_timestamp_ns": 1500000000,
+      "frame_id": "world",
+      "position_reference": "body_origin",
+      "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
+      "state_scale": "identity",
+      "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
+      "whitening_id": "frozen_block_whitener:b1a986f29306c561",
+      "noise_model_id": "per_block_frozen_noise_model",
+      "boundary_summary_id": "partial_qr_schur_boundary",
+      "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
+      "protected_reference_center": "body_origin",
+      "active_observation_index": "20002;21001;21002;22001;22002;23001;23002;24001;24002;25001;25002;26001;26002;27001;27002;28001;28002;29001;29002;30000;30001;30002",
+      "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
+      "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
+      "identity_digest": "77a94a3673648aaf"
+     },
+     "production": {
+      "snapshot_id": "window:30:transaction:30",
+      "config_digest": "fbca498476c5af11",
+      "identity_digest": "77a94a3673648aaf",
+      "frame_id": "world",
+      "position_reference": "body_origin",
+      "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation"
+     },
+     "tolerance": "exact equality",
+     "note": "{\"snapshot_id\": true, \"identity_digest\": true, \"config_digest\": true, \"frame_id_world\": true, \"protected_body_origin\": true, \"coverage_epoch_declared\": true}"
+    },
+    {
+     "id": "O1",
+     "case": "A_nominal_30",
+     "description": "parity statistic s^2 = ||z - H x_hat||^2",
+     "status": "PASS",
+     "oracle": 4.4529470232546734e-08,
+     "production": 4.45295e-08,
+     "tolerance": "rel<=1e-05 (CSV precision)",
+     "note": "oracle_rank=165"
+    },
+    {
+     "id": "O2",
+     "case": "A_nominal_30",
+     "description": "detector dof and chi-square threshold",
+     "status": "PASS",
+     "oracle": {
+      "dof": 88,
+      "threshold": 165.99308436123317
+     },
+     "production": {
+      "dof": 88,
+      "threshold": 165.993
+     },
+     "tolerance": "dof exact, threshold rel<=1e-05",
+     "note": "p_fa=1e-06 from detector.p_fa_per_test"
+    },
+    {
+     "id": "O3",
+     "case": "A_nominal_30",
+     "description": "block assembly and W * J_raw == J_whitened",
+     "status": "PASS",
+     "oracle": {
+      "assembly_max_rel": 0.0,
+      "whitening_max_rel": 1.9003227604906671e-16
+     },
+     "production": null,
+     "tolerance": "abs<=1e-12",
+     "note": "independent row placement via window_column_indices"
+    },
+    {
+     "id": "O4",
+     "case": "A_nominal_30",
+     "description": "rank / dof / condition number of H",
+     "status": "PASS",
+     "oracle": {
+      "rank": 165,
+      "dof": 88,
+      "condition_number": 328352.7291013592
+     },
+     "production": {
+      "rank": 165,
+      "dof": 88,
+      "condition_number": 328352.7291092238
+     },
+     "tolerance": "rank+dof exact, cond rel<=1e-05",
+     "note": "SVD gate 1e-9 * max(1, sigma_max)"
+    },
+    {
+     "id": "O5",
+     "case": "A_nominal_30",
+     "description": "anchor-1 epoch-independent template (Gamma, slopes)",
+     "status": "PASS",
+     "oracle": {
+      "sigma_min": 9.102707747535122,
+      "slopes_xyz": [
+       0.013194115437292736,
+       0.0011882044038921831,
+       0.022380565161211997
+      ],
+      "gamma": 82.85928833703595
+     },
+     "production": {
+      "hypothesis_id": "21",
+      "sigma_min": 9.10271,
+      "slopes_xyz": [
+       0.0131941,
+       0.00118821,
+       0.0223806
+      ]
+     },
+     "tolerance": "rel<=1e-05 (CSV precision); non-finite never passes",
+     "note": "{\"sigma_min_ok\": true, \"axes\": [{\"axis\": \"x\", \"oracle\": 0.013194115437292736, \"production\": 0.0131941, \"rel\": 1.1700134661664462e-06}, {\"axis\": \"y\", \"oracle\": 0.0011882044038921831, \"production\": 0.00118821, \"rel\": 4.7096959434285286e-06}, {\"axis\": \"z\", \"oracle\": 0.022380565161211997, \"production\": 0.0223806, \"rel\": 1.5566512070178008e-06}]}"
+    },
+    {
+     "id": "O6",
+     "case": "A_nominal_30",
+     "description": "non-centrality boundary lambda* vs scipy ncx2",
+     "status": "PASS",
+     "oracle": {
+      "solved_first": 157.8177642882721,
+      "worst_rel_vs_csv": 1.4935668169954078e-06,
+      "worst_abs_cdf_closure": 2.7455994934403108e-08,
+      "rows": 64
+     },
+     "production": null,
+     "tolerance": "rel<=1e-05; P_miss(lambda*)=p_md within 1e-6",
+     "note": "P(chi2'_dof(lambda) <= tau) = p_md allocation, tau/dof taken from the conditional detector of the same window"
+    },
+    {
+     "id": "O7",
+     "case": "A_nominal_30",
+     "description": "G9 guard: monitorable hypotheses carry finite slopes",
+     "status": "PASS",
+     "oracle": {
+      "monitorable_rows": 236,
+      "nonfinite_rows": 0
+     },
+     "production": null,
+     "tolerance": "count must be 0",
+     "note": "hypotheses.csv slope_x/y/z"
+    }
+   ],
+   "summary": {
+    "pass": 8,
+    "fail": 0,
+    "not_run": 0
+   }
+  },
+  {
+   "case": "C_uwb_fde_25",
+   "note": "UWB fault before the exclusion action",
+   "bin": "raw/replay_p2/C_uwb_fde/exports/attempt-25.bin",
+   "bin_sha256": "1802f0584bfa92a5d2dc537b92ce130d28c0d14a86bd30acb5b5279caca30442",
+   "csv_dir": "raw/runs_p2/C_uwb_fde",
+   "attempt": 25,
+   "window": {
+    "m": 253,
+    "n": 165,
+    "rank": 165,
+    "dof": 88,
+    "condition_number": 292184.0900012754
+   },
+   "identity": {
+    "snapshot_id": "window:25:transaction:25",
+    "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
+    "config_digest": "1a87b5260b3646be",
+    "manifest_digest": "d2a01e7343f5c357",
+    "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
+    "sensor_timestamp_ns": 1250000000,
+    "frame_id": "world",
+    "position_reference": "body_origin",
+    "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
+    "state_scale": "identity",
+    "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
+    "whitening_id": "frozen_block_whitener:0b8543854b511233",
+    "noise_model_id": "per_block_frozen_noise_model",
+    "boundary_summary_id": "partial_qr_schur_boundary",
+    "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
+    "protected_reference_center": "body_origin",
+    "active_observation_index": "15002;16001;16002;17001;17002;18001;18002;19001;19002;20001;20002;21001;21002;22001;22002;23001;23002;24001;24002;25000;25001;25002",
+    "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
+    "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
+    "identity_digest": "830de2db1dd43a1c"
+   },
+   "items": [
+    {
+     "id": "O0",
+     "case": "C_uwb_fde_25",
+     "description": "v5 bin identity binding to run CSV",
+     "status": "PASS",
+     "oracle": {
+      "snapshot_id": "window:25:transaction:25",
+      "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
+      "config_digest": "1a87b5260b3646be",
+      "manifest_digest": "d2a01e7343f5c357",
+      "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
+      "sensor_timestamp_ns": 1250000000,
+      "frame_id": "world",
+      "position_reference": "body_origin",
+      "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
+      "state_scale": "identity",
+      "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
+      "whitening_id": "frozen_block_whitener:0b8543854b511233",
+      "noise_model_id": "per_block_frozen_noise_model",
+      "boundary_summary_id": "partial_qr_schur_boundary",
+      "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
+      "protected_reference_center": "body_origin",
+      "active_observation_index": "15002;16001;16002;17001;17002;18001;18002;19001;19002;20001;20002;21001;21002;22001;22002;23001;23002;24001;24002;25000;25001;25002",
+      "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
+      "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
+      "identity_digest": "830de2db1dd43a1c"
+     },
+     "production": {
+      "snapshot_id": "window:25:transaction:25",
+      "config_digest": "1a87b5260b3646be",
+      "identity_digest": "830de2db1dd43a1c",
+      "frame_id": "world",
+      "position_reference": "body_origin",
+      "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation"
+     },
+     "tolerance": "exact equality",
+     "note": "{\"snapshot_id\": true, \"identity_digest\": true, \"config_digest\": true, \"frame_id_world\": true, \"protected_body_origin\": true, \"coverage_epoch_declared\": true}"
+    },
+    {
+     "id": "O1",
+     "case": "C_uwb_fde_25",
+     "description": "parity statistic s^2 = ||z - H x_hat||^2",
+     "status": "PASS",
+     "oracle": 419.264152290827,
+     "production": 419.264,
+     "tolerance": "rel<=1e-05 (CSV precision)",
+     "note": "oracle_rank=165"
+    },
+    {
+     "id": "O2",
+     "case": "C_uwb_fde_25",
+     "description": "detector dof and chi-square threshold",
+     "status": "PASS",
+     "oracle": {
+      "dof": 88,
+      "threshold": 165.99308436123317
+     },
+     "production": {
+      "dof": 88,
+      "threshold": 165.993
+     },
+     "tolerance": "dof exact, threshold rel<=1e-05",
+     "note": "p_fa=1e-06 from detector.p_fa_per_test"
+    },
+    {
+     "id": "O3",
+     "case": "C_uwb_fde_25",
+     "description": "block assembly and W * J_raw == J_whitened",
+     "status": "PASS",
+     "oracle": {
+      "assembly_max_rel": 0.0,
+      "whitening_max_rel": 1.9994406919718948e-16
+     },
+     "production": null,
+     "tolerance": "abs<=1e-12",
+     "note": "independent row placement via window_column_indices"
+    },
+    {
+     "id": "O4",
+     "case": "C_uwb_fde_25",
+     "description": "rank / dof / condition number of H",
+     "status": "PASS",
+     "oracle": {
+      "rank": 165,
+      "dof": 88,
+      "condition_number": 292184.0900012754
+     },
+     "production": {
+      "rank": 165,
+      "dof": 88,
+      "condition_number": 292184.08999770106
+     },
+     "tolerance": "rank+dof exact, cond rel<=1e-05",
+     "note": "SVD gate 1e-9 * max(1, sigma_max)"
+    },
+    {
+     "id": "O5",
+     "case": "C_uwb_fde_25",
+     "description": "anchor-1 epoch-independent template (Gamma, slopes)",
+     "status": "PASS",
+     "oracle": {
+      "sigma_min": 9.100446811210835,
+      "slopes_xyz": [
+       0.011926710411259233,
+       0.0018100782201760906,
+       0.022480367032426438
+      ],
+      "gamma": 82.81813216367745
+     },
+     "production": {
+      "hypothesis_id": "21",
+      "sigma_min": 9.10045,
+      "slopes_xyz": [
+       0.0119267,
+       0.00181007,
+       0.0224804
+      ]
+     },
+     "tolerance": "rel<=1e-05 (CSV precision); non-finite never passes",
+     "note": "{\"sigma_min_ok\": true, \"axes\": [{\"axis\": \"x\", \"oracle\": 0.011926710411259233, \"production\": 0.0119267, \"rel\": 8.729363650330261e-07}, {\"axis\": \"y\", \"oracle\": 0.0018100782201760906, \"production\": 0.00181007, \"rel\": 4.541337495234633e-06}, {\"axis\": \"z\", \"oracle\": 0.022480367032426438, \"production\": 0.0224804, \"rel\": 1.4665029787477802e-06}]}"
+    },
+    {
+     "id": "O6",
+     "case": "C_uwb_fde_25",
+     "description": "non-centrality boundary lambda* vs scipy ncx2",
+     "status": "PASS",
+     "oracle": {
+      "solved_first": 157.8177642882721,
+      "worst_rel_vs_csv": 1.4935668169954078e-06,
+      "worst_abs_cdf_closure": 2.7455994934403108e-08,
+      "rows": 64
+     },
+     "production": null,
+     "tolerance": "rel<=1e-05; P_miss(lambda*)=p_md within 1e-6",
+     "note": "P(chi2'_dof(lambda) <= tau) = p_md allocation, tau/dof taken from the conditional detector of the same window"
+    },
+    {
+     "id": "O7",
+     "case": "C_uwb_fde_25",
+     "description": "G9 guard: monitorable hypotheses carry finite slopes",
+     "status": "PASS",
+     "oracle": {
+      "monitorable_rows": 236,
+      "nonfinite_rows": 0
+     },
+     "production": null,
+     "tolerance": "count must be 0",
+     "note": "hypotheses.csv slope_x/y/z"
+    }
+   ],
+   "summary": {
+    "pass": 8,
+    "fail": 0,
+    "not_run": 0
+   }
+  },
+  {
+   "case": "C_uwb_fde_26",
+   "note": "post-FDE window (action applied, 128 cap)",
+   "bin": "raw/replay_p2/C_uwb_fde/exports/attempt-26.bin",
+   "bin_sha256": "aab25d7599d09b165219d5031b7d21b11eb84cd3001ae95420190651478adda3",
+   "csv_dir": "raw/runs_p2/C_uwb_fde",
+   "attempt": 26,
+   "window": {
+    "m": 252,
+    "n": 165,
+    "rank": 165,
+    "dof": 87,
+    "condition_number": 299669.41180161556
+   },
+   "identity": {
+    "snapshot_id": "window:26:transaction:26",
+    "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
+    "config_digest": "1a87b5260b3646be",
+    "manifest_digest": "d2a01e7343f5c357",
+    "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
+    "sensor_timestamp_ns": 1300000000,
+    "frame_id": "world",
+    "position_reference": "body_origin",
+    "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
+    "state_scale": "identity",
+    "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
+    "whitening_id": "frozen_block_whitener:2720de4ce9da4f54",
+    "noise_model_id": "per_block_frozen_noise_model",
+    "boundary_summary_id": "partial_qr_schur_boundary",
+    "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
+    "protected_reference_center": "body_origin",
+    "active_observation_index": "16002;17001;17002;18001;18002;19001;19002;20001;20002;21001;21002;22001;22002;23001;23002;24001;24002;25001;25010;26000;26001;26002",
+    "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
+    "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
+    "identity_digest": "7b1ff4ce3a0c5f9e"
+   },
+   "items": [
+    {
+     "id": "O0",
+     "case": "C_uwb_fde_26",
+     "description": "v5 bin identity binding to run CSV",
+     "status": "PASS",
+     "oracle": {
+      "snapshot_id": "window:26:transaction:26",
+      "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
+      "config_digest": "1a87b5260b3646be",
+      "manifest_digest": "d2a01e7343f5c357",
+      "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
+      "sensor_timestamp_ns": 1300000000,
+      "frame_id": "world",
+      "position_reference": "body_origin",
+      "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
+      "state_scale": "identity",
+      "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
+      "whitening_id": "frozen_block_whitener:2720de4ce9da4f54",
+      "noise_model_id": "per_block_frozen_noise_model",
+      "boundary_summary_id": "partial_qr_schur_boundary",
+      "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
+      "protected_reference_center": "body_origin",
+      "active_observation_index": "16002;17001;17002;18001;18002;19001;19002;20001;20002;21001;21002;22001;22002;23001;23002;24001;24002;25001;25010;26000;26001;26002",
+      "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
+      "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
+      "identity_digest": "7b1ff4ce3a0c5f9e"
+     },
+     "production": {
+      "snapshot_id": "window:26:transaction:26",
+      "config_digest": "1a87b5260b3646be",
+      "identity_digest": "7b1ff4ce3a0c5f9e",
+      "frame_id": "world",
+      "position_reference": "body_origin",
+      "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation"
+     },
+     "tolerance": "exact equality",
+     "note": "{\"snapshot_id\": true, \"identity_digest\": true, \"config_digest\": true, \"frame_id_world\": true, \"protected_body_origin\": true, \"coverage_epoch_declared\": true}"
+    },
+    {
+     "id": "O1",
+     "case": "C_uwb_fde_26",
+     "description": "parity statistic s^2 = ||z - H x_hat||^2",
+     "status": "PASS",
+     "oracle": 4.0901364211769864e-08,
+     "production": 4.09014e-08,
+     "tolerance": "rel<=1e-05 (CSV precision)",
+     "note": "oracle_rank=165"
+    },
+    {
+     "id": "O2",
+     "case": "C_uwb_fde_26",
+     "description": "detector dof and chi-square threshold",
+     "status": "PASS",
+     "oracle": {
+      "dof": 87,
+      "threshold": 164.63637545259573
+     },
+     "production": {
+      "dof": 87,
+      "threshold": 164.636
+     },
+     "tolerance": "dof exact, threshold rel<=1e-05",
+     "note": "p_fa=1e-06 from detector.p_fa_per_test"
+    },
+    {
+     "id": "O3",
+     "case": "C_uwb_fde_26",
+     "description": "block assembly and W * J_raw == J_whitened",
+     "status": "PASS",
+     "oracle": {
+      "assembly_max_rel": 0.0,
+      "whitening_max_rel": 1.9994406919718948e-16
+     },
+     "production": null,
+     "tolerance": "abs<=1e-12",
+     "note": "independent row placement via window_column_indices"
+    },
+    {
+     "id": "O4",
+     "case": "C_uwb_fde_26",
+     "description": "rank / dof / condition number of H",
+     "status": "PASS",
+     "oracle": {
+      "rank": 165,
+      "dof": 87,
+      "condition_number": 299669.41180161556
+     },
+     "production": {
+      "rank": 165,
+      "dof": 87,
+      "condition_number": 299669.4118005962
+     },
+     "tolerance": "rank+dof exact, cond rel<=1e-05",
+     "note": "SVD gate 1e-9 * max(1, sigma_max)"
+    },
+    {
+     "id": "O5",
+     "case": "C_uwb_fde_26",
+     "description": "anchor-1 epoch-independent template (Gamma, slopes)",
+     "status": "PASS",
+     "oracle": {
+      "sigma_min": 9.051448109919209,
+      "slopes_xyz": [
+       0.012445175086309362,
+       0.0026955325434125476,
+       0.02327212170299978
+      ],
+      "gamma": 81.92871288656
+     },
+     "production": {
+      "hypothesis_id": "19",
+      "sigma_min": 9.05145,
+      "slopes_xyz": [
+       0.0124452,
+       0.00269554,
+       0.0232721
+      ]
+     },
+     "tolerance": "rel<=1e-05 (CSV precision); non-finite never passes",
+     "note": "{\"sigma_min_ok\": true, \"axes\": [{\"axis\": \"x\", \"oracle\": 0.012445175086309362, \"production\": 0.0124452, \"rel\": 2.0018714555237427e-06}, {\"axis\": \"y\", \"oracle\": 0.0026955325434125476, \"production\": 0.00269554, \"rel\": 2.766268522272728e-06}, {\"axis\": \"z\", \"oracle\": 0.02327212170299978, \"production\": 0.0232721, \"rel\": 9.325750379035782e-07}]}"
+    },
+    {
+     "id": "O6",
+     "case": "C_uwb_fde_26",
+     "description": "non-centrality boundary lambda* vs scipy ncx2",
+     "status": "PASS",
+     "oracle": {
+      "solved_first": 157.2167806585794,
+      "worst_rel_vs_csv": 1.3951507826972525e-06,
+      "worst_abs_cdf_closure": 2.5620575744072713e-08,
+      "rows": 64
+     },
+     "production": null,
+     "tolerance": "rel<=1e-05; P_miss(lambda*)=p_md within 1e-6",
+     "note": "P(chi2'_dof(lambda) <= tau) = p_md allocation, tau/dof taken from the conditional detector of the same window"
+    },
+    {
+     "id": "O7",
+     "case": "C_uwb_fde_26",
+     "description": "G9 guard: monitorable hypotheses carry finite slopes",
+     "status": "PASS",
+     "oracle": {
+      "monitorable_rows": 234,
+      "nonfinite_rows": 0
+     },
+     "production": null,
+     "tolerance": "count must be 0",
+     "note": "hypotheses.csv slope_x/y/z"
+    }
+   ],
+   "summary": {
+    "pass": 8,
+    "fail": 0,
+    "not_run": 0
+   }
+  },
+  {
+   "case": "F_ramp_30",
+   "note": "ramp regime under the frozen unsupported declaration",
+   "bin": "raw/replay_p2/F_ramp_unmonitorable/exports/attempt-30.bin",
+   "bin_sha256": "dae85b8f96e74b4a9ee891cae18c2967d6b9a9d0e40dd3ae0b15e4957440a039",
+   "csv_dir": "raw/runs_p2/F_ramp_unmonitorable",
+   "attempt": 30,
+   "window": {
+    "m": 253,
+    "n": 165,
+    "rank": 165,
+    "dof": 88,
+    "condition_number": 328352.7291013592
+   },
+   "identity": {
+    "snapshot_id": "window:30:transaction:30",
+    "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
+    "config_digest": "ac70210f6cd9e671",
+    "manifest_digest": "d2a01e7343f5c357",
+    "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
+    "sensor_timestamp_ns": 1500000000,
+    "frame_id": "world",
+    "position_reference": "body_origin",
+    "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
+    "state_scale": "identity",
+    "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
+    "whitening_id": "frozen_block_whitener:b1a986f29306c561",
+    "noise_model_id": "per_block_frozen_noise_model",
+    "boundary_summary_id": "partial_qr_schur_boundary",
+    "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
+    "protected_reference_center": "body_origin",
+    "active_observation_index": "20002;21001;21002;22001;22002;23001;23002;24001;24002;25001;25002;26001;26002;27001;27002;28001;28002;29001;29002;30000;30001;30002",
+    "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
+    "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
+    "identity_digest": "f3343450740d02ab"
+   },
+   "items": [
+    {
+     "id": "O0",
+     "case": "F_ramp_30",
+     "description": "v5 bin identity binding to run CSV",
+     "status": "PASS",
+     "oracle": {
+      "snapshot_id": "window:30:transaction:30",
+      "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
+      "config_digest": "ac70210f6cd9e671",
+      "manifest_digest": "d2a01e7343f5c357",
+      "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
+      "sensor_timestamp_ns": 1500000000,
+      "frame_id": "world",
+      "position_reference": "body_origin",
+      "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
+      "state_scale": "identity",
+      "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
+      "whitening_id": "frozen_block_whitener:b1a986f29306c561",
+      "noise_model_id": "per_block_frozen_noise_model",
+      "boundary_summary_id": "partial_qr_schur_boundary",
+      "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
+      "protected_reference_center": "body_origin",
+      "active_observation_index": "20002;21001;21002;22001;22002;23001;23002;24001;24002;25001;25002;26001;26002;27001;27002;28001;28002;29001;29002;30000;30001;30002",
+      "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
+      "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
+      "identity_digest": "f3343450740d02ab"
+     },
+     "production": {
+      "snapshot_id": "window:30:transaction:30",
+      "config_digest": "ac70210f6cd9e671",
+      "identity_digest": "f3343450740d02ab",
+      "frame_id": "world",
+      "position_reference": "body_origin",
+      "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation"
+     },
+     "tolerance": "exact equality",
+     "note": "{\"snapshot_id\": true, \"identity_digest\": true, \"config_digest\": true, \"frame_id_world\": true, \"protected_body_origin\": true, \"coverage_epoch_declared\": true}"
+    },
+    {
+     "id": "O1",
+     "case": "F_ramp_30",
+     "description": "parity statistic s^2 = ||z - H x_hat||^2",
+     "status": "PASS",
+     "oracle": 4.4529470232546734e-08,
+     "production": 4.45295e-08,
+     "tolerance": "rel<=1e-05 (CSV precision)",
+     "note": "oracle_rank=165"
+    },
+    {
+     "id": "O2",
+     "case": "F_ramp_30",
+     "description": "detector dof and chi-square threshold",
+     "status": "PASS",
+     "oracle": {
+      "dof": 88,
+      "threshold": 165.99308436123317
+     },
+     "production": {
+      "dof": 88,
+      "threshold": 165.993
+     },
+     "tolerance": "dof exact, threshold rel<=1e-05",
+     "note": "p_fa=1e-06 from detector.p_fa_per_test"
+    },
+    {
+     "id": "O3",
+     "case": "F_ramp_30",
+     "description": "block assembly and W * J_raw == J_whitened",
+     "status": "PASS",
+     "oracle": {
+      "assembly_max_rel": 0.0,
+      "whitening_max_rel": 1.9003227604906671e-16
+     },
+     "production": null,
+     "tolerance": "abs<=1e-12",
+     "note": "independent row placement via window_column_indices"
+    },
+    {
+     "id": "O4",
+     "case": "F_ramp_30",
+     "description": "rank / dof / condition number of H",
+     "status": "PASS",
+     "oracle": {
+      "rank": 165,
+      "dof": 88,
+      "condition_number": 328352.7291013592
+     },
+     "production": {
+      "rank": 165,
+      "dof": 88,
+      "condition_number": 328352.7291092238
+     },
+     "tolerance": "rank+dof exact, cond rel<=1e-05",
+     "note": "SVD gate 1e-9 * max(1, sigma_max)"
+    },
+    {
+     "id": "O5",
+     "case": "F_ramp_30",
+     "description": "anchor-1 epoch-independent template (Gamma, slopes)",
+     "status": "PASS",
+     "oracle": {
+      "sigma_min": 9.102707747535122,
+      "slopes_xyz": [
+       0.013194115437292736,
+       0.0011882044038921831,
+       0.022380565161211997
+      ],
+      "gamma": 82.85928833703595
+     },
+     "production": {
+      "hypothesis_id": "31",
+      "sigma_min": 9.10271,
+      "slopes_xyz": [
+       0.0131941,
+       0.00118821,
+       0.0223806
+      ]
+     },
+     "tolerance": "rel<=1e-05 (CSV precision); non-finite never passes",
+     "note": "{\"sigma_min_ok\": true, \"axes\": [{\"axis\": \"x\", \"oracle\": 0.013194115437292736, \"production\": 0.0131941, \"rel\": 1.1700134661664462e-06}, {\"axis\": \"y\", \"oracle\": 0.0011882044038921831, \"production\": 0.00118821, \"rel\": 4.7096959434285286e-06}, {\"axis\": \"z\", \"oracle\": 0.022380565161211997, \"production\": 0.0223806, \"rel\": 1.5566512070178008e-06}]}"
+    },
+    {
+     "id": "O6",
+     "case": "F_ramp_30",
+     "description": "non-centrality boundary lambda* vs scipy ncx2",
+     "status": "PASS",
+     "oracle": {
+      "solved_first": 157.8177642882721,
+      "worst_rel_vs_csv": 1.4935668169954078e-06,
+      "worst_abs_cdf_closure": 2.7455994934403108e-08,
+      "rows": 64
+     },
+     "production": null,
+     "tolerance": "rel<=1e-05; P_miss(lambda*)=p_md within 1e-6",
+     "note": "P(chi2'_dof(lambda) <= tau) = p_md allocation, tau/dof taken from the conditional detector of the same window"
+    },
+    {
+     "id": "O7",
+     "case": "F_ramp_30",
+     "description": "G9 guard: monitorable hypotheses carry finite slopes",
+     "status": "PASS",
+     "oracle": {
+      "monitorable_rows": 324,
+      "nonfinite_rows": 0
+     },
+     "production": null,
+     "tolerance": "count must be 0",
+     "note": "hypotheses.csv slope_x/y/z"
+    }
+   ],
+   "summary": {
+    "pass": 8,
+    "fail": 0,
+    "not_run": 0
+   }
+  },
+  {
+   "case": "G_reject_10",
+   "note": "consecutive rejection epoch",
+   "bin": "raw/replay_p2/G_continuous_rejection/exports/attempt-10.bin",
+   "bin_sha256": "e570ef81fadfffbc0e1211204027edbf47724be8eed4b0262e140ee3066fab03",
+   "csv_dir": "raw/runs_p2/G_continuous_rejection",
+   "attempt": 10,
+   "window": {
+    "m": 130,
+    "n": 90,
+    "rank": 90,
+    "dof": 40,
+    "condition_number": 104831.32642606787
+   },
+   "identity": {
+    "snapshot_id": "window:10:transaction:10",
+    "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
+    "config_digest": "50caa3ee8657d45b",
+    "manifest_digest": "d2a01e7343f5c357",
+    "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
+    "sensor_timestamp_ns": 500000000,
+    "frame_id": "world",
+    "position_reference": "body_origin",
+    "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
+    "state_scale": "identity",
+    "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
+    "whitening_id": "frozen_block_whitener:3a759ac0f33de2f1",
+    "noise_model_id": "per_block_frozen_noise_model",
+    "boundary_summary_id": "partial_qr_schur_boundary",
+    "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
+    "protected_reference_center": "body_origin",
+    "active_observation_index": "1001;1002;2001;2002;3001;3002;4001;4002;10000;10001;10002",
+    "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
+    "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
+    "identity_digest": "f642efdd5b396f58"
+   },
+   "items": [
+    {
+     "id": "O0",
+     "case": "G_reject_10",
+     "description": "v5 bin identity binding to run CSV",
+     "status": "PASS",
+     "oracle": {
+      "snapshot_id": "window:10:transaction:10",
+      "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
+      "config_digest": "50caa3ee8657d45b",
+      "manifest_digest": "d2a01e7343f5c357",
+      "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
+      "sensor_timestamp_ns": 500000000,
+      "frame_id": "world",
+      "position_reference": "body_origin",
+      "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
+      "state_scale": "identity",
+      "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
+      "whitening_id": "frozen_block_whitener:3a759ac0f33de2f1",
+      "noise_model_id": "per_block_frozen_noise_model",
+      "boundary_summary_id": "partial_qr_schur_boundary",
+      "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
+      "protected_reference_center": "body_origin",
+      "active_observation_index": "1001;1002;2001;2002;3001;3002;4001;4002;10000;10001;10002",
+      "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
+      "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
+      "identity_digest": "f642efdd5b396f58"
+     },
+     "production": {
+      "snapshot_id": "window:10:transaction:10",
+      "config_digest": "50caa3ee8657d45b",
+      "identity_digest": "f642efdd5b396f58",
+      "frame_id": "world",
+      "position_reference": "body_origin",
+      "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation"
+     },
+     "tolerance": "exact equality",
+     "note": "{\"snapshot_id\": true, \"identity_digest\": true, \"config_digest\": true, \"frame_id_world\": true, \"protected_body_origin\": true, \"coverage_epoch_declared\": true}"
+    },
+    {
+     "id": "O1",
+     "case": "G_reject_10",
+     "description": "parity statistic s^2 = ||z - H x_hat||^2",
+     "status": "PASS",
+     "oracle": 12960.353326167999,
+     "production": 12960.4,
+     "tolerance": "rel<=1e-05 (CSV precision)",
+     "note": "oracle_rank=90"
+    },
+    {
+     "id": "O2",
+     "case": "G_reject_10",
+     "description": "detector dof and chi-square threshold",
+     "status": "PASS",
+     "oracle": {
+      "dof": 40,
+      "threshold": 97.65295741497064
+     },
+     "production": {
+      "dof": 40,
+      "threshold": 97.653
+     },
+     "tolerance": "dof exact, threshold rel<=1e-05",
+     "note": "p_fa=1e-06 from detector.p_fa_per_test"
+    },
+    {
+     "id": "O3",
+     "case": "G_reject_10",
+     "description": "block assembly and W * J_raw == J_whitened",
+     "status": "PASS",
+     "oracle": {
+      "assembly_max_rel": 0.0,
+      "whitening_max_rel": 1.9926030563698662e-16
+     },
+     "production": null,
+     "tolerance": "abs<=1e-12",
+     "note": "independent row placement via window_column_indices"
+    },
+    {
+     "id": "O4",
+     "case": "G_reject_10",
+     "description": "rank / dof / condition number of H",
+     "status": "PASS",
+     "oracle": {
+      "rank": 90,
+      "dof": 40,
+      "condition_number": 104831.32642606787
+     },
+     "production": {
+      "rank": 90,
+      "dof": 40,
+      "condition_number": 104831.3264260955
+     },
+     "tolerance": "rank+dof exact, cond rel<=1e-05",
+     "note": "SVD gate 1e-9 * max(1, sigma_max)"
+    },
+    {
+     "id": "O5",
+     "case": "G_reject_10",
+     "description": "anchor-1 epoch-independent template (Gamma, slopes)",
+     "status": "NOT_RUN",
+     "oracle": {
+      "oracle_sigma_min": 8.531428729496596,
+      "oracle_slopes": [
+       0.01809625744804094,
+       0.019345412584900405,
+       0.017745268530544468
+      ]
+     },
+     "production": null,
+     "tolerance": null,
+     "note": "no production row with onset_epoch == attempt"
+    },
+    {
+     "id": "O6",
+     "case": "G_reject_10",
+     "description": "non-centrality boundary lambda* vs scipy ncx2",
+     "status": "PASS",
+     "oracle": {
+      "solved_first": 123.43748735968573,
+      "worst_rel_vs_csv": 3.948230769757797e-06,
+      "worst_abs_cdf_closure": 6.763796601798322e-08,
+      "rows": 64
+     },
+     "production": null,
+     "tolerance": "rel<=1e-05; P_miss(lambda*)=p_md within 1e-6",
+     "note": "P(chi2'_dof(lambda) <= tau) = p_md allocation, tau/dof taken from the conditional detector of the same window"
+    },
+    {
+     "id": "O7",
+     "case": "G_reject_10",
+     "description": "G9 guard: monitorable hypotheses carry finite slopes",
+     "status": "PASS",
+     "oracle": {
+      "monitorable_rows": 110,
+      "nonfinite_rows": 0
+     },
+     "production": null,
+     "tolerance": "count must be 0",
+     "note": "hypotheses.csv slope_x/y/z"
+    }
+   ],
+   "summary": {
+    "pass": 7,
+    "fail": 0,
+    "not_run": 1
+   }
+  },
+  {
+   "case": "H_mature_201",
+   "note": "mature union window",
+   "bin": "raw/replay_p2/H_mature_union/exports/attempt-201.bin",
+   "bin_sha256": "920a54ff2709c8150a7bcd16fbfce5d96c99d948f7b7439f94fc823a9ba272d5",
+   "csv_dir": "raw/runs_p2/H_mature_union",
+   "attempt": 201,
+   "window": {
+    "m": 253,
+    "n": 165,
+    "rank": 165,
+    "dof": 88,
+    "condition_number": 963447.7184860115
+   },
+   "identity": {
+    "snapshot_id": "window:201:transaction:201",
+    "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
+    "config_digest": "55e6cbacf03742e5",
+    "manifest_digest": "d2a01e7343f5c357",
+    "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
+    "sensor_timestamp_ns": 10050000000,
+    "frame_id": "world",
+    "position_reference": "body_origin",
+    "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
+    "state_scale": "identity",
+    "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
+    "whitening_id": "frozen_block_whitener:ce9f0dd2c8ccdfdb",
+    "noise_model_id": "per_block_frozen_noise_model",
+    "boundary_summary_id": "partial_qr_schur_boundary",
+    "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
+    "protected_reference_center": "body_origin",
+    "active_observation_index": "191002;192001;192002;193001;193002;194001;194002;195001;195002;196001;196002;197001;197002;198001;198002;199001;199002;200001;200002;201000;201001;201002",
+    "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
+    "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
+    "identity_digest": "69af999a7cbf6ba7"
+   },
+   "items": [
+    {
+     "id": "O0",
+     "case": "H_mature_201",
+     "description": "v5 bin identity binding to run CSV",
+     "status": "PASS",
+     "oracle": {
+      "snapshot_id": "window:201:transaction:201",
+      "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
+      "config_digest": "55e6cbacf03742e5",
+      "manifest_digest": "d2a01e7343f5c357",
+      "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
+      "sensor_timestamp_ns": 10050000000,
+      "frame_id": "world",
+      "position_reference": "body_origin",
+      "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
+      "state_scale": "identity",
+      "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
+      "whitening_id": "frozen_block_whitener:ce9f0dd2c8ccdfdb",
+      "noise_model_id": "per_block_frozen_noise_model",
+      "boundary_summary_id": "partial_qr_schur_boundary",
+      "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
+      "protected_reference_center": "body_origin",
+      "active_observation_index": "191002;192001;192002;193001;193002;194001;194002;195001;195002;196001;196002;197001;197002;198001;198002;199001;199002;200001;200002;201000;201001;201002",
+      "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
+      "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
+      "identity_digest": "69af999a7cbf6ba7"
+     },
+     "production": {
+      "snapshot_id": "window:201:transaction:201",
+      "config_digest": "55e6cbacf03742e5",
+      "identity_digest": "69af999a7cbf6ba7",
+      "frame_id": "world",
+      "position_reference": "body_origin",
+      "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation"
+     },
+     "tolerance": "exact equality",
+     "note": "{\"snapshot_id\": true, \"identity_digest\": true, \"config_digest\": true, \"frame_id_world\": true, \"protected_body_origin\": true, \"coverage_epoch_declared\": true}"
+    },
+    {
+     "id": "O1",
+     "case": "H_mature_201",
+     "description": "parity statistic s^2 = ||z - H x_hat||^2",
+     "status": "PASS",
+     "oracle": 2.561315381635978e-07,
+     "production": 2.56132e-07,
+     "tolerance": "rel<=1e-05 (CSV precision)",
+     "note": "oracle_rank=165"
+    },
+    {
+     "id": "O2",
+     "case": "H_mature_201",
+     "description": "detector dof and chi-square threshold",
+     "status": "PASS",
+     "oracle": {
+      "dof": 88,
+      "threshold": 165.99308436123317
+     },
+     "production": {
+      "dof": 88,
+      "threshold": 165.993
+     },
+     "tolerance": "dof exact, threshold rel<=1e-05",
+     "note": "p_fa=1e-06 from detector.p_fa_per_test"
+    },
+    {
+     "id": "O3",
+     "case": "H_mature_201",
+     "description": "block assembly and W * J_raw == J_whitened",
+     "status": "PASS",
+     "oracle": {
+      "assembly_max_rel": 0.0,
+      "whitening_max_rel": 1.8380129622940737e-16
+     },
+     "production": null,
+     "tolerance": "abs<=1e-12",
+     "note": "independent row placement via window_column_indices"
+    },
+    {
+     "id": "O4",
+     "case": "H_mature_201",
+     "description": "rank / dof / condition number of H",
+     "status": "PASS",
+     "oracle": {
+      "rank": 165,
+      "dof": 88,
+      "condition_number": 963447.7184860115
+     },
+     "production": {
+      "rank": 165,
+      "dof": 88,
+      "condition_number": 963447.7185172654
+     },
+     "tolerance": "rank+dof exact, cond rel<=1e-05",
+     "note": "SVD gate 1e-9 * max(1, sigma_max)"
+    },
+    {
+     "id": "O5",
+     "case": "H_mature_201",
+     "description": "anchor-1 epoch-independent template (Gamma, slopes)",
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": null,
+     "note": "hypotheses.csv rows missing"
+    },
+    {
+     "id": "O6",
+     "case": "H_mature_201",
+     "description": "non-centrality boundary lambda*",
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": null,
+     "note": "hypotheses.csv or integrity.csv row missing"
+    },
+    {
+     "id": "O7",
+     "case": "H_mature_201",
+     "description": "G9 guard: monitorable hypotheses carry finite slopes",
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": "count must be 0",
+     "note": "hypotheses.csv is empty (run without FULL_AUDIT)"
+    }
+   ],
+   "summary": {
+    "pass": 5,
+    "fail": 0,
+    "not_run": 3
+   }
+  },
+  {
+   "case": "H_mature_205",
+   "note": "mature union window (second export)",
+   "bin": "raw/replay_p2/H_mature_union/exports/attempt-205.bin",
+   "bin_sha256": "03c94422ae0f5608146727daa0ea7c3614771481096f41eb6c98b3e70709223b",
+   "csv_dir": "raw/runs_p2/H_mature_union",
+   "attempt": 205,
+   "window": {
+    "m": 253,
+    "n": 165,
+    "rank": 165,
+    "dof": 88,
+    "condition_number": 973172.2676759264
+   },
+   "identity": {
+    "snapshot_id": "window:205:transaction:205",
+    "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
+    "config_digest": "55e6cbacf03742e5",
+    "manifest_digest": "d2a01e7343f5c357",
+    "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
+    "sensor_timestamp_ns": 10250000000,
+    "frame_id": "world",
+    "position_reference": "body_origin",
+    "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
+    "state_scale": "identity",
+    "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
+    "whitening_id": "frozen_block_whitener:ce2efcc008fdced0",
+    "noise_model_id": "per_block_frozen_noise_model",
+    "boundary_summary_id": "partial_qr_schur_boundary",
+    "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
+    "protected_reference_center": "body_origin",
+    "active_observation_index": "195002;196001;196002;197001;197002;198001;198002;199001;199002;200001;200002;201001;201002;202001;202002;203001;203002;204001;204002;205000;205001;205002",
+    "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
+    "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
+    "identity_digest": "a479e95e07c8144e"
+   },
+   "items": [
+    {
+     "id": "O0",
+     "case": "H_mature_205",
+     "description": "v5 bin identity binding to run CSV",
+     "status": "PASS",
+     "oracle": {
+      "snapshot_id": "window:205:transaction:205",
+      "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
+      "config_digest": "55e6cbacf03742e5",
+      "manifest_digest": "d2a01e7343f5c357",
+      "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
+      "sensor_timestamp_ns": 10250000000,
+      "frame_id": "world",
+      "position_reference": "body_origin",
+      "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
+      "state_scale": "identity",
+      "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
+      "whitening_id": "frozen_block_whitener:ce2efcc008fdced0",
+      "noise_model_id": "per_block_frozen_noise_model",
+      "boundary_summary_id": "partial_qr_schur_boundary",
+      "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
+      "protected_reference_center": "body_origin",
+      "active_observation_index": "195002;196001;196002;197001;197002;198001;198002;199001;199002;200001;200002;201001;201002;202001;202002;203001;203002;204001;204002;205000;205001;205002",
+      "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
+      "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
+      "identity_digest": "a479e95e07c8144e"
+     },
+     "production": {
+      "snapshot_id": "window:205:transaction:205",
+      "config_digest": "55e6cbacf03742e5",
+      "identity_digest": "a479e95e07c8144e",
+      "frame_id": "world",
+      "position_reference": "body_origin",
+      "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation"
+     },
+     "tolerance": "exact equality",
+     "note": "{\"snapshot_id\": true, \"identity_digest\": true, \"config_digest\": true, \"frame_id_world\": true, \"protected_body_origin\": true, \"coverage_epoch_declared\": true}"
+    },
+    {
+     "id": "O1",
+     "case": "H_mature_205",
+     "description": "parity statistic s^2 = ||z - H x_hat||^2",
+     "status": "PASS",
+     "oracle": 1.6016114504286661e-07,
+     "production": 1.60161e-07,
+     "tolerance": "rel<=1e-05 (CSV precision)",
+     "note": "oracle_rank=165"
+    },
+    {
+     "id": "O2",
+     "case": "H_mature_205",
+     "description": "detector dof and chi-square threshold",
+     "status": "PASS",
+     "oracle": {
+      "dof": 88,
+      "threshold": 165.99308436123317
+     },
+     "production": {
+      "dof": 88,
+      "threshold": 165.993
+     },
+     "tolerance": "dof exact, threshold rel<=1e-05",
+     "note": "p_fa=1e-06 from detector.p_fa_per_test"
+    },
+    {
+     "id": "O3",
+     "case": "H_mature_205",
+     "description": "block assembly and W * J_raw == J_whitened",
+     "status": "PASS",
+     "oracle": {
+      "assembly_max_rel": 0.0,
+      "whitening_max_rel": 1.8380129622940737e-16
+     },
+     "production": null,
+     "tolerance": "abs<=1e-12",
+     "note": "independent row placement via window_column_indices"
+    },
+    {
+     "id": "O4",
+     "case": "H_mature_205",
+     "description": "rank / dof / condition number of H",
+     "status": "PASS",
+     "oracle": {
+      "rank": 165,
+      "dof": 88,
+      "condition_number": 973172.2676759264
+     },
+     "production": {
+      "rank": 165,
+      "dof": 88,
+      "condition_number": 973172.267693692
+     },
+     "tolerance": "rank+dof exact, cond rel<=1e-05",
+     "note": "SVD gate 1e-9 * max(1, sigma_max)"
+    },
+    {
+     "id": "O5",
+     "case": "H_mature_205",
+     "description": "anchor-1 epoch-independent template (Gamma, slopes)",
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": null,
+     "note": "hypotheses.csv rows missing"
+    },
+    {
+     "id": "O6",
+     "case": "H_mature_205",
+     "description": "non-centrality boundary lambda*",
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": null,
+     "note": "hypotheses.csv or integrity.csv row missing"
+    },
+    {
+     "id": "O7",
+     "case": "H_mature_205",
+     "description": "G9 guard: monitorable hypotheses carry finite slopes",
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": "count must be 0",
+     "note": "hypotheses.csv is empty (run without FULL_AUDIT)"
+    }
+   ],
+   "summary": {
+    "pass": 5,
+    "fail": 0,
+    "not_run": 3
+   }
+  },
+  {
+   "case": "EPOCHS20_30",
+   "note": "K=20 integrity-window census\u53e3\u5f84",
+   "bin": "raw/replay_p2/epochs20-census/exports/attempt-30.bin",
+   "bin_sha256": "d7c77c89cff5bc2aedcf4e475991c62af71b3e005e7c6087258371e1e78f254f",
+   "csv_dir": "raw/runs_p2/epochs20-census",
+   "attempt": 30,
+   "window": {
+    "m": 483,
+    "n": 315,
+    "rank": 315,
+    "dof": 168,
+    "condition_number": 393895.7222476168
+   },
+   "identity": {
+    "snapshot_id": "window:30:transaction:30",
+    "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
+    "config_digest": "7d72f859690b7cb4",
+    "manifest_digest": "d2a01e7343f5c357",
+    "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
+    "sensor_timestamp_ns": 1500000000,
+    "frame_id": "world",
+    "position_reference": "body_origin",
+    "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
+    "state_scale": "identity",
+    "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
+    "whitening_id": "frozen_block_whitener:c221c89f204195ff",
+    "noise_model_id": "per_block_frozen_noise_model",
+    "boundary_summary_id": "partial_qr_schur_boundary",
+    "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
+    "protected_reference_center": "body_origin",
+    "active_observation_index": "10002;11001;11002;12001;12002;13001;13002;14001;14002;15001;15002;16001;16002;17001;17002;18001;18002;19001;19002;20001;20002;21001;21002;22001;22002;23001;23002;24001;24002;25001;25002;26001;26002;27001;27002;28001;28002;29001;29002;30000;30001;30002",
+    "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
+    "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
+    "identity_digest": "9c175dae961d5573"
+   },
+   "items": [
+    {
+     "id": "O0",
+     "case": "EPOCHS20_30",
+     "description": "v5 bin identity binding to run CSV",
+     "status": "PASS",
+     "oracle": {
+      "snapshot_id": "window:30:transaction:30",
+      "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
+      "config_digest": "7d72f859690b7cb4",
+      "manifest_digest": "d2a01e7343f5c357",
+      "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
+      "sensor_timestamp_ns": 1500000000,
+      "frame_id": "world",
+      "position_reference": "body_origin",
+      "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
+      "state_scale": "identity",
+      "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
+      "whitening_id": "frozen_block_whitener:c221c89f204195ff",
+      "noise_model_id": "per_block_frozen_noise_model",
+      "boundary_summary_id": "partial_qr_schur_boundary",
+      "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
+      "protected_reference_center": "body_origin",
+      "active_observation_index": "10002;11001;11002;12001;12002;13001;13002;14001;14002;15001;15002;16001;16002;17001;17002;18001;18002;19001;19002;20001;20002;21001;21002;22001;22002;23001;23002;24001;24002;25001;25002;26001;26002;27001;27002;28001;28002;29001;29002;30000;30001;30002",
+      "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
+      "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
+      "identity_digest": "9c175dae961d5573"
+     },
+     "production": {
+      "snapshot_id": "window:30:transaction:30",
+      "config_digest": "7d72f859690b7cb4",
+      "identity_digest": "9c175dae961d5573",
+      "frame_id": "world",
+      "position_reference": "body_origin",
+      "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation"
+     },
+     "tolerance": "exact equality",
+     "note": "{\"snapshot_id\": true, \"identity_digest\": true, \"config_digest\": true, \"frame_id_world\": true, \"protected_body_origin\": true, \"coverage_epoch_declared\": true}"
+    },
+    {
+     "id": "O1",
+     "case": "EPOCHS20_30",
+     "description": "parity statistic s^2 = ||z - H x_hat||^2",
+     "status": "PASS",
+     "oracle": 4.4944502314629405e-08,
+     "production": 4.49445e-08,
+     "tolerance": "rel<=1e-05 (CSV precision)",
+     "note": "oracle_rank=315"
+    },
+    {
+     "id": "O2",
+     "case": "EPOCHS20_30",
+     "description": "detector dof and chi-square threshold",
+     "status": "PASS",
+     "oracle": {
+      "dof": 168,
+      "threshold": 269.93166811286255
+     },
+     "production": {
+      "dof": 168,
+      "threshold": 269.932
+     },
+     "tolerance": "dof exact, threshold rel<=1e-05",
+     "note": "p_fa=1e-06 from detector.p_fa_per_test"
+    },
+    {
+     "id": "O3",
+     "case": "EPOCHS20_30",
+     "description": "block assembly and W * J_raw == J_whitened",
+     "status": "PASS",
+     "oracle": {
+      "assembly_max_rel": 0.0,
+      "whitening_max_rel": 1.9994406919718948e-16
+     },
+     "production": null,
+     "tolerance": "abs<=1e-12",
+     "note": "independent row placement via window_column_indices"
+    },
+    {
+     "id": "O4",
+     "case": "EPOCHS20_30",
+     "description": "rank / dof / condition number of H",
+     "status": "PASS",
+     "oracle": {
+      "rank": 315,
+      "dof": 168,
+      "condition_number": 393895.7222476168
+     },
+     "production": {
+      "rank": 315,
+      "dof": 168,
+      "condition_number": 393895.72224651574
+     },
+     "tolerance": "rank+dof exact, cond rel<=1e-05",
+     "note": "SVD gate 1e-9 * max(1, sigma_max)"
+    },
+    {
+     "id": "O5",
+     "case": "EPOCHS20_30",
+     "description": "anchor-1 epoch-independent template (Gamma, slopes)",
+     "status": "PASS",
+     "oracle": {
+      "sigma_min": 9.102707744534015,
+      "slopes_xyz": [
+       0.013194112900733267,
+       0.0011882062443559123,
+       0.022380565860576917
+      ],
+      "gamma": 82.85928828239953
+     },
+     "production": {
+      "hypothesis_id": "41",
+      "sigma_min": 9.10271,
+      "slopes_xyz": [
+       0.0131941,
+       0.00118821,
+       0.0223806
+      ]
+     },
+     "tolerance": "rel<=1e-05 (CSV precision); non-finite never passes",
+     "note": "{\"sigma_min_ok\": true, \"axes\": [{\"axis\": \"x\", \"oracle\": 0.013194112900733267, \"production\": 0.0131941, \"rel\": 9.777643531955422e-07}, {\"axis\": \"y\", \"oracle\": 0.0011882062443559123, \"production\": 0.00118821, \"rel\": 3.160757852418672e-06}, {\"axis\": \"z\", \"oracle\": 0.022380565860576917, \"production\": 0.0223806, \"rel\": 1.5254024951806493e-06}]}"
+    },
+    {
+     "id": "O6",
+     "case": "EPOCHS20_30",
+     "description": "non-centrality boundary lambda* vs scipy ncx2",
+     "status": "PASS",
+     "oracle": {
+      "solved_first": 197.99312986070484,
+      "worst_rel_vs_csv": 6.558849033640865e-07,
+      "worst_abs_cdf_closure": 1.2764562372152496e-08,
+      "rows": 64
+     },
+     "production": null,
+     "tolerance": "rel<=1e-05; P_miss(lambda*)=p_md within 1e-6",
+     "note": "P(chi2'_dof(lambda) <= tau) = p_md allocation, tau/dof taken from the conditional detector of the same window"
+    },
+    {
+     "id": "O7",
+     "case": "EPOCHS20_30",
+     "description": "G9 guard: monitorable hypotheses carry finite slopes",
+     "status": "PASS",
+     "oracle": {
+      "monitorable_rows": 456,
+      "nonfinite_rows": 0
+     },
+     "production": null,
+     "tolerance": "count must be 0",
+     "note": "hypotheses.csv slope_x/y/z"
+    }
+   ],
+   "summary": {
+    "pass": 8,
+    "fail": 0,
+    "not_run": 0
+   }
+  }
+ ],
+ "totals": {
+  "pass": 57,
+  "fail": 0,
+  "not_run": 7
+ }
+}

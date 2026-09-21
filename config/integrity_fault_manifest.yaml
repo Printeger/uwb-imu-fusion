@@ -1,0 +1,171 @@
+# Integrity fault manifest (A3, schema_version 1).
+#
+# This file is the declaration of what the CURRENT HypothesisGenerator can
+# actually monitor.  It is loaded strictly by IntegrityConfigLoader whenever
+# fault_models.manifest_path points at it; unknown keys, unknown families,
+# events outside the generator's capability, or a configuration that enables a
+# family declared NOT_IMPLEMENTED reject the run at startup.
+#
+# Scope notes (verified against src/uwb_imu_pl/integrity/hypothesis_generator.cpp):
+#   * UWB: one physical anchor event per occurrence, three time shapes
+#     (epoch-independent single-epoch step, persistent constant step, affine
+#     ramp).  Onsets are window-internal occurrences; the persistent shape is
+#     the only one whose support may be widened to the recoverable boundary.
+#   * IMU: six single-axis interval-constant events per window occurrence
+#     (accelerometer xyz, gyroscope xyz).  No multi-axis common cause, no
+#     bias-jump/ramp families, no IMU x IMU pairs, no two-UWB pairs.
+#   * Pair families: exactly one UWB event + one IMU single-axis event
+#     (uwb_imu).  Order 2 is only active when the configuration declares
+#     max_fault_order: 2; this manifest supports up to order 2.
+#   * projection_eligibility is a function of model_type only.  allowed_actions
+#     never selects the numerical kernel (loader-enforced structural rule).
+
+schema_version: 1
+manifest_id: uwb-imu-pl/fault-manifest/2026-09-21-1
+protected_quantity: position_xyz
+position_reference: body_origin
+max_fault_order: 2
+
+enabled_single_families:
+  - uwb_single_anchor
+  - imu_single_axis
+enabled_pair_families:
+  - uwb_imu
+unsupported_families:
+  - two_uwb
+  - imu_imu
+  - same_device_multiaxis
+
+events:
+  - source_id: uwb.anchor
+    common_cause_group: uwb_anchors
+    event_id: uwb_anchor_epoch_independent_bias
+    model_type: epoch_independent_step
+    parameter_units: m
+    parameter_sharing: single_parameter
+    onset_domain: per_epoch_occurrence
+    end_condition: same_epoch
+    physical_time_support: one_uwb_interval
+    amplitude_model: unbounded_subspace
+    prior_bound_source: fault_models.uwb.prior_probability_bound
+    prior_time_basis: per_protected_epoch
+    evidence_status: IMPLEMENTED_UNVERIFIED
+    included_hypothesis_families: [uwb_single_anchor, uwb_imu]
+    omitted_event_set: [two_uwb, same_device_multiaxis]
+    history_retention_or_reset_rule: active_window_only_maturity_delay
+    allowed_actions: [keep_all, exclude_source_group]
+    projection_eligibility: algebraic
+
+  - source_id: uwb.anchor
+    common_cause_group: uwb_anchors
+    event_id: uwb_anchor_persistent_bias
+    model_type: persistent_constant_step
+    parameter_units: m
+    parameter_sharing: single_parameter
+    onset_domain: per_epoch_occurrence
+    end_condition: window_end_or_source_silence
+    physical_time_support: onset_to_detector_window_end
+    amplitude_model: unbounded_subspace
+    prior_bound_source: fault_models.uwb.prior_probability_bound
+    prior_time_basis: per_protected_epoch
+    evidence_status: IMPLEMENTED_UNVERIFIED
+    included_hypothesis_families: [uwb_single_anchor, uwb_imu]
+    omitted_event_set: [two_uwb, same_device_multiaxis]
+    history_retention_or_reset_rule: active_window_only_maturity_delay
+    allowed_actions: [keep_all, exclude_source_group]
+    projection_eligibility: algebraic
+
+  - source_id: uwb.anchor
+    common_cause_group: uwb_anchors
+    event_id: uwb_anchor_affine_ramp
+    model_type: affine_ramp
+    parameter_units: m,m/s
+    parameter_sharing: onset_offset_plus_slope
+    onset_domain: per_epoch_occurrence
+    end_condition: window_end_or_source_silence
+    physical_time_support: onset_to_detector_window_end
+    amplitude_model: unbounded_subspace
+    prior_bound_source: fault_models.uwb.prior_probability_bound
+    prior_time_basis: per_protected_epoch
+    evidence_status: IMPLEMENTED_UNVERIFIED
+    included_hypothesis_families: [uwb_single_anchor, uwb_imu]
+    omitted_event_set: [two_uwb, same_device_multiaxis]
+    history_retention_or_reset_rule: active_window_only_maturity_delay
+    allowed_actions: [keep_all, exclude_source_group]
+    projection_eligibility: algebraic
+
+  - source_id: imu.accelerometer
+    common_cause_group: imu_axis
+    event_id: imu_accel_axis_interval_bias
+    model_type: interval_constant_axis
+    parameter_units: m/s^2
+    parameter_sharing: single_parameter
+    onset_domain: per_epoch_occurrence
+    end_condition: same_epoch
+    physical_time_support: one_imu_interval
+    amplitude_model: unbounded_subspace
+    prior_bound_source: fault_models.imu.accel_prior_probability_bound
+    prior_time_basis: per_protected_epoch
+    evidence_status: IMPLEMENTED_UNVERIFIED
+    included_hypothesis_families: [imu_single_axis, uwb_imu]
+    omitted_event_set: [imu_imu, same_device_multiaxis]
+    history_retention_or_reset_rule: active_window_only_maturity_delay
+    allowed_actions: [keep_all, interval_repair_or_bridge]
+    projection_eligibility: algebraic
+
+  - source_id: imu.gyroscope
+    common_cause_group: imu_axis
+    event_id: imu_gyro_axis_interval_bias
+    model_type: interval_constant_axis
+    parameter_units: rad/s
+    parameter_sharing: single_parameter
+    onset_domain: per_epoch_occurrence
+    end_condition: same_epoch
+    physical_time_support: one_imu_interval
+    amplitude_model: unbounded_subspace
+    prior_bound_source: fault_models.imu.gyro_prior_probability_bound
+    prior_time_basis: per_protected_epoch
+    evidence_status: IMPLEMENTED_UNVERIFIED
+    included_hypothesis_families: [imu_single_axis, uwb_imu]
+    omitted_event_set: [imu_imu, same_device_multiaxis]
+    history_retention_or_reset_rule: active_window_only_maturity_delay
+    allowed_actions: [keep_all, interval_repair_or_bridge]
+    projection_eligibility: algebraic
+
+  # Declared but NOT implemented: multi-axis common cause / bounded-amplitude
+  # envelope.  Kept explicit so no report can imply support for it.
+  - source_id: imu.accelerometer
+    common_cause_group: imu_axis
+    event_id: imu_accel_xyz_common_cause
+    model_type: interval_constant_multiaxis
+    parameter_units: m/s^2,m/s^2,m/s^2
+    parameter_sharing: shared_onset_vector
+    onset_domain: per_epoch_occurrence
+    end_condition: same_epoch
+    physical_time_support: one_imu_interval
+    amplitude_model: validated_bounded_set
+    prior_bound_source: NOT_IMPLEMENTED
+    prior_time_basis: per_protected_epoch
+    evidence_status: NOT_IMPLEMENTED
+    included_hypothesis_families: [same_device_multiaxis]
+    omitted_event_set: [imu_imu, two_uwb]
+    history_retention_or_reset_rule: not_applicable_not_implemented
+    allowed_actions: [keep_all]
+    projection_eligibility: unsupported
+
+families:
+  - family_id: uwb_single_anchor
+    scope: single
+    members: [uwb_anchor_epoch_independent_bias, uwb_anchor_persistent_bias,
+              uwb_anchor_affine_ramp]
+  - family_id: imu_single_axis
+    scope: single
+    members: [imu_accel_axis_interval_bias, imu_gyro_axis_interval_bias]
+  - family_id: uwb_imu
+    scope: pair
+    members: [uwb_anchor_epoch_independent_bias, uwb_anchor_persistent_bias,
+              uwb_anchor_affine_ramp, imu_accel_axis_interval_bias,
+              imu_gyro_axis_interval_bias]
+  - family_id: same_device_multiaxis
+    scope: pair
+    members: [imu_accel_xyz_common_cause]

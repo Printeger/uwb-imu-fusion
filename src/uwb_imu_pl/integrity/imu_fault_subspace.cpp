@@ -50,15 +50,16 @@ gtsam::PreintegratedCombinedMeasurements reintegrate(
 }  // namespace
 
 Eigen::MatrixXd ImuFaultSubspaceBuilder::finiteDifference(
-    const EpochTransaction& tx, const LinearizedFactorBlock& block) const {
+    const EpochTransaction& tx, const LinearizedFactorBlock& block,
+    double epsilon) const {
   Eigen::MatrixXd map = Eigen::MatrixXd::Zero(block.residual_whitened.size(), 6);
   for (int axis = 0; axis < 6; ++axis) {
     NumericalWorkCounters::imuOracleReintegration();
-    const auto plus = reintegrate(tx, axis, epsilon_);
+    const auto plus = reintegrate(tx, axis, epsilon);
     NumericalWorkCounters::imuOracleReintegration();
-    const auto minus = reintegrate(tx, axis, -epsilon_);
+    const auto minus = reintegrate(tx, axis, -epsilon);
     const Eigen::VectorXd derivative =
-        (factorError(tx, plus) - factorError(tx, minus)) / (2.0 * epsilon_);
+        (factorError(tx, plus) - factorError(tx, minus)) / (2.0 * epsilon);
     // Integrity uses z=-error.
     map.col(axis) = -block.whitener * derivative;
   }
@@ -112,7 +113,7 @@ ImuFaultSubspaces ImuFaultSubspaceBuilder::verifyFiniteDifferenceOracle(
     const EpochTransaction& tx, const LinearizedFactorBlock& block) const {
   ImuFaultSubspaces out = buildAnalytic(tx, block);
   if (!out.analytic_input_valid || !out.analytic_computation_valid) return out;
-  const Eigen::MatrixXd oracle = finiteDifference(tx, block);
+  const Eigen::MatrixXd oracle = finiteDifference(tx, block, epsilon_);
   Eigen::MatrixXd analytic(out.accel_xyz.rows(), 6);
   if (out.accel_xyz.rows() == out.gyro_xyz.rows()) {
     analytic << out.accel_xyz, out.gyro_xyz;
@@ -128,6 +129,39 @@ ImuFaultSubspaces ImuFaultSubspaceBuilder::verifyFiniteDifferenceOracle(
       out.oracle_relative_error <= tolerance_;
   out.finite_difference_relative_error = out.oracle_relative_error;
   out.analytic_verified = out.oracle_verified;
+  return out;
+}
+
+ImuFaultSubspaces ImuFaultSubspaceBuilder::verifyFiniteDifferenceSweep(
+    const EpochTransaction& tx, const LinearizedFactorBlock& block,
+    const std::vector<double>& epsilons) const {
+  ImuFaultSubspaces out = buildAnalytic(tx, block);
+  if (!out.analytic_input_valid || !out.analytic_computation_valid) return out;
+  if (epsilons.empty()) return out;
+  Eigen::MatrixXd analytic(out.accel_xyz.rows(), 6);
+  if (out.accel_xyz.rows() != out.gyro_xyz.rows()) return out;
+  analytic << out.accel_xyz, out.gyro_xyz;
+  out.sweep_executed = true;
+  bool all_finite = true;
+  double worst = 0.0;
+  for (const double epsilon : epsilons) {
+    if (!std::isfinite(epsilon) || epsilon <= 0.0) {
+      out.sweep_verified = false;
+      return out;
+    }
+    const Eigen::MatrixXd oracle = finiteDifference(tx, block, epsilon);
+    const double relative = analytic.rows() == oracle.rows() &&
+            analytic.cols() == oracle.cols()
+        ? (analytic - oracle).norm() / std::max(1.0, oracle.norm())
+        : std::numeric_limits<double>::infinity();
+    out.sweep_epsilons.push_back(epsilon);
+    out.sweep_relative_errors.push_back(relative);
+    out.sweep_reintegrations += 12;
+    all_finite = all_finite && std::isfinite(relative);
+    worst = std::max(worst, relative);
+  }
+  out.sweep_worst_relative_error = worst;
+  out.sweep_verified = all_finite && worst <= tolerance_;
   return out;
 }
 

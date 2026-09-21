@@ -104,7 +104,10 @@ include_directories(
 add_library(${PROJECT_NAME}
   src/uwb_imu_pl/common/types.cpp
   src/uwb_imu_pl/common/integrity_ids.cpp
+  src/uwb_imu_pl/common/failure_reason.cpp
+  src/uwb_imu_pl/common/integrity_identity.cpp
   src/uwb_imu_pl/config/integrity_config.cpp
+  src/uwb_imu_pl/config/fault_manifest.cpp
   src/uwb_imu_pl/io/run_logger.cpp
   src/uwb_imu_pl/integrity/estimation_snapshot.cpp
   src/uwb_imu_pl/estimation/snapshot_estimator.cpp
@@ -276,6 +279,16 @@ if(CATKIN_ENABLE_TESTING)
   target_compile_definitions(test_integrity_v2 PRIVATE
     UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
   target_link_libraries(test_integrity_v2 ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_integrity_reference test/test_integrity_reference.cpp test/test_main.cpp)
+  target_compile_definitions(test_integrity_reference PRIVATE
+    UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(test_integrity_reference ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_fault_manifest test/test_fault_manifest.cpp test/test_main.cpp)
+  target_compile_definitions(test_fault_manifest PRIVATE
+    UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(test_fault_manifest ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
 
   add_rostest(test/realtime_integrity_viz.test)
 

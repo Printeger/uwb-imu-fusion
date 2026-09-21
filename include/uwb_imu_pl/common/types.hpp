@@ -1,5 +1,7 @@
 #pragma once
 
+#include "uwb_imu_pl/common/integrity_identity.hpp"
+
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
@@ -313,6 +315,21 @@ struct AttemptDiagnostics {
   bool oracle_executed = false;
   double oracle_relative_error = std::numeric_limits<double>::infinity();
   bool oracle_verified = false;
+  // Multi-step finite-difference sweep (A4): epsilons, per-epsilon relative
+  // errors and whether the observed sequence stays within tolerance over the
+  // whole bracket instead of a single hand-picked step.
+  bool oracle_sweep_executed = false;
+  bool oracle_sweep_verified = false;
+  double oracle_sweep_worst_relative_error =
+      std::numeric_limits<double>::infinity();
+  std::uint64_t oracle_sweep_reintegrations = 0;
+  std::string oracle_sweep_epsilons;
+  std::string oracle_sweep_relative_errors;
+  // Failure accounting (A3). Codes come from the frozen FailureReason enum and
+  // are additive; the legacy `reason` text is unchanged.
+  std::string primary_failure = "NONE";
+  std::string all_failures;
+  std::string not_evaluated_checks;
   std::string status = "EXECUTED";
   std::string reason;
 };
@@ -459,6 +476,7 @@ struct BridgeAuditRecord {
 
 struct IntegrityOutput {
   AttemptDiagnostics diagnostics;
+  IntegritySnapshotIdentity snapshot_identity;
   TimestampNs timestamp;
   NavigationState state;
   DetectorResult detector;
@@ -540,6 +558,8 @@ struct RunManifest {
   std::string maturity = "IMPLEMENTED_UNVERIFIED";
   bool formal_eligible = false;
   std::string protected_state = "body_origin_position_world";
+  std::string protected_quantity = "position_xyz";
+  std::string position_reference = "body_origin";
   std::string detector = "joint_window_residual_chi_square";
   std::string pl_method = "residual_failure_mode_slope";
   std::uint32_t window_epochs = 20;
@@ -550,6 +570,10 @@ struct RunManifest {
   std::uint32_t max_exclusion_cardinality = 2;
   std::string bridge_model = "kinematic_cv_bounded";
   std::string history_recovery = "active_window_only_maturity_delay";
+  std::string diagnostics_schema_version = "uwb-imu-pl/gate-d-diagnostics/v11";
+  std::string failure_catalog;
+  std::string fault_manifest_digest;
+  std::string fault_manifest_id;
   std::string risk_calibration_id;
   std::string noise_overbound_calibration_id;
   std::string bridge_calibration_id;

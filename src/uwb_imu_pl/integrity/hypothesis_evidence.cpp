@@ -179,6 +179,10 @@ void analyzeDynamic(const Eigen::MatrixXd& input_gram,
     }
     pl_entry->monitorability.protected_slopes = pl_entry->protected_slopes;
     pl_entry->valid = pl_entry->protected_slopes.allFinite();
+    // A3 (G9): the audit export reads evidence.monitorability; copy the values
+    // that were just computed for the frozen PL entry instead of leaving the
+    // struct default (+inf).  Diagnostics only; the PL path above is unchanged.
+    evidence->monitorability.protected_slopes = pl_entry->protected_slopes;
   }
 }
 
@@ -252,6 +256,8 @@ void analyzeFixed(const Eigen::Matrix<double, Dimension, Dimension>& input_gram,
     }
     pl_entry->monitorability.protected_slopes = pl_entry->protected_slopes;
     pl_entry->valid = pl_entry->protected_slopes.allFinite();
+    // A3 (G9): mirror into the evidence record for the audit export.
+    evidence->monitorability.protected_slopes = pl_entry->protected_slopes;
   }
 }
 

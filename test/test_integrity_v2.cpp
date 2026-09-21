@@ -1712,6 +1712,44 @@ TEST(IntegrityV2ImuOracle, AnalyticProductionHasZeroReintegrationAcrossMotions) 
   }
 }
 
+TEST(IntegrityV2ImuOracle, FiniteDifferenceSweepMatchesAnalyticAcrossStepSizes) {
+  using namespace uwb_imu_pl;
+  auto config = researchConfig();
+  IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d(0.1, 0.2, 0.3));
+  NavigationState initial;
+  initial.timestamp = TimestampNs(0);
+  initial.position_world_m = {0, 0, 1};
+  initial.velocity_world_mps = {0.2, 0.1, 0.0};
+  initial.q_world_body =
+      Eigen::Quaterniond(Eigen::AngleAxisd(0.2, Eigen::Vector3d(1, 2, 3).normalized()));
+  estimator.initialize(initial, config.realtime.prior_sigmas);
+  for (int sample = 0; sample <= 10; ++sample) {
+    ImuMeasurement imu;
+    imu.id = MeasurementId(sample + 1);
+    imu.timestamp = TimestampNs(sample * 5000000LL);
+    imu.specific_force_mps2 = {0.3, -0.1, config.imu.gravity_mps2 + 0.05};
+    imu.angular_velocity_radps = {0.1, -0.2, 0.15};
+    estimator.ingestImu(imu);
+  }
+  auto input = batch(config, 55000000);
+  auto transaction = estimator.prepareEpoch(input);
+  const auto imu_block = estimator.buildPendingFactorBlock(
+      transaction, transaction.imu_group.id);
+  const auto sweep = ImuFaultSubspaceBuilder().verifyFiniteDifferenceSweep(
+      transaction, imu_block);
+  EXPECT_TRUE(sweep.sweep_executed);
+  EXPECT_TRUE(sweep.sweep_verified) << sweep.sweep_worst_relative_error;
+  EXPECT_EQ(sweep.sweep_epsilons.size(), 5u);
+  EXPECT_EQ(sweep.sweep_relative_errors.size(), 5u);
+  EXPECT_EQ(sweep.sweep_reintegrations, 60u);
+  for (const double error : sweep.sweep_relative_errors) {
+    EXPECT_TRUE(std::isfinite(error));
+  }
+  EXPECT_TRUE(std::isfinite(sweep.sweep_worst_relative_error));
+  estimator.discardEpoch(std::move(transaction),
+      {FdeStatus::ModelInvalid, "sweep development test", false});
+}
+
 TEST(IntegrityV2ImuOracle, InvalidAnalyticInputIsReportedWithoutOracle) {
   const uwb_imu_pl::EpochTransaction transaction;
   const uwb_imu_pl::LinearizedFactorBlock block;

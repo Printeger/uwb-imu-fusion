@@ -43,10 +43,22 @@ std::string withFixedLag(std::string text, const std::string& value) {
 }
 
 std::string writeTemp(const std::string& text, int index) {
+  // A3: temp copies live in /tmp, so the relative manifest path of the shipped
+  // research configuration is rewritten to the repository file.  The manifest
+  // itself is loaded and cross-checked in every case.
+  std::string body = text;
+  const std::string relative =
+      "  manifest_path: integrity_fault_manifest.yaml";
+  const auto manifest = body.find(relative);
+  if (manifest != std::string::npos) {
+    body.replace(manifest, relative.size(),
+                 "  manifest_path: " + std::string(UWB_IMU_PL_SOURCE_DIR) +
+                     "/config/integrity_fault_manifest.yaml");
+  }
   const std::string path = "/tmp/uwb_imu_pl_integrity_config_" +
       std::to_string(index) + ".yaml";
   std::ofstream output(path);
-  output << text;
+  output << body;
   return path;
 }
 
@@ -96,6 +108,11 @@ TEST(IntegrityConfig, SupportsValidFaultCardinalityPolicies) {
         text, "  double_faults_enabled: false\n",
         std::string("  double_faults_enabled: ") +
             (double_enabled ? "true\n" : "false\n"));
+    // A3 migration: keep the canonical order key consistent with the legacy
+    // switches instead of silently overriding either spelling.
+    text = replaceOnce(
+        text, "  max_fault_order: 1\n",
+        std::string("  max_fault_order: ") + (double_enabled ? "2\n" : "1\n"));
     return uwb_imu_pl::IntegrityConfigLoader::load(writeTemp(text, index));
   };
   const auto single = load(true, false, 60);
@@ -117,6 +134,8 @@ TEST(IntegrityConfig, ValidatesDoubleFaultSubtypesAndLegacyDefaults) {
   const std::string base = readConfig();
   auto double_enabled = replaceOnce(base,
       "  double_faults_enabled: false\n", "  double_faults_enabled: true\n");
+  double_enabled = replaceOnce(double_enabled, "  max_fault_order: 1\n",
+                               "  max_fault_order: 2\n");
   auto none = replaceOnce(double_enabled, "    uwb_plus_accel: true\n",
                           "    uwb_plus_accel: false\n");
   none = replaceOnce(none, "    uwb_plus_gyro: true\n",
@@ -233,8 +252,18 @@ TEST(IntegrityConfig, HashCoversResolvedConfigurationAfterOverride) {
   const auto reloaded = uwb_imu_pl::IntegrityConfigLoader::load(
       writeTemp(full_history.resolved_yaml, 50));
   EXPECT_EQ(reloaded.incremental.fixed_lag_epochs, 0u);
-  EXPECT_EQ(reloaded.config_hash, full_history.config_hash);
-  EXPECT_EQ(reloaded.resolved_yaml, full_history.resolved_yaml);
+  // A3: migration notes are part of the hashed resolved configuration, so a
+  // reload is not byte-identical to the original run that still carried the
+  // legacy aliases.  The required invariant is idempotence: loading the
+  // already-migrated dump again reproduces the same effective hash and text.
+  const auto reloaded_again = uwb_imu_pl::IntegrityConfigLoader::load(
+      writeTemp(reloaded.resolved_yaml, 51));
+  EXPECT_EQ(reloaded_again.config_hash, reloaded.config_hash);
+  EXPECT_EQ(reloaded_again.resolved_yaml, reloaded.resolved_yaml);
+  EXPECT_EQ(reloaded.fault_models.max_fault_order,
+            full_history.fault_models.max_fault_order);
+  EXPECT_EQ(reloaded.integrity_window.epochs,
+            full_history.integrity_window.epochs);
 }
 
 TEST(IntegrityConfig, UnifiedOverridesAreResolvedAndHashed) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "uwb_imu_pl/common/types.hpp"
+#include "uwb_imu_pl/config/fault_manifest.hpp"
 #include "uwb_imu_pl/factors/kinematic_bridge_factor.hpp"
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
 #include "uwb_imu_pl/integrity/health_manager.hpp"
@@ -85,6 +86,12 @@ struct FaultModelsConfig {
   bool single_faults_enabled = true;
   bool double_faults_enabled = false;
   std::uint32_t max_cardinality = 2;
+  // A3 migration: max_fault_order is the canonical switch (1 = single events
+  // only, 2 = singles plus declared pair families).  Legacy
+  // single_/double_faults_enabled remain readable but conflicts are rejected.
+  std::optional<int> max_fault_order;
+  // Optional fault manifest path (resolved relative to the config file).
+  std::string manifest_path;
   UwbFaultModelConfig uwb;
   ImuFaultModelConfig imu;
   CombinationFaultModelConfig combinations;
@@ -184,6 +191,10 @@ struct IntegrityConfig {
   std::string resolved_yaml;
   std::string source_path;
   std::string config_hash;
+  // A3: resolved fault manifest (present when fault_models.manifest_path is
+  // set) and the migration warnings that participated in the config hash.
+  std::optional<FaultManifest> fault_manifest;
+  std::vector<std::string> migration_warnings;
 };
 
 // Experiment-only overrides are applied to the parsed YAML before strict

@@ -1,0 +1,4569 @@
+{
+ "frames": [
+  {
+   "class": "normal",
+   "run": "A_nominal",
+   "attempt": 30,
+   "scenario": "A_nominal",
+   "note": "KEEP_ALL, all-in detector pass, finite PL",
+   "bin": "raw/replay/A_nominal/exports/attempt-30.bin",
+   "bin_sha256": "df7e5ab80d31974edc684a72f83ea09b2533eab7f17815fe4d910df4ac545610",
+   "window": {
+    "id": 30,
+    "detector_first_epoch": 20,
+    "recovery_first_epoch": 9,
+    "model_valid": true,
+    "reason": ""
+   },
+   "ladder": {
+    "anchor_id": 1,
+    "row_support": {
+     "current_rows": [
+      245
+     ],
+     "history_rows": [
+      15,
+      38,
+      61,
+      84,
+      107,
+      130,
+      153,
+      176,
+      199,
+      222
+     ],
+     "blocks": [
+      {
+       "group_id": 20002,
+       "epoch": 20,
+       "disposition": "ExplicitMeasurement",
+       "row": 15
+      },
+      {
+       "group_id": 21002,
+       "epoch": 21,
+       "disposition": "ExplicitMeasurement",
+       "row": 38
+      },
+      {
+       "group_id": 22002,
+       "epoch": 22,
+       "disposition": "ExplicitMeasurement",
+       "row": 61
+      },
+      {
+       "group_id": 23002,
+       "epoch": 23,
+       "disposition": "ExplicitMeasurement",
+       "row": 84
+      },
+      {
+       "group_id": 24002,
+       "epoch": 24,
+       "disposition": "ExplicitMeasurement",
+       "row": 107
+      },
+      {
+       "group_id": 25002,
+       "epoch": 25,
+       "disposition": "ExplicitMeasurement",
+       "row": 130
+      },
+      {
+       "group_id": 26002,
+       "epoch": 26,
+       "disposition": "ExplicitMeasurement",
+       "row": 153
+      },
+      {
+       "group_id": 27002,
+       "epoch": 27,
+       "disposition": "ExplicitMeasurement",
+       "row": 176
+      },
+      {
+       "group_id": 28002,
+       "epoch": 28,
+       "disposition": "ExplicitMeasurement",
+       "row": 199
+      },
+      {
+       "group_id": 29002,
+       "epoch": 29,
+       "disposition": "ExplicitMeasurement",
+       "row": 222
+      },
+      {
+       "group_id": 30002,
+       "epoch": 30,
+       "disposition": "PendingExplicit",
+       "row": 245
+      }
+     ]
+    },
+    "variants": {
+     "one_dim_instant": {
+      "q": 1,
+      "rows_touched": 1,
+      "rank_A": 1,
+      "rank_Z": 1,
+      "sigma_min_Z": 9.102707744675937,
+      "condition_Z": 1.0,
+      "slopes_xyz": [
+       0.013194115441437044,
+       0.0011882044042654015,
+       0.022380565168241794
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 4.090553009465877e-09
+     },
+     "template_epoch_independent": {
+      "q": 1,
+      "rows_touched": 1,
+      "rank_A": 1,
+      "rank_Z": 1,
+      "sigma_min_Z": 9.102707744675937,
+      "condition_Z": 1.0,
+      "slopes_xyz": [
+       0.013194115441437044,
+       0.0011882044042654015,
+       0.022380565168241794
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 4.090553009465877e-09
+     },
+     "template_persistent": {
+      "q": 1,
+      "rows_touched": 11,
+      "rank_A": 1,
+      "rank_Z": 1,
+      "sigma_min_Z": 28.50539548853352,
+      "condition_Z": 1.0,
+      "slopes_xyz": [
+       0.007561882761216194,
+       0.007474089254394761,
+       0.0016081474278373507
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 1.9162800174192039e-13
+     },
+     "template_family_union": {
+      "q": 2,
+      "rows_touched": 11,
+      "rank_A": 2,
+      "rank_Z": 2,
+      "sigma_min_Z": 8.688697222431648,
+      "condition_Z": 10.860853471086358,
+      "slopes_xyz": [
+       0.013781043725626073,
+       0.007537323499308591,
+       0.023871920447777587
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 4.4668351957720085e-09
+     },
+     "source_free_profile": {
+      "q": 11,
+      "rows_touched": 11,
+      "rank_A": 11,
+      "rank_Z": 11,
+      "sigma_min_Z": 8.507212892989738,
+      "condition_Z": 1.356422382475952,
+      "slopes_xyz": [
+       0.01451220708245581,
+       0.015124344185119626,
+       0.028882159569317736
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 8.380247640722319e-09
+     }
+    }
+   },
+   "shadow": {
+    "attempt_status": "EXECUTED",
+    "attempt_reason": "",
+    "checks": [
+     {
+      "name": "integrity_window",
+      "label": "window construction (model_valid, rank, condition)",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_boundary_provenance",
+      "label": "boundary provenance / slot identity",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_factor_linearization_whitening",
+      "label": "factor linearization + whitening",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_dense_assembly",
+      "label": "dense assembly",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_svd",
+      "label": "canonical Jacobian-space SVD",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_normal_equations",
+      "label": "normal equations (H^T H)",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_llt_state_solves",
+      "label": "LLT base solves and parity",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_fingerprint",
+      "label": "content fingerprint",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "all_in_detector",
+      "label": "all-in joint window detector",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "current_sensitivity",
+      "label": "analytic IMU sensitivity input/computation",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "model_generation",
+      "label": "fault mode/hypothesis/action generation",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "historical_sensitivity",
+      "label": "historical IMU sensitivity recomputation",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "hypothesis_evidence",
+      "label": "per-hypothesis Gram/rank/slope evidence",
+      "status": "PASS",
+      "detail": "effective_dimensions=1:236,2:0,3:0,other:0;context_bytes=34280;worker_blocks=4"
+     },
+     {
+      "name": "health_actions",
+      "label": "health state transits + candidate eligibility",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "hypothesis_audit",
+      "label": "hypothesis audit export",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "base_factorization",
+      "label": "base candidate kernel factorization",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "shared_cache",
+      "label": "per-block shared solve cache",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "candidate_evaluation",
+      "label": "candidate kernel + post detector + PL",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "fde_decision",
+      "label": "FDE decision / candidate selection",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "candidate_audit",
+      "label": "candidate + coverage audit",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "commit",
+      "label": "atomic backend commit",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "discard",
+      "label": "fail-closed discard",
+      "status": "SKIP_WITH_REASON",
+      "detail": "upstream gate did not reach stage"
+     },
+     {
+      "name": "state_audit",
+      "label": "ledger/health audit snapshot",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "finalize_commit_audit",
+      "label": "finalize + publication",
+      "status": "PASS",
+      "detail": "excludes separately timed commit/discard/state audit"
+     }
+    ],
+    "first_limitation": {
+     "layer": "publication",
+     "name": "EXECUTED",
+     "detail": "no identified limitation; nominal path"
+    },
+    "candidate_checks": [
+     {
+      "action_id": "1",
+      "kernel_evaluated": true,
+      "numerical_valid": true,
+      "post_passed": true,
+      "pl_evaluated": true,
+      "selected": true,
+      "numerical_path": "KEEP_BASE_CANONICAL",
+      "skip_reason": "",
+      "fallback_reason": ""
+     }
+    ],
+    "coverage_checks": [
+     {
+      "action_id": "1",
+      "outcome": "SELECTED",
+      "reason": "",
+      "uncovered_hypothesis_ids": ""
+     }
+    ],
+    "not_evaluated": [],
+    "publication": {
+     "batch_committed": true,
+     "availability": "UNAVAILABLE",
+     "fde_status": "SUCCESS_KEEP_ALL",
+     "pl_xyz": [
+      "2.23619",
+      "1.82313",
+      "1.99898"
+     ],
+     "reason": "IMPLEMENTED_UNVERIFIED: Gate J calibration and independent review pending"
+    },
+    "counts": {
+     "hypotheses": 236,
+     "generated_actions": 128,
+     "kernel_evaluated": 1,
+     "post_passed": 1,
+     "pl_evaluated": 1,
+     "selected": 1,
+     "single_uwb": 176,
+     "single_accel": 30,
+     "single_gyro": 30,
+     "double_uwb_accel": 0,
+     "double_uwb_gyro": 0
+    }
+   },
+   "production_hypothesis_crosscheck": [
+    {
+     "hypothesis_id": "1",
+     "fault_rank": "1",
+     "sigma_min": "9.66631",
+     "sigma_max": "9.66631",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "3",
+     "fault_rank": "1",
+     "sigma_min": "9.66542",
+     "sigma_max": "9.66542",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "5",
+     "fault_rank": "1",
+     "sigma_min": "9.66251",
+     "sigma_max": "9.66251",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "7",
+     "fault_rank": "1",
+     "sigma_min": "9.65663",
+     "sigma_max": "9.65663",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "9",
+     "fault_rank": "1",
+     "sigma_min": "9.64804",
+     "sigma_max": "9.64804",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "11",
+     "fault_rank": "1",
+     "sigma_min": "9.63928",
+     "sigma_max": "9.63928",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "13",
+     "fault_rank": "1",
+     "sigma_min": "9.63444",
+     "sigma_max": "9.63444",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "15",
+     "fault_rank": "1",
+     "sigma_min": "9.63367",
+     "sigma_max": "9.63367",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "17",
+     "fault_rank": "1",
+     "sigma_min": "9.61864",
+     "sigma_max": "9.61864",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "19",
+     "fault_rank": "1",
+     "sigma_min": "9.51918",
+     "sigma_max": "9.51918",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "21",
+     "fault_rank": "1",
+     "sigma_min": "9.10271",
+     "sigma_max": "9.10271",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    }
+   ]
+  },
+  {
+   "class": "alarm",
+   "run": "C_uwb_fde",
+   "attempt": 25,
+   "scenario": "C_uwb_fde",
+   "note": "anchor-1 range bias +2.25 m, detector alarm, union exclusion committed",
+   "bin": "raw/replay/C_uwb_fde/exports/attempt-25.bin",
+   "bin_sha256": "6f32d521f561c8c3b5703afaa39c654f7d3403d8be0f169b779f541f9f9e9119",
+   "window": {
+    "id": 25,
+    "detector_first_epoch": 15,
+    "recovery_first_epoch": 4,
+    "model_valid": true,
+    "reason": ""
+   },
+   "ladder": {
+    "anchor_id": 1,
+    "row_support": {
+     "current_rows": [
+      245
+     ],
+     "history_rows": [
+      15,
+      38,
+      61,
+      84,
+      107,
+      130,
+      153,
+      176,
+      199,
+      222
+     ],
+     "blocks": [
+      {
+       "group_id": 15002,
+       "epoch": 15,
+       "disposition": "ExplicitMeasurement",
+       "row": 15
+      },
+      {
+       "group_id": 16002,
+       "epoch": 16,
+       "disposition": "ExplicitMeasurement",
+       "row": 38
+      },
+      {
+       "group_id": 17002,
+       "epoch": 17,
+       "disposition": "ExplicitMeasurement",
+       "row": 61
+      },
+      {
+       "group_id": 18002,
+       "epoch": 18,
+       "disposition": "ExplicitMeasurement",
+       "row": 84
+      },
+      {
+       "group_id": 19002,
+       "epoch": 19,
+       "disposition": "ExplicitMeasurement",
+       "row": 107
+      },
+      {
+       "group_id": 20002,
+       "epoch": 20,
+       "disposition": "ExplicitMeasurement",
+       "row": 130
+      },
+      {
+       "group_id": 21002,
+       "epoch": 21,
+       "disposition": "ExplicitMeasurement",
+       "row": 153
+      },
+      {
+       "group_id": 22002,
+       "epoch": 22,
+       "disposition": "ExplicitMeasurement",
+       "row": 176
+      },
+      {
+       "group_id": 23002,
+       "epoch": 23,
+       "disposition": "ExplicitMeasurement",
+       "row": 199
+      },
+      {
+       "group_id": 24002,
+       "epoch": 24,
+       "disposition": "ExplicitMeasurement",
+       "row": 222
+      },
+      {
+       "group_id": 25002,
+       "epoch": 25,
+       "disposition": "PendingExplicit",
+       "row": 245
+      }
+     ]
+    },
+    "variants": {
+     "one_dim_instant": {
+      "q": 1,
+      "rows_touched": 1,
+      "rank_A": 1,
+      "rank_Z": 1,
+      "sigma_min_Z": 9.10044680854312,
+      "condition_Z": 1.0,
+      "slopes_xyz": [
+       0.011926710414755444,
+       0.0018100782207066991,
+       0.022480367039016357
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 419.26415225018997
+     },
+     "template_epoch_independent": {
+      "q": 1,
+      "rows_touched": 1,
+      "rank_A": 1,
+      "rank_Z": 1,
+      "sigma_min_Z": 9.10044680854312,
+      "condition_Z": 1.0,
+      "slopes_xyz": [
+       0.011926710414755444,
+       0.0018100782207066991,
+       0.022480367039016357
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 419.26415225018997
+     },
+     "template_persistent": {
+      "q": 1,
+      "rows_touched": 11,
+      "rank_A": 1,
+      "rank_Z": 1,
+      "sigma_min_Z": 28.48215276457842,
+      "condition_Z": 1.0,
+      "slopes_xyz": [
+       0.007464131050849549,
+       0.0076251247018426505,
+       0.0016784956263685216
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 33.774689678792434
+     },
+     "template_family_union": {
+      "q": 2,
+      "rows_touched": 11,
+      "rank_A": 2,
+      "rank_Z": 2,
+      "sigma_min_Z": 8.686906348835738,
+      "condition_Z": 10.847646594978531,
+      "slopes_xyz": [
+       0.012662650556974015,
+       0.007634062860755587,
+       0.02400009173574739
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 419.2641522505928
+     },
+     "source_free_profile": {
+      "q": 11,
+      "rows_touched": 11,
+      "rank_A": 11,
+      "rank_Z": 11,
+      "sigma_min_Z": 8.499433647929457,
+      "condition_Z": 1.359230038640495,
+      "slopes_xyz": [
+       0.013746944925214787,
+       0.014736862246893695,
+       0.029037691753282333
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 419.2641522544808
+     }
+    }
+   },
+   "shadow": {
+    "attempt_status": "EXECUTED",
+    "attempt_reason": "",
+    "checks": [
+     {
+      "name": "integrity_window",
+      "label": "window construction (model_valid, rank, condition)",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_boundary_provenance",
+      "label": "boundary provenance / slot identity",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_factor_linearization_whitening",
+      "label": "factor linearization + whitening",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_dense_assembly",
+      "label": "dense assembly",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_svd",
+      "label": "canonical Jacobian-space SVD",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_normal_equations",
+      "label": "normal equations (H^T H)",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_llt_state_solves",
+      "label": "LLT base solves and parity",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_fingerprint",
+      "label": "content fingerprint",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "all_in_detector",
+      "label": "all-in joint window detector",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "current_sensitivity",
+      "label": "analytic IMU sensitivity input/computation",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "model_generation",
+      "label": "fault mode/hypothesis/action generation",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "historical_sensitivity",
+      "label": "historical IMU sensitivity recomputation",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "hypothesis_evidence",
+      "label": "per-hypothesis Gram/rank/slope evidence",
+      "status": "PASS",
+      "detail": "effective_dimensions=1:236,2:0,3:0,other:0;context_bytes=34280;worker_blocks=4"
+     },
+     {
+      "name": "health_actions",
+      "label": "health state transits + candidate eligibility",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "hypothesis_audit",
+      "label": "hypothesis audit export",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "base_factorization",
+      "label": "base candidate kernel factorization",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "shared_cache",
+      "label": "per-block shared solve cache",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "candidate_evaluation",
+      "label": "candidate kernel + post detector + PL",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "fde_decision",
+      "label": "FDE decision / candidate selection",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "candidate_audit",
+      "label": "candidate + coverage audit",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "commit",
+      "label": "atomic backend commit",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "discard",
+      "label": "fail-closed discard",
+      "status": "SKIP_WITH_REASON",
+      "detail": "upstream gate did not reach stage"
+     },
+     {
+      "name": "state_audit",
+      "label": "ledger/health audit snapshot",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "finalize_commit_audit",
+      "label": "finalize + publication",
+      "status": "PASS",
+      "detail": "excludes separately timed commit/discard/state audit"
+     }
+    ],
+    "first_limitation": {
+     "layer": "candidate",
+     "name": "action 1",
+     "detail": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set"
+    },
+    "candidate_checks": [
+     {
+      "action_id": "1",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "2",
+      "kernel_evaluated": true,
+      "numerical_valid": true,
+      "post_passed": true,
+      "pl_evaluated": true,
+      "selected": true,
+      "numerical_path": "FINAL_JACOBIAN_REFERENCE",
+      "skip_reason": "",
+      "fallback_reason": "unstable normal solve;residual energy cancellation"
+     }
+    ],
+    "coverage_checks": [
+     {
+      "action_id": "1",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "21;22"
+     },
+     {
+      "action_id": "2",
+      "outcome": "SELECTED",
+      "reason": "",
+      "uncovered_hypothesis_ids": ""
+     }
+    ],
+    "not_evaluated": [],
+    "publication": {
+     "batch_committed": true,
+     "availability": "UNAVAILABLE",
+     "fde_status": "SUCCESS_UWB_EXCLUSION",
+     "pl_xyz": [
+      "2.07365",
+      "1.87296",
+      "2.01092"
+     ],
+     "reason": "IMPLEMENTED_UNVERIFIED: Gate J calibration and independent review pending"
+    },
+    "counts": {
+     "hypotheses": 236,
+     "generated_actions": 128,
+     "kernel_evaluated": 1,
+     "post_passed": 1,
+     "pl_evaluated": 1,
+     "selected": 1,
+     "single_uwb": 176,
+     "single_accel": 30,
+     "single_gyro": 30,
+     "double_uwb_accel": 0,
+     "double_uwb_gyro": 0
+    }
+   },
+   "production_hypothesis_crosscheck": [
+    {
+     "hypothesis_id": "1",
+     "fault_rank": "1",
+     "sigma_min": "9.66444",
+     "sigma_max": "9.66444",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "3",
+     "fault_rank": "1",
+     "sigma_min": "9.66404",
+     "sigma_max": "9.66404",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "5",
+     "fault_rank": "1",
+     "sigma_min": "9.66163",
+     "sigma_max": "9.66163",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "7",
+     "fault_rank": "1",
+     "sigma_min": "9.65623",
+     "sigma_max": "9.65623",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "9",
+     "fault_rank": "1",
+     "sigma_min": "9.64808",
+     "sigma_max": "9.64808",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "11",
+     "fault_rank": "1",
+     "sigma_min": "9.63974",
+     "sigma_max": "9.63974",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "13",
+     "fault_rank": "1",
+     "sigma_min": "9.63532",
+     "sigma_max": "9.63532",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "15",
+     "fault_rank": "1",
+     "sigma_min": "9.635",
+     "sigma_max": "9.635",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "17",
+     "fault_rank": "1",
+     "sigma_min": "9.62027",
+     "sigma_max": "9.62027",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "19",
+     "fault_rank": "1",
+     "sigma_min": "9.52021",
+     "sigma_max": "9.52021",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "21",
+     "fault_rank": "1",
+     "sigma_min": "9.10045",
+     "sigma_max": "9.10045",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    }
+   ]
+  },
+  {
+   "class": "inf_pl",
+   "run": "C_uwb_fde",
+   "attempt": 26,
+   "scenario": "C_uwb_fde",
+   "note": "first epoch after the alarm: no eligible action, best-effort commit, PL never evaluated",
+   "bin": "raw/replay/C_uwb_fde/exports/attempt-26.bin",
+   "bin_sha256": "eb97abc4b9cc538eb8f077fa06e929a75ffe4b6bd499c668c52083660b4da413",
+   "window": {
+    "id": 26,
+    "detector_first_epoch": 16,
+    "recovery_first_epoch": 5,
+    "model_valid": true,
+    "reason": ""
+   },
+   "ladder": {
+    "anchor_id": 1,
+    "row_support": {
+     "current_rows": [
+      244
+     ],
+     "history_rows": [
+      15,
+      38,
+      61,
+      84,
+      107,
+      130,
+      153,
+      176,
+      199,
+      222
+     ],
+     "blocks": [
+      {
+       "group_id": 16002,
+       "epoch": 16,
+       "disposition": "ExplicitMeasurement",
+       "row": 15
+      },
+      {
+       "group_id": 17002,
+       "epoch": 17,
+       "disposition": "ExplicitMeasurement",
+       "row": 38
+      },
+      {
+       "group_id": 18002,
+       "epoch": 18,
+       "disposition": "ExplicitMeasurement",
+       "row": 61
+      },
+      {
+       "group_id": 19002,
+       "epoch": 19,
+       "disposition": "ExplicitMeasurement",
+       "row": 84
+      },
+      {
+       "group_id": 20002,
+       "epoch": 20,
+       "disposition": "ExplicitMeasurement",
+       "row": 107
+      },
+      {
+       "group_id": 21002,
+       "epoch": 21,
+       "disposition": "ExplicitMeasurement",
+       "row": 130
+      },
+      {
+       "group_id": 22002,
+       "epoch": 22,
+       "disposition": "ExplicitMeasurement",
+       "row": 153
+      },
+      {
+       "group_id": 23002,
+       "epoch": 23,
+       "disposition": "ExplicitMeasurement",
+       "row": 176
+      },
+      {
+       "group_id": 24002,
+       "epoch": 24,
+       "disposition": "ExplicitMeasurement",
+       "row": 199
+      },
+      {
+       "group_id": 25010,
+       "epoch": 25,
+       "disposition": "ExplicitMeasurement",
+       "row": 222
+      },
+      {
+       "group_id": 26002,
+       "epoch": 26,
+       "disposition": "PendingExplicit",
+       "row": 244
+      }
+     ]
+    },
+    "variants": {
+     "one_dim_instant": {
+      "q": 1,
+      "rows_touched": 1,
+      "rank_A": 1,
+      "rank_Z": 1,
+      "sigma_min_Z": 9.051448112586181,
+      "condition_Z": 1.0,
+      "slopes_xyz": [
+       0.01244517508264244,
+       0.0026955325426183197,
+       0.023272121696142744
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 3.4006810761957543e-09
+     },
+     "template_epoch_independent": {
+      "q": 1,
+      "rows_touched": 1,
+      "rank_A": 1,
+      "rank_Z": 1,
+      "sigma_min_Z": 9.051448112586181,
+      "condition_Z": 1.0,
+      "slopes_xyz": [
+       0.01244517508264244,
+       0.0026955325426183197,
+       0.023272121696142744
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 3.4006810761957543e-09
+     },
+     "template_persistent": {
+      "q": 1,
+      "rows_touched": 11,
+      "rank_A": 1,
+      "rank_Z": 1,
+      "sigma_min_Z": 28.362331221888816,
+      "condition_Z": 1.0,
+      "slopes_xyz": [
+       0.007258555737457534,
+       0.007631680062986217,
+       0.0051716211057826166
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 8.778921545969479e-12
+     },
+     "template_family_union": {
+      "q": 2,
+      "rows_touched": 11,
+      "rank_A": 2,
+      "rank_Z": 2,
+      "sigma_min_Z": 8.635514933466808,
+      "condition_Z": 10.885816938985144,
+      "slopes_xyz": [
+       0.013032188611377313,
+       0.00765073930761571,
+       0.026335229650353443
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 3.819242858182188e-09
+     },
+     "source_free_profile": {
+      "q": 11,
+      "rows_touched": 11,
+      "rank_A": 11,
+      "rank_Z": 11,
+      "sigma_min_Z": 8.366262099267445,
+      "condition_Z": 1.402717448077719,
+      "slopes_xyz": [
+       0.013968691656880486,
+       0.014451818751538137,
+       0.02851247189187799
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 7.779691407869346e-09
+     }
+    }
+   },
+   "shadow": {
+    "attempt_status": "EXECUTED",
+    "attempt_reason": "",
+    "checks": [
+     {
+      "name": "integrity_window",
+      "label": "window construction (model_valid, rank, condition)",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_boundary_provenance",
+      "label": "boundary provenance / slot identity",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_factor_linearization_whitening",
+      "label": "factor linearization + whitening",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_dense_assembly",
+      "label": "dense assembly",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_svd",
+      "label": "canonical Jacobian-space SVD",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_normal_equations",
+      "label": "normal equations (H^T H)",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_llt_state_solves",
+      "label": "LLT base solves and parity",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_fingerprint",
+      "label": "content fingerprint",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "all_in_detector",
+      "label": "all-in joint window detector",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "current_sensitivity",
+      "label": "analytic IMU sensitivity input/computation",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "model_generation",
+      "label": "fault mode/hypothesis/action generation",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "historical_sensitivity",
+      "label": "historical IMU sensitivity recomputation",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "hypothesis_evidence",
+      "label": "per-hypothesis Gram/rank/slope evidence",
+      "status": "PASS",
+      "detail": "effective_dimensions=1:234,2:0,3:0,other:0;context_bytes=33992;worker_blocks=4"
+     },
+     {
+      "name": "health_actions",
+      "label": "health state transits + candidate eligibility",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "hypothesis_audit",
+      "label": "hypothesis audit export",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "base_factorization",
+      "label": "base candidate kernel factorization",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "shared_cache",
+      "label": "per-block shared solve cache",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "candidate_evaluation",
+      "label": "candidate kernel + post detector + PL",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "fde_decision",
+      "label": "FDE decision / candidate selection",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "candidate_audit",
+      "label": "candidate + coverage audit",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "commit",
+      "label": "atomic backend commit",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "discard",
+      "label": "fail-closed discard",
+      "status": "SKIP_WITH_REASON",
+      "detail": "upstream gate did not reach stage"
+     },
+     {
+      "name": "state_audit",
+      "label": "ledger/health audit snapshot",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "finalize_commit_audit",
+      "label": "finalize + publication",
+      "status": "PASS",
+      "detail": "excludes separately timed commit/discard/state audit"
+     }
+    ],
+    "first_limitation": {
+     "layer": "candidate",
+     "name": "action 1",
+     "detail": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set"
+    },
+    "candidate_checks": [
+     {
+      "action_id": "1",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "2",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "3",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "4",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "5",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "6",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "7",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "8",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "9",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "10",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "11",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "12",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "13",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "14",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "15",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "16",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "17",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "18",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "19",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "20",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "21",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "22",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "23",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "24",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "25",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "26",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "27",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "28",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "29",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "30",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "31",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "32",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "33",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "34",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "35",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "36",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "37",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "38",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "39",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "40",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "41",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "42",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "43",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "44",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "45",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "46",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "47",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "48",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "49",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "50",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "51",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "52",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "53",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "54",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "55",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "56",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "57",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "58",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "59",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "60",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "61",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "62",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "63",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "64",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "65",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "66",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "67",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "68",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "69",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "70",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "71",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "72",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "73",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "74",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "75",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "76",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "77",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "78",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "79",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "80",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "81",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "82",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "83",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "84",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "85",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "86",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "87",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "88",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "89",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "90",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "91",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "92",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "93",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "94",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "95",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "96",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "97",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "98",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "99",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "100",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "101",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "102",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "103",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "104",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "105",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "106",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "107",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "108",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "109",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "110",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "111",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "112",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "113",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "114",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "115",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "116",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "117",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "118",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "119",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "120",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "121",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "122",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "123",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "124",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "125",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "126",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "127",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: does not cover complete frozen plausible set",
+      "fallback_reason": ""
+     },
+     {
+      "action_id": "159",
+      "kernel_evaluated": false,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "",
+      "skip_reason": "SKIPPED_INELIGIBLE: cardinality exceeds frozen contract",
+      "fallback_reason": ""
+     }
+    ],
+    "coverage_checks": [
+     {
+      "action_id": "1",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;5"
+     },
+     {
+      "action_id": "2",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;68;69;70;71;72;73;7"
+     },
+     {
+      "action_id": "3",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "4",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "5",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "6",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "7",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "8",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "9",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "10",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "11",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "12",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "13",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "14",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "15",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "16",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "17",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "18",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "19",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "20",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "21",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "22",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "23",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;68;"
+     },
+     {
+      "action_id": "24",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "25",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "26",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "27",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "28",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "29",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "30",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "31",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "32",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "33",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;53;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "34",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;54;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "35",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;55;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "36",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;56;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "37",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;57;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "38",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;58;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "39",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;59;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "40",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;60;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "41",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;61;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "42",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;62;63;64;65;66;67;"
+     },
+     {
+      "action_id": "43",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;63;64;65;66;67;"
+     },
+     {
+      "action_id": "44",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;65;66;67;68;"
+     },
+     {
+      "action_id": "45",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;66;67;"
+     },
+     {
+      "action_id": "46",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;67;"
+     },
+     {
+      "action_id": "47",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "48",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "49",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "50",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "51",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "52",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "53",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "54",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "55",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "56",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "57",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "58",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "59",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "60",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "61",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "62",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "63",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "64",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "65",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "66",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "67",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "68",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "69",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "70",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "71",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "72",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "73",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "74",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "75",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "76",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "77",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "78",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "79",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "80",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "81",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "82",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "83",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "84",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "85",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "86",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "87",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "88",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "89",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "90",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "91",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "92",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "93",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "94",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "95",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "96",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "97",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "98",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "99",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "100",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "101",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "102",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "103",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "104",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "105",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "106",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "107",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "108",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "109",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "110",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "111",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "112",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "113",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "114",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "115",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "116",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "117",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "118",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "119",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "120",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "121",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "122",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "123",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "124",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "125",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "126",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "127",
+      "outcome": "COVERAGE_GAP",
+      "reason": "action does not cover the frozen plausible set and mandatory exclusions",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     },
+     {
+      "action_id": "159",
+      "outcome": "CARDINALITY_CONTRACT",
+      "reason": "action physical-source cardinality exceeds configured maximum",
+      "uncovered_hypothesis_ids": "1;3;5;7;9;11;13;15;17;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50;51;52;53;54;55;56;57;58;59;60;61;62;63;64;65;66;"
+     }
+    ],
+    "not_evaluated": [
+     "post-FDE protection level for every hypothesis/action (no kernel+PL pass reached)",
+     "post-FDE detector for every action"
+    ],
+    "publication": {
+     "batch_committed": true,
+     "availability": "UNAVAILABLE",
+     "fde_status": "AMBIGUOUS_UNAVAILABLE",
+     "pl_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "reason": "no valid action covers the complete plausible set"
+    },
+    "counts": {
+     "hypotheses": 234,
+     "generated_actions": 128,
+     "kernel_evaluated": 0,
+     "post_passed": 0,
+     "pl_evaluated": 0,
+     "selected": 0,
+     "single_uwb": 174,
+     "single_accel": 30,
+     "single_gyro": 30,
+     "double_uwb_accel": 0,
+     "double_uwb_gyro": 0
+    }
+   },
+   "production_hypothesis_crosscheck": [
+    {
+     "hypothesis_id": "1",
+     "fault_rank": "1",
+     "sigma_min": "9.66491",
+     "sigma_max": "9.66491",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "3",
+     "fault_rank": "1",
+     "sigma_min": "9.66442",
+     "sigma_max": "9.66442",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "5",
+     "fault_rank": "1",
+     "sigma_min": "9.66194",
+     "sigma_max": "9.66194",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "7",
+     "fault_rank": "1",
+     "sigma_min": "9.6565",
+     "sigma_max": "9.6565",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "9",
+     "fault_rank": "1",
+     "sigma_min": "9.64828",
+     "sigma_max": "9.64828",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "11",
+     "fault_rank": "1",
+     "sigma_min": "9.63951",
+     "sigma_max": "9.63951",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "13",
+     "fault_rank": "1",
+     "sigma_min": "9.63366",
+     "sigma_max": "9.63366",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "15",
+     "fault_rank": "1",
+     "sigma_min": "9.62942",
+     "sigma_max": "9.62942",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "17",
+     "fault_rank": "1",
+     "sigma_min": "9.60407",
+     "sigma_max": "9.60407",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "19",
+     "fault_rank": "1",
+     "sigma_min": "9.05145",
+     "sigma_max": "9.05145",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    }
+   ]
+  },
+  {
+   "class": "missing",
+   "run": "G_continuous_rejection",
+   "attempt": 10,
+   "scenario": "G_continuous_rejection",
+   "note": "all-anchor bias; only candidate rejected by the 0.25 step gate; epoch discarded (no UWB commit)",
+   "bin": "raw/replay/G_continuous_rejection/exports/attempt-10.bin",
+   "bin_sha256": "188ef1feb3b8bac77e6b206f3980b0e33194f93ec1b69ec94d53b7207ec7b4d6",
+   "window": {
+    "id": 10,
+    "detector_first_epoch": 0,
+    "recovery_first_epoch": 0,
+    "model_valid": true,
+    "reason": ""
+   },
+   "ladder": {
+    "anchor_id": 1,
+    "row_support": {
+     "current_rows": [
+      122
+     ],
+     "history_rows": [
+      30,
+      53,
+      76,
+      99
+     ],
+     "blocks": [
+      {
+       "group_id": 1002,
+       "epoch": 1,
+       "disposition": "ExplicitMeasurement",
+       "row": 30
+      },
+      {
+       "group_id": 2002,
+       "epoch": 2,
+       "disposition": "ExplicitMeasurement",
+       "row": 53
+      },
+      {
+       "group_id": 3002,
+       "epoch": 3,
+       "disposition": "ExplicitMeasurement",
+       "row": 76
+      },
+      {
+       "group_id": 4002,
+       "epoch": 4,
+       "disposition": "ExplicitMeasurement",
+       "row": 99
+      },
+      {
+       "group_id": 10002,
+       "epoch": 5,
+       "disposition": "PendingExplicit",
+       "row": 122
+      }
+     ]
+    },
+    "variants": {
+     "one_dim_instant": {
+      "q": 1,
+      "rows_touched": 1,
+      "rank_A": 1,
+      "rank_Z": 1,
+      "sigma_min_Z": 8.53142872975627,
+      "condition_Z": 1.0,
+      "slopes_xyz": [
+       0.01809625744749014,
+       0.019345412584311588,
+       0.01774526853000435
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 3240.8310901471
+     },
+     "template_epoch_independent": {
+      "q": 1,
+      "rows_touched": 1,
+      "rank_A": 1,
+      "rank_Z": 1,
+      "sigma_min_Z": 8.53142872975627,
+      "condition_Z": 1.0,
+      "slopes_xyz": [
+       0.01809625744749014,
+       0.019345412584311588,
+       0.01774526853000435
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 3240.8310901471
+     },
+     "template_persistent": {
+      "q": 1,
+      "rows_touched": 5,
+      "rank_A": 1,
+      "rank_Z": 1,
+      "sigma_min_Z": 18.963781166787225,
+      "condition_Z": 1.0,
+      "slopes_xyz": [
+       0.009923575190090832,
+       0.010885464232523685,
+       0.003202242526015081
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 687.1774676953454
+     },
+     "template_family_union": {
+      "q": 2,
+      "rows_touched": 5,
+      "rank_A": 2,
+      "rank_Z": 2,
+      "sigma_min_Z": 7.46775053452245,
+      "condition_Z": 6.753832218249325,
+      "slopes_xyz": [
+       0.01821759102869365,
+       0.01951315126295098,
+       0.0184999295265793
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 3241.8656751278268
+     },
+     "source_free_profile": {
+      "q": 5,
+      "rows_touched": 5,
+      "rank_A": 5,
+      "rank_Z": 5,
+      "sigma_min_Z": 8.48082599460434,
+      "condition_Z": 1.3591288783149533,
+      "slopes_xyz": [
+       0.020448444987742672,
+       0.0208202400878138,
+       0.024223784652246554
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 3261.794191460864
+     }
+    }
+   },
+   "shadow": {
+    "attempt_status": "EXECUTED",
+    "attempt_reason": "",
+    "checks": [
+     {
+      "name": "integrity_window",
+      "label": "window construction (model_valid, rank, condition)",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_boundary_provenance",
+      "label": "boundary provenance / slot identity",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_factor_linearization_whitening",
+      "label": "factor linearization + whitening",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_dense_assembly",
+      "label": "dense assembly",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_svd",
+      "label": "canonical Jacobian-space SVD",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_normal_equations",
+      "label": "normal equations (H^T H)",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_llt_state_solves",
+      "label": "LLT base solves and parity",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_fingerprint",
+      "label": "content fingerprint",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "all_in_detector",
+      "label": "all-in joint window detector",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "current_sensitivity",
+      "label": "analytic IMU sensitivity input/computation",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "model_generation",
+      "label": "fault mode/hypothesis/action generation",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "historical_sensitivity",
+      "label": "historical IMU sensitivity recomputation",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "hypothesis_evidence",
+      "label": "per-hypothesis Gram/rank/slope evidence",
+      "status": "PASS",
+      "detail": "effective_dimensions=1:110,2:0,3:0,other:0;context_bytes=16136;worker_blocks=4"
+     },
+     {
+      "name": "health_actions",
+      "label": "health state transits + candidate eligibility",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "hypothesis_audit",
+      "label": "hypothesis audit export",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "base_factorization",
+      "label": "base candidate kernel factorization",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "shared_cache",
+      "label": "per-block shared solve cache",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "candidate_evaluation",
+      "label": "candidate kernel + post detector + PL",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "fde_decision",
+      "label": "FDE decision / candidate selection",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "candidate_audit",
+      "label": "candidate + coverage audit",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "commit",
+      "label": "atomic backend commit",
+      "status": "SKIP_WITH_REASON",
+      "detail": "upstream gate did not reach stage"
+     },
+     {
+      "name": "discard",
+      "label": "fail-closed discard",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "state_audit",
+      "label": "ledger/health audit snapshot",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "finalize_commit_audit",
+      "label": "finalize + publication",
+      "status": "PASS",
+      "detail": "excludes separately timed commit/discard/state audit"
+     }
+    ],
+    "first_limitation": {
+     "layer": "candidate",
+     "name": "action 1",
+     "detail": "certified step exceeds gate; final Jacobian not built"
+    },
+    "candidate_checks": [
+     {
+      "action_id": "1",
+      "kernel_evaluated": true,
+      "numerical_valid": false,
+      "post_passed": false,
+      "pl_evaluated": false,
+      "selected": false,
+      "numerical_path": "QR_CERTIFIED_STEP_REJECTION",
+      "skip_reason": "certified step exceeds gate; final Jacobian not built",
+      "fallback_reason": ""
+     }
+    ],
+    "coverage_checks": [
+     {
+      "action_id": "1",
+      "outcome": "NUMERICAL_REJECTION",
+      "reason": "candidate linearization step gate failed",
+      "uncovered_hypothesis_ids": ""
+     }
+    ],
+    "not_evaluated": [
+     "post-FDE protection level for every hypothesis/action (no kernel+PL pass reached)",
+     "post-FDE detector for every action"
+    ],
+    "publication": {
+     "batch_committed": false,
+     "availability": "UNAVAILABLE",
+     "fde_status": "NO_VALID_CANDIDATE",
+     "pl_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "reason": "alarm has no risk-preserving plausible hypothesis"
+    },
+    "counts": {
+     "hypotheses": 110,
+     "generated_actions": 78,
+     "kernel_evaluated": 1,
+     "post_passed": 0,
+     "pl_evaluated": 0,
+     "selected": 0,
+     "single_uwb": 80,
+     "single_accel": 15,
+     "single_gyro": 15,
+     "double_uwb_accel": 0,
+     "double_uwb_gyro": 0
+    }
+   },
+   "production_hypothesis_crosscheck": [
+    {
+     "hypothesis_id": "1",
+     "fault_rank": "1",
+     "sigma_min": "9.28092",
+     "sigma_max": "9.28092",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "3",
+     "fault_rank": "1",
+     "sigma_min": "9.50216",
+     "sigma_max": "9.50216",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "5",
+     "fault_rank": "1",
+     "sigma_min": "9.52189",
+     "sigma_max": "9.52189",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "7",
+     "fault_rank": "1",
+     "sigma_min": "9.39089",
+     "sigma_max": "9.39089",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    },
+    {
+     "hypothesis_id": "9",
+     "fault_rank": "1",
+     "sigma_min": "8.53143",
+     "sigma_max": "8.53143",
+     "condition_number": "1",
+     "slopes_xyz": [
+      "inf",
+      "inf",
+      "inf"
+     ],
+     "monitorable": true
+    }
+   ]
+  },
+  {
+   "class": "marginalization",
+   "run": "H_mature_union",
+   "attempt": 201,
+   "scenario": "H_mature_union",
+   "note": "first fixed-lag marginalization epoch; KEEP_ALL committed",
+   "bin": "raw/replay/H_mature_union/exports/attempt-201.bin",
+   "bin_sha256": "d7c147774a3e92efa69a449d4d96aee50e2794116df1d2af2df311ff2f6b827c",
+   "window": {
+    "id": 201,
+    "detector_first_epoch": 191,
+    "recovery_first_epoch": 180,
+    "model_valid": true,
+    "reason": ""
+   },
+   "ladder": {
+    "anchor_id": 1,
+    "row_support": {
+     "current_rows": [
+      245
+     ],
+     "history_rows": [
+      15,
+      38,
+      61,
+      84,
+      107,
+      130,
+      153,
+      176,
+      199,
+      222
+     ],
+     "blocks": [
+      {
+       "group_id": 191002,
+       "epoch": 191,
+       "disposition": "ExplicitMeasurement",
+       "row": 15
+      },
+      {
+       "group_id": 192002,
+       "epoch": 192,
+       "disposition": "ExplicitMeasurement",
+       "row": 38
+      },
+      {
+       "group_id": 193002,
+       "epoch": 193,
+       "disposition": "ExplicitMeasurement",
+       "row": 61
+      },
+      {
+       "group_id": 194002,
+       "epoch": 194,
+       "disposition": "ExplicitMeasurement",
+       "row": 84
+      },
+      {
+       "group_id": 195002,
+       "epoch": 195,
+       "disposition": "ExplicitMeasurement",
+       "row": 107
+      },
+      {
+       "group_id": 196002,
+       "epoch": 196,
+       "disposition": "ExplicitMeasurement",
+       "row": 130
+      },
+      {
+       "group_id": 197002,
+       "epoch": 197,
+       "disposition": "ExplicitMeasurement",
+       "row": 153
+      },
+      {
+       "group_id": 198002,
+       "epoch": 198,
+       "disposition": "ExplicitMeasurement",
+       "row": 176
+      },
+      {
+       "group_id": 199002,
+       "epoch": 199,
+       "disposition": "ExplicitMeasurement",
+       "row": 199
+      },
+      {
+       "group_id": 200002,
+       "epoch": 200,
+       "disposition": "ExplicitMeasurement",
+       "row": 222
+      },
+      {
+       "group_id": 201002,
+       "epoch": 201,
+       "disposition": "PendingExplicit",
+       "row": 245
+      }
+     ]
+    },
+    "variants": {
+     "one_dim_instant": {
+      "q": 1,
+      "rows_touched": 1,
+      "rank_A": 1,
+      "rank_Z": 1,
+      "sigma_min_Z": 8.84511635628973,
+      "condition_Z": 1.0,
+      "slopes_xyz": [
+       0.007346123928633637,
+       0.011964332382550841,
+       0.0056392891816485135
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 3.078232428159906e-10
+     },
+     "template_epoch_independent": {
+      "q": 1,
+      "rows_touched": 1,
+      "rank_A": 1,
+      "rank_Z": 1,
+      "sigma_min_Z": 8.84511635628973,
+      "condition_Z": 1.0,
+      "slopes_xyz": [
+       0.007346123928633637,
+       0.011964332382550841,
+       0.0056392891816485135
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 3.078232428159906e-10
+     },
+     "template_persistent": {
+      "q": 1,
+      "rows_touched": 11,
+      "rank_A": 1,
+      "rank_Z": 1,
+      "sigma_min_Z": 28.637894334064352,
+      "condition_Z": 1.0,
+      "slopes_xyz": [
+       0.006042029713034666,
+       0.008194730264453996,
+       0.0060449256554187475
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 2.2129962917286223e-12
+     },
+     "template_family_union": {
+      "q": 2,
+      "rows_touched": 11,
+      "rank_A": 2,
+      "rank_Z": 2,
+      "sigma_min_Z": 8.428260332648897,
+      "condition_Z": 11.646693015642844,
+      "slopes_xyz": [
+       0.008406829739350656,
+       0.01294327359192445,
+       0.007282408851763744
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 3.219673211077873e-10
+     },
+     "source_free_profile": {
+      "q": 11,
+      "rows_touched": 11,
+      "rank_A": 11,
+      "rank_Z": 11,
+      "sigma_min_Z": 8.587250006695596,
+      "condition_Z": 1.2117036254414308,
+      "slopes_xyz": [
+       0.009806044217819464,
+       0.015906362237414495,
+       0.007919781380527954
+      ],
+      "monitorable_evidence_gate": true,
+      "monitorable_pl_gate": true,
+      "detection_energy": 5.704027889160599e-10
+     }
+    }
+   },
+   "shadow": {
+    "attempt_status": "EXECUTED",
+    "attempt_reason": "",
+    "checks": [
+     {
+      "name": "integrity_window",
+      "label": "window construction (model_valid, rank, condition)",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_boundary_provenance",
+      "label": "boundary provenance / slot identity",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_factor_linearization_whitening",
+      "label": "factor linearization + whitening",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_dense_assembly",
+      "label": "dense assembly",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_svd",
+      "label": "canonical Jacobian-space SVD",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_normal_equations",
+      "label": "normal equations (H^T H)",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_llt_state_solves",
+      "label": "LLT base solves and parity",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "window_fingerprint",
+      "label": "content fingerprint",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "all_in_detector",
+      "label": "all-in joint window detector",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "current_sensitivity",
+      "label": "analytic IMU sensitivity input/computation",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "model_generation",
+      "label": "fault mode/hypothesis/action generation",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "historical_sensitivity",
+      "label": "historical IMU sensitivity recomputation",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "hypothesis_evidence",
+      "label": "per-hypothesis Gram/rank/slope evidence",
+      "status": "PASS",
+      "detail": "effective_dimensions=1:236,2:0,3:0,other:0;context_bytes=34280;worker_blocks=4"
+     },
+     {
+      "name": "health_actions",
+      "label": "health state transits + candidate eligibility",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "hypothesis_audit",
+      "label": "hypothesis audit export",
+      "status": "SKIP_WITH_REASON",
+      "detail": "disabled by output.write_hypothesis_evidence"
+     },
+     {
+      "name": "base_factorization",
+      "label": "base candidate kernel factorization",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "shared_cache",
+      "label": "per-block shared solve cache",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "candidate_evaluation",
+      "label": "candidate kernel + post detector + PL",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "fde_decision",
+      "label": "FDE decision / candidate selection",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "candidate_audit",
+      "label": "candidate + coverage audit",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "commit",
+      "label": "atomic backend commit",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "discard",
+      "label": "fail-closed discard",
+      "status": "SKIP_WITH_REASON",
+      "detail": "upstream gate did not reach stage"
+     },
+     {
+      "name": "state_audit",
+      "label": "ledger/health audit snapshot",
+      "status": "PASS",
+      "detail": ""
+     },
+     {
+      "name": "finalize_commit_audit",
+      "label": "finalize + publication",
+      "status": "PASS",
+      "detail": "excludes separately timed commit/discard/state audit"
+     }
+    ],
+    "first_limitation": {
+     "layer": "publication",
+     "name": "EXECUTED",
+     "detail": "no identified limitation; nominal path"
+    },
+    "candidate_checks": [
+     {
+      "action_id": "1",
+      "kernel_evaluated": true,
+      "numerical_valid": true,
+      "post_passed": true,
+      "pl_evaluated": true,
+      "selected": true,
+      "numerical_path": "KEEP_BASE_CANONICAL",
+      "skip_reason": "",
+      "fallback_reason": ""
+     }
+    ],
+    "coverage_checks": [
+     {
+      "action_id": "1",
+      "outcome": "SELECTED",
+      "reason": "",
+      "uncovered_hypothesis_ids": ""
+     }
+    ],
+    "not_evaluated": [],
+    "publication": {
+     "batch_committed": true,
+     "availability": "UNAVAILABLE",
+     "fde_status": "SUCCESS_KEEP_ALL",
+     "pl_xyz": [
+      "2.99622",
+      "4.30433",
+      "2.08127"
+     ],
+     "reason": "IMPLEMENTED_UNVERIFIED: Gate J calibration and independent review pending"
+    },
+    "counts": {
+     "hypotheses": 236,
+     "generated_actions": 128,
+     "kernel_evaluated": 1,
+     "post_passed": 1,
+     "pl_evaluated": 1,
+     "selected": 1,
+     "single_uwb": 176,
+     "single_accel": 30,
+     "single_gyro": 30,
+     "double_uwb_accel": 0,
+     "double_uwb_gyro": 0
+    }
+   },
+   "production_hypothesis_crosscheck": []
+  }
+ ]
+}
