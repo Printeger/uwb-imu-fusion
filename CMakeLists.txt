@@ -137,6 +137,7 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/integrity/history_summary_extraction.cpp
   src/uwb_imu_pl/integrity/dual_channel_detector.cpp
   src/uwb_imu_pl/integrity/fde_post_selection.cpp
+  src/uwb_imu_pl/integrity/publication_identity.cpp
   src/uwb_imu_pl/integrity/history_summary_lifecycle.cpp
   src/uwb_imu_pl/factors/kinematic_bridge_factor.cpp
 )
@@ -330,6 +331,11 @@ if(CATKIN_ENABLE_TESTING)
   target_compile_definitions(test_fde_post_selection PRIVATE
     UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
   target_link_libraries(test_fde_post_selection ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_publication_identity test/test_publication_identity.cpp test/test_main.cpp)
+  target_compile_definitions(test_publication_identity PRIVATE
+    UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(test_publication_identity ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
 
   catkin_add_gtest(test_history_summary_pipeline test/test_history_summary_pipeline.cpp test/test_main.cpp)
   target_compile_definitions(test_history_summary_pipeline PRIVATE
