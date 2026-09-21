@@ -506,3 +506,43 @@ identity/parity/solution 残差、前向界、detector_only_rows、策略与可�
   常数丢失（实测）。详见 `history-fault-parameterization.md`。
 * 哈希：机械规则最后生成（base `e4d1f10` → 代码 `1f05f11` ∪ 证据树）。
 * Part C（接线）未执行；就绪清单见主证据 §6。不 push；无格式化。
+
+## 15. C1 收口（Part C 接线 + C1-c 剩余）2026-09-21
+
+**S0 保命点**：工作树 WIP（19 改 + 4 新，构建通过，全量 376/6）→
+`wip(C1): pipeline wiring WIP - 6 failures pending`（`de7e474`）作为承接点；
+此后每过一个绿测里程碑再做 `wip(C1):` checkpoint，最终 `--amend` 收束为正式代码提交。
+
+**S0 格式化事件检查（第七次）**：WIP 中 5 个文件为**纯格式化**（
+`history_fault_summary.{hpp,cpp}`、`history_summary_extraction.hpp`、
+`statistical_bounds_cache.{hpp,cpp}`：去空白/注释后 token 完全相同）→ 回退到
+`9288f73` 版本；其余文件的格式化噪声与真实改动混在同一 hunk 流中，保留（记录在案）。
+
+**S0 基线**：构建通过；全量 **376 tests / 6 failures**（3 个用例 ×2 计数）→
+`raw/run_tests_c1pipeline.log`（本轮起所有测试运行落盘）。
+
+**三个失败根因与修复（分析 → 改动 → 证据）**
+
+* F3（真缺陷，两个）：
+  1. `buildIntegrityWindow` 把整个 boundary graph `linearize()` 后抽取，而
+     `LinearContainerFactor`（fixed-lag 边缘化容器）线性化为 `HessianFactor` ⇒
+     抽取拒绝（`reduced factor is not a JacobianFactor`）。修：逐因子分辨类型：
+     测量型因子行原样（行身份保留，fault map 才能对齐）；信息型因子用
+     `info().selfadjointView()` + Cholesky 得 `[R|c]`，常数 `f-cᵀc` **显式累加**
+     （`history.constant_offset`）而非丢弃。
+  2. 注入路径逐键只拷 **1 列**（`stacked.col()`）⇒ 导航状态键（x/b=6、v=3）被
+     截断；修：按 `getA(iterator).cols()` 逐键块拷贝。
+* F2：摘要身份未进指纹 ⇒ 修：`integrityWindowFingerprint` 纳入摘要 present/valid/
+  capacity/version_digest/计数/列身份/response/detector_response/d_perp/文本；
+  stale 判据（已有）因此生效。
+* F1：测试把模式映射建成 `emitted_rows` 长度后与 `window.Hᵀ` 相乘（维度不符，
+  Release 下 UB ⇒ Γ=-∞）。修：映射放入窗口行空间（按边界块行偏移定位），
+  Γ 恒等式与断言不变。
+
+**重基线（逐条依据见 `history-summary-pipeline.md §6`）**：F3 legacy dof 断言
+改为 `dof == UWB 行数 + nu_perp`（池化口径；实测 nu_perp=0/0/31/35 ⇒ 8/14/41/47）。
+
+**全量**：见日志 `raw/run_tests_c1pipeline.log`（0 failures 行）。
+**其余**：诊断 v15（`AttemptDiagnostics.history_summary`，只加字段）、冷启动显式状态、
+`UWB_IMU_PL_C1P_DIAG` 实测表 → `history-summary-pipeline.md §10`。
+不 push；无格式化；阈值/合同零改动。

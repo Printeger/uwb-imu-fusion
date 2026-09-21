@@ -261,3 +261,21 @@
   `extractBoundaryRows(linearized)` + `buildHistoryFaultSummary()` 的
   `(R_b,d_b)`（含 `T_b` 故障响应与经 `DetectorOnlyRows` 进入的 `(F_b,d_perp)`）。
 * Part C 就绪清单与残留风险：`history-fault-parameterization.md §3/§6`。
+
+## 附：C1 收口后的边界构造（2026-09-21）
+
+* **已接线（本轮）**：`buildIntegrityWindow` 边界段按 factor group 取线性化行
+  （测量型因子行原样；`LinearContainerFactor`/`HessianFactor` 用
+  `info().selfadjointView()` + Cholesky 得 `[R|c]`，常数 `f-cᵀc` 累加到
+  `history.constant_offset`），注入历史故障列后 `extractBoundaryRows` →
+  `buildHistoryFaultSummary`，窗口边界块即 `[R_b; 0] / [0 | d_perp]`
+  （`whitening_model_id = "history_summary_sqrt_d1"`，不进 ledger 组）。
+* **载体**：`WindowHistorySummary`（response/detector_response/d_perp/kappa_b/
+  nu_perp/constant_offset/information_form_factors/state/version_digest…）。
+* **指纹**：`integrityWindowFingerprint` 现含摘要身份（版本分量/计数/列身份/
+  矩阵/文本）⇒ 缓存失效语义完备。
+* **诊断 v15**：`AttemptDiagnostics.history_summary`（只加字段）。
+* **遗留**：`boundary_summary_id` 仍为 `partial_qr_schur_boundary`（描述旧构造），
+  新块用 `whitening_model_id` 区分；`validity_assumptions` 仍为
+  `history_nominal_boundary_only`（摘要不声称 horizon 外覆盖，正确）。
+* 根因与缺口：`history-summary-pipeline.md §6/§11`。

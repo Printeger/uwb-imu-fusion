@@ -237,67 +237,81 @@
    "id": "HIS-01",
    "description": "完整历史与摘要，多个消元顺序；Sigma_p/G/Gamma/代价/df 等价，不只比轨迹",
    "owner_work_package": "C",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [
-    "history-summary-design.md"
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.BoundaryIsTheSquareRootHistorySummary:HistorySummaryPipeline.PooledStatisticAndDofIdentity"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。 | C1-b 解阻（Part A/B，代码 1f05f11）：参数化子系统与抽取定路已模块级 LOCKED_BY_TEST；接线（Part C）就绪清单见 history-fault-parameterization.md §6。"
+   "evidence": [
+    "history-summary-pipeline.md",
+    "history-fault-parameterization.md"
+   ],
+   "note": "管线级：边界块 == 模块平方根摘要（R_b/T_b/d_b/F_b/d_perp 载体逐项一致）+ 池化恒等式；模块级多消元顺序不变量见 HIS-M1。管线级「多消元顺序」独立 oracle 未成测（pipeline md §11 缺口 3）。"
   },
   {
    "id": "HIS-02",
    "description": "原始 IMU/UWB 故障跨左边界；故障影响与检测信息持续保留",
    "owner_work_package": "C",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [
-    "history-summary-design.md"
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.HistoryFaultResponsePersistsAcrossBoundary"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。 | C1-b 解阻（Part A/B，代码 1f05f11）：参数化子系统与抽取定路已模块级 LOCKED_BY_TEST；接线（Part C）就绪清单见 history-fault-parameterization.md §6。"
+   "evidence": [
+    "history-summary-pipeline.md"
+   ],
+   "note": "跨边界持续故障：模式映射=[T_b f; F_b f]，实测 Γ>0 且有限、‖T_b f‖>0；历史列注入 q=22/18（F3 legacy 场景）。"
   },
   {
    "id": "HIS-03",
    "description": "old/new 数据归属重复或漏记；lineage 检查失败；无增加冗余假象",
    "owner_work_package": "C",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [
-    "history-summary-design.md"
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.RowAttributionExplicitXorBoundary"
    ],
-   "note": "v11 identity 已导出 history_lineage_id 字段（当前 NOT_AVAILABLE_IN_SCHEMA），为 C 准备接口 | C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。 | C1-b 解阻（Part A/B，代码 1f05f11）：参数化子系统与抽取定路已模块级 LOCKED_BY_TEST；接线（Part C）就绪清单见 history-fault-parameterization.md §6。"
+   "evidence": [
+    "history-summary-pipeline.md"
+   ],
+   "note": "explicit XOR boundary 精确一次、指针身份逐槽校验、边界块不占 ledger 组 ⇒ 无重复计入；覆盖率=100%（slot_accounting == frozen_slots）+ 唯一性（group_ids == blocks）。"
   },
   {
    "id": "HIS-04",
    "description": "历史重线性化、权重/白化改变；重建/有效包络/不可用，不重新贴版本号",
    "owner_work_package": "C",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [
-    "history-summary-design.md"
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.SummaryVersionBindsWindowFingerprint:HistorySummaryPipeline.DeletedMaterialFailsBeforeSummaryUpdate"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。 | C1-b 解阻（Part A/B，代码 1f05f11）：参数化子系统与抽取定路已模块级 LOCKED_BY_TEST；接线（Part C）就绪清单见 history-fault-parameterization.md §6。"
+   "evidence": [
+    "history-summary-pipeline.md"
+   ],
+   "note": "摘要身份进入内容指纹；版本变化 ⇒ 旧 numerics 判 stale 不可用；材料先删/冷启动 ⇒ HISTORY_SUMMARY_INVALID（禁止从 nominal marginal 反推）。"
   },
   {
    "id": "HIS-05",
    "description": "运行中阶数/family 改变；缺交叉历史时必须重建或拒绝",
    "owner_work_package": "C",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [
-    "history-summary-design.md"
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_history_summary_lifecycle --gtest_filter=HistorySummaryLifecycle.HotSwitchDefaultsToRefuse"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。 | C1-b 解阻（Part A/B，代码 1f05f11）：参数化子系统与抽取定路已模块级 LOCKED_BY_TEST；接线（Part C）就绪清单见 history-fault-parameterization.md §6。"
+   "evidence": [
+    "history-summary-pipeline.md"
+   ],
+   "note": "热切换判据：集合不变=no-op，改变=拒绝或显式重建（绝不复用旧摘要）。管线侧：IntegrityConfig 构造后不可变、无运行时模式集入口 ⇒ 结构上只能不变或重建。"
   },
   {
    "id": "HIS-06",
    "description": "参数/内存容量满、故障结束后残留；不静默遗忘，不把停止注入视为恢复",
    "owner_work_package": "C/D",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [
-    "history-summary-design.md"
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.CapacityRefusalIsExplicitAndCounted",
+    "{bin}/test_history_summary_lifecycle --gtest_filter=HistorySummaryLifecycle.*"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。 | C1-b 解阻（Part A/B，代码 1f05f11）：参数化子系统与抽取定路已模块级 LOCKED_BY_TEST；接线（Part C）就绪清单见 history-fault-parameterization.md §6。"
+   "evidence": [
+    "history-summary-pipeline.md"
+   ],
+   "note": "容量 REFUSE=不可用+计数（无截断）；故障结束≠清除、淘汰需证明/包络/风险或清洁重置；auto_shrink 无设置点（vacuous-safe）。"
   },
   {
    "id": "HIS-M1",

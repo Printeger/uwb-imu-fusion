@@ -334,3 +334,39 @@ Householder 正消元（先消 `x_o`，再按 `x_b` 支持分块）；无正规�
 * **诚实缺口（NOT_RUN）**：Part C 接线（边界段替换、顺序断言、池化检测、冷启动
   生产、指纹/缓存填充、重基线、v15、新场景）——就绪清单见主证据 §6；本轮未做
   任何半成品接线。
+
+## 20.（C1 收口）管线接线后的命题（LOCKED_BY_TEST / 诚实缺口）
+
+范围：`incremental_estimator.cpp`（边界段）、`integrity_window_snapshot.{hpp,cpp}`
+（载体/指纹）、`integrity_monitor.cpp`（诊断 v15）、`common/types.hpp`、
+`history_fault_parameterization.cpp`（注入键块宽度）、测试 4 套（pipeline/lifecycle/legacy）。
+
+* **命题（边界即摘要）**：冻结窗口的 `BoundaryPrior` 块 == 模块平方根摘要
+  （`R_b` 进窗口列布局、`d_perp` 为零 Jacobian 行、`T_b/F_b` 载体逐项对应）。
+  * `LOCKED_BY_TEST`：`HistorySummaryPipeline.BoundaryIsTheSquareRootHistorySummary`。
+* **命题（池化口径）**：`T_pooled = ‖r_c‖² + κ_b(+offset)`、`ν_pooled = ν_c + ν_⊥`，
+  且 `dof = rows − rank` 恒等式在管线成立。
+  * `LOCKED_BY_TEST`：`PooledStatisticAndDofIdentity`（残差能量 == κ_b；
+    dof 加性）+ legacy `OneSecondUwbDropAndChangingAnchorSetRecover`
+    （`dof == UWB 行 + nu_perp`，整数精确）。
+* **命题（跨边界可监测）**：历史故障的模式映射 `[T_b f; F_b f]` 非零，Γ>0 且有限
+  （detector-only 内容与 H 行空间正交 ⇒ Γ ≥ ‖F_b f‖²）。
+  * `LOCKED_BY_TEST`：`HistoryFaultResponsePersistsAcrossBoundary`。
+* **命题（缓存身份/失效）**：摘要身份进入内容指纹；版本变 ⇒ 旧 numerics `stale`
+  且不可用。
+  * `LOCKED_BY_TEST`：`SummaryVersionBindsWindowFingerprint`。
+* **命题（内容完整性/无重复计入）**：`slot_accounting` 精确一次 XOR；边界块不属于
+  ledger 组；覆盖率=100% + 唯一性。
+  * `LOCKED_BY_TEST`：`RowAttributionExplicitXorBoundary`。
+* **命题（顺序与冷启动）**：horizon 内材料被先删 ⇒ 显式不可用
+  （`HISTORY_SUMMARY_INVALID`），不从名义边际反推；容量 REFUSE ⇒ 不可用+计数、
+  不截断。
+  * `LOCKED_BY_TEST`：`DeletedMaterialFailsBeforeSummaryUpdate`、
+    `CapacityRefusalIsExplicitAndCounted`。
+* **命题（生命周期行 1–7）**：决策级全双向锁定（含 `auto_shrink` 恒关）。
+  * `LOCKED_BY_TEST`：`HistorySummaryLifecycle.*`（7 例）。
+* **本轮修复的真缺陷（回归守护）**：信息型因子（container）路径（原为硬拒绝）与
+  注入键块宽度（原为每键 1 列的静默截断）——两者由 legacy 场景与管线恒等式共同
+  守护。
+* **诚实缺口**：r0_r1 原始流新场景未执行；context_oracle O8a/O8d 未重跑；管线级
+  多消元顺序独立 oracle 未成测；offset 的场景级影响未量化（`history-summary-pipeline.md §11`）。
