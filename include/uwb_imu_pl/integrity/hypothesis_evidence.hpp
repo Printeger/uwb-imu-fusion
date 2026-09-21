@@ -25,6 +25,18 @@ struct HypothesisEvaluationConfig {
 // PL-specific semantics are intentionally stored separately from the evidence
 // monitorability result.  Both consume the same frozen Gram and LDLT solve,
 // but retain their original, different rank/condition gates.
+// B1: classify the detection-space response Z_h = Q2^T D_h of a hypothesis.
+// `g_h` is the protected-state response C (H^T H)^-1 H^T D_h in the same basis.
+// The classification is 1 = full rank, 2 = harmless nullspace (fault invisible
+// but projected out of the protected state), 3 = dangerous nullspace, and
+// 4 = numerically indistinguishable (smallest singular value inside the rank
+// tolerance band).  Exposed so the tri-state logic is unit tested directly.
+int classifyDetectionResponse(const Eigen::MatrixXd& z_h,
+                              const Eigen::MatrixXd& g_h,
+                              double rank_tolerance,
+                              double* smallest_singular_value,
+                              double* condition, int* rank);
+
 struct FrozenHypothesisPlEntry {
   HypothesisId hypothesis;
   MonitorabilityResult monitorability;
@@ -32,6 +44,16 @@ struct FrozenHypothesisPlEntry {
       std::numeric_limits<double>::infinity());
   bool gram_spd = false;
   bool valid = false;
+  // B1 audit: rank/condition of the detection-space response Z_h = Q2^T D_h
+  // from the window's square-root context, and its structural classification
+  // (0 = not evaluated, 1 = full rank, 2 = harmless nullspace, 3 = dangerous
+  // nullspace, 4 = numerically indistinguishable).  The numeric Gram and the
+  // slopes still come from the shared normal-equation solve, so this batch
+  // changes no decision; the classification is the B2 input and is exported.
+  int z_rank = 0;
+  double z_smallest_singular_value = std::numeric_limits<double>::infinity();
+  double z_condition = std::numeric_limits<double>::infinity();
+  int z_classification = 0;
 };
 
 // Immutable, window-scoped products shared by evidence and KEEP_ALL PL.  The

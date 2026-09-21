@@ -187,3 +187,28 @@
 - PL/detector/evidence/fault-model/rank-update 的数学与全部阈值（0.25 gate、128 动作上限、`p_fa/p_md`、alert limits、风险预算）。
 - `formal_eligible` 保持 `false`（Gate J 未完成）。
 - 未实现平方根内核、历史摘要、分组包络、惰性 FDE。
+
+## 7. P3（B1）统一平方根上下文
+
+### 7.1 新增模块
+
+| 模块 | 路径 | 角色 |
+|---|---|---|
+| `FrozenSquareRootContext` | `include/uwb_imu_pl/estimation/square_root_context.hpp`、`src/uwb_imu_pl/estimation/square_root_context.cpp` | 每冻结窗口一次的列置换 QR（默认 unit/natural）、隐式 Qᵀ、`informationSolve`（(HᵀH)⁻¹）、`leastSquaresSolve`、`faultResponse`（Y/Z）、`protectedMap`/`protectedCovariance`（Σp）、证书、符号分析缓存 |
+| v12 诊断 | `src/uwb_imu_pl/io/run_logger.cpp`、`include/uwb_imu_pl/common/types.hpp` | 新表 `diagnostic_square_root.csv`（证书与上下文统计）；`hypotheses.csv` 追加 `z_rank/z_sigma_min/z_condition/z_classification` |
+| Z 响应分类 | `src/uwb_imu_pl/integrity/hypothesis_evidence.cpp:classifyDetectionResponse` | 每假设 Z_h=Q₂ᵀD_h 的小型 SVD：full / harmless nullspace / dangerous nullspace / indistinguishable（审计与 B2 输入） |
+
+### 7.2 消费者切换
+
+* detector：parity/statistic 由上下文提供（SVD 值仅作证书参考与回退）。
+* hypothesis evidence：Σp/G/Γ 的求解改走上下文 `informationSolve`（R 三角回代）。
+* 候选 KEEP：块缓存与内层交叉改走上下文 solve；`base.state_increment` 由上下文提供。
+* **显式保留的旧路径**：`evaluateMapped`（`enable_shared_context=false` 的参考对照路径）
+  继续使用 LLT；`solveFrozenInformation(numerics, …)` 作为证书不满足时的参考回退（计数）。
+* **删除/降级**：LLT 正规方程 + 谱回退不再位于主路径（429→15 次求解 / 92,262→1,695 列）。
+
+### 7.3 与 P2 契约的关系
+
+`FrozenWindowNumerics` 增加 `spectral_state_increment`（参考解）与 `square_root_*` 摘要字段；
+`LinearizedIntegrityWindow` 增加 `square_root`（进程内对象，不参与 replay 序列化，
+读回后由 `finalizeIntegrityWindow` 重建）。replay 架构仍为 v5（无新增字段）。

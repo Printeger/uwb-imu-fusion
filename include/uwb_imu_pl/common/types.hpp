@@ -359,6 +359,40 @@ struct HypothesisAuditRecord {
   bool plausible = false;
   double conditioned_statistic = std::numeric_limits<double>::infinity();
   double log_evidence = -std::numeric_limits<double>::infinity();
+  // B1: detection-space response Z_h = Q2^T D_h classification (0 = not
+  // evaluated, 1 = full rank, 2 = harmless nullspace, 3 = dangerous nullspace,
+  // 4 = numerically indistinguishable).  Filled for the multi-dimensional
+  // hypotheses handled by the batch path.
+  int z_rank = 0;
+  double z_smallest_singular_value = std::numeric_limits<double>::infinity();
+  double z_condition = std::numeric_limits<double>::infinity();
+  int z_classification = 0;
+  std::string reason;
+};
+
+// B1: per-window audit of the single square-root context (one row per
+// committed attempt).  Values are the certificate and identity quantities that
+// the consumers rely on; they are exported so the independent oracle can check
+// them without replaying the factorization.
+struct SquareRootAuditRecord {
+  std::uint64_t attempt_id = 0;
+  int rows = 0;
+  int columns = 0;
+  int rank = 0;
+  int dof = 0;
+  double r_diagonal_min = 0.0;
+  double r_diagonal_max = 0.0;
+  double condition_estimate = std::numeric_limits<double>::infinity();
+  double identity_residual_relative = std::numeric_limits<double>::infinity();
+  double parity_relative_difference = std::numeric_limits<double>::infinity();
+  double solution_relative_difference = std::numeric_limits<double>::infinity();
+  double forward_error_bound = std::numeric_limits<double>::infinity();
+  bool certificate_ok = false;
+  bool usable = false;
+  int detector_only_rows = 0;
+  double statistic = std::numeric_limits<double>::infinity();
+  std::string scale_policy;
+  std::string permutation_policy;
   std::string reason;
 };
 
@@ -522,6 +556,9 @@ struct IntegrityOutput {
   std::vector<StageTiming> stage_timings;
   std::vector<HypothesisAuditRecord> hypothesis_audit;
   std::vector<CandidateAuditRecord> candidate_audit;
+  // B1: one entry per committed attempt while the frozen window carries a
+  // square-root context (see SquareRootAuditRecord).
+  std::vector<SquareRootAuditRecord> square_root_audit;
   std::vector<CoverageAuditRecord> coverage_audit;
   std::vector<StateStepAuditRecord> state_step_audit;
   std::vector<FactorLedgerAuditRecord> factor_ledger_audit;
@@ -570,7 +607,7 @@ struct RunManifest {
   std::uint32_t max_exclusion_cardinality = 2;
   std::string bridge_model = "kinematic_cv_bounded";
   std::string history_recovery = "active_window_only_maturity_delay";
-  std::string diagnostics_schema_version = "uwb-imu-pl/gate-d-diagnostics/v11";
+  std::string diagnostics_schema_version = "uwb-imu-pl/gate-d-diagnostics/v12";
   std::string failure_catalog;
   std::string fault_manifest_digest;
   std::string fault_manifest_id;

@@ -40,7 +40,9 @@
   * `ReferenceFixture.TwoRowScalarLeastSquares`（s²=1/2、Γ=1/2、斜率 √(gᵀΓ⁻¹g) 约定守卫）；
   * `oracle-results.json` O6（scipy `ncx2.cdf(τ, ν, Λ)=p_md` 反解与导出值逐行一致）；
   * `integrity_monitor.cpp` 中 `slope·sqrt(noncentrality_boundary)` 的组合为证据行。
-* **阻塞/归属**：无（若要改成立方/平方根内核 B1，须先改本项与测试）。
+* **阻塞/归属**：无。**P3/B1 更新**：`SquareRootContext.COV02_AuxiliarySubsetProjectionIdentity`
+  独立验证 `Z^T Z == D^T (I − H(HᵀH)⁻¹Hᵀ)D`（≤1e-12）与子集 Gamma 形式；`NUM01` 验证
+  S/Π/C 同步；oracle O6 在 5 个保留 fixture 上复核 λ* 反解与闭包。
 
 ## 4. 三条查询路径的等价性
 
@@ -50,7 +52,9 @@
   证明冻结块白化后的行拼接严格等于全量 `H`（abs ≤ 1e-12），oracle O3 在 8 个真实
   窗口上复核同一恒等式；三路径的**数值等价**未做逐点对照。
 * **证据**：`oracle-results.json`（O3 全 PASS）、`fixtures/frames.json`。
-* **阻塞/归属**：B（B1 平方根内核时需保证三路径同一结果）。
+* **阻塞/归属**：B。**P3/B1 更新**：信息求解已统一到同一上下文（`evaluateMapped` 保留为
+  参考对照路径），场景重放 7×19 文件离散零差异、数值在分级容差内（`equivalence-summary.json`）；
+  三路径的**逐点数值等价**仍待 B2 用同一 D_h 做对照。
 
 ## 5. C = [0 | R] 的有限差分锁定（D1 声明相关）
 
@@ -62,7 +66,8 @@
   探针实验（`gtsam::Pose3::retract`：∂t/∂ω=0、∂t/∂υ=R）作为独立佐证。
 * **证据**：`test/test_integrity_reference.cpp`；`raw/runs_p2/*/diagnostic_snapshot_identity.csv`
   （`position_reference=body_origin`、`tangent_convention=gtsam_pose3_...`）。
-* **阻塞/归属**：无。
+* **阻塞/归属**：无。**P3/B1 更新**：NUM-01 专门覆盖 “C 必须与 H 同步缩放/置换” 的陷阱
+  （用未同步的 C 得到的 Σp 会被判 FAIL）。
 
 ## 6. IMU 解析灵敏度 vs 重积分 oracle
 
@@ -93,7 +98,8 @@
   的 `history_lineage_id`、`boundary_summary_id`、`coverage_epoch` 已就位
   （当前 `NOT_AVAILABLE_IN_SCHEMA`，诚实占位）。
 * **证据**：`diagnostic_snapshot_identity.csv`、本文档第 8 项。
-* **阻塞/归属**：C。
+* **阻塞/归属**：C。**P3/B1 更新**：上下文接口已预留 `history_lineage_id` /
+  `boundary_summary_id` / `coverage_epoch`（v12 identity 表），摘要语义仍未实现。
 
 ## 9. Post-FDE 选择风险
 
@@ -143,3 +149,17 @@
 | 解析 fixture（含反例 A/B/C） | `test_integrity_reference` | 8/8 PASS |
 | manifest/迁移/分类学/identity/v11 | `test_fault_manifest`、`test_integrity_config` | 全部 PASS（`raw/run_tests_p2.log`） |
 | 验证调度与清单 | `tools/run_validation.py`、`validation-manifest.json`、`validation-report.json` | 13 PASS / 0 FAIL / 28 NOT_RUN（未开始项均标注归属） |
+
+## 13.（P3 新增）每假设 Z 响应三态与决策延后
+
+* **命题**：可监测性应来自检测空间响应 `Z_h = Q₂ᵀD_h` 的小型分解（秩揭示），并在
+  `ker Z_h ⊆ ker G_h` 时区分「结构性无害零空间」（可给有限界）与「危险零空间」（不可用）；
+  数值无法分辨时走参考回退或不可用。
+* **本轮状态**：实现为**审计层**（`z_rank/z_sigma_min/z_condition/z_classification` 已导出），
+  **不改变任何决策**：数值 Gram 与斜率仍取共享正规方程形式，以保证与 P2 逐位一致
+  （`equivalence-summary.json` 离散零差异）。三态逻辑由
+  `SquareRootContext.ClassifiesDetectionResponseTriState` 锁定；7 个场景流中
+  35,128 行均为 full-rank，未出现 harmless/dangerous/indistinguishable。
+* **遗留**：把 harmless 分支接到「有限保守界」（GEO-04 语义）会改变退化情形的离散结果，
+  须与 B2/B3 的风险账本一起做，并作为显式的行为变更重跑等价证据。
+* **阻塞/归属**：B2/B3。

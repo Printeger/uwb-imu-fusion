@@ -170,3 +170,38 @@ PL/detector/evidence/fault-model/rank-update 数学均未改动。与 A1/A2 相�
   `imu_fault_subspace.*`（多步长 sweep）、`integrity_monitor.cpp`（failure 记账/identity/oracle 导出）、
   `run_logger.*`（v11）、`candidate_replay.*`（v5）、`integrity_config.*`（迁移）、
   `types.hpp`（字段）、`CMakeLists.txt`（新目标）；阈值与算法语义零改动。
+
+## 8. P3（B1）更新，2026-09-21
+
+**范围**：统一平方根数值上下文（B1）；存储纪律与 prune；未做 B2/B3/B4/C/D。
+**测试**：`catkin run_tests uwb_imu_pl` → **254 tests / 0 errors / 0 failures**
+（P2 240；+14 = 2×7 新用例），日志 `raw/run_tests_b1.log`、`raw/b1_square_root_tests.log`。
+
+### 8.1 缺口表状态变更
+
+| # | 原缺口 | P3 状态 | 证据 |
+|---|---|---|---|
+| G2 | 三套数值表示并存、无单一平方根上下文 | **部分关闭**：求解与隐式 Qᵀ 已统一到一个 QR 上下文（求解 429→15 次 / 92,262→1,695 列）；rank/cond 仍以 SVD 为权威、`HᵀH` 仍作为基信息导出 | `square-root-context.md §1/§4` |
+| G11 附带 | A 轮缺陷 G9 / BoundaryPrior 已修 | 不变（P2 完成） | `oracle-results.json` |
+| 其他（G1、G3–G6、G8、G12、G13） | 未变 | 归 B2/B3/B4/C/D | `validation-manifest.json` |
+
+### 8.2 本轮数字
+
+| 项 | P2 | P3/B1 |
+|---|---|---|
+| 测试 | 240 / 0 fail | **254 / 0 fail** |
+| 信息求解（LLT/谱） | 429 次 / 92,262 列 | **15 次 / 1,695 列**（回退） |
+| 上下文求解 | — | 414 次 / 90,567 列；隐式 Qᵀ 406 次 / 89,274 列 |
+| 符号缓存 | — | 339 命中 / 82 未命中 |
+| 场景重放离散差异 | — | **0**（7 场景 × 19 文件） |
+| 独立 oracle | 57 PASS/0 FAIL/7 NOT_RUN（P2 口径） | 36 PASS/0 FAIL/7 NOT_RUN（5 个保留 fixture） + 上下文 oracle 30 PASS |
+| 验证调度 | 13 PASS/28 NOT_RUN | 18 PASS / 0 FAIL / 24 NOT_RUN |
+| `raw/` 体积 | 98 MB | **7.5 MB** |
+
+### 8.3 诚实声明
+
+* 阈值与算法语义零改动；`formal_eligible` 仍为 `false`。
+* 每假设 Z 三态分类为**审计层**，本轮不改变决策（见 proof-obligations 第 13 项）。
+* 3 个 fixture（F30 / H205 / epochs20）在 prune 时删除，相关 oracle 项为 NOT_RUN 并给出再生命令。
+* 计时只报观测：`hypothesis_evidence` 中位 5.35→5.69 ms；`window_fingerprint` 桶
+  1.29→3.02 ms（含每窗口 QR 构建 ~1.7 ms）；不做 40ms 结论。

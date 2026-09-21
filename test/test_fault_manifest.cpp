@@ -272,7 +272,7 @@ TEST(ResultIdentity, DigestIsStableAndSensitive) {
   EXPECT_NE(serialized.find("identity_digest="), std::string::npos);
 }
 
-TEST(DiagnosticsV11, LoggerExportsFailureAccountingAndIdentityColumns) {
+TEST(DiagnosticsV12, LoggerExportsFailureAccountingIdentityAndSquareRootTables) {
   const std::string directory = "/tmp/uwb_imu_pl_p2_logger_v11";
   boost::filesystem::remove_all(directory);
   {
@@ -287,6 +287,19 @@ TEST(DiagnosticsV11, LoggerExportsFailureAccountingAndIdentityColumns) {
     output.snapshot_identity.snapshot_id = "window:1:transaction:1";
     output.snapshot_identity.position_reference = "body_origin";
     output.snapshot_identity.identity_digest = "0123456789abcdef";
+    // B1: the square-root audit row must be exported with the certificate.
+    uwb_imu_pl::SquareRootAuditRecord audit;
+    audit.attempt_id = 1;
+    audit.rows = 253;
+    audit.columns = 165;
+    audit.rank = 165;
+    audit.dof = 88;
+    audit.condition_estimate = 328352.7;
+    audit.certificate_ok = true;
+    audit.usable = true;
+    audit.scale_policy = "unit";
+    audit.permutation_policy = "natural";
+    output.square_root_audit.push_back(audit);
     output.diagnostics.status = "EXECUTED";
     logger.writeIntegrity(output);
     logger.flush();
@@ -300,7 +313,7 @@ TEST(DiagnosticsV11, LoggerExportsFailureAccountingAndIdentityColumns) {
   EXPECT_NE(attempt_header.find("all_failures"), std::string::npos);
   EXPECT_NE(attempt_header.find("not_evaluated_checks"), std::string::npos);
   EXPECT_NE(attempt_header.find("oracle_sweep_verified"), std::string::npos);
-  EXPECT_NE(attempt_row.find("gate-d-diagnostics/v11"), std::string::npos);
+  EXPECT_NE(attempt_row.find("gate-d-diagnostics/v12"), std::string::npos);
   std::ifstream identity(directory + "/diagnostic_snapshot_identity.csv");
   ASSERT_TRUE(identity.good());
   std::string identity_header;
@@ -310,5 +323,16 @@ TEST(DiagnosticsV11, LoggerExportsFailureAccountingAndIdentityColumns) {
   std::string row;
   std::getline(identity, row);
   EXPECT_NE(row.find("window:1:transaction:1"), std::string::npos);
+  std::ifstream square_root(directory + "/diagnostic_square_root.csv");
+  ASSERT_TRUE(square_root.good());
+  std::string square_root_header;
+  std::getline(square_root, square_root_header);
+  EXPECT_NE(square_root_header.find("certificate_ok"), std::string::npos);
+  EXPECT_NE(square_root_header.find("detector_only_rows"), std::string::npos);
+  EXPECT_NE(square_root_header.find("condition_estimate"), std::string::npos);
+  std::string square_root_row;
+  std::getline(square_root, square_root_row);
+  EXPECT_NE(square_root_row.find("gate-d-diagnostics/v12"), std::string::npos);
+  EXPECT_NE(square_root_row.find("unit"), std::string::npos);
   boost::filesystem::remove_all(directory);
 }

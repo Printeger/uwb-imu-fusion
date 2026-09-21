@@ -89,6 +89,27 @@ Eigen::MatrixXd solveFrozenInformation(const FrozenWindowNumerics& numerics,
       numerics.spectral_vectors->transpose() * rhs;
 }
 
+Eigen::MatrixXd solveFrozenInformation(
+    const FrozenSquareRootContext* context,
+    const FrozenWindowNumerics& numerics,
+    const Eigen::MatrixXd& information, const Eigen::MatrixXd& rhs,
+    bool* used_spectral_fallback) {
+  if (used_spectral_fallback) *used_spectral_fallback = false;
+  if (context && context->usable() &&
+      rhs.rows() == context->columns()) {
+    Eigen::MatrixXd solved = context->informationSolve(rhs);
+    if (solved.rows() == rhs.rows() && solved.cols() == rhs.cols() &&
+        solved.allFinite()) {
+      return solved;
+    }
+    NumericalWorkCounters::squareRootFallback();
+  } else if (context) {
+    NumericalWorkCounters::squareRootFallback();
+  }
+  return solveFrozenInformation(numerics, information, rhs,
+                                used_spectral_fallback);
+}
+
 std::uint64_t integrityWindowFingerprint(
     const LinearizedIntegrityWindow& window) {
   std::uint64_t hash = 1469598103934665603ULL;
@@ -175,6 +196,7 @@ void finalizeIntegrityWindow(LinearizedIntegrityWindow* window,
     return value;
   };
   window->numerics.reset();
+  window->square_root.reset();
   int rows = 0;
   int columns = 0;
   std::set<std::uint64_t> group_ids;
@@ -210,8 +232,7 @@ void finalizeIntegrityWindow(LinearizedIntegrityWindow* window,
   }
   window->capabilities.no_duplicate_rows =
       group_ids.size() == window->blocks.size();
-  window->preparation_timing.dense_assembly_ms = elapsed_ms();
-  if (rows == 0 || columns == 0) {
+  window->preparation_timing.dense_assembly_ms = elapsed_ms();  if (rows == 0 || columns == 0) {
     window->model_valid = false;
     window->reason = "empty integrity window";
     return;
@@ -296,8 +317,8 @@ void finalizeIntegrityWindow(LinearizedIntegrityWindow* window,
     // equation residual whose condition number is squared.
     NumericalWorkCounters::baseStateSolve();
     NumericalWorkCounters::svdStateSolve();
-    numerics->base_state_increment = std::move(spectral_increment);
-    numerics->canonical_spectral_solution = true;
+    numerics->spectral_state_increment = spectral_increment;
+    numerics->base_state_increment = numerics->spectral_state_increment;
     numerics->parity = window->z - window->H * numerics->base_state_increment;
     numerics->statistic = numerics->parity.squaredNorm();
     numerics->information_logdet = 2.0 * singular.head(window->rank)
@@ -322,6 +343,29 @@ void finalizeIntegrityWindow(LinearizedIntegrityWindow* window,
   }
   numerics->block_row_offsets.push_back(row_offset);
   window->preparation_timing.llt_and_state_solves_ms = elapsed_ms();
+
+  // B1: build the single square-root context of this frozen window.  It owns
+  // the canonical nominal increment and parity statistic; the SVD/LLT results
+  // above remain the certificate reference and the reference fallback.
+  window->square_root = FrozenSquareRootContext::build(
+      window->H, window->z, window->protected_state_map,
+      ColumnScalePolicy::Unit, ColumnPermutationPolicy::Natural,
+      rank_tolerance, numerics->spectral_state_increment,
+      numerics->statistic);
+  if (window->square_root) {
+    numerics->square_root_statistic = window->square_root->statistic();
+    numerics->square_root_condition_estimate =
+        window->square_root->certificate().condition_estimate;
+    numerics->square_root_detector_only_rows =
+        window->square_root->detectorOnlyRows();
+    numerics->square_root_certificate_ok = window->square_root->usable();
+    if (window->square_root->usable()) {
+      numerics->base_state_increment = window->square_root->baseStateIncrement();
+      numerics->parity = window->square_root->parity();
+      numerics->statistic = window->square_root->statistic();
+      numerics->canonical_spectral_solution = false;
+    }
+  }
   window->model_valid = window->dof > 0 && window->rank == columns &&
       window->condition_number <= max_condition_number &&
       window->capabilities.no_duplicate_rows &&

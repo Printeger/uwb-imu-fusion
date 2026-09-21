@@ -43,6 +43,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from replay_io import read_replay  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+# P3 (B1): run CSVs come from an environment-selectable scenario root because the
+# P2 baseline tree was pruned for the storage budget (see prune-log.md).  The
+# frozen replay bins stay in the repository (fixtures/frames-b1.json).
+RUNS_ROOT = os.environ.get(
+    "UWB_IMU_PL_ORACLE_RUNS",
+    "/tmp/uwb_imu_pl_b1_20260921/b1_runs_v12")
 REPO = os.path.abspath(os.path.join(ROOT, "..", "..", ".."))
 RAW = os.path.join(ROOT, "raw")
 
@@ -54,22 +60,23 @@ ABS_WHITEN = 1.0e-12    # whitening / assembly audit
 
 # label -> (csv run dir, attempt, replay dir, scenario note)
 CASES = [
-    ("A_nominal_30", "runs_p2/A_nominal", 30, "replay_p2/A_nominal",
+    ("A_nominal_30", "A_nominal", 30, "A_nominal",
      "healthy frozen window, anchor template active"),
-    ("C_uwb_fde_25", "runs_p2/C_uwb_fde", 25, "replay_p2/C_uwb_fde",
+    ("C_uwb_fde_25", "C_uwb_fde", 25, "C_uwb_fde",
      "UWB fault before the exclusion action"),
-    ("C_uwb_fde_26", "runs_p2/C_uwb_fde", 26, "replay_p2/C_uwb_fde",
+    ("C_uwb_fde_26", "C_uwb_fde", 26, "C_uwb_fde",
      "post-FDE window (action applied, 128 cap)"),
-    ("F_ramp_30", "runs_p2/F_ramp_unmonitorable", 30, "replay_p2/F_ramp_unmonitorable",
-     "ramp regime under the frozen unsupported declaration"),
-    ("G_reject_10", "runs_p2/G_continuous_rejection", 10, "replay_p2/G_continuous_rejection",
+    ("G_reject_10", "G_continuous_rejection", 10, "G_continuous_rejection",
      "consecutive rejection epoch"),
-    ("H_mature_201", "runs_p2/H_mature_union", 201, "replay_p2/H_mature_union",
+    ("H_mature_201", "H_mature_union", 201, "H_mature_union",
      "mature union window"),
-    ("H_mature_205", "runs_p2/H_mature_union", 205, "replay_p2/H_mature_union",
-     "mature union window (second export)"),
-    ("EPOCHS20_30", "runs_p2/epochs20-census", 30, "replay_p2/epochs20-census",
-     "K=20 integrity-window census口径"),
+]
+# Pruned in P3 for the storage budget: reported as NOT_RUN with the
+# regeneration command from prune-log.md instead of being silently dropped.
+PRUNED_CASES = [
+    ("F_ramp_30", "bin raw/replay_p2/F_ramp_unmonitorable/exports/attempt-30.bin pruned"),
+    ("H_mature_205", "bin raw/replay_p2/H_mature_union/exports/attempt-205.bin pruned"),
+    ("EPOCHS20_30", "bin raw/replay_p2/epochs20-census/exports/attempt-30.bin pruned"),
 ]
 
 
@@ -133,9 +140,9 @@ def current_anchor_row(frame, anchor_id):
 
 
 def analyze_case(label, run_dir, attempt, replay_dir, note):
-    bin_path = os.path.join(RAW, replay_dir, "exports",
+    bin_path = os.path.join(ROOT, "raw", "replay_p2", replay_dir, "exports",
                             f"attempt-{attempt}.bin")
-    csv_dir = os.path.join(RAW, run_dir)
+    csv_dir = os.path.join(RUNS_ROOT, run_dir)
     frame = read_replay(bin_path)
     window = frame["window"]
     H = window["H"]
@@ -421,6 +428,15 @@ def main():
     for label, run_dir, attempt, replay_dir, note in CASES:
         results["cases"].append(
             analyze_case(label, run_dir, attempt, replay_dir, note))
+    for label, note in PRUNED_CASES:
+        results["cases"].append({
+            "case": label, "note": note,
+            "items": [{"id": "O0-O7", "description": "fixture bin pruned",
+                       "status": "NOT_RUN", "oracle": None, "production": None,
+                       "tolerance": None,
+                       "note": "regenerate with the command in prune-log.md"}],
+            "summary": {"pass": 0, "fail": 0, "not_run": 1},
+        })
     totals = {"pass": 0, "fail": 0, "not_run": 0}
     for case in results["cases"]:
         for key in totals:

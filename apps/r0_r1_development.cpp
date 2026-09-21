@@ -559,7 +559,25 @@ int main(int argc, char** argv) {
             std::to_string(work.spectral_rhs_columns) +
         ";numerical_contract_mismatches=" +
             std::to_string(work.numerical_contract_mismatches) +
-        ";oracle_reintegrations=" + std::to_string(work.imu_oracle_reintegrations);
+        ";oracle_reintegrations=" + std::to_string(work.imu_oracle_reintegrations) +
+        ";square_root_factorizations=" +
+            std::to_string(work.square_root_factorizations) +
+        ";square_root_information_solves=" +
+            std::to_string(work.square_root_information_solves) +
+        ";square_root_information_columns=" +
+            std::to_string(work.square_root_information_columns) +
+        ";square_root_qt_applications=" +
+            std::to_string(work.square_root_qt_applications) +
+        ";square_root_qt_columns=" +
+            std::to_string(work.square_root_qt_columns) +
+        ";square_root_symbolic_hits=" +
+            std::to_string(work.square_root_symbolic_hits) +
+        ";square_root_symbolic_misses=" +
+            std::to_string(work.square_root_symbolic_misses) +
+        ";square_root_fallbacks=" +
+            std::to_string(work.square_root_fallbacks) +
+        ";square_root_certificate_holds=" +
+            std::to_string(work.square_root_certificate_holds);
     logger.writeSummary(summary);
     std::cout << summary.detail << '\n';
   } catch (const std::exception& error) {

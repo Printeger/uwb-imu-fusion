@@ -107,14 +107,23 @@ RunLogger::RunLogger(const std::string& output_directory,
   diagnostic_coverage_.open(directory_ + "/diagnostic_coverage.csv");
   diagnostic_steps_.open(directory_ + "/diagnostic_state_steps.csv");
   diagnostic_identity_.open(directory_ + "/diagnostic_snapshot_identity.csv");
+  diagnostic_square_root_.open(directory_ + "/diagnostic_square_root.csv");
   requireOpen(attempts_, "diagnostic_attempts.csv");
   requireOpen(diagnostic_stages_, "diagnostic_stages.csv");
   requireOpen(diagnostic_candidates_, "diagnostic_candidates.csv");
   requireOpen(diagnostic_coverage_, "diagnostic_coverage.csv");
   requireOpen(diagnostic_steps_, "diagnostic_state_steps.csv");
   requireOpen(diagnostic_identity_, "diagnostic_snapshot_identity.csv");
+  requireOpen(diagnostic_square_root_, "diagnostic_square_root.csv");
   attempts_ << std::setprecision(17);
   diagnostic_stages_ << std::setprecision(17);
+  diagnostic_square_root_ << std::setprecision(17);
+  diagnostic_square_root_
+      << "schema_version,attempt_id,rows,columns,rank,dof,r_diagonal_min,"
+         "r_diagonal_max,condition_estimate,identity_residual_relative,"
+         "parity_relative_difference,solution_relative_difference,"
+         "forward_error_bound,certificate_ok,usable,detector_only_rows,"
+         "statistic,scale_policy,permutation_policy,reason\n";
   diagnostic_candidates_ << std::setprecision(17);
   diagnostic_coverage_ << std::setprecision(17);
   diagnostic_steps_ << std::setprecision(17);
@@ -188,7 +197,8 @@ RunLogger::RunLogger(const std::string& output_directory,
                  "fault_rank,sigma_min,sigma_max,condition_number,slope_x,slope_y,"
                  "slope_z,boundary_direction_gram,noncentrality_boundary,prior_bound,p_md_allocation,"
                  "hmi_allocation,monitorable,plausible,conditioned_statistic,"
-                 "log_evidence,reason\n";
+                 "log_evidence,z_rank,z_sigma_min,z_condition,z_classification,"
+                 "reason\n";
   candidates_ << "timestamp_ns,window_id,action_id,action_type,physical_source_ids,removed_group_ids,"
                  "added_group_ids,bridge_mode,cardinality,valid,"
                  "post_detector_passed,covers_plausible_set,statistic,threshold,"
@@ -333,10 +343,22 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
              << csv(o.reinitialization_phase) << ','
              << csv(o.reinitialization_reason) << ','
              << csv(p.reason) << '\n';
+  for (const auto& s : o.square_root_audit) {
+    diagnostic_square_root_
+        << "uwb-imu-pl/gate-d-diagnostics/v12," << s.attempt_id << ','
+        << s.rows << ',' << s.columns << ',' << s.rank << ',' << s.dof << ','
+        << s.r_diagonal_min << ',' << s.r_diagonal_max << ','
+        << s.condition_estimate << ',' << s.identity_residual_relative << ','
+        << s.parity_relative_difference << ','
+        << s.solution_relative_difference << ',' << s.forward_error_bound << ','
+        << s.certificate_ok << ',' << s.usable << ',' << s.detector_only_rows
+        << ',' << s.statistic << ',' << csv(s.scale_policy) << ','
+        << csv(s.permutation_policy) << ',' << csv(s.reason) << '\n';
+  }
   if (o.diagnostics.input_attempt_id) {
     const auto& d = o.diagnostics;
     auto identity = [&](std::ostream& stream) -> std::ostream& {
-      return stream << "uwb-imu-pl/gate-d-diagnostics/v11," << d.input_attempt_id << ','
+      return stream << "uwb-imu-pl/gate-d-diagnostics/v12," << d.input_attempt_id << ','
           << d.input_timestamp.value() << ',' << o.transaction_id << ',' << o.window_id << ','
           << o.base_graph_version << ',' << d.ordering_version << ','
           << d.noise_model_version << ',' << o.linearization_version << ',' << o.timestamp.value() << ',';
@@ -474,7 +496,9 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
                 << h.prior_bound << ',' << h.p_md_allocation << ','
                 << h.hmi_allocation << ',' << h.monitorable << ','
                 << h.plausible << ',' << h.conditioned_statistic << ','
-                << h.log_evidence << ',' << csv(h.reason) << '\n';
+                << h.log_evidence << ',' << h.z_rank << ','
+                << h.z_smallest_singular_value << ',' << h.z_condition << ','
+                << h.z_classification << ',' << csv(h.reason) << '\n';
   }
   for (const auto& c : o.candidate_audit) {
     candidates_ << o.timestamp.value() << ',' << o.window_id << ','
@@ -625,6 +649,7 @@ void RunLogger::flush() {
   diagnostic_coverage_.flush();
   diagnostic_steps_.flush();
   diagnostic_identity_.flush();
+  diagnostic_square_root_.flush();
 }
 
 RunManifest makeRunManifest(const IntegrityConfig& config,
@@ -666,7 +691,7 @@ RunManifest makeRunManifest(const IntegrityConfig& config,
       config.imu.noise_overbound_calibration_id;
   manifest.protected_quantity = "position_xyz";
   manifest.position_reference = "body_origin";
-  manifest.diagnostics_schema_version = "uwb-imu-pl/gate-d-diagnostics/v11";
+  manifest.diagnostics_schema_version = "uwb-imu-pl/gate-d-diagnostics/v12";
   manifest.failure_catalog = failureReasonCatalogJson();
   if (config.fault_manifest) {
     manifest.fault_manifest_id = config.fault_manifest->manifest_id;

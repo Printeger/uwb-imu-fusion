@@ -117,6 +117,7 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/estimation/incremental_estimator.cpp
   src/uwb_imu_pl/estimation/factor_ledger.cpp
   src/uwb_imu_pl/estimation/integrity_window_snapshot.cpp
+  src/uwb_imu_pl/estimation/square_root_context.cpp
   src/uwb_imu_pl/estimation/candidate_replay.cpp
   src/uwb_imu_pl/estimation/candidate_worker_pool.cpp
   src/uwb_imu_pl/estimation/rank_update_kernel.cpp
@@ -289,6 +290,11 @@ if(CATKIN_ENABLE_TESTING)
   target_compile_definitions(test_fault_manifest PRIVATE
     UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
   target_link_libraries(test_fault_manifest ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_square_root_context test/test_square_root_context.cpp test/test_main.cpp)
+  target_compile_definitions(test_square_root_context PRIVATE
+    UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(test_square_root_context ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
 
   add_rostest(test/realtime_integrity_viz.test)
 

@@ -1,0 +1,396 @@
+{
+ "produced_by": "tools/context_oracle.py",
+ "runs_source": "/tmp/uwb_imu_pl_b1_20260921/b1_runs_v12",
+ "cases": [
+  {
+   "case": "A_nominal#30",
+   "bin": "raw/replay_p2/A_nominal/exports/attempt-30.bin",
+   "items": [
+    {
+     "id": "O8a",
+     "description": "rank / dof of the factored window",
+     "status": "PASS",
+     "oracle": {
+      "rank": 165,
+      "dof": 88
+     },
+     "production": {
+      "rank": 165,
+      "dof": 88
+     },
+     "tolerance": "exact",
+     "note": ""
+    },
+    {
+     "id": "O8b",
+     "description": "R diagonal min/max and condition estimate",
+     "status": "PASS",
+     "oracle": {
+      "r_min": 1.3359718828020832,
+      "r_max": 44721.471353279776,
+      "condition": 33474.85970998165
+     },
+     "production": {
+      "r_min": 1.33597188280208,
+      "r_max": 44721.47135327978,
+      "condition": 33474.859709981734
+     },
+     "tolerance": "rel<=1e-05 (CSV prints 6 digits)",
+     "note": ""
+    },
+    {
+     "id": "O8c",
+     "description": "parity statistic from the frozen window",
+     "status": "PASS",
+     "oracle": 4.4529470232546734e-08,
+     "production": 4.452947023254547e-08,
+     "tolerance": "rel<=1e-05 or abs<=1e-09",
+     "note": ""
+    },
+    {
+     "id": "O8d",
+     "description": "detector-only rows preserved",
+     "status": "PASS",
+     "oracle": 0,
+     "production": 0,
+     "tolerance": "exact",
+     "note": "zero rows stay in H, z, dof and the response"
+    },
+    {
+     "id": "O8e",
+     "description": "parity identity ||Q2^T z||^2 == ||z - H x_hat||^2",
+     "status": "PASS",
+     "oracle": 4.4529470232546396e-08,
+     "production": 4.4529470232546734e-08,
+     "tolerance": "rel<=1e-09",
+     "note": "verifies the implicit Q2 route the consumers use"
+    },
+    {
+     "id": "O8f",
+     "description": "protected covariance C (H^T H)^-1 C^T is finite and PSD",
+     "status": "PASS",
+     "oracle": {
+      "trace": 0.20833484886261924,
+      "min_eigenvalue": 0.001730015599254128
+     },
+     "production": null,
+     "tolerance": "PSD check, absolute 1e-12",
+     "note": "G/Z/Gamma per hypothesis need D_h from the generator (not in the replay schema): NOT_RUN here, covered by oracle_compare.py O5/O6 and by the C++ tests NUM-01..04 / COV-02"
+    }
+   ]
+  },
+  {
+   "case": "C_uwb_fde#25",
+   "bin": "raw/replay_p2/C_uwb_fde/exports/attempt-25.bin",
+   "items": [
+    {
+     "id": "O8a",
+     "description": "rank / dof of the factored window",
+     "status": "PASS",
+     "oracle": {
+      "rank": 165,
+      "dof": 88
+     },
+     "production": {
+      "rank": 165,
+      "dof": 88
+     },
+     "tolerance": "exact",
+     "note": ""
+    },
+    {
+     "id": "O8b",
+     "description": "R diagonal min/max and condition estimate",
+     "status": "PASS",
+     "oracle": {
+      "r_min": 1.2922955873638369,
+      "r_max": 44721.47135328261,
+      "condition": 34606.22460571135
+     },
+     "production": {
+      "r_min": 1.292295587363837,
+      "r_max": 44721.471353282606,
+      "condition": 34606.22460571134
+     },
+     "tolerance": "rel<=1e-05 (CSV prints 6 digits)",
+     "note": ""
+    },
+    {
+     "id": "O8c",
+     "description": "parity statistic from the frozen window",
+     "status": "PASS",
+     "oracle": 419.264152290827,
+     "production": 419.2641522908269,
+     "tolerance": "rel<=1e-05 or abs<=1e-09",
+     "note": ""
+    },
+    {
+     "id": "O8d",
+     "description": "detector-only rows preserved",
+     "status": "PASS",
+     "oracle": 0,
+     "production": 0,
+     "tolerance": "exact",
+     "note": "zero rows stay in H, z, dof and the response"
+    },
+    {
+     "id": "O8e",
+     "description": "parity identity ||Q2^T z||^2 == ||z - H x_hat||^2",
+     "status": "PASS",
+     "oracle": 419.26415229082716,
+     "production": 419.264152290827,
+     "tolerance": "rel<=1e-09",
+     "note": "verifies the implicit Q2 route the consumers use"
+    },
+    {
+     "id": "O8f",
+     "description": "protected covariance C (H^T H)^-1 C^T is finite and PSD",
+     "status": "PASS",
+     "oracle": {
+      "trace": 0.1764898135346387,
+      "min_eigenvalue": 0.0017316949892300063
+     },
+     "production": null,
+     "tolerance": "PSD check, absolute 1e-12",
+     "note": "G/Z/Gamma per hypothesis need D_h from the generator (not in the replay schema): NOT_RUN here, covered by oracle_compare.py O5/O6 and by the C++ tests NUM-01..04 / COV-02"
+    }
+   ]
+  },
+  {
+   "case": "C_uwb_fde#26",
+   "bin": "raw/replay_p2/C_uwb_fde/exports/attempt-26.bin",
+   "items": [
+    {
+     "id": "O8a",
+     "description": "rank / dof of the factored window",
+     "status": "PASS",
+     "oracle": {
+      "rank": 165,
+      "dof": 87
+     },
+     "production": {
+      "rank": 165,
+      "dof": 87
+     },
+     "tolerance": "exact",
+     "note": ""
+    },
+    {
+     "id": "O8b",
+     "description": "R diagonal min/max and condition estimate",
+     "status": "PASS",
+     "oracle": {
+      "r_min": 1.2991009942861758,
+      "r_max": 44721.47135328192,
+      "condition": 34424.93813027622
+     },
+     "production": {
+      "r_min": 1.2991009942861755,
+      "r_max": 44721.47135328192,
+      "condition": 34424.93813027623
+     },
+     "tolerance": "rel<=1e-05 (CSV prints 6 digits)",
+     "note": ""
+    },
+    {
+     "id": "O8c",
+     "description": "parity statistic from the frozen window",
+     "status": "PASS",
+     "oracle": 4.0901364211769864e-08,
+     "production": 4.090136421176946e-08,
+     "tolerance": "rel<=1e-05 or abs<=1e-09",
+     "note": ""
+    },
+    {
+     "id": "O8d",
+     "description": "detector-only rows preserved",
+     "status": "PASS",
+     "oracle": 0,
+     "production": 0,
+     "tolerance": "exact",
+     "note": "zero rows stay in H, z, dof and the response"
+    },
+    {
+     "id": "O8e",
+     "description": "parity identity ||Q2^T z||^2 == ||z - H x_hat||^2",
+     "status": "PASS",
+     "oracle": 4.090136421177019e-08,
+     "production": 4.0901364211769864e-08,
+     "tolerance": "rel<=1e-09",
+     "note": "verifies the implicit Q2 route the consumers use"
+    },
+    {
+     "id": "O8f",
+     "description": "protected covariance C (H^T H)^-1 C^T is finite and PSD",
+     "status": "PASS",
+     "oracle": {
+      "trace": 0.18301343520600794,
+      "min_eigenvalue": 0.0018272643957356087
+     },
+     "production": null,
+     "tolerance": "PSD check, absolute 1e-12",
+     "note": "G/Z/Gamma per hypothesis need D_h from the generator (not in the replay schema): NOT_RUN here, covered by oracle_compare.py O5/O6 and by the C++ tests NUM-01..04 / COV-02"
+    }
+   ]
+  },
+  {
+   "case": "G_continuous_rejection#10",
+   "bin": "raw/replay_p2/G_continuous_rejection/exports/attempt-10.bin",
+   "items": [
+    {
+     "id": "O8a",
+     "description": "rank / dof of the factored window",
+     "status": "PASS",
+     "oracle": {
+      "rank": 90,
+      "dof": 40
+     },
+     "production": {
+      "rank": 90,
+      "dof": 40
+     },
+     "tolerance": "exact",
+     "note": ""
+    },
+    {
+     "id": "O8b",
+     "description": "R diagonal min/max and condition estimate",
+     "status": "PASS",
+     "oracle": {
+      "r_min": 1.1320573356100205,
+      "r_max": 44721.47135339585,
+      "condition": 39504.5992341874
+     },
+     "production": {
+      "r_min": 1.13205733561002,
+      "r_max": 44721.47135339584,
+      "condition": 39504.599234187415
+     },
+     "tolerance": "rel<=1e-05 (CSV prints 6 digits)",
+     "note": ""
+    },
+    {
+     "id": "O8c",
+     "description": "parity statistic from the frozen window",
+     "status": "PASS",
+     "oracle": 12960.353326167999,
+     "production": 12960.353326168,
+     "tolerance": "rel<=1e-05 or abs<=1e-09",
+     "note": ""
+    },
+    {
+     "id": "O8d",
+     "description": "detector-only rows preserved",
+     "status": "PASS",
+     "oracle": 0,
+     "production": 0,
+     "tolerance": "exact",
+     "note": "zero rows stay in H, z, dof and the response"
+    },
+    {
+     "id": "O8e",
+     "description": "parity identity ||Q2^T z||^2 == ||z - H x_hat||^2",
+     "status": "PASS",
+     "oracle": 12960.353326168002,
+     "production": 12960.353326167999,
+     "tolerance": "rel<=1e-09",
+     "note": "verifies the implicit Q2 route the consumers use"
+    },
+    {
+     "id": "O8f",
+     "description": "protected covariance C (H^T H)^-1 C^T is finite and PSD",
+     "status": "PASS",
+     "oracle": {
+      "trace": 0.08298218605830396,
+      "min_eigenvalue": 0.003517937359237935
+     },
+     "production": null,
+     "tolerance": "PSD check, absolute 1e-12",
+     "note": "G/Z/Gamma per hypothesis need D_h from the generator (not in the replay schema): NOT_RUN here, covered by oracle_compare.py O5/O6 and by the C++ tests NUM-01..04 / COV-02"
+    }
+   ]
+  },
+  {
+   "case": "H_mature_union#201",
+   "bin": "raw/replay_p2/H_mature_union/exports/attempt-201.bin",
+   "items": [
+    {
+     "id": "O8a",
+     "description": "rank / dof of the factored window",
+     "status": "PASS",
+     "oracle": {
+      "rank": 165,
+      "dof": 88
+     },
+     "production": {
+      "rank": 165,
+      "dof": 88
+     },
+     "tolerance": "exact",
+     "note": ""
+    },
+    {
+     "id": "O8b",
+     "description": "R diagonal min/max and condition estimate",
+     "status": "PASS",
+     "oracle": {
+      "r_min": 1.0938999890027574,
+      "r_max": 44721.47135326885,
+      "condition": 40882.59603516288
+     },
+     "production": {
+      "r_min": 1.0938999890027614,
+      "r_max": 44721.47135326885,
+      "condition": 40882.59603516273
+     },
+     "tolerance": "rel<=1e-05 (CSV prints 6 digits)",
+     "note": ""
+    },
+    {
+     "id": "O8c",
+     "description": "parity statistic from the frozen window",
+     "status": "PASS",
+     "oracle": 2.561315381635978e-07,
+     "production": 2.5613153816355605e-07,
+     "tolerance": "rel<=1e-05 or abs<=1e-09",
+     "note": ""
+    },
+    {
+     "id": "O8d",
+     "description": "detector-only rows preserved",
+     "status": "PASS",
+     "oracle": 0,
+     "production": 0,
+     "tolerance": "exact",
+     "note": "zero rows stay in H, z, dof and the response"
+    },
+    {
+     "id": "O8e",
+     "description": "parity identity ||Q2^T z||^2 == ||z - H x_hat||^2",
+     "status": "PASS",
+     "oracle": 2.5613153816370444e-07,
+     "production": 2.561315381635978e-07,
+     "tolerance": "rel<=1e-09",
+     "note": "verifies the implicit Q2 route the consumers use"
+    },
+    {
+     "id": "O8f",
+     "description": "protected covariance C (H^T H)^-1 C^T is finite and PSD",
+     "status": "PASS",
+     "oracle": {
+      "trace": 1.3072111309518653,
+      "min_eigenvalue": 0.002072122764042564
+     },
+     "production": null,
+     "tolerance": "PSD check, absolute 1e-12",
+     "note": "G/Z/Gamma per hypothesis need D_h from the generator (not in the replay schema): NOT_RUN here, covered by oracle_compare.py O5/O6 and by the C++ tests NUM-01..04 / COV-02"
+    }
+   ]
+  }
+ ],
+ "totals": {
+  "pass": 30,
+  "fail": 0,
+  "not_run": 0
+ }
+}

@@ -1,0 +1,312 @@
+{
+ "schema": "uwb-imu-pl/b1-equivalence/1",
+ "baseline": "P2 raw/runs_p2 (pruned: see prune-log.md) with v11 diagnostics",
+ "current": "B1 build, v12 diagnostics (/tmp/uwb_imu_pl_b1_20260921/b1_runs_v12)",
+ "comparison": "19 CSV files per scenario, all shared columns; discrete columns exact, numeric rel 1e-5 (6-digit CSV printing) or abs 1e-9 floor",
+ "per_frame_details": "/tmp/uwb_imu_pl_b1_20260921/equivalence_final.json (not committed)",
+ "tolerance": {
+  "numeric_rel": 1e-05,
+  "absolute_floor": 1e-09,
+  "source": "logger prints 6 significant digits"
+ },
+ "scenarios": {
+  "A_nominal": {
+   "files_compared": 19,
+   "discrete_mismatches": 0,
+   "route_differences": [],
+   "metadata_difference_count": 1500,
+   "metadata_note": "diagnostic schema v11->v12 and context_bytes only",
+   "numeric_failures": [],
+   "worst_numeric_columns": [
+    {
+     "file": "hypotheses.csv",
+     "column": "log_evidence",
+     "worst_rel": 4.480326884700347e-06,
+     "worst_abs": 1.000000000011348e-26
+    },
+    {
+     "file": "hypotheses.csv",
+     "column": "slope_x",
+     "worst_rel": 2.139151826305562e-06,
+     "worst_abs": 1.0000000000021927e-10
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "gyro_bias_norm",
+     "worst_rel": 2.0946956514042466e-08,
+     "worst_abs": 5.610443908098597e-17
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "accel_bias_norm",
+     "worst_rel": 6.595865005889376e-09,
+     "worst_abs": 9.322484322150232e-17
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "rotation_norm",
+     "worst_rel": 6.8017035133658e-10,
+     "worst_abs": 9.072603779358701e-15
+    }
+   ]
+  },
+  "C_uwb_fde": {
+   "files_compared": 19,
+   "discrete_mismatches": 0,
+   "route_differences": [
+    {
+     "file": "diagnostic_candidates.csv",
+     "column": "fallback_reason",
+     "count": 1,
+     "first": [
+      [
+       25,
+       "unstable normal solve;residual energy cancellation",
+       "residual energy cancellation"
+      ]
+     ]
+    }
+   ],
+   "metadata_difference_count": 2717,
+   "metadata_note": "diagnostic schema v11->v12 and context_bytes only",
+   "numeric_failures": [],
+   "worst_numeric_columns": [
+    {
+     "file": "hypotheses.csv",
+     "column": "conditioned_statistic",
+     "worst_rel": 0.00028107617657503785,
+     "worst_abs": 1.1400000000001015e-11
+    },
+    {
+     "file": "hypotheses.csv",
+     "column": "slope_x",
+     "worst_rel": 2.139151826305562e-06,
+     "worst_abs": 1.0000000000021927e-10
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "gyro_bias_norm",
+     "worst_rel": 2.0946956514042466e-08,
+     "worst_abs": 1.070514120057875e-14
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "accel_bias_norm",
+     "worst_rel": 6.595865005889376e-09,
+     "worst_abs": 9.46529313261557e-13
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "rotation_norm",
+     "worst_rel": 6.8017035133658e-10,
+     "worst_abs": 3.598343845112595e-12
+    }
+   ]
+  },
+  "D_imu_bridge": {
+   "files_compared": 19,
+   "discrete_mismatches": 0,
+   "route_differences": [],
+   "metadata_difference_count": 1701,
+   "metadata_note": "diagnostic schema v11->v12 and context_bytes only",
+   "numeric_failures": [],
+   "worst_numeric_columns": [
+    {
+     "file": "hypotheses.csv",
+     "column": "slope_x",
+     "worst_rel": 3.0981717688879894e-06,
+     "worst_abs": 1.0000000000157452e-09
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "gyro_bias_norm",
+     "worst_rel": 2.0946956514042466e-08,
+     "worst_abs": 7.119643416486632e-13
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "accel_bias_norm",
+     "worst_rel": 6.595865005889376e-09,
+     "worst_abs": 3.4163227802253004e-12
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "rotation_norm",
+     "worst_rel": 6.8017035133658e-10,
+     "worst_abs": 1.6909851296986744e-10
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "position_norm",
+     "worst_rel": 1.935041704818341e-10,
+     "worst_abs": 9.724132610244851e-11
+    }
+   ]
+  },
+  "E_union": {
+   "files_compared": 19,
+   "discrete_mismatches": 0,
+   "route_differences": [],
+   "metadata_difference_count": 1701,
+   "metadata_note": "diagnostic schema v11->v12 and context_bytes only",
+   "numeric_failures": [],
+   "worst_numeric_columns": [
+    {
+     "file": "hypotheses.csv",
+     "column": "slope_x",
+     "worst_rel": 3.0981717688879894e-06,
+     "worst_abs": 1.0000000000157452e-09
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "gyro_bias_norm",
+     "worst_rel": 2.0946956514042466e-08,
+     "worst_abs": 7.119643416486632e-13
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "accel_bias_norm",
+     "worst_rel": 6.595865005889376e-09,
+     "worst_abs": 3.4163227802253004e-12
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "rotation_norm",
+     "worst_rel": 6.8017035133658e-10,
+     "worst_abs": 1.6909851296986744e-10
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "position_norm",
+     "worst_rel": 1.935041704818341e-10,
+     "worst_abs": 9.724132610244851e-11
+    }
+   ]
+  },
+  "F_ramp_unmonitorable": {
+   "files_compared": 19,
+   "discrete_mismatches": 0,
+   "route_differences": [],
+   "metadata_difference_count": 1500,
+   "metadata_note": "diagnostic schema v11->v12 and context_bytes only",
+   "numeric_failures": [],
+   "worst_numeric_columns": [
+    {
+     "file": "hypotheses.csv",
+     "column": "log_evidence",
+     "worst_rel": 4.480326884700347e-06,
+     "worst_abs": 1.000000000011348e-26
+    },
+    {
+     "file": "hypotheses.csv",
+     "column": "slope_x",
+     "worst_rel": 2.139151826305562e-06,
+     "worst_abs": 1.0000000000021927e-10
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "gyro_bias_norm",
+     "worst_rel": 2.0946956514042466e-08,
+     "worst_abs": 5.610443908098597e-17
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "accel_bias_norm",
+     "worst_rel": 6.595865005889376e-09,
+     "worst_abs": 9.322484322150232e-17
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "rotation_norm",
+     "worst_rel": 6.8017035133658e-10,
+     "worst_abs": 9.072603779358701e-15
+    }
+   ]
+  },
+  "G_continuous_rejection": {
+   "files_compared": 19,
+   "discrete_mismatches": 0,
+   "route_differences": [],
+   "metadata_difference_count": 1686,
+   "metadata_note": "diagnostic schema v11->v12 and context_bytes only",
+   "numeric_failures": [],
+   "worst_numeric_columns": [
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "gyro_bias_norm",
+     "worst_rel": 2.0946956514042466e-08,
+     "worst_abs": 7.267963357884821e-13
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "accel_bias_norm",
+     "worst_rel": 6.595865005889376e-09,
+     "worst_abs": 2.1732338151281283e-12
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "rotation_norm",
+     "worst_rel": 6.8017035133658e-10,
+     "worst_abs": 9.281464485866309e-12
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "position_norm",
+     "worst_rel": 1.3921767157499252e-10,
+     "worst_abs": 5.850431250564725e-12
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "velocity_norm",
+     "worst_rel": 8.362445576531898e-11,
+     "worst_abs": 3.640288070982933e-11
+    }
+   ]
+  },
+  "H_mature_union": {
+   "files_compared": 19,
+   "discrete_mismatches": 0,
+   "route_differences": [],
+   "metadata_difference_count": 11866,
+   "metadata_note": "diagnostic schema v11->v12 and context_bytes only",
+   "numeric_failures": [],
+   "worst_numeric_columns": [
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "gyro_bias_norm",
+     "worst_rel": 3.2806329868606345e-08,
+     "worst_abs": 2.7975972233251767e-13
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "accel_bias_norm",
+     "worst_rel": 6.595865005889376e-09,
+     "worst_abs": 2.8462440737619943e-12
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "rotation_norm",
+     "worst_rel": 6.8017035133658e-10,
+     "worst_abs": 6.979625766234676e-10
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "epoch_norm",
+     "worst_rel": 1.9195555190249106e-10,
+     "worst_abs": 7.378062605312152e-10
+    },
+    {
+     "file": "diagnostic_state_steps.csv",
+     "column": "position_norm",
+     "worst_rel": 1.3921767157499252e-10,
+     "worst_abs": 2.481437277879195e-10
+    }
+   ]
+  }
+ },
+ "totals": {
+  "discrete_mismatch_total": 0,
+  "worst_numeric_rel": 0.00028107617657503785,
+  "numeric_tolerance": 1e-05
+ }
+}

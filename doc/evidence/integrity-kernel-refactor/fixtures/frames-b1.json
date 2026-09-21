@@ -1,0 +1,47 @@
+{
+  "schema": "uwb-imu-pl/fixture-index/2",
+  "produced_by": "P3 (B1) storage prune; supersedes the bin references of frames.json for the retained set",
+  "note": "The A-round fixtures/frames.json still carries the full census/ladder/shadow numbers but referenced the P1 v4 bins, which were pruned for the storage budget. This index lists the five retained v5 bins (identical windows/semantics, v5 layout) with regenerated digests. Deleted bins (F_ramp attempt-30, H_mature attempt-205, epochs20-census attempt-30) and their regeneration commands are recorded in prune-log.md.",
+  "bins": [
+    {
+      "class": "nominal",
+      "run": "A_nominal",
+      "attempt": 30,
+      "bin": "raw/replay_p2/A_nominal/exports/attempt-30.bin",
+      "sha256": "3730c22054d4651507b066de87e7e277b652f297c88b16cf68ead7ffe8dab17d",
+      "note": "healthy frozen window (253x165)"
+    },
+    {
+      "class": "alarm",
+      "run": "C_uwb_fde",
+      "attempt": 25,
+      "bin": "raw/replay_p2/C_uwb_fde/exports/attempt-25.bin",
+      "sha256": "1802f0584bfa92a5d2dc537b92ce130d28c0d14a86bd30acb5b5279caca30442",
+      "note": "UWB fault before the exclusion action (253x165)"
+    },
+    {
+      "class": "post_fde",
+      "run": "C_uwb_fde",
+      "attempt": 26,
+      "bin": "raw/replay_p2/C_uwb_fde/exports/attempt-26.bin",
+      "sha256": "aab25d7599d09b165219d5031b7d21b11eb84cd3001ae95420190651478adda3",
+      "note": "post-FDE window, 128 actions (252x165)"
+    },
+    {
+      "class": "rejection",
+      "run": "G_continuous_rejection",
+      "attempt": 10,
+      "bin": "raw/replay_p2/G_continuous_rejection/exports/attempt-10.bin",
+      "sha256": "e570ef81fadfffbc0e1211204027edbf47724be8eed4b0262e140ee3066fab03",
+      "note": "consecutive rejection epoch (130x90)"
+    },
+    {
+      "class": "mature",
+      "run": "H_mature_union",
+      "attempt": 201,
+      "bin": "raw/replay_p2/H_mature_union/exports/attempt-201.bin",
+      "sha256": "920a54ff2709c8150a7bcd16fbfce5d96c99d948f7b7439f94fc823a9ba272d5",
+      "note": "mature union window (253x165)"
+    }
+  ]
+}

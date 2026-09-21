@@ -1393,6 +1393,37 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           "frozen_linearization;active_window_fault_support;"
           "history_nominal_boundary_only";
       identityDigest(&identity);
+      if (window.square_root) {
+        const auto& context = *window.square_root;
+        const auto& certificate = context.certificate();
+        SquareRootAuditRecord audit;
+        // input_attempt_count_ is the 1-based attempt id used by the
+        // diagnostics CSV and by the replay export; the diagnostics field
+        // is assigned later in this function.
+        audit.attempt_id = input_attempt_count_;
+        audit.rows = context.rows();
+        audit.columns = context.columns();
+        audit.rank = context.rank();
+        audit.dof = context.dof();
+        audit.r_diagonal_min = certificate.r_diagonal_min;
+        audit.r_diagonal_max = certificate.r_diagonal_max;
+        audit.condition_estimate = certificate.condition_estimate;
+        audit.identity_residual_relative =
+            certificate.identity_residual_relative;
+        audit.parity_relative_difference =
+            certificate.parity_relative_difference;
+        audit.solution_relative_difference =
+            certificate.solution_relative_difference;
+        audit.forward_error_bound = certificate.forward_error_bound;
+        audit.certificate_ok = certificate.ok();
+        audit.usable = context.usable();
+        audit.detector_only_rows = context.detectorOnlyRows();
+        audit.statistic = context.statistic();
+        audit.scale_policy = toString(context.scalePolicy());
+        audit.permutation_policy = toString(context.permutationPolicy());
+        audit.reason = context.reason();
+        output.square_root_audit.push_back(std::move(audit));
+      }
     }
     const auto& preparation = window.preparation_timing;
     output.stage_timings.push_back({"window_boundary_provenance",
@@ -1906,6 +1937,16 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             }
             record.noncentrality_boundary =
                 noncentrality_boundaries.at(hypothesis.p_md_allocation);
+            if (shared_hypothesis_numerics &&
+                i < shared_hypothesis_numerics->pl_entries.size()) {
+              const auto& entry =
+                  shared_hypothesis_numerics->pl_entries[i];
+              record.z_rank = entry.z_rank;
+              record.z_smallest_singular_value =
+                  entry.z_smallest_singular_value;
+              record.z_condition = entry.z_condition;
+              record.z_classification = entry.z_classification;
+            }
           }
           output.hypothesis_audit.push_back(std::move(record));
         }

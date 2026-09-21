@@ -99,7 +99,8 @@ TEST(RunLogger, V5SchemaHasExactHeadersAndStructuredSummary) {
             "fault_rank,sigma_min,sigma_max,condition_number,slope_x,slope_y,"
             "slope_z,boundary_direction_gram,noncentrality_boundary,prior_bound,p_md_allocation,"
             "hmi_allocation,monitorable,plausible,conditioned_statistic,"
-            "log_evidence,reason");
+            "log_evidence,z_rank,z_sigma_min,z_condition,z_classification,"
+            "reason");
   EXPECT_EQ(firstLine(directory + "/candidates.csv"),
             "timestamp_ns,window_id,action_id,action_type,physical_source_ids,removed_group_ids,"
             "added_group_ids,bridge_mode,cardinality,valid,post_detector_passed,"

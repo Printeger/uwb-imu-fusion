@@ -28,6 +28,15 @@ struct NumericalWorkSnapshot {
   std::uint64_t spectral_rhs_columns = 0;
   std::uint64_t numerical_contract_mismatches = 0;
   std::uint64_t imu_oracle_reintegrations = 0;
+  std::uint64_t square_root_factorizations = 0;
+  std::uint64_t square_root_information_solves = 0;
+  std::uint64_t square_root_information_columns = 0;
+  std::uint64_t square_root_qt_applications = 0;
+  std::uint64_t square_root_qt_columns = 0;
+  std::uint64_t square_root_symbolic_hits = 0;
+  std::uint64_t square_root_symbolic_misses = 0;
+  std::uint64_t square_root_fallbacks = 0;
+  std::uint64_t square_root_certificate_holds = 0;
 };
 
 // Counts actual decomposition/solve construction points.  The counters are
@@ -47,7 +56,16 @@ class NumericalWorkCounters {
             covariance_rhs_solves_.load(), covariance_rhs_columns_.load(),
             spectral_rhs_solves_.load(), spectral_rhs_columns_.load(),
             numerical_contract_mismatches_.load(),
-            imu_oracle_reintegrations_.load()};
+            imu_oracle_reintegrations_.load(),
+            square_root_factorizations_.load(),
+            square_root_information_solves_.load(),
+            square_root_information_columns_.load(),
+            square_root_qt_applications_.load(),
+            square_root_qt_columns_.load(),
+            square_root_symbolic_hits_.load(),
+            square_root_symbolic_misses_.load(),
+            square_root_fallbacks_.load(),
+            square_root_certificate_holds_.load()};
   }
   static void reset() {
     base_svd_ = 0; base_llt_ = 0; base_state_solves_ = 0;
@@ -61,6 +79,11 @@ class NumericalWorkCounters {
     covariance_rhs_solves_ = 0; covariance_rhs_columns_ = 0;
     spectral_rhs_solves_ = 0; spectral_rhs_columns_ = 0;
     numerical_contract_mismatches_ = 0; imu_oracle_reintegrations_ = 0;
+    square_root_factorizations_ = 0; square_root_information_solves_ = 0;
+    square_root_information_columns_ = 0; square_root_qt_applications_ = 0;
+    square_root_qt_columns_ = 0; square_root_symbolic_hits_ = 0;
+    square_root_symbolic_misses_ = 0; square_root_fallbacks_ = 0;
+    square_root_certificate_holds_ = 0;
   }
   static void baseSvd() { ++base_svd_; }
   static void baseLlt() { ++base_llt_; }
@@ -98,6 +121,19 @@ class NumericalWorkCounters {
   }
   static void numericalContractMismatch() { ++numerical_contract_mismatches_; }
   static void imuOracleReintegration() { ++imu_oracle_reintegrations_; }
+  static void squareRootFactorization() { ++square_root_factorizations_; }
+  static void squareRootInformationSolve(std::uint64_t columns) {
+    ++square_root_information_solves_;
+    square_root_information_columns_ += columns;
+  }
+  static void squareRootQtApplication(std::uint64_t columns) {
+    ++square_root_qt_applications_;
+    square_root_qt_columns_ += columns;
+  }
+  static void squareRootSymbolicHit() { ++square_root_symbolic_hits_; }
+  static void squareRootSymbolicMiss() { ++square_root_symbolic_misses_; }
+  static void squareRootFallback() { ++square_root_fallbacks_; }
+  static void squareRootCertificateHold() { ++square_root_certificate_holds_; }
 
  private:
   inline static std::atomic<std::uint64_t> base_svd_{0};
@@ -122,6 +158,15 @@ class NumericalWorkCounters {
   inline static std::atomic<std::uint64_t> spectral_rhs_columns_{0};
   inline static std::atomic<std::uint64_t> numerical_contract_mismatches_{0};
   inline static std::atomic<std::uint64_t> imu_oracle_reintegrations_{0};
+  inline static std::atomic<std::uint64_t> square_root_factorizations_{0};
+  inline static std::atomic<std::uint64_t> square_root_information_solves_{0};
+  inline static std::atomic<std::uint64_t> square_root_information_columns_{0};
+  inline static std::atomic<std::uint64_t> square_root_qt_applications_{0};
+  inline static std::atomic<std::uint64_t> square_root_qt_columns_{0};
+  inline static std::atomic<std::uint64_t> square_root_symbolic_hits_{0};
+  inline static std::atomic<std::uint64_t> square_root_symbolic_misses_{0};
+  inline static std::atomic<std::uint64_t> square_root_fallbacks_{0};
+  inline static std::atomic<std::uint64_t> square_root_certificate_holds_{0};
 };
 
 }  // namespace uwb_imu_pl

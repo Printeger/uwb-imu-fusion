@@ -28,8 +28,8 @@ import subprocess
 import sys
 import time
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-REPO = os.path.abspath(os.path.join(ROOT, "..", "..", ".."))
+REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+ROOT = os.path.join(REPO, "doc", "evidence", "integrity-kernel-refactor")
 WORKSPACE = os.environ.get("UWB_IMU_PL_WORKSPACE", "/home/mint/ws_fusion_uwb")
 
 
@@ -92,6 +92,8 @@ def main():
                         help="run every item that has commands")
     parser.add_argument("--config", default=os.path.join(
         REPO, "config", "realtime_uwb_imu_pl_research.yaml"))
+    # Moved here in P3 (B1): the dispatcher lives with the repository tools; the
+    # manifest and reports stay in the evidence directory.
     args = parser.parse_args()
 
     with open(args.manifest) as handle:

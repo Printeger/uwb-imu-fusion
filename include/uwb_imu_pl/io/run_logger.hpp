@@ -57,6 +57,7 @@ class RunLogger {
   std::ofstream diagnostic_coverage_;
   std::ofstream diagnostic_steps_;
   std::ofstream diagnostic_identity_;
+  std::ofstream diagnostic_square_root_;
   bool write_residuals_ = true;
   bool write_timing_ = true;
   std::uint64_t next_event_sequence_ = 1;

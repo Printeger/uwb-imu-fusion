@@ -157,3 +157,37 @@ P2 与 P1 的差异（口径说明，供后续引用）：
 | replay bin | v4 | v5（v4 布局 + identity；v1–v4 仍可读） |
 | 场景证据目录 | `raw/runs`、`raw/replay` | `raw/runs_p2`、`raw/replay_p2`、`raw/census_p2`（P1 目录保留不动） |
 | 生产源码 | 零修改 | A3/A4 范围内修改（清单见最终报告）；阈值/算法语义不变 |
+
+## 6. P3（B1）命令、存储与验证
+
+```
+# 构建 + 全量测试（P3 口径）
+  source /opt/ros/noetic/setup.bash && source devel/setup.bash
+  catkin build uwb_imu_pl
+  catkin run_tests uwb_imu_pl                 # raw/run_tests_b1.log -> 254 tests / 0 failures
+  catkin_test_results build/uwb_imu_pl/test_results/uwb_imu_pl
+
+# B1 单元测试（上下文）
+  devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_square_root_context   # 7 用例
+
+# 场景重放（离散零差异判据的当前侧；大产物写 /tmp）
+  O=/tmp/uwb_imu_pl_b1_20260921/b1_runs_v12
+  UWB_IMU_PL_DEVELOPMENT_FULL_AUDIT=1 devel/lib/uwb_imu_pl/r0_r1_development \
+      $CFG $O/<SCENARIO> <EPOCHS> <SCENARIO> $SCN      # A/C/D/E/F=30, G=45；H=226（无 FULL_AUDIT）
+
+# 独立 oracle（仓库内，读 /tmp 的 run CSV；环境变量可改）
+  python3 $E/tools/oracle_compare.py            # UWB_IMU_PL_ORACLE_RUNS=$O
+  python3 $E/tools/context_oracle.py            # 读 fixtures/frames-b1.json 的 5 个 bin
+
+# 验证调度（P3 起位于仓库 tools/integrity/）
+  python3 tools/integrity/run_validation.py --all    # -> $E/validation-report.json
+
+# 存储纪律（本轮起）
+#   大产物（逐帧 CSV/trace/日志）写 /tmp/uwb_imu_pl_b1_<date>/；仓库只保留摘要
+#   doc/evidence 单文件 <=1MB、整目录 <=20MB；raw/ <=15MB（prune-log.md 记录删除清单）
+#   本轮 du：raw/ 7.5MB，doc/evidence/integrity-kernel-refactor/ 8.3MB（results/ 1.2GB 未动）
+```
+
+本轮 v12 诊断新增：`diagnostic_square_root.csv`（每窗口证书：rank/dof、R 对角、条件估计、
+identity/parity/solution 残差、前向界、detector_only_rows、策略与可用性），
+`hypotheses.csv` 追加 `z_rank/z_sigma_min/z_condition/z_classification`。

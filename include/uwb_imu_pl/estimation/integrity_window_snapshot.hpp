@@ -1,6 +1,7 @@
 #pragma once
 
 #include "uwb_imu_pl/estimation/factor_ledger.hpp"
+#include "uwb_imu_pl/estimation/square_root_context.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Cholesky>
@@ -110,6 +111,9 @@ struct FrozenWindowNumerics {
   std::shared_ptr<const Eigen::LLT<Eigen::MatrixXd>> information_factorization;
   std::shared_ptr<const Eigen::MatrixXd> spectral_vectors;
   Eigen::VectorXd spectral_inverse_squared;
+  // Reference (SVD) nominal increment; kept only for the certificate and as
+  // the B1 fallback when the square-root context is not usable.
+  Eigen::VectorXd spectral_state_increment;
   Eigen::VectorXd base_state_increment;
   Eigen::VectorXd parity;
   std::vector<Eigen::Index> block_row_offsets;
@@ -124,6 +128,12 @@ struct FrozenWindowNumerics {
       std::numeric_limits<double>::infinity();
   double llt_svd_relative_difference = std::numeric_limits<double>::infinity();
   bool canonical_spectral_solution = false;
+  // B1 square-root context summary (values owned by the context; mirrored here
+  // for diagnostics and for consumers that only hold the numerics struct).
+  double square_root_statistic = std::numeric_limits<double>::infinity();
+  double square_root_condition_estimate = std::numeric_limits<double>::infinity();
+  int square_root_detector_only_rows = 0;
+  bool square_root_certificate_ok = false;
   int exact_rank = 0;
   int dof = 0;
   double exact_condition = std::numeric_limits<double>::infinity();
@@ -163,6 +173,10 @@ struct LinearizedIntegrityWindow {
   WindowCapabilities capabilities;
   WindowPreparationTiming preparation_timing;
   std::shared_ptr<const FrozenWindowNumerics> numerics;
+  // B1: the single square-root context of this frozen window.  All consumers
+  // (detector statistic, hypothesis evidence, PL slopes, candidate base solve)
+  // read from it; the LLT/spectral products above are reference fallbacks.
+  std::shared_ptr<const FrozenSquareRootContext> square_root;
   bool model_valid = false;
   std::string reason;
 };
@@ -186,5 +200,15 @@ Eigen::MatrixXd solveFrozenInformation(const FrozenWindowNumerics& numerics,
                                        const Eigen::MatrixXd& information,
                                        const Eigen::MatrixXd& rhs,
                                        bool* used_spectral_fallback = nullptr);
+
+// B1 consumer entry point: solve (H^T H)^-1 rhs from the frozen window's single
+// square-root context when it is usable and certifies itself, and only then
+// fall back to the LLT/spectral reference path.  A fallback is always counted
+// (NumericalWorkCounters::square_rootFallbacks) so mixed use is visible.
+Eigen::MatrixXd solveFrozenInformation(
+    const FrozenSquareRootContext* context,
+    const FrozenWindowNumerics& numerics,
+    const Eigen::MatrixXd& information, const Eigen::MatrixXd& rhs,
+    bool* used_spectral_fallback = nullptr);
 
 }  // namespace uwb_imu_pl

@@ -386,7 +386,7 @@ void RankUpdateEvaluator::buildSharedCache(BaseCandidateKernel* kernel,
       auto& entries = cache->blocks[block.group_id];
       if (std::any_of(entries.begin(), entries.end(), [&](const auto& e) { return sameBlock(e.block, block); })) return;
       entries.push_back({block, solveFrozenInformation(
-          *base.numerics, window.base_information,
+          window.square_root.get(), *base.numerics, window.base_information,
           block.jacobian_whitened.transpose())});
     };
     std::set<FactorGroupId> removals;
@@ -510,7 +510,8 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
         }
       }
       if (!hit) cj.middleCols(cache_offset, block->jacobian_whitened.rows()) =
-          solveFrozenInformation(*base.numerics, window.base_information,
+          solveFrozenInformation(base.window_view->square_root.get(),
+              *base.numerics, window.base_information,
               block->jacobian_whitened.transpose());
       cache_offset += block->jacobian_whitened.rows();
     }

@@ -341,14 +341,29 @@ std::vector<FaultModeEvidence> evaluateContiguous(
   rhs.leftCols<3>() = window.protected_state_map.transpose();
   rhs.rightCols(total_columns) = normal_cross;
   const Eigen::MatrixXd solved = solveFrozenInformation(
-      *window.numerics, window.base_information, rhs);
+      window.square_root.get(), *window.numerics, window.base_information, rhs);
   if (solved.rows() != window.H.cols() || solved.cols() != rhs.cols() ||
       !solved.allFinite()) return results;
   const Eigen::MatrixXd covariance_modes = solved.rightCols(total_columns);
   const Eigen::MatrixXd protected_modes =
       window.protected_state_map * covariance_modes;
   const Eigen::VectorXd scores = dense.transpose() * window.numerics->parity;
-
+  // B1: one implicit Q^T application gives Z = Q2^T D for every fault mode.
+  // Z^T Z equals the fault Gram below (verified by COV-02 and NUM-01), and the
+  // per-hypothesis block of Z supplies the rank/condition audit that B2 needs;
+  // the numeric Gram itself stays the shared normal-equation form so this
+  // batch reproduces the P2 numbers exactly.
+  Eigen::MatrixXd all_mode_response;
+  if (window.square_root && window.square_root->usable()) {
+    Eigen::MatrixXd z_response;
+    window.square_root->faultResponse(dense, nullptr, &z_response);
+    if (z_response.rows() > 0 && z_response.cols() == total_columns &&
+        z_response.allFinite()) {
+      all_mode_response = std::move(z_response);
+    }
+  }
+  const Eigen::MatrixXd all_mode_gram =
+      dense.transpose() * dense - normal_cross.transpose() * covariance_modes;
   auto context = std::make_shared<FrozenHypothesisNumerics>();
   context->window_id = window.id;
   context->version = window.version;
@@ -367,8 +382,6 @@ std::vector<FaultModeEvidence> evaluateContiguous(
   // One contiguous GEMM pair materializes every self and pair cross term.
   // This is transient window work (not retained by the shared context) and
   // replaces tens of thousands of tiny per-hypothesis products.
-  const Eigen::MatrixXd all_mode_gram =
-      dense.transpose() * dense - normal_cross.transpose() * covariance_modes;
 
   auto crossBlock = [&](const ModeDescriptor& left,
                         const ModeDescriptor& right) -> Eigen::MatrixXd {
@@ -405,6 +418,45 @@ std::vector<FaultModeEvidence> evaluateContiguous(
       if (!found_all || dimension <= 0) {
         failDimension(&hypothesis, &evidence, physical_dimension);
         continue;
+      }
+      // B1 audit: detection-space response of this hypothesis, classified from
+      // the small SVD of Z_h = Q2^T D_h (never from the squared normal form).
+      // Applied to every hypothesis; the added work is one small SVD whose size
+      // is (m - rank) x dimension, counted as square_root_qt_columns.
+      if (all_mode_response.cols() > 0 && config.enable_shared_context) {
+        std::vector<Eigen::MatrixXd> z_parts;
+        int width = 0;
+        for (const auto part : parts) {
+          const auto& descriptor = descriptors[part];
+          if (descriptor.offset + descriptor.dimension >
+              all_mode_response.cols()) continue;
+          z_parts.push_back(all_mode_response.middleCols(
+              descriptor.offset, descriptor.dimension));
+          width += descriptor.dimension;
+        }
+        if (width == dimension) {
+          Eigen::MatrixXd z_h(all_mode_response.rows(), dimension);
+          int offset = 0;
+          for (const auto& part : z_parts) {
+            z_h.middleCols(offset, part.cols()) = part;
+            offset += static_cast<int>(part.cols());
+          }
+          Eigen::MatrixXd g_h(3, dimension);
+          offset = 0;
+          for (const auto part : parts) {
+            const auto& descriptor = descriptors[part];
+            g_h.middleCols(offset, descriptor.dimension) =
+                protected_modes.middleCols(descriptor.offset,
+                                           descriptor.dimension);
+            offset += descriptor.dimension;
+          }
+          pl_entry.z_classification = classifyDetectionResponse(
+              z_h, g_h,
+              window.numerics
+                  ? window.numerics->numerical_contract.rank_tolerance : 1e-10,
+              &pl_entry.z_smallest_singular_value, &pl_entry.z_condition,
+              &pl_entry.z_rank);
+        }
       }
       if (dimension <= 3 && parts.size() <= 2) {
         Eigen::Matrix3d gram = Eigen::Matrix3d::Zero();
@@ -713,7 +765,54 @@ std::vector<FaultModeEvidence> evaluateMapped(
   return results;
 }
 
+
+
 }  // namespace
+
+int classifyDetectionResponse(const Eigen::MatrixXd& z_h,
+                              const Eigen::MatrixXd& g_h,
+                              double rank_tolerance,
+                              double* smallest_singular_value,
+                              double* condition, int* rank_out) {
+  if (z_h.cols() == 0 || z_h.rows() == 0) return 0;
+  // ThinV is required: the structural nullspace test needs V (the default
+  // JacobiSVD option computes singular values only).
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(z_h, Eigen::ComputeThinV);
+  const Eigen::VectorXd singular = svd.singularValues();
+  const double largest = singular.size() ? singular(0) : 0.0;
+  const double gate = rank_tolerance * std::max(1.0, largest);
+  int rank = 0;
+  for (int index = 0; index < singular.size(); ++index) {
+    if (singular(index) > gate) ++rank;
+  }
+  const int columns = static_cast<int>(z_h.cols());
+  if (rank_out) *rank_out = rank;
+  if (smallest_singular_value) {
+    *smallest_singular_value = rank > 0 ? singular(rank - 1) : 0.0;
+  }
+  if (condition) {
+    *condition = rank > 0 && singular(rank - 1) > 0.0
+        ? largest / singular(rank - 1)
+        : std::numeric_limits<double>::infinity();
+  }
+  if (rank == columns) return 1;  // full rank
+  // The band check uses the first *discarded* singular value: a value that is
+  // below the gate but well above zero means the rank decision is a tolerance
+  // artifact rather than a structural nullspace.
+  const double excluded = rank < singular.size() ? singular(rank) : 0.0;
+  if (excluded > gate * 0.01) return 4;  // numerically indistinguishable
+  double residual = 0.0;
+  if (g_h.cols() == columns && rank > 0) {
+    const Eigen::MatrixXd retained =
+        svd.matrixV().leftCols(rank) *
+        svd.matrixV().leftCols(rank).transpose() * g_h.transpose();
+    residual = (g_h.transpose() - retained).cwiseAbs().maxCoeff();
+  } else if (g_h.size() > 0) {
+    residual = g_h.cwiseAbs().maxCoeff();
+  }
+  const double response_scale = std::max(1.0, g_h.size() ? g_h.cwiseAbs().maxCoeff() : 0.0);
+  return residual <= 1e-9 * response_scale ? 2 : 3;
+}
 
 std::uint64_t hypothesisSetFingerprint(
     const std::vector<FaultHypothesisV2>& hypotheses) {
@@ -825,7 +924,8 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
           hypothesis.A.allFinite()) {
         const Eigen::MatrixXd cross = window.H.transpose() * hypothesis.A;
         const Eigen::MatrixXd covariance_cross = solveFrozenInformation(
-            *window.numerics, window.base_information, cross);
+            window.square_root.get(), *window.numerics,
+            window.base_information, cross);
         gram = hypothesis.A.transpose() * hypothesis.A -
             cross.transpose() * covariance_cross;
         score = hypothesis.A.transpose() * window.numerics->parity;
