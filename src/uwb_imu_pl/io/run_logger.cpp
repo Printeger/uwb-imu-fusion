@@ -128,7 +128,7 @@ RunLogger::RunLogger(const std::string& output_directory,
   diagnostic_coverage_ << std::setprecision(17);
   diagnostic_steps_ << std::setprecision(17);
   const std::string identity = "schema_version,input_attempt_id,input_timestamp_ns,transaction_id,window_id,graph_version,ordering_version,noise_model_version,linpoint_version,output_timestamp_ns,";
-  attempts_ << identity << "frozen_group_ids,backend_epoch_before,backend_epoch_after,pending_duration_s,state_age_s,raw_imu_samples,consecutive_rejections,marginalization_count,factor_block_cache_hits,factor_block_cache_misses,factor_block_cache_invalidations,statistical_cache_hits,statistical_cache_misses,cache_entries,cache_bytes,cache_invalidation_reason,base_step_norm,selected_step_norm,risk_nominal,risk_p_nm,risk_bridge,risk_history,risk_model,risk_hypotheses,risk_total,risk_upper_bound,risk_margin,hypothesis_count,single_uwb_hypotheses,single_accel_hypotheses,single_gyro_hypotheses,double_uwb_accel_hypotheses,double_uwb_gyro_hypotheses,effective_fault_cardinality,generated_actions,kernel_evaluated_actions,post_passed_actions,pl_evaluated_actions,selected_actions,base_svd,base_llt,base_state_solves,llt_state_solve_calls,svd_state_solve_calls,detector_reference_qr,candidate_reference_svd,candidate_inner_llt,fault_gram_eigen,fault_gram_svd,fault_gram_ldlt,low_dim_fault_gram,generic_fault_gram_fallback,hypothesis_parallel_blocks,hypothesis_shared_hits,hypothesis_shared_misses,covariance_rhs_solves,covariance_rhs_columns,spectral_rhs_solves,spectral_rhs_columns,numerical_contract_mismatches,imu_oracle_reintegrations,analytic_input_valid,analytic_computation_valid,oracle_executed,oracle_relative_error,oracle_verified,primary_failure,all_failures,not_evaluated_checks,oracle_sweep_executed,oracle_sweep_verified,oracle_sweep_worst_relative_error,oracle_sweep_reintegrations,oracle_sweep_epsilons,oracle_sweep_relative_errors,status,reason\n";
+  attempts_ << identity << "frozen_group_ids,backend_epoch_before,backend_epoch_after,pending_duration_s,state_age_s,raw_imu_samples,consecutive_rejections,marginalization_count,factor_block_cache_hits,factor_block_cache_misses,factor_block_cache_invalidations,statistical_cache_hits,statistical_cache_misses,cache_entries,cache_bytes,cache_invalidation_reason,base_step_norm,selected_step_norm,risk_nominal,risk_p_nm,risk_bridge,risk_history,risk_model,risk_hypotheses,risk_total,risk_upper_bound,risk_margin,risk_ledger_charged_total,risk_ledger_declared_total,risk_ledger_closes,risk_ledger_all_validated,risk_ledger_validated_terms,risk_ledger_unvalidated_terms,risk_ledger_not_implemented_terms,risk_ledger_terms,coverage_status,coverage_exact_leaves,coverage_enveloped_leaves,coverage_uncovered_leaves,coverage_envelope_count,coverage_accepted_envelope_count,coverage_proof_count,coverage_envelope_online,hypothesis_count,single_uwb_hypotheses,single_accel_hypotheses,single_gyro_hypotheses,double_uwb_accel_hypotheses,double_uwb_gyro_hypotheses,effective_fault_cardinality,generated_actions,kernel_evaluated_actions,post_passed_actions,pl_evaluated_actions,selected_actions,base_svd,base_llt,base_state_solves,llt_state_solve_calls,svd_state_solve_calls,detector_reference_qr,candidate_reference_svd,candidate_inner_llt,fault_gram_eigen,fault_gram_svd,fault_gram_ldlt,low_dim_fault_gram,generic_fault_gram_fallback,hypothesis_parallel_blocks,hypothesis_shared_hits,hypothesis_shared_misses,covariance_rhs_solves,covariance_rhs_columns,spectral_rhs_solves,spectral_rhs_columns,numerical_contract_mismatches,imu_oracle_reintegrations,analytic_input_valid,analytic_computation_valid,oracle_executed,oracle_relative_error,oracle_verified,primary_failure,all_failures,not_evaluated_checks,oracle_sweep_executed,oracle_sweep_verified,oracle_sweep_worst_relative_error,oracle_sweep_reintegrations,oracle_sweep_epsilons,oracle_sweep_relative_errors,status,reason\n";
   diagnostic_stages_ << identity << "stage,status,wall_ms,reason\n";
   diagnostic_candidates_ << identity << "action_id,kernel_evaluated,numerical_valid,post_passed,pl_evaluated,coverage_rejected,selected,slow_path,near_gate,recovered_replacement,numerical_path,fallback_reason,skip_reason,cache_hits,certificate_passed,condition_value_kind,condition_lower_bound,condition_upper_bound,certificate_margin,matrix_free_step_rejected,covariance_solve_count,scratch_reuse_count,kernel_ms,post_ms,bridge_ms,fault_map_ms,pl_ms\n";
   diagnostic_coverage_ << identity << "action_id,action_type,plausible_hypothesis_ids,mandatory_health_sources,mandatory_group_ids,covered_mode_ids,removed_group_ids,added_group_ids,uncovered_hypothesis_ids,uncovered_mode_ids,uncovered_group_ids,uncovered_mandatory_group_ids,outcome,reason\n";
@@ -346,7 +346,7 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
              << csv(p.reason) << '\n';
   for (const auto& s : o.square_root_audit) {
     diagnostic_square_root_
-        << "uwb-imu-pl/gate-d-diagnostics/v13," << s.attempt_id << ','
+        << "uwb-imu-pl/gate-d-diagnostics/v14," << s.attempt_id << ','
         << s.rows << ',' << s.columns << ',' << s.rank << ',' << s.dof << ','
         << s.r_diagonal_min << ',' << s.r_diagonal_max << ','
         << s.condition_estimate << ',' << s.identity_residual_relative << ','
@@ -359,7 +359,7 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
   if (o.diagnostics.input_attempt_id) {
     const auto& d = o.diagnostics;
     auto identity = [&](std::ostream& stream) -> std::ostream& {
-      return stream << "uwb-imu-pl/gate-d-diagnostics/v13," << d.input_attempt_id << ','
+      return stream << "uwb-imu-pl/gate-d-diagnostics/v14," << d.input_attempt_id << ','
           << d.input_timestamp.value() << ',' << o.transaction_id << ',' << o.window_id << ','
           << o.base_graph_version << ',' << d.ordering_version << ','
           << d.noise_model_version << ',' << o.linearization_version << ',' << o.timestamp.value() << ',';
@@ -374,7 +374,20 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
         << d.selected_step_norm << ',' << d.risk_nominal << ',' << d.risk_p_nm << ','
         << d.risk_bridge << ',' << d.risk_history << ',' << d.risk_model << ','
         << d.risk_hypotheses << ',' << d.risk_total << ',' << d.risk_upper_bound << ','
-        << d.risk_margin << ',' << d.hypothesis_count << ','
+        << d.risk_margin << ',' << d.risk_ledger_charged_total << ','
+        << d.risk_ledger_declared_total << ','
+        << d.risk_ledger_closes << ',' << d.risk_ledger_all_validated << ','
+        << d.risk_ledger_validated_terms << ','
+        << d.risk_ledger_unvalidated_terms << ','
+        << d.risk_ledger_not_implemented_terms << ','
+        << csv(d.risk_ledger_terms) << ','
+        << csv(d.coverage_status) << ',' << d.coverage_exact_leaves << ','
+        << d.coverage_enveloped_leaves << ',' << d.coverage_uncovered_leaves
+        << ',' << d.coverage_envelope_count << ','
+        << d.coverage_accepted_envelope_count << ','
+        << d.coverage_proof_count << ','
+        << (d.coverage_envelope_online ? 1 : 0) << ','
+        << d.hypothesis_count << ','
         << d.single_uwb_hypotheses << ',' << d.single_accel_hypotheses << ','
         << d.single_gyro_hypotheses << ',' << d.double_uwb_accel_hypotheses << ','
         << d.double_uwb_gyro_hypotheses << ',' << d.effective_fault_cardinality << ','
@@ -693,7 +706,7 @@ RunManifest makeRunManifest(const IntegrityConfig& config,
       config.imu.noise_overbound_calibration_id;
   manifest.protected_quantity = "position_xyz";
   manifest.position_reference = "body_origin";
-  manifest.diagnostics_schema_version = "uwb-imu-pl/gate-d-diagnostics/v13";
+  manifest.diagnostics_schema_version = "uwb-imu-pl/gate-d-diagnostics/v14";
   manifest.failure_catalog = failureReasonCatalogJson();
   if (config.fault_manifest) {
     manifest.fault_manifest_id = config.fault_manifest->manifest_id;

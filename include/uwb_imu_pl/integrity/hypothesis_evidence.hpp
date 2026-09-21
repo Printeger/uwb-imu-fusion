@@ -47,11 +47,18 @@ struct HypothesisEvaluationConfig {
 // but projected out of the protected state), 3 = dangerous nullspace, and
 // 4 = numerically indistinguishable (smallest singular value inside the rank
 // tolerance band).  Exposed so the tri-state logic is unit tested directly.
+// B3: additionally reports the per-axis residual of the protected response
+// outside the retained detection subspace (direction-level evidence for a
+// dangerous nullspace) and, for a structurally harmless nullspace, the finite
+// bound slopes computed by the projected path ||g V_r Sigma_r^-1|| (section
+// 5.5) so the caller can use a bound instead of discarding the hypothesis.
 int classifyDetectionResponse(const Eigen::MatrixXd& z_h,
                               const Eigen::MatrixXd& g_h,
                               double rank_tolerance,
                               double* smallest_singular_value,
-                              double* condition, int* rank);
+                              double* condition, int* rank,
+                              Eigen::Vector3d* axis_residual = nullptr,
+                              Eigen::Vector3d* harmless_slopes = nullptr);
 
 struct FrozenHypothesisPlEntry {
   HypothesisId hypothesis;
@@ -70,6 +77,10 @@ struct FrozenHypothesisPlEntry {
   double z_smallest_singular_value = std::numeric_limits<double>::infinity();
   double z_condition = std::numeric_limits<double>::infinity();
   int z_classification = 0;
+  // B3: the bound comes from the projected path ||g V_r Sigma_r^-1|| instead of
+  // the fault Gram (structurally harmless detection nullspace).  Gamma stays
+  // audit-only in that case, and the PL gate accepts the projected bound.
+  bool bound_from_projected_path = false;
 };
 
 // Immutable, window-scoped products shared by evidence and KEEP_ALL PL.  The

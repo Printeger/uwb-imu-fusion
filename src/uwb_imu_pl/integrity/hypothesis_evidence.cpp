@@ -758,6 +758,11 @@ std::vector<FaultModeEvidence> evaluateContiguous(
       // the small SVD of Z_h = Q2^T D_h (never from the squared normal form).
       // Applied to every hypothesis; the added work is one small SVD whose size
       // is (m - rank) x dimension, counted as square_root_qt_columns.
+      // B3: direction-level evidence produced by the tri-state classification.
+      Eigen::Vector3d classification_axis_residual = Eigen::Vector3d::Zero();
+      Eigen::Vector3d classification_harmless_slopes =
+          Eigen::Vector3d::Constant(std::numeric_limits<double>::infinity());
+      bool classification_evaluated = false;
       if (all_mode_response.cols() > 0 && config.enable_shared_context) {
         std::vector<Eigen::MatrixXd> z_parts;
         int width = 0;
@@ -790,7 +795,9 @@ std::vector<FaultModeEvidence> evaluateContiguous(
               window.numerics
                   ? window.numerics->numerical_contract.rank_tolerance : 1e-10,
               &pl_entry.z_smallest_singular_value, &pl_entry.z_condition,
-              &pl_entry.z_rank);
+              &pl_entry.z_rank, &classification_axis_residual,
+              &classification_harmless_slopes);
+          classification_evaluated = pl_entry.z_classification != 0;
         }
       }
       if (dimension <= 3 && parts.size() <= 2) {
@@ -867,6 +874,61 @@ std::vector<FaultModeEvidence> evaluateContiguous(
         analyzeDynamic(gram, score, &protected_fault, physical_dimension,
                        window.numerics->statistic, squared_detector_threshold,
                        config, &hypothesis, &evidence, &pl_entry, &work);
+      }
+      // B3 (section 5.5 / 5.8): the detection-space classification decides
+      // availability.  A structurally harmless nullspace keeps a finite bound
+      // through the projected path ||g V_r Sigma_r^-1||; a dangerous or
+      // numerically indistinguishable response is unavailable with a
+      // direction-level reason (never a dictionary-wide rejection).
+      if (classification_evaluated) {
+        if (pl_entry.z_classification == 2 &&
+            classification_harmless_slopes.allFinite()) {
+          pl_entry.protected_slopes = classification_harmless_slopes;
+          evidence.monitorability.protected_slopes =
+              classification_harmless_slopes;
+          // Structurally harmless: the fault is invisible in the detection
+          // space but fully projected out of the protected state, so the
+          // projected path still yields a finite bound (Gamma stays audit
+          // only).  The reason records which channel was used.
+          pl_entry.valid = true;
+          pl_entry.gram_spd = false;
+          pl_entry.bound_from_projected_path = true;
+          pl_entry.monitorability.monitorable = true;
+          hypothesis.monitored = true;
+          evidence.monitorability.monitorable = true;
+          evidence.monitorability.reason =
+              "harmless detection nullspace: finite bound from projected "
+              "response (Gamma audit only)";
+          evidence.plausible = true;
+        } else if (pl_entry.z_classification == 3 ||
+                   pl_entry.z_classification == 4) {
+          const bool dangerous = pl_entry.z_classification == 3;
+          std::string reason = dangerous
+              ? "dangerous detection nullspace: protected response not "
+                "observable in the retained subspace (axis residuals "
+              : "numerically indistinguishable detection response: reference "
+                "fallback required (axis residuals ";
+          for (int axis = 0; axis < 3; ++axis) {
+            if (axis) reason += ",";
+            reason += std::string(1, "xyz"[axis]) + "=" +
+                std::to_string(classification_axis_residual(axis));
+          }
+          reason += "); modes";
+          for (const auto id : hypothesis.modes) {
+            reason += " " + std::to_string(id.value());
+          }
+          auto& monitor = hypothesis.monitorability;
+          monitor.parameter_dimension = dimension;
+          monitor.physical_parameter_dimension = physical_dimension;
+          monitor.reason = reason;
+          hypothesis.monitored = false;
+          evidence.monitorability = monitor;
+          evidence.plausible = false;
+          pl_entry.monitorability = monitor;
+          pl_entry.valid = false;
+          pl_entry.protected_slopes = Eigen::Vector3d::Constant(
+              std::numeric_limits<double>::infinity());
+        }
       }
     }
     publish(work);
@@ -1113,7 +1175,14 @@ int classifyDetectionResponse(const Eigen::MatrixXd& z_h,
                               const Eigen::MatrixXd& g_h,
                               double rank_tolerance,
                               double* smallest_singular_value,
-                              double* condition, int* rank_out) {
+                              double* condition, int* rank_out,
+                              Eigen::Vector3d* axis_residual,
+                              Eigen::Vector3d* harmless_slopes) {
+  if (axis_residual) *axis_residual = Eigen::Vector3d::Zero();
+  if (harmless_slopes) {
+    *harmless_slopes = Eigen::Vector3d::Constant(
+        std::numeric_limits<double>::infinity());
+  }
   if (z_h.cols() == 0 || z_h.rows() == 0) return 0;
   // ThinV is required: the structural nullspace test needs V (the default
   // JacobiSVD option computes singular values only).
@@ -1142,14 +1211,46 @@ int classifyDetectionResponse(const Eigen::MatrixXd& z_h,
   const double excluded = rank < singular.size() ? singular(rank) : 0.0;
   if (excluded > gate * 0.01) return 4;  // numerically indistinguishable
   double residual = 0.0;
-  if (g_h.cols() == columns && rank > 0) {
-    const Eigen::MatrixXd retained =
-        svd.matrixV().leftCols(rank) *
-        svd.matrixV().leftCols(rank).transpose() * g_h.transpose();
-    residual = (g_h.transpose() - retained).cwiseAbs().maxCoeff();
+  Eigen::Vector3d axis_values = Eigen::Vector3d::Zero();
+  if (rank > 0) {
+    // Finite bound through the projected path (section 5.5): the retained
+    // detection subspace carries the responsive part of the protected
+    // response; the residual is what a nullspace direction could hide.
+    const Eigen::MatrixXd basis = svd.matrixV().leftCols(rank);
+    const Eigen::MatrixXd scaled = basis *
+        singular.head(rank).cwiseInverse().asDiagonal();
+    if (harmless_slopes) {
+      for (int axis = 0; axis < harmless_slopes->size(); ++axis) {
+        if (g_h.rows() > axis && g_h.cols() == columns) {
+          (*harmless_slopes)(axis) =
+              (g_h.row(axis) * scaled).norm();
+        }
+      }
+    }
+    if (g_h.cols() == columns) {
+      const Eigen::MatrixXd projected = basis * basis.transpose() * g_h.transpose();
+      const Eigen::MatrixXd outside = g_h.transpose() - projected;
+      for (int axis = 0; axis < 3; ++axis) {
+        if (outside.cols() > axis) {
+          axis_values(axis) = outside.col(axis).cwiseAbs().maxCoeff();
+        }
+      }
+      residual = outside.cwiseAbs().maxCoeff();
+    }
   } else if (g_h.size() > 0) {
     residual = g_h.cwiseAbs().maxCoeff();
+    for (int axis = 0; axis < 3; ++axis) {
+      if (g_h.rows() > axis) axis_values(axis) = g_h.row(axis).cwiseAbs().maxCoeff();
+    }
   }
+  if (rank == 0 && harmless_slopes && g_h.cols() == columns) {
+    // Rank-free projected bound: the caller only uses these values when the
+    // classification is "structurally harmless", which requires the residual
+    // (hence the whole protected response) to vanish, so the finite bound is
+    // exactly zero.
+    *harmless_slopes = Eigen::Vector3d::Zero();
+  }
+  if (axis_residual) *axis_residual = axis_values;
   const double response_scale = std::max(1.0, g_h.size() ? g_h.cwiseAbs().maxCoeff() : 0.0);
   return residual <= 1e-9 * response_scale ? 2 : 3;
 }

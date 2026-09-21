@@ -23,6 +23,12 @@ struct HypothesisGeneratorConfig {
   bool include_epoch_independent_uwb = true;
   bool include_persistent_uwb = true;
   bool include_ramp_uwb = true;
+  // B4: healthy, alarm-free frames need the mode descriptions, their
+  // sensitivity/slopes and the KEEP_ALL solution, but not the exclusion-action
+  // entities (removal sets, replacement groups, bridge blocks).  When enabled,
+  // the generator stores only the seeds and the entities are materialized on
+  // demand by ensureActionEntities() on the paths that really need evidence.
+  bool lazy_action_entities = true;
 };
 
 struct GeneratedFaultModelSet {
@@ -32,6 +38,13 @@ struct GeneratedFaultModelSet {
   std::vector<FaultHypothesisV2> hypotheses;
   std::vector<ExclusionAction> actions;
   std::vector<ExclusionAction> single_mode_actions;
+  // B4 counters and lazy state.  `action_entities_built` tells whether
+  // single_mode_actions has been materialized; the counters make the lazy path
+  // observable (a healthy frame must report zero bridge blocks).
+  bool action_entities_built = false;
+  std::size_t action_entities_constructed = 0;
+  std::size_t bridge_blocks_built = 0;
+  std::size_t action_entities_deferred = 0;
   std::size_t single_uwb_hypotheses = 0;
   std::size_t single_accel_hypotheses = 0;
   std::size_t single_gyro_hypotheses = 0;
@@ -70,9 +83,15 @@ class HypothesisGenerator {
   std::vector<ExclusionAction> actionsForPlausibleSet(
       const LinearizedIntegrityWindow& window,
       const EpochTransaction& transaction,
-      const GeneratedFaultModelSet& models,
+      GeneratedFaultModelSet* models,
       const std::vector<FaultModeEvidence>& evidence,
       const std::vector<std::string>& mandatory_health_sources = {}) const;
+
+  // B4: materializes the exclusion-action entities (single-mode actions and
+  // their bridge/rollback blocks) exactly once, on demand.  Idempotent.
+  static void ensureActionEntities(const EpochTransaction& transaction,
+                                   const LinearizedIntegrityWindow& window,
+                                   GeneratedFaultModelSet* models);
 
  private:
   HypothesisGeneratorConfig config_;

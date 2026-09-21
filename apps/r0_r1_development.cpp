@@ -595,7 +595,18 @@ int main(int argc, char** argv) {
         ";compact_capacity_fallbacks=" +
             std::to_string(work.compact_capacity_fallbacks) +
         ";hypothesis_capacity_refusals=" +
-            std::to_string(work.hypothesis_capacity_refusals);
+            std::to_string(work.hypothesis_capacity_refusals) +
+        ";action_entities_constructed=" +
+            std::to_string(work.action_entities_constructed) +
+        ";action_entities_deferred=" +
+            std::to_string(work.action_entities_deferred) +
+        ";bridge_blocks_built=" + std::to_string(work.bridge_blocks_built) +
+        ";candidate_graph_built=" +
+            std::to_string(work.candidate_graph_built) +
+        ";evidence_calls_fault_path=" +
+            std::to_string(work.evidence_calls_fault_path) +
+        ";evidence_calls_health_path=" +
+            std::to_string(work.evidence_calls_health_path);
     logger.writeSummary(summary);
     std::cout << summary.detail << '\n';
   } catch (const std::exception& error) {

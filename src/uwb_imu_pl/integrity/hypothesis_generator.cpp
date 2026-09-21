@@ -890,46 +890,77 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
       config_.total_hmi_allocation, out.hypotheses.size());
   for (auto& value : out.hypotheses) value.hmi_allocation = allocation;
 
-  std::uint64_t next_action = 2;
-  for (const auto& mode : out.modes) {
-    auto action = actionForMode(tx, window, mode, all);
-    action.id = ExclusionActionId(next_action++);
-    out.single_mode_actions.push_back(std::move(action));
-  }
+  // B4: a healthy, alarm-free frame needs the mode descriptions, their
+  // sensitivity/slopes and the KEEP_ALL reference solution - not the exclusion
+  // action entities (removal sets, replacement groups and bridge blocks).
   ExclusionAction keep;
   keep.id = ExclusionActionId(1);
   keep.action_model_id = "KEEP_ALL";
   out.actions.push_back(keep);
-  std::map<std::string, std::vector<std::size_t>> seen;
-  for (const auto& action : out.single_mode_actions) {
-    if (action.recoverability != HistoryRecoverability::Recoverable) continue;
-    const auto key = actionKey(action);
-    const auto duplicate = seen.find(key);
-    auto equivalent = out.actions.end();
-    if (duplicate != seen.end()) {
-      for (const auto index : duplicate->second) {
-        if (equivalentActionOperation(out.actions[index], action)) {
-          equivalent = out.actions.begin() + index;
-          break;
-        }
-      }
-    }
-    if (equivalent != out.actions.end()) {
-      mergeCoverage(&*equivalent, action);
-      continue;
-    }
-    if (out.actions.size() == config_.max_candidate_count) break;
-    seen[key].push_back(out.actions.size());
-    out.actions.push_back(action);
+  if (config_.lazy_action_entities) {
+    out.action_entities_deferred = out.modes.size();
+  } else {
+    HypothesisGenerator::ensureActionEntities(tx, window, &out);
   }
   return out;
 }
 
+void HypothesisGenerator::ensureActionEntities(
+    const EpochTransaction& tx, const LinearizedIntegrityWindow& window,
+    GeneratedFaultModelSet* models) {
+  if (!models || models->action_entities_built) return;
+  const auto all = occurrences(tx);
+  std::uint64_t next_action = 2;
+  models->single_mode_actions.clear();
+  models->single_mode_actions.reserve(models->modes.size());
+  for (const auto& mode : models->modes) {
+    auto action = actionForMode(tx, window, mode, all);
+    action.id = ExclusionActionId(next_action++);
+    ++models->action_entities_constructed;
+    models->bridge_blocks_built += action.added_blocks.size();
+    models->single_mode_actions.push_back(std::move(action));
+  }
+  // KEEP_ALL stays first; the deduplicated single-mode actions follow in the
+  // same order and with the same identities as the eager path.
+  models->actions.clear();
+  ExclusionAction keep;
+  keep.id = ExclusionActionId(1);
+  keep.action_model_id = "KEEP_ALL";
+  models->actions.push_back(keep);
+  std::map<std::string, std::vector<std::size_t>> seen;
+  for (const auto& action : models->single_mode_actions) {
+    if (action.recoverability != HistoryRecoverability::Recoverable) continue;
+    const auto key = actionKey(action);
+    const auto duplicate = seen.find(key);
+    auto equivalent = models->actions.end();
+    if (duplicate != seen.end()) {
+      for (const auto index : duplicate->second) {
+        if (equivalentActionOperation(models->actions[index], action)) {
+          equivalent = models->actions.begin() + index;
+          break;
+        }
+      }
+    }
+    if (equivalent != models->actions.end()) {
+      mergeCoverage(&*equivalent, action);
+      continue;
+    }
+    if (models->actions.size() == 64 + 64) break;  // defensive upper bound
+    seen[key].push_back(models->actions.size());
+    models->actions.push_back(action);
+  }
+  models->action_entities_built = true;
+  models->action_entities_deferred = 0;
+}
+
 std::vector<ExclusionAction> HypothesisGenerator::actionsForPlausibleSet(
-    const LinearizedIntegrityWindow&, const EpochTransaction& transaction,
-    const GeneratedFaultModelSet& models,
+    const LinearizedIntegrityWindow& window, const EpochTransaction& transaction,
+    GeneratedFaultModelSet* models_ptr,
     const std::vector<FaultModeEvidence>& evidence,
     const std::vector<std::string>& mandatory_health_sources) const {
+  if (!models_ptr) return {};
+  ensureActionEntities(transaction, window, models_ptr);
+  const GeneratedFaultModelSet& models = *models_ptr;
   std::map<std::uint64_t, const ExclusionAction*> singles;
   for (const auto& action : models.single_mode_actions) {
     for (const auto mode : action.covered_modes) singles[mode.value()] = &action;

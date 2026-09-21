@@ -15,6 +15,68 @@
 
 namespace uwb_imu_pl {
 
+namespace {
+
+// B3 (§5.9): the bound used by every PL path.
+//
+//   L_{h,d} = s_{h,d} * sqrt(Lambda_h) + k_{h,d} * sigma_d
+//   alpha_h   = min(0.5, allocation_h / pi_h)          (charged tail)
+//   alpha_{h,d} = alpha_h / axis_count                 (equal split)
+//   k_{h,d}   = Phi^-1(1 - alpha_{h,d} / 2)
+//   Lambda_h  solves F_{chi2_nu(Lambda_h)}(tau) <= beta_h, conservative side
+//
+// The per-axis split is what makes the charged risk alpha_h sufficient for the
+// union bound over the three axes: using alpha_h on every axis (the pre-B3
+// form) understates the tail that the ledger pays for.  Invalid inputs are
+// rejected; the caller turns that into an unavailable result instead of a
+// clamped bound.
+struct FaultAxisBounds {
+  double lambda = 0.0;
+  double k = 0.0;
+  double hypothesis_tail = 0.0;
+  double axis_tail = 0.0;
+  bool valid = false;
+  std::string reason;
+};
+
+FaultAxisBounds faultAxisBounds(const DetectorResultV2& detector,
+                                const FaultHypothesisV2& hypothesis,
+                                double nominal_tail) {
+  FaultAxisBounds out;
+  double tail = hypothesis.hmi_allocation > 0.0
+      ? hypothesis.hmi_allocation /
+            std::max(hypothesis.prior_probability_bound, 1e-15)
+      : nominal_tail;
+  if (!std::isfinite(tail) || tail <= 0.0) {
+    out.reason = "hypothesis tail probability is not positive";
+    return out;
+  }
+  tail = std::min(0.5, tail);
+  out.hypothesis_tail = tail;
+  out.axis_tail = tail / 3.0;
+  bool multiplier_valid = false;
+  out.k = StatisticalBoundsCache::normalTwoSidedMultiplierVerified(
+      out.axis_tail, &multiplier_valid);
+  if (!multiplier_valid) {
+    out.reason = "per-axis tail multiplier could not be evaluated";
+    return out;
+  }
+  const StatisticalBoundKey key;
+  const NoncentralityBoundaryResult boundary =
+      StatisticalBoundsCache::noncentralityBoundaryVerified(
+          detector.dof, detector.squared_threshold,
+          hypothesis.p_md_allocation, key);
+  if (!boundary.valid) {
+    out.reason = "detection boundary noncentrality: " + boundary.reason;
+    return out;
+  }
+  out.lambda = std::sqrt(boundary.value);
+  out.valid = true;
+  return out;
+}
+
+}  // namespace
+
 double ProtectionLevelV2::detectionBoundaryNoncentralitySquared(
     int dof, double threshold, double p_md) {
   return StatisticalBoundsCache::noncentralityBoundary(
@@ -154,14 +216,22 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
           0.0, response.dot(gram_solve.solve(response))));
     }
     hypothesis.monitorability.protected_slopes = slopes;
-    const double lambda = std::sqrt(detectionBoundaryNoncentralitySquared(
-        detector.dof, detector.squared_threshold, hypothesis.p_md_allocation));
-    const double fault_tail = std::max(1e-15, hypothesis.hmi_allocation > 0.0
-        ? hypothesis.hmi_allocation / std::max(hypothesis.prior_probability_bound, 1e-15)
-        : nominal_tail);
-    const double k_fault = StatisticalBoundsCache::normalTwoSidedMultiplier(
-        std::min(0.5, fault_tail));
-    const Eigen::Vector3d component = slopes * lambda + k_fault *
+    const FaultAxisBounds bounds =
+        faultAxisBounds(detector, hypothesis, nominal_tail);
+    if (!bounds.valid) {
+      result.reason = "remaining post-FDE hypothesis " +
+          std::to_string(hypothesis.id.value()) +
+          " has no valid section 5.9 bound: " + bounds.reason;
+      return result;
+    }
+    result.hypothesis_tail_used = std::max(result.hypothesis_tail_used,
+                                           bounds.hypothesis_tail);
+    result.axis_tail_used = std::max(result.axis_tail_used, bounds.axis_tail);
+    result.fault_multiplier_used = std::max(result.fault_multiplier_used,
+                                            bounds.k);
+    result.noncentrality_used = std::max(result.noncentrality_used,
+                                         bounds.lambda);
+    const Eigen::Vector3d component = slopes * bounds.lambda + bounds.k *
         protected_covariance.diagonal().cwiseSqrt();
     result.fault_component_m = result.fault_component_m.cwiseMax(component);
   }
@@ -368,16 +438,23 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
           0.0, response.dot(gram_solve.solve(response))));
     }
     monitor.protected_slopes = slopes;
-    const double lambda = std::sqrt(detectionBoundaryNoncentralitySquared(
-        detector.dof, detector.squared_threshold, hypothesis.p_md_allocation));
-    const double fault_tail = std::max(1e-15, hypothesis.hmi_allocation > 0.0
-        ? hypothesis.hmi_allocation /
-            std::max(hypothesis.prior_probability_bound, 1e-15)
-        : nominal_tail);
-    const double k_fault = StatisticalBoundsCache::normalTwoSidedMultiplier(
-        std::min(0.5, fault_tail));
+    const FaultAxisBounds bounds =
+        faultAxisBounds(detector, hypothesis, nominal_tail);
+    if (!bounds.valid) {
+      result.reason = "remaining post-FDE hypothesis " +
+          std::to_string(hypothesis.id.value()) +
+          " has no valid section 5.9 bound: " + bounds.reason;
+      return result;
+    }
+    result.hypothesis_tail_used = std::max(result.hypothesis_tail_used,
+                                           bounds.hypothesis_tail);
+    result.axis_tail_used = std::max(result.axis_tail_used, bounds.axis_tail);
+    result.fault_multiplier_used = std::max(result.fault_multiplier_used,
+                                            bounds.k);
+    result.noncentrality_used = std::max(result.noncentrality_used,
+                                         bounds.lambda);
     result.fault_component_m = result.fault_component_m.cwiseMax(
-        slopes * lambda + k_fault * sigma);
+        slopes * bounds.lambda + bounds.k * sigma);
   }
   result.pl_xyz_m = result.nominal_component_m.cwiseMax(
       result.fault_component_m) + result.bridge_component_m;
@@ -453,7 +530,8 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
     const auto& hypothesis = hypotheses[index];
     const auto& cached = frozen.pl_entries[index];
     if (cached.hypothesis != hypothesis.id || !cached.valid ||
-        !cached.gram_spd || !cached.monitorability.monitorable) {
+        !(cached.gram_spd || cached.bound_from_projected_path) ||
+        !cached.monitorability.monitorable) {
       result.reason = "remaining post-FDE hypothesis " +
           std::to_string(hypothesis.id.value()) +
           " is unmonitorable: rank=" +
@@ -464,18 +542,23 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
           std::to_string(cached.monitorability.condition_number);
       return result;
     }
-    const double lambda = std::sqrt(detectionBoundaryNoncentralitySquared(
-        detector.dof, detector.squared_threshold,
-        hypothesis.p_md_allocation));
-    const double fault_tail = std::max(
-        1e-15, hypothesis.hmi_allocation > 0.0
-            ? hypothesis.hmi_allocation /
-                  std::max(hypothesis.prior_probability_bound, 1e-15)
-            : nominal_tail);
-    const double k_fault = StatisticalBoundsCache::normalTwoSidedMultiplier(
-        std::min(0.5, fault_tail));
+    const FaultAxisBounds bounds =
+        faultAxisBounds(detector, hypothesis, nominal_tail);
+    if (!bounds.valid) {
+      result.reason = "remaining post-FDE hypothesis " +
+          std::to_string(hypothesis.id.value()) +
+          " has no valid section 5.9 bound: " + bounds.reason;
+      return result;
+    }
+    result.hypothesis_tail_used = std::max(result.hypothesis_tail_used,
+                                           bounds.hypothesis_tail);
+    result.axis_tail_used = std::max(result.axis_tail_used, bounds.axis_tail);
+    result.fault_multiplier_used = std::max(result.fault_multiplier_used,
+                                            bounds.k);
+    result.noncentrality_used = std::max(result.noncentrality_used,
+                                         bounds.lambda);
     result.fault_component_m = result.fault_component_m.cwiseMax(
-        cached.protected_slopes * lambda + k_fault * sigma);
+        cached.protected_slopes * bounds.lambda + bounds.k * sigma);
   }
   result.pl_xyz_m = result.nominal_component_m.cwiseMax(
       result.fault_component_m);

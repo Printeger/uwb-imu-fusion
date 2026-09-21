@@ -1661,6 +1661,11 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         auto models = HypothesisGenerator(generator_config).generate(
             window, transaction, imu_subspaces, bridge_block);
         output.diagnostics.generated_actions = models.actions.size();
+        // B2/B3: the online traversal is exact, so the certificate for this
+        // window is built from the frozen registry before any decision is
+        // published.  (Grouped envelopes stay an opt-in path.)
+        const CoverageCertificate coverage_certificate =
+            buildExactCoverageCertificate(models.modes);
         const RiskBudgetAudit risk_audit =
             auditRiskBudget(cfg.risk_v2, models.hypotheses);
         output.diagnostics.risk_nominal = risk_audit.nominal;
@@ -1673,6 +1678,72 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         output.diagnostics.risk_upper_bound = risk_audit.upper_bound;
         output.diagnostics.risk_margin = risk_audit.margin;
         output.diagnostics.hypothesis_count = risk_audit.hypothesis_count;
+        // B3 (§5.9): the ledger certificate travels with the published
+        // attempt: every term with its value, source and status, so an
+        // unvalidated channel can never pass as a proven zero.
+        {
+          RiskLedgerInputs ledger_inputs;
+          if (cfg.fault_manifest) {
+            for (const auto& event : cfg.fault_manifest->events) {
+              for (const auto& omitted : event.omitted_event_set) {
+                if (std::find(ledger_inputs.omitted_event_set.begin(),
+                              ledger_inputs.omitted_event_set.end(),
+                              omitted) ==
+                    ledger_inputs.omitted_event_set.end()) {
+                  ledger_inputs.omitted_event_set.push_back(omitted);
+                }
+              }
+            }
+          }
+          ledger_inputs.envelope_online = false;
+          ledger_inputs.envelope_leaf_count =
+              coverage_certificate.enveloped_count;
+          ledger_inputs.selection_contract_frozen = false;
+          const RiskLedger ledger = buildRiskLedger(
+              cfg.risk_v2, models.hypotheses, ledger_inputs);
+          output.diagnostics.risk_ledger_charged_total =
+              ledger.charged_total;
+          output.diagnostics.risk_ledger_declared_total =
+              ledger.declared_total;
+          output.diagnostics.risk_ledger_closes = ledger.closes;
+          output.diagnostics.risk_ledger_all_validated =
+              ledger.all_terms_validated;
+          for (const auto& term : ledger.terms) {
+            if (term.status == RiskTermStatus::Validated) {
+              ++output.diagnostics.risk_ledger_validated_terms;
+            } else if (term.status == RiskTermStatus::AssumedUnvalidated) {
+              ++output.diagnostics.risk_ledger_unvalidated_terms;
+            } else {
+              ++output.diagnostics.risk_ledger_not_implemented_terms;
+            }
+            if (!output.diagnostics.risk_ledger_terms.empty()) {
+              output.diagnostics.risk_ledger_terms += ";";
+            }
+            output.diagnostics.risk_ledger_terms += term.id + "=" +
+                std::to_string(term.value) + ":" + toString(term.status);
+          }
+        }
+        // B3 (§5.8): the coverage certificate is part of the same attempt
+        // output that crosses the existing history-validity gate; the
+        // certificate itself never bypasses that gate.
+        output.diagnostics.coverage_status = coverage_certificate.complete
+            ? "COMPLETE" : "INCOMPLETE";
+        output.diagnostics.coverage_exact_leaves =
+            coverage_certificate.exact_count;
+        output.diagnostics.coverage_enveloped_leaves =
+            coverage_certificate.enveloped_count;
+        output.diagnostics.coverage_uncovered_leaves =
+            coverage_certificate.uncovered_count;
+        output.diagnostics.coverage_envelope_count =
+            coverage_certificate.envelopes.size();
+        output.diagnostics.coverage_proof_count = 0;
+        for (const auto& envelope : coverage_certificate.envelopes) {
+          if (envelope.accepted) {
+            ++output.diagnostics.coverage_accepted_envelope_count;
+          }
+          output.diagnostics.coverage_proof_count += envelope.proofs.size();
+        }
+        output.diagnostics.coverage_envelope_online = false;
         output.diagnostics.single_uwb_hypotheses =
             models.single_uwb_hypotheses;
         output.diagnostics.single_accel_hypotheses =
@@ -1735,6 +1806,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             faultModelPolicyFingerprint(cfg.fault_models);
         std::shared_ptr<const FrozenHypothesisNumerics>
             shared_hypothesis_numerics;
+        NumericalWorkCounters::evidenceCallFaultPath();
         auto evidence = HypothesisEvidenceEvaluator(evidence_config).evaluateAll(
             window, models.modes, &models.hypotheses,
             all_in.squared_threshold, &shared_hypothesis_numerics,
@@ -1759,8 +1831,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         // envelopes are an opt-in capacity path and are only ever used when
         // both the inclusion proof and the dominance obligation hold
         // (see coverage_envelope.hpp).
-        const CoverageCertificate coverage_certificate =
-            buildExactCoverageCertificate(models.modes);
+
         bool hardware_barrier = false;
         struct SourceEvidence {
           SensorType sensor = SensorType::Unknown;
@@ -1789,6 +1860,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           auto& aggregate = source_item.second;
           pending_health.registerSource(source, aggregate.sensor);
           if (pending_health.allowedInFormalEstimator(source)) {
+            NumericalWorkCounters::evidenceCallHealthPath();
             (void)pending_health.observeEvidence(source, aggregate.suspicious);
           } else {
             (void)pending_health.observeShadowRecovery(
@@ -1816,15 +1888,26 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             }
           }
         }
+        NumericalWorkCounters::actionEntitiesDeferred(
+            models.action_entities_deferred);
+        NumericalWorkCounters::bridgeBlocksBuilt(models.bridge_blocks_built);
+        NumericalWorkCounters::actionEntitiesConstructed(
+            models.action_entities_constructed);
         if (all_in.passed && !hardware_barrier) {
           ExclusionAction keep;
           keep.id = ExclusionActionId(1);
           keep.action_model_id = "KEEP_ALL";
           models.actions = {keep};
         } else {
+          // B4: this is the alarm/mandatory path: the exclusion-action
+          // entities and their bridge blocks are materialized here, once.
+          NumericalWorkCounters::candidateGraphBuilt();
           models.actions = HypothesisGenerator(generator_config)
-              .actionsForPlausibleSet(window, transaction, models, evidence,
+              .actionsForPlausibleSet(window, transaction, &models, evidence,
                                       mandatory_health_sources);
+          NumericalWorkCounters::actionEntitiesConstructed(
+              models.action_entities_constructed);
+          NumericalWorkCounters::bridgeBlocksBuilt(models.bridge_blocks_built);
         }
         const bool exhaustive_candidates =
             std::getenv("UWB_IMU_PL_EXHAUSTIVE_CANDIDATES") != nullptr;

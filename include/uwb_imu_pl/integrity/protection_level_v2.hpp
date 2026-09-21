@@ -22,6 +22,15 @@ struct ProtectionLevelV2Result {
   bool model_valid = false;
   bool formal_eligible = false;
   Availability availability = Availability::Unavailable;
+  // B3 (§5.9): the bound actually used for this result, so the certificate can
+  // be checked without re-deriving it.  `hypothesis_tail_used` is the charged
+  // per-hypothesis tail alpha_h, `axis_tail_used` its equal split over the
+  // three protected axes (alpha_h / 3) and `fault_multiplier_used` the
+  // resulting normal multiplier k = Phi^-1(1 - alpha_h / 6).
+  double hypothesis_tail_used = 0.0;
+  double axis_tail_used = 0.0;
+  double fault_multiplier_used = 0.0;
+  double noncentrality_used = 0.0;
   std::string reason;
 };
 

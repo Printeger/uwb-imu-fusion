@@ -59,7 +59,8 @@ int main(int argc,char** argv) {
     auto window=estimator.buildIntegrityWindow(tx,IntegrityWindowRequest{});
     auto imu=estimator.buildPendingFactorBlock(tx,tx.imu_group.id);
     auto bridge=estimator.buildPendingFactorBlock(tx,tx.generic_bridge_group.id);
-    auto models=HypothesisGenerator().generate(window,tx,ImuFaultSubspaceBuilder().build(tx,imu),bridge);
+    HypothesisGeneratorConfig export_config; export_config.lazy_action_entities=false;
+    auto models=HypothesisGenerator(export_config).generate(window,tx,ImuFaultSubspaceBuilder().build(tx,imu),bridge);
     FrozenCandidateReplay replay; replay.window=window; replay.actions=models.actions;
     replay.input_attempt_id=206; replay.input_timestamp=b.timestamp; replay.transaction_id=tx.id.value();
     replay.config.materialize_dense_oracle_fields=false;

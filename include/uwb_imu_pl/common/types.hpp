@@ -276,6 +276,24 @@ struct AttemptDiagnostics {
   double risk_total = 0.0;
   double risk_upper_bound = 0.0;
   double risk_margin = 0.0;
+  // B3: risk ledger certificate: every term with its status and source.
+  std::string risk_ledger_terms;
+  std::size_t risk_ledger_validated_terms = 0;
+  std::size_t risk_ledger_unvalidated_terms = 0;
+  std::size_t risk_ledger_not_implemented_terms = 0;
+  double risk_ledger_charged_total = 0.0;
+  double risk_ledger_declared_total = 0.0;
+  bool risk_ledger_closes = false;
+  bool risk_ledger_all_validated = false;
+  // B3: coverage certificate attached to the published attempt.
+  std::string coverage_status;
+  std::size_t coverage_exact_leaves = 0;
+  std::size_t coverage_enveloped_leaves = 0;
+  std::size_t coverage_uncovered_leaves = 0;
+  std::size_t coverage_envelope_count = 0;
+  std::size_t coverage_accepted_envelope_count = 0;
+  std::size_t coverage_proof_count = 0;
+  bool coverage_envelope_online = false;
   std::uint64_t generated_actions = 0;
   std::uint64_t hypothesis_count = 0;
   std::uint64_t single_uwb_hypotheses = 0;
@@ -614,7 +632,7 @@ struct RunManifest {
   std::uint32_t max_exclusion_cardinality = 2;
   std::string bridge_model = "kinematic_cv_bounded";
   std::string history_recovery = "active_window_only_maturity_delay";
-  std::string diagnostics_schema_version = "uwb-imu-pl/gate-d-diagnostics/v12";
+  std::string diagnostics_schema_version = "uwb-imu-pl/gate-d-diagnostics/v14";
   std::string failure_catalog;
   std::string fault_manifest_digest;
   std::string fault_manifest_id;

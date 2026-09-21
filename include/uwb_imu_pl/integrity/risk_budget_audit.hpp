@@ -3,6 +3,8 @@
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
 
 #include <cstddef>
+#include <cstdint>
+#include <string>
 #include <vector>
 
 namespace uwb_imu_pl {
@@ -25,6 +27,85 @@ struct RiskBudgetAudit {
   bool inputs_valid = false;
   bool valid = false;
 };
+
+// B3: every ledger term carries where its value comes from and whether that
+// value is a validated bound.  A term is never silently zero: a zero with an
+// unvalidated status is reported as such and recorded in the certificate.
+enum class RiskTermStatus {
+  Validated = 0,
+  AssumedUnvalidated = 1,
+  NotImplemented = 2,
+};
+
+const char* toString(RiskTermStatus status);
+
+struct RiskLedgerTerm {
+  std::string id;
+  double value = 0.0;
+  RiskTermStatus status = RiskTermStatus::NotImplemented;
+  std::string source;
+  std::string note;
+};
+
+// B3 (§5.9) ledger: charge = sum over VALIDATED terms only; every other term
+// is reported with its source and status and only blocks formal eligibility.
+struct RiskLedger {
+  std::vector<RiskLedgerTerm> terms;
+  double budget = 0.0;
+  double charged_total = 0.0;
+  double declared_total = 0.0;
+  double margin = 0.0;
+  bool closes = false;
+  bool inputs_valid = false;
+  bool all_terms_validated = false;
+  bool formal_eligible = false;
+  std::size_t hypothesis_count = 0;
+  std::string reason;
+  const RiskLedgerTerm* find(const std::string& id) const;
+};
+
+struct RiskLedgerInputs {
+  // Omitted-event mass: the manifest lists which event kinds are omitted; the
+  // mass itself is not quantified yet, so the ledger reports the list and the
+  // status instead of a silent zero.
+  std::vector<std::string> omitted_event_set;
+  // Envelope qualification: envelopes are offline by default, so the envelope
+  // term is an explicit zero tied to the coverage certificate.
+  bool envelope_online = false;
+  std::size_t envelope_leaf_count = 0;
+  // Selection slot (reserved for C3).
+  bool selection_contract_frozen = false;
+};
+
+RiskLedger buildRiskLedger(const RiskBudgetV2& risk,
+                           const std::vector<FaultHypothesisV2>& hypotheses,
+                           const RiskLedgerInputs& inputs = {});
+
+// B3 (§5.9): per-axis tail split for one hypothesis.
+//
+//   L_{h,d} = s_{h,d} * sqrt(Lambda_h) + k_{h,d} * sigma_d
+//   alpha_h = allocation_h / pi_h          (charged per-hypothesis tail)
+//   alpha_{h,d} = alpha_h / axis_count     (equal split, union bound)
+//   k_{h,d} = Phi^-1(1 - alpha_{h,d} / 2)
+//   charge_h = pi_h * max(sum_d alpha_{h,d}, beta_h)
+//
+// The union bound over the axes is what makes the split necessary: charging
+// alpha_h for the hypothesis while using alpha_h on every axis would
+// understate the tails.  Invalid inputs are rejected, never clamped.
+struct AxisTailSplit {
+  int axis_count = 3;
+  double allocation = 0.0;
+  double prior_bound = 0.0;
+  double beta = 0.0;
+  double hypothesis_tail = 0.0;
+  double axis_tail = 0.0;
+  double charge = 0.0;
+  bool valid = false;
+  std::string reason;
+};
+
+AxisTailSplit axisTailSplit(double allocation, double prior_bound, double p_md,
+                            double nominal_tail, int axis_count = 3);
 
 RiskBudgetAudit auditRiskBudget(
     const RiskBudgetV2& risk,

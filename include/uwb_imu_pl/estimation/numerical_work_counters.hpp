@@ -55,6 +55,15 @@ struct NumericalWorkSnapshot {
   std::uint64_t compact_padded_equivalent_rows = 0;
   std::uint64_t compact_capacity_fallbacks = 0;
   std::uint64_t hypothesis_capacity_refusals = 0;
+  // B4: lazy FDE accounting.  A healthy frame must show zero bridge blocks and
+  // exactly the KEEP_ALL action entity; the deferred count records how many
+  // entities the lazy path avoided materializing.
+  std::uint64_t action_entities_constructed = 0;
+  std::uint64_t bridge_blocks_built = 0;
+  std::uint64_t candidate_graph_built = 0;
+  std::uint64_t action_entities_deferred = 0;
+  std::uint64_t evidence_calls_fault_path = 0;
+  std::uint64_t evidence_calls_health_path = 0;
 };
 
 // Counts actual decomposition/solve construction points.  The counters are
@@ -95,7 +104,13 @@ class NumericalWorkCounters {
             compact_mode_columns_.load(),
             compact_padded_equivalent_rows_.load(),
             compact_capacity_fallbacks_.load(),
-            hypothesis_capacity_refusals_.load()};
+            hypothesis_capacity_refusals_.load(),
+            action_entities_constructed_.load(),
+            bridge_blocks_built_.load(),
+            candidate_graph_built_.load(),
+            action_entities_deferred_.load(),
+            evidence_calls_fault_path_.load(),
+            evidence_calls_health_path_.load()};
   }
   static void reset() {
     base_svd_ = 0; base_llt_ = 0; base_state_solves_ = 0;
@@ -121,6 +136,9 @@ class NumericalWorkCounters {
     compact_mode_rows_ = 0; compact_mode_columns_ = 0;
     compact_padded_equivalent_rows_ = 0;
     compact_capacity_fallbacks_ = 0; hypothesis_capacity_refusals_ = 0;
+    action_entities_constructed_ = 0; bridge_blocks_built_ = 0;
+    candidate_graph_built_ = 0; action_entities_deferred_ = 0;
+    evidence_calls_fault_path_ = 0; evidence_calls_health_path_ = 0;
   }
   static void baseSvd() { ++base_svd_; }
   static void baseLlt() { ++base_llt_; }
@@ -195,6 +213,18 @@ class NumericalWorkCounters {
   static void hypothesisCapacityRefusal() {
     ++hypothesis_capacity_refusals_;
   }
+  static void actionEntitiesConstructed(std::uint64_t count) {
+    action_entities_constructed_ += count;
+  }
+  static void bridgeBlocksBuilt(std::uint64_t count) {
+    bridge_blocks_built_ += count;
+  }
+  static void candidateGraphBuilt() { ++candidate_graph_built_; }
+  static void actionEntitiesDeferred(std::uint64_t count) {
+    action_entities_deferred_ += count;
+  }
+  static void evidenceCallFaultPath() { ++evidence_calls_fault_path_; }
+  static void evidenceCallHealthPath() { ++evidence_calls_health_path_; }
 
  private:
   inline static std::atomic<std::uint64_t> base_svd_{0};
@@ -229,6 +259,12 @@ class NumericalWorkCounters {
   inline static std::atomic<std::uint64_t> compact_mode_columns_{0};
   inline static std::atomic<std::uint64_t> compact_capacity_fallbacks_{0};
   inline static std::atomic<std::uint64_t> hypothesis_capacity_refusals_{0};
+  inline static std::atomic<std::uint64_t> action_entities_constructed_{0};
+  inline static std::atomic<std::uint64_t> bridge_blocks_built_{0};
+  inline static std::atomic<std::uint64_t> candidate_graph_built_{0};
+  inline static std::atomic<std::uint64_t> action_entities_deferred_{0};
+  inline static std::atomic<std::uint64_t> evidence_calls_fault_path_{0};
+  inline static std::atomic<std::uint64_t> evidence_calls_health_path_{0};
   inline static std::atomic<std::uint64_t> square_root_symbolic_hits_{0};
   inline static std::atomic<std::uint64_t> square_root_symbolic_misses_{0};
   inline static std::atomic<std::uint64_t> square_root_fallbacks_{0};

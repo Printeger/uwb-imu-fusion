@@ -16,6 +16,8 @@
 #include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
 
 #include <gtest/gtest.h>
+#include <boost/math/distributions/normal.hpp>
+#include <random>
 #include <gtsam/base/numericalDerivative.h>
 #include <gtsam/inference/Symbol.h>
 
@@ -1285,7 +1287,8 @@ TEST(GateDOracle, RealCurrentHistoricalBridgeAndUnionActionsMatchDenseAndWorkers
   auto models = HypothesisGenerator().generate(window, tx, ImuFaultSubspaceBuilder().build(tx,imu), bridge);
   std::vector<FaultModeEvidence> evidence;
   for(const auto& h:models.hypotheses) { FaultModeEvidence e; e.hypothesis=h.id; e.plausible=true; evidence.push_back(e); }
-  auto actions = HypothesisGenerator().actionsForPlausibleSet(window, tx, models, evidence);
+  auto actions = HypothesisGenerator().actionsForPlausibleSet(window, tx, &models,
+                                                              evidence);
   ASSERT_GT(actions.size(), 10u);
   RankUpdateConfig config; config.materialize_dense_oracle_fields=false;
   config.enable_early_step_gate=false;
@@ -2241,4 +2244,476 @@ TEST(B2Coverage, DominanceRejectsAnUnderCoveringEnvelope) {
   EXPECT_EQ(coverageLabelFor(certificate, fixture.modes[0].id),
             CoverageLabel::Exact);
   EXPECT_TRUE(certificate.complete);
+}
+
+// ---------------------------------------------------------------------------
+// B3 Stage 1 (roadmap section 5.9): verified joint bound and risk ledger.
+// ---------------------------------------------------------------------------
+
+TEST(B3Risk, RSK01UnionBoundDoesNotDoubleChargeAndSolvesConservatively) {
+  using namespace uwb_imu_pl;
+  // Charged tail and per-axis split: the case pays alpha_h for the hypothesis,
+  // so every axis may only use alpha_h / 3 (using alpha_h per axis would
+  // understate the tail the ledger pays for).
+  const double allocation = 3.0e-8;
+  const double prior = 1.0e-4;
+  const double p_md = 1.0e-3;
+  const AxisTailSplit split = axisTailSplit(allocation, prior, p_md, 1e-5);
+  ASSERT_TRUE(split.valid) << split.reason;
+  EXPECT_NEAR(split.hypothesis_tail, allocation / prior, 1e-18);
+  EXPECT_NEAR(split.axis_tail, split.hypothesis_tail / 3.0, 1e-18);
+  EXPECT_DOUBLE_EQ(split.charge, std::max(split.hypothesis_tail, p_md));
+  // The charge times the prior is exactly the allocation (no double charge).
+  EXPECT_NEAR(prior * split.charge, std::max(allocation, prior * p_md), 1e-18);
+
+  // The normal multiplier must grow when the tail is split over the axes.
+  const double k_axis = StatisticalBoundsCache::normalTwoSidedMultiplier(
+      split.axis_tail);
+  const double k_single = StatisticalBoundsCache::normalTwoSidedMultiplier(
+      split.hypothesis_tail);
+  EXPECT_GT(k_axis, k_single);
+  EXPECT_LT(k_single, k_axis);
+
+  // dof = 1 has an independent closed form:
+  //   P(chi'^2_1(lambda) <= tau) = Phi(sqrt(tau) - sqrt(lambda))
+  //                               - Phi(-sqrt(tau) - sqrt(lambda))
+  const int dof = 1;
+  const double threshold = 6.0;
+  const StatisticalBoundKey key;
+  const auto boundary = StatisticalBoundsCache::noncentralityBoundaryVerified(
+      dof, threshold, p_md, key);
+  ASSERT_TRUE(boundary.valid) << boundary.reason;
+  EXPECT_TRUE(boundary.converged);
+  auto miss = [&](double noncentrality) {
+    const double root = std::sqrt(noncentrality);
+    const double t = std::sqrt(threshold);
+    const auto normal = boost::math::normal();
+    return boost::math::cdf(normal, t - root) -
+        boost::math::cdf(normal, -t - root);
+  };
+  EXPECT_LE(miss(boundary.value), p_md)
+      << "the returned boundary must be on the conservative side";
+  EXPECT_LT(boundary.residual, 1e-12);
+  EXPECT_LT(boundary.bracket_width, 1e-9 * std::max(1.0, boundary.value));
+  // Monotone in p_md: a smaller miss allocation needs a larger noncentrality.
+  const auto tighter = StatisticalBoundsCache::noncentralityBoundaryVerified(
+      dof, threshold, 0.1 * p_md, key);
+  ASSERT_TRUE(tighter.valid) << tighter.reason;
+  EXPECT_GT(tighter.value, boundary.value);
+
+  // Seeded synthetic acceptance sample (statistical, not a proof): with the
+  // split tails, the measured per-axis exceedance of the k-sigma bound stays
+  // within a 4-sigma band of the nominal two-sided tail.  Stated as sampling
+  // evidence only; the deterministic claim is the union bound above.
+  std::mt19937_64 generator(20260921);
+  std::normal_distribution<double> standard(0.0, 1.0);
+  const std::size_t samples = 200000;
+  const double sigma = 0.37;
+  std::size_t exceedances = 0;
+  for (std::size_t index = 0; index < samples; ++index) {
+    // Correlated three-axis protected error with equal marginals.
+    const double common = standard(generator);
+    for (int axis = 0; axis < 3; ++axis) {
+      const double value = sigma * (0.6 * common + 0.8 * standard(generator));
+      if (std::abs(value) > k_axis * sigma) ++exceedances;
+    }
+  }
+  const double total = static_cast<double>(samples) * 3.0;
+  const double rate = static_cast<double>(exceedances) / total;
+  const double expected = split.axis_tail;
+  const double sample_sigma = std::sqrt(expected * (1.0 - expected) / total);
+  EXPECT_LT(rate, expected + 4.0 * sample_sigma)
+      << "per-axis exceedance must stay inside the charged tail band";
+}
+
+TEST(B3Risk, RSK02LedgerHasNoHiddenZerosAndOverlapGivesNoDividend) {
+  using namespace uwb_imu_pl;
+  RiskBudgetV2 risk;
+  FaultHypothesisV2 first;
+  first.id = HypothesisId(1);
+  first.hmi_allocation = 3.0e-8;
+  first.prior_probability_bound = 1.0e-4;
+  first.p_md_allocation = 1.0e-3;
+  FaultHypothesisV2 second = first;
+  second.id = HypothesisId(2);
+  RiskLedgerInputs inputs;
+  inputs.omitted_event_set = {"two_uwb", "imu_imu"};
+  const RiskLedger one = buildRiskLedger(risk, {first}, inputs);
+  ASSERT_TRUE(one.closes) << one.reason;
+  ASSERT_TRUE(one.inputs_valid);
+  // Every term is present with a status and a source: nothing hides as a
+  // silent zero.
+  for (const char* id : {"nominal", "p_nm", "hypotheses",
+                         "hypotheses_miss_channel", "bridge", "history",
+                         "model", "omitted", "envelope", "selection"}) {
+    const auto* term = one.find(id);
+    ASSERT_NE(term, nullptr) << id;
+    EXPECT_FALSE(term->source.empty()) << id;
+    EXPECT_FALSE(term->note.empty()) << id;
+  }
+  EXPECT_EQ(one.find("omitted")->status, RiskTermStatus::NotImplemented);
+  EXPECT_NE(one.find("omitted")->note.find("two_uwb"), std::string::npos);
+  EXPECT_EQ(one.find("bridge")->status, RiskTermStatus::AssumedUnvalidated);
+  EXPECT_FALSE(one.all_terms_validated);
+  EXPECT_FALSE(one.formal_eligible);
+  EXPECT_TRUE(one.declared_total >= one.charged_total);
+
+  // Overlapping coverage gives no risk dividend: adding a hypothesis never
+  // lowers the charged total, and the miss channel stays explicit.
+  const RiskLedger two = buildRiskLedger(risk, {first, second}, inputs);
+  ASSERT_TRUE(two.closes) << two.reason;
+  EXPECT_GT(two.charged_total, one.charged_total);
+  const auto* one_fault = one.find("hypotheses");
+  const auto* two_fault = two.find("hypotheses");
+  ASSERT_NE(one_fault, nullptr);
+  ASSERT_NE(two_fault, nullptr);
+  EXPECT_NEAR(two_fault->value, 2.0 * one_fault->value, 1e-18);
+  // The detector miss channel is reported but not charged.
+  const auto* miss = two.find("hypotheses_miss_channel");
+  ASSERT_NE(miss, nullptr);
+  EXPECT_GT(miss->value, 0.0);
+  EXPECT_EQ(miss->status, RiskTermStatus::AssumedUnvalidated);
+  EXPECT_NEAR(two.charged_total,
+              one.find("nominal")->value + one.find("p_nm")->value +
+                  2.0 * one_fault->value,
+              1e-18);
+}
+
+TEST(B3Risk, RSK03PositionMarginAndResidualThresholdActTogether) {
+  using namespace uwb_imu_pl;
+  // Both the detector threshold (through Lambda) and the position margin
+  // (through k * sigma) enter the same bound: neither channel alone may be
+  // used to claim the other.
+  const StatisticalBoundKey key;
+  const double p_md = 1e-3;
+  const auto loose = StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, 10.0, p_md, key);
+  const auto tight = StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, 40.0, p_md, key);
+  ASSERT_TRUE(loose.valid);
+  ASSERT_TRUE(tight.valid);
+  EXPECT_GT(tight.value, loose.value)
+      << "a higher detector threshold must require more noncentrality";
+  const AxisTailSplit split = axisTailSplit(3e-8, 1e-4, p_md, 1e-5);
+  ASSERT_TRUE(split.valid);
+  const double k = StatisticalBoundsCache::normalTwoSidedMultiplier(
+      split.axis_tail);
+  const double sigma = 0.5;
+  const double fault_component =
+      std::sqrt(tight.value) * 0.25 + k * sigma;
+  EXPECT_GT(fault_component, k * sigma)
+      << "the fault size channel and the noise channel must both contribute";
+  EXPECT_GT(fault_component, std::sqrt(tight.value) * 0.25);
+}
+
+TEST(B3Risk, BoundaryInputsAreRejectedAndCacheIdentityIsVersioned) {
+  using namespace uwb_imu_pl;
+  StatisticalBoundsCache::clear();
+  const StatisticalBoundKey key;
+  // beta = 0, beta >= 1, zero dof, non-positive threshold.
+  EXPECT_FALSE(StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, 10.0, 0.0, key).valid);
+  EXPECT_FALSE(StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, 10.0, 1.0, key).valid);
+  EXPECT_FALSE(StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, 10.0, 1.5, key).valid);
+  EXPECT_FALSE(StatisticalBoundsCache::noncentralityBoundaryVerified(
+      0, 10.0, 1e-3, key).valid);
+  EXPECT_FALSE(StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, 0.0, 1e-3, key).valid);
+  EXPECT_FALSE(StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, -1.0, 1e-3, key).valid);
+  // Key/dof disagreement is a policy mismatch, not a silent reuse.
+  StatisticalBoundKey wrong_dof;
+  wrong_dof.dof = 7;
+  EXPECT_FALSE(StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, 10.0, 1e-3, wrong_dof).valid);
+  EXPECT_GE(StatisticalBoundsCache::stats().policy_mismatches, 1u);
+
+  // Illegal priors are rejected by the split, never clamped.
+  const AxisTailSplit bad = axisTailSplit(1e-8, 0.0, 1e-3, 1e-5);
+  EXPECT_FALSE(bad.valid);
+  EXPECT_NE(bad.reason.find("prior"), std::string::npos);
+  const AxisTailSplit negative = axisTailSplit(-1.0, 1e-4, 1e-3, 1e-5);
+  EXPECT_FALSE(negative.valid);
+  const AxisTailSplit zero = axisTailSplit(0.0, 1e-4, 1e-3, 1e-5);
+  EXPECT_TRUE(zero.valid);
+  EXPECT_DOUBLE_EQ(zero.charge, 1e-3);
+
+  // Tiny tails must stay finite (complement evaluation, no 1 - tiny).
+  bool valid = false;
+  const double k_tiny =
+      StatisticalBoundsCache::normalTwoSidedMultiplierVerified(1e-300, &valid);
+  EXPECT_TRUE(valid);
+  EXPECT_TRUE(std::isfinite(k_tiny));
+  EXPECT_GT(k_tiny, 30.0);
+  const double k_invalid =
+      StatisticalBoundsCache::normalTwoSidedMultiplierVerified(0.0, &valid);
+  EXPECT_FALSE(valid);
+  EXPECT_FALSE(std::isfinite(k_invalid));
+
+  // Cache identity: same key hits, a contract/envelope version change misses.
+  const auto before = StatisticalBoundsCache::stats();
+  const auto first = StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, 21.0, 1e-3, key);
+  const auto hit = StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, 21.0, 1e-3, key);
+  ASSERT_TRUE(first.valid);
+  ASSERT_TRUE(hit.valid);
+  EXPECT_DOUBLE_EQ(first.value, hit.value);
+  StatisticalBoundKey new_contract;
+  new_contract.contract_version = key.contract_version + 1;
+  const auto versioned = StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, 21.0, 1e-3, new_contract);
+  ASSERT_TRUE(versioned.valid);
+  EXPECT_DOUBLE_EQ(versioned.value, first.value);
+  StatisticalBoundKey envelope_changed;
+  envelope_changed.envelope_fingerprint = 0xABCDEFULL;
+  const auto enveloped = StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, 21.0, 1e-3, envelope_changed);
+  ASSERT_TRUE(enveloped.valid);
+  const auto after = StatisticalBoundsCache::stats();
+  EXPECT_GE(after.hits - before.hits, 1u);
+  EXPECT_GE(after.misses - before.misses, 3u)
+      << "a contract or envelope version change must miss the cache";
+}
+
+// ---------------------------------------------------------------------------
+// B4 Stage 3: lazy FDE action entities and health-state preservation.
+// ---------------------------------------------------------------------------
+
+TEST(B4LazyFde, FDE01HealthyFrameBuildsNoActionEntitiesButKeepsSensitivity) {
+  using namespace uwb_imu_pl;
+  auto config = researchConfig();
+  IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d(0.1, 0.2, 0.3));
+  NavigationState initial;
+  initial.timestamp = TimestampNs(0);
+  initial.position_world_m = {0, 0, 1};
+  initial.velocity_world_mps = {0.2, 0.1, 0.0};
+  initial.q_world_body = Eigen::Quaterniond(Eigen::AngleAxisd(
+      0.2, Eigen::Vector3d(1, 2, 3).normalized()));
+  estimator.initialize(initial, config.realtime.prior_sigmas);
+  for (int sample = 0; sample <= 10; ++sample) {
+    ImuMeasurement imu;
+    imu.id = MeasurementId(sample + 1);
+    imu.timestamp = TimestampNs(sample * 5000000LL);
+    imu.specific_force_mps2 = {0.3, -0.1, config.imu.gravity_mps2 + 0.05};
+    imu.angular_velocity_radps = {0.1, -0.2, 0.15};
+    estimator.ingestImu(imu);
+  }
+  auto input = batch(config, 55000000);
+  auto transaction = estimator.prepareEpoch(input);
+  auto window = estimator.buildIntegrityWindow(transaction, IntegrityWindowRequest{});
+  auto imu_block = estimator.buildPendingFactorBlock(transaction, transaction.imu_group.id);
+  auto bridge_block = estimator.buildPendingFactorBlock(
+      transaction, transaction.generic_bridge_group.id);
+  const auto imu_maps = ImuFaultSubspaceBuilder().build(transaction, imu_block);
+
+  // Lazy (default): mode descriptions and hypotheses exist, entities do not.
+  auto lazy = HypothesisGenerator().generate(window, transaction, imu_maps,
+                                             bridge_block);
+  EXPECT_TRUE(lazy.action_entities_built == false);
+  EXPECT_TRUE(lazy.single_mode_actions.empty());
+  EXPECT_EQ(lazy.action_entities_constructed, 0u);
+  EXPECT_EQ(lazy.bridge_blocks_built, 0u);
+  EXPECT_EQ(lazy.action_entities_deferred, lazy.modes.size());
+  ASSERT_EQ(lazy.actions.size(), 1u);
+  EXPECT_EQ(lazy.actions.front().id.value(), 1u);
+  EXPECT_EQ(lazy.actions.front().action_model_id, "KEEP_ALL");
+  // Sensitivity is preserved: every mode still carries its fault map and every
+  // hypothesis its risk allocation, which is what the PL path consumes.
+  ASSERT_FALSE(lazy.modes.empty());
+  for (const auto& mode : lazy.modes) {
+    EXPECT_FALSE(mode.raw_group_maps.empty());
+  }
+  ASSERT_FALSE(lazy.hypotheses.empty());
+  for (const auto& hypothesis : lazy.hypotheses) {
+    EXPECT_GT(hypothesis.hmi_allocation, 0.0);
+  }
+
+  // Eager compatibility path produces the same identities.
+  HypothesisGeneratorConfig eager_config;
+  eager_config.lazy_action_entities = false;
+  auto eager = HypothesisGenerator(eager_config).generate(window, transaction,
+                                                          imu_maps, bridge_block);
+  EXPECT_TRUE(eager.action_entities_built);
+  EXPECT_EQ(eager.action_entities_constructed, eager.modes.size());
+  EXPECT_EQ(eager.action_entities_deferred, 0u);
+  ASSERT_EQ(eager.single_mode_actions.size(), eager.modes.size());
+  EXPECT_GT(eager.actions.size(), 1u)
+      << "the eager path still deduplicates recoverable actions";
+
+  // On-demand materialization is idempotent and reproduces the eager ids.
+  HypothesisGenerator::ensureActionEntities(transaction, window, &lazy);
+  EXPECT_TRUE(lazy.action_entities_built);
+  // The deduplicated catalog is reproduced identically (same ids, same order).
+  ASSERT_EQ(lazy.actions.size(), eager.actions.size());
+  for (std::size_t index = 0; index < lazy.actions.size(); ++index) {
+    EXPECT_EQ(lazy.actions[index].id.value(), eager.actions[index].id.value());
+  }
+  ASSERT_EQ(lazy.single_mode_actions.size(), eager.single_mode_actions.size());
+  for (std::size_t index = 0; index < lazy.single_mode_actions.size(); ++index) {
+    EXPECT_EQ(lazy.single_mode_actions[index].id.value(),
+              eager.single_mode_actions[index].id.value());
+    EXPECT_EQ(lazy.single_mode_actions[index].action_model_id,
+              eager.single_mode_actions[index].action_model_id);
+    EXPECT_EQ(lazy.single_mode_actions[index].groups_to_remove.size(),
+              eager.single_mode_actions[index].groups_to_remove.size());
+  }
+  const std::size_t constructed = lazy.action_entities_constructed;
+  const std::size_t bridges = lazy.bridge_blocks_built;
+  HypothesisGenerator::ensureActionEntities(transaction, window, &lazy);
+  EXPECT_EQ(lazy.action_entities_constructed, constructed)
+      << "ensureActionEntities must be idempotent";
+  EXPECT_EQ(lazy.bridge_blocks_built, bridges);
+  // On-demand materialization builds exactly the blocks the eager path builds.
+  EXPECT_EQ(lazy.bridge_blocks_built, eager.bridge_blocks_built);
+  estimator.discardEpoch(std::move(transaction),
+      {FdeStatus::ModelInvalid, "lazy FDE development test", false});
+}
+
+TEST(B4LazyFde, FDE02IsolationPathStillMaterializesEvidenceOnDemand) {
+  using namespace uwb_imu_pl;
+  auto config = researchConfig();
+  IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d(0.1, 0.2, 0.3));
+  NavigationState initial;
+  initial.timestamp = TimestampNs(0);
+  initial.position_world_m = {0, 0, 1};
+  initial.velocity_world_mps = {0.2, 0.1, 0.0};
+  initial.q_world_body = Eigen::Quaterniond(Eigen::AngleAxisd(
+      0.2, Eigen::Vector3d(1, 2, 3).normalized()));
+  estimator.initialize(initial, config.realtime.prior_sigmas);
+  for (int sample = 0; sample <= 10; ++sample) {
+    ImuMeasurement imu;
+    imu.id = MeasurementId(sample + 1);
+    imu.timestamp = TimestampNs(sample * 5000000LL);
+    imu.specific_force_mps2 = {0.3, -0.1, config.imu.gravity_mps2 + 0.05};
+    imu.angular_velocity_radps = {0.1, -0.2, 0.15};
+    estimator.ingestImu(imu);
+  }
+  auto input = batch(config, 55000000);
+  auto transaction = estimator.prepareEpoch(input);
+  auto window = estimator.buildIntegrityWindow(transaction, IntegrityWindowRequest{});
+  auto imu_block = estimator.buildPendingFactorBlock(transaction, transaction.imu_group.id);
+  auto bridge_block = estimator.buildPendingFactorBlock(
+      transaction, transaction.generic_bridge_group.id);
+  const auto imu_maps = ImuFaultSubspaceBuilder().build(transaction, imu_block);
+  auto models = HypothesisGenerator().generate(window, transaction, imu_maps,
+                                               bridge_block);
+  std::vector<FaultModeEvidence> evidence;
+  for (const auto& hypothesis : models.hypotheses) {
+    FaultModeEvidence item;
+    item.hypothesis = hypothesis.id;
+    item.plausible = true;
+    evidence.push_back(item);
+  }
+  EXPECT_EQ(models.action_entities_constructed, 0u);
+  const auto actions = HypothesisGenerator().actionsForPlausibleSet(
+      window, transaction, &models, evidence);
+  EXPECT_GE(actions.size(), 2u)
+      << "the isolation path must still build its candidate actions";
+  EXPECT_GT(models.action_entities_constructed, 0u)
+      << "entities are materialized on demand, not eagerly";
+  EXPECT_TRUE(models.action_entities_built);
+  EXPECT_EQ(models.action_entities_deferred, 0u);
+  // Action identity is stable: KEEP_ALL first, then the mode actions in order.
+  bool keep_all_seen = false;
+  std::set<std::uint64_t> ids;
+  for (const auto& action : actions) {
+    EXPECT_TRUE(ids.insert(action.id.value()).second)
+        << "duplicate action id " << action.id.value();
+    keep_all_seen = keep_all_seen || action.action_model_id == "KEEP_ALL";
+  }
+  EXPECT_TRUE(keep_all_seen);
+  estimator.discardEpoch(std::move(transaction),
+      {FdeStatus::ModelInvalid, "lazy FDE isolation test", false});
+}
+
+// ---------------------------------------------------------------------------
+// B3 Stage 2: the detection-space tri-state decides availability with
+// direction-level reasons (no dictionary-wide rejection).
+// ---------------------------------------------------------------------------
+
+TEST(B3ZeroSpace, DangerousNullspaceIsUnavailableWithDirectionLevelReason) {
+  using namespace uwb_imu_pl;
+  auto window = syntheticWindow();
+  finalizeIntegrityWindow(&window, 1e-10, 1e10);
+  // A fault map proportional to the nominal design column is invisible in the
+  // detection space but moves the protected state: exactly the dangerous case.
+  const Eigen::Index rows = window.H.rows();
+  const Eigen::VectorXd state_direction = window.H.col(0);
+  FaultModeBasis mode;
+  mode.id = FaultModeId(1);
+  mode.sensor = SensorType::Uwb;
+  mode.parameter_dimension = 1;
+  Eigen::Index row_offset = 0;
+  for (const auto& block : window.blocks) {
+    const Eigen::Index block_rows = block.residual_raw.size();
+    mode.raw_group_maps[block.group_id] = state_direction.segment(row_offset,
+                                                                  block_rows);
+    row_offset += block_rows;
+  }
+  ASSERT_EQ(row_offset, rows);
+  const std::vector<FaultModeBasis> modes{mode};
+  FaultHypothesisV2 hypothesis;
+  hypothesis.id = HypothesisId(1);
+  hypothesis.modes = {mode.id};
+  hypothesis.prior_probability_bound = 1e-4;
+  hypothesis.p_md_allocation = 1e-3;
+  std::vector<FaultHypothesisV2> hypotheses{hypothesis};
+  std::shared_ptr<const FrozenHypothesisNumerics> shared;
+  const auto evidence = HypothesisEvidenceEvaluator().evaluateAll(
+      window, modes, &hypotheses, 100.0, &shared);
+  ASSERT_EQ(evidence.size(), 1u);
+  ASSERT_TRUE(shared);
+  ASSERT_EQ(shared->pl_entries.size(), 1u);
+  const auto& entry = shared->pl_entries[0];
+  EXPECT_EQ(entry.z_classification, 3) << entry.z_smallest_singular_value;
+  EXPECT_FALSE(hypotheses[0].monitored);
+  EXPECT_FALSE(evidence[0].plausible);
+  const std::string reason = hypotheses[0].monitorability.reason;
+  EXPECT_NE(reason.find("dangerous detection nullspace"), std::string::npos)
+      << reason;
+  EXPECT_NE(reason.find("axis residuals"), std::string::npos) << reason;
+  EXPECT_NE(reason.find("modes 1"), std::string::npos) << reason;
+  EXPECT_FALSE(entry.valid);
+}
+
+TEST(B3ZeroSpace, HarmlessNullspaceKeepsAFiniteProjectedBound) {
+  using namespace uwb_imu_pl;
+  auto window = syntheticWindow();
+  finalizeIntegrityWindow(&window, 1e-10, 1e10);
+  // Degenerate harmless limit expressible on the two-state synthetic fixture:
+  // the protected map is full column rank there, so the only direction that is
+  // both invisible and harmless is the zero response.  The classification must
+  // still return the harmless branch with a finite (zero) projected bound
+  // instead of rejecting the hypothesis or reporting a dangerous nullspace.
+  FaultModeBasis mode;
+  mode.id = FaultModeId(1);
+  mode.sensor = SensorType::Uwb;
+  mode.parameter_dimension = 1;
+  for (const auto& block : window.blocks) {
+    mode.raw_group_maps[block.group_id] =
+        Eigen::VectorXd::Zero(block.residual_raw.size());
+  }
+  const std::vector<FaultModeBasis> modes{mode};
+  FaultHypothesisV2 hypothesis;
+  hypothesis.id = HypothesisId(1);
+  hypothesis.modes = {mode.id};
+  hypothesis.prior_probability_bound = 1e-4;
+  hypothesis.p_md_allocation = 1e-3;
+  std::vector<FaultHypothesisV2> hypotheses{hypothesis};
+  std::shared_ptr<const FrozenHypothesisNumerics> shared;
+  const auto evidence = HypothesisEvidenceEvaluator().evaluateAll(
+      window, modes, &hypotheses, 100.0, &shared);
+  ASSERT_EQ(evidence.size(), 1u);
+  ASSERT_TRUE(shared);
+  const auto& entry = shared->pl_entries[0];
+  EXPECT_EQ(entry.z_classification, 2) << entry.z_smallest_singular_value;
+  EXPECT_TRUE(entry.bound_from_projected_path);
+  EXPECT_TRUE(entry.monitorability.monitorable);
+  EXPECT_TRUE(entry.protected_slopes.allFinite());
+  EXPECT_TRUE(entry.protected_slopes.isZero(1e-12))
+      << entry.protected_slopes.transpose();
+  EXPECT_TRUE(hypotheses[0].monitored);
 }

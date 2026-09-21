@@ -29,7 +29,7 @@ def validate_attachments(directory, epochs=None, warmup=100, expected_candidates
     if ids != expected:
         raise ValueError("missing, duplicate or unordered input attempt IDs")
     indexed = dict(zip(ids, attempts))
-    if any(row["schema_version"] not in (SCHEMA, "uwb-imu-pl/gate-d-diagnostics/v2", "uwb-imu-pl/gate-d-diagnostics/v3", "uwb-imu-pl/gate-d-diagnostics/v4", "uwb-imu-pl/gate-d-diagnostics/v5", "uwb-imu-pl/gate-d-diagnostics/v6", "uwb-imu-pl/gate-d-diagnostics/v7", "uwb-imu-pl/gate-d-diagnostics/v8", "uwb-imu-pl/gate-d-diagnostics/v9", "uwb-imu-pl/gate-d-diagnostics/v10", "uwb-imu-pl/gate-d-diagnostics/v11", "uwb-imu-pl/gate-d-diagnostics/v12", "uwb-imu-pl/gate-d-diagnostics/v13") for row in attempts):
+    if any(row["schema_version"] not in (SCHEMA, "uwb-imu-pl/gate-d-diagnostics/v2", "uwb-imu-pl/gate-d-diagnostics/v3", "uwb-imu-pl/gate-d-diagnostics/v4", "uwb-imu-pl/gate-d-diagnostics/v5", "uwb-imu-pl/gate-d-diagnostics/v6", "uwb-imu-pl/gate-d-diagnostics/v7", "uwb-imu-pl/gate-d-diagnostics/v8", "uwb-imu-pl/gate-d-diagnostics/v9", "uwb-imu-pl/gate-d-diagnostics/v10", "uwb-imu-pl/gate-d-diagnostics/v11", "uwb-imu-pl/gate-d-diagnostics/v12", "uwb-imu-pl/gate-d-diagnostics/v13", "uwb-imu-pl/gate-d-diagnostics/v14") for row in attempts):
         raise ValueError("unsupported diagnostic schema")
     by_stage, by_candidate = defaultdict(dict), defaultdict(dict)
     for rows, target, field in ((stages, by_stage, "stage"), (candidates, by_candidate, "action_id")):
@@ -127,7 +127,7 @@ def validate_attachments(directory, epochs=None, warmup=100, expected_candidates
         if set(current) != set(old):
             raise ValueError("candidate attachment missing or mismatched")
         for key, candidate in current.items():
-            eligibility_skip = (row["schema_version"].endswith(("/v8", "/v9", "/v10", "/v11", "/v12", "/v13")) and
+            eligibility_skip = (row["schema_version"].endswith(("/v8", "/v9", "/v10", "/v11", "/v12", "/v13", "/v14")) and
                                 candidate["kernel_evaluated"] == "0" and
                                 candidate["skip_reason"].startswith("SKIPPED_INELIGIBLE:"))
             if candidate["kernel_evaluated"] != "1" and not eligibility_skip:
@@ -147,7 +147,7 @@ def validate_attachments(directory, epochs=None, warmup=100, expected_candidates
                 elif candidate[field] or not candidate["skip_reason"]:
                     raise ValueError("uncomputed candidate stage lacks skip reason")
             if row["schema_version"].endswith(
-                    ("/v3", "/v4", "/v5", "/v6", "/v7", "/v8", "/v9", "/v10", "/v11", "/v12", "/v13")):
+                    ("/v3", "/v4", "/v5", "/v6", "/v7", "/v8", "/v9", "/v10", "/v11", "/v12", "/v13", "/v14")):
                 frozen = set(filter(None, row["frozen_group_ids"].split(";")))
                 removed = set(filter(None, old[key]["removed_group_ids"].split(";")))
                 if not removed.issubset(frozen):
