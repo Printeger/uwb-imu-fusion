@@ -1,5 +1,6 @@
 #include "uwb_imu_pl/integrity/joint_window_detector.hpp"
 
+#include "uwb_imu_pl/integrity/dual_channel_detector.hpp"
 #include <sstream>
 #include "uwb_imu_pl/integrity/statistical_bounds_cache.hpp"
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
@@ -147,6 +148,24 @@ DetectorResultV2 JointWindowDetector::evaluate(
   auto out = baseResult(window.H.rows(), rank,
                         window.H.rows() - rank, statistic, risk);
   out.window_id = window.id;
+  // C2 (§7.3): the separated layout on the same frozen window.  Thresholds are
+  // the unchanged per-test budget; the joint acceptance is reported, not
+  // substituted for the pooled decision.
+  {
+    const DualChannelDecision split = evaluateDualChannel(
+        window, risk.p_fa_per_test, risk.continuity_horizon_tests);
+    out.channel_split_valid = split.numerically_valid;
+    out.joint_accepted = split.joint_accepted;
+    out.channel_reason = split.reason;
+    out.channel_current_statistic = split.current.statistic;
+    out.channel_current_threshold = split.current.threshold;
+    out.channel_current_dof = split.current.dof;
+    out.channel_current_accepted = split.current.accepted;
+    out.channel_history_statistic = split.history.statistic;
+    out.channel_history_threshold = split.history.threshold;
+    out.channel_history_dof = split.history.dof;
+    out.channel_history_accepted = split.history.accepted;
+  }
   if (window.condition_number > risk.max_condition_number) {
     out.numerically_valid = false;
     out.passed = false;

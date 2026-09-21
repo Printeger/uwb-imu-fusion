@@ -31,6 +31,21 @@ struct DetectorResultV2 {
   bool passed = false;
   bool numerically_valid = false;
   std::string reason;
+  // C2 (§7.3): separated residual channels.  `pooled` above stays the product
+  // decision (unchanged thresholds); these fields expose the two-channel split
+  // and the joint acceptance A = {T_c <= tau_c} AND {T_b <= tau_b} so no
+  // consumer has to re-derive it.
+  double channel_current_statistic = 0.0;
+  double channel_current_threshold = 0.0;
+  int channel_current_dof = 0;
+  bool channel_current_accepted = false;
+  double channel_history_statistic = 0.0;
+  double channel_history_threshold = 0.0;
+  int channel_history_dof = 0;
+  bool channel_history_accepted = false;
+  bool channel_split_valid = false;
+  bool joint_accepted = false;
+  std::string channel_reason;
 };
 
 class JointWindowDetector {
