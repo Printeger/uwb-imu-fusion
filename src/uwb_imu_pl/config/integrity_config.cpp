@@ -298,7 +298,7 @@ IntegrityConfig IntegrityConfigLoader::load(
   rejectUnknown(root, "root", {"schema_version", "seed", "snapshot",
       "incremental", "imu", "integrity_window", "detector",
       "fault_models", "fde", "bridge", "health", "risk",
-      "robust_shadow", "output", "realtime", "anchors"});
+      "robust_shadow", "output", "realtime", "anchors", "history"});
   cfg.schema_version = required<std::string>(root, "schema_version", "root");
   if (cfg.schema_version != "uwb-imu-pl/v4" &&
       cfg.schema_version != "uwb-imu-pl/v5") {
@@ -425,6 +425,38 @@ IntegrityConfig IntegrityConfigLoader::load(
       cfg.incremental.fixed_lag_epochs <= cfg.integrity_window.epochs +
           cfg.integrity_window.recovery_margin_epochs) {
     throw std::runtime_error("incremental.fixed_lag_epochs must exceed integrity window plus recovery margin");
+  }
+
+  // C1-c/C2: history-summary capacity keys.  The section is optional (absent
+  // means zero capacity: the summary path is not wired yet, so nothing is
+  // produced); when present it is strict - unknown keys, a missing key or an
+  // unknown capacity action are hard errors.
+  {
+    const auto history = root["history"];
+    if (history) {
+      rejectUnknown(history, "history", {"max_summary_rows",
+          "max_fault_columns", "max_perp_rows", "capacity_action"});
+      cfg.history.max_summary_rows = required<std::uint64_t>(history,
+          "max_summary_rows", "history");
+      cfg.history.max_fault_columns = required<std::uint64_t>(history,
+          "max_fault_columns", "history");
+      cfg.history.max_perp_rows = required<std::uint64_t>(history,
+          "max_perp_rows", "history");
+      cfg.history.capacity_action = required<std::string>(history,
+          "capacity_action", "history");
+      if (cfg.history.capacity_action != "REFUSE" &&
+          cfg.history.capacity_action != "RESET" &&
+          cfg.history.capacity_action != "STOP_PROTECTED") {
+        throw std::runtime_error(
+            "history.capacity_action must be REFUSE, RESET or STOP_PROTECTED");
+      }
+    }
+    // Canonicalize the optional section so the resolved dump and its hash are
+    // stable whether or not the source file declares it.
+    root["history"]["max_summary_rows"] = cfg.history.max_summary_rows;
+    root["history"]["max_fault_columns"] = cfg.history.max_fault_columns;
+    root["history"]["max_perp_rows"] = cfg.history.max_perp_rows;
+    root["history"]["capacity_action"] = cfg.history.capacity_action;
   }
 
   const auto detector = root["detector"];

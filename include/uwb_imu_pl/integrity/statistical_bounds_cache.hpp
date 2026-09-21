@@ -14,16 +14,23 @@ struct StatisticalBoundsCacheStats {
   std::uint64_t policy_mismatches = 0;
 };
 
-// B3: cache identity.  The key carries the detector identity, the numerical
-// contract version, the envelope parameters and their version, so a policy or
-// envelope change can never be served from a stale entry (and never cached by
-// a human readable mode name).
+// B3/C1-c: cache identity.  The key carries the detector identity, the
+// numerical contract version, the envelope parameters and their versions, and
+// the history-summary binding digest, so a policy, envelope or summary change
+// can never be served from a stale entry (and never cached by a human
+// readable mode name).  Every field above participates in the stored key:
+// there is no declared-but-unhashed axis.
 struct StatisticalBoundKey {
   std::uint32_t detector_id = 0;
   std::uint32_t dof = 0;
   std::uint64_t contract_version = 1;
   std::uint64_t envelope_kind = 0;
   std::uint64_t envelope_fingerprint = 0;
+  // C1-c: digest of the summary binding (linearization / whitening / mode
+  // set / capacity; see `digestHistorySummaryVersion` in
+  // history_fault_summary.hpp).  Zero means "no summary version bound"
+  // (pre-C1-b default), which is exactly the current production state.
+  std::uint64_t history_summary_version = 0;
 };
 
 struct NoncentralityBoundaryResult {

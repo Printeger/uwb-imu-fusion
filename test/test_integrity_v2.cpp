@@ -2478,6 +2478,57 @@ TEST(B3Risk, BoundaryInputsAreRejectedAndCacheIdentityIsVersioned) {
       << "a contract or envelope version change must miss the cache";
 }
 
+TEST(B3Risk, HistorySummaryVersionIsPartOfCacheIdentity) {
+  using namespace uwb_imu_pl;
+  StatisticalBoundsCache::clear();
+  const StatisticalBoundKey base;
+  const auto first = StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, 21.0, 1e-3, base);
+  ASSERT_TRUE(first.valid);
+  const auto hit = StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, 21.0, 1e-3, base);
+  ASSERT_TRUE(hit.valid);
+  EXPECT_DOUBLE_EQ(first.value, hit.value);
+  const auto before = StatisticalBoundsCache::stats();
+
+  // C1-c: a rebuilt summary with a different binding digest is a different
+  // cache identity; the value is recomputed rather than reused.
+  StatisticalBoundKey rebuilt_summary = base;
+  rebuilt_summary.history_summary_version = 0x1234ULL;
+  const auto versioned = StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, 21.0, 1e-3, rebuilt_summary);
+  ASSERT_TRUE(versioned.valid);
+  EXPECT_DOUBLE_EQ(versioned.value, first.value);
+  const auto versioned_again =
+      StatisticalBoundsCache::noncentralityBoundaryVerified(
+          4, 21.0, 1e-3, rebuilt_summary);
+  ASSERT_TRUE(versioned_again.valid);
+  EXPECT_DOUBLE_EQ(versioned_again.value, first.value);
+
+  // C1-c fix: `envelope_kind` is a first-class identity axis (it was declared
+  // on the struct but missing from the stored tuple, silently aliasing two
+  // different kinds onto one entry).
+  StatisticalBoundKey kind_one = base;
+  kind_one.envelope_kind = 1;
+  StatisticalBoundKey kind_two = base;
+  kind_two.envelope_kind = 2;
+  ASSERT_TRUE(StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, 21.0, 1e-3, kind_one).valid);
+  ASSERT_TRUE(StatisticalBoundsCache::noncentralityBoundaryVerified(
+      4, 21.0, 1e-3, kind_two).valid);
+  const auto kind_one_again =
+      StatisticalBoundsCache::noncentralityBoundaryVerified(
+          4, 21.0, 1e-3, kind_one);
+  ASSERT_TRUE(kind_one_again.valid);
+
+  const auto after = StatisticalBoundsCache::stats();
+  // Hits: the rebuilt-summary reuse and the envelope-kind reuse.  Misses: one
+  // entry per distinct identity (summary version, kind one, kind two).
+  EXPECT_GE(after.hits - before.hits, 2u);
+  EXPECT_GE(after.misses - before.misses, 3u)
+      << "a summary version or envelope kind change must miss the cache";
+}
+
 // ---------------------------------------------------------------------------
 // B4 Stage 3: lazy FDE action entities and health-state preservation.
 // ---------------------------------------------------------------------------

@@ -21,16 +21,22 @@ std::uint64_t bits(double value) {
   return result;
 }
 
-// B3 key identity: (detector, dof, contract version, threshold, p_md) plus the
-// envelope parameters and their version.  Nothing is keyed by a mode name.
+// B3/C1-c key identity: (detector, dof, contract version, threshold, p_md)
+// plus the envelope parameters and their version and the history-summary
+// binding digest.  Nothing is keyed by a mode name.  C1-c fix: `envelope_kind`
+// was declared on the struct but missing from this tuple (a silent aliasing
+// axis); it now participates in the identity together with
+// `history_summary_version`.
 using NoncentralKey = std::tuple<std::uint32_t, std::uint32_t, std::uint64_t,
-                                 std::uint64_t, std::uint64_t, std::uint64_t>;
+                                 std::uint64_t, std::uint64_t, std::uint64_t,
+                                 std::uint64_t, std::uint64_t>;
 
 NoncentralKey noncentralKey(int dof, double threshold, double p_md,
                             const StatisticalBoundKey& key) {
   return std::make_tuple(key.detector_id, static_cast<std::uint32_t>(dof),
                          key.contract_version, bits(threshold), bits(p_md),
-                         key.envelope_fingerprint);
+                         key.envelope_kind, key.envelope_fingerprint,
+                         key.history_summary_version);
 }
 
 struct Storage {

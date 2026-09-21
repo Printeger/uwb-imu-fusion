@@ -797,4 +797,36 @@ TEST(HistoryFaultSummary, HISM1SplitHelperConsistency) {
   EXPECT_EQ((from_split.d_perp - direct.d_perp).norm(), 0.0);
 }
 
+TEST(HistoryFaultSummary, HISM2VersionDigestBindsAllComponents) {
+  // C1-c/C3: the binding digest must be deterministic and must change when
+  // ANY component (linearization / whitening / mode set / capacity) changes,
+  // so a cached summary can never survive a rebuild with a changed binding.
+  const uwb_imu_pl::HistorySummaryVersion base;
+  const std::uint64_t base_digest =
+      uwb_imu_pl::digestHistorySummaryVersion(base);
+  EXPECT_EQ(base_digest, uwb_imu_pl::digestHistorySummaryVersion(
+                             uwb_imu_pl::HistorySummaryVersion{}));
+  uwb_imu_pl::HistorySummaryVersion changed = base;
+  changed.linearization = 1;
+  EXPECT_NE(base_digest, uwb_imu_pl::digestHistorySummaryVersion(changed));
+  changed = base;
+  changed.whitening = 1;
+  EXPECT_NE(base_digest, uwb_imu_pl::digestHistorySummaryVersion(changed));
+  changed = base;
+  changed.mode_set = 1;
+  EXPECT_NE(base_digest, uwb_imu_pl::digestHistorySummaryVersion(changed));
+  changed = base;
+  changed.capacity = 1;
+  EXPECT_NE(base_digest, uwb_imu_pl::digestHistorySummaryVersion(changed));
+  // Component order matters: swapping two distinct values is a change.
+  uwb_imu_pl::HistorySummaryVersion swapped;
+  swapped.linearization = 7;
+  swapped.whitening = 9;
+  uwb_imu_pl::HistorySummaryVersion reversed;
+  reversed.linearization = 9;
+  reversed.whitening = 7;
+  EXPECT_NE(uwb_imu_pl::digestHistorySummaryVersion(swapped),
+            uwb_imu_pl::digestHistorySummaryVersion(reversed));
+}
+
 }  // namespace

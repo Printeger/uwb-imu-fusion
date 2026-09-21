@@ -81,6 +81,7 @@
 
 #include <Eigen/Core>
 
+#include <cstdint>
 #include <optional>
 #include <string>
 
@@ -170,5 +171,32 @@ struct HistoryFaultSummary {
 HistoryFaultSummary buildHistoryFaultSummary(
     const HistoryFaultSummaryInput& input,
     const HistoryFaultSummaryOptions& options = {});
+
+// C1-c/C3: binding identity of a history summary (design freeze §3/§5).  The
+// component digests are filled by the producer when a summary is built:
+//   * linearization - linearization point / local-coordinate identity,
+//   * whitening     - whitening model identity,
+//   * mode_set      - the monitored fault mode set (anchors / onsets / ramps),
+//   * capacity      - the capacity policy and budget identity.
+// The digest is what a consumer binds into caches (StatisticalBoundKey
+// `history_summary_version`) and fingerprints.  A rebuild with ANY changed
+// component therefore can never be served from a stale entry; changing a
+// human-readable id alone is not a binding and is forbidden by the design.
+// The pipeline that fills these components is C1-b and is NOT wired in this
+// round (see the blocker record); this type and digest are the binding
+// carrier the pipeline will use.
+struct HistorySummaryVersion {
+  std::uint64_t linearization = 0;
+  std::uint64_t whitening = 0;
+  std::uint64_t mode_set = 0;
+  std::uint64_t capacity = 0;
+};
+
+// Deterministic 64-bit fold of the four components in fixed order.  Uses the
+// same constants/order as the integrity-config hash (`fnv1a64`), so the
+// convention is identical across the codebase.  Determinism and sensitivity
+// to every component are the only properties claimed.
+std::uint64_t digestHistorySummaryVersion(
+    const HistorySummaryVersion& version);
 
 }  // namespace uwb_imu_pl

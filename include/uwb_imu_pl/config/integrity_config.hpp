@@ -44,6 +44,20 @@ struct IntegrityWindowConfig {
   bool require_history_provenance = true;
 };
 
+struct HistoryCapacityConfig {
+  // C1-c/C2: history-summary capacity keys (strict loader; design freeze
+  // history-summary-design.md §7.6/§7.7).  All-zero capacity is the pre-C1-b
+  // state: the summary path is not wired yet, so nothing is produced and
+  // nothing is refused.  `capacity_action` semantics are frozen:
+  // REFUSE / RESET / STOP_PROTECTED - the summary path must never silently
+  // drop the oldest fault.  Enforcement (counting, unusable marking) lives in
+  // the C1-b summary manager; this struct only carries the validated values.
+  std::uint64_t max_summary_rows = 0;
+  std::uint64_t max_fault_columns = 0;
+  std::uint64_t max_perp_rows = 0;
+  std::string capacity_action = "REFUSE";
+};
+
 struct DetectorConfigV2 {
   std::string type = "joint_window_residual_chi_square";
   double p_fa_per_test = 1e-6;
@@ -179,6 +193,7 @@ struct IntegrityConfig {
   RiskBudget risk;
   RiskBudgetV2 risk_v2;
   IntegrityWindowConfig integrity_window;
+  HistoryCapacityConfig history;
   DetectorConfigV2 detector;
   FaultModelsConfig fault_models;
   FdeConfigV2 fde;

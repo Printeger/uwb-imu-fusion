@@ -275,4 +275,19 @@ Eigen::VectorXd HistoryFaultSummary::conditionalBoundaryMeanDelta(
   return -boundaryMeanShiftForFault(f);
 }
 
+std::uint64_t digestHistorySummaryVersion(
+    const HistorySummaryVersion& version) {
+  const std::uint64_t components[4] = {version.linearization,
+                                       version.whitening, version.mode_set,
+                                       version.capacity};
+  std::uint64_t hash = 1469598103934665603ULL;
+  for (const std::uint64_t component : components) {
+    for (int shift = 0; shift < 64; shift += 8) {
+      hash ^= (component >> shift) & 0xFFULL;
+      hash *= 1099511628211ULL;
+    }
+  }
+  return hash;
+}
+
 }  // namespace uwb_imu_pl

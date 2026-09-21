@@ -43,6 +43,19 @@ integrity_window:
   max_linearization_step_norm: 0.25
   require_history_provenance: true
 
+# C1-c/C2: history-summary capacity keys (strict loader; unknown keys, missing
+# keys and unknown actions are hard errors).  All-zero capacity is the
+# pre-C1-b state: the summary path is not wired yet, so nothing is produced
+# and nothing is refused.  `capacity_action` (REFUSE / RESET / STOP_PROTECTED,
+# default REFUSE) governs what happens once the wired summary exceeds a
+# capacity: refuse / valid reset or rebuild / stop protected publication -
+# never silently drop the oldest fault.
+history:
+  max_summary_rows: 0
+  max_fault_columns: 0
+  max_perp_rows: 0
+  capacity_action: REFUSE
+
 detector:
   type: joint_window_residual_chi_square
   p_fa_per_test: 1.0e-6
