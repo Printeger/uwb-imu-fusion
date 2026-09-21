@@ -244,10 +244,46 @@ struct CandidateDiagnostics {
   double pl_ms = 0.0;
 };
 
+// C1-c diagnostics v15 (additive): the condensed boundary's fault-preserving
+// history summary exactly as the window carried it.  The pooled detector
+// identity is  T_pooled = ||r_c||^2 + kappa_b + constant_offset  and
+// nu_pooled = nu_c + nu_perp, so the fields below are the terms the pooled
+// statistic/dof are assembled from (nothing is recomputed downstream).
+struct HistorySummaryDiagnostics {
+  bool present = false;
+  bool valid = false;
+  bool capacity_ok = true;
+  std::string state;
+  std::string reason;
+  std::uint64_t version_digest = 0;
+  std::size_t fault_columns = 0;
+  std::size_t boundary_rows = 0;
+  std::size_t emitted_rows = 0;
+  std::size_t boundary_columns = 0;
+  int rank_boundary = 0;
+  int nu_perp = 0;
+  double kappa_b = 0.0;
+  double constant_offset = 0.0;
+  double omega_trace = 0.0;
+  double xi_norm = 0.0;
+  std::size_t information_form_factors = 0;
+  std::size_t injected_epochs = 0;
+  std::size_t horizon_first_epoch = 0;
+  std::size_t window_first_epoch = 0;
+  std::size_t omitted_epoch_count = 0;
+  std::size_t material_gap_epoch_count = 0;
+  bool claims_full_coverage = false;
+  std::string assumptions;
+  std::string omitted_risk_source;
+};
+
 struct AttemptDiagnostics {
   std::vector<std::uint64_t> frozen_group_ids;
   std::uint64_t input_attempt_id = 0;
   TimestampNs input_timestamp;
+  // C1-c: the condensed boundary summary of the frozen window this attempt
+  // was judged on (empty when the request carried no condensed material).
+  HistorySummaryDiagnostics history_summary;
   std::uint64_t ordering_version = 0;
   std::uint64_t noise_model_version = 0;
   std::uint64_t backend_epoch_before = 0;

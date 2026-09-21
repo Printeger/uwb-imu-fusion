@@ -135,6 +135,7 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/integrity/history_fault_summary.cpp
   src/uwb_imu_pl/integrity/history_fault_parameterization.cpp
   src/uwb_imu_pl/integrity/history_summary_extraction.cpp
+  src/uwb_imu_pl/integrity/history_summary_lifecycle.cpp
   src/uwb_imu_pl/factors/kinematic_bridge_factor.cpp
 )
 
@@ -312,6 +313,16 @@ if(CATKIN_ENABLE_TESTING)
   target_compile_definitions(test_history_summary_extraction PRIVATE
     UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
   target_link_libraries(test_history_summary_extraction ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_history_summary_lifecycle test/test_history_summary_lifecycle.cpp test/test_main.cpp)
+  target_compile_definitions(test_history_summary_lifecycle PRIVATE
+    UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(test_history_summary_lifecycle ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_history_summary_pipeline test/test_history_summary_pipeline.cpp test/test_main.cpp)
+  target_compile_definitions(test_history_summary_pipeline PRIVATE
+    UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(test_history_summary_pipeline ${PROJECT_NAME} gtsam gtsam_unstable ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
 
   add_rostest(test/realtime_integrity_viz.test)
 

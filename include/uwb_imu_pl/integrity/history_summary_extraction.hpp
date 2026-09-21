@@ -37,7 +37,6 @@
 #include <gtsam/linear/GaussianFactorGraph.h>
 
 #include <Eigen/Core>
-
 #include <string>
 #include <vector>
 

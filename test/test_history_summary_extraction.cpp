@@ -7,26 +7,24 @@
 // (precision / dof correctness / complexity) lives in
 // doc/evidence/integrity-kernel-refactor/history-fault-parameterization.md.
 
-#include "uwb_imu_pl/config/integrity_config.hpp"
-#include "uwb_imu_pl/estimation/incremental_estimator.hpp"
-#include "uwb_imu_pl/integrity/history_fault_summary.hpp"
-#include "uwb_imu_pl/integrity/history_summary_extraction.hpp"
-
 #include <gtest/gtest.h>
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/linear/JacobianFactor.h>
 
-#include <boost/shared_ptr.hpp>
-
 #include <Eigen/SVD>
-
 #include <algorithm>
+#include <boost/shared_ptr.hpp>
 #include <cmath>
 #include <cstdio>
 #include <map>
 #include <set>
 #include <string>
 #include <vector>
+
+#include "uwb_imu_pl/config/integrity_config.hpp"
+#include "uwb_imu_pl/estimation/incremental_estimator.hpp"
+#include "uwb_imu_pl/integrity/history_fault_summary.hpp"
+#include "uwb_imu_pl/integrity/history_summary_extraction.hpp"
 
 namespace {
 
@@ -43,13 +41,12 @@ double relErrMatrix(const Eigen::MatrixXd& got, const Eigen::MatrixXd& want) {
   return (got - want).norm() / scale;
 }
 
-gtsam::GaussianFactorGraph linearGraph(
-    const Eigen::MatrixXd& H, const Eigen::VectorXd& z,
-    const std::vector<gtsam::Key>& keys) {
+gtsam::GaussianFactorGraph linearGraph(const Eigen::MatrixXd& H,
+                                       const Eigen::VectorXd& z,
+                                       const std::vector<gtsam::Key>& keys) {
   std::vector<std::pair<gtsam::Key, Eigen::MatrixXd>> terms;
   for (std::size_t i = 0; i < keys.size(); ++i) {
-    terms.emplace_back(keys[i],
-                       Eigen::MatrixXd(H.col(static_cast<int>(i))));
+    terms.emplace_back(keys[i], Eigen::MatrixXd(H.col(static_cast<int>(i))));
   }
   gtsam::GaussianFactorGraph graph;
   graph.emplace_shared<gtsam::JacobianFactor>(terms, Eigen::VectorXd(z));
@@ -82,8 +79,8 @@ UwbBatch batch(const IntegrityConfig& config, std::int64_t time_ns) {
     measurement.anchor_id = config.anchors[i].id;
     measurement.timestamp = value.timestamp;
     measurement.anchor_position_m = config.anchors[i].position_world_m;
-    measurement.range_m = (measurement.anchor_position_m -
-                           Eigen::Vector3d(0, 0, 1)).norm();
+    measurement.range_m =
+        (measurement.anchor_position_m - Eigen::Vector3d(0, 0, 1)).norm();
     measurement.sigma_m = 0.05;
     value.measurements.push_back(measurement);
   }
@@ -102,8 +99,8 @@ EpochTransaction matureTransaction(IncrementalUwbImuEstimator* estimator,
     for (int sample = 1; sample <= 10; ++sample) {
       ImuMeasurement imu;
       imu.id = MeasurementId(epoch * 1000 + sample);
-      imu.timestamp = TimestampNs(static_cast<std::int64_t>(
-          ((epoch - 1) * 10 + sample) * 5000000));
+      imu.timestamp = TimestampNs(
+          static_cast<std::int64_t>(((epoch - 1) * 10 + sample) * 5000000));
       imu.specific_force_mps2 = {0, 0, config.imu.gravity_mps2};
       estimator->ingestImu(imu);
     }
@@ -125,16 +122,14 @@ EpochTransaction matureTransaction(IncrementalUwbImuEstimator* estimator,
 
 }  // namespace
 
-TEST(HistorySummaryExtraction, LinearizedRowsKeepTheConstantWhileReducedRowsDoNot) {
+TEST(HistorySummaryExtraction,
+     LinearizedRowsKeepTheConstantWhileReducedRowsDoNot) {
   const gtsam::Key k1 = gtsam::Symbol('x', 1);
   const gtsam::Key k2 = gtsam::Symbol('x', 2);
   const gtsam::Key k3 = gtsam::Symbol('x', 3);
   Eigen::MatrixXd H(5, 3);
-  H << 2.0, 1.0, 0.3,
-       0.4, 1.5, -0.2,
-       0.1, 0.2, 1.7,
-       -0.3, 0.5, 0.9,
-       0.6, -0.4, 0.2;
+  H << 2.0, 1.0, 0.3, 0.4, 1.5, -0.2, 0.1, 0.2, 1.7, -0.3, 0.5, 0.9, 0.6, -0.4,
+      0.2;
   Eigen::VectorXd z(5);
   z << 0.7, -0.3, 1.1, 0.2, -0.6;
 
@@ -175,10 +170,10 @@ TEST(HistorySummaryExtraction, LinearizedRowsKeepTheConstantWhileReducedRowsDoNo
 
   // Comparison route (i-b): rows of the QR-reduced graph.  The normal
   // content matches, the constant is dropped by GTSAM elimination.
-  const auto reduced =
-      graph.eliminatePartialMultifrontal(gtsam::KeyVector{k1},
-                                         gtsam::EliminateQR)
-          .second;
+  const auto reduced = graph
+                           .eliminatePartialMultifrontal(gtsam::KeyVector{k1},
+                                                         gtsam::EliminateQR)
+                           .second;
   const auto extracted = extractBoundaryRows(*reduced);
   ASSERT_TRUE(extracted.valid) << extracted.reason;
   EXPECT_EQ(extracted.data_columns(), 2);
@@ -204,8 +199,7 @@ TEST(HistorySummaryExtraction, LinearizedRowsKeepTheConstantWhileReducedRowsDoNo
   EXPECT_EQ(extracted_ii.data_columns(), 2);
   const auto via_information = summarizeRows(extracted_ii.rows);
   ASSERT_TRUE(via_information.valid) << via_information.invalid_reason;
-  EXPECT_LE(relErrMatrix(via_information.R_b.transpose() *
-                             via_information.R_b,
+  EXPECT_LE(relErrMatrix(via_information.R_b.transpose() * via_information.R_b,
                          direct.R_b.transpose() * direct.R_b),
             1e-9);
   EXPECT_EQ(via_information.kappaBoundary(), 0.0);
@@ -228,10 +222,7 @@ TEST(HistorySummaryExtraction, RankDeficientReducedSystemKeepsDofAccounting) {
   const gtsam::Key k2 = gtsam::Symbol('x', 2);
   const gtsam::Key k3 = gtsam::Symbol('x', 3);
   Eigen::MatrixXd H(4, 3);
-  H << 1.0, 1.0, 2.0,
-       0.5, 0.5, 1.0,
-       0.2, 0.2, 0.4,
-       0.9, 0.9, 1.8;
+  H << 1.0, 1.0, 2.0, 0.5, 0.5, 1.0, 0.2, 0.2, 0.4, 0.9, 0.9, 1.8;
   Eigen::VectorXd z(4);
   z << 1.0, -0.4, 0.6, 0.1;
 
@@ -255,10 +246,10 @@ TEST(HistorySummaryExtraction, RankDeficientReducedSystemKeepsDofAccounting) {
 
   // Route (ii) refuses the rank-deficient information instead of fabricating
   // a factor.
-  const auto reduced =
-      graph.eliminatePartialMultifrontal(gtsam::KeyVector{k1},
-                                         gtsam::EliminateQR)
-          .second;
+  const auto reduced = graph
+                           .eliminatePartialMultifrontal(gtsam::KeyVector{k1},
+                                                         gtsam::EliminateQR)
+                           .second;
   gtsam::Ordering ordering;
   ordering.push_back(k2);
   ordering.push_back(k3);
@@ -364,9 +355,9 @@ TEST(HistorySummaryExtraction, RealWindowRowsMatchReducedInformation) {
   // Reference 1: reduced information (GTSAM elimination of the outside keys).
   gtsam::GaussianFactorGraph::shared_ptr reduced = gaussian;
   if (!outside.empty()) {
-    reduced = gaussian->eliminatePartialMultifrontal(outside,
-                                                     gtsam::EliminateQR)
-                  .second;
+    reduced =
+        gaussian->eliminatePartialMultifrontal(outside, gtsam::EliminateQR)
+            .second;
   }
   const auto hessian = reduced->hessian(inside);
   const Eigen::MatrixXd summary_information =
@@ -383,9 +374,8 @@ TEST(HistorySummaryExtraction, RealWindowRowsMatchReducedInformation) {
       summary_information.allFinite() ? 1 : 0, hessian.first.norm(),
       summary_information.norm(),
       hessian.first.size() ? hessian.first.cwiseAbs().maxCoeff() : 0.0,
-      summary_information.size()
-          ? summary_information.cwiseAbs().maxCoeff()
-          : 0.0);
+      summary_information.size() ? summary_information.cwiseAbs().maxCoeff()
+                                 : 0.0);
   const double information_relative_error =
       relErrMatrix(summary_information, hessian.first);
   EXPECT_LE(information_relative_error, 1e-7);
@@ -394,8 +384,8 @@ TEST(HistorySummaryExtraction, RealWindowRowsMatchReducedInformation) {
   // the full row system, so kappa is compared against a real minimization.
   const Eigen::MatrixXd full_h = extracted.rows.leftCols(columns);
   const Eigen::VectorXd full_z = extracted.rows.col(columns);
-  Eigen::JacobiSVD<Eigen::MatrixXd> svd(full_h, Eigen::ComputeThinU |
-                                                    Eigen::ComputeThinV);
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(
+      full_h, Eigen::ComputeThinU | Eigen::ComputeThinV);
   const Eigen::VectorXd singular = svd.singularValues();
   const double gate = singular.size() ? 1e-12 * singular(0) : 0.0;
   Eigen::MatrixXd inverse =

@@ -1,5 +1,3 @@
-#include "uwb_imu_pl/config/integrity_config.hpp"
-
 #include <gtest/gtest.h>
 
 #include <fstream>
@@ -7,11 +5,12 @@
 #include <stdexcept>
 #include <string>
 
+#include "uwb_imu_pl/config/integrity_config.hpp"
+
 namespace {
 
-const std::string kResearchConfig =
-    std::string(UWB_IMU_PL_SOURCE_DIR) +
-    "/config/realtime_uwb_imu_pl_research.yaml";
+const std::string kResearchConfig = std::string(UWB_IMU_PL_SOURCE_DIR) +
+                                    "/config/realtime_uwb_imu_pl_research.yaml";
 
 std::string readConfig() {
   std::ifstream input(kResearchConfig);
@@ -37,8 +36,7 @@ std::string withFixedLag(std::string text, const std::string& value) {
     throw std::runtime_error("fixed_lag_epochs key not found");
   }
   const auto end = text.find('\n', position);
-  text.replace(position, end - position,
-               prefix + " " + value);
+  text.replace(position, end - position, prefix + " " + value);
   return text;
 }
 
@@ -47,25 +45,23 @@ std::string writeTemp(const std::string& text, int index) {
   // research configuration is rewritten to the repository file.  The manifest
   // itself is loaded and cross-checked in every case.
   std::string body = text;
-  const std::string relative =
-      "  manifest_path: integrity_fault_manifest.yaml";
+  const std::string relative = "  manifest_path: integrity_fault_manifest.yaml";
   const auto manifest = body.find(relative);
   if (manifest != std::string::npos) {
     body.replace(manifest, relative.size(),
                  "  manifest_path: " + std::string(UWB_IMU_PL_SOURCE_DIR) +
                      "/config/integrity_fault_manifest.yaml");
   }
-  const std::string path = "/tmp/uwb_imu_pl_integrity_config_" +
-      std::to_string(index) + ".yaml";
+  const std::string path =
+      "/tmp/uwb_imu_pl_integrity_config_" + std::to_string(index) + ".yaml";
   std::ofstream output(path);
   output << body;
   return path;
 }
 
 void expectRejected(const std::string& text, int index) {
-  EXPECT_THROW(
-      uwb_imu_pl::IntegrityConfigLoader::load(writeTemp(text, index)),
-      std::exception);
+  EXPECT_THROW(uwb_imu_pl::IntegrityConfigLoader::load(writeTemp(text, index)),
+               std::exception);
 }
 
 }  // namespace
@@ -84,15 +80,15 @@ TEST(IntegrityConfig, LoadsStrictResearchConfiguration) {
   EXPECT_EQ(config.fault_models.max_cardinality, 2u);
   EXPECT_TRUE(config.fault_models.single_faults_enabled);
   EXPECT_FALSE(config.fault_models.double_faults_enabled);
-  EXPECT_EQ(uwb_imu_pl::enabledFaultHypothesisCardinality(
-                config.fault_models), 1u);
+  EXPECT_EQ(uwb_imu_pl::enabledFaultHypothesisCardinality(config.fault_models),
+            1u);
   EXPECT_EQ(config.fde.max_candidate_count, 128u);
   EXPECT_EQ(config.fde.max_exclusion_cardinality, 2u);
   EXPECT_TRUE(config.incremental.single_transaction_per_epoch);
   EXPECT_TRUE(config.incremental.fixed_lag_epochs == 0u ||
               config.incremental.fixed_lag_epochs >
                   config.integrity_window.epochs +
-                  config.integrity_window.recovery_margin_epochs);
+                      config.integrity_window.recovery_margin_epochs);
   EXPECT_FALSE(config.resolved_yaml.empty());
   EXPECT_EQ(config.resolved_yaml.back(), '\n');
 }
@@ -100,14 +96,12 @@ TEST(IntegrityConfig, LoadsStrictResearchConfiguration) {
 TEST(IntegrityConfig, SupportsValidFaultCardinalityPolicies) {
   const std::string base = readConfig();
   const auto load = [&](bool single, bool double_enabled, int index) {
-    auto text = replaceOnce(
-        base, "  single_faults_enabled: true\n",
-        std::string("  single_faults_enabled: ") +
-            (single ? "true\n" : "false\n"));
-    text = replaceOnce(
-        text, "  double_faults_enabled: false\n",
-        std::string("  double_faults_enabled: ") +
-            (double_enabled ? "true\n" : "false\n"));
+    auto text = replaceOnce(base, "  single_faults_enabled: true\n",
+                            std::string("  single_faults_enabled: ") +
+                                (single ? "true\n" : "false\n"));
+    text = replaceOnce(text, "  double_faults_enabled: false\n",
+                       std::string("  double_faults_enabled: ") +
+                           (double_enabled ? "true\n" : "false\n"));
     // A3 migration: keep the canonical order key consistent with the legacy
     // switches instead of silently overriding either spelling.
     text = replaceOnce(
@@ -116,14 +110,15 @@ TEST(IntegrityConfig, SupportsValidFaultCardinalityPolicies) {
     return uwb_imu_pl::IntegrityConfigLoader::load(writeTemp(text, index));
   };
   const auto single = load(true, false, 60);
-  EXPECT_EQ(uwb_imu_pl::enabledFaultHypothesisCardinality(
-                single.fault_models), 1u);
+  EXPECT_EQ(uwb_imu_pl::enabledFaultHypothesisCardinality(single.fault_models),
+            1u);
   const auto both = load(true, true, 61);
-  EXPECT_EQ(uwb_imu_pl::enabledFaultHypothesisCardinality(
-                both.fault_models), 2u);
+  EXPECT_EQ(uwb_imu_pl::enabledFaultHypothesisCardinality(both.fault_models),
+            2u);
   const auto double_only = load(false, true, 62);
-  EXPECT_EQ(uwb_imu_pl::enabledFaultHypothesisCardinality(
-                double_only.fault_models), 2u);
+  EXPECT_EQ(
+      uwb_imu_pl::enabledFaultHypothesisCardinality(double_only.fault_models),
+      2u);
   EXPECT_EQ(double_only.fde.max_exclusion_cardinality, 2u);
   auto neither = replaceOnce(base, "  single_faults_enabled: true\n",
                              "  single_faults_enabled: false\n");
@@ -132,8 +127,8 @@ TEST(IntegrityConfig, SupportsValidFaultCardinalityPolicies) {
 
 TEST(IntegrityConfig, ValidatesDoubleFaultSubtypesAndLegacyDefaults) {
   const std::string base = readConfig();
-  auto double_enabled = replaceOnce(base,
-      "  double_faults_enabled: false\n", "  double_faults_enabled: true\n");
+  auto double_enabled = replaceOnce(base, "  double_faults_enabled: false\n",
+                                    "  double_faults_enabled: true\n");
   double_enabled = replaceOnce(double_enabled, "  max_fault_order: 1\n",
                                "  max_fault_order: 2\n");
   auto none = replaceOnce(double_enabled, "    uwb_plus_accel: true\n",
@@ -143,17 +138,19 @@ TEST(IntegrityConfig, ValidatesDoubleFaultSubtypesAndLegacyDefaults) {
   expectRejected(none, 64);
   const auto accel_only = uwb_imu_pl::IntegrityConfigLoader::load(
       writeTemp(replaceOnce(double_enabled, "    uwb_plus_gyro: true\n",
-                            "    uwb_plus_gyro: false\n"), 65));
+                            "    uwb_plus_gyro: false\n"),
+                65));
   EXPECT_TRUE(accel_only.fault_models.combinations.uwb_plus_accel);
   EXPECT_FALSE(accel_only.fault_models.combinations.uwb_plus_gyro);
   expectRejected(replaceOnce(double_enabled, "    two_uwb: false\n",
-                             "    two_uwb: true\n"), 66);
+                             "    two_uwb: true\n"),
+                 66);
 
   auto legacy = replaceOnce(base, "  single_faults_enabled: true\n", "");
   legacy = replaceOnce(legacy, "  double_faults_enabled: false\n", "");
   legacy = replaceOnce(legacy, "  max_exclusion_cardinality: 2\n", "");
-  const auto loaded = uwb_imu_pl::IntegrityConfigLoader::load(
-      writeTemp(legacy, 67));
+  const auto loaded =
+      uwb_imu_pl::IntegrityConfigLoader::load(writeTemp(legacy, 67));
   EXPECT_TRUE(loaded.fault_models.single_faults_enabled);
   EXPECT_FALSE(loaded.fault_models.double_faults_enabled);
   EXPECT_EQ(loaded.fde.max_exclusion_cardinality, 2u);
@@ -167,23 +164,22 @@ TEST(IntegrityConfig, ValidatesDoubleFaultSubtypesAndLegacyDefaults) {
 
 TEST(IntegrityConfig, RejectsMissingRequiredFieldInEverySection) {
   const std::string base = readConfig();
-  const std::string fields[] = {
-      "schema_version: uwb-imu-pl/v5\n",
-      "seed: 20260901\n",
-      "  dimensions: 3\n",
-      "  relinearize_threshold: 0.1\n",
-      "  accelerometer_sigma: 0.10\n",
-      "  p_fa_per_test: 1.0e-6\n",
-      "integrity_window:\n",
-      "fault_models:\n",
-      "fde:\n",
-      "bridge:\n",
-      "health:\n",
-      "risk:\n",
-      "robust_shadow:\n",
-      "  root: results/realtime_uwb_imu_pl\n",
-      "  world_frame: world\n",
-      "anchors:\n"};
+  const std::string fields[] = {"schema_version: uwb-imu-pl/v5\n",
+                                "seed: 20260901\n",
+                                "  dimensions: 3\n",
+                                "  relinearize_threshold: 0.1\n",
+                                "  accelerometer_sigma: 0.10\n",
+                                "  p_fa_per_test: 1.0e-6\n",
+                                "integrity_window:\n",
+                                "fault_models:\n",
+                                "fde:\n",
+                                "bridge:\n",
+                                "health:\n",
+                                "risk:\n",
+                                "robust_shadow:\n",
+                                "  root: results/realtime_uwb_imu_pl\n",
+                                "  world_frame: world\n",
+                                "anchors:\n"};
   int index = 0;
   for (const auto& field : fields) {
     expectRejected(replaceOnce(base, field, ""), index++);
@@ -201,10 +197,10 @@ TEST(IntegrityConfig, RejectsUnknownRootSectionAndAnchorKeys) {
 
 TEST(IntegrityConfig, RejectsInvalidRiskAndUnsupportedOnlineModes) {
   const std::string base = readConfig();
-  expectRejected(replaceOnce(base, "p_hmi_total: 4.0e-5",
-                             "p_hmi_total: 1.0e-8"), 30);
-  expectRejected(replaceOnce(base, "enable_method_b: false",
-                             "enable_method_b: true"), 31);
+  expectRejected(
+      replaceOnce(base, "p_hmi_total: 4.0e-5", "p_hmi_total: 1.0e-8"), 30);
+  expectRejected(
+      replaceOnce(base, "enable_method_b: false", "enable_method_b: true"), 31);
   expectRejected(withFixedLag(base, "1"), 32);
   expectRejected(withFixedLag(base, "-1"), 33);
   expectRejected(withFixedLag(base, "4294967296"), 34);
@@ -215,9 +211,9 @@ TEST(IntegrityConfig, RuntimeOverrideAcceptsFullHistoryAndFixedLag) {
     const auto loaded = uwb_imu_pl::IntegrityConfigLoader::load(
         kResearchConfig, std::to_string(value));
     EXPECT_EQ(loaded.incremental.fixed_lag_epochs, value);
-    EXPECT_NE(loaded.resolved_yaml.find(
-                  "fixed_lag_epochs: " + std::to_string(value)),
-              std::string::npos);
+    EXPECT_NE(
+        loaded.resolved_yaml.find("fixed_lag_epochs: " + std::to_string(value)),
+        std::string::npos);
   }
 }
 
@@ -226,26 +222,26 @@ TEST(IntegrityConfig, RetainsV4ConfigurationReadCompatibility) {
   while (legacy.find("uwb-imu-pl/v5") != std::string::npos) {
     legacy = replaceOnce(legacy, "uwb-imu-pl/v5", "uwb-imu-pl/v4");
   }
-  const auto loaded = uwb_imu_pl::IntegrityConfigLoader::load(
-      writeTemp(legacy, 41));
+  const auto loaded =
+      uwb_imu_pl::IntegrityConfigLoader::load(writeTemp(legacy, 41));
   EXPECT_EQ(loaded.schema_version, "uwb-imu-pl/v4");
   EXPECT_EQ(loaded.output.schema_version, "uwb-imu-pl/v4");
 }
 
 TEST(IntegrityConfig, RuntimeOverrideRejectsIllegalValues) {
   for (const std::string& value : {"1", "-1", "4294967296", "2.5", "x"}) {
-    EXPECT_THROW(uwb_imu_pl::IntegrityConfigLoader::load(kResearchConfig,
-                                                         value),
-                 std::exception)
+    EXPECT_THROW(
+        uwb_imu_pl::IntegrityConfigLoader::load(kResearchConfig, value),
+        std::exception)
         << value;
   }
 }
 
 TEST(IntegrityConfig, HashCoversResolvedConfigurationAfterOverride) {
-  const auto full_history = uwb_imu_pl::IntegrityConfigLoader::load(
-      kResearchConfig, "0");
-  const auto fixed_lag = uwb_imu_pl::IntegrityConfigLoader::load(
-      kResearchConfig, "200");
+  const auto full_history =
+      uwb_imu_pl::IntegrityConfigLoader::load(kResearchConfig, "0");
+  const auto fixed_lag =
+      uwb_imu_pl::IntegrityConfigLoader::load(kResearchConfig, "200");
   EXPECT_NE(full_history.config_hash, fixed_lag.config_hash);
   EXPECT_NE(full_history.resolved_yaml, fixed_lag.resolved_yaml);
 
@@ -274,8 +270,8 @@ TEST(IntegrityConfig, UnifiedOverridesAreResolvedAndHashed) {
   overrides.write_residuals = false;
   overrides.write_timing = false;
   overrides.output_root = "results/week4_fixture";
-  const auto loaded = uwb_imu_pl::IntegrityConfigLoader::load(
-      kResearchConfig, overrides);
+  const auto loaded =
+      uwb_imu_pl::IntegrityConfigLoader::load(kResearchConfig, overrides);
   EXPECT_EQ(loaded.seed, 20260902u);
   EXPECT_EQ(loaded.incremental.fixed_lag_epochs, 50u);
   EXPECT_TRUE(loaded.output.write_global_diagnostics);
@@ -285,19 +281,20 @@ TEST(IntegrityConfig, UnifiedOverridesAreResolvedAndHashed) {
   EXPECT_NE(loaded.resolved_yaml.find("seed: 20260902"), std::string::npos);
   EXPECT_NE(loaded.resolved_yaml.find("root: results/week4_fixture"),
             std::string::npos);
-  EXPECT_NE(loaded.config_hash,
-            uwb_imu_pl::IntegrityConfigLoader::load(kResearchConfig).config_hash);
+  EXPECT_NE(
+      loaded.config_hash,
+      uwb_imu_pl::IntegrityConfigLoader::load(kResearchConfig).config_hash);
 }
 
 TEST(IntegrityConfig, DevelopmentManifestHashTracksAppendedOverrides) {
   const auto base = uwb_imu_pl::IntegrityConfigLoader::load(kResearchConfig);
-  const std::string resolved = base.resolved_yaml +
-      "development_formal_eligible: false\n";
+  const std::string resolved =
+      base.resolved_yaml + "development_formal_eligible: false\n";
   EXPECT_NE(uwb_imu_pl::IntegrityConfigLoader::hashResolvedYaml(resolved),
             base.config_hash);
-  EXPECT_EQ(uwb_imu_pl::IntegrityConfigLoader::hashResolvedYaml(
-                base.resolved_yaml),
-            base.config_hash);
+  EXPECT_EQ(
+      uwb_imu_pl::IntegrityConfigLoader::hashResolvedYaml(base.resolved_yaml),
+      base.config_hash);
 }
 
 TEST(IntegrityConfig, HistoryCapacityKeysAreStrictlyLoaded) {
@@ -323,8 +320,8 @@ TEST(IntegrityConfig, HistoryCapacityKeysAreStrictlyLoaded) {
                            "  max_summary_rows: 4096");
   tuned_text = replaceOnce(tuned_text, "  max_fault_columns: 512",
                            "  max_fault_columns: 128");
-  tuned_text = replaceOnce(tuned_text, "  max_perp_rows: 512",
-                           "  max_perp_rows: 2048");
+  tuned_text =
+      replaceOnce(tuned_text, "  max_perp_rows: 512", "  max_perp_rows: 2048");
   tuned_text = replaceOnce(tuned_text, "  capacity_action: REFUSE",
                            "  capacity_action: STOP_PROTECTED");
   const auto tuned = IntegrityConfigLoader::load(writeTemp(tuned_text, 70));
@@ -343,16 +340,17 @@ TEST(IntegrityConfig, HistoryCapacityKeysAreStrictlyLoaded) {
   EXPECT_EQ(absent.history.capacity_action, "REFUSE");
 
   // Unknown key inside the section is rejected.
-  auto unknown_text = replaceOnce(readConfig(), section,
-                                  section + "  max_widgets: 1\n");
+  auto unknown_text =
+      replaceOnce(readConfig(), section, section + "  max_widgets: 1\n");
   expectRejected(unknown_text, 72);
 
   // Unknown capacity action is rejected.
   auto bad_action = replaceOnce(readConfig(), "  capacity_action: REFUSE",
-                               "  capacity_action: DROP_OLDEST");
+                                "  capacity_action: DROP_OLDEST");
   expectRejected(bad_action, 73);
 
   // A present section must be complete: a missing key is rejected.
-  auto missing_key = replaceOnce(readConfig(), "  max_fault_columns: 512\n", "");
+  auto missing_key =
+      replaceOnce(readConfig(), "  max_fault_columns: 512\n", "");
   expectRejected(missing_key, 74);
 }

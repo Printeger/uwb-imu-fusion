@@ -6,24 +6,23 @@
 // window-side columns compared on shared material).  The subsystem under
 // test is `history_fault_parameterization.{hpp,cpp}`.
 
-#include "uwb_imu_pl/config/integrity_config.hpp"
-#include "uwb_imu_pl/estimation/incremental_estimator.hpp"
-#include "uwb_imu_pl/integrity/history_fault_parameterization.hpp"
-#include "uwb_imu_pl/integrity/hypothesis_generator.hpp"
-#include "uwb_imu_pl/integrity/imu_fault_subspace.hpp"
-
 #include <gtest/gtest.h>
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/linear/JacobianFactor.h>
 
-#include <boost/shared_ptr.hpp>
-
 #include <algorithm>
+#include <boost/shared_ptr.hpp>
 #include <cmath>
 #include <cstdio>
 #include <map>
 #include <set>
 #include <string>
+
+#include "uwb_imu_pl/config/integrity_config.hpp"
+#include "uwb_imu_pl/estimation/incremental_estimator.hpp"
+#include "uwb_imu_pl/integrity/history_fault_parameterization.hpp"
+#include "uwb_imu_pl/integrity/hypothesis_generator.hpp"
+#include "uwb_imu_pl/integrity/imu_fault_subspace.hpp"
 
 namespace {
 
@@ -46,8 +45,8 @@ UwbBatch batch(const IntegrityConfig& config, std::int64_t time_ns) {
     measurement.anchor_id = config.anchors[i].id;
     measurement.timestamp = value.timestamp;
     measurement.anchor_position_m = config.anchors[i].position_world_m;
-    measurement.range_m = (measurement.anchor_position_m -
-                           Eigen::Vector3d(0, 0, 1)).norm();
+    measurement.range_m =
+        (measurement.anchor_position_m - Eigen::Vector3d(0, 0, 1)).norm();
     measurement.sigma_m = 0.05;
     value.measurements.push_back(measurement);
   }
@@ -68,8 +67,8 @@ EpochTransaction matureTransaction(IncrementalUwbImuEstimator* estimator,
     for (int sample = 1; sample <= 10; ++sample) {
       ImuMeasurement imu;
       imu.id = MeasurementId(epoch * 1000 + sample);
-      imu.timestamp = TimestampNs(static_cast<std::int64_t>(
-          ((epoch - 1) * 10 + sample) * 5000000));
+      imu.timestamp = TimestampNs(
+          static_cast<std::int64_t>(((epoch - 1) * 10 + sample) * 5000000));
       imu.specific_force_mps2 = {0, 0, config.imu.gravity_mps2};
       estimator->ingestImu(imu);
     }
@@ -118,7 +117,8 @@ const HistoricalEpochContext* recordOf(const EpochTransaction& tx,
 
 }  // namespace
 
-TEST(HistoryFaultParameterization, PlanCoversRecoverableHorizonWithoutOverclaiming) {
+TEST(HistoryFaultParameterization,
+     PlanCoversRecoverableHorizonWithoutOverclaiming) {
   const auto config = researchConfig();
   IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
   NavigationState initial;
@@ -211,8 +211,8 @@ TEST(HistoryFaultParameterization, ColumnsMatchIndependentSelectionOracle) {
       const std::size_t rows = group->source_measurements.size();
       Eigen::VectorXd expected = Eigen::VectorXd::Zero(rows);
       for (std::size_t row = 0; row < rows; ++row) {
-        const UwbMeasurement* measurement = measurementOf(
-            record->uwb_batch, group->source_measurements[row]);
+        const UwbMeasurement* measurement =
+            measurementOf(record->uwb_batch, group->source_measurements[row]);
         if (!measurement ||
             measurement->anchor_id.value() != column.id.source) {
           continue;
@@ -222,8 +222,7 @@ TEST(HistoryFaultParameterization, ColumnsMatchIndependentSelectionOracle) {
                 ? 1.0
                 : measurement->timestamp.seconds() - record->begin.seconds();
       }
-      worst_uwb =
-          std::max(worst_uwb, (column.raw_map - expected).norm());
+      worst_uwb = std::max(worst_uwb, (column.raw_map - expected).norm());
       ++checked_uwb;
     } else {
       const PendingFactorGroup* group =
@@ -235,11 +234,9 @@ TEST(HistoryFaultParameterization, ColumnsMatchIndependentSelectionOracle) {
       // raw = L * whitened  <=>  whitened = L^-1 * raw
       const Eigen::VectorXd expected_whitened =
           llt.matrixL().solve(column.raw_map);
-      const double scale =
-          std::max(1.0, column.whitened_map.norm());
+      const double scale = std::max(1.0, column.whitened_map.norm());
       worst_imu = std::max(
-          worst_imu,
-          (column.whitened_map - expected_whitened).norm() / scale);
+          worst_imu, (column.whitened_map - expected_whitened).norm() / scale);
       EXPECT_EQ(column.raw_map.rows(), 15);
       ++checked_imu;
     }
@@ -255,7 +252,8 @@ TEST(HistoryFaultParameterization, ColumnsMatchIndependentSelectionOracle) {
       checked_uwb, worst_uwb, checked_imu, worst_imu);
 }
 
-TEST(HistoryFaultParameterization, WindowAndHistoryColumnsAgreeOnSharedMaterial) {
+TEST(HistoryFaultParameterization,
+     WindowAndHistoryColumnsAgreeOnSharedMaterial) {
   // A2: the same event produces identical columns through the window path
   // (HypothesisGenerator over the frozen window) and through the new
   // historical subsystem (same group material, historical-style context).
@@ -301,8 +299,8 @@ TEST(HistoryFaultParameterization, WindowAndHistoryColumnsAgreeOnSharedMaterial)
 
   const auto uwb_columns = buildHistoricalUwbColumnsForEpoch(current);
   const auto imu_columns = buildHistoricalImuColumnsForEpoch(current);
-  const UwbMeasurement* first = measurementOf(
-      tx.uwb_batch, nominal_uwb->source_measurements.front());
+  const UwbMeasurement* first =
+      measurementOf(tx.uwb_batch, nominal_uwb->source_measurements.front());
   ASSERT_NE(first, nullptr);
   const std::uint64_t anchor = first->anchor_id.value();
 
@@ -416,8 +414,7 @@ TEST(HistoryFaultParameterization, RampCombinationIsExactOverTheStepBasis) {
   }
 
   // Persistent: coefficient 1 on every constant column at/after onset.
-  const auto persistent =
-      persistentUwbCombination(anchor, onset, basis);
+  const auto persistent = persistentUwbCombination(anchor, onset, basis);
   ASSERT_GE(persistent.columns.size(), 2u);
   for (std::size_t i = 0; i < persistent.columns.size(); ++i) {
     EXPECT_EQ(persistent.columns[i].kind,
@@ -428,8 +425,8 @@ TEST(HistoryFaultParameterization, RampCombinationIsExactOverTheStepBasis) {
 
   // Ramp: value t - t_onset on the anchor rows, exactly represented by
   // 1 * (t - t_epoch_begin) + (t_epoch_begin - t_onset) * 1.
-  const auto ramp = rampUwbCombination(anchor, onset, onset_time_s,
-                                       epoch_begin_s, basis);
+  const auto ramp =
+      rampUwbCombination(anchor, onset, onset_time_s, epoch_begin_s, basis);
   std::set<std::size_t> ramp_epochs;
   double worst = 0.0;
   for (std::size_t i = 0; i < ramp.columns.size(); ++i) {
@@ -444,8 +441,8 @@ TEST(HistoryFaultParameterization, RampCombinationIsExactOverTheStepBasis) {
     // Response of the ramp combination restricted to this column's rows.
     const double coefficient = ramp.coefficients(i);
     for (std::size_t row = 0; row < group->source_measurements.size(); ++row) {
-      const UwbMeasurement* measurement = measurementOf(
-          record->uwb_batch, group->source_measurements[row]);
+      const UwbMeasurement* measurement =
+          measurementOf(record->uwb_batch, group->source_measurements[row]);
       if (!measurement || measurement->anchor_id.value() != anchor) continue;
       const double t = measurement->timestamp.seconds();
       const double direct = t - onset_time_s;
@@ -463,16 +460,18 @@ TEST(HistoryFaultParameterization, RampCombinationIsExactOverTheStepBasis) {
   // full combination identity is checked by summing both columns of an epoch.
   for (const std::size_t epoch : ramp_epochs) {
     const HistoricalEpochContext* record = recordOf(tx, epoch);
-    const PendingFactorGroup* group = selectedGroup(*record, FactorKind::UwbBatch);
+    const PendingFactorGroup* group =
+        selectedGroup(*record, FactorKind::UwbBatch);
     for (std::size_t row = 0; row < group->source_measurements.size(); ++row) {
-      const UwbMeasurement* measurement = measurementOf(
-          record->uwb_batch, group->source_measurements[row]);
+      const UwbMeasurement* measurement =
+          measurementOf(record->uwb_batch, group->source_measurements[row]);
       if (!measurement || measurement->anchor_id.value() != anchor) continue;
       const double t = measurement->timestamp.seconds();
       double total = 0.0;
       for (std::size_t i = 0; i < ramp.columns.size(); ++i) {
         if (ramp.columns[i].epoch != epoch) continue;
-        if (ramp.columns[i].kind == HistoryFaultBasisKind::UwbAnchorTimeLinear) {
+        if (ramp.columns[i].kind ==
+            HistoryFaultBasisKind::UwbAnchorTimeLinear) {
           total += ramp.coefficients(i) * (t - record->begin.seconds());
         } else {
           total += ramp.coefficients(i) * 1.0;
@@ -527,10 +526,10 @@ TEST(HistoryFaultParameterization, InjectionKeepsFaultKeysInSeparator) {
   // Fault keys survive eliminating every state key (they are in the
   // separator); state keys do not.
   gtsam::KeyVector state_keys = injection.state_keys;
-  const auto reduced = injection.graph
-                           .eliminatePartialMultifrontal(state_keys,
-                                                         gtsam::EliminateQR)
-                           .second;
+  const auto reduced =
+      injection.graph
+          .eliminatePartialMultifrontal(state_keys, gtsam::EliminateQR)
+          .second;
   std::set<gtsam::Key> remaining;
   for (const auto& factor : *reduced) {
     for (const gtsam::Key key : factor->keys()) remaining.insert(key);
@@ -549,27 +548,33 @@ TEST(HistoryFaultParameterization, InjectionKeepsFaultKeysInSeparator) {
   ASSERT_NE(factor, nullptr);
   const Eigen::MatrixXd A = factor->getA();
   const Eigen::VectorXd b = factor->getb();
-  const std::size_t state_count = injection.state_keys.size();
-  ASSERT_EQ(A.cols(), static_cast<int>(state_count + columns.size()));
+  // Column layout: the state keys contribute their tangent blocks (x/b: 6,
+  // v: 3) and the fault columns follow.  Re-baselined with the injection
+  // width fix (2026-09-21): the fault block starts at the summed tangent
+  // dimension of the state keys, not at the key count -- a per-key single
+  // column would truncate a 6-dimensional navigation key.
+  int state_width = 0;
+  for (const gtsam::Key key : injection.state_keys) {
+    state_width += gtsam::Symbol(key).chr() == 'v' ? 3 : 6;
+  }
+  ASSERT_EQ(A.cols(), state_width + static_cast<int>(columns.size()));
   double worst_norm = 0.0;
   for (std::size_t i = 0; i < columns.size(); ++i) {
-    const Eigen::VectorXd column = A.col(static_cast<int>(state_count + i));
+    const Eigen::VectorXd column = A.col(state_width + static_cast<int>(i));
     EXPECT_EQ((column - columns[i].whitened_map).norm(), 0.0)
         << "the injected column must be the whitened map exactly";
     const double plus = (column - b).squaredNorm();
     const double minus = (column + b).squaredNorm();
-    const double second_difference =
-        plus + minus - 2.0 * b.squaredNorm();
+    const double second_difference = plus + minus - 2.0 * b.squaredNorm();
     const double expected = 2.0 * columns[i].whitened_map.squaredNorm();
-    worst_norm = std::max(worst_norm,
-                          std::abs(second_difference - expected) /
-                              std::max(1.0, expected));
+    worst_norm = std::max(worst_norm, std::abs(second_difference - expected) /
+                                          std::max(1.0, expected));
   }
   EXPECT_LE(worst_norm, 1e-12);
   std::printf(
       "[HFP-TABLE] case=injection epoch=%zu columns=%zu state_keys=%zu "
-      "fault_keys=%zu rows=%zu worst_norm_rel=%.3e\n",
-      chosen_epoch, columns.size(), injection.state_keys.size(),
+      "state_width=%d fault_keys=%zu rows=%zu worst_norm_rel=%.3e\n",
+      chosen_epoch, columns.size(), injection.state_keys.size(), state_width,
       injection.fault_keys.size(), injection.rows, worst_norm);
 }
 

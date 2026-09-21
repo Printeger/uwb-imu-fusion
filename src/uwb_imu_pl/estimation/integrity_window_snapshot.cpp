@@ -180,6 +180,51 @@ std::uint64_t integrityWindowFingerprint(
       hashBytes(&hash, &value, sizeof(value));
     }
   }
+  // C1-b/C1-c: the condensed boundary IS the summary, so the summary identity
+  // is part of the window content.  Without this, a cache entry computed for a
+  // different summary version / mode set / horizon would still match the
+  // fingerprint of the rows alone (the rows are only the state-supported part
+  // of the summary; the response and detector content live in the carrier).
+  {
+    const auto& history = window.history_summary;
+    const bool present = history.present;
+    const bool valid = history.valid;
+    const bool capacity_ok = history.capacity_ok;
+    hashBytes(&hash, &present, sizeof(present));
+    hashBytes(&hash, &valid, sizeof(valid));
+    hashBytes(&hash, &capacity_ok, sizeof(capacity_ok));
+    hashBytes(&hash, &history.version_digest, sizeof(history.version_digest));
+    const std::uint64_t components[4] = {history.version.linearization,
+                                         history.version.whitening,
+                                         history.version.mode_set,
+                                         history.version.capacity};
+    hashBytes(&hash, components, sizeof(components));
+    const std::uint64_t counts[8] = {
+        static_cast<std::uint64_t>(history.fault_columns),
+        static_cast<std::uint64_t>(history.boundary_rows),
+        static_cast<std::uint64_t>(history.emitted_rows),
+        static_cast<std::uint64_t>(history.horizon_first_epoch),
+        static_cast<std::uint64_t>(history.window_first_epoch),
+        static_cast<std::uint64_t>(history.nu_perp),
+        static_cast<std::uint64_t>(history.omitted_epoch_count),
+        static_cast<std::uint64_t>(history.material_gap_epoch_count)};
+    hashBytes(&hash, counts, sizeof(counts));
+    hashBytes(&hash, &history.kappa_b, sizeof(history.kappa_b));
+    hashBytes(&hash, &history.constant_offset, sizeof(history.constant_offset));
+    for (const auto& id : history.column_ids) {
+      // HistoryFaultColumnId is a POD triple; hash its fields explicitly so
+      // padding cannot make the identity depend on the compiler.
+      const std::uint64_t tuple[3] = {static_cast<std::uint64_t>(id.kind),
+                                      id.source, id.epoch};
+      hashBytes(&hash, tuple, sizeof(tuple));
+    }
+    hashMatrix(&hash, history.response);
+    hashMatrix(&hash, history.detector_response);
+    hashMatrix(&hash, history.d_perp);
+    hashBytes(&hash, history.assumptions.data(), history.assumptions.size());
+    hashBytes(&hash, history.omitted_risk_source.data(),
+              history.omitted_risk_source.size());
+  }
   return hash;
 }
 

@@ -1,15 +1,16 @@
 #pragma once
 
-#include "uwb_imu_pl/estimation/factor_ledger.hpp"
-#include "uwb_imu_pl/estimation/square_root_context.hpp"
-
-#include <Eigen/Core>
 #include <Eigen/Cholesky>
-
+#include <Eigen/Core>
 #include <limits>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include "uwb_imu_pl/estimation/factor_ledger.hpp"
+#include "uwb_imu_pl/estimation/square_root_context.hpp"
+#include "uwb_imu_pl/integrity/history_fault_parameterization.hpp"
+#include "uwb_imu_pl/integrity/history_fault_summary.hpp"
 
 namespace uwb_imu_pl {
 
@@ -49,6 +50,88 @@ struct WindowCapabilities {
   bool no_duplicate_rows = false;
   bool every_active_factor_accounted_once = false;
   bool frozen_slot_identity_valid = false;
+  // C1-b: the condensed boundary is the fault-preserving history summary
+  // (square-root form), not the legacy eigendecomposition prior.
+  bool history_summary_present = false;
+  bool history_summary_valid = false;
+  bool history_summary_capacity_ok = true;
+};
+
+// C1-b: the fault-preserving history summary carried by a frozen window.
+//
+// The boundary factor block holds the condensed rows [R_b; 0] plus the
+// detection-only rows [0 | d_perp] (the square_root_context classifies the
+// latter automatically: zero Jacobian rows).  This carrier holds everything
+// that is NOT a window row: the fault response (T_b over the boundary
+// columns, F_b over the detection-only rows), the fault column identity
+// (per (kind, source, epoch), D-1 granularity), the A3 horizon bookkeeping,
+// the design-freeze binding digest and the capacity decision.  Mode maps for
+// historical faults are linear combinations of `response`/`detector_response`
+// columns (persistent = coefficient 1 on every epoch >= onset; ramp uses the
+// time-linear companion basis, exact by construction).
+struct WindowHistorySummary {
+  bool present = false;  // the boundary graph had material to summarize
+  bool valid = false;
+  std::string reason;
+
+  // Counts and audit views (kappa_b feeds the pooled statistic identity
+  // T_pooled = ||r_c||^2 + kappa_b, nu_perp the pooled dof).
+  std::size_t fault_columns = 0;
+  std::size_t boundary_rows = 0;     // rows extracted from the boundary graph
+  std::size_t boundary_columns = 0;  // x_b columns fed to the module
+  std::size_t emitted_rows = 0;      // rows the boundary block contributes
+  int rank_boundary = 0;
+  int nu_perp = 0;
+  double kappa_b = 0.0;
+  double constant_energy = 0.0;  // route (i) keeps the full constant content
+  std::size_t injected_epochs = 0;
+  std::vector<HistoryFaultColumnId> column_ids;
+  std::size_t constant_columns = 0;
+  std::size_t time_linear_columns = 0;
+  std::size_t imu_columns = 0;
+
+  // Fault response in the condensed basis: residual = [R_b;0] x - [d_b;d_perp]
+  // plus [T_b;F_b] f, so a mode map over the boundary block is the stacked
+  // column [response.col(i); detector_response.col(i)].
+  Eigen::MatrixXd response;           // T_b: boundary_columns x q
+  Eigen::MatrixXd detector_response;  // F_b: nu_perp x q
+  Eigen::VectorXd d_perp;             // nu_perp
+  Eigen::MatrixXd omega() const {
+    return detector_response.transpose() * detector_response;
+  }
+  Eigen::VectorXd xi() const { return detector_response.transpose() * d_perp; }
+
+  // Route (i) residual-constant accounting.  `kappa_b` is the row-space
+  // constant; `constant_offset` is the part of the constant that rows cannot
+  // represent, contributed by information-form boundary factors (the fixed-lag
+  // marginalization's LinearContainerFactors, whose rows are rebuilt by
+  // Cholesky).  Both are exported so nothing is dropped silently: the total
+  // detector constant is kappa_b + constant_offset.
+  double constant_offset = 0.0;
+  std::size_t information_form_factors = 0;
+
+  // A3 horizon / no-overclaim bookkeeping (plan text exported verbatim).
+  std::size_t horizon_first_epoch = 0;
+  std::size_t window_first_epoch = 0;
+  std::size_t omitted_epoch_count = 0;
+  std::size_t material_gap_epoch_count = 0;
+  bool claims_full_coverage = false;
+  std::string assumptions;
+  std::string omitted_risk_source;
+  std::size_t skipped_columns = 0;
+
+  // Design-freeze binding (§3/§5): what caches and fingerprints carry.
+  HistorySummaryVersion version;
+  std::uint64_t version_digest = 0;
+
+  // §7.6 row 7 / cold start: explicit state, never silent.
+  bool capacity_ok = true;
+  std::string capacity_action;
+  // Explicit state name (HistorySummaryState, lifecycle module): one of
+  // HISTORY_SUMMARY_{NOT_REQUIRED,VALID,INVALID,BUILD_INVALID} or
+  // HISTORY_CAPACITY_EXCEEDED.  Diagnostics and the cold-start contract read
+  // this instead of inferring a state from the counts.
+  std::string state;
 };
 
 struct FactorSlotAccounting {
@@ -122,7 +205,8 @@ struct FrozenWindowNumerics {
   double smallest_singular_value = 0.0;
   double largest_singular_value = 0.0;
   double smallest_information_lower_bound = 0.0;
-  double largest_information_upper_bound = std::numeric_limits<double>::infinity();
+  double largest_information_upper_bound =
+      std::numeric_limits<double>::infinity();
   double solve_relative_residual = std::numeric_limits<double>::infinity();
   double normal_equation_forward_error_bound =
       std::numeric_limits<double>::infinity();
@@ -131,7 +215,8 @@ struct FrozenWindowNumerics {
   // B1 square-root context summary (values owned by the context; mirrored here
   // for diagnostics and for consumers that only hold the numerics struct).
   double square_root_statistic = std::numeric_limits<double>::infinity();
-  double square_root_condition_estimate = std::numeric_limits<double>::infinity();
+  double square_root_condition_estimate =
+      std::numeric_limits<double>::infinity();
   int square_root_detector_only_rows = 0;
   bool square_root_certificate_ok = false;
   int exact_rank = 0;
@@ -177,6 +262,8 @@ struct LinearizedIntegrityWindow {
   // (detector statistic, hypothesis evidence, PL slopes, candidate base solve)
   // read from it; the LLT/spectral products above are reference fallbacks.
   std::shared_ptr<const FrozenSquareRootContext> square_root;
+  // C1-b: fault-preserving history summary of the condensed boundary.
+  WindowHistorySummary history_summary;
   bool model_valid = false;
   std::string reason;
 };
@@ -205,10 +292,10 @@ Eigen::MatrixXd solveFrozenInformation(const FrozenWindowNumerics& numerics,
 // square-root context when it is usable and certifies itself, and only then
 // fall back to the LLT/spectral reference path.  A fallback is always counted
 // (NumericalWorkCounters::square_rootFallbacks) so mixed use is visible.
-Eigen::MatrixXd solveFrozenInformation(
-    const FrozenSquareRootContext* context,
-    const FrozenWindowNumerics& numerics,
-    const Eigen::MatrixXd& information, const Eigen::MatrixXd& rhs,
-    bool* used_spectral_fallback = nullptr);
+Eigen::MatrixXd solveFrozenInformation(const FrozenSquareRootContext* context,
+                                       const FrozenWindowNumerics& numerics,
+                                       const Eigen::MatrixXd& information,
+                                       const Eigen::MatrixXd& rhs,
+                                       bool* used_spectral_fallback = nullptr);
 
 }  // namespace uwb_imu_pl

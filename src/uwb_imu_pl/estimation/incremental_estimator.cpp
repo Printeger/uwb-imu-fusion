@@ -1,33 +1,38 @@
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 
-#include "uwb_imu_pl/factors/realtime_factors.hpp"
-#include "uwb_imu_pl/factors/kinematic_bridge_factor.hpp"
-
-#include <gtsam/inference/Symbol.h>
 #include <gtsam/inference/Ordering.h>
-#include <gtsam/navigation/NavState.h>
-#include <gtsam/linear/GaussianFactorGraph.h>
+#include <gtsam/inference/Symbol.h>
 #include <gtsam/linear/GaussianBayesNet.h>
+#include <gtsam/linear/GaussianFactorGraph.h>
+#include <gtsam/linear/HessianFactor.h>
+#include <gtsam/navigation/NavState.h>
 #include <gtsam/nonlinear/LinearContainerFactor.h>
 #include <gtsam/nonlinear/Marginals.h>
-#include <gtsam/nonlinear/LinearContainerFactor.h>
 #include <gtsam/slam/PriorFactor.h>
 #include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
-
-#include <boost/make_shared.hpp>
 
 #include <Eigen/Cholesky>
 #include <Eigen/Eigenvalues>
 #include <Eigen/LU>
 #include <Eigen/SVD>
-
+#include <boost/make_shared.hpp>
 #include <chrono>
 #include <cmath>
-#include <functional>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <numeric>
 #include <set>
 #include <stdexcept>
+
+#include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
+#include "uwb_imu_pl/factors/kinematic_bridge_factor.hpp"
+#include "uwb_imu_pl/factors/realtime_factors.hpp"
+#include "uwb_imu_pl/integrity/history_fault_parameterization.hpp"
+#include "uwb_imu_pl/integrity/history_fault_summary.hpp"
+#include "uwb_imu_pl/integrity/history_summary_extraction.hpp"
+#include "uwb_imu_pl/integrity/history_summary_lifecycle.hpp"
 
 namespace uwb_imu_pl {
 
@@ -48,13 +53,16 @@ void cacheHashBytes(std::uint64_t* hash, const void* data, std::size_t size) {
     *hash *= 1099511628211ULL;
   }
 }
-template <class T> void cacheHashScalar(std::uint64_t* hash, const T& value) {
+template <class T>
+void cacheHashScalar(std::uint64_t* hash, const T& value) {
   cacheHashBytes(hash, &value, sizeof(value));
 }
 template <class Derived>
-void cacheHashMatrix(std::uint64_t* hash, const Eigen::MatrixBase<Derived>& value) {
+void cacheHashMatrix(std::uint64_t* hash,
+                     const Eigen::MatrixBase<Derived>& value) {
   const Eigen::Index rows = value.rows(), cols = value.cols();
-  cacheHashScalar(hash, rows); cacheHashScalar(hash, cols);
+  cacheHashScalar(hash, rows);
+  cacheHashScalar(hash, cols);
   for (Eigen::Index column = 0; column < cols; ++column)
     for (Eigen::Index row = 0; row < rows; ++row) {
       const double item = value(row, column);
@@ -70,11 +78,15 @@ std::uint64_t factorBlockFingerprint(const PendingFactorGroup& group,
                                      const EpochTransaction& tx) {
   std::uint64_t hash = 1469598103934665603ULL;
   const auto id = group.id.value();
-  cacheHashScalar(&hash, id); cacheHashScalar(&hash, group.kind);
-  cacheHashScalar(&hash, group.sensor); cacheHashScalar(&hash, group.nominal);
-  cacheHashText(&hash, group.noise_model_id); cacheHashText(&hash, group.model_id);
+  cacheHashScalar(&hash, id);
+  cacheHashScalar(&hash, group.kind);
+  cacheHashScalar(&hash, group.sensor);
+  cacheHashScalar(&hash, group.nominal);
+  cacheHashText(&hash, group.noise_model_id);
+  cacheHashText(&hash, group.model_id);
   cacheHashMatrix(&hash, group.raw_covariance);
-  cacheHashScalar(&hash, tx.previous_epoch); cacheHashScalar(&hash, tx.proposed_epoch);
+  cacheHashScalar(&hash, tx.previous_epoch);
+  cacheHashScalar(&hash, tx.proposed_epoch);
   cacheHashScalar(&hash, tx.base_version.graph_version);
   cacheHashScalar(&hash, tx.base_version.ordering_version);
   cacheHashScalar(&hash, tx.base_version.noise_model_version);
@@ -87,7 +99,8 @@ std::uint64_t factorBlockFingerprint(const PendingFactorGroup& group,
   cacheHashMatrix(&hash, tx.nominal_predicted_state.velocity_world_mps);
   for (const auto key : group.keys) cacheHashScalar(&hash, key);
   for (const auto id_value : group.source_measurements) {
-    const auto value = id_value.value(); cacheHashScalar(&hash, value);
+    const auto value = id_value.value();
+    cacheHashScalar(&hash, value);
   }
   for (const auto& factor : group.factors) {
     const auto pointer = reinterpret_cast<std::uintptr_t>(factor.get());
@@ -97,10 +110,13 @@ std::uint64_t factorBlockFingerprint(const PendingFactorGroup& group,
 }
 
 std::size_t blockBytes(const LinearizedFactorBlock& block) {
-  return sizeof(block) + sizeof(double) * static_cast<std::size_t>(
-      block.jacobian_raw.size() + block.residual_raw.size() +
-      block.covariance.size() + block.whitener.size() +
-      block.jacobian_whitened.size() + block.residual_whitened.size());
+  return sizeof(block) +
+         sizeof(double) *
+             static_cast<std::size_t>(
+                 block.jacobian_raw.size() + block.residual_raw.size() +
+                 block.covariance.size() + block.whitener.size() +
+                 block.jacobian_whitened.size() +
+                 block.residual_whitened.size());
 }
 
 gtsam::Key positionKey(std::size_t epoch) { return gtsam::Symbol('p', epoch); }
@@ -110,15 +126,15 @@ gtsam::Key biasKey(std::size_t epoch) { return gtsam::Symbol('b', epoch); }
 
 gtsam::Pose3 toGtsamPose(const NavigationState& state) {
   const Eigen::Quaterniond q = state.q_world_body.normalized();
-  return gtsam::Pose3(gtsam::Rot3(q.toRotationMatrix()), state.position_world_m);
+  return gtsam::Pose3(gtsam::Rot3(q.toRotationMatrix()),
+                      state.position_world_m);
 }
 
 gtsam::imuBias::ConstantBias toGtsamBias(const NavigationState& state) {
   return {state.accel_bias_mps2, state.gyro_bias_radps};
 }
 
-NavigationState stateFromValues(const gtsam::Values& values,
-                                std::size_t epoch,
+NavigationState stateFromValues(const gtsam::Values& values, std::size_t epoch,
                                 TimestampNs timestamp) {
   const auto pose = values.at<gtsam::Pose3>(poseKey(epoch));
   const auto velocity = values.at<gtsam::Vector3>(velocityKey(epoch));
@@ -136,17 +152,20 @@ NavigationState stateFromValues(const gtsam::Values& values,
 
 Eigen::MatrixXd whitener(const Eigen::MatrixXd& covariance) {
   Eigen::LLT<Eigen::MatrixXd> llt(covariance);
-  if (llt.info() != Eigen::Success) throw std::runtime_error("whitening failed");
-  return llt.matrixL().solve(Eigen::MatrixXd::Identity(covariance.rows(), covariance.cols()));
+  if (llt.info() != Eigen::Success)
+    throw std::runtime_error("whitening failed");
+  return llt.matrixL().solve(
+      Eigen::MatrixXd::Identity(covariance.rows(), covariance.cols()));
 }
 
 double elapsedMs(std::chrono::steady_clock::time_point start) {
   return std::chrono::duration<double, std::milli>(
-      std::chrono::steady_clock::now() - start).count();
+             std::chrono::steady_clock::now() - start)
+      .count();
 }
 
-gtsam::GaussianBayesNet currentCliqueClosure(
-    const gtsam::ISAM2& isam2, const gtsam::KeyVector& keys) {
+gtsam::GaussianBayesNet currentCliqueClosure(const gtsam::ISAM2& isam2,
+                                             const gtsam::KeyVector& keys) {
   gtsam::GaussianBayesNet bayes_net;
   std::vector<gtsam::ISAM2Clique::shared_ptr> closure;
   std::set<const gtsam::ISAM2Clique*> seen;
@@ -178,11 +197,15 @@ gtsam::Values transactionValues(const EpochTransaction& tx) {
   if (tx.frozen_values) return *tx.frozen_values;
   gtsam::Values values;
   values.insert(poseKey(tx.previous_epoch), toGtsamPose(tx.previous_state));
-  values.insert(velocityKey(tx.previous_epoch), tx.previous_state.velocity_world_mps);
+  values.insert(velocityKey(tx.previous_epoch),
+                tx.previous_state.velocity_world_mps);
   values.insert(biasKey(tx.previous_epoch), toGtsamBias(tx.previous_state));
-  values.insert(poseKey(tx.proposed_epoch), toGtsamPose(tx.nominal_predicted_state));
-  values.insert(velocityKey(tx.proposed_epoch), tx.nominal_predicted_state.velocity_world_mps);
-  values.insert(biasKey(tx.proposed_epoch), toGtsamBias(tx.nominal_predicted_state));
+  values.insert(poseKey(tx.proposed_epoch),
+                toGtsamPose(tx.nominal_predicted_state));
+  values.insert(velocityKey(tx.proposed_epoch),
+                tx.nominal_predicted_state.velocity_world_mps);
+  values.insert(biasKey(tx.proposed_epoch),
+                toGtsamBias(tx.nominal_predicted_state));
   return values;
 }
 
@@ -225,7 +248,8 @@ std::pair<Eigen::MatrixXd, Eigen::VectorXd> linearizeGroupDense(
 
 }  // namespace
 
-IncrementalUwbEstimator::IncrementalUwbEstimator(const IncrementalConfig& config)
+IncrementalUwbEstimator::IncrementalUwbEstimator(
+    const IncrementalConfig& config)
     : config_(config), isam2_([&config] {
         gtsam::ISAM2Params params;
         params.relinearizeThreshold = config.relinearize_threshold;
@@ -236,7 +260,8 @@ IncrementalUwbEstimator::IncrementalUwbEstimator(const IncrementalConfig& config
 void IncrementalUwbEstimator::initialize(
     TimestampNs timestamp, const Eigen::Vector3d& position_world_m,
     const Eigen::Vector3d& velocity_world_mps) {
-  if (initialized_) throw std::logic_error("UWB incremental estimator already initialized");
+  if (initialized_)
+    throw std::logic_error("UWB incremental estimator already initialized");
   gtsam::NonlinearFactorGraph graph;
   gtsam::Values values;
   graph.addPrior(positionKey(0), gtsam::Point3(position_world_m),
@@ -253,8 +278,10 @@ void IncrementalUwbEstimator::initialize(
 }
 
 IntegrityOutput IncrementalUwbEstimator::update(const UwbBatch& batch) {
-  if (!initialized_) throw std::logic_error("UWB incremental estimator is not initialized");
-  if (!(timestamp_ < batch.timestamp)) throw std::invalid_argument("UWB batches must be strictly ordered");
+  if (!initialized_)
+    throw std::logic_error("UWB incremental estimator is not initialized");
+  if (!(timestamp_ < batch.timestamp))
+    throw std::invalid_argument("UWB batches must be strictly ordered");
   const double dt = batch.timestamp.seconds() - timestamp_.seconds();
   const gtsam::Point3 p0 = estimate_.at<gtsam::Point3>(positionKey(epoch_));
   const gtsam::Vector3 v0 = estimate_.at<gtsam::Vector3>(velocityKey(epoch_));
@@ -264,7 +291,8 @@ IntegrityOutput IncrementalUwbEstimator::update(const UwbBatch& batch) {
   graph.add(boost::make_shared<ConstantVelocityRegularizer>(
       positionKey(epoch_ - 1), velocityKey(epoch_ - 1), positionKey(epoch_),
       velocityKey(epoch_), dt, config_.smoothness_sigma_m));
-  graph.add(boost::make_shared<UwbPositionBatchFactor>(positionKey(epoch_), batch));
+  graph.add(
+      boost::make_shared<UwbPositionBatchFactor>(positionKey(epoch_), batch));
   const gtsam::Point3 predicted_position(p0 + dt * v0);
   values.insert(positionKey(epoch_), predicted_position);
   values.insert(velocityKey(epoch_), v0);
@@ -281,22 +309,26 @@ IntegrityOutput IncrementalUwbEstimator::update(const UwbBatch& batch) {
   marginal_.block<3, 3>(0, 3) = joint.at(keys[0], keys[1]);
   marginal_.block<3, 3>(3, 0) = joint.at(keys[1], keys[0]);
   marginal_.block<3, 3>(3, 3) = joint.at(keys[1], keys[1]);
-  const gtsam::Point3 position = estimate_.at<gtsam::Point3>(positionKey(epoch_));
+  const gtsam::Point3 position =
+      estimate_.at<gtsam::Point3>(positionKey(epoch_));
   const Eigen::MatrixXd covariance = validatedUwbCovariance(batch);
   const Eigen::MatrixXd w = whitener(covariance);
   Eigen::MatrixXd h = Eigen::MatrixXd::Zero(batch.measurements.size(), 6);
   Eigen::VectorXd residual(batch.measurements.size());
   for (std::size_t i = 0; i < batch.measurements.size(); ++i) {
-    const Eigen::Vector3d delta = position - batch.measurements[i].anchor_position_m;
-    h.block<1, 3>(static_cast<Eigen::Index>(i), 0) = delta.transpose() / delta.norm();
-    residual(static_cast<Eigen::Index>(i)) = batch.measurements[i].range_m - delta.norm();
+    const Eigen::Vector3d delta =
+        position - batch.measurements[i].anchor_position_m;
+    h.block<1, 3>(static_cast<Eigen::Index>(i), 0) =
+        delta.transpose() / delta.norm();
+    residual(static_cast<Eigen::Index>(i)) =
+        batch.measurements[i].range_m - delta.norm();
   }
   WhitenedRowBlock measurement_rows;
   measurement_rows.factor_id = batch.measurements.front().factor_id;
   measurement_rows.role = RowRole::Measurement;
   measurement_rows.jacobian = w * h;
   measurement_rows.residual = w * residual;
-  measurement_rows.column_indices = {0,1,2,3,4,5};
+  measurement_rows.column_indices = {0, 1, 2, 3, 4, 5};
   measurement_rows.whitening_model_id = batch.covariance_model_id;
   for (const auto& m : batch.measurements) {
     measurement_rows.measurement_ids.push_back(m.id);
@@ -316,16 +348,19 @@ IntegrityOutput IncrementalUwbEstimator::update(const UwbBatch& batch) {
   regularizer_rows.residual.tail<3>() =
       (v0 - estimate_.at<gtsam::Vector3>(velocityKey(epoch_))) /
       config_.smoothness_sigma_m;
-  regularizer_rows.column_indices = {0,1,2,3,4,5};
+  regularizer_rows.column_indices = {0, 1, 2, 3, 4, 5};
   regularizer_rows.whitening_model_id = "constant_velocity_regularizer";
   row_blocks_ = {std::move(regularizer_rows), std::move(measurement_rows)};
   diagnostics_.rows = static_cast<int>(batch.measurements.size());
   diagnostics_.columns = 3;
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(w * h.leftCols(3));
-  diagnostics_.rank = static_cast<int>((svd.singularValues().array() > 1e-10).count());
+  diagnostics_.rank =
+      static_cast<int>((svd.singularValues().array() > 1e-10).count());
   diagnostics_.covariance_valid = marginal_.allFinite();
-  diagnostics_.model_valid = diagnostics_.rank == 3 && diagnostics_.covariance_valid;
-  if (!diagnostics_.model_valid) diagnostics_.reason = "UWB-only current geometry/marginal invalid";
+  diagnostics_.model_valid =
+      diagnostics_.rank == 3 && diagnostics_.covariance_valid;
+  if (!diagnostics_.model_valid)
+    diagnostics_.reason = "UWB-only current geometry/marginal invalid";
 
   IntegrityOutput output;
   output.timestamp = timestamp_;
@@ -333,12 +368,14 @@ IntegrityOutput IncrementalUwbEstimator::update(const UwbBatch& batch) {
   output.batch_committed = true;
   output.protection_level.label = IntegrityLabel::ImplementedUnverified;
   output.protection_level.availability = Availability::Unavailable;
-  output.protection_level.reason = "UWB-only bridge does not publish formal fusion PL";
+  output.protection_level.reason =
+      "UWB-only bridge does not publish formal fusion PL";
   return output;
 }
 
 NavigationState IncrementalUwbEstimator::currentState() const {
-  if (!initialized_) throw std::logic_error("UWB incremental estimator is not initialized");
+  if (!initialized_)
+    throw std::logic_error("UWB incremental estimator is not initialized");
   NavigationState state;
   state.id = StateId(epoch_);
   state.timestamp = timestamp_;
@@ -347,7 +384,8 @@ NavigationState IncrementalUwbEstimator::currentState() const {
   return state;
 }
 
-std::shared_ptr<const EstimationSnapshot> IncrementalUwbEstimator::snapshot() const {
+std::shared_ptr<const EstimationSnapshot> IncrementalUwbEstimator::snapshot()
+    const {
   SnapshotCapabilities capabilities;
   capabilities.dense_snapshot = true;
   capabilities.sparse_solve = true;
@@ -360,8 +398,8 @@ std::shared_ptr<const EstimationSnapshot> IncrementalUwbEstimator::snapshot() co
   if (marginal_.size() > 0) {
     Eigen::LDLT<Eigen::MatrixXd> solve(marginal_);
     if (solve.info() == Eigen::Success) {
-      information = solve.solve(Eigen::MatrixXd::Identity(
-          marginal_.rows(), marginal_.cols()));
+      information = solve.solve(
+          Eigen::MatrixXd::Identity(marginal_.rows(), marginal_.cols()));
     }
   }
   return std::make_shared<ImmutableEstimationSnapshot>(
@@ -371,8 +409,7 @@ std::shared_ptr<const EstimationSnapshot> IncrementalUwbEstimator::snapshot() co
 
 IncrementalUwbImuEstimator::IncrementalUwbImuEstimator(
     const IntegrityConfig& config, const Eigen::Vector3d& lever_arm_body_m)
-    : config_(config), lever_arm_body_m_(lever_arm_body_m),
-      isam2_([&config] {
+    : config_(config), lever_arm_body_m_(lever_arm_body_m), isam2_([&config] {
         gtsam::ISAM2Params params;
         params.relinearizeThreshold = config.incremental.relinearize_threshold;
         params.relinearizeSkip = config.incremental.relinearize_skip;
@@ -398,14 +435,17 @@ IncrementalUwbImuEstimator::IncrementalUwbImuEstimator(
   }
   auto params = gtsam::PreintegratedCombinedMeasurements::Params::MakeSharedU(
       config_.imu.gravity_mps2);
-  params->accelerometerCovariance = Eigen::Matrix3d::Identity() *
+  params->accelerometerCovariance =
+      Eigen::Matrix3d::Identity() *
       std::pow(config_.imu.accelerometer_sigma, 2);
-  params->gyroscopeCovariance = Eigen::Matrix3d::Identity() *
-      std::pow(config_.imu.gyroscope_sigma, 2);
+  params->gyroscopeCovariance =
+      Eigen::Matrix3d::Identity() * std::pow(config_.imu.gyroscope_sigma, 2);
   params->integrationCovariance = Eigen::Matrix3d::Identity() * 1e-9;
-  params->biasAccCovariance = Eigen::Matrix3d::Identity() *
+  params->biasAccCovariance =
+      Eigen::Matrix3d::Identity() *
       std::pow(config_.imu.accelerometer_bias_rw_sigma, 2);
-  params->biasOmegaCovariance = Eigen::Matrix3d::Identity() *
+  params->biasOmegaCovariance =
+      Eigen::Matrix3d::Identity() *
       std::pow(config_.imu.gyroscope_bias_rw_sigma, 2);
   imu_params_ = params;
 }
@@ -416,8 +456,8 @@ const gtsam::ISAM2& IncrementalUwbImuEstimator::backendIsam() const {
   return fixed_lag_backend_ ? fixed_lag_backend_->isam() : isam2_;
 }
 
-const gtsam::NonlinearFactorGraph&
-IncrementalUwbImuEstimator::activeGraph() const {
+const gtsam::NonlinearFactorGraph& IncrementalUwbImuEstimator::activeGraph()
+    const {
   return backendIsam().getFactorsUnsafe();
 }
 
@@ -484,7 +524,8 @@ std::uint32_t IncrementalUwbImuEstimator::retainedEpochs() const {
     return static_cast<std::uint32_t>(std::min<std::size_t>(
         epoch_ + 1, std::numeric_limits<std::uint32_t>::max()));
   }
-  return static_cast<std::uint32_t>(fixed_lag_backend_->timestamps().size() / 3);
+  return static_cast<std::uint32_t>(fixed_lag_backend_->timestamps().size() /
+                                    3);
 }
 
 std::size_t IncrementalUwbImuEstimator::oldestRetainedEpoch() const {
@@ -506,9 +547,11 @@ std::size_t IncrementalUwbImuEstimator::activeValueCount() const {
 void IncrementalUwbImuEstimator::pruneRetainedMetadata() {
   const std::size_t configured_history =
       static_cast<std::size_t>(config_.integrity_window.epochs) +
-      static_cast<std::size_t>(config_.integrity_window.recovery_margin_epochs) + 1;
-  std::size_t oldest = epoch_ > configured_history
-      ? epoch_ - configured_history : 0;
+      static_cast<std::size_t>(
+          config_.integrity_window.recovery_margin_epochs) +
+      1;
+  std::size_t oldest =
+      epoch_ > configured_history ? epoch_ - configured_history : 0;
   if (fixed_lag_backend_) oldest = std::max(oldest, oldestRetainedEpoch());
   while (!committed_uwb_batches_.empty() &&
          committed_uwb_batches_.front().first < oldest) {
@@ -518,8 +561,9 @@ void IncrementalUwbImuEstimator::pruneRetainedMetadata() {
          committed_epochs_.front().transaction.proposed_epoch <= oldest) {
     committed_epochs_.pop_front();
   }
-  for (auto it = state_history_.begin(); it != state_history_.end() &&
-       it->first < oldest;) it = state_history_.erase(it);
+  for (auto it = state_history_.begin();
+       it != state_history_.end() && it->first < oldest;)
+    it = state_history_.erase(it);
   for (auto it = prefix_covariances_.begin();
        it != prefix_covariances_.end() && it->first < oldest;) {
     it = prefix_covariances_.erase(it);
@@ -529,9 +573,11 @@ void IncrementalUwbImuEstimator::pruneRetainedMetadata() {
 void IncrementalUwbImuEstimator::initialize(
     const NavigationState& initial_state,
     const Eigen::Matrix<double, 15, 1>& prior_sigmas) {
-  if (initialized_) throw std::logic_error("UWB/IMU estimator already initialized");
+  if (initialized_)
+    throw std::logic_error("UWB/IMU estimator already initialized");
   if (!prior_sigmas.allFinite() || (prior_sigmas.array() <= 0.0).any()) {
-    throw std::invalid_argument("all initial prior sigmas must be finite and > 0");
+    throw std::invalid_argument(
+        "all initial prior sigmas must be finite and > 0");
   }
   gtsam::NonlinearFactorGraph graph;
   gtsam::Values values;
@@ -540,8 +586,9 @@ void IncrementalUwbImuEstimator::initialize(
   const gtsam::imuBias::ConstantBias bias = toGtsamBias(initial_state);
   graph.addPrior(poseKey(0), pose,
                  gtsam::noiseModel::Diagonal::Sigmas(prior_sigmas.head<6>()));
-  graph.addPrior(velocityKey(0), velocity,
-                 gtsam::noiseModel::Diagonal::Sigmas(prior_sigmas.segment<3>(6)));
+  graph.addPrior(
+      velocityKey(0), velocity,
+      gtsam::noiseModel::Diagonal::Sigmas(prior_sigmas.segment<3>(6)));
   graph.addPrior(biasKey(0), bias,
                  gtsam::noiseModel::Diagonal::Sigmas(prior_sigmas.tail<6>()));
   values.insert(poseKey(0), pose);
@@ -555,7 +602,8 @@ void IncrementalUwbImuEstimator::initialize(
   current_state_.id = StateId(0);
   state_timestamp_ = initial_state.timestamp;
   queryCurrentState();
-  preintegrated_.reset(new gtsam::PreintegratedCombinedMeasurements(imu_params_, bias));
+  preintegrated_.reset(
+      new gtsam::PreintegratedCombinedMeasurements(imu_params_, bias));
   initialized_ = true;
   graph_version_ = 1;
   linpoint_version_ = 1;
@@ -567,7 +615,8 @@ void IncrementalUwbImuEstimator::initialize(
 }
 
 void IncrementalUwbImuEstimator::ingestImu(const ImuMeasurement& measurement) {
-  if (!initialized_) throw std::logic_error("UWB/IMU estimator is not initialized");
+  if (!initialized_)
+    throw std::logic_error("UWB/IMU estimator is not initialized");
   if (!measurement.specific_force_mps2.allFinite() ||
       !measurement.angular_velocity_radps.allFinite()) {
     throw std::invalid_argument("IMU measurement must be finite");
@@ -590,9 +639,9 @@ void IncrementalUwbImuEstimator::ingestImu(const ImuMeasurement& measurement) {
   imu_queue_.push_back(measurement);
 }
 
-void IncrementalUwbImuEstimator::validateUwbBatch(
-    const UwbBatch& batch) const {
-  if (!initialized_) throw std::logic_error("UWB/IMU estimator is not initialized");
+void IncrementalUwbImuEstimator::validateUwbBatch(const UwbBatch& batch) const {
+  if (!initialized_)
+    throw std::logic_error("UWB/IMU estimator is not initialized");
   if (batch.measurements.empty()) {
     throw std::invalid_argument("UWB batch must not be empty");
   }
@@ -600,7 +649,8 @@ void IncrementalUwbImuEstimator::validateUwbBatch(
     throw std::invalid_argument("UWB batch timestamp must increase");
   }
   std::set<std::uint64_t> configured;
-  for (const auto& anchor : config_.anchors) configured.insert(anchor.id.value());
+  for (const auto& anchor : config_.anchors)
+    configured.insert(anchor.id.value());
   std::set<std::uint64_t> measurement_ids;
   std::set<std::uint64_t> factor_ids;
   TimestampNs earliest = batch.measurements.front().timestamp;
@@ -609,19 +659,23 @@ void IncrementalUwbImuEstimator::validateUwbBatch(
     if (!std::isfinite(measurement.range_m) || measurement.range_m <= 0.0 ||
         !std::isfinite(measurement.sigma_m) || measurement.sigma_m <= 0.0 ||
         !measurement.anchor_position_m.allFinite()) {
-      throw std::invalid_argument("UWB batch contains invalid measurement values");
+      throw std::invalid_argument(
+          "UWB batch contains invalid measurement values");
     }
-    if (!configured.empty() && configured.count(measurement.anchor_id.value()) == 0) {
-      throw std::invalid_argument("UWB batch references an unconfigured physical anchor");
+    if (!configured.empty() &&
+        configured.count(measurement.anchor_id.value()) == 0) {
+      throw std::invalid_argument(
+          "UWB batch references an unconfigured physical anchor");
     }
     if (!measurement_ids.insert(measurement.id.value()).second ||
         !factor_ids.insert(measurement.factor_id.value()).second) {
-      throw std::invalid_argument("UWB batch measurement/factor IDs must be unique");
+      throw std::invalid_argument(
+          "UWB batch measurement/factor IDs must be unique");
     }
     if (measurement.timestamp < earliest) earliest = measurement.timestamp;
     if (latest < measurement.timestamp) latest = measurement.timestamp;
-    const double skew = std::abs(
-        measurement.timestamp.seconds() - batch.timestamp.seconds());
+    const double skew =
+        std::abs(measurement.timestamp.seconds() - batch.timestamp.seconds());
     if (skew > config_.incremental.max_time_skew_s + 1e-12) {
       throw std::invalid_argument("UWB batch member exceeds max_time_skew_s");
     }
@@ -635,10 +689,15 @@ void IncrementalUwbImuEstimator::validateUwbBatch(
 
 EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
     TimestampNs timestamp, const UwbBatch* batch) {
-  if (!initialized_) throw std::logic_error("UWB/IMU estimator is not initialized");
-  if (backend_poisoned_) throw std::runtime_error("backend is fail-closed after a partial update exception");
-  if (active_transaction_id_) throw std::logic_error("commit or discard pending epoch first");
-  if (!(state_timestamp_ < timestamp)) throw std::invalid_argument("prediction timestamp must increase");
+  if (!initialized_)
+    throw std::logic_error("UWB/IMU estimator is not initialized");
+  if (backend_poisoned_)
+    throw std::runtime_error(
+        "backend is fail-closed after a partial update exception");
+  if (active_transaction_id_)
+    throw std::logic_error("commit or discard pending epoch first");
+  if (!(state_timestamp_ < timestamp))
+    throw std::invalid_argument("prediction timestamp must increase");
   if (!imu_boundary_ || imu_boundary_->timestamp != state_timestamp_) {
     throw std::runtime_error("missing causal IMU sample at state boundary");
   }
@@ -660,7 +719,8 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
   for (const auto& measurement : imu_queue_) {
     if (timestamp < measurement.timestamp) break;
     if (!(previous_time < measurement.timestamp)) {
-      throw std::runtime_error("duplicate or reversed IMU sample in prediction interval");
+      throw std::runtime_error(
+          "duplicate or reversed IMU sample in prediction interval");
     }
     const double dt = measurement.timestamp.seconds() - previous_time.seconds();
     if (!std::isfinite(dt) || dt > config_.imu.max_gap_s + 1e-12) {
@@ -670,7 +730,8 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
         0.5 * (previous_measurement.specific_force_mps2 +
                measurement.specific_force_mps2),
         0.5 * (previous_measurement.angular_velocity_radps +
-               measurement.angular_velocity_radps), dt);
+               measurement.angular_velocity_radps),
+        dt);
     previous_time = measurement.timestamp;
     previous_measurement = measurement;
     ++consume_count;
@@ -713,7 +774,9 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
   const double prediction_dt = timestamp.seconds() - state_timestamp_.seconds();
   tx.cv_predicted_state.position_world_m +=
       current_state_.velocity_world_mps * prediction_dt;
-  tx.preintegration = std::make_shared<const gtsam::PreintegratedCombinedMeasurements>(proposed);
+  tx.preintegration =
+      std::make_shared<const gtsam::PreintegratedCombinedMeasurements>(
+          proposed);
   tx.raw_imu_slice.push_back(*imu_boundary_);
   for (std::size_t i = 0; i < consume_count; ++i) {
     tx.raw_imu_slice.push_back(imu_queue_[i]);
@@ -729,26 +792,28 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
   tx.imu_group.id = FactorGroupId(tx.id.value() * 1000 + 1);
   tx.imu_group.kind = FactorKind::CombinedImu;
   tx.imu_group.sensor = SensorType::Imu;
-  tx.imu_group.keys = {poseKey(epoch_), velocityKey(epoch_), poseKey(next_epoch),
-                       velocityKey(next_epoch), biasKey(epoch_), biasKey(next_epoch)};
+  tx.imu_group.keys = {poseKey(epoch_),     velocityKey(epoch_),
+                       poseKey(next_epoch), velocityKey(next_epoch),
+                       biasKey(epoch_),     biasKey(next_epoch)};
   tx.imu_group.noise_model_id = "gtsam_preintegrated_combined_covariance_v1";
   tx.imu_group.model_id = "combined_imu_interval_constant_fault_map_v1";
   tx.imu_group.factors.add(gtsam::CombinedImuFactor(
       poseKey(epoch_), velocityKey(epoch_), poseKey(next_epoch),
       velocityKey(next_epoch), biasKey(epoch_), biasKey(next_epoch), proposed));
   tx.generic_bridge_group.id = FactorGroupId(tx.id.value() * 1000 + 3);
-  tx.generic_bias_continuity_group.id =
-      FactorGroupId(tx.id.value() * 1000 + 4);
-  tx.generic_bridge_group = BridgeFactory().makeGeneric(tx, config_.bridge.generic);
+  tx.generic_bias_continuity_group.id = FactorGroupId(tx.id.value() * 1000 + 4);
+  tx.generic_bridge_group =
+      BridgeFactory().makeGeneric(tx, config_.bridge.generic);
   tx.generic_bias_continuity_group =
       BridgeFactory().makeBiasContinuity(tx, config_.bridge.generic);
   if (batch) attachUwbGroups(&tx, *batch);
   tx.ledger_version = factor_ledger_.version();
-  tx.frozen_graph = std::make_shared<const gtsam::NonlinearFactorGraph>(
-      activeGraph());
+  tx.frozen_graph =
+      std::make_shared<const gtsam::NonlinearFactorGraph>(activeGraph());
   gtsam::Values frozen = backendIsam().calculateEstimate();
   frozen.insert(poseKey(next_epoch), toGtsamPose(tx.cv_predicted_state));
-  frozen.insert(velocityKey(next_epoch), tx.cv_predicted_state.velocity_world_mps);
+  frozen.insert(velocityKey(next_epoch),
+                tx.cv_predicted_state.velocity_world_mps);
   frozen.insert(biasKey(next_epoch), toGtsamBias(tx.cv_predicted_state));
   tx.frozen_values = std::make_shared<const gtsam::Values>(std::move(frozen));
   std::map<std::size_t, FactorGroupId> slot_groups;
@@ -770,7 +835,8 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
       static_cast<std::size_t>(config_.integrity_window.epochs) +
       static_cast<std::size_t>(config_.integrity_window.recovery_margin_epochs);
   tx.oldest_recoverable_epoch = tx.previous_epoch > context_intervals
-      ? tx.previous_epoch - context_intervals : 0;
+                                    ? tx.previous_epoch - context_intervals
+                                    : 0;
   if (fixed_lag_backend_) {
     tx.oldest_recoverable_epoch =
         std::max(tx.oldest_recoverable_epoch, oldestRetainedEpoch());
@@ -786,16 +852,16 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
     context.raw_imu_slice = committed.raw_imu_slice;
     context.preintegration = committed.preintegration;
     context.uwb_batch = committed.uwb_batch;
-    context.previous_state = stateFromValues(
-        *tx.frozen_values, committed.previous_epoch,
-        state_history_.at(committed.previous_epoch).timestamp);
-    context.current_state = stateFromValues(
-        *tx.frozen_values, committed.proposed_epoch,
-        state_history_.at(committed.proposed_epoch).timestamp);
+    context.previous_state =
+        stateFromValues(*tx.frozen_values, committed.previous_epoch,
+                        state_history_.at(committed.previous_epoch).timestamp);
+    context.current_state =
+        stateFromValues(*tx.frozen_values, committed.proposed_epoch,
+                        state_history_.at(committed.proposed_epoch).timestamp);
     const auto selected_in_record = [&](FactorGroupId id) {
       return std::find(record.selected_groups.begin(),
-                       record.selected_groups.end(), id) !=
-             record.selected_groups.end();
+                       record.selected_groups.end(),
+                       id) != record.selected_groups.end();
     };
     const bool committed_imu_selected =
         selected_in_record(committed.imu_group.id);
@@ -819,7 +885,8 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
     FactorGroupId selected_uwb;
     const PendingFactorGroup* selected_uwb_group = nullptr;
     for (const auto& group : committed.uwb_groups) {
-      if (std::find(record.selected_groups.begin(), record.selected_groups.end(),
+      if (std::find(record.selected_groups.begin(),
+                    record.selected_groups.end(),
                     group.id) != record.selected_groups.end()) {
         selected_uwb = group.id;
         selected_uwb_group = &group;
@@ -840,13 +907,15 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
         }
       }
     }
-    const Eigen::MatrixXd historical_covariance = selected_uwb_group
-        ? validatedUwbCovariance(committed.uwb_batch) : Eigen::MatrixXd{};
+    const Eigen::MatrixXd historical_covariance =
+        selected_uwb_group ? validatedUwbCovariance(committed.uwb_batch)
+                           : Eigen::MatrixXd{};
     for (const auto excluded_anchor : selected_anchors) {
       UwbBatch retained = committed.uwb_batch;
       retained.measurements.clear();
       std::vector<Eigen::Index> retained_indices;
-      for (std::size_t i = 0; i < committed.uwb_batch.measurements.size(); ++i) {
+      for (std::size_t i = 0; i < committed.uwb_batch.measurements.size();
+           ++i) {
         const auto& measurement = committed.uwb_batch.measurements[i];
         if (selected_measurements.count(measurement.id.value()) &&
             measurement.anchor_id.value() != excluded_anchor) {
@@ -855,31 +924,34 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
         }
       }
       if (retained.measurements.empty()) continue;
-      retained.covariance_m2.resize(retained_indices.size(), retained_indices.size());
+      retained.covariance_m2.resize(retained_indices.size(),
+                                    retained_indices.size());
       for (std::size_t row = 0; row < retained_indices.size(); ++row) {
-        for (std::size_t column = 0; column < retained_indices.size(); ++column) {
+        for (std::size_t column = 0; column < retained_indices.size();
+             ++column) {
           retained.covariance_m2(row, column) = historical_covariance(
               retained_indices[row], retained_indices[column]);
         }
       }
       retained.covariance_model_id = committed.uwb_batch.covariance_model_id +
-          ":recovery_principal_covariance";
+                                     ":recovery_principal_covariance";
       PendingFactorGroup replacement;
       replacement.id = FactorGroupId(history_base + 10 + replacement_index++);
       replacement.kind = FactorKind::UwbBatch;
       replacement.sensor = SensorType::Uwb;
       replacement.keys = {poseKey(committed.proposed_epoch)};
       replacement.noise_model_id = retained.covariance_model_id;
-      replacement.model_id = "historical_uwb_exclude_anchor_" +
-          std::to_string(excluded_anchor);
+      replacement.model_id =
+          "historical_uwb_exclude_anchor_" + std::to_string(excluded_anchor);
       replacement.nominal = false;
       replacement.raw_covariance = retained.covariance_m2;
       replacement.excluded_fault_units = {FaultUnitId(excluded_anchor)};
       for (const auto& measurement : retained.measurements) {
         replacement.source_measurements.push_back(measurement.id);
-        replacement.fault_units.push_back(FaultUnitId(measurement.anchor_id.value()));
-        replacement.source_ids.push_back("uwb:" +
-                                         std::to_string(measurement.anchor_id.value()));
+        replacement.fault_units.push_back(
+            FaultUnitId(measurement.anchor_id.value()));
+        replacement.source_ids.push_back(
+            "uwb:" + std::to_string(measurement.anchor_id.value()));
       }
       replacement.factors.add(boost::make_shared<UwbPoseBatchFactor>(
           poseKey(committed.proposed_epoch), retained, lever_arm_body_m_));
@@ -893,7 +965,8 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
       historical_bridge.replaces_group = committed.imu_group.id;
       historical_bridge.recovery_epoch = next_epoch;
       context.groups.push_back(std::move(historical_bridge));
-      PendingFactorGroup historical_bias = committed.generic_bias_continuity_group;
+      PendingFactorGroup historical_bias =
+          committed.generic_bias_continuity_group;
       historical_bias.id = FactorGroupId(history_base + 81);
       historical_bias.replaces_group = committed.imu_group.id;
       historical_bias.recovery_epoch = next_epoch;
@@ -918,9 +991,10 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
   return tx;
 }
 
-void IncrementalUwbImuEstimator::attachUwbGroups(
-    EpochTransaction* tx, const UwbBatch& batch) const {
-  if (!tx || !tx->uwb_groups.empty()) throw std::logic_error("UWB group already attached");
+void IncrementalUwbImuEstimator::attachUwbGroups(EpochTransaction* tx,
+                                                 const UwbBatch& batch) const {
+  if (!tx || !tx->uwb_groups.empty())
+    throw std::logic_error("UWB group already attached");
   tx->uwb_batch = batch;
   PendingFactorGroup group;
   group.id = FactorGroupId(tx->id.value() * 1000 + 2);
@@ -928,14 +1002,16 @@ void IncrementalUwbImuEstimator::attachUwbGroups(
   group.sensor = SensorType::Uwb;
   group.keys = {poseKey(tx->proposed_epoch)};
   group.noise_model_id = batch.covariance_model_id.empty()
-      ? "per_measurement_diagonal" : batch.covariance_model_id;
+                             ? "per_measurement_diagonal"
+                             : batch.covariance_model_id;
   group.model_id = "physical_anchor_correlated_batch_v1";
   group.raw_covariance = validatedUwbCovariance(batch);
   for (std::size_t i = 0; i < batch.measurements.size(); ++i) {
     group.source_measurements.push_back(batch.measurements[i].id);
-    group.fault_units.push_back(FaultUnitId(batch.measurements[i].anchor_id.value()));
-    group.source_ids.push_back("uwb:" +
-                               std::to_string(batch.measurements[i].anchor_id.value()));
+    group.fault_units.push_back(
+        FaultUnitId(batch.measurements[i].anchor_id.value()));
+    group.source_ids.push_back(
+        "uwb:" + std::to_string(batch.measurements[i].anchor_id.value()));
   }
   group.factors.add(boost::make_shared<UwbPoseBatchFactor>(
       poseKey(tx->proposed_epoch), batch, lever_arm_body_m_));
@@ -961,31 +1037,35 @@ void IncrementalUwbImuEstimator::attachUwbGroups(
     }
     if (retained.measurements.empty()) continue;
     const Eigen::MatrixXd full_covariance = validatedUwbCovariance(batch);
-    retained.covariance_m2.resize(retained_indices.size(), retained_indices.size());
+    retained.covariance_m2.resize(retained_indices.size(),
+                                  retained_indices.size());
     for (std::size_t row = 0; row < retained_indices.size(); ++row) {
       for (std::size_t col = 0; col < retained_indices.size(); ++col) {
         retained.covariance_m2(row, col) =
             full_covariance(retained_indices[row], retained_indices[col]);
       }
     }
-    retained.covariance_model_id = batch.covariance_model_id.empty()
-        ? "retained_principal_covariance" :
-          batch.covariance_model_id + ":retained_principal_covariance";
+    retained.covariance_model_id =
+        batch.covariance_model_id.empty()
+            ? "retained_principal_covariance"
+            : batch.covariance_model_id + ":retained_principal_covariance";
     PendingFactorGroup replacement;
-    replacement.id = FactorGroupId(tx->id.value() * 1000 + 10 + candidate_index++);
+    replacement.id =
+        FactorGroupId(tx->id.value() * 1000 + 10 + candidate_index++);
     replacement.kind = FactorKind::UwbBatch;
     replacement.sensor = SensorType::Uwb;
     replacement.keys = {poseKey(tx->proposed_epoch)};
     replacement.noise_model_id = retained.covariance_model_id;
     replacement.model_id = "uwb_principal_covariance_exclude_anchor_" +
-        std::to_string(excluded_anchor);
+                           std::to_string(excluded_anchor);
     replacement.nominal = false;
     replacement.raw_covariance = retained.covariance_m2;
     replacement.excluded_fault_units.push_back(FaultUnitId(excluded_anchor));
     replacement.replaces_group = tx->uwb_groups.front().id;
     for (const auto& measurement : retained.measurements) {
       replacement.source_measurements.push_back(measurement.id);
-      replacement.fault_units.push_back(FaultUnitId(measurement.anchor_id.value()));
+      replacement.fault_units.push_back(
+          FaultUnitId(measurement.anchor_id.value()));
       replacement.source_ids.push_back(
           "uwb:" + std::to_string(measurement.anchor_id.value()));
     }
@@ -995,7 +1075,8 @@ void IncrementalUwbImuEstimator::attachUwbGroups(
   }
 }
 
-EpochTransaction IncrementalUwbImuEstimator::prepareEpoch(const UwbBatch& batch) {
+EpochTransaction IncrementalUwbImuEstimator::prepareEpoch(
+    const UwbBatch& batch) {
   validateUwbBatch(batch);
   return prepareTransaction(batch.timestamp, &batch);
 }
@@ -1011,8 +1092,8 @@ LinearizedFactorBlock IncrementalUwbImuEstimator::linearizePendingGroup(
   block.group_id = group.id;
   block.kind = group.kind;
   block.sensor = group.sensor;
-  block.role = group.kind == FactorKind::BoundaryPrior
-      ? RowRole::TrustedPrior : RowRole::Measurement;
+  block.role = group.kind == FactorKind::BoundaryPrior ? RowRole::TrustedPrior
+                                                       : RowRole::Measurement;
   block.jacobian_whitened = h;
   block.residual_whitened = rhs;
   block.fault_units = group.fault_units;
@@ -1031,14 +1112,14 @@ LinearizedFactorBlock IncrementalUwbImuEstimator::linearizePendingGroup(
   }
   block.whitener = whitener(block.covariance);
   block.jacobian_raw = block.whitener.triangularView<Eigen::Lower>().solve(h);
-  block.residual_raw =
-      block.whitener.triangularView<Eigen::Lower>().solve(rhs);
+  block.residual_raw = block.whitener.triangularView<Eigen::Lower>().solve(rhs);
   return block;
 }
 
 CurrentStatePrior IncrementalUwbImuEstimator::pendingCurrentPrior(
     const EpochTransaction& tx) const {
-  const Eigen::Matrix<double, 15, 15> previous_covariance = currentJointMarginal();
+  const Eigen::Matrix<double, 15, 15> previous_covariance =
+      currentJointMarginal();
   Eigen::LLT<Eigen::Matrix<double, 15, 15>> prior_llt(previous_covariance);
   if (prior_llt.info() != Eigen::Success) {
     throw std::runtime_error("committed current marginal is not SPD");
@@ -1068,24 +1149,33 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
   if (!active_transaction_id_ || *active_transaction_id_ != tx.id ||
       tx.backend_mutated || tx.base_graph_version != graph_version_ ||
       tx.ledger_version != factor_ledger_.version() ||
-      !(tx.base_version == LinearizationVersion{
-          graph_version_, ordering_version_, 1, linpoint_version_})) {
-    throw std::logic_error("integrity window requires the active frozen transaction");
+      !(tx.base_version == LinearizationVersion{graph_version_,
+                                                ordering_version_, 1,
+                                                linpoint_version_})) {
+    throw std::logic_error(
+        "integrity window requires the active frozen transaction");
   }
   LinearizedIntegrityWindow window;
   window.id = WindowId(tx.id.value());
   window.version = tx.base_version;
-  const std::size_t interval_count = std::min<std::size_t>(
-      request.epochs, tx.proposed_epoch);
+  // No condensed material at all is an explicit state, not an absent field:
+  // every consumer can distinguish "nothing to summarize" from "summary could
+  // not be established" (§7.6 row 7 / cold start).
+  window.history_summary.state =
+      toString(HistorySummaryState::NotRequired);
+  const std::size_t interval_count =
+      std::min<std::size_t>(request.epochs, tx.proposed_epoch);
   const std::size_t first_epoch = tx.proposed_epoch - interval_count;
   window.detector_first_epoch = first_epoch;
   window.recovery_first_epoch = tx.oldest_recoverable_epoch;
   const int total_columns = static_cast<int>((interval_count + 1) * 15);
   for (std::size_t epoch = first_epoch; epoch <= tx.proposed_epoch; ++epoch) {
-    window.state_layout.push_back(StateLayoutEntry{
-        epoch, {poseKey(epoch), velocityKey(epoch), biasKey(epoch)},
-        static_cast<int>((epoch - first_epoch) * 15), 15,
-        epoch == tx.proposed_epoch});
+    window.state_layout.push_back(
+        StateLayoutEntry{epoch,
+                         {poseKey(epoch), velocityKey(epoch), biasKey(epoch)},
+                         static_cast<int>((epoch - first_epoch) * 15),
+                         15,
+                         epoch == tx.proposed_epoch});
   }
 
   if (!tx.frozen_graph || !tx.frozen_values ||
@@ -1108,24 +1198,28 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
   std::set<std::uint64_t> explicit_group_ids;
   for (const auto& record : tx.recoverable_history) {
     if (record.proposed_epoch < first_epoch ||
-        record.proposed_epoch > tx.previous_epoch) continue;
+        record.proposed_epoch > tx.previous_epoch)
+      continue;
     for (const auto group : record.selected_groups) {
-      const auto found = std::find_if(record.groups.begin(), record.groups.end(),
-          [&](const PendingFactorGroup& candidate) {
-            return candidate.id == group;
-          });
+      const auto found =
+          std::find_if(record.groups.begin(), record.groups.end(),
+                       [&](const PendingFactorGroup& candidate) {
+                         return candidate.id == group;
+                       });
       if (found == record.groups.end()) {
-        window.reason = "committed group provenance is incomplete: selected group " +
+        window.reason =
+            "committed group provenance is incomplete: selected group " +
             std::to_string(group.value()) + " is absent from epoch " +
             std::to_string(record.proposed_epoch) + " catalog";
         return window;
       }
       historical_groups[group.value()] = {&*found, record.proposed_epoch};
-      const bool all_keys_in_window = !found->keys.empty() &&
+      const bool all_keys_in_window =
+          !found->keys.empty() &&
           std::all_of(found->keys.begin(), found->keys.end(),
-              [&](gtsam::Key key) {
-                return explicit_window_keys.count(key) != 0;
-              });
+                      [&](gtsam::Key key) {
+                        return explicit_window_keys.count(key) != 0;
+                      });
       if (all_keys_in_window) explicit_group_ids.insert(group.value());
     }
   }
@@ -1136,9 +1230,21 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     if (slots.empty()) slot_identity_valid = false;
     explicit_slots.insert(slots.begin(), slots.end());
   }
-  gtsam::NonlinearFactorGraph boundary_graph;
+  // Boundary inputs, grouped by factor group.  Each group is linearized as a
+  // whole (`NonlinearFactorGraph::linearize` may hand back HessianFactors, and
+  // a HessianFactor is exactly the normal matrix of that group: the residual
+  // *constant* is only lost by GTSAM's reduction/elimination (route (i-b)),
+  // not by the per-group factorization used here).  Grouping also keeps the
+  // condensed boundary attributable to the factor ledger group by group.
+  struct BoundaryGroupRows {
+    FactorGroupId id;
+    gtsam::NonlinearFactorGraph factors;
+  };
+  std::vector<BoundaryGroupRows> boundary_groups;
+  std::map<std::uint64_t, std::size_t> boundary_group_index;
   for (const auto& frozen : tx.frozen_slots) {
-    const bool pointer_ok = frozen.slot < tx.frozen_graph->size() &&
+    const bool pointer_ok =
+        frozen.slot < tx.frozen_graph->size() &&
         (*tx.frozen_graph)[frozen.slot] && frozen.factor &&
         (*tx.frozen_graph)[frozen.slot].get() == frozen.factor.get() &&
         frozen.slot < activeGraph().size() && activeGraph()[frozen.slot] &&
@@ -1151,10 +1257,24 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     accounting.boundary_input = !explicit_block;
     accounting.pointer_identity_valid = pointer_ok;
     window.slot_accounting.push_back(accounting);
-    slot_identity_valid = slot_identity_valid && pointer_ok &&
+    slot_identity_valid =
+        slot_identity_valid && pointer_ok &&
         (accounting.explicit_window_block != accounting.boundary_input) &&
         frozen.group_id.has_value();
-    if (!explicit_block) boundary_graph.push_back(frozen.factor);
+    if (explicit_block) continue;
+    const std::uint64_t group_value =
+        frozen.group_id ? frozen.group_id->value() : 0;
+    const auto found = boundary_group_index.find(group_value);
+    if (found == boundary_group_index.end()) {
+      boundary_group_index.emplace(group_value, boundary_groups.size());
+      BoundaryGroupRows rows;
+      if (frozen.group_id) rows.id = *frozen.group_id;
+      else rows.id = FactorGroupId(group_value);
+      rows.factors.push_back(frozen.factor);
+      boundary_groups.push_back(std::move(rows));
+    } else {
+      boundary_groups[found->second].factors.push_back(frozen.factor);
+    }
   }
   std::map<std::uint64_t, FrozenWindowFactorInventoryEntry> frozen_inventory;
   for (const auto& accounting : window.slot_accounting) {
@@ -1163,8 +1283,8 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     entry.group_id = *accounting.group_id;
     entry.slots.push_back(accounting.slot);
     entry.disposition = accounting.explicit_window_block
-        ? FrozenFactorDisposition::ExplicitMeasurement
-        : FrozenFactorDisposition::BoundaryInput;
+                            ? FrozenFactorDisposition::ExplicitMeasurement
+                            : FrozenFactorDisposition::BoundaryInput;
     const auto metadata = historical_groups.find(accounting.group_id->value());
     if (metadata != historical_groups.end()) {
       entry.epoch = metadata->second.epoch;
@@ -1177,65 +1297,313 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     window.factor_inventory.push_back(std::move(item.second));
   }
   window.capabilities.frozen_slot_identity_valid = slot_identity_valid;
-  window.capabilities.every_active_factor_accounted_once = slot_identity_valid &&
+  window.capabilities.every_active_factor_accounted_once =
+      slot_identity_valid &&
       window.slot_accounting.size() == tx.frozen_slots.size();
   if (!slot_identity_valid) {
     window.reason = "active factor slot ownership/pointer identity is invalid";
     return window;
   }
 
-  if (!boundary_graph.empty()) {
+  if (!boundary_groups.empty()) {
     std::set<gtsam::Key> window_keys;
     for (std::size_t epoch = first_epoch; epoch <= tx.previous_epoch; ++epoch) {
       window_keys.insert(poseKey(epoch));
       window_keys.insert(velocityKey(epoch));
       window_keys.insert(biasKey(epoch));
     }
-    std::set<gtsam::Key> graph_keys;
-    for (const auto& factor : boundary_graph) {
-      graph_keys.insert(factor->keys().begin(), factor->keys().end());
-    }
-    gtsam::KeyVector outside_variables;
-    gtsam::Ordering inside_ordering;
-    for (const auto key : graph_keys) {
-      if (window_keys.count(key) == 0) {
-        outside_variables.push_back(key);
+
+    // ---- C1-b: fault-preserving history summary (route (i)) --------------
+    // The condensed boundary is the square-root summary produced by the C1-a
+    // module from the *linearized* frozen rows (no eigendecomposition, no
+    // pre-elimination: the route-(i-b) measurement shows GTSAM's partial
+    // elimination drops per-factor constants, so kappa/d_perp must come from
+    // the linearized rows).  Each boundary group contributes one Jacobian
+    // factor: its rows are the group's whitened residual rows [A | b], so the
+    // constant stays available (a HessianFactor alone would only carry
+    // A'A, A'b, b'b).  Historical fault columns (Part A granularity) are
+    // injected with fault keys in the separator; only groups that are boundary
+    // inputs carry them (window-explicit groups keep their own maps).
+    gtsam::GaussianFactorGraph augmented;
+    std::size_t information_form_factors = 0;
+    double information_form_offset = 0.0;
+    for (const auto& group : boundary_groups) {
+      for (const auto& factor : group.factors) {
+        const auto jacobian = boost::dynamic_pointer_cast<gtsam::JacobianFactor>(
+            factor->linearize(*tx.frozen_values));
+        if (jacobian) {
+          // Measurement-style factor: the linearization already IS the
+          // whitened row block [A | b], so the row identity (and with it the
+          // per-anchor fault map) is preserved exactly.
+          augmented.push_back(jacobian);
+          continue;
+        }
+        const auto hessian = boost::dynamic_pointer_cast<gtsam::HessianFactor>(
+            factor->linearize(*tx.frozen_values));
+        if (!hessian) {
+          window.reason =
+              "boundary factor is neither a Jacobian nor a Hessian factor";
+          return window;
+        }
+        // Information-form factor (the fixed-lag marginalization stores the
+        // condensed prior as a LinearContainerFactor).  Its rows are rebuilt
+        // from the information block by Cholesky: [R | c] with R'R = Lambda
+        // and c = R^-T eta, which reproduces the quadratic form exactly.  The
+        // constant f - c'c cannot be represented by rows at all, so it is
+        // accumulated explicitly instead of being silently dropped.
+        // `info().selfadjointView()` is the full augmented matrix
+        // [Lambda, eta; eta', f] of dimension (dimension + 1).
+        const Eigen::MatrixXd augmented_information =
+            hessian->info().selfadjointView();
+        int dimension = 0;
+        for (const auto key : hessian->keys()) dimension += keyDimension(key);
+        if (augmented_information.rows() != dimension + 1) {
+          window.reason =
+              "information-form boundary factor has an unexpected dimension";
+          return window;
+        }
+        const Eigen::MatrixXd lambda =
+            augmented_information.topLeftCorner(dimension, dimension);
+        const Eigen::VectorXd eta =
+            augmented_information.topRightCorner(dimension, 1);
+        const double constant =
+            augmented_information(dimension, dimension);
+        Eigen::LLT<Eigen::MatrixXd> llt(lambda);
+        if (llt.info() != Eigen::Success) {
+          window.reason =
+              "information-form boundary factor is not positive definite";
+          return window;
+        }
+        const Eigen::MatrixXd rows = llt.matrixU();
+        const Eigen::VectorXd rhs = llt.matrixU().transpose().solve(eta);
+        information_form_offset += constant - rhs.squaredNorm();
+        ++information_form_factors;
+        std::vector<std::pair<gtsam::Key, Eigen::MatrixXd>> terms;
+        int column = 0;
+        for (const auto key : hessian->keys()) {
+          const int width = keyDimension(key);
+          terms.emplace_back(key,
+                             Eigen::MatrixXd(rows.middleCols(column, width)));
+          column += width;
+        }
+        augmented.emplace_shared<gtsam::JacobianFactor>(terms, rhs);
       }
     }
-    for (std::size_t epoch = first_epoch; epoch <= tx.previous_epoch; ++epoch) {
-      for (const auto key : {poseKey(epoch), velocityKey(epoch), biasKey(epoch)}) {
-        if (graph_keys.count(key)) inside_ordering.push_back(key);
-      }
-    }
-    const auto gaussian = boundary_graph.linearize(*tx.frozen_values);
-    // Eliminate old variables on the sparse factor graph.  The previous code
-    // first formed a dense normal matrix for every fixed-lag variable and then
-    // took a Schur complement, making boundary construction cubic in the full
-    // lag.  Partial QR produces the identical reduced Gaussian model while the
-    // dense eigensolve below is bounded by the requested integrity window.
-    gtsam::GaussianFactorGraph::shared_ptr reduced = gaussian;
-    if (!outside_variables.empty()) {
-      reduced = gaussian->eliminatePartialMultifrontal(
-          outside_variables, gtsam::EliminateQR).second;
-    }
-    const auto reduced_system = reduced->hessian(inside_ordering);
-    const int inside_columns = reduced_system.first.cols();
-    Eigen::MatrixXd reduced_information = reduced_system.first;
-    Eigen::VectorXd reduced_rhs = reduced_system.second;
-    reduced_information =
-        0.5 * (reduced_information + reduced_information.transpose());
-    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigen(reduced_information);
-    if (eigen.info() != Eigen::Success || !eigen.eigenvalues().allFinite() ||
-        eigen.eigenvalues().minCoeff() <
-            -config_.integrity_window.rank_tolerance) {
-      window.reason = "boundary partial Schur is not positive semidefinite";
+    const HistoryFaultParameterizationPlan plan =
+        planHistoryFaultParameterization(tx, interval_count);
+    WindowHistorySummary& history = window.history_summary;
+    history.present = true;
+    history.fault_columns = plan.q_hist();
+    history.horizon_first_epoch = plan.horizon.first_epoch;
+    history.window_first_epoch = plan.horizon.window_first_epoch;
+    history.omitted_epoch_count = plan.omitted_epoch_count;
+    history.material_gap_epoch_count = plan.material_gap_epoch_count;
+    history.claims_full_coverage = plan.claimsFullCoverage();
+    history.assumptions = plan.validityAssumptions();
+    history.omitted_risk_source = plan.omittedRiskSource();
+    history.skipped_columns = plan.skipped_columns;
+    HistoryFaultCapacityLimits capacity_limits;
+    capacity_limits.max_fault_columns = config_.history.max_fault_columns;
+    capacity_limits.capacity_action = config_.history.capacity_action;
+    const HistoryFaultCapacityDecision capacity =
+        evaluateHistoryFaultCapacity(plan.q_hist(), capacity_limits);
+    history.capacity_ok = capacity.fits;
+    history.capacity_action = capacity.action;
+    if (!capacity.fits) {
+      history.valid = false;
+      history.state = toString(HistorySummaryState::CapacityExceeded);
+      history.reason = capacity.reason;
+      NumericalWorkCounters::historyCapacityRefusal();
+      NumericalWorkCounters::historySummaryInvalid();
+      window.reason = "history fault capacity refused: " + capacity.reason;
       return window;
     }
-    const double max_eigen = std::max(1.0, eigen.eigenvalues().maxCoeff());
-    std::vector<int> retained;
-    for (int i = 0; i < eigen.eigenvalues().size(); ++i) {
-      if (eigen.eigenvalues()(i) >
-          config_.integrity_window.rank_tolerance * max_eigen) retained.push_back(i);
+
+    std::set<std::uint64_t> boundary_group_values;
+    for (const auto& accounting : window.slot_accounting) {
+      if (accounting.boundary_input && accounting.group_id) {
+        boundary_group_values.insert(accounting.group_id->value());
+      }
+    }
+    std::map<gtsam::Key, HistoryFaultColumnId> column_id_of_key;
+    std::map<std::size_t, const HistoricalEpochContext*> history_by_epoch;
+    for (const auto& record : tx.recoverable_history) {
+      history_by_epoch[record.proposed_epoch] = &record;
+    }
+    std::uint64_t next_fault_index = 1;
+    for (std::size_t epoch = plan.horizon.first_epoch;
+         epoch < plan.horizon.window_first_epoch; ++epoch) {
+      const auto record = history_by_epoch.find(epoch);
+      if (record == history_by_epoch.end()) {
+        // Ordering guard (design freeze §7.1 / readiness item 2): material of
+        // an epoch inside the A3 horizon may not disappear before the summary
+        // consumed it.  If the frozen boundary still carries factors of that
+        // epoch, the deletion happened first and the window must fail instead
+        // of silently claiming the interval.
+        bool epoch_has_boundary_factors = false;
+        for (const auto& group : boundary_groups) {
+          for (const auto& factor : group.factors) {
+            for (const auto key : factor->keys()) {
+              if (gtsam::Symbol(key).index() == epoch) {
+                epoch_has_boundary_factors = true;
+                break;
+              }
+            }
+            if (epoch_has_boundary_factors) break;
+          }
+          if (epoch_has_boundary_factors) break;
+        }
+        if (epoch_has_boundary_factors) {
+          history.valid = false;
+          history.state = toString(HistorySummaryState::ColdStartInvalid);
+          history.reason = "history material for epoch " +
+                           std::to_string(epoch) +
+                           " was deleted before the summary update";
+          NumericalWorkCounters::historySummaryInvalid();
+          window.reason = history.reason;
+          return window;
+        }
+        continue;
+      }
+      std::vector<HistoryFaultColumn> columns;
+      for (const auto& column : plan.columns) {
+        if (column.id.epoch != epoch) continue;
+        if (boundary_group_values.count(column.group.value()) == 0) continue;
+        columns.push_back(column);
+      }
+      if (columns.empty()) continue;
+      const HistoryFaultInjectionResult injection =
+          buildHistoricalFaultInjection(*record->second, *tx.frozen_values,
+                                        columns, next_fault_index);
+      if (!injection.valid) {
+        history.valid = false;
+        history.state = toString(HistorySummaryState::BuildInvalid);
+        history.reason = "history fault injection failed: " + injection.reason;
+        NumericalWorkCounters::historySummaryInvalid();
+        window.reason = history.reason;
+        return window;
+      }
+      for (const auto& factor : injection.graph) augmented.push_back(factor);
+      for (std::size_t index = 0; index < columns.size(); ++index) {
+        column_id_of_key[injection.fault_keys[index]] = columns[index].id;
+      }
+      next_fault_index += static_cast<std::uint64_t>(columns.size());
+      ++history.injected_epochs;
+    }
+
+    const ExtractedBoundaryRows extracted = extractBoundaryRows(augmented);
+    if (!extracted.valid || extracted.rows.rows() == 0 ||
+        extracted.total_columns == 0) {
+      history.valid = false;
+      history.state = toString(HistorySummaryState::BuildInvalid);
+      history.reason = "boundary row extraction failed: " + extracted.reason;
+      NumericalWorkCounters::historySummaryInvalid();
+      window.reason = history.reason;
+      return window;
+    }
+    history.boundary_rows = static_cast<std::size_t>(extracted.rows.rows());
+    history.constant_energy = extracted.constant_energy;
+
+    std::vector<int> old_columns;
+    std::vector<int> boundary_columns;
+    std::vector<int> fault_columns;
+    const int extracted_columns = static_cast<int>(extracted.keys.size());
+    for (int column = 0; column < extracted_columns; ++column) {
+      const gtsam::Key key = extracted.keys[column];
+      if (gtsam::Symbol(key).chr() == 'f') {
+        if (column_id_of_key.count(key) == 0) {
+          history.valid = false;
+          history.reason =
+              "extracted fault key is not attributable to a column id";
+          NumericalWorkCounters::historySummaryInvalid();
+          window.reason = history.reason;
+          return window;
+        }
+        fault_columns.push_back(column);
+      } else if (window_keys.count(key) != 0) {
+        boundary_columns.push_back(column);
+      } else {
+        old_columns.push_back(column);
+      }
+    }
+    // Canonical boundary column order (epoch ascending, then x < v < b) so the
+    // summary's x_b basis maps directly onto the window column layout.
+    std::sort(boundary_columns.begin(), boundary_columns.end(),
+              [&](int left, int right) {
+                const gtsam::Key a = extracted.keys[left];
+                const gtsam::Key b = extracted.keys[right];
+                const std::uint64_t epoch_a = gtsam::Symbol(a).index();
+                const std::uint64_t epoch_b = gtsam::Symbol(b).index();
+                if (epoch_a != epoch_b) return epoch_a < epoch_b;
+                auto rank = [](char chr) {
+                  return chr == 'x' ? 0 : (chr == 'v' ? 1 : 2);
+                };
+                return rank(gtsam::Symbol(a).chr()) <
+                       rank(gtsam::Symbol(b).chr());
+              });
+    auto concatColumns = [&](const std::vector<int>& columns) {
+      int width = 0;
+      for (const int column : columns) width += extracted.key_dim[column];
+      Eigen::MatrixXd out(extracted.rows.rows(), width);
+      int cursor = 0;
+      for (const int column : columns) {
+        const int dim = extracted.key_dim[column];
+        out.middleCols(cursor, dim) =
+            extracted.rows.middleCols(extracted.column_begin[column], dim);
+        cursor += dim;
+      }
+      return out;
+    };
+    HistoryFaultSummaryInput summary_input;
+    summary_input.h_old_state = concatColumns(old_columns);
+    summary_input.h_boundary = concatColumns(boundary_columns);
+    summary_input.fault_map = concatColumns(fault_columns);
+    // GTSAM JacobianFactor carries the residual as A x + b; the summary module
+    // uses r = H x - z, so the extracted right-hand side enters negated.
+    summary_input.rhs = -extracted.rows.col(extracted.total_columns);
+    const HistoryFaultSummary summary = buildHistoryFaultSummary(summary_input);
+    history.boundary_columns =
+        static_cast<std::size_t>(summary_input.h_boundary.cols());
+    const std::uint64_t input_width = static_cast<std::uint64_t>(
+        summary_input.h_old_state.cols() + summary_input.h_boundary.cols() +
+        summary_input.fault_map.cols() + 1);
+    NumericalWorkCounters::historySummaryBuild(
+        history.boundary_rows, input_width,
+        static_cast<std::uint64_t>(summary_input.fault_map.cols()),
+        static_cast<std::uint64_t>(summary.n_boundary + summary.nuPerp()));
+    if (!summary.valid) {
+      history.valid = false;
+      history.state = toString(HistorySummaryState::BuildInvalid);
+      history.reason = summary.invalid_reason;
+      NumericalWorkCounters::historySummaryInvalid();
+      window.reason = "history summary invalid: " + summary.invalid_reason;
+      return window;
+    }
+
+    // Condensed rows: the boundary triangle [R_b] carries the state content,
+    // the detection-only rows [0 | d_perp] carry the state-free residual
+    // content (kappa_b = ||d_perp||^2, nu_perp dof).  Rows that are exactly
+    // zero everywhere are dropped: they would only inflate the residual dof.
+    std::vector<int> kept_rows;
+    std::vector<char> field_is_perp;
+    for (int row = 0; row < summary.n_boundary; ++row) {
+      const bool nonzero = summary.R_b.row(row).cwiseAbs().maxCoeff() > 0.0 ||
+                           std::abs(summary.d_b(row)) > 0.0 ||
+                           (summary.n_fault > 0 &&
+                            summary.T_b.row(row).cwiseAbs().maxCoeff() > 0.0);
+      if (nonzero) {
+        kept_rows.push_back(row);
+        field_is_perp.push_back(0);
+      }
+    }
+    for (int row = 0; row < summary.nuPerp(); ++row) {
+      const bool nonzero = std::abs(summary.d_perp(row)) > 0.0 ||
+                           (summary.n_fault > 0 &&
+                            summary.F_b.row(row).cwiseAbs().maxCoeff() > 0.0);
+      if (nonzero) {
+        kept_rows.push_back(summary.n_boundary + row);
+        field_is_perp.push_back(1);
+      }
     }
     LinearizedFactorBlock boundary;
     boundary.group_id = FactorGroupId(tx.id.value() * 1000);
@@ -1243,45 +1611,173 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     boundary.sensor = SensorType::Prior;
     boundary.role = RowRole::TrustedPrior;
     boundary.jacobian_whitened = Eigen::MatrixXd::Zero(
-        retained.size(), total_columns);
-    Eigen::MatrixXd compact = Eigen::MatrixXd::Zero(retained.size(), inside_columns);
-    for (std::size_t row = 0; row < retained.size(); ++row) {
-      compact.row(row) = std::sqrt(eigen.eigenvalues()(retained[row])) *
-          eigen.eigenvectors().col(retained[row]).transpose();
+        static_cast<Eigen::Index>(kept_rows.size()), total_columns);
+    boundary.residual_whitened =
+        Eigen::VectorXd::Zero(static_cast<Eigen::Index>(kept_rows.size()));
+    for (std::size_t index = 0; index < kept_rows.size(); ++index) {
+      const int row = kept_rows[index];
+      if (field_is_perp[index]) {
+        boundary.residual_whitened(static_cast<Eigen::Index>(index)) =
+            summary.d_perp(row - summary.n_boundary);
+        continue;
+      }
+      boundary.residual_whitened(static_cast<Eigen::Index>(index)) =
+          summary.d_b(row);
+      int cursor = 0;
+      for (const int column : boundary_columns) {
+        const int dim = extracted.key_dim[column];
+        const gtsam::Key key = extracted.keys[column];
+        const std::size_t epoch = gtsam::Symbol(key).index();
+        const int offset = static_cast<int>((epoch - first_epoch) * 15) +
+                           (gtsam::Symbol(key).chr() == 'x'
+                                ? 0
+                                : (gtsam::Symbol(key).chr() == 'v' ? 6 : 9));
+        boundary.jacobian_whitened.block(static_cast<Eigen::Index>(index),
+                                         offset, 1, dim) =
+            summary.R_b.block(row, cursor, 1, dim);
+        cursor += dim;
+      }
     }
-    // Boundary graph has no pending epoch columns and is ordered by epoch.
-    boundary.jacobian_whitened.leftCols(inside_columns) = compact;
-    boundary.residual_whitened = compact.transpose()
-        .completeOrthogonalDecomposition().solve(reduced_rhs);
     boundary.jacobian_raw = boundary.jacobian_whitened;
     boundary.residual_raw = boundary.residual_whitened;
-    boundary.covariance = Eigen::MatrixXd::Identity(retained.size(), retained.size());
+    boundary.covariance =
+        Eigen::MatrixXd::Identity(static_cast<Eigen::Index>(kept_rows.size()),
+                                  static_cast<Eigen::Index>(kept_rows.size()));
     boundary.whitener = boundary.covariance;
     boundary.effective_weight = 1.0;
-    boundary.whitening_model_id = "frozen_graph_partial_qr_schur";
-    // A3: the condensed boundary prior also touches every window column (its
-    // dense block spans the full window).  Filling the indices keeps
-    // diagnostics/census analysis consistent with the regular blocks instead
-    // of reporting zero touched columns.
+    boundary.whitening_model_id = "history_summary_sqrt_d1";
     boundary.window_column_indices.resize(total_columns);
     std::iota(boundary.window_column_indices.begin(),
               boundary.window_column_indices.end(), 0);
     boundary.version = tx.base_version;
     window.blocks.push_back(std::move(boundary));
     window.capabilities.includes_boundary_prior = true;
+    window.capabilities.history_summary_present = true;
+    window.capabilities.history_summary_valid = true;
+    window.capabilities.history_summary_capacity_ok = capacity.fits;
+
+    // Fault response carrier: rows align 1:1 with the emitted boundary block,
+    // so a historical mode map over the block is [response.col; detector.col].
+    std::size_t kept_perp = 0;
+    for (const char flag : field_is_perp) kept_perp += flag ? 1u : 0u;
+    history.emitted_rows = kept_rows.size();
+    history.nu_perp = static_cast<int>(kept_perp);
+    history.rank_boundary = summary.rank_boundary;
+    history.response = Eigen::MatrixXd(kept_rows.size(), summary.n_fault);
+    history.detector_response = Eigen::MatrixXd(kept_perp, summary.n_fault);
+    history.d_perp = Eigen::VectorXd(static_cast<Eigen::Index>(kept_perp));
+    {
+      std::size_t boundary_row = 0;
+      std::size_t perp_row = 0;
+      for (std::size_t index = 0; index < kept_rows.size(); ++index) {
+        const int row = kept_rows[index];
+        if (field_is_perp[index]) {
+          history.detector_response.row(static_cast<Eigen::Index>(perp_row)) =
+              summary.F_b.row(row - summary.n_boundary);
+          history.d_perp(static_cast<Eigen::Index>(perp_row)) =
+              summary.d_perp(row - summary.n_boundary);
+          ++perp_row;
+        } else {
+          history.response.row(static_cast<Eigen::Index>(boundary_row)) =
+              summary.T_b.row(row);
+          ++boundary_row;
+        }
+      }
+    }
+    history.kappa_b = history.d_perp.squaredNorm();
+    history.constant_offset = information_form_offset;
+    history.information_form_factors = information_form_factors;
+    for (const int column : fault_columns) {
+      const HistoryFaultColumnId id =
+          column_id_of_key.at(extracted.keys[column]);
+      history.column_ids.push_back(id);
+      if (id.kind == HistoryFaultBasisKind::UwbAnchorConstant) {
+        ++history.constant_columns;
+      } else if (id.kind == HistoryFaultBasisKind::UwbAnchorTimeLinear) {
+        ++history.time_linear_columns;
+      } else {
+        ++history.imu_columns;
+      }
+    }
+    NumericalWorkCounters::historyPerpRows(kept_perp);
+
+    // Binding digest (design freeze §3/§5): fold every component that can
+    // change the meaning of the summary.  The digest is what caches and the
+    // FrozenWindowNumerics fingerprint carry, so a changed whitening / mode
+    // set / linearization / capacity can never be served from a stale entry.
+    auto fnv = [](std::uint64_t hash, const void* data, std::size_t bytes) {
+      const auto* bytes_ptr = static_cast<const unsigned char*>(data);
+      for (std::size_t index = 0; index < bytes; ++index) {
+        hash ^= bytes_ptr[index];
+        hash *= 1099511628211ULL;
+      }
+      return hash;
+    };
+    const std::uint64_t fnv_offset = 1469598103934665603ULL;
+    HistorySummaryVersion summary_version;
+    {
+      std::uint64_t hash = fnv_offset;
+      const std::uint64_t fields[4] = {
+          window.version.graph_version, window.version.ordering_version,
+          window.version.noise_model_version, window.version.linpoint_version};
+      hash = fnv(hash, fields, sizeof(fields));
+      summary_version.linearization = hash;
+    }
+    {
+      std::uint64_t hash = fnv_offset;
+      std::set<std::string> whitening_ids;
+      for (const auto& item : historical_groups) {
+        whitening_ids.insert(item.second.group->noise_model_id);
+      }
+      for (const auto& id_text : whitening_ids) {
+        hash = fnv(hash, id_text.data(), id_text.size());
+      }
+      summary_version.whitening = hash;
+    }
+    {
+      std::uint64_t hash = fnv_offset;
+      std::vector<HistoryFaultColumnId> ids = history.column_ids;
+      std::sort(ids.begin(), ids.end(),
+                [](const HistoryFaultColumnId& a,
+                   const HistoryFaultColumnId& b) { return a < b; });
+      for (const auto& id : ids) {
+        const std::uint64_t tuple[3] = {static_cast<std::uint64_t>(id.kind),
+                                        id.source, id.epoch};
+        hash = fnv(hash, tuple, sizeof(tuple));
+      }
+      const std::uint64_t counts[4] = {
+          plan.horizon.first_epoch, plan.horizon.window_first_epoch,
+          static_cast<std::uint64_t>(plan.q_hist()),
+          static_cast<std::uint64_t>(plan.skipped_columns)};
+      hash = fnv(hash, counts, sizeof(counts));
+      summary_version.mode_set = hash;
+    }
+    {
+      std::uint64_t hash = fnv_offset;
+      hash = fnv(hash, &capacity_limits.max_fault_columns,
+                 sizeof(capacity_limits.max_fault_columns));
+      hash = fnv(hash, capacity_limits.capacity_action.data(),
+                 capacity_limits.capacity_action.size());
+      summary_version.capacity = hash;
+    }
+    history.version = summary_version;
+    history.version_digest = digestHistorySummaryVersion(summary_version);
+    history.valid = true;
+    history.state = toString(HistorySummaryState::Valid);
   }
 
   const auto factor_start = std::chrono::steady_clock::now();
   window.preparation_timing.boundary_and_provenance_ms =
-      std::chrono::duration<double, std::milli>(
-          factor_start - preparation_start).count();
+      std::chrono::duration<double, std::milli>(factor_start -
+                                                preparation_start)
+          .count();
 
   auto append_group = [&](const PendingFactorGroup& group,
                           EpochTransaction linearization_tx) {
     linearization_tx.base_version = window.version;
     linearization_tx.backend_mutated = false;
-    const std::uint64_t fingerprint = factorBlockFingerprint(
-        group, linearization_tx);
+    const std::uint64_t fingerprint =
+        factorBlockFingerprint(group, linearization_tx);
     const auto cached = factor_block_cache_.find(group.id.value());
     LinearizedFactorBlock block;
     if (cached != factor_block_cache_.end() &&
@@ -1293,8 +1789,8 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     } else {
       ++cache_audit_.factor_block_misses;
       const auto local = linearizeGroupDense(group, linearization_tx);
-      block = linearizePendingGroup(
-          group, linearization_tx, local.first, local.second);
+      block = linearizePendingGroup(group, linearization_tx, local.first,
+                                    local.second);
       FactorBlockCacheEntry entry;
       entry.transaction_id = tx.id;
       entry.version = window.version;
@@ -1302,10 +1798,10 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
       entry.block = block;
       factor_block_cache_[group.id.value()] = std::move(entry);
     }
-    Eigen::MatrixXd embedded_h = Eigen::MatrixXd::Zero(
-        block.jacobian_whitened.rows(), total_columns);
-    Eigen::MatrixXd embedded_raw = Eigen::MatrixXd::Zero(
-        block.jacobian_raw.rows(), total_columns);
+    Eigen::MatrixXd embedded_h =
+        Eigen::MatrixXd::Zero(block.jacobian_whitened.rows(), total_columns);
+    Eigen::MatrixXd embedded_raw =
+        Eigen::MatrixXd::Zero(block.jacobian_raw.rows(), total_columns);
     for (const auto key : group.keys) {
       const std::size_t epoch = gtsam::Symbol(key).index();
       if (epoch < first_epoch || epoch > tx.proposed_epoch) {
@@ -1314,15 +1810,16 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
       }
       const int source = transactionColumn(linearization_tx, key);
       const int destination = static_cast<int>((epoch - first_epoch) * 15) +
-          (gtsam::Symbol(key).chr() == 'x' ? 0 :
-           (gtsam::Symbol(key).chr() == 'v' ? 6 : 9));
+                              (gtsam::Symbol(key).chr() == 'x'
+                                   ? 0
+                                   : (gtsam::Symbol(key).chr() == 'v' ? 6 : 9));
       const int dimension = keyDimension(key);
       embedded_h.block(0, destination, embedded_h.rows(), dimension) =
-          block.jacobian_whitened.block(0, source, block.jacobian_whitened.rows(),
-                                       dimension);
+          block.jacobian_whitened.block(
+              0, source, block.jacobian_whitened.rows(), dimension);
       embedded_raw.block(0, destination, embedded_raw.rows(), dimension) =
           block.jacobian_raw.block(0, source, block.jacobian_raw.rows(),
-                                  dimension);
+                                   dimension);
     }
     block.jacobian_whitened = std::move(embedded_h);
     block.jacobian_raw = std::move(embedded_raw);
@@ -1340,7 +1837,8 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
   for (const auto& record : tx.recoverable_history) {
     const auto& history = record;
     if (history.proposed_epoch < first_epoch ||
-        history.proposed_epoch > tx.previous_epoch) continue;
+        history.proposed_epoch > tx.previous_epoch)
+      continue;
     EpochTransaction linearization_tx;
     linearization_tx.previous_epoch = history.previous_epoch;
     linearization_tx.proposed_epoch = history.proposed_epoch;
@@ -1356,11 +1854,12 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     for (const auto selected_group : history.selected_groups) {
       if (explicit_group_ids.count(selected_group.value()) == 0) continue;
       const auto group = std::find_if(groups.begin(), groups.end(),
-          [&](const PendingFactorGroup* candidate) {
-            return candidate->id == selected_group;
-          });
+                                      [&](const PendingFactorGroup* candidate) {
+                                        return candidate->id == selected_group;
+                                      });
       if (group == groups.end()) {
-        window.reason = "committed group provenance is incomplete: explicit group " +
+        window.reason =
+            "committed group provenance is incomplete: explicit group " +
             std::to_string(selected_group.value()) + " is absent from epoch " +
             std::to_string(history.proposed_epoch) + " catalog";
         return window;
@@ -1371,49 +1870,83 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
 
   if (request.include_pending_imu) {
     append_group(tx.imu_group, tx);
-    window.factor_inventory.push_back({
-        tx.imu_group.id, tx.proposed_epoch, tx.imu_group.kind,
-        tx.imu_group.sensor, FrozenFactorDisposition::PendingExplicit,
-        tx.imu_group.keys, {}});
+    window.factor_inventory.push_back({tx.imu_group.id,
+                                       tx.proposed_epoch,
+                                       tx.imu_group.kind,
+                                       tx.imu_group.sensor,
+                                       FrozenFactorDisposition::PendingExplicit,
+                                       tx.imu_group.keys,
+                                       {}});
     window.capabilities.includes_pending_imu = true;
   }
   if (request.include_pending_uwb) {
     for (const auto& group : tx.uwb_groups) {
       if (!group.nominal) continue;
       append_group(group, tx);
-      window.factor_inventory.push_back({
-          group.id, tx.proposed_epoch, group.kind, group.sensor,
-          FrozenFactorDisposition::PendingExplicit, group.keys, {}});
+      window.factor_inventory.push_back(
+          {group.id,
+           tx.proposed_epoch,
+           group.kind,
+           group.sensor,
+           FrozenFactorDisposition::PendingExplicit,
+           group.keys,
+           {}});
     }
     window.capabilities.includes_pending_uwb = !tx.uwb_groups.empty();
   }
   if (request.include_generic_bridge) {
     append_group(tx.generic_bridge_group, tx);
     append_group(tx.generic_bias_continuity_group, tx);
-    for (const auto* group : {&tx.generic_bridge_group,
-                              &tx.generic_bias_continuity_group}) {
-      window.factor_inventory.push_back({
-          group->id, tx.proposed_epoch, group->kind, group->sensor,
-          FrozenFactorDisposition::PendingExplicit, group->keys, {}});
+    for (const auto* group :
+         {&tx.generic_bridge_group, &tx.generic_bias_continuity_group}) {
+      window.factor_inventory.push_back(
+          {group->id,
+           tx.proposed_epoch,
+           group->kind,
+           group->sensor,
+           FrozenFactorDisposition::PendingExplicit,
+           group->keys,
+           {}});
     }
   }
   window.protected_state_map = Eigen::MatrixXd::Zero(3, total_columns);
-  window.protected_state_map.block<3, 6>(
-      0, total_columns - 15) =
+  window.protected_state_map.block<3, 6>(0, total_columns - 15) =
       worldPositionPoseTangentJacobian(toGtsamPose(tx.nominal_predicted_state));
   window.capabilities.complete_factor_provenance =
       factor_ledger_.hasCompleteActiveProvenance(activeGraph());
-  window.capabilities.history_provenance_valid = tx.previous_epoch == 0 ||
-      window.capabilities.complete_factor_provenance;
+  window.capabilities.history_provenance_valid =
+      tx.previous_epoch == 0 || window.capabilities.complete_factor_provenance;
   window.capabilities.fixed_lag_maturity_valid =
       config_.incremental.fixed_lag_epochs == 0 ||
       config_.incremental.fixed_lag_epochs >
           request.epochs + config_.integrity_window.recovery_margin_epochs;
   window.preparation_timing.factor_linearization_whitening_ms =
       std::chrono::duration<double, std::milli>(
-          std::chrono::steady_clock::now() - factor_start).count();
+          std::chrono::steady_clock::now() - factor_start)
+          .count();
   finalizeIntegrityWindow(&window, config_.integrity_window.rank_tolerance,
                           config_.integrity_window.max_condition_number);
+  if (std::getenv("UWB_IMU_PL_C1P_DIAG") != nullptr) {
+    const auto& history = window.history_summary;
+    std::fprintf(stderr,
+                 "[C1P-DIAG] tx=%llu first=%zu window_first=%zu rows=%ld rank=%d "
+                 "dof=%d blocks=%zu | history present=%d valid=%d state=%s "
+                 "boundary_rows=%zu "
+                 "emitted=%zu nu_perp=%d rank_boundary=%d kappa=%.6e offset=%.3e "
+                 "info_form=%zu q=%zu injected=%zu capacity=%d | boundary_ms=%.3f "
+                 "assembly_ms=%.3f\n",
+                 static_cast<unsigned long long>(tx.id.value()), first_epoch,
+                 interval_count, static_cast<long>(window.H.rows()), window.rank,
+                 window.dof, window.blocks.size(), history.present ? 1 : 0,
+                 history.valid ? 1 : 0, history.state.c_str(),
+                 history.boundary_rows,
+                 history.emitted_rows, history.nu_perp, history.rank_boundary,
+                 history.kappa_b, history.constant_offset,
+                 history.information_form_factors, history.fault_columns,
+                 history.injected_epochs, history.capacity_ok ? 1 : 0,
+                 window.preparation_timing.boundary_and_provenance_ms,
+                 window.preparation_timing.dense_assembly_ms);
+  }
   if (!window.capabilities.fixed_lag_maturity_valid) {
     window.model_valid = false;
     window.reason = "fixed lag violates integrity-window maturity delay";
@@ -1427,22 +1960,24 @@ LinearizedFactorBlock IncrementalUwbImuEstimator::buildPendingFactorBlock(
       tx.backend_mutated || tx.base_graph_version != graph_version_) {
     throw std::logic_error("pending block requires active frozen transaction");
   }
-  std::vector<const PendingFactorGroup*> groups{&tx.imu_group,
-                                                &tx.generic_bridge_group,
-                                                &tx.generic_bias_continuity_group};
+  std::vector<const PendingFactorGroup*> groups{
+      &tx.imu_group, &tx.generic_bridge_group,
+      &tx.generic_bias_continuity_group};
   for (const auto& group : tx.uwb_groups) groups.push_back(&group);
   if (tx.dynamics_bridge_group) groups.push_back(&*tx.dynamics_bridge_group);
   for (const auto& history : tx.recoverable_history) {
     for (const auto& group : history.groups) groups.push_back(&group);
   }
-  const auto found = std::find_if(groups.begin(), groups.end(),
+  const auto found = std::find_if(
+      groups.begin(), groups.end(),
       [&](const PendingFactorGroup* group) { return group->id == id; });
   if (found == groups.end()) {
     throw std::out_of_range("unknown pending factor group");
   }
   EpochTransaction local = tx;
   for (const auto& history : tx.recoverable_history) {
-    const auto historical = std::find_if(history.groups.begin(), history.groups.end(),
+    const auto historical = std::find_if(
+        history.groups.begin(), history.groups.end(),
         [&](const PendingFactorGroup& group) { return group.id == id; });
     if (historical != history.groups.end()) {
       local.previous_epoch = history.previous_epoch;
@@ -1466,8 +2001,8 @@ LinearizedFactorBlock IncrementalUwbImuEstimator::buildPendingFactorBlock(
   }
   ++cache_audit_.factor_block_misses;
   const auto linear = linearizeGroupDense(**found, local);
-  LinearizedFactorBlock block = linearizePendingGroup(
-      **found, local, linear.first, linear.second);
+  LinearizedFactorBlock block =
+      linearizePendingGroup(**found, local, linear.first, linear.second);
   FactorBlockCacheEntry entry;
   entry.transaction_id = tx.id;
   entry.version = tx.base_version;
@@ -1496,11 +2031,10 @@ void IncrementalUwbImuEstimator::queryCurrentState() {
   // cliques and their ancestor closure, then retract these three keys at the
   // stored linearization point. The closure is also the exact dependency set
   // used by the current-state marginal below.
-  const gtsam::KeyVector keys{
-      poseKey(epoch_), velocityKey(epoch_), biasKey(epoch_)};
+  const gtsam::KeyVector keys{poseKey(epoch_), velocityKey(epoch_),
+                              biasKey(epoch_)};
   const gtsam::ISAM2& isam = backendIsam();
-  const gtsam::GaussianBayesNet bayes_net =
-      currentCliqueClosure(isam, keys);
+  const gtsam::GaussianBayesNet bayes_net = currentCliqueClosure(isam, keys);
   gtsam::VectorValues local_delta;
   for (std::size_t i = bayes_net.size(); i > 0; --i) {
     local_delta.insert(bayes_net[i - 1]->solve(local_delta));
@@ -1510,10 +2044,8 @@ void IncrementalUwbImuEstimator::queryCurrentState() {
       theta.at<gtsam::Pose3>(keys[0]), local_delta.at(keys[0]));
   const gtsam::Vector3 velocity = gtsam::traits<gtsam::Vector3>::Retract(
       theta.at<gtsam::Vector3>(keys[1]), local_delta.at(keys[1]));
-  const auto bias =
-      gtsam::traits<gtsam::imuBias::ConstantBias>::Retract(
-          theta.at<gtsam::imuBias::ConstantBias>(keys[2]),
-          local_delta.at(keys[2]));
+  const auto bias = gtsam::traits<gtsam::imuBias::ConstantBias>::Retract(
+      theta.at<gtsam::imuBias::ConstantBias>(keys[2]), local_delta.at(keys[2]));
   current_state_.id = StateId(epoch_);
   current_state_.timestamp = state_timestamp_;
   current_state_.position_world_m = pose.translation();
@@ -1523,16 +2055,16 @@ void IncrementalUwbImuEstimator::queryCurrentState() {
   current_state_.gyro_bias_radps = bias.gyroscope();
 }
 
-Eigen::Matrix<double, 15, 15>
-IncrementalUwbImuEstimator::currentJointMarginal() const {
+Eigen::Matrix<double, 15, 15> IncrementalUwbImuEstimator::currentJointMarginal()
+    const {
   return jointMarginal(epoch_);
 }
 
-Eigen::Matrix<double, 15, 15>
-IncrementalUwbImuEstimator::jointMarginal(std::size_t requested_epoch) const {
+Eigen::Matrix<double, 15, 15> IncrementalUwbImuEstimator::jointMarginal(
+    std::size_t requested_epoch) const {
   const gtsam::KeyVector keys{poseKey(requested_epoch),
-                             velocityKey(requested_epoch),
-                             biasKey(requested_epoch)};
+                              velocityKey(requested_epoch),
+                              biasKey(requested_epoch)};
   const std::array<int, 3> offsets{0, 6, 9};
   const std::array<int, 3> dimensions{6, 3, 6};
   // Extract only the current cliques and their ancestor closure from the
@@ -1546,7 +2078,8 @@ IncrementalUwbImuEstimator::jointMarginal(std::size_t requested_epoch) const {
   for (const auto& conditional : bayes_net) {
     for (auto item = conditional->begin(); item != conditional->end(); ++item) {
       if (!zero_rhs.exists(*item)) {
-        zero_rhs.insert(*item, Eigen::VectorXd::Zero(conditional->getDim(item)));
+        zero_rhs.insert(*item,
+                        Eigen::VectorXd::Zero(conditional->getDim(item)));
       }
     }
   }
@@ -1563,9 +2096,8 @@ IncrementalUwbImuEstimator::jointMarginal(std::size_t requested_epoch) const {
           bayes_net.backSubstitute(intermediate);
       const int output_column = offsets[column_key] + local_column;
       for (std::size_t row_key = 0; row_key < keys.size(); ++row_key) {
-        covariance.block(offsets[row_key], output_column,
-                         dimensions[row_key], 1) =
-            inverse_column.at(keys[row_key]);
+        covariance.block(offsets[row_key], output_column, dimensions[row_key],
+                         1) = inverse_column.at(keys[row_key]);
       }
     }
   }
@@ -1595,7 +2127,8 @@ std::shared_ptr<const EstimationSnapshot>
 IncrementalUwbImuEstimator::preMeasurementSnapshot(const UwbBatch& batch) {
   const auto snapshot_start = std::chrono::steady_clock::now();
   if (!adapter_transaction_ || batch.timestamp != adapter_transaction_->end) {
-    throw std::logic_error("pre-measurement snapshot requires matching predicted epoch");
+    throw std::logic_error(
+        "pre-measurement snapshot requires matching predicted epoch");
   }
   validateUwbBatch(batch);
   if (adapter_transaction_->uwb_groups.empty()) {
@@ -1603,9 +2136,12 @@ IncrementalUwbImuEstimator::preMeasurementSnapshot(const UwbBatch& batch) {
   }
   CurrentStatePrior prior = pendingCurrentPrior(*adapter_transaction_);
   pending_batch_id_ = batch.id;
-  if (!prior.excludes_current_uwb) throw std::logic_error("current UWB already contaminates prior");
-  const gtsam::Pose3 pose = toGtsamPose(adapter_transaction_->nominal_predicted_state);
-  UwbPoseBatchFactor proposed(poseKey(adapter_transaction_->proposed_epoch), batch, lever_arm_body_m_);
+  if (!prior.excludes_current_uwb)
+    throw std::logic_error("current UWB already contaminates prior");
+  const gtsam::Pose3 pose =
+      toGtsamPose(adapter_transaction_->nominal_predicted_state);
+  UwbPoseBatchFactor proposed(poseKey(adapter_transaction_->proposed_epoch),
+                              batch, lever_arm_body_m_);
   gtsam::Matrix raw_h;
   const Eigen::VectorXd factor_error = proposed.evaluateError(pose, raw_h);
   Eigen::MatrixXd h = Eigen::MatrixXd::Zero(raw_h.rows(), 15);
@@ -1633,14 +2169,17 @@ IncrementalUwbImuEstimator::preMeasurementSnapshot(const UwbBatch& batch) {
   diagnostics.columns = 15;
   Eigen::JacobiSVD<Eigen::Matrix<double, 15, 15>> svd(prior.covariance);
   const double smallest = svd.singularValues().tail<1>()(0);
-  diagnostics.rank = static_cast<int>((svd.singularValues().array() >
-      config_.snapshot.rank_tolerance).count());
-  diagnostics.condition_number = smallest > 0.0 ?
-      svd.singularValues()(0) / smallest : std::numeric_limits<double>::infinity();
+  diagnostics.rank = static_cast<int>(
+      (svd.singularValues().array() > config_.snapshot.rank_tolerance).count());
+  diagnostics.condition_number = smallest > 0.0
+                                     ? svd.singularValues()(0) / smallest
+                                     : std::numeric_limits<double>::infinity();
   diagnostics.covariance_valid = diagnostics.rank == 15;
-  diagnostics.model_valid = diagnostics.covariance_valid &&
+  diagnostics.model_valid =
+      diagnostics.covariance_valid &&
       diagnostics.condition_number <= config_.snapshot.max_condition_number;
-  if (!diagnostics.model_valid) diagnostics.reason = "pre-UWB prior marginal is ill-conditioned";
+  if (!diagnostics.model_valid)
+    diagnostics.reason = "pre-UWB prior marginal is ill-conditioned";
   diagnostics.linearization_step_norm = 0.0;
   SnapshotCapabilities capabilities;
   capabilities.dense_snapshot = true;
@@ -1652,12 +2191,12 @@ IncrementalUwbImuEstimator::preMeasurementSnapshot(const UwbBatch& batch) {
   capabilities.historical_fault_provenance = false;
   Eigen::LDLT<Eigen::Matrix<double, 15, 15>> information_solve(
       prior.covariance);
-  const Eigen::Matrix<double, 15, 15> information = information_solve.solve(
-      Eigen::Matrix<double, 15, 15>::Identity());
+  const Eigen::Matrix<double, 15, 15> information =
+      information_solve.solve(Eigen::Matrix<double, 15, 15>::Identity());
   auto snapshot = std::make_shared<ImmutableEstimationSnapshot>(
-      prior.mean, prior.version, diagnostics, std::vector<WhitenedRowBlock>{rows},
-      capabilities, LinearizationConsistency::Strict, prior, prior.covariance,
-      information);
+      prior.mean, prior.version, diagnostics,
+      std::vector<WhitenedRowBlock>{rows}, capabilities,
+      LinearizationConsistency::Strict, prior, prior.covariance, information);
   last_snapshot_extraction_ms_ = elapsedMs(snapshot_start);
   return snapshot;
 }
@@ -1667,8 +2206,9 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
   if (backend_poisoned_) throw std::runtime_error("backend is fail-closed");
   if (!active_transaction_id_ || *active_transaction_id_ != tx.id ||
       tx.backend_mutated || tx.base_graph_version != graph_version_ ||
-      !(tx.base_version == LinearizationVersion{
-          graph_version_, ordering_version_, 1, linpoint_version_})) {
+      !(tx.base_version == LinearizationVersion{graph_version_,
+                                                ordering_version_, 1,
+                                                linpoint_version_})) {
     throw std::logic_error("BACKEND_VERSION_MISMATCH or repeated transaction");
   }
   const auto start = std::chrono::steady_clock::now();
@@ -1678,7 +2218,8 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
   for (const auto& group : tx.uwb_groups) all_groups.push_back(&group);
   all_groups.push_back(&tx.generic_bridge_group);
   all_groups.push_back(&tx.generic_bias_continuity_group);
-  if (tx.dynamics_bridge_group) all_groups.push_back(&*tx.dynamics_bridge_group);
+  if (tx.dynamics_bridge_group)
+    all_groups.push_back(&*tx.dynamics_bridge_group);
   for (const auto& history : tx.recoverable_history) {
     for (const auto& group : history.groups) {
       if (group.replaces_group) all_groups.push_back(&group);
@@ -1690,9 +2231,11 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
     if (!selected_ids.insert(id.value()).second) {
       throw std::logic_error("commit plan contains duplicate add group");
     }
-    const auto found = std::find_if(all_groups.begin(), all_groups.end(),
+    const auto found = std::find_if(
+        all_groups.begin(), all_groups.end(),
         [&](const PendingFactorGroup* group) { return group->id == id; });
-    if (found == all_groups.end()) throw std::logic_error("commit plan references unknown add group");
+    if (found == all_groups.end())
+      throw std::logic_error("commit plan references unknown add group");
     selected_groups.push_back(*found);
     for (const auto& factor : (*found)->factors) graph.push_back(factor);
   }
@@ -1701,7 +2244,8 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
       selected_ids.count(tx.generic_bridge_group.id.value()) != 0;
   const bool has_bias_bridge =
       selected_ids.count(tx.generic_bias_continuity_group.id.value()) != 0;
-  const bool has_bridge = has_pose_bridge ||
+  const bool has_bridge =
+      has_pose_bridge ||
       (tx.dynamics_bridge_group &&
        selected_ids.count(tx.dynamics_bridge_group->id.value()) != 0);
   if (has_imu == has_bridge || has_pose_bridge != has_bias_bridge) {
@@ -1711,19 +2255,23 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
   std::vector<std::size_t> remove_slots;
   for (const auto group : plan.groups_to_remove) {
     const auto slots = factor_ledger_.activeSlots(group);
-    if (slots.empty()) throw std::logic_error("commit plan cannot remove inactive/unknown group");
+    if (slots.empty())
+      throw std::logic_error(
+          "commit plan cannot remove inactive/unknown group");
     remove_slots.insert(remove_slots.end(), slots.begin(), slots.end());
   }
   for (const auto& history : tx.recoverable_history) {
-    const auto removed_imu = std::find(
-        plan.groups_to_remove.begin(), plan.groups_to_remove.end(),
-        history.groups.front().id) != plan.groups_to_remove.end();
+    const auto removed_imu =
+        std::find(plan.groups_to_remove.begin(), plan.groups_to_remove.end(),
+                  history.groups.front().id) != plan.groups_to_remove.end();
     if (!removed_imu) continue;
     int historical_pose_bridges = 0;
     int historical_bias_bridges = 0;
     for (const auto& group : history.groups) {
-      if (!group.replaces_group || *group.replaces_group != history.groups.front().id ||
-          selected_ids.count(group.id.value()) == 0) continue;
+      if (!group.replaces_group ||
+          *group.replaces_group != history.groups.front().id ||
+          selected_ids.count(group.id.value()) == 0)
+        continue;
       historical_pose_bridges += group.kind == FactorKind::KinematicBridge;
       historical_bias_bridges += group.kind == FactorKind::BiasContinuity;
     }
@@ -1733,16 +2281,20 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
     }
   }
   std::sort(remove_slots.begin(), remove_slots.end());
-  if (std::adjacent_find(remove_slots.begin(), remove_slots.end()) != remove_slots.end()) {
-    throw std::logic_error("commit plan attempts duplicate factor-slot removal");
+  if (std::adjacent_find(remove_slots.begin(), remove_slots.end()) !=
+      remove_slots.end()) {
+    throw std::logic_error(
+        "commit plan attempts duplicate factor-slot removal");
   }
   gtsam::Values values;
   values.insert(poseKey(tx.proposed_epoch), toGtsamPose(tx.cv_predicted_state));
-  values.insert(velocityKey(tx.proposed_epoch), tx.cv_predicted_state.velocity_world_mps);
+  values.insert(velocityKey(tx.proposed_epoch),
+                tx.cv_predicted_state.velocity_world_mps);
   values.insert(biasKey(tx.proposed_epoch), toGtsamBias(tx.cv_predicted_state));
   BackendUpdateAudit update;
   try {
-    update = backendUpdate(graph, values, tx.proposed_epoch, true, remove_slots);
+    update =
+        backendUpdate(graph, values, tx.proposed_epoch, true, remove_slots);
   } catch (...) {
     backend_poisoned_ = true;
     active_transaction_id_.reset();
@@ -1759,7 +2311,8 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
   }
   ++graph_version_;
   ++linpoint_version_;
-  for (std::size_t i = 0; i < tx.imu_cursor.consume_count; ++i) imu_queue_.pop_front();
+  for (std::size_t i = 0; i < tx.imu_cursor.consume_count; ++i)
+    imu_queue_.pop_front();
   imu_boundary_ = tx.imu_cursor.new_boundary;
   const auto state_query_start = std::chrono::steady_clock::now();
   queryCurrentState();
@@ -1775,9 +2328,10 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
     for (auto& item : state_history_) {
       if (!recovered_values.exists(poseKey(item.first)) ||
           !recovered_values.exists(velocityKey(item.first)) ||
-          !recovered_values.exists(biasKey(item.first))) continue;
-      item.second = stateFromValues(recovered_values, item.first,
-                                    item.second.timestamp);
+          !recovered_values.exists(biasKey(item.first)))
+        continue;
+      item.second =
+          stateFromValues(recovered_values, item.first, item.second.timestamp);
     }
     current_state_ = state_history_.at(epoch_);
   }
@@ -1788,7 +2342,8 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
   }
   const auto& active = activeGraph();
   factor_ledger_.markSlotsAbsent(active, oldestRetainedEpoch());
-  std::set<std::size_t> previously_occupied(remove_slots.begin(), remove_slots.end());
+  std::set<std::size_t> previously_occupied(remove_slots.begin(),
+                                            remove_slots.end());
   std::set<std::size_t> reused_slots;
   for (const auto* group : selected_groups) {
     std::vector<std::size_t> slots;
@@ -1801,9 +2356,12 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
           break;
         }
       }
-      if (!found) throw std::runtime_error("committed factor identity missing from backend");
+      if (!found)
+        throw std::runtime_error(
+            "committed factor identity missing from backend");
     }
-    factor_ledger_.activate(group->id, slots,
+    factor_ledger_.activate(
+        group->id, slots,
         {graph_version_, ordering_version_, 1, linpoint_version_});
     for (const auto slot : slots) {
       if (previously_occupied.count(slot)) reused_slots.insert(slot);
@@ -1816,8 +2374,9 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
       replacement = FactorGroupId(relation->second);
     }
     factor_ledger_.transition(
-        group, replacement ? FactorLifecycle::SupersededByBridge
-                           : FactorLifecycle::RemovedByFde,
+        group,
+        replacement ? FactorLifecycle::SupersededByBridge
+                    : FactorLifecycle::RemovedByFde,
         {graph_version_, ordering_version_, 1, linpoint_version_}, replacement);
   }
   factor_ledger_.syncBoundaryFactors(
@@ -1877,15 +2436,15 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
       current_selected_groups.push_back(group);
     }
   }
-  committed_epochs_.push_back(
-      CommittedEpochRecord{std::move(committed_transaction),
-                           std::move(current_selected_groups)});
+  committed_epochs_.push_back(CommittedEpochRecord{
+      std::move(committed_transaction), std::move(current_selected_groups)});
 
   current_uwb_committed_ = false;
   for (const auto& group : tx.uwb_groups) {
     if (selected_ids.count(group.id.value())) current_uwb_committed_ = true;
   }
-  if (current_uwb_committed_) committed_uwb_batches_.emplace_back(epoch_, tx.uwb_batch.id);
+  if (current_uwb_committed_)
+    committed_uwb_batches_.emplace_back(epoch_, tx.uwb_batch.id);
   pruneRetainedMetadata();
   pending_epoch_ = false;
   pending_batch_id_.reset();
@@ -1918,7 +2477,8 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
     }
   }
   for (const auto* group : selected_groups) {
-    if (group->recovery_epoch != 0 && group->recovery_epoch == tx.proposed_epoch) {
+    if (group->recovery_epoch != 0 &&
+        group->recovery_epoch == tx.proposed_epoch) {
       receipt.historical_groups_added.push_back(group->id);
     }
   }
@@ -1950,18 +2510,20 @@ DiscardReceipt IncrementalUwbImuEstimator::discardEpoch(
 void IncrementalUwbImuEstimator::commitUwbBatch(const UwbBatch& batch) {
   if (!adapter_transaction_ || batch.timestamp != adapter_transaction_->end ||
       !pending_batch_id_ || *pending_batch_id_ != batch.id) {
-    throw std::logic_error("commit requires matching pending adapter transaction");
+    throw std::logic_error(
+        "commit requires matching pending adapter transaction");
   }
   EpochCommitPlan plan = EpochCommitPlan::nominalPlan(*adapter_transaction_);
   EpochTransaction tx = std::move(*adapter_transaction_);
   (void)commitEpoch(std::move(tx), plan);
 }
 
-void IncrementalUwbImuEstimator::rejectUwbBatch(
-    const UwbBatch& batch, const std::string& reason) {
+void IncrementalUwbImuEstimator::rejectUwbBatch(const UwbBatch& batch,
+                                                const std::string& reason) {
   if (!adapter_transaction_ || batch.timestamp != adapter_transaction_->end ||
       !pending_batch_id_ || *pending_batch_id_ != batch.id) {
-    throw std::logic_error("reject requires matching pending adapter transaction");
+    throw std::logic_error(
+        "reject requires matching pending adapter transaction");
   }
   EpochCommitPlan plan;
   plan.groups_to_add = {adapter_transaction_->imu_group.id};
@@ -1973,8 +2535,10 @@ void IncrementalUwbImuEstimator::rejectUwbBatch(
 }
 
 NavigationState IncrementalUwbImuEstimator::currentState() const {
-  if (!initialized_) throw std::logic_error("UWB/IMU estimator is not initialized");
-  if (adapter_transaction_) return adapter_transaction_->nominal_predicted_state;
+  if (!initialized_)
+    throw std::logic_error("UWB/IMU estimator is not initialized");
+  if (adapter_transaction_)
+    return adapter_transaction_->nominal_predicted_state;
   return current_state_;
 }
 
@@ -1990,7 +2554,8 @@ double IncrementalUwbImuEstimator::globalGraphResidualStatistic() const {
 }
 
 EstimatorAudit IncrementalUwbImuEstimator::audit() const {
-  if (!initialized_) throw std::logic_error("UWB/IMU estimator is not initialized");
+  if (!initialized_)
+    throw std::logic_error("UWB/IMU estimator is not initialized");
   EstimatorAudit result;
   result.current_marginal = currentJointMarginal();
   result.epoch = epoch_;
@@ -2012,7 +2577,8 @@ EstimatorAudit IncrementalUwbImuEstimator::audit() const {
     }
   }
   result.timestamp_count = fixed_lag_backend_
-      ? fixed_lag_backend_->timestamps().size() : activeValueCount();
+                               ? fixed_lag_backend_->timestamps().size()
+                               : activeValueCount();
   result.oldest_retained_epoch = oldestRetainedEpoch();
   result.retained_epochs = retainedEpochs();
   result.marginalization_count = marginalization_count_;
@@ -2035,23 +2601,27 @@ IncrementalUwbImuEstimator::methodBCandidatePrior(
     const Eigen::MatrixXd& current_uwb_covariance) const {
   if (!all_in_covariance.allFinite() || current_uwb_jacobian.cols() != 15 ||
       current_uwb_covariance.rows() != current_uwb_jacobian.rows() ||
-      current_uwb_covariance.cols() != current_uwb_jacobian.rows()) return std::nullopt;
+      current_uwb_covariance.cols() != current_uwb_jacobian.rows())
+    return std::nullopt;
   Eigen::LDLT<Eigen::Matrix<double, 15, 15>> covariance_ldlt(all_in_covariance);
   Eigen::LDLT<Eigen::MatrixXd> measurement_ldlt(current_uwb_covariance);
   if (covariance_ldlt.info() != Eigen::Success ||
-      measurement_ldlt.info() != Eigen::Success) return std::nullopt;
+      measurement_ldlt.info() != Eigen::Success)
+    return std::nullopt;
   const Eigen::Matrix<double, 15, 15> prior_information =
       covariance_ldlt.solve(Eigen::Matrix<double, 15, 15>::Identity()) -
       current_uwb_jacobian.transpose() *
-      measurement_ldlt.solve(current_uwb_jacobian);
-  Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 15, 15>> eigen(prior_information);
+          measurement_ldlt.solve(current_uwb_jacobian);
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 15, 15>> eigen(
+      prior_information);
   if (eigen.info() != Eigen::Success || eigen.eigenvalues().minCoeff() <= 0.0) {
     return std::nullopt;
   }
-  const double condition = eigen.eigenvalues().maxCoeff() /
-      eigen.eigenvalues().minCoeff();
+  const double condition =
+      eigen.eigenvalues().maxCoeff() / eigen.eigenvalues().minCoeff();
   if (!std::isfinite(condition) ||
-      condition > config_.incremental.method_b_max_condition) return std::nullopt;
+      condition > config_.incremental.method_b_max_condition)
+    return std::nullopt;
   Eigen::LDLT<Eigen::Matrix<double, 15, 15>> prior_ldlt(prior_information);
   return prior_ldlt.solve(Eigen::Matrix<double, 15, 15>::Identity());
 }
@@ -2073,21 +2643,24 @@ IncrementalUwbImuEstimator::methodBCandidatePrior(
   Eigen::LDLT<Eigen::Matrix<double, 15, 15>> all_in_ldlt(all_in_covariance);
   Eigen::LDLT<Eigen::MatrixXd> measurement_ldlt(current_uwb_covariance);
   if (all_in_ldlt.info() != Eigen::Success ||
-      measurement_ldlt.info() != Eigen::Success) return std::nullopt;
+      measurement_ldlt.info() != Eigen::Success)
+    return std::nullopt;
   const Eigen::Matrix<double, 15, 15> all_in_information =
       all_in_ldlt.solve(Eigen::Matrix<double, 15, 15>::Identity());
   const Eigen::Matrix<double, 15, 1> prior_information_vector =
-      all_in_information * all_in_mean - current_uwb_jacobian.transpose() *
-      measurement_ldlt.solve(current_uwb_linear_measurement);
+      all_in_information * all_in_mean -
+      current_uwb_jacobian.transpose() *
+          measurement_ldlt.solve(current_uwb_linear_measurement);
   MethodBCandidatePrior result;
   result.covariance = *covariance;
   result.mean = result.covariance * prior_information_vector;
   Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 15, 15>> eigen(
       result.covariance);
   if (!result.mean.allFinite() || eigen.info() != Eigen::Success ||
-      eigen.eigenvalues().minCoeff() <= 0.0) return std::nullopt;
-  result.condition_number = eigen.eigenvalues().maxCoeff() /
-      eigen.eigenvalues().minCoeff();
+      eigen.eigenvalues().minCoeff() <= 0.0)
+    return std::nullopt;
+  result.condition_number =
+      eigen.eigenvalues().maxCoeff() / eigen.eigenvalues().minCoeff();
   return result;
 }
 

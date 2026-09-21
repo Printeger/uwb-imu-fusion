@@ -1,16 +1,16 @@
 #pragma once
 
-#include "uwb_imu_pl/common/types.hpp"
-#include "uwb_imu_pl/config/fault_manifest.hpp"
-#include "uwb_imu_pl/factors/kinematic_bridge_factor.hpp"
-#include "uwb_imu_pl/integrity/fde_manager.hpp"
-#include "uwb_imu_pl/integrity/health_manager.hpp"
-
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
+
+#include "uwb_imu_pl/common/types.hpp"
+#include "uwb_imu_pl/config/fault_manifest.hpp"
+#include "uwb_imu_pl/factors/kinematic_bridge_factor.hpp"
+#include "uwb_imu_pl/integrity/fde_manager.hpp"
+#include "uwb_imu_pl/integrity/health_manager.hpp"
 
 namespace uwb_imu_pl {
 
@@ -234,10 +234,9 @@ class IntegrityConfigLoader {
   // required, unknown keys are rejected, and no random seed is implicit.
   // A non-empty fixed-lag override is applied before validation,
   // serialization, and hashing. An empty optional uses the YAML value.
-  static IntegrityConfig load(
-      const std::string& yaml_path,
-      const std::optional<std::string>& fixed_lag_epochs_override =
-          std::nullopt);
+  static IntegrityConfig load(const std::string& yaml_path,
+                              const std::optional<std::string>&
+                                  fixed_lag_epochs_override = std::nullopt);
   static IntegrityConfig load(const std::string& yaml_path,
                               const IntegrityConfigOverrides& overrides);
   // Used by explicit development-only runtime manifests after appending a

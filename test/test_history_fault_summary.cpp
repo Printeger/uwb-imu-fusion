@@ -15,12 +15,9 @@
 // tier and tagged; it does not claim the moderate tier and is not placed at
 // the rank gate (pivot ratio ~9.4e-10 vs the 1e-12 gate).
 
-#include "uwb_imu_pl/integrity/history_fault_summary.hpp"
-
 #include <gtest/gtest.h>
 
 #include <Eigen/SVD>
-
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -33,20 +30,22 @@
 #include <string>
 #include <vector>
 
+#include "uwb_imu_pl/integrity/history_fault_summary.hpp"
+
 namespace {
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
+using uwb_imu_pl::buildHistoryFaultSummary;
 using uwb_imu_pl::HistoryFaultSummary;
 using uwb_imu_pl::HistoryFaultSummaryInput;
 using uwb_imu_pl::HistoryFaultSummaryOptions;
-using uwb_imu_pl::buildHistoryFaultSummary;
 using uwb_imu_pl::splitBlockSystem;
 
-constexpr double kTolWell = 1e-9;        // ADR 0002, well-conditioned
-constexpr double kTolModerate = 1e-7;    // ADR 0002, moderate
-constexpr double kTolNearGate = 1e-6;    // ADR 0002, near-gate (tagged)
+constexpr double kTolWell = 1e-9;      // ADR 0002, well-conditioned
+constexpr double kTolModerate = 1e-7;  // ADR 0002, moderate
+constexpr double kTolNearGate = 1e-6;  // ADR 0002, near-gate (tagged)
 constexpr double kOracleRankTolerance = 1e-12;
 
 // ---------------------------------------------------------------------------
@@ -79,8 +78,7 @@ class Rng {
 
   // Orthonormal columns: thin U of a Gaussian matrix.
   MatrixXd orthonormal(int rows, int cols) {
-    Eigen::JacobiSVD<MatrixXd> svd(normal(rows, cols),
-                                   Eigen::ComputeThinU);
+    Eigen::JacobiSVD<MatrixXd> svd(normal(rows, cols), Eigen::ComputeThinU);
     return svd.matrixU();
   }
 
@@ -103,8 +101,7 @@ MatrixXd conditionedOldState(Rng& rng, int rows, int cols, double kappa) {
   const MatrixXd v = rng.orthonormal(cols, cols);
   VectorXd singular(cols);
   for (int i = 0; i < cols; ++i) {
-    const double t =
-        (cols == 1) ? 0.0 : static_cast<double>(i) / (cols - 1);
+    const double t = (cols == 1) ? 0.0 : static_cast<double>(i) / (cols - 1);
     singular(i) = std::pow(kappa, -t);
   }
   return u * singular.asDiagonal() * v.transpose();
@@ -134,7 +131,7 @@ MatrixXd permutationMatrix(const std::vector<int>& perm) {
 // ---------------------------------------------------------------------------
 
 struct ThinSvd {
-  MatrixXd u;          // thin left singular vectors above the rank gate
+  MatrixXd u;  // thin left singular vectors above the rank gate
   VectorXd singular;
   int rank = 0;
 };
@@ -171,14 +168,12 @@ MatrixXd pseudoInverse(const MatrixXd& matrix) {
   if (matrix.rows() == 0 || matrix.cols() == 0) {
     return MatrixXd::Zero(matrix.cols(), matrix.rows());
   }
-  Eigen::JacobiSVD<MatrixXd> svd(matrix, Eigen::ComputeThinU |
-                                             Eigen::ComputeThinV);
+  Eigen::JacobiSVD<MatrixXd> svd(matrix,
+                                 Eigen::ComputeThinU | Eigen::ComputeThinV);
   const VectorXd singular = svd.singularValues();
   const double largest = singular.size() ? singular(0) : 0.0;
-  const double gate =
-      (largest == 0.0) ? 0.0 : kOracleRankTolerance * largest;
-  MatrixXd inverse =
-      MatrixXd::Zero(svd.matrixV().cols(), svd.matrixU().cols());
+  const double gate = (largest == 0.0) ? 0.0 : kOracleRankTolerance * largest;
+  MatrixXd inverse = MatrixXd::Zero(svd.matrixV().cols(), svd.matrixU().cols());
   for (int i = 0; i < singular.size(); ++i) {
     if (singular(i) > gate) {
       inverse(i, i) = 1.0 / singular(i);
@@ -211,8 +206,7 @@ double minOldStateCost(const MatrixXd& h_old_state, const VectorXd& w) {
 MatrixXd marginalBoundaryInformation(const MatrixXd& h_old_state,
                                      const MatrixXd& h_boundary) {
   const MatrixXd projector = orthogonalProjector(h_old_state);
-  return h_boundary.transpose() *
-         (h_boundary - projector * h_boundary);
+  return h_boundary.transpose() * (h_boundary - projector * h_boundary);
 }
 
 // A^T (I - P_{[H_o H_b]}) A (fault Gram after eliminating all states).
@@ -278,40 +272,39 @@ IdentityErrors measureIdentities(const HistoryFaultSummary& summary,
     const VectorXd f = rng.normalVector(input.faultColumns());
     const VectorXd w = input.h_boundary * x_b + input.fault_map * f - input.rhs;
     const double lhs = minOldStateCost(input.h_old_state, w);
-    const double rhs = (summary.R_b * x_b + summary.T_b * f - summary.d_b)
-                           .squaredNorm() +
-                       (summary.F_b * f - summary.d_perp).squaredNorm();
-    errors.cost =
-        std::max(errors.cost, std::abs(lhs - rhs) / std::max(1.0, std::abs(lhs)));
+    const double rhs =
+        (summary.R_b * x_b + summary.T_b * f - summary.d_b).squaredNorm() +
+        (summary.F_b * f - summary.d_perp).squaredNorm();
+    errors.cost = std::max(errors.cost,
+                           std::abs(lhs - rhs) / std::max(1.0, std::abs(lhs)));
     if (summary.boundaryShiftUsable()) {
-      const VectorXd xb_f =
-          jointBoundarySolve(input.h_old_state, input.h_boundary,
-                             input.rhs - input.fault_map * f);
+      const VectorXd xb_f = jointBoundarySolve(
+          input.h_old_state, input.h_boundary, input.rhs - input.fault_map * f);
       const VectorXd xb_0 =
           jointBoundarySolve(input.h_old_state, input.h_boundary, input.rhs);
       const VectorXd dense_delta = xb_f - xb_0;
       const VectorXd shift = summary.boundaryMeanShiftForFault(f);
       const VectorXd delta = summary.conditionalBoundaryMeanDelta(f);
-      const double scale =
-          std::max(1.0, std::max(shift.norm(), delta.norm()));
-      errors.shift = std::max(errors.shift, (shift + dense_delta).norm() / scale);
-      errors.delta = std::max(errors.delta, (delta - dense_delta).norm() / scale);
+      const double scale = std::max(1.0, std::max(shift.norm(), delta.norm()));
+      errors.shift =
+          std::max(errors.shift, (shift + dense_delta).norm() / scale);
+      errors.delta =
+          std::max(errors.delta, (delta - dense_delta).norm() / scale);
       errors.shift_checked = true;
     }
   }
-  errors.schur = relErrMatrix(summary.R_b.transpose() * summary.R_b,
-                              marginalBoundaryInformation(input.h_old_state,
-                                                          input.h_boundary));
+  errors.schur = relErrMatrix(
+      summary.R_b.transpose() * summary.R_b,
+      marginalBoundaryInformation(input.h_old_state, input.h_boundary));
   // Omega/kappa/nu are pure invariant checks only when the boundary block is
   // full rank (otherwise part of the f-response sits in the boundary block
   // and the identity is still carried by the cost check above).
   const bool well_posed = summary.rank_boundary == summary.n_boundary &&
                           summary.rank_h_old_state == summary.n_old_state;
   if (well_posed) {
-    errors.omega = relErrMatrix(summary.omegaBoundary(),
-                                faultGramOracle(input.h_old_state,
-                                                input.h_boundary,
-                                                input.fault_map));
+    errors.omega = relErrMatrix(
+        summary.omegaBoundary(),
+        faultGramOracle(input.h_old_state, input.h_boundary, input.fault_map));
     errors.kappa = relErr(
         summary.kappaBoundary(),
         minJointResidualCost(input.h_old_state, input.h_boundary, input.rhs));
@@ -392,13 +385,12 @@ TEST(HistoryFaultSummary, HISM1BoundaryResponseSignDuality) {
   const HistoryFaultSummary summary = buildHistoryFaultSummary(input);
   ASSERT_TRUE(summary.valid) << summary.invalid_reason;
   ASSERT_TRUE(summary.boundaryShiftUsable());
-  const VectorXd xb_0 = jointBoundarySolve(input.h_old_state,
-                                           input.h_boundary, input.rhs);
+  const VectorXd xb_0 =
+      jointBoundarySolve(input.h_old_state, input.h_boundary, input.rhs);
   for (int t = 0; t < 16; ++t) {
     const VectorXd f = rng.normalVector(input.faultColumns());
-    const VectorXd xb_f =
-        jointBoundarySolve(input.h_old_state, input.h_boundary,
-                           input.rhs - input.fault_map * f);
+    const VectorXd xb_f = jointBoundarySolve(
+        input.h_old_state, input.h_boundary, input.rhs - input.fault_map * f);
     const VectorXd dense_delta = xb_f - xb_0;
     const VectorXd shift = summary.boundaryMeanShiftForFault(f);
     const VectorXd delta = summary.conditionalBoundaryMeanDelta(f);
@@ -424,16 +416,14 @@ TEST(HistoryFaultSummary, HISM1FaultGramKappaNu) {
     const HistoryFaultSummary summary = buildHistoryFaultSummary(input);
     ASSERT_TRUE(summary.valid) << summary.invalid_reason;
     EXPECT_LE(relErrMatrix(summary.omegaBoundary(),
-                           faultGramOracle(input.h_old_state,
-                                           input.h_boundary,
+                           faultGramOracle(input.h_old_state, input.h_boundary,
                                            input.fault_map)),
               kTolWell);
     EXPECT_LE(relErr(summary.kappaBoundary(),
-                     minJointResidualCost(input.h_old_state,
-                                          input.h_boundary, input.rhs)),
+                     minJointResidualCost(input.h_old_state, input.h_boundary,
+                                          input.rhs)),
               kTolWell);
-    const MatrixXd joined =
-        joinBlocks(input.h_old_state, input.h_boundary);
+    const MatrixXd joined = joinBlocks(input.h_old_state, input.h_boundary);
     EXPECT_EQ(summary.nuPerp(), size[0] - thinSvd(joined).rank);
     EXPECT_EQ(summary.nuPerp(), summary.F_b.rows());
     EXPECT_LE(relErrMatrix(summary.xiBoundary(),
@@ -472,9 +462,9 @@ TEST(HistoryFaultSummary, HISM1EliminationOrderInvariance) {
   EXPECT_LE(relErrMatrix(row_summary.R_b.transpose() * row_summary.R_b,
                          base_summary.R_b.transpose() * base_summary.R_b),
             kTolWell);
-  EXPECT_LE(relErrMatrix(row_summary.omegaBoundary(),
-                         base_summary.omegaBoundary()),
-            kTolWell);
+  EXPECT_LE(
+      relErrMatrix(row_summary.omegaBoundary(), base_summary.omegaBoundary()),
+      kTolWell);
   EXPECT_LE(relErr(row_summary.kappaBoundary(), base_summary.kappaBoundary()),
             kTolWell);
   EXPECT_EQ(row_summary.nuPerp(), base_summary.nuPerp());
@@ -491,9 +481,9 @@ TEST(HistoryFaultSummary, HISM1EliminationOrderInvariance) {
   EXPECT_LE(relErrMatrix(old_summary.R_b.transpose() * old_summary.R_b,
                          base_summary.R_b.transpose() * base_summary.R_b),
             kTolWell);
-  EXPECT_LE(relErrMatrix(old_summary.omegaBoundary(),
-                         base_summary.omegaBoundary()),
-            kTolWell);
+  EXPECT_LE(
+      relErrMatrix(old_summary.omegaBoundary(), base_summary.omegaBoundary()),
+      kTolWell);
   EXPECT_LE(relErr(old_summary.kappaBoundary(), base_summary.kappaBoundary()),
             kTolWell);
 
@@ -507,15 +497,13 @@ TEST(HistoryFaultSummary, HISM1EliminationOrderInvariance) {
       buildHistoryFaultSummary(bound_input);
   ASSERT_TRUE(bound_summary.valid) << bound_summary.invalid_reason;
   EXPECT_LE(relErrMatrix(bound_summary.R_b.transpose() * bound_summary.R_b,
-                         p_bound.transpose() *
-                             base_summary.R_b.transpose() * base_summary.R_b *
-                             p_bound),
+                         p_bound.transpose() * base_summary.R_b.transpose() *
+                             base_summary.R_b * p_bound),
             kTolWell);
-  EXPECT_LE(relErrMatrix(bound_summary.omegaBoundary(),
-                         base_summary.omegaBoundary()),
-            kTolWell);
-  EXPECT_LE(relErr(bound_summary.kappaBoundary(),
-                   base_summary.kappaBoundary()),
+  EXPECT_LE(
+      relErrMatrix(bound_summary.omegaBoundary(), base_summary.omegaBoundary()),
+      kTolWell);
+  EXPECT_LE(relErr(bound_summary.kappaBoundary(), base_summary.kappaBoundary()),
             kTolWell);
   EXPECT_EQ(bound_summary.nuPerp(), base_summary.nuPerp());
   const IdentityErrors bound_errors =
@@ -534,12 +522,11 @@ TEST(HistoryFaultSummary, HISM1EliminationOrderInvariance) {
             kTolWell);
   EXPECT_LE(relErrMatrix(fault_summary.F_b, base_summary.F_b * p_fault),
             kTolWell);
-  EXPECT_LE(relErrMatrix(fault_summary.omegaBoundary(),
-                         p_fault.transpose() * base_summary.omegaBoundary() *
-                             p_fault),
+  EXPECT_LE(relErrMatrix(
+                fault_summary.omegaBoundary(),
+                p_fault.transpose() * base_summary.omegaBoundary() * p_fault),
             kTolWell);
-  EXPECT_LE(relErr(fault_summary.kappaBoundary(),
-                   base_summary.kappaBoundary()),
+  EXPECT_LE(relErr(fault_summary.kappaBoundary(), base_summary.kappaBoundary()),
             kTolWell);
 }
 
@@ -621,8 +608,7 @@ TEST(HistoryFaultSummary, HISM1DegenerateRejection) {
     input.rhs(0) = std::numeric_limits<double>::infinity();
     const HistoryFaultSummary summary = buildHistoryFaultSummary(input);
     ASSERT_FALSE(summary.valid);
-    const VectorXd shift =
-        summary.boundaryMeanShiftForFault(VectorXd::Zero(2));
+    const VectorXd shift = summary.boundaryMeanShiftForFault(VectorXd::Zero(2));
     const VectorXd delta =
         summary.conditionalBoundaryMeanDelta(VectorXd::Zero(2));
     EXPECT_TRUE(allNan(shift));
@@ -675,11 +661,10 @@ TEST(HistoryFaultSummary, HISM1DetectorOnlyAndNominal) {
     EXPECT_EQ(summary.omegaBoundary().size(), 0);
     EXPECT_EQ(summary.xiBoundary().size(), 0);
     EXPECT_LE(relErr(summary.kappaBoundary(),
-                     minJointResidualCost(input.h_old_state,
-                                          input.h_boundary, input.rhs)),
+                     minJointResidualCost(input.h_old_state, input.h_boundary,
+                                          input.rhs)),
               kTolWell);
-    const VectorXd shift =
-        summary.boundaryMeanShiftForFault(VectorXd::Zero(0));
+    const VectorXd shift = summary.boundaryMeanShiftForFault(VectorXd::Zero(0));
     EXPECT_EQ(shift.size(), 3);
     EXPECT_LE(shift.norm(), 1e-12);
     EXPECT_LE(relErrMatrix(summary.R_b.transpose() * summary.R_b,
@@ -701,8 +686,7 @@ TEST(HistoryFaultSummary, HISM1DetectorOnlyAndNominal) {
     ASSERT_TRUE(summary.valid) << summary.invalid_reason;
     EXPECT_EQ(summary.rank_boundary, 0);
     EXPECT_FALSE(summary.boundaryShiftUsable());
-    const VectorXd shift =
-        summary.boundaryMeanShiftForFault(VectorXd::Ones(1));
+    const VectorXd shift = summary.boundaryMeanShiftForFault(VectorXd::Ones(1));
     EXPECT_TRUE(allNan(shift));
     EXPECT_LE(std::abs(summary.kappaBoundary() - 25.0), 1e-9);
     const IdentityErrors errors = measureIdentities(summary, input, rng, 8);
@@ -730,8 +714,7 @@ TEST(HistoryFaultSummary, HISM1OracleTable) {
       {"medium_well", 60, 10, 6, 4, 1.0, kTolWell, "well"},
       {"moderate_k1e4", 40, 8, 5, 3, 1e4, kTolModerate, "moderate"},
       {"ill_k1e8", 36, 6, 4, 3, 1e8, kTolModerate, "ill"},
-      {"harsh_k1e10", 30, 5, 3, 2, 1e10, kTolNearGate,
-       "harsh(tagged,1e-6)"},
+      {"harsh_k1e10", 30, 5, 3, 2, 1e10, kTolNearGate, "harsh(tagged,1e-6)"},
   };
   Rng rng(20260928u);
   for (const Case& test_case : cases) {
@@ -772,18 +755,18 @@ TEST(HistoryFaultSummary, HISM1SplitHelperConsistency) {
   // splitBlockSystem() must reproduce the direct construction.
   Rng rng(20260929u);
   const HistoryFaultSummaryInput input = makeInput(rng, 20, 5, 3, 2);
-  MatrixXd block(input.rows(),
-                 input.oldStateColumns() + input.boundaryColumns() +
-                     input.faultColumns() + 1);
+  MatrixXd block(input.rows(), input.oldStateColumns() +
+                                   input.boundaryColumns() +
+                                   input.faultColumns() + 1);
   block.leftCols(input.oldStateColumns()) = input.h_old_state;
   block.middleCols(input.oldStateColumns(), input.boundaryColumns()) =
       input.h_boundary;
   block.middleCols(input.oldStateColumns() + input.boundaryColumns(),
                    input.faultColumns()) = input.fault_map;
   block.col(block.cols() - 1) = input.rhs;
-  const auto split = splitBlockSystem(block, input.oldStateColumns(),
-                                      input.boundaryColumns(),
-                                      input.faultColumns());
+  const auto split =
+      splitBlockSystem(block, input.oldStateColumns(), input.boundaryColumns(),
+                       input.faultColumns());
   ASSERT_TRUE(split.has_value());
   EXPECT_EQ((split->h_old_state - input.h_old_state).norm(), 0.0);
   EXPECT_EQ((split->h_boundary - input.h_boundary).norm(), 0.0);

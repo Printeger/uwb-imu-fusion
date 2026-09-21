@@ -5,10 +5,8 @@
 
 #include <gtsam/linear/JacobianFactor.h>
 
-#include <boost/shared_ptr.hpp>
-
 #include <Eigen/QR>
-
+#include <boost/shared_ptr.hpp>
 #include <map>
 
 namespace uwb_imu_pl {
@@ -28,8 +26,8 @@ ExtractedBoundaryRows extractBoundaryRows(
     for (std::size_t local = 0; local < jacobian->keys().size(); ++local) {
       const gtsam::Key key = jacobian->keys()[local];
       if (column_of_key.find(key) == column_of_key.end()) {
-        const int width = static_cast<int>(
-            jacobian->getA(jacobian->begin() + local).cols());
+        const int width =
+            static_cast<int>(jacobian->getA(jacobian->begin() + local).cols());
         column_of_key.emplace(key, static_cast<int>(out.keys.size()));
         out.keys.push_back(key);
         out.column_begin.push_back(out.total_columns);
@@ -55,7 +53,8 @@ ExtractedBoundaryRows extractBoundaryRows(
                      out.key_dim[index]) =
           jacobian->getA(jacobian->begin() + local);
     }
-    out.rows.block(cursor, out.total_columns, factor_rows, 1) = jacobian->getb();
+    out.rows.block(cursor, out.total_columns, factor_rows, 1) =
+        jacobian->getb();
     cursor += static_cast<std::size_t>(factor_rows);
   }
   // Rank audit (no truncation anywhere: the rows are handed over intact).

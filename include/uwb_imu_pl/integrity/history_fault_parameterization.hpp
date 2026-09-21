@@ -49,17 +49,16 @@
 // Status: Part A module implemented and locked by
 // `HistoryFaultParameterization.*` tests.  Pipeline wiring is Part C.
 
-#include "uwb_imu_pl/estimation/epoch_transaction.hpp"
-
 #include <gtsam/linear/GaussianFactorGraph.h>
 
 #include <Eigen/Core>
-
 #include <cstdint>
 #include <map>
 #include <optional>
 #include <string>
 #include <vector>
+
+#include "uwb_imu_pl/estimation/epoch_transaction.hpp"
 
 namespace uwb_imu_pl {
 
@@ -162,7 +161,10 @@ HistoryFaultCombination rampUwbCombination(
 // Rebuilt linear factors with fault keys in the separator.  The input epoch
 // group factors are linearized at `linearization`; the epoch's mapped fault
 // columns are appended as new key columns (`gtsam::Symbol('f', index)`).
-// The input context is never modified.
+// `first_fault_index` lets a caller inject several epochs into one system
+// without colliding fault keys; the assignment order (and therefore the key
+// -> column association) is the column order passed in.  The input context
+// is never modified.
 struct HistoryFaultInjectionResult {
   bool valid = false;
   std::string reason;
@@ -174,7 +176,8 @@ struct HistoryFaultInjectionResult {
 
 HistoryFaultInjectionResult buildHistoricalFaultInjection(
     const HistoricalEpochContext& epoch, const gtsam::Values& linearization,
-    const std::vector<HistoryFaultColumn>& columns);
+    const std::vector<HistoryFaultColumn>& columns,
+    std::uint64_t first_fault_index = 1);
 
 // D-2 capacity semantics (enforcement is not wired into the pipeline yet):
 // REFUSE is the default action; an over-limit plan is unusable and counted by

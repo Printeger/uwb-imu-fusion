@@ -41,8 +41,7 @@ bool allFinite(const Eigen::MatrixXd& matrix) { return matrix.allFinite(); }
 // up as a pivot falling to (numerically) zero; pivot-based rank revealing is
 // a C1-b hardening item, not part of the frozen C1-a contract.
 std::vector<double> householderReduceBlock(Eigen::MatrixXd& M,
-                                           Eigen::Index row0,
-                                           Eigen::Index col0,
+                                           Eigen::Index row0, Eigen::Index col0,
                                            Eigen::Index ncols) {
   std::vector<double> pivot_abs;
   pivot_abs.reserve(static_cast<std::size_t>(std::max<Eigen::Index>(0, ncols)));
@@ -72,8 +71,7 @@ std::vector<double> householderReduceBlock(Eigen::MatrixXd& M,
     const Eigen::Index block_cols = cols - (col0 + j);
     Eigen::RowVectorXd w =
         v.transpose() * M.block(r, col0 + j, rows - r, block_cols);
-    M.block(r, col0 + j, rows - r, block_cols) -=
-        (2.0 / v_squared) * v * w;
+    M.block(r, col0 + j, rows - r, block_cols) -= (2.0 / v_squared) * v * w;
     pivot_abs.push_back(norm);
   }
   return pivot_abs;
@@ -134,8 +132,7 @@ std::optional<HistoryFaultSummaryInput> splitBlockSystem(
   HistoryFaultSummaryInput input;
   input.h_old_state = block.leftCols(n_old_state);
   input.h_boundary = block.middleCols(n_old_state, n_boundary);
-  input.fault_map =
-      block.middleCols(n_old_state + n_boundary, n_fault);
+  input.fault_map = block.middleCols(n_old_state + n_boundary, n_fault);
   input.rhs = block.col(total - 1);
   return input;
 }
@@ -157,8 +154,7 @@ HistoryFaultSummary buildHistoryFaultSummary(
   if (!allFinite(input.h_old_state) || !allFinite(input.h_boundary) ||
       !allFinite(input.fault_map) || !input.rhs.allFinite()) {
     invalidate(summary,
-               std::string(kNonFinite) +
-                   ": input contains a non-finite entry");
+               std::string(kNonFinite) + ": input contains a non-finite entry");
     return summary;
   }
   if (input.h_old_state.rows() != m || input.h_boundary.rows() != m ||
@@ -167,8 +163,8 @@ HistoryFaultSummary buildHistoryFaultSummary(
                std::string(kShapeMismatch) + ": H_o " +
                    std::to_string(input.h_old_state.rows()) + " rows, H_b " +
                    std::to_string(input.h_boundary.rows()) + " rows, A " +
-                   std::to_string(input.fault_map.rows()) +
-                   " rows, z has " + std::to_string(m) + " entries");
+                   std::to_string(input.fault_map.rows()) + " rows, z has " +
+                   std::to_string(m) + " entries");
     return summary;
   }
   if (m == 0) {
@@ -192,8 +188,7 @@ HistoryFaultSummary buildHistoryFaultSummary(
   W.col(n_o + n_b + q) = input.rhs;
 
   // Stage A: eliminate x_o.
-  const std::vector<double> pivots_o =
-      householderReduceBlock(W, 0, 0, n_o);
+  const std::vector<double> pivots_o = householderReduceBlock(W, 0, 0, n_o);
   const int rank_o = rankFromPivots(pivots_o, options.rank_tolerance);
   summary.rank_h_old_state = rank_o;
   {
@@ -215,16 +210,15 @@ HistoryFaultSummary buildHistoryFaultSummary(
     for (const double pivot : pivots_o) {
       scale = std::max(scale, pivot);
     }
-    const double smallest = pivots_o.empty()
-                                ? 0.0
-                                : *std::min_element(pivots_o.begin(),
-                                                    pivots_o.end());
-    invalidate(summary,
-               std::string(kRankDeficient) + ": rank " +
-                   std::to_string(rank_o) + " < " + std::to_string(n_o) +
-                   " columns, pivot ratio " + std::to_string(smallest) +
-                   " <= " + std::to_string(options.rank_tolerance) +
-                   " (scale " + std::to_string(scale) + ")");
+    const double smallest =
+        pivots_o.empty() ? 0.0
+                         : *std::min_element(pivots_o.begin(), pivots_o.end());
+    invalidate(summary, std::string(kRankDeficient) + ": rank " +
+                            std::to_string(rank_o) + " < " +
+                            std::to_string(n_o) + " columns, pivot ratio " +
+                            std::to_string(smallest) +
+                            " <= " + std::to_string(options.rank_tolerance) +
+                            " (scale " + std::to_string(scale) + ")");
     return summary;
   }
 
@@ -277,9 +271,8 @@ Eigen::VectorXd HistoryFaultSummary::conditionalBoundaryMeanDelta(
 
 std::uint64_t digestHistorySummaryVersion(
     const HistorySummaryVersion& version) {
-  const std::uint64_t components[4] = {version.linearization,
-                                       version.whitening, version.mode_set,
-                                       version.capacity};
+  const std::uint64_t components[4] = {version.linearization, version.whitening,
+                                       version.mode_set, version.capacity};
   std::uint64_t hash = 1469598103934665603ULL;
   for (const std::uint64_t component : components) {
     for (int shift = 0; shift < 64; shift += 8) {

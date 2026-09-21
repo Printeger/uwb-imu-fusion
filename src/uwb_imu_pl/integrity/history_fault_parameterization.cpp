@@ -6,18 +6,17 @@
 
 #include "uwb_imu_pl/integrity/history_fault_parameterization.hpp"
 
-#include "uwb_imu_pl/integrity/imu_fault_subspace.hpp"
-
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/linear/JacobianFactor.h>
 #include <gtsam/linear/VectorValues.h>
 
-#include <boost/shared_ptr.hpp>
-
 #include <algorithm>
+#include <boost/shared_ptr.hpp>
 #include <cmath>
 #include <set>
 #include <sstream>
+
+#include "uwb_imu_pl/integrity/imu_fault_subspace.hpp"
 
 namespace uwb_imu_pl {
 namespace {
@@ -39,8 +38,8 @@ bool whitenerFromCovariance(const Eigen::MatrixXd& covariance,
   return true;
 }
 
-const PendingFactorGroup* selectedGroupOfKind(const HistoricalEpochContext& epoch,
-                                              FactorKind kind) {
+const PendingFactorGroup* selectedGroupOfKind(
+    const HistoricalEpochContext& epoch, FactorKind kind) {
   for (const auto& group : epoch.groups) {
     if (group.kind != kind) continue;
     if (std::find(epoch.selected_groups.begin(), epoch.selected_groups.end(),
@@ -63,8 +62,8 @@ const UwbMeasurement* measurementInBatch(const UwbBatch& batch,
 // order.  Returns false when the anchor has no rows in this epoch.
 bool uwbAnchorPatterns(const HistoricalEpochContext& epoch,
                        const PendingFactorGroup& group, std::uint64_t anchor,
-                       Eigen::VectorXd* constant_raw, Eigen::VectorXd* linear_raw,
-                       std::size_t* row_count) {
+                       Eigen::VectorXd* constant_raw,
+                       Eigen::VectorXd* linear_raw, std::size_t* row_count) {
   const std::size_t rows = group.source_measurements.size();
   Eigen::VectorXd constant = Eigen::VectorXd::Zero(rows);
   Eigen::VectorXd linear = Eigen::VectorXd::Zero(rows);
@@ -117,11 +116,10 @@ HistoryFaultParameterizationPlan planHistoryFaultParameterization(
   HistoryFaultParameterizationPlan plan;
   const std::size_t derived_first = tx.oldest_recoverable_epoch + 1;
   const std::size_t window_first =
-      tx.proposed_epoch > window_epochs ? tx.proposed_epoch - window_epochs
-                                        : 0;
-  plan.horizon.first_epoch =
-      options.configured_first_epoch ? *options.configured_first_epoch
-                                     : derived_first;
+      tx.proposed_epoch > window_epochs ? tx.proposed_epoch - window_epochs : 0;
+  plan.horizon.first_epoch = options.configured_first_epoch
+                                 ? *options.configured_first_epoch
+                                 : derived_first;
   plan.horizon.source = options.configured_first_epoch
                             ? "configured:history.horizon_first_epoch"
                             : "derived:tx.oldest_recoverable_epoch+1";
@@ -157,8 +155,9 @@ HistoryFaultParameterizationPlan planHistoryFaultParameterization(
   // Material gaps: requested epochs without a recoverable record.
   if (window_first > plan.horizon.first_epoch) {
     const std::size_t expected = window_first - plan.horizon.first_epoch;
-    plan.material_gap_epoch_count =
-        expected > observed_epochs.size() ? expected - observed_epochs.size() : 0;
+    plan.material_gap_epoch_count = expected > observed_epochs.size()
+                                        ? expected - observed_epochs.size()
+                                        : 0;
   }
   return plan;
 }
@@ -175,15 +174,15 @@ std::vector<HistoryFaultColumn> buildHistoricalUwbColumnsForEpoch(
   bool have_whitener = false;
   if (uwb->raw_covariance.rows() == static_cast<int>(rows) &&
       uwb->raw_covariance.cols() == static_cast<int>(rows)) {
-    have_whitener = whitenerFromCovariance(uwb->raw_covariance, &group_whitener);
+    have_whitener =
+        whitenerFromCovariance(uwb->raw_covariance, &group_whitener);
   } else {
     group_whitener = Eigen::MatrixXd::Identity(rows, rows);
     have_whitener = true;
   }
   std::set<std::uint64_t> anchors;
   for (const auto id : uwb->source_measurements) {
-    const UwbMeasurement* measurement =
-        measurementInBatch(epoch.uwb_batch, id);
+    const UwbMeasurement* measurement = measurementInBatch(epoch.uwb_batch, id);
     if (measurement) anchors.insert(measurement->anchor_id.value());
   }
   for (const std::uint64_t anchor : anchors) {
@@ -325,7 +324,8 @@ std::string HistoryFaultParameterizationPlan::omittedRiskSource() const {
 
 HistoryFaultInjectionResult buildHistoricalFaultInjection(
     const HistoricalEpochContext& epoch, const gtsam::Values& linearization,
-    const std::vector<HistoryFaultColumn>& columns) {
+    const std::vector<HistoryFaultColumn>& columns,
+    std::uint64_t first_fault_index) {
   HistoryFaultInjectionResult out;
   if (columns.empty()) {
     out.reason = "no fault columns to inject";
@@ -340,7 +340,7 @@ HistoryFaultInjectionResult buildHistoricalFaultInjection(
     if (bucket.empty()) group_order.push_back(column.group);
     bucket.push_back(&column);
   }
-  std::uint64_t fault_index = 1;
+  std::uint64_t fault_index = first_fault_index;
   for (const auto group_id : group_order) {
     const PendingFactorGroup* group = nullptr;
     for (const auto& candidate : epoch.groups) {
@@ -352,9 +352,13 @@ HistoryFaultInjectionResult buildHistoricalFaultInjection(
     }
     // Linearize the group's factors at the linearization point and stack
     // them; the fault columns are appended in the same (whitened) units.
+    // Rows are copied key-block by key-block: a navigation-state key carries a
+    // 6- or 3-dimensional tangent block (x/b: 6, v: 3), so a per-key single
+    // column would truncate the state map and break the separator algebra.
     std::vector<boost::shared_ptr<gtsam::JacobianFactor>> jacobians;
     gtsam::KeyVector key_order;
     std::map<gtsam::Key, int> column_of_key;
+    int key_columns = 0;
     std::size_t rows = 0;
     for (const auto& factor : group->factors) {
       const auto jacobian = boost::dynamic_pointer_cast<gtsam::JacobianFactor>(
@@ -363,16 +367,19 @@ HistoryFaultInjectionResult buildHistoricalFaultInjection(
         out.reason = "group factor did not linearize to a JacobianFactor";
         return out;
       }
-      for (const gtsam::Key key : jacobian->keys()) {
+      for (std::size_t local = 0; local < jacobian->keys().size(); ++local) {
+        const gtsam::Key key = jacobian->keys()[local];
         if (column_of_key.find(key) == column_of_key.end()) {
-          column_of_key.emplace(key, static_cast<int>(key_order.size()));
+          column_of_key.emplace(key, key_columns);
           key_order.push_back(key);
+          key_columns +=
+              static_cast<int>(jacobian->getA(jacobian->begin() + local).cols());
         }
       }
       rows += static_cast<std::size_t>(jacobian->getA().rows());
       jacobians.push_back(jacobian);
     }
-    Eigen::MatrixXd stacked = Eigen::MatrixXd::Zero(rows, key_order.size());
+    Eigen::MatrixXd stacked = Eigen::MatrixXd::Zero(rows, key_columns);
     Eigen::VectorXd stacked_b = Eigen::VectorXd::Zero(rows);
     std::size_t row_cursor = 0;
     for (const auto& jacobian : jacobians) {
@@ -380,7 +387,8 @@ HistoryFaultInjectionResult buildHistoricalFaultInjection(
       const Eigen::VectorXd b = jacobian->getb();
       for (std::size_t local = 0; local < jacobian->keys().size(); ++local) {
         const int global = column_of_key.at(jacobian->keys()[local]);
-        stacked.block(row_cursor, global, A.rows(), 1) = A.col(local);
+        const Eigen::MatrixXd block = jacobian->getA(jacobian->begin() + local);
+        stacked.block(row_cursor, global, A.rows(), block.cols()) = block;
       }
       stacked_b.segment(row_cursor, b.size()) = b;
       row_cursor += static_cast<std::size_t>(A.rows());
@@ -394,7 +402,21 @@ HistoryFaultInjectionResult buildHistoricalFaultInjection(
     // One augmented linear factor over [state keys | fault key columns].
     std::vector<std::pair<gtsam::Key, Eigen::MatrixXd>> terms;
     for (std::size_t index = 0; index < key_order.size(); ++index) {
-      terms.emplace_back(key_order[index], Eigen::MatrixXd(stacked.col(index)));
+      const int begin = column_of_key.at(key_order[index]);
+      const int width = [&] {
+        for (const auto& jacobian : jacobians) {
+          for (std::size_t local = 0; local < jacobian->keys().size();
+               ++local) {
+            if (jacobian->keys()[local] == key_order[index]) {
+              return static_cast<int>(
+                  jacobian->getA(jacobian->begin() + local).cols());
+            }
+          }
+        }
+        return 0;
+      }();
+      terms.emplace_back(key_order[index],
+                         Eigen::MatrixXd(stacked.middleCols(begin, width)));
     }
     for (const HistoryFaultColumn* column : by_group.at(group_id.value())) {
       const gtsam::Key fault_key = gtsam::Symbol('f', fault_index++);
@@ -419,8 +441,8 @@ HistoryFaultCapacityDecision evaluateHistoryFaultCapacity(
   if (!known_action) {
     decision.fits = false;
     decision.unusable = true;
-    decision.reason = "unknown history capacity action: " +
-                      limits.capacity_action;
+    decision.reason =
+        "unknown history capacity action: " + limits.capacity_action;
     return decision;
   }
   if (q_hist <= limits.max_fault_columns) {

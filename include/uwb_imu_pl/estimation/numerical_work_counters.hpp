@@ -64,6 +64,20 @@ struct NumericalWorkSnapshot {
   std::uint64_t action_entities_deferred = 0;
   std::uint64_t evidence_calls_fault_path = 0;
   std::uint64_t evidence_calls_health_path = 0;
+  // C1-b: history-summary construction work (dense Householder elimination of
+  // the frozen boundary rows) and its explicit states.  `boundary_rows` is the
+  // extracted input volume, `input_columns` the system width (old + boundary +
+  // fault + rhs), `fault_columns` the injected historical fault columns and
+  // `emitted_rows`/`perp_rows` what the condensed block contributes to the
+  // window (the perp rows are the detector-only rows carrying kappa_b).
+  std::uint64_t history_summary_builds = 0;
+  std::uint64_t history_boundary_rows = 0;
+  std::uint64_t history_input_columns = 0;
+  std::uint64_t history_fault_columns = 0;
+  std::uint64_t history_emitted_rows = 0;
+  std::uint64_t history_perp_rows = 0;
+  std::uint64_t history_capacity_refusals = 0;
+  std::uint64_t history_summary_invalid = 0;
 };
 
 // Counts actual decomposition/solve construction points.  The counters are
@@ -71,17 +85,26 @@ struct NumericalWorkSnapshot {
 class NumericalWorkCounters {
  public:
   static NumericalWorkSnapshot snapshot() {
-    return {base_svd_.load(), base_llt_.load(), base_state_solves_.load(),
-            llt_state_solve_calls_.load(), svd_state_solve_calls_.load(),
+    return {base_svd_.load(),
+            base_llt_.load(),
+            base_state_solves_.load(),
+            llt_state_solve_calls_.load(),
+            svd_state_solve_calls_.load(),
             detector_reference_qr_.load(),
-            candidate_reference_svd_.load(), candidate_inner_llt_.load(),
-            fault_gram_eigen_.load(), fault_gram_svd_.load(),
-            fault_gram_ldlt_.load(), low_dim_fault_gram_.load(),
+            candidate_reference_svd_.load(),
+            candidate_inner_llt_.load(),
+            fault_gram_eigen_.load(),
+            fault_gram_svd_.load(),
+            fault_gram_ldlt_.load(),
+            low_dim_fault_gram_.load(),
             generic_fault_gram_fallback_.load(),
             hypothesis_parallel_blocks_.load(),
-            hypothesis_shared_hits_.load(), hypothesis_shared_misses_.load(),
-            covariance_rhs_solves_.load(), covariance_rhs_columns_.load(),
-            spectral_rhs_solves_.load(), spectral_rhs_columns_.load(),
+            hypothesis_shared_hits_.load(),
+            hypothesis_shared_misses_.load(),
+            covariance_rhs_solves_.load(),
+            covariance_rhs_columns_.load(),
+            spectral_rhs_solves_.load(),
+            spectral_rhs_columns_.load(),
             numerical_contract_mismatches_.load(),
             imu_oracle_reintegrations_.load(),
             square_root_factorizations_.load(),
@@ -110,35 +133,74 @@ class NumericalWorkCounters {
             candidate_graph_built_.load(),
             action_entities_deferred_.load(),
             evidence_calls_fault_path_.load(),
-            evidence_calls_health_path_.load()};
+            evidence_calls_health_path_.load(),
+            history_summary_builds_.load(),
+            history_boundary_rows_.load(),
+            history_input_columns_.load(),
+            history_fault_columns_.load(),
+            history_emitted_rows_.load(),
+            history_perp_rows_.load(),
+            history_capacity_refusals_.load(),
+            history_summary_invalid_.load()};
   }
   static void reset() {
-    base_svd_ = 0; base_llt_ = 0; base_state_solves_ = 0;
-    llt_state_solve_calls_ = 0; svd_state_solve_calls_ = 0;
+    base_svd_ = 0;
+    base_llt_ = 0;
+    base_state_solves_ = 0;
+    llt_state_solve_calls_ = 0;
+    svd_state_solve_calls_ = 0;
     detector_reference_qr_ = 0;
-    candidate_reference_svd_ = 0; candidate_inner_llt_ = 0;
-    fault_gram_eigen_ = 0; fault_gram_svd_ = 0; fault_gram_ldlt_ = 0;
-    low_dim_fault_gram_ = 0; generic_fault_gram_fallback_ = 0;
+    candidate_reference_svd_ = 0;
+    candidate_inner_llt_ = 0;
+    fault_gram_eigen_ = 0;
+    fault_gram_svd_ = 0;
+    fault_gram_ldlt_ = 0;
+    low_dim_fault_gram_ = 0;
+    generic_fault_gram_fallback_ = 0;
     hypothesis_parallel_blocks_ = 0;
-    hypothesis_shared_hits_ = 0; hypothesis_shared_misses_ = 0;
-    covariance_rhs_solves_ = 0; covariance_rhs_columns_ = 0;
-    spectral_rhs_solves_ = 0; spectral_rhs_columns_ = 0;
-    numerical_contract_mismatches_ = 0; imu_oracle_reintegrations_ = 0;
-    square_root_factorizations_ = 0; square_root_information_solves_ = 0;
-    square_root_information_columns_ = 0; square_root_qt_applications_ = 0;
-    square_root_qt_columns_ = 0; square_root_symbolic_hits_ = 0;
-    square_root_symbolic_misses_ = 0; square_root_fallbacks_ = 0;
+    hypothesis_shared_hits_ = 0;
+    hypothesis_shared_misses_ = 0;
+    covariance_rhs_solves_ = 0;
+    covariance_rhs_columns_ = 0;
+    spectral_rhs_solves_ = 0;
+    spectral_rhs_columns_ = 0;
+    numerical_contract_mismatches_ = 0;
+    imu_oracle_reintegrations_ = 0;
+    square_root_factorizations_ = 0;
+    square_root_information_solves_ = 0;
+    square_root_information_columns_ = 0;
+    square_root_qt_applications_ = 0;
+    square_root_qt_columns_ = 0;
+    square_root_symbolic_hits_ = 0;
+    square_root_symbolic_misses_ = 0;
+    square_root_fallbacks_ = 0;
     square_root_certificate_holds_ = 0;
-    fault_mode_columns_ = 0; fault_cross_blocks_ = 0;
-    fault_cross_block_cache_hits_ = 0; all_mode_gram_columns_ = 0;
-    mode_dense_allocations_ = 0; mode_dense_allocation_rows_ = 0;
+    fault_mode_columns_ = 0;
+    fault_cross_blocks_ = 0;
+    fault_cross_block_cache_hits_ = 0;
+    all_mode_gram_columns_ = 0;
+    mode_dense_allocations_ = 0;
+    mode_dense_allocation_rows_ = 0;
     mode_dense_allocation_columns_ = 0;
-    compact_mode_rows_ = 0; compact_mode_columns_ = 0;
+    compact_mode_rows_ = 0;
+    compact_mode_columns_ = 0;
     compact_padded_equivalent_rows_ = 0;
-    compact_capacity_fallbacks_ = 0; hypothesis_capacity_refusals_ = 0;
-    action_entities_constructed_ = 0; bridge_blocks_built_ = 0;
-    candidate_graph_built_ = 0; action_entities_deferred_ = 0;
-    evidence_calls_fault_path_ = 0; evidence_calls_health_path_ = 0;
+    compact_capacity_fallbacks_ = 0;
+    hypothesis_capacity_refusals_ = 0;
+    action_entities_constructed_ = 0;
+    bridge_blocks_built_ = 0;
+    candidate_graph_built_ = 0;
+    action_entities_deferred_ = 0;
+    evidence_calls_fault_path_ = 0;
+    evidence_calls_health_path_ = 0;
+    history_summary_builds_ = 0;
+    history_boundary_rows_ = 0;
+    history_input_columns_ = 0;
+    history_fault_columns_ = 0;
+    history_emitted_rows_ = 0;
+    history_perp_rows_ = 0;
+    history_capacity_refusals_ = 0;
+    history_summary_invalid_ = 0;
   }
   static void baseSvd() { ++base_svd_; }
   static void baseLlt() { ++base_llt_; }
@@ -169,10 +231,12 @@ class NumericalWorkCounters {
   static void hypothesisSharedHit() { ++hypothesis_shared_hits_; }
   static void hypothesisSharedMiss() { ++hypothesis_shared_misses_; }
   static void covarianceRhsSolve(std::uint64_t columns) {
-    ++covariance_rhs_solves_; covariance_rhs_columns_ += columns;
+    ++covariance_rhs_solves_;
+    covariance_rhs_columns_ += columns;
   }
   static void spectralRhsSolve(std::uint64_t columns) {
-    ++spectral_rhs_solves_; spectral_rhs_columns_ += columns;
+    ++spectral_rhs_solves_;
+    spectral_rhs_columns_ += columns;
   }
   static void numericalContractMismatch() { ++numerical_contract_mismatches_; }
   static void imuOracleReintegration() { ++imu_oracle_reintegrations_; }
@@ -210,9 +274,7 @@ class NumericalWorkCounters {
     compact_padded_equivalent_rows_ += rows;
   }
   static void compactCapacityFallback() { ++compact_capacity_fallbacks_; }
-  static void hypothesisCapacityRefusal() {
-    ++hypothesis_capacity_refusals_;
-  }
+  static void hypothesisCapacityRefusal() { ++hypothesis_capacity_refusals_; }
   static void actionEntitiesConstructed(std::uint64_t count) {
     action_entities_constructed_ += count;
   }
@@ -225,6 +287,20 @@ class NumericalWorkCounters {
   }
   static void evidenceCallFaultPath() { ++evidence_calls_fault_path_; }
   static void evidenceCallHealthPath() { ++evidence_calls_health_path_; }
+  static void historySummaryBuild(std::uint64_t rows, std::uint64_t columns,
+                                  std::uint64_t fault_columns,
+                                  std::uint64_t emitted_rows) {
+    ++history_summary_builds_;
+    history_boundary_rows_ += rows;
+    history_input_columns_ += columns;
+    history_fault_columns_ += fault_columns;
+    history_emitted_rows_ += emitted_rows;
+  }
+  static void historyPerpRows(std::uint64_t rows) {
+    history_perp_rows_ += rows;
+  }
+  static void historyCapacityRefusal() { ++history_capacity_refusals_; }
+  static void historySummaryInvalid() { ++history_summary_invalid_; }
 
  private:
   inline static std::atomic<std::uint64_t> base_svd_{0};
@@ -265,6 +341,14 @@ class NumericalWorkCounters {
   inline static std::atomic<std::uint64_t> action_entities_deferred_{0};
   inline static std::atomic<std::uint64_t> evidence_calls_fault_path_{0};
   inline static std::atomic<std::uint64_t> evidence_calls_health_path_{0};
+  inline static std::atomic<std::uint64_t> history_summary_builds_{0};
+  inline static std::atomic<std::uint64_t> history_boundary_rows_{0};
+  inline static std::atomic<std::uint64_t> history_input_columns_{0};
+  inline static std::atomic<std::uint64_t> history_fault_columns_{0};
+  inline static std::atomic<std::uint64_t> history_emitted_rows_{0};
+  inline static std::atomic<std::uint64_t> history_perp_rows_{0};
+  inline static std::atomic<std::uint64_t> history_capacity_refusals_{0};
+  inline static std::atomic<std::uint64_t> history_summary_invalid_{0};
   inline static std::atomic<std::uint64_t> square_root_symbolic_hits_{0};
   inline static std::atomic<std::uint64_t> square_root_symbolic_misses_{0};
   inline static std::atomic<std::uint64_t> square_root_fallbacks_{0};

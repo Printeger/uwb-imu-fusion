@@ -80,7 +80,6 @@
 // C1-b (pipeline wiring, lifecycle, capacity, cold start) and C1-c: NOT_RUN.
 
 #include <Eigen/Core>
-
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -94,12 +93,8 @@ struct HistoryFaultSummaryInput {
   Eigen::VectorXd rhs;          // z:   m
 
   int rows() const { return static_cast<int>(rhs.size()); }
-  int oldStateColumns() const {
-    return static_cast<int>(h_old_state.cols());
-  }
-  int boundaryColumns() const {
-    return static_cast<int>(h_boundary.cols());
-  }
+  int oldStateColumns() const { return static_cast<int>(h_old_state.cols()); }
+  int boundaryColumns() const { return static_cast<int>(h_boundary.cols()); }
   int faultColumns() const { return static_cast<int>(fault_map.cols()); }
 };
 
@@ -107,8 +102,7 @@ struct HistoryFaultSummaryInput {
 // Returns nullopt when the block does not have exactly
 // n_old_state + n_boundary + n_fault + 1 columns.
 std::optional<HistoryFaultSummaryInput> splitBlockSystem(
-    const Eigen::MatrixXd& block, int n_old_state, int n_boundary,
-    int n_fault);
+    const Eigen::MatrixXd& block, int n_old_state, int n_boundary, int n_fault);
 
 struct HistoryFaultSummaryOptions {
   // Relative pivot floor used to adjudicate rank(H_o) and to report the
@@ -127,10 +121,10 @@ struct HistoryFaultSummary {
   std::string invalid_reason;  // non-empty iff !valid
 
   // Original problem dimensions.
-  int n_rows = 0;         // m
-  int n_old_state = 0;    // n_o
-  int n_boundary = 0;     // n_b
-  int n_fault = 0;        // q
+  int n_rows = 0;            // m
+  int n_old_state = 0;       // n_o
+  int n_boundary = 0;        // n_b
+  int n_fault = 0;           // q
   int rank_h_old_state = 0;  // adjudicated rank(H_o); == n_o when valid
   int rank_boundary = 0;     // adjudicated rank of R_b (informational)
   // Adjudicated pivot ratio min|R_ii| / max|R_ii| of the H_o reduction
@@ -196,7 +190,6 @@ struct HistorySummaryVersion {
 // same constants/order as the integrity-config hash (`fnv1a64`), so the
 // convention is identical across the codebase.  Determinism and sensitivity
 // to every component are the only properties claimed.
-std::uint64_t digestHistorySummaryVersion(
-    const HistorySummaryVersion& version);
+std::uint64_t digestHistorySummaryVersion(const HistorySummaryVersion& version);
 
 }  // namespace uwb_imu_pl

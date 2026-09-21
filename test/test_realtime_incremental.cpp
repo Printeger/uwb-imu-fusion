@@ -830,8 +830,18 @@ TEST(UwbImuIncremental, OneSecondUwbDropAndChangingAnchorSetRecover) {
     // and current UWB groups (each factor exactly once).
     const auto expected_window_uwb = counts[epoch] +
         (epoch == 0 ? 0U : counts[epoch - 1]);
+    //
+    // C1-b re-baseline (2026-09-21): the condensed boundary is now the
+    // fault-preserving history summary, whose pooled dof identity is
+    // nu_pooled = nu_c + nu_perp.  The legacy UWB-only count therefore gains
+    // exactly the summary's detector-only rows (nu_perp, exported in the
+    // attempt diagnostics).  Measured at the time of the change: nu_perp = 0
+    // while the A3 horizon is empty (epochs 0-1: dof 8 and 14, unchanged),
+    // and nu_perp = 31 / 35 once historical fault columns exist (epochs 2-3).
+    // Tolerance: exact integer identity, no slack.
     EXPECT_EQ(output.detector.dof,
-              static_cast<int>(expected_window_uwb));
+              static_cast<int>(expected_window_uwb) +
+                  output.diagnostics.history_summary.nu_perp);
     EXPECT_EQ(output.measurement_group_size, counts[epoch]);
     EXPECT_TRUE(output.measurement_model_valid) << output.detector.reason;
     EXPECT_TRUE(output.batch_committed) << output.detector.reason;

@@ -34,10 +34,10 @@ struct StatisticalBoundKey {
 };
 
 struct NoncentralityBoundaryResult {
-  double value = 0.0;          // conservative side: F(value) <= p_md
+  double value = 0.0;  // conservative side: F(value) <= p_md
   bool valid = false;
   bool converged = false;
-  double residual = 0.0;       // |F(value) - p_md|
+  double residual = 0.0;  // |F(value) - p_md|
   double bracket_width = 0.0;
   std::uint64_t iterations = 0;
   std::string reason;

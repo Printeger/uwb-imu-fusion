@@ -1442,6 +1442,39 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
     output.stage_timings.push_back({"window_fingerprint",
         preparation.fingerprint_ms, true, "EXECUTED", ""});
     output.window_id = window.id.value();
+    {
+      // C1-c diagnostics v15: export the condensed summary as produced (the
+      // pooled terms are read here, never recomputed downstream).
+      const auto& source = window.history_summary;
+      auto& target = output.diagnostics.history_summary;
+      target.present = source.present;
+      target.valid = source.valid;
+      target.capacity_ok = source.capacity_ok;
+      target.state = source.state;
+      target.reason = source.reason;
+      target.version_digest = source.version_digest;
+      target.fault_columns = source.fault_columns;
+      target.boundary_rows = source.boundary_rows;
+      target.emitted_rows = source.emitted_rows;
+      target.boundary_columns = source.boundary_columns;
+      target.rank_boundary = source.rank_boundary;
+      target.nu_perp = source.nu_perp;
+      target.kappa_b = source.kappa_b;
+      target.constant_offset = source.constant_offset;
+      target.omega_trace = source.detector_response.size() > 0
+                               ? source.omega().trace()
+                               : 0.0;
+      target.xi_norm = source.d_perp.size() > 0 ? source.xi().norm() : 0.0;
+      target.information_form_factors = source.information_form_factors;
+      target.injected_epochs = source.injected_epochs;
+      target.horizon_first_epoch = source.horizon_first_epoch;
+      target.window_first_epoch = source.window_first_epoch;
+      target.omitted_epoch_count = source.omitted_epoch_count;
+      target.material_gap_epoch_count = source.material_gap_epoch_count;
+      target.claims_full_coverage = source.claims_full_coverage;
+      target.assumptions = source.assumptions;
+      target.omitted_risk_source = source.omitted_risk_source;
+    }
     std::set<std::uint64_t> frozen_groups;
     for (const auto& block : window.blocks) frozen_groups.insert(block.group_id.value());
     output.diagnostics.frozen_group_ids.assign(frozen_groups.begin(), frozen_groups.end());

@@ -3,7 +3,6 @@
 #include <boost/math/distributions/chi_squared.hpp>
 #include <boost/math/distributions/non_central_chi_squared.hpp>
 #include <boost/math/distributions/normal.hpp>
-
 #include <cmath>
 #include <cstring>
 #include <limits>
@@ -27,9 +26,9 @@ std::uint64_t bits(double value) {
 // was declared on the struct but missing from this tuple (a silent aliasing
 // axis); it now participates in the identity together with
 // `history_summary_version`.
-using NoncentralKey = std::tuple<std::uint32_t, std::uint32_t, std::uint64_t,
-                                 std::uint64_t, std::uint64_t, std::uint64_t,
-                                 std::uint64_t, std::uint64_t>;
+using NoncentralKey =
+    std::tuple<std::uint32_t, std::uint32_t, std::uint64_t, std::uint64_t,
+               std::uint64_t, std::uint64_t, std::uint64_t, std::uint64_t>;
 
 NoncentralKey noncentralKey(int dof, double threshold, double p_md,
                             const StatisticalBoundKey& key) {
@@ -46,19 +45,22 @@ struct Storage {
   std::map<std::uint64_t, double> normal;
   StatisticalBoundsCacheStats stats;
 };
-Storage& storage() { static Storage value; return value; }
+Storage& storage() {
+  static Storage value;
+  return value;
+}
 
 // Complement-quantile evaluation: P(X > x) = upper_tail.  Never forms 1 - tiny.
 double normalUpperQuantile(double upper_tail) {
   const boost::math::normal distribution;
-  return boost::math::quantile(boost::math::complement(distribution,
-                                                       upper_tail));
+  return boost::math::quantile(
+      boost::math::complement(distribution, upper_tail));
 }
 
 double chiSquaredUpperQuantile(int dof, double upper_tail) {
   const boost::math::chi_squared distribution(dof);
-  return boost::math::quantile(boost::math::complement(distribution,
-                                                       upper_tail));
+  return boost::math::quantile(
+      boost::math::complement(distribution, upper_tail));
 }
 
 double noncentralMissProbability(int dof, double noncentrality,
@@ -77,16 +79,20 @@ double StatisticalBoundsCache::chiSquaredThreshold(int dof, double p_fa) {
   const auto key = std::make_pair(dof, bits(p_fa));
   std::lock_guard<std::mutex> lock(data.mutex);
   const auto found = data.chi.find(key);
-  if (found != data.chi.end()) { ++data.stats.hits; return found->second; }
+  if (found != data.chi.end()) {
+    ++data.stats.hits;
+    return found->second;
+  }
   // (1 - p_fa) quantile through the complement: tiny p_fa cannot collapse into
   // quantile(1.0) = +inf.
   const double value = chiSquaredUpperQuantile(dof, p_fa);
-  data.chi.emplace(key, value); ++data.stats.misses;
+  data.chi.emplace(key, value);
+  ++data.stats.misses;
   return value;
 }
 
-double StatisticalBoundsCache::noncentralityBoundary(
-    int dof, double threshold, double p_md) {
+double StatisticalBoundsCache::noncentralityBoundary(int dof, double threshold,
+                                                     double p_md) {
   const NoncentralityBoundaryResult verified =
       noncentralityBoundaryVerified(dof, threshold, p_md);
   if (!verified.valid) {
@@ -96,7 +102,8 @@ double StatisticalBoundsCache::noncentralityBoundary(
   return verified.value;
 }
 
-NoncentralityBoundaryResult StatisticalBoundsCache::noncentralityBoundaryVerified(
+NoncentralityBoundaryResult
+StatisticalBoundsCache::noncentralityBoundaryVerified(
     int dof, double squared_threshold, double p_md,
     const StatisticalBoundKey& key) {
   NoncentralityBoundaryResult result;
@@ -132,7 +139,8 @@ NoncentralityBoundaryResult StatisticalBoundsCache::noncentralityBoundaryVerifie
       result.valid = true;
       result.converged = true;
       result.residual =
-          noncentralMissProbability(dof, found->second, squared_threshold) - p_md;
+          noncentralMissProbability(dof, found->second, squared_threshold) -
+          p_md;
       return result;
     }
   }
@@ -149,8 +157,9 @@ NoncentralityBoundaryResult StatisticalBoundsCache::noncentralityBoundaryVerifie
     result.valid = true;
     result.converged = true;
     result.residual = missed(0.0) - p_md;
-    result.reason = "detector boundary is already satisfied at zero "
-                    "noncentrality";
+    result.reason =
+        "detector boundary is already satisfied at zero "
+        "noncentrality";
     return result;
   }
   double lower = 0.0;
@@ -165,11 +174,14 @@ NoncentralityBoundaryResult StatisticalBoundsCache::noncentralityBoundaryVerifie
   std::uint64_t iterations = 0;
   for (; iterations < 200; ++iterations) {
     const double middle = 0.5 * (lower + upper);
-    if (missed(middle) > p_md) lower = middle; else upper = middle;
+    if (missed(middle) > p_md)
+      lower = middle;
+    else
+      upper = middle;
     const double width = upper - lower;
     const double scale = std::max(1.0, std::abs(upper));
-    const bool converged = (width <= 1e-13 * scale) ||
-        (width >= previous_width) ||
+    const bool converged =
+        (width <= 1e-13 * scale) || (width >= previous_width) ||
         (std::abs(missed(upper) - p_md) <= 1e-12 * std::max(1.0, p_md) &&
          width <= 1e-9 * scale);
     previous_width = width;
@@ -183,12 +195,14 @@ NoncentralityBoundaryResult StatisticalBoundsCache::noncentralityBoundaryVerifie
   result.iterations = iterations;
   result.residual = missed(conservative) - p_md;
   result.valid = std::isfinite(conservative) && result.residual <= 0.0;
-  result.converged = result.valid &&
+  result.converged =
+      result.valid &&
       (result.bracket_width <= 1e-9 * std::max(1.0, std::abs(conservative)) ||
        std::abs(result.residual) <= 1e-12 * std::max(1.0, p_md));
   if (!result.valid) {
-    result.reason = "noncentrality solve did not produce a conservative side "
-                    "endpoint";
+    result.reason =
+        "noncentrality solve did not produce a conservative side "
+        "endpoint";
     ++storage().stats.non_converged;
     return result;
   }
@@ -228,7 +242,8 @@ double StatisticalBoundsCache::normalTwoSidedMultiplierVerified(
     // Two-sided multiplier: each tail carries tail/2 and is evaluated through
     // the complement, so a tiny tail never rounds 1 - tiny to 1.0.
     value = normalUpperQuantile(0.5 * tail_probability);
-    data.normal.emplace(key, value); ++data.stats.misses;
+    data.normal.emplace(key, value);
+    ++data.stats.misses;
   }
   if (valid) *valid = std::isfinite(value) && value > 0.0;
   return value;
@@ -238,7 +253,8 @@ StatisticalBoundsCacheStats StatisticalBoundsCache::stats() {
   Storage& data = storage();
   std::lock_guard<std::mutex> lock(data.mutex);
   auto result = data.stats;
-  result.entries = data.chi.size() + data.noncentral.size() + data.normal.size();
+  result.entries =
+      data.chi.size() + data.noncentral.size() + data.normal.size();
   return result;
 }
 
