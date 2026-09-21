@@ -125,6 +125,7 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/integrity/joint_window_detector.cpp
   src/uwb_imu_pl/integrity/hypothesis_evidence.cpp
   src/uwb_imu_pl/integrity/hypothesis_generator.cpp
+  src/uwb_imu_pl/integrity/coverage_envelope.cpp
   src/uwb_imu_pl/integrity/fde_manager.cpp
   src/uwb_imu_pl/integrity/risk_budget_audit.cpp
   src/uwb_imu_pl/integrity/protection_level_v2.cpp

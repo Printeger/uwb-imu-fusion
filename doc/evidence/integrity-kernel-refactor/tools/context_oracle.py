@@ -24,6 +24,17 @@ reported as NOT_RUN with that reason; the slope / Gamma / Lambda conventions
 are covered by oracle_compare.py (O5/O6) and by the C++ tests
 (NUM-01..04, COV-02) instead.
 
+B2 (P4) adds the exported coverage certification of the same window:
+
+      O8g  coverage labels are present and inside the label domain
+      O8h  label / envelope-id consistency (EXACT => 0, UPPER_ENVELOPE => >=1)
+      O8i  no UNCOVERED label: incomplete coverage must make the protected
+           output unavailable, so a silent uncovered leaf is a failure
+      O8j  envelope inclusion identity and dominance are NOT_RUN here: the
+           transform T and the dominance bounds live inside the frozen window
+           (not in the replay schema); they are covered by the C++ tests
+           B2Coverage.* and by the GEO-05 reference fixture instead
+
 Run CSV source: env UWB_IMU_PL_ORACLE_RUNS, default
 /tmp/uwb_imu_pl_b1_20260921/b1_runs_v12 (regenerate with the commands in
 prune-log.md).  Output: square-root-oracle.json next to this file.
@@ -144,6 +155,66 @@ def main():
             "G/Z/Gamma per hypothesis need D_h from the generator (not in the "
             "replay schema): NOT_RUN here, covered by oracle_compare.py O5/O6 "
             "and by the C++ tests NUM-01..04 / COV-02"))
+        # B2 coverage certification (diagnostics v13).
+        labels, ids = [], []
+        hypotheses_path = os.path.join(csv_dir, "hypotheses.csv")
+        if os.path.exists(hypotheses_path):
+            for row in csv.DictReader(open(hypotheses_path)):
+                if row.get("timestamp_ns") is None:
+                    continue
+                labels.append(row.get("coverage_label", ""))
+                try:
+                    ids.append(int(row.get("coverage_envelope_id", "0")))
+                except ValueError:
+                    ids.append(-1)
+        domain = {"EXACT", "UPPER_ENVELOPE", "UNCOVERED"}
+        if not labels:
+            case["items"].append(item(
+                "O8g", "coverage labels present and inside the label domain",
+                "NOT_RUN", None, None, None,
+                "this run exports no hypothesis audit rows "
+                "(output.write_hypothesis_evidence disabled for the scenario)"))
+            case["items"].append(item(
+                "O8h", "label / envelope id consistency", "NOT_RUN", None, None,
+                None, "no hypothesis audit rows"))
+            case["items"].append(item(
+                "O8i", "no UNCOVERED leaf in a certified window", "NOT_RUN",
+                None, None, None, "no hypothesis audit rows"))
+            case["items"].append(item(
+                "O8j", "envelope inclusion identity and dominance verification",
+                "NOT_RUN", None, None, None,
+                "the transform T and the dominance bounds are internal to the "
+                "frozen window and are not part of the replay schema; covered "
+                "by the C++ tests B2Coverage.* and by the GEO-05 fixture"))
+            report["cases"].append(case)
+            continue
+        case["items"].append(item(
+            "O8g", "coverage labels present and inside the label domain",
+            "PASS" if labels and set(labels) <= domain else "FAIL",
+            sorted(domain), sorted(set(labels)), "exact",
+            f"{len(labels)} hypothesis rows"))
+        consistent = all(
+            (label == "EXACT" and value == 0) or
+            (label == "UPPER_ENVELOPE" and value >= 1) or
+            (label == "UNCOVERED" and value == 0)
+            for label, value in zip(labels, ids))
+        case["items"].append(item(
+            "O8h", "label / envelope id consistency",
+            "PASS" if consistent else "FAIL",
+            "EXACT:0, UPPER_ENVELOPE:>=1, UNCOVERED:0",
+            {"labels": sorted(set(labels)), "ids": sorted(set(ids))}, "exact"))
+        case["items"].append(item(
+            "O8i", "no UNCOVERED leaf in a certified window",
+            "PASS" if labels and "UNCOVERED" not in set(labels) else "FAIL",
+            "complete coverage certificate (COV-04)",
+            sorted(set(labels)), "exact",
+            "incomplete coverage must make the protected output unavailable"))
+        case["items"].append(item(
+            "O8j", "envelope inclusion identity and dominance verification",
+            "NOT_RUN", None, None, None,
+            "the transform T and the dominance bounds are internal to the "
+            "frozen window and are not part of the replay schema; covered by "
+            "the C++ tests B2Coverage.* and by the GEO-05 reference fixture"))
         report["cases"].append(case)
 
     for case in report["cases"]:

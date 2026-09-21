@@ -361,3 +361,65 @@ TEST(ReferenceFixture, ProtectedMapIsBodyOriginFiniteDifference) {
 }
 
 }  // namespace
+// ---------------------------------------------------------------------------
+// GEO-05 (B2): double-fault residual cancellation.  Two single faults are each
+// monitorable, but their union cancels in the detection space while moving the
+// protected state: the pair is dangerous and the cross term Gamma_12 cannot be
+// dropped (the diagonal-only Gram would understate the risk).
+// ---------------------------------------------------------------------------
+TEST(ReferenceFixture, GEO05DoubleFaultCancellationNeedsTheCrossTerm) {
+  const int m = 12, n = 3;
+  MatrixXd H = MatrixXd::Zero(m, n);
+  for (int row = 0; row < m; ++row) {
+    H(row, 0) = 1.0;
+    H(row, 1) = 0.25 * row;
+    H(row, 2) = (row % 3 == 0) ? 1.0 : 0.0;
+  }
+  MatrixXd C = MatrixXd::Zero(2, n);
+  C(0, 0) = 1.0;
+  C(1, 1) = 1.0;
+
+  // d2 = H w - d1 makes the pair direction (1, 1) collapse in parity space
+  // (A v = H w) while the protected response stays C w != 0.
+  MatrixXd d1 = MatrixXd::Zero(m, 1);
+  for (int row = 0; row < m; ++row) d1(row, 0) = (row % 2 == 0) ? 1.0 : -1.0;
+  const VectorXd w = (VectorXd(3) << 0.3, -0.2, 0.1).finished();
+  const MatrixXd d2 = H * w - d1;
+  const LeastSquaresReference ls = leastSquares(H);
+  const SlopeReference single1 = slopeReference(H, d1, C);
+  const SlopeReference single2 = slopeReference(H, d2, C);
+  EXPECT_TRUE(single1.slopes.allFinite());
+  EXPECT_TRUE(single2.slopes.allFinite());
+  EXPECT_GT(single1.Gamma(0, 0), 1e-3);
+  EXPECT_GT(single2.Gamma(0, 0), 1e-3);
+
+  // Double faults add columns to the *same* window: A = [d1 | d2].
+  MatrixXd A(m, 2);
+  A << d1, d2;
+  const SlopeReference pair = slopeReference(H, A, C);
+  // The exact Gram of the pair is singular: there is a blind combination.
+  EXPECT_LT(pair.rank, 2) << "cross term must couple the two faults";
+  Eigen::JacobiSVD<MatrixXd> pair_svd(pair.Gamma, Eigen::ComputeThinU |
+                                                       Eigen::ComputeThinV);
+  const double largest = pair_svd.singularValues()(0);
+  const VectorXd blind = pair_svd.matrixV().col(1);  // null direction of Gamma
+  const double blind_gain = pair_svd.singularValues()(1);
+  EXPECT_LT(blind_gain, 1e-8 * std::max(1.0, largest));
+  // The blind direction is undetectable ...
+  const VectorXd detection = pair.Z * blind;
+  EXPECT_LT(detection.norm(), 1e-8);
+  // ... but it moves the protected state: the combination is dangerous.
+  const VectorXd protected_motion = pair.G * blind;
+  EXPECT_GT(protected_motion.norm(), 1e-3);
+
+  // Dropping the cross term would make the same direction look detectable, so
+  // the cross term cannot be dropped (it hides the dangerous combination).
+  MatrixXd Gamma_diagonal = pair.Gamma;
+  Gamma_diagonal(0, 1) = 0.0;
+  Gamma_diagonal(1, 0) = 0.0;
+  Eigen::JacobiSVD<MatrixXd> diagonal_svd(Gamma_diagonal);
+  EXPECT_GT(diagonal_svd.singularValues().minCoeff(), 1e-3);
+  // Known limitation the Stage 3 grouped envelope must cover: the rank
+  // truncated exact bound stays finite even though the pair is dangerous.
+  EXPECT_TRUE(pair.slopes.allFinite());
+}

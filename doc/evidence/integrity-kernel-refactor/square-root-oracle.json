@@ -1,6 +1,6 @@
 {
  "produced_by": "tools/context_oracle.py",
- "runs_source": "/tmp/uwb_imu_pl_b1_20260921/b1_runs_v12",
+ "runs_source": "/tmp/uwb_imu_pl_b2_20260921/stage3",
  "cases": [
   {
    "case": "A_nominal#30",
@@ -76,6 +76,57 @@
      "production": null,
      "tolerance": "PSD check, absolute 1e-12",
      "note": "G/Z/Gamma per hypothesis need D_h from the generator (not in the replay schema): NOT_RUN here, covered by oracle_compare.py O5/O6 and by the C++ tests NUM-01..04 / COV-02"
+    },
+    {
+     "id": "O8g",
+     "description": "coverage labels present and inside the label domain",
+     "status": "PASS",
+     "oracle": [
+      "EXACT",
+      "UNCOVERED",
+      "UPPER_ENVELOPE"
+     ],
+     "production": [
+      "EXACT"
+     ],
+     "tolerance": "exact",
+     "note": "5930 hypothesis rows"
+    },
+    {
+     "id": "O8h",
+     "description": "label / envelope id consistency",
+     "status": "PASS",
+     "oracle": "EXACT:0, UPPER_ENVELOPE:>=1, UNCOVERED:0",
+     "production": {
+      "labels": [
+       "EXACT"
+      ],
+      "ids": [
+       0
+      ]
+     },
+     "tolerance": "exact",
+     "note": ""
+    },
+    {
+     "id": "O8i",
+     "description": "no UNCOVERED leaf in a certified window",
+     "status": "PASS",
+     "oracle": "complete coverage certificate (COV-04)",
+     "production": [
+      "EXACT"
+     ],
+     "tolerance": "exact",
+     "note": "incomplete coverage must make the protected output unavailable"
+    },
+    {
+     "id": "O8j",
+     "description": "envelope inclusion identity and dominance verification",
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": null,
+     "note": "the transform T and the dominance bounds are internal to the frozen window and are not part of the replay schema; covered by the C++ tests B2Coverage.* and by the GEO-05 reference fixture"
     }
    ]
   },
@@ -153,6 +204,57 @@
      "production": null,
      "tolerance": "PSD check, absolute 1e-12",
      "note": "G/Z/Gamma per hypothesis need D_h from the generator (not in the replay schema): NOT_RUN here, covered by oracle_compare.py O5/O6 and by the C++ tests NUM-01..04 / COV-02"
+    },
+    {
+     "id": "O8g",
+     "description": "coverage labels present and inside the label domain",
+     "status": "PASS",
+     "oracle": [
+      "EXACT",
+      "UNCOVERED",
+      "UPPER_ENVELOPE"
+     ],
+     "production": [
+      "EXACT"
+     ],
+     "tolerance": "exact",
+     "note": "5920 hypothesis rows"
+    },
+    {
+     "id": "O8h",
+     "description": "label / envelope id consistency",
+     "status": "PASS",
+     "oracle": "EXACT:0, UPPER_ENVELOPE:>=1, UNCOVERED:0",
+     "production": {
+      "labels": [
+       "EXACT"
+      ],
+      "ids": [
+       0
+      ]
+     },
+     "tolerance": "exact",
+     "note": ""
+    },
+    {
+     "id": "O8i",
+     "description": "no UNCOVERED leaf in a certified window",
+     "status": "PASS",
+     "oracle": "complete coverage certificate (COV-04)",
+     "production": [
+      "EXACT"
+     ],
+     "tolerance": "exact",
+     "note": "incomplete coverage must make the protected output unavailable"
+    },
+    {
+     "id": "O8j",
+     "description": "envelope inclusion identity and dominance verification",
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": null,
+     "note": "the transform T and the dominance bounds are internal to the frozen window and are not part of the replay schema; covered by the C++ tests B2Coverage.* and by the GEO-05 reference fixture"
     }
    ]
   },
@@ -230,6 +332,57 @@
      "production": null,
      "tolerance": "PSD check, absolute 1e-12",
      "note": "G/Z/Gamma per hypothesis need D_h from the generator (not in the replay schema): NOT_RUN here, covered by oracle_compare.py O5/O6 and by the C++ tests NUM-01..04 / COV-02"
+    },
+    {
+     "id": "O8g",
+     "description": "coverage labels present and inside the label domain",
+     "status": "PASS",
+     "oracle": [
+      "EXACT",
+      "UNCOVERED",
+      "UPPER_ENVELOPE"
+     ],
+     "production": [
+      "EXACT"
+     ],
+     "tolerance": "exact",
+     "note": "5920 hypothesis rows"
+    },
+    {
+     "id": "O8h",
+     "description": "label / envelope id consistency",
+     "status": "PASS",
+     "oracle": "EXACT:0, UPPER_ENVELOPE:>=1, UNCOVERED:0",
+     "production": {
+      "labels": [
+       "EXACT"
+      ],
+      "ids": [
+       0
+      ]
+     },
+     "tolerance": "exact",
+     "note": ""
+    },
+    {
+     "id": "O8i",
+     "description": "no UNCOVERED leaf in a certified window",
+     "status": "PASS",
+     "oracle": "complete coverage certificate (COV-04)",
+     "production": [
+      "EXACT"
+     ],
+     "tolerance": "exact",
+     "note": "incomplete coverage must make the protected output unavailable"
+    },
+    {
+     "id": "O8j",
+     "description": "envelope inclusion identity and dominance verification",
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": null,
+     "note": "the transform T and the dominance bounds are internal to the frozen window and are not part of the replay schema; covered by the C++ tests B2Coverage.* and by the GEO-05 reference fixture"
     }
    ]
   },
@@ -307,6 +460,57 @@
      "production": null,
      "tolerance": "PSD check, absolute 1e-12",
      "note": "G/Z/Gamma per hypothesis need D_h from the generator (not in the replay schema): NOT_RUN here, covered by oracle_compare.py O5/O6 and by the C++ tests NUM-01..04 / COV-02"
+    },
+    {
+     "id": "O8g",
+     "description": "coverage labels present and inside the label domain",
+     "status": "PASS",
+     "oracle": [
+      "EXACT",
+      "UNCOVERED",
+      "UPPER_ENVELOPE"
+     ],
+     "production": [
+      "EXACT"
+     ],
+     "tolerance": "exact",
+     "note": "4950 hypothesis rows"
+    },
+    {
+     "id": "O8h",
+     "description": "label / envelope id consistency",
+     "status": "PASS",
+     "oracle": "EXACT:0, UPPER_ENVELOPE:>=1, UNCOVERED:0",
+     "production": {
+      "labels": [
+       "EXACT"
+      ],
+      "ids": [
+       0
+      ]
+     },
+     "tolerance": "exact",
+     "note": ""
+    },
+    {
+     "id": "O8i",
+     "description": "no UNCOVERED leaf in a certified window",
+     "status": "PASS",
+     "oracle": "complete coverage certificate (COV-04)",
+     "production": [
+      "EXACT"
+     ],
+     "tolerance": "exact",
+     "note": "incomplete coverage must make the protected output unavailable"
+    },
+    {
+     "id": "O8j",
+     "description": "envelope inclusion identity and dominance verification",
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": null,
+     "note": "the transform T and the dominance bounds are internal to the frozen window and are not part of the replay schema; covered by the C++ tests B2Coverage.* and by the GEO-05 reference fixture"
     }
    ]
   },
@@ -384,13 +588,49 @@
      "production": null,
      "tolerance": "PSD check, absolute 1e-12",
      "note": "G/Z/Gamma per hypothesis need D_h from the generator (not in the replay schema): NOT_RUN here, covered by oracle_compare.py O5/O6 and by the C++ tests NUM-01..04 / COV-02"
+    },
+    {
+     "id": "O8g",
+     "description": "coverage labels present and inside the label domain",
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": null,
+     "note": "this run exports no hypothesis audit rows (output.write_hypothesis_evidence disabled for the scenario)"
+    },
+    {
+     "id": "O8h",
+     "description": "label / envelope id consistency",
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": null,
+     "note": "no hypothesis audit rows"
+    },
+    {
+     "id": "O8i",
+     "description": "no UNCOVERED leaf in a certified window",
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": null,
+     "note": "no hypothesis audit rows"
+    },
+    {
+     "id": "O8j",
+     "description": "envelope inclusion identity and dominance verification",
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": null,
+     "note": "the transform T and the dominance bounds are internal to the frozen window and are not part of the replay schema; covered by the C++ tests B2Coverage.* and by the GEO-05 fixture"
     }
    ]
   }
  ],
  "totals": {
-  "pass": 30,
+  "pass": 42,
   "fail": 0,
-  "not_run": 0
+  "not_run": 8
  }
 }

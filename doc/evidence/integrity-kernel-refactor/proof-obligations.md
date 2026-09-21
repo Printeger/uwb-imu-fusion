@@ -163,3 +163,29 @@
 * **遗留**：把 harmless 分支接到「有限保守界」（GEO-04 语义）会改变退化情形的离散结果，
   须与 B2/B3 的风险账本一起做，并作为显式的行为变更重跑等价证据。
 * **阻塞/归属**：B2/B3。
+
+## 14.（P4/B2 新增）单双故障同 registry、紧凑模式与覆盖包络
+
+* **命题（§5.7）**：order=1 与 order=2 必须共用同一引擎与同一解；双故障交叉项只对
+  被引用的模式对计算，且拼接前必须证明参数块结构独立；共享参数/共享方向/不适用族
+  一律 fail-closed（不产出 Gamma/斜率，导出原因）。
+  * **本轮状态**：`IMPLEMENTED`。`pairFamilySupport` + `hypothesisParametersIndependent`
+    在 `evaluateContiguous` 的每假设入口执行；拒绝时 `monitored=false`、
+    `plausible=false`、`z_classification=3` 并导出 reason。
+  * **证据**：`B2Registry.*`（4 例）、场景计数（`fault_cross_blocks` 按需）、
+    `equivalence-summary.json.B2_stage3`（离散零差异）。
+* **命题（R2 紧凑计算）**：`HᵀA`、score 与 Gram 交叉项必须从 mode 的**实际非零
+  factor blocks** 构建；逐模式 padded 分配不得进入热路径；容量上限须显式且可计数。
+  * **本轮状态**：`IMPLEMENTED`。紧凑路径 `mode_dense_allocations=0`（7 场景）；
+    回退路径逐模式计数；紧凑与回退**逐位相同**。
+  * **证据**：`B2Compact.*`（4 例）、`coverage-envelopes.md` §4/§5。
+* **命题（§5.8）**：完整 plausible set 必须被精确枚举或由**通过包含性证明与支配性
+  验证**的包络覆盖；覆盖不完备时受保护输出不可用（fail-closed，不许静默）。
+  * **本轮状态**：`IMPLEMENTED`（在线为精确遍历；分组包络为可选容量路径，接受时
+    打 `UPPER_ENVELOPE`，否则保留 `EXACT`）。
+  * **证据**：`B2Coverage.*`（6 例）、oracle O8g–O8i、`coverage-envelopes.md`。
+* **遗留/边界**：
+  * 包络在线启用会改变导出标签，属显式行为变更，留待与 B3 风险并集界一起做
+    （`NOT_RUN`，见 `coverage-envelopes.md` §7）。
+  * 时间耗尽的在线提前停止（D）与 K>ν 专项（GEO-03）仍未开始。
+  * 危险零空间的有限保守界（GEO-04 语义）仍由包络支配性义务承担，未接入风险账本。

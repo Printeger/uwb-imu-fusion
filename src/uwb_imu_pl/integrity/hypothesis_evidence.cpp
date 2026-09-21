@@ -267,6 +267,29 @@ struct ModeDescriptor {
   int physical_dimension = 0;
   int dimension = 0;
   Eigen::Index offset = 0;
+  // B2: index of the source mode, so compact descriptors can be reached from
+  // the descriptor without another lookup.
+  std::size_t mode_number = 0;
+};
+
+// B2 (§5.7/R2): a mode only writes on the factor groups it actually touches.
+// The compact descriptor keeps those rows contiguously (no window-wide zero
+// padding) together with the products that only depend on the mode itself
+// (H^T A and A^T parity).  Cross terms of a hypothesis are then assembled from
+// the intersections of these row spans.
+struct CompactModeSpan {
+  Eigen::Index row_offset = 0;   // row offset of the factor group in the window
+  Eigen::Index rows = 0;         // rows of the group
+  Eigen::Index block_offset = 0; // row offset inside the compact block
+  std::size_t piece = 0;         // index into the whitened pieces of the mode
+};
+
+struct CompactModeEntry {
+  std::vector<CompactModeSpan> spans;  // ascending row_offset
+  Eigen::MatrixXd block;               // Sum(rows) x dimension, whitened
+  Eigen::MatrixXd normal_cross;        // H^T A (window columns x dimension)
+  Eigen::VectorXd score;               // A^T parity (dimension)
+  bool valid = false;
 };
 
 bool useEffectiveBasis(const FaultModeBasis& mode) {
@@ -307,15 +330,33 @@ std::vector<FaultModeEvidence> evaluateContiguous(
         ? mode.effective_parameter_dimension : mode.parameter_dimension;
     descriptor.offset = total_columns;
     total_columns += descriptor.dimension;
+    descriptor.mode_number = descriptors.size();
     mode_index.emplace(mode.id.value(), descriptors.size());
     descriptors.push_back(descriptor);
   }
-  Eigen::MatrixXd dense = Eigen::MatrixXd::Zero(window.H.rows(), total_columns);
+  // ---- B2 (§5.7/R2): compact mode descriptors ---------------------------
+  // A mode only writes on the factor groups it touches; the compact entry
+  // stores exactly those rows plus the mode-local products (H^T A and
+  // A^T parity).  The window-wide zero-padded matrix is materialized only when
+  // the audit needs it as the input of the single frozen Q^T application, or
+  // when the configured capacity forces the padded fallback.
+  const auto& capacity = config.compact_capacity;
+  const bool compact_within_capacity =
+      modes.size() <= capacity.max_modes &&
+      static_cast<std::size_t>(total_columns) <= capacity.max_window_columns;
+  std::vector<CompactModeEntry> compact(modes.size());
   std::vector<bool> mode_valid(modes.size(), true);
-  for (std::size_t mode_number = 0; mode_number < modes.size(); ++mode_number) {
+  std::size_t total_compact_rows = 0;
+  bool compact_usable = compact_within_capacity;
+  for (std::size_t mode_number = 0;
+       compact_usable && mode_number < modes.size(); ++mode_number) {
     const auto& mode = modes[mode_number];
     const auto& descriptor = descriptors[mode_number];
+    auto& entry = compact[mode_number];
     mode_valid[mode_number] = descriptor.dimension > 0;
+    if (!mode_valid[mode_number]) continue;
+    std::vector<Eigen::MatrixXd> pieces;
+    pieces.reserve(mode.raw_group_maps.size());
     for (const auto& item : mode.raw_group_maps) {
       const auto found = block_index.find(item.first.value());
       if (found == block_index.end()) {
@@ -329,14 +370,153 @@ std::vector<FaultModeEvidence> evaluateContiguous(
         break;
       }
       const Eigen::MatrixXd whitened = block.whitener * item.second;
-      dense.block(block_offsets[found->second], descriptor.offset,
-                  item.second.rows(), descriptor.dimension) =
-          useEffectiveBasis(mode)
-              ? whitened * mode.effective_parameter_basis : whitened;
+      pieces.push_back(useEffectiveBasis(mode)
+                           ? whitened * mode.effective_parameter_basis
+                           : whitened);
+      CompactModeSpan span;
+      span.row_offset = block_offsets[found->second];
+      span.rows = item.second.rows();
+      span.piece = pieces.size() - 1;
+      entry.spans.push_back(span);
+    }
+    if (!mode_valid[mode_number]) {
+      entry.spans.clear();
+      continue;
+    }
+    std::sort(entry.spans.begin(), entry.spans.end(),
+              [](const CompactModeSpan& left, const CompactModeSpan& right) {
+                return left.row_offset < right.row_offset;
+              });
+    Eigen::Index compact_rows = 0;
+    for (std::size_t index = 0; index < entry.spans.size(); ++index) {
+      auto& span = entry.spans[index];
+      // A group mapped twice would double count its rows: refuse the mode.
+      if (index > 0 &&
+          span.row_offset <
+              entry.spans[index - 1].row_offset + entry.spans[index - 1].rows) {
+        mode_valid[mode_number] = false;
+        break;
+      }
+      span.block_offset = compact_rows;
+      compact_rows += span.rows;
+    }
+    if (!mode_valid[mode_number]) {
+      entry.spans.clear();
+      continue;
+    }
+    if (static_cast<std::size_t>(compact_rows) > capacity.max_mode_rows ||
+        total_compact_rows + static_cast<std::size_t>(compact_rows) >
+            capacity.max_total_compact_rows) {
+      compact_usable = false;
+      break;
+    }
+    entry.block.resize(compact_rows, descriptor.dimension);
+    for (const auto& span : entry.spans) {
+      entry.block.middleRows(span.block_offset, span.rows) = pieces[span.piece];
+    }
+    entry.normal_cross =
+        Eigen::MatrixXd::Zero(window.H.cols(), descriptor.dimension);
+    entry.score = Eigen::VectorXd::Zero(descriptor.dimension);
+    for (const auto& span : entry.spans) {
+      const auto rows = entry.block.middleRows(span.block_offset, span.rows);
+      entry.normal_cross +=
+          window.H.middleRows(span.row_offset, span.rows).transpose() * rows;
+      entry.score += rows.transpose() *
+          window.numerics->parity.segment(span.row_offset, span.rows);
+    }
+    entry.valid = entry.block.allFinite() && entry.normal_cross.allFinite() &&
+        entry.score.allFinite();
+    if (!entry.valid) {
+      mode_valid[mode_number] = false;
+      entry.spans.clear();
+      continue;
+    }
+    total_compact_rows += static_cast<std::size_t>(compact_rows);
+    NumericalWorkCounters::compactModeStorage(
+        static_cast<std::uint64_t>(compact_rows),
+        static_cast<std::uint64_t>(descriptor.dimension));
+  }
+  const bool compact_fallback = !compact_usable;
+  if (compact_fallback) NumericalWorkCounters::compactCapacityFallback();
+  // Storage accounting for the report: rows the padded form would have cost.
+  NumericalWorkCounters::compactPaddedEquivalent(
+      static_cast<std::uint64_t>(window.H.rows()) *
+      static_cast<std::uint64_t>(total_columns));
+
+  const bool audit_input_needed = config.enable_shared_context &&
+      window.square_root && window.square_root->usable();
+  Eigen::MatrixXd dense;  // padded fallback form / audit input only
+  if (compact_fallback) {
+    dense = Eigen::MatrixXd::Zero(window.H.rows(), total_columns);
+    for (std::size_t mode_number = 0; mode_number < modes.size(); ++mode_number) {
+      const auto& mode = modes[mode_number];
+      const auto& descriptor = descriptors[mode_number];
+      // The compact loop may have stopped at the capacity bound, so validity
+      // has to be re-derived for every mode in the padded form.
+      bool valid = descriptor.dimension > 0;
+      for (const auto& item : mode.raw_group_maps) {
+        const auto found = block_index.find(item.first.value());
+        if (found == block_index.end()) {
+          valid = false;
+          break;
+        }
+        const auto& block = window.blocks[found->second];
+        if (item.second.rows() != block.residual_raw.size() ||
+            item.second.cols() != mode.parameter_dimension) {
+          valid = false;
+          break;
+        }
+      }
+      mode_valid[mode_number] = valid;
+      compact[mode_number] = CompactModeEntry();
+      if (!valid) continue;
+      for (const auto& item : mode.raw_group_maps) {
+        const auto found = block_index.find(item.first.value());
+        const auto& block = window.blocks[found->second];
+        const Eigen::MatrixXd whitened = block.whitener * item.second;
+        dense.block(block_offsets[found->second], descriptor.offset,
+                    item.second.rows(), descriptor.dimension) =
+            useEffectiveBasis(mode)
+                ? whitened * mode.effective_parameter_basis : whitened;
+      }
+      // The fallback pads every mode across all window rows: count the padded
+      // per-mode materialization the compact path avoids.
+      NumericalWorkCounters::modeDenseAllocation(
+          static_cast<std::uint64_t>(window.H.rows()),
+          static_cast<std::uint64_t>(descriptor.dimension));
+    }
+    if (!dense.allFinite()) return results;
+  } else if (audit_input_needed) {
+    dense = Eigen::MatrixXd::Zero(window.H.rows(), total_columns);
+    for (std::size_t mode_number = 0; mode_number < modes.size(); ++mode_number) {
+      if (!mode_valid[mode_number]) continue;
+      const auto& descriptor = descriptors[mode_number];
+      const auto& entry = compact[mode_number];
+      for (const auto& span : entry.spans) {
+        dense.block(span.row_offset, descriptor.offset, span.rows,
+                    descriptor.dimension) =
+            entry.block.middleRows(span.block_offset, span.rows);
+      }
+    }
+    if (!dense.allFinite()) return results;
+  }
+
+  Eigen::MatrixXd normal_cross =
+      Eigen::MatrixXd::Zero(window.H.cols(), total_columns);
+  Eigen::VectorXd scores = Eigen::VectorXd::Zero(total_columns);
+  if (compact_fallback) {
+    normal_cross = window.H.transpose() * dense;
+    scores = dense.transpose() * window.numerics->parity;
+  } else {
+    for (std::size_t mode_number = 0; mode_number < modes.size(); ++mode_number) {
+      if (!mode_valid[mode_number]) continue;
+      const auto& descriptor = descriptors[mode_number];
+      const auto& entry = compact[mode_number];
+      normal_cross.middleCols(descriptor.offset, descriptor.dimension) =
+          entry.normal_cross;
+      scores.segment(descriptor.offset, descriptor.dimension) = entry.score;
     }
   }
-  if (!dense.allFinite()) return results;
-  const Eigen::MatrixXd normal_cross = window.H.transpose() * dense;
   Eigen::MatrixXd rhs(window.H.cols(), 3 + total_columns);
   rhs.leftCols<3>() = window.protected_state_map.transpose();
   rhs.rightCols(total_columns) = normal_cross;
@@ -347,14 +527,15 @@ std::vector<FaultModeEvidence> evaluateContiguous(
   const Eigen::MatrixXd covariance_modes = solved.rightCols(total_columns);
   const Eigen::MatrixXd protected_modes =
       window.protected_state_map * covariance_modes;
-  const Eigen::VectorXd scores = dense.transpose() * window.numerics->parity;
+  NumericalWorkCounters::faultModeColumns(
+      static_cast<std::uint64_t>(total_columns));
   // B1: one implicit Q^T application gives Z = Q2^T D for every fault mode.
   // Z^T Z equals the fault Gram below (verified by COV-02 and NUM-01), and the
   // per-hypothesis block of Z supplies the rank/condition audit that B2 needs;
   // the numeric Gram itself stays the shared normal-equation form so this
   // batch reproduces the P2 numbers exactly.
   Eigen::MatrixXd all_mode_response;
-  if (window.square_root && window.square_root->usable()) {
+  if (audit_input_needed) {
     Eigen::MatrixXd z_response;
     window.square_root->faultResponse(dense, nullptr, &z_response);
     if (z_response.rows() > 0 && z_response.cols() == total_columns &&
@@ -362,8 +543,125 @@ std::vector<FaultModeEvidence> evaluateContiguous(
       all_mode_response = std::move(z_response);
     }
   }
-  const Eigen::MatrixXd all_mode_gram =
-      dense.transpose() * dense - normal_cross.transpose() * covariance_modes;
+  // B2 (§5.7): cross blocks are computed on demand for the (mode, mode) pairs the
+  // hypotheses actually reference; the previous unconditional all-mode Gram is
+  // gone, so an order=1 configuration never pays for pair cross terms.  The
+  // requested set is collected and evaluated *before* the worker pool starts:
+  // the cache is read-only inside the parallel region (mutating shared state
+  // from multiple workers was a real crash in the first B2 iteration).
+  // The compact path evaluates a cross block from the intersections of the two
+  // modes' group spans, so the zero-padded rows never enter the product.
+  auto blockOf = [&](const ModeDescriptor& first,
+                     const ModeDescriptor& second) -> Eigen::MatrixXd {
+    const Eigen::Index left_offset = first.offset;
+    const Eigen::Index right_offset = second.offset;
+    Eigen::MatrixXd value;
+    if (!compact_fallback) {
+      const auto& left = compact[first.mode_number];
+      const auto& right = compact[second.mode_number];
+      value = Eigen::MatrixXd::Zero(first.dimension, second.dimension);
+      std::size_t left_index = 0;
+      std::size_t right_index = 0;
+      while (left_index < left.spans.size() &&
+             right_index < right.spans.size()) {
+        const auto& left_span = left.spans[left_index];
+        const auto& right_span = right.spans[right_index];
+        if (left_span.row_offset + left_span.rows <= right_span.row_offset) {
+          ++left_index;
+          continue;
+        }
+        if (right_span.row_offset + right_span.rows <= left_span.row_offset) {
+          ++right_index;
+          continue;
+        }
+        // Group spans are disjoint blocks, so overlapping spans coincide.
+        const Eigen::Index overlap_begin =
+            std::max(left_span.row_offset, right_span.row_offset);
+        const Eigen::Index overlap_end = std::min(
+            left_span.row_offset + left_span.rows,
+            right_span.row_offset + right_span.rows);
+        const Eigen::Index overlap_rows = overlap_end - overlap_begin;
+        value +=
+            left.block
+                .middleRows(left_span.block_offset + overlap_begin -
+                                left_span.row_offset,
+                            overlap_rows)
+                .transpose() *
+            right.block.middleRows(right_span.block_offset + overlap_begin -
+                                       right_span.row_offset,
+                                   overlap_rows);
+        ++left_index;
+        ++right_index;
+      }
+      value -= left.normal_cross.transpose() *
+          covariance_modes.middleCols(right_offset, second.dimension);
+      return value;
+    }
+    value = dense.middleCols(left_offset, first.dimension).transpose() *
+        dense.middleCols(right_offset, second.dimension);
+    value -= normal_cross.middleCols(left_offset, first.dimension).transpose() *
+        covariance_modes.middleCols(right_offset, second.dimension);
+    return value;
+  };
+  std::map<std::pair<int, int>, Eigen::MatrixXd> cross_block_cache;
+  {
+    std::set<std::pair<int, int>> requested;
+    for (const auto& hypothesis : *hypotheses) {
+      std::vector<std::size_t> parts;
+      bool valid = !hypothesis.modes.empty();
+      for (const auto id : hypothesis.modes) {
+        const auto found = mode_index.find(id.value());
+        if (found == mode_index.end() || !mode_valid[found->second]) {
+          valid = false;
+          break;
+        }
+        parts.push_back(found->second);
+      }
+      if (!valid) continue;
+      for (std::size_t left = 0; left < parts.size(); ++left) {
+        for (std::size_t right = 0; right < parts.size(); ++right) {
+          const int left_offset =
+              static_cast<int>(descriptors[parts[left]].offset);
+          const int right_offset =
+              static_cast<int>(descriptors[parts[right]].offset);
+          requested.emplace(std::min(left_offset, right_offset),
+                            std::max(left_offset, right_offset));
+        }
+      }
+    }
+    for (const auto& key : requested) {
+      const ModeDescriptor* first = nullptr;
+      const ModeDescriptor* second = nullptr;
+      for (const auto& descriptor : descriptors) {
+        if (static_cast<int>(descriptor.offset) == key.first) first = &descriptor;
+        if (static_cast<int>(descriptor.offset) == key.second) second = &descriptor;
+      }
+      if (!first || !second) continue;
+      cross_block_cache.emplace(key, blockOf(*first, *second));
+      NumericalWorkCounters::faultCrossBlock();
+    }
+  }
+  const auto& blocks = cross_block_cache;
+  auto crossBlock = [&blocks, &blockOf](const ModeDescriptor& left,
+                                        const ModeDescriptor& right)
+      -> Eigen::MatrixXd {
+    const int left_offset = static_cast<int>(left.offset);
+    const int right_offset = static_cast<int>(right.offset);
+    const bool ordered = left_offset <= right_offset;
+    const std::pair<int, int> key = ordered
+        ? std::make_pair(left_offset, right_offset)
+        : std::make_pair(right_offset, left_offset);
+    const auto found = blocks.find(key);
+    if (found == blocks.end()) {
+      // Unrequested pairing (must not happen: the requested set is collected
+      // from the same hypotheses): recompute locally, touching no shared state.
+      return ordered ? blockOf(left, right)
+                     : Eigen::MatrixXd(blockOf(right, left).transpose());
+    }
+    NumericalWorkCounters::faultCrossBlockCacheHit();
+    if (ordered) return found->second;
+    return Eigen::MatrixXd(found->second.transpose());
+  };
   auto context = std::make_shared<FrozenHypothesisNumerics>();
   context->window_id = window.id;
   context->version = window.version;
@@ -375,19 +673,18 @@ std::vector<FaultModeEvidence> evaluateContiguous(
   context->fault_model_policy_fingerprint =
       config.fault_model_policy_fingerprint;
   context->protected_covariance = window.protected_state_map * solved.leftCols<3>();
+  // B2 storage discipline: report which storage form served this window.
+  context->compact_rows = compact_fallback
+      ? static_cast<std::size_t>(window.H.rows()) *
+          static_cast<std::size_t>(total_columns)
+      : total_compact_rows;
+  context->compact_columns = compact_fallback
+      ? 0 : static_cast<std::size_t>(total_columns);
+  context->compact_mode_used = !compact_fallback;
+  context->compact_capacity_exceeded = compact_fallback;
   context->pl_entries.resize(hypotheses->size());
   context->mode_count = modes.size();
   context->hypothesis_count = hypotheses->size();
-
-  // One contiguous GEMM pair materializes every self and pair cross term.
-  // This is transient window work (not retained by the shared context) and
-  // replaces tens of thousands of tiny per-hypothesis products.
-
-  auto crossBlock = [&](const ModeDescriptor& left,
-                        const ModeDescriptor& right) -> Eigen::MatrixXd {
-    return all_mode_gram.block(left.offset, right.offset,
-                               left.dimension, right.dimension);
-  };
 
   auto evaluate_range = [&](std::size_t begin, std::size_t end) {
     WorkDelta work;
@@ -418,6 +715,44 @@ std::vector<FaultModeEvidence> evaluateContiguous(
       if (!found_all || dimension <= 0) {
         failDimension(&hypothesis, &evidence, physical_dimension);
         continue;
+      }
+      // B2 capacity bound: a hypothesis whose parameter dimension exceeds the
+      // configured bound is refused fail-closed and counted, instead of
+      // allocating unbounded temporaries.
+      if (dimension > config.compact_capacity.max_hypothesis_dimension) {
+        NumericalWorkCounters::hypothesisCapacityRefusal();
+        auto& monitor = hypothesis.monitorability;
+        monitor.parameter_dimension = dimension;
+        monitor.physical_parameter_dimension = physical_dimension;
+        monitor.reason = "hypothesis dimension exceeds the configured capacity";
+        hypothesis.monitored = false;
+        evidence.monitorability = monitor;
+        evidence.plausible = false;
+        pl_entry.monitorability = monitor;
+        pl_entry.valid = false;
+        pl_entry.z_classification = 3;  // dangerous / unavailable
+        continue;
+      }
+      // B2 (§5.7): refuse a concatenated hypothesis whose parameter blocks are
+      // not structurally independent (unsupported family, shared parameters, or
+      // a shared direction inside a common factor group).  Fail closed: no
+      // Gamma, no slopes, and the reason is exported.
+      if (parts.size() > 1) {
+        std::string independence_reason;
+        if (!hypothesisParametersIndependent(modes, hypothesis.modes,
+                                             &independence_reason)) {
+          auto& monitor = hypothesis.monitorability;
+          monitor.parameter_dimension = dimension;
+          monitor.physical_parameter_dimension = physical_dimension;
+          monitor.reason = independence_reason;
+          hypothesis.monitored = false;
+          evidence.monitorability = monitor;
+          evidence.plausible = false;
+          pl_entry.monitorability = monitor;
+          pl_entry.valid = false;
+          pl_entry.z_classification = 3;  // dangerous / unavailable
+          continue;
+        }
       }
       // B1 audit: detection-space response of this hypothesis, classified from
       // the small SVD of Z_h = Q2^T D_h (never from the squared normal form).
@@ -622,6 +957,11 @@ std::vector<FaultModeEvidence> evaluateMapped(
           effective ? whitened * mode.effective_parameter_basis : whitened;
     }
     if (!valid || !dense.allFinite()) continue;
+    // B2: this legacy route materializes one zero-padded dense block per mode
+    // (all window rows), which is exactly what the compact path eliminates.
+    NumericalWorkCounters::modeDenseAllocation(
+        static_cast<std::uint64_t>(dense.rows()),
+        static_cast<std::uint64_t>(dense.cols()));
     Projection projection;
     projection.dense = std::move(dense);
     projection.normal_cross = window.H.transpose() * projection.dense;

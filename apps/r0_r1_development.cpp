@@ -577,7 +577,25 @@ int main(int argc, char** argv) {
         ";square_root_fallbacks=" +
             std::to_string(work.square_root_fallbacks) +
         ";square_root_certificate_holds=" +
-            std::to_string(work.square_root_certificate_holds);
+            std::to_string(work.square_root_certificate_holds) +
+        ";fault_mode_columns=" + std::to_string(work.fault_mode_columns) +
+        ";fault_cross_blocks=" + std::to_string(work.fault_cross_blocks) +
+        ";fault_cross_block_cache_hits=" +
+            std::to_string(work.fault_cross_block_cache_hits) +
+        ";all_mode_gram_columns=" + std::to_string(work.all_mode_gram_columns) +
+        ";mode_dense_allocations=" + std::to_string(work.mode_dense_allocations) +
+        ";mode_dense_allocation_rows=" +
+            std::to_string(work.mode_dense_allocation_rows) +
+        ";mode_dense_allocation_columns=" +
+            std::to_string(work.mode_dense_allocation_columns) +
+        ";compact_mode_rows=" + std::to_string(work.compact_mode_rows) +
+        ";compact_mode_columns=" + std::to_string(work.compact_mode_columns) +
+        ";compact_padded_equivalent_rows=" +
+            std::to_string(work.compact_padded_equivalent_rows) +
+        ";compact_capacity_fallbacks=" +
+            std::to_string(work.compact_capacity_fallbacks) +
+        ";hypothesis_capacity_refusals=" +
+            std::to_string(work.hypothesis_capacity_refusals);
     logger.writeSummary(summary);
     std::cout << summary.detail << '\n';
   } catch (const std::exception& error) {

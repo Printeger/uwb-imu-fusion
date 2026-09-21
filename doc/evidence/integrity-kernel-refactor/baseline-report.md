@@ -205,3 +205,21 @@ PL/detector/evidence/fault-model/rank-update 数学均未改动。与 A1/A2 相�
 * 3 个 fixture（F30 / H205 / epochs20）在 prune 时删除，相关 oracle 项为 NOT_RUN 并给出再生命令。
 * 计时只报观测：`hypothesis_evidence` 中位 5.35→5.69 ms；`window_fingerprint` 桶
   1.29→3.02 ms（含每窗口 QR 构建 ~1.7 ms）；不做 40ms 结论。
+
+## 9. P4（B2）观测与计数
+
+| 项 | P3/B1 | P4/B2 |
+|---|---|---|
+| 测试 | 254 / 0 fail | **284 / 0 fail** |
+| 离散差异（7 场景 × 20 文件） | 0 | **0**（worst_numeric_rel = 0.0） |
+| 逐模式 padded 分配 | — | **0**（紧凑路径）；回退路径按模式计数 |
+| 未引用模式的交叉块 | 无（B1 曾一次性构建全量 Gram） | **0**（`fault_cross_blocks` 仅覆盖被引用对；F 场景 8,130 < 10,090 列） |
+| 紧凑行数 vs padded 等价行数 | — | 139,110 vs 1,407,120（A）；1,281,398 vs 13,109,888（H）≈ 10.1× |
+| 独立 oracle | 36 PASS / 0 FAIL / 7 NOT_RUN | **42 PASS / 0 FAIL / 8 NOT_RUN**（5 fixture × 10 项） |
+| 验证调度 | 18 PASS / 0 FAIL / 24 NOT_RUN | **22 PASS / 0 FAIL / 20 NOT_RUN** |
+| 诊断 schema | v12 | **v13**（`coverage_label`/`coverage_envelope_id`） |
+
+诚实声明：阈值与算法语义零改动（0.25 gate、128 上限、p_fa/p_md、alert limits、
+风险预算）；SVD 仍是 rank/cond 权威；`formal_eligible` 仍为 `false`；历史仍只有
+名义 `BoundaryPrior`；bounded set 仍 `NOT_IMPLEMENTED`；FDE 选择合同不动。包络为
+可选路径且在线默认不启用（精确遍历）。

@@ -1,7 +1,7 @@
 {
  "produced_by": "tools/oracle_compare.py",
  "algorithm": "independent numpy/scipy reimplementation (no production solver)",
- "source_revision": "492dd72666f029ffcebd5973b2758f03a124d775",
+ "source_revision": "9d5550fe34d231dab6ee28f981842561722b678a",
  "tolerance_source": {
   "csv_printed": "6-significant-digit ostream default -> rel 1e-5",
   "strict_linear": "ADR 0002 well-conditioned rel 1e-9 (used elsewhere)",
@@ -18,7 +18,7 @@
    "note": "healthy frozen window, anchor template active",
    "bin": "raw/replay_p2/A_nominal/exports/attempt-30.bin",
    "bin_sha256": "3730c22054d4651507b066de87e7e277b652f297c88b16cf68ead7ffe8dab17d",
-   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_b1_20260921/b1_runs_v12/A_nominal",
+   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_b2_20260921/stage3/A_nominal",
    "attempt": 30,
    "window": {
     "m": 253,
@@ -211,7 +211,7 @@
    "note": "UWB fault before the exclusion action",
    "bin": "raw/replay_p2/C_uwb_fde/exports/attempt-25.bin",
    "bin_sha256": "1802f0584bfa92a5d2dc537b92ce130d28c0d14a86bd30acb5b5279caca30442",
-   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_b1_20260921/b1_runs_v12/C_uwb_fde",
+   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_b2_20260921/stage3/C_uwb_fde",
    "attempt": 25,
    "window": {
     "m": 253,
@@ -404,7 +404,7 @@
    "note": "post-FDE window (action applied, 128 cap)",
    "bin": "raw/replay_p2/C_uwb_fde/exports/attempt-26.bin",
    "bin_sha256": "aab25d7599d09b165219d5031b7d21b11eb84cd3001ae95420190651478adda3",
-   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_b1_20260921/b1_runs_v12/C_uwb_fde",
+   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_b2_20260921/stage3/C_uwb_fde",
    "attempt": 26,
    "window": {
     "m": 252,
@@ -597,7 +597,7 @@
    "note": "consecutive rejection epoch",
    "bin": "raw/replay_p2/G_continuous_rejection/exports/attempt-10.bin",
    "bin_sha256": "e570ef81fadfffbc0e1211204027edbf47724be8eed4b0262e140ee3066fab03",
-   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_b1_20260921/b1_runs_v12/G_continuous_rejection",
+   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_b2_20260921/stage3/G_continuous_rejection",
    "attempt": 10,
    "window": {
     "m": 130,
@@ -781,7 +781,7 @@
    "note": "mature union window",
    "bin": "raw/replay_p2/H_mature_union/exports/attempt-201.bin",
    "bin_sha256": "920a54ff2709c8150a7bcd16fbfce5d96c99d948f7b7439f94fc823a9ba272d5",
-   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_b1_20260921/b1_runs_v12/H_mature_union",
+   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_b2_20260921/stage3/H_mature_union",
    "attempt": 201,
    "window": {
     "m": 253,

@@ -308,5 +308,94 @@
   "discrete_mismatch_total": 0,
   "worst_numeric_rel": 0.00028107617657503785,
   "numeric_tolerance": 1e-05
+ },
+ "B2_stage3": {
+  "baseline": "B1/P3 runs (/tmp/uwb_imu_pl_b2_20260921/baseline_b1, v12 diagnostics)",
+  "current": "B2 build, v13 diagnostics (/tmp/uwb_imu_pl_b2_20260921/stage3)",
+  "comparison": "20 CSV files per scenario, shared columns; discrete columns exact, numeric rel 1e-5 (6-digit CSV printing) or abs 1e-9 floor",
+  "per_frame_details": "/tmp/uwb_imu_pl_b2_20260921/equiv_stage3.json (not committed)",
+  "metadata_note": "intentional: diagnostics schema v12 -> v13 (one row per attempt) and context_bytes (B2 context fields); hypotheses.csv gained columns coverage_label/coverage_envelope_id, recorded as column_mismatch, shared columns still compared column by column",
+  "scenarios": {
+   "A_nominal": {
+    "files_compared": 20,
+    "discrete_mismatches": 0,
+    "route_differences": [],
+    "numeric_failures": [],
+    "worst_numeric_rel": 0.0
+   },
+   "C_uwb_fde": {
+    "files_compared": 20,
+    "discrete_mismatches": 0,
+    "route_differences": [],
+    "numeric_failures": [],
+    "worst_numeric_rel": 0.0
+   },
+   "D_imu_bridge": {
+    "files_compared": 20,
+    "discrete_mismatches": 0,
+    "route_differences": [],
+    "numeric_failures": [],
+    "worst_numeric_rel": 0.0
+   },
+   "E_union": {
+    "files_compared": 20,
+    "discrete_mismatches": 0,
+    "route_differences": [],
+    "numeric_failures": [],
+    "worst_numeric_rel": 0.0
+   },
+   "F_ramp_unmonitorable": {
+    "files_compared": 20,
+    "discrete_mismatches": 0,
+    "route_differences": [],
+    "numeric_failures": [],
+    "worst_numeric_rel": 0.0
+   },
+   "G_continuous_rejection": {
+    "files_compared": 20,
+    "discrete_mismatches": 0,
+    "route_differences": [],
+    "numeric_failures": [],
+    "worst_numeric_rel": 0.0
+   },
+   "H_mature_union": {
+    "files_compared": 20,
+    "discrete_mismatches": 0,
+    "route_differences": [],
+    "numeric_failures": [],
+    "worst_numeric_rel": 0.0
+   }
+  },
+  "summary": {
+   "discrete_mismatch_total": 0,
+   "worst_numeric_rel": 0.0,
+   "numeric_tolerance": 1e-05,
+   "route_differences": 0
+  },
+  "counting": {
+   "note": "see coverage-envelopes.md section 4; compact path has zero per-mode padded allocations",
+   "A_nominal": {
+    "fault_mode_columns": 5930,
+    "fault_cross_blocks": 5930,
+    "fault_cross_block_cache_hits": 5930,
+    "all_mode_gram_columns": 0,
+    "mode_dense_allocations": 0,
+    "compact_mode_rows": 139110,
+    "compact_padded_equivalent_rows": 1407120,
+    "compact_capacity_fallbacks": 0,
+    "hypothesis_capacity_refusals": 0
+   },
+   "H_mature_union": {
+    "fault_mode_columns": 52186,
+    "fault_cross_blocks": 52186,
+    "fault_cross_block_cache_hits": 52186,
+    "all_mode_gram_columns": 0,
+    "mode_dense_allocations": 0,
+    "compact_mode_rows": 1281398,
+    "compact_padded_equivalent_rows": 13109888,
+    "compact_capacity_fallbacks": 0,
+    "hypothesis_capacity_refusals": 0
+   }
+  }
  }
 }

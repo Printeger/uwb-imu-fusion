@@ -6,6 +6,7 @@
 #include "uwb_imu_pl/factors/kinematic_bridge_factor.hpp"
 #include "uwb_imu_pl/factors/realtime_factors.hpp"
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
+#include "uwb_imu_pl/integrity/coverage_envelope.hpp"
 #include "uwb_imu_pl/integrity/integrity_monitor.hpp"
 #include "uwb_imu_pl/integrity/health_manager.hpp"
 #include "uwb_imu_pl/integrity/hypothesis_generator.hpp"
@@ -848,7 +849,20 @@ TEST(IntegrityV2ProtectionLevel,
   ASSERT_EQ(reference_evidence.size(), optimized_evidence.size());
   EXPECT_EQ(frozen->low_dimensional_count, 1u);
   EXPECT_EQ(frozen->generic_fallback_count, 1u);
-  for (std::size_t i = 0; i < optimized.size(); ++i) {
+  // B2 (§5.7): the optimized path refuses the concatenated hypothesis whose
+  // two modes share one direction (A12 = [A1, A2] doubles the same column), so
+  // no rank/Gram is computed for it.  The reference path has no such guard and
+  // still reports the singular rank.
+  EXPECT_EQ(reference[0].monitorability.rank, 1);
+  EXPECT_EQ(optimized[0].monitorability.rank, 0);
+  EXPECT_FALSE(reference[0].monitored);
+  EXPECT_FALSE(optimized[0].monitored);
+  EXPECT_NE(optimized[0].monitorability.reason.find("concatenation refused"),
+            std::string::npos)
+      << optimized[0].monitorability.reason;
+  EXPECT_FALSE(optimized_evidence[0].plausible);
+  EXPECT_EQ(optimized_evidence[0].fault_gram.rows(), 0);
+  for (std::size_t i = 1; i < optimized.size(); ++i) {
     EXPECT_EQ(reference[i].monitored, optimized[i].monitored);
     EXPECT_EQ(reference[i].monitorability.rank,
               optimized[i].monitorability.rank);
@@ -857,7 +871,6 @@ TEST(IntegrityV2ProtectionLevel,
     EXPECT_TRUE(reference_evidence[i].fault_gram.isApprox(
         optimized_evidence[i].fault_gram, 1e-12));
   }
-  EXPECT_FALSE(optimized[0].monitored);
 }
 
 TEST(IntegrityV2Fde, CoversEntirePlausibleSetBeforeSelection) {
@@ -1764,4 +1777,468 @@ TEST(IntegrityV2ImuOracle, InvalidAnalyticInputIsReportedWithoutOracle) {
           transaction, block);
   EXPECT_FALSE(oracle.oracle_executed);
   EXPECT_EQ(oracle.oracle_reintegrations, 0u);
+}
+
+// ---------------------------------------------------------------------------
+// B2 (§5.7): one registry for order=1 and order=2.  Family classification,
+// shared-parameter fail-closed behaviour, and on-demand cross blocks.
+// ---------------------------------------------------------------------------
+
+TEST(B2Registry, PairFamilySupportClassifiesFamilies) {
+  using namespace uwb_imu_pl;
+  FaultModeBasis uwb;
+  uwb.sensor = SensorType::Uwb;
+  uwb.physical_source_id = "uwb:1";
+  FaultModeBasis uwb_other = uwb;
+  uwb_other.physical_source_id = "uwb:2";
+  FaultModeBasis accel;
+  accel.sensor = SensorType::ImuAccelerometer;
+  accel.physical_source_id = "imu_accel:0:interval:3";
+  FaultModeBasis gyro = accel;
+  gyro.sensor = SensorType::ImuGyroscope;
+
+  EXPECT_EQ(pairFamilySupport(uwb, uwb_other), PairFamilySupport::Unsupported);
+  EXPECT_EQ(pairFamilySupport(accel, gyro), PairFamilySupport::Unsupported);
+  EXPECT_EQ(pairFamilySupport(uwb, accel), PairFamilySupport::Independent);
+  EXPECT_EQ(pairFamilySupport(uwb, gyro), PairFamilySupport::Independent);
+  FaultModeBasis same_source_imu = accel;
+  same_source_imu.physical_source_id = uwb.physical_source_id;
+  EXPECT_EQ(pairFamilySupport(uwb, same_source_imu),
+            PairFamilySupport::SharedParameters);
+  EXPECT_EQ(toString(PairFamilySupport::Unsupported), "UNSUPPORTED");
+}
+
+TEST(B2Registry, SharedDirectionFailsClosedInTheConcatenationGuard) {
+  using namespace uwb_imu_pl;
+  auto window = syntheticWindow();
+  finalizeIntegrityWindow(&window, 1e-10, 1e10);
+  // Two modes touching the same factor group with identical raw maps: the
+  // stacked map is rank deficient, so A12 = [A1, A2] would double count.
+  FaultModeBasis left;
+  left.id = FaultModeId(1);
+  left.sensor = SensorType::Uwb;
+  left.parameter_dimension = 1;
+  left.raw_group_maps[FactorGroupId(2)] = Eigen::Vector3d::Ones();
+  FaultModeBasis right = left;
+  right.id = FaultModeId(2);
+  right.sensor = SensorType::ImuAccelerometer;
+  const std::vector<FaultModeBasis> modes{left, right};
+  std::string reason;
+  EXPECT_FALSE(hypothesisParametersIndependent(
+      modes, {left.id, right.id}, &reason));
+  EXPECT_NE(reason.find("shared direction"), std::string::npos) << reason;
+
+  // Disjoint groups (UWB group 2 vs IMU group 1) are independent.
+  FaultModeBasis imu;
+  imu.id = FaultModeId(3);
+  imu.sensor = SensorType::ImuAccelerometer;
+  imu.parameter_dimension = 1;
+  imu.raw_group_maps[FactorGroupId(1)] = Eigen::Vector3d(0.0, 1.0, 0.0);
+  EXPECT_TRUE(hypothesisParametersIndependent(
+      {left, imu}, {left.id, imu.id}, &reason)) << reason;
+
+  // Unsupported family is refused with its own reason.
+  FaultModeBasis uwb_pair = left;
+  uwb_pair.id = FaultModeId(4);
+  EXPECT_FALSE(hypothesisParametersIndependent(
+      {left, uwb_pair}, {left.id, uwb_pair.id}, &reason));
+  EXPECT_NE(reason.find("unsupported pair family"), std::string::npos) << reason;
+}
+
+TEST(B2Registry, SharedParametersAreNotMonitoredByTheEvidencePath) {
+  using namespace uwb_imu_pl;
+  auto window = syntheticWindow();
+  finalizeIntegrityWindow(&window, 1e-10, 1e10);
+  FaultModeBasis left;
+  left.id = FaultModeId(1);
+  left.sensor = SensorType::Uwb;
+  left.parameter_dimension = 1;
+  left.raw_group_maps[FactorGroupId(2)] = Eigen::Vector3d::Ones();
+  FaultModeBasis right = left;
+  right.id = FaultModeId(2);
+  right.sensor = SensorType::ImuAccelerometer;
+  const std::vector<FaultModeBasis> modes{left, right};
+  FaultHypothesisV2 hypothesis;
+  hypothesis.id = HypothesisId(1);
+  hypothesis.modes = {left.id, right.id};
+  std::vector<FaultHypothesisV2> hypotheses{hypothesis};
+  const auto evidence = HypothesisEvidenceEvaluator().evaluateAll(
+      window, modes, &hypotheses, 100.0);
+  ASSERT_EQ(evidence.size(), 1u);
+  EXPECT_FALSE(hypotheses[0].monitored);
+  EXPECT_NE(hypotheses[0].monitorability.reason.find("shared direction"),
+            std::string::npos)
+      << hypotheses[0].monitorability.reason;
+  EXPECT_FALSE(evidence[0].plausible);
+}
+
+TEST(B2Registry, CrossBlocksAreRequestedOnlyWhereNeeded) {
+  using namespace uwb_imu_pl;
+  auto window = syntheticWindow();
+  finalizeIntegrityWindow(&window, 1e-10, 1e10);
+  FaultModeBasis first;
+  first.id = FaultModeId(1);
+  first.sensor = SensorType::Uwb;
+  first.parameter_dimension = 1;
+  first.raw_group_maps[FactorGroupId(2)] = Eigen::Vector3d::Ones();
+  FaultModeBasis second;
+  second.id = FaultModeId(2);
+  second.sensor = SensorType::Uwb;
+  second.parameter_dimension = 1;
+  // Group 3 carries two rows in the synthetic fixture: the raw map must match
+  // the group's native row count or the mode is rejected as invalid.
+  second.raw_group_maps[FactorGroupId(3)] =
+      (Eigen::MatrixXd(2, 1) << 1.0, 0.0).finished();
+  FaultModeBasis imu;
+  imu.id = FaultModeId(3);
+  imu.sensor = SensorType::ImuAccelerometer;
+  imu.parameter_dimension = 1;
+  imu.raw_group_maps[FactorGroupId(1)] =
+      (Eigen::MatrixXd(2, 1) << 0.0, 1.0).finished();
+  const std::vector<FaultModeBasis> modes{first, second, imu};
+
+  // Order=1 only: exactly one self block per evaluated hypothesis, and the
+  // all-mode Gram is never materialized.
+  {
+    std::vector<FaultHypothesisV2> singles(3);
+    for (std::size_t index = 0; index < 3; ++index) {
+      singles[index].id = HypothesisId(index + 1);
+      singles[index].modes = {modes[index].id};
+      singles[index].prior_probability_bound = 1e-4;
+      singles[index].p_md_allocation = 1e-3;
+    }
+    const auto before = NumericalWorkCounters::snapshot();
+    (void)HypothesisEvidenceEvaluator().evaluateAll(window, modes, &singles,
+                                                    100.0);
+    const auto after = NumericalWorkCounters::snapshot();
+    EXPECT_EQ(after.fault_cross_blocks - before.fault_cross_blocks, 3u)
+        << "one self block per hypothesis, no pair cross terms";
+    EXPECT_EQ(after.all_mode_gram_columns, 0u)
+        << "the unconditional all-mode Gram must not be built";
+  }
+  // Order=2 enabled: the pair cross blocks appear, one per referenced pair.
+  {
+    std::vector<FaultHypothesisV2> pairs(2);
+    pairs[0].id = HypothesisId(10);
+    pairs[0].modes = {first.id, imu.id};
+    pairs[0].prior_probability_bound = 1e-8;
+    pairs[0].p_md_allocation = 1e-3;
+    pairs[1].id = HypothesisId(11);
+    pairs[1].modes = {second.id, imu.id};
+    pairs[1].prior_probability_bound = 1e-8;
+    pairs[1].p_md_allocation = 1e-3;
+    const auto before = NumericalWorkCounters::snapshot();
+    (void)HypothesisEvidenceEvaluator().evaluateAll(window, modes, &pairs,
+                                                    100.0);
+    const auto after = NumericalWorkCounters::snapshot();
+    // self(first) + self(second) + self(imu) + cross(first,imu) +
+    // cross(second,imu); no cross(first,second) because no hypothesis needs it.
+    EXPECT_EQ(after.fault_cross_blocks - before.fault_cross_blocks, 5u);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// B2 Stage 2 (roadmap R2): compact mode descriptors, capacity-bounded buffers,
+// and the counted padded fallback.  Storage form must never change results.
+// ---------------------------------------------------------------------------
+namespace {
+
+struct B2CompactFixture {
+  uwb_imu_pl::LinearizedIntegrityWindow window;
+  std::vector<uwb_imu_pl::FaultModeBasis> modes;
+  std::vector<uwb_imu_pl::FaultHypothesisV2> hypotheses;
+};
+
+B2CompactFixture makeCompactFixture() {
+  using namespace uwb_imu_pl;
+  B2CompactFixture fixture;
+  fixture.window = syntheticWindow();
+  finalizeIntegrityWindow(&fixture.window, 1e-10, 1e10);
+  FaultModeBasis first;
+  first.id = FaultModeId(1);
+  first.sensor = SensorType::Uwb;
+  first.parameter_dimension = 1;
+  first.raw_group_maps[FactorGroupId(2)] = Eigen::Vector3d::Ones();
+  FaultModeBasis imu;
+  imu.id = FaultModeId(2);
+  imu.sensor = SensorType::ImuAccelerometer;
+  imu.parameter_dimension = 1;
+  imu.raw_group_maps[FactorGroupId(1)] =
+      (Eigen::MatrixXd(2, 1) << 0.0, 1.0).finished();
+  fixture.modes = {first, imu};
+  FaultHypothesisV2 pair;
+  pair.id = HypothesisId(1);
+  pair.modes = {first.id, imu.id};
+  pair.prior_probability_bound = 1e-8;
+  pair.p_md_allocation = 1e-3;
+  FaultHypothesisV2 single;
+  single.id = HypothesisId(2);
+  single.modes = {first.id};
+  single.prior_probability_bound = 1e-4;
+  single.p_md_allocation = 1e-3;
+  fixture.hypotheses = {pair, single};
+  return fixture;
+}
+
+}  // namespace
+
+TEST(B2Compact, CompactPathAllocatesNoPaddedModeBlocks) {
+  using namespace uwb_imu_pl;
+  auto fixture = makeCompactFixture();
+  const auto before = NumericalWorkCounters::snapshot();
+  std::shared_ptr<const FrozenHypothesisNumerics> shared;
+  const auto evidence = HypothesisEvidenceEvaluator().evaluateAll(
+      fixture.window, fixture.modes, &fixture.hypotheses, 100.0, &shared);
+  const auto after = NumericalWorkCounters::snapshot();
+  ASSERT_EQ(evidence.size(), 2u);
+  ASSERT_TRUE(shared);
+  // The compact path stores only the rows the modes touch: 3 (UWB group 2)
+  // plus 2 (IMU group 1) rows, never window.H.rows() per mode.
+  EXPECT_EQ(after.compact_mode_rows - before.compact_mode_rows, 5u);
+  EXPECT_EQ(after.compact_mode_columns - before.compact_mode_columns, 2u);
+  EXPECT_EQ(after.mode_dense_allocations - before.mode_dense_allocations, 0u)
+      << "the compact path must not pad modes across the window rows";
+  EXPECT_EQ(after.compact_capacity_fallbacks - before.compact_capacity_fallbacks,
+            0u);
+  EXPECT_TRUE(shared->compact_mode_used);
+  EXPECT_FALSE(shared->compact_capacity_exceeded);
+  EXPECT_LT(shared->compact_rows,
+            static_cast<std::size_t>(fixture.window.H.rows()) *
+                fixture.modes.size());
+}
+
+TEST(B2Compact, CapacityExhaustionFallsBackWithIdenticalResults) {
+  using namespace uwb_imu_pl;
+  auto compact_fixture = makeCompactFixture();
+  std::shared_ptr<const FrozenHypothesisNumerics> compact_shared;
+  const auto compact_evidence = HypothesisEvidenceEvaluator().evaluateAll(
+      compact_fixture.window, compact_fixture.modes,
+      &compact_fixture.hypotheses, 100.0, &compact_shared);
+
+  auto padded_fixture = makeCompactFixture();
+  HypothesisEvaluationConfig config;
+  config.compact_capacity.max_total_compact_rows = 1;  // force the fallback
+  std::shared_ptr<const FrozenHypothesisNumerics> padded_shared;
+  const auto before = NumericalWorkCounters::snapshot();
+  const auto padded_evidence = HypothesisEvidenceEvaluator(config).evaluateAll(
+      padded_fixture.window, padded_fixture.modes, &padded_fixture.hypotheses,
+      100.0, &padded_shared);
+  const auto after = NumericalWorkCounters::snapshot();
+  ASSERT_EQ(compact_evidence.size(), padded_evidence.size());
+  ASSERT_TRUE(padded_shared);
+  EXPECT_TRUE(padded_shared->compact_capacity_exceeded);
+  EXPECT_FALSE(padded_shared->compact_mode_used);
+  EXPECT_EQ(after.compact_capacity_fallbacks - before.compact_capacity_fallbacks,
+            1u);
+  // One padded block per valid mode, each across all window rows.
+  EXPECT_EQ(after.mode_dense_allocations - before.mode_dense_allocations, 2u);
+  EXPECT_EQ(after.mode_dense_allocation_rows - before.mode_dense_allocation_rows,
+            static_cast<std::uint64_t>(2 * padded_fixture.window.H.rows()));
+  // Identical results: the storage form is not allowed to change the numbers.
+  for (std::size_t index = 0; index < compact_evidence.size(); ++index) {
+    EXPECT_EQ(compact_evidence[index].all_in_statistic,
+              padded_evidence[index].all_in_statistic);
+    EXPECT_EQ(compact_evidence[index].conditioned_statistic,
+              padded_evidence[index].conditioned_statistic);
+    EXPECT_EQ(compact_evidence[index].log_evidence,
+              padded_evidence[index].log_evidence);
+    EXPECT_EQ(compact_evidence[index].plausible, padded_evidence[index].plausible);
+    EXPECT_EQ(compact_evidence[index].estimated_fault.size(),
+              padded_evidence[index].estimated_fault.size());
+    if (compact_evidence[index].estimated_fault.size() ==
+        padded_evidence[index].estimated_fault.size()) {
+      EXPECT_EQ((compact_evidence[index].estimated_fault -
+                 padded_evidence[index].estimated_fault).cwiseAbs().maxCoeff(),
+                0.0);
+    }
+    EXPECT_EQ(compact_evidence[index].fault_gram.rows(),
+              padded_evidence[index].fault_gram.rows());
+    if (compact_evidence[index].fault_gram.rows() ==
+            padded_evidence[index].fault_gram.rows() &&
+        compact_evidence[index].fault_gram.cols() ==
+            padded_evidence[index].fault_gram.cols()) {
+      EXPECT_EQ((compact_evidence[index].fault_gram -
+                 padded_evidence[index].fault_gram).cwiseAbs().maxCoeff(),
+                0.0);
+    }
+  }
+}
+
+TEST(B2Compact, HypothesisDimensionCapRefusesFailClosed) {
+  using namespace uwb_imu_pl;
+  auto fixture = makeCompactFixture();
+  HypothesisEvaluationConfig config;
+  config.compact_capacity.max_hypothesis_dimension = 0;
+  const auto before = NumericalWorkCounters::snapshot();
+  const auto evidence = HypothesisEvidenceEvaluator(config).evaluateAll(
+      fixture.window, fixture.modes, &fixture.hypotheses, 100.0);
+  const auto after = NumericalWorkCounters::snapshot();
+  ASSERT_EQ(evidence.size(), 2u);
+  EXPECT_EQ(after.hypothesis_capacity_refusals -
+                before.hypothesis_capacity_refusals,
+            2u);
+  for (std::size_t index = 0; index < evidence.size(); ++index) {
+    EXPECT_FALSE(fixture.hypotheses[index].monitored);
+    EXPECT_FALSE(evidence[index].plausible);
+    EXPECT_NE(fixture.hypotheses[index].monitorability.reason.find("capacity"),
+              std::string::npos)
+        << fixture.hypotheses[index].monitorability.reason;
+  }
+}
+
+TEST(B2Compact, LegacyMappedRouteCountsPaddedAllocations) {
+  using namespace uwb_imu_pl;
+  auto fixture = makeCompactFixture();
+  HypothesisEvaluationConfig config;
+  config.enable_low_dim_batch = false;  // route through evaluateMapped
+  const auto before = NumericalWorkCounters::snapshot();
+  const auto evidence = HypothesisEvidenceEvaluator(config).evaluateAll(
+      fixture.window, fixture.modes, &fixture.hypotheses, 100.0);
+  const auto after = NumericalWorkCounters::snapshot();
+  EXPECT_EQ(evidence.size(), 2u);
+  // The legacy route pads every mode across the window rows, and that cost is
+  // visible in the counters instead of being implicit.
+  EXPECT_EQ(after.mode_dense_allocations - before.mode_dense_allocations, 2u);
+  EXPECT_EQ(after.compact_mode_rows - before.compact_mode_rows, 0u);
+}
+
+// ---------------------------------------------------------------------------
+// B2 Stage 3 (§5.8): exact traversal, grouped envelopes with inclusion proofs,
+// dominance verification, and the fail-closed coverage certificate.
+// ---------------------------------------------------------------------------
+TEST(B2Coverage, ExactTraversalCertifiesEveryTask) {
+  using namespace uwb_imu_pl;
+  const auto fixture = makeCompactFixture();
+  const auto certificate = buildExactCoverageCertificate(fixture.modes);
+  EXPECT_TRUE(certificate.complete);
+  EXPECT_EQ(certificate.exact_count, fixture.modes.size());
+  EXPECT_EQ(certificate.enveloped_count, 0u);
+  EXPECT_EQ(certificate.uncovered_count, 0u);
+  for (const auto& mode : fixture.modes) {
+    EXPECT_EQ(coverageLabelFor(certificate, mode.id), CoverageLabel::Exact);
+    EXPECT_EQ(coverageEnvelopeIdFor(certificate, mode.id), 0u);
+  }
+  EXPECT_EQ(std::string(toString(CoverageLabel::UpperEnvelope)), "UPPER_ENVELOPE");
+}
+
+TEST(B2Coverage, GroupedEnvelopeDischargesProofAndDominance) {
+  using namespace uwb_imu_pl;
+  auto fixture = makeCompactFixture();
+  // A group mode on the same factor group with a scaled map spans the leaf
+  // exactly: A_leaf = A_group * 2.
+  FaultModeBasis group;
+  group.id = FaultModeId(10);
+  group.sensor = SensorType::Uwb;
+  group.parameter_dimension = 1;
+  group.raw_group_maps[FactorGroupId(2)] = Eigen::Vector3d::Constant(0.5);
+  const auto certificate = buildGroupedCoverageCertificate(
+      fixture.window, {fixture.modes[0]}, {group});
+  ASSERT_EQ(certificate.envelopes.size(), 1u);
+  const auto& envelope = certificate.envelopes.front();
+  EXPECT_TRUE(envelope.accepted) << envelope.reason;
+  ASSERT_EQ(envelope.proofs.size(), 1u);
+  EXPECT_TRUE(envelope.proofs.front().verified);
+  EXPECT_LT(envelope.proofs.front().relative_residual, 1e-12);
+  EXPECT_NEAR(envelope.proofs.front().transform(0, 0), 2.0, 1e-12);
+  EXPECT_TRUE(envelope.dominant) << envelope.dominance_margin;
+  EXPECT_GE(envelope.dominance_margin, -1e-9);
+  EXPECT_EQ(certificate.enveloped_count, 1u);
+  EXPECT_TRUE(certificate.complete);
+  EXPECT_EQ(coverageLabelFor(certificate, fixture.modes[0].id),
+            CoverageLabel::UpperEnvelope);
+  EXPECT_EQ(coverageEnvelopeIdFor(certificate, fixture.modes[0].id), 1u);
+}
+
+TEST(B2Coverage, MismatchedModesAreRejectedByTheInclusionProof) {
+  using namespace uwb_imu_pl;
+  auto fixture = makeCompactFixture();
+  // The group touches a different factor group: no transform can reproduce the
+  // leaf map, so the envelope must be rejected and the leaf stays EXACT.
+  FaultModeBasis group;
+  group.id = FaultModeId(10);
+  group.sensor = SensorType::Uwb;
+  group.parameter_dimension = 1;
+  group.raw_group_maps[FactorGroupId(3)] =
+      (Eigen::MatrixXd(2, 1) << 1.0, 0.0).finished();
+  const auto certificate = buildGroupedCoverageCertificate(
+      fixture.window, {fixture.modes[0]}, {group});
+  ASSERT_EQ(certificate.envelopes.size(), 1u);
+  const auto& envelope = certificate.envelopes.front();
+  EXPECT_FALSE(envelope.accepted);
+  EXPECT_NE(envelope.reason.find("inclusion proof"), std::string::npos)
+      << envelope.reason;
+  EXPECT_EQ(certificate.exact_count, 1u);
+  EXPECT_EQ(coverageLabelFor(certificate, fixture.modes[0].id),
+            CoverageLabel::Exact);
+}
+
+TEST(B2Coverage, UnsupportedFamilyCannotFormAnEnvelope) {
+  using namespace uwb_imu_pl;
+  auto fixture = makeCompactFixture();
+  // A UWB group cannot span an IMU leaf (different factor groups and row
+  // counts): the proof fails and no label is promoted.
+  const auto certificate = buildGroupedCoverageCertificate(
+      fixture.window, {fixture.modes[1]}, {fixture.modes[0]});
+  ASSERT_EQ(certificate.envelopes.size(), 1u);
+  EXPECT_FALSE(certificate.envelopes.front().accepted);
+  EXPECT_EQ(coverageLabelFor(certificate, fixture.modes[1].id),
+            CoverageLabel::Exact);
+}
+
+TEST(B2Coverage, IncompleteCoverageMakesProtectedOutputUnavailable) {
+  using namespace uwb_imu_pl;
+  auto fixture = makeCompactFixture();
+  // Capacity exhaustion: no envelope may be built, so the certificate can no
+  // longer vouch for the window.
+  CoverageCapacity capacity;
+  capacity.max_envelopes = 0;
+  const auto certificate = buildGroupedCoverageCertificate(
+      fixture.window, fixture.modes, {fixture.modes[0]}, capacity);
+  EXPECT_TRUE(certificate.capacity_exceeded);
+  EXPECT_FALSE(certificate.complete);
+  EXPECT_NE(certificate.reason.find("protected output unavailable"),
+            std::string::npos)
+      << certificate.reason;
+
+  // An unusable mode map is UNCOVERED and also makes coverage incomplete.
+  auto broken_window = fixture.window;
+  FaultModeBasis broken;
+  broken.id = FaultModeId(20);
+  broken.sensor = SensorType::ImuGyroscope;
+  broken.parameter_dimension = 1;
+  broken.raw_group_maps[FactorGroupId(999)] = Eigen::Vector3d::Ones();
+  const auto uncovered = buildGroupedCoverageCertificate(
+      broken_window, {fixture.modes[0], broken}, {fixture.modes[0]});
+  EXPECT_FALSE(uncovered.complete);
+  ASSERT_EQ(uncovered.uncovered_modes.size(), 1u);
+  EXPECT_EQ(uncovered.uncovered_modes.front().value(), 20u);
+  EXPECT_EQ(coverageLabelFor(uncovered, broken.id), CoverageLabel::Uncovered);
+}
+
+TEST(B2Coverage, DominanceRejectsAnUnderCoveringEnvelope) {
+  using namespace uwb_imu_pl;
+  auto fixture = makeCompactFixture();
+  // A degenerate group map can satisfy a loose inclusion tolerance while
+  // claiming the leaf is unmonitored.  The dominance obligation must catch it:
+  // the envelope bound (zero) is below the leaf's exact bound, so the envelope
+  // is rejected and the leaf stays EXACT.
+  FaultModeBasis degenerate;
+  degenerate.id = FaultModeId(12);
+  degenerate.sensor = SensorType::Uwb;
+  degenerate.parameter_dimension = 1;
+  degenerate.raw_group_maps[FactorGroupId(2)] = Eigen::Vector3d::Zero();
+  CoverageCapacity capacity;
+  capacity.inclusion_tolerance = 2.0;  // loose enough to pass the proof
+  const auto certificate = buildGroupedCoverageCertificate(
+      fixture.window, {fixture.modes[0]}, {degenerate}, capacity);
+  ASSERT_EQ(certificate.envelopes.size(), 1u);
+  const auto& envelope = certificate.envelopes.front();
+  EXPECT_FALSE(envelope.dominant);
+  EXPECT_FALSE(envelope.accepted);
+  EXPECT_NE(envelope.reason.find("below the leaf exact bound"),
+            std::string::npos)
+      << envelope.reason;
+  EXPECT_EQ(coverageLabelFor(certificate, fixture.modes[0].id),
+            CoverageLabel::Exact);
+  EXPECT_TRUE(certificate.complete);
 }

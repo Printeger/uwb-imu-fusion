@@ -37,6 +37,24 @@ struct NumericalWorkSnapshot {
   std::uint64_t square_root_symbolic_misses = 0;
   std::uint64_t square_root_fallbacks = 0;
   std::uint64_t square_root_certificate_holds = 0;
+  // B2: fault-mode cross blocks are computed on demand only.
+  std::uint64_t fault_mode_columns = 0;
+  std::uint64_t fault_cross_blocks = 0;
+  std::uint64_t fault_cross_block_cache_hits = 0;
+  std::uint64_t all_mode_gram_columns = 0;
+  // B2: compact-mode storage accounting (per-mode dense allocations are the
+  // thing the compact path must eliminate from the hot loop).
+  std::uint64_t mode_dense_allocations = 0;
+  std::uint64_t mode_dense_allocation_rows = 0;
+  std::uint64_t mode_dense_allocation_columns = 0;
+  // B2: compact footprint actually built (rows and columns of the per-mode
+  // blocks that only cover the factor groups the mode touches).
+  std::uint64_t compact_mode_rows = 0;
+  std::uint64_t compact_mode_columns = 0;
+  // Rows the padded form would have materialized for the same windows.
+  std::uint64_t compact_padded_equivalent_rows = 0;
+  std::uint64_t compact_capacity_fallbacks = 0;
+  std::uint64_t hypothesis_capacity_refusals = 0;
 };
 
 // Counts actual decomposition/solve construction points.  The counters are
@@ -65,7 +83,19 @@ class NumericalWorkCounters {
             square_root_symbolic_hits_.load(),
             square_root_symbolic_misses_.load(),
             square_root_fallbacks_.load(),
-            square_root_certificate_holds_.load()};
+            square_root_certificate_holds_.load(),
+            fault_mode_columns_.load(),
+            fault_cross_blocks_.load(),
+            fault_cross_block_cache_hits_.load(),
+            all_mode_gram_columns_.load(),
+            mode_dense_allocations_.load(),
+            mode_dense_allocation_rows_.load(),
+            mode_dense_allocation_columns_.load(),
+            compact_mode_rows_.load(),
+            compact_mode_columns_.load(),
+            compact_padded_equivalent_rows_.load(),
+            compact_capacity_fallbacks_.load(),
+            hypothesis_capacity_refusals_.load()};
   }
   static void reset() {
     base_svd_ = 0; base_llt_ = 0; base_state_solves_ = 0;
@@ -84,6 +114,13 @@ class NumericalWorkCounters {
     square_root_qt_columns_ = 0; square_root_symbolic_hits_ = 0;
     square_root_symbolic_misses_ = 0; square_root_fallbacks_ = 0;
     square_root_certificate_holds_ = 0;
+    fault_mode_columns_ = 0; fault_cross_blocks_ = 0;
+    fault_cross_block_cache_hits_ = 0; all_mode_gram_columns_ = 0;
+    mode_dense_allocations_ = 0; mode_dense_allocation_rows_ = 0;
+    mode_dense_allocation_columns_ = 0;
+    compact_mode_rows_ = 0; compact_mode_columns_ = 0;
+    compact_padded_equivalent_rows_ = 0;
+    compact_capacity_fallbacks_ = 0; hypothesis_capacity_refusals_ = 0;
   }
   static void baseSvd() { ++base_svd_; }
   static void baseLlt() { ++base_llt_; }
@@ -134,6 +171,30 @@ class NumericalWorkCounters {
   static void squareRootSymbolicMiss() { ++square_root_symbolic_misses_; }
   static void squareRootFallback() { ++square_root_fallbacks_; }
   static void squareRootCertificateHold() { ++square_root_certificate_holds_; }
+  static void faultModeColumns(std::uint64_t columns) {
+    fault_mode_columns_ += columns;
+  }
+  static void faultCrossBlock() { ++fault_cross_blocks_; }
+  static void faultCrossBlockCacheHit() { ++fault_cross_block_cache_hits_; }
+  static void allModeGramColumns(std::uint64_t columns) {
+    all_mode_gram_columns_ += columns;
+  }
+  static void modeDenseAllocation(std::uint64_t rows, std::uint64_t columns) {
+    ++mode_dense_allocations_;
+    mode_dense_allocation_rows_ += rows;
+    mode_dense_allocation_columns_ += columns;
+  }
+  static void compactModeStorage(std::uint64_t rows, std::uint64_t columns) {
+    compact_mode_rows_ += rows;
+    compact_mode_columns_ += columns;
+  }
+  static void compactPaddedEquivalent(std::uint64_t rows) {
+    compact_padded_equivalent_rows_ += rows;
+  }
+  static void compactCapacityFallback() { ++compact_capacity_fallbacks_; }
+  static void hypothesisCapacityRefusal() {
+    ++hypothesis_capacity_refusals_;
+  }
 
  private:
   inline static std::atomic<std::uint64_t> base_svd_{0};
@@ -163,10 +224,22 @@ class NumericalWorkCounters {
   inline static std::atomic<std::uint64_t> square_root_information_columns_{0};
   inline static std::atomic<std::uint64_t> square_root_qt_applications_{0};
   inline static std::atomic<std::uint64_t> square_root_qt_columns_{0};
+  inline static std::atomic<std::uint64_t> compact_mode_rows_{0};
+  inline static std::atomic<std::uint64_t> compact_padded_equivalent_rows_{0};
+  inline static std::atomic<std::uint64_t> compact_mode_columns_{0};
+  inline static std::atomic<std::uint64_t> compact_capacity_fallbacks_{0};
+  inline static std::atomic<std::uint64_t> hypothesis_capacity_refusals_{0};
   inline static std::atomic<std::uint64_t> square_root_symbolic_hits_{0};
   inline static std::atomic<std::uint64_t> square_root_symbolic_misses_{0};
   inline static std::atomic<std::uint64_t> square_root_fallbacks_{0};
   inline static std::atomic<std::uint64_t> square_root_certificate_holds_{0};
+  inline static std::atomic<std::uint64_t> fault_mode_columns_{0};
+  inline static std::atomic<std::uint64_t> fault_cross_blocks_{0};
+  inline static std::atomic<std::uint64_t> fault_cross_block_cache_hits_{0};
+  inline static std::atomic<std::uint64_t> all_mode_gram_columns_{0};
+  inline static std::atomic<std::uint64_t> mode_dense_allocations_{0};
+  inline static std::atomic<std::uint64_t> mode_dense_allocation_rows_{0};
+  inline static std::atomic<std::uint64_t> mode_dense_allocation_columns_{0};
 };
 
 }  // namespace uwb_imu_pl

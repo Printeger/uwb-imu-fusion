@@ -259,6 +259,90 @@ std::vector<T> sortedCopy(std::vector<T> values) {
 
 }  // namespace
 
+std::string toString(PairFamilySupport support) {
+  switch (support) {
+    case PairFamilySupport::Independent: return "INDEPENDENT";
+    case PairFamilySupport::SharedParameters: return "SHARED_PARAMETERS";
+    case PairFamilySupport::Unsupported: return "UNSUPPORTED";
+  }
+  return "UNKNOWN";
+}
+
+PairFamilySupport pairFamilySupport(const FaultModeBasis& left,
+                                    const FaultModeBasis& right) {
+  const bool left_uwb = left.sensor == SensorType::Uwb;
+  const bool right_uwb = right.sensor == SensorType::Uwb;
+  // two_uwb / imu_imu / same_device_multiaxis are declared NOT_IMPLEMENTED in
+  // the fault manifest: the runtime must never silently concatenate them.
+  if (left_uwb && right_uwb) return PairFamilySupport::Unsupported;
+  if (!left_uwb && !right_uwb) return PairFamilySupport::Unsupported;
+  // A UWB mode and an IMU mode share parameters when they claim the same
+  // physical source and the same support (only reachable through a malformed
+  // registry, but the check must be structural rather than assumed).
+  if (left.physical_source_id == right.physical_source_id &&
+      !left.physical_source_id.empty()) {
+    return PairFamilySupport::SharedParameters;
+  }
+  return PairFamilySupport::Independent;
+}
+
+bool hypothesisParametersIndependent(
+    const std::vector<FaultModeBasis>& modes,
+    const std::vector<FaultModeId>& hypothesis_modes, std::string* reason) {
+  std::vector<const FaultModeBasis*> parts;
+  parts.reserve(hypothesis_modes.size());
+  for (const auto id : hypothesis_modes) {
+    const auto found = std::find_if(
+        modes.begin(), modes.end(),
+        [&](const FaultModeBasis& mode) { return mode.id.value() == id.value(); });
+    if (found == modes.end()) {
+      if (reason) *reason = "hypothesis references an unregistered mode";
+      return false;
+    }
+    parts.push_back(&*found);
+  }
+  for (std::size_t i = 0; i < parts.size(); ++i) {
+    for (std::size_t j = i + 1; j < parts.size(); ++j) {
+      const auto support = pairFamilySupport(*parts[i], *parts[j]);
+      if (support == PairFamilySupport::Unsupported) {
+        if (reason) *reason = "unsupported pair family: concatenation refused";
+        return false;
+      }
+      if (support == PairFamilySupport::SharedParameters) {
+        if (reason) *reason = "shared parameters require shared semantics";
+        return false;
+      }
+      // Numeric defence: if both modes touch a common factor group, the
+      // stacked raw map must have full column rank q_i + q_j, otherwise the
+      // two parameter blocks are not simultaneously identifiable and the
+      // concatenation would double-count a shared direction.
+      for (const auto& left_item : parts[i]->raw_group_maps) {
+        const auto found = parts[j]->raw_group_maps.find(left_item.first);
+        if (found == parts[j]->raw_group_maps.end()) continue;
+        Eigen::MatrixXd stacked(left_item.second.rows(),
+                                left_item.second.cols() + found->second.cols());
+        stacked << left_item.second, found->second;
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd> factorization(stacked);
+        const auto& diagonal = factorization.matrixR().diagonal();
+        int rank = 0;
+        const double gate = 1e-10 * std::max(1.0, diagonal.cwiseAbs().maxCoeff());
+        for (int index = 0; index < diagonal.size(); ++index) {
+          if (std::abs(diagonal(index)) > gate) ++rank;
+        }
+        if (rank < stacked.cols()) {
+          if (reason) {
+            *reason = "shared direction inside group " +
+                std::to_string(left_item.first.value()) +
+                ": parameters are not independent";
+          }
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
 bool equivalentActionOperation(const ExclusionAction& left,
                                const ExclusionAction& right) {
   if (sortedCopy(left.groups_to_remove) != sortedCopy(right.groups_to_remove) ||
@@ -753,7 +837,29 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
              config_.include_uwb_accel_combinations) ||
             (imu.sensor == SensorType::ImuGyroscope &&
              config_.include_uwb_gyro_combinations);
-        if (enabled) hypothesis({uwb.id, imu.id});
+        if (!enabled) continue;
+        // B2 runtime defence: a pair is only admitted when the two parameter
+        // blocks are structurally independent.  Unsupported families and
+        // shared parameters are rejected here (counted), in addition to the
+        // startup-time manifest cross-check.
+        ++out.pair_candidates_considered;
+        const auto support = pairFamilySupport(uwb, imu);
+        if (support == PairFamilySupport::Unsupported) {
+          ++out.pair_candidates_rejected_unsupported;
+          continue;
+        }
+        if (support == PairFamilySupport::SharedParameters) {
+          ++out.pair_candidates_rejected_shared;
+          continue;
+        }
+        std::string reason;
+        const std::vector<FaultModeBasis> pair{uwb, imu};
+        const std::vector<FaultModeId> pair_ids{uwb.id, imu.id};
+        if (!hypothesisParametersIndependent(pair, pair_ids, &reason)) {
+          ++out.pair_candidates_rejected_shared;
+          continue;
+        }
+        hypothesis({uwb.id, imu.id});
       }
     }
   }

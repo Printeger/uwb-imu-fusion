@@ -51,6 +51,32 @@ struct FaultModeBasis {
   HistoryRecoverability recoverability = HistoryRecoverability::Recoverable;
 };
 
+// B2 (§5.7): one registry serves order=1 and order=2.  Whether two modes may be
+// concatenated into a single hypothesis (A12 = [A1, A2]) is a structural
+// property, never an action label.
+enum class PairFamilySupport {
+  Independent,       // disjoint parameter blocks: A12 = [A1, A2] is valid
+  SharedParameters,  // overlapping parameter identity: concatenation invalid
+  Unsupported,       // family declared not implemented (manifest vocabulary)
+};
+
+std::string toString(PairFamilySupport support);
+
+// Structural classification of a two-mode hypothesis.  Two UWB modes or two IMU
+// modes belong to the families the manifest declares NOT_IMPLEMENTED
+// (two_uwb / imu_imu / same_device_multiaxis); a UWB mode pair sharing the same
+// physical source and support is SharedParameters.
+PairFamilySupport pairFamilySupport(const FaultModeBasis& left,
+                                    const FaultModeBasis& right);
+
+// Fail-closed guard for the A12 = [A1, A2] construction.  Returns false when any
+// mode pair in the hypothesis is unsupported or shares parameters; `reason`
+// carries the reason for the evidence record.  The per-group stacked map rank
+// test catches mis-concatenation even when the metadata looks independent.
+bool hypothesisParametersIndependent(
+    const std::vector<FaultModeBasis>& modes,
+    const std::vector<FaultModeId>& hypothesis_modes, std::string* reason);
+
 struct MonitorabilityResult {
   int rank = 0;
   int parameter_dimension = 0;

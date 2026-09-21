@@ -38,6 +38,10 @@ struct GeneratedFaultModelSet {
   std::size_t double_uwb_accel_hypotheses = 0;
   std::size_t double_uwb_gyro_hypotheses = 0;
   std::uint32_t effective_max_cardinality = 0;
+  // B2: runtime family/parameter defence counters (see pairFamilySupport).
+  std::size_t pair_candidates_considered = 0;
+  std::size_t pair_candidates_rejected_unsupported = 0;
+  std::size_t pair_candidates_rejected_shared = 0;
 };
 
 // Exact second-stage check for canonical-action deduplication.  The compact

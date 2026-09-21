@@ -367,6 +367,13 @@ struct HypothesisAuditRecord {
   double z_smallest_singular_value = std::numeric_limits<double>::infinity();
   double z_condition = std::numeric_limits<double>::infinity();
   int z_classification = 0;
+  // B2 (§5.8): coverage certification of this hypothesis.  The online
+  // traversal is exact, so the label is EXACT with envelope id 0; the label
+  // turns into UPPER_ENVELOPE only when a grouped envelope discharged both the
+  // inclusion proof and the dominance obligation, and into UNCOVERED when no
+  // enumerated hypothesis or verified envelope serves the leaf.
+  std::string coverage_label = "EXACT";
+  std::uint64_t coverage_envelope_id = 0;
   std::string reason;
 };
 

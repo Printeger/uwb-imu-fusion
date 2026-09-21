@@ -198,6 +198,7 @@ RunLogger::RunLogger(const std::string& output_directory,
                  "slope_z,boundary_direction_gram,noncentrality_boundary,prior_bound,p_md_allocation,"
                  "hmi_allocation,monitorable,plausible,conditioned_statistic,"
                  "log_evidence,z_rank,z_sigma_min,z_condition,z_classification,"
+                 "coverage_label,coverage_envelope_id,"
                  "reason\n";
   candidates_ << "timestamp_ns,window_id,action_id,action_type,physical_source_ids,removed_group_ids,"
                  "added_group_ids,bridge_mode,cardinality,valid,"
@@ -345,7 +346,7 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
              << csv(p.reason) << '\n';
   for (const auto& s : o.square_root_audit) {
     diagnostic_square_root_
-        << "uwb-imu-pl/gate-d-diagnostics/v12," << s.attempt_id << ','
+        << "uwb-imu-pl/gate-d-diagnostics/v13," << s.attempt_id << ','
         << s.rows << ',' << s.columns << ',' << s.rank << ',' << s.dof << ','
         << s.r_diagonal_min << ',' << s.r_diagonal_max << ','
         << s.condition_estimate << ',' << s.identity_residual_relative << ','
@@ -358,7 +359,7 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
   if (o.diagnostics.input_attempt_id) {
     const auto& d = o.diagnostics;
     auto identity = [&](std::ostream& stream) -> std::ostream& {
-      return stream << "uwb-imu-pl/gate-d-diagnostics/v12," << d.input_attempt_id << ','
+      return stream << "uwb-imu-pl/gate-d-diagnostics/v13," << d.input_attempt_id << ','
           << d.input_timestamp.value() << ',' << o.transaction_id << ',' << o.window_id << ','
           << o.base_graph_version << ',' << d.ordering_version << ','
           << d.noise_model_version << ',' << o.linearization_version << ',' << o.timestamp.value() << ',';
@@ -498,7 +499,8 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
                 << h.plausible << ',' << h.conditioned_statistic << ','
                 << h.log_evidence << ',' << h.z_rank << ','
                 << h.z_smallest_singular_value << ',' << h.z_condition << ','
-                << h.z_classification << ',' << csv(h.reason) << '\n';
+                << h.z_classification << ',' << csv(h.coverage_label) << ','
+                << h.coverage_envelope_id << ',' << csv(h.reason) << '\n';
   }
   for (const auto& c : o.candidate_audit) {
     candidates_ << o.timestamp.value() << ',' << o.window_id << ','
@@ -691,7 +693,7 @@ RunManifest makeRunManifest(const IntegrityConfig& config,
       config.imu.noise_overbound_calibration_id;
   manifest.protected_quantity = "position_xyz";
   manifest.position_reference = "body_origin";
-  manifest.diagnostics_schema_version = "uwb-imu-pl/gate-d-diagnostics/v12";
+  manifest.diagnostics_schema_version = "uwb-imu-pl/gate-d-diagnostics/v13";
   manifest.failure_catalog = failureReasonCatalogJson();
   if (config.fault_manifest) {
     manifest.fault_manifest_id = config.fault_manifest->manifest_id;

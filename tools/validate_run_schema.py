@@ -51,6 +51,18 @@ V5_HEADERS.update({
 })
 
 
+# Run schema v5 keeps the same manifest/CSV layout while the *diagnostics*
+# schema evolved: B1 (v12) appended the Z-response audit columns and B2 (v13)
+# appended the coverage certificate columns to hypotheses.csv.  All three
+# hypothesis headers are accepted so frozen baselines stay validatable.
+V5_HYPOTHESES_B1 = V5_HEADERS["hypotheses.csv"][:-len(",reason")] + \
+    ",z_rank,z_sigma_min,z_condition,z_classification,reason"
+V5_HYPOTHESES_V13 = V5_HYPOTHESES_B1[:-len(",reason")] + \
+    ",coverage_label,coverage_envelope_id,reason"
+V5_HEADER_ALTERNATES = {"hypotheses.csv": (V5_HYPOTHESES_B1,
+                                           V5_HYPOTHESES_V13)}
+
+
 def fail(message):
     raise ValueError(message)
 
@@ -100,7 +112,7 @@ def validate_monotonic(path, strict):
 
 
 def validate_v2(directory, manifest, expected_headers=V2_HEADERS,
-                strict_timestamps=True):
+                strict_timestamps=True, alternate_headers=None):
     required = {"states.csv", "integrity.csv", "events.csv", "ground_truth.csv",
                 "fault_truth.csv", "summary.json", "resolved_config.yaml"}
     for name in required:
@@ -108,7 +120,11 @@ def validate_v2(directory, manifest, expected_headers=V2_HEADERS,
             fail(f"missing required v2 artifact: {name}")
     for name, expected in expected_headers.items():
         path = directory / name
-        if path.exists() and header(path) != expected:
+        if not path.exists():
+            continue
+        allowed = (expected,) + tuple(
+            (alternate_headers or {}).get(name, ()))
+        if header(path) not in allowed:
             fail(f"{name}: header mismatch")
     validate_monotonic(directory / "states.csv", strict_timestamps)
     validate_monotonic(directory / "integrity.csv", strict_timestamps)
@@ -253,7 +269,8 @@ def validate_checksum_file(directory, relative):
 
 def validate_v5(directory, manifest):
     # Rejected attempts legitimately repeat the last committed state time.
-    validate_v2(directory, manifest, V5_HEADERS, strict_timestamps=False)
+    validate_v2(directory, manifest, V5_HEADERS, strict_timestamps=False,
+                alternate_headers=V5_HEADER_ALTERNATES)
     for name in ("transactions.csv", "hypotheses.csv", "candidates.csv",
                  "factor_ledger.csv", "health.csv", "bridge.csv"):
         if not (directory / name).is_file():
@@ -373,7 +390,7 @@ def validate_v5(directory, manifest):
         with diagnostic_attempts.open(newline="", encoding="utf-8") as stream:
             for row in csv.DictReader(stream):
                 if row["schema_version"].endswith(
-                        ("/v3", "/v4", "/v5", "/v6", "/v7", "/v8", "/v9", "/v10", "/v11", "/v12", "/v12")):
+                        ("/v3", "/v4", "/v5", "/v6", "/v7", "/v8", "/v9", "/v10", "/v11", "/v12", "/v13")):
                     frozen_groups[int(row["input_attempt_id"])] = id_set(row["frozen_group_ids"], "frozen_group_ids")
         if frozen_groups:
             with (directory / "diagnostic_candidates.csv").open(newline="", encoding="utf-8") as stream:

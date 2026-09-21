@@ -3,6 +3,7 @@
 #include "uwb_imu_pl/common/failure_reason.hpp"
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 #include "uwb_imu_pl/integrity/hypothesis_generator.hpp"
+#include "uwb_imu_pl/integrity/coverage_envelope.hpp"
 #include "uwb_imu_pl/integrity/protection_level_v2.hpp"
 #include "uwb_imu_pl/integrity/statistical_bounds_cache.hpp"
 
@@ -1752,6 +1753,14 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         }
         start_operation("health_actions");
         const FrozenCandidateIndexes indexes(transaction, models, evidence);
+        // B2 (§5.8): coverage certificate for this window.  The online
+        // traversal is exact, so every enumerated mode is an EXACT leaf; the
+        // label is exported per hypothesis (diagnostics v13).  Grouped
+        // envelopes are an opt-in capacity path and are only ever used when
+        // both the inclusion proof and the dominance obligation hold
+        // (see coverage_envelope.hpp).
+        const CoverageCertificate coverage_certificate =
+            buildExactCoverageCertificate(models.modes);
         bool hardware_barrier = false;
         struct SourceEvidence {
           SensorType sensor = SensorType::Unknown;
@@ -1917,6 +1926,23 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           record.p_md_allocation = hypothesis.p_md_allocation;
           record.hmi_allocation = hypothesis.hmi_allocation;
           record.monitorable = hypothesis.monitored;
+          {
+            bool covered = !hypothesis.modes.empty();
+            for (const auto mode_id : hypothesis.modes) {
+              if (indexes.modes.find(mode_id.value()) == indexes.modes.end()) {
+                covered = false;
+                break;
+              }
+            }
+            const FaultModeId reference =
+                covered ? hypothesis.modes.front() : FaultModeId(0);
+            record.coverage_label = toString(
+                covered ? coverageLabelFor(coverage_certificate, reference)
+                        : CoverageLabel::Uncovered);
+            record.coverage_envelope_id =
+                covered ? coverageEnvelopeIdFor(coverage_certificate, reference)
+                        : 0;
+          }
           if (i < evidence.size()) {
             record.plausible = evidence[i].plausible;
             record.conditioned_statistic = evidence[i].conditioned_statistic;

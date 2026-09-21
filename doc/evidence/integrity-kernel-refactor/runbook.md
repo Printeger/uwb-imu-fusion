@@ -191,3 +191,71 @@ P2 与 P1 的差异（口径说明，供后续引用）：
 本轮 v12 诊断新增：`diagnostic_square_root.csv`（每窗口证书：rank/dof、R 对角、条件估计、
 identity/parity/solution 残差、前向界、detector_only_rows、策略与可用性），
 `hypotheses.csv` 追加 `z_rank/z_sigma_min/z_condition/z_classification`。
+
+## 7. 工作树卫生事件（P4/B2 Stage 0，2026-09-21）
+
+**事件**：P3 提交（9d5550f）之后、B2 开始之前，工作树出现一次**未请求**的全文件重排
+（27 个源文件：注释折行重排、空行删除，`git diff --ignore-all-space` 仍显示 3,427 行变化，
+并破坏了 `square_root_context.hpp` 的约定注释块）。该 pass 晚于 P3 全部证据、破坏
+`hashes-B1.txt`、未经构建/测试。
+
+**处置**：`git restore -- include src test` 全部回退；回退后工作树仅剩未跟踪的路线图文档，
+`hashes-B1.txt` 复核 **109/109 OK**。
+
+**规则（本轮起生效）**：
+1. **禁止未请求的全文件重排/格式化**。任何格式化必须由用户明确要求，并且：
+   单独 style commit、附带 `.clang-format`、重建 + 全量测试 + 场景抽查、重算哈希；
+   **不得与功能提交混在一起**。
+2. 任何"看起来像工具自动改动"的 diff（注释折行、include 排序、大范围空行变化）
+   在提交前必须先用 `git diff --ignore-all-space --stat` 判别，并在报告中说明来路。
+3. 每轮收尾仍然遵守：`hashes-<轮次>.txt` 最后生成；生成后不得再改任何文件。
+
+## 8. P4（B2）命令、计数与验证
+
+```
+# 构建 + 全量测试（P4 口径；B2 新增 15 个用例 ×2 计数）
+  source /opt/ros/noetic/setup.bash && source devel/setup.bash
+  catkin build uwb_imu_pl
+  catkin run_tests uwb_imu_pl          # -> 284 tests / 0 failures
+  catkin_test_results build/uwb_imu_pl/test_results/uwb_imu_pl
+
+# B2 单元测试（快照）
+  devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 \\
+      --gtest_filter='B2Registry.*:B2Compact.*:B2Coverage.*'
+  devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_reference \\
+      --gtest_filter='ReferenceFixture.GEO05*'
+
+# 场景重放（stage3 = 最终证据侧；大产物写 /tmp）
+  O=/tmp/uwb_imu_pl_b2_20260921/stage3
+  for spec in "A_nominal 30" "C_uwb_fde 30" "D_imu_bridge 30" "E_union 30" \\
+              "F_ramp_unmonitorable 30" "G_continuous_rejection 45"; do
+    set -- $spec; mkdir -p $O/$1
+    UWB_IMU_PL_DEVELOPMENT_FULL_AUDIT=1 devel/lib/uwb_imu_pl/r0_r1_development \\
+        $CFG $O/$1 $2 $1 $SCN > $O/$1/stdout.log 2>&1
+  done
+  UWB_IMU_PL_DEVELOPMENT_FULL_AUDIT=1 devel/lib/uwb_imu_pl/r0_r1_development \\
+      $CFG $O/H_mature_union 226 H_mature_union $SCN
+
+# 等价（baseline = B1 运行，v12 诊断）
+  UWB_IMU_PL_EQUIVALENCE_BASELINE=/tmp/uwb_imu_pl_b2_20260921/baseline_b1 \\
+  UWB_IMU_PL_EQUIVALENCE_CURRENT=$O \\
+  python3 $E/tools/equivalence_compare.py        # 0 离散差异，worst_numeric_rel 0.0
+
+# 独立 oracle（新增 O8g–O8j 覆盖证书检查）
+  UWB_IMU_PL_ORACLE_RUNS=$O python3 $E/tools/context_oracle.py   # 42 PASS / 0 FAIL / 8 NOT_RUN
+
+# 运行/诊断 schema 校验
+  python3 tools/validate_run_schema.py $O/A_nominal        # PASS uwb-imu-pl/v5
+  PYTHONPATH=tools python3 test/test_gate_d_tools.py       # 13 tests OK
+
+# 验证调度
+  python3 tools/integrity/run_validation.py --all          # 22 PASS / 0 FAIL / 20 NOT_RUN
+```
+
+计数口径（可复核，`coverage-envelopes.md` §4）：`fault_cross_blocks` 只统计被假设
+引用的 (mode, mode) 对；`mode_dense_allocations` 统计**逐模式 padded** 分配（紧凑
+路径必须为 0，回退路径 = 有效模式数）；`compact_mode_rows` 为各模式实际写入行数之和，
+`compact_padded_equivalent_rows = 窗口行数 × Σq` 为 padded 等价成本。
+
+本轮 du：`raw/` 7.5MB 未变；`doc/evidence/integrity-kernel-refactor/` ≈ 8.4MB
+（新增 `coverage-envelopes.md`）；大产物全部在 /tmp/uwb_imu_pl_b2_20260921/。

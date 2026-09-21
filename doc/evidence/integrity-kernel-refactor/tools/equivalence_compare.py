@@ -122,9 +122,12 @@ def compare_file(baseline_path, current_path):
                 if base_value == cur_value:
                     continue
                 if column == "schema_version":
+                    # Intentional diagnostics schema bump (B1: v12, B2: v13).
+                    # Classified as metadata, never as a discrete mismatch.
                     result.setdefault("metadata_differences", []).append(
                         {"column": column, "row": index,
-                         "note": "v11 -> v12 bump"})
+                         "note": f"diagnostics schema bump: {base_value} -> "
+                                 f"{cur_value}"})
                     continue
                 if column == "reason" and normalize_reason(base_value) == normalize_reason(cur_value):
                     result.setdefault("metadata_differences", []).append(

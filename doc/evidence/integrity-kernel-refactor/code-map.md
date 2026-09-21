@@ -212,3 +212,22 @@
 `FrozenWindowNumerics` 增加 `spectral_state_increment`（参考解）与 `square_root_*` 摘要字段；
 `LinearizedIntegrityWindow` 增加 `square_root`（进程内对象，不参与 replay 序列化，
 读回后由 `finalizeIntegrityWindow` 重建）。replay 架构仍为 v5（无新增字段）。
+
+## 附：P4（B2）新增/修改的代码与入口（2026-09-21）
+
+| 文件 | 变更 | 说明 |
+|---|---|---|
+| `include/uwb_imu_pl/integrity/fault_model.hpp` | 新增 | `PairFamilySupport`、`pairFamilySupport()`、`hypothesisParametersIndependent()`（接收 mode id 列表，避免不完整类型） |
+| `src/uwb_imu_pl/integrity/hypothesis_generator.cpp` | 新增/修改 | 族分类（UWB×UWB、IMU×IMU → Unsupported；同 `physical_source_id` → SharedParameters）、堆叠 map 秩守卫（`1e-10·max(1,diag)` 门限）、双故障候选计数（considered / rejected_unsupported / rejected_shared） |
+| `include/uwb_imu_pl/integrity/hypothesis_generator.hpp` | 修改 | `GeneratedFaultModelSet` 追加三个候选计数 |
+| `src/uwb_imu_pl/integrity/hypothesis_evidence.cpp` | 重构 | 紧凑模式描述符（行跨度 + 紧凑块 + `HᵀA` + `Aᵀparity`）；交叉块按需预计算（单线程、只读缓存，修复首版多线程写 map 的崩溃）；容量回退路径（padded，逐模式计数）；共享方向/参数守卫 fail-closed；假设维数容量 fail-closed；`context->compact_*` 度量 |
+| `include/uwb_imu_pl/integrity/hypothesis_evidence.hpp` | 修改 | `CompactModeCapacity`（模式数/窗口列数/单模式行数/总紧凑行数/假设维数上限）、`FrozenHypothesisNumerics` 追加紧凑度量 |
+| `include/uwb_imu_pl/estimation/numerical_work_counters.hpp` | 新增计数器 | `fault_mode_columns`、`fault_cross_blocks`、`fault_cross_block_cache_hits`、`all_mode_gram_columns`、`mode_dense_allocations(+rows/cols)`、`compact_mode_rows/columns`、`compact_padded_equivalent_rows`、`compact_capacity_fallbacks`、`hypothesis_capacity_refusals` |
+| `include/uwb_imu_pl/integrity/coverage_envelope.hpp`、`src/uwb_imu_pl/integrity/coverage_envelope.cpp` | 新增 | 覆盖证书：精确遍历、分组包络（包含性证明 `A_leaf = A_group·T` + 支配性义务）、容量上限、标签与 envelope id 查询 |
+| `include/uwb_imu_pl/common/types.hpp`、`src/uwb_imu_pl/io/run_logger.cpp` | 修改 | `HypothesisAuditRecord` 追加 `coverage_label/coverage_envelope_id`；`hypotheses.csv` 追加两列；诊断 schema `v12 → v13` |
+| `src/uwb_imu_pl/integrity/integrity_monitor.cpp` | 修改 | 每窗口构建精确覆盖证书并按假设导出标签 |
+| `apps/r0_r1_development.cpp` | 修改 | 摘要追加 B2 计数器（11 个字段） |
+| `test/test_integrity_v2.cpp`、`test/test_integrity_reference.cpp` | 新增用例 | `B2Registry.*`（4）、`B2Compact.*`（4）、`B2Coverage.*`（6）、`ReferenceFixture.GEO05*`（1）；更新 `FixedLowDim...`（守卫拒绝语义）与 v13 头部断言 |
+| `CMakeLists.txt` | 修改 | 加入 `coverage_envelope.cpp` |
+| `tools/gate_d_diagnostics.py`、`tools/validate_run_schema.py` | 修改 | 接受 `v13` 诊断 schema 与 B1/B2 两种 `hypotheses.csv` 头部 |
+| `doc/evidence/.../tools/context_oracle.py`、`equivalence_compare.py` | 修改 | 新增 O8g–O8j（标签域/id 一致性/UNCOVERED 禁止/包络内部量 NOT_RUN）；schema bump 注释改为版本无关 |

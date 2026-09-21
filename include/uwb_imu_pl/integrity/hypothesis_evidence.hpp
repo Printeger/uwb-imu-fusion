@@ -9,6 +9,21 @@ namespace uwb_imu_pl {
 
 class CandidateWorkerPool;
 
+// B2 (§5.7 / R2): capacity bounds for the compact mode form.  The compact
+// descriptor stores a mode only on the factor groups it actually touches, so
+// the padded window-wide matrix is never built for the hot products.  Every
+// bound is explicit: when a window would exceed a bound the evaluator falls
+// back to the padded form and counts the fallback instead of growing the
+// allocation silently.  A hypothesis that exceeds the per-hypothesis
+// dimension bound is refused fail-closed and counted.
+struct CompactModeCapacity {
+  std::size_t max_modes = 512;
+  std::size_t max_window_columns = 4096;
+  std::size_t max_mode_rows = 1u << 16;
+  std::size_t max_total_compact_rows = 1u << 20;
+  int max_hypothesis_dimension = 64;
+};
+
 struct HypothesisEvaluationConfig {
   double rank_tolerance = 1e-10;
   double max_condition_number = 1e10;
@@ -20,6 +35,7 @@ struct HypothesisEvaluationConfig {
   bool retain_detailed_results = true;
   std::size_t hypothesis_workers = 1;
   std::uint64_t fault_model_policy_fingerprint = 0;
+  CompactModeCapacity compact_capacity{};
 };
 
 // PL-specific semantics are intentionally stored separately from the evidence
@@ -81,6 +97,14 @@ struct FrozenHypothesisNumerics {
   std::size_t bytes = 0;
   bool valid = false;
   std::string reason;
+  // B2 storage discipline: footprint of the compact per-mode blocks (rows sum
+  // over the touched factor groups, columns = fault parameter dimension) and
+  // whether the configured capacity forced the padded fallback for this
+  // window.
+  std::size_t compact_rows = 0;
+  std::size_t compact_columns = 0;
+  bool compact_mode_used = false;
+  bool compact_capacity_exceeded = false;
 };
 
 std::uint64_t hypothesisSetFingerprint(
