@@ -226,4 +226,48 @@
   * **证据**：`GateAttribution.*`；G 场景 40/40 拒绝候选带归因且离散/PL 与 P5 逐帧 0 差异。
 * **未执行（NOT_RUN）**：C1 的摘要替换/生命周期/重线性化/oracle/新场景（A1–A6）与
   C2 的双通道检测/PL/fault-span/模型误差通道（B0–B5）；设计与义务已冻结于
-  `history-summary-design.md`。
+  `history-summary-design.md`（C1-a 模块级部分见 §17）。
+
+## 17.（C1-a 新增）历史消元摘要**模块级**恒等式（LOCKED_BY_TEST）
+
+范围：纯算法单元 `history_fault_summary.{hpp,cpp}`（代码提交 `bc5722c`），
+**未接入生产管线**（无调用点；检测/PL/风险/阈值零变化）。构造只用两段
+Householder 正消元（先消 `x_o`，再按 `x_b` 支持分块）；无正规方程、无求逆；
+输出为平方根形式 `(R_b,T_b,d_b,F_b,d_perp)`。详见 `history-summary-module.md`。
+
+* **命题（代价恒等式）**：对一切 `(x_b,f)`，
+  `min_{x_o} ‖H_o x_o + H_b x_b + A f − z‖²
+  == ‖R_b x_b + T_b f − d_b‖² + ‖F_b f − d_perp‖²`。
+  * **本轮状态**：`LOCKED_BY_TEST`（C1-a 模块级）。
+  * **证据**：`HistoryFaultSummary.HISM1CostIdentity`、`HISM1OracleTable`
+    （多尺寸/多顺序/病态档；实测最大相对误差见 `history-summary-module.md` §4）。
+* **命题（边际等价）**：`f=0` 时 `R_bᵀR_b == H_bᵀ(I−P_{H_o})H_b`（`x_b` 边际信息），
+  对应边际协方差 `(R_bᵀR_b)⁻¹` 与稠密边际协方差一致。
+  * **本轮状态**：`LOCKED_BY_TEST`。
+  * **证据**：`HistoryFaultSummary.HISM1SchurEquivalence`。
+* **命题（G 响应与符号对偶，§2 冻结约定）**：
+  `R_b⁻¹T_b f` 与稠密条件边界均值响应互为负向；
+  `boundaryMeanShiftForFault(f)` 与 `conditionalBoundaryMeanDelta(f)` 互为相反数。
+  * **本轮状态**：`LOCKED_BY_TEST`。
+  * **证据**：`HistoryFaultSummary.HISM1BoundaryResponseSignDuality`
+    （两函数各自对稠密 oracle 校验 + 互为相反数断言）。
+* **命题（检测审计视图）**：`Ω_b == Aᵀ(I−P_{[H_o H_b]})A`、
+  `κ_b == 最小联合残差能量`、`ν_⊥ == 检测行数`（边界满秩时；边界秩亏时由
+  代价恒等式承载，模块报告 `rank_boundary` 并不拒绝）。
+  * **本轮状态**：`LOCKED_BY_TEST`。
+  * **证据**：`HistoryFaultSummary.HISM1FaultGramKappaNu`、
+    `HISM1DetectorOnlyAndNominal`。
+* **命题（多消元顺序不变量）**：行置换与列置换（`x_o`/`x_b`/`f`）下
+  `R_bᵀR_b、F_bᵀF_b、κ_b、ν_⊥`（上至相应置换）与代价恒等式一致。
+  * **本轮状态**：`LOCKED_BY_TEST`。
+  * **证据**：`HistoryFaultSummary.HISM1EliminationOrderInvariance`。
+* **命题（退化显式化）**：非有限输入 / `H_o` 结构性秩亏（无法裁决）/ 空输入
+  → `invalid + reason`、不产出数值；`q=0` 给出正确零列（名义边界）；
+  纯检测行（无 `x_b` 支持但 `A/z` 非零）进入 `F_b/d_perp`，不被丢弃。
+  * **本轮状态**：`LOCKED_BY_TEST`。
+  * **证据**：`HistoryFaultSummary.HISM1DegenerateRejection`、
+    `HISM1DetectorOnlyAndNominal`。
+* **诚实缺口（NOT_RUN）**：管线接入（`buildIntegrityWindow` 块/账本 → `H_o/H_b/A/z`
+  适配）、生命周期（§7.6 行 1–7）、容量键、冷启动枚举、重线性化绑定、跨边界新场景
+  与管线级 oracle（`HIS-01..06`）待 C1-b/C1-c；C2 未开始。上述模块级恒等式
+  **不**构成任何管线等价声明。

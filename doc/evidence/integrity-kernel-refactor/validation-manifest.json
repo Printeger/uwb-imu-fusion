@@ -242,7 +242,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10）"
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。"
   },
   {
    "id": "HIS-02",
@@ -253,7 +253,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10）"
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。"
   },
   {
    "id": "HIS-03",
@@ -264,7 +264,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "v11 identity 已导出 history_lineage_id 字段（当前 NOT_AVAILABLE_IN_SCHEMA），为 C 准备接口 | C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10）"
+   "note": "v11 identity 已导出 history_lineage_id 字段（当前 NOT_AVAILABLE_IN_SCHEMA），为 C 准备接口 | C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。"
   },
   {
    "id": "HIS-04",
@@ -275,7 +275,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10）"
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。"
   },
   {
    "id": "HIS-05",
@@ -286,7 +286,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10）"
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。"
   },
   {
    "id": "HIS-06",
@@ -297,7 +297,21 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10）"
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。"
+  },
+  {
+   "id": "HIS-M1",
+   "description": "历史消元摘要模块级恒等式：(R_b,T_b,d_b,F_b,d_perp) 代价恒等式、Schur/边际协方差、G 响应与符号对偶、Omega/kappa/nu 审计视图、多消元顺序不变量、退化拒绝（纯算法单元，未接入管线）",
+   "owner_work_package": "C",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_history_fault_summary --gtest_filter=HistoryFaultSummary.*"
+   ],
+   "evidence": [
+    "history-summary-module.md",
+    "history-summary-design.md"
+   ],
+   "note": "C1-a：两段 Householder 消元（无正规方程、无求逆，输出平方根形式）；符号约定 boundaryMeanShiftForFault = R_b^-1 T_b f 与 conditionalBoundaryMeanDelta 互为相反数；管线接入/生命周期/容量键/冷启动/重线性化绑定为 C1-b/C1-c NOT_RUN"
   },
   {
    "id": "DET-01",

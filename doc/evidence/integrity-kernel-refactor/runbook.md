@@ -384,3 +384,56 @@ identity/parity/solution 残差、前向界、detector_only_rows、策略与可�
   → `run_sha=6484b73`，29 PASS / 0 FAIL / 18 NOT_RUN）。该 runner 改动随本轮证据提交一起入库。
 * 本轮哈希清单按 §11 的机械规则生成（`git diff --name-only d58a45d..HEAD` ∪ 证据树，
   排除本轮自身哈希文件）：**112 条，112/112 OK**。
+
+## 12. C1-a（历史消元摘要模块）2026-09-21
+
+**S0-A 第四次格式化事件（例行程序：先对照再回退，不重复取证）**
+
+* P7 提交后工作树仅 `include/uwb_imu_pl/integrity/coverage_envelope.hpp` 被外部工具链
+  改写：单 hunk，+2/−3——删除的 `joint_window_detector.hpp` include 指令在文件底部
+  原样重插，两处空行合并；token 多重集不变（仅 include 块顺序/空行变化）⇒ 纯格式化。
+* 处置：`git restore -- include/uwb_imu_pl/integrity/coverage_envelope.hpp`；工作树恢复
+  （仅剩未跟踪路线图文档）。
+* 哈希复核：`sha256sum -c hashes-C1C2.txt` → **114/114 OK，零失配**。任务书预期
+  113/113；实测条目数 114（121 行 = 7 行注释 + 114 条）。机械并集重算复核：
+  `git diff --name-only d58a45d..c6544d5` = 15 ∪ P7 收尾时证据树 109（现 112 − 本轮
+  新增 3）= 去重 115 − 自身 1 − 瞬态 `tools/__pycache__/*.pyc`（.gitignore）1 = 114，
+  与文件逐条一致；§11 叙述中的"112 条"为生成前时点数字，以文件实测为最终口径。
+  事件按例行程序记录（取证口径见 §10，成因不再深挖）。
+
+**S0-B 基线**
+
+* HEAD=`c6544d5`；`catkin build uwb_imu_pl` + `catkin run_tests` →
+  **304 tests / 0 errors / 0 failures**（本轮起点）。
+
+**C1-a：模块（未接入管线）**
+
+* 代码提交 **`bc5722c`**（模块 + 测试 + CMake；run_sha 口径）。
+* 命令：
+  * `catkin build uwb_imu_pl`；
+  * `make -C build/uwb_imu_pl test_history_fault_summary`；
+  * `devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_fault_summary`
+    → **9 tests / 9 PASSED / 0 FAILED**（含 `[HISM1-TABLE]` oracle 表输出，
+    日志 `raw/run_tests_c1a.log`）；
+  * `catkin run_tests uwb_imu_pl` + `catkin_test_results` →
+    **322 tests / 0 errors / 0 failures / 0 skipped**（= 304 + 2×9，
+    日志 `raw/catkin_test_results_c1a.txt`）。
+* 恒等式/容差/拒绝用例与 oracle 表：见 `history-summary-module.md`（κ(H_o)=1e8 档
+  实测 ≤5.65e-9 @1e-7；κ=1e10 档按固定 1e-6 档保守对照并 tagged）。
+* validation：`UWB_IMU_PL_VALIDATION_SHA=bc5722c python3 tools/integrity/run_validation.py
+  --all`（新 `HIS-M1` MAPPED 至 `test_history_fault_summary`；`HIS-01..06` 保持
+  NOT_STARTED，note 更新为"模块级恒等式已完成（HIS-M1）；管线等价待 C1-b"）；
+  结果 **30 PASS / 0 FAIL / 18 NOT_RUN**（日志 `raw/validation_c1a.log`）。
+* **runner 附带效应与处置（记录在案）**：`--all` 会重跑 `context_oracle.py` /
+  `oracle_compare.py` 并改写两个派生 oracle 工件（`square-root-oracle.json`、
+  `oracle-results.json`）。工具按磁盘现存 /tmp 转储自动选源；P2 的
+  `/tmp/uwb_imu_pl_b2_20260921/stage3` 已被清理，本次自动选中 b1 时代转储
+  （b1_runs_v12，缺 v13+ 字段）→ `square-root-oracle.json` 出现 8 条 O8g/O8h
+  **环境性降级（非回归）**。处置：两工件**恢复为提交状态**（P7 验证过、0 FAIL），
+  不提交降级产物；如需刷新须在正确转储可用时以显式 runs-source 重跑。validator
+  报告本身保持本轮生成（其 PRV/COV 行为工具退出码口径，未受影响）。
+* 生产行为零变化：模块无生产调用点；未改检测/PL/风险/阈值/配置/场景；未做
+  C1-b 适配器骨架（可选项，NOT_RUN，避免半成品）。
+* 哈希：`hashes-C1C2.txt` 按机械规则最后重生成（base `c6544d5` → 代码提交
+  `bc5722c` ∪ 证据树，排除自身与瞬态 `__pycache__/`）；**115 条，115/115 OK**。
+  不 push；无格式化步骤。
