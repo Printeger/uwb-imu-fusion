@@ -304,26 +304,26 @@ TEST(IntegrityConfig, HistoryCapacityKeysAreStrictlyLoaded) {
   using uwb_imu_pl::IntegrityConfigLoader;
   const std::string section =
       "history:\n"
-      "  max_summary_rows: 0\n"
-      "  max_fault_columns: 0\n"
-      "  max_perp_rows: 0\n"
+      "  max_summary_rows: 512\n"
+      "  max_fault_columns: 512\n"
+      "  max_perp_rows: 512\n"
       "  capacity_action: REFUSE\n";
 
   // The shipped research configuration declares the C1-c capacity keys; the
-  // zeros are the pre-C1-b state (the summary path is not wired yet).
+  // values are the D-2 measured defaults (full-span bound + headroom).
   const auto shipped = IntegrityConfigLoader::load(kResearchConfig);
-  EXPECT_EQ(shipped.history.max_summary_rows, 0u);
-  EXPECT_EQ(shipped.history.max_fault_columns, 0u);
-  EXPECT_EQ(shipped.history.max_perp_rows, 0u);
+  EXPECT_EQ(shipped.history.max_summary_rows, 512u);
+  EXPECT_EQ(shipped.history.max_fault_columns, 512u);
+  EXPECT_EQ(shipped.history.max_perp_rows, 512u);
   EXPECT_EQ(shipped.history.capacity_action, "REFUSE");
 
   // Explicit non-default values parse and validate.
   auto tuned_text = readConfig();
-  tuned_text = replaceOnce(tuned_text, "  max_summary_rows: 0",
+  tuned_text = replaceOnce(tuned_text, "  max_summary_rows: 512",
                            "  max_summary_rows: 4096");
-  tuned_text = replaceOnce(tuned_text, "  max_fault_columns: 0",
+  tuned_text = replaceOnce(tuned_text, "  max_fault_columns: 512",
                            "  max_fault_columns: 128");
-  tuned_text = replaceOnce(tuned_text, "  max_perp_rows: 0",
+  tuned_text = replaceOnce(tuned_text, "  max_perp_rows: 512",
                            "  max_perp_rows: 2048");
   tuned_text = replaceOnce(tuned_text, "  capacity_action: REFUSE",
                            "  capacity_action: STOP_PROTECTED");
@@ -333,13 +333,13 @@ TEST(IntegrityConfig, HistoryCapacityKeysAreStrictlyLoaded) {
   EXPECT_EQ(tuned.history.max_perp_rows, 2048u);
   EXPECT_EQ(tuned.history.capacity_action, "STOP_PROTECTED");
 
-  // An absent section keeps the zero-capacity defaults (the rest of the
+  // An absent section keeps the measured defaults (the rest of the
   // configuration stays strictly validated as before).
   auto absent_text = replaceOnce(readConfig(), section, "");
   const auto absent = IntegrityConfigLoader::load(writeTemp(absent_text, 71));
-  EXPECT_EQ(absent.history.max_summary_rows, 0u);
-  EXPECT_EQ(absent.history.max_fault_columns, 0u);
-  EXPECT_EQ(absent.history.max_perp_rows, 0u);
+  EXPECT_EQ(absent.history.max_summary_rows, 512u);
+  EXPECT_EQ(absent.history.max_fault_columns, 512u);
+  EXPECT_EQ(absent.history.max_perp_rows, 512u);
   EXPECT_EQ(absent.history.capacity_action, "REFUSE");
 
   // Unknown key inside the section is rejected.
@@ -353,6 +353,6 @@ TEST(IntegrityConfig, HistoryCapacityKeysAreStrictlyLoaded) {
   expectRejected(bad_action, 73);
 
   // A present section must be complete: a missing key is rejected.
-  auto missing_key = replaceOnce(readConfig(), "  max_fault_columns: 0\n", "");
+  auto missing_key = replaceOnce(readConfig(), "  max_fault_columns: 512\n", "");
   expectRejected(missing_key, 74);
 }

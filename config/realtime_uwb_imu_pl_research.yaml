@@ -44,16 +44,19 @@ integrity_window:
   require_history_provenance: true
 
 # C1-c/C2: history-summary capacity keys (strict loader; unknown keys, missing
-# keys and unknown actions are hard errors).  All-zero capacity is the
-# pre-C1-b state: the summary path is not wired yet, so nothing is produced
-# and nothing is refused.  `capacity_action` (REFUSE / RESET / STOP_PROTECTED,
-# default REFUSE) governs what happens once the wired summary exceeds a
-# capacity: refuse / valid reset or rebuild / stop protected publication -
-# never silently drop the oldest fault.
+# keys and unknown actions are hard errors).  The values are the D-2 measured
+# defaults: the recoverable span holds at most (epochs + recovery_margin) = 20
+# historical epochs and 22 fault columns per epoch (8 anchors x {constant,
+# linear} + 6 IMU axes); the measured profile reached 220 columns at half span
+# (epoch 26), so 512 is the full-span default with headroom.  `capacity_action`
+# (REFUSE / RESET / STOP_PROTECTED, default REFUSE) governs what happens once
+# the wired summary exceeds a capacity: refuse / valid reset or rebuild / stop
+# protected publication - never silently drop the oldest fault.  Enforcement
+# lands with the Part C wiring; these defaults are to be re-frozen there.
 history:
-  max_summary_rows: 0
-  max_fault_columns: 0
-  max_perp_rows: 0
+  max_summary_rows: 512
+  max_fault_columns: 512
+  max_perp_rows: 512
   capacity_action: REFUSE
 
 detector:

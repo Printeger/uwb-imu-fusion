@@ -46,15 +46,19 @@ struct IntegrityWindowConfig {
 
 struct HistoryCapacityConfig {
   // C1-c/C2: history-summary capacity keys (strict loader; design freeze
-  // history-summary-design.md §7.6/§7.7).  All-zero capacity is the pre-C1-b
-  // state: the summary path is not wired yet, so nothing is produced and
-  // nothing is refused.  `capacity_action` semantics are frozen:
+  // history-summary-design.md §7.6/§7.7).  The defaults are the D-2 measured
+  // values: with the shipped research configuration the recoverable span is
+  // at most (epochs + recovery_margin_epochs) = 20 epochs, and the fault
+  // column count is at most 22 per epoch (8 anchors x {constant, linear} +
+  // 6 IMU axes); the measured profile reached 220 columns at half span
+  // (epoch 26, span 10), so the full-span bound is 440 and the default is
+  // 512 with headroom.  `capacity_action` semantics are frozen:
   // REFUSE / RESET / STOP_PROTECTED - the summary path must never silently
-  // drop the oldest fault.  Enforcement (counting, unusable marking) lives in
-  // the C1-b summary manager; this struct only carries the validated values.
-  std::uint64_t max_summary_rows = 0;
-  std::uint64_t max_fault_columns = 0;
-  std::uint64_t max_perp_rows = 0;
+  // drop the oldest fault.  Enforcement (counting, unusable marking) lands
+  // with the Part C wiring; these defaults are to be re-frozen there.
+  std::uint64_t max_summary_rows = 512;
+  std::uint64_t max_fault_columns = 512;
+  std::uint64_t max_perp_rows = 512;
   std::string capacity_action = "REFUSE";
 };
 
