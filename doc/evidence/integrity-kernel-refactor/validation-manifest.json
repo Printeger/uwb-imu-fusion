@@ -465,28 +465,40 @@
    "id": "FDE-03",
    "description": "错排、漏排、两故障、旧先验污染；未满足 post-selection 证明不得恢复发布",
    "owner_work_package": "C",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [],
-   "note": ""
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_fde_post_selection --gtest_filter=FdePostSelection.Fde03ProfileEvidenceAndNoPublishWithoutProof"
+   ],
+   "evidence": [
+    "fde-post-selection.md"
+   ],
+   "note": "profile likelihood（原始白化量、κ_b 回写审计）; 跨单位/跨维/未声明单位排序显式拒绝; 旧先验污染使 J 上升（−7.5→+1.5）; 预算不闭合 ⇒ 不可用（不放松标准）。"
   },
   {
    "id": "FDE-04",
    "description": "IMU 区间修复/桥接失败；合法参考转移或不可用；不增加虚假 Gaussian 信息",
    "owner_work_package": "C",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [],
-   "note": ""
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_fde_post_selection --gtest_filter=FdePostSelection.Fde04ImuIntervalRepairAndBridgeFailureStayLegal"
+   ],
+   "evidence": [
+    "fde-post-selection.md"
+   ],
+   "note": "决策序：验证模型⇒参考估计+包络（标记 bounded，不当高斯信息）；仅中心+参考+转移界⇒转移；无界/无参考⇒未保护诊断（不是“永久不可排除”）；移除候选仍自成保证组计费（风险不消失）。"
   },
   {
    "id": "FDE-05",
    "description": "共享参考的多个候选中心/多个不同参考；同参考共用失败事件；不同参考选择不能少记风险",
    "owner_work_package": "C",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [],
-   "note": ""
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_fde_post_selection --gtest_filter=FdePostSelection.Fde05SharedReferenceGroupsAndDistinctReferences"
+   ],
+   "evidence": [
+    "fde-post-selection.md"
+   ],
+   "note": "共享参考多中心共用失败事件（3 动作 1 组，只计 max=1.2e-5，非求和）；不同参考分别计费（1.0e-5+1.2e-5>1.5e-5 拒绝）；缺一共享标志/三角恒等式破坏 ⇒ 不成组并记录残差。"
   },
   {
    "id": "PRV-01",

@@ -581,3 +581,22 @@ identity/parity/solution 残差、前向界、detector_only_rows、策略与可�
   全量见日志末行。
 * M2（C3）/M3（C4）本轮**未开始**（窗口限制；不提交半成品）；续跑起点见
   `c2-dual-channel.md §7`。详情与量化表同文件。
+
+## 18. C2+C3+C4 合并轮：M2（C3）2026-09-21
+
+**S0**：外部格式化事件再现（5 文件 token 多重集完全相同：`dual_channel_detector.{hpp,cpp}`、
+`joint_window_detector.{hpp,cpp}`、`test_dual_channel_detector.cpp`）⇒ `git restore`；
+hashes-C1C2 133/133 一致。基线：全量 **386/0**（`raw/run_tests_c3c4_baseline.log`）。
+
+**M2 交付**
+
+* §8.4：`profileLikelihoodEvidence`（原始白化量；κ_b 回写审计；小 SVD 伪逆；秩/条件代理）、
+  `rankStructuredCandidates`（跨单位/跨维/未声明单位显式拒绝）。
+* §8.5：`buildGuaranteeGroups`（共享参考的一组共用失败事件、按组最大 ε 计费；不同参考分别计费；
+  缺共享标志或三角恒等式破坏 ⇒ 单元素组；超预算 ⇒ 不可用）。
+* §8.3：`decideCandidateHandling`（验证模型 / 中心转移 / 未保护诊断三段式；bounded 模型不得当高斯信息）。
+* 测试：`test_fde_post_selection` FDE-03/04/05 全 PASS；全量 **392/0**；
+  validation SHA=`ecbaa8e` → **47 PASS / 0 FAIL / 6 NOT_RUN**（FDE-01..05 全 PASS）。
+* 未接线部分（如实记录，见 `fde-post-selection.md §6`）：模块→`FdeManager::decide` 的实际序列替换、
+  ε 预算接入风险账本执行、IMU 区间移除的字段落盘。
+* M3（C4）**未开始**；续跑起点同文件 §6。

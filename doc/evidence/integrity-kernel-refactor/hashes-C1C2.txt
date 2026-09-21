@@ -1,10 +1,10 @@
-# sha256 of the retained evidence tree and the repository files changed by the C2+C3+C4 merged round (M1 = C2 delivered).
-# Generated 2026-09-21T14:22:04Z.
-# Base 1d6cf4f (C1 follow-up evidence) -> code commit 66b8eb6 (M1 = C2); evidence commit = HEAD.
+# sha256 of the retained evidence tree and the repository files changed by the C2+C3+C4 merged round (M2 = C3 delivered).
+# Generated 2026-09-21T14:38:36Z.
+# Base 0121601 (M1 evidence) -> code commit ecbaa8e (M2 = C3); evidence commit = HEAD.
 # File list is MECHANICAL: git diff --name-only <base>..<code>  UNION  evidence tree
 # (the round's own hash file is excluded: it cannot hash itself; __pycache__/ is transient).
 # format: sha256  path (relative to the repository root)
-21bab34366a8aa3fff2ef3563a6bf8d81da619e918bda2287f351f157b180673  CMakeLists.txt
+3c3bf980ed4755bbf861f1c5ebd89961316e4f2f52a6c3eb5f4be6545bbac951  CMakeLists.txt
 35740b6d3be41e8085fa77e0f4f2cfebd19344518e9cc9bfa8ad9cbdf1412fb7  doc/evidence/integrity-kernel-refactor/.gitignore
 f8ec2874fcbf59b5508dfa95c912f16343b76a7ed31d152f1106e2008f5e1e73  doc/evidence/integrity-kernel-refactor/agent-instructions.txt
 0e836f583b971a1f6e475313d510023092bb3126e322422a0960329ffce82152  doc/evidence/integrity-kernel-refactor/baseline-report.md
@@ -19,6 +19,7 @@ a025e5fd568309264e768d8ce9db041eda9badcce2a85b809e21cea816b54294  doc/evidence/i
 e84dc03c4a61b33b1c9e66a58b639174971ef0fe6e2b5a2cdc2675fc590d80af  doc/evidence/integrity-kernel-refactor/effective-config.yaml
 bd97aab6fb0cae40a39eff40355c12e70388ff4a9461f4ff9e96be515c25a6ea  doc/evidence/integrity-kernel-refactor/equivalence-summary.json
 dc328a00af5495ad68e882d8766d0e86fcbf9b0c36fafe4f9d4bc4962bb69120  doc/evidence/integrity-kernel-refactor/fault-manifest-resolved.yaml
+9ff69218aded703795cbc98e0762cb986b3d19eb2bfef08d1f168922572a70fb  doc/evidence/integrity-kernel-refactor/fde-post-selection.md
 91ad82a1fc70ce7c7e09359a6acd3edbaeb7df0c2d3d6c8ae47bebe6d706e57f  doc/evidence/integrity-kernel-refactor/fixtures/README.md
 131e2f1c624ceaf2abf41005bdf6095597e0aab57aaf2f7c4e2118254a677436  doc/evidence/integrity-kernel-refactor/fixtures/frames-b1.json
 e8c936765ea5ab39e26f78c08ab1ad674e570d6443fd923b022896bf9a0b02cd  doc/evidence/integrity-kernel-refactor/fixtures/frames.json
@@ -32,7 +33,7 @@ d028866d3adda6d41d337cd36a217c80ba7be81fd66a67798d86d41d9f326756  doc/evidence/i
 213e883774c70871771ef002348f057a7107fbda0565d33f10ddbf48657e71b3  doc/evidence/integrity-kernel-refactor/history-summary-module.md
 aa1b5c13cf53a497ae9c1c693ab3c79a1d9a59c2500b5dd457fd3fac4e16e9e1  doc/evidence/integrity-kernel-refactor/history-summary-pipeline.md
 61dfa8ab6642651026f7731b7b72746e2b6bfa317e4db6a6d5101d5d90a259ee  doc/evidence/integrity-kernel-refactor/oracle-results.json
-2b73feac7302d744fd958db10b6bdf0ee385ec09dc93f65068630044b6adb226  doc/evidence/integrity-kernel-refactor/proof-obligations.md
+0f1a2546ce8fd683b8e9304a75126e56f4b566a6aafbc5e621098ac0229b9f8e  doc/evidence/integrity-kernel-refactor/proof-obligations.md
 208d4a0297847b891983dfc2263b6477fd246c7a6ee29d19f8b94d79dc84e384  doc/evidence/integrity-kernel-refactor/prune-log.md
 249dac48cd35a116295f78ff40e0766a1576ca516834b8400bb0de54f5a1e6c3  doc/evidence/integrity-kernel-refactor/raw/b1_square_root_tests.log
 efd8f990a7fe8b8474ec68c063efb8f5baf40fd972dd93ed4298a7b736618a60  doc/evidence/integrity-kernel-refactor/raw/build-release.log
@@ -64,6 +65,7 @@ e4aeda814e5e7642786b6b5cca212565973cbb59551329f7c37e1c4d74c89143  doc/evidence/i
 640b9e18eccc0777915dd01c5cacc18e506777b2f4c6ac2cb9b9cb855d23b9be  doc/evidence/integrity-kernel-refactor/raw/run_tests_c1b_ab.log
 c0c9aec53086921751741a659386337bfbc216b499127b39153b2077da0c3fbc  doc/evidence/integrity-kernel-refactor/raw/run_tests_c1pipeline.log
 acfcb666f6befa82f9f081ef6ad0b4d65e70a856b8c621c8dc8447faa62e0aee  doc/evidence/integrity-kernel-refactor/raw/run_tests_c2c3c4_baseline.log
+49a62c67ebf0405f47b6a7a340ee30e972e762849083e130ddefbf6391f5097a  doc/evidence/integrity-kernel-refactor/raw/run_tests_c3c4_baseline.log
 d5362435f5f6743fb1dc54091e45b1ec8f45f861178e6daf1d08e095209094a6  doc/evidence/integrity-kernel-refactor/raw/run_tests_p2.log
 ad7716f02e06cda2524dadb8756f4a2897e469115b1b4ff93795d854b510d0e0  doc/evidence/integrity-kernel-refactor/raw/run_tests_p7.log
 73295d852f38911ad5bbe11761a2146743ea7fe116369acad280639e6bbea1b6  doc/evidence/integrity-kernel-refactor/raw/scenario_summaries_b2.txt
@@ -116,10 +118,11 @@ de74053caf6c6238ac93310ee2dcb27f2320afae79c7b734530d39fd2fbd8147  doc/evidence/i
 877167c0ff3ae690bf619e90311b7e8de3da822af9e00747df2bdd6361d65a56  doc/evidence/integrity-kernel-refactor/raw/validation_c1c.log
 2fe0481f3d57113d4f9704996ccc903c8a004fc676e00b405bd2e7134572ed0a  doc/evidence/integrity-kernel-refactor/raw/validation_c1pipeline.log
 e8b7fb512a53abbe49909a298d7891ce433c3d6210502ccb44a14f332323a820  doc/evidence/integrity-kernel-refactor/raw/validation_c2c3c4.log
+36ab632e4562a17fa55a2fdde83df2c156b9702d67469fb15e62f0147fd7b64a  doc/evidence/integrity-kernel-refactor/raw/validation_c3c4.log
 835effe069864f5ce4a855e176dac8f5624efd59c74bf1f8407c9d3a1d5b274a  doc/evidence/integrity-kernel-refactor/raw/validation_p7.log
 fc51a27d6ddbf3cb6498932a1caeb08173b3ff640fe7a773c5e346193c988250  doc/evidence/integrity-kernel-refactor/remote-head.txt
 6d1279a3f8d2ba193e346f3bc8a7800924d8fa5eb77d9f88b1b2dd360157a7e6  doc/evidence/integrity-kernel-refactor/risk-and-lazy-fde.md
-5b54b2b3561078aa16fa086a0cfd26f0a867d70cada5150fdafa88d335241ec0  doc/evidence/integrity-kernel-refactor/runbook.md
+7c7efe30f5cf1abc1058cd17859fc81139c5333bee97fb825b660494a3d0bab2  doc/evidence/integrity-kernel-refactor/runbook.md
 20f697d968c20ccf131cbfa34d44fbf5c4a54b2b808bbe3d73863253eddbbc21  doc/evidence/integrity-kernel-refactor/square-root-context.md
 69a04a3fc3d299287160fdc43bfc89786dc83d915cd9241a99203df41882e968  doc/evidence/integrity-kernel-refactor/square-root-oracle.json
 59c5aaf79eaeb696fc1c3d4ec073701e87557dbbf34fb1568885cb59862aec23  doc/evidence/integrity-kernel-refactor/storage-inventory.md
@@ -129,11 +132,9 @@ fc51a27d6ddbf3cb6498932a1caeb08173b3ff640fe7a773c5e346193c988250  doc/evidence/i
 e484cf5f4e90f757e1d2a7dd7416026174245e825ea1f1180fb9e90a6affacc0  doc/evidence/integrity-kernel-refactor/tools/oracle_compare.py
 9bf646a2754cfd425708346bbcfdef86ff874f5048528dc18c2f737c41efab0e  doc/evidence/integrity-kernel-refactor/tools/replay_io.py
 e864d4f73487e3b38b1a519e3333ffdfcb63b4816122e88bd16ac3f5618ec668  doc/evidence/integrity-kernel-refactor/tracked-files.txt
-a43ac94fa2fc6d08269145c83d679db477d027d6d3d79c4dab4be6f334419121  doc/evidence/integrity-kernel-refactor/validation-manifest.json
-527318f17227279fa9ff193953fdcc8fd31ea49d5772b65d22f521b31501cabd  doc/evidence/integrity-kernel-refactor/validation-report.json
+9ab2494fc51df7d6d7616ee624f13935e240fa6b45b7190bdd0ed7ec7ae994bd  doc/evidence/integrity-kernel-refactor/validation-manifest.json
+4936a197aa13ce9d130d41cc729e2cfd3e6580ca9c263de345a7e7ce1051c069  doc/evidence/integrity-kernel-refactor/validation-report.json
 b3b0b9ee2ed32a7d516022a3690eb325d2b1c5fb0d1166e1617cd3c114b3cb88  doc/evidence/integrity-kernel-refactor/worktree-before.txt
-ace53eaa4f7f2ecdae0b99f03f26b08d166b40b3e6f3ebed178fe9acbe50269f  include/uwb_imu_pl/integrity/dual_channel_detector.hpp
-74c466b2910267dd37e6b6d508478d59072ec9a535be2d6182ea06246da2749e  include/uwb_imu_pl/integrity/joint_window_detector.hpp
-c50da0e8758bbd2cb11248e837c94ca5610e9f3777ec8d266cb177f07c8119c2  src/uwb_imu_pl/integrity/dual_channel_detector.cpp
-09375171717751ca29db17fe97bb9cd7ea9926530f3526e8fdbe855c98a4d180  src/uwb_imu_pl/integrity/joint_window_detector.cpp
-c3dd4220f15b8463f81fc7e36aab9423573120d734cf7bb8742d3832b4bbab81  test/test_dual_channel_detector.cpp
+82290b82d472648734d205937e6b8dc9ecd12a5222af625d8ab62a1ba8e116b8  include/uwb_imu_pl/integrity/fde_post_selection.hpp
+53e2d5a5e82f4f05399f4d73759280cc778773c9b72e7f7bab3c46bb3a2161d2  src/uwb_imu_pl/integrity/fde_post_selection.cpp
+ed04393f2bfe2d2cb3c898302fe9efccbb6b8e368e0a9415b47f806baf906a30  test/test_fde_post_selection.cpp
