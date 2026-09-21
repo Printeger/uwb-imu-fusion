@@ -132,6 +132,7 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/integrity/statistical_bounds_cache.cpp
   src/uwb_imu_pl/integrity/health_manager.cpp
   src/uwb_imu_pl/integrity/imu_fault_subspace.cpp
+  src/uwb_imu_pl/integrity/history_fault_summary.cpp
   src/uwb_imu_pl/factors/kinematic_bridge_factor.cpp
 )
 
@@ -296,6 +297,9 @@ if(CATKIN_ENABLE_TESTING)
   target_compile_definitions(test_square_root_context PRIVATE
     UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
   target_link_libraries(test_square_root_context ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_history_fault_summary test/test_history_fault_summary.cpp test/test_main.cpp)
+  target_link_libraries(test_history_fault_summary ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
 
   add_rostest(test/realtime_integrity_viz.test)
 
