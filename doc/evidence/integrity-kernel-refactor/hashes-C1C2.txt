@@ -1,10 +1,12 @@
-# sha256 of the retained evidence tree and the repository files changed by the C1 closure round (Part C wiring + C1-c remainder).
-# Generated 2026-09-21T13:36:03Z.
-# Base 9288f73 (C1-b unblock evidence) -> code commit 9257941; evidence commit = HEAD.
-# File list is MECHANICAL: git diff --name-only <base>..<code>  UNION  evidence tree
+# sha256 of the retained evidence tree and the repository files changed by the C1 closure round + follow-up.
+# Generated 2026-09-21T14:02:27Z.
+# Base 9288f73 -> code commits 9257941 (Part C wiring) and 8b6c177 (HIP scenario / v15 CSV / carrier oracle).
+# File list is MECHANICAL: git diff --name-only <base>..<code1>  UNION  <evidence1>..<code2>  UNION  evidence tree
 # (the round's own hash file is excluded: it cannot hash itself; __pycache__/ is transient).
 # format: sha256  path (relative to the repository root)
 e6194957cdc0608246d883b11224e62110df38e54397351ffea27ac07f8115ff  CMakeLists.txt
+586c7c0e0c4056420c1fc7034a8ddfec83895400d68373c67aae5f4d71eb808b  apps/r0_r1_development.cpp
+50e64d5d481694488e091e9ceb0a10dcb631e9f32e303168c8523ba6ab05b4c4  config/r0_r1_development_scenarios.yaml
 35740b6d3be41e8085fa77e0f4f2cfebd19344518e9cc9bfa8ad9cbdf1412fb7  doc/evidence/integrity-kernel-refactor/.gitignore
 f8ec2874fcbf59b5508dfa95c912f16343b76a7ed31d152f1106e2008f5e1e73  doc/evidence/integrity-kernel-refactor/agent-instructions.txt
 0e836f583b971a1f6e475313d510023092bb3126e322422a0960329ffce82152  doc/evidence/integrity-kernel-refactor/baseline-report.md
@@ -29,9 +31,9 @@ e8c936765ea5ab39e26f78c08ab1ad674e570d6443fd923b022896bf9a0b02cd  doc/evidence/i
 402065eecaffeb2e07329c513bb9e210fced4947b292e239307c761f71e55ae3  doc/evidence/integrity-kernel-refactor/history-summary-b1c-blockers.md
 d028866d3adda6d41d337cd36a217c80ba7be81fd66a67798d86d41d9f326756  doc/evidence/integrity-kernel-refactor/history-summary-design.md
 213e883774c70871771ef002348f057a7107fbda0565d33f10ddbf48657e71b3  doc/evidence/integrity-kernel-refactor/history-summary-module.md
-8b1aae07326b096462f5727f70fb6291af79ac4adbbd046ff3ff59ae5fea1578  doc/evidence/integrity-kernel-refactor/history-summary-pipeline.md
+aa1b5c13cf53a497ae9c1c693ab3c79a1d9a59c2500b5dd457fd3fac4e16e9e1  doc/evidence/integrity-kernel-refactor/history-summary-pipeline.md
 61dfa8ab6642651026f7731b7b72746e2b6bfa317e4db6a6d5101d5d90a259ee  doc/evidence/integrity-kernel-refactor/oracle-results.json
-59237bada5a5b414986247b3701c547cbdb4ccc3e6a20d1dc428a2ac572bc8a4  doc/evidence/integrity-kernel-refactor/proof-obligations.md
+469e7878e5ab5975efc69e02dc341f70767ee8bd50dd79e69eee0454f42dcfde  doc/evidence/integrity-kernel-refactor/proof-obligations.md
 208d4a0297847b891983dfc2263b6477fd246c7a6ee29d19f8b94d79dc84e384  doc/evidence/integrity-kernel-refactor/prune-log.md
 249dac48cd35a116295f78ff40e0766a1576ca516834b8400bb0de54f5a1e6c3  doc/evidence/integrity-kernel-refactor/raw/b1_square_root_tests.log
 efd8f990a7fe8b8474ec68c063efb8f5baf40fd972dd93ed4298a7b736618a60  doc/evidence/integrity-kernel-refactor/raw/build-release.log
@@ -45,6 +47,10 @@ dc9a8ca28726612f798ac3e17060862b12ef69fcd251b75e642bcd4cde584189  doc/evidence/i
 a8c78622041106bf1354f41a41103aa728bdad4b493857585699c0637888acba  doc/evidence/integrity-kernel-refactor/raw/catkin_test_results_verbose.txt
 8e7a2a4582d1d03e2d2a7bed8f4f7278d4ec582f7b83c08eefc1fddb3aca879e  doc/evidence/integrity-kernel-refactor/raw/config_hashes.txt
 95919ae5187372a1a22380accebdd80837be2427e487bfdf235b6fb40431f7b8  doc/evidence/integrity-kernel-refactor/raw/equivalence_stage3_b2.json
+4c6ba3e860277f966c135bece715736c74ea9c2e71e5480e95f2210da860d1bb  doc/evidence/integrity-kernel-refactor/raw/hip_run_230ep_history_summary.csv
+fbd3afc5fca9f950a1540af111316d33c9f1bdb3f8c2ea65df2dc390c81063e1  doc/evidence/integrity-kernel-refactor/raw/hip_run_60ep_history_summary.csv
+26ed5ccf9ba95538cbb6a980a31e491fbfef53aa3333701fa372b475c09c8a74  doc/evidence/integrity-kernel-refactor/raw/hip_run_60ep_scenario.json
+531f0d1ea7abf8e55132f439c4708ff3b00ecb9589f6dd539e8271b6341493d7  doc/evidence/integrity-kernel-refactor/raw/hip_run_capture.md
 3730c22054d4651507b066de87e7e277b652f297c88b16cf68ead7ffe8dab17d  doc/evidence/integrity-kernel-refactor/raw/replay_p2/A_nominal/exports/attempt-30.bin
 1802f0584bfa92a5d2dc537b92ce130d28c0d14a86bd30acb5b5279caca30442  doc/evidence/integrity-kernel-refactor/raw/replay_p2/C_uwb_fde/exports/attempt-25.bin
 aab25d7599d09b165219d5031b7d21b11eb84cd3001ae95420190651478adda3  doc/evidence/integrity-kernel-refactor/raw/replay_p2/C_uwb_fde/exports/attempt-26.bin
@@ -57,7 +63,7 @@ b3d73b6191912f1458bbe54a80e422e949701fa4e1f3a3995d3566e2948bd9a2  doc/evidence/i
 8c5b02b7add3e6e76cf4c9285b0ff934ec8334ecefcbb11903c6ad4329bf95d0  doc/evidence/integrity-kernel-refactor/raw/run_tests_c0.log
 e4aeda814e5e7642786b6b5cca212565973cbb59551329f7c37e1c4d74c89143  doc/evidence/integrity-kernel-refactor/raw/run_tests_c1a.log
 640b9e18eccc0777915dd01c5cacc18e506777b2f4c6ac2cb9b9cb855d23b9be  doc/evidence/integrity-kernel-refactor/raw/run_tests_c1b_ab.log
-3e088c1b50768672d2e73998335a2ee0331bbc9ae9f14060154f4576d5b2cfe5  doc/evidence/integrity-kernel-refactor/raw/run_tests_c1pipeline.log
+c0c9aec53086921751741a659386337bfbc216b499127b39153b2077da0c3fbc  doc/evidence/integrity-kernel-refactor/raw/run_tests_c1pipeline.log
 d5362435f5f6743fb1dc54091e45b1ec8f45f861178e6daf1d08e095209094a6  doc/evidence/integrity-kernel-refactor/raw/run_tests_p2.log
 ad7716f02e06cda2524dadb8756f4a2897e469115b1b4ff93795d854b510d0e0  doc/evidence/integrity-kernel-refactor/raw/run_tests_p7.log
 73295d852f38911ad5bbe11761a2146743ea7fe116369acad280639e6bbea1b6  doc/evidence/integrity-kernel-refactor/raw/scenario_summaries_b2.txt
@@ -112,7 +118,7 @@ de74053caf6c6238ac93310ee2dcb27f2320afae79c7b734530d39fd2fbd8147  doc/evidence/i
 835effe069864f5ce4a855e176dac8f5624efd59c74bf1f8407c9d3a1d5b274a  doc/evidence/integrity-kernel-refactor/raw/validation_p7.log
 fc51a27d6ddbf3cb6498932a1caeb08173b3ff640fe7a773c5e346193c988250  doc/evidence/integrity-kernel-refactor/remote-head.txt
 6d1279a3f8d2ba193e346f3bc8a7800924d8fa5eb77d9f88b1b2dd360157a7e6  doc/evidence/integrity-kernel-refactor/risk-and-lazy-fde.md
-edf0730090ccbfc17a6d4994b6a7e0cd13ee649ef9993bbee8666abc7a78a45a  doc/evidence/integrity-kernel-refactor/runbook.md
+c102430ddbf48bdecb53185fb6239ef3497724eeb5fe23db4b111714ce9fed79  doc/evidence/integrity-kernel-refactor/runbook.md
 20f697d968c20ccf131cbfa34d44fbf5c4a54b2b808bbe3d73863253eddbbc21  doc/evidence/integrity-kernel-refactor/square-root-context.md
 69a04a3fc3d299287160fdc43bfc89786dc83d915cd9241a99203df41882e968  doc/evidence/integrity-kernel-refactor/square-root-oracle.json
 59c5aaf79eaeb696fc1c3d4ec073701e87557dbbf34fb1568885cb59862aec23  doc/evidence/integrity-kernel-refactor/storage-inventory.md
@@ -122,8 +128,8 @@ edf0730090ccbfc17a6d4994b6a7e0cd13ee649ef9993bbee8666abc7a78a45a  doc/evidence/i
 e484cf5f4e90f757e1d2a7dd7416026174245e825ea1f1180fb9e90a6affacc0  doc/evidence/integrity-kernel-refactor/tools/oracle_compare.py
 9bf646a2754cfd425708346bbcfdef86ff874f5048528dc18c2f737c41efab0e  doc/evidence/integrity-kernel-refactor/tools/replay_io.py
 e864d4f73487e3b38b1a519e3333ffdfcb63b4816122e88bd16ac3f5618ec668  doc/evidence/integrity-kernel-refactor/tracked-files.txt
-12d455fe2171d6406eeb8d982fe30fe170056b047fabb95e861a09b28816e1be  doc/evidence/integrity-kernel-refactor/validation-manifest.json
-a05478f87b12b157d33369c07c39ee91a622da1d3046a0a6fbeaac44e197c35a  doc/evidence/integrity-kernel-refactor/validation-report.json
+63f903cd675a75bd91e93a90ee984e13374125af52e7995ef662860043e3a8a1  doc/evidence/integrity-kernel-refactor/validation-manifest.json
+31ea86da0996d237e01dcd93fbc8ac58b8f2276d90d489b463866a36feec380c  doc/evidence/integrity-kernel-refactor/validation-report.json
 b3b0b9ee2ed32a7d516022a3690eb325d2b1c5fb0d1166e1617cd3c114b3cb88  doc/evidence/integrity-kernel-refactor/worktree-before.txt
 2c80467a6aab5c910c4b57c86ef6f68f4e7e2200c111a9e3bdfff402fecb5539  include/uwb_imu_pl/common/types.hpp
 80aa48d85b07a167ce9e735667a57aa31b7766d21f11435a4ab30ea022962879  include/uwb_imu_pl/config/integrity_config.hpp
@@ -134,6 +140,7 @@ bd6ef0aacc5f25452a481798864f53fffc8d6e45f4b035c01ef9a0804fcfc301  include/uwb_im
 f60db832089c3c53c2c012daa38a7fe93915fb40f8e782964ec6214870560090  include/uwb_imu_pl/integrity/history_summary_extraction.hpp
 9bdaacbf80fab0270dda0f4e24264056ff1a9e9f5cc41f75199344ec13e2bc3d  include/uwb_imu_pl/integrity/history_summary_lifecycle.hpp
 3a61d264f9432280d26de6523a3df0f200e83c837b369817012ae4f77aa64e4c  include/uwb_imu_pl/integrity/statistical_bounds_cache.hpp
+0a1f81d4294e8b93548f95dca853eb8aef5e2e913c0bdb548e9466fe72f49d74  include/uwb_imu_pl/io/run_logger.hpp
 5146d0d957fe3048384429b87827665c6a5d75d336dc17224f15a00a04859f0a  src/uwb_imu_pl/config/integrity_config.cpp
 dd2b60ef05f62e4315fd398b268406c9b33e10763df4cda01aea3b2904fef984  src/uwb_imu_pl/estimation/incremental_estimator.cpp
 9de7a8eebbd9c16a790ba2baf33ca41ef95506933b04004007ed015bc7233e89  src/uwb_imu_pl/estimation/integrity_window_snapshot.cpp
@@ -143,11 +150,12 @@ bb34e4afc7a581adf50fafb68f961f664ef7c702b638edc0a02cba4b61c319df  src/uwb_imu_pl
 283d8839c94f8ba98c18fae7268efe230ec9cb50ef1e5dbe8c227d725c3468f9  src/uwb_imu_pl/integrity/history_summary_lifecycle.cpp
 e84c405eeac3cfbf1f38d0b099e5ab462cd3211c534fe8897a5f3989f176109e  src/uwb_imu_pl/integrity/integrity_monitor.cpp
 9e427ad243fb39cd81f7c541ff49c1bded7b8a14aa3f6f0741f7deb46833fecb  src/uwb_imu_pl/integrity/statistical_bounds_cache.cpp
+e0bb3990bdbab4366cef6974d7a5b61438a2198ebf0fad35a313bccc549057cc  src/uwb_imu_pl/io/run_logger.cpp
 27d71c27ff260df91040cdb99596cc275980d04185c20432a187578355b954c0  test/test_history_fault_parameterization.cpp
 34439789047e66a9cb1a7e134da5441df7d4fbc52451b98b1a8e4dd33c5cb9dd  test/test_history_fault_summary.cpp
 77374a18fc13a4733f1ab5da11ece57c9b94f6db08f1929aaaa91a0d9d6085cd  test/test_history_summary_extraction.cpp
 e50028e427e742a691a5da95452f1a825abb1081bbf5114ec1863b059a0d81df  test/test_history_summary_lifecycle.cpp
-22144a73dd17fbf8a9f44231affab1c1553ae0e7a9921359e6990fa0ced03383  test/test_history_summary_pipeline.cpp
+d96e3a15e802efecd8d3dfe477d26cfbaaabfbe53bc29646a5a9535f5c4a4f1f  test/test_history_summary_pipeline.cpp
 33f1780ecf4c3b612e19afa08345ce4fa8c0527d9ea8e5b5985056a180779115  test/test_integrity_config.cpp
 ed749d0675917f47b7c7728e622e6e7bd2b19b48a119aabef3936ecced95947b  test/test_integrity_v2.cpp
 0c2573634fdcbf3bb48ebaafd19fbddc2810649ddaddea147c2cd3b79698ae65  test/test_realtime_incremental.cpp

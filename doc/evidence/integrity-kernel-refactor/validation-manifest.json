@@ -239,13 +239,13 @@
    "owner_work_package": "C",
    "status": "MAPPED",
    "commands": [
-    "{bin}/test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.BoundaryIsTheSquareRootHistorySummary:HistorySummaryPipeline.PooledStatisticAndDofIdentity"
+    "{bin}/test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.CarrierInvariantsUnderRowPermutation:HistorySummaryPipeline.BoundaryIsTheSquareRootHistorySummary:HistorySummaryPipeline.PooledStatisticAndDofIdentity"
    ],
    "evidence": [
     "history-summary-pipeline.md",
     "history-fault-parameterization.md"
    ],
-   "note": "管线级：边界块 == 模块平方根摘要（R_b/T_b/d_b/F_b/d_perp 载体逐项一致）+ 池化恒等式；模块级多消元顺序不变量见 HIS-M1。管线级「多消元顺序」独立 oracle 未成测（pipeline md §11 缺口 3）。"
+   "note": "管线级：边界块 == 模块平方根摘要 + 池化恒等式 + **载体行系统多消元顺序 oracle**（round-trip 与逆序重消元，比对 R_bᵀR_b/R_bᵀT_b/R_bᵀd_b/F_bᵀF_b/κ_b 与计数，rel≤1e-9）；模块级多消元顺序不变量见 HIS-M1。"
   },
   {
    "id": "HIS-02",
@@ -256,9 +256,11 @@
     "{bin}/test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.HistoryFaultResponsePersistsAcrossBoundary"
    ],
    "evidence": [
-    "history-summary-pipeline.md"
+    "history-summary-pipeline.md",
+    "raw/hip_run_capture.md",
+    "raw/hip_run_60ep_history_summary.csv"
    ],
-   "note": "跨边界持续故障：模式映射=[T_b f; F_b f]，实测 Γ>0 且有限、‖T_b f‖>0；历史列注入 q=22/18（F3 legacy 场景）。"
+   "note": "跨边界持续故障：Γ>0 且有限、‖T_b f‖>0、q=22/18（F3 legacy 场景）。原始流场景 HIP_history_crossing_fault 已实跑并留存捕获（raw/hip_run_capture.md、raw/hip_run_60ep_history_summary.csv、raw/hip_run_230ep_history_summary.csv；复现命令见 capture 文件首行），该运行是**记录型证据**而非本套件的可执行项；dev harness 在此配置 marginalizations=0（信息型因子路径证据在 F3 legacy：info_form=1/offset≠0）。"
   },
   {
    "id": "HIS-03",

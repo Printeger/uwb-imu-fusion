@@ -370,3 +370,15 @@ Householder 正消元（先消 `x_o`，再按 `x_b` 支持分块）；无正规�
   守护。
 * **诚实缺口**：r0_r1 原始流新场景未执行；context_oracle O8a/O8d 未重跑；管线级
   多消元顺序独立 oracle 未成测；offset 的场景级影响未量化（`history-summary-pipeline.md §11`）。
+
+## 21.（C1 补完）新增命题与缺口状态
+
+* **命题（载体行系统多消元顺序）**：对已交付载体 `[R_b T_b; 0 F_b]`/`[d_b; d_perp]`
+  重消元（同序与逆序）必须重现 `R_bᵀR_b`、`R_bᵀT_b`、`R_bᵀd_b`、`F_bᵀF_b`、`κ_b` 与计数。
+  * `LOCKED_BY_TEST`：`HistorySummaryPipeline.CarrierInvariantsUnderRowPermutation`（rel≤1e-9）。
+* **命题（原始流可监测性）**：`HIP_history_crossing_fault` 原始流中 onset 出窗后，摘要仍携带
+  响应与检测内容（q/injected/nu_perp/κ/Ω/ξ 连续且非零）。
+  * `LOCKED_BY_RAW_RUN`：`raw/hip_run_capture.md`（60/230 epochs；dev harness
+    `marginalizations=0` 已如实记录）。
+* **证据缺口状态**：①原始流场景 **已关闭**；③管线级多消元顺序 oracle **已关闭**；
+  ②context_oracle O8a/O8d 仍 NOT_RUN（需 raw dump 接入）；④offset 仅一个样本（已导出）。

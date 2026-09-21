@@ -546,3 +546,17 @@ identity/parity/solution 残差、前向界、detector_only_rows、策略与可�
 **其余**：诊断 v15（`AttemptDiagnostics.history_summary`，只加字段）、冷启动显式状态、
 `UWB_IMU_PL_C1P_DIAG` 实测表 → `history-summary-pipeline.md §10`。
 不 push；无格式化；阈值/合同零改动。
+
+## 16. C1 收口补完（四个缺口关闭）2026-09-21
+
+1. **诊断 v15 工具同步**：`RunLogger` 新增 `diagnostic_history_summary.csv`
+   （schema `uwb-imu-pl/gate-d-diagnostics/v15`，同 identity 前缀列），随 dev-runner 产出。
+2. **r0_r1 原始流新场景**：`apps/r0_r1_development.cpp` 白名单 + `config/r0_r1_development_scenarios.yaml`
+   新增 `HIP_history_crossing_fault`（onset=6、持续单锚点 2.25 m），实跑 60 与 230 epochs；
+   捕获入证据树（`raw/hip_run_capture.md` + 两份 history CSV + 场景清单）。
+   实测：onset 出窗前后的 q/injected/nu_perp/κ/Ω/ξ 连续变化；如实记录 dev harness `marginalizations=0`。
+3. **管线级多消元顺序 oracle**：`HistorySummaryPipeline.CarrierInvariantsUnderRowPermutation`
+   （对已交付载体行系统做 round-trip + 逆序重消元，比对正规方程形式与计数）。
+4. **offset 量化**：唯一实测样本 F3 tx4（offset −8.6e-49 vs κ 2.8e-29）；app 运行 `info_form=0`。
+
+全量回归与结果：见 `raw/run_tests_c1pipeline.log` 末次运行行；hashes 机械规则最后重生成。

@@ -13,6 +13,12 @@ validation `UWB_IMU_PL_VALIDATION_SHA=9257941 … --all` → **40 PASS / 0 FAIL 
 （HIS-01..06、HIS-M1/C1/V1/X1/X2 全 PASS；`raw/validation_c1pipeline.log`）；
 hashes-C1C2 **147/147 OK**（机械规则最后生成）。
 
+**补完轮（同轮，四个缺口关闭，§8/§10.4/§10.5/§11）**：新增管线级载体 oracle 测试、
+v15 CSV 导出（`diagnostic_history_summary.csv`）、`HIP_history_crossing_fault` 原始流场景
+（60/230 epochs 实跑，捕获 `raw/hip_run_capture.md`）；运行 schema 校验
+`tools/validate_run_schema.py /tmp/c1p_hip_run` → **PASS: uwb-imu-pl/v5**。
+补完轮的代码/证据提交与哈希见 `hashes-C1C2.txt` 头部与 `runbook.md §16`。
+
 ---
 
 ## 1. 接线映射（就绪清单第 1 项）
@@ -111,10 +117,19 @@ omitted/material_gap、claims_full_coverage、assumptions、omitted_risk_source�
 
 * **管线级（已交付）**：故障在 horizon 内起始、跨窗口左边界持续 ⇒ 摘要携带响应与检测内容，
   Γ>0、`‖T_b f‖>0`（测试 4）；F3 legacy 场景（丢 UWB＋换锚点集）跨 4 个 epoch，历史列注入 q=22/18。
-* **r0_r1 dev-runner 原始流场景（未交付）**：`config/r0_r1_development_scenarios.yaml` 的场景名被
-  `apps/r0_r1_development.cpp` 白名单硬校验，新增「早注入、跨边缘化边界持续」场景需要同时扩展 runner 语义
-  （`fault_epoch_begin/end` 对单锚点持续偏置的组合、persistent 组合、raw dump）＋跑 evidence 运行；
-  本轮预算内**不交付**（避免落到「无人执行的空条目」）。**见第 11 项缺口**。
+* **r0_r1 原始流场景（本轮已交付）**：新增场景名 `HIP_history_crossing_fault`
+  （`apps/r0_r1_development.cpp` 白名单 + `config/r0_r1_development_scenarios.yaml`：onset=6、
+  单锚点持续偏置 2.25 m、fault 活性 6..200），并用 dev-runner 实跑 60 与 230 epochs：
+  * 60 epochs：`uwb_raw_injections=55`、`alarms=54`、`finite_pl=17`；
+  * 实际转换（原始流）：attempt 12 `window_first=2`（onset 仍在窗内）→ attempt 18
+    `window_first=8`（**onset=6 已出窗**）⇒ 历史列 `q` 100→140→160、`injected_epochs` 5→7→8、
+    `nu_perp` 145→203→232、`κ_b` 1.29e-07→1.57e-05、`Ω` trace 3.1e3→5.0e3、`ξ` 2.3e-04→2.3e-02；
+  * 即「onset 材料离窗后，响应与检测内容仍由摘要携带」在**原始流**上可测量（`raw/hip_run_capture.md`、
+    `raw/hip_run_60ep_history_summary.csv`、`raw/hip_run_230ep_history_summary.csv`）。
+* **如实说明**：dev harness 在此配置下 `marginalizations=0`（不触发 fixed-lag 边缘化），
+  所以 container/信息型因子路径的证据来自单元/集成层（F3 legacy `info_form=1`、`offset≠0`），
+  不是本轮 app 运行；raw 全量目录（1.7M/25 文件）留在 `/tmp/c1p_hip_run`，证据树只保留
+  场景清单、两份 history CSV 与汇总。
 
 ## 9. 生命周期（第 9 项，§7.6 行 1–7）
 
@@ -170,13 +185,23 @@ omitted/material_gap、claims_full_coverage、assumptions、omitted_risk_source�
 （`NumericalWorkCounters`：builds/boundary_rows/input_columns/fault_columns/emitted_rows/
 perp_rows/capacity_refusals/summary_invalid）同步记录。
 
-**10.4 摘要 oracle 表**：模块级多消元顺序不变量与真实窗口等价见 `history-fault-parameterization.md §3`
-（HIS-M1/HIS-X2）；本轮管线级等价由测试 1（边界块 == 摘要）与测试 2（池化恒等式）给出。
+**10.4 摘要 oracle 表**
+
+| 层 | oracle | 覆盖 | 结果 |
+|---|---|---|---|
+| 模块 | 独立 SVD/Schur oracle、多消元顺序、退化拒绝 | HIS-M1 / HIS-X2 | 全 PASS（见 `history-fault-parameterization.md`） |
+| 管线（本轮新增） | `HistorySummaryPipeline.CarrierInvariantsUnderRowPermutation`：把**已交付载体**的行系统 `[R_b T_b; 0 F_b]` 重消元（同序 round-trip + 逆序），比对 `R_bᵀR_b`、`R_bᵀT_b`、`R_bᵀd_b`、`F_bᵀF_b`、`κ_b` 与计数 | HIS-01（管线级多消元顺序） | PASS（rel ≤1e-9；实测 `[HSP-ORACLE] rows=333 q=220 nu_perp=318 κ=6.22e-32 Ω=3.03e4 ξ=1.72e-15`） |
+
+**10.5 诊断 v15 的 CSV 导出**：`diagnostic_history_summary.csv`（`RunLogger`，schema
+`uwb-imu-pl/gate-d-diagnostics/v15`，同 `identity` 前缀列）已随 dev-runner 运行产出
+（60/230 epochs 两份捕获），字段与 `AttemptDiagnostics.history_summary` 一一对应。
 
 ## 11. 诚实缺口（NOT_RUN / 未交付）
 
-1. **r0_r1 原始流新场景未执行**（第 8 项后半）：原因见 §8；管线级语义已由测试 4 与 F3 覆盖。
-2. **context_oracle O8a/O8d 未重跑**：需要 raw dump 环境（本轮无 `/tmp` 运行数据），按 §6 R5 记录。
-3. **管线级「多消元顺序」oracle**未单独成测：模块级已覆盖（HIS-M1），管线级只做了单一顺序的等价与恒等式。
-4. **信息型因子常数 offset 的可观测量**：offset 已导出并可非零（实测 -8.6e-49），但其对统计量的影响
-   尚未在场景级量化（当前量级 ≪ 噪声；已在诊断中可见，留待有 raw 数据的轮次核账）。
+1. ~~r0_r1 原始流新场景未执行~~ **已关闭**（§8：场景已注册并实跑 60/230 epochs，原始流捕获入证据树）。
+2. **context_oracle O8a/O8d 未重跑**：需 raw dump 环境（本轮 app 运行的 raw 目录在 /tmp，
+   未接入 oracle 的自动发现路径）；按 §6 R5 记录。
+3. ~~管线级「多消元顺序」oracle 未成测~~ **已关闭**（§10.4：载体行系统的 round-trip + 逆序不变性）。
+4. **信息型因子 `constant_offset` 的场景级影响未量化**：本轮已导出并给出唯一实测样本
+   （F3 tx4：`offset=-8.6e-49` vs `κ_b=2.8e-29`，比 ~3e-20）；app 运行 `info_form=0`，
+   所以更大范围的影响仍未量化。
