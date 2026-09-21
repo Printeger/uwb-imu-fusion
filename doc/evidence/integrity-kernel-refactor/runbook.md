@@ -600,3 +600,15 @@ hashes-C1C2 133/133 一致。基线：全量 **386/0**（`raw/run_tests_c3c4_bas
 * 未接线部分（如实记录，见 `fde-post-selection.md §6`）：模块→`FdeManager::decide` 的实际序列替换、
   ε 预算接入风险账本执行、IMU 区间移除的字段落盘。
 * M3（C4）**未开始**；续跑起点同文件 §6。
+
+## 19. C2+C3+C4 合并轮：M3（C4）2026-09-21
+
+**交付**：`publication_identity.{hpp,cpp}`——§8.6 提交绑定（快照/解/摘要/清单/健康/检测器/
+风险证明/PL/参考点/时刻/坐标系/证书）、原子提交状态机（拒绝跳级与绕过 ATOMIC_COMMIT）、
+同时间点中心偏移重绑定、不同时间点需传播证明（估计差不是证明）、watchdog 壁钟与新鲜度分离
+（回放 `/clock` 跳变不污染 wall 统计；wall−sensor 滞后量判新鲜）。
+测试：`test_publication_identity` OUT-01/02/03 全 PASS；全量 **398/0**；
+validation SHA=`8c5330f` → **50 PASS / 0 FAIL / 6 NOT_RUN**（OUT-01..03 PASS）。
+证据：`fde-publication.md`（身份表/状态机/时间契约表/差异表）。
+
+**两个里程碑均完成（M2/M3）**：M2 与 M3 的“未接线”项已在各自证据文件如实列出。

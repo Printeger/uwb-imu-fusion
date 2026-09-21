@@ -714,6 +714,45 @@
     "history-summary-pipeline.md"
    ],
    "note": "T_c+T_b=T_pooled（rel≤1e-9）、ν_c+ν_b=ν_pooled（整数）；并集界=min(1,2·p_fa·horizon)；检测器字段与模块一致。"
+  },
+  {
+   "id": "OUT-01",
+   "description": "同一时间点后端改解/证书晚到：ID 检查与中心偏移重绑定；不复用旧证书",
+   "owner_work_package": "OUT",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_publication_identity --gtest_filter=PublicationIdentity.Out01SameTimeRebindAndNoCertificateReuse"
+   ],
+   "evidence": [
+    "fde-publication.md"
+   ],
+   "note": "无偏移界拒绝；有界可重绑定；不同时刻需传播证明（估计差不是证明）；摘要/清单身份不符即拒；状态机禁止 UNAVAILABLE→PROTECTED 与绕过 ATOMIC_COMMIT。"
+  },
+  {
+   "id": "OUT-02",
+   "description": "时间/坐标系/参考点/tag-body 混用：拒绝或有明确变换界",
+   "owner_work_package": "OUT",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_publication_identity --gtest_filter=PublicationIdentity.Out02TimeFrameAndReferenceMixing"
+   ],
+   "evidence": [
+    "fde-publication.md"
+   ],
+   "note": "frame_id/position_reference/detector_ids/manifest_digest 任一不符即拒；中心偏移界**不能**修补这些不匹配（需显式变换，本 API 不臆造）。"
+  },
+  {
+   "id": "OUT-03",
+   "description": "过期、队列拥塞、时钟跳变：及时不可用；wall/sensor 时间分离",
+   "owner_work_package": "OUT",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_publication_identity --gtest_filter=PublicationIdentity.Out03ExpiryCongestionAndClockJumps"
+   ],
+   "evidence": [
+    "fde-publication.md"
+   ],
+   "note": "wall 只在单调未跳变时累加（回放跳变不污染统计）；新鲜度用 wall−sensor 滞后量（冻结数据 400ms>100ms 判过期）；时钟倒退无标记即拒。"
   }
  ]
 }
