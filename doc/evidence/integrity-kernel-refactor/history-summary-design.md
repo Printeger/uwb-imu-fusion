@@ -126,3 +126,41 @@ C1 的 A1 需要替换估计器核心的边界先验构造（含与 fixed-lag �
 HIS-01..06、DET-02..04 的完整验证（多消元顺序 oracle、新跨边界场景、定量对比），否则不能声明闭合。
 在本轮可用的执行窗口内无法完成"实现 + 完整验证"的闭环，因此按纪律**不做半成品改动**：
 A1–A6、B0–B5 全部记 NOT_RUN，本文件作为冻结设计与实施清单交付。
+
+## 11. P7 实现勘察（A1 触点的实际代码事实，供下一轮直接开工）
+
+对 `src/uwb_imu_pl/estimation/incremental_estimator.cpp`（`buildIntegrityWindow`，边界段
+约 1187–1270 行）逐行核对后确认：
+
+1. **当前算法**：`boundary_graph.linearize(*tx.frozen_values)` →
+   `eliminatePartialMultifrontal(outside_variables, EliminateQR)`（稀疏因子图上消元**外部**
+   变量）→ `reduced->hessian(inside_ordering)` 得到**稠密正规矩阵** `(Λ, η)`（窗口内变量，
+   列数 = `inside_columns`）→ `SelfAdjointEigenSolver(Λ)` 取特征值 > `rank_tolerance·max`
+   的方向 → 紧凑块 `compact_i = √λ_i · v_iᵀ`（行数 = 保留方向数，列 = 全部窗口列，
+   右端用 COD 伪逆求解）。块写为 `FactorKind::BoundaryPrior` /
+   `RowRole::TrustedPrior` / `whitening_model_id = "frozen_graph_partial_qr_schur"`，
+   并声明 `window.capabilities.includes_boundary_prior`。
+2. **故障列不存在**：`boundary_graph` 只含名义因子，消元只对状态变量做，`(Λ, η)` 里没有
+   任何故障方向 ⇒ 现路径**结构上不可能**产出 `T_b`/`F_b`/`d_perp`。A1 需要在
+   `linearize()` 之前把**可监测故障模式的旧历元列**加入线性化（与
+   `HypothesisGenerator` 的 mode 构造共用映射），并保证消元**只消状态、不消故障列**。
+3. **平方根形式**：现在的做法是"稠密正规矩阵 + 特征分解"（与 §7.1 的要求"平方根/消元后算子"
+   不一致）。A1 应改为对 `(Λ, η)` 做对称 Cholesky（窗口维度小，成本可控）得到 `R_b`，
+   由交叉块得到 `T_b`，并由**被消元掉的残差行**构造 `F_b, d_perp`（`EliminateQR` 的
+   multifrontal 因子图保留了这些行：需取 `reduced` 中与故障列相关的部分，而不是只取
+   `hessian(inside_ordering)`）。
+4. **检测自由度**：`DetectorOnlyRows` 基础设施（B1）与 `detector_only_rows` 计数已存在；
+   `(F_b, d_perp)` 必须以"零状态列"的残差行进入窗口，`ν_⊥ = dim d_perp` 计入
+   `ν_pooled = ν_c + ν_⊥`（§7.2 池化口径），否则会丢检测信息。
+5. **版本/指纹绑定**：`tx.frozen_values`、`tx.base_version`、`tx.frozen_slots`、
+   `boundary_graph` 是现成的绑定材料；摘要版本需并入 `FrozenWindowNumerics`
+   指纹与 `StatisticalBoundKey`（否则重线性化/模式变化会复用旧摘要）。
+6. **行级归属**：`window.slot_accounting` / `frozen_slots` 已有槽位身份校验
+   （`every_active_factor_accounted_once`），摘要行归属可复用同一套 slot 身份；
+   HIS-03 的核心断言（原始测量/IMU 样本 → 因子 → 摘要行）可直接建在其上。
+7. **风险点**：(a) 故障列加入后 `hessian()` 的列数膨胀与稀疏性损失（需要按
+   `inside ∪ fault` 的块结构取子块，避免全稠密）；(b) `EliminateQR` 的 multifrontal
+   顺序决定 `F_b` 的行含义，多消元顺序 oracle 必须覆盖；(c) 消元与 fixed-lag 边缘化的
+   **同一历元内顺序**（摘要先更新、再删除原始信息）需要在 `commitEpoch` 路径上加断言；
+   (d) 池化检测 `T_pooled = ‖r_c‖² + κ_b` 进入检测即改变语义（历史信息首次入检测），
+   必须与 P5/P6 的场景差异表逐条对比，不得用"无差异"掩盖。

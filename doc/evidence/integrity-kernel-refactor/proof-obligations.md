@@ -212,9 +212,11 @@
 
 ## 16.（P6/C 包 Stage 0）支配性单侧化与 step gate 归因
 
-* **命题（支配性）**：包络接受必须单侧——`B_env >= B_leaf·(1−ε)`，ε 只吸收共享恒等式的
-  binary64 噪声（实测 ~1e-16，取 1e-9，留 7 个数量级余量），且接受时导出 `dominance_margin >= 0`；
-  原始比值另存 `dominance_ratio` 供审计。
+* **命题（支配性）**：包络接受必须单侧——`ratio = B_env/B_leaf >= 1−ε`，ε 只吸收共享恒等式的
+  binary64 噪声（实测 ~1e-16，取 1e-9，留 7 个数量级余量）；`dominance_margin` 为**原始
+  `ratio−1`**（接受时 `>= -ε`），`dominance_ratio` 存同一最小值供审计。
+  **P6 更正**：本条曾声称"接受时 margin >= 0 且已实现"，实际实现未落地（仍为绝对容差）；
+  P7 提交 `6484b73` 完成，口径以本段为准。
   * **本轮状态**：`IMPLEMENTED`（`CoverageEnvelope::{dominance_margin,dominance_ratio}`，
     接受条件 `ratio >= 1 − dominance_tolerance`）。
   * **证据**：`B2Coverage.*`（6 例，含零核拒绝用例）。

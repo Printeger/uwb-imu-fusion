@@ -73,6 +73,17 @@ def run_command(command):
 
 
 def git_sha(scope=None):
+    # P7: the report must name the round's **code** commit.  When the evidence
+    # commit already exists on top of it, pass it explicitly via
+    # UWB_IMU_PL_VALIDATION_SHA (checked to be a real commit).
+    override = os.environ.get("UWB_IMU_PL_VALIDATION_SHA", "").strip()
+    if override:
+        try:
+            return subprocess.run(["git", "rev-parse", f"{override}^{{commit}}"],
+                                  cwd=scope or REPO, capture_output=True,
+                                  text=True, check=True).stdout.strip()
+        except Exception:
+            pass
     try:
         return subprocess.run(["git", "rev-parse", "HEAD"],
                               cwd=scope or REPO, capture_output=True, text=True,

@@ -584,6 +584,20 @@
     "history-summary-design.md"
    ],
    "note": "stateStepAttribution() 由窗口 state_layout 分段（每历元 15 维：rotation/position/velocity/accel_bias/gyro_bias），监测器只在 step-gate 拒绝时追加到 reason 与 skip_reason；G 场景 45 帧实测 40/40 拒绝候选带归因（dominant=velocity(epoch 4/5)），离散与 PL 与 P5 逐帧 0 差异"
+  },
+  {
+   "id": "DOM-01",
+   "description": "包络支配性单侧相对判据与窄带回归（拒绝 1e-7 相对缺口、接受 binary64 噪声带）",
+   "owner_work_package": "B",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_integrity_v2 --gtest_filter=EnvelopeDominance.OneSidedRelativeRuleRejectsNarrowBandShortfall:B2Coverage.GroupedEnvelopeDischargesProofAndDominance:B2Coverage.DominanceRejectsAnUnderCoveringEnvelope"
+   ],
+   "evidence": [
+    "coverage-envelopes.md",
+    "risk-and-lazy-fde.md"
+   ],
+   "note": "判据抽为 envelopeDominanceAccepts()/envelopeDominanceMargin()：ratio>=1-tol（相对，默认 1e-9）；dominance_margin 为原始 ratio-1（接受时 >= -tol，tol 仅 binary64 噪声地板，实测恒等式噪声 ~1e-16）；P6 曾声称完成但实现未落地，于 P7 提交 6484b73 完成并在 runbook §11 更正"
   }
  ]
 }

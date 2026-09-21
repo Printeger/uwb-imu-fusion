@@ -334,3 +334,53 @@ identity/parity/solution 残差、前向界、detector_only_rows、策略与可�
 
 **C1/C2**：设计冻结见 `history-summary-design.md`（表示、符号约定、生命周期表、容量动作、
 重线性化规则、冷启动、oracle 计划、C2 接口、实现触点、未执行原因）。实现与验证本轮 NOT_RUN。
+
+## 11. P7（Stage 0 遗留补救）2026-09-21
+
+**S0-1 第三次格式化事件（例行程序：先检测再回退）**
+
+* 18:01:43 批次改写 `coverage_envelope.hpp` / `.cpp`（+58/−52）。token 多重集对照
+  （去注释、include 归一、字面量拼接）显示 body token 序列与 include 集合**逐一相同** ⇒ 纯格式化。
+* 处置：`git restore -- include src`；工作树仅剩未跟踪路线图文档。取证与 §10 一致（仓库外
+  Codex 侧工具链），本轮不再重复取证。
+
+**S0-2 P6 假声明更正（重要）**
+
+* **事实**：P6 报告与 `proof-obligations §16`、`baseline-report §11` 声称"单侧支配性已实现"，
+  但 `src/.../coverage_envelope.cpp` 实际仍是**绝对**判据
+  `envelope_bound.slope + dominance_tolerance < leaf_bound.slope`，且初始化行重复
+  （`dominance_ratio` 赋两次）；头文件注释已改而实现未改 ⇒ **文档超实现**。
+  根因：P6 中一次 `replace_string_in_file` 因路径笔误失败后未复查即继续，且当时未对
+  "文档声明 vs 实现"做逐条核对。
+* **更正**：**于 P7 提交 `6484b73` 完成**。实现为单侧相对判据
+  `ratio = B_env / B_leaf >= 1 - dominance_tolerance`（相对，默认 1e-9），
+  判据抽为可测函数 `envelopeDominanceAccepts()` / `envelopeDominanceMargin()`；
+  `dominance_margin` 语义**选定为原始 `ratio − 1`**（接受时 `>= -tol`，tol 仅为
+  binary64 噪声地板，实测共享恒等式噪声 ~1e-16），`dominance_ratio` 存同一最小值；
+  重复初始化行已删除；新增窄带回归 `EnvelopeDominance.*`：
+  `env = leaf·(1−1e-7)` 必须**拒绝**（旧绝对逻辑误接受），`env = leaf·(1−1e-10)` 接受且
+  `margin >= -tol`，`env = leaf` 接受且 `margin >= 0`，非有限输入拒绝。
+* **口径统一**：代码、头文件注释、本文件、`proof-obligations §16`、`baseline-report §11`
+  对 margin 语义逐字一致（原始 `ratio−1`，接受时 `>= -tol`）。
+* **流程改进**：每轮收尾新增一步核对——凡文档声明"已实现"的条目，逐条给出对应代码位置
+  （文件+函数）或测试名，否则一律标 NOT_RUN。
+
+**S0-3 哈希覆盖纪律（P6 遗漏更正）**
+
+* **事实**：`hashes-C1C2.txt`（105 条）**未覆盖** P6 代码提交 `e97edee` 的改动文件
+  （`coverage_envelope.hpp/.cpp`、`joint_window_detector.hpp/.cpp`、`integrity_monitor.cpp`、
+  `test_integrity_v2.cpp` 中至少 `coverage_envelope.*` 缺失）：生成时使用
+  `git status --porcelain`（当时代码文件已在提交中，故不在 status 输出里）。
+* **更正与规矩**：每轮哈希清单必须由
+  `git diff --name-only <base>..<head>` ∪ 保留证据树（`find doc/evidence/integrity-kernel-refactor -type f`）
+  机械生成，任一缺失即不合格。P7 起按此执行（`hashes-C1C2.txt` 已重生成，含全部漏项）。
+* 本 agent 收尾流程仍无任何格式化步骤；两轮报告均把格式化事件记为"外部工具链所致"。
+
+**S0-4 报告口径修正（P7 新增）**
+
+* `tools/integrity/run_validation.py` 新增 `UWB_IMU_PL_VALIDATION_SHA` 覆盖：当轮的证据提交
+  已叠在代码提交之上时，仍按**代码提交** SHA 生成 `validation-report.json`
+  （P7：`UWB_IMU_PL_VALIDATION_SHA=6484b73 python3 tools/integrity/run_validation.py --all`
+  → `run_sha=6484b73`，29 PASS / 0 FAIL / 18 NOT_RUN）。该 runner 改动随本轮证据提交一起入库。
+* 本轮哈希清单按 §11 的机械规则生成（`git diff --name-only d58a45d..HEAD` ∪ 证据树，
+  排除本轮自身哈希文件）：**112 条，112/112 OK**。
