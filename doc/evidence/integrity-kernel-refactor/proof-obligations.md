@@ -296,3 +296,41 @@ Householder 正消元（先消 `x_o`，再按 `x_b` 支持分块）；无正规�
   C1c-C4（v15）、D1–D3 均因 B1 阻塞；逐条代码位置、原因与所需输入见
   `history-summary-b1c-blockers.md §1`（影响面清单见其 §5）。本轮**未**做任何
   B1-lite / default-off 半成品集成（理由见同文 §3）。
+
+## 19.（C1-b 解阻：Part A/B）历史故障参数化与抽取定路（LOCKED_BY_TEST）
+
+范围：`history_fault_parameterization.{hpp,cpp}`、`history_summary_extraction.{hpp,cpp}`
+（代码提交 `1f05f11`）；**未接线**（Part C 就绪清单见
+`history-fault-parameterization.md §6`）。以下均为模块级命题。
+
+* **命题（参数化粒度，D-1）**：UWB 每 (anchor, 历史历元) 常数步列 + 时间线性伴生列；
+  IMU 每 (轴, 历元) 区间常值列（与窗口生成器同一解析路径）；双故障不存列。
+  * **本轮状态**：`LOCKED_BY_TEST`。**证据**：
+    `HistoryFaultParameterization.ColumnsMatchIndependentSelectionOracle`。
+* **命题（窗口-历史一致性）**：同一事件在窗口路径（生成器）与历史路径（新子系统）
+  产出的列逐位一致（UWB `norm=0`；IMU `rel=0`）。
+  * **本轮状态**：`LOCKED_BY_TEST`。**证据**：
+    `...WindowAndHistoryColumnsAgreeOnSharedMaterial`。
+* **命题（模式组合精确性）**：persistent/ramp 历史模式 = 步列精确线性组合
+  （构造性 T；ramp ≤ 1e-12 重排级，persistent 精确）。
+  * **本轮状态**：`LOCKED_BY_TEST`。**证据**：`...RampCombinationIsExactOverTheStepBasis`。
+* **命题（注入）**：故障键进入 separator（只消状态键）；重建因子不改既有图/不触
+  Unrecoverable；列范数与残差在增广误差中保持（二阶差分恒等式）。
+  * **本轮状态**：`LOCKED_BY_TEST`。**证据**：`...InjectionKeepsFaultKeysInSeparator`。
+* **命题（视野，A3）**：覆盖 = `[oldest_recoverable+1, window_first)`；视野外
+  unrecoverable 且**不得声称覆盖**（gap/omitted 计数 + assumptions/omittedRiskSource
+  文本）；生产写入属 Part C。
+  * **本轮状态**：`LOCKED_BY_TEST`。**证据**：`...PlanCoversRecoverableHorizonWithoutOverclaiming`。
+* **命题（容量，D-2）**：默认容量 = 实测 q_hist（半跨 220，全跨界 440）→ 512；
+  超限 REFUSE（unusable+HISTORY_CAPACITY_EXCEEDED），**无截断路径**；RESET/
+  STOP_PROTECTED 仅显式且同样先置不可用。
+  * **本轮状态**：`LOCKED_BY_TEST`（构造器层；执行接线随 Part C）。**证据**：
+    `...CapacityRefusesWithoutTruncation`、`IntegrityConfig.HistoryCapacityKeysAreStrictlyLoaded`。
+* **命题（抽取等价与定路，D-3）**：选定路线 = 线性化行抽取 + 模块正交消元：
+  合成系统 `rel=0`（κ/d_b/R_bᵀR_b 全等）；真实窗口 `rel=2.9e-16`（信息）、
+  κ 对稠密最小二乘 oracle `rel=6.6e-47`；无特征分解截断（rank=390=columns）；
+  秩亏正确（rank_boundary/ν）。对照路线 (i-b)/(ii) 的常数丢失为实测结论。
+  * **本轮状态**：`LOCKED_BY_TEST`。**证据**：`HistorySummaryExtraction.*`（3 例）。
+* **诚实缺口（NOT_RUN）**：Part C 接线（边界段替换、顺序断言、池化检测、冷启动
+  生产、指纹/缓存填充、重基线、v15、新场景）——就绪清单见主证据 §6；本轮未做
+  任何半成品接线。

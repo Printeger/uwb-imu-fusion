@@ -242,7 +242,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。"
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。 | C1-b 解阻（Part A/B，代码 1f05f11）：参数化子系统与抽取定路已模块级 LOCKED_BY_TEST；接线（Part C）就绪清单见 history-fault-parameterization.md §6。"
   },
   {
    "id": "HIS-02",
@@ -253,7 +253,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。"
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。 | C1-b 解阻（Part A/B，代码 1f05f11）：参数化子系统与抽取定路已模块级 LOCKED_BY_TEST；接线（Part C）就绪清单见 history-fault-parameterization.md §6。"
   },
   {
    "id": "HIS-03",
@@ -264,7 +264,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "v11 identity 已导出 history_lineage_id 字段（当前 NOT_AVAILABLE_IN_SCHEMA），为 C 准备接口 | C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。"
+   "note": "v11 identity 已导出 history_lineage_id 字段（当前 NOT_AVAILABLE_IN_SCHEMA），为 C 准备接口 | C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。 | C1-b 解阻（Part A/B，代码 1f05f11）：参数化子系统与抽取定路已模块级 LOCKED_BY_TEST；接线（Part C）就绪清单见 history-fault-parameterization.md §6。"
   },
   {
    "id": "HIS-04",
@@ -275,7 +275,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。"
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。 | C1-b 解阻（Part A/B，代码 1f05f11）：参数化子系统与抽取定路已模块级 LOCKED_BY_TEST；接线（Part C）就绪清单见 history-fault-parameterization.md §6。"
   },
   {
    "id": "HIS-05",
@@ -286,7 +286,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。"
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。 | C1-b 解阻（Part A/B，代码 1f05f11）：参数化子系统与抽取定路已模块级 LOCKED_BY_TEST；接线（Part C）就绪清单见 history-fault-parameterization.md §6。"
   },
   {
    "id": "HIS-06",
@@ -297,7 +297,7 @@
    "evidence": [
     "history-summary-design.md"
    ],
-   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。"
+   "note": "| C-round: 设计冻结见 history-summary-design.md；实现与验证本轮 NOT_RUN（见该文 §8/§10） | C1-a：模块级恒等式已完成（HIS-M1 / history-summary-module.md）；管线等价待 C1-b。 | C1-c：B1 核心阻塞（历史故障参数化子系统缺失；见 history-summary-b1c-blockers.md §1）；本轮已交付 C2 容量键（HIS-C1）与 B5 缓存身份（HIS-V1）。 | C1-b 解阻（Part A/B，代码 1f05f11）：参数化子系统与抽取定路已模块级 LOCKED_BY_TEST；接线（Part C）就绪清单见 history-fault-parameterization.md §6。"
   },
   {
    "id": "HIS-M1",
@@ -339,6 +339,33 @@
     "history-summary-b1c-blockers.md"
    ],
    "note": "C1-c/B5 本轮完成；绑定摘要 digestHistorySummaryVersion 见 history_fault_summary.hpp（测试 HISM2VersionDigestBindsAllComponents）"
+  },
+  {
+   "id": "HIS-X1",
+   "description": "历史故障参数化：粒度（UWB anchor 常数+时间线性步列 / IMU 轴区间常值列）、窗口-历史逐位一致、模式精确组合、注入进 separator、视野不越权、容量 REFUSE",
+   "owner_work_package": "C",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_history_fault_parameterization --gtest_filter=HistoryFaultParameterization.*"
+   ],
+   "evidence": [
+    "history-fault-parameterization.md",
+    "config-migration.md"
+   ],
+   "note": "D-1/D-2/A2/A3 映射见证据 §5；未接线（Part C）"
+  },
+  {
+   "id": "HIS-X2",
+   "description": "边界表示抽取等价：线性化行+模块消元（选定）在合成/真实窗口与信息矩阵、稠密最小二乘 oracle 等价；无截断；秩亏裁决；对照路线常数丢失实测；Cholesky 路线拒绝秩亏",
+   "owner_work_package": "C",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_history_summary_extraction --gtest_filter=HistorySummaryExtraction.*"
+   ],
+   "evidence": [
+    "history-fault-parameterization.md"
+   ],
+   "note": "D-3 定路：选定 (i) 线性化行抽取+模块消元；残留风险（稠密代价/键维展开）见证据 §3"
   },
   {
    "id": "DET-01",

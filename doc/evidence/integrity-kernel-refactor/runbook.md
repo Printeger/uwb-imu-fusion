@@ -482,3 +482,27 @@ identity/parity/solution 残差、前向界、detector_only_rows、策略与可�
   全量重基线。
 * 未做 B1-lite / default-off 半成品集成（纪律说明见 blockers §3）；`auto_shrink`
   仓库无设置点（grep 0 命中），"保持关闭"无需改动。
+
+## 14. C1-b 解阻：Part A 参数化 + Part B 抽取定路 2026-09-21
+
+**S0-A 格式化事件检查**：工作树仅剩未跟踪路线图文档 ⇒ **本轮无新事件**（第六次
+检查，前次为 §13 的第五次，已回退验证）。`hashes-C1C2` 115/115 OK。
+
+**S0-B 基线**：HEAD=`e4d1f10`；全量测试 **328/0**（起点）。
+
+**测试日志强制落盘（本轮起）**：`raw/run_tests_c1b_ab.log` —— 基线、两次全量
+运行与结果行均在其中（含 `[HFP]`/`[HSE]` 表行）。
+
+**交付（代码提交 `1f05f11`）**
+
+* Part A：`history_fault_parameterization.{hpp,cpp}`（粒度/注入/视野/容量；6 用例）；
+* Part B：`history_summary_extraction.{hpp,cpp}`（三路线原型与定路；3 用例）；
+* D-2 实测默认：`history.*` = 512/512/512/REFUSE（q_hist 实测 220@半跨，全跨界 440）。
+* 全量：**346 tests / 0 errors / 0 failures**（= 328 + 2×9）。
+* validation：`UWB_IMU_PL_VALIDATION_SHA=1f05f11 … --all`（新增 `HIS-X1`/`HIS-X2`）；
+  派生工件副作用处置同 §12（恢复两个 oracle JSON）。
+* 关键实测：窗口-历史列逐位一致；注入保留 separator；真实窗口抽取
+  `rel=2.9e-16`（信息）/κ `6.6e-47`（oracle）/无截断（399=columns）；对照路线
+  常数丢失（实测）。详见 `history-fault-parameterization.md`。
+* 哈希：机械规则最后生成（base `e4d1f10` → 代码 `1f05f11` ∪ 证据树）。
+* Part C（接线）未执行；就绪清单见主证据 §6。不 push；无格式化。

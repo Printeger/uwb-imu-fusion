@@ -96,14 +96,17 @@ G 帧证据 `raw/runs_p2/G_continuous_rejection`）。
 
 | 键 | 类型 | 默认 | 语义 |
 |---|---|---|---|
-| `history.max_summary_rows` | u64 | 0 | 摘要行数容量（0 = 摘要路径未启用） |
-| `history.max_fault_columns` | u64 | 0 | 摘要故障列容量 |
-| `history.max_perp_rows` | u64 | 0 | 检测（`ν_⊥`）行容量 |
+| `history.max_summary_rows` | u64 | 512 | 摘要行数容量 |
+| `history.max_fault_columns` | u64 | 512 | 摘要故障列容量 |
+| `history.max_perp_rows` | u64 | 512 | 检测（`ν_⊥`）行容量 |
 | `history.capacity_action` | 枚举 | `REFUSE` | 超限动作：`REFUSE` / `RESET` / `STOP_PROTECTED` |
 
-* 严格加载：节缺省 = 全部默认；节存在时**四个键全部必需**；未知键、未知动作、
+* 默认值来源（D-2 实测）：可恢复跨度 ≤ `epochs + recovery_margin_epochs` = 20 历元，
+  每历元 ≤ 22 列（8 anchors × {常数,时间线性} + 6 IMU 轴）；实测 q_hist 在半个跨度
+  （epoch 26，跨度 10）为 **220** ⇒ 全跨度界 440，默认 **512** 含余量。
+  实测记录见 `history-fault-parameterization.md`。
+* 严格加载：节缺省 = 上表默认；节存在时**四个键全部必需**；未知键、未知动作、
   缺键一律硬错误（测试 `IntegrityConfig.HistoryCapacityKeysAreStrictlyLoaded`）。
 * resolved dump 规范化补齐该节，config hash 覆盖。
-* **执行语义（超限 → 不可用并计数）尚未接入**：摘要路径（C1-b）本身被阻塞
-  （`history-summary-b1c-blockers.md §1.1`）；"绝不静默丢最旧故障"为冻结语义，
-  不存在 `DROP_OLDEST` 一类动作（测试断言其被拒绝）。
+* **执行语义（超限 → 不可用并计数）尚未接入**：摘要路径（Part C 接线）未落地；
+  "绝不静默丢最旧故障"为冻结语义，不存在 `DROP_OLDEST` 一类动作（测试断言其被拒绝）。
