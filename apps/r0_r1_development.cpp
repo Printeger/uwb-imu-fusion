@@ -112,11 +112,22 @@ Scenario parseScenario(const std::string& name,
     s.fault_begin = s.fault_end = 225; s.uwb_fault = s.imu_fault = true;
     s.mature = true;
   }
+  if (name == "HIP_history_crossing_fault") {
+    // C1 readiness item 8: an early-onset persistent single-anchor UWB bias.
+    // The onset sits inside the A3 recoverable horizon while the fault itself
+    // outlives the fixed-lag window, so the epoch that carries the onset is
+    // compressed into the history summary and the fault must stay monitorable
+    // through the summary's response (T_b) and detection content (F_b).
+    s.uwb_fault = true;
+    s.fault_begin = 6;
+    s.fault_end = 200;
+  }
   if (!oneOf(name, {"A_nominal", "A_default_ramp",
                    "B_initial_velocity_error", "C_uwb_fde",
                    "D_imu_bridge", "E_union", "F_ramp_unmonitorable",
                    "F_low_redundancy", "G_continuous_rejection",
-                   "G_bridge_timeout", "H_mature_union"})) {
+                   "G_bridge_timeout", "H_mature_union",
+                   "HIP_history_crossing_fault"})) {
     throw std::invalid_argument("unknown development scenario: " + name);
   }
 

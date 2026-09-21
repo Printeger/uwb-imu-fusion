@@ -58,6 +58,9 @@ class RunLogger {
   std::ofstream diagnostic_steps_;
   std::ofstream diagnostic_identity_;
   std::ofstream diagnostic_square_root_;
+  // C1-c diagnostics v15: the condensed boundary's fault-preserving history
+  // summary and the pooled detector terms it contributes.
+  std::ofstream diagnostic_history_summary_;
   bool write_residuals_ = true;
   bool write_timing_ = true;
   std::uint64_t next_event_sequence_ = 1;

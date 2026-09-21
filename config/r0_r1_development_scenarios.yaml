@@ -72,3 +72,13 @@ scenarios:
     raw_imu_samples: 10
     raw_accel_bias_mps2: 1582.0
     uwb_ramp_enabled: false
+  # C1 readiness item 8: early-onset persistent single-anchor UWB bias.  The
+  # onset (epoch 6) is inside the A3 recoverable horizon while the bias outlives
+  # the fixed-lag window, so the summary must carry the fault's response and
+  # detection content across the boundary.
+  HIP_history_crossing_fault:
+    fault_epoch_begin: 6
+    fault_epoch_end: 200
+    raw_anchor_id: first_configured_anchor
+    raw_range_bias_m: 2.25
+    uwb_ramp_enabled: false

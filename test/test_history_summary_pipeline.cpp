@@ -318,8 +318,7 @@ TEST(HistorySummaryPipeline, HistoryFaultResponsePersistsAcrossBoundary) {
   rhs.col(0) = normal;
   const Eigen::MatrixXd solved = solveFrozenInformation(
       window.square_root.get(), *window.numerics, window.base_information, rhs);
-  const double gamma =
-      map.dot(map) - (normal.transpose() * solved)(0, 0);
+  const double gamma = map.dot(map) - (normal.transpose() * solved)(0, 0);
   EXPECT_GT(gamma, 0.0) << "history detection contribution must be positive";
 
   // Protected-state response stays finite (PL slopes are computable).
@@ -471,6 +470,159 @@ TEST(HistorySummaryPipeline, DeletedMaterialFailsBeforeSummaryUpdate) {
     const auto plan = EpochCommitPlan::nominalPlan(transaction);
     estimator.commitEpoch(std::move(transaction), plan);
   }
+}
+
+// 9. HIS-01 closure / readiness gaps 3+4: oracle on the *shipped* carrier.
+//    The boundary block plus the carrier describe exactly the condensed row
+//    system [R_b  T_b ; 0  F_b] with rhs [d_b ; d_perp].  Re-summarizing those
+//    rows must reproduce the shipped quantities, and doing it in the reversed
+//    row order must reproduce every sign-invariant quantity (multiple
+//    elimination orders at the pipeline level, running on the artifact the
+//    detector consumes).  The same test records how large the information-form
+//    constant offset is, i.e. the part of the detector constant that rows
+//    cannot express.
+TEST(HistorySummaryPipeline, CarrierInvariantsUnderRowPermutation) {
+  auto config = researchConfig();
+  std::map<std::size_t, std::size_t> request;
+  request[22] = 1;
+  const auto windows = driveEstimator(config, 22, &request);
+  ASSERT_EQ(windows.size(), 1u);
+  const auto& window = windows.front();
+  ASSERT_TRUE(window.model_valid) << window.reason;
+  const auto& history = window.history_summary;
+  ASSERT_TRUE(history.valid) << history.reason;
+  ASSERT_GT(history.nu_perp, 0);
+  ASSERT_GT(history.fault_columns, 0u);
+  const auto boundary_block =
+      std::find_if(window.blocks.begin(), window.blocks.end(),
+                   [](const auto& block) {
+                     return block.whitening_model_id ==
+                            "history_summary_sqrt_d1";
+                   });
+  ASSERT_NE(boundary_block, window.blocks.end());
+  const int rows = static_cast<int>(history.emitted_rows);
+  ASSERT_EQ(boundary_block->jacobian_whitened.rows(), rows);
+  ASSERT_EQ(boundary_block->residual_whitened.size(), rows);
+
+  // Row system exactly as the carrier stores it.  The boundary epochs need not
+  // be a prefix of the window layout, so the boundary columns are recovered
+  // structurally: they are exactly the nonzero columns of the shipped triangle
+  // (R_b has a nonzero diagonal), in window column order (which is the
+  // summary's canonical epoch-ascending order).
+  std::vector<int> boundary_columns;
+  for (int column = 0; column < boundary_block->jacobian_whitened.cols();
+       ++column) {
+    if (boundary_block->jacobian_whitened.col(column).cwiseAbs().maxCoeff() >
+        0.0) {
+      boundary_columns.push_back(column);
+    }
+  }
+  ASSERT_EQ(boundary_columns.size(), history.boundary_columns);
+  const int boundary_rows = static_cast<int>(history.emitted_rows) - history.nu_perp;
+  Eigen::MatrixXd state_map =
+      Eigen::MatrixXd::Zero(boundary_rows + history.nu_perp,
+                            static_cast<int>(boundary_columns.size()));
+  for (std::size_t index = 0; index < boundary_columns.size(); ++index) {
+    state_map.col(static_cast<int>(index)) =
+        boundary_block->jacobian_whitened.col(boundary_columns[index]);
+  }
+  // The shipped state-supported rows must form an upper triangle in this order
+  // (the summary's contract); a violation means the window mapping is wrong.
+  int diagonal_zeros = 0;
+  if (boundary_rows > 1) {
+    const Eigen::MatrixXd triangle = state_map.topRows(boundary_rows);
+    const Eigen::MatrixXd upper =
+        Eigen::MatrixXd(triangle.triangularView<Eigen::Upper>());
+    EXPECT_LE((triangle - upper).norm(), 1e-12 * (1.0 + triangle.norm()))
+        << "R_b must be upper triangular in the window column order";
+    for (int index = 0; index < triangle.rows() && index < triangle.cols();
+         ++index) {
+      if (std::abs(triangle(index, index)) == 0.0) ++diagonal_zeros;
+    }
+    EXPECT_EQ(diagonal_zeros, 0)
+        << "the shipped boundary triangle must have a nonzero diagonal";
+  }
+  Eigen::MatrixXd fault_map = Eigen::MatrixXd::Zero(rows, history.fault_columns);
+  fault_map.topRows(boundary_rows) = history.response;
+  fault_map.bottomRows(history.nu_perp) = history.detector_response;
+  Eigen::VectorXd rhs = boundary_block->residual_whitened;
+  // The carrier stores only the detector-only residual; d_b is the leading part
+  // of the block residual, so both are read from the shipped block.
+  const Eigen::VectorXd shipped_d_b = rhs.head(boundary_rows);
+  // The carrier's d_perp is the detector-only residual the block carries.
+  EXPECT_LE((rhs.tail(history.nu_perp) - history.d_perp).norm(),
+            1e-12 * (1.0 + history.d_perp.norm()));
+
+  auto summarize = [&](const Eigen::MatrixXd& h, const Eigen::MatrixXd& a,
+                       const Eigen::VectorXd& z) {
+    HistoryFaultSummaryInput input;
+    input.h_old_state = Eigen::MatrixXd::Zero(h.rows(), 0);
+    input.h_boundary = h;
+    input.fault_map = a;
+    input.rhs = z;
+    return buildHistoryFaultSummary(input);
+  };
+  // (a) Shipped sign-invariant forms (R_b is read from the shipped block, T_b /
+  //     F_b / d_perp from the carrier, d_b from the block residual).  The
+  //     compared quantities are the normal-equation forms R_b'R_b, R_b'T_b,
+  //     R_b'd_b, F_b'F_b and kappa_b: each is invariant under the +-1 row signs
+  //     a different elimination order may introduce, and together they are the
+  //     condensed system the detector consumes.
+  const Eigen::MatrixXd shipped_r = state_map.topRows(boundary_rows);
+  const Eigen::MatrixXd shipped_gram = shipped_r.transpose() * shipped_r;
+  const Eigen::MatrixXd shipped_response = shipped_r.transpose() * history.response;
+  const Eigen::VectorXd shipped_linear = shipped_r.transpose() * shipped_d_b;
+  const Eigen::MatrixXd shipped_perp =
+      history.detector_response.transpose() * history.detector_response;
+  const double shipped_kappa = history.d_perp.squaredNorm();
+  auto compareToShipped = [&](const HistoryFaultSummary& candidate,
+                              const char* label) {
+    ASSERT_TRUE(candidate.valid) << candidate.invalid_reason;
+    EXPECT_EQ(candidate.n_boundary, static_cast<int>(boundary_rows)) << label;
+    EXPECT_EQ(candidate.nuPerp(), history.nu_perp) << label;
+    const Eigen::MatrixXd candidate_r = candidate.R_b;
+    EXPECT_LE((candidate_r.transpose() * candidate_r - shipped_gram).norm(),
+              1e-9 * std::max(1.0, shipped_gram.norm()))
+        << label << " (R_b'R_b)";
+    EXPECT_LE((candidate_r.transpose() * candidate.T_b - shipped_response).norm(),
+              1e-9 * std::max(1.0, shipped_response.norm()))
+        << label << " (R_b'T_b)";
+    EXPECT_LE((candidate_r.transpose() * candidate.d_b - shipped_linear).norm(),
+              1e-9 * std::max(1.0, shipped_linear.norm()))
+        << label << " (R_b'd_b)";
+    EXPECT_LE((candidate.F_b.transpose() * candidate.F_b - shipped_perp).norm(),
+              1e-9 * std::max(1.0, shipped_perp.norm()))
+        << label << " (F_b'F_b)";
+    EXPECT_LE(std::abs(candidate.d_perp.squaredNorm() - shipped_kappa),
+              1e-9 * std::max(1.0, std::abs(shipped_kappa)))
+        << label << " (kappa_b)";
+  };
+  // (b) Round trip: the shipped rows reproduce the shipped summary.
+  const HistoryFaultSummary identity = summarize(state_map, fault_map, rhs);
+  compareToShipped(identity, "round trip");
+  // (c) Reversed row order: a different elimination order of the same rows must
+  //     reproduce the same sign-invariant content.
+  Eigen::MatrixXd reversed_state = state_map.colwise().reverse();
+  Eigen::MatrixXd reversed_fault = fault_map.colwise().reverse();
+  Eigen::VectorXd reversed_rhs = rhs.reverse();
+  const HistoryFaultSummary permuted =
+      summarize(reversed_state, reversed_fault, reversed_rhs);
+  compareToShipped(permuted, "reversed row order");
+
+  // (c) Constant accounting (readiness gap 4): the row constant is kappa_b; the
+  // information-form part can only be added explicitly, so it is exported.  It
+  // must be finite and its measured size is reported by the table below.
+  EXPECT_TRUE(std::isfinite(history.kappa_b));
+  EXPECT_TRUE(std::isfinite(history.constant_offset));
+  std::printf(
+      "[HSP-ORACLE] rows=%d boundary_rows=%d q=%zu nu_perp=%d kappa=%.6e "
+      "offset=%.3e offset_ratio=%.3e omega_trace=%.6e xi_norm=%.6e "
+      "reversed_rows=%d permuted_nu=%d\n",
+      rows, boundary_rows, history.fault_columns, history.nu_perp,
+      history.kappa_b, history.constant_offset,
+      std::abs(history.constant_offset) /
+          std::max(1.0, std::abs(history.kappa_b)),
+      history.omega().trace(), history.xi().norm(), rows, permuted.nuPerp());
 }
 
 }  // namespace
