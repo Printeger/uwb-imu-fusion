@@ -1,4 +1,6 @@
 #include "uwb_imu_pl/integrity/joint_window_detector.hpp"
+
+#include <sstream>
 #include "uwb_imu_pl/integrity/statistical_bounds_cache.hpp"
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
 
@@ -10,6 +12,54 @@
 #include <cmath>
 
 namespace uwb_imu_pl {
+
+std::string stateStepAttribution(const LinearizedIntegrityWindow& window,
+                                 const Eigen::VectorXd& increment) {
+  if (increment.size() == 0) return "step attribution: empty increment";
+  double rotation = 0.0, position = 0.0, velocity = 0.0;
+  double accel_bias = 0.0, gyro_bias = 0.0;
+  double dominant = -1.0;
+  std::string dominant_label = "none";
+  std::uint64_t dominant_epoch = 0;
+  auto consider = [&](const std::string& label, double value,
+                      std::uint64_t epoch) {
+    if (!std::isfinite(value)) return;
+    if (value > dominant) {
+      dominant = value;
+      dominant_label = label;
+      dominant_epoch = epoch;
+    }
+  };
+  for (const auto& layout : window.state_layout) {
+    if (layout.dimension < 15 || layout.column_offset < 0 ||
+        layout.column_offset + 15 > increment.size()) {
+      continue;
+    }
+    const Eigen::Index offset = layout.column_offset;
+    const double r = increment.segment(offset, 3).norm();
+    const double p = increment.segment(offset + 3, 3).norm();
+    const double v = increment.segment(offset + 6, 3).norm();
+    const double ba = increment.segment(offset + 9, 3).norm();
+    const double bg = increment.segment(offset + 12, 3).norm();
+    rotation = std::max(rotation, r);
+    position = std::max(position, p);
+    velocity = std::max(velocity, v);
+    accel_bias = std::max(accel_bias, ba);
+    gyro_bias = std::max(gyro_bias, bg);
+    consider("rotation", r, layout.epoch);
+    consider("position", p, layout.epoch);
+    consider("velocity", v, layout.epoch);
+    consider("accel_bias", ba, layout.epoch);
+    consider("gyro_bias", bg, layout.epoch);
+  }
+  std::ostringstream out;
+  out << "step attribution: rotation=" << rotation
+      << " position=" << position << " velocity=" << velocity
+      << " accel_bias=" << accel_bias << " gyro_bias=" << gyro_bias
+      << "; dominant=" << dominant_label << "(epoch " << dominant_epoch << ")";
+  return out.str();
+}
+
 namespace {
 
 double squaredThreshold(int dof, double p_fa) {

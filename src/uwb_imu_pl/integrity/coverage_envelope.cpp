@@ -288,6 +288,8 @@ CoverageCertificate buildGroupedCoverageCertificate(
     envelope.id = next_envelope_id;
     envelope.group = group.id;
     envelope.dominance_margin = std::numeric_limits<double>::infinity();
+    envelope.dominance_ratio = std::numeric_limits<double>::infinity();
+    envelope.dominance_ratio = std::numeric_limits<double>::infinity();
     bool envelope_ok = group_map.valid;
     const Eigen::MatrixXd gram_group =
         envelope_ok ? compactCross(group_map, group_map) : Eigen::MatrixXd();

@@ -2156,8 +2156,34 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           const ExclusionAction& action = *action_order[index];
           EvaluatedAction& evaluated = evaluated_actions[index];
           const auto candidate_start = std::chrono::steady_clock::now();
+          // P6/C-round Stage 0: a step-gate rejection carries its physical
+          // attribution (rotation/position/velocity/bias magnitudes and the
+          // dominant block).  The gate itself is untouched: this only explains
+          // an existing rejection.
           CandidateEvaluation& candidate = evaluated.candidate;
           candidate = evaluator.evaluate(base, action, &scratch);
+          // Stage 0 (C-round): explain a step-gate rejection with the physical
+          // attribution of the frozen-window increment.  Threshold and
+          // acceptance logic are unchanged; only the exported reason grows.
+          const bool step_gate_rejected =
+              candidate.diagnostics.matrix_free_step_rejected ||
+              candidate.reason.find("step gate failed") != std::string::npos ||
+              candidate.diagnostics.skip_reason.find("step gate") !=
+                  std::string::npos ||
+              candidate.diagnostics.skip_reason.find("exceeds gate") !=
+                  std::string::npos;
+          if (!candidate.valid && step_gate_rejected &&
+              candidate.state_increment.size() ==
+                  base.state_increment.size() &&
+              candidate.state_increment.allFinite()) {
+            const std::string attribution =
+                stateStepAttribution(window, candidate.state_increment);
+            if (candidate.reason.empty()) {
+              candidate.reason = "candidate linearization step gate failed";
+            }
+            candidate.reason += "; " + attribution;
+            candidate.diagnostics.skip_reason += "; " + attribution;
+          }
           candidate.diagnostics.kernel_evaluated = true;
           candidate.diagnostics.numerical_valid = candidate.valid;
           candidate.diagnostics.slow_path = candidate.exact_slow_path;

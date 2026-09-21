@@ -2717,3 +2717,46 @@ TEST(B3ZeroSpace, HarmlessNullspaceKeepsAFiniteProjectedBound) {
       << entry.protected_slopes.transpose();
   EXPECT_TRUE(hypotheses[0].monitored);
 }
+
+// ---------------------------------------------------------------------------
+// Stage 0 (C-round): physical attribution of a step-gate rejection.  The gate
+// logic and thresholds are untouched; only the exported reason grows.
+// ---------------------------------------------------------------------------
+TEST(GateAttribution, StepAttributionNamesPhysicalBlocksAndDominantEpoch) {
+  using namespace uwb_imu_pl;
+  auto window = syntheticWindow();
+  StateLayoutEntry old_epoch;
+  old_epoch.epoch = 3;
+  old_epoch.column_offset = 0;
+  old_epoch.dimension = 15;
+  StateLayoutEntry current;
+  current.epoch = 4;
+  current.column_offset = 15;
+  current.dimension = 15;
+  current.protected_current_state = true;
+  window.state_layout = {old_epoch, current};
+  Eigen::VectorXd increment = Eigen::VectorXd::Zero(30);
+  increment.segment(0, 3) = Eigen::Vector3d::Constant(0.1);     // rotation
+  increment.segment(3, 3) = Eigen::Vector3d::Constant(0.2);     // position
+  increment.segment(6, 3) = Eigen::Vector3d::Constant(0.05);    // velocity
+  increment.segment(9, 3) = Eigen::Vector3d::Constant(0.01);    // accel bias
+  increment.segment(12, 3) = Eigen::Vector3d::Constant(0.0);    // gyro bias
+  increment.segment(15, 3) = Eigen::Vector3d::Constant(0.03);   // rotation
+  increment.segment(18, 3) = Eigen::Vector3d::Constant(0.9);    // position
+  increment.segment(21, 3) = Eigen::Vector3d::Constant(0.4);    // velocity
+  increment.segment(24, 3) = Eigen::Vector3d::Constant(0.0);
+  increment.segment(27, 3) = Eigen::Vector3d::Constant(0.0);
+  const std::string attribution =
+      stateStepAttribution(window, increment);
+  EXPECT_NE(attribution.find("step attribution"), std::string::npos) << attribution;
+  EXPECT_NE(attribution.find("rotation="), std::string::npos) << attribution;
+  EXPECT_NE(attribution.find("position="), std::string::npos) << attribution;
+  EXPECT_NE(attribution.find("velocity="), std::string::npos) << attribution;
+  EXPECT_NE(attribution.find("accel_bias="), std::string::npos) << attribution;
+  EXPECT_NE(attribution.find("gyro_bias="), std::string::npos) << attribution;
+  // The dominant block is the current-epoch position (0.9 * sqrt(3)).
+  EXPECT_NE(attribution.find("dominant=position(epoch 4)"), std::string::npos)
+      << attribution;
+  EXPECT_EQ(stateStepAttribution(window, Eigen::VectorXd()),
+            "step attribution: empty increment");
+}

@@ -3,6 +3,14 @@
 #include "uwb_imu_pl/estimation/rank_update_kernel.hpp"
 
 namespace uwb_imu_pl {
+// P6/C-round Stage 0: physical attribution of a frozen-window state increment.
+// Splits the 15-dimensional epoch blocks into rotation / position / velocity /
+// accelerometer-bias / gyroscope-bias magnitudes and names the dominant block,
+// so a step-gate rejection can be explained without changing the gate itself.
+std::string stateStepAttribution(const LinearizedIntegrityWindow& window,
+                                 const Eigen::VectorXd& increment);
+
+
 
 struct DetectorRiskContext {
   double p_fa_per_test = 1e-6;

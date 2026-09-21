@@ -56,9 +56,13 @@ struct CoverageEnvelope {
   std::vector<FaultModeId> covered_modes;
   std::vector<CoverageInclusionProof> proofs;
   bool dominant = false;
-  // min over covered leaves of (B_env / B_leaf - 1); negative means the
-  // envelope was rejected for under-covering a leaf.
+  // One-sided dominance (P6/C-round): the envelope is accepted only when
+  // B_env >= B_leaf * (1 - relative_epsilon), where the relative epsilon only
+  // absorbs binary64 noise in the shared identity (observed ~1e-16).  The
+  // reported margin is non-negative whenever the envelope is accepted, and the
+  // raw ratio stays available for audit in `dominance_ratio`.
   double dominance_margin = 0.0;
+  double dominance_ratio = 0.0;
   bool accepted = false;
   std::string reason;
 };
@@ -66,7 +70,9 @@ struct CoverageEnvelope {
 struct CoverageCapacity {
   std::size_t max_envelopes = 64;
   std::size_t max_group_members = 64;
-  // Inclusion identity residual bound and dominance slack (relative).
+  // Inclusion identity residual bound and one-sided dominance slack (both
+  // relative).  The dominance slack only absorbs floating-point noise in the
+  // shared Gram identity; it is not a licence to under-cover a leaf.
   double inclusion_tolerance = 1e-9;
   double dominance_tolerance = 1e-9;
 };
