@@ -223,3 +223,17 @@ PL/detector/evidence/fault-model/rank-update 数学均未改动。与 A1/A2 相�
 风险预算）；SVD 仍是 rank/cond 权威；`formal_eligible` 仍为 `false`；历史仍只有
 名义 `BoundaryPrior`；bounded set 仍 `NOT_IMPLEMENTED`；FDE 选择合同不动。包络为
 可选路径且在线默认不启用（精确遍历）。
+
+## 10. P5（B3+B4）观测
+
+| 项 | P4/B2 | P5/B3+B4 |
+|---|---|---|
+| 测试 | 284 / 0 fail | **300 / 0 fail** |
+| 诊断 schema | v13 | **v14**（账本 + 覆盖证书 attempt 列） |
+| §5.9 每轴尾概率 | `α_h`（与账本不符） | **`α_h/3` 等分**（与账本一致，PL 单侧上升） |
+| 账本项 | 4 项硬编码 0 混在审计里 | **10 项带 source/status**，charged 仅 VALIDATED |
+| 零空间决定 | 仅审计 | **进入决定**（危险→不可用+轴级 reason；无害→投影有限界） |
+| 正常帧动作实体 | 急切构造（每帧 236 个） | **0**（deferred 5930；KEEP_ALL 常驻） |
+| 正常帧桥接块 | 急切构造 | **0** |
+| 场景离散差异（vs P5 基线） | — | **0**（7 场景，PL 全部单侧上升） |
+| 验证调度 | 22 PASS / 0 FAIL / 20 NOT_RUN（P4 口径） | **22 PASS / 0 FAIL / 20 NOT_RUN**（新增 RSK-01..03、FDE-01/02 → 下一轮 27/0/20） |

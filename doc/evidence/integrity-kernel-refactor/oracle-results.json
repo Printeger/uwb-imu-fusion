@@ -1,7 +1,7 @@
 {
  "produced_by": "tools/oracle_compare.py",
  "algorithm": "independent numpy/scipy reimplementation (no production solver)",
- "source_revision": "9d5550fe34d231dab6ee28f981842561722b678a",
+ "source_revision": "e40e2ef45c63fa305e90d2e6c8f5784919c226e1",
  "tolerance_source": {
   "csv_printed": "6-significant-digit ostream default -> rel 1e-5",
   "strict_linear": "ADR 0002 well-conditioned rel 1e-9 (used elsewhere)",

@@ -509,6 +509,72 @@
     "square-root-context.md"
    ],
    "note": "5 个保留 fixture x O8a-O8f = 30 PASS / 0 FAIL；每假设 G/Z/Gamma 需 D_h（不在 bin 内）由 C++ 测试与 oracle O5/O6 覆盖"
+  },
+  {
+   "id": "RSK-01",
+   "description": "§5.9 联合界：不重复花预算、每轴尾概率等分、小尾求解保守（dof=1 闭式 + 定种子接受率统计对照）",
+   "owner_work_package": "B",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_integrity_v2 --gtest_filter=B3Risk.RSK01UnionBoundDoesNotDoubleChargeAndSolvesConservatively",
+    "{bin}/test_integrity_v2 --gtest_filter=B3Risk.BoundaryInputsAreRejectedAndCacheIdentityIsVersioned"
+   ],
+   "evidence": [
+    "risk-and-lazy-fde.md"
+   ],
+   "note": "k=Phi^-1(1-alpha_{h,d}/2)，alpha_{h,d}=alpha_h/3；Lambda 取保守侧端点（F(Lambda)<=beta、残差<0、收敛与 bracket 检查）；缓存键含 detector/dof/contract 版本/包络指纹，版本变更必 miss；beta=0/>=1、零 dof、非法先验一律拒绝"
+  },
+  {
+   "id": "RSK-02",
+   "description": "模式合并/事件重叠不产生风险红利；遗漏质量入账（无隐藏零）",
+   "owner_work_package": "B",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_integrity_v2 --gtest_filter=B3Risk.RSK02LedgerHasNoHiddenZerosAndOverlapGivesNoDividend"
+   ],
+   "evidence": [
+    "risk-and-lazy-fde.md"
+   ],
+   "note": "账本 10 项全部带 source/status；charged 只含 VALIDATED（nominal/p_nm/hypotheses），miss 通道与 bridge/history/model 记 ASSUMED_UNVALIDATED、omitted/envelope/selection 记 NOT_IMPLEMENTED；`declared_total > charged_total` 差值显式导出"
+  },
+  {
+   "id": "RSK-03",
+   "description": "位置裕度与残差门限同时生效（同一界内两通道都贡献）",
+   "owner_work_package": "B",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_integrity_v2 --gtest_filter=B3Risk.RSK03PositionMarginAndResidualThresholdActTogether"
+   ],
+   "evidence": [
+    "risk-and-lazy-fde.md"
+   ],
+   "note": "同一假设界内 tau 通道经 Lambda、噪声通道经 k*sigma 同时进入；提高门限必须提高非中心性"
+  },
+  {
+   "id": "FDE-01",
+   "description": "健康普通帧无 eager 动作实体/桥接块，PL 灵敏度仍在",
+   "owner_work_package": "B",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_integrity_v2 --gtest_filter=B4LazyFde.FDE01HealthyFrameBuildsNoActionEntitiesButKeepsSensitivity"
+   ],
+   "evidence": [
+    "risk-and-lazy-fde.md"
+   ],
+   "note": "惰性生成：single_mode_actions 按需构造（幂等），KEEP_ALL 常驻；A_nominal 实测 action_entities_constructed=0、bridge_blocks_built=0、candidate_graph_built=0、action_entities_deferred=5930，而模式 map 与 hmi_allocation 完整"
+  },
+  {
+   "id": "FDE-02",
+   "description": "惰性化不破坏健康状态机；隔离路径仍在需要时构造证据；动作 ID 稳定",
+   "owner_work_package": "B",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_integrity_v2 --gtest_filter=B4LazyFde.FDE02IsolationPathStillMaterializesEvidenceOnDemand"
+   ],
+   "evidence": [
+    "risk-and-lazy-fde.md"
+   ],
+   "note": "pending_health.observeEvidence 未被删除（A_nominal evidence_calls_health_path=420）；隔离路径调用 actionsForPlausibleSet 时才构造实体且 KEEP_ALL id=1、模式动作 id 与 eager 路径逐一致；7 场景 FDE/选择/提交离散差异 0"
   }
  ]
 }

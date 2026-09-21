@@ -231,3 +231,19 @@
 | `CMakeLists.txt` | 修改 | 加入 `coverage_envelope.cpp` |
 | `tools/gate_d_diagnostics.py`、`tools/validate_run_schema.py` | 修改 | 接受 `v13` 诊断 schema 与 B1/B2 两种 `hypotheses.csv` 头部 |
 | `doc/evidence/.../tools/context_oracle.py`、`equivalence_compare.py` | 修改 | 新增 O8g–O8j（标签域/id 一致性/UNCOVERED 禁止/包络内部量 NOT_RUN）；schema bump 注释改为版本无关 |
+
+## 附：P5（B3+B4）新增/修改的代码（2026-09-21）
+
+| 文件 | 变更 | 说明 |
+|---|---|---|
+| `include/uwb_imu_pl/integrity/risk_budget_audit.hpp`、`src/.../risk_budget_audit.cpp` | 新增 | `RiskTermStatus`/`RiskLedgerTerm`/`RiskLedger`/`buildRiskLedger()`（10 项、charged 仅 VALIDATED）、`axisTailSplit()`（§5.9 每轴等分与计费） |
+| `include/uwb_imu_pl/integrity/statistical_bounds_cache.hpp`、`src/.../statistical_bounds_cache.cpp` | 重写 | complement 分位数（小尾不再消减）、`noncentralityBoundaryVerified()`（收敛/残差/bracket 检查 + 保守侧端点）、`StatisticalBoundKey`（detector/contract/包络版本进键）、`normalTwoSidedMultiplierVerified()`、`clear()`、统计扩展（invalid_inputs/non_converged/policy_mismatches） |
+| `include/uwb_imu_pl/integrity/protection_level_v2.hpp`、`src/.../protection_level_v2.cpp` | 修改 | `faultAxisBounds()` 单一来源（三路径共用）；结果新增 `hypothesis_tail_used/axis_tail_used/fault_multiplier_used/noncentrality_used`；无效输入拒绝；PL 门接受 `bound_from_projected_path` |
+| `src/uwb_imu_pl/integrity/hypothesis_evidence.cpp`、`include/.../hypothesis_evidence.hpp` | 修改 | `classifyDetectionResponse()` 增加每轴残差与 §5.5 投影界输出；三态决定落到证据路径（危险/不可分辨→fail-closed + 轴级 reason；无害→投影有限界）；`FrozenHypothesisPlEntry::bound_from_projected_path` |
+| `include/uwb_imu_pl/integrity/hypothesis_generator.hpp`、`src/.../hypothesis_generator.cpp` | 修改 | `lazy_action_entities`（默认开）、`ensureActionEntities()`（幂等、按需）、`GeneratedFaultModelSet` 计数（constructed/bridge/deferred/built） |
+| `src/uwb_imu_pl/integrity/integrity_monitor.cpp` | 修改 | 报警/屏障路径显式触发实体构造并计数；健康路径计数 deferred；每帧构建精确覆盖证书 + 风险账本并写入 attempt 诊断；`evidence_calls_*` 计数 |
+| `include/uwb_imu_pl/estimation/numerical_work_counters.hpp` | 新增计数器 | `action_entities_constructed`、`bridge_blocks_built`、`candidate_graph_built`、`action_entities_deferred`、`evidence_calls_fault_path`、`evidence_calls_health_path` |
+| `include/uwb_imu_pl/common/types.hpp`、`src/uwb_imu_pl/io/run_logger.cpp` | 修改 | v14：attempt 行新增账本（charged/declared/closes/all_validated/三项计数/terms 字符串）与覆盖证书列（status/叶计数/包络/证明/在线标志） |
+| `apps/r0_r1_development.cpp`、`apps/gate_d_development.cpp` | 修改 | 摘要追加 B4 计数器；诊断导出 app 保持 eager 实体（`lazy_action_entities=false`） |
+| `test/test_integrity_v2.cpp`、`test/test_fault_manifest.cpp` | 新增/修改 | `B3Risk.*`（4）、`B3ZeroSpace.*`（2）、`B4LazyFde.*`（2）；v14 断言 |
+| `tools/gate_d_diagnostics.py`、`tools/validate_run_schema.py` | 修改 | 接受 v14 诊断 schema |

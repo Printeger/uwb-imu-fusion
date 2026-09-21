@@ -397,5 +397,18 @@
     "hypothesis_capacity_refusals": 0
    }
   }
+ },
+ "B3_B4_stage": {
+  "baseline": "P5 baseline runs (/tmp/uwb_imu_pl_b5_20260921/baseline, v13 diagnostics)",
+  "current": "P5 build, v14 diagnostics (/tmp/uwb_imu_pl_b5_20260921/b3b4)",
+  "comparison": "integrity.csv + diagnostic_attempts.csv column-by-column; discrete exact, numeric rel 1e-5 / abs 1e-9",
+  "summary": {
+   "discrete_mismatch_total": 0,
+   "worst_numeric_rel": "pl columns grew monotonically, see below",
+   "numeric_tolerance": 1e-05,
+   "pl_changes": "all one-sided (min delta 0.0): A 90/+0.112, C 75/+0.098, D 72/+0.113, E 72/+0.113, F 90/+0.109, G 12/+0.156, H 669/+0.287"
+  },
+  "per_frame_details": "/tmp/uwb_imu_pl_b5_20260921/b3b4 (not committed)",
+  "note": "PL difference list is complete and one-sided (conservative); every discrete column (availability/label/batch_committed/selected_action_id/fde_status/risk_budget_valid/conditional_passed/monitorable/plausible) is identical in all 7 scenarios"
  }
 }

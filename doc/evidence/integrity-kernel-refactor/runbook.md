@@ -259,3 +259,48 @@ identity/parity/solution 残差、前向界、detector_only_rows、策略与可�
 
 本轮 du：`raw/` 7.5MB 未变；`doc/evidence/integrity-kernel-refactor/` ≈ 8.4MB
 （新增 `coverage-envelopes.md`）；大产物全部在 /tmp/uwb_imu_pl_b2_20260921/。
+
+## 9. P5（B3+B4）命令、Stage 0 取证与处置
+
+**Stage 0（工作树卫生，2026-09-21 15:47 批次）**
+
+* 现象：10 个已提交文件被改写（`git diff --stat` 1550+/1130-，`--ignore-all-space` 同量级）。
+* 取证：**token 多重集对照**（去注释、include 引号/尖括号统一、相邻字面量拼接后比较）
+  → 10 个文件 body token 序列**逐一相同**、include 集合相同 ⇒ 纯格式化（include 重排/引号→尖括号、
+  折行、字符串拆分、注释重排），无语义改动。
+* 触发源：`find ~ -newermt '2026-09-21 15:45' ! -newermt '2026-09-21 15:50' -type f` 显示
+  写入顺序为 12 个文件（含内容未变的 `CMakeLists.txt`、`coverage-envelopes.md`）→ 紧随其后
+  `~/.cache/vscode-cpptools/.browse.VC.db*` 重建、`User/History/*` 逐文件产生条目，随后 `.git/index`。
+  `entries.json` 中该批条目的 `source` **为空**（与本 agent 的 `Chat Edit: ...` 条目形态不同）。
+  仓库内无 `.clang-format`，工作区 `settings.json` 无 formatOnSave，安装的格式化扩展为零，
+  且 clang-format 不会把引号 include 改写成尖括号 ⇒ **无法确认为用户侧自动工具**（限时取证到此）。
+* 处置（按指令 (b)）：`git restore -- apps include src test` 回退 10 个文件；
+  `sha256sum -c hashes-B2.txt` 复核 **115/115 OK**；工作树仅剩未跟踪路线图文档。
+  本 agent 的收尾流程不含任何格式化步骤（仅文件创建/替换工具），本轮亦未引入 `.clang-format`。
+* 规则沿用 runbook §7：禁止未请求重排；提交前 `git diff --ignore-all-space --stat` 判别；
+  `hashes-*` 最后生成。
+
+**P5 命令**
+
+```
+# 构建 + 全量测试（P5 口径）
+  catkin build uwb_imu_pl && catkin run_tests uwb_imu_pl   # 300 tests / 0 failures
+  devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 \
+      --gtest_filter='B3Risk.*:B3ZeroSpace.*:B4LazyFde.*'
+
+# 场景（P5 基线 + B3+B4 侧）
+  O=/tmp/uwb_imu_pl_b5_20260921/b3b4
+  for spec in "A_nominal 30" "C_uwb_fde 30" "D_imu_bridge 30" "E_union 30" \
+              "F_ramp_unmonitorable 30" "G_continuous_rejection 45"; do
+    set -- $spec; mkdir -p $O/$1
+    UWB_IMU_PL_DEVELOPMENT_FULL_AUDIT=1 devel/lib/uwb_imu_pl/r0_r1_development \
+        $CFG $O/$1 $2 $1 $SCN > $O/$1/stdout.log 2>&1
+  done
+  devel/lib/uwb_imu_pl/r0_r1_development $CFG $O/H_mature_union 226 H_mature_union $SCN
+
+# 验证调度（报告以**代码提交** SHA 生成：本轮 = e40e2ef）
+  python3 tools/integrity/run_validation.py --all          # 22 PASS / 0 FAIL / 20 NOT_RUN
+```
+
+提交纪律：两个相邻提交 ① 代码 `e40e2ef` ② 证据（本文件所属提交，含以 ① SHA 生成的
+`validation-report.json` 与 `hashes-B3.txt`）；不 push；不提交/删除路线图文档。
