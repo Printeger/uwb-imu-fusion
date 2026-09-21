@@ -382,3 +382,23 @@ Householder 正消元（先消 `x_o`，再按 `x_b` 支持分块）；无正规�
     `marginalizations=0` 已如实记录）。
 * **证据缺口状态**：①原始流场景 **已关闭**；③管线级多消元顺序 oracle **已关闭**；
   ②context_oracle O8a/O8d 仍 NOT_RUN（需 raw dump 接入）；④offset 仅一个样本（已导出）。
+
+## 22.（C2/M1）§7.3–7.5 + §8.2 公式评审与义务
+
+* **命题（通道切分精确）**：`T_c+T_b=T_pooled`、`ν_c+ν_b=ν_pooled`；并集界
+  `min(1, 2·p_fa·horizon)` 显式导出（阈值未改）。
+  * `LOCKED_BY_TEST`：`DualChannelDetector.RealWindowSplitIsExactAndTablesTheDifference`（真实窗口）。
+* **命题（§7.4 双通道界）**：`W_h=Σ_j w_j Γ_{h,j}/Λ_{h,j}`，`b_{h,d}=√(g W_h† gᵀ)` 由**细 SVD**
+  计算（不形成 W 逆），与显式 `W^{-1}` 形式逐位一致；`ker W_h ⊆ ker G_h` 违反即拒；
+  零贡献/无自由度通道不生成 Λ；单有效通道退化为 B3 `s·√Λ`；证书绑定
+  detector_id/τ_j/ν_j/Λ_{h,j}/w_j/dim；证明只用二次型界（不依赖通道独立性）。
+  * `LOCKED_BY_TEST`：`DET-02`。**评审结论**：公式与 B3 形式在单通道极限相容；
+    权重归一化后 `Σw_j=1`；通道丢弃不影响正常化（测试断言 1e-12）。
+* **命题（§7.5 fault-span）**：`U` 覆盖声明内全部方向（SVD 基，无 top-K）；恒等式
+  `U(Z_bᵀZ_b)Uᵀ=F_allᵀF_all` 在全参数空间验证；截断基必然失败；声明秩亏记录。
+  * `LOCKED_BY_TEST`：`DET-03`。管线采用未投影残差（合同允许）并记录 `ν_⊥`。
+* **命题（§8.2 模型误差）**：`τ_risk=(√τ_actual+ρ_r)²`，`ρ=0` 退化为标准 χ²；位置 ρ 逐轴；
+  ρ 来源与验证状态入证书；负值/非有限拒绝。
+  * `LOCKED_BY_TEST`：`DET-02`（含未验证假设路径）。
+* **诚实缺口**：fault-span 投影未接入管线（当前用未投影残差，符合合同）；ρ 未进入风险账本
+  执行（模块 + 证书状态就绪）；C3（FDE-03..05）与 C4（OUT-01..03）未开始。

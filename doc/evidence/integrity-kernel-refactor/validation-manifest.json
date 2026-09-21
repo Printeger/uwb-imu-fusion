@@ -400,34 +400,40 @@
    "id": "DET-02",
    "description": "只有合并检测方向才能监测的故障；W 的核测试与联合分区 bound 正确",
    "owner_work_package": "C",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [
-    "history-summary-design.md"
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_dual_channel_detector --gtest_filter=DualChannelDetector.Det02MergedDirectionIsTheOnlyMonitoredOne"
    ],
-   "note": "| C-round: 双通道公式与 fault-span 义务已冻结（history-summary-design.md §8）；实现与验证本轮 NOT_RUN"
+   "evidence": [
+    "c2-dual-channel.md"
+   ],
+   "note": "双通道 PL：§7.4 公式与显式 W^{-1} 形式逐位一致（1e-9）；ker W ⊆ ker G 违反即拒绝；零贡献/无 dof 通道不生成 Λ（丢弃/全拒两路）；单通道退化为 B3 形式；证书字段齐全；ρ=0 退化、未验证假设入证书标记。"
   },
   {
    "id": "DET-03",
    "description": "历史 fault-span 投影；Gamma/score 保持，df 正确，漏掉声明方向时拒绝",
    "owner_work_package": "C",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [
-    "history-summary-design.md"
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_dual_channel_detector --gtest_filter=DualChannelDetector.Det03FaultSpanCoversEveryRetainedDirection"
    ],
-   "note": "| C-round: 双通道公式与 fault-span 义务已冻结（history-summary-design.md §8）；实现与验证本轮 NOT_RUN"
+   "evidence": [
+    "c2-dual-channel.md"
+   ],
+   "note": "§7.5：全参数空间恒等式 U(Z_bᵀZ_b)Uᵀ=F_allᵀF_all；top-K 截断基必然失败（>tol）；声明秩亏被记录。管线采用未投影残差（合同允许）并记录正确自由度 ν_⊥。"
   },
   {
    "id": "DET-04",
    "description": "最近故障/长期故障/旧纯噪声增长；定量比较池化与分离布局，不宣称普遍单调",
    "owner_work_package": "C/D",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [
-    "history-summary-design.md"
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_dual_channel_detector --gtest_filter=DualChannelDetector.Det04PooledVersusSeparatedIsQuantifiedNotAssumed"
    ],
-   "note": "| C-round: 双通道公式与 fault-span 义务已冻结（history-summary-design.md §8）；实现与验证本轮 NOT_RUN"
+   "evidence": [
+    "c2-dual-channel.md"
+   ],
+   "note": "池化 vs 分离定量表（m=0..8，worst|Δ|=0.665，非单调）；独立性仅用于量化且显式标注，不作为证明；真实窗口逐帧差异表见 c2-dual-channel.md §5（无覆盖缩水：联合接受更严）。"
   },
   {
    "id": "FDE-01",
@@ -682,6 +688,20 @@
     "risk-and-lazy-fde.md"
    ],
    "note": "判据抽为 envelopeDominanceAccepts()/envelopeDominanceMargin()：ratio>=1-tol（相对，默认 1e-9）；dominance_margin 为原始 ratio-1（接受时 >= -tol，tol 仅 binary64 噪声地板，实测恒等式噪声 ~1e-16）；P6 曾声称完成但实现未落地，于 P7 提交 6484b73 完成并在 runbook §11 更正"
+  },
+  {
+   "id": "DET-CH",
+   "description": "真实窗口通道切分精确性与生产接线",
+   "owner_work_package": "DET",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_dual_channel_detector --gtest_filter=DualChannelDetector.RealWindowSplitIsExactAndTablesTheDifference"
+   ],
+   "evidence": [
+    "c2-dual-channel.md",
+    "history-summary-pipeline.md"
+   ],
+   "note": "T_c+T_b=T_pooled（rel≤1e-9）、ν_c+ν_b=ν_pooled（整数）；并集界=min(1,2·p_fa·horizon)；检测器字段与模块一致。"
   }
  ]
 }

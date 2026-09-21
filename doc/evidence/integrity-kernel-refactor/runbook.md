@@ -560,3 +560,24 @@ identity/parity/solution 残差、前向界、detector_only_rows、策略与可�
 4. **offset 量化**：唯一实测样本 F3 tx4（offset −8.6e-49 vs κ 2.8e-29）；app 运行 `info_form=0`。
 
 全量回归与结果：见 `raw/run_tests_c1pipeline.log` 末次运行行；hashes 机械规则最后重生成。
+
+## 17. C2+C3+C4 合并轮：M1（C2）2026-09-21
+
+**S0**：第 6 次外部格式化事件（4 文件：`apps/r0_r1_development.cpp`、`run_logger.{hpp,cpp}`、
+`test_history_summary_pipeline.cpp`）→ token 多重集完全相同 ⇒ `git restore`；hashes-C1C2 155/155 一致。
+基线：全量 **378/0**（`raw/run_tests_c2c3c4_baseline.log`）。
+
+**M1 交付**
+
+* §7.3 分离残差布局：`dual_channel_detector.{hpp,cpp}`（`evaluateDualChannel`）+ 检测器 11 个
+  additive 字段（`DetectorResultV2`）；真实窗口实测 `T_c+T_b=T_pooled`、`ν_c+ν_b=ν_pooled`；
+  并集界 `min(1,2·p_fa·horizon)` 显式导出；原 pooled 判定保持不变。
+* §7.4 双通道 PL：`computeDualChannelBound`（W 的细 SVD，无显式逆；通道丢弃/全拒两路；
+  `ker W ⊆ ker G` 拒绝路径；证书 `dual_channel_bound_w_<digest>`；与显式 W 形式 1e-9 一致）。
+* §7.5：`buildFaultSpanProjection`/`evaluateFaultSpanIdentity`（全空间恒等式；top-K 失败；秩亏记录）；
+  管线仍用未投影残差（合同允许）并记录 `ν_⊥`。
+* §8.2：`riskAdjustedThreshold`（ρ=0 退化）+ 位置 ρ 逐轴 + 状态入证书。
+* 测试：`test_dual_channel_detector` 4 用例（DET-02/03/04 + 真实窗口切分），全 PASS；
+  全量见日志末行。
+* M2（C3）/M3（C4）本轮**未开始**（窗口限制；不提交半成品）；续跑起点见
+  `c2-dual-channel.md §7`。详情与量化表同文件。

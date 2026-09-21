@@ -2,7 +2,7 @@
  "schema": "uwb-imu-pl/validation-report/1",
  "produced_by": "tools/run_validation.py",
  "base_sha": "2772b3a1e3584b25c889239421404f550fba9f5d",
- "run_sha": "8b6c177c75d7d8144f793392a173c33cbc8a333a",
+ "run_sha": "66b8eb657093961485c9c7f750035681516f98a1",
  "workspace_root": "/home/mint/ws_fusion_uwb",
  "config_digest": null,
  "items": [
@@ -16,8 +16,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_config",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.13356804847717285,
-     "stdout_tail": "[       OK ] IntegrityConfig.DevelopmentManifestHashTracksAppendedOverrides (4 ms)\n[ RUN      ] IntegrityConfig.HistoryCapacityKeysAreStrictlyLoaded\n[       OK ] IntegrityConfig.HistoryCapacityKeysAreStrictlyLoaded (15 ms)\n[----------] 13 tests from IntegrityConfig (125 ms total)\n\n[----------] Global test environment tear-down\n[==========] 13 tests from 1 test suite ran. (125 ms total)\n[  PASSED  ] 13 tests.",
+     "seconds": 0.1267075538635254,
+     "stdout_tail": "[       OK ] IntegrityConfig.DevelopmentManifestHashTracksAppendedOverrides (3 ms)\n[ RUN      ] IntegrityConfig.HistoryCapacityKeysAreStrictlyLoaded\n[       OK ] IntegrityConfig.HistoryCapacityKeysAreStrictlyLoaded (16 ms)\n[----------] 13 tests from IntegrityConfig (118 ms total)\n\n[----------] Global test environment tear-down\n[==========] 13 tests from 1 test suite ran. (118 ms total)\n[  PASSED  ] 13 tests.",
      "stderr_tail": "",
      "metrics": {
       "tests": 13,
@@ -29,8 +29,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_fault_manifest --gtest_filter=ConfigMigration.EpochsIntervalsConflictRejected:ConfigMigration.LegacyOnlyFieldsGainWarningsAndCanonicalKeys:ConfigMigration.OrderAndLegacyFlagConflictRejected",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.014508724212646484,
-     "stdout_tail": "[       OK ] ConfigMigration.EpochsIntervalsConflictRejected (1 ms)\n[ RUN      ] ConfigMigration.LegacyOnlyFieldsGainWarningsAndCanonicalKeys\n[       OK ] ConfigMigration.LegacyOnlyFieldsGainWarningsAndCanonicalKeys (4 ms)\n[----------] 3 tests from ConfigMigration (7 ms total)\n\n[----------] Global test environment tear-down\n[==========] 3 tests from 1 test suite ran. (7 ms total)\n[  PASSED  ] 3 tests.",
+     "seconds": 0.014345407485961914,
+     "stdout_tail": "[       OK ] ConfigMigration.EpochsIntervalsConflictRejected (2 ms)\n[ RUN      ] ConfigMigration.LegacyOnlyFieldsGainWarningsAndCanonicalKeys\n[       OK ] ConfigMigration.LegacyOnlyFieldsGainWarningsAndCanonicalKeys (4 ms)\n[----------] 3 tests from ConfigMigration (8 ms total)\n\n[----------] Global test environment tear-down\n[==========] 3 tests from 1 test suite ran. (8 ms total)\n[  PASSED  ] 3 tests.",
      "stderr_tail": "",
      "metrics": {
       "tests": 3,
@@ -58,8 +58,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_fault_manifest --gtest_filter=FaultManifest.*:ConfigMigration.StartupRejectsManifestWithEnabledUnsupportedFamily",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.01793694496154785,
-     "stdout_tail": "[----------] 1 test from ConfigMigration\n[ RUN      ] ConfigMigration.StartupRejectsManifestWithEnabledUnsupportedFamily\n[       OK ] ConfigMigration.StartupRejectsManifestWithEnabledUnsupportedFamily (3 ms)\n[----------] 1 test from ConfigMigration (3 ms total)\n\n[----------] Global test environment tear-down\n[==========] 6 tests from 2 test suites ran. (11 ms total)\n[  PASSED  ] 6 tests.",
+     "seconds": 0.017161130905151367,
+     "stdout_tail": "[----------] 1 test from ConfigMigration\n[ RUN      ] ConfigMigration.StartupRejectsManifestWithEnabledUnsupportedFamily\n[       OK ] ConfigMigration.StartupRejectsManifestWithEnabledUnsupportedFamily (2 ms)\n[----------] 1 test from ConfigMigration (2 ms total)\n\n[----------] Global test environment tear-down\n[==========] 6 tests from 2 test suites ran. (10 ms total)\n[  PASSED  ] 6 tests.",
      "stderr_tail": "",
      "metrics": {
       "tests": 6,
@@ -99,7 +99,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_reference --gtest_filter=ReferenceFixture.TwoRowScalarLeastSquares",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.008654117584228516,
+     "seconds": 0.006217002868652344,
      "stdout_tail": "[----------] 1 test from ReferenceFixture\n[ RUN      ] ReferenceFixture.TwoRowScalarLeastSquares\n[       OK ] ReferenceFixture.TwoRowScalarLeastSquares (0 ms)\n[----------] 1 test from ReferenceFixture (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
@@ -125,7 +125,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_reference --gtest_filter=ReferenceFixture.OneDimensionalUndetectableFault",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.006522655487060547,
+     "seconds": 0.00805044174194336,
      "stdout_tail": "[----------] 1 test from ReferenceFixture\n[ RUN      ] ReferenceFixture.OneDimensionalUndetectableFault\n[       OK ] ReferenceFixture.OneDimensionalUndetectableFault (0 ms)\n[----------] 1 test from ReferenceFixture (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
@@ -165,7 +165,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_reference --gtest_filter=ReferenceFixture.HarmlessNuisanceNullspaceKeepsFiniteBound",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.007661342620849609,
+     "seconds": 0.006052732467651367,
      "stdout_tail": "[----------] 1 test from ReferenceFixture\n[ RUN      ] ReferenceFixture.HarmlessNuisanceNullspaceKeepsFiniteBound\n[       OK ] ReferenceFixture.HarmlessNuisanceNullspaceKeepsFiniteBound (0 ms)\n[----------] 1 test from ReferenceFixture (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
@@ -191,7 +191,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_reference --gtest_filter=ReferenceFixture.GEO05DoubleFaultCancellationNeedsTheCrossTerm",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.005939006805419922,
+     "seconds": 0.006595611572265625,
      "stdout_tail": "[----------] 1 test from ReferenceFixture\n[ RUN      ] ReferenceFixture.GEO05DoubleFaultCancellationNeedsTheCrossTerm\n[       OK ] ReferenceFixture.GEO05DoubleFaultCancellationNeedsTheCrossTerm (0 ms)\n[----------] 1 test from ReferenceFixture (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
@@ -231,8 +231,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 --gtest_filter=IntegrityV2ImuOracle.*",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.047077178955078125,
-     "stdout_tail": "[       OK ] IntegrityV2ImuOracle.FiniteDifferenceSweepMatchesAnalyticAcrossStepSizes (5 ms)\n[ RUN      ] IntegrityV2ImuOracle.InvalidAnalyticInputIsReportedWithoutOracle\n[       OK ] IntegrityV2ImuOracle.InvalidAnalyticInputIsReportedWithoutOracle (0 ms)\n[----------] 3 tests from IntegrityV2ImuOracle (40 ms total)\n\n[----------] Global test environment tear-down\n[==========] 3 tests from 1 test suite ran. (40 ms total)\n[  PASSED  ] 3 tests.",
+     "seconds": 0.045372724533081055,
+     "stdout_tail": "[       OK ] IntegrityV2ImuOracle.FiniteDifferenceSweepMatchesAnalyticAcrossStepSizes (5 ms)\n[ RUN      ] IntegrityV2ImuOracle.InvalidAnalyticInputIsReportedWithoutOracle\n[       OK ] IntegrityV2ImuOracle.InvalidAnalyticInputIsReportedWithoutOracle (0 ms)\n[----------] 3 tests from IntegrityV2ImuOracle (38 ms total)\n\n[----------] Global test environment tear-down\n[==========] 3 tests from 1 test suite ran. (38 ms total)\n[  PASSED  ] 3 tests.",
      "stderr_tail": "",
      "metrics": {
       "tests": 3,
@@ -292,8 +292,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 --gtest_filter=B2Coverage.ExactTraversalCertifiesEveryTask:B2Coverage.GroupedEnvelopeDischargesProofAndDominance:B2Coverage.MismatchedModesAreRejectedByTheInclusionProof:B2Coverage.DominanceRejectsAnUnderCoveringEnvelope",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.006802558898925781,
-     "stdout_tail": "[       OK ] B2Coverage.MismatchedModesAreRejectedByTheInclusionProof (0 ms)\n[ RUN      ] B2Coverage.DominanceRejectsAnUnderCoveringEnvelope\n[       OK ] B2Coverage.DominanceRejectsAnUnderCoveringEnvelope (0 ms)\n[----------] 4 tests from B2Coverage (1 ms total)\n\n[----------] Global test environment tear-down\n[==========] 4 tests from 1 test suite ran. (1 ms total)\n[  PASSED  ] 4 tests.",
+     "seconds": 0.008086204528808594,
+     "stdout_tail": "[       OK ] B2Coverage.MismatchedModesAreRejectedByTheInclusionProof (0 ms)\n[ RUN      ] B2Coverage.DominanceRejectsAnUnderCoveringEnvelope\n[       OK ] B2Coverage.DominanceRejectsAnUnderCoveringEnvelope (0 ms)\n[----------] 4 tests from B2Coverage (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 4 tests from 1 test suite ran. (0 ms total)\n[  PASSED  ] 4 tests.",
      "stderr_tail": "",
      "metrics": {
       "tests": 4,
@@ -305,11 +305,11 @@
      "command": "/usr/bin/python3 /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/doc/evidence/integrity-kernel-refactor/tools/context_oracle.py",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 12.636286497116089,
+     "seconds": 10.7626793384552,
      "stdout_tail": "A_nominal#30 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=FAIL O8h=FAIL O8i=PASS O8j=NOT_RUN\nC_uwb_fde#25 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=FAIL O8h=FAIL O8i=PASS O8j=NOT_RUN\nC_uwb_fde#26 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=FAIL O8h=FAIL O8i=PASS O8j=NOT_RUN\nG_continuous_rejection#10 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=FAIL O8h=FAIL O8i=PASS O8j=NOT_RUN\nH_mature_union#201 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=NOT_RUN O8h=NOT_RUN O8i=NOT_RUN O8j=NOT_RUN\ntotals: {'pass': 34, 'fail': 8, 'not_run': 8}\nwritten square-root-oracle.json",
      "stderr_tail": "",
      "metrics": {
-      "wall_seconds": 12.64
+      "wall_seconds": 10.76
      }
     }
    ],
@@ -330,7 +330,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_reference --gtest_filter=ReferenceFixture.TemplateAndRecentProfileAreNotNested:ReferenceFixture.RemovingProcessConstraintKeepsFiniteSlope",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.006590366363525391,
+     "seconds": 0.0074346065521240234,
      "stdout_tail": "[       OK ] ReferenceFixture.RemovingProcessConstraintKeepsFiniteSlope (0 ms)\n[ RUN      ] ReferenceFixture.TemplateAndRecentProfileAreNotNested\n[       OK ] ReferenceFixture.TemplateAndRecentProfileAreNotNested (0 ms)\n[----------] 2 tests from ReferenceFixture (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 2 tests from 1 test suite ran. (0 ms total)\n[  PASSED  ] 2 tests.",
      "stderr_tail": "",
      "metrics": {
@@ -343,7 +343,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_square_root_context --gtest_filter=SquareRootContext.COV02_*",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.005803346633911133,
+     "seconds": 0.0061495304107666016,
      "stdout_tail": "[----------] 1 test from SquareRootContext\n[ RUN      ] SquareRootContext.COV02_AuxiliarySubsetProjectionIdentity\n[       OK ] SquareRootContext.COV02_AuxiliarySubsetProjectionIdentity (0 ms)\n[----------] 1 test from SquareRootContext (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
@@ -369,8 +369,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 --gtest_filter=B2Coverage.UnsupportedFamilyCannotFormAnEnvelope:B2Coverage.MismatchedModesAreRejectedByTheInclusionProof:B2Registry.SharedParametersAreNotMonitoredByTheEvidencePath",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.007206439971923828,
-     "stdout_tail": "[       OK ] B2Coverage.MismatchedModesAreRejectedByTheInclusionProof (0 ms)\n[ RUN      ] B2Coverage.UnsupportedFamilyCannotFormAnEnvelope\n[       OK ] B2Coverage.UnsupportedFamilyCannotFormAnEnvelope (0 ms)\n[----------] 2 tests from B2Coverage (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 3 tests from 2 test suites ran. (1 ms total)\n[  PASSED  ] 3 tests.",
+     "seconds": 0.008503913879394531,
+     "stdout_tail": "[       OK ] B2Coverage.MismatchedModesAreRejectedByTheInclusionProof (0 ms)\n[ RUN      ] B2Coverage.UnsupportedFamilyCannotFormAnEnvelope\n[       OK ] B2Coverage.UnsupportedFamilyCannotFormAnEnvelope (0 ms)\n[----------] 2 tests from B2Coverage (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 3 tests from 2 test suites ran. (0 ms total)\n[  PASSED  ] 3 tests.",
      "stderr_tail": "",
      "metrics": {
       "tests": 3,
@@ -395,7 +395,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 --gtest_filter=B2Coverage.IncompleteCoverageMakesProtectedOutputUnavailable",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.006551027297973633,
+     "seconds": 0.006286144256591797,
      "stdout_tail": "[----------] 1 test from B2Coverage\n[ RUN      ] B2Coverage.IncompleteCoverageMakesProtectedOutputUnavailable\n[       OK ] B2Coverage.IncompleteCoverageMakesProtectedOutputUnavailable (0 ms)\n[----------] 1 test from B2Coverage (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
@@ -408,11 +408,11 @@
      "command": "/usr/bin/python3 /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/doc/evidence/integrity-kernel-refactor/tools/context_oracle.py",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 10.018098831176758,
+     "seconds": 13.580712795257568,
      "stdout_tail": "A_nominal#30 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=FAIL O8h=FAIL O8i=PASS O8j=NOT_RUN\nC_uwb_fde#25 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=FAIL O8h=FAIL O8i=PASS O8j=NOT_RUN\nC_uwb_fde#26 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=FAIL O8h=FAIL O8i=PASS O8j=NOT_RUN\nG_continuous_rejection#10 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=FAIL O8h=FAIL O8i=PASS O8j=NOT_RUN\nH_mature_union#201 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=NOT_RUN O8h=NOT_RUN O8i=NOT_RUN O8j=NOT_RUN\ntotals: {'pass': 34, 'fail': 8, 'not_run': 8}\nwritten square-root-oracle.json",
      "stderr_tail": "",
      "metrics": {
-      "wall_seconds": 10.02
+      "wall_seconds": 13.58
      }
     }
    ],
@@ -433,13 +433,13 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.CarrierInvariantsUnderRowPermutation:HistorySummaryPipeline.BoundaryIsTheSquareRootHistorySummary:HistorySummaryPipeline.PooledStatisticAndDofIdentity",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.2348337173461914,
-     "stdout_tail": "[ RUN      ] HistorySummaryPipeline.CarrierInvariantsUnderRowPermutation\n[HSP-ORACLE] rows=333 boundary_rows=15 q=220 nu_perp=318 kappa=6.220409e-32 offset=0.000e+00 offset_ratio=0.000e+00 omega_trace=3.026350e+04 xi_norm=1.715552e-15 reversed_rows=333 permuted_nu=318\n[       OK ] HistorySummaryPipeline.CarrierInvariantsUnderRowPermutation (74 ms)\n[----------] 3 tests from HistorySummaryPipeline (224 ms total)\n\n[----------] Global test environment tear-down\n[==========] 3 tests from 1 test suite ran. (224 ms total)\n[  PASSED  ] 3 tests.",
+     "seconds": 0.24076175689697266,
+     "stdout_tail": "[ RUN      ] HistorySummaryPipeline.CarrierInvariantsUnderRowPermutation\n[HSP-ORACLE] rows=333 boundary_rows=15 q=220 nu_perp=318 kappa=6.220409e-32 offset=0.000e+00 offset_ratio=0.000e+00 omega_trace=3.026350e+04 xi_norm=1.715552e-15 reversed_rows=333 permuted_nu=318\n[       OK ] HistorySummaryPipeline.CarrierInvariantsUnderRowPermutation (75 ms)\n[----------] 3 tests from HistorySummaryPipeline (231 ms total)\n\n[----------] Global test environment tear-down\n[==========] 3 tests from 1 test suite ran. (231 ms total)\n[  PASSED  ] 3 tests.",
      "stderr_tail": "",
      "metrics": {
       "tests": 3,
       "passed": 3,
-      "wall_seconds": 0.23
+      "wall_seconds": 0.24
      }
     }
    ],
@@ -460,8 +460,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.HistoryFaultResponsePersistsAcrossBoundary",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.08786654472351074,
-     "stdout_tail": "[----------] 1 test from HistorySummaryPipeline\n[ RUN      ] HistorySummaryPipeline.HistoryFaultResponsePersistsAcrossBoundary\n[       OK ] HistorySummaryPipeline.HistoryFaultResponsePersistsAcrossBoundary (78 ms)\n[----------] 1 test from HistorySummaryPipeline (78 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (78 ms total)\n[  PASSED  ] 1 test.",
+     "seconds": 0.08965301513671875,
+     "stdout_tail": "[----------] 1 test from HistorySummaryPipeline\n[ RUN      ] HistorySummaryPipeline.HistoryFaultResponsePersistsAcrossBoundary\n[       OK ] HistorySummaryPipeline.HistoryFaultResponsePersistsAcrossBoundary (81 ms)\n[----------] 1 test from HistorySummaryPipeline (81 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (81 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
       "tests": 1,
@@ -488,8 +488,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.RowAttributionExplicitXorBoundary",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.08560800552368164,
-     "stdout_tail": "[----------] 1 test from HistorySummaryPipeline\n[ RUN      ] HistorySummaryPipeline.RowAttributionExplicitXorBoundary\n[       OK ] HistorySummaryPipeline.RowAttributionExplicitXorBoundary (78 ms)\n[----------] 1 test from HistorySummaryPipeline (78 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (78 ms total)\n[  PASSED  ] 1 test.",
+     "seconds": 0.08695554733276367,
+     "stdout_tail": "[----------] 1 test from HistorySummaryPipeline\n[ RUN      ] HistorySummaryPipeline.RowAttributionExplicitXorBoundary\n[       OK ] HistorySummaryPipeline.RowAttributionExplicitXorBoundary (79 ms)\n[----------] 1 test from HistorySummaryPipeline (79 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (79 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
       "tests": 1,
@@ -514,13 +514,13 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.SummaryVersionBindsWindowFingerprint:HistorySummaryPipeline.DeletedMaterialFailsBeforeSummaryUpdate",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.19373011589050293,
-     "stdout_tail": "[       OK ] HistorySummaryPipeline.SummaryVersionBindsWindowFingerprint (114 ms)\n[ RUN      ] HistorySummaryPipeline.DeletedMaterialFailsBeforeSummaryUpdate\n[       OK ] HistorySummaryPipeline.DeletedMaterialFailsBeforeSummaryUpdate (70 ms)\n[----------] 2 tests from HistorySummaryPipeline (184 ms total)\n\n[----------] Global test environment tear-down\n[==========] 2 tests from 1 test suite ran. (184 ms total)\n[  PASSED  ] 2 tests.",
+     "seconds": 0.1843104362487793,
+     "stdout_tail": "[       OK ] HistorySummaryPipeline.SummaryVersionBindsWindowFingerprint (106 ms)\n[ RUN      ] HistorySummaryPipeline.DeletedMaterialFailsBeforeSummaryUpdate\n[       OK ] HistorySummaryPipeline.DeletedMaterialFailsBeforeSummaryUpdate (69 ms)\n[----------] 2 tests from HistorySummaryPipeline (175 ms total)\n\n[----------] Global test environment tear-down\n[==========] 2 tests from 1 test suite ran. (175 ms total)\n[  PASSED  ] 2 tests.",
      "stderr_tail": "",
      "metrics": {
       "tests": 2,
       "passed": 2,
-      "wall_seconds": 0.19
+      "wall_seconds": 0.18
      }
     }
    ],
@@ -540,7 +540,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_summary_lifecycle --gtest_filter=HistorySummaryLifecycle.HotSwitchDefaultsToRefuse",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.007823467254638672,
+     "seconds": 0.007825851440429688,
      "stdout_tail": "[----------] 1 test from HistorySummaryLifecycle\n[ RUN      ] HistorySummaryLifecycle.HotSwitchDefaultsToRefuse\n[       OK ] HistorySummaryLifecycle.HotSwitchDefaultsToRefuse (0 ms)\n[----------] 1 test from HistorySummaryLifecycle (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
@@ -566,8 +566,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.CapacityRefusalIsExplicitAndCounted",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.03174996376037598,
-     "stdout_tail": "[----------] 1 test from HistorySummaryPipeline\n[ RUN      ] HistorySummaryPipeline.CapacityRefusalIsExplicitAndCounted\n[       OK ] HistorySummaryPipeline.CapacityRefusalIsExplicitAndCounted (26 ms)\n[----------] 1 test from HistorySummaryPipeline (26 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (26 ms total)\n[  PASSED  ] 1 test.",
+     "seconds": 0.034810543060302734,
+     "stdout_tail": "[----------] 1 test from HistorySummaryPipeline\n[ RUN      ] HistorySummaryPipeline.CapacityRefusalIsExplicitAndCounted\n[       OK ] HistorySummaryPipeline.CapacityRefusalIsExplicitAndCounted (29 ms)\n[----------] 1 test from HistorySummaryPipeline (29 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (29 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
       "tests": 1,
@@ -579,7 +579,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_summary_lifecycle --gtest_filter=HistorySummaryLifecycle.*",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.006564617156982422,
+     "seconds": 0.006685733795166016,
      "stdout_tail": "[       OK ] HistorySummaryLifecycle.HotSwitchDefaultsToRefuse (0 ms)\n[ RUN      ] HistorySummaryLifecycle.ExplicitStatesAndAutoShrink\n[       OK ] HistorySummaryLifecycle.ExplicitStatesAndAutoShrink (0 ms)\n[----------] 7 tests from HistorySummaryLifecycle (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 7 tests from 1 test suite ran. (0 ms total)\n[  PASSED  ] 7 tests.",
      "stderr_tail": "",
      "metrics": {
@@ -605,13 +605,13 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_fault_summary --gtest_filter=HistoryFaultSummary.*",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.014794111251831055,
+     "seconds": 0.015232086181640625,
      "stdout_tail": "[       OK ] HistoryFaultSummary.HISM1SplitHelperConsistency (0 ms)\n[ RUN      ] HistoryFaultSummary.HISM2VersionDigestBindsAllComponents\n[       OK ] HistoryFaultSummary.HISM2VersionDigestBindsAllComponents (0 ms)\n[----------] 10 tests from HistoryFaultSummary (9 ms total)\n\n[----------] Global test environment tear-down\n[==========] 10 tests from 1 test suite ran. (9 ms total)\n[  PASSED  ] 10 tests.",
      "stderr_tail": "",
      "metrics": {
       "tests": 10,
       "passed": 10,
-      "wall_seconds": 0.01
+      "wall_seconds": 0.02
      }
     }
    ],
@@ -632,7 +632,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_config --gtest_filter=IntegrityConfig.HistoryCapacityKeysAreStrictlyLoaded",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.021715879440307617,
+     "seconds": 0.022502660751342773,
      "stdout_tail": "[----------] 1 test from IntegrityConfig\n[ RUN      ] IntegrityConfig.HistoryCapacityKeysAreStrictlyLoaded\n[       OK ] IntegrityConfig.HistoryCapacityKeysAreStrictlyLoaded (15 ms)\n[----------] 1 test from IntegrityConfig (15 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (15 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
@@ -659,7 +659,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 --gtest_filter=B3Risk.HistorySummaryVersionIsPartOfCacheIdentity",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.00789189338684082,
+     "seconds": 0.007218360900878906,
      "stdout_tail": "[----------] 1 test from B3Risk\n[ RUN      ] B3Risk.HistorySummaryVersionIsPartOfCacheIdentity\n[       OK ] B3Risk.HistorySummaryVersionIsPartOfCacheIdentity (0 ms)\n[----------] 1 test from B3Risk (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
@@ -685,13 +685,13 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_fault_parameterization --gtest_filter=HistoryFaultParameterization.*",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.22270512580871582,
-     "stdout_tail": "[       OK ] HistoryFaultParameterization.InjectionKeepsFaultKeysInSeparator (26 ms)\n[ RUN      ] HistoryFaultParameterization.CapacityRefusesWithoutTruncation\n[       OK ] HistoryFaultParameterization.CapacityRefusesWithoutTruncation (0 ms)\n[----------] 6 tests from HistoryFaultParameterization (213 ms total)\n\n[----------] Global test environment tear-down\n[==========] 6 tests from 1 test suite ran. (213 ms total)\n[  PASSED  ] 6 tests.",
+     "seconds": 0.22696423530578613,
+     "stdout_tail": "[       OK ] HistoryFaultParameterization.InjectionKeepsFaultKeysInSeparator (28 ms)\n[ RUN      ] HistoryFaultParameterization.CapacityRefusesWithoutTruncation\n[       OK ] HistoryFaultParameterization.CapacityRefusesWithoutTruncation (0 ms)\n[----------] 6 tests from HistoryFaultParameterization (219 ms total)\n\n[----------] Global test environment tear-down\n[==========] 6 tests from 1 test suite ran. (219 ms total)\n[  PASSED  ] 6 tests.",
      "stderr_tail": "",
      "metrics": {
       "tests": 6,
       "passed": 6,
-      "wall_seconds": 0.22
+      "wall_seconds": 0.23
      }
     }
    ],
@@ -712,8 +712,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_summary_extraction --gtest_filter=HistorySummaryExtraction.*",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.23308181762695312,
-     "stdout_tail": "[HSE-DIAG] hess_dim=150x150 summary_dim=150x150 hess_finite=1 summary_finite=1 hess_norm=2.498124e+10 summary_norm=2.498124e+10 hess_max=4.000000e+09 summary_max=4.000000e+09\n[HSE-TABLE] case=real_window rows=590 columns=390 rank=390 rel_to_reduced_information=2.895e-16 kappa=9.392229e-32 kappa_oracle=9.392229e-32 kappa_rel=6.569e-47 nu_perp=200\n[       OK ] HistorySummaryExtraction.RealWindowRowsMatchReducedInformation (223 ms)\n[----------] 3 tests from HistorySummaryExtraction (224 ms total)\n\n[----------] Global test environment tear-down\n[==========] 3 tests from 1 test suite ran. (224 ms total)\n[  PASSED  ] 3 tests.",
+     "seconds": 0.23419189453125,
+     "stdout_tail": "[HSE-DIAG] hess_dim=150x150 summary_dim=150x150 hess_finite=1 summary_finite=1 hess_norm=2.498124e+10 summary_norm=2.498124e+10 hess_max=4.000000e+09 summary_max=4.000000e+09\n[HSE-TABLE] case=real_window rows=590 columns=390 rank=390 rel_to_reduced_information=2.895e-16 kappa=9.392229e-32 kappa_oracle=9.392229e-32 kappa_rel=6.569e-47 nu_perp=200\n[       OK ] HistorySummaryExtraction.RealWindowRowsMatchReducedInformation (225 ms)\n[----------] 3 tests from HistorySummaryExtraction (226 ms total)\n\n[----------] Global test environment tear-down\n[==========] 3 tests from 1 test suite ran. (226 ms total)\n[  PASSED  ] 3 tests.",
      "stderr_tail": "",
      "metrics": {
       "tests": 3,
@@ -738,7 +738,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_reference --gtest_filter=ReferenceFixture.TwoRowScalarLeastSquares",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.007276773452758789,
+     "seconds": 0.00634455680847168,
      "stdout_tail": "[----------] 1 test from ReferenceFixture\n[ RUN      ] ReferenceFixture.TwoRowScalarLeastSquares\n[       OK ] ReferenceFixture.TwoRowScalarLeastSquares (0 ms)\n[----------] 1 test from ReferenceFixture (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
@@ -758,40 +758,79 @@
    "case_id": "DET-02",
    "description": "\u53ea\u6709\u5408\u5e76\u68c0\u6d4b\u65b9\u5411\u624d\u80fd\u76d1\u6d4b\u7684\u6545\u969c\uff1bW \u7684\u6838\u6d4b\u8bd5\u4e0e\u8054\u5408\u5206\u533a bound \u6b63\u786e",
    "owner_work_package": "C",
-   "manifest_status": "NOT_STARTED",
-   "commands": [],
-   "status": "NOT_RUN",
-   "artifact_paths": [
-    "history-summary-design.md"
+   "manifest_status": "MAPPED",
+   "commands": [
+    {
+     "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_dual_channel_detector --gtest_filter=DualChannelDetector.Det02MergedDirectionIsTheOnlyMonitoredOne",
+     "exit_code": 0,
+     "status": "PASS",
+     "seconds": 0.0059375762939453125,
+     "stdout_tail": "[----------] 1 test from DualChannelDetector\n[ RUN      ] DualChannelDetector.Det02MergedDirectionIsTheOnlyMonitoredOne\n[       OK ] DualChannelDetector.Det02MergedDirectionIsTheOnlyMonitoredOne (0 ms)\n[----------] 1 test from DualChannelDetector (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
+     "stderr_tail": "",
+     "metrics": {
+      "tests": 1,
+      "passed": 1,
+      "wall_seconds": 0.01
+     }
+    }
    ],
-   "note": "| C-round: \u53cc\u901a\u9053\u516c\u5f0f\u4e0e fault-span \u4e49\u52a1\u5df2\u51bb\u7ed3\uff08history-summary-design.md \u00a78\uff09\uff1b\u5b9e\u73b0\u4e0e\u9a8c\u8bc1\u672c\u8f6e NOT_RUN",
-   "reason": "not started in P2; owning work package C"
+   "status": "PASS",
+   "artifact_paths": [
+    "c2-dual-channel.md"
+   ],
+   "note": "\u53cc\u901a\u9053 PL\uff1a\u00a77.4 \u516c\u5f0f\u4e0e\u663e\u5f0f W^{-1} \u5f62\u5f0f\u9010\u4f4d\u4e00\u81f4\uff081e-9\uff09\uff1bker W \u2286 ker G \u8fdd\u53cd\u5373\u62d2\u7edd\uff1b\u96f6\u8d21\u732e/\u65e0 dof \u901a\u9053\u4e0d\u751f\u6210 \u039b\uff08\u4e22\u5f03/\u5168\u62d2\u4e24\u8def\uff09\uff1b\u5355\u901a\u9053\u9000\u5316\u4e3a B3 \u5f62\u5f0f\uff1b\u8bc1\u4e66\u5b57\u6bb5\u9f50\u5168\uff1b\u03c1=0 \u9000\u5316\u3001\u672a\u9a8c\u8bc1\u5047\u8bbe\u5165\u8bc1\u4e66\u6807\u8bb0\u3002"
   },
   {
    "case_id": "DET-03",
    "description": "\u5386\u53f2 fault-span \u6295\u5f71\uff1bGamma/score \u4fdd\u6301\uff0cdf \u6b63\u786e\uff0c\u6f0f\u6389\u58f0\u660e\u65b9\u5411\u65f6\u62d2\u7edd",
    "owner_work_package": "C",
-   "manifest_status": "NOT_STARTED",
-   "commands": [],
-   "status": "NOT_RUN",
-   "artifact_paths": [
-    "history-summary-design.md"
+   "manifest_status": "MAPPED",
+   "commands": [
+    {
+     "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_dual_channel_detector --gtest_filter=DualChannelDetector.Det03FaultSpanCoversEveryRetainedDirection",
+     "exit_code": 0,
+     "status": "PASS",
+     "seconds": 0.007482290267944336,
+     "stdout_tail": "[----------] 1 test from DualChannelDetector\n[ RUN      ] DualChannelDetector.Det03FaultSpanCoversEveryRetainedDirection\n[       OK ] DualChannelDetector.Det03FaultSpanCoversEveryRetainedDirection (0 ms)\n[----------] 1 test from DualChannelDetector (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
+     "stderr_tail": "",
+     "metrics": {
+      "tests": 1,
+      "passed": 1,
+      "wall_seconds": 0.01
+     }
+    }
    ],
-   "note": "| C-round: \u53cc\u901a\u9053\u516c\u5f0f\u4e0e fault-span \u4e49\u52a1\u5df2\u51bb\u7ed3\uff08history-summary-design.md \u00a78\uff09\uff1b\u5b9e\u73b0\u4e0e\u9a8c\u8bc1\u672c\u8f6e NOT_RUN",
-   "reason": "not started in P2; owning work package C"
+   "status": "PASS",
+   "artifact_paths": [
+    "c2-dual-channel.md"
+   ],
+   "note": "\u00a77.5\uff1a\u5168\u53c2\u6570\u7a7a\u95f4\u6052\u7b49\u5f0f U(Z_b\u1d40Z_b)U\u1d40=F_all\u1d40F_all\uff1btop-K \u622a\u65ad\u57fa\u5fc5\u7136\u5931\u8d25\uff08>tol\uff09\uff1b\u58f0\u660e\u79e9\u4e8f\u88ab\u8bb0\u5f55\u3002\u7ba1\u7ebf\u91c7\u7528\u672a\u6295\u5f71\u6b8b\u5dee\uff08\u5408\u540c\u5141\u8bb8\uff09\u5e76\u8bb0\u5f55\u6b63\u786e\u81ea\u7531\u5ea6 \u03bd_\u22a5\u3002"
   },
   {
    "case_id": "DET-04",
    "description": "\u6700\u8fd1\u6545\u969c/\u957f\u671f\u6545\u969c/\u65e7\u7eaf\u566a\u58f0\u589e\u957f\uff1b\u5b9a\u91cf\u6bd4\u8f83\u6c60\u5316\u4e0e\u5206\u79bb\u5e03\u5c40\uff0c\u4e0d\u5ba3\u79f0\u666e\u904d\u5355\u8c03",
    "owner_work_package": "C/D",
-   "manifest_status": "NOT_STARTED",
-   "commands": [],
-   "status": "NOT_RUN",
-   "artifact_paths": [
-    "history-summary-design.md"
+   "manifest_status": "MAPPED",
+   "commands": [
+    {
+     "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_dual_channel_detector --gtest_filter=DualChannelDetector.Det04PooledVersusSeparatedIsQuantifiedNotAssumed",
+     "exit_code": 0,
+     "status": "PASS",
+     "seconds": 0.006518125534057617,
+     "stdout_tail": "[DET-04] 8.0,64.000,98.702,0.000077,0.115368,+0.115290\n[DET-04] worst_abs_difference=0.665022 pooled_better_max=0.665022 joint_better_max=0.000000\n[       OK ] DualChannelDetector.Det04PooledVersusSeparatedIsQuantifiedNotAssumed (0 ms)\n[----------] 1 test from DualChannelDetector (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
+     "stderr_tail": "",
+     "metrics": {
+      "tests": 1,
+      "passed": 1,
+      "wall_seconds": 0.01
+     }
+    }
    ],
-   "note": "| C-round: \u53cc\u901a\u9053\u516c\u5f0f\u4e0e fault-span \u4e49\u52a1\u5df2\u51bb\u7ed3\uff08history-summary-design.md \u00a78\uff09\uff1b\u5b9e\u73b0\u4e0e\u9a8c\u8bc1\u672c\u8f6e NOT_RUN",
-   "reason": "not started in P2; owning work package C/D"
+   "status": "PASS",
+   "artifact_paths": [
+    "c2-dual-channel.md"
+   ],
+   "note": "\u6c60\u5316 vs \u5206\u79bb\u5b9a\u91cf\u8868\uff08m=0..8\uff0cworst|\u0394|=0.665\uff0c\u975e\u5355\u8c03\uff09\uff1b\u72ec\u7acb\u6027\u4ec5\u7528\u4e8e\u91cf\u5316\u4e14\u663e\u5f0f\u6807\u6ce8\uff0c\u4e0d\u4f5c\u4e3a\u8bc1\u660e\uff1b\u771f\u5b9e\u7a97\u53e3\u9010\u5e27\u5dee\u5f02\u8868\u89c1 c2-dual-channel.md \u00a75\uff08\u65e0\u8986\u76d6\u7f29\u6c34\uff1a\u8054\u5408\u63a5\u53d7\u66f4\u4e25\uff09\u3002"
   },
   {
    "case_id": "FDE-01",
@@ -803,8 +842,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 --gtest_filter=B4LazyFde.FDE01HealthyFrameBuildsNoActionEntitiesButKeepsSensitivity",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.014006614685058594,
-     "stdout_tail": "[----------] 1 test from B4LazyFde\n[ RUN      ] B4LazyFde.FDE01HealthyFrameBuildsNoActionEntitiesButKeepsSensitivity\n[       OK ] B4LazyFde.FDE01HealthyFrameBuildsNoActionEntitiesButKeepsSensitivity (6 ms)\n[----------] 1 test from B4LazyFde (6 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (6 ms total)\n[  PASSED  ] 1 test.",
+     "seconds": 0.013764142990112305,
+     "stdout_tail": "[----------] 1 test from B4LazyFde\n[ RUN      ] B4LazyFde.FDE01HealthyFrameBuildsNoActionEntitiesButKeepsSensitivity\n[       OK ] B4LazyFde.FDE01HealthyFrameBuildsNoActionEntitiesButKeepsSensitivity (7 ms)\n[----------] 1 test from B4LazyFde (7 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (7 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
       "tests": 1,
@@ -829,8 +868,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 --gtest_filter=B4LazyFde.FDE02IsolationPathStillMaterializesEvidenceOnDemand",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.01429128646850586,
-     "stdout_tail": "[----------] 1 test from B4LazyFde\n[ RUN      ] B4LazyFde.FDE02IsolationPathStillMaterializesEvidenceOnDemand\n[       OK ] B4LazyFde.FDE02IsolationPathStillMaterializesEvidenceOnDemand (6 ms)\n[----------] 1 test from B4LazyFde (6 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (6 ms total)\n[  PASSED  ] 1 test.",
+     "seconds": 0.013941049575805664,
+     "stdout_tail": "[----------] 1 test from B4LazyFde\n[ RUN      ] B4LazyFde.FDE02IsolationPathStillMaterializesEvidenceOnDemand\n[       OK ] B4LazyFde.FDE02IsolationPathStillMaterializesEvidenceOnDemand (7 ms)\n[----------] 1 test from B4LazyFde (7 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (7 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
       "tests": 1,
@@ -888,7 +927,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_fault_manifest --gtest_filter=ResultIdentity.*:DiagnosticsV12.*",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.008016347885131836,
+     "seconds": 0.0073986053466796875,
      "stdout_tail": "[----------] 1 test from DiagnosticsV12\n[ RUN      ] DiagnosticsV12.LoggerExportsFailureAccountingIdentityAndSquareRootTables\n[       OK ] DiagnosticsV12.LoggerExportsFailureAccountingIdentityAndSquareRootTables (1 ms)\n[----------] 1 test from DiagnosticsV12 (1 ms total)\n\n[----------] Global test environment tear-down\n[==========] 2 tests from 2 test suites ran. (1 ms total)\n[  PASSED  ] 2 tests.",
      "stderr_tail": "",
      "metrics": {
@@ -901,11 +940,11 @@
      "command": "/usr/bin/python3 /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/doc/evidence/integrity-kernel-refactor/tools/context_oracle.py",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 10.309338808059692,
+     "seconds": 10.864298105239868,
      "stdout_tail": "A_nominal#30 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=FAIL O8h=FAIL O8i=PASS O8j=NOT_RUN\nC_uwb_fde#25 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=FAIL O8h=FAIL O8i=PASS O8j=NOT_RUN\nC_uwb_fde#26 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=FAIL O8h=FAIL O8i=PASS O8j=NOT_RUN\nG_continuous_rejection#10 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=FAIL O8h=FAIL O8i=PASS O8j=NOT_RUN\nH_mature_union#201 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=NOT_RUN O8h=NOT_RUN O8i=NOT_RUN O8j=NOT_RUN\ntotals: {'pass': 34, 'fail': 8, 'not_run': 8}\nwritten square-root-oracle.json",
      "stderr_tail": "",
      "metrics": {
-      "wall_seconds": 10.31
+      "wall_seconds": 10.86
      }
     }
    ],
@@ -925,7 +964,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_fault_manifest --gtest_filter=DiagnosticsV12.*",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.009902238845825195,
+     "seconds": 0.008613109588623047,
      "stdout_tail": "[----------] 1 test from DiagnosticsV12\n[ RUN      ] DiagnosticsV12.LoggerExportsFailureAccountingIdentityAndSquareRootTables\n[       OK ] DiagnosticsV12.LoggerExportsFailureAccountingIdentityAndSquareRootTables (1 ms)\n[----------] 1 test from DiagnosticsV12 (1 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (1 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
@@ -951,7 +990,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_fault_manifest --gtest_filter=FailureTaxonomy.*",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.005948305130004883,
+     "seconds": 0.005736351013183594,
      "stdout_tail": "[----------] 1 test from FailureTaxonomy\n[ RUN      ] FailureTaxonomy.MapsExistingReasonTexts\n[       OK ] FailureTaxonomy.MapsExistingReasonTexts (0 ms)\n[----------] 1 test from FailureTaxonomy (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
@@ -977,8 +1016,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_reference",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.007665157318115234,
-     "stdout_tail": "[       OK ] ReferenceFixture.ProtectedMapIsBodyOriginFiniteDifference (0 ms)\n[ RUN      ] ReferenceFixture.GEO05DoubleFaultCancellationNeedsTheCrossTerm\n[       OK ] ReferenceFixture.GEO05DoubleFaultCancellationNeedsTheCrossTerm (0 ms)\n[----------] 9 tests from ReferenceFixture (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 9 tests from 1 test suite ran. (0 ms total)\n[  PASSED  ] 9 tests.",
+     "seconds": 0.006243228912353516,
+     "stdout_tail": "[       OK ] ReferenceFixture.ProtectedMapIsBodyOriginFiniteDifference (0 ms)\n[ RUN      ] ReferenceFixture.GEO05DoubleFaultCancellationNeedsTheCrossTerm\n[       OK ] ReferenceFixture.GEO05DoubleFaultCancellationNeedsTheCrossTerm (0 ms)\n[----------] 9 tests from ReferenceFixture (1 ms total)\n\n[----------] Global test environment tear-down\n[==========] 9 tests from 1 test suite ran. (1 ms total)\n[  PASSED  ] 9 tests.",
      "stderr_tail": "",
      "metrics": {
       "tests": 9,
@@ -990,8 +1029,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_square_root_context",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.006487369537353516,
-     "stdout_tail": "[       OK ] SquareRootContext.COV02_AuxiliarySubsetProjectionIdentity (0 ms)\n[ RUN      ] SquareRootContext.ClassifiesDetectionResponseTriState\n[       OK ] SquareRootContext.ClassifiesDetectionResponseTriState (1 ms)\n[----------] 7 tests from SquareRootContext (1 ms total)\n\n[----------] Global test environment tear-down\n[==========] 7 tests from 1 test suite ran. (1 ms total)\n[  PASSED  ] 7 tests.",
+     "seconds": 0.007367134094238281,
+     "stdout_tail": "[       OK ] SquareRootContext.COV02_AuxiliarySubsetProjectionIdentity (0 ms)\n[ RUN      ] SquareRootContext.ClassifiesDetectionResponseTriState\n[       OK ] SquareRootContext.ClassifiesDetectionResponseTriState (0 ms)\n[----------] 7 tests from SquareRootContext (1 ms total)\n\n[----------] Global test environment tear-down\n[==========] 7 tests from 1 test suite ran. (1 ms total)\n[  PASSED  ] 7 tests.",
      "stderr_tail": "",
      "metrics": {
       "tests": 7,
@@ -1016,11 +1055,11 @@
      "command": "/usr/bin/python3 /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/doc/evidence/integrity-kernel-refactor/tools/oracle_compare.py",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 13.742156028747559,
+     "seconds": 14.174993515014648,
      "stdout_tail": "C_uwb_fde_26: O0=PASS O1=PASS O2=PASS O3=PASS O4=PASS O5=PASS O6=PASS O7=PASS\nG_reject_10: O0=PASS O1=PASS O2=PASS O3=PASS O4=PASS O5=NOT_RUN O6=PASS O7=PASS\nH_mature_201: O0=PASS O1=PASS O2=PASS O3=PASS O4=PASS O5=NOT_RUN O6=NOT_RUN O7=NOT_RUN\nF_ramp_30: O0-O7=NOT_RUN\nH_mature_205: O0-O7=NOT_RUN\nEPOCHS20_30: O0-O7=NOT_RUN\ntotals: {'pass': 36, 'fail': 0, 'not_run': 7}\nwritten oracle-results.json",
      "stderr_tail": "",
      "metrics": {
-      "wall_seconds": 13.74
+      "wall_seconds": 14.17
      }
     }
    ],
@@ -1040,7 +1079,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_square_root_context --gtest_filter=SquareRootContext.NUM01_*",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.006996870040893555,
+     "seconds": 0.008284330368041992,
      "stdout_tail": "[----------] 1 test from SquareRootContext\n[ RUN      ] SquareRootContext.NUM01_ScaleAndPermutationInvarianceWithProtectedSync\n[       OK ] SquareRootContext.NUM01_ScaleAndPermutationInvarianceWithProtectedSync (0 ms)\n[----------] 1 test from SquareRootContext (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
@@ -1067,7 +1106,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_square_root_context --gtest_filter=SquareRootContext.NUM02_*",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.007060527801513672,
+     "seconds": 0.005799770355224609,
      "stdout_tail": "[----------] 1 test from SquareRootContext\n[ RUN      ] SquareRootContext.NUM02_DetectorOnlyRowsKeepResidualDofAndResponse\n[       OK ] SquareRootContext.NUM02_DetectorOnlyRowsKeepResidualDofAndResponse (0 ms)\n[----------] 1 test from SquareRootContext (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
@@ -1093,7 +1132,7 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_square_root_context --gtest_filter=SquareRootContext.NUM03*",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.006888866424560547,
+     "seconds": 0.007019996643066406,
      "stdout_tail": "[       OK ] SquareRootContext.NUM03_RankDeficientWindowIsExplicitlyUnobservable (0 ms)\n[ RUN      ] SquareRootContext.NUM03b_CertificateFailureFallsBackToReferencePath\n[       OK ] SquareRootContext.NUM03b_CertificateFailureFallsBackToReferencePath (0 ms)\n[----------] 2 tests from SquareRootContext (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 2 tests from 1 test suite ran. (0 ms total)\n[  PASSED  ] 2 tests.",
      "stderr_tail": "",
      "metrics": {
@@ -1119,8 +1158,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_square_root_context --gtest_filter=SquareRootContext.NUM04_*",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.00622105598449707,
-     "stdout_tail": "[----------] 1 test from SquareRootContext\n[ RUN      ] SquareRootContext.NUM04_SymbolicPlanCacheAndNumericRebuild\n[       OK ] SquareRootContext.NUM04_SymbolicPlanCacheAndNumericRebuild (0 ms)\n[----------] 1 test from SquareRootContext (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
+     "seconds": 0.006133079528808594,
+     "stdout_tail": "[----------] 1 test from SquareRootContext\n[ RUN      ] SquareRootContext.NUM04_SymbolicPlanCacheAndNumericRebuild\n[       OK ] SquareRootContext.NUM04_SymbolicPlanCacheAndNumericRebuild (1 ms)\n[----------] 1 test from SquareRootContext (1 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (1 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
       "tests": 1,
@@ -1145,11 +1184,11 @@
      "command": "/usr/bin/python3 /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/doc/evidence/integrity-kernel-refactor/tools/context_oracle.py",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 10.512931823730469,
+     "seconds": 10.718632459640503,
      "stdout_tail": "A_nominal#30 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=FAIL O8h=FAIL O8i=PASS O8j=NOT_RUN\nC_uwb_fde#25 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=FAIL O8h=FAIL O8i=PASS O8j=NOT_RUN\nC_uwb_fde#26 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=FAIL O8h=FAIL O8i=PASS O8j=NOT_RUN\nG_continuous_rejection#10 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=FAIL O8h=FAIL O8i=PASS O8j=NOT_RUN\nH_mature_union#201 O8a=PASS O8b=PASS O8c=PASS O8d=PASS O8e=PASS O8f=PASS O8g=NOT_RUN O8h=NOT_RUN O8i=NOT_RUN O8j=NOT_RUN\ntotals: {'pass': 34, 'fail': 8, 'not_run': 8}\nwritten square-root-oracle.json",
      "stderr_tail": "",
      "metrics": {
-      "wall_seconds": 10.51
+      "wall_seconds": 10.72
      }
     }
    ],
@@ -1170,20 +1209,20 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 --gtest_filter=B3Risk.RSK01UnionBoundDoesNotDoubleChargeAndSolvesConservatively",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.025925397872924805,
-     "stdout_tail": "[----------] 1 test from B3Risk\n[ RUN      ] B3Risk.RSK01UnionBoundDoesNotDoubleChargeAndSolvesConservatively\n[       OK ] B3Risk.RSK01UnionBoundDoesNotDoubleChargeAndSolvesConservatively (16 ms)\n[----------] 1 test from B3Risk (16 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (16 ms total)\n[  PASSED  ] 1 test.",
+     "seconds": 0.020475387573242188,
+     "stdout_tail": "[----------] 1 test from B3Risk\n[ RUN      ] B3Risk.RSK01UnionBoundDoesNotDoubleChargeAndSolvesConservatively\n[       OK ] B3Risk.RSK01UnionBoundDoesNotDoubleChargeAndSolvesConservatively (12 ms)\n[----------] 1 test from B3Risk (12 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (12 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
       "tests": 1,
       "passed": 1,
-      "wall_seconds": 0.03
+      "wall_seconds": 0.02
      }
     },
     {
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 --gtest_filter=B3Risk.BoundaryInputsAreRejectedAndCacheIdentityIsVersioned",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.011664152145385742,
+     "seconds": 0.007384061813354492,
      "stdout_tail": "[----------] 1 test from B3Risk\n[ RUN      ] B3Risk.BoundaryInputsAreRejectedAndCacheIdentityIsVersioned\n[       OK ] B3Risk.BoundaryInputsAreRejectedAndCacheIdentityIsVersioned (0 ms)\n[----------] 1 test from B3Risk (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
@@ -1209,8 +1248,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 --gtest_filter=B3Risk.RSK02LedgerHasNoHiddenZerosAndOverlapGivesNoDividend",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.00926065444946289,
-     "stdout_tail": "[----------] 1 test from B3Risk\n[ RUN      ] B3Risk.RSK02LedgerHasNoHiddenZerosAndOverlapGivesNoDividend\n[       OK ] B3Risk.RSK02LedgerHasNoHiddenZerosAndOverlapGivesNoDividend (1 ms)\n[----------] 1 test from B3Risk (1 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (1 ms total)\n[  PASSED  ] 1 test.",
+     "seconds": 0.005538225173950195,
+     "stdout_tail": "[----------] 1 test from B3Risk\n[ RUN      ] B3Risk.RSK02LedgerHasNoHiddenZerosAndOverlapGivesNoDividend\n[       OK ] B3Risk.RSK02LedgerHasNoHiddenZerosAndOverlapGivesNoDividend (0 ms)\n[----------] 1 test from B3Risk (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
       "tests": 1,
@@ -1235,8 +1274,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 --gtest_filter=B3Risk.RSK03PositionMarginAndResidualThresholdActTogether",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.009824037551879883,
-     "stdout_tail": "[----------] 1 test from B3Risk\n[ RUN      ] B3Risk.RSK03PositionMarginAndResidualThresholdActTogether\n[       OK ] B3Risk.RSK03PositionMarginAndResidualThresholdActTogether (0 ms)\n[----------] 1 test from B3Risk (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
+     "seconds": 0.006812334060668945,
+     "stdout_tail": "[----------] 1 test from B3Risk\n[ RUN      ] B3Risk.RSK03PositionMarginAndResidualThresholdActTogether\n[       OK ] B3Risk.RSK03PositionMarginAndResidualThresholdActTogether (1 ms)\n[----------] 1 test from B3Risk (1 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (1 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
       "tests": 1,
@@ -1261,8 +1300,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 --gtest_filter=GateAttribution.StepAttributionNamesPhysicalBlocksAndDominantEpoch",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.0073468685150146484,
-     "stdout_tail": "[----------] 1 test from GateAttribution\n[ RUN      ] GateAttribution.StepAttributionNamesPhysicalBlocksAndDominantEpoch\n[       OK ] GateAttribution.StepAttributionNamesPhysicalBlocksAndDominantEpoch (0 ms)\n[----------] 1 test from GateAttribution (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (0 ms total)\n[  PASSED  ] 1 test.",
+     "seconds": 0.006507396697998047,
+     "stdout_tail": "[----------] 1 test from GateAttribution\n[ RUN      ] GateAttribution.StepAttributionNamesPhysicalBlocksAndDominantEpoch\n[       OK ] GateAttribution.StepAttributionNamesPhysicalBlocksAndDominantEpoch (0 ms)\n[----------] 1 test from GateAttribution (1 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (1 ms total)\n[  PASSED  ] 1 test.",
      "stderr_tail": "",
      "metrics": {
       "tests": 1,
@@ -1287,8 +1326,8 @@
      "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 --gtest_filter=EnvelopeDominance.OneSidedRelativeRuleRejectsNarrowBandShortfall:B2Coverage.GroupedEnvelopeDischargesProofAndDominance:B2Coverage.DominanceRejectsAnUnderCoveringEnvelope",
      "exit_code": 0,
      "status": "PASS",
-     "seconds": 0.008552074432373047,
-     "stdout_tail": "[----------] 1 test from EnvelopeDominance\n[ RUN      ] EnvelopeDominance.OneSidedRelativeRuleRejectsNarrowBandShortfall\n[       OK ] EnvelopeDominance.OneSidedRelativeRuleRejectsNarrowBandShortfall (0 ms)\n[----------] 1 test from EnvelopeDominance (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 3 tests from 2 test suites ran. (1 ms total)\n[  PASSED  ] 3 tests.",
+     "seconds": 0.005710124969482422,
+     "stdout_tail": "[----------] 1 test from EnvelopeDominance\n[ RUN      ] EnvelopeDominance.OneSidedRelativeRuleRejectsNarrowBandShortfall\n[       OK ] EnvelopeDominance.OneSidedRelativeRuleRejectsNarrowBandShortfall (0 ms)\n[----------] 1 test from EnvelopeDominance (0 ms total)\n\n[----------] Global test environment tear-down\n[==========] 3 tests from 2 test suites ran. (0 ms total)\n[  PASSED  ] 3 tests.",
      "stderr_tail": "",
      "metrics": {
       "tests": 3,
@@ -1303,12 +1342,39 @@
     "risk-and-lazy-fde.md"
    ],
    "note": "\u5224\u636e\u62bd\u4e3a envelopeDominanceAccepts()/envelopeDominanceMargin()\uff1aratio>=1-tol\uff08\u76f8\u5bf9\uff0c\u9ed8\u8ba4 1e-9\uff09\uff1bdominance_margin \u4e3a\u539f\u59cb ratio-1\uff08\u63a5\u53d7\u65f6 >= -tol\uff0ctol \u4ec5 binary64 \u566a\u58f0\u5730\u677f\uff0c\u5b9e\u6d4b\u6052\u7b49\u5f0f\u566a\u58f0 ~1e-16\uff09\uff1bP6 \u66fe\u58f0\u79f0\u5b8c\u6210\u4f46\u5b9e\u73b0\u672a\u843d\u5730\uff0c\u4e8e P7 \u63d0\u4ea4 6484b73 \u5b8c\u6210\u5e76\u5728 runbook \u00a711 \u66f4\u6b63"
+  },
+  {
+   "case_id": "DET-CH",
+   "description": "\u771f\u5b9e\u7a97\u53e3\u901a\u9053\u5207\u5206\u7cbe\u786e\u6027\u4e0e\u751f\u4ea7\u63a5\u7ebf",
+   "owner_work_package": "DET",
+   "manifest_status": "MAPPED",
+   "commands": [
+    {
+     "command": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_dual_channel_detector --gtest_filter=DualChannelDetector.RealWindowSplitIsExactAndTablesTheDifference",
+     "exit_code": 0,
+     "status": "PASS",
+     "seconds": 0.26129698753356934,
+     "stdout_tail": "[DET-CHANNEL] 21,0.000000,546.779332,398,0.000000,165.993084,88,0.000000,443.061386,310,1\n[DET-CHANNEL] 22,0.000000,556.117965,406,0.000000,165.993084,88,0.000000,452.575311,318,1\n[       OK ] DualChannelDetector.RealWindowSplitIsExactAndTablesTheDifference (252 ms)\n[----------] 1 test from DualChannelDetector (252 ms total)\n\n[----------] Global test environment tear-down\n[==========] 1 test from 1 test suite ran. (252 ms total)\n[  PASSED  ] 1 test.",
+     "stderr_tail": "",
+     "metrics": {
+      "tests": 1,
+      "passed": 1,
+      "wall_seconds": 0.26
+     }
+    }
+   ],
+   "status": "PASS",
+   "artifact_paths": [
+    "c2-dual-channel.md",
+    "history-summary-pipeline.md"
+   ],
+   "note": "T_c+T_b=T_pooled\uff08rel\u22641e-9\uff09\u3001\u03bd_c+\u03bd_b=\u03bd_pooled\uff08\u6574\u6570\uff09\uff1b\u5e76\u96c6\u754c=min(1,2\u00b7p_fa\u00b7horizon)\uff1b\u68c0\u6d4b\u5668\u5b57\u6bb5\u4e0e\u6a21\u5757\u4e00\u81f4\u3002"
   }
  ],
  "summary": {
-  "PASS": 40,
+  "PASS": 44,
   "FAIL": 0,
-  "NOT_RUN": 12,
+  "NOT_RUN": 9,
   "SKIP_WITH_REASON": 0
  }
 }
