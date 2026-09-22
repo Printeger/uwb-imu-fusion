@@ -337,6 +337,11 @@ if(CATKIN_ENABLE_TESTING)
     UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
   target_link_libraries(test_publication_identity ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
 
+  catkin_add_gtest(test_publication_wiring test/test_publication_wiring.cpp test/test_main.cpp)
+  target_compile_definitions(test_publication_wiring PRIVATE
+    UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(test_publication_wiring ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
   catkin_add_gtest(test_history_summary_pipeline test/test_history_summary_pipeline.cpp test/test_main.cpp)
   target_compile_definitions(test_history_summary_pipeline PRIVATE
     UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")

@@ -1474,6 +1474,10 @@ TEST(GateDReplay, LosslessRoundTripAllBlocksAndActions) {
   action.physical_source_ids = {"source with spaces"};
   action.recovery_epoch_begin = 5;
   action.recovery_epoch_end = 8;
+  // C4/W2 replay v6: the removal provenance is explicit wire content.
+  action.removal_data_source = "imu_accel_interval_7";
+  action.model_error_record = "model_error:imu_interval_bound";
+  action.model_error_validated = true;
   replay.actions = {action, action};
   replay.actions.back().id = ExclusionActionId(43);
   const std::string path =
@@ -1495,6 +1499,12 @@ TEST(GateDReplay, LosslessRoundTripAllBlocksAndActions) {
   EXPECT_EQ(loaded.actions[0].covered_modes, action.covered_modes);
   EXPECT_EQ(loaded.actions[0].physical_source_ids, action.physical_source_ids);
   EXPECT_EQ(loaded.actions[0].recovery_epoch_end, action.recovery_epoch_end);
+  // v6 round-trip: the removal provenance fields survive byte-for-byte.
+  EXPECT_EQ(loaded.actions[0].removal_data_source,
+            action.removal_data_source);
+  EXPECT_EQ(loaded.actions[0].model_error_record, action.model_error_record);
+  EXPECT_EQ(loaded.actions[0].model_error_validated,
+            action.model_error_validated);
   EXPECT_TRUE(loaded.actions[0].added_blocks[0].jacobian_whitened.isApprox(
       action.added_blocks[0].jacobian_whitened, 0));
   const RankUpdateEvaluator evaluator;

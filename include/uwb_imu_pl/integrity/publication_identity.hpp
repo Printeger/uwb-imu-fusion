@@ -138,4 +138,128 @@ WatchdogState updateWatchdog(const WatchdogState& previous,
                              std::int64_t sensor_stale_limit_ns,
                              std::int64_t wall_timeout_limit_ns);
 
+// ---------------------------------------------------------------------------
+// C4/W2 production wiring: the explicit publication state holder.
+// ---------------------------------------------------------------------------
+//
+// The pipeline drives the publication gate through ONE explicit holder object
+// (never through a const path, a mutable member or a second state source):
+//
+//   beginAttempt(sample)      -- freshness/watchdog judgement, attempt entry
+//   finalizeAttempt(...)      -- identity check + white-listed state machine
+//
+// The holder is the only place the publication state and the last admitted
+// certificate live; the identity check itself stays a pure function of the
+// two identities it compares.
+
+// Watchdog limits used by the production attempt gate.  These are NEW policy
+// defaults introduced with the C4 wiring (no existing threshold is modified);
+// they are constructor-explicit so a scenario or test can state the policy it
+// ran under.  The defaults are tied to the platform's own designed outage
+// tolerance `bridge.max_duration_s = 1 s`: a UWB gap the bridge can still cover
+// must never be classified as stale, so the staleness limit is twice that
+// outage and the wall timeout is twice the staleness limit again.
+struct PublicationLimits {
+  std::int64_t sensor_stale_limit_ns = 2000000000;   // 2 s (2 x design outage)
+  std::int64_t wall_timeout_limit_ns = 4000000000;   // 4 s (2 x stale limit)
+};
+
+// Limits for OFFLINE replay harnesses.  A replay run consumes pre-generated
+// batches as fast as the machine can and its wall clock is not a real-time
+// deadline source, so the wall-timeout judgement is disabled by construction
+// while the freeze/vintage checks stay fully active.  The helper is named so
+// every call site states the policy it ran under.
+PublicationLimits offlineReplayPublicationLimits();
+
+// Record of one publication-gate judgement.  Everything here is a measured or
+// derived production value; a field that production cannot supply is reported
+// through `missing_identity_fields` instead of being invented.
+struct PublicationDiagnosis {
+  bool gate_executed = false;
+  // "ADMISSIBLE" / "SAME_TIME_REBIND" / "REQUIRES_PROPAGATION" / "REFUSED" /
+  // "NOT_EVALUATED" (watchdog refused the attempt before any identity work).
+  std::string identity_check = "NOT_EVALUATED";
+  std::string identity_reason;
+  std::string state_before;
+  std::string state_after;
+  std::string transition;
+  bool transition_accepted = false;
+  // What the consumer is allowed to assume about this output.
+  bool protected_output = false;
+  bool unprotected_output = true;
+  std::string refusal;
+  std::vector<std::string> missing_identity_fields;
+  // Watchdog channel (independent of the FDE latency).
+  bool watchdog_valid = false;
+  std::int64_t wall_elapsed_ns = 0;
+  std::int64_t sensor_elapsed_ns = 0;
+  std::int64_t sensor_delta_ns = 0;   // sample-to-sample sensor advance
+  std::int64_t sensor_lag_ns = 0;
+  bool sensor_stale = false;
+  bool wall_timeout = false;
+  bool replay_clock_jumped = false;
+  bool clock_refused = false;
+  std::string watchdog_reason;
+};
+
+std::vector<std::string> missingPublicationIdentityFields(
+    const PublicationIdentity& identity);
+
+class PublicationController {
+ public:
+  explicit PublicationController(PublicationLimits limits = PublicationLimits{})
+      : limits_(limits) {}
+
+  // Attempt entry, before any heavy FDE work.  Opens the attempt on the state
+  // machine (READY/PROTECTED -> EVALUATING, UNAVAILABLE -> FDE_EVALUATING) and
+  // updates the watchdog with the caller's clock sample.
+  const WatchdogState& beginAttempt(const ClockSample& sample);
+
+  // True when the watchdog already decided UNAVAILABLE for this attempt.  The
+  // refusal covers exactly the two cases where consuming the attempt cannot
+  // publish anything trustworthy:
+  //   * the data is FROZEN -- the sensor timestamp did not move at all while
+  //     the wall clock advanced and the accumulated divergence exceeded the
+  //     staleness limit (a stream that merely lags but still progresses is NOT
+  //     refused: refusing fresh data would drop it), and
+  //   * the wall clock timed out (the pipeline itself is not progressing).
+  // A backwards clock is not a refusal here: it is refused the way the
+  // platform refuses invalid batches (see watchdog().valid).
+  bool watchdogRefused() const { return watchdog_refused_; }
+
+  // Finalizes the attempt:
+  //   candidate               -- identity assembled from the published output
+  //   certificate             -- identity the attempt's proofs were issued for
+  //   certificate_available   -- false: no certificate exists (fail-closed)
+  //   certification_available -- the platform may certify protection (Gate J);
+  //                              false keeps every output explicitly unprotected
+  // The admitted branch walks VERIFIED_CANDIDATE -> ATOMIC_COMMIT -> PROTECTED;
+  // no other path may reach PROTECTED.
+  PublicationDiagnosis finalizeAttempt(const PublicationIdentity& candidate,
+                                       const PublicationIdentity& certificate,
+                                       bool certificate_available,
+                                       bool certification_available);
+
+  PublicationState state() const { return state_; }
+  bool hasCertificate() const { return has_certificate_; }
+  const PublicationIdentity& certificate() const { return certificate_; }
+  const WatchdogState& watchdog() const { return watchdog_; }
+  const PublicationLimits& limits() const { return limits_; }
+
+ private:
+  StateTransition request(PublicationState next);
+  // Legal shortest path back to UNAVAILABLE (documented in the .cpp).
+  void dropToUnavailable();
+  PublicationDiagnosis watchdogDiagnosis() const;
+
+  PublicationLimits limits_;
+  PublicationState state_ = PublicationState::Ready;
+  WatchdogState watchdog_;
+  bool watchdog_refused_ = false;
+  bool last_sample_jumped_ = false;
+  std::int64_t last_sensor_delta_ns_ = 0;
+  PublicationIdentity certificate_;
+  bool has_certificate_ = false;
+};
+
 }  // namespace uwb_imu_pl

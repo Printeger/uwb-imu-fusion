@@ -100,13 +100,15 @@ TEST(RunLogger, V5SchemaHasExactHeadersAndStructuredSummary) {
             "slope_z,boundary_direction_gram,noncentrality_boundary,prior_bound,p_md_allocation,"
             "hmi_allocation,monitorable,plausible,conditioned_statistic,"
             "log_evidence,z_rank,z_sigma_min,z_condition,z_classification,coverage_label,coverage_envelope_id,"
+            "unit_kind,profile_j,profile_valid,"
             "reason");
   EXPECT_EQ(firstLine(directory + "/candidates.csv"),
             "timestamp_ns,window_id,action_id,action_type,physical_source_ids,removed_group_ids,"
             "added_group_ids,bridge_mode,cardinality,valid,post_detector_passed,"
             "covers_plausible_set,statistic,threshold,rank,dof,condition_number,"
             "information_logdet,risk_allocation,hpl_m,vpl_m,selected,"
-            "evaluation_wall_ms,reason");
+            "evaluation_wall_ms,removal_data_source,model_error_record,"
+            "model_error_validated,reason");
   EXPECT_TRUE(boost::filesystem::exists(directory + "/ground_truth.csv"));
   EXPECT_TRUE(boost::filesystem::exists(directory + "/fault_truth.csv"));
   EXPECT_TRUE(boost::filesystem::exists(directory + "/transactions.csv"));

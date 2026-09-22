@@ -1,11 +1,14 @@
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
+#include "uwb_imu_pl/common/integrity_identity.hpp"
 #include "uwb_imu_pl/integrity/fde_post_selection.hpp"
 #include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
 
 #include <algorithm>
 #include <cmath>
+#include <iomanip>
 #include <set>
 #include <map>
+#include <sstream>
 #include <string>
 #include <tuple>
 
@@ -270,6 +273,24 @@ FdeDecision FdeManager::decide(
     decision.selection_charged_budget = groups.total_charged_budget;
     decision.selection_available_budget = risk.p_hmi_total;
     decision.selection_budget_ok = groups.valid;
+    // Export the charged class identity: the ids come from the same
+    // eventClassId() derivation that minted the guarantee groups, and the
+    // proof id is the documented FNV-1a binding of (charged budget, ids).
+    decision.selection_event_class_ids.clear();
+    for (const auto& item : by_class) {
+      decision.selection_event_class_ids.push_back(
+          item.second.reference_certificate_id);
+    }
+    std::sort(decision.selection_event_class_ids.begin(),
+              decision.selection_event_class_ids.end());
+    {
+      std::ostringstream proof;
+      proof << std::setprecision(17) << groups.total_charged_budget;
+      for (const auto id : decision.selection_event_class_ids) {
+        proof << '|' << id;
+      }
+      decision.selection_risk_proof_id = identityHash64(proof.str());
+    }
     if (!groups.valid) {
       // The publishable set cannot be bounded: stay unavailable, never relax.
       decision.commit_allowed = false;

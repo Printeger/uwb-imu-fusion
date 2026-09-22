@@ -53,14 +53,23 @@ V5_HEADERS.update({
 
 # Run schema v5 keeps the same manifest/CSV layout while the *diagnostics*
 # schema evolved: B1 (v12) appended the Z-response audit columns and B2 (v13)
-# appended the coverage certificate columns to hypotheses.csv.  All three
-# hypothesis headers are accepted so frozen baselines stay validatable.
+# appended the coverage certificate columns to hypotheses.csv; C4/W2 (v16)
+# appended the C3 unit/profile columns and the removal provenance columns.
+# Compatibility policy (stated once, used by every check below): a report is
+# valid when its header equals the version-specific table for the schema it
+# declares, so frozen baselines stay validatable next to new runs.
 V5_HYPOTHESES_B1 = V5_HEADERS["hypotheses.csv"][:-len(",reason")] + \
     ",z_rank,z_sigma_min,z_condition,z_classification,reason"
 V5_HYPOTHESES_V13 = V5_HYPOTHESES_B1[:-len(",reason")] + \
     ",coverage_label,coverage_envelope_id,reason"
+V5_HYPOTHESES_V16 = V5_HYPOTHESES_V13[:-len(",reason")] + \
+    ",unit_kind,profile_j,profile_valid,reason"
+V5_CANDIDATES_V16 = V5_HEADERS["candidates.csv"][:-len(",reason")] + \
+    ",removal_data_source,model_error_record,model_error_validated,reason"
 V5_HEADER_ALTERNATES = {"hypotheses.csv": (V5_HYPOTHESES_B1,
-                                           V5_HYPOTHESES_V13)}
+                                           V5_HYPOTHESES_V13,
+                                           V5_HYPOTHESES_V16),
+                        "candidates.csv": (V5_CANDIDATES_V16,)}
 
 
 def fail(message):
@@ -390,7 +399,7 @@ def validate_v5(directory, manifest):
         with diagnostic_attempts.open(newline="", encoding="utf-8") as stream:
             for row in csv.DictReader(stream):
                 if row["schema_version"].endswith(
-                        ("/v3", "/v4", "/v5", "/v6", "/v7", "/v8", "/v9", "/v10", "/v11", "/v12", "/v13", "/v14")):
+                        ("/v3", "/v4", "/v5", "/v6", "/v7", "/v8", "/v9", "/v10", "/v11", "/v12", "/v13", "/v14", "/v15", "/v16")):
                     frozen_groups[int(row["input_attempt_id"])] = id_set(row["frozen_group_ids"], "frozen_group_ids")
         if frozen_groups:
             with (directory / "diagnostic_candidates.csv").open(newline="", encoding="utf-8") as stream:

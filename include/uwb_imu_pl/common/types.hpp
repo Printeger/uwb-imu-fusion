@@ -281,9 +281,18 @@ struct AttemptDiagnostics {
   std::vector<std::uint64_t> frozen_group_ids;
   std::uint64_t input_attempt_id = 0;
   TimestampNs input_timestamp;
+  // C4/W2: false when the attempt never opened a transaction (the watchdog
+  // refused it before the heavy FDE).  Refused attempts therefore have no
+  // transaction/candidate rows; the record below keeps their own shape.
+  bool transaction_opened = true;
   // C1-c: the condensed boundary summary of the frozen window this attempt
   // was judged on (empty when the request carried no condensed material).
   HistorySummaryDiagnostics history_summary;
+  // W1 §8.5 union charge identity (C4 diagnostics v16): the event-class ids
+  // actually charged and the derived risk-proof id.  Both come from the
+  // production decision; nothing is inferred here.
+  std::string selection_event_class_ids;
+  std::uint64_t selection_risk_proof_id = 0;
   std::uint64_t ordering_version = 0;
   std::uint64_t noise_model_version = 0;
   std::uint64_t backend_epoch_before = 0;
@@ -428,6 +437,11 @@ struct HypothesisAuditRecord {
   // enumerated hypothesis or verified envelope serves the leaf.
   std::string coverage_label = "EXACT";
   std::uint64_t coverage_envelope_id = 0;
+  // C3 wiring (§7.1), exported by the C4 diagnostics step: the comparability
+  // identity and the RAW whitened profile value of this mode.
+  std::string unit_kind;
+  double profile_j = std::numeric_limits<double>::infinity();
+  bool profile_valid = false;
   std::string reason;
 };
 
@@ -465,6 +479,11 @@ struct CandidateAuditRecord {
   std::string removed_group_ids;
   std::string added_group_ids;
   std::string bridge_mode;
+  // C3 wiring (§6 item 3) exported by the C4 diagnostics step: where a removed
+  // interval's data comes from and which model-error record covers it.
+  std::string removal_data_source;
+  std::string model_error_record;
+  bool model_error_validated = false;
   int cardinality = 0;
   bool valid = false;
   bool post_detector_passed = false;
@@ -569,9 +588,51 @@ struct BridgeAuditRecord {
   std::string status;
 };
 
+// C4/W2 publication gate record (diagnostics v16).  The values are copied from
+// the explicit publication state holder after the attempt finished; the holder
+// remains the only state source.  `*_output` distinguishes a protected output
+// from an explicitly unprotected one, as the roadmap §8.6 message contract
+// requires.
+struct PublicationDiagnostics {
+  bool gate_executed = false;
+  std::string identity_check = "NOT_EVALUATED";
+  std::string identity_reason;
+  std::string state_before;
+  std::string state_after;
+  std::string transition;
+  bool transition_accepted = false;
+  bool protected_output = false;
+  bool unprotected_output = true;
+  std::string refusal;
+  std::string missing_identity_fields;
+  bool watchdog_valid = false;
+  std::int64_t wall_elapsed_ns = 0;
+  std::int64_t sensor_elapsed_ns = 0;
+  std::int64_t sensor_delta_ns = 0;
+  std::int64_t sensor_lag_ns = 0;
+  bool sensor_stale = false;
+  bool wall_timeout = false;
+  bool replay_clock_jumped = false;
+  bool clock_refused = false;
+  std::string watchdog_reason;
+  // Identity values actually used (0/empty when production could not supply
+  // them; the missing list names them instead of inventing a placeholder).
+  std::uint64_t snapshot_id = 0;
+  std::uint64_t state_solution_id = 0;
+  std::uint64_t history_summary_id = 0;
+  std::uint64_t manifest_digest = 0;
+  std::uint64_t health_state = 0;
+  std::string detector_ids;
+  std::uint64_t risk_proof_id = 0;
+  std::uint64_t certificate_id = 0;
+};
+
 struct IntegrityOutput {
   AttemptDiagnostics diagnostics;
   IntegritySnapshotIdentity snapshot_identity;
+  // C4/W2: the publication gate record (identity tri-state, state machine,
+  // watchdog channel).  Populated by the publication state holder.
+  PublicationDiagnostics publication;
   TimestampNs timestamp;
   NavigationState state;
   DetectorResult detector;
@@ -668,7 +729,7 @@ struct RunManifest {
   std::uint32_t max_exclusion_cardinality = 2;
   std::string bridge_model = "kinematic_cv_bounded";
   std::string history_recovery = "active_window_only_maturity_delay";
-  std::string diagnostics_schema_version = "uwb-imu-pl/gate-d-diagnostics/v14";
+  std::string diagnostics_schema_version = "uwb-imu-pl/gate-d-diagnostics/v16";
   std::string failure_catalog;
   std::string fault_manifest_digest;
   std::string fault_manifest_id;

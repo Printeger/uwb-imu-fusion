@@ -7,6 +7,15 @@ namespace uwb_imu_pl {
 
 const char* const kNotAvailableInSchema = "NOT_AVAILABLE_IN_SCHEMA";
 
+std::uint64_t identityHash64(const std::string& text) {
+  std::uint64_t hash = 1469598103934665603ULL;
+  for (const unsigned char byte : text) {
+    hash ^= byte;
+    hash *= 1099511628211ULL;
+  }
+  return hash;
+}
+
 std::string identityDigest(IntegritySnapshotIdentity* identity) {
   if (!identity) return {};
   std::ostringstream text;

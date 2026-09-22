@@ -29,8 +29,20 @@ def validate_attachments(directory, epochs=None, warmup=100, expected_candidates
     if ids != expected:
         raise ValueError("missing, duplicate or unordered input attempt IDs")
     indexed = dict(zip(ids, attempts))
-    if any(row["schema_version"] not in (SCHEMA, "uwb-imu-pl/gate-d-diagnostics/v2", "uwb-imu-pl/gate-d-diagnostics/v3", "uwb-imu-pl/gate-d-diagnostics/v4", "uwb-imu-pl/gate-d-diagnostics/v5", "uwb-imu-pl/gate-d-diagnostics/v6", "uwb-imu-pl/gate-d-diagnostics/v7", "uwb-imu-pl/gate-d-diagnostics/v8", "uwb-imu-pl/gate-d-diagnostics/v9", "uwb-imu-pl/gate-d-diagnostics/v10", "uwb-imu-pl/gate-d-diagnostics/v11", "uwb-imu-pl/gate-d-diagnostics/v12", "uwb-imu-pl/gate-d-diagnostics/v13", "uwb-imu-pl/gate-d-diagnostics/v14") for row in attempts):
+    # C4/W2 compatibility policy: the schema version list is extended version by
+    # version; a report is valid when its rows declare a version this table
+    # knows, so frozen baselines stay validatable next to new runs.
+    if any(row["schema_version"] not in (SCHEMA, "uwb-imu-pl/gate-d-diagnostics/v2", "uwb-imu-pl/gate-d-diagnostics/v3", "uwb-imu-pl/gate-d-diagnostics/v4", "uwb-imu-pl/gate-d-diagnostics/v5", "uwb-imu-pl/gate-d-diagnostics/v6", "uwb-imu-pl/gate-d-diagnostics/v7", "uwb-imu-pl/gate-d-diagnostics/v8", "uwb-imu-pl/gate-d-diagnostics/v9", "uwb-imu-pl/gate-d-diagnostics/v10", "uwb-imu-pl/gate-d-diagnostics/v11", "uwb-imu-pl/gate-d-diagnostics/v12", "uwb-imu-pl/gate-d-diagnostics/v13", "uwb-imu-pl/gate-d-diagnostics/v14", "uwb-imu-pl/gate-d-diagnostics/v15", "uwb-imu-pl/gate-d-diagnostics/v16") for row in attempts):
         raise ValueError("unsupported diagnostic schema")
+    # C4/W2: an attempt may be refused by the publication watchdog before the
+    # heavy FDE.  Such a row is a first-class record with its own shape: no
+    # transaction was opened, the identity check never ran, the readouts stay
+    # zero and exactly the watchdog stage exists.  Every other attempt keeps the
+    # executed shape with its legacy attachments.
+    refused = [row for row in attempts if row["status"] == "WATCHDOG_REFUSED"]
+    executed = [row for row in attempts if row["status"] != "WATCHDOG_REFUSED"]
+    if len(refused) + len(executed) != len(attempts):
+        raise ValueError("unclassified attempt status")
     by_stage, by_candidate = defaultdict(dict), defaultdict(dict)
     for rows, target, field in ((stages, by_stage, "stage"), (candidates, by_candidate, "action_id")):
         for row in rows:
@@ -43,8 +55,8 @@ def validate_attachments(directory, epochs=None, warmup=100, expected_candidates
                 raise ValueError(f"duplicate {field} for attempt {attempt}")
             target[attempt][key] = row
     transactions = read_rows(directory, "transactions.csv")
-    if len(transactions) != len(attempts):
-        raise ValueError("transaction rows do not match attempts")
+    if len(transactions) != len(executed):
+        raise ValueError("transaction rows do not match executed attempts")
     old_candidates = read_rows(directory, "candidates.csv")
     if len(old_candidates) != len(candidates):
         raise ValueError("candidate attachment missing or mismatched")
@@ -61,10 +73,25 @@ def validate_attachments(directory, epochs=None, warmup=100, expected_candidates
             raise ValueError("duplicate legacy candidate in attempt")
         old_by_attempt[attempt][row["action_id"]] = row
     legacy_core = ([r for r in read_rows(directory, "timing.csv") if r["stage"] == "core_total"]
-                   if require_legacy_timing else [None] * len(attempts))
+                   if require_legacy_timing else [None] * len(executed))
+    # Refused attempts are validated on their own shape: no transaction, no
+    # identity work and exactly the watchdog stage.
+    for row in refused:
+        attempt = int(row["input_attempt_id"])
+        if (row["transaction_id"] != "0" or row["window_id"] != "0" or
+                row.get("transaction_opened", "0") != "0" or
+                row["publication_gate_executed"] != "0" or
+                row["publication_identity_check"] != "NOT_EVALUATED" or
+                row["watchdog_valid"] != "1" or
+                (row["watchdog_sensor_stale"] != "1" and
+                 row["watchdog_wall_timeout"] != "1")):
+            raise ValueError(f"attempt {attempt}: refused shape is inconsistent")
+        if set(by_stage.get(attempt, {})) != {"publication_watchdog"}:
+            raise ValueError(
+                f"attempt {attempt}: refused attempt must carry exactly the watchdog stage")
     # Legacy CSV meanings stay unchanged. The attachment provides the input key;
     # the core records must match its exact order, state time, epoch and duration.
-    if len(legacy_core) != len(attempts):
+    if len(legacy_core) != len(executed):
         raise ValueError("missing/duplicate legacy core_total")
     if require_legacy_timing and any(row["schema_version"].endswith(("/v2", "/v3", "/v4")) for row in attempts):
         legacy_rows = read_rows(directory, "timing.csv")
@@ -94,7 +121,8 @@ def validate_attachments(directory, epochs=None, warmup=100, expected_candidates
             for stage, row in items.items():
                 if row["status"] == "EXECUTED" and (attempt, stage) not in linked_stages:
                     raise ValueError("executed diagnostic stage lacks legacy timing link")
-    for attempt, row, tx, legacy in zip(ids, attempts, transactions, legacy_core):
+    for attempt, row, tx, legacy in zip([int(r["input_attempt_id"]) for r in executed],
+                                        executed, transactions, legacy_core):
         if row["status"] != "EXECUTED":
             raise ValueError(f"attempt {attempt}: {row['status']}")
         finite(row["pending_duration_s"])
@@ -127,7 +155,7 @@ def validate_attachments(directory, epochs=None, warmup=100, expected_candidates
         if set(current) != set(old):
             raise ValueError("candidate attachment missing or mismatched")
         for key, candidate in current.items():
-            eligibility_skip = (row["schema_version"].endswith(("/v8", "/v9", "/v10", "/v11", "/v12", "/v13", "/v14")) and
+            eligibility_skip = (row["schema_version"].endswith(("/v8", "/v9", "/v10", "/v11", "/v12", "/v13", "/v14", "/v15", "/v16")) and
                                 candidate["kernel_evaluated"] == "0" and
                                 candidate["skip_reason"].startswith("SKIPPED_INELIGIBLE:"))
             if candidate["kernel_evaluated"] != "1" and not eligibility_skip:

@@ -139,9 +139,9 @@ RunLogger::RunLogger(const std::string& output_directory,
          "injected_epochs,horizon_first_epoch,window_first_epoch,"
          "omitted_epoch_count,material_gap_epoch_count,claims_full_coverage,"
          "assumptions,omitted_risk_source,reason\n";
-  attempts_ << identity << "frozen_group_ids,backend_epoch_before,backend_epoch_after,pending_duration_s,state_age_s,raw_imu_samples,consecutive_rejections,marginalization_count,factor_block_cache_hits,factor_block_cache_misses,factor_block_cache_invalidations,statistical_cache_hits,statistical_cache_misses,cache_entries,cache_bytes,cache_invalidation_reason,base_step_norm,selected_step_norm,risk_nominal,risk_p_nm,risk_bridge,risk_history,risk_model,risk_hypotheses,risk_total,risk_upper_bound,risk_margin,risk_ledger_charged_total,risk_ledger_declared_total,risk_ledger_closes,risk_ledger_all_validated,risk_ledger_validated_terms,risk_ledger_unvalidated_terms,risk_ledger_not_implemented_terms,risk_ledger_terms,coverage_status,coverage_exact_leaves,coverage_enveloped_leaves,coverage_uncovered_leaves,coverage_envelope_count,coverage_accepted_envelope_count,coverage_proof_count,coverage_envelope_online,hypothesis_count,single_uwb_hypotheses,single_accel_hypotheses,single_gyro_hypotheses,double_uwb_accel_hypotheses,double_uwb_gyro_hypotheses,effective_fault_cardinality,generated_actions,kernel_evaluated_actions,post_passed_actions,pl_evaluated_actions,selected_actions,base_svd,base_llt,base_state_solves,llt_state_solve_calls,svd_state_solve_calls,detector_reference_qr,candidate_reference_svd,candidate_inner_llt,fault_gram_eigen,fault_gram_svd,fault_gram_ldlt,low_dim_fault_gram,generic_fault_gram_fallback,hypothesis_parallel_blocks,hypothesis_shared_hits,hypothesis_shared_misses,covariance_rhs_solves,covariance_rhs_columns,spectral_rhs_solves,spectral_rhs_columns,numerical_contract_mismatches,imu_oracle_reintegrations,analytic_input_valid,analytic_computation_valid,oracle_executed,oracle_relative_error,oracle_verified,primary_failure,all_failures,not_evaluated_checks,oracle_sweep_executed,oracle_sweep_verified,oracle_sweep_worst_relative_error,oracle_sweep_reintegrations,oracle_sweep_epsilons,oracle_sweep_relative_errors,status,reason\n";
+  attempts_ << identity << "frozen_group_ids,backend_epoch_before,backend_epoch_after,pending_duration_s,state_age_s,raw_imu_samples,consecutive_rejections,marginalization_count,factor_block_cache_hits,factor_block_cache_misses,factor_block_cache_invalidations,statistical_cache_hits,statistical_cache_misses,cache_entries,cache_bytes,cache_invalidation_reason,base_step_norm,selected_step_norm,risk_nominal,risk_p_nm,risk_bridge,risk_history,risk_model,risk_hypotheses,risk_total,risk_upper_bound,risk_margin,risk_ledger_charged_total,risk_ledger_declared_total,risk_ledger_closes,risk_ledger_all_validated,risk_ledger_validated_terms,risk_ledger_unvalidated_terms,risk_ledger_not_implemented_terms,risk_ledger_terms,coverage_status,coverage_exact_leaves,coverage_enveloped_leaves,coverage_uncovered_leaves,coverage_envelope_count,coverage_accepted_envelope_count,coverage_proof_count,coverage_envelope_online,hypothesis_count,single_uwb_hypotheses,single_accel_hypotheses,single_gyro_hypotheses,double_uwb_accel_hypotheses,double_uwb_gyro_hypotheses,effective_fault_cardinality,generated_actions,kernel_evaluated_actions,post_passed_actions,pl_evaluated_actions,selected_actions,base_svd,base_llt,base_state_solves,llt_state_solve_calls,svd_state_solve_calls,detector_reference_qr,candidate_reference_svd,candidate_inner_llt,fault_gram_eigen,fault_gram_svd,fault_gram_ldlt,low_dim_fault_gram,generic_fault_gram_fallback,hypothesis_parallel_blocks,hypothesis_shared_hits,hypothesis_shared_misses,covariance_rhs_solves,covariance_rhs_columns,spectral_rhs_solves,spectral_rhs_columns,numerical_contract_mismatches,imu_oracle_reintegrations,analytic_input_valid,analytic_computation_valid,oracle_executed,oracle_relative_error,oracle_verified,primary_failure,all_failures,not_evaluated_checks,oracle_sweep_executed,oracle_sweep_verified,oracle_sweep_worst_relative_error,oracle_sweep_reintegrations,oracle_sweep_epsilons,oracle_sweep_relative_errors,selection_event_class_ids,selection_risk_proof_id,publication_gate_executed,publication_identity_check,publication_identity_reason,publication_state_before,publication_state_after,publication_transition,publication_transition_accepted,publication_protected,publication_unprotected,publication_refusal,publication_missing_identity_fields,publication_snapshot_id,publication_state_solution_id,publication_history_summary_id,publication_manifest_digest,publication_health_state,publication_detector_ids,publication_risk_proof_id,publication_certificate_id,transaction_opened,watchdog_valid,watchdog_wall_elapsed_ns,watchdog_sensor_elapsed_ns,watchdog_sensor_delta_ns,watchdog_sensor_lag_ns,watchdog_sensor_stale,watchdog_wall_timeout,watchdog_replay_jump,watchdog_clock_refused,watchdog_reason,status,reason\n";
   diagnostic_stages_ << identity << "stage,status,wall_ms,reason\n";
-  diagnostic_candidates_ << identity << "action_id,kernel_evaluated,numerical_valid,post_passed,pl_evaluated,coverage_rejected,selected,slow_path,near_gate,recovered_replacement,numerical_path,fallback_reason,skip_reason,cache_hits,certificate_passed,condition_value_kind,condition_lower_bound,condition_upper_bound,certificate_margin,matrix_free_step_rejected,covariance_solve_count,scratch_reuse_count,kernel_ms,post_ms,bridge_ms,fault_map_ms,pl_ms\n";
+  diagnostic_candidates_ << identity << "action_id,kernel_evaluated,numerical_valid,post_passed,pl_evaluated,coverage_rejected,selected,slow_path,near_gate,recovered_replacement,numerical_path,fallback_reason,skip_reason,cache_hits,certificate_passed,condition_value_kind,condition_lower_bound,condition_upper_bound,certificate_margin,matrix_free_step_rejected,covariance_solve_count,scratch_reuse_count,kernel_ms,post_ms,bridge_ms,fault_map_ms,pl_ms,removal_data_source,model_error_record,model_error_validated\n";
   diagnostic_coverage_ << identity << "action_id,action_type,plausible_hypothesis_ids,mandatory_health_sources,mandatory_group_ids,covered_mode_ids,removed_group_ids,added_group_ids,uncovered_hypothesis_ids,uncovered_mode_ids,uncovered_group_ids,uncovered_mandatory_group_ids,outcome,reason\n";
   diagnostic_steps_ << identity << "source,epoch,rotation_norm,position_norm,velocity_norm,accel_bias_norm,gyro_bias_norm,epoch_norm\n";
   diagnostic_identity_ << identity
@@ -210,12 +210,15 @@ RunLogger::RunLogger(const std::string& output_directory,
                  "hmi_allocation,monitorable,plausible,conditioned_statistic,"
                  "log_evidence,z_rank,z_sigma_min,z_condition,z_classification,"
                  "coverage_label,coverage_envelope_id,"
+                 "unit_kind,profile_j,profile_valid,"
                  "reason\n";
   candidates_ << "timestamp_ns,window_id,action_id,action_type,physical_source_ids,removed_group_ids,"
                  "added_group_ids,bridge_mode,cardinality,valid,"
                  "post_detector_passed,covers_plausible_set,statistic,threshold,"
                  "rank,dof,condition_number,information_logdet,risk_allocation,"
-                 "hpl_m,vpl_m,selected,evaluation_wall_ms,reason\n";
+                 "hpl_m,vpl_m,selected,evaluation_wall_ms,"
+                 "removal_data_source,model_error_record,model_error_validated,"
+                 "reason\n";
   factor_ledger_ << "factor_id,group_id,sensor,factor_kind,lifecycle,epoch_begin,"
                     "epoch_end,time_begin_ns,time_end_ns,backend_slot,"
                     "noise_model_id,model_id,health,source_ids,measurement_ids,"
@@ -357,7 +360,7 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
              << csv(p.reason) << '\n';
   for (const auto& s : o.square_root_audit) {
     diagnostic_square_root_
-        << "uwb-imu-pl/gate-d-diagnostics/v14," << s.attempt_id << ','
+        << "uwb-imu-pl/gate-d-diagnostics/v16," << s.attempt_id << ','
         << s.rows << ',' << s.columns << ',' << s.rank << ',' << s.dof << ','
         << s.r_diagonal_min << ',' << s.r_diagonal_max << ','
         << s.condition_estimate << ',' << s.identity_residual_relative << ','
@@ -370,7 +373,7 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
   if (o.diagnostics.input_attempt_id) {
     const auto& h = o.diagnostics.history_summary;
     diagnostic_history_summary_
-        << "uwb-imu-pl/gate-d-diagnostics/v15," << o.diagnostics.input_attempt_id
+        << "uwb-imu-pl/gate-d-diagnostics/v16," << o.diagnostics.input_attempt_id
         << ',' << o.diagnostics.input_timestamp.value() << ',' << o.transaction_id
         << ',' << o.window_id << ',' << o.base_graph_version << ','
         << o.diagnostics.ordering_version << ','
@@ -390,7 +393,7 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
   if (o.diagnostics.input_attempt_id) {
     const auto& d = o.diagnostics;
     auto identity = [&](std::ostream& stream) -> std::ostream& {
-      return stream << "uwb-imu-pl/gate-d-diagnostics/v14," << d.input_attempt_id << ','
+      return stream << "uwb-imu-pl/gate-d-diagnostics/v16," << d.input_attempt_id << ','
           << d.input_timestamp.value() << ',' << o.transaction_id << ',' << o.window_id << ','
           << o.base_graph_version << ',' << d.ordering_version << ','
           << d.noise_model_version << ',' << o.linearization_version << ',' << o.timestamp.value() << ',';
@@ -448,6 +451,40 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
         << d.oracle_sweep_reintegrations << ','
         << csv(d.oracle_sweep_epsilons) << ','
         << csv(d.oracle_sweep_relative_errors) << ','
+        // C4/W2 diagnostics v16: selection identities, the publication gate
+        // record and the watchdog channel, all copied from the producing side.
+        << csv(d.selection_event_class_ids) << ','
+        << d.selection_risk_proof_id << ','
+        << o.publication.gate_executed << ','
+        << csv(o.publication.identity_check) << ','
+        << csv(o.publication.identity_reason) << ','
+        << csv(o.publication.state_before) << ','
+        << csv(o.publication.state_after) << ','
+        << csv(o.publication.transition) << ','
+        << o.publication.transition_accepted << ','
+        << o.publication.protected_output << ','
+        << o.publication.unprotected_output << ','
+        << csv(o.publication.refusal) << ','
+        << csv(o.publication.missing_identity_fields) << ','
+        << o.publication.snapshot_id << ','
+        << o.publication.state_solution_id << ','
+        << o.publication.history_summary_id << ','
+        << o.publication.manifest_digest << ','
+        << o.publication.health_state << ','
+        << csv(o.publication.detector_ids) << ','
+        << o.publication.risk_proof_id << ','
+        << o.publication.certificate_id << ','
+        << d.transaction_opened << ','
+        << o.publication.watchdog_valid << ','
+        << o.publication.wall_elapsed_ns << ','
+        << o.publication.sensor_elapsed_ns << ','
+        << o.publication.sensor_delta_ns << ','
+        << o.publication.sensor_lag_ns << ','
+        << o.publication.sensor_stale << ','
+        << o.publication.wall_timeout << ','
+        << o.publication.replay_clock_jumped << ','
+        << o.publication.clock_refused << ','
+        << csv(o.publication.watchdog_reason) << ','
         << csv(d.status) << ','
         << csv(d.reason) << '\n';
     for (const auto& stage : o.stage_timings) {
@@ -475,6 +512,9 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
       if (c.pl_evaluated) diagnostic_candidates_ << c.fault_map_ms;
       diagnostic_candidates_ << ',';
       if (c.pl_evaluated) diagnostic_candidates_ << c.pl_ms;
+      diagnostic_candidates_ << ',' << csv(candidate.removal_data_source)
+          << ',' << csv(candidate.model_error_record) << ','
+          << candidate.model_error_validated;
       diagnostic_candidates_ << '\n';
     }
     for (const auto& coverage : o.coverage_audit) {
@@ -521,12 +561,17 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
         << csv(frozen_identity.validity_assumptions) << ','
         << csv(frozen_identity.identity_digest) << '\n';
   }
-  transactions_ << o.timestamp.value() << ',' << o.transaction_id << ','
-                << o.window_id << ',' << o.base_graph_version << ','
-                << o.linearization_version << ',' << o.selected_action_id << ','
-                << csv(o.fde_status) << ',' << o.backend_updates << ','
-                << o.stale_state << ','
-                << o.controlled_reinitialization_required << '\n';
+  // C4/W2: an attempt refused by the watchdog channel never opened a
+  // transaction, so it contributes no transaction row (its diagnostic_attempts
+  // row carries status=WATCHDOG_REFUSED and transaction_opened=0).
+  if (o.diagnostics.transaction_opened) {
+    transactions_ << o.timestamp.value() << ',' << o.transaction_id << ','
+                  << o.window_id << ',' << o.base_graph_version << ','
+                  << o.linearization_version << ',' << o.selected_action_id << ','
+                  << csv(o.fde_status) << ',' << o.backend_updates << ','
+                  << o.stale_state << ','
+                  << o.controlled_reinitialization_required << '\n';
+  }
   for (const auto& h : o.hypothesis_audit) {
     hypotheses_ << o.timestamp.value() << ',' << o.window_id << ','
                 << h.hypothesis_id << ',' << csv(h.fault_unit_ids) << ','
@@ -544,7 +589,10 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
                 << h.log_evidence << ',' << h.z_rank << ','
                 << h.z_smallest_singular_value << ',' << h.z_condition << ','
                 << h.z_classification << ',' << csv(h.coverage_label) << ','
-                << h.coverage_envelope_id << ',' << csv(h.reason) << '\n';
+                << h.coverage_envelope_id << ','
+                << csv(h.unit_kind) << ',' << h.profile_j << ','
+                << h.profile_valid << ','
+                << csv(h.reason) << '\n';
   }
   for (const auto& c : o.candidate_audit) {
     candidates_ << o.timestamp.value() << ',' << o.window_id << ','
@@ -563,7 +611,9 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
     candidates_ << ',' << c.information_logdet << ',' << c.risk_allocation << ','
                 << c.hpl_m << ',' << c.vpl_m << ',' << c.selected << ','
                 << c.wall_ms << ','
-                << csv(c.reason) << '\n';
+                << csv(c.removal_data_source) << ','
+                << csv(c.model_error_record) << ',' << c.model_error_validated
+                << ',' << csv(c.reason) << '\n';
   }
   for (const auto& f : o.factor_ledger_audit) {
     factor_ledger_ << f.factor_id << ',' << f.group_id << ',' << csv(f.sensor)
@@ -738,7 +788,7 @@ RunManifest makeRunManifest(const IntegrityConfig& config,
       config.imu.noise_overbound_calibration_id;
   manifest.protected_quantity = "position_xyz";
   manifest.position_reference = "body_origin";
-  manifest.diagnostics_schema_version = "uwb-imu-pl/gate-d-diagnostics/v14";
+  manifest.diagnostics_schema_version = "uwb-imu-pl/gate-d-diagnostics/v16";
   manifest.failure_catalog = failureReasonCatalogJson();
   if (config.fault_manifest) {
     manifest.fault_manifest_id = config.fault_manifest->manifest_id;

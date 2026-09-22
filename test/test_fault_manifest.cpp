@@ -313,7 +313,7 @@ TEST(DiagnosticsV12, LoggerExportsFailureAccountingIdentityAndSquareRootTables) 
   EXPECT_NE(attempt_header.find("all_failures"), std::string::npos);
   EXPECT_NE(attempt_header.find("not_evaluated_checks"), std::string::npos);
   EXPECT_NE(attempt_header.find("oracle_sweep_verified"), std::string::npos);
-  EXPECT_NE(attempt_row.find("gate-d-diagnostics/v14"), std::string::npos);
+  EXPECT_NE(attempt_row.find("gate-d-diagnostics/v16"), std::string::npos);
   std::ifstream identity(directory + "/diagnostic_snapshot_identity.csv");
   ASSERT_TRUE(identity.good());
   std::string identity_header;
@@ -332,7 +332,7 @@ TEST(DiagnosticsV12, LoggerExportsFailureAccountingIdentityAndSquareRootTables) 
   EXPECT_NE(square_root_header.find("condition_estimate"), std::string::npos);
   std::string square_root_row;
   std::getline(square_root, square_root_row);
-  EXPECT_NE(square_root_row.find("gate-d-diagnostics/v14"), std::string::npos);
+  EXPECT_NE(square_root_row.find("gate-d-diagnostics/v16"), std::string::npos);
   EXPECT_NE(square_root_row.find("unit"), std::string::npos);
   boost::filesystem::remove_all(directory);
 }

@@ -3,6 +3,7 @@
 #include "uwb_imu_pl/common/types.hpp"
 #include "uwb_imu_pl/estimation/snapshot_estimator.hpp"
 #include "uwb_imu_pl/integrity/health_manager.hpp"
+#include "uwb_imu_pl/integrity/publication_identity.hpp"
 #include "uwb_imu_pl/estimation/reinitialization.hpp"
 
 #include <memory>
@@ -26,13 +27,21 @@ class IntegrityMonitor {
         max_condition_number_(max_condition_number) {}
 
   IntegrityOutput evaluateSnapshot(const UwbBatch& batch,
-                                   const SnapshotSolution& solution) const;
+                                   const SnapshotSolution& solution,
+                                   PublicationController* publication = nullptr) const;
   IntegrityOutput evaluateConditional(const UwbBatch& batch,
-                                      const EstimationSnapshot& snapshot) const;
+                                      const EstimationSnapshot& snapshot,
+                                      PublicationController* publication = nullptr) const;
 
   static double noncentralityBoundary(int dof, double threshold, double p_md);
 
  private:
+  // Bodies of the two stateless paths; the public entry points above append the
+  // C4 publication gate (identity assembly + tri-state check) to them.
+  IntegrityOutput evaluateSnapshotImpl(const UwbBatch& batch,
+                                       const SnapshotSolution& solution) const;
+  IntegrityOutput evaluateConditionalImpl(const UwbBatch& batch,
+                                          const EstimationSnapshot& snapshot) const;
   DetectorResult snapshotDetector(const SnapshotSolution& solution) const;
   std::vector<FaultHypothesis> currentAnchorHypotheses(
       const UwbBatch& batch) const;
@@ -76,10 +85,19 @@ class CandidateWorkerPool;
 class RealtimeIntegrityPipeline {
  public:
   RealtimeIntegrityPipeline(IncrementalUwbImuEstimator* estimator,
-                            IntegrityMonitor monitor);
+                            IntegrityMonitor monitor,
+                            PublicationLimits publication_limits =
+                                PublicationLimits{});
   ~RealtimeIntegrityPipeline();
   void ingestImu(const ImuMeasurement& measurement);
   IntegrityOutput processUwbBatch(const UwbBatch& batch);
+  // C4/W2: the watchdog sample is taken from the caller when supplied (replay
+  // harnesses and deterministic tests); the default is the monotonic steady
+  // clock plus the batch timestamp.  The publication state holder is the same
+  // object in both cases -- no second state source exists.
+  IntegrityOutput processUwbBatch(const UwbBatch& batch,
+                                  const ClockSample& clock_sample);
+  const PublicationController& publication() const { return publication_; }
   const ReinitializationDirective& reinitializationDirective() const {
     return reinitializer_.directive();
   }
@@ -95,6 +113,10 @@ class RealtimeIntegrityPipeline {
   IncrementalUwbImuEstimator* estimator_;
   IntegrityMonitor monitor_;
   HealthManager health_;
+  // C4/W2: the explicit publication state holder of this pipeline.  It owns
+  // the publication state machine, the last admitted certificate and the
+  // watchdog; nothing else in the pipeline stores publication state.
+  PublicationController publication_;
   std::uint32_t consecutive_bridge_epochs_ = 0;
   std::optional<TimestampNs> bridge_start_timestamp_;
   ControlledReinitializer reinitializer_;
@@ -103,6 +125,9 @@ class RealtimeIntegrityPipeline {
   std::uint64_t input_attempt_count_ = 0;
   std::uint64_t consecutive_rejections_ = 0;
   IntegrityOutput processUwbBatchImpl(const UwbBatch& batch);
+  // C4/W2: assembles the published identity from production values and passes
+  // the attempt through the publication state holder.
+  void applyPublicationGate(IntegrityOutput* output, const UwbBatch& batch);
  public:
   const IntegrityOutput& lastAttemptOutput() const { return last_attempt_output_; }
  private:

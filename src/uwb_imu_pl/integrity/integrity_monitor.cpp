@@ -1,6 +1,7 @@
 #include "uwb_imu_pl/integrity/integrity_monitor.hpp"
 
 #include "uwb_imu_pl/common/failure_reason.hpp"
+#include "uwb_imu_pl/common/integrity_identity.hpp"
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 #include "uwb_imu_pl/integrity/hypothesis_generator.hpp"
 #include "uwb_imu_pl/integrity/coverage_envelope.hpp"
@@ -351,7 +352,7 @@ ProtectionLevelResult IntegrityMonitor::protectionLevel(
   return result;
 }
 
-IntegrityOutput IntegrityMonitor::evaluateSnapshot(
+IntegrityOutput IntegrityMonitor::evaluateSnapshotImpl(
     const UwbBatch& batch, const SnapshotSolution& solution) const {
   IntegrityOutput output;
   output.timestamp = batch.timestamp;
@@ -443,7 +444,7 @@ SensitivityResult IntegrityMonitor::conditionalSensitivity(
   return result;
 }
 
-IntegrityOutput IntegrityMonitor::evaluateConditional(
+IntegrityOutput IntegrityMonitor::evaluateConditionalImpl(
     const UwbBatch& batch, const EstimationSnapshot& snapshot) const {
   auto stage_start = std::chrono::steady_clock::now();
   IntegrityOutput output;
@@ -1082,10 +1083,226 @@ ProjectedPostActionModes projectPostActionModes(
 
 }  // namespace
 
+namespace {
+
+// ---------------------------------------------------------------------------
+// C4/W2: publication identity assembly from production values only.
+// ---------------------------------------------------------------------------
+//
+// Every element below is a value the running pipeline actually produced:
+//   * the frozen window / transaction identity,
+//   * the linearization version the proofs were computed at,
+//   * the C1 history summary version_digest,
+//   * the C2 detector identity labels of the detectors that ran,
+//   * the W1 §8.5 selection risk proof id,
+//   * the fault-manifest digest and the health snapshot,
+//   * the protection level, reference, timestamp and frame.
+// String-valued identities are bound through the documented FNV-1a 64 mapping
+// (identityHash64); nothing is substituted by a placeholder.  A value the run
+// cannot supply stays zero/empty and is reported as missing.
+
+struct IdentityMaterial {
+  std::string snapshot_id_text;
+  std::uint64_t state_solution_id = 0;
+  std::uint64_t history_summary_id = 0;
+  std::string manifest_digest_text;
+  std::string health_state_text;
+  std::vector<std::string> detector_ids;
+  std::uint64_t risk_proof_id = 0;
+  Eigen::Vector3d protection_level_m = Eigen::Vector3d::Zero();
+  std::string position_reference;
+  std::int64_t timestamp_ns = 0;
+  std::string frame_id;
+};
+
+PublicationIdentity publicationIdentityFrom(const IdentityMaterial& material) {
+  PublicationIdentity identity;
+  identity.snapshot_id = material.snapshot_id_text.empty()
+      ? 0 : identityHash64(material.snapshot_id_text);
+  identity.state_solution_id = material.state_solution_id;
+  identity.history_summary_id = material.history_summary_id;
+  identity.manifest_digest = material.manifest_digest_text.empty()
+      ? 0 : identityHash64(material.manifest_digest_text);
+  identity.health_state = material.health_state_text.empty()
+      ? 0 : identityHash64(material.health_state_text);
+  for (const auto& detector : material.detector_ids) {
+    if (!detector.empty()) {
+      identity.detector_ids.push_back(identityHash64(detector));
+    }
+  }
+  identity.risk_proof_id = material.risk_proof_id;
+  identity.protection_level_m = material.protection_level_m;
+  identity.position_reference = material.position_reference;
+  identity.timestamp_ns = material.timestamp_ns;
+  identity.frame_id = material.frame_id;
+  return identity;
+}
+
+std::uint64_t publicationCertificateDigest(const PublicationIdentity& identity) {
+  std::ostringstream text;
+  text << identity.snapshot_id << '\x1f' << identity.state_solution_id << '\x1f'
+       << identity.history_summary_id << '\x1f' << identity.manifest_digest
+       << '\x1f' << identity.health_state << '\x1f';
+  for (const auto detector : identity.detector_ids) text << detector << ',';
+  text << '\x1f' << identity.risk_proof_id << '\x1f' << identity.timestamp_ns
+       << '\x1f' << identity.frame_id << '\x1f' << identity.position_reference;
+  return identityHash64(text.str());
+}
+
+std::string serializeHealthSnapshot(const HealthSnapshot& snapshot) {
+  std::string text;
+  for (const auto& entry : snapshot) {
+    if (!text.empty()) text += '|';
+    text += entry.source_id;
+    text += ':';
+    text += toString(entry.state);
+  }
+  return text;
+}
+
+std::string joinNames(const std::vector<std::string>& names) {
+  std::string text;
+  for (const auto& name : names) {
+    if (!text.empty()) text += ';';
+    text += name;
+  }
+  return text;
+}
+
+void copyPublicationIdentityValues(const PublicationIdentity& candidate,
+                                   const std::string& detector_labels,
+                                   std::uint64_t certificate_id,
+                                   PublicationDiagnostics* target) {
+  if (target == nullptr) return;
+  target->snapshot_id = candidate.snapshot_id;
+  target->state_solution_id = candidate.state_solution_id;
+  target->history_summary_id = candidate.history_summary_id;
+  target->manifest_digest = candidate.manifest_digest;
+  target->health_state = candidate.health_state;
+  target->detector_ids = detector_labels;
+  target->risk_proof_id = candidate.risk_proof_id;
+  target->certificate_id = certificate_id;
+}
+
+void runPublicationGate(PublicationController* controller,
+                        IntegrityOutput* output, const UwbBatch& batch,
+                        const IdentityMaterial& material,
+                        const std::string& detector_labels) {
+  IdentityMaterial certificate_material = material;
+  certificate_material.timestamp_ns = batch.timestamp.value();
+  IdentityMaterial candidate_material = material;
+  candidate_material.timestamp_ns = output->timestamp.value();
+  PublicationIdentity certificate = publicationIdentityFrom(certificate_material);
+  const std::vector<std::string> certificate_missing =
+      missingPublicationIdentityFields(certificate);
+  const bool certificate_available = certificate_missing.empty();
+  certificate.certificate_id = certificate_available
+      ? publicationCertificateDigest(certificate) : 0;
+  PublicationIdentity candidate = publicationIdentityFrom(candidate_material);
+  if (controller == nullptr) {
+    // No state holder was supplied: the gate did not run and the output must
+    // say so instead of implying a check passed.
+    const std::string reason =
+        "no publication state holder supplied for this stateless monitor path";
+    output->publication = PublicationDiagnostics{};
+    output->publication.gate_executed = false;
+    output->publication.identity_check = "NOT_EVALUATED";
+    output->publication.identity_reason = reason;
+    output->publication.refusal =
+        reason + ": output is explicitly unprotected";
+    output->publication.unprotected_output = true;
+    output->publication.missing_identity_fields =
+        joinNames(missingPublicationIdentityFields(candidate));
+    copyPublicationIdentityValues(candidate, detector_labels, 0,
+                                  &output->publication);
+    return;
+  }
+  const bool certification_available =
+      output->protection_level.formal_eligible &&
+      output->measurement_model_valid;
+  const PublicationDiagnosis diagnosis = controller->finalizeAttempt(
+      candidate, certificate, certificate_available, certification_available);
+  output->publication = PublicationDiagnostics{};
+  output->publication.gate_executed = diagnosis.gate_executed;
+  output->publication.identity_check = diagnosis.identity_check;
+  output->publication.identity_reason = diagnosis.identity_reason;
+  output->publication.state_before = diagnosis.state_before;
+  output->publication.state_after = diagnosis.state_after;
+  output->publication.transition = diagnosis.transition;
+  output->publication.transition_accepted = diagnosis.transition_accepted;
+  output->publication.protected_output = diagnosis.protected_output;
+  output->publication.unprotected_output = diagnosis.unprotected_output;
+  output->publication.refusal = diagnosis.refusal;
+  output->publication.missing_identity_fields =
+      joinNames(diagnosis.missing_identity_fields);
+  output->publication.watchdog_valid = diagnosis.watchdog_valid;
+  output->publication.wall_elapsed_ns = diagnosis.wall_elapsed_ns;
+  output->publication.sensor_elapsed_ns = diagnosis.sensor_elapsed_ns;
+  output->publication.sensor_delta_ns = diagnosis.sensor_delta_ns;
+  output->publication.sensor_lag_ns = diagnosis.sensor_lag_ns;
+  output->publication.sensor_stale = diagnosis.sensor_stale;
+  output->publication.wall_timeout = diagnosis.wall_timeout;
+  output->publication.replay_clock_jumped = diagnosis.replay_clock_jumped;
+  output->publication.clock_refused = diagnosis.clock_refused;
+  output->publication.watchdog_reason = diagnosis.watchdog_reason;
+  copyPublicationIdentityValues(candidate, detector_labels,
+                                certificate.certificate_id,
+                                &output->publication);
+}
+
+}  // namespace
+
+// The public stateless entry points append the C4 publication gate to the two
+// bodies above.  They are defined here (after the gate helpers) because the
+// gate needs the identity assembly; the bodies themselves stay unchanged.
+IntegrityOutput IntegrityMonitor::evaluateSnapshot(
+    const UwbBatch& batch, const SnapshotSolution& solution,
+    PublicationController* publication) const {
+  IntegrityOutput output = evaluateSnapshotImpl(batch, solution);
+  IdentityMaterial material;
+  // The snapshot solution carries no version/solution identity: nothing is
+  // invented for it, the element is reported as missing instead.
+  material.protection_level_m = output.protection_level.pl_xyz_m;
+  if (!output.detector.detector_type.empty()) {
+    material.detector_ids.push_back(output.detector.detector_type);
+  }
+  if (!output.postfit_detector.detector_type.empty()) {
+    material.detector_ids.push_back(output.postfit_detector.detector_type);
+  }
+  runPublicationGate(publication, &output, batch, material,
+                     joinNames(material.detector_ids));
+  return output;
+}
+
+IntegrityOutput IntegrityMonitor::evaluateConditional(
+    const UwbBatch& batch, const EstimationSnapshot& snapshot,
+    PublicationController* publication) const {
+  IntegrityOutput output = evaluateConditionalImpl(batch, snapshot);
+  const auto& version = snapshot.version();
+  IdentityMaterial material;
+  material.snapshot_id_text = "snapshot:" + std::to_string(version.graph_version) +
+      ":linpoint:" + std::to_string(version.linpoint_version) +
+      ":ordering:" + std::to_string(version.ordering_version) +
+      ":noise:" + std::to_string(version.noise_model_version);
+  material.state_solution_id = version.linpoint_version;
+  material.protection_level_m = output.protection_level.pl_xyz_m;
+  if (!output.detector.detector_type.empty()) {
+    material.detector_ids.push_back(output.detector.detector_type);
+  }
+  if (!output.postfit_detector.detector_type.empty()) {
+    material.detector_ids.push_back(output.postfit_detector.detector_type);
+  }
+  runPublicationGate(publication, &output, batch, material,
+                     joinNames(material.detector_ids));
+  return output;
+}
+
 RealtimeIntegrityPipeline::RealtimeIntegrityPipeline(
-    IncrementalUwbImuEstimator* estimator, IntegrityMonitor monitor)
+    IncrementalUwbImuEstimator* estimator, IntegrityMonitor monitor,
+    PublicationLimits publication_limits)
     : estimator_(estimator), monitor_(std::move(monitor)),
       health_(estimator ? estimator->config().health : HealthConfigV2{}),
+      publication_(publication_limits),
       candidate_workers_(new CandidateWorkerPool(4)) {
   if (estimator_ == nullptr) throw std::invalid_argument("estimator must not be null");
   for (const auto& anchor : estimator_->config().anchors) {
@@ -1154,6 +1371,52 @@ RealtimeIntegrityPipeline::reinitializationPriorSigmas(
 }
 
 IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch) {
+  ClockSample sample;
+  sample.wall_monotonic_ns =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          std::chrono::steady_clock::now().time_since_epoch())
+          .count();
+  sample.sensor_timestamp_ns = batch.timestamp.value();
+  // No replay marker exists on the production path, so a backwards clock is
+  // refused by the watchdog instead of being excused as a replay jump.
+  sample.replay_clock_jumped = false;
+  return processUwbBatch(batch, sample);
+}
+
+void RealtimeIntegrityPipeline::applyPublicationGate(IntegrityOutput* output,
+                                                     const UwbBatch& batch) {
+  const IntegrityConfig& cfg = estimator_->config();
+  IdentityMaterial material;
+  if (output->window_id != 0 && output->transaction_id != 0) {
+    material.snapshot_id_text = "window:" + std::to_string(output->window_id) +
+        ":transaction:" + std::to_string(output->transaction_id);
+  }
+  material.state_solution_id = output->linearization_version;
+  const auto& summary = output->diagnostics.history_summary;
+  if (summary.present && summary.valid) {
+    material.history_summary_id = summary.version_digest;
+  }
+  if (cfg.fault_manifest) material.manifest_digest_text = cfg.fault_manifest->digest;
+  material.health_state_text = serializeHealthSnapshot(health_.snapshot());
+  if (!output->detector.detector_type.empty()) {
+    material.detector_ids.push_back(output->detector.detector_type);
+  }
+  if (!output->postfit_detector.detector_type.empty()) {
+    material.detector_ids.push_back(output->postfit_detector.detector_type);
+  }
+  if (!output->global_detector.detector_type.empty()) {
+    material.detector_ids.push_back(output->global_detector.detector_type);
+  }
+  material.risk_proof_id = output->diagnostics.selection_risk_proof_id;
+  material.protection_level_m = output->protection_level.pl_xyz_m;
+  material.position_reference = output->snapshot_identity.position_reference;
+  material.frame_id = cfg.realtime.world_frame;
+  runPublicationGate(&publication_, output, batch, material,
+                     joinNames(material.detector_ids));
+}
+
+IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(
+    const UwbBatch& batch, const ClockSample& clock_sample) {
   const auto start = std::chrono::steady_clock::now();
   const auto before = estimator_->currentEpoch();
   ++input_attempt_count_;
@@ -1194,8 +1457,38 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
         std::chrono::steady_clock::now() - start).count(), d.status != "EXCEPTION",
         d.status, d.reason});
   };
+  // C4/W2: the freshness channel is judged before any heavy FDE work.
+  publication_.beginAttempt(clock_sample);
+  const WatchdogState& watchdog = publication_.watchdog();
+  if (!watchdog.valid) {
+    // Backwards clock without a replay marker (or an unusable sample): refused
+    // the same way the platform's own input validation refuses stale batches --
+    // no FDE is entered and no estimator state is touched.
+    throw std::invalid_argument(
+        "publication watchdog refused the batch: " + watchdog.reason);
+  }
+  if (publication_.watchdogRefused()) {
+    // Frozen data / wall-clock timeout: UNAVAILABLE is decided here, before the
+    // heavy FDE, exactly so the judgement does not wait for it.
+    IntegrityOutput output;
+    output.timestamp = estimator_->currentState().timestamp;
+    output.state = estimator_->currentState();
+    output.stale_state = true;
+    output.protection_level.availability = Availability::Unavailable;
+    output.protection_level.formal_eligible = false;
+    output.protection_level.reason = watchdog.reason;
+    output.diagnostics.status = "WATCHDOG_REFUSED";
+    output.diagnostics.reason = watchdog.reason;
+    output.diagnostics.transaction_opened = false;
+    output.stage_timings.push_back({"publication_watchdog", 0.0, false,
+        "REFUSED", watchdog.reason});
+    runPublicationGate(&publication_, &output, batch, IdentityMaterial{}, "");
+    finish(output);
+    return output;
+  }
   try {
     auto output = processUwbBatchImpl(batch);
+    applyPublicationGate(&output, batch);
     finish(output);
     return output;
   } catch (const std::exception& error) {
@@ -2042,6 +2335,21 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           record.p_md_allocation = hypothesis.p_md_allocation;
           record.hmi_allocation = hypothesis.hmi_allocation;
           record.monitorable = hypothesis.monitored;
+          // C4 diagnostics v16 (§7.1): the comparability identity and the RAW
+          // whitened profile value of this hypothesis, copied from the
+          // evidence record that produced them.
+          {
+            const auto evidence_index =
+                indexes.evidence.find(hypothesis.id.value());
+            if (evidence_index != indexes.evidence.end() &&
+                evidence_index->second < evidence.size()) {
+              const FaultModeEvidence& hypothesis_evidence =
+                  evidence[evidence_index->second];
+              record.unit_kind = toString(hypothesis_evidence.unit_kind);
+              record.profile_j = hypothesis_evidence.profile_j;
+              record.profile_valid = hypothesis_evidence.profile_valid;
+            }
+          }
           {
             bool covered = !hypothesis.modes.empty();
             for (const auto mode_id : hypothesis.modes) {
@@ -2372,6 +2680,18 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             fde_trigger, models.hypotheses, evidence, &candidates,
             mandatory_exclusion_groups, cfg.risk_v2);
         record_stage("fde_decision", true);
+        // C4 diagnostics v16: export the charged event-class identity and the
+        // derived risk-proof id exactly as the decision produced them.
+        output.diagnostics.selection_risk_proof_id =
+            decision.selection_risk_proof_id;
+        {
+          std::string classes;
+          for (const auto id : decision.selection_event_class_ids) {
+            if (!classes.empty()) classes += ';';
+            classes += std::to_string(id);
+          }
+          output.diagnostics.selection_event_class_ids = classes;
+        }
         if (!decision.commit_allowed || !decision.selected_action) {
           note_failure(decision.reason);
         }
@@ -2400,6 +2720,11 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               candidate.action.groups_to_remove);
           record.added_group_ids = join_group_ids(candidate.action.groups_to_add);
           record.bridge_mode = toString(candidate.action.bridge_mode);
+          // C4 diagnostics v16 (§7.3): the removal provenance of this action.
+          record.removal_data_source = candidate.action.removal_data_source;
+          record.model_error_record = candidate.action.model_error_record;
+          record.model_error_validated =
+              candidate.action.model_error_validated;
           }
           record.cardinality = candidate.action.exclusion_cardinality;
           record.valid = candidate.valid;

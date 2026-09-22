@@ -40,6 +40,12 @@ struct FdeDecision {
   double selection_charged_budget = 0.0;
   double selection_available_budget = 0.0;
   std::size_t selection_event_classes = 0;
+  // Identity of the charged event classes (C4 diagnostics v16 / publication
+  // risk proof): the class ids actually charged, sorted, and a derived id that
+  // the publication gate binds as the W1 risk proof identity.  A decision with
+  // no charged class carries id 0 and the gate reports it as missing.
+  std::vector<std::uint64_t> selection_event_class_ids;
+  std::uint64_t selection_risk_proof_id = 0;
   // §8.3 disposition per candidate, parallel to the candidate vector.
   std::vector<int> candidate_dispositions;
 };

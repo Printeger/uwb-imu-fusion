@@ -316,7 +316,11 @@ int main(int argc, char** argv) {
     uwb_imu_pl::RealtimeIntegrityPipeline pipeline(
         &estimator, uwb_imu_pl::IntegrityMonitor(
             config.risk, config.snapshot.rank_tolerance,
-            config.snapshot.max_condition_number));
+            config.snapshot.max_condition_number),
+        // Offline replay harness: wall-clock deadlines are not a real-time
+        // reference here, so the wall-timeout judgement is disabled by
+        // construction; freeze/vintage checks stay active.
+        uwb_imu_pl::offlineReplayPublicationLimits());
     uwb_imu_pl::ImuMeasurement boundary;
     boundary.timestamp = initial.timestamp;
     boundary.specific_force_mps2 = {0, 0, config.imu.gravity_mps2};
