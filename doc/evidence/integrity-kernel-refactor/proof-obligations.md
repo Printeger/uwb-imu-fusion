@@ -430,3 +430,13 @@ Householder 正消元（先消 `x_o`，再按 `x_b` 支持分块）；无正规�
   新鲜度用 wall−sensor 滞后量；时钟倒退（无标记）即拒。*`LOCKED_BY_TEST`：OUT-03。*
 * **诚实缺口（未接线）**：模块→`integrity_monitor` 发布路径的替换与诊断列/CSV 的 OUT 字段未加。
 * **本轮三个里程碑状态**：M1/M2/M3 的**模块 + 测试 + 证据**均完成；M2/M3 的接入项如上。
+## 25.（W1：C3 生产接线）义务与状态
+
+| # | 义务 | 状态 | 证据 |
+|---|---|---|---|
+| W1-01 | 可能集每个假设都有**可比性身份**（单位/维数）与**原始白化 profile 值** | LOCKED_BY_TEST | `hypothesis_evidence.cpp`（`faultUnitKindOf`、`profile_j`）；测试 `SelectionRiskChargedOverPublishableSet`、`MixedUnitPoolIsRecordedAndNotRanked` |
+| W1-02 | 证据缺失/非有限 profile ⇒ 拒绝发布（fail-closed，不放宽） | LOCKED_BY_TEST | `FdeManager::decide` 池检查 ⇒ `ModelInvalid`；测试 `ProfilePoolRefusesMissingEvidenceFailClosed` |
+| W1-03 | 跨单位/跨维数**不得排序**（拒绝语义被遵守） | LOCKED_BY_TEST | 混单位池 `profile_pool_ranked=false` 且按冻结准则照常选择；测试 `MixedUnitPoolIsRecordedAndNotRanked` |
+| W1-04 | 选择风险对**全部可能发布动作**的并集控制，超预算保持不可用 | LOCKED_BY_TEST（当前策略下不可绑定，见 §7.2 诚实说明） | `buildGuaranteeGroups` + `commit_allowed=false` 路径；测试 `SelectionRiskChargedOverPublishableSet` |
+| W1-05 | IMU 区间移除的"数据来源/模型误差记录"是显式字段，并在并集动作中保真 | LOCKED_BY_TEST（结构）/ 诊断导出推迟 W2 | `ExclusionAction::{removal_data_source,model_error_record,model_error_validated}`；`actionForMode`/`unite`；`candidate_replay.cpp` 显式说明 |
+| W1-06 | 阈值/合同（0.25 gate、128 上限、p_fa/p_md、alert limits、风险预算）不动 | LOCKED_BY_TEST | 无阈值改动；validation 50 PASS/0 FAIL @ b7feb9c |
