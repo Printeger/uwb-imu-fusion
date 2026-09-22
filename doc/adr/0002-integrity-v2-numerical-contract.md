@@ -56,3 +56,11 @@ one frozen base, and compared against complete block content and versions.
 A post-detector failure skips bridge/fault-map/PL work, while the diagnostic
 attachment retains the separate numerical-validity result. No hypotheses or
 actions are pruned by coverage before kernel execution.
+
+## D round status (2026-09-22)
+
+The numerical contract held through the D acceptance runs: NUM-01..04, PRV-01..06
+and the Gate-D numerics suites all PASS in `validation-report.json`; the v16
+diagnostics export the frozen-window certificate fields unchanged.  Gate J
+evidence (independent formula review, real-data calibration) is still pending,
+so `formal_eligible` remains false.  No contract value was changed in D.

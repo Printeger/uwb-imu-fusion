@@ -335,7 +335,8 @@ std::string runMode(const Options& options, const uwb_imu_pl::IntegrityConfig& b
   uwb_imu_pl::RealtimeIntegrityPipeline pipeline(
       &estimator, uwb_imu_pl::IntegrityMonitor(
           config.risk, config.snapshot.rank_tolerance,
-          config.snapshot.max_condition_number));
+          config.snapshot.max_condition_number),
+      uwb_imu_pl::offlineReplayPublicationLimits());
   uwb_imu_pl::ImuMeasurement boundary;
   boundary.timestamp = initial.timestamp;
   boundary.specific_force_mps2 = initial_truth.acceleration +

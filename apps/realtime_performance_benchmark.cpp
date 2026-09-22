@@ -65,10 +65,14 @@ int main(int argc, char** argv) {
     uwb_imu_pl::IncrementalUwbImuEstimator estimator(
         config, config.realtime.lever_arm_body_m);
     estimator.initialize(initial, config.realtime.prior_sigmas);
-    uwb_imu_pl::RealtimeIntegrityPipeline pipeline(
-        &estimator, uwb_imu_pl::IntegrityMonitor(
-            config.risk, config.snapshot.rank_tolerance,
-            config.snapshot.max_condition_number));
+  // D round: offline replay declares its publication policy explicitly (the
+  // default wall timeout is a bridge/streaming policy; this harness computes
+  // slower than real time by construction).
+  uwb_imu_pl::RealtimeIntegrityPipeline pipeline(
+      &estimator, uwb_imu_pl::IntegrityMonitor(
+          config.risk, config.snapshot.rank_tolerance,
+          config.snapshot.max_condition_number),
+      uwb_imu_pl::offlineReplayPublicationLimits());
     uwb_imu_pl::ImuMeasurement boundary;
     boundary.timestamp = initial.timestamp;
     boundary.specific_force_mps2 = acceleration(0) +

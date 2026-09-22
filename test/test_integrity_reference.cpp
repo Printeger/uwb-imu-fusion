@@ -423,3 +423,137 @@ TEST(ReferenceFixture, GEO05DoubleFaultCancellationNeedsTheCrossTerm) {
   // truncated exact bound stays finite even though the pair is dangerous.
   EXPECT_TRUE(pair.slopes.allFinite());
 }
+
+// ---------------------------------------------------------------------------
+// CFG-03 (D round): fixed anchors, moving platform.  The startup checks are a
+// configuration-level pass; the runtime geometry must still be re-validated
+// per frozen window.  The same four anchors give a rank-3 range Jacobian at
+// (0,0,1) and a rank-2 (state-deficient) one at (0,0,0), so a startup pass
+// must never be inherited by a runtime window.
+// ---------------------------------------------------------------------------
+TEST(ReferenceFixture, StartupPassDoesNotMaskRuntimeGeometryDegradation) {
+  using namespace uwb_imu_pl;
+  const std::vector<Eigen::Vector3d> anchors = {
+      {-1, -1, 0}, {-1, 1, 0}, {1, -1, 0}, {1, 1, 0}};
+  auto rangeJacobian = [&](const Eigen::Vector3d& target) {
+    MatrixXd jacobian(anchors.size(), 3);
+    for (std::size_t i = 0; i < anchors.size(); ++i) {
+      const Eigen::Vector3d delta = target - anchors[i];
+      jacobian.row(static_cast<Eigen::Index>(i)) =
+          delta.transpose() / delta.norm();
+    }
+    return jacobian;
+  };
+  auto buildWindow = [&](const Eigen::Vector3d& target) {
+    LinearizedIntegrityWindow window;
+    window.id = WindowId(7);
+    window.version = {1, 1, 1, 1};
+    LinearizedFactorBlock block;
+    block.group_id = FactorGroupId(1);
+    block.kind = FactorKind::UwbBatch;
+    block.sensor = SensorType::Uwb;
+    const MatrixXd raw = rangeJacobian(target);
+    block.whitener = MatrixXd::Identity(anchors.size(), anchors.size());
+    block.jacobian_raw = raw;
+    block.residual_raw = VectorXd::Zero(static_cast<Eigen::Index>(anchors.size()));
+    block.covariance = MatrixXd::Identity(anchors.size(), anchors.size());
+    block.jacobian_whitened = block.whitener * raw;
+    block.residual_whitened = VectorXd::Zero(static_cast<Eigen::Index>(anchors.size()));
+    block.version = window.version;
+    window.blocks.push_back(std::move(block));
+    window.protected_state_map = MatrixXd::Identity(3, 3);
+    finalizeIntegrityWindow(&window, 1e-10, 1e10);
+    return window;
+  };
+  const auto elevated = buildWindow({0, 0, 1});
+  EXPECT_TRUE(elevated.model_valid) << elevated.reason;
+  EXPECT_EQ(elevated.rank, 3);
+  EXPECT_EQ(elevated.dof, 1);
+  const auto at_origin = buildWindow({0, 0, 0});
+  EXPECT_FALSE(at_origin.model_valid)
+      << "runtime geometry degradation must not be masked by a startup pass";
+  EXPECT_EQ(at_origin.rank, 2);
+  EXPECT_NE(at_origin.reason.find("rank deficient"), std::string::npos)
+      << at_origin.reason;
+}
+
+// ---------------------------------------------------------------------------
+// GEO-03 (D round): multiple alternate one-dimensional modes with K > nu.  A
+// count-based rule ("dictionary bigger than nu -> reject") is wrong in both
+// directions; the classification must come from the parity/kernel analysis.
+// Here m = 4, rank(H) = 2 (nu = 2) and the dictionary carries four
+// one-dimensional modes, K > nu:
+//   * d1, d2 stay detectable and span the full 2-D parity content;
+//   * d3 = H w3 is blind but harmless (G d3 = 0, GEO-04 contrast);
+//   * d4 = H w4 is blind and dangerous (G d4 != 0).
+// The verdict is driven by the kernel direction, not by K: with d4 removed the
+// K = 3 > nu dictionary keeps a finite bound; with d4 present the dangerous
+// kernel direction is identified even though most of the dictionary is fine.
+// ---------------------------------------------------------------------------
+TEST(ReferenceFixture, Geo03KGreaterThanNuIsClassifiedByTheKernelNotByCounts) {
+  MatrixXd H(4, 2);
+  H << 1.0, 0.0,
+       0.0, 1.0,
+       1.0, 1.0,
+       1.0, -1.0;
+  const LeastSquaresReference ls = leastSquares(H);
+  EXPECT_EQ(ls.rank, 2);
+  EXPECT_EQ(ls.nu, 2);
+  MatrixXd C(1, 2);
+  C << 1.0, 0.0;
+
+  const VectorXd w3 = (VectorXd(2) << 0.0, 0.4).finished();   // G d3 = 0
+  const VectorXd w4 = (VectorXd(2) << 0.5, 0.0).finished();   // G d4 != 0
+  MatrixXd A(4, 4);
+  A.col(0) << 1.0, 0.0, 0.0, 0.0;
+  A.col(1) << 0.0, 1.0, 0.0, 0.0;
+  A.col(2) = H * w3;
+  A.col(3) = H * w4;
+  const SlopeReference mixed = slopeReference(H, A, C);
+  EXPECT_EQ(mixed.rank, 2);  // the detection content lives in parity space
+  EXPECT_GT(mixed.Z.col(0).norm(), 0.1);
+  EXPECT_GT(mixed.Z.col(1).norm(), 0.1);
+  EXPECT_NEAR(mixed.Z.col(2).norm(), 0.0, kAtol);  // blind mode
+  EXPECT_NEAR(mixed.Z.col(3).norm(), 0.0, kAtol);  // blind mode
+  Eigen::JacobiSVD<MatrixXd> z_svd(mixed.Z, Eigen::ComputeThinU |
+                                                Eigen::ComputeThinV);
+  const VectorXd z_singular = z_svd.singularValues();
+  const double z_gate = 1e-10 * std::max(1.0, z_singular(0));
+  const int z_rank =
+      static_cast<int>((z_singular.array() > z_gate).count());
+  EXPECT_EQ(mixed.Z.cols() - z_rank, 2);
+  // Kernel analysis: a dangerous kernel direction exists (G restricted to
+  // ker Z is non-zero), and it comes from d4, not from the dictionary size.
+  double worst_kernel_gain = 0.0;
+  for (int i = z_rank; i < mixed.Z.cols(); ++i) {
+    worst_kernel_gain = std::max(
+        worst_kernel_gain, (mixed.G * z_svd.matrixV().col(i)).cwiseAbs().maxCoeff());
+  }
+  EXPECT_GT(worst_kernel_gain, 0.1)
+      << "the present dangerous direction must be identified by the kernel "
+         "test";
+
+  // Removing the dangerous mode leaves a K = 3 > nu = 2 dictionary whose only
+  // blind direction is harmless: the bound stays finite.  K > nu alone never
+  // rejects (counts are not the trigger).
+  MatrixXd harmless(4, 3);
+  harmless << A.col(0), A.col(1), A.col(2);
+  const SlopeReference fine = slopeReference(H, harmless, C);
+  EXPECT_EQ(fine.rank, 2);
+  EXPECT_TRUE(std::isfinite(fine.slopes(0)));
+  EXPECT_GT(fine.slopes(0), 0.0);
+  Eigen::JacobiSVD<MatrixXd> fine_svd(fine.Z, Eigen::ComputeThinU |
+                                                  Eigen::ComputeThinV);
+  const VectorXd fine_singular = fine_svd.singularValues();
+  const double fine_gate = 1e-10 * std::max(1.0, fine_singular(0));
+  const int fine_rank =
+      static_cast<int>((fine_singular.array() > fine_gate).count());
+  double fine_kernel_gain = 0.0;
+  for (int i = fine_rank; i < fine.Z.cols(); ++i) {
+    fine_kernel_gain = std::max(
+        fine_kernel_gain,
+        (fine.G * fine_svd.matrixV().col(i)).cwiseAbs().maxCoeff());
+  }
+  EXPECT_LT(fine_kernel_gain, 1e-9)
+      << "the only blind direction is harmless; K > nu must not blanket-reject";
+}

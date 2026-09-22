@@ -622,3 +622,222 @@ TEST(HistoryFaultParameterization, CapacityRefusesWithoutTruncation) {
   EXPECT_TRUE(nonempty.unusable);
   EXPECT_EQ(nonempty.reason, "HISTORY_CAPACITY_EXCEEDED");
 }
+
+namespace {
+
+// D round MOD-03 oracle: replicates ImuFaultSubspaceBuilder's private
+// reintegration loop, but with the additive sample perturbation active only
+// from `first_interval` on (interval i covers raw samples i-1 -> i, matching
+// the production code).
+gtsam::PreintegratedCombinedMeasurements reintegrateIntervalOnset(
+    const EpochTransaction& tx, int axis, double perturbation,
+    std::size_t first_interval) {
+  gtsam::PreintegratedCombinedMeasurements pim(*tx.preintegration);
+  pim.resetIntegration();
+  for (std::size_t i = 1; i < tx.raw_imu_slice.size(); ++i) {
+    const auto& left = tx.raw_imu_slice[i - 1];
+    const auto& right = tx.raw_imu_slice[i];
+    const double dt = right.timestamp.seconds() - left.timestamp.seconds();
+    Eigen::Vector3d acc =
+        0.5 * (left.specific_force_mps2 + right.specific_force_mps2);
+    Eigen::Vector3d gyro =
+        0.5 * (left.angular_velocity_radps + right.angular_velocity_radps);
+    if (i - 1 >= first_interval) {
+      if (axis < 3) acc(axis) += perturbation;
+      else gyro(axis - 3) += perturbation;
+    }
+    pim.integrateMeasurement(acc, gyro, dt);
+  }
+  return pim;
+}
+
+gtsam::Vector intervalOnsetFactorError(
+    const EpochTransaction& tx,
+    const gtsam::PreintegratedCombinedMeasurements& pim) {
+  gtsam::CombinedImuFactor factor(1, 2, 3, 4, 5, 6, pim);
+  const auto pose = [](const NavigationState& state) {
+    return gtsam::Pose3(
+        gtsam::Rot3(state.q_world_body.normalized().toRotationMatrix()),
+        state.position_world_m);
+  };
+  const auto bias = [](const NavigationState& state) {
+    return gtsam::imuBias::ConstantBias(state.accel_bias_mps2,
+                                        state.gyro_bias_radps);
+  };
+  return factor.evaluateError(pose(tx.previous_state),
+                              tx.previous_state.velocity_world_mps,
+                              pose(tx.nominal_predicted_state),
+                              tx.nominal_predicted_state.velocity_world_mps,
+                              bias(tx.previous_state),
+                              bias(tx.nominal_predicted_state));
+}
+
+Eigen::MatrixXd intervalOnsetOracleMap(const EpochTransaction& tx,
+                                       const LinearizedFactorBlock& block,
+                                       int axis, double epsilon,
+                                       std::size_t first_interval) {
+  const auto plus =
+      reintegrateIntervalOnset(tx, axis, epsilon, first_interval);
+  const auto minus =
+      reintegrateIntervalOnset(tx, axis, -epsilon, first_interval);
+  const Eigen::VectorXd derivative =
+      (intervalOnsetFactorError(tx, plus) -
+       intervalOnsetFactorError(tx, minus)) / (2.0 * epsilon);
+  return -block.whitener * derivative;
+}
+
+}  // namespace
+
+// ---------------------------------------------------------------------------
+// D round MOD-01: UWB template support under dropouts and non-uniform sample
+// times.  The declared UWB shapes are per-epoch occurrences; a dropped anchor
+// in one history epoch must remove exactly that (epoch, source) occurrence
+// from the parameterization (no fabricated template, no material-gap
+// overclaim), and the time-linear companion column must follow the *actual*
+// measurement timestamps when an epoch is not on the uniform grid.
+// ---------------------------------------------------------------------------
+TEST(HistoryFaultParameterization,
+     Mod01UwbDropoutAndNonUniformTimestampsKeepTheDeclaredSupport) {
+  const auto config = researchConfig();
+  IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+  NavigationState initial;
+  initial.position_world_m = {0, 0, 1};
+  estimator.initialize(initial, config.realtime.prior_sigmas);
+  ImuMeasurement boundary;
+  boundary.timestamp = TimestampNs(0);
+  boundary.specific_force_mps2 = {0, 0, config.imu.gravity_mps2};
+  estimator.ingestImu(boundary);
+  const std::size_t dropout_epoch = 8;
+  const std::size_t skew_epoch = 9;
+  const std::size_t dropout_anchor = 0;
+  constexpr double kSkewSeconds = 0.003;  // inside imu.max_time_skew_s = 0.01
+  EpochTransaction last;
+  for (std::size_t epoch = 1; epoch <= 26; ++epoch) {
+    for (int sample = 1; sample <= 10; ++sample) {
+      ImuMeasurement imu;
+      imu.id = MeasurementId(epoch * 1000 + sample);
+      imu.timestamp = TimestampNs(
+          static_cast<std::int64_t>(((epoch - 1) * 10 + sample) * 5000000));
+      imu.specific_force_mps2 = {0, 0, config.imu.gravity_mps2};
+      estimator.ingestImu(imu);
+    }
+    auto input = batch(config, static_cast<std::int64_t>(epoch * 50000000));
+    for (std::size_t row = 0; row < input.measurements.size(); ++row) {
+      input.measurements[row].id = MeasurementId(epoch * 100 + row + 1);
+      input.measurements[row].factor_id = FactorId(epoch * 100 + row + 1);
+      if (epoch == skew_epoch) {
+        input.measurements[row].timestamp = TimestampNs(
+            static_cast<std::int64_t>(epoch * 50000000 +
+                                      kSkewSeconds * 1e9));
+      }
+    }
+    if (epoch == dropout_epoch) {
+      input.measurements.erase(input.measurements.begin() +
+                               static_cast<std::ptrdiff_t>(dropout_anchor));
+    }
+    auto transaction = estimator.prepareEpoch(input);
+    if (epoch == 26) {
+      last = transaction;
+    } else {
+      const auto plan = EpochCommitPlan::nominalPlan(transaction);
+      estimator.commitEpoch(std::move(transaction), plan);
+    }
+  }
+  const auto plan = planHistoryFaultParameterization(last, 10);
+  const std::size_t window_first = last.proposed_epoch - 10;
+  // UWB occurrences only: IMU columns use axis indexes as their source, which
+  // would collide with anchor ids in a combined pair set.
+  std::set<std::pair<std::size_t, std::uint64_t>> pairs;
+  for (const auto& column : plan.columns) {
+    if (column.id.kind == HistoryFaultBasisKind::UwbAnchorConstant ||
+        column.id.kind == HistoryFaultBasisKind::UwbAnchorTimeLinear) {
+      pairs.insert({column.id.epoch, column.id.source});
+    }
+  }
+  // Dropout: exactly that occurrence disappears; the epoch keeps material.
+  EXPECT_EQ(pairs.count({dropout_epoch,
+                         config.anchors[dropout_anchor].id.value()}),
+            0u);
+  EXPECT_GT(pairs.count({dropout_epoch,
+                         config.anchors[1].id.value()}),
+            0u);
+  EXPECT_EQ(plan.material_gap_epoch_count, 0u);
+  // The declared support still reaches the window boundary (no tail cut).
+  EXPECT_GT(pairs.count({window_first - 1, config.anchors[1].id.value()}), 0u);
+
+  // Non-uniform times: recompute the time-linear oracle from the actual
+  // timestamps of the shifted epoch.  An implementation that reused the
+  // uniform grid (index * dt) would mismatch here.
+  std::size_t checked = 0;
+  double worst = 0.0;
+  for (const auto& column : plan.columns) {
+    if (column.id.epoch != skew_epoch ||
+        column.id.kind != HistoryFaultBasisKind::UwbAnchorTimeLinear) {
+      continue;
+    }
+    const HistoricalEpochContext* record = recordOf(last, column.id.epoch);
+    ASSERT_NE(record, nullptr);
+    const PendingFactorGroup* group =
+        selectedGroup(*record, FactorKind::UwbBatch);
+    ASSERT_NE(group, nullptr);
+    Eigen::VectorXd expected = Eigen::VectorXd::Zero(
+        static_cast<Eigen::Index>(group->source_measurements.size()));
+    for (std::size_t row = 0; row < group->source_measurements.size(); ++row) {
+      const UwbMeasurement* measurement =
+          measurementOf(record->uwb_batch, group->source_measurements[row]);
+      if (!measurement || measurement->anchor_id.value() != column.id.source) {
+        continue;
+      }
+      expected(static_cast<Eigen::Index>(row)) =
+          measurement->timestamp.seconds() - record->begin.seconds();
+    }
+    worst = std::max(worst, (column.raw_map - expected).norm());
+    ++checked;
+  }
+  EXPECT_GT(checked, 0u);
+  EXPECT_EQ(worst, 0.0) << "time-linear template must follow actual sample "
+                           "times, not an assumed uniform grid";
+}
+
+// ---------------------------------------------------------------------------
+// D round MOD-03: an interval-interior onset must not reuse the whole-interval
+// bias Jacobian.  The production event declarations are interval-constant per
+// epoch, so the positive control is that the full-interval finite-difference
+// oracle reproduces the analytic template; when the same perturbation covers
+// only the second half of the interval the map changes by O(50 %), i.e. a
+// non-whole-interval template would be plainly wrong if it kept the complete
+// bias Jacobian.
+// ---------------------------------------------------------------------------
+TEST(HistoryFaultParameterization,
+     Mod03IntervalInteriorOnsetCannotReuseTheWholeIntervalTemplate) {
+  const auto config = researchConfig();
+  IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+  NavigationState initial;
+  initial.position_world_m = {0, 0, 1};
+  estimator.initialize(initial, config.realtime.prior_sigmas);
+  const EpochTransaction tx = matureTransaction(&estimator, config, 1);
+  ASSERT_TRUE(tx.preintegration);
+  ASSERT_GE(tx.raw_imu_slice.size(), 3u);
+  const LinearizedFactorBlock block =
+      estimator.buildPendingFactorBlock(tx, tx.imu_group.id);
+  ASSERT_EQ(block.kind, FactorKind::CombinedImu);
+  const auto maps = ImuFaultSubspaceBuilder().build(tx, block);
+  ASSERT_TRUE(maps.analytic_input_valid);
+  ASSERT_TRUE(maps.analytic_computation_valid);
+  const double epsilon = 1e-6;
+  const Eigen::MatrixXd full = intervalOnsetOracleMap(tx, block, 0, epsilon, 0);
+  const Eigen::MatrixXd half =
+      intervalOnsetOracleMap(tx, block, 0, epsilon, tx.raw_imu_slice.size() / 2);
+  const double reference = std::max(1e-12, maps.accel_axis[0].norm());
+  // Positive control: full-interval support == analytic template.
+  EXPECT_LE((full - maps.accel_axis[0]).norm() / reference, 1e-4);
+  // Interior onset: the whole-interval template must not be reused.
+  const double mismatch =
+      (half - maps.accel_axis[0]).norm() / reference;
+  EXPECT_GT(mismatch, 0.2)
+      << "a half-interval onset cannot be represented by the full-interval "
+         "bias Jacobian";
+  const double ratio = half.norm() / std::max(1e-12, full.norm());
+  EXPECT_GT(ratio, 0.2);
+  EXPECT_LT(ratio, 0.8);
+}

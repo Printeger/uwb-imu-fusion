@@ -68,7 +68,7 @@ int main(int argc,char** argv) {
     const auto before=estimator.backendUpdateCount();
     estimator.discardEpoch(std::move(tx),{FdeStatus::ModelInvalid,"diagnostic frozen export complete",false});
     if(estimator.backendUpdateCount()!=before) throw std::runtime_error("diagnostic prepare/discard mutated backend");
-    RealtimeIntegrityPipeline pipeline(&estimator,IntegrityMonitor(cfg.risk,cfg.snapshot.rank_tolerance,cfg.snapshot.max_condition_number));
+    RealtimeIntegrityPipeline pipeline(&estimator,IntegrityMonitor(cfg.risk,cfg.snapshot.rank_tolerance,cfg.snapshot.max_condition_number),offlineReplayPublicationLimits());
     auto output=pipeline.processUwbBatch(b);
     logger.writeState(output.state); logger.writeIntegrity(output);
     for(const auto& stage:output.stage_timings) if(stage.status=="EXECUTED") {

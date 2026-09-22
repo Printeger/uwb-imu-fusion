@@ -41,3 +41,16 @@ Placeholder combination priors do not assume independence and use the
 conservative Frechet upper bound `min(component priors)`.  Formal estimator
 weights remain fixed; GNC is shadow-only.
 
+## D round status (2026-09-22)
+
+The declared scope is unchanged.  The D acceptance round measured the whole
+pipeline against the 40 ms normal-frame target and recorded a blocker instead
+of narrowing the claim: with the shipped `fixed_lag_epochs: 200` the boundary
+history grows until fixed-lag marginalization engages, and the C1 history
+summary extraction (stage `window_boundary_provenance`) costs O(boundary
+rows ^ ~4).  Measured at 20 Hz replay: ~10 s/frame at epoch 100 and ~26 s at
+epoch 114 on an 18-core workstation, and `core_total` crosses 40 ms at epoch
+13 of the benchmark trajectory.  `formal_eligible` remains false; the
+performance finding is recorded in the D-round evidence
+(`d-round-report.md` section 11, `proof-obligations.md`).
+

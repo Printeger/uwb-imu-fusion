@@ -1480,11 +1480,41 @@ TEST(GateDReplay, LosslessRoundTripAllBlocksAndActions) {
   action.model_error_validated = true;
   replay.actions = {action, action};
   replay.actions.back().id = ExclusionActionId(43);
+  // D round: v6 is documented as "v5 layout + removal provenance"; the v5
+  // factor-inventory section must stay on the wire.  A regression that dropped
+  // it (as the W2 v6 writer did) desynchronizes every v4/v5/v6 reader that
+  // follows the documented layout, so pin it in the round-trip.
+  replay.window.factor_inventory.clear();
+  FrozenWindowFactorInventoryEntry inventory_entry;
+  inventory_entry.group_id = FactorGroupId(7);
+  inventory_entry.epoch = 3;
+  inventory_entry.kind = FactorKind::UwbBatch;
+  inventory_entry.sensor = SensorType::Uwb;
+  inventory_entry.disposition = FrozenFactorDisposition::ExplicitMeasurement;
+  inventory_entry.keys = {gtsam::Symbol('x', 3)};
+  inventory_entry.slots = {0, 1};
+  replay.window.factor_inventory.push_back(inventory_entry);
   const std::string path =
       "/tmp/gate-d-replay-" + std::to_string(getpid()) + ".bin";
   writeCandidateReplay(path, replay);
   const auto loaded = readCandidateReplay(path);
   std::remove(path.c_str());
+  ASSERT_EQ(loaded.window.factor_inventory.size(),
+            replay.window.factor_inventory.size());
+  EXPECT_EQ(loaded.window.factor_inventory.front().group_id.value(),
+            replay.window.factor_inventory.front().group_id.value());
+  EXPECT_EQ(loaded.window.factor_inventory.front().epoch,
+            replay.window.factor_inventory.front().epoch);
+  EXPECT_EQ(loaded.window.factor_inventory.front().kind,
+            replay.window.factor_inventory.front().kind);
+  EXPECT_EQ(loaded.window.factor_inventory.front().sensor,
+            replay.window.factor_inventory.front().sensor);
+  EXPECT_EQ(loaded.window.factor_inventory.front().disposition,
+            replay.window.factor_inventory.front().disposition);
+  EXPECT_EQ(loaded.window.factor_inventory.front().keys,
+            replay.window.factor_inventory.front().keys);
+  EXPECT_EQ(loaded.window.factor_inventory.front().slots,
+            replay.window.factor_inventory.front().slots);
   EXPECT_EQ(loaded.input_attempt_id, replay.input_attempt_id);
   EXPECT_EQ(loaded.config.enable_shared_cache,
             replay.config.enable_shared_cache);

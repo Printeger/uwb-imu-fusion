@@ -53,3 +53,19 @@ changing its physical risk semantics.  Boundary UWB measurements are
 recoverable and replaceable exactly once.  The inventory and basis certificate
 are included in frozen-content identity and development diagnostics.  Formal
 eligibility remains unchanged pending campaign evidence.
+
+## D round status (2026-09-22)
+
+Boundary ownership and the fault bases are unchanged; the D matrix exercised
+them at order=1 and order=2 (pair family enabled) with 7 scenarios each and no
+published-quantity change versus the W1 baseline for the order=1 batch.  Two
+gaps found by D are recorded rather than silently fixed:
+
+* `history.max_summary_rows` / `history.max_perp_rows` are loaded and exported
+  but never enforced; only `history.max_fault_columns` reaches
+  `evaluateHistoryFaultCapacity()`.  A mature run therefore reports
+  `capacity_ok=1` while `emitted_rows` (1069) and `nu_perp` (1054) exceed the
+  configured 512.
+* The boundary history summary extraction cost grows superlinearly with the
+  retained boundary rows (see ADR-0001 D-round note) until fixed-lag
+  marginalization engages; incremental summary updates remain future work.

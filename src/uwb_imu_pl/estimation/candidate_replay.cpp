@@ -125,7 +125,13 @@ void transfer(Codec& c, FrozenCandidateReplay& r) {
     c.id(id); if(c.in){s.group_id.reset(); if(has) s.group_id=id;}
     c.scalar(s.explicit_window_block); c.scalar(s.boundary_input); c.scalar(s.pointer_identity_valid); });
   if (schema=="uwb-imu-pl/frozen-candidates/v4" ||
-      schema=="uwb-imu-pl/frozen-candidates/v5") {
+      schema=="uwb-imu-pl/frozen-candidates/v5" ||
+      schema=="uwb-imu-pl/frozen-candidates/v6") {
+    // D round: v6 is documented as "v5 layout + removal provenance"; the
+    // factor inventory belongs to the v5 layout and must stay on the wire for
+    // v6 as well (the reader-side tooling parses it for every v4/v5/v6
+    // stream).  Omitting it here desynchronizes every v6 reader that follows
+    // the documented layout.
     c.vector(w.factor_inventory,[&](FrozenWindowFactorInventoryEntry& e) {
       c.id(e.group_id); c.scalar(e.epoch); c.scalar(e.kind); c.scalar(e.sensor);
       c.scalar(e.disposition);

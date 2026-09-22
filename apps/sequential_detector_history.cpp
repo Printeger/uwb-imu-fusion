@@ -134,7 +134,8 @@ int main(int argc, char** argv) {
         uwb_imu_pl::RealtimeIntegrityPipeline pipeline(
             &estimator, uwb_imu_pl::IntegrityMonitor(
                 run_config.risk, run_config.snapshot.rank_tolerance,
-                run_config.snapshot.max_condition_number));
+                run_config.snapshot.max_condition_number),
+            uwb_imu_pl::offlineReplayPublicationLimits());
         uwb_imu_pl::ImuMeasurement boundary;
         boundary.timestamp = initial.timestamp;
         boundary.specific_force_mps2 = acceleration(job.trajectory, 0) +

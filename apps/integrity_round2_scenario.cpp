@@ -362,7 +362,8 @@ RunResult simulate(const uwb_imu_pl::IntegrityConfig& config,
   uwb_imu_pl::RealtimeIntegrityPipeline pipeline(
       &estimator, uwb_imu_pl::IntegrityMonitor(
           config.risk, config.snapshot.rank_tolerance,
-          config.snapshot.max_condition_number));
+          config.snapshot.max_condition_number),
+      uwb_imu_pl::offlineReplayPublicationLimits());
   CounterRng random(seed, stringField(cell, "id", cell));
   uwb_imu_pl::ImuMeasurement boundary;
   boundary.id = uwb_imu_pl::MeasurementId(1);
