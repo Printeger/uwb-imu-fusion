@@ -50,13 +50,15 @@
    "id": "CFG-03",
    "description": "固定基站、运动位置/姿态变化；启动通过不掩盖运行时退化",
    "owner_work_package": "A/B",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [
-    "raw/runs_p2/A_nominal",
-    "raw/runs_p2/H_mature_union"
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_integrity_reference --gtest_filter=ReferenceFixture.StartupPassDoesNotMaskRuntimeGeometryDegradation"
    ],
-   "note": "现有场景 A/H 在固定基站+运动轨迹下运行通过，但无专门的运行时退化验证用例"
+   "evidence": [
+    "runbook.md",
+    "final-review.md"
+   ],
+   "note": "D 轮补测：同一固定四锚几何在 (0,0,1) rank-3 有效、在 (0,0,0) rank-2 状态亏秩 ⇒ 运行时窗口失效（reason 'window state is rank deficient'）；每个窗口由 finalizeIntegrityWindow 重新验证，启动检查不被继承。"
   },
   {
    "id": "GEO-01",
@@ -88,13 +90,15 @@
    "id": "GEO-03",
    "description": "多个备选一维模式，K 大于 ν；不因 K 或总字典列数而统一拒绝",
    "owner_work_package": "B",
-   "status": "NOT_STARTED",
-   "commands": [],
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_integrity_reference --gtest_filter=ReferenceFixture.Geo03KGreaterThanNuIsClassifiedByTheKernelNotByCounts"
+   ],
    "evidence": [
     "census.json",
-    "coverage-envelopes.md"
+    "runbook.md"
    ],
-   "note": "K=20 census（624 假设/61104 动作）仍只作输入事实；B2 记录 K=10 → 236 假设/帧、fault_cross_blocks 按需计数（A_nominal=5930），但不含“K>nu 不统一拒绝”的专门断言：留 B/C"
+   "note": "D 轮补测：m=4/rank=2（ν=2）、K=4>ν 的一维模式字典。判定由核检验给出：含危险盲方向（d4=H w4，G d4≠0）时核增益 >0.1 被识别；移除后 K=3>ν 仅含无害盲方向（G|kerZ=0）⇒ 有限 bound；K 或总列数不构成拒绝依据。"
   },
   {
    "id": "GEO-04",
@@ -127,12 +131,15 @@
    "id": "MOD-01",
    "description": "UWB 瞬时/阶跃/ramp，丢包与非均匀时刻；真实时间支撑、末端退化、单位与白化",
    "owner_work_package": "A/B",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [
-    "raw/runs_p2/F_ramp_unmonitorable"
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_history_fault_parameterization --gtest_filter=HistoryFaultParameterization.Mod01UwbDropoutAndNonUniformTimestampsKeepTheDeclaredSupport"
    ],
-   "note": "F 场景提供 ramp 停用证据；模板级验证未建立"
+   "evidence": [
+    "raw/runs_p2/F_ramp_unmonitorable",
+    "runbook.md"
+   ],
+   "note": "D 轮补测：epoch 8 删除一个锚的测量 ⇒ 该 (epoch,anchor) 出现从参数化中消失且 material_gap=0（不臆造模板）；epoch 9 采样时刻 +3ms（< max_time_skew_s=0.01）⇒ time-linear 列与按真实测量时刻重算的独立 oracle 逐位一致；支持到达窗口边界（末端不截断）。形状计数（瞬时/阶跃/ramp、6 轴）由 IntegrityV2FaultModel.GeneratesCompactUwbModesAndEveryImuAxis 覆盖，白化由 HFP oracle 覆盖。"
   },
   {
    "id": "MOD-02",
@@ -151,10 +158,14 @@
    "id": "MOD-03",
    "description": "区间内部 onset、跨窗口持续 step；非整区间模板不能误用完整 bias Jacobian",
    "owner_work_package": "B/C",
-   "status": "NOT_STARTED",
-   "commands": [],
-   "evidence": [],
-   "note": ""
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_history_fault_parameterization --gtest_filter=HistoryFaultParameterization.Mod03IntervalInteriorOnsetCannotReuseTheWholeIntervalTemplate"
+   ],
+   "evidence": [
+    "runbook.md"
+   ],
+   "note": "D 轮补测：整区间 FD oracle 与解析 bias 模板一致（阳性对照 ≤1e-4）；区间后半段 onset 的 FD 映射与整区间模板相对差 >20%、幅值比 ∈(0.2,0.8) ⇒ 非整区间模板不得复用完整 bias Jacobian。跨窗口持续 step 的精确表示由 HIS-01/X1 的 per-epoch constant+time-linear 列覆盖（支持覆盖到可恢复边界）。"
   },
   {
    "id": "MOD-04",
@@ -165,7 +176,7 @@
    "evidence": [
     "config/integrity_fault_manifest.yaml"
    ],
-   "note": "manifest 已声明 imu_accel_xyz_common_cause=NOT_IMPLEMENTED（bounded set 不实现，D3）；验证用例待 B"
+   "note": "D 轮终局：NOT_IMPLEMENTED（文档化限制，不补测）。理由：same_device_multiaxis（同器件多轴共因）与 two_uwb（UWB×UWB 对）在 config/integrity_fault_manifest.yaml 的 unsupported_families 中声明且启动期拒绝；多轴共因的交叉项先验账本无实现。影响面：启用这些族的配置无法启动（fail-closed，无覆盖声明也无风险红利）；事件级 parameter_sharing=single_parameter 的共享预算只适用于已实现的单事件族。复现：加载启用 two_uwb/same_device_multiaxis 的 manifest ⇒ 启动拒绝；守卫用例 {bin}/test_fault_manifest --gtest_filter=ConfigMigration.StartupRejectsManifestWithEnabledUnsupportedFamily。"
   },
   {
    "id": "MOD-05",
@@ -173,8 +184,10 @@
    "owner_work_package": "B/C",
    "status": "NOT_STARTED",
    "commands": [],
-   "evidence": [],
-   "note": "bounded set 当前一律 NOT_IMPLEMENTED，避免能力声明超出实现"
+   "evidence": [
+    "config/integrity_fault_manifest.yaml"
+   ],
+   "note": "D 轮终局：NOT_IMPLEMENTED（文档化限制，不补测）。理由：amplitude_model=bounded_set 的事件一律标记 NOT_IMPLEMENTED，启动期拒绝（bounded-set 的集合支撑界与“集合失效”风险账本无实现）；无界子空间与零空间分类（GEO-02/03/04）仍是唯一已证路径。影响面：无法对“已知有限幅值但检测盲”的事件给出集合界；此类声明一律不可用，不静默降级为无界判据。复现：{bin}/test_fault_manifest --gtest_filter=FaultManifest.BoundedAmplitudeSetMustBeMarkedNotImplemented（守卫：bounded set 不得取消 NOT_IMPLEMENTED 标记）。"
   },
   {
    "id": "COV-01",
@@ -753,6 +766,58 @@
     "fde-publication.md"
    ],
    "note": "wall 只在单调未跳变时累加（回放跳变不污染统计）；新鲜度用 wall−sensor 滞后量（冻结数据 400ms>100ms 判过期）；时钟倒退无标记即拒。"
+  },
+  {
+   "id": "OUT-04",
+   "description": "生产 pipeline 逐 attempt 身份量真实取材、证书 id 绑定；缺失即失败封闭（不编造）",
+   "owner_work_package": "OUT",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_publication_wiring --gtest_filter=PublicationWiring.PipelineAttemptCarriesProductionIdentity"
+   ],
+   "evidence": [
+    "fde-publication.md"
+   ],
+   "note": "触发路径 processUwbBatch → applyPublicationGate → PublicationController::finalizeAttempt：window/transaction、linpoint、C1 version_digest、C2 检测器标签、W1 风险证明 id、manifest、健康态、PL、参考点、时刻、frame 全部取自生产现场；v16 列 publication_gate_executed/identity_* 导出；缺失清单 missingPublicationIdentityFields（同 proof-obligations W2-02）。"
+  },
+  {
+   "id": "OUT-05",
+   "description": "冻结数据/超时 ⇒ 重 FDE 之前及时不可用；时钟倒退拒绝；wall/sensor 分离",
+   "owner_work_package": "OUT",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_publication_wiring --gtest_filter=PublicationWiring.FrozenDataIsUnavailableBeforeHeavyFde:PublicationWiring.WatchdogClauseSemanticsAreExplicit:PublicationWiring.BackwardsClockIsRefusedLikeInputValidation"
+   ],
+   "evidence": [
+    "fde-publication.md"
+   ],
+   "note": "冻结/超时 ⇒ WATCHDOG_REFUSED 短路（transaction_opened=0、单 publication_watchdog stage、不进入重 FDE）；sensor_delta=0 ∧ lag>限 为冻结判据；“落后但前进”不拒绝（H 实测原 OR 判定 169/226 拒绝为假阳性）；倒退 ⇒ std::invalid_argument（同平台输入校验）。"
+  },
+  {
+   "id": "OUT-06",
+   "description": "三态身份判定 + 原子提交状态机；无中心偏移证明不得恢复发布",
+   "owner_work_package": "OUT",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_publication_wiring --gtest_filter=PublicationWiring.ControllerTriStateAndAtomicChain"
+   ],
+   "evidence": [
+    "fde-publication.md"
+   ],
+   "note": "状态机禁止 UNAVAILABLE→PROTECTED 与绕过 ATOMIC_COMMIT；requires_propagation 无传播证明 ⇒ 显式未保护（不复用旧证书）；admissible 且平台认证未完成 ⇒ UNAVAILABLE + 未保护理由。"
+  },
+  {
+   "id": "OUT-07",
+   "description": "无持有者的 const 路径显式未保护（NOT_EVALUATED，不臆造证书）",
+   "owner_work_package": "OUT",
+   "status": "MAPPED",
+   "commands": [
+    "{bin}/test_publication_wiring --gtest_filter=PublicationWiring.StatelessMonitorPathIsExplicitlyUnprotected"
+   ],
+   "evidence": [
+    "fde-publication.md"
+   ],
+   "note": "evaluateSnapshot/evaluateConditional(nullptr) ⇒ gate_executed=false、identity_check=NOT_EVALUATED、protected_output=false 且给出理由；与生产有状态路径显式区分（同 §7.6 注记），不构成第二个状态源。"
   }
  ]
 }

@@ -1,7 +1,7 @@
 {
  "produced_by": "tools/oracle_compare.py",
  "algorithm": "independent numpy/scipy reimplementation (no production solver)",
- "source_revision": "9408bd3c286af1a2dd9c961c003445695dbaa21e",
+ "source_revision": "85843964ce534914c0e4413eb15725639ccb0297",
  "tolerance_source": {
   "csv_printed": "6-significant-digit ostream default -> rel 1e-5",
   "strict_linear": "ADR 0002 well-conditioned rel 1e-9 (used elsewhere)",
@@ -17,20 +17,20 @@
    "case": "A_nominal_30",
    "note": "healthy frozen window, anchor template active",
    "bin": "raw/replay_p2/A_nominal/exports/attempt-30.bin",
-   "bin_sha256": "3730c22054d4651507b066de87e7e277b652f297c88b16cf68ead7ffe8dab17d",
-   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_b2_20260921/stage3/A_nominal",
+   "bin_sha256": "5a466b5844227b0575d529dc82b473074c74b1ec533e7610fc7990a8d1de75ae",
+   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_d_20260922/oracle_runs/A_nominal",
    "attempt": 30,
    "window": {
-    "m": 253,
+    "m": 635,
     "n": 165,
     "rank": 165,
-    "dof": 88,
-    "condition_number": 328352.7291013592
+    "dof": 470,
+    "condition_number": 280291.3579052663
    },
    "identity": {
     "snapshot_id": "window:30:transaction:30",
     "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
-    "config_digest": "fbca498476c5af11",
+    "config_digest": "538dfa46f6e82714",
     "manifest_digest": "d2a01e7343f5c357",
     "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
     "sensor_timestamp_ns": 1500000000,
@@ -39,7 +39,7 @@
     "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
     "state_scale": "identity",
     "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
-    "whitening_id": "frozen_block_whitener:b1a986f29306c561",
+    "whitening_id": "frozen_block_whitener:76bd703845be80ea",
     "noise_model_id": "per_block_frozen_noise_model",
     "boundary_summary_id": "partial_qr_schur_boundary",
     "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
@@ -47,7 +47,7 @@
     "active_observation_index": "20002;21001;21002;22001;22002;23001;23002;24001;24002;25001;25002;26001;26002;27001;27002;28001;28002;29001;29002;30000;30001;30002",
     "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
     "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
-    "identity_digest": "77a94a3673648aaf"
+    "identity_digest": "375270dca7c04275"
    },
    "items": [
     {
@@ -58,7 +58,7 @@
      "oracle": {
       "snapshot_id": "window:30:transaction:30",
       "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
-      "config_digest": "fbca498476c5af11",
+      "config_digest": "538dfa46f6e82714",
       "manifest_digest": "d2a01e7343f5c357",
       "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
       "sensor_timestamp_ns": 1500000000,
@@ -67,7 +67,7 @@
       "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
       "state_scale": "identity",
       "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
-      "whitening_id": "frozen_block_whitener:b1a986f29306c561",
+      "whitening_id": "frozen_block_whitener:76bd703845be80ea",
       "noise_model_id": "per_block_frozen_noise_model",
       "boundary_summary_id": "partial_qr_schur_boundary",
       "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
@@ -75,12 +75,12 @@
       "active_observation_index": "20002;21001;21002;22001;22002;23001;23002;24001;24002;25001;25002;26001;26002;27001;27002;28001;28002;29001;29002;30000;30001;30002",
       "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
       "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
-      "identity_digest": "77a94a3673648aaf"
+      "identity_digest": "375270dca7c04275"
      },
      "production": {
       "snapshot_id": "window:30:transaction:30",
-      "config_digest": "fbca498476c5af11",
-      "identity_digest": "77a94a3673648aaf",
+      "config_digest": "538dfa46f6e82714",
+      "identity_digest": "375270dca7c04275",
       "frame_id": "world",
       "position_reference": "body_origin",
       "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation"
@@ -93,8 +93,8 @@
      "case": "A_nominal_30",
      "description": "parity statistic s^2 = ||z - H x_hat||^2",
      "status": "PASS",
-     "oracle": 4.4529470232546734e-08,
-     "production": 4.45295e-08,
+     "oracle": 5.66977852312639e-07,
+     "production": 5.66978e-07,
      "tolerance": "rel<=1e-05 (CSV precision)",
      "note": "oracle_rank=165"
     },
@@ -104,12 +104,12 @@
      "description": "detector dof and chi-square threshold",
      "status": "PASS",
      "oracle": {
-      "dof": 88,
-      "threshold": 165.99308436123317
+      "dof": 470,
+      "threshold": 630.3856599389121
      },
      "production": {
-      "dof": 88,
-      "threshold": 165.993
+      "dof": 470,
+      "threshold": 630.386
      },
      "tolerance": "dof exact, threshold rel<=1e-05",
      "note": "p_fa=1e-06 from detector.p_fa_per_test"
@@ -134,13 +134,13 @@
      "status": "PASS",
      "oracle": {
       "rank": 165,
-      "dof": 88,
-      "condition_number": 328352.7291013592
+      "dof": 470,
+      "condition_number": 280291.3579052663
      },
      "production": {
       "rank": 165,
-      "dof": 88,
-      "condition_number": 328352.7291092238
+      "dof": 470,
+      "condition_number": 280291.35790524917
      },
      "tolerance": "rank+dof exact, cond rel<=1e-05",
      "note": "SVD gate 1e-9 * max(1, sigma_max)"
@@ -151,25 +151,25 @@
      "description": "anchor-1 epoch-independent template (Gamma, slopes)",
      "status": "PASS",
      "oracle": {
-      "sigma_min": 9.102707747535122,
+      "sigma_min": 9.11248044186422,
       "slopes_xyz": [
-       0.013194115437292736,
-       0.0011882044038921831,
-       0.022380565161211997
+       0.011479611341796902,
+       0.0026532322297981668,
+       0.021552142044361285
       ],
-      "gamma": 82.85928833703595
+      "gamma": 83.03729980335791
      },
      "production": {
       "hypothesis_id": "21",
-      "sigma_min": 9.10271,
+      "sigma_min": 9.11248,
       "slopes_xyz": [
-       0.0131941,
-       0.00118821,
-       0.0223806
+       0.0114796,
+       0.00265322,
+       0.0215521
       ]
      },
      "tolerance": "rel<=1e-05 (CSV precision); non-finite never passes",
-     "note": "{\"sigma_min_ok\": true, \"axes\": [{\"axis\": \"x\", \"oracle\": 0.013194115437292736, \"production\": 0.0131941, \"rel\": 1.1700134661664462e-06}, {\"axis\": \"y\", \"oracle\": 0.0011882044038921831, \"production\": 0.00118821, \"rel\": 4.7096959434285286e-06}, {\"axis\": \"z\", \"oracle\": 0.022380565161211997, \"production\": 0.0223806, \"rel\": 1.5566512070178008e-06}]}"
+     "note": "{\"sigma_min_ok\": true, \"axes\": [{\"axis\": \"x\", \"oracle\": 0.011479611341796902, \"production\": 0.0114796, \"rel\": 9.879948514806884e-07}, {\"axis\": \"y\", \"oracle\": 0.0026532322297981668, \"production\": 0.00265322, \"rel\": 4.609396052650051e-06}, {\"axis\": \"z\", \"oracle\": 0.021552142044361285, \"production\": 0.0215521, \"rel\": 1.9508205355016308e-06}]}"
     },
     {
      "id": "O6",
@@ -177,9 +177,9 @@
      "description": "non-centrality boundary lambda* vs scipy ncx2",
      "status": "PASS",
      "oracle": {
-      "solved_first": 157.8177642882721,
-      "worst_rel_vs_csv": 1.4935668169954078e-06,
-      "worst_abs_cdf_closure": 2.7455994934403108e-08,
+      "solved_first": 295.4421946424843,
+      "worst_rel_vs_csv": 6.588174872523329e-07,
+      "worst_abs_cdf_closure": 1.3933825452824844e-08,
       "rows": 64
      },
      "production": null,
@@ -210,20 +210,20 @@
    "case": "C_uwb_fde_25",
    "note": "UWB fault before the exclusion action",
    "bin": "raw/replay_p2/C_uwb_fde/exports/attempt-25.bin",
-   "bin_sha256": "1802f0584bfa92a5d2dc537b92ce130d28c0d14a86bd30acb5b5279caca30442",
-   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_b2_20260921/stage3/C_uwb_fde",
+   "bin_sha256": "623f439e12d19c3afa3db622a4644133153612271d6f55e1cedfbbb8892ab19d",
+   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_d_20260922/oracle_runs/C_uwb_fde",
    "attempt": 25,
    "window": {
-    "m": 253,
+    "m": 595,
     "n": 165,
     "rank": 165,
-    "dof": 88,
-    "condition_number": 292184.0900012754
+    "dof": 430,
+    "condition_number": 252343.29929111007
    },
    "identity": {
     "snapshot_id": "window:25:transaction:25",
     "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
-    "config_digest": "1a87b5260b3646be",
+    "config_digest": "2f12cb8673f64bd3",
     "manifest_digest": "d2a01e7343f5c357",
     "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
     "sensor_timestamp_ns": 1250000000,
@@ -232,7 +232,7 @@
     "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
     "state_scale": "identity",
     "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
-    "whitening_id": "frozen_block_whitener:0b8543854b511233",
+    "whitening_id": "frozen_block_whitener:503a41653f5638d3",
     "noise_model_id": "per_block_frozen_noise_model",
     "boundary_summary_id": "partial_qr_schur_boundary",
     "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
@@ -240,7 +240,7 @@
     "active_observation_index": "15002;16001;16002;17001;17002;18001;18002;19001;19002;20001;20002;21001;21002;22001;22002;23001;23002;24001;24002;25000;25001;25002",
     "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
     "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
-    "identity_digest": "830de2db1dd43a1c"
+    "identity_digest": "22cfa696e63c67f2"
    },
    "items": [
     {
@@ -251,7 +251,7 @@
      "oracle": {
       "snapshot_id": "window:25:transaction:25",
       "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
-      "config_digest": "1a87b5260b3646be",
+      "config_digest": "2f12cb8673f64bd3",
       "manifest_digest": "d2a01e7343f5c357",
       "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
       "sensor_timestamp_ns": 1250000000,
@@ -260,7 +260,7 @@
       "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
       "state_scale": "identity",
       "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
-      "whitening_id": "frozen_block_whitener:0b8543854b511233",
+      "whitening_id": "frozen_block_whitener:503a41653f5638d3",
       "noise_model_id": "per_block_frozen_noise_model",
       "boundary_summary_id": "partial_qr_schur_boundary",
       "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
@@ -268,12 +268,12 @@
       "active_observation_index": "15002;16001;16002;17001;17002;18001;18002;19001;19002;20001;20002;21001;21002;22001;22002;23001;23002;24001;24002;25000;25001;25002",
       "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
       "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
-      "identity_digest": "830de2db1dd43a1c"
+      "identity_digest": "22cfa696e63c67f2"
      },
      "production": {
       "snapshot_id": "window:25:transaction:25",
-      "config_digest": "1a87b5260b3646be",
-      "identity_digest": "830de2db1dd43a1c",
+      "config_digest": "2f12cb8673f64bd3",
+      "identity_digest": "22cfa696e63c67f2",
       "frame_id": "world",
       "position_reference": "body_origin",
       "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation"
@@ -286,8 +286,8 @@
      "case": "C_uwb_fde_25",
      "description": "parity statistic s^2 = ||z - H x_hat||^2",
      "status": "PASS",
-     "oracle": 419.264152290827,
-     "production": 419.264,
+     "oracle": 420.1545691628131,
+     "production": 420.155,
      "tolerance": "rel<=1e-05 (CSV precision)",
      "note": "oracle_rank=165"
     },
@@ -297,12 +297,12 @@
      "description": "detector dof and chi-square threshold",
      "status": "PASS",
      "oracle": {
-      "dof": 88,
-      "threshold": 165.99308436123317
+      "dof": 430,
+      "threshold": 584.0568717345647
      },
      "production": {
-      "dof": 88,
-      "threshold": 165.993
+      "dof": 430,
+      "threshold": 584.057
      },
      "tolerance": "dof exact, threshold rel<=1e-05",
      "note": "p_fa=1e-06 from detector.p_fa_per_test"
@@ -327,13 +327,13 @@
      "status": "PASS",
      "oracle": {
       "rank": 165,
-      "dof": 88,
-      "condition_number": 292184.0900012754
+      "dof": 430,
+      "condition_number": 252343.29929111007
      },
      "production": {
       "rank": 165,
-      "dof": 88,
-      "condition_number": 292184.08999770106
+      "dof": 430,
+      "condition_number": 252343.29929084406
      },
      "tolerance": "rank+dof exact, cond rel<=1e-05",
      "note": "SVD gate 1e-9 * max(1, sigma_max)"
@@ -344,25 +344,25 @@
      "description": "anchor-1 epoch-independent template (Gamma, slopes)",
      "status": "PASS",
      "oracle": {
-      "sigma_min": 9.100446811210835,
+      "sigma_min": 9.110100248413593,
       "slopes_xyz": [
-       0.011926710411259233,
-       0.0018100782201760906,
-       0.022480367032426438
+       0.01046611835622975,
+       0.0032016218585333564,
+       0.02165630093451779
       ],
-      "gamma": 82.81813216367745
+      "gamma": 82.9939265361454
      },
      "production": {
       "hypothesis_id": "21",
-      "sigma_min": 9.10045,
+      "sigma_min": 9.1101,
       "slopes_xyz": [
-       0.0119267,
-       0.00181007,
-       0.0224804
+       0.0104661,
+       0.00320162,
+       0.0216563
       ]
      },
      "tolerance": "rel<=1e-05 (CSV precision); non-finite never passes",
-     "note": "{\"sigma_min_ok\": true, \"axes\": [{\"axis\": \"x\", \"oracle\": 0.011926710411259233, \"production\": 0.0119267, \"rel\": 8.729363650330261e-07}, {\"axis\": \"y\", \"oracle\": 0.0018100782201760906, \"production\": 0.00181007, \"rel\": 4.541337495234633e-06}, {\"axis\": \"z\", \"oracle\": 0.022480367032426438, \"production\": 0.0224804, \"rel\": 1.4665029787477802e-06}]}"
+     "note": "{\"sigma_min_ok\": true, \"axes\": [{\"axis\": \"x\", \"oracle\": 0.01046611835622975, \"production\": 0.0104661, \"rel\": 1.7538717913343539e-06}, {\"axis\": \"y\", \"oracle\": 0.0032016218585333564, \"production\": 0.00320162, \"rel\": 5.80497459854599e-07}, {\"axis\": \"z\", \"oracle\": 0.02165630093451779, \"production\": 0.0216563, \"rel\": 4.315223511010304e-08}]}"
     },
     {
      "id": "O6",
@@ -370,9 +370,9 @@
      "description": "non-centrality boundary lambda* vs scipy ncx2",
      "status": "PASS",
      "oracle": {
-      "solved_first": 157.8177642882721,
-      "worst_rel_vs_csv": 1.4935668169954078e-06,
-      "worst_abs_cdf_closure": 2.7455994934403108e-08,
+      "solved_first": 284.9187553563991,
+      "worst_rel_vs_csv": 8.586426348028803e-07,
+      "worst_abs_cdf_closure": 1.8038894358069976e-08,
       "rows": 64
      },
      "production": null,
@@ -403,20 +403,20 @@
    "case": "C_uwb_fde_26",
    "note": "post-FDE window (action applied, 128 cap)",
    "bin": "raw/replay_p2/C_uwb_fde/exports/attempt-26.bin",
-   "bin_sha256": "aab25d7599d09b165219d5031b7d21b11eb84cd3001ae95420190651478adda3",
-   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_b2_20260921/stage3/C_uwb_fde",
+   "bin_sha256": "d3b91686882cbbdb84c99f7cc801b4637566c2c8766a92635c37b6bb9e720ef9",
+   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_d_20260922/oracle_runs/C_uwb_fde",
    "attempt": 26,
    "window": {
-    "m": 252,
+    "m": 603,
     "n": 165,
     "rank": 165,
-    "dof": 87,
-    "condition_number": 299669.41180161556
+    "dof": 438,
+    "condition_number": 243562.19545152213
    },
    "identity": {
     "snapshot_id": "window:26:transaction:26",
     "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
-    "config_digest": "1a87b5260b3646be",
+    "config_digest": "2f12cb8673f64bd3",
     "manifest_digest": "d2a01e7343f5c357",
     "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
     "sensor_timestamp_ns": 1300000000,
@@ -425,15 +425,15 @@
     "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
     "state_scale": "identity",
     "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
-    "whitening_id": "frozen_block_whitener:2720de4ce9da4f54",
+    "whitening_id": "frozen_block_whitener:1ebd4179ddadf3b1",
     "noise_model_id": "per_block_frozen_noise_model",
     "boundary_summary_id": "partial_qr_schur_boundary",
     "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
     "protected_reference_center": "body_origin",
-    "active_observation_index": "16002;17001;17002;18001;18002;19001;19002;20001;20002;21001;21002;22001;22002;23001;23002;24001;24002;25001;25010;26000;26001;26002",
+    "active_observation_index": "16002;17001;17002;18001;18002;19001;19002;20001;20002;21001;21002;22001;22002;23001;23002;24001;24002;25001;25002;26000;26001;26002",
     "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
     "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
-    "identity_digest": "7b1ff4ce3a0c5f9e"
+    "identity_digest": "ec7bb9027a551635"
    },
    "items": [
     {
@@ -444,7 +444,7 @@
      "oracle": {
       "snapshot_id": "window:26:transaction:26",
       "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
-      "config_digest": "1a87b5260b3646be",
+      "config_digest": "2f12cb8673f64bd3",
       "manifest_digest": "d2a01e7343f5c357",
       "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
       "sensor_timestamp_ns": 1300000000,
@@ -453,20 +453,20 @@
       "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
       "state_scale": "identity",
       "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
-      "whitening_id": "frozen_block_whitener:2720de4ce9da4f54",
+      "whitening_id": "frozen_block_whitener:1ebd4179ddadf3b1",
       "noise_model_id": "per_block_frozen_noise_model",
       "boundary_summary_id": "partial_qr_schur_boundary",
       "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
       "protected_reference_center": "body_origin",
-      "active_observation_index": "16002;17001;17002;18001;18002;19001;19002;20001;20002;21001;21002;22001;22002;23001;23002;24001;24002;25001;25010;26000;26001;26002",
+      "active_observation_index": "16002;17001;17002;18001;18002;19001;19002;20001;20002;21001;21002;22001;22002;23001;23002;24001;24002;25001;25002;26000;26001;26002",
       "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
       "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
-      "identity_digest": "7b1ff4ce3a0c5f9e"
+      "identity_digest": "ec7bb9027a551635"
      },
      "production": {
       "snapshot_id": "window:26:transaction:26",
-      "config_digest": "1a87b5260b3646be",
-      "identity_digest": "7b1ff4ce3a0c5f9e",
+      "config_digest": "2f12cb8673f64bd3",
+      "identity_digest": "ec7bb9027a551635",
       "frame_id": "world",
       "position_reference": "body_origin",
       "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation"
@@ -479,8 +479,8 @@
      "case": "C_uwb_fde_26",
      "description": "parity statistic s^2 = ||z - H x_hat||^2",
      "status": "PASS",
-     "oracle": 4.0901364211769864e-08,
-     "production": 4.09014e-08,
+     "oracle": 452.66702515116174,
+     "production": 452.667,
      "tolerance": "rel<=1e-05 (CSV precision)",
      "note": "oracle_rank=165"
     },
@@ -490,12 +490,12 @@
      "description": "detector dof and chi-square threshold",
      "status": "PASS",
      "oracle": {
-      "dof": 87,
-      "threshold": 164.63637545259573
+      "dof": 438,
+      "threshold": 593.3453727276136
      },
      "production": {
-      "dof": 87,
-      "threshold": 164.636
+      "dof": 438,
+      "threshold": 593.345
      },
      "tolerance": "dof exact, threshold rel<=1e-05",
      "note": "p_fa=1e-06 from detector.p_fa_per_test"
@@ -507,7 +507,7 @@
      "status": "PASS",
      "oracle": {
       "assembly_max_rel": 0.0,
-      "whitening_max_rel": 1.9994406919718948e-16
+      "whitening_max_rel": 1.9918431091828342e-16
      },
      "production": null,
      "tolerance": "abs<=1e-12",
@@ -520,13 +520,13 @@
      "status": "PASS",
      "oracle": {
       "rank": 165,
-      "dof": 87,
-      "condition_number": 299669.41180161556
+      "dof": 438,
+      "condition_number": 243562.19545152213
      },
      "production": {
       "rank": 165,
-      "dof": 87,
-      "condition_number": 299669.4118005962
+      "dof": 438,
+      "condition_number": 243562.19545168884
      },
      "tolerance": "rank+dof exact, cond rel<=1e-05",
      "note": "SVD gate 1e-9 * max(1, sigma_max)"
@@ -537,25 +537,25 @@
      "description": "anchor-1 epoch-independent template (Gamma, slopes)",
      "status": "PASS",
      "oracle": {
-      "sigma_min": 9.051448109919209,
+      "sigma_min": 9.174943843434313,
       "slopes_xyz": [
-       0.012445175086309362,
-       0.0026955325434125476,
-       0.02327212170299978
+       0.0045381772234201236,
+       0.004654619925830505,
+       0.003719844726118283
       ],
-      "gamma": 81.92871288656
+      "gamma": 84.1795945301732
      },
      "production": {
-      "hypothesis_id": "19",
-      "sigma_min": 9.05145,
+      "hypothesis_id": "21",
+      "sigma_min": 9.17494,
       "slopes_xyz": [
-       0.0124452,
-       0.00269554,
-       0.0232721
+       0.00453818,
+       0.00465462,
+       0.00371984
       ]
      },
      "tolerance": "rel<=1e-05 (CSV precision); non-finite never passes",
-     "note": "{\"sigma_min_ok\": true, \"axes\": [{\"axis\": \"x\", \"oracle\": 0.012445175086309362, \"production\": 0.0124452, \"rel\": 2.0018714555237427e-06}, {\"axis\": \"y\", \"oracle\": 0.0026955325434125476, \"production\": 0.00269554, \"rel\": 2.766268522272728e-06}, {\"axis\": \"z\", \"oracle\": 0.02327212170299978, \"production\": 0.0232721, \"rel\": 9.325750379035782e-07}]}"
+     "note": "{\"sigma_min_ok\": true, \"axes\": [{\"axis\": \"x\", \"oracle\": 0.0045381772234201236, \"production\": 0.00453818, \"rel\": 6.118267403690487e-07}, {\"axis\": \"y\", \"oracle\": 0.004654619925830505, \"production\": 0.00465462, \"rel\": 1.5934597281483687e-08}, {\"axis\": \"z\", \"oracle\": 0.003719844726118283, \"production\": 0.00371984, \"rel\": 1.270514935744951e-06}]}"
     },
     {
      "id": "O6",
@@ -563,9 +563,9 @@
      "description": "non-centrality boundary lambda* vs scipy ncx2",
      "status": "PASS",
      "oracle": {
-      "solved_first": 157.2167806585794,
-      "worst_rel_vs_csv": 1.3951507826972525e-06,
-      "worst_abs_cdf_closure": 2.5620575744072713e-08,
+      "solved_first": 287.0610309895853,
+      "worst_rel_vs_csv": 1.079546923909252e-07,
+      "worst_abs_cdf_closure": 2.27115776814564e-09,
       "rows": 64
      },
      "production": null,
@@ -578,7 +578,7 @@
      "description": "G9 guard: monitorable hypotheses carry finite slopes",
      "status": "PASS",
      "oracle": {
-      "monitorable_rows": 234,
+      "monitorable_rows": 236,
       "nonfinite_rows": 0
      },
      "production": null,
@@ -596,20 +596,20 @@
    "case": "G_reject_10",
    "note": "consecutive rejection epoch",
    "bin": "raw/replay_p2/G_continuous_rejection/exports/attempt-10.bin",
-   "bin_sha256": "e570ef81fadfffbc0e1211204027edbf47724be8eed4b0262e140ee3066fab03",
-   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_b2_20260921/stage3/G_continuous_rejection",
+   "bin_sha256": "d145e79ded5688be9ebefa29c525959804b1fa692540c7c11bb4d507b02550c5",
+   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_d_20260922/oracle_runs/G_continuous_rejection",
    "attempt": 10,
    "window": {
     "m": 130,
     "n": 90,
     "rank": 90,
     "dof": 40,
-    "condition_number": 104831.32642606787
+    "condition_number": 104831.32642608836
    },
    "identity": {
     "snapshot_id": "window:10:transaction:10",
     "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
-    "config_digest": "50caa3ee8657d45b",
+    "config_digest": "770c200457d69c84",
     "manifest_digest": "d2a01e7343f5c357",
     "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
     "sensor_timestamp_ns": 500000000,
@@ -618,7 +618,7 @@
     "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
     "state_scale": "identity",
     "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
-    "whitening_id": "frozen_block_whitener:3a759ac0f33de2f1",
+    "whitening_id": "frozen_block_whitener:858257d2e21b6162",
     "noise_model_id": "per_block_frozen_noise_model",
     "boundary_summary_id": "partial_qr_schur_boundary",
     "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
@@ -626,7 +626,7 @@
     "active_observation_index": "1001;1002;2001;2002;3001;3002;4001;4002;10000;10001;10002",
     "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
     "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
-    "identity_digest": "f642efdd5b396f58"
+    "identity_digest": "2af2bf71f1e6db7e"
    },
    "items": [
     {
@@ -637,7 +637,7 @@
      "oracle": {
       "snapshot_id": "window:10:transaction:10",
       "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
-      "config_digest": "50caa3ee8657d45b",
+      "config_digest": "770c200457d69c84",
       "manifest_digest": "d2a01e7343f5c357",
       "state_solution_id": "NOT_AVAILABLE_IN_SCHEMA",
       "sensor_timestamp_ns": 500000000,
@@ -646,7 +646,7 @@
       "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation",
       "state_scale": "identity",
       "output_jacobian_contract": "[0_3x3 | R] on the final epoch pose block (body origin position)",
-      "whitening_id": "frozen_block_whitener:3a759ac0f33de2f1",
+      "whitening_id": "frozen_block_whitener:858257d2e21b6162",
       "noise_model_id": "per_block_frozen_noise_model",
       "boundary_summary_id": "partial_qr_schur_boundary",
       "history_lineage_id": "NOT_AVAILABLE_IN_SCHEMA",
@@ -654,12 +654,12 @@
       "active_observation_index": "1001;1002;2001;2002;3001;3002;4001;4002;10000;10001;10002",
       "coverage_epoch": "NOT_AVAILABLE_IN_SCHEMA",
       "validity_assumptions": "frozen_linearization;active_window_fault_support;history_nominal_boundary_only",
-      "identity_digest": "f642efdd5b396f58"
+      "identity_digest": "2af2bf71f1e6db7e"
      },
      "production": {
       "snapshot_id": "window:10:transaction:10",
-      "config_digest": "50caa3ee8657d45b",
-      "identity_digest": "f642efdd5b396f58",
+      "config_digest": "770c200457d69c84",
+      "identity_digest": "2af2bf71f1e6db7e",
       "frame_id": "world",
       "position_reference": "body_origin",
       "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation"
@@ -672,7 +672,7 @@
      "case": "G_reject_10",
      "description": "parity statistic s^2 = ||z - H x_hat||^2",
      "status": "PASS",
-     "oracle": 12960.353326167999,
+     "oracle": 12960.353241810897,
      "production": 12960.4,
      "tolerance": "rel<=1e-05 (CSV precision)",
      "note": "oracle_rank=90"
@@ -714,12 +714,12 @@
      "oracle": {
       "rank": 90,
       "dof": 40,
-      "condition_number": 104831.32642606787
+      "condition_number": 104831.32642608836
      },
      "production": {
       "rank": 90,
       "dof": 40,
-      "condition_number": 104831.3264260955
+      "condition_number": 104831.32642606931
      },
      "tolerance": "rank+dof exact, cond rel<=1e-05",
      "note": "SVD gate 1e-9 * max(1, sigma_max)"
@@ -781,7 +781,7 @@
    "note": "mature union window",
    "bin": "raw/replay_p2/H_mature_union/exports/attempt-201.bin",
    "bin_sha256": "920a54ff2709c8150a7bcd16fbfce5d96c99d948f7b7439f94fc823a9ba272d5",
-   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_b2_20260921/stage3/H_mature_union",
+   "csv_dir": "../../../../../../../../tmp/uwb_imu_pl_d_20260922/oracle_runs/H_mature_union",
    "attempt": 201,
    "window": {
     "m": 253,
@@ -817,7 +817,7 @@
      "id": "O0",
      "case": "H_mature_201",
      "description": "v5 bin identity binding to run CSV",
-     "status": "PASS",
+     "status": "NOT_RUN",
      "oracle": {
       "snapshot_id": "window:201:transaction:201",
       "source_revision": "NOT_AVAILABLE_IN_SCHEMA",
@@ -842,40 +842,34 @@
      },
      "production": {
       "snapshot_id": "window:201:transaction:201",
-      "config_digest": "55e6cbacf03742e5",
-      "identity_digest": "69af999a7cbf6ba7",
+      "config_digest": "bb978ef854a1653c",
+      "identity_digest": "f0bea79efb9a809f",
       "frame_id": "world",
       "position_reference": "body_origin",
       "tangent_convention": "gtsam_pose3_local_rotation_then_body_translation"
      },
-     "tolerance": "exact equality",
-     "note": "{\"snapshot_id\": true, \"identity_digest\": true, \"config_digest\": true, \"frame_id_world\": true, \"protected_body_origin\": true, \"coverage_epoch_declared\": true}"
+     "tolerance": null,
+     "note": "stale bin: the frozen window on the wire does not bind to the production run for this attempt (identity digest differs; the bin was exported from an earlier window representation).  Re-export with UWB_IMU_PL_REPLAY_EXPORT_DIR + UWB_IMU_PL_REPLAY_ATTEMPTS (d-round-report.md D-6) and rerun this tool."
     },
     {
      "id": "O1",
      "case": "H_mature_201",
      "description": "parity statistic s^2 = ||z - H x_hat||^2",
-     "status": "PASS",
+     "status": "NOT_RUN",
      "oracle": 2.561315381635978e-07,
-     "production": 2.56132e-07,
-     "tolerance": "rel<=1e-05 (CSV precision)",
-     "note": "oracle_rank=165"
+     "production": null,
+     "tolerance": null,
+     "note": "stale bin: the frozen window on the wire does not bind to the production run for this attempt (identity digest differs; the bin was exported from an earlier window representation).  Re-export with UWB_IMU_PL_REPLAY_EXPORT_DIR + UWB_IMU_PL_REPLAY_ATTEMPTS (d-round-report.md D-6) and rerun this tool."
     },
     {
      "id": "O2",
      "case": "H_mature_201",
      "description": "detector dof and chi-square threshold",
-     "status": "PASS",
-     "oracle": {
-      "dof": 88,
-      "threshold": 165.99308436123317
-     },
-     "production": {
-      "dof": 88,
-      "threshold": 165.993
-     },
-     "tolerance": "dof exact, threshold rel<=1e-05",
-     "note": "p_fa=1e-06 from detector.p_fa_per_test"
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": null,
+     "note": "stale bin: the frozen window on the wire does not bind to the production run for this attempt (identity digest differs; the bin was exported from an earlier window representation).  Re-export with UWB_IMU_PL_REPLAY_EXPORT_DIR + UWB_IMU_PL_REPLAY_ATTEMPTS (d-round-report.md D-6) and rerun this tool."
     },
     {
      "id": "O3",
@@ -916,33 +910,41 @@
      "oracle": null,
      "production": null,
      "tolerance": null,
-     "note": "hypotheses.csv rows missing"
+     "note": "stale bin: the frozen window on the wire does not bind to the production run for this attempt (identity digest differs; the bin was exported from an earlier window representation).  Re-export with UWB_IMU_PL_REPLAY_EXPORT_DIR + UWB_IMU_PL_REPLAY_ATTEMPTS (d-round-report.md D-6) and rerun this tool."
     },
     {
      "id": "O6",
      "case": "H_mature_201",
-     "description": "non-centrality boundary lambda*",
-     "status": "NOT_RUN",
-     "oracle": null,
+     "description": "non-centrality boundary lambda* vs scipy ncx2",
+     "status": "PASS",
+     "oracle": {
+      "solved_first": 531.369211237794,
+      "worst_rel_vs_csv": 4.1613961579271165e-06,
+      "worst_abs_cdf_closure": 9.605141276574844e-08,
+      "rows": 64
+     },
      "production": null,
-     "tolerance": null,
-     "note": "hypotheses.csv or integrity.csv row missing"
+     "tolerance": "rel<=1e-05; P_miss(lambda*)=p_md within 1e-6",
+     "note": "P(chi2'_dof(lambda) <= tau) = p_md allocation, tau/dof taken from the conditional detector of the same window"
     },
     {
      "id": "O7",
      "case": "H_mature_201",
      "description": "G9 guard: monitorable hypotheses carry finite slopes",
-     "status": "NOT_RUN",
-     "oracle": null,
+     "status": "PASS",
+     "oracle": {
+      "monitorable_rows": 236,
+      "nonfinite_rows": 0
+     },
      "production": null,
      "tolerance": "count must be 0",
-     "note": "hypotheses.csv is empty (run without FULL_AUDIT)"
+     "note": "hypotheses.csv slope_x/y/z"
     }
    ],
    "summary": {
-    "pass": 5,
+    "pass": 4,
     "fail": 0,
-    "not_run": 3
+    "not_run": 4
    }
   },
   {
@@ -1007,8 +1009,8 @@
   }
  ],
  "totals": {
-  "pass": 36,
+  "pass": 35,
   "fail": 0,
-  "not_run": 7
+  "not_run": 8
  }
 }

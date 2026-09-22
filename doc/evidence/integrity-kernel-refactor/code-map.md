@@ -313,3 +313,31 @@
 * 测试：`test/test_publication_wiring.cpp`（新增 6 用例）；`test_integrity_v2.cpp`（replay v6 往返）；
   `test_run_logger.cpp` / `test_fault_manifest.cpp`（v16 表头/行戳）。
 * 详见 `fde-publication.md §7`（接入点/三态/看门狗规则/诊断列/差异表）。
+
+## D 轮附录（2026-09-22）
+
+* `test/test_integrity_reference.cpp`：+2 用例（CFG-03 运行时窗口失效不被启动
+  检查掩盖；GEO-03 K>ν 由核检验而非计数判定）。
+* `test/test_history_fault_parameterization.cpp`：+2 用例（MOD-01 丢包/非均匀
+  时刻的真实支撑；MOD-03 区间内部 onset 不得复用整区间模板）。
+* `apps/realtime_performance_benchmark.cpp`、`apps/advisor_paired_benchmark.cpp`、
+  `apps/sequential_detector_history.cpp`、`apps/gate_d_development.cpp`、
+  `apps/integrity_round2_scenario.cpp`：构造 pipeline 时显式传
+  `offlineReplayPublicationLimits()`（离线 wall 政策声明）。
+* `doc/evidence/integrity-kernel-refactor/tools/perf_trace_summary.py`（新）：
+  逐帧 trace → 类分解的 p50/p95/p99/max + deadline miss + 有限 PL 比例。
+* `doc/evidence/integrity-kernel-refactor/configs/research-order2-dev.yaml`（新，
+  sha256 `18e8f055…`）：order=2 验收输入（与 research 配置仅三行差异）。
+* `doc/adr/0001/0002/0003`：追加 D 轮状态小节（含性能 blocker 与容量键缺口）。
+* 主要发现：热点 `window_boundary_provenance`（C1 参数化+摘要提取，随
+  `boundary_rows` 幂律增长）；`history.max_summary_rows`/`max_perp_rows` 未执行；
+  benchmark 合成流全段 `NO_VALID_CANDIDATE`（计时口径，非静默降级）。
+* `src/uwb_imu_pl/estimation/candidate_replay.cpp`：v6 写入器补写
+  `factor_inventory`（缺陷修复，恢复「v6 = v5 布局 + removal provenance」契约）；
+  `test/test_integrity_v2.cpp` 的 `GateDReplay` 往返断言逐字段覆盖该段。
+* 冻结 bin 重导出机制（D 轮首次用于证据刷新）：
+  `UWB_IMU_PL_REPLAY_EXPORT_DIR` + `UWB_IMU_PL_REPLAY_ATTEMPTS`（按 attempt 过滤）。
+* `tools/context_oracle.py`、`tools/oracle_compare.py`：新增**身份绑定陈旧门**
+  （bin 内 `identity_digest` ≠ 同 attempt 生产身份行 ⇒ 跨边界检查 O8a–d /
+  O0–O2/O5 转 NOT_RUN 并附重导出配方；bin 内部检查照实算），防止跨代材料
+  的伪比较。

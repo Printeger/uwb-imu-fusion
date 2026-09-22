@@ -1,0 +1,204 @@
+# D-round acceptance input: the research configuration with the declared pair
+# family switched ON (max_fault_order=2 + double_faults_enabled=true).
+# Every other line is byte-identical to config/realtime_uwb_imu_pl_research.yaml;
+# the relative manifest_path is adjusted for this directory (4 levels up).
+# Research-only example. It is not a certified safety configuration.
+schema_version: uwb-imu-pl/v5
+seed: 20260901
+
+snapshot:
+  dimensions: 3
+  max_iterations: 30
+  step_tolerance_m: 1.0e-7
+  rank_tolerance: 1.0e-10
+  max_condition_number: 1.0e10
+
+incremental:
+  relinearize_threshold: 0.1
+  # One atomic backend update is issued per finalized 20 Hz epoch.
+  relinearize_skip: 200
+  smoothness_sigma_m: 0.5
+  epoch_bin_s: 0.02
+  max_time_skew_s: 0.01
+  enable_method_b: false
+  method_b_max_condition: 1.0e10
+  fixed_lag_epochs: 200
+  single_transaction_per_epoch: true
+
+imu:
+  accelerometer_sigma: 0.10
+  gyroscope_sigma: 0.01
+  accelerometer_bias_rw_sigma: 0.001
+  gyroscope_bias_rw_sigma: 0.0001
+  gravity_mps2: 9.80665
+  max_gap_s: 0.02
+  noise_overbound_calibration_id: ""
+
+integrity_window:
+  # A3: `intervals` is the canonical name (interval count; the frozen window
+  # then holds intervals+1 state nodes).  `epochs` is a deprecated alias kept
+  # for older readers; both must agree when both are present.
+  intervals: 10
+  epochs: 10
+  recovery_margin_epochs: 10
+  boundary_method: bayes_tree_schur
+  rank_tolerance: 1.0e-10
+  max_condition_number: 1.0e10
+  max_linearization_step_norm: 0.25
+  require_history_provenance: true
+
+# C1-c/C2: history-summary capacity keys (strict loader; unknown keys, missing
+# keys and unknown actions are hard errors).  The values are the D-2 measured
+# defaults: the recoverable span holds at most (epochs + recovery_margin) = 20
+# historical epochs and 22 fault columns per epoch (8 anchors x {constant,
+# linear} + 6 IMU axes); the measured profile reached 220 columns at half span
+# (epoch 26), so 512 is the full-span default with headroom.  `capacity_action`
+# (REFUSE / RESET / STOP_PROTECTED, default REFUSE) governs what happens once
+# the wired summary exceeds a capacity: refuse / valid reset or rebuild / stop
+# protected publication - never silently drop the oldest fault.  Enforcement
+# lands with the Part C wiring; these defaults are to be re-frozen there.
+history:
+  max_summary_rows: 512
+  max_fault_columns: 512
+  max_perp_rows: 512
+  capacity_action: REFUSE
+
+detector:
+  type: joint_window_residual_chi_square
+  p_fa_per_test: 1.0e-6
+  continuity_horizon_tests: 1000
+  continuity_accounting: union_bound
+  use_squared_norm_statistic: true
+
+fault_models:
+  single_faults_enabled: true
+  double_faults_enabled: true
+  max_cardinality: 2
+  # A3: canonical declared order (1 = single events; 2 adds declared pair
+  # families).  Legacy single_/double_faults_enabled above remain readable and
+  # must agree, otherwise loading fails.
+  max_fault_order: 2
+  # A3: strict fault manifest (relative to this file).  Enabled models must be
+  # declared and implemented there; unsupported families reject at startup.
+  manifest_path: ../../../../config/integrity_fault_manifest.yaml
+  uwb:
+    enabled: true
+    epoch_single_anchor_bias: true
+    persistent_anchor_bias: true
+    ramp_bias: true
+    prior_probability_bound: 1.0e-4
+    p_md: 1.0e-3
+  imu:
+    accel_axis_interval_bias: true
+    gyro_axis_interval_bias: true
+    accel_xyz_interval_bias: false
+    gyro_xyz_interval_bias: false
+    bias_jump: false
+    ramp_fault: false
+    accel_prior_probability_bound: 1.0e-5
+    gyro_prior_probability_bound: 1.0e-5
+    p_md: 1.0e-3
+    min_fault_gram_sigma: 1.0e-8
+    max_fault_gram_condition: 1.0e10
+  combinations:
+    uwb_plus_accel: true
+    uwb_plus_gyro: true
+    two_uwb: false
+    assume_independent_priors: false
+
+fde:
+  trigger: joint_detector_alarm_or_hardware_barrier
+  isolation: profile_parity_glrt
+  ambiguity_policy: union_exclusion_else_unavailable
+  selection_primary: minimum_cardinality
+  selection_secondary: minimum_protection_level
+  dense_oracle_online_fallback: false
+  max_candidate_count: 128
+  max_exclusion_cardinality: 2
+
+bridge:
+  generic:
+    enabled: true
+    model: constant_velocity_constant_attitude
+    optimization_sigma_position_m: 0.5
+    optimization_sigma_velocity_mps: 1.0
+    optimization_sigma_rotation_rad: 0.5
+    optimization_sigma_bias_accel: 0.01
+    optimization_sigma_bias_gyro: 0.001
+    acceleration_bound_mps2: 4.0
+    angular_rate_bound_radps: 2.0
+    angular_acceleration_bound_radps2: 4.0
+    integrity_model: deterministic_box
+    calibration_id: ""
+  quadrotor_dynamics:
+    enabled: false
+    require_control_input: true
+    model_calibration_id: ""
+    integrity_model: deterministic_ellipsoid
+  max_consecutive_epochs: 20
+  max_duration_s: 1.0
+
+health:
+  suspect_evidence_count: 2
+  quarantine_after_exclusion: true
+  recovery_shadow_passes: 20
+  recovery_test_passes: 10
+  allow_auto_recovery: true
+
+risk:
+  calibration_id: ""
+  p_hmi_total: 4.0e-5
+  nominal_axis_tail: 1.0e-5
+  p_nm: 1.0e-7
+  p_bridge_escape: 0.0
+  p_history_contamination: 0.0
+  p_model_escape: 0.0
+  horizontal_alert_limit_m: 2.0
+  vertical_alert_limit_m: 3.0
+  allocation_policy: prior_weighted_outcome_conditioned
+
+robust_shadow:
+  gnc_enabled: false
+  never_mutate_formal_weights: true
+
+output:
+  root: results/realtime_uwb_imu_pl
+  schema_version: uwb-imu-pl/v5
+  write_residuals: true
+  write_timing: true
+  # Full-graph residual is a separately calibrated diagnostic and is disabled
+  # on the formal/performance path.
+  write_global_diagnostics: false
+  write_factor_ledger: true
+  write_window_rows: false
+  write_hypothesis_evidence: true
+  write_candidates: true
+  write_health: true
+  write_bridge: true
+
+realtime:
+  world_frame: world
+  body_frame: base_link
+  imu_topic: /imu/data
+  uwb_topic: /nlink_linktrack_nodeframe3
+  odometry_topic: /uwb_imu_pl/odometry
+  integrity_topic: /uwb_imu_pl/integrity
+  diagnostics_topic: /diagnostics
+  initial_position_m: [0.0, 0.0, 0.0]
+  initial_velocity_mps: [0.0, 0.0, 0.0]
+  lever_arm_body_m: [0.0, 0.0, 0.0]
+  range_sigma_m: 0.10
+  # Pose3 tangent (rotation, local translation), world velocity, ba, bg.
+  prior_sigmas: [0.10, 0.10, 0.10, 0.50, 0.50, 0.50,
+                 0.50, 0.50, 0.50, 0.10, 0.10, 0.10,
+                 0.01, 0.01, 0.01]
+
+anchors:
+  - {id: 1, position_m: [-5.0, -5.0, 1.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 2, position_m: [-5.0, -5.0, 5.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 3, position_m: [-5.0,  5.0, 1.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 4, position_m: [-5.0,  5.0, 5.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 5, position_m: [ 5.0, -5.0, 1.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 6, position_m: [ 5.0, -5.0, 5.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 7, position_m: [ 5.0,  5.0, 1.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 8, position_m: [ 5.0,  5.0, 5.0], sigma_m: 0.05, frame: world, map_version: sim-v1}

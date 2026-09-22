@@ -160,6 +160,21 @@ def analyze_case(label, run_dir, attempt, replay_dir, note):
 
     items = []
     identity = frame.get("identity", {})
+    # D round: a retained bin that does not bind to the production run for the
+    # same attempt (identity digest differs) was exported from an earlier
+    # window representation; comparing numbers across the two is not defined,
+    # so the boundary-crossing checks are reported as NOT_RUN with the exact
+    # re-export recipe instead of being silently compared.
+    stale_reason = None
+    if identity_rows and identity.get("identity_digest"):
+        if identity.get("identity_digest") != identity_rows[0].get("identity_digest"):
+            stale_reason = (
+                "stale bin: the frozen window on the wire does not bind to "
+                "the production run for this attempt (identity digest "
+                "differs; the bin was exported from an earlier window "
+                "representation).  Re-export with "
+                "UWB_IMU_PL_REPLAY_EXPORT_DIR + UWB_IMU_PL_REPLAY_ATTEMPTS "
+                "(d-round-report.md D-6) and rerun this tool.")
     identity_read = None
     if identity_rows:
         row = identity_rows[0]
@@ -179,7 +194,11 @@ def analyze_case(label, run_dir, attempt, replay_dir, note):
         "protected_body_origin": identity.get("protected_reference_center") == "body_origin",
         "coverage_epoch_declared": identity.get("coverage_epoch") == "NOT_AVAILABLE_IN_SCHEMA",
     }
-    if identity_read is None:
+    if stale_reason is not None:
+        items.append(item(label, "O0", "v5 bin identity binding to run CSV",
+                          "NOT_RUN", identity, identity_read, None,
+                          stale_reason))
+    elif identity_read is None:
         items.append(item(label, "O0", "v5 bin identity binding to run CSV",
                           "NOT_RUN", identity, None, None,
                           "run CSV identity row missing for this attempt"))
@@ -198,7 +217,7 @@ def analyze_case(label, run_dir, attempt, replay_dir, note):
     rank = int(np.count_nonzero(singular > gate))
     dof = m - rank
     threshold = float(chi2.ppf(1.0 - P_FA, dof)) if dof > 0 else float("inf")
-    if integrity_rows:
+    if integrity_rows and stale_reason is None:
         row = integrity_rows[0]
         prod_stat = float(row["conditional_statistic"])
         prod_dof = int(row["conditional_dof"])
@@ -216,9 +235,14 @@ def analyze_case(label, run_dir, attempt, replay_dir, note):
             f"dof exact, threshold rel<={REL_CSV:g}",
             f"p_fa={P_FA:g} from detector.p_fa_per_test"))
     else:
+        reason = (stale_reason if stale_reason is not None else
+                  "integrity.csv row missing for this attempt")
         items.append(item(label, "O1", "parity statistic s^2 = ||z - H x_hat||^2",
-                          "NOT_RUN", statistic, None, None,
-                          "integrity.csv row missing for this attempt"))
+                          "NOT_RUN", statistic, None, None, reason))
+        if stale_reason is not None:
+            items.append(item(label, "O2",
+                              "detector dof and chi-square threshold",
+                              "NOT_RUN", None, None, None, stale_reason))
 
     # O3 assembly and whitening audit
     assembly_error = 0.0
@@ -269,7 +293,11 @@ def analyze_case(label, run_dir, attempt, replay_dir, note):
     # O5 single-anchor template at the current epoch
     anchor_row, anchor_block, block_offset = current_anchor_row(frame, 1)
     template_cmp = None
-    if anchor_row is None or not hypothesis_rows:
+    if stale_reason is not None:
+        items.append(item(label, "O5",
+                          "anchor-1 epoch-independent template (Gamma, slopes)",
+                          "NOT_RUN", None, None, None, stale_reason))
+    elif anchor_row is None or not hypothesis_rows:
         reason = ("no pending UWB row in this window"
                   if anchor_row is None else "hypotheses.csv rows missing")
         items.append(item(label, "O5",

@@ -1,6 +1,7 @@
 {
  "produced_by": "tools/context_oracle.py",
- "runs_source": "/tmp/uwb_imu_pl_b2_20260921/stage3",
+ "source_revision": "85843964ce534914c0e4413eb15725639ccb0297",
+ "runs_source": "/tmp/uwb_imu_pl_d_20260922/oracle_runs",
  "cases": [
   {
    "case": "A_nominal#30",
@@ -12,11 +13,11 @@
      "status": "PASS",
      "oracle": {
       "rank": 165,
-      "dof": 88
+      "dof": 470
      },
      "production": {
       "rank": 165,
-      "dof": 88
+      "dof": 470
      },
      "tolerance": "exact",
      "note": ""
@@ -26,14 +27,14 @@
      "description": "R diagonal min/max and condition estimate",
      "status": "PASS",
      "oracle": {
-      "r_min": 1.3359718828020832,
-      "r_max": 44721.471353279776,
-      "condition": 33474.85970998165
+      "r_min": 1.3600842625381386,
+      "r_max": 44721.471360849275,
+      "condition": 32881.397566788786
      },
      "production": {
-      "r_min": 1.33597188280208,
-      "r_max": 44721.47135327978,
-      "condition": 33474.859709981734
+      "r_min": 1.360084262538138,
+      "r_max": 44721.471360849275,
+      "condition": 32881.3975667888
      },
      "tolerance": "rel<=1e-05 (CSV prints 6 digits)",
      "note": ""
@@ -42,8 +43,8 @@
      "id": "O8c",
      "description": "parity statistic from the frozen window",
      "status": "PASS",
-     "oracle": 4.4529470232546734e-08,
-     "production": 4.452947023254547e-08,
+     "oracle": 5.66977852312639e-07,
+     "production": 5.669778523126367e-07,
      "tolerance": "rel<=1e-05 or abs<=1e-09",
      "note": ""
     },
@@ -51,8 +52,8 @@
      "id": "O8d",
      "description": "detector-only rows preserved",
      "status": "PASS",
-     "oracle": 0,
-     "production": 0,
+     "oracle": 382,
+     "production": 382,
      "tolerance": "exact",
      "note": "zero rows stay in H, z, dof and the response"
     },
@@ -60,8 +61,8 @@
      "id": "O8e",
      "description": "parity identity ||Q2^T z||^2 == ||z - H x_hat||^2",
      "status": "PASS",
-     "oracle": 4.4529470232546396e-08,
-     "production": 4.4529470232546734e-08,
+     "oracle": 5.6697785231264e-07,
+     "production": 5.66977852312639e-07,
      "tolerance": "rel<=1e-09",
      "note": "verifies the implicit Q2 route the consumers use"
     },
@@ -70,8 +71,8 @@
      "description": "protected covariance C (H^T H)^-1 C^T is finite and PSD",
      "status": "PASS",
      "oracle": {
-      "trace": 0.20833484886261924,
-      "min_eigenvalue": 0.001730015599254128
+      "trace": 0.16530783150561706,
+      "min_eigenvalue": 0.0017178009451404035
      },
      "production": null,
      "tolerance": "PSD check, absolute 1e-12",
@@ -128,7 +129,8 @@
      "tolerance": null,
      "note": "the transform T and the dominance bounds are internal to the frozen window and are not part of the replay schema; covered by the C++ tests B2Coverage.* and by the GEO-05 reference fixture"
     }
-   ]
+   ],
+   "bin_sha256": "5a466b5844227b0575d529dc82b473074c74b1ec533e7610fc7990a8d1de75ae"
   },
   {
    "case": "C_uwb_fde#25",
@@ -140,11 +142,11 @@
      "status": "PASS",
      "oracle": {
       "rank": 165,
-      "dof": 88
+      "dof": 430
      },
      "production": {
       "rank": 165,
-      "dof": 88
+      "dof": 430
      },
      "tolerance": "exact",
      "note": ""
@@ -154,14 +156,14 @@
      "description": "R diagonal min/max and condition estimate",
      "status": "PASS",
      "oracle": {
-      "r_min": 1.2922955873638369,
-      "r_max": 44721.47135328261,
-      "condition": 34606.22460571135
+      "r_min": 1.3145891905026164,
+      "r_max": 44721.47136095867,
+      "condition": 34019.351204203944
      },
      "production": {
-      "r_min": 1.292295587363837,
-      "r_max": 44721.471353282606,
-      "condition": 34606.22460571134
+      "r_min": 1.3145891905026155,
+      "r_max": 44721.47136095867,
+      "condition": 34019.351204203966
      },
      "tolerance": "rel<=1e-05 (CSV prints 6 digits)",
      "note": ""
@@ -170,8 +172,8 @@
      "id": "O8c",
      "description": "parity statistic from the frozen window",
      "status": "PASS",
-     "oracle": 419.264152290827,
-     "production": 419.2641522908269,
+     "oracle": 420.1545691628131,
+     "production": 420.1545691628132,
      "tolerance": "rel<=1e-05 or abs<=1e-09",
      "note": ""
     },
@@ -179,8 +181,8 @@
      "id": "O8d",
      "description": "detector-only rows preserved",
      "status": "PASS",
-     "oracle": 0,
-     "production": 0,
+     "oracle": 342,
+     "production": 342,
      "tolerance": "exact",
      "note": "zero rows stay in H, z, dof and the response"
     },
@@ -188,8 +190,8 @@
      "id": "O8e",
      "description": "parity identity ||Q2^T z||^2 == ||z - H x_hat||^2",
      "status": "PASS",
-     "oracle": 419.26415229082716,
-     "production": 419.264152290827,
+     "oracle": 420.15456916281306,
+     "production": 420.1545691628131,
      "tolerance": "rel<=1e-09",
      "note": "verifies the implicit Q2 route the consumers use"
     },
@@ -198,8 +200,8 @@
      "description": "protected covariance C (H^T H)^-1 C^T is finite and PSD",
      "status": "PASS",
      "oracle": {
-      "trace": 0.1764898135346387,
-      "min_eigenvalue": 0.0017316949892300063
+      "trace": 0.14287645333943066,
+      "min_eigenvalue": 0.0017195978931680096
      },
      "production": null,
      "tolerance": "PSD check, absolute 1e-12",
@@ -218,7 +220,7 @@
       "EXACT"
      ],
      "tolerance": "exact",
-     "note": "5920 hypothesis rows"
+     "note": "5930 hypothesis rows"
     },
     {
      "id": "O8h",
@@ -256,7 +258,8 @@
      "tolerance": null,
      "note": "the transform T and the dominance bounds are internal to the frozen window and are not part of the replay schema; covered by the C++ tests B2Coverage.* and by the GEO-05 reference fixture"
     }
-   ]
+   ],
+   "bin_sha256": "623f439e12d19c3afa3db622a4644133153612271d6f55e1cedfbbb8892ab19d"
   },
   {
    "case": "C_uwb_fde#26",
@@ -268,11 +271,11 @@
      "status": "PASS",
      "oracle": {
       "rank": 165,
-      "dof": 87
+      "dof": 438
      },
      "production": {
       "rank": 165,
-      "dof": 87
+      "dof": 438
      },
      "tolerance": "exact",
      "note": ""
@@ -282,14 +285,14 @@
      "description": "R diagonal min/max and condition estimate",
      "status": "PASS",
      "oracle": {
-      "r_min": 1.2991009942861758,
-      "r_max": 44721.47135328192,
-      "condition": 34424.93813027622
+      "r_min": 0.7389011345167181,
+      "r_max": 44721.471360943055,
+      "condition": 60524.296515248076
      },
      "production": {
-      "r_min": 1.2991009942861755,
-      "r_max": 44721.47135328192,
-      "condition": 34424.93813027623
+      "r_min": 0.7389011345167192,
+      "r_max": 44721.471360943055,
+      "condition": 60524.29651524799
      },
      "tolerance": "rel<=1e-05 (CSV prints 6 digits)",
      "note": ""
@@ -298,8 +301,8 @@
      "id": "O8c",
      "description": "parity statistic from the frozen window",
      "status": "PASS",
-     "oracle": 4.0901364211769864e-08,
-     "production": 4.090136421176946e-08,
+     "oracle": 452.66702515116174,
+     "production": 452.66702515116145,
      "tolerance": "rel<=1e-05 or abs<=1e-09",
      "note": ""
     },
@@ -307,8 +310,8 @@
      "id": "O8d",
      "description": "detector-only rows preserved",
      "status": "PASS",
-     "oracle": 0,
-     "production": 0,
+     "oracle": 350,
+     "production": 350,
      "tolerance": "exact",
      "note": "zero rows stay in H, z, dof and the response"
     },
@@ -316,8 +319,8 @@
      "id": "O8e",
      "description": "parity identity ||Q2^T z||^2 == ||z - H x_hat||^2",
      "status": "PASS",
-     "oracle": 4.090136421177019e-08,
-     "production": 4.0901364211769864e-08,
+     "oracle": 452.66702515116197,
+     "production": 452.66702515116174,
      "tolerance": "rel<=1e-09",
      "note": "verifies the implicit Q2 route the consumers use"
     },
@@ -326,8 +329,8 @@
      "description": "protected covariance C (H^T H)^-1 C^T is finite and PSD",
      "status": "PASS",
      "oracle": {
-      "trace": 0.18301343520600794,
-      "min_eigenvalue": 0.0018272643957356087
+      "trace": 0.042141312344334006,
+      "min_eigenvalue": 0.004874503283413119
      },
      "production": null,
      "tolerance": "PSD check, absolute 1e-12",
@@ -346,7 +349,7 @@
       "EXACT"
      ],
      "tolerance": "exact",
-     "note": "5920 hypothesis rows"
+     "note": "5930 hypothesis rows"
     },
     {
      "id": "O8h",
@@ -384,7 +387,8 @@
      "tolerance": null,
      "note": "the transform T and the dominance bounds are internal to the frozen window and are not part of the replay schema; covered by the C++ tests B2Coverage.* and by the GEO-05 reference fixture"
     }
-   ]
+   ],
+   "bin_sha256": "d3b91686882cbbdb84c99f7cc801b4637566c2c8766a92635c37b6bb9e720ef9"
   },
   {
    "case": "G_continuous_rejection#10",
@@ -415,9 +419,9 @@
       "condition": 39504.5992341874
      },
      "production": {
-      "r_min": 1.13205733561002,
+      "r_min": 1.1320573356100203,
       "r_max": 44721.47135339584,
-      "condition": 39504.599234187415
+      "condition": 39504.59923418741
      },
      "tolerance": "rel<=1e-05 (CSV prints 6 digits)",
      "note": ""
@@ -426,8 +430,8 @@
      "id": "O8c",
      "description": "parity statistic from the frozen window",
      "status": "PASS",
-     "oracle": 12960.353326167999,
-     "production": 12960.353326168,
+     "oracle": 12960.353241810897,
+     "production": 12960.3532418109,
      "tolerance": "rel<=1e-05 or abs<=1e-09",
      "note": ""
     },
@@ -444,8 +448,8 @@
      "id": "O8e",
      "description": "parity identity ||Q2^T z||^2 == ||z - H x_hat||^2",
      "status": "PASS",
-     "oracle": 12960.353326168002,
-     "production": 12960.353326167999,
+     "oracle": 12960.353241810899,
+     "production": 12960.353241810897,
      "tolerance": "rel<=1e-09",
      "note": "verifies the implicit Q2 route the consumers use"
     },
@@ -512,7 +516,8 @@
      "tolerance": null,
      "note": "the transform T and the dominance bounds are internal to the frozen window and are not part of the replay schema; covered by the C++ tests B2Coverage.* and by the GEO-05 reference fixture"
     }
-   ]
+   ],
+   "bin_sha256": "d145e79ded5688be9ebefa29c525959804b1fa692540c7c11bb4d507b02550c5"
   },
   {
    "case": "H_mature_union#201",
@@ -521,52 +526,38 @@
     {
      "id": "O8a",
      "description": "rank / dof of the factored window",
-     "status": "PASS",
-     "oracle": {
-      "rank": 165,
-      "dof": 88
-     },
-     "production": {
-      "rank": 165,
-      "dof": 88
-     },
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
      "tolerance": "exact",
-     "note": ""
+     "note": "stale bin: the frozen window on the wire does not bind to the production run for this attempt (identity digest differs).  Re-export with UWB_IMU_PL_REPLAY_EXPORT_DIR + UWB_IMU_PL_REPLAY_ATTEMPTS (d-round-report.md D-6) and rerun this tool."
     },
     {
      "id": "O8b",
      "description": "R diagonal min/max and condition estimate",
-     "status": "PASS",
-     "oracle": {
-      "r_min": 1.0938999890027574,
-      "r_max": 44721.47135326885,
-      "condition": 40882.59603516288
-     },
-     "production": {
-      "r_min": 1.0938999890027614,
-      "r_max": 44721.47135326885,
-      "condition": 40882.59603516273
-     },
-     "tolerance": "rel<=1e-05 (CSV prints 6 digits)",
-     "note": ""
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": "exact",
+     "note": "stale bin: the frozen window on the wire does not bind to the production run for this attempt (identity digest differs).  Re-export with UWB_IMU_PL_REPLAY_EXPORT_DIR + UWB_IMU_PL_REPLAY_ATTEMPTS (d-round-report.md D-6) and rerun this tool."
     },
     {
      "id": "O8c",
      "description": "parity statistic from the frozen window",
-     "status": "PASS",
-     "oracle": 2.561315381635978e-07,
-     "production": 2.5613153816355605e-07,
-     "tolerance": "rel<=1e-05 or abs<=1e-09",
-     "note": ""
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
+     "tolerance": "exact",
+     "note": "stale bin: the frozen window on the wire does not bind to the production run for this attempt (identity digest differs).  Re-export with UWB_IMU_PL_REPLAY_EXPORT_DIR + UWB_IMU_PL_REPLAY_ATTEMPTS (d-round-report.md D-6) and rerun this tool."
     },
     {
      "id": "O8d",
      "description": "detector-only rows preserved",
-     "status": "PASS",
-     "oracle": 0,
-     "production": 0,
+     "status": "NOT_RUN",
+     "oracle": null,
+     "production": null,
      "tolerance": "exact",
-     "note": "zero rows stay in H, z, dof and the response"
+     "note": "stale bin: the frozen window on the wire does not bind to the production run for this attempt (identity digest differs).  Re-export with UWB_IMU_PL_REPLAY_EXPORT_DIR + UWB_IMU_PL_REPLAY_ATTEMPTS (d-round-report.md D-6) and rerun this tool."
     },
     {
      "id": "O8e",
@@ -592,29 +583,44 @@
     {
      "id": "O8g",
      "description": "coverage labels present and inside the label domain",
-     "status": "NOT_RUN",
-     "oracle": null,
-     "production": null,
-     "tolerance": null,
-     "note": "this run exports no hypothesis audit rows (output.write_hypothesis_evidence disabled for the scenario)"
+     "status": "PASS",
+     "oracle": [
+      "EXACT",
+      "UNCOVERED",
+      "UPPER_ENVELOPE"
+     ],
+     "production": [
+      "EXACT"
+     ],
+     "tolerance": "exact",
+     "note": "52186 hypothesis rows"
     },
     {
      "id": "O8h",
      "description": "label / envelope id consistency",
-     "status": "NOT_RUN",
-     "oracle": null,
-     "production": null,
-     "tolerance": null,
-     "note": "no hypothesis audit rows"
+     "status": "PASS",
+     "oracle": "EXACT:0, UPPER_ENVELOPE:>=1, UNCOVERED:0",
+     "production": {
+      "labels": [
+       "EXACT"
+      ],
+      "ids": [
+       0
+      ]
+     },
+     "tolerance": "exact",
+     "note": ""
     },
     {
      "id": "O8i",
      "description": "no UNCOVERED leaf in a certified window",
-     "status": "NOT_RUN",
-     "oracle": null,
-     "production": null,
-     "tolerance": null,
-     "note": "no hypothesis audit rows"
+     "status": "PASS",
+     "oracle": "complete coverage certificate (COV-04)",
+     "production": [
+      "EXACT"
+     ],
+     "tolerance": "exact",
+     "note": "incomplete coverage must make the protected output unavailable"
     },
     {
      "id": "O8j",
@@ -623,14 +629,15 @@
      "oracle": null,
      "production": null,
      "tolerance": null,
-     "note": "the transform T and the dominance bounds are internal to the frozen window and are not part of the replay schema; covered by the C++ tests B2Coverage.* and by the GEO-05 fixture"
+     "note": "the transform T and the dominance bounds are internal to the frozen window and are not part of the replay schema; covered by the C++ tests B2Coverage.* and by the GEO-05 reference fixture"
     }
-   ]
+   ],
+   "bin_sha256": "920a54ff2709c8150a7bcd16fbfce5d96c99d948f7b7439f94fc823a9ba272d5"
   }
  ],
  "totals": {
-  "pass": 42,
+  "pass": 41,
   "fail": 0,
-  "not_run": 8
+  "not_run": 9
  }
 }

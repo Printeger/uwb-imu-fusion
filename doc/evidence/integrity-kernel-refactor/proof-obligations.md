@@ -456,3 +456,16 @@ Householder 正消元（先消 `x_o`，再按 `x_b` 支持分块）；无正规�
 | W2-09 | 身份缺失 ⇒ 失败封闭 + 缺失清单（实测样例） | LOCKED_BY_EMPIRICAL | 早退/丢弃尝试 `publication_identity_check=REFUSED`、缺失 `risk_proof_id;protection_level_m`（`C_uwb_fde` 6/30、`G_continuous_rejection` 40/45、`HIP_60` 43/60）；成熟尝试 `ADMISSIBLE`（`A_nominal` 30/30） |
 | 缺口 | `H_mature_union`（226 epochs）全量基线侧未跑（单侧 25-40 min；harness 强制 226） | 续跑点（D 包） | 命令与成本见 `fde-publication.md §7.4`；新侧探测运行（epoch ~87）确认身份/看门狗记录 |
 | 缺口 | 被看门狗拒绝的尝试日志形状（`WATCHDOG_REFUSED`）已实现工具校验，但无场景可触发 | 诚实标注 | 生产者侧由 `FrozenDataIsUnavailableBeforeHeavyFde` 覆盖；校验器侧为形状规则（`gate_d_diagnostics.py`） |
+
+## 27.（D：最终验收轮）义务与状态 2026-09-22
+
+| ID | 义务 | 状态 | 证据 |
+|---|---|---|---|
+| D-01 | 离线驱动的 wall 政策显式声明；生产默认（2 s 陈旧 / 4 s wall）与配置合同不变 | LOCKED_BY_CODE+TEST | 五个应用传 `offlineReplayPublicationLimits()`（`apps/*.cpp`），`r0_r1_development` 于 W2 已传；生产构造点与默认值未动 |
+| D-02 | §10 缺口补测：CFG-03/GEO-03/MOD-01/MOD-03 各一新用例，断言摘要见 D 报告 §D-1.3 | LOCKED_BY_TEST | `ReferenceFixture.StartupPassDoesNotMaskRuntimeGeometryDegradation`、`ReferenceFixture.Geo03KGreaterThanNuIsClassifiedByTheKernelNotByCounts`、`HistoryFaultParameterization.Mod01UwbDropoutAndNonUniformTimestampsKeepTheDeclaredSupport`、`...Mod03IntervalInteriorOnsetCannotReuseTheWholeIntervalTemplate`；`validation-manifest.json` 四项 MAPPED |
+| D-03 | §10 矩阵 order=1/2 分别报告；ORDER=2 真实展开（非开关摆设） | LOCKED_BY_EMPIRICAL | `--all` 58 PASS/0 FAIL/2 NOT_RUN（`raw/validation_d_final.log`）；order=2 批次 7 场景 `effective_fault_cardinality=2`、双故障假设 1728–7920/帧、`mode_dense_allocations=0`；发布门对照表（d-round-report §D-2.3） |
+| D-04 | 性能：原始逐帧 trace、p50/p95/p99/max、峰值内存/队列、有限 PL 比例；40 ms 目标如实判定 | **RECORDED_BLOCKER** | `d-round-report.md` §D-3；热点 `window_boundary_provenance`（99.5%，幂律 ≈ r^4，`boundary_rows` +≈23/epoch）；epoch 13 越界；未缩覆盖、未改阈值、无投机优化 |
+| D-05 | 资源容量语义自查：发现 `history.max_summary_rows`/`max_perp_rows` 未被执行 | RECORDED_GAP（按语义零改动不修） | `capacity_ok=1` 而 `emitted_rows=1069`、`nu_perp=1054` > 512；调用点 `incremental_estimator.cpp:1405-1409`；ADR-0003 D 注记 |
+| D-06 | 第八次外部格式化事件：判定/回退/补记 | RECORDED | `runbook.md` §22 S0-2；工作树复核 = `3550a38`（8/9 严格等价 + 1 个 `case '\\'` 展开 artifact） |
+| D-07 | H_mature_union 两侧全量对照 + oracle JSON 重生成（同代材料） | 对照见 `fde-publication.md` §7.4 D 轮更新；oracle 完成（H#201 跨代 bin 由新增身份绑定陈旧门记 NOT_RUN + 重导出配方） | `tools/publish_diff.py`；bin 重导出机制（`UWB_IMU_PL_REPLAY_EXPORT_DIR/ATTEMPTS`）；陈旧门（`identity_digest` 绑定判据）；square-root 41/0/9、oracle-results 35/0/8（`d-round-report.md` §D-4.6） |
+| D-08 | replay v6 写入器符合「v5 布局 + removal provenance」契约（factor_inventory 在线上） | FIXED_BY_CODE+TEST | `candidate_replay.cpp`（v6 也写 factor_inventory，`wip(D)`=8584396）；`GateDReplay.LosslessRoundTripAllBlocksAndActions` 逐字段往返断言（旧代码下失败） |

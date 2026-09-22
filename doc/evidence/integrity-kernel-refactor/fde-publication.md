@@ -176,7 +176,7 @@ PROTECTED -> EVALUATING | UNAVAILABLE        （随时可降级）
 | `F_ramp_unmonitorable` (30) | **无差异** | **无差异** | 不变量化 |
 | `G_continuous_rejection` (45) | **无差异** | **无差异** | 不变量化 |
 | `HIP_history_crossing_fault` (60) | **无差异** | **无差异** | 不变量化 |
-| `H_mature_union` (226) | **本轮未逐行对照**（单侧 25-40 min，harness 强制 226；见下） | 未对照 | D 包续跑 |
+| `H_mature_union` (226) | **无差异**（226 帧逐列相同：共有列 + 覆盖/决策计数列；`raw/h_publish_diff_d.log`） | **无差异**（身份门 224 `ADMISSIBLE` / 2 `REFUSED`、`publication_protected=0`、`refused=0`；与 7 场景同口径） | **D 轮完成**（base = pre-C4 基线侧、无 publication 列；new 侧新增 32 列 v16） |
 
 * **无覆盖缩水（实测）**：覆盖证书与决策计数列（`coverage_*`、`kernel/post/pl_evaluated_actions`、
   `selected_actions`、`risk_ledger_*`、`primary_failure`、`all_failures`、`not_evaluated_checks`）
@@ -188,9 +188,7 @@ PROTECTED -> EVALUATING | UNAVAILABLE        （随时可降级）
   不改变任何已发布量。
 * **replay 哈希**：v6 写出的二进制与 v5 必然不同（新增 3 个 provenance 字段），归因 = 格式版本升级；
   本批场景未开启 `UWB_IMU_PL_REPLAY_EXPORT_DIR`，盘上无新 replay 工件。
-* `H_mature_union` 续跑点：`bash /tmp/w2_baseline_run.sh` 中把 H 行恢复为 226 epochs 后重跑两侧，
-  再执行 `python3 tools/publish_diff.py <base>/H_mature_union <new>/H_mature_union`；本轮新侧已跑到
-  epoch ~87 的探测运行显示身份/看门狗记录工作正常（§7.5 样例），成本 ~25-40 min/侧。
+* `H_mature_union` 续跑点（**D 轮已完成**）：两侧 226-epoch 全量运行（`base/` = pre-C4 基线侧，`new/` = C4/D 代码侧，均已到 226 帧）后执行 `python3 tools/publish_diff.py <base>/H_mature_union <new>/H_mature_union` ⇒ **exit 0，零已发布量差异**；两侧运行汇总计数器逐项相同（`finite_pl=224`、`kernel_evaluations=226`、`pl_evaluations=224`、`marginalizations=27`、`numerical_contract_mismatches=0`、`reinitialization_requests=0`、`max_pending_duration_s=0.05`）。成本更正：单侧 ≈ 2–3 h（非 25–40 min，超线性增长，见 §22 D-4）。base 侧无 publication 列（pre-C4），new 侧 v16 32 列 – 与 §7.4 表头说明一致；日志 `raw/h_publish_diff_d.log`。
 
 ### 7.5 计数与场景实测
 
@@ -223,6 +221,12 @@ PROTECTED -> EVALUATING | UNAVAILABLE        （随时可降级）
 **工具副作用处置（沿用 runbook §12/§13 政策）**：validation 的自动发现把两个 oracle JSON 指向旧
 `/tmp/uwb_imu_pl_b1_20260921/b1_runs_v12` dumps（产生虚假 O8g FAIL）⇒ 已 `git restore` 回提交态；
 新一版 oracle 产物需完整 226-epoch H 运行（D 包口径），本轮不伪称已重生成。
+
+**D 轮更新（2026-09-22）**：两个 oracle JSON 已以**同代材料**重生成 —— `square-root-oracle.json`
+= 41 PASS / 0 FAIL / 9 NOT_RUN，`oracle-results.json` = 35 PASS / 0 FAIL / 8 NOT_RUN；跨代/陈旧
+冻结 bin 由新增**身份绑定陈旧门**记 NOT_RUN 并附重导出配方（不再对陈旧材料做数字比较）。重导出
+机制与配方见 `runbook.md §22` D-4b 与 `d-round-report.md` §D-4.6；期间修复的 v6 写入缺陷见其
+§D-4.6 与 `proof-obligations.md` D-08。
 
 **差异表**：见 §7.4（7 场景 + HIP 全部"无已发布量变化"、无覆盖缩水；H 列为 D 包续跑）。
 

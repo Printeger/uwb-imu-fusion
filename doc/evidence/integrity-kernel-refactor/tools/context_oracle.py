@@ -40,8 +40,10 @@ Run CSV source: env UWB_IMU_PL_ORACLE_RUNS, default
 prune-log.md).  Output: square-root-oracle.json next to this file.
 """
 import csv
+import hashlib
 import json
 import os
+import subprocess
 import sys
 
 import numpy as np
@@ -50,8 +52,17 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from replay_io import read_replay  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+REPO = os.path.abspath(os.path.join(ROOT, "..", "..", ".."))
 RUNS = os.environ.get(
     "UWB_IMU_PL_ORACLE_RUNS", "/tmp/uwb_imu_pl_b1_20260921/b1_runs_v12")
+
+
+def sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 REL_CSV = 1.0e-5
 REL_STRICT = 1.0e-9
 ABS_FLOOR = 1.0e-9
@@ -69,13 +80,18 @@ def close(a, b, rel, floor=0.0):
 
 
 def main():
+    revision = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True,
+        text=True, check=True).stdout.strip()
     index = json.load(open(os.path.join(ROOT, "fixtures", "frames-b1.json")))
-    report = {"produced_by": "tools/context_oracle.py", "runs_source": RUNS,
+    report = {"produced_by": "tools/context_oracle.py",
+              "source_revision": revision, "runs_source": RUNS,
               "cases": [], "totals": {"pass": 0, "fail": 0, "not_run": 0}}
     for entry in index["bins"]:
         case = {"case": f"{entry['run']}#{entry['attempt']}",
                 "bin": entry["bin"], "items": []}
         frame = read_replay(os.path.join(ROOT, entry["bin"]))
+        case["bin_sha256"] = sha256(os.path.join(ROOT, entry["bin"]))
         H = frame["window"]["H"]
         z = frame["window"]["z"]
         m, n = H.shape
@@ -93,6 +109,25 @@ def main():
             continue
         row = rows[0]
 
+        # D round: a retained bin that does not bind to the production run for
+        # the same attempt was exported from an earlier window representation;
+        # the cross-boundary checks are then NOT_RUN with the re-export recipe.
+        stale_reason = None
+        identity = frame.get("identity", {})
+        ident_path = os.path.join(csv_dir, "diagnostic_snapshot_identity.csv")
+        if os.path.exists(ident_path) and identity.get("identity_digest"):
+            for candidate in csv.DictReader(open(ident_path)):
+                if candidate["input_attempt_id"] == str(entry["attempt"]):
+                    if candidate.get("identity_digest") != identity.get("identity_digest"):
+                        stale_reason = (
+                            "stale bin: the frozen window on the wire does not "
+                            "bind to the production run for this attempt "
+                            "(identity digest differs).  Re-export with "
+                            "UWB_IMU_PL_REPLAY_EXPORT_DIR + "
+                            "UWB_IMU_PL_REPLAY_ATTEMPTS (d-round-report.md "
+                            "D-6) and rerun this tool.")
+                    break
+
         x_hat, *_ = np.linalg.lstsq(H, z, rcond=None)
         parity = z - H @ x_hat
         statistic = float(parity @ parity)
@@ -105,32 +140,41 @@ def main():
         detector_only = int(np.count_nonzero(np.abs(H).max(axis=1) == 0.0))
         q2_statistic = float(np.sum((Q[:, rank:].T @ z) ** 2))
 
-        case["items"].append(item(
-            "O8a", "rank / dof of the factored window",
-            "PASS" if (int(row["rank"]) == rank and int(row["dof"]) == dof)
-            else "FAIL", {"rank": rank, "dof": dof},
-            {"rank": int(row["rank"]), "dof": int(row["dof"])}, "exact"))
-        case["items"].append(item(
-            "O8b", "R diagonal min/max and condition estimate",
-            "PASS" if (close(float(row["r_diagonal_min"]), float(singular[:rank].min()), REL_CSV)
-                       and close(float(row["r_diagonal_max"]), float(singular[:rank].max()), REL_CSV)
-                       and close(float(row["condition_estimate"]), condition, REL_CSV))
-            else "FAIL",
-            {"r_min": float(singular[:rank].min()), "r_max": float(singular[:rank].max()),
-             "condition": condition},
-            {"r_min": float(row["r_diagonal_min"]), "r_max": float(row["r_diagonal_max"]),
-             "condition": float(row["condition_estimate"])},
-            f"rel<={REL_CSV:g} (CSV prints 6 digits)"))
-        case["items"].append(item(
-            "O8c", "parity statistic from the frozen window",
-            "PASS" if close(float(row["statistic"]), statistic, REL_CSV, ABS_FLOOR)
-            else "FAIL", statistic, float(row["statistic"]),
-            f"rel<={REL_CSV:g} or abs<={ABS_FLOOR:g}"))
-        case["items"].append(item(
-            "O8d", "detector-only rows preserved",
-            "PASS" if int(row["detector_only_rows"]) == detector_only else "FAIL",
-            detector_only, int(row["detector_only_rows"]), "exact",
-            "zero rows stay in H, z, dof and the response"))
+        if stale_reason is not None:
+            for ident, description in (
+                    ("O8a", "rank / dof of the factored window"),
+                    ("O8b", "R diagonal min/max and condition estimate"),
+                    ("O8c", "parity statistic from the frozen window"),
+                    ("O8d", "detector-only rows preserved")):
+                case["items"].append(item(ident, description, "NOT_RUN",
+                                          None, None, "exact", stale_reason))
+        else:
+            case["items"].append(item(
+                "O8a", "rank / dof of the factored window",
+                "PASS" if (int(row["rank"]) == rank and int(row["dof"]) == dof)
+                else "FAIL", {"rank": rank, "dof": dof},
+                {"rank": int(row["rank"]), "dof": int(row["dof"])}, "exact"))
+            case["items"].append(item(
+                "O8b", "R diagonal min/max and condition estimate",
+                "PASS" if (close(float(row["r_diagonal_min"]), float(singular[:rank].min()), REL_CSV)
+                           and close(float(row["r_diagonal_max"]), float(singular[:rank].max()), REL_CSV)
+                           and close(float(row["condition_estimate"]), condition, REL_CSV))
+                else "FAIL",
+                {"r_min": float(singular[:rank].min()), "r_max": float(singular[:rank].max()),
+                 "condition": condition},
+                {"r_min": float(row["r_diagonal_min"]), "r_max": float(row["r_diagonal_max"]),
+                 "condition": float(row["condition_estimate"])},
+                f"rel<={REL_CSV:g} (CSV prints 6 digits)"))
+            case["items"].append(item(
+                "O8c", "parity statistic from the frozen window",
+                "PASS" if close(float(row["statistic"]), statistic, REL_CSV, ABS_FLOOR)
+                else "FAIL", statistic, float(row["statistic"]),
+                f"rel<={REL_CSV:g} or abs<={ABS_FLOOR:g}"))
+            case["items"].append(item(
+                "O8d", "detector-only rows preserved",
+                "PASS" if int(row["detector_only_rows"]) == detector_only else "FAIL",
+                detector_only, int(row["detector_only_rows"]), "exact",
+                "zero rows stay in H, z, dof and the response"))
         case["items"].append(item(
             "O8e", "parity identity ||Q2^T z||^2 == ||z - H x_hat||^2",
             "PASS" if close(q2_statistic, statistic, REL_STRICT) else "FAIL",

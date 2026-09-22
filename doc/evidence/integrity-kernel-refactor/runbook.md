@@ -728,3 +728,106 @@ python3 $E/tools/publish_diff.py /tmp/uwb_imu_pl_w2_20260922/base/<scenario> $O/
 UWB_IMU_PL_VALIDATION_SHA=<wip(W2) 代码 SHA> \
     python3 tools/integrity/run_validation.py --all
 ```
+
+## 22. D（最终验收轮）2026-09-22
+
+**S0-1 工作树与 HEAD**：起点 `HEAD=3550a38`（W2 证据提交；代码 `09a71e4`）；
+`git status --porcelain` 仅剩未跟踪路线图文档。
+
+**S0-2 第八次外部格式化事件（补记；非开发方自查）**
+
+| 项 | 记录 |
+|---|---|
+| 时间 | 2026-09-22 13:06 |
+| 范围 | 9 个文件：`publication_identity.{hpp,cpp}`、`types.hpp`、`integrity_monitor.cpp`、`fde_manager.{hpp,cpp}`、`run_logger.cpp`、`candidate_replay.cpp`、`test_integrity_v2.cpp` |
+| 判定 | 指挥方 token 多重集复核：**8/9 严格等价**，`candidate_replay.cpp` 一处 `case '\\'` 展开 artifact（零语义内容） |
+| 处置 | 指挥方已 `git restore` 回退（本轮开始前完成；开发侧复核工作树 = `3550a38`） |
+| 归属 | 非开发方自查（检测/判定/回退均由指挥方完成） |
+
+防复发规则沿用 §20 S0-3；本轮收尾不做任何格式化。
+
+**S0-2b 第八次事件的第二波（14:22，补记）**：`wip(D)` amend（14:04）后，外部
+pass 再格式化了该提交涉及的 9 个文件（`apps/` 5 + `candidate_replay.cpp` +
+`test_integrity_reference.cpp` + `test_history_fault_parameterization.cpp` +
+`test_integrity_v2.cpp`）。收尾审计（本 agent）token 多重集复核 = **8/9 严格
+等价**；`advisor_paired_benchmark.cpp` 一处 CSV 表头长字符串换行 artifact（邻接
+字面量拼接，零语义）。已 `git restore -- apps src test` 回退（代码树 =
+`8584396`）；本轮无任何开发侧格式化命令。
+
+**S0-3 manifest 对齐与补测登记**：OUT-04..07 按 OUT-01..03 同机制（`test_publication_wiring`
++ gtest filter）MAPPED；CFG-03/GEO-03/MOD-01/MOD-03 由本轮新用例 MAPPED；
+MOD-04/MOD-05 终局 = 文档化 NOT_IMPLEMENTED（理由/影响/复现入 manifest note）。
+item 计数 56 → 60。`--all` 终值 **58 PASS / 0 FAIL / 2 NOT_RUN**
+（`raw/validation_d_final.log`、`validation-report.json`）。
+
+**S0-4 起点基线**：全量套件 416/0（`raw/run_tests_d_stage0.log`）；终值 424/0
+（+4 新用例 × gtest 双计数；`raw/run_tests_d_final.log`）。
+
+**D-1 §10 矩阵 order=1/2**：逐条状态与补测用例断言摘要见
+`d-round-report.md` §D-1/§D-2。order=2 输入 = `configs/research-order2-dev.yaml`
+（sha256 `18e8f055…`；与 research 配置逐行等价，仅 `double_faults_enabled`/
+`max_fault_order`/相对 `manifest_path` 三处）；7 场景批次全部
+`effective_fault_cardinality=2`、schema PASS；发布门对照表见 §D-2.3
+（唯一 order 差异 = HIP_60 早期 REFUSED 17/43 → 5/55，同缺失清单，保守扩大）。
+
+**D-2 §11 性能（不换口径；阻塞记录）**：热点 = `window_boundary_provenance`
+（成熟帧 99.5%；e106 11.54 s / 全帧 11.62 s），增长量 = `boundary_rows`
+（+≈23/epoch；e20 444 → e115 2652 → H e188 4331），时间实测幂律 ≈ r^4；根因 =
+`fixed_lag_epochs=200` 前边界因子持续累积而 C1 摘要每次重建。`core_total` 在
+基准轨迹 epoch 13 越过 40 ms；成熟段 p50 ≈ 14.5 s（nominal，e101–124 段）。
+无覆盖缩水、无阈值改动、无投机优化（热点不属 symbol/index/hash/PIM/概率反演/
+临时分配类别）。有限 PL 比例与分类表见 `d-round-report.md` §D-3。
+**基准终态**：alarm 完成（260 帧 / 9:22.5 / 122 MB）；order=2 完成（150 帧 /
+32:42.5 / 297 MB / 成熟段 p50 28.8 s、p99 52.3 s）；nominal 至提交仍在运行
+（覆盖至 e199：成熟段 p50 50.6 s、p99 131.5 s、峰值 493 MB，仍增长）。
+**缺口记录**：`history.max_summary_rows` / `max_perp_rows` 仅解析未执行
+（`capacity_ok=1` 而 `emitted_rows=1069`、`nu_perp=1054` > 512）——按语义零改动
+原则只记录（§D-3.5）。**离线 wall 政策**：5 个离线应用显式传
+`offlineReplayPublicationLimits()`（§D-3.6）。
+
+**D-3 清理与 §12**：清理审计（无可安全删除项；method B 离线、dense oracle 在役、
+无状态路径限开发 app、惰性 FDE 已成、LLT/spectral 计数回退）与 §12 八门逐条
+自查（实时与资源门 = **不通过（blocker）**，模型证据门 = 未完成）见
+`d-round-report.md` §D-4。ADR-0001/0002/0003 已追加 D 轮状态小节。
+
+**D-4 H_mature_union 全量对照与 oracle 重生成（W2 缺口收口）**：两侧 226 epochs
+并行运行（W2 侧 `new/`、b7feb9c 侧 `base/`），完成后：
+
+```bash
+python3 doc/evidence/integrity-kernel-refactor/tools/publish_diff.py \
+    /tmp/uwb_imu_pl_w2_20260922/base/H_mature_union \
+    /tmp/uwb_imu_pl_w2_20260922/new/H_mature_union
+# oracle JSON 重生成（226-epoch H 运行 + W2 场景批次）
+UWB_IMU_PL_ORACLE_RUNS=/tmp/uwb_imu_pl_w2_20260922/new \
+    python3 doc/evidence/integrity-kernel-refactor/tools/context_oracle.py   # square-root-oracle.json
+UWB_IMU_PL_ORACLE_RUNS=/tmp/uwb_imu_pl_w2_20260922/new \
+    python3 doc/evidence/integrity-kernel-refactor/tools/oracle_compare.py   # oracle-results.json
+```
+
+**成本更正**：W2 证据记录的单侧 "25–40 min" 为低估；实测两侧在 e188/e163 时
+单帧已达 128 s / 75 s（超线性增长，同 §D-2 热点），全程每侧 ≈ 2–3 h。该更正
+写入 `final-review.md` 的"被更正旧结论"清单。
+
+**D-4 结果（两侧完成后）**：base 侧 226/226 完成（2026-09-22 15:50:56 退出；
+`states.csv` = 227 行含表头；汇总行与 new 侧逐项相同）。`publish_diff.py` 全量
+对照 = **exit 0，零已发布量差异**（共有列 + 覆盖/决策计数列 226 行逐行相同；
+new 侧 v16 32 列另报：`protected=0`、`refused=0`、身份门 224 `ADMISSIBLE` /
+2 `REFUSED`）；日志 `raw/h_publish_diff_d.log`。base 侧无任何 publication 列
+（pre-C4），与「base = b7feb9c 基线侧」的构建证据一致（`diagnostic_attempts.csv`
+表头 0 个 publication 列 vs new 19 处匹配）。
+
+**D-4b oracle 重生成（同代材料）与 v6 缺陷修复**：A/C/G 的冻结 bin 由 D 轮代码
+重导出（`UWB_IMU_PL_REPLAY_EXPORT_DIR` + `UWB_IMU_PL_REPLAY_ATTEMPTS`），CSV
+与 H 侧分别取同代/在跑运行；两个工具新增**身份绑定陈旧门**（bin 的
+`identity_digest` ≠ 同 attempt 生产身份行 ⇒ 跨边界检查转 NOT_RUN 并附重导出
+配方；bin 内部检查照实算）。最终：`square-root-oracle.json` = 41 PASS/0 FAIL/
+9 NOT_RUN，`oracle-results.json` = 35 PASS/0 FAIL/8 NOT_RUN（NOT_RUN 逐条在案；
+H#201 的 O8a–d/O0–O2/O5 为陈旧门结果，重导出需重跑 226-epoch 全场景 ≈2.5 h，
+按门保留）。期间发现并修复 W2 引入的 v6 写入缺陷（`factor_inventory` 段落
+缺失 ⇒ v6 读取器错位，python 侧 `trailing bytes`），并强化 `GateDReplay` 往返
+测试钉扎该段；代码提交修正为 `8584396`。验证 runner 的 PRV-05/06 会以默认
+`/tmp` 源覆盖两个产物 ⇒ 收尾按 §12/§13 政策恢复同代版本后再生成哈希。
+
+**D-5 重复执行的验证口径**：本轮所有数值使用原始逐帧 trace
+（`tools/perf_trace_summary.py`）与场景/基准输出；无组件中位数求和，无跨轮
+拼接的旧数字冒用。
