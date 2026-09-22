@@ -440,3 +440,19 @@ Householder 正消元（先消 `x_o`，再按 `x_b` 支持分块）；无正规�
 | W1-04 | 选择风险对**全部可能发布动作**的并集控制，超预算保持不可用 | LOCKED_BY_TEST（当前策略下不可绑定，见 §7.2 诚实说明） | `buildGuaranteeGroups` + `commit_allowed=false` 路径；测试 `SelectionRiskChargedOverPublishableSet` |
 | W1-05 | IMU 区间移除的"数据来源/模型误差记录"是显式字段，并在并集动作中保真 | LOCKED_BY_TEST（结构）/ 诊断导出推迟 W2 | `ExclusionAction::{removal_data_source,model_error_record,model_error_validated}`；`actionForMode`/`unite`；`candidate_replay.cpp` 显式说明 |
 | W1-06 | 阈值/合同（0.25 gate、128 上限、p_fa/p_md、alert limits、风险预算）不动 | LOCKED_BY_TEST | 无阈值改动；validation 50 PASS/0 FAIL @ b7feb9c |
+
+## 26.（W2：C4 生产接线）义务与状态
+
+| # | 义务 | 状态 | 证据 |
+|---|---|---|---|
+| W2-01 | 发布状态机由**显式持有对象**穿线；不藏在 const 路径、无第二状态源 | LOCKED_BY_TEST | `PublicationController`（`publication_identity.{hpp,cpp}`）+ `RealtimeIntegrityPipeline::publication_`；`evaluateSnapshot/evaluateConditional` 显式接收持有者；测试 `PipelineAttemptCarriesProductionIdentity`、`StatelessMonitorPathIsExplicitlyUnprotected` |
+| W2-02 | 身份量从生产现场真实取材；任一缺失 ⇒ 失败封闭 + 缺失清单（不编造） | LOCKED_BY_TEST | `applyPublicationGate`（window/transaction、linpoint、C1 version_digest、C2 检测器标签、W1 风险证明 id、manifest、健康态、PL、参考点、时刻、frame）+ `missingPublicationIdentityFields`；测试 OUT-04/OUT-07 |
+| W2-03 | 三态处置：admissible 走原子链；same_time_rebind 无证明即拒绝；requires_propagation 显式未保护、不复用旧证书 | LOCKED_BY_TEST | `finalizeAttempt`；测试 `ControllerTriStateAndAtomicChain` |
+| W2-04 | 平台未认证（`formal_eligible=false`）⇒ 显式未保护 + 原因记录，不伪称受保护 | LOCKED_BY_TEST | `admit()` 的 `certification_available=false` 分支；场景实测 `publication_protected=0` |
+| W2-05 | 冻结数据在重 FDE 之前判 UNAVAILABLE；落后但前进的流不被误拒；时钟倒退与平台输入校验一致地拒绝 | LOCKED_BY_TEST | `beginAttempt` 冻结规则（sensor_delta==0 ∧ lag>限）；测试 `FrozenDataIsUnavailableBeforeHeavyFde`、`WatchdogClauseSemanticsAreExplicit`、`BackwardsClockIsRefusedLikeInputValidation`；H 场景实测（原始 OR 判定 169/226 假阳性 ⇒ 0） |
+| W2-06 | 诊断 v16 只加列；工具按已知版本接受（旧报告仍可校验） | LOCKED_BY_TEST | `run_logger.cpp`（v16 列）+ `tools/validate_run_schema.py`（V5_*_V16 变体）/`tools/gate_d_diagnostics.py`（v1..v16 + 拒绝形状）；`test_run_logger`/`test_fault_manifest` 更新 |
+| W2-07 | replay codec 先加显式版本再扩展；v1..v5 布局不变；未知版本拒绝解析 | LOCKED_BY_TEST | `candidate_replay.cpp` v6 分支 + `tools/replay_io.py`（v4/v5/v6）；`GateDReplay.LosslessRoundTripAllBlocksAndActions` 断言三字段往返 |
+| W2-08 | 已发布动作/状态/PL 对 `b7feb9c` 保守或不变量化；无覆盖缩水 | **LOCKED_BY_EMPIRICAL**（7 场景 + HIP 逐行零差异；H 见缺口行） | `tools/publish_diff.py`：`A_nominal`/`C_uwb_fde`/`D_imu_bridge`/`E_union`/`F_ramp_unmonitorable`/`G_continuous_rejection`/`HIP_60` 的已发布列与覆盖/决策计数**逐行相同**（`publication_protected=0`、`WATCHDOG_REFUSED=0`） |
+| W2-09 | 身份缺失 ⇒ 失败封闭 + 缺失清单（实测样例） | LOCKED_BY_EMPIRICAL | 早退/丢弃尝试 `publication_identity_check=REFUSED`、缺失 `risk_proof_id;protection_level_m`（`C_uwb_fde` 6/30、`G_continuous_rejection` 40/45、`HIP_60` 43/60）；成熟尝试 `ADMISSIBLE`（`A_nominal` 30/30） |
+| 缺口 | `H_mature_union`（226 epochs）全量基线侧未跑（单侧 25-40 min；harness 强制 226） | 续跑点（D 包） | 命令与成本见 `fde-publication.md §7.4`；新侧探测运行（epoch ~87）确认身份/看门狗记录 |
+| 缺口 | 被看门狗拒绝的尝试日志形状（`WATCHDOG_REFUSED`）已实现工具校验，但无场景可触发 | 诚实标注 | 生产者侧由 `FrozenDataIsUnavailableBeforeHeavyFde` 覆盖；校验器侧为形状规则（`gate_d_diagnostics.py`） |

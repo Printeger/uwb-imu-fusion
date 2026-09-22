@@ -612,3 +612,119 @@ validation SHA=`8c5330f` → **50 PASS / 0 FAIL / 6 NOT_RUN**（OUT-01..03 PASS�
 证据：`fde-publication.md`（身份表/状态机/时间契约表/差异表）。
 
 **两个里程碑均完成（M2/M3）**：M2 与 M3 的“未接线”项已在各自证据文件如实列出。
+
+## 20. W2（C4 接线）Stage 0：复核、事件 #7 补记、格式化源审计 2026-09-22
+
+**S0-1 工作树与哈希复核**：HEAD=`0f37905`（W1 证据提交）；`git status --porcelain`
+仅剩未跟踪路线图文档。注意：13 个文件因**指挥方 `git restore`** 而 mtime 变新
+（统一 11:02:48）——**不是**未提交改动。`sha256sum -c hashes-C1C2.txt` = **141/141 OK**。
+
+**S0-2 第七次外部格式化事件（补记；非开发方自查，由指挥方检测/判定/回退）**
+
+| 项 | 记录 |
+|---|---|
+| 时间 | 2026-09-22 10:53–10:54（晚于 W1 证据提交 10:51） |
+| 范围 | 13 个文件（`include/`、`src/`、`test/`；mtime 复核：回退后统一为 11:02:48） |
+| 判定 | 指挥方 token 多重集复核：**12/13 严格等价**，`run_logger.cpp` 另有一处 `case '\\'` 字面量展开亦等价 ⇒ **零语义内容** |
+| 处置 | 指挥方 `git restore` 全量清除；回退后 `hashes-C1C2` 141/141 OK |
+| 归属 | 非开发方自查（检测/判定/回退均由指挥方完成；开发侧仅复核结果并补记） |
+| 机械观测 | `tools/gate_d_diagnostics.py`、`tools/validate_run_schema.py` 的 mtime 落在事件窗口（10:54:06），内容与 HEAD 一致（`git status` 干净）——存档记录，不做归属推断 |
+
+**S0-3 自动格式化源审计（防第 8 次事件）**
+
+* 仓库内 `.clang-format` / `.clang-format-ignore`：**不存在**（全树 find，排除 build）。
+* `.editorconfig`：**不存在**；`core.hooksPath` 未设置；git config 无格式化相关项。
+* `~/.vscode-server/data/User/settings.json`：**不存在**；工作区 `settings.json`（ws 根
+  `.vscode/`）只含 `files.associations` + `cmake.configureOnOpen`，**无** `formatOnSave`/
+  `formatOnPaste`/`codeActionsOnSave`；包目录无 `.vscode/`。
+* 已安装扩展 28 个，**无** clang-format / formatter 类扩展。
+* ⇒ 本仓库与本编辑器侧**没有任何启用的自动格式化路径**（事件来自外部工具链；与 §11
+  的 Codex 侧取证结论一致）。防复发沿用 §7 规则：任何"工具式"diff 先做
+  `git diff --ignore-all-space` + token 多重集判别；本 agent 收尾流程不做任何格式化。
+
+**S0-4 起点基线**：`catkin build uwb_imu_pl` 首次因 `cc1plus` 被 OOM kill（`Killed signal`，
+非代码问题），重跑成功；全量套件 **404 tests / 0 errors / 0 failures**
+（与 `run_tests_cwire_w1.log` 同口径），日志 `raw/run_tests_cwire_w2base.log`。
+
+## 21. W2：C4 生产接线 + 诊断 v16 + 全场景重基线 2026-09-22
+
+**交付（代码提交 `wip(W2)`）**
+
+* 发布门（C4 → 生产）：`PublicationController`（`publication_identity.{hpp,cpp}`）为**显式状态持有者**
+  （状态机 + 最近准入证书 + 看门狗），由 `RealtimeIntegrityPipeline::publication_` 持有并穿线；
+  `processUwbBatch(batch, ClockSample)` 在重 FDE 之前 `beginAttempt`，返回前 `applyPublicationGate`
+  组装身份并 `finalizeAttempt`；const 的 `evaluateSnapshot/evaluateConditional` 接受调用方传入的
+  持有者（`nullptr` ⇒ 显式未保护 + `NOT_EVALUATED`）。细节与三态处置见 `fde-publication.md §7`。
+* 看门狗规则（**重 FDE 之前**）：拒绝 = 冻结数据（sensor_delta==0 且 lag>限）或 wall 超时；
+  后退时钟 ⇒ 与平台输入校验一致的 `std::invalid_argument`；"落后但前进"的流不拒绝（H 场景实测：
+  原始 OR 判定拒 169/226 ⇒ 假阳性；冻结规则下 0 拒绝）。门限为新政策默认 2 s / 4 s（构造可覆盖）。
+* 诊断 v14/v15 → **v16（只加列）**：发布三态/理由/状态机/身份值/看门狗（含 sensor_delta）、
+  选择类 id 与风险证明 id、hypothesis `unit_kind/profile_j/profile_valid`、candidate removal provenance；
+  `transaction_opened` 标记未开事务的拒绝尝试（不写 transactions 行）。
+* `candidate_replay` **v6**：先加显式版本标记再扩展（v6 = v5 + removal provenance），v1..v5 布局不变、
+  未知版本拒绝解析；`tools/replay_io.py` 接受 v4/v5/v6。
+* 工具同步（兼容策略 = 接受已知版本）：`tools/gate_d_diagnostics.py` v1..v16 + 拒绝形状校验；
+  `tools/validate_run_schema.py` v5 运行 schema 的 B1/v13/**v16** 表头变体。
+
+**验证与计数**
+
+* 全量套件 **416 / 0 / 0**（基线 404/0 + 6 新用例×2）；日志 `raw/run_tests_cwire_w2_stage3.log`。
+* validation @ `09a71e4`（`run_validation.py --all`）→ **50 PASS / 0 FAIL / 6 NOT_RUN**
+  （与 M3/W1 相同）；`validation-report.json` 已入库，日志 `raw/validation_w2.log`。
+* 运行 schema：场景输出全部 **PASS uwb-imu-pl/v5**（v16 表头 + 诊断工具）。
+* 工具同步修复：`gate_d_diagnostics` 的 `eligibility_skip` 版本列表补 `/v15,/v16`（HIP 场景
+  `SKIPPED_INELIGIBLE` 候选在 v16 下不再被误判为"candidate kernel was not executed"）。
+* oracle 产物副作用：自动发现指向旧 `/tmp/uwb_imu_pl_b1_20260921/b1_runs_v12` ⇒ 按 §12/§13 政策
+  `git restore` 两个 JSON；新一版 oracle 需完整 226-epoch H 运行（D 包）。
+
+**场景重基线（对 `b7feb9c`）**
+
+* 命令与产物见下（`/tmp/uwb_imu_pl_w2_20260922/{base,new}/<scenario>`）；差异逐行比较工具
+  `doc/evidence/integrity-kernel-refactor/tools/publish_diff.py`（本轮入库）。
+* `H_mature_union`（226 epochs，harness 强制 `minimum_epochs=226`）单侧成本实测 ≈ 25-40 min
+  （epoch 83 时 `core_total` 已达 3.9 s 且继续增长）⇒ 本轮不重跑该场景的基线侧，差异表覆盖
+  其余 7 个场景；H 的**全量对照**列为 D 包续跑点（单侧命令与成本已入证据）。
+* 差异结果（`tools/publish_diff.py`，发布量逐行对照）：**7 个场景 + HIP 全部“无已发布量变化”**
+  （`integrity/transactions/candidates/hypotheses` 共有列 + 覆盖/决策计数逐行相同；
+  `publication_protected=0`、`WATCHDOG_REFUSED=0`）⇒ 无覆盖缩水、无新增未保护输出；
+  身份门仅新增记录（成熟尝试 `ADMISSIBLE`；无风险证明/PL 的早退路径 `REFUSED` +
+  缺失清单 `risk_proof_id;protection_level_m`）。
+* `H_mature_union` 列为 D 包续跑（本轮未做基线侧；新侧探测运行在 epoch ~87 终止，
+  记录显示身份/看门狗行为符合设计）。
+
+**Stage 3 命令（照抄口径；大产物写 /tmp）**
+
+```bash
+E=$B/doc/evidence/integrity-kernel-refactor          # $B = 本包目录
+CFG=$B/config/realtime_uwb_imu_pl_research.yaml
+SCN=$B/config/r0_r1_development_scenarios.yaml
+
+# 全量套件（与 W1 同口径）
+source /opt/ros/noetic/setup.bash && source devel/setup.bash
+catkin build uwb_imu_pl && catkin run_tests uwb_imu_pl > $E/raw/run_tests_cwire_w2_stage3.log 2>&1
+
+# 场景批次（W2 侧；与 §8/§17 同一命令口径 + 离线回放发布口径）
+O=/tmp/uwb_imu_pl_w2_20260922/new
+for spec in "A_nominal 30" "C_uwb_fde 30" "D_imu_bridge 30" "E_union 30" \
+            "F_ramp_unmonitorable 30" "G_continuous_rejection 45"; do
+  set -- $spec; mkdir -p $O/$1
+  UWB_IMU_PL_DEVELOPMENT_FULL_AUDIT=1 devel/lib/uwb_imu_pl/r0_r1_development \
+      $CFG $O/$1 $2 $1 $SCN > $O/$1/stdout.log 2>&1
+done
+UWB_IMU_PL_DEVELOPMENT_FULL_AUDIT=1 devel/lib/uwb_imu_pl/r0_r1_development \
+    $CFG $O/H_mature_union 226 H_mature_union $SCN > $O/H_mature_union/stdout.log 2>&1
+UWB_IMU_PL_DEVELOPMENT_FULL_AUDIT=1 devel/lib/uwb_imu_pl/r0_r1_development \
+    $CFG $O/HIP_60 60 HIP_history_crossing_fault $SCN > $O/HIP_60/stdout.log 2>&1
+
+# 基线侧（b7feb9c）：git checkout b7feb9c → 重建 → 同一批次 → 回分支重建
+#   （脚本 /tmp/w2_baseline_run.sh；证据侧改动 checkout 前 stash）
+
+# 运行 schema + 诊断工具
+python3 tools/validate_run_schema.py $O/<scenario>          # v16
+# 发布差异（逐行，共用列）：tools/publish_diff.py（本轮入库）
+python3 $E/tools/publish_diff.py /tmp/uwb_imu_pl_w2_20260922/base/<scenario> $O/<scenario>
+
+# 验证调度（报告以代码提交 SHA 生成）
+UWB_IMU_PL_VALIDATION_SHA=<wip(W2) 代码 SHA> \
+    python3 tools/integrity/run_validation.py --all
+```

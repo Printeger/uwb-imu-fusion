@@ -279,3 +279,37 @@
   新块用 `whitening_model_id` 区分；`validity_assumptions` 仍为
   `history_nominal_boundary_only`（摘要不声称 horizon 外覆盖，正确）。
 * 根因与缺口：`history-summary-pipeline.md §6/§11`。
+
+## 附：W2（C4 生产接线 + 诊断 v16）新增/修改入口（2026-09-22）
+
+* `include/uwb_imu_pl/integrity/publication_identity.hpp` / `src/.../publication_identity.cpp`：
+  新增 `PublicationLimits`、`PublicationDiagnosis`、`PublicationController`（显式状态持有者：
+  `beginAttempt` / `watchdogRefused` / `finalizeAttempt` / `state` / `certificate` / `watchdog`）、
+  `offlineReplayPublicationLimits()`（离线回放口径：wall 超时按构造关闭）、
+  `missingPublicationIdentityFields`；`updateWatchdog`/`advancePublicationState`/`checkPublicationIdentity`
+  语义不变（模块测试原样通过）。
+* `apps/r0_r1_development.cpp`：场景 harness 显式传入 `offlineReplayPublicationLimits()`（调用点可见的策略）。
+* `include/uwb_imu_pl/common/integrity_identity.hpp` / `src/.../integrity_identity.cpp`：
+  新增 `identityHash64`（FNV-1a 64，与 `identityDigest` 同变体），用于把字符串型生产身份绑定进
+  `PublicationIdentity` 的数值字段。
+* `include/.../integrity/integrity_monitor.hpp` / `src/.../integrity_monitor.cpp`：
+  `RealtimeIntegrityPipeline` 新增 `publication_` 成员与 `PublicationLimits` 构造参数、
+  `processUwbBatch(batch, ClockSample)` 重载、私有 `applyPublicationGate`；看门狗入口短路
+  （`WATCHDOG_REFUSED`，`transaction_opened=false`）；`IntegrityMonitor::evaluateSnapshot/
+  evaluateConditional` 变为带可选 `PublicationController*` 的包装（原实现体改名 `*Impl`）。
+* `include/.../integrity/fde_manager.hpp` / `src/.../fde_manager.cpp`：
+  `FdeDecision` 新增 `selection_event_class_ids` / `selection_risk_proof_id`（由 §8.5 事件类记账导出；
+  决策语义不变）。
+* `include/uwb_imu_pl/common/types.hpp`：`PublicationDiagnostics`、`IntegrityOutput::publication`、
+  `AttemptDiagnostics::{selection_event_class_ids,selection_risk_proof_id,transaction_opened}`、
+  `HypothesisAuditRecord::{unit_kind,profile_j,profile_valid}`、
+  `CandidateAuditRecord::{removal_data_source,model_error_record,model_error_validated}`；
+  `diagnostics_schema_version` 默认 v16。
+* `src/uwb_imu_pl/io/run_logger.cpp`：v16 列（attempts/candidates/hypotheses）+ 拒绝尝试不写
+  transactions 行 + v16 版本戳（含 square-root、history-summary）。
+* `src/uwb_imu_pl/estimation/candidate_replay.cpp`：replay schema v6（= v5 + removal provenance）。
+* `tools/validate_run_schema.py`、`tools/gate_d_diagnostics.py`：v16 表头/版本接受 + 拒绝形状；
+  `doc/evidence/integrity-kernel-refactor/tools/replay_io.py`：v4/v5/v6。
+* 测试：`test/test_publication_wiring.cpp`（新增 6 用例）；`test_integrity_v2.cpp`（replay v6 往返）；
+  `test_run_logger.cpp` / `test_fault_manifest.cpp`（v16 表头/行戳）。
+* 详见 `fde-publication.md §7`（接入点/三态/看门狗规则/诊断列/差异表）。

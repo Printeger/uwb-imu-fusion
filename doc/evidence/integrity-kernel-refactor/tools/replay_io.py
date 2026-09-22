@@ -1,4 +1,4 @@
-"""Independent reader for uwb-imu-pl/frozen-candidates/v4 replay binaries.
+"""Independent reader for uwb-imu-pl/frozen-candidates/v4-v6 replay binaries.
 
 This module re-implements the candidate replay codec
 (`src/uwb_imu_pl/estimation/candidate_replay.cpp`, schema v4) from the written
@@ -126,7 +126,8 @@ def read_replay(path):
         reader = Reader(handle.read())
     schema = reader.text()
     if schema not in ("uwb-imu-pl/frozen-candidates/v4",
-                      "uwb-imu-pl/frozen-candidates/v5"):
+                      "uwb-imu-pl/frozen-candidates/v5",
+                      "uwb-imu-pl/frozen-candidates/v6"):
         raise ValueError(f"unsupported replay schema: {schema}")
     endian = reader.u64()
     if endian != 0x0102030405060708:
@@ -183,7 +184,8 @@ def read_replay(path):
     })
     window["blocks"] = reader.vector(lambda: _block(reader))
     dictionary = reader.vector(lambda: _block(reader))
-    replay["actions"] = reader.vector(lambda: _action(reader, dictionary))
+    replay["actions"] = reader.vector(
+        lambda: _action(reader, dictionary, schema))
     replay["config"] = {
         "rank_tolerance": reader.f64(),
         "max_condition_number": reader.f64(),
@@ -194,7 +196,8 @@ def read_replay(path):
         "force_exact_condition_number": reader.boolean(),
     }
     replay["window"] = window
-    if schema == "uwb-imu-pl/frozen-candidates/v5":
+    if schema in ("uwb-imu-pl/frozen-candidates/v5",
+                  "uwb-imu-pl/frozen-candidates/v6"):
         replay["identity"] = {
             "snapshot_id": reader.text(),
             "source_revision": reader.text(),
@@ -243,7 +246,7 @@ def _optional(reader):
     return value if has else None
 
 
-def _action(reader, dictionary):
+def _action(reader, dictionary, schema):
     action = {
         "id": reader.u64(),
         "covered_units": reader.u64_vector(),
@@ -255,9 +258,16 @@ def _action(reader, dictionary):
         "exclusion_cardinality": reader.i32(),
         "action_model_id": reader.text(),
         "recoverability": RECOVERABILITY.get(reader.i32(), "?"),
+    }
+    if schema == "uwb-imu-pl/frozen-candidates/v6":
+        # C3/W1 removal provenance (W2 wires it into the versioned format).
+        action["removal_data_source"] = reader.text()
+        action["model_error_record"] = reader.text()
+        action["model_error_validated"] = reader.boolean()
+    action.update({
         "recovery_epoch_begin": _optional(reader),
         "recovery_epoch_end": _optional(reader),
         "added_block_refs": reader.u64_vector(),
-    }
+    })
     action["added_blocks"] = [dictionary[i] for i in action["added_block_refs"]]
     return action
