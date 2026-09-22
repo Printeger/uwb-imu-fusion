@@ -560,6 +560,18 @@ ExclusionAction actionForMode(const EpochTransaction& tx,
   }
   action.action_model_id = mode.sensor == SensorType::Uwb
       ? "UWB_HISTORY_RECOVERY" : "IMU_HISTORY_BRIDGE_RECOVERY";
+  // C3 wiring (§6 item 3): the removed interval's data source and its model
+  // error record are explicit fields; they are never carried implicitly by the
+  // action model id.  `model_error_validated` stays false while the pipeline
+  // has no trial-validated model error bound for these removals, so a consumer
+  // can never mistake a declared model for a validated one.
+  action.removal_data_source = std::string(
+      mode.sensor == SensorType::Uwb ? "uwb_range:" : "imu_interval:") +
+      mode.physical_source_id;
+  action.model_error_record = action.added_blocks.empty()
+      ? "model_error:none"
+      : "whitening:" + action.added_blocks.front().whitening_model_id;
+  action.model_error_validated = false;
   return action;
 }
 
@@ -567,8 +579,20 @@ ExclusionAction unite(const std::vector<const ExclusionAction*>& parts) {
   ExclusionAction out;
   std::set<std::uint64_t> remove, add, modes, units;
   std::set<std::string> physical_sources;
+  std::set<std::string> data_sources;
+  std::set<std::string> model_records;
+  bool any_part = false;
+  bool all_validated = true;
   for (const auto* part : parts) {
     if (!part) continue;
+    any_part = true;
+    if (!part->removal_data_source.empty()) {
+      data_sources.insert(part->removal_data_source);
+    }
+    if (!part->model_error_record.empty()) {
+      model_records.insert(part->model_error_record);
+    }
+    all_validated = all_validated && part->model_error_validated;
     out.bridge_mode = part->bridge_mode != BridgeMode::None
         ? part->bridge_mode : out.bridge_mode;
     if (part->recoverability != HistoryRecoverability::Recoverable) {
@@ -609,6 +633,17 @@ ExclusionAction unite(const std::vector<const ExclusionAction*>& parts) {
   out.action_model_id = parts.size() > 1 ? "CANONICAL_UNION_RECOVERY"
                                          : (parts.empty() ? "KEEP_ALL"
                                                           : parts.front()->action_model_id);
+  // C3 wiring (§6 item 3): a union carries the union of the removal data
+  // sources and model error records of its parts, so the provenance of every
+  // removed interval survives the merge instead of being flattened onto one
+  // model id string.
+  for (const auto& item : data_sources) {
+    out.removal_data_source += out.removal_data_source.empty() ? item : "|" + item;
+  }
+  for (const auto& item : model_records) {
+    out.model_error_record += out.model_error_record.empty() ? item : "|" + item;
+  }
+  out.model_error_validated = any_part && all_validated;
   return out;
 }
 

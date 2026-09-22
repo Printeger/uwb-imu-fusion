@@ -153,6 +153,11 @@ void transfer(Codec& c, FrozenCandidateReplay& r) {
     c.vector(a.physical_source_ids,[&](std::string& s){c.text(s);});
     c.ids(a.groups_to_remove); c.ids(a.groups_to_add); c.scalar(a.bridge_mode);
     c.scalar(a.exclusion_cardinality); c.text(a.action_model_id); c.scalar(a.recoverability);
+    // NOTE (C3/W1): the removal provenance fields of ExclusionAction
+    // (removal_data_source / model_error_record / model_error_validated) are
+    // NOT added to this replay codec here: the codec is an unversioned
+    // round-trip format and extending it belongs to the versioned diagnostics
+    // step (W2, v15 -> v16 additive columns).
     c.optional(a.recovery_epoch_begin); c.optional(a.recovery_epoch_end);
     std::vector<std::uint64_t> ids; if(c.out) ids=refs.at(index);
     c.vector(ids,[&](std::uint64_t& x){c.scalar(x);});

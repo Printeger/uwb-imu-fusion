@@ -36,14 +36,7 @@ namespace uwb_imu_pl {
 // ---------------------------------------------------------------------------
 // §8.4 profile-likelihood evidence.
 // ---------------------------------------------------------------------------
-enum class FaultUnitKind {
-  UwbRangeMeters = 0,
-  ImuAccelMps2 = 1,
-  ImuGyroRadps = 2,
-  Unknown = 3,
-};
-
-const char* toString(FaultUnitKind unit);
+// FaultUnitKind lives in fault_model.hpp (shared with the evidence structs).
 
 struct ProfileEvidenceInput {
   // Gamma_{h,full} = Z_c'Z_c + Omega (parameter_dim x parameter_dim), raw.

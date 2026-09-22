@@ -164,6 +164,10 @@ void analyzeDynamic(const Eigen::MatrixXd& input_gram,
     evidence->explained_energy = std::max(0.0, score.dot(estimated));
     evidence->conditioned_statistic = std::max(
         0.0, all_in - evidence->explained_energy);
+    // C3 wiring (§8.4): the raw whitened profile value J = ||r_c||^2 + kappa_b
+    // - t' Gamma^+ t; no risk-adjusted channel quantity is used here.
+    evidence->profile_j = evidence->conditioned_statistic;
+    evidence->profile_valid = std::isfinite(evidence->profile_j);
     evidence->log_evidence = 0.5 * evidence->explained_energy;
     evidence->plausible = evidence->conditioned_statistic <=
         squared_detector_threshold +
@@ -242,6 +246,9 @@ void analyzeFixed(const Eigen::Matrix<double, Dimension, Dimension>& input_gram,
     evidence->explained_energy = std::max(0.0, score.dot(estimated));
     evidence->conditioned_statistic = std::max(
         0.0, all_in - evidence->explained_energy);
+    // C3 wiring (§8.4): raw whitened profile value, see analyzeDynamic.
+    evidence->profile_j = evidence->conditioned_statistic;
+    evidence->profile_valid = std::isfinite(evidence->profile_j);
     evidence->log_evidence = 0.5 * evidence->explained_energy;
     evidence->plausible = evidence->conditioned_statistic <=
         squared_detector_threshold +
@@ -264,6 +271,8 @@ void analyzeFixed(const Eigen::Matrix<double, Dimension, Dimension>& input_gram,
 struct ModeDescriptor {
   FaultModeId id;
   SensorType sensor = SensorType::Unknown;
+  // C3 wiring (§8.4): comparability identity of the mode's parameter space.
+  FaultUnitKind unit_kind = FaultUnitKind::Unknown;
   int physical_dimension = 0;
   int dimension = 0;
   Eigen::Index offset = 0;
@@ -300,6 +309,35 @@ bool useEffectiveBasis(const FaultModeBasis& mode) {
           mode.effective_parameter_dimension;
 }
 
+// C3 wiring (§8.4): the physical unit of a mode, from its declared fault kind
+// and sensor.  Anything the catalogue does not declare stays Unknown, which is
+// never comparable with a declared unit.
+FaultUnitKind faultUnitKindOf(FaultKind kind, SensorType sensor) {
+  switch (kind) {
+    case FaultKind::AnchorBiasEpochIndependent:
+    case FaultKind::AnchorBiasPersistentConstant:
+    case FaultKind::AnchorBiasRamp:
+      return FaultUnitKind::UwbRangeMeters;
+    case FaultKind::AccelAxisIntervalConstant:
+      return FaultUnitKind::ImuAccelMps2;
+    case FaultKind::GyroAxisIntervalConstant:
+      return FaultUnitKind::ImuGyroRadps;
+    default:
+      break;
+  }
+  switch (sensor) {
+    case SensorType::Uwb:
+      return FaultUnitKind::UwbRangeMeters;
+    case SensorType::ImuAccelerometer:
+      return FaultUnitKind::ImuAccelMps2;
+    case SensorType::ImuGyroscope:
+      return FaultUnitKind::ImuGyroRadps;
+    default:
+      break;
+  }
+  return FaultUnitKind::Unknown;
+}
+
 std::vector<FaultModeEvidence> evaluateContiguous(
     const LinearizedIntegrityWindow& window,
     const std::vector<FaultModeBasis>& modes,
@@ -325,6 +363,7 @@ std::vector<FaultModeEvidence> evaluateContiguous(
     ModeDescriptor descriptor;
     descriptor.id = mode.id;
     descriptor.sensor = mode.sensor;
+    descriptor.unit_kind = faultUnitKindOf(mode.kind, mode.sensor);
     descriptor.physical_dimension = mode.parameter_dimension;
     descriptor.dimension = useEffectiveBasis(mode)
         ? mode.effective_parameter_dimension : mode.parameter_dimension;
@@ -716,6 +755,17 @@ std::vector<FaultModeEvidence> evaluateContiguous(
         failDimension(&hypothesis, &evidence, physical_dimension);
         continue;
       }
+      // C3 wiring (§8.4): record the comparability identity of this hypothesis.
+      // Parts that disagree on the physical unit yield Unknown rather than a
+      // guess; the parameter dimension is the one actually analysed.
+      evidence.unit_kind = descriptors[parts.front()].unit_kind;
+      for (const auto part : parts) {
+        if (descriptors[part].unit_kind != evidence.unit_kind) {
+          evidence.unit_kind = FaultUnitKind::Unknown;
+          break;
+        }
+      }
+      evidence.parameter_dimension = static_cast<std::size_t>(dimension);
       // B2 capacity bound: a hypothesis whose parameter dimension exceeds the
       // configured bound is refused fail-closed and counted, instead of
       // allocating unbounded temporaries.

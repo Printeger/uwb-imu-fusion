@@ -27,6 +27,21 @@ struct FdeDecision {
   bool commit_allowed = false;
   bool integrity_available = false;
   std::string reason;
+  // C3 wiring (§8.4/§8.5/§8.3), all additive and fail-closed:
+  // §8.4 structured evidence pool of the plausible hypotheses.
+  bool profile_pool_valid = false;
+  bool profile_pool_comparable = false;
+  bool profile_pool_ranked = false;
+  bool profile_pool_mixed_units = false;
+  bool profile_pool_mixed_dimensions = false;
+  std::vector<double> plausible_profile_j;  // same order as above
+  // §8.5 union charge over the publishable action set (event classes).
+  bool selection_budget_ok = false;
+  double selection_charged_budget = 0.0;
+  double selection_available_budget = 0.0;
+  std::size_t selection_event_classes = 0;
+  // §8.3 disposition per candidate, parallel to the candidate vector.
+  std::vector<int> candidate_dispositions;
 };
 
 class FdeManager {

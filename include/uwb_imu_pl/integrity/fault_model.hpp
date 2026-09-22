@@ -125,6 +125,19 @@ struct FaultHypothesisV2 {
   std::string pruning_reason;
 };
 
+// Physical fault unit of a hypothesis.  It is the comparability identity of an
+// evidence/profile value: profiles in different units (metres vs m/s^2 vs
+// rad/s) or in different parameter dimensions may never be ranked against each
+// other without an explicit declaration.
+enum class FaultUnitKind {
+  UwbRangeMeters = 0,
+  ImuAccelMps2 = 1,
+  ImuGyroRadps = 2,
+  Unknown = 3,
+};
+
+const char* toString(FaultUnitKind unit);
+
 struct FaultModeEvidence {
   HypothesisId hypothesis;
   Eigen::VectorXd estimated_fault;
@@ -135,6 +148,14 @@ struct FaultModeEvidence {
   Eigen::MatrixXd fault_gram;
   MonitorabilityResult monitorability;
   bool plausible = false;
+  // Comparability identity of this mode (C3 wiring): physical unit and the
+  // parameter dimension the Gram/profile live in.
+  FaultUnitKind unit_kind = FaultUnitKind::Unknown;
+  std::size_t parameter_dimension = 0;
+  // Raw whitened profile evidence: J = ||r_c||^2 + kappa_b - t' Gamma^+ t.
+  // `profile_valid` is false when the inputs were not usable.
+  double profile_j = std::numeric_limits<double>::infinity();
+  bool profile_valid = false;
 };
 
 struct ExclusionAction {
@@ -151,6 +172,12 @@ struct ExclusionAction {
   HistoryRecoverability recoverability = HistoryRecoverability::Recoverable;
   std::optional<std::size_t> recovery_epoch_begin;
   std::optional<std::size_t> recovery_epoch_end;
+  // C3 wiring (§6 item 3): the data source of a removed interval and its
+  // model-error record are explicit fields -- an IMU interval removal must not
+  // carry its provenance implicitly through the model id string.
+  std::string removal_data_source;   // e.g. "imu_accel_interval_0", "uwb_anchor_3"
+  std::string model_error_record;    // bounded/random model-error record id
+  bool model_error_validated = false;  // trial-validated model error bound
 };
 
 struct BridgeUncertainty {

@@ -1,13 +1,26 @@
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
+#include "uwb_imu_pl/integrity/fde_post_selection.hpp"
 #include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <set>
 #include <map>
+#include <string>
 #include <tuple>
 
 namespace uwb_imu_pl {
 namespace {
+
+// FNV-1a; decision-level event-class id (never a PL transfer certificate).
+std::uint64_t eventClassId(const std::string& key) {
+  std::uint64_t hash = 1469598103934665603ull;
+  for (const unsigned char byte : key) {
+    hash ^= byte;
+    hash *= 1099511628211ull;
+  }
+  return hash == 0 ? 1 : hash;
+}
 
 bool covers(const ExclusionAction& action, const FaultHypothesisV2& hypothesis) {
   if (!hypothesis.modes.empty()) {
@@ -71,6 +84,67 @@ FdeDecision FdeManager::decide(
     }
   }
   decision.mandatory_exclusion_groups = mandatory_groups;
+  // §8.4 wiring (C3): the structured evidence pool of the plausible hypotheses
+  // is the comparability audit of everything the ordering below may consume.
+  // Malformed evidence (missing record / non-finite raw profile) refuses
+  // fail-closed; a pool that mixes units or dimensions is *recorded* as not
+  // comparable and is never ranked, while the action order itself stays on the
+  // frozen criterion (it never compares profile values across units).
+  {
+    std::vector<StructuredCandidate> pool;
+    pool.reserve(decision.plausible_hypotheses.size());
+    bool malformed = false;
+    std::string malformed_reason;
+    std::set<FaultUnitKind> pool_units;
+    std::set<std::size_t> pool_dimensions;
+    for (const auto id : decision.plausible_hypotheses) {
+      const FaultModeEvidence* match = nullptr;
+      for (const auto& entry : evidence) {
+        if (entry.hypothesis == id) {
+          match = &entry;
+          break;
+        }
+      }
+      if (match == nullptr) {
+        malformed = true;
+        malformed_reason = "plausible hypothesis has no evidence record";
+        break;
+      }
+      if (!match->profile_valid || !std::isfinite(match->profile_j)) {
+        malformed = true;
+        malformed_reason =
+            "plausible hypothesis has no finite raw profile evidence";
+        break;
+      }
+      StructuredCandidate pooled;
+      pooled.hypothesis = id;
+      pooled.unit = match->unit_kind;
+      pooled.parameter_dim = match->parameter_dimension;
+      pooled.j_profile = match->profile_j;
+      pooled.explained_energy = match->explained_energy;
+      pooled.has_valid_reference = match->profile_valid;
+      pool_units.insert(match->unit_kind);
+      pool_dimensions.insert(match->parameter_dimension);
+      decision.plausible_profile_j.push_back(match->profile_j);
+      pool.push_back(pooled);
+    }
+    decision.profile_pool_valid = !malformed;
+    if (malformed) {
+      decision.status = FdeStatus::ModelInvalid;
+      decision.reason = malformed_reason;
+      return decision;
+    }
+    decision.profile_pool_mixed_units = pool_units.size() > 1;
+    decision.profile_pool_mixed_dimensions = pool_dimensions.size() > 1;
+    if (!pool.empty()) {
+      const CandidateRanking ranking = rankStructuredCandidates(pool);
+      decision.profile_pool_ranked = ranking.valid;
+      decision.profile_pool_comparable = ranking.valid &&
+          !ranking.mixed_units && !ranking.mixed_dimensions;
+    } else {
+      decision.profile_pool_comparable = true;
+    }
+  }
   std::map<HypothesisId, const FaultHypothesisV2*> hypothesis_index;
   for (const auto& h : hypotheses) hypothesis_index.emplace(h.id, &h);
   std::vector<std::size_t> eligible;
@@ -105,6 +179,30 @@ FdeDecision FdeManager::decide(
     decision.reason = "no valid action covers the complete plausible set";
     return decision;
   }
+  // §8.3 wiring (C3): every candidate is passed through the disposition order
+  // of fde_post_selection.  The mapping is the pipeline's own criterion -- a
+  // candidate that covers the complete plausible set with a finite protected
+  // reference estimate is the reference-estimate path, anything else can only
+  // be a centre candidate or a diagnostic.  The disposition is recorded per
+  // candidate; selection below still requires the reference-estimate path.
+  decision.candidate_dispositions.assign(candidates->size(), 0);
+  for (std::size_t i = 0; i < candidates->size(); ++i) {
+    const auto& candidate = (*candidates)[i];
+    // The mapping uses exactly the frozen eligibility criterion (finite
+    // protected PL on a recovered history), so this view adds no new gate.
+    const bool finite_pl = std::isfinite(candidate.hpl_m) &&
+        std::isfinite(candidate.vpl_m);
+    StructuredCandidate view;
+    view.bounded_model = candidate.covers_plausible_set && candidate.valid &&
+        candidate.action.recoverability == HistoryRecoverability::Recoverable &&
+        finite_pl;
+    view.centre_only = !candidate.covers_plausible_set;
+    view.has_valid_reference = candidate.valid;
+    view.propagation_bound_available = finite_pl;
+    const CandidateDecision handling = decideCandidateHandling(view);
+    decision.candidate_dispositions[i] =
+        static_cast<int>(handling.disposition);
+  }
   std::stable_sort(eligible.begin(), eligible.end(), [&](std::size_t a, std::size_t b) {
     const auto& x = (*candidates)[a];
     const auto& y = (*candidates)[b];
@@ -127,6 +225,58 @@ FdeDecision FdeManager::decide(
   decision.integrity_available = winner.hpl_m <= risk.horizontal_alert_limit_m &&
       winner.vpl_m <= risk.vertical_alert_limit_m;
   if (!decision.integrity_available) decision.reason = "post-FDE PL exceeds alert limit";
+  // §8.5 wiring (C3): charge the union of everything that may be published.
+  // Eligible actions that cover the same plausible-hypothesis union share one
+  // failure event (they are alternative protections of one reference event at
+  // one epoch), so they collapse into one event class; a different union is a
+  // different event and is charged on its own.  No triangle-protection-level
+  // transfer is claimed here (triangle_transfer_evidence stays false), which is
+  // exactly why the module keeps every class charge separate.
+  {
+    std::map<std::string, ActionGuarantee> by_class;
+    for (const auto index : eligible) {
+      const auto& candidate = (*candidates)[index];
+      std::string key;
+      double epsilon = 0.0;
+      for (const auto id : decision.plausible_hypotheses) {
+        const auto found = hypothesis_index.find(id);
+        if (found == hypothesis_index.end()) continue;
+        epsilon += std::max(0.0, found->second->hmi_allocation);
+        key += std::to_string(id.value());
+        key += ',';
+      }
+      ActionGuarantee guarantee;
+      guarantee.action_id = candidate.action.id.value();
+      guarantee.reference_certificate_id = eventClassId(key);
+      guarantee.shared_reference_certificate = true;
+      guarantee.shared_accepted_event = true;
+      guarantee.shared_time = true;
+      guarantee.shared_output_quantity = true;
+      guarantee.triangle_transfer_evidence = false;
+      guarantee.epsilon_budget = epsilon;
+      const auto found = by_class.find(key);
+      if (found == by_class.end()) {
+        by_class.emplace(key, guarantee);
+      } else if (guarantee.epsilon_budget > found->second.epsilon_budget) {
+        found->second.epsilon_budget = guarantee.epsilon_budget;
+      }
+    }
+    std::vector<ActionGuarantee> classes;
+    classes.reserve(by_class.size());
+    for (const auto& item : by_class) classes.push_back(item.second);
+    const GuaranteeGroupResult groups =
+        buildGuaranteeGroups(classes, risk.p_hmi_total);
+    decision.selection_event_classes = classes.size();
+    decision.selection_charged_budget = groups.total_charged_budget;
+    decision.selection_available_budget = risk.p_hmi_total;
+    decision.selection_budget_ok = groups.valid;
+    if (!groups.valid) {
+      // The publishable set cannot be bounded: stay unavailable, never relax.
+      decision.commit_allowed = false;
+      decision.integrity_available = false;
+      decision.reason = groups.reason;
+    }
+  }
   return decision;
 }
 

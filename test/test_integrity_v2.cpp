@@ -13,6 +13,7 @@
 
 #include "uwb_imu_pl/config/integrity_config.hpp"
 #include "uwb_imu_pl/estimation/candidate_replay.hpp"
+#include "uwb_imu_pl/integrity/fde_post_selection.hpp"
 #include "uwb_imu_pl/estimation/candidate_worker_pool.hpp"
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
@@ -932,6 +933,12 @@ TEST(IntegrityV2Fde, CoversEntirePlausibleSetBeforeSelection) {
   e1.hypothesis = h1.id;
   e2.hypothesis = h2.id;
   e1.plausible = e2.plausible = true;
+  // C3: a plausible hypothesis carries its comparability identity and raw
+  // profile evidence; the FDE manager refuses to publish without them.
+  e1.unit_kind = e2.unit_kind = uwb_imu_pl::FaultUnitKind::UwbRangeMeters;
+  e1.parameter_dimension = e2.parameter_dimension = 1;
+  e1.profile_j = e2.profile_j = 1.0;
+  e1.profile_valid = e2.profile_valid = true;
   uwb_imu_pl::CandidateEvaluation one, both;
   one.valid = both.valid = true;
   one.post_detector_passed = both.post_detector_passed = true;
@@ -966,6 +973,11 @@ TEST(IntegrityV2Fde, PlausibleStrictSupersetRetainsCoverageDutyInSelection) {
   e1.hypothesis = singleton.id;
   e2.hypothesis = superset.id;
   e1.plausible = e2.plausible = true;
+  // C3: comparability identity + raw profile evidence of the fixture.
+  e1.unit_kind = e2.unit_kind = FaultUnitKind::UwbRangeMeters;
+  e1.parameter_dimension = e2.parameter_dimension = 1;
+  e1.profile_j = e2.profile_j = 1.0;
+  e1.profile_valid = e2.profile_valid = true;
   CandidateEvaluation only_uwb;
   only_uwb.valid = true;
   only_uwb.post_detector_passed = true;
@@ -983,6 +995,141 @@ TEST(IntegrityV2Fde, PlausibleStrictSupersetRetainsCoverageDutyInSelection) {
   EXPECT_FALSE(decision.commit_allowed);
   EXPECT_EQ(decision.status, FdeStatus::AmbiguousUnavailable);
   EXPECT_FALSE(candidates.front().covers_plausible_set);
+}
+
+// C3 wiring (W1): a plausible hypothesis without usable RAW profile evidence is
+// a defect of the pipeline and refuses fail-closed instead of publishing on an
+// unaudited pool.
+TEST(IntegrityV2Fde, ProfilePoolRefusesMissingEvidenceFailClosed) {
+  using namespace uwb_imu_pl;
+  DetectorResultV2 detector;
+  detector.numerically_valid = true;
+  detector.passed = false;
+  FaultHypothesisV2 fault;
+  fault.id = HypothesisId(1);
+  fault.units = {FaultUnitId(11)};
+  FaultModeEvidence evidence;
+  evidence.hypothesis = fault.id;
+  evidence.plausible = true;
+  // unit_kind / parameter_dimension / profile_j deliberately left unset.
+  CandidateEvaluation candidate;
+  candidate.valid = true;
+  candidate.post_detector_passed = true;
+  candidate.hpl_m = candidate.vpl_m = 1.0;
+  candidate.action.id = ExclusionActionId(1);
+  candidate.action.covered_units = {fault.units.front()};
+  candidate.action.exclusion_cardinality = 1;
+  std::vector<CandidateEvaluation> candidates{candidate};
+  const auto decision =
+      FdeManager().decide(detector, {fault}, {evidence}, &candidates, {},
+                          RiskBudgetV2{});
+  EXPECT_EQ(decision.status, FdeStatus::ModelInvalid);
+  EXPECT_FALSE(decision.commit_allowed);
+  EXPECT_FALSE(decision.selected_action.has_value());
+  EXPECT_FALSE(decision.profile_pool_valid);
+  EXPECT_NE(decision.reason.find("profile"), std::string::npos)
+      << decision.reason;
+}
+
+// C3 wiring (W1): the selection risk is charged over the union of everything
+// that may be published.  Alternative protections of the same plausible set are
+// one failure event (one class, one charge); the ledger is reported on the
+// decision.
+TEST(IntegrityV2Fde, SelectionRiskChargedOverPublishableSet) {
+  using namespace uwb_imu_pl;
+  DetectorResultV2 detector;
+  detector.numerically_valid = true;
+  detector.passed = false;
+  FaultHypothesisV2 h1, h2;
+  h1.id = HypothesisId(1);
+  h1.units = {FaultUnitId(11)};
+  h1.hmi_allocation = 1e-6;
+  h2.id = HypothesisId(2);
+  h2.units = {FaultUnitId(12)};
+  h2.hmi_allocation = 2e-6;
+  FaultModeEvidence e1, e2;
+  e1.hypothesis = h1.id;
+  e2.hypothesis = h2.id;
+  e1.plausible = e2.plausible = true;
+  e1.unit_kind = e2.unit_kind = FaultUnitKind::UwbRangeMeters;
+  e1.parameter_dimension = e2.parameter_dimension = 1;
+  e1.profile_j = e2.profile_j = 1.0;
+  e1.profile_valid = e2.profile_valid = true;
+  CandidateEvaluation one, both;
+  one.valid = both.valid = true;
+  one.post_detector_passed = both.post_detector_passed = true;
+  one.hpl_m = one.vpl_m = both.hpl_m = both.vpl_m = 1.0;
+  one.action.id = ExclusionActionId(1);
+  one.action.covered_units = {h1.units.front()};
+  one.action.exclusion_cardinality = 1;
+  both.action.id = ExclusionActionId(2);
+  both.action.covered_units = {h1.units.front(), h2.units.front()};
+  both.action.exclusion_cardinality = 2;
+  std::vector<CandidateEvaluation> candidates{one, both};
+  const auto decision =
+      FdeManager().decide(detector, {h1, h2}, {e1, e2}, &candidates, {},
+                          RiskBudgetV2{});
+  ASSERT_TRUE(decision.selected_action.has_value());
+  EXPECT_EQ(decision.selected_action->id, both.action.id);
+  EXPECT_TRUE(decision.profile_pool_valid);
+  EXPECT_TRUE(decision.profile_pool_comparable);
+  EXPECT_TRUE(decision.profile_pool_ranked);
+  EXPECT_EQ(decision.plausible_profile_j, (std::vector<double>{1.0, 1.0}));
+  // Both eligible actions protect the same plausible union -> one event class,
+  // charged once with the union budget.
+  EXPECT_EQ(decision.selection_event_classes, 1u);
+  EXPECT_TRUE(decision.selection_budget_ok);
+  EXPECT_DOUBLE_EQ(decision.selection_charged_budget, 3e-6);
+  EXPECT_DOUBLE_EQ(decision.selection_available_budget,
+                   RiskBudgetV2{}.p_hmi_total);
+  ASSERT_EQ(decision.candidate_dispositions.size(), 2u);
+  // The candidate that covers the complete plausible set with a finite
+  // protected reference is the reference-estimate path.
+  EXPECT_EQ(decision.candidate_dispositions[1],
+            static_cast<int>(CandidateDisposition::UseInReferenceEstimate));
+}
+
+// C3 wiring (W1): profiles from different physical units are recorded as not
+// comparable and are never ranked; the frozen action ordering is unaffected.
+TEST(IntegrityV2Fde, MixedUnitPoolIsRecordedAndNotRanked) {
+  using namespace uwb_imu_pl;
+  DetectorResultV2 detector;
+  detector.numerically_valid = true;
+  detector.passed = false;
+  FaultHypothesisV2 uwb, imu;
+  uwb.id = HypothesisId(1);
+  uwb.units = {FaultUnitId(11)};
+  imu.id = HypothesisId(2);
+  imu.units = {FaultUnitId(12)};
+  FaultModeEvidence e1, e2;
+  e1.hypothesis = uwb.id;
+  e2.hypothesis = imu.id;
+  e1.plausible = e2.plausible = true;
+  e1.unit_kind = FaultUnitKind::UwbRangeMeters;
+  e2.unit_kind = FaultUnitKind::ImuAccelMps2;
+  e1.parameter_dimension = 1;
+  e2.parameter_dimension = 3;
+  e1.profile_j = 1.0;
+  e2.profile_j = 2.0;
+  e1.profile_valid = e2.profile_valid = true;
+  CandidateEvaluation both;
+  both.valid = true;
+  both.post_detector_passed = true;
+  both.hpl_m = both.vpl_m = 1.0;
+  both.action.id = ExclusionActionId(1);
+  both.action.covered_units = {uwb.units.front(), imu.units.front()};
+  both.action.exclusion_cardinality = 2;
+  std::vector<CandidateEvaluation> candidates{both};
+  const auto decision =
+      FdeManager().decide(detector, {uwb, imu}, {e1, e2}, &candidates, {},
+                          RiskBudgetV2{});
+  EXPECT_TRUE(decision.profile_pool_valid);
+  EXPECT_TRUE(decision.profile_pool_mixed_units);
+  EXPECT_TRUE(decision.profile_pool_mixed_dimensions);
+  EXPECT_FALSE(decision.profile_pool_comparable);
+  EXPECT_FALSE(decision.profile_pool_ranked);
+  ASSERT_TRUE(decision.selected_action.has_value());
+  EXPECT_EQ(decision.status, FdeStatus::AmbiguousUnionExclusion);
 }
 
 TEST(IntegrityV2Fde, ActionDedupRejectsSameShapeAndNormDifferentContent) {
@@ -1582,6 +1729,11 @@ TEST(GateDSelection, DenseAndOperatorPathsSelectSameSuccessfulExclusion) {
   FaultModeEvidence evidence;
   evidence.hypothesis = fault.id;
   evidence.plausible = true;
+  // C3: comparability identity + raw profile evidence of the fixture.
+  evidence.unit_kind = FaultUnitKind::UwbRangeMeters;
+  evidence.parameter_dimension = 1;
+  evidence.profile_j = 1.0;
+  evidence.profile_valid = true;
   DetectorResultV2 alarm;
   alarm.numerically_valid = true;
   alarm.passed = false;
