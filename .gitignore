@@ -101,3 +101,14 @@ data/*.bag
 /results/integrity_round3/
 # Windows alternate-data-stream metadata copied onto POSIX filesystems.
 *:Zone.Identifier
+
+# Wrap-up guard (2026-09-22): keep large or transient artifacts out of the repo.
+# The large local dirs (/results/, /logs/, /Testing/) and the evidence scratch
+# tree (doc/evidence/integrity-kernel-refactor/raw/) are covered above or by
+# nested .gitignore files; these rules guard against new strays.
+*.bag
+*.orig
+*.rej
+*.bak
+*.tmp
+/scratch/
