@@ -11,6 +11,7 @@
 #include "uwb_imu_pl/factors/kinematic_bridge_factor.hpp"
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
 #include "uwb_imu_pl/integrity/health_manager.hpp"
+#include "uwb_imu_pl/integrity/fault_scope.hpp"
 
 namespace uwb_imu_pl {
 
@@ -116,6 +117,7 @@ struct FaultModelsConfig {
 };
 
 struct FdeConfigV2 {
+  FdeProfile profile = FdeProfile::JointOrder1;
   std::string trigger = "joint_detector_alarm_or_hardware_barrier";
   std::string isolation = "profile_parity_glrt";
   std::string ambiguity_policy = "union_exclusion_else_unavailable";
@@ -127,11 +129,15 @@ struct FdeConfigV2 {
   // census can still require a conservative union action covering multiple
   // indistinguishable single-fault explanations.
   std::uint32_t max_exclusion_cardinality = 2;
+  std::string on_no_valid_action = "discard";
+  std::string on_integrity_model_invalid = "discard";
 };
 
 std::uint32_t enabledFaultHypothesisCardinality(
     const FaultModelsConfig& config);
 std::uint64_t faultModelPolicyFingerprint(const FaultModelsConfig& config);
+std::uint64_t faultScopePolicyFingerprint(
+    const FaultModelsConfig& config, const ResolvedFaultScope& scope);
 
 struct BridgeConfigV2 {
   GenericBridgeSpec generic;
@@ -172,6 +178,12 @@ struct OutputConfig {
   bool write_bridge = true;
 };
 
+struct PublicationConfig {
+  bool allow_unprotected_output = true;
+  bool protected_output_enabled = false;
+  double deadline_ms = 40.0;
+};
+
 struct RealtimeConfig {
   std::string world_frame;
   std::string body_frame;
@@ -184,6 +196,9 @@ struct RealtimeConfig {
   Eigen::Vector3d initial_velocity_mps = Eigen::Vector3d::Zero();
   Eigen::Vector3d lever_arm_body_m = Eigen::Vector3d::Zero();
   double range_sigma_m = 0.10;
+  std::uint32_t max_queued_events = 8192;
+  std::string imu_overflow_policy = "invalidate_and_reinitialize";
+  std::string uwb_overflow_policy = "drop_oldest_unprocessed_uwb";
   Eigen::Matrix<double, 15, 1> prior_sigmas =
       Eigen::Matrix<double, 15, 1>::Ones();
 };
@@ -201,10 +216,12 @@ struct IntegrityConfig {
   DetectorConfigV2 detector;
   FaultModelsConfig fault_models;
   FdeConfigV2 fde;
+  ResolvedFaultScope resolved_scope;
   BridgeConfigV2 bridge;
   HealthConfigV2 health;
   RobustShadowConfig robust_shadow;
   OutputConfig output;
+  PublicationConfig publication;
   RealtimeConfig realtime;
   std::vector<AnchorRecord> anchors;
   std::string resolved_yaml;
@@ -226,6 +243,7 @@ struct IntegrityConfigOverrides {
   std::optional<bool> write_residuals;
   std::optional<bool> write_timing;
   std::optional<std::string> output_root;
+  std::optional<FdeProfile> fde_profile;
 };
 
 class IntegrityConfigLoader {

@@ -18,9 +18,11 @@ PublicationIdentity makeIdentity(std::uint64_t certificate) {
   identity.state_solution_id = 22;
   identity.history_summary_id = 33;
   identity.manifest_digest = 44;
+  identity.scope_digest = 45;
   identity.health_state = 1;
   identity.detector_ids = {7, 8};
   identity.risk_proof_id = 55;
+  identity.pl_detector_certificate_id = 66;
   identity.protection_level_m = Eigen::Vector3d(1.0, 1.0, 2.0);
   identity.position_reference = "body_origin";
   identity.timestamp_ns = 1000000;
@@ -124,7 +126,8 @@ TEST(PublicationIdentity, Out01SameTimeRebindAndNoCertificateReuse) {
 // ---------------------------------------------------------------------------
 TEST(PublicationIdentity, Out02TimeFrameAndReferenceMixing) {
   const PublicationIdentity certificate = makeIdentity(202);
-  for (const auto& mutation : {"frame", "reference", "detectors", "manifest"}) {
+  for (const auto& mutation : {"frame", "reference", "detectors", "manifest",
+                               "scope", "pl_certificate"}) {
     PublicationIdentity changed = certificate;
     if (std::string(mutation) == "frame") changed.frame_id = "body";
     if (std::string(mutation) == "reference") {
@@ -132,6 +135,10 @@ TEST(PublicationIdentity, Out02TimeFrameAndReferenceMixing) {
     }
     if (std::string(mutation) == "detectors") changed.detector_ids = {7, 9};
     if (std::string(mutation) == "manifest") changed.manifest_digest = 45;
+    if (std::string(mutation) == "scope") changed.scope_digest = 46;
+    if (std::string(mutation) == "pl_certificate") {
+      changed.pl_detector_certificate_id = 67;
+    }
     const IdentityCheck refused =
         checkPublicationIdentity(changed, certificate, 0.0);
     EXPECT_FALSE(refused.admissible) << mutation;
@@ -144,7 +151,7 @@ TEST(PublicationIdentity, Out02TimeFrameAndReferenceMixing) {
   PublicationIdentity unprotected = certificate;
   unprotected.protected_output = false;
   EXPECT_NE(unprotected.protected_output, certificate.protected_output);
-  std::printf("[OUT-02] refused_mixings=frame,reference,detectors,manifest "
+  std::printf("[OUT-02] refused_mixings=frame,reference,detectors,manifest,scope,pl_certificate "
               "(centre-shift bound does not repair any of them)\n");
   SUCCEED();
 }

@@ -194,6 +194,7 @@ std::uint64_t integrityWindowFingerprint(
     hashBytes(&hash, &valid, sizeof(valid));
     hashBytes(&hash, &capacity_ok, sizeof(capacity_ok));
     hashBytes(&hash, &history.version_digest, sizeof(history.version_digest));
+    hashBytes(&hash, history.scope_digest.data(), history.scope_digest.size());
     const std::uint64_t components[4] = {history.version.linearization,
                                          history.version.whitening,
                                          history.version.mode_set,

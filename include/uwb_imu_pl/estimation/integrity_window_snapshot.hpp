@@ -121,6 +121,7 @@ struct WindowHistorySummary {
   std::size_t skipped_columns = 0;
 
   // Design-freeze binding (§3/§5): what caches and fingerprints carry.
+  std::string scope_digest;
   HistorySummaryVersion version;
   std::uint64_t version_digest = 0;
 

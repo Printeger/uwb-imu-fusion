@@ -1,6 +1,7 @@
 #include "uwb_imu_pl/integrity/protection_level_v2.hpp"
 #include "uwb_imu_pl/integrity/statistical_bounds_cache.hpp"
 #include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
+#include "uwb_imu_pl/integrity/dual_channel_detector.hpp"
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
 
 #include <boost/math/distributions/non_central_chi_squared.hpp>
@@ -38,6 +39,94 @@ struct FaultAxisBounds {
   bool valid = false;
   std::string reason;
 };
+
+FaultAxisBounds dualChannelAxisBounds(
+    const DetectorResultV2& detector,
+    const FaultHypothesisV2& hypothesis,
+    const Eigen::MatrixXd& total_gram,
+    const Eigen::MatrixXd& history_gram,
+    const Eigen::MatrixXd& protected_response,
+    const Eigen::Vector3d& sigma,
+    double nominal_tail,
+    Eigen::Vector3d* component,
+    std::string* certificate_id) {
+  FaultAxisBounds out;
+  double tail = hypothesis.hmi_allocation > 0.0
+      ? hypothesis.hmi_allocation /
+            std::max(hypothesis.prior_probability_bound, 1e-15)
+      : nominal_tail;
+  // The production path is required to carry an explicit dual-channel
+  // certificate.  Keep the older public numerical API usable for independent
+  // dense-oracle callers: a legacy detector that predates the split is treated
+  // as one state-supported channel.  A detector that claims the v1 contract
+  // but omits its split still fails closed.
+  const bool legacy_single_channel = !detector.channel_split_valid;
+  if (!std::isfinite(tail) || tail <= 0.0) {
+    out.reason = "hypothesis tail probability is not positive";
+    return out;
+  }
+  tail = std::min(0.5, tail);
+  out.hypothesis_tail = tail;
+  out.axis_tail = tail / 3.0;
+  bool multiplier_valid = false;
+  out.k = StatisticalBoundsCache::normalTwoSidedMultiplierVerified(
+      out.axis_tail, &multiplier_valid);
+  if (!multiplier_valid) {
+    out.reason = "per-axis tail multiplier could not be evaluated";
+    return out;
+  }
+  DualChannelBoundRequest request;
+  request.protected_response = protected_response;
+  request.p_md = hypothesis.p_md_allocation;
+  request.k_axis.setConstant(out.k);
+  request.position_rho_m.setZero();
+  request.position_rho_validated = true;
+  request.position_rho_source = "none";
+
+  ChannelBoundInput current;
+  current.detector_id = "joint_window_state_supported";
+  current.dof = legacy_single_channel ? detector.dof
+                                      : detector.channel_current_dof;
+  current.threshold = legacy_single_channel ? detector.squared_threshold
+                                            : detector.channel_current_threshold;
+  current.actual_threshold = current.threshold;
+  current.weight = !legacy_single_channel && detector.channel_history_dof > 0
+                       ? 0.5
+                       : 1.0;
+  const Eigen::MatrixXd current_gram = legacy_single_channel
+      ? total_gram : (total_gram - history_gram);
+  current.gram = 0.5 * (current_gram + current_gram.transpose());
+  current.rho_validated = true;
+  current.rho_source = "none";
+  request.channels.push_back(std::move(current));
+  if (!legacy_single_channel && detector.channel_history_dof > 0 &&
+      history_gram.norm() > 0.0) {
+    ChannelBoundInput history;
+    history.detector_id = "history_eliminated_detector_only";
+    history.dof = detector.channel_history_dof;
+    history.threshold = detector.channel_history_threshold;
+    history.actual_threshold = detector.channel_history_threshold;
+    history.weight = 0.5;
+    history.gram = 0.5 * (history_gram + history_gram.transpose());
+    history.rho_validated = true;
+    history.rho_source = "none";
+    request.channels.push_back(std::move(history));
+  }
+  const DualChannelBoundResult bound = computeDualChannelBound(request);
+  if (!bound.valid) {
+    out.reason = "dual-channel PL bound: " + bound.reason;
+    return out;
+  }
+  *component = bound.axis_bound_m + out.k * sigma +
+               bound.position_rho_m;
+  *certificate_id = bound.certificate_id;
+  for (const double value : bound.channel_lambda) {
+    out.lambda = std::max(out.lambda, value);
+  }
+  out.valid = component->allFinite();
+  if (!out.valid) out.reason = "dual-channel PL component is non-finite";
+  return out;
+}
 
 FaultAxisBounds faultAxisBounds(const DetectorResultV2& detector,
                                 const FaultHypothesisV2& hypothesis,
@@ -167,8 +256,9 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
   const double nominal_tail = std::max(1e-15, risk.nominal_axis_tail);
   const double nominal_k = StatisticalBoundsCache::normalTwoSidedMultiplier(
       nominal_tail);
-  result.nominal_component_m = nominal_k *
+  const Eigen::Vector3d sigma =
       protected_covariance.diagonal().cwiseSqrt();
+  result.nominal_component_m = nominal_k * sigma;
   result.fault_component_m.setZero();
   solve_column = 3;
   for (std::size_t index = 0; index < hypotheses->size(); ++index) {
@@ -216,8 +306,22 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
           0.0, response.dot(gram_solve.solve(response))));
     }
     hypothesis.monitorability.protected_slopes = slopes;
-    const FaultAxisBounds bounds =
-        faultAxisBounds(detector, hypothesis, nominal_tail);
+    Eigen::MatrixXd history_gram = Eigen::MatrixXd::Zero(
+        fault_map.cols(), fault_map.cols());
+    const Eigen::MatrixXd& retained_h = candidate.retainedJacobian();
+    if (retained_h.rows() == fault_map.rows()) {
+      for (Eigen::Index row = 0; row < retained_h.rows(); ++row) {
+        if (retained_h.row(row).norm() <= 1e-12) {
+          history_gram.noalias() += fault_map.row(row).transpose() *
+                                    fault_map.row(row);
+        }
+      }
+    }
+    Eigen::Vector3d component;
+    std::string detector_certificate;
+    const FaultAxisBounds bounds = dualChannelAxisBounds(
+        detector, hypothesis, gram, history_gram, protected_fault, sigma,
+        nominal_tail, &component, &detector_certificate);
     if (!bounds.valid) {
       result.reason = "remaining post-FDE hypothesis " +
           std::to_string(hypothesis.id.value()) +
@@ -231,8 +335,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
                                             bounds.k);
     result.noncentrality_used = std::max(result.noncentrality_used,
                                          bounds.lambda);
-    const Eigen::Vector3d component = slopes * bounds.lambda + bounds.k *
-        protected_covariance.diagonal().cwiseSqrt();
+    result.detector_certificate_id = detector_certificate;
     result.fault_component_m = result.fault_component_m.cwiseMax(component);
   }
   result.pl_xyz_m = result.nominal_component_m
@@ -370,6 +473,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
       columns += solved_modes.at(id.value()).map->cols();
     Eigen::MatrixXd gram = Eigen::MatrixXd::Zero(columns, columns);
     Eigen::MatrixXd protected_fault(3, columns);
+    Eigen::MatrixXd fault_map(candidate->rows, columns);
     Eigen::Index offset = 0;
     for (const auto left_id : hypothesis.modes) {
       const auto& left = solved_modes.at(left_id.value());
@@ -377,6 +481,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
       protected_fault.middleCols(offset, left_count) =
           window.protected_state_map * solutions.middleCols(
               left.solve_offset, left_count);
+      fault_map.middleCols(offset, left_count) = *left.map;
       Eigen::Index right_offset = 0;
       for (const auto right_id : hypothesis.modes) {
         const auto& right = solved_modes.at(right_id.value());
@@ -438,8 +543,21 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
           0.0, response.dot(gram_solve.solve(response))));
     }
     monitor.protected_slopes = slopes;
-    const FaultAxisBounds bounds =
-        faultAxisBounds(detector, hypothesis, nominal_tail);
+    Eigen::MatrixXd history_gram = Eigen::MatrixXd::Zero(columns, columns);
+    const Eigen::MatrixXd& retained_h = candidate->retainedJacobian();
+    if (retained_h.rows() == fault_map.rows()) {
+      for (Eigen::Index row = 0; row < retained_h.rows(); ++row) {
+        if (retained_h.row(row).norm() <= 1e-12) {
+          history_gram.noalias() += fault_map.row(row).transpose() *
+                                    fault_map.row(row);
+        }
+      }
+    }
+    Eigen::Vector3d component;
+    std::string detector_certificate;
+    const FaultAxisBounds bounds = dualChannelAxisBounds(
+        detector, hypothesis, gram, history_gram, protected_fault, sigma,
+        nominal_tail, &component, &detector_certificate);
     if (!bounds.valid) {
       result.reason = "remaining post-FDE hypothesis " +
           std::to_string(hypothesis.id.value()) +
@@ -453,8 +571,8 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
                                             bounds.k);
     result.noncentrality_used = std::max(result.noncentrality_used,
                                          bounds.lambda);
-    result.fault_component_m = result.fault_component_m.cwiseMax(
-        slopes * bounds.lambda + bounds.k * sigma);
+    result.detector_certificate_id = detector_certificate;
+    result.fault_component_m = result.fault_component_m.cwiseMax(component);
   }
   result.pl_xyz_m = result.nominal_component_m.cwiseMax(
       result.fault_component_m) + result.bridge_component_m;

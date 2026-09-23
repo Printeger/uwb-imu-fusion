@@ -13,6 +13,7 @@
 #include <sys/utsname.h>
 #include <iomanip>
 #include <fstream>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 
@@ -50,6 +51,15 @@ std::string joinIds(const std::vector<std::uint64_t>& ids) {
   for (std::size_t i = 0; i < ids.size(); ++i) {
     if (i) out << ';';
     out << ids[i];
+  }
+  return out.str();
+}
+
+std::string joinStrings(const std::vector<std::string>& values) {
+  std::ostringstream out;
+  for (std::size_t i = 0; i < values.size(); ++i) {
+    if (i) out << ';';
+    out << values[i];
   }
   return out.str();
 }
@@ -133,7 +143,7 @@ RunLogger::RunLogger(const std::string& output_directory,
   const std::string identity = "schema_version,input_attempt_id,input_timestamp_ns,transaction_id,window_id,graph_version,ordering_version,noise_model_version,linpoint_version,output_timestamp_ns,";
   diagnostic_history_summary_ << std::setprecision(17);
   diagnostic_history_summary_ << identity
-      << "present,valid,capacity_ok,state,version_digest,fault_columns,"
+      << "present,valid,capacity_ok,state,version_digest,scope_digest,fault_columns,"
          "boundary_rows,emitted_rows,boundary_columns,rank_boundary,nu_perp,"
          "kappa_b,constant_offset,omega_trace,xi_norm,information_form_factors,"
          "injected_epochs,horizon_first_epoch,window_first_epoch,"
@@ -176,7 +186,11 @@ RunLogger::RunLogger(const std::string& output_directory,
   if (write_residuals_) {
     residuals_ << "timestamp_ns,factor_id,anchor_id,row_role,raw,whitened\n";
   }
-  integrity_ << "timestamp_ns,group_size,measurement_model_valid,"
+  integrity_ << "timestamp_ns,attempted_timestamp_ns,state_timestamp_ns,"
+                "fde_profile,scope_digest,detector_contract_id,pl_status,"
+                "within_alert_limits,state_valid,fresh,deadline_missed,"
+                "reason_codes,publication_protected,publication_certificate_id,"
+                "group_size,measurement_model_valid,"
                 "global_statistic,global_threshold,global_dof,global_passed,"
                 "postfit_statistic,postfit_threshold,postfit_dof,postfit_passed,"
                 "conditional_statistic,conditional_threshold,conditional_dof,"
@@ -234,6 +248,130 @@ RunLogger::RunLogger(const std::string& output_directory,
              "timeout,status\n";
 }
 
+void RunLoggingSession::enable(const std::string& output_directory,
+                               bool write_residuals, bool write_timing) {
+  if (logger_) throw std::runtime_error("run logging is already enabled");
+  if (output_directory.empty()) {
+    throw std::runtime_error("enabled run logging requires an output directory");
+  }
+  const boost::filesystem::path target(output_directory);
+  if (boost::filesystem::exists(target)) {
+    throw std::runtime_error(
+        "refusing to overwrite existing run directory: " + output_directory);
+  }
+  const auto parent = target.parent_path();
+  if (!parent.empty()) boost::filesystem::create_directories(parent);
+  if (!boost::filesystem::create_directory(target)) {
+    throw std::runtime_error(
+        "could not reserve unique run directory: " + output_directory);
+  }
+  directory_ = output_directory;
+  logger_ = std::make_unique<RunLogger>(
+      output_directory, write_residuals, write_timing);
+}
+
+void RunLoggingSession::writeResolvedConfig(const std::string& yaml) const {
+  if (logger_) logger_->writeResolvedConfig(yaml);
+}
+
+void RunLoggingSession::writeManifest(const RunManifest& manifest) const {
+  if (logger_) logger_->writeManifest(manifest);
+}
+
+void RunLoggingSession::writeState(const NavigationState& state) {
+  if (logger_) logger_->writeState(state);
+}
+
+void RunLoggingSession::writeResidual(TimestampNs timestamp, FactorId factor,
+                                      AnchorId anchor, RowRole role,
+                                      double raw, double whitened) {
+  if (logger_) {
+    logger_->writeResidual(timestamp, factor, anchor, role, raw, whitened);
+  }
+}
+
+void RunLoggingSession::writeIntegrity(const IntegrityOutput& output) {
+  if (logger_) logger_->writeIntegrity(output);
+}
+
+void RunLoggingSession::writeTiming(const TimingRecord& record) {
+  if (logger_) logger_->writeTiming(record);
+}
+
+void RunLoggingSession::writeEvent(TimestampNs timestamp,
+                                   const std::string& event,
+                                   const std::string& detail) {
+  if (logger_) logger_->writeEvent(timestamp, event, detail);
+}
+
+void RunLoggingSession::writeEvent(TimestampNs timestamp,
+                                   std::uint64_t sequence,
+                                   const std::string& event,
+                                   const std::string& detail) {
+  if (logger_) logger_->writeEvent(timestamp, sequence, event, detail);
+}
+
+void RunLoggingSession::writeGroundTruth(const GroundTruthRecord& record) {
+  if (logger_) logger_->writeGroundTruth(record);
+}
+
+void RunLoggingSession::writeFaultTruth(const FaultTruthRecord& record) {
+  if (logger_) logger_->writeFaultTruth(record);
+}
+
+void RunLoggingSession::writeSummary(const RunSummary& summary) const {
+  if (logger_) logger_->writeSummary(summary);
+}
+
+void RunLoggingSession::flush() {
+  if (logger_) logger_->flush();
+}
+
+std::string bindExecutionCommandArguments(
+    const std::string& command,
+    const std::vector<std::pair<std::string, std::string>>& arguments) {
+  if (command.empty()) {
+    throw std::runtime_error("execution_command must not be empty");
+  }
+  std::vector<std::string> tokens;
+  std::istringstream input(command);
+  for (std::string token; input >> token;) tokens.push_back(token);
+  if (tokens.empty()) {
+    throw std::runtime_error("execution_command must not be blank");
+  }
+  std::set<std::string> bound;
+  for (auto& token : tokens) {
+    for (const auto& argument : arguments) {
+      const std::string prefix = argument.first + ":=";
+      if (token.compare(0, prefix.size(), prefix) == 0) {
+        if (!bound.insert(argument.first).second) {
+          throw std::runtime_error(
+              "duplicate execution_command argument: " + argument.first);
+        }
+        token = prefix + argument.second;
+        break;
+      }
+    }
+  }
+  for (const auto& argument : arguments) {
+    if (bound.insert(argument.first).second) {
+      tokens.push_back(argument.first + ":=" + argument.second);
+    }
+  }
+  std::ostringstream resolved;
+  for (std::size_t index = 0; index < tokens.size(); ++index) {
+    if (index) resolved << ' ';
+    resolved << tokens[index];
+  }
+  const std::string result = resolved.str();
+  if (result.find("$(") != std::string::npos ||
+      result.find("${") != std::string::npos) {
+    throw std::runtime_error(
+        "execution_command contains an unresolved placeholder");
+  }
+  return result;
+}
+
 void RunLogger::writeResolvedConfig(const std::string& yaml) const {
   std::ofstream out(directory_ + "/resolved_config.yaml");
   requireOpen(out, directory_ + "/resolved_config.yaml");
@@ -279,6 +417,14 @@ void RunLogger::writeManifest(const RunManifest& m) const {
       << ",\n"
       << "  \"protected_quantity\": " << json(m.protected_quantity) << ",\n"
       << "  \"position_reference\": " << json(m.position_reference) << ",\n"
+      << "  \"fde_profile\": " << json(m.fde_profile) << ",\n"
+      << "  \"scope_digest\": " << json(m.scope_digest) << ",\n"
+      << "  \"detector_contract_id\": "
+      << json(m.detector_contract_id) << ",\n"
+      << "  \"active_fault_families\": "
+      << json(joinStrings(m.active_fault_families)) << ",\n"
+      << "  \"omitted_fault_families\": "
+      << json(joinStrings(m.omitted_fault_families)) << ",\n"
       << "  \"scope\": {\"protected_state\": " << json(m.protected_state)
       << ", \"detector\": " << json(m.detector)
       << ", \"pl_method\": " << json(m.pl_method)
@@ -325,8 +471,16 @@ void RunLogger::writeResidual(TimestampNs t, FactorId factor, AnchorId anchor,
 void RunLogger::writeIntegrity(const IntegrityOutput& o) {
   const auto& p = o.protection_level;
   const DetectorResult& conditional = o.detector;
-  integrity_ << o.timestamp.value() << ',' << o.measurement_group_size << ','
-             << o.measurement_model_valid << ','
+  integrity_ << o.timestamp.value() << ',' << o.attempted_timestamp.value()
+             << ',' << o.state.timestamp.value() << ',' << csv(o.fde_profile)
+             << ',' << csv(o.scope_digest) << ','
+             << csv(o.detector_contract_id) << ',' << toString(o.pl_status)
+             << ',' << o.within_alert_limits << ',' << o.state_valid << ','
+             << o.fresh << ',' << o.deadline_missed << ','
+             << csv(joinStrings(o.reason_codes)) << ','
+             << o.publication.protected_output << ','
+             << o.publication.certificate_id << ','
+             << o.measurement_group_size << ',' << o.measurement_model_valid << ','
              << o.global_detector.statistic << ','
              << o.global_detector.threshold << ',' << o.global_detector.dof
              << ',' << o.global_detector.passed << ','
@@ -380,7 +534,8 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
         << o.diagnostics.noise_model_version << ',' << o.linearization_version
         << ',' << o.timestamp.value() << ',' << h.present << ',' << h.valid << ','
         << h.capacity_ok << ',' << csv(h.state) << ',' << h.version_digest << ','
-        << h.fault_columns << ',' << h.boundary_rows << ',' << h.emitted_rows
+        << csv(h.scope_digest) << ',' << h.fault_columns << ','
+        << h.boundary_rows << ',' << h.emitted_rows
         << ',' << h.boundary_columns << ',' << h.rank_boundary << ',' << h.nu_perp
         << ',' << h.kappa_b << ',' << h.constant_offset << ',' << h.omega_trace
         << ',' << h.xi_norm << ',' << h.information_form_factors << ','
@@ -788,6 +943,16 @@ RunManifest makeRunManifest(const IntegrityConfig& config,
       config.imu.noise_overbound_calibration_id;
   manifest.protected_quantity = "position_xyz";
   manifest.position_reference = "body_origin";
+  manifest.fde_profile = toString(config.resolved_scope.profile);
+  manifest.scope_digest = config.resolved_scope.scope_digest;
+  manifest.detector_contract_id = config.resolved_scope.detector_contract_id;
+  for (const auto family : config.resolved_scope.singles) {
+    manifest.active_fault_families.push_back(toString(family));
+  }
+  for (const auto family : config.resolved_scope.pairs) {
+    manifest.active_fault_families.push_back(toString(family));
+  }
+  manifest.omitted_fault_families = config.resolved_scope.omitted_families;
   manifest.diagnostics_schema_version = "uwb-imu-pl/gate-d-diagnostics/v16";
   manifest.failure_catalog = failureReasonCatalogJson();
   if (config.fault_manifest) {

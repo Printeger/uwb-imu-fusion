@@ -98,6 +98,8 @@ class IncrementalUwbImuEstimator {
   void validateUwbBatch(const UwbBatch& batch) const;
 
   EpochTransaction prepareEpoch(const UwbBatch& batch);
+  EpochTransaction prepareEpoch(const UwbBatch& batch,
+                                const EpochPreparationOptions& options);
   LinearizedIntegrityWindow buildIntegrityWindow(
       const EpochTransaction& transaction,
       const IntegrityWindowRequest& request) const;
@@ -178,9 +180,11 @@ class IncrementalUwbImuEstimator {
     LinearizedFactorBlock block;
   };
   EpochTransaction prepareTransaction(TimestampNs timestamp,
-                                      const UwbBatch* batch);
+                                      const UwbBatch* batch,
+                                      const EpochPreparationOptions& options);
   void attachUwbGroups(EpochTransaction* transaction,
-                       const UwbBatch& batch) const;
+                       const UwbBatch& batch,
+                       bool build_recovery_material) const;
   CurrentStatePrior pendingCurrentPrior(
       const EpochTransaction& transaction) const;
   LinearizedFactorBlock linearizePendingGroup(

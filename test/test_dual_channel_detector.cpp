@@ -45,6 +45,30 @@ Eigen::VectorXd unit(int dimension, int index) {
   return value;
 }
 
+TEST(DualChannelDetector, InformationFormConstantIsCountedBeforeChannelSplit) {
+  LinearizedIntegrityWindow window;
+  window.model_valid = true;
+  auto numerics = std::make_shared<FrozenWindowNumerics>();
+  numerics->valid = true;
+  numerics->statistic = 0.75;
+  numerics->dof = 10;
+  window.numerics = numerics;
+  window.history_summary.valid = true;
+  window.history_summary.nu_perp = 4;
+  window.history_summary.kappa_b = 0.60;
+  window.history_summary.constant_offset = 0.20;
+
+  const auto split = evaluateDualChannel(window, 1e-6, 1000);
+  ASSERT_TRUE(split.numerically_valid) << split.reason;
+  EXPECT_EQ(split.current.dof, 6);
+  EXPECT_EQ(split.history.dof, 4);
+  EXPECT_NEAR(split.current.statistic, 0.15, 1e-15);
+  EXPECT_NEAR(split.history.statistic, 0.80, 1e-15);
+  EXPECT_NEAR(split.current.statistic + split.history.statistic,
+              numerics->statistic + window.history_summary.constant_offset,
+              1e-15);
+}
+
 // ---------------------------------------------------------------------------
 // DET-02: a fault that only the *merged* layout can monitor.
 // ---------------------------------------------------------------------------
@@ -378,8 +402,11 @@ TEST(DualChannelDetector, RealWindowSplitIsExactAndTablesTheDifference) {
       ASSERT_TRUE(split.numerically_valid) << split.reason;
       // Exactness of the split on the real window.
       EXPECT_NEAR(split.current.statistic + split.history.statistic,
-                  window.numerics->statistic,
-                  1e-9 * std::max(1.0, std::abs(window.numerics->statistic)))
+                  window.numerics->statistic +
+                      window.history_summary.constant_offset,
+                  1e-9 * std::max(
+                      1.0, std::abs(window.numerics->statistic +
+                                    window.history_summary.constant_offset)))
           << "T_c + T_b must equal the pooled statistic";
       EXPECT_EQ(split.current.dof + split.history.dof,
                 window.numerics->dof);

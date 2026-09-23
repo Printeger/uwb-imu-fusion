@@ -1,0 +1,77 @@
+schema: uwb-imu-pl/fde-profile-validation/v1
+protocol_id: fde-profiles-20260923-v1
+description: >-
+  Deterministic raw-stream validation for the five v6 FDE profiles.  The
+  synthetic truth has 3-D translation, roll/pitch/yaw excitation and a
+  non-zero body-to-UWB-tag lever arm.
+input:
+  imu_rate_hz: 200
+  uwb_rate_hz: 20
+  fixed_lag_epochs: 30
+  integrity_window_epochs: 10
+  recovery_margin_epochs: 10
+  lever_arm_body_m: [0.25, -0.10, 0.08]
+  imu_noise_interpretation: continuous_density_converted_to_discrete_by_sqrt_dt
+  imu_discrete_accelerometer_sigma_mps2: 0.01
+  imu_discrete_gyroscope_sigma_radps: 0.001
+  uwb_noise_interpretation: per_measurement_standard_deviation
+  nominal_physical_noise_fraction_of_integrity_overbound: 0.05
+  nominal_gyro_noise_fraction_of_integrity_overbound: 0.01
+  seeds: [20260901, 20260902, 20260903, 20260904, 20260905,
+          20260906, 20260907, 20260908, 20260909, 20260910,
+          20260911, 20260912, 20260913, 20260914, 20260915,
+          20260916, 20260917, 20260918, 20260919, 20260920]
+  monte_carlo_seeds: 20
+profiles: ['off', uwb_order1, imu_order1, joint_order1, joint_order2]
+active_profiles: [uwb_order1, imu_order1, joint_order1, joint_order2]
+scenarios:
+  fgo: [noiseless, nominal, initial_error, degenerate]
+  profiles:
+    'off': [nominal, uwb_fault, imu_accel_x, joint_fault, history_uwb, persistent_reject]
+    uwb_order1: [nominal, uwb_fault, history_uwb, persistent_reject, uwb_recovery]
+    imu_order1: [nominal, imu_accel_x, imu_accel_y, imu_accel_z, imu_gyro_x, imu_gyro_y, imu_gyro_z, imu_recovery]
+    joint_order1: [nominal, uwb_fault, imu_accel_x, imu_gyro_z, joint_fault, history_uwb, persistent_reject, uwb_recovery, imu_recovery]
+    joint_order2: [nominal, uwb_fault, imu_accel_x, imu_gyro_z, joint_fault, history_uwb, persistent_reject, joint_recovery, uwb_recovery, imu_recovery]
+  pl:
+    uwb_order1: [nominal, uwb_fault, uwb_recovery]
+    imu_order1: [nominal, imu_accel_x, imu_gyro_z, imu_recovery]
+    joint_order1: [nominal, uwb_fault, imu_accel_x, joint_fault, uwb_recovery, imu_recovery]
+    joint_order2: [nominal, uwb_fault, imu_accel_x, joint_fault, joint_recovery, uwb_recovery, imu_recovery]
+epochs:
+  smoke: 30
+  fgo: 200
+  behavior: 300
+  pilot: 600
+  sustained: 12000
+  performance_full: 12000
+performance:
+  warmup_epochs: 100
+  full_repeats: 3
+  pilot_repeats: 1
+  smoke_repeats: 1
+  core_p99_ms_max: 40.0
+  arrival_to_publish_p99_ms_max: 50.0
+  deadline_miss_fraction_max: 0.01
+  rss_peak_mib_max: 1024.0
+gates:
+  noiseless_position_rmse_m_max: 0.01
+  noiseless_attitude_rmse_rad_max: 0.01
+  nominal_position_rmse_m_max: 0.20
+  nominal_position_p95_m_max: 0.50
+  nominal_attitude_rmse_rad_max: 0.10
+  nominal_velocity_rmse_mps_max: 0.20
+  valid_new_state_fraction_min: 0.99
+  active_nominal_finite_pl_fraction_min: 0.95
+  active_nominal_within_alert_fraction_min: 0.90
+  recovered_finite_epochs_min: 20
+  recovered_within_alert_fraction_min: 0.80
+  horizontal_alert_limit_m: 2.0
+  vertical_alert_limit_m: 3.0
+formal_eligibility:
+  expected: false
+  reason: real calibration, rare-event campaign, Gate J and independent review are absent
+storage:
+  task_budget_bytes: 2147483648
+  minimum_free_bytes: 5368709120
+  retain_full_trajectory_for: [noiseless, failed]
+  diagnostic_context_epochs: 25

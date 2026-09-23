@@ -186,6 +186,47 @@ TEST(HistoryFaultParameterization,
   EXPECT_EQ(widened.q_hist(), plan.q_hist());
 }
 
+TEST(HistoryFaultParameterization, InactiveProvidersCreateNoHistoricalColumns) {
+  const auto config = researchConfig();
+  IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+  NavigationState initial;
+  initial.position_world_m = {0, 0, 1};
+  estimator.initialize(initial, config.realtime.prior_sigmas);
+  const EpochTransaction tx = matureTransaction(&estimator, config, 26);
+
+  HistoryFaultParameterizationOptions uwb_only;
+  uwb_only.include_uwb_faults = true;
+  uwb_only.include_imu_faults = false;
+  uwb_only.scope_digest = "scope-uwb";
+  const auto uwb = planHistoryFaultParameterization(tx, 10, uwb_only);
+  ASSERT_GT(uwb.q_hist(), 0u);
+  EXPECT_EQ(uwb.scope_digest, "scope-uwb");
+  EXPECT_TRUE(std::none_of(uwb.columns.begin(), uwb.columns.end(),
+      [](const HistoryFaultColumn& column) {
+        return column.id.kind == HistoryFaultBasisKind::ImuAxisConstant;
+      }));
+
+  HistoryFaultParameterizationOptions imu_only;
+  imu_only.include_uwb_faults = false;
+  imu_only.include_imu_faults = true;
+  imu_only.scope_digest = "scope-imu";
+  const auto imu = planHistoryFaultParameterization(tx, 10, imu_only);
+  ASSERT_GT(imu.q_hist(), 0u);
+  EXPECT_EQ(imu.scope_digest, "scope-imu");
+  EXPECT_TRUE(std::all_of(imu.columns.begin(), imu.columns.end(),
+      [](const HistoryFaultColumn& column) {
+        return column.id.kind == HistoryFaultBasisKind::ImuAxisConstant;
+      }));
+
+  HistoryFaultParameterizationOptions off;
+  off.include_uwb_faults = false;
+  off.include_imu_faults = false;
+  off.scope_digest = "scope-off";
+  const auto none = planHistoryFaultParameterization(tx, 10, off);
+  EXPECT_TRUE(none.columns.empty());
+  EXPECT_EQ(none.scope_digest, "scope-off");
+}
+
 TEST(HistoryFaultParameterization, ColumnsMatchIndependentSelectionOracle) {
   const auto config = researchConfig();
   IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());

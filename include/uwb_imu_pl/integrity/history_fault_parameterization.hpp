@@ -98,7 +98,10 @@ struct HistoryFaultHorizon {
 };
 
 struct HistoryFaultParameterizationOptions {
+  bool include_uwb_faults = true;
+  bool include_imu_faults = true;
   bool include_time_linear_basis = true;
+  std::string scope_digest;
   // Explicit horizon override (recorded in `horizon.source`); defaults to the
   // derived recoverable boundary.
   std::optional<std::size_t> configured_first_epoch;
@@ -106,6 +109,10 @@ struct HistoryFaultParameterizationOptions {
 
 struct HistoryFaultParameterizationPlan {
   HistoryFaultHorizon horizon;
+  // Exact five-mode scope under which these columns were constructed.  It is
+  // copied into the summary version/fingerprint so material from another
+  // profile can never be reused as cache-equivalent history.
+  std::string scope_digest;
   std::vector<HistoryFaultColumn> columns;
   // Epochs strictly below the horizon: unrecoverable, never claimed.
   std::size_t omitted_epoch_count = 0;

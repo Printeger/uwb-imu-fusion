@@ -16,6 +16,17 @@
 
 namespace uwb_imu_pl {
 
+struct EpochPreparationOptions {
+  bool build_integrity_material = true;
+  bool build_uwb_recovery_material = true;
+  bool build_imu_recovery_material = true;
+  bool build_recoverable_history = true;
+
+  static EpochPreparationOptions nominalOnly() {
+    return {false, false, false, false};
+  }
+};
+
 struct PendingFactorGroup {
   FactorGroupId id;
   FactorKind kind = FactorKind::Unknown;
@@ -97,6 +108,7 @@ struct EpochTransaction {
   HistoryRecoverability history_recoverability =
       HistoryRecoverability::Recoverable;
   bool backend_mutated = false;
+  EpochPreparationOptions preparation;
 };
 
 struct EpochCommitPlan {

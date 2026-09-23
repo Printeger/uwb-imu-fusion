@@ -114,6 +114,7 @@ HistoryFaultParameterizationPlan planHistoryFaultParameterization(
     const EpochTransaction& tx, std::size_t window_epochs,
     const HistoryFaultParameterizationOptions& options) {
   HistoryFaultParameterizationPlan plan;
+  plan.scope_digest = options.scope_digest;
   const std::size_t derived_first = tx.oldest_recoverable_epoch + 1;
   const std::size_t window_first =
       tx.proposed_epoch > window_epochs ? tx.proposed_epoch - window_epochs : 0;
@@ -138,18 +139,22 @@ HistoryFaultParameterizationPlan planHistoryFaultParameterization(
                  // the omitted range
     }
     observed_epochs.insert(current);
-    std::vector<HistoryFaultColumn> uwb_columns =
-        buildHistoricalUwbColumnsForEpoch(epoch, &plan.skipped_columns);
-    for (auto& column : uwb_columns) {
-      if (!options.include_time_linear_basis &&
-          column.id.kind == HistoryFaultBasisKind::UwbAnchorTimeLinear) {
-        continue;
+    if (options.include_uwb_faults) {
+      std::vector<HistoryFaultColumn> uwb_columns =
+          buildHistoricalUwbColumnsForEpoch(epoch, &plan.skipped_columns);
+      for (auto& column : uwb_columns) {
+        if (!options.include_time_linear_basis &&
+            column.id.kind == HistoryFaultBasisKind::UwbAnchorTimeLinear) {
+          continue;
+        }
+        plan.columns.push_back(std::move(column));
       }
-      plan.columns.push_back(std::move(column));
     }
-    std::vector<HistoryFaultColumn> imu_columns =
-        buildHistoricalImuColumnsForEpoch(epoch, &plan.skipped_columns);
-    for (auto& column : imu_columns) plan.columns.push_back(std::move(column));
+    if (options.include_imu_faults) {
+      std::vector<HistoryFaultColumn> imu_columns =
+          buildHistoricalImuColumnsForEpoch(epoch, &plan.skipped_columns);
+      for (auto& column : imu_columns) plan.columns.push_back(std::move(column));
+    }
   }
 
   // Material gaps: requested epochs without a recoverable record.

@@ -35,8 +35,11 @@ namespace {
 bool sameStructuralIdentity(const PublicationIdentity& a,
                             const PublicationIdentity& b) {
   if (a.snapshot_id != b.snapshot_id || a.manifest_digest != b.manifest_digest ||
+      a.scope_digest != b.scope_digest ||
       a.history_summary_id != b.history_summary_id ||
-      a.risk_proof_id != b.risk_proof_id || a.frame_id != b.frame_id ||
+      a.risk_proof_id != b.risk_proof_id ||
+      a.pl_detector_certificate_id != b.pl_detector_certificate_id ||
+      a.frame_id != b.frame_id ||
       a.position_reference != b.position_reference) {
     return false;
   }
@@ -251,9 +254,12 @@ std::vector<std::string> missingPublicationIdentityFields(
   if (id.state_solution_id == 0) missing.push_back("state_solution_id");
   if (id.history_summary_id == 0) missing.push_back("history_summary_id");
   if (id.manifest_digest == 0) missing.push_back("manifest_digest");
+  if (id.scope_digest == 0) missing.push_back("scope_digest");
   if (id.health_state == 0) missing.push_back("health_state");
   if (id.detector_ids.empty()) missing.push_back("detector_ids");
   if (id.risk_proof_id == 0) missing.push_back("risk_proof_id");
+  if (id.pl_detector_certificate_id == 0)
+    missing.push_back("pl_detector_certificate_id");
   if (!id.protection_level_m.allFinite()) missing.push_back("protection_level_m");
   if (id.position_reference.empty()) missing.push_back("position_reference");
   if (id.timestamp_ns == 0) missing.push_back("timestamp_ns");

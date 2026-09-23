@@ -233,6 +233,25 @@ std::uint64_t faultModelPolicyFingerprint(const FaultModelsConfig& config) {
   return hash;
 }
 
+std::uint64_t faultScopePolicyFingerprint(
+    const FaultModelsConfig& config, const ResolvedFaultScope& scope) {
+  std::uint64_t hash = faultModelPolicyFingerprint(config);
+  auto append_bytes = [&](const void* data, std::size_t size) {
+    const auto* bytes = static_cast<const unsigned char*>(data);
+    for (std::size_t i = 0; i < size; ++i) {
+      hash ^= bytes[i];
+      hash *= 1099511628211ULL;
+    }
+  };
+  const auto profile = static_cast<unsigned>(scope.profile);
+  append_bytes(&profile, sizeof(profile));
+  append_bytes(&scope.max_fault_order, sizeof(scope.max_fault_order));
+  append_bytes(&scope.allow_uwb_actions, sizeof(scope.allow_uwb_actions));
+  append_bytes(&scope.allow_imu_actions, sizeof(scope.allow_imu_actions));
+  append_bytes(scope.scope_digest.data(), scope.scope_digest.size());
+  return hash;
+}
+
 IntegrityConfig IntegrityConfigLoader::load(
     const std::string& yaml_path,
     const std::optional<std::string>& fixed_lag_epochs_override) {
@@ -250,6 +269,17 @@ IntegrityConfig IntegrityConfigLoader::load(
   cfg.source_path = yaml_path;
   YAML::Node root = YAML::Load(readAll(yaml_path));
   requireMap(root, "root");
+  const std::string source_schema =
+      required<std::string>(root, "schema_version", "root");
+  const bool is_v6 = source_schema == "uwb-imu-pl/v6";
+  if (source_schema != "uwb-imu-pl/v4" &&
+      source_schema != "uwb-imu-pl/v5" && !is_v6) {
+    throw std::runtime_error(
+        "schema_version must be uwb-imu-pl/v4, uwb-imu-pl/v5 or "
+        "uwb-imu-pl/v6");
+  }
+  requireMap(root["fault_models"], "fault_models");
+  requireMap(root["fde"], "fde");
   // A3 migration: remember which fault-order keys the user actually wrote so
   // that order/flags conflicts are rejected instead of silently overwritten.
   const bool has_single_flag =
@@ -258,13 +288,32 @@ IntegrityConfig IntegrityConfigLoader::load(
       static_cast<bool>(root["fault_models"]["double_faults_enabled"]);
   const bool has_max_fault_order =
       static_cast<bool>(root["fault_models"]["max_fault_order"]);
-  if (!root["fault_models"]["single_faults_enabled"]) {
+  if (is_v6 && (has_single_flag || has_double_flag || has_max_fault_order)) {
+    throw std::runtime_error(
+        "v6 fde.profile conflicts with legacy fault order/enable fields");
+  }
+  if (is_v6 && !root["fde"]["profile"]) {
+    throw std::runtime_error("missing required key fde.profile");
+  }
+  if (!is_v6 && root["fde"]["profile"]) {
+    throw std::runtime_error(
+        "v5 legacy fault order fields and fde.profile cannot be combined");
+  }
+  if (is_v6) {
+    const FdeProfile profile =
+        parseFdeProfile(root["fde"]["profile"].as<std::string>());
+    root["fault_models"]["single_faults_enabled"] =
+        profile != FdeProfile::Off;
+    root["fault_models"]["double_faults_enabled"] =
+        profile == FdeProfile::JointOrder2;
+    root["fault_models"]["max_fault_order"] =
+        profile == FdeProfile::JointOrder2 ? 2 : 1;
+  } else if (!root["fault_models"]["single_faults_enabled"]) {
     root["fault_models"]["single_faults_enabled"] = true;
   }
-  if (!root["fault_models"]["double_faults_enabled"]) {
+  if (!is_v6 && !root["fault_models"]["double_faults_enabled"]) {
     root["fault_models"]["double_faults_enabled"] = false;
   }
-  requireMap(root["fde"], "fde");
   if (!root["fde"]["max_exclusion_cardinality"]) {
     root["fde"]["max_exclusion_cardinality"] = 2;
   }
@@ -292,19 +341,27 @@ IntegrityConfig IntegrityConfigLoader::load(
     root["output"]["write_timing"] = *overrides.write_timing;
   }
   if (overrides.output_root) root["output"]["root"] = *overrides.output_root;
+  if (overrides.fde_profile) {
+    if (!is_v6) {
+      throw std::runtime_error(
+          "fde profile override requires a v6 base configuration");
+    }
+    root["fde"]["profile"] = toString(*overrides.fde_profile);
+    root["fault_models"]["single_faults_enabled"] =
+        *overrides.fde_profile != FdeProfile::Off;
+    root["fault_models"]["double_faults_enabled"] =
+        *overrides.fde_profile == FdeProfile::JointOrder2;
+    root["fault_models"]["max_fault_order"] =
+        *overrides.fde_profile == FdeProfile::JointOrder2 ? 2 : 1;
+  }
   cfg.resolved_yaml = emitResolvedYaml(root);
   cfg.config_hash = fnv1a64(cfg.resolved_yaml);
   rejectUnknown(root, "root",
                 {"schema_version", "seed", "snapshot", "incremental", "imu",
                  "integrity_window", "detector", "fault_models", "fde",
                  "bridge", "health", "risk", "robust_shadow", "output",
-                 "realtime", "anchors", "history"});
+                 "publication", "realtime", "anchors", "history"});
   cfg.schema_version = required<std::string>(root, "schema_version", "root");
-  if (cfg.schema_version != "uwb-imu-pl/v4" &&
-      cfg.schema_version != "uwb-imu-pl/v5") {
-    throw std::runtime_error(
-        "schema_version must be uwb-imu-pl/v4 or uwb-imu-pl/v5");
-  }
   cfg.seed = required<std::uint64_t>(root, "seed", "root");
 
   const auto snapshot = root["snapshot"];
@@ -541,14 +598,17 @@ IntegrityConfig IntegrityConfigLoader::load(
   cfg.fault_models.double_faults_enabled =
       required<bool>(fault_models, "double_faults_enabled", "fault_models");
   if (!cfg.fault_models.single_faults_enabled &&
-      !cfg.fault_models.double_faults_enabled) {
+      !cfg.fault_models.double_faults_enabled && !is_v6) {
     throw std::runtime_error(
         "fault_models must enable single_faults_enabled or "
         "double_faults_enabled");
   }
   // A3 migration: max_fault_order is the canonical declared order.  Legacy
   // flags remain readable; a conflict between the two spellings is rejected.
-  if (has_max_fault_order) {
+  if (is_v6) {
+    cfg.fault_models.max_fault_order =
+        cfg.fault_models.double_faults_enabled ? 2 : 1;
+  } else if (has_max_fault_order) {
     const int order = fault_models["max_fault_order"].as<int>();
     if (order != 1 && order != 2) {
       throw std::runtime_error("fault_models.max_fault_order must be 1 or 2");
@@ -691,7 +751,28 @@ IntegrityConfig IntegrityConfigLoader::load(
       fde, "fde",
       {"trigger", "isolation", "ambiguity_policy", "selection_primary",
        "selection_secondary", "dense_oracle_online_fallback",
-       "max_candidate_count", "max_exclusion_cardinality"});
+       "max_candidate_count", "max_exclusion_cardinality", "profile",
+       "on_no_valid_action", "on_integrity_model_invalid"});
+  if (is_v6) {
+    cfg.fde.profile = parseFdeProfile(required<std::string>(fde, "profile", "fde"));
+    cfg.fde.on_no_valid_action =
+        required<std::string>(fde, "on_no_valid_action", "fde");
+    cfg.fde.on_integrity_model_invalid = required<std::string>(
+        fde, "on_integrity_model_invalid", "fde");
+  } else {
+    if (!cfg.fault_models.single_faults_enabled &&
+        cfg.fault_models.double_faults_enabled) {
+      throw std::runtime_error(
+          "v5 double-only configuration cannot migrate to a five-mode "
+          "profile; enable singles or use the legacy research entry point");
+    }
+    cfg.fde.profile = cfg.fault_models.double_faults_enabled
+                          ? FdeProfile::JointOrder2
+                          : FdeProfile::JointOrder1;
+    cfg.migration_warnings.push_back(
+        std::string("legacy v5 fault switches mapped to fde.profile=") +
+        toString(cfg.fde.profile));
+  }
   cfg.fde.trigger = required<std::string>(fde, "trigger", "fde");
   cfg.fde.isolation = required<std::string>(fde, "isolation", "fde");
   cfg.fde.ambiguity_policy =
@@ -714,7 +795,9 @@ IntegrityConfig IntegrityConfigLoader::load(
       cfg.fde.dense_oracle_online_fallback ||
       cfg.fde.max_candidate_count == 0 ||
       cfg.fde.max_exclusion_cardinality == 0 ||
-      cfg.fde.max_exclusion_cardinality > cfg.fault_models.max_cardinality) {
+      cfg.fde.max_exclusion_cardinality > cfg.fault_models.max_cardinality ||
+      cfg.fde.on_no_valid_action != "discard" ||
+      cfg.fde.on_integrity_model_invalid != "discard") {
     throw std::runtime_error(
         "fde configuration does not match the v4 research architecture");
   }
@@ -913,12 +996,33 @@ IntegrityConfig IntegrityConfigLoader::load(
         "output.schema_version must equal root schema_version");
   }
 
+  if (is_v6) {
+    const auto publication = root["publication"];
+    rejectUnknown(publication, "publication",
+                  {"allow_unprotected_output", "protected_output_enabled",
+                   "deadline_ms"});
+    cfg.publication.allow_unprotected_output = required<bool>(
+        publication, "allow_unprotected_output", "publication");
+    cfg.publication.protected_output_enabled = required<bool>(
+        publication, "protected_output_enabled", "publication");
+    cfg.publication.deadline_ms =
+        required<double>(publication, "deadline_ms", "publication");
+    positive(cfg.publication.deadline_ms, "publication.deadline_ms");
+    if (!cfg.publication.allow_unprotected_output &&
+        !cfg.publication.protected_output_enabled) {
+      throw std::runtime_error(
+          "publication must enable protected or unprotected output");
+    }
+  }
+
   const auto realtime = root["realtime"];
   rejectUnknown(realtime, "realtime",
                 {"world_frame", "body_frame", "imu_topic", "uwb_topic",
                  "odometry_topic", "integrity_topic", "diagnostics_topic",
                  "initial_position_m", "initial_velocity_mps",
-                 "lever_arm_body_m", "range_sigma_m", "prior_sigmas"});
+                 "lever_arm_body_m", "range_sigma_m", "prior_sigmas",
+                 "max_queued_events", "imu_overflow_policy",
+                 "uwb_overflow_policy"});
   cfg.realtime.world_frame =
       required<std::string>(realtime, "world_frame", "realtime");
   cfg.realtime.body_frame =
@@ -942,6 +1046,21 @@ IntegrityConfig IntegrityConfigLoader::load(
   cfg.realtime.range_sigma_m =
       required<double>(realtime, "range_sigma_m", "realtime");
   positive(cfg.realtime.range_sigma_m, "realtime.range_sigma_m");
+  if (is_v6) {
+    cfg.realtime.max_queued_events = required<std::uint32_t>(
+        realtime, "max_queued_events", "realtime");
+    cfg.realtime.imu_overflow_policy = required<std::string>(
+        realtime, "imu_overflow_policy", "realtime");
+    cfg.realtime.uwb_overflow_policy = required<std::string>(
+        realtime, "uwb_overflow_policy", "realtime");
+    if (cfg.realtime.max_queued_events == 0 ||
+        cfg.realtime.imu_overflow_policy !=
+            "invalidate_and_reinitialize" ||
+        cfg.realtime.uwb_overflow_policy !=
+            "drop_oldest_unprocessed_uwb") {
+      throw std::runtime_error("realtime queue policy is invalid for v6");
+    }
+  }
   const auto prior_sigmas = realtime["prior_sigmas"];
   if (!prior_sigmas || !prior_sigmas.IsSequence() ||
       prior_sigmas.size() != 15) {
@@ -1017,11 +1136,34 @@ IntegrityConfig IntegrityConfigLoader::load(
     cfg.fault_manifest = std::move(manifest);
   }
 
+  FaultScopeCapabilities scope_capabilities;
+  if (cfg.fault_manifest) {
+    scope_capabilities.manifest_digest = cfg.fault_manifest->digest;
+    scope_capabilities.uwb_anchor = manifestLists(
+        cfg.fault_manifest->enabled_single_families, "uwb_single_anchor");
+    scope_capabilities.imu_accel_axis = manifestLists(
+        cfg.fault_manifest->enabled_single_families, "imu_single_axis");
+    scope_capabilities.imu_gyro_axis = scope_capabilities.imu_accel_axis;
+    scope_capabilities.uwb_imu_pair = manifestLists(
+        cfg.fault_manifest->enabled_pair_families, "uwb_imu");
+  } else if (is_v6 && cfg.fde.profile != FdeProfile::Off) {
+    throw std::runtime_error(
+        "active v6 fde.profile requires fault_models.manifest_path");
+  }
+  cfg.resolved_scope = resolveFaultScope(cfg.fde.profile, scope_capabilities);
+
   // Migration notes and the resolved fault manifest are part of the hashed
   // resolved configuration so a mismatch can never be silent.  Re-emit the
   // YAML first so migrated canonical keys (max_fault_order, intervals) appear
   // in the effective dump.
-  if (!cfg.migration_warnings.empty() || cfg.fault_manifest) {
+  {
+    // Legacy switches are only an internal compatibility representation while
+    // parsing.  A v6 resolved file has exactly one mode source: fde.profile.
+    if (is_v6) {
+      root["fault_models"].remove("single_faults_enabled");
+      root["fault_models"].remove("double_faults_enabled");
+      root["fault_models"].remove("max_fault_order");
+    }
     cfg.resolved_yaml = emitResolvedYaml(root);
     cfg.resolved_yaml += "\n# --- migration notes (informational) ---\n";
     for (const auto& warning : cfg.migration_warnings) {
@@ -1040,6 +1182,12 @@ IntegrityConfig IntegrityConfigLoader::load(
       std::string line;
       while (std::getline(lines, line)) cfg.resolved_yaml += "# " + line + "\n";
     }
+    cfg.resolved_yaml += "# resolved_fde_profile: " +
+        std::string(toString(cfg.resolved_scope.profile)) + "\n";
+    cfg.resolved_yaml += "# resolved_scope_digest: " +
+        cfg.resolved_scope.scope_digest + "\n";
+    cfg.resolved_yaml += "# detector_contract_id: " +
+        cfg.resolved_scope.detector_contract_id + "\n";
     cfg.config_hash = fnv1a64(cfg.resolved_yaml);
   }
   return cfg;

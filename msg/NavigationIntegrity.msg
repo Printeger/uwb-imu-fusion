@@ -1,0 +1,46 @@
+std_msgs/Header header
+time attempted_timestamp
+time state_timestamp
+time publish_timestamp
+uint64 arrival_steady_ns
+uint64 finish_steady_ns
+float64 state_age_s
+bool deadline_missed
+
+string run_id
+uint64 attempt_id
+uint64 transaction_id
+uint64 solution_id
+string config_hash
+string scope_digest
+string manifest_digest
+
+nav_msgs/Odometry odometry
+uwb_imu_pl/IntegrityStatus integrity
+geometry_msgs/Vector3 velocity_world_mps
+geometry_msgs/Vector3 accel_bias_mps2
+geometry_msgs/Vector3 gyro_bias_radps
+bool state_valid
+bool fresh
+bool batch_committed
+string commit_reason
+
+string fde_profile
+uint32 fault_order
+string[] active_families
+string detector_contract_id
+uint32 hypothesis_count
+uint32 generated_action_count
+uint64 selected_action_id
+
+float64[3] pl_xyz_m
+float64 hpl_m
+float64 vpl_m
+string pl_status
+bool within_alert_limits
+bool risk_budget_valid
+bool formal_eligible
+
+bool publication_protected
+uint64 publication_certificate_id
+string[] reason_codes

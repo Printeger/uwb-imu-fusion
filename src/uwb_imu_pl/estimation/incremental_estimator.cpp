@@ -688,7 +688,8 @@ void IncrementalUwbImuEstimator::validateUwbBatch(const UwbBatch& batch) const {
 }
 
 EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
-    TimestampNs timestamp, const UwbBatch* batch) {
+    TimestampNs timestamp, const UwbBatch* batch,
+    const EpochPreparationOptions& options) {
   if (!initialized_)
     throw std::logic_error("UWB/IMU estimator is not initialized");
   if (backend_poisoned_)
@@ -753,6 +754,7 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
   last_imu_preintegration_ms_ = elapsedMs(preintegration_start);
   const std::size_t next_epoch = epoch_ + 1;
   EpochTransaction tx;
+  tx.preparation = options;
   tx.id = TransactionId(next_transaction_id_++);
   tx.base_graph_version = graph_version_;
   tx.base_version = {graph_version_, ordering_version_, 1, linpoint_version_};
@@ -800,29 +802,38 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
   tx.imu_group.factors.add(gtsam::CombinedImuFactor(
       poseKey(epoch_), velocityKey(epoch_), poseKey(next_epoch),
       velocityKey(next_epoch), biasKey(epoch_), biasKey(next_epoch), proposed));
-  tx.generic_bridge_group.id = FactorGroupId(tx.id.value() * 1000 + 3);
-  tx.generic_bias_continuity_group.id = FactorGroupId(tx.id.value() * 1000 + 4);
-  tx.generic_bridge_group =
-      BridgeFactory().makeGeneric(tx, config_.bridge.generic);
-  tx.generic_bias_continuity_group =
-      BridgeFactory().makeBiasContinuity(tx, config_.bridge.generic);
-  if (batch) attachUwbGroups(&tx, *batch);
+  if (options.build_imu_recovery_material) {
+    tx.generic_bridge_group.id = FactorGroupId(tx.id.value() * 1000 + 3);
+    tx.generic_bias_continuity_group.id = FactorGroupId(tx.id.value() * 1000 + 4);
+    tx.generic_bridge_group =
+        BridgeFactory().makeGeneric(tx, config_.bridge.generic);
+    tx.generic_bias_continuity_group =
+        BridgeFactory().makeBiasContinuity(tx, config_.bridge.generic);
+  }
+  if (batch) {
+    attachUwbGroups(&tx, *batch, options.build_uwb_recovery_material);
+  }
   tx.ledger_version = factor_ledger_.version();
-  tx.frozen_graph =
-      std::make_shared<const gtsam::NonlinearFactorGraph>(activeGraph());
-  gtsam::Values frozen = backendIsam().calculateEstimate();
-  frozen.insert(poseKey(next_epoch), toGtsamPose(tx.cv_predicted_state));
-  frozen.insert(velocityKey(next_epoch),
-                tx.cv_predicted_state.velocity_world_mps);
-  frozen.insert(biasKey(next_epoch), toGtsamBias(tx.cv_predicted_state));
-  tx.frozen_values = std::make_shared<const gtsam::Values>(std::move(frozen));
+  if (options.build_integrity_material) {
+    tx.frozen_graph =
+        std::make_shared<const gtsam::NonlinearFactorGraph>(activeGraph());
+    gtsam::Values frozen = backendIsam().calculateEstimate();
+    frozen.insert(poseKey(next_epoch), toGtsamPose(tx.cv_predicted_state));
+    frozen.insert(velocityKey(next_epoch),
+                  tx.cv_predicted_state.velocity_world_mps);
+    frozen.insert(biasKey(next_epoch), toGtsamBias(tx.cv_predicted_state));
+    tx.frozen_values = std::make_shared<const gtsam::Values>(std::move(frozen));
+  }
   std::map<std::size_t, FactorGroupId> slot_groups;
-  for (const auto& entry : factor_ledger_.entries()) {
-    if (entry.lifecycle == FactorLifecycle::Active && entry.backend_slot) {
-      slot_groups.emplace(*entry.backend_slot, entry.group_id);
+  if (tx.frozen_graph) {
+    for (const auto& entry : factor_ledger_.entries()) {
+      if (entry.lifecycle == FactorLifecycle::Active && entry.backend_slot) {
+        slot_groups.emplace(*entry.backend_slot, entry.group_id);
+      }
     }
   }
-  for (std::size_t slot = 0; slot < tx.frozen_graph->size(); ++slot) {
+  for (std::size_t slot = 0;
+       tx.frozen_graph && slot < tx.frozen_graph->size(); ++slot) {
     if (!(*tx.frozen_graph)[slot]) continue;
     FrozenFactorSlot frozen_slot;
     frozen_slot.slot = slot;
@@ -841,7 +852,7 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
     tx.oldest_recoverable_epoch =
         std::max(tx.oldest_recoverable_epoch, oldestRetainedEpoch());
   }
-  for (const auto& record : committed_epochs_) {
+  if (options.build_recoverable_history) for (const auto& record : committed_epochs_) {
     const auto& committed = record.transaction;
     if (committed.proposed_epoch <= tx.oldest_recoverable_epoch) continue;
     HistoricalEpochContext context;
@@ -865,6 +876,9 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
     };
     const bool committed_imu_selected =
         selected_in_record(committed.imu_group.id);
+    // Provider scope controls fault maps and recovery alternatives, never the
+    // nominal observation history.  A UWB-only profile still needs the
+    // selected IMU group in the epoch catalog for complete provenance.
     if (committed_imu_selected) {
       context.groups.push_back(committed.imu_group);
     } else {
@@ -910,6 +924,7 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
     const Eigen::MatrixXd historical_covariance =
         selected_uwb_group ? validatedUwbCovariance(committed.uwb_batch)
                            : Eigen::MatrixXd{};
+    if (options.build_uwb_recovery_material)
     for (const auto excluded_anchor : selected_anchors) {
       UwbBatch retained = committed.uwb_batch;
       retained.measurements.clear();
@@ -959,7 +974,7 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
       replacement.recovery_epoch = next_epoch;
       context.groups.push_back(std::move(replacement));
     }
-    if (committed_imu_selected) {
+    if (committed_imu_selected && options.build_imu_recovery_material) {
       PendingFactorGroup historical_bridge = committed.generic_bridge_group;
       historical_bridge.id = FactorGroupId(history_base + 80);
       historical_bridge.replaces_group = committed.imu_group.id;
@@ -979,10 +994,12 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
     for (auto& group : context.groups) group.recovery_epoch = next_epoch;
     tx.recoverable_history.push_back(std::move(context));
   }
-  tx.history_recoverability =
-      factor_ledger_.hasCompleteActiveProvenance(*tx.frozen_graph)
-          ? HistoryRecoverability::Recoverable
-          : HistoryRecoverability::MissingProvenance;
+  tx.history_recoverability = !options.build_recoverable_history
+      ? HistoryRecoverability::Recoverable
+      : (tx.frozen_graph &&
+                 factor_ledger_.hasCompleteActiveProvenance(*tx.frozen_graph)
+             ? HistoryRecoverability::Recoverable
+             : HistoryRecoverability::MissingProvenance);
   active_transaction_id_ = tx.id;
   pending_epoch_ = true;
   current_uwb_committed_ = false;
@@ -992,7 +1009,8 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
 }
 
 void IncrementalUwbImuEstimator::attachUwbGroups(EpochTransaction* tx,
-                                                 const UwbBatch& batch) const {
+                                                 const UwbBatch& batch,
+                                                 bool build_recovery_material) const {
   if (!tx || !tx->uwb_groups.empty())
     throw std::logic_error("UWB group already attached");
   tx->uwb_batch = batch;
@@ -1016,6 +1034,8 @@ void IncrementalUwbImuEstimator::attachUwbGroups(EpochTransaction* tx,
   group.factors.add(boost::make_shared<UwbPoseBatchFactor>(
       poseKey(tx->proposed_epoch), batch, lever_arm_body_m_));
   tx->uwb_groups.push_back(std::move(group));
+
+  if (!build_recovery_material) return;
 
   // A correlated UWB group is indivisible once whitened. Prepare one
   // retained-principal-covariance replacement for every physical anchor so
@@ -1077,12 +1097,18 @@ void IncrementalUwbImuEstimator::attachUwbGroups(EpochTransaction* tx,
 
 EpochTransaction IncrementalUwbImuEstimator::prepareEpoch(
     const UwbBatch& batch) {
+  return prepareEpoch(batch, EpochPreparationOptions{});
+}
+
+EpochTransaction IncrementalUwbImuEstimator::prepareEpoch(
+    const UwbBatch& batch, const EpochPreparationOptions& options) {
   validateUwbBatch(batch);
-  return prepareTransaction(batch.timestamp, &batch);
+  return prepareTransaction(batch.timestamp, &batch, options);
 }
 
 void IncrementalUwbImuEstimator::predictTo(TimestampNs timestamp) {
-  adapter_transaction_ = prepareTransaction(timestamp, nullptr);
+  adapter_transaction_ =
+      prepareTransaction(timestamp, nullptr, EpochPreparationOptions{});
 }
 
 LinearizedFactorBlock IncrementalUwbImuEstimator::linearizePendingGroup(
@@ -1389,10 +1415,17 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
         augmented.emplace_shared<gtsam::JacobianFactor>(terms, rhs);
       }
     }
+    HistoryFaultParameterizationOptions history_options;
+    history_options.include_uwb_faults =
+        config_.resolved_scope.requiresUwbFaults();
+    history_options.include_imu_faults =
+        config_.resolved_scope.requiresImuFaults();
+    history_options.scope_digest = config_.resolved_scope.scope_digest;
     const HistoryFaultParameterizationPlan plan =
-        planHistoryFaultParameterization(tx, interval_count);
+        planHistoryFaultParameterization(tx, interval_count, history_options);
     WindowHistorySummary& history = window.history_summary;
     history.present = true;
+    history.scope_digest = plan.scope_digest;
     history.fault_columns = plan.q_hist();
     history.horizon_first_epoch = plan.horizon.first_epoch;
     history.window_first_epoch = plan.horizon.window_first_epoch;
@@ -1750,6 +1783,7 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
           static_cast<std::uint64_t>(plan.q_hist()),
           static_cast<std::uint64_t>(plan.skipped_columns)};
       hash = fnv(hash, counts, sizeof(counts));
+      hash = fnv(hash, plan.scope_digest.data(), plan.scope_digest.size());
       summary_version.mode_set = hash;
     }
     {
@@ -2132,7 +2166,7 @@ IncrementalUwbImuEstimator::preMeasurementSnapshot(const UwbBatch& batch) {
   }
   validateUwbBatch(batch);
   if (adapter_transaction_->uwb_groups.empty()) {
-    attachUwbGroups(&*adapter_transaction_, batch);
+    attachUwbGroups(&*adapter_transaction_, batch, true);
   }
   CurrentStatePrior prior = pendingCurrentPrior(*adapter_transaction_);
   pending_batch_id_ = batch.id;
@@ -2382,6 +2416,9 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
   factor_ledger_.syncBoundaryFactors(
       activeGraph(), update.boundary_factor_slots, state_timestamp_, epoch_,
       {graph_version_, ordering_version_, 1, linpoint_version_});
+  if (fixed_lag_backend_) {
+    factor_ledger_.pruneInactiveBefore(oldestRetainedEpoch());
+  }
 
   for (auto& committed : committed_epochs_) {
     std::vector<FactorGroupId> removed_from_record;

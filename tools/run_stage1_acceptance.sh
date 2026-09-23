@@ -87,7 +87,8 @@ run_ros_smoke() {
     roslaunch uwb_imu_pl realtime_integrity_sim.launch \
       trajectory:=figure_eight fault_mode:=none random_seed:=20260901 \
       rviz:=false packet_loss_prob:=0.0 nlos_probability:=0.0 \
-      fixed_lag_epochs:="${lag}" run_directory:="${run_directory}" \
+      fixed_lag_epochs:="${lag}" enable_run_logging:=true \
+      run_directory:="${run_directory}" \
       >"${launch_log}" 2>&1
   launch_status=$?
   set -e

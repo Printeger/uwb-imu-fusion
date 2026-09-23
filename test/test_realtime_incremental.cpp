@@ -644,6 +644,37 @@ TEST(UwbImuIncremental, FaultAlarmRejectsOnlyCurrentUwbAndNextBatchRecovers) {
   ASSERT_EQ(estimator.audit().committed_uwb_batch_ids.size(), 1u);
 }
 
+TEST(UwbImuIncremental, FinalDeadlineCheckKeepsRealCommitButDowngradesPublish) {
+  auto cfg = config();
+  cfg.publication.deadline_ms = 1e-9;
+  uwb_imu_pl::IncrementalUwbImuEstimator estimator(cfg, Eigen::Vector3d::Zero());
+  uwb_imu_pl::NavigationState initial;
+  initial.timestamp = uwb_imu_pl::TimestampNs(0);
+  initial.position_world_m = {0, 0, 1};
+  estimator.initialize(initial, Eigen::Matrix<double, 15, 1>::Constant(0.1));
+  uwb_imu_pl::RealtimeIntegrityPipeline pipeline(
+      &estimator, uwb_imu_pl::IntegrityMonitor(
+          cfg.risk, cfg.snapshot.rank_tolerance,
+          cfg.snapshot.max_condition_number));
+  for (int i = 0; i <= 2; ++i) {
+    uwb_imu_pl::ImuMeasurement sample;
+    sample.timestamp = uwb_imu_pl::TimestampNs(i * 5000000);
+    sample.specific_force_mps2 = {0, 0, cfg.imu.gravity_mps2};
+    pipeline.ingestImu(sample);
+  }
+  const auto output = pipeline.processUwbBatch(makeBatch(
+      uwb_imu_pl::TimestampNs(10000000), initial.position_world_m));
+  EXPECT_TRUE(output.batch_committed);
+  EXPECT_EQ(output.backend_updates, 1u);
+  EXPECT_TRUE(output.deadline_missed);
+  EXPECT_FALSE(output.publication.protected_output);
+  EXPECT_TRUE(output.publication.unprotected_output);
+  EXPECT_NE(std::find(output.reason_codes.begin(), output.reason_codes.end(),
+                      "FINISH_DEADLINE_MISSED"),
+            output.reason_codes.end());
+  EXPECT_EQ(estimator.currentEpoch(), 1u);
+}
+
 TEST(UwbImuIncremental, PlausibleMultiAnchorAmbiguityDoesNotClaimHistoryLoss) {
   auto cfg = config();
   uwb_imu_pl::IncrementalUwbImuEstimator estimator(cfg, Eigen::Vector3d::Zero());
@@ -928,6 +959,7 @@ TEST(UwbImuIncremental, FixedLagRetainsThreeCompleteEpochsAndBoundedMetadata) {
   estimator.ingestImu(boundary);
 
   std::size_t maximum_factor_slots = 0;
+  std::size_t maximum_ledger_entries = 0;
   for (int epoch = 1; epoch <= 10; ++epoch) {
     for (int sample_index = 2 * epoch - 1; sample_index <= 2 * epoch;
          ++sample_index) {
@@ -950,6 +982,8 @@ TEST(UwbImuIncremental, FixedLagRetainsThreeCompleteEpochsAndBoundedMetadata) {
     const auto audit = estimator.audit();
     maximum_factor_slots = std::max(maximum_factor_slots,
                                     audit.factor_slot_count);
+    maximum_ledger_entries = std::max(
+        maximum_ledger_entries, estimator.factorLedger().entries().size());
     EXPECT_TRUE(audit.fixed_lag_active);
     EXPECT_TRUE(audit.historical_fault_provenance);
     EXPECT_LE(audit.active_value_count, 9u);
@@ -970,6 +1004,8 @@ TEST(UwbImuIncremental, FixedLagRetainsThreeCompleteEpochsAndBoundedMetadata) {
     }
   }
   EXPECT_LE(maximum_factor_slots, 18u);
+  EXPECT_LE(maximum_ledger_entries, 30u)
+      << "finalized factor provenance must be pruned with the fixed lag";
   EXPECT_TRUE(std::isfinite(estimator.globalGraphResidualStatistic()));
 }
 

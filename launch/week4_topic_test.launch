@@ -6,12 +6,33 @@
   <arg name="inventory"/>
   <arg name="config_path"
        default="$(find uwb_imu_pl)/config/realtime_uwb_imu_pl_research.yaml"/>
+  <arg name="fde_profile" default=""/>
+  <arg name="fixed_lag_epochs" default="200"/>
+  <arg name="seed" default=""/>
+  <arg name="enable_run_logging" default="true"/>
+  <arg name="write_global_diagnostics" default=""/>
+  <arg name="write_residuals" default=""/>
+  <arg name="write_timing" default=""/>
+  <arg name="output_root" default=""/>
+  <arg name="execution_command"
+       default="roslaunch uwb_imu_pl week4_topic_test.launch scenario:=$(arg scenario) epochs:=$(arg epochs) rate_scale:=$(arg rate_scale) inventory:=$(arg inventory) config_path:=$(arg config_path) fde_profile:=$(arg fde_profile) fixed_lag_epochs:=$(arg fixed_lag_epochs) seed:=$(arg seed) enable_run_logging:=$(arg enable_run_logging) run_directory:=$(arg run_directory) write_global_diagnostics:=$(arg write_global_diagnostics) write_residuals:=$(arg write_residuals) write_timing:=$(arg write_timing) output_root:=$(arg output_root)"/>
   <node pkg="uwb_imu_pl" type="uwb_imu_pl_realtime_node"
         name="uwb_imu_pl_realtime" output="screen">
     <param name="config_path" value="$(arg config_path)"/>
-    <param name="fixed_lag_epochs" type="str" value="200"/>
+    <param name="fixed_lag_epochs" type="str"
+           value="$(arg fixed_lag_epochs)"/>
+    <param name="seed" type="str" value="$(arg seed)"/>
+    <param name="fde_profile" type="str" value="$(arg fde_profile)"/>
+    <param name="enable_run_logging" type="bool"
+           value="$(arg enable_run_logging)"/>
+    <param name="write_global_diagnostics" type="str"
+           value="$(arg write_global_diagnostics)"/>
+    <param name="write_residuals" type="str"
+           value="$(arg write_residuals)"/>
+    <param name="write_timing" type="str" value="$(arg write_timing)"/>
+    <param name="output_root" value="$(arg output_root)"/>
     <param name="run_directory" value="$(arg run_directory)"/>
-    <param name="execution_command" value="week4_topic_test $(arg scenario)"/>
+    <param name="execution_command" value="$(arg execution_command)"/>
     <remap from="/imu/data" to="/sim/imu"/>
   </node>
   <node pkg="uwb_imu_pl" type="week4_topic_publisher.py"

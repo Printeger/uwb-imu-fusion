@@ -39,9 +39,11 @@ struct PublicationIdentity {
   std::uint64_t state_solution_id = 0;
   std::uint64_t history_summary_id = 0;
   std::uint64_t manifest_digest = 0;
+  std::uint64_t scope_digest = 0;
   std::uint64_t health_state = 0;
   std::vector<std::uint64_t> detector_ids;
   std::uint64_t risk_proof_id = 0;
+  std::uint64_t pl_detector_certificate_id = 0;
   Eigen::Vector3d protection_level_m = Eigen::Vector3d::Zero();
   std::string position_reference;
   std::int64_t timestamp_ns = 0;

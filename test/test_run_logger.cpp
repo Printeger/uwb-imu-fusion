@@ -55,6 +55,75 @@ TEST(RunLogger, OptionalCsvCreationFollowsConfiguration) {
   boost::filesystem::remove_all(enabled);
 }
 
+TEST(RunLoggingSession, DisabledCreatesNoDirectoryAndWritesNothing) {
+  const std::string directory = "/tmp/uwb_imu_pl_logging_session_disabled";
+  boost::filesystem::remove_all(directory);
+  uwb_imu_pl::RunLoggingSession session;
+  EXPECT_FALSE(session.enabled());
+  session.writeResolvedConfig("schema_version: test\n");
+  session.writeManifest(uwb_imu_pl::RunManifest{});
+  uwb_imu_pl::NavigationState state;
+  state.timestamp = uwb_imu_pl::TimestampNs(0);
+  session.writeState(state);
+  uwb_imu_pl::IntegrityOutput output;
+  output.timestamp = uwb_imu_pl::TimestampNs(0);
+  output.attempted_timestamp = uwb_imu_pl::TimestampNs(0);
+  output.state.timestamp = uwb_imu_pl::TimestampNs(0);
+  session.writeIntegrity(output);
+  session.writeEvent(uwb_imu_pl::TimestampNs(1), "NOOP", "disabled");
+  session.writeSummary(uwb_imu_pl::RunSummary{});
+  session.flush();
+  EXPECT_FALSE(boost::filesystem::exists(directory));
+}
+
+TEST(RunLoggingSession, EnabledWritesIdentityAndRefusesExistingDirectory) {
+  const std::string directory = "/tmp/uwb_imu_pl_logging_session_enabled";
+  boost::filesystem::remove_all(directory);
+  {
+    uwb_imu_pl::RunLoggingSession session;
+    session.enable(directory, false, true);
+    ASSERT_TRUE(session.enabled());
+    EXPECT_EQ(session.directory(), directory);
+    session.writeResolvedConfig("schema_version: test\n");
+    uwb_imu_pl::RunManifest manifest;
+    manifest.execution_command =
+        "roslaunch uwb_imu_pl realtime.launch enable_run_logging:=true";
+    session.writeManifest(manifest);
+  }
+  EXPECT_TRUE(boost::filesystem::exists(directory + "/resolved_config.yaml"));
+  EXPECT_TRUE(boost::filesystem::exists(directory + "/run_manifest.json"));
+  EXPECT_TRUE(boost::filesystem::exists(directory + "/timing.csv"));
+  EXPECT_FALSE(boost::filesystem::exists(directory + "/residuals.csv"));
+  uwb_imu_pl::RunLoggingSession duplicate;
+  EXPECT_THROW(duplicate.enable(directory, false, false), std::runtime_error);
+  boost::filesystem::remove_all(directory);
+}
+
+TEST(RunLoggingSession, BindsResolvedExecutionIdentityWithoutPlaceholders) {
+  const std::string command = uwb_imu_pl::bindExecutionCommandArguments(
+      "roslaunch uwb_imu_pl realtime_integrity_sim.launch "
+      "fde_profile:= fixed_lag_epochs:= run_directory:=",
+      {{"config_path", "/tmp/fde_joint_order1.yaml"},
+       {"fde_profile", "joint_order1"},
+       {"fixed_lag_epochs", "30"},
+       {"enable_run_logging", "true"},
+       {"run_directory", "/tmp/run-123"},
+       {"seed", "20260901"},
+       {"write_timing", "true"}});
+  for (const auto& expected : {
+           "config_path:=/tmp/fde_joint_order1.yaml",
+           "fde_profile:=joint_order1", "fixed_lag_epochs:=30",
+           "enable_run_logging:=true", "run_directory:=/tmp/run-123",
+           "seed:=20260901", "write_timing:=true"}) {
+    EXPECT_NE(command.find(expected), std::string::npos) << expected;
+  }
+  EXPECT_EQ(command.find("$("), std::string::npos);
+  EXPECT_THROW(
+      uwb_imu_pl::bindExecutionCommandArguments(
+          "roslaunch package file config_path:=$(arg config_path)", {}),
+      std::runtime_error);
+}
+
 TEST(RunLogger, V5SchemaHasExactHeadersAndStructuredSummary) {
   const std::string directory = "/tmp/uwb_imu_pl_logger_v5";
   boost::filesystem::remove_all(directory);
@@ -74,7 +143,11 @@ TEST(RunLogger, V5SchemaHasExactHeadersAndStructuredSummary) {
     logger.writeSummary(summary);
   }
   EXPECT_EQ(firstLine(directory + "/integrity.csv"),
-            "timestamp_ns,group_size,measurement_model_valid,global_statistic,"
+            "timestamp_ns,attempted_timestamp_ns,state_timestamp_ns,"
+            "fde_profile,scope_digest,detector_contract_id,pl_status,"
+            "within_alert_limits,state_valid,fresh,deadline_missed,reason_codes,"
+            "publication_protected,publication_certificate_id,"
+            "group_size,measurement_model_valid,global_statistic,"
             "global_threshold,global_dof,global_passed,postfit_statistic,"
             "postfit_threshold,postfit_dof,postfit_passed,conditional_statistic,"
             "conditional_threshold,conditional_dof,conditional_passed,"

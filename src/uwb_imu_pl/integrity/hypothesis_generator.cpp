@@ -653,17 +653,33 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
     const LinearizedIntegrityWindow& window, const EpochTransaction& tx,
     const ImuFaultSubspaces& current_imu,
     const LinearizedFactorBlock&) const {
-  if (!window.model_valid || !current_imu.analytic_input_valid ||
-      !current_imu.analytic_computation_valid ||
-      config_.max_model_cardinality != 2 ||
-      config_.max_exclusion_cardinality == 0 ||
-      config_.max_exclusion_cardinality > config_.max_model_cardinality ||
-      config_.max_candidate_count == 0 ||
-      (!config_.single_faults_enabled && !config_.double_faults_enabled) ||
-      (config_.double_faults_enabled &&
-       !config_.include_uwb_accel_combinations &&
-       !config_.include_uwb_gyro_combinations)) {
-    throw std::invalid_argument("fault model generation precondition failed");
+  std::string invalid_reason;
+  if (!window.model_valid) invalid_reason = "integrity window is invalid";
+  else if (config_.include_imu_faults &&
+           (!current_imu.analytic_input_valid ||
+            !current_imu.analytic_computation_valid)) {
+    invalid_reason = "active IMU provider has no valid analytic subspace";
+  } else if (config_.max_model_cardinality != 2) {
+    invalid_reason = "max_model_cardinality must equal 2";
+  } else if (config_.max_exclusion_cardinality == 0 ||
+             config_.max_exclusion_cardinality >
+                 config_.max_model_cardinality) {
+    invalid_reason = "max_exclusion_cardinality is outside [1,2]";
+  } else if (config_.max_candidate_count == 0) {
+    invalid_reason = "max_candidate_count must be positive";
+  } else if (!config_.single_faults_enabled &&
+             !config_.double_faults_enabled) {
+    invalid_reason = "no fault order is enabled";
+  } else if (!config_.include_uwb_faults && !config_.include_imu_faults) {
+    invalid_reason = "no fault provider is active";
+  } else if (config_.double_faults_enabled &&
+             !config_.include_uwb_accel_combinations &&
+             !config_.include_uwb_gyro_combinations) {
+    invalid_reason = "second order has no supported UWB-IMU pair family";
+  }
+  if (!invalid_reason.empty()) {
+    throw std::invalid_argument(
+        "fault model generation precondition failed: " + invalid_reason);
   }
   GeneratedFaultModelSet out;
   const auto all = occurrences(tx);
@@ -700,7 +716,7 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
     out.modes.push_back(std::move(mode));
   };
 
-  for (const auto& anchor_item : anchor_occurrences) {
+  if (config_.include_uwb_faults) for (const auto& anchor_item : anchor_occurrences) {
     std::vector<const Occurrence*> unique = anchor_item.second;
     std::sort(unique.begin(), unique.end(), [](const Occurrence* a,
                                                const Occurrence* b) {
@@ -793,7 +809,7 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
     }
   }
 
-  for (const auto& occurrence : all) {
+  if (config_.include_imu_faults) for (const auto& occurrence : all) {
     if (!occurrence.imu ||
         !explicitlyMonitored(window, occurrence.imu->id)) continue;
     const auto* block = blockFor(window, occurrence.imu->id);

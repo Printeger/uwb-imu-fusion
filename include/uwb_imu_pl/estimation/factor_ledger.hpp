@@ -59,6 +59,10 @@ class FactorLedger {
                            const LinearizationVersion& version);
   void markSlotsAbsent(const gtsam::NonlinearFactorGraph& active_graph,
                        std::size_t oldest_retained_epoch);
+  // Drop finalized provenance that predates the fixed-lag backend. Active
+  // entries are never removed, and callers retain recoverable epoch catalogs
+  // separately in EpochTransaction history.
+  std::size_t pruneInactiveBefore(std::size_t oldest_retained_epoch);
   std::vector<FactorLedgerEntry> entries() const;
   std::vector<FactorLedgerEntry> activeEntries(std::size_t epoch_begin,
                                                 std::size_t epoch_end) const;

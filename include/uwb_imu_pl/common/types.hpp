@@ -75,6 +75,7 @@ enum class IntegrityLabel {
   HeuristicDebug
 };
 enum class Availability { Available, Alert, Unavailable };
+enum class ProtectionLevelStatus { NotComputed, Finite, Unbounded, Invalid };
 
 struct UwbMeasurement {
   MeasurementId id;
@@ -199,6 +200,7 @@ struct ProtectionLevelResult {
   IntegrityLabel label = IntegrityLabel::ImplementedUnverified;
   LinearizationConsistency consistency = LinearizationConsistency::Strict;
   std::string reason;
+  std::string detector_certificate_id;
 };
 
 struct ResidualRecord {
@@ -256,6 +258,7 @@ struct HistorySummaryDiagnostics {
   std::string state;
   std::string reason;
   std::uint64_t version_digest = 0;
+  std::string scope_digest;
   std::size_t fault_columns = 0;
   std::size_t boundary_rows = 0;
   std::size_t emitted_rows = 0;
@@ -621,9 +624,11 @@ struct PublicationDiagnostics {
   std::uint64_t state_solution_id = 0;
   std::uint64_t history_summary_id = 0;
   std::uint64_t manifest_digest = 0;
+  std::uint64_t scope_digest = 0;
   std::uint64_t health_state = 0;
   std::string detector_ids;
   std::uint64_t risk_proof_id = 0;
+  std::uint64_t pl_detector_certificate_id = 0;
   std::uint64_t certificate_id = 0;
 };
 
@@ -634,7 +639,17 @@ struct IntegrityOutput {
   // watchdog channel).  Populated by the publication state holder.
   PublicationDiagnostics publication;
   TimestampNs timestamp;
+  TimestampNs attempted_timestamp;
   NavigationState state;
+  std::string fde_profile = "joint_order1";
+  std::string scope_digest;
+  std::string detector_contract_id;
+  ProtectionLevelStatus pl_status = ProtectionLevelStatus::Unbounded;
+  bool within_alert_limits = false;
+  bool state_valid = false;
+  bool fresh = false;
+  bool deadline_missed = false;
+  std::vector<std::string> reason_codes;
   DetectorResult detector;
   std::vector<SensitivityResult> sensitivities;
   ProtectionLevelResult protection_level;
@@ -719,6 +734,11 @@ struct RunManifest {
   std::string protected_state = "body_origin_position_world";
   std::string protected_quantity = "position_xyz";
   std::string position_reference = "body_origin";
+  std::string fde_profile = "joint_order1";
+  std::string scope_digest;
+  std::string detector_contract_id = "dual_channel_v1";
+  std::vector<std::string> active_fault_families;
+  std::vector<std::string> omitted_fault_families;
   std::string detector = "joint_window_residual_chi_square";
   std::string pl_method = "residual_failure_mode_slope";
   std::uint32_t window_epochs = 20;
@@ -805,5 +825,6 @@ struct RunSummary {
 
 const char* toString(Availability value);
 const char* toString(IntegrityLabel value);
+const char* toString(ProtectionLevelStatus value);
 
 }  // namespace uwb_imu_pl

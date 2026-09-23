@@ -31,6 +31,7 @@ add_message_files(
   PositionCommand.msg
   SO3Command.msg
   IntegrityStatus.msg
+  NavigationIntegrity.msg
   FaultTruth.msg
 )
 
@@ -110,6 +111,7 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/config/fault_manifest.cpp
   src/uwb_imu_pl/io/run_logger.cpp
   src/uwb_imu_pl/integrity/estimation_snapshot.cpp
+  src/uwb_imu_pl/integrity/fault_scope.cpp
   src/uwb_imu_pl/estimation/snapshot_estimator.cpp
   src/uwb_imu_pl/integrity/integrity_monitor.cpp
   src/uwb_imu_pl/integrity/dense_oracle.cpp
@@ -254,6 +256,9 @@ catkin_install_python(PROGRAMS
   tools/run_round2_performance.py
   tools/run_integrity_round3.py
   tools/summarize_gate_d_p3_p6.py
+  tools/generate_fde_profile_configs.py
+  tools/run_fde_profile_validation.py
+  tools/analyze_fde_profile_runs.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -372,4 +377,7 @@ if(CATKIN_ENABLE_TESTING)
     COMMAND ${CMAKE_COMMAND} -E env
       PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools
       python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_round3_tools.py)
+
+  add_test(NAME test_launch_contracts
+    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_launch_contracts.py)
 endif()

@@ -302,6 +302,27 @@ int main(int argc, char** argv) {
       if (index != 0) command << ' ';
       command << argv[index];
     }
+    const std::string execution_command =
+        uwb_imu_pl::bindExecutionCommandArguments(
+            command.str(),
+            {{"config_path", options.config_path},
+             {"run_directory", options.output_directory},
+             {"fde_profile",
+              uwb_imu_pl::toString(config.resolved_scope.profile)},
+             {"fixed_lag_epochs",
+              std::to_string(config.incremental.fixed_lag_epochs)},
+             {"seed", std::to_string(config.seed)},
+             {"trajectory", "statistical_monte_carlo"},
+             {"fault_mode", "noncentral_anchor_bias"},
+             {"fault_anchor_id", "sweep"},
+             {"fault_magnitude_m", "noncentral_boundary"},
+             {"packet_loss_prob", "0"},
+             {"nlos_probability", "0"},
+             {"enable_run_logging", "true"},
+             {"write_residuals", "false"},
+             {"write_timing", "false"},
+             {"write_global_diagnostics", "false"},
+             {"output_root", config.output.root}});
     std::ofstream manifest(options.output_directory +
                            "/monte_carlo_manifest.json");
     manifest << "{\n"
@@ -321,7 +342,7 @@ int main(int argc, char** argv) {
              << "  \"ram_bytes\": " << run_manifest.ram_bytes << ",\n"
              << "  \"gtsam_version\": " << json(run_manifest.gtsam_version) << ",\n"
              << "  \"eigen_version\": " << json(run_manifest.eigen_version) << ",\n"
-             << "  \"execution_command\": " << json(command.str()) << ",\n"
+             << "  \"execution_command\": " << json(execution_command) << ",\n"
              << "  \"command\": " << json(command.str()) << ",\n"
              << "  \"h0_trials_per_job\": " << options.h0_trials << ",\n"
              << "  \"noncentral_trials_per_job\": "

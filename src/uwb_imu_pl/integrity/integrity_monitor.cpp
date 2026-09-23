@@ -1106,9 +1106,11 @@ struct IdentityMaterial {
   std::uint64_t state_solution_id = 0;
   std::uint64_t history_summary_id = 0;
   std::string manifest_digest_text;
+  std::string scope_digest_text;
   std::string health_state_text;
   std::vector<std::string> detector_ids;
   std::uint64_t risk_proof_id = 0;
+  std::string pl_detector_certificate_id;
   Eigen::Vector3d protection_level_m = Eigen::Vector3d::Zero();
   std::string position_reference;
   std::int64_t timestamp_ns = 0;
@@ -1123,6 +1125,8 @@ PublicationIdentity publicationIdentityFrom(const IdentityMaterial& material) {
   identity.history_summary_id = material.history_summary_id;
   identity.manifest_digest = material.manifest_digest_text.empty()
       ? 0 : identityHash64(material.manifest_digest_text);
+  identity.scope_digest = material.scope_digest_text.empty()
+      ? 0 : identityHash64(material.scope_digest_text);
   identity.health_state = material.health_state_text.empty()
       ? 0 : identityHash64(material.health_state_text);
   for (const auto& detector : material.detector_ids) {
@@ -1131,6 +1135,9 @@ PublicationIdentity publicationIdentityFrom(const IdentityMaterial& material) {
     }
   }
   identity.risk_proof_id = material.risk_proof_id;
+  identity.pl_detector_certificate_id =
+      material.pl_detector_certificate_id.empty()
+          ? 0 : identityHash64(material.pl_detector_certificate_id);
   identity.protection_level_m = material.protection_level_m;
   identity.position_reference = material.position_reference;
   identity.timestamp_ns = material.timestamp_ns;
@@ -1142,9 +1149,11 @@ std::uint64_t publicationCertificateDigest(const PublicationIdentity& identity) 
   std::ostringstream text;
   text << identity.snapshot_id << '\x1f' << identity.state_solution_id << '\x1f'
        << identity.history_summary_id << '\x1f' << identity.manifest_digest
+       << '\x1f' << identity.scope_digest
        << '\x1f' << identity.health_state << '\x1f';
   for (const auto detector : identity.detector_ids) text << detector << ',';
-  text << '\x1f' << identity.risk_proof_id << '\x1f' << identity.timestamp_ns
+  text << '\x1f' << identity.risk_proof_id << '\x1f'
+       << identity.pl_detector_certificate_id << '\x1f' << identity.timestamp_ns
        << '\x1f' << identity.frame_id << '\x1f' << identity.position_reference;
   return identityHash64(text.str());
 }
@@ -1178,9 +1187,12 @@ void copyPublicationIdentityValues(const PublicationIdentity& candidate,
   target->state_solution_id = candidate.state_solution_id;
   target->history_summary_id = candidate.history_summary_id;
   target->manifest_digest = candidate.manifest_digest;
+  target->scope_digest = candidate.scope_digest;
   target->health_state = candidate.health_state;
   target->detector_ids = detector_labels;
   target->risk_proof_id = candidate.risk_proof_id;
+  target->pl_detector_certificate_id =
+      candidate.pl_detector_certificate_id;
   target->certificate_id = certificate_id;
 }
 
@@ -1305,18 +1317,24 @@ RealtimeIntegrityPipeline::RealtimeIntegrityPipeline(
       publication_(publication_limits),
       candidate_workers_(new CandidateWorkerPool(4)) {
   if (estimator_ == nullptr) throw std::invalid_argument("estimator must not be null");
-  for (const auto& anchor : estimator_->config().anchors) {
-    health_.registerSource("anchor:" + std::to_string(anchor.id.value()),
-                           SensorType::Uwb);
+  if (estimator_->config().resolved_scope.requiresUwbFaults()) {
+    for (const auto& anchor : estimator_->config().anchors) {
+      health_.registerSource("anchor:" + std::to_string(anchor.id.value()),
+                             SensorType::Uwb);
+    }
   }
   static const char* axes[] = {"x", "y", "z"};
-  for (int axis = 0; axis < 3; ++axis) {
-    health_.registerSource(std::string("accel:") + axes[axis],
-                           SensorType::ImuAccelerometer);
-    health_.registerSource(std::string("gyro:") + axes[axis],
-                           SensorType::ImuGyroscope);
+  if (estimator_->config().resolved_scope.requiresImuFaults()) {
+    for (int axis = 0; axis < 3; ++axis) {
+      health_.registerSource(std::string("accel:") + axes[axis],
+                             SensorType::ImuAccelerometer);
+      health_.registerSource(std::string("gyro:") + axes[axis],
+                             SensorType::ImuGyroscope);
+    }
   }
-  health_.registerSource("generic_bridge", SensorType::Bridge);
+  if (estimator_->config().resolved_scope.enabled()) {
+    health_.registerSource("generic_bridge", SensorType::Bridge);
+  }
 }
 
 RealtimeIntegrityPipeline::~RealtimeIntegrityPipeline() = default;
@@ -1397,6 +1415,7 @@ void RealtimeIntegrityPipeline::applyPublicationGate(IntegrityOutput* output,
     material.history_summary_id = summary.version_digest;
   }
   if (cfg.fault_manifest) material.manifest_digest_text = cfg.fault_manifest->digest;
+  material.scope_digest_text = cfg.resolved_scope.scope_digest;
   material.health_state_text = serializeHealthSnapshot(health_.snapshot());
   if (!output->detector.detector_type.empty()) {
     material.detector_ids.push_back(output->detector.detector_type);
@@ -1408,6 +1427,8 @@ void RealtimeIntegrityPipeline::applyPublicationGate(IntegrityOutput* output,
     material.detector_ids.push_back(output->global_detector.detector_type);
   }
   material.risk_proof_id = output->diagnostics.selection_risk_proof_id;
+  material.pl_detector_certificate_id =
+      output->protection_level.detector_certificate_id;
   material.protection_level_m = output->protection_level.pl_xyz_m;
   material.position_reference = output->snapshot_identity.position_reference;
   material.frame_id = cfg.realtime.world_frame;
@@ -1422,6 +1443,35 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(
   ++input_attempt_count_;
   last_attempt_output_ = IntegrityOutput();
   auto finish = [&](IntegrityOutput& output) {
+    const IntegrityConfig& config = estimator_->config();
+    output.attempted_timestamp = batch.timestamp;
+    output.fde_profile = toString(config.resolved_scope.profile);
+    output.scope_digest = config.resolved_scope.scope_digest;
+    output.detector_contract_id = config.resolved_scope.detector_contract_id;
+    output.state_valid = output.state.q_world_body.coeffs().allFinite() &&
+        output.state.position_world_m.allFinite() &&
+        output.state.velocity_world_mps.allFinite() &&
+        output.state.accel_bias_mps2.allFinite() &&
+        output.state.gyro_bias_radps.allFinite();
+    output.fresh = output.state.timestamp == batch.timestamp &&
+        output.batch_committed;
+    output.deadline_missed = output.publication.wall_timeout;
+    if (config.resolved_scope.profile != FdeProfile::Off) {
+      if (output.protection_level.pl_xyz_m.allFinite() &&
+          std::isfinite(output.protection_level.hpl_m) &&
+          std::isfinite(output.protection_level.vpl_m)) {
+        output.pl_status = ProtectionLevelStatus::Finite;
+        output.within_alert_limits =
+            output.protection_level.hpl_m <=
+                config.risk.horizontal_alert_limit_m &&
+            output.protection_level.vpl_m <=
+                config.risk.vertical_alert_limit_m;
+      } else if (output.measurement_model_valid) {
+        output.pl_status = ProtectionLevelStatus::Unbounded;
+      } else {
+        output.pl_status = ProtectionLevelStatus::Invalid;
+      }
+    }
     auto& d = output.diagnostics;
     d.input_attempt_id = input_attempt_count_;
     d.input_timestamp = batch.timestamp;
@@ -1449,8 +1499,14 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(
     for (const auto& stage : stages) {
       if (std::none_of(output.stage_timings.begin(), output.stage_timings.end(),
           [&](const StageTiming& t) { return t.stage == stage; })) {
-        output.stage_timings.push_back({stage, 0.0, true, "SKIPPED", d.reason.empty()
-            ? "upstream gate did not reach stage" : d.reason});
+        const bool skipped_profile =
+            config.resolved_scope.profile == FdeProfile::Off;
+        output.stage_timings.push_back({
+            stage, 0.0, true,
+            skipped_profile ? "SKIPPED_PROFILE" : "SKIPPED",
+            skipped_profile ? "FDE_DISABLED" :
+                (d.reason.empty() ? "upstream gate did not reach stage"
+                                  : d.reason)});
       }
     }
     output.stage_timings.push_back({"core_total", std::chrono::duration<double, std::milli>(
@@ -1488,7 +1544,29 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(
   }
   try {
     auto output = processUwbBatchImpl(batch);
+    const double finish_elapsed_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - start).count();
+    const bool finish_deadline_missed =
+        finish_elapsed_ms > estimator_->config().publication.deadline_ms;
+    if (finish_deadline_missed) {
+      output.protection_level.formal_eligible = false;
+      const std::string prior_reason = output.protection_level.reason;
+      output.protection_level.reason =
+          "FINISH_DEADLINE_MISSED after " +
+          std::to_string(finish_elapsed_ms) + " ms" +
+          (prior_reason.empty() ? std::string() : "; upstream=" + prior_reason);
+      output.reason_codes.push_back("FINISH_DEADLINE_MISSED");
+    }
     applyPublicationGate(&output, batch);
+    if (finish_deadline_missed) {
+      // A commit that already happened remains a real commit.  The end gate
+      // only downgrades publication; it never fabricates a rollback.
+      output.publication.protected_output = false;
+      output.publication.unprotected_output = true;
+      output.publication.wall_timeout = true;
+      output.publication.refusal = "FINISH_DEADLINE_MISSED";
+    }
     finish(output);
     return output;
   } catch (const std::exception& error) {
@@ -1522,10 +1600,66 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
     return output;
   }
   const IntegrityConfig& cfg = estimator_->config();
+  if (cfg.resolved_scope.profile == FdeProfile::Off) {
+    IntegrityOutput output;
+    output.attempted_timestamp = batch.timestamp;
+    output.fde_profile = toString(cfg.resolved_scope.profile);
+    output.scope_digest = cfg.resolved_scope.scope_digest;
+    output.detector_contract_id = cfg.resolved_scope.detector_contract_id;
+    const auto prepare_start = std::chrono::steady_clock::now();
+    EpochTransaction transaction = estimator_->prepareEpoch(
+        batch, EpochPreparationOptions::nominalOnly());
+    output.transaction_id = transaction.id.value();
+    output.base_graph_version = transaction.base_graph_version;
+    output.linearization_version = transaction.base_version.linpoint_version;
+    output.measurement_group_size = batch.measurements.size();
+    output.stage_timings.push_back({
+        "prepare",
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - prepare_start).count(),
+        true, "EXECUTED", "nominal-only preparation"});
+    EpochCommitPlan plan = EpochCommitPlan::nominalPlan(transaction);
+    plan.best_effort_integrity_unavailable = true;
+    const auto commit_start = std::chrono::steady_clock::now();
+    const CommitReceipt receipt =
+        estimator_->commitEpoch(std::move(transaction), plan);
+    output.stage_timings.push_back({
+        "commit",
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - commit_start).count(),
+        receipt.backend_updates == 1, "EXECUTED", "nominal commit"});
+    output.timestamp = receipt.state_timestamp;
+    output.state = estimator_->currentState();
+    output.batch_committed = receipt.backend_updates == 1;
+    output.backend_updates = receipt.backend_updates;
+    output.selected_action_type = "KEEP_ALL";
+    output.fde_status = "FDE_DISABLED";
+    output.detector.detector_type = "NOT_RUN";
+    output.detector.reason = "FDE_DISABLED";
+    output.protection_level.timestamp = receipt.state_timestamp;
+    output.protection_level.formal_eligible = false;
+    output.protection_level.availability = Availability::Unavailable;
+    output.protection_level.reason = "FDE_DISABLED";
+    output.pl_status = ProtectionLevelStatus::NotComputed;
+    output.within_alert_limits = false;
+    output.measurement_model_valid = true;
+    output.reason_codes.push_back("FDE_DISABLED");
+    output.diagnostics.status = output.batch_committed ? "COMMITTED" : "ERROR";
+    output.diagnostics.reason = "FDE_DISABLED";
+    return output;
+  }
   const NumericalWorkSnapshot numerical_before =
       NumericalWorkCounters::snapshot();
   const auto prepare_start = std::chrono::steady_clock::now();
-  EpochTransaction transaction = estimator_->prepareEpoch(batch);
+  EpochPreparationOptions preparation_options;
+  preparation_options.build_integrity_material = true;
+  preparation_options.build_uwb_recovery_material =
+      cfg.resolved_scope.requiresUwbFaults();
+  preparation_options.build_imu_recovery_material =
+      cfg.resolved_scope.requiresImuFaults();
+  preparation_options.build_recoverable_history = true;
+  EpochTransaction transaction =
+      estimator_->prepareEpoch(batch, preparation_options);
   IntegrityOutput output;
   std::string executing_stage = "prepare";
   auto operation_start = prepare_start;
@@ -1746,6 +1880,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
       target.state = source.state;
       target.reason = source.reason;
       target.version_digest = source.version_digest;
+      target.scope_digest = source.scope_digest;
       target.fault_columns = source.fault_columns;
       target.boundary_rows = source.boundary_rows;
       target.emitted_rows = source.emitted_rows;
@@ -1784,8 +1919,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
     const DetectorResultV2 all_in =
         JointWindowDetector().evaluate(window, detector_risk);
     record_stage("all_in_detector", all_in.numerically_valid);
-    output.detector.detector_type =
-        "joint_window_whitened_parity_squared_norm";
+    output.detector.detector_type = "dual_channel_v1";
     output.detector.statistic = all_in.squared_parity_statistic;
     output.detector.threshold = all_in.squared_threshold;
     output.detector.dof = all_in.dof;
@@ -1902,16 +2036,21 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           history_invalid);
     } else {
       start_operation("current_sensitivity");
-      const auto imu_block = estimator_->buildPendingFactorBlock(
-          transaction, transaction.imu_group.id);
-      const auto bridge_block = estimator_->buildPendingFactorBlock(
-          transaction, transaction.generic_bridge_group.id);
+      ImuFaultSubspaces imu_subspaces;
+      LinearizedFactorBlock bridge_block;
       const bool run_imu_fd_oracle =
+          cfg.resolved_scope.requiresImuFaults() &&
           std::getenv("UWB_IMU_PL_IMU_FD_ORACLE") != nullptr;
-      const ImuFaultSubspaces imu_subspaces = run_imu_fd_oracle
-          ? ImuFaultSubspaceBuilder().verifyFiniteDifferenceOracle(
-                transaction, imu_block)
-          : ImuFaultSubspaceBuilder().buildAnalytic(transaction, imu_block);
+      if (cfg.resolved_scope.requiresImuFaults()) {
+        const auto imu_block = estimator_->buildPendingFactorBlock(
+            transaction, transaction.imu_group.id);
+        bridge_block = estimator_->buildPendingFactorBlock(
+            transaction, transaction.generic_bridge_group.id);
+        imu_subspaces = run_imu_fd_oracle
+            ? ImuFaultSubspaceBuilder().verifyFiniteDifferenceOracle(
+                  transaction, imu_block)
+            : ImuFaultSubspaceBuilder().buildAnalytic(transaction, imu_block);
+      }
       output.diagnostics.analytic_input_valid =
           imu_subspaces.analytic_input_valid;
       output.diagnostics.analytic_computation_valid =
@@ -1922,6 +2061,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
       output.diagnostics.oracle_verified = imu_subspaces.oracle_verified;
       if (run_imu_fd_oracle) {
         // A4: multi-step sweep (both signs per step, several step sizes).
+        const auto imu_block = estimator_->buildPendingFactorBlock(
+            transaction, transaction.imu_group.id);
         const ImuFaultSubspaces sweep = ImuFaultSubspaceBuilder()
             .verifyFiniteDifferenceSweep(transaction, imu_block);
         auto joinNumbers = [](const std::vector<double>& values) {
@@ -1945,8 +2086,9 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             joinNumbers(sweep.sweep_relative_errors);
       }
       record_stage("current_sensitivity");
-      if (!imu_subspaces.analytic_input_valid ||
-          !imu_subspaces.analytic_computation_valid) {
+      if (cfg.resolved_scope.requiresImuFaults() &&
+          (!imu_subspaces.analytic_input_valid ||
+           !imu_subspaces.analytic_computation_valid)) {
         discard_fail_closed(
             FdeStatus::ModelInvalid,
             "analytic IMU sensitivity input/computation invalid",
@@ -1954,10 +2096,14 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
       } else {
         start_operation("model_generation");
         HypothesisGeneratorConfig generator_config;
+        generator_config.include_uwb_faults =
+            cfg.resolved_scope.requiresUwbFaults();
+        generator_config.include_imu_faults =
+            cfg.resolved_scope.requiresImuFaults();
         generator_config.single_faults_enabled =
-            cfg.fault_models.single_faults_enabled;
+            cfg.resolved_scope.max_fault_order >= 1;
         generator_config.double_faults_enabled =
-            cfg.fault_models.double_faults_enabled;
+            cfg.resolved_scope.max_fault_order >= 2;
         generator_config.max_model_cardinality =
             cfg.fault_models.max_cardinality;
         generator_config.max_exclusion_cardinality =
@@ -2019,6 +2165,14 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
                   ledger_inputs.omitted_event_set.push_back(omitted);
                 }
               }
+            }
+          }
+          for (const auto& omitted : cfg.resolved_scope.omitted_families) {
+            const std::string scoped = "inactive_profile_family:" + omitted;
+            if (std::find(ledger_inputs.omitted_event_set.begin(),
+                          ledger_inputs.omitted_event_set.end(), scoped) ==
+                ledger_inputs.omitted_event_set.end()) {
+              ledger_inputs.omitted_event_set.push_back(scoped);
             }
           }
           ledger_inputs.envelope_online = false;
@@ -2129,7 +2283,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         }
         evidence_config.hypothesis_workers = active_workers;
         evidence_config.fault_model_policy_fingerprint =
-            faultModelPolicyFingerprint(cfg.fault_models);
+            faultScopePolicyFingerprint(cfg.fault_models, cfg.resolved_scope);
         std::shared_ptr<const FrozenHypothesisNumerics>
             shared_hypothesis_numerics;
         NumericalWorkCounters::evidenceCallFaultPath();
@@ -2603,25 +2757,17 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               }
             }
             candidate.diagnostics.bridge_ms = part_ms();
-            const bool unchanged_action = action.groups_to_remove.empty() &&
-                action.groups_to_add.empty() && action.added_blocks.empty();
-            if (unchanged_action && shared_hypothesis_numerics) {
-              candidate.diagnostics.fault_map_ms = part_ms();
-              evaluated.protection_level = ProtectionLevelV2().computeFrozenAllIn(
-                  window, &candidate, evaluated.post, models.hypotheses,
-                  models.modes,
-                  *shared_hypothesis_numerics,
-                  faultModelPolicyFingerprint(cfg.fault_models),
-                  cfg.risk_v2);
-            } else {
-              auto projected_modes = projectPostActionModes(
-                  window, transaction, models, action, indexes);
-              shared_pl.mode_maps = std::move(projected_modes.mode_maps);
-              candidate.diagnostics.fault_map_ms = part_ms();
-              evaluated.protection_level = ProtectionLevelV2().computeShared(
-                  window, &candidate, evaluated.post,
-                  &projected_modes.hypotheses, shared_pl, cfg.risk_v2);
-            }
+            // Production PL always consumes candidate-specific dual-channel
+            // detector material.  The pooled/frozen path remains an explicit
+            // offline reference and is not allowed to certify a five-profile
+            // output.
+            auto projected_modes = projectPostActionModes(
+                window, transaction, models, action, indexes);
+            shared_pl.mode_maps = std::move(projected_modes.mode_maps);
+            candidate.diagnostics.fault_map_ms = part_ms();
+            evaluated.protection_level = ProtectionLevelV2().computeShared(
+                window, &candidate, evaluated.post,
+                &projected_modes.hypotheses, shared_pl, cfg.risk_v2);
             evaluated.has_protection_level = true;
             candidate.diagnostics.pl_evaluated = true;
             candidate.diagnostics.pl_ms = part_ms();
@@ -2644,6 +2790,14 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             candidate.diagnostics.skip_reason =
                 !candidate.diagnostics.numerical_valid
                     ? "numerical rejection" : "post detector failed";
+          }
+          // Every invalid candidate is an auditable fail-closed result.  Some
+          // low-rank kernels signal invalidity only through the boolean; do
+          // not let that become an empty reason in the v6 CSV contract.
+          if (!candidate.valid && candidate.reason.empty()) {
+            candidate.reason = candidate.diagnostics.skip_reason.empty()
+                ? "candidate numerical kernel invalid"
+                : candidate.diagnostics.skip_reason;
           }
           if (evaluated.has_protection_level) {
             candidate_pl[candidate.action.id.value()] =
@@ -2742,7 +2896,12 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           record.vpl_m = candidate.vpl_m;
           record.selected = candidate.selected;
           record.wall_ms = candidate.wall_ms;
-          if (cfg.output.write_candidates) record.reason = candidate.reason;
+          // Compact logging may omit descriptive fields, but an invalid
+          // candidate must always retain its fail-closed reason so the run is
+          // schema-valid and independently auditable.
+          if (cfg.output.write_candidates || !candidate.valid) {
+            record.reason = candidate.reason;
+          }
           output.candidate_audit.push_back(std::move(record));
           if (cfg.output.write_candidates) {
             CoverageAuditRecord coverage;
@@ -3018,6 +3177,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
                   pl->second.allocated_outcome_risk;
               output.protection_level.risk_budget_valid =
                   pl->second.risk_budget_valid;
+              output.protection_level.detector_certificate_id =
+                  pl->second.detector_certificate_id;
             }
           }
           output.protection_level.availability = Availability::Unavailable;

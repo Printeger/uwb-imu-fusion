@@ -49,7 +49,14 @@ DualChannelDecision evaluateDualChannel(
   const int history_dof = history.valid ? history.nu_perp : 0;
   const double history_statistic =
       history.valid ? history.kappa_b + history.constant_offset : 0.0;
-  const double pooled_statistic = window.numerics->statistic;
+  // The square-root row system cannot encode the scalar remainder produced
+  // when an information-form boundary factor is rebuilt.  C1 records that
+  // remainder as constant_offset.  It belongs to the pooled quadratic form
+  // and to the eliminated-history channel, so add it before subtracting the
+  // latter.  Omitting it here made the current statistic spuriously negative
+  // once fixed-lag marginalization produced a non-zero offset.
+  const double pooled_statistic = window.numerics->statistic +
+      (history.valid ? history.constant_offset : 0.0);
   const int pooled_dof = window.numerics->dof;
   const int current_dof = pooled_dof - history_dof;
   const double current_statistic = pooled_statistic - history_statistic;
@@ -75,12 +82,25 @@ DualChannelDecision evaluateDualChannel(
   };
   out.current = makeTest("joint_window_state_supported", current_dof,
                          std::max(0.0, current_statistic));
-  out.history = makeTest("history_eliminated_detector_only", history_dof,
-                         std::max(0.0, history_statistic));
+  if (history_dof > 0) {
+    out.history = makeTest("history_eliminated_detector_only", history_dof,
+                           std::max(0.0, history_statistic));
+    out.channel_count = 2;
+  } else {
+    // Explicit cold-start degeneration: no history test is claimed and the
+    // contract reduces to the current channel instead of fabricating dof.
+    out.history.detector_id = "history_channel_not_present";
+    out.history.dof = 0;
+    out.history.statistic = 0.0;
+    out.history.threshold = 0.0;
+    out.history.p_fa = 0.0;
+    out.history.numerically_valid = true;
+    out.history.accepted = true;
+    out.channel_count = 1;
+  }
   out.joint_accepted = out.current.accepted && out.history.accepted;
   out.numerically_valid = out.current.numerically_valid &&
                           out.history.numerically_valid;
-  out.channel_count = 2;
   // Union bound with the unchanged per-test budget: exactly what the platform
   // pays for testing both channels, reported instead of hidden.
   out.operation_p_fa_upper_bound =

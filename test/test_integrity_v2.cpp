@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <boost/filesystem.hpp>
 #include <boost/math/distributions/normal.hpp>
 #include <cmath>
 #include <cstdio>
@@ -31,6 +32,7 @@
 #include "uwb_imu_pl/integrity/protection_level_v2.hpp"
 #include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
 #include "uwb_imu_pl/integrity/statistical_bounds_cache.hpp"
+#include "uwb_imu_pl/io/run_logger.hpp"
 
 namespace {
 
@@ -108,6 +110,112 @@ void addImu(uwb_imu_pl::IncrementalUwbImuEstimator* estimator, double gravity) {
 }
 
 }  // namespace
+
+TEST(FdeProfiles, NominalPipelineAndFaultCensusFollowResolvedScope) {
+  struct Expectation {
+    const char* name;
+    bool uwb;
+    bool imu;
+    bool pairs;
+  };
+  const Expectation expectations[] = {
+      {"off", false, false, false},
+      {"uwb_order1", true, false, false},
+      {"imu_order1", false, true, false},
+      {"joint_order1", true, true, false},
+      {"joint_order2", true, true, true},
+  };
+  for (const auto& expected : expectations) {
+    SCOPED_TRACE(expected.name);
+    auto config = uwb_imu_pl::IntegrityConfigLoader::load(
+        std::string(UWB_IMU_PL_SOURCE_DIR) + "/config/fde_" +
+        expected.name + ".yaml");
+    uwb_imu_pl::NavigationState initial;
+    initial.timestamp = uwb_imu_pl::TimestampNs(0);
+    initial.position_world_m = {0, 0, 1};
+    uwb_imu_pl::IncrementalUwbImuEstimator estimator(
+        config, config.realtime.lever_arm_body_m);
+    estimator.initialize(initial, config.realtime.prior_sigmas);
+    uwb_imu_pl::RealtimeIntegrityPipeline pipeline(
+        &estimator,
+        uwb_imu_pl::IntegrityMonitor(config.risk,
+                                     config.snapshot.rank_tolerance,
+                                     config.snapshot.max_condition_number),
+        uwb_imu_pl::offlineReplayPublicationLimits());
+    for (int i = 0; i <= 2; ++i) {
+      uwb_imu_pl::ImuMeasurement measurement;
+      measurement.id = uwb_imu_pl::MeasurementId(100 + i);
+      measurement.timestamp = uwb_imu_pl::TimestampNs(i * 5000000);
+      measurement.specific_force_mps2 = {0, 0, config.imu.gravity_mps2};
+      pipeline.ingestImu(measurement);
+    }
+    const auto output = pipeline.processUwbBatch(batch(config, 10000000));
+    const std::string logging_directory =
+        std::string("/tmp/uwb_imu_pl_profile_logging_") + expected.name;
+    boost::filesystem::remove_all(logging_directory);
+    uwb_imu_pl::RunLoggingSession disabled_logging;
+    disabled_logging.writeIntegrity(output);
+    {
+      uwb_imu_pl::RunLoggingSession enabled_logging;
+      enabled_logging.enable(logging_directory, false, false);
+      enabled_logging.writeIntegrity(output);
+    }
+    // Logging is downstream of the immutable algorithm result. Enabling it
+    // must not alter profile identity, transaction, census or PL state.
+    EXPECT_EQ(output.fde_profile, expected.name);
+    EXPECT_EQ(output.scope_digest, config.resolved_scope.scope_digest);
+    EXPECT_EQ(output.backend_updates, 1u);
+    EXPECT_TRUE(output.batch_committed);
+    EXPECT_EQ(output.state.timestamp, uwb_imu_pl::TimestampNs(10000000));
+    EXPECT_TRUE(output.fresh);
+    EXPECT_EQ(output.transaction_id, 1u);
+    EXPECT_EQ(output.diagnostics.single_uwb_hypotheses > 0, expected.uwb);
+    EXPECT_EQ(output.diagnostics.single_accel_hypotheses > 0, expected.imu);
+    boost::filesystem::remove_all(logging_directory);
+    if (std::string(expected.name) == "off") {
+      EXPECT_EQ(output.fde_status, "FDE_DISABLED");
+      EXPECT_EQ(output.detector.detector_type, "NOT_RUN");
+      EXPECT_EQ(output.pl_status,
+                uwb_imu_pl::ProtectionLevelStatus::NotComputed);
+      EXPECT_FALSE(output.protection_level.pl_xyz_m.allFinite());
+      EXPECT_EQ(output.diagnostics.hypothesis_count, 0u);
+      EXPECT_EQ(output.diagnostics.generated_actions, 0u);
+      continue;
+    }
+    EXPECT_EQ(output.detector.detector_type, "dual_channel_v1");
+    EXPECT_EQ(output.diagnostics.single_uwb_hypotheses > 0, expected.uwb);
+    EXPECT_EQ(output.diagnostics.single_accel_hypotheses > 0, expected.imu);
+    EXPECT_EQ(output.diagnostics.single_gyro_hypotheses > 0, expected.imu);
+    EXPECT_EQ(output.diagnostics.double_uwb_accel_hypotheses > 0,
+              expected.pairs);
+    EXPECT_EQ(output.diagnostics.double_uwb_gyro_hypotheses > 0,
+              expected.pairs);
+    EXPECT_EQ(output.diagnostics.effective_fault_cardinality,
+              expected.pairs ? 2u : 1u);
+    if (std::string(expected.name) == "uwb_order1") {
+      // Regression: disabling the IMU fault provider must not remove the
+      // nominal IMU group from historical provenance on the next epoch.
+      for (int i = 3; i <= 4; ++i) {
+        uwb_imu_pl::ImuMeasurement measurement;
+        measurement.id = uwb_imu_pl::MeasurementId(100 + i);
+        measurement.timestamp = uwb_imu_pl::TimestampNs(i * 5000000);
+        measurement.specific_force_mps2 = {0, 0, config.imu.gravity_mps2};
+        pipeline.ingestImu(measurement);
+      }
+      auto next_batch = batch(config, 20000000);
+      next_batch.id = uwb_imu_pl::BatchId(2);
+      for (std::size_t i = 0; i < next_batch.measurements.size(); ++i) {
+        next_batch.measurements[i].id = uwb_imu_pl::MeasurementId(200 + i);
+        next_batch.measurements[i].factor_id = uwb_imu_pl::FactorId(200 + i);
+      }
+      const auto next = pipeline.processUwbBatch(next_batch);
+      EXPECT_TRUE(next.batch_committed);
+      EXPECT_EQ(std::find(next.reason_codes.begin(), next.reason_codes.end(),
+                          "provenance is incomplete"),
+                next.reason_codes.end());
+    }
+  }
+}
 
 TEST(IntegrityV2Transaction, PrepareAndDiscardNeverMutateBackend) {
   const auto config = researchConfig();

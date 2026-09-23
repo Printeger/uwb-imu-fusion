@@ -70,6 +70,12 @@ V5_HEADER_ALTERNATES = {"hypotheses.csv": (V5_HYPOTHESES_B1,
                                            V5_HYPOTHESES_V13,
                                            V5_HYPOTHESES_V16),
                         "candidates.csv": (V5_CANDIDATES_V16,)}
+V6_HEADERS = dict(V5_HEADERS)
+V6_HEADERS.update({
+    "integrity.csv": "timestamp_ns,attempted_timestamp_ns,state_timestamp_ns,fde_profile,scope_digest,detector_contract_id,pl_status,within_alert_limits,state_valid,fresh,deadline_missed,reason_codes,publication_protected,publication_certificate_id,group_size,measurement_model_valid,global_statistic,global_threshold,global_dof,global_passed,postfit_statistic,postfit_threshold,postfit_dof,postfit_passed,conditional_statistic,conditional_threshold,conditional_dof,conditional_passed,conditional_formal,pl_x,pl_y,pl_z,hpl_m,vpl_m,availability,label,formal_eligible,risk_budget_valid,allocated_hmi_risk,hmi_risk_requirement,batch_committed,transaction_id,window_id,base_graph_version,linearization_version,selected_action_id,selected_action_type,fde_status,bridge_pl_x,bridge_pl_y,bridge_pl_z,history_provenance_valid,backend_updates,stale_state,controlled_reinitialization_required,historical_groups_removed,historical_groups_added,recovery_epoch_begin,recovery_epoch_end,reinitialization_request_id,reinitialization_phase,reinitialization_reason,reason",
+    "hypotheses.csv": V5_HYPOTHESES_V16,
+    "candidates.csv": V5_CANDIDATES_V16,
+})
 
 
 def fail(message):
@@ -276,10 +282,12 @@ def validate_checksum_file(directory, relative):
             fail(f"{relative}:{line_number}: checksum mismatch")
 
 
-def validate_v5(directory, manifest):
+def validate_v5(directory, manifest, expected_headers=V5_HEADERS,
+                alternate_headers=V5_HEADER_ALTERNATES,
+                allow_zero_window=False):
     # Rejected attempts legitimately repeat the last committed state time.
-    validate_v2(directory, manifest, V5_HEADERS, strict_timestamps=False,
-                alternate_headers=V5_HEADER_ALTERNATES)
+    validate_v2(directory, manifest, expected_headers, strict_timestamps=False,
+                alternate_headers=alternate_headers)
     for name in ("transactions.csv", "hypotheses.csv", "candidates.csv",
                  "factor_ledger.csv", "health.csv", "bridge.csv"):
         if not (directory / name).is_file():
@@ -314,7 +322,8 @@ def validate_v5(directory, manifest):
         for line, row in enumerate(csv.DictReader(stream), 2):
             transaction = int(row["transaction_id"])
             window = int(row["window_id"])
-            if transaction <= 0 or window <= 0:
+            if (transaction <= 0 or window < 0 or
+                    (window == 0 and not allow_zero_window)):
                 fail(f"transactions.csv:{line}: zero transaction/window ID")
             if transaction in transactions:
                 fail(f"transactions.csv:{line}: duplicate transaction ID")
@@ -447,6 +456,35 @@ def validate_v5(directory, manifest):
         validate_checksum_file(directory, checksum_path)
 
 
+def validate_v6(directory, manifest):
+    profiles = {"off", "uwb_order1", "imu_order1", "joint_order1",
+                "joint_order2"}
+    profile = manifest.get("fde_profile")
+    if profile not in profiles:
+        fail("run_manifest.json: invalid fde_profile")
+    validate_v5(directory, manifest, V6_HEADERS, {}, profile == "off")
+    scope_digest = manifest.get("scope_digest")
+    if not isinstance(scope_digest, str) or not re.fullmatch(
+            r"[0-9a-f]{16}", scope_digest):
+        fail("run_manifest.json: scope_digest must be 16 lowercase hex digits")
+    if not isinstance(manifest.get("detector_contract_id"), str) or not manifest[
+            "detector_contract_id"].strip():
+        fail("run_manifest.json: detector_contract_id must be non-empty")
+    if profile == "off" and manifest.get("active_fault_families"):
+        fail("run_manifest.json: off profile cannot have active fault families")
+    with (directory / "integrity.csv").open(newline="", encoding="utf-8") as stream:
+        for line, row in enumerate(csv.DictReader(stream), 2):
+            if (row["fde_profile"] != profile or
+                    row["scope_digest"] != scope_digest or
+                    row["detector_contract_id"] != manifest["detector_contract_id"]):
+                fail(f"integrity.csv:{line}: profile/scope/contract identity mismatch")
+            for field in ("within_alert_limits", "state_valid", "fresh",
+                          "deadline_missed", "publication_protected"):
+                boolean(row[field], f"integrity.csv:{line}:{field}")
+            if profile == "off" and row["pl_status"] != "NOT_COMPUTED":
+                fail(f"integrity.csv:{line}: off profile PL was computed")
+
+
 def validate(directory):
     diagnostic_path = directory / "diagnostic_attempts.csv"
     if diagnostic_path.exists():
@@ -462,7 +500,7 @@ def validate(directory):
         manifest = json.load(stream)
     version = manifest.get("schema_version")
     if version not in ("uwb-imu-pl/v1", "uwb-imu-pl/v2", "uwb-imu-pl/v3",
-                       "uwb-imu-pl/v4", "uwb-imu-pl/v5"):
+                       "uwb-imu-pl/v4", "uwb-imu-pl/v5", "uwb-imu-pl/v6"):
         fail(f"unsupported schema_version: {version!r}")
     for field, kind in (("git_sha", str), ("config_hash", str),
                         ("seed", int), ("git_dirty", bool)):
@@ -472,7 +510,9 @@ def validate(directory):
         fail("run_manifest.json: empty git_sha")
     if not re.fullmatch(r"[0-9a-fA-F]{16}", manifest["config_hash"]):
         fail("run_manifest.json: config_hash is not 16 hexadecimal digits")
-    if version == "uwb-imu-pl/v5":
+    if version == "uwb-imu-pl/v6":
+        validate_v6(directory, manifest)
+    elif version == "uwb-imu-pl/v5":
         validate_v5(directory, manifest)
     elif version == "uwb-imu-pl/v4":
         validate_v4(directory, manifest)

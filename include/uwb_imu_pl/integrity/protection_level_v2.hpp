@@ -31,6 +31,7 @@ struct ProtectionLevelV2Result {
   double axis_tail_used = 0.0;
   double fault_multiplier_used = 0.0;
   double noncentrality_used = 0.0;
+  std::string detector_certificate_id;
   std::string reason;
 };
 

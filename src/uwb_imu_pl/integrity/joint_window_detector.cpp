@@ -165,6 +165,14 @@ DetectorResultV2 JointWindowDetector::evaluate(
     out.channel_history_threshold = split.history.threshold;
     out.channel_history_dof = split.history.dof;
     out.channel_history_accepted = split.history.accepted;
+    out.numerically_valid = out.numerically_valid && split.numerically_valid;
+    out.passed = out.numerically_valid && split.joint_accepted;
+    if (!split.numerically_valid) out.reason = split.reason;
+    else if (!split.joint_accepted) {
+      out.reason = "dual-channel current/history acceptance failed";
+    } else {
+      out.reason.clear();
+    }
   }
   if (window.condition_number > risk.max_condition_number) {
     out.numerically_valid = false;
@@ -179,6 +187,69 @@ DetectorResultV2 JointWindowDetector::evaluateCandidate(
     const DetectorRiskContext& risk) const {
   auto out = baseResult(candidate.rows, candidate.rank, candidate.dof,
                         candidate.statistic, risk);
+  const Eigen::MatrixXd& h = candidate.retainedJacobian();
+  if (candidate.valid && h.rows() == candidate.retained_residual.size() &&
+      h.rows() > 0) {
+    std::vector<Eigen::Index> current_rows;
+    std::vector<Eigen::Index> history_rows;
+    for (Eigen::Index row = 0; row < h.rows(); ++row) {
+      (h.row(row).norm() <= risk.rank_tolerance ? history_rows : current_rows)
+          .push_back(row);
+    }
+    auto channel = [&](const char* id,
+                       const std::vector<Eigen::Index>& rows) {
+      ChannelTest test;
+      test.detector_id = id;
+      test.p_fa = risk.p_fa_per_test;
+      if (rows.empty()) {
+        test.numerically_valid = true;
+        test.accepted = true;
+        return test;
+      }
+      Eigen::MatrixXd a(rows.size(), h.cols());
+      Eigen::VectorXd b(rows.size());
+      for (std::size_t i = 0; i < rows.size(); ++i) {
+        a.row(static_cast<Eigen::Index>(i)) = h.row(rows[i]);
+        b(static_cast<Eigen::Index>(i)) = candidate.retained_residual(rows[i]);
+      }
+      Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr(a);
+      qr.setThreshold(risk.rank_tolerance);
+      const int rank = qr.rank();
+      test.dof = static_cast<int>(rows.size()) - rank;
+      test.statistic = (b - a * qr.solve(b)).squaredNorm();
+      if (test.dof > 0) {
+        test.threshold = squaredThreshold(test.dof, risk.p_fa_per_test);
+        test.numerically_valid = std::isfinite(test.statistic) &&
+                                 std::isfinite(test.threshold);
+        test.accepted = test.numerically_valid &&
+                        test.statistic <= test.threshold;
+      } else if (std::string(id) == "history_eliminated_detector_only") {
+        test.numerically_valid = true;
+        test.accepted = true;
+      }
+      return test;
+    };
+    const ChannelTest current = channel("joint_window_state_supported",
+                                        current_rows);
+    const ChannelTest history = channel("history_eliminated_detector_only",
+                                        history_rows);
+    out.channel_current_statistic = current.statistic;
+    out.channel_current_threshold = current.threshold;
+    out.channel_current_dof = current.dof;
+    out.channel_current_accepted = current.accepted;
+    out.channel_history_statistic = history.statistic;
+    out.channel_history_threshold = history.threshold;
+    out.channel_history_dof = history.dof;
+    out.channel_history_accepted = history.accepted;
+    out.channel_split_valid = current.numerically_valid &&
+                              history.numerically_valid;
+    out.joint_accepted = current.accepted && history.accepted;
+    out.numerically_valid = out.numerically_valid && out.channel_split_valid;
+    out.passed = out.numerically_valid && out.joint_accepted;
+    if (!out.passed) out.reason = out.numerically_valid
+        ? "post-FDE dual-channel detector alarm"
+        : "post-FDE dual-channel detector invalid";
+  }
   if (!candidate.valid) {
     out.numerically_valid = false;
     out.passed = false;

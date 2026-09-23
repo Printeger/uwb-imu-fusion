@@ -3,8 +3,11 @@
 #include "uwb_imu_pl/common/types.hpp"
 
 #include <fstream>
+#include <memory>
 #include <mutex>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace uwb_imu_pl {
 
@@ -66,6 +69,47 @@ class RunLogger {
   std::uint64_t next_event_sequence_ = 1;
   mutable std::mutex mutex_;
 };
+
+// Centralized optional facade used by interactive ROS runs.  A disabled
+// session never constructs RunLogger and every write is a true no-op.
+class RunLoggingSession {
+ public:
+  RunLoggingSession() = default;
+  RunLoggingSession(const RunLoggingSession&) = delete;
+  RunLoggingSession& operator=(const RunLoggingSession&) = delete;
+
+  void enable(const std::string& output_directory,
+              bool write_residuals, bool write_timing);
+  bool enabled() const { return static_cast<bool>(logger_); }
+  const std::string& directory() const { return directory_; }
+
+  void writeResolvedConfig(const std::string& yaml) const;
+  void writeManifest(const RunManifest& manifest) const;
+  void writeState(const NavigationState& state);
+  void writeResidual(TimestampNs timestamp, FactorId factor, AnchorId anchor,
+                     RowRole role, double raw, double whitened);
+  void writeIntegrity(const IntegrityOutput& output);
+  void writeTiming(const TimingRecord& record);
+  void writeEvent(TimestampNs timestamp, const std::string& event,
+                  const std::string& detail);
+  void writeEvent(TimestampNs timestamp, std::uint64_t sequence,
+                  const std::string& event, const std::string& detail);
+  void writeGroundTruth(const GroundTruthRecord& record);
+  void writeFaultTruth(const FaultTruthRecord& record);
+  void writeSummary(const RunSummary& summary) const;
+  void flush();
+
+ private:
+  std::string directory_;
+  std::unique_ptr<RunLogger> logger_;
+};
+
+// Replace or append resolved roslaunch-style key:=value arguments.  This is
+// used immediately before manifest creation so the saved command identifies
+// what the node actually ran, rather than unresolved launch defaults.
+std::string bindExecutionCommandArguments(
+    const std::string& command,
+    const std::vector<std::pair<std::string, std::string>>& arguments);
 
 RunManifest makeRunManifest(const IntegrityConfig& config,
                             const std::string& git_sha, bool git_dirty,

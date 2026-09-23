@@ -15,7 +15,7 @@ import sys
 
 import numpy as np
 
-from gate_d_diagnostics import validate_attachments
+from gate_d_diagnostics import COMPLETED_STAGE_STATUSES, validate_attachments
 
 from round2_common import FAIL, PASS, atomic_json, load_protocol
 
@@ -86,7 +86,7 @@ def summarize_run(output, epochs, workers, expected_candidates, returncode=0):
                     "scratch_reuse_count")}
         for attempt in measured:
             for name, row in timing[attempt].items():
-                if row["status"] == "EXECUTED":
+                if row["status"] in COMPLETED_STAGE_STATUSES:
                     stages.setdefault(name, []).append(float(row["wall_ms"]))
             counts.append(len(candidates[attempt]))
             for row in candidates[attempt].values():

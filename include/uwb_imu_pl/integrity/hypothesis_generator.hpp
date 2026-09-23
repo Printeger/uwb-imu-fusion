@@ -6,6 +6,8 @@
 namespace uwb_imu_pl {
 
 struct HypothesisGeneratorConfig {
+  bool include_uwb_faults = true;
+  bool include_imu_faults = true;
   bool single_faults_enabled = true;
   bool double_faults_enabled = false;
   std::uint32_t max_model_cardinality = 2;

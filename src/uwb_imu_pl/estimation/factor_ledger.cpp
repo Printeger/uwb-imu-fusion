@@ -251,6 +251,27 @@ void FactorLedger::markSlotsAbsent(const gtsam::NonlinearFactorGraph& graph,
   if (changed) ++version_;
 }
 
+std::size_t FactorLedger::pruneInactiveBefore(
+    std::size_t oldest_retained_epoch) {
+  std::size_t removed = 0;
+  for (auto group = groups_.begin(); group != groups_.end();) {
+    const bool obsolete = !group->second.empty() &&
+        std::all_of(group->second.begin(), group->second.end(),
+                    [&](const FactorLedgerEntry& entry) {
+                      return entry.lifecycle != FactorLifecycle::Active &&
+                             entry.epoch_end < oldest_retained_epoch;
+                    });
+    if (obsolete) {
+      removed += group->second.size();
+      group = groups_.erase(group);
+    } else {
+      ++group;
+    }
+  }
+  if (removed) ++version_;
+  return removed;
+}
+
 std::vector<FactorLedgerEntry> FactorLedger::entries() const {
   std::vector<FactorLedgerEntry> out;
   for (const auto& pair : groups_) {

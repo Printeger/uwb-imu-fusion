@@ -115,14 +115,80 @@ TEST(IntegrityConfig, SupportsValidFaultCardinalityPolicies) {
   const auto both = load(true, true, 61);
   EXPECT_EQ(uwb_imu_pl::enabledFaultHypothesisCardinality(both.fault_models),
             2u);
-  const auto double_only = load(false, true, 62);
-  EXPECT_EQ(
-      uwb_imu_pl::enabledFaultHypothesisCardinality(double_only.fault_models),
-      2u);
-  EXPECT_EQ(double_only.fde.max_exclusion_cardinality, 2u);
+  // The five-mode contract has no double-only profile: order2 always contains
+  // the complete order1 event set.
+  EXPECT_THROW((void)load(false, true, 62), std::exception);
   auto neither = replaceOnce(base, "  single_faults_enabled: true\n",
                              "  single_faults_enabled: false\n");
   expectRejected(neither, 63);
+}
+
+TEST(IntegrityConfig, V6FiveProfilesResolveStableScopedCapabilities) {
+  using uwb_imu_pl::FdeProfile;
+  struct Expected {
+    const char* name;
+    FdeProfile profile;
+    std::size_t singles;
+    std::size_t pairs;
+    bool uwb;
+    bool imu;
+  };
+  const Expected expected[] = {
+      {"off", FdeProfile::Off, 0, 0, false, false},
+      {"uwb_order1", FdeProfile::UwbOrder1, 1, 0, true, false},
+      {"imu_order1", FdeProfile::ImuOrder1, 2, 0, false, true},
+      {"joint_order1", FdeProfile::JointOrder1, 3, 0, true, true},
+      {"joint_order2", FdeProfile::JointOrder2, 3, 1, true, true},
+  };
+  std::string previous_digest;
+  for (const auto& item : expected) {
+    const std::string path = std::string(UWB_IMU_PL_SOURCE_DIR) +
+        "/config/fde_" + item.name + ".yaml";
+    const auto first = uwb_imu_pl::IntegrityConfigLoader::load(path);
+    const auto second = uwb_imu_pl::IntegrityConfigLoader::load(path);
+    EXPECT_EQ(first.schema_version, "uwb-imu-pl/v6");
+    EXPECT_EQ(first.fde.profile, item.profile);
+    EXPECT_EQ(first.resolved_scope.profile, item.profile);
+    EXPECT_EQ(first.resolved_scope.singles.size(), item.singles);
+    EXPECT_EQ(first.resolved_scope.pairs.size(), item.pairs);
+    EXPECT_EQ(first.resolved_scope.requiresUwbFaults(), item.uwb);
+    EXPECT_EQ(first.resolved_scope.requiresImuFaults(), item.imu);
+    EXPECT_EQ(first.resolved_scope.detector_contract_id, "dual_channel_v1");
+    EXPECT_EQ(first.resolved_scope.scope_digest,
+              second.resolved_scope.scope_digest);
+    EXPECT_EQ(first.config_hash, second.config_hash);
+    EXPECT_NE(first.resolved_yaml.find("resolved_scope_digest"),
+              std::string::npos);
+    EXPECT_EQ(first.resolved_yaml.find("single_faults_enabled"),
+              std::string::npos);
+    EXPECT_NE(previous_digest, first.resolved_scope.scope_digest);
+    previous_digest = first.resolved_scope.scope_digest;
+  }
+}
+
+TEST(IntegrityConfig, V6RejectsDuplicateModeSourceAndHashesOverride) {
+  const std::string path = std::string(UWB_IMU_PL_SOURCE_DIR) +
+      "/config/fde_joint_order1.yaml";
+  std::ifstream input(path);
+  std::ostringstream contents;
+  contents << input.rdbuf();
+  const std::string base = contents.str();
+  const auto marker = base.find("fault_models:\n");
+  ASSERT_NE(marker, std::string::npos);
+  std::string conflict = base;
+  conflict.insert(marker + std::string("fault_models:\n").size(),
+                  "  single_faults_enabled: true\n");
+  expectRejected(conflict, 90);
+
+  uwb_imu_pl::IntegrityConfigOverrides overrides;
+  overrides.fde_profile = uwb_imu_pl::FdeProfile::UwbOrder1;
+  const auto overridden =
+      uwb_imu_pl::IntegrityConfigLoader::load(path, overrides);
+  const auto original = uwb_imu_pl::IntegrityConfigLoader::load(path);
+  EXPECT_EQ(overridden.fde.profile, uwb_imu_pl::FdeProfile::UwbOrder1);
+  EXPECT_NE(overridden.resolved_scope.scope_digest,
+            original.resolved_scope.scope_digest);
+  EXPECT_NE(overridden.config_hash, original.config_hash);
 }
 
 TEST(IntegrityConfig, ValidatesDoubleFaultSubtypesAndLegacyDefaults) {

@@ -6,6 +6,9 @@ import math
 SCHEMA = "uwb-imu-pl/gate-d-diagnostics/v1"
 IDENTITY = "schema_version input_attempt_id input_timestamp_ns transaction_id window_id graph_version ordering_version noise_model_version linpoint_version output_timestamp_ns".split()
 STAGES = set("prepare integrity_window window_boundary_provenance window_factor_linearization_whitening window_dense_assembly window_svd window_normal_equations window_llt_state_solves window_fingerprint all_in_detector current_sensitivity historical_sensitivity model_generation hypothesis_evidence health_actions hypothesis_audit base_factorization candidate_evaluation fde_decision candidate_audit finalize_commit_audit core_total".split())
+COMPLETED_ATTEMPT_STATUSES = {"EXECUTED", "COMMITTED"}
+COMPLETED_STAGE_STATUSES = {"EXECUTED", "COMMITTED"}
+SKIPPED_STAGE_STATUSES = {"SKIPPED", "SKIPPED_PROFILE"}
 
 
 def read_rows(directory, name):
@@ -114,16 +117,17 @@ def validate_attachments(directory, epochs=None, warmup=100, expected_candidates
             # Legacy success retains its model-gate meaning. Execution versus
             # exception is authoritative in the independent diagnostic status.
             diagnostic = by_stage[attempt].get(link["stage"])
-            if diagnostic is not None and (diagnostic["status"] != "EXECUTED" or
+            if diagnostic is not None and (diagnostic["status"] not in COMPLETED_STAGE_STATUSES or
                     not math.isclose(finite(diagnostic["wall_ms"]), finite(legacy_row["wall_ms"]), rel_tol=1e-5, abs_tol=1e-5)):
                 raise ValueError("linked timing stage/duration mismatch")
         for attempt, items in by_stage.items():
             for stage, row in items.items():
-                if row["status"] == "EXECUTED" and (attempt, stage) not in linked_stages:
+                if (row["status"] in COMPLETED_STAGE_STATUSES and
+                        (attempt, stage) not in linked_stages):
                     raise ValueError("executed diagnostic stage lacks legacy timing link")
     for attempt, row, tx, legacy in zip([int(r["input_attempt_id"]) for r in executed],
                                         executed, transactions, legacy_core):
-        if row["status"] != "EXECUTED":
+        if row["status"] not in COMPLETED_ATTEMPT_STATUSES:
             raise ValueError(f"attempt {attempt}: {row['status']}")
         finite(row["pending_duration_s"])
         for key, old in (("transaction_id", "transaction_id"), ("window_id", "window_id"),
@@ -131,18 +135,28 @@ def validate_attachments(directory, epochs=None, warmup=100, expected_candidates
                          ("linpoint_version", "linearization_version")):
             if row[key] != tx[old]:
                 raise ValueError("transaction attachment mismatch")
-        if not STAGES.issubset(by_stage[attempt]) or set(by_stage[attempt]) - STAGES - {"commit", "discard", "state_audit", "shared_cache"}:
+        profile_skipped = (by_stage[attempt].get("integrity_window", {}).get(
+            "status") == "SKIPPED_PROFILE")
+        missing_stages = STAGES - set(by_stage[attempt])
+        missing_window_children = {
+            "window_boundary_provenance", "window_factor_linearization_whitening",
+            "window_dense_assembly", "window_svd", "window_normal_equations",
+            "window_llt_state_solves", "window_fingerprint"}
+        if ((missing_stages and
+             (not profile_skipped or not missing_stages.issubset(missing_window_children))) or
+                set(by_stage[attempt]) - STAGES - {"commit", "discard", "state_audit", "shared_cache"}):
             raise ValueError(f"attempt {attempt}: incomplete stage set")
         for stage in by_stage[attempt].values():
-            if stage["status"] == "SKIPPED":
-                if stage["wall_ms"] or not stage["reason"]:
+            if stage["status"] in SKIPPED_STAGE_STATUSES:
+                if ((stage["wall_ms"] not in ("", "0", "0.0")) or
+                        not stage["reason"]):
                     raise ValueError("skipped stage must have reason and no fabricated duration")
-            elif stage["status"] == "EXECUTED":
+            elif stage["status"] in COMPLETED_STAGE_STATUSES:
                 finite(stage["wall_ms"])
             else:
                 raise ValueError("stage exception or invalid status")
         core = by_stage[attempt]["core_total"]
-        if core["status"] != "EXECUTED":
+        if core["status"] not in COMPLETED_STAGE_STATUSES:
             raise ValueError("core_total was not executed")
         if require_legacy_timing and (legacy["timestamp_ns"] != row["output_timestamp_ns"] or
                 legacy["epoch"] != row["backend_epoch_after"] or

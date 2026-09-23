@@ -292,10 +292,35 @@ int main(int argc, char** argv) {
     const std::string output_directory = argv[2];
     uwb_imu_pl::RunLogger logger(output_directory, false, true);
     logger.writeResolvedConfig(config.resolved_yaml);
+    const std::string execution_command =
+        uwb_imu_pl::bindExecutionCommandArguments(
+            std::string(argv[0]) + " " + argv[1] + " " + argv[2] + " " +
+                argv[3] + " " + argv[4] + " " + scenario_manifest,
+            {{"config_path", argv[1]},
+             {"run_directory", output_directory},
+             {"fde_profile",
+              uwb_imu_pl::toString(config.resolved_scope.profile)},
+             {"fixed_lag_epochs",
+              std::to_string(config.incremental.fixed_lag_epochs)},
+             {"seed", std::to_string(kSeed)},
+             {"trajectory", "constant_velocity_yaw"},
+             {"fault_mode", scenario.name},
+             {"fault_anchor_id", std::to_string(uwb_fault_anchor)},
+             {"fault_magnitude_m", std::to_string(uwb_fault_m)},
+             {"accel_fault_mps2", std::to_string(accel_fault_mps2)},
+             {"gyro_fault_radps", std::to_string(gyro_fault_radps)},
+             {"fault_axis", std::to_string(accel_fault_axis)},
+             {"packet_loss_prob", "0"},
+             {"nlos_probability", "0"},
+             {"enable_run_logging", "true"},
+             {"write_residuals", "false"},
+             {"write_timing", "true"},
+             {"write_global_diagnostics",
+              config.output.write_global_diagnostics ? "true" : "false"},
+             {"output_root", config.output.root}});
     auto manifest = uwb_imu_pl::makeRunManifest(
         config, UWB_IMU_PL_GIT_SHA, UWB_IMU_PL_GIT_DIRTY != 0,
-        std::string(argv[0]) + " " + argv[1] + " " + argv[2] + " " +
-            argv[3] + " " + argv[4] + " " + scenario_manifest);
+        execution_command);
     manifest.seed = kSeed;
     manifest.maturity = "DEVELOPMENT_ONLY / IMPLEMENTED_UNVERIFIED";
     manifest.formal_eligible = false;

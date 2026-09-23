@@ -17,7 +17,21 @@ int main(int argc,char** argv) {
     const auto cfg=IntegrityConfigLoader::load(argv[1]);
     RunLogger logger(argv[2],false,true);
     logger.writeResolvedConfig(cfg.resolved_yaml);
-    logger.writeManifest(makeRunManifest(cfg,"development",true,"gate_d_development"));
+    const std::string execution_command = bindExecutionCommandArguments(
+        std::string(argv[0]) + " " + argv[1] + " " + argv[2],
+        {{"config_path", argv[1]}, {"run_directory", argv[2]},
+         {"fde_profile", toString(cfg.resolved_scope.profile)},
+         {"fixed_lag_epochs", std::to_string(cfg.incremental.fixed_lag_epochs)},
+         {"seed", std::to_string(cfg.seed)}, {"trajectory", "static"},
+         {"fault_mode", "none"}, {"fault_anchor_id", "NONE"},
+         {"fault_magnitude_m", "0"}, {"packet_loss_prob", "0"},
+         {"nlos_probability", "0"}, {"enable_run_logging", "true"},
+         {"write_residuals", "false"}, {"write_timing", "true"},
+         {"write_global_diagnostics",
+          cfg.output.write_global_diagnostics ? "true" : "false"},
+         {"output_root", cfg.output.root}});
+    logger.writeManifest(makeRunManifest(
+        cfg,"development",true,execution_command));
     std::ofstream audit(std::string(argv[2])+"/fixed_lag_commits.csv");
     audit<<std::setprecision(17)<<"epoch,backend_updates,marginalization_count,wall_ms\n";
     IncrementalUwbImuEstimator estimator(cfg,Eigen::Vector3d::Zero());

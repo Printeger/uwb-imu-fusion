@@ -54,6 +54,17 @@ class DiagnosticsTest(unittest.TestCase):
     def test_repeated_state_timestamps_and_normal_rejection_are_valid(self):
         self.assertEqual(self.verdict()["status"], "PASS")
 
+    def test_committed_attempt_and_profile_skips_are_valid(self):
+        for row in self.data["diagnostic_attempts"]:
+            row["status"] = "COMMITTED"
+        for row in self.data["diagnostic_stages"]:
+            if row["stage"] == "core_total":
+                row["status"] = "COMMITTED"
+            elif row["stage"] == "integrity_window":
+                row.update(status="SKIPPED_PROFILE", wall_ms="0",
+                           reason="FDE_DISABLED")
+        self.assertEqual(self.verdict()["status"], "PASS")
+
     def test_v2_exact_timing_links(self):
         for name in ("diagnostic_attempts", "diagnostic_stages", "diagnostic_candidates"):
             for row in self.data[name]: row["schema_version"] = "uwb-imu-pl/gate-d-diagnostics/v2"

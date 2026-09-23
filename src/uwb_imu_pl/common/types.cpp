@@ -39,4 +39,14 @@ const char* toString(IntegrityLabel value) {
   return "IMPLEMENTED_UNVERIFIED";
 }
 
+const char* toString(ProtectionLevelStatus value) {
+  switch (value) {
+    case ProtectionLevelStatus::NotComputed: return "NOT_COMPUTED";
+    case ProtectionLevelStatus::Finite: return "FINITE";
+    case ProtectionLevelStatus::Unbounded: return "UNBOUNDED";
+    case ProtectionLevelStatus::Invalid: return "INVALID";
+  }
+  return "INVALID";
+}
+
 }  // namespace uwb_imu_pl

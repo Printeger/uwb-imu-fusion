@@ -298,6 +298,7 @@ class Runner:
                     target = directory / scenario
                     command = ["roslaunch", "uwb_imu_pl", "week4_topic_test.launch",
                                f"scenario:={scenario}", f"run_directory:={target}",
+                               "enable_run_logging:=true",
                                f"inventory:={target/'publisher_inventory.json'}"]
                     self.command(record, command, log, timeout=180)
                 command = [sys.executable, str(REPOSITORY/"tools/validate_week4_ros.py"),
