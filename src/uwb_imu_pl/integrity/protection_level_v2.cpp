@@ -40,6 +40,103 @@ struct FaultAxisBounds {
   std::string reason;
 };
 
+bool detectorContractMatchesCandidate(const LinearizedIntegrityWindow& window,
+                                      const CandidateEvaluation& candidate,
+                                      const DetectorResultV2& detector,
+                                      std::string* reason) {
+  if (detector.contract_mode == DetectorContractMode::LegacyPooledOffline) {
+    return true;
+  }
+  std::string candidate_reason;
+  if (!validateCandidateDetectorCertificate(window, candidate,
+                                            &candidate_reason)) {
+    if (reason) *reason = candidate_reason;
+    return false;
+  }
+  const auto& certificate = candidate.detector_certificate;
+  const bool p_fa_valid = std::isfinite(detector.p_fa_per_test) &&
+      detector.p_fa_per_test > 0.0 && detector.p_fa_per_test < 1.0;
+  const int expected_channel_count = certificate.history_rows > 0 ? 2 : 1;
+  const std::uint64_t expected_horizon =
+      std::max<std::uint64_t>(1, detector.continuity_horizon_tests);
+  const double expected_current_threshold = p_fa_valid
+      ? StatisticalBoundsCache::chiSquaredThreshold(
+            certificate.current_dof, detector.p_fa_per_test)
+      : std::numeric_limits<double>::infinity();
+  const double expected_history_threshold = certificate.history_rows > 0 &&
+      p_fa_valid
+      ? StatisticalBoundsCache::chiSquaredThreshold(
+            certificate.history_dof, detector.p_fa_per_test)
+      : 0.0;
+  const double expected_pooled_threshold = p_fa_valid
+      ? StatisticalBoundsCache::chiSquaredThreshold(
+            certificate.pooled_dof, detector.p_fa_per_test)
+      : std::numeric_limits<double>::infinity();
+  const double expected_operation_bound = p_fa_valid
+      ? std::min(1.0, detector.p_fa_per_test *
+            static_cast<double>(expected_horizon) *
+            static_cast<double>(expected_channel_count))
+      : std::numeric_limits<double>::infinity();
+  const bool expected_current_accepted = p_fa_valid &&
+      certificate.current_statistic <= expected_current_threshold;
+  const bool expected_history_accepted = certificate.history_rows == 0 ||
+      (p_fa_valid &&
+       certificate.history_statistic <= expected_history_threshold);
+  const bool valid = certificate.valid &&
+      certificate.history_constant_present && detector.channel_split_valid &&
+      p_fa_valid && detector.window_id == window.id &&
+      detector.accepted_event_id == certificate.accepted_event_id &&
+      detector.accepted_event_id == "dual_channel_intersection_v6" &&
+      detector.candidate_numerical_identity == certificate.numerical_identity &&
+      detector.candidate_numerical_identity != 0 &&
+      detector.candidate_certificate_digest == certificate.certificate_digest &&
+      detector.detector_contract_digest != 0 &&
+      detector.detector_contract_digest == detectorContractDigest(detector) &&
+      detector.rows == candidate.rows && detector.rank == candidate.rank &&
+      detector.dof == candidate.dof &&
+      detector.squared_parity_statistic ==
+          certificate.current_statistic + certificate.history_statistic &&
+      detector.squared_threshold == expected_pooled_threshold &&
+      std::isfinite(detector.history_constant) &&
+      detector.history_constant == certificate.history_constant &&
+      detector.channel_current_statistic == certificate.current_statistic &&
+      detector.channel_history_statistic == certificate.history_statistic &&
+      detector.channel_current_dof == certificate.current_dof &&
+      detector.channel_history_dof == certificate.history_dof &&
+      detector.channel_current_threshold == expected_current_threshold &&
+      detector.channel_history_threshold == expected_history_threshold &&
+      detector.continuity_horizon_tests == expected_horizon &&
+      detector.active_channel_count == expected_channel_count &&
+      detector.operation_p_fa_upper_bound == expected_operation_bound &&
+      detector.channel_current_accepted == expected_current_accepted &&
+      detector.channel_history_accepted == expected_history_accepted &&
+      detector.channel_current_accepted && detector.channel_history_accepted &&
+      detector.joint_accepted && detector.passed;
+  if (!valid && reason) {
+    *reason = "active-v6 detector certificate/event/numerical identity mismatch";
+  }
+  return valid;
+}
+
+Eigen::MatrixXd historyGramFromCertificate(
+    const CandidateEvaluation& candidate, const Eigen::MatrixXd& fault_map) {
+  Eigen::MatrixXd history_gram = Eigen::MatrixXd::Zero(
+      fault_map.cols(), fault_map.cols());
+  const auto& roles = candidate.detector_certificate.row_roles;
+  if (!candidate.detector_certificate.valid ||
+      roles.size() != static_cast<std::size_t>(fault_map.rows())) {
+    return Eigen::MatrixXd();
+  }
+  for (Eigen::Index row = 0; row < fault_map.rows(); ++row) {
+    if (roles[static_cast<std::size_t>(row)] ==
+        CandidateDetectorRowRole::HistoryDetectorOnly) {
+      history_gram.noalias() += fault_map.row(row).transpose() *
+                                fault_map.row(row);
+    }
+  }
+  return history_gram;
+}
+
 FaultAxisBounds dualChannelAxisBounds(
     const DetectorResultV2& detector,
     const FaultHypothesisV2& hypothesis,
@@ -56,11 +153,19 @@ FaultAxisBounds dualChannelAxisBounds(
             std::max(hypothesis.prior_probability_bound, 1e-15)
       : nominal_tail;
   // The production path is required to carry an explicit dual-channel
-  // certificate.  Keep the older public numerical API usable for independent
-  // dense-oracle callers: a legacy detector that predates the split is treated
-  // as one state-supported channel.  A detector that claims the v1 contract
-  // but omits its split still fails closed.
-  const bool legacy_single_channel = !detector.channel_split_valid;
+  // certificate.  The older pooled numerical API remains available only when
+  // an offline caller explicitly selects LegacyPooledOffline; an incomplete
+  // active-v6 detector always fails closed.
+  const bool legacy_single_channel =
+      detector.contract_mode == DetectorContractMode::LegacyPooledOffline;
+  if (!legacy_single_channel &&
+      (detector.accepted_event_id != "dual_channel_intersection_v6" ||
+       !detector.channel_split_valid ||
+       detector.candidate_numerical_identity == 0 ||
+       !std::isfinite(detector.history_constant))) {
+    out.reason = "active-v6 dual-channel detector certificate is incomplete";
+    return out;
+  }
   if (!std::isfinite(tail) || tail <= 0.0) {
     out.reason = "hypothesis tail probability is not positive";
     return out;
@@ -195,10 +300,15 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
     const Eigen::Vector3d& bridge_margin) const {
   ProtectionLevelV2Result result;
   result.bridge_component_m = bridge_margin.cwiseAbs();
+  std::string detector_contract_reason;
   if (!hypotheses || !candidate.valid || !detector.numerically_valid ||
+      !detectorContractMatchesCandidate(window, candidate, detector,
+                                        &detector_contract_reason) ||
       window.protected_state_map.cols() != candidate.state_increment.rows() ||
       window.protected_state_map.rows() != 3) {
-    result.reason = "invalid post-FDE candidate/protected-state map";
+    result.reason = detector_contract_reason.empty()
+        ? "invalid post-FDE candidate/protected-state map"
+        : detector_contract_reason;
     return result;
   }
   const RiskBudgetAudit risk_audit = auditRiskBudget(risk, *hypotheses);
@@ -306,16 +416,11 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
           0.0, response.dot(gram_solve.solve(response))));
     }
     hypothesis.monitorability.protected_slopes = slopes;
-    Eigen::MatrixXd history_gram = Eigen::MatrixXd::Zero(
-        fault_map.cols(), fault_map.cols());
-    const Eigen::MatrixXd& retained_h = candidate.retainedJacobian();
-    if (retained_h.rows() == fault_map.rows()) {
-      for (Eigen::Index row = 0; row < retained_h.rows(); ++row) {
-        if (retained_h.row(row).norm() <= 1e-12) {
-          history_gram.noalias() += fault_map.row(row).transpose() *
-                                    fault_map.row(row);
-        }
-      }
+    Eigen::MatrixXd history_gram = historyGramFromCertificate(candidate,
+                                                               fault_map);
+    if (history_gram.rows() != fault_map.cols()) {
+      result.reason = "candidate detector row-role payload is missing";
+      return result;
     }
     Eigen::Vector3d component;
     std::string detector_certificate;
@@ -365,11 +470,16 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
     const ProtectionLevelSharedContext& shared,
     const RiskBudgetV2& risk) const {
   ProtectionLevelV2Result result;
+  std::string detector_contract_reason;
   if (!candidate || !hypotheses || !candidate->valid ||
       !detector.numerically_valid ||
+      !detectorContractMatchesCandidate(window, *candidate, detector,
+                                        &detector_contract_reason) ||
       window.protected_state_map.cols() != candidate->state_increment.rows() ||
       window.protected_state_map.rows() != 3) {
-    result.reason = "invalid post-FDE candidate/protected-state map";
+    result.reason = detector_contract_reason.empty()
+        ? "invalid post-FDE candidate/protected-state map"
+        : detector_contract_reason;
     return result;
   }
   std::map<std::uint64_t, const Eigen::MatrixXd*> modes;
@@ -543,15 +653,11 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
           0.0, response.dot(gram_solve.solve(response))));
     }
     monitor.protected_slopes = slopes;
-    Eigen::MatrixXd history_gram = Eigen::MatrixXd::Zero(columns, columns);
-    const Eigen::MatrixXd& retained_h = candidate->retainedJacobian();
-    if (retained_h.rows() == fault_map.rows()) {
-      for (Eigen::Index row = 0; row < retained_h.rows(); ++row) {
-        if (retained_h.row(row).norm() <= 1e-12) {
-          history_gram.noalias() += fault_map.row(row).transpose() *
-                                    fault_map.row(row);
-        }
-      }
+    Eigen::MatrixXd history_gram = historyGramFromCertificate(*candidate,
+                                                               fault_map);
+    if (history_gram.rows() != columns) {
+      result.reason = "candidate detector row-role payload is missing";
+      return result;
     }
     Eigen::Vector3d component;
     std::string detector_certificate;
@@ -601,6 +707,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
     std::uint64_t fault_model_policy_fingerprint,
     const RiskBudgetV2& risk) const {
   ProtectionLevelV2Result result;
+  std::string detector_contract_reason;
   const bool keep_all = candidate && candidate->action.groups_to_remove.empty() &&
       candidate->action.groups_to_add.empty() && candidate->action.added_blocks.empty();
   const bool identity_valid = frozen.valid && window.numerics &&
@@ -617,9 +724,20 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
       frozen.hypothesis_count == hypotheses.size() &&
       frozen.pl_entries.size() == hypotheses.size();
   if (!candidate || !candidate->valid || !detector.numerically_valid ||
+      !detectorContractMatchesCandidate(window, *candidate, detector,
+                                        &detector_contract_reason) ||
       !keep_all || !identity_valid) {
     NumericalWorkCounters::hypothesisSharedMiss();
-    result.reason = "frozen all-in hypothesis context identity mismatch";
+    result.reason = detector_contract_reason.empty()
+        ? "frozen all-in hypothesis context identity mismatch"
+        : detector_contract_reason;
+    return result;
+  }
+  if (detector.contract_mode == DetectorContractMode::ActiveDualChannelV6 &&
+      detector.channel_history_dof > 0) {
+    NumericalWorkCounters::hypothesisSharedMiss();
+    result.reason =
+        "frozen pooled hypothesis context cannot certify active dual-channel PL";
     return result;
   }
   NumericalWorkCounters::hypothesisSharedHit();

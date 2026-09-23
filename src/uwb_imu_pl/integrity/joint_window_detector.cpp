@@ -63,6 +63,26 @@ std::string stateStepAttribution(const LinearizedIntegrityWindow& window,
 
 namespace {
 
+void hashDetectorBytes(std::uint64_t* hash, const void* data,
+                       std::size_t size) {
+  const auto* bytes = static_cast<const unsigned char*>(data);
+  for (std::size_t index = 0; index < size; ++index) {
+    *hash ^= bytes[index];
+    *hash *= 1099511628211ULL;
+  }
+}
+
+template <class T>
+void hashDetectorScalar(std::uint64_t* hash, const T& value) {
+  hashDetectorBytes(hash, &value, sizeof(value));
+}
+
+void hashDetectorString(std::uint64_t* hash, const std::string& value) {
+  const std::uint64_t size = value.size();
+  hashDetectorScalar(hash, size);
+  if (!value.empty()) hashDetectorBytes(hash, value.data(), value.size());
+}
+
 double squaredThreshold(int dof, double p_fa) {
   if (dof <= 0 || !std::isfinite(p_fa) || p_fa <= 0.0 || p_fa >= 1.0) {
     return std::numeric_limits<double>::infinity();
@@ -90,6 +110,38 @@ DetectorResultV2 baseResult(int rows, int rank, int dof,
 }
 
 }  // namespace
+
+std::uint64_t detectorContractDigest(const DetectorResultV2& detector) {
+  std::uint64_t hash = 1469598103934665603ULL;
+  hashDetectorScalar(&hash, detector.window_id.value());
+  hashDetectorScalar(&hash, detector.squared_parity_statistic);
+  hashDetectorScalar(&hash, detector.squared_threshold);
+  hashDetectorScalar(&hash, detector.rows);
+  hashDetectorScalar(&hash, detector.rank);
+  hashDetectorScalar(&hash, detector.dof);
+  hashDetectorScalar(&hash, detector.p_fa_per_test);
+  hashDetectorScalar(&hash, detector.operation_p_fa_upper_bound);
+  hashDetectorScalar(&hash, detector.passed);
+  hashDetectorScalar(&hash, detector.numerically_valid);
+  hashDetectorScalar(&hash, detector.channel_current_statistic);
+  hashDetectorScalar(&hash, detector.channel_current_threshold);
+  hashDetectorScalar(&hash, detector.channel_current_dof);
+  hashDetectorScalar(&hash, detector.channel_current_accepted);
+  hashDetectorScalar(&hash, detector.channel_history_statistic);
+  hashDetectorScalar(&hash, detector.channel_history_threshold);
+  hashDetectorScalar(&hash, detector.channel_history_dof);
+  hashDetectorScalar(&hash, detector.channel_history_accepted);
+  hashDetectorScalar(&hash, detector.channel_split_valid);
+  hashDetectorScalar(&hash, detector.joint_accepted);
+  hashDetectorScalar(&hash, static_cast<int>(detector.contract_mode));
+  hashDetectorString(&hash, detector.accepted_event_id);
+  hashDetectorScalar(&hash, detector.candidate_numerical_identity);
+  hashDetectorScalar(&hash, detector.candidate_certificate_digest);
+  hashDetectorScalar(&hash, detector.continuity_horizon_tests);
+  hashDetectorScalar(&hash, detector.active_channel_count);
+  hashDetectorScalar(&hash, detector.history_constant);
+  return hash;
+}
 
 DetectorResultV2 JointWindowDetector::evaluate(
     const LinearizedIntegrityWindow& window,
@@ -145,8 +197,12 @@ DetectorResultV2 JointWindowDetector::evaluate(
       return out;
     }
   }
+  const double history_constant = window.history_summary.present &&
+      window.history_summary.valid ? window.history_summary.constant_offset
+                                   : 0.0;
   auto out = baseResult(window.H.rows(), rank,
-                        window.H.rows() - rank, statistic, risk);
+                        window.H.rows() - rank,
+                        statistic + history_constant, risk);
   out.window_id = window.id;
   // C2 (§7.3): the separated layout on the same frozen window.  Thresholds are
   // the unchanged per-test budget; the joint acceptance is reported, not
@@ -165,6 +221,15 @@ DetectorResultV2 JointWindowDetector::evaluate(
     out.channel_history_threshold = split.history.threshold;
     out.channel_history_dof = split.history.dof;
     out.channel_history_accepted = split.history.accepted;
+    out.operation_p_fa_upper_bound = split.operation_p_fa_upper_bound;
+    out.accepted_event_id = "dual_channel_intersection_v6";
+    out.candidate_numerical_identity = candidateDetectorNumericalIdentity(
+        window, ExclusionAction{});
+    out.history_constant = window.history_summary.present
+        ? window.history_summary.constant_offset : 0.0;
+    out.continuity_horizon_tests =
+        std::max<std::uint64_t>(1, risk.continuity_horizon_tests);
+    out.active_channel_count = split.channel_count;
     out.numerically_valid = out.numerically_valid && split.numerically_valid;
     out.passed = out.numerically_valid && split.joint_accepted;
     if (!split.numerically_valid) out.reason = split.reason;
@@ -179,82 +244,131 @@ DetectorResultV2 JointWindowDetector::evaluate(
     out.passed = false;
     out.reason = "joint window condition gate failed";
   }
+  out.detector_contract_digest = detectorContractDigest(out);
   return out;
 }
 
 DetectorResultV2 JointWindowDetector::evaluateCandidate(
+    const LinearizedIntegrityWindow& window,
     const CandidateEvaluation& candidate,
     const DetectorRiskContext& risk) const {
-  auto out = baseResult(candidate.rows, candidate.rank, candidate.dof,
-                        candidate.statistic, risk);
-  const Eigen::MatrixXd& h = candidate.retainedJacobian();
-  if (candidate.valid && h.rows() == candidate.retained_residual.size() &&
-      h.rows() > 0) {
-    std::vector<Eigen::Index> current_rows;
-    std::vector<Eigen::Index> history_rows;
-    for (Eigen::Index row = 0; row < h.rows(); ++row) {
-      (h.row(row).norm() <= risk.rank_tolerance ? history_rows : current_rows)
-          .push_back(row);
-    }
-    auto channel = [&](const char* id,
-                       const std::vector<Eigen::Index>& rows) {
-      ChannelTest test;
-      test.detector_id = id;
-      test.p_fa = risk.p_fa_per_test;
-      if (rows.empty()) {
-        test.numerically_valid = true;
-        test.accepted = true;
-        return test;
-      }
-      Eigen::MatrixXd a(rows.size(), h.cols());
-      Eigen::VectorXd b(rows.size());
-      for (std::size_t i = 0; i < rows.size(); ++i) {
-        a.row(static_cast<Eigen::Index>(i)) = h.row(rows[i]);
-        b(static_cast<Eigen::Index>(i)) = candidate.retained_residual(rows[i]);
-      }
-      Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr(a);
-      qr.setThreshold(risk.rank_tolerance);
-      const int rank = qr.rank();
-      test.dof = static_cast<int>(rows.size()) - rank;
-      test.statistic = (b - a * qr.solve(b)).squaredNorm();
-      if (test.dof > 0) {
-        test.threshold = squaredThreshold(test.dof, risk.p_fa_per_test);
-        test.numerically_valid = std::isfinite(test.statistic) &&
-                                 std::isfinite(test.threshold);
-        test.accepted = test.numerically_valid &&
-                        test.statistic <= test.threshold;
-      } else if (std::string(id) == "history_eliminated_detector_only") {
-        test.numerically_valid = true;
-        test.accepted = true;
-      }
-      return test;
-    };
-    const ChannelTest current = channel("joint_window_state_supported",
-                                        current_rows);
-    const ChannelTest history = channel("history_eliminated_detector_only",
-                                        history_rows);
-    out.channel_current_statistic = current.statistic;
-    out.channel_current_threshold = current.threshold;
-    out.channel_current_dof = current.dof;
-    out.channel_current_accepted = current.accepted;
-    out.channel_history_statistic = history.statistic;
-    out.channel_history_threshold = history.threshold;
-    out.channel_history_dof = history.dof;
-    out.channel_history_accepted = history.accepted;
-    out.channel_split_valid = current.numerically_valid &&
-                              history.numerically_valid;
-    out.joint_accepted = current.accepted && history.accepted;
-    out.numerically_valid = out.numerically_valid && out.channel_split_valid;
-    out.passed = out.numerically_valid && out.joint_accepted;
-    if (!out.passed) out.reason = out.numerically_valid
-        ? "post-FDE dual-channel detector alarm"
-        : "post-FDE dual-channel detector invalid";
-  }
   if (!candidate.valid) {
+    DetectorResultV2 out;
     out.numerically_valid = false;
     out.passed = false;
     out.reason = "invalid candidate: " + candidate.reason;
+    return out;
   }
+  std::string certificate_reason;
+  if (!validateCandidateDetectorCertificate(window, candidate,
+                                            &certificate_reason)) {
+    DetectorResultV2 out;
+    out.window_id = window.id;
+    out.numerically_valid = false;
+    out.passed = false;
+    out.reason = "invalid active-v6 candidate detector certificate: " +
+                 certificate_reason;
+    return out;
+  }
+  const auto& certificate = candidate.detector_certificate;
+  const int current_role_count = static_cast<int>(std::count(
+      certificate.row_roles.begin(), certificate.row_roles.end(),
+      CandidateDetectorRowRole::CurrentStateSupported));
+  const int history_role_count = static_cast<int>(std::count(
+      certificate.row_roles.begin(), certificate.row_roles.end(),
+      CandidateDetectorRowRole::HistoryDetectorOnly));
+  const double represented_pooled = certificate.current_statistic +
+      certificate.history_statistic;
+  const double expected_pooled = candidate.statistic +
+      certificate.history_constant;
+  const double identity_scale = std::max(
+      {1.0, std::abs(represented_pooled), std::abs(expected_pooled)});
+  if (!certificate.valid || !certificate.history_constant_present ||
+      certificate.accepted_event_id != "dual_channel_intersection_v6" ||
+      certificate.numerical_identity == 0 ||
+      certificate.pooled_rank != candidate.rank ||
+      certificate.pooled_dof != candidate.dof ||
+      certificate.row_roles.size() != static_cast<std::size_t>(candidate.rows) ||
+      current_role_count != certificate.current_rows ||
+      history_role_count != certificate.history_rows ||
+      certificate.current_rows + certificate.history_rows != candidate.rows ||
+      certificate.current_rank != candidate.rank ||
+      certificate.history_rank != 0 ||
+      certificate.current_dof + certificate.history_dof != candidate.dof ||
+      !std::isfinite(certificate.history_constant) ||
+      !std::isfinite(represented_pooled) ||
+      std::abs(represented_pooled - expected_pooled) >
+          1e-7 * identity_scale) {
+    DetectorResultV2 out;
+    out.numerically_valid = false;
+    out.passed = false;
+    out.reason = "missing or invalid active-v6 candidate detector certificate";
+    if (!certificate.reason.empty()) out.reason += ": " + certificate.reason;
+    return out;
+  }
+  auto out = baseResult(
+      candidate.rows, candidate.rank, candidate.dof,
+      certificate.current_statistic + certificate.history_statistic, risk);
+  out.window_id = window.id;
+  auto channel = [&](const char* id, int rows, int rank, int dof,
+                     double statistic) {
+    ChannelTest test;
+    test.detector_id = id;
+    test.dof = dof;
+    test.statistic = statistic;
+    test.p_fa = risk.p_fa_per_test;
+    if (rows == 0) {
+      test.threshold = 0.0;
+      test.numerically_valid = rank == 0 && dof == 0;
+      test.accepted = test.numerically_valid;
+      return test;
+    }
+    test.threshold = squaredThreshold(dof, risk.p_fa_per_test);
+    test.numerically_valid = rank >= 0 && dof > 0 &&
+        rows == rank + dof && std::isfinite(statistic) &&
+        std::isfinite(test.threshold);
+    test.accepted = test.numerically_valid && statistic <= test.threshold;
+    return test;
+  };
+  const ChannelTest current = channel(
+      "joint_window_state_supported", certificate.current_rows,
+      certificate.current_rank, certificate.current_dof,
+      certificate.current_statistic);
+  const ChannelTest history = channel(
+      "history_eliminated_detector_only", certificate.history_rows,
+      certificate.history_rank, certificate.history_dof,
+      certificate.history_statistic);
+  out.channel_current_statistic = current.statistic;
+  out.channel_current_threshold = current.threshold;
+  out.channel_current_dof = current.dof;
+  out.channel_current_accepted = current.accepted;
+  out.channel_history_statistic = history.statistic;
+  out.channel_history_threshold = history.threshold;
+  out.channel_history_dof = history.dof;
+  out.channel_history_accepted = history.accepted;
+  const int channel_count = certificate.history_rows > 0 ? 2 : 1;
+  const std::uint64_t continuity_horizon_tests =
+      std::max<std::uint64_t>(1, risk.continuity_horizon_tests);
+  out.operation_p_fa_upper_bound = std::min(
+      1.0, risk.p_fa_per_test *
+          static_cast<double>(continuity_horizon_tests) *
+          static_cast<double>(channel_count));
+  out.channel_split_valid = current.numerically_valid &&
+                            history.numerically_valid;
+  out.joint_accepted = current.accepted && history.accepted;
+  out.numerically_valid = out.numerically_valid && out.channel_split_valid;
+  out.passed = out.numerically_valid && out.joint_accepted;
+  out.accepted_event_id = certificate.accepted_event_id;
+  out.candidate_numerical_identity = certificate.numerical_identity;
+  out.candidate_certificate_digest = certificate.certificate_digest;
+  out.continuity_horizon_tests = continuity_horizon_tests;
+  out.active_channel_count = channel_count;
+  out.history_constant = certificate.history_constant;
+  if (!out.passed) out.reason = out.numerically_valid
+      ? "post-FDE dual-channel detector alarm"
+      : "post-FDE dual-channel detector invalid";
+  else out.reason.clear();
+  out.detector_contract_digest = detectorContractDigest(out);
   return out;
 }
 

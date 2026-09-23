@@ -2692,7 +2692,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             return ms;
           };
           evaluated.post = JointWindowDetector().evaluateCandidate(
-              candidate, detector_risk);
+              window, candidate, detector_risk);
           candidate.squared_threshold = evaluated.post.squared_threshold;
           candidate.post_detector_passed = evaluated.post.passed;
           candidate.diagnostics.post_ms = part_ms();

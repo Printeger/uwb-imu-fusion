@@ -54,6 +54,57 @@ struct BaseCandidateKernel {
   std::string reason;
 };
 
+enum class CandidateDetectorRowRole : std::uint8_t {
+  CurrentStateSupported = 0,
+  HistoryDetectorOnly = 1,
+};
+
+// Immutable handoff from the candidate numerical kernel to post detection and
+// PL.  It is produced for dense and matrix-free candidates alike; retained
+// Jacobian materialization is deliberately not part of the active contract.
+struct CandidateDetectorCertificate {
+  std::vector<CandidateDetectorRowRole> row_roles;
+  double current_statistic = std::numeric_limits<double>::infinity();
+  double history_statistic = std::numeric_limits<double>::infinity();
+  double history_constant = std::numeric_limits<double>::quiet_NaN();
+  int current_rows = 0;
+  int current_rank = 0;
+  int current_dof = 0;
+  int history_rows = 0;
+  int history_rank = 0;
+  int history_dof = 0;
+  int pooled_rank = 0;
+  int pooled_dof = 0;
+  std::string accepted_event_id;
+  std::uint64_t window_fingerprint = 0;
+  std::uint64_t numerical_contract_identity = 0;
+  std::uint64_t canonical_action_identity = 0;
+  std::uint64_t numerical_identity = 0;
+  std::uint64_t certificate_digest = 0;
+  bool history_constant_present = false;
+  bool valid = false;
+  std::string reason;
+};
+
+struct CandidateEvaluation;
+
+// Recomputed by detector and PL consumers from the actual frozen window,
+// action, candidate numerical payload, and certificate fields.  The digest is
+// an integrity identity, not a cryptographic authenticity mechanism.
+std::uint64_t candidateDetectorActionIdentity(
+    const ExclusionAction& action);
+std::uint64_t candidateDetectorNumericalIdentity(
+    const LinearizedIntegrityWindow& window,
+    const ExclusionAction& action);
+std::uint64_t candidateDetectorCertificateDigest(
+    const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate,
+    const CandidateDetectorCertificate& certificate);
+bool validateCandidateDetectorCertificate(
+    const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate,
+    std::string* reason = nullptr);
+
 struct CandidateEvaluation {
   CandidateDiagnostics diagnostics;
   ExclusionAction action;
@@ -70,6 +121,7 @@ struct CandidateEvaluation {
   Eigen::MatrixXd retained_jacobian;
   const Eigen::MatrixXd* retained_jacobian_view = nullptr;
   Eigen::VectorXd retained_residual;
+  CandidateDetectorCertificate detector_certificate;
   int rows = 0;
   int rank = 0;
   int dof = 0;

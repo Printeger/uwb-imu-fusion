@@ -1,0 +1,36 @@
+red_command: cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl --target test_integrity_v2 -j2 && /home/mint/ws_fusion_uwb/devel/lib/uwb_imu_pl/test_integrity_v2 --gtest_filter='P002DualChannelContract.*'
+red_build_exit_code: 0
+red_test_exit_code: 1
+red_summary: 0/3 passed; pooled-pass/dual-fail, nonzero-constant and missing-payload reproductions failed before the fix
+
+final_command_1: /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 --gtest_filter='P002DualChannelContract.*'
+final_exit_code_1: 0
+final_summary_1: 7/7 passed
+P002DualChannelContract.PooledPassDualFailRejectsDenseAndMatrixFree PASS
+P002DualChannelContract.NonzeroHistoryConstantRejectsEveryCandidatePath PASS
+P002DualChannelContract.MissingPayloadIsInvalidAndCannotCertifyFinitePl PASS
+P002DualChannelContract.AllInKeepAndModifiedShareDenseMatrixFreeCertificateAndPl PASS
+P002DualChannelContract.MissingHistoryConstantFailsClosed PASS
+P002DualChannelContract.IndependentRawQrGramAndPlOracleCoversAllCandidatePaths PASS
+P002DualChannelContract.StaleSwappedAndTamperedContractsFailClosedBeforeFinitePl PASS
+
+first_reviewer_verdict: FAILED
+first_reviewer_blockers: digest not consumer-recomputable; stale/transplanted certificate accepted; detector threshold/P_FA/continuity union not rebound in PL; no independent raw-row QR/Gram/PL oracle
+reviewer_repair_summary: all blockers have retained negative tests and fail closed before finite certified PL
+
+second_reviewer_verdict: FAILED
+second_reviewer_scope: core implementation PASS; isolated negative-test evidence FAILED because semantic detector mutations retained a stale outer digest
+second_reviewer_repair: each current/history/pooled threshold/stat/dof, rows/rank, P_FA, operation bound, channel count, continuity horizon, constant, event and identity mutation recomputes detectorContractDigest before PL and is still INVALID/non-finite
+detector_digest_only_case: stored digest alone is damaged and rejected independently
+candidate_payload_cases: state_increment, dense covariance, actual matrix-free shared-base covariance and low-rank correction each retain the old certificate and are detector INVALID with non-finite PL
+
+final_command_2: /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_dual_channel_detector
+final_exit_code_2: 0
+final_summary_2: 5/5 passed
+DualChannelDetector.InformationFormConstantIsCountedBeforeChannelSplit PASS
+DualChannelDetector.Det02MergedDirectionIsTheOnlyMonitoredOne PASS
+DualChannelDetector.Det03FaultSpanCoversEveryRetainedDirection PASS
+DualChannelDetector.Det04PooledVersusSeparatedIsQuantifiedNotAssumed PASS
+DualChannelDetector.RealWindowSplitIsExactAndTablesTheDifference PASS
+
+not_run: sanitizers; hardware replay; performance comparison; long campaign and deployment calibration

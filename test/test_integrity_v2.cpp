@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <atomic>
 #include <boost/filesystem.hpp>
+#include <boost/math/distributions/chi_squared.hpp>
+#include <boost/math/distributions/non_central_chi_squared.hpp>
 #include <boost/math/distributions/normal.hpp>
 #include <cmath>
 #include <cstdio>
@@ -23,6 +25,7 @@
 #include "uwb_imu_pl/factors/kinematic_bridge_factor.hpp"
 #include "uwb_imu_pl/factors/realtime_factors.hpp"
 #include "uwb_imu_pl/integrity/coverage_envelope.hpp"
+#include "uwb_imu_pl/integrity/dual_channel_detector.hpp"
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
 #include "uwb_imu_pl/integrity/health_manager.hpp"
 #include "uwb_imu_pl/integrity/hypothesis_generator.hpp"
@@ -71,6 +74,219 @@ uwb_imu_pl::LinearizedIntegrityWindow syntheticWindow() {
   window.protected_state_map(1, 1) = 1.0;
   uwb_imu_pl::finalizeIntegrityWindow(&window, 1e-10, 1e10);
   return window;
+}
+
+uwb_imu_pl::LinearizedIntegrityWindow p002HistoryWindow(
+    double history_residual, double history_constant) {
+  uwb_imu_pl::LinearizedIntegrityWindow window;
+  window.id = uwb_imu_pl::WindowId(2002);
+  window.version = {20, 2, 0, 2};
+  for (std::uint64_t id = 1; id <= 3; ++id) {
+    window.blocks.push_back(block(
+        id, Eigen::Matrix<double, 1, 1>::Ones(),
+        Eigen::VectorXd::Zero(1), window.version));
+  }
+  auto history = block(
+      4, Eigen::Matrix<double, 1, 1>::Zero(),
+      Eigen::VectorXd::Constant(1, history_residual), window.version);
+  history.kind = uwb_imu_pl::FactorKind::BoundaryPrior;
+  history.sensor = uwb_imu_pl::SensorType::Prior;
+  history.role = uwb_imu_pl::RowRole::TrustedPrior;
+  history.whitening_model_id = "history_summary_sqrt_d1";
+  window.blocks.push_back(std::move(history));
+  window.history_summary.present = true;
+  window.history_summary.valid = true;
+  window.history_summary.nu_perp = 1;
+  window.history_summary.kappa_b = history_residual * history_residual;
+  window.history_summary.constant_offset = history_constant;
+  window.history_summary.emitted_rows = 1;
+  window.history_summary.detector_response = Eigen::MatrixXd::Zero(1, 0);
+  window.protected_state_map = Eigen::MatrixXd::Ones(3, 1);
+  uwb_imu_pl::finalizeIntegrityWindow(&window, 1e-12, 1e10);
+  return window;
+}
+
+struct P002RawOracle {
+  Eigen::MatrixXd h;
+  Eigen::VectorXd z;
+  Eigen::VectorXd state;
+  Eigen::MatrixXd covariance;
+  std::vector<uwb_imu_pl::CandidateDetectorRowRole> row_roles;
+  double current_statistic = 0.0;
+  double history_statistic = 0.0;
+  int current_rank = 0;
+  int current_dof = 0;
+  int history_rank = 0;
+  int history_dof = 0;
+};
+
+P002RawOracle p002IndependentRawOracle(
+    const uwb_imu_pl::LinearizedIntegrityWindow& window,
+    const uwb_imu_pl::ExclusionAction& action, double rank_tolerance) {
+  using uwb_imu_pl::CandidateDetectorRowRole;
+  P002RawOracle out;
+  std::vector<const uwb_imu_pl::LinearizedFactorBlock*> retained;
+  auto removed = [&](uwb_imu_pl::FactorGroupId id) {
+    return std::find(action.groups_to_remove.begin(),
+                     action.groups_to_remove.end(), id) !=
+        action.groups_to_remove.end();
+  };
+  for (const auto& value : window.blocks) {
+    if (!removed(value.group_id)) retained.push_back(&value);
+  }
+  for (const auto& value : action.added_blocks) retained.push_back(&value);
+  int rows = 0;
+  for (const auto* value : retained) rows += value->jacobian_whitened.rows();
+  out.h.resize(rows, window.H.cols());
+  out.z.resize(rows);
+  int offset = 0;
+  for (const auto* value : retained) {
+    const int count = value->jacobian_whitened.rows();
+    out.h.middleRows(offset, count) = value->jacobian_whitened;
+    out.z.segment(offset, count) = value->residual_whitened;
+    const int history_rows =
+        value->whitening_model_id == "history_summary_sqrt_d1"
+        ? window.history_summary.nu_perp : 0;
+    out.row_roles.insert(
+        out.row_roles.end(), count - history_rows,
+        CandidateDetectorRowRole::CurrentStateSupported);
+    out.row_roles.insert(
+        out.row_roles.end(), history_rows,
+        CandidateDetectorRowRole::HistoryDetectorOnly);
+    offset += count;
+  }
+  Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr(out.h);
+  qr.setThreshold(rank_tolerance);
+  out.state = qr.solve(out.z);
+  out.covariance = (out.h.transpose() * out.h).llt().solve(
+      Eigen::MatrixXd::Identity(out.h.cols(), out.h.cols()));
+  const Eigen::VectorXd residual = out.z - out.h * out.state;
+  std::vector<Eigen::Index> current_rows;
+  std::vector<Eigen::Index> history_rows;
+  for (Eigen::Index row = 0; row < residual.size(); ++row) {
+    if (out.row_roles[static_cast<std::size_t>(row)] ==
+        CandidateDetectorRowRole::HistoryDetectorOnly) {
+      history_rows.push_back(row);
+      out.history_statistic += residual(row) * residual(row);
+    } else {
+      current_rows.push_back(row);
+      out.current_statistic += residual(row) * residual(row);
+    }
+  }
+  out.history_statistic += window.history_summary.constant_offset;
+  auto channel_rank = [&](const std::vector<Eigen::Index>& selected) {
+    Eigen::MatrixXd channel(selected.size(), out.h.cols());
+    for (std::size_t row = 0; row < selected.size(); ++row) {
+      channel.row(static_cast<Eigen::Index>(row)) = out.h.row(selected[row]);
+    }
+    if (channel.rows() == 0) return 0;
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> channel_qr(channel);
+    channel_qr.setThreshold(rank_tolerance);
+    return static_cast<int>(channel_qr.rank());
+  };
+  out.current_rank = channel_rank(current_rows);
+  out.current_dof = static_cast<int>(current_rows.size()) - out.current_rank;
+  out.history_rank = channel_rank(history_rows);
+  out.history_dof = static_cast<int>(history_rows.size()) - out.history_rank;
+  return out;
+}
+
+Eigen::Vector3d p002IndependentPlOracle(
+    const uwb_imu_pl::LinearizedIntegrityWindow& window,
+    const P002RawOracle& raw, const Eigen::MatrixXd& fault_map,
+    const uwb_imu_pl::DetectorRiskContext& detector_risk,
+    const uwb_imu_pl::FaultHypothesisV2& hypothesis,
+    const uwb_imu_pl::RiskBudgetV2& risk) {
+  const Eigen::MatrixXd cross = raw.h.transpose() * fault_map;
+  const Eigen::MatrixXd solved = raw.covariance * cross;
+  Eigen::MatrixXd gram = fault_map.transpose() * fault_map -
+      cross.transpose() * solved;
+  gram = 0.5 * (gram + gram.transpose());
+  Eigen::MatrixXd history_gram = Eigen::MatrixXd::Zero(
+      fault_map.cols(), fault_map.cols());
+  for (Eigen::Index row = 0; row < fault_map.rows(); ++row) {
+    if (raw.row_roles[static_cast<std::size_t>(row)] ==
+        uwb_imu_pl::CandidateDetectorRowRole::HistoryDetectorOnly) {
+      history_gram.noalias() += fault_map.row(row).transpose() *
+                                fault_map.row(row);
+    }
+  }
+  const Eigen::MatrixXd protected_response =
+      window.protected_state_map * solved;
+  const Eigen::Matrix3d protected_covariance =
+      window.protected_state_map * raw.covariance *
+      window.protected_state_map.transpose();
+  const Eigen::Vector3d sigma =
+      protected_covariance.diagonal().cwiseSqrt();
+  const double hypothesis_tail = std::min(
+      0.5, hypothesis.hmi_allocation /
+          hypothesis.prior_probability_bound);
+  const double axis_tail = hypothesis_tail / 3.0;
+  const boost::math::normal_distribution<double> standard_normal;
+  const double k = boost::math::quantile(
+      standard_normal, 1.0 - axis_tail / 2.0);
+  auto threshold = [&](int dof) {
+    const boost::math::chi_squared_distribution<double> central(dof);
+    return boost::math::quantile(
+        boost::math::complement(central, detector_risk.p_fa_per_test));
+  };
+  auto noncentrality = [&](int dof, double tau) {
+    auto miss = [&](double lambda) {
+      const boost::math::non_central_chi_squared_distribution<double>
+          distribution(dof, lambda);
+      return boost::math::cdf(distribution, tau);
+    };
+    double low = 0.0;
+    double high = 1.0;
+    while (miss(high) > hypothesis.p_md_allocation && high < 1e12) {
+      high *= 2.0;
+    }
+    for (int iteration = 0; iteration < 200; ++iteration) {
+      const double middle = 0.5 * (low + high);
+      if (miss(middle) > hypothesis.p_md_allocation) low = middle;
+      else high = middle;
+    }
+    return high;
+  };
+  std::vector<std::pair<Eigen::MatrixXd, double>> channels;
+  const Eigen::MatrixXd current_gram = gram - history_gram;
+  if (current_gram.norm() > 0.0) {
+    channels.emplace_back(
+        current_gram,
+        noncentrality(raw.current_dof, threshold(raw.current_dof)));
+  }
+  if (raw.history_dof > 0 && history_gram.norm() > 0.0) {
+    channels.emplace_back(
+        history_gram,
+        noncentrality(raw.history_dof, threshold(raw.history_dof)));
+  }
+  if (channels.empty()) {
+    return Eigen::Vector3d::Constant(
+        std::numeric_limits<double>::infinity());
+  }
+  Eigen::MatrixXd w = Eigen::MatrixXd::Zero(gram.rows(), gram.cols());
+  const double weight = 1.0 / static_cast<double>(channels.size());
+  for (const auto& channel : channels) {
+    w.noalias() += weight / channel.second * channel.first;
+  }
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(w, Eigen::ComputeThinV);
+  const Eigen::VectorXd singular = svd.singularValues();
+  const double floor = singular.size() ? 1e-12 * singular(0) : 0.0;
+  Eigen::Vector3d fault_component = Eigen::Vector3d::Zero();
+  for (int axis = 0; axis < 3; ++axis) {
+    const Eigen::VectorXd response = protected_response.row(axis).transpose();
+    double quadratic = 0.0;
+    for (Eigen::Index index = 0; index < singular.size(); ++index) {
+      if (singular(index) <= floor) continue;
+      const double projection = svd.matrixV().col(index).dot(response);
+      quadratic += projection * projection / singular(index);
+    }
+    fault_component(axis) = std::sqrt(std::max(0.0, quadratic)) +
+                            k * sigma(axis);
+  }
+  const double nominal_k = boost::math::quantile(
+      standard_normal, 1.0 - risk.nominal_axis_tail / 2.0);
+  return fault_component.cwiseMax(nominal_k * sigma);
 }
 
 uwb_imu_pl::IntegrityConfig researchConfig() {
@@ -808,6 +1024,553 @@ TEST(IntegrityV2Detector, UsesSquaredParityDofAndUnionBound) {
   EXPECT_DOUBLE_EQ(result.operation_p_fa_upper_bound, 1e-3);
 }
 
+TEST(P002DualChannelContract, PooledPassDualFailRejectsDenseAndMatrixFree) {
+  using namespace uwb_imu_pl;
+  const auto window = p002HistoryWindow(5.0, 0.0);
+  ASSERT_TRUE(window.model_valid) << window.reason;
+  DetectorRiskContext risk;
+  risk.p_fa_per_test = 1e-6;
+  risk.rank_tolerance = 1e-12;
+  risk.max_condition_number = 1e10;
+  const auto all_in = JointWindowDetector().evaluate(window, risk);
+  ASSERT_TRUE(all_in.numerically_valid) << all_in.reason;
+  EXPECT_FALSE(all_in.passed);
+  EXPECT_GT(all_in.channel_history_statistic,
+            all_in.channel_history_threshold);
+  ExclusionAction keep;
+  keep.id = ExclusionActionId(2002);
+  keep.action_model_id = "KEEP_ALL";
+  RankUpdateConfig config;
+  config.rank_tolerance = 1e-12;
+  config.max_condition_number = 1e10;
+  config.max_linearization_step_norm = 10.0;
+  config.materialize_dense_oracle_fields = false;
+  const RankUpdateEvaluator evaluator(config);
+  const auto matrix_free = evaluator.evaluate(
+      evaluator.factorizeOnce(window, {keep}), keep);
+  const auto dense = DenseCandidateOracle(config).evaluate(window, keep);
+  ASSERT_TRUE(matrix_free.valid) << matrix_free.reason;
+  ASSERT_TRUE(dense.valid) << dense.reason;
+  for (const auto* candidate : {&matrix_free, &dense}) {
+    const auto post = JointWindowDetector().evaluateCandidate(
+        window, *candidate, risk);
+    EXPECT_TRUE(post.channel_split_valid) << post.reason;
+    EXPECT_FALSE(post.passed) << "pooled-pass/dual-fail must reject";
+    EXPECT_DOUBLE_EQ(post.channel_history_statistic, 25.0);
+    EXPECT_EQ(post.channel_history_dof, 1);
+  }
+}
+
+TEST(P002DualChannelContract, NonzeroHistoryConstantRejectsEveryCandidatePath) {
+  using namespace uwb_imu_pl;
+  const auto window = p002HistoryWindow(0.0, 25.0);
+  ASSERT_TRUE(window.model_valid) << window.reason;
+  DetectorRiskContext risk;
+  risk.p_fa_per_test = 1e-6;
+  risk.rank_tolerance = 1e-12;
+  risk.max_condition_number = 1e10;
+  const auto all_in = JointWindowDetector().evaluate(window, risk);
+  ASSERT_TRUE(all_in.numerically_valid) << all_in.reason;
+  EXPECT_FALSE(all_in.passed);
+  ExclusionAction keep;
+  keep.id = ExclusionActionId(2003);
+  keep.action_model_id = "KEEP_ALL";
+  RankUpdateConfig config;
+  config.rank_tolerance = 1e-12;
+  config.max_condition_number = 1e10;
+  config.max_linearization_step_norm = 10.0;
+  config.materialize_dense_oracle_fields = false;
+  const RankUpdateEvaluator evaluator(config);
+  const auto matrix_free = evaluator.evaluate(
+      evaluator.factorizeOnce(window, {keep}), keep);
+  const auto dense = DenseCandidateOracle(config).evaluate(window, keep);
+  for (const auto* candidate : {&matrix_free, &dense}) {
+    ASSERT_TRUE(candidate->valid) << candidate->reason;
+    const auto post = JointWindowDetector().evaluateCandidate(
+        window, *candidate, risk);
+    EXPECT_TRUE(post.channel_split_valid) << post.reason;
+    EXPECT_FALSE(post.passed) << "history constant is part of accepted event";
+    EXPECT_DOUBLE_EQ(post.channel_history_statistic, 25.0);
+  }
+}
+
+TEST(P002DualChannelContract, MissingPayloadIsInvalidAndCannotCertifyFinitePl) {
+  using namespace uwb_imu_pl;
+  auto window = syntheticWindow();
+  window.protected_state_map.row(2) = window.protected_state_map.row(0);
+  finalizeIntegrityWindow(&window, 1e-12, 1e10);
+  RankUpdateConfig config;
+  config.rank_tolerance = 1e-12;
+  config.max_condition_number = 1e10;
+  config.max_linearization_step_norm = 10.0;
+  const auto source = DenseCandidateOracle(config).evaluate(
+      window, ExclusionAction{});
+  ASSERT_TRUE(source.valid) << source.reason;
+  CandidateEvaluation missing;
+  missing.action = source.action;
+  missing.base_version = source.base_version;
+  missing.state_increment = source.state_increment;
+  missing.covariance = source.covariance;
+  missing.rows = source.rows;
+  missing.rank = source.rank;
+  missing.dof = source.dof;
+  missing.statistic = source.statistic;
+  missing.information_logdet = source.information_logdet;
+  missing.valid = true;
+  DetectorRiskContext risk;
+  risk.p_fa_per_test = 1e-6;
+  const auto detector = JointWindowDetector().evaluateCandidate(
+      window, missing, risk);
+  EXPECT_FALSE(detector.numerically_valid);
+  EXPECT_FALSE(detector.passed);
+  FaultHypothesisV2 hypothesis;
+  hypothesis.id = HypothesisId(2004);
+  hypothesis.A = Eigen::MatrixXd::Zero(missing.rows, 1);
+  hypothesis.A(4, 0) = 1.0;
+  hypothesis.p_md_allocation = 1e-3;
+  hypothesis.hmi_allocation = 1e-6;
+  hypothesis.prior_probability_bound = 1e-3;
+  std::vector<FaultHypothesisV2> remaining{hypothesis};
+  const auto pl = ProtectionLevelV2().compute(
+      window, missing, detector, &remaining, RiskBudgetV2{});
+  EXPECT_FALSE(pl.model_valid);
+  EXPECT_FALSE(pl.pl_xyz_m.allFinite());
+}
+
+TEST(P002DualChannelContract,
+     AllInKeepAndModifiedShareDenseMatrixFreeCertificateAndPl) {
+  using namespace uwb_imu_pl;
+  auto window = p002HistoryWindow(0.0, 0.0);
+  ASSERT_TRUE(window.model_valid) << window.reason;
+  DetectorRiskContext risk;
+  risk.p_fa_per_test = 1e-6;
+  risk.rank_tolerance = 1e-12;
+  risk.max_condition_number = 1e10;
+  const auto all_in = JointWindowDetector().evaluate(window, risk);
+  ASSERT_TRUE(all_in.numerically_valid) << all_in.reason;
+  ASSERT_TRUE(all_in.passed) << all_in.reason;
+
+  ExclusionAction keep;
+  keep.id = ExclusionActionId(2010);
+  keep.action_model_id = "KEEP_ALL";
+  ExclusionAction modified;
+  modified.id = ExclusionActionId(2011);
+  modified.action_model_id = "O02_MODIFIED";
+  modified.groups_to_remove = {FactorGroupId(1)};
+  RankUpdateConfig config;
+  config.rank_tolerance = 1e-12;
+  config.max_condition_number = 1e10;
+  config.max_linearization_step_norm = 10.0;
+  config.materialize_dense_oracle_fields = false;
+  const RankUpdateEvaluator evaluator(config);
+  const auto base = evaluator.factorizeOnce(window, {keep, modified});
+
+  for (const auto& action : {keep, modified}) {
+    auto matrix_free = evaluator.evaluate(base, action);
+    auto dense = DenseCandidateOracle(config).evaluate(window, action);
+    ASSERT_TRUE(matrix_free.valid) << matrix_free.reason;
+    ASSERT_TRUE(dense.valid) << dense.reason;
+    ASSERT_TRUE(matrix_free.detector_certificate.valid)
+        << matrix_free.detector_certificate.reason;
+    ASSERT_TRUE(dense.detector_certificate.valid)
+        << dense.detector_certificate.reason;
+    EXPECT_EQ(matrix_free.detector_certificate.row_roles,
+              dense.detector_certificate.row_roles);
+    EXPECT_DOUBLE_EQ(matrix_free.detector_certificate.current_statistic,
+                     dense.detector_certificate.current_statistic);
+    EXPECT_DOUBLE_EQ(matrix_free.detector_certificate.history_statistic,
+                     dense.detector_certificate.history_statistic);
+    EXPECT_DOUBLE_EQ(matrix_free.detector_certificate.history_constant,
+                     dense.detector_certificate.history_constant);
+    EXPECT_EQ(matrix_free.detector_certificate.current_rank,
+              dense.detector_certificate.current_rank);
+    EXPECT_EQ(matrix_free.detector_certificate.current_dof,
+              dense.detector_certificate.current_dof);
+    EXPECT_EQ(matrix_free.detector_certificate.history_rank,
+              dense.detector_certificate.history_rank);
+    EXPECT_EQ(matrix_free.detector_certificate.history_dof,
+              dense.detector_certificate.history_dof);
+    EXPECT_EQ(matrix_free.detector_certificate.accepted_event_id,
+              "dual_channel_intersection_v6");
+    EXPECT_EQ(matrix_free.detector_certificate.numerical_identity,
+              dense.detector_certificate.numerical_identity);
+
+    const auto matrix_free_post =
+        JointWindowDetector().evaluateCandidate(window, matrix_free, risk);
+    const auto dense_post = JointWindowDetector().evaluateCandidate(
+        window, dense, risk);
+    ASSERT_TRUE(matrix_free_post.passed) << matrix_free_post.reason;
+    ASSERT_TRUE(dense_post.passed) << dense_post.reason;
+    EXPECT_EQ(matrix_free_post.accepted_event_id,
+              dense_post.accepted_event_id);
+    EXPECT_EQ(matrix_free_post.candidate_numerical_identity,
+              dense_post.candidate_numerical_identity);
+    EXPECT_DOUBLE_EQ(matrix_free_post.channel_current_statistic,
+                     dense_post.channel_current_statistic);
+    EXPECT_DOUBLE_EQ(matrix_free_post.channel_history_statistic,
+                     dense_post.channel_history_statistic);
+    EXPECT_EQ(matrix_free_post.channel_current_dof,
+              dense_post.channel_current_dof);
+    EXPECT_EQ(matrix_free_post.channel_history_dof,
+              dense_post.channel_history_dof);
+    EXPECT_DOUBLE_EQ(matrix_free_post.operation_p_fa_upper_bound,
+                     dense_post.operation_p_fa_upper_bound);
+    if (action.action_model_id == "KEEP_ALL") {
+      EXPECT_EQ(matrix_free_post.accepted_event_id, all_in.accepted_event_id);
+      EXPECT_EQ(matrix_free_post.candidate_numerical_identity,
+                all_in.candidate_numerical_identity);
+      EXPECT_DOUBLE_EQ(matrix_free_post.channel_current_statistic,
+                       all_in.channel_current_statistic);
+      EXPECT_DOUBLE_EQ(matrix_free_post.channel_history_statistic,
+                       all_in.channel_history_statistic);
+      EXPECT_EQ(matrix_free_post.channel_current_dof,
+                all_in.channel_current_dof);
+      EXPECT_EQ(matrix_free_post.channel_history_dof,
+                all_in.channel_history_dof);
+      EXPECT_DOUBLE_EQ(matrix_free_post.operation_p_fa_upper_bound,
+                       all_in.operation_p_fa_upper_bound);
+    }
+
+    Eigen::MatrixXd mode = Eigen::MatrixXd::Zero(matrix_free.rows, 1);
+    mode(0, 0) = 1.0;
+    mode(mode.rows() - 1, 0) = 1.0;
+    FaultHypothesisV2 hypothesis;
+    hypothesis.id = HypothesisId(2012);
+    hypothesis.modes = {FaultModeId(2013)};
+    hypothesis.A = mode;
+    hypothesis.p_md_allocation = 1e-3;
+    hypothesis.hmi_allocation = 1e-6;
+    hypothesis.prior_probability_bound = 1e-3;
+    std::vector<FaultHypothesisV2> matrix_free_faults{hypothesis};
+    std::vector<FaultHypothesisV2> dense_faults{hypothesis};
+    ProtectionLevelSharedContext matrix_free_shared;
+    matrix_free_shared.mode_maps.emplace(2013, mode);
+    ProtectionLevelSharedContext dense_shared = matrix_free_shared;
+    const auto matrix_free_pl = ProtectionLevelV2().computeShared(
+        window, &matrix_free, matrix_free_post, &matrix_free_faults,
+        matrix_free_shared, RiskBudgetV2{});
+    const auto dense_pl = ProtectionLevelV2().computeShared(
+        window, &dense, dense_post, &dense_faults, dense_shared,
+        RiskBudgetV2{});
+    ASSERT_TRUE(matrix_free_pl.model_valid) << matrix_free_pl.reason;
+    ASSERT_TRUE(dense_pl.model_valid) << dense_pl.reason;
+    EXPECT_TRUE(matrix_free_pl.pl_xyz_m.isApprox(dense_pl.pl_xyz_m, 1e-12));
+    EXPECT_EQ(matrix_free_pl.detector_certificate_id,
+              dense_pl.detector_certificate_id);
+  }
+}
+
+TEST(P002DualChannelContract, MissingHistoryConstantFailsClosed) {
+  using namespace uwb_imu_pl;
+  const auto window = p002HistoryWindow(0.0, 0.0);
+  RankUpdateConfig config;
+  config.rank_tolerance = 1e-12;
+  config.max_condition_number = 1e10;
+  config.max_linearization_step_norm = 10.0;
+  auto candidate = DenseCandidateOracle(config).evaluate(
+      window, ExclusionAction{});
+  ASSERT_TRUE(candidate.valid) << candidate.reason;
+  ASSERT_TRUE(candidate.detector_certificate.valid)
+      << candidate.detector_certificate.reason;
+  candidate.detector_certificate.history_constant_present = false;
+  const auto detector = JointWindowDetector().evaluateCandidate(
+      window, candidate, DetectorRiskContext{});
+  EXPECT_FALSE(detector.numerically_valid);
+  EXPECT_FALSE(detector.passed);
+  EXPECT_NE(detector.reason.find("certificate"), std::string::npos);
+}
+
+TEST(P002DualChannelContract,
+     IndependentRawQrGramAndPlOracleCoversAllCandidatePaths) {
+  using namespace uwb_imu_pl;
+  const auto window = p002HistoryWindow(0.0, 0.0);
+  DetectorRiskContext detector_risk;
+  detector_risk.p_fa_per_test = 1e-6;
+  detector_risk.continuity_horizon_tests = 1000;
+  detector_risk.rank_tolerance = 1e-12;
+  detector_risk.max_condition_number = 1e10;
+  const auto all_in = JointWindowDetector().evaluate(window, detector_risk);
+  ASSERT_TRUE(all_in.passed) << all_in.reason;
+
+  ExclusionAction keep;
+  keep.id = ExclusionActionId(2020);
+  keep.action_model_id = "KEEP_ALL";
+  ExclusionAction modified;
+  modified.id = ExclusionActionId(2021);
+  modified.action_model_id = "O02_MODIFIED";
+  modified.groups_to_remove = {FactorGroupId(1)};
+  RankUpdateConfig config;
+  config.rank_tolerance = detector_risk.rank_tolerance;
+  config.max_condition_number = detector_risk.max_condition_number;
+  config.max_linearization_step_norm = 10.0;
+  config.materialize_dense_oracle_fields = false;
+  const RankUpdateEvaluator evaluator(config);
+  const auto base = evaluator.factorizeOnce(window, {keep, modified});
+  RiskBudgetV2 pl_risk;
+
+  for (const auto& action : {keep, modified}) {
+    const P002RawOracle raw = p002IndependentRawOracle(
+        window, action, config.rank_tolerance);
+    if (action.action_model_id == "KEEP_ALL") {
+      EXPECT_DOUBLE_EQ(all_in.channel_current_statistic,
+                       raw.current_statistic);
+      EXPECT_DOUBLE_EQ(all_in.channel_history_statistic,
+                       raw.history_statistic);
+      EXPECT_EQ(all_in.channel_current_dof, raw.current_dof);
+      EXPECT_EQ(all_in.channel_history_dof, raw.history_dof);
+    }
+    auto matrix_free = evaluator.evaluate(base, action);
+    auto dense = DenseCandidateOracle(config).evaluate(window, action);
+    for (auto* candidate : {&matrix_free, &dense}) {
+      ASSERT_TRUE(candidate->valid) << candidate->reason;
+      ASSERT_TRUE(validateCandidateDetectorCertificate(
+          window, *candidate, nullptr));
+      EXPECT_TRUE(candidate->state_increment.isApprox(raw.state, 1e-12));
+      EXPECT_EQ(candidate->detector_certificate.row_roles, raw.row_roles);
+      EXPECT_DOUBLE_EQ(candidate->detector_certificate.current_statistic,
+                       raw.current_statistic);
+      EXPECT_DOUBLE_EQ(candidate->detector_certificate.history_statistic,
+                       raw.history_statistic);
+      EXPECT_EQ(candidate->detector_certificate.current_rank,
+                raw.current_rank);
+      EXPECT_EQ(candidate->detector_certificate.current_dof,
+                raw.current_dof);
+      EXPECT_EQ(candidate->detector_certificate.history_rank,
+                raw.history_rank);
+      EXPECT_EQ(candidate->detector_certificate.history_dof,
+                raw.history_dof);
+      const auto detector = JointWindowDetector().evaluateCandidate(
+          window, *candidate, detector_risk);
+      ASSERT_TRUE(detector.passed) << detector.reason;
+
+      Eigen::MatrixXd mode = Eigen::MatrixXd::Zero(candidate->rows, 1);
+      mode(0, 0) = 1.0;
+      mode(mode.rows() - 1, 0) = 1.0;
+      FaultHypothesisV2 hypothesis;
+      hypothesis.id = HypothesisId(2022);
+      hypothesis.modes = {FaultModeId(2023)};
+      hypothesis.A = mode;
+      hypothesis.p_md_allocation = 1e-3;
+      hypothesis.hmi_allocation = 1e-6;
+      hypothesis.prior_probability_bound = 1e-3;
+      std::vector<FaultHypothesisV2> hypotheses{hypothesis};
+      ProtectionLevelSharedContext shared;
+      shared.mode_maps.emplace(2023, mode);
+      const auto pl = ProtectionLevelV2().computeShared(
+          window, candidate, detector, &hypotheses, shared, pl_risk);
+      ASSERT_TRUE(pl.model_valid) << pl.reason;
+      const Eigen::Vector3d independent_pl = p002IndependentPlOracle(
+          window, raw, mode, detector_risk, hypothesis, pl_risk);
+      ASSERT_TRUE(independent_pl.allFinite());
+      EXPECT_TRUE(pl.pl_xyz_m.isApprox(independent_pl, 1e-10));
+    }
+  }
+}
+
+TEST(P002DualChannelContract,
+     StaleSwappedAndTamperedContractsFailClosedBeforeFinitePl) {
+  using namespace uwb_imu_pl;
+  const auto window = p002HistoryWindow(0.0, 0.0);
+  DetectorRiskContext risk;
+  risk.p_fa_per_test = 1e-6;
+  risk.continuity_horizon_tests = 1000;
+  risk.rank_tolerance = 1e-12;
+  risk.max_condition_number = 1e10;
+  ExclusionAction keep;
+  keep.id = ExclusionActionId(2030);
+  keep.action_model_id = "KEEP_ALL";
+  ExclusionAction modified;
+  modified.id = ExclusionActionId(2031);
+  modified.action_model_id = "O02_MODIFIED";
+  modified.groups_to_remove = {FactorGroupId(1)};
+  RankUpdateConfig config;
+  config.rank_tolerance = risk.rank_tolerance;
+  config.max_condition_number = risk.max_condition_number;
+  config.max_linearization_step_norm = 10.0;
+  const auto keep_candidate = DenseCandidateOracle(config).evaluate(window, keep);
+  const auto modified_candidate =
+      DenseCandidateOracle(config).evaluate(window, modified);
+  ASSERT_TRUE(keep_candidate.valid);
+  ASSERT_TRUE(modified_candidate.valid);
+  const auto keep_detector = JointWindowDetector().evaluateCandidate(
+      window, keep_candidate, risk);
+  ASSERT_TRUE(keep_detector.passed) << keep_detector.reason;
+
+  auto finite_pl = [&](const CandidateEvaluation& candidate,
+                       const DetectorResultV2& detector) {
+    FaultHypothesisV2 hypothesis;
+    hypothesis.id = HypothesisId(2032);
+    hypothesis.A = Eigen::MatrixXd::Zero(candidate.rows, 1);
+    hypothesis.A(0, 0) = 1.0;
+    hypothesis.A(candidate.rows - 1, 0) = 1.0;
+    hypothesis.p_md_allocation = 1e-3;
+    hypothesis.hmi_allocation = 1e-6;
+    hypothesis.prior_probability_bound = 1e-3;
+    std::vector<FaultHypothesisV2> hypotheses{hypothesis};
+    return ProtectionLevelV2().compute(
+        window, candidate, detector, &hypotheses, RiskBudgetV2{});
+  };
+  auto reject_certificate = [&](const char* label,
+                                CandidateEvaluation tampered) {
+    const auto detector = JointWindowDetector().evaluateCandidate(
+        window, tampered, risk);
+    EXPECT_FALSE(detector.numerically_valid) << label;
+    EXPECT_FALSE(detector.passed) << label;
+    const auto pl = finite_pl(tampered, detector);
+    EXPECT_FALSE(pl.model_valid) << label;
+    EXPECT_FALSE(pl.pl_xyz_m.allFinite()) << label;
+  };
+
+  {
+    auto tampered = keep_candidate;
+    std::swap(tampered.detector_certificate.row_roles.front(),
+              tampered.detector_certificate.row_roles.back());
+    reject_certificate("row-role swap", tampered);
+  }
+  for (const auto& mutation :
+       std::vector<std::function<void(CandidateEvaluation&)>>{
+           [](CandidateEvaluation& value) {
+             value.detector_certificate.current_statistic += 0.25;
+           },
+           [](CandidateEvaluation& value) {
+             --value.detector_certificate.current_dof;
+           },
+           [](CandidateEvaluation& value) {
+             value.detector_certificate.history_constant += 0.5;
+           },
+           [](CandidateEvaluation& value) {
+             value.detector_certificate.accepted_event_id += "_tampered";
+           },
+           [](CandidateEvaluation& value) {
+             value.detector_certificate.numerical_identity ^= 1;
+           },
+           [](CandidateEvaluation& value) {
+             value.detector_certificate.certificate_digest ^= 1;
+           },
+           [](CandidateEvaluation& value) {
+             value.action.action_model_id += "_stale";
+           }}) {
+    auto tampered = keep_candidate;
+    mutation(tampered);
+    reject_certificate("certificate payload", tampered);
+  }
+  {
+    auto tampered = keep_candidate;
+    tampered.state_increment(0) = std::nextafter(
+        tampered.state_increment(0),
+        tampered.state_increment(0) + 1.0);
+    reject_certificate("candidate state increment", tampered);
+  }
+  {
+    auto tampered = keep_candidate;
+    ASSERT_GT(tampered.covariance.size(), 0);
+    tampered.covariance(0, 0) = std::nextafter(
+        tampered.covariance(0, 0), tampered.covariance(0, 0) + 1.0);
+    reject_certificate("dense candidate covariance", tampered);
+  }
+  {
+    RankUpdateConfig matrix_free_config = config;
+    matrix_free_config.materialize_dense_oracle_fields = false;
+    const RankUpdateEvaluator evaluator(matrix_free_config);
+    const auto matrix_free_candidate = evaluator.evaluate(
+        evaluator.factorizeOnce(window, {modified}), modified);
+    ASSERT_TRUE(matrix_free_candidate.valid) << matrix_free_candidate.reason;
+    ASSERT_EQ(matrix_free_candidate.covariance.size(), 0);
+    ASSERT_FALSE(matrix_free_candidate.reference_vectors);
+    ASSERT_TRUE(matrix_free_candidate.shared_base_factorization);
+    ASSERT_GT(matrix_free_candidate.covariance_plus_factor.size(), 0);
+    {
+      auto tampered = matrix_free_candidate;
+      const Eigen::MatrixXd base_factor =
+          tampered.shared_base_factorization->matrixL().toDenseMatrix();
+      Eigen::MatrixXd changed_information =
+          base_factor * base_factor.transpose();
+      changed_information(0, 0) += 1.0;
+      auto changed_base =
+          std::make_shared<Eigen::LLT<Eigen::MatrixXd>>(changed_information);
+      ASSERT_EQ(changed_base->info(), Eigen::Success);
+      tampered.shared_base_factorization = changed_base;
+      reject_certificate("matrix-free shared-base covariance", tampered);
+    }
+    auto tampered = matrix_free_candidate;
+    tampered.covariance_plus_factor(0, 0) = std::nextafter(
+        tampered.covariance_plus_factor(0, 0),
+        tampered.covariance_plus_factor(0, 0) + 1.0);
+    reject_certificate("matrix-free covariance correction", tampered);
+  }
+
+  auto transplanted = modified_candidate;
+  transplanted.detector_certificate = keep_candidate.detector_certificate;
+  const auto transplanted_pl = finite_pl(transplanted, keep_detector);
+  EXPECT_FALSE(transplanted_pl.model_valid);
+  EXPECT_FALSE(transplanted_pl.pl_xyz_m.allFinite());
+
+  auto stale_window = window;
+  stale_window.id = WindowId(99999);
+  const auto stale_detector = JointWindowDetector().evaluateCandidate(
+      stale_window, keep_candidate, risk);
+  EXPECT_FALSE(stale_detector.numerically_valid);
+
+  auto reject_detector_semantics = [&](const char* label,
+                                       DetectorResultV2 tampered) {
+    EXPECT_EQ(tampered.detector_contract_digest,
+              detectorContractDigest(tampered)) << label;
+    const auto pl = finite_pl(keep_candidate, tampered);
+    EXPECT_FALSE(pl.model_valid) << label;
+    EXPECT_FALSE(pl.pl_xyz_m.allFinite()) << label;
+  };
+  for (const auto& mutation :
+       std::vector<std::function<void(DetectorResultV2&)>>{
+           [](DetectorResultV2& value) {
+             value.channel_current_threshold += 1.0;
+           },
+           [](DetectorResultV2& value) {
+             value.channel_history_threshold += 1.0;
+           },
+           [](DetectorResultV2& value) { value.p_fa_per_test *= 2.0; },
+           [](DetectorResultV2& value) {
+             value.operation_p_fa_upper_bound *= 0.5;
+           },
+           [](DetectorResultV2& value) { ++value.active_channel_count; },
+           [](DetectorResultV2& value) { ++value.continuity_horizon_tests; },
+           [](DetectorResultV2& value) {
+             value.channel_current_statistic += 0.125;
+           },
+           [](DetectorResultV2& value) { --value.channel_current_dof; },
+           [](DetectorResultV2& value) {
+             value.channel_history_statistic += 0.125;
+           },
+           [](DetectorResultV2& value) { --value.channel_history_dof; },
+           [](DetectorResultV2& value) {
+             value.squared_parity_statistic += 0.125;
+           },
+           [](DetectorResultV2& value) { value.squared_threshold += 1.0; },
+           [](DetectorResultV2& value) { ++value.rows; },
+           [](DetectorResultV2& value) { --value.rank; },
+           [](DetectorResultV2& value) { --value.dof; },
+           [](DetectorResultV2& value) { value.history_constant += 0.25; },
+           [](DetectorResultV2& value) {
+             value.accepted_event_id += "_tampered";
+           },
+           [](DetectorResultV2& value) {
+             value.candidate_numerical_identity ^= 1;
+           }}) {
+    auto tampered = keep_detector;
+    mutation(tampered);
+    tampered.detector_contract_digest = detectorContractDigest(tampered);
+    reject_detector_semantics("detector semantic payload", tampered);
+  }
+  {
+    auto tampered = keep_detector;
+    tampered.detector_contract_digest ^= 1;
+    EXPECT_NE(tampered.detector_contract_digest,
+              detectorContractDigest(tampered));
+    const auto pl = finite_pl(keep_candidate, tampered);
+    EXPECT_FALSE(pl.model_valid) << "detector digest only";
+    EXPECT_FALSE(pl.pl_xyz_m.allFinite()) << "detector digest only";
+  }
+}
+
 TEST(IntegrityV2ProtectionLevel, RecomputesPostCandidateAndStaysResearchOnly) {
   auto window = syntheticWindow();
   window.protected_state_map.row(2) = window.protected_state_map.row(0);
@@ -821,7 +1584,7 @@ TEST(IntegrityV2ProtectionLevel, RecomputesPostCandidateAndStaysResearchOnly) {
   uwb_imu_pl::DetectorRiskContext detector_risk;
   detector_risk.p_fa_per_test = 1e-6;
   const auto detector = uwb_imu_pl::JointWindowDetector().evaluateCandidate(
-      candidate, detector_risk);
+      window, candidate, detector_risk);
   uwb_imu_pl::FaultHypothesisV2 first;
   first.id = uwb_imu_pl::HypothesisId(1);
   first.A = Eigen::MatrixXd::Zero(candidate.rows, 1);
@@ -919,7 +1682,7 @@ TEST(IntegrityV2ProtectionLevel,
   DetectorRiskContext detector_risk;
   detector_risk.p_fa_per_test = 1e-6;
   const auto detector =
-      JointWindowDetector().evaluateCandidate(candidate, detector_risk);
+      JointWindowDetector().evaluateCandidate(window, candidate, detector_risk);
   ProtectionLevelSharedContext ordinary_context;
   ordinary_context.mode_maps[1] = Eigen::MatrixXd::Zero(window.H.rows(), 1);
   ordinary_context.mode_maps[1].middleRows(2, 3) =
@@ -1737,9 +2500,10 @@ TEST(GateDOracle,
               1e-7);
     EXPECT_EQ(c.dof, oracle.dof);
     const auto dc =
-        JointWindowDetector().evaluateCandidate(c, DetectorRiskContext{});
+        JointWindowDetector().evaluateCandidate(window, c, DetectorRiskContext{});
     const auto od =
-        JointWindowDetector().evaluateCandidate(oracle, DetectorRiskContext{});
+        JointWindowDetector().evaluateCandidate(
+            window, oracle, DetectorRiskContext{});
     EXPECT_EQ(dc.passed, od.passed);
     EXPECT_NEAR(dc.squared_threshold, od.squared_threshold, 1e-9);
     Eigen::Vector3d bc = Eigen::Vector3d::Zero(), bo = bc;
@@ -1851,7 +2615,8 @@ TEST(GateDSelection, DenseAndOperatorPathsSelectSameSuccessfulExclusion) {
     dense.push_back(DenseCandidateOracle(cfg).evaluate(w, action));
     for (auto* c : {&fast.back(), &dense.back()}) {
       const auto detector =
-          JointWindowDetector().evaluateCandidate(*c, DetectorRiskContext{});
+          JointWindowDetector().evaluateCandidate(
+              w, *c, DetectorRiskContext{});
       ASSERT_TRUE(c->valid);
       ASSERT_TRUE(detector.passed);
       FaultHypothesisV2 remaining;
@@ -1963,7 +2728,8 @@ TEST(GateDProtectionLevel, SharedModesUseOneCombinedCovarianceSolve) {
   auto candidate = evaluator.evaluate(base, ExclusionAction{});
   ASSERT_TRUE(candidate.valid) << candidate.reason;
   const auto detector =
-      JointWindowDetector().evaluateCandidate(candidate, DetectorRiskContext{});
+      JointWindowDetector().evaluateCandidate(
+          window, candidate, DetectorRiskContext{});
   ASSERT_TRUE(detector.passed);
   Eigen::MatrixXd mode = Eigen::MatrixXd::Zero(candidate.rows, 1);
   mode(4, 0) = 1.0;

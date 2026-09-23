@@ -10,7 +10,9 @@
 #include <algorithm>
 #include <cmath>
 #include <chrono>
+#include <cstring>
 #include <set>
+#include <type_traits>
 
 namespace uwb_imu_pl {
 namespace {
@@ -217,6 +219,227 @@ bool candidateRows(const LinearizedIntegrityWindow& window,
   return true;
 }
 
+void hashCertificateBytes(std::uint64_t* hash, const void* data,
+                          std::size_t size) {
+  const auto* bytes = static_cast<const unsigned char*>(data);
+  for (std::size_t index = 0; index < size; ++index) {
+    *hash ^= bytes[index];
+    *hash *= 1099511628211ULL;
+  }
+}
+
+template <class T>
+void hashCertificateScalar(std::uint64_t* hash, const T& value) {
+  hashCertificateBytes(hash, &value, sizeof(value));
+}
+
+void hashCertificateString(std::uint64_t* hash, const std::string& value) {
+  const std::uint64_t size = value.size();
+  hashCertificateScalar(hash, size);
+  if (!value.empty()) hashCertificateBytes(hash, value.data(), value.size());
+}
+
+template <class Derived>
+void hashCertificateEigen(std::uint64_t* hash,
+                          const Eigen::MatrixBase<Derived>& value) {
+  const std::int64_t rows = value.rows();
+  const std::int64_t cols = value.cols();
+  hashCertificateScalar(hash, rows);
+  hashCertificateScalar(hash, cols);
+  for (Eigen::Index col = 0; col < value.cols(); ++col) {
+    for (Eigen::Index row = 0; row < value.rows(); ++row) {
+      const double entry = value(row, col) == 0.0 ? 0.0 : value(row, col);
+      hashCertificateScalar(hash, entry);
+    }
+  }
+}
+
+void hashCertificateVersion(std::uint64_t* hash,
+                            const LinearizationVersion& version) {
+  hashCertificateScalar(hash, version.graph_version);
+  hashCertificateScalar(hash, version.ordering_version);
+  hashCertificateScalar(hash, version.noise_model_version);
+  hashCertificateScalar(hash, version.linpoint_version);
+}
+
+std::uint64_t blockCertificateIdentity(const LinearizedFactorBlock& block) {
+  std::uint64_t hash = 1469598103934665603ULL;
+  hashCertificateScalar(&hash, block.group_id.value());
+  hashCertificateScalar(&hash, static_cast<int>(block.kind));
+  hashCertificateScalar(&hash, static_cast<int>(block.sensor));
+  hashCertificateScalar(&hash, static_cast<int>(block.role));
+  hashCertificateEigen(&hash, block.jacobian_raw);
+  hashCertificateEigen(&hash, block.residual_raw);
+  hashCertificateEigen(&hash, block.covariance);
+  hashCertificateEigen(&hash, block.whitener);
+  hashCertificateEigen(&hash, block.jacobian_whitened);
+  hashCertificateEigen(&hash, block.residual_whitened);
+  hashCertificateScalar(
+      &hash, static_cast<std::uint64_t>(block.window_column_indices.size()));
+  for (const int index : block.window_column_indices) {
+    hashCertificateScalar(&hash, index);
+  }
+  std::vector<std::uint64_t> fault_units;
+  for (const auto id : block.fault_units) fault_units.push_back(id.value());
+  std::sort(fault_units.begin(), fault_units.end());
+  hashCertificateScalar(&hash,
+                        static_cast<std::uint64_t>(fault_units.size()));
+  for (const auto value : fault_units) hashCertificateScalar(&hash, value);
+  hashCertificateScalar(&hash, block.effective_weight);
+  hashCertificateString(&hash, block.whitening_model_id);
+  hashCertificateVersion(&hash, block.version);
+  return hash;
+}
+
+CandidateDetectorCertificate buildCandidateDetectorCertificate(
+    const LinearizedIntegrityWindow& window, const ExclusionAction& action,
+    const CandidateEvaluation& candidate, double rank_tolerance) {
+  CandidateDetectorCertificate out;
+  out.accepted_event_id = "dual_channel_intersection_v6";
+  out.pooled_rank = candidate.rank;
+  out.pooled_dof = candidate.dof;
+  if (!candidate.valid || !candidate.state_increment.allFinite()) {
+    out.reason = "candidate numerical solution is not valid";
+    return out;
+  }
+
+  std::vector<const LinearizedFactorBlock*> retained;
+  retained.reserve(window.blocks.size() + action.added_blocks.size());
+  for (const auto& block : window.blocks) {
+    if (!groupSelected(block.group_id, action.groups_to_remove)) {
+      retained.push_back(&block);
+    }
+  }
+  for (const auto& block : action.added_blocks) retained.push_back(&block);
+
+  int history_block_count = 0;
+  int current_rows = 0;
+  int history_rows = 0;
+  for (const auto* block : retained) {
+    const bool history_block =
+        block->whitening_model_id == "history_summary_sqrt_d1";
+    if (history_block) ++history_block_count;
+    int block_history_rows = 0;
+    if (history_block) {
+      const bool is_added = std::any_of(
+          action.added_blocks.begin(), action.added_blocks.end(),
+          [&](const LinearizedFactorBlock& added) { return &added == block; });
+      if (is_added) {
+        out.reason = "added history summary has no bound constant payload";
+        return out;
+      }
+      if (!window.history_summary.present || !window.history_summary.valid ||
+          window.history_summary.nu_perp < 0 ||
+          window.history_summary.nu_perp > block->jacobian_whitened.rows() ||
+          !std::isfinite(window.history_summary.constant_offset)) {
+        out.reason = "history summary constant/row-role payload is missing";
+        return out;
+      }
+      block_history_rows = window.history_summary.nu_perp;
+      out.history_constant = window.history_summary.constant_offset;
+      out.history_constant_present = true;
+    }
+    current_rows += block->jacobian_whitened.rows() - block_history_rows;
+    history_rows += block_history_rows;
+  }
+  const bool frozen_history_block = std::any_of(
+      window.blocks.begin(), window.blocks.end(),
+      [](const LinearizedFactorBlock& block) {
+        return block.whitening_model_id == "history_summary_sqrt_d1";
+      });
+  if (history_block_count > 1) {
+    out.reason = "candidate contains multiple history summary blocks";
+    return out;
+  }
+  if ((window.history_summary.present || frozen_history_block) &&
+      history_block_count == 0) {
+    out.reason = "candidate removed or omitted the frozen history payload";
+    return out;
+  }
+  if (history_block_count == 0) {
+    out.history_constant = 0.0;
+    out.history_constant_present = true;
+  }
+
+  Eigen::MatrixXd current_h(current_rows, window.H.cols());
+  Eigen::MatrixXd history_h(history_rows, window.H.cols());
+  Eigen::VectorXd current_r(current_rows);
+  Eigen::VectorXd history_r(history_rows);
+  int current_offset = 0;
+  int history_offset = 0;
+  out.row_roles.reserve(static_cast<std::size_t>(current_rows + history_rows));
+  for (const auto* block : retained) {
+    const int rows = block->jacobian_whitened.rows();
+    const int block_history_rows =
+        block->whitening_model_id == "history_summary_sqrt_d1"
+            ? window.history_summary.nu_perp
+            : 0;
+    const int supported_rows = rows - block_history_rows;
+    if (supported_rows > 0) {
+      current_h.middleRows(current_offset, supported_rows) =
+          block->jacobian_whitened.topRows(supported_rows);
+      current_r.segment(current_offset, supported_rows) =
+          block->residual_whitened.head(supported_rows) -
+          block->jacobian_whitened.topRows(supported_rows) *
+              candidate.state_increment;
+      current_offset += supported_rows;
+      out.row_roles.insert(out.row_roles.end(), supported_rows,
+                           CandidateDetectorRowRole::CurrentStateSupported);
+    }
+    if (block_history_rows > 0) {
+      history_h.middleRows(history_offset, block_history_rows) =
+          block->jacobian_whitened.bottomRows(block_history_rows);
+      history_r.segment(history_offset, block_history_rows) =
+          block->residual_whitened.tail(block_history_rows) -
+          block->jacobian_whitened.bottomRows(block_history_rows) *
+              candidate.state_increment;
+      history_offset += block_history_rows;
+      out.row_roles.insert(out.row_roles.end(), block_history_rows,
+                           CandidateDetectorRowRole::HistoryDetectorOnly);
+    }
+  }
+  auto rankOf = [&](const Eigen::MatrixXd& value) {
+    if (value.rows() == 0 || value.cols() == 0) return 0;
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr(value);
+    qr.setThreshold(rank_tolerance);
+    return static_cast<int>(qr.rank());
+  };
+  out.current_rows = current_rows;
+  out.current_rank = rankOf(current_h);
+  out.current_dof = current_rows - out.current_rank;
+  out.history_rows = history_rows;
+  out.history_rank = rankOf(history_h);
+  out.history_dof = history_rows - out.history_rank;
+  out.current_statistic = current_r.squaredNorm();
+  out.history_statistic = history_r.squaredNorm() + out.history_constant;
+  const double represented_without_constant =
+      out.current_statistic + history_r.squaredNorm();
+  const double scale = std::max({1.0, std::abs(candidate.statistic),
+                                 std::abs(represented_without_constant)});
+  if (!out.history_constant_present || !std::isfinite(out.current_statistic) ||
+      !std::isfinite(out.history_statistic) || out.history_statistic < 0.0 ||
+      out.current_dof <= 0 || out.current_rank != candidate.rank ||
+      out.current_dof + out.history_dof != candidate.dof ||
+      out.current_rows + out.history_rows != candidate.rows ||
+      out.history_rank != 0 ||
+      (out.history_rows > 0 && out.history_dof <= 0) ||
+      std::abs(represented_without_constant - candidate.statistic) >
+          1e-7 * scale) {
+    out.reason = "candidate detector statistics/rank/dof identity is invalid";
+    return out;
+  }
+
+  out.window_fingerprint = integrityWindowFingerprint(window);
+  out.numerical_contract_identity = window.numerics
+      ? window.numerics->numerical_contract_fingerprint : 0;
+  out.canonical_action_identity = candidateDetectorActionIdentity(action);
+  out.numerical_identity = candidateDetectorNumericalIdentity(window, action);
+  out.valid = true;
+  out.certificate_digest = candidateDetectorCertificateDigest(
+      window, candidate, out);
+  return out;
+}
+
 bool covarianceFromInformation(const Eigen::MatrixXd& information,
                                Eigen::MatrixXd* covariance) {
   NumericalWorkCounters::candidateInnerLlt();
@@ -265,6 +488,208 @@ void finishCandidate(CandidateEvaluation* result, const Eigen::MatrixXd& h,
 }
 
 }  // namespace
+
+std::uint64_t candidateDetectorActionIdentity(
+    const ExclusionAction& action) {
+  std::uint64_t hash = 1469598103934665603ULL;
+  hashCertificateScalar(&hash, action.id.value());
+  auto hash_sorted_ids = [&](const auto& ids) {
+    std::vector<std::uint64_t> values;
+    values.reserve(ids.size());
+    for (const auto id : ids) values.push_back(id.value());
+    std::sort(values.begin(), values.end());
+    hashCertificateScalar(&hash, static_cast<std::uint64_t>(values.size()));
+    for (const auto value : values) hashCertificateScalar(&hash, value);
+  };
+  hash_sorted_ids(action.covered_units);
+  hash_sorted_ids(action.covered_modes);
+  std::vector<std::string> sources = action.physical_source_ids;
+  std::sort(sources.begin(), sources.end());
+  hashCertificateScalar(&hash, static_cast<std::uint64_t>(sources.size()));
+  for (const auto& source : sources) hashCertificateString(&hash, source);
+  hash_sorted_ids(action.groups_to_remove);
+  hash_sorted_ids(action.groups_to_add);
+  std::vector<std::uint64_t> added_blocks;
+  added_blocks.reserve(action.added_blocks.size());
+  for (const auto& block : action.added_blocks) {
+    added_blocks.push_back(blockCertificateIdentity(block));
+  }
+  std::sort(added_blocks.begin(), added_blocks.end());
+  hashCertificateScalar(&hash,
+                        static_cast<std::uint64_t>(added_blocks.size()));
+  for (const auto value : added_blocks) hashCertificateScalar(&hash, value);
+  hashCertificateScalar(&hash, static_cast<int>(action.bridge_mode));
+  hashCertificateScalar(&hash, action.exclusion_cardinality);
+  hashCertificateString(&hash, action.action_model_id);
+  hashCertificateScalar(&hash, static_cast<int>(action.recoverability));
+  const bool has_begin = action.recovery_epoch_begin.has_value();
+  const bool has_end = action.recovery_epoch_end.has_value();
+  hashCertificateScalar(&hash, has_begin);
+  if (has_begin) hashCertificateScalar(
+      &hash, static_cast<std::uint64_t>(*action.recovery_epoch_begin));
+  hashCertificateScalar(&hash, has_end);
+  if (has_end) hashCertificateScalar(
+      &hash, static_cast<std::uint64_t>(*action.recovery_epoch_end));
+  hashCertificateString(&hash, action.removal_data_source);
+  hashCertificateString(&hash, action.model_error_record);
+  hashCertificateScalar(&hash, action.model_error_validated);
+  return hash;
+}
+
+std::uint64_t candidateDetectorNumericalIdentity(
+    const LinearizedIntegrityWindow& window,
+    const ExclusionAction& action) {
+  std::uint64_t hash = 1469598103934665603ULL;
+  hashCertificateScalar(&hash, integrityWindowFingerprint(window));
+  const std::uint64_t numerical_contract = window.numerics
+      ? window.numerics->numerical_contract_fingerprint : 0;
+  hashCertificateScalar(&hash, numerical_contract);
+  const bool no_op = action.groups_to_remove.empty() &&
+      action.groups_to_add.empty() && action.added_blocks.empty();
+  const std::uint64_t numerical_action = no_op
+      ? 0 : candidateDetectorActionIdentity(action);
+  hashCertificateScalar(&hash, numerical_action);
+  return hash;
+}
+
+std::uint64_t candidateDetectorCertificateDigest(
+    const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate,
+    const CandidateDetectorCertificate& certificate) {
+  std::uint64_t hash = 1469598103934665603ULL;
+  hashCertificateScalar(&hash, integrityWindowFingerprint(window));
+  const std::uint64_t numerical_contract = window.numerics
+      ? window.numerics->numerical_contract_fingerprint : 0;
+  hashCertificateScalar(&hash, numerical_contract);
+  hashCertificateVersion(&hash, candidate.base_version);
+  hashCertificateScalar(&hash, candidateDetectorActionIdentity(candidate.action));
+  hashCertificateScalar(&hash, candidate.rows);
+  hashCertificateScalar(&hash, candidate.rank);
+  hashCertificateScalar(&hash, candidate.dof);
+  hashCertificateScalar(&hash, candidate.statistic);
+  hashCertificateScalar(&hash, candidate.condition_number);
+  hashCertificateScalar(&hash, candidate.information_logdet);
+  hashCertificateScalar(&hash, candidate.valid);
+  hashCertificateScalar(&hash, candidate.exact_slow_path);
+  const std::uint64_t candidate_window_fingerprint = candidate.window_view
+      ? integrityWindowFingerprint(*candidate.window_view) : 0;
+  hashCertificateScalar(&hash, candidate_window_fingerprint);
+  hashCertificateEigen(&hash, candidate.state_increment);
+  hashCertificateEigen(&hash, candidate.covariance);
+  hashCertificateEigen(&hash, candidate.reference_inverse_squared);
+  hashCertificateEigen(&hash, candidate.covariance_plus_factor);
+  hashCertificateEigen(&hash, candidate.covariance_minus_factor);
+  if (candidate.reference_vectors) {
+    hashCertificateEigen(&hash, *candidate.reference_vectors);
+  } else {
+    hashCertificateScalar(&hash, std::uint64_t{0});
+  }
+  if (candidate.shared_base_factorization) {
+    const Eigen::MatrixXd factor =
+        candidate.shared_base_factorization->matrixL().toDenseMatrix();
+    hashCertificateEigen(&hash, factor);
+  } else {
+    hashCertificateScalar(&hash, std::uint64_t{0});
+  }
+  hashCertificateEigen(&hash, candidate.retainedJacobian());
+  hashCertificateEigen(&hash, candidate.retained_residual);
+
+  hashCertificateScalar(&hash,
+                        static_cast<std::uint64_t>(certificate.row_roles.size()));
+  for (const auto role : certificate.row_roles) {
+    hashCertificateScalar(&hash, static_cast<std::uint8_t>(role));
+  }
+  hashCertificateScalar(&hash, certificate.current_statistic);
+  hashCertificateScalar(&hash, certificate.history_statistic);
+  hashCertificateScalar(&hash, certificate.history_constant);
+  hashCertificateScalar(&hash, certificate.current_rows);
+  hashCertificateScalar(&hash, certificate.current_rank);
+  hashCertificateScalar(&hash, certificate.current_dof);
+  hashCertificateScalar(&hash, certificate.history_rows);
+  hashCertificateScalar(&hash, certificate.history_rank);
+  hashCertificateScalar(&hash, certificate.history_dof);
+  hashCertificateScalar(&hash, certificate.pooled_rank);
+  hashCertificateScalar(&hash, certificate.pooled_dof);
+  hashCertificateString(&hash, certificate.accepted_event_id);
+  hashCertificateScalar(&hash, certificate.window_fingerprint);
+  hashCertificateScalar(&hash, certificate.numerical_contract_identity);
+  hashCertificateScalar(&hash, certificate.canonical_action_identity);
+  hashCertificateScalar(&hash, certificate.numerical_identity);
+  hashCertificateScalar(&hash, certificate.history_constant_present);
+  hashCertificateScalar(&hash, certificate.valid);
+  return hash;
+}
+
+bool validateCandidateDetectorCertificate(
+    const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate,
+    std::string* reason) {
+  auto reject = [&](const std::string& message) {
+    if (reason) *reason = message;
+    return false;
+  };
+  if (!window.model_valid || !window.numerics || !window.numerics->valid ||
+      window.numerics->window_id != window.id ||
+      !(window.numerics->version == window.version) ||
+      window.numerics->content_fingerprint != integrityWindowFingerprint(window) ||
+      window.numerics->numerical_contract_fingerprint !=
+          numericalContractFingerprint(window.numerics->numerical_contract)) {
+    return reject("candidate certificate window identity mismatch");
+  }
+  if (!(candidate.base_version == window.version)) {
+    return reject("candidate certificate linearization version mismatch");
+  }
+  if (candidate.window_view &&
+      (candidate.window_view->id != window.id ||
+       !(candidate.window_view->version == window.version) ||
+       integrityWindowFingerprint(*candidate.window_view) !=
+           integrityWindowFingerprint(window))) {
+    return reject("candidate source window identity mismatch");
+  }
+  std::string action_reason;
+  if (!validateAction(window, candidate.action, &action_reason)) {
+    return reject("candidate certificate action invalid: " + action_reason);
+  }
+  const CandidateDetectorCertificate expected =
+      buildCandidateDetectorCertificate(
+          window, candidate.action, candidate,
+          window.numerics->numerical_contract.rank_tolerance);
+  const auto& actual = candidate.detector_certificate;
+  if (!actual.valid || !expected.valid) {
+    return reject("candidate detector certificate is not valid");
+  }
+  const bool fields_match =
+      actual.row_roles == expected.row_roles &&
+      actual.current_statistic == expected.current_statistic &&
+      actual.history_statistic == expected.history_statistic &&
+      actual.history_constant == expected.history_constant &&
+      actual.current_rows == expected.current_rows &&
+      actual.current_rank == expected.current_rank &&
+      actual.current_dof == expected.current_dof &&
+      actual.history_rows == expected.history_rows &&
+      actual.history_rank == expected.history_rank &&
+      actual.history_dof == expected.history_dof &&
+      actual.pooled_rank == expected.pooled_rank &&
+      actual.pooled_dof == expected.pooled_dof &&
+      actual.accepted_event_id == expected.accepted_event_id &&
+      actual.window_fingerprint == expected.window_fingerprint &&
+      actual.numerical_contract_identity ==
+          expected.numerical_contract_identity &&
+      actual.canonical_action_identity == expected.canonical_action_identity &&
+      actual.numerical_identity == expected.numerical_identity &&
+      actual.history_constant_present == expected.history_constant_present;
+  if (!fields_match) {
+    return reject("candidate detector certificate payload mismatch");
+  }
+  const std::uint64_t recomputed = candidateDetectorCertificateDigest(
+      window, candidate, actual);
+  if (actual.certificate_digest == 0 ||
+      actual.certificate_digest != recomputed ||
+      actual.certificate_digest != expected.certificate_digest) {
+    return reject("candidate detector certificate digest mismatch");
+  }
+  return true;
+}
 
 Eigen::MatrixXd CandidateEvaluation::covarianceTimes(
     const Eigen::MatrixXd& value) const {
@@ -420,6 +845,10 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
   result.diagnostics.kernel_evaluated = true;
   result.diagnostics.numerical_path = "ADD_THEN_REMOVE_SVD";
   auto done = [&]() {
+    if (result.valid && !result.detector_certificate.valid) {
+      result.detector_certificate = buildCandidateDetectorCertificate(
+          window, action, result, config_.rank_tolerance);
+    }
     result.wall_ms = std::chrono::duration<double, std::milli>(
         std::chrono::steady_clock::now() - start).count();
     result.diagnostics.kernel_ms = result.wall_ms;
@@ -790,6 +1219,10 @@ CandidateEvaluation DenseCandidateOracle::evaluate(
   finishCandidate(&result, h, z, config_.rank_tolerance,
                   config_.max_condition_number,
                   config_.max_linearization_step_norm);
+  if (result.valid) {
+    result.detector_certificate = buildCandidateDetectorCertificate(
+        window, action, result, config_.rank_tolerance);
+  }
   result.diagnostics.condition_value_kind = "EXACT_SVD";
   result.wall_ms = std::chrono::duration<double, std::milli>(
       std::chrono::steady_clock::now() - wall_start).count();
