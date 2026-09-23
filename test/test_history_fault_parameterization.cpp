@@ -22,6 +22,7 @@
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 #include "uwb_imu_pl/integrity/history_fault_parameterization.hpp"
 #include "uwb_imu_pl/integrity/hypothesis_generator.hpp"
+#include "uwb_imu_pl/integrity/hypothesis_evidence.hpp"
 #include "uwb_imu_pl/integrity/imu_fault_subspace.hpp"
 
 namespace {
@@ -32,6 +33,12 @@ IntegrityConfig researchConfig() {
   return IntegrityConfigLoader::load(
       std::string(UWB_IMU_PL_SOURCE_DIR) +
       "/config/realtime_uwb_imu_pl_research.yaml");
+}
+
+IntegrityConfig jointOrder2Config() {
+  return IntegrityConfigLoader::load(
+      std::string(UWB_IMU_PL_SOURCE_DIR) +
+      "/config/fde_joint_order2.yaml");
 }
 
 UwbBatch batch(const IntegrityConfig& config, std::int64_t time_ns) {
@@ -316,6 +323,131 @@ TEST(HistoryFaultParameterization,
   const auto models =
       HypothesisGenerator().generate(window, tx, imu_maps, bridge_block);
 
+  // P0-01/O03 census is an explicit three-stage contract.  The expected set
+  // is enumerated from the frozen physical transaction/history scope, the
+  // represented set from the mode registry, and the evaluated set from the
+  // hypotheses.  Default research scope includes every single mode, so the
+  // three identity sets must agree exactly.
+  EXPECT_EQ(models.expected_mode_identities,
+            models.represented_mode_identities);
+  EXPECT_EQ(models.represented_mode_identities,
+            models.evaluated_mode_identities);
+  EXPECT_EQ(models.represented_mode_identities.size(), models.modes.size());
+
+  const auto history_block = std::find_if(
+      window.blocks.begin(), window.blocks.end(), [](const auto& block) {
+        return block.whitening_model_id == "history_summary_sqrt_d1";
+      });
+  ASSERT_NE(history_block, window.blocks.end());
+  bool persistent_history = false;
+  bool ramp_history = false;
+  bool imu_history = false;
+  std::size_t history_mapped_modes = 0;
+  std::size_t termwise_checked = 0;
+  double worst_history_map = 0.0;
+  std::map<std::size_t, double> physical_epoch_begin_s;
+  for (const auto& record : tx.recoverable_history) {
+    physical_epoch_begin_s[record.proposed_epoch] = record.begin.seconds();
+  }
+  for (const auto& mode : models.modes) {
+    const auto mapped = mode.raw_group_maps.find(history_block->group_id);
+    if (mapped == mode.raw_group_maps.end()) continue;
+    ++history_mapped_modes;
+    ASSERT_EQ(mapped->second.rows(), history_block->residual_raw.rows());
+    EXPECT_TRUE(mapped->second.allFinite());
+    EXPECT_GT(mapped->second.norm(), 0.0);
+
+    // Independent, term-by-term physical oracle.  Construct the coefficient
+    // matrix directly from the mode definition and frozen epoch times, then
+    // apply it to the two initialized history carriers.  No production
+    // persistent/ramp combination helper or generated mode map is reused.
+    Eigen::MatrixXd coefficients = Eigen::MatrixXd::Zero(
+        static_cast<Eigen::Index>(window.history_summary.column_ids.size()),
+        mode.parameter_dimension);
+    const std::size_t effective_onset =
+        (mode.onset_epoch == window.detector_first_epoch &&
+         (mode.kind == FaultKind::AnchorBiasPersistentConstant ||
+          mode.kind == FaultKind::AnchorBiasRamp))
+            ? tx.oldest_recoverable_epoch
+            : mode.onset_epoch;
+    for (std::size_t column = 0;
+         column < window.history_summary.column_ids.size(); ++column) {
+      const auto& id = window.history_summary.column_ids[column];
+      if (mode.kind == FaultKind::AnchorBiasEpochIndependent) {
+        if (id.kind == HistoryFaultBasisKind::UwbAnchorConstant &&
+            id.source == mode.anchor_id.value() &&
+            id.epoch == mode.onset_epoch) {
+          coefficients(static_cast<Eigen::Index>(column), 0) = 1.0;
+        }
+      } else if (mode.kind == FaultKind::AnchorBiasPersistentConstant) {
+        if (id.kind == HistoryFaultBasisKind::UwbAnchorConstant &&
+            id.source == mode.anchor_id.value() &&
+            id.epoch >= effective_onset) {
+          coefficients(static_cast<Eigen::Index>(column), 0) = 1.0;
+        }
+      } else if (mode.kind == FaultKind::AnchorBiasRamp) {
+        if (id.source != mode.anchor_id.value() ||
+            id.epoch < effective_onset) {
+          continue;
+        }
+        if (id.kind == HistoryFaultBasisKind::UwbAnchorConstant) {
+          const auto begin = physical_epoch_begin_s.find(id.epoch);
+          ASSERT_NE(begin, physical_epoch_begin_s.end());
+          coefficients(static_cast<Eigen::Index>(column), 0) = 1.0;
+          coefficients(static_cast<Eigen::Index>(column), 1) =
+              begin->second - mode.onset_time.seconds();
+        } else if (id.kind == HistoryFaultBasisKind::UwbAnchorTimeLinear) {
+          coefficients(static_cast<Eigen::Index>(column), 1) = 1.0;
+        }
+      } else if (mode.kind == FaultKind::AccelAxisIntervalConstant ||
+                 mode.kind == FaultKind::GyroAxisIntervalConstant) {
+        const std::uint64_t physical_axis =
+            static_cast<std::uint64_t>(mode.axis +
+                (mode.kind == FaultKind::GyroAxisIntervalConstant ? 3 : 0));
+        // IMU mode onset is the interval's previous epoch; the history basis
+        // labels the interval by its ending epoch.
+        if (id.kind == HistoryFaultBasisKind::ImuAxisConstant &&
+            id.source == physical_axis && id.epoch == mode.onset_epoch + 1) {
+          coefficients(static_cast<Eigen::Index>(column), 0) = 1.0;
+        }
+      }
+    }
+    Eigen::MatrixXd expected = Eigen::MatrixXd::Zero(
+        window.history_summary.response.rows() +
+            window.history_summary.detector_response.rows(),
+        mode.parameter_dimension);
+    expected.topRows(window.history_summary.response.rows()).noalias() =
+        window.history_summary.response * coefficients;
+    expected.bottomRows(
+        window.history_summary.detector_response.rows()).noalias() =
+        window.history_summary.detector_response * coefficients;
+    const double scale = std::max(1.0, expected.norm());
+    worst_history_map = std::max(
+        worst_history_map, (mapped->second - expected).norm() / scale);
+    EXPECT_LE((mapped->second - expected).norm() / scale, 1e-12)
+        << "mode=" << mode.physical_source_id
+        << " onset=" << mode.onset_epoch;
+    ++termwise_checked;
+    persistent_history = persistent_history ||
+        mode.kind == FaultKind::AnchorBiasPersistentConstant;
+    ramp_history = ramp_history || mode.kind == FaultKind::AnchorBiasRamp;
+    imu_history = imu_history ||
+        mode.kind == FaultKind::AccelAxisIntervalConstant ||
+        mode.kind == FaultKind::GyroAxisIntervalConstant;
+  }
+  EXPECT_TRUE(persistent_history);
+  EXPECT_TRUE(ramp_history);
+  EXPECT_TRUE(imu_history);
+  EXPECT_EQ(termwise_checked, history_mapped_modes);
+  EXPECT_LE(worst_history_map, 1e-12);
+  std::printf(
+      "[P0-01-O03] expected=%zu represented=%zu evaluated=%zu "
+      "history_mapped=%zu termwise_worst=%.3e\n",
+      models.expected_mode_identities.size(),
+      models.represented_mode_identities.size(),
+      models.evaluated_mode_identities.size(), history_mapped_modes,
+      worst_history_map);
+
   // Current-epoch material as a historical-style context.
   HistoricalEpochContext current;
   current.previous_epoch = tx.previous_epoch;
@@ -415,6 +547,98 @@ TEST(HistoryFaultParameterization,
       "[HFP-TABLE] case=window_vs_history anchor=%llu uwb_exact=1 "
       "imu_axes=%zu worst_imu_rel=%.3e\n",
       static_cast<unsigned long long>(anchor), matched_axes, worst_imu);
+}
+
+TEST(HistoryFaultParameterization,
+     JointOrder2PhysicalPairCensusReachesNumericalTerminalState) {
+  const auto config = jointOrder2Config();
+  IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+  NavigationState initial;
+  initial.position_world_m = {0, 0, 1};
+  estimator.initialize(initial, config.realtime.prior_sigmas);
+  EpochTransaction tx = matureTransaction(&estimator, config, 26);
+  IntegrityWindowRequest request;
+  request.epochs = config.integrity_window.epochs;
+  const auto window = estimator.buildIntegrityWindow(tx, request);
+  ASSERT_TRUE(window.model_valid) << window.reason;
+  const auto imu_block = estimator.buildPendingFactorBlock(tx, tx.imu_group.id);
+  const auto bridge_block =
+      estimator.buildPendingFactorBlock(tx, tx.generic_bridge_group.id);
+  const auto imu_maps = ImuFaultSubspaceBuilder().build(tx, imu_block);
+
+  HypothesisGeneratorConfig generator;
+  generator.include_uwb_faults = config.resolved_scope.requiresUwbFaults();
+  generator.include_imu_faults = config.resolved_scope.requiresImuFaults();
+  generator.single_faults_enabled = true;
+  generator.double_faults_enabled = true;
+  generator.max_model_cardinality = config.fault_models.max_cardinality;
+  generator.max_exclusion_cardinality = config.fde.max_exclusion_cardinality;
+  generator.max_candidate_count = config.fde.max_candidate_count;
+  generator.include_uwb_accel_combinations =
+      config.fault_models.combinations.uwb_plus_accel;
+  generator.include_uwb_gyro_combinations =
+      config.fault_models.combinations.uwb_plus_gyro;
+  generator.include_epoch_independent_uwb =
+      config.fault_models.uwb.epoch_single_anchor_bias;
+  generator.include_persistent_uwb =
+      config.fault_models.uwb.persistent_anchor_bias;
+  generator.include_ramp_uwb = config.fault_models.uwb.ramp_bias;
+  auto models = HypothesisGenerator(generator).generate(
+      window, tx, imu_maps, bridge_block);
+
+  std::size_t uwb_modes = 0, accel_modes = 0, gyro_modes = 0;
+  for (const auto& mode : models.modes) {
+    uwb_modes += mode.sensor == SensorType::Uwb;
+    accel_modes += mode.sensor == SensorType::ImuAccelerometer;
+    gyro_modes += mode.sensor == SensorType::ImuGyroscope;
+  }
+  EXPECT_EQ(uwb_modes, 504u);
+  EXPECT_EQ(accel_modes, 60u);
+  EXPECT_EQ(gyro_modes, 60u);
+  EXPECT_EQ(models.double_uwb_accel_hypotheses, 30240u);
+  EXPECT_EQ(models.double_uwb_gyro_hypotheses, 30240u);
+  EXPECT_EQ(models.hypotheses.size(), 61104u);
+  EXPECT_EQ(models.expected_pair_identities,
+            models.represented_pair_identities);
+  EXPECT_EQ(models.represented_pair_identities,
+            models.evaluated_pair_identities);
+  EXPECT_EQ(models.expected_pair_identities.size(), 60480u);
+  EXPECT_EQ(models.pair_candidates_rejected_shared, 0u);
+
+  // Traverse every registered hypothesis through the real numerical evidence
+  // path.  Each pair must reach a terminal state: monitored, or explicitly
+  // fail-closed with a nonempty numerical reason.  None may disappear in a
+  // pre-evaluation local-rank filter.
+  const auto evidence = HypothesisEvidenceEvaluator().evaluateAll(
+      window, models.modes, &models.hypotheses, 100.0);
+  ASSERT_EQ(evidence.size(), models.hypotheses.size());
+  std::size_t terminal_pairs = 0;
+  std::size_t monitored_pairs = 0;
+  std::size_t failed_closed_pairs = 0;
+  for (std::size_t index = 0; index < models.hypotheses.size(); ++index) {
+    const auto& hypothesis = models.hypotheses[index];
+    if (hypothesis.modes.size() != 2) continue;
+    ASSERT_EQ(evidence[index].hypothesis, hypothesis.id);
+    if (hypothesis.monitored) {
+      ++monitored_pairs;
+    } else {
+      EXPECT_FALSE(hypothesis.monitorability.reason.empty());
+      ++failed_closed_pairs;
+    }
+    ++terminal_pairs;
+  }
+  EXPECT_EQ(terminal_pairs, models.expected_pair_identities.size());
+  std::printf(
+      "[P0-01-PAIR-CENSUS] uwb=%zu accel=%zu gyro=%zu "
+      "expected=%zu represented=%zu evaluated=%zu terminal=%zu "
+      "monitored=%zu fail_closed=%zu hypotheses=%zu\n",
+      uwb_modes, accel_modes, gyro_modes,
+      models.expected_pair_identities.size(),
+      models.represented_pair_identities.size(),
+      models.evaluated_pair_identities.size(), terminal_pairs,
+      monitored_pairs, failed_closed_pairs, models.hypotheses.size());
+  estimator.discardEpoch(
+      std::move(tx), {FdeStatus::ModelInvalid, "test complete", false});
 }
 
 TEST(HistoryFaultParameterization, RampCombinationIsExactOverTheStepBasis) {

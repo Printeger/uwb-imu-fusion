@@ -1,0 +1,23 @@
+command: directed P0-01 O01/O03/census/counterexample filters using isolated library
+summary_exit=0
+pipeline_exit=0
+parameterization_exit=0
+b2_counterexamples_exit=0
+
+[P0-01-O01-PRODUCTION] rows=375 old=240 boundary=165 faults=160 rhs_norm=1.508129e+00 covariance_correlated=1 objective=9.080e-10 state=9.489e-13 covariance=6.488e-11 Tcross=6.436e-13 TFgram=7.628e-15 Fgram=1.271e-14 constant=1.965e-16 dof=120
+[P0-01-CROSSING] epoch=22 marginalizations=1 oldest_retained=1 boundary_rows=268
+[P0-01-CROSSING] epoch=24 marginalizations=3 oldest_retained=3 boundary_rows=268
+[P0-01-CROSSING] epoch=26 marginalizations=5 oldest_retained=5 boundary_rows=268
+[P0-01-O03] expected=624 represented=624 evaluated=624 history_mapped=316 termwise_worst=1.940e-20
+[HFP-TABLE] case=window_vs_history anchor=1 uwb_exact=1 imu_axes=6 worst_imu_rel=0.000e+00
+[P0-01-PAIR-CENSUS] uwb=504 accel=60 gyro=60 expected=60480 represented=60480 evaluated=60480 terminal=60480 monitored=60480 fail_closed=0 hypotheses=61104
+
+HistoryFaultSummary.P001CorrelatedRawFactorOracle PASS
+HistorySummaryPipeline.BoundaryIsTheSquareRootHistorySummary PASS
+HistorySummaryPipeline.ProductionWindowMatchesIndependentFrozenRawFactorOracle PASS
+HistorySummaryPipeline.RowAttributionExplicitXorBoundary PASS
+HistorySummaryPipeline.UniqueOwnershipAcrossMultipleLagCrossings PASS
+HistoryFaultParameterization.WindowAndHistoryColumnsAgreeOnSharedMaterial PASS
+HistoryFaultParameterization.JointOrder2PhysicalPairCensusReachesNumericalTerminalState PASS
+B2Registry.LocalCollinearityDoesNotEraseGloballyIndependentPair PASS
+B2Registry.GlobalDangerousNullspaceIsPreservedAndFailsClosedNumerically PASS

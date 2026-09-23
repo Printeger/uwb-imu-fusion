@@ -34,6 +34,21 @@ struct HypothesisGeneratorConfig {
 };
 
 struct GeneratedFaultModelSet {
+  // P0-01/O03 physical census.  Expected identities are enumerated from the
+  // frozen transaction/history scope before mode construction, represented
+  // identities come from the registry, and evaluated identities are those
+  // referenced by at least one generated hypothesis.
+  std::vector<std::string> expected_mode_identities;
+  std::vector<std::string> represented_mode_identities;
+  std::vector<std::string> evaluated_mode_identities;
+  // Order-2 census uses stable physical identities (not mode ids).  Expected
+  // pairs are the manifest-enabled Cartesian product of independently
+  // enumerated physical modes, represented pairs are registry hypotheses,
+  // and evaluated pairs are hypotheses handed to the numerical evidence
+  // stage.  Equality is a generation invariant.
+  std::vector<std::string> expected_pair_identities;
+  std::vector<std::string> represented_pair_identities;
+  std::vector<std::string> evaluated_pair_identities;
   double historical_sensitivity_ms = 0.0;
   std::vector<FaultUnit> units;
   std::vector<FaultModeBasis> modes;

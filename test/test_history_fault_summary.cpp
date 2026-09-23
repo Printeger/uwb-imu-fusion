@@ -337,6 +337,89 @@ std::string fmt(double value) {
 // Tests
 // ---------------------------------------------------------------------------
 
+TEST(HistoryFaultSummary, P001CorrelatedRawFactorOracle) {
+  // Independent O01 fixture: unique unwhitened rows, non-zero RHS and a
+  // genuinely correlated covariance.  The production summary only receives
+  // the whitened system; every reference below is rebuilt here from the raw
+  // factors and dense SVD/LLT algebra.
+  Rng rng(2026092301u);
+  constexpr int m = 12;
+  const MatrixXd h_old_raw = rng.normal(m, 3);
+  const MatrixXd h_boundary_raw = rng.normal(m, 3);
+  const MatrixXd fault_raw = rng.normal(m, 2);
+  const VectorXd rhs_raw = rng.normalVector(m) +
+      VectorXd::LinSpaced(m, -0.7, 1.1);
+  MatrixXd correlation = rng.normal(m, m);
+  MatrixXd covariance = correlation * correlation.transpose();
+  covariance.diagonal().array() += 2.0;
+  ASSERT_GT((covariance -
+             MatrixXd(covariance.diagonal().asDiagonal())).norm(),
+            1.0);
+  Eigen::LLT<MatrixXd> llt(covariance);
+  ASSERT_EQ(llt.info(), Eigen::Success);
+  HistoryFaultSummaryInput input;
+  input.h_old_state = llt.matrixL().solve(h_old_raw);
+  input.h_boundary = llt.matrixL().solve(h_boundary_raw);
+  input.fault_map = llt.matrixL().solve(fault_raw);
+  input.rhs = llt.matrixL().solve(rhs_raw);
+  const HistoryFaultSummary summary = buildHistoryFaultSummary(input);
+  ASSERT_TRUE(summary.valid) << summary.invalid_reason;
+
+  const MatrixXd old_projector = orthogonalProjector(input.h_old_state);
+  const MatrixXd old_residual =
+      MatrixXd::Identity(m, m) - old_projector;
+  EXPECT_LE(relErrMatrix(summary.R_b.transpose() * summary.R_b,
+                         input.h_boundary.transpose() * old_residual *
+                             input.h_boundary),
+            kTolWell);
+  EXPECT_LE(relErrMatrix(summary.R_b.transpose() * summary.T_b,
+                         input.h_boundary.transpose() * old_residual *
+                             input.fault_map),
+            kTolWell);
+  EXPECT_LE(relErrMatrix(summary.T_b.transpose() * summary.T_b +
+                             summary.F_b.transpose() * summary.F_b,
+                         input.fault_map.transpose() * old_residual *
+                             input.fault_map),
+            kTolWell);
+  EXPECT_LE(relErrMatrix(summary.F_b.transpose() * summary.F_b,
+                         faultGramOracle(input.h_old_state,
+                                         input.h_boundary, input.fault_map)),
+            kTolWell);
+
+  const MatrixXd information = summary.R_b.transpose() * summary.R_b;
+  EXPECT_LE(relErrMatrix(pseudoInverse(information),
+                         pseudoInverse(marginalBoundaryInformation(
+                             input.h_old_state, input.h_boundary))),
+            kTolWell);
+  EXPECT_LE(relErr(summary.kappaBoundary(),
+                   minJointResidualCost(input.h_old_state,
+                                        input.h_boundary, input.rhs)),
+            kTolWell);
+  const MatrixXd joined = joinBlocks(input.h_old_state, input.h_boundary);
+  EXPECT_EQ(summary.nuPerp(), m - thinSvd(joined).rank);
+
+  for (int probe = 0; probe < 20; ++probe) {
+    const VectorXd x_b = rng.normalVector(input.boundaryColumns());
+    const VectorXd fault = rng.normalVector(input.faultColumns());
+    const VectorXd raw_w =
+        h_boundary_raw * x_b + fault_raw * fault - rhs_raw;
+    const VectorXd whitened_w = llt.matrixL().solve(raw_w);
+    const double raw_objective =
+        minOldStateCost(input.h_old_state, whitened_w);
+    const double condensed_objective =
+        (summary.R_b * x_b + summary.T_b * fault - summary.d_b)
+            .squaredNorm() +
+        (summary.F_b * fault - summary.d_perp).squaredNorm();
+    EXPECT_LE(relErr(raw_objective, condensed_objective), kTolWell);
+  }
+
+  const VectorXd expected_state = jointBoundarySolve(
+      input.h_old_state, input.h_boundary, input.rhs);
+  const VectorXd represented_state =
+      pseudoInverse(summary.R_b) * summary.d_b;
+  EXPECT_LE(relErrMatrix(represented_state, expected_state), kTolWell);
+}
+
 TEST(HistoryFaultSummary, HISM1CostIdentity) {
   // Identity 1: min_{x_o} cost == ||R_b x_b + T_b f - d_b||^2 +
   // ||F_b f - d_perp||^2 for many random (x_b, f), relative 1e-9

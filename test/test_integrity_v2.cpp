@@ -2329,25 +2329,35 @@ TEST(B2Registry, PairFamilySupportClassifiesFamilies) {
   EXPECT_EQ(toString(PairFamilySupport::Unsupported), "UNSUPPORTED");
 }
 
-TEST(B2Registry, SharedDirectionFailsClosedInTheConcatenationGuard) {
+TEST(B2Registry, LocalCollinearityDoesNotEraseGloballyIndependentPair) {
   using namespace uwb_imu_pl;
   auto window = syntheticWindow();
   finalizeIntegrityWindow(&window, 1e-10, 1e10);
-  // Two modes touching the same factor group with identical raw maps: the
-  // stacked map is rank deficient, so A12 = [A1, A2] would double count.
+  // The modes are collinear on one common factor group, but the IMU mode has
+  // an additional response in a second group.  A local rank gate would erase
+  // this valid pair even though its global stacked response has full rank.
   FaultModeBasis left;
   left.id = FaultModeId(1);
   left.sensor = SensorType::Uwb;
   left.parameter_dimension = 1;
-  left.raw_group_maps[FactorGroupId(2)] = Eigen::Vector3d::Ones();
+  const Eigen::VectorXd state_direction = window.H.col(0);
+  Eigen::Index row_offset = 0;
+  for (const auto& block : window.blocks) {
+    left.raw_group_maps[block.group_id] = state_direction.segment(
+        row_offset, block.residual_raw.size());
+    row_offset += block.residual_raw.size();
+  }
   FaultModeBasis right = left;
   right.id = FaultModeId(2);
   right.sensor = SensorType::ImuAccelerometer;
+  right.physical_source_id = "imu_accel:0:interval:2";
+  right.raw_group_maps[FactorGroupId(1)] =
+      (Eigen::MatrixXd(2, 1) << 0.0, 1.0).finished();
   const std::vector<FaultModeBasis> modes{left, right};
   std::string reason;
-  EXPECT_FALSE(
-      hypothesisParametersIndependent(modes, {left.id, right.id}, &reason));
-  EXPECT_NE(reason.find("shared direction"), std::string::npos) << reason;
+  EXPECT_TRUE(
+      hypothesisParametersIndependent(modes, {left.id, right.id}, &reason))
+      << reason;
 
   // Disjoint groups (UWB group 2 vs IMU group 1) are independent.
   FaultModeBasis imu;
@@ -2368,7 +2378,7 @@ TEST(B2Registry, SharedDirectionFailsClosedInTheConcatenationGuard) {
       << reason;
 }
 
-TEST(B2Registry, SharedParametersAreNotMonitoredByTheEvidencePath) {
+TEST(B2Registry, GlobalDangerousNullspaceIsPreservedAndFailsClosedNumerically) {
   using namespace uwb_imu_pl;
   auto window = syntheticWindow();
   finalizeIntegrityWindow(&window, 1e-10, 1e10);
@@ -2376,10 +2386,17 @@ TEST(B2Registry, SharedParametersAreNotMonitoredByTheEvidencePath) {
   left.id = FaultModeId(1);
   left.sensor = SensorType::Uwb;
   left.parameter_dimension = 1;
-  left.raw_group_maps[FactorGroupId(2)] = Eigen::Vector3d::Ones();
+  const Eigen::VectorXd state_direction = window.H.col(0);
+  Eigen::Index row_offset = 0;
+  for (const auto& block : window.blocks) {
+    left.raw_group_maps[block.group_id] = state_direction.segment(
+        row_offset, block.residual_raw.size());
+    row_offset += block.residual_raw.size();
+  }
   FaultModeBasis right = left;
   right.id = FaultModeId(2);
   right.sensor = SensorType::ImuAccelerometer;
+  right.physical_source_id = "imu_accel:0:interval:2";
   const std::vector<FaultModeBasis> modes{left, right};
   FaultHypothesisV2 hypothesis;
   hypothesis.id = HypothesisId(1);
@@ -2389,9 +2406,9 @@ TEST(B2Registry, SharedParametersAreNotMonitoredByTheEvidencePath) {
       window, modes, &hypotheses, 100.0);
   ASSERT_EQ(evidence.size(), 1u);
   EXPECT_FALSE(hypotheses[0].monitored);
-  EXPECT_NE(hypotheses[0].monitorability.reason.find("shared direction"),
-            std::string::npos)
-      << hypotheses[0].monitorability.reason;
+  EXPECT_TRUE(hypothesisParametersIndependent(
+      modes, {left.id, right.id}, nullptr));
+  EXPECT_FALSE(hypotheses[0].monitorability.reason.empty());
   EXPECT_FALSE(evidence[0].plausible);
 }
 

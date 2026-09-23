@@ -19,6 +19,9 @@
 
 #include <gtest/gtest.h>
 #include <gtsam/inference/Symbol.h>
+#include <gtsam/linear/JacobianFactor.h>
+#include <gtsam/linear/HessianFactor.h>
+#include <Eigen/SVD>
 
 #include <algorithm>
 #include <cmath>
@@ -26,6 +29,7 @@
 #include <numeric>
 #include <set>
 #include <string>
+#include <tuple>
 
 #include "uwb_imu_pl/config/integrity_config.hpp"
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
@@ -62,6 +66,27 @@ UwbBatch batch(const IntegrityConfig& config, std::int64_t time_ns) {
   return value;
 }
 
+UwbBatch correlatedBiasedBatch(const IntegrityConfig& config,
+                               std::size_t epoch) {
+  UwbBatch value =
+      batch(config, static_cast<std::int64_t>(epoch) * 50000000);
+  const Eigen::Index rows =
+      static_cast<Eigen::Index>(value.measurements.size());
+  const double variance = 0.05 * 0.05;
+  value.covariance_m2 = Eigen::MatrixXd::Constant(rows, rows,
+                                                  0.12 * variance);
+  value.covariance_m2.diagonal().setConstant(variance);
+  value.covariance_model_id = "p0_01_correlated_raw_covariance";
+  for (std::size_t row = 0; row < value.measurements.size(); ++row) {
+    value.measurements[row].id = MeasurementId(epoch * 100 + row + 1);
+    value.measurements[row].factor_id = FactorId(epoch * 100 + row + 1);
+    value.measurements[row].range_m +=
+        0.015 * std::sin(0.31 * static_cast<double>(epoch) +
+                         0.17 * static_cast<double>(row + 1));
+  }
+  return value;
+}
+
 // Drives the estimator with clean IMU + clean UWB up to `epochs` and keeps the
 // window of the final epoch (plus the previous one for comparison).
 struct DrivenRun {
@@ -82,7 +107,10 @@ void appendImu(IncrementalUwbImuEstimator* estimator, double gravity,
 
 std::vector<LinearizedIntegrityWindow> driveEstimator(
     const IntegrityConfig& config, std::size_t epochs,
-    std::map<std::size_t, std::size_t>* window_epochs = nullptr) {
+    std::map<std::size_t, std::size_t>* window_epochs = nullptr,
+    std::map<std::size_t, std::size_t>* unique_boundary_rows = nullptr,
+    std::map<std::size_t, std::uint64_t>* marginalization_counts = nullptr,
+    std::map<std::size_t, std::size_t>* oldest_retained_epochs = nullptr) {
   IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
   NavigationState initial;
   initial.timestamp = TimestampNs(0);
@@ -102,9 +130,40 @@ std::vector<LinearizedIntegrityWindow> driveEstimator(
     }
     auto transaction = estimator.prepareEpoch(input);
     if (window_epochs != nullptr && window_epochs->count(epoch) != 0) {
+      const auto audit = estimator.audit();
+      if (marginalization_counts != nullptr) {
+        (*marginalization_counts)[epoch] = audit.marginalization_count;
+      }
+      if (oldest_retained_epochs != nullptr) {
+        (*oldest_retained_epochs)[epoch] = audit.oldest_retained_epoch;
+      }
       IntegrityWindowRequest request;
       request.epochs = 10;
       windows.push_back(estimator.buildIntegrityWindow(transaction, request));
+      if (unique_boundary_rows != nullptr) {
+        std::size_t rows = 0;
+        for (const auto& accounting : windows.back().slot_accounting) {
+          if (!accounting.boundary_input) continue;
+          const auto frozen = std::find_if(
+              transaction.frozen_slots.begin(), transaction.frozen_slots.end(),
+              [&](const auto& item) { return item.slot == accounting.slot; });
+          if (frozen == transaction.frozen_slots.end()) {
+            ADD_FAILURE() << "boundary slot missing from frozen transaction";
+            continue;
+          }
+          const auto linear = frozen->factor->linearize(*transaction.frozen_values);
+          if (const auto jacobian =
+                  boost::dynamic_pointer_cast<gtsam::JacobianFactor>(linear)) {
+            rows += static_cast<std::size_t>(jacobian->rows());
+          } else if (const auto hessian =
+                         boost::dynamic_pointer_cast<gtsam::HessianFactor>(linear)) {
+            rows += static_cast<std::size_t>(hessian->info().rows() - 1);
+          } else {
+            ADD_FAILURE() << "boundary factor has no independent row count";
+          }
+        }
+        (*unique_boundary_rows)[epoch] = rows;
+      }
     }
     const auto plan = EpochCommitPlan::nominalPlan(transaction);
     estimator.commitEpoch(std::move(transaction), plan);
@@ -115,6 +174,244 @@ std::vector<LinearizedIntegrityWindow> driveEstimator(
 double relErr(double got, double want) {
   const double scale = std::max({1.0, std::abs(got), std::abs(want)});
   return std::abs(got - want) / scale;
+}
+
+double matrixRelErr(const Eigen::MatrixXd& got, const Eigen::MatrixXd& want) {
+  return (got - want).norm() /
+      std::max({1.0, got.norm(), want.norm()});
+}
+
+int tangentWidth(gtsam::Key key) {
+  const char symbol = gtsam::Symbol(key).chr();
+  return symbol == 'v' ? 3 : 6;
+}
+
+Eigen::MatrixXd projectorOf(const Eigen::MatrixXd& matrix) {
+  if (matrix.cols() == 0) {
+    return Eigen::MatrixXd::Zero(matrix.rows(), matrix.rows());
+  }
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(matrix, Eigen::ComputeThinU);
+  const auto singular = svd.singularValues();
+  const double gate = singular.size() == 0 ? 0.0 : singular(0) * 1e-12;
+  const int rank = static_cast<int>((singular.array() > gate).count());
+  return svd.matrixU().leftCols(rank) * svd.matrixU().leftCols(rank).transpose();
+}
+
+Eigen::MatrixXd pseudoInverse(const Eigen::MatrixXd& matrix) {
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(
+      matrix, Eigen::ComputeThinU | Eigen::ComputeThinV);
+  Eigen::VectorXd inverse = Eigen::VectorXd::Zero(svd.singularValues().size());
+  const double gate = svd.singularValues().size() == 0
+      ? 0.0 : svd.singularValues()(0) * 1e-12;
+  for (int index = 0; index < inverse.size(); ++index) {
+    if (svd.singularValues()(index) > gate) {
+      inverse(index) = 1.0 / svd.singularValues()(index);
+    }
+  }
+  return svd.matrixV() * inverse.asDiagonal() * svd.matrixU().transpose();
+}
+
+const PendingFactorGroup* selectedHistoricalGroup(
+    const HistoricalEpochContext& record, FactorKind kind) {
+  for (const auto id : record.selected_groups) {
+    for (const auto& group : record.groups) {
+      if (group.id == id && group.kind == kind) return &group;
+    }
+  }
+  return nullptr;
+}
+
+const UwbMeasurement* rawMeasurement(const HistoricalEpochContext& record,
+                                     MeasurementId id) {
+  for (const auto& measurement : record.uwb_batch.measurements) {
+    if (measurement.id == id) return &measurement;
+  }
+  return nullptr;
+}
+
+struct RawOracleSystem {
+  Eigen::MatrixXd old_state;
+  Eigen::MatrixXd boundary;
+  Eigen::MatrixXd fault;
+  Eigen::VectorXd rhs;
+  double constant_offset = 0.0;
+  std::vector<HistoryFaultColumnId> fault_ids;
+};
+
+// Independent reconstruction used only by the P0-01 production oracle.  It
+// starts from frozen slots and raw group covariance, independently creates
+// per-(anchor,epoch) constant/time-linear columns, and never calls the
+// history parameterization or summary builders.
+RawOracleSystem reconstructRawUwbBoundary(
+    const EpochTransaction& tx, const LinearizedIntegrityWindow& window,
+    std::size_t window_epochs) {
+  struct Metadata {
+    const HistoricalEpochContext* record = nullptr;
+    const PendingFactorGroup* group = nullptr;
+  };
+  std::map<std::uint64_t, Metadata> metadata;
+  std::map<std::size_t, const HistoricalEpochContext*> records;
+  for (const auto& record : tx.recoverable_history) {
+    records[record.proposed_epoch] = &record;
+    const auto* group = selectedHistoricalGroup(record, FactorKind::UwbBatch);
+    if (group) metadata[group->id.value()] = {&record, group};
+  }
+  const std::size_t first = tx.oldest_recoverable_epoch + 1;
+  const std::size_t window_first = tx.proposed_epoch - window_epochs;
+  std::map<HistoryFaultColumnId, int> fault_index;
+  std::vector<HistoryFaultColumnId> fault_ids;
+  for (std::size_t epoch = first; epoch < window_first; ++epoch) {
+    const auto record_it = records.find(epoch);
+    if (record_it == records.end()) continue;
+    const auto* group =
+        selectedHistoricalGroup(*record_it->second, FactorKind::UwbBatch);
+    if (!group) continue;
+    std::set<std::uint64_t> anchors;
+    for (const auto measurement_id : group->source_measurements) {
+      const auto* measurement = rawMeasurement(*record_it->second,
+                                               measurement_id);
+      if (measurement) anchors.insert(measurement->anchor_id.value());
+    }
+    for (const auto anchor : anchors) {
+      for (const auto kind : {HistoryFaultBasisKind::UwbAnchorConstant,
+                              HistoryFaultBasisKind::UwbAnchorTimeLinear}) {
+        HistoryFaultColumnId id{kind, anchor, epoch};
+        fault_index[id] = static_cast<int>(fault_ids.size());
+        fault_ids.push_back(id);
+      }
+    }
+  }
+
+  struct RowBlock {
+    std::vector<gtsam::Key> keys;
+    Eigen::MatrixXd state;
+    Eigen::MatrixXd fault;
+    Eigen::VectorXd rhs;
+  };
+  std::vector<RowBlock> blocks;
+  std::set<gtsam::Key> state_keys;
+  double constant_offset = 0.0;
+  for (const auto& accounting : window.slot_accounting) {
+    if (!accounting.boundary_input || !accounting.group_id) continue;
+    const auto frozen = std::find_if(
+        tx.frozen_slots.begin(), tx.frozen_slots.end(),
+        [&](const auto& item) { return item.slot == accounting.slot; });
+    EXPECT_NE(frozen, tx.frozen_slots.end());
+    if (frozen == tx.frozen_slots.end()) continue;
+    const auto linear = frozen->factor->linearize(*tx.frozen_values);
+    RowBlock block;
+    if (const auto jacobian =
+            boost::dynamic_pointer_cast<gtsam::JacobianFactor>(linear)) {
+      block.keys.assign(jacobian->keys().begin(), jacobian->keys().end());
+      block.state = jacobian->getA();
+      block.rhs = jacobian->getb();
+    } else if (const auto hessian =
+                   boost::dynamic_pointer_cast<gtsam::HessianFactor>(linear)) {
+      block.keys.assign(hessian->keys().begin(), hessian->keys().end());
+      int dimension = 0;
+      for (const auto key : block.keys) dimension += tangentWidth(key);
+      const Eigen::MatrixXd info = hessian->info().selfadjointView();
+      const Eigen::MatrixXd lambda =
+          info.topLeftCorner(dimension, dimension);
+      const Eigen::VectorXd eta = info.topRightCorner(dimension, 1);
+      Eigen::LLT<Eigen::MatrixXd> llt(lambda);
+      EXPECT_EQ(llt.info(), Eigen::Success);
+      block.state = llt.matrixU();
+      block.rhs = llt.matrixU().transpose().solve(eta);
+      constant_offset += info(dimension, dimension) - block.rhs.squaredNorm();
+    } else {
+      ADD_FAILURE() << "raw oracle encountered unknown linear factor";
+      continue;
+    }
+    block.fault = Eigen::MatrixXd::Zero(
+        block.state.rows(), static_cast<int>(fault_ids.size()));
+    const auto meta = metadata.find(accounting.group_id->value());
+    if (meta != metadata.end() &&
+        meta->second.record->proposed_epoch >= first &&
+        meta->second.record->proposed_epoch < window_first) {
+      const auto& record = *meta->second.record;
+      const auto& group = *meta->second.group;
+      EXPECT_EQ(block.state.rows(),
+                static_cast<Eigen::Index>(group.source_measurements.size()));
+      Eigen::LLT<Eigen::MatrixXd> llt(group.raw_covariance);
+      EXPECT_EQ(llt.info(), Eigen::Success);
+      const Eigen::MatrixXd whitener = llt.matrixL().solve(
+          Eigen::MatrixXd::Identity(group.raw_covariance.rows(),
+                                    group.raw_covariance.cols()));
+      for (std::size_t row = 0; row < group.source_measurements.size(); ++row) {
+        const auto* measurement =
+            rawMeasurement(record, group.source_measurements[row]);
+        EXPECT_NE(measurement, nullptr);
+        if (!measurement) continue;
+        const HistoryFaultColumnId constant{
+            HistoryFaultBasisKind::UwbAnchorConstant,
+            measurement->anchor_id.value(), record.proposed_epoch};
+        const HistoryFaultColumnId linear_id{
+            HistoryFaultBasisKind::UwbAnchorTimeLinear,
+            measurement->anchor_id.value(), record.proposed_epoch};
+        Eigen::VectorXd raw_constant = Eigen::VectorXd::Zero(block.state.rows());
+        Eigen::VectorXd raw_linear = Eigen::VectorXd::Zero(block.state.rows());
+        raw_constant(static_cast<Eigen::Index>(row)) = 1.0;
+        raw_linear(static_cast<Eigen::Index>(row)) =
+            measurement->timestamp.seconds() - record.begin.seconds();
+        block.fault.col(fault_index.at(constant)) +=
+            whitener * raw_constant;
+        block.fault.col(fault_index.at(linear_id)) += whitener * raw_linear;
+      }
+    }
+    for (const auto key : block.keys) state_keys.insert(key);
+    blocks.push_back(std::move(block));
+  }
+
+  std::vector<gtsam::Key> old_keys;
+  for (const auto key : state_keys) {
+    const std::size_t epoch = gtsam::Symbol(key).index();
+    if (epoch < window.detector_first_epoch || epoch > tx.previous_epoch) {
+      old_keys.push_back(key);
+    }
+  }
+  std::map<gtsam::Key, int> old_offset;
+  int old_width = 0;
+  for (const auto key : old_keys) {
+    old_offset[key] = old_width;
+    old_width += tangentWidth(key);
+  }
+  const int boundary_width = static_cast<int>((window_epochs + 1) * 15);
+  int rows = 0;
+  for (const auto& block : blocks) rows += block.state.rows();
+  RawOracleSystem out;
+  out.old_state = Eigen::MatrixXd::Zero(rows, old_width);
+  out.boundary = Eigen::MatrixXd::Zero(rows, boundary_width);
+  out.fault = Eigen::MatrixXd::Zero(rows, fault_ids.size());
+  out.rhs = Eigen::VectorXd::Zero(rows);
+  out.constant_offset = constant_offset;
+  out.fault_ids = fault_ids;
+  int row_offset = 0;
+  for (const auto& block : blocks) {
+    int local_offset = 0;
+    for (const auto key : block.keys) {
+      const int width = tangentWidth(key);
+      const auto old = old_offset.find(key);
+      if (old != old_offset.end()) {
+        out.old_state.block(row_offset, old->second, block.state.rows(), width) =
+            block.state.middleCols(local_offset, width);
+      } else {
+        const std::size_t epoch = gtsam::Symbol(key).index();
+        const int type_offset = gtsam::Symbol(key).chr() == 'x'
+            ? 0 : (gtsam::Symbol(key).chr() == 'v' ? 6 : 9);
+        const int target =
+            static_cast<int>((epoch - window.detector_first_epoch) * 15) +
+            type_offset;
+        out.boundary.block(row_offset, target, block.state.rows(), width) =
+            block.state.middleCols(local_offset, width);
+      }
+      local_offset += width;
+    }
+    out.fault.middleRows(row_offset, block.state.rows()) = block.fault;
+    out.rhs.segment(row_offset, block.state.rows()) = block.rhs;
+    row_offset += block.state.rows();
+  }
+  return out;
 }
 
 // 1. The condensed boundary is the square-root history summary.
@@ -157,6 +454,24 @@ TEST(HistorySummaryPipeline, BoundaryIsTheSquareRootHistorySummary) {
   EXPECT_EQ(history.column_ids.size(), history.fault_columns);
   EXPECT_GT(history.version_digest, 0u);
 
+  // P0-01/D03-A: T_b owns only the state-supported condensed rows.  F_b owns
+  // the detector-only rows; the two carriers are independently sized and
+  // fully written, rather than sharing an emitted-row allocation with an
+  // unwritten tail.
+  ASSERT_GE(history.emitted_rows,
+            static_cast<std::size_t>(history.nu_perp));
+  const std::size_t supported_rows =
+      history.emitted_rows - static_cast<std::size_t>(history.nu_perp);
+  EXPECT_EQ(static_cast<std::size_t>(history.response.rows()), supported_rows);
+  EXPECT_EQ(static_cast<std::size_t>(history.detector_response.rows()),
+            static_cast<std::size_t>(history.nu_perp));
+  EXPECT_EQ(static_cast<std::size_t>(history.response.cols()),
+            history.fault_columns);
+  EXPECT_EQ(static_cast<std::size_t>(history.detector_response.cols()),
+            history.fault_columns);
+  EXPECT_TRUE(history.response.allFinite());
+  EXPECT_TRUE(history.detector_response.allFinite());
+
   // D-1 granularity: per (anchor, epoch) constant + time-linear columns and
   // per (axis, epoch) IMU columns, every column inside the A3 horizon.
   for (const auto& id : history.column_ids) {
@@ -170,6 +485,181 @@ TEST(HistorySummaryPipeline, BoundaryIsTheSquareRootHistorySummary) {
   // detector-only rows of the square-root context.
   EXPECT_EQ(window.square_root->detectorOnlyRows() >= history.nu_perp, true);
   SUCCEED();
+}
+
+TEST(HistorySummaryPipeline,
+     ProductionWindowMatchesIndependentFrozenRawFactorOracle) {
+  auto config = IntegrityConfigLoader::load(
+      std::string(UWB_IMU_PL_SOURCE_DIR) + "/config/fde_uwb_order1.yaml");
+  ASSERT_TRUE(config.resolved_scope.requiresUwbFaults());
+  ASSERT_FALSE(config.resolved_scope.requiresImuFaults());
+  IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+  NavigationState initial;
+  initial.timestamp = TimestampNs(0);
+  initial.position_world_m = {0, 0, 1};
+  estimator.initialize(initial, config.realtime.prior_sigmas);
+  ImuMeasurement boundary_sample;
+  boundary_sample.timestamp = TimestampNs(0);
+  boundary_sample.specific_force_mps2 = {0, 0, config.imu.gravity_mps2};
+  estimator.ingestImu(boundary_sample);
+  EpochTransaction tx;
+  for (std::size_t epoch = 1; epoch <= 26; ++epoch) {
+    appendImu(&estimator, config.imu.gravity_mps2, epoch, 10);
+    auto pending = estimator.prepareEpoch(correlatedBiasedBatch(config, epoch));
+    if (epoch == 26) {
+      tx = std::move(pending);
+    } else {
+      const auto plan = EpochCommitPlan::nominalPlan(pending);
+      estimator.commitEpoch(std::move(pending), plan);
+    }
+  }
+  IntegrityWindowRequest request;
+  request.epochs = config.integrity_window.epochs;
+  const auto window = estimator.buildIntegrityWindow(tx, request);
+  ASSERT_TRUE(window.model_valid) << window.reason;
+  ASSERT_TRUE(window.history_summary.valid) << window.history_summary.reason;
+  const auto summary_block = std::find_if(
+      window.blocks.begin(), window.blocks.end(), [](const auto& block) {
+        return block.whitening_model_id == "history_summary_sqrt_d1";
+      });
+  ASSERT_NE(summary_block, window.blocks.end());
+
+  const RawOracleSystem raw = reconstructRawUwbBoundary(
+      tx, window, config.integrity_window.epochs);
+  ASSERT_GT(raw.old_state.rows(), 0);
+  ASSERT_GT(raw.old_state.cols(), 0);
+  ASSERT_GT(raw.boundary.cols(), 0);
+  ASSERT_GT(raw.fault.cols(), 0);
+  ASSERT_GT(raw.rhs.norm(), 0.0);
+  ASSERT_EQ(raw.fault_ids, window.history_summary.column_ids);
+  ASSERT_EQ(raw.fault.cols(),
+            static_cast<Eigen::Index>(window.history_summary.fault_columns));
+  bool correlated = false;
+  for (const auto& record : tx.recoverable_history) {
+    const auto* group = selectedHistoricalGroup(record, FactorKind::UwbBatch);
+    if (group && group->raw_covariance.rows() > 1) {
+      correlated = correlated ||
+          (group->raw_covariance -
+           Eigen::MatrixXd(group->raw_covariance.diagonal().asDiagonal()))
+                  .norm() > 0.0;
+    }
+  }
+  EXPECT_TRUE(correlated);
+
+  const Eigen::Index supported = window.history_summary.response.rows();
+  const Eigen::Index perpendicular =
+      window.history_summary.detector_response.rows();
+  ASSERT_EQ(summary_block->jacobian_whitened.rows(),
+            supported + perpendicular);
+  Eigen::MatrixXd represented_fault = Eigen::MatrixXd::Zero(
+      supported + perpendicular, raw.fault.cols());
+  represented_fault.topRows(supported) = window.history_summary.response;
+  represented_fault.bottomRows(perpendicular) =
+      window.history_summary.detector_response;
+  const Eigen::MatrixXd& represented_boundary =
+      summary_block->jacobian_whitened;
+  const Eigen::VectorXd& represented_rhs =
+      summary_block->residual_whitened;
+
+  const Eigen::MatrixXd old_residual =
+      Eigen::MatrixXd::Identity(raw.old_state.rows(), raw.old_state.rows()) -
+      projectorOf(raw.old_state);
+  Eigen::MatrixXd joined(raw.old_state.rows(),
+                         raw.old_state.cols() + raw.boundary.cols());
+  joined << raw.old_state, raw.boundary;
+  const Eigen::MatrixXd all_state_residual =
+      Eigen::MatrixXd::Identity(raw.old_state.rows(), raw.old_state.rows()) -
+      projectorOf(joined);
+
+  const Eigen::MatrixXd raw_state_info =
+      raw.boundary.transpose() * old_residual * raw.boundary;
+  const Eigen::VectorXd raw_state_rhs =
+      raw.boundary.transpose() * old_residual * raw.rhs;
+  const Eigen::MatrixXd represented_state_info =
+      represented_boundary.transpose() * represented_boundary;
+  const Eigen::VectorXd represented_state_rhs =
+      represented_boundary.transpose() * represented_rhs;
+  const Eigen::MatrixXd raw_state_covariance = pseudoInverse(raw_state_info);
+  const Eigen::MatrixXd represented_state_covariance =
+      pseudoInverse(represented_state_info);
+  const Eigen::VectorXd raw_state = raw_state_covariance * raw_state_rhs;
+  const Eigen::VectorXd represented_state =
+      represented_state_covariance * represented_state_rhs;
+  EXPECT_LE(matrixRelErr(represented_state_info, raw_state_info), 1e-8);
+  EXPECT_LE(matrixRelErr(represented_state_covariance, raw_state_covariance),
+            1e-8);
+  EXPECT_LE(matrixRelErr(represented_state, raw_state), 1e-8);
+
+  // T_b is checked through both its state cross-information and the complete
+  // [T_b;F_b] Gram.  F_b is independently checked after eliminating every
+  // state direction; these are invariant to square-root row rotations.
+  const double t_cross_error = matrixRelErr(
+      represented_boundary.transpose() * represented_fault,
+      raw.boundary.transpose() * old_residual * raw.fault);
+  const double tf_gram_error = matrixRelErr(
+      represented_fault.transpose() * represented_fault,
+      raw.fault.transpose() * old_residual * raw.fault);
+  const double f_gram_error = matrixRelErr(
+      window.history_summary.detector_response.transpose() *
+          window.history_summary.detector_response,
+      raw.fault.transpose() * all_state_residual * raw.fault);
+  EXPECT_LE(t_cross_error, 1e-8);
+  EXPECT_LE(tf_gram_error, 1e-8);
+  EXPECT_LE(f_gram_error, 1e-8);
+
+  const double raw_constant =
+      raw.rhs.dot(old_residual * raw.rhs) + raw.constant_offset;
+  const double represented_constant =
+      represented_rhs.squaredNorm() + window.history_summary.constant_offset;
+  EXPECT_LE(relErr(represented_constant, raw_constant), 1e-8);
+  EXPECT_LE(relErr(window.history_summary.constant_offset,
+                   raw.constant_offset), 1e-10);
+
+  Eigen::JacobiSVD<Eigen::MatrixXd> joined_svd(joined);
+  const double rank_gate = joined_svd.singularValues().size() == 0
+      ? 0.0 : joined_svd.singularValues()(0) * 1e-12;
+  const int raw_rank = static_cast<int>(
+      (joined_svd.singularValues().array() > rank_gate).count());
+  EXPECT_EQ(window.history_summary.nu_perp, raw.old_state.rows() - raw_rank);
+
+  double worst_objective = 0.0;
+  for (int probe = 1; probe <= 8; ++probe) {
+    Eigen::VectorXd state(raw.boundary.cols());
+    Eigen::VectorXd fault(raw.fault.cols());
+    for (int index = 0; index < state.size(); ++index) {
+      state(index) = std::sin(0.07 * probe * (index + 1));
+    }
+    for (int index = 0; index < fault.size(); ++index) {
+      fault(index) = std::cos(0.11 * probe * (index + 1));
+    }
+    const Eigen::VectorXd raw_w =
+        raw.boundary * state + raw.fault * fault - raw.rhs;
+    const double expected =
+        raw_w.dot(old_residual * raw_w) + raw.constant_offset;
+    const double represented =
+        (represented_boundary * state + represented_fault * fault -
+         represented_rhs).squaredNorm() +
+        window.history_summary.constant_offset;
+    worst_objective = std::max(worst_objective,
+                               relErr(represented, expected));
+  }
+  EXPECT_LE(worst_objective, 1e-8);
+  std::printf(
+      "[P0-01-O01-PRODUCTION] rows=%ld old=%ld boundary=%ld faults=%ld "
+      "rhs_norm=%.6e covariance_correlated=%d objective=%.3e state=%.3e "
+      "covariance=%.3e Tcross=%.3e TFgram=%.3e Fgram=%.3e "
+      "constant=%.3e dof=%d\n",
+      static_cast<long>(raw.old_state.rows()),
+      static_cast<long>(raw.old_state.cols()),
+      static_cast<long>(raw.boundary.cols()),
+      static_cast<long>(raw.fault.cols()), raw.rhs.norm(), correlated ? 1 : 0,
+      worst_objective, matrixRelErr(represented_state, raw_state),
+      matrixRelErr(represented_state_covariance, raw_state_covariance),
+      t_cross_error, tf_gram_error, f_gram_error,
+      relErr(represented_constant, raw_constant),
+      window.history_summary.nu_perp);
+  estimator.discardEpoch(
+      std::move(tx), {FdeStatus::ModelInvalid, "oracle complete", false});
 }
 
 // 2. Pooled semantics: statistic = residual of the state-supported rows at the
@@ -380,13 +870,18 @@ TEST(HistorySummaryPipeline, RowAttributionExplicitXorBoundary) {
   auto config = researchConfig();
   std::map<std::size_t, std::size_t> request;
   request[22] = 1;
-  const auto windows = driveEstimator(config, 22, &request);
+  std::map<std::size_t, std::size_t> unique_boundary_rows;
+  const auto windows =
+      driveEstimator(config, 22, &request, &unique_boundary_rows);
   const auto& window = windows.front();
   ASSERT_TRUE(window.model_valid) << window.reason;
   EXPECT_TRUE(window.capabilities.frozen_slot_identity_valid);
   EXPECT_TRUE(window.capabilities.every_active_factor_accounted_once);
   EXPECT_TRUE(window.capabilities.no_duplicate_rows);
   EXPECT_TRUE(window.capabilities.history_summary_valid);
+  ASSERT_EQ(unique_boundary_rows.count(22), 1u);
+  EXPECT_EQ(window.history_summary.boundary_rows, unique_boundary_rows.at(22))
+      << "each raw boundary row/covariance owner must occur exactly once";
   for (const auto& slot : window.slot_accounting) {
     EXPECT_NE(slot.explicit_window_block, slot.boundary_input);
     EXPECT_TRUE(slot.pointer_identity_valid);
@@ -408,6 +903,53 @@ TEST(HistorySummaryPipeline, RowAttributionExplicitXorBoundary) {
   // The condensed block is not a ledger group: its content is the summary.
   const std::uint64_t synthetic = window.id.value() * 1000u;
   EXPECT_EQ(block_groups.count(synthetic), 1u);
+}
+
+TEST(HistorySummaryPipeline, UniqueOwnershipAcrossMultipleLagCrossings) {
+  auto config = researchConfig();
+  // The research default retains 200 epochs and never crossed a backend
+  // fixed-lag boundary in the old 18/22/26 fixture.  Twenty-one is the
+  // smallest valid lag for the configured 10 detector + 10 recovery epochs;
+  // requests 22/24/26 therefore observe three distinct, real crossings.
+  config.incremental.fixed_lag_epochs = 21;
+  std::map<std::size_t, std::size_t> request{{22, 1}, {24, 1}, {26, 1}};
+  std::map<std::size_t, std::size_t> unique_boundary_rows;
+  std::map<std::size_t, std::uint64_t> marginalization_counts;
+  std::map<std::size_t, std::size_t> oldest_retained_epochs;
+  const auto windows =
+      driveEstimator(config, 26, &request, &unique_boundary_rows,
+                     &marginalization_counts, &oldest_retained_epochs);
+  ASSERT_EQ(windows.size(), request.size());
+  std::size_t index = 0;
+  std::uint64_t previous_crossings = 0;
+  std::size_t previous_oldest = 0;
+  for (const auto& item : request) {
+    const auto& window = windows.at(index++);
+    ASSERT_TRUE(window.model_valid) << "epoch " << item.first << ": "
+                                    << window.reason;
+    const auto& history = window.history_summary;
+    ASSERT_TRUE(history.valid) << history.reason;
+    ASSERT_EQ(unique_boundary_rows.count(item.first), 1u);
+    EXPECT_EQ(history.boundary_rows, unique_boundary_rows.at(item.first));
+    EXPECT_EQ(history.response.rows(),
+              static_cast<Eigen::Index>(history.emitted_rows -
+                                        static_cast<std::size_t>(history.nu_perp)));
+    EXPECT_EQ(history.detector_response.rows(), history.nu_perp);
+    EXPECT_TRUE(history.response.allFinite());
+    EXPECT_TRUE(history.detector_response.allFinite());
+    ASSERT_EQ(marginalization_counts.count(item.first), 1u);
+    ASSERT_EQ(oldest_retained_epochs.count(item.first), 1u);
+    EXPECT_GT(marginalization_counts.at(item.first), previous_crossings);
+    EXPECT_GT(oldest_retained_epochs.at(item.first), previous_oldest);
+    previous_crossings = marginalization_counts.at(item.first);
+    previous_oldest = oldest_retained_epochs.at(item.first);
+    std::printf(
+        "[P0-01-CROSSING] epoch=%zu marginalizations=%llu "
+        "oldest_retained=%zu boundary_rows=%zu\n",
+        item.first,
+        static_cast<unsigned long long>(marginalization_counts.at(item.first)),
+        oldest_retained_epochs.at(item.first), history.boundary_rows);
+  }
 }
 
 // 8. Ordering: material removed before the summary update fails explicitly

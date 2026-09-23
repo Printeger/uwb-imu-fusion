@@ -100,7 +100,7 @@ class RoundTwoProtocolTests(unittest.TestCase):
         self.assertEqual(left, right)
         self.assertEqual(json.loads(left)["status"], "PASS")
 
-    def test_v5_run_validator_checks_inventory_and_protocol_digest(self):
+    def test_v6_run_validator_checks_inventory_and_protocol_digest(self):
         executable = TEST_BIN_DIR / "realtime_performance_benchmark"
         if not executable.is_file():
             self.skipTest("performance runner is not built")
@@ -115,7 +115,7 @@ class RoundTwoProtocolTests(unittest.TestCase):
                 ":" + environment["LD_LIBRARY_PATH"]
                 if environment.get("LD_LIBRARY_PATH") else "")
             subprocess.run([str(executable),
-                            str(ROOT / "config/realtime_uwb_imu_pl_research.yaml"),
+                            str(ROOT / "config/fde_joint_order2.yaml"),
                             str(run), "2"], check=True, capture_output=True,
                            text=True, env=environment)
             manifest_path = run / "run_manifest.json"

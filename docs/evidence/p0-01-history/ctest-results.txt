@@ -1,0 +1,31 @@
+command: cd /tmp/uwb-p001-build && LD_PRELOAD=/tmp/uwb-p001-build/devel/lib/libuwb_imu_pl.so ctest --output-on-failure -j2
+exit_code: 0
+1 _ctest_uwb_imu_pl_gtest_test_snapshot_integrity PASS
+2 _ctest_uwb_imu_pl_gtest_test_integrity_config PASS
+3 _ctest_uwb_imu_pl_gtest_test_run_logger PASS
+4 _ctest_uwb_imu_pl_gtest_test_realtime_incremental PASS
+5 _ctest_uwb_imu_pl_gtest_test_deterministic_event PASS
+6 _ctest_uwb_imu_pl_gtest_test_dense_oracle PASS
+7 _ctest_uwb_imu_pl_gtest_test_integrity_v2 PASS
+8 _ctest_uwb_imu_pl_gtest_test_integrity_reference PASS
+9 _ctest_uwb_imu_pl_gtest_test_fault_manifest PASS
+10 _ctest_uwb_imu_pl_gtest_test_square_root_context PASS
+11 _ctest_uwb_imu_pl_gtest_test_history_fault_summary PASS
+12 _ctest_uwb_imu_pl_gtest_test_history_fault_parameterization PASS
+13 _ctest_uwb_imu_pl_gtest_test_history_summary_extraction PASS
+14 _ctest_uwb_imu_pl_gtest_test_history_summary_lifecycle PASS
+15 _ctest_uwb_imu_pl_gtest_test_dual_channel_detector PASS
+16 _ctest_uwb_imu_pl_gtest_test_fde_post_selection PASS
+17 _ctest_uwb_imu_pl_gtest_test_publication_identity PASS
+18 _ctest_uwb_imu_pl_gtest_test_publication_wiring PASS
+19 _ctest_uwb_imu_pl_gtest_test_history_summary_pipeline PASS
+20 _ctest_uwb_imu_pl_rostest_test_realtime_integrity_viz.test PASS
+21 test_week4_tools PASS
+22 test_advisor_report PASS
+23 test_round2_tools PASS
+24 test_gate_d_tools PASS
+25 test_round3_tools PASS
+26 test_launch_contracts PASS
+summary: 100% tests passed, 0 tests failed out of 26
+total_test_time_seconds: 9.27
+not_run: sanitizers; hardware replay; performance comparison; long campaign

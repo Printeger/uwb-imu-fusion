@@ -783,10 +783,10 @@ std::vector<FaultModeEvidence> evaluateContiguous(
         pl_entry.z_classification = 3;  // dangerous / unavailable
         continue;
       }
-      // B2 (§5.7): refuse a concatenated hypothesis whose parameter blocks are
-      // not structurally independent (unsupported family, shared parameters, or
-      // a shared direction inside a common factor group).  Fail closed: no
-      // Gamma, no slopes, and the reason is exported.
+      // B2 (§5.7): refuse only a concatenated hypothesis whose parameter
+      // blocks are structurally unsupported or explicitly share physical
+      // parameters.  Numerical dependence is classified below from the
+      // global stacked response; it must not remove a declared hypothesis.
       if (parts.size() > 1) {
         std::string independence_reason;
         if (!hypothesisParametersIndependent(modes, hypothesis.modes,

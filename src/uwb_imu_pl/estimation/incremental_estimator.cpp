@@ -1351,6 +1351,13 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     // injected with fault keys in the separator; only groups that are boundary
     // inputs carry them (window-explicit groups keep their own maps).
     gtsam::GaussianFactorGraph augmented;
+    // Stage nominal rows by their ledger owner.  A group receiving historical
+    // fault columns is inserted later through its augmented factor *instead
+    // of* these rows.  This preserves the single stochastic-row/covariance
+    // ownership required by the raw factor model.
+    std::map<std::uint64_t, gtsam::GaussianFactorGraph>
+        nominal_boundary_graphs;
+    std::map<std::uint64_t, std::size_t> nominal_boundary_rows;
     std::size_t information_form_factors = 0;
     double information_form_offset = 0.0;
     for (const auto& group : boundary_groups) {
@@ -1361,7 +1368,9 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
           // Measurement-style factor: the linearization already IS the
           // whitened row block [A | b], so the row identity (and with it the
           // per-anchor fault map) is preserved exactly.
-          augmented.push_back(jacobian);
+          nominal_boundary_graphs[group.id.value()].push_back(jacobian);
+          nominal_boundary_rows[group.id.value()] +=
+              static_cast<std::size_t>(jacobian->rows());
           continue;
         }
         const auto hessian = boost::dynamic_pointer_cast<gtsam::HessianFactor>(
@@ -1412,7 +1421,10 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
                              Eigen::MatrixXd(rows.middleCols(column, width)));
           column += width;
         }
-        augmented.emplace_shared<gtsam::JacobianFactor>(terms, rhs);
+        nominal_boundary_graphs[group.id.value()]
+            .emplace_shared<gtsam::JacobianFactor>(terms, rhs);
+        nominal_boundary_rows[group.id.value()] +=
+            static_cast<std::size_t>(rows.rows());
       }
     }
     HistoryFaultParameterizationOptions history_options;
@@ -1459,6 +1471,7 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
       }
     }
     std::map<gtsam::Key, HistoryFaultColumnId> column_id_of_key;
+    std::set<std::uint64_t> fault_augmented_groups;
     std::map<std::size_t, const HistoricalEpochContext*> history_by_epoch;
     for (const auto& record : tx.recoverable_history) {
       history_by_epoch[record.proposed_epoch] = &record;
@@ -1516,12 +1529,53 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
         window.reason = history.reason;
         return window;
       }
+      std::set<std::uint64_t> epoch_groups;
+      for (const auto& column : columns) epoch_groups.insert(column.group.value());
+      std::size_t expected_injection_rows = 0;
+      for (const auto group_value : epoch_groups) {
+        if (!fault_augmented_groups.insert(group_value).second) {
+          history.valid = false;
+          history.state = toString(HistorySummaryState::BuildInvalid);
+          history.reason =
+              "historical group was assigned more than one augmented row owner";
+          NumericalWorkCounters::historySummaryInvalid();
+          window.reason = history.reason;
+          return window;
+        }
+        const auto nominal_rows = nominal_boundary_rows.find(group_value);
+        if (nominal_rows == nominal_boundary_rows.end()) {
+          history.valid = false;
+          history.state = toString(HistorySummaryState::BuildInvalid);
+          history.reason = "historical fault group has no nominal row owner";
+          NumericalWorkCounters::historySummaryInvalid();
+          window.reason = history.reason;
+          return window;
+        }
+        expected_injection_rows += nominal_rows->second;
+      }
+      if (injection.rows != expected_injection_rows) {
+        history.valid = false;
+        history.state = toString(HistorySummaryState::BuildInvalid);
+        history.reason =
+            "augmented historical rows do not match their nominal row owner";
+        NumericalWorkCounters::historySummaryInvalid();
+        window.reason = history.reason;
+        return window;
+      }
       for (const auto& factor : injection.graph) augmented.push_back(factor);
       for (std::size_t index = 0; index < columns.size(); ++index) {
         column_id_of_key[injection.fault_keys[index]] = columns[index].id;
       }
       next_fault_index += static_cast<std::uint64_t>(columns.size());
       ++history.injected_epochs;
+    }
+
+    // Insert the untouched nominal groups after all replacements are known.
+    // Every ledger group now contributes exactly one row block: nominal or
+    // fault-augmented, never both.
+    for (const auto& item : nominal_boundary_graphs) {
+      if (fault_augmented_groups.count(item.first) != 0) continue;
+      for (const auto& factor : item.second) augmented.push_back(factor);
     }
 
     const ExtractedBoundaryRows extracted = extractBoundaryRows(augmented);
@@ -1591,9 +1645,9 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     summary_input.h_old_state = concatColumns(old_columns);
     summary_input.h_boundary = concatColumns(boundary_columns);
     summary_input.fault_map = concatColumns(fault_columns);
-    // GTSAM JacobianFactor carries the residual as A x + b; the summary module
-    // uses r = H x - z, so the extracted right-hand side enters negated.
-    summary_input.rhs = -extracted.rows.col(extracted.total_columns);
+    // GTSAM JacobianFactor uses 0.5 ||A x - b||^2.  The summary uses the same
+    // H x - z convention, so getb()/the extracted last column is already z.
+    summary_input.rhs = extracted.rows.col(extracted.total_columns);
     const HistoryFaultSummary summary = buildHistoryFaultSummary(summary_input);
     history.boundary_columns =
         static_cast<std::size_t>(summary_input.h_boundary.cols());
@@ -1696,9 +1750,13 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     history.emitted_rows = kept_rows.size();
     history.nu_perp = static_cast<int>(kept_perp);
     history.rank_boundary = summary.rank_boundary;
-    history.response = Eigen::MatrixXd(kept_rows.size(), summary.n_fault);
-    history.detector_response = Eigen::MatrixXd(kept_perp, summary.n_fault);
-    history.d_perp = Eigen::VectorXd(static_cast<Eigen::Index>(kept_perp));
+    const std::size_t kept_supported = kept_rows.size() - kept_perp;
+    history.response = Eigen::MatrixXd::Zero(
+        static_cast<Eigen::Index>(kept_supported), summary.n_fault);
+    history.detector_response = Eigen::MatrixXd::Zero(
+        static_cast<Eigen::Index>(kept_perp), summary.n_fault);
+    history.d_perp = Eigen::VectorXd::Zero(
+        static_cast<Eigen::Index>(kept_perp));
     {
       std::size_t boundary_row = 0;
       std::size_t perp_row = 0;

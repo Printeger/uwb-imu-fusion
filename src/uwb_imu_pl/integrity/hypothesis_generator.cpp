@@ -9,7 +9,9 @@
 
 #include <algorithm>
 #include <chrono>
+#include <functional>
 #include <iomanip>
+#include <iterator>
 #include <map>
 #include <set>
 #include <sstream>
@@ -53,6 +55,63 @@ bool explicitlyMonitored(const LinearizedIntegrityWindow& window,
   return found != window.factor_inventory.end() &&
       (found->disposition == FrozenFactorDisposition::ExplicitMeasurement ||
        found->disposition == FrozenFactorDisposition::PendingExplicit);
+}
+
+const LinearizedFactorBlock* historySummaryBlock(
+    const LinearizedIntegrityWindow& window) {
+  const auto found = std::find_if(
+      window.blocks.begin(), window.blocks.end(), [](const auto& block) {
+        return block.whitening_model_id == "history_summary_sqrt_d1";
+      });
+  return found == window.blocks.end() ? nullptr : &*found;
+}
+
+bool hasHistoryColumn(const LinearizedIntegrityWindow& window,
+                      HistoryFaultBasisKind kind, std::uint64_t source,
+                      std::size_t epoch) {
+  const auto& ids = window.history_summary.column_ids;
+  return std::find(ids.begin(), ids.end(),
+                   HistoryFaultColumnId{kind, source, epoch}) != ids.end();
+}
+
+Eigen::MatrixXd historicalMap(
+    const LinearizedIntegrityWindow& window, int parameter_dimension,
+    const std::function<Eigen::VectorXd(const HistoryFaultColumnId&)>&
+        coefficient) {
+  const auto& history = window.history_summary;
+  const Eigen::Index supported = history.response.rows();
+  const Eigen::Index perpendicular = history.detector_response.rows();
+  Eigen::MatrixXd map = Eigen::MatrixXd::Zero(
+      supported + perpendicular, parameter_dimension);
+  if (!history.valid || history.column_ids.size() != history.fault_columns ||
+      history.response.cols() != static_cast<Eigen::Index>(history.fault_columns) ||
+      history.detector_response.cols() !=
+          static_cast<Eigen::Index>(history.fault_columns)) {
+    return map;
+  }
+  for (std::size_t column = 0; column < history.column_ids.size(); ++column) {
+    const Eigen::VectorXd weights = coefficient(history.column_ids[column]);
+    if (weights.size() != parameter_dimension || weights.isZero(0.0)) continue;
+    map.topRows(supported).noalias() +=
+        history.response.col(static_cast<Eigen::Index>(column)) *
+        weights.transpose();
+    map.bottomRows(perpendicular).noalias() +=
+        history.detector_response.col(static_cast<Eigen::Index>(column)) *
+        weights.transpose();
+  }
+  return map;
+}
+
+std::string physicalModeIdentity(const FaultModeBasis& mode) {
+  std::ostringstream out;
+  out << static_cast<int>(mode.kind) << ':' << mode.physical_source_id << ':'
+      << mode.onset_epoch << ':' << mode.parameter_dimension;
+  return out.str();
+}
+
+std::string physicalPairIdentity(std::string left, std::string right) {
+  if (right < left) std::swap(left, right);
+  return left + "||" + right;
 }
 
 void finalizeEffectiveBasis(const LinearizedIntegrityWindow& window,
@@ -312,32 +371,13 @@ bool hypothesisParametersIndependent(
         if (reason) *reason = "shared parameters require shared semantics";
         return false;
       }
-      // Numeric defence: if both modes touch a common factor group, the
-      // stacked raw map must have full column rank q_i + q_j, otherwise the
-      // two parameter blocks are not simultaneously identifiable and the
-      // concatenation would double-count a shared direction.
-      for (const auto& left_item : parts[i]->raw_group_maps) {
-        const auto found = parts[j]->raw_group_maps.find(left_item.first);
-        if (found == parts[j]->raw_group_maps.end()) continue;
-        Eigen::MatrixXd stacked(left_item.second.rows(),
-                                left_item.second.cols() + found->second.cols());
-        stacked << left_item.second, found->second;
-        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd> factorization(stacked);
-        const auto& diagonal = factorization.matrixR().diagonal();
-        int rank = 0;
-        const double gate = 1e-10 * std::max(1.0, diagonal.cwiseAbs().maxCoeff());
-        for (int index = 0; index < diagonal.size(); ++index) {
-          if (std::abs(diagonal(index)) > gate) ++rank;
-        }
-        if (rank < stacked.cols()) {
-          if (reason) {
-            *reason = "shared direction inside group " +
-                std::to_string(left_item.first.value()) +
-                ": parameters are not independent";
-          }
-          return false;
-        }
-      }
+      // Deliberately do not apply a rank gate to an individual common group.
+      // Two physically independent parameters may be collinear in one factor
+      // and distinguished by another.  Conversely, a genuinely dangerous
+      // global nullspace is a numerical monitorability result, not permission
+      // to erase the declared hypothesis from the registry.  The evidence
+      // evaluator therefore keeps every structurally supported pair and
+      // classifies its global stacked response fail-closed.
     }
   }
   return true;
@@ -683,18 +723,139 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
   }
   GeneratedFaultModelSet out;
   const auto all = occurrences(tx);
+  const LinearizedFactorBlock* history_block = historySummaryBlock(window);
+  std::map<std::size_t, double> epoch_begin_s;
+  for (const auto& occurrence : all) {
+    epoch_begin_s[occurrence.epoch] = occurrence.begin.seconds();
+  }
   std::map<std::uint64_t, std::vector<const Occurrence*>> anchor_occurrences;
   for (const auto& occurrence : all) {
-    if (!occurrence.uwb || !occurrence.batch ||
-        !explicitlyMonitored(window, occurrence.uwb->id)) continue;
+    if (!occurrence.uwb || !occurrence.batch) continue;
+    const bool explicit_rows = explicitlyMonitored(window, occurrence.uwb->id);
     for (const auto id : occurrence.uwb->source_measurements) {
       const auto* measurement = measurementById(*occurrence.batch, id);
-      if (measurement) anchor_occurrences[measurement->anchor_id.value()].push_back(&occurrence);
+      if (!measurement) continue;
+      const std::uint64_t anchor = measurement->anchor_id.value();
+      const bool history_rows =
+          hasHistoryColumn(window, HistoryFaultBasisKind::UwbAnchorConstant,
+                           anchor, occurrence.epoch);
+      if (explicit_rows || history_rows) {
+        anchor_occurrences[anchor].push_back(&occurrence);
+      }
     }
   }
 
   std::uint64_t next_mode = 1;
+  std::set<std::string> expected_identities;
+  std::set<std::string> represented_identities;
+  std::set<std::string> evaluated_identities;
+  std::map<std::string, SensorType> expected_sensors;
+  std::set<std::string> expected_pairs;
+  std::set<std::string> represented_pairs;
+  std::set<std::string> evaluated_pairs;
+  auto expect_mode = [&](FaultKind kind, const std::string& source,
+                         std::size_t onset, int dimension,
+                         SensorType sensor) {
+    FaultModeBasis expected;
+    expected.kind = kind;
+    expected.physical_source_id = source;
+    expected.onset_epoch = onset;
+    expected.parameter_dimension = dimension;
+    const std::string identity = physicalModeIdentity(expected);
+    expected_identities.insert(identity);
+    expected_sensors.emplace(identity, sensor);
+  };
+  // Expected identities are deliberately enumerated independently of
+  // history.column_ids and of the mode registry.  The only inputs are the
+  // frozen raw transaction, the configured providers/families, and the
+  // declared physical horizon carried by the window.  A missing production
+  // history column therefore creates a census failure instead of shrinking
+  // the denominator.
+  std::map<std::uint64_t, std::set<std::size_t>> expected_anchor_epochs;
+  const std::size_t physical_first = window.history_summary.present
+      ? window.history_summary.horizon_first_epoch
+      : window.detector_first_epoch;
+  for (const auto& occurrence : all) {
+    if (!occurrence.uwb || !occurrence.batch ||
+        occurrence.epoch < physical_first ||
+        occurrence.epoch > tx.proposed_epoch) {
+      continue;
+    }
+    for (const auto id : occurrence.uwb->source_measurements) {
+      const auto* measurement = measurementById(*occurrence.batch, id);
+      if (measurement) {
+        expected_anchor_epochs[measurement->anchor_id.value()].insert(
+            occurrence.epoch);
+      }
+    }
+  }
+  if (config_.include_uwb_faults) for (const auto& anchor_item : expected_anchor_epochs) {
+    std::set<std::size_t> onsets;
+    onsets = anchor_item.second;
+    const std::string source = "uwb:" + std::to_string(anchor_item.first);
+    for (const std::size_t onset : onsets) {
+      if (config_.include_epoch_independent_uwb) {
+        expect_mode(FaultKind::AnchorBiasEpochIndependent, source, onset, 1,
+                    SensorType::Uwb);
+      }
+      if (config_.include_persistent_uwb) {
+        expect_mode(FaultKind::AnchorBiasPersistentConstant, source, onset, 1,
+                    SensorType::Uwb);
+      }
+      if (config_.include_ramp_uwb) {
+        expect_mode(FaultKind::AnchorBiasRamp, source, onset, 2,
+                    SensorType::Uwb);
+      }
+    }
+  }
+  if (config_.include_imu_faults) {
+    for (const auto& occurrence : all) {
+      // The physical scope is the union of complete raw historical epochs
+      // and explicit in-window intervals.  The sole interval that straddles
+      // history.window_first_epoch is neither: it cannot be represented by a
+      // history column and is not an all-keys-in-window explicit factor.
+      const bool historical_interval =
+          occurrence.epoch >= physical_first &&
+          occurrence.epoch < window.history_summary.window_first_epoch;
+      const bool explicit_interval =
+          occurrence.previous_epoch >= window.detector_first_epoch;
+      if (!occurrence.imu || (!historical_interval && !explicit_interval) ||
+          occurrence.epoch > tx.proposed_epoch) continue;
+      for (int axis = 0; axis < 6; ++axis) {
+        const FaultKind kind = axis < 3
+            ? FaultKind::AccelAxisIntervalConstant
+            : FaultKind::GyroAxisIntervalConstant;
+        const std::string source =
+            std::string(axis < 3 ? "imu_accel:" : "imu_gyro:") +
+            std::to_string(axis % 3) + ":interval:" +
+            std::to_string(occurrence.epoch);
+        expect_mode(kind, source, occurrence.previous_epoch, 1,
+                    axis < 3 ? SensorType::ImuAccelerometer
+                             : SensorType::ImuGyroscope);
+      }
+    }
+  }
+  if (config_.double_faults_enabled) {
+    for (const auto& left : expected_sensors) {
+      if (left.second != SensorType::Uwb) continue;
+      for (const auto& right : expected_sensors) {
+        const bool enabled =
+            (right.second == SensorType::ImuAccelerometer &&
+             config_.include_uwb_accel_combinations) ||
+            (right.second == SensorType::ImuGyroscope &&
+             config_.include_uwb_gyro_combinations);
+        if (enabled) {
+          expected_pairs.insert(physicalPairIdentity(left.first, right.first));
+        }
+      }
+    }
+  }
   auto append_mode = [&](FaultModeBasis mode) {
+    std::sort(mode.affected_groups.begin(), mode.affected_groups.end());
+    mode.affected_groups.erase(
+        std::unique(mode.affected_groups.begin(), mode.affected_groups.end()),
+        mode.affected_groups.end());
+    represented_identities.insert(physicalModeIdentity(mode));
     finalizeEffectiveBasis(window, config_.rank_tolerance, &mode);
     mode.id = FaultModeId(next_mode++);
     FaultUnit unit;
@@ -749,6 +910,53 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
           mode->affected_groups.push_back(occurrence.uwb->id);
         }
       }
+      if (history_block != nullptr) {
+        const bool has_history_support = std::any_of(
+            window.history_summary.column_ids.begin(),
+            window.history_summary.column_ids.end(),
+            [&](const HistoryFaultColumnId& id) {
+              return id.source == anchor_item.first &&
+                     id.epoch >= effective_onset &&
+                     id.kind == HistoryFaultBasisKind::UwbAnchorConstant;
+            });
+        const Eigen::MatrixXd history_map = historicalMap(
+            window, ramp ? 2 : 1,
+            [&](const HistoryFaultColumnId& id) {
+              Eigen::VectorXd weights =
+                  Eigen::VectorXd::Zero(ramp ? 2 : 1);
+              if (id.source != anchor_item.first ||
+                  id.epoch < effective_onset) {
+                return weights;
+              }
+              if (id.kind == HistoryFaultBasisKind::UwbAnchorConstant) {
+                weights(0) = 1.0;
+                if (ramp) {
+                  const auto begin = epoch_begin_s.find(id.epoch);
+                  if (begin == epoch_begin_s.end()) return Eigen::VectorXd();
+                  weights(1) = begin->second - mode->onset_time.seconds();
+                }
+              } else if (ramp &&
+                         id.kind ==
+                             HistoryFaultBasisKind::UwbAnchorTimeLinear) {
+                weights(1) = 1.0;
+              }
+              return weights;
+            });
+        if (has_history_support) {
+          mode->raw_group_maps[history_block->group_id] = history_map;
+          for (const auto& occurrence : all) {
+            if (!occurrence.uwb || occurrence.epoch < effective_onset ||
+                explicitlyMonitored(window, occurrence.uwb->id)) {
+              continue;
+            }
+            if (hasHistoryColumn(
+                    window, HistoryFaultBasisKind::UwbAnchorConstant,
+                    anchor_item.first, occurrence.epoch)) {
+              mode->affected_groups.push_back(occurrence.uwb->id);
+            }
+          }
+        }
+      }
     };
     for (const auto* onset : unique) {
       if (config_.include_epoch_independent_uwb) {
@@ -765,8 +973,32 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
         for (const auto& occurrence : all) {
           if (occurrence.epoch == onset->epoch) fill(&mode, occurrence.epoch, false, false);
         }
-        // Epoch-independent means exactly the onset group.
+        // Epoch-independent means exactly the onset group.  Replace the
+        // persistent-style historical map produced by fill() with the one
+        // constant history column owned by this epoch.
+        if (history_block != nullptr) {
+          mode.raw_group_maps.erase(history_block->group_id);
+          const Eigen::MatrixXd history_map = historicalMap(
+              window, 1, [&](const HistoryFaultColumnId& id) {
+                Eigen::VectorXd weight = Eigen::VectorXd::Zero(1);
+                if (id.kind == HistoryFaultBasisKind::UwbAnchorConstant &&
+                    id.source == anchor_item.first &&
+                    id.epoch == onset->epoch) {
+                  weight(0) = 1.0;
+                }
+                return weight;
+              });
+          if (hasHistoryColumn(
+                  window, HistoryFaultBasisKind::UwbAnchorConstant,
+                  anchor_item.first, onset->epoch)) {
+            mode.raw_group_maps[history_block->group_id] = history_map;
+          }
+        }
         for (auto it = mode.raw_group_maps.begin(); it != mode.raw_group_maps.end();) {
+          if (history_block != nullptr && it->first == history_block->group_id) {
+            ++it;
+            continue;
+          }
           const auto found = std::find_if(all.begin(), all.end(), [&](const Occurrence& o) {
             return o.uwb && o.uwb->id == it->first;
           });
@@ -774,7 +1006,11 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
           else ++it;
         }
         mode.affected_groups.clear();
-        for (const auto& item : mode.raw_group_maps) mode.affected_groups.push_back(item.first);
+        for (const auto& occurrence : all) {
+          if (occurrence.uwb && occurrence.epoch == onset->epoch) {
+            mode.affected_groups.push_back(occurrence.uwb->id);
+          }
+        }
         mode.affected_measurements.clear();
         for (const auto& occurrence : all) {
           if (!occurrence.uwb || !occurrence.batch ||
@@ -810,12 +1046,19 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
   }
 
   if (config_.include_imu_faults) for (const auto& occurrence : all) {
-    if (!occurrence.imu ||
-        !explicitlyMonitored(window, occurrence.imu->id)) continue;
+    if (!occurrence.imu) continue;
+    const bool explicit_rows = explicitlyMonitored(window, occurrence.imu->id);
+    bool history_rows = false;
+    for (int axis = 0; axis < 6; ++axis) {
+      history_rows = history_rows ||
+          hasHistoryColumn(window, HistoryFaultBasisKind::ImuAxisConstant,
+                           static_cast<std::uint64_t>(axis), occurrence.epoch);
+    }
+    if (!explicit_rows && !history_rows) continue;
     const auto* block = blockFor(window, occurrence.imu->id);
-    if (!block) continue;
+    if (explicit_rows && !block) continue;
     ImuFaultSubspaces subspaces = current_imu;
-    if (occurrence.history) {
+    if (explicit_rows && occurrence.history) {
       EpochTransaction local;
       local.previous_state = occurrence.history->previous_state;
       local.nominal_predicted_state = occurrence.history->current_state;
@@ -826,8 +1069,8 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
       out.historical_sensitivity_ms += std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - sensitivity_start).count();
     }
-    if (!subspaces.analytic_input_valid ||
-        !subspaces.analytic_computation_valid) continue;
+    if (explicit_rows && (!subspaces.analytic_input_valid ||
+                          !subspaces.analytic_computation_valid)) continue;
     for (int axis = 0; axis < 6; ++axis) {
       FaultModeBasis mode;
       mode.kind = axis < 3 ? FaultKind::AccelAxisIntervalConstant
@@ -844,10 +1087,28 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
                                               : config_.gyro_prior_bound;
       mode.recoverability = tx.history_recoverability;
       mode.affected_groups = {occurrence.imu->id};
-      const Eigen::VectorXd whitened = axis < 3
-          ? subspaces.accel_axis[axis] : subspaces.gyro_axis[axis - 3];
-      mode.raw_group_maps[occurrence.imu->id] =
-          block->whitener.triangularView<Eigen::Lower>().solve(whitened);
+      if (explicit_rows) {
+        const Eigen::VectorXd whitened = axis < 3
+            ? subspaces.accel_axis[axis] : subspaces.gyro_axis[axis - 3];
+        mode.raw_group_maps[occurrence.imu->id] =
+            block->whitener.triangularView<Eigen::Lower>().solve(whitened);
+      }
+      if (history_block != nullptr &&
+          hasHistoryColumn(window, HistoryFaultBasisKind::ImuAxisConstant,
+                           static_cast<std::uint64_t>(axis),
+                           occurrence.epoch)) {
+        const Eigen::MatrixXd history_map = historicalMap(
+            window, 1, [&](const HistoryFaultColumnId& id) {
+              Eigen::VectorXd weight = Eigen::VectorXd::Zero(1);
+              if (id.kind == HistoryFaultBasisKind::ImuAxisConstant &&
+                  id.source == static_cast<std::uint64_t>(axis) &&
+                  id.epoch == occurrence.epoch) {
+                weight(0) = 1.0;
+              }
+              return weight;
+            });
+        mode.raw_group_maps[history_block->group_id] = history_map;
+      }
       append_mode(std::move(mode));
     }
   }
@@ -910,11 +1171,17 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
           ++out.pair_candidates_rejected_shared;
           continue;
         }
+        represented_pairs.insert(physicalPairIdentity(
+            physicalModeIdentity(uwb), physicalModeIdentity(imu)));
         hypothesis({uwb.id, imu.id});
       }
     }
   }
   for (const auto& value : out.hypotheses) {
+    for (const auto id : value.modes) {
+      evaluated_identities.insert(
+          physicalModeIdentity(out.modes.at(id.value() - 1)));
+    }
     out.effective_max_cardinality = std::max<std::uint32_t>(
         out.effective_max_cardinality,
         static_cast<std::uint32_t>(value.modes.size()));
@@ -935,11 +1202,63 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
       }
       if (uwb && accel) ++out.double_uwb_accel_hypotheses;
       else if (uwb && gyro) ++out.double_uwb_gyro_hypotheses;
+      evaluated_pairs.insert(physicalPairIdentity(
+          physicalModeIdentity(out.modes.at(value.modes[0].value() - 1)),
+          physicalModeIdentity(out.modes.at(value.modes[1].value() - 1))));
     }
   }
   const double allocation = conservativeEqualRiskAllocation(
       config_.total_hmi_allocation, out.hypotheses.size());
   for (auto& value : out.hypotheses) value.hmi_allocation = allocation;
+
+  out.expected_mode_identities.assign(expected_identities.begin(),
+                                      expected_identities.end());
+  out.represented_mode_identities.assign(represented_identities.begin(),
+                                         represented_identities.end());
+  out.evaluated_mode_identities.assign(evaluated_identities.begin(),
+                                       evaluated_identities.end());
+  out.expected_pair_identities.assign(expected_pairs.begin(),
+                                      expected_pairs.end());
+  out.represented_pair_identities.assign(represented_pairs.begin(),
+                                         represented_pairs.end());
+  out.evaluated_pair_identities.assign(evaluated_pairs.begin(),
+                                       evaluated_pairs.end());
+  if (out.expected_mode_identities != out.represented_mode_identities) {
+    std::vector<std::string> missing;
+    std::set_difference(expected_identities.begin(), expected_identities.end(),
+                        represented_identities.begin(), represented_identities.end(),
+                        std::back_inserter(missing));
+    std::vector<std::string> unexpected;
+    std::set_difference(represented_identities.begin(), represented_identities.end(),
+                        expected_identities.begin(), expected_identities.end(),
+                        std::back_inserter(unexpected));
+    throw std::runtime_error(
+        "physical fault census mismatch: expected modes are not fully "
+        "represented; expected=" + std::to_string(expected_identities.size()) +
+        " represented=" + std::to_string(represented_identities.size()) +
+        " missing=" + std::to_string(missing.size()) +
+        (missing.empty() ? "" : " first_missing=" + missing.front()) +
+        " unexpected=" + std::to_string(unexpected.size()) +
+        (unexpected.empty() ? "" : " first_unexpected=" + unexpected.front()));
+  }
+  if (config_.single_faults_enabled &&
+      out.represented_mode_identities != out.evaluated_mode_identities) {
+    throw std::runtime_error(
+        "physical fault census mismatch: represented modes are not fully "
+        "evaluated");
+  }
+  if (config_.double_faults_enabled &&
+      out.expected_pair_identities != out.represented_pair_identities) {
+    throw std::runtime_error(
+        "physical fault census mismatch: expected pairs are not fully "
+        "represented");
+  }
+  if (config_.double_faults_enabled &&
+      out.represented_pair_identities != out.evaluated_pair_identities) {
+    throw std::runtime_error(
+        "physical fault census mismatch: represented pairs are not fully "
+        "evaluated");
+  }
 
   // B4: a healthy, alarm-free frame needs the mode descriptions, their
   // sensitivity/slopes and the KEEP_ALL reference solution - not the exclusion

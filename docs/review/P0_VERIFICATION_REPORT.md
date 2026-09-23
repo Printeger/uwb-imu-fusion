@@ -74,11 +74,10 @@ The table status is one of:
 - `GOLDEN`: the implementation commit, required tests and evidence bundle all
   passed, and an immutable golden tag points to that commit.
 
-Current project state is `VERIFIED_BROKEN` at
-`c7fd4cc79a3a22cebeb46aaa03706a0c65938f39`.  P1 is `CLOSED`.  The current
-suite also has one known evidence-harness failure: `test_round2_tools` declares
-a v5 manifest while validating a v6 `integrity.csv` header.  That mismatch must
-be corrected as part of the P0-01 evidence work; the historical
+Current project state is `P0_REMEDIATION`; the latest immutable baseline is
+`golden-p0-01-history`.  P1 is `CLOSED`.  P0-01 corrected the known
+`test_round2_tools` v5/v6 evidence-harness mismatch, and its complete CTest
+result is recorded in the evidence bundle; the historical
 `catkin_test_results` count is not an acceptance substitute for the complete
 CTest result.
 
@@ -91,7 +90,7 @@ move an earlier golden tag.
 
 | Step | Required scope | Mandatory evidence / exit gate | Commit and golden baseline | Status |
 |---|---|---|---|---|
-| **P0-01 History raw-factor equivalence** | R01; D01, D02, D03-A, D03-B; establish the independent raw-factor portion of D12. Fix unique row ownership, the `Ax-b` RHS convention, initialized carrier dimensions, and history-to-physical-mode/census mapping. Also remove the current v5/v6 test-harness mismatch so the full suite has an honest result. | O01 and O03. Nonzero RHS, correlated covariance, multiple fixed-lag crossings and persistent/ramp history must match the unique raw system in objective, state, covariance, `T_b/F_b`, constant, dof, Gram and census. Any mismatch stops the step. | Commit: `fix(p0-01): restore history raw-factor equivalence`; tag: `golden-p0-01-history` | `NOT_STARTED` |
+| **P0-01 History raw-factor equivalence** | R01; D01, D02, D03-A, D03-B; establish the independent raw-factor portion of D12. Fix unique row ownership, the `Ax-b` RHS convention, initialized carrier dimensions, and history-to-physical-mode/census mapping. Also remove the current v5/v6 test-harness mismatch so the full suite has an honest result. | O01 and O03. Nonzero RHS, correlated covariance, multiple fixed-lag crossings and persistent/ramp history must match the unique raw system in objective, state, covariance, `T_b/F_b`, constant, dof, Gram and census. Any mismatch stops the step. | Commit: `fix(p0-01): restore history raw-factor equivalence`; tag: `golden-p0-01-history` | `GOLDEN` |
 | **P0-02 Dual-channel contract** | R02; D04. Introduce one candidate detector certificate carrying row roles, current/history statistics, constant, rank/dof, accepted-event ID and numerical identity. Active v6 must not silently use pooled fallback. | O02. All-in, KEEP_ALL and modified candidates agree for dense and matrix-free paths; the pooled-pass/dual-fail and missing-constant examples reject; missing payload is `INVALID` and cannot produce a finite certified PL. | Commit: `fix(p0-02): enforce dual-channel candidate contract`; tag: `golden-p0-02-dual-channel` | `NOT_STARTED` |
 | **P0-03 Unified numerical certificate** | R04; D08. Use one certified square-root solve/tolerance/proof identity for state, covariance, fault and bridge RHS; unify symmetry, PSD, rank, nullspace and `G ker(W)` decisions; retain exact fallback. | O05. State and every covariance/Gram/slope/PL quantity agree with an independent stable QR/SVD reference over rank/condition transitions. Tiny-map/unbounded-fault and indefinite-Gram examples fail closed. | Commit: `fix(p0-03): unify integrity numerical certificates`; tag: `golden-p0-03-numerics` | `NOT_STARTED` |
 | **P0-04 Complete risk and selection events** | R03; D05, D06. Separate allocation validity, complete bound closure, validation status and formal eligibility. Charge or reject miss/escape/omitted/selection terms. Remove plausible-ID premerging without a numeric shared-event proof. | O06. High-precision ledger closes on the same total budget; unknown terms are not zero; disjoint action events are not merged; over-budget profiles become unavailable without changing budgets, alert limits or thresholds. | Commit: `fix(p0-04): close risk and selection accounting`; tag: `golden-p0-04-risk` | `NOT_STARTED` |
@@ -184,7 +183,7 @@ The completion record is maintained here:
 
 | Step | Status | Commit | Golden tag / reference | Evidence bundle | Reviewer note |
 |---|---|---|---|---|---|
-| P0-01 | `NOT_STARTED` | — | `golden-p0-01-history` | — | — |
+| P0-01 | `GOLDEN` | this commit (`golden-p0-01-history^{}`) | `golden-p0-01-history` | [p0-01-history](../evidence/p0-01-history/README.md) | PASS: independent reviewer and supervisor; O01/O03 plus complete CTest 26/26 |
 | P0-02 | `NOT_STARTED` | — | `golden-p0-02-dual-channel` | — | — |
 | P0-03 | `NOT_STARTED` | — | `golden-p0-03-numerics` | — | — |
 | P0-04 | `NOT_STARTED` | — | `golden-p0-04-risk` | — | — |
