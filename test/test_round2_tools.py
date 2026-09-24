@@ -98,7 +98,14 @@ class RoundTwoProtocolTests(unittest.TestCase):
         right = subprocess.run(command, check=True, text=True,
                                capture_output=True).stdout
         self.assertEqual(left, right)
-        self.assertEqual(json.loads(left)["status"], "PASS")
+        replay = json.loads(left)
+        # P0-04: the deterministic short fixture has no complete production
+        # risk ledger.  It must replay deterministically, but it may not turn
+        # unknown miss/escape/selection terms into a protected PASS.
+        self.assertEqual(replay["status"], "FAIL")
+        self.assertEqual(replay["failure_reason"], "SAFETY_INVARIANT")
+        self.assertFalse(replay["risk_budget_closed"])
+        self.assertFalse(replay["protected_available"])
 
     def test_v6_run_validator_checks_inventory_and_protocol_digest(self):
         executable = TEST_BIN_DIR / "realtime_performance_benchmark"

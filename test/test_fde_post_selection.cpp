@@ -8,6 +8,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <limits>
 #include <string>
 
 #include "uwb_imu_pl/integrity/fde_post_selection.hpp"
@@ -179,8 +180,9 @@ TEST(FdePostSelection, Fde04ImuIntervalRepairAndBridgeFailureStayLegal) {
 }
 
 // ---------------------------------------------------------------------------
-// FDE-05: shared-reference centres share one failure event; distinct reference
-// dependencies cannot under-count the risk.
+// FDE-05: caller-declared shared-reference centres are not proof of a shared
+// failure event.  Until a verifiable P0-03/P0-02 producer is wired, every
+// action is charged as a singleton.
 // ---------------------------------------------------------------------------
 TEST(FdePostSelection, Fde05SharedReferenceGroupsAndDistinctReferences) {
   auto makeShared = [](std::uint64_t action_id, std::uint64_t reference,
@@ -198,30 +200,50 @@ TEST(FdePostSelection, Fde05SharedReferenceGroupsAndDistinctReferences) {
     action.p_action_m = Eigen::Vector3d(centre_shift, 0.0, 0.0);
     action.L_action_m = action.L_reference_m +
                         (action.p_action_m - action.p_reference_m).cwiseAbs();
+    action.L_action_m.x() = std::nextafter(
+        action.L_action_m.x(), std::numeric_limits<double>::infinity());
     action.epsilon_budget = epsilon;
     return action;
   };
-  // Three centres sharing one reference: ONE failure event, charged once.
+  // Three centres with identical caller claims are still three events.
   std::vector<ActionGuarantee> shared = {makeShared(1, 7, 1.0e-5, 0.1),
                                          makeShared(2, 7, 1.2e-5, 0.2),
                                          makeShared(3, 7, 1.1e-5, -0.3)};
-  const GuaranteeGroupResult grouped = buildGuaranteeGroups(shared, 1.5e-5);
+  auto events = [](const std::vector<ActionGuarantee>& actions) {
+    std::vector<ActionSharedEventV1> out;
+    for (const auto& action : actions) {
+      ActionSharedEventV1 event;
+      event.action_id = action.action_id;
+      // Deliberately independent caller claim, not copied from the action.
+      // Without full proof/certificate payload it must never enable sharing.
+      event.common_reference_certificate_id = 999;
+      event.common_L_reference_m = Eigen::Vector3d::Ones();
+      event.common_p_reference_m = Eigen::Vector3d::Zero();
+      event.accepted_event_id = "invented";
+      event.reference_time_id = 123;
+      event.output_quantity_id = "invented";
+      out.push_back(std::move(event));
+    }
+    return out;
+  };
+  const GuaranteeGroupResult grouped =
+      buildGuaranteeGroups(shared, 4.0e-5, events(shared));
   ASSERT_TRUE(grouped.valid) << grouped.reason;
-  EXPECT_EQ(grouped.groups.size(), 1u)
-      << "a shared reference certificate is one failure event";
-  EXPECT_EQ(grouped.groups[0].action_ids.size(), 3u);
-  EXPECT_NEAR(grouped.total_charged_budget, 1.2e-5, 1e-18)
-      << "the shared event is charged once (the largest member), not summed";
-  EXPECT_LE(grouped.groups[0].worst_triangle_residual, 1e-12);
+  EXPECT_EQ(grouped.groups.size(), 3u);
+  EXPECT_EQ(grouped.singleton_groups, 3u);
+  EXPECT_EQ(grouped.shared_groups, 0u);
+  EXPECT_NEAR(grouped.total_charged_budget, 3.3e-5, 1e-18);
 
   // Distinct references with the same structure: two separate failure events,
   // charged separately (no under-counting).
   std::vector<ActionGuarantee> distinct = {makeShared(4, 8, 1.0e-5, 0.1),
                                           makeShared(5, 9, 1.2e-5, 0.2)};
-  const GuaranteeGroupResult separate = buildGuaranteeGroups(distinct, 1.5e-5);
+  const GuaranteeGroupResult separate =
+      buildGuaranteeGroups(distinct, 1.5e-5, events(distinct));
   EXPECT_FALSE(separate.valid)
       << "1.0e-5 + 1.2e-5 > 1.5e-5 must refuse: both events are charged";
-  const GuaranteeGroupResult separate_ok = buildGuaranteeGroups(distinct, 2.5e-5);
+  const GuaranteeGroupResult separate_ok =
+      buildGuaranteeGroups(distinct, 2.5e-5, events(distinct));
   ASSERT_TRUE(separate_ok.valid) << separate_ok.reason;
   EXPECT_EQ(separate_ok.singleton_groups, 2u);
   EXPECT_NEAR(separate_ok.total_charged_budget, 2.2e-5, 1e-18);
@@ -231,7 +253,8 @@ TEST(FdePostSelection, Fde05SharedReferenceGroupsAndDistinctReferences) {
   std::vector<ActionGuarantee> partial = {makeShared(6, 10, 1.0e-5, 0.0),
                                           makeShared(7, 10, 1.0e-5, 0.0)};
   partial[1].shared_time = false;
-  const GuaranteeGroupResult split = buildGuaranteeGroups(partial, 2.5e-5);
+  const GuaranteeGroupResult split =
+      buildGuaranteeGroups(partial, 2.5e-5, events(partial));
   ASSERT_TRUE(split.valid) << split.reason;
   EXPECT_EQ(split.groups.size(), 2u);
   // Missing one shared flag breaks the group: neither action ends up in a
@@ -245,17 +268,19 @@ TEST(FdePostSelection, Fde05SharedReferenceGroupsAndDistinctReferences) {
   std::vector<ActionGuarantee> violated = {makeShared(8, 11, 1.0e-5, 0.1),
                                            makeShared(9, 11, 1.0e-5, 0.2)};
   violated[1].L_action_m = Eigen::Vector3d(0.5, 0.5, 0.5);  // too optimistic
-  const GuaranteeGroupResult refused = buildGuaranteeGroups(violated, 1.5e-5);
+  const GuaranteeGroupResult refused =
+      buildGuaranteeGroups(violated, 1.5e-5, events(violated));
   EXPECT_FALSE(refused.valid)
       << "the violated action is a singleton and is charged separately";
   const GuaranteeGroupResult refused_ok =
-      buildGuaranteeGroups(violated, 2.5e-5);
+      buildGuaranteeGroups(violated, 2.5e-5, events(violated));
   ASSERT_TRUE(refused_ok.valid) << refused_ok.reason;
   EXPECT_EQ(refused_ok.groups.size(), 2u);
   EXPECT_GT(refused_ok.groups[1].worst_triangle_residual, 1e-9);
 
   std::printf(
-      "[FDE-05] shared_actions=3 charged_once=%.3e singletons=2 charged_sum=%.3e "
+      "[FDE-05] unverified_shared_claims=3 singleton_sum=%.3e "
+      "singletons=2 charged_sum=%.3e "
       "partial_groups=%zu triangle_violation_residual=%.3e\n",
       grouped.total_charged_budget, separate_ok.total_charged_budget,
       split.groups.size(), refused_ok.groups[1].worst_triangle_residual);

@@ -21,6 +21,19 @@ namespace uwb_imu_pl {
 
 namespace {
 
+RiskLedger preSelectionRiskLedger(
+    const RiskBudgetV2& risk,
+    const std::vector<FaultHypothesisV2>& hypotheses) {
+  RiskLedgerInputs inputs;
+  // PL alone cannot prove omitted/escape/selection events.  Keep them UNKNOWN
+  // and let the later action-group ledger close them; never export the
+  // allocation precheck as complete risk validity.
+  inputs.envelope_online = false;
+  inputs.envelope_leaf_count = 0;
+  inputs.selection_contract_frozen = false;
+  return buildRiskLedger(risk, hypotheses, inputs);
+}
+
 void hashBytes(std::uint64_t* hash, const void* data, std::size_t size) {
   const auto* bytes = static_cast<const unsigned char*>(data);
   for (std::size_t index = 0; index < size; ++index) {
@@ -716,7 +729,7 @@ bool validateProtectionLevelV2ProofPayload(
   const bool dual_valid = dual_payloads_valid &&
       ((proof.pooled_only && proof.dual_channel_proofs.empty()) ||
        proof.dual_channel_proofs.size() == proof.hypotheses.size());
-  const RiskBudgetAudit risk_audit = auditRiskBudget(
+  const RiskLedger complete_risk = preSelectionRiskLedger(
       proof.risk, proof.hypotheses);
   const SymmetricPsdCertificate covariance_certificate = certifyFactorGram(
       proof.protected_covariance_factor, proof.protected_covariance,
@@ -823,13 +836,19 @@ bool validateProtectionLevelV2ProofPayload(
   const double expected_vpl = expected_pl.z();
   const bool expected_model_valid = expected_pl.allFinite() &&
       proof.detector_passed;
+  const bool expected_complete_risk_valid =
+      complete_risk.closes &&
+      complete_risk.all_terms_validated;
   const Availability expected_availability = expected_model_valid &&
+      expected_complete_risk_valid &&
       expected_hpl <= proof.risk.horizontal_alert_limit_m &&
       expected_vpl <= proof.risk.vertical_alert_limit_m
       ? Availability::Available : Availability::Unavailable;
   std::string expected_reason;
   if (!proof.detector_passed) expected_reason = "post-FDE detector alarm";
-  else if (expected_availability != Availability::Available) {
+  else if (!expected_complete_risk_valid) {
+    expected_reason = complete_risk.reason;
+  } else if (expected_availability != Availability::Available) {
     expected_reason = "post-FDE protection level exceeds alert limit";
   } else {
     expected_reason = "research V2 implemented; Gate J calibration/review pending";
@@ -845,8 +864,10 @@ bool validateProtectionLevelV2ProofPayload(
       components_valid && same(served.fault_component_m, expected_fault) &&
       same(served.pl_xyz_m, expected_pl) && served.hpl_m == expected_hpl &&
       served.vpl_m == expected_vpl &&
-      served.allocated_outcome_risk == risk_audit.total &&
-      served.risk_budget_valid == risk_audit.valid &&
+      served.allocated_outcome_risk == complete_risk.charged_total &&
+      served.risk_budget_valid ==
+          (complete_risk.closes &&
+           complete_risk.all_terms_validated) &&
       served.model_valid == expected_model_valid &&
       served.formal_eligible == false &&
       served.availability == expected_availability &&
@@ -1058,11 +1079,13 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
         : detector_contract_reason;
     return result;
   }
-  const RiskBudgetAudit risk_audit = auditRiskBudget(risk, *hypotheses);
-  result.allocated_outcome_risk = risk_audit.total;
-  result.risk_budget_valid = risk_audit.valid;
-  if (!result.risk_budget_valid) {
-    result.reason = "outcome-conditioned risk budget does not close";
+  const RiskBudgetAudit allocation = auditRiskBudget(risk, *hypotheses);
+  const RiskLedger complete_risk = preSelectionRiskLedger(risk, *hypotheses);
+  result.allocated_outcome_risk = complete_risk.charged_total;
+  result.risk_budget_valid = complete_risk.closes &&
+      complete_risk.all_terms_validated;
+  if (!allocation.valid) {
+    result.reason = "risk allocation precheck does not close";
     return result;
   }
   std::vector<Eigen::MatrixXd> fault_maps;
@@ -1227,12 +1250,13 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
   result.hpl_m = std::hypot(result.pl_xyz_m.x(), result.pl_xyz_m.y());
   result.vpl_m = result.pl_xyz_m.z();
   result.model_valid = result.pl_xyz_m.allFinite() && detector.passed;
-  result.availability = result.model_valid &&
+  result.availability = result.model_valid && result.risk_budget_valid &&
       result.hpl_m <= risk.horizontal_alert_limit_m &&
       result.vpl_m <= risk.vertical_alert_limit_m
       ? Availability::Available : Availability::Unavailable;
   result.formal_eligible = false;  // Gate J evidence is intentionally absent.
   if (!detector.passed) result.reason = "post-FDE detector alarm";
+  else if (!result.risk_budget_valid) result.reason = complete_risk.reason;
   else if (result.availability != Availability::Available) {
     result.reason = "post-FDE protection level exceeds alert limit";
   } else {
@@ -1277,11 +1301,13 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
       modes.emplace(id.value(), &found->second);
     }
   }
-  const RiskBudgetAudit risk_audit = auditRiskBudget(risk, *hypotheses);
-  result.allocated_outcome_risk = risk_audit.total;
-  result.risk_budget_valid = risk_audit.valid;
-  if (!result.risk_budget_valid) {
-    result.reason = "outcome-conditioned risk budget does not close";
+  const RiskBudgetAudit allocation = auditRiskBudget(risk, *hypotheses);
+  const RiskLedger complete_risk = preSelectionRiskLedger(risk, *hypotheses);
+  result.allocated_outcome_risk = complete_risk.charged_total;
+  result.risk_budget_valid = complete_risk.closes &&
+      complete_risk.all_terms_validated;
+  if (!allocation.valid) {
+    result.reason = "risk allocation precheck does not close";
     return result;
   }
   struct SolvedMode {
@@ -1482,12 +1508,13 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
   result.hpl_m = std::hypot(result.pl_xyz_m.x(), result.pl_xyz_m.y());
   result.vpl_m = result.pl_xyz_m.z();
   result.model_valid = result.pl_xyz_m.allFinite() && detector.passed;
-  result.availability = result.model_valid &&
+  result.availability = result.model_valid && result.risk_budget_valid &&
       result.hpl_m <= risk.horizontal_alert_limit_m &&
       result.vpl_m <= risk.vertical_alert_limit_m
       ? Availability::Available : Availability::Unavailable;
   result.formal_eligible = false;
   if (!detector.passed) result.reason = "post-FDE detector alarm";
+  else if (!result.risk_budget_valid) result.reason = complete_risk.reason;
   else if (result.availability != Availability::Available)
     result.reason = "post-FDE protection level exceeds alert limit";
   else result.reason = "research V2 implemented; Gate J calibration/review pending";
@@ -1542,11 +1569,13 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
     return result;
   }
   NumericalWorkCounters::hypothesisSharedHit();
-  const RiskBudgetAudit risk_audit = auditRiskBudget(risk, hypotheses);
-  result.allocated_outcome_risk = risk_audit.total;
-  result.risk_budget_valid = risk_audit.valid;
-  if (!result.risk_budget_valid) {
-    result.reason = "outcome-conditioned risk budget does not close";
+  const RiskBudgetAudit allocation = auditRiskBudget(risk, hypotheses);
+  const RiskLedger complete_risk = preSelectionRiskLedger(risk, hypotheses);
+  result.allocated_outcome_risk = complete_risk.charged_total;
+  result.risk_budget_valid = complete_risk.closes &&
+      complete_risk.all_terms_validated;
+  if (!allocation.valid) {
+    result.reason = "risk allocation precheck does not close";
     return result;
   }
   const double covariance_rank_tolerance = window.numerics
@@ -1647,12 +1676,13 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
   result.hpl_m = std::hypot(result.pl_xyz_m.x(), result.pl_xyz_m.y());
   result.vpl_m = result.pl_xyz_m.z();
   result.model_valid = result.pl_xyz_m.allFinite() && detector.passed;
-  result.availability = result.model_valid &&
+  result.availability = result.model_valid && result.risk_budget_valid &&
       result.hpl_m <= risk.horizontal_alert_limit_m &&
       result.vpl_m <= risk.vertical_alert_limit_m
       ? Availability::Available : Availability::Unavailable;
   result.formal_eligible = false;
   if (!detector.passed) result.reason = "post-FDE detector alarm";
+  else if (!result.risk_budget_valid) result.reason = complete_risk.reason;
   else if (result.availability != Availability::Available)
     result.reason = "post-FDE protection level exceeds alert limit";
   else result.reason = "research V2 implemented; Gate J calibration/review pending";

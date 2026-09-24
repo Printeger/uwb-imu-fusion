@@ -3,14 +3,32 @@
 
 #include "uwb_imu_pl/integrity/fde_post_selection.hpp"
 
+#include <boost/multiprecision/cpp_bin_float.hpp>
+
 #include <Eigen/SVD>
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <map>
 #include <set>
+#include <tuple>
 
 namespace uwb_imu_pl {
+namespace {
+
+using ExactAccumulator = boost::multiprecision::cpp_bin_float_quad;
+
+double conservativeRoundUp(const ExactAccumulator& value) {
+  double rounded = static_cast<double>(value);
+  while (std::isfinite(rounded) && ExactAccumulator(rounded) < value) {
+    rounded = std::nextafter(
+        rounded, std::numeric_limits<double>::infinity());
+  }
+  return rounded;
+}
+
+}  // namespace
 
 const char* toString(FaultUnitKind unit) {
   switch (unit) {
@@ -133,7 +151,21 @@ CandidateRanking rankStructuredCandidates(
 
 GuaranteeGroupResult buildGuaranteeGroups(
     const std::vector<ActionGuarantee>& actions, double available_budget) {
+  return buildGuaranteeGroups(actions, available_budget, {});
+}
+
+GuaranteeGroupResult buildGuaranteeGroups(
+    const std::vector<ActionGuarantee>& actions, double available_budget,
+    const std::vector<ActionSharedEventV1>& shared_events) {
   GuaranteeGroupResult out;
+  // ActionSharedEventV1 contains only caller assertions.  It has no complete
+  // P0-03 numerical proof payload, P0-02 accepted-event certificate, or
+  // recomputable digest tied to frozen window/time/output identity.  Consuming
+  // it as authority would let a caller invent cert/event/time/output strings
+  // and self-prove a shared event.  Therefore P0-04 intentionally ignores all
+  // such claims; every action remains a singleton until a real independent
+  // producer/reference contract is wired end-to-end.
+  (void)shared_events;
   if (actions.empty()) {
     out.reason = "no candidate actions to guarantee";
     return out;
@@ -142,15 +174,36 @@ GuaranteeGroupResult buildGuaranteeGroups(
     out.reason = "selection-risk budget is not positive";
     return out;
   }
-  auto triangleResidual = [](const ActionGuarantee& action) {
-    const Eigen::Vector3d expected =
-        action.L_reference_m +
-        (action.p_action_m - action.p_reference_m).cwiseAbs();
-    const double scale = std::max(
-        1.0, action.L_action_m.norm() + (action.p_action_m - action.p_reference_m).norm());
-    return (action.L_action_m - expected).norm() / scale;
+  auto triangleProof = [](const ActionGuarantee& action, double* residual) {
+    ExactAccumulator squared_residual = 0;
+    ExactAccumulator squared_scale = 0;
+    bool valid = true;
+    for (int axis = 0; axis < 3; ++axis) {
+      const ExactAccumulator reference(action.L_reference_m(axis));
+      const ExactAccumulator delta = abs(
+          ExactAccumulator(action.p_action_m(axis)) -
+          ExactAccumulator(action.p_reference_m(axis)));
+      const ExactAccumulator required = reference + delta;
+      const ExactAccumulator actual(action.L_action_m(axis));
+      // The proof is a componentwise conservative interval, not a norm-based
+      // approximate equality.  No tolerance can turn an under-bound into a
+      // shared event.
+      if (actual < required) valid = false;
+      const ExactAccumulator gap = actual - required;
+      squared_residual += gap * gap;
+      squared_scale += actual * actual + delta * delta;
+    }
+    const ExactAccumulator scale = sqrt(std::max(
+        ExactAccumulator(1), squared_scale));
+    *residual = conservativeRoundUp(sqrt(squared_residual) / scale);
+    return valid;
   };
+  std::set<std::uint64_t> action_ids;
   for (const auto& action : actions) {
+    if (action.action_id == 0 || !action_ids.insert(action.action_id).second) {
+      out.reason = "action ids must be nonzero and unique";
+      return out;
+    }
     if (!std::isfinite(action.epsilon_budget) || action.epsilon_budget < 0.0) {
       out.reason = "action budget must be finite and non-negative";
       return out;
@@ -160,42 +213,30 @@ GuaranteeGroupResult buildGuaranteeGroups(
       out.reason = "guarantee vectors must be finite";
       return out;
     }
+    if ((action.L_reference_m.array() < 0.0).any() ||
+        (action.L_action_m.array() < 0.0).any()) {
+      out.reason = "guarantee bounds must be componentwise non-negative";
+      return out;
+    }
   }
-  // Grouping: only actions that share ALL evidence flags, the same reference
-  // certificate and satisfy the triangle-transfer identity
-  //   L_{a,d} = L_{ref,d} + |p_{a,d} - p_{ref,d}|
-  // may share the reference failure event.  Everything else is a singleton and
-  // is charged on its own.
-  const double triangle_tolerance = 1e-9;
-  std::map<std::uint64_t, std::size_t> group_of_reference;
+  // No verified common-reference producer exists in production.  Preserve the
+  // componentwise triangle residual as diagnostic evidence, but do not let it
+  // convert a caller claim into a shared statistical event.
+  std::set<std::uint64_t> used_group_ids;
+  auto uniqueGroupId = [&](std::uint64_t proposed) {
+    if (proposed == 0) proposed = 1;
+    while (!used_group_ids.insert(proposed).second) {
+      ++proposed;
+      if (proposed == 0) proposed = 1;
+    }
+    return proposed;
+  };
   for (const auto& action : actions) {
-    const double residual = triangleResidual(action);
-    const bool shareable = action.shared_reference_certificate &&
-                           action.shared_accepted_event && action.shared_time &&
-                           action.shared_output_quantity &&
-                           action.triangle_transfer_evidence &&
-                           action.reference_certificate_id != 0 &&
-                           residual <= triangle_tolerance;
-    if (shareable) {
-      const auto found = group_of_reference.find(action.reference_certificate_id);
-      if (found == group_of_reference.end()) {
-        group_of_reference.emplace(action.reference_certificate_id,
-                                   out.groups.size());
-        GuaranteeGroup group;
-        group.group_id = action.reference_certificate_id;
-        group.reference_certificate_id = action.reference_certificate_id;
-        out.groups.push_back(group);
-        ++out.shared_groups;
-      }
-      auto& group =
-          out.groups[group_of_reference.at(action.reference_certificate_id)];
-      group.action_ids.push_back(action.action_id);
-      group.charged_budget = std::max(group.charged_budget, action.epsilon_budget);
-      group.worst_triangle_residual =
-          std::max(group.worst_triangle_residual, residual);
-    } else {
+    double residual = std::numeric_limits<double>::infinity();
+    triangleProof(action, &residual);
+    {
       GuaranteeGroup group;
-      group.group_id = action.action_id;
+      group.group_id = uniqueGroupId(action.action_id);
       group.reference_certificate_id = action.reference_certificate_id;
       group.action_ids.push_back(action.action_id);
       group.charged_budget = action.epsilon_budget;
@@ -213,11 +254,16 @@ GuaranteeGroupResult buildGuaranteeGroups(
     if (group.action_ids.size() > 1) ++out.shared_groups;
     else ++out.singleton_groups;
   }
-  out.total_charged_budget = 0.0;
+  ExactAccumulator exact_total = 0;
   for (const auto& group : out.groups) {
-    out.total_charged_budget += group.charged_budget;
+    exact_total += ExactAccumulator(group.charged_budget);
   }
-  if (out.total_charged_budget > available_budget) {
+  out.total_charged_budget = static_cast<double>(exact_total);
+  while (ExactAccumulator(out.total_charged_budget) < exact_total) {
+    out.total_charged_budget = std::nextafter(
+        out.total_charged_budget, std::numeric_limits<double>::infinity());
+  }
+  if (exact_total > ExactAccumulator(available_budget)) {
     out.reason =
         "selection-risk budget does not close over the publishable action set";
     out.valid = false;

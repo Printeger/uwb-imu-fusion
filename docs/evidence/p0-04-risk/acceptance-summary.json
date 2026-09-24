@@ -1,0 +1,39 @@
+{
+  "status": "IMPLEMENTER_PASS_PENDING_REVIEW",
+  "base_sha": "9d81a25f68e7552aa14f83b74e9a4585d8ebef82",
+  "red": {"exit": 1, "failed": 2, "run": 2},
+  "directed": {"p0_04": "13/13", "fde_grouping": "3/3", "inherited": "10/10", "round2": "5 PASS / 2 optional SKIP; CTest wrapper PASS"},
+  "ctest": {"exit": 0, "passed": 27, "total": 27, "seconds": 103.01, "clean_rebuild": true},
+  "risk_summary": {
+    "statuses_separate": true,
+    "unknown_terms_are_zero": false,
+    "miss_charged": true,
+    "selection_same_total": true,
+    "disjoint_actions_merged": false,
+    "over_budget_available": false,
+    "invalid_bounds_fail_closed": true,
+    "rejected_hypothesis_unknown": true,
+    "overflow_fail_closed": true,
+    "qualified_zero_finite": true,
+    "dormant_sidecar_canonical": true,
+    "sidecar_cartesian_cases": 280,
+    "caller_claimed_shared_event_accepted": false
+  },
+  "coverage_summary": {
+    "p0_01_census_preserved": true,
+    "p0_02_dual_event_preserved": true,
+    "p0_03_proof_consumers_preserved": true,
+    "coverage_reduction": false
+  },
+  "work_counters": {
+    "oracle_expected_cases": 13,
+    "oracle_evaluated_cases": 13,
+    "oracle_terminal_cases": 13,
+    "sidecar_cartesian_expected": 280,
+    "sidecar_cartesian_evaluated": 280,
+    "eligible_actions_in_disjoint_replay": 2,
+    "evaluated_actions_in_disjoint_replay": 2,
+    "omitted_actions_in_disjoint_replay": 0
+  },
+  "abi": {"golden_header_link_run": true, "legacy_decide6_symbol": true, "golden_layouts_preserved": true}
+}

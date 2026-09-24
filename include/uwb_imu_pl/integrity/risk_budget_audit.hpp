@@ -25,6 +25,7 @@ struct RiskBudgetAudit {
   std::size_t other_cardinality_hypothesis_count = 0;
   std::uint32_t effective_max_cardinality = 0;
   bool inputs_valid = false;
+  // Allocation precheck only; retained at the golden ABI location/name.
   bool valid = false;
 };
 
@@ -47,8 +48,9 @@ struct RiskLedgerTerm {
   std::string note;
 };
 
-// B3 (§5.9) ledger: charge = sum over VALIDATED terms only; every other term
-// is reported with its source and status and only blocks formal eligibility.
+// Complete HMI ledger.  Every finite term is charged whether or not its bound
+// has completed qualification.  An unknown term is NaN, never zero, and makes
+// complete_bound_closes false.
 struct RiskLedger {
   std::vector<RiskLedgerTerm> terms;
   double budget = 0.0;
@@ -73,13 +75,49 @@ struct RiskLedgerInputs {
   // term is an explicit zero tied to the coverage certificate.
   bool envelope_online = false;
   std::size_t envelope_leaf_count = 0;
-  // Selection slot (reserved for C3).
+  // Selection is the extra union charge beyond the once-charged hypothesis
+  // allocation.  It is reconciled in this same total budget.
   bool selection_contract_frozen = false;
+};
+
+// Versioned P0-04 input sidecar.  The pre-existing RiskLedgerInputs layout is
+// unchanged so a golden-header client remains binary compatible.
+struct CompleteRiskInputsV1 {
+  RiskLedgerInputs legacy;
+  // When omitted_scope_complete is true and omitted_event_set is empty, the
+  // only canonical zero-proof representation is bound==0 with known and
+  // validated both true.  Declared omitted events likewise require a complete
+  // scope and a known finite non-negative bound.
+  bool omitted_scope_complete = false;
+  double omitted_event_bound = 0.0;
+  bool omitted_event_bound_known = false;
+  bool omitted_event_bound_validated = false;
+  // Offline traversal with zero leaves is a zero proof only when the bound is
+  // canonically represented as known, validated and exactly zero.
+  double envelope_event_bound = 0.0;
+  bool envelope_event_bound_known = false;
+  bool envelope_event_bound_validated = false;
+  bool bridge_escape_validated = false;
+  bool history_escape_validated = false;
+  bool model_escape_validated = false;
+  double selection_extra_bound = 0.0;
+  bool selection_bound_known = false;
+  bool selection_bound_validated = false;
+  bool model_formal_eligible = false;
+};
+
+struct CompleteRiskStatusV1 {
+  bool allocation_valid = false;
+  bool complete_bound_closes = false;
 };
 
 RiskLedger buildRiskLedger(const RiskBudgetV2& risk,
                            const std::vector<FaultHypothesisV2>& hypotheses,
                            const RiskLedgerInputs& inputs = {});
+RiskLedger buildRiskLedger(const RiskBudgetV2& risk,
+                           const std::vector<FaultHypothesisV2>& hypotheses,
+                           const CompleteRiskInputsV1& inputs,
+                           CompleteRiskStatusV1* status);
 
 // B3 (§5.9): per-axis tail split for one hypothesis.
 //

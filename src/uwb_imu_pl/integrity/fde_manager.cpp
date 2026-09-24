@@ -3,11 +3,13 @@
 #include "uwb_imu_pl/integrity/fde_post_selection.hpp"
 #include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
 
+#include <boost/multiprecision/cpp_bin_float.hpp>
+
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
+#include <limits>
 #include <set>
-#include <map>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -15,14 +17,15 @@
 namespace uwb_imu_pl {
 namespace {
 
-// FNV-1a; decision-level event-class id (never a PL transfer certificate).
-std::uint64_t eventClassId(const std::string& key) {
-  std::uint64_t hash = 1469598103934665603ull;
-  for (const unsigned char byte : key) {
-    hash ^= byte;
-    hash *= 1099511628211ull;
+using ExactRisk = boost::multiprecision::cpp_bin_float_quad;
+
+double roundRiskUp(const ExactRisk& value) {
+  double rounded = static_cast<double>(value);
+  while (std::isfinite(rounded) && ExactRisk(rounded) < value) {
+    rounded = std::nextafter(
+        rounded, std::numeric_limits<double>::infinity());
   }
-  return hash == 0 ? 1 : hash;
+  return rounded;
 }
 
 bool covers(const ExclusionAction& action, const FaultHypothesisV2& hypothesis) {
@@ -65,14 +68,38 @@ FdeDecision FdeManager::decide(
     std::vector<CandidateEvaluation>* candidates,
     const std::vector<FactorGroupId>& mandatory_groups,
     const RiskBudgetV2& risk) const {
+  return decide(all_in, hypotheses, evidence, candidates, mandatory_groups,
+                risk, nullptr);
+}
+
+FdeDecision FdeManager::decide(
+    const DetectorResultV2& all_in,
+    const std::vector<FaultHypothesisV2>& hypotheses,
+    const std::vector<FaultModeEvidence>& evidence,
+    std::vector<CandidateEvaluation>* candidates,
+    const std::vector<FactorGroupId>& mandatory_groups,
+    const RiskBudgetV2& risk,
+    const FdeDecisionContextV1* context) const {
   FdeDecision decision;
+  FdeRiskDecisionV1 local_risk;
+  FdeRiskDecisionV1* risk_result = context && context->risk_result
+      ? context->risk_result : &local_risk;
+  *risk_result = {};
+  risk_result->charged_total = std::numeric_limits<double>::quiet_NaN();
+  risk_result->declared_total = std::numeric_limits<double>::quiet_NaN();
+  risk_result->margin = std::numeric_limits<double>::quiet_NaN();
+  risk_result->terms =
+      "complete risk ledger unavailable before selection closure";
+  const auto* protection_proof_ids = context
+      ? context->protection_proof_ids : nullptr;
   if (!candidates || !all_in.numerically_valid) {
     decision.status = FdeStatus::ModelInvalid;
     decision.reason = "joint detector or candidate set invalid";
     return decision;
   }
   const RiskBudgetAudit risk_audit = auditRiskBudget(risk, hypotheses);
-  if (!risk_audit.valid) {
+  risk_result->allocation_valid = risk_audit.valid;
+  if (!risk_result->allocation_valid) {
     decision.status = FdeStatus::RiskBudgetInvalid;
     decision.reason = "V2 outcome risk budget does not close";
     return decision;
@@ -151,6 +178,7 @@ FdeDecision FdeManager::decide(
   std::map<HypothesisId, const FaultHypothesisV2*> hypothesis_index;
   for (const auto& h : hypotheses) hypothesis_index.emplace(h.id, &h);
   std::vector<std::size_t> eligible;
+  decision.candidate_dispositions.assign(candidates->size(), 0);
   for (std::size_t i = 0; i < candidates->size(); ++i) {
     auto& candidate = (*candidates)[i];
     bool covers_all = true;
@@ -170,9 +198,25 @@ FdeDecision FdeManager::decide(
           });
     }
     candidate.covers_plausible_set = covers_all;
+    const bool finite_pl = std::isfinite(candidate.hpl_m) &&
+        std::isfinite(candidate.vpl_m);
+    const bool action_model_valid = candidate.action.bridge_mode ==
+        BridgeMode::None || candidate.action.model_error_validated;
+    StructuredCandidate view;
+    view.bounded_model = candidate.covers_plausible_set && candidate.valid &&
+        candidate.action.recoverability == HistoryRecoverability::Recoverable &&
+        finite_pl && action_model_valid;
+    view.centre_only = !candidate.covers_plausible_set;
+    view.has_valid_reference = candidate.valid;
+    view.propagation_bound_available = finite_pl;
+    const CandidateDecision handling = decideCandidateHandling(view);
+    decision.candidate_dispositions[i] =
+        static_cast<int>(handling.disposition);
+    const bool reference_estimate = handling.disposition ==
+        CandidateDisposition::UseInReferenceEstimate;
     if (candidate.valid && candidate.post_detector_passed && covers_all &&
         candidate.action.recoverability == HistoryRecoverability::Recoverable &&
-        std::isfinite(candidate.hpl_m) && std::isfinite(candidate.vpl_m)) {
+        finite_pl && reference_estimate) {
       eligible.push_back(i);
     }
   }
@@ -181,30 +225,6 @@ FdeDecision FdeManager::decide(
         ? FdeStatus::AmbiguousUnavailable : FdeStatus::NoValidCandidate;
     decision.reason = "no valid action covers the complete plausible set";
     return decision;
-  }
-  // §8.3 wiring (C3): every candidate is passed through the disposition order
-  // of fde_post_selection.  The mapping is the pipeline's own criterion -- a
-  // candidate that covers the complete plausible set with a finite protected
-  // reference estimate is the reference-estimate path, anything else can only
-  // be a centre candidate or a diagnostic.  The disposition is recorded per
-  // candidate; selection below still requires the reference-estimate path.
-  decision.candidate_dispositions.assign(candidates->size(), 0);
-  for (std::size_t i = 0; i < candidates->size(); ++i) {
-    const auto& candidate = (*candidates)[i];
-    // The mapping uses exactly the frozen eligibility criterion (finite
-    // protected PL on a recovered history), so this view adds no new gate.
-    const bool finite_pl = std::isfinite(candidate.hpl_m) &&
-        std::isfinite(candidate.vpl_m);
-    StructuredCandidate view;
-    view.bounded_model = candidate.covers_plausible_set && candidate.valid &&
-        candidate.action.recoverability == HistoryRecoverability::Recoverable &&
-        finite_pl;
-    view.centre_only = !candidate.covers_plausible_set;
-    view.has_valid_reference = candidate.valid;
-    view.propagation_bound_available = finite_pl;
-    const CandidateDecision handling = decideCandidateHandling(view);
-    decision.candidate_dispositions[i] =
-        static_cast<int>(handling.disposition);
   }
   std::stable_sort(eligible.begin(), eligible.end(), [&](std::size_t a, std::size_t b) {
     const auto& x = (*candidates)[a];
@@ -216,70 +236,73 @@ FdeDecision FdeManager::decide(
                            std::max(y.hpl_m, y.vpl_m),
                            -y.information_logdet, y.action.id.value());
   });
-  auto& winner = (*candidates)[eligible.front()];
-  winner.selected = true;
-  decision.selected_action = winner.action;
-  decision.status = statusFor(winner.action);
-  if (decision.plausible_hypotheses.size() > 1 &&
-      winner.action.exclusion_cardinality > 1) {
-    decision.status = FdeStatus::AmbiguousUnionExclusion;
-  }
-  decision.commit_allowed = true;
-  decision.integrity_available = winner.hpl_m <= risk.horizontal_alert_limit_m &&
+  const std::size_t winner_index = eligible.front();
+  const auto& winner = (*candidates)[winner_index];
+  const bool winner_within_alert =
+      winner.hpl_m <= risk.horizontal_alert_limit_m &&
       winner.vpl_m <= risk.vertical_alert_limit_m;
-  if (!decision.integrity_available) decision.reason = "post-FDE PL exceeds alert limit";
-  // §8.5 wiring (C3): charge the union of everything that may be published.
-  // Eligible actions that cover the same plausible-hypothesis union share one
-  // failure event (they are alternative protections of one reference event at
-  // one epoch), so they collapse into one event class; a different union is a
-  // different event and is charged on its own.  No triangle-protection-level
-  // transfer is claimed here (triangle_transfer_evidence stays false), which is
-  // exactly why the module keeps every class charge separate.
+  // §8.5 / P0-04: pass EVERY original eligible action into the strict grouping
+  // layer.  Plausible IDs are fault labels, never a shared failure event.  A
+  // candidate may reuse another action's event only through the actual numeric
+  // certificate/event/time/output identities and the triangle transfer.
   {
-    std::map<std::string, ActionGuarantee> by_class;
+    std::vector<ActionGuarantee> guarantees;
+    guarantees.reserve(eligible.size());
+    // Each action's protected PL is conditioned on the complete represented
+    // hypothesis family, not only on the labels that happened to be plausible
+    // in this detector outcome.  Charging only plausible IDs would make the
+    // nominal/no-alarm action event spuriously free and would reintroduce the
+    // D06 label/event conflation through the amount rather than the key.
+    const double per_action_epsilon = risk_audit.hypotheses;
     for (const auto index : eligible) {
       const auto& candidate = (*candidates)[index];
-      std::string key;
-      double epsilon = 0.0;
-      for (const auto id : decision.plausible_hypotheses) {
-        const auto found = hypothesis_index.find(id);
-        if (found == hypothesis_index.end()) continue;
-        epsilon += std::max(0.0, found->second->hmi_allocation);
-        key += std::to_string(id.value());
-        key += ',';
-      }
       ActionGuarantee guarantee;
       guarantee.action_id = candidate.action.id.value();
-      guarantee.reference_certificate_id = eventClassId(key);
-      guarantee.shared_reference_certificate = true;
-      guarantee.shared_accepted_event = true;
-      guarantee.shared_time = true;
-      guarantee.shared_output_quantity = true;
-      guarantee.triangle_transfer_evidence = false;
-      guarantee.epsilon_budget = epsilon;
-      const auto found = by_class.find(key);
-      if (found == by_class.end()) {
-        by_class.emplace(key, guarantee);
-      } else if (guarantee.epsilon_budget > found->second.epsilon_budget) {
-        found->second.epsilon_budget = guarantee.epsilon_budget;
+      if (protection_proof_ids) {
+        const auto proof = protection_proof_ids->find(
+            candidate.action.id.value());
+        if (proof != protection_proof_ids->end()) {
+          guarantee.reference_certificate_id = proof->second;
+        }
       }
+      guarantee.L_action_m = candidate.pl_xyz_m.allFinite()
+          ? candidate.pl_xyz_m.cwiseAbs()
+          : Eigen::Vector3d(candidate.hpl_m, candidate.hpl_m,
+                            candidate.vpl_m).cwiseAbs();
+      guarantee.L_reference_m.setZero();
+      guarantee.p_reference_m.setZero();
+      bool numeric_candidate = candidate.detector_certificate.valid &&
+          guarantee.L_action_m.allFinite();
+      if (candidate.window_view && candidate.state_increment.allFinite() &&
+          candidate.window_view->protected_state_map.cols() ==
+              candidate.state_increment.size()) {
+        guarantee.p_action_m =
+            candidate.window_view->protected_state_map *
+            candidate.state_increment;
+      } else {
+        numeric_candidate = false;
+      }
+      // A candidate proof is not an independent common-reference sidecar.
+      // Until such a sidecar supplies the same proof/p_ref/L_ref/event/time/
+      // output for multiple actions, production actions are singletons.
+      guarantee.shared_reference_certificate = false;
+      guarantee.shared_accepted_event = false;
+      guarantee.shared_time = false;
+      guarantee.shared_output_quantity = false;
+      guarantee.triangle_transfer_evidence = false;
+      if (!numeric_candidate) guarantee.L_action_m.setZero();
+      guarantee.epsilon_budget = per_action_epsilon;
+      guarantees.push_back(std::move(guarantee));
     }
-    std::vector<ActionGuarantee> classes;
-    classes.reserve(by_class.size());
-    for (const auto& item : by_class) classes.push_back(item.second);
     const GuaranteeGroupResult groups =
-        buildGuaranteeGroups(classes, risk.p_hmi_total);
-    decision.selection_event_classes = classes.size();
+        buildGuaranteeGroups(guarantees, risk.p_hmi_total);
+    decision.selection_event_classes = groups.groups.size();
     decision.selection_charged_budget = groups.total_charged_budget;
     decision.selection_available_budget = risk.p_hmi_total;
     decision.selection_budget_ok = groups.valid;
-    // Export the charged class identity: the ids come from the same
-    // eventClassId() derivation that minted the guarantee groups, and the
-    // proof id is the documented FNV-1a binding of (charged budget, ids).
     decision.selection_event_class_ids.clear();
-    for (const auto& item : by_class) {
-      decision.selection_event_class_ids.push_back(
-          item.second.reference_certificate_id);
+    for (const auto& group : groups.groups) {
+      decision.selection_event_class_ids.push_back(group.group_id);
     }
     std::sort(decision.selection_event_class_ids.begin(),
               decision.selection_event_class_ids.end());
@@ -291,11 +314,82 @@ FdeDecision FdeManager::decide(
       }
       decision.selection_risk_proof_id = identityHash64(proof.str());
     }
+    // Reconcile the union selection event with the allocation/miss/escape
+    // ledger.  Hypothesis allocation is already charged once; only the excess
+    // from disjoint action events is added as the selection term.
+    CompleteRiskInputsV1 ledger_inputs;
+    ledger_inputs.legacy.envelope_online = false;
+    ledger_inputs.legacy.envelope_leaf_count = 0;
+    ledger_inputs.legacy.selection_contract_frozen = true;
+    ExactRisk exact_hypothesis_allocation = 0;
+    for (const auto& hypothesis : hypotheses) {
+      exact_hypothesis_allocation += ExactRisk(hypothesis.hmi_allocation);
+    }
+    const ExactRisk selection_extra = std::max(
+        ExactRisk(0), ExactRisk(groups.total_charged_budget) -
+            exact_hypothesis_allocation);
+    ledger_inputs.selection_extra_bound = roundRiskUp(selection_extra);
+    ledger_inputs.selection_bound_known = true;
+    ledger_inputs.selection_bound_validated = true;
+    ledger_inputs.model_formal_eligible = !risk.calibration_id.empty();
+    CompleteRiskStatusV1 complete_status;
+    const RiskLedger complete = buildRiskLedger(
+        risk, hypotheses, ledger_inputs, &complete_status);
+    risk_result->allocation_valid = complete_status.allocation_valid;
+    risk_result->complete_bound_closes =
+        complete_status.complete_bound_closes;
+    risk_result->all_terms_validated = complete.all_terms_validated;
+    risk_result->formal_eligible = complete.formal_eligible;
+    risk_result->charged_total = complete.charged_total;
+    risk_result->declared_total = complete.declared_total;
+    risk_result->margin = complete.margin;
+    risk_result->terms.clear();
+    for (const auto& term : complete.terms) {
+      if (term.status == RiskTermStatus::Validated) {
+        ++risk_result->validated_terms;
+      } else if (term.status == RiskTermStatus::AssumedUnvalidated) {
+        ++risk_result->unvalidated_terms;
+      } else {
+        ++risk_result->not_implemented_terms;
+      }
+      if (!risk_result->terms.empty()) {
+        risk_result->terms += ";";
+      }
+      risk_result->terms += term.id + "=" +
+          (std::isfinite(term.value) ? std::to_string(term.value)
+                                     : std::string("UNKNOWN")) +
+          ":" + toString(term.status);
+    }
     if (!groups.valid) {
       // The publishable set cannot be bounded: stay unavailable, never relax.
       decision.commit_allowed = false;
       decision.integrity_available = false;
+      decision.status = FdeStatus::RiskBudgetInvalid;
       decision.reason = groups.reason;
+    } else if (!risk_result->complete_bound_closes) {
+      decision.commit_allowed = false;
+      decision.integrity_available = false;
+      decision.status = FdeStatus::RiskBudgetInvalid;
+      decision.reason = complete.reason;
+    } else if (!risk_result->all_terms_validated) {
+      decision.commit_allowed = false;
+      decision.integrity_available = false;
+      decision.status = FdeStatus::RiskBudgetInvalid;
+      decision.reason = complete.reason;
+    } else {
+      // Winner state is published only after the complete risk gate passes.
+      (*candidates)[winner_index].selected = true;
+      decision.selected_action = winner.action;
+      decision.status = statusFor(winner.action);
+      if (decision.plausible_hypotheses.size() > 1 &&
+          winner.action.exclusion_cardinality > 1) {
+        decision.status = FdeStatus::AmbiguousUnionExclusion;
+      }
+      decision.commit_allowed = true;
+      decision.integrity_available = winner_within_alert;
+      if (!winner_within_alert) {
+        decision.reason = "post-FDE PL exceeds alert limit";
+      }
     }
   }
   return decision;

@@ -1,0 +1,2528 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 27225dd..985ee10 100755
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -337,6 +337,11 @@ if(CATKIN_ENABLE_TESTING)
+     UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+   target_link_libraries(test_fde_post_selection ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+ 
++  catkin_add_gtest(test_p0_04_risk_oracle test/test_p0_04_risk_oracle.cpp test/test_main.cpp)
++  target_compile_definitions(test_p0_04_risk_oracle PRIVATE
++    UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
++  target_link_libraries(test_p0_04_risk_oracle ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
++
+   catkin_add_gtest(test_publication_identity test/test_publication_identity.cpp test/test_main.cpp)
+   target_compile_definitions(test_publication_identity PRIVATE
+     UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+diff --git a/include/uwb_imu_pl/integrity/fde_manager.hpp b/include/uwb_imu_pl/integrity/fde_manager.hpp
+index c8a2aa5..feb94b9 100644
+--- a/include/uwb_imu_pl/integrity/fde_manager.hpp
++++ b/include/uwb_imu_pl/integrity/fde_manager.hpp
+@@ -3,6 +3,7 @@
+ #include "uwb_imu_pl/integrity/hypothesis_evidence.hpp"
+ 
+ #include <optional>
++#include <map>
+ 
+ namespace uwb_imu_pl {
+ 
+@@ -50,6 +51,25 @@ struct FdeDecision {
+   std::vector<int> candidate_dispositions;
+ };
+ 
++struct FdeRiskDecisionV1 {
++  bool allocation_valid = false;
++  bool complete_bound_closes = false;
++  bool all_terms_validated = false;
++  bool formal_eligible = false;
++  double charged_total = 0.0;
++  double declared_total = 0.0;
++  double margin = 0.0;
++  std::size_t validated_terms = 0;
++  std::size_t unvalidated_terms = 0;
++  std::size_t not_implemented_terms = 0;
++  std::string terms;
++};
++
++struct FdeDecisionContextV1 {
++  const std::map<std::uint64_t, std::uint64_t>* protection_proof_ids = nullptr;
++  FdeRiskDecisionV1* risk_result = nullptr;
++};
++
+ class FdeManager {
+  public:
+   FdeDecision decide(const DetectorResultV2& all_in,
+@@ -58,6 +78,13 @@ class FdeManager {
+                      std::vector<CandidateEvaluation>* candidates,
+                      const std::vector<FactorGroupId>& mandatory_groups,
+                      const RiskBudgetV2& risk) const;
++  FdeDecision decide(const DetectorResultV2& all_in,
++                     const std::vector<FaultHypothesisV2>& hypotheses,
++                     const std::vector<FaultModeEvidence>& evidence,
++                     std::vector<CandidateEvaluation>* candidates,
++                     const std::vector<FactorGroupId>& mandatory_groups,
++                     const RiskBudgetV2& risk,
++                     const FdeDecisionContextV1* context) const;
+ };
+ 
+ }  // namespace uwb_imu_pl
+diff --git a/include/uwb_imu_pl/integrity/fde_post_selection.hpp b/include/uwb_imu_pl/integrity/fde_post_selection.hpp
+index d61bf59..3d81a40 100644
+--- a/include/uwb_imu_pl/integrity/fde_post_selection.hpp
++++ b/include/uwb_imu_pl/integrity/fde_post_selection.hpp
+@@ -123,6 +123,27 @@ struct ActionGuarantee {
+   double epsilon_budget = 0.0;
+ };
+ 
++// Versioned event-claim sidecar; ActionGuarantee keeps its golden layout.
++//
++// P0-04 does not trust this caller-populated summary as a statistical proof.
++// A future shared-event implementation must replace/extend it with the full
++// independently produced P0-03 proof payload, the P0-02 accepted-event
++// certificate, frozen window/time/output identity, and a digest that this
++// consumer recomputes.  Until that producer exists, the overload accepting
++// these claims deliberately charges every action as a singleton.
++struct ActionSharedEventV1 {
++  std::uint64_t action_id = 0;
++  // This payload is produced independently of the action.  Repeating an
++  // action's own reference fields is not sufficient: they must exactly match
++  // this common P0-03 proof and numeric reference.
++  std::uint64_t common_reference_certificate_id = 0;
++  Eigen::Vector3d common_L_reference_m = Eigen::Vector3d::Zero();
++  Eigen::Vector3d common_p_reference_m = Eigen::Vector3d::Zero();
++  std::string accepted_event_id;
++  std::uint64_t reference_time_id = 0;
++  std::string output_quantity_id;
++};
++
+ struct GuaranteeGroup {
+   std::uint64_t group_id = 0;
+   std::uint64_t reference_certificate_id = 0;
+@@ -148,6 +169,10 @@ struct GuaranteeGroupResult {
+ // must then keep the platform unavailable, never relax the standard).
+ GuaranteeGroupResult buildGuaranteeGroups(
+     const std::vector<ActionGuarantee>& actions, double available_budget);
++GuaranteeGroupResult buildGuaranteeGroups(
++    const std::vector<ActionGuarantee>& actions, double available_budget,
++    // Untrusted compatibility/reserved input; cannot enable event sharing.
++    const std::vector<ActionSharedEventV1>& shared_events);
+ 
+ // ---------------------------------------------------------------------------
+ // §8.3 bridge / candidate decision order.
+diff --git a/include/uwb_imu_pl/integrity/risk_budget_audit.hpp b/include/uwb_imu_pl/integrity/risk_budget_audit.hpp
+index 586adc6..f4e2fa8 100644
+--- a/include/uwb_imu_pl/integrity/risk_budget_audit.hpp
++++ b/include/uwb_imu_pl/integrity/risk_budget_audit.hpp
+@@ -25,6 +25,7 @@ struct RiskBudgetAudit {
+   std::size_t other_cardinality_hypothesis_count = 0;
+   std::uint32_t effective_max_cardinality = 0;
+   bool inputs_valid = false;
++  // Allocation precheck only; retained at the golden ABI location/name.
+   bool valid = false;
+ };
+ 
+@@ -47,8 +48,9 @@ struct RiskLedgerTerm {
+   std::string note;
+ };
+ 
+-// B3 (§5.9) ledger: charge = sum over VALIDATED terms only; every other term
+-// is reported with its source and status and only blocks formal eligibility.
++// Complete HMI ledger.  Every finite term is charged whether or not its bound
++// has completed qualification.  An unknown term is NaN, never zero, and makes
++// complete_bound_closes false.
+ struct RiskLedger {
+   std::vector<RiskLedgerTerm> terms;
+   double budget = 0.0;
+@@ -73,13 +75,49 @@ struct RiskLedgerInputs {
+   // term is an explicit zero tied to the coverage certificate.
+   bool envelope_online = false;
+   std::size_t envelope_leaf_count = 0;
+-  // Selection slot (reserved for C3).
++  // Selection is the extra union charge beyond the once-charged hypothesis
++  // allocation.  It is reconciled in this same total budget.
+   bool selection_contract_frozen = false;
+ };
+ 
++// Versioned P0-04 input sidecar.  The pre-existing RiskLedgerInputs layout is
++// unchanged so a golden-header client remains binary compatible.
++struct CompleteRiskInputsV1 {
++  RiskLedgerInputs legacy;
++  // When omitted_scope_complete is true and omitted_event_set is empty, the
++  // only canonical zero-proof representation is bound==0 with known and
++  // validated both true.  Declared omitted events likewise require a complete
++  // scope and a known finite non-negative bound.
++  bool omitted_scope_complete = false;
++  double omitted_event_bound = 0.0;
++  bool omitted_event_bound_known = false;
++  bool omitted_event_bound_validated = false;
++  // Offline traversal with zero leaves is a zero proof only when the bound is
++  // canonically represented as known, validated and exactly zero.
++  double envelope_event_bound = 0.0;
++  bool envelope_event_bound_known = false;
++  bool envelope_event_bound_validated = false;
++  bool bridge_escape_validated = false;
++  bool history_escape_validated = false;
++  bool model_escape_validated = false;
++  double selection_extra_bound = 0.0;
++  bool selection_bound_known = false;
++  bool selection_bound_validated = false;
++  bool model_formal_eligible = false;
++};
++
++struct CompleteRiskStatusV1 {
++  bool allocation_valid = false;
++  bool complete_bound_closes = false;
++};
++
+ RiskLedger buildRiskLedger(const RiskBudgetV2& risk,
+                            const std::vector<FaultHypothesisV2>& hypotheses,
+                            const RiskLedgerInputs& inputs = {});
++RiskLedger buildRiskLedger(const RiskBudgetV2& risk,
++                           const std::vector<FaultHypothesisV2>& hypotheses,
++                           const CompleteRiskInputsV1& inputs,
++                           CompleteRiskStatusV1* status);
+ 
+ // B3 (§5.9): per-axis tail split for one hypothesis.
+ //
+diff --git a/src/uwb_imu_pl/integrity/fde_manager.cpp b/src/uwb_imu_pl/integrity/fde_manager.cpp
+index b18804b..bdde3cc 100644
+--- a/src/uwb_imu_pl/integrity/fde_manager.cpp
++++ b/src/uwb_imu_pl/integrity/fde_manager.cpp
+@@ -3,11 +3,13 @@
+ #include "uwb_imu_pl/integrity/fde_post_selection.hpp"
+ #include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
+ 
++#include <boost/multiprecision/cpp_bin_float.hpp>
++
+ #include <algorithm>
+ #include <cmath>
+ #include <iomanip>
++#include <limits>
+ #include <set>
+-#include <map>
+ #include <sstream>
+ #include <string>
+ #include <tuple>
+@@ -15,14 +17,15 @@
+ namespace uwb_imu_pl {
+ namespace {
+ 
+-// FNV-1a; decision-level event-class id (never a PL transfer certificate).
+-std::uint64_t eventClassId(const std::string& key) {
+-  std::uint64_t hash = 1469598103934665603ull;
+-  for (const unsigned char byte : key) {
+-    hash ^= byte;
+-    hash *= 1099511628211ull;
++using ExactRisk = boost::multiprecision::cpp_bin_float_quad;
++
++double roundRiskUp(const ExactRisk& value) {
++  double rounded = static_cast<double>(value);
++  while (std::isfinite(rounded) && ExactRisk(rounded) < value) {
++    rounded = std::nextafter(
++        rounded, std::numeric_limits<double>::infinity());
+   }
+-  return hash == 0 ? 1 : hash;
++  return rounded;
+ }
+ 
+ bool covers(const ExclusionAction& action, const FaultHypothesisV2& hypothesis) {
+@@ -65,14 +68,38 @@ FdeDecision FdeManager::decide(
+     std::vector<CandidateEvaluation>* candidates,
+     const std::vector<FactorGroupId>& mandatory_groups,
+     const RiskBudgetV2& risk) const {
++  return decide(all_in, hypotheses, evidence, candidates, mandatory_groups,
++                risk, nullptr);
++}
++
++FdeDecision FdeManager::decide(
++    const DetectorResultV2& all_in,
++    const std::vector<FaultHypothesisV2>& hypotheses,
++    const std::vector<FaultModeEvidence>& evidence,
++    std::vector<CandidateEvaluation>* candidates,
++    const std::vector<FactorGroupId>& mandatory_groups,
++    const RiskBudgetV2& risk,
++    const FdeDecisionContextV1* context) const {
+   FdeDecision decision;
++  FdeRiskDecisionV1 local_risk;
++  FdeRiskDecisionV1* risk_result = context && context->risk_result
++      ? context->risk_result : &local_risk;
++  *risk_result = {};
++  risk_result->charged_total = std::numeric_limits<double>::quiet_NaN();
++  risk_result->declared_total = std::numeric_limits<double>::quiet_NaN();
++  risk_result->margin = std::numeric_limits<double>::quiet_NaN();
++  risk_result->terms =
++      "complete risk ledger unavailable before selection closure";
++  const auto* protection_proof_ids = context
++      ? context->protection_proof_ids : nullptr;
+   if (!candidates || !all_in.numerically_valid) {
+     decision.status = FdeStatus::ModelInvalid;
+     decision.reason = "joint detector or candidate set invalid";
+     return decision;
+   }
+   const RiskBudgetAudit risk_audit = auditRiskBudget(risk, hypotheses);
+-  if (!risk_audit.valid) {
++  risk_result->allocation_valid = risk_audit.valid;
++  if (!risk_result->allocation_valid) {
+     decision.status = FdeStatus::RiskBudgetInvalid;
+     decision.reason = "V2 outcome risk budget does not close";
+     return decision;
+@@ -151,6 +178,7 @@ FdeDecision FdeManager::decide(
+   std::map<HypothesisId, const FaultHypothesisV2*> hypothesis_index;
+   for (const auto& h : hypotheses) hypothesis_index.emplace(h.id, &h);
+   std::vector<std::size_t> eligible;
++  decision.candidate_dispositions.assign(candidates->size(), 0);
+   for (std::size_t i = 0; i < candidates->size(); ++i) {
+     auto& candidate = (*candidates)[i];
+     bool covers_all = true;
+@@ -170,41 +198,33 @@ FdeDecision FdeManager::decide(
+           });
+     }
+     candidate.covers_plausible_set = covers_all;
+-    if (candidate.valid && candidate.post_detector_passed && covers_all &&
+-        candidate.action.recoverability == HistoryRecoverability::Recoverable &&
+-        std::isfinite(candidate.hpl_m) && std::isfinite(candidate.vpl_m)) {
+-      eligible.push_back(i);
+-    }
+-  }
+-  if (eligible.empty()) {
+-    decision.status = decision.plausible_hypotheses.size() > 1
+-        ? FdeStatus::AmbiguousUnavailable : FdeStatus::NoValidCandidate;
+-    decision.reason = "no valid action covers the complete plausible set";
+-    return decision;
+-  }
+-  // §8.3 wiring (C3): every candidate is passed through the disposition order
+-  // of fde_post_selection.  The mapping is the pipeline's own criterion -- a
+-  // candidate that covers the complete plausible set with a finite protected
+-  // reference estimate is the reference-estimate path, anything else can only
+-  // be a centre candidate or a diagnostic.  The disposition is recorded per
+-  // candidate; selection below still requires the reference-estimate path.
+-  decision.candidate_dispositions.assign(candidates->size(), 0);
+-  for (std::size_t i = 0; i < candidates->size(); ++i) {
+-    const auto& candidate = (*candidates)[i];
+-    // The mapping uses exactly the frozen eligibility criterion (finite
+-    // protected PL on a recovered history), so this view adds no new gate.
+     const bool finite_pl = std::isfinite(candidate.hpl_m) &&
+         std::isfinite(candidate.vpl_m);
++    const bool action_model_valid = candidate.action.bridge_mode ==
++        BridgeMode::None || candidate.action.model_error_validated;
+     StructuredCandidate view;
+     view.bounded_model = candidate.covers_plausible_set && candidate.valid &&
+         candidate.action.recoverability == HistoryRecoverability::Recoverable &&
+-        finite_pl;
++        finite_pl && action_model_valid;
+     view.centre_only = !candidate.covers_plausible_set;
+     view.has_valid_reference = candidate.valid;
+     view.propagation_bound_available = finite_pl;
+     const CandidateDecision handling = decideCandidateHandling(view);
+     decision.candidate_dispositions[i] =
+         static_cast<int>(handling.disposition);
++    const bool reference_estimate = handling.disposition ==
++        CandidateDisposition::UseInReferenceEstimate;
++    if (candidate.valid && candidate.post_detector_passed && covers_all &&
++        candidate.action.recoverability == HistoryRecoverability::Recoverable &&
++        finite_pl && reference_estimate) {
++      eligible.push_back(i);
++    }
++  }
++  if (eligible.empty()) {
++    decision.status = decision.plausible_hypotheses.size() > 1
++        ? FdeStatus::AmbiguousUnavailable : FdeStatus::NoValidCandidate;
++    decision.reason = "no valid action covers the complete plausible set";
++    return decision;
+   }
+   std::stable_sort(eligible.begin(), eligible.end(), [&](std::size_t a, std::size_t b) {
+     const auto& x = (*candidates)[a];
+@@ -216,70 +236,73 @@ FdeDecision FdeManager::decide(
+                            std::max(y.hpl_m, y.vpl_m),
+                            -y.information_logdet, y.action.id.value());
+   });
+-  auto& winner = (*candidates)[eligible.front()];
+-  winner.selected = true;
+-  decision.selected_action = winner.action;
+-  decision.status = statusFor(winner.action);
+-  if (decision.plausible_hypotheses.size() > 1 &&
+-      winner.action.exclusion_cardinality > 1) {
+-    decision.status = FdeStatus::AmbiguousUnionExclusion;
+-  }
+-  decision.commit_allowed = true;
+-  decision.integrity_available = winner.hpl_m <= risk.horizontal_alert_limit_m &&
++  const std::size_t winner_index = eligible.front();
++  const auto& winner = (*candidates)[winner_index];
++  const bool winner_within_alert =
++      winner.hpl_m <= risk.horizontal_alert_limit_m &&
+       winner.vpl_m <= risk.vertical_alert_limit_m;
+-  if (!decision.integrity_available) decision.reason = "post-FDE PL exceeds alert limit";
+-  // §8.5 wiring (C3): charge the union of everything that may be published.
+-  // Eligible actions that cover the same plausible-hypothesis union share one
+-  // failure event (they are alternative protections of one reference event at
+-  // one epoch), so they collapse into one event class; a different union is a
+-  // different event and is charged on its own.  No triangle-protection-level
+-  // transfer is claimed here (triangle_transfer_evidence stays false), which is
+-  // exactly why the module keeps every class charge separate.
++  // §8.5 / P0-04: pass EVERY original eligible action into the strict grouping
++  // layer.  Plausible IDs are fault labels, never a shared failure event.  A
++  // candidate may reuse another action's event only through the actual numeric
++  // certificate/event/time/output identities and the triangle transfer.
+   {
+-    std::map<std::string, ActionGuarantee> by_class;
++    std::vector<ActionGuarantee> guarantees;
++    guarantees.reserve(eligible.size());
++    // Each action's protected PL is conditioned on the complete represented
++    // hypothesis family, not only on the labels that happened to be plausible
++    // in this detector outcome.  Charging only plausible IDs would make the
++    // nominal/no-alarm action event spuriously free and would reintroduce the
++    // D06 label/event conflation through the amount rather than the key.
++    const double per_action_epsilon = risk_audit.hypotheses;
+     for (const auto index : eligible) {
+       const auto& candidate = (*candidates)[index];
+-      std::string key;
+-      double epsilon = 0.0;
+-      for (const auto id : decision.plausible_hypotheses) {
+-        const auto found = hypothesis_index.find(id);
+-        if (found == hypothesis_index.end()) continue;
+-        epsilon += std::max(0.0, found->second->hmi_allocation);
+-        key += std::to_string(id.value());
+-        key += ',';
+-      }
+       ActionGuarantee guarantee;
+       guarantee.action_id = candidate.action.id.value();
+-      guarantee.reference_certificate_id = eventClassId(key);
+-      guarantee.shared_reference_certificate = true;
+-      guarantee.shared_accepted_event = true;
+-      guarantee.shared_time = true;
+-      guarantee.shared_output_quantity = true;
+-      guarantee.triangle_transfer_evidence = false;
+-      guarantee.epsilon_budget = epsilon;
+-      const auto found = by_class.find(key);
+-      if (found == by_class.end()) {
+-        by_class.emplace(key, guarantee);
+-      } else if (guarantee.epsilon_budget > found->second.epsilon_budget) {
+-        found->second.epsilon_budget = guarantee.epsilon_budget;
++      if (protection_proof_ids) {
++        const auto proof = protection_proof_ids->find(
++            candidate.action.id.value());
++        if (proof != protection_proof_ids->end()) {
++          guarantee.reference_certificate_id = proof->second;
++        }
++      }
++      guarantee.L_action_m = candidate.pl_xyz_m.allFinite()
++          ? candidate.pl_xyz_m.cwiseAbs()
++          : Eigen::Vector3d(candidate.hpl_m, candidate.hpl_m,
++                            candidate.vpl_m).cwiseAbs();
++      guarantee.L_reference_m.setZero();
++      guarantee.p_reference_m.setZero();
++      bool numeric_candidate = candidate.detector_certificate.valid &&
++          guarantee.L_action_m.allFinite();
++      if (candidate.window_view && candidate.state_increment.allFinite() &&
++          candidate.window_view->protected_state_map.cols() ==
++              candidate.state_increment.size()) {
++        guarantee.p_action_m =
++            candidate.window_view->protected_state_map *
++            candidate.state_increment;
++      } else {
++        numeric_candidate = false;
+       }
++      // A candidate proof is not an independent common-reference sidecar.
++      // Until such a sidecar supplies the same proof/p_ref/L_ref/event/time/
++      // output for multiple actions, production actions are singletons.
++      guarantee.shared_reference_certificate = false;
++      guarantee.shared_accepted_event = false;
++      guarantee.shared_time = false;
++      guarantee.shared_output_quantity = false;
++      guarantee.triangle_transfer_evidence = false;
++      if (!numeric_candidate) guarantee.L_action_m.setZero();
++      guarantee.epsilon_budget = per_action_epsilon;
++      guarantees.push_back(std::move(guarantee));
+     }
+-    std::vector<ActionGuarantee> classes;
+-    classes.reserve(by_class.size());
+-    for (const auto& item : by_class) classes.push_back(item.second);
+     const GuaranteeGroupResult groups =
+-        buildGuaranteeGroups(classes, risk.p_hmi_total);
+-    decision.selection_event_classes = classes.size();
++        buildGuaranteeGroups(guarantees, risk.p_hmi_total);
++    decision.selection_event_classes = groups.groups.size();
+     decision.selection_charged_budget = groups.total_charged_budget;
+     decision.selection_available_budget = risk.p_hmi_total;
+     decision.selection_budget_ok = groups.valid;
+-    // Export the charged class identity: the ids come from the same
+-    // eventClassId() derivation that minted the guarantee groups, and the
+-    // proof id is the documented FNV-1a binding of (charged budget, ids).
+     decision.selection_event_class_ids.clear();
+-    for (const auto& item : by_class) {
+-      decision.selection_event_class_ids.push_back(
+-          item.second.reference_certificate_id);
++    for (const auto& group : groups.groups) {
++      decision.selection_event_class_ids.push_back(group.group_id);
+     }
+     std::sort(decision.selection_event_class_ids.begin(),
+               decision.selection_event_class_ids.end());
+@@ -291,11 +314,82 @@ FdeDecision FdeManager::decide(
+       }
+       decision.selection_risk_proof_id = identityHash64(proof.str());
+     }
++    // Reconcile the union selection event with the allocation/miss/escape
++    // ledger.  Hypothesis allocation is already charged once; only the excess
++    // from disjoint action events is added as the selection term.
++    CompleteRiskInputsV1 ledger_inputs;
++    ledger_inputs.legacy.envelope_online = false;
++    ledger_inputs.legacy.envelope_leaf_count = 0;
++    ledger_inputs.legacy.selection_contract_frozen = true;
++    ExactRisk exact_hypothesis_allocation = 0;
++    for (const auto& hypothesis : hypotheses) {
++      exact_hypothesis_allocation += ExactRisk(hypothesis.hmi_allocation);
++    }
++    const ExactRisk selection_extra = std::max(
++        ExactRisk(0), ExactRisk(groups.total_charged_budget) -
++            exact_hypothesis_allocation);
++    ledger_inputs.selection_extra_bound = roundRiskUp(selection_extra);
++    ledger_inputs.selection_bound_known = true;
++    ledger_inputs.selection_bound_validated = true;
++    ledger_inputs.model_formal_eligible = !risk.calibration_id.empty();
++    CompleteRiskStatusV1 complete_status;
++    const RiskLedger complete = buildRiskLedger(
++        risk, hypotheses, ledger_inputs, &complete_status);
++    risk_result->allocation_valid = complete_status.allocation_valid;
++    risk_result->complete_bound_closes =
++        complete_status.complete_bound_closes;
++    risk_result->all_terms_validated = complete.all_terms_validated;
++    risk_result->formal_eligible = complete.formal_eligible;
++    risk_result->charged_total = complete.charged_total;
++    risk_result->declared_total = complete.declared_total;
++    risk_result->margin = complete.margin;
++    risk_result->terms.clear();
++    for (const auto& term : complete.terms) {
++      if (term.status == RiskTermStatus::Validated) {
++        ++risk_result->validated_terms;
++      } else if (term.status == RiskTermStatus::AssumedUnvalidated) {
++        ++risk_result->unvalidated_terms;
++      } else {
++        ++risk_result->not_implemented_terms;
++      }
++      if (!risk_result->terms.empty()) {
++        risk_result->terms += ";";
++      }
++      risk_result->terms += term.id + "=" +
++          (std::isfinite(term.value) ? std::to_string(term.value)
++                                     : std::string("UNKNOWN")) +
++          ":" + toString(term.status);
++    }
+     if (!groups.valid) {
+       // The publishable set cannot be bounded: stay unavailable, never relax.
+       decision.commit_allowed = false;
+       decision.integrity_available = false;
++      decision.status = FdeStatus::RiskBudgetInvalid;
+       decision.reason = groups.reason;
++    } else if (!risk_result->complete_bound_closes) {
++      decision.commit_allowed = false;
++      decision.integrity_available = false;
++      decision.status = FdeStatus::RiskBudgetInvalid;
++      decision.reason = complete.reason;
++    } else if (!risk_result->all_terms_validated) {
++      decision.commit_allowed = false;
++      decision.integrity_available = false;
++      decision.status = FdeStatus::RiskBudgetInvalid;
++      decision.reason = complete.reason;
++    } else {
++      // Winner state is published only after the complete risk gate passes.
++      (*candidates)[winner_index].selected = true;
++      decision.selected_action = winner.action;
++      decision.status = statusFor(winner.action);
++      if (decision.plausible_hypotheses.size() > 1 &&
++          winner.action.exclusion_cardinality > 1) {
++        decision.status = FdeStatus::AmbiguousUnionExclusion;
++      }
++      decision.commit_allowed = true;
++      decision.integrity_available = winner_within_alert;
++      if (!winner_within_alert) {
++        decision.reason = "post-FDE PL exceeds alert limit";
++      }
+     }
+   }
+   return decision;
+diff --git a/src/uwb_imu_pl/integrity/fde_post_selection.cpp b/src/uwb_imu_pl/integrity/fde_post_selection.cpp
+index 5c80df0..4adf86d 100644
+--- a/src/uwb_imu_pl/integrity/fde_post_selection.cpp
++++ b/src/uwb_imu_pl/integrity/fde_post_selection.cpp
+@@ -3,14 +3,32 @@
+ 
+ #include "uwb_imu_pl/integrity/fde_post_selection.hpp"
+ 
++#include <boost/multiprecision/cpp_bin_float.hpp>
++
+ #include <Eigen/SVD>
+ 
+ #include <algorithm>
+ #include <cmath>
++#include <limits>
+ #include <map>
+ #include <set>
++#include <tuple>
+ 
+ namespace uwb_imu_pl {
++namespace {
++
++using ExactAccumulator = boost::multiprecision::cpp_bin_float_quad;
++
++double conservativeRoundUp(const ExactAccumulator& value) {
++  double rounded = static_cast<double>(value);
++  while (std::isfinite(rounded) && ExactAccumulator(rounded) < value) {
++    rounded = std::nextafter(
++        rounded, std::numeric_limits<double>::infinity());
++  }
++  return rounded;
++}
++
++}  // namespace
+ 
+ const char* toString(FaultUnitKind unit) {
+   switch (unit) {
+@@ -133,7 +151,21 @@ CandidateRanking rankStructuredCandidates(
+ 
+ GuaranteeGroupResult buildGuaranteeGroups(
+     const std::vector<ActionGuarantee>& actions, double available_budget) {
++  return buildGuaranteeGroups(actions, available_budget, {});
++}
++
++GuaranteeGroupResult buildGuaranteeGroups(
++    const std::vector<ActionGuarantee>& actions, double available_budget,
++    const std::vector<ActionSharedEventV1>& shared_events) {
+   GuaranteeGroupResult out;
++  // ActionSharedEventV1 contains only caller assertions.  It has no complete
++  // P0-03 numerical proof payload, P0-02 accepted-event certificate, or
++  // recomputable digest tied to frozen window/time/output identity.  Consuming
++  // it as authority would let a caller invent cert/event/time/output strings
++  // and self-prove a shared event.  Therefore P0-04 intentionally ignores all
++  // such claims; every action remains a singleton until a real independent
++  // producer/reference contract is wired end-to-end.
++  (void)shared_events;
+   if (actions.empty()) {
+     out.reason = "no candidate actions to guarantee";
+     return out;
+@@ -142,15 +174,36 @@ GuaranteeGroupResult buildGuaranteeGroups(
+     out.reason = "selection-risk budget is not positive";
+     return out;
+   }
+-  auto triangleResidual = [](const ActionGuarantee& action) {
+-    const Eigen::Vector3d expected =
+-        action.L_reference_m +
+-        (action.p_action_m - action.p_reference_m).cwiseAbs();
+-    const double scale = std::max(
+-        1.0, action.L_action_m.norm() + (action.p_action_m - action.p_reference_m).norm());
+-    return (action.L_action_m - expected).norm() / scale;
++  auto triangleProof = [](const ActionGuarantee& action, double* residual) {
++    ExactAccumulator squared_residual = 0;
++    ExactAccumulator squared_scale = 0;
++    bool valid = true;
++    for (int axis = 0; axis < 3; ++axis) {
++      const ExactAccumulator reference(action.L_reference_m(axis));
++      const ExactAccumulator delta = abs(
++          ExactAccumulator(action.p_action_m(axis)) -
++          ExactAccumulator(action.p_reference_m(axis)));
++      const ExactAccumulator required = reference + delta;
++      const ExactAccumulator actual(action.L_action_m(axis));
++      // The proof is a componentwise conservative interval, not a norm-based
++      // approximate equality.  No tolerance can turn an under-bound into a
++      // shared event.
++      if (actual < required) valid = false;
++      const ExactAccumulator gap = actual - required;
++      squared_residual += gap * gap;
++      squared_scale += actual * actual + delta * delta;
++    }
++    const ExactAccumulator scale = sqrt(std::max(
++        ExactAccumulator(1), squared_scale));
++    *residual = conservativeRoundUp(sqrt(squared_residual) / scale);
++    return valid;
+   };
++  std::set<std::uint64_t> action_ids;
+   for (const auto& action : actions) {
++    if (action.action_id == 0 || !action_ids.insert(action.action_id).second) {
++      out.reason = "action ids must be nonzero and unique";
++      return out;
++    }
+     if (!std::isfinite(action.epsilon_budget) || action.epsilon_budget < 0.0) {
+       out.reason = "action budget must be finite and non-negative";
+       return out;
+@@ -160,42 +213,30 @@ GuaranteeGroupResult buildGuaranteeGroups(
+       out.reason = "guarantee vectors must be finite";
+       return out;
+     }
++    if ((action.L_reference_m.array() < 0.0).any() ||
++        (action.L_action_m.array() < 0.0).any()) {
++      out.reason = "guarantee bounds must be componentwise non-negative";
++      return out;
++    }
+   }
+-  // Grouping: only actions that share ALL evidence flags, the same reference
+-  // certificate and satisfy the triangle-transfer identity
+-  //   L_{a,d} = L_{ref,d} + |p_{a,d} - p_{ref,d}|
+-  // may share the reference failure event.  Everything else is a singleton and
+-  // is charged on its own.
+-  const double triangle_tolerance = 1e-9;
+-  std::map<std::uint64_t, std::size_t> group_of_reference;
++  // No verified common-reference producer exists in production.  Preserve the
++  // componentwise triangle residual as diagnostic evidence, but do not let it
++  // convert a caller claim into a shared statistical event.
++  std::set<std::uint64_t> used_group_ids;
++  auto uniqueGroupId = [&](std::uint64_t proposed) {
++    if (proposed == 0) proposed = 1;
++    while (!used_group_ids.insert(proposed).second) {
++      ++proposed;
++      if (proposed == 0) proposed = 1;
++    }
++    return proposed;
++  };
+   for (const auto& action : actions) {
+-    const double residual = triangleResidual(action);
+-    const bool shareable = action.shared_reference_certificate &&
+-                           action.shared_accepted_event && action.shared_time &&
+-                           action.shared_output_quantity &&
+-                           action.triangle_transfer_evidence &&
+-                           action.reference_certificate_id != 0 &&
+-                           residual <= triangle_tolerance;
+-    if (shareable) {
+-      const auto found = group_of_reference.find(action.reference_certificate_id);
+-      if (found == group_of_reference.end()) {
+-        group_of_reference.emplace(action.reference_certificate_id,
+-                                   out.groups.size());
+-        GuaranteeGroup group;
+-        group.group_id = action.reference_certificate_id;
+-        group.reference_certificate_id = action.reference_certificate_id;
+-        out.groups.push_back(group);
+-        ++out.shared_groups;
+-      }
+-      auto& group =
+-          out.groups[group_of_reference.at(action.reference_certificate_id)];
+-      group.action_ids.push_back(action.action_id);
+-      group.charged_budget = std::max(group.charged_budget, action.epsilon_budget);
+-      group.worst_triangle_residual =
+-          std::max(group.worst_triangle_residual, residual);
+-    } else {
++    double residual = std::numeric_limits<double>::infinity();
++    triangleProof(action, &residual);
++    {
+       GuaranteeGroup group;
+-      group.group_id = action.action_id;
++      group.group_id = uniqueGroupId(action.action_id);
+       group.reference_certificate_id = action.reference_certificate_id;
+       group.action_ids.push_back(action.action_id);
+       group.charged_budget = action.epsilon_budget;
+@@ -213,11 +254,16 @@ GuaranteeGroupResult buildGuaranteeGroups(
+     if (group.action_ids.size() > 1) ++out.shared_groups;
+     else ++out.singleton_groups;
+   }
+-  out.total_charged_budget = 0.0;
++  ExactAccumulator exact_total = 0;
+   for (const auto& group : out.groups) {
+-    out.total_charged_budget += group.charged_budget;
++    exact_total += ExactAccumulator(group.charged_budget);
++  }
++  out.total_charged_budget = static_cast<double>(exact_total);
++  while (ExactAccumulator(out.total_charged_budget) < exact_total) {
++    out.total_charged_budget = std::nextafter(
++        out.total_charged_budget, std::numeric_limits<double>::infinity());
+   }
+-  if (out.total_charged_budget > available_budget) {
++  if (exact_total > ExactAccumulator(available_budget)) {
+     out.reason =
+         "selection-risk budget does not close over the publishable action set";
+     out.valid = false;
+diff --git a/src/uwb_imu_pl/integrity/integrity_monitor.cpp b/src/uwb_imu_pl/integrity/integrity_monitor.cpp
+index ef643cb..523c96a 100644
+--- a/src/uwb_imu_pl/integrity/integrity_monitor.cpp
++++ b/src/uwb_imu_pl/integrity/integrity_monitor.cpp
+@@ -2872,10 +2872,45 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
+           fde_trigger.passed = false;
+           fde_trigger.reason = "quarantined/failed source hardware barrier";
+         }
++        FdeRiskDecisionV1 final_risk;
++        FdeDecisionContextV1 fde_context;
++        fde_context.protection_proof_ids = &candidate_pl_proof;
++        fde_context.risk_result = &final_risk;
+         FdeDecision decision = FdeManager().decide(
+             fde_trigger, models.hypotheses, evidence, &candidates,
+-            mandatory_exclusion_groups, cfg.risk_v2);
++            mandatory_exclusion_groups, cfg.risk_v2, &fde_context);
+         record_stage("fde_decision", true);
++        // P0-04 final ledger supersedes the pre-selection diagnostic.  It uses
++        // the same total budget and includes the actual eligible-action union.
++        output.diagnostics.risk_ledger_charged_total =
++            final_risk.charged_total;
++        output.diagnostics.risk_ledger_declared_total =
++            final_risk.declared_total;
++        output.diagnostics.risk_margin = final_risk.margin;
++        output.diagnostics.risk_ledger_closes =
++            final_risk.complete_bound_closes;
++        output.diagnostics.risk_ledger_all_validated =
++            final_risk.all_terms_validated;
++        output.diagnostics.risk_ledger_validated_terms =
++            final_risk.validated_terms;
++        output.diagnostics.risk_ledger_unvalidated_terms =
++            final_risk.unvalidated_terms;
++        output.diagnostics.risk_ledger_not_implemented_terms =
++            final_risk.not_implemented_terms;
++        output.diagnostics.risk_ledger_terms =
++            final_risk.terms;
++        // The action-aware ledger is authoritative for every final consumer,
++        // including fail-closed early exits where its numeric value is
++        // UNKNOWN.  Never retain the pre-selection PL diagnostic as the final
++        // complete-risk result.
++        output.protection_level.risk_budget_valid =
++            final_risk.complete_bound_closes &&
++            final_risk.all_terms_validated;
++        output.protection_level.formal_eligible =
++            final_risk.formal_eligible;
++        if (!output.protection_level.risk_budget_valid) {
++          output.protection_level.availability = Availability::Unavailable;
++        }
+         // C4 diagnostics v16: export the charged event-class identity and the
+         // derived risk-proof id exactly as the decision produced them.
+         output.diagnostics.selection_risk_proof_id =
+@@ -3218,7 +3253,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
+               output.protection_level.allocated_hmi_risk =
+                   pl->second.allocated_outcome_risk;
+               output.protection_level.risk_budget_valid =
+-                  pl->second.risk_budget_valid;
++                  final_risk.complete_bound_closes &&
++                  final_risk.all_terms_validated;
+               const auto proof = candidate_pl_proof.find(
+                   selected->action.id.value());
+               const std::uint64_t pl_proof_identity =
+@@ -3248,7 +3284,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
+             }
+           }
+           output.protection_level.availability = Availability::Unavailable;
+-          output.protection_level.formal_eligible = false;
++          output.protection_level.formal_eligible =
++              final_risk.formal_eligible;
+           output.protection_level.hmi_risk_requirement = cfg.risk_v2.p_hmi_total;
+           output.protection_level.reason =
+               "IMPLEMENTED_UNVERIFIED: Gate J calibration and independent review pending";
+diff --git a/src/uwb_imu_pl/integrity/protection_level_v2.cpp b/src/uwb_imu_pl/integrity/protection_level_v2.cpp
+index bdc2319..2e1dd45 100644
+--- a/src/uwb_imu_pl/integrity/protection_level_v2.cpp
++++ b/src/uwb_imu_pl/integrity/protection_level_v2.cpp
+@@ -21,6 +21,19 @@ namespace uwb_imu_pl {
+ 
+ namespace {
+ 
++RiskLedger preSelectionRiskLedger(
++    const RiskBudgetV2& risk,
++    const std::vector<FaultHypothesisV2>& hypotheses) {
++  RiskLedgerInputs inputs;
++  // PL alone cannot prove omitted/escape/selection events.  Keep them UNKNOWN
++  // and let the later action-group ledger close them; never export the
++  // allocation precheck as complete risk validity.
++  inputs.envelope_online = false;
++  inputs.envelope_leaf_count = 0;
++  inputs.selection_contract_frozen = false;
++  return buildRiskLedger(risk, hypotheses, inputs);
++}
++
+ void hashBytes(std::uint64_t* hash, const void* data, std::size_t size) {
+   const auto* bytes = static_cast<const unsigned char*>(data);
+   for (std::size_t index = 0; index < size; ++index) {
+@@ -716,7 +729,7 @@ bool validateProtectionLevelV2ProofPayload(
+   const bool dual_valid = dual_payloads_valid &&
+       ((proof.pooled_only && proof.dual_channel_proofs.empty()) ||
+        proof.dual_channel_proofs.size() == proof.hypotheses.size());
+-  const RiskBudgetAudit risk_audit = auditRiskBudget(
++  const RiskLedger complete_risk = preSelectionRiskLedger(
+       proof.risk, proof.hypotheses);
+   const SymmetricPsdCertificate covariance_certificate = certifyFactorGram(
+       proof.protected_covariance_factor, proof.protected_covariance,
+@@ -823,13 +836,19 @@ bool validateProtectionLevelV2ProofPayload(
+   const double expected_vpl = expected_pl.z();
+   const bool expected_model_valid = expected_pl.allFinite() &&
+       proof.detector_passed;
++  const bool expected_complete_risk_valid =
++      complete_risk.closes &&
++      complete_risk.all_terms_validated;
+   const Availability expected_availability = expected_model_valid &&
++      expected_complete_risk_valid &&
+       expected_hpl <= proof.risk.horizontal_alert_limit_m &&
+       expected_vpl <= proof.risk.vertical_alert_limit_m
+       ? Availability::Available : Availability::Unavailable;
+   std::string expected_reason;
+   if (!proof.detector_passed) expected_reason = "post-FDE detector alarm";
+-  else if (expected_availability != Availability::Available) {
++  else if (!expected_complete_risk_valid) {
++    expected_reason = complete_risk.reason;
++  } else if (expected_availability != Availability::Available) {
+     expected_reason = "post-FDE protection level exceeds alert limit";
+   } else {
+     expected_reason = "research V2 implemented; Gate J calibration/review pending";
+@@ -845,8 +864,10 @@ bool validateProtectionLevelV2ProofPayload(
+       components_valid && same(served.fault_component_m, expected_fault) &&
+       same(served.pl_xyz_m, expected_pl) && served.hpl_m == expected_hpl &&
+       served.vpl_m == expected_vpl &&
+-      served.allocated_outcome_risk == risk_audit.total &&
+-      served.risk_budget_valid == risk_audit.valid &&
++      served.allocated_outcome_risk == complete_risk.charged_total &&
++      served.risk_budget_valid ==
++          (complete_risk.closes &&
++           complete_risk.all_terms_validated) &&
+       served.model_valid == expected_model_valid &&
+       served.formal_eligible == false &&
+       served.availability == expected_availability &&
+@@ -1058,11 +1079,13 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
+         : detector_contract_reason;
+     return result;
+   }
+-  const RiskBudgetAudit risk_audit = auditRiskBudget(risk, *hypotheses);
+-  result.allocated_outcome_risk = risk_audit.total;
+-  result.risk_budget_valid = risk_audit.valid;
+-  if (!result.risk_budget_valid) {
+-    result.reason = "outcome-conditioned risk budget does not close";
++  const RiskBudgetAudit allocation = auditRiskBudget(risk, *hypotheses);
++  const RiskLedger complete_risk = preSelectionRiskLedger(risk, *hypotheses);
++  result.allocated_outcome_risk = complete_risk.charged_total;
++  result.risk_budget_valid = complete_risk.closes &&
++      complete_risk.all_terms_validated;
++  if (!allocation.valid) {
++    result.reason = "risk allocation precheck does not close";
+     return result;
+   }
+   std::vector<Eigen::MatrixXd> fault_maps;
+@@ -1227,12 +1250,13 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
+   result.hpl_m = std::hypot(result.pl_xyz_m.x(), result.pl_xyz_m.y());
+   result.vpl_m = result.pl_xyz_m.z();
+   result.model_valid = result.pl_xyz_m.allFinite() && detector.passed;
+-  result.availability = result.model_valid &&
++  result.availability = result.model_valid && result.risk_budget_valid &&
+       result.hpl_m <= risk.horizontal_alert_limit_m &&
+       result.vpl_m <= risk.vertical_alert_limit_m
+       ? Availability::Available : Availability::Unavailable;
+   result.formal_eligible = false;  // Gate J evidence is intentionally absent.
+   if (!detector.passed) result.reason = "post-FDE detector alarm";
++  else if (!result.risk_budget_valid) result.reason = complete_risk.reason;
+   else if (result.availability != Availability::Available) {
+     result.reason = "post-FDE protection level exceeds alert limit";
+   } else {
+@@ -1277,11 +1301,13 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
+       modes.emplace(id.value(), &found->second);
+     }
+   }
+-  const RiskBudgetAudit risk_audit = auditRiskBudget(risk, *hypotheses);
+-  result.allocated_outcome_risk = risk_audit.total;
+-  result.risk_budget_valid = risk_audit.valid;
+-  if (!result.risk_budget_valid) {
+-    result.reason = "outcome-conditioned risk budget does not close";
++  const RiskBudgetAudit allocation = auditRiskBudget(risk, *hypotheses);
++  const RiskLedger complete_risk = preSelectionRiskLedger(risk, *hypotheses);
++  result.allocated_outcome_risk = complete_risk.charged_total;
++  result.risk_budget_valid = complete_risk.closes &&
++      complete_risk.all_terms_validated;
++  if (!allocation.valid) {
++    result.reason = "risk allocation precheck does not close";
+     return result;
+   }
+   struct SolvedMode {
+@@ -1482,12 +1508,13 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
+   result.hpl_m = std::hypot(result.pl_xyz_m.x(), result.pl_xyz_m.y());
+   result.vpl_m = result.pl_xyz_m.z();
+   result.model_valid = result.pl_xyz_m.allFinite() && detector.passed;
+-  result.availability = result.model_valid &&
++  result.availability = result.model_valid && result.risk_budget_valid &&
+       result.hpl_m <= risk.horizontal_alert_limit_m &&
+       result.vpl_m <= risk.vertical_alert_limit_m
+       ? Availability::Available : Availability::Unavailable;
+   result.formal_eligible = false;
+   if (!detector.passed) result.reason = "post-FDE detector alarm";
++  else if (!result.risk_budget_valid) result.reason = complete_risk.reason;
+   else if (result.availability != Availability::Available)
+     result.reason = "post-FDE protection level exceeds alert limit";
+   else result.reason = "research V2 implemented; Gate J calibration/review pending";
+@@ -1542,11 +1569,13 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+     return result;
+   }
+   NumericalWorkCounters::hypothesisSharedHit();
+-  const RiskBudgetAudit risk_audit = auditRiskBudget(risk, hypotheses);
+-  result.allocated_outcome_risk = risk_audit.total;
+-  result.risk_budget_valid = risk_audit.valid;
+-  if (!result.risk_budget_valid) {
+-    result.reason = "outcome-conditioned risk budget does not close";
++  const RiskBudgetAudit allocation = auditRiskBudget(risk, hypotheses);
++  const RiskLedger complete_risk = preSelectionRiskLedger(risk, hypotheses);
++  result.allocated_outcome_risk = complete_risk.charged_total;
++  result.risk_budget_valid = complete_risk.closes &&
++      complete_risk.all_terms_validated;
++  if (!allocation.valid) {
++    result.reason = "risk allocation precheck does not close";
+     return result;
+   }
+   const double covariance_rank_tolerance = window.numerics
+@@ -1647,12 +1676,13 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+   result.hpl_m = std::hypot(result.pl_xyz_m.x(), result.pl_xyz_m.y());
+   result.vpl_m = result.pl_xyz_m.z();
+   result.model_valid = result.pl_xyz_m.allFinite() && detector.passed;
+-  result.availability = result.model_valid &&
++  result.availability = result.model_valid && result.risk_budget_valid &&
+       result.hpl_m <= risk.horizontal_alert_limit_m &&
+       result.vpl_m <= risk.vertical_alert_limit_m
+       ? Availability::Available : Availability::Unavailable;
+   result.formal_eligible = false;
+   if (!detector.passed) result.reason = "post-FDE detector alarm";
++  else if (!result.risk_budget_valid) result.reason = complete_risk.reason;
+   else if (result.availability != Availability::Available)
+     result.reason = "post-FDE protection level exceeds alert limit";
+   else result.reason = "research V2 implemented; Gate J calibration/review pending";
+diff --git a/src/uwb_imu_pl/integrity/risk_budget_audit.cpp b/src/uwb_imu_pl/integrity/risk_budget_audit.cpp
+index 13a1fbf..6df9825 100644
+--- a/src/uwb_imu_pl/integrity/risk_budget_audit.cpp
++++ b/src/uwb_imu_pl/integrity/risk_budget_audit.cpp
+@@ -9,6 +9,24 @@
+ namespace uwb_imu_pl {
+ namespace {
+ using ExactAccumulator = boost::multiprecision::cpp_bin_float_quad;
++
++double roundUp(const ExactAccumulator& value) {
++  double rounded = static_cast<double>(value);
++  while (std::isfinite(rounded) && ExactAccumulator(rounded) < value) {
++    rounded = std::nextafter(rounded,
++                             std::numeric_limits<double>::infinity());
++  }
++  return rounded;
++}
++
++double roundDown(const ExactAccumulator& value) {
++  double rounded = static_cast<double>(value);
++  while (std::isfinite(rounded) && ExactAccumulator(rounded) > value) {
++    rounded = std::nextafter(rounded,
++                             -std::numeric_limits<double>::infinity());
++  }
++  return rounded;
++}
+ }
+ 
+ double conservativeEqualRiskAllocation(double total, std::size_t count) {
+@@ -73,6 +91,12 @@ AxisTailSplit axisTailSplit(double allocation, double prior_bound, double p_md,
+     out.reason = "p_md allocation outside (0, 1)";
+     return out;
+   }
++  if (!std::isfinite(prior_bound) || prior_bound <= 0.0) {
++    // The miss event is weighted by the prior even when no tail allocation is
++    // assigned, so a zero allocation does not make the prior optional.
++    out.reason = "prior probability bound is not positive";
++    return out;
++  }
+   if (allocation == 0.0) {
+     // No hypothesis allocation: only the detector miss channel is charged.
+     out.hypothesis_tail = 0.0;
+@@ -81,12 +105,6 @@ AxisTailSplit axisTailSplit(double allocation, double prior_bound, double p_md,
+     out.valid = true;
+     return out;
+   }
+-  if (!std::isfinite(prior_bound) || prior_bound <= 0.0) {
+-    // An illegal prior is rejected instead of being clamped: the allocation
+-    // cannot be converted into a tail without a positive prior bound.
+-    out.reason = "prior probability bound is not positive";
+-    return out;
+-  }
+   const double tail = allocation / prior_bound;
+   if (!std::isfinite(tail) || tail <= 0.0) {
+     out.reason = "hypothesis tail probability is not positive";
+@@ -102,7 +120,18 @@ AxisTailSplit axisTailSplit(double allocation, double prior_bound, double p_md,
+ RiskLedger buildRiskLedger(const RiskBudgetV2& risk,
+                            const std::vector<FaultHypothesisV2>& hypotheses,
+                            const RiskLedgerInputs& inputs) {
++  CompleteRiskInputsV1 complete;
++  complete.legacy = inputs;
++  return buildRiskLedger(risk, hypotheses, complete, nullptr);
++}
++
++RiskLedger buildRiskLedger(const RiskBudgetV2& risk,
++                           const std::vector<FaultHypothesisV2>& hypotheses,
++                           const CompleteRiskInputsV1& inputs,
++                           CompleteRiskStatusV1* status) {
+   RiskLedger ledger;
++  if (status) *status = {};
++  std::vector<std::pair<bool, ExactAccumulator>> exact_terms;
+   ledger.budget = risk.p_hmi_total;
+   ledger.hypothesis_count = hypotheses.size();
+   ledger.inputs_valid = std::isfinite(risk.p_hmi_total) &&
+@@ -120,15 +149,32 @@ RiskLedger buildRiskLedger(const RiskBudgetV2& risk,
+                     "set with a positive total";
+     return ledger;
+   }
++  // The versioned sidecar carries numeric event bounds even when the
++  // corresponding event is asserted absent.  Treat every supplied numeric
++  // field as data, not as an ignorable scratch slot: NaN, infinity, and
++  // negative values make the complete contract invalid.  This also prevents
++  // a contradictory known/validated flag combination from laundering an
++  // invalid number into a zero charge.
++  const auto validBound = [](double value) {
++    return std::isfinite(value) && value >= 0.0;
++  };
++  const bool sidecar_numeric_inputs_valid =
++      validBound(inputs.omitted_event_bound) &&
++      validBound(inputs.envelope_event_bound) &&
++      validBound(inputs.selection_extra_bound);
++  ledger.inputs_valid = ledger.inputs_valid && sidecar_numeric_inputs_valid;
+ 
+   // 1. Nominal outcome: three axes, each with the configured nominal tail.
+   RiskLedgerTerm nominal;
+   nominal.id = "nominal";
+-  nominal.value = 3.0 * risk.nominal_axis_tail;
++  const ExactAccumulator exact_nominal =
++      ExactAccumulator(risk.nominal_axis_tail) * 3;
++  nominal.value = roundUp(exact_nominal);
+   nominal.status = RiskTermStatus::Validated;
+   nominal.source = "config risk.nominal_axis_tail x 3 protected axes";
+   nominal.note = "pi0 * alpha0 for the alarm-free outcome";
+   ledger.terms.push_back(std::move(nominal));
++  exact_terms.push_back({true, exact_nominal});
+ 
+   // 2. Non-nominal outcome mass charged for hypotheses that no longer own an
+   //    allocation (config term).
+@@ -139,14 +185,12 @@ RiskLedger buildRiskLedger(const RiskBudgetV2& risk,
+   p_nm.source = "config risk.p_nm";
+   p_nm.note = "non-nominal outcome mass not attributable to a hypothesis";
+   ledger.terms.push_back(std::move(p_nm));
++  exact_terms.push_back({true, ExactAccumulator(risk.p_nm)});
+ 
+-  // 3. Hypothesis outcome: charged as pi_h * alpha_h (the allocation-derived
+-  //    tail per hypothesis).  The detector-miss channel pi_h * beta_h is part
+-  //    of the section 5.9 bound but is *not* charged here: at the current
+-  //    budget the sum of that channel alone does not close (see the note in
+-  //    risk-and-lazy-fde.md), so it is reported explicitly instead of being
+-  //    silently treated as zero.  Charging it would flip availability for
+-  //    most frames and requires a budget re-calibration (B3 follow-up).
++  // 3. Hypothesis outcome.  Allocation and the detector-miss excess are two
++  //    parts of the same pi_h * max(alpha_h,beta_h) union bound.  Both are
++  //    charged; an over-budget profile becomes unavailable rather than
++  //    relabelling the miss channel as diagnostic.
+   RiskLedgerTerm fault;
+   fault.id = "hypotheses";
+   fault.source = "per-hypothesis allocation / prior bound (allocation policy: " +
+@@ -158,9 +202,8 @@ RiskLedger buildRiskLedger(const RiskBudgetV2& risk,
+   miss.id = "hypotheses_miss_channel";
+   miss.source = "section 5.9 union bound: sum of pi_h * max(0, beta_h - "
+                 "alpha_h)";
+-  miss.status = RiskTermStatus::AssumedUnvalidated;
+-  miss.note = "part of the section 5.9 bound that the current budget does not "
+-              "close; reported, not charged, and blocks formal eligibility";
++  miss.status = RiskTermStatus::Validated;
++  miss.note = "charged detector-miss excess above the allocation-derived tail";
+   ExactAccumulator charged_hypotheses = 0;
+   ExactAccumulator miss_channel = 0;
+   std::vector<std::string> rejected;
+@@ -174,104 +217,268 @@ RiskLedger buildRiskLedger(const RiskBudgetV2& risk,
+       continue;
+     }
+     charged_hypotheses += ExactAccumulator(hypothesis.hmi_allocation);
+-    if (split.hypothesis_tail > 0.0 && split.beta > split.hypothesis_tail) {
+-      miss_channel += ExactAccumulator(hypothesis.prior_probability_bound) *
+-          ExactAccumulator(split.beta - split.hypothesis_tail);
++    const ExactAccumulator exact_prior(hypothesis.prior_probability_bound);
++    const ExactAccumulator exact_alpha = hypothesis.hmi_allocation == 0.0
++        ? ExactAccumulator(0)
++        : std::min(ExactAccumulator(0.5),
++                   ExactAccumulator(hypothesis.hmi_allocation) / exact_prior);
++    const ExactAccumulator exact_beta(hypothesis.p_md_allocation);
++    if (exact_beta > exact_alpha) {
++      miss_channel += exact_prior * (exact_beta - exact_alpha);
+     }
+   }
+-  fault.value = static_cast<double>(charged_hypotheses);
++  const bool hypotheses_known = rejected.empty();
++  fault.value = hypotheses_known
++      ? roundUp(charged_hypotheses)
++      : std::numeric_limits<double>::quiet_NaN();
+   if (!rejected.empty()) {
+-    fault.status = RiskTermStatus::AssumedUnvalidated;
++    fault.status = RiskTermStatus::NotImplemented;
+     fault.note += "; hypotheses with rejected tails: " +
+         std::to_string(rejected.size()) + " (first: " + rejected.front() + ")";
+   }
+   ledger.terms.push_back(std::move(fault));
+-  miss.value = static_cast<double>(miss_channel);
++  exact_terms.push_back({hypotheses_known, charged_hypotheses});
++  miss.value = hypotheses_known
++      ? roundUp(miss_channel)
++      : std::numeric_limits<double>::quiet_NaN();
++  if (!rejected.empty()) {
++    miss.status = RiskTermStatus::NotImplemented;
++    miss.note += "; rejected hypothesis tails make the miss bound UNKNOWN";
++  }
+   ledger.terms.push_back(std::move(miss));
++  exact_terms.push_back({hypotheses_known, miss_channel});
+ 
+-  // 4. Escape channels: configured values kept, flagged as unvalidated
+-  //    assumptions instead of silent zeros.
+-  const std::pair<const char*, double> escapes[] = {
+-      {"bridge", risk.p_bridge_escape},
+-      {"history", risk.p_history_contamination},
+-      {"model", risk.p_model_escape}};
++  // 4. Escape channels.  A positive configured conservative bound remains in
++  //    the arithmetic even before qualification.  A configured zero without
++  //    a zero proof is unknown (NaN), never silently free.
++  struct EscapeInput {
++    const char* id;
++    double value;
++    bool validated;
++    const char* source;
++  };
++  const EscapeInput escapes[] = {
++      {"bridge", risk.p_bridge_escape, inputs.bridge_escape_validated,
++       "config risk.p_bridge_escape"},
++      {"history", risk.p_history_contamination,
++       inputs.history_escape_validated,
++       "config risk.p_history_contamination"},
++      {"model", risk.p_model_escape, inputs.model_escape_validated,
++       "config risk.p_model_escape"}};
+   for (const auto& entry : escapes) {
+     RiskLedgerTerm term;
+-    term.id = entry.first;
+-    term.value = entry.second;
+-    term.status = RiskTermStatus::AssumedUnvalidated;
+-    term.source = std::string("config risk.p_") + entry.first + "_escape";
+-    term.note = entry.second == 0.0
+-        ? "configured as zero: recorded as an unvalidated assumption, not as "
+-          "a proven zero"
+-        : "configured value used as an unvalidated assumption";
++    term.id = entry.id;
++    term.value = entry.value == 0.0 && !entry.validated
++        ? std::numeric_limits<double>::quiet_NaN() : entry.value;
++    term.status = entry.validated ? RiskTermStatus::Validated
++                                  : RiskTermStatus::AssumedUnvalidated;
++    term.source = entry.source;
++    term.note = entry.validated
++        ? "qualified conservative escape bound"
++        : (entry.value == 0.0
++            ? "configured zero has no zero proof: value is UNKNOWN"
++            : "configured bound is charged but qualification is incomplete");
+     ledger.terms.push_back(std::move(term));
++    const bool known = entry.value != 0.0 || entry.validated;
++    exact_terms.push_back({known, ExactAccumulator(entry.value)});
+   }
+ 
+-  // 5. Omitted event mass (manifest omitted_event_set).
++  // 5. Omitted event mass (manifest omitted_event_set).  A structural proof
++  // that there are no omitted events does not authorize this consumer to
++  // overwrite contradictory sidecar evidence.  Its only accepted wire
++  // representation is a known, validated, finite zero.  When omitted events
++  // are present, the scope must be complete and the supplied bound must be
++  // known; an unvalidated finite bound is still charged but cannot support
++  // formal eligibility.
+   RiskLedgerTerm omitted;
+   omitted.id = "omitted";
+-  omitted.value = 0.0;
+-  omitted.status = RiskTermStatus::NotImplemented;
++  const bool omitted_events_present =
++      !inputs.legacy.omitted_event_set.empty();
++  const bool no_omissions = inputs.omitted_scope_complete &&
++      !omitted_events_present;
++  const bool omitted_numeric_valid = validBound(inputs.omitted_event_bound);
++  const bool omitted_flag_consistent =
++      !inputs.omitted_event_bound_validated ||
++      inputs.omitted_event_bound_known;
++  const bool omitted_zero_canonical = no_omissions &&
++      omitted_numeric_valid && inputs.omitted_event_bound == 0.0 &&
++      inputs.omitted_event_bound_known &&
++      inputs.omitted_event_bound_validated;
++  const bool omitted_explicit_context = inputs.omitted_scope_complete &&
++      omitted_events_present;
++  const bool omitted_bound_known = omitted_explicit_context &&
++      omitted_numeric_valid && omitted_flag_consistent &&
++      inputs.omitted_event_bound_known;
++  const bool omitted_known = omitted_zero_canonical || omitted_bound_known;
++  const bool omitted_representation_valid = no_omissions
++      ? omitted_zero_canonical
++      : (omitted_explicit_context
++          ? omitted_numeric_valid && omitted_flag_consistent
++          : omitted_numeric_valid && omitted_flag_consistent &&
++              !inputs.omitted_event_bound_known &&
++              !inputs.omitted_event_bound_validated &&
++              inputs.omitted_event_bound == 0.0);
++  omitted.value = omitted_known ? inputs.omitted_event_bound
++      : std::numeric_limits<double>::quiet_NaN();
++  omitted.status = omitted_known &&
++      (omitted_zero_canonical || inputs.omitted_event_bound_validated)
++      ? RiskTermStatus::Validated
++      : (omitted_known ? RiskTermStatus::AssumedUnvalidated
++                       : RiskTermStatus::NotImplemented);
+   omitted.source = "config/integrity_fault_manifest.yaml omitted_event_set";
+-  omitted.note = "mass not quantified yet; omitted kinds: ";
+-  for (std::size_t index = 0; index < inputs.omitted_event_set.size(); ++index) {
++  omitted.note = omitted_zero_canonical
++      ? "resolved scope and canonical known/validated zero prove there are no omitted events"
++      : (no_omissions
++          ? "zero-event proof has a contradictory sidecar representation; bound is UNKNOWN"
++          : "omitted-event mass is UNKNOWN unless the complete scope carries a finite known bound; kinds: ");
++  for (std::size_t index = 0;
++       index < inputs.legacy.omitted_event_set.size(); ++index) {
+     if (index) omitted.note += ",";
+-    omitted.note += inputs.omitted_event_set[index];
++    omitted.note += inputs.legacy.omitted_event_set[index];
+   }
+-  if (inputs.omitted_event_set.empty())
++  if (!no_omissions && inputs.legacy.omitted_event_set.empty())
+     omitted.note += "(none declared in the resolved manifest)";
+   ledger.terms.push_back(std::move(omitted));
++  exact_terms.push_back({omitted_known, ExactAccumulator(
++      omitted_numeric_valid ? inputs.omitted_event_bound : 0.0)});
++  ledger.inputs_valid = ledger.inputs_valid &&
++      omitted_representation_valid;
+ 
+-  // 6. Envelope qualification slot: explicit zero while envelopes are offline.
++  // 6. Envelope qualification.  As above, an exact traversal/no-leaf proof is
++  // accepted only in its canonical known, validated, finite-zero form.  An
++  // online envelope must identify at least one represented leaf and carry a
++  // known numeric bound.  The two mixed online/leaf states are contradictory.
+   RiskLedgerTerm envelope;
+   envelope.id = "envelope";
+-  envelope.value = 0.0;
+-  envelope.status = RiskTermStatus::NotImplemented;
++  const bool exact_no_envelope = !inputs.legacy.envelope_online &&
++      inputs.legacy.envelope_leaf_count == 0;
++  const bool envelope_events_present = inputs.legacy.envelope_online &&
++      inputs.legacy.envelope_leaf_count > 0;
++  const bool envelope_numeric_valid = validBound(inputs.envelope_event_bound);
++  const bool envelope_flag_consistent =
++      !inputs.envelope_event_bound_validated ||
++      inputs.envelope_event_bound_known;
++  const bool envelope_zero_canonical = exact_no_envelope &&
++      envelope_numeric_valid && inputs.envelope_event_bound == 0.0 &&
++      inputs.envelope_event_bound_known &&
++      inputs.envelope_event_bound_validated;
++  const bool envelope_bound_known = envelope_events_present &&
++      envelope_numeric_valid && envelope_flag_consistent &&
++      inputs.envelope_event_bound_known;
++  const bool envelope_known = envelope_zero_canonical ||
++      envelope_bound_known;
++  const bool envelope_representation_valid = exact_no_envelope
++      ? envelope_zero_canonical
++      : (envelope_events_present && envelope_numeric_valid &&
++          envelope_flag_consistent);
++  envelope.value = envelope_known ? inputs.envelope_event_bound
++      : std::numeric_limits<double>::quiet_NaN();
++  envelope.status = envelope_known &&
++      (envelope_zero_canonical || inputs.envelope_event_bound_validated)
++      ? RiskTermStatus::Validated
++      : (envelope_known ? RiskTermStatus::AssumedUnvalidated
++                        : RiskTermStatus::NotImplemented);
+   envelope.source = "coverage certificate envelope qualification";
+-  envelope.note = inputs.envelope_online
+-      ? "envelopes online: group risk mapping not implemented in this batch"
+-      : "envelopes offline (exact traversal): epsilon_envelope = 0 by "
+-        "construction, qualification statistic recorded";
++  envelope.note = inputs.legacy.envelope_online
++      ? "envelopes online: a finite qualified event bound is required"
++      : (envelope_zero_canonical
++          ? "exact traversal with zero enveloped leaves and canonical sidecar proves zero"
++          : (exact_no_envelope
++              ? "zero-envelope proof has a contradictory sidecar representation; bound UNKNOWN"
++              : "offline/leaf certificate state or bound representation is inconsistent; bound UNKNOWN"));
+   envelope.note += "; enveloped leaves: " +
+-      std::to_string(inputs.envelope_leaf_count);
++      std::to_string(inputs.legacy.envelope_leaf_count);
+   ledger.terms.push_back(std::move(envelope));
++  exact_terms.push_back({envelope_known, ExactAccumulator(
++      envelope_numeric_valid ? inputs.envelope_event_bound : 0.0)});
++  ledger.inputs_valid = ledger.inputs_valid &&
++      envelope_representation_valid;
+ 
+-  // 7. Selection slot (reserved for C3).
++  // 7. Selection surcharge in the same total budget.
+   RiskLedgerTerm selection;
+   selection.id = "selection";
+-  selection.value = 0.0;
+-  selection.status = RiskTermStatus::NotImplemented;
+-  selection.source = "FDE selection contract (C3)";
+-  selection.note = inputs.selection_contract_frozen
+-      ? "selection contract frozen: slot still requires its own bound"
+-      : "reserved slot; FDE selection contract unchanged in this batch";
++  const bool selection_numeric_valid = validBound(inputs.selection_extra_bound);
++  const bool selection_flag_consistent =
++      !inputs.selection_bound_validated || inputs.selection_bound_known;
++  const bool selection_context_valid =
++      inputs.legacy.selection_contract_frozen;
++  const bool selection_known = inputs.legacy.selection_contract_frozen &&
++      inputs.selection_bound_known && selection_numeric_valid &&
++      selection_flag_consistent;
++  const bool selection_representation_valid = selection_context_valid
++      ? selection_numeric_valid && selection_flag_consistent
++      : selection_numeric_valid && selection_flag_consistent &&
++          !inputs.selection_bound_known &&
++          !inputs.selection_bound_validated &&
++          inputs.selection_extra_bound == 0.0;
++  selection.value = selection_known ? inputs.selection_extra_bound
++      : std::numeric_limits<double>::quiet_NaN();
++  selection.status = selection_known && inputs.selection_bound_validated
++      ? RiskTermStatus::Validated
++      : (selection_known ? RiskTermStatus::AssumedUnvalidated
++                         : RiskTermStatus::NotImplemented);
++  selection.source = "numeric FDE guarantee groups over every eligible action";
++  selection.note = inputs.legacy.selection_contract_frozen
++      ? "extra union charge beyond the once-charged hypothesis allocation"
++      : "selection event set/bound is UNKNOWN before action grouping";
+   ledger.terms.push_back(std::move(selection));
++  exact_terms.push_back({selection_known, ExactAccumulator(
++      selection_numeric_valid ? inputs.selection_extra_bound : 0.0)});
++  ledger.inputs_valid = ledger.inputs_valid &&
++      selection_representation_valid;
+ 
+-  // Charged total: validated terms only.  Declared total is informational and
+-  // includes the unvalidated channels so nothing hides behind a zero.
++  // Every finite numeric bound is charged even if qualification is pending.
++  // Unknown terms are NaN and make complete closure false.
+   ExactAccumulator charged = 0;
+   ExactAccumulator declared_all = 0;
+   bool all_validated = true;
+-  for (const auto& term : ledger.terms) {
+-    declared_all += ExactAccumulator(term.value);
+-    if (term.status == RiskTermStatus::Validated) {
+-      charged += ExactAccumulator(term.value);
+-    } else {
+-      all_validated = false;
++  bool all_numeric = true;
++  for (std::size_t index = 0; index < ledger.terms.size(); ++index) {
++    auto& term = ledger.terms[index];
++    const auto& exact = exact_terms[index];
++    const bool finite_nonnegative_export = std::isfinite(term.value) &&
++        term.value >= 0.0;
++    if (exact.first) {
++      declared_all += exact.second;
++      charged += exact.second;
+     }
++    if (!exact.first || !finite_nonnegative_export) {
++      all_numeric = false;
++      if (term.status == RiskTermStatus::Validated) {
++        term.status = RiskTermStatus::NotImplemented;
++        term.note += "; finite non-negative exported bound is unavailable";
++      }
++    }
++    if (term.status != RiskTermStatus::Validated) all_validated = false;
++  }
++  ledger.charged_total = roundUp(charged);
++  ledger.declared_total = all_numeric
++      ? roundUp(declared_all)
++      : std::numeric_limits<double>::quiet_NaN();
++  ledger.margin = all_numeric
++      ? roundDown(ExactAccumulator(risk.p_hmi_total) - charged)
++      : std::numeric_limits<double>::quiet_NaN();
++  const RiskBudgetAudit allocation = auditRiskBudget(risk, hypotheses);
++  const bool complete_bound_closes = ledger.inputs_valid && all_numeric &&
++      charged <= ExactAccumulator(risk.p_hmi_total);
++  ledger.closes = complete_bound_closes;
++  ledger.all_terms_validated = ledger.inputs_valid && all_validated;
++  ledger.formal_eligible = allocation.valid &&
++      complete_bound_closes && ledger.all_terms_validated &&
++      inputs.model_formal_eligible;
++  if (status) {
++    status->allocation_valid = allocation.valid;
++    status->complete_bound_closes = complete_bound_closes;
+   }
+-  ledger.charged_total = static_cast<double>(charged);
+-  ledger.declared_total = static_cast<double>(declared_all);
+-  ledger.margin = static_cast<double>(ExactAccumulator(risk.p_hmi_total) -
+-                                      charged);
+-  ledger.closes = ExactAccumulator(ledger.charged_total) <=
+-      ExactAccumulator(risk.p_hmi_total);
+-  ledger.all_terms_validated = all_validated;
+-  ledger.formal_eligible = false;  // Gate J evidence is intentionally absent.
+-  ledger.reason = ledger.closes
+-      ? "outcome-conditioned ledger closes on validated terms"
+-      : "outcome-conditioned risk budget does not close";
++  ledger.reason = !ledger.inputs_valid
++      ? "complete risk inputs are not finite non-negative bounds"
++      : (!all_numeric
++      ? "complete risk bound contains UNKNOWN terms"
++      : (complete_bound_closes
++          ? (ledger.all_terms_validated
++              ? "complete risk bound closes"
++              : "numeric bound closes but one or more terms are unvalidated")
++          : "complete risk bound exceeds the unchanged total budget"));
+   return ledger;
+ }
+ 
+@@ -279,19 +486,16 @@ RiskBudgetAudit auditRiskBudget(
+     const RiskBudgetV2& risk,
+     const std::vector<FaultHypothesisV2>& hypotheses) {
+   RiskBudgetAudit out;
+-  out.nominal = 3.0 * risk.nominal_axis_tail;
+-  out.p_nm = risk.p_nm;
+-  out.bridge = risk.p_bridge_escape;
+-  out.history = risk.p_history_contamination;
+-  out.model = risk.p_model_escape;
+-  out.upper_bound = risk.p_hmi_total;
+   out.hypothesis_count = hypotheses.size();
++  const auto validBound = [](double value) {
++    return std::isfinite(value) && value >= 0.0;
++  };
+   const double inputs[] = {risk.nominal_axis_tail, risk.p_nm,
+       risk.p_bridge_escape, risk.p_history_contamination,
+       risk.p_model_escape, risk.p_hmi_total};
+   out.inputs_valid = true;
+   for (double value : inputs) {
+-    out.inputs_valid = out.inputs_valid && std::isfinite(value) && value >= 0.0;
++    out.inputs_valid = out.inputs_valid && validBound(value);
+   }
+   ExactAccumulator hypothesis_sum = 0;
+   for (const auto& hypothesis : hypotheses) {
+@@ -302,20 +506,42 @@ RiskBudgetAudit auditRiskBudget(
+     else if (hypothesis.modes.size() == 2)
+       ++out.double_fault_hypothesis_count;
+     else ++out.other_cardinality_hypothesis_count;
+-    out.inputs_valid = out.inputs_valid &&
+-        std::isfinite(hypothesis.hmi_allocation) &&
+-        hypothesis.hmi_allocation >= 0.0;
+-    hypothesis_sum += ExactAccumulator(hypothesis.hmi_allocation);
++    const bool allocation_valid = validBound(hypothesis.hmi_allocation);
++    out.inputs_valid = out.inputs_valid && allocation_valid;
++    if (allocation_valid) {
++      hypothesis_sum += ExactAccumulator(hypothesis.hmi_allocation);
++    }
+   }
+-  out.hypotheses = static_cast<double>(hypothesis_sum);
++  if (!out.inputs_valid) {
++    const double unknown = std::numeric_limits<double>::quiet_NaN();
++    out.nominal = unknown;
++    out.p_nm = unknown;
++    out.bridge = unknown;
++    out.history = unknown;
++    out.model = unknown;
++    out.hypotheses = unknown;
++    out.total = unknown;
++    out.upper_bound = validBound(risk.p_hmi_total)
++        ? risk.p_hmi_total : unknown;
++    out.margin = unknown;
++    out.valid = false;
++    return out;
++  }
++  out.nominal = roundUp(ExactAccumulator(risk.nominal_axis_tail) * 3);
++  out.p_nm = risk.p_nm;
++  out.bridge = risk.p_bridge_escape;
++  out.history = risk.p_history_contamination;
++  out.model = risk.p_model_escape;
++  out.upper_bound = risk.p_hmi_total;
++  out.hypotheses = roundUp(hypothesis_sum);
+   const ExactAccumulator exact_total =
+       ExactAccumulator(risk.nominal_axis_tail) * 3 +
+       ExactAccumulator(risk.p_nm) + ExactAccumulator(risk.p_bridge_escape) +
+       ExactAccumulator(risk.p_history_contamination) +
+       ExactAccumulator(risk.p_model_escape) + hypothesis_sum;
+   const ExactAccumulator exact_upper(risk.p_hmi_total);
+-  out.total = static_cast<double>(exact_total);
+-  out.margin = static_cast<double>(exact_upper - exact_total);
++  out.total = roundUp(exact_total);
++  out.margin = roundDown(exact_upper - exact_total);
+   out.valid = out.inputs_valid && exact_total <= exact_upper;
+   return out;
+ }
+diff --git a/test/test_fde_post_selection.cpp b/test/test_fde_post_selection.cpp
+index ac414b6..8c60f91 100644
+--- a/test/test_fde_post_selection.cpp
++++ b/test/test_fde_post_selection.cpp
+@@ -8,6 +8,7 @@
+ 
+ #include <cmath>
+ #include <cstdio>
++#include <limits>
+ #include <string>
+ 
+ #include "uwb_imu_pl/integrity/fde_post_selection.hpp"
+@@ -179,8 +180,9 @@ TEST(FdePostSelection, Fde04ImuIntervalRepairAndBridgeFailureStayLegal) {
+ }
+ 
+ // ---------------------------------------------------------------------------
+-// FDE-05: shared-reference centres share one failure event; distinct reference
+-// dependencies cannot under-count the risk.
++// FDE-05: caller-declared shared-reference centres are not proof of a shared
++// failure event.  Until a verifiable P0-03/P0-02 producer is wired, every
++// action is charged as a singleton.
+ // ---------------------------------------------------------------------------
+ TEST(FdePostSelection, Fde05SharedReferenceGroupsAndDistinctReferences) {
+   auto makeShared = [](std::uint64_t action_id, std::uint64_t reference,
+@@ -198,30 +200,50 @@ TEST(FdePostSelection, Fde05SharedReferenceGroupsAndDistinctReferences) {
+     action.p_action_m = Eigen::Vector3d(centre_shift, 0.0, 0.0);
+     action.L_action_m = action.L_reference_m +
+                         (action.p_action_m - action.p_reference_m).cwiseAbs();
++    action.L_action_m.x() = std::nextafter(
++        action.L_action_m.x(), std::numeric_limits<double>::infinity());
+     action.epsilon_budget = epsilon;
+     return action;
+   };
+-  // Three centres sharing one reference: ONE failure event, charged once.
++  // Three centres with identical caller claims are still three events.
+   std::vector<ActionGuarantee> shared = {makeShared(1, 7, 1.0e-5, 0.1),
+                                          makeShared(2, 7, 1.2e-5, 0.2),
+                                          makeShared(3, 7, 1.1e-5, -0.3)};
+-  const GuaranteeGroupResult grouped = buildGuaranteeGroups(shared, 1.5e-5);
++  auto events = [](const std::vector<ActionGuarantee>& actions) {
++    std::vector<ActionSharedEventV1> out;
++    for (const auto& action : actions) {
++      ActionSharedEventV1 event;
++      event.action_id = action.action_id;
++      // Deliberately independent caller claim, not copied from the action.
++      // Without full proof/certificate payload it must never enable sharing.
++      event.common_reference_certificate_id = 999;
++      event.common_L_reference_m = Eigen::Vector3d::Ones();
++      event.common_p_reference_m = Eigen::Vector3d::Zero();
++      event.accepted_event_id = "invented";
++      event.reference_time_id = 123;
++      event.output_quantity_id = "invented";
++      out.push_back(std::move(event));
++    }
++    return out;
++  };
++  const GuaranteeGroupResult grouped =
++      buildGuaranteeGroups(shared, 4.0e-5, events(shared));
+   ASSERT_TRUE(grouped.valid) << grouped.reason;
+-  EXPECT_EQ(grouped.groups.size(), 1u)
+-      << "a shared reference certificate is one failure event";
+-  EXPECT_EQ(grouped.groups[0].action_ids.size(), 3u);
+-  EXPECT_NEAR(grouped.total_charged_budget, 1.2e-5, 1e-18)
+-      << "the shared event is charged once (the largest member), not summed";
+-  EXPECT_LE(grouped.groups[0].worst_triangle_residual, 1e-12);
++  EXPECT_EQ(grouped.groups.size(), 3u);
++  EXPECT_EQ(grouped.singleton_groups, 3u);
++  EXPECT_EQ(grouped.shared_groups, 0u);
++  EXPECT_NEAR(grouped.total_charged_budget, 3.3e-5, 1e-18);
+ 
+   // Distinct references with the same structure: two separate failure events,
+   // charged separately (no under-counting).
+   std::vector<ActionGuarantee> distinct = {makeShared(4, 8, 1.0e-5, 0.1),
+                                           makeShared(5, 9, 1.2e-5, 0.2)};
+-  const GuaranteeGroupResult separate = buildGuaranteeGroups(distinct, 1.5e-5);
++  const GuaranteeGroupResult separate =
++      buildGuaranteeGroups(distinct, 1.5e-5, events(distinct));
+   EXPECT_FALSE(separate.valid)
+       << "1.0e-5 + 1.2e-5 > 1.5e-5 must refuse: both events are charged";
+-  const GuaranteeGroupResult separate_ok = buildGuaranteeGroups(distinct, 2.5e-5);
++  const GuaranteeGroupResult separate_ok =
++      buildGuaranteeGroups(distinct, 2.5e-5, events(distinct));
+   ASSERT_TRUE(separate_ok.valid) << separate_ok.reason;
+   EXPECT_EQ(separate_ok.singleton_groups, 2u);
+   EXPECT_NEAR(separate_ok.total_charged_budget, 2.2e-5, 1e-18);
+@@ -231,7 +253,8 @@ TEST(FdePostSelection, Fde05SharedReferenceGroupsAndDistinctReferences) {
+   std::vector<ActionGuarantee> partial = {makeShared(6, 10, 1.0e-5, 0.0),
+                                           makeShared(7, 10, 1.0e-5, 0.0)};
+   partial[1].shared_time = false;
+-  const GuaranteeGroupResult split = buildGuaranteeGroups(partial, 2.5e-5);
++  const GuaranteeGroupResult split =
++      buildGuaranteeGroups(partial, 2.5e-5, events(partial));
+   ASSERT_TRUE(split.valid) << split.reason;
+   EXPECT_EQ(split.groups.size(), 2u);
+   // Missing one shared flag breaks the group: neither action ends up in a
+@@ -245,17 +268,19 @@ TEST(FdePostSelection, Fde05SharedReferenceGroupsAndDistinctReferences) {
+   std::vector<ActionGuarantee> violated = {makeShared(8, 11, 1.0e-5, 0.1),
+                                            makeShared(9, 11, 1.0e-5, 0.2)};
+   violated[1].L_action_m = Eigen::Vector3d(0.5, 0.5, 0.5);  // too optimistic
+-  const GuaranteeGroupResult refused = buildGuaranteeGroups(violated, 1.5e-5);
++  const GuaranteeGroupResult refused =
++      buildGuaranteeGroups(violated, 1.5e-5, events(violated));
+   EXPECT_FALSE(refused.valid)
+       << "the violated action is a singleton and is charged separately";
+   const GuaranteeGroupResult refused_ok =
+-      buildGuaranteeGroups(violated, 2.5e-5);
++      buildGuaranteeGroups(violated, 2.5e-5, events(violated));
+   ASSERT_TRUE(refused_ok.valid) << refused_ok.reason;
+   EXPECT_EQ(refused_ok.groups.size(), 2u);
+   EXPECT_GT(refused_ok.groups[1].worst_triangle_residual, 1e-9);
+ 
+   std::printf(
+-      "[FDE-05] shared_actions=3 charged_once=%.3e singletons=2 charged_sum=%.3e "
++      "[FDE-05] unverified_shared_claims=3 singleton_sum=%.3e "
++      "singletons=2 charged_sum=%.3e "
+       "partial_groups=%zu triangle_violation_residual=%.3e\n",
+       grouped.total_charged_budget, separate_ok.total_charged_budget,
+       split.groups.size(), refused_ok.groups[1].worst_triangle_residual);
+diff --git a/test/test_integrity_v2.cpp b/test/test_integrity_v2.cpp
+index 6b498c7..a50747d 100644
+--- a/test/test_integrity_v2.cpp
++++ b/test/test_integrity_v2.cpp
+@@ -408,6 +408,13 @@ TEST(FdeProfiles, NominalPipelineAndFaultCensusFollowResolvedScope) {
+       continue;
+     }
+     EXPECT_EQ(output.detector.detector_type, "dual_channel_v1");
++    EXPECT_EQ(output.protection_level.risk_budget_valid,
++              output.diagnostics.risk_ledger_closes &&
++                  output.diagnostics.risk_ledger_all_validated);
++    EXPECT_FALSE(output.protection_level.risk_budget_valid);
++    EXPECT_FALSE(output.protection_level.formal_eligible);
++    EXPECT_EQ(output.protection_level.availability,
++              uwb_imu_pl::Availability::Unavailable);
+     EXPECT_EQ(output.diagnostics.single_uwb_hypotheses > 0, expected.uwb);
+     EXPECT_EQ(output.diagnostics.single_accel_hypotheses > 0, expected.imu);
+     EXPECT_EQ(output.diagnostics.single_gyro_hypotheses > 0, expected.imu);
+@@ -1957,7 +1964,9 @@ TEST(IntegrityV2ProtectionLevel, RecomputesPostCandidateAndStaysResearchOnly) {
+       window, candidate, detector, &remaining, uwb_imu_pl::RiskBudgetV2{});
+   EXPECT_TRUE(result.model_valid) << result.reason;
+   EXPECT_TRUE(result.pl_xyz_m.allFinite());
+-  EXPECT_TRUE(result.risk_budget_valid);
++  EXPECT_FALSE(result.risk_budget_valid)
++      << "PL alone cannot close omitted/escape/selection events";
++  EXPECT_EQ(result.availability, uwb_imu_pl::Availability::Unavailable);
+   EXPECT_FALSE(result.formal_eligible);
+   EXPECT_TRUE(remaining[0].monitored);
+   EXPECT_TRUE(remaining[1].monitored);
+@@ -2209,12 +2218,16 @@ TEST(IntegrityV2Fde, CoversEntirePlausibleSetBeforeSelection) {
+   both.action.covered_units = {h1.units.front(), h2.units.front()};
+   both.action.exclusion_cardinality = 2;
+   std::vector<uwb_imu_pl::CandidateEvaluation> candidates{one, both};
+-  const auto decision =
+-      uwb_imu_pl::FdeManager().decide(detector, {h1, h2}, {e1, e2}, &candidates,
+-                                      {}, uwb_imu_pl::RiskBudgetV2{});
+-  ASSERT_TRUE(decision.selected_action.has_value());
+-  EXPECT_EQ(decision.selected_action->id, both.action.id);
+-  EXPECT_EQ(decision.status, uwb_imu_pl::FdeStatus::AmbiguousUnionExclusion);
++  uwb_imu_pl::FdeRiskDecisionV1 final_risk;
++  uwb_imu_pl::FdeDecisionContextV1 context;
++  context.risk_result = &final_risk;
++  const auto decision = uwb_imu_pl::FdeManager().decide(
++      detector, {h1, h2}, {e1, e2}, &candidates, {},
++      uwb_imu_pl::RiskBudgetV2{}, &context);
++  EXPECT_FALSE(decision.selected_action.has_value());
++  EXPECT_EQ(decision.status, uwb_imu_pl::FdeStatus::RiskBudgetInvalid);
++  EXPECT_FALSE(final_risk.complete_bound_closes);
++  EXPECT_FALSE(decision.commit_allowed);
+ }
+ 
+ TEST(IntegrityV2Fde, PlausibleStrictSupersetRetainsCoverageDutyInSelection) {
+@@ -2325,22 +2338,27 @@ TEST(IntegrityV2Fde, SelectionRiskChargedOverPublishableSet) {
+   both.action.covered_units = {h1.units.front(), h2.units.front()};
+   both.action.exclusion_cardinality = 2;
+   std::vector<CandidateEvaluation> candidates{one, both};
+-  const auto decision =
+-      FdeManager().decide(detector, {h1, h2}, {e1, e2}, &candidates, {},
+-                          RiskBudgetV2{});
+-  ASSERT_TRUE(decision.selected_action.has_value());
+-  EXPECT_EQ(decision.selected_action->id, both.action.id);
++  FdeRiskDecisionV1 final_risk;
++  FdeDecisionContextV1 context;
++  context.risk_result = &final_risk;
++  const auto decision = FdeManager().decide(
++      detector, {h1, h2}, {e1, e2}, &candidates, {}, RiskBudgetV2{},
++      &context);
++  EXPECT_FALSE(decision.selected_action.has_value());
+   EXPECT_TRUE(decision.profile_pool_valid);
+   EXPECT_TRUE(decision.profile_pool_comparable);
+   EXPECT_TRUE(decision.profile_pool_ranked);
+   EXPECT_EQ(decision.plausible_profile_j, (std::vector<double>{1.0, 1.0}));
+-  // Both eligible actions protect the same plausible union -> one event class,
+-  // charged once with the union budget.
++  // Only `both` covers the complete plausible set, so exactly one original
++  // eligible action enters grouping.  The independent P0-04 oracle covers the
++  // two-eligible-action disjoint-event counterexample.
+   EXPECT_EQ(decision.selection_event_classes, 1u);
+   EXPECT_TRUE(decision.selection_budget_ok);
+   EXPECT_DOUBLE_EQ(decision.selection_charged_budget, 3e-6);
+   EXPECT_DOUBLE_EQ(decision.selection_available_budget,
+                    RiskBudgetV2{}.p_hmi_total);
++  EXPECT_FALSE(final_risk.complete_bound_closes);
++  EXPECT_FALSE(decision.commit_allowed);
+   ASSERT_EQ(decision.candidate_dispositions.size(), 2u);
+   // The candidate that covers the complete plausible set with a finite
+   // protected reference is the reference-estimate path.
+@@ -2387,8 +2405,9 @@ TEST(IntegrityV2Fde, MixedUnitPoolIsRecordedAndNotRanked) {
+   EXPECT_TRUE(decision.profile_pool_mixed_dimensions);
+   EXPECT_FALSE(decision.profile_pool_comparable);
+   EXPECT_FALSE(decision.profile_pool_ranked);
+-  ASSERT_TRUE(decision.selected_action.has_value());
+-  EXPECT_EQ(decision.status, FdeStatus::AmbiguousUnionExclusion);
++  EXPECT_FALSE(decision.selected_action.has_value());
++  EXPECT_EQ(decision.status, FdeStatus::RiskBudgetInvalid);
++  EXPECT_FALSE(decision.commit_allowed);
+ }
+ 
+ TEST(IntegrityV2Fde, ActionDedupRejectsSameShapeAndNormDifferentContent) {
+@@ -2433,8 +2452,8 @@ TEST(IntegrityV2Fde, MandatoryGroupIsIndependentOfProbabilisticPlausibility) {
+   std::vector<CandidateEvaluation> candidates{keep, exclude};
+   const auto decision = FdeManager().decide(
+       barrier, {}, {}, &candidates, {FactorGroupId(77)}, RiskBudgetV2{});
+-  ASSERT_TRUE(decision.selected_action.has_value());
+-  EXPECT_EQ(decision.selected_action->id, ExclusionActionId(2));
++  EXPECT_FALSE(decision.selected_action.has_value());
++  EXPECT_EQ(decision.status, FdeStatus::RiskBudgetInvalid);
+   EXPECT_TRUE(decision.plausible_hypotheses.empty());
+   EXPECT_EQ(decision.mandatory_exclusion_groups,
+             (std::vector<FactorGroupId>{FactorGroupId(77)}));
+@@ -3047,15 +3066,21 @@ TEST(GateDSelection, DenseAndOperatorPathsSelectSameSuccessfulExclusion) {
+   DetectorResultV2 alarm;
+   alarm.numerically_valid = true;
+   alarm.passed = false;
+-  const auto f = FdeManager().decide(alarm, {fault}, {evidence}, &fast, {},
+-                                     RiskBudgetV2{});
+-  const auto d = FdeManager().decide(alarm, {fault}, {evidence}, &dense, {},
+-                                     RiskBudgetV2{});
+-  ASSERT_TRUE(f.commit_allowed);
+-  ASSERT_TRUE(d.commit_allowed);
+-  EXPECT_EQ(f.selected_action->id, exclude.id);
+-  EXPECT_EQ(f.selected_action->id, d.selected_action->id);
+-  EXPECT_EQ(f.status, FdeStatus::SuccessUwbExclusion);
++  FdeRiskDecisionV1 f_risk, d_risk;
++  FdeDecisionContextV1 f_context, d_context;
++  f_context.risk_result = &f_risk;
++  d_context.risk_result = &d_risk;
++  const auto f = FdeManager().decide(
++      alarm, {fault}, {evidence}, &fast, {}, RiskBudgetV2{}, &f_context);
++  const auto d = FdeManager().decide(
++      alarm, {fault}, {evidence}, &dense, {}, RiskBudgetV2{}, &d_context);
++  ASSERT_FALSE(f.commit_allowed);
++  ASSERT_FALSE(d.commit_allowed);
++  EXPECT_FALSE(f.selected_action.has_value());
++  EXPECT_FALSE(d.selected_action.has_value());
++  EXPECT_EQ(f.status, FdeStatus::RiskBudgetInvalid);
++  EXPECT_FALSE(f_risk.complete_bound_closes);
++  EXPECT_EQ(f_risk.complete_bound_closes, d_risk.complete_bound_closes);
+   EXPECT_EQ(f.status, d.status);
+ }
+ 
+@@ -4063,44 +4088,75 @@ TEST(B3Risk, RSK02LedgerHasNoHiddenZerosAndOverlapGivesNoDividend) {
+   second.id = HypothesisId(2);
+   RiskLedgerInputs inputs;
+   inputs.omitted_event_set = {"two_uwb", "imu_imu"};
+-  const RiskLedger one = buildRiskLedger(risk, {first}, inputs);
+-  ASSERT_TRUE(one.closes) << one.reason;
+-  ASSERT_TRUE(one.inputs_valid);
++  const RiskLedger unknown = buildRiskLedger(risk, {first}, inputs);
++  EXPECT_FALSE(unknown.closes) << unknown.reason;
++  EXPECT_FALSE(unknown.all_terms_validated);
++  // The legacy sidecar has no canonical known/validated zero proofs, so the
++  // complete contract is invalid as well as non-closing; it remains useful as
++  // a diagnostic ledger and must expose every unknown term below.
++  ASSERT_FALSE(unknown.inputs_valid);
+   // Every term is present with a status and a source: nothing hides as a
+   // silent zero.
+   for (const char* id :
+        {"nominal", "p_nm", "hypotheses", "hypotheses_miss_channel", "bridge",
+         "history", "model", "omitted", "envelope", "selection"}) {
+-    const auto* term = one.find(id);
++    const auto* term = unknown.find(id);
+     ASSERT_NE(term, nullptr) << id;
+     EXPECT_FALSE(term->source.empty()) << id;
+     EXPECT_FALSE(term->note.empty()) << id;
+   }
+-  EXPECT_EQ(one.find("omitted")->status, RiskTermStatus::NotImplemented);
+-  EXPECT_NE(one.find("omitted")->note.find("two_uwb"), std::string::npos);
+-  EXPECT_EQ(one.find("bridge")->status, RiskTermStatus::AssumedUnvalidated);
+-  EXPECT_FALSE(one.all_terms_validated);
+-  EXPECT_FALSE(one.formal_eligible);
+-  EXPECT_TRUE(one.declared_total >= one.charged_total);
++  EXPECT_EQ(unknown.find("omitted")->status, RiskTermStatus::NotImplemented);
++  EXPECT_NE(unknown.find("omitted")->note.find("two_uwb"), std::string::npos);
++  EXPECT_EQ(unknown.find("bridge")->status, RiskTermStatus::AssumedUnvalidated);
++  EXPECT_TRUE(std::isnan(unknown.find("bridge")->value));
++  EXPECT_TRUE(std::isnan(unknown.find("omitted")->value));
++  EXPECT_FALSE(unknown.formal_eligible);
++  EXPECT_TRUE(std::isnan(unknown.declared_total));
++
++  // Once every zero/bound carries an explicit proof, the same values close;
++  // this is distinct from deployment formal eligibility.
++  CompleteRiskInputsV1 qualified;
++  qualified.legacy = inputs;
++  qualified.omitted_scope_complete = true;
++  qualified.bridge_escape_validated = true;
++  qualified.history_escape_validated = true;
++  qualified.model_escape_validated = true;
++  qualified.omitted_event_bound = 0.0;
++  qualified.omitted_event_bound_known = true;
++  qualified.omitted_event_bound_validated = true;
++  qualified.envelope_event_bound = 0.0;
++  qualified.envelope_event_bound_known = true;
++  qualified.envelope_event_bound_validated = true;
++  qualified.legacy.selection_contract_frozen = true;
++  qualified.selection_extra_bound = 0.0;
++  qualified.selection_bound_known = true;
++  qualified.selection_bound_validated = true;
++  CompleteRiskStatusV1 one_status;
++  const RiskLedger one = buildRiskLedger(
++      risk, {first}, qualified, &one_status);
++  ASSERT_TRUE(one_status.complete_bound_closes) << one.reason;
++  ASSERT_TRUE(one.all_terms_validated) << one.reason;
+ 
+   // Overlapping coverage gives no risk dividend: adding a hypothesis never
+   // lowers the charged total, and the miss channel stays explicit.
+-  const RiskLedger two = buildRiskLedger(risk, {first, second}, inputs);
+-  ASSERT_TRUE(two.closes) << two.reason;
++  CompleteRiskStatusV1 two_status;
++  const RiskLedger two = buildRiskLedger(
++      risk, {first, second}, qualified, &two_status);
++  ASSERT_TRUE(two_status.complete_bound_closes) << two.reason;
+   EXPECT_GT(two.charged_total, one.charged_total);
+   const auto* one_fault = one.find("hypotheses");
+   const auto* two_fault = two.find("hypotheses");
+   ASSERT_NE(one_fault, nullptr);
+   ASSERT_NE(two_fault, nullptr);
+   EXPECT_NEAR(two_fault->value, 2.0 * one_fault->value, 1e-18);
+-  // The detector miss channel is reported but not charged.
++  // The detector miss channel is validated and charged.
+   const auto* miss = two.find("hypotheses_miss_channel");
+   ASSERT_NE(miss, nullptr);
+   EXPECT_GT(miss->value, 0.0);
+-  EXPECT_EQ(miss->status, RiskTermStatus::AssumedUnvalidated);
++  EXPECT_EQ(miss->status, RiskTermStatus::Validated);
+   EXPECT_NEAR(two.charged_total,
+               one.find("nominal")->value + one.find("p_nm")->value +
+-                  2.0 * one_fault->value,
++                  2.0 * one_fault->value + miss->value,
+               1e-18);
+ }
+ 
+diff --git a/test/test_round2_tools.py b/test/test_round2_tools.py
+index a04817c..38074c4 100755
+--- a/test/test_round2_tools.py
++++ b/test/test_round2_tools.py
+@@ -98,7 +98,14 @@ class RoundTwoProtocolTests(unittest.TestCase):
+         right = subprocess.run(command, check=True, text=True,
+                                capture_output=True).stdout
+         self.assertEqual(left, right)
+-        self.assertEqual(json.loads(left)["status"], "PASS")
++        replay = json.loads(left)
++        # P0-04: the deterministic short fixture has no complete production
++        # risk ledger.  It must replay deterministically, but it may not turn
++        # unknown miss/escape/selection terms into a protected PASS.
++        self.assertEqual(replay["status"], "FAIL")
++        self.assertEqual(replay["failure_reason"], "SAFETY_INVARIANT")
++        self.assertFalse(replay["risk_budget_closed"])
++        self.assertFalse(replay["protected_available"])
+ 
+     def test_v6_run_validator_checks_inventory_and_protocol_digest(self):
+         executable = TEST_BIN_DIR / "realtime_performance_benchmark"
+diff --git a/test/test_p0_04_risk_oracle.cpp b/test/test_p0_04_risk_oracle.cpp
+new file mode 100644
+index 0000000..43cbb46
+--- /dev/null
++++ b/test/test_p0_04_risk_oracle.cpp
+@@ -0,0 +1,639 @@
++#include <gtest/gtest.h>
++
++#include <boost/multiprecision/cpp_bin_float.hpp>
++
++#include <cmath>
++#include <limits>
++#include <vector>
++
++#include "uwb_imu_pl/integrity/fde_manager.hpp"
++#include "uwb_imu_pl/integrity/fde_post_selection.hpp"
++#include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
++
++namespace {
++
++using namespace uwb_imu_pl;
++using Quad = boost::multiprecision::cpp_bin_float_quad;
++
++FaultHypothesisV2 hypothesis(std::uint64_t id, double allocation,
++                             double prior, double p_md) {
++  FaultHypothesisV2 out;
++  out.id = HypothesisId(id);
++  out.units = {FaultUnitId(id + 100)};
++  out.hmi_allocation = allocation;
++  out.prior_probability_bound = prior;
++  out.p_md_allocation = p_md;
++  return out;
++}
++
++FaultModeEvidence evidenceFor(const FaultHypothesisV2& hypothesis) {
++  FaultModeEvidence out;
++  out.hypothesis = hypothesis.id;
++  out.plausible = true;
++  out.unit_kind = FaultUnitKind::UwbRangeMeters;
++  out.parameter_dimension = 1;
++  out.profile_j = 1.0;
++  out.profile_valid = true;
++  return out;
++}
++
++CandidateEvaluation candidateFor(std::uint64_t id,
++                                 const FaultHypothesisV2& fault) {
++  CandidateEvaluation out;
++  out.valid = true;
++  out.post_detector_passed = true;
++  out.hpl_m = 1.0;
++  out.vpl_m = 1.0;
++  out.action.id = ExclusionActionId(id);
++  out.action.covered_units = fault.units;
++  out.action.exclusion_cardinality = 1;
++  out.action.recoverability = HistoryRecoverability::Recoverable;
++  return out;
++}
++
++CompleteRiskInputsV1 qualifiedInputs() {
++  CompleteRiskInputsV1 out;
++  out.omitted_scope_complete = true;
++  out.omitted_event_bound = 0.0;
++  out.omitted_event_bound_known = true;
++  out.omitted_event_bound_validated = true;
++  out.legacy.envelope_online = false;
++  out.legacy.envelope_leaf_count = 0;
++  out.envelope_event_bound = 0.0;
++  out.envelope_event_bound_known = true;
++  out.envelope_event_bound_validated = true;
++  out.bridge_escape_validated = true;
++  out.history_escape_validated = true;
++  out.model_escape_validated = true;
++  out.legacy.selection_contract_frozen = true;
++  out.selection_extra_bound = 0.0;
++  out.selection_bound_known = true;
++  out.selection_bound_validated = true;
++  out.model_formal_eligible = true;
++  return out;
++}
++
++// Independent O06 arithmetic: pi*max(allocation/pi, p_md) must be in the
++// total.  It is deliberately expressed directly in quad precision and does
++// not call axisTailSplit or another production helper.
++TEST(P004RiskOracle, MissChannelIsChargedIntoTheSameTotal) {
++  RiskBudgetV2 risk;
++  risk.p_hmi_total = 4.0e-5;
++  risk.nominal_axis_tail = 1.0e-6;
++  risk.p_nm = 1.0e-7;
++  const FaultHypothesisV2 fault = hypothesis(1, 3.0e-8, 1.0e-4, 1.0e-3);
++
++  CompleteRiskInputsV1 inputs;
++  inputs.legacy.omitted_event_set.clear();
++  const RiskLedger ledger = buildRiskLedger(risk, {fault}, inputs, nullptr);
++
++  const Quad alpha = Quad(fault.hmi_allocation) /
++      Quad(fault.prior_probability_bound);
++  const Quad beta(fault.p_md_allocation);
++  const Quad expected = Quad(3) * Quad(risk.nominal_axis_tail) +
++      Quad(risk.p_nm) +
++      Quad(fault.prior_probability_bound) *
++          (alpha > beta ? alpha : beta);
++  const RiskLedgerTerm* miss = ledger.find("hypotheses_miss_channel");
++  ASSERT_NE(miss, nullptr);
++  EXPECT_EQ(miss->status, RiskTermStatus::Validated);
++  EXPECT_GT(miss->value, 0.0);
++  EXPECT_NEAR(ledger.charged_total, static_cast<double>(expected), 1e-20);
++}
++
++TEST(P004RiskOracle, ZeroAllocationStillChargesPriorWeightedMiss) {
++  RiskBudgetV2 risk;
++  risk.p_hmi_total = 4.0e-5;
++  risk.nominal_axis_tail = 0.0;
++  risk.p_nm = 0.0;
++  const FaultHypothesisV2 fault = hypothesis(1, 0.0, 1.0e-2, 1.0e-3);
++  const RiskLedger ledger = buildRiskLedger(
++      risk, {fault}, qualifiedInputs(), nullptr);
++  const RiskLedgerTerm* miss = ledger.find("hypotheses_miss_channel");
++  ASSERT_NE(miss, nullptr);
++  EXPECT_EQ(miss->status, RiskTermStatus::Validated);
++  EXPECT_NEAR(miss->value, 1.0e-5, 1e-20);
++  EXPECT_NEAR(ledger.charged_total, 1.0e-5, 1e-20);
++}
++
++TEST(P004RiskOracle, FourStatusesAreIndependentAndUnknownIsNotZero) {
++  RiskBudgetV2 risk;
++  risk.p_hmi_total = 4.0e-5;
++  risk.nominal_axis_tail = 1.0e-6;
++  risk.p_nm = 1.0e-7;
++  const FaultHypothesisV2 fault = hypothesis(1, 3.0e-8, 1.0e-4, 1.0e-5);
++
++  CompleteRiskStatusV1 unknown_status;
++  const RiskLedger unknown = buildRiskLedger(
++      risk, {fault}, CompleteRiskInputsV1{}, &unknown_status);
++  EXPECT_TRUE(unknown_status.allocation_valid);
++  EXPECT_FALSE(unknown_status.complete_bound_closes);
++  EXPECT_FALSE(unknown.all_terms_validated);
++  EXPECT_FALSE(unknown.formal_eligible);
++  ASSERT_NE(unknown.find("bridge"), nullptr);
++  ASSERT_NE(unknown.find("omitted"), nullptr);
++  ASSERT_NE(unknown.find("selection"), nullptr);
++  EXPECT_TRUE(std::isnan(unknown.find("bridge")->value));
++  EXPECT_TRUE(std::isnan(unknown.find("omitted")->value));
++  EXPECT_TRUE(std::isnan(unknown.find("selection")->value));
++
++  CompleteRiskInputsV1 false_validation = qualifiedInputs();
++  false_validation.omitted_scope_complete = false;
++  false_validation.omitted_event_bound_validated = true;
++  false_validation.omitted_event_bound_known = false;
++  CompleteRiskStatusV1 still_unknown_status;
++  const RiskLedger still_unknown = buildRiskLedger(
++      risk, {fault}, false_validation, &still_unknown_status);
++  EXPECT_FALSE(still_unknown.all_terms_validated);
++  EXPECT_FALSE(still_unknown_status.complete_bound_closes);
++  EXPECT_TRUE(std::isnan(still_unknown.find("omitted")->value));
++
++  CompleteRiskStatusV1 qualified_status;
++  const RiskLedger qualified = buildRiskLedger(
++      risk, {fault}, qualifiedInputs(), &qualified_status);
++  EXPECT_TRUE(qualified_status.allocation_valid);
++  EXPECT_TRUE(qualified_status.complete_bound_closes) << qualified.reason;
++  EXPECT_TRUE(qualified.all_terms_validated) << qualified.reason;
++  EXPECT_TRUE(qualified.formal_eligible) << qualified.reason;
++}
++
++TEST(P004RiskOracle, AllocationCanFitWhileCompleteMissBoundExceedsBudget) {
++  RiskBudgetV2 risk;
++  risk.p_hmi_total = 4.0e-5;
++  risk.nominal_axis_tail = 1.0e-5;
++  risk.p_nm = 0.0;
++  // The allocation precheck sees 3e-5 + 1e-6 <= 4e-5.  The complete bound
++  // sees pi*beta=1e-4 and must refuse without changing any input budget.
++  const FaultHypothesisV2 fault = hypothesis(1, 1.0e-6, 1.0e-1, 1.0e-3);
++  CompleteRiskStatusV1 ledger_status;
++  const RiskLedger ledger = buildRiskLedger(
++      risk, {fault}, qualifiedInputs(), &ledger_status);
++  EXPECT_TRUE(ledger_status.allocation_valid);
++  EXPECT_TRUE(ledger.all_terms_validated);
++  EXPECT_FALSE(ledger_status.complete_bound_closes);
++  EXPECT_FALSE(ledger.formal_eligible);
++  EXPECT_GT(ledger.charged_total, risk.p_hmi_total);
++}
++
++TEST(P004RiskOracle, QuadBoundaryCannotBeRoundedBackIntoBudget) {
++  RiskBudgetV2 risk;
++  risk.p_hmi_total = 0.3;
++  risk.nominal_axis_tail = 0.1;
++  risk.p_nm = 0.0;
++  CompleteRiskStatusV1 status;
++  const RiskLedger ledger = buildRiskLedger(
++      risk, {}, qualifiedInputs(), &status);
++
++  // Exact(binary64(0.1))*3 > exact(binary64(0.3)); a binary64 recomputation
++  // is not authoritative and exported totals must round upward.
++  EXPECT_FALSE(status.allocation_valid);
++  EXPECT_FALSE(status.complete_bound_closes);
++  EXPECT_TRUE(ledger.all_terms_validated);
++  EXPECT_FALSE(ledger.formal_eligible);
++  EXPECT_GT(ledger.charged_total, risk.p_hmi_total);
++}
++
++TEST(P004RiskOracle, ReviewerExactMissBoundaryRemainsOverBudget) {
++  RiskBudgetV2 risk;
++  risk.p_hmi_total = 1.2075810982130189e-14;
++  risk.nominal_axis_tail = 0.0;
++  risk.p_nm = 0.0;
++  const FaultHypothesisV2 fault = hypothesis(
++      1, 5.226175689748075e-15, 2.0503228027277203e-12,
++      0.005889712081465759);
++
++  CompleteRiskStatusV1 status;
++  const RiskLedger ledger = buildRiskLedger(
++      risk, {fault}, qualifiedInputs(), &status);
++  const Quad expected = Quad(fault.prior_probability_bound) *
++      Quad(fault.p_md_allocation);
++
++  ASSERT_GT(expected, Quad(risk.p_hmi_total));
++  EXPECT_TRUE(status.allocation_valid);
++  EXPECT_FALSE(status.complete_bound_closes);
++  EXPECT_TRUE(ledger.all_terms_validated);
++  EXPECT_FALSE(ledger.formal_eligible);
++  EXPECT_GE(Quad(ledger.charged_total), expected);
++  EXPECT_GT(ledger.charged_total, risk.p_hmi_total);
++}
++
++TEST(P004RiskOracle, InvalidCompleteRiskBoundsFailClosedWithoutNegativeExport) {
++  RiskBudgetV2 risk;
++  risk.p_hmi_total = 4.0e-5;
++  const FaultHypothesisV2 fault = hypothesis(1, 0.0, 1.0e-2, 1.0e-3);
++  const std::vector<double> invalid{
++      -2.0, std::numeric_limits<double>::quiet_NaN(),
++      std::numeric_limits<double>::infinity()};
++
++  for (const double value : invalid) {
++    CompleteRiskInputsV1 omitted = qualifiedInputs();
++    omitted.omitted_scope_complete = false;
++    omitted.legacy.omitted_event_set = {"independent-omitted-event"};
++    omitted.omitted_event_bound = value;
++    omitted.omitted_event_bound_known = true;
++    omitted.omitted_event_bound_validated = true;
++    CompleteRiskStatusV1 omitted_status;
++    const RiskLedger omitted_ledger = buildRiskLedger(
++        risk, {fault}, omitted, &omitted_status);
++    ASSERT_NE(omitted_ledger.find("omitted"), nullptr);
++    EXPECT_TRUE(std::isnan(omitted_ledger.find("omitted")->value));
++    EXPECT_FALSE(omitted_status.complete_bound_closes);
++    EXPECT_FALSE(omitted_ledger.all_terms_validated);
++    EXPECT_FALSE(omitted_ledger.formal_eligible);
++    EXPECT_FALSE(omitted_ledger.charged_total < 0.0);
++
++    CompleteRiskInputsV1 envelope = qualifiedInputs();
++    envelope.legacy.envelope_online = true;
++    envelope.legacy.envelope_leaf_count = 1;
++    envelope.envelope_event_bound = value;
++    envelope.envelope_event_bound_known = true;
++    envelope.envelope_event_bound_validated = true;
++    CompleteRiskStatusV1 envelope_status;
++    const RiskLedger envelope_ledger = buildRiskLedger(
++        risk, {fault}, envelope, &envelope_status);
++    ASSERT_NE(envelope_ledger.find("envelope"), nullptr);
++    EXPECT_TRUE(std::isnan(envelope_ledger.find("envelope")->value));
++    EXPECT_FALSE(envelope_status.complete_bound_closes);
++    EXPECT_FALSE(envelope_ledger.all_terms_validated);
++    EXPECT_FALSE(envelope_ledger.formal_eligible);
++    EXPECT_FALSE(envelope_ledger.charged_total < 0.0);
++
++    CompleteRiskInputsV1 selection = qualifiedInputs();
++    selection.selection_extra_bound = value;
++    CompleteRiskStatusV1 selection_status;
++    const RiskLedger selection_ledger = buildRiskLedger(
++        risk, {fault}, selection, &selection_status);
++    ASSERT_NE(selection_ledger.find("selection"), nullptr);
++    EXPECT_TRUE(std::isnan(selection_ledger.find("selection")->value));
++    EXPECT_FALSE(selection_status.complete_bound_closes);
++    EXPECT_FALSE(selection_ledger.all_terms_validated);
++    EXPECT_FALSE(selection_ledger.formal_eligible);
++    EXPECT_FALSE(selection_ledger.charged_total < 0.0);
++  }
++}
++
++// Independent representation oracle for the three sidecar terms.  This is a
++// full Boolean Cartesian product, not a replay of production predicates: each
++// raw context/known/validated combination is crossed with all IEEE boundary
++// classes requested by the P0-04 review.
++TEST(P004RiskOracle, SidecarTermsObeyCanonicalCartesianContract) {
++  RiskBudgetV2 risk;
++  risk.p_hmi_total = 1.0;
++  const std::vector<double> values{
++      -std::numeric_limits<double>::infinity(), -0.25, -0.0, 0.0, 0.25,
++      std::numeric_limits<double>::infinity(),
++      std::numeric_limits<double>::quiet_NaN()};
++
++  const auto finite_nonnegative = [](double value) {
++    return std::isfinite(value) && value >= 0.0;
++  };
++  const auto check = [&](const RiskLedger& ledger,
++                         const CompleteRiskStatusV1& status,
++                         const char* id, bool representation_valid,
++                         bool term_known, bool term_validated,
++                         double expected_value) {
++    const RiskLedgerTerm* term = ledger.find(id);
++    ASSERT_NE(term, nullptr);
++    EXPECT_EQ(ledger.inputs_valid, representation_valid);
++    EXPECT_EQ(status.complete_bound_closes, term_known);
++    EXPECT_EQ(ledger.all_terms_validated,
++              term_known && term_validated);
++    EXPECT_EQ(ledger.formal_eligible, term_known && term_validated);
++    if (term_known) {
++      EXPECT_TRUE(std::isfinite(term->value));
++      EXPECT_EQ(term->value, expected_value);
++      EXPECT_EQ(term->status, term_validated
++          ? RiskTermStatus::Validated
++          : RiskTermStatus::AssumedUnvalidated);
++    } else {
++      EXPECT_TRUE(std::isnan(term->value));
++      EXPECT_EQ(term->status, RiskTermStatus::NotImplemented);
++    }
++  };
++
++  // Omitted-event raw state: scope-complete x event-present x known x
++  // validated x seven bound classes (112 cases).
++  for (bool scope_complete : {false, true}) {
++    for (bool event_present : {false, true}) {
++      for (bool known : {false, true}) {
++        for (bool validated : {false, true}) {
++          for (double value : values) {
++            SCOPED_TRACE(::testing::Message()
++                << "omitted scope=" << scope_complete
++                << " event=" << event_present << " known=" << known
++                << " validated=" << validated << " value=" << value);
++            CompleteRiskInputsV1 inputs = qualifiedInputs();
++            inputs.omitted_scope_complete = scope_complete;
++            inputs.legacy.omitted_event_set = event_present
++                ? std::vector<std::string>{"independent-event"}
++                : std::vector<std::string>{};
++            inputs.omitted_event_bound = value;
++            inputs.omitted_event_bound_known = known;
++            inputs.omitted_event_bound_validated = validated;
++
++            const bool numeric = finite_nonnegative(value);
++            const bool flag_consistent = !validated || known;
++            const bool zero_proof = scope_complete && !event_present;
++            const bool explicit_events = scope_complete && event_present;
++            const bool canonical_zero = zero_proof && numeric &&
++                value == 0.0 && known && validated;
++            const bool explicit_known = explicit_events && numeric &&
++                flag_consistent && known;
++            const bool representation_valid = zero_proof
++                ? canonical_zero
++                : (explicit_events
++                    ? numeric && flag_consistent
++                    : numeric && flag_consistent && !known && !validated &&
++                        value == 0.0);
++            const bool term_known = canonical_zero || explicit_known;
++            const bool term_validated = canonical_zero ||
++                (explicit_known && validated);
++            CompleteRiskStatusV1 status;
++            const RiskLedger ledger = buildRiskLedger(
++                risk, {}, inputs, &status);
++            check(ledger, status, "omitted", representation_valid,
++                  term_known, term_validated, value);
++          }
++        }
++      }
++    }
++  }
++
++  // Envelope raw state: online x leaf-present x known x validated x seven
++  // bound classes (112 cases).  The mixed online/leaf states are invalid.
++  for (bool online : {false, true}) {
++    for (bool leaf_present : {false, true}) {
++      for (bool known : {false, true}) {
++        for (bool validated : {false, true}) {
++          for (double value : values) {
++            SCOPED_TRACE(::testing::Message()
++                << "envelope online=" << online
++                << " leaf=" << leaf_present << " known=" << known
++                << " validated=" << validated << " value=" << value);
++            CompleteRiskInputsV1 inputs = qualifiedInputs();
++            inputs.legacy.envelope_online = online;
++            inputs.legacy.envelope_leaf_count = leaf_present ? 1u : 0u;
++            inputs.envelope_event_bound = value;
++            inputs.envelope_event_bound_known = known;
++            inputs.envelope_event_bound_validated = validated;
++
++            const bool numeric = finite_nonnegative(value);
++            const bool flag_consistent = !validated || known;
++            const bool zero_proof = !online && !leaf_present;
++            const bool explicit_events = online && leaf_present;
++            const bool canonical_zero = zero_proof && numeric &&
++                value == 0.0 && known && validated;
++            const bool explicit_known = explicit_events && numeric &&
++                flag_consistent && known;
++            const bool representation_valid = zero_proof
++                ? canonical_zero
++                : (explicit_events && numeric && flag_consistent);
++            const bool term_known = canonical_zero || explicit_known;
++            const bool term_validated = canonical_zero ||
++                (explicit_known && validated);
++            CompleteRiskStatusV1 status;
++            const RiskLedger ledger = buildRiskLedger(
++                risk, {}, inputs, &status);
++            check(ledger, status, "envelope", representation_valid,
++                  term_known, term_validated, value);
++          }
++        }
++      }
++    }
++  }
++
++  // Selection raw state: event-set-frozen x known x validated x seven bound
++  // classes (56 cases).  There is no implicit zero proof before freezing.
++  for (bool frozen : {false, true}) {
++    for (bool known : {false, true}) {
++      for (bool validated : {false, true}) {
++        for (double value : values) {
++          SCOPED_TRACE(::testing::Message()
++              << "selection frozen=" << frozen << " known=" << known
++              << " validated=" << validated << " value=" << value);
++          CompleteRiskInputsV1 inputs = qualifiedInputs();
++          inputs.legacy.selection_contract_frozen = frozen;
++          inputs.selection_extra_bound = value;
++          inputs.selection_bound_known = known;
++          inputs.selection_bound_validated = validated;
++
++          const bool numeric = finite_nonnegative(value);
++          const bool flag_consistent = !validated || known;
++          const bool representation_valid = frozen
++              ? numeric && flag_consistent
++              : numeric && flag_consistent && !known && !validated &&
++                  value == 0.0;
++          const bool term_known = frozen && numeric && flag_consistent &&
++              known;
++          const bool term_validated = term_known && validated;
++          CompleteRiskStatusV1 status;
++          const RiskLedger ledger = buildRiskLedger(
++              risk, {}, inputs, &status);
++          check(ledger, status, "selection", representation_valid,
++                term_known, term_validated, value);
++        }
++      }
++    }
++  }
++}
++
++TEST(P004RiskOracle, RejectedHypothesisRiskIsUnknownRatherThanKnownZero) {
++  RiskBudgetV2 risk;
++  risk.p_hmi_total = 4.0e-5;
++  const double nan = std::numeric_limits<double>::quiet_NaN();
++  const double inf = std::numeric_limits<double>::infinity();
++  std::vector<FaultHypothesisV2> rejected{
++      hypothesis(1, -1.0, 1.0e-2, 1.0e-3),
++      hypothesis(2, nan, 1.0e-2, 1.0e-3),
++      hypothesis(3, inf, 1.0e-2, 1.0e-3),
++      hypothesis(4, 1.0e-8, -1.0, 1.0e-3),
++      hypothesis(5, 1.0e-8, nan, 1.0e-3),
++      hypothesis(6, 1.0e-8, inf, 1.0e-3),
++      hypothesis(7, 1.0e-8, 1.0e-2, -1.0),
++      hypothesis(8, 1.0e-8, 1.0e-2, nan),
++      hypothesis(9, 1.0e-8, 1.0e-2, inf)};
++  for (const auto& item : rejected) {
++    CompleteRiskStatusV1 status;
++    const RiskLedger ledger = buildRiskLedger(
++        risk, {item}, qualifiedInputs(), &status);
++    ASSERT_NE(ledger.find("hypotheses"), nullptr);
++    ASSERT_NE(ledger.find("hypotheses_miss_channel"), nullptr);
++    EXPECT_TRUE(std::isnan(ledger.find("hypotheses")->value));
++    EXPECT_TRUE(std::isnan(ledger.find("hypotheses_miss_channel")->value));
++    EXPECT_FALSE(status.complete_bound_closes);
++    EXPECT_FALSE(ledger.all_terms_validated);
++    EXPECT_FALSE(ledger.formal_eligible);
++    EXPECT_FALSE(ledger.charged_total < 0.0);
++  }
++}
++
++TEST(P004RiskOracle, OverflowFailsClosedAndProvenZeroTermsRemainFinite) {
++  RiskBudgetV2 overflow;
++  overflow.p_hmi_total = std::numeric_limits<double>::max();
++  overflow.nominal_axis_tail = std::numeric_limits<double>::max();
++  CompleteRiskStatusV1 overflow_status;
++  const RiskLedger overflow_ledger = buildRiskLedger(
++      overflow, {}, qualifiedInputs(), &overflow_status);
++  EXPECT_FALSE(overflow_status.complete_bound_closes);
++  EXPECT_FALSE(overflow_ledger.all_terms_validated);
++  EXPECT_FALSE(overflow_ledger.formal_eligible);
++  EXPECT_FALSE(overflow_ledger.charged_total < 0.0);
++
++  RiskBudgetV2 zero;
++  zero.p_hmi_total = 4.0e-5;
++  zero.nominal_axis_tail = 0.0;
++  zero.p_nm = 0.0;
++  zero.p_bridge_escape = 0.0;
++  zero.p_history_contamination = 0.0;
++  zero.p_model_escape = 0.0;
++  CompleteRiskStatusV1 zero_status;
++  const RiskLedger zero_ledger = buildRiskLedger(
++      zero, {}, qualifiedInputs(), &zero_status);
++  ASSERT_TRUE(zero_status.complete_bound_closes) << zero_ledger.reason;
++  ASSERT_TRUE(zero_ledger.all_terms_validated) << zero_ledger.reason;
++  EXPECT_TRUE(zero_ledger.formal_eligible);
++  for (const auto& term : zero_ledger.terms) {
++    EXPECT_TRUE(std::isfinite(term.value));
++    EXPECT_GE(term.value, 0.0);
++  }
++  EXPECT_EQ(zero_ledger.charged_total, 0.0);
++}
++
++TEST(P004RiskOracle, UnverifiableSharedEventClaimsRemainSingletons) {
++  auto action = [](std::uint64_t id) {
++    ActionGuarantee out;
++    out.action_id = id;
++    out.reference_certificate_id = 77;
++    out.shared_reference_certificate = true;
++    out.shared_accepted_event = true;
++    out.shared_time = true;
++    out.shared_output_quantity = true;
++    out.triangle_transfer_evidence = true;
++    out.L_reference_m = Eigen::Vector3d::Ones();
++    out.p_reference_m = Eigen::Vector3d::Zero();
++    out.p_action_m = Eigen::Vector3d(0.1 * id, 0.0, 0.0);
++    out.L_action_m = out.L_reference_m + out.p_action_m.cwiseAbs();
++    out.L_action_m.x() = std::nextafter(
++        out.L_action_m.x(), std::numeric_limits<double>::infinity());
++    out.epsilon_budget = 3.0e-5;
++    return out;
++  };
++  ActionGuarantee first = action(1);
++  ActionGuarantee second = action(2);
++  // Independent producer/reference fixture: these values are deliberately
++  // built without copying ActionGuarantee fields.  The current API still lacks
++  // the full P0-03/P0-02 payload and recomputable frozen-identity digest, so
++  // even internally consistent claims are not authority for event sharing.
++  auto externalClaim = [](std::uint64_t action_id) {
++    ActionSharedEventV1 out;
++    out.action_id = action_id;
++    out.common_reference_certificate_id = 77;
++    out.common_L_reference_m = Eigen::Vector3d::Ones();
++    out.common_p_reference_m = Eigen::Vector3d::Zero();
++    out.accepted_event_id = "dual_channel_intersection_v6";
++    out.reference_time_id = 1234;
++    out.output_quantity_id = "protected_position_xyz_m";
++    return out;
++  };
++  const std::vector<ActionSharedEventV1> same_event{
++      externalClaim(1), externalClaim(2)};
++  const GuaranteeGroupResult shared =
++      buildGuaranteeGroups({first, second}, 7.0e-5, same_event);
++  ASSERT_TRUE(shared.valid) << shared.reason;
++  EXPECT_EQ(shared.groups.size(), 2u);
++  EXPECT_EQ(shared.singleton_groups, 2u);
++  EXPECT_EQ(shared.shared_groups, 0u);
++  EXPECT_NEAR(shared.total_charged_budget, 6.0e-5, 1e-20);
++
++  // Exact reviewer forgery probe: caller-invented identifiers cannot turn two
++  // disjoint actions into one 3e-5 event under the unchanged 4e-5 budget.
++  auto forged = same_event;
++  for (auto& claim : forged) {
++    claim.common_reference_certificate_id = 999;
++    claim.accepted_event_id = "invented";
++    claim.reference_time_id = 123;
++    claim.output_quantity_id = "invented";
++  }
++  const GuaranteeGroupResult forged_result =
++      buildGuaranteeGroups({first, second}, 4.0e-5, forged);
++  EXPECT_FALSE(forged_result.valid);
++  EXPECT_EQ(forged_result.groups.size(), 2u);
++  EXPECT_EQ(forged_result.singleton_groups, 2u);
++  EXPECT_EQ(forged_result.shared_groups, 0u);
++  EXPECT_NEAR(forged_result.total_charged_budget, 6.0e-5, 1e-20);
++
++  const GuaranteeGroupResult no_sidecar =
++      buildGuaranteeGroups({first, second}, 4.0e-5);
++  EXPECT_EQ(no_sidecar.groups.size(), 2u);
++  EXPECT_FALSE(no_sidecar.valid);
++
++  auto tampered = same_event;
++  tampered[1].common_p_reference_m.x() = 99.0;
++  tampered[1].accepted_event_id = "tampered";
++  const GuaranteeGroupResult tampered_result =
++      buildGuaranteeGroups({first, second}, 4.0e-5, tampered);
++  EXPECT_FALSE(tampered_result.valid);
++  EXPECT_EQ(tampered_result.groups.size(), 2u);
++  EXPECT_NEAR(tampered_result.total_charged_budget, 6.0e-5, 1e-20);
++
++  ActionGuarantee duplicate = second;
++  duplicate.action_id = first.action_id;
++  EXPECT_FALSE(buildGuaranteeGroups(
++      {first, duplicate}, 1.0, same_event).valid);
++
++}
++
++// D06's exact counterexample at the production caller: equal plausible IDs
++// are labels, not a shared failure event.  With no numeric transfer proof the
++// two original actions are singletons and 2*3e-5 exceeds the unchanged 4e-5.
++TEST(P004RiskOracle, ManagerDoesNotPremergeDisjointActionsByPlausibleId) {
++  RiskBudgetV2 risk;
++  risk.p_hmi_total = 4.0e-5;
++  risk.nominal_axis_tail = 0.0;
++  risk.p_nm = 0.0;
++  const FaultHypothesisV2 fault = hypothesis(1, 3.0e-5, 1.0e-2, 1.0e-4);
++
++  DetectorResultV2 detector;
++  detector.numerically_valid = true;
++  detector.passed = false;
++  std::vector<CandidateEvaluation> candidates{
++      candidateFor(10, fault), candidateFor(11, fault)};
++  const FdeDecision decision = FdeManager().decide(
++      detector, {fault}, {evidenceFor(fault)}, &candidates, {}, risk);
++
++  EXPECT_EQ(decision.selection_event_classes, 2u) << decision.reason;
++  EXPECT_NEAR(decision.selection_charged_budget, 6.0e-5, 1e-20);
++  EXPECT_FALSE(decision.selection_budget_ok);
++  EXPECT_FALSE(decision.commit_allowed);
++  EXPECT_FALSE(decision.integrity_available);
++  EXPECT_FALSE(decision.selected_action.has_value());
++  EXPECT_FALSE(candidates[0].selected);
++  EXPECT_FALSE(candidates[1].selected);
++}
++
++TEST(P004RiskOracle, NoAlarmDoesNotMakeActionSelectionEventsFree) {
++  RiskBudgetV2 risk;
++  risk.p_hmi_total = 4.0e-5;
++  risk.nominal_axis_tail = 0.0;
++  risk.p_nm = 0.0;
++  const FaultHypothesisV2 fault = hypothesis(1, 3.0e-5, 1.0e-2, 1.0e-4);
++
++  DetectorResultV2 detector;
++  detector.numerically_valid = true;
++  detector.passed = true;
++  std::vector<CandidateEvaluation> candidates{
++      candidateFor(20, fault), candidateFor(21, fault)};
++  const FdeDecision decision = FdeManager().decide(
++      detector, {fault}, {}, &candidates, {}, risk);
++
++  EXPECT_TRUE(decision.plausible_hypotheses.empty());
++  EXPECT_EQ(decision.selection_event_classes, 2u);
++  EXPECT_NEAR(decision.selection_charged_budget, 6.0e-5, 1e-20);
++  EXPECT_FALSE(decision.selection_budget_ok);
++  EXPECT_FALSE(decision.commit_allowed);
++  EXPECT_FALSE(decision.selected_action.has_value());
++  EXPECT_FALSE(candidates[0].selected);
++  EXPECT_FALSE(candidates[1].selected);
++}
++
++}  // namespace

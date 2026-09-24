@@ -408,6 +408,13 @@ TEST(FdeProfiles, NominalPipelineAndFaultCensusFollowResolvedScope) {
       continue;
     }
     EXPECT_EQ(output.detector.detector_type, "dual_channel_v1");
+    EXPECT_EQ(output.protection_level.risk_budget_valid,
+              output.diagnostics.risk_ledger_closes &&
+                  output.diagnostics.risk_ledger_all_validated);
+    EXPECT_FALSE(output.protection_level.risk_budget_valid);
+    EXPECT_FALSE(output.protection_level.formal_eligible);
+    EXPECT_EQ(output.protection_level.availability,
+              uwb_imu_pl::Availability::Unavailable);
     EXPECT_EQ(output.diagnostics.single_uwb_hypotheses > 0, expected.uwb);
     EXPECT_EQ(output.diagnostics.single_accel_hypotheses > 0, expected.imu);
     EXPECT_EQ(output.diagnostics.single_gyro_hypotheses > 0, expected.imu);
@@ -1957,7 +1964,9 @@ TEST(IntegrityV2ProtectionLevel, RecomputesPostCandidateAndStaysResearchOnly) {
       window, candidate, detector, &remaining, uwb_imu_pl::RiskBudgetV2{});
   EXPECT_TRUE(result.model_valid) << result.reason;
   EXPECT_TRUE(result.pl_xyz_m.allFinite());
-  EXPECT_TRUE(result.risk_budget_valid);
+  EXPECT_FALSE(result.risk_budget_valid)
+      << "PL alone cannot close omitted/escape/selection events";
+  EXPECT_EQ(result.availability, uwb_imu_pl::Availability::Unavailable);
   EXPECT_FALSE(result.formal_eligible);
   EXPECT_TRUE(remaining[0].monitored);
   EXPECT_TRUE(remaining[1].monitored);
@@ -2209,12 +2218,16 @@ TEST(IntegrityV2Fde, CoversEntirePlausibleSetBeforeSelection) {
   both.action.covered_units = {h1.units.front(), h2.units.front()};
   both.action.exclusion_cardinality = 2;
   std::vector<uwb_imu_pl::CandidateEvaluation> candidates{one, both};
-  const auto decision =
-      uwb_imu_pl::FdeManager().decide(detector, {h1, h2}, {e1, e2}, &candidates,
-                                      {}, uwb_imu_pl::RiskBudgetV2{});
-  ASSERT_TRUE(decision.selected_action.has_value());
-  EXPECT_EQ(decision.selected_action->id, both.action.id);
-  EXPECT_EQ(decision.status, uwb_imu_pl::FdeStatus::AmbiguousUnionExclusion);
+  uwb_imu_pl::FdeRiskDecisionV1 final_risk;
+  uwb_imu_pl::FdeDecisionContextV1 context;
+  context.risk_result = &final_risk;
+  const auto decision = uwb_imu_pl::FdeManager().decide(
+      detector, {h1, h2}, {e1, e2}, &candidates, {},
+      uwb_imu_pl::RiskBudgetV2{}, &context);
+  EXPECT_FALSE(decision.selected_action.has_value());
+  EXPECT_EQ(decision.status, uwb_imu_pl::FdeStatus::RiskBudgetInvalid);
+  EXPECT_FALSE(final_risk.complete_bound_closes);
+  EXPECT_FALSE(decision.commit_allowed);
 }
 
 TEST(IntegrityV2Fde, PlausibleStrictSupersetRetainsCoverageDutyInSelection) {
@@ -2325,22 +2338,27 @@ TEST(IntegrityV2Fde, SelectionRiskChargedOverPublishableSet) {
   both.action.covered_units = {h1.units.front(), h2.units.front()};
   both.action.exclusion_cardinality = 2;
   std::vector<CandidateEvaluation> candidates{one, both};
-  const auto decision =
-      FdeManager().decide(detector, {h1, h2}, {e1, e2}, &candidates, {},
-                          RiskBudgetV2{});
-  ASSERT_TRUE(decision.selected_action.has_value());
-  EXPECT_EQ(decision.selected_action->id, both.action.id);
+  FdeRiskDecisionV1 final_risk;
+  FdeDecisionContextV1 context;
+  context.risk_result = &final_risk;
+  const auto decision = FdeManager().decide(
+      detector, {h1, h2}, {e1, e2}, &candidates, {}, RiskBudgetV2{},
+      &context);
+  EXPECT_FALSE(decision.selected_action.has_value());
   EXPECT_TRUE(decision.profile_pool_valid);
   EXPECT_TRUE(decision.profile_pool_comparable);
   EXPECT_TRUE(decision.profile_pool_ranked);
   EXPECT_EQ(decision.plausible_profile_j, (std::vector<double>{1.0, 1.0}));
-  // Both eligible actions protect the same plausible union -> one event class,
-  // charged once with the union budget.
+  // Only `both` covers the complete plausible set, so exactly one original
+  // eligible action enters grouping.  The independent P0-04 oracle covers the
+  // two-eligible-action disjoint-event counterexample.
   EXPECT_EQ(decision.selection_event_classes, 1u);
   EXPECT_TRUE(decision.selection_budget_ok);
   EXPECT_DOUBLE_EQ(decision.selection_charged_budget, 3e-6);
   EXPECT_DOUBLE_EQ(decision.selection_available_budget,
                    RiskBudgetV2{}.p_hmi_total);
+  EXPECT_FALSE(final_risk.complete_bound_closes);
+  EXPECT_FALSE(decision.commit_allowed);
   ASSERT_EQ(decision.candidate_dispositions.size(), 2u);
   // The candidate that covers the complete plausible set with a finite
   // protected reference is the reference-estimate path.
@@ -2387,8 +2405,9 @@ TEST(IntegrityV2Fde, MixedUnitPoolIsRecordedAndNotRanked) {
   EXPECT_TRUE(decision.profile_pool_mixed_dimensions);
   EXPECT_FALSE(decision.profile_pool_comparable);
   EXPECT_FALSE(decision.profile_pool_ranked);
-  ASSERT_TRUE(decision.selected_action.has_value());
-  EXPECT_EQ(decision.status, FdeStatus::AmbiguousUnionExclusion);
+  EXPECT_FALSE(decision.selected_action.has_value());
+  EXPECT_EQ(decision.status, FdeStatus::RiskBudgetInvalid);
+  EXPECT_FALSE(decision.commit_allowed);
 }
 
 TEST(IntegrityV2Fde, ActionDedupRejectsSameShapeAndNormDifferentContent) {
@@ -2433,8 +2452,8 @@ TEST(IntegrityV2Fde, MandatoryGroupIsIndependentOfProbabilisticPlausibility) {
   std::vector<CandidateEvaluation> candidates{keep, exclude};
   const auto decision = FdeManager().decide(
       barrier, {}, {}, &candidates, {FactorGroupId(77)}, RiskBudgetV2{});
-  ASSERT_TRUE(decision.selected_action.has_value());
-  EXPECT_EQ(decision.selected_action->id, ExclusionActionId(2));
+  EXPECT_FALSE(decision.selected_action.has_value());
+  EXPECT_EQ(decision.status, FdeStatus::RiskBudgetInvalid);
   EXPECT_TRUE(decision.plausible_hypotheses.empty());
   EXPECT_EQ(decision.mandatory_exclusion_groups,
             (std::vector<FactorGroupId>{FactorGroupId(77)}));
@@ -3047,15 +3066,21 @@ TEST(GateDSelection, DenseAndOperatorPathsSelectSameSuccessfulExclusion) {
   DetectorResultV2 alarm;
   alarm.numerically_valid = true;
   alarm.passed = false;
-  const auto f = FdeManager().decide(alarm, {fault}, {evidence}, &fast, {},
-                                     RiskBudgetV2{});
-  const auto d = FdeManager().decide(alarm, {fault}, {evidence}, &dense, {},
-                                     RiskBudgetV2{});
-  ASSERT_TRUE(f.commit_allowed);
-  ASSERT_TRUE(d.commit_allowed);
-  EXPECT_EQ(f.selected_action->id, exclude.id);
-  EXPECT_EQ(f.selected_action->id, d.selected_action->id);
-  EXPECT_EQ(f.status, FdeStatus::SuccessUwbExclusion);
+  FdeRiskDecisionV1 f_risk, d_risk;
+  FdeDecisionContextV1 f_context, d_context;
+  f_context.risk_result = &f_risk;
+  d_context.risk_result = &d_risk;
+  const auto f = FdeManager().decide(
+      alarm, {fault}, {evidence}, &fast, {}, RiskBudgetV2{}, &f_context);
+  const auto d = FdeManager().decide(
+      alarm, {fault}, {evidence}, &dense, {}, RiskBudgetV2{}, &d_context);
+  ASSERT_FALSE(f.commit_allowed);
+  ASSERT_FALSE(d.commit_allowed);
+  EXPECT_FALSE(f.selected_action.has_value());
+  EXPECT_FALSE(d.selected_action.has_value());
+  EXPECT_EQ(f.status, FdeStatus::RiskBudgetInvalid);
+  EXPECT_FALSE(f_risk.complete_bound_closes);
+  EXPECT_EQ(f_risk.complete_bound_closes, d_risk.complete_bound_closes);
   EXPECT_EQ(f.status, d.status);
 }
 
@@ -4063,44 +4088,75 @@ TEST(B3Risk, RSK02LedgerHasNoHiddenZerosAndOverlapGivesNoDividend) {
   second.id = HypothesisId(2);
   RiskLedgerInputs inputs;
   inputs.omitted_event_set = {"two_uwb", "imu_imu"};
-  const RiskLedger one = buildRiskLedger(risk, {first}, inputs);
-  ASSERT_TRUE(one.closes) << one.reason;
-  ASSERT_TRUE(one.inputs_valid);
+  const RiskLedger unknown = buildRiskLedger(risk, {first}, inputs);
+  EXPECT_FALSE(unknown.closes) << unknown.reason;
+  EXPECT_FALSE(unknown.all_terms_validated);
+  // The legacy sidecar has no canonical known/validated zero proofs, so the
+  // complete contract is invalid as well as non-closing; it remains useful as
+  // a diagnostic ledger and must expose every unknown term below.
+  ASSERT_FALSE(unknown.inputs_valid);
   // Every term is present with a status and a source: nothing hides as a
   // silent zero.
   for (const char* id :
        {"nominal", "p_nm", "hypotheses", "hypotheses_miss_channel", "bridge",
         "history", "model", "omitted", "envelope", "selection"}) {
-    const auto* term = one.find(id);
+    const auto* term = unknown.find(id);
     ASSERT_NE(term, nullptr) << id;
     EXPECT_FALSE(term->source.empty()) << id;
     EXPECT_FALSE(term->note.empty()) << id;
   }
-  EXPECT_EQ(one.find("omitted")->status, RiskTermStatus::NotImplemented);
-  EXPECT_NE(one.find("omitted")->note.find("two_uwb"), std::string::npos);
-  EXPECT_EQ(one.find("bridge")->status, RiskTermStatus::AssumedUnvalidated);
-  EXPECT_FALSE(one.all_terms_validated);
-  EXPECT_FALSE(one.formal_eligible);
-  EXPECT_TRUE(one.declared_total >= one.charged_total);
+  EXPECT_EQ(unknown.find("omitted")->status, RiskTermStatus::NotImplemented);
+  EXPECT_NE(unknown.find("omitted")->note.find("two_uwb"), std::string::npos);
+  EXPECT_EQ(unknown.find("bridge")->status, RiskTermStatus::AssumedUnvalidated);
+  EXPECT_TRUE(std::isnan(unknown.find("bridge")->value));
+  EXPECT_TRUE(std::isnan(unknown.find("omitted")->value));
+  EXPECT_FALSE(unknown.formal_eligible);
+  EXPECT_TRUE(std::isnan(unknown.declared_total));
+
+  // Once every zero/bound carries an explicit proof, the same values close;
+  // this is distinct from deployment formal eligibility.
+  CompleteRiskInputsV1 qualified;
+  qualified.legacy = inputs;
+  qualified.omitted_scope_complete = true;
+  qualified.bridge_escape_validated = true;
+  qualified.history_escape_validated = true;
+  qualified.model_escape_validated = true;
+  qualified.omitted_event_bound = 0.0;
+  qualified.omitted_event_bound_known = true;
+  qualified.omitted_event_bound_validated = true;
+  qualified.envelope_event_bound = 0.0;
+  qualified.envelope_event_bound_known = true;
+  qualified.envelope_event_bound_validated = true;
+  qualified.legacy.selection_contract_frozen = true;
+  qualified.selection_extra_bound = 0.0;
+  qualified.selection_bound_known = true;
+  qualified.selection_bound_validated = true;
+  CompleteRiskStatusV1 one_status;
+  const RiskLedger one = buildRiskLedger(
+      risk, {first}, qualified, &one_status);
+  ASSERT_TRUE(one_status.complete_bound_closes) << one.reason;
+  ASSERT_TRUE(one.all_terms_validated) << one.reason;
 
   // Overlapping coverage gives no risk dividend: adding a hypothesis never
   // lowers the charged total, and the miss channel stays explicit.
-  const RiskLedger two = buildRiskLedger(risk, {first, second}, inputs);
-  ASSERT_TRUE(two.closes) << two.reason;
+  CompleteRiskStatusV1 two_status;
+  const RiskLedger two = buildRiskLedger(
+      risk, {first, second}, qualified, &two_status);
+  ASSERT_TRUE(two_status.complete_bound_closes) << two.reason;
   EXPECT_GT(two.charged_total, one.charged_total);
   const auto* one_fault = one.find("hypotheses");
   const auto* two_fault = two.find("hypotheses");
   ASSERT_NE(one_fault, nullptr);
   ASSERT_NE(two_fault, nullptr);
   EXPECT_NEAR(two_fault->value, 2.0 * one_fault->value, 1e-18);
-  // The detector miss channel is reported but not charged.
+  // The detector miss channel is validated and charged.
   const auto* miss = two.find("hypotheses_miss_channel");
   ASSERT_NE(miss, nullptr);
   EXPECT_GT(miss->value, 0.0);
-  EXPECT_EQ(miss->status, RiskTermStatus::AssumedUnvalidated);
+  EXPECT_EQ(miss->status, RiskTermStatus::Validated);
   EXPECT_NEAR(two.charged_total,
               one.find("nominal")->value + one.find("p_nm")->value +
-                  2.0 * one_fault->value,
+                  2.0 * one_fault->value + miss->value,
               1e-18);
 }
 

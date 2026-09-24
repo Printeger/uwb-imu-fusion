@@ -123,6 +123,27 @@ struct ActionGuarantee {
   double epsilon_budget = 0.0;
 };
 
+// Versioned event-claim sidecar; ActionGuarantee keeps its golden layout.
+//
+// P0-04 does not trust this caller-populated summary as a statistical proof.
+// A future shared-event implementation must replace/extend it with the full
+// independently produced P0-03 proof payload, the P0-02 accepted-event
+// certificate, frozen window/time/output identity, and a digest that this
+// consumer recomputes.  Until that producer exists, the overload accepting
+// these claims deliberately charges every action as a singleton.
+struct ActionSharedEventV1 {
+  std::uint64_t action_id = 0;
+  // This payload is produced independently of the action.  Repeating an
+  // action's own reference fields is not sufficient: they must exactly match
+  // this common P0-03 proof and numeric reference.
+  std::uint64_t common_reference_certificate_id = 0;
+  Eigen::Vector3d common_L_reference_m = Eigen::Vector3d::Zero();
+  Eigen::Vector3d common_p_reference_m = Eigen::Vector3d::Zero();
+  std::string accepted_event_id;
+  std::uint64_t reference_time_id = 0;
+  std::string output_quantity_id;
+};
+
 struct GuaranteeGroup {
   std::uint64_t group_id = 0;
   std::uint64_t reference_certificate_id = 0;
@@ -148,6 +169,10 @@ struct GuaranteeGroupResult {
 // must then keep the platform unavailable, never relax the standard).
 GuaranteeGroupResult buildGuaranteeGroups(
     const std::vector<ActionGuarantee>& actions, double available_budget);
+GuaranteeGroupResult buildGuaranteeGroups(
+    const std::vector<ActionGuarantee>& actions, double available_budget,
+    // Untrusted compatibility/reserved input; cannot enable event sharing.
+    const std::vector<ActionSharedEventV1>& shared_events);
 
 // ---------------------------------------------------------------------------
 // §8.3 bridge / candidate decision order.

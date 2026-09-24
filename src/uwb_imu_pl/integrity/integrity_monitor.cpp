@@ -2872,10 +2872,45 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           fde_trigger.passed = false;
           fde_trigger.reason = "quarantined/failed source hardware barrier";
         }
+        FdeRiskDecisionV1 final_risk;
+        FdeDecisionContextV1 fde_context;
+        fde_context.protection_proof_ids = &candidate_pl_proof;
+        fde_context.risk_result = &final_risk;
         FdeDecision decision = FdeManager().decide(
             fde_trigger, models.hypotheses, evidence, &candidates,
-            mandatory_exclusion_groups, cfg.risk_v2);
+            mandatory_exclusion_groups, cfg.risk_v2, &fde_context);
         record_stage("fde_decision", true);
+        // P0-04 final ledger supersedes the pre-selection diagnostic.  It uses
+        // the same total budget and includes the actual eligible-action union.
+        output.diagnostics.risk_ledger_charged_total =
+            final_risk.charged_total;
+        output.diagnostics.risk_ledger_declared_total =
+            final_risk.declared_total;
+        output.diagnostics.risk_margin = final_risk.margin;
+        output.diagnostics.risk_ledger_closes =
+            final_risk.complete_bound_closes;
+        output.diagnostics.risk_ledger_all_validated =
+            final_risk.all_terms_validated;
+        output.diagnostics.risk_ledger_validated_terms =
+            final_risk.validated_terms;
+        output.diagnostics.risk_ledger_unvalidated_terms =
+            final_risk.unvalidated_terms;
+        output.diagnostics.risk_ledger_not_implemented_terms =
+            final_risk.not_implemented_terms;
+        output.diagnostics.risk_ledger_terms =
+            final_risk.terms;
+        // The action-aware ledger is authoritative for every final consumer,
+        // including fail-closed early exits where its numeric value is
+        // UNKNOWN.  Never retain the pre-selection PL diagnostic as the final
+        // complete-risk result.
+        output.protection_level.risk_budget_valid =
+            final_risk.complete_bound_closes &&
+            final_risk.all_terms_validated;
+        output.protection_level.formal_eligible =
+            final_risk.formal_eligible;
+        if (!output.protection_level.risk_budget_valid) {
+          output.protection_level.availability = Availability::Unavailable;
+        }
         // C4 diagnostics v16: export the charged event-class identity and the
         // derived risk-proof id exactly as the decision produced them.
         output.diagnostics.selection_risk_proof_id =
@@ -3218,7 +3253,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               output.protection_level.allocated_hmi_risk =
                   pl->second.allocated_outcome_risk;
               output.protection_level.risk_budget_valid =
-                  pl->second.risk_budget_valid;
+                  final_risk.complete_bound_closes &&
+                  final_risk.all_terms_validated;
               const auto proof = candidate_pl_proof.find(
                   selected->action.id.value());
               const std::uint64_t pl_proof_identity =
@@ -3248,7 +3284,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             }
           }
           output.protection_level.availability = Availability::Unavailable;
-          output.protection_level.formal_eligible = false;
+          output.protection_level.formal_eligible =
+              final_risk.formal_eligible;
           output.protection_level.hmi_risk_requirement = cfg.risk_v2.p_hmi_total;
           output.protection_level.reason =
               "IMPLEMENTED_UNVERIFIED: Gate J calibration and independent review pending";

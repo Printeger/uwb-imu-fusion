@@ -1,0 +1,6 @@
+FdeDecision 528 504
+ActionGuarantee 128 120
+RiskBudgetAudit 112 109
+RiskLedger 104 72
+RiskLedgerInputs 48 40
+decide6 12 0 0

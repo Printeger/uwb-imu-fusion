@@ -3,6 +3,7 @@
 #include "uwb_imu_pl/integrity/hypothesis_evidence.hpp"
 
 #include <optional>
+#include <map>
 
 namespace uwb_imu_pl {
 
@@ -50,6 +51,25 @@ struct FdeDecision {
   std::vector<int> candidate_dispositions;
 };
 
+struct FdeRiskDecisionV1 {
+  bool allocation_valid = false;
+  bool complete_bound_closes = false;
+  bool all_terms_validated = false;
+  bool formal_eligible = false;
+  double charged_total = 0.0;
+  double declared_total = 0.0;
+  double margin = 0.0;
+  std::size_t validated_terms = 0;
+  std::size_t unvalidated_terms = 0;
+  std::size_t not_implemented_terms = 0;
+  std::string terms;
+};
+
+struct FdeDecisionContextV1 {
+  const std::map<std::uint64_t, std::uint64_t>* protection_proof_ids = nullptr;
+  FdeRiskDecisionV1* risk_result = nullptr;
+};
+
 class FdeManager {
  public:
   FdeDecision decide(const DetectorResultV2& all_in,
@@ -58,6 +78,13 @@ class FdeManager {
                      std::vector<CandidateEvaluation>* candidates,
                      const std::vector<FactorGroupId>& mandatory_groups,
                      const RiskBudgetV2& risk) const;
+  FdeDecision decide(const DetectorResultV2& all_in,
+                     const std::vector<FaultHypothesisV2>& hypotheses,
+                     const std::vector<FaultModeEvidence>& evidence,
+                     std::vector<CandidateEvaluation>* candidates,
+                     const std::vector<FactorGroupId>& mandatory_groups,
+                     const RiskBudgetV2& risk,
+                     const FdeDecisionContextV1* context) const;
 };
 
 }  // namespace uwb_imu_pl

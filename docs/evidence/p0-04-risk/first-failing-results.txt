@@ -1,0 +1,19 @@
+P0-04 independent pre-fix red run
+base=golden-p0-03-numerics^{}=9d81a25f68e7552aa14f83b74e9a4585d8ebef82
+command=test_p0_04_risk_oracle
+exit=1
+tests=2 failed / 2 run
+
+P004RiskOracle.MissChannelIsChargedIntoTheSameTotal
+- observed miss status: ASSUMED_UNVALIDATED
+- observed charged_total: 3.13e-6
+- independent boost::multiprecision::cpp_bin_float_quad expected: 3.2e-6
+- failure: positive pi*(beta-alpha) miss excess was reported but not charged
+
+P004RiskOracle.ManagerDoesNotPremergeDisjointActionsByPlausibleId
+- two original eligible actions, same plausible hypothesis label
+- neither action carried reference/event/time/output/triangle transfer proof
+- observed classes=1, charged=3e-5, selection accepted, commit allowed
+- required classes=2, charged=6e-5 > unchanged p_hmi_total=4e-5
+- failure: caller premerged by plausible-label-derived class before strict grouping
+

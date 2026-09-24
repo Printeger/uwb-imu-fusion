@@ -1,0 +1,12 @@
+golden-header client link/run: PASS
+FdeDecision 528 504
+ActionGuarantee 128 120
+RiskBudgetAudit 112 109
+RiskLedger 104 72
+RiskLedgerInputs 48 40
+decide6 12 0 0
+exported decide/grouping symbols:
+000000000037d290 T uwb_imu_pl::buildGuaranteeGroups(std::vector<uwb_imu_pl::ActionGuarantee, std::allocator<uwb_imu_pl::ActionGuarantee> > const&, double)
+000000000037c810 T uwb_imu_pl::buildGuaranteeGroups(std::vector<uwb_imu_pl::ActionGuarantee, std::allocator<uwb_imu_pl::ActionGuarantee> > const&, double, std::vector<uwb_imu_pl::ActionSharedEventV1, std::allocator<uwb_imu_pl::ActionSharedEventV1> > const&)
+00000000002ff900 T uwb_imu_pl::FdeManager::decide(uwb_imu_pl::DetectorResultV2 const&, std::vector<uwb_imu_pl::FaultHypothesisV2, std::allocator<uwb_imu_pl::FaultHypothesisV2> > const&, std::vector<uwb_imu_pl::FaultModeEvidence, std::allocator<uwb_imu_pl::FaultModeEvidence> > const&, std::vector<uwb_imu_pl::CandidateEvaluation, std::allocator<uwb_imu_pl::CandidateEvaluation> >*, std::vector<uwb_imu_pl::StrongId<uwb_imu_pl::FactorGroupIdTag>, std::allocator<uwb_imu_pl::StrongId<uwb_imu_pl::FactorGroupIdTag> > > const&, uwb_imu_pl::RiskBudgetV2 const&) const
+00000000002fc4f0 T uwb_imu_pl::FdeManager::decide(uwb_imu_pl::DetectorResultV2 const&, std::vector<uwb_imu_pl::FaultHypothesisV2, std::allocator<uwb_imu_pl::FaultHypothesisV2> > const&, std::vector<uwb_imu_pl::FaultModeEvidence, std::allocator<uwb_imu_pl::FaultModeEvidence> > const&, std::vector<uwb_imu_pl::CandidateEvaluation, std::allocator<uwb_imu_pl::CandidateEvaluation> >*, std::vector<uwb_imu_pl::StrongId<uwb_imu_pl::FactorGroupIdTag>, std::allocator<uwb_imu_pl::StrongId<uwb_imu_pl::FactorGroupIdTag> > > const&, uwb_imu_pl::RiskBudgetV2 const&, uwb_imu_pl::FdeDecisionContextV1 const*) const

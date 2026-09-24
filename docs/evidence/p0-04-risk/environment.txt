@@ -1,0 +1,36 @@
+date=2026-09-24
+timezone=Asia/Shanghai
+base_tag=golden-p0-03-numerics
+base_peeled_sha=9d81a25f68e7552aa14f83b74e9a4585d8ebef82
+head_sha=9d81a25f68e7552aa14f83b74e9a4585d8ebef82
+compiler=c++ (Ubuntu 9.4.0-1ubuntu1~20.04.2) 9.4.0
+cmake=3.16.3
+kernel=Linux mint 6.18.33.2-microsoft-standard-WSL2 x86_64
+logical_cpus=18
+build_workers=2
+test_workers=1 (CTest default sequential)
+build_dir=/home/mint/ws_fusion_uwb/build/uwb_imu_pl
+devel_lib=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib
+
+Loaded direct dependencies of libuwb_imu_pl.so:
+libpthread.so.0
+libboost_filesystem.so.1.71.0
+libgtsam_unstable.so.4
+libyaml-cpp.so.0.6
+libgtsam.so.4
+libtbb.so.2
+libstdc++.so.6
+libm.so.6
+libgcc_s.so.1
+libc.so.6
+libboost_serialization.so.1.71.0
+libboost_timer.so.1.71.0
+libtbbmalloc.so.2
+libmetis-gtsam.so
+libdl.so.2
+libboost_chrono.so.1.71.0
+
+Resolved configuration and manifest inputs are unchanged and bound in
+binary-hashes.sha256. O06 truth is the independent closed-form/quad fixture in
+the hashed test_p0_04_risk_oracle.cpp source.
+

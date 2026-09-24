@@ -1,0 +1,48 @@
+attempt	command_scope	exit	result
+red-01	pre-fix independent P0-04 oracle	1	2/2 failed: miss omitted from charge; plausible-ID premerge admitted two disjoint actions
+repair-01	initial P0-04 oracle	0	5/5 PASS
+repair-02	FDE post-selection + directed integrity_v2	0	3/3 + 14/14 PASS
+repair-03	full integrity_v2 before expectation repair	1	84/85; old test expected commit under incomplete risk
+repair-04	full integrity_v2 after fail-closed expectation repair	0	85/85 PASS
+attempt-01	complete CTest before round2 fixture expectation repair	8	26/27; deterministic fixture correctly became unavailable but old tool expected PASS
+repair-05	round2 deterministic expectation updated to require fail-closed	0	7/7 PASS
+repair-06	no-alarm action-charge audit added	0	P0-04 oracle 7/7 PASS
+accept-01	build target tests -j2	0	PASS; pre-existing deprecation warnings only
+accept-02	P0-04 oracle	0	7/7 PASS
+accept-03	FDE grouping	0	3/3 PASS
+accept-04	P0-01/P0-02/P0-03 directed preservation set	0	10/10 PASS
+accept-05	complete CTest before final validation-flag hardening	0	27/27 PASS, 103.15 s
+accept-06	git diff --check and base identity	0	PASS; HEAD and peeled base both 9d81a25f68e7552aa14f83b74e9a4585d8ebef82
+accept-07	final rebuild + P0-04 oracle	0	build PASS; oracle 7/7 PASS
+accept-08	final complete CTest	0	27/27 PASS, 102.94 s
+accept-09	retained-output complete CTest	0	27/27 PASS, 103.08 s; complete console output saved
+accept-10	final quad selection-accumulator rebuild + retained CTest	0	build PASS; 27/27 PASS, 103.24 s
+attempt-02	oracle invocation with unsupported --gtest_brief	0	NOT_ACCEPTED: old GoogleTest printed help; CTest target result is authoritative
+review-01	first independent read-only review	1	FAILED: rounded-double closure; risk gate ordering; self-reference sharing; final consumer; ABI
+review-fix-01	reviewer exact quad boundary + claimed common-reference sidecar	0	P0-04 oracle 9/9 PASS; exact reviewer profile over budget/formal false
+review-fix-02	golden-p0-03 header ABI client link/run	0	PASS; old decide6 symbol and golden struct layouts retained
+review-fix-03	final complete build and retained CTest	0	build PASS; 27/27 PASS, 103.16 s
+review-02	second independent read-only review	1	FAILED: negative/invalid bound closure; rejected hypothesis as zero; caller-forged sidecar; incomplete FAILED evidence
+repair-08	invalid risk and shared-event provenance repair	0	negative/NaN/inf/rejected/overflow fail closed; qualified zero finite; all unverified sidecars singleton
+attempt-03	full tests build -j2	2	NOT_ACCEPTED: compiler process externally terminated while rebuilding test_integrity_v2; no test result claimed
+repair-09	full tests build retry -j1	0	PASS
+accept-11	P0-04 independent oracle after second review	0	12/12 PASS including invalid bounds, rejected hypotheses, overflow/zero and forged sidecar
+accept-12	FDE post-selection grouping after second review	0	3/3 PASS; unverified shared claims remain singleton
+accept-13	P0-01/P0-02/P0-03 directed preservation set	0	10/10 PASS
+attempt-04	round2 unittest via pytest	1	NOT_ACCEPTED: pytest is not installed in this environment
+attempt-05	round2 unittest without tools PYTHONPATH	1	NOT_ACCEPTED: round2_common import unavailable
+accept-14	round2 unittest with declared PYTHONPATH	0	7 discovered; 5 PASS, 2 optional-runner SKIP; complete CTest wrapper is authoritative
+accept-15	golden-p0-03 old-header ABI client link/run	0	PASS; old decide6 symbol and five golden public layouts retained
+accept-16	complete CTest after second-review repair	0	27/27 PASS, 118.60 s
+accept-17	final build and CTest after dormant-invalid-term hardening	0	build PASS; 27/27 PASS, 103.11 s
+accept-18	final golden-p0-03 old-header ABI client and symbol check	0	PASS; five layouts exact; decide6 and decide7 symbols present
+review-03	third independent read-only review	1	FAILED: dormant omitted/envelope zero proofs overwrote nonzero and validated-without-known sidecars
+repair-10	canonical sidecar representation + independent Cartesian oracle	0	omitted 112, envelope 112, selection 56 combinations PASS including -Inf/negative/-0/+0/positive/+Inf/NaN
+accept-19	full tests target after third-review repair	0	PASS with one build worker
+accept-20	P0-04 oracle/grouping/inherited directed set	0	13/13 + 3/3 + 10/10 PASS
+accept-21	complete CTest after third-review repair	0	27/27 PASS, 103.55 s
+attempt-06	golden-header ABI client without production -march=native compile contract	134	NOT_ACCEPTED: client layout differed and aborted; rerun with exact production compile flags
+accept-22	golden-p0-03 old-header ABI client with production flags and symbol check	0	PASS; five layouts exact; decide6/decide7 and grouping symbols present
+accept-23	clean then full tests rebuild with one worker	0	PASS; all library objects and test targets rebuilt from clean state
+accept-24	complete CTest after clean rebuild	0	27/27 PASS, 103.01 s
+accept-25	post-clean directed and golden-header ABI recheck	0	13/13 + 3/3 + 10/10 PASS; five layouts and decide6/decide7 symbols PASS

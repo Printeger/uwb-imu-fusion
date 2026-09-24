@@ -1,0 +1,110 @@
+{
+  "schema": "p0-04-risk-boundary-v1",
+  "base": "golden-p0-03-numerics^{}",
+  "base_sha": "9d81a25f68e7552aa14f83b74e9a4585d8ebef82",
+  "unchanged_contract": {
+    "p_hmi_total": 0.00004,
+    "alert_limits_changed": false,
+    "thresholds_changed": false,
+    "priors_changed": false,
+    "coverage_reduced": false
+  },
+  "replays": [
+    {
+      "id": "miss_quad_same_total",
+      "nominal_axis_tail": 0.000001,
+      "p_nm": 0.0000001,
+      "hypothesis": {"allocation": 0.00000003, "prior": 0.0001, "p_md": 0.001},
+      "quad_expected_total": 0.0000032,
+      "expected": "miss positive and charged"
+    },
+    {
+      "id": "unknown_is_not_zero",
+      "unknown_terms": ["bridge", "history", "model", "omitted", "selection"],
+      "expected": {"complete_bound_closes": false, "all_terms_validated": false, "formal_eligible": false}
+    },
+    {
+      "id": "allocation_fits_complete_exceeds",
+      "nominal_axis_tail": 0.00001,
+      "hypothesis": {"allocation": 0.000001, "prior": 0.1, "p_md": 0.001},
+      "expected": {"allocation_valid": true, "complete_bound_closes": false, "protected_available": false}
+    },
+    {
+      "id": "reviewer_exact_quad_boundary",
+      "hypothesis": {"allocation": 5.226175689748075e-15, "prior": 2.0503228027277203e-12, "p_md": 0.005889712081465759},
+      "p_hmi_total": 1.2075810982130189e-14,
+      "expected": {"allocation_valid": true, "complete_bound_closes": false, "formal_eligible": false, "exported_total_rounded_up": true}
+    },
+    {
+      "id": "disjoint_selection_events",
+      "eligible_actions": [10, 11],
+      "per_action_bound": 0.00003,
+      "shared_numeric_proof": false,
+      "expected_classes": 2,
+      "expected_charge": 0.00006,
+      "expected_commit_allowed": false
+    },
+    {
+      "id": "unverified_common_reference_claim",
+      "eligible_actions": [1, 2],
+      "reference_certificate_id": 77,
+      "complete_p0_03_payload": false,
+      "p0_02_accepted_event_certificate": false,
+      "consumer_recomputed_frozen_identity_digest": false,
+      "accepted_event_id": "dual_channel_intersection_v6",
+      "reference_time_id": 1234,
+      "output_quantity_id": "protected_position_xyz_m",
+      "triangle_rule": "componentwise L_action >= L_ref + abs(p_action-p_ref), quad checked",
+      "expected_classes": 2,
+      "expected_charge": 0.00006
+    },
+    {
+      "id": "same_labels_disjoint_numeric_reference",
+      "eligible_actions": [1, 2],
+      "reference_certificate_id": 77,
+      "accepted_event_id": "dual_channel_intersection_v6",
+      "numeric_common_references_equal": false,
+      "expected_classes": 2
+    },
+    {
+      "id": "invalid_complete_risk_bounds",
+      "fields": ["omitted_event_bound", "envelope_event_bound", "selection_extra_bound"],
+      "values": ["-infinity", "negative", "NaN", "+infinity"],
+      "expected": {"complete_bound_closes": false, "all_terms_validated": false, "formal_eligible": false, "negative_export": false}
+    },
+    {
+      "id": "sidecar_representation_cartesian",
+      "terms": {
+        "omitted": {"cases": 112, "booleans": ["scope_complete", "event_present", "known", "validated"]},
+        "envelope": {"cases": 112, "booleans": ["online", "leaf_present", "known", "validated"]},
+        "selection": {"cases": 56, "booleans": ["contract_frozen", "known", "validated"]}
+      },
+      "values": ["-infinity", "negative", "-0", "+0", "positive", "+infinity", "NaN"],
+      "expected": {
+        "dormant_nonzero": "UNKNOWN",
+        "validated_without_known": "UNKNOWN",
+        "canonical_zero": "known and validated",
+        "complete_and_formal_false_on_contradiction": true
+      }
+    },
+    {
+      "id": "rejected_hypothesis_is_unknown",
+      "invalid_fields": ["allocation", "prior", "p_md"],
+      "values": ["negative", "NaN", "+infinity"],
+      "expected": {"hypotheses": "UNKNOWN", "hypotheses_miss_channel": "UNKNOWN", "complete_bound_closes": false}
+    },
+    {
+      "id": "forged_shared_event_claim",
+      "eligible_actions": [1, 2],
+      "per_action_bound": 0.00003,
+      "claimed_certificate_id": 999,
+      "claimed_event": "invented",
+      "claimed_time": 123,
+      "claimed_output": "invented",
+      "expected_classes": 2,
+      "expected_charge": 0.00006,
+      "budget": 0.00004,
+      "expected_valid": false
+    }
+  ]
+}

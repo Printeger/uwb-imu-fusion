@@ -1,0 +1,46 @@
+Final directed acceptance (all exit 0)
+
+P0-04 independent oracle: 13/13 PASS
+- miss is charged into the same total using independent quad arithmetic
+- zero allocation still charges prior-weighted miss
+- four status meanings remain independent; unknown is NaN, not zero
+- allocation can fit while the complete bound is over budget/unavailable
+- reviewer exact profile (allocation 5.226175689748075e-15, prior
+  2.0503228027277203e-12, beta 0.005889712081465759, budget
+  1.2075810982130189e-14) remains over budget and formal=false
+- negative/NaN/infinite omitted, envelope, and selection bounds fail closed
+  without a negative exported charge
+- full independent sidecar Cartesian oracle PASS: omitted 112, envelope 112,
+  selection 56 representations; dormant nonzero or contradictory flags remain
+  UNKNOWN, while canonical known/validated `-0` and `+0` both close as the
+  same finite non-negative mathematical zero
+- rejected hypothesis allocation/prior/p_md makes the aggregate fault and miss
+  channels UNKNOWN rather than continuing with a known zero
+- overflowing exported terms fail closed; independently proved zero terms stay
+  finite, non-negative and can close
+- caller-claimed common references cannot share without complete verifiable
+  P0-03/P0-02/frozen-identity payloads; the exact forged ID/event/time/output
+  probe remains two singletons totaling 6e-5 and fails the 4e-5 budget
+- manager does not premerge disjoint actions by plausible ID
+- no-alarm/plausible-empty outcomes do not make action events free
+
+FDE post-selection: 3/3 PASS
+- profile evidence/refusal
+- IMU repair/bridge failure legality
+- unverified shared claims, distinct claims and triangle-failing claims all
+  remain singleton charges
+
+Inherited contract preservation filter: 10/10 PASS
+- FdeProfiles: 1/1
+- P002DualChannelContract: 7/7
+- P003ProofChain: 1/1
+- GateDSelection: 1/1
+
+Round-two unittest: 7 discovered, 5 PASS and 2 optional-runner SKIP in the
+direct invocation. The complete CTest wrapper PASS is authoritative; the short
+research fixture remains fail-closed whenever its optional runner is present.
+
+Golden-header ABI client: PASS. The golden-p0-03 headers link and run against
+the repaired library through the legacy six-argument FdeManager::decide symbol;
+FdeDecision, ActionGuarantee, RiskBudgetAudit, RiskLedger and RiskLedgerInputs
+retain their golden sizes and trailing-field offsets.
