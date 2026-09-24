@@ -1,0 +1,33 @@
+red_command: cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl --target test_dual_channel_detector -j2 && /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_dual_channel_detector --gtest_filter='DualChannelDetector.P003IndefiniteAndAsymmetricGramsFailClosed'
+red_build_exit_code: 0
+red_test_exit_code: 1
+red_summary: four assertions failed because indefinite and asymmetric Grams both returned valid finite bounds before the fix
+
+build_command: cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl --target tests -j2
+build_exit_code: 0
+
+final_command_1: /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_square_root_context
+final_exit_code_1: 0
+final_summary_1: 9/9 passed
+SquareRootContext.P003UnifiedPsdRankAndNullspaceCertificate PASS
+SquareRootContext.P003EveryRhsUsesCertifiedRootAndSvdReference PASS
+
+final_command_2: /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_dual_channel_detector
+final_exit_code_2: 0
+final_summary_2: 6/6 passed
+DualChannelDetector.P003IndefiniteAndAsymmetricGramsFailClosed PASS
+
+final_command_3: /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_reference
+final_exit_code_3: 0
+final_summary_3: 11/11 passed
+
+final_command_4: /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2
+final_exit_code_4: 0
+final_summary_4: 84/84 passed
+GateDNumerics.RankAndConditionThresholdsBothSidesKeepExactDefinitions PASS
+GateDOracle.RealCurrentHistoricalBridgeAndUnionActionsMatchDenseAndWorkers PASS
+IntegrityV2ProtectionLevel.FixedLowDimKeepsSingularStatusAndUncommonDimensionFallsBack PASS
+B3ZeroSpace.DangerousNullspaceIsUnavailableWithDirectionLevelReason PASS
+B3ZeroSpace.HarmlessNullspaceKeepsAFiniteProjectedBound PASS
+
+not_run: sanitizers; hardware replay; performance comparison; long campaign and deployment calibration

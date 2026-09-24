@@ -1,0 +1,57 @@
+attempt	command_scope	exit	result
+red-01	pre-fix P003 indefinite/asymmetric dual-channel reproduction	1	4 assertions failed; retained in first-failing-results.txt
+repair-01	current four directed binaries before reviewer repair	1	test_integrity_v2 76/84; strict certificate exposed rounded factor-Gram negatives
+repair-02	current integrity_v2 after constructive factor-Gram repair	1	81/84; external formula ID, raw-Z legacy rank and coverage attribution remained
+repair-03	three remaining directed failures	0	3/3 PASS
+accept-01	build target tests -j2	0	PASS
+accept-02	P003 root/PSD/rank/proof/multi-RHS	0	4/4 PASS
+accept-03	P003 dual-channel negative inputs	0	1/1 PASS
+accept-04	numerical/direct/PL/coverage directed set	0	24/24 PASS
+accept-05	shared+batch disabled legacy production set	0	5/5 PASS
+accept-06	complete CTest	0	26/26 PASS, 14.77 s
+accept-07	git diff --check	0	PASS
+repair-04	exact factor-to-actual-Gram reconstruction directed run	1	23/24; frozen cache covariance was a distinct numerical approximation
+repair-05	frozen path serves direct raw-H covariance	0	previous failure PASS
+accept-08	final directed set after exact reconstruction gate	0	4/4 + 1/1 + 24/24 PASS
+accept-09	final shared+batch disabled production set	0	5/5 PASS
+accept-10	final complete CTest	0	26/26 PASS, 13.62 s
+accept-11	final relative-only score/coverage gate build and directed sets	0	build PASS; 4/4 + 1/1 + 24/24 + legacy 5/5 PASS
+accept-12	final complete CTest after relative-only gates	0	26/26 PASS, 13.58 s
+review-02	second independent reviewer	1	FAILED C/D/F/ABI; full proof propagation, root-only legacy operator, independent raw-H oracle and old symbol required
+repair-06	first targeted frozen proof run	1	frozen context rejected intentionally invalid uncommon-dimension entry
+repair-07	context validity fix and full integrity_v2	0	85/85 PASS
+repair-08	dense oracle singular-unit and exact-harmless repair	0	dense oracle 2/2; combined directed 5/5 + 1/1 + 25/25 PASS
+attempt-13	ctest --test-dir against package build (unsupported by CMake 3.16 invocation)	0	NOT_ACCEPTED: No tests found
+attempt-14	ctest --test-dir against workspace build (unsupported by CMake 3.16 invocation)	0	NOT_ACCEPTED: No tests found
+accept-13	pre-clean complete CTest from actual package build directory	0	26/26 PASS, 14.15 s
+accept-14	clean then build target tests -j2	0	PASS; only pre-existing deprecation warnings
+attempt-15	directed evidence redirection from package build directory using relative source path	1	NOT_ACCEPTED: evidence path did not exist; tests were not started
+accept-15	post-clean P003/proof/raw-H/PL/coverage directed sets	0	5/5 + 1/1 + 25/25 PASS
+accept-16	post-clean shared+batch-disabled legacy production set	0	5/5 PASS
+accept-17	post-clean complete CTest from actual package build directory	0	26/26 PASS, 14.35 s
+accept-18	legacy eight-argument and explicit nine-argument exported symbol audit	0	both symbols present; exact old function pointer links
+review-03	third independent reviewer	1	FAILED C/F/ABI; raw-H fallback recomputation, complete PL/publication payload consumers, production final-H O05 and exact golden layouts required
+repair-09	first old-header ABI link attempt	1	link rejected missing GTSAM dependency DSO; no result accepted
+repair-10	old/current ABI clients without project march flag	139	both clients segfaulted from Eigen compile-layout mismatch; no result accepted
+repair-11	old/current ABI clients with exact project compile flags	0	11 public layouts and classify8 behavior identical
+repair-12	O05 forced KEEP_ALL fallback probe	1	KEEP_ALL canonical early return did not exercise candidate final-H path; no result accepted
+repair-13	O05 modified candidate final-H fallback probe	0	production FINAL_JACOBIAN_REFERENCE path and direct raw-H oracle agree
+repair-14	full integrity_v2 after path-specific ID propagation	1	84/85; detector identity must remain path-independent across equivalent dense/matrix-free results
+repair-15	external candidate proof identity with legacy detector identity restored	0	integrity_v2 85/85 PASS
+accept-19	post-third-review focused root/PL/O05/publication tests	0	proof payload tamper, raw-H fallback and publication consumers PASS
+accept-20	clean then build target tests -j2	0	PASS; only pre-existing deprecation warnings
+accept-21	post-clean directed numerical/proof/publication set	0	5/5 + 1/1 + 25/25 + publication 6/6 + identity 3/3 PASS
+accept-22	post-clean shared+batch-disabled legacy production set	0	5/5 PASS
+accept-23	post-clean complete CTest	0	26/26 PASS, 101.94 s
+accept-24	golden-header ABI client against current library	0	old/current outputs byte-identical; 11 layouts and classify8 runtime behavior PASS
+accept-25	git diff --check and frozen-base identity	0	PASS; HEAD and peeled golden-p0-02-dual-channel remain 6b8c83b45eab6a69ca6364da48cb01df61e098af
+accept-26	complete diff, binary/dependency/evidence hash refresh	0	PASS; complete binary-capable include/src/test artifact includes untracked ABI client
+repair-16	publication payload self-containment audit	0	pooled-only mode added to versioned sidecar digest; non-pooled proof now requires one valid dual-W payload per hypothesis
+accept-27	final clean build, directed, legacy and complete CTest	0	build PASS; directed 5/5 + 1/1 + 25/25 + 6/6 + 3/3; legacy 5/5; CTest 26/26 in 102.14 s
+accept-28	final golden-header ABI runtime recheck	0	old/current layout outputs identical and both exported overloads present after final library rebuild
+review-04	fourth independent reviewer	1	FAILED three consumer gaps: spectral covariance operator, complete sidecar recomputation, candidate-specific publication packet
+repair-17	first strict full-sidecar focused run	1	4/6 failed because arbitrary-Gram validation rejected rounded covariance; no result accepted
+repair-18	actual raw-H covariance-factor proof and complete consumer rerun	0	integrity_v2 85/85 PASS; root/dual/hyp/PL tamper and candidate packet collision probes PASS
+accept-29	final clean build and directed/legacy suites	0	build PASS; directed 5/5 + 1/1 + 31/31 + 6/6 + 3/3; legacy 5/5
+accept-30	final complete CTest	0	26/26 PASS, 103.94 s
+accept-31	final golden-header ABI runtime recheck	0	old/current outputs byte-identical; 11 layouts and classify8 behavior PASS

@@ -155,11 +155,16 @@ P002RawOracle p002IndependentRawOracle(
         CandidateDetectorRowRole::HistoryDetectorOnly);
     offset += count;
   }
-  Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr(out.h);
-  qr.setThreshold(rank_tolerance);
-  out.state = qr.solve(out.z);
-  out.covariance = (out.h.transpose() * out.h).llt().solve(
-      Eigen::MatrixXd::Identity(out.h.cols(), out.h.cols()));
+  // Independent O05 reference: every state/covariance RHS is served directly
+  // from raw-H SVD.  No production certificate/oracle and no normal-equation
+  // covariance solve is used here.
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(
+      out.h, Eigen::ComputeThinU | Eigen::ComputeThinV);
+  const Eigen::VectorXd inverse = svd.singularValues().cwiseInverse();
+  out.state = svd.matrixV() * inverse.asDiagonal() *
+      svd.matrixU().transpose() * out.z;
+  out.covariance = svd.matrixV() * inverse.array().square().matrix().asDiagonal() *
+      svd.matrixV().transpose();
   const Eigen::VectorXd residual = out.z - out.h * out.state;
   std::vector<Eigen::Index> current_rows;
   std::vector<Eigen::Index> history_rows;
@@ -197,11 +202,15 @@ Eigen::Vector3d p002IndependentPlOracle(
     const uwb_imu_pl::DetectorRiskContext& detector_risk,
     const uwb_imu_pl::FaultHypothesisV2& hypothesis,
     const uwb_imu_pl::RiskBudgetV2& risk) {
-  const Eigen::MatrixXd cross = raw.h.transpose() * fault_map;
-  const Eigen::MatrixXd solved = raw.covariance * cross;
-  Eigen::MatrixXd gram = fault_map.transpose() * fault_map -
-      cross.transpose() * solved;
-  gram = 0.5 * (gram + gram.transpose());
+  Eigen::JacobiSVD<Eigen::MatrixXd> raw_svd(
+      raw.h, Eigen::ComputeThinU | Eigen::ComputeThinV);
+  const Eigen::VectorXd inverse = raw_svd.singularValues().cwiseInverse();
+  const Eigen::MatrixXd coordinates =
+      raw_svd.matrixU().transpose() * fault_map;
+  const Eigen::MatrixXd residual_factor =
+      fault_map - raw_svd.matrixU() * coordinates;
+  const Eigen::MatrixXd gram =
+      residual_factor.transpose() * residual_factor;
   Eigen::MatrixXd history_gram = Eigen::MatrixXd::Zero(
       fault_map.cols(), fault_map.cols());
   for (Eigen::Index row = 0; row < fault_map.rows(); ++row) {
@@ -211,8 +220,8 @@ Eigen::Vector3d p002IndependentPlOracle(
                                 fault_map.row(row);
     }
   }
-  const Eigen::MatrixXd protected_response =
-      window.protected_state_map * solved;
+  const Eigen::MatrixXd protected_response = window.protected_state_map *
+      raw_svd.matrixV() * inverse.asDiagonal() * coordinates;
   const Eigen::Matrix3d protected_covariance =
       window.protected_state_map * raw.covariance *
       window.protected_state_map.transpose();
@@ -1257,6 +1266,34 @@ TEST(P002DualChannelContract,
     EXPECT_TRUE(matrix_free_pl.pl_xyz_m.isApprox(dense_pl.pl_xyz_m, 1e-12));
     EXPECT_EQ(matrix_free_pl.detector_certificate_id,
               dense_pl.detector_certificate_id);
+    const std::uint64_t matrix_free_proof =
+        protectionLevelV2ProofIdentity(matrix_free, matrix_free_pl);
+    const std::uint64_t dense_proof =
+        protectionLevelV2ProofIdentity(dense, dense_pl);
+    ASSERT_NE(0u, matrix_free_proof);
+    ASSERT_NE(0u, dense_proof);
+    ASSERT_NE(matrix_free_proof, dense_proof);
+    std::string matrix_free_packet;
+    std::string dense_packet;
+    ASSERT_TRUE(bindProtectionLevelPublicationPacket(
+        matrix_free, matrix_free_pl, matrix_free_proof,
+        &matrix_free_packet));
+    ASSERT_TRUE(bindProtectionLevelPublicationPacket(
+        dense, dense_pl, dense_proof, &dense_packet));
+    EXPECT_NE(matrix_free_packet, dense_packet);
+    EXPECT_TRUE(validateProtectionLevelPublicationProof(
+        matrix_free_proof, matrix_free_pl.pl_xyz_m,
+        matrix_free_packet, nullptr));
+    EXPECT_TRUE(validateProtectionLevelPublicationProof(
+        dense_proof, dense_pl.pl_xyz_m, dense_packet, nullptr));
+    // Reviewer collision probe: identical served PL/certificate values do not
+    // authorize crossing the selected-candidate packet/proof pair.
+    EXPECT_FALSE(validateProtectionLevelPublicationProof(
+        matrix_free_proof, matrix_free_pl.pl_xyz_m,
+        dense_packet, nullptr));
+    EXPECT_FALSE(validateProtectionLevelPublicationProof(
+        dense_proof, dense_pl.pl_xyz_m,
+        matrix_free_packet, nullptr));
   }
 }
 
@@ -1346,6 +1383,32 @@ TEST(P002DualChannelContract,
       Eigen::MatrixXd mode = Eigen::MatrixXd::Zero(candidate->rows, 1);
       mode(0, 0) = 1.0;
       mode(mode.rows() - 1, 0) = 1.0;
+      Eigen::JacobiSVD<Eigen::MatrixXd> direct_svd(
+          raw.h, Eigen::ComputeThinU | Eigen::ComputeThinV);
+      const Eigen::VectorXd direct_inverse =
+          direct_svd.singularValues().cwiseInverse();
+      const Eigen::MatrixXd direct_covariance = direct_svd.matrixV() *
+          direct_inverse.array().square().matrix().asDiagonal() *
+          direct_svd.matrixV().transpose();
+      Eigen::MatrixXd all_rhs(raw.h.cols(), 6);
+      all_rhs.leftCols<3>() = window.protected_state_map.transpose();
+      all_rhs.col(3) = raw.h.transpose() * mode;
+      all_rhs.rightCols<2>().setConstant(0.375);  // bridge RHS fixtures
+      const Eigen::MatrixXd direct_all_rhs = direct_covariance * all_rhs;
+      EXPECT_TRUE(candidate->covarianceTimes(all_rhs).isApprox(
+          direct_all_rhs, 1e-11));
+      const Eigen::MatrixXd direct_y =
+          direct_svd.matrixU().transpose() * mode;
+      const Eigen::MatrixXd direct_z =
+          mode - direct_svd.matrixU() * direct_y;
+      const Eigen::MatrixXd direct_gamma =
+          direct_z.transpose() * direct_z;
+      const Eigen::VectorXd direct_parity = raw.z - raw.h * raw.state;
+      const Eigen::VectorXd direct_t = mode.transpose() * direct_parity;
+      const Eigen::MatrixXd direct_g = window.protected_state_map *
+          direct_svd.matrixV() * direct_inverse.asDiagonal() * direct_y;
+      const double direct_j = direct_parity.squaredNorm() -
+          direct_t.dot(direct_gamma.ldlt().solve(direct_t));
       FaultHypothesisV2 hypothesis;
       hypothesis.id = HypothesisId(2022);
       hypothesis.modes = {FaultModeId(2023)};
@@ -1359,12 +1422,305 @@ TEST(P002DualChannelContract,
       const auto pl = ProtectionLevelV2().computeShared(
           window, candidate, detector, &hypotheses, shared, pl_risk);
       ASSERT_TRUE(pl.model_valid) << pl.reason;
+      ASSERT_TRUE(validateProtectionLevelV2Proof(
+          *candidate, detector, hypotheses, pl, nullptr));
+      auto tampered_pl = pl;
+      tampered_pl.pl_xyz_m(0) = std::nextafter(
+          tampered_pl.pl_xyz_m(0),
+          std::numeric_limits<double>::infinity());
+      EXPECT_FALSE(validateProtectionLevelV2Proof(
+          *candidate, detector, hypotheses, tampered_pl, nullptr));
+      ProtectionLevelV2ProofV1 pl_proof;
+      ASSERT_TRUE(protectionLevelV2Proof(pl, &pl_proof));
+      ASSERT_TRUE(validateProtectionLevelV2ProofPayload(pl_proof, nullptr));
+      EXPECT_EQ(protectionLevelV2ProofIdentity(*candidate, pl),
+                pl_proof.proof_identity);
+      ASSERT_EQ(pl_proof.hypothesis_proofs.size(), 1u);
+      ASSERT_EQ(pl_proof.dual_channel_proofs.size(), 1u);
+      auto tampered_pl_proof = pl_proof;
+      tampered_pl_proof.served_result.pl_xyz_m(0) = std::nextafter(
+          tampered_pl_proof.served_result.pl_xyz_m(0),
+          std::numeric_limits<double>::infinity());
+      EXPECT_FALSE(validateProtectionLevelV2ProofPayload(
+          tampered_pl_proof, nullptr));
+      tampered_pl_proof = pl_proof;
+      tampered_pl_proof.protected_covariance(0, 0) = std::nextafter(
+          tampered_pl_proof.protected_covariance(0, 0),
+          std::numeric_limits<double>::infinity());
+      EXPECT_FALSE(validateProtectionLevelV2ProofPayload(
+          tampered_pl_proof, nullptr));
+      tampered_pl_proof = pl_proof;
+      tampered_pl_proof.fixed_bridge_margin(0) =
+          std::numeric_limits<double>::denorm_min();
+      EXPECT_FALSE(validateProtectionLevelV2ProofPayload(
+          tampered_pl_proof, nullptr));
+      tampered_pl_proof = pl_proof;
+      tampered_pl_proof.nominal_tail = std::nextafter(
+          tampered_pl_proof.nominal_tail,
+          std::numeric_limits<double>::infinity());
+      EXPECT_FALSE(validateProtectionLevelV2ProofPayload(
+          tampered_pl_proof, nullptr));
+      tampered_pl_proof = pl_proof;
+      tampered_pl_proof.component_proofs[0].served_component(0) =
+          std::nextafter(
+              tampered_pl_proof.component_proofs[0].served_component(0),
+              std::numeric_limits<double>::infinity());
+      EXPECT_FALSE(validateProtectionLevelV2ProofPayload(
+          tampered_pl_proof, nullptr));
+      tampered_pl_proof = pl_proof;
+      tampered_pl_proof.hypotheses[0].prior_probability_bound =
+          std::nextafter(
+              tampered_pl_proof.hypotheses[0].prior_probability_bound,
+              std::numeric_limits<double>::infinity());
+      EXPECT_FALSE(validateProtectionLevelV2ProofPayload(
+          tampered_pl_proof, nullptr));
+      tampered_pl_proof = pl_proof;
+      tampered_pl_proof.dual_channel_proofs[0].w_matrix(0, 0) =
+          std::nextafter(
+              tampered_pl_proof.dual_channel_proofs[0].w_matrix(0, 0),
+              std::numeric_limits<double>::infinity());
+      EXPECT_FALSE(validateProtectionLevelV2ProofPayload(
+          tampered_pl_proof, nullptr));
+      auto tampered_hypothesis_proof = pl_proof.hypothesis_proofs[0];
+      tampered_hypothesis_proof.protected_response(0, 0) =
+          std::nextafter(
+              tampered_hypothesis_proof.protected_response(0, 0),
+              std::numeric_limits<double>::infinity());
+      EXPECT_FALSE(validateFrozenHypothesisPlEntry(
+          tampered_hypothesis_proof, nullptr));
+      tampered_hypothesis_proof = pl_proof.hypothesis_proofs[0];
+      tampered_hypothesis_proof.served_entry.z_classification ^= 1;
+      EXPECT_FALSE(validateFrozenHypothesisPlEntry(
+          tampered_hypothesis_proof, nullptr));
+      tampered_hypothesis_proof = pl_proof.hypothesis_proofs[0];
+      tampered_hypothesis_proof.served_entry.valid =
+          !tampered_hypothesis_proof.served_entry.valid;
+      EXPECT_FALSE(validateFrozenHypothesisPlEntry(
+          tampered_hypothesis_proof, nullptr));
+      auto tampered_dual_proof = pl_proof.dual_channel_proofs[0];
+      tampered_dual_proof.proof_identity ^= 1;
+      EXPECT_FALSE(validateDualChannelNumericalProof(
+          tampered_dual_proof, nullptr));
+      tampered_dual_proof = pl_proof.dual_channel_proofs[0];
+      tampered_dual_proof.served_result.w_rank += 1.0;
+      EXPECT_FALSE(validateDualChannelNumericalProof(
+          tampered_dual_proof, nullptr));
+      tampered_dual_proof = pl_proof.dual_channel_proofs[0];
+      tampered_dual_proof.served_result.model_error_validated =
+          !tampered_dual_proof.served_result.model_error_validated;
+      EXPECT_FALSE(validateDualChannelNumericalProof(
+          tampered_dual_proof, nullptr));
+      EXPECT_TRUE(pl_proof.hypothesis_proofs[0].certified_gram.isApprox(
+          direct_gamma, 1e-12));
+      EXPECT_TRUE(pl_proof.hypothesis_proofs[0].protected_response.isApprox(
+          direct_g, 1e-12));
+      const Eigen::Vector3d direct_slopes =
+          (direct_g * direct_gamma.ldlt().solve(direct_g.transpose()))
+              .diagonal().cwiseMax(0.0).cwiseSqrt();
+      EXPECT_TRUE(pl_proof.hypothesis_proofs[0]
+                      .served_entry.protected_slopes.isApprox(
+          direct_slopes, 1e-10));
+      std::string publication_packet;
+      ASSERT_TRUE(bindProtectionLevelPublicationPacket(
+          *candidate, pl, pl_proof.proof_identity,
+          &publication_packet));
+      ProtectionLevelPublicationPacketV1 packet_payload;
+      ASSERT_TRUE(protectionLevelPublicationPacket(
+          publication_packet, &packet_payload));
+      EXPECT_EQ(packet_payload.candidate_proof_identity,
+                candidateNumericalProofIdentity(window, *candidate));
+      EXPECT_TRUE(validateProtectionLevelPublicationProof(
+          pl_proof.proof_identity, pl.pl_xyz_m,
+          publication_packet, nullptr));
+      Eigen::Vector3d tampered_publication_pl = pl.pl_xyz_m;
+      tampered_publication_pl(0) = std::nextafter(
+          tampered_publication_pl(0),
+          std::numeric_limits<double>::infinity());
+      EXPECT_FALSE(validateProtectionLevelPublicationProof(
+          pl_proof.proof_identity, tampered_publication_pl,
+          publication_packet, nullptr));
+      if (action.action_model_id == "KEEP_ALL") {
+        auto profile_hypotheses = std::vector<FaultHypothesisV2>{hypothesis};
+        profile_hypotheses[0].A = mode;
+        HypothesisEvaluationConfig profile_config;
+        profile_config.rank_tolerance = config.rank_tolerance;
+        profile_config.max_condition_number = config.max_condition_number;
+        const auto evidence = HypothesisEvidenceEvaluator(profile_config)
+            .evaluateAll(window, &profile_hypotheses,
+                         std::numeric_limits<double>::infinity());
+        ASSERT_EQ(evidence.size(), 1u);
+        EXPECT_TRUE(evidence[0].fault_gram.isApprox(direct_gamma, 1e-12));
+        EXPECT_TRUE(evidence[0].estimated_fault.isApprox(
+            direct_gamma.ldlt().solve(direct_t), 1e-11));
+        EXPECT_NEAR(evidence[0].profile_j, direct_j, 1e-11);
+      }
       const Eigen::Vector3d independent_pl = p002IndependentPlOracle(
           window, raw, mode, detector_risk, hypothesis, pl_risk);
       ASSERT_TRUE(independent_pl.allFinite());
       EXPECT_TRUE(pl.pl_xyz_m.isApprox(independent_pl, 1e-10));
     }
   }
+
+  // Independent discrete rank/condition sweep, including the exact boundary.
+  for (const double small : {1e-12, 1e-11, 1e-10, 1e-9, 1e-8,
+                             1e-7, 1e-6, 1e-5, 1e-4}) {
+    Eigen::Matrix2d raw_h = Eigen::Matrix2d::Zero();
+    raw_h(0, 0) = 1.0;
+    raw_h(1, 1) = small;
+    Eigen::JacobiSVD<Eigen::Matrix2d> direct(raw_h);
+    const int direct_rank = static_cast<int>((
+        direct.singularValues().array() > 1e-10).count());
+    if (small == 1e-10) {
+      EXPECT_DOUBLE_EQ(direct.singularValues()(1), 1e-10);  // transition band
+    } else {
+      EXPECT_EQ(direct_rank, small > 1e-10 ? 2 : 1);
+    }
+    const double direct_condition = direct.singularValues()(0) /
+        direct.singularValues()(1);
+    EXPECT_DOUBLE_EQ(direct_condition, 1.0 / small);
+
+    // The same discrete decision must be made by the production candidate's
+    // final raw-H SVD fallback, not merely by this test-local reference.
+    LinearizedIntegrityWindow sweep_window;
+    sweep_window.version = {71, 72, 73, 74};
+    Eigen::MatrixXd candidate_h = Eigen::MatrixXd::Zero(3, 2);
+    candidate_h(0, 0) = 1.0;
+    candidate_h(1, 1) = small;
+    sweep_window.blocks = {
+        block(7101, candidate_h, Eigen::Vector3d(0.1, small, 0.2),
+              sweep_window.version),
+        block(7102, Eigen::Matrix2d::Identity(), Eigen::Vector2d::Zero(),
+              sweep_window.version)};
+    finalizeIntegrityWindow(&sweep_window, 1e-10, 1e13);
+    ASSERT_TRUE(sweep_window.model_valid) << sweep_window.reason;
+    ExclusionAction sweep_action;
+    sweep_action.id = ExclusionActionId(7103);
+    sweep_action.groups_to_remove = {FactorGroupId(7102)};
+    RankUpdateConfig sweep_config;
+    sweep_config.rank_tolerance = 1e-10;
+    sweep_config.max_condition_number = 1e13;
+    sweep_config.max_linearization_step_norm = 1e13;
+    sweep_config.force_exact_condition_number = true;
+    sweep_config.materialize_dense_oracle_fields = false;
+    const RankUpdateEvaluator sweep_evaluator(sweep_config);
+    const auto production = sweep_evaluator.evaluate(
+        sweep_evaluator.factorizeOnce(sweep_window, {sweep_action}),
+        sweep_action);
+    EXPECT_TRUE(production.exact_slow_path);
+    EXPECT_EQ(production.diagnostics.numerical_path,
+              "FINAL_JACOBIAN_REFERENCE");
+    EXPECT_EQ(production.rank, direct_rank);
+    EXPECT_EQ(production.valid, direct_rank == 2) << production.reason;
+    if (direct_rank == 2) {
+      EXPECT_NEAR(production.condition_number, direct_condition,
+                  1e-10 * direct_condition);
+    }
+  }
+
+  RankUpdateConfig candidate_fallback_config = config;
+  candidate_fallback_config.force_exact_condition_number = true;
+  const RankUpdateEvaluator candidate_fallback_evaluator(
+      candidate_fallback_config);
+  const auto candidate_fallback = candidate_fallback_evaluator.evaluate(
+      candidate_fallback_evaluator.factorizeOnce(window, {modified}),
+      modified);
+  ASSERT_TRUE(candidate_fallback.valid) << candidate_fallback.reason;
+  EXPECT_TRUE(candidate_fallback.exact_slow_path);
+  EXPECT_EQ(candidate_fallback.diagnostics.numerical_path,
+            "FINAL_JACOBIAN_REFERENCE");
+  const P002RawOracle candidate_fallback_raw = p002IndependentRawOracle(
+      window, modified, config.rank_tolerance);
+  EXPECT_TRUE(candidate_fallback.state_increment.isApprox(
+      candidate_fallback_raw.state, 1e-11));
+  EXPECT_TRUE(candidate_fallback.covarianceTimes(
+      Eigen::MatrixXd::Identity(window.H.cols(), window.H.cols())).isApprox(
+          candidate_fallback_raw.covariance, 1e-10));
+
+  // Force the production operator off its LLT path and compare the spectral
+  // fallback against the direct raw-H SVD for several simultaneous RHS.
+  const P002RawOracle keep_raw = p002IndependentRawOracle(
+      window, keep, config.rank_tolerance);
+  FrozenWindowNumerics forced = *window.numerics;
+  forced.information_factorization =
+      std::make_shared<const Eigen::LLT<Eigen::MatrixXd>>(
+          7.0 * Eigen::MatrixXd::Identity(keep_raw.h.cols(),
+                                          keep_raw.h.cols()));
+  Eigen::MatrixXd fallback_rhs(keep_raw.h.cols(), 5);
+  fallback_rhs.setRandom();
+  bool used_spectral_fallback = false;
+  const Eigen::MatrixXd fallback = solveFrozenInformation(
+      forced, window.base_information, fallback_rhs,
+      &used_spectral_fallback);
+  EXPECT_TRUE(used_spectral_fallback);
+  EXPECT_TRUE(fallback.isApprox(keep_raw.covariance * fallback_rhs, 1e-11));
+}
+
+TEST(P003ProofChain, FrozenWindowServedResultIsConsumerRecomputable) {
+  using namespace uwb_imu_pl;
+  const auto window = syntheticWindow();
+  ASSERT_TRUE(window.numerics);
+  ASSERT_TRUE(validateFrozenWindowNumericalProof(
+      window, *window.numerics, nullptr));
+  EXPECT_FALSE(window.numerics->canonical_spectral_solution)
+      << "usable QR is the served path";
+
+  auto tampered = *window.numerics;
+  tampered.base_state_increment(0) = std::nextafter(
+      tampered.base_state_increment(0),
+      std::numeric_limits<double>::infinity());
+  EXPECT_FALSE(validateFrozenWindowNumericalProof(window, tampered, nullptr));
+  tampered = *window.numerics;
+  tampered.parity(0) = std::nextafter(
+      tampered.parity(0), std::numeric_limits<double>::infinity());
+  EXPECT_FALSE(validateFrozenWindowNumericalProof(window, tampered, nullptr));
+  tampered = *window.numerics;
+  tampered.statistic = std::nextafter(
+      tampered.statistic, std::numeric_limits<double>::infinity());
+  EXPECT_FALSE(validateFrozenWindowNumericalProof(window, tampered, nullptr));
+  tampered = *window.numerics;
+  tampered.canonical_spectral_solution = true;
+  EXPECT_FALSE(validateFrozenWindowNumericalProof(window, tampered, nullptr));
+
+  auto fallback_window = window;
+  fallback_window.square_root.reset();
+  auto fallback = *window.numerics;
+  fallback.canonical_spectral_solution = true;
+  fallback.square_root_certificate_ok = false;
+  fallback.base_state_increment = fallback.spectral_state_increment;
+  fallback.parity = fallback_window.z -
+      fallback_window.H * fallback.base_state_increment;
+  fallback.statistic = fallback.parity.squaredNorm();
+  EXPECT_TRUE(validateFrozenWindowNumericalProof(
+      fallback_window, fallback, nullptr));
+  // Reviewer probe: even synchronized cached derivatives and a public rehash
+  // cannot hide a changed canonical SVD state, because validation recomputes
+  // independently from raw H/z.
+  fallback.spectral_state_increment(0) += 0.125;
+  fallback.base_state_increment = fallback.spectral_state_increment;
+  fallback.parity = fallback_window.z -
+      fallback_window.H * fallback.base_state_increment;
+  fallback.statistic = fallback.parity.squaredNorm();
+  EXPECT_NE(0u, frozenWindowNumericalProofIdentity(fallback_window, fallback));
+  EXPECT_FALSE(validateFrozenWindowNumericalProof(
+      fallback_window, fallback, nullptr));
+
+  // Reviewer probe: altering both spectral factors and rehashing must not
+  // replace the covariance/all-RHS operator derived from actual raw H.
+  fallback = *window.numerics;
+  fallback.canonical_spectral_solution = true;
+  fallback.square_root_certificate_ok = false;
+  fallback.base_state_increment = fallback.spectral_state_increment;
+  fallback.parity = fallback_window.z -
+      fallback_window.H * fallback.base_state_increment;
+  fallback.statistic = fallback.parity.squaredNorm();
+  Eigen::MatrixXd changed_vectors = *fallback.spectral_vectors;
+  changed_vectors(0, 0) += 0.125;
+  fallback.spectral_vectors =
+      std::make_shared<const Eigen::MatrixXd>(changed_vectors);
+  fallback.spectral_inverse_squared(0) *= 0.75;
+  EXPECT_NE(0u, frozenWindowNumericalProofIdentity(fallback_window, fallback));
+  EXPECT_FALSE(validateFrozenWindowNumericalProof(
+      fallback_window, fallback, nullptr));
 }
 
 TEST(P002DualChannelContract,
@@ -1657,6 +2013,21 @@ TEST(IntegrityV2ProtectionLevel,
           .evaluateAll(window, modes, &optimized_hypotheses, 100.0, &frozen,
                        &pool);
   ASSERT_TRUE(frozen && frozen->valid) << (frozen ? frozen->reason : "missing");
+  ASSERT_FALSE(frozen->pl_entries.empty());
+  FrozenHypothesisPlProofV1 frozen_proof;
+  ASSERT_TRUE(frozenHypothesisPlProof(
+      frozen->pl_entries.front(), &frozen_proof));
+  ASSERT_TRUE(validateFrozenHypothesisPlEntry(frozen_proof, nullptr));
+  auto tampered_entry = frozen_proof;
+  tampered_entry.certified_gram(0, 0) = std::nextafter(
+      tampered_entry.certified_gram(0, 0),
+      std::numeric_limits<double>::infinity());
+  EXPECT_FALSE(validateFrozenHypothesisPlEntry(tampered_entry, nullptr));
+  tampered_entry = frozen_proof;
+  tampered_entry.gram_eigenvalues(0) = std::nextafter(
+      tampered_entry.gram_eigenvalues(0),
+      std::numeric_limits<double>::infinity());
+  EXPECT_FALSE(validateFrozenHypothesisPlEntry(tampered_entry, nullptr));
   ASSERT_EQ(reference_evidence.size(), optimized_evidence.size());
   EXPECT_EQ(frozen->low_dimensional_count, optimized_hypotheses.size());
   EXPECT_EQ(frozen->generic_fallback_count, 0u);
@@ -1696,10 +2067,21 @@ TEST(IntegrityV2ProtectionLevel,
       window, &ordinary_candidate, detector, &ordinary_hypotheses,
       ordinary_context, RiskBudgetV2{});
   auto frozen_candidate = candidate;
+  const auto frozen_work_before = NumericalWorkCounters::snapshot();
   const auto reused = ProtectionLevelV2().computeFrozenAllIn(
       window, &frozen_candidate, detector, optimized_hypotheses, modes, *frozen,
       frozen->fault_model_policy_fingerprint, RiskBudgetV2{});
-  ASSERT_EQ(ordinary.model_valid, reused.model_valid);
+  const auto frozen_work_after = NumericalWorkCounters::snapshot();
+  ASSERT_EQ(ordinary.model_valid, reused.model_valid)
+      << "ordinary=" << ordinary.reason << ";reused=" << reused.reason;
+  EXPECT_EQ(frozen_work_after.square_root_fallbacks -
+                frozen_work_before.square_root_fallbacks,
+            0u);
+  EXPECT_EQ(frozen_work_after.spectral_rhs_solves -
+                frozen_work_before.spectral_rhs_solves,
+            0u);
+  EXPECT_TRUE(validateProtectionLevelV2Proof(
+      frozen_candidate, detector, optimized_hypotheses, reused, nullptr));
   EXPECT_TRUE(ordinary.pl_xyz_m.isApprox(reused.pl_xyz_m, 1e-12));
   EXPECT_NEAR(ordinary.hpl_m, reused.hpl_m, 1e-12);
   EXPECT_NEAR(ordinary.vpl_m, reused.vpl_m, 1e-12);
@@ -1782,7 +2164,13 @@ TEST(IntegrityV2ProtectionLevel,
   EXPECT_FALSE(optimized_evidence[0].plausible);
   EXPECT_EQ(optimized_evidence[0].fault_gram.rows(), 0);
   for (std::size_t i = 1; i < optimized.size(); ++i) {
-    EXPECT_EQ(reference[i].monitored, optimized[i].monitored);
+    EXPECT_EQ(reference[i].monitored, optimized[i].monitored)
+        << "reference sigma/condition="
+        << reference[i].monitorability.sigma_min << "/"
+        << reference[i].monitorability.condition_number
+        << " optimized sigma/condition="
+        << optimized[i].monitorability.sigma_min << "/"
+        << optimized[i].monitorability.condition_number;
     EXPECT_EQ(reference[i].monitorability.rank,
               optimized[i].monitorability.rank);
     EXPECT_EQ(reference_evidence[i].plausible, optimized_evidence[i].plausible);
@@ -2475,6 +2863,10 @@ TEST(GateDOracle,
     for (const auto& item : worker.get()) {
       EXPECT_EQ(item.second.action.id, serial[item.first].action.id);
       EXPECT_EQ(item.second.valid, serial[item.first].valid);
+      ASSERT_EQ(item.second.state_increment.rows(),
+                serial[item.first].state_increment.rows())
+          << item.first << ": " << item.second.reason << "/"
+          << serial[item.first].reason;
       EXPECT_TRUE(item.second.state_increment.isApprox(
           serial[item.first].state_increment, 1e-9));
     }
@@ -2493,6 +2885,10 @@ TEST(GateDOracle,
     const auto pc = c.covarianceTimes(window.protected_state_map.transpose());
     const auto po =
         oracle.covarianceTimes(window.protected_state_map.transpose());
+    ASSERT_EQ(pc.rows(), po.rows())
+        << i << ": certified covariance solve returned " << pc.rows()
+        << " rows for action " << actions[i].action_model_id;
+    ASSERT_EQ(pc.cols(), po.cols()) << i;
     EXPECT_LE((pc - po).norm() / std::max(1e-15, po.norm()), 1e-7);
     EXPECT_NEAR(c.statistic, oracle.statistic, 1e-7);
     EXPECT_LE(std::abs(c.information_logdet - oracle.information_logdet) /
@@ -2534,7 +2930,8 @@ TEST(GateDOracle,
         ProtectionLevelV2().compute(window, c, dc, &fc, RiskBudgetV2{}, bc);
     const auto op = ProtectionLevelV2().compute(window, oracle, od, &fo,
                                                 RiskBudgetV2{}, bo);
-    EXPECT_EQ(pl.model_valid, op.model_valid);
+    EXPECT_EQ(pl.model_valid, op.model_valid)
+        << i << ": " << pl.reason << "/" << op.reason;
     if (pl.model_valid) {
       EXPECT_LE((pl.pl_xyz_m - op.pl_xyz_m).norm() /
                     std::max(1e-15, op.pl_xyz_m.norm()),
@@ -3412,6 +3809,14 @@ TEST(B2Compact, LegacyMappedRouteCountsPaddedAllocations) {
   // visible in the counters instead of being implicit.
   EXPECT_EQ(after.mode_dense_allocations - before.mode_dense_allocations, 2u);
   EXPECT_EQ(after.compact_mode_rows - before.compact_mode_rows, 0u);
+  EXPECT_GT(after.square_root_information_solves -
+                before.square_root_information_solves,
+            0u);
+  EXPECT_GT(after.square_root_qt_applications -
+                before.square_root_qt_applications,
+            0u);
+  EXPECT_EQ(after.spectral_rhs_solves - before.spectral_rhs_solves, 0u);
+  EXPECT_EQ(after.square_root_fallbacks - before.square_root_fallbacks, 0u);
 }
 
 // ---------------------------------------------------------------------------
@@ -3444,8 +3849,10 @@ TEST(B2Coverage, GroupedEnvelopeDischargesProofAndDominance) {
   group.sensor = SensorType::Uwb;
   group.parameter_dimension = 1;
   group.raw_group_maps[FactorGroupId(2)] = Eigen::Vector3d::Constant(0.5);
+  const auto work_before = NumericalWorkCounters::snapshot();
   const auto certificate = buildGroupedCoverageCertificate(
       fixture.window, {fixture.modes[0]}, {group});
+  const auto work_after = NumericalWorkCounters::snapshot();
   ASSERT_EQ(certificate.envelopes.size(), 1u);
   const auto& envelope = certificate.envelopes.front();
   EXPECT_TRUE(envelope.accepted) << envelope.reason;
@@ -3460,6 +3867,14 @@ TEST(B2Coverage, GroupedEnvelopeDischargesProofAndDominance) {
   EXPECT_EQ(coverageLabelFor(certificate, fixture.modes[0].id),
             CoverageLabel::UpperEnvelope);
   EXPECT_EQ(coverageEnvelopeIdFor(certificate, fixture.modes[0].id), 1u);
+  EXPECT_GT(work_after.square_root_information_solves -
+                work_before.square_root_information_solves,
+            0u);
+  EXPECT_EQ(work_after.spectral_rhs_solves - work_before.spectral_rhs_solves,
+            0u);
+  EXPECT_EQ(work_after.square_root_fallbacks -
+                work_before.square_root_fallbacks,
+            0u);
 }
 
 TEST(B2Coverage, MismatchedModesAreRejectedByTheInclusionProof) {

@@ -1,0 +1,39 @@
+{
+  "step": "P0-03",
+  "base_tag": "golden-p0-02-dual-channel",
+  "base_sha": "6b8c83b45eab6a69ca6364da48cb01df61e098af",
+  "clean_build": {"target": "tests", "workers": 2, "passed": true},
+  "complete_ctest": {"targets": 26, "passed": 26, "failed": 0, "seconds": 103.94},
+  "directed": {"p003_root": 5, "p003_dual": 1, "numerical_pl_coverage": 31, "publication_wiring": 6, "publication_identity": 3, "legacy_switch": 5, "failed": 0},
+  "census": {
+    "hypothesis_coverage_reduced": false,
+    "action_coverage_reduced": false,
+    "coverage_cases": 6,
+    "compact_path_cases": 4,
+    "dangerous_harmless_nullspace_cases": 2
+  },
+  "risk": {
+    "budget_changed": false,
+    "threshold_changed": false,
+    "alert_limit_changed": false,
+    "prior_changed": false,
+    "denominator_changed": false,
+    "b3_risk_tests_in_complete_ctest": 5
+  },
+  "work_counters": {
+    "shared_covariance_batch_asserted": true,
+    "direct_final_jacobian_fallback_asserted": true,
+    "matrix_free_and_dense_paths_asserted": true,
+    "fallback_disabled": false,
+    "legacy_root_operator_asserted": true,
+    "proof_consumer_recompute_asserted": true
+  },
+  "abi": {
+    "legacy_8_argument_symbol": true,
+    "explicit_9_argument_symbol": true,
+    "golden_public_layouts_identical": true,
+    "golden_header_client_links_and_runs": true,
+    "versioned_external_proof_sidecars": true
+  },
+  "not_run": ["sanitizers", "hardware_replay", "performance_comparison", "deployment_campaign"]
+}

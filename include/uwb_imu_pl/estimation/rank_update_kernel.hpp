@@ -96,6 +96,9 @@ std::uint64_t candidateDetectorActionIdentity(
 std::uint64_t candidateDetectorNumericalIdentity(
     const LinearizedIntegrityWindow& window,
     const ExclusionAction& action);
+std::uint64_t candidateNumericalProofIdentity(
+    const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate);
 std::uint64_t candidateDetectorCertificateDigest(
     const LinearizedIntegrityWindow& window,
     const CandidateEvaluation& candidate,

@@ -218,6 +218,42 @@ TEST(DualChannelDetector, Det02MergedDirectionIsTheOnlyMonitoredOne) {
       << "the risk threshold must be the inflated one";
 }
 
+// P0-03 / O05 independent counterexamples.  Singular values alone cannot
+// certify that a matrix advertised as a covariance/fault Gram is symmetric
+// positive semidefinite.  Both inputs below have finite positive singular
+// values and therefore used to reach a finite PL bound.
+TEST(DualChannelDetector, P003IndefiniteAndAsymmetricGramsFailClosed) {
+  ChannelBoundInput channel;
+  channel.detector_id = "p0_03_numerical_oracle";
+  channel.dof = 8;
+  channel.threshold = 20.0;
+  channel.actual_threshold = channel.threshold;
+  channel.weight = 1.0;
+  channel.rho_validated = true;
+
+  DualChannelBoundRequest request;
+  request.channels = {channel};
+  request.protected_response = Eigen::MatrixXd::Zero(3, 2);
+  request.protected_response(0, 0) = 1.0;
+  request.protected_response(1, 1) = 1.0;
+  request.p_md = 1e-3;
+  request.k_axis.setConstant(3.0);
+  request.position_rho_validated = true;
+
+  request.channels[0].gram = Eigen::Vector2d(1.0, -1e-6).asDiagonal();
+  const DualChannelBoundResult indefinite = computeDualChannelBound(request);
+  EXPECT_FALSE(indefinite.valid) << indefinite.reason;
+  EXPECT_NE(indefinite.reason.find("PSD"), std::string::npos)
+      << indefinite.reason;
+
+  request.channels[0].gram << 1.0, 1e-3,
+                              0.0, 1.0;
+  const DualChannelBoundResult asymmetric = computeDualChannelBound(request);
+  EXPECT_FALSE(asymmetric.valid) << asymmetric.reason;
+  EXPECT_NE(asymmetric.reason.find("symmetric"), std::string::npos)
+      << asymmetric.reason;
+}
+
 // ---------------------------------------------------------------------------
 // DET-03: fault-span projection (§7.5).
 // ---------------------------------------------------------------------------

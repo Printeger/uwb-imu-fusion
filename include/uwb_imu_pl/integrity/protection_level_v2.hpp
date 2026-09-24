@@ -2,6 +2,7 @@
 
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
 #include "uwb_imu_pl/integrity/hypothesis_evidence.hpp"
+#include "uwb_imu_pl/integrity/dual_channel_detector.hpp"
 
 #include <functional>
 #include <map>
@@ -34,6 +35,91 @@ struct ProtectionLevelV2Result {
   std::string detector_certificate_id;
   std::string reason;
 };
+
+struct ProtectionBridgeProofV1 {
+  Eigen::MatrixXd projected_gain;
+  Eigen::VectorXd deterministic_bound;
+  Eigen::Vector3d served_component = Eigen::Vector3d::Zero();
+};
+
+struct ProtectionHypothesisComponentProofV1 {
+  HypothesisId hypothesis;
+  int detector_dof = 0;
+  double detector_threshold = 0.0;
+  double hypothesis_tail = 0.0;
+  double axis_tail = 0.0;
+  double multiplier = 0.0;
+  double noncentrality = 0.0;
+  bool dual_channel = false;
+  Eigen::Vector3d served_component = Eigen::Vector3d::Zero();
+};
+
+struct ProtectionLevelV2ProofV1 {
+  std::uint64_t schema_version = 1;
+  std::uint64_t candidate_proof_identity = 0;
+  std::uint64_t detector_proof_identity = 0;
+  std::uint64_t detector_candidate_numerical_identity = 0;
+  bool pooled_only = false;
+  bool detector_passed = false;
+  RiskBudgetV2 risk;
+  Eigen::MatrixXd protected_covariance_factor;
+  Eigen::Matrix3d protected_covariance = Eigen::Matrix3d::Zero();
+  double covariance_rank_tolerance = 1e-10;
+  double nominal_tail = 0.0;
+  double nominal_multiplier = 0.0;
+  Eigen::Vector3d nominal_sigma = Eigen::Vector3d::Zero();
+  Eigen::Vector3d fixed_bridge_margin = Eigen::Vector3d::Zero();
+  std::vector<ProtectionBridgeProofV1> bridge_proofs;
+  std::vector<FaultHypothesisV2> hypotheses;
+  std::vector<FrozenHypothesisPlProofV1> hypothesis_proofs;
+  std::vector<DualChannelNumericalProofV1> dual_channel_proofs;
+  std::vector<ProtectionHypothesisComponentProofV1> component_proofs;
+  ProtectionLevelV2Result served_result;
+  std::uint64_t proof_identity = 0;
+};
+
+struct ProtectionLevelPublicationPacketV1 {
+  std::uint64_t schema_version = 1;
+  std::uint64_t candidate_proof_identity = 0;
+  std::uint64_t protection_proof_identity = 0;
+  Eigen::Vector3d served_pl = Eigen::Vector3d::Zero();
+  std::string detector_certificate_id;
+  std::uint64_t packet_identity = 0;
+};
+
+bool validateProtectionLevelV2ProofPayload(
+    const ProtectionLevelV2ProofV1& proof,
+    std::string* reason = nullptr);
+
+bool validateProtectionLevelV2Proof(
+    const CandidateEvaluation& candidate, const DetectorResultV2& detector,
+    const std::vector<FaultHypothesisV2>& hypotheses,
+    const ProtectionLevelV2Result& result,
+    std::string* reason = nullptr);
+
+bool protectionLevelV2Proof(const ProtectionLevelV2Result& result,
+                            ProtectionLevelV2ProofV1* proof);
+std::uint64_t protectionLevelV2ProofIdentity(
+    const ProtectionLevelV2Result& result);
+std::uint64_t protectionLevelV2ProofIdentity(
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result);
+bool bindProtectionLevelPublicationPacket(
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    std::uint64_t protection_proof_identity,
+    std::string* packet_id);
+bool protectionLevelPublicationPacket(
+    const std::string& packet_id,
+    ProtectionLevelPublicationPacketV1* packet);
+std::uint64_t protectionLevelPublicationProofIdentity(
+    const Eigen::Vector3d& served_pl,
+    const std::string& detector_certificate_id);
+bool validateProtectionLevelPublicationProof(
+    std::uint64_t proof_identity,
+    const Eigen::Vector3d& served_pl,
+    const std::string& detector_certificate_id,
+    std::string* reason = nullptr);
 
 struct FrozenBridgeProjection {
   Eigen::MatrixXd jacobian_whitened;

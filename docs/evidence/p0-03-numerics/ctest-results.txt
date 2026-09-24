@@ -1,0 +1,57 @@
+Test project /home/mint/ws_fusion_uwb/build/uwb_imu_pl
+      Start  1: _ctest_uwb_imu_pl_gtest_test_snapshot_integrity
+ 1/26 Test  #1: _ctest_uwb_imu_pl_gtest_test_snapshot_integrity ...............   Passed    0.09 sec
+      Start  2: _ctest_uwb_imu_pl_gtest_test_integrity_config
+ 2/26 Test  #2: _ctest_uwb_imu_pl_gtest_test_integrity_config .................   Passed    0.23 sec
+      Start  3: _ctest_uwb_imu_pl_gtest_test_run_logger
+ 3/26 Test  #3: _ctest_uwb_imu_pl_gtest_test_run_logger .......................   Passed    0.09 sec
+      Start  4: _ctest_uwb_imu_pl_gtest_test_realtime_incremental
+ 4/26 Test  #4: _ctest_uwb_imu_pl_gtest_test_realtime_incremental .............   Passed    0.41 sec
+      Start  5: _ctest_uwb_imu_pl_gtest_test_deterministic_event
+ 5/26 Test  #5: _ctest_uwb_imu_pl_gtest_test_deterministic_event ..............   Passed    0.07 sec
+      Start  6: _ctest_uwb_imu_pl_gtest_test_dense_oracle
+ 6/26 Test  #6: _ctest_uwb_imu_pl_gtest_test_dense_oracle .....................   Passed    0.09 sec
+      Start  7: _ctest_uwb_imu_pl_gtest_test_integrity_v2
+ 7/26 Test  #7: _ctest_uwb_imu_pl_gtest_test_integrity_v2 .....................   Passed    1.06 sec
+      Start  8: _ctest_uwb_imu_pl_gtest_test_integrity_reference
+ 8/26 Test  #8: _ctest_uwb_imu_pl_gtest_test_integrity_reference ..............   Passed    0.08 sec
+      Start  9: _ctest_uwb_imu_pl_gtest_test_fault_manifest
+ 9/26 Test  #9: _ctest_uwb_imu_pl_gtest_test_fault_manifest ...................   Passed    0.10 sec
+      Start 10: _ctest_uwb_imu_pl_gtest_test_square_root_context
+10/26 Test #10: _ctest_uwb_imu_pl_gtest_test_square_root_context ..............   Passed    0.08 sec
+      Start 11: _ctest_uwb_imu_pl_gtest_test_history_fault_summary
+11/26 Test #11: _ctest_uwb_imu_pl_gtest_test_history_fault_summary ............   Passed    0.09 sec
+      Start 12: _ctest_uwb_imu_pl_gtest_test_history_fault_parameterization
+12/26 Test #12: _ctest_uwb_imu_pl_gtest_test_history_fault_parameterization ...   Passed   91.77 sec
+      Start 13: _ctest_uwb_imu_pl_gtest_test_history_summary_extraction
+13/26 Test #13: _ctest_uwb_imu_pl_gtest_test_history_summary_extraction .......   Passed    0.35 sec
+      Start 14: _ctest_uwb_imu_pl_gtest_test_history_summary_lifecycle
+14/26 Test #14: _ctest_uwb_imu_pl_gtest_test_history_summary_lifecycle ........   Passed    0.10 sec
+      Start 15: _ctest_uwb_imu_pl_gtest_test_dual_channel_detector
+15/26 Test #15: _ctest_uwb_imu_pl_gtest_test_dual_channel_detector ............   Passed    0.28 sec
+      Start 16: _ctest_uwb_imu_pl_gtest_test_fde_post_selection
+16/26 Test #16: _ctest_uwb_imu_pl_gtest_test_fde_post_selection ...............   Passed    0.08 sec
+      Start 17: _ctest_uwb_imu_pl_gtest_test_publication_identity
+17/26 Test #17: _ctest_uwb_imu_pl_gtest_test_publication_identity .............   Passed    0.08 sec
+      Start 18: _ctest_uwb_imu_pl_gtest_test_publication_wiring
+18/26 Test #18: _ctest_uwb_imu_pl_gtest_test_publication_wiring ...............   Passed    0.13 sec
+      Start 19: _ctest_uwb_imu_pl_gtest_test_history_summary_pipeline
+19/26 Test #19: _ctest_uwb_imu_pl_gtest_test_history_summary_pipeline .........   Passed    1.11 sec
+      Start 20: _ctest_uwb_imu_pl_rostest_test_realtime_integrity_viz.test
+20/26 Test #20: _ctest_uwb_imu_pl_rostest_test_realtime_integrity_viz.test ....   Passed    3.01 sec
+      Start 21: test_week4_tools
+21/26 Test #21: test_week4_tools ..............................................   Passed    1.12 sec
+      Start 22: test_advisor_report
+22/26 Test #22: test_advisor_report ...........................................   Passed    1.18 sec
+      Start 23: test_round2_tools
+23/26 Test #23: test_round2_tools .............................................   Passed    0.61 sec
+      Start 24: test_gate_d_tools
+24/26 Test #24: test_gate_d_tools .............................................   Passed    1.12 sec
+      Start 25: test_round3_tools
+25/26 Test #25: test_round3_tools .............................................   Passed    0.45 sec
+      Start 26: test_launch_contracts
+26/26 Test #26: test_launch_contracts .........................................   Passed    0.12 sec
+
+100% tests passed, 0 tests failed out of 26
+
+Total Test time (real) = 103.94 sec

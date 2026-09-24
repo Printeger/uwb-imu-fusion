@@ -1,0 +1,13 @@
+kernel=Linux 6.18.33.2-microsoft-standard-WSL2 x86_64
+compiler=GCC 9.4.0
+cmake=3.16.3
+eigen=3.3.7-2
+gtsam=4.0.3-1ubuntu1
+tbb=2020.1-2
+yaml_cpp=0.6.2-4ubuntu1
+build_workers=2
+ctest_workers=1
+OMP_NUM_THREADS=unset
+MKL_NUM_THREADS=unset
+OPENBLAS_NUM_THREADS=unset
+input_truth=deterministic fixtures embedded in hashed test sources and boundary-replay.json

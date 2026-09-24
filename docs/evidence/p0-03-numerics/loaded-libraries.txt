@@ -1,0 +1,17 @@
+/home/mint/ws_fusion_uwb/devel/lib/libuwb_imu_pl.so
+/lib/x86_64-linux-gnu/libboost_chrono.so.1.71.0
+/lib/x86_64-linux-gnu/libboost_filesystem.so.1.71.0
+/lib/x86_64-linux-gnu/libboost_serialization.so.1.71.0
+/lib/x86_64-linux-gnu/libboost_timer.so.1.71.0
+/lib/x86_64-linux-gnu/libc.so.6
+/lib/x86_64-linux-gnu/libdl.so.2
+/lib/x86_64-linux-gnu/libgcc_s.so.1
+/lib/x86_64-linux-gnu/libm.so.6
+/lib/x86_64-linux-gnu/libpthread.so.0
+/lib/x86_64-linux-gnu/libstdc++.so.6
+/lib/x86_64-linux-gnu/libtbb.so.2
+/lib/x86_64-linux-gnu/libtbbmalloc.so.2
+/lib/x86_64-linux-gnu/libyaml-cpp.so.0.6
+/usr/local/lib/libgtsam.so.4
+/usr/local/lib/libgtsam_unstable.so.4
+/usr/local/lib/libmetis-gtsam.so

@@ -1,0 +1,164 @@
+Note: Google Test filter = SquareRootContext.P003*
+[==========] Running 5 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 5 tests from SquareRootContext
+[ RUN      ] SquareRootContext.P003UnifiedPsdRankAndNullspaceCertificate
+[       OK ] SquareRootContext.P003UnifiedPsdRankAndNullspaceCertificate (0 ms)
+[ RUN      ] SquareRootContext.P003ReviewerScaleRankAndProofIdentityProbes
+[       OK ] SquareRootContext.P003ReviewerScaleRankAndProofIdentityProbes (0 ms)
+[ RUN      ] SquareRootContext.P003LegacyEightArgumentClassificationAbiLinks
+[       OK ] SquareRootContext.P003LegacyEightArgumentClassificationAbiLinks (0 ms)
+[ RUN      ] SquareRootContext.P003RootProofBindsInputsPolicyPathAndServedResult
+[       OK ] SquareRootContext.P003RootProofBindsInputsPolicyPathAndServedResult (0 ms)
+[ RUN      ] SquareRootContext.P003EveryRhsUsesCertifiedRootAndSvdReference
+[       OK ] SquareRootContext.P003EveryRhsUsesCertifiedRootAndSvdReference (0 ms)
+[----------] 5 tests from SquareRootContext (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 5 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 5 tests.
+Note: Google Test filter = *P003*
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from DualChannelDetector
+[ RUN      ] DualChannelDetector.P003IndefiniteAndAsymmetricGramsFailClosed
+[       OK ] DualChannelDetector.P003IndefiniteAndAsymmetricGramsFailClosed (0 ms)
+[----------] 1 test from DualChannelDetector (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 1 test.
+Note: Google Test filter = P002DualChannelContract.*:P003ProofChain.*:IntegrityV2ProtectionLevel.*:GateDNumerics.*:GateDOracle.*:GateDProtectionLevel.*:B2Compact.*:B2Coverage.*:B3ZeroSpace.*
+[==========] Running 31 tests from 9 test suites.
+[----------] Global test environment set-up.
+[----------] 7 tests from P002DualChannelContract
+[ RUN      ] P002DualChannelContract.PooledPassDualFailRejectsDenseAndMatrixFree
+[       OK ] P002DualChannelContract.PooledPassDualFailRejectsDenseAndMatrixFree (0 ms)
+[ RUN      ] P002DualChannelContract.NonzeroHistoryConstantRejectsEveryCandidatePath
+[       OK ] P002DualChannelContract.NonzeroHistoryConstantRejectsEveryCandidatePath (0 ms)
+[ RUN      ] P002DualChannelContract.MissingPayloadIsInvalidAndCannotCertifyFinitePl
+[       OK ] P002DualChannelContract.MissingPayloadIsInvalidAndCannotCertifyFinitePl (0 ms)
+[ RUN      ] P002DualChannelContract.AllInKeepAndModifiedShareDenseMatrixFreeCertificateAndPl
+[       OK ] P002DualChannelContract.AllInKeepAndModifiedShareDenseMatrixFreeCertificateAndPl (1 ms)
+[ RUN      ] P002DualChannelContract.MissingHistoryConstantFailsClosed
+[       OK ] P002DualChannelContract.MissingHistoryConstantFailsClosed (0 ms)
+[ RUN      ] P002DualChannelContract.IndependentRawQrGramAndPlOracleCoversAllCandidatePaths
+[       OK ] P002DualChannelContract.IndependentRawQrGramAndPlOracleCoversAllCandidatePaths (3 ms)
+[ RUN      ] P002DualChannelContract.StaleSwappedAndTamperedContractsFailClosedBeforeFinitePl
+[       OK ] P002DualChannelContract.StaleSwappedAndTamperedContractsFailClosedBeforeFinitePl (0 ms)
+[----------] 7 tests from P002DualChannelContract (4 ms total)
+
+[----------] 1 test from P003ProofChain
+[ RUN      ] P003ProofChain.FrozenWindowServedResultIsConsumerRecomputable
+[       OK ] P003ProofChain.FrozenWindowServedResultIsConsumerRecomputable (0 ms)
+[----------] 1 test from P003ProofChain (0 ms total)
+
+[----------] 3 tests from IntegrityV2ProtectionLevel
+[ RUN      ] IntegrityV2ProtectionLevel.RecomputesPostCandidateAndStaysResearchOnly
+[       OK ] IntegrityV2ProtectionLevel.RecomputesPostCandidateAndStaysResearchOnly (1 ms)
+[ RUN      ] IntegrityV2ProtectionLevel.FrozenEvidenceContextMatchesKeepAllAndInvalidatesOnMutation
+[       OK ] IntegrityV2ProtectionLevel.FrozenEvidenceContextMatchesKeepAllAndInvalidatesOnMutation (1 ms)
+[ RUN      ] IntegrityV2ProtectionLevel.FixedLowDimKeepsSingularStatusAndUncommonDimensionFallsBack
+[       OK ] IntegrityV2ProtectionLevel.FixedLowDimKeepsSingularStatusAndUncommonDimensionFallsBack (0 ms)
+[----------] 3 tests from IntegrityV2ProtectionLevel (2 ms total)
+
+[----------] 6 tests from GateDNumerics
+[ RUN      ] GateDNumerics.CompleteReplacementSurvivesSingularDeletionIntermediate
+[       OK ] GateDNumerics.CompleteReplacementSurvivesSingularDeletionIntermediate (0 ms)
+[ RUN      ] GateDNumerics.FrozenNumericalContractMismatchFailsClosed
+[       OK ] GateDNumerics.FrozenNumericalContractMismatchFailsClosed (0 ms)
+[ RUN      ] GateDNumerics.FinalSvdRejectsConditionHiddenByCholeskyDiagonal
+[       OK ] GateDNumerics.FinalSvdRejectsConditionHiddenByCholeskyDiagonal (0 ms)
+[ RUN      ] GateDNumerics.EuclideanStepGateBothSidesUsesReferenceNearBoundary
+[       OK ] GateDNumerics.EuclideanStepGateBothSidesUsesReferenceNearBoundary (0 ms)
+[ RUN      ] GateDNumerics.MalformedFullChangeRejectedBeforeAnyPartialOperation
+[       OK ] GateDNumerics.MalformedFullChangeRejectedBeforeAnyPartialOperation (0 ms)
+[ RUN      ] GateDNumerics.RankAndConditionThresholdsBothSidesKeepExactDefinitions
+[       OK ] GateDNumerics.RankAndConditionThresholdsBothSidesKeepExactDefinitions (0 ms)
+[----------] 6 tests from GateDNumerics (0 ms total)
+
+[----------] 1 test from GateDOracle
+[ RUN      ] GateDOracle.RealCurrentHistoricalBridgeAndUnionActionsMatchDenseAndWorkers
+[       OK ] GateDOracle.RealCurrentHistoricalBridgeAndUnionActionsMatchDenseAndWorkers (312 ms)
+[----------] 1 test from GateDOracle (312 ms total)
+
+[----------] 1 test from GateDProtectionLevel
+[ RUN      ] GateDProtectionLevel.SharedModesUseOneCombinedCovarianceSolve
+[       OK ] GateDProtectionLevel.SharedModesUseOneCombinedCovarianceSolve (1 ms)
+[----------] 1 test from GateDProtectionLevel (1 ms total)
+
+[----------] 4 tests from B2Compact
+[ RUN      ] B2Compact.CompactPathAllocatesNoPaddedModeBlocks
+[       OK ] B2Compact.CompactPathAllocatesNoPaddedModeBlocks (0 ms)
+[ RUN      ] B2Compact.CapacityExhaustionFallsBackWithIdenticalResults
+[       OK ] B2Compact.CapacityExhaustionFallsBackWithIdenticalResults (0 ms)
+[ RUN      ] B2Compact.HypothesisDimensionCapRefusesFailClosed
+[       OK ] B2Compact.HypothesisDimensionCapRefusesFailClosed (0 ms)
+[ RUN      ] B2Compact.LegacyMappedRouteCountsPaddedAllocations
+[       OK ] B2Compact.LegacyMappedRouteCountsPaddedAllocations (1 ms)
+[----------] 4 tests from B2Compact (1 ms total)
+
+[----------] 6 tests from B2Coverage
+[ RUN      ] B2Coverage.ExactTraversalCertifiesEveryTask
+[       OK ] B2Coverage.ExactTraversalCertifiesEveryTask (0 ms)
+[ RUN      ] B2Coverage.GroupedEnvelopeDischargesProofAndDominance
+[       OK ] B2Coverage.GroupedEnvelopeDischargesProofAndDominance (0 ms)
+[ RUN      ] B2Coverage.MismatchedModesAreRejectedByTheInclusionProof
+[       OK ] B2Coverage.MismatchedModesAreRejectedByTheInclusionProof (0 ms)
+[ RUN      ] B2Coverage.UnsupportedFamilyCannotFormAnEnvelope
+[       OK ] B2Coverage.UnsupportedFamilyCannotFormAnEnvelope (0 ms)
+[ RUN      ] B2Coverage.IncompleteCoverageMakesProtectedOutputUnavailable
+[       OK ] B2Coverage.IncompleteCoverageMakesProtectedOutputUnavailable (0 ms)
+[ RUN      ] B2Coverage.DominanceRejectsAnUnderCoveringEnvelope
+[       OK ] B2Coverage.DominanceRejectsAnUnderCoveringEnvelope (0 ms)
+[----------] 6 tests from B2Coverage (0 ms total)
+
+[----------] 2 tests from B3ZeroSpace
+[ RUN      ] B3ZeroSpace.DangerousNullspaceIsUnavailableWithDirectionLevelReason
+[       OK ] B3ZeroSpace.DangerousNullspaceIsUnavailableWithDirectionLevelReason (0 ms)
+[ RUN      ] B3ZeroSpace.HarmlessNullspaceKeepsAFiniteProjectedBound
+[       OK ] B3ZeroSpace.HarmlessNullspaceKeepsAFiniteProjectedBound (1 ms)
+[----------] 2 tests from B3ZeroSpace (1 ms total)
+
+[----------] Global test environment tear-down
+[==========] 31 tests from 9 test suites ran. (321 ms total)
+[  PASSED  ] 31 tests.
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from PublicationWiring
+[ RUN      ] PublicationWiring.PipelineAttemptCarriesProductionIdentity
+[OUT-04] check=REFUSED state=UNAVAILABLE missing=manifest_digest;risk_proof_id;pl_detector_certificate_id;protection_level_m;frame_id
+[       OK ] PublicationWiring.PipelineAttemptCarriesProductionIdentity (8 ms)
+[ RUN      ] PublicationWiring.FrozenDataIsUnavailableBeforeHeavyFde
+[OUT-05] wall_elapsed_ns=6000000000 sensor_delta_ns=0 sensor_lag_ns=5990000000 frozen=1
+[       OK ] PublicationWiring.FrozenDataIsUnavailableBeforeHeavyFde (14 ms)
+[ RUN      ] PublicationWiring.WatchdogClauseSemanticsAreExplicit
+[       OK ] PublicationWiring.WatchdogClauseSemanticsAreExplicit (0 ms)
+[ RUN      ] PublicationWiring.BackwardsClockIsRefusedLikeInputValidation
+[       OK ] PublicationWiring.BackwardsClockIsRefusedLikeInputValidation (6 ms)
+[ RUN      ] PublicationWiring.ControllerTriStateAndAtomicChain
+[       OK ] PublicationWiring.ControllerTriStateAndAtomicChain (1 ms)
+[ RUN      ] PublicationWiring.StatelessMonitorPathIsExplicitlyUnprotected
+[       OK ] PublicationWiring.StatelessMonitorPathIsExplicitlyUnprotected (0 ms)
+[----------] 6 tests from PublicationWiring (29 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (29 ms total)
+[  PASSED  ] 6 tests.
+[==========] Running 3 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 3 tests from PublicationIdentity
+[ RUN      ] PublicationIdentity.Out01SameTimeRebindAndNoCertificateReuse
+[OUT-01] same_time_rebind=0.050 rejected_without_bound=1 propagation_proof_id=9001 chain=READY..PROTECTED
+[       OK ] PublicationIdentity.Out01SameTimeRebindAndNoCertificateReuse (0 ms)
+[ RUN      ] PublicationIdentity.Out02TimeFrameAndReferenceMixing
+[OUT-02] refused_mixings=frame,reference,detectors,manifest,scope,pl_certificate (centre-shift bound does not repair any of them)
+[       OK ] PublicationIdentity.Out02TimeFrameAndReferenceMixing (0 ms)
+[ RUN      ] PublicationIdentity.Out03ExpiryCongestionAndClockJumps
+[OUT-03] wall_elapsed_after_jump=420000000 sensor_stale=1 wall_timeout=1 backwards_refused=1
+[       OK ] PublicationIdentity.Out03ExpiryCongestionAndClockJumps (0 ms)
+[----------] 3 tests from PublicationIdentity (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 3 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 3 tests.

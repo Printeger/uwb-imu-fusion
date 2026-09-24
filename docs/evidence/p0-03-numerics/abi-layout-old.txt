@@ -1,0 +1,12 @@
+ProtectionLevelResult 232 200
+PublicationDiagnostics 424 416
+FrozenWindowNumerics 384 352
+CandidateDetectorCertificate 192 160
+CandidateEvaluation 1088 1056
+DualChannelBoundResult 320 288
+DualChannelBoundRequest 144 112
+FrozenHypothesisPlEntry 168 164
+FrozenHypothesisNumerics 320 264
+ProtectionLevelV2Result 224 192
+PublicationIdentity 200 192
+classify8 1 1 1 1

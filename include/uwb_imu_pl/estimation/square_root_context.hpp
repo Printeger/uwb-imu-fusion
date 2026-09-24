@@ -75,6 +75,82 @@ struct SquareRootCertificate {
   bool ok() const;
 };
 
+// P0-03: one quantity-aware decision certificate for every symmetric
+// covariance/fault Gram consumed by evidence, detector and PL code.  Eigenvalue
+// intervals, rather than singular values of an arbitrary matrix, decide PSD,
+// rank and nullspace.  A transition-band result is explicitly indeterminate
+// and callers must fail closed or use their exact reference path.
+struct SymmetricPsdCertificate {
+  Eigen::MatrixXd symmetric_matrix;
+  Eigen::VectorXd eigenvalues;       // ascending
+  Eigen::MatrixXd eigenvectors;      // matching columns
+  Eigen::VectorXd eigenvalue_errors; // per-eigenpair a posteriori intervals
+  double matrix_scale = 0.0;
+  double symmetry_error = std::numeric_limits<double>::infinity();
+  double symmetry_tolerance = 0.0;
+  double eigenvalue_error = std::numeric_limits<double>::infinity();
+  double rank_eigenvalue_gate = 0.0;
+  double sigma_min = 0.0;
+  double sigma_max = 0.0;
+  double condition = std::numeric_limits<double>::infinity();
+  int rank = 0;
+  std::uint64_t proof_identity = 0;
+  bool symmetric = false;
+  bool psd = false;
+  bool rank_certified = false;
+  bool valid = false;
+  std::string reason;
+};
+
+enum class GramNullspaceClass {
+  FullRank = 1,
+  Harmless = 2,
+  Dangerous = 3,
+  Indeterminate = 4,
+};
+
+struct GramResponseCertificate {
+  SymmetricPsdCertificate gram;
+  GramNullspaceClass nullspace_class = GramNullspaceClass::Indeterminate;
+  Eigen::Vector3d axis_residual = Eigen::Vector3d::Constant(
+      std::numeric_limits<double>::infinity());
+  Eigen::Vector3d protected_slopes = Eigen::Vector3d::Constant(
+      std::numeric_limits<double>::infinity());
+  double response_tolerance = 0.0;
+  std::uint64_t proof_identity = 0;
+  bool valid = false;
+  std::string reason;
+};
+
+SymmetricPsdCertificate certifySymmetricPsd(
+    const Eigen::MatrixXd& matrix, double rank_tolerance,
+    std::uint64_t parent_proof_identity = 0,
+    double raw_factor_scale = std::numeric_limits<double>::quiet_NaN());
+
+// Certifies an actual Gram together with the raw factor that produced it.
+// This is intentionally a separate entry point from certifySymmetricPsd(): a
+// negative entry/eigenvalue in an arbitrary matrix must fail closed, whereas a
+// Gram formed as factor' * factor has a constructive PSD proof and must not be
+// rejected because the *secondary* eigensolve of the rounded product reports a
+// spurious tiny negative eigenvalue.  The supplied Gram is still checked and
+// hashed; callers cannot launder a different/indefinite matrix through the raw
+// factor proof.
+SymmetricPsdCertificate certifyFactorGram(
+    const Eigen::MatrixXd& raw_factor, const Eigen::MatrixXd& actual_gram,
+    double rank_tolerance, std::uint64_t parent_proof_identity = 0,
+    double raw_factor_scale = std::numeric_limits<double>::quiet_NaN());
+
+GramResponseCertificate certifyGramAndProtectedResponse(
+    const Eigen::MatrixXd& gram, const Eigen::MatrixXd& protected_response,
+    double rank_tolerance, std::uint64_t parent_proof_identity = 0,
+    double raw_factor_scale = std::numeric_limits<double>::quiet_NaN());
+
+GramResponseCertificate certifyFactorGramAndProtectedResponse(
+    const Eigen::MatrixXd& raw_factor, const Eigen::MatrixXd& actual_gram,
+    const Eigen::MatrixXd& protected_response, double rank_tolerance,
+    std::uint64_t parent_proof_identity = 0,
+    double raw_factor_scale = std::numeric_limits<double>::quiet_NaN());
+
 class FrozenSquareRootContext {
  public:
   // Builds the context from the frozen snapshot.  `reference_solution` and
@@ -135,6 +211,7 @@ class FrozenSquareRootContext {
 
   std::uint64_t contentFingerprint() const { return content_fingerprint_; }
   std::uint64_t policyFingerprint() const { return policy_fingerprint_; }
+  std::uint64_t proofIdentity() const;
 
   // Symbolic cache instrumentation (process wide), reset with the counters.
   struct SymbolicCacheStats {

@@ -3,9 +3,11 @@
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
 
 #include <Eigen/Householder>
+#include <Eigen/Eigenvalues>
 #include <Eigen/QR>
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <map>
 #include <mutex>
@@ -24,6 +26,21 @@ void hashBytes(std::uint64_t* hash, const void* data, std::size_t size) {
 template <class T>
 void hashScalar(std::uint64_t* hash, const T& value) {
   hashBytes(hash, &value, sizeof(value));
+}
+
+template <class Derived>
+void hashMatrix(std::uint64_t* hash,
+                const Eigen::MatrixBase<Derived>& matrix) {
+  const Eigen::Index rows = matrix.rows();
+  const Eigen::Index columns = matrix.cols();
+  hashScalar(hash, rows);
+  hashScalar(hash, columns);
+  for (Eigen::Index column = 0; column < columns; ++column) {
+    for (Eigen::Index row = 0; row < rows; ++row) {
+      const double value = static_cast<double>(matrix(row, column));
+      hashScalar(hash, value);
+    }
+  }
 }
 
 std::uint64_t patternFingerprint(const Eigen::MatrixXd& matrix) {
@@ -116,6 +133,400 @@ bool SquareRootSymbolicPlan::sameAs(const SquareRootSymbolicPlan& other) const {
 bool SquareRootCertificate::ok() const {
   return full_column_rank && identity_ok && parity_matches_reference &&
       solution_matches_reference && forward_error_ok;
+}
+
+SymmetricPsdCertificate certifySymmetricPsd(
+    const Eigen::MatrixXd& matrix, double rank_tolerance,
+    std::uint64_t parent_proof_identity, double raw_factor_scale) {
+  SymmetricPsdCertificate out;
+  std::uint64_t proof = 1469598103934665603ULL;
+  hashScalar(&proof, parent_proof_identity);
+  hashScalar(&proof, rank_tolerance);
+  hashScalar(&proof, raw_factor_scale);
+  hashMatrix(&proof, matrix);
+  out.proof_identity = proof;
+  if (matrix.rows() <= 0 || matrix.rows() != matrix.cols() ||
+      !matrix.allFinite() || !(rank_tolerance > 0.0) ||
+      !std::isfinite(rank_tolerance)) {
+    out.reason = "symmetric PSD input dimensions/values are invalid";
+    return out;
+  }
+  const Eigen::Index dimension = matrix.rows();
+  out.symmetric_matrix = 0.5 * (matrix + matrix.transpose());
+  out.matrix_scale = out.symmetric_matrix.norm();
+  out.symmetry_error = (matrix - matrix.transpose()).norm();
+  const double eps = std::numeric_limits<double>::epsilon();
+  out.symmetry_tolerance = 64.0 * eps *
+      static_cast<double>(std::max<Eigen::Index>(1, dimension)) *
+      matrix.norm();
+  out.symmetric = out.symmetry_error <= out.symmetry_tolerance;
+  if (!out.symmetric) {
+    out.reason = "matrix is not symmetric within its rounding certificate";
+    return out;
+  }
+
+  Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigen(out.symmetric_matrix);
+  if (eigen.info() != Eigen::Success ||
+      !eigen.eigenvalues().allFinite() ||
+      !eigen.eigenvectors().allFinite()) {
+    out.reason = "symmetric PSD eigensolve failed";
+    return out;
+  }
+  out.eigenvalues = eigen.eigenvalues();
+  out.eigenvectors = eigen.eigenvectors();
+  out.eigenvalue_errors.resize(dimension);
+  out.eigenvalue_error = 0.0;
+  for (Eigen::Index index = 0; index < dimension; ++index) {
+    const Eigen::VectorXd vector = out.eigenvectors.col(index);
+    const double value = out.eigenvalues(index);
+    const double residual =
+        (out.symmetric_matrix * vector - value * vector).norm();
+    const double local_roundoff = 64.0 * eps *
+        static_cast<double>(std::max<Eigen::Index>(1, dimension)) *
+        std::abs(value);
+    out.eigenvalue_errors(index) = residual + local_roundoff;
+    out.eigenvalue_error = std::max(out.eigenvalue_error,
+                                    out.eigenvalue_errors(index));
+  }
+  const double largest = std::max(0.0, out.eigenvalues.maxCoeff());
+  for (Eigen::Index index = 0; index < dimension; ++index) {
+    const double value = out.eigenvalues(index);
+    const double error = out.eigenvalue_errors(index);
+    if (value < 0.0) {
+      out.reason = value + error < 0.0
+          ? "matrix is not PSD (certified negative eigenvalue)"
+          : "PSD interval crosses zero and is numerically indeterminate";
+      return out;
+    }
+  }
+  out.psd = true;
+  out.sigma_max = std::sqrt(largest);
+  // The configured rank tolerance is in raw-factor singular-value units.
+  // Gram eigenvalues have squared units, hence the exact corresponding gate.
+  // There is deliberately no absolute floor: scale never turns a nonzero
+  // negative/asymmetric/hidden response into zero.
+  const double factor_scale = std::isfinite(raw_factor_scale) &&
+      raw_factor_scale >= 0.0
+      ? raw_factor_scale : std::sqrt(largest);
+  out.rank_eigenvalue_gate = rank_tolerance * rank_tolerance *
+      factor_scale * factor_scale;
+  out.rank = 0;
+  out.rank_certified = true;
+  double smallest_positive = std::numeric_limits<double>::infinity();
+  for (Eigen::Index index = 0; index < out.eigenvalues.size(); ++index) {
+    const double value = out.eigenvalues(index);
+    const double error = out.eigenvalue_errors(index);
+    if (value - error > out.rank_eigenvalue_gate) {
+      ++out.rank;
+      smallest_positive = std::min(smallest_positive, value);
+    } else if (value == 0.0 && error == 0.0) {
+      continue;
+    } else if (!(value + error < out.rank_eigenvalue_gate)) {
+      out.rank_certified = false;
+    }
+  }
+  if (!out.rank_certified) {
+    out.reason = "rank transition interval is numerically indeterminate";
+    return out;
+  }
+  out.sigma_min = out.rank > 0 ? std::sqrt(smallest_positive) : 0.0;
+  out.condition = out.rank > 0 && out.sigma_min > 0.0
+      ? out.sigma_max / out.sigma_min
+      : std::numeric_limits<double>::infinity();
+
+  hashMatrix(&proof, out.symmetric_matrix);
+  hashMatrix(&proof, out.eigenvalues);
+  hashMatrix(&proof, out.eigenvectors);
+  hashMatrix(&proof, out.eigenvalue_errors);
+  hashScalar(&proof, out.rank_eigenvalue_gate);
+  hashScalar(&proof, out.rank);
+  hashScalar(&proof, out.symmetric);
+  hashScalar(&proof, out.psd);
+  out.proof_identity = proof;
+  out.valid = true;
+  return out;
+}
+
+GramResponseCertificate certifyGramAndProtectedResponse(
+    const Eigen::MatrixXd& gram, const Eigen::MatrixXd& protected_response,
+    double rank_tolerance, std::uint64_t parent_proof_identity,
+    double raw_factor_scale) {
+  GramResponseCertificate out;
+  out.gram = certifySymmetricPsd(gram, rank_tolerance,
+                                 parent_proof_identity, raw_factor_scale);
+  std::uint64_t proof = out.gram.proof_identity;
+  hashMatrix(&proof, protected_response);
+  out.proof_identity = proof;
+  if (!out.gram.valid) {
+    out.reason = out.gram.reason;
+    return out;
+  }
+  if (protected_response.rows() != 3 ||
+      protected_response.cols() != gram.cols() ||
+      !protected_response.allFinite()) {
+    out.reason = "protected response dimensions/values are invalid";
+    return out;
+  }
+  const Eigen::Index dimension = gram.cols();
+  const int nullity = static_cast<int>(dimension) - out.gram.rank;
+  out.response_tolerance = 0.0;
+  out.axis_residual.setZero();
+  if (nullity == 0) {
+    out.nullspace_class = GramNullspaceClass::FullRank;
+  } else {
+    const Eigen::MatrixXd kernel = out.gram.eigenvectors.leftCols(nullity);
+    const Eigen::MatrixXd hidden = protected_response * kernel;
+    for (int axis = 0; axis < 3; ++axis) {
+      out.axis_residual(axis) = hidden.row(axis).norm();
+    }
+    const double largest_hidden = out.axis_residual.maxCoeff();
+    // Fault amplitude is unbounded, so no floating tolerance can make a
+    // nonzero protected remainder harmless.  Without an explicit amplitude
+    // charge, only exact structural G*ker(Gram)==0 is harmless.
+    out.nullspace_class = largest_hidden == 0.0
+        ? GramNullspaceClass::Harmless
+        : GramNullspaceClass::Dangerous;
+  }
+
+  out.protected_slopes.setZero();
+  const int first_positive = static_cast<int>(dimension) - out.gram.rank;
+  for (int axis = 0; axis < 3; ++axis) {
+    long double quadratic = 0.0L;
+    for (int index = first_positive; index < dimension; ++index) {
+      const double eigenvalue = out.gram.eigenvalues(index);
+      if (!(eigenvalue > out.gram.rank_eigenvalue_gate)) {
+        out.nullspace_class = GramNullspaceClass::Indeterminate;
+        out.reason = "positive Gram subspace is numerically indeterminate";
+        return out;
+      }
+      const double projection = out.gram.eigenvectors.col(index).dot(
+          protected_response.row(axis).transpose());
+      quadratic += static_cast<long double>(projection) *
+                   static_cast<long double>(projection) /
+                   static_cast<long double>(eigenvalue);
+    }
+    out.protected_slopes(axis) = std::sqrt(
+        std::max(0.0L, quadratic));
+  }
+  if (out.nullspace_class == GramNullspaceClass::Dangerous) {
+    out.reason = "Gram nullspace has an unbounded protected response";
+  }
+  hashScalar(&proof, static_cast<int>(out.nullspace_class));
+  hashMatrix(&proof, out.axis_residual);
+  hashMatrix(&proof, out.protected_slopes);
+  hashScalar(&proof, out.response_tolerance);
+  out.proof_identity = proof;
+  out.valid = out.nullspace_class != GramNullspaceClass::Indeterminate;
+  return out;
+}
+
+SymmetricPsdCertificate certifyFactorGram(
+    const Eigen::MatrixXd& raw_factor, const Eigen::MatrixXd& actual_gram,
+    double rank_tolerance, std::uint64_t parent_proof_identity,
+    double raw_factor_scale) {
+  SymmetricPsdCertificate out;
+  std::uint64_t proof = 1469598103934665603ULL;
+  const std::uint64_t domain = 0x464143544f524752ULL;  // "FACTORGR"
+  hashScalar(&proof, domain);
+  hashScalar(&proof, parent_proof_identity);
+  hashScalar(&proof, rank_tolerance);
+  hashScalar(&proof, raw_factor_scale);
+  hashMatrix(&proof, raw_factor);
+  hashMatrix(&proof, actual_gram);
+  out.proof_identity = proof;
+  if (raw_factor.rows() <= 0 || raw_factor.cols() <= 0 ||
+      actual_gram.rows() != raw_factor.cols() ||
+      actual_gram.cols() != raw_factor.cols() ||
+      !raw_factor.allFinite() || !actual_gram.allFinite() ||
+      !(rank_tolerance > 0.0) || !std::isfinite(rank_tolerance)) {
+    out.reason = "factor Gram input dimensions/values are invalid";
+    return out;
+  }
+
+  const Eigen::Index dimension = raw_factor.cols();
+  const double eps = std::numeric_limits<double>::epsilon();
+  out.symmetric_matrix = 0.5 * (actual_gram + actual_gram.transpose());
+  out.matrix_scale = out.symmetric_matrix.norm();
+  out.symmetry_error = (actual_gram - actual_gram.transpose()).norm();
+  out.symmetry_tolerance = 64.0 * eps *
+      static_cast<double>(std::max<Eigen::Index>(1, dimension)) *
+      actual_gram.norm();
+  out.symmetric = out.symmetry_error <= out.symmetry_tolerance;
+  if (!out.symmetric) {
+    out.reason = "factor Gram is not symmetric within its rounding certificate";
+    return out;
+  }
+  const Eigen::MatrixXd reconstructed = raw_factor.transpose() * raw_factor;
+  // The constructive certificate is valid only for the Gram that was actually
+  // formed from this factor.  A floating tolerance here could turn a genuinely
+  // indefinite supplied matrix (for example diag(1, -1e-16)) into a proof for
+  // the benign factor diag(1, 0).  Eigen's product is deterministic for these
+  // fixed inputs, so require the recomputed entries to match exactly.
+  if (!(actual_gram.array() == reconstructed.array()).all()) {
+    out.reason = "actual Gram does not match its claimed raw factor";
+    return out;
+  }
+
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(raw_factor, Eigen::ComputeThinV);
+  const Eigen::VectorXd singular_descending = svd.singularValues();
+  if (!singular_descending.allFinite() || !svd.matrixV().allFinite()) {
+    out.reason = "raw-factor SVD failed";
+    return out;
+  }
+  out.eigenvalues = Eigen::VectorXd::Zero(dimension);
+  out.eigenvectors = Eigen::MatrixXd::Zero(dimension, dimension);
+  out.eigenvalue_errors = Eigen::VectorXd::Zero(dimension);
+  const Eigen::Index available = singular_descending.size();
+  const Eigen::Index structural_nullity = dimension - available;
+  for (Eigen::Index index = 0; index < available; ++index) {
+    const Eigen::Index destination = dimension - 1 - index;
+    const double sigma = singular_descending(index);
+    out.eigenvalues(destination) = sigma * sigma;
+    out.eigenvectors.col(destination) = svd.matrixV().col(index);
+  }
+  // Thin V is square whenever rows >= columns.  If rows < columns, obtain the
+  // exact structural kernel from a full-V decomposition so all null directions
+  // remain bound into the certificate.
+  if (structural_nullity > 0) {
+    Eigen::JacobiSVD<Eigen::MatrixXd> full(raw_factor, Eigen::ComputeFullV);
+    if (!full.matrixV().allFinite() || full.matrixV().cols() != dimension) {
+      out.reason = "raw-factor full-V SVD failed";
+      return out;
+    }
+    out.eigenvectors.leftCols(structural_nullity) =
+        full.matrixV().rightCols(structural_nullity);
+  }
+  out.eigenvalue_error = 0.0;
+  for (Eigen::Index index = 0; index < dimension; ++index) {
+    const Eigen::VectorXd vector = out.eigenvectors.col(index);
+    const double value = out.eigenvalues(index);
+    const double residual =
+        (actual_gram * vector - value * vector).norm();
+    const double local_roundoff = 64.0 * eps *
+        static_cast<double>(std::max<Eigen::Index>(1, dimension)) *
+        std::abs(value);
+    out.eigenvalue_errors(index) = residual + local_roundoff;
+    out.eigenvalue_error = std::max(out.eigenvalue_error,
+                                    out.eigenvalue_errors(index));
+  }
+  out.psd = true;  // constructive factor proof, after actual-Gram agreement
+  const double largest = singular_descending.size()
+      ? singular_descending(0) : 0.0;
+  out.sigma_max = largest;
+  const double factor_scale = std::isfinite(raw_factor_scale) &&
+      raw_factor_scale >= 0.0 ? raw_factor_scale : largest;
+  const double singular_gate = rank_tolerance * factor_scale;
+  out.rank_eigenvalue_gate = singular_gate * singular_gate;
+  out.rank = 0;
+  out.rank_certified = true;
+  double smallest_positive = std::numeric_limits<double>::infinity();
+  for (Eigen::Index index = 0; index < singular_descending.size(); ++index) {
+    const double sigma = singular_descending(index);
+    const double error = 64.0 * eps *
+        static_cast<double>(std::max(raw_factor.rows(), raw_factor.cols())) *
+        std::abs(sigma);
+    if (sigma - error > singular_gate) {
+      ++out.rank;
+      smallest_positive = std::min(smallest_positive, sigma);
+    } else if (sigma == 0.0 && error == 0.0) {
+      continue;
+    } else if (!(sigma + error < singular_gate)) {
+      out.rank_certified = false;
+    }
+  }
+  if (!out.rank_certified) {
+    out.reason = "rank transition interval is numerically indeterminate";
+    return out;
+  }
+  out.sigma_min = out.rank > 0 ? smallest_positive : 0.0;
+  out.condition = out.rank > 0 && out.sigma_min > 0.0
+      ? out.sigma_max / out.sigma_min
+      : std::numeric_limits<double>::infinity();
+  hashMatrix(&proof, reconstructed);
+  hashMatrix(&proof, out.eigenvalues);
+  hashMatrix(&proof, out.eigenvectors);
+  hashMatrix(&proof, out.eigenvalue_errors);
+  hashScalar(&proof, out.rank_eigenvalue_gate);
+  hashScalar(&proof, out.rank);
+  hashScalar(&proof, out.rank_certified);
+  hashScalar(&proof, out.psd);
+  out.proof_identity = proof;
+  out.valid = true;
+  return out;
+}
+
+namespace {
+GramResponseCertificate finishGramResponseCertificate(
+    SymmetricPsdCertificate gram, const Eigen::MatrixXd& protected_response) {
+  GramResponseCertificate out;
+  out.gram = std::move(gram);
+  std::uint64_t proof = out.gram.proof_identity;
+  hashMatrix(&proof, protected_response);
+  out.proof_identity = proof;
+  if (!out.gram.valid) {
+    out.reason = out.gram.reason;
+    return out;
+  }
+  if (protected_response.rows() != 3 ||
+      protected_response.cols() != out.gram.symmetric_matrix.cols() ||
+      !protected_response.allFinite()) {
+    out.reason = "protected response dimensions/values are invalid";
+    return out;
+  }
+  const Eigen::Index dimension = out.gram.symmetric_matrix.cols();
+  const int nullity = static_cast<int>(dimension) - out.gram.rank;
+  out.response_tolerance = 0.0;
+  out.axis_residual.setZero();
+  if (nullity == 0) {
+    out.nullspace_class = GramNullspaceClass::FullRank;
+  } else {
+    const Eigen::MatrixXd kernel = out.gram.eigenvectors.leftCols(nullity);
+    const Eigen::MatrixXd hidden = protected_response * kernel;
+    for (int axis = 0; axis < 3; ++axis) {
+      out.axis_residual(axis) = hidden.row(axis).norm();
+    }
+    out.nullspace_class = out.axis_residual.maxCoeff() == 0.0
+        ? GramNullspaceClass::Harmless : GramNullspaceClass::Dangerous;
+  }
+  out.protected_slopes.setZero();
+  const int first_positive = static_cast<int>(dimension) - out.gram.rank;
+  for (int axis = 0; axis < 3; ++axis) {
+    long double quadratic = 0.0L;
+    for (int index = first_positive; index < dimension; ++index) {
+      const double eigenvalue = out.gram.eigenvalues(index);
+      if (!(eigenvalue > out.gram.rank_eigenvalue_gate)) {
+        out.nullspace_class = GramNullspaceClass::Indeterminate;
+        out.reason = "positive Gram subspace is numerically indeterminate";
+        return out;
+      }
+      const double projection = out.gram.eigenvectors.col(index).dot(
+          protected_response.row(axis).transpose());
+      quadratic += static_cast<long double>(projection) * projection /
+                   static_cast<long double>(eigenvalue);
+    }
+    out.protected_slopes(axis) = std::sqrt(std::max(0.0L, quadratic));
+  }
+  if (out.nullspace_class == GramNullspaceClass::Dangerous) {
+    out.reason = "Gram nullspace has an unbounded protected response";
+  }
+  hashScalar(&proof, static_cast<int>(out.nullspace_class));
+  hashMatrix(&proof, out.axis_residual);
+  hashMatrix(&proof, out.protected_slopes);
+  hashScalar(&proof, out.response_tolerance);
+  out.proof_identity = proof;
+  out.valid = out.nullspace_class != GramNullspaceClass::Indeterminate;
+  return out;
+}
+}  // namespace
+
+GramResponseCertificate certifyFactorGramAndProtectedResponse(
+    const Eigen::MatrixXd& raw_factor, const Eigen::MatrixXd& actual_gram,
+    const Eigen::MatrixXd& protected_response, double rank_tolerance,
+    std::uint64_t parent_proof_identity, double raw_factor_scale) {
+  return finishGramResponseCertificate(
+      certifyFactorGram(raw_factor, actual_gram, rank_tolerance,
+                        parent_proof_identity, raw_factor_scale),
+      protected_response);
 }
 
 struct FrozenSquareRootContext::ImplicitQ {
@@ -269,7 +680,7 @@ std::shared_ptr<const FrozenSquareRootContext> FrozenSquareRootContext::build(
     diagonal_min = std::min(diagonal_min, magnitude);
     diagonal_max = std::max(diagonal_max, magnitude);
   }
-  const double gate = rank_tolerance * std::max(1.0, diagonal_max);
+  const double gate = rank_tolerance * diagonal_max;
   context->rank_ = 0;
   for (int index = 0; index < context->columns_; ++index) {
     if (std::abs(context->r_(index, index)) > gate) ++context->rank_;
@@ -355,6 +766,40 @@ std::shared_ptr<const FrozenSquareRootContext> FrozenSquareRootContext::build(
              : "square-root certificate not satisfied");
   if (context->usable_) NumericalWorkCounters::squareRootCertificateHold();
   return context;
+}
+
+std::uint64_t FrozenSquareRootContext::proofIdentity() const {
+  // Recomputed on demand so no ABI-visible or private storage field is needed.
+  // content_fingerprint_ binds the exact H/z/protected-map input bytes.
+  std::uint64_t proof = 1469598103934665603ULL;
+  hashScalar(&proof, content_fingerprint_);
+  hashScalar(&proof, policy_fingerprint_);
+  hashScalar(&proof, scale_fingerprint_);
+  hashScalar(&proof, scale_policy_);
+  hashScalar(&proof, permutation_policy_);
+  hashMatrix(&proof, scale_);
+  for (const int column : permutation_) hashScalar(&proof, column);
+  hashMatrix(&proof, scaled_);
+  hashMatrix(&proof, r_);
+  hashScalar(&proof, rank_);
+  hashScalar(&proof, certificate_.full_column_rank);
+  hashScalar(&proof, certificate_.identity_ok);
+  hashScalar(&proof, certificate_.parity_matches_reference);
+  hashScalar(&proof, certificate_.solution_matches_reference);
+  hashScalar(&proof, certificate_.forward_error_ok);
+  hashScalar(&proof, certificate_.identity_residual_relative);
+  hashScalar(&proof, certificate_.parity_relative_difference);
+  hashScalar(&proof, certificate_.solution_relative_difference);
+  hashScalar(&proof, certificate_.forward_error_bound);
+  hashScalar(&proof, certificate_.r_diagonal_min);
+  hashScalar(&proof, certificate_.r_diagonal_max);
+  hashScalar(&proof, certificate_.condition_estimate);
+  hashMatrix(&proof, state_increment_);
+  hashMatrix(&proof, parity_);
+  hashScalar(&proof, statistic_);
+  hashScalar(&proof, usable_);
+  hashBytes(&proof, reason_.data(), reason_.size());
+  return proof;
 }
 
 Eigen::MatrixXd FrozenSquareRootContext::applyQt(

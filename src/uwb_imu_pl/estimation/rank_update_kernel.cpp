@@ -90,7 +90,7 @@ SpectralCertificate certifyUpdate(const FrozenWindowNumerics& base,
   out.condition_upper = singular_max_upper / singular_min_lower;
   // The lower bound is diagnostic only; one is always valid for an SPD matrix.
   out.condition_lower = 1.0;
-  const double rank_gate = rank_tolerance * std::max(1.0, singular_max_upper);
+  const double rank_gate = rank_tolerance * singular_max_upper;
   out.full_rank = singular_min_lower > rank_gate * (1.0 + 1e-7);
   out.condition_passed = out.condition_upper < max_condition * (1.0 - 1e-7);
   out.margin = std::min(singular_min_lower - rank_gate,
@@ -252,6 +252,32 @@ void hashCertificateEigen(std::uint64_t* hash,
       hashCertificateScalar(hash, entry);
     }
   }
+}
+
+std::uint64_t candidateNumericalProofIdentityImpl(
+    const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate) {
+  std::uint64_t proof = 1469598103934665603ULL;
+  const std::uint64_t parent = window.numerics
+      ? frozenWindowNumericalProofIdentity(window, *window.numerics) : 0;
+  hashCertificateScalar(&proof, parent);
+  hashCertificateScalar(&proof,
+                        candidateDetectorActionIdentity(candidate.action));
+  hashCertificateString(&proof, candidate.diagnostics.numerical_path);
+  hashCertificateScalar(&proof, candidate.exact_slow_path);
+  hashCertificateScalar(&proof, candidate.valid);
+  hashCertificateScalar(&proof, candidate.rows);
+  hashCertificateScalar(&proof, candidate.rank);
+  hashCertificateScalar(&proof, candidate.dof);
+  hashCertificateScalar(&proof, candidate.statistic);
+  hashCertificateScalar(&proof, candidate.condition_number);
+  hashCertificateScalar(&proof, candidate.information_logdet);
+  hashCertificateEigen(&proof, candidate.state_increment);
+  hashCertificateEigen(&proof, candidate.covariance);
+  hashCertificateEigen(&proof, candidate.reference_inverse_squared);
+  hashCertificateEigen(&proof, candidate.covariance_plus_factor);
+  hashCertificateEigen(&proof, candidate.covariance_minus_factor);
+  return proof;
 }
 
 void hashCertificateVersion(std::uint64_t* hash,
@@ -458,7 +484,7 @@ void finishCandidate(CandidateEvaluation* result, const Eigen::MatrixXd& h,
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(h);
   const auto s = svd.singularValues();
   const double largest = s.size() ? s(0) : 0.0;
-  const double threshold = rank_tolerance * std::max(1.0, largest);
+  const double threshold = rank_tolerance * largest;
   result->rank = static_cast<int>((s.array() > threshold).count());
   result->rows = h.rows();
   result->dof = result->rows - result->rank;
@@ -488,6 +514,12 @@ void finishCandidate(CandidateEvaluation* result, const Eigen::MatrixXd& h,
 }
 
 }  // namespace
+
+std::uint64_t candidateNumericalProofIdentity(
+    const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate) {
+  return candidateNumericalProofIdentityImpl(window, candidate);
+}
 
 std::uint64_t candidateDetectorActionIdentity(
     const ExclusionAction& action) {
@@ -571,6 +603,8 @@ std::uint64_t candidateDetectorCertificateDigest(
   hashCertificateScalar(&hash, candidate.information_logdet);
   hashCertificateScalar(&hash, candidate.valid);
   hashCertificateScalar(&hash, candidate.exact_slow_path);
+  hashCertificateScalar(&hash,
+                        candidateNumericalProofIdentityImpl(window, candidate));
   const std::uint64_t candidate_window_fingerprint = candidate.window_view
       ? integrityWindowFingerprint(*candidate.window_view) : 0;
   hashCertificateScalar(&hash, candidate_window_fingerprint);
@@ -633,12 +667,15 @@ bool validateCandidateDetectorCertificate(
       !(window.numerics->version == window.version) ||
       window.numerics->content_fingerprint != integrityWindowFingerprint(window) ||
       window.numerics->numerical_contract_fingerprint !=
-          numericalContractFingerprint(window.numerics->numerical_contract)) {
+          numericalContractFingerprint(window.numerics->numerical_contract) ||
+      !validateFrozenWindowNumericalProof(window, *window.numerics)) {
     return reject("candidate certificate window identity mismatch");
   }
   if (!(candidate.base_version == window.version)) {
     return reject("candidate certificate linearization version mismatch");
   }
+  const std::uint64_t expected_proof =
+      candidateNumericalProofIdentityImpl(window, candidate);
   if (candidate.window_view &&
       (candidate.window_view->id != window.id ||
        !(candidate.window_view->version == window.version) ||
@@ -676,6 +713,7 @@ bool validateCandidateDetectorCertificate(
       actual.numerical_contract_identity ==
           expected.numerical_contract_identity &&
       actual.canonical_action_identity == expected.canonical_action_identity &&
+      expected_proof != 0 &&
       actual.numerical_identity == expected.numerical_identity &&
       actual.history_constant_present == expected.history_constant_present;
   if (!fields_match) {
@@ -693,25 +731,127 @@ bool validateCandidateDetectorCertificate(
 
 Eigen::MatrixXd CandidateEvaluation::covarianceTimes(
     const Eigen::MatrixXd& value) const {
-  if (covariance.size() != 0) return covariance * value;
-  if (reference_vectors) {
-    if (value.rows() != reference_vectors->rows()) return Eigen::MatrixXd();
-    return *reference_vectors * reference_inverse_squared.asDiagonal() * reference_vectors->transpose() * value;
+  if (value.rows() <= 0 || !value.allFinite()) return Eigen::MatrixXd();
+  Eigen::MatrixXd primary;
+  if (covariance.size() != 0) {
+    if (covariance.rows() != value.rows() || covariance.cols() != value.rows())
+      return Eigen::MatrixXd();
+    primary = covariance * value;
+  } else if (reference_vectors) {
+    if (value.rows() != reference_vectors->rows() ||
+        reference_inverse_squared.size() != reference_vectors->cols()) {
+      return Eigen::MatrixXd();
+    }
+    primary = *reference_vectors * reference_inverse_squared.asDiagonal() *
+        reference_vectors->transpose() * value;
+  } else {
+    if (!shared_base_factorization ||
+        shared_base_factorization->matrixL().rows() != value.rows()) {
+      return Eigen::MatrixXd();
+    }
+    primary = shared_base_factorization->solve(value);
+    if (covariance_plus_factor.cols()) {
+      primary.noalias() += covariance_plus_factor *
+          (covariance_plus_factor.transpose() * value);
+    }
+    if (covariance_minus_factor.cols()) {
+      primary.noalias() -= covariance_minus_factor *
+          (covariance_minus_factor.transpose() * value);
+    }
   }
-  if (!shared_base_factorization ||
-      shared_base_factorization->matrixL().rows() != value.rows()) {
+  if (!window_view || !window_view->numerics ||
+      detector_certificate.numerical_identity == 0) {
+    // Compatibility for standalone/offline containers.  Active candidates are
+    // always bound to a frozen window and take the certified path below.
+    return primary.allFinite() ? primary : Eigen::MatrixXd();
+  }
+  const auto& window = *window_view;
+  Eigen::MatrixXd information = window.base_information;
+  for (const auto& block : window.blocks) {
+    if (groupSelected(block.group_id, action.groups_to_remove)) {
+      information.noalias() -= block.jacobian_whitened.transpose() *
+                               block.jacobian_whitened;
+    }
+  }
+  for (const auto& block : action.added_blocks) {
+    information.noalias() += block.jacobian_whitened.transpose() *
+                             block.jacobian_whitened;
+  }
+  information = 0.5 * (information + information.transpose());
+  const auto& contract = window.numerics->numerical_contract;
+  auto certified = [&](const Eigen::MatrixXd& solution,
+                       double jacobian_condition,
+                       const Eigen::MatrixXd& certified_information) {
+    if (solution.rows() != value.rows() ||
+        solution.cols() != value.cols() || !solution.allFinite()) return false;
+    const Eigen::MatrixXd residual = certified_information * solution - value;
+    const double denominator = std::max(
+        {1.0, value.norm(),
+         certified_information.norm() * solution.norm()});
+    const double backward = residual.norm() / denominator;
+    const double condition = std::max(1.0, jacobian_condition);
+    const double forward = condition * condition * backward;
+    const double roundoff = 128.0 * std::numeric_limits<double>::epsilon() *
+        static_cast<double>(std::max(certified_information.rows(),
+                                     value.cols()));
+    return std::isfinite(backward) && std::isfinite(forward) &&
+        backward <= contract.solve_residual_limit + roundoff &&
+        forward <= contract.forward_error_limit + roundoff;
+  };
+  double condition = std::isfinite(condition_number)
+      ? condition_number : diagnostics.condition_upper_bound;
+  if (!std::isfinite(condition) || condition <= 0.0) {
+    condition = window.numerics->exact_condition;
+  }
+  if (certified(primary, condition, information)) return primary;
+
+  // Exact fallback: rebuild the final whitened Jacobian and use its direct SVD
+  // for every RHS type (state, covariance, fault and bridge alike).
+  Eigen::MatrixXd final_h;
+  Eigen::VectorXd final_z;
+  if (!candidateRows(window, action, &final_h, &final_z)) {
     return Eigen::MatrixXd();
   }
-  Eigen::MatrixXd result = shared_base_factorization->solve(value);
-  if (covariance_plus_factor.cols()) {
-    result.noalias() += covariance_plus_factor *
-        (covariance_plus_factor.transpose() * value);
+  NumericalWorkCounters::candidateReferenceSvd();
+  Eigen::JacobiSVD<Eigen::MatrixXd> reference(
+      final_h, Eigen::ComputeThinU | Eigen::ComputeThinV);
+  const Eigen::VectorXd singular = reference.singularValues();
+  const double largest = singular.size() ? singular(0) : 0.0;
+  const double gate = contract.rank_tolerance * largest;
+  const int solved_rank = static_cast<int>((singular.array() > gate).count());
+  if (solved_rank != final_h.cols()) return Eigen::MatrixXd();
+  Eigen::VectorXd inverse_squared = singular.array().square().inverse();
+  const Eigen::MatrixXd fallback = reference.matrixV() *
+      inverse_squared.asDiagonal() * reference.matrixV().transpose() * value;
+  const double smallest = singular(singular.size() - 1);
+  const double exact_condition = smallest > 0.0
+      ? largest / smallest : std::numeric_limits<double>::infinity();
+  const Eigen::MatrixXd reference_information =
+      final_h.transpose() * final_h;
+  if (certified(fallback, exact_condition, reference_information)) {
+    return fallback;
   }
-  if (covariance_minus_factor.cols()) {
-    result.noalias() -= covariance_minus_factor *
-        (covariance_minus_factor.transpose() * value);
-  }
-  return result;
+  // The direct raw-H SVD is the exact fallback.  When the conservative
+  // kappa(H)^2 bound is pessimistic, require both a backward-stable SVD result
+  // and agreement with the independently formed update/root result.  No full
+  // n-by-n normal equation is solved in higher precision.
+  const double fallback_backward =
+      (reference_information * fallback - value).norm() /
+      std::max({value.norm(),
+                reference_information.norm() * fallback.norm(),
+                std::numeric_limits<double>::min()});
+  const double solution_scale = std::max(
+      {fallback.norm(), primary.norm(), std::numeric_limits<double>::min()});
+  const double independent_agreement =
+      (fallback - primary).norm() / solution_scale;
+  const double roundoff = 128.0 * std::numeric_limits<double>::epsilon() *
+      static_cast<double>(std::max(reference_information.rows(), value.cols()));
+  return fallback.allFinite() && std::isfinite(fallback_backward) &&
+             fallback_backward <= contract.solve_residual_limit + roundoff &&
+             std::isfinite(independent_agreement) &&
+             independent_agreement <= contract.reference_relative_tolerance
+      ? fallback
+      : Eigen::MatrixXd();
 }
 
 Eigen::MatrixXd CandidateEvaluation::normalCross(
@@ -979,7 +1119,18 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
   // certificates below so near-step, ill-conditioned, and cancellation cases
   // retain the exact reference behavior required by the numerical contract.
   if (keep) result.state_increment = base.numerics->base_state_increment;
-  else result.state_increment = result.covarianceTimes(rhs);
+  else {
+    result.state_increment = result.covarianceTimes(rhs);
+    if (result.state_increment.rows() != rhs.rows() ||
+        result.state_increment.cols() != 1 ||
+        !result.state_increment.allFinite()) {
+      // The update operator could not certify the state RHS.  Continue through
+      // the mandatory final-Jacobian reference instead of letting an empty
+      // tentative solve enter residual arithmetic.
+      request_reference("candidate state RHS certificate failed");
+      result.state_increment = Eigen::VectorXd::Zero(rhs.rows());
+    }
+  }
   Eigen::MatrixXd h;
   Eigen::VectorXd z;
   const double keep_step = result.state_increment.norm();
@@ -1122,7 +1273,7 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
     Eigen::JacobiSVD<Eigen::MatrixXd> reference(h, Eigen::ComputeThinU | Eigen::ComputeThinV);
     const auto singular = reference.singularValues();
     const double largest = singular.size() ? singular(0) : 0.0;
-    const double gate = config_.rank_tolerance * std::max(1.0, largest);
+    const double gate = config_.rank_tolerance * largest;
     result.rank = static_cast<int>((singular.array() > gate).count());
     const double smallest = result.rank ? singular(result.rank - 1) : 0.0;
     result.condition_number = result.rank == h.cols() && smallest > 0.0
@@ -1147,6 +1298,30 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
     if (result.rank != h.cols()) {
       result.reason = "candidate rank loss";
       result.statistic = (z - h * result.state_increment).squaredNorm();
+      return done();
+    }
+    const Eigen::MatrixXd state_rhs = h.transpose() * z;
+    const Eigen::MatrixXd direct_state = result.state_increment;
+    const Eigen::MatrixXd information = h.transpose() * h;
+    auto state_certified = [&](const Eigen::MatrixXd& solution) {
+      if (solution.rows() != h.cols() || solution.cols() != 1 ||
+          !solution.allFinite()) return false;
+      const double backward = (information * solution - state_rhs).norm() /
+          std::max({1.0, state_rhs.norm(),
+                    information.norm() * solution.norm()});
+      const double forward = result.condition_number *
+          result.condition_number * backward;
+      const double roundoff = 128.0 * std::numeric_limits<double>::epsilon() *
+          static_cast<double>(information.rows());
+      return std::isfinite(backward) && std::isfinite(forward) &&
+          backward <= base.numerics->numerical_contract.solve_residual_limit +
+                          roundoff &&
+          forward <= base.numerics->numerical_contract.forward_error_limit +
+                         roundoff;
+    };
+    if (!state_certified(direct_state)) {
+      result.reason = "candidate state RHS reference certificate failed";
+      result.valid = false;
       return done();
     }
     if (result.dof <= 0) {
@@ -1185,6 +1360,7 @@ CandidateEvaluation DenseCandidateOracle::evaluate(
   const auto wall_start = std::chrono::steady_clock::now();
   result.action = action;
   result.base_version = window.version;
+  result.window_view = &window;
   if (!validateAction(window, action, &result.reason)) return result;
   for (const auto& block : action.added_blocks) {
     if (!(block.version == window.version) ||
@@ -1219,6 +1395,7 @@ CandidateEvaluation DenseCandidateOracle::evaluate(
   finishCandidate(&result, h, z, config_.rank_tolerance,
                   config_.max_condition_number,
                   config_.max_linearization_step_norm);
+  result.diagnostics.numerical_path = "DENSE_DIRECT_SVD";
   if (result.valid) {
     result.detector_certificate = buildCandidateDetectorCertificate(
         window, action, result, config_.rank_tolerance);

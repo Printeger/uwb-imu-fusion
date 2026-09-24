@@ -49,7 +49,7 @@ DenseOracleResult evaluateDenseSvdOracle(
       design, Eigen::ComputeFullU | Eigen::ComputeFullV);
   const Eigen::VectorXd singular = svd.singularValues();
   const double scale = singular.size() == 0 ? 0.0 : singular.maxCoeff();
-  const double cutoff = rank_tolerance * std::max(1.0, scale);
+  const double cutoff = rank_tolerance * scale;
   result.rank = static_cast<int>((singular.array() > cutoff).count());
   if (result.rank != columns) {
     result.reason = "design is rank deficient";
@@ -79,9 +79,15 @@ DenseOracleResult evaluateDenseSvdOracle(
   result.detector_statistic = postfit.squaredNorm();
   const Eigen::VectorXd protected_fault =
       protected_state_jacobian * result.pseudoinverse * incidence;
-  result.detector_gram = incidence.dot(result.residual_projector * incidence);
-  if (result.detector_gram <= cutoff) {
-    if (protected_fault.norm() <= cutoff) {
+  const Eigen::VectorXd detector_response = rows > columns
+      ? svd.matrixU().rightCols(rows - columns).transpose() * incidence
+      : Eigen::VectorXd{};
+  result.detector_gram = detector_response.squaredNorm();
+  const double fault_sigma = detector_response.norm();
+  const double fault_cutoff = rank_tolerance * incidence.norm();
+  if (!(fault_sigma > fault_cutoff)) {
+    if (fault_sigma == 0.0 &&
+        (protected_fault.array() == 0.0).all()) {
       result.protected_slope.setZero();
       result.fault_monitorable = true;
       result.reason = "fault has no protected-state effect";
@@ -92,7 +98,7 @@ DenseOracleResult evaluateDenseSvdOracle(
     }
   } else {
     result.protected_slope = protected_fault.cwiseAbs() /
-        std::sqrt(result.detector_gram);
+        fault_sigma;
     result.fault_monitorable = result.protected_slope.allFinite();
     if (!result.fault_monitorable) result.reason = "non-finite fault slope";
   }

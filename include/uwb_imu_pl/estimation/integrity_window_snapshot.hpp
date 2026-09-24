@@ -176,7 +176,7 @@ struct IntegrityWindowRequest {
 // numerical result.  Store the values as well as the fingerprint so a dump or
 // debugger can explain a mismatch without reverse-engineering the hash.
 struct FrozenNumericalContract {
-  std::uint64_t policy_version = 2;
+  std::uint64_t policy_version = 3;
   double rank_tolerance = 1e-10;
   double max_condition_number = 1e12;
   double solve_residual_limit = 1e-7;
@@ -226,6 +226,17 @@ struct FrozenWindowNumerics {
   bool valid = false;
   std::string reason;
 };
+
+// Rebuilds and validates the identity from the values actually served by the
+// frozen window.  This is a consumer gate, not merely a producer-side hash.
+struct LinearizedIntegrityWindow;
+std::uint64_t frozenWindowNumericalProofIdentity(
+    const LinearizedIntegrityWindow& window,
+    const FrozenWindowNumerics& numerics);
+bool validateFrozenWindowNumericalProof(
+    const LinearizedIntegrityWindow& window,
+    const FrozenWindowNumerics& numerics,
+    std::string* reason = nullptr);
 
 // Kept in the window value so every consumer records the same nested wall-time
 // intervals without introducing a process-global profiler or mutable cache.

@@ -177,32 +177,21 @@ ModeBound boundOf(const LinearizedIntegrityWindow& window,
   }
   bound.protected_response = window.protected_state_map * covariance;
   bound.gram = gram;
-  Eigen::JacobiSVD<Eigen::MatrixXd> svd(gram, Eigen::ComputeThinU |
-                                                 Eigen::ComputeThinV);
-  const Eigen::VectorXd singular = svd.singularValues();
-  const double largest = singular.size() ? singular(0) : 0.0;
-  const double gate = 1e-10 * std::max(1.0, largest);
-  int rank = 0;
-  for (int index = 0; index < singular.size(); ++index) {
-    if (singular(index) > gate) ++rank;
-  }
-  if (rank == 0) {
-    bound.valid = true;  // invisible fault: no bound is needed
-    bound.slope = 0.0;
+  const GramResponseCertificate certificate =
+      certifyGramAndProtectedResponse(
+          gram, bound.protected_response,
+          window.numerics->numerical_contract.rank_tolerance,
+          frozenWindowNumericalProofIdentity(window, *window.numerics),
+          map.block.norm());
+  // Coverage is a production protection claim.  Rank-zero is finite only when
+  // the same exact structural G*ker certificate used by detector/evidence/PL
+  // proves it harmless; any nonzero remainder is unbounded and fails closed.
+  if (!certificate.valid ||
+      certificate.nullspace_class == GramNullspaceClass::Dangerous) {
     return bound;
   }
-  Eigen::MatrixXd scaled = Eigen::MatrixXd::Zero(gram.rows(), rank);
-  for (int index = 0; index < rank; ++index) {
-    scaled.col(index) = svd.matrixV().col(index) / std::sqrt(singular(index));
-  }
-  bound.slope = 0.0;
-  for (int axis = 0; axis < bound.protected_response.rows(); ++axis) {
-    const Eigen::VectorXd response =
-        bound.protected_response.row(axis).transpose();
-    bound.slope = std::max(bound.slope,
-                           (scaled.transpose() * response).norm());
-  }
-  bound.valid = true;
+  bound.slope = certificate.protected_slopes.maxCoeff();
+  bound.valid = std::isfinite(bound.slope);
   return bound;
 }
 
@@ -386,7 +375,12 @@ CoverageCertificate buildGroupedCoverageCertificate(
       const ModeBound envelope_bound =
           boundOf(window, leaf.map, gram_envelope_in_leaf);
       if (!leaf_bound.valid || !envelope_bound.valid) {
-        envelope.reason = "dominance obligation could not be evaluated";
+        // A zero/indeterminate envelope Gram with a nonzero protected response
+        // is an under-covering envelope, not a harmless numerical omission.
+        // Preserve the one-sided rejection attribution while failing closed.
+        envelope.reason = leaf_bound.valid && !envelope_bound.valid
+            ? "envelope bound is below the leaf exact bound (unbounded or uncertified)"
+            : "dominance obligation could not be evaluated";
         envelope_ok = false;
         break;
       }

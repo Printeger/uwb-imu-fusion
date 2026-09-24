@@ -461,8 +461,8 @@ TEST(SquareRootContext, ClassifiesDetectionResponseTriState) {
                                                   &rank),
             3);
 
-  // Numerically indistinguishable: smallest singular value just inside the
-  // rank-tolerance band.
+  // Below the common relative gate the second direction is a certified
+  // nullspace, and its nonzero protected response is dangerous.
   Eigen::MatrixXd z_ambiguous(4, 2);
   z_ambiguous << 1, 0,
                  0, 1e-11,
@@ -471,7 +471,238 @@ TEST(SquareRootContext, ClassifiesDetectionResponseTriState) {
   EXPECT_EQ(uwb_imu_pl::classifyDetectionResponse(z_ambiguous, g_dangerous,
                                                   1e-10, &sigma, &condition,
                                                   &rank),
-            4);
+            3);
+}
+
+TEST(SquareRootContext, P003UnifiedPsdRankAndNullspaceCertificate) {
+  using uwb_imu_pl::GramNullspaceClass;
+  using uwb_imu_pl::certifyGramAndProtectedResponse;
+  using uwb_imu_pl::certifySymmetricPsd;
+
+  const Eigen::Matrix2d indefinite =
+      Eigen::Vector2d(1.0, -1e-6).asDiagonal();
+  const auto rejected = certifySymmetricPsd(indefinite, 1e-10, 17);
+  EXPECT_FALSE(rejected.valid);
+  EXPECT_NE(rejected.reason.find("not PSD"), std::string::npos);
+
+  Eigen::Matrix2d asymmetric;
+  asymmetric << 1.0, 1e-3, 0.0, 1.0;
+  const auto nonsymmetric = certifySymmetricPsd(asymmetric, 1e-10, 17);
+  EXPECT_FALSE(nonsymmetric.valid);
+  EXPECT_NE(nonsymmetric.reason.find("not symmetric"), std::string::npos);
+
+  // A tiny but nonzero map is not structural zero for an unbounded fault.
+  Eigen::Matrix<double, 1, 1> tiny_gram;
+  tiny_gram(0, 0) = 1e-26;
+  Eigen::Matrix<double, 3, 1> protected_response;
+  protected_response << 1.0, 0.0, 0.0;
+  const auto tiny = certifyGramAndProtectedResponse(
+      tiny_gram, protected_response, 1e-10, 19, 1.0);
+  ASSERT_TRUE(tiny.valid) << tiny.reason;
+  EXPECT_EQ(tiny.nullspace_class, GramNullspaceClass::Dangerous);
+
+  protected_response.setZero();
+  const auto harmless = certifyGramAndProtectedResponse(
+      tiny_gram, protected_response, 1e-10, 19, 1.0);
+  ASSERT_TRUE(harmless.valid) << harmless.reason;
+  EXPECT_EQ(harmless.nullspace_class, GramNullspaceClass::Harmless);
+  EXPECT_TRUE(harmless.protected_slopes.isZero(0.0));
+
+  // Exactly on the rank boundary the certificate refuses a discrete answer.
+  Eigen::Matrix2d transition = Eigen::Matrix2d::Zero();
+  transition(0, 0) = 1.0;
+  transition(1, 1) = 1e-20;
+  const auto boundary = certifySymmetricPsd(transition, 1e-10, 23);
+  EXPECT_FALSE(boundary.valid);
+  EXPECT_NE(boundary.reason.find("rank transition"), std::string::npos);
+}
+
+TEST(SquareRootContext, P003ReviewerScaleRankAndProofIdentityProbes) {
+  using uwb_imu_pl::GramNullspaceClass;
+  using uwb_imu_pl::certifyGramAndProtectedResponse;
+  using uwb_imu_pl::certifySymmetricPsd;
+
+  Eigen::Matrix<double, 1, 1> tiny_negative;
+  tiny_negative(0, 0) = -1e-16;
+  const auto negative = certifySymmetricPsd(tiny_negative, 1e-10, 31);
+  EXPECT_FALSE(negative.valid) << negative.reason;
+
+  Eigen::Matrix2d tiny_asymmetric = Eigen::Matrix2d::Zero();
+  tiny_asymmetric.diagonal().setConstant(1e-20);
+  tiny_asymmetric(0, 1) = 1e-28;
+  const auto asymmetric = certifySymmetricPsd(tiny_asymmetric, 1e-10, 31);
+  EXPECT_FALSE(asymmetric.valid) << asymmetric.reason;
+
+  Eigen::Matrix<double, 1, 1> zero_gram;
+  zero_gram.setZero();
+  Eigen::Matrix<double, 3, 1> nonzero_response;
+  nonzero_response << 1e-16, 0.0, 0.0;
+  const auto unbounded = certifyGramAndProtectedResponse(
+      zero_gram, nonzero_response, 1e-10, 31);
+  ASSERT_TRUE(unbounded.valid) << unbounded.reason;
+  EXPECT_EQ(unbounded.nullspace_class, GramNullspaceClass::Dangerous);
+
+  const double singular_values[] = {
+      1e-12, 1e-11, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4};
+  for (const double smallest : singular_values) {
+    SCOPED_TRACE(smallest);
+    Eigen::Matrix2d z = Eigen::Matrix2d::Identity();
+    z(1, 1) = smallest;
+    int raw_rank = 0;
+    const int classification = uwb_imu_pl::classifyDetectionResponse(
+        z, Eigen::Matrix<double, 3, 2>::Zero(), 1e-10,
+        nullptr, nullptr, &raw_rank, nullptr, nullptr);
+    const auto gram = certifySymmetricPsd(z.transpose() * z, 1e-10, 37);
+    if (smallest == 1e-10) {
+      EXPECT_FALSE(gram.valid);
+      EXPECT_EQ(classification,
+                static_cast<int>(GramNullspaceClass::Indeterminate));
+    } else {
+      ASSERT_TRUE(gram.valid) << gram.reason;
+      const int expected_rank = smallest > 1e-10 ? 2 : 1;
+      EXPECT_EQ(gram.rank, expected_rank);
+      EXPECT_EQ(raw_rank, expected_rank);
+    }
+  }
+
+  Eigen::Matrix2d first = Eigen::Matrix2d::Zero();
+  Eigen::Matrix2d second = Eigen::Matrix2d::Zero();
+  first(0, 0) = 1.0;
+  second(0, 0) = 2.0;
+  const auto first_id = certifySymmetricPsd(first, 1e-10, 41);
+  const auto second_id = certifySymmetricPsd(second, 1e-10, 41);
+  ASSERT_TRUE(first_id.valid);
+  ASSERT_TRUE(second_id.valid);
+  EXPECT_NE(first_id.proof_identity, second_id.proof_identity);
+
+  // A constructive factor proof accepts its own rounded Gram (including an
+  // exact structural zero), but cannot be used to launder a different matrix.
+  Eigen::MatrixXd factor = Eigen::MatrixXd::Zero(4, 2);
+  factor(0, 0) = 1.0;
+  factor(1, 1) = 1e-6;
+  const Eigen::MatrixXd factor_gram = factor.transpose() * factor;
+  const auto factor_certificate = uwb_imu_pl::certifyFactorGram(
+      factor, factor_gram, 1e-10, 43);
+  ASSERT_TRUE(factor_certificate.valid) << factor_certificate.reason;
+  EXPECT_EQ(factor_certificate.rank, 2);
+  Eigen::MatrixXd tampered_gram = factor_gram;
+  tampered_gram(1, 1) = -1e-16;
+  const auto tampered_factor_certificate = uwb_imu_pl::certifyFactorGram(
+      factor, tampered_gram, 1e-10, 43);
+  EXPECT_FALSE(tampered_factor_certificate.valid);
+  EXPECT_NE(tampered_factor_certificate.reason.find("does not match"),
+            std::string::npos);
+  EXPECT_NE(factor_certificate.proof_identity,
+            tampered_factor_certificate.proof_identity);
+
+  // The direct raw-Z and squared Gram contracts agree away from the frozen
+  // boundary for the reviewer probe diag(1, 1e-6), tol=1e-10.
+  int direct_rank = 0;
+  const int direct_class = uwb_imu_pl::classifyDetectionResponse(
+      factor, Eigen::Matrix<double, 3, 2>::Zero(), 1e-10,
+      nullptr, nullptr, &direct_rank);
+  EXPECT_EQ(direct_rank, 2);
+  EXPECT_EQ(direct_class, static_cast<int>(GramNullspaceClass::FullRank));
+}
+
+TEST(SquareRootContext, P003LegacyEightArgumentClassificationAbiLinks) {
+  using LegacySignature = int (*)(
+      const Eigen::MatrixXd&, const Eigen::MatrixXd&, double,
+      double*, double*, int*, Eigen::Vector3d*, Eigen::Vector3d*);
+  const LegacySignature legacy = static_cast<LegacySignature>(
+      &uwb_imu_pl::classifyDetectionResponse);
+  ASSERT_NE(legacy, nullptr);
+  const Eigen::MatrixXd z = Eigen::MatrixXd::Identity(2, 2);
+  const Eigen::MatrixXd g = Eigen::MatrixXd::Zero(3, 2);
+  int rank = 0;
+  EXPECT_EQ(legacy(z, g, 1e-10, nullptr, nullptr, &rank, nullptr, nullptr),
+            static_cast<int>(uwb_imu_pl::GramNullspaceClass::FullRank));
+  EXPECT_EQ(rank, 2);
+}
+
+TEST(SquareRootContext, P003RootProofBindsInputsPolicyPathAndServedResult) {
+  const int rows = 12, columns = 4;
+  const Eigen::MatrixXd H = randomMatrix(rows, columns, 951);
+  const Eigen::VectorXd z = randomMatrix(rows, 1, 952);
+  const auto C = protectedMapFor(columns);
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(H,
+                                        Eigen::ComputeThinU | Eigen::ComputeThinV);
+  const Eigen::VectorXd state = svd.solve(z);
+  const double statistic = (z - H * state).squaredNorm();
+  const auto natural = buildContext(H, z, C, ColumnScalePolicy::Unit,
+                                    ColumnPermutationPolicy::Natural,
+                                    state, statistic);
+  const auto pivoted = buildContext(H, z, C, ColumnScalePolicy::Unit,
+                                    ColumnPermutationPolicy::ColumnPivot,
+                                    state, statistic);
+  ASSERT_TRUE(natural && natural->usable());
+  ASSERT_TRUE(pivoted && pivoted->usable());
+  EXPECT_NE(natural->proofIdentity(), pivoted->proofIdentity());
+  Eigen::MatrixXd changed_h = H;
+  changed_h(0, 0) = std::nextafter(changed_h(0, 0),
+                                   std::numeric_limits<double>::infinity());
+  Eigen::JacobiSVD<Eigen::MatrixXd> changed_svd(
+      changed_h, Eigen::ComputeThinU | Eigen::ComputeThinV);
+  const Eigen::VectorXd changed_state = changed_svd.solve(z);
+  const auto changed = buildContext(
+      changed_h, z, C, ColumnScalePolicy::Unit,
+      ColumnPermutationPolicy::Natural, changed_state,
+      (z - changed_h * changed_state).squaredNorm());
+  ASSERT_TRUE(changed && changed->usable());
+  EXPECT_NE(natural->proofIdentity(), changed->proofIdentity());
+}
+
+TEST(SquareRootContext, P003EveryRhsUsesCertifiedRootAndSvdReference) {
+  const int rows = 9;
+  const int columns = 4;
+  Eigen::MatrixXd H = Eigen::MatrixXd::Zero(rows, columns);
+  H.diagonal().head(columns) << 1.0, 1e-2, 1e-4, 1e-5;
+  H.bottomRows(rows - columns) =
+      1e-3 * randomMatrix(rows - columns, columns, 901);
+  const Eigen::VectorXd z = randomMatrix(rows, 1, 902);
+  const auto protected_map = protectedMapFor(columns);
+  Eigen::JacobiSVD<Eigen::MatrixXd> reference(
+      H, Eigen::ComputeThinU | Eigen::ComputeThinV);
+  const Eigen::VectorXd state = reference.solve(z);
+  const auto context = buildContext(
+      H, z, protected_map, ColumnScalePolicy::Unit,
+      ColumnPermutationPolicy::Natural, state,
+      (z - H * state).squaredNorm());
+  ASSERT_TRUE(context != nullptr);
+  ASSERT_TRUE(context->usable()) << certificateSummary(context->certificate());
+
+  FrozenWindowNumerics numerics;
+  const Eigen::MatrixXd information = H.transpose() * H;
+  numerics.information_factorization =
+      std::make_shared<const Eigen::LLT<Eigen::MatrixXd>>(information);
+  numerics.exact_condition = reference.singularValues()(0) /
+      reference.singularValues()(columns - 1);
+  numerics.spectral_vectors =
+      std::make_shared<const Eigen::MatrixXd>(reference.matrixV());
+  numerics.spectral_inverse_squared =
+      reference.singularValues().array().square().inverse();
+
+  // One batch contains the nominal-state normal RHS, all protected covariance
+  // columns, two fault RHS and two bridge RHS.  The independent oracle is the
+  // direct raw-Jacobian SVD, not the normal-equation LLT under test.
+  Eigen::MatrixXd rhs(columns, 8);
+  rhs.col(0) = H.transpose() * z;
+  rhs.middleCols<3>(1) = protected_map.transpose();
+  rhs.middleCols(4, 2) = randomMatrix(columns, 2, 903);
+  rhs.rightCols(2) = randomMatrix(columns, 2, 904);
+  const Eigen::MatrixXd actual = solveFrozenInformation(
+      context.get(), numerics, information, rhs);
+  ASSERT_EQ(actual.rows(), columns);
+  ASSERT_EQ(actual.cols(), rhs.cols());
+  const Eigen::MatrixXd expected = reference.matrixV() *
+      numerics.spectral_inverse_squared.asDiagonal() *
+      reference.matrixV().transpose() * rhs;
+  for (int column = 0; column < actual.cols(); ++column) {
+    const double absolute = (actual.col(column) - expected.col(column)).norm();
+    const double relative = absolute / std::max(1.0, expected.col(column).norm());
+    EXPECT_LE(absolute, 1e-10 + 1e-9 * expected.col(column).norm());
+    EXPECT_LE(relative, 1e-9);
+  }
 }
 
 }  // namespace

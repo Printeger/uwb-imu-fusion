@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <mutex>
 #include <set>
 #include <stdexcept>
 #include <utility>
@@ -35,6 +36,50 @@ void hashMatrix(std::uint64_t* hash, const Eigen::MatrixBase<Derived>& matrix) {
       const double value = matrix(row, column);
       hashBytes(hash, &value, sizeof(value));
     }
+}
+
+std::uint64_t frozenEntryProofKey(const FrozenHypothesisPlEntry& entry) {
+  std::uint64_t key = 1469598103934665603ULL;
+  const auto hypothesis = entry.hypothesis.value();
+  hashBytes(&key, &hypothesis, sizeof(hypothesis));
+  hashBytes(&key, &entry.monitorability.parameter_dimension,
+            sizeof(entry.monitorability.parameter_dimension));
+  hashBytes(&key, &entry.monitorability.physical_parameter_dimension,
+            sizeof(entry.monitorability.physical_parameter_dimension));
+  hashBytes(&key, &entry.monitorability.rank,
+            sizeof(entry.monitorability.rank));
+  hashBytes(&key, &entry.monitorability.sigma_min,
+            sizeof(entry.monitorability.sigma_min));
+  hashBytes(&key, &entry.monitorability.sigma_max,
+            sizeof(entry.monitorability.sigma_max));
+  hashBytes(&key, &entry.monitorability.condition_number,
+            sizeof(entry.monitorability.condition_number));
+  hashBytes(&key, &entry.monitorability.monitorable,
+            sizeof(entry.monitorability.monitorable));
+  hashMatrix(&key, entry.monitorability.protected_slopes);
+  hashBytes(&key, entry.monitorability.reason.data(),
+            entry.monitorability.reason.size());
+  hashMatrix(&key, entry.protected_slopes);
+  hashBytes(&key, &entry.gram_spd, sizeof(entry.gram_spd));
+  hashBytes(&key, &entry.valid, sizeof(entry.valid));
+  hashBytes(&key, &entry.z_rank, sizeof(entry.z_rank));
+  hashBytes(&key, &entry.z_smallest_singular_value,
+            sizeof(entry.z_smallest_singular_value));
+  hashBytes(&key, &entry.z_condition, sizeof(entry.z_condition));
+  hashBytes(&key, &entry.z_classification, sizeof(entry.z_classification));
+  hashBytes(&key, &entry.bound_from_projected_path,
+            sizeof(entry.bound_from_projected_path));
+  return key;
+}
+
+struct FrozenProofRegistry {
+  std::mutex mutex;
+  std::map<std::uint64_t, FrozenHypothesisPlProofV1> proofs;
+};
+
+FrozenProofRegistry& frozenProofRegistry() {
+  static FrozenProofRegistry registry;
+  return registry;
 }
 
 struct WorkDelta {
@@ -63,7 +108,7 @@ void failDimension(FaultHypothesisV2* hypothesis, FaultModeEvidence* evidence,
   evidence->monitorability = monitor;
 }
 
-void fillEvidenceMonitor(const Eigen::VectorXd& eigenvalues,
+void fillEvidenceMonitor(const SymmetricPsdCertificate& certificate,
                          int dimension, int physical_dimension,
                          const HypothesisEvaluationConfig& config,
                          FaultHypothesisV2* hypothesis,
@@ -71,17 +116,11 @@ void fillEvidenceMonitor(const Eigen::VectorXd& eigenvalues,
   auto& monitor = hypothesis->monitorability;
   monitor.parameter_dimension = dimension;
   monitor.physical_parameter_dimension = physical_dimension;
-  const Eigen::VectorXd singular =
-      eigenvalues.cwiseMax(0.0).cwiseSqrt().reverse();
-  monitor.sigma_max = singular.size() ? singular(0) : 0.0;
-  const double rank_gate = config.rank_tolerance *
-      std::max(1.0, monitor.sigma_max);
-  monitor.rank = static_cast<int>((singular.array() > rank_gate).count());
-  monitor.sigma_min = monitor.rank > 0 ? singular(monitor.rank - 1) : 0.0;
-  monitor.condition_number = monitor.sigma_min > 0.0
-      ? monitor.sigma_max / monitor.sigma_min
-      : std::numeric_limits<double>::infinity();
-  monitor.monitorable = monitor.rank == dimension &&
+  monitor.rank = certificate.rank;
+  monitor.sigma_min = certificate.sigma_min;
+  monitor.sigma_max = certificate.sigma_max;
+  monitor.condition_number = certificate.condition;
+  monitor.monitorable = certificate.valid && monitor.rank == dimension &&
       monitor.sigma_min >= config.min_fault_gram_sigma &&
       monitor.condition_number <= config.max_fault_gram_condition;
   monitor.reason = monitor.monitorable ? "" : "fault subspace is unmonitorable";
@@ -89,27 +128,56 @@ void fillEvidenceMonitor(const Eigen::VectorXd& eigenvalues,
   evidence->monitorability = monitor;
 }
 
-void fillPlMonitor(const Eigen::VectorXd& singular, int dimension,
+void fillPlMonitor(const SymmetricPsdCertificate& certificate, int dimension,
                    FrozenHypothesisPlEntry* entry) {
   auto& monitor = entry->monitorability;
   monitor.parameter_dimension = dimension;
-  const double largest = singular.size() ? singular(0) : 0.0;
-  const double gate = 1e-10 * std::max(1.0, largest);
-  monitor.rank = static_cast<int>((singular.array() > gate).count());
-  const double smallest = monitor.rank > 0 ? singular(monitor.rank - 1) : 0.0;
-  monitor.sigma_min = std::sqrt(std::max(0.0, smallest));
-  monitor.sigma_max = std::sqrt(std::max(0.0, largest));
-  monitor.condition_number = smallest > 0.0
-      ? largest / smallest : std::numeric_limits<double>::infinity();
-  monitor.monitorable = monitor.rank == dimension;
+  monitor.rank = certificate.rank;
+  monitor.sigma_min = certificate.sigma_min;
+  monitor.sigma_max = certificate.sigma_max;
+  monitor.condition_number = certificate.condition;
+  monitor.monitorable = certificate.valid && monitor.rank == dimension;
   if (!monitor.monitorable) {
     monitor.reason = "remaining post-FDE fault is unmonitorable";
   }
 }
 
+void storePlCertificate(const SymmetricPsdCertificate& gram,
+                        const Eigen::MatrixXd& protected_response,
+                        const GramResponseCertificate& response,
+                        const Eigen::MatrixXd* raw_detection_factor,
+                        double raw_factor_scale,
+                        double rank_tolerance,
+                        std::uint64_t parent_proof_identity,
+                        FrozenHypothesisPlEntry* entry) {
+  if (!entry) return;
+  FrozenHypothesisPlProofV1 proof;
+  proof.served_entry = *entry;
+  proof.certified_gram = gram.symmetric_matrix;
+  proof.protected_response = protected_response;
+  proof.gram_eigenvalues = gram.eigenvalues;
+  proof.gram_eigenvectors = gram.eigenvectors;
+  proof.gram_eigenvalue_errors = gram.eigenvalue_errors;
+  proof.nullspace_axis_residual = response.axis_residual;
+  proof.nullspace_class = static_cast<int>(response.nullspace_class);
+  proof.proof_identity = response.proof_identity;
+  if (raw_detection_factor) proof.raw_detection_factor = *raw_detection_factor;
+  proof.raw_factor_scale = raw_factor_scale;
+  proof.rank_tolerance = rank_tolerance;
+  proof.parent_proof_identity = parent_proof_identity;
+  proof.served_entry_identity = frozenEntryProofKey(proof.served_entry);
+  auto& registry = frozenProofRegistry();
+  std::lock_guard<std::mutex> lock(registry.mutex);
+  registry.proofs[frozenEntryProofKey(*entry)] = std::move(proof);
+}
+
 void analyzeDynamic(const Eigen::MatrixXd& input_gram,
+                    const Eigen::MatrixXd* raw_detection_factor,
                     const Eigen::VectorXd& score,
                     const Eigen::MatrixXd* protected_fault,
+                    bool allow_harmless_nullspace,
+                    std::uint64_t parent_proof_identity,
+                    double raw_factor_scale,
                     int physical_dimension, double all_in,
                     double squared_detector_threshold,
                     const HypothesisEvaluationConfig& config,
@@ -125,41 +193,121 @@ void analyzeDynamic(const Eigen::MatrixXd& input_gram,
     failDimension(hypothesis, evidence, physical_dimension);
     return;
   }
-  const Eigen::MatrixXd gram = 0.5 * (input_gram + input_gram.transpose());
-  if (config.retain_detailed_results) evidence->fault_gram = gram;
-  ++work->eigen;
-  Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigen(gram);
-  if (eigen.info() != Eigen::Success) {
-    hypothesis->monitorability.reason = "fault Gram eigensolve failed";
+  const bool has_raw_factor = raw_detection_factor &&
+      raw_detection_factor->cols() == dimension &&
+      raw_detection_factor->rows() > 0 && raw_detection_factor->allFinite();
+  const SymmetricPsdCertificate gram_certificate = has_raw_factor
+      ? certifyFactorGram(*raw_detection_factor, input_gram,
+                          config.rank_tolerance, parent_proof_identity,
+                          raw_factor_scale)
+      : certifySymmetricPsd(input_gram, config.rank_tolerance,
+                            parent_proof_identity, raw_factor_scale);
+  if (!gram_certificate.valid) {
+    hypothesis->monitorability.reason =
+        "fault Gram numerical certificate failed: " + gram_certificate.reason;
     hypothesis->monitored = false;
     evidence->monitorability = hypothesis->monitorability;
+    if (pl_entry) pl_entry->monitorability = hypothesis->monitorability;
     return;
   }
-  fillEvidenceMonitor(eigen.eigenvalues(), dimension, physical_dimension,
+  const Eigen::MatrixXd& gram = gram_certificate.symmetric_matrix;
+  if (config.retain_detailed_results) evidence->fault_gram = gram;
+  ++work->eigen;
+  fillEvidenceMonitor(gram_certificate, dimension, physical_dimension,
                       config, hypothesis, evidence);
-  if (pl_entry) {
-    ++work->svd;
-    Eigen::JacobiSVD<Eigen::MatrixXd> svd(gram);
-    fillPlMonitor(svd.singularValues(), dimension, pl_entry);
-  }
-  const bool need_solve = hypothesis->monitored ||
-      (pl_entry && pl_entry->monitorability.monitorable);
-  if (!need_solve) return;
-  ++work->ldlt;
-  Eigen::LDLT<Eigen::MatrixXd> solve(gram);
-  const bool positive = solve.info() == Eigen::Success && solve.isPositive();
-  if (pl_entry) pl_entry->gram_spd = positive;
-  if (!positive) {
-    if (hypothesis->monitored) {
-      hypothesis->monitorability.monitorable = false;
-      hypothesis->monitorability.reason = "fault Gram solve failed";
-      hypothesis->monitored = false;
+  GramResponseCertificate response_certificate;
+  const bool has_protected_response = protected_fault &&
+      protected_fault->rows() == 3 &&
+      protected_fault->cols() == dimension && protected_fault->allFinite();
+  if (has_protected_response) {
+    response_certificate = has_raw_factor
+        ? certifyFactorGramAndProtectedResponse(
+              *raw_detection_factor, input_gram, *protected_fault,
+              config.rank_tolerance, parent_proof_identity, raw_factor_scale)
+        : certifyGramAndProtectedResponse(
+              gram, *protected_fault, config.rank_tolerance,
+              parent_proof_identity, raw_factor_scale);
+    if (!hypothesis->monitored && allow_harmless_nullspace &&
+        response_certificate.valid &&
+        response_certificate.nullspace_class ==
+            GramNullspaceClass::Harmless) {
+      hypothesis->monitorability.monitorable = true;
+      hypothesis->monitorability.reason =
+          "harmless Gram nullspace certified by protected response";
+      hypothesis->monitorability.protected_slopes =
+          response_certificate.protected_slopes;
+      hypothesis->monitored = true;
       evidence->monitorability = hypothesis->monitorability;
     }
-    return;
   }
+  if (pl_entry) {
+    fillPlMonitor(gram_certificate, dimension, pl_entry);
+    pl_entry->gram_spd = gram_certificate.psd;
+    if (has_protected_response) {
+      pl_entry->monitorability.monitorable = response_certificate.valid &&
+          response_certificate.nullspace_class !=
+              GramNullspaceClass::Dangerous;
+      pl_entry->monitorability.reason =
+          pl_entry->monitorability.monitorable ? "" : response_certificate.reason;
+      if (pl_entry->monitorability.monitorable) {
+        pl_entry->protected_slopes = response_certificate.protected_slopes;
+        pl_entry->monitorability.protected_slopes =
+            pl_entry->protected_slopes;
+        pl_entry->valid = pl_entry->protected_slopes.allFinite();
+        evidence->monitorability.protected_slopes =
+            pl_entry->protected_slopes;
+      }
+      storePlCertificate(gram_certificate, *protected_fault,
+                         response_certificate, raw_detection_factor,
+                         raw_factor_scale, config.rank_tolerance,
+                         parent_proof_identity, pl_entry);
+    } else {
+      pl_entry->monitorability.monitorable = false;
+      pl_entry->monitorability.reason =
+          "protected fault response is missing or invalid";
+    }
+  }
+  if (!hypothesis->monitored) return;
   if (hypothesis->monitored) {
-    const Eigen::VectorXd estimated = solve.solve(score);
+    Eigen::VectorXd inverse = Eigen::VectorXd::Zero(dimension);
+    Eigen::MatrixXd positive_basis(dimension, gram_certificate.rank);
+    int positive_column = 0;
+    for (int index = 0; index < dimension; ++index) {
+      if (gram_certificate.eigenvalues(index) >
+          gram_certificate.rank_eigenvalue_gate) {
+        inverse(index) = 1.0 / gram_certificate.eigenvalues(index);
+        positive_basis.col(positive_column++) =
+            gram_certificate.eigenvectors.col(index);
+      }
+    }
+    Eigen::VectorXd projected_score = Eigen::VectorXd::Zero(dimension);
+    if (positive_basis.cols() > 0) {
+      projected_score = positive_basis *
+          (positive_basis.transpose() * score);
+    }
+    const double score_tolerance =
+        128.0 * std::numeric_limits<double>::epsilon() *
+        static_cast<double>(std::max(1, dimension)) *
+        score.norm();
+    if ((score - projected_score).norm() > score_tolerance) {
+      hypothesis->monitorability.monitorable = false;
+      hypothesis->monitorability.reason =
+          "fault score has an uncertified Gram-nullspace component";
+      hypothesis->monitored = false;
+      evidence->monitorability = hypothesis->monitorability;
+      return;
+    }
+    const Eigen::VectorXd estimated = gram_certificate.eigenvectors *
+        inverse.asDiagonal() * gram_certificate.eigenvectors.transpose() *
+        score;
+    if (!estimated.allFinite()) {
+      hypothesis->monitorability.monitorable = false;
+      hypothesis->monitorability.reason =
+          "fault profile solve failed its common Gram certificate";
+      hypothesis->monitored = false;
+      evidence->monitorability = hypothesis->monitorability;
+      return;
+    }
     if (config.retain_detailed_results) evidence->estimated_fault = estimated;
     evidence->explained_energy = std::max(0.0, score.dot(estimated));
     evidence->conditioned_statistic = std::max(
@@ -173,27 +321,15 @@ void analyzeDynamic(const Eigen::MatrixXd& input_gram,
         squared_detector_threshold +
             config.plausible_conditioned_statistic_margin;
   }
-  if (pl_entry && pl_entry->monitorability.monitorable && protected_fault &&
-      protected_fault->rows() == 3 && protected_fault->cols() == dimension &&
-      protected_fault->allFinite()) {
-    for (int axis = 0; axis < 3; ++axis) {
-      const Eigen::VectorXd response = protected_fault->row(axis).transpose();
-      pl_entry->protected_slopes(axis) = std::sqrt(std::max(
-          0.0, response.dot(solve.solve(response))));
-    }
-    pl_entry->monitorability.protected_slopes = pl_entry->protected_slopes;
-    pl_entry->valid = pl_entry->protected_slopes.allFinite();
-    // A3 (G9): the audit export reads evidence.monitorability; copy the values
-    // that were just computed for the frozen PL entry instead of leaving the
-    // struct default (+inf).  Diagnostics only; the PL path above is unchanged.
-    evidence->monitorability.protected_slopes = pl_entry->protected_slopes;
-  }
 }
 
 template <int Dimension>
 void analyzeFixed(const Eigen::Matrix<double, Dimension, Dimension>& input_gram,
+                  const Eigen::MatrixXd* raw_detection_factor,
                   const Eigen::Matrix<double, Dimension, 1>& score,
                   const Eigen::Matrix<double, 3, Dimension>& protected_fault,
+                  std::uint64_t parent_proof_identity,
+                  double raw_factor_scale,
                   int physical_dimension, double all_in,
                   double squared_detector_threshold,
                   const HypothesisEvaluationConfig& config,
@@ -209,39 +345,67 @@ void analyzeFixed(const Eigen::Matrix<double, Dimension, Dimension>& input_gram,
   }
   if (config.retain_detailed_results) evidence->fault_gram = gram;
   ++work->eigen;
-  Eigen::SelfAdjointEigenSolver<
-      Eigen::Matrix<double, Dimension, Dimension>> eigen(gram);
-  if (eigen.info() != Eigen::Success) {
-    hypothesis->monitorability.reason = "fault Gram eigensolve failed";
+  const bool has_raw_factor = raw_detection_factor &&
+      raw_detection_factor->cols() == Dimension &&
+      raw_detection_factor->rows() > 0 && raw_detection_factor->allFinite();
+  const SymmetricPsdCertificate gram_certificate = has_raw_factor
+      ? certifyFactorGram(*raw_detection_factor, Eigen::MatrixXd(input_gram),
+                          config.rank_tolerance, parent_proof_identity,
+                          raw_factor_scale)
+      : certifySymmetricPsd(Eigen::MatrixXd(input_gram), config.rank_tolerance,
+                            parent_proof_identity, raw_factor_scale);
+  if (!gram_certificate.valid) {
+    hypothesis->monitorability.reason =
+        "fault Gram numerical certificate failed: " + gram_certificate.reason;
     hypothesis->monitored = false;
     evidence->monitorability = hypothesis->monitorability;
     return;
   }
-  fillEvidenceMonitor(eigen.eigenvalues(), Dimension, physical_dimension,
+  fillEvidenceMonitor(gram_certificate, Dimension, physical_dimension,
                       config, hypothesis, evidence);
   if (pl_entry) {
-    ++work->svd;
-    Eigen::JacobiSVD<Eigen::Matrix<double, Dimension, Dimension>> svd(gram);
-    fillPlMonitor(svd.singularValues(), Dimension, pl_entry);
+    fillPlMonitor(gram_certificate, Dimension, pl_entry);
+    pl_entry->gram_spd = gram_certificate.psd;
+    const GramResponseCertificate response_certificate = has_raw_factor
+        ? certifyFactorGramAndProtectedResponse(
+              *raw_detection_factor, Eigen::MatrixXd(input_gram),
+              Eigen::MatrixXd(protected_fault), config.rank_tolerance,
+              parent_proof_identity, raw_factor_scale)
+        : certifyGramAndProtectedResponse(
+              Eigen::MatrixXd(gram), Eigen::MatrixXd(protected_fault),
+              config.rank_tolerance, parent_proof_identity, raw_factor_scale);
+    pl_entry->monitorability.monitorable = response_certificate.valid &&
+        response_certificate.nullspace_class != GramNullspaceClass::Dangerous;
+    pl_entry->monitorability.reason =
+        pl_entry->monitorability.monitorable ? "" : response_certificate.reason;
+    if (pl_entry->monitorability.monitorable) {
+      pl_entry->protected_slopes = response_certificate.protected_slopes;
+      pl_entry->monitorability.protected_slopes =
+          pl_entry->protected_slopes;
+      pl_entry->valid = pl_entry->protected_slopes.allFinite();
+      evidence->monitorability.protected_slopes = pl_entry->protected_slopes;
+    }
+    storePlCertificate(gram_certificate, Eigen::MatrixXd(protected_fault),
+                       response_certificate, raw_detection_factor,
+                       raw_factor_scale, config.rank_tolerance,
+                       parent_proof_identity, pl_entry);
   }
-  const bool need_solve = hypothesis->monitored ||
-      (pl_entry && pl_entry->monitorability.monitorable);
-  if (!need_solve) return;
-  ++work->ldlt;
-  Eigen::LDLT<Eigen::Matrix<double, Dimension, Dimension>> solve(gram);
-  const bool positive = solve.info() == Eigen::Success && solve.isPositive();
-  if (pl_entry) pl_entry->gram_spd = positive;
-  if (!positive) {
-    if (hypothesis->monitored) {
+  if (!hypothesis->monitored) return;
+  if (hypothesis->monitored) {
+    const Eigen::VectorXd inverse =
+        gram_certificate.eigenvalues.cwiseInverse();
+    const Eigen::VectorXd estimated_dynamic = gram_certificate.eigenvectors *
+        inverse.asDiagonal() * gram_certificate.eigenvectors.transpose() *
+        Eigen::VectorXd(score);
+    if (!estimated_dynamic.allFinite()) {
       hypothesis->monitorability.monitorable = false;
-      hypothesis->monitorability.reason = "fault Gram solve failed";
+      hypothesis->monitorability.reason =
+          "fault profile solve failed its common Gram certificate";
       hypothesis->monitored = false;
       evidence->monitorability = hypothesis->monitorability;
+      return;
     }
-    return;
-  }
-  if (hypothesis->monitored) {
-    const Eigen::Matrix<double, Dimension, 1> estimated = solve.solve(score);
+    const Eigen::Matrix<double, Dimension, 1> estimated = estimated_dynamic;
     if (config.retain_detailed_results) evidence->estimated_fault = estimated;
     evidence->explained_energy = std::max(0.0, score.dot(estimated));
     evidence->conditioned_statistic = std::max(
@@ -253,18 +417,6 @@ void analyzeFixed(const Eigen::Matrix<double, Dimension, Dimension>& input_gram,
     evidence->plausible = evidence->conditioned_statistic <=
         squared_detector_threshold +
             config.plausible_conditioned_statistic_margin;
-  }
-  if (pl_entry && pl_entry->monitorability.monitorable) {
-    for (int axis = 0; axis < 3; ++axis) {
-      const Eigen::Matrix<double, Dimension, 1> response =
-          protected_fault.row(axis).transpose();
-      pl_entry->protected_slopes(axis) = std::sqrt(std::max(
-          0.0, response.dot(solve.solve(response))));
-    }
-    pl_entry->monitorability.protected_slopes = pl_entry->protected_slopes;
-    pl_entry->valid = pl_entry->protected_slopes.allFinite();
-    // A3 (G9): mirror into the evidence record for the audit export.
-    evidence->monitorability.protected_slopes = pl_entry->protected_slopes;
   }
 }
 
@@ -482,7 +634,10 @@ std::vector<FaultModeEvidence> evaluateContiguous(
       static_cast<std::uint64_t>(window.H.rows()) *
       static_cast<std::uint64_t>(total_columns));
 
-  const bool audit_input_needed = config.enable_shared_context &&
+  // P0-03: active, batch-disabled and shared-disabled routes all classify the
+  // same direct raw-factor response Z=Q2^T D.  This is numerical proof input,
+  // not an optional audit optimization.
+  const bool audit_input_needed =
       window.square_root && window.square_root->usable();
   Eigen::MatrixXd dense;  // padded fallback form / audit input only
   if (compact_fallback) {
@@ -564,7 +719,7 @@ std::vector<FaultModeEvidence> evaluateContiguous(
   if (solved.rows() != window.H.cols() || solved.cols() != rhs.cols() ||
       !solved.allFinite()) return results;
   const Eigen::MatrixXd covariance_modes = solved.rightCols(total_columns);
-  const Eigen::MatrixXd protected_modes =
+  Eigen::MatrixXd protected_modes =
       window.protected_state_map * covariance_modes;
   NumericalWorkCounters::faultModeColumns(
       static_cast<std::uint64_t>(total_columns));
@@ -575,11 +730,18 @@ std::vector<FaultModeEvidence> evaluateContiguous(
   // batch reproduces the P2 numbers exactly.
   Eigen::MatrixXd all_mode_response;
   if (audit_input_needed) {
+    Eigen::MatrixXd y_response;
     Eigen::MatrixXd z_response;
-    window.square_root->faultResponse(dense, nullptr, &z_response);
+    window.square_root->faultResponse(dense, &y_response, &z_response);
     if (z_response.rows() > 0 && z_response.cols() == total_columns &&
         z_response.allFinite()) {
       all_mode_response = std::move(z_response);
+    }
+    const Eigen::MatrixXd protected_factor =
+        window.square_root->protectedResponse();
+    if (protected_factor.cols() == y_response.rows() &&
+        y_response.cols() == total_columns) {
+      protected_modes = protected_factor * y_response;
     }
   }
   // B2 (§5.7): cross blocks are computed on demand for the (mode, mode) pairs the
@@ -594,6 +756,11 @@ std::vector<FaultModeEvidence> evaluateContiguous(
                      const ModeDescriptor& second) -> Eigen::MatrixXd {
     const Eigen::Index left_offset = first.offset;
     const Eigen::Index right_offset = second.offset;
+    if (all_mode_response.cols() == total_columns) {
+      return all_mode_response
+                 .middleCols(left_offset, first.dimension).transpose() *
+          all_mode_response.middleCols(right_offset, second.dimension);
+    }
     Eigen::MatrixXd value;
     if (!compact_fallback) {
       const auto& left = compact[first.mode_number];
@@ -711,7 +878,10 @@ std::vector<FaultModeEvidence> evaluateContiguous(
   context->fault_mode_fingerprint = faultModeSetFingerprint(modes);
   context->fault_model_policy_fingerprint =
       config.fault_model_policy_fingerprint;
-  context->protected_covariance = window.protected_state_map * solved.leftCols<3>();
+  context->protected_covariance = window.square_root &&
+      window.square_root->usable()
+      ? window.square_root->protectedCovariance()
+      : window.protected_state_map * solved.leftCols<3>();
   // B2 storage discipline: report which storage form served this window.
   context->compact_rows = compact_fallback
       ? static_cast<std::size_t>(window.H.rows()) *
@@ -766,6 +936,16 @@ std::vector<FaultModeEvidence> evaluateContiguous(
         }
       }
       evidence.parameter_dimension = static_cast<std::size_t>(dimension);
+      double raw_factor_scale_squared = 0.0;
+      if (dense.cols() == total_columns) {
+        for (const auto part : parts) {
+          const auto& descriptor = descriptors[part];
+          raw_factor_scale_squared += dense.middleCols(
+              descriptor.offset, descriptor.dimension).squaredNorm();
+        }
+      }
+      const double raw_factor_scale =
+          std::sqrt(raw_factor_scale_squared);
       // B2 capacity bound: a hypothesis whose parameter dimension exceeds the
       // configured bound is refused fail-closed and counted, instead of
       // allocating unbounded temporaries.
@@ -813,6 +993,7 @@ std::vector<FaultModeEvidence> evaluateContiguous(
       Eigen::Vector3d classification_harmless_slopes =
           Eigen::Vector3d::Constant(std::numeric_limits<double>::infinity());
       bool classification_evaluated = false;
+      Eigen::MatrixXd raw_detection_factor;
       if (all_mode_response.cols() > 0 && config.enable_shared_context) {
         std::vector<Eigen::MatrixXd> z_parts;
         int width = 0;
@@ -831,6 +1012,7 @@ std::vector<FaultModeEvidence> evaluateContiguous(
             z_h.middleCols(offset, part.cols()) = part;
             offset += static_cast<int>(part.cols());
           }
+          raw_detection_factor = z_h;
           Eigen::MatrixXd g_h(3, dimension);
           offset = 0;
           for (const auto part : parts) {
@@ -846,7 +1028,7 @@ std::vector<FaultModeEvidence> evaluateContiguous(
                   ? window.numerics->numerical_contract.rank_tolerance : 1e-10,
               &pl_entry.z_smallest_singular_value, &pl_entry.z_condition,
               &pl_entry.z_rank, &classification_axis_residual,
-              &classification_harmless_slopes);
+              &classification_harmless_slopes, raw_factor_scale);
           classification_evaluated = pl_entry.z_classification != 0;
         }
       }
@@ -879,17 +1061,28 @@ std::vector<FaultModeEvidence> evaluateContiguous(
           left_offset += left_descriptor.dimension;
         }
         if (dimension == 1) {
-          analyzeFixed<1>(gram.topLeftCorner<1, 1>(), score.head<1>(),
-                          protected_fault.leftCols<1>(), physical_dimension,
+          analyzeFixed<1>(gram.topLeftCorner<1, 1>(), &raw_detection_factor,
+                          score.head<1>(),
+                          protected_fault.leftCols<1>(),
+                          frozenWindowNumericalProofIdentity(window, *window.numerics),
+                          raw_factor_scale,
+                          physical_dimension,
                           window.numerics->statistic, squared_detector_threshold,
                           config, &hypothesis, &evidence, &pl_entry, &work);
         } else if (dimension == 2) {
-          analyzeFixed<2>(gram.topLeftCorner<2, 2>(), score.head<2>(),
-                          protected_fault.leftCols<2>(), physical_dimension,
+          analyzeFixed<2>(gram.topLeftCorner<2, 2>(), &raw_detection_factor,
+                          score.head<2>(),
+                          protected_fault.leftCols<2>(),
+                          frozenWindowNumericalProofIdentity(window, *window.numerics),
+                          raw_factor_scale,
+                          physical_dimension,
                           window.numerics->statistic, squared_detector_threshold,
                           config, &hypothesis, &evidence, &pl_entry, &work);
         } else {
-          analyzeFixed<3>(gram, score, protected_fault, physical_dimension,
+          analyzeFixed<3>(gram, &raw_detection_factor, score, protected_fault,
+                          frozenWindowNumericalProofIdentity(window, *window.numerics),
+                          raw_factor_scale,
+                          physical_dimension,
                           window.numerics->statistic, squared_detector_threshold,
                           config, &hypothesis, &evidence, &pl_entry, &work);
         }
@@ -921,7 +1114,10 @@ std::vector<FaultModeEvidence> evaluateContiguous(
           }
           left_offset += left_descriptor.dimension;
         }
-        analyzeDynamic(gram, score, &protected_fault, physical_dimension,
+        analyzeDynamic(gram, &raw_detection_factor, score, &protected_fault, true,
+                       frozenWindowNumericalProofIdentity(window, *window.numerics),
+                       raw_factor_scale,
+                       physical_dimension,
                        window.numerics->statistic, squared_detector_threshold,
                        config, &hypothesis, &evidence, &pl_entry, &work);
       }
@@ -1018,7 +1214,14 @@ std::vector<FaultModeEvidence> evaluateContiguous(
   context->bytes = sizeof(*context) +
       context->pl_entries.capacity() * sizeof(FrozenHypothesisPlEntry);
   context->valid = context->protected_covariance.allFinite() &&
-      context->pl_entries.size() == hypotheses->size();
+      context->pl_entries.size() == hypotheses->size() &&
+      std::all_of(context->pl_entries.begin(), context->pl_entries.end(),
+          [&](const FrozenHypothesisPlEntry& entry) {
+            FrozenHypothesisPlProofV1 proof;
+            return !entry.valid ||
+                (frozenHypothesisPlProof(entry, &proof) &&
+                 validateFrozenHypothesisPlEntry(proof));
+          });
   if (!context->valid) context->reason = "shared hypothesis context is incomplete";
   if (shared) *shared = std::move(context);
   return results;
@@ -1033,6 +1236,7 @@ std::vector<FaultModeEvidence> evaluateMapped(
     std::shared_ptr<const FrozenHypothesisNumerics>* shared) {
   struct Projection {
     Eigen::MatrixXd dense;
+    Eigen::MatrixXd detection_response;
     Eigen::MatrixXd normal_cross;
     Eigen::MatrixXd covariance_cross;
     Eigen::MatrixXd protected_fault;
@@ -1076,6 +1280,16 @@ std::vector<FaultModeEvidence> evaluateMapped(
         static_cast<std::uint64_t>(dense.cols()));
     Projection projection;
     projection.dense = std::move(dense);
+    if (window.square_root && window.square_root->usable()) {
+      Eigen::MatrixXd y_response;
+      window.square_root->faultResponse(
+          projection.dense, &y_response, &projection.detection_response);
+      const Eigen::MatrixXd protected_factor =
+          window.square_root->protectedResponse();
+      if (protected_factor.cols() == y_response.rows()) {
+        projection.protected_fault = protected_factor * y_response;
+      }
+    }
     projection.normal_cross = window.H.transpose() * projection.dense;
     projection.physical_dimension = mode.parameter_dimension;
     projected_modes.emplace(mode.id.value(), std::move(projection));
@@ -1095,7 +1309,8 @@ std::vector<FaultModeEvidence> evaluateMapped(
     solve_offset += columns;
   }
   const Eigen::MatrixXd combined_solutions = solveFrozenInformation(
-      *window.numerics, window.base_information, combined_cross);
+      window.square_root.get(), *window.numerics,
+      window.base_information, combined_cross);
   if (combined_solutions.rows() != window.H.cols() ||
       combined_solutions.cols() != solve_columns ||
       !combined_solutions.allFinite()) return {};
@@ -1111,8 +1326,10 @@ std::vector<FaultModeEvidence> evaluateMapped(
     context->fault_mode_fingerprint = faultModeSetFingerprint(modes);
     context->fault_model_policy_fingerprint =
         config.fault_model_policy_fingerprint;
-    context->protected_covariance =
-        window.protected_state_map * combined_solutions.leftCols<3>();
+    context->protected_covariance = window.square_root &&
+        window.square_root->usable()
+        ? window.square_root->protectedCovariance()
+        : window.protected_state_map * combined_solutions.leftCols<3>();
     context->pl_entries.resize(hypotheses->size());
     context->mode_count = modes.size();
     context->hypothesis_count = hypotheses->size();
@@ -1123,7 +1340,11 @@ std::vector<FaultModeEvidence> evaluateMapped(
     item.second.covariance_cross =
         combined_solutions.middleCols(solve_offset, columns);
     item.second.score = item.second.dense.transpose() * window.numerics->parity;
-    if (config.enable_shared_context) {
+    // The protected response is part of the common numerical certificate, not
+    // an optimization-only artifact.  Both the legacy evidence path and the
+    // shared PL path must therefore classify the same Gram nullspace.
+    if (item.second.protected_fault.rows() != 3 ||
+        item.second.protected_fault.cols() != columns) {
       item.second.protected_fault =
           window.protected_state_map * item.second.covariance_cross;
     }
@@ -1162,13 +1383,28 @@ std::vector<FaultModeEvidence> evaluateMapped(
     Eigen::MatrixXd gram = Eigen::MatrixXd::Zero(columns, columns);
     Eigen::VectorXd score = Eigen::VectorXd::Zero(columns);
     Eigen::MatrixXd protected_fault = Eigen::MatrixXd::Zero(3, columns);
+    Eigen::MatrixXd raw_detection_factor;
+    bool raw_factor_available = !parts.empty();
+    Eigen::Index raw_factor_rows = parts.empty()
+        ? 0 : parts.front().second->detection_response.rows();
+    for (const auto& part : parts) {
+      raw_factor_available = raw_factor_available && raw_factor_rows > 0 &&
+          part.second->detection_response.rows() == raw_factor_rows &&
+          part.second->detection_response.cols() == part.second->dense.cols() &&
+          part.second->detection_response.allFinite();
+    }
+    if (raw_factor_available) raw_detection_factor.resize(raw_factor_rows, columns);
+    double raw_factor_scale_squared = 0.0;
     int left_column = 0;
     for (std::size_t left = 0; left < parts.size(); ++left) {
       const int left_size = parts[left].second->dense.cols();
       score.segment(left_column, left_size) = parts[left].second->score;
-      if (config.enable_shared_context) {
-        protected_fault.middleCols(left_column, left_size) =
-            parts[left].second->protected_fault;
+      raw_factor_scale_squared += parts[left].second->dense.squaredNorm();
+      protected_fault.middleCols(left_column, left_size) =
+          parts[left].second->protected_fault;
+      if (raw_factor_available) {
+        raw_detection_factor.middleCols(left_column, left_size) =
+            parts[left].second->detection_response;
       }
       int right_column = 0;
       for (std::size_t right = 0; right < parts.size(); ++right) {
@@ -1180,8 +1416,16 @@ std::vector<FaultModeEvidence> evaluateMapped(
         if (found == pair_grams.end()) {
           const auto& first = projected_modes.at(key.first);
           const auto& second = projected_modes.at(key.second);
-          Eigen::MatrixXd value = first.dense.transpose() * second.dense -
-              first.normal_cross.transpose() * second.covariance_cross;
+          Eigen::MatrixXd value;
+          if (first.detection_response.rows() > 0 &&
+              first.detection_response.rows() ==
+                  second.detection_response.rows()) {
+            value = first.detection_response.transpose() *
+                second.detection_response;
+          } else {
+            value = first.dense.transpose() * second.dense -
+                first.normal_cross.transpose() * second.covariance_cross;
+          }
           found = pair_grams.emplace(key, std::move(value)).first;
         }
         gram.block(left_column, right_column, left_size, right_size) =
@@ -1196,8 +1440,15 @@ std::vector<FaultModeEvidence> evaluateMapped(
       entry = &context->pl_entries[hypothesis_index];
       entry->hypothesis = hypothesis.id;
     }
-    analyzeDynamic(gram, score,
-                   config.enable_shared_context ? &protected_fault : nullptr,
+    std::string independence_reason;
+    const bool allow_harmless_nullspace = hypothesis.modes.size() <= 1 ||
+        hypothesisParametersIndependent(modes, hypothesis.modes,
+                                        &independence_reason);
+    analyzeDynamic(gram,
+                   raw_factor_available ? &raw_detection_factor : nullptr,
+                   score, &protected_fault, allow_harmless_nullspace,
+                   frozenWindowNumericalProofIdentity(window, *window.numerics),
+                   std::sqrt(raw_factor_scale_squared),
                    physical_dimension, window.numerics->statistic,
                    squared_detector_threshold, config, &hypothesis,
                    &evidence, entry, &work);
@@ -1210,7 +1461,14 @@ std::vector<FaultModeEvidence> evaluateMapped(
     context->worker_blocks = 1;
     context->bytes = sizeof(*context) +
         context->pl_entries.capacity() * sizeof(FrozenHypothesisPlEntry);
-    context->valid = context->protected_covariance.allFinite();
+    context->valid = context->protected_covariance.allFinite() &&
+        std::all_of(context->pl_entries.begin(), context->pl_entries.end(),
+            [&](const FrozenHypothesisPlEntry& entry) {
+              FrozenHypothesisPlProofV1 proof;
+              return !entry.valid ||
+                  (frozenHypothesisPlProof(entry, &proof) &&
+                   validateFrozenHypothesisPlEntry(proof));
+            });
     if (!context->valid) context->reason = "shared hypothesis context is incomplete";
     if (shared) *shared = std::move(context);
   }
@@ -1221,6 +1479,97 @@ std::vector<FaultModeEvidence> evaluateMapped(
 
 }  // namespace
 
+std::uint64_t frozenHypothesisPlEntryIdentity(
+    const FrozenHypothesisPlEntry& entry) {
+  return frozenEntryProofKey(entry);
+}
+
+bool validateFrozenHypothesisPlEntry(
+    const FrozenHypothesisPlProofV1& proof, std::string* reason) {
+  auto reject = [&](const std::string& message) {
+    if (reason) *reason = message;
+    return false;
+  };
+  const auto& entry = proof.served_entry;
+  if (proof.certified_gram.rows() == 0 ||
+      proof.protected_response.rows() != 3 ||
+      proof.protected_response.cols() != proof.certified_gram.cols()) {
+    return reject("frozen hypothesis proof payload is incomplete");
+  }
+  const GramResponseCertificate rebuilt = proof.raw_detection_factor.rows() > 0
+      ? certifyFactorGramAndProtectedResponse(
+            proof.raw_detection_factor, proof.certified_gram,
+            proof.protected_response, proof.rank_tolerance,
+            proof.parent_proof_identity, proof.raw_factor_scale)
+      : certifyGramAndProtectedResponse(
+            proof.certified_gram, proof.protected_response,
+            proof.rank_tolerance, proof.parent_proof_identity,
+            proof.raw_factor_scale);
+  auto same = [](const auto& left, const auto& right) {
+    return left.rows() == right.rows() && left.cols() == right.cols() &&
+        (left.array() == right.array()).all();
+  };
+  double z_sigma_min = std::numeric_limits<double>::infinity();
+  double z_condition = std::numeric_limits<double>::infinity();
+  int z_rank = 0;
+  Eigen::Vector3d z_axis_residual;
+  Eigen::Vector3d z_slopes;
+  const int z_classification = proof.raw_detection_factor.rows() > 0
+      ? classifyDetectionResponse(
+            proof.raw_detection_factor, proof.protected_response,
+            proof.rank_tolerance, &z_sigma_min, &z_condition, &z_rank,
+            &z_axis_residual, &z_slopes, proof.raw_factor_scale)
+      : 0;
+  const bool expected_projected =
+      z_classification == static_cast<int>(GramNullspaceClass::Harmless);
+  const bool expected_monitorable = rebuilt.valid &&
+      z_classification != static_cast<int>(GramNullspaceClass::Dangerous) &&
+      z_classification != static_cast<int>(GramNullspaceClass::Indeterminate);
+  const bool expected_valid = expected_monitorable &&
+      rebuilt.protected_slopes.allFinite();
+  const bool valid = rebuilt.valid && proof.schema_version == 1 &&
+      proof.served_entry_identity != 0 &&
+      proof.served_entry_identity == frozenEntryProofKey(entry) &&
+      rebuilt.proof_identity == proof.proof_identity &&
+      static_cast<int>(rebuilt.nullspace_class) == proof.nullspace_class &&
+      same(rebuilt.gram.symmetric_matrix, proof.certified_gram) &&
+      same(rebuilt.gram.eigenvalues, proof.gram_eigenvalues) &&
+      same(rebuilt.gram.eigenvectors, proof.gram_eigenvectors) &&
+      same(rebuilt.gram.eigenvalue_errors, proof.gram_eigenvalue_errors) &&
+      same(rebuilt.axis_residual, proof.nullspace_axis_residual) &&
+      same(rebuilt.protected_slopes, entry.protected_slopes) &&
+      entry.valid == expected_valid &&
+      entry.gram_spd == (rebuilt.gram.psd && !expected_projected) &&
+      entry.monitorability.parameter_dimension == proof.certified_gram.cols() &&
+      entry.monitorability.rank == rebuilt.gram.rank &&
+      entry.monitorability.sigma_min == rebuilt.gram.sigma_min &&
+      entry.monitorability.sigma_max == rebuilt.gram.sigma_max &&
+      entry.monitorability.condition_number == rebuilt.gram.condition &&
+      entry.monitorability.monitorable == expected_monitorable &&
+      same(entry.monitorability.protected_slopes,
+           rebuilt.protected_slopes) &&
+      entry.z_rank == z_rank &&
+      entry.z_smallest_singular_value == z_sigma_min &&
+      entry.z_condition == z_condition &&
+      entry.z_classification == z_classification &&
+      entry.bound_from_projected_path == expected_projected;
+  if (!valid) return reject("frozen hypothesis numerical proof mismatch");
+  return true;
+}
+
+bool frozenHypothesisPlProof(const FrozenHypothesisPlEntry& entry,
+                             FrozenHypothesisPlProofV1* proof) {
+  if (!proof) return false;
+  auto& registry = frozenProofRegistry();
+  std::lock_guard<std::mutex> lock(registry.mutex);
+  const auto found = registry.proofs.find(frozenEntryProofKey(entry));
+  if (found == registry.proofs.end()) return false;
+  *proof = found->second;
+  return proof->served_entry.hypothesis == entry.hypothesis &&
+      proof->served_entry.protected_slopes == entry.protected_slopes &&
+      proof->served_entry.valid == entry.valid;
+}
+
 int classifyDetectionResponse(const Eigen::MatrixXd& z_h,
                               const Eigen::MatrixXd& g_h,
                               double rank_tolerance,
@@ -1228,81 +1577,58 @@ int classifyDetectionResponse(const Eigen::MatrixXd& z_h,
                               double* condition, int* rank_out,
                               Eigen::Vector3d* axis_residual,
                               Eigen::Vector3d* harmless_slopes) {
+  return classifyDetectionResponse(
+      z_h, g_h, rank_tolerance, smallest_singular_value, condition, rank_out,
+      axis_residual, harmless_slopes,
+      std::numeric_limits<double>::quiet_NaN());
+}
+
+int classifyDetectionResponse(const Eigen::MatrixXd& z_h,
+                              const Eigen::MatrixXd& g_h,
+                              double rank_tolerance,
+                              double* smallest_singular_value,
+                              double* condition, int* rank_out,
+                              Eigen::Vector3d* axis_residual,
+                              Eigen::Vector3d* harmless_slopes,
+                              double raw_factor_scale) {
   if (axis_residual) *axis_residual = Eigen::Vector3d::Zero();
   if (harmless_slopes) {
     *harmless_slopes = Eigen::Vector3d::Constant(
         std::numeric_limits<double>::infinity());
   }
-  if (z_h.cols() == 0 || z_h.rows() == 0) return 0;
-  // ThinV is required: the structural nullspace test needs V (the default
-  // JacobiSVD option computes singular values only).
-  Eigen::JacobiSVD<Eigen::MatrixXd> svd(z_h, Eigen::ComputeThinV);
-  const Eigen::VectorXd singular = svd.singularValues();
-  const double largest = singular.size() ? singular(0) : 0.0;
-  const double gate = rank_tolerance * std::max(1.0, largest);
-  int rank = 0;
-  for (int index = 0; index < singular.size(); ++index) {
-    if (singular(index) > gate) ++rank;
+  if (z_h.cols() == 0 || z_h.rows() == 0 || g_h.rows() != 3 ||
+      g_h.cols() != z_h.cols() || !z_h.allFinite() || !g_h.allFinite()) {
+    return 0;
   }
-  const int columns = static_cast<int>(z_h.cols());
-  if (rank_out) *rank_out = rank;
+  // Raw-Z exact fallback for the singular-value transition band.  This is
+  // available to the evidence path and prevents a nonzero, unbounded fault map
+  // from being re-labelled as a structural zero merely because Z'Z squares a
+  // tiny singular value.  Gram-only consumers conservatively use the common
+  // PSD certificate below.
+  Eigen::JacobiSVD<Eigen::MatrixXd> z_reference(z_h);
+  const Eigen::VectorXd z_singular = z_reference.singularValues();
+  const double z_largest = z_singular.size() ? z_singular(0) : 0.0;
+  const double factor_scale = std::isfinite(raw_factor_scale) &&
+      raw_factor_scale >= 0.0 ? raw_factor_scale : z_largest;
+  const double z_gate = rank_tolerance * factor_scale;
+  int z_rank = 0;
+  for (Eigen::Index index = 0; index < z_singular.size(); ++index) {
+    if (z_singular(index) > z_gate) ++z_rank;
+  }
+  const Eigen::MatrixXd gram = z_h.transpose() * z_h;
+  const GramResponseCertificate certificate =
+      certifyFactorGramAndProtectedResponse(z_h, gram, g_h,
+                                            rank_tolerance, 0,
+                                            factor_scale);
+  if (rank_out) *rank_out = certificate.gram.rank;
   if (smallest_singular_value) {
-    *smallest_singular_value = rank > 0 ? singular(rank - 1) : 0.0;
+    *smallest_singular_value = certificate.gram.sigma_min;
   }
-  if (condition) {
-    *condition = rank > 0 && singular(rank - 1) > 0.0
-        ? largest / singular(rank - 1)
-        : std::numeric_limits<double>::infinity();
-  }
-  if (rank == columns) return 1;  // full rank
-  // The band check uses the first *discarded* singular value: a value that is
-  // below the gate but well above zero means the rank decision is a tolerance
-  // artifact rather than a structural nullspace.
-  const double excluded = rank < singular.size() ? singular(rank) : 0.0;
-  if (excluded > gate * 0.01) return 4;  // numerically indistinguishable
-  double residual = 0.0;
-  Eigen::Vector3d axis_values = Eigen::Vector3d::Zero();
-  if (rank > 0) {
-    // Finite bound through the projected path (section 5.5): the retained
-    // detection subspace carries the responsive part of the protected
-    // response; the residual is what a nullspace direction could hide.
-    const Eigen::MatrixXd basis = svd.matrixV().leftCols(rank);
-    const Eigen::MatrixXd scaled = basis *
-        singular.head(rank).cwiseInverse().asDiagonal();
-    if (harmless_slopes) {
-      for (int axis = 0; axis < harmless_slopes->size(); ++axis) {
-        if (g_h.rows() > axis && g_h.cols() == columns) {
-          (*harmless_slopes)(axis) =
-              (g_h.row(axis) * scaled).norm();
-        }
-      }
-    }
-    if (g_h.cols() == columns) {
-      const Eigen::MatrixXd projected = basis * basis.transpose() * g_h.transpose();
-      const Eigen::MatrixXd outside = g_h.transpose() - projected;
-      for (int axis = 0; axis < 3; ++axis) {
-        if (outside.cols() > axis) {
-          axis_values(axis) = outside.col(axis).cwiseAbs().maxCoeff();
-        }
-      }
-      residual = outside.cwiseAbs().maxCoeff();
-    }
-  } else if (g_h.size() > 0) {
-    residual = g_h.cwiseAbs().maxCoeff();
-    for (int axis = 0; axis < 3; ++axis) {
-      if (g_h.rows() > axis) axis_values(axis) = g_h.row(axis).cwiseAbs().maxCoeff();
-    }
-  }
-  if (rank == 0 && harmless_slopes && g_h.cols() == columns) {
-    // Rank-free projected bound: the caller only uses these values when the
-    // classification is "structurally harmless", which requires the residual
-    // (hence the whole protected response) to vanish, so the finite bound is
-    // exactly zero.
-    *harmless_slopes = Eigen::Vector3d::Zero();
-  }
-  if (axis_residual) *axis_residual = axis_values;
-  const double response_scale = std::max(1.0, g_h.size() ? g_h.cwiseAbs().maxCoeff() : 0.0);
-  return residual <= 1e-9 * response_scale ? 2 : 3;
+  if (condition) *condition = certificate.gram.condition;
+  if (axis_residual) *axis_residual = certificate.axis_residual;
+  if (harmless_slopes) *harmless_slopes = certificate.protected_slopes;
+  if (!certificate.valid || certificate.gram.rank != z_rank) return 4;
+  return static_cast<int>(certificate.nullspace_class);
 }
 
 std::uint64_t hypothesisSetFingerprint(
@@ -1394,7 +1720,8 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
   if (shared) shared->reset();
   if (!window.model_valid || !window.numerics || !window.numerics->valid ||
       window.numerics->content_fingerprint != integrityWindowFingerprint(window) ||
-      !window.numerics->information_factorization) return {};
+      !window.numerics->information_factorization ||
+      !validateFrozenWindowNumericalProof(window, *window.numerics)) return {};
   if (window.numerics->numerical_contract_fingerprint !=
       numericalContractFingerprint(config_.rank_tolerance,
                                    config_.max_condition_number)) {
@@ -1421,7 +1748,21 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
             cross.transpose() * covariance_cross;
         score = hypothesis.A.transpose() * window.numerics->parity;
       }
-      analyzeDynamic(gram, score, nullptr, hypothesis.A.cols(),
+      Eigen::MatrixXd raw_detection_factor;
+      if (window.square_root && window.square_root->usable() &&
+          hypothesis.A.rows() == window.H.rows() &&
+          hypothesis.A.cols() > 0) {
+        Eigen::MatrixXd y;
+        window.square_root->faultResponse(hypothesis.A, &y,
+                                          &raw_detection_factor);
+      }
+      analyzeDynamic(gram,
+                     raw_detection_factor.rows() > 0
+                         ? &raw_detection_factor : nullptr,
+                     score, nullptr, false,
+                     frozenWindowNumericalProofIdentity(window, *window.numerics),
+                     hypothesis.A.norm(),
+                     hypothesis.A.cols(),
                      window.numerics->statistic, squared_detector_threshold,
                      config_, &hypothesis, &evidence, nullptr, &work);
       results.push_back(std::move(evidence));

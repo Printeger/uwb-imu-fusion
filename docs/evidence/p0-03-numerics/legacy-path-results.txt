@@ -1,0 +1,28 @@
+Note: Google Test filter = FdeProfiles.NominalPipelineAndFaultCensusFollowResolvedScope:IntegrityV2ProtectionLevel.FixedLowDimKeepsSingularStatusAndUncommonDimensionFallsBack:B2Compact.LegacyMappedRouteCountsPaddedAllocations:B3ZeroSpace.*
+[==========] Running 5 tests from 4 test suites.
+[----------] Global test environment set-up.
+[----------] 1 test from FdeProfiles
+[ RUN      ] FdeProfiles.NominalPipelineAndFaultCensusFollowResolvedScope
+[       OK ] FdeProfiles.NominalPipelineAndFaultCensusFollowResolvedScope (65 ms)
+[----------] 1 test from FdeProfiles (65 ms total)
+
+[----------] 1 test from IntegrityV2ProtectionLevel
+[ RUN      ] IntegrityV2ProtectionLevel.FixedLowDimKeepsSingularStatusAndUncommonDimensionFallsBack
+[       OK ] IntegrityV2ProtectionLevel.FixedLowDimKeepsSingularStatusAndUncommonDimensionFallsBack (0 ms)
+[----------] 1 test from IntegrityV2ProtectionLevel (0 ms total)
+
+[----------] 1 test from B2Compact
+[ RUN      ] B2Compact.LegacyMappedRouteCountsPaddedAllocations
+[       OK ] B2Compact.LegacyMappedRouteCountsPaddedAllocations (0 ms)
+[----------] 1 test from B2Compact (0 ms total)
+
+[----------] 2 tests from B3ZeroSpace
+[ RUN      ] B3ZeroSpace.DangerousNullspaceIsUnavailableWithDirectionLevelReason
+[       OK ] B3ZeroSpace.DangerousNullspaceIsUnavailableWithDirectionLevelReason (0 ms)
+[ RUN      ] B3ZeroSpace.HarmlessNullspaceKeepsAFiniteProjectedBound
+[       OK ] B3ZeroSpace.HarmlessNullspaceKeepsAFiniteProjectedBound (0 ms)
+[----------] 2 tests from B3ZeroSpace (1 ms total)
+
+[----------] Global test environment tear-down
+[==========] 5 tests from 4 test suites ran. (66 ms total)
+[  PASSED  ] 5 tests.

@@ -132,6 +132,29 @@ struct DualChannelBoundRequest {
 DualChannelBoundResult computeDualChannelBound(
     const DualChannelBoundRequest& request);
 
+// Versioned P0-03 proof sidecar.  Existing request/result layouts are left
+// byte-for-byte compatible with the previous golden ABI.
+struct DualChannelNumericalProofV1 {
+  std::uint64_t schema_version = 1;
+  DualChannelBoundRequest request;
+  double rank_tolerance = 1e-10;
+  std::uint64_t parent_proof_identity = 0;
+  Eigen::MatrixXd w_matrix;
+  Eigen::VectorXd w_eigenvalues;
+  Eigen::MatrixXd w_eigenvectors;
+  Eigen::VectorXd w_eigenvalue_errors;
+  DualChannelBoundResult served_result;
+  std::uint64_t proof_identity = 0;
+};
+
+DualChannelBoundResult computeDualChannelBoundCertified(
+    const DualChannelBoundRequest& request, double rank_tolerance,
+    std::uint64_t parent_proof_identity,
+    DualChannelNumericalProofV1* proof);
+bool validateDualChannelNumericalProof(
+    const DualChannelNumericalProofV1& proof,
+    std::string* reason = nullptr);
+
 // ---------------------------------------------------------------------------
 // §7.5 fault-span projection.
 // ---------------------------------------------------------------------------

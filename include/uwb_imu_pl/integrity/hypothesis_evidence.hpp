@@ -60,6 +60,17 @@ int classifyDetectionResponse(const Eigen::MatrixXd& z_h,
                               Eigen::Vector3d* axis_residual = nullptr,
                               Eigen::Vector3d* harmless_slopes = nullptr);
 
+// Extended overload; the original eight-argument symbol above remains exported
+// for ABI compatibility.
+int classifyDetectionResponse(const Eigen::MatrixXd& z_h,
+                              const Eigen::MatrixXd& g_h,
+                              double rank_tolerance,
+                              double* smallest_singular_value,
+                              double* condition, int* rank,
+                              Eigen::Vector3d* axis_residual,
+                              Eigen::Vector3d* harmless_slopes,
+                              double raw_factor_scale);
+
 struct FrozenHypothesisPlEntry {
   HypothesisId hypothesis;
   MonitorabilityResult monitorability;
@@ -82,6 +93,34 @@ struct FrozenHypothesisPlEntry {
   // audit-only in that case, and the PL gate accepts the projected bound.
   bool bound_from_projected_path = false;
 };
+
+struct FrozenHypothesisPlProofV1 {
+  std::uint64_t schema_version = 1;
+  FrozenHypothesisPlEntry served_entry;
+  Eigen::MatrixXd certified_gram;
+  Eigen::MatrixXd protected_response;
+  Eigen::VectorXd gram_eigenvalues;
+  Eigen::MatrixXd gram_eigenvectors;
+  Eigen::VectorXd gram_eigenvalue_errors;
+  Eigen::Vector3d nullspace_axis_residual = Eigen::Vector3d::Constant(
+      std::numeric_limits<double>::infinity());
+  int nullspace_class = 0;
+  Eigen::MatrixXd raw_detection_factor;
+  double raw_factor_scale = std::numeric_limits<double>::quiet_NaN();
+  double rank_tolerance = std::numeric_limits<double>::quiet_NaN();
+  std::uint64_t parent_proof_identity = 0;
+  std::uint64_t proof_identity = 0;
+  std::uint64_t served_entry_identity = 0;
+};
+
+std::uint64_t frozenHypothesisPlEntryIdentity(
+    const FrozenHypothesisPlEntry& entry);
+
+bool validateFrozenHypothesisPlEntry(
+    const FrozenHypothesisPlProofV1& proof,
+    std::string* reason = nullptr);
+bool frozenHypothesisPlProof(const FrozenHypothesisPlEntry& entry,
+                             FrozenHypothesisPlProofV1* proof);
 
 // Immutable, window-scoped products shared by evidence and KEEP_ALL PL.  The
 // context is never reused after a changed observation set, rewhitening,

@@ -1032,17 +1032,17 @@ ProjectedPostActionModes projectPostActionModes(
   // A post-action graph can remove every row on which a mode acts (for
   // example, an epoch-local UWB bias whose complete batch was replaced by a
   // retained-measurement block).  Such a mode is no longer a fault of the
-  // candidate graph.  Keeping its all-zero map in the post-FDE census makes
+  // candidate graph.  Keeping its exactly all-zero map in the post-FDE census makes
   // the fault Gram rank deficient by construction and incorrectly rejects an
   // otherwise valid exclusion.  Drop only directions whose *candidate raw
-  // measurement effect* is numerically zero; modes that retain any effect
-  // remain subject to the normal monitorability contract.
+  // measurement effect* is structurally (bitwise) zero; a tiny nonzero map is
+  // retained because the fault amplitude is unbounded.  Non-finite maps are
+  // also retained so the numerical gate fails closed downstream.
   std::set<std::uint64_t> inactive_modes;
   for (auto it = projected.mode_maps.begin(); it != projected.mode_maps.end();) {
     const Eigen::MatrixXd& map = it->second;
-    const double largest = map.size() == 0
-        ? 0.0 : map.cwiseAbs().maxCoeff();
-    if (!std::isfinite(largest) || largest > 1e-12) {
+    const bool structurally_zero = map.size() == 0 || map.isZero(0.0);
+    if (!structurally_zero) {
       ++it;
       continue;
     }
@@ -1111,6 +1111,7 @@ struct IdentityMaterial {
   std::vector<std::string> detector_ids;
   std::uint64_t risk_proof_id = 0;
   std::string pl_detector_certificate_id;
+  std::uint64_t pl_numerical_proof_identity = 0;
   Eigen::Vector3d protection_level_m = Eigen::Vector3d::Zero();
   std::string position_reference;
   std::int64_t timestamp_ns = 0;
@@ -1135,9 +1136,10 @@ PublicationIdentity publicationIdentityFrom(const IdentityMaterial& material) {
     }
   }
   identity.risk_proof_id = material.risk_proof_id;
+  // The pre-existing numeric PL-certificate slot carries the versioned
+  // sidecar proof identity.  No public ABI layout extension is needed.
   identity.pl_detector_certificate_id =
-      material.pl_detector_certificate_id.empty()
-          ? 0 : identityHash64(material.pl_detector_certificate_id);
+      material.pl_numerical_proof_identity;
   identity.protection_level_m = material.protection_level_m;
   identity.position_reference = material.position_reference;
   identity.timestamp_ns = material.timestamp_ns;
@@ -1153,7 +1155,8 @@ std::uint64_t publicationCertificateDigest(const PublicationIdentity& identity) 
        << '\x1f' << identity.health_state << '\x1f';
   for (const auto detector : identity.detector_ids) text << detector << ',';
   text << '\x1f' << identity.risk_proof_id << '\x1f'
-       << identity.pl_detector_certificate_id << '\x1f' << identity.timestamp_ns
+       << identity.pl_detector_certificate_id << '\x1f'
+       << identity.timestamp_ns
        << '\x1f' << identity.frame_id << '\x1f' << identity.position_reference;
   return identityHash64(text.str());
 }
@@ -1211,6 +1214,13 @@ void runPublicationGate(PublicationController* controller,
   certificate.certificate_id = certificate_available
       ? publicationCertificateDigest(certificate) : 0;
   PublicationIdentity candidate = publicationIdentityFrom(candidate_material);
+  std::string pl_proof_reason;
+  const bool pl_proof_valid = material.pl_numerical_proof_identity == 0 ||
+      validateProtectionLevelPublicationProof(
+          material.pl_numerical_proof_identity,
+          material.protection_level_m,
+          material.pl_detector_certificate_id,
+          &pl_proof_reason);
   if (controller == nullptr) {
     // No state holder was supplied: the gate did not run and the output must
     // say so instead of implying a check passed.
@@ -1231,7 +1241,7 @@ void runPublicationGate(PublicationController* controller,
   }
   const bool certification_available =
       output->protection_level.formal_eligible &&
-      output->measurement_model_valid;
+      output->measurement_model_valid && pl_proof_valid;
   const PublicationDiagnosis diagnosis = controller->finalizeAttempt(
       candidate, certificate, certificate_available, certification_available);
   output->publication = PublicationDiagnostics{};
@@ -1429,6 +1439,10 @@ void RealtimeIntegrityPipeline::applyPublicationGate(IntegrityOutput* output,
   material.risk_proof_id = output->diagnostics.selection_risk_proof_id;
   material.pl_detector_certificate_id =
       output->protection_level.detector_certificate_id;
+  material.pl_numerical_proof_identity =
+      protectionLevelPublicationProofIdentity(
+          output->protection_level.pl_xyz_m,
+          output->protection_level.detector_certificate_id);
   material.protection_level_m = output->protection_level.pl_xyz_m;
   material.position_reference = output->snapshot_identity.position_reference;
   material.frame_id = cfg.realtime.world_frame;
@@ -2611,11 +2625,13 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         start_operation("candidate_evaluation");
         std::vector<CandidateEvaluation> candidates;
         std::map<std::uint64_t, ProtectionLevelV2Result> candidate_pl;
+        std::map<std::uint64_t, std::uint64_t> candidate_pl_proof;
         candidates.reserve(models.actions.size());
         struct EvaluatedAction {
           CandidateEvaluation candidate;
           DetectorResultV2 post;
           ProtectionLevelV2Result protection_level;
+          std::uint64_t protection_level_proof_identity = 0;
           bool has_protection_level = false;
         };
         std::vector<const ExclusionAction*> action_order;
@@ -2768,6 +2784,30 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             evaluated.protection_level = ProtectionLevelV2().computeShared(
                 window, &candidate, evaluated.post,
                 &projected_modes.hypotheses, shared_pl, cfg.risk_v2);
+            if (evaluated.protection_level.model_valid) {
+              std::string proof_reason;
+              if (!validateProtectionLevelV2Proof(
+                      candidate, evaluated.post, projected_modes.hypotheses,
+                      evaluated.protection_level, &proof_reason)) {
+                evaluated.protection_level.model_valid = false;
+                evaluated.protection_level.availability =
+                    Availability::Unavailable;
+                evaluated.protection_level.reason =
+                    "candidate PL proof consumer rejected: " + proof_reason;
+              }
+            }
+            if (evaluated.protection_level.model_valid) {
+              evaluated.protection_level_proof_identity =
+                  protectionLevelV2ProofIdentity(
+                      candidate, evaluated.protection_level);
+              if (evaluated.protection_level_proof_identity == 0) {
+                evaluated.protection_level.model_valid = false;
+                evaluated.protection_level.availability =
+                    Availability::Unavailable;
+                evaluated.protection_level.reason =
+                    "candidate PL exact proof identity is unavailable";
+              }
+            }
             evaluated.has_protection_level = true;
             candidate.diagnostics.pl_evaluated = true;
             candidate.diagnostics.pl_ms = part_ms();
@@ -2802,6 +2842,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           if (evaluated.has_protection_level) {
             candidate_pl[candidate.action.id.value()] =
                 evaluated.protection_level;
+            candidate_pl_proof[candidate.action.id.value()] =
+                evaluated.protection_level_proof_identity;
           }
           candidates.push_back(std::move(candidate));
         }
@@ -3177,8 +3219,32 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
                   pl->second.allocated_outcome_risk;
               output.protection_level.risk_budget_valid =
                   pl->second.risk_budget_valid;
-              output.protection_level.detector_certificate_id =
-                  pl->second.detector_certificate_id;
+              const auto proof = candidate_pl_proof.find(
+                  selected->action.id.value());
+              const std::uint64_t pl_proof_identity =
+                  proof == candidate_pl_proof.end() ? 0 : proof->second;
+              std::string pl_proof_reason;
+              std::string publication_packet;
+              const bool packet_bound = pl_proof_identity != 0 &&
+                  bindProtectionLevelPublicationPacket(
+                      *selected, pl->second, pl_proof_identity,
+                      &publication_packet);
+              if (!packet_bound ||
+                  !validateProtectionLevelPublicationProof(
+                      pl_proof_identity, pl->second.pl_xyz_m,
+                      publication_packet,
+                      &pl_proof_reason)) {
+                output.protection_level.detector_certificate_id.clear();
+                output.protection_level.risk_budget_valid = false;
+                output.protection_level.reason =
+                    "P0-03 PL proof rejected during P0-02 conversion: " +
+                    pl_proof_reason;
+              } else {
+                // Existing ABI string slot carries a versioned packet whose
+                // payload explicitly binds the selected candidate identity.
+                output.protection_level.detector_certificate_id =
+                    publication_packet;
+              }
             }
           }
           output.protection_level.availability = Availability::Unavailable;

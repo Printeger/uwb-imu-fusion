@@ -3,6 +3,7 @@
 
 #include <Eigen/SVD>
 
+#include <algorithm>
 #include <set>
 #include <chrono>
 #include <cstdlib>
@@ -58,6 +59,125 @@ std::uint64_t numericalContractFingerprint(
   return contract;
 }
 
+std::uint64_t frozenWindowNumericalProofIdentity(
+    const LinearizedIntegrityWindow& window,
+    const FrozenWindowNumerics& numerics) {
+  std::uint64_t proof = 1469598103934665603ULL;
+  const std::uint64_t proof_schema_version = 1;
+  hashBytes(&proof, &proof_schema_version, sizeof(proof_schema_version));
+  hashBytes(&proof, &numerics.content_fingerprint,
+            sizeof(numerics.content_fingerprint));
+  hashBytes(&proof, &numerics.numerical_contract_fingerprint,
+            sizeof(numerics.numerical_contract_fingerprint));
+  hashMatrix(&proof, window.H);
+  hashMatrix(&proof, window.z);
+  hashMatrix(&proof, window.protected_state_map);
+  const std::uint64_t square_root_proof = window.square_root
+      ? window.square_root->proofIdentity() : 0;
+  hashBytes(&proof, &square_root_proof, sizeof(square_root_proof));
+  hashBytes(&proof, &numerics.canonical_spectral_solution,
+            sizeof(numerics.canonical_spectral_solution));
+  hashMatrix(&proof, numerics.spectral_state_increment);
+  if (numerics.spectral_vectors) hashMatrix(&proof, *numerics.spectral_vectors);
+  else hashMatrix(&proof, Eigen::MatrixXd{});
+  hashMatrix(&proof, numerics.spectral_inverse_squared);
+  hashMatrix(&proof, numerics.base_state_increment);
+  hashMatrix(&proof, numerics.parity);
+  hashBytes(&proof, &numerics.statistic, sizeof(numerics.statistic));
+  hashBytes(&proof, &numerics.square_root_certificate_ok,
+            sizeof(numerics.square_root_certificate_ok));
+  return proof;
+}
+
+bool validateFrozenWindowNumericalProof(
+    const LinearizedIntegrityWindow& window,
+    const FrozenWindowNumerics& numerics, std::string* reason) {
+  const bool root_served = window.square_root && window.square_root->usable();
+  bool served_values_match = false;
+  if (root_served &&
+      numerics.base_state_increment.size() ==
+          window.square_root->baseStateIncrement().size() &&
+      numerics.parity.size() == window.square_root->parity().size()) {
+    served_values_match = !numerics.canonical_spectral_solution &&
+        (numerics.base_state_increment.array() ==
+         window.square_root->baseStateIncrement().array()).all() &&
+        (numerics.parity.array() == window.square_root->parity().array()).all() &&
+        numerics.statistic == window.square_root->statistic();
+  } else if (!root_served && window.H.rows() == window.z.size() &&
+             window.H.cols() > 0 &&
+             numerics.spectral_state_increment.size() == window.H.cols() &&
+             numerics.base_state_increment.size() == window.H.cols()) {
+    // This is an independent consumer recomputation from the raw frozen H/z.
+    // It deliberately does not trust spectral_state_increment or any rehashed
+    // stored derivative: changing that state and synchronizing parity/statistic
+    // must still fail.
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(
+        window.H, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    const Eigen::VectorXd expected_state = svd.solve(window.z);
+    const Eigen::VectorXd expected_parity = window.z - window.H * expected_state;
+    const double spectral_scale = svd.singularValues().size() > 0
+        ? svd.singularValues()(0) : 0.0;
+    const double spectral_threshold =
+        numerics.numerical_contract.rank_tolerance * spectral_scale;
+    Eigen::VectorXd expected_inverse_squared = Eigen::VectorXd::Zero(
+        svd.matrixV().cols());
+    for (Eigen::Index i = 0; i < svd.singularValues().size(); ++i) {
+      if (svd.singularValues()(i) > spectral_threshold) {
+        expected_inverse_squared(i) =
+            1.0 / (svd.singularValues()(i) * svd.singularValues()(i));
+      }
+    }
+    Eigen::MatrixXd expected_covariance = svd.matrixV() *
+        expected_inverse_squared.asDiagonal() * svd.matrixV().transpose();
+    Eigen::MatrixXd stored_covariance;
+    bool spectral_operator_matches = numerics.spectral_vectors &&
+        numerics.spectral_vectors->rows() == window.H.cols() &&
+        numerics.spectral_vectors->cols() ==
+            numerics.spectral_inverse_squared.size() &&
+        numerics.spectral_inverse_squared.allFinite() &&
+        numerics.spectral_vectors->allFinite();
+    if (spectral_operator_matches) {
+      stored_covariance = *numerics.spectral_vectors *
+          numerics.spectral_inverse_squared.asDiagonal() *
+          numerics.spectral_vectors->transpose();
+      const double operator_scale = std::max(expected_covariance.norm(),
+                                             stored_covariance.norm());
+      spectral_operator_matches = operator_scale > 0.0 &&
+          (stored_covariance - expected_covariance).norm() <=
+              1024.0 * std::numeric_limits<double>::epsilon() *
+              static_cast<double>(std::max(window.H.rows(), window.H.cols())) *
+              operator_scale;
+    }
+    const auto numerically_same = [](const Eigen::VectorXd& actual,
+                                     const Eigen::VectorXd& expected) {
+      if (actual.size() != expected.size() || !actual.allFinite() ||
+          !expected.allFinite()) return false;
+      if ((actual.array() == expected.array()).all()) return true;
+      const double scale = std::max(actual.norm(), expected.norm());
+      return scale > 0.0 && (actual - expected).norm() <=
+          512.0 * std::numeric_limits<double>::epsilon() *
+          static_cast<double>(std::max<Eigen::Index>(1, actual.size())) * scale;
+    };
+    served_values_match = numerics.canonical_spectral_solution &&
+        spectral_operator_matches &&
+        numerically_same(numerics.spectral_state_increment, expected_state) &&
+        numerically_same(numerics.base_state_increment, expected_state) &&
+        numerically_same(numerics.parity, expected_parity) &&
+        std::abs(numerics.statistic - expected_parity.squaredNorm()) <=
+          512.0 * std::numeric_limits<double>::epsilon() *
+          std::max(std::abs(numerics.statistic),
+                   expected_parity.squaredNorm());
+  }
+  const bool valid = served_values_match &&
+      frozenWindowNumericalProofIdentity(window, numerics) != 0;
+  if (!valid && reason) {
+    *reason = served_values_match
+        ? "frozen-window numerical proof identity mismatch"
+        : "frozen-window served QR/SVD result does not match its path";
+  }
+  return valid;
+}
+
 Eigen::MatrixXd solveFrozenInformation(const FrozenWindowNumerics& numerics,
                                        const Eigen::MatrixXd& information,
                                        const Eigen::MatrixXd& rhs,
@@ -70,11 +190,15 @@ Eigen::MatrixXd solveFrozenInformation(const FrozenWindowNumerics& numerics,
       static_cast<std::uint64_t>(rhs.cols()));
   Eigen::MatrixXd solved = numerics.information_factorization->solve(rhs);
   const double backward = (information * solved - rhs).norm() /
-      std::max(1.0, rhs.norm());
+      std::max({1.0, rhs.norm(), information.norm() * solved.norm()});
   const double forward_bound = numerics.exact_condition *
       numerics.exact_condition * backward;
+  const double roundoff = 128.0 * std::numeric_limits<double>::epsilon() *
+      static_cast<double>(std::max(information.rows(), rhs.cols()));
   if (solved.allFinite() && std::isfinite(forward_bound) &&
-      forward_bound <= numerics.numerical_contract.forward_error_limit) {
+      backward <= numerics.numerical_contract.solve_residual_limit + roundoff &&
+      forward_bound <= numerics.numerical_contract.forward_error_limit +
+                           roundoff) {
     return solved;
   }
   if (!numerics.spectral_vectors ||
@@ -84,9 +208,21 @@ Eigen::MatrixXd solveFrozenInformation(const FrozenWindowNumerics& numerics,
   NumericalWorkCounters::spectralRhsSolve(
       static_cast<std::uint64_t>(rhs.cols()));
   if (used_spectral_fallback) *used_spectral_fallback = true;
-  return *numerics.spectral_vectors *
+  const Eigen::MatrixXd fallback = *numerics.spectral_vectors *
       numerics.spectral_inverse_squared.asDiagonal() *
       numerics.spectral_vectors->transpose() * rhs;
+  const double fallback_backward = (information * fallback - rhs).norm() /
+      std::max({1.0, rhs.norm(), information.norm() * fallback.norm()});
+  const double fallback_forward = numerics.exact_condition *
+      numerics.exact_condition * fallback_backward;
+  if (!fallback.allFinite() || !std::isfinite(fallback_forward) ||
+      fallback_backward > numerics.numerical_contract.solve_residual_limit +
+                              roundoff ||
+      fallback_forward > numerics.numerical_contract.forward_error_limit +
+                             roundoff) {
+    return Eigen::MatrixXd();
+  }
+  return fallback;
 }
 
 Eigen::MatrixXd solveFrozenInformation(
@@ -98,8 +234,19 @@ Eigen::MatrixXd solveFrozenInformation(
   if (context && context->usable() &&
       rhs.rows() == context->columns()) {
     Eigen::MatrixXd solved = context->informationSolve(rhs);
+    const double backward = solved.rows() == rhs.rows()
+        ? (information * solved - rhs).norm() /
+              std::max({1.0, rhs.norm(), information.norm() * solved.norm()})
+        : std::numeric_limits<double>::infinity();
+    const double context_condition =
+        context->certificate().condition_estimate;
+    const double forward = context_condition * context_condition * backward;
+    const double roundoff = 128.0 * std::numeric_limits<double>::epsilon() *
+        static_cast<double>(std::max(information.rows(), rhs.cols()));
     if (solved.rows() == rhs.rows() && solved.cols() == rhs.cols() &&
-        solved.allFinite()) {
+        solved.allFinite() && std::isfinite(forward) &&
+        backward <= numerics.numerical_contract.solve_residual_limit + roundoff &&
+        forward <= numerics.numerical_contract.forward_error_limit + roundoff) {
       return solved;
     }
     NumericalWorkCounters::squareRootFallback();
@@ -318,7 +465,7 @@ void finalizeIntegrityWindow(LinearizedIntegrityWindow* window,
     return;
   }
   const double scale = singular.size() ? singular(0) : 0.0;
-  const double threshold = rank_tolerance * std::max(1.0, scale);
+  const double threshold = rank_tolerance * scale;
   window->rank = static_cast<int>((singular.array() > threshold).count());
   window->dof = rows - window->rank;
   const double smallest = window->rank > 0 ? singular(window->rank - 1) : 0.0;
@@ -345,7 +492,7 @@ void finalizeIntegrityWindow(LinearizedIntegrityWindow* window,
         1.0 / (singular(i) * singular(i));
   }
   const double singular_error = 128.0 * std::numeric_limits<double>::epsilon() *
-      std::max(window->H.rows(), window->H.cols()) * std::max(1.0, scale);
+      std::max(window->H.rows(), window->H.cols()) * scale;
   numerics->smallest_information_lower_bound =
       std::pow(std::max(0.0, smallest - singular_error), 2);
   numerics->largest_information_upper_bound = std::pow(scale + singular_error, 2);
@@ -369,6 +516,7 @@ void finalizeIntegrityWindow(LinearizedIntegrityWindow* window,
     numerics->statistic = numerics->parity.squaredNorm();
     numerics->information_logdet = 2.0 * singular.head(window->rank)
         .array().log().sum();
+    numerics->canonical_spectral_solution = true;
     const Eigen::VectorXd normal_residual = window->base_information_rhs -
         window->base_information * llt_increment;
     numerics->solve_relative_residual = normal_residual.norm() /

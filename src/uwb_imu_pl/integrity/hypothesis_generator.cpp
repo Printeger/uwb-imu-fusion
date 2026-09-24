@@ -143,54 +143,40 @@ void finalizeEffectiveBasis(const LinearizedIntegrityWindow& window,
     map.middleRows(offset, item.second.rows()) = block->whitener * item.second;
     offset += item.second.rows();
   }
-  Eigen::JacobiSVD<Eigen::MatrixXd> svd(map, Eigen::ComputeFullV);
-  if (!svd.singularValues().allFinite()) {
+  if (!map.allFinite()) {
     mode->effective_basis_certified = false;
     return;
   }
-  const double largest = svd.singularValues().size()
-      ? svd.singularValues()(0) : 0.0;
-  const double gate = rank_tolerance * std::max(1.0, largest);
-  const int rank = static_cast<int>(
-      (svd.singularValues().array() > gate).count());
-  if (rank <= 0 || rank == physical) return;
-  const Eigen::MatrixXd retained = svd.matrixV().leftCols(rank);
-  const Eigen::MatrixXd discarded = svd.matrixV().rightCols(physical - rank);
-  const Eigen::MatrixXd discarded_map = map * discarded;
-  mode->discarded_measurement_norm = discarded_map.norm();
-  if (window.numerics && window.numerics->information_factorization &&
-      window.protected_state_map.cols() == window.H.cols()) {
-    Eigen::MatrixXd dense = Eigen::MatrixXd::Zero(window.H.rows(), physical);
-    int aggregate_offset = 0;
-    for (const auto& block : window.blocks) {
-      const auto found = mode->raw_group_maps.find(block.group_id);
-      if (found != mode->raw_group_maps.end()) {
-        dense.middleRows(aggregate_offset, found->second.rows()) =
-            block.whitener * found->second;
+  // P0-03: an unbounded fault has no numerical amplitude below which a
+  // nonzero map can be discarded.  Keep the complete physical basis.  Exact
+  // zero columns may still be removed: their standard-basis identity is a
+  // symbolic proof, not a magnitude decision.  SVD truncation (even when G is
+  // also small) is not such a proof.
+  std::vector<int> structurally_active;
+  for (int column = 0; column < physical; ++column) {
+    bool active = false;
+    for (Eigen::Index row = 0; row < map.rows(); ++row) {
+      if (map(row, column) != 0.0) {
+        active = true;
+        break;
       }
-      aggregate_offset += block.residual_whitened.size();
     }
-    const Eigen::MatrixXd rhs = window.H.transpose() * dense * discarded;
-    const Eigen::MatrixXd response = window.protected_state_map *
-        window.numerics->information_factorization->solve(rhs);
-    mode->discarded_protected_response_norm = response.norm();
-  } else {
-    mode->effective_basis_certified = false;
-    return;
+    if (active) structurally_active.push_back(column);
   }
-  const double measurement_limit = rank_tolerance *
-      std::max(1.0, map.norm()) * 16.0;
-  const double response_limit = rank_tolerance *
-      std::max(1.0, window.protected_state_map.norm()) * 16.0;
-  if (mode->discarded_measurement_norm <= measurement_limit &&
-      mode->discarded_protected_response_norm <= response_limit) {
-    mode->effective_parameter_basis = retained;
-    mode->effective_parameter_dimension = rank;
-  } else {
-    // Leave the physical basis intact so the downstream Gram rank gate fails
-    // closed instead of hiding a protected-state-relevant direction.
-    mode->effective_basis_certified = false;
+  if (!structurally_active.empty() &&
+      structurally_active.size() < static_cast<std::size_t>(physical)) {
+    mode->effective_parameter_basis = Eigen::MatrixXd::Zero(
+        physical, static_cast<int>(structurally_active.size()));
+    for (std::size_t column = 0; column < structurally_active.size(); ++column) {
+      mode->effective_parameter_basis(
+          structurally_active[column], static_cast<int>(column)) = 1.0;
+    }
+    mode->effective_parameter_dimension =
+        static_cast<int>(structurally_active.size());
+    mode->discarded_measurement_norm = 0.0;
+    mode->discarded_protected_response_norm = 0.0;
   }
+  (void)rank_tolerance;
 }
 
 const PendingFactorGroup* selectedKind(const HistoricalEpochContext& history,
