@@ -14,6 +14,12 @@ bool fresh
 bool deadline_missed
 bool publication_protected
 uint64 publication_certificate_id
+uint32 final_packet_protocol_version
+uint64 final_packet_digest
+bool final_packet_authoritative
+string protected_frame_id
+string protected_position_reference
+string protection_packet_id
 string[] reason_codes
 string scope_label
 string availability

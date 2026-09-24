@@ -1,0 +1,106 @@
+P0-05 directed acceptance (all commands exit 0)
+
+Sixth-review O08 stability repair:
+- each mature epoch carries explicit finite positive-definite test-only Pose3,
+  velocity and bias priors on the unique proposed x/v/b keys
+- before every mature/bridge/fault commit, a separately assembled frozen plus
+  selected raw graph passes GTSAM batch Marginals with a finite strictly
+  positive-definite full 15D joint covariance
+- exact expected terminal boundary names are checked and the final reached set
+  is exactly all eight post-mutation injection points
+- same process `--gtest_repeat=500`: 500/500 PASS
+- independent cold processes, eight workers: 800/800 PASS
+- full directed binary after clean rebuild: 13/13 PASS
+
+P0-05 publication target: 13/13 PASS
+- eight post-mutation injection boundaries produce a terminal receipt,
+  backend poison, no pending transaction, and at most one backend update
+- pre-mutation failure remains honestly discardable and does not poison
+- complete ledger lifecycle/IDs, catalog/prune identities, full navigation
+  state/covariance, histories, IMU contents/cursor, health records and bridge
+  state are compared independently at all eight post-mutation boundaries
+- a genuine P0-03 candidate/proof is committed through the certified API and
+  actual full Pose3/SO3, velocity, biases and 15x15 covariance are checked
+  against a separately built raw-factor GTSAM batch LM/Marginals oracle
+- publication-transaction return deadline and state age/stale state are
+  finalized once
+- clock reversal, queue overflow, and publication exception fail closed
+- +90 degree yaw rotates world velocity and covariance into the child frame
+  using a non-diagonal symmetric covariance oracle
+- slow actual candidate-publish return (arrival=100, call=140, return=1170,
+  deadline=100) is
+  missed/unprotected; commit observes the exact returned packet digest
+- partial second-sink failure leaves only a non-authoritative unprotected
+  candidate, and non-atomic fan-out cannot activate protected authority
+- the mature O08 fixture has nonempty catalog/prune/history/IMU/health/bridge
+- V1 `88/80` and V2 `256/248` layout assertions pass
+- production-style non-atomic fan-out exercises actual slow return, second ROS
+  sink failure and CSV/logger failure; post-freeze commit is never called
+
+Genuine P0-03 proof/reference target: 1/1 PASS
+- sidecar mint validates the actual candidate certificate, transaction/window
+  identity and registered proof before mutation
+- reference mean is derived from nominal state + protected map * increment
+- tamper burns the single-use token; replay, stale/mismatched transaction,
+  missing/fake proof, Inf, and overflow reject before mutation
+- the genuine certified commit binds actual nonlinear backend state and
+  covariance; large finite, Inf, and mismatched componentwise transfers are
+  checked separately without substituting for the actual commit oracle
+
+Golden-header ABI client: PASS
+- reproduction: `tmp=$(mktemp -d /tmp/p005-abi.XXXXXX)`; extract
+  `git archive golden-p0-04-risk include` into that directory; compile
+  `test/p005_golden_abi_client.cpp` with that directory first on the include
+  path and link against the current `libuwb_imu_pl.so`; run with the current
+  library on `LD_LIBRARY_PATH`
+- `IntegrityOutput` size/offset: `4128 / 3864`
+- `PublicationDiagnostics` size/certificate offset: `424 / 416`
+- `EpochCommitPlan` size/offset: `200 / 184`
+- `CommitReceipt` size/offset: `296 / 292`
+- `ProtectionLevelPublicationPacketV1` size/packet-identity offset: `88 / 80`
+- the golden V1 getter links and runs; transfer fields live only in V2
+- linked and ran against current library: `old-client-run PASS 1`
+- by-value, raw-array, and `std::vector<IntegrityOutput>` calls cross the DSO
+- `git diff golden-p0-04-risk -- include/uwb_imu_pl/common/types.hpp` is empty
+
+Selected inherited targets: 6/6 PASS
+- IntegrityV2
+- RealtimeIncremental
+- PublicationIdentity
+- PublicationWiring
+- RunLogger
+- P0_05Publication
+
+Complete rebuild regression of targets that initially exposed stale binary or
+non-finite-reference failures: 6/6 PASS in 91.71 seconds.
+
+Normal clean -> full all-target build -> tests-target build -> CTest: 28/28 PASS
+in 91.52 seconds on the sixth-review rerun. The actual
+`integrity_round2_scenario` executable remained
+present. `test_round2_tools` passed after its top-level status was corrected to
+fail whenever protection is unavailable or the risk budget is not closed.
+
+ROS simulator/subscriber smoke:
+- a simultaneous real subscriber captured NavigationIntegrity compound,
+  IntegrityStatus legacy mirror, and Odometry legacy mirror for attempt 1215
+- compound and legacy integrity semantic fields match after excluding the
+  authority bit: compound=false and legacy=false. Both are unprotected and
+  carry the common final digest; state stamp, position, orientation, and all 36
+  pose covariance values match the legacy odometry
+- canonical raw JSON SHA-256 and the exact matching CSV row/file hashes are in
+  `ros-smoke-results.txt`
+- checked-in capture/reproduction programs now reproduce both the simulator
+  path and a controlled genuine certified commit
+- the certified capture is `SUCCESS_KEEP_ALL`, has finite transferred PL and
+  a V2 packet ID, is `batch_committed=true`, and remains explicitly
+  `publication_protected=false` because the formal gate is unchanged
+
+Seventh-review O08 proof repair:
+- directed target: 13/13 PASS
+- raw Marginals covariance: worst antisymmetry norm `0`, documented tolerance
+  `1e-12`, checked before symmetrization; strict-positive eigen gate PASS
+- exact one-shot hit identity: eight distinct fault points and eight distinct
+  monotonic nonzero nonces, receipt/sidecar identity PASS
+- valid same-process repeat: 500/500 PASS
+- valid independent cold-process stress: 400/400 PASS with eight workers
+- selected inherited and round2 CTest targets: 6/6 PASS

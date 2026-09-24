@@ -3,12 +3,14 @@
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 #include "uwb_imu_pl/integrity/integrity_monitor.hpp"
 #include "uwb_imu_pl/io/run_logger.hpp"
+#include "uwb_imu_pl/publication/final_output_packet.hpp"
 
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
 #include <diagnostic_msgs/KeyValue.h>
 #include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
+#include <ros/serialization.h>
 #include <sensor_msgs/Imu.h>
 #include <uwb_imu_pl/IntegrityStatus.h>
 #include <uwb_imu_pl/NavigationIntegrity.h>
@@ -74,6 +76,7 @@ struct ProcessingMetrics {
   std::uint32_t queue_depth = 0;
   double sensor_to_process_ms = 0.0;
   std::uint64_t arrival_steady_ns = 0;
+  std::uint64_t compute_done_steady_ns = 0;
 };
 
 std::uint64_t steadyNowNs() {
@@ -81,6 +84,29 @@ std::uint64_t steadyNowNs() {
       std::chrono::duration_cast<std::chrono::nanoseconds>(
           std::chrono::steady_clock::now().time_since_epoch()).count());
 }
+
+class RosPublicationTransaction final
+    : public uwb_imu_pl::FinalPacketPublicationTransaction {
+ public:
+  using PublishCandidate =
+      std::function<void(const uwb_imu_pl::FinalOutputPacket&)>;
+  explicit RosPublicationTransaction(PublishCandidate publish_candidate)
+      : publish_candidate_(std::move(publish_candidate)) {}
+
+  void publishCandidate(
+      const uwb_imu_pl::FinalOutputPacket& candidate) override {
+    publish_candidate_(candidate);
+  }
+  void commitReceipt(
+      const uwb_imu_pl::FinalOutputPacket&) noexcept override {}
+
+  void abort() noexcept override { aborted_ = true; }
+  bool aborted() const { return aborted_; }
+
+ private:
+  PublishCandidate publish_candidate_;
+  bool aborted_ = false;
+};
 
 const char* booleanText(bool value) { return value ? "true" : "false"; }
 
@@ -375,7 +401,7 @@ class RealtimeNode {
       unavailable.protection_level.availability =
           uwb_imu_pl::Availability::Unavailable;
       unavailable.protection_level.reason = "IMU gap exceeds configured maximum";
-      publish(unavailable, metrics);
+      (void)publish(unavailable, metrics);
       logger_.writeEvent(event.timestamp, "IMU_GAP_REINITIALIZE",
                           "graph left unchanged before controlled reinitialization");
       initialize(event.timestamp, previous);
@@ -428,14 +454,15 @@ class RealtimeNode {
     const auto output = pipeline_->processUwbBatch(batch);
     const double core_ms = std::chrono::duration<double, std::milli>(
         std::chrono::steady_clock::now() - core_start).count();
+    ProcessingMetrics final_metrics = metrics;
+    final_metrics.compute_done_steady_ns = steadyNowNs();
     const auto publish_start = std::chrono::steady_clock::now();
-    publish(output, metrics);
+    const auto final_packet = publish(output, final_metrics);
+    const auto& final_output = final_packet.output();
     const double publish_ms = std::chrono::duration<double, std::milli>(
         std::chrono::steady_clock::now() - publish_start).count();
     const auto logging_start = std::chrono::steady_clock::now();
-    logger_.writeState(output.state);
-    logger_.writeIntegrity(output);
-    for (const auto& residual : output.residual_records) {
+    for (const auto& residual : final_output.residual_records) {
       logger_.writeResidual(residual.timestamp, residual.factor_id,
                              residual.anchor_id, residual.role, residual.raw,
                              residual.whitened);
@@ -446,12 +473,12 @@ class RealtimeNode {
     const std::size_t factor_count = estimator_->factorCount();
     auto timing = [&](const std::string& stage, double wall_ms, bool success) {
       uwb_imu_pl::TimingRecord record;
-      record.timestamp = output.timestamp;
+      record.timestamp = final_output.timestamp;
       record.epoch = epoch;
       record.stage = stage;
       record.wall_ms = wall_ms;
       record.problem_size = batch.measurements.size();
-      record.hypothesis_count = output.sensitivities.size();
+      record.hypothesis_count = final_output.sensitivities.size();
       record.factor_count = factor_count;
       record.cold = epoch <= 100;
       record.success = success;
@@ -463,10 +490,10 @@ class RealtimeNode {
     timing("state_query", estimator_->lastStateQueryMs(), true);
     timing("current_joint_marginal", estimator_->lastMarginalMs(), true);
     timing("snapshot_extraction", estimator_->lastSnapshotExtractionMs(), true);
-    for (const auto& stage : output.stage_timings) {
+    for (const auto& stage : final_output.stage_timings) {
       timing(stage.stage, stage.wall_ms, stage.success);
     }
-    timing(output.batch_committed ? "uwb_commit" : "uwb_reject",
+    timing(final_output.batch_committed ? "uwb_commit" : "uwb_reject",
            estimator_->lastUwbUpdateMs(), true);
     timing("core_total", core_ms, true);
     timing("publish", publish_ms, true);
@@ -475,16 +502,16 @@ class RealtimeNode {
         std::chrono::steady_clock::now() - end_to_end_start).count();
     timing("end_to_end_total", end_to_end_ms, true);
     summary_.processed++;
-    summary_.committed += output.batch_committed ? 1 : 0;
-    summary_.rejected += output.batch_committed ? 0 : 1;
+    summary_.committed += final_output.batch_committed ? 1 : 0;
+    summary_.rejected += final_output.batch_committed ? 0 : 1;
     summary_.core_total_ms += core_ms;
     summary_.end_to_end_total_ms += end_to_end_ms;
-    logger_.writeEvent(output.timestamp,
-                        output.batch_committed ? "UWB_COMMIT" : "UWB_REJECT",
-                        output.detector.reason);
+    logger_.writeEvent(final_output.timestamp,
+                        final_output.batch_committed ? "UWB_COMMIT" : "UWB_REJECT",
+                        final_output.detector.reason);
     if (estimator_->marginalizationCount() > marginalizations_before) {
       logger_.writeEvent(
-          output.timestamp, "FIXED_LAG_MARGINALIZE",
+          final_output.timestamp, "FIXED_LAG_MARGINALIZE",
           "oldest_retained_epoch=" +
               std::to_string(estimator_->oldestRetainedEpoch()) +
               ";retained_epochs=" +
@@ -499,7 +526,7 @@ class RealtimeNode {
       // fails. Retrying that partially advanced instance would silently
       // reassociate the next UWB with an existing key. Fail closed, publish an
       // explicit unavailable epoch, and start a fresh audited graph instead.
-      uwb_imu_pl::IntegrityOutput unavailable;
+      uwb_imu_pl::IntegrityOutput unavailable = pipeline_->lastAttemptOutput();
       unavailable.timestamp = recovery_state.timestamp;
       unavailable.attempted_timestamp = event.timestamp;
       unavailable.state = recovery_state;
@@ -509,16 +536,22 @@ class RealtimeNode {
       unavailable.pl_status = config_.resolved_scope.enabled()
                                   ? uwb_imu_pl::ProtectionLevelStatus::Invalid
                                   : uwb_imu_pl::ProtectionLevelStatus::NotComputed;
-      unavailable.reason_codes.push_back("NUMERICAL_REINITIALIZE");
+      if (std::find(unavailable.reason_codes.begin(),
+                    unavailable.reason_codes.end(),
+                    "NUMERICAL_REINITIALIZE") ==
+          unavailable.reason_codes.end()) {
+        unavailable.reason_codes.push_back("NUMERICAL_REINITIALIZE");
+      }
       unavailable.measurement_group_size = event.uwb.nodes.size();
       unavailable.protection_level.timestamp = recovery_state.timestamp;
       unavailable.protection_level.availability =
           uwb_imu_pl::Availability::Unavailable;
       unavailable.protection_level.reason =
           std::string("controlled numerical reinitialization: ") + error.what();
-      publish(unavailable, metrics);
-      logger_.writeState(unavailable.state);
-      logger_.writeIntegrity(unavailable);
+      ProcessingMetrics final_metrics = metrics;
+      final_metrics.compute_done_steady_ns = steadyNowNs();
+      (void)publish(
+          unavailable, final_metrics, uwb_imu_pl::FinalAttemptKind::Exception);
       logger_.writeEvent(event.timestamp,
                           "NUMERICAL_REINITIALIZE", error.what());
       if (estimator_->marginalizationCount() > marginalizations_before) {
@@ -600,7 +633,11 @@ class RealtimeNode {
               uwb_imu_pl::Availability::Unavailable;
           unavailable.protection_level.reason =
               unavailable.reinitialization_reason;
-          publish(unavailable, metrics);
+          ProcessingMetrics final_metrics = metrics;
+          final_metrics.compute_done_steady_ns = steadyNowNs();
+          (void)publish(
+              unavailable, final_metrics,
+              uwb_imu_pl::FinalAttemptKind::QueueOverflow);
           initialize(event.timestamp, previous);
         }
         if (event.kind == Event::Kind::Imu) processImu(event, metrics);
@@ -615,26 +652,13 @@ class RealtimeNode {
     }
   }
 
-  void publish(uwb_imu_pl::IntegrityOutput output,
-               const ProcessingMetrics& metrics) {
-    const std::uint64_t finish_steady_ns = steadyNowNs();
-    const std::uint64_t elapsed_ns = metrics.arrival_steady_ns > 0 &&
-            finish_steady_ns >= metrics.arrival_steady_ns
-        ? finish_steady_ns - metrics.arrival_steady_ns
-        : 0;
+  uwb_imu_pl::FinalOutputPacket publish(
+      uwb_imu_pl::IntegrityOutput output,
+      const ProcessingMetrics& metrics,
+      uwb_imu_pl::FinalAttemptKind attempt_kind =
+          uwb_imu_pl::FinalAttemptKind::Normal) {
     const std::uint64_t deadline_ns = static_cast<std::uint64_t>(
         config_.publication.deadline_ms * 1e6);
-    if (elapsed_ns > deadline_ns) {
-      output.deadline_missed = true;
-      output.publication.protected_output = false;
-      output.publication.unprotected_output = true;
-      output.publication.wall_timeout = true;
-      output.publication.refusal = "publication deadline exceeded at final send";
-      if (std::find(output.reason_codes.begin(), output.reason_codes.end(),
-                    "PUBLICATION_DEADLINE_MISSED") == output.reason_codes.end()) {
-        output.reason_codes.push_back("PUBLICATION_DEADLINE_MISSED");
-      }
-    }
     nav_msgs::Odometry odometry;
     odometry.header.stamp = rosTime(output.state.timestamp);
     odometry.header.frame_id = config_.realtime.world_frame;
@@ -646,9 +670,33 @@ class RealtimeNode {
     odometry.pose.pose.orientation.x = output.state.q_world_body.x();
     odometry.pose.pose.orientation.y = output.state.q_world_body.y();
     odometry.pose.pose.orientation.z = output.state.q_world_body.z();
-    odometry.twist.twist.linear.x = output.state.velocity_world_mps.x();
-    odometry.twist.twist.linear.y = output.state.velocity_world_mps.y();
-    odometry.twist.twist.linear.z = output.state.velocity_world_mps.z();
+    Eigen::Matrix3d velocity_covariance_world =
+        Eigen::Matrix3d::Constant(
+            std::numeric_limits<double>::quiet_NaN());
+    uwb_imu_pl::CommittedStatePublicationV1 committed_state;
+    if (uwb_imu_pl::committedStatePublicationV1(
+            output.transaction_id, output.state.timestamp,
+            &committed_state)) {
+      velocity_covariance_world = committed_state.covariance.block<3, 3>(6, 6);
+    }
+    const bool twist_covariance_valid = velocity_covariance_world.allFinite();
+    const auto child_twist = uwb_imu_pl::childFrameLinearTwist(
+        output.state.q_world_body, output.state.velocity_world_mps,
+        twist_covariance_valid ? velocity_covariance_world
+                               : Eigen::Matrix3d::Zero());
+    odometry.twist.twist.linear.x = child_twist.velocity_body_mps.x();
+    odometry.twist.twist.linear.y = child_twist.velocity_body_mps.y();
+    odometry.twist.twist.linear.z = child_twist.velocity_body_mps.z();
+    if (twist_covariance_valid) {
+      for (int row = 0; row < 3; ++row) {
+        for (int column = 0; column < 3; ++column) {
+          odometry.twist.covariance[row * 6 + column] =
+              child_twist.covariance_body_m2ps2(row, column);
+        }
+      }
+    } else {
+      odometry.twist.covariance[0] = -1.0;
+    }
     uwb_imu_pl::IntegrityStatus status;
     status.header = odometry.header;
     status.attempted_timestamp = rosTime(output.attempted_timestamp);
@@ -665,7 +713,10 @@ class RealtimeNode {
     status.fresh = output.fresh;
     status.deadline_missed = output.deadline_missed;
     status.publication_protected = output.publication.protected_output;
-    status.publication_certificate_id = output.publication.certificate_id;
+      status.publication_certificate_id = output.publication.certificate_id;
+      status.final_packet_protocol_version = 2;
+      status.final_packet_digest = 0;
+      status.final_packet_authoritative = false;
     status.reason_codes = output.reason_codes;
     status.scope_label = uwb_imu_pl::toString(output.protection_level.label);
     status.availability = uwb_imu_pl::toString(output.protection_level.availability);
@@ -728,7 +779,7 @@ class RealtimeNode {
     solution.state_timestamp = status.state_timestamp;
     solution.publish_timestamp = status.publish_timestamp;
     solution.arrival_steady_ns = metrics.arrival_steady_ns;
-    solution.finish_steady_ns = finish_steady_ns;
+    solution.finish_steady_ns = 0;
     solution.state_age_s = std::max(
         0.0, output.attempted_timestamp.seconds() -
                  output.state.timestamp.seconds());
@@ -780,23 +831,121 @@ class RealtimeNode {
     solution.formal_eligible = output.protection_level.formal_eligible;
     solution.publication_protected = output.publication.protected_output;
     solution.publication_certificate_id = output.publication.certificate_id;
+    solution.final_packet_protocol_version = 2;
+    solution.final_packet_digest = 0;
+    solution.final_packet_authoritative = false;
     solution.reason_codes = output.reason_codes;
 
-    // The compound topic is the authoritative atomic result.  Legacy topics
-    // are emitted afterwards as best-effort mirrors of the same solution ID.
-    solution_publisher_.publish(solution);
-    odometry_publisher_.publish(odometry);
-    integrity_publisher_.publish(status);
+    // Message construction above is part of the measured deadline interval.
+    // Freeze exactly once at the publish-call boundary, then project only this
+    // immutable packet into the authoritative and mirror sinks.
+    uwb_imu_pl::FinalPacketTiming packet_timing;
+    packet_timing.arrival_steady_ns = metrics.arrival_steady_ns;
+    packet_timing.compute_done_steady_ns = metrics.compute_done_steady_ns != 0
+        ? metrics.compute_done_steady_ns : steadyNowNs();
+    packet_timing.packet_ready_steady_ns = steadyNowNs();
+    packet_timing.deadline_boundary =
+        uwb_imu_pl::FinalPacketBoundary::PublishCall;
+    packet_timing.attempt_kind = attempt_kind;
+    std::string publication_error;
+    RosPublicationTransaction publication_transaction(
+        [&](const uwb_imu_pl::FinalOutputPacket& candidate_packet) {
+          // Force all potentially allocating ROS serialization paths before
+          // the terminal packet is frozen.  No topic is externally visible
+          // during this phase; a throw therefore aborts every sink.
+          (void)ros::serialization::serializationLength(solution);
+          (void)ros::serialization::serializationLength(solution.odometry);
+          (void)ros::serialization::serializationLength(solution.integrity);
+          const auto& candidate_output = candidate_packet.output();
+          status.deadline_missed = candidate_output.deadline_missed;
+          status.publication_protected =
+              candidate_output.publication.protected_output;
+          status.reason_codes = candidate_output.reason_codes;
+          const auto& metadata = candidate_packet.metadata();
+          status.final_packet_protocol_version = metadata.protocol_version;
+          status.final_packet_digest = metadata.digest;
+          status.final_packet_authoritative = metadata.authoritative;
+          status.protected_frame_id = metadata.protected_frame_id;
+          status.protected_position_reference =
+              metadata.protected_position_reference;
+          status.protection_packet_id = metadata.protection_packet_id;
+          status.fresh = candidate_output.fresh;
+          status.stale_state = candidate_output.stale_state;
+          status.formal_eligible =
+              candidate_output.protection_level.formal_eligible;
+          status.reason = candidate_output.protection_level.reason;
+          solution.finish_steady_ns = 0;
+          solution.state_age_s = candidate_packet.stateAgeSeconds();
+          solution.deadline_missed = candidate_output.deadline_missed;
+          solution.integrity = status;
+          solution.fresh = candidate_output.fresh;
+          solution.formal_eligible =
+              candidate_output.protection_level.formal_eligible;
+          solution.publication_protected =
+              candidate_output.publication.protected_output;
+          solution.reason_codes = candidate_output.reason_codes;
+          solution.final_packet_protocol_version =
+              status.final_packet_protocol_version;
+          solution.final_packet_digest = status.final_packet_digest;
+          solution.final_packet_authoritative = false;
+          solution.protected_frame_id = status.protected_frame_id;
+          solution.protected_position_reference =
+              status.protected_position_reference;
+          solution.protection_packet_id = status.protection_packet_id;
+
+          // ROS topics and CSV are explicitly non-authoritative mirrors.  All
+          // their real, fallible calls occur before the terminal return sample.
+          (void)ros::serialization::serializationLength(solution);
+          (void)ros::serialization::serializationLength(solution.odometry);
+          (void)ros::serialization::serializationLength(solution.integrity);
+          solution_publisher_.publish(solution);
+          solution.odometry.header.seq =
+              static_cast<std::uint32_t>(status.final_packet_digest);
+          solution.integrity.publication_protected = false;
+          solution.integrity.final_packet_authoritative = false;
+          odometry_publisher_.publish(solution.odometry);
+          integrity_publisher_.publish(solution.integrity);
+          logger_.writeState(candidate_output.state);
+          logger_.writeIntegrity(candidate_output, metadata);
+          logger_.flush();
+        });
+    const auto final_packet = uwb_imu_pl::invokeFinalOutputPacket(
+        std::move(output), packet_timing, deadline_ns,
+        [] { return steadyNowNs(); }, &publication_transaction,
+        &publication_error);
+    const auto& final_output = final_packet.output();
+    status.deadline_missed = final_output.deadline_missed;
+    status.publication_protected =
+        final_output.publication.protected_output;
+    status.reason_codes = final_output.reason_codes;
+    status.fresh = final_output.fresh;
+    status.stale_state = final_output.stale_state;
+    status.formal_eligible = final_output.protection_level.formal_eligible;
+    status.reason = final_output.protection_level.reason;
+    solution.finish_steady_ns = final_packet.timing().publish_return_steady_ns;
+    solution.state_age_s = final_packet.stateAgeSeconds();
+    solution.deadline_missed = final_output.deadline_missed;
+    solution.integrity = status;
+    solution.fresh = final_output.fresh;
+    solution.formal_eligible = final_output.protection_level.formal_eligible;
+    solution.publication_protected =
+        final_output.publication.protected_output;
+    solution.reason_codes = final_output.reason_codes;
+
+    if (!publication_error.empty()) {
+      ROS_ERROR_STREAM("final packet publication failed: "
+                       << publication_error);
+    }
 
     diagnostic_msgs::DiagnosticArray diagnostics;
     diagnostics.header = status.header;
     diagnostic_msgs::DiagnosticStatus item;
     item.name = "uwb_imu_pl/integrity";
     item.hardware_id = "uwb_imu_pl";
-    item.level = output.protection_level.availability ==
+    item.level = final_output.protection_level.availability ==
                          uwb_imu_pl::Availability::Available
                      ? diagnostic_msgs::DiagnosticStatus::OK
-                     : (output.protection_level.availability ==
+                     : (final_output.protection_level.availability ==
                                 uwb_imu_pl::Availability::Alert
                             ? diagnostic_msgs::DiagnosticStatus::ERROR
                             : diagnostic_msgs::DiagnosticStatus::WARN);
@@ -846,6 +995,7 @@ class RealtimeNode {
     item.values.push_back(publish_lag);
     diagnostics.status.push_back(item);
     diagnostics_publisher_.publish(diagnostics);
+    return final_packet;
   }
 
   ros::NodeHandle node_;

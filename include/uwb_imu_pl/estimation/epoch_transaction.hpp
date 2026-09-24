@@ -11,6 +11,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -111,6 +112,22 @@ struct EpochTransaction {
   EpochPreparationOptions preparation;
 };
 
+// Frozen position quantity protected by a candidate PL.  It is handed to the
+// estimator before the one allowed backend mutation and is validated there;
+// the resulting receipt either binds this exact quantity to the nonlinear
+// committed mean or conservatively transfers the PL componentwise.
+struct ProtectedPositionReference {
+  Eigen::Vector3d mean_world_m = Eigen::Vector3d::Constant(
+      std::numeric_limits<double>::quiet_NaN());
+  Eigen::Vector3d pl_at_reference_m = Eigen::Vector3d::Constant(
+      std::numeric_limits<double>::infinity());
+  TimestampNs timestamp;
+  std::string frame_id;
+  std::string position_reference;
+  std::uint64_t numerical_proof_id = 0;
+  bool valid = false;
+};
+
 struct EpochCommitPlan {
   // Empty means no new group. Call nominalPlan() for the all-in action.
   std::vector<FactorGroupId> groups_to_add;
@@ -123,7 +140,6 @@ struct EpochCommitPlan {
   std::map<std::uint64_t, std::uint64_t> replacement_relations;
   std::optional<std::size_t> recovery_epoch_begin;
   std::optional<std::size_t> recovery_epoch_end;
-
   static EpochCommitPlan nominalPlan(const EpochTransaction& transaction) {
     EpochCommitPlan plan;
     plan.groups_to_add.push_back(transaction.imu_group.id);
@@ -153,6 +169,76 @@ struct CommitReceipt {
   std::optional<std::size_t> recovery_epoch_end;
   std::uint32_t backend_updates = 0;
   bool integrity_available = false;
+};
+
+// P0-05 versioned sidecars deliberately preserve the golden P0-04 layouts of
+// EpochCommitPlan and CommitReceipt.  A protection token is minted only by the
+// P0-03 proof registry from a validated candidate/window/result tuple and is
+// consumed exactly once before backend mutation.
+struct CommitProtectionEvidenceV1 {
+  std::uint64_t schema_version = 1;
+  TransactionId transaction_id;
+  WindowId window_id;
+  LinearizationVersion base_version;
+  std::uint64_t candidate_proof_identity = 0;
+  std::uint64_t protection_proof_identity = 0;
+  ProtectedPositionReference reference;
+  std::uint64_t token_identity = 0;
+};
+
+struct CommitCertificationV1 {
+  std::uint64_t schema_version = 1;
+  ProtectedPositionReference protected_reference;
+  Eigen::Vector3d committed_mean_world_m = Eigen::Vector3d::Constant(
+      std::numeric_limits<double>::quiet_NaN());
+  Eigen::Vector3d reference_transfer_m = Eigen::Vector3d::Zero();
+  Eigen::Vector3d transferred_pl_m = Eigen::Vector3d::Constant(
+      std::numeric_limits<double>::infinity());
+  Eigen::Matrix<double, 15, 15> committed_covariance =
+      Eigen::Matrix<double, 15, 15>::Constant(
+          std::numeric_limits<double>::quiet_NaN());
+  std::uint64_t protection_token_identity = 0;
+  bool reference_bound = false;
+  bool integrity_available = false;
+};
+
+enum class CommitFaultPoint : std::uint8_t {
+  None = 0,
+  BeforeBackendUpdate,
+  DuringBackendUpdate,
+  AfterBackendUpdate,
+  BeforeStateQuery,
+  BeforeMarginalQuery,
+  BeforeLedgerBind,
+  BeforeSlotBind,
+  BeforeMetadataPrune,
+  BeforeReceiptCreation,
+};
+
+struct CommitFailureReceipt {
+  TransactionId transaction_id;
+  std::uint32_t backend_updates = 0;
+  bool backend_mutated = false;
+  bool backend_poisoned = false;
+  bool committed_unprotected = false;
+  // Populated only when the armed one-shot test hook was actually reached.
+  // A natural backend exception cannot masquerade as an injected failure just
+  // because it occurred at the same coarse commit boundary.
+  CommitFaultPoint injected_fault_point = CommitFaultPoint::None;
+  std::uint64_t injected_fault_nonce = 0;
+  bool injected_fault_hit = false;
+  std::string boundary;
+  std::string reason;
+};
+
+class CommitTerminalError : public std::runtime_error {
+ public:
+  explicit CommitTerminalError(CommitFailureReceipt receipt)
+      : std::runtime_error(receipt.reason), receipt_(std::move(receipt)) {}
+  const CommitFailureReceipt& receipt() const noexcept { return receipt_; }
+
+ private:
+  CommitFailureReceipt receipt_;
 };
 
 struct DiscardReason {

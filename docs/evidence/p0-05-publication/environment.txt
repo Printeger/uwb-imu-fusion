@@ -1,0 +1,36 @@
+date=2026-09-24
+timezone=Asia/Shanghai
+base_tag=golden-p0-04-risk
+base_peeled_sha=d2e848fa0fe739357681f44ea456d01d560bdc76
+head_sha=d2e848fa0fe739357681f44ea456d01d560bdc76
+compiler=c++ (Ubuntu 9.4.0-1ubuntu1~20.04.2) 9.4.0
+cmake=3.16.3
+kernel=Linux 6.18.33.2-microsoft-standard-WSL2 x86_64
+logical_cpus=18
+build_workers=2
+test_workers=2
+build_dir=/home/mint/ws_fusion_uwb/build/uwb_imu_pl
+devel_lib=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib
+ros_distro=noetic
+
+The accepted simulator capture's resolved configuration, run manifest, fault
+manifest, launch file, and generated truth outputs are retained under
+artifacts/ros-simulator and verified by artifact-hashes.sha256. No prerecorded
+simulator input file existed: the launch generated live ROS IMU/UWB messages.
+That item and the controlled certified publisher's non-applicable YAML,
+run-manifest, and replay-input items are explicit in artifact-status.tsv.
+
+The retained launch source uses the filename
+`realtime_integrity_sim.launch.txt` while remaining byte-identical to the
+invoked production `.launch`; this prevents ROS package discovery from
+registering the evidence copy as a second launch target. The sixth-review
+normal package-name simulator reproduction passed after that packaging fix.
+
+The uncommitted source state is frozen by complete-diff.patch relative to the
+peeled base above and by source-hashes.sha256. hashes.sha256 verifies the
+retained evidence files without hashing itself; binary-hashes.sha256 and
+loaded-library-hashes.sha256 retain build/runtime artifacts.
+
+Seventh-review repair retained the same environment and base. The final normal
+clean/full/tests sequence and 28/28 CTest run completed after the source
+repair; exact-hit and raw-covariance evidence is in seventh-repair-probes.txt.

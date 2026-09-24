@@ -1,0 +1,352 @@
+schema_version: uwb-imu-pl/v5
+seed: 20260901
+snapshot:
+  dimensions: 3
+  max_iterations: 30
+  step_tolerance_m: 1.0e-7
+  rank_tolerance: 1.0e-10
+  max_condition_number: 1.0e10
+incremental:
+  relinearize_threshold: 0.1
+  relinearize_skip: 200
+  smoothness_sigma_m: 0.5
+  epoch_bin_s: 0.02
+  max_time_skew_s: 0.01
+  enable_method_b: false
+  method_b_max_condition: 1.0e10
+  fixed_lag_epochs: 200
+  single_transaction_per_epoch: true
+imu:
+  accelerometer_sigma: 0.10
+  gyroscope_sigma: 0.01
+  accelerometer_bias_rw_sigma: 0.001
+  gyroscope_bias_rw_sigma: 0.0001
+  gravity_mps2: 9.80665
+  max_gap_s: 0.02
+  noise_overbound_calibration_id: ""
+integrity_window:
+  intervals: 10
+  epochs: 10
+  recovery_margin_epochs: 10
+  boundary_method: bayes_tree_schur
+  rank_tolerance: 1.0e-10
+  max_condition_number: 1.0e10
+  max_linearization_step_norm: 0.25
+  require_history_provenance: true
+history:
+  max_summary_rows: 512
+  max_fault_columns: 512
+  max_perp_rows: 512
+  capacity_action: REFUSE
+detector:
+  type: joint_window_residual_chi_square
+  p_fa_per_test: 1.0e-6
+  continuity_horizon_tests: 1000
+  continuity_accounting: union_bound
+  use_squared_norm_statistic: true
+fault_models:
+  single_faults_enabled: true
+  double_faults_enabled: false
+  max_cardinality: 2
+  max_fault_order: 1
+  manifest_path: integrity_fault_manifest.yaml
+  uwb:
+    enabled: true
+    epoch_single_anchor_bias: true
+    persistent_anchor_bias: true
+    ramp_bias: true
+    prior_probability_bound: 1.0e-4
+    p_md: 1.0e-3
+  imu:
+    accel_axis_interval_bias: true
+    gyro_axis_interval_bias: true
+    accel_xyz_interval_bias: false
+    gyro_xyz_interval_bias: false
+    bias_jump: false
+    ramp_fault: false
+    accel_prior_probability_bound: 1.0e-5
+    gyro_prior_probability_bound: 1.0e-5
+    p_md: 1.0e-3
+    min_fault_gram_sigma: 1.0e-8
+    max_fault_gram_condition: 1.0e10
+  combinations:
+    uwb_plus_accel: true
+    uwb_plus_gyro: true
+    two_uwb: false
+    assume_independent_priors: false
+fde:
+  trigger: joint_detector_alarm_or_hardware_barrier
+  isolation: profile_parity_glrt
+  ambiguity_policy: union_exclusion_else_unavailable
+  selection_primary: minimum_cardinality
+  selection_secondary: minimum_protection_level
+  dense_oracle_online_fallback: false
+  max_candidate_count: 128
+  max_exclusion_cardinality: 2
+bridge:
+  generic:
+    enabled: true
+    model: constant_velocity_constant_attitude
+    optimization_sigma_position_m: 0.5
+    optimization_sigma_velocity_mps: 1.0
+    optimization_sigma_rotation_rad: 0.5
+    optimization_sigma_bias_accel: 0.01
+    optimization_sigma_bias_gyro: 0.001
+    acceleration_bound_mps2: 4.0
+    angular_rate_bound_radps: 2.0
+    angular_acceleration_bound_radps2: 4.0
+    integrity_model: deterministic_box
+    calibration_id: ""
+  quadrotor_dynamics:
+    enabled: false
+    require_control_input: true
+    model_calibration_id: ""
+    integrity_model: deterministic_ellipsoid
+  max_consecutive_epochs: 20
+  max_duration_s: 1.0
+health:
+  suspect_evidence_count: 2
+  quarantine_after_exclusion: true
+  recovery_shadow_passes: 20
+  recovery_test_passes: 10
+  allow_auto_recovery: true
+risk:
+  calibration_id: ""
+  p_hmi_total: 4.0e-5
+  nominal_axis_tail: 1.0e-5
+  p_nm: 1.0e-7
+  p_bridge_escape: 0.0
+  p_history_contamination: 0.0
+  p_model_escape: 0.0
+  horizontal_alert_limit_m: 2.0
+  vertical_alert_limit_m: 3.0
+  allocation_policy: prior_weighted_outcome_conditioned
+robust_shadow:
+  gnc_enabled: false
+  never_mutate_formal_weights: true
+output:
+  root: results/realtime_uwb_imu_pl
+  schema_version: uwb-imu-pl/v5
+  write_residuals: true
+  write_timing: true
+  write_global_diagnostics: false
+  write_factor_ledger: true
+  write_window_rows: false
+  write_hypothesis_evidence: true
+  write_candidates: true
+  write_health: true
+  write_bridge: true
+realtime:
+  world_frame: world
+  body_frame: base_link
+  imu_topic: /imu/data
+  uwb_topic: /nlink_linktrack_nodeframe3
+  odometry_topic: /uwb_imu_pl/odometry
+  integrity_topic: /uwb_imu_pl/integrity
+  diagnostics_topic: /diagnostics
+  initial_position_m: [0.0, 0.0, 0.0]
+  initial_velocity_mps: [0.0, 0.0, 0.0]
+  lever_arm_body_m: [0.0, 0.0, 0.0]
+  range_sigma_m: 0.10
+  prior_sigmas: [0.10, 0.10, 0.10, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.10, 0.10, 0.10, 0.01, 0.01, 0.01]
+anchors:
+  - {id: 1, position_m: [-5.0, -5.0, 1.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 2, position_m: [-5.0, -5.0, 5.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 3, position_m: [-5.0, 5.0, 1.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 4, position_m: [-5.0, 5.0, 5.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 5, position_m: [5.0, -5.0, 1.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 6, position_m: [5.0, -5.0, 5.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 7, position_m: [5.0, 5.0, 1.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+  - {id: 8, position_m: [5.0, 5.0, 5.0], sigma_m: 0.05, frame: world, map_version: sim-v1}
+
+# --- migration notes (informational) ---
+# integrity_window.epochs duplicated integrity_window.intervals; remove the legacy alias
+# integrity_window.max_linearization_step_norm retained unchanged: the 0.25 mixed-unit Euclidean step gate remains a candidate admissibility check; physical-scale linearization diagnostics are deferred to B/C
+# legacy v5 fault switches mapped to fde.profile=joint_order1
+# resolved_fault_manifest_id: uwb-imu-pl/fault-manifest/2026-09-21-1
+# resolved_fault_manifest_digest: d2a01e7343f5c357
+# --- resolved fault manifest (read-only copy) ---
+# schema_version: 1
+# manifest_id: uwb-imu-pl/fault-manifest/2026-09-21-1
+# protected_quantity: position_xyz
+# position_reference: body_origin
+# max_fault_order: 2
+# enabled_single_families:
+#   - uwb_single_anchor
+#   - imu_single_axis
+# enabled_pair_families:
+#   - uwb_imu
+# unsupported_families:
+#   - two_uwb
+#   - imu_imu
+#   - same_device_multiaxis
+# events:
+#   - source_id: uwb.anchor
+#     common_cause_group: uwb_anchors
+#     event_id: uwb_anchor_epoch_independent_bias
+#     model_type: epoch_independent_step
+#     parameter_units: m
+#     parameter_sharing: single_parameter
+#     onset_domain: per_epoch_occurrence
+#     end_condition: same_epoch
+#     physical_time_support: one_uwb_interval
+#     amplitude_model: unbounded_subspace
+#     prior_bound_source: fault_models.uwb.prior_probability_bound
+#     prior_time_basis: per_protected_epoch
+#     evidence_status: IMPLEMENTED_UNVERIFIED
+#     included_hypothesis_families:
+#       - uwb_single_anchor
+#       - uwb_imu
+#     omitted_event_set:
+#       - two_uwb
+#       - same_device_multiaxis
+#     history_retention_or_reset_rule: active_window_only_maturity_delay
+#     allowed_actions:
+#       - keep_all
+#       - exclude_source_group
+#     projection_eligibility: algebraic
+#   - source_id: uwb.anchor
+#     common_cause_group: uwb_anchors
+#     event_id: uwb_anchor_persistent_bias
+#     model_type: persistent_constant_step
+#     parameter_units: m
+#     parameter_sharing: single_parameter
+#     onset_domain: per_epoch_occurrence
+#     end_condition: window_end_or_source_silence
+#     physical_time_support: onset_to_detector_window_end
+#     amplitude_model: unbounded_subspace
+#     prior_bound_source: fault_models.uwb.prior_probability_bound
+#     prior_time_basis: per_protected_epoch
+#     evidence_status: IMPLEMENTED_UNVERIFIED
+#     included_hypothesis_families:
+#       - uwb_single_anchor
+#       - uwb_imu
+#     omitted_event_set:
+#       - two_uwb
+#       - same_device_multiaxis
+#     history_retention_or_reset_rule: active_window_only_maturity_delay
+#     allowed_actions:
+#       - keep_all
+#       - exclude_source_group
+#     projection_eligibility: algebraic
+#   - source_id: uwb.anchor
+#     common_cause_group: uwb_anchors
+#     event_id: uwb_anchor_affine_ramp
+#     model_type: affine_ramp
+#     parameter_units: m,m/s
+#     parameter_sharing: onset_offset_plus_slope
+#     onset_domain: per_epoch_occurrence
+#     end_condition: window_end_or_source_silence
+#     physical_time_support: onset_to_detector_window_end
+#     amplitude_model: unbounded_subspace
+#     prior_bound_source: fault_models.uwb.prior_probability_bound
+#     prior_time_basis: per_protected_epoch
+#     evidence_status: IMPLEMENTED_UNVERIFIED
+#     included_hypothesis_families:
+#       - uwb_single_anchor
+#       - uwb_imu
+#     omitted_event_set:
+#       - two_uwb
+#       - same_device_multiaxis
+#     history_retention_or_reset_rule: active_window_only_maturity_delay
+#     allowed_actions:
+#       - keep_all
+#       - exclude_source_group
+#     projection_eligibility: algebraic
+#   - source_id: imu.accelerometer
+#     common_cause_group: imu_axis
+#     event_id: imu_accel_axis_interval_bias
+#     model_type: interval_constant_axis
+#     parameter_units: m/s^2
+#     parameter_sharing: single_parameter
+#     onset_domain: per_epoch_occurrence
+#     end_condition: same_epoch
+#     physical_time_support: one_imu_interval
+#     amplitude_model: unbounded_subspace
+#     prior_bound_source: fault_models.imu.accel_prior_probability_bound
+#     prior_time_basis: per_protected_epoch
+#     evidence_status: IMPLEMENTED_UNVERIFIED
+#     included_hypothesis_families:
+#       - imu_single_axis
+#       - uwb_imu
+#     omitted_event_set:
+#       - imu_imu
+#       - same_device_multiaxis
+#     history_retention_or_reset_rule: active_window_only_maturity_delay
+#     allowed_actions:
+#       - keep_all
+#       - interval_repair_or_bridge
+#     projection_eligibility: algebraic
+#   - source_id: imu.gyroscope
+#     common_cause_group: imu_axis
+#     event_id: imu_gyro_axis_interval_bias
+#     model_type: interval_constant_axis
+#     parameter_units: rad/s
+#     parameter_sharing: single_parameter
+#     onset_domain: per_epoch_occurrence
+#     end_condition: same_epoch
+#     physical_time_support: one_imu_interval
+#     amplitude_model: unbounded_subspace
+#     prior_bound_source: fault_models.imu.gyro_prior_probability_bound
+#     prior_time_basis: per_protected_epoch
+#     evidence_status: IMPLEMENTED_UNVERIFIED
+#     included_hypothesis_families:
+#       - imu_single_axis
+#       - uwb_imu
+#     omitted_event_set:
+#       - imu_imu
+#       - same_device_multiaxis
+#     history_retention_or_reset_rule: active_window_only_maturity_delay
+#     allowed_actions:
+#       - keep_all
+#       - interval_repair_or_bridge
+#     projection_eligibility: algebraic
+#   - source_id: imu.accelerometer
+#     common_cause_group: imu_axis
+#     event_id: imu_accel_xyz_common_cause
+#     model_type: interval_constant_multiaxis
+#     parameter_units: m/s^2,m/s^2,m/s^2
+#     parameter_sharing: shared_onset_vector
+#     onset_domain: per_epoch_occurrence
+#     end_condition: same_epoch
+#     physical_time_support: one_imu_interval
+#     amplitude_model: validated_bounded_set
+#     prior_bound_source: NOT_IMPLEMENTED
+#     prior_time_basis: per_protected_epoch
+#     evidence_status: NOT_IMPLEMENTED
+#     included_hypothesis_families:
+#       - same_device_multiaxis
+#     omitted_event_set:
+#       - imu_imu
+#       - two_uwb
+#     history_retention_or_reset_rule: not_applicable_not_implemented
+#     allowed_actions:
+#       - keep_all
+#     projection_eligibility: unsupported
+# families:
+#   - family_id: uwb_single_anchor
+#     scope: single
+#     members:
+#       - uwb_anchor_epoch_independent_bias
+#       - uwb_anchor_persistent_bias
+#       - uwb_anchor_affine_ramp
+#   - family_id: imu_single_axis
+#     scope: single
+#     members:
+#       - imu_accel_axis_interval_bias
+#       - imu_gyro_axis_interval_bias
+#   - family_id: uwb_imu
+#     scope: pair
+#     members:
+#       - uwb_anchor_epoch_independent_bias
+#       - uwb_anchor_persistent_bias
+#       - uwb_anchor_affine_ramp
+#       - imu_accel_axis_interval_bias
+#       - imu_gyro_axis_interval_bias
+#   - family_id: same_device_multiaxis
+#     scope: pair
+#     members:
+#       - imu_accel_xyz_common_cause
+# resolved_fde_profile: joint_order1
+# resolved_scope_digest: 88d5401651284008
+# detector_contract_id: dual_channel_v1

@@ -1,0 +1,41 @@
+P0-05 sixth-review O08 fixture repair probes (all acceptance commands exit 0)
+
+Root cause and deterministic repair:
+- The zero-lever-arm UWB fixture directly constrained position only. After the
+  epoch-0 prior was marginalized, attitude/velocity/bias constraint reached x4
+  only through several short CombinedImuFactor intervals and was needlessly
+  close to singular under fixed-lag elimination/relinearization ordering.
+- Every mature fixture epoch now adds finite positive-definite test-only Pose3,
+  velocity and bias priors on its unique proposed x/v/b keys.
+- Before mutation, an independent raw frozen-plus-selected factor graph is
+  passed through GTSAM batch Marginals. Its full 15D joint covariance must be
+  finite and strictly positive definite.
+- The test checks the exact terminal boundary for each fault and requires the
+  reached set to contain all eight post-mutation fault points.
+- No catch/skip/retry, threshold, risk, denominator, sensor, hypothesis,
+  action, mature epoch, pruning, history, IMU, health or bridge reduction was
+  introduced.
+
+Stability:
+- full directed binary: 13/13 PASS
+- O08 same process, --gtest_repeat=500: 500/500 PASS
+- O08 independent cold processes, eight workers: 800/800 PASS
+
+Normal rebuild and regression:
+- clean: PASS
+- full all-target build: PASS, including integrity_round2_scenario and
+  p005_ros_certified_publisher
+- tests target: PASS
+- complete CTest: 28/28 PASS, 0 failed, 91.52 seconds
+- P0-05 CTest target: 13/13 PASS, 0.16 seconds
+
+ABI and ROS:
+- golden-header cross-DSO client compile/link/run: PASS; 424/416, 4128/3864,
+  V1 88/80, by-value/raw-array/vector, old-client-run PASS 1
+- certified ROS capture: PASS, transaction 1, committed-unprotected, common
+  digest, capture ff507093a44a7318b90e4006851b039f2761f5c1277e315bad4bdd1be5a29899
+- simulator ROS capture after evidence launch archive rename: PASS, attempt 1,
+  committed-unprotected, common digest, capture
+  fe4f71380021ed75bbc7e16edf29175edd2941150a407571acd462589579ab45
+- archived launch content remains byte-identical to the production launch but
+  uses `.launch.txt` so ROS package discovery does not create a duplicate.

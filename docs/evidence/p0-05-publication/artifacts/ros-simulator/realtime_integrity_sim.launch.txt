@@ -1,0 +1,45 @@
+<launch>
+  <arg name="trajectory" default="figure_eight"/>
+  <arg name="fault_mode" default="none"/>
+  <arg name="fault_anchor_id" default="1"/>
+  <arg name="fault_magnitude_m" default="1.0"/>
+  <arg name="random_seed" default="20260901"/>
+  <arg name="rviz" default="false"/>
+  <arg name="run_directory" default=""/>
+  <arg name="config_path"
+       default="$(find uwb_imu_pl)/config/realtime_uwb_imu_pl_research.yaml"/>
+  <arg name="fixed_lag_epochs" default=""/>
+  <arg name="fde_profile" default=""/>
+  <arg name="seed" default=""/>
+  <arg name="enable_run_logging" default="false"/>
+  <arg name="write_global_diagnostics" default=""/>
+  <arg name="write_residuals" default=""/>
+  <arg name="write_timing" default=""/>
+  <arg name="output_root" default=""/>
+  <arg name="packet_loss_prob" default="0.0"/>
+  <arg name="nlos_probability" default="0.0"/>
+  <arg name="execution_command"
+       default="roslaunch uwb_imu_pl realtime_integrity_sim.launch trajectory:=$(arg trajectory) fault_mode:=$(arg fault_mode) fault_anchor_id:=$(arg fault_anchor_id) fault_magnitude_m:=$(arg fault_magnitude_m) random_seed:=$(arg random_seed) packet_loss_prob:=$(arg packet_loss_prob) nlos_probability:=$(arg nlos_probability) rviz:=$(arg rviz) config_path:=$(arg config_path) fde_profile:=$(arg fde_profile) fixed_lag_epochs:=$(arg fixed_lag_epochs) seed:=$(arg seed) enable_run_logging:=$(arg enable_run_logging) run_directory:=$(arg run_directory) write_global_diagnostics:=$(arg write_global_diagnostics) write_residuals:=$(arg write_residuals) write_timing:=$(arg write_timing) output_root:=$(arg output_root)"/>
+  <include file="$(find uwb_imu_pl)/simulator/launch/realtime_integrity_stack.launch">
+    <arg name="trajectory" value="$(arg trajectory)"/>
+    <arg name="fault_mode" value="$(arg fault_mode)"/>
+    <arg name="fault_anchor_id" value="$(arg fault_anchor_id)"/>
+    <arg name="fault_magnitude_m" value="$(arg fault_magnitude_m)"/>
+    <arg name="random_seed" value="$(arg random_seed)"/>
+    <arg name="rviz" value="$(arg rviz)"/>
+    <arg name="run_directory" value="$(arg run_directory)"/>
+    <arg name="config_path" value="$(arg config_path)"/>
+    <arg name="fixed_lag_epochs" value="$(arg fixed_lag_epochs)"/>
+    <arg name="fde_profile" value="$(arg fde_profile)"/>
+    <arg name="seed" value="$(arg seed)"/>
+    <arg name="enable_run_logging" value="$(arg enable_run_logging)"/>
+    <arg name="write_global_diagnostics"
+         value="$(arg write_global_diagnostics)"/>
+    <arg name="write_residuals" value="$(arg write_residuals)"/>
+    <arg name="write_timing" value="$(arg write_timing)"/>
+    <arg name="output_root" value="$(arg output_root)"/>
+    <arg name="packet_loss_prob" value="$(arg packet_loss_prob)"/>
+    <arg name="nlos_probability" value="$(arg nlos_probability)"/>
+    <arg name="execution_command" value="$(arg execution_command)"/>
+  </include>
+</launch>

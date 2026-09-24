@@ -12,6 +12,7 @@
 namespace uwb_imu_pl {
 
 struct IntegrityConfig;
+struct FinalPacketMetadataV2;
 
 class RunLogger {
  public:
@@ -23,6 +24,8 @@ class RunLogger {
   void writeResidual(TimestampNs timestamp, FactorId factor, AnchorId anchor,
                      RowRole role, double raw, double whitened);
   void writeIntegrity(const IntegrityOutput& output);
+  void writeIntegrity(const IntegrityOutput& output,
+                      const FinalPacketMetadataV2& metadata);
   void writeTiming(TimestampNs timestamp, const std::string& stage,
                    double wall_ms, bool success);
   void writeTiming(const TimingRecord& record);
@@ -89,6 +92,8 @@ class RunLoggingSession {
   void writeResidual(TimestampNs timestamp, FactorId factor, AnchorId anchor,
                      RowRole role, double raw, double whitened);
   void writeIntegrity(const IntegrityOutput& output);
+  void writeIntegrity(const IntegrityOutput& output,
+                      const FinalPacketMetadataV2& metadata);
   void writeTiming(const TimingRecord& record);
   void writeEvent(TimestampNs timestamp, const std::string& event,
                   const std::string& detail);

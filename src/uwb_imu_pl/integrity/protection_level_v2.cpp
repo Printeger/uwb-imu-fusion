@@ -143,7 +143,10 @@ struct ProtectionProofRegistry {
   std::map<std::uint64_t, std::vector<ProtectionLevelV2ProofV1>> by_result;
   std::map<std::uint64_t, ProtectionLevelV2ProofV1> by_identity;
   std::map<std::string, ProtectionLevelPublicationPacketV1>
-      publication_packets;
+      publication_packets_v1;
+  std::map<std::string, ProtectionLevelPublicationPacketV2>
+      publication_packets_v2;
+  std::map<std::uint64_t, CommitProtectionEvidenceV1> commit_tokens;
 };
 
 ProtectionProofRegistry& protectionProofRegistry() {
@@ -925,6 +928,176 @@ std::uint64_t protectionLevelV2ProofIdentity(
   return match == found->second.rend() ? 0 : match->proof_identity;
 }
 
+bool mintCommitProtectionEvidenceV1(
+    const EpochTransaction& transaction,
+    const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    std::uint64_t protection_proof_identity,
+    const std::string& frame_id,
+    CommitProtectionEvidenceV1* evidence,
+    std::string* reason) {
+  if (!evidence) {
+    if (reason) *reason = "null commit-protection output";
+    return false;
+  }
+  *evidence = CommitProtectionEvidenceV1{};
+  std::string candidate_reason;
+  if (transaction.id.value() == 0 || window.id != WindowId(transaction.id.value()) ||
+      !(window.version == transaction.base_version) ||
+      !(candidate.base_version == transaction.base_version) ||
+      candidate.window_view != &window ||
+      !validateCandidateDetectorCertificate(window, candidate,
+                                             &candidate_reason) ||
+      window.protected_state_map.rows() != 3 ||
+      window.protected_state_map.cols() != candidate.state_increment.size() ||
+      !candidate.state_increment.allFinite() || frame_id.empty()) {
+    if (reason) {
+      *reason = candidate_reason.empty()
+          ? "candidate/window/transaction binding mismatch"
+          : candidate_reason;
+    }
+    return false;
+  }
+  ProtectionLevelV2ProofV1 proof;
+  {
+    auto& registry = protectionProofRegistry();
+    std::lock_guard<std::mutex> lock(registry.mutex);
+    const auto found = registry.by_identity.find(protection_proof_identity);
+    if (found == registry.by_identity.end()) {
+      if (reason) *reason = "P0-03 protection proof is unavailable";
+      return false;
+    }
+    proof = found->second;
+  }
+  const std::uint64_t candidate_identity =
+      candidateNumericalProofIdentity(window, candidate);
+  if (candidate_identity == 0 ||
+      proof.proof_identity != protection_proof_identity ||
+      proof.candidate_proof_identity != candidate_identity ||
+      resultRegistryKey(proof.served_result) != resultRegistryKey(result) ||
+      !validateProtectionLevelV2ProofPayload(proof) ||
+      !result.pl_xyz_m.allFinite() ||
+      (result.pl_xyz_m.array() < 0.0).any()) {
+    if (reason) *reason = "P0-03 candidate/protection proof mismatch";
+    return false;
+  }
+  const Eigen::Vector3d mean =
+      transaction.nominal_predicted_state.position_world_m +
+      window.protected_state_map * candidate.state_increment;
+  if (!mean.allFinite()) {
+    if (reason) *reason = "derived protected reference is non-finite";
+    return false;
+  }
+  CommitProtectionEvidenceV1 out;
+  out.transaction_id = transaction.id;
+  out.window_id = window.id;
+  out.base_version = transaction.base_version;
+  out.candidate_proof_identity = candidate_identity;
+  out.protection_proof_identity = protection_proof_identity;
+  out.reference.mean_world_m = mean;
+  out.reference.pl_at_reference_m = proof.served_result.pl_xyz_m;
+  out.reference.timestamp = transaction.end;
+  out.reference.frame_id = frame_id;
+  out.reference.position_reference = "body_origin";
+  out.reference.numerical_proof_id = protection_proof_identity;
+  out.reference.valid = true;
+  std::uint64_t token = 1469598103934665603ULL;
+  hashScalar(&token, out.schema_version);
+  hashScalar(&token, out.transaction_id.value());
+  hashScalar(&token, out.window_id.value());
+  hashScalar(&token, out.base_version.graph_version);
+  hashScalar(&token, out.base_version.ordering_version);
+  hashScalar(&token, out.base_version.noise_model_version);
+  hashScalar(&token, out.base_version.linpoint_version);
+  hashScalar(&token, out.candidate_proof_identity);
+  hashScalar(&token, out.protection_proof_identity);
+  hashMatrix(&token, out.reference.mean_world_m);
+  hashMatrix(&token, out.reference.pl_at_reference_m);
+  hashScalar(&token, out.reference.timestamp.value());
+  hashBytes(&token, out.reference.frame_id.data(), out.reference.frame_id.size());
+  hashBytes(&token, out.reference.position_reference.data(),
+            out.reference.position_reference.size());
+  if (token == 0) token = 1;
+  out.token_identity = token;
+  {
+    auto& registry = protectionProofRegistry();
+    std::lock_guard<std::mutex> lock(registry.mutex);
+    registry.commit_tokens[token] = out;
+  }
+  *evidence = out;
+  return true;
+}
+
+bool consumeCommitProtectionEvidenceV1(
+    const CommitProtectionEvidenceV1& evidence,
+    const EpochTransaction& transaction,
+    const std::string& expected_frame_id,
+    std::string* reason) {
+  CommitProtectionEvidenceV1 registered;
+  ProtectionLevelV2ProofV1 proof;
+  {
+    auto& registry = protectionProofRegistry();
+    std::lock_guard<std::mutex> lock(registry.mutex);
+    const auto token = registry.commit_tokens.find(evidence.token_identity);
+    if (token == registry.commit_tokens.end()) {
+      if (reason) *reason = "commit protection token missing, stale, or replayed";
+      return false;
+    }
+    registered = token->second;
+    // Consumption is deliberately destructive even if the caller tampered
+    // with its copy: a failed attempt cannot later replay the token.
+    registry.commit_tokens.erase(token);
+    const auto found = registry.by_identity.find(
+        registered.protection_proof_identity);
+    if (found != registry.by_identity.end()) proof = found->second;
+  }
+  const auto same_vector = [](const Eigen::Vector3d& left,
+                              const Eigen::Vector3d& right) {
+    return (left.array() == right.array()).all();
+  };
+  const bool exact = evidence.schema_version == registered.schema_version &&
+      evidence.transaction_id == registered.transaction_id &&
+      evidence.window_id == registered.window_id &&
+      evidence.base_version == registered.base_version &&
+      evidence.candidate_proof_identity ==
+          registered.candidate_proof_identity &&
+      evidence.protection_proof_identity ==
+          registered.protection_proof_identity &&
+      evidence.token_identity == registered.token_identity &&
+      evidence.reference.valid == registered.reference.valid &&
+      same_vector(evidence.reference.mean_world_m,
+                  registered.reference.mean_world_m) &&
+      same_vector(evidence.reference.pl_at_reference_m,
+                  registered.reference.pl_at_reference_m) &&
+      evidence.reference.timestamp == registered.reference.timestamp &&
+      evidence.reference.frame_id == registered.reference.frame_id &&
+      evidence.reference.position_reference ==
+          registered.reference.position_reference &&
+      evidence.reference.numerical_proof_id ==
+          registered.reference.numerical_proof_id;
+  const bool valid = exact && evidence.schema_version == 1 &&
+      evidence.transaction_id == transaction.id &&
+      evidence.window_id == WindowId(transaction.id.value()) &&
+      evidence.base_version == transaction.base_version &&
+      evidence.reference.timestamp == transaction.end &&
+      evidence.reference.frame_id == expected_frame_id &&
+      evidence.reference.position_reference == "body_origin" &&
+      evidence.reference.mean_world_m.allFinite() &&
+      evidence.reference.pl_at_reference_m.allFinite() &&
+      (evidence.reference.pl_at_reference_m.array() >= 0.0).all() &&
+      proof.proof_identity == evidence.protection_proof_identity &&
+      proof.candidate_proof_identity == evidence.candidate_proof_identity &&
+      validateProtectionLevelV2ProofPayload(proof) &&
+      (proof.served_result.pl_xyz_m.array() ==
+       evidence.reference.pl_at_reference_m.array()).all();
+  if (!valid && reason) {
+    *reason = exact ? "commit protection proof validation failed"
+                    : "commit protection evidence tampered or mismatched";
+  }
+  return valid;
+}
+
 bool bindProtectionLevelPublicationPacket(
     const CandidateEvaluation& candidate,
     const ProtectionLevelV2Result& result,
@@ -962,7 +1135,79 @@ bool bindProtectionLevelPublicationPacket(
   *packet_id = "p003-pl-publication-v1-" + hexDigest(identity);
   auto& registry = protectionProofRegistry();
   std::lock_guard<std::mutex> lock(registry.mutex);
-  registry.publication_packets[*packet_id] = packet;
+  registry.publication_packets_v1[*packet_id] = packet;
+  return true;
+}
+
+bool bindTransferredProtectionLevelPublicationPacket(
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    std::uint64_t protection_proof_identity,
+    const Eigen::Vector3d& reference_mean_world_m,
+    const Eigen::Vector3d& committed_mean_world_m,
+    const Eigen::Vector3d& transferred_pl_m,
+    std::int64_t timestamp_ns,
+    const std::string& frame_id,
+    const std::string& position_reference,
+    std::string* packet_id) {
+  if (!packet_id || timestamp_ns == 0 || frame_id.empty() ||
+      position_reference != "body_origin" ||
+      !reference_mean_world_m.allFinite() ||
+      !committed_mean_world_m.allFinite() ||
+      !transferred_pl_m.allFinite()) {
+    return false;
+  }
+  ProtectionLevelV2ProofV1 proof;
+  {
+    auto& registry = protectionProofRegistry();
+    std::lock_guard<std::mutex> lock(registry.mutex);
+    const auto found = registry.by_identity.find(protection_proof_identity);
+    if (found == registry.by_identity.end()) return false;
+    proof = found->second;
+  }
+  const std::uint64_t candidate_identity = candidateProofIdentity(candidate);
+  const Eigen::Vector3d transfer =
+      (committed_mean_world_m - reference_mean_world_m).cwiseAbs();
+  if (candidate_identity == 0 ||
+      proof.candidate_proof_identity != candidate_identity ||
+      resultRegistryKey(proof.served_result) != resultRegistryKey(result) ||
+      !validateProtectionLevelV2ProofPayload(proof) ||
+      !(transferred_pl_m.array() ==
+        (result.pl_xyz_m + transfer).array()).all()) {
+    return false;
+  }
+  ProtectionLevelPublicationPacketV2 packet;
+  packet.candidate_proof_identity = candidate_identity;
+  packet.protection_proof_identity = protection_proof_identity;
+  packet.served_pl = transferred_pl_m;
+  packet.reference_pl = result.pl_xyz_m;
+  packet.reference_mean_world_m = reference_mean_world_m;
+  packet.committed_mean_world_m = committed_mean_world_m;
+  packet.triangle_transfer_m = transfer;
+  packet.timestamp_ns = timestamp_ns;
+  packet.frame_id = frame_id;
+  packet.position_reference = position_reference;
+  packet.detector_certificate_id = result.detector_certificate_id;
+  std::uint64_t identity = 1469598103934665603ULL;
+  hashScalar(&identity, packet.schema_version);
+  hashScalar(&identity, packet.candidate_proof_identity);
+  hashScalar(&identity, packet.protection_proof_identity);
+  hashMatrix(&identity, packet.served_pl);
+  hashMatrix(&identity, packet.reference_pl);
+  hashMatrix(&identity, packet.reference_mean_world_m);
+  hashMatrix(&identity, packet.committed_mean_world_m);
+  hashMatrix(&identity, packet.triangle_transfer_m);
+  hashScalar(&identity, packet.timestamp_ns);
+  hashBytes(&identity, packet.frame_id.data(), packet.frame_id.size());
+  hashBytes(&identity, packet.position_reference.data(),
+            packet.position_reference.size());
+  hashBytes(&identity, packet.detector_certificate_id.data(),
+            packet.detector_certificate_id.size());
+  packet.packet_identity = identity;
+  *packet_id = "p005-pl-transfer-v2-" + hexDigest(identity);
+  auto& registry = protectionProofRegistry();
+  std::lock_guard<std::mutex> lock(registry.mutex);
+  registry.publication_packets_v2[*packet_id] = packet;
   return true;
 }
 
@@ -972,8 +1217,20 @@ bool protectionLevelPublicationPacket(
   if (!packet) return false;
   auto& registry = protectionProofRegistry();
   std::lock_guard<std::mutex> lock(registry.mutex);
-  const auto found = registry.publication_packets.find(packet_id);
-  if (found == registry.publication_packets.end()) return false;
+  const auto found = registry.publication_packets_v1.find(packet_id);
+  if (found == registry.publication_packets_v1.end()) return false;
+  *packet = found->second;
+  return true;
+}
+
+bool protectionLevelPublicationPacketV2(
+    const std::string& packet_id,
+    ProtectionLevelPublicationPacketV2* packet) {
+  if (!packet) return false;
+  auto& registry = protectionProofRegistry();
+  std::lock_guard<std::mutex> lock(registry.mutex);
+  const auto found = registry.publication_packets_v2.find(packet_id);
+  if (found == registry.publication_packets_v2.end()) return false;
   *packet = found->second;
   return true;
 }
@@ -983,30 +1240,45 @@ std::uint64_t protectionLevelPublicationProofIdentity(
     const std::string& detector_certificate_id) {
   auto& registry = protectionProofRegistry();
   std::lock_guard<std::mutex> lock(registry.mutex);
-  const auto found = registry.publication_packets.find(
+  const auto found_v1 = registry.publication_packets_v1.find(
       detector_certificate_id);
-  if (found == registry.publication_packets.end() ||
-      !(found->second.served_pl.array() == served_pl.array()).all()) return 0;
-  return found->second.protection_proof_identity;
+  if (found_v1 != registry.publication_packets_v1.end() &&
+      (found_v1->second.served_pl.array() == served_pl.array()).all()) {
+    return found_v1->second.protection_proof_identity;
+  }
+  const auto found_v2 = registry.publication_packets_v2.find(
+      detector_certificate_id);
+  if (found_v2 != registry.publication_packets_v2.end() &&
+      (found_v2->second.served_pl.array() == served_pl.array()).all()) {
+    return found_v2->second.protection_proof_identity;
+  }
+  return 0;
 }
 
 bool validateProtectionLevelPublicationProof(
     std::uint64_t proof_identity, const Eigen::Vector3d& served_pl,
     const std::string& detector_certificate_id, std::string* reason) {
-  ProtectionLevelPublicationPacketV1 packet;
   ProtectionLevelV2ProofV1 proof;
+  ProtectionLevelPublicationPacketV1 packet_v1;
+  ProtectionLevelPublicationPacketV2 packet_v2;
+  bool is_v2 = false;
   {
     auto& registry = protectionProofRegistry();
     std::lock_guard<std::mutex> lock(registry.mutex);
-    const auto packet_found = registry.publication_packets.find(
+    const auto packet_v1_found = registry.publication_packets_v1.find(
+        detector_certificate_id);
+    const auto packet_v2_found = registry.publication_packets_v2.find(
         detector_certificate_id);
     const auto proof_found = registry.by_identity.find(proof_identity);
-    if (packet_found == registry.publication_packets.end() ||
+    if ((packet_v1_found == registry.publication_packets_v1.end() &&
+         packet_v2_found == registry.publication_packets_v2.end()) ||
         proof_found == registry.by_identity.end()) {
       if (reason) *reason = "publication PL proof packet is unavailable";
       return false;
     }
-    packet = packet_found->second;
+    is_v2 = packet_v2_found != registry.publication_packets_v2.end();
+    if (is_v2) packet_v2 = packet_v2_found->second;
+    else packet_v1 = packet_v1_found->second;
     proof = proof_found->second;
   }
   if (proof.proof_identity == 0) {
@@ -1014,24 +1286,62 @@ bool validateProtectionLevelPublicationProof(
     return false;
   }
   std::uint64_t expected_packet_identity = 1469598103934665603ULL;
-  hashScalar(&expected_packet_identity, packet.schema_version);
-  hashScalar(&expected_packet_identity, packet.candidate_proof_identity);
-  hashScalar(&expected_packet_identity, packet.protection_proof_identity);
-  hashMatrix(&expected_packet_identity, packet.served_pl);
-  hashBytes(&expected_packet_identity, packet.detector_certificate_id.data(),
-            packet.detector_certificate_id.size());
+  const auto schema_version = is_v2 ? packet_v2.schema_version
+                                    : packet_v1.schema_version;
+  const auto candidate_identity = is_v2 ? packet_v2.candidate_proof_identity
+                                        : packet_v1.candidate_proof_identity;
+  const auto packet_proof_identity = is_v2
+      ? packet_v2.protection_proof_identity
+      : packet_v1.protection_proof_identity;
+  const auto& packet_served_pl = is_v2 ? packet_v2.served_pl
+                                       : packet_v1.served_pl;
+  const auto& packet_detector_id = is_v2
+      ? packet_v2.detector_certificate_id
+      : packet_v1.detector_certificate_id;
+  hashScalar(&expected_packet_identity, schema_version);
+  hashScalar(&expected_packet_identity, candidate_identity);
+  hashScalar(&expected_packet_identity, packet_proof_identity);
+  hashMatrix(&expected_packet_identity, packet_served_pl);
+  bool transfer_valid = true;
+  if (is_v2) {
+    hashMatrix(&expected_packet_identity, packet_v2.reference_pl);
+    hashMatrix(&expected_packet_identity, packet_v2.reference_mean_world_m);
+    hashMatrix(&expected_packet_identity, packet_v2.committed_mean_world_m);
+    hashMatrix(&expected_packet_identity, packet_v2.triangle_transfer_m);
+    hashScalar(&expected_packet_identity, packet_v2.timestamp_ns);
+    hashBytes(&expected_packet_identity, packet_v2.frame_id.data(),
+              packet_v2.frame_id.size());
+    hashBytes(&expected_packet_identity, packet_v2.position_reference.data(),
+              packet_v2.position_reference.size());
+    transfer_valid = packet_v2.timestamp_ns != 0 &&
+        !packet_v2.frame_id.empty() &&
+        packet_v2.position_reference == "body_origin" &&
+        (packet_v2.triangle_transfer_m.array() ==
+         (packet_v2.committed_mean_world_m -
+          packet_v2.reference_mean_world_m).cwiseAbs().array()).all() &&
+        (packet_v2.served_pl.array() ==
+         (packet_v2.reference_pl +
+          packet_v2.triangle_transfer_m).array()).all();
+  }
+  hashBytes(&expected_packet_identity, packet_detector_id.data(),
+            packet_detector_id.size());
+  const std::uint64_t packet_identity = is_v2 ? packet_v2.packet_identity
+                                              : packet_v1.packet_identity;
   const bool valid = validateProtectionLevelV2ProofPayload(proof) &&
       proof.proof_identity == proof_identity &&
-      packet.schema_version == 1 &&
-      packet.protection_proof_identity == proof_identity &&
-      packet.candidate_proof_identity == proof.candidate_proof_identity &&
-      packet.detector_certificate_id ==
+      schema_version == (is_v2 ? 2u : 1u) && transfer_valid &&
+      packet_proof_identity == proof_identity &&
+      candidate_identity == proof.candidate_proof_identity &&
+      packet_detector_id ==
           proof.served_result.detector_certificate_id &&
-      packet.packet_identity == expected_packet_identity &&
+      packet_identity == expected_packet_identity &&
       detector_certificate_id ==
-          "p003-pl-publication-v1-" + hexDigest(expected_packet_identity) &&
-      (packet.served_pl.array() == served_pl.array()).all() &&
-      (proof.served_result.pl_xyz_m.array() == served_pl.array()).all();
+          (is_v2 ? "p005-pl-transfer-v2-"
+                 : "p003-pl-publication-v1-") +
+              hexDigest(expected_packet_identity) &&
+      (packet_served_pl.array() == served_pl.array()).all() &&
+      (proof.served_result.pl_xyz_m.array() ==
+       (is_v2 ? packet_v2.reference_pl : packet_v1.served_pl).array()).all();
   if (!valid && reason) *reason = "publication PL proof recomputation failed";
   return valid;
 }

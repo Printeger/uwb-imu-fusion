@@ -81,6 +81,13 @@ class IntegrityMonitor {
 class IncrementalUwbImuEstimator;
 class CandidateWorkerPool;
 
+struct PipelineCommitBoundaryAuditV1 {
+  HealthSnapshot health;
+  std::uint32_t consecutive_bridge_epochs = 0;
+  TimestampNs bridge_start_timestamp;
+  bool bridge_start_present = false;
+};
+
 // Orchestration layer enforcing "detect before commit" for each UWB group.
 class RealtimeIntegrityPipeline {
  public:
@@ -98,6 +105,23 @@ class RealtimeIntegrityPipeline {
   IntegrityOutput processUwbBatch(const UwbBatch& batch,
                                   const ClockSample& clock_sample);
   const PublicationController& publication() const { return publication_; }
+  PipelineCommitBoundaryAuditV1 commitBoundaryAudit() const {
+    PipelineCommitBoundaryAuditV1 out;
+    out.health = health_.snapshot();
+    out.consecutive_bridge_epochs = consecutive_bridge_epochs_;
+    out.bridge_start_present = bridge_start_timestamp_.has_value();
+    if (bridge_start_timestamp_) {
+      out.bridge_start_timestamp = *bridge_start_timestamp_;
+    }
+    return out;
+  }
+  HealthSnapshot debugHealthSnapshot() const { return health_.snapshot(); }
+  std::uint32_t debugConsecutiveBridgeEpochs() const {
+    return consecutive_bridge_epochs_;
+  }
+  const std::optional<TimestampNs>& debugBridgeStartTimestamp() const {
+    return bridge_start_timestamp_;
+  }
   const ReinitializationDirective& reinitializationDirective() const {
     return reinitializer_.directive();
   }

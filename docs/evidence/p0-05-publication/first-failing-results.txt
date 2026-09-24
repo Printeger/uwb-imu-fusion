@@ -1,0 +1,30 @@
+P0-05 red-first record
+
+1. Interface red test
+Command:
+  cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl \
+    --target test_p0_05_publication -j2
+Result: exit 2
+Decisive diagnostic:
+  fatal error: uwb_imu_pl/publication/final_output_packet.hpp: No such file or directory
+
+2. First implemented directed run
+Result: 3/6 PASS, 3/6 FAIL.
+Two failures were harness defects: backendUpdateCount included estimator
+initialization and an exact DOUBLE_EQ was used for a decimal-derived state age.
+The assertions were corrected to compare the update delta and use a stated
+floating tolerance. No production threshold or safety contract changed.
+
+3. First complete CTest after implementation
+Result: exit 8, 22/28 targets PASS.
+The first decisive contract failure was:
+  protected reference must bind finite PL/mean to transaction time,
+  configured world frame, body origin, and numerical proof
+Cause: the pipeline marked a non-finite candidate PL as a valid protected
+reference. Fix: require finite, non-negative component PL and a finite numeric
+reference mean before setting ProtectedPositionReference::valid. Otherwise the
+commit proceeds without a bound reference and final PL publication fails
+closed. The additional crashes were stale test executables linked against the
+new public structures; rebuilding the complete `tests` target removed the ABI
+mix and all six previously failing targets passed.
+

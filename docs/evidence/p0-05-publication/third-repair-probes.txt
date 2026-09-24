@@ -1,0 +1,26 @@
+P0-05 third-review repair probes (all exit 0)
+
+Directed binary: 12 tests / 5 suites, 12 PASS, 0 FAILED.
+- slow actual candidate publication: arrival=100, call=140, return=1170,
+  deadline=100 -> deadline_missed=true, protected=false
+- partial second-sink exception -> no authoritative/protected output
+- non-atomic fan-out -> protected receipt activation refused
+- mature O08: five committed epochs, fixed-lag prune, real committed bridge,
+  nonempty catalogs/history/IMU/health/bridge, eight raw-state comparisons
+- O04: independent raw-factor GTSAM batch LM/Marginals matches the genuinely
+  certified backend commit in full Pose3/SO3/state/covariance
+- ABI: V1 88/80 and V2 256/248
+
+Authoritative full CTest: 28/28 PASS, 0 failed, 92.30 seconds.
+
+Certified ROS capture:
+- attempt/transaction 1, batch_committed=true
+- compound authoritative=true; embedded and legacy protected=false;
+  legacy authoritative=false
+- compound/embedded/legacy/CSV common digest 10830230958831141298
+- full PL xyz/HPL/VPL, formal/risk flags, reasons, attempt/time/frame/reference
+  matched
+- canonical capture SHA-256
+  4fb1deccdf3194ef78ca456ed79b4fb8ee95d3b0adf63ee949b36078abd00972
+- CSV SHA-256
+  ade451c9fa8578f954b0aaf944877f7bebc85116e3c0d5900ba4f8ea27743450

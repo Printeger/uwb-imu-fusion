@@ -1280,6 +1280,69 @@ TEST(P002DualChannelContract,
     ASSERT_NE(0u, matrix_free_proof);
     ASSERT_NE(0u, dense_proof);
     ASSERT_NE(matrix_free_proof, dense_proof);
+    EpochTransaction frozen_transaction;
+    frozen_transaction.id = TransactionId(window.id.value());
+    frozen_transaction.base_version = window.version;
+    frozen_transaction.end = TimestampNs(2002000000);
+    frozen_transaction.nominal_predicted_state.position_world_m =
+        Eigen::Vector3d(4.0, -3.0, 2.0);
+    CommitProtectionEvidenceV1 evidence;
+    std::string evidence_reason;
+    ASSERT_TRUE(mintCommitProtectionEvidenceV1(
+        frozen_transaction, window, matrix_free, matrix_free_pl,
+        matrix_free_proof, "map", &evidence, &evidence_reason))
+        << evidence_reason;
+    const Eigen::Vector3d independent_reference =
+        frozen_transaction.nominal_predicted_state.position_world_m +
+        window.protected_state_map * matrix_free.state_increment;
+    EXPECT_TRUE(evidence.reference.mean_world_m.isApprox(
+        independent_reference, 0.0));
+
+    auto tampered = evidence;
+    tampered.reference.mean_world_m.x() += 1.0;
+    EXPECT_FALSE(consumeCommitProtectionEvidenceV1(
+        tampered, frozen_transaction, "map", &evidence_reason));
+    // A failed/tampered consumption burns the token.
+    EXPECT_FALSE(consumeCommitProtectionEvidenceV1(
+        evidence, frozen_transaction, "map", &evidence_reason));
+
+    ASSERT_TRUE(mintCommitProtectionEvidenceV1(
+        frozen_transaction, window, matrix_free, matrix_free_pl,
+        matrix_free_proof, "map", &evidence, &evidence_reason));
+    EXPECT_TRUE(consumeCommitProtectionEvidenceV1(
+        evidence, frozen_transaction, "map", &evidence_reason));
+    EXPECT_FALSE(consumeCommitProtectionEvidenceV1(
+        evidence, frozen_transaction, "map", &evidence_reason));
+
+    ASSERT_TRUE(mintCommitProtectionEvidenceV1(
+        frozen_transaction, window, matrix_free, matrix_free_pl,
+        matrix_free_proof, "map", &evidence, &evidence_reason));
+    auto mismatched_transaction = frozen_transaction;
+    mismatched_transaction.id = TransactionId(window.id.value() + 1);
+    EXPECT_FALSE(consumeCommitProtectionEvidenceV1(
+        evidence, mismatched_transaction, "map", &evidence_reason));
+
+    const Eigen::Vector3d large_committed =
+        independent_reference + Eigen::Vector3d::Constant(1e150);
+    const Eigen::Vector3d large_transfer =
+        (large_committed - independent_reference).cwiseAbs();
+    std::string large_packet;
+    ASSERT_TRUE(bindTransferredProtectionLevelPublicationPacket(
+        matrix_free, matrix_free_pl, matrix_free_proof,
+        independent_reference, large_committed,
+        matrix_free_pl.pl_xyz_m + large_transfer,
+        frozen_transaction.end.value(), "map", "body_origin",
+        &large_packet));
+    EXPECT_TRUE(validateProtectionLevelPublicationProof(
+        matrix_free_proof, matrix_free_pl.pl_xyz_m + large_transfer,
+        large_packet, nullptr));
+    EXPECT_FALSE(bindTransferredProtectionLevelPublicationPacket(
+        matrix_free, matrix_free_pl, matrix_free_proof,
+        independent_reference,
+        Eigen::Vector3d::Constant(std::numeric_limits<double>::infinity()),
+        Eigen::Vector3d::Constant(std::numeric_limits<double>::infinity()),
+        frozen_transaction.end.value(), "map", "body_origin",
+        &large_packet));
     std::string matrix_free_packet;
     std::string dense_packet;
     ASSERT_TRUE(bindProtectionLevelPublicationPacket(

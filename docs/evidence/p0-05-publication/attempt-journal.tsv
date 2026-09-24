@@ -1,0 +1,60 @@
+attempt	stage	result	exit_code	evidence
+1	red interface build	FAIL_EXPECTED	2	missing final_output_packet.hpp
+2	first directed implementation	FAIL_EXPECTED	1	3/6; harness update-count and floating assertions corrected
+3	directed P0-05	PASS	0	6/6
+4	selected inherited regression	PASS	0	6/6 CTest targets
+5	first complete CTest	FAIL_EXPECTED	8	non-finite reference exposed; stale test binaries identified
+6	complete tests rebuild	PASS	0	target tests
+7	formerly failing regression	PASS	0	6/6 in 91.71 s
+8	complete CTest	PASS	0	28/28 in 91.79 s
+9	complete build including ROS simulator	PASS	0	all target
+10	ROS compound/legacy subscriber	PASS	0	13/13
+11	ROS CSV final packet match	PASS	0	5/5
+12	git diff --check	PASS	0	clean
+13	all-target optional runner diagnostic	FAIL_EXPECTED	1	27/28; out-of-scope round2 scenario status assertion
+14	authoritative complete CTest	PASS	0	28/28 in 92.18 s; optional runner absent as in golden
+15	first independent review	FAILED	1	runner hidden; proof/reference, O08, publish boundary, O04, ROS raw evidence, ABI, evidence honesty rejected
+16	round2 normal-build repair	PASS	0	top-level FAIL when risk_closed=false or protected_available=false; runner retained
+17	P0-05 repaired directed target	PASS	0	7/7 including all eight O08 points, fake proof, publisher exception, non-diagonal 90deg covariance
+18	genuine P0-03 proof/reference target	PASS	0	1/1; mint/consume plus tamper/replay/stale/mismatch/large finite/Inf coverage
+19	golden-header ABI client	PASS	0	golden headers compile/link/run against current library; old-client-run PASS 1
+20	normal clean	PASS	0	cmake --build build/uwb_imu_pl --target clean
+21	normal full all-target build	PASS	0	cmake --build build/uwb_imu_pl -j2; runner present
+22	normal tests target build	PASS	0	cmake --build build/uwb_imu_pl --target tests -j2
+23	normal authoritative CTest	PASS	0	28/28 in 92.13 s with runner present; test_round2_tools PASS
+24	ROS repair launch with trajectory hover	FAIL_EXPECTED	1	invalid test invocation: trajectory_generator rejects unsupported hover; no acceptance claim
+25	ROS real figure-eight launch	PASS	0	compound/legacy/odometry matched at attempt 1215; canonical raw hash recorded
+26	ROS CSV row/hash	PASS	0	transaction 1215 exact row; integrity.csv 1808 lines; stable hashes recorded
+27	git diff --check	PASS	0	no whitespace errors
+28	final evidence CTest rerun	PASS	0	28/28 in 91.94 s; test_round2_tools PASS with runner present
+29	second independent review	FAILED	1	O08 deep state, actual O04 commit, immutable publish/deadline, ROS reproducer, and V1 ABI rejected
+30	second-review directed repair	PASS	0	9/9; deep O08, genuine certified commit, same terminal digest, slow-return deadline
+31	golden-header V1 ABI repair	PASS	0	V1 size/offset 88/80 plus getter compile/link/run against current library
+32	ROS checked-in simulator capture	PASS	0	attempt 1 batch committed unprotected; compound/legacy/odometry/CSV raw files saved
+33	ROS certified reference-transfer capture	PASS	0	SUCCESS_KEEP_ALL finite V2 transfer, batch committed unprotected, canonical and CSV hashes saved
+34	final normal clean/full/tests/CTest	PASS	0	28/28 in 92.38 s; all targets and round2 runner present
+35	third independent review	FAILED	1	actual publish timing/partial sink, mature independent O08, nonlinear O04 oracle, and ROS field capture rejected
+36	v2 candidate/receipt publication repair	PASS	0	slow actual return, partial second sink, non-atomic protected refusal; common digest
+37	mature O08 raw-state replay	PASS	0	five epochs plus pruning and real bridge; eight full independent snapshots
+38	independent nonlinear O04 oracle	PASS	0	raw-factor GTSAM batch LM/Marginals matches genuine certified commit
+39	production ROS certified capture	PASS	0	compound authoritative; legacy unprotected/non-authoritative; full PL/risk/reason/reference/digest and CSV match
+40	post-third-review directed target	PASS	0	12/12
+41	post-third-review authoritative CTest	PASS	0	28/28 in 92.30 s; round2 tools PASS
+42	fourth independent review	FAILED	1	post-freeze real ROS/CSV fanout, common public ABI drift, and stale loaded-library hash rejected
+43	public ABI sidecar repair	PASS	0	common/types golden diff empty; 424/416 PublicationDiagnostics and 4128/3864 IntegrityOutput; by-value/array/vector cross-DSO probes
+44	production non-atomic fanout probes	PASS	0	actual slow return, second ROS sink failure, CSV/logger failure; no post-freeze fanout or authority
+45	normal clean/full/tests/CTest	PASS	0	all-target and tests builds; final 28/28 in 92.35 s; round2 present
+46	post-fourth-review ROS captures	PASS	0	simulator and certified commit; all ROS/CSV mirrors non-authoritative/unprotected with common digest
+47	fifth independent review	FAILED	1	technical gates passed; complete diff and retained config/manifest/input/truth evidence were incomplete
+48	fifth-review evidence-only closure	PASS	0	complete implementation patch, source/artifact hash manifests, retained simulator config/manifest/launch/truth, and explicit N/A/NOT_RUN records; technical tests not rerun
+49	sixth independent review	FAILED	1	first directed run 12/13: low-frequency IndeterminantLinearSystemException near x4 while constructing the O08 mature fixed-lag fixture; subsequent stress passes do not erase the failure
+50	sixth-review O08 deterministic constraint repair	PASS	0	test-only full-state priors plus independent 15D batch Marginals precondition and exact eight-boundary reached set; 500 same-process and 800 eight-worker cold-process runs PASS
+51	sixth-review clean/full/tests/CTest	PASS	0	normal all-target and tests builds; complete CTest 28/28 in 91.52 s; P0-05 13/13
+52	sixth-review ROS and evidence refresh	PASS	0	golden ABI and certified capture PASS; renamed byte-identical archived launch to .launch.txt after first reproduction attempt exposed duplicate ROS package discovery; simulator rerun then PASS
+53	seventh independent review	FAILED	1	O08 raw 15D covariance lacked a pre-symmetrization symmetry assertion; boundary-only fault accounting allowed a natural backend exception to masquerade as DuringBackendUpdate injection
+54	seventh-review directed repair	PASS	0	raw finite/symmetric/strict-positive covariance gate plus one-shot monotonic nonce bound to exact fault-point hit, terminal receipt, and debug sidecar; 13/13 PASS
+55	seventh-review invalid stress invocation	FAIL_EXPECTED	0	old GTest does not support --gtest_brief and printed help; no stability claim derived from this invocation
+56	seventh-review O08 stress	PASS	0	valid same-process repeat 500/500 and independent cold-process 400/400 with eight workers; each run requires exactly eight distinct reached points and nonces
+57	seventh-review clean/full/tests/CTest	PASS	0	normal clean, all-target and tests builds PASS; complete CTest 28/28 in 91.86 s; selected inherited/round2 6/6
+58	seventh-review ABI and certified ROS	PASS	0	golden-header cross-DSO by-value/array/vector and V1 ABI PASS; controlled certified ROS transaction 1 common digest, map/body_origin, non-authoritative/unprotected/formal-false
+59	seventh-review invalid ROS verifier	FAIL_EXPECTED	1	first post-capture ad-hoc verifier used the wrong JSON key compound; capture itself completed and the corrected semantic verifier passed against compound_integrity/envelope/legacy/CSV

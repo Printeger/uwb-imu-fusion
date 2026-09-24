@@ -1,0 +1,57 @@
+P0-05 seventh-review O08 proof-gap repair probes
+
+Scope and implementation:
+- Preserved reviewer-seventh-failed.md verbatim and changed only the two O08
+  proof gaps identified there.
+- Raw GTSAM Marginals covariance is first required finite. Before any
+  symmetrization, the test computes and reports the Frobenius antisymmetry norm
+  and its documented tight bound
+  `1e-12 * max(1, ||C||_F)`, and separately requires
+  `C.isApprox(C.transpose(), 1e-12)`. Only then is `0.5*(C+C^T)` passed to the
+  self-adjoint eigensolver and required to have strictly positive minimum
+  eigenvalue.
+- Every armed fault point receives a process-global monotonic nonzero nonce.
+  Only the exact hit helper can atomically record point/nonce/hit/consumed and
+  consume the arm. The terminal receipt and out-of-object debug sidecar carry
+  that identity. A natural backend exception leaves hit=false and nonce=0, so
+  it cannot enter the reached set even when its coarse boundary is
+  `backend_update`.
+- All eight points require arm identity, terminal identity and consumed
+  sidecar identity to match before insertion. Both the reached-point set and
+  reached-nonce set must have exactly eight elements. There is no
+  catch/skip/retry.
+- The sidecar is reset on arm/initialize, disarmed on successful or exceptional
+  completion, and erased by the estimator destructor, preventing stale tokens
+  across address reuse. No estimator data member or golden public layout was
+  changed.
+
+Directed and stability results:
+- P0-05 directed: 13/13 PASS.
+- O08 same process: valid `--gtest_repeat=500`, 500/500 PASS.
+- O08 independent cold processes: 400/400 PASS, eight workers.
+- An earlier command included unsupported `--gtest_brief`; old GTest printed
+  help. That invocation is explicitly invalid and is not counted.
+
+Normal build and regression:
+- clean: PASS.
+- full all-target build: PASS, including `integrity_round2_scenario` and
+  `p005_ros_certified_publisher`.
+- tests target: PASS.
+- complete CTest: 28/28 PASS, 0 failed, 91.86 seconds.
+- selected P0-01 through P0-05 and round2: 6/6 PASS.
+
+ABI and ROS:
+- Golden-header cross-DSO compile/link/run: PASS; PublicationDiagnostics
+  424/416, IntegrityOutput 4128/3864, V1 88/80, by-value/raw-array/vector and
+  old-client-run PASS 1. Golden `common/types.hpp` is byte-identical.
+- Controlled certified ROS capture: PASS; committed transaction 1; compound,
+  envelope, legacy and CSV share digest 8051997007928847548; all are
+  non-authoritative/unprotected/formal-false with `map/body_origin`.
+- The first ad-hoc semantic verifier queried nonexistent JSON key `compound`
+  and exited 1 after a successful capture. The corrected verifier used
+  `compound_integrity`, `compound_envelope`, `legacy_integrity`, and
+  `csv_receipt` and passed. No product failure was hidden.
+
+No detector threshold, alert limit, total/allocation risk, production prior,
+fault family, hypothesis/action coverage, denominator, timeout definition, or
+formal qualification gate changed.

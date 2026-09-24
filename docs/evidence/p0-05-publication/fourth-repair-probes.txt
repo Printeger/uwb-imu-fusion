@@ -1,0 +1,38 @@
+P0-05 fourth-review repair probes (all exit 0)
+
+Directed binary: 13 tests / 5 suites, 13 PASS, 0 FAILED.
+- production non-atomic fan-out actual return: call=140, return=5000;
+  terminal deadline_missed=true, protected=false, authoritative=false
+- second real-sink model throws after the first visible mirror: the visible
+  packet and returned sidecar remain unprotected/non-authoritative with the
+  same digest; no post-freeze commit executes
+- CSV/logger sink model throws after three mirror sinks: abort is recorded,
+  no post-freeze commit executes and terminal authority/protection remain false
+
+Golden-header cross-DSO ABI client:
+- PublicationDiagnostics size/certificate offset: 424 / 416
+- IntegrityOutput size/bridge offset: 4128 / 3864
+- ProtectionLevelPublicationPacketV1 size/id offset: 88 / 80
+- current V2 size/id offset: 256 / 248
+- PublicationDiagnostics and IntegrityOutput by-value calls PASS
+- IntegrityOutput raw-array and std::vector calls PASS
+- common/types.hpp diff against golden-p0-04-risk: empty
+
+Normal clean/full/tests/CTest:
+- all-target build PASS, including integrity_round2_scenario
+- tests target build PASS
+- complete CTest 28/28 PASS in 92.35 seconds
+- selected P0-01 through P0-04/round2 regressions 6/6 PASS
+
+ROS captures:
+- simulator canonical SHA-256:
+  e72c32bd5725918925111e1a39aa39cd82589f5fa83ef0d2ae29a9f54fc02b1e
+- simulator CSV SHA-256:
+  7e9f83e858c119ac45d0c9f5864ce9274540b537afe1ec9e2e805a0575e081dc
+- certified canonical SHA-256:
+  d6414fe49084a1798c6ef54d605b664acfbd97d0d5b1b3a70df16745dbf1b2fa
+- certified CSV SHA-256:
+  99107d38a844f604cb83790590039d83cc524496e1561fe7e496830586ada39d
+- compound, embedded status, standalone status and CSV are all
+  authoritative=false/protected=false and carry digest 8051997007928847548
+- committed transaction 1 retains the genuine finite V2 reference transfer

@@ -1,4 +1,5 @@
 #include "uwb_imu_pl/io/run_logger.hpp"
+#include "uwb_imu_pl/publication/final_output_packet.hpp"
 
 #include "uwb_imu_pl/common/failure_reason.hpp"
 #include "uwb_imu_pl/config/integrity_config.hpp"
@@ -182,6 +183,7 @@ RunLogger::RunLogger(const std::string& output_directory,
   requireOpen(factor_ledger_, directory_ + "/factor_ledger.csv");
   requireOpen(health_, directory_ + "/health.csv");
   requireOpen(bridge_, directory_ + "/bridge.csv");
+  integrity_ << std::setprecision(17);
   states_ << "timestamp_ns,state_id,px,py,pz,qw,qx,qy,qz,vx,vy,vz,bax,bay,baz,bgx,bgy,bgz\n";
   if (write_residuals_) {
     residuals_ << "timestamp_ns,factor_id,anchor_id,row_role,raw,whitened\n";
@@ -190,6 +192,10 @@ RunLogger::RunLogger(const std::string& output_directory,
                 "fde_profile,scope_digest,detector_contract_id,pl_status,"
                 "within_alert_limits,state_valid,fresh,deadline_missed,"
                 "reason_codes,publication_protected,publication_certificate_id,"
+                "final_packet_protocol_version,final_packet_digest,"
+                "final_packet_authoritative,"
+                "protected_frame_id,protected_position_reference,"
+                "protection_packet_id,"
                 "group_size,measurement_model_valid,"
                 "global_statistic,global_threshold,global_dof,global_passed,"
                 "postfit_statistic,postfit_threshold,postfit_dof,postfit_passed,"
@@ -292,6 +298,11 @@ void RunLoggingSession::writeResidual(TimestampNs timestamp, FactorId factor,
 
 void RunLoggingSession::writeIntegrity(const IntegrityOutput& output) {
   if (logger_) logger_->writeIntegrity(output);
+}
+
+void RunLoggingSession::writeIntegrity(
+    const IntegrityOutput& output, const FinalPacketMetadataV2& metadata) {
+  if (logger_) logger_->writeIntegrity(output, metadata);
 }
 
 void RunLoggingSession::writeTiming(const TimingRecord& record) {
@@ -469,6 +480,11 @@ void RunLogger::writeResidual(TimestampNs t, FactorId factor, AnchorId anchor,
 }
 
 void RunLogger::writeIntegrity(const IntegrityOutput& o) {
+  writeIntegrity(o, FinalPacketMetadataV2{});
+}
+
+void RunLogger::writeIntegrity(const IntegrityOutput& o,
+                               const FinalPacketMetadataV2& metadata) {
   const auto& p = o.protection_level;
   const DetectorResult& conditional = o.detector;
   integrity_ << o.timestamp.value() << ',' << o.attempted_timestamp.value()
@@ -480,6 +496,12 @@ void RunLogger::writeIntegrity(const IntegrityOutput& o) {
              << csv(joinStrings(o.reason_codes)) << ','
              << o.publication.protected_output << ','
              << o.publication.certificate_id << ','
+             << metadata.protocol_version << ','
+             << metadata.digest << ','
+             << metadata.authoritative << ','
+             << csv(metadata.protected_frame_id) << ','
+             << csv(metadata.protected_position_reference) << ','
+             << csv(metadata.protection_packet_id) << ','
              << o.measurement_group_size << ',' << o.measurement_model_valid << ','
              << o.global_detector.statistic << ','
              << o.global_detector.threshold << ',' << o.global_detector.dof
@@ -902,6 +924,10 @@ void RunLogger::flush() {
   diagnostic_identity_.flush();
   diagnostic_square_root_.flush();
   diagnostic_history_summary_.flush();
+  if (!states_ || !integrity_) {
+    throw std::runtime_error(
+        "final state/integrity journal flush failed");
+  }
 }
 
 RunManifest makeRunManifest(const IntegrityConfig& config,

@@ -16,6 +16,7 @@
 #include <Eigen/LU>
 #include <Eigen/SVD>
 #include <boost/make_shared.hpp>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -23,6 +24,7 @@
 #include <cstring>
 #include <functional>
 #include <numeric>
+#include <mutex>
 #include <set>
 #include <stdexcept>
 
@@ -33,6 +35,7 @@
 #include "uwb_imu_pl/integrity/history_fault_summary.hpp"
 #include "uwb_imu_pl/integrity/history_summary_extraction.hpp"
 #include "uwb_imu_pl/integrity/history_summary_lifecycle.hpp"
+#include "uwb_imu_pl/integrity/protection_level_v2.hpp"
 
 namespace uwb_imu_pl {
 
@@ -45,6 +48,92 @@ class FixedLagBackend final : public gtsam::IncrementalFixedLagSmoother {
 };
 
 namespace {
+
+struct P005EstimatorRuntime {
+  CommitFaultPoint fault_point = CommitFaultPoint::None;
+  std::uint64_t armed_nonce = 0;
+  CommitFaultPoint hit_point = CommitFaultPoint::None;
+  std::uint64_t hit_nonce = 0;
+  bool armed = false;
+  bool hit = false;
+  bool consumed = false;
+};
+
+std::atomic<std::uint64_t>& p005FaultNonce() {
+  static std::atomic<std::uint64_t> nonce{1};
+  return nonce;
+}
+
+std::mutex& p005RuntimeMutex() {
+  static std::mutex mutex;
+  return mutex;
+}
+
+std::map<const IncrementalUwbImuEstimator*, P005EstimatorRuntime>&
+p005RuntimeStates() {
+  static std::map<const IncrementalUwbImuEstimator*, P005EstimatorRuntime>
+      states;
+  return states;
+}
+
+std::uint64_t armP005Fault(const IncrementalUwbImuEstimator* estimator,
+                           CommitFaultPoint point) {
+  std::lock_guard<std::mutex> lock(p005RuntimeMutex());
+  auto& state = p005RuntimeStates()[estimator];
+  state = P005EstimatorRuntime{};
+  if (point == CommitFaultPoint::None) return 0;
+  std::uint64_t nonce = p005FaultNonce().fetch_add(1);
+  if (nonce == 0) nonce = p005FaultNonce().fetch_add(1);
+  state.fault_point = point;
+  state.armed_nonce = nonce;
+  state.armed = true;
+  return nonce;
+}
+
+std::uint64_t hitP005Fault(const IncrementalUwbImuEstimator* estimator,
+                           CommitFaultPoint point) {
+  std::lock_guard<std::mutex> lock(p005RuntimeMutex());
+  auto& state = p005RuntimeStates()[estimator];
+  if (!state.armed || state.fault_point != point || state.armed_nonce == 0) {
+    return 0;
+  }
+  state.hit_point = point;
+  state.hit_nonce = state.armed_nonce;
+  state.hit = true;
+  state.consumed = true;
+  state.fault_point = CommitFaultPoint::None;
+  state.armed_nonce = 0;
+  state.armed = false;
+  return state.hit_nonce;
+}
+
+void disarmP005Fault(const IncrementalUwbImuEstimator* estimator) {
+  std::lock_guard<std::mutex> lock(p005RuntimeMutex());
+  auto& state = p005RuntimeStates()[estimator];
+  state.fault_point = CommitFaultPoint::None;
+  state.armed_nonce = 0;
+  state.armed = false;
+}
+
+CommitFaultInjectionAuditV1 p005FaultAudit(
+    const IncrementalUwbImuEstimator* estimator) {
+  std::lock_guard<std::mutex> lock(p005RuntimeMutex());
+  const auto state = p005RuntimeStates()[estimator];
+  CommitFaultInjectionAuditV1 audit;
+  audit.armed_point = state.fault_point;
+  audit.armed_nonce = state.armed_nonce;
+  audit.hit_point = state.hit_point;
+  audit.hit_nonce = state.hit_nonce;
+  audit.armed = state.armed;
+  audit.hit = state.hit;
+  audit.consumed = state.consumed;
+  return audit;
+}
+
+void eraseP005Runtime(const IncrementalUwbImuEstimator* estimator) {
+  std::lock_guard<std::mutex> lock(p005RuntimeMutex());
+  p005RuntimeStates().erase(estimator);
+}
 
 void cacheHashBytes(std::uint64_t* hash, const void* data, std::size_t size) {
   const auto* bytes = static_cast<const unsigned char*>(data);
@@ -450,7 +539,23 @@ IncrementalUwbImuEstimator::IncrementalUwbImuEstimator(
   imu_params_ = params;
 }
 
-IncrementalUwbImuEstimator::~IncrementalUwbImuEstimator() = default;
+IncrementalUwbImuEstimator::~IncrementalUwbImuEstimator() {
+  eraseP005Runtime(this);
+}
+
+bool IncrementalUwbImuEstimator::backendPoisoned() const {
+  return backend_poisoned_;
+}
+
+std::uint64_t IncrementalUwbImuEstimator::setCommitFaultPointForTesting(
+    CommitFaultPoint point) {
+  return armP005Fault(this, point);
+}
+
+CommitFaultInjectionAuditV1
+IncrementalUwbImuEstimator::commitFaultInjectionAuditForTesting() const {
+  return p005FaultAudit(this);
+}
 
 const gtsam::ISAM2& IncrementalUwbImuEstimator::backendIsam() const {
   return fixed_lag_backend_ ? fixed_lag_backend_->isam() : isam2_;
@@ -481,6 +586,13 @@ IncrementalUwbImuEstimator::backendUpdate(
     audit.new_factor_slots.assign(result.newFactorsIndices.begin(),
                                   result.newFactorsIndices.end());
     ++backend_update_count_;
+    const std::uint64_t injected_nonce =
+        hitP005Fault(this, CommitFaultPoint::DuringBackendUpdate);
+    if (injected_nonce != 0) {
+      throw std::runtime_error(
+          "injected commit failure during backend update; nonce=" +
+          std::to_string(injected_nonce));
+    }
     return audit;
   }
 
@@ -497,6 +609,13 @@ IncrementalUwbImuEstimator::backendUpdate(
   audit.new_factor_slots.assign(isam_result.newFactorsIndices.begin(),
                                 isam_result.newFactorsIndices.end());
   ++backend_update_count_;
+  const std::uint64_t injected_nonce =
+      hitP005Fault(this, CommitFaultPoint::DuringBackendUpdate);
+  if (injected_nonce != 0) {
+    throw std::runtime_error(
+        "injected commit failure during backend update; nonce=" +
+        std::to_string(injected_nonce));
+  }
   const std::size_t after = fixed_lag_backend_->timestamps().size();
   const std::size_t added = add_timestamps ? 3 : 0;
   if (before + added < after || (before + added - after) % 3 != 0) {
@@ -573,6 +692,8 @@ void IncrementalUwbImuEstimator::pruneRetainedMetadata() {
 void IncrementalUwbImuEstimator::initialize(
     const NavigationState& initial_state,
     const Eigen::Matrix<double, 15, 1>& prior_sigmas) {
+  backend_poisoned_ = false;
+  (void)armP005Fault(this, CommitFaultPoint::None);
   if (initialized_)
     throw std::logic_error("UWB/IMU estimator already initialized");
   if (!prior_sigmas.allFinite() || (prior_sigmas.array() <= 0.0).any()) {
@@ -692,7 +813,7 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
     const EpochPreparationOptions& options) {
   if (!initialized_)
     throw std::logic_error("UWB/IMU estimator is not initialized");
-  if (backend_poisoned_)
+  if (backendPoisoned())
     throw std::runtime_error(
         "backend is fail-closed after a partial update exception");
   if (active_transaction_id_)
@@ -2118,13 +2239,19 @@ EstimatorCacheAudit IncrementalUwbImuEstimator::cacheAudit() const {
 }
 
 void IncrementalUwbImuEstimator::queryCurrentState() {
+  current_state_ = queryState(epoch_, state_timestamp_);
+}
+
+NavigationState IncrementalUwbImuEstimator::queryState(
+    std::size_t requested_epoch, TimestampNs timestamp) const {
   // GTSAM's single-key calculateEstimate<T>() still enters getDelta(), whose
   // wildfire update can visit the full Bayes tree. Solve only the current
   // cliques and their ancestor closure, then retract these three keys at the
   // stored linearization point. The closure is also the exact dependency set
   // used by the current-state marginal below.
-  const gtsam::KeyVector keys{poseKey(epoch_), velocityKey(epoch_),
-                              biasKey(epoch_)};
+  const gtsam::KeyVector keys{poseKey(requested_epoch),
+                              velocityKey(requested_epoch),
+                              biasKey(requested_epoch)};
   const gtsam::ISAM2& isam = backendIsam();
   const gtsam::GaussianBayesNet bayes_net = currentCliqueClosure(isam, keys);
   gtsam::VectorValues local_delta;
@@ -2138,13 +2265,15 @@ void IncrementalUwbImuEstimator::queryCurrentState() {
       theta.at<gtsam::Vector3>(keys[1]), local_delta.at(keys[1]));
   const auto bias = gtsam::traits<gtsam::imuBias::ConstantBias>::Retract(
       theta.at<gtsam::imuBias::ConstantBias>(keys[2]), local_delta.at(keys[2]));
-  current_state_.id = StateId(epoch_);
-  current_state_.timestamp = state_timestamp_;
-  current_state_.position_world_m = pose.translation();
-  current_state_.q_world_body = Eigen::Quaterniond(pose.rotation().matrix());
-  current_state_.velocity_world_mps = velocity;
-  current_state_.accel_bias_mps2 = bias.accelerometer();
-  current_state_.gyro_bias_radps = bias.gyroscope();
+  NavigationState state;
+  state.id = StateId(requested_epoch);
+  state.timestamp = timestamp;
+  state.position_world_m = pose.translation();
+  state.q_world_body = Eigen::Quaterniond(pose.rotation().matrix());
+  state.velocity_world_mps = velocity;
+  state.accel_bias_mps2 = bias.accelerometer();
+  state.gyro_bias_radps = bias.gyroscope();
+  return state;
 }
 
 Eigen::Matrix<double, 15, 15> IncrementalUwbImuEstimator::currentJointMarginal()
@@ -2295,7 +2424,14 @@ IncrementalUwbImuEstimator::preMeasurementSnapshot(const UwbBatch& batch) {
 
 CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
     EpochTransaction&& tx, const EpochCommitPlan& plan) {
-  if (backend_poisoned_) throw std::runtime_error("backend is fail-closed");
+  return commitEpochCertified(std::move(tx), plan, nullptr, nullptr);
+}
+
+CommitReceipt IncrementalUwbImuEstimator::commitEpochCertified(
+    EpochTransaction&& tx, const EpochCommitPlan& plan,
+    const CommitProtectionEvidenceV1* protection_evidence,
+    CommitCertificationV1* certification) {
+  if (backendPoisoned()) throw std::runtime_error("backend is fail-closed");
   if (!active_transaction_id_ || *active_transaction_id_ != tx.id ||
       tx.backend_mutated || tx.base_graph_version != graph_version_ ||
       !(tx.base_version == LinearizationVersion{graph_version_,
@@ -2304,6 +2440,10 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
     throw std::logic_error("BACKEND_VERSION_MISMATCH or repeated transaction");
   }
   const auto start = std::chrono::steady_clock::now();
+
+  // Everything that can be validated, allocated, or copied without touching
+  // iSAM is completed before arming the mutation guard.  After the update the
+  // code below writes only staged copies until the complete receipt exists.
   gtsam::NonlinearFactorGraph graph;
   std::vector<const PendingFactorGroup*> all_groups;
   all_groups.push_back(&tx.imu_group);
@@ -2378,208 +2518,362 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpoch(
     throw std::logic_error(
         "commit plan attempts duplicate factor-slot removal");
   }
+  CommitCertificationV1 staged_certification;
+  bool protection_evidence_valid = false;
+  if (protection_evidence) {
+    std::string evidence_reason;
+    protection_evidence_valid = consumeCommitProtectionEvidenceV1(
+        *protection_evidence, tx, config_.realtime.world_frame,
+        &evidence_reason);
+    if (!protection_evidence_valid) {
+      throw std::invalid_argument(
+          "commit protection rejected before mutation: " + evidence_reason);
+    }
+    staged_certification.protected_reference =
+        protection_evidence->reference;
+    staged_certification.protection_token_identity =
+        protection_evidence->token_identity;
+  }
   gtsam::Values values;
   values.insert(poseKey(tx.proposed_epoch), toGtsamPose(tx.cv_predicted_state));
   values.insert(velocityKey(tx.proposed_epoch),
                 tx.cv_predicted_state.velocity_world_mps);
   values.insert(biasKey(tx.proposed_epoch), toGtsamBias(tx.cv_predicted_state));
-  BackendUpdateAudit update;
-  try {
-    update =
-        backendUpdate(graph, values, tx.proposed_epoch, true, remove_slots);
-  } catch (...) {
-    backend_poisoned_ = true;
-    active_transaction_id_.reset();
-    adapter_transaction_.reset();
-    pending_epoch_ = false;
-    throw;
-  }
-  tx.backend_mutated = true;
-  epoch_ = tx.proposed_epoch;
-  state_timestamp_ = tx.end;
-  if (update.marginalized_epochs > 0) {
-    marginalization_count_ += update.marginalized_epochs;
-    ++ordering_version_;
-  }
-  ++graph_version_;
-  ++linpoint_version_;
-  for (std::size_t i = 0; i < tx.imu_cursor.consume_count; ++i)
-    imu_queue_.pop_front();
-  imu_boundary_ = tx.imu_cursor.new_boundary;
-  const auto state_query_start = std::chrono::steady_clock::now();
-  queryCurrentState();
-  last_state_query_ms_ = elapsedMs(state_query_start);
-  state_history_[epoch_] = current_state_;
-  prefix_covariances_[epoch_] = currentJointMarginal();
-
-  // Historical removal/replacement can change every retained state linpoint.
-  // Synchronize the recovery catalog with the single post-update estimate so
-  // the next transaction never mixes pre- and post-recovery states.
-  if (!plan.groups_to_remove.empty()) {
-    const gtsam::Values recovered_values = backendIsam().calculateEstimate();
-    for (auto& item : state_history_) {
-      if (!recovered_values.exists(poseKey(item.first)) ||
-          !recovered_values.exists(velocityKey(item.first)) ||
-          !recovered_values.exists(biasKey(item.first)))
-        continue;
-      item.second =
-          stateFromValues(recovered_values, item.first, item.second.timestamp);
-    }
-    current_state_ = state_history_.at(epoch_);
-  }
-
-  factor_ledger_.recordSelected(tx, plan.groups_to_add);
-  for (const auto& item : plan.group_health) {
-    factor_ledger_.setHealth(FactorGroupId(item.first), item.second);
-  }
-  const auto& active = activeGraph();
-  factor_ledger_.markSlotsAbsent(active, oldestRetainedEpoch());
-  std::set<std::size_t> previously_occupied(remove_slots.begin(),
-                                            remove_slots.end());
-  std::set<std::size_t> reused_slots;
-  for (const auto* group : selected_groups) {
-    std::vector<std::size_t> slots;
-    for (const auto& expected : group->factors) {
-      bool found = false;
-      for (std::size_t slot = 0; slot < active.size(); ++slot) {
-        if (active[slot] && active[slot].get() == expected.get()) {
-          slots.push_back(slot);
-          found = true;
-          break;
-        }
-      }
-      if (!found)
-        throw std::runtime_error(
-            "committed factor identity missing from backend");
-    }
-    factor_ledger_.activate(
-        group->id, slots,
-        {graph_version_, ordering_version_, 1, linpoint_version_});
-    for (const auto slot : slots) {
-      if (previously_occupied.count(slot)) reused_slots.insert(slot);
-    }
-  }
-  for (const auto group : plan.groups_to_remove) {
-    std::optional<FactorGroupId> replacement;
-    const auto relation = plan.replacement_relations.find(group.value());
-    if (relation != plan.replacement_relations.end()) {
-      replacement = FactorGroupId(relation->second);
-    }
-    factor_ledger_.transition(
-        group,
-        replacement ? FactorLifecycle::SupersededByBridge
-                    : FactorLifecycle::RemovedByFde,
-        {graph_version_, ordering_version_, 1, linpoint_version_}, replacement);
-  }
-  factor_ledger_.syncBoundaryFactors(
-      activeGraph(), update.boundary_factor_slots, state_timestamp_, epoch_,
-      {graph_version_, ordering_version_, 1, linpoint_version_});
-  if (fixed_lag_backend_) {
-    factor_ledger_.pruneInactiveBefore(oldestRetainedEpoch());
-  }
-
-  for (auto& committed : committed_epochs_) {
-    std::vector<FactorGroupId> removed_from_record;
-    for (const auto removed : plan.groups_to_remove) {
-      auto selected = std::find(committed.selected_groups.begin(),
-                                committed.selected_groups.end(), removed);
-      if (selected != committed.selected_groups.end()) {
-        committed.selected_groups.erase(selected);
-        removed_from_record.push_back(removed);
-      }
-    }
-    if (removed_from_record.empty()) continue;
-    for (const auto* group : selected_groups) {
-      if (group->replaces_group &&
-          std::find(removed_from_record.begin(), removed_from_record.end(),
-                    *group->replaces_group) != removed_from_record.end()) {
-        committed.selected_groups.push_back(group->id);
-        if (group->kind == FactorKind::UwbBatch) {
-          committed.transaction.uwb_groups.push_back(*group);
-        } else if (group->kind == FactorKind::KinematicBridge) {
-          committed.transaction.generic_bridge_group = *group;
-        } else if (group->kind == FactorKind::BiasContinuity) {
-          committed.transaction.generic_bias_continuity_group = *group;
-        }
-      }
-    }
-  }
+  FactorLedger staged_ledger = factor_ledger_;
+  auto staged_committed_epochs = committed_epochs_;
+  auto staged_committed_batches = committed_uwb_batches_;
+  auto staged_state_history = state_history_;
+  auto staged_prefix_covariances = prefix_covariances_;
+  auto staged_imu_queue = imu_queue_;
+  const auto staged_imu_boundary = tx.imu_cursor.new_boundary;
   EpochTransaction committed_transaction = tx;
   committed_transaction.frozen_graph.reset();
   committed_transaction.frozen_values.reset();
   committed_transaction.frozen_slots.clear();
   committed_transaction.recoverable_history.clear();
-
-  // A recovery commit may add replacement groups that belong to older
-  // committed epochs.  Those groups are transferred to the corresponding
-  // records above and must not also be advertised as selected by the current
-  // epoch: the current transaction does not own their factor catalog.  Doing
-  // so makes the very next frozen-window inventory report missing provenance.
-  std::set<std::uint64_t> current_catalog;
-  current_catalog.insert(tx.imu_group.id.value());
-  for (const auto& group : tx.uwb_groups) {
-    current_catalog.insert(group.id.value());
-  }
-  current_catalog.insert(tx.generic_bridge_group.id.value());
-  current_catalog.insert(tx.generic_bias_continuity_group.id.value());
-  if (tx.dynamics_bridge_group) {
-    current_catalog.insert(tx.dynamics_bridge_group->id.value());
-  }
   std::vector<FactorGroupId> current_selected_groups;
-  for (const auto group : plan.groups_to_add) {
-    if (current_catalog.count(group.value()) != 0) {
-      current_selected_groups.push_back(group);
-    }
-  }
-  committed_epochs_.push_back(CommittedEpochRecord{
-      std::move(committed_transaction), std::move(current_selected_groups)});
-
-  current_uwb_committed_ = false;
-  for (const auto& group : tx.uwb_groups) {
-    if (selected_ids.count(group.id.value())) current_uwb_committed_ = true;
-  }
-  if (current_uwb_committed_)
-    committed_uwb_batches_.emplace_back(epoch_, tx.uwb_batch.id);
-  pruneRetainedMetadata();
-  pending_epoch_ = false;
-  pending_batch_id_.reset();
-  active_transaction_id_.reset();
-  adapter_transaction_.reset();
-  last_uwb_update_ms_ = elapsedMs(start);
-
+  current_selected_groups.reserve(plan.groups_to_add.size());
   CommitReceipt receipt;
-  receipt.transaction_id = tx.id;
-  receipt.action_id = plan.action_id;
-  receipt.graph_version = graph_version_;
-  receipt.committed_epoch = epoch_;
-  receipt.state_timestamp = state_timestamp_;
-  receipt.added_factor_slots = update.new_factor_slots;
-  receipt.removed_factor_slots = update.removed_factor_slots;
-  receipt.marginalized_keys = update.marginalized_keys;
-  receipt.boundary_factor_slots = update.boundary_factor_slots;
+  receipt.added_factor_slots.reserve(graph.size());
+  receipt.removed_factor_slots.reserve(remove_slots.size());
   receipt.group_to_slots.clear();
-  for (const auto* group : selected_groups) {
-    receipt.group_to_slots[group->id.value()] =
-        factor_ledger_.activeSlots(group->id);
-  }
-  receipt.reused_factor_slots.assign(reused_slots.begin(), reused_slots.end());
-  receipt.recovery_epoch_begin = plan.recovery_epoch_begin;
-  receipt.recovery_epoch_end = plan.recovery_epoch_end;
-  for (const auto group : plan.groups_to_remove) {
-    const auto entries = factor_ledger_.groupEntries(group);
-    if (!entries.empty() && entries.front().epoch_end < tx.proposed_epoch) {
-      receipt.historical_groups_removed.push_back(group);
+
+  auto inject = [&](CommitFaultPoint point, const char* boundary) {
+    const std::uint64_t injected_nonce = hitP005Fault(this, point);
+    if (injected_nonce != 0) {
+      throw std::runtime_error(std::string("injected commit failure at ") +
+                               boundary + "; nonce=" +
+                               std::to_string(injected_nonce));
     }
-  }
-  for (const auto* group : selected_groups) {
-    if (group->recovery_epoch != 0 &&
-        group->recovery_epoch == tx.proposed_epoch) {
-      receipt.historical_groups_added.push_back(group->id);
+  };
+  inject(CommitFaultPoint::BeforeBackendUpdate, "before_backend_update");
+
+  const std::uint64_t updates_before = backend_update_count_;
+  BackendUpdateAudit update;
+  std::string boundary = "backend_update";
+  tx.backend_mutated = true;  // guard is armed before iSAM can mutate
+  try {
+    update = backendUpdate(graph, values, tx.proposed_epoch, true, remove_slots);
+    boundary = "after_backend_update";
+    inject(CommitFaultPoint::AfterBackendUpdate, boundary.c_str());
+
+    const std::size_t staged_epoch = tx.proposed_epoch;
+    const TimestampNs staged_timestamp = tx.end;
+    const std::uint64_t staged_graph_version = graph_version_ + 1;
+    const std::uint64_t staged_linpoint_version = linpoint_version_ + 1;
+    const std::uint64_t staged_ordering_version =
+        ordering_version_ + (update.marginalized_epochs > 0 ? 1 : 0);
+    const std::uint64_t staged_marginalization_count =
+        marginalization_count_ + update.marginalized_epochs;
+    const LinearizationVersion staged_version{
+        staged_graph_version, staged_ordering_version, 1,
+        staged_linpoint_version};
+    const std::uint32_t retained = fixed_lag_backend_
+        ? static_cast<std::uint32_t>(fixed_lag_backend_->timestamps().size() / 3)
+        : static_cast<std::uint32_t>(staged_epoch + 1);
+    const std::size_t backend_oldest = retained == 0
+        ? staged_epoch : staged_epoch + 1 - retained;
+
+    for (std::size_t i = 0; i < tx.imu_cursor.consume_count; ++i) {
+      if (staged_imu_queue.empty()) {
+        throw std::logic_error("staged IMU cursor exceeds queue");
+      }
+      staged_imu_queue.pop_front();
     }
+
+    boundary = "state_query";
+    inject(CommitFaultPoint::BeforeStateQuery, boundary.c_str());
+    const auto state_query_start = std::chrono::steady_clock::now();
+    NavigationState staged_current_state =
+        queryState(staged_epoch, staged_timestamp);
+    const double staged_state_query_ms = elapsedMs(state_query_start);
+
+    boundary = "marginal_query";
+    inject(CommitFaultPoint::BeforeMarginalQuery, boundary.c_str());
+    const Eigen::Matrix<double, 15, 15> staged_current_covariance =
+        jointMarginal(staged_epoch);
+    staged_state_history[staged_epoch] = staged_current_state;
+    staged_prefix_covariances[staged_epoch] = staged_current_covariance;
+
+    // Historical replacement can alter retained nonlinear means.  Those
+    // means are written only to the staged catalog.
+    if (!plan.groups_to_remove.empty()) {
+      const gtsam::Values recovered_values = backendIsam().calculateEstimate();
+      for (auto& item : staged_state_history) {
+        if (!recovered_values.exists(poseKey(item.first)) ||
+            !recovered_values.exists(velocityKey(item.first)) ||
+            !recovered_values.exists(biasKey(item.first))) {
+          continue;
+        }
+        item.second = stateFromValues(recovered_values, item.first,
+                                      item.second.timestamp);
+      }
+      staged_current_state = staged_state_history.at(staged_epoch);
+    }
+
+    boundary = "ledger_bind";
+    inject(CommitFaultPoint::BeforeLedgerBind, boundary.c_str());
+    staged_ledger.recordSelected(tx, plan.groups_to_add);
+    for (const auto& item : plan.group_health) {
+      staged_ledger.setHealth(FactorGroupId(item.first), item.second);
+    }
+    const auto& active = activeGraph();
+    staged_ledger.markSlotsAbsent(active, backend_oldest);
+
+    boundary = "slot_bind";
+    inject(CommitFaultPoint::BeforeSlotBind, boundary.c_str());
+    std::set<std::size_t> previously_occupied(remove_slots.begin(),
+                                              remove_slots.end());
+    std::set<std::size_t> reused_slots;
+    for (const auto* group : selected_groups) {
+      std::vector<std::size_t> slots;
+      slots.reserve(group->factors.size());
+      for (const auto& expected : group->factors) {
+        const auto found = std::find_if(
+            active.begin(), active.end(), [&](const auto& factor) {
+              return factor && factor.get() == expected.get();
+            });
+        if (found == active.end()) {
+          throw std::runtime_error(
+              "committed factor identity missing from backend");
+        }
+        slots.push_back(static_cast<std::size_t>(found - active.begin()));
+      }
+      staged_ledger.activate(group->id, slots, staged_version);
+      for (const auto slot : slots) {
+        if (previously_occupied.count(slot)) reused_slots.insert(slot);
+      }
+    }
+    for (const auto group : plan.groups_to_remove) {
+      std::optional<FactorGroupId> replacement;
+      const auto relation = plan.replacement_relations.find(group.value());
+      if (relation != plan.replacement_relations.end()) {
+        replacement = FactorGroupId(relation->second);
+      }
+      staged_ledger.transition(
+          group,
+          replacement ? FactorLifecycle::SupersededByBridge
+                      : FactorLifecycle::RemovedByFde,
+          staged_version, replacement);
+    }
+    staged_ledger.syncBoundaryFactors(active, update.boundary_factor_slots,
+                                      staged_timestamp, staged_epoch,
+                                      staged_version);
+    if (fixed_lag_backend_) {
+      staged_ledger.pruneInactiveBefore(backend_oldest);
+    }
+
+    for (auto& committed : staged_committed_epochs) {
+      std::vector<FactorGroupId> removed_from_record;
+      for (const auto removed : plan.groups_to_remove) {
+        auto selected = std::find(committed.selected_groups.begin(),
+                                  committed.selected_groups.end(), removed);
+        if (selected != committed.selected_groups.end()) {
+          committed.selected_groups.erase(selected);
+          removed_from_record.push_back(removed);
+        }
+      }
+      if (removed_from_record.empty()) continue;
+      for (const auto* group : selected_groups) {
+        if (group->replaces_group &&
+            std::find(removed_from_record.begin(), removed_from_record.end(),
+                      *group->replaces_group) != removed_from_record.end()) {
+          committed.selected_groups.push_back(group->id);
+          if (group->kind == FactorKind::UwbBatch) {
+            committed.transaction.uwb_groups.push_back(*group);
+          } else if (group->kind == FactorKind::KinematicBridge) {
+            committed.transaction.generic_bridge_group = *group;
+          } else if (group->kind == FactorKind::BiasContinuity) {
+            committed.transaction.generic_bias_continuity_group = *group;
+          }
+        }
+      }
+    }
+
+    // A recovery commit may add replacement groups that belong to older
+    // committed epochs.  Those groups are transferred to the corresponding
+    // records above and must not also be advertised as selected by the current
+    // epoch: the current transaction does not own their factor catalog.
+    std::set<std::uint64_t> current_catalog;
+    current_catalog.insert(tx.imu_group.id.value());
+    for (const auto& group : tx.uwb_groups) {
+      current_catalog.insert(group.id.value());
+    }
+    current_catalog.insert(tx.generic_bridge_group.id.value());
+    current_catalog.insert(tx.generic_bias_continuity_group.id.value());
+    if (tx.dynamics_bridge_group) {
+      current_catalog.insert(tx.dynamics_bridge_group->id.value());
+    }
+    for (const auto group : plan.groups_to_add) {
+      if (current_catalog.count(group.value()) != 0) {
+        current_selected_groups.push_back(group);
+      }
+    }
+    staged_committed_epochs.push_back(CommittedEpochRecord{
+        std::move(committed_transaction), std::move(current_selected_groups)});
+
+    bool staged_current_uwb_committed = false;
+    for (const auto& group : tx.uwb_groups) {
+      if (selected_ids.count(group.id.value())) {
+        staged_current_uwb_committed = true;
+      }
+    }
+    if (staged_current_uwb_committed) {
+      staged_committed_batches.emplace_back(staged_epoch, tx.uwb_batch.id);
+    }
+
+    boundary = "metadata_prune";
+    inject(CommitFaultPoint::BeforeMetadataPrune, boundary.c_str());
+    const std::size_t configured_history =
+        static_cast<std::size_t>(config_.integrity_window.epochs) +
+        static_cast<std::size_t>(
+            config_.integrity_window.recovery_margin_epochs) + 1;
+    std::size_t oldest = staged_epoch > configured_history
+        ? staged_epoch - configured_history : 0;
+    if (fixed_lag_backend_) oldest = std::max(oldest, backend_oldest);
+    while (!staged_committed_batches.empty() &&
+           staged_committed_batches.front().first < oldest) {
+      staged_committed_batches.pop_front();
+    }
+    while (!staged_committed_epochs.empty() &&
+           staged_committed_epochs.front().transaction.proposed_epoch <= oldest) {
+      staged_committed_epochs.pop_front();
+    }
+    for (auto it = staged_state_history.begin();
+         it != staged_state_history.end() && it->first < oldest;) {
+      it = staged_state_history.erase(it);
+    }
+    for (auto it = staged_prefix_covariances.begin();
+         it != staged_prefix_covariances.end() && it->first < oldest;) {
+      it = staged_prefix_covariances.erase(it);
+    }
+
+    boundary = "receipt_creation";
+    inject(CommitFaultPoint::BeforeReceiptCreation, boundary.c_str());
+    receipt.transaction_id = tx.id;
+    receipt.action_id = plan.action_id;
+    receipt.graph_version = staged_graph_version;
+    receipt.committed_epoch = staged_epoch;
+    receipt.state_timestamp = staged_timestamp;
+    receipt.added_factor_slots = update.new_factor_slots;
+    receipt.removed_factor_slots = update.removed_factor_slots;
+    receipt.marginalized_keys = update.marginalized_keys;
+    receipt.boundary_factor_slots = update.boundary_factor_slots;
+    receipt.group_to_slots.clear();
+    for (const auto* group : selected_groups) {
+      receipt.group_to_slots[group->id.value()] =
+          staged_ledger.activeSlots(group->id);
+    }
+    receipt.reused_factor_slots.assign(reused_slots.begin(), reused_slots.end());
+    receipt.recovery_epoch_begin = plan.recovery_epoch_begin;
+    receipt.recovery_epoch_end = plan.recovery_epoch_end;
+    for (const auto group : plan.groups_to_remove) {
+      const auto entries = staged_ledger.groupEntries(group);
+      if (!entries.empty() && entries.front().epoch_end < tx.proposed_epoch) {
+        receipt.historical_groups_removed.push_back(group);
+      }
+    }
+    for (const auto* group : selected_groups) {
+      if (group->recovery_epoch != 0 &&
+          group->recovery_epoch == tx.proposed_epoch) {
+        receipt.historical_groups_added.push_back(group->id);
+      }
+    }
+    receipt.backend_updates = 1;
+    staged_certification.committed_mean_world_m =
+        staged_current_state.position_world_m;
+    staged_certification.committed_covariance = staged_current_covariance;
+    if (protection_evidence_valid) {
+      staged_certification.reference_transfer_m =
+          (staged_certification.committed_mean_world_m -
+           staged_certification.protected_reference.mean_world_m).cwiseAbs();
+      staged_certification.transferred_pl_m =
+          staged_certification.protected_reference.pl_at_reference_m +
+          staged_certification.reference_transfer_m;
+      staged_certification.reference_bound =
+          staged_certification.transferred_pl_m.allFinite();
+    }
+    staged_certification.integrity_available =
+        !plan.best_effort_integrity_unavailable &&
+        staged_certification.reference_bound;
+    receipt.integrity_available = staged_certification.integrity_available;
+
+    // Atomic metadata publication.  All operations that can query, allocate,
+    // bind, prune, or create the receipt have already succeeded.
+    factor_ledger_ = std::move(staged_ledger);
+    committed_epochs_.swap(staged_committed_epochs);
+    committed_uwb_batches_.swap(staged_committed_batches);
+    state_history_.swap(staged_state_history);
+    prefix_covariances_.swap(staged_prefix_covariances);
+    imu_queue_.swap(staged_imu_queue);
+    imu_boundary_ = staged_imu_boundary;
+    epoch_ = staged_epoch;
+    state_timestamp_ = staged_timestamp;
+    current_state_ = staged_current_state;
+    current_uwb_committed_ = staged_current_uwb_committed;
+    marginalization_count_ = staged_marginalization_count;
+    ordering_version_ = staged_ordering_version;
+    graph_version_ = staged_graph_version;
+    linpoint_version_ = staged_linpoint_version;
+    last_state_query_ms_ = staged_state_query_ms;
+    pending_epoch_ = false;
+    pending_batch_id_.reset();
+    active_transaction_id_.reset();
+    adapter_transaction_.reset();
+    last_uwb_update_ms_ = elapsedMs(start);
+    disarmP005Fault(this);
+    if (certification) *certification = std::move(staged_certification);
+    return receipt;
+  } catch (...) {
+    std::string reason = "unknown post-mutation commit failure";
+    try {
+      throw;
+    } catch (const std::exception& error) {
+      reason = error.what();
+    } catch (...) {
+    }
+    backend_poisoned_ = true;
+    active_transaction_id_.reset();
+    adapter_transaction_.reset();
+    pending_epoch_ = false;
+    pending_batch_id_.reset();
+    const CommitFaultInjectionAuditV1 fault_audit = p005FaultAudit(this);
+    disarmP005Fault(this);
+    CommitFailureReceipt terminal;
+    terminal.transaction_id = tx.id;
+    terminal.backend_updates = static_cast<std::uint32_t>(
+        std::min<std::uint64_t>(backend_update_count_ - updates_before,
+                                std::numeric_limits<std::uint32_t>::max()));
+    terminal.backend_mutated = true;
+    terminal.backend_poisoned = true;
+    terminal.committed_unprotected = true;
+    terminal.injected_fault_point = fault_audit.hit_point;
+    terminal.injected_fault_nonce = fault_audit.hit_nonce;
+    terminal.injected_fault_hit = fault_audit.hit;
+    terminal.boundary = boundary;
+    terminal.reason = "commit terminal at " + boundary + ": " + reason;
+    throw CommitTerminalError(std::move(terminal));
   }
-  receipt.backend_updates = 1;
-  receipt.integrity_available = !plan.best_effort_integrity_unavailable;
-  return receipt;
 }
 
 DiscardReceipt IncrementalUwbImuEstimator::discardEpoch(
@@ -2686,6 +2980,68 @@ EstimatorAudit IncrementalUwbImuEstimator::audit() const {
   }
   result.pending_epoch = pending_epoch_;
   result.pending_batch_id = pending_batch_id_;
+  return result;
+}
+
+CommitBoundaryAuditV1
+IncrementalUwbImuEstimator::commitBoundaryAudit() const {
+  CommitBoundaryAuditV1 out;
+  out.published_state = current_state_;
+  const auto covariance = prefix_covariances_.find(epoch_);
+  if (covariance != prefix_covariances_.end()) {
+    out.published_covariance = covariance->second;
+  }
+  out.ledger_version = factor_ledger_.version();
+  out.ledger_entries = factor_ledger_.entries();
+  for (const auto& entry : out.ledger_entries) {
+    if (entry.backend_slot && entry.lifecycle == FactorLifecycle::Active) {
+      out.active_ledger_slots.push_back(*entry.backend_slot);
+    }
+  }
+  std::sort(out.active_ledger_slots.begin(), out.active_ledger_slots.end());
+  out.committed_epoch_catalog.reserve(committed_epochs_.size());
+  for (const auto& record : committed_epochs_) {
+    out.committed_epoch_catalog.push_back({
+        record.transaction.id,
+        record.transaction.previous_epoch,
+        record.transaction.proposed_epoch,
+        record.transaction.begin,
+        record.transaction.end,
+        record.transaction.uwb_batch.id,
+        record.selected_groups});
+  }
+  out.committed_batch_catalog.assign(committed_uwb_batches_.begin(),
+                                     committed_uwb_batches_.end());
+  out.state_history = state_history_;
+  out.covariance_history = prefix_covariances_;
+  out.imu_queue.assign(imu_queue_.begin(), imu_queue_.end());
+  out.imu_boundary = imu_boundary_;
+  out.last_received_imu_timestamp = last_received_imu_timestamp_;
+  out.epoch = epoch_;
+  out.state_timestamp = state_timestamp_;
+  out.version = {graph_version_, ordering_version_, 1, linpoint_version_};
+  out.active_transaction_id =
+      active_transaction_id_ ? active_transaction_id_->value() : 0;
+  out.pending_batch_id = pending_batch_id_;
+  out.pending_epoch = pending_epoch_;
+  out.backend_poisoned = backendPoisoned();
+  out.backend_update_count = backend_update_count_;
+  return out;
+}
+
+std::vector<CommittedEpochCatalogAuditV1>
+IncrementalUwbImuEstimator::debugCommittedEpochCatalog() const {
+  std::vector<CommittedEpochCatalogAuditV1> result;
+  result.reserve(committed_epochs_.size());
+  for (const auto& record : committed_epochs_) {
+    result.push_back({record.transaction.id,
+                      record.transaction.previous_epoch,
+                      record.transaction.proposed_epoch,
+                      record.transaction.begin,
+                      record.transaction.end,
+                      record.transaction.uwb_batch.id,
+                      record.selected_groups});
+  }
   return result;
 }
 

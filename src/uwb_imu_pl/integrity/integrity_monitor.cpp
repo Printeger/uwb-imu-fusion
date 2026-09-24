@@ -7,6 +7,7 @@
 #include "uwb_imu_pl/integrity/coverage_envelope.hpp"
 #include "uwb_imu_pl/integrity/protection_level_v2.hpp"
 #include "uwb_imu_pl/integrity/statistical_bounds_cache.hpp"
+#include "uwb_imu_pl/publication/final_output_packet.hpp"
 
 #include "uwb_imu_pl/estimation/candidate_replay.hpp"
 #include "uwb_imu_pl/estimation/candidate_worker_pool.hpp"
@@ -1345,6 +1346,18 @@ RealtimeIntegrityPipeline::RealtimeIntegrityPipeline(
   if (estimator_->config().resolved_scope.enabled()) {
     health_.registerSource("generic_bridge", SensorType::Bridge);
   }
+  // Reconstruct the bridge watchdog when a pipeline is attached to an
+  // already-committed estimator (restart/replay and fault-injection cases).
+  // The ledger is authoritative: only active kinematic bridge factors count.
+  for (const auto& entry : estimator_->factorLedger().entries()) {
+    if (entry.lifecycle != FactorLifecycle::Active ||
+        entry.kind != FactorKind::KinematicBridge) {
+      continue;
+    }
+    ++consecutive_bridge_epochs_;
+    if (!bridge_start_timestamp_ || entry.time_begin < *bridge_start_timestamp_)
+      bridge_start_timestamp_ = entry.time_begin;
+  }
 }
 
 RealtimeIntegrityPipeline::~RealtimeIntegrityPipeline() = default;
@@ -1588,6 +1601,24 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(
     last_attempt_output_.state = estimator_->currentState();
     last_attempt_output_.diagnostics.status = "EXCEPTION";
     last_attempt_output_.diagnostics.reason = error.what();
+    if (const auto* terminal =
+            dynamic_cast<const CommitTerminalError*>(&error)) {
+      last_attempt_output_.transaction_id =
+          terminal->receipt().transaction_id.value();
+      last_attempt_output_.backend_updates =
+          terminal->receipt().backend_updates;
+      last_attempt_output_.batch_committed = false;
+      last_attempt_output_.stale_state = true;
+      last_attempt_output_.controlled_reinitialization_required = true;
+      last_attempt_output_.protection_level.formal_eligible = false;
+      last_attempt_output_.protection_level.availability =
+          Availability::Unavailable;
+      last_attempt_output_.protection_level.reason = terminal->what();
+      last_attempt_output_.reason_codes.push_back(
+          "POST_MUTATION_COMMIT_TERMINAL");
+      last_attempt_output_.reason_codes.push_back(
+          "COMMITTED_UNPROTECTED_REINITIALIZE");
+    }
     if (last_attempt_output_.stage_timings.empty()) {
       last_attempt_output_.stage_timings.push_back({"prepare", std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - start).count(), false, "EXCEPTION", error.what()});
@@ -1635,8 +1666,9 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
     EpochCommitPlan plan = EpochCommitPlan::nominalPlan(transaction);
     plan.best_effort_integrity_unavailable = true;
     const auto commit_start = std::chrono::steady_clock::now();
-    const CommitReceipt receipt =
-        estimator_->commitEpoch(std::move(transaction), plan);
+    CommitCertificationV1 certification;
+    const CommitReceipt receipt = estimator_->commitEpochCertified(
+        std::move(transaction), plan, nullptr, &certification);
     output.stage_timings.push_back({
         "commit",
         std::chrono::duration<double, std::milli>(
@@ -1644,6 +1676,9 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         receipt.backend_updates == 1, "EXECUTED", "nominal commit"});
     output.timestamp = receipt.state_timestamp;
     output.state = estimator_->currentState();
+    (void)recordCommittedStatePublicationV1({
+        1, receipt.transaction_id.value(), receipt.state_timestamp,
+        certification.committed_covariance});
     output.batch_committed = receipt.backend_updates == 1;
     output.backend_updates = receipt.backend_updates;
     output.selected_action_type = "KEEP_ALL";
@@ -1946,10 +1981,20 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         (!cfg.integrity_window.require_history_provenance ||
          window.capabilities.history_provenance_valid);
 
-    auto timed_commit = [&](EpochTransaction&& tx, const EpochCommitPlan& plan) {
+    auto timed_commit = [&](EpochTransaction&& tx, const EpochCommitPlan& plan,
+                            const CommitProtectionEvidenceV1* evidence = nullptr,
+                            CommitCertificationV1* certification = nullptr) {
       start_operation("commit");
       const auto start = std::chrono::steady_clock::now();
-      auto receipt = estimator_->commitEpoch(std::move(tx), plan);
+      CommitCertificationV1 local_certification;
+      auto receipt = estimator_->commitEpochCertified(
+          std::move(tx), plan, evidence,
+          certification ? certification : &local_certification);
+      const auto& final_certification = certification
+          ? *certification : local_certification;
+      (void)recordCommittedStatePublicationV1({
+          1, receipt.transaction_id.value(), receipt.state_timestamp,
+          final_certification.committed_covariance});
       output.stage_timings.push_back({"commit", std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - start).count(), true, "EXECUTED", ""});
       return receipt;
@@ -3148,14 +3193,19 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           const bool current_bridge_selected = std::find(
               plan.groups_to_add.begin(), plan.groups_to_add.end(),
               transaction.generic_bridge_group.id) != plan.groups_to_add.end();
+          auto staged_bridge_start_timestamp = bridge_start_timestamp_;
+          std::uint32_t staged_consecutive_bridge_epochs =
+              consecutive_bridge_epochs_;
           if (current_bridge_selected) {
-            if (!bridge_start_timestamp_) bridge_start_timestamp_ = batch.timestamp;
-            ++consecutive_bridge_epochs_;
+            if (!staged_bridge_start_timestamp) {
+              staged_bridge_start_timestamp = batch.timestamp;
+            }
+            ++staged_consecutive_bridge_epochs;
             const double duration = batch.timestamp.seconds() -
-                bridge_start_timestamp_->seconds();
+                staged_bridge_start_timestamp->seconds();
             BridgeAuditRecord bridge;
             bridge.mode = toString(action.bridge_mode);
-            bridge.consecutive_epochs = consecutive_bridge_epochs_;
+            bridge.consecutive_epochs = staged_consecutive_bridge_epochs;
             bridge.duration_s = duration;
             bridge.model_id = "GENERIC_KINEMATIC_CV";
             bridge.dt_s = transaction.end.seconds() - transaction.begin.seconds();
@@ -3173,7 +3223,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             bridge.status = "ACTIVE";
             output.bridge_audit = bridge;
             if (bridgeTimeoutExceeded(
-                    consecutive_bridge_epochs_, duration,
+                    staged_consecutive_bridge_epochs, duration,
                     cfg.bridge.max_consecutive_epochs,
                     cfg.bridge.max_duration_s)) {
               (void)pending_health.fail("generic_bridge", "BRIDGE_TIMEOUT");
@@ -3182,6 +3232,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               const auto receipt = timed_discard(
                   std::move(transaction), reason);
               health_ = pending_health;
+              bridge_start_timestamp_ = staged_bridge_start_timestamp;
+              consecutive_bridge_epochs_ = staged_consecutive_bridge_epochs;
               output.timestamp = receipt.last_committed_timestamp;
               output.state = estimator_->currentState();
               output.stale_state = true;
@@ -3206,8 +3258,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               return output;
             }
           } else {
-            consecutive_bridge_epochs_ = 0;
-            bridge_start_timestamp_.reset();
+            staged_consecutive_bridge_epochs = 0;
+            staged_bridge_start_timestamp.reset();
           }
           const bool uwb_committed = std::any_of(
               plan.groups_to_add.begin(), plan.groups_to_add.end(),
@@ -3216,9 +3268,41 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
                        id != transaction.generic_bridge_group.id &&
                        id != transaction.generic_bias_continuity_group.id;
               });
+          const auto selected = std::find_if(
+              candidates.begin(), candidates.end(),
+              [](const CandidateEvaluation& value) { return value.selected; });
+          auto selected_pl = candidate_pl.end();
+          std::uint64_t selected_pl_proof_identity = 0;
+          if (selected != candidates.end()) {
+            selected_pl = candidate_pl.find(selected->action.id.value());
+            const auto proof = candidate_pl_proof.find(
+                selected->action.id.value());
+            selected_pl_proof_identity = proof == candidate_pl_proof.end()
+                ? 0 : proof->second;
+          }
+          CommitProtectionEvidenceV1 protection_evidence;
+          bool protection_minted = false;
+          std::string protection_mint_reason;
+          if (selected != candidates.end() && selected_pl != candidate_pl.end() &&
+              selected_pl_proof_identity != 0 &&
+              selected->state_increment.allFinite() &&
+              selected_pl->second.pl_xyz_m.allFinite() &&
+              (selected_pl->second.pl_xyz_m.array() >= 0.0).all() &&
+              window.protected_state_map.cols() ==
+                  selected->state_increment.size()) {
+            protection_minted = mintCommitProtectionEvidenceV1(
+                transaction, window, *selected, selected_pl->second,
+                selected_pl_proof_identity, cfg.realtime.world_frame,
+                &protection_evidence, &protection_mint_reason);
+          }
+          CommitCertificationV1 certification;
           const CommitReceipt receipt = timed_commit(
-              std::move(transaction), plan);
+              std::move(transaction), plan,
+              protection_minted ? &protection_evidence : nullptr,
+              &certification);
           health_ = pending_health;
+          bridge_start_timestamp_ = staged_bridge_start_timestamp;
+          consecutive_bridge_epochs_ = staged_consecutive_bridge_epochs;
           output.backend_updates = receipt.backend_updates;
           for (const auto id : receipt.historical_groups_removed) {
             output.historical_groups_removed.push_back(id.value());
@@ -3233,41 +3317,45 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           output.fde_status = toString(decision.status);
           output.state = estimator_->currentState();
           output.batch_committed = uwb_committed;
-          const auto selected = std::find_if(candidates.begin(), candidates.end(),
-              [](const CandidateEvaluation& value) { return value.selected; });
           if (selected != candidates.end()) {
             output.diagnostics.selected_actions = 1;
             output.diagnostics.selected_step_norm =
                 selected->state_increment.norm();
             append_step_audit(selected->state_increment, "SELECTED");
-            const auto pl = candidate_pl.find(selected->action.id.value());
-            if (pl != candidate_pl.end()) {
-              output.protection_level.pl_xyz_m = pl->second.pl_xyz_m;
+            const auto pl = selected_pl;
+            if (pl != candidate_pl.end() && certification.reference_bound) {
+              output.protection_level.pl_xyz_m = certification.transferred_pl_m;
               output.protection_level.nominal_component_m =
-                  pl->second.nominal_component_m;
+                  pl->second.nominal_component_m +
+                  certification.reference_transfer_m;
               output.protection_level.fault_component_m =
                   pl->second.fault_component_m;
               output.bridge_component_m = pl->second.bridge_component_m;
-              output.protection_level.hpl_m = pl->second.hpl_m;
-              output.protection_level.vpl_m = pl->second.vpl_m;
+              output.protection_level.hpl_m = std::hypot(
+                  certification.transferred_pl_m.x(),
+                  certification.transferred_pl_m.y());
+              output.protection_level.vpl_m = certification.transferred_pl_m.z();
               output.protection_level.allocated_hmi_risk =
                   pl->second.allocated_outcome_risk;
               output.protection_level.risk_budget_valid =
                   final_risk.complete_bound_closes &&
                   final_risk.all_terms_validated;
-              const auto proof = candidate_pl_proof.find(
-                  selected->action.id.value());
-              const std::uint64_t pl_proof_identity =
-                  proof == candidate_pl_proof.end() ? 0 : proof->second;
               std::string pl_proof_reason;
               std::string publication_packet;
-              const bool packet_bound = pl_proof_identity != 0 &&
-                  bindProtectionLevelPublicationPacket(
-                      *selected, pl->second, pl_proof_identity,
+              const bool packet_bound = selected_pl_proof_identity != 0 &&
+                  bindTransferredProtectionLevelPublicationPacket(
+                      *selected, pl->second, selected_pl_proof_identity,
+                      certification.protected_reference.mean_world_m,
+                      certification.committed_mean_world_m,
+                      certification.transferred_pl_m,
+                      receipt.state_timestamp.value(),
+                      certification.protected_reference.frame_id,
+                      certification.protected_reference.position_reference,
                       &publication_packet);
               if (!packet_bound ||
                   !validateProtectionLevelPublicationProof(
-                      pl_proof_identity, pl->second.pl_xyz_m,
+                      selected_pl_proof_identity,
+                      certification.transferred_pl_m,
                       publication_packet,
                       &pl_proof_reason)) {
                 output.protection_level.detector_certificate_id.clear();
@@ -3281,6 +3369,20 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
                 output.protection_level.detector_certificate_id =
                     publication_packet;
               }
+            } else {
+              output.protection_level.pl_xyz_m.setConstant(
+                  std::numeric_limits<double>::infinity());
+              output.protection_level.hpl_m =
+                  std::numeric_limits<double>::infinity();
+              output.protection_level.vpl_m =
+                  std::numeric_limits<double>::infinity();
+              output.protection_level.risk_budget_valid = false;
+              output.protection_level.detector_certificate_id.clear();
+              output.protection_level.reason =
+                  "committed nonlinear mean has no bound PL reference" +
+                  (protection_mint_reason.empty()
+                       ? std::string()
+                       : ": " + protection_mint_reason);
             }
           }
           output.protection_level.availability = Availability::Unavailable;

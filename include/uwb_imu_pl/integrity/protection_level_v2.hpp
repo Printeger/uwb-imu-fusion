@@ -3,6 +3,7 @@
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
 #include "uwb_imu_pl/integrity/hypothesis_evidence.hpp"
 #include "uwb_imu_pl/integrity/dual_channel_detector.hpp"
+#include "uwb_imu_pl/estimation/epoch_transaction.hpp"
 
 #include <functional>
 #include <map>
@@ -87,6 +88,25 @@ struct ProtectionLevelPublicationPacketV1 {
   std::uint64_t packet_identity = 0;
 };
 
+// P0-05 transfer metadata is deliberately carried by a new versioned type.
+// The V1 definition above is part of the golden-p0-04 public ABI and must not
+// grow or change offsets.
+struct ProtectionLevelPublicationPacketV2 {
+  std::uint64_t schema_version = 2;
+  std::uint64_t candidate_proof_identity = 0;
+  std::uint64_t protection_proof_identity = 0;
+  Eigen::Vector3d served_pl = Eigen::Vector3d::Zero();
+  Eigen::Vector3d reference_pl = Eigen::Vector3d::Zero();
+  Eigen::Vector3d reference_mean_world_m = Eigen::Vector3d::Zero();
+  Eigen::Vector3d committed_mean_world_m = Eigen::Vector3d::Zero();
+  Eigen::Vector3d triangle_transfer_m = Eigen::Vector3d::Zero();
+  std::int64_t timestamp_ns = 0;
+  std::string frame_id;
+  std::string position_reference;
+  std::string detector_certificate_id;
+  std::uint64_t packet_identity = 0;
+};
+
 bool validateProtectionLevelV2ProofPayload(
     const ProtectionLevelV2ProofV1& proof,
     std::string* reason = nullptr);
@@ -109,9 +129,23 @@ bool bindProtectionLevelPublicationPacket(
     const ProtectionLevelV2Result& result,
     std::uint64_t protection_proof_identity,
     std::string* packet_id);
+bool bindTransferredProtectionLevelPublicationPacket(
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    std::uint64_t protection_proof_identity,
+    const Eigen::Vector3d& reference_mean_world_m,
+    const Eigen::Vector3d& committed_mean_world_m,
+    const Eigen::Vector3d& transferred_pl_m,
+    std::int64_t timestamp_ns,
+    const std::string& frame_id,
+    const std::string& position_reference,
+    std::string* packet_id);
 bool protectionLevelPublicationPacket(
     const std::string& packet_id,
     ProtectionLevelPublicationPacketV1* packet);
+bool protectionLevelPublicationPacketV2(
+    const std::string& packet_id,
+    ProtectionLevelPublicationPacketV2* packet);
 std::uint64_t protectionLevelPublicationProofIdentity(
     const Eigen::Vector3d& served_pl,
     const std::string& detector_certificate_id);
@@ -119,6 +153,27 @@ bool validateProtectionLevelPublicationProof(
     std::uint64_t proof_identity,
     const Eigen::Vector3d& served_pl,
     const std::string& detector_certificate_id,
+    std::string* reason = nullptr);
+
+// Mint/consume the single-use handoff used by the P0-05 commit boundary.
+// Minting independently validates the P0-03 candidate and PL proof payloads
+// and derives the reference mean from the frozen window and candidate step.
+// Consumption compares the complete registered value and erases it before
+// any backend mutation, so fabricated, stale, replayed, or altered evidence
+// can never mark a receipt protected.
+bool mintCommitProtectionEvidenceV1(
+    const EpochTransaction& transaction,
+    const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    std::uint64_t protection_proof_identity,
+    const std::string& frame_id,
+    CommitProtectionEvidenceV1* evidence,
+    std::string* reason = nullptr);
+bool consumeCommitProtectionEvidenceV1(
+    const CommitProtectionEvidenceV1& evidence,
+    const EpochTransaction& transaction,
+    const std::string& expected_frame_id,
     std::string* reason = nullptr);
 
 struct FrozenBridgeProjection {

@@ -1,0 +1,62 @@
+{
+  "schema": "uwb-imu-pl/p0-05-boundary-replay/v3",
+  "base": "golden-p0-04-risk",
+  "transaction_boundaries": {
+    "before_backend_update": "discardable",
+    "during_backend_update": "poisoned_committed_unprotected",
+    "after_backend_update": "poisoned_committed_unprotected",
+    "state_query": "poisoned_committed_unprotected",
+    "marginal_query": "poisoned_committed_unprotected",
+    "ledger_bind": "poisoned_committed_unprotected",
+    "slot_bind": "poisoned_committed_unprotected",
+    "metadata_prune": "poisoned_committed_unprotected",
+    "receipt_creation": "poisoned_committed_unprotected"
+  },
+  "publication_boundaries": {
+    "unprotected_candidate_publish_invocation": "actual_publish_call_recorded",
+    "unprotected_candidate_publish_return": "actual_publish_return_and_outcome_recorded",
+    "slow_return_deadline_100_140_1170": "one_terminal_packet_unprotected_deadline_missed",
+    "atomic_receipt_digest": "exactly_equal_to_returned_packet_digest",
+    "partial_second_sink_exception": "only_non_authoritative_unprotected_candidate_visible",
+    "non_atomic_fanout": "protected_receipt_activation_refused",
+    "clock_reverse": "unprotected_clock_invalid",
+    "queue_overflow": "unprotected_overflow",
+    "receipt": "all_ros_csv_mirrors_unprotected_non_authoritative_atomic_receipt_absent"
+  },
+  "o08_independent_snapshot_fields": [
+    "current_state", "current_covariance", "ledger_version", "ledger_entries",
+    "active_slots", "committed_catalog", "prune_catalog", "state_history",
+    "covariance_history", "imu_queue", "imu_boundary", "bridge_audit",
+    "health_state", "graph_version", "ordering_version",
+    "linearization_version", "epoch_version", "active_transaction",
+    "pending_transaction", "backend_updates", "backend_poisoned"
+  ],
+  "o08_raw_covariance_precondition": {
+    "finite": true,
+    "raw_symmetry_relative_tolerance": 1e-12,
+    "worst_antisymmetry_norm": 0.0,
+    "symmetrize_only_after_raw_assertion": true,
+    "strict_positive_minimum_eigenvalue": true
+  },
+  "o08_fault_hit_identity": {
+    "one_shot_monotonic_nonce": true,
+    "terminal_receipt_matches_point_and_nonce": true,
+    "debug_sidecar_matches_point_nonce_hit_and_consumed": true,
+    "natural_backend_exception_can_enter_reached_set": false,
+    "exact_reached_points": 8,
+    "exact_unique_nonces": 8
+  },
+  "proof_reference_negative_replays": [
+    "missing", "fake_1234", "tamper_then_replay", "stale",
+    "transaction_mismatch", "infinite", "overflow"
+  ],
+  "reference_oracle": "separately constructed raw-factor GTSAM batch LM and Marginals; full Pose3 Logmap, velocity, biases, time and 15x15 covariance; then L_commit[i] = L_ref[i] + abs(p_commit[i] - p_ref[i])",
+  "odometry_oracle": {
+    "yaw_deg": 90,
+    "world_velocity": [1, 0, 0],
+    "child_velocity": [0, -1, 0],
+    "world_covariance": [[1, 0.2, 0.3], [0.2, 4, 0.5], [0.3, 0.5, 9]],
+    "child_covariance": [[4, -0.2, 0.5], [-0.2, 1, -0.3], [0.5, -0.3, 9]]
+  },
+  "result": "PASS"
+}

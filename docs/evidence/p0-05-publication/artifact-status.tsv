@@ -1,0 +1,12 @@
+artifact	status	provenance_or_reason
+artifacts/ros-simulator/resolved_config.yaml	USED_RETAINED	/tmp/p005_ros_repro/resolved_config.yaml from the accepted simulator capture
+artifacts/ros-simulator/run_manifest.json	USED_RETAINED	/tmp/p005_ros_repro/run_manifest.json from the accepted simulator capture
+artifacts/ros-simulator/integrity_fault_manifest.yaml	USED_RETAINED	config/integrity_fault_manifest.yaml resolved by the accepted simulator configuration
+artifacts/ros-simulator/realtime_integrity_sim.launch.txt	USED_RETAINED	byte-identical copy of launch/realtime_integrity_sim.launch invoked by reproduce_ros_capture.sh; .txt prevents ROS package discovery from treating evidence as a duplicate launch target
+artifacts/ros-simulator/ground_truth.csv	GENERATED_TRUTH_RETAINED	/tmp/p005_ros_repro/ground_truth.csv emitted by the live simulator run
+artifacts/ros-simulator/fault_truth.csv	GENERATED_TRUTH_RETAINED	/tmp/p005_ros_repro/fault_truth.csv emitted by the live simulator run
+simulator_input_file	N/A	No prerecorded input file was used; realtime_integrity_sim.launch generated live ROS IMU/UWB messages as recorded by run_manifest.json
+certified_capture_resolved_config	N/A	The controlled p005_ros_certified_publisher binary constructs its frozen transaction in code and does not load a YAML configuration
+certified_capture_run_manifest	N/A	The controlled certified publisher is a directed ROS oracle and does not create a run manifest
+certified_capture_input_file	N/A	The controlled certified publisher constructs its deterministic factors in test/p005_ros_certified_publisher.cpp and consumes no external replay input
+physical_sensor_input	NOT_RUN	P0-05 used the ROS simulator and controlled publisher; no physical UWB/IMU campaign was claimed

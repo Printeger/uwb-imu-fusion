@@ -761,6 +761,7 @@ std::string runScenario(const std::string& config_path,
           sameDecisionSignature(diagnostic_low, diagnostic_high);
     }
     const bool safety_failure = result.backend_update_violation ||
+        !result.risk_budget_closed || !result.protected_available ||
         !result.post_fde_detector_passed || result.hmi ||
         !expectation_failure.empty();
     const std::string status = !result.valid ? "INVALID" :

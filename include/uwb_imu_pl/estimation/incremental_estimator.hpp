@@ -64,6 +64,54 @@ struct EstimatorCacheAudit {
   std::string last_invalidation_reason;
 };
 
+struct CommittedEpochCatalogAuditV1 {
+  TransactionId transaction_id;
+  std::size_t previous_epoch = 0;
+  std::size_t proposed_epoch = 0;
+  TimestampNs begin;
+  TimestampNs end;
+  BatchId uwb_batch_id;
+  std::vector<FactorGroupId> selected_groups;
+};
+
+struct CommitBoundaryAuditV1 {
+  NavigationState published_state;
+  Eigen::Matrix<double, 15, 15> published_covariance =
+      Eigen::Matrix<double, 15, 15>::Constant(
+          std::numeric_limits<double>::quiet_NaN());
+  std::uint64_t ledger_version = 0;
+  std::vector<FactorLedgerEntry> ledger_entries;
+  std::vector<std::size_t> active_ledger_slots;
+  std::vector<CommittedEpochCatalogAuditV1> committed_epoch_catalog;
+  std::vector<std::pair<std::size_t, BatchId>> committed_batch_catalog;
+  std::map<std::size_t, NavigationState> state_history;
+  std::map<std::size_t, Eigen::Matrix<double, 15, 15>> covariance_history;
+  std::vector<ImuMeasurement> imu_queue;
+  std::optional<ImuMeasurement> imu_boundary;
+  std::optional<TimestampNs> last_received_imu_timestamp;
+  std::size_t epoch = 0;
+  TimestampNs state_timestamp;
+  LinearizationVersion version;
+  std::uint64_t active_transaction_id = 0;
+  std::optional<BatchId> pending_batch_id;
+  bool pending_epoch = false;
+  bool backend_poisoned = false;
+  std::uint64_t backend_update_count = 0;
+};
+
+// Out-of-object test/debug sidecar. Keeping this state in the implementation
+// registry preserves the estimator's golden object layout while giving O08 an
+// unambiguous one-shot identity for the exact maybeInject invocation reached.
+struct CommitFaultInjectionAuditV1 {
+  CommitFaultPoint armed_point = CommitFaultPoint::None;
+  std::uint64_t armed_nonce = 0;
+  CommitFaultPoint hit_point = CommitFaultPoint::None;
+  std::uint64_t hit_nonce = 0;
+  bool armed = false;
+  bool hit = false;
+  bool consumed = false;
+};
+
 class IncrementalUwbEstimator {
  public:
   explicit IncrementalUwbEstimator(const IncrementalConfig& config);
@@ -107,6 +155,10 @@ class IncrementalUwbImuEstimator {
       const EpochTransaction& transaction, FactorGroupId group) const;
   CommitReceipt commitEpoch(EpochTransaction&& transaction,
                             const EpochCommitPlan& plan);
+  CommitReceipt commitEpochCertified(
+      EpochTransaction&& transaction, const EpochCommitPlan& plan,
+      const CommitProtectionEvidenceV1* protection_evidence,
+      CommitCertificationV1* certification);
   DiscardReceipt discardEpoch(EpochTransaction&& transaction,
                               const DiscardReason& reason);
 
@@ -146,6 +198,41 @@ class IncrementalUwbImuEstimator {
   const FactorLedger& factorLedger() const { return factor_ledger_; }
   std::uint64_t backendUpdateCount() const { return backend_update_count_; }
   EstimatorCacheAudit cacheAudit() const;
+  CommitBoundaryAuditV1 commitBoundaryAudit() const;
+  // Narrow read-only debug views for independent fault-injection snapshots.
+  // These expose the underlying containers instead of deriving both sides of
+  // a comparison through commitBoundaryAudit().
+  const std::map<std::size_t, NavigationState>& debugStateHistory() const {
+    return state_history_;
+  }
+  const std::map<std::size_t, Eigen::Matrix<double, 15, 15>>&
+  debugCovarianceHistory() const { return prefix_covariances_; }
+  std::vector<ImuMeasurement> debugImuQueue() const {
+    return {imu_queue_.begin(), imu_queue_.end()};
+  }
+  const std::optional<ImuMeasurement>& debugImuBoundary() const {
+    return imu_boundary_;
+  }
+  const std::optional<TimestampNs>& debugLastReceivedImuTimestamp() const {
+    return last_received_imu_timestamp_;
+  }
+  std::vector<CommittedEpochCatalogAuditV1> debugCommittedEpochCatalog() const;
+  std::vector<std::pair<std::size_t, BatchId>>
+  debugCommittedBatchCatalog() const {
+    return {committed_uwb_batches_.begin(), committed_uwb_batches_.end()};
+  }
+  LinearizationVersion debugVersion() const {
+    return {graph_version_, ordering_version_, 1, linpoint_version_};
+  }
+  std::uint64_t debugActiveTransactionId() const {
+    return active_transaction_id_ ? active_transaction_id_->value() : 0;
+  }
+  const std::optional<BatchId>& debugPendingBatchId() const {
+    return pending_batch_id_;
+  }
+  bool backendPoisoned() const;
+  std::uint64_t setCommitFaultPointForTesting(CommitFaultPoint point);
+  CommitFaultInjectionAuditV1 commitFaultInjectionAuditForTesting() const;
 
   // Method B candidate: computes the leave-current-out information downdate
   // and gates it numerically. It is never used by the formal output unless the
@@ -192,6 +279,7 @@ class IncrementalUwbImuEstimator {
       const Eigen::MatrixXd& full_jacobian,
       const Eigen::VectorXd& rhs) const;
   void queryCurrentState();
+  NavigationState queryState(std::size_t epoch, TimestampNs timestamp) const;
   CurrentStatePrior queryCurrentPrior(TimestampNs timestamp);
   Eigen::Matrix<double, 15, 15> currentJointMarginal() const;
   const gtsam::ISAM2& backendIsam() const;

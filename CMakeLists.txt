@@ -140,6 +140,7 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/integrity/dual_channel_detector.cpp
   src/uwb_imu_pl/integrity/fde_post_selection.cpp
   src/uwb_imu_pl/integrity/publication_identity.cpp
+  src/uwb_imu_pl/publication/final_output_packet.cpp
   src/uwb_imu_pl/integrity/history_summary_lifecycle.cpp
   src/uwb_imu_pl/factors/kinematic_bridge_factor.cpp
 )
@@ -351,6 +352,14 @@ if(CATKIN_ENABLE_TESTING)
   target_compile_definitions(test_publication_wiring PRIVATE
     UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
   target_link_libraries(test_publication_wiring ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_p0_05_publication test/test_p0_05_publication.cpp test/test_main.cpp)
+  target_compile_definitions(test_p0_05_publication PRIVATE
+    UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(test_p0_05_publication ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
+  add_executable(p005_ros_certified_publisher test/p005_ros_certified_publisher.cpp)
+  target_link_libraries(p005_ros_certified_publisher ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${catkin_LIBRARIES})
 
   catkin_add_gtest(test_history_summary_pipeline test/test_history_summary_pipeline.cpp test/test_main.cpp)
   target_compile_definitions(test_history_summary_pipeline PRIVATE

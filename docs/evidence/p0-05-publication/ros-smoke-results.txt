@@ -1,0 +1,134 @@
+P0-05 real ROS raw reproduction (repair attempt 25)
+
+Launch command:
+source /home/mint/ws_fusion_uwb/devel/setup.bash && \
+roslaunch uwb_imu_pl realtime_integrity_sim.launch rviz:=false \
+  enable_run_logging:=true run_directory:=/tmp/p005_ros_repair2 \
+  config_path:=/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/realtime_uwb_imu_pl_research.yaml
+
+The process used the launch file's supported figure_eight trajectory and was
+stopped by SIGINT only after capture. Topic/type/rate observations:
+/uwb_imu_pl/solution   uwb_imu_pl/NavigationIntegrity about 19.996 Hz
+/uwb_imu_pl/integrity  uwb_imu_pl/IntegrityStatus     about 19.994 Hz
+/uwb_imu_pl/odometry   nav_msgs/Odometry              about 19.993 Hz
+
+Raw simultaneous subscriber capture, canonical JSON (one physical attempt):
+{"compound_envelope":{"attempt_id":1215,"attempted_timestamp":[1790248477,675964092],"deadline_missed":false,"manifest_digest":"d2a01e7343f5c357","publication_certificate_id":0,"publication_protected":false,"publish_timestamp":[1790248477,699361692],"run_id":"/tmp/p005_ros_repair2","scope_digest":"88d5401651284008","solution_id":1,"state_timestamp":[1790248416,919876100],"transaction_id":1215},"compound_integrity":{"attempt_id":1215,"attempted_timestamp":[1790248477,675964092],"batch_committed":false,"deadline_missed":false,"fde_status":"NO_VALID_CANDIDATE","fresh":false,"hpl_m":Infinity,"pl_status":"UNBOUNDED","publication_certificate_id":0,"publication_protected":false,"publish_timestamp":[1790248477,699361692],"reason":"alarm has no risk-preserving plausible hypothesis","selected_action_id":0,"selected_action_type":"KEEP_ALL","solution_id":1,"state_timestamp":[1790248416,919876100],"state_valid":true,"transaction_id":1215,"vpl_m":Infinity,"window_id":1215},"compound_odometry":{"child_frame_id":"base_link","frame_id":"world","linear_velocity":[1.245057848601182,0.4318558403189774,0.36230785627894896],"orientation":[-0.2336938715611161,-0.17245584839356223,0.45229277974691856,0.8432540519549483],"pose_covariance":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"position":[1.2389807853895969,1.241053813645633,2.0134994899744183],"state_stamp":[1790248416,919876100]},"legacy_integrity":{"attempt_id":1215,"attempted_timestamp":[1790248477,675964092],"batch_committed":false,"deadline_missed":false,"fde_status":"NO_VALID_CANDIDATE","fresh":false,"hpl_m":Infinity,"pl_status":"UNBOUNDED","publication_certificate_id":0,"publication_protected":false,"publish_timestamp":[1790248477,699361692],"reason":"alarm has no risk-preserving plausible hypothesis","selected_action_id":0,"selected_action_type":"KEEP_ALL","solution_id":1,"state_timestamp":[1790248416,919876100],"state_valid":true,"transaction_id":1215,"vpl_m":Infinity,"window_id":1215},"legacy_odometry":{"child_frame_id":"base_link","frame_id":"world","linear_velocity":[1.245057848601182,0.4318558403189774,0.36230785627894896],"orientation":[-0.2336938715611161,-0.17245584839356223,0.45229277974691856,0.8432540519549483],"pose_covariance":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"position":[1.2389807853895969,1.241053813645633,2.0134994899744183],"state_stamp":[1790248416,919876100]}}
+canonical_sha256=2c707dde32c95d0d64f4477681a3951fdb43c3cef6803d290dbf6543a2ed1439
+
+The capture program subscribed concurrently, indexed compound and status by
+attempt_id, required complete equality of their canonical IntegrityStatus
+fields, and required equal state stamp, position, orientation, and all 36 pose
+covariance values before emitting. It exited 0.
+
+Exact /tmp/p005_ros_repair2/integrity.csv header:
+timestamp_ns,attempted_timestamp_ns,state_timestamp_ns,fde_profile,scope_digest,detector_contract_id,pl_status,within_alert_limits,state_valid,fresh,deadline_missed,reason_codes,publication_protected,publication_certificate_id,group_size,measurement_model_valid,global_statistic,global_threshold,global_dof,global_passed,postfit_statistic,postfit_threshold,postfit_dof,postfit_passed,conditional_statistic,conditional_threshold,conditional_dof,conditional_passed,conditional_formal,pl_x,pl_y,pl_z,hpl_m,vpl_m,availability,label,formal_eligible,risk_budget_valid,allocated_hmi_risk,hmi_risk_requirement,batch_committed,transaction_id,window_id,base_graph_version,linearization_version,selected_action_id,selected_action_type,fde_status,bridge_pl_x,bridge_pl_y,bridge_pl_z,history_provenance_valid,backend_updates,stale_state,controlled_reinitialization_required,historical_groups_removed,historical_groups_added,recovery_epoch_begin,recovery_epoch_end,reinitialization_request_id,reinitialization_phase,reinitialization_reason,reason
+
+Exact row whose transaction_id/window_id equal captured attempt 1215:
+1790248416919876100,1790248477675964092,1790248416919876100,"joint_order1","88d5401651284008","dual_channel_v1",UNBOUNDED,0,1,0,0,"",0,0,8,1,nan,nan,0,0,inf,0,0,0,11159,42.7009,8,0,0,inf,inf,inf,inf,inf,UNAVAILABLE,IMPLEMENTED_UNVERIFIED,0,0,inf,0,0,1215,1215,1,1,0,"KEEP_ALL","NO_VALID_CANDIDATE",0,0,0,1,0,1,0,"","",0,0,0,"RUNNING","","alarm has no risk-preserving plausible hypothesis"
+
+Post-SIGINT stable files:
+integrity.csv lines: 1808
+9f9af32fa7c6e44bf55fab7ae82823c43bbb5846ab0e5acb7708675e8a8165ee  /tmp/p005_ros_repair2/integrity.csv
+e040d7be4a519fe7df0995bde5b5b2ec82261169dd1ddfef8660923ca4ceac39  /tmp/p005_ros_repair2/run_manifest.json
+e8191d43db6fd6e37edecf8d3db582690a09ed770287327b1ded8ad61aa18196  /tmp/p005_ros_repair2/resolved_config.yaml
+
+Rejected setup attempt (repair attempt 24): adding `trajectory:=hover` caused
+trajectory_generator to exit because `hover` is unsupported by this launch.
+No evidence or acceptance claim is taken from that invalid invocation.
+
+Post-third-review checked-in reproduction
+------------------------------------------
+
+Simulator capture command:
+`docs/evidence/p0-05-publication/reproduce_ros_capture.sh`
+
+This uses the checked-in simultaneous subscriber
+`capture_ros_publication.py`.  It captured attempt 1 with
+`batch_committed=true`, `publication_protected=false`; canonical JSON is saved
+as `ros-capture-committed.json` and the exact logger output as
+`ros-integrity-committed.csv`.
+
+Controlled genuine certified reference-transfer command:
+`docs/evidence/p0-05-publication/reproduce_ros_certified_capture.sh`
+
+The checked-in publisher constructs a real estimator transaction and frozen
+window, evaluates an actual candidate and P0-03 PL proof, mints and consumes the
+single-use commit token, performs `commitEpochCertified`, verifies actual
+backend mean/covariance and the V2 transfer proof, and only then publishes the
+one terminal packet through ROS.  The capture is explicitly
+`publication_protected=false`: the formal gate was not opened.
+
+Certified raw artifacts (v2 authoritative compound receipt; standalone status
+is an explicitly unprotected, non-authoritative mirror with the same digest):
+- `ros-certified-capture.json`: canonical SHA-256
+  `4fb1deccdf3194ef78ca456ed79b4fb8ee95d3b0adf63ee949b36078abd00972`
+- `ros-certified-integrity.csv`: SHA-256
+  `ade451c9fa8578f954b0aaf944877f7bebc85116e3c0d5900ba4f8ea27743450`
+- transaction/window 1, `SUCCESS_KEEP_ALL`, finite HPL/VPL, reason contains
+  the validated `p005-pl-transfer-v2-*` identity, `batch_committed=true`, and
+  compound/legacy status semantic fields plus odometry are canonical-equal;
+  the authority bit intentionally differs.
+
+Post-fourth-review production non-atomic reproduction
+------------------------------------------------------
+
+The same simulator reproduction now executes all real compound/odometry/status
+publishes and the CSV write before the terminal return sample. All are
+explicitly unprotected/non-authoritative and share one digest. The refreshed
+artifacts are:
+- `ros-capture-committed.json`: SHA-256
+  `e72c32bd5725918925111e1a39aa39cd82589f5fa83ef0d2ae29a9f54fc02b1e`
+- `ros-integrity-committed.csv`: SHA-256
+  `7e9f83e858c119ac45d0c9f5864ce9274540b537afe1ec9e2e805a0575e081dc`
+
+The controlled certified reference-transfer reproduction has the same
+non-atomic authority semantics:
+- `ros-certified-capture.json`: SHA-256
+  `d6414fe49084a1798c6ef54d605b664acfbd97d0d5b1b3a70df16745dbf1b2fa`
+- `ros-certified-integrity.csv`: SHA-256
+  `99107d38a844f604cb83790590039d83cc524496e1561fe7e496830586ada39d`
+
+Fifth-review evidence closure
+-----------------------------
+
+The accepted simulator run's previously temporary inputs and truth are now
+retained in `artifacts/ros-simulator/`: `resolved_config.yaml`,
+`run_manifest.json`, the resolved fault manifest, the invoked launch file,
+`ground_truth.csv`, and `fault_truth.csv`. Their exact stable-path hashes are in
+`artifact-hashes.sha256` and pass `sha256sum -c` from repository root.
+
+The simulator did not consume a prerecorded input file; the retained launch
+generated live ROS IMU/UWB messages. The controlled certified publisher did
+not consume YAML, a run manifest, or an external replay input. These are `N/A`,
+not silently omitted or represented as hashed, in `artifact-status.tsv`.
+
+Sixth-review O08 repair regression
+----------------------------------
+
+After the clean rebuild, the controlled certified capture and the simulator
+capture were both rerun and passed with transaction/attempt 1,
+`batch_committed=true`, `publication_protected=false`, `formal_eligible=false`
+and non-authoritative compound/legacy/CSV mirrors carrying their common digest.
+
+The first simulator reproduction attempt exposed that retaining the invoked
+source under a second `.launch` filename made ROS package discovery ambiguous.
+The archive was renamed to `realtime_integrity_sim.launch.txt` without changing
+its bytes; no production launch or reproduction command changed. The normal
+package-name reproduction then passed. Refreshed hashes are:
+- simulator capture: `fe4f71380021ed75bbc7e16edf29175edd2941150a407571acd462589579ab45`
+- simulator CSV: `181f1f4df2dd64e9bd76747ac523509d59b1456e9f29146e3e14b7cfc206168d`
+- certified capture: `ff507093a44a7318b90e4006851b039f2761f5c1277e315bad4bdd1be5a29899`
+- certified CSV: `99107d38a844f604cb83790590039d83cc524496e1561fe7e496830586ada39d`
+
+Seventh-review controlled certified ROS regression
+--------------------------------------------------
+
+A fresh isolated-master capture after the normal rebuild passed for committed
+transaction 1. Compound integrity/envelope, legacy integrity and CSV receipt
+shared digest `8051997007928847548`; every view was explicitly
+non-authoritative, unprotected and formal-false with `map/body_origin`.
+The fresh temporary capture hash was
+`185f86496d648ed49b772e153deb1a7862c3a493813ef989e7159e380f1783b7`.
+The first ad-hoc verifier used nonexistent JSON key `compound` and exited 1;
+the capture itself was valid and the corrected full semantic verifier passed.

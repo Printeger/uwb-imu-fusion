@@ -1,0 +1,79 @@
+Command: cd /home/mint/ws_fusion_uwb/build/uwb_imu_pl && ctest --output-on-failure -j2
+Exit: 0
+
+Test project /home/mint/ws_fusion_uwb/build/uwb_imu_pl
+      Start 12: _ctest_uwb_imu_pl_gtest_test_history_fault_parameterization
+      Start 22: _ctest_uwb_imu_pl_rostest_test_realtime_integrity_viz.test
+ 1/28 Test #22: _ctest_uwb_imu_pl_rostest_test_realtime_integrity_viz.test ....   Passed    2.88 sec
+      Start 24: test_advisor_report
+ 2/28 Test #24: test_advisor_report ...........................................   Passed    1.21 sec
+      Start 21: _ctest_uwb_imu_pl_gtest_test_history_summary_pipeline
+ 3/28 Test #21: _ctest_uwb_imu_pl_gtest_test_history_summary_pipeline .........   Passed    1.13 sec
+      Start  7: _ctest_uwb_imu_pl_gtest_test_integrity_v2
+ 4/28 Test  #7: _ctest_uwb_imu_pl_gtest_test_integrity_v2 .....................   Passed    1.05 sec
+      Start 26: test_gate_d_tools
+ 5/28 Test #26: test_gate_d_tools .............................................   Passed    1.10 sec
+      Start 23: test_week4_tools
+ 6/28 Test #23: test_week4_tools ..............................................   Passed    0.81 sec
+      Start 20: _ctest_uwb_imu_pl_gtest_test_p0_05_publication
+ 7/28 Test #20: _ctest_uwb_imu_pl_gtest_test_p0_05_publication ................   Passed    0.09 sec
+      Start  4: _ctest_uwb_imu_pl_gtest_test_realtime_incremental
+ 8/28 Test  #4: _ctest_uwb_imu_pl_gtest_test_realtime_incremental .............   Passed    0.41 sec
+      Start 27: test_round3_tools
+ 9/28 Test #27: test_round3_tools .............................................   Passed    0.39 sec
+      Start 13: _ctest_uwb_imu_pl_gtest_test_history_summary_extraction
+10/28 Test #13: _ctest_uwb_imu_pl_gtest_test_history_summary_extraction .......   Passed    0.32 sec
+      Start 17: _ctest_uwb_imu_pl_gtest_test_p0_04_risk_oracle
+11/28 Test #17: _ctest_uwb_imu_pl_gtest_test_p0_04_risk_oracle ................   Passed    0.08 sec
+      Start 15: _ctest_uwb_imu_pl_gtest_test_dual_channel_detector
+12/28 Test #15: _ctest_uwb_imu_pl_gtest_test_dual_channel_detector ............   Passed    0.23 sec
+      Start  2: _ctest_uwb_imu_pl_gtest_test_integrity_config
+13/28 Test  #2: _ctest_uwb_imu_pl_gtest_test_integrity_config .................   Passed    0.23 sec
+      Start 25: test_round2_tools
+14/28 Test #25: test_round2_tools .............................................   Passed    1.10 sec
+      Start 19: _ctest_uwb_imu_pl_gtest_test_publication_wiring
+15/28 Test #19: _ctest_uwb_imu_pl_gtest_test_publication_wiring ...............   Passed    0.12 sec
+      Start 28: test_launch_contracts
+16/28 Test #28: test_launch_contracts .........................................   Passed    0.09 sec
+      Start  9: _ctest_uwb_imu_pl_gtest_test_fault_manifest
+17/28 Test  #9: _ctest_uwb_imu_pl_gtest_test_fault_manifest ...................   Passed    0.09 sec
+      Start 11: _ctest_uwb_imu_pl_gtest_test_history_fault_summary
+18/28 Test #11: _ctest_uwb_imu_pl_gtest_test_history_fault_summary ............   Passed    0.09 sec
+      Start 18: _ctest_uwb_imu_pl_gtest_test_publication_identity
+19/28 Test #18: _ctest_uwb_imu_pl_gtest_test_publication_identity .............   Passed    0.08 sec
+      Start  3: _ctest_uwb_imu_pl_gtest_test_run_logger
+20/28 Test  #3: _ctest_uwb_imu_pl_gtest_test_run_logger .......................   Passed    0.08 sec
+      Start 10: _ctest_uwb_imu_pl_gtest_test_square_root_context
+21/28 Test #10: _ctest_uwb_imu_pl_gtest_test_square_root_context ..............   Passed    0.08 sec
+      Start  8: _ctest_uwb_imu_pl_gtest_test_integrity_reference
+22/28 Test  #8: _ctest_uwb_imu_pl_gtest_test_integrity_reference ..............   Passed    0.08 sec
+      Start 16: _ctest_uwb_imu_pl_gtest_test_fde_post_selection
+23/28 Test #16: _ctest_uwb_imu_pl_gtest_test_fde_post_selection ...............   Passed    0.08 sec
+      Start 14: _ctest_uwb_imu_pl_gtest_test_history_summary_lifecycle
+24/28 Test #14: _ctest_uwb_imu_pl_gtest_test_history_summary_lifecycle ........   Passed    0.08 sec
+      Start  6: _ctest_uwb_imu_pl_gtest_test_dense_oracle
+25/28 Test  #6: _ctest_uwb_imu_pl_gtest_test_dense_oracle .....................   Passed    0.08 sec
+      Start  1: _ctest_uwb_imu_pl_gtest_test_snapshot_integrity
+26/28 Test  #1: _ctest_uwb_imu_pl_gtest_test_snapshot_integrity ...............   Passed    0.08 sec
+      Start  5: _ctest_uwb_imu_pl_gtest_test_deterministic_event
+27/28 Test  #5: _ctest_uwb_imu_pl_gtest_test_deterministic_event ..............   Passed    0.07 sec
+28/28 Test #12: _ctest_uwb_imu_pl_gtest_test_history_fault_parameterization ...   Passed   91.94 sec
+
+100% tests passed, 0 tests failed out of 28
+
+Total Test time (real) =  91.94 sec
+
+Final post-fourth-review repair rerun used the same command and exited 0:
+28/28 passed, 0 failed; final real time 92.35 sec. The normal sequence was clean,
+full all-target build (including integrity_round2_scenario and
+p005_ros_certified_publisher), tests target, then this CTest run.
+
+Sixth-review O08 repair used the same normal clean, full all-target and tests
+sequence, then the same CTest command. It exited 0 with 28/28 passed, 0 failed,
+in 91.52 seconds; the P0-05 target passed 13/13 in 0.16 seconds.
+
+Seventh-review O08 proof repair used the same normal sequence. After the final
+test-source change, complete CTest exited 0 with 28/28 passed, 0 failed, in
+91.36 seconds; the P0-05 directed binary passed 13/13 and reported raw
+antisymmetry norm 0 against tolerance 1e-12. Selected P0-01 through P0-05 and
+round2 targets passed 6/6.

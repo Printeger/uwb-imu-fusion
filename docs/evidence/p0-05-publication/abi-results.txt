@@ -1,0 +1,45 @@
+P0-05 golden-header ABI/link/run probe
+
+Headers: `git archive golden-p0-04-risk include`
+Compiler contract: the project flags include `-march=native`; the old client
+was compiled with those same Eigen alignment flags and the extracted golden
+headers before any current include directory, then linked against the current
+shared library.
+
+Command outline:
+`g++ -O3 -DNDEBUG -march=native -std=gnu++17 -pthread test/p005_golden_abi_client.cpp -I${tmp}/include -I/usr/include/eigen3 -I/usr/local/include -I/opt/ros/noetic/include -L/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib -L/usr/local/lib -luwb_imu_pl -lgtsam -lyaml-cpp -lboost_filesystem -ltbb -lpthread ...`
+
+Exit: 0
+
+```text
+IntegrityOutput 4128 3864
+PublicationDiagnostics 424 416
+EpochCommitPlan 200 184
+CommitReceipt 296 292
+ProtectionLevelPublicationPacketV1 88 80
+old-client-run PASS 1
+```
+
+The golden-header client also passes `PublicationDiagnostics` and
+`IntegrityOutput` by value across the current shared-library boundary, and
+passes `IntegrityOutput` through both a raw array and `std::vector`. The
+current `common/types.hpp` is byte-for-byte unchanged from
+`golden-p0-04-risk`; terminal publication metadata lives only in the separate
+V2 sidecar.
+
+The client also calls the golden V1
+`protectionLevelPublicationPacket(const std::string&,
+ProtectionLevelPublicationPacketV1*)` symbol; linking and execution therefore
+cover both the old type layout and function ABI.
+
+The current-header directed ABI oracle additionally verifies V2 size/packet
+identity offset `256 / 248`; both V1 and V2 assertions pass.
+
+The sixth-review repair repeated the golden-header compile/link/run after the
+normal clean rebuild. It again exited 0 with 424/416, 4128/3864, V1 88/80 and
+`old-client-run PASS 1`; the by-value, raw-array and vector calls all ran.
+
+The seventh-review repair repeated the same golden-header cross-DSO probe after
+the normal clean rebuild. It exited 0 with 424/416, 4128/3864, V1 88/80 and
+`old-client-run PASS 1`; by-value, raw-array and vector calls all ran. Golden
+`common/types.hpp` remained byte-identical.
