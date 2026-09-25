@@ -1,6 +1,7 @@
 #pragma once
 
 #include "uwb_imu_pl/integrity/hypothesis_evidence.hpp"
+#include "uwb_imu_pl/integrity/hypothesis_generator.hpp"
 
 #include <optional>
 #include <map>
@@ -70,6 +71,16 @@ struct FdeDecisionContextV1 {
   FdeRiskDecisionV1* risk_result = nullptr;
 };
 
+// P0-06 additive context.  V1 remains layout-stable for existing callers.
+struct FdeDecisionContextV2 {
+  FdeDecisionContextV1 v1;
+  const ActionSearchCensusV1* action_search = nullptr;
+  const GeneratedActionSnapshotV1* trusted_generated_actions = nullptr;
+  std::size_t max_evaluated_actions = 0;
+  ActionSearchLifecycleV1 action_search_lifecycle =
+      ActionSearchLifecycleV1::ReadyForEvaluation;
+};
+
 class FdeManager {
  public:
   FdeDecision decide(const DetectorResultV2& all_in,
@@ -85,6 +96,13 @@ class FdeManager {
                      const std::vector<FactorGroupId>& mandatory_groups,
                      const RiskBudgetV2& risk,
                      const FdeDecisionContextV1* context) const;
+  FdeDecision decide(const DetectorResultV2& all_in,
+                     const std::vector<FaultHypothesisV2>& hypotheses,
+                     const std::vector<FaultModeEvidence>& evidence,
+                     std::vector<CandidateEvaluation>* candidates,
+                     const std::vector<FactorGroupId>& mandatory_groups,
+                     const RiskBudgetV2& risk,
+                     const FdeDecisionContextV2* context) const;
 };
 
 }  // namespace uwb_imu_pl

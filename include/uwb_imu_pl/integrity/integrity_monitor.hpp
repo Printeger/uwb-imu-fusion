@@ -6,6 +6,7 @@
 #include "uwb_imu_pl/integrity/publication_identity.hpp"
 #include "uwb_imu_pl/estimation/reinitialization.hpp"
 
+#include <functional>
 #include <memory>
 
 namespace uwb_imu_pl {
@@ -81,6 +82,20 @@ class IntegrityMonitor {
 class IncrementalUwbImuEstimator;
 class CandidateWorkerPool;
 
+// Explicit, object-owned dependency seams for release-mode exception tests.
+// They are inert unless a test injects this object directly; production has
+// no environment variable, global switch, or implicit activation path.
+struct PipelineTestDependencySeamsV1 {
+  // Test-only seam at the real generator/census boundary.  It receives the
+  // complete raw occurrence vector before the immutable census is staged;
+  // production never installs this object.
+  std::function<void(std::vector<ExclusionAction>*)>
+      after_action_generation_before_census;
+  std::function<void(ExclusionActionId)> before_candidate;
+  std::function<void(ExclusionActionId)> before_post_detector;
+  std::function<void(ExclusionActionId)> before_protection_level;
+};
+
 struct PipelineCommitBoundaryAuditV1 {
   HealthSnapshot health;
   std::uint32_t consecutive_bridge_epochs = 0;
@@ -132,6 +147,8 @@ class RealtimeIntegrityPipeline {
       const Eigen::Matrix<double, 15, 1>& base) const;
   void completeReinitialization(IncrementalUwbImuEstimator* estimator,
                                 const ImuMeasurement& trusted_boundary);
+  void setTestDependencySeamsV1(
+      std::shared_ptr<const PipelineTestDependencySeamsV1> seams);
 
  private:
   IncrementalUwbImuEstimator* estimator_;

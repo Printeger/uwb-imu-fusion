@@ -358,6 +358,9 @@ if(CATKIN_ENABLE_TESTING)
     UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
   target_link_libraries(test_p0_05_publication ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
 
+  catkin_add_gtest(test_p0_06_action_search test/test_p0_06_action_search.cpp test/test_main.cpp)
+  target_link_libraries(test_p0_06_action_search ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
   add_executable(p005_ros_certified_publisher test/p005_ros_certified_publisher.cpp)
   target_link_libraries(p005_ros_certified_publisher ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${catkin_LIBRARIES})
 

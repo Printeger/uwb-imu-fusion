@@ -4,6 +4,7 @@
 
 #include <Eigen/Cholesky>
 
+#include <functional>
 #include <memory>
 #include <cstdint>
 
@@ -179,6 +180,63 @@ class DenseCandidateOracle {
 
  private:
   RankUpdateConfig config_;
+};
+
+// P0-06: a rank update is an optimization, never the correctness boundary.
+// The router first constructs an exact final-Jacobian/SVD candidate and uses
+// it, together with independently checked frozen-information solves for every
+// changed row block, as a conservative safety certificate.  Unknown shape,
+// mapping, rank, conditioning, solve, or gate margin routes to the exact
+// candidate without invoking RankUpdateEvaluator::evaluate().
+struct CandidateRouteSafetyV1 {
+  std::uint64_t protocol_version = 1;
+  bool rank_path_safe = false;
+  std::size_t removed_blocks = 0;
+  std::size_t added_blocks = 0;
+  std::size_t changed_rows = 0;
+  int exact_rank = 0;
+  int exact_dof = 0;
+  double exact_condition = std::numeric_limits<double>::infinity();
+  double exact_step_norm = std::numeric_limits<double>::infinity();
+  std::string reason;
+};
+
+struct CandidateRouteWorkV1 {
+  std::uint64_t routed_rank = 0;
+  std::uint64_t routed_dense = 0;
+  std::uint64_t rank_exceptions_recovered = 0;
+};
+
+CandidateRouteWorkV1 candidateRouteWorkV1();
+void resetCandidateRouteWorkV1();
+
+class CandidateEvaluationRouterV1 {
+ public:
+  using RankEvaluationDependency = std::function<CandidateEvaluation(
+      const BaseCandidateKernel&, const ExclusionAction&,
+      RankUpdateScratch*)>;
+
+  explicit CandidateEvaluationRouterV1(RankUpdateConfig config = {})
+      : config_(config), rank_(config), dense_(config) {}
+
+  // Explicit dependency seam for the release-mode exception regression.
+  // The ordinary production constructor has no ambient/global hook.
+  CandidateEvaluationRouterV1(RankUpdateConfig config,
+                              RankEvaluationDependency rank_dependency)
+      : config_(config), rank_(config), dense_(config),
+        rank_dependency_(std::move(rank_dependency)) {}
+
+  CandidateEvaluation evaluate(const LinearizedIntegrityWindow& window,
+                               const BaseCandidateKernel& base,
+                               const ExclusionAction& action,
+                               RankUpdateScratch* scratch = nullptr,
+                               CandidateRouteSafetyV1* safety = nullptr) const;
+
+ private:
+  RankUpdateConfig config_;
+  RankUpdateEvaluator rank_;
+  DenseCandidateOracle dense_;
+  RankEvaluationDependency rank_dependency_;
 };
 
 }  // namespace uwb_imu_pl

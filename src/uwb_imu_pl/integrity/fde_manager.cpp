@@ -1,6 +1,7 @@
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
 #include "uwb_imu_pl/common/integrity_identity.hpp"
 #include "uwb_imu_pl/integrity/fde_post_selection.hpp"
+#include "uwb_imu_pl/integrity/hypothesis_generator.hpp"
 #include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
 
 #include <boost/multiprecision/cpp_bin_float.hpp>
@@ -69,7 +70,64 @@ FdeDecision FdeManager::decide(
     const std::vector<FactorGroupId>& mandatory_groups,
     const RiskBudgetV2& risk) const {
   return decide(all_in, hypotheses, evidence, candidates, mandatory_groups,
-                risk, nullptr);
+                risk, static_cast<const FdeDecisionContextV1*>(nullptr));
+}
+
+FdeDecision FdeManager::decide(
+    const DetectorResultV2& all_in,
+    const std::vector<FaultHypothesisV2>& hypotheses,
+    const std::vector<FaultModeEvidence>& evidence,
+    std::vector<CandidateEvaluation>* candidates,
+    const std::vector<FactorGroupId>& mandatory_groups,
+    const RiskBudgetV2& risk,
+    const FdeDecisionContextV2* context) const {
+  ActionSearchValidationV1 search_validation;
+  if (context && context->action_search) {
+    std::vector<ExclusionAction> consumed_actions;
+    if (candidates) {
+      consumed_actions.reserve(candidates->size());
+      for (const auto& candidate : *candidates) {
+        consumed_actions.push_back(candidate.action);
+      }
+    }
+    if (!context->trusted_generated_actions) {
+      search_validation = {false, false,
+                           "trusted raw generated snapshot missing"};
+    } else {
+      search_validation = validateActionSearchCensusV1(
+          *context->action_search, *context->trusted_generated_actions,
+          context->max_evaluated_actions, context->action_search_lifecycle,
+          consumed_actions);
+    }
+  }
+  if (context && context->action_search &&
+      (!search_validation.valid || !search_validation.exhaustive)) {
+    if (context->v1.risk_result) {
+      *context->v1.risk_result = {};
+      context->v1.risk_result->charged_total =
+          std::numeric_limits<double>::quiet_NaN();
+      context->v1.risk_result->declared_total =
+          std::numeric_limits<double>::quiet_NaN();
+      context->v1.risk_result->margin =
+          std::numeric_limits<double>::quiet_NaN();
+      context->v1.risk_result->terms =
+          "SEARCH_INCOMPLETE: census validation=" + search_validation.reason;
+    }
+    FdeDecision decision;
+    decision.status = FdeStatus::SearchIncomplete;
+    decision.commit_allowed = false;
+    decision.integrity_available = false;
+    decision.reason = "SEARCH_INCOMPLETE: generated=" +
+        std::to_string(context->action_search->generated) +
+        " evaluated=" +
+        std::to_string(context->action_search->evaluated) +
+        " omitted=" +
+        std::to_string(context->action_search->omitted) +
+        " validation=" + search_validation.reason;
+    return decision;
+  }
+  return decide(all_in, hypotheses, evidence, candidates, mandatory_groups,
+                risk, context ? &context->v1 : nullptr);
 }
 
 FdeDecision FdeManager::decide(

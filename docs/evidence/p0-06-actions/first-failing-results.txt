@@ -1,0 +1,19 @@
+Independent red reproduction
+
+Command:
+cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl --target test_p0_06_action_search -j2
+
+Expected exit: non-zero
+Observed exit: 2
+
+The test compiled, then the linker rejected the missing P0-06 APIs:
+- undefined reference to censusAndCapActionsV1(...)
+- undefined reference to exactActionOperationIdentityV1(...)
+
+The older implementation instead contained:
+- ensureActionEntities(): `if (models->actions.size() == 64 + 64) break;`
+- actionsForPlausibleSet(): `out.resize(config_.max_candidate_count)` followed
+  by replacement of the final retained entry.
+
+Neither path recorded omitted identities or a search-incomplete state.
+

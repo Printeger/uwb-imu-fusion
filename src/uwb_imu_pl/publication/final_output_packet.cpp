@@ -71,6 +71,14 @@ bool committedStatePublicationV1(
 FinalOutputPacket finalizeOutputPacket(IntegrityOutput output,
                                        FinalPacketTiming timing,
                                        std::uint64_t deadline_ns) {
+  const bool search_incomplete = output.fde_status == "SEARCH_INCOMPLETE" ||
+      std::find(output.reason_codes.begin(), output.reason_codes.end(),
+                "SEARCH_INCOMPLETE") != output.reason_codes.end();
+  if (search_incomplete) {
+    output.protection_level.availability = Availability::Unavailable;
+    output.protection_level.risk_budget_valid = false;
+    refuseProtection(&output, "SEARCH_INCOMPLETE", false);
+  }
   const bool clock_valid = timing.arrival_steady_ns > 0 &&
       timing.compute_done_steady_ns >= timing.arrival_steady_ns &&
       timing.packet_ready_steady_ns >= timing.compute_done_steady_ns &&

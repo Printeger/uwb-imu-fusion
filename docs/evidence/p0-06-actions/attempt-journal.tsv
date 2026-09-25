@@ -1,0 +1,73 @@
+attempt	stage	result	exit_code	evidence
+1	base/tag preflight	PASS	0	HEAD and golden-p0-05-publication peeled SHA both 02ae9f6b92bf2afc852cda9eac18c50aec6686b1
+2	independent red interface/link	FAIL_EXPECTED	2	undefined censusAndCapActionsV1 and exactActionOperationIdentityV1
+3	initial census helper	PASS	0	5/5
+4	production propagation build	PASS	0	new V2 sidecar/context and final packet compiled
+5	P0-06 directed/O07	PASS	0	10/10
+6	selected inherited FDE/selection	PASS	0	8/8
+7	P0-05 publication regression	PASS	0	13/13
+8	invalid make target name	FAIL_EXPECTED	2	No rule test_round2_tools; corrected to CTest test name; no product/test failure
+9	normal clean	PASS	0	cmake build target clean
+10	normal full all-target build	PASS	0	integrity_round2_scenario present
+11	tests target build	PASS	0	all test binaries including P0-06
+12	complete CTest	PASS	0	29/29 in 91.47 s
+13	golden-header ABI	PASS	0	old-client-run PASS 1, frozen sizes/offsets
+14	production generator O07 extension	PASS	0	11/11, generated131/evaluated128/omitted3
+15	final complete CTest	PASS	0	29/29 in 91.29 s
+16	independent review	FAILED	1	frozen verbatim in reviewer-first-failed.md; six repairable census/oracle/evidence defects
+17	first-review repair directed/O07	PASS	0	17/17; raw occurrence census, byte-exact identity, strict validator, pre-kernel refusal, production-backed O07
+18	continuation tests target and selected regression	PASS	0	tests target; directed 17/17; integrity/FDE 34/34; P0-04 13/13; P0-05 13/13; round2 1/1
+19	continuation complete CTest	PASS	0	29/29 in 92.52 s
+20	continuation golden-header ABI	PASS	0	frozen layouts plus old-client-run PASS 1 against rebuilt current library
+21	continuation diff/hash replay	PASS	0	complete-diff byte-exact with current golden-to-worktree implementation/test diff; source/binary/input/loaded hashes verified
+22	second independent review	FAILED	1	frozen verbatim in reviewer-second-failed.md; five repairable semantic/O07/exception/evidence defects
+23	second-review repair directed/O07	PASS	0	19/19; order-independent semantic census, real 54-cell FDE, production 130-action index128 winner, production exception chain
+24	final normal build and regression	PASS	0	clean; full all-target; tests; selected 17/17; P0-04 13/13; P0-05 13/13
+25	final complete CTest	PASS	0	29/29 in 92.67 s including round2
+26	final golden-header ABI	PASS	0	frozen layouts and old-client-run PASS 1 against rebuilt current library
+27	final diff/hash replay	PASS	0	complete patch includes untracked test; apply/match/reverse and source/binary/loaded/input/artifact hashes verified
+28	third independent review	FAILED	1	frozen in reviewer-third-failed.md; release ambient hook, untrusted omitted-action proof, and hand-built 54-cell generation defects
+29	third-review implementation	PASS	0	removed release env hook; separate trusted raw snapshot validation; every grid cell calls production generate; test-only explicit exception dependencies
+30	third-review directed/O07	PASS	0	22/22; suites 13/13, 6/6, 3/3; no cell/action skipped
+31	third-review normal build and regression	PASS	0	clean; full all-target; tests; selected 17/17; FDE post 3/3; P0-04 13/13; P0-05 13/13
+32	third-review complete CTest	PASS	0	29/29 in 92.28 s including round2
+33	third-review golden-header ABI	PASS	0	frozen layouts and old-client-run PASS 1 against rebuilt current library
+34	third-review diff replay	PASS	0	complete diff contains all ten implementation/test paths; golden apply/check, byte compare, reverse/check and golden byte compare pass
+35	third-review hash and syntax verification	PASS	0	source/binary/loaded/input/artifact sha256 checks, evidence JSON parsing, diff whitespace check and protected-doc tracked-diff check pass
+36	independent-snapshot interface rebuild	PASS	0	production generator explicit snapshot output; directed 22/22; complete CTest 29/29 in 92.21 s; golden-header old client PASS
+37	final evidence verification	PASS	0	golden patch apply/byte/reverse replay; all recorded hashes and JSON; source/test diff whitespace; release DSO P006 hook-string absence
+38	fourth independent review	FAILED	1	frozen verbatim in reviewer-fourth-failed.md; test-only dense routing hid production rank SIGSEGV and the 54-cell plausible/profile evidence was synthetic
+39	fourth-review implementation	PASS	0	production candidate router checks frozen proof/mapping/changed solves/exact margins and raw-H SVD postcondition; grid uses real HypothesisEvidenceEvaluator and complete plausible set
+40	fourth-review directed/O07	PASS	0	23/23; 54 real cells match uncapped dense decision, 567 rank and 2384 dense terminals; large/ill-conditioned/unknown mapping boundary PASS
+41	fourth-review normal build and regressions	PASS	0	clean; full all-target; tests; selected 17/17; P0-04 13/13; P0-05 13/13; round2 1/1
+42	invalid old-CTest invocation	COMMAND_ERROR	0	local CTest 3.16 does not support --test-dir and reported no tests in source directory; corrected by running from build directory; no product test executed or failed
+43	fourth-review complete CTest	PASS	0	29/29 in 92.16 s including round2 and P0-06 23/23; superseded by final exact-source repeat
+44	fourth-review golden-header ABI	PASS	0	frozen layouts and old-client-run PASS 1 against rebuilt current library
+45	final exact-source verification	PASS	0	directed 23/23 in 62.519 s; complete CTest 29/29 in 91.89 s; four golden-header clients PASS; 12-path golden apply/byte/reverse replay PASS; five hash manifests and JSON PASS
+46	fifth independent review	FAILED	1	frozen verbatim in reviewer-fifth-failed.md; production exception staging, router rank-exception handling, risk override and 130-oracle defects
+47	fifth-review implementation	PASS	0	pre-fallible production certificate staging; router-local rank exception dense terminal; complete_risk_inputs/thread_local override removed; 130 uses production router and normal P0-04 risk ledger
+48	fifth-review directed before CSV regression	PASS	0	24/24 in 66.138 s; 130 independent oracle recoverable action 129 but production FDE RiskBudgetInvalid/no selection/no commit
+49	fifth-review normal clean/full/tests and inherited regressions	PASS	0	clean/full/tests; integrity_v2 85/85; FDE post 3/3; P0-04 13/13; P0-05 13/13
+50	post-staging round2 regression	FAIL	8	2 repeated runs exposed duplicate action ID, then certificate summary misclassified as an unevaluated candidate; no acceptance claim derived
+51	round2 CSV repair	PASS	0	actual result enriches the same staged occurrence row; complete certificate stays in the same IntegrityOutput reason codes/final packet/integrity CSV; round2 7/7
+52	fifth-review final directed	PASS	0	24/24 in 65.979 s; suites 13/13, 6/6, 5/5; 54 cells and 130 honest refusal result retained
+53	fifth-review complete CTest	PASS	0	29/29 in 91.43 s including round2 and P0-06
+54	fifth-review golden-header ABI	PASS	0	golden-p0-05 headers; frozen layouts and old-client-run PASS 1 against rebuilt current DSO
+55	sixth independent review	FAILED	1	frozen verbatim in reviewer-sixth-failed.md; 130 fixture reduced plausible coverage after generation, lacked an independent uncapped raw-factor oracle, and pipeline exception evidence lacked an exact duplicate occurrence
+56	sixth-review implementation	PASS	0	one fixed target+residual semantic set generates 130 distinct real factor-shard operations; independent raw-H dense SVD/statistic/PL oracle; three reorderings; real pipeline dynamic exact duplicate with row-complete packet/CSV checks
+57	sixth-review normal clean/full/tests	PASS	0	normal clean; full all-target including integrity_round2_scenario; tests target
+58	sixth-review directed and inherited regressions	PASS	0	P0-06 24/24 in 65.54 s; integrity_v2 85/85; FDE post 3/3; P0-04 13/13; P0-05 13/13
+59	sixth-review complete CTest	PASS	0	29/29 in 91.95 s including round2, P0-06, history and ROS visualization
+60	sixth-review golden-header ABI	PASS	0	four precompiled golden-p0-05 clients; frozen layouts and old-client-run PASS 1; common/types.hpp byte-identical
+61	sixth-review final exact-source repeat	PASS	0	shared production hypothesis projection added; clean/full/tests, directed 24/24, inherited regressions, CTest 29/29 and four-client ABI all repeated on the exact final source
+62	sixth-review final patch/hash replay	PASS	0	13-path complete patch applies to golden-p0-05, byte-matches every implementation/test file and reverse-checks; source/binary/loaded/input/artifact hashes, evidence JSON and whitespace checks pass
+63	seventh independent review	FAILED	1	frozen verbatim in reviewer-seventh-failed.md; 130 action fixture bypassed production generator, oracle began from production-prewhitened factors, and pipeline object layout changed
+64	seventh-review implementation	PASS	0	one production universe generates 128 plausible historical UWB hypotheses and KEEP_ALL+128 singles+full union=130; independent correlated-raw LLT/eigen whitening and dense SVD/Boost oracle; ABI-stable external test seam
+65	seventh-review normal clean/full/tests	PASS	0	normal clean; full all-target including integrity_round2_scenario; tests target
+66	seventh-review directed and inherited regressions	PASS	0	P0-06 24/24 in 88.03 s; integrity_v2 85/85; FDE post 3/3; P0-04 13/13; P0-05 13/13
+67	seventh-review complete CTest	PASS	0	29/29 in 98.56 s including P0-06 92.13 s and round2 1.16 s
+68	seventh-review golden-header pipeline ABI	PASS	0	portable golden/current pipeline 5056/16; project-DSO golden/current 5184/32; guarded cross-DSO construction, calls, by-value audit and destruction PASS
+69	seventh-review final patch/hash replay	PASS	0	14-path complete patch applies to golden-p0-05, byte-matches every implementation/test/canary file and reverse-checks; source/binary/loaded/input/artifact hashes, evidence JSON and whitespace checks pass
+70	eighth independent review	PASS	0	normal clean/full/tests; directed 24/24 in 88.681 s; complete CTest 29/29 in 97.65 s; production O07 chain, raw oracle, pipeline ABI, patch and hashes PASS
+71	supervisor ABI command wrong cwd	FAIL_COMMAND	1	git archive was invoked from the build directory and failed before compilation; no product result was derived
+72	supervisor final acceptance	PASS	0	normal clean/full/tests; directed 24/24 in 88.215 s; complete CTest 29/29 in 99.01 s; selected gates, golden-header pipeline ABI and rebuilt binary/library hashes PASS

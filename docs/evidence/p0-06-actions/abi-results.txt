@@ -1,0 +1,60 @@
+Golden-header cross-DSO ABI probe
+
+Headers: git archive golden-p0-05-publication include
+Compiler: g++ -O3 -DNDEBUG -march=native -std=gnu++17
+Link target: current libuwb_imu_pl.so
+Exit: 0
+
+IntegrityOutput 4128 3864
+PublicationDiagnostics 424 416
+EpochCommitPlan 200 184
+CommitReceipt 296 292
+ProtectionLevelPublicationPacketV1 88 80
+old-client-run PASS 1
+
+P0-06 adds versioned sidecars and does not extend these frozen layouts.
+
+Repeated after the third-review repair and final rebuild: exit 0; the golden
+`common/types.hpp` is byte-identical to the current file, and the by-value,
+raw-array/vector client again reports `old-client-run PASS 1`.
+
+Repeated after the fourth-review repair and normal clean/full/tests rebuild:
+exit 0. The precompiled `golden-p0-05-publication` header client linked against
+the current DSO and again reported the frozen sizes/offsets above plus
+`old-client-run PASS 1`. The new router/certificate/work types are additive;
+no frozen V1/P0-05 layout changed.
+
+Repeated against the final fourth-repair source and DSO after the final
+directed/CTest run: exit 0. All four independently precompiled golden-header
+clients resolved the current DSO and reported the frozen sizes/offsets above
+plus `old-client-run PASS 1`.
+
+Repeated after the fifth-review repair using headers extracted from
+`golden-p0-05-publication`, compiled with the project Release ABI flags and
+linked to the rebuilt current DSO: exit 0. Frozen output remains
+`IntegrityOutput 4128 3864`, `PublicationDiagnostics 424 416`,
+`EpochCommitPlan 200 184`, `CommitReceipt 296 292`,
+`ProtectionLevelPublicationPacketV1 88 80`, and `old-client-run PASS 1`.
+The golden and current `common/types.hpp` remain byte-identical.
+
+Repeated after the sixth-review repair and the normal clean/full/tests rebuild:
+four independently precompiled clients built with
+`golden-p0-05-publication` headers linked and ran against the current DSO.
+Each reported the same frozen sizes/offsets and `old-client-run PASS 1`;
+`common/types.hpp` remains byte-identical to the golden file. The added
+exception seam is confined to the already explicit test-dependency type and
+does not alter any frozen V1/output/publication layout.
+
+Seventh-review repair pipeline canary:
+- portable compile, golden header: `RealtimeIntegrityPipeline 5056 16`
+- portable compile, current header: `RealtimeIntegrityPipeline 5056 16`
+- project DSO flags (`-march=native` Eigen ABI), golden/current header:
+  `RealtimeIntegrityPipeline 5184 32`
+- the source-retained golden-header client linked to the current DSO,
+  constructed the pipeline in exact-size guarded storage, called
+  `publication()`, `lastAttemptOutput()` and by-value `commitBoundaryAudit()`,
+  destroyed it, and reported `construct-destruct-call 1 1 1 1` (exit 0).
+
+The explicit test seam is stored outside the class in a mutex-protected
+sidecar keyed by `this`; constructor/destructor clear stale entries. There is
+no `test_dependency_seams_` object member and no default registry entry.

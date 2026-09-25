@@ -1,0 +1,95 @@
+P0-06 directed and O07 final result
+
+Command:
+/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_p0_06_action_search --gtest_color=no
+
+Exit: 0
+Result: 24 tests / 24 passed (88.03 seconds)
+
+Suites:
+- P006ActionSearchRed: 13/13
+- P006ActionSearch: 6/6
+- P006O07: 5/5
+
+Coverage:
+- distinct 130 / cap 128 => generated 130, retained 128 before the
+  production gate, then actual evaluated 0 and 130 explicit omissions after
+  pre-kernel SEARCH_INCOMPLETE refusal;
+- every raw KEEP_ALL/request occurrence enters one census boundary; production
+  exact duplicates keep unique occurrence identity, EXACT_SEMANTIC_DUPLICATE,
+  duplicate-of and identical complete downstream-semantic-byte proof;
+- operation identity covers the complete graph mutation/factor-block multiset;
+  semantic identity additionally covers ID/model/coverage/cardinality. Different
+  semantic variants are never merged and same-ID conflict fails closed.
+  Floating bit patterns preserve +0/-0 distinctions,
+  NaN/Inf operations are INVALID_OPERATION_ENCODING, and same compact
+  key/shape/norm with different bytes is never merged;
+- strict consumer validator checks protocol, uint64 checked arithmetic,
+  record counts/uniqueness, an independently supplied trusted raw snapshot,
+  actual evaluated-action byte/order binding, omission reason/proof and
+  canonical representatives, deriving exhaustive/terminal rather than
+  trusting booleans or certificate-adjacent raw data;
+- cap 0/1/128, near-UINT64_MAX arithmetic, fake-safe/tampered records,
+  duplicate action IDs/occurrences, collision and reorder are covered;
+- unsafe omission is persisted before candidate kernel/post/PL; abort preserves
+  safe duplicate proof records while each canonical unevaluated occurrence has
+  its separate unsafe omission, with generated=evaluated+omitted and no double
+  counting;
+- the 130-action O07 fixture starts from 128 real historical UWB epochs for one
+  anchor, then invokes production `HypothesisGenerator::generate`, production
+  evidence/plausibility, and `actionsForPlausibleSetV1`. All 128 generated
+  hypotheses are plausible. The raw universe is exactly KEEP_ALL + 128
+  single-epoch requests + production `FULL_PLAUSIBLE_UNION_RECOVERY` = 130;
+  only the final union covers all 128 obligations, and cap128 omits it. No
+  hypothesis/action is handwritten, expanded, substituted or deleted;
+- the uncapped independent oracle constructs a whitener from correlated raw
+  covariance (LLT with positive-eigen fallback), applies it to raw H/z for
+  every action, asserts whitening agreement, then performs its own dense SVD,
+  state/full-covariance/parity calculation and
+  Boost-based nominal/fault PL. It calls none of the production router,
+  post-detector or PL implementations for expected values. Both independent
+  and production paths make zero-based index 129 / action ID 130 the sole
+  complete, numerically viable pre-risk reference result;
+- under the unchanged P0-04 qualification/risk contract, that oracle result is
+  not an FDE selection: the normal ledger is `RiskBudgetInvalid`, selected
+  action is absent and final commit is false. Three reordered uncapped
+  enumerations have the same refusal, state/covariance, PL, plausible coverage,
+  risk result and dispositions. This is not reported as implemented recovery;
+- all 54 amplitude/onset/axis/joint cells construct real window/transaction
+  and UWB/IMU subspaces, call HypothesisGenerator::generate() and the real
+  HypothesisEvidenceEvaluator, then feed the complete computed plausible set
+  into production action census, nonempty-hypothesis PL and FDE. Every
+  plausible hypothesis's complete affected-group set and every joint group is
+  checked. Actual results are 18 alarms, 54 honest refusals, 22 frozen-proof
+  evidence refusals, 13 invalid plausible-profile cells, 2,863 plausible
+  hypotheses (2,295 joint), 567 certified rank terminals and 2,384 dense
+  terminals. Each 50.0 stress cell routes at least one action automatically to
+  dense without SIGSEGV; there is no amplitude/ID branch. Rank results are used
+  only after state/rank/dof/statistic/full-covariance agreement with the
+  router-local raw-H SVD. Every final FDE decision/risk state matches an
+  uncapped DenseCandidateOracle reference; no cell/action is skipped;
+- explicit large-step replacement, ill-conditioned and unknown-group mapping
+  boundaries route dense with auditable precondition reasons;
+- operation-equivalent ID/model variants produce identical forward/reverse
+  winner/status/commit/risk/final packet without unsafe merging;
+- at the real production pipeline generator-to-census boundary, an explicitly
+  installed external ABI-stable sidecar
+  test seam adds one exact duplicate of an actually generated raw occurrence.
+  Candidate/post/PL exception dependencies then record generated=2, planned=1,
+  exact-duplicate omitted=1 and actual 0/0/0, 1/0/0, 1/1/0 respectively.
+  Every occurrence/operation/semantic/duplicate-of identity and terminal state
+  agrees row-by-row between lastAttemptOutput, final packet, integrity.csv and
+  candidates.csv; the release DSO has no ambient/global hook;
+- NDEBUG regression sets every former hook value plus an arbitrary value and
+  proves raw census, decision fields and final packet remain identical;
+- FdeManager rejects invalid/incomplete sidecars before winner/risk/commit;
+  final packet and CSV retain SEARCH_INCOMPLETE and omission identities.
+
+Selected inherited final results:
+- test_integrity_v2: 85/85 PASS; FdePostSelection: 3/3 PASS
+- test_p0_04_risk_oracle: 13/13 PASS
+- test_p0_05_publication: 13/13 PASS
+- CTest test_round2_tools: PASS
+- golden-p0-05 header cross-DSO ABI clients: PASS; pipeline portable
+  golden/current size/alignment 5056/16, DSO-flags golden/current 5184/32,
+  guarded construction/reference+by-value calls/destruction PASS

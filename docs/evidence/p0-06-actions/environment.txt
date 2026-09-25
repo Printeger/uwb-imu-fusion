@@ -1,0 +1,17 @@
+run_date=2026-09-25 Asia/Shanghai
+base_tag=golden-p0-05-publication
+base_peeled_sha=02ae9f6b92bf2afc852cda9eac18c50aec6686b1
+source_sha_at_run=02ae9f6b92bf2afc852cda9eac18c50aec6686b1+recorded-dirty-diff
+compiler=c++ (Ubuntu 9.4.0-1ubuntu1~20.04.2) 9.4.0
+cmake=3.16.3
+eigen=3.3.7
+gtsam=4.2a5
+workers_build=2
+workers_ctest=2
+logical_cpus=18
+os=Linux mint 6.18.33.2-microsoft-standard-WSL2 x86_64
+build_type=Release-compatible project defaults (-O3 -DNDEBUG -march=native)
+formal_gate_changed=false
+risk_or_threshold_change=false
+fault_or_hypothesis_coverage_reduced=false
+

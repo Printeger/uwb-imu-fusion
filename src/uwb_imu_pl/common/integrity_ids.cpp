@@ -107,6 +107,7 @@ const char* toString(FdeStatus v) {
     case FdeStatus::RiskBudgetInvalid: return "RISK_BUDGET_INVALID";
     case FdeStatus::BackendVersionMismatch: return "BACKEND_VERSION_MISMATCH";
     case FdeStatus::ControlledReinitializationRequired: return "CONTROLLED_REINITIALIZATION_REQUIRED";
+    case FdeStatus::SearchIncomplete: return "SEARCH_INCOMPLETE";
   }
   return unknown(v);
 }

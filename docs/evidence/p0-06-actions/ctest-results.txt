@@ -1,0 +1,29 @@
+Command: cd /home/mint/ws_fusion_uwb/build/uwb_imu_pl && ctest --output-on-failure -j2
+Exit: 0
+
+29/29 tests passed; 0 failed.
+Total real time: 98.56 seconds.
+
+Required named gates:
+- _ctest_uwb_imu_pl_gtest_test_p0_06_action_search PASS
+- _ctest_uwb_imu_pl_gtest_test_p0_05_publication PASS
+- _ctest_uwb_imu_pl_gtest_test_p0_04_risk_oracle PASS
+- _ctest_uwb_imu_pl_gtest_test_integrity_v2 PASS
+- test_round2_tools PASS
+- history_fault_parameterization PASS
+- ROS visualization rostest PASS
+
+The final seventh-review repair run followed a normal clean, full all-target build, and complete tests
+target rebuild.  `integrity_round2_scenario` was produced by the normal full
+build; no runner was hidden or moved.
+
+Exact-source timing highlights:
+- _ctest_uwb_imu_pl_gtest_test_p0_06_action_search: 92.13 seconds
+- test_round2_tools: 1.16 seconds
+
+Before the final run, two explicit round2-only invocations failed because the
+new staged certificate was emitted as a duplicate/unevaluated candidate row.
+That production CSV regression was repaired by enriching the already-staged
+occurrence row and retaining the certificate in the same attempt's reason
+codes. The final round2 run and this complete CTest both pass; the failures are
+retained in `attempt-journal.tsv`.

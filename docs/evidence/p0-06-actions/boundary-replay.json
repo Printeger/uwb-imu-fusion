@@ -1,0 +1,21 @@
+{
+  "schema": "uwb-imu-pl/p0-06-boundary-replay/v1",
+  "generation": "all raw occurrence, operation and semantic identities recorded",
+  "trusted_raw": "validator receives a generator-held snapshot separate from the certificate and recomputes each occurrence, duplicate and canonical representative",
+  "exact_duplicate": "proof-safe merge only after full downstream-semantic comparison with canonical order-independent representative",
+  "operation_equivalence": "not sufficient for merge; different action ID/model remains distinct",
+  "duplicate_action_id_conflict": "fail closed",
+  "compact_hash_collision": "different operation retained",
+  "candidate_router": "rank is called only after frozen-proof, remove/add mapping, finite solve, exact SVD rank/dof/condition/state-step and shape preconditions; unknown/boundary cases and catchable rank exceptions use router-local raw-H SVD dense exact, then continue through postcondition/census; dense-invalid remains fail closed",
+  "resource_cap": "SEARCH_INCOMPLETE",
+  "risk_selection": "no complete ledger or winner claim",
+  "commit": "commit_allowed=false; hardware-barrier best-effort path also discards",
+  "final_packet": "unavailable, unprotected, risk-invalid, formal-false",
+  "normal_publish": "SEARCH_INCOMPLETE retained",
+  "deadline": "SEARCH_INCOMPLETE plus deadline refusal retained",
+  "queue_overflow": "SEARCH_INCOMPLETE plus overflow refusal retained",
+  "exception": "explicit ABI-stable external generator-to-census sidecar duplicates one actual generated raw occurrence, then explicit throwing dependencies on the production RealtimeIntegrityPipeline candidate/post/PL calls preserve both pre-staged occurrence rows and the reason-code certificate through outer catch; generated=2, planned=1, omitted exact duplicate=1, and actual 0/0/0, 1/0/0, 1/1/0 stage counts remain distinguishable; lastAttempt, final packet, integrity.csv and every candidates.csv occurrence row agree",
+  "release_environment": "NDEBUG legacy P006 environment variable values cannot change raw census, decision fields or final packet",
+  "csv": "fde_status/reason codes and every occurrence/operation/semantic/reason/duplicate-of identity retained",
+  "ros": "production adapter copies fde_status, reason, reason_codes and final protection flags"
+}

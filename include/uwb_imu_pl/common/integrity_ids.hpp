@@ -91,7 +91,8 @@ enum class FdeStatus {
   ModelInvalid,
   RiskBudgetInvalid,
   BackendVersionMismatch,
-  ControlledReinitializationRequired
+  ControlledReinitializationRequired,
+  SearchIncomplete
 };
 
 const char* toString(SensorType value);

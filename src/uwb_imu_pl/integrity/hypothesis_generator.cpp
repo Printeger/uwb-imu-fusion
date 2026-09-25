@@ -9,9 +9,11 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstring>
 #include <functional>
 #include <iomanip>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <set>
 #include <sstream>
@@ -267,33 +269,90 @@ std::string actionKey(const ExclusionAction& action) {
   return key.str();
 }
 
-template <class DerivedA, class DerivedB>
-bool exactEigenContent(const Eigen::MatrixBase<DerivedA>& left,
-                       const Eigen::MatrixBase<DerivedB>& right) {
-  if (left.rows() != right.rows() || left.cols() != right.cols()) return false;
-  for (Eigen::Index column = 0; column < left.cols(); ++column) {
-    for (Eigen::Index row = 0; row < left.rows(); ++row) {
-      if (left(row, column) != right(row, column)) return false;
-    }
-  }
-  return true;
+template <class T>
+void appendIntegralIdentity(std::ostringstream* out, T value) {
+  *out << std::hex << static_cast<std::uint64_t>(value) << ';' << std::dec;
 }
 
-bool equivalentBlock(const LinearizedFactorBlock& left,
-                     const LinearizedFactorBlock& right) {
-  return left.group_id == right.group_id && left.kind == right.kind &&
-      left.sensor == right.sensor && left.role == right.role &&
-      left.window_column_indices == right.window_column_indices &&
-      left.fault_units == right.fault_units &&
-      left.effective_weight == right.effective_weight &&
-      left.whitening_model_id == right.whitening_model_id &&
-      left.version == right.version &&
-      exactEigenContent(left.jacobian_raw, right.jacobian_raw) &&
-      exactEigenContent(left.residual_raw, right.residual_raw) &&
-      exactEigenContent(left.covariance, right.covariance) &&
-      exactEigenContent(left.whitener, right.whitener) &&
-      exactEigenContent(left.jacobian_whitened, right.jacobian_whitened) &&
-      exactEigenContent(left.residual_whitened, right.residual_whitened);
+void appendStringIdentity(std::ostringstream* out, const std::string& value) {
+  *out << value.size() << ':';
+  for (const unsigned char c : value) {
+    *out << std::hex << std::setw(2) << std::setfill('0')
+         << static_cast<unsigned int>(c);
+  }
+  *out << ';' << std::dec << std::setfill(' ');
+}
+
+void appendDoubleIdentity(std::ostringstream* out, double value) {
+  static_assert(sizeof(double) == sizeof(std::uint64_t),
+                "P0-06 identity requires 64-bit doubles");
+  std::uint64_t bits = 0;
+  std::memcpy(&bits, &value, sizeof(bits));
+  appendIntegralIdentity(out, bits);
+}
+
+template <class Derived>
+void appendEigenIdentity(std::ostringstream* out,
+                         const Eigen::MatrixBase<Derived>& value) {
+  appendIntegralIdentity(out, value.rows());
+  appendIntegralIdentity(out, value.cols());
+  for (Eigen::Index row = 0; row < value.rows(); ++row) {
+    for (Eigen::Index column = 0; column < value.cols(); ++column) {
+      appendDoubleIdentity(out, value(row, column));
+    }
+  }
+}
+
+std::string exactBlockIdentity(const LinearizedFactorBlock& block) {
+  std::ostringstream out;
+  appendIntegralIdentity(&out, block.group_id.value());
+  appendIntegralIdentity(&out, static_cast<int>(block.kind));
+  appendIntegralIdentity(&out, static_cast<int>(block.sensor));
+  appendIntegralIdentity(&out, static_cast<int>(block.role));
+  appendIntegralIdentity(&out, block.window_column_indices.size());
+  for (const int column : block.window_column_indices) {
+    appendIntegralIdentity(&out, column);
+  }
+  appendIntegralIdentity(&out, block.fault_units.size());
+  for (const auto unit : block.fault_units) {
+    appendIntegralIdentity(&out, unit.value());
+  }
+  appendDoubleIdentity(&out, block.effective_weight);
+  appendStringIdentity(&out, block.whitening_model_id);
+  appendIntegralIdentity(&out, block.version.graph_version);
+  appendIntegralIdentity(&out, block.version.ordering_version);
+  appendIntegralIdentity(&out, block.version.noise_model_version);
+  appendIntegralIdentity(&out, block.version.linpoint_version);
+  appendEigenIdentity(&out, block.jacobian_raw);
+  appendEigenIdentity(&out, block.residual_raw);
+  appendEigenIdentity(&out, block.covariance);
+  appendEigenIdentity(&out, block.whitener);
+  appendEigenIdentity(&out, block.jacobian_whitened);
+  appendEigenIdentity(&out, block.residual_whitened);
+  return out.str();
+}
+
+bool finiteBlockOperation(const LinearizedFactorBlock& block) {
+  return std::isfinite(block.effective_weight) &&
+      block.jacobian_raw.allFinite() && block.residual_raw.allFinite() &&
+      block.covariance.allFinite() && block.whitener.allFinite() &&
+      block.jacobian_whitened.allFinite() &&
+      block.residual_whitened.allFinite();
+}
+
+bool finiteActionOperation(const ExclusionAction& action) {
+  return std::all_of(action.added_blocks.begin(), action.added_blocks.end(),
+                     finiteBlockOperation);
+}
+
+std::string occurrenceIdentity(std::uint64_t duplicate_index,
+                               const ExclusionAction& action,
+                               const std::string& operation_identity) {
+  std::ostringstream out;
+  out << "ACTION_OCCURRENCE_V1|action=" << action.id.value()
+      << "|duplicate_index=" << duplicate_index
+      << "|operation=" << operation_identity;
+  return out.str();
 }
 
 template <class T>
@@ -371,27 +430,38 @@ bool hypothesisParametersIndependent(
 
 bool equivalentActionOperation(const ExclusionAction& left,
                                const ExclusionAction& right) {
-  if (sortedCopy(left.groups_to_remove) != sortedCopy(right.groups_to_remove) ||
-      sortedCopy(left.groups_to_add) != sortedCopy(right.groups_to_add) ||
-      left.bridge_mode != right.bridge_mode ||
-      left.recoverability != right.recoverability ||
-      left.recovery_epoch_begin != right.recovery_epoch_begin ||
-      left.recovery_epoch_end != right.recovery_epoch_end ||
-      left.added_blocks.size() != right.added_blocks.size()) {
-    return false;
+  // NaN/Inf graph operations are invalid, never duplicates.  For finite
+  // operations equality is equality of the complete canonical bytes, so
+  // +0/-0 and every floating-point bit pattern remain distinct.
+  return finiteActionOperation(left) && finiteActionOperation(right) &&
+      exactActionOperationIdentityV1(left) ==
+          exactActionOperationIdentityV1(right);
+}
+
+std::vector<FaultHypothesisV2> projectRemainingHypothesesForActionV1(
+    const std::vector<FaultHypothesisV2>& hypotheses,
+    const ExclusionAction& action) {
+  std::vector<FaultHypothesisV2> remaining;
+  remaining.reserve(hypotheses.size());
+  for (const auto& hypothesis : hypotheses) {
+    FaultHypothesisV2 residual = hypothesis;
+    residual.modes.erase(std::remove_if(
+        residual.modes.begin(), residual.modes.end(), [&](FaultModeId id) {
+          return std::find(action.covered_modes.begin(),
+                           action.covered_modes.end(), id) !=
+              action.covered_modes.end();
+        }), residual.modes.end());
+    residual.units.erase(std::remove_if(
+        residual.units.begin(), residual.units.end(), [&](FaultUnitId id) {
+          return std::find(action.covered_units.begin(),
+                           action.covered_units.end(), id) !=
+              action.covered_units.end();
+        }), residual.units.end());
+    if (!residual.modes.empty() || !residual.units.empty()) {
+      remaining.push_back(std::move(residual));
+    }
   }
-  std::vector<const LinearizedFactorBlock*> left_blocks, right_blocks;
-  for (const auto& block : left.added_blocks) left_blocks.push_back(&block);
-  for (const auto& block : right.added_blocks) right_blocks.push_back(&block);
-  const auto order = [](const auto* a, const auto* b) {
-    return a->group_id < b->group_id;
-  };
-  std::sort(left_blocks.begin(), left_blocks.end(), order);
-  std::sort(right_blocks.begin(), right_blocks.end(), order);
-  for (std::size_t i = 0; i < left_blocks.size(); ++i) {
-    if (!equivalentBlock(*left_blocks[i], *right_blocks[i])) return false;
-  }
-  return true;
+  return remaining;
 }
 
 std::string healthSourceId(const FaultUnit& unit) {
@@ -674,6 +744,451 @@ ExclusionAction unite(const std::vector<const ExclusionAction*>& parts) {
 }
 
 }  // namespace
+
+std::string exactActionOperationIdentityV1(const ExclusionAction& action) {
+  std::ostringstream out;
+  out << "ACTION_OPERATION_V1|";
+  auto remove = sortedCopy(action.groups_to_remove);
+  auto add = sortedCopy(action.groups_to_add);
+  appendIntegralIdentity(&out, remove.size());
+  for (const auto id : remove) appendIntegralIdentity(&out, id.value());
+  appendIntegralIdentity(&out, add.size());
+  for (const auto id : add) appendIntegralIdentity(&out, id.value());
+  appendIntegralIdentity(&out, static_cast<int>(action.bridge_mode));
+  appendIntegralIdentity(&out, static_cast<int>(action.recoverability));
+  appendIntegralIdentity(&out, action.recovery_epoch_begin.has_value());
+  if (action.recovery_epoch_begin) {
+    appendIntegralIdentity(&out, *action.recovery_epoch_begin);
+  }
+  appendIntegralIdentity(&out, action.recovery_epoch_end.has_value());
+  if (action.recovery_epoch_end) {
+    appendIntegralIdentity(&out, *action.recovery_epoch_end);
+  }
+  std::vector<std::string> blocks;
+  blocks.reserve(action.added_blocks.size());
+  for (const auto& block : action.added_blocks) {
+    blocks.push_back(exactBlockIdentity(block));
+  }
+  std::sort(blocks.begin(), blocks.end());
+  appendIntegralIdentity(&out, blocks.size());
+  for (const auto& block : blocks) appendStringIdentity(&out, block);
+  appendStringIdentity(&out, action.removal_data_source);
+  appendStringIdentity(&out, action.model_error_record);
+  appendIntegralIdentity(&out, action.model_error_validated);
+  return out.str();
+}
+
+std::string exactActionSemanticIdentityV1(const ExclusionAction& action) {
+  std::ostringstream out;
+  out << "ACTION_SEMANTICS_V1|";
+  appendStringIdentity(&out, exactActionOperationIdentityV1(action));
+  appendIntegralIdentity(&out, action.id.value());
+  appendStringIdentity(&out, action.action_model_id);
+  const auto units = sortedCopy(action.covered_units);
+  const auto modes = sortedCopy(action.covered_modes);
+  const auto sources = sortedCopy(action.physical_source_ids);
+  appendIntegralIdentity(&out, units.size());
+  for (const auto id : units) appendIntegralIdentity(&out, id.value());
+  appendIntegralIdentity(&out, modes.size());
+  for (const auto id : modes) appendIntegralIdentity(&out, id.value());
+  appendIntegralIdentity(&out, sources.size());
+  for (const auto& source : sources) appendStringIdentity(&out, source);
+  appendIntegralIdentity(&out, action.exclusion_cardinality);
+  return out.str();
+}
+
+namespace {
+
+std::string exactGeneratedSnapshotIdentityV1(
+    const std::vector<ExclusionAction>& generated) {
+  std::vector<std::pair<std::string, std::string>> records;
+  records.reserve(generated.size());
+  for (const auto& action : generated) {
+    records.emplace_back(exactActionSemanticIdentityV1(action),
+                         exactActionOperationIdentityV1(action));
+  }
+  std::sort(records.begin(), records.end());
+  std::ostringstream out;
+  out << "GENERATED_ACTION_SNAPSHOT_V1|";
+  appendIntegralIdentity(&out, records.size());
+  for (const auto& record : records) {
+    appendStringIdentity(&out, record.first);
+    appendStringIdentity(&out, record.second);
+  }
+  return out.str();
+}
+
+}  // namespace
+
+ActionSearchResultV1 censusAndCapActionsV1(
+    const std::vector<ExclusionAction>& generated,
+    std::size_t max_evaluated_actions,
+    GeneratedActionSnapshotV1* trusted_generated_snapshot) {
+  ActionSearchResultV1 result;
+  result.generated_snapshot.protocol_version = 1;
+  result.generated_snapshot.generator_identity =
+      "censusAndCapActionsV1/raw-generator-output";
+  result.generated_snapshot.actions = generated;
+  result.generated_snapshot.snapshot_identity =
+      exactGeneratedSnapshotIdentityV1(generated);
+  result.max_evaluated_actions = max_evaluated_actions;
+  result.census.generated_snapshot_identity =
+      result.generated_snapshot.snapshot_identity;
+  result.census.generated = static_cast<std::uint64_t>(generated.size());
+  result.census.generated_identities.reserve(generated.size());
+  result.census.generated_records.reserve(generated.size());
+
+  struct RawAction {
+    const ExclusionAction* action = nullptr;
+    std::string operation;
+    std::string semantics;
+    std::string occurrence;
+  };
+  std::vector<RawAction> raw;
+  raw.reserve(generated.size());
+  std::map<std::pair<std::uint64_t, std::string>, std::uint64_t>
+      occurrence_counts;
+  std::map<std::uint64_t, std::set<std::string>> semantics_by_action_id;
+  for (std::size_t raw_index = 0; raw_index < generated.size(); ++raw_index) {
+    const auto& action = generated[raw_index];
+    const std::string operation = exactActionOperationIdentityV1(action);
+    const std::string semantics = exactActionSemanticIdentityV1(action);
+    const auto occurrence_key = std::make_pair(action.id.value(), semantics);
+    const std::uint64_t duplicate_index = occurrence_counts[occurrence_key]++;
+    const std::string occurrence = occurrenceIdentity(
+        duplicate_index, action, semantics);
+    raw.push_back({&action, operation, semantics, occurrence});
+    semantics_by_action_id[action.id.value()].insert(semantics);
+  }
+
+  // Canonicalize the raw census and the representative set. Neither an exact
+  // duplicate representative nor cap membership depends on input order.
+  std::sort(raw.begin(), raw.end(), [](const RawAction& left,
+                                      const RawAction& right) {
+    return std::make_tuple(left.action->id.value(), left.semantics,
+                           left.occurrence) <
+        std::make_tuple(right.action->id.value(), right.semantics,
+                        right.occurrence);
+  });
+  for (const auto& entry : raw) {
+    result.census.generated_identities.push_back(entry.occurrence);
+    ActionOccurrenceV1 record;
+    record.action_id = entry.action->id.value();
+    record.occurrence_identity = entry.occurrence;
+    record.operation_identity = entry.operation;
+    record.semantic_identity = entry.semantics;
+    result.census.generated_records.push_back(std::move(record));
+  }
+
+  struct DistinctAction {
+    ExclusionAction action;
+    std::string occurrence;
+    std::string operation;
+    std::string semantics;
+  };
+  std::vector<DistinctAction> distinct;
+  distinct.reserve(raw.size());
+  for (std::size_t begin = 0; begin < raw.size();) {
+    std::size_t end = begin + 1;
+    while (end < raw.size() && raw[end].semantics == raw[begin].semantics) ++end;
+    const RawAction& canonical = raw[begin];
+    const bool id_conflict =
+        semantics_by_action_id[canonical.action->id.value()].size() != 1;
+    if (!finiteActionOperation(*canonical.action) || id_conflict) {
+      const char* reason = id_conflict ? "DUPLICATE_ACTION_ID_CONFLICT"
+                                       : "INVALID_OPERATION_ENCODING";
+      for (std::size_t index = begin; index < end; ++index) {
+        ActionOmissionV1 omission;
+        omission.action_id = raw[index].action->id.value();
+        omission.occurrence_identity = raw[index].occurrence;
+        omission.operation_identity = raw[index].operation;
+        omission.reason = reason;
+        omission.semantic_identity = raw[index].semantics;
+        result.census.omitted_actions.push_back(std::move(omission));
+      }
+    } else {
+      distinct.push_back({*canonical.action, canonical.occurrence,
+                          canonical.operation, canonical.semantics});
+      for (std::size_t index = begin + 1; index < end; ++index) {
+        ActionOmissionV1 omission;
+        omission.action_id = raw[index].action->id.value();
+        omission.occurrence_identity = raw[index].occurrence;
+        omission.operation_identity = raw[index].operation;
+        omission.duplicate_of_identity = canonical.occurrence;
+        omission.reason = "EXACT_SEMANTIC_DUPLICATE";
+        omission.proven_safe = true;
+        omission.semantic_identity = raw[index].semantics;
+        result.census.omitted_actions.push_back(std::move(omission));
+      }
+    }
+    begin = end;
+  }
+
+  const std::size_t evaluated =
+      std::min(max_evaluated_actions, distinct.size());
+  result.actions.reserve(evaluated);
+  result.census.evaluated = static_cast<std::uint64_t>(evaluated);
+  result.census.evaluated_identities.reserve(evaluated);
+  for (std::size_t index = 0; index < evaluated; ++index) {
+    result.actions.push_back(distinct[index].action);
+    result.census.evaluated_identities.push_back(distinct[index].occurrence);
+  }
+  for (std::size_t index = evaluated; index < distinct.size(); ++index) {
+    ActionOmissionV1 omission;
+    omission.action_id = distinct[index].action.id.value();
+    omission.occurrence_identity = distinct[index].occurrence;
+    omission.operation_identity = distinct[index].operation;
+    omission.reason = "RESOURCE_CAP_UNPROVEN";
+    omission.semantic_identity = distinct[index].semantics;
+    result.census.omitted_actions.push_back(std::move(omission));
+  }
+  result.census.omitted = static_cast<std::uint64_t>(
+      result.census.omitted_actions.size());
+  result.census.exhaustive = std::all_of(
+      result.census.omitted_actions.begin(),
+      result.census.omitted_actions.end(),
+      [](const ActionOmissionV1& omitted) { return omitted.proven_safe; });
+  result.census.terminal_reason =
+      result.census.exhaustive ? "COMPLETE" : "SEARCH_INCOMPLETE";
+  if (trusted_generated_snapshot) {
+    *trusted_generated_snapshot = result.generated_snapshot;
+  }
+  return result;
+}
+
+namespace {
+
+void abortIncompleteActionSearchUnchecked(ActionSearchResultV1* result) {
+  result->actions.clear();
+  result->census.evaluated = 0;
+  result->census.evaluated_identities.clear();
+  const auto original_omissions = result->census.omitted_actions;
+  result->census.omitted_actions.clear();
+  for (const auto& record : result->census.generated_records) {
+    const auto original = std::find_if(
+        original_omissions.begin(), original_omissions.end(),
+        [&](const ActionOmissionV1& omission) {
+          return omission.occurrence_identity == record.occurrence_identity;
+        });
+    if (original != original_omissions.end() &&
+        original->reason == "EXACT_SEMANTIC_DUPLICATE") {
+      result->census.omitted_actions.push_back(*original);
+    } else {
+      const std::string reason = original != original_omissions.end()
+          ? original->reason : "SEARCH_ABORTED_INCOMPLETE";
+      result->census.omitted_actions.push_back({
+          record.action_id, record.occurrence_identity,
+          record.operation_identity, {}, reason, false,
+          record.semantic_identity});
+    }
+  }
+  result->census.omitted = result->census.generated;
+  result->census.exhaustive = false;
+  result->census.terminal_reason = "SEARCH_INCOMPLETE";
+  result->lifecycle =
+      ActionSearchLifecycleV1::AbortedIncompleteBeforeEvaluation;
+}
+
+bool sameOccurrence(const ActionOccurrenceV1& left,
+                    const ActionOccurrenceV1& right) {
+  return left.action_id == right.action_id &&
+      left.occurrence_identity == right.occurrence_identity &&
+      left.operation_identity == right.operation_identity &&
+      left.semantic_identity == right.semantic_identity;
+}
+
+bool sameOmission(const ActionOmissionV1& left,
+                  const ActionOmissionV1& right) {
+  return left.action_id == right.action_id &&
+      left.occurrence_identity == right.occurrence_identity &&
+      left.operation_identity == right.operation_identity &&
+      left.duplicate_of_identity == right.duplicate_of_identity &&
+      left.reason == right.reason && left.proven_safe == right.proven_safe &&
+      left.semantic_identity == right.semantic_identity;
+}
+
+bool sameCensus(const ActionSearchCensusV1& left,
+                const ActionSearchCensusV1& right) {
+  if (left.protocol_version != right.protocol_version ||
+      left.generated != right.generated || left.evaluated != right.evaluated ||
+      left.omitted != right.omitted || left.exhaustive != right.exhaustive ||
+      left.generated_identities != right.generated_identities ||
+      left.evaluated_identities != right.evaluated_identities ||
+      left.generated_snapshot_identity != right.generated_snapshot_identity ||
+      left.terminal_reason != right.terminal_reason ||
+      left.generated_records.size() != right.generated_records.size() ||
+      left.omitted_actions.size() != right.omitted_actions.size()) {
+    return false;
+  }
+  for (std::size_t i = 0; i < left.generated_records.size(); ++i) {
+    if (!sameOccurrence(left.generated_records[i], right.generated_records[i])) {
+      return false;
+    }
+  }
+  for (std::size_t i = 0; i < left.omitted_actions.size(); ++i) {
+    if (!sameOmission(left.omitted_actions[i], right.omitted_actions[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+}  // namespace
+
+ActionSearchValidationV1 validateActionSearchCensusV1(
+    const ActionSearchCensusV1& census,
+    const GeneratedActionSnapshotV1& trusted_generated_snapshot,
+    std::size_t max_evaluated_actions,
+    ActionSearchLifecycleV1 lifecycle,
+    const std::vector<ExclusionAction>& actual_evaluated_actions) {
+  auto fail = [](const std::string& reason) {
+    return ActionSearchValidationV1{false, false, reason};
+  };
+  if (census.protocol_version != 1) return fail("unsupported protocol_version");
+  if (trusted_generated_snapshot.protocol_version != 1 ||
+      trusted_generated_snapshot.generator_identity.empty()) {
+    return fail("trusted raw snapshot version/generator identity invalid");
+  }
+  if (trusted_generated_snapshot.actions.size() >
+      static_cast<std::size_t>(std::numeric_limits<std::uint64_t>::max())) {
+    return fail("raw generated action count overflows protocol");
+  }
+  if (census.generated != census.generated_records.size() ||
+      census.generated != census.generated_identities.size()) {
+    return fail("generated record count mismatch");
+  }
+  if (census.evaluated != census.evaluated_identities.size() ||
+      census.omitted != census.omitted_actions.size()) {
+    return fail("terminal record count mismatch");
+  }
+  if (census.evaluated > std::numeric_limits<std::uint64_t>::max() -
+          census.omitted || census.evaluated + census.omitted != census.generated) {
+    return fail("checked census arithmetic mismatch/overflow");
+  }
+  std::map<std::string, const ActionOccurrenceV1*> generated;
+  for (std::size_t i = 0; i < census.generated_records.size(); ++i) {
+    const auto& record = census.generated_records[i];
+    if (record.occurrence_identity.empty() || record.operation_identity.empty() ||
+        record.semantic_identity.empty() ||
+        record.occurrence_identity != census.generated_identities[i] ||
+        !generated.emplace(record.occurrence_identity, &record).second) {
+      return fail("generated occurrence identity invalid/duplicate");
+    }
+  }
+  std::set<std::string> terminal;
+  for (const auto& identity : census.evaluated_identities) {
+    if (!generated.count(identity) || !terminal.insert(identity).second) {
+      return fail("evaluated identity absent/duplicate");
+    }
+  }
+  std::map<std::string, const ActionOmissionV1*> omission_index;
+  for (const auto& omission : census.omitted_actions) {
+    if (!omission_index.emplace(omission.occurrence_identity, &omission).second) {
+      return fail("duplicate omission occurrence identity");
+    }
+  }
+  bool derived_exhaustive = true;
+  for (const auto& omission : census.omitted_actions) {
+    const auto source = generated.find(omission.occurrence_identity);
+    if (source == generated.end() ||
+        source->second->action_id != omission.action_id ||
+        source->second->operation_identity != omission.operation_identity ||
+        source->second->semantic_identity != omission.semantic_identity ||
+        !terminal.insert(omission.occurrence_identity).second) {
+      return fail("omission record does not bind generated occurrence");
+    }
+    bool safe = false;
+    if (omission.reason == "EXACT_SEMANTIC_DUPLICATE") {
+      const auto retained = generated.find(omission.duplicate_of_identity);
+      const auto retained_omission = omission_index.find(
+          omission.duplicate_of_identity);
+      const bool retained_is_canonical_occurrence =
+          retained_omission == omission_index.end() ||
+          retained_omission->second->reason != "EXACT_SEMANTIC_DUPLICATE";
+      safe = retained != generated.end() &&
+          retained_is_canonical_occurrence &&
+          retained->second->operation_identity == omission.operation_identity &&
+          retained->second->semantic_identity == omission.semantic_identity;
+    } else if (!omission.duplicate_of_identity.empty()) {
+      return fail("unsafe omission carries duplicate proof");
+    }
+    if (omission.proven_safe != safe) {
+      return fail("omission proof-safety flag is not derived");
+    }
+    derived_exhaustive = derived_exhaustive && safe;
+  }
+  if (terminal.size() != generated.size()) return fail("unaccounted occurrence");
+  {
+    if (actual_evaluated_actions.size() != census.evaluated_identities.size()) {
+      return fail("evaluated action vector count mismatch");
+    }
+    for (std::size_t i = 0; i < actual_evaluated_actions.size(); ++i) {
+      const auto record = generated.find(census.evaluated_identities[i]);
+      if (record == generated.end() ||
+          record->second->action_id != actual_evaluated_actions[i].id.value() ||
+          record->second->operation_identity !=
+              exactActionOperationIdentityV1(actual_evaluated_actions[i]) ||
+          record->second->semantic_identity !=
+              exactActionSemanticIdentityV1(actual_evaluated_actions[i]) ||
+          !finiteActionOperation(actual_evaluated_actions[i])) {
+        return fail("evaluated action does not match census bytes");
+      }
+    }
+  }
+  if (census.exhaustive != derived_exhaustive ||
+      census.terminal_reason !=
+          (derived_exhaustive ? "COMPLETE" : "SEARCH_INCOMPLETE")) {
+    return fail("producer completeness claim disagrees with derived result");
+  }
+  // The preceding checks make malformed counts safe to inspect.  This final
+  // independent regeneration is the trust boundary: operation bytes,
+  // semantic bytes, occurrence numbering, duplicate representative, cap and
+  // lifecycle all have to match the complete raw action objects.
+  ActionSearchResultV1 expected = censusAndCapActionsV1(
+      trusted_generated_snapshot.actions, max_evaluated_actions);
+  const std::string independently_derived_snapshot_identity =
+      exactGeneratedSnapshotIdentityV1(trusted_generated_snapshot.actions);
+  if (trusted_generated_snapshot.snapshot_identity !=
+          independently_derived_snapshot_identity ||
+      census.generated_snapshot_identity !=
+          independently_derived_snapshot_identity) {
+    return fail("raw generated snapshot identity mismatch");
+  }
+  if (lifecycle ==
+      ActionSearchLifecycleV1::AbortedIncompleteBeforeEvaluation) {
+    if (expected.census.exhaustive) {
+      return fail("complete raw search cannot have aborted-incomplete lifecycle");
+    }
+    abortIncompleteActionSearchUnchecked(&expected);
+  } else if (lifecycle != ActionSearchLifecycleV1::ReadyForEvaluation) {
+    return fail("unknown action-search lifecycle");
+  }
+  if (!sameCensus(census, expected.census)) {
+    return fail("census differs from trusted raw generated actions");
+  }
+  if (actual_evaluated_actions.size() != expected.actions.size()) {
+    return fail("evaluated actions differ from trusted raw derivation");
+  }
+  for (std::size_t i = 0; i < actual_evaluated_actions.size(); ++i) {
+    if (exactActionOperationIdentityV1(actual_evaluated_actions[i]) !=
+            exactActionOperationIdentityV1(expected.actions[i]) ||
+        exactActionSemanticIdentityV1(actual_evaluated_actions[i]) !=
+            exactActionSemanticIdentityV1(expected.actions[i])) {
+      return fail("evaluated action bytes differ from trusted raw derivation");
+    }
+  }
+  return {true, derived_exhaustive, "VALID"};
+}
+
+void abortIncompleteActionSearchBeforeEvaluationV1(
+    ActionSearchResultV1* result) {
+  if (!result) return;
+  const auto validation = validateActionSearchCensusV1(
+      result->census, result->generated_snapshot,
+      result->max_evaluated_actions, result->lifecycle, result->actions);
+  if (!validation.valid || validation.exhaustive) return;
+  abortIncompleteActionSearchUnchecked(result);
+}
 
 GeneratedFaultModelSet HypothesisGenerator::generate(
     const LinearizedIntegrityWindow& window, const EpochTransaction& tx,
@@ -1301,7 +1816,6 @@ void HypothesisGenerator::ensureActionEntities(
       mergeCoverage(&*equivalent, action);
       continue;
     }
-    if (models->actions.size() == 64 + 64) break;  // defensive upper bound
     seen[key].push_back(models->actions.size());
     models->actions.push_back(action);
   }
@@ -1314,6 +1828,22 @@ std::vector<ExclusionAction> HypothesisGenerator::actionsForPlausibleSet(
     GeneratedFaultModelSet* models_ptr,
     const std::vector<FaultModeEvidence>& evidence,
     const std::vector<std::string>& mandatory_health_sources) const {
+  ActionSearchResultV1 result = actionsForPlausibleSetV1(
+      window, transaction, models_ptr, evidence, mandatory_health_sources);
+  if (!result.census.exhaustive) {
+    throw std::runtime_error(
+        "SEARCH_INCOMPLETE: legacy action-vector API cannot carry census; "
+        "use actionsForPlausibleSetV1");
+  }
+  return result.actions;
+}
+
+ActionSearchResultV1 HypothesisGenerator::actionsForPlausibleSetV1(
+    const LinearizedIntegrityWindow& window, const EpochTransaction& transaction,
+    GeneratedFaultModelSet* models_ptr,
+    const std::vector<FaultModeEvidence>& evidence,
+    const std::vector<std::string>& mandatory_health_sources,
+    GeneratedActionSnapshotV1* trusted_generated_snapshot) const {
   if (!models_ptr) return {};
   ensureActionEntities(transaction, window, models_ptr);
   const GeneratedFaultModelSet& models = *models_ptr;
@@ -1382,7 +1912,6 @@ std::vector<ExclusionAction> HypothesisGenerator::actionsForPlausibleSet(
   keep.id = ExclusionActionId(1);
   keep.action_model_id = "KEEP_ALL";
   out.push_back(keep);
-  std::map<std::string, std::vector<std::size_t>> seen;
   std::uint64_t id = 2;
   for (const auto& parts : requested) {
     auto action = unite(parts);
@@ -1391,24 +1920,11 @@ std::vector<ExclusionAction> HypothesisGenerator::actionsForPlausibleSet(
       action.recoverability = HistoryRecoverability::MissingProvenance;
       action.action_model_id = "CARDINALITY_CONTRACT_REJECTED";
     }
-    const auto key = actionKey(action);
-    const auto duplicate = seen.find(key);
-    std::optional<std::size_t> equivalent;
-    if (duplicate != seen.end()) {
-      for (const auto index : duplicate->second) {
-        if (equivalentActionOperation(out[index], action)) {
-          equivalent = index;
-          break;
-        }
-      }
-    }
-    if (!equivalent) {
-      action.id = ExclusionActionId(id++);
-      seen[key].push_back(out.size());
-      out.push_back(std::move(action));
-    } else {
-      mergeCoverage(&out[*equivalent], action);
-    }
+    // Preserve every raw request.  The single census/dedup boundary below is
+    // the only place allowed to merge exact operations, and records a proof
+    // for every merged occurrence.
+    action.id = ExclusionActionId(id++);
+    out.push_back(std::move(action));
   }
   std::sort(full.begin(), full.end(), [](const ExclusionAction* left,
                                         const ExclusionAction* right) {
@@ -1430,34 +1946,18 @@ std::vector<ExclusionAction> HypothesisGenerator::actionsForPlausibleSet(
         static_cast<int>(config_.max_exclusion_cardinality)) {
       union_action.recoverability = HistoryRecoverability::MissingProvenance;
     }
-    const auto key = actionKey(union_action);
-    const auto duplicate = seen.find(key);
-    std::optional<std::size_t> equivalent;
-    if (duplicate != seen.end()) {
-      for (const auto index : duplicate->second) {
-        if (equivalentActionOperation(out[index], union_action)) {
-          equivalent = index;
-          break;
-        }
-      }
-    }
-    if (!equivalent) {
-      union_action.id = ExclusionActionId(id++);
-      union_action.action_model_id = "FULL_PLAUSIBLE_UNION_RECOVERY";
-      seen[key].push_back(out.size());
-      out.push_back(std::move(union_action));
-    } else {
-      mergeCoverage(&out[*equivalent], union_action);
-      out[*equivalent].action_model_id =
-          "FULL_PLAUSIBLE_UNION_RECOVERY";
-    }
+    union_action.id = ExclusionActionId(id++);
+    union_action.action_model_id = "FULL_PLAUSIBLE_UNION_RECOVERY";
+    out.push_back(std::move(union_action));
   }
-  if (out.size() > config_.max_candidate_count) {
-    const ExclusionAction full_union = out.back();
-    out.resize(config_.max_candidate_count);
-    out.back() = full_union;
+  ActionSearchResultV1 result =
+      censusAndCapActionsV1(out, config_.max_candidate_count);
+  result.generated_snapshot.generator_identity =
+      "HypothesisGenerator::actionsForPlausibleSetV1/production-v1";
+  if (trusted_generated_snapshot) {
+    *trusted_generated_snapshot = result.generated_snapshot;
   }
-  return out;
+  return result;
 }
 
 }  // namespace uwb_imu_pl

@@ -8,6 +8,7 @@
 #include <cstdlib>
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <chrono>
 #include <cstring>
@@ -16,6 +17,10 @@
 
 namespace uwb_imu_pl {
 namespace {
+
+std::atomic<std::uint64_t> g_candidate_route_rank{0};
+std::atomic<std::uint64_t> g_candidate_route_dense{0};
+std::atomic<std::uint64_t> g_candidate_route_rank_exception{0};
 
 bool groupSelected(FactorGroupId id, const std::vector<FactorGroupId>& ids) {
   return std::find(ids.begin(), ids.end(), id) != ids.end();
@@ -1403,6 +1408,263 @@ CandidateEvaluation DenseCandidateOracle::evaluate(
   result.diagnostics.condition_value_kind = "EXACT_SVD";
   result.wall_ms = std::chrono::duration<double, std::milli>(
       std::chrono::steady_clock::now() - wall_start).count();
+  return result;
+}
+
+CandidateRouteWorkV1 candidateRouteWorkV1() {
+  CandidateRouteWorkV1 out;
+  out.routed_rank = g_candidate_route_rank.load();
+  out.routed_dense = g_candidate_route_dense.load();
+  out.rank_exceptions_recovered = g_candidate_route_rank_exception.load();
+  return out;
+}
+
+void resetCandidateRouteWorkV1() {
+  g_candidate_route_rank.store(0);
+  g_candidate_route_dense.store(0);
+  g_candidate_route_rank_exception.store(0);
+}
+
+CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
+    const LinearizedIntegrityWindow& window,
+    const BaseCandidateKernel& base,
+    const ExclusionAction& action,
+    RankUpdateScratch* scratch,
+    CandidateRouteSafetyV1* safety_output) const {
+  CandidateRouteSafetyV1 safety;
+  auto refuse_rank = [&](const std::string& reason) {
+    safety.rank_path_safe = false;
+    safety.reason = reason;
+  };
+
+  // Build the exact final-Jacobian reference first.  Besides being the dense
+  // terminal fallback, it supplies a state/rank/condition certificate that is
+  // independent of the add/downdate implementation.  Consequently no rank
+  // operation is attempted merely because an action happens to have a known
+  // type, amplitude, or ID.
+  CandidateEvaluation exact = dense_.evaluate(window, action);
+  // Keep the golden DenseCandidateOracle API/semantics untouched.  The new
+  // P0-06 router strengthens only its own terminal fallback by recomputing the
+  // final raw-H SVD state/covariance; this avoids using an H' H inverse as the
+  // independent certificate without reopening existing P0-03 callers.
+  Eigen::MatrixXd exact_h;
+  Eigen::VectorXd exact_z;
+  std::string exact_action_reason;
+  if (validateAction(window, action, &exact_action_reason) &&
+      candidateRows(window, action, &exact_h, &exact_z)) {
+    NumericalWorkCounters::candidateReferenceSvd();
+    Eigen::JacobiSVD<Eigen::MatrixXd> reference(
+        exact_h, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    const Eigen::VectorXd singular = reference.singularValues();
+    const double largest = singular.size() ? singular(0) : 0.0;
+    const double gate = config_.rank_tolerance * largest;
+    const int exact_rank =
+        static_cast<int>((singular.array() > gate).count());
+    if (exact_rank == exact_h.cols()) {
+      const Eigen::VectorXd inverse = singular.cwiseInverse();
+      exact.state_increment = reference.matrixV() * inverse.asDiagonal() *
+          reference.matrixU().transpose() * exact_z;
+      exact.covariance = reference.matrixV() *
+          inverse.array().square().matrix().asDiagonal() *
+          reference.matrixV().transpose();
+      exact.reference_vectors =
+          std::make_shared<const Eigen::MatrixXd>(reference.matrixV());
+      exact.reference_inverse_squared = inverse.array().square();
+      exact.reason.clear();
+      finishCandidate(&exact, exact_h, exact_z, config_.rank_tolerance,
+                      config_.max_condition_number,
+                      config_.max_linearization_step_norm);
+      exact.diagnostics.numerical_path = "DENSE_ROUTER_RAW_SVD";
+      exact.detector_certificate = {};
+      if (exact.valid) {
+        exact.detector_certificate = buildCandidateDetectorCertificate(
+            window, action, exact, config_.rank_tolerance);
+      }
+    }
+  }
+  safety.exact_rank = exact.rank;
+  safety.exact_dof = exact.dof;
+  safety.exact_condition = exact.condition_number;
+  safety.exact_step_norm = exact.state_increment.size() == window.H.cols() &&
+          exact.state_increment.allFinite()
+      ? exact.state_increment.norm()
+      : std::numeric_limits<double>::infinity();
+  auto dense_terminal = [&](const std::string& reason) {
+    exact.exact_slow_path = true;
+    exact.diagnostics.slow_path = true;
+    exact.diagnostics.numerical_path = "DENSE_ROUTER_EXACT";
+    exact.diagnostics.fallback_reason = reason;
+    // The detector certificate binds the complete candidate numerical
+    // identity, including diagnostics.  Rebuild it only after the terminal
+    // fallback identity is final; otherwise postcondition validation sees the
+    // pre-routing digest and (correctly) refuses the candidate.
+    exact.detector_certificate = {};
+    if (exact.valid) {
+      exact.detector_certificate = buildCandidateDetectorCertificate(
+          window, action, exact, config_.rank_tolerance);
+    }
+    return exact;
+  };
+
+  bool shape_safe = true;
+  if (!base.valid || base.window_view != &window || !base.numerics ||
+      base.window_id != window.id || !(base.version == window.version) ||
+      base.numerics->content_fingerprint != integrityWindowFingerprint(window) ||
+      !validateFrozenWindowNumericalProof(window, *base.numerics)) {
+    refuse_rank("RANK_PRECONDITION_BASE_IDENTITY");
+    shape_safe = false;
+  }
+
+  std::set<FactorGroupId> requested_removals;
+  std::set<FactorGroupId> requested_additions;
+  for (const auto id : action.groups_to_remove) {
+    if (!requested_removals.insert(id).second) {
+      refuse_rank("RANK_PRECONDITION_DUPLICATE_REMOVAL");
+      shape_safe = false;
+    }
+  }
+  for (const auto id : action.groups_to_add) {
+    if (!requested_additions.insert(id).second) {
+      refuse_rank("RANK_PRECONDITION_DUPLICATE_ADDITION");
+      shape_safe = false;
+    }
+  }
+  if (requested_additions.size() != action.added_blocks.size()) {
+    refuse_rank("RANK_PRECONDITION_ADDITION_MAPPING");
+    shape_safe = false;
+  }
+  for (const auto& added : action.added_blocks) {
+    if (!requested_additions.count(added.group_id)) {
+      refuse_rank("RANK_PRECONDITION_ADDITION_MAPPING");
+      shape_safe = false;
+    }
+    ++safety.added_blocks;
+    safety.changed_rows += static_cast<std::size_t>(
+        std::max<Eigen::Index>(0, added.jacobian_whitened.rows()));
+  }
+
+  std::set<FactorGroupId> observed_removals;
+  std::vector<const LinearizedFactorBlock*> changed_blocks;
+  for (const auto& block : window.blocks) {
+    if (!requested_removals.count(block.group_id)) continue;
+    observed_removals.insert(block.group_id);
+    changed_blocks.push_back(&block);
+    ++safety.removed_blocks;
+    safety.changed_rows += static_cast<std::size_t>(
+        std::max<Eigen::Index>(0, block.jacobian_whitened.rows()));
+  }
+  if (observed_removals != requested_removals) {
+    refuse_rank("RANK_PRECONDITION_REMOVAL_MAPPING");
+    shape_safe = false;
+  }
+  for (const auto& added : action.added_blocks) changed_blocks.push_back(&added);
+
+  // RankUpdateEvaluator assigns one frozen-information solve per changed
+  // block into a fixed row slice.  Certify that exact shape and finiteness
+  // before the assignment; an empty/short solve was the concrete NDEBUG crash
+  // mechanism reproduced by the fourth review.
+  if (shape_safe) {
+    for (const auto* block : changed_blocks) {
+      const Eigen::MatrixXd solved = solveFrozenInformation(
+          window.square_root.get(), *base.numerics, window.base_information,
+          block->jacobian_whitened.transpose());
+      if (solved.rows() != window.H.cols() ||
+          solved.cols() != block->jacobian_whitened.rows() ||
+          !solved.allFinite()) {
+        refuse_rank("RANK_PRECONDITION_CHANGED_BLOCK_SOLVE");
+        shape_safe = false;
+        break;
+      }
+    }
+  }
+
+  // The exact candidate must be comfortably inside every numerical/gate
+  // boundary before the optimized path is allowed.  This is only a routing
+  // margin: the configured acceptance threshold is unchanged and the dense
+  // result remains authoritative whenever the proof is unknown.
+  const double condition_margin = 0.5 * config_.max_condition_number;
+  const double step_margin = 0.5 * config_.max_linearization_step_norm;
+  if (shape_safe && (!exact.valid || exact.rank != window.H.cols() ||
+                     exact.dof <= 0 || !std::isfinite(exact.condition_number) ||
+                     exact.condition_number > condition_margin ||
+                     !std::isfinite(safety.exact_step_norm) ||
+                     safety.exact_step_norm > step_margin ||
+                     safety.changed_rows >
+                         static_cast<std::size_t>(window.H.cols()))) {
+    refuse_rank("RANK_PRECONDITION_EXACT_MARGIN");
+    shape_safe = false;
+  }
+
+  if (!shape_safe) {
+    safety.rank_path_safe = false;
+    if (safety_output) *safety_output = safety;
+    ++g_candidate_route_dense;
+    return dense_terminal(safety.reason);
+  }
+
+  CandidateEvaluation result;
+  try {
+    result = rank_dependency_
+        ? rank_dependency_(base, action, scratch)
+        : rank_.evaluate(base, action, scratch);
+  } catch (const std::exception& error) {
+    safety.rank_path_safe = false;
+    safety.reason = std::string("RANK_EXCEPTION_DENSE_EXACT:") + error.what();
+    if (safety_output) *safety_output = safety;
+    ++g_candidate_route_dense;
+    ++g_candidate_route_rank_exception;
+    return dense_terminal(safety.reason);
+  } catch (...) {
+    safety.rank_path_safe = false;
+    safety.reason = "RANK_EXCEPTION_DENSE_EXACT:unknown";
+    if (safety_output) *safety_output = safety;
+    ++g_candidate_route_dense;
+    ++g_candidate_route_rank_exception;
+    return dense_terminal(safety.reason);
+  }
+  const Eigen::MatrixXd identity = Eigen::MatrixXd::Identity(
+      window.H.cols(), window.H.cols());
+  const Eigen::MatrixXd rank_covariance = result.covarianceTimes(identity);
+  const Eigen::MatrixXd exact_covariance = exact.covarianceTimes(identity);
+  const double state_scale = std::max(
+      {1.0, result.state_increment.norm(), exact.state_increment.norm()});
+  const double covariance_scale = std::max(
+      {1.0, rank_covariance.norm(), exact_covariance.norm()});
+  const double statistic_scale = std::max(
+      {1.0, std::abs(result.statistic), std::abs(exact.statistic)});
+  const bool same_terminal = result.valid == exact.valid &&
+      result.rank == exact.rank && result.dof == exact.dof &&
+      result.state_increment.size() == exact.state_increment.size() &&
+      rank_covariance.rows() == window.H.cols() &&
+      rank_covariance.cols() == window.H.cols() &&
+      exact_covariance.rows() == window.H.cols() &&
+      exact_covariance.cols() == window.H.cols() &&
+      result.state_increment.allFinite() && rank_covariance.allFinite() &&
+      (result.state_increment - exact.state_increment).norm() <=
+          1e-7 * state_scale &&
+      (rank_covariance - exact_covariance).norm() <=
+          1e-7 * covariance_scale &&
+      std::isfinite(result.statistic) && std::isfinite(exact.statistic) &&
+      std::abs(result.statistic - exact.statistic) <=
+          1e-7 * statistic_scale;
+  if (!same_terminal) {
+    safety.rank_path_safe = false;
+    safety.reason = "RANK_POSTCONDITION_EXACT_MISMATCH";
+    if (safety_output) *safety_output = safety;
+    ++g_candidate_route_dense;
+    return dense_terminal(safety.reason);
+  }
+
+  safety.rank_path_safe = true;
+  safety.reason = "RANK_SAFETY_CERTIFIED_V1";
+  if (safety_output) *safety_output = safety;
+  ++g_candidate_route_rank;
+  if (result.diagnostics.fallback_reason.empty()) {
+    result.diagnostics.fallback_reason = safety.reason;
+  } else {
+    result.diagnostics.fallback_reason = safety.reason + ";" +
+        result.diagnostics.fallback_reason;
+  }
   return result;
 }
 
