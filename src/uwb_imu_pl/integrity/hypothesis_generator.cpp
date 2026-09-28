@@ -625,7 +625,12 @@ ExclusionAction actionForMode(const EpochTransaction& tx,
     if (mode.sensor == SensorType::Uwb) {
       const auto* replacement = replacementFor(tx, *occurrence,
                                                  mode.anchor_id.value());
-      if (!replacement) {
+      // A condensed historical occurrence has no explicit source rows in the
+      // current window.  It is therefore not recoverable by a row-level
+      // retained-principal-covariance replacement.  Preserve the mode and
+      // fail this action closed instead of throwing while constructing the
+      // complete production action census.
+      if (!replacement || blockFor(window, occurrence->uwb->id) == nullptr) {
         action.recoverability = HistoryRecoverability::MissingProvenance;
         continue;
       }

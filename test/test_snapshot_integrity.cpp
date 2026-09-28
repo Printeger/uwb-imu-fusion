@@ -119,7 +119,12 @@ TEST(SnapshotIntegrity, ChiSquareDofAndPhysicalAnchorHypotheses) {
   }
   EXPECT_EQ(anchors.size(), batch.measurements.size());
   EXPECT_TRUE(output.protection_level.pl_xyz_m.allFinite());
-  EXPECT_TRUE(output.protection_level.formal_eligible);
+  EXPECT_FALSE(output.protection_level.formal_eligible);
+  EXPECT_EQ(output.protection_level.availability,
+            uwb_imu_pl::Availability::Unavailable);
+  EXPECT_NE(output.protection_level.reason.find("IMU_MODEL_UNQUALIFIED"),
+            std::string::npos);
+  EXPECT_FALSE(output.publication.protected_output);
   EXPECT_NEAR(output.protection_level.hpl_m,
               std::hypot(output.protection_level.pl_xyz_m.x(),
                          output.protection_level.pl_xyz_m.y()), 1e-12);
@@ -203,7 +208,9 @@ TEST(SnapshotIntegrity, FormalGateRiskAlarmAndAlertLimitBranchesFailClose) {
   low_limits.vertical_alert_limit_m = 1e-9;
   output = uwb_imu_pl::IntegrityMonitor(low_limits, 1e-10, 1e10)
                .evaluateSnapshot(batch, nominal);
-  EXPECT_TRUE(output.protection_level.formal_eligible);
+  EXPECT_FALSE(output.protection_level.formal_eligible);
+  EXPECT_NE(output.protection_level.reason.find("IMU_MODEL_UNQUALIFIED"),
+            std::string::npos);
   EXPECT_TRUE(output.protection_level.pl_xyz_m.allFinite());
   EXPECT_EQ(output.protection_level.availability,
             uwb_imu_pl::Availability::Unavailable);
@@ -216,10 +223,10 @@ TEST(SnapshotIntegrity, FormalGateRiskAlarmAndAlertLimitBranchesFailClose) {
                .evaluateSnapshot(batch, faulted);
   ASSERT_TRUE(output.detector.numerically_valid);
   EXPECT_FALSE(output.detector.passed);
-  EXPECT_TRUE(output.protection_level.formal_eligible);
+  EXPECT_FALSE(output.protection_level.formal_eligible);
   EXPECT_EQ(output.protection_level.label,
             uwb_imu_pl::IntegrityLabel::FormalLocalCurrentFaultOnly);
   EXPECT_EQ(output.protection_level.availability,
-            uwb_imu_pl::Availability::Alert);
+            uwb_imu_pl::Availability::Unavailable);
   EXPECT_FALSE(output.protection_level.pl_xyz_m.allFinite());
 }

@@ -335,9 +335,12 @@ RawOracleSystem reconstructRawUwbBoundary(
                 static_cast<Eigen::Index>(group.source_measurements.size()));
       Eigen::LLT<Eigen::MatrixXd> llt(group.raw_covariance);
       EXPECT_EQ(llt.info(), Eigen::Success);
-      const Eigen::MatrixXd whitener = llt.matrixL().solve(
+      const Eigen::MatrixXd information = llt.solve(
           Eigen::MatrixXd::Identity(group.raw_covariance.rows(),
                                     group.raw_covariance.cols()));
+      Eigen::LLT<Eigen::MatrixXd> information_llt(information);
+      EXPECT_EQ(information_llt.info(), Eigen::Success);
+      const Eigen::MatrixXd whitener = information_llt.matrixU();
       for (std::size_t row = 0; row < group.source_measurements.size(); ++row) {
         const auto* measurement =
             rawMeasurement(record, group.source_measurements[row]);

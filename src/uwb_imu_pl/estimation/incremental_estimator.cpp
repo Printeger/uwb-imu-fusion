@@ -59,6 +59,69 @@ struct P005EstimatorRuntime {
   bool consumed = false;
 };
 
+// P0-07 diagnostic certificates are frozen while prepareEpoch still owns a
+// coherent view of the graph and ledger.  The sidecar is deliberately outside
+// the estimator and EpochTransaction layouts so the golden public ABI remains
+// unchanged.  Audit readers take a shared immutable snapshot under the mutex
+// and never touch the live ledger while commit publishes a replacement.
+using P007RawOwnerCertificate =
+    std::shared_ptr<const std::vector<RawRowOwnershipAuditV1>>;
+struct P007CertificateEntry {
+  std::weak_ptr<const gtsam::Values> lifetime;
+  P007RawOwnerCertificate certificate;
+};
+
+std::mutex& p007CertificateMutex() {
+  static std::mutex mutex;
+  return mutex;
+}
+
+std::map<const IncrementalUwbImuEstimator*,
+         std::map<std::pair<std::uint64_t, const gtsam::Values*>,
+                  P007CertificateEntry>>&
+p007Certificates() {
+  static std::map<const IncrementalUwbImuEstimator*,
+                  std::map<std::pair<std::uint64_t, const gtsam::Values*>,
+                           P007CertificateEntry>> states;
+  return states;
+}
+
+void freezeP007Certificate(
+    const IncrementalUwbImuEstimator* estimator,
+    const EpochTransaction& transaction,
+    std::vector<RawRowOwnershipAuditV1> certificate) {
+  auto immutable = std::make_shared<const std::vector<RawRowOwnershipAuditV1>>(
+      std::move(certificate));
+  std::lock_guard<std::mutex> lock(p007CertificateMutex());
+  auto& by_transaction = p007Certificates()[estimator];
+  for (auto it = by_transaction.begin(); it != by_transaction.end();) {
+    if (it->second.lifetime.expired()) {
+      it = by_transaction.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  by_transaction[{transaction.id.value(), transaction.frozen_values.get()}] =
+      {transaction.frozen_values, std::move(immutable)};
+}
+
+P007RawOwnerCertificate readP007Certificate(
+    const IncrementalUwbImuEstimator* estimator,
+    const EpochTransaction& transaction) {
+  std::lock_guard<std::mutex> lock(p007CertificateMutex());
+  const auto owner = p007Certificates().find(estimator);
+  if (owner == p007Certificates().end()) return {};
+  const auto found = owner->second.find(
+      {transaction.id.value(), transaction.frozen_values.get()});
+  return found == owner->second.end() ? P007RawOwnerCertificate{}
+                                      : found->second.certificate;
+}
+
+void eraseP007Certificates(const IncrementalUwbImuEstimator* estimator) {
+  std::lock_guard<std::mutex> lock(p007CertificateMutex());
+  p007Certificates().erase(estimator);
+}
+
 std::atomic<std::uint64_t>& p005FaultNonce() {
   static std::atomic<std::uint64_t> nonce{1};
   return nonce;
@@ -337,6 +400,9 @@ std::pair<Eigen::MatrixXd, Eigen::VectorXd> linearizeGroupDense(
 
 }  // namespace
 
+static std::vector<RawRowOwnershipAuditV1> buildRawRowOwnershipCertificateV1(
+    const EpochTransaction& transaction, const FactorLedger& frozen_ledger);
+
 IncrementalUwbEstimator::IncrementalUwbEstimator(
     const IncrementalConfig& config)
     : config_(config), isam2_([&config] {
@@ -513,6 +579,8 @@ IncrementalUwbImuEstimator::IncrementalUwbImuEstimator(
         params.optimizationParams = gtsam::ISAM2DoglegParams();
         return params;
       }()) {
+  // Defensively clear any registry entry left at a recycled object address.
+  eraseP007Certificates(this);
   if (config_.incremental.fixed_lag_epochs == 1) {
     throw std::invalid_argument("fixed_lag_epochs must be 0 or at least 2");
   }
@@ -540,6 +608,7 @@ IncrementalUwbImuEstimator::IncrementalUwbImuEstimator(
 }
 
 IncrementalUwbImuEstimator::~IncrementalUwbImuEstimator() {
+  eraseP007Certificates(this);
   eraseP005Runtime(this);
 }
 
@@ -1121,6 +1190,10 @@ EpochTransaction IncrementalUwbImuEstimator::prepareTransaction(
                  factor_ledger_.hasCompleteActiveProvenance(*tx.frozen_graph)
              ? HistoryRecoverability::Recoverable
              : HistoryRecoverability::MissingProvenance);
+  if (tx.frozen_values) {
+    freezeP007Certificate(
+        this, tx, buildRawRowOwnershipCertificateV1(tx, factor_ledger_));
+  }
   active_transaction_id_ = tx.id;
   pending_epoch_ = true;
   current_uwb_committed_ = false;
@@ -1258,8 +1331,28 @@ LinearizedFactorBlock IncrementalUwbImuEstimator::linearizePendingGroup(
     block.covariance = Eigen::MatrixXd::Identity(h.rows(), h.rows());
   }
   block.whitener = whitener(block.covariance);
-  block.jacobian_raw = block.whitener.triangularView<Eigen::Lower>().solve(h);
-  block.residual_raw = block.whitener.triangularView<Eigen::Lower>().solve(rhs);
+  if (group.kind == FactorKind::UwbBatch) {
+    // `GaussianFactor::jacobian()` is expressed using GTSAM's upper-triangular
+    // square-root information convention.  It is not, in general, the same
+    // matrix as the lower-Cholesky whitener initially constructed above for
+    // correlated UWB covariance.  Recover the physical raw range system with
+    // the matching GTSAM model and retain its exact deterministic whitening
+    // coordinate, avoiding a gratuitous row rotation of rank-update inputs.
+    const auto gaussian_noise =
+        gtsam::noiseModel::Gaussian::Covariance(block.covariance);
+    block.whitener = gaussian_noise->R();
+    block.jacobian_raw.resize(h.rows(), h.cols());
+    for (Eigen::Index column = 0; column < h.cols(); ++column) {
+      block.jacobian_raw.col(column) =
+          gaussian_noise->unwhiten(h.col(column));
+    }
+    block.residual_raw = gaussian_noise->unwhiten(rhs);
+  } else {
+    block.jacobian_raw =
+        block.whitener.triangularView<Eigen::Lower>().solve(h);
+    block.residual_raw =
+        block.whitener.triangularView<Eigen::Lower>().solve(rhs);
+  }
   return block;
 }
 
@@ -3112,6 +3205,122 @@ IncrementalUwbImuEstimator::methodBCandidatePrior(
     return std::nullopt;
   result.condition_number =
       eigen.eigenvalues().maxCoeff() / eigen.eigenvalues().minCoeff();
+  return result;
+}
+
+std::vector<RawRowOwnershipAuditV1>
+IncrementalUwbImuEstimator::auditRawRowOwnershipV1(
+    const EpochTransaction& transaction) const {
+  if (!transaction.frozen_values) {
+    throw std::runtime_error("raw row ownership audit requires frozen values");
+  }
+  const auto frozen = readP007Certificate(this, transaction);
+  if (!frozen) {
+    throw std::runtime_error(
+        "raw row ownership audit certificate is absent or belongs to a "
+        "different estimator lifetime");
+  }
+  return *frozen;
+}
+
+static std::vector<RawRowOwnershipAuditV1> buildRawRowOwnershipCertificateV1(
+    const EpochTransaction& transaction, const FactorLedger& frozen_ledger) {
+  std::vector<RawRowOwnershipAuditV1> result;
+  std::set<std::uint64_t> represented_groups;
+  const auto append_group = [&](const PendingFactorGroup& group) {
+    if (!group.nominal ||
+        (group.kind != FactorKind::CombinedImu &&
+         group.kind != FactorKind::UwbBatch)) {
+      return;
+    }
+    gtsam::Ordering ordering;
+    for (const auto key : group.keys) {
+      if (std::find(ordering.begin(), ordering.end(), key) == ordering.end()) {
+        ordering.push_back(key);
+      }
+    }
+    const auto dense = group.factors.linearize(
+        *transaction.frozen_values)->jacobian(ordering);
+    const std::size_t rows = static_cast<std::size_t>(dense.first.rows());
+    if (group.kind == FactorKind::UwbBatch &&
+        group.source_measurements.size() > rows) {
+      throw std::runtime_error(
+          "UWB row ownership audit size mismatch for group " +
+          std::to_string(group.id.value()) + ": sources=" +
+          std::to_string(group.source_measurements.size()) + ", rows=" +
+          std::to_string(rows));
+    }
+    represented_groups.insert(group.id.value());
+    for (std::size_t row = 0; row < rows; ++row) {
+      RawRowOwnershipAuditV1 entry;
+      entry.owner_group = group.id;
+      entry.row_in_group = row;
+      if (group.kind == FactorKind::UwbBatch &&
+          row < group.source_measurements.size()) {
+        entry.row_id = "uwb-measurement:" +
+            std::to_string(group.source_measurements[row].value());
+        entry.covariance_placement = "uwb-covariance-row-column:" +
+            std::to_string(row);
+      } else {
+        entry.row_id = (group.kind == FactorKind::CombinedImu ? "imu:" :
+                                                              "group-aux:") +
+            std::to_string(group.id.value()) + ":" + std::to_string(row);
+        entry.covariance_placement = "factor-native-whitened-row:" +
+            std::to_string(row);
+      }
+      result.push_back(std::move(entry));
+    }
+  };
+  for (const auto& record : transaction.recoverable_history) {
+    for (const auto& group : record.groups) append_group(group);
+  }
+  append_group(transaction.imu_group);
+  for (const auto& group : transaction.uwb_groups) append_group(group);
+
+  for (const auto& slot : transaction.frozen_slots) {
+    if (!slot.group_id || represented_groups.count(slot.group_id->value()) != 0) {
+      continue;
+    }
+    const auto linear = slot.factor->linearize(*transaction.frozen_values);
+    std::size_t rows = 0;
+    if (const auto jacobian =
+            boost::dynamic_pointer_cast<gtsam::JacobianFactor>(linear)) {
+      rows = static_cast<std::size_t>(jacobian->rows());
+    } else if (const auto hessian =
+                   boost::dynamic_pointer_cast<gtsam::HessianFactor>(linear)) {
+      rows = static_cast<std::size_t>(hessian->info().rows() - 1);
+    } else {
+      throw std::runtime_error("unknown frozen factor in row ownership audit");
+    }
+    const auto ledger_entries = frozen_ledger.groupEntries(*slot.group_id);
+    const auto ledger_uwb = std::find_if(
+        ledger_entries.begin(), ledger_entries.end(),
+        [&](const FactorLedgerEntry& entry) {
+          return entry.kind == FactorKind::UwbBatch &&
+              entry.source_measurements.size() == rows;
+        });
+    const bool frozen_uwb = ledger_uwb != ledger_entries.end();
+    for (std::size_t row = 0; row < rows; ++row) {
+      if (frozen_uwb) {
+        result.push_back({
+            "uwb-measurement:" +
+                std::to_string(ledger_uwb->source_measurements[row].value()),
+            *slot.group_id, row,
+            "uwb-covariance-row-column:" + std::to_string(row)});
+      } else {
+        result.push_back({"prior:marginalized-through-epoch-1:" +
+                              std::to_string(slot.group_id->value()) + ":" +
+                              std::to_string(row),
+                          *slot.group_id, row,
+                          "information-prior:" + std::to_string(slot.slot) +
+                              ":" + std::to_string(row)});
+      }
+    }
+  }
+  std::sort(result.begin(), result.end(), [](const auto& left,
+                                             const auto& right) {
+    return left.row_id < right.row_id;
+  });
   return result;
 }
 

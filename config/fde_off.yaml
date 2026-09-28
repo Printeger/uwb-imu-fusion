@@ -25,6 +25,8 @@ imu:
   gyroscope_bias_rw_sigma: 0.0001
   gravity_mps2: 9.80665
   max_gap_s: 0.02
+  sigma_semantics: UNQUALIFIED_CONFIGURED_PARAMETER
+  trapezoid_correlation_model: SHARED_SAMPLE_CORRELATION_UNQUALIFIED
   noise_overbound_calibration_id: ''
 integrity_window:
   intervals: 10

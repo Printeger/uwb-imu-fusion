@@ -99,6 +99,17 @@ struct CommitBoundaryAuditV1 {
   std::uint64_t backend_update_count = 0;
 };
 
+// Read-only row ownership certificate for independent raw-factor tests and
+// offline diagnostics. This is a non-virtual diagnostic method, so it does not
+// alter any long-lived public object layout. Row identities are derived from
+// production transaction/ledger inventory, never supplied by the caller.
+struct RawRowOwnershipAuditV1 {
+  std::string row_id;
+  FactorGroupId owner_group;
+  std::size_t row_in_group = 0;
+  std::string covariance_placement;
+};
+
 // Out-of-object test/debug sidecar. Keeping this state in the implementation
 // registry preserves the estimator's golden object layout while giving O08 an
 // unambiguous one-shot identity for the exact maybeInject invocation reached.
@@ -195,6 +206,8 @@ class IncrementalUwbImuEstimator {
   }
   const IntegrityConfig& config() const { return config_; }
   EstimatorAudit audit() const;
+  std::vector<RawRowOwnershipAuditV1> auditRawRowOwnershipV1(
+      const EpochTransaction& transaction) const;
   const FactorLedger& factorLedger() const { return factor_ledger_; }
   std::uint64_t backendUpdateCount() const { return backend_update_count_; }
   EstimatorCacheAudit cacheAudit() const;

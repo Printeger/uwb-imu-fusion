@@ -21,9 +21,7 @@
 namespace uwb_imu_pl {
 namespace {
 
-// Mirrors the estimator convention (`incremental_estimator.cpp::whitener`):
-// covariance = L L^T, whitener = L^-1 (lower triangular).  Returns false when
-// the covariance is not SPD; the caller skips the column and counts it.
+// Lower-Cholesky coordinate used by the IMU material builder.
 bool whitenerFromCovariance(const Eigen::MatrixXd& covariance,
                             Eigen::MatrixXd* whitener) {
   if (covariance.rows() != covariance.cols() || covariance.rows() == 0) {
@@ -36,6 +34,24 @@ bool whitenerFromCovariance(const Eigen::MatrixXd& covariance,
   *whitener = llt.matrixL().solve(
       Eigen::MatrixXd::Identity(covariance.rows(), covariance.cols()));
   return true;
+}
+
+// UWB Gaussian factors use GTSAM's upper square-root information coordinate.
+// Fault columns must use the identical coordinate; an independently valid
+// lower root would be a row rotation and cannot be mixed with upper-root H/z.
+bool upperInformationRootFromCovariance(const Eigen::MatrixXd& covariance,
+                                        Eigen::MatrixXd* whitener) {
+  if (covariance.rows() != covariance.cols() || covariance.rows() == 0) {
+    return false;
+  }
+  Eigen::LLT<Eigen::MatrixXd> covariance_llt(covariance);
+  if (covariance_llt.info() != Eigen::Success) return false;
+  const Eigen::MatrixXd information = covariance_llt.solve(
+      Eigen::MatrixXd::Identity(covariance.rows(), covariance.cols()));
+  Eigen::LLT<Eigen::MatrixXd> information_llt(information);
+  if (information_llt.info() != Eigen::Success) return false;
+  *whitener = information_llt.matrixU();
+  return whitener->allFinite();
 }
 
 const PendingFactorGroup* selectedGroupOfKind(
@@ -179,8 +195,8 @@ std::vector<HistoryFaultColumn> buildHistoricalUwbColumnsForEpoch(
   bool have_whitener = false;
   if (uwb->raw_covariance.rows() == static_cast<int>(rows) &&
       uwb->raw_covariance.cols() == static_cast<int>(rows)) {
-    have_whitener =
-        whitenerFromCovariance(uwb->raw_covariance, &group_whitener);
+    have_whitener = upperInformationRootFromCovariance(
+        uwb->raw_covariance, &group_whitener);
   } else {
     group_whitener = Eigen::MatrixXd::Identity(rows, rows);
     have_whitener = true;

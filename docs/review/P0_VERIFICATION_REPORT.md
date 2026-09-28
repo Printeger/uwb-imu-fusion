@@ -71,11 +71,17 @@ The table status is one of:
   the only reference;
 - `BLOCKED`: an explicit dependency or required artifact is absent;
 - `FAILED`: the step was exercised and did not satisfy its exit gate;
+- `VALIDATION_PAUSED`: implementation is checkpointed, but the required
+  independent review and golden acceptance are explicitly unfinished;
 - `GOLDEN`: the implementation commit, required tests and evidence bundle all
   passed, and an immutable golden tag points to that commit.
 
-Current project state is `P0_REMEDIATION`; the latest immutable baseline is
-`golden-p0-06-actions`.  P1 is `CLOSED`.  P0-01 corrected the known
+Current project state is `P1_DEVELOPMENT_ON_WIP_CHECKPOINT`; the latest
+immutable golden baseline remains `golden-p0-06-actions`.  On 2026-09-28 the
+user explicitly paused P0-07 acceptance and authorized P1 development directly
+on the ordinary P0-07 checkpoint commit.  That checkpoint is not a golden
+baseline, does not satisfy D12, and does not authorize a `golden-p0-07` tag.
+P0-01 corrected the known
 `test_round2_tools` v5/v6 evidence-harness mismatch, and its complete CTest
 result is recorded in the evidence bundle; the historical
 `catkin_test_results` count is not an acceptance substitute for the complete
@@ -96,7 +102,7 @@ move an earlier golden tag.
 | **P0-04 Complete risk and selection events** | R03; D05, D06. Separate allocation validity, complete bound closure, validation status and formal eligibility. Charge or reject miss/escape/omitted/selection terms. Remove plausible-ID premerging without a numeric shared-event proof. | O06. High-precision ledger closes on the same total budget; unknown terms are not zero; disjoint action events are not merged; over-budget profiles become unavailable without changing budgets, alert limits or thresholds. | Commit: `fix(p0-04): close risk and selection accounting`; tag: `golden-p0-04-risk` | `GOLDEN` |
 | **P0-05 Transaction, reference and final packet** | R05; D07-A, D07-B, D11-B. Extend the mutation guard through receipt creation, stage metadata, bind committed mean to the PL reference or transfer it, and make ROS/logging consume one immutable final packet. Fix D11-A in the same output boundary by rotating Odometry velocity/covariance to the child frame. | O04, O08 and O10. Exception injection at every mutation/query/ledger/publication boundary yields one receipt or poison; committed mean is covered; ROS, CSV and mirrors agree; deadline timestamps include the defined packet/publish boundary; 90-degree-yaw velocity test passes. | Commit: `fix(p0-05): make commit and publication certificates atomic`; tag: `golden-p0-05-publication` | `GOLDEN` |
 | **P0-06 Action-search completeness** | Conditional-P0 D09. Eliminate silent action truncation. Exact duplicates may be merged; otherwise evaluate all actions or report `SEARCH_INCOMPLETE` with generated/evaluated/omitted identities. | O07. An uncapped reference and reordered enumeration produce the same winner/refusal. A resource-limited run cannot claim exhaustive selection or protected output. Increasing the cap alone does not pass. | Commit: `fix(p0-06): fail closed on incomplete action search`; tag: `golden-p0-06-actions` | `GOLDEN` |
-| **P0-07 Corrected exhaustive closure** | R06; complete D12 evidence and resolve N01's noise/trapezoid semantics. Produce a corrected exhaustive baseline and an evidence bundle. Missing external calibration may remain an explicit qualification blocker only if it is represented by a fail-closed model gate and protected/formal output remains disabled. | O01–O12 correctness smoke, complete CTest exit status, sanitizer subset where available, replay snapshots, source/diff/binary/library/config/input/output hashes and explicit `NOT_RUN`. No P0 finding may remain an uncontrolled behavior. | Commit: `test(p0-07): establish corrected exhaustive baseline`; tag: `golden-p0-07-corrected-exhaustive` | `NOT_STARTED` |
+| **P0-07 Corrected exhaustive closure** | R06; complete D12 evidence and resolve N01's noise/trapezoid semantics. Produce a corrected exhaustive baseline and an evidence bundle. Missing external calibration may remain an explicit qualification blocker only if it is represented by a fail-closed model gate and protected/formal output remains disabled. | O01–O12 correctness smoke, complete CTest exit status, sanitizer subset where available, replay snapshots, source/diff/binary/library/config/input/output hashes and explicit `NOT_RUN`. No P0 finding may remain an uncontrolled behavior. | Ordinary checkpoint: `wip(p0-07): checkpoint implementation with formal validation pending`; **no golden tag** | `VALIDATION_PAUSED` |
 | **P1-01 Immutable identity and indexing** | R07 only: frozen typed handles, one content hash, direct descriptor indices, compact pair descriptors, exact operation deduplication and batched unique-block RHS. | O03, O05, O09, O12 against `golden-p0-07-corrected-exhaustive`; census, decisions, risk and outputs unchanged; full-attempt time or work counters improve. | Commit: `perf(p1-01): remove redundant identity and lookup work` | `NOT_STARTED` |
 | **P1-02 Shared dual numerics** | R08: one candidate root/context, shared unique-mode responses and fixed-size pair blocks across detector, evidence and PL. Keep every hypothesis and fallback. | O02, O03, O05, O06, O07, O12. Per-hypothesis `Gamma_c/Gamma_h/t/G/J/L`, worst PL, winner and certificate match the latest golden baseline within the numerical contract. | Commit: `perf(p1-02): share dual-channel hypothesis numerics` | `NOT_STARTED` |
 | **P1-03 Incremental history root** | R09: update only the proven dependency closure while preserving raw row provenance, fault columns, constants and dof; retain full rebuild fallback. | O01, O03, O05, O09, O12. Every epoch matches full rebuild; recovery invalidates affected cache entries; long-run RSS is bounded. | Commit: `perf(p1-03): incrementally maintain history root` | `NOT_STARTED` |
@@ -104,9 +110,14 @@ move an earlier golden tag.
 | **P1-05 Deterministic concurrency and timing** | R11: flat candidate×hypothesis tasks, fixed output slots, deterministic reduction, bounded scratch and one all-attempt timer. No nested use of the same worker pool. | O08, O09, O10, O12 plus TSan where available. One/two/four workers produce identical decisions; exceptions and deadline misses remain in the denominator; p99 and RSS are reported, not assumed. | Commit: `perf(p1-05): parallelize deterministic integrity work` | `NOT_STARTED` |
 | **P1-06 Position-quality diagnosis and final acceptance** | R12 plus the complete P1 acceptance run. Diagnose off-profile attitude/long-run behavior in the required frame/observability/time/Jacobian/initialization order. Only proven implementation defects may be fixed here; a model, noise, prior or risk-contract change is moved to a separately authorized P2 step. | O04, O05, O11, O12. Re-run all profiles and all attempts on the same hardware/source/config/input; report core, analysis-completion and arrival-to-publish p50/p95/p99/max, complete-work rate, PL/recovery, navigation errors and RSS. | Commit: `test(p1-06): record full corrected performance acceptance` | `NOT_STARTED` |
 
-The ordering is strict.  P1-01 may start only after every P0 row is `GOLDEN`
-and `golden-p0-07-corrected-exhaustive` exists.  A P0 result that is merely
-faster, finite, or internally self-consistent is not complete.
+The normal ordering is strict: P1-01 starts only after every P0 row is
+`GOLDEN` and `golden-p0-07-corrected-exhaustive` exists.  A P0 result that is
+merely faster, finite, or internally self-consistent is not complete.  The
+2026-09-28 user-authorized exception permits P1 implementation on the ordinary
+P0-07 checkpoint solely to avoid blocking development; it does not convert
+P0-07 to `GOLDEN`, waive its unfinished independent validation, or permit a
+golden tag.  P1 comparisons use that immutable checkpoint as the development
+baseline while retaining `golden-p0-06-actions` as the latest true golden.
 
 ### 2.3 Golden-baseline protocol
 
@@ -189,7 +200,7 @@ The completion record is maintained here:
 | P0-04 | `GOLDEN` | this commit (`golden-p0-04-risk^{}`) | `golden-p0-04-risk` | [p0-04-risk](../evidence/p0-04-risk/README.md) | PASS: independent reviewer and supervisor; O06 13/13, grouping 3/3, complete CTest 27/27 |
 | P0-05 | `GOLDEN` | this commit (`golden-p0-05-publication^{}`) | `golden-p0-05-publication` | [p0-05-publication](../evidence/p0-05-publication/README.md) | PASS: eighth independent reviewer and supervisor; O04/O08/O10, directed 13/13, complete CTest 28/28 |
 | P0-06 | `GOLDEN` | this commit (`golden-p0-06-actions^{}`) | `golden-p0-06-actions` | [p0-06-actions](../evidence/p0-06-actions/README.md) | PASS: eighth independent reviewer and supervisor; O07 directed 24/24, complete CTest 29/29 |
-| P0-07 | `NOT_STARTED` | — | `golden-p0-07-corrected-exhaustive` | — | P1 gate is closed until this row is GOLDEN |
+| P0-07 | `VALIDATION_PAUSED` | ordinary checkpoint carrying this record | **none; do not create `golden-p0-07`** | [p0-07-corrected-exhaustive](../evidence/p0-07-corrected-exhaustive/README.md) | Independent validation unfinished; full 174 gate interrupted after static PASS and DERIVED 11/13; user authorized P1 continuation on 2026-09-28 |
 | P1-01 | `NOT_STARTED` | — | use latest golden | — | — |
 | P1-02 | `NOT_STARTED` | — | use latest golden | — | — |
 | P1-03 | `NOT_STARTED` | — | use latest golden | — | — |

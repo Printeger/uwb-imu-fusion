@@ -361,6 +361,49 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(test_p0_06_action_search test/test_p0_06_action_search.cpp test/test_main.cpp)
   target_link_libraries(test_p0_06_action_search ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
 
+  catkin_add_gtest(test_p0_07_corrected_exhaustive test/test_p0_07_corrected_exhaustive.cpp test/test_main.cpp)
+  target_compile_definitions(test_p0_07_corrected_exhaustive PRIVATE
+    UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(test_p0_07_corrected_exhaustive ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
+  add_executable(p0_07_production_probe tools/p0_07_production_probe.cpp)
+  target_link_libraries(p0_07_production_probe
+    ${PROJECT_NAME} gtsam gtsam_unstable ${Boost_LIBRARIES} yaml-cpp)
+
+  add_test(NAME test_p0_07_process_oracle
+    COMMAND ${PYTHON_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/tools/run_p0_07_process_oracle.py
+      --probe $<TARGET_FILE:p0_07_production_probe>
+      --source ${CMAKE_CURRENT_SOURCE_DIR})
+
+  # D12 acceptance is the complete, process-isolated 174-leaf protocol.  Keep
+  # it as an ordinary CTest so a complete-suite result cannot silently omit
+  # the expensive mutation coverage that was previously run by hand.
+  add_test(NAME test_p0_07_leaf_protocol
+    COMMAND ${PYTHON_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/tools/test_p0_07_leaf_protocol.py
+      --full
+      --probe $<TARGET_FILE:p0_07_production_probe>
+      --source ${CMAKE_CURRENT_SOURCE_DIR})
+  set_tests_properties(test_p0_07_leaf_protocol PROPERTIES TIMEOUT 3600)
+
+  add_test(NAME test_p0_07_evidence_runner
+    COMMAND ${PYTHON_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_p0_07_evidence.py
+      --binary $<TARGET_FILE:test_p0_07_corrected_exhaustive>
+      --input ${CMAKE_CURRENT_SOURCE_DIR}/docs/evidence/p0-07-corrected-exhaustive/authoritative-replay/frozen-input.json
+      --reference ${CMAKE_CURRENT_SOURCE_DIR}/docs/evidence/p0-07-corrected-exhaustive/authoritative-replay/frozen-truth.json
+      --compare-dir ${CMAKE_CURRENT_SOURCE_DIR}/docs/evidence/p0-07-corrected-exhaustive/authoritative-replay
+      --output-dir ${CMAKE_CURRENT_BINARY_DIR}/p0-07-replay-bundle)
+  add_test(NAME test_p0_07_evidence_runner_atomic_failure
+    COMMAND ${PYTHON_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/tools/test_p0_07_runner_atomic.py
+      --runner ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_p0_07_evidence.py
+      --binary $<TARGET_FILE:test_p0_07_corrected_exhaustive>
+      --input ${CMAKE_CURRENT_SOURCE_DIR}/docs/evidence/p0-07-corrected-exhaustive/authoritative-replay/frozen-input.json
+      --reference ${CMAKE_CURRENT_SOURCE_DIR}/docs/evidence/p0-07-corrected-exhaustive/authoritative-replay/frozen-truth.json
+      --canonical ${CMAKE_CURRENT_SOURCE_DIR}/docs/evidence/p0-07-corrected-exhaustive/authoritative-replay)
+
   add_executable(p005_ros_certified_publisher test/p005_ros_certified_publisher.cpp)
   target_link_libraries(p005_ros_certified_publisher ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${catkin_LIBRARIES})
 

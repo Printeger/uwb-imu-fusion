@@ -164,6 +164,17 @@ struct ImuNoiseConfig {
   std::string noise_overbound_calibration_id;
 };
 
+struct ImuNoiseQualificationV1 {
+  bool formal_eligible = false;
+  bool sigma_semantics_declared = false;
+  bool shared_sample_correlation_covered = false;
+  bool calibration_bound = false;
+  std::string reason;
+};
+
+ImuNoiseQualificationV1 assessImuNoiseQualificationV1(
+    const ImuNoiseConfig& config);
+
 struct OutputConfig {
   std::string root;
   bool write_residuals = true;

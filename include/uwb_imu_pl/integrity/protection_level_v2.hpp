@@ -221,6 +221,18 @@ class ProtectionLevelV2 {
       const ProtectionLevelSharedContext& shared,
       const RiskBudgetV2& risk) const;
 
+  // Additive P0-07 overload: returns the exact in-call proof payload even
+  // when the served result fails closed before it can enter the ordinary
+  // valid-result proof registry. Existing signatures/layouts stay unchanged.
+  ProtectionLevelV2Result computeShared(
+      const LinearizedIntegrityWindow& window,
+      CandidateEvaluation* candidate,
+      const DetectorResultV2& detector,
+      std::vector<FaultHypothesisV2>* remaining_hypotheses,
+      const ProtectionLevelSharedContext& shared,
+      const RiskBudgetV2& risk,
+      ProtectionLevelV2ProofV1* computation_audit) const;
+
   // Exact KEEP_ALL fast path.  Only the portions mathematically identical to
   // all-in evidence are reused; PL keeps its own rank semantics recorded in
   // FrozenHypothesisPlEntry.  Any identity mismatch returns an invalid result

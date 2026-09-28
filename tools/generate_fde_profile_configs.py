@@ -32,10 +32,11 @@ def generate() -> None:
         # 30-epoch lag keeps that full contract while reaching real
         # marginalization early enough for bounded pilot/full campaigns.
         cfg["incremental"]["fixed_lag_epochs"] = 30
-        # The estimator/GTSAM fields are continuous white-noise densities.
-        # Freeze the synthetic campaign at plausible 200 Hz per-sample noise
-        # (0.01 m/s^2 and 0.001 rad/s), expressed here as the continuous
-        # density consumed by GTSAM rather than silently mixing units.
+        # Preserve the historical synthetic campaign numbers exactly.  P0-07
+        # deliberately does not treat this conversion comment as calibration:
+        # the emitted model remains UNQUALIFIED until external evidence binds
+        # effective-interval sigma semantics and the shared-sample trapezoid
+        # correlation overbound.
         cfg["imu"]["accelerometer_sigma"] = 0.01 / (200.0 ** 0.5)
         cfg["imu"]["gyroscope_sigma"] = 0.001 / (200.0 ** 0.5)
         for key in (

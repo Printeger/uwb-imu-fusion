@@ -1,0 +1,295 @@
+attempt	command	exit	result
+1	python3 tools/generate_fde_profile_configs.py	0	PASS; generated profiles stable apart from P0-07 metadata
+2	catkin build uwb_imu_pl --no-deps --force-cmake -j2 --summarize	0	PASS initial full Release build
+3	catkin build uwb_imu_pl --no-deps --force-cmake -j2 --make-args test_p0_07_corrected_exhaustive --summarize	2	FAIL command syntax; --summarize incorrectly reached make, no product failure hidden
+4	catkin build uwb_imu_pl --no-deps --force-cmake -j2 --summarize --make-args test_p0_07_corrected_exhaustive	0	PASS corrected target build
+5	test_p0_07_corrected_exhaustive	0	PASS 3/3
+6	incremental test_integrity_config before clean	139	FAIL stale executable/header layout mismatch; triggered mandatory clean rebuild
+7	catkin clean -y uwb_imu_pl && catkin build uwb_imu_pl --no-deps --force-cmake -j2 --summarize	0	PASS clean/full Release build
+8	devel/lib/uwb_imu_pl/test_integrity_config	127	FAIL expected path absent because default all target does not build gtests
+9	catkin build uwb_imu_pl --no-deps -j2 --summarize --make-args tests	0	PASS explicit clean tests build
+10	test_integrity_config && test_p0_07_corrected_exhaustive	0	PASS 15/15 plus 3/3
+11	ctest --output-on-failure -j1	0	PASS 30/30, 193.24 s
+12	final catkin build uwb_imu_pl --no-deps -j2 --summarize --make-args tests	0	PASS after publication-gate hardening and member-order preservation
+13	final test_integrity_config && test_p0_07_corrected_exhaustive	0	PASS 15/15 plus 3/3
+14	final ctest --output-on-failure -j1	0	PASS 30/30, 193.50 s
+15	first manual ASan+UBSan compile/run script	0 wrapper / compile failed	FAIL macro quotes were lost and trailing printf masked subcommand status; no sanitizer claim
+16	set -e ASan+UBSan client with detect_leaks=1	1	3/3 assertions PASS; LSan reports 12312 bytes from three libtbb.so.2 exit-time allocations
+17	ASan+UBSan client with detect_leaks=0	0	PASS 3/3; no ASan invalid access and no UBSan finding
+18	first independent reviewer	1	FAILED (not BLOCKED); public ABI/old-profile compatibility, self-assertable N01 gate, non-production D12 chain, and incomplete section 2.5/O12 evidence; see reviewer-first-failed.md
+19	incremental rebuild after public ABI restoration	0	PASS target build
+20	directed test after old-profile fixture added	1	FAIL old profile was written under /tmp so its relative fault-manifest path could not resolve; test fixture path repaired
+21	first golden-header config ABI shell wrapper	not_run	FAIL_COMMAND sandbox rejected cleanup form before command execution
+22	golden-header config ABI compile attempt 1	1	FAIL_COMPILE canary incorrectly treated enum profile as string; canary corrected
+23	golden-header config ABI compile attempt 2	1	FAIL_LINK missing explicit gtsam DSO; link line corrected
+24	golden-p0-06 header/current DSO config ABI ASan+UBSan canary	0	PASS ImuNoiseConfig 80/8, IntegrityConfig 2544/8, loader construct/by-value/destruct callable
+25	production replay target build attempt 1	2	FAIL_COMPILE wrong detector p_fa config member; corrected to config.detector.p_fa_per_test
+26	production replay target rebuild	0	PASS
+27	production replay directed run 1	1	FAIL recovery UWB source block absent on alarm/action path
+28	production replay rebuild with full preparation options	0	PASS
+29	production replay directed run 2	1	FAIL same recovery UWB source block absence; nominal same-refusal replay selected for R06 closure, failure retained
+30	production replay rebuild after nominal frozen replay correction	0	PASS
+31	production replay directed run before final exception/timing hardening	0	PASS 5/5; 24/24 input attempts printed
+32	final incremental directed target rebuild	0	PASS post-mutation exception and unchanged 40 ms deadline included
+33	final directed run	0	PASS 5/5 in 13.066 s; 24/24 complete-work, 22/24 deadline misses retained
+34	clean Release package build after all source changes	0	PASS 5m18.2s
+35	explicit tests target after clean	0	PASS 3m27.2s
+36	post-clean config and directed executions	0	PASS 15/15 plus 5/5 in 13.107 s
+37	post-clean ctest --output-on-failure -j1	0	PASS 30/30, 208.06 s
+38	current five-case ASan+UBSan compile attempt 1	1	FAIL_LINK missing explicit libtbb on link line; source compile completed, link command corrected
+39	current five-case sanitizer client without project -march=native	1	FAIL ABI-incompatible Eigen instantiation SEGV in dense replay; incorrect client flags, retained and corrected
+40	current five-case ASan+UBSan client with exact project -march=native, detect_leaks=0	0	PASS 5/5 across two invocations; production replay 109.597 s; no ASan invalid access or UBSan finding
+41	current sanitizer client detect_leaks=1 ABI/N01 subset	1	2/2 assertions PASS then LSan reports 12312 bytes in three libtbb.so.2 allocations; retained as FAIL
+42	post-clean golden-header/current-DSO ASan+UBSan config ABI canary	0	PASS ImuNoiseConfig 80/8, IntegrityConfig 2544/8, loader construct/by-value/destruct
+43	offset-extended ABI canary missing project -march=native	130	FAIL incorrect Eigen client ABI repeatedly signaled; interrupted and retained
+44	offset-extended golden-header/current-DSO ASan+UBSan config ABI canary with project -march=native	0	PASS sizes/alignments, ImuNoiseConfig offsets 0/8/16/24/32/40/48, loader construct/by-value/destruct
+45	second independent reviewer	1	FAILED (not BLOCKED); public monitor N01 exits, split D12 fixtures/no real recovery, non-mechanical O12 evidence and duplicated timing boundaries; see reviewer-second-failed.md
+46	chmod tools/generate_p0_07_evidence.py from workspace parent	1	FAIL_COMMAND wrong relative path; no file changed
+47	incremental P0-07 target build before mechanical runner	0	PASS
+48	mechanical runner attempt 1	1	FAIL independent raw oracle exposed incorrect linearization-state assumption and multi-column ramp map assumption; snapshots not written
+49	incremental rebuild after oracle assumption correction	0	PASS
+50	mechanical runner attempt 2	1	FAIL independent raw oracle exposed production correlated-covariance unwhitening defect (raw H max 0.356319, raw z max 0.163819); snapshots not written
+51	diagnostic directed rebuild/run	1	FAIL retained while proving frozen transaction state equals CV linearization state and isolating whitening convention
+52	incremental rebuild after canonical correlated-covariance unwhitening repair	0	PASS
+53	directed same-replay run after raw H/z repair	0	PASS raw H/z/covariance and canonical whitened H/z independently match
+54	directed action-terminal audit before exhaustive execution repair	0	PASS test but audit proves actions 1-5 NOT_RUN_INELIGIBLE and action 6 PL_COMPLETE; reviewer condition not yet met
+55	incremental rebuild after removing environment candidate bypass and enforcing frozen-census execution	0	PASS
+56	directed same-replay six-action execution	0	PASS action 1 POST_COMPLETE, actions 2-6 PL_COMPLETE, generated=kernel_evaluated=6, honest refusal
+57	version-controlled mechanical evidence runner	0	PASS 24 attempts, 192 raw UWB rows, 6 per-action terminal rows and three timing boundaries generated
+58	full six-case P0-07 directed target after snapshot generation	1	FAIL yaml-cpp bool conversion rejected journal string "1"; frozen snapshot was valid and test parser corrected
+59	P0-07/public snapshot/publication directed regression	0	PASS 6/6, 7/7, 6/6 including all public N01 exits
+60	P0-06 full 24-case action-search regression after global canonical row rotation	1	FAIL 23/24; ProductionBackedAmplitudeOnsetAxisJointGrid rank covariance differed from dense reference
+61	P0-06 grid retry after limiting row rotation to UWB	1	FAIL equivalent UWB row rotation still changed golden numerical coordinate; failure retained
+62	P0-07 same-replay retry with exact GTSAM upper whitening retained	0	PASS independent raw H/z and independently reconstructed upper information sqrt all match
+63	P0-06 production grid retry with exact GTSAM upper whitening retained	0	PASS 1/1, 54 cells, prior rank/dense semantics restored
+64	mechanical runner regeneration plus six-case snapshot reverse verification	0	PASS runner exit 0 then directed 6/6 PASS
+65	final pre-clean ctest --output-on-failure -j1	0	PASS 30/30, 207.66 s; P0-06 full 87.48 s and P0-07 16.13 s
+66	second-repair fresh ASan+UBSan client compile/link	0	PASS current six-case source, project -march=native, explicit libtbb link
+67	second-repair fresh client detect_leaks=1 N01/ABI subset	0	PASS 2/2 and exit 0; historical 12,312-byte exit-1 fact retained unchanged
+68	stale/current ASan+UBSan full invocations before abort-on-error retry	interrupted	FAIL repeated ASan DEADLYSIGNAL without usable stack; stopped to prevent two unbounded ~1 GB temporary logs, explicit temp files removed
+69	second-repair fresh client detect_leaks=0 abort_on_error=1	0	PASS 6/6 in 125.116 s; no ASan invalid access or UBSan finding
+70	second-repair reused standalone sanitized ABI canary	interrupted	FAIL repeated ASan DEADLYSIGNAL without usable stack; bounded retry timed out and is not counted PASS
+71	second-repair fresh golden-header/current-DSO plain ABI canary	0	PASS sizes/alignments, offsets, config load by value and destruction
+72	catkin clean uwb_imu_pl -y	0	PASS package build/devel products only
+73	final clean Release package build	0	PASS 5m20.9s; existing catkin symlink warnings, no failed package
+74	final explicit tests target build after clean	0	PASS 3m29.0s; existing catkin symlink warnings, no failed package
+75	post-clean mechanical replay runner	0	PASS 24 attempts, 192 UWB rows, six actual action terminals
+76	post-clean ctest --output-on-failure -j1	0	PASS 30/30, 209.34 s
+77	complete patch apply/byte/reverse verification	0	PASS against fresh golden-p0-06-actions archive; 196290-byte patch before final journal refresh
+78	final JSON/hash/git diff checks	0	PASS all evidence JSON parsed, independent manifests checked, git diff --check clean
+79	third independent reviewer	1	FAILED (not BLOCKED); incomplete complete-replay raw/action reference, bypassed pipeline exception/publication chain, non-atomic runner; N01/ABI accepted; see reviewer-third-failed.md
+80	third-repair complete raw-history oracle	0	PASS 268 raw history rows independently eliminated to 103 effective rows; full prior/IMU/UWB/history information, RHS, constant, objective, state, covariance, rank/DOF and T_b/F_b matched
+81	third-repair whitening-coordinate diagnosis	1	FAIL retained: independent oracle found UWB H/z used GTSAM upper information root while historical fault F used lower inverse-Cholesky coordinate
+82	third-repair upper-root coordinate unification	0	PASS production history F and raw oracle now use the same GTSAM upper information-root coordinate; P0-01 production history oracle passed
+83	third-repair initial all-hypothesis dense gate	1	FAIL retained: 2e-8 cross-solver gate was below measured conditioning amplification (maximum about 1.13e-6 relative)
+84	third-repair 504-hypothesis independent dense oracle	0	PASS all 504 Gram/profile/protected-response/PL records matched under explicit test-only 2e-6 cross-solver gate
+85	third-repair MissingProvenance same-replay census check	1	FAIL retained: same replay correctly contained zero MissingProvenance modes, so a nonzero assertion was invalid
+86	third-repair MissingProvenance dedicated production census/FDE reference	0	PASS uncapped census retained one action and production FDE refused it as NoValidCandidate despite attractive numerical fields
+87	third-repair directed same-replay plus MissingProvenance tests	0	PASS 2/2; 504 hypotheses, seven action dense references, real pipeline exception and honest NOT_ATTEMPTED publication state
+88	third-repair atomic runner late-failure injection	0	PASS nonzero injected generation left the prior bundle tree digest byte-identical
+89	third-repair authoritative atomic bundle generation	0	PASS versioned frozen input/reference validated; 24 attempts, 192 raw rows, seven action terminals
+90	third-repair second fresh runner compare	0	PASS all non-timing/non-RSS fields and stable semantic digest matched; timing digest varied as declared
+91	third-repair selected CTest gate	0	PASS 7/7, 134.87 s; P0-06 88.28 s, P0-07 15.30 s, runner 15.33 s, atomic failure 15.45 s
+92	third-repair pre-clean complete CTest	0	PASS 32/32, 240.61 s; no failed tests
+93	third-repair catkin clean uwb_imu_pl -y	0	PASS package build/devel products only
+94	third-repair clean Release package build	0	PASS 5m23.8s; existing compiler and catkin symlink warnings, no failed package
+95	third-repair explicit tests target after clean	0	PASS 3m37.2s; existing deprecation and catkin symlink warnings, no failed package
+96	third-repair post-clean complete CTest	0	PASS 32/32, 239.95 s; history parameterization 91.71 s, P0-06 88.68 s, P0-07 15.40 s, runner 15.33 s, atomic failure 15.43 s
+97	third-repair fresh ASan+UBSan compile first link	1	FAIL two sanitized objects compiled, but object-path replacement expected absolute paths while CMake link.txt used relative paths
+98	third-repair fresh ASan+UBSan corrected link	0	PASS current seven-case source, project -march=native and explicit libtbb link
+99	third-repair fresh ASan+UBSan full directed client	0	PASS 7/7 in 148.203 s, detect_leaks=0; no ASan invalid access or UBSan finding
+100	third-repair leak-enabled pipeline/MissingProvenance subset	99	FAIL assertions PASS 2/2, then LSan reports 12,312 bytes in three external libtbb.so.2 exit-time allocations
+101	third-repair leak-enabled N01/ABI subset	0	PASS 2/2 and exit 0; external TBB failure remains retained
+102	third-repair fresh golden-header/current-DSO ABI combined command	1	FAIL ABI client itself exited 0 with 80/8, 2544/8, offsets and load/by-value/destruct PASS; following grep used obsolete evaluateAndSelect name
+103	third-repair corrected DSO ABI symbol census	0	PASS all three FdeManager::decide exports present: legacy, V1 context and V2 context
+104	third-repair initial replay-bundle hash verifier	1	FAIL verifier incorrectly assumed a nested files object while the manifest is intentionally a flat filename-to-SHA256 map
+105	third-repair corrected replay-bundle hash verifier	0	PASS all seven manifest entries match their files; input/reference copies are JSON-semantically identical to the separate root inputs
+106	third-repair initial complete patch apply/byte/reverse verification	0	APPLY/BYTE/REVERSE PASS but git apply warned about one retained reviewer file's extra blank line at EOF; hardened before final artifact
+107	third-repair whitespace-strict complete patch apply/byte/reverse verification	0	PASS 57 files byte-identical against fresh golden archive; apply check/apply/reverse check with whitespace=error-all, source/input/truth manifests, 11 JSON files and seven replay-bundle hashes PASS
+108	fourth independent reviewer	1	FAILED (not BLOCKED); expected raw rows, hypotheses and actions still depended on production metadata, authority replacement had a crash gap, and sanitizer entered a stackless DEADLYSIGNAL loop; see reviewer-fourth-failed.md
+109	fourth-repair condition-derived hypothesis tolerance first directed attempt	1	FAIL retained: initial machine-epsilon certificate did not account for the independently measured normal-equation and Gram condition amplification
+110	fourth-repair full history coordinate comparison first directed attempt	1	FAIL retained: independent Householder used sorted-key columns rather than the frozen factor first-appearance order
+111	fourth-repair full history coordinate comparison second directed attempt	1	FAIL retained: oracle incorrectly used all 165 served columns as the history separator instead of the declared 15-column boundary state
+112	fourth-repair independently enumerated 504 native maps first directed attempt	1	FAIL retained: persistent/ramp boundary onset had not expanded to physical_first=3 and alarm-epoch ramp structural zero was not represented
+113	fourth-repair directed same-replay plus MissingProvenance tests	0	PASS 2/2; full raw H/z/C/whitener and R/d/T/F coordinates, 504 independent maps/numerics, seven manifest operations and refusal checks
+114	fourth-repair complete directed binary	0	PASS 7/7 in 15.28 s
+115	fourth-repair content-addressed authority generation	0	PASS immutable bundle written and fsynced before atomic current pointer commit
+116	fourth-repair crash-injection authority matrix	0	PASS validation/write/flush/pre-pointer/pointer-rename failures preserved old selected authority byte-identically; post-commit cleanup failure retained complete new authority and old immutable bundle; fresh-process readers passed
+117	fourth-repair fresh ASan+UBSan compile first shell attempt	127	FAIL retained: CMake flags.make is Make syntax and cannot be sourced as shell
+118	fourth-repair fresh ASan+UBSan first link transformation	1	FAIL retained: shell replacement malformed the retained -O3 argument as /-O3
+119	fourth-repair fresh ASan+UBSan corrected compile/link	0	PASS current seven-case source, project -march=native and explicit libtbb link
+120	fourth-repair fresh ASan+UBSan full directed client	0	PASS 7/7 in 150.767 s, detect_leaks=0; no ASan invalid access or UBSan finding
+121	fourth-repair first LSan command target	126	FAIL retained: invoked the temporary directory instead of its client executable
+122	fourth-repair LSan abort-on-error N01/ABI subset	interrupted	FAIL repeated stackless ASan DEADLYSIGNAL output; stopped after bounded observation and retained with fourth-review occurrence
+123	fourth-repair LSan non-aborting N01/ABI subset	0	PASS 2/2 in 98 ms, detect_leaks=1, no leak report
+124	fourth-repair selected CTest gate	0	PASS 7/7 in 320.59 s; config, history parameterization, P0-06, P0-07, runner, six-point crash-injection matrix and history pipeline
+125	fourth-repair pre-clean complete CTest	0	PASS 32/32 in 332.51 s; P0-06 88.53 s, P0-07 15.37 s, runner 15.41 s and crash matrix 108.26 s
+126	fourth-repair catkin clean uwb_imu_pl -y	0	PASS package build/devel products only
+127	fourth-repair clean Release package build	0	PASS 5m22.5s; existing compiler, environment and catkin symlink warnings, no failed package
+128	fourth-repair explicit tests target after clean	0	PASS 3m39.4s; existing deprecation and catkin symlink warnings, no failed package
+129	fourth-repair post-clean complete CTest	0	PASS 32/32 in 334.66 s; history parameterization 91.89 s, P0-06 89.42 s, P0-07 15.69 s, runner 15.38 s and crash matrix 108.60 s
+130	fourth-repair golden-header/current-DSO ABI first link	1	FAIL retained: direct current DSO link omitted its GTSAM dependency from the command line
+131	fourth-repair golden-header/current-DSO ABI second link	1	FAIL retained: GTSAM unstable/core shared libraries were supplied in an order discarded by as-needed dependency resolution
+132	fourth-repair corrected golden-header/current-DSO ABI and export census	0	PASS 80/8 and 2544/8 layouts, offsets, load/by-value/destruct and legacy/V1/V2 FdeManager::decide exports
+133	fourth-repair initial JSON/oracle aggregate verifier	1	FAIL retained: verifier looked for operations under top-level actions instead of alarm_oracle
+134	fourth-repair corrected JSON/oracle aggregate verifier	0	PASS every evidence JSON parsed and manifest declares schema, 504 modes/hypotheses and seven operations
+135	fourth-repair complete patch apply/byte/reverse verification	0	PASS 59 files byte-identical against fresh golden archive; whitespace-strict apply check/apply/reverse check passed
+136	fourth-repair independent-classification incremental compile	2	FAIL retained: ASSERT_LE cannot return from the non-void raw-reference helper
+137	fourth-repair independent-classification first directed invocation	127	FAIL retained: invoked a nonexistent build-tree executable path after successful compilation
+138	fourth-repair independent protected-response regression	1	FAIL retained: first independent protected-state Jacobian used identity instead of the terminal nominal body rotation; Gram/profile/classification passed but response/slopes correctly disagreed
+139	fourth-repair independent valid/nullspace/discrete classification directed test	0	PASS same-replay 504/504 after raw-reference terminal pose Jacobian repair, 15.22 s
+140	fourth-repair final directed seven-case binary	0	PASS 7/7 in 15.26 s with independent profile-valid, finite/infinite, PL-valid, rank and nullspace/discrete-class checks
+141	fourth-repair final runner and authority matrix CTest	0	PASS 3/3 in 138.81 s; P0-07 15.36 s, runner 15.27 s, six-point failure matrix 108.17 s
+142	fourth-repair final complete CTest after independent-classification repair	0	PASS 32/32 in 332.40 s; history parameterization 91.73 s, P0-06 88.56 s, P0-07 15.34 s, runner 15.27 s and authority matrix 108.17 s
+143	fourth-repair final complete patch apply/byte/reverse verification	0	PASS 59 files byte-identical against fresh golden archive; whitespace-strict apply check/apply/reverse check passed
+144	fourth-repair expected-shape metadata independence cleanup	0	PASS 7/7 in 15.35 s after replacing the final production window row-count read with independent raw-reference dimensions
+145	fifth independent review	1	FAILED not BLOCKED; result constants, production-fed candidate blocks, missing PL/risk/selection oracle, hand-authored MissingProvenance and incomplete existing-identity/concurrency validation retained in reviewer-fifth-failed.md
+146	fifth-repair initial compile	2	FAIL oracle raw-block recovery attempted MatrixXd.solve instead of triangularView<Upper>().solve
+147	fifth-repair corrected incremental compile	0	PASS directed client linked
+148	fifth-repair first same-replay oracle run	1	FAIL independent historical replacement-ID recipe used epoch*1000 and correctly failed to find frozen factor groups
+149	fifth-repair corrected same-replay oracle run	0	PASS profile-derived plausible set, recipe-derived 7 operations, independently rebuilt replacement blocks and full candidate refusal in 15.28 s
+150	fifth-repair first natural MissingProvenance chain	1	FAIL test overconstrained persistent actions to have no added groups although only the current replacement was deliberately absent
+151	fifth-repair corrected natural MissingProvenance chain	0	PASS same raw fixture drove generator/action/dense-candidate/FDE with nonzero MissingProvenance actions in 1.13 s
+152	fifth-repair directed seven-case binary	0	PASS 7/7 in 16.37 s
+153	fifth-repair fresh runner generation and canonical non-timing comparison	0	PASS content-addressed bundle generated and compared from recipe-checked binary
+154	fifth-repair expanded authority matrix	0	PASS same/different-content concurrency, corrupt existing identity refusal, old-pointer reader and post-commit cleanup
+155	fifth-repair final main replay plus natural MissingProvenance chain	0	PASS 2/2 in 16.43 s; main 15.32 s and real generator/action/FDE missing-provenance 1.11 s
+156	fifth-repair selected config/history/P006/P007 CTest	0	PASS 4/4 in 197.07 s
+157	fifth-repair pre-clean complete CTest	0	PASS 32/32 in 334.92 s; runner 15.38 s and authority matrix 108.89 s
+158	fifth-repair final raw-UWB shape-independence compile	2	FAIL retained: helper referred to nonexistent manifest.window_epochs instead of parsed manifest.state_columns
+159	fifth-repair corrected raw-UWB shape-independence compile and directed binary	0	PASS 7/7 in 16.49 s; expected columns/map now manifest/frozen-state derived
+160	fifth-repair runner same-identity consecutive writes	0	PASS both runs; existing bundle inventory/hash/semantic bytes revalidated
+161	fifth-repair final expanded authority matrix	0	PASS all concurrent/corrupt/old-reader/post-cleanup cases after final binary rebuild
+162	fifth-repair package-scoped clean	0	PASS only uwb_imu_pl build/devel products removed
+163	fifth-repair clean full Release build	0	PASS about 5 minutes; existing workspace simulator symlink warnings retained, no failed package
+164	fifth-repair explicit tests target after clean	0	PASS about 3m34s; same existing symlink warnings, no failed package
+165	fifth-repair post-clean complete CTest	0	PASS 32/32 in 335.47 s; history 91.68 s, P006 88.86 s, P007 16.52 s, runner 15.38 s, authority matrix 109.51 s
+166	fifth-repair fresh ASan+UBSan compile/link	0	PASS both seven-case source and test main rebuilt with -O0 -g -march=native and sanitizer flags
+167	fifth-repair fresh ASan+UBSan seven-case run	0	PASS 7/7 in 160.061 s; no invalid-access or undefined-behaviour report
+168	fifth-repair fresh leak-enabled N01/config-ABI subset	0	PASS 2/2 in 98 ms, exit 0, no leak report
+169	fifth-repair fresh golden-header/current-clean-DSO ABI canary and export census	0	PASS 80/8, 2544/8, offsets, load/by-value/destruct and legacy/V1/V2 decide exports
+170	fifth-repair observed-only schema first runner comparison	1	FAIL canonical frozen-truth retained the pre-rename key order and differed bytewise from deterministic sort_keys output
+171	fifth-repair canonical observation jq formatter	127	FAIL_COMMAND jq is not installed; no repository file changed
+172	fifth-repair canonical observation json.tool formatter	0	FAIL_COMMAND unsupported --indent argument exited 2 but a trailing echo masked the wrapper status; no repository file changed
+173	fifth-repair deterministic canonical observation formatter	0	PASS sort_keys output exactly matched generator serialization
+174	fifth-repair observed-only schema runner	0	PASS regression observation fields were copied/compared but never consumed as expected oracle truth
+175	fifth-repair observed-only schema expanded authority matrix	0	PASS concurrent/corrupt/old-reader/post-cleanup cases after final schema rename
+176	sixth reviewer initial sanitizer macro compile	1	FAIL shell macro quoting produced a compile error; retained verbatim in reviewer-sixth-failed.md and not counted as a sanitizer pass
+177	sixth reviewer sanitized golden-header ABI canary	130	FAIL repeated stackless AddressSanitizer DEADLYSIGNAL and was terminated; retained verbatim in reviewer-sixth-failed.md
+178	sixth independent review	1	FAILED not BLOCKED; recipe/config split, production-derived raw inventory, missing action PL/risk math, unexecuted declarations and conflicting authorities retained in reviewer-sixth-failed.md
+179	sixth-repair initial recipe/config/raw/action-oracle compile	0	PASS directed client linked
+180	sixth-repair first complete directed run	1	FAIL terminal-onset ramp oracle retained the two-dimensional identity basis as a numerical basis, and replacement covariance initially retained the excluded row
+181	sixth-repair first hardcoded-group cleanup compile	2	FAIL oracleUwbGroup arguments were reversed; no test ran
+182	sixth-repair candidate mathematical production comparison	1	FAIL action 2 legitimately returned before proof creation because remaining hypothesis 60 had no channel with both DOF and fault contribution; independent result was already dangerous/infinite
+183	sixth-repair corrected recipe-driven directed binary	0	PASS 7/7 in 17.239 s; 504 hypotheses and seven actions checked, including finite/infinite mathematical classes before N01
+184	sixth-repair fresh sole-authority runner comparison	0	PASS in 15.934 s against authoritative-replay epoch-23/504-mode/seven-action snapshot
+185	sixth-repair fresh ASan+UBSan compile/link	0	PASS current seven-case source and test main rebuilt with -O0 -g -march=native sanitizer flags
+186	sixth-repair fresh ASan+UBSan seven-case run	130	FAIL repeated stackless AddressSanitizer DEADLYSIGNAL while consuming CPU for 8m21s; diagnosed as a hang and interrupted, never counted PASS
+187	sixth-repair fresh leak-enabled N01/config-ABI subset	0	PASS 2/2 in 101 ms with no leak or undefined-behaviour report
+188	sixth-repair first complete CTest after authority move	8	FAIL 30/32 because generated CTest commands still referenced migrated root/replay-bundle paths; production tests passed
+189	sixth-repair corrected runner and expanded authority matrix	0	PASS 2/2 in 130.85 s after CMake authority paths and flat bundle hash were corrected
+190	sixth-repair complete pre-clean CTest	0	PASS 32/32 in 339.12 s; P0-07 17.32 s, runner 16.13 s and authority matrix 114.77 s
+191	sixth-repair first golden-header/current-DSO ABI link	1	FAIL GTSAM shared dependencies were presented in the wrong order; no client ran
+192	sixth-repair corrected golden-header/current-DSO ABI and export census	0	PASS 80/8, 2544/8, offsets, load/by-value/destruct and legacy/V1/V2 exports
+193	sixth-repair package-scoped clean	0	PASS only uwb_imu_pl build/devel products removed
+194	sixth-repair clean full Release build	0	PASS in about 5m14s; existing simulator symlink/hash warnings retained, no failed package
+195	sixth-repair explicit tests target after clean	0	PASS all test executables rebuilt
+196	sixth-repair post-clean P0-07/runner/authority matrix	0	PASS 3/3 in 148.51 s
+197	sixth-repair post-clean golden-header/current-DSO ABI and exports	0	PASS 80/8, 2544/8, offsets, load/by-value/destruct and three decide exports
+198	sixth-repair ASan+UBSan non-main case split	0	PASS 4/4 in 8.365 s; replay unit, frozen binding, pipeline refusal and real MissingProvenance chain
+199	sixth-repair final evidence JSON and manifest preflight	0	PASS all retained JSON parsed and current source/config/binary/library/authority manifests checked before patch regeneration
+200	sixth-repair complete diff apply/byte/reverse validation	0	PASS 62 files applied to a fresh golden-p0-06-actions archive, byte-compared to the worktree and reverse-apply checked
+201	sixth-repair final evidence artifact hash census	0	PASS artifact manifest refreshed after complete-diff and verification finalization; every retained entry rechecked
+202	seventh independent review	1	FAILED not BLOCKED; unconsumed recipe/config/fault-manifest fields, production-fed hypothesis risk, incomplete prior/IMU row-owner binding and inconsistent O05/O09/O11 evidence retained in reviewer-seventh-failed.md
+203	seventh-repair first strict-owner compile	2	FAIL gtest ASSERT macros cannot return from CompleteRawReference; changed to EXPECT plus explicit guards before any product test ran
+204	seventh-repair first strict-owner same-replay run	1	FAIL independently expected epoch-2 UWB rows correctly had no recoverable PendingFactorGroup because they were already a frozen boundary input; early continue also omitted those eight expected owner rows
+205	seventh-repair corrected same-replay owner lookup	0	PASS 1/1 in 16.203 s; all 506 independently generated prior/IMU/UWB row identities bind by expected stable group/row/covariance placement, including epoch-2 frozen-slot ownership
+206	seventh-repair complete CTest	0	PASS 32/32 in 342.98 s; P0-07 17.33 s, runner 16.36 s, authority matrix 114.36 s, P0-06 89.70 s and history parameterization 91.02 s
+207	seventh-repair fresh ASan+UBSan compile/link	0	PASS current seven-case source and test main rebuilt with -O0 -g -march=native sanitizer flags
+208	seventh-repair fresh ASan+UBSan seven-case run	0	PASS 7/7 in 167.966 s with no invalid-access or undefined-behaviour report
+209	seventh-repair fresh leak-enabled N01/config-ABI subset	0	PASS 2/2 in 96 ms, exit 0, no leak report
+210	seventh-repair golden-header/current-DSO ABI and export census	0	PASS 80/8, 2544/8, offsets, load/by-value/destruct and legacy/V1/V2 decide exports
+211	seventh-repair package-scoped clean and full Release build	0	PASS default target rebuilt from zero; only retained compiler warnings
+212	seventh-repair explicit tests target after clean	0	PASS all test executables rebuilt from zero
+213	seventh-repair post-clean P0-07/runner/authority matrix	0	PASS 3/3 in 148.37 s; P0-07 17.44 s, runner 16.32 s, six-point authority matrix 114.62 s
+214	seventh-repair post-clean golden-header/current-DSO ABI, exports and hashes	0	PASS 80/8, 2544/8, offsets, load/by-value/destruct, three exports, DSO sha256 861372b5 and directed binary sha256 971600b9
+215	seventh-repair JSON/source-config-binary-library-truth hash and diff preflight	0	PASS all evidence JSON parsed, five manifests verified and git diff check clean
+216	seventh-repair first patch regeneration wrapper	0	FAIL_COMMAND git ls-files quoted the user-owned non-ASCII doc path and the loop emitted a could-not-access diagnostic; generated patch excluded it and independently passed 63-file apply/byte/reverse, but wrapper is not counted as final
+217	seventh-repair final NUL-safe complete patch apply/byte/reverse validation	0	PASS 63 intended files, including reviewer-seventh-failed.md, applied to fresh golden-p0-06-actions archive, byte-compared and reverse-apply checked; user docs excluded
+218	seventh-repair post-clean complete CTest	0	PASS 32/32 in 341.87 s; P0-07 17.31 s, runner 16.03 s, authority matrix 114.48 s, P0-06 89.84 s and history parameterization 90.95 s
+219	final owner-certificate first compile	2	FAIL gtest ASSERT_EQ cannot return from CompleteRawReference; replaced by EXPECT plus bounded comparable-row guard before any product test ran
+220	final owner-certificate first same-replay run	1	FAIL production diagnostic initially classified frozen epoch-2 UWB group 2002 as a prior because selected_groups provenance had already been retired; exposed by the new per-row actual comparison
+221	final owner-certificate second same-replay run	1	FAIL recoverable_history does not retain epoch 2 at this boundary, so missing-measurement inference still classified group 2002 as prior; replaced with production FactorLedger lookup by actual group ID
+222	final FactorLedger-backed row-certificate same-replay	0	PASS 1/1 in 16.144 s; all 506 actual prior/IMU/UWB row IDs, groups, row indices and covariance placements match the independently generated expected ledger
+223	final row-certificate directed suite	0	PASS 7/7 in 17.190 s
+224	incorrect ctest --test-dir invocation	0	NOT_A_TEST old ctest interpreted --test-dir unexpectedly and reported zero tests from the source directory; immediately rerun from the package build directory and never counted as validation
+225	final current-source complete CTest	0	PASS 32/32 in 342.15 s; P0-07 17.29 s, runner 16.24 s, P0-06 89.38 s and history parameterization 90.86 s
+226	final row-certificate fresh ASan+UBSan compile/link	0	PASS current seven-case source and test main rebuilt with -O0 -g -march=native sanitizer flags
+227	final row-certificate fresh ASan+UBSan seven-case run	0	PASS 7/7 in 176.177 s, exit 0, no invalid-access or undefined-behaviour finding
+228	final row-certificate leak-enabled N01/config-ABI subset	0	PASS 2/2 in 105 ms, exit 0, no leak finding
+229	final row-certificate pre-clean golden-header/current-DSO ABI and exports	0	PASS 80/8, 2544/8, offsets, load/by-value/destruct, three decide overloads and one non-virtual ownership diagnostic export
+230	final row-certificate package-scoped clean Release build	0	PASS in 2m17.1s; only retained compiler and simulator symlink warnings
+231	final row-certificate explicit tests target after clean	0	PASS all test executables rebuilt from zero
+232	final row-certificate post-clean P0-07/runner/authority matrix	0	PASS 3/3 in 149.23 s; P0-07 17.42 s, runner 16.25 s, authority 115.55 s
+233	final row-certificate post-clean ABI/export census	0	PASS 80/8, 2544/8, offsets, load/by-value/destruct, three decide exports and one diagnostic export; no layout field or vtable change
+234	final overbroad boundary-replay reference scan	1	FAIL_COMMAND scan correctly found the frozen reviewer finding plus a valid legacy-attempt artifact and stale pre-regeneration patch; corrected check is scoped to current O05/O11 matrix links
+235	eighth independent review	1	FAILED not BLOCKED; unconsumed legal recipe leaves, eleven stale artifact hashes and a fresh LSan stackless DEADLYSIGNAL retained in reviewer-eighth-failed.md
+236	eighth-repair strict typed-consumption compile	0	PASS current P0-07 target compiled after authority/history/served/boundary/missing/tolerance/observed leaf binding
+237	eighth-repair all-leaf mutation test	0	PASS 1/1; 174/174 legal leaves rejected or observably changed typed expected fingerprint; root/nested unknown and missing keys rejected
+238	eighth-repair directed suite	0	PASS 8/8 in 17.168 s
+239	eighth-repair pre-clean complete CTest	0	PASS 32/32 in 340.61 s
+240	eighth-repair package-scoped clean	0	PASS only uwb_imu_pl build/devel products removed
+241	eighth-repair clean Release build	0	PASS in 5m13.7s; only retained compiler and catkin symlink warnings
+242	eighth-repair from-zero tests target	0	PASS in 3m38.7s; no failed package
+243	eighth-repair post-clean complete CTest	0	PASS 32/32 in 341.09 s; P0-07 17.40 s, runner 16.15 s and atomic failure matrix 114.23 s
+244	eighth-repair fresh ASan+UBSan compile/link	0	PASS current eight-case source and test main rebuilt with -O0 -g -march=native and sanitizer flags; fresh SHA256 3c672ffd
+245	eighth-repair fresh ASan+UBSan full run	0	PASS 8/8 in 172.869 s, exit 0, no sanitizer finding
+246	eighth-repair first fresh-binary LSan subset	0	PASS 2/2 in 104 ms, exit 0, no leak finding and no retry required
+247	eighth-repair post-clean golden-header/current-DSO ABI and exports	0	PASS 80/8, 2544/8, offsets, load/by-value/destruct, three decide exports and one ownership diagnostic export
+248	eighth-repair first patch exclusion wrapper	9	FAIL_COMMAND overbroad content scan matched documentation text naming the deliberately excluded artifacts; patch apply, 65-file byte comparison and reverse check had passed, but wrapper is not counted as final
+249	eighth-repair corrected complete patch validation	0	PASS 65 intended files apply/byte/reverse against a fresh golden-p0-06-actions archive; header-scoped exclusion check passed and user docs remained excluded
+250	ninth independent review	1	FAILED not BLOCKED; generic fingerprint pseudo-gate, fresh full8 ASan startup loop and live-ledger ownership audit race frozen in reviewer-ninth-failed.md
+251	ninth-repair first semantic-sink mutation run	1	FAIL 172/174; anchor_stride did not yet alter action artifact and tolerance cap did not bind; retained and corrected with explicit replacement schedule and cap-binding case
+252	ninth-repair explicit semantic leaf gate	0	PASS 174/174; 50 named semantic sinks, 116 strict/semantic rejects, 8 observed validators; unknown/missing root and nested reject
+253	ninth-repair directed suite before sanitizer lifetime correction	0	PASS 8/8 in 17.602 s including frozen certificate concurrency/copy/reuse
+254	ninth-repair first fresh sanitizer link command	1	FAIL_COMMAND simplified dependency list omitted required GTSAM symbols; no binary produced
+255	ninth-repair fresh sanitizer SHA066f first full8	0	PASS 8/8 in 171.615 s, exit 0, no ASan/UBSan finding
+256	ninth-repair fresh sanitizer SHA066f first LSan	0	FAIL despite process exit 0 under halt_on_error=0; assertions 2/2 PASS then LSan reported external libtbb.so.2 12,312 bytes in three allocations
+257	ninth-repair explicit TBB lifetime diagnostic binary	0	PASS leak-enabled 2/2 with no finding; diagnostic only, not the final first-full8 gate
+258	ninth-repair final fresh sanitizer SHA3a4631bd first full8	0	PASS 8/8 in 171.247 s, exit 0, no ASan/UBSan finding
+259	ninth-repair final fresh sanitizer SHA3a4631bd first LSan	0	PASS 2/2 in 131 ms, exit 0, no leak finding, halt/abort-on-error enabled, no retry
+260	ninth-repair first pre-clean complete CTest	8	FAIL 31/32 in 341.45 s; P0-05 exposed legal UWB group with five raw rows plus fifteen auxiliary prior rows
+261	ninth-repair focused P0-05 compatibility correction	0	PASS 1/1 in 85 ms; auxiliary group rows explicitly classified as group-native rather than UWB
+262	ninth-repair final directed suite	0	PASS 8/8 in 17.361 s
+263	ninth-repair corrected pre-clean complete CTest	0	PASS 32/32 in 339.99 s
+264	ninth-repair package-scoped clean	0	PASS only uwb_imu_pl build/devel products removed in 0.2 s
+265	ninth-repair clean Release build	0	PASS in 5m18.8s; only retained compiler/catkin/environment warnings
+266	ninth-repair from-zero tests target	0	PASS in 3m41.6s; no failed package
+267	ninth-repair post-clean complete CTest	0	PASS 32/32 in 341.74 s; P0-07 17.47 s, runner 16.22 s, atomic matrix 114.44 s
+268	ninth-repair first post-clean ABI link	1	FAIL_COMMAND dependency order left current DSO GTSAM references unresolved; no client ran
+269	ninth-repair second post-clean ABI link	1	FAIL_COMMAND omitted direct GTSAM header static-initializer symbols; no client ran
+270	ninth-repair corrected post-clean golden-header/current-DSO ABI and exports	0	PASS 80/8, 2544/8, offsets, load/by-value/destruct, three decide exports, one audit export and zero private-builder exports
+271	ninth-repair complete patch validation	0	PASS 67 intended files apply/byte/reverse against fresh golden-p0-06-actions archive; recursive artifacts and user docs excluded
+272	tenth independent review	1	FAILED not BLOCKED; string-serialization leaf sink, catch-all fixed rejection and hard-coded observed actual frozen in reviewer-tenth-failed.md
+273	tenth-repair typed leaf and meta gates	0	PASS 174/174 explicit cases: 38 DERIVED, 128 FIXED, 8 OBSERVED; source dependency meta gate PASS
+274	tenth-repair directed suite before support-axis sanitizer correction	0	PASS 9/9 in 18.29 s
+275	tenth-repair fresh authority generator comparison	0	PASS 504 modes, seven actions, selected zero and honest refusal match authoritative replay
+276	tenth-repair package-scoped clean	0	PASS only uwb_imu_pl build/devel products removed
+277	tenth-repair clean Release build	0	PASS in 322.2 s; retained compiler/catkin warnings only
+278	tenth-repair from-zero tests target	0	PASS in 228.4 s; no failed package
+279	tenth-repair post-clean complete CTest	0	PASS 32/32 in 343.69 s; P0-07 18.37 s, runner 16.22 s, atomic matrix 114.67 s
+280	tenth-repair fresh sanitizer object compile	0	PASS current nine-case source and main rebuilt with -O0 -g -march=native and ASan+UBSan
+281	tenth-repair first sanitizer link rewrite	1	FAIL_COMMAND malformed rewrite supplied two root path arguments; no binary produced
+282	tenth-repair corrected sanitizer link	0	PASS fresh pre-fix binary SHA256 8a13a57efc5e28bdd2d28d154e453c9ad9a2bbaffc8b7baab8e48efa0ee5d12f
+283	tenth-repair pre-fix sanitizer full9	134	FAIL Eigen bounds assertion: legal alarm_epoch 24 extended persistent mode support beyond onset_last-sized temporal map
+284	tenth-repair first support-axis sanitizer compile	1	FAIL_COMMAND attempted to source Make variable syntax; Eigen include absent and no object produced
+285	tenth-repair redirected sanitizer leaf run	130	FAIL stackless AddressSanitizer DEADLYSIGNAL stream boundedly interrupted; not counted as a pass
+286	tenth-repair corrected typed support-axis sanitizer leaf	0	PASS 174/174 in 8.80 s; temporal support sized through max onset/alarm
+287	tenth-repair final fresh ASan+UBSan full9	0	PASS 9/9 in 179.97 s, exit 0, no sanitizer finding; final SHA256 6ea6298ca1c98a4aa17132db020e1af697fb883d49761fe14f522b1336dec3ad
+288	tenth-repair final first LSan subset	0	PASS 2/2 in 0.18 s, exit 0, no leak finding and no retry required
+289	tenth-repair final Release rebuild and directed suite	0	PASS 9/9 in 18.18 s after support-axis correction
+290	tenth-repair golden-header/current-DSO ABI and exports	0	PASS 80/8, 2544/8, offsets, load/by-value/destruct, three decide exports, one audit export and zero private-builder exports
+291	tenth-repair first final CTest invocation	0	FAIL_COMMAND unsupported --test-dir placement ran from source and found no tests; not counted as a gate pass
+292	tenth-repair final complete CTest after support-axis correction	0	PASS 32/32 in 341.99 s; history parameterization 91.93 s, P0-06 88.00 s, P0-07 18.38 s, runner 16.12 s and atomic matrix 114.16 s
+293	tenth-repair first complete patch exclusion wrapper	9	FAIL_COMMAND patch apply, 69-file byte comparison and reverse check passed, but overbroad content grep matched documentation text naming deliberately excluded artifacts
+294	tenth-repair corrected complete patch validation	0	PASS 69 intended files apply/byte/reverse against fresh golden-p0-06-actions archive; header-scoped exclusions passed and user docs remained excluded

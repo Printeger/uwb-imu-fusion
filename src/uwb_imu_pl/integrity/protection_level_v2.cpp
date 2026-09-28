@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <map>
 #include <mutex>
 #include <sstream>
@@ -20,6 +21,18 @@
 namespace uwb_imu_pl {
 
 namespace {
+
+class ScopeExit final {
+ public:
+  explicit ScopeExit(std::function<void()> callback)
+      : callback_(std::move(callback)) {}
+  ~ScopeExit() { callback_(); }
+  ScopeExit(const ScopeExit&) = delete;
+  ScopeExit& operator=(const ScopeExit&) = delete;
+
+ private:
+  std::function<void()> callback_;
+};
 
 RiskLedger preSelectionRiskLedger(
     const RiskBudgetV2& risk,
@@ -1584,9 +1597,38 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
     std::vector<FaultHypothesisV2>* hypotheses,
     const ProtectionLevelSharedContext& shared,
     const RiskBudgetV2& risk) const {
+  return computeShared(window, candidate, detector, hypotheses, shared, risk,
+                       nullptr);
+}
+
+ProtectionLevelV2Result ProtectionLevelV2::computeShared(
+    const LinearizedIntegrityWindow& window,
+    CandidateEvaluation* candidate,
+    const DetectorResultV2& detector,
+    std::vector<FaultHypothesisV2>* hypotheses,
+    const ProtectionLevelSharedContext& shared,
+    const RiskBudgetV2& risk,
+    ProtectionLevelV2ProofV1* computation_audit) const {
   ProtectionLevelV2Result result;
   ProtectionLevelV2ProofV1 sidecar;
   sidecar.risk = risk;
+  ScopeExit freeze_computation_audit([&] {
+    if (!computation_audit) return;
+    if (candidate) {
+      sidecar.candidate_proof_identity = candidateProofIdentity(*candidate);
+    }
+    sidecar.detector_proof_identity = detector.detector_contract_digest;
+    sidecar.detector_candidate_numerical_identity =
+        detector.candidate_numerical_identity;
+    sidecar.pooled_only =
+        detector.contract_mode == DetectorContractMode::LegacyPooledOffline ||
+        detector.channel_history_dof == 0;
+    sidecar.detector_passed = detector.passed;
+    if (hypotheses) sidecar.hypotheses = *hypotheses;
+    sidecar.served_result = result;
+    sidecar.proof_identity = protectionResultProofIdentity(sidecar);
+    *computation_audit = sidecar;
+  });
   std::string detector_contract_reason;
   if (!candidate || !hypotheses || !candidate->valid ||
       !detector.numerically_valid ||
@@ -1718,6 +1760,19 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
   sidecar.nominal_sigma = sigma;
   result.nominal_component_m = nominal_k * sigma;
   result.fault_component_m.setZero();
+  std::string audit_failure;
+  auto retain_audit_failure = [&](const std::string& reason) {
+    if (audit_failure.empty()) audit_failure = reason;
+  };
+  auto append_unavailable_component = [&](HypothesisId hypothesis) {
+    ProtectionHypothesisComponentProofV1 component;
+    component.hypothesis = hypothesis;
+    component.detector_dof = detector.dof;
+    component.detector_threshold = detector.squared_threshold;
+    component.served_component.setConstant(
+        std::numeric_limits<double>::infinity());
+    sidecar.component_proofs.push_back(std::move(component));
+  };
   for (auto& hypothesis : *hypotheses) {
     Eigen::Index columns = 0;
     for (const auto id : hypothesis.modes)
@@ -1736,7 +1791,14 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
     if (!raw_factor.faultProducts(fault_map, &gram, &protected_fault,
                                   &residual_factor)) {
       result.reason = "direct raw-H fault certificate failed";
-      return result;
+      if (!computation_audit) return result;
+      retain_audit_failure(result.reason);
+      FrozenHypothesisPlProofV1 unavailable;
+      unavailable.served_entry.hypothesis = hypothesis.id;
+      unavailable.parent_proof_identity = candidateProofIdentity(*candidate);
+      sidecar.hypothesis_proofs.push_back(std::move(unavailable));
+      append_unavailable_component(hypothesis.id);
+      continue;
     }
     NumericalWorkCounters::faultGramEigen();
     const double rank_tolerance = window.numerics
@@ -1768,14 +1830,20 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
           "/" + std::to_string(columns) + ";sigma_min=" +
           std::to_string(monitor.sigma_min) + ";condition=" +
           std::to_string(monitor.condition_number);
-      return result;
+      if (!computation_audit) return result;
+      retain_audit_failure(result.reason);
+      append_unavailable_component(hypothesis.id);
+      continue;
     }
     monitor.protected_slopes = gram_certificate.protected_slopes;
     Eigen::MatrixXd history_gram = historyGramFromCertificate(*candidate,
                                                                fault_map);
     if (history_gram.rows() != columns) {
       result.reason = "candidate detector row-role payload is missing";
-      return result;
+      if (!computation_audit) return result;
+      retain_audit_failure(result.reason);
+      append_unavailable_component(hypothesis.id);
+      continue;
     }
     Eigen::Vector3d component;
     std::string detector_certificate;
@@ -1789,7 +1857,10 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
       result.reason = "remaining post-FDE hypothesis " +
           std::to_string(hypothesis.id.value()) +
           " has no valid section 5.9 bound: " + bounds.reason;
-      return result;
+      if (!computation_audit) return result;
+      retain_audit_failure(result.reason);
+      append_unavailable_component(hypothesis.id);
+      continue;
     }
     result.hypothesis_tail_used = std::max(result.hypothesis_tail_used,
                                            bounds.hypothesis_tail);
@@ -1812,6 +1883,12 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
     component_proof.served_component = component;
     sidecar.component_proofs.push_back(std::move(component_proof));
     result.fault_component_m = result.fault_component_m.cwiseMax(component);
+  }
+  if (!audit_failure.empty()) {
+    result.reason = audit_failure;
+    result.model_valid = false;
+    result.availability = Availability::Unavailable;
+    return result;
   }
   result.pl_xyz_m = result.nominal_component_m.cwiseMax(
       result.fault_component_m) + result.bridge_component_m;

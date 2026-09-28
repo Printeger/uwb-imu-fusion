@@ -1,0 +1,112 @@
+{
+  "schema": "p0-07-independent-oracle-recipe-v2",
+  "authority": "declarative construction recipe; observed outcomes are non-authoritative",
+  "replay": {
+    "epochs": 24, "alarm_epoch": 23, "physical_first_epoch": 3,
+    "detector_first_epoch": 13, "window_first_epoch": 13,
+    "epoch_period_ns": 50000000,
+    "anchors": [1, 2, 3, 4, 5, 6, 7, 8],
+    "imu_samples_per_epoch": 10, "uwb_rows_per_epoch": 8
+  },
+  "factor_construction": {
+    "state_columns": {
+      "first_epoch": 13, "last_epoch": 23, "per_epoch": 15,
+      "components": [
+        {"symbol": "x", "offset": 0, "width": 6},
+        {"symbol": "v", "offset": 6, "width": 3},
+        {"symbol": "b", "offset": 9, "width": 6}
+      ]
+    },
+    "history_raw": {
+      "expected_rows": 268,
+      "marginal_prior": {"slot": 46, "group_id": 16140901064519974958, "owner": "prior:marginalized-through-epoch-1", "rows": 15},
+      "uwb_only_epochs": {"first": 2, "last": 2, "rows_each": 8},
+      "imu_and_uwb_epochs": {"first": 3, "last": 12, "imu_rows_each": 15, "uwb_rows_each": 8},
+      "imu_only_epochs": {"first": 13, "last": 13, "rows_each": 15},
+      "slot_rules": {"imu_multiplier": 2, "imu_add": 1, "uwb_multiplier": 2, "uwb_add": 2},
+      "group_rules": {"epoch_multiplier": 1000, "imu_add": 1, "uwb_add": 2},
+      "row_identity": {"prior_prefix": "prior:marginalized-through-epoch-1", "imu_prefix": "imu", "uwb_prefix": "uwb-measurement"},
+      "factor_order": ["imu_and_uwb:uwb", "uwb_only:uwb", "imu_and_uwb:imu", "imu_only:imu", "marginal_prior"]
+    },
+    "served_window": {
+      "expected_rows": 341, "history_summary_rows": 103,
+      "history_summary_group_id": 23000,
+      "explicit_uwb_epochs": {"first": 13, "last": 23, "rows_each": 8},
+      "explicit_imu_epochs": {"first": 14, "last": 23, "rows_each": 15},
+      "order": "history-summary, then epoch ascending with IMU before UWB except first UWB-only epoch"
+    },
+    "whitening": {
+      "uwb": "upper information square root R with R^T R=C^-1",
+      "imu": "factor-native whitened Jacobian; raw coordinate recovered with declared covariance",
+      "history": "Householder elimination of recipe old columns and deterministic retained rows"
+    }
+  },
+  "fault_contract": {
+    "families": [
+      {"kind": 1, "name": "AnchorBiasEpochIndependent", "dimension": 1, "terminal_onset_effective_dimension": 1, "support": "onset-only"},
+      {"kind": 2, "name": "AnchorBiasPersistentConstant", "dimension": 1, "terminal_onset_effective_dimension": 1, "support": "at-or-after-onset"},
+      {"kind": 3, "name": "AnchorBiasRamp", "dimension": 2, "terminal_onset_effective_dimension": 1, "support": "at-or-after-onset", "native_columns": ["constant", "measurement-time-minus-onset-time"]}
+    ],
+    "onset_epochs": {"first": 3, "last": 23},
+    "window_boundary_onset_rule": "persistent/ramp onset at window-first extends to physical-first",
+    "mode_order": "anchor ascending, onset ascending, family array order",
+    "hypothesis_rule": "one single-mode hypothesis per enumerated mode",
+    "double_fault_families": []
+  },
+  "detector_and_action_recipe": {
+    "detector": {"distribution": "chi-square", "type": "joint_window_residual_chi_square", "p_fa_per_test": 1.0e-6, "plausible_profile_margin": 0.0, "use_squared_norm_statistic": true},
+    "action_generation": {
+      "keep_all_first": true, "one_occurrence_per_plausible_hypothesis": true,
+      "full_union_when_single_anchor": true, "max_exclusion_cardinality": 2,
+      "replacement_group": {"historical_transaction_multiplier": 1000000, "historical_epoch_multiplier": 100, "current_transaction_multiplier": 1000, "anchor_base": 10, "anchor_stride": 1},
+      "identity_fields": ["sorted_remove", "sorted_add", "exact_added_block_bytes", "bridge_mode"],
+      "exact_duplicates": "occurrences retained; exact-operation equivalence recorded, union remains explicit"
+    },
+    "risk": {
+      "total_decimal": "0.000040000000000000000000000000000000",
+      "nominal_axis_tail": 1.0e-5, "p_nm": 1.0e-7,
+      "p_bridge_escape": 0.0, "p_history_contamination": 0.0,
+      "p_model_escape": 0.0, "horizontal_alert_limit_m": 2.0,
+      "vertical_alert_limit_m": 3.0,
+      "allocation_policy": "prior_weighted_outcome_conditioned",
+      "allocation_rule": "total/generated-action-count",
+      "model_calibration": "UNKNOWN_N01_NO_AUTHENTICATED_ARTIFACT",
+      "unknown_terms_are_zero": false
+    },
+    "selection": {"primary": "minimum_cardinality", "secondary": "minimum_protection_level", "tertiary": "maximum_information_logdet", "final": "action_id"},
+    "resolved_config_binding": {
+      "fde_profile": "uwb_order1", "fault_max_cardinality": 2,
+      "uwb_enabled": true, "epoch_single_anchor_bias": true,
+      "persistent_anchor_bias": true, "ramp_bias": true,
+      "single_faults_enabled": true, "double_faults_enabled": false,
+      "resolved_max_fault_order": 1,
+      "uwb_prior_probability_bound": 1.0e-4,
+      "uwb_p_md": 1.0e-3,
+      "action_trigger": "joint_detector_alarm_or_hardware_barrier",
+      "action_isolation": "profile_parity_glrt",
+      "ambiguity_policy": "union_exclusion_else_unavailable",
+      "dense_oracle_online_fallback": false,
+      "max_candidate_count": 128,
+      "on_no_valid_action": "discard",
+      "on_integrity_model_invalid": "discard",
+      "fault_manifest_path": "integrity_fault_manifest.yaml",
+      "fault_manifest_id": "uwb-imu-pl/fault-manifest/2026-09-21-1"
+    }
+  },
+  "missing_provenance_fixture": {
+    "recipe": "same raw alarm replay with the anchor-1 current replacement factor deliberately absent before generation",
+    "anchor": 1, "onset_epoch": 23, "family_kind": 1,
+    "expected_recoverability_rule": "nominal affected group is explicit but its recipe replacement group is absent, so generated action is MissingProvenance"
+  },
+  "observed_non_authoritative": {
+    "plausible_mode_ordinals": [57, 60, 61, 62, 63],
+    "generated_action_count": 7, "winner": 0,
+    "note": "same-run production sidecar"
+  },
+  "tolerance_policy": {
+    "formula": "abs <= eps * max(1,norm_expected) * max(32,dimension) * max(1,condition_certificate)",
+    "epsilon": 2.220446049250313e-16, "maximum_multiplier": 10000000000.0,
+    "forbid_blanket_tolerance": true,
+    "classifications_always_compared": ["profile_valid", "pl_valid", "nullspace_class", "finite_or_infinite", "risk_valid", "eligibility"]
+  }
+}

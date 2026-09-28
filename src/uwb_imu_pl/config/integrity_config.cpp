@@ -13,6 +13,25 @@
 #include <stdexcept>
 
 namespace uwb_imu_pl {
+
+ImuNoiseQualificationV1 assessImuNoiseQualificationV1(
+    const ImuNoiseConfig& config) {
+  (void)config;
+  ImuNoiseQualificationV1 out;
+  // V1 is intentionally fail-closed.  A free-form identifier or declaration
+  // inside an ordinary run profile is not a qualification artifact.  Opening
+  // this gate requires a separately versioned verifier that authenticates a
+  // strict artifact schema, its content digest/allowlist, and its binding to
+  // the complete model/config digest.  No such hardware artifact is shipped.
+  // Keeping this state out of ImuNoiseConfig also preserves the frozen public
+  // aggregate ABI for golden-p0-06 consumers.
+  out.reason =
+      "IMU_MODEL_UNQUALIFIED: no authenticated V1 calibration artifact "
+      "is bound to the complete model/config digest; profile declarations "
+      "and calibration identifiers are not qualification evidence;";
+  return out;
+}
+
 namespace {
 
 void requireMap(const YAML::Node& node, const std::string& path) {
@@ -441,6 +460,7 @@ IntegrityConfig IntegrityConfigLoader::load(
       imu, "imu",
       {"accelerometer_sigma", "gyroscope_sigma", "accelerometer_bias_rw_sigma",
        "gyroscope_bias_rw_sigma", "gravity_mps2", "max_gap_s",
+       "sigma_semantics", "trapezoid_correlation_model",
        "noise_overbound_calibration_id"});
   cfg.imu.accelerometer_sigma =
       required<double>(imu, "accelerometer_sigma", "imu");
@@ -451,6 +471,16 @@ IntegrityConfig IntegrityConfigLoader::load(
       required<double>(imu, "gyroscope_bias_rw_sigma", "imu");
   cfg.imu.gravity_mps2 = required<double>(imu, "gravity_mps2", "imu");
   cfg.imu.max_gap_s = required<double>(imu, "max_gap_s", "imu");
+  // These optional declarations document research profiles only.  They are
+  // deliberately not stored in the public aggregate and can never open the
+  // qualification gate.  Old v5/v6 profiles without them remain loadable.
+  const std::string sigma_semantics = imu["sigma_semantics"]
+      ? imu["sigma_semantics"].as<std::string>()
+      : "UNQUALIFIED_CONFIGURED_PARAMETER";
+  const std::string trapezoid_correlation_model =
+      imu["trapezoid_correlation_model"]
+      ? imu["trapezoid_correlation_model"].as<std::string>()
+      : "SHARED_SAMPLE_CORRELATION_UNQUALIFIED";
   cfg.imu.noise_overbound_calibration_id =
       required<std::string>(imu, "noise_overbound_calibration_id", "imu");
   positive(cfg.imu.accelerometer_sigma, "imu.accelerometer_sigma");
@@ -460,6 +490,18 @@ IntegrityConfig IntegrityConfigLoader::load(
   positive(cfg.imu.gyroscope_bias_rw_sigma, "imu.gyroscope_bias_rw_sigma");
   positive(cfg.imu.gravity_mps2, "imu.gravity_mps2");
   positive(cfg.imu.max_gap_s, "imu.max_gap_s");
+  if (sigma_semantics != "UNQUALIFIED_CONFIGURED_PARAMETER" &&
+      sigma_semantics != "CALIBRATED_EFFECTIVE_INTERVAL_OVERBOUND") {
+    throw std::runtime_error(
+        "imu.sigma_semantics has an unsupported qualification value");
+  }
+  if (trapezoid_correlation_model !=
+          "SHARED_SAMPLE_CORRELATION_UNQUALIFIED" &&
+      trapezoid_correlation_model !=
+          "CALIBRATED_CONSERVATIVE_INDEPENDENT_OVERBOUND") {
+    throw std::runtime_error(
+        "imu.trapezoid_correlation_model has an unsupported qualification value");
+  }
 
   const auto window = root["integrity_window"];
   rejectUnknown(window, "integrity_window",

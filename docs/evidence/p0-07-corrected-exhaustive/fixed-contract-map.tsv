@@ -1,0 +1,154 @@
+path	json_type	production_source_line_symbol_contract
+authority	string	docs/evidence/p0-07-corrected-exhaustive/oracle-manifest-v1.json:3:authority/declarative authority boundary
+detector_and_action_recipe.action_generation.exact_duplicates	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+detector_and_action_recipe.action_generation.full_union_when_single_anchor	boolean	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+detector_and_action_recipe.action_generation.identity_fields[0]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+detector_and_action_recipe.action_generation.identity_fields[1]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+detector_and_action_recipe.action_generation.identity_fields[2]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+detector_and_action_recipe.action_generation.identity_fields[3]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+detector_and_action_recipe.action_generation.keep_all_first	boolean	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+detector_and_action_recipe.action_generation.max_exclusion_cardinality	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+detector_and_action_recipe.action_generation.one_occurrence_per_plausible_hypothesis	boolean	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+detector_and_action_recipe.action_generation.replacement_group.anchor_base	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity
+detector_and_action_recipe.action_generation.replacement_group.anchor_stride	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity
+detector_and_action_recipe.action_generation.replacement_group.current_transaction_multiplier	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity
+detector_and_action_recipe.action_generation.replacement_group.historical_epoch_multiplier	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity
+detector_and_action_recipe.action_generation.replacement_group.historical_transaction_multiplier	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity
+detector_and_action_recipe.detector.distribution	string	src/uwb_imu_pl/integrity/joint_window_detector.cpp:146:JointWindowDetector::evaluate/dual-channel detector contract
+detector_and_action_recipe.detector.plausible_profile_margin	number	src/uwb_imu_pl/integrity/joint_window_detector.cpp:146:JointWindowDetector::evaluate/dual-channel detector contract
+detector_and_action_recipe.detector.type	string	src/uwb_imu_pl/integrity/joint_window_detector.cpp:146:JointWindowDetector::evaluate/dual-channel detector contract
+detector_and_action_recipe.detector.use_squared_norm_statistic	boolean	src/uwb_imu_pl/integrity/joint_window_detector.cpp:146:JointWindowDetector::evaluate/dual-channel detector contract
+detector_and_action_recipe.resolved_config_binding.action_isolation	string	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.action_trigger	string	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.ambiguity_policy	string	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.dense_oracle_online_fallback	boolean	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.double_faults_enabled	boolean	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.epoch_single_anchor_bias	boolean	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.fault_manifest_id	string	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.fault_manifest_path	string	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.fault_max_cardinality	integer	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.fde_profile	string	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.max_candidate_count	integer	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.on_integrity_model_invalid	string	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.on_no_valid_action	string	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.persistent_anchor_bias	boolean	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.ramp_bias	boolean	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.resolved_max_fault_order	integer	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.single_faults_enabled	boolean	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.uwb_enabled	boolean	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.uwb_p_md	number	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.resolved_config_binding.uwb_prior_probability_bound	number	src/uwb_imu_pl/config/integrity_config.cpp:285:IntegrityConfigLoader::load/strict resolved config
+detector_and_action_recipe.risk.allocation_policy	string	src/uwb_imu_pl/integrity/risk_budget_audit.cpp:128:buildRiskLedger/risk contract
+detector_and_action_recipe.risk.allocation_rule	string	src/uwb_imu_pl/integrity/risk_budget_audit.cpp:128:buildRiskLedger/risk contract
+detector_and_action_recipe.risk.model_calibration	string	src/uwb_imu_pl/integrity/risk_budget_audit.cpp:128:buildRiskLedger/risk contract
+detector_and_action_recipe.risk.unknown_terms_are_zero	boolean	src/uwb_imu_pl/integrity/risk_budget_audit.cpp:128:buildRiskLedger/risk contract
+detector_and_action_recipe.selection.final	string	src/uwb_imu_pl/integrity/fde_manager.cpp:133:FdeManager::decide/stable winner ordering at line 287
+detector_and_action_recipe.selection.primary	string	src/uwb_imu_pl/integrity/fde_manager.cpp:133:FdeManager::decide/stable winner ordering at line 287
+detector_and_action_recipe.selection.secondary	string	src/uwb_imu_pl/integrity/fde_manager.cpp:133:FdeManager::decide/stable winner ordering at line 287
+detector_and_action_recipe.selection.tertiary	string	src/uwb_imu_pl/integrity/fde_manager.cpp:133:FdeManager::decide/stable winner ordering at line 287
+factor_construction.history_raw.expected_rows	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.factor_order[0]	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.factor_order[1]	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.factor_order[2]	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.factor_order[3]	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.factor_order[4]	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.group_rules.epoch_multiplier	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/factor group identity
+factor_construction.history_raw.group_rules.imu_add	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/factor group identity
+factor_construction.history_raw.group_rules.uwb_add	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/factor group identity
+factor_construction.history_raw.imu_and_uwb_epochs.first	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.imu_and_uwb_epochs.imu_rows_each	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.imu_and_uwb_epochs.last	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.imu_and_uwb_epochs.uwb_rows_each	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.imu_only_epochs.first	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.imu_only_epochs.last	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.imu_only_epochs.rows_each	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.marginal_prior.group_id	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.marginal_prior.owner	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.marginal_prior.rows	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.marginal_prior.slot	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.row_identity.imu_prefix	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.row_identity.prior_prefix	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.row_identity.uwb_prefix	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.slot_rules.imu_add	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/factor-ledger slot identity
+factor_construction.history_raw.slot_rules.imu_multiplier	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/factor-ledger slot identity
+factor_construction.history_raw.slot_rules.uwb_add	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/factor-ledger slot identity
+factor_construction.history_raw.slot_rules.uwb_multiplier	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/factor-ledger slot identity
+factor_construction.history_raw.uwb_only_epochs.first	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.uwb_only_epochs.last	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.history_raw.uwb_only_epochs.rows_each	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+factor_construction.served_window.expected_rows	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/served row layout
+factor_construction.served_window.explicit_imu_epochs.first	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/served row layout
+factor_construction.served_window.explicit_imu_epochs.last	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/served row layout
+factor_construction.served_window.explicit_imu_epochs.rows_each	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/served row layout
+factor_construction.served_window.explicit_uwb_epochs.first	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/served row layout
+factor_construction.served_window.explicit_uwb_epochs.last	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/served row layout
+factor_construction.served_window.explicit_uwb_epochs.rows_each	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/served row layout
+factor_construction.served_window.history_summary_group_id	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/served row layout
+factor_construction.served_window.history_summary_rows	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/served row layout
+factor_construction.served_window.order	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/served row layout
+factor_construction.state_columns.components[0].offset	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/state layout
+factor_construction.state_columns.components[0].symbol	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/state layout
+factor_construction.state_columns.components[0].width	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/state layout
+factor_construction.state_columns.components[1].offset	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/state layout
+factor_construction.state_columns.components[1].symbol	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/state layout
+factor_construction.state_columns.components[1].width	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/state layout
+factor_construction.state_columns.components[2].offset	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/state layout
+factor_construction.state_columns.components[2].symbol	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/state layout
+factor_construction.state_columns.components[2].width	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/state layout
+factor_construction.state_columns.first_epoch	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/state layout
+factor_construction.state_columns.last_epoch	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/state layout
+factor_construction.state_columns.per_epoch	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/state layout
+factor_construction.whitening.history	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/upper information root
+factor_construction.whitening.imu	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/upper information root
+factor_construction.whitening.uwb	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/upper information root
+fault_contract.double_fault_families	array	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[0].dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[0].kind	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[0].name	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[0].support	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[0].terminal_onset_effective_dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[1].dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[1].kind	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[1].name	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[1].support	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[1].terminal_onset_effective_dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[2].dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[2].kind	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[2].name	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[2].native_columns[0]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[2].native_columns[1]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[2].support	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.families[2].terminal_onset_effective_dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.hypothesis_rule	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.mode_order	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.onset_epochs.first	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.onset_epochs.last	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+fault_contract.window_boundary_onset_rule	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+missing_provenance_fixture.anchor	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract
+missing_provenance_fixture.expected_recoverability_rule	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract
+missing_provenance_fixture.family_kind	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract
+missing_provenance_fixture.onset_epoch	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract
+missing_provenance_fixture.recipe	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract
+replay.alarm_epoch	integer	tools/p0_07_production_probe.cpp:144:main/frozen replay protocol
+replay.anchors[0]	integer	tools/p0_07_production_probe.cpp:144:main/frozen replay protocol
+replay.anchors[1]	integer	tools/p0_07_production_probe.cpp:144:main/frozen replay protocol
+replay.anchors[2]	integer	tools/p0_07_production_probe.cpp:144:main/frozen replay protocol
+replay.anchors[3]	integer	tools/p0_07_production_probe.cpp:144:main/frozen replay protocol
+replay.anchors[4]	integer	tools/p0_07_production_probe.cpp:144:main/frozen replay protocol
+replay.anchors[5]	integer	tools/p0_07_production_probe.cpp:144:main/frozen replay protocol
+replay.anchors[6]	integer	tools/p0_07_production_probe.cpp:144:main/frozen replay protocol
+replay.detector_first_epoch	integer	tools/p0_07_production_probe.cpp:144:main/frozen replay protocol
+replay.physical_first_epoch	integer	tools/p0_07_production_probe.cpp:144:main/frozen replay protocol
+replay.uwb_rows_per_epoch	integer	tools/p0_07_production_probe.cpp:144:main/frozen replay protocol
+replay.window_first_epoch	integer	tools/p0_07_production_probe.cpp:144:main/frozen replay protocol
+schema	string	docs/evidence/p0-07-corrected-exhaustive/oracle-manifest-v1.json:2:schema/versioned oracle protocol
+tolerance_policy.classifications_always_compared[0]	string	tools/p0_07_compare_protocols.py:15:close/quantity-aware comparison policy
+tolerance_policy.classifications_always_compared[1]	string	tools/p0_07_compare_protocols.py:15:close/quantity-aware comparison policy
+tolerance_policy.classifications_always_compared[2]	string	tools/p0_07_compare_protocols.py:15:close/quantity-aware comparison policy
+tolerance_policy.classifications_always_compared[3]	string	tools/p0_07_compare_protocols.py:15:close/quantity-aware comparison policy
+tolerance_policy.classifications_always_compared[4]	string	tools/p0_07_compare_protocols.py:15:close/quantity-aware comparison policy
+tolerance_policy.classifications_always_compared[5]	string	tools/p0_07_compare_protocols.py:15:close/quantity-aware comparison policy
+tolerance_policy.epsilon	number	tools/p0_07_compare_protocols.py:15:close/quantity-aware comparison policy
+tolerance_policy.forbid_blanket_tolerance	boolean	tools/p0_07_compare_protocols.py:15:close/quantity-aware comparison policy
+tolerance_policy.formula	string	tools/p0_07_compare_protocols.py:15:close/quantity-aware comparison policy
+tolerance_policy.maximum_multiplier	number	tools/p0_07_compare_protocols.py:15:close/quantity-aware comparison policy

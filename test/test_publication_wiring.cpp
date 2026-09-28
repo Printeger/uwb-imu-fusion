@@ -346,6 +346,11 @@ TEST(PublicationWiring, StatelessMonitorPathIsExplicitlyUnprotected) {
   EXPECT_EQ(output.publication.identity_check, "NOT_EVALUATED");
   EXPECT_TRUE(output.publication.unprotected_output);
   EXPECT_FALSE(output.publication.protected_output);
+  EXPECT_FALSE(output.protection_level.formal_eligible);
+  EXPECT_EQ(output.protection_level.availability,
+            uwb_imu_pl::Availability::Unavailable);
+  EXPECT_NE(output.protection_level.reason.find("IMU_MODEL_UNQUALIFIED"),
+            std::string::npos);
   EXPECT_NE(output.publication.refusal.find("no publication state holder"),
             std::string::npos);
   // With an explicit holder the identity check runs and the missing
@@ -356,5 +361,9 @@ TEST(PublicationWiring, StatelessMonitorPathIsExplicitlyUnprotected) {
   EXPECT_TRUE(gated.publication.gate_executed);
   EXPECT_EQ(gated.publication.identity_check, "REFUSED");
   EXPECT_TRUE(gated.publication.unprotected_output);
+  EXPECT_FALSE(gated.protection_level.formal_eligible);
+  EXPECT_EQ(gated.protection_level.availability,
+            uwb_imu_pl::Availability::Unavailable);
+  EXPECT_FALSE(gated.publication.protected_output);
   EXPECT_FALSE(gated.publication.missing_identity_fields.empty());
 }
