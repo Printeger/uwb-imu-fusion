@@ -1,6 +1,7 @@
 #pragma once
 
 #include "uwb_imu_pl/integrity/joint_window_detector.hpp"
+#include "uwb_imu_pl/integrity/attempt_proof_arena.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -137,6 +138,12 @@ bool validateFrozenHypothesisPlEntry(
     std::string* reason = nullptr);
 bool frozenHypothesisPlProof(const FrozenHypothesisPlEntry& entry,
                              FrozenHypothesisPlProofV1* proof);
+bool frozenHypothesisPlProof(const FrozenHypothesisPlEntry& entry,
+                             const AttemptProofArena& arena,
+                             FrozenHypothesisPlProofV1* proof);
+bool frozenHypothesisPlProof(const FrozenHypothesisPlEntry& entry,
+                             const AttemptProofLease& lease,
+                             FrozenHypothesisPlProofV1* proof);
 
 // Immutable, window-scoped products shared by evidence and KEEP_ALL PL.  The
 // context is never reused after a changed observation set, rewhitening,
@@ -230,6 +237,17 @@ class HypothesisEvidenceEvaluator {
       std::shared_ptr<const FrozenHypothesisNumerics>* shared,
       std::shared_ptr<const FrozenHypothesisDualNumerics>* shared_dual,
       CandidateWorkerPool* worker_pool = nullptr) const;
+  // Explicit attempt-scoped proof ownership. The legacy overload above keeps
+  // its original process-lifetime lookup contract for ABI/API compatibility.
+  std::vector<FaultModeEvidence> evaluateAll(
+      const FrozenWindowAdmission& admission,
+      const std::vector<FaultModeBasis>& modes,
+      std::vector<FaultHypothesisV2>* hypotheses,
+      double squared_detector_threshold,
+      std::shared_ptr<const FrozenHypothesisNumerics>* shared,
+      std::shared_ptr<const FrozenHypothesisDualNumerics>* shared_dual,
+      CandidateWorkerPool* worker_pool,
+      AttemptProofArena* proof_arena) const;
   std::vector<FaultModeEvidence> evaluateAll(
       const LinearizedIntegrityWindow& window,
       std::vector<FaultHypothesisV2>* hypotheses,

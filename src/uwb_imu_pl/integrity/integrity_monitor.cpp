@@ -1863,8 +1863,20 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(const UwbBatch& batch
   return processUwbBatch(batch, sample);
 }
 
+IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(
+    const UwbBatch& batch, AttemptProofLease* proof_lease) {
+  ClockSample sample;
+  sample.wall_monotonic_ns =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          std::chrono::steady_clock::now().time_since_epoch()).count();
+  sample.sensor_timestamp_ns = batch.timestamp.value();
+  sample.replay_clock_jumped = false;
+  return processUwbBatch(batch, sample, proof_lease);
+}
+
 void RealtimeIntegrityPipeline::applyPublicationGate(IntegrityOutput* output,
-                                                     const UwbBatch& batch) {
+                                                     const UwbBatch& batch,
+                                                     AttemptProofArena* proof_arena) {
   const IntegrityConfig& cfg = estimator_->config();
   IdentityMaterial material;
   if (output->window_id != 0 && output->transaction_id != 0) {
@@ -1891,10 +1903,13 @@ void RealtimeIntegrityPipeline::applyPublicationGate(IntegrityOutput* output,
   material.risk_proof_id = output->diagnostics.selection_risk_proof_id;
   material.pl_detector_certificate_id =
       output->protection_level.detector_certificate_id;
-  material.pl_numerical_proof_identity =
-      protectionLevelPublicationProofIdentity(
-          output->protection_level.pl_xyz_m,
-          output->protection_level.detector_certificate_id);
+  material.pl_numerical_proof_identity = proof_arena
+      ? protectionLevelPublicationProofIdentity(
+            output->protection_level.pl_xyz_m,
+            output->protection_level.detector_certificate_id, *proof_arena)
+      : protectionLevelPublicationProofIdentity(
+            output->protection_level.pl_xyz_m,
+            output->protection_level.detector_certificate_id);
   material.protection_level_m = output->protection_level.pl_xyz_m;
   material.position_reference = output->snapshot_identity.position_reference;
   material.frame_id = cfg.realtime.world_frame;
@@ -1909,6 +1924,27 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(
       batch, clock_sample, std::nullopt);
 }
 
+IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(
+    const UwbBatch& batch, const ClockSample& clock_sample,
+    AttemptProofLease* proof_lease) {
+  if (!proof_lease) {
+    throw std::invalid_argument("scoped proof lease output is required");
+  }
+  proof_lease->reset();
+  AttemptProofArena arena;
+  try {
+    auto output = processUwbBatchWithFinishElapsedOverride(
+        batch, clock_sample, std::nullopt, &arena);
+    *proof_lease = arena.lease();
+    arena.close();
+    return output;
+  } catch (...) {
+    *proof_lease = arena.lease();
+    arena.close();
+    throw;
+  }
+}
+
 IntegrityOutput RealtimeIntegrityPipeline::
 processUwbBatchWithFrozenFinishElapsed(
     const UwbBatch& batch, const ClockSample& clock_sample,
@@ -1918,13 +1954,14 @@ processUwbBatchWithFrozenFinishElapsed(
         "frozen finish elapsed time must be finite and non-negative");
   }
   return processUwbBatchWithFinishElapsedOverride(
-      batch, clock_sample, finish_elapsed_ms);
+      batch, clock_sample, finish_elapsed_ms, nullptr);
 }
 
 IntegrityOutput RealtimeIntegrityPipeline::
 processUwbBatchWithFinishElapsedOverride(
     const UwbBatch& batch, const ClockSample& clock_sample,
-    const std::optional<double>& finish_elapsed_ms_override) {
+    const std::optional<double>& finish_elapsed_ms_override,
+    AttemptProofArena* proof_arena) {
   const auto start = std::chrono::steady_clock::now();
   const auto before = estimator_->currentEpoch();
   ++input_attempt_count_;
@@ -2032,7 +2069,7 @@ processUwbBatchWithFinishElapsedOverride(
     return output;
   }
   try {
-    auto output = processUwbBatchImpl(batch);
+    auto output = processUwbBatchImpl(batch, proof_arena);
     const ImuNoiseQualificationV1 imu_qualification =
         assessImuNoiseQualificationV1(estimator_->config().imu);
     if (!imu_qualification.formal_eligible) {
@@ -2059,7 +2096,7 @@ processUwbBatchWithFinishElapsedOverride(
           (prior_reason.empty() ? std::string() : "; upstream=" + prior_reason);
       output.reason_codes.push_back("FINISH_DEADLINE_MISSED");
     }
-    applyPublicationGate(&output, batch);
+    applyPublicationGate(&output, batch, proof_arena);
     if (finish_deadline_missed) {
       // A commit that already happened remains a real commit.  The end gate
       // only downgrades publication; it never fabricates a rollback.
@@ -2102,7 +2139,8 @@ processUwbBatchWithFinishElapsedOverride(
   }
 }
 
-IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& batch) {
+IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+    const UwbBatch& batch, AttemptProofArena* proof_arena) {
   if (reinitializer_.blocksUwb()) {
     IntegrityOutput output;
     output.timestamp = estimator_->currentState().timestamp;
@@ -2150,9 +2188,12 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         receipt.backend_updates == 1, "EXECUTED", "nominal commit"});
     output.timestamp = receipt.state_timestamp;
     output.state = estimator_->currentState();
-    (void)recordCommittedStatePublicationV1({
+    const CommittedStatePublicationV1 committed_state{
         1, receipt.transaction_id.value(), receipt.state_timestamp,
-        certification.committed_covariance});
+        certification.committed_covariance};
+    (void)(proof_arena
+        ? recordCommittedStatePublicationV1(committed_state, proof_arena)
+        : recordCommittedStatePublicationV1(committed_state));
     output.batch_committed = receipt.backend_updates == 1;
     output.backend_updates = receipt.backend_updates;
     output.selected_action_type = "KEEP_ALL";
@@ -2479,9 +2520,12 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
           certification ? certification : &local_certification);
       const auto& final_certification = certification
           ? *certification : local_certification;
-      (void)recordCommittedStatePublicationV1({
+      const CommittedStatePublicationV1 committed_state{
           1, receipt.transaction_id.value(), receipt.state_timestamp,
-          final_certification.committed_covariance});
+          final_certification.committed_covariance};
+      (void)(proof_arena
+          ? recordCommittedStatePublicationV1(committed_state, proof_arena)
+          : recordCommittedStatePublicationV1(committed_state));
       output.stage_timings.push_back({"commit", std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - start).count(), true, "EXECUTED", ""});
       return receipt;
@@ -2834,10 +2878,17 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         std::shared_ptr<const FrozenHypothesisDualNumerics>
             shared_hypothesis_dual_numerics;
         NumericalWorkCounters::evidenceCallFaultPath();
-        auto evidence = HypothesisEvidenceEvaluator(evidence_config).evaluateAll(
-            window_admission, models.modes, &models.hypotheses,
-            all_in.squared_threshold, &shared_hypothesis_numerics,
-            &shared_hypothesis_dual_numerics, candidate_workers_.get());
+        auto evidence = proof_arena
+            ? HypothesisEvidenceEvaluator(evidence_config).evaluateAll(
+                  window_admission, models.modes, &models.hypotheses,
+                  all_in.squared_threshold, &shared_hypothesis_numerics,
+                  &shared_hypothesis_dual_numerics, candidate_workers_.get(),
+                  proof_arena)
+            : HypothesisEvidenceEvaluator(evidence_config).evaluateAll(
+                  window_admission, models.modes, &models.hypotheses,
+                  all_in.squared_threshold, &shared_hypothesis_numerics,
+                  &shared_hypothesis_dual_numerics,
+                  candidate_workers_.get());
         record_stage("hypothesis_evidence", true);
         if (shared_hypothesis_numerics && !output.stage_timings.empty()) {
           const auto& shared = *shared_hypothesis_numerics;
@@ -3527,8 +3578,15 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
                 pl_seams->before_protection_level(action.id);
               }
               if (complete_frozen_dual) {
-                evaluated.protection_level =
-                    ProtectionLevelV2().computeFrozenAllIn(
+                evaluated.protection_level = proof_arena
+                    ? ProtectionLevelV2().computeFrozenAllIn(
+                        window_admission, &candidate, evaluated.post,
+                        projected_modes.hypotheses, models.modes,
+                        *shared_hypothesis_numerics,
+                        *shared_hypothesis_dual_numerics,
+                        evidence_config.fault_model_policy_fingerprint,
+                        cfg.risk_v2, proof_arena)
+                    : ProtectionLevelV2().computeFrozenAllIn(
                         window_admission, &candidate, evaluated.post,
                         projected_modes.hypotheses, models.modes,
                         *shared_hypothesis_numerics,
@@ -3536,15 +3594,25 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
                         evidence_config.fault_model_policy_fingerprint,
                         cfg.risk_v2);
               } else if (capture_action_proof) {
-                evaluated.protection_level = ProtectionLevelV2().computeShared(
-                    window_admission, &candidate, evaluated.post,
-                    &projected_modes.hypotheses, shared_pl, cfg.risk_v2,
-                    &evaluated.computation_proof);
+                evaluated.protection_level = proof_arena
+                    ? ProtectionLevelV2().computeShared(
+                        window_admission, &candidate, evaluated.post,
+                        &projected_modes.hypotheses, shared_pl, cfg.risk_v2,
+                        &evaluated.computation_proof, proof_arena)
+                    : ProtectionLevelV2().computeShared(
+                        window_admission, &candidate, evaluated.post,
+                        &projected_modes.hypotheses, shared_pl, cfg.risk_v2,
+                        &evaluated.computation_proof);
                 evaluated.has_computation_proof = true;
               } else {
-                evaluated.protection_level = ProtectionLevelV2().computeShared(
-                    window_admission, &candidate, evaluated.post,
-                    &projected_modes.hypotheses, shared_pl, cfg.risk_v2);
+                evaluated.protection_level = proof_arena
+                    ? ProtectionLevelV2().computeShared(
+                        window_admission, &candidate, evaluated.post,
+                        &projected_modes.hypotheses, shared_pl, cfg.risk_v2,
+                        nullptr, proof_arena)
+                    : ProtectionLevelV2().computeShared(
+                        window_admission, &candidate, evaluated.post,
+                        &projected_modes.hypotheses, shared_pl, cfg.risk_v2);
               }
               markActionSearchTerminal(&output, action, "PL_COMPLETE");
             } catch (...) {
@@ -3553,9 +3621,17 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             }
             if (evaluated.protection_level.model_valid) {
               std::string proof_reason;
-              if (!validateProtectionLevelV2Proof(
-                      candidate, evaluated.post, projected_modes.hypotheses,
-                      evaluated.protection_level, &proof_reason)) {
+              const bool proof_valid = proof_arena
+                  ? validateProtectionLevelV2Proof(
+                        candidate, evaluated.post,
+                        projected_modes.hypotheses,
+                        evaluated.protection_level, *proof_arena,
+                        &proof_reason)
+                  : validateProtectionLevelV2Proof(
+                        candidate, evaluated.post,
+                        projected_modes.hypotheses,
+                        evaluated.protection_level, &proof_reason);
+              if (!proof_valid) {
                 evaluated.protection_level.model_valid = false;
                 evaluated.protection_level.availability =
                     Availability::Unavailable;
@@ -3564,9 +3640,11 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               }
             }
             if (evaluated.protection_level.model_valid) {
-              evaluated.protection_level_proof_identity =
-                  protectionLevelV2ProofIdentity(
-                      candidate, evaluated.protection_level);
+              evaluated.protection_level_proof_identity = proof_arena
+                  ? protectionLevelV2ProofIdentity(
+                        candidate, evaluated.protection_level, *proof_arena)
+                  : protectionLevelV2ProofIdentity(
+                        candidate, evaluated.protection_level);
               if (evaluated.protection_level_proof_identity == 0) {
                 evaluated.protection_level.model_valid = false;
                 evaluated.protection_level.availability =
@@ -3740,7 +3818,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             bool has_proof = false;
             const auto pl = candidate_pl.find(candidate.action.id.value());
             if (pl != candidate_pl.end()) {
-              has_proof = protectionLevelV2Proof(pl->second, &proof);
+              has_proof = proof_arena
+                  ? protectionLevelV2Proof(pl->second, candidate,
+                                           *proof_arena, &proof)
+                  : protectionLevelV2Proof(pl->second, &proof);
             }
             if (!has_proof && action_index < evaluated_actions.size() &&
                 evaluated_actions[action_index].has_computation_proof) {
@@ -4222,10 +4303,17 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               (selected_pl->second.pl_xyz_m.array() >= 0.0).all() &&
               window.protected_state_map.cols() ==
                   selected->state_increment.size()) {
-            protection_minted = mintCommitProtectionEvidenceV1(
-                transaction, window_admission, *selected, selected_pl->second,
-                selected_pl_proof_identity, cfg.realtime.world_frame,
-                &protection_evidence, &protection_mint_reason);
+            protection_minted = proof_arena
+                ? mintCommitProtectionEvidenceV1(
+                      transaction, window_admission, *selected,
+                      selected_pl->second, selected_pl_proof_identity,
+                      cfg.realtime.world_frame, proof_arena,
+                      &protection_evidence, &protection_mint_reason)
+                : mintCommitProtectionEvidenceV1(
+                      transaction, window_admission, *selected,
+                      selected_pl->second, selected_pl_proof_identity,
+                      cfg.realtime.world_frame, &protection_evidence,
+                      &protection_mint_reason);
           }
           CommitCertificationV1 certification;
           const CommitReceipt receipt = timed_commit(
@@ -4275,21 +4363,39 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               std::string pl_proof_reason;
               std::string publication_packet;
               const bool packet_bound = selected_pl_proof_identity != 0 &&
-                  bindTransferredProtectionLevelPublicationPacket(
-                      *selected, pl->second, selected_pl_proof_identity,
-                      certification.protected_reference.mean_world_m,
-                      certification.committed_mean_world_m,
-                      certification.transferred_pl_m,
-                      receipt.state_timestamp.value(),
-                      certification.protected_reference.frame_id,
-                      certification.protected_reference.position_reference,
-                      &publication_packet);
-              if (!packet_bound ||
-                  !validateProtectionLevelPublicationProof(
-                      selected_pl_proof_identity,
-                      certification.transferred_pl_m,
-                      publication_packet,
-                      &pl_proof_reason)) {
+                  (proof_arena
+                       ? bindTransferredProtectionLevelPublicationPacket(
+                             *selected, pl->second,
+                             selected_pl_proof_identity,
+                             certification.protected_reference.mean_world_m,
+                             certification.committed_mean_world_m,
+                             certification.transferred_pl_m,
+                             receipt.state_timestamp.value(),
+                             certification.protected_reference.frame_id,
+                             certification.protected_reference.position_reference,
+                             proof_arena, &publication_packet)
+                       : bindTransferredProtectionLevelPublicationPacket(
+                             *selected, pl->second,
+                             selected_pl_proof_identity,
+                             certification.protected_reference.mean_world_m,
+                             certification.committed_mean_world_m,
+                             certification.transferred_pl_m,
+                             receipt.state_timestamp.value(),
+                             certification.protected_reference.frame_id,
+                             certification.protected_reference.position_reference,
+                             &publication_packet));
+              const bool publication_proof_valid = packet_bound &&
+                  (proof_arena
+                       ? validateProtectionLevelPublicationProof(
+                             selected_pl_proof_identity,
+                             certification.transferred_pl_m,
+                             publication_packet, *proof_arena,
+                             &pl_proof_reason)
+                       : validateProtectionLevelPublicationProof(
+                             selected_pl_proof_identity,
+                             certification.transferred_pl_m,
+                             publication_packet, &pl_proof_reason));
+              if (!publication_proof_valid) {
                 output.protection_level.detector_certificate_id.clear();
                 output.protection_level.risk_budget_valid = false;
                 output.protection_level.reason =

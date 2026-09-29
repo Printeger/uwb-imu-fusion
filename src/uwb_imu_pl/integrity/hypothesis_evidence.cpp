@@ -20,6 +20,8 @@
 namespace uwb_imu_pl {
 namespace {
 
+constexpr std::uint32_t kArenaFrozenHypothesisProof = 1;
+
 void hashBytes(std::uint64_t* hash, const void* data, std::size_t size) {
   const auto* bytes = static_cast<const unsigned char*>(data);
   for (std::size_t i = 0; i < size; ++i) {
@@ -222,7 +224,8 @@ void storePlCertificate(const SymmetricPsdCertificate& gram,
                         double raw_factor_scale,
                         double rank_tolerance,
                         std::uint64_t parent_proof_identity,
-                        FrozenHypothesisPlEntry* entry) {
+                        FrozenHypothesisPlEntry* entry,
+                        AttemptProofArena* proof_arena) {
   if (!entry) return;
   FrozenHypothesisPlProofV1 proof;
   proof.served_entry = *entry;
@@ -239,9 +242,16 @@ void storePlCertificate(const SymmetricPsdCertificate& gram,
   proof.rank_tolerance = rank_tolerance;
   proof.parent_proof_identity = parent_proof_identity;
   proof.served_entry_identity = frozenEntryProofKey(proof.served_entry);
-  auto& registry = frozenProofRegistry();
-  std::lock_guard<std::mutex> lock(registry.mutex);
-  registry.proofs[frozenEntryProofKey(*entry)] = std::move(proof);
+  const auto key = frozenEntryProofKey(*entry);
+  if (proof_arena) {
+    (void)detail::AttemptProofArenaAccess::store(
+        proof_arena, kArenaFrozenHypothesisProof, key, nullptr,
+        std::make_shared<const FrozenHypothesisPlProofV1>(std::move(proof)));
+  } else {
+    auto& registry = frozenProofRegistry();
+    std::lock_guard<std::mutex> lock(registry.mutex);
+    registry.proofs[key] = std::move(proof);
+  }
 }
 
 void analyzeDynamic(const Eigen::MatrixXd& input_gram,
@@ -257,7 +267,8 @@ void analyzeDynamic(const Eigen::MatrixXd& input_gram,
                     FaultHypothesisV2* hypothesis,
                     FaultModeEvidence* evidence,
                     FrozenHypothesisPlEntry* pl_entry,
-                    WorkDelta* work) {
+                    WorkDelta* work,
+                    AttemptProofArena* proof_arena) {
   ++work->generic;
   const int dimension = input_gram.rows();
   if (dimension <= 0 || input_gram.cols() != dimension ||
@@ -333,7 +344,7 @@ void analyzeDynamic(const Eigen::MatrixXd& input_gram,
       storePlCertificate(gram_certificate, *protected_fault,
                          response_certificate, raw_detection_factor,
                          raw_factor_scale, config.rank_tolerance,
-                         parent_proof_identity, pl_entry);
+                         parent_proof_identity, pl_entry, proof_arena);
     } else {
       pl_entry->monitorability.monitorable = false;
       pl_entry->monitorability.reason =
@@ -409,7 +420,8 @@ void analyzeFixed(const Eigen::Matrix<double, Dimension, Dimension>& input_gram,
                   FaultHypothesisV2* hypothesis,
                   FaultModeEvidence* evidence,
                   FrozenHypothesisPlEntry* pl_entry,
-                  WorkDelta* work) {
+                  WorkDelta* work,
+                  AttemptProofArena* proof_arena) {
   ++work->low_dim;
   const auto gram = (0.5 * (input_gram + input_gram.transpose())).eval();
   if (!gram.allFinite() || !score.allFinite() || !protected_fault.allFinite()) {
@@ -461,7 +473,7 @@ void analyzeFixed(const Eigen::Matrix<double, Dimension, Dimension>& input_gram,
     storePlCertificate(gram_certificate, Eigen::MatrixXd(protected_fault),
                        response_certificate, raw_detection_factor,
                        raw_factor_scale, config.rank_tolerance,
-                       parent_proof_identity, pl_entry);
+                       parent_proof_identity, pl_entry, proof_arena);
   }
   if (!hypothesis->monitored) return;
   if (hypothesis->monitored) {
@@ -584,7 +596,8 @@ std::vector<FaultModeEvidence> evaluateContiguous(
     std::shared_ptr<const FrozenHypothesisNumerics>* shared,
     std::shared_ptr<const FrozenHypothesisDualNumerics>* shared_dual,
     CandidateWorkerPool* worker_pool,
-    const FrozenWindowAdmission* admission) {
+    const FrozenWindowAdmission* admission,
+    AttemptProofArena* proof_arena) {
   std::vector<FaultModeEvidence> results(hypotheses->size());
   std::map<std::uint64_t, std::size_t> block_index;
   std::vector<Eigen::Index> block_offsets(window.blocks.size());
@@ -1311,7 +1324,8 @@ std::vector<FaultModeEvidence> evaluateContiguous(
                           raw_factor_scale,
                           physical_dimension,
                           window.numerics->statistic, squared_detector_threshold,
-                          config, &hypothesis, &evidence, &pl_entry, &work);
+                          config, &hypothesis, &evidence, &pl_entry, &work,
+                          proof_arena);
         } else if (dimension == 2) {
           analyzeFixed<2>(gram.topLeftCorner<2, 2>(), &raw_detection_factor,
                           score.head<2>(),
@@ -1321,7 +1335,8 @@ std::vector<FaultModeEvidence> evaluateContiguous(
                           raw_factor_scale,
                           physical_dimension,
                           window.numerics->statistic, squared_detector_threshold,
-                          config, &hypothesis, &evidence, &pl_entry, &work);
+                          config, &hypothesis, &evidence, &pl_entry, &work,
+                          proof_arena);
         } else {
           analyzeFixed<3>(gram, &raw_detection_factor, score, protected_fault,
                           admittedProofIdentity(window,
@@ -1329,7 +1344,8 @@ std::vector<FaultModeEvidence> evaluateContiguous(
                           raw_factor_scale,
                           physical_dimension,
                           window.numerics->statistic, squared_detector_threshold,
-                          config, &hypothesis, &evidence, &pl_entry, &work);
+                          config, &hypothesis, &evidence, &pl_entry, &work,
+                          proof_arena);
         }
         dual_block.profile_statistic = evidence.profile_j;
       } else {
@@ -1366,7 +1382,8 @@ std::vector<FaultModeEvidence> evaluateContiguous(
                        raw_factor_scale,
                        physical_dimension,
                        window.numerics->statistic, squared_detector_threshold,
-                       config, &hypothesis, &evidence, &pl_entry, &work);
+                       config, &hypothesis, &evidence, &pl_entry, &work,
+                       proof_arena);
       }
       // B3 (section 5.5 / 5.8): the detection-space classification decides
       // availability.  A structurally harmless nullspace keeps a finite bound
@@ -1465,7 +1482,9 @@ std::vector<FaultModeEvidence> evaluateContiguous(
           [&](const FrozenHypothesisPlEntry& entry) {
             FrozenHypothesisPlProofV1 proof;
             return !entry.valid ||
-                (frozenHypothesisPlProof(entry, &proof) &&
+                ((proof_arena
+                      ? frozenHypothesisPlProof(entry, *proof_arena, &proof)
+                      : frozenHypothesisPlProof(entry, &proof)) &&
                  validateFrozenHypothesisPlEntry(proof));
           });
   if (!context->valid) context->reason = "shared hypothesis context is incomplete";
@@ -1493,7 +1512,8 @@ std::vector<FaultModeEvidence> evaluateMapped(
     double squared_detector_threshold,
     const HypothesisEvaluationConfig& config,
     std::uint64_t numerical_proof_identity,
-    std::shared_ptr<const FrozenHypothesisNumerics>* shared) {
+    std::shared_ptr<const FrozenHypothesisNumerics>* shared,
+    AttemptProofArena* proof_arena) {
   struct Projection {
     Eigen::MatrixXd dense;
     Eigen::MatrixXd detection_response;
@@ -1711,7 +1731,7 @@ std::vector<FaultModeEvidence> evaluateMapped(
                    std::sqrt(raw_factor_scale_squared),
                    physical_dimension, window.numerics->statistic,
                    squared_detector_threshold, config, &hypothesis,
-                   &evidence, entry, &work);
+                   &evidence, entry, &work, proof_arena);
     results.push_back(std::move(evidence));
   }
   publish(work);
@@ -1726,7 +1746,9 @@ std::vector<FaultModeEvidence> evaluateMapped(
             [&](const FrozenHypothesisPlEntry& entry) {
               FrozenHypothesisPlProofV1 proof;
               return !entry.valid ||
-                  (frozenHypothesisPlProof(entry, &proof) &&
+                  ((proof_arena
+                        ? frozenHypothesisPlProof(entry, *proof_arena, &proof)
+                        : frozenHypothesisPlProof(entry, &proof)) &&
                    validateFrozenHypothesisPlEntry(proof));
             });
     if (!context->valid) context->reason = "shared hypothesis context is incomplete";
@@ -1911,6 +1933,34 @@ bool frozenHypothesisPlProof(const FrozenHypothesisPlEntry& entry,
       proof->served_entry.valid == entry.valid;
 }
 
+namespace {
+template <typename Owner>
+bool scopedFrozenHypothesisPlProof(const FrozenHypothesisPlEntry& entry,
+                                   const Owner& owner,
+                                   FrozenHypothesisPlProofV1* proof) {
+  if (!proof) return false;
+  const auto payload = detail::AttemptProofArenaAccess::find(
+      owner, kArenaFrozenHypothesisProof, frozenEntryProofKey(entry), nullptr);
+  if (!payload) return false;
+  *proof = *std::static_pointer_cast<const FrozenHypothesisPlProofV1>(payload);
+  return proof->served_entry.hypothesis == entry.hypothesis &&
+      proof->served_entry.protected_slopes == entry.protected_slopes &&
+      proof->served_entry.valid == entry.valid;
+}
+}  // namespace
+
+bool frozenHypothesisPlProof(const FrozenHypothesisPlEntry& entry,
+                             const AttemptProofArena& arena,
+                             FrozenHypothesisPlProofV1* proof) {
+  return scopedFrozenHypothesisPlProof(entry, arena, proof);
+}
+
+bool frozenHypothesisPlProof(const FrozenHypothesisPlEntry& entry,
+                             const AttemptProofLease& lease,
+                             FrozenHypothesisPlProofV1* proof) {
+  return scopedFrozenHypothesisPlProof(entry, lease, proof);
+}
+
 int classifyDetectionResponse(const Eigen::MatrixXd& z_h,
                               const Eigen::MatrixXd& g_h,
                               double rank_tolerance,
@@ -2061,7 +2111,8 @@ std::vector<FaultModeEvidence> evaluateAllImpl(
     std::shared_ptr<const FrozenHypothesisNumerics>* shared,
     std::shared_ptr<const FrozenHypothesisDualNumerics>* shared_dual,
     CandidateWorkerPool* worker_pool,
-    const FrozenWindowAdmission* admission) {
+    const FrozenWindowAdmission* admission,
+    AttemptProofArena* proof_arena) {
   if (!hypotheses) throw std::invalid_argument("hypotheses must not be null");
   if (shared) shared->reset();
   if (shared_dual) shared_dual->reset();
@@ -2127,7 +2178,8 @@ std::vector<FaultModeEvidence> evaluateAllImpl(
                      hypothesis.A.norm(),
                      hypothesis.A.cols(),
                      window.numerics->statistic, squared_detector_threshold,
-                     config_, &hypothesis, &evidence, nullptr, &work);
+                     config_, &hypothesis, &evidence, nullptr, &work,
+                     proof_arena);
       results.push_back(std::move(evidence));
     }
     publish(work);
@@ -2137,10 +2189,10 @@ std::vector<FaultModeEvidence> evaluateAllImpl(
     return evaluateContiguous(window, modes, hypotheses,
                               squared_detector_threshold, config_,
                               numerical_proof_identity, shared,
-                              shared_dual, worker_pool, admission);
+                              shared_dual, worker_pool, admission, proof_arena);
   }
   return evaluateMapped(window, modes, hypotheses, squared_detector_threshold,
-                        config_, numerical_proof_identity, shared);
+                        config_, numerical_proof_identity, shared, proof_arena);
 }
 
 }  // namespace
@@ -2156,7 +2208,7 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
   return evaluateAllImpl(config_, window, modes, hypotheses,
                          squared_detector_threshold, shared, nullptr,
                          worker_pool,
-                         nullptr);
+                         nullptr, nullptr);
 }
 
 std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
@@ -2173,7 +2225,7 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
   return evaluateAllImpl(config_, admission.window(), modes, hypotheses,
                          squared_detector_threshold, shared, nullptr,
                          worker_pool,
-                         &admission);
+                         &admission, nullptr);
 }
 
 std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
@@ -2191,7 +2243,26 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
   }
   return evaluateAllImpl(config_, admission.window(), modes, hypotheses,
                          squared_detector_threshold, shared, shared_dual,
-                         worker_pool, &admission);
+                         worker_pool, &admission, nullptr);
+}
+
+std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
+    const FrozenWindowAdmission& admission,
+    const std::vector<FaultModeBasis>& modes,
+    std::vector<FaultHypothesisV2>* hypotheses,
+    double squared_detector_threshold,
+    std::shared_ptr<const FrozenHypothesisNumerics>* shared,
+    std::shared_ptr<const FrozenHypothesisDualNumerics>* shared_dual,
+    CandidateWorkerPool* worker_pool,
+    AttemptProofArena* proof_arena) const {
+  if (!admission || !proof_arena || proof_arena->closed()) {
+    if (shared) shared->reset();
+    if (shared_dual) shared_dual->reset();
+    return {};
+  }
+  return evaluateAllImpl(config_, admission.window(), modes, hypotheses,
+                         squared_detector_threshold, shared, shared_dual,
+                         worker_pool, &admission, proof_arena);
 }
 
 std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(

@@ -5,6 +5,7 @@
 #include "uwb_imu_pl/integrity/health_manager.hpp"
 #include "uwb_imu_pl/integrity/publication_identity.hpp"
 #include "uwb_imu_pl/estimation/reinitialization.hpp"
+#include "uwb_imu_pl/integrity/attempt_proof_arena.hpp"
 
 #include <functional>
 #include <memory>
@@ -113,12 +114,17 @@ class RealtimeIntegrityPipeline {
   ~RealtimeIntegrityPipeline();
   void ingestImu(const ImuMeasurement& measurement);
   IntegrityOutput processUwbBatch(const UwbBatch& batch);
+  IntegrityOutput processUwbBatch(const UwbBatch& batch,
+                                  AttemptProofLease* proof_lease);
   // C4/W2: the watchdog sample is taken from the caller when supplied (replay
   // harnesses and deterministic tests); the default is the monotonic steady
   // clock plus the batch timestamp.  The publication state holder is the same
   // object in both cases -- no second state source exists.
   IntegrityOutput processUwbBatch(const UwbBatch& batch,
                                   const ClockSample& clock_sample);
+  IntegrityOutput processUwbBatch(const UwbBatch& batch,
+                                  const ClockSample& clock_sample,
+                                  AttemptProofLease* proof_lease);
   // Deterministic replay/evidence seam. It freezes both watchdog time and
   // end-of-attempt elapsed time without changing the configured deadline.
   IntegrityOutput processUwbBatchWithFrozenFinishElapsed(
@@ -170,13 +176,16 @@ class RealtimeIntegrityPipeline {
   bool awaiting_first_clean_uwb_ = false;
   std::uint64_t input_attempt_count_ = 0;
   std::uint64_t consecutive_rejections_ = 0;
-  IntegrityOutput processUwbBatchImpl(const UwbBatch& batch);
+  IntegrityOutput processUwbBatchImpl(const UwbBatch& batch,
+                                      AttemptProofArena* proof_arena);
   IntegrityOutput processUwbBatchWithFinishElapsedOverride(
       const UwbBatch& batch, const ClockSample& clock_sample,
-      const std::optional<double>& finish_elapsed_ms);
+      const std::optional<double>& finish_elapsed_ms,
+      AttemptProofArena* proof_arena = nullptr);
   // C4/W2: assembles the published identity from production values and passes
   // the attempt through the publication state holder.
-  void applyPublicationGate(IntegrityOutput* output, const UwbBatch& batch);
+  void applyPublicationGate(IntegrityOutput* output, const UwbBatch& batch,
+                            AttemptProofArena* proof_arena = nullptr);
  public:
   const IntegrityOutput& lastAttemptOutput() const { return last_attempt_output_; }
  private:

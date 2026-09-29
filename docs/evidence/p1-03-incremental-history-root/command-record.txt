@@ -1,0 +1,100 @@
+P1-03 reviewer-failure repair command and exit record (2026-09-30)
+
+Build:
+  cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl --target tests realtime_performance_benchmark uwb_imu_pl_realtime_node -j2
+  exit=0
+
+Focused lifecycle:
+  test_integrity_v2 --gtest_filter=P103ProofArena.*
+  exit=0; 7/7 PASS
+
+P0-03 / O05:
+  test_integrity_v2
+  exit=0; 106/106 PASS
+
+P0-05:
+  test_p0_05_publication
+  exit=0; 13/13 PASS
+
+Golden-header/current-DSO ABI:
+  a stale pre-repair temporary client built without the DSO's Eigen ISA flags
+  exited 139 inside Eigen SVD and is not used as acceptance evidence
+  first manual history-client link omitted the required no-as-needed GTSAM
+  dependency order; link exit=1 and no client executed
+  corrected link with golden P1-02 headers and current DSO; exit=0;
+  HistoryFaultSummary size/offset/rank=176/160/2
+  retained golden P0-05 client against current DSO; exit=0;
+  layouts=424/416, 4128/3864, 200/184, 296/292, 88/80
+
+O01:
+  test_history_fault_summary
+  exit=0; 14/14 PASS
+  test_history_summary_pipeline
+  exit=0; 12/12 PASS
+
+O03/O07:
+  test_p0_06_action_search
+  exit=0; 24/24 PASS
+
+O09:
+  test_deterministic_event
+  exit=0; 2/2 PASS
+  test_realtime_incremental --gtest_filter=UwbImuIncremental.RepeatedExecutionIsDeterministic
+  exit=0; 1/1 PASS
+
+O12:
+  test_p0_07_corrected_exhaustive --gtest_filter=P007CorrectedExhaustive.SameRawReplayDrivesProductionBuilderGeneratorAndFinalRefusal:P007CorrectedExhaustive.MissingProvenanceCensusIsRetainedAndRefused
+  exit=0; 2/2 PASS
+
+Complete CTest:
+  env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1 BLIS_NUM_THREADS=1 ctest --output-on-failure -j1
+  cwd=/home/mint/ws_fusion_uwb/build/uwb_imu_pl
+  exit=0; 34/34 PASS; 1138.57 seconds
+
+Section 2.4, each of three candidate runs:
+  /usr/bin/time -v env LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1 BLIS_NUM_THREADS=1 UWB_IMU_PL_CANDIDATE_WORKERS=4 UWB_IMU_PL_BENCHMARK_SEED=20260928 taskset -c 0-3 realtime_performance_benchmark config/fde_joint_order2.yaml RUN_DIR 45
+  exits=0/0/0
+  compare_p1_03_outputs.py BASELINE_RUN CANDIDATE_RUN --output EQUIVALENCE_JSON
+  exits=0/0/0; PASS/PASS/PASS
+
+Final bounded-RSS soak:
+  same environment and executable, config/fde_joint_order2.yaml, 120 attempts
+  exit=0; 120/120 processed and committed; 0 rejected; 0 errors;
+  peak RSS=558512 KiB
+
+Whitespace/syntax:
+  git diff --check
+  python3 -m py_compile tools/compare_p1_03_outputs.py tools/summarize_p1_01_performance.py
+  recorded after archive finalization
+
+Second independent reviewer observation (not an archived raw log):
+  status=FAILED only for Section 2.5 evidence completeness
+  implementation defects fixed before review; P103=7/7, P0-03=106/106,
+  P0-05=13/13, ABI=PASS
+  complete CTest=34/34 PASS, 1137.32 seconds
+  closure=30/30 oracle checks, 23 path updates, 0 mismatch
+  independent 3x45 comparators=PASS/PASS/PASS; 135/135 complete; 0 excluded
+  independent 60-attempt soak=60/60, 0 reject/error, peak RSS=542360 KiB
+  archived implementer 120-attempt soak=120/120, peak RSS=558512 KiB
+  tail latency regression was reported honestly
+  sole failures: seven stale lifecycle hashes; missing
+  test/p103_old_abi_history_client.cpp in source-hashes.sha256; run2/run3
+  run_manifest/resolved-config/truth omissions
+  No standalone raw reviewer report was supplied, so none is fabricated here.
+  The reviewer's three independent comparator result files remained on the
+  validation host and were observed byte-identical to equivalence-run1.json,
+  equivalence-run2.json and equivalence-run3.json respectively (SHA-256
+  c34798d8..., 581e15a8... and 941fe0da...).
+
+Evidence-only manifest repair:
+  no build, test, benchmark, soak or comparator was rerun
+  candidate 3x45 and 120-attempt raw outputs were copied byte-for-byte into
+  archived-raw/ and are covered by output-hashes.sha256
+  lifecycle-source-hashes.sha256: seven stale values refreshed
+  source-hashes.sha256: test/p103_old_abi_history_client.cpp added; the
+  manifest now exactly covers all 28 P1-03 source/build/test/tool files
+  input-config-truth-hashes.sha256: unique run1/run2/run3 and 120-attempt
+  run manifests, resolved configurations and truth files covered
+  output-hashes.sha256: 104 repository-relative archived artifacts covered
+  verification commands and exact source immutability proof are in
+  archive-index.md and evidence-repair-audit.txt

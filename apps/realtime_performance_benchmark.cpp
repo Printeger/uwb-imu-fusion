@@ -351,8 +351,9 @@ int main(int argc, char** argv) {
       const std::uint64_t marginalizations_before = estimator.marginalizationCount();
       const auto start = std::chrono::steady_clock::now();
       uwb_imu_pl::IntegrityOutput result;
+      uwb_imu_pl::AttemptProofLease proof_lease;
       try {
-        result = pipeline.processUwbBatch(batch);
+        result = pipeline.processUwbBatch(batch, &proof_lease);
       } catch (...) {
         logger.writeIntegrity(pipeline.lastAttemptOutput());
         throw;
@@ -467,6 +468,30 @@ int main(int argc, char** argv) {
               << work.block_rhs_solve_batches
               << " block_rhs_unique_blocks="
               << work.block_rhs_unique_blocks
+              << '\n';
+    const auto history_root = estimator.historyRootCacheAuditForTesting();
+    std::cout << "history_root_work requests=" << history_root.requests
+              << " exact_hits=" << history_root.exact_hits
+              << " incremental_path_updates="
+              << history_root.incremental_path_updates
+              << " incremental_add_paths="
+              << history_root.incremental_add_paths
+              << " incremental_remove_paths="
+              << history_root.incremental_remove_paths
+              << " incremental_relinearize_paths="
+              << history_root.incremental_relinearize_paths
+              << " internal_nodes_recomputed="
+              << history_root.internal_nodes_recomputed
+              << " full_tree_rebuilds=" << history_root.full_tree_rebuilds
+              << " full_oracle_checks=" << history_root.full_oracle_checks
+              << " full_oracle_mismatches="
+              << history_root.full_oracle_mismatches
+              << " reused_groups=" << history_root.reused_groups
+              << " rebuilt_groups=" << history_root.rebuilt_groups
+              << " factor_group_hits=" << history_root.factor_group_hits
+              << " factor_group_misses=" << history_root.factor_group_misses
+              << " retained_rows=" << history_root.retained_rows
+              << " retained_bytes=" << history_root.retained_bytes
               << '\n';
   } catch (const std::exception& error) {
     std::cerr << error.what() << '\n';

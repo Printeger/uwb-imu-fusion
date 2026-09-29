@@ -9,6 +9,7 @@ import json
 import math
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import tempfile
@@ -59,11 +60,13 @@ def timing_summary(rows: list[dict[str, str]], field: str) -> dict[str, float]:
 
 
 def parse_run(stdout: str) -> tuple[list[dict[str, str]], list[list[str]],
-                                    list[dict[str, str]], dict[str, str]]:
+                                    list[dict[str, str]], dict[str, str],
+                                    dict[str, str]]:
     attempts: list[dict[str, str]] = []
     raw_uwb: list[list[str]] = []
     actions: list[dict[str, str]] = []
     contract: dict[str, str] = {}
+    authorized: dict[str, str] = {}
     for line in stdout.splitlines():
         if line.startswith("[P0-07-ATTEMPT]\t"):
             values = line.split("\t")[1:]
@@ -80,6 +83,8 @@ def parse_run(stdout: str) -> tuple[list[dict[str, str]], list[list[str]],
             actions.append(dict(zip(ACTION_HEADER, values)))
         elif line.startswith("[P0-07-CONTRACT]\t"):
             contract = dict(item.split("=", 1) for item in line.split("\t")[1:])
+        elif line.startswith("[P1-03-AUTHORIZED-DIFF] "):
+            authorized = dict(re.findall(r"(\w+)=([^ ]+)", line))
     if len(attempts) != 24:
         raise RuntimeError(f"expected 24 attempts, observed {len(attempts)}")
     if len(raw_uwb) != 24 * 8:
@@ -88,7 +93,11 @@ def parse_run(stdout: str) -> tuple[list[dict[str, str]], list[list[str]],
         raise RuntimeError("missing epoch-23 production alarm contract")
     if len(actions) != int(contract.get("generated", "-1")):
         raise RuntimeError("per-action terminal journal does not match census")
-    return attempts, raw_uwb, actions, contract
+    required = {"rows", "dof", "nu_perp", "threshold", "mode57_stat",
+                "plausible_removed", "actions"}
+    if set(authorized) != required:
+        raise RuntimeError("missing or malformed P1-03 authorized-difference certificate")
+    return attempts, raw_uwb, actions, contract, authorized
 
 
 def write_json(path: pathlib.Path, value: object) -> None:
@@ -325,13 +334,121 @@ def write_bundle_atomic(authority: pathlib.Path, files: dict[str, str],
             stage.rmdir()
 
 
-def compare_non_timing(bundle: dict[str, object], canonical: pathlib.Path) -> None:
+def parse_tsv(text_value: str) -> list[dict[str, str]]:
+    lines = text_value.splitlines()
+    header = lines[0].split("\t")
+    return [dict(zip(header, line.split("\t"))) for line in lines[1:]]
+
+
+def split_transition(value: str, name: str) -> tuple[int, int]:
+    match = re.fullmatch(r"(\d+)->(\d+)", value)
+    if not match:
+        raise RuntimeError(f"malformed authorized {name} transition")
+    return int(match.group(1)), int(match.group(2))
+
+
+def compare_authorized_actions(fresh_text: str, frozen_text: str,
+                               authorized: dict[str, str]) -> None:
+    """Account for every old/new action field under the corrected-rank contract.
+
+    The mapping is structural: old occurrence 2 is mode 57 and disappears;
+    ordinary surviving occurrences retain their order, while the last row is
+    the generated union action.  No production value is copied as an expected
+    value: the independently emitted causal certificate fixes the census/rank
+    transition, and the frozen/new journals are then compared field by field.
+    """
+    old = parse_tsv(frozen_text)
+    fresh = parse_tsv(fresh_text)
+    old_count, new_count = split_transition(authorized["actions"], "actions")
+    old_dof, new_dof = split_transition(authorized["dof"], "dof")
+    old_nu, new_nu = split_transition(authorized["nu_perp"], "nu_perp")
+    old_rows, new_rows = split_transition(authorized["rows"], "rows")
+    removed_rank = old_nu - new_nu
+    if (old_count, new_count) != (len(old), len(fresh)) or old_count != new_count + 1:
+        raise RuntimeError("authorized action census does not match the journals")
+    if removed_rank <= 0 or old_dof - new_dof != removed_rank or \
+            old_rows - new_rows != removed_rank:
+        raise RuntimeError("rows/dof/effective-rank causal certificate does not close")
+    if authorized["plausible_removed"] != "57":
+        raise RuntimeError("unexpected corrected-rank plausibility delta")
+
+    # keep, four surviving per-mode occurrences, and the union action.
+    mapping = [(0, 0)] + [(index, index + 1) for index in range(1, new_count - 1)]
+    mapping.append((new_count - 1, old_count - 1))
+    allowed_common = {"action_id", "dof", "risk_allocation", "statistic",
+                      "threshold", "occurrence_identity_hash"}
+    allowed_union = allowed_common | {"removed_group_ids", "added_group_ids",
+                                      "covers_plausible_set", "reason_hash"}
+    full_diff: list[dict[str, object]] = []
+    for fresh_index, old_index in mapping:
+        lhs, rhs = old[old_index], fresh[fresh_index]
+        changes = {field: [lhs[field], rhs[field]] for field in ACTION_HEADER
+                   if lhs[field] != rhs[field]}
+        allowed = allowed_union if fresh_index == new_count - 1 else allowed_common
+        unexpected = set(changes) - allowed
+        if unexpected:
+            raise RuntimeError(
+                f"unproved action fields changed at corrected row {fresh_index + 1}: "
+                f"{sorted(unexpected)}")
+        if int(rhs["dof"]) != int(lhs["dof"]) - removed_rank:
+            # The corrected union changes its removal set as well.  It must be
+            # identical to the first surviving occurrence, which is verified
+            # below, rather than pretending its old removal-set dof is mapped.
+            if fresh_index != new_count - 1:
+                raise RuntimeError("surviving action dof is not the rank correction")
+        if fresh_index != new_count - 1:
+            if not math.isclose(float(lhs["statistic"]), float(rhs["statistic"]),
+                                rel_tol=1e-12, abs_tol=1e-12):
+                raise RuntimeError("surviving action statistic changed beyond roundoff")
+            old_threshold = float(lhs["threshold"])
+            corrected_threshold = float(rhs["threshold"])
+            if math.isfinite(old_threshold) and math.isfinite(corrected_threshold) and \
+                    corrected_threshold >= old_threshold:
+                raise RuntimeError("corrected action threshold did not follow lower dof")
+        full_diff.append({"old_row": old_index + 1,
+                          "corrected_row": fresh_index + 1,
+                          "changes": changes})
+
+    # Mode 57's per-mode action and the old union have the same operation.  The
+    # corrected union must instead equal the first surviving operation and its
+    # independently recomputed statistic/dof/threshold, while retaining union
+    # coverage.  This is the exact action-level consequence of removing only 57.
+    operation = ("removed_group_ids", "added_group_ids")
+    if any(old[1][field] != old[-1][field] for field in operation):
+        raise RuntimeError("old mode-57/union operation identity is inconsistent")
+    if any(fresh[1][field] != fresh[-1][field] for field in operation):
+        raise RuntimeError("corrected union is not derived from surviving modes")
+    for field in ("rank", "dof", "statistic", "threshold", "hpl_m", "vpl_m"):
+        if fresh[1][field] != fresh[-1][field]:
+            raise RuntimeError(f"corrected union {field} differs from its operation oracle")
+    if old[1]["covers_plausible_set"] != "0" or old[-1]["covers_plausible_set"] != "1" \
+            or fresh[1]["covers_plausible_set"] != "0" \
+            or fresh[-1]["covers_plausible_set"] != "1":
+        raise RuntimeError("union coverage identity is inconsistent")
+
+    old_total = float(old[0]["risk_allocation"]) * len(old)
+    new_total = float(fresh[0]["risk_allocation"]) * len(fresh)
+    if not math.isclose(old_total, new_total, rel_tol=1e-14, abs_tol=1e-18):
+        raise RuntimeError("total action risk changed with corrected census")
+    if any(not math.isclose(float(row["risk_allocation"]), new_total / len(fresh),
+                            rel_tol=1e-14, abs_tol=1e-18) for row in fresh):
+        raise RuntimeError("corrected action risk is not the unchanged total/all-actions rule")
+    print("P1_03_AUTHORIZED_ACTION_DIFF " +
+          json.dumps(full_diff, sort_keys=True, separators=(",", ":")))
+
+
+def compare_non_timing(bundle: dict[str, object], canonical: pathlib.Path,
+                       authorized: dict[str, str]) -> None:
     canonical = resolve_authority(canonical)
-    for name in ("frozen-input.json", "frozen-truth.json", "alarm-actions.tsv"):
+    for name in ("frozen-input.json", "frozen-truth.json"):
         generated = bundle[name]
         expected = (canonical / name).read_text(encoding="utf-8")
         if generated != expected:
             raise RuntimeError(f"fresh {name} differs from frozen evidence")
+    compare_authorized_actions(
+        str(bundle["alarm-actions.tsv"]),
+        (canonical / "alarm-actions.tsv").read_text(encoding="utf-8"),
+        authorized)
     fresh_output = json.loads(str(bundle["frozen-output.json"]))
     frozen_output = load_json(canonical / "frozen-output.json")
     for value in (fresh_output, frozen_output):
@@ -340,21 +457,34 @@ def compare_non_timing(bundle: dict[str, object], canonical: pathlib.Path) -> No
         for field in ("core_compute_ms", "analysis_completion_ms",
                       "arrival_to_packet_ready_ms", "rss_kib"):
             terminal.pop(field, None)
+        value.pop("alarm_actions", None)
+    old_actions, new_actions = split_transition(authorized["actions"], "actions")
+    for field in ("generated", "kernel_evaluated"):
+        if (int(frozen_output["alarm"][field]), int(fresh_output["alarm"][field])) != \
+                (old_actions, new_actions):
+            raise RuntimeError(f"alarm {field} differs outside authorized action census")
+        frozen_output["alarm"][field] = fresh_output["alarm"][field]
     if fresh_output != frozen_output:
         raise RuntimeError("fresh semantic output differs from frozen evidence")
     def stable_attempts(text_value: str) -> list[dict[str, str]]:
-        lines = text_value.splitlines()
-        header = lines[0].split("\t")
-        result = []
-        for line in lines[1:]:
-            row = dict(zip(header, line.split("\t")))
+        result = parse_tsv(text_value)
+        for row in result:
             for field in ("core_compute_ms", "analysis_completion_ms",
                           "arrival_to_packet_ready_ms", "rss_kib"):
                 row.pop(field, None)
-            result.append(row)
         return result
-    if stable_attempts(str(bundle["input-attempts.tsv"])) != stable_attempts(
-            (canonical / "input-attempts.tsv").read_text(encoding="utf-8")):
+    fresh_attempts = stable_attempts(str(bundle["input-attempts.tsv"]))
+    old_attempts = stable_attempts(
+        (canonical / "input-attempts.tsv").read_text(encoding="utf-8"))
+    if len(fresh_attempts) != len(old_attempts):
+        raise RuntimeError("attempt journal denominator changed")
+    for lhs, rhs in zip(old_attempts, fresh_attempts):
+        if lhs["attempt"] == "23":
+            for field in ("generated_actions", "kernel_evaluated_actions"):
+                if (int(lhs[field]), int(rhs[field])) != (old_actions, new_actions):
+                    raise RuntimeError(f"attempt-23 {field} has an unproved delta")
+                lhs[field] = rhs[field]
+    if fresh_attempts != old_attempts:
         raise RuntimeError("fresh non-timing attempt journal differs from frozen evidence")
     fresh_summary = json.loads(str(bundle["o12-correctness-smoke.json"]))
     frozen_summary = load_json(canonical / "o12-correctness-smoke.json")
@@ -385,7 +515,7 @@ def main() -> int:
     sys.stdout.write(run.stdout)
     if run.returncode != 0:
         return run.returncode
-    attempts, raw_uwb, actions, contract = parse_run(run.stdout)
+    attempts, raw_uwb, actions, contract, authorized = parse_run(run.stdout)
     input_snapshot = load_json(pathlib.Path(args.input))
     reference = load_json(pathlib.Path(args.reference))
     if input_snapshot.get("schema") != "p0-07-production-raw-replay-v3":
@@ -414,7 +544,7 @@ def main() -> int:
             f"input={args.input}\nreference={args.reference}\n"),
     }
     if args.compare_dir:
-        compare_non_timing(files, pathlib.Path(args.compare_dir))
+        compare_non_timing(files, pathlib.Path(args.compare_dir), authorized)
     inject_at = args.inject_at or (
         "pre_pointer" if args.inject_failure_before_swap else "")
     write_bundle_atomic(output_dir, files, inject_at)

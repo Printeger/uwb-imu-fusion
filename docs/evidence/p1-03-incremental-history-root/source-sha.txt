@@ -1,0 +1,6 @@
+base_tag=golden-p1-02-shared-dual-numerics
+base_commit=435d682440f34fdeec22c237e4490b18c412cc74
+candidate_commit=UNCOMMITTED_IMPLEMENTER_WORKTREE
+complete_diff_sha256=23e713978a7d63d7252fcc672cb5b55172b5a9552fe0fcffcfcf970b50af8766
+candidate_source_hash_manifest=source-hashes.sha256
+

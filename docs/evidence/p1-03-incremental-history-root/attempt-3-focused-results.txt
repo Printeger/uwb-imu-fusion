@@ -1,0 +1,25 @@
+Baseline: golden-p1-02-shared-dual-numerics (435d682440f34fdeec22c237e4490b18c412cc74)
+
+Command: test_history_fault_summary --gtest_filter=HistoryFaultSummary.P103*
+Exit: 0
+Result: 2/2 PASS
+Feasibility: requests=30 path_updates=19 add=4 remove=5 relinearize=10 internal=293 full_tree=11; 0 oracle mismatch
+
+Command: test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.P103ProductionClosureAudit
+Exit: 0
+Result: 1/1 PASS
+Production: requests=30 paths=23 exact=6 tree_full=1 add=39 remove=0 relinearize=63 internal=562 oracle=30/0 oracle_max=1.508e-12
+
+Command: test_history_fault_summary && test_history_summary_pipeline
+Exit: interrupted after mandatory stop condition
+test_history_fault_summary: 13/13 PASS
+test_history_summary_pipeline first failure:
+  ProductionWindowMatchesIndependentFrozenRawFactorOracle
+  window.history_summary.nu_perp=112
+  raw.old_state.rows()-raw_rank=120
+  objective=8.989e-10 state=9.609e-13 covariance=6.488e-11
+  Tcross=1.267e-12 TFgram=7.907e-15 Fgram=1.319e-14 constant=1.179e-15
+
+Classification: FAILED. Continuous square-root invariants match, but the
+published detector dof/statistical denominator changes. All later gates are
+NOT_RUN under the explicit stop rule.

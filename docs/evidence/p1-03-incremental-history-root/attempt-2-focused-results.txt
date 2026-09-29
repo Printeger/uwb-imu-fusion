@@ -1,0 +1,12 @@
+Command: test_history_fault_summary --gtest_filter=HistoryFaultSummary.P103*
+Exit: 0
+Result: 2 tests passed
+
+Command: test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.P103ProductionClosureAudit
+Exit: 0
+Result: 1 test passed
+Audit: requests=30 append=0 group_updates=26 reused_groups=402 rebuilt_groups=76 factor_hits=439 factor_misses=51 exact=0 rebuilds=30 invalidations=29 rows=467 bytes=2002496 reason=row append/update/remove changed the census
+
+R09 classification: FAILED. The factor-group hits are real, but root append,
+root downdate and exact whole-root reuse are all zero; all 30 aggregate roots
+were fully rebuilt.

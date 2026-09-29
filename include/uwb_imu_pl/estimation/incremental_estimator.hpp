@@ -214,6 +214,8 @@ class IncrementalUwbImuEstimator {
   const FactorLedger& factorLedger() const { return factor_ledger_; }
   std::uint64_t backendUpdateCount() const { return backend_update_count_; }
   EstimatorCacheAudit cacheAudit() const;
+  HistoryRootCacheAudit historyRootCacheAuditForTesting() const;
+  void enableHistoryRootOracleForTesting(bool enabled);
   CommitBoundaryAuditV1 commitBoundaryAudit() const;
   // Narrow read-only debug views for independent fault-injection snapshots.
   // These expose the underlying containers instead of deriving both sides of
@@ -274,6 +276,8 @@ class IncrementalUwbImuEstimator {
     std::vector<std::size_t> new_factor_slots;
     std::vector<std::size_t> removed_factor_slots;
     std::vector<gtsam::Key> marginalized_keys;
+    std::vector<gtsam::Key> relinearized_keys;
+    std::vector<gtsam::Key> marked_keys;
     std::vector<std::size_t> boundary_factor_slots;
   };
   struct FactorBlockCacheEntry {

@@ -14,6 +14,8 @@
 namespace uwb_imu_pl {
 namespace {
 
+constexpr std::uint32_t kArenaCommittedStatePublication = 7;
+
 std::mutex& committedStateMutex() {
   static std::mutex value;
   return value;
@@ -56,6 +58,19 @@ bool recordCommittedStatePublicationV1(
   return true;
 }
 
+bool recordCommittedStatePublicationV1(
+    const CommittedStatePublicationV1& sidecar,
+    AttemptProofArena* arena) {
+  if (!arena || sidecar.schema_version != 1 ||
+      sidecar.transaction_id == 0 || sidecar.state_timestamp.value() == 0 ||
+      !sidecar.covariance.allFinite()) return false;
+  const std::string timestamp = std::to_string(sidecar.state_timestamp.value());
+  return detail::AttemptProofArenaAccess::store(
+      arena, kArenaCommittedStatePublication, sidecar.transaction_id,
+      timestamp.c_str(),
+      std::make_shared<const CommittedStatePublicationV1>(sidecar));
+}
+
 bool committedStatePublicationV1(
     std::uint64_t transaction_id, TimestampNs state_timestamp,
     CommittedStatePublicationV1* sidecar) {
@@ -65,6 +80,26 @@ bool committedStatePublicationV1(
       {transaction_id, state_timestamp.value()});
   if (found == committedStates().end()) return false;
   *sidecar = found->second;
+  return true;
+}
+
+std::size_t committedStatePublicationCountForTesting() {
+  std::lock_guard<std::mutex> lock(committedStateMutex());
+  return committedStates().size();
+}
+
+bool committedStatePublicationV1(
+    std::uint64_t transaction_id, TimestampNs state_timestamp,
+    const AttemptProofLease& lease,
+    CommittedStatePublicationV1* sidecar) {
+  if (!sidecar || !lease.valid()) return false;
+  const std::string timestamp = std::to_string(state_timestamp.value());
+  const auto payload = detail::AttemptProofArenaAccess::find(
+      lease, kArenaCommittedStatePublication, transaction_id,
+      timestamp.c_str());
+  if (!payload) return false;
+  *sidecar = *std::static_pointer_cast<
+      const CommittedStatePublicationV1>(payload);
   return true;
 }
 
@@ -139,6 +174,31 @@ FinalOutputPacket finalizeOutputPacket(IntegrityOutput output,
         packet.output_.protection_level.detector_certificate_id;
   }
   packet.metadata_.digest = finalOutputPacketDigest(packet);
+  return packet;
+}
+
+FinalOutputPacket finalizeOutputPacket(
+    IntegrityOutput output, FinalPacketTiming timing,
+    std::uint64_t deadline_ns,
+    const FinalProtectionProofBundleV1& proof_bundle) {
+  std::string reason;
+  const bool valid = validateFinalProtectionProofBundleV1(
+      proof_bundle, output.protection_level.pl_xyz_m,
+      output.protection_level.detector_certificate_id, &reason);
+  if (!valid && !output.protection_level.detector_certificate_id.empty()) {
+    refuseProtection(&output, "FINAL_PROOF_BUNDLE_INVALID", false);
+    output.protection_level.detector_certificate_id.clear();
+  }
+  FinalOutputPacket packet = finalizeOutputPacket(
+      std::move(output), timing, deadline_ns);
+  if (valid) {
+    packet.metadata_.protected_frame_id =
+        proof_bundle.publication_packet.frame_id;
+    packet.metadata_.protected_position_reference =
+        proof_bundle.publication_packet.position_reference;
+    packet.metadata_.protection_packet_id = proof_bundle.packet_id;
+    packet.metadata_.digest = finalOutputPacketDigest(packet);
+  }
   return packet;
 }
 
@@ -230,6 +290,62 @@ FinalOutputPacket invokeFinalOutputPacket(
   if (timing.publish_outcome == FinalPublishOutcome::Success) {
     if (atomic_receipt) {
       terminal.metadata_.authoritative = true;
+      transaction->commitReceipt(terminal);
+    }
+  } else {
+    transaction->abort();
+  }
+  return terminal;
+}
+
+FinalOutputPacket invokeFinalOutputPacket(
+    IntegrityOutput output, FinalPacketTiming timing,
+    std::uint64_t deadline_ns,
+    const FinalProtectionProofBundleV1& proof_bundle,
+    const FinalPacketClock& clock,
+    FinalPacketPublicationTransaction* transaction,
+    std::string* publication_error) {
+  if (!clock || !transaction) {
+    throw std::invalid_argument(
+        "final packet clock/publication transaction is required");
+  }
+  const bool atomic_receipt = transaction->supportsAtomicProtectedReceipt();
+  if (!atomic_receipt) {
+    refuseProtection(&output, "ATOMIC_PROTECTED_RECEIPT_UNAVAILABLE", false);
+    refuseProtection(&output, "PUBLICATION_COMPLETION_UNCERTIFIED", true);
+    output.publication.wall_timeout = true;
+  }
+  timing.deadline_boundary = FinalPacketBoundary::PublishReturn;
+  timing.publish_call_steady_ns = clock();
+  IntegrityOutput candidate_output = output;
+  if (atomic_receipt) {
+    refuseProtection(&candidate_output,
+                     "NON_AUTHORITATIVE_UNPROTECTED_CANDIDATE", false);
+  }
+  FinalPacketTiming candidate_timing = timing;
+  candidate_timing.publish_outcome = FinalPublishOutcome::NotAttempted;
+  const auto candidate = finalizeOutputPacket(
+      std::move(candidate_output), candidate_timing, deadline_ns,
+      proof_bundle);
+  try {
+    transaction->publishCandidate(candidate);
+    timing.publish_outcome = FinalPublishOutcome::Success;
+  } catch (const std::exception& error) {
+    if (publication_error) *publication_error = error.what();
+    timing.attempt_kind = FinalAttemptKind::Exception;
+    timing.publish_outcome = FinalPublishOutcome::PublisherException;
+  } catch (...) {
+    if (publication_error) *publication_error = "unknown publisher exception";
+    timing.attempt_kind = FinalAttemptKind::Exception;
+    timing.publish_outcome = FinalPublishOutcome::PublisherException;
+  }
+  timing.publish_return_steady_ns = clock();
+  FinalOutputPacket terminal = finalizeOutputPacket(
+      std::move(output), timing, deadline_ns, proof_bundle);
+  if (timing.publish_outcome == FinalPublishOutcome::Success) {
+    if (atomic_receipt) {
+      terminal.metadata_.authoritative = true;
+      terminal.metadata_.digest = finalOutputPacketDigest(terminal);
       transaction->commitReceipt(terminal);
     }
   } else {

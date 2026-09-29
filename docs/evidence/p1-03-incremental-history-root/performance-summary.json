@@ -1,0 +1,31 @@
+{
+  "schema": "uwb-imu-pl/p1-03-implementer-performance/v1",
+  "baseline": "golden-p1-02-shared-dual-numerics",
+  "equivalence": {
+    "status_by_run": ["PASS", "PASS", "PASS"],
+    "attempted": 135,
+    "complete_work_attempts": 135,
+    "excluded": 0,
+    "authorized_rank_delta_rows_per_run": 24,
+    "rank_closure": true,
+    "rank_dimensions_strictly_decrease": true
+  },
+  "candidate_3x45": {
+    "core_compute_ms": {"p50": 3042.48, "p95": 4903.396, "p99": 5755.307, "max": 5791.43},
+    "analysis_completion_ms": {"p50": 3042.48, "p95": 4903.396, "p99": 5755.307, "max": 5791.43},
+    "arrival_to_publish_ms": {"p50": 3043.02, "p95": 4903.695, "p99": 5755.9068, "max": 5791.8},
+    "deadline_misses": 132,
+    "rss_peak_kib": 536820
+  },
+  "rss_checks": {
+    "short_35_peak_kib": 536388,
+    "runs_45_peak_kib": [524472, 526800, 536820],
+    "final_120_peak_kib": 558512,
+    "final_120_processed": 120,
+    "final_120_committed": 120,
+    "final_120_rejected": 0,
+    "final_120_errors": 0,
+    "bounded_plateau": true
+  },
+  "latency_claim": "median improvement only; p95/p99/max regress versus P1-02 and no tail speedup is claimed"
+}

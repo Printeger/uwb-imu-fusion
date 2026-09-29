@@ -451,13 +451,16 @@ class RealtimeNode {
     const double parse_ms = std::chrono::duration<double, std::milli>(
         std::chrono::steady_clock::now() - parse_start).count();
     const auto core_start = std::chrono::steady_clock::now();
-    const auto output = pipeline_->processUwbBatch(batch);
+    uwb_imu_pl::AttemptProofLease proof_lease;
+    const auto output = pipeline_->processUwbBatch(batch, &proof_lease);
     const double core_ms = std::chrono::duration<double, std::milli>(
         std::chrono::steady_clock::now() - core_start).count();
     ProcessingMetrics final_metrics = metrics;
     final_metrics.compute_done_steady_ns = steadyNowNs();
     const auto publish_start = std::chrono::steady_clock::now();
-    const auto final_packet = publish(output, final_metrics);
+    const auto final_packet = publish(
+        output, final_metrics, uwb_imu_pl::FinalAttemptKind::Normal,
+        &proof_lease);
     const auto& final_output = final_packet.output();
     const double publish_ms = std::chrono::duration<double, std::milli>(
         std::chrono::steady_clock::now() - publish_start).count();
@@ -656,7 +659,8 @@ class RealtimeNode {
       uwb_imu_pl::IntegrityOutput output,
       const ProcessingMetrics& metrics,
       uwb_imu_pl::FinalAttemptKind attempt_kind =
-          uwb_imu_pl::FinalAttemptKind::Normal) {
+          uwb_imu_pl::FinalAttemptKind::Normal,
+      const uwb_imu_pl::AttemptProofLease* proof_lease = nullptr) {
     const std::uint64_t deadline_ns = static_cast<std::uint64_t>(
         config_.publication.deadline_ms * 1e6);
     nav_msgs::Odometry odometry;
@@ -674,9 +678,14 @@ class RealtimeNode {
         Eigen::Matrix3d::Constant(
             std::numeric_limits<double>::quiet_NaN());
     uwb_imu_pl::CommittedStatePublicationV1 committed_state;
-    if (uwb_imu_pl::committedStatePublicationV1(
-            output.transaction_id, output.state.timestamp,
-            &committed_state)) {
+    const bool committed_state_found = proof_lease
+        ? uwb_imu_pl::committedStatePublicationV1(
+              output.transaction_id, output.state.timestamp,
+              *proof_lease, &committed_state)
+        : uwb_imu_pl::committedStatePublicationV1(
+              output.transaction_id, output.state.timestamp,
+              &committed_state);
+    if (committed_state_found) {
       velocity_covariance_world = committed_state.covariance.block<3, 3>(6, 6);
     }
     const bool twist_covariance_valid = velocity_covariance_world.allFinite();
@@ -909,10 +918,38 @@ class RealtimeNode {
           logger_.writeIntegrity(candidate_output, metadata);
           logger_.flush();
         });
-    const auto final_packet = uwb_imu_pl::invokeFinalOutputPacket(
-        std::move(output), packet_timing, deadline_ns,
-        [] { return steadyNowNs(); }, &publication_transaction,
-        &publication_error);
+    uwb_imu_pl::FinalProtectionProofBundleV1 proof_bundle;
+    std::string bundle_reason;
+    const bool scoped_bundle_required = proof_lease &&
+        !output.protection_level.detector_certificate_id.empty();
+    const bool scoped_bundle = scoped_bundle_required &&
+        uwb_imu_pl::freezeFinalProtectionProofBundleV1(
+            *proof_lease, output.protection_level.detector_certificate_id,
+            &proof_bundle, &bundle_reason);
+    if (scoped_bundle_required && !scoped_bundle) {
+      output.protection_level.formal_eligible = false;
+      output.protection_level.risk_budget_valid = false;
+      output.publication.protected_output = false;
+      output.publication.unprotected_output = true;
+      output.publication.refusal = "FINAL_PROOF_BUNDLE_FREEZE_FAILED";
+      output.reason_codes.push_back("FINAL_PROOF_BUNDLE_FREEZE_FAILED");
+      if (!bundle_reason.empty()) {
+        ROS_ERROR_STREAM("scoped final proof bundle rejected: "
+                         << bundle_reason);
+      }
+    }
+    // A non-empty scoped packet never falls back to the process-global legacy
+    // registry.  Passing the invalid bundle forces the terminal helper to
+    // clear the packet identity and remain explicitly unprotected.
+    const auto final_packet = scoped_bundle_required
+        ? uwb_imu_pl::invokeFinalOutputPacket(
+              std::move(output), packet_timing, deadline_ns, proof_bundle,
+              [] { return steadyNowNs(); }, &publication_transaction,
+              &publication_error)
+        : uwb_imu_pl::invokeFinalOutputPacket(
+              std::move(output), packet_timing, deadline_ns,
+              [] { return steadyNowNs(); }, &publication_transaction,
+              &publication_error);
     const auto& final_output = final_packet.output();
     status.deadline_missed = final_output.deadline_missed;
     status.publication_protected =

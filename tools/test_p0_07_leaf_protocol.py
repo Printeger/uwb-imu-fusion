@@ -7,6 +7,7 @@ import csv
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -154,14 +155,48 @@ def audit_case_tables(source):
         if not target.is_file():
             raise RuntimeError(f"FIXED source does not exist: {file_name}")
         lines = target.read_text().splitlines()
-        line_number = int(line_text)
-        if not 1 <= line_number <= len(lines):
-            raise RuntimeError(f"FIXED source line is outside file: {expected_source}")
         symbol = symbol_contract.split("/", 1)[0]
-        vicinity = "\n".join(lines[max(0, line_number - 2):line_number + 2])
         symbol_token = symbol.rsplit("::", 1)[-1]
-        if symbol_token not in vicinity and f'"{symbol_token}"' not in vicinity:
-            raise RuntimeError(f"FIXED source symbol is stale: {expected_source}")
+        if target.suffix == ".json":
+            pattern = re.compile(rf'^\s*"{re.escape(symbol_token)}"\s*:')
+        elif target.suffix == ".py":
+            pattern = re.compile(rf'^def\s+{re.escape(symbol_token)}\s*\(')
+        elif "::" in symbol:
+            pattern = re.compile(re.escape(symbol) + r"\s*\(")
+        elif symbol_token == "main":
+            pattern = re.compile(r"\bint\s+main\s*\(")
+        elif symbol_token == "buildRiskLedger":
+            pattern = re.compile(r"\bRiskLedger\s+buildRiskLedger\s*\(")
+        else:
+            raise RuntimeError(f"FIXED source has no definition matcher: {expected_source}")
+        occurrences = [index + 1 for index, text in enumerate(lines)
+                       if pattern.search(text)]
+        overload_markers = {
+            "IntegrityConfigLoader::load": "IntegrityConfigOverrides&",
+            "JointWindowDetector::evaluate": "FrozenWindowAdmission&",
+            "FdeManager::decide": "FdeDecisionContextV1*",
+            "buildRiskLedger": "CompleteRiskInputsV1&",
+        }
+        marker = overload_markers.get(symbol)
+        if marker:
+            matching_definitions = []
+            for line in occurrences:
+                declaration = []
+                for text in lines[line - 1:line + 12]:
+                    declaration.append(text)
+                    if "{" in text:
+                        break
+                if marker in "\n".join(declaration):
+                    matching_definitions.append(line)
+            occurrences = matching_definitions
+        if len(occurrences) != 1:
+            raise RuntimeError(
+                f"FIXED source symbol is absent or ambiguous: {expected_source}; "
+                f"actual_lines={occurrences}")
+        # The canonical P0 map is immutable and therefore retains its reviewed
+        # historical line coordinate.  P1 validates the stable symbol in the
+        # same file instead of weakening coverage when unrelated edits move it.
+        int(line_text)
     print("LEAF_CASE_AUDIT_PASS\ttotal=174\tDERIVED=13\tFIXED=153\tOBSERVED=8")
 
 

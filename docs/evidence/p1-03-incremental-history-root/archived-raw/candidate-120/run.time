@@ -1,0 +1,23 @@
+	Command being timed: "env LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1 BLIS_NUM_THREADS=1 UWB_IMU_PL_CANDIDATE_WORKERS=4 UWB_IMU_PL_BENCHMARK_SEED=20260928 taskset -c 0-3 /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark config/fde_joint_order2.yaml /tmp/p103-repair-final-120.TsS9Wn/run 120"
+	User time (seconds): 488.98
+	System time (seconds): 12.15
+	Percent of CPU this job got: 141%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 5:54.94
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 558512
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 1759836
+	Voluntary context switches: 895502
+	Involuntary context switches: 2103
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 5064
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

@@ -38,6 +38,7 @@
 #include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
 #include "uwb_imu_pl/integrity/statistical_bounds_cache.hpp"
 #include "uwb_imu_pl/io/run_logger.hpp"
+#include "uwb_imu_pl/publication/final_output_packet.hpp"
 
 namespace {
 
@@ -449,6 +450,312 @@ TEST(FdeProfiles, NominalPipelineAndFaultCensusFollowResolvedScope) {
                 next.reason_codes.end());
     }
   }
+}
+
+TEST(P103ProofArena,
+     ScopedAttemptFreezesSelfContainedBundleAndLegacyPathRemainsCompatible) {
+  using namespace uwb_imu_pl;
+  const auto frozen_window = freezeIntegrityWindowCopy(
+      p002HistoryWindow(0.0, 0.0));
+  const auto admission = admitFrozenIntegrityWindow(frozen_window);
+  ASSERT_TRUE(admission) << admission.reason;
+  const auto& window = admission.window();
+  DetectorRiskContext detector_risk;
+  detector_risk.p_fa_per_test = 1e-6;
+  detector_risk.continuity_horizon_tests = 1000;
+  detector_risk.rank_tolerance = 1e-12;
+  detector_risk.max_condition_number = 1e10;
+  ExclusionAction action;
+  action.id = ExclusionActionId(10301);
+  action.action_model_id = "KEEP_ALL";
+  RankUpdateConfig rank_config;
+  rank_config.rank_tolerance = 1e-12;
+  rank_config.max_condition_number = 1e10;
+  rank_config.max_linearization_step_norm = 10.0;
+  auto scoped_candidate = DenseCandidateOracle(rank_config).evaluate(
+      admission, action);
+  auto legacy_candidate = DenseCandidateOracle(rank_config).evaluate(
+      admission, action);
+  ASSERT_TRUE(scoped_candidate.valid);
+  const auto detector = JointWindowDetector().evaluateCandidate(
+      window, scoped_candidate, detector_risk);
+  ASSERT_TRUE(detector.passed) << detector.reason;
+  Eigen::MatrixXd mode = Eigen::MatrixXd::Zero(scoped_candidate.rows, 1);
+  mode(0, 0) = 1.0;
+  mode(mode.rows() - 1, 0) = 1.0;
+  FaultHypothesisV2 hypothesis;
+  hypothesis.id = HypothesisId(10302);
+  hypothesis.modes = {FaultModeId(10303)};
+  hypothesis.A = mode;
+  hypothesis.p_md_allocation = 1e-3;
+  hypothesis.hmi_allocation = 1e-6;
+  hypothesis.prior_probability_bound = 1e-3;
+  std::vector<FaultHypothesisV2> scoped_hypotheses{hypothesis};
+  std::vector<FaultHypothesisV2> legacy_hypotheses{hypothesis};
+  ProtectionLevelSharedContext shared;
+  shared.mode_maps.emplace(10303, mode);
+  AttemptProofArena arena;
+  ProtectionLevelV2ProofV1 audit;
+  const auto scoped = ProtectionLevelV2().computeShared(
+      window, &scoped_candidate, detector, &scoped_hypotheses, shared,
+      RiskBudgetV2{}, &audit, &arena);
+  ASSERT_TRUE(scoped.model_valid) << scoped.reason;
+  ASSERT_TRUE(validateProtectionLevelV2Proof(
+      scoped_candidate, detector, scoped_hypotheses, scoped, arena, nullptr));
+  const auto scoped_identity = protectionLevelV2ProofIdentity(
+      scoped_candidate, scoped, arena);
+  ASSERT_NE(scoped_identity, 0u);
+  EpochTransaction transaction;
+  transaction.id = TransactionId(window.id.value());
+  transaction.base_version = window.version;
+  transaction.end = TimestampNs(1030000000);
+  transaction.nominal_predicted_state.position_world_m =
+      Eigen::Vector3d(4.0, -3.0, 2.0);
+  CommitProtectionEvidenceV1 unconsumed;
+  std::string reason;
+  ASSERT_TRUE(mintCommitProtectionEvidenceV1(
+      transaction, admission, scoped_candidate, scoped, scoped_identity,
+      "map", &arena, &unconsumed, &reason)) << reason;
+  EXPECT_EQ(detail::AttemptProofArenaAccess::liveConsumableCountForTesting(),
+            1u);
+  const Eigen::Vector3d reference(1.0, 2.0, 3.0);
+  const Eigen::Vector3d committed(1.1, 1.8, 3.3);
+  const Eigen::Vector3d transferred = scoped.pl_xyz_m +
+      (committed - reference).cwiseAbs();
+  std::string packet_id;
+  ASSERT_TRUE(bindTransferredProtectionLevelPublicationPacket(
+      scoped_candidate, scoped, scoped_identity, reference, committed,
+      transferred, 1030000000, "map", "body_origin", &arena, &packet_id));
+  AttemptProofLease lease = arena.lease();
+  arena.close();
+  EXPECT_EQ(detail::AttemptProofArenaAccess::liveConsumableCountForTesting(),
+            0u);
+  EXPECT_FALSE(consumeCommitProtectionEvidenceV1(
+      unconsumed, transaction, "map", &reason));
+  FinalProtectionProofBundleV1 bundle;
+  ASSERT_TRUE(freezeFinalProtectionProofBundleV1(
+      lease, packet_id, &bundle, &reason)) << reason;
+  const auto retained_entries = lease.entryCount();
+  lease.reset();
+  ASSERT_TRUE(validateFinalProtectionProofBundleV1(
+      bundle, transferred, packet_id, &reason)) << reason;
+  EXPECT_GT(retained_entries, 0u);
+  IntegrityOutput terminal_output;
+  terminal_output.attempted_timestamp = TimestampNs(1030000000);
+  terminal_output.state.timestamp = terminal_output.attempted_timestamp;
+  terminal_output.protection_level.pl_xyz_m = transferred;
+  terminal_output.protection_level.detector_certificate_id = packet_id;
+  FinalPacketTiming timing;
+  timing.arrival_steady_ns = 1;
+  timing.compute_done_steady_ns = 2;
+  timing.packet_ready_steady_ns = 3;
+  const auto final_packet = finalizeOutputPacket(
+      terminal_output, timing, 100, bundle);
+  EXPECT_EQ(final_packet.metadata().protection_packet_id, packet_id);
+  EXPECT_EQ(final_packet.metadata().protected_frame_id, "map");
+  EXPECT_EQ(final_packet.metadata().protected_position_reference,
+            "body_origin");
+  CommittedStatePublicationV1 committed_sidecar;
+  committed_sidecar.transaction_id = transaction.id.value();
+  committed_sidecar.state_timestamp = transaction.end;
+  committed_sidecar.covariance.setIdentity();
+  AttemptProofArena committed_arena;
+  ASSERT_TRUE(recordCommittedStatePublicationV1(
+      committed_sidecar, &committed_arena));
+  auto committed_lease = committed_arena.lease();
+  committed_arena.close();
+  CommittedStatePublicationV1 recovered_sidecar;
+  ASSERT_TRUE(committedStatePublicationV1(
+      committed_sidecar.transaction_id, committed_sidecar.state_timestamp,
+      committed_lease, &recovered_sidecar));
+  EXPECT_TRUE(recovered_sidecar.covariance.isApprox(
+      committed_sidecar.covariance, 0.0));
+  auto tampered_bundle = bundle;
+  tampered_bundle.publication_packet.served_pl.x() = std::nextafter(
+      tampered_bundle.publication_packet.served_pl.x(),
+      std::numeric_limits<double>::infinity());
+  EXPECT_FALSE(validateFinalProtectionProofBundleV1(
+      tampered_bundle, transferred, packet_id, &reason));
+
+  std::vector<std::future<bool>> readers;
+  for (int worker = 0; worker < 4; ++worker) {
+    readers.push_back(std::async(std::launch::async, [&, worker] {
+      std::string local_reason;
+      auto local = bundle;
+      if (worker == 3) local.arena_generation = bundle.arena_generation;
+      return validateFinalProtectionProofBundleV1(
+          local, transferred, packet_id, &local_reason);
+    }));
+  }
+  for (auto& reader : readers) EXPECT_TRUE(reader.get());
+
+  const auto legacy = ProtectionLevelV2().computeShared(
+      window, &legacy_candidate, detector, &legacy_hypotheses, shared,
+      RiskBudgetV2{});
+  ASSERT_TRUE(legacy.model_valid) << legacy.reason;
+  EXPECT_TRUE(scoped.pl_xyz_m.isApprox(legacy.pl_xyz_m, 0.0));
+  EXPECT_EQ(scoped.detector_certificate_id, legacy.detector_certificate_id);
+  EXPECT_EQ(scoped.risk_budget_valid, legacy.risk_budget_valid);
+  EXPECT_EQ(scoped.availability, legacy.availability);
+}
+
+TEST(P103ProofArena, CloseConsumeRaceHasOneLinearizedWinner) {
+  using namespace uwb_imu_pl;
+  constexpr std::uint32_t kind = 103;
+  for (std::uint64_t iteration = 1; iteration <= 128; ++iteration) {
+    AttemptProofArena arena;
+    ASSERT_TRUE(detail::AttemptProofArenaAccess::registerConsumable(
+        &arena, kind, iteration,
+        std::make_shared<const std::uint64_t>(iteration)));
+    std::atomic<bool> start{false};
+    std::shared_ptr<const void> consumed;
+    auto closer = std::async(std::launch::async, [&] {
+      while (!start.load(std::memory_order_acquire)) {}
+      arena.close();
+    });
+    auto consumer = std::async(std::launch::async, [&] {
+      while (!start.load(std::memory_order_acquire)) {}
+      consumed = detail::AttemptProofArenaAccess::consumeConsumable(
+          kind, iteration);
+    });
+    start.store(true, std::memory_order_release);
+    closer.get();
+    consumer.get();
+    EXPECT_TRUE(arena.closed());
+    if (consumed) {
+      EXPECT_EQ(*std::static_pointer_cast<const std::uint64_t>(consumed),
+                iteration);
+    } else {
+      EXPECT_FALSE(detail::AttemptProofArenaAccess::consumeConsumable(
+          kind, iteration));
+    }
+  }
+  EXPECT_EQ(detail::AttemptProofArenaAccess::liveConsumableCountForTesting(),
+            0u);
+}
+
+TEST(P103ProofArena, PreConsumeExceptionRevokesLiveToken) {
+  using namespace uwb_imu_pl;
+  EXPECT_THROW(
+      {
+        AttemptProofArena arena;
+        ASSERT_TRUE(detail::AttemptProofArenaAccess::registerConsumable(
+            &arena, 104, 1,
+            std::make_shared<const std::uint64_t>(1)));
+        EXPECT_EQ(detail::AttemptProofArenaAccess::
+                      liveConsumableCountForTesting(),
+                  1u);
+        throw std::runtime_error("pre-consume failure");
+      },
+      std::runtime_error);
+  EXPECT_EQ(detail::AttemptProofArenaAccess::liveConsumableCountForTesting(),
+            0u);
+  EXPECT_FALSE(detail::AttemptProofArenaAccess::consumeConsumable(104, 1));
+}
+
+TEST(P103ProofArena, NonemptyInvalidFinalBundleFailsClosed) {
+  using namespace uwb_imu_pl;
+  IntegrityOutput output;
+  output.attempted_timestamp = TimestampNs(1);
+  output.state.timestamp = TimestampNs(1);
+  output.protection_level.detector_certificate_id = "scoped-nonempty";
+  output.protection_level.formal_eligible = true;
+  output.publication.protected_output = true;
+  output.publication.unprotected_output = false;
+  FinalPacketTiming timing;
+  timing.arrival_steady_ns = 1;
+  timing.compute_done_steady_ns = 2;
+  timing.packet_ready_steady_ns = 3;
+  const auto packet = finalizeOutputPacket(
+      std::move(output), timing, 100, FinalProtectionProofBundleV1{});
+  EXPECT_FALSE(packet.output().publication.protected_output);
+  EXPECT_TRUE(packet.output().publication.unprotected_output);
+  EXPECT_FALSE(packet.output().protection_level.formal_eligible);
+  EXPECT_TRUE(packet.output().protection_level.detector_certificate_id.empty());
+  EXPECT_NE(std::find(packet.output().reason_codes.begin(),
+                      packet.output().reason_codes.end(),
+                      "FINAL_PROOF_BUNDLE_INVALID"),
+            packet.output().reason_codes.end());
+}
+
+TEST(P103ProofArena, ScopedCommittedStateDoesNotGrowLegacyRegistry) {
+  using namespace uwb_imu_pl;
+  const auto before = committedStatePublicationCountForTesting();
+  for (std::uint64_t index = 1; index <= 512; ++index) {
+    AttemptProofLease lease;
+    {
+      AttemptProofArena arena;
+      CommittedStatePublicationV1 sidecar;
+      sidecar.transaction_id = 100000 + index;
+      sidecar.state_timestamp = TimestampNs(200000 + index);
+      sidecar.covariance.setIdentity();
+      ASSERT_TRUE(recordCommittedStatePublicationV1(sidecar, &arena));
+      lease = arena.lease();
+      arena.close();
+      CommittedStatePublicationV1 recovered;
+      ASSERT_TRUE(committedStatePublicationV1(
+          sidecar.transaction_id, sidecar.state_timestamp, lease,
+          &recovered));
+    }
+    lease.reset();
+  }
+  EXPECT_EQ(committedStatePublicationCountForTesting(), before);
+}
+
+TEST(P103ProofArena, CloseIsIdempotentAndLeaseSurvivesOwner) {
+  uwb_imu_pl::AttemptProofLease lease;
+  std::uint64_t generation = 0;
+  {
+    uwb_imu_pl::AttemptProofArena arena;
+    generation = arena.generation();
+    lease = arena.lease();
+    EXPECT_FALSE(arena.closed());
+    arena.close();
+    arena.close();
+    EXPECT_TRUE(arena.closed());
+  }
+  EXPECT_TRUE(lease.valid());
+  EXPECT_TRUE(lease.closed());
+  EXPECT_EQ(lease.generation(), generation);
+  EXPECT_EQ(lease.entryCount(), 0u);
+  lease.reset();
+  EXPECT_FALSE(lease.valid());
+}
+
+TEST(P103ProofArena, ScopedPipelineExceptionClosesArenaAndDiscardsAttempt) {
+  using namespace uwb_imu_pl;
+  auto config = IntegrityConfigLoader::load(
+      std::string(UWB_IMU_PL_SOURCE_DIR) + "/config/fde_uwb_order1.yaml");
+  NavigationState initial;
+  initial.timestamp = TimestampNs(0);
+  initial.position_world_m = {0, 0, 1};
+  IncrementalUwbImuEstimator estimator(
+      config, config.realtime.lever_arm_body_m);
+  estimator.initialize(initial, config.realtime.prior_sigmas);
+  addImu(&estimator, config.imu.gravity_mps2);
+  RealtimeIntegrityPipeline pipeline(
+      &estimator,
+      IntegrityMonitor(config.risk, config.snapshot.rank_tolerance,
+                       config.snapshot.max_condition_number),
+      offlineReplayPublicationLimits());
+  auto seams = std::make_shared<PipelineTestDependencySeamsV1>();
+  seams->before_candidate = [](ExclusionActionId) {
+    throw std::runtime_error("P103 scoped exception injection");
+  };
+  pipeline.setTestDependencySeamsV1(seams);
+  AttemptProofLease lease;
+  EXPECT_THROW((void)pipeline.processUwbBatch(
+                   batch(config, 10000000), &lease),
+               std::runtime_error);
+  EXPECT_TRUE(lease.valid());
+  EXPECT_TRUE(lease.closed());
+  EXPECT_GT(lease.entryCount(), 0u);
+  EXPECT_FALSE(estimator.hasPendingEpoch());
+  EXPECT_EQ(estimator.currentEpoch(), 0u);
+  EXPECT_EQ(uwb_imu_pl::detail::AttemptProofArenaAccess::
+                liveConsumableCountForTesting(),
+            0u);
+  lease.reset();
 }
 
 TEST(IntegrityV2Transaction, PrepareAndDiscardNeverMutateBackend) {

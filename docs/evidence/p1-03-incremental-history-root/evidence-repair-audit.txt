@@ -1,0 +1,28 @@
+P1-03 evidence-only repair source immutability audit (2026-09-30)
+
+Scope:
+  only docs/evidence/p1-03-incremental-history-root manifests, indices,
+  explanations, and byte-identical raw evidence copies were changed
+  no source, test source, CMake, binary, or generated raw content was edited
+  no build, test, benchmark, soak, or comparator was rerun
+
+Before evidence repair:
+  tracked source diff SHA-256=9f6984d73cf09c862ca3fd84693d766e48043a0726d80b6879713637fc8cd004
+  28-file source payload composite SHA-256=35f773456f6664aca3cde2d6e962fab950f423dab7267b9830c4320c92739281
+
+After evidence repair:
+  tracked source diff SHA-256=9f6984d73cf09c862ca3fd84693d766e48043a0726d80b6879713637fc8cd004
+  28-file source payload composite SHA-256=35f773456f6664aca3cde2d6e962fab950f423dab7267b9830c4320c92739281
+  result=PASS; source diff and source payload are byte-identical
+
+Digest method:
+  tracked source diff: git diff --binary golden-p1-02-shared-dual-numerics --
+    CMakeLists.txt apps include src test tools | sha256sum
+  source payload composite: sort the 28 source-hashes.sha256 paths, run
+    sha256sum on each current file, then hash that sorted checksum stream
+
+Raw archive copy audit:
+  104 files copied; source-to-archive cmp=PASS for every file
+  input/config/truth manifest=17/17 PASS
+  output manifest=104/104 PASS
+

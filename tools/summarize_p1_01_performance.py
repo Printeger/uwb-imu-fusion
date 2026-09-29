@@ -42,8 +42,16 @@ def parse_work(path: pathlib.Path) -> dict[str, int]:
              if line.startswith("numerical_work ")]
     if len(lines) != 1:
         raise ValueError(f"{path}: expected one numerical_work line")
-    return {key: int(value) for key, value in
-            re.findall(r"([a-z0-9_]+)=([0-9]+)", lines[0])}
+    result = {key: int(value) for key, value in
+              re.findall(r"([a-z0-9_]+)=([0-9]+)", lines[0])}
+    history_lines = [line for line in text.splitlines()
+                     if line.startswith("history_root_work ")]
+    if len(history_lines) > 1:
+        raise ValueError(f"{path}: expected at most one history_root_work line")
+    if history_lines:
+        result.update({"history_root_" + key: int(value) for key, value in
+                       re.findall(r"([a-z0-9_]+)=([0-9]+)", history_lines[0])})
+    return result
 
 
 def parse_rss(path: pathlib.Path) -> int:

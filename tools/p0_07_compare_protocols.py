@@ -95,7 +95,8 @@ def main():
     close("served ztz", oz.T @ oz, az.T @ az)
     for name in ("BASE_INFORMATION", "BASE_RHS", "BASE_STATE"):
         close(name, oracle["matrices"][name], actual["matrices"][name])
-    if len(oracle["proofs"]) != 7 * 504 or set(oracle["proofs"]) != set(actual["proofs"]):
+    if (len(oracle["proofs"]) != len(actual["outcomes"]) * 504 or
+            set(oracle["proofs"]) != set(actual["proofs"])):
         raise AssertionError("action x hypothesis census mismatch")
     available = 0
     for key, expected in oracle["proofs"].items():
@@ -135,7 +136,8 @@ def main():
         raise AssertionError(f"winner/terminal/formal/protected mismatch {oracle['decision']} != {observed_decision}")
     if not args.skip_observed and oracle["observed"] != actual["observed"]:
         raise AssertionError(f"same-run observed metadata mismatch {oracle['observed']} != {actual['observed']}")
-    print(f"P007_PROCESS_ABC_PASS records={len(oracle['proofs'])} available={available}")
+    print(f"P007_PROCESS_ABC_PASS records={len(oracle['proofs'])} "
+          f"available={available}")
 
 
 if __name__ == "__main__": main()

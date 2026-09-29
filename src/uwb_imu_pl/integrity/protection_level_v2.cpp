@@ -22,6 +22,20 @@ namespace uwb_imu_pl {
 
 namespace {
 
+constexpr std::uint32_t kArenaProtectionByResult = 2;
+constexpr std::uint32_t kArenaProtectionByIdentity = 3;
+constexpr std::uint32_t kArenaPublicationPacketV1 = 4;
+constexpr std::uint32_t kArenaPublicationPacketV2 = 5;
+constexpr std::uint32_t kArenaCommitToken = 6;
+
+bool validateProtectionLevelPublicationProofPayloads(
+    std::uint64_t proof_identity, const Eigen::Vector3d& served_pl,
+    const std::string& detector_certificate_id,
+    const ProtectionLevelV2ProofV1& proof,
+    const ProtectionLevelPublicationPacketV1& packet_v1,
+    const ProtectionLevelPublicationPacketV2& packet_v2,
+    bool is_v2, std::string* reason);
+
 class ScopeExit final {
  public:
   explicit ScopeExit(std::function<void()> callback)
@@ -58,6 +72,13 @@ void hashBytes(std::uint64_t* hash, const void* data, std::size_t size) {
 template <class T>
 void hashScalar(std::uint64_t* hash, const T& value) {
   hashBytes(hash, &value, sizeof(value));
+}
+
+std::uint64_t scopedResultKey(std::uint64_t result_key,
+                              std::uint64_t candidate_identity) {
+  std::uint64_t value = result_key;
+  hashScalar(&value, candidate_identity);
+  return value;
 }
 
 template <class Derived>
@@ -152,6 +173,10 @@ std::uint64_t resultRegistryKey(const ProtectionLevelV2Result& result) {
 }
 
 struct ProtectionProofRegistry {
+  struct CommitToken {
+    CommitProtectionEvidenceV1 evidence;
+    ProtectionLevelV2ProofV1 proof;
+  };
   std::mutex mutex;
   std::map<std::uint64_t, std::vector<ProtectionLevelV2ProofV1>> by_result;
   std::map<std::uint64_t, ProtectionLevelV2ProofV1> by_identity;
@@ -159,7 +184,7 @@ struct ProtectionProofRegistry {
       publication_packets_v1;
   std::map<std::string, ProtectionLevelPublicationPacketV2>
       publication_packets_v2;
-  std::map<std::uint64_t, CommitProtectionEvidenceV1> commit_tokens;
+  std::map<std::uint64_t, CommitToken> commit_tokens;
 };
 
 ProtectionProofRegistry& protectionProofRegistry() {
@@ -281,7 +306,8 @@ std::uint64_t protectionResultProofIdentity(
 void bindProtectionResultProof(
     const CandidateEvaluation& candidate, const DetectorResultV2& detector,
     const std::vector<FaultHypothesisV2>& hypotheses,
-    ProtectionLevelV2Result* result, ProtectionLevelV2ProofV1* sidecar) {
+    ProtectionLevelV2Result* result, ProtectionLevelV2ProofV1* sidecar,
+    AttemptProofArena* proof_arena) {
   if (!result || !sidecar || !result->model_valid ||
       !result->pl_xyz_m.allFinite()) return;
   sidecar->candidate_proof_identity =
@@ -297,15 +323,30 @@ void bindProtectionResultProof(
   sidecar->served_result = *result;
   sidecar->proof_identity =
       protectionResultProofIdentity(*sidecar);
-  {
+  if (proof_arena) {
+    const auto payload =
+        std::make_shared<const ProtectionLevelV2ProofV1>(*sidecar);
+    (void)detail::AttemptProofArenaAccess::store(
+        proof_arena, kArenaProtectionByResult,
+        scopedResultKey(resultRegistryKey(*result),
+                        sidecar->candidate_proof_identity),
+        nullptr, payload);
+    (void)detail::AttemptProofArenaAccess::store(
+        proof_arena, kArenaProtectionByIdentity, sidecar->proof_identity,
+        nullptr, payload);
+  } else {
     auto& registry = protectionProofRegistry();
     std::lock_guard<std::mutex> lock(registry.mutex);
     registry.by_result[resultRegistryKey(*result)].push_back(*sidecar);
     registry.by_identity[sidecar->proof_identity] = *sidecar;
   }
   std::string proof_reason;
-  if (!validateProtectionLevelV2Proof(candidate, detector, hypotheses,
-                                      *result, &proof_reason)) {
+  const bool valid = proof_arena
+      ? validateProtectionLevelV2Proof(candidate, detector, hypotheses,
+                                       *result, *proof_arena, &proof_reason)
+      : validateProtectionLevelV2Proof(candidate, detector, hypotheses,
+                                       *result, &proof_reason);
+  if (!valid) {
     result->model_valid = false;
     result->availability = Availability::Unavailable;
     result->reason = proof_reason;
@@ -665,25 +706,12 @@ FaultAxisBounds faultAxisBounds(const DetectorResultV2& detector,
 
 }  // namespace
 
-bool validateProtectionLevelV2Proof(
+namespace {
+bool validateProtectionLevelV2ProofSidecar(
     const CandidateEvaluation& candidate, const DetectorResultV2& detector,
     const std::vector<FaultHypothesisV2>& hypotheses,
-    const ProtectionLevelV2Result& result, std::string* reason) {
-  ProtectionLevelV2ProofV1 sidecar;
-  {
-    auto& registry = protectionProofRegistry();
-    std::lock_guard<std::mutex> lock(registry.mutex);
-    const auto found = registry.by_result.find(resultRegistryKey(result));
-    if (found != registry.by_result.end()) {
-      const auto match = std::find_if(
-          found->second.rbegin(), found->second.rend(),
-          [&](const ProtectionLevelV2ProofV1& proof) {
-            return proof.candidate_proof_identity ==
-                candidateProofIdentity(candidate);
-          });
-      if (match != found->second.rend()) sidecar = *match;
-    }
-  }
+    const ProtectionLevelV2Result& result,
+    const ProtectionLevelV2ProofV1& sidecar, std::string* reason) {
   if (sidecar.proof_identity == 0) {
     if (reason) *reason = "protection-level proof sidecar is unavailable";
     return false;
@@ -727,6 +755,47 @@ bool validateProtectionLevelV2Proof(
     }
   }
   return valid;
+}
+}  // namespace
+
+bool validateProtectionLevelV2Proof(
+    const CandidateEvaluation& candidate, const DetectorResultV2& detector,
+    const std::vector<FaultHypothesisV2>& hypotheses,
+    const ProtectionLevelV2Result& result, std::string* reason) {
+  ProtectionLevelV2ProofV1 sidecar;
+  {
+    auto& registry = protectionProofRegistry();
+    std::lock_guard<std::mutex> lock(registry.mutex);
+    const auto found = registry.by_result.find(resultRegistryKey(result));
+    if (found != registry.by_result.end()) {
+      const auto match = std::find_if(
+          found->second.rbegin(), found->second.rend(),
+          [&](const ProtectionLevelV2ProofV1& proof) {
+            return proof.candidate_proof_identity ==
+                candidateProofIdentity(candidate);
+          });
+      if (match != found->second.rend()) sidecar = *match;
+    }
+  }
+  return validateProtectionLevelV2ProofSidecar(
+      candidate, detector, hypotheses, result, sidecar, reason);
+}
+
+bool validateProtectionLevelV2Proof(
+    const CandidateEvaluation& candidate, const DetectorResultV2& detector,
+    const std::vector<FaultHypothesisV2>& hypotheses,
+    const ProtectionLevelV2Result& result, const AttemptProofArena& arena,
+    std::string* reason) {
+  const auto payload = detail::AttemptProofArenaAccess::find(
+      arena, kArenaProtectionByResult,
+      scopedResultKey(resultRegistryKey(result), candidateProofIdentity(candidate)),
+      nullptr);
+  ProtectionLevelV2ProofV1 sidecar;
+  if (payload) {
+    sidecar = *std::static_pointer_cast<const ProtectionLevelV2ProofV1>(payload);
+  }
+  return validateProtectionLevelV2ProofSidecar(
+      candidate, detector, hypotheses, result, sidecar, reason);
 }
 
 bool validateProtectionLevelV2ProofPayload(
@@ -926,10 +995,34 @@ bool protectionLevelV2Proof(const ProtectionLevelV2Result& result,
   return true;
 }
 
+bool protectionLevelV2Proof(const ProtectionLevelV2Result& result,
+                            const CandidateEvaluation& candidate,
+                            const AttemptProofArena& arena,
+                            ProtectionLevelV2ProofV1* proof) {
+  if (!proof) return false;
+  const auto payload = detail::AttemptProofArenaAccess::find(
+      arena, kArenaProtectionByResult,
+      scopedResultKey(resultRegistryKey(result), candidateProofIdentity(candidate)),
+      nullptr);
+  if (!payload) return false;
+  *proof = *std::static_pointer_cast<const ProtectionLevelV2ProofV1>(payload);
+  return proof->candidate_proof_identity == candidateProofIdentity(candidate) &&
+      proof->proof_identity != 0;
+}
+
 std::uint64_t protectionLevelV2ProofIdentity(
     const ProtectionLevelV2Result& result) {
   ProtectionLevelV2ProofV1 proof;
   return protectionLevelV2Proof(result, &proof) ? proof.proof_identity : 0;
+}
+
+std::uint64_t protectionLevelV2ProofIdentity(
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    const AttemptProofArena& arena) {
+  ProtectionLevelV2ProofV1 proof;
+  return protectionLevelV2Proof(result, candidate, arena, &proof)
+      ? proof.proof_identity : 0;
 }
 
 std::uint64_t protectionLevelV2ProofIdentity(
@@ -958,7 +1051,8 @@ bool mintCommitProtectionEvidenceImpl(
     const std::string& frame_id,
     CommitProtectionEvidenceV1* evidence,
     std::string* reason,
-    const FrozenWindowAdmission* admission) {
+    const FrozenWindowAdmission* admission,
+    AttemptProofArena* proof_arena) {
   if (!evidence) {
     if (reason) *reason = "null commit-protection output";
     return false;
@@ -985,7 +1079,18 @@ bool mintCommitProtectionEvidenceImpl(
     return false;
   }
   ProtectionLevelV2ProofV1 proof;
-  {
+  if (proof_arena) {
+    const auto payload = detail::AttemptProofArenaAccess::find(
+        *proof_arena, kArenaProtectionByIdentity, protection_proof_identity,
+        nullptr);
+    if (payload) {
+      proof = *std::static_pointer_cast<const ProtectionLevelV2ProofV1>(payload);
+    }
+    if (proof.proof_identity == 0) {
+      if (reason) *reason = "P0-03 protection proof is unavailable";
+      return false;
+    }
+  } else {
     auto& registry = protectionProofRegistry();
     std::lock_guard<std::mutex> lock(registry.mutex);
     const auto found = registry.by_identity.find(protection_proof_identity);
@@ -1045,12 +1150,27 @@ bool mintCommitProtectionEvidenceImpl(
   hashBytes(&token, out.reference.frame_id.data(), out.reference.frame_id.size());
   hashBytes(&token, out.reference.position_reference.data(),
             out.reference.position_reference.size());
+  // Scoped tokens are namespaced by their arena generation.  The generation
+  // is deliberately opaque to the public evidence ABI, but prevents a closed
+  // scoped token from aliasing a legacy registry token with identical fields.
+  if (proof_arena) hashScalar(&token, proof_arena->generation());
   if (token == 0) token = 1;
   out.token_identity = token;
-  {
+  ProtectionProofRegistry::CommitToken stored;
+  stored.evidence = out;
+  stored.proof = proof;
+  if (proof_arena) {
+    if (!detail::AttemptProofArenaAccess::registerConsumable(
+            proof_arena, kArenaCommitToken, token,
+            std::make_shared<const ProtectionProofRegistry::CommitToken>(
+                stored))) {
+      if (reason) *reason = "scoped commit token registration failed";
+      return false;
+    }
+  } else {
     auto& registry = protectionProofRegistry();
     std::lock_guard<std::mutex> lock(registry.mutex);
-    registry.commit_tokens[token] = out;
+    registry.commit_tokens[token] = std::move(stored);
   }
   *evidence = out;
   return true;
@@ -1069,7 +1189,7 @@ bool mintCommitProtectionEvidenceV1(
     std::string* reason) {
   return mintCommitProtectionEvidenceImpl(
       transaction, window, candidate, result, protection_proof_identity,
-      frame_id, evidence, reason, nullptr);
+      frame_id, evidence, reason, nullptr, nullptr);
 }
 
 bool mintCommitProtectionEvidenceV1(
@@ -1090,7 +1210,28 @@ bool mintCommitProtectionEvidenceV1(
   }
   return mintCommitProtectionEvidenceImpl(
       transaction, admission.window(), candidate, result,
-      protection_proof_identity, frame_id, evidence, reason, &admission);
+      protection_proof_identity, frame_id, evidence, reason, &admission,
+      nullptr);
+}
+
+bool mintCommitProtectionEvidenceV1(
+    const EpochTransaction& transaction,
+    const FrozenWindowAdmission& admission,
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    std::uint64_t protection_proof_identity,
+    const std::string& frame_id,
+    AttemptProofArena* arena,
+    CommitProtectionEvidenceV1* evidence,
+    std::string* reason) {
+  if (!admission || !arena || arena->closed()) {
+    if (reason) *reason = "invalid scoped proof arena/admission";
+    return false;
+  }
+  return mintCommitProtectionEvidenceImpl(
+      transaction, admission.window(), candidate, result,
+      protection_proof_identity, frame_id, evidence, reason, &admission,
+      arena);
 }
 
 bool consumeCommitProtectionEvidenceV1(
@@ -1100,6 +1241,15 @@ bool consumeCommitProtectionEvidenceV1(
     std::string* reason) {
   CommitProtectionEvidenceV1 registered;
   ProtectionLevelV2ProofV1 proof;
+  const auto scoped_payload =
+      detail::AttemptProofArenaAccess::consumeConsumable(
+          kArenaCommitToken, evidence.token_identity);
+  if (scoped_payload) {
+    const auto token = std::static_pointer_cast<
+        const ProtectionProofRegistry::CommitToken>(scoped_payload);
+    registered = token->evidence;
+    proof = token->proof;
+  } else {
   {
     auto& registry = protectionProofRegistry();
     std::lock_guard<std::mutex> lock(registry.mutex);
@@ -1108,13 +1258,17 @@ bool consumeCommitProtectionEvidenceV1(
       if (reason) *reason = "commit protection token missing, stale, or replayed";
       return false;
     }
-    registered = token->second;
+    registered = token->second.evidence;
+    proof = token->second.proof;
     // Consumption is deliberately destructive even if the caller tampered
     // with its copy: a failed attempt cannot later replay the token.
     registry.commit_tokens.erase(token);
-    const auto found = registry.by_identity.find(
-        registered.protection_proof_identity);
-    if (found != registry.by_identity.end()) proof = found->second;
+    if (proof.proof_identity == 0) {
+      const auto found = registry.by_identity.find(
+          registered.protection_proof_identity);
+      if (found != registry.by_identity.end()) proof = found->second;
+      }
+  }
   }
   const auto same_vector = [](const Eigen::Vector3d& left,
                               const Eigen::Vector3d& right) {
@@ -1203,7 +1357,8 @@ bool bindProtectionLevelPublicationPacket(
   return true;
 }
 
-bool bindTransferredProtectionLevelPublicationPacket(
+namespace {
+bool bindTransferredProtectionLevelPublicationPacketImpl(
     const CandidateEvaluation& candidate,
     const ProtectionLevelV2Result& result,
     std::uint64_t protection_proof_identity,
@@ -1212,7 +1367,7 @@ bool bindTransferredProtectionLevelPublicationPacket(
     const Eigen::Vector3d& transferred_pl_m,
     std::int64_t timestamp_ns,
     const std::string& frame_id,
-    const std::string& position_reference,
+    const std::string& position_reference, AttemptProofArena* arena,
     std::string* packet_id) {
   if (!packet_id || timestamp_ns == 0 || frame_id.empty() ||
       position_reference != "body_origin" ||
@@ -1222,7 +1377,14 @@ bool bindTransferredProtectionLevelPublicationPacket(
     return false;
   }
   ProtectionLevelV2ProofV1 proof;
-  {
+  if (arena) {
+    const auto payload = detail::AttemptProofArenaAccess::find(
+        *arena, kArenaProtectionByIdentity, protection_proof_identity, nullptr);
+    if (payload) {
+      proof = *std::static_pointer_cast<const ProtectionLevelV2ProofV1>(payload);
+    }
+    if (proof.proof_identity == 0) return false;
+  } else {
     auto& registry = protectionProofRegistry();
     std::lock_guard<std::mutex> lock(registry.mutex);
     const auto found = registry.by_identity.find(protection_proof_identity);
@@ -1269,10 +1431,53 @@ bool bindTransferredProtectionLevelPublicationPacket(
             packet.detector_certificate_id.size());
   packet.packet_identity = identity;
   *packet_id = "p005-pl-transfer-v2-" + hexDigest(identity);
+  if (arena) {
+    return detail::AttemptProofArenaAccess::store(
+        arena, kArenaPublicationPacketV2, 0, packet_id->c_str(),
+        std::make_shared<const ProtectionLevelPublicationPacketV2>(
+            std::move(packet)));
+  }
   auto& registry = protectionProofRegistry();
   std::lock_guard<std::mutex> lock(registry.mutex);
   registry.publication_packets_v2[*packet_id] = packet;
   return true;
+}
+}  // namespace
+
+bool bindTransferredProtectionLevelPublicationPacket(
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    std::uint64_t protection_proof_identity,
+    const Eigen::Vector3d& reference_mean_world_m,
+    const Eigen::Vector3d& committed_mean_world_m,
+    const Eigen::Vector3d& transferred_pl_m,
+    std::int64_t timestamp_ns,
+    const std::string& frame_id,
+    const std::string& position_reference,
+    std::string* packet_id) {
+  return bindTransferredProtectionLevelPublicationPacketImpl(
+      candidate, result, protection_proof_identity, reference_mean_world_m,
+      committed_mean_world_m, transferred_pl_m, timestamp_ns, frame_id,
+      position_reference, nullptr, packet_id);
+}
+
+bool bindTransferredProtectionLevelPublicationPacket(
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    std::uint64_t protection_proof_identity,
+    const Eigen::Vector3d& reference_mean_world_m,
+    const Eigen::Vector3d& committed_mean_world_m,
+    const Eigen::Vector3d& transferred_pl_m,
+    std::int64_t timestamp_ns,
+    const std::string& frame_id,
+    const std::string& position_reference,
+    AttemptProofArena* arena,
+    std::string* packet_id) {
+  if (!arena || arena->closed()) return false;
+  return bindTransferredProtectionLevelPublicationPacketImpl(
+      candidate, result, protection_proof_identity, reference_mean_world_m,
+      committed_mean_world_m, transferred_pl_m, timestamp_ns, frame_id,
+      position_reference, arena, packet_id);
 }
 
 bool protectionLevelPublicationPacket(
@@ -1299,6 +1504,67 @@ bool protectionLevelPublicationPacketV2(
   return true;
 }
 
+bool freezeFinalProtectionProofBundleV1(
+    const AttemptProofLease& lease, const std::string& packet_id,
+    FinalProtectionProofBundleV1* bundle, std::string* reason) {
+  if (!bundle) return false;
+  *bundle = FinalProtectionProofBundleV1{};
+  if (!lease.valid() || packet_id.empty()) {
+    if (reason) *reason = "proof lease or packet identity is unavailable";
+    return false;
+  }
+  ProtectionLevelPublicationPacketV2 packet;
+  if (!protectionLevelPublicationPacketV2(packet_id, lease, &packet)) {
+    if (reason) *reason = "scoped publication packet is unavailable";
+    return false;
+  }
+  const auto proof_payload = detail::AttemptProofArenaAccess::find(
+      lease, kArenaProtectionByIdentity, packet.protection_proof_identity,
+      nullptr);
+  if (!proof_payload) {
+    if (reason) *reason = "scoped protection proof is unavailable";
+    return false;
+  }
+  bundle->arena_generation = lease.generation();
+  bundle->protection_proof = *std::static_pointer_cast<
+      const ProtectionLevelV2ProofV1>(proof_payload);
+  bundle->publication_packet = std::move(packet);
+  bundle->packet_id = packet_id;
+  bundle->valid = true;
+  bundle->valid = validateFinalProtectionProofBundleV1(
+      *bundle, bundle->publication_packet.served_pl, packet_id, reason);
+  return bundle->valid;
+}
+
+bool validateFinalProtectionProofBundleV1(
+    const FinalProtectionProofBundleV1& bundle,
+    const Eigen::Vector3d& served_pl, const std::string& packet_id,
+    std::string* reason) {
+  if (!bundle.valid || bundle.schema_version != 1 ||
+      bundle.arena_generation == 0 || bundle.packet_id.empty() ||
+      bundle.packet_id != packet_id) {
+    if (reason) *reason = "final proof bundle header is invalid";
+    return false;
+  }
+  return validateProtectionLevelPublicationProofPayloads(
+      bundle.publication_packet.protection_proof_identity, served_pl,
+      packet_id, bundle.protection_proof,
+      ProtectionLevelPublicationPacketV1{}, bundle.publication_packet,
+      true, reason);
+}
+
+bool protectionLevelPublicationPacketV2(
+    const std::string& packet_id, const AttemptProofLease& lease,
+    ProtectionLevelPublicationPacketV2* packet) {
+  if (!packet) return false;
+  const auto payload = detail::AttemptProofArenaAccess::find(
+      lease, kArenaPublicationPacketV2, 0, packet_id.c_str());
+  if (!payload) return false;
+  *packet = *std::static_pointer_cast<
+      const ProtectionLevelPublicationPacketV2>(payload);
+  return true;
+}
+
 std::uint64_t protectionLevelPublicationProofIdentity(
     const Eigen::Vector3d& served_pl,
     const std::string& detector_certificate_id) {
@@ -1319,32 +1585,27 @@ std::uint64_t protectionLevelPublicationProofIdentity(
   return 0;
 }
 
-bool validateProtectionLevelPublicationProof(
+std::uint64_t protectionLevelPublicationProofIdentity(
+    const Eigen::Vector3d& served_pl,
+    const std::string& detector_certificate_id,
+    const AttemptProofArena& arena) {
+  const auto payload = detail::AttemptProofArenaAccess::find(
+      arena, kArenaPublicationPacketV2, 0, detector_certificate_id.c_str());
+  if (!payload) return 0;
+  const auto& packet = *std::static_pointer_cast<
+      const ProtectionLevelPublicationPacketV2>(payload);
+  return (packet.served_pl.array() == served_pl.array()).all()
+      ? packet.protection_proof_identity : 0;
+}
+
+namespace {
+bool validateProtectionLevelPublicationProofPayloads(
     std::uint64_t proof_identity, const Eigen::Vector3d& served_pl,
-    const std::string& detector_certificate_id, std::string* reason) {
-  ProtectionLevelV2ProofV1 proof;
-  ProtectionLevelPublicationPacketV1 packet_v1;
-  ProtectionLevelPublicationPacketV2 packet_v2;
-  bool is_v2 = false;
-  {
-    auto& registry = protectionProofRegistry();
-    std::lock_guard<std::mutex> lock(registry.mutex);
-    const auto packet_v1_found = registry.publication_packets_v1.find(
-        detector_certificate_id);
-    const auto packet_v2_found = registry.publication_packets_v2.find(
-        detector_certificate_id);
-    const auto proof_found = registry.by_identity.find(proof_identity);
-    if ((packet_v1_found == registry.publication_packets_v1.end() &&
-         packet_v2_found == registry.publication_packets_v2.end()) ||
-        proof_found == registry.by_identity.end()) {
-      if (reason) *reason = "publication PL proof packet is unavailable";
-      return false;
-    }
-    is_v2 = packet_v2_found != registry.publication_packets_v2.end();
-    if (is_v2) packet_v2 = packet_v2_found->second;
-    else packet_v1 = packet_v1_found->second;
-    proof = proof_found->second;
-  }
+    const std::string& detector_certificate_id,
+    const ProtectionLevelV2ProofV1& proof,
+    const ProtectionLevelPublicationPacketV1& packet_v1,
+    const ProtectionLevelPublicationPacketV2& packet_v2,
+    bool is_v2, std::string* reason) {
   if (proof.proof_identity == 0) {
     if (reason) *reason = "publication PL proof sidecar is unavailable";
     return false;
@@ -1408,6 +1669,59 @@ bool validateProtectionLevelPublicationProof(
        (is_v2 ? packet_v2.reference_pl : packet_v1.served_pl).array()).all();
   if (!valid && reason) *reason = "publication PL proof recomputation failed";
   return valid;
+}
+}  // namespace
+
+bool validateProtectionLevelPublicationProof(
+    std::uint64_t proof_identity, const Eigen::Vector3d& served_pl,
+    const std::string& detector_certificate_id, std::string* reason) {
+  ProtectionLevelV2ProofV1 proof;
+  ProtectionLevelPublicationPacketV1 packet_v1;
+  ProtectionLevelPublicationPacketV2 packet_v2;
+  bool is_v2 = false;
+  {
+    auto& registry = protectionProofRegistry();
+    std::lock_guard<std::mutex> lock(registry.mutex);
+    const auto packet_v1_found = registry.publication_packets_v1.find(
+        detector_certificate_id);
+    const auto packet_v2_found = registry.publication_packets_v2.find(
+        detector_certificate_id);
+    const auto proof_found = registry.by_identity.find(proof_identity);
+    if ((packet_v1_found == registry.publication_packets_v1.end() &&
+         packet_v2_found == registry.publication_packets_v2.end()) ||
+        proof_found == registry.by_identity.end()) {
+      if (reason) *reason = "publication PL proof packet is unavailable";
+      return false;
+    }
+    is_v2 = packet_v2_found != registry.publication_packets_v2.end();
+    if (is_v2) packet_v2 = packet_v2_found->second;
+    else packet_v1 = packet_v1_found->second;
+    proof = proof_found->second;
+  }
+  return validateProtectionLevelPublicationProofPayloads(
+      proof_identity, served_pl, detector_certificate_id, proof, packet_v1,
+      packet_v2, is_v2, reason);
+}
+
+bool validateProtectionLevelPublicationProof(
+    std::uint64_t proof_identity, const Eigen::Vector3d& served_pl,
+    const std::string& detector_certificate_id,
+    const AttemptProofArena& arena, std::string* reason) {
+  const auto proof_payload = detail::AttemptProofArenaAccess::find(
+      arena, kArenaProtectionByIdentity, proof_identity, nullptr);
+  const auto packet_payload = detail::AttemptProofArenaAccess::find(
+      arena, kArenaPublicationPacketV2, 0, detector_certificate_id.c_str());
+  if (!proof_payload || !packet_payload) {
+    if (reason) *reason = "publication PL proof packet is unavailable";
+    return false;
+  }
+  const auto& proof = *std::static_pointer_cast<
+      const ProtectionLevelV2ProofV1>(proof_payload);
+  const auto& packet_v2 = *std::static_pointer_cast<
+      const ProtectionLevelPublicationPacketV2>(packet_payload);
+  return validateProtectionLevelPublicationProofPayloads(
+      proof_identity, served_pl, detector_certificate_id, proof,
+      ProtectionLevelPublicationPacketV1{}, packet_v2, true, reason);
 }
 
 double ProtectionLevelV2::detectionBoundaryNoncentralitySquared(
@@ -1637,7 +1951,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeStreaming(
     result.reason = "research V2 implemented; Gate J calibration/review pending";
   }
   bindProtectionResultProof(candidate, detector, *hypotheses, &result,
-                            &sidecar);
+                            &sidecar, nullptr);
   return result;
 }
 
@@ -1650,6 +1964,24 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
     const RiskBudgetV2& risk) const {
   return computeShared(window, candidate, detector, hypotheses, shared, risk,
                        nullptr);
+}
+
+ProtectionLevelV2Result ProtectionLevelV2::computeShared(
+    const LinearizedIntegrityWindow& window,
+    CandidateEvaluation* candidate,
+    const DetectorResultV2& detector,
+    std::vector<FaultHypothesisV2>* hypotheses,
+    const ProtectionLevelSharedContext& shared,
+    const RiskBudgetV2& risk,
+    ProtectionLevelV2ProofV1* computation_audit,
+    AttemptProofArena* proof_arena) const {
+  if (!proof_arena || proof_arena->closed()) {
+    ProtectionLevelV2Result result;
+    result.reason = "invalid scoped proof arena";
+    return result;
+  }
+  return computeSharedImpl(window, candidate, detector, hypotheses, shared,
+                           risk, computation_audit, nullptr, proof_arena);
 }
 
 ProtectionLevelV2Result ProtectionLevelV2::computeShared(
@@ -1672,7 +2004,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
     const RiskBudgetV2& risk,
     ProtectionLevelV2ProofV1* computation_audit) const {
   return computeSharedImpl(window, candidate, detector, hypotheses, shared,
-                           risk, computation_audit, nullptr);
+                           risk, computation_audit, nullptr, nullptr);
 }
 
 ProtectionLevelV2Result ProtectionLevelV2::computeShared(
@@ -1691,7 +2023,26 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
   }
   return computeSharedImpl(admission.window(), candidate, detector,
                            hypotheses, shared, risk, computation_audit,
-                           &admission);
+                           &admission, nullptr);
+}
+
+ProtectionLevelV2Result ProtectionLevelV2::computeShared(
+    const FrozenWindowAdmission& admission,
+    CandidateEvaluation* candidate,
+    const DetectorResultV2& detector,
+    std::vector<FaultHypothesisV2>* hypotheses,
+    const ProtectionLevelSharedContext& shared,
+    const RiskBudgetV2& risk,
+    ProtectionLevelV2ProofV1* computation_audit,
+    AttemptProofArena* proof_arena) const {
+  if (!admission || !proof_arena || proof_arena->closed()) {
+    ProtectionLevelV2Result result;
+    result.reason = "invalid scoped proof arena/admission";
+    return result;
+  }
+  return computeSharedImpl(admission.window(), candidate, detector,
+                           hypotheses, shared, risk, computation_audit,
+                           &admission, proof_arena);
 }
 
 ProtectionLevelV2Result ProtectionLevelV2::computeSharedImpl(
@@ -1702,7 +2053,8 @@ ProtectionLevelV2Result ProtectionLevelV2::computeSharedImpl(
     const ProtectionLevelSharedContext& shared,
     const RiskBudgetV2& risk,
     ProtectionLevelV2ProofV1* computation_audit,
-    const FrozenWindowAdmission* admission) const {
+    const FrozenWindowAdmission* admission,
+    AttemptProofArena* proof_arena) const {
   ProtectionLevelV2Result result;
   ProtectionLevelV2ProofV1 sidecar;
   sidecar.risk = risk;
@@ -2001,7 +2353,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeSharedImpl(
     result.reason = "post-FDE protection level exceeds alert limit";
   else result.reason = "research V2 implemented; Gate J calibration/review pending";
   bindProtectionResultProof(*candidate, detector, *hypotheses, &result,
-                            &sidecar);
+                            &sidecar, proof_arena);
   return result;
 }
 
@@ -2016,7 +2368,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
     const RiskBudgetV2& risk) const {
   return computeFrozenAllInImpl(
       window, candidate, detector, hypotheses, modes, frozen,
-      nullptr, fault_model_policy_fingerprint, risk, nullptr);
+      nullptr, fault_model_policy_fingerprint, risk, nullptr, nullptr);
 }
 
 ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
@@ -2037,7 +2389,30 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
   }
   return computeFrozenAllInImpl(
       admission.window(), candidate, detector, hypotheses, modes, frozen,
-      &frozen_dual, fault_model_policy_fingerprint, risk, &admission);
+      &frozen_dual, fault_model_policy_fingerprint, risk, &admission,
+      nullptr);
+}
+
+ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+    const FrozenWindowAdmission& admission,
+    CandidateEvaluation* candidate,
+    const DetectorResultV2& detector,
+    const std::vector<FaultHypothesisV2>& hypotheses,
+    const std::vector<FaultModeBasis>& modes,
+    const FrozenHypothesisNumerics& frozen,
+    const FrozenHypothesisDualNumerics& frozen_dual,
+    std::uint64_t fault_model_policy_fingerprint,
+    const RiskBudgetV2& risk,
+    AttemptProofArena* proof_arena) const {
+  if (!admission || !proof_arena || proof_arena->closed()) {
+    ProtectionLevelV2Result result;
+    result.reason = "invalid scoped proof arena/admission";
+    return result;
+  }
+  return computeFrozenAllInImpl(
+      admission.window(), candidate, detector, hypotheses, modes, frozen,
+      &frozen_dual, fault_model_policy_fingerprint, risk, &admission,
+      proof_arena);
 }
 
 ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
@@ -2050,7 +2425,8 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
     const FrozenHypothesisDualNumerics* frozen_dual,
     std::uint64_t fault_model_policy_fingerprint,
     const RiskBudgetV2& risk,
-    const FrozenWindowAdmission* admission) const {
+    const FrozenWindowAdmission* admission,
+    AttemptProofArena* proof_arena) const {
   ProtectionLevelV2Result result;
   ProtectionLevelV2ProofV1 sidecar;
   sidecar.risk = risk;
@@ -2214,7 +2590,10 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
     }
     std::string cached_proof_reason;
     FrozenHypothesisPlProofV1 cached_proof;
-    if (!frozenHypothesisPlProof(cached, &cached_proof) ||
+    const bool cached_found = proof_arena
+        ? frozenHypothesisPlProof(cached, *proof_arena, &cached_proof)
+        : frozenHypothesisPlProof(cached, &cached_proof);
+    if (!cached_found ||
         !validateFrozenHypothesisPlEntry(cached_proof,
                                          &cached_proof_reason)) {
       result.reason = "frozen hypothesis proof rejected: " +
@@ -2340,7 +2719,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
     result.reason = "post-FDE protection level exceeds alert limit";
   else result.reason = "research V2 implemented; Gate J calibration/review pending";
   bindProtectionResultProof(*candidate, detector, hypotheses, &result,
-                            &sidecar);
+                            &sidecar, proof_arena);
   return result;
 }
 

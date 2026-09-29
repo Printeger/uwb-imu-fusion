@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <map>
 #include <numeric>
 #include <set>
@@ -110,8 +111,10 @@ std::vector<LinearizedIntegrityWindow> driveEstimator(
     std::map<std::size_t, std::size_t>* window_epochs = nullptr,
     std::map<std::size_t, std::size_t>* unique_boundary_rows = nullptr,
     std::map<std::size_t, std::uint64_t>* marginalization_counts = nullptr,
-    std::map<std::size_t, std::size_t>* oldest_retained_epochs = nullptr) {
+    std::map<std::size_t, std::size_t>* oldest_retained_epochs = nullptr,
+    HistoryRootCacheAudit* root_cache_audit = nullptr) {
   IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+  estimator.enableHistoryRootOracleForTesting(root_cache_audit != nullptr);
   NavigationState initial;
   initial.timestamp = TimestampNs(0);
   initial.position_world_m = {0, 0, 1};
@@ -168,6 +171,9 @@ std::vector<LinearizedIntegrityWindow> driveEstimator(
     const auto plan = EpochCommitPlan::nominalPlan(transaction);
     estimator.commitEpoch(std::move(transaction), plan);
   }
+  if (root_cache_audit != nullptr) {
+    *root_cache_audit = estimator.historyRootCacheAuditForTesting();
+  }
   return windows;
 }
 
@@ -209,6 +215,40 @@ Eigen::MatrixXd pseudoInverse(const Eigen::MatrixXd& matrix) {
     }
   }
   return svd.matrixV() * inverse.asDiagonal() * svd.matrixU().transpose();
+}
+
+int effectiveCarrierRankOracle(const Eigen::MatrixXd& state,
+                               const Eigen::MatrixXd& fault,
+                               const Eigen::VectorXd& rhs,
+                               double rank_tolerance,
+                               int* raw_residual_dof = nullptr) {
+  Eigen::JacobiSVD<Eigen::MatrixXd> state_svd(state, Eigen::ComputeFullU);
+  const Eigen::VectorXd state_singular = state_svd.singularValues();
+  const double state_scale =
+      state_singular.size() == 0 ? 0.0 : state_singular(0);
+  int state_rank = 0;
+  for (Eigen::Index i = 0; i < state_singular.size(); ++i)
+    if (state_singular(i) > rank_tolerance * state_scale) ++state_rank;
+  const int residual_rows = static_cast<int>(state.rows()) - state_rank;
+  if (raw_residual_dof) *raw_residual_dof = residual_rows;
+  Eigen::MatrixXd raw(state.rows(), fault.cols() + 1);
+  if (fault.cols() > 0) raw.leftCols(fault.cols()) = fault;
+  raw.col(fault.cols()) = rhs;
+  const Eigen::MatrixXd carrier =
+      state_svd.matrixU().rightCols(residual_rows).transpose() * raw;
+  Eigen::JacobiSVD<Eigen::MatrixXd> carrier_svd(carrier);
+  const Eigen::VectorXd singular = carrier_svd.singularValues();
+  const double scale = singular.size() == 0 ? 0.0 : singular(0);
+  const double dimension = static_cast<double>(
+      std::max<Eigen::Index>(carrier.rows(), carrier.cols()));
+  const double eps = std::numeric_limits<double>::epsilon();
+  const double gamma = (dimension * eps) / (1.0 - dimension * eps);
+  const double threshold =
+      rank_tolerance * scale + gamma * carrier.norm();
+  int rank = 0;
+  for (Eigen::Index i = 0; i < singular.size(); ++i)
+    if (singular(i) > threshold) ++rank;
+  return rank;
 }
 
 const PendingFactorGroup* selectedHistoricalGroup(
@@ -618,12 +658,13 @@ TEST(HistorySummaryPipeline,
   EXPECT_LE(relErr(window.history_summary.constant_offset,
                    raw.constant_offset), 1e-10);
 
-  Eigen::JacobiSVD<Eigen::MatrixXd> joined_svd(joined);
-  const double rank_gate = joined_svd.singularValues().size() == 0
-      ? 0.0 : joined_svd.singularValues()(0) * 1e-12;
-  const int raw_rank = static_cast<int>(
-      (joined_svd.singularValues().array() > rank_gate).count());
-  EXPECT_EQ(window.history_summary.nu_perp, raw.old_state.rows() - raw_rank);
+  int raw_residual_dof = 0;
+  const int effective_rank = effectiveCarrierRankOracle(
+      joined, raw.fault, raw.rhs, config.integrity_window.rank_tolerance,
+      &raw_residual_dof);
+  EXPECT_EQ(window.history_summary.nu_perp, effective_rank);
+  EXPECT_GT(raw_residual_dof, effective_rank);
+  EXPECT_NE(window.history_summary.version_digest, 0u);
 
   double worst_objective = 0.0;
   for (int probe = 1; probe <= 8; ++probe) {
@@ -986,6 +1027,18 @@ TEST(HistorySummaryPipeline, DeletedMaterialFailsBeforeSummaryUpdate) {
       const auto reference =
           estimator.buildIntegrityWindow(transaction, request);
       ASSERT_TRUE(reference.history_summary.valid) << reference.reason;
+      const auto before_reuse = estimator.historyRootCacheAuditForTesting();
+      const auto repeated = estimator.buildIntegrityWindow(transaction, request);
+      ASSERT_TRUE(repeated.history_summary.valid) << repeated.reason;
+      const auto after_reuse = estimator.historyRootCacheAuditForTesting();
+      EXPECT_EQ(after_reuse.exact_hits, before_reuse.exact_hits + 1);
+      EXPECT_EQ(after_reuse.full_rebuilds, before_reuse.full_rebuilds);
+      EXPECT_EQ((repeated.history_summary.response -
+                 reference.history_summary.response).norm(), 0.0);
+      EXPECT_EQ((repeated.history_summary.detector_response -
+                 reference.history_summary.detector_response).norm(), 0.0);
+      EXPECT_EQ((repeated.history_summary.d_perp -
+                 reference.history_summary.d_perp).norm(), 0.0);
       const std::size_t horizon_first =
           reference.history_summary.horizon_first_epoch;
       ASSERT_GE(transaction.recoverable_history.size(), 2u);
@@ -1015,6 +1068,54 @@ TEST(HistorySummaryPipeline, DeletedMaterialFailsBeforeSummaryUpdate) {
     const auto plan = EpochCommitPlan::nominalPlan(transaction);
     estimator.commitEpoch(std::move(transaction), plan);
   }
+}
+
+TEST(HistorySummaryPipeline, P103ProductionClosureAudit) {
+  const auto config = researchConfig();
+  std::map<std::size_t, std::size_t> requested;
+  for (std::size_t epoch = 1; epoch <= 30; ++epoch) requested[epoch] = epoch;
+  HistoryRootCacheAudit audit;
+  const auto windows = driveEstimator(config, 30, &requested, nullptr, nullptr,
+                                      nullptr, &audit);
+  ASSERT_EQ(windows.size(), 30u);
+  EXPECT_EQ(audit.requests, 30u);
+  EXPECT_EQ(audit.full_tree_rebuilds + audit.incremental_path_updates +
+                audit.exact_hits,
+            audit.requests);
+  EXPECT_GT(audit.incremental_path_updates, 0u);
+  EXPECT_LT(audit.full_tree_rebuilds, audit.requests);
+  EXPECT_GT(audit.incremental_group_updates, 0u);
+  EXPECT_GT(audit.reused_groups, 0u);
+  EXPECT_GT(audit.factor_group_hits, 0u);
+  EXPECT_EQ(audit.full_oracle_checks, audit.requests);
+  EXPECT_EQ(audit.full_oracle_mismatches, 0u);
+  std::printf("[P103-PRODUCTION-CLOSURE] requests=%llu append=%llu paths=%llu "
+              "add=%llu remove=%llu relinearize=%llu internal=%llu tree_full=%llu "
+              "group_updates=%llu reused_groups=%llu rebuilt_groups=%llu "
+              "factor_hits=%llu factor_misses=%llu "
+              "exact=%llu rebuilds=%llu invalidations=%llu oracle=%llu/%llu "
+              "oracle_max=%.3e rows=%zu bytes=%zu reason=%s\n",
+              static_cast<unsigned long long>(audit.requests),
+              static_cast<unsigned long long>(audit.incremental_appends),
+              static_cast<unsigned long long>(audit.incremental_path_updates),
+              static_cast<unsigned long long>(audit.incremental_add_paths),
+              static_cast<unsigned long long>(audit.incremental_remove_paths),
+              static_cast<unsigned long long>(audit.incremental_relinearize_paths),
+              static_cast<unsigned long long>(audit.internal_nodes_recomputed),
+              static_cast<unsigned long long>(audit.full_tree_rebuilds),
+              static_cast<unsigned long long>(audit.incremental_group_updates),
+              static_cast<unsigned long long>(audit.reused_groups),
+              static_cast<unsigned long long>(audit.rebuilt_groups),
+              static_cast<unsigned long long>(audit.factor_group_hits),
+              static_cast<unsigned long long>(audit.factor_group_misses),
+              static_cast<unsigned long long>(audit.exact_hits),
+              static_cast<unsigned long long>(audit.full_rebuilds),
+              static_cast<unsigned long long>(audit.invalidations),
+              static_cast<unsigned long long>(audit.full_oracle_checks),
+              static_cast<unsigned long long>(audit.full_oracle_mismatches),
+              audit.max_oracle_relative_error,
+              audit.retained_rows, audit.retained_bytes,
+              audit.last_reason.c_str());
 }
 
 // 9. HIS-01 closure / readiness gaps 3+4: oracle on the *shipped* carrier.

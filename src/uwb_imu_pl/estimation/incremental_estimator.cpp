@@ -39,12 +39,72 @@
 
 namespace uwb_imu_pl {
 
+struct P103BoundaryGroupCacheValue {
+  std::uint64_t fingerprint = 0;
+  gtsam::GaussianFactorGraph rows;
+  std::size_t row_count = 0;
+  std::size_t information_form_factors = 0;
+  double information_form_offset = 0.0;
+};
+
 class FixedLagBackend final : public gtsam::IncrementalFixedLagSmoother {
  public:
   FixedLagBackend(double lag, const gtsam::ISAM2Params& params)
-      : gtsam::IncrementalFixedLagSmoother(lag, params) {}
+      : gtsam::IncrementalFixedLagSmoother(lag, params),
+        history_owner_(
+            std::make_shared<const std::uint64_t>(0x503130332d523039ULL)) {}
 
   const gtsam::ISAM2& isam() const { return isam_; }
+  HistoryFaultSummary updateHistoryRoot(
+      HistoryRootCacheRequest request,
+      HistoryCarrierRankCertificate* carrier_rank,
+      const HistoryFaultSummaryOptions& options) {
+    request.owner = history_owner_;
+    request.owner_payload = history_owner_.get();
+    request.verify_full_oracle = verify_history_root_oracle_;
+    return history_root_.update(request, carrier_rank, options);
+  }
+  void enableHistoryRootOracleForTesting(bool enabled) {
+    verify_history_root_oracle_ = enabled;
+  }
+  HistoryRootCacheAudit historyRootAudit() const {
+    HistoryRootCacheAudit result = history_root_.audit();
+    result.factor_group_hits = factor_group_hits_;
+    result.factor_group_misses = factor_group_misses_;
+    return result;
+  }
+  const P103BoundaryGroupCacheValue* findHistoryGroup(
+      std::uint64_t group, std::uint64_t fingerprint) {
+    const auto found = history_groups_.find(group);
+    if (found != history_groups_.end() &&
+        found->second.fingerprint == fingerprint) {
+      ++factor_group_hits_;
+      return &found->second;
+    }
+    ++factor_group_misses_;
+    return nullptr;
+  }
+  void storeHistoryGroup(std::uint64_t group,
+                         P103BoundaryGroupCacheValue value) {
+    history_groups_[group] = std::move(value);
+  }
+  void retainHistoryGroups(const std::set<std::uint64_t>& active) {
+    for (auto it = history_groups_.begin(); it != history_groups_.end();) {
+      if (active.count(it->first) == 0) {
+        it = history_groups_.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  }
+
+ private:
+  std::shared_ptr<const std::uint64_t> history_owner_;
+  IncrementalHistoryRootCache history_root_;
+  std::map<std::uint64_t, P103BoundaryGroupCacheValue> history_groups_;
+  std::uint64_t factor_group_hits_ = 0;
+  std::uint64_t factor_group_misses_ = 0;
+  bool verify_history_root_oracle_ = false;
 };
 
 namespace {
@@ -257,6 +317,39 @@ std::uint64_t factorBlockFingerprint(const PendingFactorGroup& group,
   for (const auto& factor : group.factors) {
     const auto pointer = reinterpret_cast<std::uintptr_t>(factor.get());
     cacheHashScalar(&hash, pointer);
+  }
+  return hash;
+}
+
+std::uint64_t boundaryGroupFingerprint(
+    FactorGroupId group, const gtsam::NonlinearFactorGraph& factors,
+    const gtsam::Values& values) {
+  std::uint64_t hash = 1469598103934665603ULL;
+  const std::uint64_t group_value = group.value();
+  cacheHashScalar(&hash, group_value);
+  std::set<gtsam::Key> keys;
+  for (const auto& factor : factors) {
+    const auto pointer = reinterpret_cast<std::uintptr_t>(factor.get());
+    cacheHashScalar(&hash, pointer);
+    for (const auto key : factor->keys()) keys.insert(key);
+  }
+  for (const auto key : keys) {
+    cacheHashScalar(&hash, key);
+    const char symbol = gtsam::Symbol(key).chr();
+    if (symbol == 'x') {
+      cacheHashMatrix(&hash, values.at<gtsam::Pose3>(key).matrix());
+    } else if (symbol == 'v') {
+      cacheHashMatrix(&hash, values.at<gtsam::Vector3>(key));
+    } else if (symbol == 'b') {
+      const auto bias = values.at<gtsam::imuBias::ConstantBias>(key);
+      cacheHashMatrix(&hash, bias.accelerometer());
+      cacheHashMatrix(&hash, bias.gyroscope());
+    } else {
+      // Unknown value types are never guessed.  Force a miss by binding the
+      // current Values owner; the complete rebuild path remains available.
+      const auto owner = reinterpret_cast<std::uintptr_t>(&values);
+      cacheHashScalar(&hash, owner);
+    }
   }
   return hash;
 }
@@ -572,6 +665,10 @@ IncrementalUwbImuEstimator::IncrementalUwbImuEstimator(
         // tree. Stop the relinearization check once an unchanged separator is
         // reached instead of scanning every historical state each period.
         params.enablePartialRelinearizationCheck = true;
+        // R09 dependency receipts need the actual per-key relinearization
+        // closure.  Aggregate counters cannot prove that an untouched factor
+        // group is reusable.
+        params.enableDetailedResults = true;
         // Range factors are strongly nonlinear in the coupled pose/velocity
         // state. Dogleg prevents the unbounded Gauss-Newton steps that can
         // corrupt the following IMU prediction and make an otherwise anchored
@@ -654,6 +751,12 @@ IncrementalUwbImuEstimator::backendUpdate(
     const gtsam::ISAM2Result result = isam2_.update(graph, values, removals);
     audit.new_factor_slots.assign(result.newFactorsIndices.begin(),
                                   result.newFactorsIndices.end());
+    audit.marked_keys.assign(result.markedKeys.begin(), result.markedKeys.end());
+    if (result.detail) {
+      for (const auto& item : result.detail->variableStatus) {
+        if (item.second.isRelinearized) audit.relinearized_keys.push_back(item.first);
+      }
+    }
     ++backend_update_count_;
     const std::uint64_t injected_nonce =
         hitP005Fault(this, CommitFaultPoint::DuringBackendUpdate);
@@ -677,6 +780,15 @@ IncrementalUwbImuEstimator::backendUpdate(
   const auto& isam_result = fixed_lag_backend_->getISAM2Result();
   audit.new_factor_slots.assign(isam_result.newFactorsIndices.begin(),
                                 isam_result.newFactorsIndices.end());
+  audit.marked_keys.assign(isam_result.markedKeys.begin(),
+                           isam_result.markedKeys.end());
+  if (isam_result.detail) {
+    for (const auto& item : isam_result.detail->variableStatus) {
+      if (item.second.isRelinearized) {
+        audit.relinearized_keys.push_back(item.first);
+      }
+    }
+  }
   ++backend_update_count_;
   const std::uint64_t injected_nonce =
       hitP005Fault(this, CommitFaultPoint::DuringBackendUpdate);
@@ -1565,6 +1677,8 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     // injected with fault keys in the separator; only groups that are boundary
     // inputs carry them (window-explicit groups keep their own maps).
     gtsam::GaussianFactorGraph augmented;
+    std::vector<std::string> augmented_row_uids;
+    std::vector<std::uint64_t> augmented_row_provenance;
     // Stage nominal rows by their ledger owner.  A group receiving historical
     // fault columns is inserted later through its augmented factor *instead
     // of* these rows.  This preserves the single stochastic-row/covariance
@@ -1574,7 +1688,27 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     std::map<std::uint64_t, std::size_t> nominal_boundary_rows;
     std::size_t information_form_factors = 0;
     double information_form_offset = 0.0;
+    std::set<std::uint64_t> active_boundary_group_ids;
     for (const auto& group : boundary_groups) {
+      const std::uint64_t group_value = group.id.value();
+      active_boundary_group_ids.insert(group_value);
+      const std::uint64_t group_fingerprint =
+          boundaryGroupFingerprint(group.id, group.factors, *tx.frozen_values);
+      if (fixed_lag_backend_) {
+        const auto* cached = fixed_lag_backend_->findHistoryGroup(
+            group_value, group_fingerprint);
+        if (cached != nullptr) {
+          nominal_boundary_graphs[group_value] = cached->rows;
+          nominal_boundary_rows[group_value] = cached->row_count;
+          information_form_factors += cached->information_form_factors;
+          information_form_offset += cached->information_form_offset;
+          continue;
+        }
+      }
+      P103BoundaryGroupCacheValue cache_value;
+      cache_value.fingerprint = group_fingerprint;
+      const std::size_t information_count_before = information_form_factors;
+      const double information_offset_before = information_form_offset;
       for (const auto& factor : group.factors) {
         const auto jacobian = boost::dynamic_pointer_cast<gtsam::JacobianFactor>(
             factor->linearize(*tx.frozen_values));
@@ -1640,6 +1774,19 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
         nominal_boundary_rows[group.id.value()] +=
             static_cast<std::size_t>(rows.rows());
       }
+      if (fixed_lag_backend_) {
+        cache_value.rows = nominal_boundary_graphs[group_value];
+        cache_value.row_count = nominal_boundary_rows[group_value];
+        cache_value.information_form_factors =
+            information_form_factors - information_count_before;
+        cache_value.information_form_offset =
+            information_form_offset - information_offset_before;
+        fixed_lag_backend_->storeHistoryGroup(group_value,
+                                              std::move(cache_value));
+      }
+    }
+    if (fixed_lag_backend_) {
+      fixed_lag_backend_->retainHistoryGroups(active_boundary_group_ids);
     }
     HistoryFaultParameterizationOptions history_options;
     history_options.include_uwb_faults =
@@ -1777,6 +1924,18 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
         return window;
       }
       for (const auto& factor : injection.graph) augmented.push_back(factor);
+      std::set<std::uint64_t> injection_uid_groups;
+      for (const auto& column : columns) {
+        const std::uint64_t group_value = column.group.value();
+        if (!injection_uid_groups.insert(group_value).second) continue;
+        const std::size_t rows = nominal_boundary_rows.at(group_value);
+        for (std::size_t row = 0; row < rows; ++row) {
+          augmented_row_uids.push_back(
+              "factor-group:" + std::to_string(group_value) + ":row:" +
+              std::to_string(row));
+          augmented_row_provenance.push_back(group_value);
+        }
+      }
       for (std::size_t index = 0; index < columns.size(); ++index) {
         column_id_of_key[injection.fault_keys[index]] = columns[index].id;
       }
@@ -1789,7 +1948,27 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     // fault-augmented, never both.
     for (const auto& item : nominal_boundary_graphs) {
       if (fault_augmented_groups.count(item.first) != 0) continue;
-      for (const auto& factor : item.second) augmented.push_back(factor);
+      std::size_t group_row = 0;
+      for (const auto& factor : item.second) {
+        augmented.push_back(factor);
+        const auto jacobian =
+            boost::dynamic_pointer_cast<gtsam::JacobianFactor>(factor);
+        if (!jacobian) {
+          history.valid = false;
+          history.state = toString(HistorySummaryState::BuildInvalid);
+          history.reason = "staged nominal boundary row is not Jacobian form";
+          NumericalWorkCounters::historySummaryInvalid();
+          window.reason = history.reason;
+          return window;
+        }
+        for (std::size_t row = 0;
+             row < static_cast<std::size_t>(jacobian->rows()); ++row) {
+          augmented_row_uids.push_back(
+              "factor-group:" + std::to_string(item.first) + ":row:" +
+              std::to_string(group_row++));
+          augmented_row_provenance.push_back(item.first);
+        }
+      }
     }
 
     const ExtractedBoundaryRows extracted = extractBoundaryRows(augmented);
@@ -1798,6 +1977,17 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
       history.valid = false;
       history.state = toString(HistorySummaryState::BuildInvalid);
       history.reason = "boundary row extraction failed: " + extracted.reason;
+      NumericalWorkCounters::historySummaryInvalid();
+      window.reason = history.reason;
+      return window;
+    }
+    if (augmented_row_uids.size() !=
+            static_cast<std::size_t>(extracted.rows.rows()) ||
+        augmented_row_provenance.size() != augmented_row_uids.size()) {
+      history.valid = false;
+      history.state = toString(HistorySummaryState::BuildInvalid);
+      history.reason =
+          "boundary raw row UID/provenance census does not match extraction";
       NumericalWorkCounters::historySummaryInvalid();
       window.reason = history.reason;
       return window;
@@ -1862,7 +2052,66 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     // GTSAM JacobianFactor uses 0.5 ||A x - b||^2.  The summary uses the same
     // H x - z convention, so getb()/the extracted last column is already z.
     summary_input.rhs = extracted.rows.col(extracted.total_columns);
-    const HistoryFaultSummary summary = buildHistoryFaultSummary(summary_input);
+    HistoryRootCacheRequest root_request;
+    root_request.input = summary_input;
+    root_request.linearization_version = tx.base_version.linpoint_version;
+    root_request.ordering_version = tx.base_version.ordering_version;
+    root_request.whitening_version = tx.base_version.noise_model_version;
+    root_request.marginalization_version = marginalization_count_;
+    // Recovery changes are bound by the exact original group-row provenance
+    // and byte payload below.  A normal ledger append must not masquerade as
+    // a mutation of every retained row; rollback/replacement changes those
+    // inputs and therefore invalidates precisely the affected closure.
+    root_request.recovery_version = 0;
+    std::uint64_t column_digest = 1469598103934665603ULL;
+    auto fold_root = [&](const void* data, std::size_t bytes) {
+      const auto* source = static_cast<const unsigned char*>(data);
+      for (std::size_t i = 0; i < bytes; ++i) {
+        column_digest ^= source[i];
+        column_digest *= 1099511628211ULL;
+      }
+    };
+    for (std::size_t index = 0; index < extracted.keys.size(); ++index) {
+      const auto key = extracted.keys[index];
+      if (gtsam::Symbol(key).chr() == 'f') continue;
+      fold_root(&key, sizeof(key));
+      fold_root(&extracted.key_dim[index], sizeof(extracted.key_dim[index]));
+    }
+    fold_root(plan.scope_digest.data(), plan.scope_digest.size());
+    root_request.column_order_digest = column_digest;
+    root_request.row_uids = std::move(augmented_row_uids);
+    root_request.row_provenance = std::move(augmented_row_provenance);
+    auto append_state_column_uids = [&](const std::vector<int>& columns) {
+      for (const int column : columns) {
+        const gtsam::Key key = extracted.keys[column];
+        for (int local = 0; local < extracted.key_dim[column]; ++local) {
+          root_request.state_column_uids.push_back(
+              std::to_string(static_cast<std::uint64_t>(key)) + ":" +
+              std::to_string(local));
+        }
+      }
+    };
+    append_state_column_uids(old_columns);
+    append_state_column_uids(boundary_columns);
+    for (const int column : fault_columns) {
+      const auto& id = column_id_of_key.at(extracted.keys[column]);
+      root_request.fault_column_uids.push_back(
+          std::to_string(static_cast<std::uint64_t>(id.kind)) + ":" +
+          std::to_string(id.source) + ":" + std::to_string(id.epoch));
+    }
+    HistoryFaultSummaryOptions summary_options;
+    summary_options.rank_tolerance = config_.integrity_window.rank_tolerance;
+    HistoryCarrierRankCertificate carrier_rank;
+    HistoryFaultSummary summary;
+    if (fixed_lag_backend_) {
+      summary = fixed_lag_backend_->updateHistoryRoot(
+          std::move(root_request), &carrier_rank, summary_options);
+    } else {
+      CertifiedHistoryFaultSummary certified =
+          buildCertifiedHistoryFaultSummary(summary_input, summary_options);
+      summary = std::move(certified.summary);
+      carrier_rank = std::move(certified.carrier_rank);
+    }
     history.boundary_columns =
         static_cast<std::size_t>(summary_input.h_boundary.cols());
     const std::uint64_t input_width = static_cast<std::uint64_t>(
@@ -1883,8 +2132,19 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
 
     // Condensed rows: the boundary triangle [R_b] carries the state content,
     // the detection-only rows [0 | d_perp] carry the state-free residual
-    // content (kappa_b = ||d_perp||^2, nu_perp dof).  Rows that are exactly
-    // zero everywhere are dropped: they would only inflate the residual dof.
+    // content (kappa_b = ||d_perp||^2, nu_perp dof).  The perpendicular
+    // carrier is already orthogonally compressed using the numerical
+    // contract.  Never infer its dof from element-wise nonzero tests.
+    if (!carrier_rank.valid ||
+        carrier_rank.effective_rank != summary.nuPerp() ||
+        summary.F_b.rows() != summary.nuPerp() ||
+        summary.d_perp.size() != summary.nuPerp()) {
+      history.valid = false;
+      history.state = toString(HistorySummaryState::BuildInvalid);
+      history.reason = "history residual carrier rank proof is invalid";
+      window.reason = history.reason;
+      return window;
+    }
     std::vector<int> kept_rows;
     std::vector<char> field_is_perp;
     for (int row = 0; row < summary.n_boundary; ++row) {
@@ -1898,13 +2158,8 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
       }
     }
     for (int row = 0; row < summary.nuPerp(); ++row) {
-      const bool nonzero = std::abs(summary.d_perp(row)) > 0.0 ||
-                           (summary.n_fault > 0 &&
-                            summary.F_b.row(row).cwiseAbs().maxCoeff() > 0.0);
-      if (nonzero) {
-        kept_rows.push_back(summary.n_boundary + row);
-        field_is_perp.push_back(1);
-      }
+      kept_rows.push_back(summary.n_boundary + row);
+      field_is_perp.push_back(1);
     }
     LinearizedFactorBlock boundary;
     boundary.group_id = FactorGroupId(tx.id.value() * 1000);
@@ -2056,6 +2311,8 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
           static_cast<std::uint64_t>(plan.skipped_columns)};
       hash = fnv(hash, counts, sizeof(counts));
       hash = fnv(hash, plan.scope_digest.data(), plan.scope_digest.size());
+      hash = fnv(hash, &carrier_rank.proof_identity,
+                 sizeof(carrier_rank.proof_identity));
       summary_version.mode_set = hash;
     }
     {
@@ -2335,6 +2592,18 @@ EstimatorCacheAudit IncrementalUwbImuEstimator::cacheAudit() const {
   for (const auto& item : factor_block_cache_)
     result.factor_block_bytes += blockBytes(item.second.block);
   return result;
+}
+
+HistoryRootCacheAudit
+IncrementalUwbImuEstimator::historyRootCacheAuditForTesting() const {
+  return fixed_lag_backend_ ? fixed_lag_backend_->historyRootAudit()
+                            : HistoryRootCacheAudit{};
+}
+
+void IncrementalUwbImuEstimator::enableHistoryRootOracleForTesting(
+    bool enabled) {
+  if (fixed_lag_backend_)
+    fixed_lag_backend_->enableHistoryRootOracleForTesting(enabled);
 }
 
 void IncrementalUwbImuEstimator::queryCurrentState() {

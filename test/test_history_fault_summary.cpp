@@ -25,6 +25,8 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <map>
+#include <numeric>
 #include <random>
 #include <sstream>
 #include <string>
@@ -37,7 +39,10 @@ namespace {
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
+using uwb_imu_pl::buildCertifiedHistoryFaultSummary;
 using uwb_imu_pl::buildHistoryFaultSummary;
+using uwb_imu_pl::CertifiedHistoryFaultSummary;
+using uwb_imu_pl::HistoryCarrierRankCertificate;
 using uwb_imu_pl::HistoryFaultSummary;
 using uwb_imu_pl::HistoryFaultSummaryInput;
 using uwb_imu_pl::HistoryFaultSummaryOptions;
@@ -227,6 +232,47 @@ double minJointResidualCost(const MatrixXd& h_old_state,
   return residual.squaredNorm();
 }
 
+// Independent O01 oracle for the corrected carrier contract.  Build an
+// orthonormal basis of the residual subspace of [H_o|H_b], project [A|z]
+// into it, and apply the same documented numerical-contract inequality to
+// independently computed singular values.  This is deliberately not a
+// hard-coded expected rank and does not inspect production F_b/d_perp.
+int effectiveCarrierRankOracle(const HistoryFaultSummaryInput& input,
+                               double rank_tolerance = 1e-12) {
+  const MatrixXd joined = joinBlocks(input.h_old_state, input.h_boundary);
+  Eigen::JacobiSVD<MatrixXd> joined_svd(joined,
+                                        Eigen::ComputeFullU |
+                                            Eigen::ComputeThinV);
+  const double joined_scale = joined_svd.singularValues().size() == 0
+                                  ? 0.0
+                                  : joined_svd.singularValues()(0);
+  int joined_rank = 0;
+  for (Eigen::Index i = 0; i < joined_svd.singularValues().size(); ++i) {
+    if (joined_svd.singularValues()(i) > rank_tolerance * joined_scale)
+      ++joined_rank;
+  }
+  MatrixXd raw(input.rows(), input.faultColumns() + 1);
+  if (input.faultColumns() > 0)
+    raw.leftCols(input.faultColumns()) = input.fault_map;
+  raw.col(input.faultColumns()) = input.rhs;
+  const MatrixXd carrier =
+      joined_svd.matrixU().rightCols(input.rows() - joined_rank).transpose() *
+      raw;
+  Eigen::JacobiSVD<MatrixXd> carrier_svd(carrier);
+  const VectorXd singular = carrier_svd.singularValues();
+  const double scale = singular.size() == 0 ? 0.0 : singular(0);
+  const double dimension = static_cast<double>(
+      std::max<Eigen::Index>(carrier.rows(), carrier.cols()));
+  const double eps = std::numeric_limits<double>::epsilon();
+  const double gamma = (dimension * eps) / (1.0 - dimension * eps);
+  const double threshold =
+      rank_tolerance * scale + gamma * carrier.norm();
+  int rank = 0;
+  for (Eigen::Index i = 0; i < singular.size(); ++i)
+    if (singular(i) > threshold) ++rank;
+  return rank;
+}
+
 // x_b part of the joint minimizer for rhs.
 VectorXd jointBoundarySolve(const MatrixXd& h_old_state,
                             const MatrixXd& h_boundary, const VectorXd& rhs) {
@@ -308,8 +354,7 @@ IdentityErrors measureIdentities(const HistoryFaultSummary& summary,
     errors.kappa = relErr(
         summary.kappaBoundary(),
         minJointResidualCost(input.h_old_state, input.h_boundary, input.rhs));
-    const MatrixXd joined = joinBlocks(input.h_old_state, input.h_boundary);
-    const double nu_oracle = input.rows() - thinSvd(joined).rank;
+    const double nu_oracle = effectiveCarrierRankOracle(input);
     errors.nu_mismatch = std::abs(nu_oracle - summary.nuPerp());
   }
   return errors;
@@ -362,7 +407,9 @@ TEST(HistoryFaultSummary, P001CorrelatedRawFactorOracle) {
   input.h_boundary = llt.matrixL().solve(h_boundary_raw);
   input.fault_map = llt.matrixL().solve(fault_raw);
   input.rhs = llt.matrixL().solve(rhs_raw);
-  const HistoryFaultSummary summary = buildHistoryFaultSummary(input);
+  const CertifiedHistoryFaultSummary certified =
+      buildCertifiedHistoryFaultSummary(input);
+  const HistoryFaultSummary& summary = certified.summary;
   ASSERT_TRUE(summary.valid) << summary.invalid_reason;
 
   const MatrixXd old_projector = orthogonalProjector(input.h_old_state);
@@ -395,8 +442,11 @@ TEST(HistoryFaultSummary, P001CorrelatedRawFactorOracle) {
                    minJointResidualCost(input.h_old_state,
                                         input.h_boundary, input.rhs)),
             kTolWell);
-  const MatrixXd joined = joinBlocks(input.h_old_state, input.h_boundary);
-  EXPECT_EQ(summary.nuPerp(), m - thinSvd(joined).rank);
+  EXPECT_EQ(summary.nuPerp(), effectiveCarrierRankOracle(input));
+  EXPECT_TRUE(certified.carrier_rank.valid);
+  EXPECT_EQ(certified.carrier_rank.raw_residual_dof,
+            m - thinSvd(joinBlocks(input.h_old_state,
+                                  input.h_boundary)).rank);
 
   for (int probe = 0; probe < 20; ++probe) {
     const VectorXd x_b = rng.normalVector(input.boundaryColumns());
@@ -488,15 +538,17 @@ TEST(HistoryFaultSummary, HISM1BoundaryResponseSignDuality) {
 
 TEST(HistoryFaultSummary, HISM1FaultGramKappaNu) {
   // Identity 4: Omega_b = F_b^T F_b equals the dense A^T (I - P) A; kappa_b
-  // equals the minimal joint residual energy; nu_perp equals the number of
-  // detection-only rows.
+  // equals the minimal joint residual energy; nu_perp equals the independent
+  // effective-rank oracle for [F_b|d_perp], not its raw storage row count.
   Rng rng(20260924u);
   const std::vector<std::array<int, 4>> sizes = {
       {12, 4, 3, 2}, {30, 7, 5, 3}, {60, 10, 6, 4}};
   for (const auto& size : sizes) {
     const HistoryFaultSummaryInput input =
         makeInput(rng, size[0], size[1], size[2], size[3]);
-    const HistoryFaultSummary summary = buildHistoryFaultSummary(input);
+    const CertifiedHistoryFaultSummary certified =
+        buildCertifiedHistoryFaultSummary(input);
+    const HistoryFaultSummary& summary = certified.summary;
     ASSERT_TRUE(summary.valid) << summary.invalid_reason;
     EXPECT_LE(relErrMatrix(summary.omegaBoundary(),
                            faultGramOracle(input.h_old_state, input.h_boundary,
@@ -506,8 +558,10 @@ TEST(HistoryFaultSummary, HISM1FaultGramKappaNu) {
                      minJointResidualCost(input.h_old_state, input.h_boundary,
                                           input.rhs)),
               kTolWell);
-    const MatrixXd joined = joinBlocks(input.h_old_state, input.h_boundary);
-    EXPECT_EQ(summary.nuPerp(), size[0] - thinSvd(joined).rank);
+    EXPECT_EQ(summary.nuPerp(), effectiveCarrierRankOracle(input));
+    EXPECT_EQ(certified.carrier_rank.raw_residual_dof,
+              size[0] - thinSvd(joinBlocks(input.h_old_state,
+                                           input.h_boundary)).rank);
     EXPECT_EQ(summary.nuPerp(), summary.F_b.rows());
     EXPECT_LE(relErrMatrix(summary.xiBoundary(),
                            summary.F_b.transpose() * summary.d_perp),
@@ -724,10 +778,9 @@ TEST(HistoryFaultSummary, HISM1DetectorOnlyAndNominal) {
     EXPECT_EQ(summary.nuPerp(), 2);
     EXPECT_EQ(summary.rank_boundary, 2);
     EXPECT_EQ(summary.F_b.rows(), 2);
-    EXPECT_LE(std::abs(std::abs(summary.F_b(0, 0)) - 3.0), 1e-12);
-    EXPECT_LE(std::abs(summary.F_b(1, 0)), 1e-12);
-    EXPECT_LE(std::abs(std::abs(summary.d_perp(0)) - 4.0), 1e-12);
-    EXPECT_LE(std::abs(std::abs(summary.d_perp(1)) - 9.0), 1e-12);
+    EXPECT_LE(std::abs(summary.F_b.squaredNorm() - 9.0), 1e-12);
+    EXPECT_LE(std::abs(summary.d_perp.squaredNorm() - 97.0), 1e-12);
+    EXPECT_LE(std::abs(summary.F_b.col(0).dot(summary.d_perp) - 12.0), 1e-12);
     EXPECT_LE(std::abs(summary.kappaBoundary() - 97.0), 1e-9);
     const IdentityErrors errors = measureIdentities(summary, input, rng, 8);
     EXPECT_LE(errors.cost, kTolWell);
@@ -893,6 +946,264 @@ TEST(HistoryFaultSummary, HISM2VersionDigestBindsAllComponents) {
   reversed.whitening = 7;
   EXPECT_NE(uwb_imu_pl::digestHistorySummaryVersion(swapped),
             uwb_imu_pl::digestHistorySummaryVersion(reversed));
+}
+
+TEST(HistoryFaultSummary, P103HierarchicalOrthogonalThirtyStepFeasibility) {
+  using uwb_imu_pl::HistoryRootCacheRequest;
+  using uwb_imu_pl::IncrementalHistoryRootCache;
+  Rng rng(10301u);
+  const auto owner = std::make_shared<const int>(17);
+  constexpr int kOld = 5;
+  constexpr int kBoundary = 4;
+  constexpr int kFault = 3;
+  constexpr int kColumns = kOld + kBoundary + kFault + 1;
+  std::map<std::uint64_t, Eigen::MatrixXd> groups;
+  for (std::uint64_t group = 100; group < 108; ++group)
+    groups.emplace(group, rng.normal(4, kColumns));
+  std::vector<int> state_order(kOld + kBoundary);
+  std::iota(state_order.begin(), state_order.end(), 0);
+  std::uint64_t ordering = 12;
+  std::uint64_t marginalization = 14;
+  std::uint64_t recovery = 15;
+
+  auto make_request = [&]() {
+    HistoryRootCacheRequest request;
+    request.owner = owner;
+    request.owner_payload = owner.get();
+    request.linearization_version = 11;
+    request.ordering_version = ordering;
+    request.whitening_version = 13;
+    request.marginalization_version = marginalization;
+    request.recovery_version = recovery;
+    request.column_order_digest = ordering;
+    int rows = 0;
+    for (const auto& item : groups) rows += item.second.rows();
+    request.input.h_old_state.resize(rows, kOld);
+    request.input.h_boundary.resize(rows, kBoundary);
+    request.input.fault_map.resize(rows, kFault);
+    request.input.rhs.resize(rows);
+    for (int column = 0; column < kOld + kBoundary; ++column)
+      request.state_column_uids.push_back(
+          "state:" + std::to_string(state_order[column]));
+    request.fault_column_uids = {"fault:0", "fault:1", "fault:2"};
+    int cursor = 0;
+    for (const auto& item : groups) {
+      for (int row = 0; row < item.second.rows(); ++row, ++cursor) {
+        for (int column = 0; column < kOld; ++column)
+          request.input.h_old_state(cursor, column) =
+              item.second(row, state_order[column]);
+        for (int column = 0; column < kBoundary; ++column)
+          request.input.h_boundary(cursor, column) =
+              item.second(row, state_order[kOld + column]);
+        request.input.fault_map.row(cursor) =
+            item.second.row(row).segment(kOld + kBoundary, kFault);
+        request.input.rhs(cursor) = item.second(row, kColumns - 1);
+        request.row_uids.push_back("group:" + std::to_string(item.first) +
+                                   ":row:" + std::to_string(row));
+        request.row_provenance.push_back(item.first);
+      }
+    }
+    return request;
+  };
+
+  auto relative_matrix = [](const Eigen::MatrixXd& a,
+                            const Eigen::MatrixXd& b) {
+    return (a - b).norm() / std::max({1.0, a.norm(), b.norm()});
+  };
+  auto relative_vector = [](const Eigen::VectorXd& a,
+                            const Eigen::VectorXd& b) {
+    return (a - b).norm() / std::max({1.0, a.norm(), b.norm()});
+  };
+  IncrementalHistoryRootCache cache;
+  std::uint64_t next_group = 1000;
+  for (int step = 0; step < 30; ++step) {
+    if (step != 0) {
+      switch (step % 6) {
+        case 0:
+          groups.emplace(next_group++, rng.normal(3, kColumns));
+          break;
+        case 1:
+          groups.begin()->second(0, kColumns - 1) += 0.01 * step;
+          break;
+        case 2:
+          if (groups.size() > 5) groups.erase(groups.begin());
+          break;
+        case 3:
+          ++marginalization;
+          groups.rbegin()->second(0, 0) -= 0.02 * step;
+          break;
+        case 4:
+          std::swap(state_order[0], state_order[1]);
+          ++ordering;
+          break;
+        case 5:
+          ++recovery;
+          break;
+      }
+    }
+    const HistoryRootCacheRequest request = make_request();
+    const HistoryFaultSummary incremental = cache.update(request);
+    const HistoryFaultSummary rebuilt = buildHistoryFaultSummary(request.input);
+    ASSERT_TRUE(incremental.valid) << "step=" << step << " "
+                                   << incremental.invalid_reason;
+    ASSERT_TRUE(rebuilt.valid) << rebuilt.invalid_reason;
+    EXPECT_EQ(incremental.rank_h_old_state, rebuilt.rank_h_old_state);
+    EXPECT_EQ(incremental.rank_boundary, rebuilt.rank_boundary);
+    EXPECT_EQ(incremental.nuPerp(), rebuilt.nuPerp());
+    EXPECT_LE(relative_matrix(incremental.R_b.transpose() * incremental.R_b,
+                              rebuilt.R_b.transpose() * rebuilt.R_b), 2e-10);
+    EXPECT_LE(relative_matrix(incremental.R_b.transpose() * incremental.T_b,
+                              rebuilt.R_b.transpose() * rebuilt.T_b), 2e-10);
+    EXPECT_LE(relative_vector(incremental.R_b.transpose() * incremental.d_b,
+                              rebuilt.R_b.transpose() * rebuilt.d_b), 2e-10);
+    EXPECT_LE(relative_matrix(incremental.omegaBoundary(),
+                              rebuilt.omegaBoundary()), 2e-10);
+    EXPECT_LE(relative_vector(incremental.xiBoundary(), rebuilt.xiBoundary()),
+              2e-10);
+    EXPECT_NEAR(incremental.kappaBoundary(), rebuilt.kappaBoundary(),
+                2e-10 * std::max({1.0, incremental.kappaBoundary(),
+                                  rebuilt.kappaBoundary()}));
+    const Eigen::VectorXd boundary = rng.normalVector(kBoundary);
+    const Eigen::VectorXd fault = rng.normalVector(kFault);
+    const double incremental_objective =
+        (incremental.R_b * boundary + incremental.T_b * fault -
+         incremental.d_b).squaredNorm() +
+        (incremental.F_b * fault - incremental.d_perp).squaredNorm();
+    const double rebuilt_objective =
+        (rebuilt.R_b * boundary + rebuilt.T_b * fault - rebuilt.d_b)
+            .squaredNorm() +
+        (rebuilt.F_b * fault - rebuilt.d_perp).squaredNorm();
+    EXPECT_NEAR(incremental_objective, rebuilt_objective,
+                3e-10 * std::max({1.0, incremental_objective,
+                                  rebuilt_objective}));
+  }
+  const auto audit = cache.audit();
+  EXPECT_GT(audit.incremental_path_updates, 0u);
+  EXPECT_GT(audit.incremental_add_paths, 0u);
+  EXPECT_GT(audit.incremental_remove_paths, 0u);
+  EXPECT_GT(audit.incremental_relinearize_paths, 0u);
+  EXPECT_LT(audit.full_tree_rebuilds, audit.requests);
+  std::printf("[P103-FEASIBILITY] requests=%llu path_updates=%llu add=%llu "
+              "remove=%llu relinearize=%llu internal=%llu full_tree=%llu\n",
+              static_cast<unsigned long long>(audit.requests),
+              static_cast<unsigned long long>(audit.incremental_path_updates),
+              static_cast<unsigned long long>(audit.incremental_add_paths),
+              static_cast<unsigned long long>(audit.incremental_remove_paths),
+              static_cast<unsigned long long>(audit.incremental_relinearize_paths),
+              static_cast<unsigned long long>(audit.internal_nodes_recomputed),
+              static_cast<unsigned long long>(audit.full_tree_rebuilds));
+}
+
+TEST(HistoryFaultSummary, P103OwnerCollisionTamperAndStaleCacheFailClosed) {
+  using uwb_imu_pl::HistoryRootCacheRequest;
+  using uwb_imu_pl::IncrementalHistoryRootCache;
+  Rng rng(10302u);
+  HistoryRootCacheRequest request;
+  request.input = makeInput(rng, 18, 4, 3, 2);
+  auto owner_a = std::make_shared<const int>(7);
+  request.owner = owner_a;
+  request.owner_payload = owner_a.get();
+  request.linearization_version = 21;
+  request.ordering_version = 22;
+  request.whitening_version = 23;
+  request.marginalization_version = 24;
+  request.recovery_version = 25;
+  request.column_order_digest = 0xfeedbeefULL;
+  for (int row = 0; row < request.input.rows(); ++row) {
+    request.row_uids.push_back("owner-row:" + std::to_string(row));
+    request.row_provenance.push_back(2000 + row);
+  }
+  for (int column = 0;
+       column < request.input.oldStateColumns() +
+                    request.input.boundaryColumns();
+       ++column) {
+    request.state_column_uids.push_back("owner-state:" +
+                                        std::to_string(column));
+  }
+  request.fault_column_uids = {"owner-fault:0", "owner-fault:1"};
+  IncrementalHistoryRootCache cache;
+  ASSERT_TRUE(cache.update(request).valid);
+
+  // Equal content and every scalar identity still cannot cross an ownership
+  // boundary.  A deliberately unchanged digest models a forced collision.
+  auto transplanted = request;
+  auto owner_b = std::make_shared<const int>(7);
+  transplanted.owner = owner_b;
+  transplanted.owner_payload = owner_b.get();
+  ASSERT_TRUE(cache.update(transplanted).valid);
+  EXPECT_NE(cache.audit().last_reason.find("full tree rebuild"),
+            std::string::npos);
+
+  // Same owner and IDs but a one-bit payload change is not reusable.
+  auto tampered = transplanted;
+  tampered.input.fault_map(0, 0) =
+      std::nextafter(tampered.input.fault_map(0, 0), 1.0);
+  ASSERT_TRUE(cache.update(tampered).valid);
+  EXPECT_NE(cache.audit().last_reason.find("changed group paths"),
+            std::string::npos);
+
+  // Missing or duplicate provenance never reaches a cached or rebuilt root.
+  auto stale = tampered;
+  stale.row_provenance.pop_back();
+  const auto missing = cache.update(stale);
+  EXPECT_FALSE(missing.valid);
+  EXPECT_NE(missing.invalid_reason.find("census"), std::string::npos);
+  stale = tampered;
+  stale.row_uids[1] = stale.row_uids[0];
+  const auto duplicate = cache.update(stale);
+  EXPECT_FALSE(duplicate.valid);
+  EXPECT_NE(duplicate.invalid_reason.find("not unique"), std::string::npos);
+  EXPECT_EQ(cache.audit().retained_rows, 0u);
+  EXPECT_EQ(cache.audit().retained_bytes, 0u);
+}
+
+TEST(HistoryFaultSummary, P103CarrierRankCertificateRejectsNumericalNoise) {
+  HistoryFaultSummaryInput input;
+  input.h_old_state = MatrixXd::Zero(4, 0);
+  input.h_boundary = MatrixXd::Zero(4, 0);
+  input.fault_map = MatrixXd::Zero(4, 2);
+  input.rhs = VectorXd::Zero(4);
+  input.fault_map(0, 0) = 1.0;
+  input.fault_map(1, 1) = 1e-8;
+  input.rhs(2) = 1e-14;  // deliberately nonzero storage noise
+  HistoryFaultSummaryOptions options;
+  options.rank_tolerance = 1e-10;
+  const CertifiedHistoryFaultSummary certified =
+      buildCertifiedHistoryFaultSummary(input, options);
+  const HistoryFaultSummary& summary = certified.summary;
+  const HistoryCarrierRankCertificate& rank = certified.carrier_rank;
+  ASSERT_TRUE(summary.valid) << summary.invalid_reason;
+  ASSERT_TRUE(rank.valid);
+  EXPECT_EQ(rank.storage_rows_before_compression, 4);
+  EXPECT_EQ(rank.raw_residual_dof, 4);
+  EXPECT_EQ(rank.effective_rank, 2);
+  EXPECT_EQ(summary.nuPerp(), 2);
+  EXPECT_EQ(summary.F_b.rows(), 2);
+  EXPECT_EQ(summary.d_perp.size(), 2);
+  EXPECT_EQ(rank.singular_values.size(), 3);
+  EXPECT_GT(rank.rank_threshold, 1e-14);
+  EXPECT_GE(rank.discarded_frobenius_bound, 1e-14);
+  EXPECT_NE(rank.proof_identity, 0u);
+  int independent_rank = 0;
+  for (Eigen::Index i = 0;
+       i < rank.singular_values.size(); ++i) {
+    if (rank.singular_values(i) > rank.rank_threshold) ++independent_rank;
+  }
+  EXPECT_EQ(independent_rank, summary.nuPerp());
+
+  // Relative conditioning, rather than absolute element magnitude, controls
+  // the decision.  Uniform scaling preserves effective rank while changing
+  // the proof identity and all dimensional bounds coherently.
+  HistoryFaultSummaryInput scaled = input;
+  scaled.fault_map *= 1e6;
+  scaled.rhs *= 1e6;
+  const CertifiedHistoryFaultSummary scaled_certified =
+      buildCertifiedHistoryFaultSummary(scaled, options);
+  const HistoryFaultSummary& scaled_summary = scaled_certified.summary;
+  ASSERT_TRUE(scaled_summary.valid) << scaled_summary.invalid_reason;
+  EXPECT_EQ(scaled_summary.nuPerp(), summary.nuPerp());
+  EXPECT_NE(scaled_certified.carrier_rank.proof_identity,
+            rank.proof_identity);
 }
 
 }  // namespace

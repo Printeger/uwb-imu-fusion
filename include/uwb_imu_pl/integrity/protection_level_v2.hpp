@@ -107,6 +107,28 @@ struct ProtectionLevelPublicationPacketV2 {
   std::uint64_t packet_identity = 0;
 };
 
+// Self-contained terminal handoff. It owns both the selected numerical proof
+// and publication binding, so delayed verification never depends on an arena
+// or process-global registry after the attempt lease is released.
+struct FinalProtectionProofBundleV1 {
+  std::uint64_t schema_version = 1;
+  std::uint64_t arena_generation = 0;
+  ProtectionLevelV2ProofV1 protection_proof;
+  ProtectionLevelPublicationPacketV2 publication_packet;
+  std::string packet_id;
+  bool valid = false;
+};
+
+bool freezeFinalProtectionProofBundleV1(
+    const AttemptProofLease& lease, const std::string& packet_id,
+    FinalProtectionProofBundleV1* bundle,
+    std::string* reason = nullptr);
+bool validateFinalProtectionProofBundleV1(
+    const FinalProtectionProofBundleV1& bundle,
+    const Eigen::Vector3d& served_pl,
+    const std::string& packet_id,
+    std::string* reason = nullptr);
+
 bool validateProtectionLevelV2ProofPayload(
     const ProtectionLevelV2ProofV1& proof,
     std::string* reason = nullptr);
@@ -116,11 +138,24 @@ bool validateProtectionLevelV2Proof(
     const std::vector<FaultHypothesisV2>& hypotheses,
     const ProtectionLevelV2Result& result,
     std::string* reason = nullptr);
+bool validateProtectionLevelV2Proof(
+    const CandidateEvaluation& candidate, const DetectorResultV2& detector,
+    const std::vector<FaultHypothesisV2>& hypotheses,
+    const ProtectionLevelV2Result& result, const AttemptProofArena& arena,
+    std::string* reason = nullptr);
 
 bool protectionLevelV2Proof(const ProtectionLevelV2Result& result,
                             ProtectionLevelV2ProofV1* proof);
+bool protectionLevelV2Proof(const ProtectionLevelV2Result& result,
+                            const CandidateEvaluation& candidate,
+                            const AttemptProofArena& arena,
+                            ProtectionLevelV2ProofV1* proof);
 std::uint64_t protectionLevelV2ProofIdentity(
     const ProtectionLevelV2Result& result);
+std::uint64_t protectionLevelV2ProofIdentity(
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    const AttemptProofArena& arena);
 std::uint64_t protectionLevelV2ProofIdentity(
     const CandidateEvaluation& candidate,
     const ProtectionLevelV2Result& result);
@@ -140,19 +175,44 @@ bool bindTransferredProtectionLevelPublicationPacket(
     const std::string& frame_id,
     const std::string& position_reference,
     std::string* packet_id);
+bool bindTransferredProtectionLevelPublicationPacket(
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    std::uint64_t protection_proof_identity,
+    const Eigen::Vector3d& reference_mean_world_m,
+    const Eigen::Vector3d& committed_mean_world_m,
+    const Eigen::Vector3d& transferred_pl_m,
+    std::int64_t timestamp_ns,
+    const std::string& frame_id,
+    const std::string& position_reference,
+    AttemptProofArena* arena,
+    std::string* packet_id);
 bool protectionLevelPublicationPacket(
     const std::string& packet_id,
     ProtectionLevelPublicationPacketV1* packet);
 bool protectionLevelPublicationPacketV2(
     const std::string& packet_id,
     ProtectionLevelPublicationPacketV2* packet);
+bool protectionLevelPublicationPacketV2(
+    const std::string& packet_id, const AttemptProofLease& lease,
+    ProtectionLevelPublicationPacketV2* packet);
 std::uint64_t protectionLevelPublicationProofIdentity(
     const Eigen::Vector3d& served_pl,
     const std::string& detector_certificate_id);
+std::uint64_t protectionLevelPublicationProofIdentity(
+    const Eigen::Vector3d& served_pl,
+    const std::string& detector_certificate_id,
+    const AttemptProofArena& arena);
 bool validateProtectionLevelPublicationProof(
     std::uint64_t proof_identity,
     const Eigen::Vector3d& served_pl,
     const std::string& detector_certificate_id,
+    std::string* reason = nullptr);
+bool validateProtectionLevelPublicationProof(
+    std::uint64_t proof_identity,
+    const Eigen::Vector3d& served_pl,
+    const std::string& detector_certificate_id,
+    const AttemptProofArena& arena,
     std::string* reason = nullptr);
 
 // Mint/consume the single-use handoff used by the P0-05 commit boundary.
@@ -168,6 +228,16 @@ bool mintCommitProtectionEvidenceV1(
     const ProtectionLevelV2Result& result,
     std::uint64_t protection_proof_identity,
     const std::string& frame_id,
+    CommitProtectionEvidenceV1* evidence,
+    std::string* reason = nullptr);
+bool mintCommitProtectionEvidenceV1(
+    const EpochTransaction& transaction,
+    const FrozenWindowAdmission& admission,
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    std::uint64_t protection_proof_identity,
+    const std::string& frame_id,
+    AttemptProofArena* arena,
     CommitProtectionEvidenceV1* evidence,
     std::string* reason = nullptr);
 bool mintCommitProtectionEvidenceV1(
@@ -255,6 +325,24 @@ class ProtectionLevelV2 {
       std::vector<FaultHypothesisV2>* remaining_hypotheses,
       const ProtectionLevelSharedContext& shared,
       const RiskBudgetV2& risk,
+      ProtectionLevelV2ProofV1* computation_audit,
+      AttemptProofArena* proof_arena) const;
+  ProtectionLevelV2Result computeShared(
+      const LinearizedIntegrityWindow& window,
+      CandidateEvaluation* candidate,
+      const DetectorResultV2& detector,
+      std::vector<FaultHypothesisV2>* remaining_hypotheses,
+      const ProtectionLevelSharedContext& shared,
+      const RiskBudgetV2& risk,
+      ProtectionLevelV2ProofV1* computation_audit,
+      AttemptProofArena* proof_arena) const;
+  ProtectionLevelV2Result computeShared(
+      const FrozenWindowAdmission& admission,
+      CandidateEvaluation* candidate,
+      const DetectorResultV2& detector,
+      std::vector<FaultHypothesisV2>* remaining_hypotheses,
+      const ProtectionLevelSharedContext& shared,
+      const RiskBudgetV2& risk,
       ProtectionLevelV2ProofV1* computation_audit) const;
 
   // Exact KEEP_ALL fast path.  Only the portions mathematically identical to
@@ -270,6 +358,17 @@ class ProtectionLevelV2 {
       const FrozenHypothesisNumerics& frozen,
       std::uint64_t fault_model_policy_fingerprint,
       const RiskBudgetV2& risk) const;
+  ProtectionLevelV2Result computeFrozenAllIn(
+      const FrozenWindowAdmission& admission,
+      CandidateEvaluation* candidate,
+      const DetectorResultV2& detector,
+      const std::vector<FaultHypothesisV2>& remaining_hypotheses,
+      const std::vector<FaultModeBasis>& modes,
+      const FrozenHypothesisNumerics& frozen,
+      const FrozenHypothesisDualNumerics& frozen_dual,
+      std::uint64_t fault_model_policy_fingerprint,
+      const RiskBudgetV2& risk,
+      AttemptProofArena* proof_arena) const;
   ProtectionLevelV2Result computeFrozenAllIn(
       const FrozenWindowAdmission& admission,
       CandidateEvaluation* candidate,
@@ -295,7 +394,8 @@ class ProtectionLevelV2 {
       const FrozenHypothesisDualNumerics* frozen_dual,
       std::uint64_t fault_model_policy_fingerprint,
       const RiskBudgetV2& risk,
-      const FrozenWindowAdmission* admission) const;
+      const FrozenWindowAdmission* admission,
+      AttemptProofArena* proof_arena) const;
   ProtectionLevelV2Result computeSharedImpl(
       const LinearizedIntegrityWindow& window,
       CandidateEvaluation* candidate,
@@ -304,7 +404,8 @@ class ProtectionLevelV2 {
       const ProtectionLevelSharedContext& shared,
       const RiskBudgetV2& risk,
       ProtectionLevelV2ProofV1* computation_audit,
-      const FrozenWindowAdmission* admission) const;
+      const FrozenWindowAdmission* admission,
+      AttemptProofArena* proof_arena) const;
 };
 
 }  // namespace uwb_imu_pl

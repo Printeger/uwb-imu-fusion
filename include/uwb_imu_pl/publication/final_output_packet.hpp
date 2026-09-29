@@ -1,6 +1,7 @@
 #pragma once
 
 #include "uwb_imu_pl/common/types.hpp"
+#include "uwb_imu_pl/integrity/protection_level_v2.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -67,10 +68,17 @@ class FinalOutputPacket {
  private:
   friend FinalOutputPacket finalizeOutputPacket(
       IntegrityOutput, FinalPacketTiming, std::uint64_t);
+  friend FinalOutputPacket finalizeOutputPacket(
+      IntegrityOutput, FinalPacketTiming, std::uint64_t,
+      const FinalProtectionProofBundleV1&);
   friend FinalOutputPacket invokeFinalOutputPacket(
       IntegrityOutput, FinalPacketTiming, std::uint64_t,
       const FinalPacketClock&, FinalPacketPublicationTransaction*,
       std::string*);
+  friend FinalOutputPacket invokeFinalOutputPacket(
+      IntegrityOutput, FinalPacketTiming, std::uint64_t,
+      const FinalProtectionProofBundleV1&, const FinalPacketClock&,
+      FinalPacketPublicationTransaction*, std::string*);
   IntegrityOutput output_;
   FinalPacketTiming timing_;
   FinalPacketMetadataV2 metadata_;
@@ -82,6 +90,10 @@ class FinalOutputPacket {
 FinalOutputPacket finalizeOutputPacket(IntegrityOutput output,
                                        FinalPacketTiming timing,
                                        std::uint64_t deadline_ns);
+FinalOutputPacket finalizeOutputPacket(
+    IntegrityOutput output, FinalPacketTiming timing,
+    std::uint64_t deadline_ns,
+    const FinalProtectionProofBundleV1& proof_bundle);
 
 std::uint64_t finalOutputPacketDigest(const FinalOutputPacket& packet);
 
@@ -118,6 +130,13 @@ FinalOutputPacket invokeFinalOutputPacket(
     std::uint64_t deadline_ns, const FinalPacketClock& clock,
     FinalPacketPublicationTransaction* transaction,
     std::string* publication_error = nullptr);
+FinalOutputPacket invokeFinalOutputPacket(
+    IntegrityOutput output, FinalPacketTiming timing,
+    std::uint64_t deadline_ns,
+    const FinalProtectionProofBundleV1& proof_bundle,
+    const FinalPacketClock& clock,
+    FinalPacketPublicationTransaction* transaction,
+    std::string* publication_error = nullptr);
 
 struct ChildFrameLinearTwist {
   Eigen::Vector3d velocity_body_mps = Eigen::Vector3d::Zero();
@@ -135,9 +154,17 @@ struct CommittedStatePublicationV1 {
 
 bool recordCommittedStatePublicationV1(
     const CommittedStatePublicationV1& sidecar);
+bool recordCommittedStatePublicationV1(
+    const CommittedStatePublicationV1& sidecar,
+    AttemptProofArena* arena);
 bool committedStatePublicationV1(
     std::uint64_t transaction_id, TimestampNs state_timestamp,
     CommittedStatePublicationV1* sidecar);
+bool committedStatePublicationV1(
+    std::uint64_t transaction_id, TimestampNs state_timestamp,
+    const AttemptProofLease& lease,
+    CommittedStatePublicationV1* sidecar);
+std::size_t committedStatePublicationCountForTesting();
 
 ChildFrameLinearTwist childFrameLinearTwist(
     const Eigen::Quaterniond& q_world_body,

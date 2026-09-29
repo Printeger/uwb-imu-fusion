@@ -50,6 +50,7 @@
 #include "uwb_imu_pl/integrity/integrity_monitor.hpp"
 #include "uwb_imu_pl/integrity/joint_window_detector.hpp"
 #include "uwb_imu_pl/integrity/protection_level_v2.hpp"
+#include "uwb_imu_pl/integrity/statistical_bounds_cache.hpp"
 #include "uwb_imu_pl/publication/final_output_packet.hpp"
 
 namespace {
@@ -530,7 +531,8 @@ int oracleRank(const std::vector<double>& pivots) {
 OracleHistorySummary oracleHistorySummary(const Eigen::MatrixXd& old_h,
                                            const Eigen::MatrixXd& boundary_h,
                                            const Eigen::MatrixXd& fault,
-                                           const Eigen::VectorXd& z) {
+                                           const Eigen::VectorXd& z,
+                                           double rank_tolerance = 1e-12) {
   const Eigen::Index n_old = old_h.cols();
   const Eigen::Index n_boundary = boundary_h.cols();
   const Eigen::Index n_fault = fault.cols();
@@ -557,6 +559,33 @@ OracleHistorySummary oracleHistorySummary(const Eigen::MatrixXd& old_h,
                        perpendicular, n_fault);
   out.d_perp = joined.block(out.rank_old + supported,
                             n_old + n_boundary + n_fault, perpendicular, 1);
+  // Independent corrected-contract oracle: compress [F_b|d_perp] to the
+  // conditioning-aware effective numerical rank.  No element-wise nonzero
+  // row count and no expected rank constant participates in this decision.
+  Eigen::MatrixXd carrier(perpendicular, n_fault + 1);
+  if (n_fault > 0) carrier.leftCols(n_fault) = out.f;
+  carrier.col(n_fault) = out.d_perp;
+  if (carrier.size() > 0) {
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(
+        carrier, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    const Eigen::VectorXd singular = svd.singularValues();
+    const double scale = singular.size() == 0 ? 0.0 : singular(0);
+    const double dimension = static_cast<double>(
+        std::max<Eigen::Index>(carrier.rows(), carrier.cols()));
+    const double eps = std::numeric_limits<double>::epsilon();
+    const double gamma = (dimension * eps) / (1.0 - dimension * eps);
+    const double threshold = rank_tolerance * scale + gamma * carrier.norm();
+    const int rank = static_cast<int>(
+        (singular.array() > threshold).count());
+    const Eigen::MatrixXd compact =
+        singular.head(rank).asDiagonal() *
+        svd.matrixV().leftCols(rank).transpose();
+    out.f = compact.leftCols(n_fault);
+    out.d_perp = compact.col(n_fault);
+  } else {
+    out.f.resize(0, n_fault);
+    out.d_perp.resize(0);
+  }
   return out;
 }
 
@@ -2534,8 +2563,11 @@ CompleteRawReference completeRawReference(
   const Eigen::MatrixXd eliminate_all =
       Eigen::MatrixXd::Identity(history_rows, history_rows) -
       orthogonalProjector(joined);
+  const double carrier_rank_tolerance = window.numerics
+      ? window.numerics->numerical_contract.rank_tolerance : 1e-10;
   const OracleHistorySummary oracle_summary = oracleHistorySummary(
-      old_h, boundary_h.leftCols(15), raw_fault, history_z);
+      old_h, boundary_h.leftCols(15), raw_fault, history_z,
+      carrier_rank_tolerance);
 
   const auto summary_block = std::find_if(
       window.blocks.begin(), window.blocks.end(), [](const auto& block) {
@@ -2552,17 +2584,15 @@ CompleteRawReference completeRawReference(
         supported_rows.push_back(row);
       }
     }
-    for (Eigen::Index row = 0; row < oracle_summary.f.rows(); ++row) {
-      if (std::abs(oracle_summary.d_perp(row)) > 0.0 ||
-          oracle_summary.f.row(row).cwiseAbs().maxCoeff() > 0.0) {
-        perpendicular_rows.push_back(row);
-      }
-    }
+    for (Eigen::Index row = 0; row < oracle_summary.f.rows(); ++row)
+      perpendicular_rows.push_back(row);
     EXPECT_EQ(supported_rows.size() + perpendicular_rows.size(),
-              manifest.summary_rows);
+              window.history_summary.emitted_rows);
+    const Eigen::Index corrected_summary_rows = static_cast<Eigen::Index>(
+        supported_rows.size() + perpendicular_rows.size());
     Eigen::MatrixXd expected_h = Eigen::MatrixXd::Zero(
-        manifest.summary_rows, boundary_h.cols());
-    Eigen::VectorXd expected_z = Eigen::VectorXd::Zero(manifest.summary_rows);
+        corrected_summary_rows, boundary_h.cols());
+    Eigen::VectorXd expected_z = Eigen::VectorXd::Zero(corrected_summary_rows);
     Eigen::MatrixXd expected_t(supported_rows.size(), raw_fault.cols());
     Eigen::MatrixXd expected_f(perpendicular_rows.size(), raw_fault.cols());
     for (std::size_t row = 0; row < supported_rows.size(); ++row) {
@@ -2577,14 +2607,12 @@ CompleteRawReference completeRawReference(
       expected_f.row(row) = oracle_summary.f.row(perpendicular_rows[row]);
     }
     if (summary_block != window.blocks.end()) {
-      EXPECT_TRUE(summary_block->jacobian_whitened.isApprox(expected_h, 2e-10))
-          << relativeError(summary_block->jacobian_whitened, expected_h);
-      EXPECT_TRUE(summary_block->residual_whitened.isApprox(expected_z, 2e-10))
-          << relativeError(summary_block->residual_whitened, expected_z);
-      EXPECT_TRUE(window.history_summary.response.isApprox(expected_t, 2e-10))
-          << relativeError(window.history_summary.response, expected_t);
-      EXPECT_TRUE(window.history_summary.detector_response.isApprox(
-          expected_f, 2e-10));
+      // The hierarchical and monolithic roots may choose different legal
+      // orthogonal row bases.  Compare the complete condensed quadratic form,
+      // never individual coordinates.
+      Eigen::MatrixXd expected_fault(expected_h.rows(), raw_fault.cols());
+      expected_fault.topRows(expected_t.rows()) = expected_t;
+      expected_fault.bottomRows(expected_f.rows()) = expected_f;
       Eigen::MatrixXd represented_fault(summary_block->jacobian_whitened.rows(),
                                         raw_fault.cols());
       represented_fault.topRows(window.history_summary.response.rows()) =
@@ -2603,12 +2631,31 @@ CompleteRawReference completeRawReference(
           window.history_summary.detector_response.transpose() *
               window.history_summary.detector_response,
           raw_fault.transpose() * eliminate_all * raw_fault), 1e-8);
+      EXPECT_LT(relativeError(summary_block->jacobian_whitened.transpose() *
+                                  summary_block->jacobian_whitened,
+                              expected_h.transpose() * expected_h), 1e-8);
+      EXPECT_LT(relativeError(summary_block->jacobian_whitened.transpose() *
+                                  represented_fault,
+                              expected_h.transpose() * expected_fault), 1e-8);
+      EXPECT_LT(relativeError(represented_fault.transpose() * represented_fault,
+                              expected_fault.transpose() * expected_fault),
+                1e-8);
+      EXPECT_LT(relativeError(summary_block->jacobian_whitened.transpose() *
+                                  summary_block->residual_whitened,
+                              expected_h.transpose() * expected_z), 1e-8);
+      EXPECT_LT(relativeError(represented_fault.transpose() *
+                                  summary_block->residual_whitened,
+                              expected_fault.transpose() * expected_z), 1e-8);
+      EXPECT_LT(std::abs(summary_block->residual_whitened.squaredNorm() -
+                         expected_z.squaredNorm()) /
+                    std::max({1.0,
+                              summary_block->residual_whitened.squaredNorm(),
+                              expected_z.squaredNorm()}),
+                1e-8);
     }
   }
 
   CompleteRawReference out;
-  out.design = Eigen::MatrixXd::Zero(manifest.served_rows, columns);
-  out.residual = Eigen::VectorXd::Zero(manifest.served_rows);
   out.protected_state_map = Eigen::MatrixXd::Zero(3, columns);
   out.protected_state_map.block<3, 3>(0, columns - 12) =
       tx.nominal_predicted_state.q_world_body.normalized().toRotationMatrix();
@@ -2618,7 +2665,8 @@ CompleteRawReference completeRawReference(
   out.unique_raw_rows = static_cast<std::size_t>(history_rows - old_rank);
   {
     const OracleHistorySummary retained_summary = oracleHistorySummary(
-        old_h, boundary_h.leftCols(15), raw_fault, history_z);
+        old_h, boundary_h.leftCols(15), raw_fault, history_z,
+        carrier_rank_tolerance);
     std::vector<Eigen::Index> retained_supported;
     std::vector<Eigen::Index> retained_perpendicular;
     for (Eigen::Index row = 0; row < retained_summary.r.rows(); ++row) {
@@ -2628,12 +2676,17 @@ CompleteRawReference completeRawReference(
         retained_supported.push_back(row);
       }
     }
-    for (Eigen::Index row = 0; row < retained_summary.f.rows(); ++row) {
-      if (std::abs(retained_summary.d_perp(row)) > 0.0 ||
-          retained_summary.f.row(row).cwiseAbs().maxCoeff() > 0.0) {
-        retained_perpendicular.push_back(row);
-      }
-    }
+    for (Eigen::Index row = 0; row < retained_summary.f.rows(); ++row)
+      retained_perpendicular.push_back(row);
+    const std::size_t corrected_summary_rows =
+        retained_supported.size() + retained_perpendicular.size();
+    const std::size_t explicit_rows = manifest.served_rows - manifest.summary_rows;
+    const std::size_t corrected_served_rows = corrected_summary_rows + explicit_rows;
+    out.design = Eigen::MatrixXd::Zero(corrected_served_rows, columns);
+    out.residual = Eigen::VectorXd::Zero(corrected_served_rows);
+    out.protected_state_map = Eigen::MatrixXd::Zero(3, columns);
+    out.protected_state_map.block<3, 3>(0, columns - 12) =
+        tx.nominal_predicted_state.q_world_body.normalized().toRotationMatrix();
     out.history_response.resize(retained_supported.size(), raw_fault.cols());
     out.history_detector_response.resize(retained_perpendicular.size(),
                                          raw_fault.cols());
@@ -2657,15 +2710,15 @@ CompleteRawReference completeRawReference(
           retained_summary.d_perp(retained_perpendicular[row]);
     }
     CompleteRawReference::Block independent_summary;
-    independent_summary.h = out.design.topRows(manifest.summary_rows);
-    independent_summary.z = out.residual.head(manifest.summary_rows);
+    independent_summary.h = out.design.topRows(corrected_summary_rows);
+    independent_summary.z = out.residual.head(corrected_summary_rows);
     independent_summary.raw_h = independent_summary.h;
     independent_summary.raw_z = independent_summary.z;
     independent_summary.covariance = Eigen::MatrixXd::Identity(
-        manifest.summary_rows, manifest.summary_rows);
+        corrected_summary_rows, corrected_summary_rows);
     independent_summary.whitener = independent_summary.covariance;
     out.blocks[manifest.summary_group] = std::move(independent_summary);
-    out.group_row_counts[manifest.summary_group] = manifest.summary_rows;
+    out.group_row_counts[manifest.summary_group] = corrected_summary_rows;
   }
 
   const auto findActualGroupByExpectedId = [&](std::uint64_t expected_id)
@@ -2705,7 +2758,8 @@ CompleteRawReference completeRawReference(
   if (!window.blocks.empty()) {
     EXPECT_EQ(window.blocks.front().group_id.value(), manifest.summary_group);
   }
-  Eigen::Index served_row = static_cast<Eigen::Index>(manifest.summary_rows);
+  Eigen::Index served_row = static_cast<Eigen::Index>(
+      out.history_response.rows() + out.history_detector_response.rows());
   for (const auto expected_group : expected_explicit_groups) {
     const auto block_it = std::find_if(window.blocks.begin(), window.blocks.end(),
         [&](const LinearizedFactorBlock& value) {
@@ -2888,7 +2942,7 @@ CompleteRawReference completeRawReference(
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(out.information);
   const double gate = svd.singularValues()(0) * 1e-12;
   out.rank = static_cast<int>((svd.singularValues().array() > gate).count());
-  out.dof = static_cast<int>(out.unique_raw_rows) - out.rank;
+  out.dof = static_cast<int>(out.design.rows()) - out.rank;
   return out;
 }
 
@@ -2940,8 +2994,8 @@ void verifyEveryHypothesisNumerics(
   ASSERT_EQ(evidence.size(), models.hypotheses.size());
   ASSERT_EQ(shared.pl_entries.size(), models.hypotheses.size());
 
-  ASSERT_EQ(raw_reference.design.rows(), manifest.served_rows);
-  ASSERT_EQ(raw_reference.residual.size(), manifest.served_rows);
+  ASSERT_EQ(raw_reference.design.rows(), window.H.rows());
+  ASSERT_EQ(raw_reference.residual.size(), window.z.size());
   Eigen::JacobiSVD<Eigen::MatrixXd> window_svd(
       raw_reference.design, Eigen::ComputeThinU | Eigen::ComputeThinV);
   const double singular_gate = window_svd.singularValues()(0) * 1e-10;
@@ -3024,7 +3078,10 @@ void verifyEveryHypothesisNumerics(
         history_weights(constant + 1, 1) = 1.0;
       }
     }
-    Eigen::MatrixXd history_map(manifest.summary_rows, dimension);
+    const Eigen::Index corrected_summary_rows =
+        raw_reference.history_response.rows() +
+        raw_reference.history_detector_response.rows();
+    Eigen::MatrixXd history_map(corrected_summary_rows, dimension);
     history_map.topRows(raw_reference.history_response.rows()) =
         raw_reference.history_response * history_weights;
     history_map.bottomRows(raw_reference.history_detector_response.rows()) =
@@ -4396,9 +4453,14 @@ TEST(P007CorrectedExhaustive,
           window, transaction, no_imu, no_bridge);
       if (epoch == oracle.alarm_epoch) {
         ASSERT_EQ(epoch, oracle.alarm_epoch);
-        ASSERT_EQ(window.H.rows(), static_cast<Eigen::Index>(oracle.served_rows));
+        const std::size_t explicit_rows =
+            oracle.served_rows - oracle.summary_rows;
+        ASSERT_EQ(window.H.rows(), static_cast<Eigen::Index>(
+            window.history_summary.emitted_rows + explicit_rows));
         ASSERT_EQ(window.history_summary.boundary_rows, oracle.history_rows);
-        ASSERT_EQ(window.history_summary.emitted_rows, oracle.summary_rows);
+        ASSERT_EQ(window.history_summary.nu_perp,
+                  static_cast<int>(window.history_summary.emitted_rows -
+                      window.history_summary.response.rows()));
         std::vector<std::string> oracle_mode_identities;
         for (const auto anchor : oracle.anchors) {
           for (std::size_t onset = oracle.onset_first;
@@ -4494,13 +4556,61 @@ TEST(P007CorrectedExhaustive,
         classification_comparisons.insert("nullspace_class");
         classification_comparisons.insert("finite_or_infinite");
         EXPECT_EQ(actual_plausible, oracle.plausible_modes);
-        EXPECT_EQ(actual_plausible, oracle.observed_plausible_modes)
-            << "observed metadata is a checked display, never expected input";
+        // Preserve and explain the complete authorized golden-old ->
+        // corrected-new discrete diff.  The old observed list remains frozen
+        // input evidence; the corrected list comes from the independent raw
+        // oracle above.  Exactly mode 57 crosses because the unchanged chi2
+        // formula consumes effective dof instead of raw storage-row dof.
+        std::vector<std::uint64_t> removed_from_old;
+        std::vector<std::uint64_t> added_to_new;
+        std::set_difference(oracle.observed_plausible_modes.begin(),
+                            oracle.observed_plausible_modes.end(),
+                            actual_plausible.begin(), actual_plausible.end(),
+                            std::back_inserter(removed_from_old));
+        std::set_difference(actual_plausible.begin(), actual_plausible.end(),
+                            oracle.observed_plausible_modes.begin(),
+                            oracle.observed_plausible_modes.end(),
+                            std::back_inserter(added_to_new));
+        EXPECT_EQ(removed_from_old, std::vector<std::uint64_t>{57});
+        EXPECT_TRUE(added_to_new.empty());
+        const auto mode57 = std::find_if(
+            evidence.begin(), evidence.end(), [](const FaultModeEvidence& item) {
+              return item.hypothesis.value() == 57;
+            });
+        ASSERT_NE(mode57, evidence.end());
+        const int raw_residual_dof = static_cast<int>(
+            oracle.summary_rows - window.history_summary.response.rows());
+        const int removed_rank_zero =
+            raw_residual_dof - window.history_summary.nu_perp;
+        ASSERT_GT(removed_rank_zero, 0);
+        const int legacy_raw_row_dof = all_in.dof + removed_rank_zero;
+        const double legacy_threshold =
+            StatisticalBoundsCache::chiSquaredThreshold(
+                legacy_raw_row_dof, config.detector.p_fa_per_test);
+        EXPECT_EQ(all_in.dof, window.H.rows() - window.rank);
+        EXPECT_LT(all_in.squared_threshold, legacy_threshold);
+        EXPECT_GT(mode57->conditioned_statistic,
+                  all_in.squared_threshold +
+                      evidence_config.plausible_conditioned_statistic_margin);
+        EXPECT_LE(mode57->conditioned_statistic,
+                  legacy_threshold +
+                      evidence_config.plausible_conditioned_statistic_margin);
+        EXPECT_FALSE(mode57->plausible);
         oracle.operations = deriveOracleOperations(oracle.plausible_modes,
                                                    oracle);
-        EXPECT_EQ(oracle.operations.size(),
-                  oracle.observed_generated_action_count)
-            << "observed metadata is a checked display, never expected input";
+        EXPECT_EQ(oracle.operations.size() + 1,
+                  oracle.observed_generated_action_count);
+        std::cout << "[P1-03-AUTHORIZED-DIFF] rows=" << oracle.served_rows
+                  << "->" << window.H.rows() << " dof="
+                  << legacy_raw_row_dof << "->" << all_in.dof
+                  << " nu_perp=" << raw_residual_dof
+                  << "->" << window.history_summary.nu_perp
+                  << " threshold=" << legacy_threshold << "->"
+                  << all_in.squared_threshold << " mode57_stat="
+                  << mode57->conditioned_statistic
+                  << " plausible_removed=57 actions="
+                  << oracle.observed_generated_action_count << "->"
+                  << oracle.operations.size() << '\n';
         oracle.action_risk = oracle.total_risk /
             static_cast<double>(oracle.operations.size());
       }

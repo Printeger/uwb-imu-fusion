@@ -215,6 +215,87 @@ def solve(h, z, tolerance):
             "information": h.T @ h, "rhs": h.T @ z}
 
 
+def compress_history_carrier(matrices, blocks, tolerance):
+    """Apply the P1-03 effective-rank contract to captured history rows."""
+    detector = matrices["HISTORY_DETECTOR_RESPONSE"]
+    d_perp = matrices["HISTORY_D_PERP"]
+    carrier = np.hstack((detector, d_perp))
+    _u, singular, vt = np.linalg.svd(carrier, full_matrices=False)
+    scale = float(singular[0]) if singular.size else 0.0
+    dimension = max(carrier.shape)
+    gamma = (dimension * np.finfo(float).eps /
+             (1.0 - dimension * np.finfo(float).eps))
+    threshold = tolerance * scale + gamma * float(np.linalg.norm(carrier))
+    rank = int(np.count_nonzero(singular > threshold))
+    compressed = singular[:rank, None] * vt[:rank, :]
+    matrices["HISTORY_DETECTOR_RESPONSE"] = compressed[:, :-1]
+    matrices["HISTORY_D_PERP"] = compressed[:, -1:]
+
+    # The captured history block is [R/T/d; 0/F/d_perp] with an identity
+    # covariance.  Replace only the detector-only tail; raw provenance stays
+    # in the immutable capture and no epsilon/noise row is introduced.
+    state_rows = matrices["HISTORY_RESPONSE"].shape[0]
+    history = blocks[0]
+    if (history["raw_h"].shape[0] - state_rows != carrier.shape[0] or
+            np.linalg.norm(history["raw_h"][state_rows:]) != 0.0 or
+            np.linalg.norm(history["cov"] - np.eye(history["cov"].shape[0])) != 0.0):
+        raise ValueError("captured history block does not satisfy carrier contract")
+    history["raw_h"] = history["raw_h"][:state_rows + rank, :]
+    history["raw_z"] = np.concatenate(
+        (history["raw_z"][:state_rows], compressed[:, -1]))
+    history["cov"] = np.eye(state_rows + rank)
+    return carrier.shape[0], rank, threshold, singular
+
+
+def corrected_plausible_modes(modes, blocks, solution, p_fa, tolerance):
+    residual = solution["projector"] @ np.concatenate(
+        [whiten(block, solution["state"].size)[1] for block in blocks])
+    threshold = chi2.ppf(1.0 - p_fa, solution["dof"])
+    plausible = []
+    for mode in modes:
+        fault = np.vstack([
+            mode["maps"].get(
+                block["group"],
+                np.zeros((block["raw_h"].shape[0], mode["dimension"])))
+            for block in blocks])[:, mode["active"]]
+        gram = fault.T @ solution["projector"] @ fault
+        score = fault.T @ residual
+        estimate = np.linalg.pinv(gram, rcond=tolerance) @ score
+        profile = max(0.0, float(residual @ residual - score @ estimate))
+        if profile <= threshold:
+            plausible.append(mode)
+    return plausible, threshold
+
+
+def corrected_actions(plausible, legacy_actions, legacy_added, blocks,
+                      recipe):
+    """Independently derive corrected operations; reuse only captured blocks."""
+    present = {block["group"] for block in blocks}
+    alarm = int(recipe["replay"]["alarm_epoch"])
+    operation_removals = [[]]
+    for mode in plausible:
+        epochs = ([mode["onset"]] if mode["family"] == 1 else
+                  list(range(mode["onset"], alarm + 1)))
+        operation_removals.append([
+            epoch * 1000 + 2 for epoch in epochs
+            if epoch * 1000 + 2 in present])
+    if plausible:
+        operation_removals.append(sorted({group for removal in
+                                          operation_removals[1:]
+                                          for group in removal}))
+
+    actions, added = {}, {}
+    for action, removal in enumerate(operation_removals, 1):
+        matches = [old for old, groups in legacy_actions.items()
+                   if groups == removal]
+        if not matches:
+            raise ValueError(f"corrected operation has no captured factors: {removal}")
+        source = matches[0]
+        actions[action] = list(removal)
+        added[action] = legacy_added[source]
+    return actions, added
+
+
 def enumerate_modes(raw, recipe, blocks, history, history_columns):
     first = recipe["fault_contract"]["onset_epochs"]["first"]
     last = recipe["fault_contract"]["onset_epochs"]["last"]
@@ -427,6 +508,8 @@ def main():
     raw = json.loads(Path(args.raw).read_text())
     config = yaml.safe_load(Path(args.config).read_text())
     tolerance = float(config["integrity_window"]["rank_tolerance"])
+    carrier_storage_rows, carrier_rank, carrier_threshold, carrier_singular = (
+        compress_history_carrier(matrices, blocks, tolerance))
     truth = json.loads(Path(args.truth).read_text())
     fault_anchor = int(truth["fault"]["anchor_id"])
     # The candidate column count is an observed property of the independently
@@ -442,6 +525,12 @@ def main():
     base = solve(served_h, served_z, tolerance)
     history = np.vstack((matrices["HISTORY_RESPONSE"], matrices["HISTORY_DETECTOR_RESPONSE"]))
     modes = enumerate_modes(raw, recipe, blocks, history, history_columns)
+    legacy_action_count = len(actions)
+    plausible, plausible_threshold = corrected_plausible_modes(
+        modes, blocks, base, float(config["detector"]["p_fa_per_test"]),
+        tolerance)
+    actions, added = corrected_actions(
+        plausible, actions, added, blocks, recipe)
     results = []
     action_outcomes = []
     risk = config["risk"]
@@ -546,6 +635,13 @@ def main():
             out.write(f"\t{anchor}")
         out.write("\n")
         out.write(f"P007_ORACLE_V1\t{base['rank']}\t{base['dof']}\t{base['stat']:.17g}\t{len(modes)}\t{len(actions)}\n")
+        discarded = float(np.linalg.norm(carrier_singular[carrier_rank:]))
+        out.write(f"CARRIER_RANK\t{carrier_storage_rows}\t{carrier_rank}\t"
+                  f"{carrier_threshold:.17g}\t{discarded:.17g}\n")
+        out.write(f"AUTHORIZED_ACTION_DIFF\t{legacy_action_count}\t"
+                  f"{len(actions)}\t{plausible_threshold:.17g}\t"
+                  f"{','.join(str(value) for value in recipe['observed_non_authoritative']['plausible_mode_ordinals'])}\t"
+                  f"{','.join(str(mode['id']) for mode in plausible)}\n")
         write_matrix(out, "SERVED_H", served_h); write_matrix(out, "SERVED_Z", served_z.reshape(-1, 1))
         write_matrix(out, "BASE_INFORMATION", base["information"]); write_matrix(out, "BASE_RHS", base["rhs"].reshape(-1, 1))
         write_matrix(out, "BASE_STATE", base["state"].reshape(-1, 1))
@@ -578,7 +674,11 @@ def main():
                        if eligible), 0)
         terminal = "RECOVERED" if winner else "AMBIGUOUS_UNAVAILABLE"
         out.write(f"DECISION\t{winner}\t{terminal}\t0\t0\n")
-        out.write(observed_protocol_line(recipe) + "\n")
+        corrected_ids = [mode["id"] for mode in plausible]
+        out.write("OBSERVED\t" + str(len(corrected_ids)) + "\t" +
+                  "\t".join(str(value) for value in corrected_ids) + "\t" +
+                  str(len(actions)) + "\t0\t" +
+                  recipe["observed_non_authoritative"]["note"] + "\n")
 
 
 if __name__ == "__main__":
