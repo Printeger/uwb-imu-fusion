@@ -1,0 +1,64 @@
+P1-02 IMPLEMENTER VERIFICATION
+status=PASS; independent review pending
+
+Build:
+  cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl --target tests realtime_performance_benchmark -j2
+  final exit=0
+
+Focused P102 + P002:
+  test_integrity_v2 --gtest_filter=P102SharedDualNumerics.*:P002DualChannelContract.*
+  result=8/8 PASS; exit=0
+
+O02:
+  test_dual_channel_detector
+  result=6/6 PASS; exit=0
+
+O03/O07:
+  test_p0_06_action_search
+  result=24/24 PASS; exit=0
+
+O05:
+  test_integrity_v2
+  result=99/99 PASS; exit=0
+
+O06:
+  test_p0_04_risk_oracle
+  result=13/13 PASS; exit=0
+
+O12:
+  test_p0_07_corrected_exhaustive --gtest_filter=P007CorrectedExhaustive.SameRawReplayDrivesProductionBuilderGeneratorAndFinalRefusal:P007CorrectedExhaustive.MissingProvenanceCensusIsRetainedAndRefused
+  result=2/2 PASS; exit=0
+
+Complete suite:
+  env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1 BLIS_NUM_THREADS=1 ctest --output-on-failure -j1
+  cwd=/home/mint/ws_fusion_uwb/build/uwb_imu_pl
+  result=34/34 PASS; exit=0; elapsed_seconds=1133.99
+
+Performance:
+  baseline runs 1/2/3: 45/45 each; exits=0/0/0
+  candidate runs 1/2/3: 45/45 each; exits=0/0/0
+  paired semantic comparisons: PASS/PASS/PASS; exits=0/0/0
+  complete-work denominator: before=135/135; after=135/135
+  excluded attempts: before=0; after=0
+
+ABI/syntax/whitespace:
+  golden-header/current-DSO P003 layout client exit=0
+  golden-header/current-DSO P102 lifecycle client: current DSO constructs,
+    old header accesses and destroys FrozenHypothesisNumerics; size=320,
+    offsetof(reason)=264; exit=0
+  python3 -m py_compile tools/compare_p1_02_outputs.py tools/summarize_p1_01_performance.py exit=0
+  git diff --check exit=0
+
+Two earlier complete-CTest attempts were deliberately interrupted with exit
+130 after code review/precheck found correctness gaps.  Neither is claimed as
+evidence.  All directed gates and the complete suite above were rerun after
+the final conservative implementation.
+
+The first independent reviewer returned FAILED because the R08 context lacked
+an admission-owner binding and sealed matrix/census proof.  During repair, an
+old-layout O12 executable then exited 139 before the full test target was
+relinked, proving that extending the public FrozenHypothesisNumerics layout
+was ABI-unsafe.  That result is retained as a failed/superseded attempt, not a
+PASS.  The final design restores the exact P1-01 public layout and moves R08 to
+an independently owned sealed sidecar; every result above was rerun after that
+switch and a full test-target rebuild.

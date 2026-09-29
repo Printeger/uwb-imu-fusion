@@ -1,0 +1,33 @@
+baseline_tag=golden-p1-01-identity-indexing
+baseline_commit=86013984e4a8c256db953743290cec767d27b661
+candidate_tree=working tree after final P1-02 implementation; no commit by implementer
+os=Linux 6.18.33.2-microsoft-standard-WSL2 x86_64
+cpu=Intel(R) Core(TM) Ultra 5 125H
+compiler=c++ 9.4.0
+cmake=3.16.3
+gtsam=4.2a5
+eigen=3.3.7
+build_type=Release
+cpu_affinity=0-3
+OMP_NUM_THREADS=1
+OPENBLAS_NUM_THREADS=1
+MKL_NUM_THREADS=1
+VECLIB_MAXIMUM_THREADS=1
+NUMEXPR_NUM_THREADS=1
+BLIS_NUM_THREADS=1
+workers=4
+seed=20260928
+profile=joint_order2
+fault_mode=nominal
+runs_per_side=3
+epochs_per_run=45
+denominator_per_side=135
+baseline_output_root=/tmp/p1-02-before-3x45.f9GjUQ
+candidate_output_root=/tmp/p1-02-sidecar-formal-3x45.pCnV75
+
+Benchmark command shape for every run:
+  /usr/bin/time -v -o RUN.time env LD_LIBRARY_PATH=SIDE_DEVEL/lib OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1 BLIS_NUM_THREADS=1 UWB_IMU_PL_CANDIDATE_WORKERS=4 UWB_IMU_PL_BENCHMARK_SEED=20260928 taskset -c 0-3 SIDE_BENCHMARK config/fde_joint_order2.yaml RUN_DIR 45
+
+The baseline used an independent detached worktree/build/devel.  `ldd`
+confirmed the baseline executable loaded its detached golden DSO and the
+candidate executable loaded the current workspace DSO.

@@ -1,0 +1,200 @@
+{
+  "denominator": {
+    "attempts_per_run": 45,
+    "attempts_per_side": 135,
+    "runs_per_side": 3
+  },
+  "schema": "uwb-imu-pl/p1-02-work-counters/v1",
+  "sides": {
+    "after": {
+      "aggregate_sums": {
+        "cache_entries": 11505,
+        "candidate_covariance_solve_count": 3,
+        "candidate_reference_svd": 534,
+        "covariance_rhs_columns": 0,
+        "covariance_rhs_solves": 0,
+        "fault_gram_eigen": 5776308,
+        "fault_gram_ldlt": 0,
+        "fault_gram_svd": 0,
+        "generic_fault_gram_fallback": 0,
+        "hypothesis_parallel_blocks": 540,
+        "hypothesis_shared_hits": 132,
+        "hypothesis_shared_misses": 0,
+        "low_dim_fault_gram": 5774400,
+        "spectral_rhs_columns": 0,
+        "spectral_rhs_solves": 0,
+        "statistical_cache_hits": 49545045,
+        "statistical_cache_misses": 8835
+      },
+      "runs": [
+        {
+          "attempts": 45,
+          "candidate_rows": 45,
+          "run": 1,
+          "sums": {
+            "cache_entries": 3835,
+            "candidate_covariance_solve_count": 1,
+            "candidate_reference_svd": 178,
+            "covariance_rhs_columns": 0,
+            "covariance_rhs_solves": 0,
+            "fault_gram_eigen": 1925436,
+            "fault_gram_ldlt": 0,
+            "fault_gram_svd": 0,
+            "generic_fault_gram_fallback": 0,
+            "hypothesis_parallel_blocks": 180,
+            "hypothesis_shared_hits": 44,
+            "hypothesis_shared_misses": 0,
+            "low_dim_fault_gram": 1924800,
+            "spectral_rhs_columns": 0,
+            "spectral_rhs_solves": 0,
+            "statistical_cache_hits": 16515015,
+            "statistical_cache_misses": 2945
+          }
+        },
+        {
+          "attempts": 45,
+          "candidate_rows": 45,
+          "run": 2,
+          "sums": {
+            "cache_entries": 3835,
+            "candidate_covariance_solve_count": 1,
+            "candidate_reference_svd": 178,
+            "covariance_rhs_columns": 0,
+            "covariance_rhs_solves": 0,
+            "fault_gram_eigen": 1925436,
+            "fault_gram_ldlt": 0,
+            "fault_gram_svd": 0,
+            "generic_fault_gram_fallback": 0,
+            "hypothesis_parallel_blocks": 180,
+            "hypothesis_shared_hits": 44,
+            "hypothesis_shared_misses": 0,
+            "low_dim_fault_gram": 1924800,
+            "spectral_rhs_columns": 0,
+            "spectral_rhs_solves": 0,
+            "statistical_cache_hits": 16515015,
+            "statistical_cache_misses": 2945
+          }
+        },
+        {
+          "attempts": 45,
+          "candidate_rows": 45,
+          "run": 3,
+          "sums": {
+            "cache_entries": 3835,
+            "candidate_covariance_solve_count": 1,
+            "candidate_reference_svd": 178,
+            "covariance_rhs_columns": 0,
+            "covariance_rhs_solves": 0,
+            "fault_gram_eigen": 1925436,
+            "fault_gram_ldlt": 0,
+            "fault_gram_svd": 0,
+            "generic_fault_gram_fallback": 0,
+            "hypothesis_parallel_blocks": 180,
+            "hypothesis_shared_hits": 44,
+            "hypothesis_shared_misses": 0,
+            "low_dim_fault_gram": 1924800,
+            "spectral_rhs_columns": 0,
+            "spectral_rhs_solves": 0,
+            "statistical_cache_hits": 16515015,
+            "statistical_cache_misses": 2945
+          }
+        }
+      ]
+    },
+    "before": {
+      "aggregate_sums": {
+        "cache_entries": 10953,
+        "candidate_covariance_solve_count": 135,
+        "candidate_reference_svd": 534,
+        "covariance_rhs_columns": 0,
+        "covariance_rhs_solves": 0,
+        "fault_gram_eigen": 5996817,
+        "fault_gram_ldlt": 0,
+        "fault_gram_svd": 0,
+        "generic_fault_gram_fallback": 0,
+        "hypothesis_parallel_blocks": 540,
+        "hypothesis_shared_hits": 0,
+        "hypothesis_shared_misses": 0,
+        "low_dim_fault_gram": 5774400,
+        "spectral_rhs_columns": 0,
+        "spectral_rhs_solves": 0,
+        "statistical_cache_hits": 49545597,
+        "statistical_cache_misses": 8283
+      },
+      "runs": [
+        {
+          "attempts": 45,
+          "candidate_rows": 45,
+          "run": 1,
+          "sums": {
+            "cache_entries": 3651,
+            "candidate_covariance_solve_count": 45,
+            "candidate_reference_svd": 178,
+            "covariance_rhs_columns": 0,
+            "covariance_rhs_solves": 0,
+            "fault_gram_eigen": 1998939,
+            "fault_gram_ldlt": 0,
+            "fault_gram_svd": 0,
+            "generic_fault_gram_fallback": 0,
+            "hypothesis_parallel_blocks": 180,
+            "hypothesis_shared_hits": 0,
+            "hypothesis_shared_misses": 0,
+            "low_dim_fault_gram": 1924800,
+            "spectral_rhs_columns": 0,
+            "spectral_rhs_solves": 0,
+            "statistical_cache_hits": 16515199,
+            "statistical_cache_misses": 2761
+          }
+        },
+        {
+          "attempts": 45,
+          "candidate_rows": 45,
+          "run": 2,
+          "sums": {
+            "cache_entries": 3651,
+            "candidate_covariance_solve_count": 45,
+            "candidate_reference_svd": 178,
+            "covariance_rhs_columns": 0,
+            "covariance_rhs_solves": 0,
+            "fault_gram_eigen": 1998939,
+            "fault_gram_ldlt": 0,
+            "fault_gram_svd": 0,
+            "generic_fault_gram_fallback": 0,
+            "hypothesis_parallel_blocks": 180,
+            "hypothesis_shared_hits": 0,
+            "hypothesis_shared_misses": 0,
+            "low_dim_fault_gram": 1924800,
+            "spectral_rhs_columns": 0,
+            "spectral_rhs_solves": 0,
+            "statistical_cache_hits": 16515199,
+            "statistical_cache_misses": 2761
+          }
+        },
+        {
+          "attempts": 45,
+          "candidate_rows": 45,
+          "run": 3,
+          "sums": {
+            "cache_entries": 3651,
+            "candidate_covariance_solve_count": 45,
+            "candidate_reference_svd": 178,
+            "covariance_rhs_columns": 0,
+            "covariance_rhs_solves": 0,
+            "fault_gram_eigen": 1998939,
+            "fault_gram_ldlt": 0,
+            "fault_gram_svd": 0,
+            "generic_fault_gram_fallback": 0,
+            "hypothesis_parallel_blocks": 180,
+            "hypothesis_shared_hits": 0,
+            "hypothesis_shared_misses": 0,
+            "low_dim_fault_gram": 1924800,
+            "spectral_rhs_columns": 0,
+            "spectral_rhs_solves": 0,
+            "statistical_cache_hits": 16515199,
+            "statistical_cache_misses": 2761
+          }
+        }
+      ]
+    }
+  }
+}

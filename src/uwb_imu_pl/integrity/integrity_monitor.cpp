@@ -2831,11 +2831,13 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             faultScopePolicyFingerprint(cfg.fault_models, cfg.resolved_scope);
         std::shared_ptr<const FrozenHypothesisNumerics>
             shared_hypothesis_numerics;
+        std::shared_ptr<const FrozenHypothesisDualNumerics>
+            shared_hypothesis_dual_numerics;
         NumericalWorkCounters::evidenceCallFaultPath();
         auto evidence = HypothesisEvidenceEvaluator(evidence_config).evaluateAll(
             window_admission, models.modes, &models.hypotheses,
             all_in.squared_threshold, &shared_hypothesis_numerics,
-            candidate_workers_.get());
+            &shared_hypothesis_dual_numerics, candidate_workers_.get());
         record_stage("hypothesis_evidence", true);
         if (shared_hypothesis_numerics && !output.stage_timings.empty()) {
           const auto& shared = *shared_hypothesis_numerics;
@@ -3393,20 +3395,147 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               }
             }
             candidate.diagnostics.bridge_ms = part_ms();
-            // Production PL always consumes candidate-specific dual-channel
-            // detector material.  The pooled/frozen path remains an explicit
-            // offline reference and is not allowed to certify a five-profile
-            // output.
-            auto projected_modes = projectPostActionModes(
-                window, transaction, models, action, indexes);
-            shared_pl.mode_maps = std::move(projected_modes.mode_maps);
+            const bool keep_all = action.groups_to_remove.empty() &&
+                action.groups_to_add.empty() && action.added_blocks.empty();
+            std::string frozen_dual_proof_reason;
+            const bool frozen_dual_sealed = shared_hypothesis_numerics &&
+                shared_hypothesis_dual_numerics &&
+                validateFrozenHypothesisDualProof(
+                    window_admission, *shared_hypothesis_numerics,
+                    *shared_hypothesis_dual_numerics,
+                    &frozen_dual_proof_reason);
+            const bool reuse_frozen_dual = keep_all &&
+                frozen_dual_sealed &&
+                !capture_action_proof && shared_pl.bridges.empty();
+            ProjectedPostActionModes projected_modes;
+            ProjectedPostActionModes exact_projected_modes;
+            bool exact_candidate_census_proven = false;
+            if (reuse_frozen_dual &&
+                shared_hypothesis_dual_numerics->candidate_mode_active.size() ==
+                    models.modes.size()) {
+              std::set<std::uint64_t> inactive_modes;
+              for (std::size_t index = 0; index < models.modes.size(); ++index) {
+                if (!shared_hypothesis_dual_numerics->candidate_mode_active[index]) {
+                  inactive_modes.insert(models.modes[index].id.value());
+                }
+              }
+              projected_modes.hypotheses = models.hypotheses;
+              std::vector<FaultHypothesisV2> active_hypotheses;
+              active_hypotheses.reserve(projected_modes.hypotheses.size());
+              for (auto& hypothesis : projected_modes.hypotheses) {
+                hypothesis.modes.erase(std::remove_if(
+                    hypothesis.modes.begin(), hypothesis.modes.end(),
+                    [&](FaultModeId id) {
+                      return inactive_modes.count(id.value()) != 0;
+                    }), hypothesis.modes.end());
+                if (hypothesis.modes.empty()) continue;
+                hypothesis.affected_groups.clear();
+                for (const auto mode_id : hypothesis.modes) {
+                  const auto mode = indexes.modes.find(mode_id.value());
+                  if (mode == indexes.modes.end()) continue;
+                  hypothesis.affected_groups.insert(
+                      hypothesis.affected_groups.end(),
+                      mode->second->affected_groups.begin(),
+                      mode->second->affected_groups.end());
+                }
+                std::sort(hypothesis.affected_groups.begin(),
+                          hypothesis.affected_groups.end());
+                hypothesis.affected_groups.erase(std::unique(
+                    hypothesis.affected_groups.begin(),
+                    hypothesis.affected_groups.end()),
+                    hypothesis.affected_groups.end());
+                hypothesis.A.resize(0, 0);
+                active_hypotheses.push_back(std::move(hypothesis));
+              }
+              projected_modes.hypotheses = std::move(active_hypotheses);
+              // The compact activity bitmap is never a correctness oracle.
+              // Prove its candidate census against the established exact
+              // projector before consuming any frozen dual block.  A mismatch
+              // keeps the exact maps and routes the entire candidate through
+              // computeShared below.
+              exact_projected_modes = projectPostActionModes(
+                  window, transaction, models, action, indexes);
+              exact_candidate_census_proven =
+                  hypothesisSetFingerprint(projected_modes.hypotheses) ==
+                      hypothesisSetFingerprint(
+                          exact_projected_modes.hypotheses) &&
+                  hypothesisSetFingerprint(
+                      exact_projected_modes.hypotheses) ==
+                      shared_hypothesis_dual_numerics
+                          ->candidate_hypothesis_fingerprint;
+              if (exact_candidate_census_proven) {
+                projected_modes.hypotheses =
+                    exact_projected_modes.hypotheses;
+              }
+            }
+            std::map<std::uint64_t, const FrozenHypothesisDualBlock*>
+                frozen_dual_by_hypothesis;
+            std::map<std::uint64_t, const FrozenHypothesisPlEntry*>
+                frozen_pl_by_hypothesis;
+            if (reuse_frozen_dual) {
+              for (const auto& block : shared_hypothesis_dual_numerics->dual_blocks) {
+                frozen_dual_by_hypothesis.emplace(
+                    block.hypothesis.value(), &block);
+              }
+              for (const auto& entry : shared_hypothesis_numerics->pl_entries) {
+                frozen_pl_by_hypothesis.emplace(
+                    entry.hypothesis.value(), &entry);
+              }
+            }
+            const bool complete_frozen_dual = reuse_frozen_dual &&
+                exact_candidate_census_proven &&
+                shared_hypothesis_dual_numerics->candidate_mode_active.size() ==
+                    models.modes.size() &&
+                shared_hypothesis_dual_numerics->dual_blocks.size() ==
+                    models.hypotheses.size() &&
+                std::all_of(
+                    projected_modes.hypotheses.begin(),
+                    projected_modes.hypotheses.end(),
+                    [&](const FaultHypothesisV2& hypothesis) {
+                      const auto block = frozen_dual_by_hypothesis.find(
+                          hypothesis.id.value());
+                      const auto pl = frozen_pl_by_hypothesis.find(
+                          hypothesis.id.value());
+                      return block != frozen_dual_by_hypothesis.end() &&
+                          block->second->valid &&
+                          block->second->dimension > 0 &&
+                          block->second->dimension <= 3 &&
+                          pl != frozen_pl_by_hypothesis.end() &&
+                          pl->second->valid &&
+                          pl->second->monitorability.monitorable &&
+                          (pl->second->gram_spd ||
+                           pl->second->bound_from_projected_path);
+                    });
+            if (complete_frozen_dual) {
+              // R08: evidence already produced Gamma_c/Gamma_h/t/G/J for
+              // this exact immutable KEEP_ALL candidate.  Preserve every
+              // hypothesis and consume that context directly; any identity
+              // or fixed-block miss remains fail-closed inside the PL gate.
+            } else {
+              if (exact_projected_modes.hypotheses.empty() &&
+                  exact_projected_modes.mode_maps.empty()) {
+                exact_projected_modes = projectPostActionModes(
+                    window, transaction, models, action, indexes);
+              }
+              projected_modes = std::move(exact_projected_modes);
+              shared_pl.mode_maps = std::move(projected_modes.mode_maps);
+            }
             candidate.diagnostics.fault_map_ms = part_ms();
             try {
               const auto pl_seams = pipelineTestSeams(this);
               if (pl_seams && pl_seams->before_protection_level) {
                 pl_seams->before_protection_level(action.id);
               }
-              if (capture_action_proof) {
+              if (complete_frozen_dual) {
+                evaluated.protection_level =
+                    ProtectionLevelV2().computeFrozenAllIn(
+                        window_admission, &candidate, evaluated.post,
+                        projected_modes.hypotheses, models.modes,
+                        *shared_hypothesis_numerics,
+                        *shared_hypothesis_dual_numerics,
+                        evidence_config.fault_model_policy_fingerprint,
+                        cfg.risk_v2);
+              } else if (capture_action_proof) {
                 evaluated.protection_level = ProtectionLevelV2().computeShared(
                     window_admission, &candidate, evaluated.post,
                     &projected_modes.hypotheses, shared_pl, cfg.risk_v2,

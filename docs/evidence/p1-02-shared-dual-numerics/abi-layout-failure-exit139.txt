@@ -1,0 +1,24 @@
+P1-02 ABI STOP-LOSS REPRODUCTION
+
+failed_attempt_exit=139
+failed_binary=test_p0_07_corrected_exhaustive (built before the public
+  FrozenHypothesisNumerics extension, then loaded against the extended DSO)
+first_test=P007CorrectedExhaustive.SameRawReplayDrivesProductionBuilderGeneratorAndFinalRefusal
+observed=segmentation fault before a test result could be claimed
+
+Conclusion:
+  The earlier P003 old-header client was insufficient because it printed only
+  compile-time layout values and called an unrelated scalar function.  It did
+  not ask the current DSO to construct a FrozenHypothesisNumerics object.
+  The exit-139 reproduction showed that changing this public cross-DSO type
+  was unsafe.  Full CTest was not started on that design.
+
+Repair:
+  Restore the P1-01 FrozenHypothesisNumerics definition exactly (size 320,
+  offsetof(reason) 264) and move R08 data to an independent sealed sidecar.
+  Rebuild every test binary.  Add a golden-header/current-DSO lifecycle client
+  that constructs, reads and destroys the context; final exit=0.  Then rerun
+  O12 (2/2 PASS), complete CTest (34/34 PASS) and formal 3x45.
+
+This exit 139 is retained as a superseded failed attempt and is not counted as
+passing evidence.

@@ -2014,43 +2014,104 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
     const FrozenHypothesisNumerics& frozen,
     std::uint64_t fault_model_policy_fingerprint,
     const RiskBudgetV2& risk) const {
+  return computeFrozenAllInImpl(
+      window, candidate, detector, hypotheses, modes, frozen,
+      nullptr, fault_model_policy_fingerprint, risk, nullptr);
+}
+
+ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+    const FrozenWindowAdmission& admission,
+    CandidateEvaluation* candidate,
+    const DetectorResultV2& detector,
+    const std::vector<FaultHypothesisV2>& hypotheses,
+    const std::vector<FaultModeBasis>& modes,
+    const FrozenHypothesisNumerics& frozen,
+    const FrozenHypothesisDualNumerics& frozen_dual,
+    std::uint64_t fault_model_policy_fingerprint,
+    const RiskBudgetV2& risk) const {
+  if (!admission) {
+    ProtectionLevelV2Result result;
+    result.reason = "invalid immutable frozen-window admission: " +
+        admission.reason;
+    return result;
+  }
+  return computeFrozenAllInImpl(
+      admission.window(), candidate, detector, hypotheses, modes, frozen,
+      &frozen_dual, fault_model_policy_fingerprint, risk, &admission);
+}
+
+ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
+    const LinearizedIntegrityWindow& window,
+    CandidateEvaluation* candidate,
+    const DetectorResultV2& detector,
+    const std::vector<FaultHypothesisV2>& hypotheses,
+    const std::vector<FaultModeBasis>& modes,
+    const FrozenHypothesisNumerics& frozen,
+    const FrozenHypothesisDualNumerics* frozen_dual,
+    std::uint64_t fault_model_policy_fingerprint,
+    const RiskBudgetV2& risk,
+    const FrozenWindowAdmission* admission) const {
   ProtectionLevelV2Result result;
   ProtectionLevelV2ProofV1 sidecar;
   sidecar.risk = risk;
   std::string detector_contract_reason;
   const bool keep_all = candidate && candidate->action.groups_to_remove.empty() &&
       candidate->action.groups_to_add.empty() && candidate->action.added_blocks.empty();
+  const bool active_dual =
+      detector.contract_mode == DetectorContractMode::ActiveDualChannelV6 &&
+      detector.channel_history_dof > 0;
+  std::string frozen_dual_reason;
+  if (active_dual && !admission) {
+    frozen_dual_reason =
+        "frozen dual context has no immutable owner binding";
+  } else if (active_dual && !frozen_dual) {
+    frozen_dual_reason = "frozen dual sidecar is unavailable";
+  }
+  const bool frozen_dual_proof_valid = !active_dual ||
+      (admission && frozen_dual && validateFrozenHypothesisDualProof(
+          *admission, frozen, *frozen_dual, &frozen_dual_reason));
   const bool identity_valid = frozen.valid && window.numerics &&
       frozen.window_id == window.id && frozen.version == window.version &&
       frozen.window_content_fingerprint ==
           window.numerics->content_fingerprint &&
-      frozen.window_content_fingerprint ==
-          integrityWindowFingerprint(window) &&
+      (admission || frozen.window_content_fingerprint ==
+          integrityWindowFingerprint(window)) &&
       frozen.numerical_contract_fingerprint ==
           window.numerics->numerical_contract_fingerprint &&
-      frozen.hypothesis_fingerprint == hypothesisSetFingerprint(hypotheses) &&
       frozen.fault_mode_fingerprint == faultModeSetFingerprint(modes) &&
       frozen.fault_model_policy_fingerprint ==
           fault_model_policy_fingerprint &&
       frozen.hypothesis_count == hypotheses.size() &&
-      frozen.pl_entries.size() == hypotheses.size();
+      (!frozen_dual || frozen.pl_entries.size() ==
+           frozen_dual->dual_blocks.size()) &&
+      frozen_dual_proof_valid;
   if (!candidate || !candidate->valid || !detector.numerically_valid ||
       !detectorContractMatchesCandidate(window, *candidate, detector,
-                                        &detector_contract_reason) ||
+                                        &detector_contract_reason,
+                                        admission) ||
       !keep_all || !identity_valid) {
     NumericalWorkCounters::hypothesisSharedMiss();
     result.reason = !identity_valid
-        ? "frozen all-in hypothesis context identity mismatch"
+        ? (frozen_dual_reason.empty()
+               ? "frozen all-in hypothesis context identity mismatch"
+               : frozen_dual_reason)
         : (detector_contract_reason.empty()
                ? "frozen all-in hypothesis context identity mismatch"
                : detector_contract_reason);
     return result;
   }
-  if (detector.contract_mode == DetectorContractMode::ActiveDualChannelV6 &&
-      detector.channel_history_dof > 0) {
+  const std::uint64_t expected_hypothesis_fingerprint = active_dual
+      ? frozen_dual->candidate_hypothesis_fingerprint
+      : frozen.hypothesis_fingerprint;
+  if (expected_hypothesis_fingerprint !=
+      hypothesisSetFingerprint(hypotheses)) {
     NumericalWorkCounters::hypothesisSharedMiss();
-    result.reason =
-        "frozen pooled hypothesis context cannot certify active dual-channel PL";
+    result.reason = "frozen candidate hypothesis census is stale";
+    return result;
+  }
+  if (active_dual && frozen_dual->dual_blocks.empty() && !hypotheses.empty()) {
+    NumericalWorkCounters::hypothesisSharedMiss();
+    result.reason = "frozen dual hypothesis context is incomplete";
     return result;
   }
   NumericalWorkCounters::hypothesisSharedHit();
@@ -2065,17 +2126,25 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
   }
   const double covariance_rank_tolerance = window.numerics
       ? window.numerics->numerical_contract.rank_tolerance : 1e-10;
-  const RawFactorCertificate raw_factor = rawFactorCertificate(
-      window, *candidate, covariance_rank_tolerance);
+  const RawFactorCertificate raw_factor = active_dual
+      ? RawFactorCertificate{}
+      : rawFactorCertificate(window, *candidate, covariance_rank_tolerance);
   // The frozen context is an optimization cache, not an independent numerical
   // authority.  Serve the same direct raw-H covariance used by the ordinary
   // paths so the constructive Gram proof binds exactly the matrix returned to
   // the caller.
   const Eigen::Matrix3d protected_covariance =
-      raw_factor.valid ? raw_factor.protected_covariance
-                       : Eigen::Matrix3d::Zero();
-  const SymmetricPsdCertificate covariance_certificate = raw_factor.valid
-      ? certifyFactorGram(raw_factor.protected_factor.transpose(),
+      active_dual ? frozen_dual->candidate_protected_covariance
+                  : (raw_factor.valid ? raw_factor.protected_covariance
+                                      : Eigen::Matrix3d::Zero());
+  const Eigen::MatrixXd protected_covariance_factor = active_dual
+      ? frozen_dual->candidate_protected_factor.transpose()
+      : raw_factor.protected_factor.transpose();
+  const bool protected_factor_valid = protected_covariance_factor.cols() == 3 &&
+      protected_covariance_factor.rows() == candidate->state_increment.size() &&
+      protected_covariance_factor.allFinite();
+  const SymmetricPsdCertificate covariance_certificate = protected_factor_valid
+      ? certifyFactorGram(protected_covariance_factor,
                           protected_covariance, covariance_rank_tolerance,
                           candidateProofIdentity(*candidate))
       : SymmetricPsdCertificate{};
@@ -2091,8 +2160,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
   const Eigen::Vector3d sigma =
       protected_covariance.diagonal().cwiseSqrt();
   sidecar.protected_covariance = protected_covariance;
-  sidecar.protected_covariance_factor =
-      raw_factor.protected_factor.transpose();
+  sidecar.protected_covariance_factor = protected_covariance_factor;
   sidecar.covariance_rank_tolerance = covariance_rank_tolerance;
   sidecar.nominal_tail = nominal_tail;
   sidecar.nominal_multiplier = nominal_k;
@@ -2100,9 +2168,37 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
   result.nominal_component_m = nominal_k * sigma;
   result.fault_component_m.setZero();
   result.bridge_component_m.setZero();
+  struct FrozenModeSlice {
+    Eigen::Index offset = 0;
+    Eigen::Index columns = 0;
+  };
+  std::map<std::uint64_t, FrozenModeSlice> frozen_mode_slices;
+  Eigen::Index frozen_mode_columns = 0;
+  for (const auto& mode : modes) {
+    const Eigen::Index columns = mode.effective_basis_certified &&
+        mode.effective_parameter_dimension > 0 &&
+        mode.effective_parameter_basis.rows() == mode.parameter_dimension &&
+        mode.effective_parameter_basis.cols() ==
+            mode.effective_parameter_dimension
+        ? mode.effective_parameter_dimension : mode.parameter_dimension;
+    frozen_mode_slices.emplace(
+        mode.id.value(), FrozenModeSlice{frozen_mode_columns, columns});
+    frozen_mode_columns += columns;
+  }
+  std::map<std::uint64_t, std::size_t> frozen_hypothesis_indexes;
+  for (std::size_t index = 0; index < frozen.pl_entries.size(); ++index) {
+    frozen_hypothesis_indexes.emplace(
+        frozen.pl_entries[index].hypothesis.value(), index);
+  }
   for (std::size_t index = 0; index < hypotheses.size(); ++index) {
     const auto& hypothesis = hypotheses[index];
-    const auto& cached = frozen.pl_entries[index];
+    const auto frozen_index = frozen_hypothesis_indexes.find(
+        hypothesis.id.value());
+    if (frozen_index == frozen_hypothesis_indexes.end()) {
+      result.reason = "frozen candidate hypothesis block is absent";
+      return result;
+    }
+    const auto& cached = frozen.pl_entries[frozen_index->second];
     if (cached.hypothesis != hypothesis.id || !cached.valid ||
         !(cached.gram_spd || cached.bound_from_projected_path) ||
         !cached.monitorability.monitorable) {
@@ -2125,9 +2221,82 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
           cached_proof_reason;
       return result;
     }
-    sidecar.hypothesis_proofs.push_back(std::move(cached_proof));
-    const FaultAxisBounds bounds =
-        faultAxisBounds(detector, hypothesis, nominal_tail);
+    FaultAxisBounds bounds;
+    Eigen::Vector3d component;
+    std::string detector_certificate;
+    if (active_dual) {
+      const auto& dual = frozen_dual->dual_blocks[frozen_index->second];
+      if (!dual.valid || dual.hypothesis != hypothesis.id ||
+          dual.dimension <= 0 || dual.dimension > 3 ||
+          cached_proof.raw_detection_factor.cols() != dual.dimension) {
+        NumericalWorkCounters::hypothesisSharedMiss();
+        result.reason = "frozen dual hypothesis block is invalid";
+        return result;
+      }
+      const Eigen::MatrixXd total_gram =
+          dual.total_gram.topLeftCorner(dual.dimension, dual.dimension);
+      const Eigen::MatrixXd history_gram =
+          dual.history_gram.topLeftCorner(dual.dimension, dual.dimension);
+      const Eigen::MatrixXd protected_response =
+          dual.protected_response.leftCols(dual.dimension);
+      Eigen::MatrixXd raw_detection_factor(
+          frozen_dual->candidate_detection_modes.rows(), dual.dimension);
+      Eigen::Index raw_offset = 0;
+      bool raw_response_valid =
+          frozen_dual->candidate_detection_modes.cols() == frozen_mode_columns;
+      for (const auto mode_id : hypothesis.modes) {
+        const auto slice = frozen_mode_slices.find(mode_id.value());
+        if (slice == frozen_mode_slices.end() ||
+            raw_offset + slice->second.columns > dual.dimension) {
+          raw_response_valid = false;
+          break;
+        }
+        raw_detection_factor.middleCols(raw_offset, slice->second.columns) =
+            frozen_dual->candidate_detection_modes.middleCols(
+                slice->second.offset, slice->second.columns);
+        raw_offset += slice->second.columns;
+      }
+      if (!raw_response_valid || raw_offset != dual.dimension ||
+          !raw_detection_factor.allFinite()) {
+        result.reason = "frozen candidate mode response is incomplete";
+        return result;
+      }
+      const GramResponseCertificate response_certificate =
+          certifyFactorGramAndProtectedResponse(
+              raw_detection_factor, total_gram,
+              protected_response, covariance_rank_tolerance,
+              candidateProofIdentity(*candidate),
+              cached_proof.raw_factor_scale);
+      if (!response_certificate.valid ||
+          response_certificate.nullspace_class ==
+              GramNullspaceClass::Dangerous) {
+        result.reason = "frozen dual hypothesis proof is unavailable: " +
+            response_certificate.reason;
+        return result;
+      }
+      sidecar.hypothesis_proofs.push_back(protectionHypothesisProof(
+          hypothesis.id, response_certificate,
+          raw_detection_factor, cached_proof.raw_factor_scale,
+          covariance_rank_tolerance));
+      sidecar.hypothesis_proofs.back().protected_response =
+          protected_response;
+      sidecar.hypothesis_proofs.back().parent_proof_identity =
+          candidateProofIdentity(*candidate);
+      DualChannelNumericalProofV1 dual_channel_proof;
+      bounds = dualChannelAxisBounds(
+          detector, hypothesis, total_gram, history_gram,
+          protected_response, sigma, nominal_tail,
+          covariance_rank_tolerance, candidateProofIdentity(*candidate),
+          &component, &detector_certificate, &dual_channel_proof);
+      if (bounds.valid) {
+        sidecar.dual_channel_proofs.push_back(
+            std::move(dual_channel_proof));
+      }
+    } else {
+      sidecar.hypothesis_proofs.push_back(std::move(cached_proof));
+      bounds = faultAxisBounds(detector, hypothesis, nominal_tail);
+      component = cached.protected_slopes * bounds.lambda + bounds.k * sigma;
+    }
     if (!bounds.valid) {
       result.reason = "remaining post-FDE hypothesis " +
           std::to_string(hypothesis.id.value()) +
@@ -2141,8 +2310,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
                                             bounds.k);
     result.noncentrality_used = std::max(result.noncentrality_used,
                                          bounds.lambda);
-    const Eigen::Vector3d component =
-        cached.protected_slopes * bounds.lambda + bounds.k * sigma;
+    if (active_dual) result.detector_certificate_id = detector_certificate;
     ProtectionHypothesisComponentProofV1 component_proof;
     component_proof.hypothesis = hypothesis.id;
     component_proof.detector_dof = detector.dof;
@@ -2151,7 +2319,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
     component_proof.axis_tail = bounds.axis_tail;
     component_proof.multiplier = bounds.k;
     component_proof.noncentrality = bounds.lambda;
-    component_proof.dual_channel = false;
+    component_proof.dual_channel = active_dual;
     component_proof.served_component = component;
     sidecar.component_proofs.push_back(std::move(component_proof));
     result.fault_component_m = result.fault_component_m.cwiseMax(component);

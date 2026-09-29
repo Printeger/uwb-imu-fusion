@@ -1,0 +1,312 @@
+{
+  "after": "/tmp/p1-02-sidecar-formal-3x45.pCnV75/run3",
+  "before": "/tmp/p1-02-before-3x45.f9GjUQ/run3",
+  "files": {
+    "bridge.csv": {
+      "after_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+      "before_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+      "mismatches": [],
+      "rows": 0,
+      "status": "PASS"
+    },
+    "candidates.csv": {
+      "after_sha256": "64e610ac6c24aeff91e34fe9dbd522dcc8657d190bb9e47254d8addcc415fabd",
+      "before_sha256": "dc5b2db8cbc85a65c858136e1f024abc1588cd1c71d2fb0130b472398eaa55d4",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "diagnostic_attempts.csv": {
+      "after_sha256": "0ea621f4b31b483ade3f0f7ded55ed714fe5372b1252d7852e17f2de588e5dd0",
+      "before_sha256": "6e110be8771f152aff5d568c9556e2a174bf30bb6003b9d705079464f887b4af",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "diagnostic_candidates.csv": {
+      "after_sha256": "00c5ebd9f56cb8a4d2f58d92bff2954274f5b632b8d779d8114c944754080f92",
+      "before_sha256": "2e8c8c1f19265eeb1aeb76c45e4e0e339706aee0c3a14679c1229ff89741bedd",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "diagnostic_coverage.csv": {
+      "after_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+      "before_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+      "mismatches": [],
+      "rows": 0,
+      "status": "PASS"
+    },
+    "diagnostic_history_summary.csv": {
+      "after_sha256": "2774cabfc5f3b37f90d82c7a6aab275217b54dcd85fee8f19b165f84e6c46a60",
+      "before_sha256": "2774cabfc5f3b37f90d82c7a6aab275217b54dcd85fee8f19b165f84e6c46a60",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "diagnostic_snapshot_identity.csv": {
+      "after_sha256": "89829157b12468b88ade0beaa2529f54dc83215c338b1f56d24c779783fc0b0f",
+      "before_sha256": "89829157b12468b88ade0beaa2529f54dc83215c338b1f56d24c779783fc0b0f",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "diagnostic_square_root.csv": {
+      "after_sha256": "81ef27d4def9209384c90f2f641be08ba4e3ac9f38b265a6540766b0e6020550",
+      "before_sha256": "81ef27d4def9209384c90f2f641be08ba4e3ac9f38b265a6540766b0e6020550",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "diagnostic_state_steps.csv": {
+      "after_sha256": "9f44c3777e7af0e923cd7519670414aa41363d62dce4e6af9622abc09e4585a2",
+      "before_sha256": "9f44c3777e7af0e923cd7519670414aa41363d62dce4e6af9622abc09e4585a2",
+      "mismatches": [],
+      "rows": 450,
+      "status": "PASS"
+    },
+    "hypotheses.csv": {
+      "after_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+      "before_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+      "mismatches": [],
+      "rows": 0,
+      "status": "PASS"
+    },
+    "integrity.csv": {
+      "after_sha256": "391faf350cd96fdd60f97ec40f06119ccb235834ef0a6ab5cf48900f300a591f",
+      "before_sha256": "1c1e20474ea76e83fd8afcb09c81b34690d27666e1593310b17fcec62cf5cc1e",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "states.csv": {
+      "after_sha256": "25115849c2d6ba975d9ee7b95bc0c39cc0480e70bc63025996c9685b0421d890",
+      "before_sha256": "25115849c2d6ba975d9ee7b95bc0c39cc0480e70bc63025996c9685b0421d890",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "transactions.csv": {
+      "after_sha256": "57f048a0b79f7bf8e082723d7ca11b1148cbdcbfbfe37a8a5544a7ffc84a5ff9",
+      "before_sha256": "57f048a0b79f7bf8e082723d7ca11b1148cbdcbfbfe37a8a5544a7ffc84a5ff9",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    }
+  },
+  "mechanically_proved_finish_wall_rows": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45
+  ],
+  "policies": {
+    "bridge.csv": {
+      "absolute_tolerance": 0.0,
+      "ignored_performance_fields": [],
+      "numeric_fields": [],
+      "relative_tolerance": 0.0
+    },
+    "candidates.csv": {
+      "absolute_tolerance": 0.0,
+      "ignored_performance_fields": [
+        "evaluation_wall_ms"
+      ],
+      "numeric_fields": [],
+      "relative_tolerance": 0.0
+    },
+    "diagnostic_attempts.csv": {
+      "absolute_tolerance": 0.0,
+      "ignored_performance_fields": [
+        "base_llt",
+        "base_state_solves",
+        "base_svd",
+        "cache_entries",
+        "candidate_inner_llt",
+        "candidate_reference_svd",
+        "covariance_rhs_columns",
+        "covariance_rhs_solves",
+        "detector_reference_qr",
+        "fault_gram_eigen",
+        "fault_gram_ldlt",
+        "fault_gram_svd",
+        "generic_fault_gram_fallback",
+        "hypothesis_parallel_blocks",
+        "hypothesis_shared_hits",
+        "hypothesis_shared_misses",
+        "llt_state_solve_calls",
+        "low_dim_fault_gram",
+        "spectral_rhs_columns",
+        "spectral_rhs_solves",
+        "statistical_cache_hits",
+        "statistical_cache_misses",
+        "svd_state_solve_calls",
+        "watchdog_reason",
+        "watchdog_sensor_delta_ns",
+        "watchdog_sensor_elapsed_ns",
+        "watchdog_sensor_lag_ns",
+        "watchdog_sensor_stale",
+        "watchdog_wall_elapsed_ns"
+      ],
+      "numeric_fields": [],
+      "relative_tolerance": 0.0
+    },
+    "diagnostic_candidates.csv": {
+      "absolute_tolerance": 0.0,
+      "ignored_performance_fields": [
+        "bridge_ms",
+        "cache_hits",
+        "covariance_solve_count",
+        "fault_map_ms",
+        "kernel_ms",
+        "pl_ms",
+        "post_ms"
+      ],
+      "numeric_fields": [
+        "certificate_margin",
+        "condition_lower_bound",
+        "condition_upper_bound"
+      ],
+      "relative_tolerance": 0.0
+    },
+    "diagnostic_coverage.csv": {
+      "absolute_tolerance": 0.0,
+      "ignored_performance_fields": [],
+      "numeric_fields": [],
+      "relative_tolerance": 0.0
+    },
+    "diagnostic_history_summary.csv": {
+      "absolute_tolerance": 0.0,
+      "ignored_performance_fields": [],
+      "numeric_fields": [],
+      "relative_tolerance": 0.0
+    },
+    "diagnostic_snapshot_identity.csv": {
+      "absolute_tolerance": 0.0,
+      "ignored_performance_fields": [],
+      "numeric_fields": [],
+      "relative_tolerance": 0.0
+    },
+    "diagnostic_square_root.csv": {
+      "absolute_tolerance": 0.0,
+      "ignored_performance_fields": [],
+      "numeric_fields": [
+        "condition_estimate",
+        "forward_error_bound",
+        "identity_residual_relative",
+        "parity_relative_difference",
+        "r_diagonal_max",
+        "r_diagonal_min",
+        "solution_relative_difference",
+        "statistic"
+      ],
+      "relative_tolerance": 0.0
+    },
+    "diagnostic_state_steps.csv": {
+      "absolute_tolerance": 0.0,
+      "ignored_performance_fields": [],
+      "numeric_fields": [],
+      "relative_tolerance": 0.0
+    },
+    "hypotheses.csv": {
+      "absolute_tolerance": 0.0,
+      "ignored_performance_fields": [],
+      "numeric_fields": [],
+      "relative_tolerance": 0.0
+    },
+    "integrity.csv": {
+      "absolute_tolerance": 0.0,
+      "ignored_performance_fields": [],
+      "numeric_fields": [
+        "allocated_hmi_risk",
+        "bridge_pl_x",
+        "bridge_pl_y",
+        "bridge_pl_z",
+        "conditional_statistic",
+        "conditional_threshold",
+        "global_statistic",
+        "global_threshold",
+        "hmi_risk_requirement",
+        "hpl_m",
+        "pl_x",
+        "pl_y",
+        "pl_z",
+        "postfit_statistic",
+        "postfit_threshold",
+        "vpl_m"
+      ],
+      "relative_tolerance": 0.0
+    },
+    "states.csv": {
+      "absolute_tolerance": 0.0,
+      "ignored_performance_fields": [],
+      "numeric_fields": [
+        "bax",
+        "bay",
+        "baz",
+        "bgx",
+        "bgy",
+        "bgz",
+        "px",
+        "py",
+        "pz",
+        "qw",
+        "qx",
+        "qy",
+        "qz",
+        "vx",
+        "vy",
+        "vz"
+      ],
+      "relative_tolerance": 0.0
+    },
+    "transactions.csv": {
+      "absolute_tolerance": 0.0,
+      "ignored_performance_fields": [],
+      "numeric_fields": [],
+      "relative_tolerance": 0.0
+    }
+  },
+  "schema": "uwb-imu-pl/p1-02-output-equivalence/v1",
+  "status": "PASS"
+}

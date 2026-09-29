@@ -1,0 +1,1067 @@
+diff --git a/include/uwb_imu_pl/integrity/hypothesis_evidence.hpp b/include/uwb_imu_pl/integrity/hypothesis_evidence.hpp
+index 504c4e0..0046341 100644
+--- a/include/uwb_imu_pl/integrity/hypothesis_evidence.hpp
++++ b/include/uwb_imu_pl/integrity/hypothesis_evidence.hpp
+@@ -96,0 +97,16 @@ struct FrozenHypothesisPlEntry {
++// R08: fixed-size numerical payload for the overwhelmingly common one/two
++// mode hypotheses (q_h <= 3).  Evidence owns the single construction of
++// Gamma, t and G; KEEP_ALL dual-channel PL consumes the same values instead of
++// rebuilding a window-wide fault map and rescanning detector row roles.  The
++// dynamic reference path remains mandatory when `valid` is false.
++struct FrozenHypothesisDualBlock {
++  HypothesisId hypothesis;
++  int dimension = 0;
++  Eigen::Matrix3d total_gram = Eigen::Matrix3d::Zero();
++  Eigen::Matrix3d history_gram = Eigen::Matrix3d::Zero();
++  Eigen::Vector3d score = Eigen::Vector3d::Zero();
++  Eigen::Matrix3d protected_response = Eigen::Matrix3d::Zero();
++  double profile_statistic = std::numeric_limits<double>::infinity();
++  bool valid = false;
++};
++
+@@ -159,0 +176,26 @@ struct FrozenHypothesisNumerics {
++// ABI-stable R08 sidecar.  FrozenHypothesisNumerics retains its exact P1-01
++// public layout; new dual-channel material crosses the DSO boundary only in
++// this separately owned type.
++struct FrozenHypothesisDualNumerics {
++  std::shared_ptr<const FrozenIntegrityWindowSeal> window_owner;
++  const LinearizedIntegrityWindow* window_payload = nullptr;
++  std::shared_ptr<const FrozenHypothesisNumerics> base_owner;
++  const FrozenHypothesisNumerics* base_payload = nullptr;
++  std::uint64_t candidate_hypothesis_fingerprint = 0;
++  std::vector<FrozenHypothesisDualBlock> dual_blocks;
++  Eigen::MatrixXd candidate_detection_modes;
++  Eigen::MatrixXd candidate_protected_modes;
++  Eigen::MatrixXd candidate_protected_factor;
++  Eigen::Matrix3d candidate_protected_covariance = Eigen::Matrix3d::Zero();
++  std::vector<std::uint8_t> candidate_mode_active;
++  std::uint64_t proof_digest = 0;
++  bool valid = false;
++  std::string reason;
++};
++
++bool validateFrozenHypothesisDualProof(
++    const FrozenWindowAdmission& admission,
++    const FrozenHypothesisNumerics& base,
++    const FrozenHypothesisDualNumerics& frozen,
++    std::string* reason = nullptr);
++
+@@ -182,0 +225,8 @@ class HypothesisEvidenceEvaluator {
++  std::vector<FaultModeEvidence> evaluateAll(
++      const FrozenWindowAdmission& admission,
++      const std::vector<FaultModeBasis>& modes,
++      std::vector<FaultHypothesisV2>* hypotheses,
++      double squared_detector_threshold,
++      std::shared_ptr<const FrozenHypothesisNumerics>* shared,
++      std::shared_ptr<const FrozenHypothesisDualNumerics>* shared_dual,
++      CandidateWorkerPool* worker_pool = nullptr) const;
+diff --git a/include/uwb_imu_pl/integrity/protection_level_v2.hpp b/include/uwb_imu_pl/integrity/protection_level_v2.hpp
+index abff91a..2272565 100644
+--- a/include/uwb_imu_pl/integrity/protection_level_v2.hpp
++++ b/include/uwb_imu_pl/integrity/protection_level_v2.hpp
+@@ -272,0 +273,10 @@ class ProtectionLevelV2 {
++  ProtectionLevelV2Result computeFrozenAllIn(
++      const FrozenWindowAdmission& admission,
++      CandidateEvaluation* candidate,
++      const DetectorResultV2& detector,
++      const std::vector<FaultHypothesisV2>& remaining_hypotheses,
++      const std::vector<FaultModeBasis>& modes,
++      const FrozenHypothesisNumerics& frozen,
++      const FrozenHypothesisDualNumerics& frozen_dual,
++      std::uint64_t fault_model_policy_fingerprint,
++      const RiskBudgetV2& risk) const;
+@@ -277,0 +288,11 @@ class ProtectionLevelV2 {
++  ProtectionLevelV2Result computeFrozenAllInImpl(
++      const LinearizedIntegrityWindow& window,
++      CandidateEvaluation* candidate,
++      const DetectorResultV2& detector,
++      const std::vector<FaultHypothesisV2>& remaining_hypotheses,
++      const std::vector<FaultModeBasis>& modes,
++      const FrozenHypothesisNumerics& frozen,
++      const FrozenHypothesisDualNumerics* frozen_dual,
++      std::uint64_t fault_model_policy_fingerprint,
++      const RiskBudgetV2& risk,
++      const FrozenWindowAdmission* admission) const;
+diff --git a/src/uwb_imu_pl/integrity/hypothesis_evidence.cpp b/src/uwb_imu_pl/integrity/hypothesis_evidence.cpp
+index 4ad8656..b42c31b 100644
+--- a/src/uwb_imu_pl/integrity/hypothesis_evidence.cpp
++++ b/src/uwb_imu_pl/integrity/hypothesis_evidence.cpp
+@@ -76,0 +77,71 @@ std::uint64_t frozenEntryProofKey(const FrozenHypothesisPlEntry& entry) {
++std::uint64_t frozenDualProofDigest(
++    const FrozenHypothesisNumerics& base,
++    const FrozenHypothesisDualNumerics& frozen) {
++  std::uint64_t hash = 1469598103934665603ULL;
++  const std::uint64_t owner_token = frozen.window_owner
++      ? frozen.window_owner->owner_token : 0;
++  const std::uintptr_t payload_address =
++      reinterpret_cast<std::uintptr_t>(frozen.window_payload);
++  hashBytes(&hash, &owner_token, sizeof(owner_token));
++  hashBytes(&hash, &payload_address, sizeof(payload_address));
++  const auto window_id = base.window_id.value();
++  hashBytes(&hash, &window_id, sizeof(window_id));
++  hashBytes(&hash, &base.version, sizeof(base.version));
++  hashBytes(&hash, &base.window_content_fingerprint,
++            sizeof(base.window_content_fingerprint));
++  hashBytes(&hash, &base.numerical_contract_fingerprint,
++            sizeof(base.numerical_contract_fingerprint));
++  hashBytes(&hash, &base.hypothesis_fingerprint,
++            sizeof(base.hypothesis_fingerprint));
++  hashBytes(&hash, &frozen.candidate_hypothesis_fingerprint,
++            sizeof(frozen.candidate_hypothesis_fingerprint));
++  hashBytes(&hash, &base.fault_mode_fingerprint,
++            sizeof(base.fault_mode_fingerprint));
++  hashBytes(&hash, &base.fault_model_policy_fingerprint,
++            sizeof(base.fault_model_policy_fingerprint));
++  hashMatrix(&hash, base.protected_covariance);
++  hashMatrix(&hash, frozen.candidate_detection_modes);
++  hashMatrix(&hash, frozen.candidate_protected_modes);
++  hashMatrix(&hash, frozen.candidate_protected_factor);
++  hashMatrix(&hash, frozen.candidate_protected_covariance);
++  const std::size_t activity_size = frozen.candidate_mode_active.size();
++  hashBytes(&hash, &activity_size, sizeof(activity_size));
++  if (!frozen.candidate_mode_active.empty()) {
++    hashBytes(&hash, frozen.candidate_mode_active.data(),
++              frozen.candidate_mode_active.size());
++  }
++  const std::size_t entry_count = base.pl_entries.size();
++  hashBytes(&hash, &entry_count, sizeof(entry_count));
++  for (const auto& entry : base.pl_entries) {
++    const std::uint64_t identity = frozenEntryProofKey(entry);
++    hashBytes(&hash, &identity, sizeof(identity));
++  }
++  const std::size_t block_count = frozen.dual_blocks.size();
++  hashBytes(&hash, &block_count, sizeof(block_count));
++  for (const auto& block : frozen.dual_blocks) {
++    const auto hypothesis = block.hypothesis.value();
++    hashBytes(&hash, &hypothesis, sizeof(hypothesis));
++    hashBytes(&hash, &block.dimension, sizeof(block.dimension));
++    hashMatrix(&hash, block.total_gram);
++    hashMatrix(&hash, block.history_gram);
++    hashMatrix(&hash, block.score);
++    hashMatrix(&hash, block.protected_response);
++    hashBytes(&hash, &block.profile_statistic,
++              sizeof(block.profile_statistic));
++    hashBytes(&hash, &block.valid, sizeof(block.valid));
++  }
++  hashBytes(&hash, &base.mode_count, sizeof(base.mode_count));
++  hashBytes(&hash, &base.hypothesis_count, sizeof(base.hypothesis_count));
++  hashBytes(&hash, &base.dimension_one_count, sizeof(base.dimension_one_count));
++  hashBytes(&hash, &base.dimension_two_count, sizeof(base.dimension_two_count));
++  hashBytes(&hash, &base.dimension_three_count,
++            sizeof(base.dimension_three_count));
++  hashBytes(&hash, &base.dimension_other_count,
++            sizeof(base.dimension_other_count));
++  hashBytes(&hash, &base.low_dimensional_count,
++            sizeof(base.low_dimensional_count));
++  hashBytes(&hash, &base.generic_fallback_count,
++            sizeof(base.generic_fallback_count));
++  return hash;
++}
++
+@@ -514 +585,3 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+-    CandidateWorkerPool* worker_pool) {
++    std::shared_ptr<const FrozenHypothesisDualNumerics>* shared_dual,
++    CandidateWorkerPool* worker_pool,
++    const FrozenWindowAdmission* admission) {
+@@ -774,0 +848,6 @@ std::vector<FaultModeEvidence> evaluateContiguous(
++  Eigen::MatrixXd history_mode_response;
++  Eigen::MatrixXd candidate_detection_modes;
++  Eigen::MatrixXd candidate_protected_modes;
++  Eigen::MatrixXd candidate_protected_factor;
++  bool history_response_valid = window.history_summary.nu_perp == 0;
++  bool candidate_response_valid = false;
+@@ -788,0 +868,52 @@ std::vector<FaultModeEvidence> evaluateContiguous(
++    // The active dual-channel history response is the raw fault payload on
++    // the detector-only tail of the unique frozen history block.  Construct
++    // it once for all modes; per-hypothesis Gamma_h is then only a <=3 block
++    // product and never rescans candidate row roles.
++    std::size_t history_block_count = 0;
++    for (std::size_t block_number = 0;
++         block_number < window.blocks.size(); ++block_number) {
++      const auto& block = window.blocks[block_number];
++      if (block.whitening_model_id != "history_summary_sqrt_d1") continue;
++      ++history_block_count;
++      const Eigen::Index history_rows = window.history_summary.nu_perp;
++      if (history_rows > 0 && history_rows <= block.residual_whitened.size() &&
++          dense.cols() == total_columns) {
++        history_mode_response = dense.middleRows(
++            block_offsets[block_number] + block.residual_whitened.size() -
++                history_rows,
++            history_rows);
++      }
++    }
++    history_response_valid = window.history_summary.nu_perp == 0 ||
++        (history_block_count == 1 &&
++         history_mode_response.rows() == window.history_summary.nu_perp &&
++         history_mode_response.cols() == total_columns &&
++         history_mode_response.allFinite());
++    // Match RawFactorCertificate's established Jacobi-SVD operation order so
++    // the reused dual certificate is bit-identical, not merely close.  The
++    // decomposition and unique-mode projection occur once per immutable
++    // candidate instead of once again inside PL and once per hypothesis.
++    Eigen::JacobiSVD<Eigen::MatrixXd> candidate_svd(
++        window.H, Eigen::ComputeThinU | Eigen::ComputeThinV);
++    const Eigen::VectorXd singular = candidate_svd.singularValues();
++    if (singular.size() == window.H.cols() && singular.allFinite() &&
++        singular.size() > 0 && singular(singular.size() - 1) > 0.0) {
++      const Eigen::MatrixXd coordinates =
++          candidate_svd.matrixU().transpose() * dense;
++      candidate_detection_modes =
++          dense - candidate_svd.matrixU() * coordinates;
++      candidate_protected_factor = window.protected_state_map *
++          candidate_svd.matrixV() *
++          singular.cwiseInverse().asDiagonal();
++      candidate_protected_modes = candidate_protected_factor * coordinates;
++      candidate_response_valid = candidate_detection_modes.rows() ==
++              window.H.rows() &&
++          candidate_detection_modes.cols() == total_columns &&
++          candidate_detection_modes.allFinite() &&
++          candidate_protected_factor.rows() == 3 &&
++          candidate_protected_factor.cols() == window.H.cols() &&
++          candidate_protected_factor.allFinite() &&
++          candidate_protected_modes.rows() == 3 &&
++          candidate_protected_modes.cols() == total_columns &&
++          candidate_protected_modes.allFinite();
++    }
+@@ -897,0 +1029,5 @@ std::vector<FaultModeEvidence> evaluateContiguous(
++  auto dual_context = std::make_shared<FrozenHypothesisDualNumerics>();
++  if (admission) {
++    dual_context->window_owner = admission->owner;
++    dual_context->window_payload = admission->payload;
++  }
+@@ -910,0 +1047,35 @@ std::vector<FaultModeEvidence> evaluateContiguous(
++  dual_context->candidate_detection_modes = candidate_detection_modes;
++  dual_context->candidate_protected_modes = candidate_protected_modes;
++  dual_context->candidate_protected_factor = candidate_protected_factor;
++  dual_context->candidate_mode_active.resize(modes.size(), 0);
++  if (dense.cols() == total_columns) {
++    for (std::size_t index = 0; index < descriptors.size(); ++index) {
++      const auto& descriptor = descriptors[index];
++      dual_context->candidate_mode_active[index] =
++          !dense.middleCols(descriptor.offset, descriptor.dimension)
++               .isZero(0.0);
++    }
++  }
++  std::set<std::uint64_t> inactive_candidate_modes;
++  for (std::size_t index = 0; index < modes.size(); ++index) {
++    if (!dual_context->candidate_mode_active[index]) {
++      inactive_candidate_modes.insert(modes[index].id.value());
++    }
++  }
++  auto candidate_hypotheses = *hypotheses;
++  candidate_hypotheses.erase(std::remove_if(
++      candidate_hypotheses.begin(), candidate_hypotheses.end(),
++      [&](FaultHypothesisV2& hypothesis) {
++        hypothesis.modes.erase(std::remove_if(
++            hypothesis.modes.begin(), hypothesis.modes.end(),
++            [&](FaultModeId mode) {
++              return inactive_candidate_modes.count(mode.value()) != 0;
++            }), hypothesis.modes.end());
++        return hypothesis.modes.empty();
++      }), candidate_hypotheses.end());
++  dual_context->candidate_hypothesis_fingerprint =
++      hypothesisSetFingerprint(candidate_hypotheses);
++  if (candidate_protected_factor.rows() == 3) {
++    dual_context->candidate_protected_covariance =
++        candidate_protected_factor * candidate_protected_factor.transpose();
++  }
+@@ -920,0 +1092 @@ std::vector<FaultModeEvidence> evaluateContiguous(
++  dual_context->dual_blocks.resize(hypotheses->size());
+@@ -930,0 +1103 @@ std::vector<FaultModeEvidence> evaluateContiguous(
++      auto& dual_block = dual_context->dual_blocks[hypothesis_index];
+@@ -933,0 +1107 @@ std::vector<FaultModeEvidence> evaluateContiguous(
++      dual_block.hypothesis = hypothesis.id;
+@@ -1086,0 +1261,44 @@ std::vector<FaultModeEvidence> evaluateContiguous(
++        dual_block.dimension = dimension;
++        dual_block.total_gram = gram;
++        dual_block.score = score;
++        dual_block.protected_response = protected_fault;
++        if (candidate_detection_modes.cols() == total_columns &&
++            candidate_protected_modes.cols() == total_columns) {
++          Eigen::MatrixXd direct_factor(candidate_detection_modes.rows(),
++                                        dimension);
++          int direct_offset = 0;
++          for (const auto part : parts) {
++            const auto& descriptor = descriptors[part];
++            direct_factor.middleCols(direct_offset, descriptor.dimension) =
++                candidate_detection_modes.middleCols(
++                    descriptor.offset, descriptor.dimension);
++            dual_block.protected_response.middleCols(
++                direct_offset, descriptor.dimension) =
++                candidate_protected_modes.middleCols(
++                    descriptor.offset, descriptor.dimension);
++            direct_offset += descriptor.dimension;
++          }
++          dual_block.total_gram.topLeftCorner(dimension, dimension) =
++              direct_factor.transpose() * direct_factor;
++        }
++        if (history_mode_response.cols() == total_columns) {
++          Eigen::MatrixXd history_factor(history_mode_response.rows(),
++                                         dimension);
++          int history_offset = 0;
++          for (const auto part : parts) {
++            const auto& descriptor = descriptors[part];
++            history_factor.middleCols(history_offset, descriptor.dimension) =
++                history_mode_response.middleCols(descriptor.offset,
++                                                  descriptor.dimension);
++            history_offset += descriptor.dimension;
++          }
++          dual_block.history_gram.topLeftCorner(dimension, dimension) =
++              history_factor.transpose() * history_factor;
++        }
++        dual_block.valid = candidate_response_valid &&
++            history_response_valid && raw_detection_factor.rows() > 0 &&
++            raw_detection_factor.cols() == dimension &&
++            dual_block.total_gram.allFinite() &&
++            dual_block.history_gram.allFinite() &&
++            dual_block.score.allFinite() &&
++            dual_block.protected_response.allFinite();
+@@ -1115,0 +1334 @@ std::vector<FaultModeEvidence> evaluateContiguous(
++        dual_block.profile_statistic = evidence.profile_j;
+@@ -1253 +1472,14 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+-  if (shared) *shared = std::move(context);
++  std::shared_ptr<const FrozenHypothesisNumerics> sealed_base = context;
++  dual_context->base_owner = sealed_base;
++  dual_context->base_payload = sealed_base.get();
++  dual_context->valid = context->valid && admission;
++  if (dual_context->valid) {
++    dual_context->proof_digest = frozenDualProofDigest(
++        *sealed_base, *dual_context);
++    dual_context->valid = dual_context->proof_digest != 0;
++  }
++  if (!dual_context->valid) {
++    dual_context->reason = "sealed dual hypothesis context is unavailable";
++  }
++  if (shared) *shared = sealed_base;
++  if (shared_dual) *shared_dual = std::move(dual_context);
+@@ -1509,0 +1742,81 @@ std::vector<FaultModeEvidence> evaluateMapped(
++bool validateFrozenHypothesisDualProof(
++    const FrozenWindowAdmission& admission,
++    const FrozenHypothesisNumerics& base,
++    const FrozenHypothesisDualNumerics& frozen,
++    std::string* reason) {
++  auto reject = [&](const std::string& message) {
++    if (reason) *reason = message;
++    return false;
++  };
++  if (!admission || !frozen.window_owner || !frozen.window_payload ||
++      !frozen.base_owner || !frozen.base_payload) {
++    return reject("frozen dual context has no immutable owner binding");
++  }
++  const bool same_owner =
++      frozen.window_owner.get() == admission.owner.get() &&
++      !frozen.window_owner.owner_before(admission.owner) &&
++      !admission.owner.owner_before(frozen.window_owner);
++  if (!same_owner || frozen.window_payload != admission.payload ||
++      frozen.window_owner->payload.get() != frozen.window_payload ||
++      frozen.base_payload != &base || frozen.base_owner.get() != &base) {
++    return reject("frozen dual context owner/payload identity mismatch");
++  }
++  const auto& window = admission.window();
++  if (!frozen.valid || frozen.proof_digest == 0 || !window.numerics ||
++      base.window_id != window.id || !(base.version == window.version) ||
++      base.window_content_fingerprint != admission.owner->content_hash ||
++      base.window_content_fingerprint !=
++          window.numerics->content_fingerprint ||
++      base.numerical_contract_fingerprint !=
++          window.numerics->numerical_contract_fingerprint) {
++    return reject("frozen dual context sealed window identity mismatch");
++  }
++  if (base.mode_count != frozen.candidate_mode_active.size() ||
++      base.hypothesis_count != base.pl_entries.size() ||
++      base.hypothesis_count != frozen.dual_blocks.size() ||
++      base.dimension_one_count + base.dimension_two_count +
++              base.dimension_three_count + base.dimension_other_count !=
++          base.hypothesis_count ||
++      base.low_dimensional_count + base.generic_fallback_count !=
++          base.hypothesis_count) {
++    return reject("frozen dual context census structure mismatch");
++  }
++  if (frozen.candidate_detection_modes.rows() != window.H.rows() ||
++      frozen.candidate_detection_modes.cols() <= 0 ||
++      frozen.candidate_protected_modes.rows() != 3 ||
++      frozen.candidate_protected_modes.cols() !=
++          frozen.candidate_detection_modes.cols() ||
++      frozen.candidate_protected_factor.rows() != 3 ||
++      frozen.candidate_protected_factor.cols() != window.H.cols() ||
++      !frozen.candidate_detection_modes.allFinite() ||
++      !frozen.candidate_protected_modes.allFinite() ||
++      !frozen.candidate_protected_factor.allFinite() ||
++      !frozen.candidate_protected_covariance.allFinite()) {
++    return reject("frozen dual context response structure mismatch");
++  }
++  if (std::any_of(frozen.candidate_mode_active.begin(),
++                  frozen.candidate_mode_active.end(),
++                  [](std::uint8_t active) { return active > 1; })) {
++    return reject("frozen dual context mode activity is invalid");
++  }
++  std::set<std::uint64_t> block_ids;
++  std::set<std::uint64_t> entry_ids;
++  for (std::size_t index = 0; index < frozen.dual_blocks.size(); ++index) {
++    const auto& block = frozen.dual_blocks[index];
++    const auto& entry = base.pl_entries[index];
++    if (!block_ids.insert(block.hypothesis.value()).second ||
++        !entry_ids.insert(entry.hypothesis.value()).second ||
++        block.hypothesis != entry.hypothesis || block.dimension < 0 ||
++        block.dimension > 3 || (block.valid && block.dimension == 0) ||
++        !block.total_gram.allFinite() || !block.history_gram.allFinite() ||
++        !block.score.allFinite() || !block.protected_response.allFinite() ||
++        !std::isfinite(block.profile_statistic)) {
++      return reject("frozen dual hypothesis block structure mismatch");
++    }
++  }
++  if (frozenDualProofDigest(base, frozen) != frozen.proof_digest) {
++    return reject("frozen dual context proof digest mismatch");
++  }
++  return true;
++}
++
+@@ -1748,0 +2062 @@ std::vector<FaultModeEvidence> evaluateAllImpl(
++    std::shared_ptr<const FrozenHypothesisDualNumerics>* shared_dual,
+@@ -1752,0 +2067 @@ std::vector<FaultModeEvidence> evaluateAllImpl(
++  if (shared_dual) shared_dual->reset();
+@@ -1825 +2140 @@ std::vector<FaultModeEvidence> evaluateAllImpl(
+-                              worker_pool);
++                              shared_dual, worker_pool, admission);
+@@ -1842 +2157,2 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
+-                         squared_detector_threshold, shared, worker_pool,
++                         squared_detector_threshold, shared, nullptr,
++                         worker_pool,
+@@ -1858 +2174,2 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
+-                         squared_detector_threshold, shared, worker_pool,
++                         squared_detector_threshold, shared, nullptr,
++                         worker_pool,
+@@ -1861,0 +2179,18 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
++std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
++    const FrozenWindowAdmission& admission,
++    const std::vector<FaultModeBasis>& modes,
++    std::vector<FaultHypothesisV2>* hypotheses,
++    double squared_detector_threshold,
++    std::shared_ptr<const FrozenHypothesisNumerics>* shared,
++    std::shared_ptr<const FrozenHypothesisDualNumerics>* shared_dual,
++    CandidateWorkerPool* worker_pool) const {
++  if (!admission) {
++    if (shared) shared->reset();
++    if (shared_dual) shared_dual->reset();
++    return {};
++  }
++  return evaluateAllImpl(config_, admission.window(), modes, hypotheses,
++                         squared_detector_threshold, shared, shared_dual,
++                         worker_pool, &admission);
++}
++
+diff --git a/src/uwb_imu_pl/integrity/integrity_monitor.cpp b/src/uwb_imu_pl/integrity/integrity_monitor.cpp
+index 14601d5..e5b10d6 100644
+--- a/src/uwb_imu_pl/integrity/integrity_monitor.cpp
++++ b/src/uwb_imu_pl/integrity/integrity_monitor.cpp
+@@ -2833,0 +2834,2 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
++        std::shared_ptr<const FrozenHypothesisDualNumerics>
++            shared_hypothesis_dual_numerics;
+@@ -2838 +2840 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
+-            candidate_workers_.get());
++            &shared_hypothesis_dual_numerics, candidate_workers_.get());
+@@ -3396,7 +3398,125 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
+-            // Production PL always consumes candidate-specific dual-channel
+-            // detector material.  The pooled/frozen path remains an explicit
+-            // offline reference and is not allowed to certify a five-profile
+-            // output.
+-            auto projected_modes = projectPostActionModes(
+-                window, transaction, models, action, indexes);
+-            shared_pl.mode_maps = std::move(projected_modes.mode_maps);
++            const bool keep_all = action.groups_to_remove.empty() &&
++                action.groups_to_add.empty() && action.added_blocks.empty();
++            std::string frozen_dual_proof_reason;
++            const bool frozen_dual_sealed = shared_hypothesis_numerics &&
++                shared_hypothesis_dual_numerics &&
++                validateFrozenHypothesisDualProof(
++                    window_admission, *shared_hypothesis_numerics,
++                    *shared_hypothesis_dual_numerics,
++                    &frozen_dual_proof_reason);
++            const bool reuse_frozen_dual = keep_all &&
++                frozen_dual_sealed &&
++                !capture_action_proof && shared_pl.bridges.empty();
++            ProjectedPostActionModes projected_modes;
++            ProjectedPostActionModes exact_projected_modes;
++            bool exact_candidate_census_proven = false;
++            if (reuse_frozen_dual &&
++                shared_hypothesis_dual_numerics->candidate_mode_active.size() ==
++                    models.modes.size()) {
++              std::set<std::uint64_t> inactive_modes;
++              for (std::size_t index = 0; index < models.modes.size(); ++index) {
++                if (!shared_hypothesis_dual_numerics->candidate_mode_active[index]) {
++                  inactive_modes.insert(models.modes[index].id.value());
++                }
++              }
++              projected_modes.hypotheses = models.hypotheses;
++              std::vector<FaultHypothesisV2> active_hypotheses;
++              active_hypotheses.reserve(projected_modes.hypotheses.size());
++              for (auto& hypothesis : projected_modes.hypotheses) {
++                hypothesis.modes.erase(std::remove_if(
++                    hypothesis.modes.begin(), hypothesis.modes.end(),
++                    [&](FaultModeId id) {
++                      return inactive_modes.count(id.value()) != 0;
++                    }), hypothesis.modes.end());
++                if (hypothesis.modes.empty()) continue;
++                hypothesis.affected_groups.clear();
++                for (const auto mode_id : hypothesis.modes) {
++                  const auto mode = indexes.modes.find(mode_id.value());
++                  if (mode == indexes.modes.end()) continue;
++                  hypothesis.affected_groups.insert(
++                      hypothesis.affected_groups.end(),
++                      mode->second->affected_groups.begin(),
++                      mode->second->affected_groups.end());
++                }
++                std::sort(hypothesis.affected_groups.begin(),
++                          hypothesis.affected_groups.end());
++                hypothesis.affected_groups.erase(std::unique(
++                    hypothesis.affected_groups.begin(),
++                    hypothesis.affected_groups.end()),
++                    hypothesis.affected_groups.end());
++                hypothesis.A.resize(0, 0);
++                active_hypotheses.push_back(std::move(hypothesis));
++              }
++              projected_modes.hypotheses = std::move(active_hypotheses);
++              // The compact activity bitmap is never a correctness oracle.
++              // Prove its candidate census against the established exact
++              // projector before consuming any frozen dual block.  A mismatch
++              // keeps the exact maps and routes the entire candidate through
++              // computeShared below.
++              exact_projected_modes = projectPostActionModes(
++                  window, transaction, models, action, indexes);
++              exact_candidate_census_proven =
++                  hypothesisSetFingerprint(projected_modes.hypotheses) ==
++                      hypothesisSetFingerprint(
++                          exact_projected_modes.hypotheses) &&
++                  hypothesisSetFingerprint(
++                      exact_projected_modes.hypotheses) ==
++                      shared_hypothesis_dual_numerics
++                          ->candidate_hypothesis_fingerprint;
++              if (exact_candidate_census_proven) {
++                projected_modes.hypotheses =
++                    exact_projected_modes.hypotheses;
++              }
++            }
++            std::map<std::uint64_t, const FrozenHypothesisDualBlock*>
++                frozen_dual_by_hypothesis;
++            std::map<std::uint64_t, const FrozenHypothesisPlEntry*>
++                frozen_pl_by_hypothesis;
++            if (reuse_frozen_dual) {
++              for (const auto& block : shared_hypothesis_dual_numerics->dual_blocks) {
++                frozen_dual_by_hypothesis.emplace(
++                    block.hypothesis.value(), &block);
++              }
++              for (const auto& entry : shared_hypothesis_numerics->pl_entries) {
++                frozen_pl_by_hypothesis.emplace(
++                    entry.hypothesis.value(), &entry);
++              }
++            }
++            const bool complete_frozen_dual = reuse_frozen_dual &&
++                exact_candidate_census_proven &&
++                shared_hypothesis_dual_numerics->candidate_mode_active.size() ==
++                    models.modes.size() &&
++                shared_hypothesis_dual_numerics->dual_blocks.size() ==
++                    models.hypotheses.size() &&
++                std::all_of(
++                    projected_modes.hypotheses.begin(),
++                    projected_modes.hypotheses.end(),
++                    [&](const FaultHypothesisV2& hypothesis) {
++                      const auto block = frozen_dual_by_hypothesis.find(
++                          hypothesis.id.value());
++                      const auto pl = frozen_pl_by_hypothesis.find(
++                          hypothesis.id.value());
++                      return block != frozen_dual_by_hypothesis.end() &&
++                          block->second->valid &&
++                          block->second->dimension > 0 &&
++                          block->second->dimension <= 3 &&
++                          pl != frozen_pl_by_hypothesis.end() &&
++                          pl->second->valid &&
++                          pl->second->monitorability.monitorable &&
++                          (pl->second->gram_spd ||
++                           pl->second->bound_from_projected_path);
++                    });
++            if (complete_frozen_dual) {
++              // R08: evidence already produced Gamma_c/Gamma_h/t/G/J for
++              // this exact immutable KEEP_ALL candidate.  Preserve every
++              // hypothesis and consume that context directly; any identity
++              // or fixed-block miss remains fail-closed inside the PL gate.
++            } else {
++              if (exact_projected_modes.hypotheses.empty() &&
++                  exact_projected_modes.mode_maps.empty()) {
++                exact_projected_modes = projectPostActionModes(
++                    window, transaction, models, action, indexes);
++              }
++              projected_modes = std::move(exact_projected_modes);
++              shared_pl.mode_maps = std::move(projected_modes.mode_maps);
++            }
+@@ -3409 +3529,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
+-              if (capture_action_proof) {
++              if (complete_frozen_dual) {
++                evaluated.protection_level =
++                    ProtectionLevelV2().computeFrozenAllIn(
++                        window_admission, &candidate, evaluated.post,
++                        projected_modes.hypotheses, models.modes,
++                        *shared_hypothesis_numerics,
++                        *shared_hypothesis_dual_numerics,
++                        evidence_config.fault_model_policy_fingerprint,
++                        cfg.risk_v2);
++              } else if (capture_action_proof) {
+diff --git a/src/uwb_imu_pl/integrity/protection_level_v2.cpp b/src/uwb_imu_pl/integrity/protection_level_v2.cpp
+index 6e1e0a7..6c44b33 100644
+--- a/src/uwb_imu_pl/integrity/protection_level_v2.cpp
++++ b/src/uwb_imu_pl/integrity/protection_level_v2.cpp
+@@ -2016,0 +2017,37 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
++  return computeFrozenAllInImpl(
++      window, candidate, detector, hypotheses, modes, frozen,
++      nullptr, fault_model_policy_fingerprint, risk, nullptr);
++}
++
++ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
++    const FrozenWindowAdmission& admission,
++    CandidateEvaluation* candidate,
++    const DetectorResultV2& detector,
++    const std::vector<FaultHypothesisV2>& hypotheses,
++    const std::vector<FaultModeBasis>& modes,
++    const FrozenHypothesisNumerics& frozen,
++    const FrozenHypothesisDualNumerics& frozen_dual,
++    std::uint64_t fault_model_policy_fingerprint,
++    const RiskBudgetV2& risk) const {
++  if (!admission) {
++    ProtectionLevelV2Result result;
++    result.reason = "invalid immutable frozen-window admission: " +
++        admission.reason;
++    return result;
++  }
++  return computeFrozenAllInImpl(
++      admission.window(), candidate, detector, hypotheses, modes, frozen,
++      &frozen_dual, fault_model_policy_fingerprint, risk, &admission);
++}
++
++ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
++    const LinearizedIntegrityWindow& window,
++    CandidateEvaluation* candidate,
++    const DetectorResultV2& detector,
++    const std::vector<FaultHypothesisV2>& hypotheses,
++    const std::vector<FaultModeBasis>& modes,
++    const FrozenHypothesisNumerics& frozen,
++    const FrozenHypothesisDualNumerics* frozen_dual,
++    std::uint64_t fault_model_policy_fingerprint,
++    const RiskBudgetV2& risk,
++    const FrozenWindowAdmission* admission) const {
+@@ -2022,0 +2060,13 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
++  const bool active_dual =
++      detector.contract_mode == DetectorContractMode::ActiveDualChannelV6 &&
++      detector.channel_history_dof > 0;
++  std::string frozen_dual_reason;
++  if (active_dual && !admission) {
++    frozen_dual_reason =
++        "frozen dual context has no immutable owner binding";
++  } else if (active_dual && !frozen_dual) {
++    frozen_dual_reason = "frozen dual sidecar is unavailable";
++  }
++  const bool frozen_dual_proof_valid = !active_dual ||
++      (admission && frozen_dual && validateFrozenHypothesisDualProof(
++          *admission, frozen, *frozen_dual, &frozen_dual_reason));
+@@ -2027,2 +2077,2 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-      frozen.window_content_fingerprint ==
+-          integrityWindowFingerprint(window) &&
++      (admission || frozen.window_content_fingerprint ==
++          integrityWindowFingerprint(window)) &&
+@@ -2031 +2080,0 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-      frozen.hypothesis_fingerprint == hypothesisSetFingerprint(hypotheses) &&
+@@ -2036 +2085,3 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-      frozen.pl_entries.size() == hypotheses.size();
++      (!frozen_dual || frozen.pl_entries.size() ==
++           frozen_dual->dual_blocks.size()) &&
++      frozen_dual_proof_valid;
+@@ -2039 +2090,2 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-                                        &detector_contract_reason) ||
++                                        &detector_contract_reason,
++                                        admission) ||
+@@ -2043 +2095,3 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-        ? "frozen all-in hypothesis context identity mismatch"
++        ? (frozen_dual_reason.empty()
++               ? "frozen all-in hypothesis context identity mismatch"
++               : frozen_dual_reason)
+@@ -2049,2 +2103,10 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-  if (detector.contract_mode == DetectorContractMode::ActiveDualChannelV6 &&
+-      detector.channel_history_dof > 0) {
++  const std::uint64_t expected_hypothesis_fingerprint = active_dual
++      ? frozen_dual->candidate_hypothesis_fingerprint
++      : frozen.hypothesis_fingerprint;
++  if (expected_hypothesis_fingerprint !=
++      hypothesisSetFingerprint(hypotheses)) {
++    NumericalWorkCounters::hypothesisSharedMiss();
++    result.reason = "frozen candidate hypothesis census is stale";
++    return result;
++  }
++  if (active_dual && frozen_dual->dual_blocks.empty() && !hypotheses.empty()) {
+@@ -2052,2 +2114 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-    result.reason =
+-        "frozen pooled hypothesis context cannot certify active dual-channel PL";
++    result.reason = "frozen dual hypothesis context is incomplete";
+@@ -2068,2 +2129,3 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-  const RawFactorCertificate raw_factor = rawFactorCertificate(
+-      window, *candidate, covariance_rank_tolerance);
++  const RawFactorCertificate raw_factor = active_dual
++      ? RawFactorCertificate{}
++      : rawFactorCertificate(window, *candidate, covariance_rank_tolerance);
+@@ -2075,4 +2137,11 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-      raw_factor.valid ? raw_factor.protected_covariance
+-                       : Eigen::Matrix3d::Zero();
+-  const SymmetricPsdCertificate covariance_certificate = raw_factor.valid
+-      ? certifyFactorGram(raw_factor.protected_factor.transpose(),
++      active_dual ? frozen_dual->candidate_protected_covariance
++                  : (raw_factor.valid ? raw_factor.protected_covariance
++                                      : Eigen::Matrix3d::Zero());
++  const Eigen::MatrixXd protected_covariance_factor = active_dual
++      ? frozen_dual->candidate_protected_factor.transpose()
++      : raw_factor.protected_factor.transpose();
++  const bool protected_factor_valid = protected_covariance_factor.cols() == 3 &&
++      protected_covariance_factor.rows() == candidate->state_increment.size() &&
++      protected_covariance_factor.allFinite();
++  const SymmetricPsdCertificate covariance_certificate = protected_factor_valid
++      ? certifyFactorGram(protected_covariance_factor,
+@@ -2094,2 +2163 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-  sidecar.protected_covariance_factor =
+-      raw_factor.protected_factor.transpose();
++  sidecar.protected_covariance_factor = protected_covariance_factor;
+@@ -2102,0 +2171,22 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
++  struct FrozenModeSlice {
++    Eigen::Index offset = 0;
++    Eigen::Index columns = 0;
++  };
++  std::map<std::uint64_t, FrozenModeSlice> frozen_mode_slices;
++  Eigen::Index frozen_mode_columns = 0;
++  for (const auto& mode : modes) {
++    const Eigen::Index columns = mode.effective_basis_certified &&
++        mode.effective_parameter_dimension > 0 &&
++        mode.effective_parameter_basis.rows() == mode.parameter_dimension &&
++        mode.effective_parameter_basis.cols() ==
++            mode.effective_parameter_dimension
++        ? mode.effective_parameter_dimension : mode.parameter_dimension;
++    frozen_mode_slices.emplace(
++        mode.id.value(), FrozenModeSlice{frozen_mode_columns, columns});
++    frozen_mode_columns += columns;
++  }
++  std::map<std::uint64_t, std::size_t> frozen_hypothesis_indexes;
++  for (std::size_t index = 0; index < frozen.pl_entries.size(); ++index) {
++    frozen_hypothesis_indexes.emplace(
++        frozen.pl_entries[index].hypothesis.value(), index);
++  }
+@@ -2105 +2195,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-    const auto& cached = frozen.pl_entries[index];
++    const auto frozen_index = frozen_hypothesis_indexes.find(
++        hypothesis.id.value());
++    if (frozen_index == frozen_hypothesis_indexes.end()) {
++      result.reason = "frozen candidate hypothesis block is absent";
++      return result;
++    }
++    const auto& cached = frozen.pl_entries[frozen_index->second];
+@@ -2128,3 +2224,76 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-    sidecar.hypothesis_proofs.push_back(std::move(cached_proof));
+-    const FaultAxisBounds bounds =
+-        faultAxisBounds(detector, hypothesis, nominal_tail);
++    FaultAxisBounds bounds;
++    Eigen::Vector3d component;
++    std::string detector_certificate;
++    if (active_dual) {
++      const auto& dual = frozen_dual->dual_blocks[frozen_index->second];
++      if (!dual.valid || dual.hypothesis != hypothesis.id ||
++          dual.dimension <= 0 || dual.dimension > 3 ||
++          cached_proof.raw_detection_factor.cols() != dual.dimension) {
++        NumericalWorkCounters::hypothesisSharedMiss();
++        result.reason = "frozen dual hypothesis block is invalid";
++        return result;
++      }
++      const Eigen::MatrixXd total_gram =
++          dual.total_gram.topLeftCorner(dual.dimension, dual.dimension);
++      const Eigen::MatrixXd history_gram =
++          dual.history_gram.topLeftCorner(dual.dimension, dual.dimension);
++      const Eigen::MatrixXd protected_response =
++          dual.protected_response.leftCols(dual.dimension);
++      Eigen::MatrixXd raw_detection_factor(
++          frozen_dual->candidate_detection_modes.rows(), dual.dimension);
++      Eigen::Index raw_offset = 0;
++      bool raw_response_valid =
++          frozen_dual->candidate_detection_modes.cols() == frozen_mode_columns;
++      for (const auto mode_id : hypothesis.modes) {
++        const auto slice = frozen_mode_slices.find(mode_id.value());
++        if (slice == frozen_mode_slices.end() ||
++            raw_offset + slice->second.columns > dual.dimension) {
++          raw_response_valid = false;
++          break;
++        }
++        raw_detection_factor.middleCols(raw_offset, slice->second.columns) =
++            frozen_dual->candidate_detection_modes.middleCols(
++                slice->second.offset, slice->second.columns);
++        raw_offset += slice->second.columns;
++      }
++      if (!raw_response_valid || raw_offset != dual.dimension ||
++          !raw_detection_factor.allFinite()) {
++        result.reason = "frozen candidate mode response is incomplete";
++        return result;
++      }
++      const GramResponseCertificate response_certificate =
++          certifyFactorGramAndProtectedResponse(
++              raw_detection_factor, total_gram,
++              protected_response, covariance_rank_tolerance,
++              candidateProofIdentity(*candidate),
++              cached_proof.raw_factor_scale);
++      if (!response_certificate.valid ||
++          response_certificate.nullspace_class ==
++              GramNullspaceClass::Dangerous) {
++        result.reason = "frozen dual hypothesis proof is unavailable: " +
++            response_certificate.reason;
++        return result;
++      }
++      sidecar.hypothesis_proofs.push_back(protectionHypothesisProof(
++          hypothesis.id, response_certificate,
++          raw_detection_factor, cached_proof.raw_factor_scale,
++          covariance_rank_tolerance));
++      sidecar.hypothesis_proofs.back().protected_response =
++          protected_response;
++      sidecar.hypothesis_proofs.back().parent_proof_identity =
++          candidateProofIdentity(*candidate);
++      DualChannelNumericalProofV1 dual_channel_proof;
++      bounds = dualChannelAxisBounds(
++          detector, hypothesis, total_gram, history_gram,
++          protected_response, sigma, nominal_tail,
++          covariance_rank_tolerance, candidateProofIdentity(*candidate),
++          &component, &detector_certificate, &dual_channel_proof);
++      if (bounds.valid) {
++        sidecar.dual_channel_proofs.push_back(
++            std::move(dual_channel_proof));
++      }
++    } else {
++      sidecar.hypothesis_proofs.push_back(std::move(cached_proof));
++      bounds = faultAxisBounds(detector, hypothesis, nominal_tail);
++      component = cached.protected_slopes * bounds.lambda + bounds.k * sigma;
++    }
+@@ -2144,2 +2313 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-    const Eigen::Vector3d component =
+-        cached.protected_slopes * bounds.lambda + bounds.k * sigma;
++    if (active_dual) result.detector_certificate_id = detector_certificate;
+@@ -2154 +2322 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-    component_proof.dual_channel = false;
++    component_proof.dual_channel = active_dual;
+diff --git a/test/test_integrity_v2.cpp b/test/test_integrity_v2.cpp
+index 1fe96b3..e857333 100644
+--- a/test/test_integrity_v2.cpp
++++ b/test/test_integrity_v2.cpp
+@@ -2186,0 +2187,216 @@ TEST(IntegrityV2ProtectionLevel,
++TEST(P102SharedDualNumerics,
++     ActiveDualKeepAllReusesEvidenceSmallBlocksWithoutChangingPl) {
++  using namespace uwb_imu_pl;
++  auto window = syntheticWindow();
++  auto history = block(
++      4, Eigen::MatrixXd::Zero(2, 2), Eigen::Vector2d::Zero(),
++      window.version);
++  history.kind = FactorKind::BoundaryPrior;
++  history.sensor = SensorType::Prior;
++  history.role = RowRole::TrustedPrior;
++  history.whitening_model_id = "history_summary_sqrt_d1";
++  window.blocks.push_back(std::move(history));
++  window.history_summary.present = true;
++  window.history_summary.valid = true;
++  window.history_summary.nu_perp = 2;
++  window.history_summary.kappa_b = 0.0;
++  window.history_summary.constant_offset = 0.0;
++  window.history_summary.emitted_rows = 2;
++  window.history_summary.detector_response = Eigen::MatrixXd::Zero(2, 0);
++  window.protected_state_map.row(2) = window.protected_state_map.row(0);
++  finalizeIntegrityWindow(&window, 1e-10, 1e10);
++  ASSERT_TRUE(window.model_valid) << window.reason;
++  std::string window_proof_reason;
++  ASSERT_TRUE(validateFrozenWindowNumericalProof(
++      window, *window.numerics, &window_proof_reason))
++      << window_proof_reason;
++  const auto frozen_window = freezeIntegrityWindowCopy(window);
++  const auto admission = admitFrozenIntegrityWindow(frozen_window);
++  ASSERT_TRUE(admission) << admission.reason;
++  FaultModeBasis mode;
++  mode.id = FaultModeId(2101);
++  mode.sensor = SensorType::Uwb;
++  mode.parameter_dimension = 1;
++  mode.raw_group_maps[FactorGroupId(1)] =
++      Eigen::Vector2d::Ones();
++  std::vector<FaultModeBasis> modes{mode};
++  FaultHypothesisV2 hypothesis;
++  hypothesis.id = HypothesisId(2101);
++  hypothesis.modes = {mode.id};
++  hypothesis.prior_probability_bound = 1e-4;
++  hypothesis.p_md_allocation = 1e-3;
++  hypothesis.hmi_allocation = 1e-6;
++  std::vector<FaultHypothesisV2> hypotheses{hypothesis};
++  std::shared_ptr<const FrozenHypothesisNumerics> frozen;
++  std::shared_ptr<const FrozenHypothesisDualNumerics> frozen_dual;
++  const auto evidence = HypothesisEvidenceEvaluator().evaluateAll(
++      admission, modes, &hypotheses, 100.0, &frozen, &frozen_dual);
++  ASSERT_EQ(evidence.size(), 1u);
++  ASSERT_TRUE(frozen && frozen->valid);
++  ASSERT_TRUE(frozen_dual && frozen_dual->valid);
++
++  ExclusionAction keep;
++  keep.id = ExclusionActionId(2101);
++  keep.action_model_id = "KEEP_ALL";
++  RankUpdateConfig rank_config{1e-10, 1e10, 10.0};
++  RankUpdateEvaluator evaluator(rank_config);
++  auto candidate = evaluator.evaluate(
++      admission, evaluator.factorizeOnce(admission), keep);
++  ASSERT_TRUE(candidate.valid) << candidate.reason;
++  DetectorRiskContext detector_risk;
++  detector_risk.p_fa_per_test = 1e-6;
++  const auto detector = JointWindowDetector().evaluateCandidate(
++      admission, candidate, detector_risk);
++  ASSERT_EQ(detector.contract_mode, DetectorContractMode::ActiveDualChannelV6);
++  ASSERT_GT(detector.channel_history_dof, 0);
++  ASSERT_TRUE(detector.passed) << detector.reason;
++
++  ProtectionLevelSharedContext reference_context;
++  reference_context.mode_maps[mode.id.value()] =
++      Eigen::MatrixXd::Zero(window.H.rows(), 1);
++  reference_context.mode_maps[mode.id.value()].topRows(2) =
++      Eigen::Vector2d::Ones();
++  auto reference_hypotheses = hypotheses;
++  auto reference_candidate = candidate;
++  const auto reference = ProtectionLevelV2().computeShared(
++      admission, &reference_candidate, detector, &reference_hypotheses,
++      reference_context, RiskBudgetV2{});
++
++  ASSERT_EQ(frozen_dual->dual_blocks.size(), hypotheses.size());
++  ASSERT_TRUE(frozen_dual->dual_blocks.front().valid);
++  EXPECT_EQ(frozen_dual->dual_blocks.front().dimension, 1);
++  EXPECT_EQ(frozen_dual->dual_blocks.front().profile_statistic,
++            evidence.front().profile_j);
++  auto reused_candidate = candidate;
++  const auto reused = ProtectionLevelV2().computeFrozenAllIn(
++      admission, &reused_candidate, detector, hypotheses, modes, *frozen,
++      *frozen_dual,
++      frozen->fault_model_policy_fingerprint, RiskBudgetV2{});
++  EXPECT_EQ(reference.model_valid, reused.model_valid)
++      << "reference=" << reference.reason << ";reused=" << reused.reason;
++  EXPECT_TRUE(reference.pl_xyz_m.isApprox(reused.pl_xyz_m, 1e-13))
++      << "reference=" << reference.pl_xyz_m.transpose() << " ("
++      << reference.reason << ");reused=" << reused.pl_xyz_m.transpose()
++      << " (" << reused.reason << ")";
++  EXPECT_EQ(reference.detector_certificate_id,
++            reused.detector_certificate_id);
++  std::string proof_reason;
++  EXPECT_TRUE(validateProtectionLevelV2Proof(
++      reused_candidate, detector, hypotheses, reused, &proof_reason))
++      << proof_reason;
++
++  std::string sealed_reason;
++  ASSERT_TRUE(validateFrozenHypothesisDualProof(
++      admission, *frozen, *frozen_dual, &sealed_reason)) << sealed_reason;
++
++  // Without a typed admission there is no control-block proof.  The legacy
++  // overload must not consume R08 matrices, even when every scalar hash is
++  // identical.
++  auto legacy_candidate = candidate;
++  const auto legacy_rejected = ProtectionLevelV2().computeFrozenAllIn(
++      admission.window(), &legacy_candidate, detector, hypotheses, modes,
++      *frozen, frozen->fault_model_policy_fingerprint, RiskBudgetV2{});
++  EXPECT_FALSE(legacy_rejected.model_valid);
++  EXPECT_NE(legacy_rejected.reason.find("immutable owner binding"),
++            std::string::npos) << legacy_rejected.reason;
++
++  // Equal content is not equal ownership: a cache from A cannot be
++  // transplanted into a separately sealed B.
++  const auto other_window = freezeIntegrityWindowCopy(window);
++  const auto other_admission = admitFrozenIntegrityWindow(other_window);
++  ASSERT_TRUE(other_admission);
++  ASSERT_EQ(admission.owner->content_hash,
++            other_admission.owner->content_hash);
++  ASSERT_NE(&admission.window(), &other_admission.window());
++  auto other_candidate = evaluator.evaluate(
++      other_admission, evaluator.factorizeOnce(other_admission), keep);
++  ASSERT_TRUE(other_candidate.valid) << other_candidate.reason;
++  const auto other_detector = JointWindowDetector().evaluateCandidate(
++      other_admission, other_candidate, detector_risk);
++  ASSERT_TRUE(other_detector.passed) << other_detector.reason;
++  const auto transplanted = ProtectionLevelV2().computeFrozenAllIn(
++      other_admission, &other_candidate, other_detector, hypotheses, modes,
++      *frozen, *frozen_dual, frozen->fault_model_policy_fingerprint,
++      RiskBudgetV2{});
++  EXPECT_FALSE(transplanted.model_valid);
++  EXPECT_NE(transplanted.reason.find("owner/payload identity mismatch"),
++            std::string::npos) << transplanted.reason;
++
++  // A forced 64-bit collision still cannot substitute ownership.  Admission
++  // B is internally self-consistent, but its distinct payload/control block
++  // cannot consume A's context.
++  auto changed = window;
++  changed.blocks.front().residual_whitened(0) = std::nextafter(
++      changed.blocks.front().residual_whitened(0), 1.0);
++  changed.blocks.front().residual_raw(0) =
++      changed.blocks.front().residual_whitened(0);
++  finalizeIntegrityWindow(&changed, 1e-10, 1e10);
++  const auto ordinary_changed = freezeIntegrityWindowCopy(changed);
++  auto collision_payload = std::make_shared<LinearizedIntegrityWindow>(
++      *ordinary_changed.seal->payload);
++  auto collision_numerics = std::make_shared<FrozenWindowNumerics>(
++      *collision_payload->numerics);
++  collision_numerics->content_fingerprint = admission.owner->content_hash;
++  collision_payload->numerics = collision_numerics;
++  auto collision_seal = std::make_shared<FrozenIntegrityWindowSeal>(
++      *ordinary_changed.seal);
++  collision_seal->content_hash = admission.owner->content_hash;
++  collision_seal->payload = collision_payload;
++  collision_seal->numerical_identity.content_fingerprint =
++      admission.owner->content_hash;
++  collision_seal->numerical_identity.proof_identity =
++      frozenWindowNumericalProofIdentity(
++          *collision_payload, *collision_numerics);
++  collision_seal->numerical_identity.valid = true;
++  const auto collision_admission = admitFrozenIntegrityWindow(
++      FrozenIntegrityWindow{collision_seal});
++  ASSERT_TRUE(collision_admission) << collision_admission.reason;
++  std::string collision_reason;
++  EXPECT_FALSE(validateFrozenHypothesisDualProof(
++      collision_admission, *frozen, *frozen_dual, &collision_reason));
++  EXPECT_NE(collision_reason.find("owner/payload identity mismatch"),
++            std::string::npos) << collision_reason;
++
++  auto expect_tamper_rejected = [&](FrozenHypothesisDualNumerics tampered) {
++    std::string reason;
++    EXPECT_FALSE(validateFrozenHypothesisDualProof(
++        admission, *frozen, tampered, &reason));
++    EXPECT_TRUE(reason.find("proof digest mismatch") != std::string::npos ||
++                reason.find("structure mismatch") != std::string::npos)
++        << reason;
++  };
++  auto stale_matrix = *frozen_dual;
++  stale_matrix.candidate_detection_modes(0, 0) = std::nextafter(
++      stale_matrix.candidate_detection_modes(0, 0), 1.0);
++  expect_tamper_rejected(std::move(stale_matrix));
++  auto stale_census = *frozen_dual;
++  stale_census.candidate_hypothesis_fingerprint ^= 1;
++  expect_tamper_rejected(std::move(stale_census));
++  auto stale_id = *frozen_dual;
++  stale_id.dual_blocks.front().hypothesis = HypothesisId(999999);
++  expect_tamper_rejected(std::move(stale_id));
++  auto missing_block = *frozen_dual;
++  missing_block.dual_blocks.clear();
++  std::string missing_reason;
++  EXPECT_FALSE(validateFrozenHypothesisDualProof(
++      admission, *frozen, missing_block, &missing_reason));
++  EXPECT_NE(missing_reason.find("census structure mismatch"),
++            std::string::npos) << missing_reason;
++  auto bad_dimension = *frozen_dual;
++  bad_dimension.dual_blocks.front().dimension = 4;
++  std::string dimension_reason;
++  EXPECT_FALSE(validateFrozenHypothesisDualProof(
++      admission, *frozen, bad_dimension, &dimension_reason));
++  EXPECT_NE(dimension_reason.find("block structure mismatch"),
++            std::string::npos) << dimension_reason;
++
++  auto modified_candidate = candidate;
++  modified_candidate.action.action_model_id += "_MODIFIED";
++  const auto stale_candidate = ProtectionLevelV2().computeFrozenAllIn(
++      admission, &modified_candidate, detector, hypotheses, modes, *frozen,
++      *frozen_dual,
++      frozen->fault_model_policy_fingerprint, RiskBudgetV2{});
++  EXPECT_FALSE(stale_candidate.model_valid);
++  EXPECT_FALSE(stale_candidate.reason.empty());
++}
++

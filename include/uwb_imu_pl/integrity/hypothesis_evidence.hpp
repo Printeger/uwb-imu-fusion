@@ -94,6 +94,22 @@ struct FrozenHypothesisPlEntry {
   bool bound_from_projected_path = false;
 };
 
+// R08: fixed-size numerical payload for the overwhelmingly common one/two
+// mode hypotheses (q_h <= 3).  Evidence owns the single construction of
+// Gamma, t and G; KEEP_ALL dual-channel PL consumes the same values instead of
+// rebuilding a window-wide fault map and rescanning detector row roles.  The
+// dynamic reference path remains mandatory when `valid` is false.
+struct FrozenHypothesisDualBlock {
+  HypothesisId hypothesis;
+  int dimension = 0;
+  Eigen::Matrix3d total_gram = Eigen::Matrix3d::Zero();
+  Eigen::Matrix3d history_gram = Eigen::Matrix3d::Zero();
+  Eigen::Vector3d score = Eigen::Vector3d::Zero();
+  Eigen::Matrix3d protected_response = Eigen::Matrix3d::Zero();
+  double profile_statistic = std::numeric_limits<double>::infinity();
+  bool valid = false;
+};
+
 struct FrozenHypothesisPlProofV1 {
   std::uint64_t schema_version = 1;
   FrozenHypothesisPlEntry served_entry;
@@ -157,6 +173,32 @@ struct FrozenHypothesisNumerics {
   bool compact_capacity_exceeded = false;
 };
 
+// ABI-stable R08 sidecar.  FrozenHypothesisNumerics retains its exact P1-01
+// public layout; new dual-channel material crosses the DSO boundary only in
+// this separately owned type.
+struct FrozenHypothesisDualNumerics {
+  std::shared_ptr<const FrozenIntegrityWindowSeal> window_owner;
+  const LinearizedIntegrityWindow* window_payload = nullptr;
+  std::shared_ptr<const FrozenHypothesisNumerics> base_owner;
+  const FrozenHypothesisNumerics* base_payload = nullptr;
+  std::uint64_t candidate_hypothesis_fingerprint = 0;
+  std::vector<FrozenHypothesisDualBlock> dual_blocks;
+  Eigen::MatrixXd candidate_detection_modes;
+  Eigen::MatrixXd candidate_protected_modes;
+  Eigen::MatrixXd candidate_protected_factor;
+  Eigen::Matrix3d candidate_protected_covariance = Eigen::Matrix3d::Zero();
+  std::vector<std::uint8_t> candidate_mode_active;
+  std::uint64_t proof_digest = 0;
+  bool valid = false;
+  std::string reason;
+};
+
+bool validateFrozenHypothesisDualProof(
+    const FrozenWindowAdmission& admission,
+    const FrozenHypothesisNumerics& base,
+    const FrozenHypothesisDualNumerics& frozen,
+    std::string* reason = nullptr);
+
 std::uint64_t hypothesisSetFingerprint(
     const std::vector<FaultHypothesisV2>& hypotheses);
 std::uint64_t faultModeSetFingerprint(
@@ -179,6 +221,14 @@ class HypothesisEvidenceEvaluator {
       std::vector<FaultHypothesisV2>* hypotheses,
       double squared_detector_threshold,
       std::shared_ptr<const FrozenHypothesisNumerics>* shared = nullptr,
+      CandidateWorkerPool* worker_pool = nullptr) const;
+  std::vector<FaultModeEvidence> evaluateAll(
+      const FrozenWindowAdmission& admission,
+      const std::vector<FaultModeBasis>& modes,
+      std::vector<FaultHypothesisV2>* hypotheses,
+      double squared_detector_threshold,
+      std::shared_ptr<const FrozenHypothesisNumerics>* shared,
+      std::shared_ptr<const FrozenHypothesisDualNumerics>* shared_dual,
       CandidateWorkerPool* worker_pool = nullptr) const;
   std::vector<FaultModeEvidence> evaluateAll(
       const LinearizedIntegrityWindow& window,

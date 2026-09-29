@@ -2184,6 +2184,222 @@ TEST(IntegrityV2ProtectionLevel,
       << stale.reason;
 }
 
+TEST(P102SharedDualNumerics,
+     ActiveDualKeepAllReusesEvidenceSmallBlocksWithoutChangingPl) {
+  using namespace uwb_imu_pl;
+  auto window = syntheticWindow();
+  auto history = block(
+      4, Eigen::MatrixXd::Zero(2, 2), Eigen::Vector2d::Zero(),
+      window.version);
+  history.kind = FactorKind::BoundaryPrior;
+  history.sensor = SensorType::Prior;
+  history.role = RowRole::TrustedPrior;
+  history.whitening_model_id = "history_summary_sqrt_d1";
+  window.blocks.push_back(std::move(history));
+  window.history_summary.present = true;
+  window.history_summary.valid = true;
+  window.history_summary.nu_perp = 2;
+  window.history_summary.kappa_b = 0.0;
+  window.history_summary.constant_offset = 0.0;
+  window.history_summary.emitted_rows = 2;
+  window.history_summary.detector_response = Eigen::MatrixXd::Zero(2, 0);
+  window.protected_state_map.row(2) = window.protected_state_map.row(0);
+  finalizeIntegrityWindow(&window, 1e-10, 1e10);
+  ASSERT_TRUE(window.model_valid) << window.reason;
+  std::string window_proof_reason;
+  ASSERT_TRUE(validateFrozenWindowNumericalProof(
+      window, *window.numerics, &window_proof_reason))
+      << window_proof_reason;
+  const auto frozen_window = freezeIntegrityWindowCopy(window);
+  const auto admission = admitFrozenIntegrityWindow(frozen_window);
+  ASSERT_TRUE(admission) << admission.reason;
+  FaultModeBasis mode;
+  mode.id = FaultModeId(2101);
+  mode.sensor = SensorType::Uwb;
+  mode.parameter_dimension = 1;
+  mode.raw_group_maps[FactorGroupId(1)] =
+      Eigen::Vector2d::Ones();
+  std::vector<FaultModeBasis> modes{mode};
+  FaultHypothesisV2 hypothesis;
+  hypothesis.id = HypothesisId(2101);
+  hypothesis.modes = {mode.id};
+  hypothesis.prior_probability_bound = 1e-4;
+  hypothesis.p_md_allocation = 1e-3;
+  hypothesis.hmi_allocation = 1e-6;
+  std::vector<FaultHypothesisV2> hypotheses{hypothesis};
+  std::shared_ptr<const FrozenHypothesisNumerics> frozen;
+  std::shared_ptr<const FrozenHypothesisDualNumerics> frozen_dual;
+  const auto evidence = HypothesisEvidenceEvaluator().evaluateAll(
+      admission, modes, &hypotheses, 100.0, &frozen, &frozen_dual);
+  ASSERT_EQ(evidence.size(), 1u);
+  ASSERT_TRUE(frozen && frozen->valid);
+  ASSERT_TRUE(frozen_dual && frozen_dual->valid);
+
+  ExclusionAction keep;
+  keep.id = ExclusionActionId(2101);
+  keep.action_model_id = "KEEP_ALL";
+  RankUpdateConfig rank_config{1e-10, 1e10, 10.0};
+  RankUpdateEvaluator evaluator(rank_config);
+  auto candidate = evaluator.evaluate(
+      admission, evaluator.factorizeOnce(admission), keep);
+  ASSERT_TRUE(candidate.valid) << candidate.reason;
+  DetectorRiskContext detector_risk;
+  detector_risk.p_fa_per_test = 1e-6;
+  const auto detector = JointWindowDetector().evaluateCandidate(
+      admission, candidate, detector_risk);
+  ASSERT_EQ(detector.contract_mode, DetectorContractMode::ActiveDualChannelV6);
+  ASSERT_GT(detector.channel_history_dof, 0);
+  ASSERT_TRUE(detector.passed) << detector.reason;
+
+  ProtectionLevelSharedContext reference_context;
+  reference_context.mode_maps[mode.id.value()] =
+      Eigen::MatrixXd::Zero(window.H.rows(), 1);
+  reference_context.mode_maps[mode.id.value()].topRows(2) =
+      Eigen::Vector2d::Ones();
+  auto reference_hypotheses = hypotheses;
+  auto reference_candidate = candidate;
+  const auto reference = ProtectionLevelV2().computeShared(
+      admission, &reference_candidate, detector, &reference_hypotheses,
+      reference_context, RiskBudgetV2{});
+
+  ASSERT_EQ(frozen_dual->dual_blocks.size(), hypotheses.size());
+  ASSERT_TRUE(frozen_dual->dual_blocks.front().valid);
+  EXPECT_EQ(frozen_dual->dual_blocks.front().dimension, 1);
+  EXPECT_EQ(frozen_dual->dual_blocks.front().profile_statistic,
+            evidence.front().profile_j);
+  auto reused_candidate = candidate;
+  const auto reused = ProtectionLevelV2().computeFrozenAllIn(
+      admission, &reused_candidate, detector, hypotheses, modes, *frozen,
+      *frozen_dual,
+      frozen->fault_model_policy_fingerprint, RiskBudgetV2{});
+  EXPECT_EQ(reference.model_valid, reused.model_valid)
+      << "reference=" << reference.reason << ";reused=" << reused.reason;
+  EXPECT_TRUE(reference.pl_xyz_m.isApprox(reused.pl_xyz_m, 1e-13))
+      << "reference=" << reference.pl_xyz_m.transpose() << " ("
+      << reference.reason << ");reused=" << reused.pl_xyz_m.transpose()
+      << " (" << reused.reason << ")";
+  EXPECT_EQ(reference.detector_certificate_id,
+            reused.detector_certificate_id);
+  std::string proof_reason;
+  EXPECT_TRUE(validateProtectionLevelV2Proof(
+      reused_candidate, detector, hypotheses, reused, &proof_reason))
+      << proof_reason;
+
+  std::string sealed_reason;
+  ASSERT_TRUE(validateFrozenHypothesisDualProof(
+      admission, *frozen, *frozen_dual, &sealed_reason)) << sealed_reason;
+
+  // Without a typed admission there is no control-block proof.  The legacy
+  // overload must not consume R08 matrices, even when every scalar hash is
+  // identical.
+  auto legacy_candidate = candidate;
+  const auto legacy_rejected = ProtectionLevelV2().computeFrozenAllIn(
+      admission.window(), &legacy_candidate, detector, hypotheses, modes,
+      *frozen, frozen->fault_model_policy_fingerprint, RiskBudgetV2{});
+  EXPECT_FALSE(legacy_rejected.model_valid);
+  EXPECT_NE(legacy_rejected.reason.find("immutable owner binding"),
+            std::string::npos) << legacy_rejected.reason;
+
+  // Equal content is not equal ownership: a cache from A cannot be
+  // transplanted into a separately sealed B.
+  const auto other_window = freezeIntegrityWindowCopy(window);
+  const auto other_admission = admitFrozenIntegrityWindow(other_window);
+  ASSERT_TRUE(other_admission);
+  ASSERT_EQ(admission.owner->content_hash,
+            other_admission.owner->content_hash);
+  ASSERT_NE(&admission.window(), &other_admission.window());
+  auto other_candidate = evaluator.evaluate(
+      other_admission, evaluator.factorizeOnce(other_admission), keep);
+  ASSERT_TRUE(other_candidate.valid) << other_candidate.reason;
+  const auto other_detector = JointWindowDetector().evaluateCandidate(
+      other_admission, other_candidate, detector_risk);
+  ASSERT_TRUE(other_detector.passed) << other_detector.reason;
+  const auto transplanted = ProtectionLevelV2().computeFrozenAllIn(
+      other_admission, &other_candidate, other_detector, hypotheses, modes,
+      *frozen, *frozen_dual, frozen->fault_model_policy_fingerprint,
+      RiskBudgetV2{});
+  EXPECT_FALSE(transplanted.model_valid);
+  EXPECT_NE(transplanted.reason.find("owner/payload identity mismatch"),
+            std::string::npos) << transplanted.reason;
+
+  // A forced 64-bit collision still cannot substitute ownership.  Admission
+  // B is internally self-consistent, but its distinct payload/control block
+  // cannot consume A's context.
+  auto changed = window;
+  changed.blocks.front().residual_whitened(0) = std::nextafter(
+      changed.blocks.front().residual_whitened(0), 1.0);
+  changed.blocks.front().residual_raw(0) =
+      changed.blocks.front().residual_whitened(0);
+  finalizeIntegrityWindow(&changed, 1e-10, 1e10);
+  const auto ordinary_changed = freezeIntegrityWindowCopy(changed);
+  auto collision_payload = std::make_shared<LinearizedIntegrityWindow>(
+      *ordinary_changed.seal->payload);
+  auto collision_numerics = std::make_shared<FrozenWindowNumerics>(
+      *collision_payload->numerics);
+  collision_numerics->content_fingerprint = admission.owner->content_hash;
+  collision_payload->numerics = collision_numerics;
+  auto collision_seal = std::make_shared<FrozenIntegrityWindowSeal>(
+      *ordinary_changed.seal);
+  collision_seal->content_hash = admission.owner->content_hash;
+  collision_seal->payload = collision_payload;
+  collision_seal->numerical_identity.content_fingerprint =
+      admission.owner->content_hash;
+  collision_seal->numerical_identity.proof_identity =
+      frozenWindowNumericalProofIdentity(
+          *collision_payload, *collision_numerics);
+  collision_seal->numerical_identity.valid = true;
+  const auto collision_admission = admitFrozenIntegrityWindow(
+      FrozenIntegrityWindow{collision_seal});
+  ASSERT_TRUE(collision_admission) << collision_admission.reason;
+  std::string collision_reason;
+  EXPECT_FALSE(validateFrozenHypothesisDualProof(
+      collision_admission, *frozen, *frozen_dual, &collision_reason));
+  EXPECT_NE(collision_reason.find("owner/payload identity mismatch"),
+            std::string::npos) << collision_reason;
+
+  auto expect_tamper_rejected = [&](FrozenHypothesisDualNumerics tampered) {
+    std::string reason;
+    EXPECT_FALSE(validateFrozenHypothesisDualProof(
+        admission, *frozen, tampered, &reason));
+    EXPECT_TRUE(reason.find("proof digest mismatch") != std::string::npos ||
+                reason.find("structure mismatch") != std::string::npos)
+        << reason;
+  };
+  auto stale_matrix = *frozen_dual;
+  stale_matrix.candidate_detection_modes(0, 0) = std::nextafter(
+      stale_matrix.candidate_detection_modes(0, 0), 1.0);
+  expect_tamper_rejected(std::move(stale_matrix));
+  auto stale_census = *frozen_dual;
+  stale_census.candidate_hypothesis_fingerprint ^= 1;
+  expect_tamper_rejected(std::move(stale_census));
+  auto stale_id = *frozen_dual;
+  stale_id.dual_blocks.front().hypothesis = HypothesisId(999999);
+  expect_tamper_rejected(std::move(stale_id));
+  auto missing_block = *frozen_dual;
+  missing_block.dual_blocks.clear();
+  std::string missing_reason;
+  EXPECT_FALSE(validateFrozenHypothesisDualProof(
+      admission, *frozen, missing_block, &missing_reason));
+  EXPECT_NE(missing_reason.find("census structure mismatch"),
+            std::string::npos) << missing_reason;
+  auto bad_dimension = *frozen_dual;
+  bad_dimension.dual_blocks.front().dimension = 4;
+  std::string dimension_reason;
+  EXPECT_FALSE(validateFrozenHypothesisDualProof(
+      admission, *frozen, bad_dimension, &dimension_reason));
+  EXPECT_NE(dimension_reason.find("block structure mismatch"),
+            std::string::npos) << dimension_reason;
+
+  auto modified_candidate = candidate;
+  modified_candidate.action.action_model_id += "_MODIFIED";
+  const auto stale_candidate = ProtectionLevelV2().computeFrozenAllIn(
+      admission, &modified_candidate, detector, hypotheses, modes, *frozen,
+      *frozen_dual,
+      frozen->fault_model_policy_fingerprint, RiskBudgetV2{});
+  EXPECT_FALSE(stale_candidate.model_valid);
+  EXPECT_FALSE(stale_candidate.reason.empty());
+}
+
 TEST(IntegrityV2ProtectionLevel,
      FixedLowDimKeepsSingularStatusAndUncommonDimensionFallsBack) {
   using namespace uwb_imu_pl;

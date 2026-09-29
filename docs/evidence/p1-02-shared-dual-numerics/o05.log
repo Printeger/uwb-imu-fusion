@@ -1,0 +1,314 @@
+[==========] Running 99 tests from 37 test suites.
+[----------] Global test environment set-up.
+[----------] 1 test from FdeProfiles
+[ RUN      ] FdeProfiles.NominalPipelineAndFaultCensusFollowResolvedScope
+[       OK ] FdeProfiles.NominalPipelineAndFaultCensusFollowResolvedScope (48 ms)
+[----------] 1 test from FdeProfiles (48 ms total)
+
+[----------] 6 tests from IntegrityV2Transaction
+[ RUN      ] IntegrityV2Transaction.PrepareAndDiscardNeverMutateBackend
+[       OK ] IntegrityV2Transaction.PrepareAndDiscardNeverMutateBackend (5 ms)
+[ RUN      ] IntegrityV2Transaction.CommitIsOneAtomicBackendUpdateAndLedgerIsComplete
+[       OK ] IntegrityV2Transaction.CommitIsOneAtomicBackendUpdateAndLedgerIsComplete (5 ms)
+[ RUN      ] IntegrityV2Transaction.BoundaryInventoryKeepsFirstStateUwbExplicitExactlyOnce
+[       OK ] IntegrityV2Transaction.BoundaryInventoryKeepsFirstStateUwbExplicitExactlyOnce (494 ms)
+[ RUN      ] IntegrityV2Transaction.ReusingFinalizedTransactionFailsWithoutMutation
+[       OK ] IntegrityV2Transaction.ReusingFinalizedTransactionFailsWithoutMutation (5 ms)
+[ RUN      ] IntegrityV2Transaction.CorrelatedUwbExclusionUsesPrincipalCovariance
+[       OK ] IntegrityV2Transaction.CorrelatedUwbExclusionUsesPrincipalCovariance (5 ms)
+[ RUN      ] IntegrityV2Transaction.HistoricalUwbReplacementCommitsAtomically
+[       OK ] IntegrityV2Transaction.HistoricalUwbReplacementCommitsAtomically (9 ms)
+[----------] 6 tests from IntegrityV2Transaction (524 ms total)
+
+[----------] 1 test from IntegrityV2FaultModel
+[ RUN      ] IntegrityV2FaultModel.GeneratesCompactUwbModesAndEveryImuAxis
+[       OK ] IntegrityV2FaultModel.GeneratesCompactUwbModesAndEveryImuAxis (7 ms)
+[----------] 1 test from IntegrityV2FaultModel (7 ms total)
+
+[----------] 2 tests from IntegrityV2Bridge
+[ RUN      ] IntegrityV2Bridge.AnalyticJacobiansMatchNumericalOracleAndCvIsExact
+[       OK ] IntegrityV2Bridge.AnalyticJacobiansMatchNumericalOracleAndCvIsExact (1 ms)
+[ RUN      ] IntegrityV2Bridge.MultiplePoseMarginsAddAndBiasMarginStaysSeparate
+[       OK ] IntegrityV2Bridge.MultiplePoseMarginsAddAndBiasMarginStaysSeparate (0 ms)
+[----------] 2 tests from IntegrityV2Bridge (1 ms total)
+
+[----------] 2 tests from IntegrityV2Reinitialization
+[ RUN      ] IntegrityV2Reinitialization.ExecutesControlledStateSequence
+[       OK ] IntegrityV2Reinitialization.ExecutesControlledStateSequence (0 ms)
+[ RUN      ] IntegrityV2Reinitialization.BridgeTimeoutAcceptsBoundaryAndRejectsFirstExcess
+[       OK ] IntegrityV2Reinitialization.BridgeTimeoutAcceptsBoundaryAndRejectsFirstExcess (0 ms)
+[----------] 2 tests from IntegrityV2Reinitialization (0 ms total)
+
+[----------] 1 test from IntegrityV2Window
+[ RUN      ] IntegrityV2Window.RejectsFixedLagWithoutMaturityMargin
+[       OK ] IntegrityV2Window.RejectsFixedLagWithoutMaturityMargin (5 ms)
+[----------] 1 test from IntegrityV2Window (5 ms total)
+
+[----------] 3 tests from IntegrityV2RankUpdate
+[ RUN      ] IntegrityV2RankUpdate.MatchesIndependentDenseOracle
+[       OK ] IntegrityV2RankUpdate.MatchesIndependentDenseOracle (1 ms)
+[ RUN      ] IntegrityV2RankUpdate.RejectsUnresolvedRemovalBeforeSelection
+[       OK ] IntegrityV2RankUpdate.RejectsUnresolvedRemovalBeforeSelection (0 ms)
+[ RUN      ] IntegrityV2RankUpdate.OnlinePathKeepsOnlySharedBaseAndLowRankCorrections
+[       OK ] IntegrityV2RankUpdate.OnlinePathKeepsOnlySharedBaseAndLowRankCorrections (0 ms)
+[----------] 3 tests from IntegrityV2RankUpdate (1 ms total)
+
+[----------] 1 test from IntegrityV2Detector
+[ RUN      ] IntegrityV2Detector.UsesSquaredParityDofAndUnionBound
+[       OK ] IntegrityV2Detector.UsesSquaredParityDofAndUnionBound (0 ms)
+[----------] 1 test from IntegrityV2Detector (0 ms total)
+
+[----------] 7 tests from P002DualChannelContract
+[ RUN      ] P002DualChannelContract.PooledPassDualFailRejectsDenseAndMatrixFree
+[       OK ] P002DualChannelContract.PooledPassDualFailRejectsDenseAndMatrixFree (1 ms)
+[ RUN      ] P002DualChannelContract.NonzeroHistoryConstantRejectsEveryCandidatePath
+[       OK ] P002DualChannelContract.NonzeroHistoryConstantRejectsEveryCandidatePath (0 ms)
+[ RUN      ] P002DualChannelContract.MissingPayloadIsInvalidAndCannotCertifyFinitePl
+[       OK ] P002DualChannelContract.MissingPayloadIsInvalidAndCannotCertifyFinitePl (0 ms)
+[ RUN      ] P002DualChannelContract.AllInKeepAndModifiedShareDenseMatrixFreeCertificateAndPl
+[       OK ] P002DualChannelContract.AllInKeepAndModifiedShareDenseMatrixFreeCertificateAndPl (1 ms)
+[ RUN      ] P002DualChannelContract.MissingHistoryConstantFailsClosed
+[       OK ] P002DualChannelContract.MissingHistoryConstantFailsClosed (0 ms)
+[ RUN      ] P002DualChannelContract.IndependentRawQrGramAndPlOracleCoversAllCandidatePaths
+[       OK ] P002DualChannelContract.IndependentRawQrGramAndPlOracleCoversAllCandidatePaths (3 ms)
+[ RUN      ] P002DualChannelContract.StaleSwappedAndTamperedContractsFailClosedBeforeFinitePl
+[       OK ] P002DualChannelContract.StaleSwappedAndTamperedContractsFailClosedBeforeFinitePl (1 ms)
+[----------] 7 tests from P002DualChannelContract (6 ms total)
+
+[----------] 1 test from P003ProofChain
+[ RUN      ] P003ProofChain.FrozenWindowServedResultIsConsumerRecomputable
+[       OK ] P003ProofChain.FrozenWindowServedResultIsConsumerRecomputable (0 ms)
+[----------] 1 test from P003ProofChain (0 ms total)
+
+[----------] 3 tests from IntegrityV2ProtectionLevel
+[ RUN      ] IntegrityV2ProtectionLevel.RecomputesPostCandidateAndStaysResearchOnly
+[       OK ] IntegrityV2ProtectionLevel.RecomputesPostCandidateAndStaysResearchOnly (0 ms)
+[ RUN      ] IntegrityV2ProtectionLevel.FrozenEvidenceContextMatchesKeepAllAndInvalidatesOnMutation
+[       OK ] IntegrityV2ProtectionLevel.FrozenEvidenceContextMatchesKeepAllAndInvalidatesOnMutation (1 ms)
+[ RUN      ] IntegrityV2ProtectionLevel.FixedLowDimKeepsSingularStatusAndUncommonDimensionFallsBack
+[       OK ] IntegrityV2ProtectionLevel.FixedLowDimKeepsSingularStatusAndUncommonDimensionFallsBack (0 ms)
+[----------] 3 tests from IntegrityV2ProtectionLevel (1 ms total)
+
+[----------] 1 test from P102SharedDualNumerics
+[ RUN      ] P102SharedDualNumerics.ActiveDualKeepAllReusesEvidenceSmallBlocksWithoutChangingPl
+[       OK ] P102SharedDualNumerics.ActiveDualKeepAllReusesEvidenceSmallBlocksWithoutChangingPl (1 ms)
+[----------] 1 test from P102SharedDualNumerics (1 ms total)
+
+[----------] 7 tests from IntegrityV2Fde
+[ RUN      ] IntegrityV2Fde.CoversEntirePlausibleSetBeforeSelection
+[       OK ] IntegrityV2Fde.CoversEntirePlausibleSetBeforeSelection (0 ms)
+[ RUN      ] IntegrityV2Fde.PlausibleStrictSupersetRetainsCoverageDutyInSelection
+[       OK ] IntegrityV2Fde.PlausibleStrictSupersetRetainsCoverageDutyInSelection (0 ms)
+[ RUN      ] IntegrityV2Fde.ProfilePoolRefusesMissingEvidenceFailClosed
+[       OK ] IntegrityV2Fde.ProfilePoolRefusesMissingEvidenceFailClosed (0 ms)
+[ RUN      ] IntegrityV2Fde.SelectionRiskChargedOverPublishableSet
+[       OK ] IntegrityV2Fde.SelectionRiskChargedOverPublishableSet (0 ms)
+[ RUN      ] IntegrityV2Fde.MixedUnitPoolIsRecordedAndNotRanked
+[       OK ] IntegrityV2Fde.MixedUnitPoolIsRecordedAndNotRanked (0 ms)
+[ RUN      ] IntegrityV2Fde.ActionDedupRejectsSameShapeAndNormDifferentContent
+[       OK ] IntegrityV2Fde.ActionDedupRejectsSameShapeAndNormDifferentContent (0 ms)
+[ RUN      ] IntegrityV2Fde.MandatoryGroupIsIndependentOfProbabilisticPlausibility
+[       OK ] IntegrityV2Fde.MandatoryGroupIsIndependentOfProbabilisticPlausibility (0 ms)
+[----------] 7 tests from IntegrityV2Fde (0 ms total)
+
+[----------] 2 tests from IntegrityV2Health
+[ RUN      ] IntegrityV2Health.QuarantineRequiresConsecutiveRecovery
+[       OK ] IntegrityV2Health.QuarantineRequiresConsecutiveRecovery (0 ms)
+[ RUN      ] IntegrityV2Health.RecoveryFailureResetsCountersAndRequarantines
+[       OK ] IntegrityV2Health.RecoveryFailureResetsCountersAndRequarantines (0 ms)
+[----------] 2 tests from IntegrityV2Health (0 ms total)
+
+[----------] 6 tests from GateDNumerics
+[ RUN      ] GateDNumerics.CompleteReplacementSurvivesSingularDeletionIntermediate
+[       OK ] GateDNumerics.CompleteReplacementSurvivesSingularDeletionIntermediate (0 ms)
+[ RUN      ] GateDNumerics.FrozenNumericalContractMismatchFailsClosed
+[       OK ] GateDNumerics.FrozenNumericalContractMismatchFailsClosed (0 ms)
+[ RUN      ] GateDNumerics.FinalSvdRejectsConditionHiddenByCholeskyDiagonal
+[       OK ] GateDNumerics.FinalSvdRejectsConditionHiddenByCholeskyDiagonal (0 ms)
+[ RUN      ] GateDNumerics.EuclideanStepGateBothSidesUsesReferenceNearBoundary
+[       OK ] GateDNumerics.EuclideanStepGateBothSidesUsesReferenceNearBoundary (0 ms)
+[ RUN      ] GateDNumerics.MalformedFullChangeRejectedBeforeAnyPartialOperation
+[       OK ] GateDNumerics.MalformedFullChangeRejectedBeforeAnyPartialOperation (0 ms)
+[ RUN      ] GateDNumerics.RankAndConditionThresholdsBothSidesKeepExactDefinitions
+[       OK ] GateDNumerics.RankAndConditionThresholdsBothSidesKeepExactDefinitions (0 ms)
+[----------] 6 tests from GateDNumerics (0 ms total)
+
+[----------] 2 tests from GateDCache
+[ RUN      ] GateDCache.CacheContentVersionWindowAndSwitchRemainEquivalent
+[       OK ] GateDCache.CacheContentVersionWindowAndSwitchRemainEquivalent (0 ms)
+[ RUN      ] GateDCache.EarlyStepSwitchAgreesWithExactFinalJacobian
+[       OK ] GateDCache.EarlyStepSwitchAgreesWithExactFinalJacobian (1 ms)
+[----------] 2 tests from GateDCache (1 ms total)
+
+[----------] 1 test from GateDReplay
+[ RUN      ] GateDReplay.LosslessRoundTripAllBlocksAndActions
+[       OK ] GateDReplay.LosslessRoundTripAllBlocksAndActions (0 ms)
+[----------] 1 test from GateDReplay (0 ms total)
+
+[----------] 1 test from GateDOracle
+[ RUN      ] GateDOracle.RealCurrentHistoricalBridgeAndUnionActionsMatchDenseAndWorkers
+[       OK ] GateDOracle.RealCurrentHistoricalBridgeAndUnionActionsMatchDenseAndWorkers (516 ms)
+[----------] 1 test from GateDOracle (516 ms total)
+
+[----------] 1 test from GateDSelection
+[ RUN      ] GateDSelection.DenseAndOperatorPathsSelectSameSuccessfulExclusion
+[       OK ] GateDSelection.DenseAndOperatorPathsSelectSameSuccessfulExclusion (1 ms)
+[----------] 1 test from GateDSelection (1 ms total)
+
+[----------] 1 test from GateDDiagnostics
+[ RUN      ] GateDDiagnostics.PreparationExceptionKeepsAttemptTimingAndZeroUpdates
+[       OK ] GateDDiagnostics.PreparationExceptionKeepsAttemptTimingAndZeroUpdates (5 ms)
+[----------] 1 test from GateDDiagnostics (5 ms total)
+
+[----------] 1 test from GateDNumericalCertificate
+[ RUN      ] GateDNumericalCertificate.ClearCandidateAvoidsFinalJacobianSvd
+[       OK ] GateDNumericalCertificate.ClearCandidateAvoidsFinalJacobianSvd (0 ms)
+[----------] 1 test from GateDNumericalCertificate (0 ms total)
+
+[----------] 1 test from GateDProtectionLevel
+[ RUN      ] GateDProtectionLevel.SharedModesUseOneCombinedCovarianceSolve
+[       OK ] GateDProtectionLevel.SharedModesUseOneCombinedCovarianceSolve (1 ms)
+[----------] 1 test from GateDProtectionLevel (1 ms total)
+
+[----------] 1 test from GateDWorkerPool
+[ RUN      ] GateDWorkerPool.StaticSchedulingExceptionBarrierAndScratchReuse
+[       OK ] GateDWorkerPool.StaticSchedulingExceptionBarrierAndScratchReuse (0 ms)
+[----------] 1 test from GateDWorkerPool (0 ms total)
+
+[----------] 1 test from GateDStatistics
+[ RUN      ] GateDStatistics.ExactBitKeyProducesCacheHitWithoutQuantization
+[       OK ] GateDStatistics.ExactBitKeyProducesCacheHitWithoutQuantization (1 ms)
+[----------] 1 test from GateDStatistics (1 ms total)
+
+[----------] 1 test from GateDHistoryCache
+[ RUN      ] GateDHistoryCache.FrozenFactorContentHitsAndMutationMisses
+[       OK ] GateDHistoryCache.FrozenFactorContentHitsAndMutationMisses (6 ms)
+[----------] 1 test from GateDHistoryCache (6 ms total)
+
+[----------] 2 tests from IntegrityV2Numerics
+[ RUN      ] IntegrityV2Numerics.FrozenWindowSharesOneBaseSvdAndLlt
+[       OK ] IntegrityV2Numerics.FrozenWindowSharesOneBaseSvdAndLlt (0 ms)
+[ RUN      ] IntegrityV2Numerics.RejectsReuseAfterAnyFrozenIdentityMutation
+[       OK ] IntegrityV2Numerics.RejectsReuseAfterAnyFrozenIdentityMutation (0 ms)
+[----------] 2 tests from IntegrityV2Numerics (0 ms total)
+
+[----------] 1 test from IntegrityV2Risk
+[ RUN      ] IntegrityV2Risk.EqualAllocationNeverOvershootsAndRealExcessFails
+[       OK ] IntegrityV2Risk.EqualAllocationNeverOvershootsAndRealExcessFails (0 ms)
+[----------] 1 test from IntegrityV2Risk (0 ms total)
+
+[----------] 3 tests from IntegrityV2ImuOracle
+[ RUN      ] IntegrityV2ImuOracle.AnalyticProductionHasZeroReintegrationAcrossMotions
+[       OK ] IntegrityV2ImuOracle.AnalyticProductionHasZeroReintegrationAcrossMotions (33 ms)
+[ RUN      ] IntegrityV2ImuOracle.FiniteDifferenceSweepMatchesAnalyticAcrossStepSizes
+[       OK ] IntegrityV2ImuOracle.FiniteDifferenceSweepMatchesAnalyticAcrossStepSizes (5 ms)
+[ RUN      ] IntegrityV2ImuOracle.InvalidAnalyticInputIsReportedWithoutOracle
+[       OK ] IntegrityV2ImuOracle.InvalidAnalyticInputIsReportedWithoutOracle (0 ms)
+[----------] 3 tests from IntegrityV2ImuOracle (38 ms total)
+
+[----------] 4 tests from B2Registry
+[ RUN      ] B2Registry.PairFamilySupportClassifiesFamilies
+[       OK ] B2Registry.PairFamilySupportClassifiesFamilies (0 ms)
+[ RUN      ] B2Registry.LocalCollinearityDoesNotEraseGloballyIndependentPair
+[       OK ] B2Registry.LocalCollinearityDoesNotEraseGloballyIndependentPair (0 ms)
+[ RUN      ] B2Registry.GlobalDangerousNullspaceIsPreservedAndFailsClosedNumerically
+[       OK ] B2Registry.GlobalDangerousNullspaceIsPreservedAndFailsClosedNumerically (0 ms)
+[ RUN      ] B2Registry.CrossBlocksAreRequestedOnlyWhereNeeded
+[       OK ] B2Registry.CrossBlocksAreRequestedOnlyWhereNeeded (1 ms)
+[----------] 4 tests from B2Registry (1 ms total)
+
+[----------] 4 tests from B2Compact
+[ RUN      ] B2Compact.CompactPathAllocatesNoPaddedModeBlocks
+[       OK ] B2Compact.CompactPathAllocatesNoPaddedModeBlocks (0 ms)
+[ RUN      ] B2Compact.CapacityExhaustionFallsBackWithIdenticalResults
+[       OK ] B2Compact.CapacityExhaustionFallsBackWithIdenticalResults (0 ms)
+[ RUN      ] B2Compact.HypothesisDimensionCapRefusesFailClosed
+[       OK ] B2Compact.HypothesisDimensionCapRefusesFailClosed (0 ms)
+[ RUN      ] B2Compact.LegacyMappedRouteCountsPaddedAllocations
+[       OK ] B2Compact.LegacyMappedRouteCountsPaddedAllocations (0 ms)
+[----------] 4 tests from B2Compact (0 ms total)
+
+[----------] 6 tests from B2Coverage
+[ RUN      ] B2Coverage.ExactTraversalCertifiesEveryTask
+[       OK ] B2Coverage.ExactTraversalCertifiesEveryTask (0 ms)
+[ RUN      ] B2Coverage.GroupedEnvelopeDischargesProofAndDominance
+[       OK ] B2Coverage.GroupedEnvelopeDischargesProofAndDominance (0 ms)
+[ RUN      ] B2Coverage.MismatchedModesAreRejectedByTheInclusionProof
+[       OK ] B2Coverage.MismatchedModesAreRejectedByTheInclusionProof (0 ms)
+[ RUN      ] B2Coverage.UnsupportedFamilyCannotFormAnEnvelope
+[       OK ] B2Coverage.UnsupportedFamilyCannotFormAnEnvelope (0 ms)
+[ RUN      ] B2Coverage.IncompleteCoverageMakesProtectedOutputUnavailable
+[       OK ] B2Coverage.IncompleteCoverageMakesProtectedOutputUnavailable (0 ms)
+[ RUN      ] B2Coverage.DominanceRejectsAnUnderCoveringEnvelope
+[       OK ] B2Coverage.DominanceRejectsAnUnderCoveringEnvelope (0 ms)
+[----------] 6 tests from B2Coverage (0 ms total)
+
+[----------] 5 tests from B3Risk
+[ RUN      ] B3Risk.RSK01UnionBoundDoesNotDoubleChargeAndSolvesConservatively
+[       OK ] B3Risk.RSK01UnionBoundDoesNotDoubleChargeAndSolvesConservatively (15 ms)
+[ RUN      ] B3Risk.RSK02LedgerHasNoHiddenZerosAndOverlapGivesNoDividend
+[       OK ] B3Risk.RSK02LedgerHasNoHiddenZerosAndOverlapGivesNoDividend (0 ms)
+[ RUN      ] B3Risk.RSK03PositionMarginAndResidualThresholdActTogether
+[       OK ] B3Risk.RSK03PositionMarginAndResidualThresholdActTogether (0 ms)
+[ RUN      ] B3Risk.BoundaryInputsAreRejectedAndCacheIdentityIsVersioned
+[       OK ] B3Risk.BoundaryInputsAreRejectedAndCacheIdentityIsVersioned (0 ms)
+[ RUN      ] B3Risk.HistorySummaryVersionIsPartOfCacheIdentity
+[       OK ] B3Risk.HistorySummaryVersionIsPartOfCacheIdentity (0 ms)
+[----------] 5 tests from B3Risk (15 ms total)
+
+[----------] 2 tests from B4LazyFde
+[ RUN      ] B4LazyFde.FDE01HealthyFrameBuildsNoActionEntitiesButKeepsSensitivity
+[       OK ] B4LazyFde.FDE01HealthyFrameBuildsNoActionEntitiesButKeepsSensitivity (17 ms)
+[ RUN      ] B4LazyFde.FDE02IsolationPathStillMaterializesEvidenceOnDemand
+[       OK ] B4LazyFde.FDE02IsolationPathStillMaterializesEvidenceOnDemand (32 ms)
+[----------] 2 tests from B4LazyFde (49 ms total)
+
+[----------] 2 tests from B3ZeroSpace
+[ RUN      ] B3ZeroSpace.DangerousNullspaceIsUnavailableWithDirectionLevelReason
+[       OK ] B3ZeroSpace.DangerousNullspaceIsUnavailableWithDirectionLevelReason (0 ms)
+[ RUN      ] B3ZeroSpace.HarmlessNullspaceKeepsAFiniteProjectedBound
+[       OK ] B3ZeroSpace.HarmlessNullspaceKeepsAFiniteProjectedBound (0 ms)
+[----------] 2 tests from B3ZeroSpace (0 ms total)
+
+[----------] 1 test from GateAttribution
+[ RUN      ] GateAttribution.StepAttributionNamesPhysicalBlocksAndDominantEpoch
+[       OK ] GateAttribution.StepAttributionNamesPhysicalBlocksAndDominantEpoch (0 ms)
+[----------] 1 test from GateAttribution (0 ms total)
+
+[----------] 1 test from EnvelopeDominance
+[ RUN      ] EnvelopeDominance.OneSidedRelativeRuleRejectsNarrowBandShortfall
+[       OK ] EnvelopeDominance.OneSidedRelativeRuleRejectsNarrowBandShortfall (0 ms)
+[----------] 1 test from EnvelopeDominance (0 ms total)
+
+[----------] 13 tests from P101IdentityIndexing
+[ RUN      ] P101IdentityIndexing.FrozenProofAndDirectDescriptorsAreExact
+[       OK ] P101IdentityIndexing.FrozenProofAndDirectDescriptorsAreExact (1 ms)
+[ RUN      ] P101IdentityIndexing.UniqueBlockRhsUsesOneBatch
+[       OK ] P101IdentityIndexing.UniqueBlockRhsUsesOneBatch (0 ms)
+[ RUN      ] P101IdentityIndexing.BatchedRhsMatchesUncachedCandidateExactly
+[       OK ] P101IdentityIndexing.BatchedRhsMatchesUncachedCandidateExactly (0 ms)
+[ RUN      ] P101IdentityIndexing.ExactOperationDedupKeepsSemanticCoverage
+[       OK ] P101IdentityIndexing.ExactOperationDedupKeepsSemanticCoverage (0 ms)
+[ RUN      ] P101IdentityIndexing.FrozenOwnerIsImmutableAndAdmissionIsConstantWork
+[       OK ] P101IdentityIndexing.FrozenOwnerIsImmutableAndAdmissionIsConstantWork (0 ms)
+[ RUN      ] P101IdentityIndexing.SealedCandidateIsBoundToItsExactOwner
+[       OK ] P101IdentityIndexing.SealedCandidateIsBoundToItsExactOwner (0 ms)
+[ RUN      ] P101IdentityIndexing.ForcedHashCollisionTransplantIsRejectedByRealSealedConsumer
+[       OK ] P101IdentityIndexing.ForcedHashCollisionTransplantIsRejectedByRealSealedConsumer (0 ms)
+[ RUN      ] P101IdentityIndexing.ProductionMoveIsolatedFromReusedSourceObject
+[       OK ] P101IdentityIndexing.ProductionMoveIsolatedFromReusedSourceObject (1 ms)
+[ RUN      ] P101IdentityIndexing.ReusedPayloadAddressCannotInheritOldOwner
+[       OK ] P101IdentityIndexing.ReusedPayloadAddressCannotInheritOldOwner (0 ms)
+[ RUN      ] P101IdentityIndexing.ForcedHashCollisionRequiresCanonicalEquality
+[       OK ] P101IdentityIndexing.ForcedHashCollisionRequiresCanonicalEquality (0 ms)
+[ RUN      ] P101IdentityIndexing.OldHandleCannotAdmitNewObjectOrAddressReuse
+[       OK ] P101IdentityIndexing.OldHandleCannotAdmitNewObjectOrAddressReuse (0 ms)
+[ RUN      ] P101IdentityIndexing.CopyMoveLifetimeAndConcurrentAdmissionAreStable
+[       OK ] P101IdentityIndexing.CopyMoveLifetimeAndConcurrentAdmissionAreStable (1 ms)
+[ RUN      ] P101IdentityIndexing.FrozenClockMakesTerminalDecisionExact
+[       OK ] P101IdentityIndexing.FrozenClockMakesTerminalDecisionExact (19 ms)
+[----------] 13 tests from P101IdentityIndexing (22 ms total)
+
+[----------] Global test environment tear-down
+[==========] 99 tests from 37 test suites ran. (1251 ms total)
+[  PASSED  ] 99 tests.

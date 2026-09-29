@@ -1,0 +1,34 @@
+[==========] Running 13 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 13 tests from P004RiskOracle
+[ RUN      ] P004RiskOracle.MissChannelIsChargedIntoTheSameTotal
+[       OK ] P004RiskOracle.MissChannelIsChargedIntoTheSameTotal (0 ms)
+[ RUN      ] P004RiskOracle.ZeroAllocationStillChargesPriorWeightedMiss
+[       OK ] P004RiskOracle.ZeroAllocationStillChargesPriorWeightedMiss (0 ms)
+[ RUN      ] P004RiskOracle.FourStatusesAreIndependentAndUnknownIsNotZero
+[       OK ] P004RiskOracle.FourStatusesAreIndependentAndUnknownIsNotZero (0 ms)
+[ RUN      ] P004RiskOracle.AllocationCanFitWhileCompleteMissBoundExceedsBudget
+[       OK ] P004RiskOracle.AllocationCanFitWhileCompleteMissBoundExceedsBudget (0 ms)
+[ RUN      ] P004RiskOracle.QuadBoundaryCannotBeRoundedBackIntoBudget
+[       OK ] P004RiskOracle.QuadBoundaryCannotBeRoundedBackIntoBudget (0 ms)
+[ RUN      ] P004RiskOracle.ReviewerExactMissBoundaryRemainsOverBudget
+[       OK ] P004RiskOracle.ReviewerExactMissBoundaryRemainsOverBudget (0 ms)
+[ RUN      ] P004RiskOracle.InvalidCompleteRiskBoundsFailClosedWithoutNegativeExport
+[       OK ] P004RiskOracle.InvalidCompleteRiskBoundsFailClosedWithoutNegativeExport (0 ms)
+[ RUN      ] P004RiskOracle.SidecarTermsObeyCanonicalCartesianContract
+[       OK ] P004RiskOracle.SidecarTermsObeyCanonicalCartesianContract (1 ms)
+[ RUN      ] P004RiskOracle.RejectedHypothesisRiskIsUnknownRatherThanKnownZero
+[       OK ] P004RiskOracle.RejectedHypothesisRiskIsUnknownRatherThanKnownZero (0 ms)
+[ RUN      ] P004RiskOracle.OverflowFailsClosedAndProvenZeroTermsRemainFinite
+[       OK ] P004RiskOracle.OverflowFailsClosedAndProvenZeroTermsRemainFinite (0 ms)
+[ RUN      ] P004RiskOracle.UnverifiableSharedEventClaimsRemainSingletons
+[       OK ] P004RiskOracle.UnverifiableSharedEventClaimsRemainSingletons (0 ms)
+[ RUN      ] P004RiskOracle.ManagerDoesNotPremergeDisjointActionsByPlausibleId
+[       OK ] P004RiskOracle.ManagerDoesNotPremergeDisjointActionsByPlausibleId (0 ms)
+[ RUN      ] P004RiskOracle.NoAlarmDoesNotMakeActionSelectionEventsFree
+[       OK ] P004RiskOracle.NoAlarmDoesNotMakeActionSelectionEventsFree (0 ms)
+[----------] 13 tests from P004RiskOracle (1 ms total)
+
+[----------] Global test environment tear-down
+[==========] 13 tests from 1 test suite ran. (1 ms total)
+[  PASSED  ] 13 tests.

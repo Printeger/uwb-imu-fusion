@@ -1,0 +1,21 @@
+P1-02 direct golden comparison
+status=PASS
+
+golden_tag=golden-p1-01-identity-indexing
+golden_commit=86013984e4a8c256db953743290cec767d27b661
+independent_detached_worktree=/tmp/p1-02-baseline-golden-p1-01.aqVUdK/src
+independent_build=/tmp/p1-02-baseline-golden-p1-01.aqVUdK/build
+independent_devel=/tmp/p1-02-baseline-golden-p1-01.aqVUdK/devel
+
+baseline: runs=3; attempts=135; complete=135; excluded=0; command_exits=0/0/0
+candidate: runs=3; attempts=135; complete=135; excluded=0; command_exits=0/0/0
+paired_comparisons=PASS/PASS/PASS
+compared_files_per_pair=13
+rows_per_pair=45 attempts plus 450 state-step rows
+
+The comparator uses exact equality for all discrete and textual semantic
+fields and zero numeric tolerance for the logged navigation/detector/PL/risk
+quantities.  It permits only mechanically proved finish-wall transformations.
+Four named work/cache fields are excluded and retained independently; see
+ignored-performance-fields.json.  No terminal, census, risk, PL, certificate,
+action, winner, commit or packet field is excluded.

@@ -1,0 +1,90 @@
+{
+  "equivalence": [
+    "PASS",
+    "PASS",
+    "PASS"
+  ],
+  "schema": "uwb-imu-pl/p1-02-acceptance-summary/v1",
+  "sides": {
+    "after": {
+      "attempt_status": {
+        "EXECUTED": 135
+      },
+      "attempts": 135,
+      "candidate_post_detector_passed": {
+        "1": 135
+      },
+      "candidate_rows": 135,
+      "candidate_selected": {
+        "0": 135
+      },
+      "candidate_valid": {
+        "0": 102,
+        "1": 33
+      },
+      "coverage_status": {
+        "COMPLETE": 135
+      },
+      "fde_status": {
+        "NO_VALID_CANDIDATE": 102,
+        "RISK_BUDGET_INVALID": 33
+      },
+      "generated_actions_total": 135,
+      "hypothesis_count_max": 61104,
+      "hypothesis_count_min": 174,
+      "kernel_evaluated_actions_total": 135,
+      "publication_protected": {
+        "0": 135
+      },
+      "publication_unprotected": {
+        "1": 135
+      },
+      "risk_ledger_all_validated": {
+        "0": 135
+      },
+      "risk_ledger_closes": {
+        "0": 135
+      }
+    },
+    "before": {
+      "attempt_status": {
+        "EXECUTED": 135
+      },
+      "attempts": 135,
+      "candidate_post_detector_passed": {
+        "1": 135
+      },
+      "candidate_rows": 135,
+      "candidate_selected": {
+        "0": 135
+      },
+      "candidate_valid": {
+        "0": 102,
+        "1": 33
+      },
+      "coverage_status": {
+        "COMPLETE": 135
+      },
+      "fde_status": {
+        "NO_VALID_CANDIDATE": 102,
+        "RISK_BUDGET_INVALID": 33
+      },
+      "generated_actions_total": 135,
+      "hypothesis_count_max": 61104,
+      "hypothesis_count_min": 174,
+      "kernel_evaluated_actions_total": 135,
+      "publication_protected": {
+        "0": 135
+      },
+      "publication_unprotected": {
+        "1": 135
+      },
+      "risk_ledger_all_validated": {
+        "0": 135
+      },
+      "risk_ledger_closes": {
+        "0": 135
+      }
+    }
+  }
+}

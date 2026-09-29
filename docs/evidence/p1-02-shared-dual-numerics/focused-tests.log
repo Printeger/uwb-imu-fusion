@@ -1,0 +1,28 @@
+Note: Google Test filter = P102SharedDualNumerics.*:P002DualChannelContract.*
+[==========] Running 8 tests from 2 test suites.
+[----------] Global test environment set-up.
+[----------] 7 tests from P002DualChannelContract
+[ RUN      ] P002DualChannelContract.PooledPassDualFailRejectsDenseAndMatrixFree
+[       OK ] P002DualChannelContract.PooledPassDualFailRejectsDenseAndMatrixFree (1 ms)
+[ RUN      ] P002DualChannelContract.NonzeroHistoryConstantRejectsEveryCandidatePath
+[       OK ] P002DualChannelContract.NonzeroHistoryConstantRejectsEveryCandidatePath (0 ms)
+[ RUN      ] P002DualChannelContract.MissingPayloadIsInvalidAndCannotCertifyFinitePl
+[       OK ] P002DualChannelContract.MissingPayloadIsInvalidAndCannotCertifyFinitePl (0 ms)
+[ RUN      ] P002DualChannelContract.AllInKeepAndModifiedShareDenseMatrixFreeCertificateAndPl
+[       OK ] P002DualChannelContract.AllInKeepAndModifiedShareDenseMatrixFreeCertificateAndPl (1 ms)
+[ RUN      ] P002DualChannelContract.MissingHistoryConstantFailsClosed
+[       OK ] P002DualChannelContract.MissingHistoryConstantFailsClosed (0 ms)
+[ RUN      ] P002DualChannelContract.IndependentRawQrGramAndPlOracleCoversAllCandidatePaths
+[       OK ] P002DualChannelContract.IndependentRawQrGramAndPlOracleCoversAllCandidatePaths (3 ms)
+[ RUN      ] P002DualChannelContract.StaleSwappedAndTamperedContractsFailClosedBeforeFinitePl
+[       OK ] P002DualChannelContract.StaleSwappedAndTamperedContractsFailClosedBeforeFinitePl (0 ms)
+[----------] 7 tests from P002DualChannelContract (5 ms total)
+
+[----------] 1 test from P102SharedDualNumerics
+[ RUN      ] P102SharedDualNumerics.ActiveDualKeepAllReusesEvidenceSmallBlocksWithoutChangingPl
+[       OK ] P102SharedDualNumerics.ActiveDualKeepAllReusesEvidenceSmallBlocksWithoutChangingPl (1 ms)
+[----------] 1 test from P102SharedDualNumerics (1 ms total)
+
+[----------] Global test environment tear-down
+[==========] 8 tests from 2 test suites ran. (6 ms total)
+[  PASSED  ] 8 tests.

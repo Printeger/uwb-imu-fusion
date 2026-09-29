@@ -1,0 +1,36 @@
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from DualChannelDetector
+[ RUN      ] DualChannelDetector.InformationFormConstantIsCountedBeforeChannelSplit
+[       OK ] DualChannelDetector.InformationFormConstantIsCountedBeforeChannelSplit (0 ms)
+[ RUN      ] DualChannelDetector.Det02MergedDirectionIsTheOnlyMonitoredOne
+[       OK ] DualChannelDetector.Det02MergedDirectionIsTheOnlyMonitoredOne (1 ms)
+[ RUN      ] DualChannelDetector.P003IndefiniteAndAsymmetricGramsFailClosed
+[       OK ] DualChannelDetector.P003IndefiniteAndAsymmetricGramsFailClosed (0 ms)
+[ RUN      ] DualChannelDetector.Det03FaultSpanCoversEveryRetainedDirection
+[       OK ] DualChannelDetector.Det03FaultSpanCoversEveryRetainedDirection (0 ms)
+[ RUN      ] DualChannelDetector.Det04PooledVersusSeparatedIsQuantifiedNotAssumed
+[DET-04] m,lambda,Tpooled_tau,pooled_miss,joint_miss,difference
+[DET-04] 0.0,0.000,98.702,0.999900,1.000000,+0.000100
+[DET-04] 1.0,1.000,98.702,0.999752,1.000000,+0.000248
+[DET-04] 2.0,4.000,98.702,0.997880,0.999998,+0.002118
+[DET-04] 3.0,9.000,98.702,0.976724,0.999911,+0.023187
+[DET-04] 4.0,16.000,98.702,0.834524,0.997096,+0.162572
+[DET-04] 5.0,25.000,98.702,0.444415,0.958005,+0.513590
+[DET-04] 6.0,36.000,98.702,0.094355,0.759377,+0.665022
+[DET-04] 8.0,64.000,98.702,0.000077,0.115368,+0.115290
+[DET-04] worst_abs_difference=0.665022 pooled_better_max=0.665022 joint_better_max=0.000000
+[       OK ] DualChannelDetector.Det04PooledVersusSeparatedIsQuantifiedNotAssumed (0 ms)
+[ RUN      ] DualChannelDetector.RealWindowSplitIsExactAndTablesTheDifference
+[DET-CHANNEL] epoch,T_pooled,tau_pooled,dof_pooled,T_c,tau_c,dof_c,T_b,tau_b,dof_b,joint
+[DET-CHANNEL] 18,0.000000,239.496855,144,0.000000,165.993084,88,0.000000,121.348810,56,1
+[DET-CHANNEL] 19,0.000000,249.697127,152,0.000000,165.993084,88,0.000000,132.787491,64,1
+[DET-CHANNEL] 20,0.000000,259.840672,160,0.000000,165.993084,88,0.000000,144.020352,72,1
+[DET-CHANNEL] 21,0.000000,269.931668,168,0.000000,165.993084,88,0.000000,155.080522,80,1
+[DET-CHANNEL] 22,0.000000,279.973803,176,0.000000,165.993084,88,0.000000,165.993084,88,1
+[       OK ] DualChannelDetector.RealWindowSplitIsExactAndTablesTheDifference (164 ms)
+[----------] 6 tests from DualChannelDetector (166 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (166 ms total)
+[  PASSED  ] 6 tests.

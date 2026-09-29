@@ -270,11 +270,32 @@ class ProtectionLevelV2 {
       const FrozenHypothesisNumerics& frozen,
       std::uint64_t fault_model_policy_fingerprint,
       const RiskBudgetV2& risk) const;
+  ProtectionLevelV2Result computeFrozenAllIn(
+      const FrozenWindowAdmission& admission,
+      CandidateEvaluation* candidate,
+      const DetectorResultV2& detector,
+      const std::vector<FaultHypothesisV2>& remaining_hypotheses,
+      const std::vector<FaultModeBasis>& modes,
+      const FrozenHypothesisNumerics& frozen,
+      const FrozenHypothesisDualNumerics& frozen_dual,
+      std::uint64_t fault_model_policy_fingerprint,
+      const RiskBudgetV2& risk) const;
 
   static double detectionBoundaryNoncentralitySquared(
       int dof, double squared_threshold, double p_md);
 
  private:
+  ProtectionLevelV2Result computeFrozenAllInImpl(
+      const LinearizedIntegrityWindow& window,
+      CandidateEvaluation* candidate,
+      const DetectorResultV2& detector,
+      const std::vector<FaultHypothesisV2>& remaining_hypotheses,
+      const std::vector<FaultModeBasis>& modes,
+      const FrozenHypothesisNumerics& frozen,
+      const FrozenHypothesisDualNumerics* frozen_dual,
+      std::uint64_t fault_model_policy_fingerprint,
+      const RiskBudgetV2& risk,
+      const FrozenWindowAdmission* admission) const;
   ProtectionLevelV2Result computeSharedImpl(
       const LinearizedIntegrityWindow& window,
       CandidateEvaluation* candidate,

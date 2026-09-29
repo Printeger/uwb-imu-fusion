@@ -1,0 +1,63 @@
+[==========] Running 24 tests from 3 test suites.
+[----------] Global test environment set-up.
+[----------] 13 tests from P006ActionSearchRed
+[ RUN      ] P006ActionSearchRed.DistinctActionBeyond128MakesSearchIncomplete
+[       OK ] P006ActionSearchRed.DistinctActionBeyond128MakesSearchIncomplete (7 ms)
+[ RUN      ] P006ActionSearchRed.ProductionGeneratorReportsEveryTruncatedIdentity
+[       OK ] P006ActionSearchRed.ProductionGeneratorReportsEveryTruncatedIdentity (5 ms)
+[ RUN      ] P006ActionSearchRed.ExactDuplicateOnlyIsProofSafe
+[       OK ] P006ActionSearchRed.ExactDuplicateOnlyIsProofSafe (0 ms)
+[ RUN      ] P006ActionSearchRed.SameCompactHashShapeDifferentOperationIsNotMerged
+[       OK ] P006ActionSearchRed.SameCompactHashShapeDifferentOperationIsNotMerged (1 ms)
+[ RUN      ] P006ActionSearchRed.ReorderingPreservesCompleteCensusAndRefusal
+[       OK ] P006ActionSearchRed.ReorderingPreservesCompleteCensusAndRefusal (10 ms)
+[ RUN      ] P006ActionSearchRed.ByteExactZeroNaNAndDuplicateProof
+[       OK ] P006ActionSearchRed.ByteExactZeroNaNAndDuplicateProof (0 ms)
+[ RUN      ] P006ActionSearchRed.CapOneAndAbortUseActualEvaluatedCount
+[       OK ] P006ActionSearchRed.CapOneAndAbortUseActualEvaluatedCount (1 ms)
+[ RUN      ] P006ActionSearchRed.StrictValidatorRejectsTamperOverflowAndFakeSafe
+[       OK ] P006ActionSearchRed.StrictValidatorRejectsTamperOverflowAndFakeSafe (0 ms)
+[ RUN      ] P006ActionSearchRed.SelfConsistentSidecarAndEmbeddedRawCannotReplaceTrustedSnapshot
+[       OK ] P006ActionSearchRed.SelfConsistentSidecarAndEmbeddedRawCannotReplaceTrustedSnapshot (0 ms)
+[ RUN      ] P006ActionSearchRed.CapLifecycleAndEvaluatedOrderAreConsumerBound
+[       OK ] P006ActionSearchRed.CapLifecycleAndEvaluatedOrderAreConsumerBound (1 ms)
+[ RUN      ] P006ActionSearchRed.DuplicateActionIdDoesNotAliasOccurrenceOrOperation
+[       OK ] P006ActionSearchRed.DuplicateActionIdDoesNotAliasOccurrenceOrOperation (0 ms)
+[ RUN      ] P006ActionSearchRed.ProductionRawDuplicateOccurrenceIsRecorded
+[       OK ] P006ActionSearchRed.ProductionRawDuplicateOccurrenceIsRecorded (1 ms)
+[ RUN      ] P006ActionSearchRed.ZeroCapAndOversizeInputFailClosedWithoutOverflow
+[       OK ] P006ActionSearchRed.ZeroCapAndOversizeInputFailClosedWithoutOverflow (0 ms)
+[----------] 13 tests from P006ActionSearchRed (26 ms total)
+
+[----------] 6 tests from P006ActionSearch
+[ RUN      ] P006ActionSearch.ManagerRefusesBeforeWinnerOrRiskClaim
+[       OK ] P006ActionSearch.ManagerRefusesBeforeWinnerOrRiskClaim (16 ms)
+[ RUN      ] P006ActionSearch.OperationEquivalentSemanticVariantsAreOrderIndependentEndToEnd
+[       OK ] P006ActionSearch.OperationEquivalentSemanticVariantsAreOrderIndependentEndToEnd (1 ms)
+[ RUN      ] P006ActionSearch.ProductionExceptionsPreserveCensusThroughPacketAndCsv
+[       OK ] P006ActionSearch.ProductionExceptionsPreserveCensusThroughPacketAndCsv (13 ms)
+[ RUN      ] P006ActionSearch.ReleaseRuntimeIgnoresLegacyP006EnvironmentVariable
+[       OK ] P006ActionSearch.ReleaseRuntimeIgnoresLegacyP006EnvironmentVariable (27 ms)
+[ RUN      ] P006ActionSearch.FinalPacketAlwaysRefusesIncompleteSearch
+[       OK ] P006ActionSearch.FinalPacketAlwaysRefusesIncompleteSearch (0 ms)
+[ RUN      ] P006ActionSearch.CsvRetainsSearchReasonAndEveryOmittedIdentity
+[       OK ] P006ActionSearch.CsvRetainsSearchReasonAndEveryOmittedIdentity (0 ms)
+[----------] 6 tests from P006ActionSearch (57 ms total)
+
+[----------] 5 tests from P006O07
+[ RUN      ] P006O07.ProductionBackedAmplitudeOnsetAxisJointGrid
+P006_GRID cells=54 alarms=18 recoverable=0 refusals=54 healthy_winners=0 evidence_refusals=22 profile_refusals=13 plausible=2863 plausible_joint=2295 rank_routes=567 dense_routes=2384
+[       OK ] P006O07.ProductionBackedAmplitudeOnsetAxisJointGrid (49343 ms)
+[ RUN      ] P006O07.RouterFailsDenseForLargeIllConditionedAndUnknownReplacement
+[       OK ] P006O07.RouterFailsDenseForLargeIllConditionedAndUnknownReplacement (0 ms)
+[ RUN      ] P006O07.RouterRecoversCatchableRankExceptionWithExactTerminal
+[       OK ] P006O07.RouterRecoversCatchableRankExceptionWithExactTerminal (0 ms)
+[ RUN      ] P006O07.Production130IncludesFullUnionBeyondCap128
+[       OK ] P006O07.Production130IncludesFullUnionBeyondCap128 (56 ms)
+[ RUN      ] P006O07.ProductionKernelDetectorPlAndFdeFindBeyondCapAction
+[       OK ] P006O07.ProductionKernelDetectorPlAndFdeFindBeyondCapAction (22354 ms)
+[----------] 5 tests from P006O07 (71753 ms total)
+
+[----------] Global test environment tear-down
+[==========] 24 tests from 3 test suites ran. (71836 ms total)
+[  PASSED  ] 24 tests.
