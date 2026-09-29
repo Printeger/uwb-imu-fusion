@@ -1,0 +1,31 @@
+P1-04 implementer verification
+baseline=golden-p1-03-incremental-history-root
+baseline_sha=bdc39560b4c74c5b7a7e4dc766d3994290f31f32
+status=PASS; independent review and supervisor acceptance complete
+
+Build affected targets: PASS
+P104 focused: 6/6 PASS
+P104 proof ownership: 1/1 PASS; high-water 7/31; main arena 1
+Exception funnel: 1/1 PASS; no PENDING_RISK
+O03 focused integrity_v2: 107/107 PASS
+O07 focused action search: 30/30 PASS, 79.04 seconds
+O12 directed replay: 2/2 PASS, 39.86 seconds
+Round2 fixed-stage validator: PASS
+P0 evidence runner: PASS, 38.68 seconds
+Golden-P1-03-header/current-DSO V1 lifecycle canary: PASS, size/align 128/8
+Current-header/current-DSO V1 lifecycle canary: PASS, size/align 128/8
+  process path: callbacks=4, no winner, NO_VALID_CANDIDATE; clear/destroy PASS
+Complete CTest: 34/34 PASS, 1139.01 seconds
+  leaf protocol: PASS, 569.23 seconds
+  evidence runner: PASS, 38.62 seconds
+  atomic failure matrix: PASS, 271.56 seconds
+Section 2.4: PASS/PASS/PASS; 135/135 complete; 0 excluded
+Core/analysis p50/p95/p99/max ms: 3142.20/5068.379/5942.9354/6007.24
+Arrival-publish p50/p95/p99/max ms: 3142.83/5069.121/5943.3068/6007.89
+Deadline misses: 132/135
+RSS peaks KiB: 553024/539392/542012
+git diff --check: PASS
+Python comparator compilation: PASS
+
+Memory claim: irreducible O(A) audit/dedup/selection state plus configured
+B times heavy workspace plus one full winner. Total memory is not claimed O(1).

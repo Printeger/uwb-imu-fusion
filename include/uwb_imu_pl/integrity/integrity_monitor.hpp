@@ -9,6 +9,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 
 namespace uwb_imu_pl {
 
@@ -97,6 +98,20 @@ struct PipelineTestDependencySeamsV1 {
   std::function<void(ExclusionActionId)> before_protection_level;
 };
 
+// Additive P1-04 test-only extension.  V1 is a frozen public ABI used by
+// golden clients and must remain exactly four std::function fields.  The
+// extension is installed through its own setter and retained in the existing
+// out-of-object sidecar, so neither V1 nor RealtimeIntegrityPipeline grows.
+struct PipelineTestDependencySeamsV2 : PipelineTestDependencySeamsV1 {
+  // Test-only trigger for the post-selection deterministic proof-recompute
+  // path when the production risk qualification artifact intentionally
+  // refuses every candidate. It does not change FDE status, risk, selection,
+  // commit, or publication; it only names the action whose first-pass scalar
+  // summary must be reproduced before a full proof is imported.
+  std::function<std::optional<ExclusionActionId>()>
+      proof_recompute_action;
+};
+
 struct PipelineCommitBoundaryAuditV1 {
   HealthSnapshot health;
   std::uint32_t consecutive_bridge_epochs = 0;
@@ -160,6 +175,8 @@ class RealtimeIntegrityPipeline {
                                 const ImuMeasurement& trusted_boundary);
   void setTestDependencySeamsV1(
       std::shared_ptr<const PipelineTestDependencySeamsV1> seams);
+  void setTestDependencySeamsV2(
+      std::shared_ptr<const PipelineTestDependencySeamsV2> seams);
 
  private:
   IncrementalUwbImuEstimator* estimator_;

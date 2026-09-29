@@ -1,0 +1,156 @@
+{
+  "additive_diagnostic": "diagnostic_stages.csv candidate_audit reason funnel",
+  "after": "/tmp/p104-fixed-run1.36OXTi",
+  "allowed_semantic_delta": "none in frozen numerical/output files",
+  "before": "docs/evidence/p1-03-incremental-history-root/archived-raw/candidate-3x45/run1",
+  "files": {
+    "bridge.csv": {
+      "after_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+      "before_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+      "mismatches": [],
+      "rows": 0,
+      "status": "PASS"
+    },
+    "candidates.csv": {
+      "after_sha256": "d7577605ade858307204d1201139a70e2b614473380797ff3f62046380bbb837",
+      "before_sha256": "0a98f922ec85c378136d20f109129e83c91c0f3f581022e05c7a1fd809f6c5bb",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "diagnostic_attempts.csv": {
+      "after_sha256": "b5ff0e2f5d3b4f94ea81db5b15f257b1745632f81015858e783a45d8c0f4215d",
+      "before_sha256": "6d7173eafe17c7e1df4f9b73c3d5aa0853fce26806532d63c86076a7af802aec",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "diagnostic_candidates.csv": {
+      "after_sha256": "a2f50675bc0014a54260151743d4f7767b27669bf1fd355eaa541ce023edccdd",
+      "before_sha256": "aaf3c174a4c8631a97ceb9b0824ab7daa7060ada4b637aca8d93bf1b00628b97",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "diagnostic_coverage.csv": {
+      "after_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+      "before_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+      "mismatches": [],
+      "rows": 0,
+      "status": "PASS"
+    },
+    "diagnostic_history_summary.csv": {
+      "after_sha256": "0d33b2ac95c5f83d9967c1f2702f83eb3325c11ced66a5ae44fe2d8a746d276b",
+      "before_sha256": "0d33b2ac95c5f83d9967c1f2702f83eb3325c11ced66a5ae44fe2d8a746d276b",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "diagnostic_snapshot_identity.csv": {
+      "after_sha256": "bb9a588a0fc2e752d36cf643af281ccc66910a14afa7a75b7bb957e0a0ed16c6",
+      "before_sha256": "bb9a588a0fc2e752d36cf643af281ccc66910a14afa7a75b7bb957e0a0ed16c6",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "diagnostic_square_root.csv": {
+      "after_sha256": "e4c223b8b95a409860f009ed6d81f895fc71e2cb0bd9c0dfeb52ff788193c95e",
+      "before_sha256": "e4c223b8b95a409860f009ed6d81f895fc71e2cb0bd9c0dfeb52ff788193c95e",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "diagnostic_state_steps.csv": {
+      "after_sha256": "93c0505b72b98d325f0cfdcd8631f33a8025d339a51a266af84f1bbd0d578660",
+      "before_sha256": "93c0505b72b98d325f0cfdcd8631f33a8025d339a51a266af84f1bbd0d578660",
+      "mismatches": [],
+      "rows": 450,
+      "status": "PASS"
+    },
+    "hypotheses.csv": {
+      "after_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+      "before_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+      "mismatches": [],
+      "rows": 0,
+      "status": "PASS"
+    },
+    "integrity.csv": {
+      "after_sha256": "2982ae167d06cad2a153bd574ac899a8388a144a8a9a2462cf31e0fb2cb88e7b",
+      "before_sha256": "b9f100adab48843cfa33dbe8fe90c8299b87fb96d6679dbbde2d7250fdb52074",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "states.csv": {
+      "after_sha256": "25115849c2d6ba975d9ee7b95bc0c39cc0480e70bc63025996c9685b0421d890",
+      "before_sha256": "25115849c2d6ba975d9ee7b95bc0c39cc0480e70bc63025996c9685b0421d890",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "transactions.csv": {
+      "after_sha256": "57f048a0b79f7bf8e082723d7ca11b1148cbdcbfbfe37a8a5544a7ffc84a5ff9",
+      "before_sha256": "57f048a0b79f7bf8e082723d7ca11b1148cbdcbfbfe37a8a5544a7ffc84a5ff9",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    }
+  },
+  "performance_ignores": {
+    "bridge.csv": [],
+    "candidates.csv": [
+      "evaluation_wall_ms"
+    ],
+    "diagnostic_attempts.csv": [
+      "base_llt",
+      "base_state_solves",
+      "base_svd",
+      "cache_entries",
+      "candidate_inner_llt",
+      "candidate_reference_svd",
+      "covariance_rhs_columns",
+      "covariance_rhs_solves",
+      "detector_reference_qr",
+      "fault_gram_eigen",
+      "fault_gram_ldlt",
+      "fault_gram_svd",
+      "generic_fault_gram_fallback",
+      "hypothesis_parallel_blocks",
+      "hypothesis_shared_hits",
+      "hypothesis_shared_misses",
+      "llt_state_solve_calls",
+      "low_dim_fault_gram",
+      "spectral_rhs_columns",
+      "spectral_rhs_solves",
+      "statistical_cache_hits",
+      "statistical_cache_misses",
+      "svd_state_solve_calls",
+      "watchdog_reason",
+      "watchdog_sensor_delta_ns",
+      "watchdog_sensor_elapsed_ns",
+      "watchdog_sensor_lag_ns",
+      "watchdog_sensor_stale",
+      "watchdog_wall_elapsed_ns"
+    ],
+    "diagnostic_candidates.csv": [
+      "bridge_ms",
+      "cache_hits",
+      "covariance_solve_count",
+      "fault_map_ms",
+      "kernel_ms",
+      "pl_ms",
+      "post_ms"
+    ],
+    "diagnostic_coverage.csv": [],
+    "diagnostic_history_summary.csv": [],
+    "diagnostic_snapshot_identity.csv": [],
+    "diagnostic_square_root.csv": [],
+    "diagnostic_state_steps.csv": [],
+    "hypotheses.csv": [],
+    "integrity.csv": [],
+    "states.csv": [],
+    "transactions.csv": []
+  },
+  "schema": "uwb-imu-pl/p1-04-stream-equivalence/v1",
+  "status": "PASS"
+}

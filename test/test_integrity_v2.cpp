@@ -599,6 +599,109 @@ TEST(P103ProofArena,
   EXPECT_EQ(scoped.availability, legacy.availability);
 }
 
+TEST(P104ProofOwnership,
+     BatchArenaHighWaterTracksCapacityAndOnlyWinnerReachesMainArena) {
+  using namespace uwb_imu_pl;
+  const auto frozen_window = freezeIntegrityWindowCopy(
+      p002HistoryWindow(0.0, 0.0));
+  const auto admission = admitFrozenIntegrityWindow(frozen_window);
+  ASSERT_TRUE(admission) << admission.reason;
+  const auto& window = admission.window();
+  RankUpdateConfig rank_config;
+  rank_config.rank_tolerance = 1e-12;
+  rank_config.max_condition_number = 1e10;
+  rank_config.max_linearization_step_norm = 10.0;
+  DetectorRiskContext detector_risk;
+  detector_risk.p_fa_per_test = 1e-6;
+  detector_risk.continuity_horizon_tests = 1000;
+  detector_risk.rank_tolerance = rank_config.rank_tolerance;
+  detector_risk.max_condition_number = rank_config.max_condition_number;
+
+  auto exercise = [&](std::size_t capacity) {
+    constexpr std::size_t kActions = 65;
+    std::vector<ExclusionAction> actions;
+    actions.reserve(kActions);
+    for (std::size_t index = 0; index < kActions; ++index) {
+      ExclusionAction action;
+      action.id = ExclusionActionId(index + 1);
+      action.action_model_id = "P104_PROOF_OWNER_" +
+          std::to_string(index + 1);
+      LinearizedFactorBlock added;
+      added.group_id = FactorGroupId(104000 + index);
+      added.kind = FactorKind::UwbBatch;
+      added.sensor = SensorType::Uwb;
+      added.role = RowRole::Measurement;
+      added.window_column_indices = {0};
+      added.jacobian_whitened = Eigen::MatrixXd::Constant(
+          1, 1, 0.01 + 0.0001 * static_cast<double>(index));
+      added.residual_whitened = Eigen::VectorXd::Constant(
+          1, 1e-5 * static_cast<double>(index));
+      added.effective_weight = 1.0;
+      added.whitening_model_id = "p104-proof-owner";
+      added.version = window.version;
+      action.groups_to_add = {added.group_id};
+      action.added_blocks.push_back(std::move(added));
+      actions.push_back(std::move(action));
+    }
+    RankUpdateEvaluator evaluator(rank_config);
+    auto base = evaluator.factorizeOnce(admission, actions);
+    ASSERT_TRUE(base.valid) << base.reason;
+    AttemptProofArena main_arena;
+    std::size_t peak = 0;
+    std::set<std::uint64_t> all_proof_ids;
+    for (std::size_t begin = 0; begin < actions.size(); begin += capacity) {
+      AttemptProofArena batch_arena;
+      const std::size_t end = std::min(actions.size(), begin + capacity);
+      for (std::size_t index = begin; index < end; ++index) {
+        auto candidate = DenseCandidateOracle(rank_config).evaluate(
+            admission, actions[index]);
+        ASSERT_TRUE(candidate.valid) << index << ": " << candidate.reason;
+        const auto detector = JointWindowDetector().evaluateCandidate(
+            window, candidate, detector_risk);
+        ASSERT_TRUE(detector.passed) << index << ": " << detector.reason;
+        Eigen::MatrixXd mode = Eigen::MatrixXd::Zero(candidate.rows, 1);
+        mode(0, 0) = 1.0;
+        mode(mode.rows() - 1, 0) = 1.0;
+        FaultHypothesisV2 hypothesis;
+        hypothesis.id = HypothesisId(104500 + index);
+        hypothesis.modes = {FaultModeId(105000 + index)};
+        hypothesis.A = mode;
+        hypothesis.p_md_allocation = 1e-3;
+        hypothesis.hmi_allocation = 1e-6;
+        hypothesis.prior_probability_bound = 1e-3;
+        std::vector<FaultHypothesisV2> hypotheses{hypothesis};
+        ProtectionLevelSharedContext shared;
+        shared.mode_maps.emplace(hypothesis.modes.front().value(), mode);
+        ProtectionLevelV2ProofV1 proof;
+        const auto result = ProtectionLevelV2().computeShared(
+            admission, &candidate, detector, &hypotheses, shared,
+            RiskBudgetV2{}, &proof, &batch_arena);
+        ASSERT_TRUE(result.model_valid) << index << ": " << result.reason;
+        ASSERT_NE(proof.proof_identity, 0u);
+        EXPECT_TRUE(all_proof_ids.insert(proof.proof_identity).second);
+        if (index + 1 == actions.size()) {
+          std::string reason;
+          ASSERT_TRUE(retainProtectionLevelV2Proof(
+              candidate, result, proof, &main_arena, &reason)) << reason;
+        }
+      }
+      const std::size_t resident = protectionLevelV2FullProofCount(batch_arena);
+      peak = std::max(peak, resident);
+      EXPECT_EQ(resident, end - begin);
+      EXPECT_LE(resident, capacity);
+      batch_arena.close();
+      EXPECT_EQ(protectionLevelV2FullProofCount(main_arena),
+                end == actions.size() ? 1u : 0u);
+    }
+    EXPECT_EQ(all_proof_ids.size(), kActions);
+    EXPECT_EQ(peak, capacity);
+    EXPECT_EQ(protectionLevelV2FullProofCount(main_arena), 1u);
+  };
+
+  exercise(7);
+  exercise(31);
+}
+
 TEST(P103ProofArena, CloseConsumeRaceHasOneLinearizedWinner) {
   using namespace uwb_imu_pl;
   constexpr std::uint32_t kind = 103;

@@ -1,0 +1,1 @@
+timestamp_ns,sequence,anchor_id,fault_mode,active,outage,injected_bias_m,true_range_m,sensor_type,fault_kind,axis,epoch_begin,epoch_end,injected_value,injected_units

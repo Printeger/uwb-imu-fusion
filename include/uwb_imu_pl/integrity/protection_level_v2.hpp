@@ -150,6 +150,20 @@ bool protectionLevelV2Proof(const ProtectionLevelV2Result& result,
                             const CandidateEvaluation& candidate,
                             const AttemptProofArena& arena,
                             ProtectionLevelV2ProofV1* proof);
+// P1-04 proof ownership helpers. Importing is an exact move/copy of a
+// self-contained proof produced for the same candidate/result; it performs no
+// numerical recomputation and cannot mint a different identity. The null-arena
+// overload preserves the legacy registry behavior for old V1 callers.
+bool retainProtectionLevelV2Proof(
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    const ProtectionLevelV2ProofV1& proof,
+    AttemptProofArena* arena,
+    std::string* reason = nullptr);
+std::size_t protectionLevelV2FullProofCount(
+    const AttemptProofArena& arena);
+std::size_t protectionLevelV2FullProofCount(
+    const AttemptProofLease& lease);
 std::uint64_t protectionLevelV2ProofIdentity(
     const ProtectionLevelV2Result& result);
 std::uint64_t protectionLevelV2ProofIdentity(
@@ -369,6 +383,21 @@ class ProtectionLevelV2 {
       std::uint64_t fault_model_policy_fingerprint,
       const RiskBudgetV2& risk,
       AttemptProofArena* proof_arena) const;
+  // P1-04 bounded-output overload: frozen hypothesis inputs may remain in the
+  // attempt arena while the per-action full proof is written to a short-lived
+  // batch arena. A null input arena preserves the legacy registry source.
+  ProtectionLevelV2Result computeFrozenAllIn(
+      const FrozenWindowAdmission& admission,
+      CandidateEvaluation* candidate,
+      const DetectorResultV2& detector,
+      const std::vector<FaultHypothesisV2>& remaining_hypotheses,
+      const std::vector<FaultModeBasis>& modes,
+      const FrozenHypothesisNumerics& frozen,
+      const FrozenHypothesisDualNumerics& frozen_dual,
+      std::uint64_t fault_model_policy_fingerprint,
+      const RiskBudgetV2& risk,
+      const AttemptProofArena* frozen_proof_arena,
+      AttemptProofArena* output_proof_arena) const;
   ProtectionLevelV2Result computeFrozenAllIn(
       const FrozenWindowAdmission& admission,
       CandidateEvaluation* candidate,
@@ -395,7 +424,8 @@ class ProtectionLevelV2 {
       std::uint64_t fault_model_policy_fingerprint,
       const RiskBudgetV2& risk,
       const FrozenWindowAdmission* admission,
-      AttemptProofArena* proof_arena) const;
+      const AttemptProofArena* frozen_proof_arena,
+      AttemptProofArena* output_proof_arena) const;
   ProtectionLevelV2Result computeSharedImpl(
       const LinearizedIntegrityWindow& window,
       CandidateEvaluation* candidate,

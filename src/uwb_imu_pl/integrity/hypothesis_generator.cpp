@@ -974,6 +974,52 @@ ActionSearchResultV1 censusAndCapActionsV1(
   return result;
 }
 
+CompleteActionStreamV2 makeCompleteActionStreamV2(
+    const std::vector<ExclusionAction>& generated,
+    std::size_t batch_capacity,
+    GeneratedActionSnapshotV1* trusted_generated_snapshot) {
+  CompleteActionStreamV2 stream;
+  stream.batch_capacity = batch_capacity;
+  if (batch_capacity == 0) return stream;
+
+  // A generated occurrence may be an exact semantic duplicate, so the raw
+  // size is a safe cap that retains every distinct representative.  This does
+  // not increase a correctness cap: V2 validates that the resulting census is
+  // exhaustive before exposing any batch.
+  stream.complete = censusAndCapActionsV1(
+      generated, generated.size(), trusted_generated_snapshot);
+  const std::size_t evaluated = stream.complete.actions.size();
+  stream.batch_count = evaluated == 0
+      ? 0 : 1 + (evaluated - 1) / batch_capacity;
+  stream.peak_batch_actions = std::min(batch_capacity, evaluated);
+  return stream;
+}
+
+ActionSearchValidationV1 validateCompleteActionStreamV2(
+    const CompleteActionStreamV2& stream,
+    const GeneratedActionSnapshotV1& trusted_generated_snapshot) {
+  if (stream.protocol_version != 2) {
+    return {false, false, "unsupported complete-action stream protocol"};
+  }
+  if (stream.batch_capacity == 0) {
+    return {false, false, "complete-action stream batch capacity is zero"};
+  }
+  const ActionSearchValidationV1 base = validateActionSearchCensusV1(
+      stream.complete.census, trusted_generated_snapshot,
+      stream.complete.max_evaluated_actions, stream.complete.lifecycle,
+      stream.complete.actions);
+  if (!base.valid || !base.exhaustive) return base;
+  const std::size_t evaluated = stream.complete.actions.size();
+  const std::size_t expected_batches = evaluated == 0
+      ? 0 : 1 + (evaluated - 1) / stream.batch_capacity;
+  if (stream.batch_count != expected_batches ||
+      stream.peak_batch_actions !=
+          std::min(stream.batch_capacity, evaluated)) {
+    return {false, false, "complete-action stream range metadata mismatch"};
+  }
+  return {true, true, "COMPLETE_STREAM"};
+}
+
 namespace {
 
 void abortIncompleteActionSearchUnchecked(ActionSearchResultV1* result) {
@@ -1983,6 +2029,34 @@ ActionSearchResultV1 HypothesisGenerator::actionsForPlausibleSetV1(
     *trusted_generated_snapshot = result.generated_snapshot;
   }
   return result;
+}
+
+CompleteActionStreamV2 HypothesisGenerator::actionsForPlausibleSetV2(
+    const LinearizedIntegrityWindow& window,
+    const EpochTransaction& transaction,
+    GeneratedFaultModelSet* models,
+    const std::vector<FaultModeEvidence>& evidence,
+    const std::vector<std::string>& mandatory_health_sources,
+    GeneratedActionSnapshotV1* trusted_generated_snapshot) const {
+  if (!models) return {};
+  // Reuse the frozen production generator, but remove its legacy total cap.
+  // Generation and exact-semantic canonicalization are unchanged; only the
+  // consumer interpretation of max_candidate_count changes to batch capacity.
+  HypothesisGeneratorConfig uncapped = config_;
+  uncapped.max_candidate_count = std::numeric_limits<std::uint32_t>::max();
+  ActionSearchResultV1 generated = HypothesisGenerator(uncapped)
+      .actionsForPlausibleSetV1(
+          window, transaction, models, evidence, mandatory_health_sources);
+  CompleteActionStreamV2 stream = makeCompleteActionStreamV2(
+      generated.generated_snapshot.actions, config_.max_candidate_count,
+      trusted_generated_snapshot);
+  stream.complete.generated_snapshot.generator_identity =
+      "HypothesisGenerator::actionsForPlausibleSetV2/production-v2";
+  if (trusted_generated_snapshot) {
+    trusted_generated_snapshot->generator_identity =
+        stream.complete.generated_snapshot.generator_identity;
+  }
+  return stream;
 }
 
 }  // namespace uwb_imu_pl

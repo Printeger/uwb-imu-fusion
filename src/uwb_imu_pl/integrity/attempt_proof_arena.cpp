@@ -1,5 +1,6 @@
 #include "uwb_imu_pl/integrity/attempt_proof_arena.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <map>
 #include <mutex>
@@ -160,6 +161,24 @@ std::shared_ptr<const void> detail::AttemptProofArenaAccess::find(
     const AttemptProofLease& lease, std::uint32_t kind,
     std::uint64_t numeric_key, const char* string_key) {
   return findImpl(lease.state_, kind, numeric_key, string_key);
+}
+
+std::size_t detail::AttemptProofArenaAccess::countKind(
+    const AttemptProofArena& arena, std::uint32_t kind) {
+  if (!arena.state_) return 0;
+  std::lock_guard<std::mutex> lock(arena.state_->mutex);
+  return static_cast<std::size_t>(std::count_if(
+      arena.state_->entries.begin(), arena.state_->entries.end(),
+      [kind](const auto& entry) { return std::get<0>(entry.first) == kind; }));
+}
+
+std::size_t detail::AttemptProofArenaAccess::countKind(
+    const AttemptProofLease& lease, std::uint32_t kind) {
+  if (!lease.state_) return 0;
+  std::lock_guard<std::mutex> lock(lease.state_->mutex);
+  return static_cast<std::size_t>(std::count_if(
+      lease.state_->entries.begin(), lease.state_->entries.end(),
+      [kind](const auto& entry) { return std::get<0>(entry.first) == kind; }));
 }
 
 bool detail::AttemptProofArenaAccess::registerConsumable(

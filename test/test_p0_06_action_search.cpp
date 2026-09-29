@@ -824,6 +824,399 @@ TEST(P006ActionSearchRed, DistinctActionBeyond128MakesSearchIncomplete) {
             "RESOURCE_CAP_UNPROVEN");
 }
 
+TEST(P104CompleteActionStream, BeyondLegacyCapIsCompleteAndBatchBounded) {
+  std::vector<ExclusionAction> generated;
+  for (std::uint64_t i = 0; i < 130; ++i) {
+    generated.push_back(action(i + 1, static_cast<double>(i + 1), 0.25));
+  }
+  GeneratedActionSnapshotV1 trusted;
+  const CompleteActionStreamV2 stream =
+      makeCompleteActionStreamV2(generated, 128, &trusted);
+  const ActionSearchValidationV1 validation =
+      validateCompleteActionStreamV2(stream, trusted);
+  EXPECT_TRUE(validation.valid) << validation.reason;
+  EXPECT_TRUE(validation.exhaustive) << validation.reason;
+  EXPECT_EQ(stream.complete.census.generated, 130u);
+  EXPECT_EQ(stream.complete.census.evaluated, 130u);
+  EXPECT_EQ(stream.complete.census.omitted, 0u);
+  EXPECT_EQ(stream.complete.census.terminal_reason, "COMPLETE");
+  EXPECT_EQ(stream.batch_capacity, 128u);
+  EXPECT_EQ(stream.batch_count, 2u);
+  EXPECT_EQ(stream.peak_batch_actions, 128u);
+}
+
+TEST(P104CompleteActionStream, ReorderingAndExactDuplicateKeepSameResult) {
+  std::vector<ExclusionAction> generated;
+  for (std::uint64_t i = 0; i < 130; ++i) {
+    generated.push_back(action(i + 1, static_cast<double>(i + 1), 0.5));
+  }
+  generated.push_back(generated[64]);
+  auto reversed = generated;
+  std::reverse(reversed.begin(), reversed.end());
+  GeneratedActionSnapshotV1 forward_trusted;
+  GeneratedActionSnapshotV1 reverse_trusted;
+  const CompleteActionStreamV2 forward =
+      makeCompleteActionStreamV2(generated, 17, &forward_trusted);
+  const CompleteActionStreamV2 backward =
+      makeCompleteActionStreamV2(reversed, 17, &reverse_trusted);
+  ASSERT_TRUE(validateCompleteActionStreamV2(
+      forward, forward_trusted).valid);
+  ASSERT_TRUE(validateCompleteActionStreamV2(
+      backward, reverse_trusted).valid);
+  EXPECT_EQ(forward.complete.census.generated_snapshot_identity,
+            backward.complete.census.generated_snapshot_identity);
+  EXPECT_EQ(forward.complete.census.evaluated_identities,
+            backward.complete.census.evaluated_identities);
+  EXPECT_EQ(forward.complete.census.omitted, 1u);
+  EXPECT_EQ(backward.complete.census.omitted, 1u);
+  ASSERT_EQ(forward.complete.census.omitted_actions.size(), 1u);
+  EXPECT_TRUE(forward.complete.census.omitted_actions.front().proven_safe);
+  EXPECT_EQ(forward.complete.census.omitted_actions.front().reason,
+            "EXACT_SEMANTIC_DUPLICATE");
+  EXPECT_EQ(forward.batch_count, 8u);
+  EXPECT_EQ(backward.batch_count, 8u);
+  EXPECT_LE(forward.peak_batch_actions, forward.batch_capacity);
+}
+
+TEST(P104CompleteActionStream, ZeroResidentCapacityFailsClosed) {
+  GeneratedActionSnapshotV1 trusted;
+  const CompleteActionStreamV2 stream =
+      makeCompleteActionStreamV2({action(1, 1.0, 0.5)}, 0, &trusted);
+  const ActionSearchValidationV1 validation =
+      validateCompleteActionStreamV2(stream, trusted);
+  EXPECT_FALSE(validation.valid);
+  EXPECT_FALSE(validation.exhaustive);
+}
+
+TEST(P104CompleteActionStream, ProductionBoundaryDoesNotAbortBeyondLegacyCap) {
+  IntegrityConfig config = productionPipelineConfig();
+  config.fde.max_candidate_count = 16;
+  IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+  NavigationState initial;
+  initial.timestamp = TimestampNs(0);
+  initial.position_world_m = {0.0, 0.0, 1.0};
+  estimator.initialize(initial, Eigen::Matrix<double, 15, 1>::Constant(0.1));
+  RealtimeIntegrityPipeline pipeline(
+      &estimator, IntegrityMonitor(config.risk,
+          config.snapshot.rank_tolerance,
+          config.snapshot.max_condition_number));
+  for (int sample = 0; sample <= 2; ++sample) {
+    ImuMeasurement imu;
+    imu.id = MeasurementId(100 + sample);
+    imu.timestamp = TimestampNs(sample * 5000000LL);
+    imu.specific_force_mps2 = {0.0, 0.0, config.imu.gravity_mps2};
+    pipeline.ingestImu(imu);
+  }
+  auto seams = std::make_shared<PipelineTestDependencySeamsV1>();
+  seams->after_action_generation_before_census =
+      [](std::vector<ExclusionAction>* raw) {
+        ASSERT_NE(raw, nullptr);
+        ASSERT_FALSE(raw->empty());
+        const ExclusionAction seed = raw->front();
+        raw->clear();
+        for (std::uint64_t id = 1; id <= 130; ++id) {
+          ExclusionAction item = seed;
+          item.id = ExclusionActionId(id);
+          item.action_model_id = "STREAM_FIXTURE_" + std::to_string(id);
+          raw->push_back(std::move(item));
+        }
+      };
+  seams->before_candidate = [](ExclusionActionId) {
+    throw std::runtime_error("stop after complete production census");
+  };
+  pipeline.setTestDependencySeamsV1(seams);
+  EXPECT_THROW(pipeline.processUwbBatch(
+      productionPipelineBatch(TimestampNs(10000000))), std::runtime_error);
+  const IntegrityOutput attempt = pipeline.lastAttemptOutput();
+  EXPECT_EQ(attempt.diagnostics.generated_actions, 130u);
+  EXPECT_EQ(std::find(attempt.reason_codes.begin(), attempt.reason_codes.end(),
+                      "SEARCH_INCOMPLETE"),
+            attempt.reason_codes.end());
+  const auto certificate = std::find_if(
+      attempt.reason_codes.begin(), attempt.reason_codes.end(),
+      [](const std::string& reason) {
+        return reason.rfind("ACTION_SEARCH_CERTIFICATE_V1:", 0) == 0;
+      });
+  ASSERT_NE(certificate, attempt.reason_codes.end());
+  EXPECT_NE(certificate->find("generated=130"), std::string::npos);
+  EXPECT_NE(certificate->find("planned_evaluations=130"), std::string::npos);
+  EXPECT_NE(certificate->find("omitted=0"), std::string::npos);
+  EXPECT_NE(certificate->find("exhaustive=1"), std::string::npos);
+}
+
+TEST(P104CompleteActionStream, ProductionPersistsCompleteRejectionFunnel) {
+  IntegrityConfig config = productionPipelineConfig();
+  IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+  NavigationState initial;
+  initial.timestamp = TimestampNs(0);
+  initial.position_world_m = {0.0, 0.0, 1.0};
+  estimator.initialize(initial, Eigen::Matrix<double, 15, 1>::Constant(0.1));
+  RealtimeIntegrityPipeline pipeline(
+      &estimator, IntegrityMonitor(config.risk,
+          config.snapshot.rank_tolerance,
+          config.snapshot.max_condition_number));
+  for (int sample = 0; sample <= 2; ++sample) {
+    ImuMeasurement imu;
+    imu.id = MeasurementId(100 + sample);
+    imu.timestamp = TimestampNs(sample * 5000000LL);
+    imu.specific_force_mps2 = {0.0, 0.0, config.imu.gravity_mps2};
+    pipeline.ingestImu(imu);
+  }
+  const IntegrityOutput output = pipeline.processUwbBatch(
+      productionPipelineBatch(TimestampNs(10000000)));
+  std::size_t occurrences = 0;
+  for (const auto& record : output.candidate_audit) {
+    if (record.action_type != "ACTION_SEARCH_OCCURRENCE_V1") continue;
+    ++occurrences;
+  }
+  EXPECT_EQ(occurrences, output.diagnostics.generated_actions);
+  EXPECT_GT(occurrences, 0u);
+  const auto funnel = std::find_if(
+      output.stage_timings.begin(), output.stage_timings.end(),
+      [](const StageTiming& stage) {
+        return stage.stage == "candidate_audit";
+      });
+  ASSERT_NE(funnel, output.stage_timings.end());
+  EXPECT_EQ(funnel->reason.rfind("ACTION_REJECTION_FUNNEL_V2:", 0), 0u);
+  EXPECT_EQ(static_cast<std::size_t>(
+                std::count(funnel->reason.begin(), funnel->reason.end(), '=')),
+            occurrences);
+}
+
+TEST(P104CompleteActionStream,
+     BatchCapacityChangesOnlyHeavyHighWaterNotTerminalResult) {
+  struct ScopedRun {
+    IntegrityOutput output;
+    std::size_t final_full_proofs = 0;
+  };
+  auto run = [](std::size_t capacity) {
+    IntegrityConfig config = productionPipelineConfig();
+    config.fde.profile = FdeProfile::UwbOrder1;
+    config.resolved_scope = resolveFaultScope(
+        FdeProfile::UwbOrder1, FaultScopeCapabilities{});
+    config.fde.max_candidate_count = capacity;
+    IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+    NavigationState initial;
+    initial.timestamp = TimestampNs(0);
+    initial.position_world_m = {0.0, 0.0, 1.0};
+    estimator.initialize(initial,
+                         Eigen::Matrix<double, 15, 1>::Constant(0.1));
+    RealtimeIntegrityPipeline pipeline(
+        &estimator, IntegrityMonitor(config.risk,
+            config.snapshot.rank_tolerance,
+            config.snapshot.max_condition_number));
+    for (int sample = 0; sample <= 2; ++sample) {
+      ImuMeasurement imu;
+      imu.id = MeasurementId(100 + sample);
+      imu.timestamp = TimestampNs(sample * 5000000LL);
+      imu.specific_force_mps2 = {0.0, 0.0, config.imu.gravity_mps2};
+      pipeline.ingestImu(imu);
+    }
+    auto seams = std::make_shared<PipelineTestDependencySeamsV2>();
+    seams->after_action_generation_before_census =
+        [](std::vector<ExclusionAction>* raw) {
+          ASSERT_NE(raw, nullptr);
+          ASSERT_FALSE(raw->empty());
+          const ExclusionAction rejected_seed = raw->front();
+          const ExclusionAction winner_seed = raw->back();
+          raw->clear();
+          for (std::uint64_t id = 1; id <= 130; ++id) {
+            ExclusionAction item = id == 130 ? winner_seed : rejected_seed;
+            item.id = ExclusionActionId(id);
+            item.action_model_id = "STREAM_FIXTURE_" + std::to_string(id);
+            if (id != 130) {
+              item.recoverability = HistoryRecoverability::Marginalized;
+            }
+            raw->push_back(std::move(item));
+          }
+        };
+    seams->proof_recompute_action = [] {
+      return std::optional<ExclusionActionId>(ExclusionActionId(130));
+    };
+    pipeline.setTestDependencySeamsV2(seams);
+    UwbBatch batch = productionPipelineBatch(TimestampNs(10000000));
+    batch.measurements.front().range_m += 1.0;
+    AttemptProofLease lease;
+    ScopedRun result;
+    result.output = pipeline.processUwbBatch(batch, &lease);
+    EXPECT_TRUE(lease.valid());
+    EXPECT_TRUE(lease.closed());
+    result.final_full_proofs = protectionLevelV2FullProofCount(lease);
+    return result;
+  };
+
+  const ScopedRun narrow_run = run(7);
+  const ScopedRun wide_run = run(31);
+  const IntegrityOutput& narrow = narrow_run.output;
+  const IntegrityOutput& wide = wide_run.output;
+  EXPECT_EQ(narrow.fde_status, wide.fde_status);
+  EXPECT_EQ(narrow.selected_action_id, wide.selected_action_id);
+  EXPECT_EQ(narrow.selected_action_type, wide.selected_action_type);
+  EXPECT_EQ(narrow.batch_committed, wide.batch_committed);
+  EXPECT_EQ(narrow.selected_action_id, 0u);
+  EXPECT_EQ(wide.selected_action_id, 0u);
+  EXPECT_EQ(narrow.fde_status, "RISK_BUDGET_INVALID");
+  // The scoped main arena owns only the final action winner proof (other
+  // non-action proof kinds are deliberately not counted by this helper).
+  EXPECT_EQ(narrow_run.final_full_proofs, 1u);
+  EXPECT_EQ(wide_run.final_full_proofs, 1u);
+  EXPECT_EQ(narrow.diagnostics.generated_actions, 130u);
+  EXPECT_EQ(wide.diagnostics.generated_actions, 130u);
+  ASSERT_EQ(narrow.candidate_audit.size(), wide.candidate_audit.size());
+  for (std::size_t index = 0; index < narrow.candidate_audit.size(); ++index) {
+    const auto& left = narrow.candidate_audit[index];
+    const auto& right = wide.candidate_audit[index];
+    EXPECT_EQ(left.action_id, right.action_id);
+    EXPECT_EQ(left.action_type, right.action_type);
+    EXPECT_EQ(left.diagnostics.skip_reason, right.diagnostics.skip_reason);
+    EXPECT_EQ(left.diagnostics.kernel_evaluated,
+              right.diagnostics.kernel_evaluated);
+    EXPECT_EQ(left.diagnostics.numerical_valid,
+              right.diagnostics.numerical_valid);
+    EXPECT_EQ(left.diagnostics.pl_evaluated,
+              right.diagnostics.pl_evaluated);
+    EXPECT_EQ(left.diagnostics.slow_path, right.diagnostics.slow_path);
+    EXPECT_EQ(left.diagnostics.near_gate, right.diagnostics.near_gate);
+    EXPECT_EQ(left.diagnostics.numerical_path,
+              right.diagnostics.numerical_path);
+    EXPECT_EQ(left.diagnostics.fallback_reason,
+              right.diagnostics.fallback_reason);
+    EXPECT_EQ(left.diagnostics.certificate_passed,
+              right.diagnostics.certificate_passed);
+    EXPECT_EQ(left.valid, right.valid);
+    EXPECT_EQ(left.post_detector_passed, right.post_detector_passed);
+    EXPECT_EQ(left.covers_plausible_set, right.covers_plausible_set);
+    EXPECT_DOUBLE_EQ(left.statistic, right.statistic);
+    EXPECT_DOUBLE_EQ(left.threshold, right.threshold);
+    EXPECT_EQ(left.rank, right.rank);
+    EXPECT_EQ(left.dof, right.dof);
+    EXPECT_DOUBLE_EQ(left.condition_number, right.condition_number);
+    EXPECT_DOUBLE_EQ(left.information_logdet, right.information_logdet);
+    EXPECT_DOUBLE_EQ(left.risk_allocation, right.risk_allocation);
+    EXPECT_DOUBLE_EQ(left.hpl_m, right.hpl_m);
+    EXPECT_DOUBLE_EQ(left.vpl_m, right.vpl_m);
+    EXPECT_EQ(left.selected, right.selected);
+    EXPECT_EQ(left.reason, right.reason);
+  }
+  const auto action_130 = std::find_if(
+      narrow.candidate_audit.begin(), narrow.candidate_audit.end(),
+      [](const CandidateAuditRecord& record) {
+        return record.action_id == 130u &&
+            record.action_type == "ACTION_SEARCH_OCCURRENCE_V1";
+      });
+  ASSERT_NE(action_130, narrow.candidate_audit.end());
+  EXPECT_TRUE(action_130->diagnostics.kernel_evaluated);
+  EXPECT_TRUE(action_130->diagnostics.numerical_valid);
+  EXPECT_TRUE(action_130->diagnostics.pl_evaluated);
+  EXPECT_TRUE(action_130->post_detector_passed);
+  EXPECT_TRUE(action_130->valid) << action_130->reason;
+  EXPECT_TRUE(action_130->covers_plausible_set)
+      << "hpl=" << action_130->hpl_m << " vpl=" << action_130->vpl_m
+      << " reason=" << action_130->reason;
+  EXPECT_FALSE(action_130->selected);
+
+  ASSERT_EQ(narrow.coverage_audit.size(), wide.coverage_audit.size());
+  for (std::size_t index = 0; index < narrow.coverage_audit.size(); ++index) {
+    const auto& left = narrow.coverage_audit[index];
+    const auto& right = wide.coverage_audit[index];
+    EXPECT_EQ(left.action_id, right.action_id);
+    EXPECT_EQ(left.action_type, right.action_type);
+    EXPECT_EQ(left.plausible_hypothesis_ids,
+              right.plausible_hypothesis_ids);
+    EXPECT_EQ(left.mandatory_health_sources,
+              right.mandatory_health_sources);
+    EXPECT_EQ(left.mandatory_group_ids, right.mandatory_group_ids);
+    EXPECT_EQ(left.covered_mode_ids, right.covered_mode_ids);
+    EXPECT_EQ(left.removed_group_ids, right.removed_group_ids);
+    EXPECT_EQ(left.added_group_ids, right.added_group_ids);
+    EXPECT_EQ(left.uncovered_hypothesis_ids,
+              right.uncovered_hypothesis_ids);
+    EXPECT_EQ(left.uncovered_mode_ids, right.uncovered_mode_ids);
+    EXPECT_EQ(left.uncovered_group_ids, right.uncovered_group_ids);
+    EXPECT_EQ(left.uncovered_mandatory_group_ids,
+              right.uncovered_mandatory_group_ids);
+    EXPECT_EQ(left.outcome, right.outcome);
+    EXPECT_EQ(left.reason, right.reason);
+  }
+  EXPECT_EQ(narrow.diagnostics.risk_ledger_terms,
+            wide.diagnostics.risk_ledger_terms);
+  auto same_scalar = [](double left, double right) {
+    return (std::isnan(left) && std::isnan(right)) || left == right;
+  };
+  EXPECT_TRUE(same_scalar(narrow.diagnostics.risk_ledger_charged_total,
+                          wide.diagnostics.risk_ledger_charged_total));
+  EXPECT_TRUE(same_scalar(narrow.diagnostics.risk_ledger_declared_total,
+                          wide.diagnostics.risk_ledger_declared_total));
+  EXPECT_TRUE(same_scalar(narrow.diagnostics.risk_margin,
+                          wide.diagnostics.risk_margin));
+  EXPECT_EQ(narrow.diagnostics.selection_event_class_ids,
+            wide.diagnostics.selection_event_class_ids);
+  EXPECT_EQ(narrow.diagnostics.selection_risk_proof_id,
+            wide.diagnostics.selection_risk_proof_id);
+  auto candidate_stage = [](const IntegrityOutput& output) {
+    return std::find_if(output.stage_timings.begin(),
+                        output.stage_timings.end(),
+        [](const StageTiming& stage) {
+          return stage.stage == "candidate_evaluation";
+        });
+  };
+  const auto narrow_stage = candidate_stage(narrow);
+  const auto wide_stage = candidate_stage(wide);
+  ASSERT_NE(narrow_stage, narrow.stage_timings.end());
+  ASSERT_NE(wide_stage, wide.stage_timings.end());
+  EXPECT_NE(narrow_stage->reason.find("stream_peak_batch_actions=7"),
+            std::string::npos) << narrow_stage->reason;
+  EXPECT_NE(wide_stage->reason.find("stream_peak_batch_actions=31"),
+            std::string::npos) << wide_stage->reason;
+  EXPECT_NE(narrow_stage->reason.find(
+                "stream_peak_resident_evaluated_actions=7"),
+            std::string::npos) << narrow_stage->reason;
+  EXPECT_NE(wide_stage->reason.find(
+                "stream_peak_resident_evaluated_actions=31"),
+            std::string::npos) << wide_stage->reason;
+  EXPECT_NE(narrow_stage->reason.find("stream_peak_batch_full_proofs=1"),
+            std::string::npos) << narrow_stage->reason;
+  EXPECT_NE(wide_stage->reason.find("stream_peak_batch_full_proofs=1"),
+            std::string::npos) << wide_stage->reason;
+  EXPECT_NE(narrow_stage->reason.find(
+                "stream_main_arena_action_full_proofs=1"),
+            std::string::npos) << narrow_stage->reason;
+  EXPECT_NE(wide_stage->reason.find(
+                "stream_main_arena_action_full_proofs=1"),
+            std::string::npos) << wide_stage->reason;
+  EXPECT_NE(narrow_stage->reason.find("stream_winner_recompute=1"),
+            std::string::npos) << narrow_stage->reason;
+  EXPECT_NE(wide_stage->reason.find("stream_winner_recompute=1"),
+            std::string::npos) << wide_stage->reason;
+  EXPECT_NE(narrow_stage->reason.find(
+                "stream_winner_recompute_test_seam=1"),
+            std::string::npos) << narrow_stage->reason;
+  EXPECT_NE(narrow_stage->reason.find("stream_full_action_heavy_copy=0"),
+            std::string::npos) << narrow_stage->reason;
+  EXPECT_NE(wide_stage->reason.find("stream_full_action_heavy_copy=0"),
+            std::string::npos) << wide_stage->reason;
+  EXPECT_NE(narrow_stage->reason.find("stream_complete=1"),
+            std::string::npos);
+  EXPECT_NE(wide_stage->reason.find("stream_complete=1"),
+            std::string::npos);
+  auto funnel = [](const IntegrityOutput& output) -> const StageTiming* {
+    const auto found = std::find_if(
+        output.stage_timings.begin(), output.stage_timings.end(),
+        [](const StageTiming& stage) {
+          return stage.stage == "candidate_audit";
+        });
+    return found == output.stage_timings.end() ? nullptr : &*found;
+  };
+  const StageTiming* narrow_funnel = funnel(narrow);
+  const StageTiming* wide_funnel = funnel(wide);
+  ASSERT_NE(narrow_funnel, nullptr);
+  ASSERT_NE(wide_funnel, nullptr);
+  EXPECT_EQ(narrow_funnel->reason, wide_funnel->reason);
+  EXPECT_EQ(narrow_funnel->reason.find("PENDING_RISK"), std::string::npos);
+  EXPECT_NE(narrow_funnel->reason.find("130=REJECT_RISK_"),
+            std::string::npos) << narrow_funnel->reason;
+}
+
 TEST(P006ActionSearchRed, ProductionGeneratorReportsEveryTruncatedIdentity) {
   GeneratedFaultModelSet models;
   models.action_entities_built = true;
@@ -1887,6 +2280,32 @@ TEST(P006O07, ProductionKernelDetectorPlAndFdeFindBeyondCapAction) {
   };
 
   const auto forward = evaluate(uncapped);
+  auto streamed_config = fixture.generator_config;
+  streamed_config.max_candidate_count = 17;
+  GeneratedActionSnapshotV1 streamed_trusted;
+  const CompleteActionStreamV2 streamed =
+      HypothesisGenerator(streamed_config).actionsForPlausibleSetV2(
+          fixture.window, fixture.transaction, &fixture.models,
+          fixture.evidence, {}, &streamed_trusted);
+  const ActionSearchValidationV1 streamed_validation =
+      validateCompleteActionStreamV2(streamed, streamed_trusted);
+  ASSERT_TRUE(streamed_validation.valid) << streamed_validation.reason;
+  ASSERT_TRUE(streamed_validation.exhaustive) << streamed_validation.reason;
+  ASSERT_EQ(streamed.complete.actions.size(), uncapped.actions.size());
+  EXPECT_EQ(streamed.batch_capacity, 17u);
+  EXPECT_EQ(streamed.batch_count, 8u);
+  EXPECT_EQ(streamed.peak_batch_actions, 17u);
+  const auto streamed_result = evaluate(streamed.complete);
+  EXPECT_EQ(streamed_result.decision.status, forward.decision.status);
+  EXPECT_EQ(streamed_result.decision.commit_allowed,
+            forward.decision.commit_allowed);
+  EXPECT_EQ(streamed_result.decision.reason, forward.decision.reason);
+  EXPECT_EQ(streamed_result.decision.candidate_dispositions,
+            forward.decision.candidate_dispositions);
+  EXPECT_EQ(streamed_result.decision.selection_event_class_ids,
+            forward.decision.selection_event_class_ids);
+  EXPECT_EQ(streamed_result.decision.selection_risk_proof_id,
+            forward.decision.selection_risk_proof_id);
   ASSERT_EQ(forward.candidates.size(), 130u);
   ASSERT_TRUE(forward.candidates[129].valid)
       << forward.candidates[129].reason;
@@ -1923,6 +2342,48 @@ TEST(P006O07, ProductionKernelDetectorPlAndFdeFindBeyondCapAction) {
                        forward.decision.candidate_dispositions.end(),
                        static_cast<int>(CandidateDisposition::UseInReferenceEstimate)),
             1);
+
+  // Selection seam only: prove that the unchanged FDE ordering and union
+  // charge admit action 130 when supplied with a complete, legal synthetic
+  // qualification sidecar. This is deliberately not connected to the
+  // production pipeline, whose absent qualification artifact above must keep
+  // returning RiskBudgetInvalid.
+  CompleteRiskInputsV1 qualified;
+  qualified.omitted_scope_complete = true;
+  qualified.omitted_event_bound = 0.0;
+  qualified.omitted_event_bound_known = true;
+  qualified.omitted_event_bound_validated = true;
+  qualified.legacy.envelope_online = false;
+  qualified.legacy.envelope_leaf_count = 0;
+  qualified.envelope_event_bound = 0.0;
+  qualified.envelope_event_bound_known = true;
+  qualified.envelope_event_bound_validated = true;
+  qualified.bridge_escape_validated = true;
+  qualified.history_escape_validated = true;
+  qualified.model_escape_validated = true;
+  qualified.legacy.selection_contract_frozen = true;
+  double hypothesis_charge = 0.0;
+  for (const auto& hypothesis : fixture.hypotheses) {
+    hypothesis_charge += hypothesis.hmi_allocation;
+  }
+  qualified.selection_extra_bound = std::max(
+      0.0, forward.decision.selection_charged_budget - hypothesis_charge);
+  qualified.selection_bound_known = true;
+  qualified.selection_bound_validated = true;
+  qualified.model_formal_eligible = true;
+  CompleteRiskStatusV1 qualified_status;
+  const RiskLedger qualified_ledger = buildRiskLedger(
+      risk, fixture.hypotheses, qualified, &qualified_status);
+  EXPECT_TRUE(qualified_status.allocation_valid);
+  EXPECT_TRUE(qualified_status.complete_bound_closes)
+      << qualified_ledger.reason;
+  EXPECT_TRUE(qualified_ledger.all_terms_validated)
+      << qualified_ledger.reason;
+  EXPECT_TRUE(qualified_ledger.formal_eligible)
+      << qualified_ledger.reason;
+  EXPECT_EQ(forward.candidates[129].action.id.value(), 130u);
+  EXPECT_EQ(forward.decision.candidate_dispositions[129],
+            static_cast<int>(CandidateDisposition::UseInReferenceEstimate));
 
   for (int permutation = 0; permutation < 3; ++permutation) {
     auto reordered_raw = fixture.raw_actions;
@@ -2263,6 +2724,17 @@ TEST(P006ActionSearch,
     }
     EXPECT_EQ(occurrence_records.size(), attempt.diagnostics.generated_actions);
     EXPECT_EQ(duplicate_records, 1u);
+    const auto funnel = std::find_if(
+        attempt.stage_timings.begin(), attempt.stage_timings.end(),
+        [](const StageTiming& item) {
+          return item.stage == "candidate_audit";
+        });
+    ASSERT_NE(funnel, attempt.stage_timings.end());
+    EXPECT_EQ(funnel->reason.rfind("ACTION_REJECTION_FUNNEL_V2:", 0), 0u);
+    EXPECT_EQ(funnel->reason.find("PENDING_RISK"), std::string::npos);
+    EXPECT_NE(funnel->reason.find("REJECT_EXCEPTION_"), std::string::npos);
+    EXPECT_NE(funnel->reason.find("OMITTED_PROVEN_DUPLICATE"),
+              std::string::npos);
     EXPECT_NE(summary->find("generated=2"), std::string::npos);
     EXPECT_NE(summary->find("planned_evaluations=1"), std::string::npos);
     EXPECT_NE(summary->find("omitted=1"), std::string::npos);

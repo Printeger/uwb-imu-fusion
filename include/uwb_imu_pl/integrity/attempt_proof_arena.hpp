@@ -70,6 +70,10 @@ class AttemptProofArenaAccess {
   static std::shared_ptr<const void> find(
       const AttemptProofLease& lease, std::uint32_t kind,
       std::uint64_t numeric_key, const char* string_key);
+  static std::size_t countKind(const AttemptProofArena& arena,
+                               std::uint32_t kind);
+  static std::size_t countKind(const AttemptProofLease& lease,
+                               std::uint32_t kind);
   // A consumable is a single-use handoff.  Registration and consumption are
   // serialized with close() on the owning arena.  Therefore either consume
   // wins and returns an immutable reader, or close wins and consumption is

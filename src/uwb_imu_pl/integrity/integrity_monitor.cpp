@@ -53,9 +53,12 @@ namespace {
 // setter creates one, and construction/destruction erase by object address so
 // address reuse cannot inherit a prior object's seam.
 std::mutex g_pipeline_test_seams_mutex;
+struct PipelineTestDependencySeamsEntry {
+  std::shared_ptr<const PipelineTestDependencySeamsV1> v1;
+  std::shared_ptr<const PipelineTestDependencySeamsV2> v2;
+};
 std::unordered_map<const RealtimeIntegrityPipeline*,
-                   std::shared_ptr<const PipelineTestDependencySeamsV1>>
-    g_pipeline_test_seams;
+                   PipelineTestDependencySeamsEntry> g_pipeline_test_seams;
 
 using ActionProofKey = std::pair<std::uint64_t, std::uint64_t>;
 using ImmutableActionProofSnapshot =
@@ -234,7 +237,14 @@ std::shared_ptr<const PipelineTestDependencySeamsV1> pipelineTestSeams(
     const RealtimeIntegrityPipeline* pipeline) {
   std::lock_guard<std::mutex> lock(g_pipeline_test_seams_mutex);
   const auto found = g_pipeline_test_seams.find(pipeline);
-  return found == g_pipeline_test_seams.end() ? nullptr : found->second;
+  return found == g_pipeline_test_seams.end() ? nullptr : found->second.v1;
+}
+
+std::shared_ptr<const PipelineTestDependencySeamsV2> pipelineTestSeamsV2(
+    const RealtimeIntegrityPipeline* pipeline) {
+  std::lock_guard<std::mutex> lock(g_pipeline_test_seams_mutex);
+  const auto found = g_pipeline_test_seams.find(pipeline);
+  return found == g_pipeline_test_seams.end() ? nullptr : found->second.v2;
 }
 
 void clearPipelineTestSeams(const RealtimeIntegrityPipeline* pipeline) {
@@ -1614,6 +1624,40 @@ void refreshActionSearchAudit(IntegrityOutput* output) {
       ";omitted=" + std::to_string(omitted) + static_certificate;
 }
 
+void closeExceptionalActionFunnel(IntegrityOutput* output) {
+  std::string funnel = "ACTION_REJECTION_FUNNEL_V2:";
+  std::size_t count = 0;
+  for (const auto& record : output->candidate_audit) {
+    if (record.action_type != kActionSearchOccurrenceAudit) continue;
+    if (count++ != 0) funnel += ',';
+    const std::string& terminal = record.diagnostics.skip_reason;
+    std::string disposition = "REJECT_RESOURCE_NOT_RUN";
+    if (terminal.find("EXCEPTION") != std::string::npos) {
+      disposition = "REJECT_EXCEPTION_" + terminal;
+    } else if (terminal == "PL_COMPLETE") {
+      disposition = "REJECT_RESOURCE_ABORT_AFTER_PL";
+    } else if (terminal == "POST_COMPLETE" ||
+               terminal == "CANDIDATE_COMPLETE") {
+      disposition = "REJECT_RESOURCE_ABORT_BEFORE_PL";
+    } else if (terminal == "OMITTED") {
+      disposition = "OMITTED_PROVEN_DUPLICATE";
+    }
+    funnel += std::to_string(record.action_id) + '=' + disposition;
+  }
+  if (count == 0) return;
+  const auto found = std::find_if(
+      output->stage_timings.begin(), output->stage_timings.end(),
+      [](const StageTiming& stage) { return stage.stage == "candidate_audit"; });
+  if (found == output->stage_timings.end()) {
+    output->stage_timings.push_back(
+        {"candidate_audit", 0.0, false, "EXCEPTION", std::move(funnel)});
+  } else {
+    found->success = false;
+    found->status = "EXCEPTION";
+    found->reason = std::move(funnel);
+  }
+}
+
 void stageActionSearchAudit(IntegrityOutput* output,
                             const ActionSearchResultV1& search,
                             const GeneratedActionSnapshotV1& trusted) {
@@ -1797,8 +1841,21 @@ RealtimeIntegrityPipeline::~RealtimeIntegrityPipeline() {
 void RealtimeIntegrityPipeline::setTestDependencySeamsV1(
     std::shared_ptr<const PipelineTestDependencySeamsV1> seams) {
   std::lock_guard<std::mutex> lock(g_pipeline_test_seams_mutex);
-  if (seams) g_pipeline_test_seams[this] = std::move(seams);
-  else g_pipeline_test_seams.erase(this);
+  if (seams) {
+    g_pipeline_test_seams[this] = {std::move(seams), nullptr};
+  } else {
+    g_pipeline_test_seams.erase(this);
+  }
+}
+
+void RealtimeIntegrityPipeline::setTestDependencySeamsV2(
+    std::shared_ptr<const PipelineTestDependencySeamsV2> seams) {
+  std::lock_guard<std::mutex> lock(g_pipeline_test_seams_mutex);
+  if (seams) {
+    g_pipeline_test_seams[this] = {seams, std::move(seams)};
+  } else {
+    g_pipeline_test_seams.erase(this);
+  }
 }
 
 void RealtimeIntegrityPipeline::ingestImu(const ImuMeasurement& measurement) {
@@ -2971,7 +3028,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
         NumericalWorkCounters::bridgeBlocksBuilt(models.bridge_blocks_built);
         NumericalWorkCounters::actionEntitiesConstructed(
             models.action_entities_constructed);
-        ActionSearchResultV1 action_search;
+        CompleteActionStreamV2 action_stream;
+        ActionSearchResultV1& action_search = action_stream.complete;
         // Held independently from the certificate/result object and passed
         // directly from the production generator boundary to the FDE
         // consumer.  The certificate cannot substitute its own raw vector.
@@ -2980,22 +3038,16 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
           ExclusionAction keep;
           keep.id = ExclusionActionId(1);
           keep.action_model_id = "KEEP_ALL";
-          action_search = censusAndCapActionsV1(
+          action_stream = makeCompleteActionStreamV2(
               {keep}, 1, &trusted_generated_actions);
-          models.actions = action_search.actions;
         } else {
           // B4: this is the alarm/mandatory path: the exclusion-action
           // entities and their bridge blocks are materialized here, once.
           NumericalWorkCounters::candidateGraphBuilt();
-          action_search = HypothesisGenerator(generator_config)
-              .actionsForPlausibleSetV1(window, transaction, &models, evidence,
+          action_stream = HypothesisGenerator(generator_config)
+              .actionsForPlausibleSetV2(window, transaction, &models, evidence,
                                         mandatory_health_sources,
                                         &trusted_generated_actions);
-          // Unsafe omission is terminal before any candidate kernel/post/PL.
-          // This makes evaluated an actual count (zero), and ensures an outer
-          // exception still carries the complete fail-closed census.
-          abortIncompleteActionSearchBeforeEvaluationV1(&action_search);
-          models.actions = action_search.actions;
           NumericalWorkCounters::actionEntitiesConstructed(
               models.action_entities_constructed);
           NumericalWorkCounters::bridgeBlocksBuilt(models.bridge_blocks_built);
@@ -3011,14 +3063,20 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
               action_search.generated_snapshot.actions;
           generation_seams->after_action_generation_before_census(
               &raw_generated);
-          action_search = censusAndCapActionsV1(
-              raw_generated, action_search.max_evaluated_actions,
+          action_stream = makeCompleteActionStreamV2(
+              raw_generated, action_stream.batch_capacity,
               &trusted_generated_actions);
           trusted_generated_actions.generator_identity =
               "RealtimeIntegrityPipeline/test-seam-after-production-generator";
           action_search.generated_snapshot.generator_identity =
               trusted_generated_actions.generator_identity;
-          models.actions = action_search.actions;
+        }
+        const ActionSearchValidationV1 action_stream_validation =
+            validateCompleteActionStreamV2(
+                action_stream, trusted_generated_actions);
+        if (!action_stream_validation.valid ||
+            !action_stream_validation.exhaustive) {
+          abortIncompleteActionSearchBeforeEvaluationV1(&action_search);
         }
         const ActionSearchCensusV1& action_search_census = action_search.census;
         output.diagnostics.generated_actions = action_search_census.generated;
@@ -3028,6 +3086,9 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
         // second, self-reported census.
         stageActionSearchAudit(
             &output, action_search, trusted_generated_actions);
+        models.actions = std::move(action_search.actions);
+        action_search.generated_snapshot.actions.clear();
+        action_search.generated_snapshot.actions.shrink_to_fit();
         if (!action_search_census.exhaustive) {
           output.fde_status = "SEARCH_INCOMPLETE";
           output.reason_codes.push_back("SEARCH_INCOMPLETE");
@@ -3051,15 +3112,12 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
           frozen_hypotheses.emplace(hypothesis.id.value(), &hypothesis);
         }
         std::map<std::uint64_t, std::string> action_ineligibility;
-        std::vector<ExclusionAction> kernel_actions;
-        kernel_actions.reserve(models.actions.size());
         for (const auto& action : models.actions) {
           std::string reason = actionIneligibilityReason(
               action, window, frozen_plausible, frozen_hypotheses,
               mandatory_exclusion_groups,
               cfg.fde.max_exclusion_cardinality);
           if (!reason.empty()) action_ineligibility.emplace(action.id.value(), reason);
-          if (exhaustive_candidates || reason.empty()) kernel_actions.push_back(action);
         }
         record_stage("health_actions");
         start_operation("hypothesis_audit");
@@ -3258,12 +3316,17 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
         append_step_audit(base.state_increment, "BASE");
         record_stage("base_factorization", base.valid);
         start_operation("shared_cache");
-        evaluator.buildSharedCache(&base, kernel_actions);
         record_stage("shared_cache");
         start_operation("candidate_evaluation");
         std::vector<CandidateEvaluation> candidates;
         std::map<std::uint64_t, ProtectionLevelV2Result> candidate_pl;
         std::map<std::uint64_t, std::uint64_t> candidate_pl_proof;
+        std::map<std::uint64_t, ProtectionLevelV2ProofV1>
+            captured_computation_proofs;
+        // Additive P1-04 attribution must not replace the P0 terminal state in
+        // CandidateDiagnostics::skip_reason.  That field is part of the
+        // action-search certificate accounting and the frozen O12 oracle.
+        std::map<std::uint64_t, std::string> action_rejection_funnel;
         candidates.reserve(models.actions.size());
         struct EvaluatedAction {
           CandidateEvaluation candidate;
@@ -3281,33 +3344,20 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
                   [](const auto* left, const auto* right) {
           return left->id < right->id;
         });
-        std::vector<EvaluatedAction> evaluated_actions(action_order.size());
-        std::vector<std::size_t> kernel_action_indices;
-        kernel_action_indices.reserve(action_order.size());
-        for (std::size_t index = 0; index < action_order.size(); ++index) {
-          const auto& action = *action_order[index];
-          const auto rejected = action_ineligibility.find(action.id.value());
-          if (!exhaustive_candidates && rejected != action_ineligibility.end()) {
-            auto& candidate = evaluated_actions[index].candidate;
-            candidate.action = action;
-            candidate.base_version = window.version;
-            candidate.reason = "SKIPPED_INELIGIBLE: " + rejected->second;
-            candidate.diagnostics.skip_reason = candidate.reason;
-            candidate.diagnostics.numerical_valid = false;
-            markActionSearchTerminal(
-                &output, action, "NOT_RUN_INELIGIBLE");
-          } else {
-            kernel_action_indices.push_back(index);
-          }
-        }
+        (void)exhaustive_candidates;
         // Phase 1: all numerical kernels and post detectors.  Every action has
         // a fixed slot; a worker exception is rethrown only after all workers
         // reach the pool barrier.
-        candidate_workers_->run(kernel_action_indices.size(), active_workers,
+        const std::size_t action_batch_capacity =
+            std::max<std::size_t>(1, action_stream.batch_capacity);
+        auto run_kernel_batch = [&](std::size_t batch_begin,
+                                    std::size_t batch_size,
+                                    std::vector<EvaluatedAction>* batch) {
+        candidate_workers_->run(batch_size, active_workers,
             [&](std::size_t work_index, std::size_t, RankUpdateScratch& scratch) {
-          const std::size_t index = kernel_action_indices[work_index];
-          const ExclusionAction& action = *action_order[index];
-          EvaluatedAction& evaluated = evaluated_actions[index];
+          const ExclusionAction& action =
+              *action_order[batch_begin + work_index];
+          EvaluatedAction& evaluated = batch->at(work_index);
           const auto candidate_start = std::chrono::steady_clock::now();
           // P6/C-round Stage 0: a step-gate rejection carries its physical
           // attribution (rotation/position/velocity/bias magnitudes and the
@@ -3384,6 +3434,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
           candidate.wall_ms = std::chrono::duration<double, std::milli>(
               std::chrono::steady_clock::now() - candidate_start).count();
         });
+        };
 
         // Bridge uncertainty depends only on a frozen group/transaction and is
         // shared by every successful candidate that contains the same bridge.
@@ -3414,17 +3465,55 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
         // production calls retain the original fail-closed early-return path.
         const bool capture_action_proof =
             actionHypothesisProofAuditEnabledV1();
-        std::vector<std::size_t> post_passed;
-        for (std::size_t index = 0; index < evaluated_actions.size(); ++index) {
-          const auto& evaluated = evaluated_actions[index];
-          if (evaluated.candidate.valid && evaluated.post.numerically_valid &&
-              evaluated.post.passed) post_passed.push_back(index);
-        }
-        // Phase 2: bridge/fault mapping/PL only for candidates that passed the
-        // post detector.
-        candidate_workers_->run(post_passed.size(), active_workers,
+        std::size_t peak_resident_evaluated_actions = 0;
+        std::size_t peak_batch_full_proofs = 0;
+        const std::size_t main_full_proofs_before_actions = proof_arena
+            ? protectionLevelV2FullProofCount(*proof_arena) : 0;
+        std::function<void(std::vector<EvaluatedAction>*,
+                           const std::vector<std::size_t>&,
+                           AttemptProofArena*)> evaluate_pl_batch;
+        for (std::size_t batch_begin = 0;
+             batch_begin < action_order.size();
+             batch_begin += action_batch_capacity) {
+          const std::size_t batch_size = std::min(
+              action_batch_capacity,
+              action_order.size() - batch_begin);
+          std::vector<ExclusionAction> batch_actions;
+          batch_actions.reserve(batch_size);
+          for (std::size_t offset = 0; offset < batch_size; ++offset) {
+            batch_actions.push_back(*action_order[batch_begin + offset]);
+          }
+          std::vector<EvaluatedAction> evaluated_batch(batch_size);
+          // Normal scoped production gives each numerical batch a short-lived
+          // arena. Thus at most B complete PL proofs coexist, and closing the
+          // batch drops every non-best proof. The explicit AH audit path keeps
+          // its intentional O(AH) proof set in the caller's arena.
+          AttemptProofArena batch_proof_arena;
+          AttemptProofArena* batch_proof_owner = capture_action_proof
+              ? proof_arena : &batch_proof_arena;
+          peak_resident_evaluated_actions = std::max(
+              peak_resident_evaluated_actions, evaluated_batch.size());
+          evaluator.buildSharedCache(&base, batch_actions);
+          run_kernel_batch(batch_begin, batch_size, &evaluated_batch);
+          std::vector<std::size_t> post_passed;
+          post_passed.reserve(batch_size);
+          for (std::size_t offset = 0; offset < batch_size; ++offset) {
+            const auto& evaluated = evaluated_batch[offset];
+            if (evaluated.candidate.valid &&
+                evaluated.post.numerically_valid && evaluated.post.passed) {
+              post_passed.push_back(offset);
+            }
+          }
+          // Phase 2 immediately follows the numerical batch, so dense
+          // candidate workspaces from prior batches can be released before
+          // admitting the next batch.
+        evaluate_pl_batch = [&](std::vector<EvaluatedAction>* target_batch,
+                                const std::vector<std::size_t>& target_passed,
+                                AttemptProofArena* batch_proof_owner) {
+        candidate_workers_->run(target_passed.size(), active_workers,
             [&](std::size_t passed_index, std::size_t, RankUpdateScratch&) {
-          EvaluatedAction& evaluated = evaluated_actions[post_passed[passed_index]];
+          EvaluatedAction& evaluated = target_batch->at(
+              target_passed[passed_index]);
           CandidateEvaluation& candidate = evaluated.candidate;
           const ExclusionAction& action = candidate.action;
           auto part_start = std::chrono::steady_clock::now();
@@ -3578,14 +3667,14 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
                 pl_seams->before_protection_level(action.id);
               }
               if (complete_frozen_dual) {
-                evaluated.protection_level = proof_arena
+                evaluated.protection_level = batch_proof_owner
                     ? ProtectionLevelV2().computeFrozenAllIn(
                         window_admission, &candidate, evaluated.post,
                         projected_modes.hypotheses, models.modes,
                         *shared_hypothesis_numerics,
                         *shared_hypothesis_dual_numerics,
                         evidence_config.fault_model_policy_fingerprint,
-                        cfg.risk_v2, proof_arena)
+                        cfg.risk_v2, proof_arena, batch_proof_owner)
                     : ProtectionLevelV2().computeFrozenAllIn(
                         window_admission, &candidate, evaluated.post,
                         projected_modes.hypotheses, models.modes,
@@ -3594,22 +3683,22 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
                         evidence_config.fault_model_policy_fingerprint,
                         cfg.risk_v2);
               } else if (capture_action_proof) {
-                evaluated.protection_level = proof_arena
+                evaluated.protection_level = batch_proof_owner
                     ? ProtectionLevelV2().computeShared(
                         window_admission, &candidate, evaluated.post,
                         &projected_modes.hypotheses, shared_pl, cfg.risk_v2,
-                        &evaluated.computation_proof, proof_arena)
+                        &evaluated.computation_proof, batch_proof_owner)
                     : ProtectionLevelV2().computeShared(
                         window_admission, &candidate, evaluated.post,
                         &projected_modes.hypotheses, shared_pl, cfg.risk_v2,
                         &evaluated.computation_proof);
                 evaluated.has_computation_proof = true;
               } else {
-                evaluated.protection_level = proof_arena
+                evaluated.protection_level = batch_proof_owner
                     ? ProtectionLevelV2().computeShared(
                         window_admission, &candidate, evaluated.post,
                         &projected_modes.hypotheses, shared_pl, cfg.risk_v2,
-                        nullptr, proof_arena)
+                        nullptr, batch_proof_owner)
                     : ProtectionLevelV2().computeShared(
                         window_admission, &candidate, evaluated.post,
                         &projected_modes.hypotheses, shared_pl, cfg.risk_v2);
@@ -3621,11 +3710,11 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
             }
             if (evaluated.protection_level.model_valid) {
               std::string proof_reason;
-              const bool proof_valid = proof_arena
+              const bool proof_valid = batch_proof_owner
                   ? validateProtectionLevelV2Proof(
                         candidate, evaluated.post,
                         projected_modes.hypotheses,
-                        evaluated.protection_level, *proof_arena,
+                        evaluated.protection_level, *batch_proof_owner,
                         &proof_reason)
                   : validateProtectionLevelV2Proof(
                         candidate, evaluated.post,
@@ -3640,9 +3729,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
               }
             }
             if (evaluated.protection_level.model_valid) {
-              evaluated.protection_level_proof_identity = proof_arena
+              evaluated.protection_level_proof_identity = batch_proof_owner
                   ? protectionLevelV2ProofIdentity(
-                        candidate, evaluated.protection_level, *proof_arena)
+                        candidate, evaluated.protection_level,
+                        *batch_proof_owner)
                   : protectionLevelV2ProofIdentity(
                         candidate, evaluated.protection_level);
               if (evaluated.protection_level_proof_identity == 0) {
@@ -3668,7 +3758,15 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
               candidate.diagnostics.post_ms + candidate.diagnostics.bridge_ms +
               candidate.diagnostics.fault_map_ms + candidate.diagnostics.pl_ms;
         });
-        for (auto& evaluated : evaluated_actions) {
+        };
+        evaluate_pl_batch(&evaluated_batch, post_passed, batch_proof_owner);
+        if (!capture_action_proof) {
+          peak_batch_full_proofs = std::max(
+              peak_batch_full_proofs,
+              protectionLevelV2FullProofCount(batch_proof_arena));
+        }
+        for (std::size_t offset = 0; offset < batch_size; ++offset) {
+          auto& evaluated = evaluated_batch[offset];
           auto& candidate = evaluated.candidate;
           if (!candidate.diagnostics.pl_evaluated &&
               candidate.diagnostics.skip_reason.empty()) {
@@ -3690,7 +3788,102 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
             candidate_pl_proof[candidate.action.id.value()] =
                 evaluated.protection_level_proof_identity;
           }
+          if (capture_action_proof && evaluated.has_computation_proof) {
+            captured_computation_proofs.emplace(
+                candidate.action.id.value(),
+                std::move(evaluated.computation_proof));
+          }
+          const bool action_model_valid = candidate.action.bridge_mode ==
+                  BridgeMode::None ||
+              candidate.action.model_error_validated;
+          bool covers_selection_set = true;
+          for (const auto id : frozen_plausible) {
+            const auto hypothesis = frozen_hypotheses.find(id.value());
+            if (hypothesis == frozen_hypotheses.end() ||
+                !actionCovers(candidate.action, *hypothesis->second)) {
+              covers_selection_set = false;
+              break;
+            }
+          }
+          if (covers_selection_set) {
+            covers_selection_set = std::all_of(
+                mandatory_exclusion_groups.begin(),
+                mandatory_exclusion_groups.end(),
+                [&](FactorGroupId group) {
+                  return std::find(
+                      candidate.action.groups_to_remove.begin(),
+                      candidate.action.groups_to_remove.end(), group) !=
+                      candidate.action.groups_to_remove.end();
+                });
+          }
+          const bool preselection_eligible =
+              covers_selection_set && candidate.valid &&
+              candidate.post_detector_passed &&
+              candidate.action.recoverability ==
+                  HistoryRecoverability::Recoverable &&
+              std::isfinite(candidate.hpl_m) &&
+              std::isfinite(candidate.vpl_m) && action_model_valid;
+          (void)preselection_eligible;
+          // P1-04 complete rejection funnel.  This is diagnostic attribution
+          // only: every generated representative still executes the same
+          // candidate/post/PL contract and selection order.
+          const auto precondition = action_ineligibility.find(
+              candidate.action.id.value());
+          if (precondition != action_ineligibility.end()) {
+            const std::string& reason = precondition->second;
+            if (reason.find("cardinality") != std::string::npos) {
+              action_rejection_funnel[candidate.action.id.value()] =
+                  "REJECT_CARDINALITY";
+            } else if (reason.find("recoverable") != std::string::npos ||
+                       reason.find("replacement") != std::string::npos ||
+                       reason.find("provenance") != std::string::npos) {
+              action_rejection_funnel[candidate.action.id.value()] =
+                  "REJECT_PROVENANCE";
+            } else {
+              action_rejection_funnel[candidate.action.id.value()] =
+                  "REJECT_COVERAGE";
+            }
+          } else if (!candidate.diagnostics.numerical_valid) {
+            action_rejection_funnel[candidate.action.id.value()] =
+                "REJECT_NUMERICAL";
+          } else if (!candidate.post_detector_passed) {
+            action_rejection_funnel[candidate.action.id.value()] =
+                "REJECT_POST_DETECTOR";
+          } else if (!evaluated.has_protection_level ||
+                     !evaluated.protection_level.model_valid ||
+                     !std::isfinite(candidate.hpl_m) ||
+                     !std::isfinite(candidate.vpl_m)) {
+            const std::string pl_reason = evaluated.has_protection_level
+                ? evaluated.protection_level.reason : candidate.reason;
+            const bool unmonitorable =
+                pl_reason.find("monitor") != std::string::npos ||
+                pl_reason.find("nullspace") != std::string::npos;
+            action_rejection_funnel[candidate.action.id.value()] =
+                unmonitorable ? "REJECT_UNMONITORABLE" : "REJECT_PL";
+          } else {
+            action_rejection_funnel[candidate.action.id.value()] =
+                "PENDING_RISK";
+          }
+          if (!capture_action_proof) {
+            // Selection consumes only the frozen action, detector validity,
+            // protected increment and scalar ranking/PL fields.  Drop dense
+            // covariance/reference/update workspaces after each batch; the
+            // current best full candidate is retained separately for the
+            // commit/publication proof handoff.
+            candidate.covariance.resize(0, 0);
+            candidate.shared_base_factorization.reset();
+            candidate.reference_vectors.reset();
+            candidate.reference_inverse_squared.resize(0);
+            candidate.covariance_plus_factor.resize(0, 0);
+            candidate.covariance_minus_factor.resize(0, 0);
+            candidate.retained_jacobian.resize(0, 0);
+            candidate.retained_jacobian_view = nullptr;
+            candidate.retained_residual.resize(0);
+            candidate.detector_certificate.row_roles.clear();
+          }
           candidates.push_back(std::move(candidate));
+        }
+        if (!capture_action_proof) batch_proof_arena.close();
         }
         refreshActionSearchAudit(&output);
         record_stage("candidate_evaluation", true);
@@ -3706,12 +3899,31 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
           }
         }
         std::string route_reason = "rank=" + std::to_string(routed_rank) +
-            ";dense=" + std::to_string(routed_dense);
+            ";dense=" + std::to_string(routed_dense) +
+            ";stream_protocol=2;stream_batches=" +
+            std::to_string(action_stream.batch_count) +
+            ";stream_batch_capacity=" +
+            std::to_string(action_stream.batch_capacity) +
+            ";stream_peak_batch_actions=" +
+            std::to_string(action_stream.peak_batch_actions) +
+            ";stream_peak_resident_evaluated_actions=" +
+            std::to_string(peak_resident_evaluated_actions) +
+            ";stream_peak_batch_full_proofs=" +
+            std::to_string(peak_batch_full_proofs) +
+            ";stream_retained_full_candidates=0" +
+            ";stream_retained_full_proofs=0" +
+            ";stream_full_action_heavy_copy=0" +
+            ";stream_complete=" +
+            (action_stream_validation.valid &&
+                     action_stream_validation.exhaustive
+                 ? "1" : "0");
         for (const auto& item : dense_reasons) {
           route_reason += ";" + item.first + "=" +
               std::to_string(item.second);
         }
         output.stage_timings.back().reason = std::move(route_reason);
+        const std::size_t candidate_evaluation_stage_index =
+            output.stage_timings.size() - 1;
         for (const auto& candidate : candidates) {
           if (!candidate.valid && !candidate.reason.empty()) {
             note_failure(candidate.reason);
@@ -3741,6 +3953,199 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
         FdeDecision decision = FdeManager().decide(
             fde_trigger, models.hypotheses, evidence, &candidates,
             mandatory_exclusion_groups, cfg.risk_v2, &fde_context);
+        output.stage_timings[candidate_evaluation_stage_index].reason +=
+            ";stream_fde_preproof_selected_action=" +
+            std::to_string(decision.selected_action
+                               ? decision.selected_action->id.value() : 0) +
+            ";stream_fde_preproof_status=" + toString(decision.status);
+        std::optional<ExclusionActionId> proof_recompute_action;
+        bool proof_recompute_test_seam = false;
+        if (decision.selected_action) {
+          proof_recompute_action = decision.selected_action->id;
+        } else if (const auto seams = pipelineTestSeamsV2(this);
+                   seams && seams->proof_recompute_action) {
+          proof_recompute_action = seams->proof_recompute_action();
+          proof_recompute_test_seam = proof_recompute_action.has_value();
+        }
+        if (!capture_action_proof && proof_recompute_action) {
+          const auto selected_summary = std::find_if(
+              candidates.begin(), candidates.end(),
+              [&](const CandidateEvaluation& candidate) {
+                return candidate.action.id == *proof_recompute_action;
+              });
+          const auto selected_order = std::find_if(
+              action_order.begin(), action_order.end(),
+              [&](const ExclusionAction* action) {
+                return action->id == *proof_recompute_action;
+              });
+          bool recompute_valid = selected_summary != candidates.end() &&
+              selected_order != action_order.end();
+          std::vector<EvaluatedAction> recomputed(1);
+          AttemptProofArena recompute_proof_arena;
+          if (recompute_valid) {
+            const std::size_t selected_index = static_cast<std::size_t>(
+                std::distance(action_order.begin(), selected_order));
+            evaluator.buildSharedCache(
+                &base, std::vector<ExclusionAction>{**selected_order});
+            run_kernel_batch(selected_index, 1, &recomputed);
+            std::vector<std::size_t> passed;
+            if (recomputed.front().candidate.valid &&
+                recomputed.front().post.numerically_valid &&
+                recomputed.front().post.passed) {
+              passed.push_back(0);
+            }
+            evaluate_pl_batch(&recomputed, passed, &recompute_proof_arena);
+            recompute_valid = passed.size() == 1 &&
+                recomputed.front().has_protection_level &&
+                recomputed.front().protection_level.model_valid;
+          }
+          ProtectionLevelV2ProofV1 recomputed_proof;
+          if (recompute_valid) {
+            recompute_valid = protectionLevelV2Proof(
+                recomputed.front().protection_level,
+                recomputed.front().candidate, recompute_proof_arena,
+                &recomputed_proof);
+          }
+          auto same_scalar = [](double left, double right) {
+            return left == right || (std::isnan(left) && std::isnan(right));
+          };
+          if (recompute_valid) {
+            const CandidateEvaluation& first = *selected_summary;
+            const CandidateEvaluation& second = recomputed.front().candidate;
+            const auto first_proof = candidate_pl_proof.find(
+                first.action.id.value());
+            recompute_valid = first.action.id == second.action.id &&
+                first.action.action_model_id == second.action.action_model_id &&
+                first.valid == second.valid &&
+                first.post_detector_passed == second.post_detector_passed &&
+                first.rank == second.rank && first.dof == second.dof &&
+                same_scalar(first.statistic, second.statistic) &&
+                same_scalar(first.squared_threshold,
+                            second.squared_threshold) &&
+                same_scalar(first.condition_number,
+                            second.condition_number) &&
+                same_scalar(first.information_logdet,
+                            second.information_logdet) &&
+                first.pl_xyz_m == second.pl_xyz_m &&
+                same_scalar(first.hpl_m, second.hpl_m) &&
+                same_scalar(first.vpl_m, second.vpl_m) &&
+                first.state_increment.size() ==
+                    second.state_increment.size() &&
+                first.state_increment.isApprox(second.state_increment, 0.0) &&
+                first_proof != candidate_pl_proof.end() &&
+                first_proof->second ==
+                    recomputed.front().protection_level_proof_identity &&
+                recomputed_proof.proof_identity == first_proof->second;
+          }
+          if (!recompute_valid) {
+            const std::uint64_t lost_selected_id =
+                proof_recompute_action->value();
+            if (!proof_recompute_test_seam) {
+              decision.commit_allowed = false;
+              decision.integrity_available = false;
+              decision.selected_action.reset();
+              decision.status = FdeStatus::ModelInvalid;
+              decision.reason =
+                  "complete action stream selected proof recomputation "
+                  "mismatch: selected=" +
+                  std::to_string(lost_selected_id);
+            }
+          } else {
+            std::string retain_reason;
+            if (!retainProtectionLevelV2Proof(
+                    recomputed.front().candidate,
+                    recomputed.front().protection_level,
+                    recomputed_proof, proof_arena, &retain_reason)) {
+              if (!proof_recompute_test_seam) {
+                selected_summary->selected = false;
+                decision.commit_allowed = false;
+                decision.integrity_available = false;
+                decision.selected_action.reset();
+                decision.status = FdeStatus::ModelInvalid;
+                decision.reason =
+                    "complete action stream could not retain selected proof: " +
+                    retain_reason;
+              }
+            } else {
+              recomputed.front().candidate.covers_plausible_set =
+                  selected_summary->covers_plausible_set;
+              recomputed.front().candidate.selected =
+                  !proof_recompute_test_seam;
+              *selected_summary = std::move(recomputed.front().candidate);
+            }
+          }
+          recompute_proof_arena.close();
+        }
+        const std::size_t main_action_full_proofs = proof_arena
+            ? protectionLevelV2FullProofCount(*proof_arena) -
+                  main_full_proofs_before_actions
+            : (decision.selected_action ? 1u : 0u);
+        output.stage_timings[candidate_evaluation_stage_index].reason +=
+            ";stream_main_arena_action_full_proofs=" +
+            std::to_string(main_action_full_proofs) +
+            ";stream_action_proof_retention=" +
+            (capture_action_proof ? std::string("AUDIT_O_AH")
+                                  : std::string("NORMAL_TWO_PASS_O_B_PLUS_ONE")) +
+            ";stream_winner_recompute=" +
+            ((!capture_action_proof && proof_recompute_action)
+                 ? std::string("1") : std::string("0")) +
+            ";stream_winner_recompute_test_seam=" +
+            (proof_recompute_test_seam ? std::string("1")
+                                       : std::string("0"));
+        for (std::size_t index = 0; index < candidates.size(); ++index) {
+          const CandidateEvaluation& candidate = candidates[index];
+          if (candidate.selected) {
+            action_rejection_funnel[candidate.action.id.value()] = "SELECTED";
+            continue;
+          }
+          auto funnel = action_rejection_funnel.find(
+              candidate.action.id.value());
+          if (funnel == action_rejection_funnel.end() ||
+              funnel->second != "PENDING_RISK") {
+            continue;
+          }
+          const auto risk_terminal = [&]() {
+            if (!final_risk.allocation_valid) {
+              return std::string("REJECT_RISK_ALLOCATION");
+            }
+            if (!decision.selection_budget_ok) {
+              return std::string("REJECT_RISK_SELECTION");
+            }
+            if (!final_risk.complete_bound_closes) {
+              return std::string("REJECT_RISK_CLOSURE");
+            }
+            if (!final_risk.all_terms_validated) {
+              return std::string("REJECT_RISK_EVIDENCE");
+            }
+            return std::string("REJECT_RISK_OTHER");
+          };
+          if (decision.status == FdeStatus::RiskBudgetInvalid) {
+            funnel->second = risk_terminal();
+          } else if (index >= decision.candidate_dispositions.size()) {
+            funnel->second = std::string("REJECT_DECISION_") +
+                toString(decision.status);
+          } else {
+            const auto disposition = static_cast<CandidateDisposition>(
+                decision.candidate_dispositions[index]);
+            switch (disposition) {
+              case CandidateDisposition::UseInReferenceEstimate:
+                funnel->second = decision.selected_action
+                    ? "REJECT_SELECTION_ORDER"
+                    : std::string("REJECT_DECISION_") +
+                          toString(decision.status);
+                break;
+              case CandidateDisposition::TransferToValidReference:
+                funnel->second = "REJECT_TRANSFER_ONLY";
+                break;
+              case CandidateDisposition::UnprotectedDiagnosticOnly:
+                funnel->second = "REJECT_DIAGNOSTIC_ONLY";
+                break;
+              case CandidateDisposition::Refused:
+                funnel->second = "REJECT_REFUSED";
+                break;
+            }
+          }
+        }
         if (capture_action_proof) {
           // Freeze the exact production objects consumed above.  This block
           // deliberately performs no candidate, detector, projection or PL
@@ -3823,9 +4228,11 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
                                            *proof_arena, &proof)
                   : protectionLevelV2Proof(pl->second, &proof);
             }
-            if (!has_proof && action_index < evaluated_actions.size() &&
-                evaluated_actions[action_index].has_computation_proof) {
-              proof = evaluated_actions[action_index].computation_proof;
+            const auto captured_proof = captured_computation_proofs.find(
+                candidate.action.id.value());
+            if (!has_proof &&
+                captured_proof != captured_computation_proofs.end()) {
+              proof = captured_proof->second;
               has_proof = proof.proof_identity != 0;
             }
             const int disposition =
@@ -3963,6 +4370,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
           note_failure(decision.reason);
         }
         start_operation("candidate_audit");
+        std::string action_funnel_evidence =
+            "ACTION_REJECTION_FUNNEL_V2:";
         for (const auto& candidate : candidates) {
           CandidateAuditRecord* staged = actionSearchOccurrenceFor(
               &output, candidate.action);
@@ -4033,6 +4442,20 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
           if (!record.reason.empty()) record.reason += ";";
           record.reason += "ACTION_OPERATION_IDENTITY=" +
               exactActionOperationIdentityV1(candidate.action);
+          const auto funnel = action_rejection_funnel.find(
+              candidate.action.id.value());
+          if (funnel != action_rejection_funnel.end()) {
+            // Keep the frozen P0 candidate reason/hash contract untouched.
+            // The complete P1-04 funnel is appended to the existing
+            // candidate-audit stage row, so the frozen stage set and timing
+            // link schema remain unchanged.
+            if (action_funnel_evidence.back() != ':') {
+              action_funnel_evidence += ',';
+            }
+            action_funnel_evidence +=
+                std::to_string(candidate.action.id.value()) + '=' +
+                funnel->second;
+          }
           if (!staged) {
             output.candidate_audit.push_back(std::move(standalone));
           }
@@ -4103,6 +4526,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
           }
         }
         record_stage("candidate_audit");
+        output.stage_timings.back().reason = std::move(action_funnel_evidence);
         for (const auto& coverage : output.coverage_audit) {
           if (coverage.outcome == "COVERAGE_GAP" ||
               coverage.outcome == "UNRECOVERABLE" ||
@@ -4517,6 +4941,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
   } catch (...) {
     eraseActionProof(output.transaction_id, output.window_id);
     refreshActionSearchAudit(&output);
+    closeExceptionalActionFunnel(&output);
     auto existing = std::find_if(output.stage_timings.begin(), output.stage_timings.end(),
         [&](const StageTiming& timing) { return timing.stage == executing_stage; });
     if (existing == output.stage_timings.end()) {

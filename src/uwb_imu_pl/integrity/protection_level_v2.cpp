@@ -1010,6 +1010,61 @@ bool protectionLevelV2Proof(const ProtectionLevelV2Result& result,
       proof->proof_identity != 0;
 }
 
+bool retainProtectionLevelV2Proof(
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    const ProtectionLevelV2ProofV1& proof,
+    AttemptProofArena* arena,
+    std::string* reason) {
+  const std::uint64_t candidate_identity = candidateProofIdentity(candidate);
+  std::string payload_reason;
+  if (candidate_identity == 0 ||
+      proof.candidate_proof_identity != candidate_identity ||
+      proof.proof_identity == 0 ||
+      resultRegistryKey(proof.served_result) != resultRegistryKey(result) ||
+      !validateProtectionLevelV2ProofPayload(proof, &payload_reason)) {
+    if (reason) {
+      *reason = payload_reason.empty()
+          ? "retained protection proof binding mismatch" : payload_reason;
+    }
+    return false;
+  }
+  if (!arena) {
+    auto& registry = protectionProofRegistry();
+    std::lock_guard<std::mutex> lock(registry.mutex);
+    registry.by_result[resultRegistryKey(result)].push_back(proof);
+    registry.by_identity[proof.proof_identity] = proof;
+    return true;
+  }
+  const auto payload =
+      std::make_shared<const ProtectionLevelV2ProofV1>(proof);
+  const bool by_result = detail::AttemptProofArenaAccess::store(
+      arena, kArenaProtectionByResult,
+      scopedResultKey(resultRegistryKey(result), candidate_identity), nullptr,
+      payload);
+  const bool by_identity = detail::AttemptProofArenaAccess::store(
+      arena, kArenaProtectionByIdentity, proof.proof_identity, nullptr,
+      payload);
+  if ((!by_result || !by_identity) && reason) {
+    *reason = "retained protection proof arena is closed";
+  }
+  return by_result && by_identity;
+}
+
+std::size_t protectionLevelV2FullProofCount(
+    const AttemptProofArena& arena) {
+  // Count the identity index only. Each full proof is deliberately indexed by
+  // both result and identity, but those two entries share one immutable body.
+  return detail::AttemptProofArenaAccess::countKind(
+      arena, kArenaProtectionByIdentity);
+}
+
+std::size_t protectionLevelV2FullProofCount(
+    const AttemptProofLease& lease) {
+  return detail::AttemptProofArenaAccess::countKind(
+      lease, kArenaProtectionByIdentity);
+}
+
 std::uint64_t protectionLevelV2ProofIdentity(
     const ProtectionLevelV2Result& result) {
   ProtectionLevelV2ProofV1 proof;
@@ -2368,7 +2423,8 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
     const RiskBudgetV2& risk) const {
   return computeFrozenAllInImpl(
       window, candidate, detector, hypotheses, modes, frozen,
-      nullptr, fault_model_policy_fingerprint, risk, nullptr, nullptr);
+      nullptr, fault_model_policy_fingerprint, risk, nullptr, nullptr,
+      nullptr);
 }
 
 ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
@@ -2390,7 +2446,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
   return computeFrozenAllInImpl(
       admission.window(), candidate, detector, hypotheses, modes, frozen,
       &frozen_dual, fault_model_policy_fingerprint, risk, &admission,
-      nullptr);
+      nullptr, nullptr);
 }
 
 ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
@@ -2412,7 +2468,31 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
   return computeFrozenAllInImpl(
       admission.window(), candidate, detector, hypotheses, modes, frozen,
       &frozen_dual, fault_model_policy_fingerprint, risk, &admission,
-      proof_arena);
+      proof_arena, proof_arena);
+}
+
+ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+    const FrozenWindowAdmission& admission,
+    CandidateEvaluation* candidate,
+    const DetectorResultV2& detector,
+    const std::vector<FaultHypothesisV2>& hypotheses,
+    const std::vector<FaultModeBasis>& modes,
+    const FrozenHypothesisNumerics& frozen,
+    const FrozenHypothesisDualNumerics& frozen_dual,
+    std::uint64_t fault_model_policy_fingerprint,
+    const RiskBudgetV2& risk,
+    const AttemptProofArena* frozen_proof_arena,
+    AttemptProofArena* output_proof_arena) const {
+  if (!admission || !output_proof_arena || output_proof_arena->closed() ||
+      (frozen_proof_arena && frozen_proof_arena->closed())) {
+    ProtectionLevelV2Result result;
+    result.reason = "invalid split scoped proof arena/admission";
+    return result;
+  }
+  return computeFrozenAllInImpl(
+      admission.window(), candidate, detector, hypotheses, modes, frozen,
+      &frozen_dual, fault_model_policy_fingerprint, risk, &admission,
+      frozen_proof_arena, output_proof_arena);
 }
 
 ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
@@ -2426,7 +2506,8 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
     std::uint64_t fault_model_policy_fingerprint,
     const RiskBudgetV2& risk,
     const FrozenWindowAdmission* admission,
-    AttemptProofArena* proof_arena) const {
+    const AttemptProofArena* frozen_proof_arena,
+    AttemptProofArena* output_proof_arena) const {
   ProtectionLevelV2Result result;
   ProtectionLevelV2ProofV1 sidecar;
   sidecar.risk = risk;
@@ -2590,8 +2671,8 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
     }
     std::string cached_proof_reason;
     FrozenHypothesisPlProofV1 cached_proof;
-    const bool cached_found = proof_arena
-        ? frozenHypothesisPlProof(cached, *proof_arena, &cached_proof)
+    const bool cached_found = frozen_proof_arena
+        ? frozenHypothesisPlProof(cached, *frozen_proof_arena, &cached_proof)
         : frozenHypothesisPlProof(cached, &cached_proof);
     if (!cached_found ||
         !validateFrozenHypothesisPlEntry(cached_proof,
@@ -2719,7 +2800,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
     result.reason = "post-FDE protection level exceeds alert limit";
   else result.reason = "research V2 implemented; Gate J calibration/review pending";
   bindProtectionResultProof(*candidate, detector, hypotheses, &result,
-                            &sidecar, proof_arena);
+                            &sidecar, output_proof_arena);
   return result;
 }
 

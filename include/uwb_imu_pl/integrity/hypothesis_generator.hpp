@@ -143,6 +143,30 @@ struct ActionSearchResultV1 {
       ActionSearchLifecycleV1::ReadyForEvaluation;
 };
 
+// P1-04 additive streaming contract.  V1 remains the fail-closed capped API
+// used by old callers.  In V2, max_candidate_count is a resident batch bound,
+// never a total-search cap: every exact-semantic representative is present in
+// `complete.actions`, while exact duplicates remain omission records with a
+// proof.  The batch ranges are deterministic and cover the complete vector.
+struct CompleteActionStreamV2 {
+  std::uint32_t protocol_version = 2;
+  ActionSearchResultV1 complete;
+  std::size_t batch_capacity = 0;
+  std::size_t batch_count = 0;
+  // Heavy numerical work admitted concurrently by the stream.  The compact
+  // action census remains proportional to generated identities for audit.
+  std::size_t peak_batch_actions = 0;
+};
+
+CompleteActionStreamV2 makeCompleteActionStreamV2(
+    const std::vector<ExclusionAction>& generated,
+    std::size_t batch_capacity,
+    GeneratedActionSnapshotV1* trusted_generated_snapshot = nullptr);
+
+ActionSearchValidationV1 validateCompleteActionStreamV2(
+    const CompleteActionStreamV2& stream,
+    const GeneratedActionSnapshotV1& trusted_generated_snapshot);
+
 // Canonical, byte-exact graph-operation identity. This proves operation
 // equivalence only; it is deliberately insufficient for deduplication.
 std::string exactActionOperationIdentityV1(const ExclusionAction& action);
@@ -213,6 +237,14 @@ class HypothesisGenerator {
       const std::vector<std::string>& mandatory_health_sources = {}) const;
 
   ActionSearchResultV1 actionsForPlausibleSetV1(
+      const LinearizedIntegrityWindow& window,
+      const EpochTransaction& transaction,
+      GeneratedFaultModelSet* models,
+      const std::vector<FaultModeEvidence>& evidence,
+      const std::vector<std::string>& mandatory_health_sources = {},
+      GeneratedActionSnapshotV1* trusted_generated_snapshot = nullptr) const;
+
+  CompleteActionStreamV2 actionsForPlausibleSetV2(
       const LinearizedIntegrityWindow& window,
       const EpochTransaction& transaction,
       GeneratedFaultModelSet* models,

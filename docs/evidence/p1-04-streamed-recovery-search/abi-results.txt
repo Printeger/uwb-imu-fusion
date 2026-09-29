@@ -1,0 +1,20 @@
+P1-04 post-review public seam ABI repair
+
+Golden reference: golden-p1-03-incremental-history-root
+Current DSO: /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/libuwb_imu_pl.so
+Compiler ABI flags: -O3 -DNDEBUG -march=native -std=gnu++17
+
+Golden-P1-03 headers -> current DSO: PASS, exit 0
+PipelineTestDependencySeamsV1 128 8 0 32 64 96
+old-v1-lifecycle 1 1 4 NO_VALID_CANDIDATE
+
+Current headers -> current DSO: PASS, exit 0
+PipelineTestDependencySeamsV1 128 8
+old-v1-lifecycle 1 1 4 NO_VALID_CANDIDATE
+
+The canary constructs shared_ptr<PipelineTestDependencySeamsV1>, installs all
+four callbacks through the old setTestDependencySeamsV1 export, executes a
+real processUwbBatch no-winner path, clears the seam, resets the shared_ptr and
+destroys the pipeline. The current DSO exports both the unchanged V1 setter
+symbol and the additive V2 setter symbol. RealtimeIntegrityPipeline retains
+its golden layout because both versions are stored in its external sidecar.

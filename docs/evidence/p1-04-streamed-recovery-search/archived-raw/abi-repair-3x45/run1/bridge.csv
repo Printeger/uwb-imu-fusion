@@ -1,0 +1,1 @@
+timestamp_ns,transaction_id,mode,consecutive_epochs,duration_s,model_id,dt_s,optimization_covariance_diagonal,integrity_model,calibration_id,bound_x,bound_y,bound_z,control_available,active,timeout,status

@@ -1,0 +1,80 @@
+P1-04 complete streamed recovery search implementer command record
+baseline=golden-p1-03-incremental-history-root
+baseline_sha=bdc39560b4c74c5b7a7e4dc766d3994290f31f32
+
+Build:
+  cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl -j2 --target test_p0_06_action_search test_p0_07_corrected_exhaustive p0_07_production_probe realtime_performance_benchmark
+  exit=0
+
+Focused P104:
+  env LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_p0_06_action_search --gtest_filter=P104CompleteActionStream.*
+  exit=0; 6/6 PASS
+
+Focused proof ownership and exception funnel after reviewer repair:
+  test_integrity_v2 --gtest_filter=P104ProofOwnership.*
+  test_p0_06_action_search --gtest_filter=P006ActionSearch.ProductionExceptionsPreserveCensusThroughPacketAndCsv
+  exits=0/0; 1/1 PASS and 1/1 PASS
+
+Focused O03:
+  env LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2
+  exit=0; 107/107 PASS
+
+Focused O07:
+  env LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_p0_06_action_search
+  exit=0; 30/30 PASS; 78.84 seconds
+
+Frozen stage schema:
+  ctest --output-on-failure -R '^test_round2_tools$'
+  exit=0; 1/1 PASS
+
+Evidence hash compatibility:
+  ctest --output-on-failure -R '^test_p0_07_evidence_runner$'
+  exit=0; 1/1 PASS; 38.68 seconds
+
+O12:
+  test_p0_07_corrected_exhaustive --gtest_filter=P007CorrectedExhaustive.SameRawReplayDrivesProductionBuilderGeneratorAndFinalRefusal:P007CorrectedExhaustive.MissingProvenanceCensusIsRetainedAndRefused
+  exit=0; 2/2 PASS; 39.58 seconds
+
+Complete CTest:
+  env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1 BLIS_NUM_THREADS=1 ctest --output-on-failure -j1
+  cwd=/home/mint/ws_fusion_uwb/build/uwb_imu_pl
+  exit=0; 34/34 PASS; 1139.47 seconds (final run after split-arena repair)
+
+Section 2.4, repeated for run1/run2/run3:
+  /usr/bin/time -v env LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1 BLIS_NUM_THREADS=1 UWB_IMU_PL_CANDIDATE_WORKERS=4 UWB_IMU_PL_BENCHMARK_SEED=20260928 taskset -c 0-3 /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark config/fde_joint_order2.yaml RUN_DIR 45
+  exits=0/0/0
+  walls=1:58.32/1:57.53/1:58.12
+  rss_kib=543824/552324/526976
+
+Strict comparison, repeated for matching run1/run2/run3:
+  python3 tools/compare_p1_04_outputs.py docs/evidence/p1-03-incremental-history-root/archived-raw/candidate-3x45/runN docs/evidence/p1-04-streamed-recovery-search/archived-raw/candidate-3x45/runN --output docs/evidence/p1-04-streamed-recovery-search/equivalence-runN.json
+  exits=0/0/0; PASS/PASS/PASS
+
+All-attempt summary:
+  python3 tools/summarize_p1_01_performance.py docs/evidence/p1-04-streamed-recovery-search/archived-raw/candidate-3x45 --output docs/evidence/p1-04-streamed-recovery-search/all-attempt-performance.json
+  exit=0; 135/135 complete, 0 excluded
+
+Static checks:
+  git diff --check
+  python3 -m py_compile tools/compare_p1_04_outputs.py
+  exits=0/0
+
+Reviewer repair audit:
+  initial two-pass run1 strict comparison=FAIL because the batch output arena
+  was incorrectly reused as the frozen-hypothesis proof input arena
+  final additive split-arena overload compiled; legacy overloads/layout kept
+  final strict comparisons=PASS/PASS/PASS
+  final ABI canaries: P1-03 HistoryFaultSummary=PASS; P0-05 old client=PASS
+
+Post-review V1 ABI repair:
+  restored PipelineTestDependencySeamsV1 to golden four-field layout
+  moved proof_recompute_action to additive V2 plus independent setter
+  golden-p1-03 headers/current DSO lifecycle/process canary exit=0, 128/8
+  current headers/current DSO lifecycle/process canary exit=0, 128/8
+  both canaries: four callbacks exercised; no-winner NO_VALID_CANDIDATE;
+  clear/reset/destruction PASS
+  focused P104+exception=7/7, O03=107/107, O07=30/30, O12=2/2
+  complete CTest exit=0, 34/34 PASS, 1139.01 seconds
+  final section 2.4 rerun walls=1:55.18/1:54.49/1:56.43
+  final section 2.4 RSS KiB=553024/539392/542012
+  final strict comparisons=PASS/PASS/PASS; 135/135 complete; 0 excluded

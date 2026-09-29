@@ -1,0 +1,22 @@
+	linux-vdso.so.1 (0x00007173e53bd000)
+	libuwb_imu_pl.so => /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/libuwb_imu_pl.so (0x00007173e4e00000)
+	libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007173e5331000)
+	libgtsam.so.4 => /usr/local/lib/libgtsam.so.4 (0x00007173e4800000)
+	libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007173e461e000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007173e44cf000)
+	libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007173e5316000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007173e42dd000)
+	libboost_filesystem.so.1.71.0 => /lib/x86_64-linux-gnu/libboost_filesystem.so.1.71.0 (0x00007173e52f6000)
+	libgtsam_unstable.so.4 => /usr/local/lib/libgtsam_unstable.so.4 (0x00007173e4118000)
+	libyaml-cpp.so.0.6 => /lib/x86_64-linux-gnu/libyaml-cpp.so.0.6 (0x00007173e529b000)
+	libtbb.so.2 => /lib/x86_64-linux-gnu/libtbb.so.2 (0x00007173e40d2000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007173e53bf000)
+	libboost_serialization.so.1.71.0 => /lib/x86_64-linux-gnu/libboost_serialization.so.1.71.0 (0x00007173e408e000)
+	libboost_timer.so.1.71.0 => /lib/x86_64-linux-gnu/libboost_timer.so.1.71.0 (0x00007173e4df6000)
+	libtbbmalloc.so.2 => /lib/x86_64-linux-gnu/libtbbmalloc.so.2 (0x00007173e404c000)
+	libmetis-gtsam.so => /usr/local/lib/libmetis-gtsam.so (0x00007173e3fdb000)
+	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007173e4df0000)
+	libboost_chrono.so.1.71.0 => /lib/x86_64-linux-gnu/libboost_chrono.so.1.71.0 (0x00007173e4de2000)
+bc896646d8f73da5d08c71532d9009219bef2d88131acf09f782f3cd6bb4946d  /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/libuwb_imu_pl.so
+00d83aa618194aefc4b2011e1d29bd9aba107a8b5e0ee8e946eb2455351219da  /usr/local/lib/libgtsam.so.4.2.0
+7e54a7f4603b30b755f9f0036034e19c9f753c985c82af83c1551b23a9358c23  /usr/local/lib/libgtsam_unstable.so.4.2.0

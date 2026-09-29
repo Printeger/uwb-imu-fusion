@@ -1,0 +1,9 @@
+{
+  "status": "IMPLEMENTED_UNVERIFIED",
+  "processed": 45,
+  "committed": 45,
+  "rejected": 0,
+  "errors": 0,
+  "metrics": {"core_total_ms": 115846, "end_to_end_total_ms": 115864},
+  "detail": "deterministic 3D rotating raw-stream benchmark; scenario=nominal; seed=20260928"
+}

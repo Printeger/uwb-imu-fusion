@@ -1,0 +1,38 @@
+{
+  "runs": [
+    {
+      "all_full_action_heavy_copy_zero": true,
+      "all_funnels_present": true,
+      "all_stream_complete": true,
+      "attempts": 45,
+      "candidate_audit_stage_rows": 45,
+      "candidate_evaluation_stage_rows": 45,
+      "candidate_rows": 45,
+      "max_peak_resident_evaluated_actions": 1,
+      "run": 1
+    },
+    {
+      "all_full_action_heavy_copy_zero": true,
+      "all_funnels_present": true,
+      "all_stream_complete": true,
+      "attempts": 45,
+      "candidate_audit_stage_rows": 45,
+      "candidate_evaluation_stage_rows": 45,
+      "candidate_rows": 45,
+      "max_peak_resident_evaluated_actions": 1,
+      "run": 2
+    },
+    {
+      "all_full_action_heavy_copy_zero": true,
+      "all_funnels_present": true,
+      "all_stream_complete": true,
+      "attempts": 45,
+      "candidate_audit_stage_rows": 45,
+      "candidate_evaluation_stage_rows": 45,
+      "candidate_rows": 45,
+      "max_peak_resident_evaluated_actions": 1,
+      "run": 3
+    }
+  ],
+  "schema": "uwb-imu-pl/p1-04-stream-diagnostics/v1"
+}
