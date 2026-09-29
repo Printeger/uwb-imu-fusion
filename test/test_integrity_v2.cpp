@@ -11,7 +11,9 @@
 #include <boost/math/distributions/normal.hpp>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <future>
+#include <new>
 #include <random>
 
 #include "uwb_imu_pl/config/integrity_config.hpp"
@@ -2178,7 +2180,8 @@ TEST(IntegrityV2ProtectionLevel,
       window, &frozen_candidate, detector, optimized_hypotheses, modes, *frozen,
       frozen->fault_model_policy_fingerprint, RiskBudgetV2{});
   EXPECT_FALSE(stale.model_valid);
-  EXPECT_NE(stale.reason.find("identity mismatch"), std::string::npos);
+  EXPECT_NE(stale.reason.find("identity mismatch"), std::string::npos)
+      << stale.reason;
 }
 
 TEST(IntegrityV2ProtectionLevel,
@@ -4722,4 +4725,534 @@ TEST(EnvelopeDominance, OneSidedRelativeRuleRejectsNarrowBandShortfall) {
   EXPECT_GE(envelope.dominance_margin, -1e-9);
   EXPECT_GE(envelope.dominance_ratio, 1.0 - 1e-9);
   EXPECT_TRUE(envelope.dominant);
+}
+
+// ---------------------------------------------------------------------------
+// P1-01/R07: immutable identity reuse, descriptor indices, exact operation
+// deduplication and batched unique-block RHS.  The legacy identity ablation is
+// retained so this test proves numerical equivalence while exposing the work
+// removed by the optimized path.
+// ---------------------------------------------------------------------------
+TEST(P101IdentityIndexing, FrozenProofAndDirectDescriptorsAreExact) {
+  using namespace uwb_imu_pl;
+  auto optimized = makeCompactFixture();
+  NumericalWorkCounters::reset();
+  unsetenv("UWB_IMU_PL_DISABLE_FROZEN_IDENTITY_HANDLE");
+  const FrozenIntegrityWindow optimized_handle =
+      freezeIntegrityWindowCopy(optimized.window);
+  const FrozenWindowAdmission optimized_admission =
+      admitFrozenIntegrityWindow(optimized_handle);
+  ASSERT_TRUE(optimized_admission) << optimized_admission.reason;
+  std::shared_ptr<const FrozenHypothesisNumerics> optimized_shared;
+  const auto optimized_evidence = HypothesisEvidenceEvaluator().evaluateAll(
+      optimized_admission, optimized.modes, &optimized.hypotheses, 100.0,
+      &optimized_shared);
+  const auto optimized_work = NumericalWorkCounters::snapshot();
+
+  auto legacy = makeCompactFixture();
+  NumericalWorkCounters::reset();
+  ASSERT_EQ(setenv("UWB_IMU_PL_DISABLE_FROZEN_IDENTITY_HANDLE", "1", 1), 0);
+  std::shared_ptr<const FrozenHypothesisNumerics> legacy_shared;
+  const auto legacy_evidence = HypothesisEvidenceEvaluator().evaluateAll(
+      legacy.window, legacy.modes, &legacy.hypotheses, 100.0, &legacy_shared);
+  unsetenv("UWB_IMU_PL_DISABLE_FROZEN_IDENTITY_HANDLE");
+  const auto legacy_work = NumericalWorkCounters::snapshot();
+
+  ASSERT_EQ(optimized_evidence.size(), legacy_evidence.size());
+  ASSERT_TRUE(optimized_shared);
+  ASSERT_TRUE(legacy_shared);
+  ASSERT_EQ(optimized_shared->pl_entries.size(),
+            legacy_shared->pl_entries.size());
+  for (std::size_t index = 0; index < optimized_evidence.size(); ++index) {
+    EXPECT_EQ(optimized_evidence[index].plausible,
+              legacy_evidence[index].plausible);
+    EXPECT_EQ(optimized_evidence[index].log_evidence,
+              legacy_evidence[index].log_evidence);
+    EXPECT_EQ(optimized_evidence[index].all_in_statistic,
+              legacy_evidence[index].all_in_statistic);
+    EXPECT_EQ(optimized_evidence[index].conditioned_statistic,
+              legacy_evidence[index].conditioned_statistic);
+    EXPECT_EQ(optimized_evidence[index].explained_energy,
+              legacy_evidence[index].explained_energy);
+    EXPECT_EQ(optimized_evidence[index].profile_j,
+              legacy_evidence[index].profile_j);
+    EXPECT_EQ(optimized_evidence[index].profile_valid,
+              legacy_evidence[index].profile_valid);
+    EXPECT_EQ(optimized_evidence[index].monitorability.rank,
+              legacy_evidence[index].monitorability.rank);
+    EXPECT_EQ(optimized_evidence[index].monitorability.condition_number,
+              legacy_evidence[index].monitorability.condition_number);
+    EXPECT_EQ(optimized_evidence[index].monitorability.monitorable,
+              legacy_evidence[index].monitorability.monitorable);
+    EXPECT_TRUE((optimized_evidence[index].estimated_fault.array() ==
+                 legacy_evidence[index].estimated_fault.array()).all());
+    EXPECT_TRUE((optimized_evidence[index].fault_gram.array() ==
+                 legacy_evidence[index].fault_gram.array()).all());
+    FrozenHypothesisPlProofV1 optimized_proof;
+    FrozenHypothesisPlProofV1 legacy_proof;
+    ASSERT_TRUE(frozenHypothesisPlProof(
+        optimized_shared->pl_entries[index], &optimized_proof));
+    ASSERT_TRUE(frozenHypothesisPlProof(
+        legacy_shared->pl_entries[index], &legacy_proof));
+    EXPECT_EQ(optimized_proof.proof_identity, legacy_proof.proof_identity);
+    EXPECT_EQ(optimized_proof.parent_proof_identity,
+              legacy_proof.parent_proof_identity);
+    EXPECT_EQ(optimized_proof.nullspace_class,
+              legacy_proof.nullspace_class);
+    EXPECT_TRUE((optimized_proof.certified_gram.array() ==
+                 legacy_proof.certified_gram.array()).all());
+    EXPECT_TRUE((optimized_proof.protected_response.array() ==
+                 legacy_proof.protected_response.array()).all());
+    EXPECT_TRUE((optimized_proof.gram_eigenvalues.array() ==
+                 legacy_proof.gram_eigenvalues.array()).all());
+    EXPECT_TRUE((optimized_proof.gram_eigenvectors.array() ==
+                 legacy_proof.gram_eigenvectors.array()).all());
+    EXPECT_TRUE((optimized_proof.gram_eigenvalue_errors.array() ==
+                 legacy_proof.gram_eigenvalue_errors.array()).all());
+    EXPECT_TRUE((optimized_proof.nullspace_axis_residual.array() ==
+                 legacy_proof.nullspace_axis_residual.array()).all());
+    EXPECT_TRUE((optimized_proof.raw_detection_factor.array() ==
+                 legacy_proof.raw_detection_factor.array()).all());
+    EXPECT_EQ(optimized_proof.raw_factor_scale,
+              legacy_proof.raw_factor_scale);
+    EXPECT_TRUE((optimized_shared->pl_entries[index].protected_slopes.array() ==
+                 legacy_shared->pl_entries[index].protected_slopes.array())
+                    .all());
+  }
+  EXPECT_EQ(optimized_work.frozen_identity_builds, 0u);
+  EXPECT_EQ(optimized_work.frozen_identity_reuses,
+            optimized.hypotheses.size());
+  EXPECT_EQ(legacy_work.frozen_identity_builds, legacy.hypotheses.size());
+  EXPECT_EQ(legacy_work.frozen_identity_reuses, 0u);
+  EXPECT_EQ(optimized_work.descriptor_id_lookups, 3u);
+  EXPECT_EQ(optimized_work.descriptor_linear_scans, 0u);
+  EXPECT_EQ(optimized_work.window_content_hash_scans, 1u);
+}
+
+TEST(P101IdentityIndexing, UniqueBlockRhsUsesOneBatch) {
+  using namespace uwb_imu_pl;
+  auto window = syntheticWindow();
+  ExclusionAction action;
+  action.id = ExclusionActionId(101);
+  action.action_model_id = "P1_01_TWO_BLOCK_REMOVAL";
+  action.groups_to_remove = {FactorGroupId(1), FactorGroupId(2)};
+  action.exclusion_cardinality = 2;
+  NumericalWorkCounters::reset();
+  const auto base = RankUpdateEvaluator().factorizeOnce(window, {action});
+  const auto work = NumericalWorkCounters::snapshot();
+  ASSERT_TRUE(base.valid) << base.reason;
+  ASSERT_TRUE(base.block_cache);
+  EXPECT_EQ(base.block_cache->blocks.size(), 2u);
+  EXPECT_EQ(work.block_rhs_solve_batches, 1u);
+  EXPECT_EQ(work.block_rhs_unique_blocks, 2u);
+  EXPECT_EQ(work.square_root_information_solves, 1u);
+  EXPECT_EQ(work.square_root_information_columns, 5u);
+  EXPECT_EQ(work.covariance_rhs_solves, 0u);
+  for (const auto& group : base.block_cache->blocks) {
+    ASSERT_EQ(group.second.size(), 1u);
+    const auto& entry = group.second.front();
+    EXPECT_EQ(entry.base_solve.rows(), window.H.cols());
+    EXPECT_EQ(entry.base_solve.cols(),
+              entry.block.jacobian_whitened.rows());
+    EXPECT_TRUE(entry.base_solve.allFinite());
+  }
+}
+
+TEST(P101IdentityIndexing, BatchedRhsMatchesUncachedCandidateExactly) {
+  using namespace uwb_imu_pl;
+  auto window = syntheticWindow();
+  ExclusionAction action;
+  action.id = ExclusionActionId(102);
+  action.action_model_id = "P1_01_REPLACEMENT";
+  action.groups_to_remove = {FactorGroupId(1)};
+  action.groups_to_add = {FactorGroupId(1)};
+  action.added_blocks = {window.blocks.front()};
+  action.added_blocks.front().residual_whitened(0) += 0.01;
+  action.added_blocks.front().residual_raw(0) += 0.01;
+  action.exclusion_cardinality = 1;
+
+  unsetenv("UWB_IMU_PL_DISABLE_BLOCK_CACHE");
+  RankUpdateEvaluator evaluator;
+  const auto batched_base = evaluator.factorizeOnce(window, {action});
+  const auto batched = evaluator.evaluate(batched_base, action);
+  ASSERT_TRUE(batched.valid) << batched.reason;
+  ASSERT_EQ(setenv("UWB_IMU_PL_DISABLE_BLOCK_CACHE", "1", 1), 0);
+  const auto uncached_base = evaluator.factorizeOnce(window, {action});
+  const auto uncached = evaluator.evaluate(uncached_base, action);
+  unsetenv("UWB_IMU_PL_DISABLE_BLOCK_CACHE");
+  ASSERT_TRUE(uncached.valid) << uncached.reason;
+  EXPECT_TRUE((batched.state_increment.array() ==
+               uncached.state_increment.array()).all());
+  EXPECT_TRUE((batched.covariance.array() == uncached.covariance.array()).all());
+  EXPECT_EQ(batched.statistic, uncached.statistic);
+  EXPECT_EQ(batched.rank, uncached.rank);
+  EXPECT_EQ(batched.dof, uncached.dof);
+  EXPECT_EQ(batched.detector_certificate.certificate_digest,
+            uncached.detector_certificate.certificate_digest);
+}
+
+TEST(P101IdentityIndexing, ExactOperationDedupKeepsSemanticCoverage) {
+  using namespace uwb_imu_pl;
+  ExclusionAction first;
+  first.id = ExclusionActionId(201);
+  first.action_model_id = "EXACT";
+  first.groups_to_remove = {FactorGroupId(3), FactorGroupId(1)};
+  first.covered_modes = {FaultModeId(8)};
+  first.exclusion_cardinality = 2;
+  ExclusionAction duplicate = first;
+  const auto result = censusAndCapActionsV1({first, duplicate}, 2);
+  ASSERT_EQ(result.actions.size(), 1u);
+  ASSERT_EQ(result.census.omitted_actions.size(), 1u);
+  EXPECT_TRUE(result.census.omitted_actions.front().proven_safe);
+  EXPECT_EQ(result.census.omitted_actions.front().reason,
+            "EXACT_SEMANTIC_DUPLICATE");
+  EXPECT_EQ(result.census.generated, 2u);
+  EXPECT_EQ(result.census.evaluated, 1u);
+  EXPECT_EQ(result.census.omitted, 1u);
+  EXPECT_TRUE(result.census.exhaustive);
+}
+
+TEST(P101IdentityIndexing, FrozenOwnerIsImmutableAndAdmissionIsConstantWork) {
+  using namespace uwb_imu_pl;
+  auto builder = syntheticWindow();
+  const Eigen::MatrixXd expected_h = builder.H;
+  const Eigen::VectorXd expected_z = builder.z;
+  NumericalWorkCounters::reset();
+  auto frozen = freezeIntegrityWindowCopy(builder);
+  const auto after_freeze = NumericalWorkCounters::snapshot();
+  ASSERT_TRUE(frozen.seal);
+  EXPECT_EQ(after_freeze.window_content_hash_scans, 1u);
+
+  builder.H.setConstant(1234.0);
+  builder.z.setConstant(-5678.0);
+  const auto admission = admitFrozenIntegrityWindow(frozen);
+  ASSERT_TRUE(admission) << admission.reason;
+  EXPECT_TRUE((admission.window().H.array() == expected_h.array()).all());
+  EXPECT_TRUE((admission.window().z.array() == expected_z.array()).all());
+  const auto after_admission = NumericalWorkCounters::snapshot();
+  EXPECT_EQ(after_admission.window_content_hash_scans, 1u);
+  EXPECT_EQ(after_admission.frozen_admission_constant_validations, 1u);
+}
+
+TEST(P101IdentityIndexing, SealedCandidateIsBoundToItsExactOwner) {
+  using namespace uwb_imu_pl;
+  NumericalWorkCounters::reset();
+  const auto seal_a = freezeIntegrityWindowCopy(syntheticWindow());
+  const auto seal_b = freezeIntegrityWindowCopy(syntheticWindow());
+  const auto admission_a = admitFrozenIntegrityWindow(seal_a);
+  const auto admission_b = admitFrozenIntegrityWindow(seal_b);
+  ASSERT_TRUE(admission_a);
+  ASSERT_TRUE(admission_b);
+  ASSERT_NE(&admission_a.window(), &admission_b.window());
+  ASSERT_EQ(seal_a.seal->content_hash, seal_b.seal->content_hash);
+
+  ExclusionAction keep;
+  keep.id = ExclusionActionId(10101);
+  keep.action_model_id = "P1_01_OWNER_BOUND_KEEP";
+  RankUpdateEvaluator evaluator;
+  const auto base = evaluator.factorizeOnce(admission_a, {keep});
+  const auto candidate = evaluator.evaluate(admission_a, base, keep);
+  ASSERT_TRUE(candidate.valid) << candidate.reason;
+  const auto before_validation = NumericalWorkCounters::snapshot();
+  std::string reason;
+  EXPECT_TRUE(validateCandidateDetectorCertificate(
+      admission_a, candidate, &reason)) << reason;
+  EXPECT_FALSE(validateCandidateDetectorCertificate(
+      admission_b, candidate, &reason));
+  EXPECT_NE(reason.find("source window owner/payload identity mismatch"),
+            std::string::npos)
+      << reason;
+  const auto rejected = JointWindowDetector().evaluateCandidate(
+      admission_b, candidate, DetectorRiskContext{});
+  EXPECT_FALSE(rejected.numerically_valid);
+  EXPECT_NE(rejected.reason.find("source window owner/payload identity mismatch"),
+            std::string::npos) << rejected.reason;
+  const auto after_validation = NumericalWorkCounters::snapshot();
+  EXPECT_EQ(after_validation.window_content_hash_scans,
+            before_validation.window_content_hash_scans);
+}
+
+TEST(P101IdentityIndexing,
+     ForcedHashCollisionTransplantIsRejectedByRealSealedConsumer) {
+  using namespace uwb_imu_pl;
+  NumericalWorkCounters::reset();
+  const auto seal_a = freezeIntegrityWindowCopy(syntheticWindow());
+  const auto admission_a = admitFrozenIntegrityWindow(seal_a);
+  ASSERT_TRUE(admission_a);
+  ExclusionAction keep;
+  keep.id = ExclusionActionId(10102);
+  keep.action_model_id = "P1_01_COLLISION_KEEP";
+  RankUpdateEvaluator evaluator;
+  const auto base = evaluator.factorizeOnce(admission_a, {keep});
+  const auto candidate = evaluator.evaluate(admission_a, base, keep);
+  ASSERT_TRUE(candidate.valid) << candidate.reason;
+
+  auto different = syntheticWindow();
+  different.blocks.front().residual_whitened(0) = std::nextafter(
+      different.blocks.front().residual_whitened(0), 1.0);
+  different.blocks.front().residual_raw(0) =
+      different.blocks.front().residual_whitened(0);
+  finalizeIntegrityWindow(&different, 1e-10, 1e10);
+  const auto ordinary_b = freezeIntegrityWindowCopy(different);
+  auto forced_payload = std::make_shared<LinearizedIntegrityWindow>(
+      *ordinary_b.seal->payload);
+  auto forced_numerics = std::make_shared<FrozenWindowNumerics>(
+      *forced_payload->numerics);
+  forced_numerics->content_fingerprint = seal_a.seal->content_hash;
+  forced_payload->numerics = forced_numerics;
+  auto forced_seal = std::make_shared<FrozenIntegrityWindowSeal>(
+      *ordinary_b.seal);
+  forced_seal->content_hash = seal_a.seal->content_hash;
+  forced_seal->payload = forced_payload;
+  forced_seal->numerical_identity.content_fingerprint =
+      seal_a.seal->content_hash;
+  forced_seal->numerical_identity.proof_identity =
+      frozenWindowNumericalProofIdentity(*forced_payload, *forced_numerics);
+  forced_seal->numerical_identity.valid = true;
+  const FrozenIntegrityWindow forged_b{forced_seal};
+  const auto admission_b = admitFrozenIntegrityWindow(forged_b);
+  ASSERT_TRUE(admission_b) << admission_b.reason;
+  ASSERT_EQ(seal_a.seal->content_hash, forced_seal->content_hash);
+  ASSERT_FALSE(frozenWindowCanonicalEqual(*seal_a.seal, *forced_seal));
+
+  const auto before_validation = NumericalWorkCounters::snapshot();
+  const auto rejected = JointWindowDetector().evaluateCandidate(
+      admission_b, candidate, DetectorRiskContext{});
+  EXPECT_FALSE(rejected.numerically_valid);
+  EXPECT_NE(rejected.reason.find("source window owner/payload identity mismatch"),
+            std::string::npos) << rejected.reason;
+  const auto after_validation = NumericalWorkCounters::snapshot();
+  EXPECT_EQ(after_validation.window_content_hash_scans,
+            before_validation.window_content_hash_scans);
+}
+
+TEST(P101IdentityIndexing, ProductionMoveIsolatedFromReusedSourceObject) {
+  using namespace uwb_imu_pl;
+  auto source = syntheticWindow();
+  const Eigen::MatrixXd expected_h = source.H;
+  const auto frozen = freezeIntegrityWindow(std::move(source));
+  source = syntheticWindow();
+  source.H.setConstant(9999.0);
+  source.z.setConstant(-9999.0);
+  const auto admission = admitFrozenIntegrityWindow(frozen);
+  ASSERT_TRUE(admission) << admission.reason;
+  EXPECT_TRUE((admission.window().H.array() == expected_h.array()).all());
+  ExclusionAction keep;
+  keep.id = ExclusionActionId(10103);
+  keep.action_model_id = "P1_01_MOVE_KEEP";
+  RankUpdateEvaluator evaluator;
+  const auto base = evaluator.factorizeOnce(admission, {keep});
+  const auto candidate = evaluator.evaluate(admission, base, keep);
+  ASSERT_TRUE(candidate.valid) << candidate.reason;
+  EXPECT_TRUE(validateCandidateDetectorCertificate(admission, candidate));
+}
+
+TEST(P101IdentityIndexing, ReusedPayloadAddressCannotInheritOldOwner) {
+  using namespace uwb_imu_pl;
+  alignas(LinearizedIntegrityWindow)
+      unsigned char storage[sizeof(LinearizedIntegrityWindow)];
+  auto make_at_storage = [&](LinearizedIntegrityWindow value) {
+    auto* payload = new (storage) LinearizedIntegrityWindow(std::move(value));
+    return std::shared_ptr<const LinearizedIntegrityWindow>(
+        payload, [](const LinearizedIntegrityWindow* pointer) {
+          const_cast<LinearizedIntegrityWindow*>(pointer)
+              ->~LinearizedIntegrityWindow();
+        });
+  };
+  auto bind_payload = [&](const FrozenIntegrityWindow& minted,
+                          std::shared_ptr<const LinearizedIntegrityWindow> payload) {
+    auto seal = std::make_shared<FrozenIntegrityWindowSeal>(*minted.seal);
+    seal->payload = std::move(payload);
+    seal->content_hash = seal->payload->numerics->content_fingerprint;
+    seal->numerical_identity.window_id = seal->payload->id;
+    seal->numerical_identity.version = seal->payload->version;
+    seal->numerical_identity.content_fingerprint = seal->content_hash;
+    seal->numerical_identity.numerical_contract_fingerprint =
+        seal->payload->numerics->numerical_contract_fingerprint;
+    seal->numerical_identity.proof_identity = frozenWindowNumericalProofIdentity(
+        *seal->payload, *seal->payload->numerics);
+    seal->numerical_identity.valid = true;
+    return FrozenIntegrityWindow{std::move(seal)};
+  };
+
+  CandidateEvaluation held_candidate;
+  std::weak_ptr<const FrozenIntegrityWindowSeal> old_owner_lifetime;
+  std::uint64_t old_owner = 0;
+  const void* reused_address = nullptr;
+  {
+    auto first_payload = make_at_storage(syntheticWindow());
+    reused_address = first_payload.get();
+    const auto first_minted = freezeIntegrityWindowCopy(*first_payload);
+    auto first = bind_payload(first_minted, std::move(first_payload));
+    auto first_admission = admitFrozenIntegrityWindow(first);
+    ASSERT_TRUE(first_admission);
+    ExclusionAction keep;
+    keep.id = ExclusionActionId(10104);
+    keep.action_model_id = "P1_01_ADDRESS_REUSE_KEEP";
+    RankUpdateEvaluator evaluator;
+    const auto base = evaluator.factorizeOnce(first_admission, {keep});
+    held_candidate = evaluator.evaluate(first_admission, base, keep);
+    ASSERT_TRUE(held_candidate.valid) << held_candidate.reason;
+    old_owner = first_admission.ownerToken();
+    old_owner_lifetime = first.seal;
+    first_admission = FrozenWindowAdmission{};
+    first = FrozenIntegrityWindow{};
+    // The candidate aliases the seal's control block, so an allocator cannot
+    // reuse the payload address while a stale candidate still exists.
+    EXPECT_FALSE(old_owner_lifetime.expired());
+  }
+  EXPECT_FALSE(old_owner_lifetime.expired());
+  held_candidate = CandidateEvaluation{};
+  EXPECT_TRUE(old_owner_lifetime.expired());
+
+  auto second_value = syntheticWindow();
+  auto second_payload = make_at_storage(std::move(second_value));
+  ASSERT_EQ(reused_address, second_payload.get());
+  const auto second_minted = freezeIntegrityWindowCopy(*second_payload);
+  auto second = bind_payload(second_minted, std::move(second_payload));
+  const auto second_admission = admitFrozenIntegrityWindow(second);
+  ASSERT_TRUE(second_admission);
+  ASSERT_NE(old_owner, second_admission.ownerToken());
+  ASSERT_EQ(reused_address,
+            static_cast<const void*>(&second_admission.window()));
+  ExclusionAction keep;
+  keep.id = ExclusionActionId(10104);
+  keep.action_model_id = "P1_01_ADDRESS_REUSE_KEEP";
+  RankUpdateEvaluator evaluator;
+  const auto base = evaluator.factorizeOnce(second_admission, {keep});
+  const auto new_candidate = evaluator.evaluate(second_admission, base, keep);
+  ASSERT_TRUE(new_candidate.valid) << new_candidate.reason;
+  EXPECT_TRUE(validateCandidateDetectorCertificate(
+      second_admission, new_candidate));
+}
+
+TEST(P101IdentityIndexing, ForcedHashCollisionRequiresCanonicalEquality) {
+  using namespace uwb_imu_pl;
+  auto left_builder = syntheticWindow();
+  auto right_builder = syntheticWindow();
+  ASSERT_FALSE(right_builder.blocks.empty());
+  right_builder.blocks.front().residual_whitened(0) = std::nextafter(
+      right_builder.blocks.front().residual_whitened(0), 1.0);
+  right_builder.blocks.front().residual_raw(0) = std::nextafter(
+      right_builder.blocks.front().residual_raw(0), 1.0);
+  finalizeIntegrityWindow(&right_builder, 1e-10, 1e10);
+  auto left = freezeIntegrityWindowCopy(left_builder);
+  auto right = freezeIntegrityWindowCopy(right_builder);
+  ASSERT_TRUE(left.seal);
+  ASSERT_TRUE(right.seal);
+  FrozenIntegrityWindowSeal forced_left = *left.seal;
+  FrozenIntegrityWindowSeal forced_right = *right.seal;
+  forced_left.content_hash = 0x123456789abcdef0ULL;
+  forced_right.content_hash = forced_left.content_hash;
+  EXPECT_FALSE(frozenWindowCanonicalEqual(forced_left, forced_right));
+
+  FrozenIntegrityWindowSeal same_payload = forced_left;
+  EXPECT_TRUE(frozenWindowCanonicalEqual(forced_left, same_payload));
+}
+
+TEST(P101IdentityIndexing, OldHandleCannotAdmitNewObjectOrAddressReuse) {
+  using namespace uwb_imu_pl;
+  auto first = freezeIntegrityWindowCopy(syntheticWindow());
+  const auto first_admission = admitFrozenIntegrityWindow(first);
+  ASSERT_TRUE(first_admission);
+  auto second_builder = syntheticWindow();
+  second_builder.id = WindowId(first_admission.window().id.value() + 1);
+  finalizeIntegrityWindow(&second_builder, 1e-10, 1e10);
+  auto second = freezeIntegrityWindowCopy(second_builder);
+  const auto old_admission = admitFrozenIntegrityWindow(first);
+  const auto new_admission = admitFrozenIntegrityWindow(second);
+  ASSERT_TRUE(old_admission);
+  ASSERT_TRUE(new_admission);
+  EXPECT_NE(old_admission.ownerToken(), new_admission.ownerToken());
+  EXPECT_FALSE(frozenWindowHandleMatches(old_admission, second));
+  EXPECT_FALSE(frozenWindowHandleMatches(new_admission, first));
+
+  const std::uint64_t expired_token = old_admission.ownerToken();
+  first = FrozenIntegrityWindow{};
+  EXPECT_NE(expired_token, new_admission.ownerToken());
+  EXPECT_TRUE((new_admission.window().H.array() ==
+               second.seal->payload->H.array()).all());
+}
+
+TEST(P101IdentityIndexing, CopyMoveLifetimeAndConcurrentAdmissionAreStable) {
+  using namespace uwb_imu_pl;
+  auto frozen = freezeIntegrityWindowCopy(syntheticWindow());
+  auto copied = frozen;
+  auto moved = std::move(copied);
+  const auto baseline = admitFrozenIntegrityWindow(moved);
+  ASSERT_TRUE(baseline);
+  constexpr int kReaders = 16;
+  std::vector<std::future<std::pair<std::uint64_t, const void*>>> readers;
+  readers.reserve(kReaders);
+  for (int i = 0; i < kReaders; ++i) {
+    readers.emplace_back(std::async(std::launch::async, [&moved]()
+        -> std::pair<std::uint64_t, const void*> {
+      const auto admitted = admitFrozenIntegrityWindow(moved);
+      if (!admitted) return {0, nullptr};
+      return std::make_pair(admitted.ownerToken(),
+                            static_cast<const void*>(&admitted.window()));
+    }));
+  }
+  for (auto& reader : readers) {
+    const auto result = reader.get();
+    EXPECT_EQ(result.first, baseline.ownerToken());
+    EXPECT_EQ(result.second, static_cast<const void*>(&baseline.window()));
+  }
+  frozen = FrozenIntegrityWindow{};
+  EXPECT_TRUE(admitFrozenIntegrityWindow(moved));
+}
+
+TEST(P101IdentityIndexing, FrozenClockMakesTerminalDecisionExact) {
+  using namespace uwb_imu_pl;
+  const auto config = researchConfig();
+  IncrementalUwbImuEstimator left_estimator(config, Eigen::Vector3d::Zero());
+  IncrementalUwbImuEstimator right_estimator(config, Eigen::Vector3d::Zero());
+  NavigationState initial;
+  initial.position_world_m = {0.0, 0.0, 1.0};
+  left_estimator.initialize(initial, config.realtime.prior_sigmas);
+  right_estimator.initialize(initial, config.realtime.prior_sigmas);
+  addImu(&left_estimator, config.imu.gravity_mps2);
+  addImu(&right_estimator, config.imu.gravity_mps2);
+  RealtimeIntegrityPipeline left(
+      &left_estimator,
+      IntegrityMonitor(config.risk, config.snapshot.rank_tolerance,
+                       config.snapshot.max_condition_number));
+  RealtimeIntegrityPipeline right(
+      &right_estimator,
+      IntegrityMonitor(config.risk, config.snapshot.rank_tolerance,
+                       config.snapshot.max_condition_number));
+  const UwbBatch input = batch(config, 10000000);
+  ClockSample frozen_clock;
+  frozen_clock.wall_monotonic_ns = 10000000;
+  frozen_clock.sensor_timestamp_ns = input.timestamp.value();
+  const auto left_output = left.processUwbBatchWithFrozenFinishElapsed(
+      input, frozen_clock, 0.0);
+  const auto right_output = right.processUwbBatchWithFrozenFinishElapsed(
+      input, frozen_clock, 0.0);
+  EXPECT_EQ(left_output.batch_committed, right_output.batch_committed);
+  EXPECT_EQ(left_output.fde_status, right_output.fde_status);
+  EXPECT_EQ(left_output.reason_codes, right_output.reason_codes);
+  EXPECT_EQ(left_output.protection_level.formal_eligible,
+            right_output.protection_level.formal_eligible);
+  EXPECT_EQ(left_output.protection_level.reason,
+            right_output.protection_level.reason);
+  EXPECT_EQ(left_output.publication.protected_output,
+            right_output.publication.protected_output);
+  EXPECT_EQ(left_output.publication.unprotected_output,
+            right_output.publication.unprotected_output);
+  EXPECT_EQ(left_output.publication.wall_timeout,
+            right_output.publication.wall_timeout);
+  EXPECT_EQ(left_output.publication.refusal,
+            right_output.publication.refusal);
+  const auto exact_nonfinite = [](double lhs, double rhs) {
+    return (std::isnan(lhs) && std::isnan(rhs)) || lhs == rhs;
+  };
+  EXPECT_TRUE(exact_nonfinite(left_output.global_detector.statistic,
+                              right_output.global_detector.statistic));
+  EXPECT_TRUE(exact_nonfinite(left_output.postfit_detector.statistic,
+                              right_output.postfit_detector.statistic));
+  for (int axis = 0; axis < 3; ++axis) {
+    EXPECT_TRUE(exact_nonfinite(left_output.protection_level.pl_xyz_m(axis),
+                                right_output.protection_level.pl_xyz_m(axis)));
+  }
 }

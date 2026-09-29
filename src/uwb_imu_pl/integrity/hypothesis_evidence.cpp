@@ -9,10 +9,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <map>
 #include <mutex>
 #include <set>
 #include <stdexcept>
+#include <unordered_map>
 #include <utility>
 
 namespace uwb_imu_pl {
@@ -490,12 +492,24 @@ FaultUnitKind faultUnitKindOf(FaultKind kind, SensorType sensor) {
   return FaultUnitKind::Unknown;
 }
 
+std::uint64_t admittedProofIdentity(
+    const LinearizedIntegrityWindow& window,
+    std::uint64_t frozen_identity) {
+  if (frozen_identity != 0) {
+    NumericalWorkCounters::frozenIdentityReuse();
+    return frozen_identity;
+  }
+  NumericalWorkCounters::frozenIdentityBuild();
+  return frozenWindowNumericalProofIdentity(window, *window.numerics);
+}
+
 std::vector<FaultModeEvidence> evaluateContiguous(
     const LinearizedIntegrityWindow& window,
     const std::vector<FaultModeBasis>& modes,
     std::vector<FaultHypothesisV2>* hypotheses,
     double squared_detector_threshold,
     const HypothesisEvaluationConfig& config,
+    std::uint64_t numerical_proof_identity,
     std::shared_ptr<const FrozenHypothesisNumerics>* shared,
     CandidateWorkerPool* worker_pool) {
   std::vector<FaultModeEvidence> results(hypotheses->size());
@@ -509,7 +523,7 @@ std::vector<FaultModeEvidence> evaluateContiguous(
   }
   std::vector<ModeDescriptor> descriptors;
   descriptors.reserve(modes.size());
-  std::map<std::uint64_t, std::size_t> mode_index;
+  std::unordered_map<std::uint64_t, std::size_t> mode_index;
   Eigen::Index total_columns = 0;
   for (const auto& mode : modes) {
     ModeDescriptor descriptor;
@@ -524,6 +538,35 @@ std::vector<FaultModeEvidence> evaluateContiguous(
     descriptor.mode_number = descriptors.size();
     mode_index.emplace(mode.id.value(), descriptors.size());
     descriptors.push_back(descriptor);
+  }
+  // Resolve external mode IDs once.  Every later stage carries stable
+  // descriptor indices, so pair collection, numerical assembly and summary
+  // accounting cannot drift into repeated map/string lookup work.
+  struct HypothesisDescriptor {
+    std::vector<std::size_t> parts;
+    bool all_ids_known = false;
+    int summary_dimension = 0;
+  };
+  std::vector<HypothesisDescriptor> hypothesis_descriptors(
+      hypotheses->size());
+  for (std::size_t hypothesis_index = 0;
+       hypothesis_index < hypotheses->size(); ++hypothesis_index) {
+    const auto& hypothesis = (*hypotheses)[hypothesis_index];
+    auto& resolved = hypothesis_descriptors[hypothesis_index];
+    resolved.all_ids_known = !hypothesis.modes.empty();
+    resolved.parts.reserve(hypothesis.modes.size());
+    bool evaluation_prefix_valid = true;
+    for (const auto id : hypothesis.modes) {
+      NumericalWorkCounters::descriptorIdLookup();
+      const auto found = mode_index.find(id.value());
+      if (found == mode_index.end()) {
+        resolved.all_ids_known = false;
+        evaluation_prefix_valid = false;
+        continue;
+      }
+      resolved.summary_dimension += descriptors[found->second].dimension;
+      if (evaluation_prefix_valid) resolved.parts.push_back(found->second);
+    }
   }
   // ---- B2 (§5.7/R2): compact mode descriptors ---------------------------
   // A mode only writes on the factor groups it touches; the compact entry
@@ -809,41 +852,26 @@ std::vector<FaultModeEvidence> evaluateContiguous(
         covariance_modes.middleCols(right_offset, second.dimension);
     return value;
   };
-  std::map<std::pair<int, int>, Eigen::MatrixXd> cross_block_cache;
+  std::map<std::pair<std::size_t, std::size_t>, Eigen::MatrixXd>
+      cross_block_cache;
   {
-    std::set<std::pair<int, int>> requested;
-    for (const auto& hypothesis : *hypotheses) {
-      std::vector<std::size_t> parts;
-      bool valid = !hypothesis.modes.empty();
-      for (const auto id : hypothesis.modes) {
-        const auto found = mode_index.find(id.value());
-        if (found == mode_index.end() || !mode_valid[found->second]) {
-          valid = false;
-          break;
-        }
-        parts.push_back(found->second);
-      }
+    std::set<std::pair<std::size_t, std::size_t>> requested;
+    for (const auto& hypothesis : hypothesis_descriptors) {
+      const auto& parts = hypothesis.parts;
+      const bool valid = hypothesis.all_ids_known &&
+          std::all_of(parts.begin(), parts.end(),
+                      [&](std::size_t index) { return mode_valid[index]; });
       if (!valid) continue;
       for (std::size_t left = 0; left < parts.size(); ++left) {
         for (std::size_t right = 0; right < parts.size(); ++right) {
-          const int left_offset =
-              static_cast<int>(descriptors[parts[left]].offset);
-          const int right_offset =
-              static_cast<int>(descriptors[parts[right]].offset);
-          requested.emplace(std::min(left_offset, right_offset),
-                            std::max(left_offset, right_offset));
+          requested.emplace(std::min(parts[left], parts[right]),
+                            std::max(parts[left], parts[right]));
         }
       }
     }
     for (const auto& key : requested) {
-      const ModeDescriptor* first = nullptr;
-      const ModeDescriptor* second = nullptr;
-      for (const auto& descriptor : descriptors) {
-        if (static_cast<int>(descriptor.offset) == key.first) first = &descriptor;
-        if (static_cast<int>(descriptor.offset) == key.second) second = &descriptor;
-      }
-      if (!first || !second) continue;
-      cross_block_cache.emplace(key, blockOf(*first, *second));
+      cross_block_cache.emplace(
+          key, blockOf(descriptors[key.first], descriptors[key.second]));
       NumericalWorkCounters::faultCrossBlock();
     }
   }
@@ -851,12 +879,10 @@ std::vector<FaultModeEvidence> evaluateContiguous(
   auto crossBlock = [&blocks, &blockOf](const ModeDescriptor& left,
                                         const ModeDescriptor& right)
       -> Eigen::MatrixXd {
-    const int left_offset = static_cast<int>(left.offset);
-    const int right_offset = static_cast<int>(right.offset);
-    const bool ordered = left_offset <= right_offset;
-    const std::pair<int, int> key = ordered
-        ? std::make_pair(left_offset, right_offset)
-        : std::make_pair(right_offset, left_offset);
+    const bool ordered = left.mode_number <= right.mode_number;
+    const std::pair<std::size_t, std::size_t> key = ordered
+        ? std::make_pair(left.mode_number, right.mode_number)
+        : std::make_pair(right.mode_number, left.mode_number);
     const auto found = blocks.find(key);
     if (found == blocks.end()) {
       // Unrequested pairing (must not happen: the requested set is collected
@@ -908,18 +934,16 @@ std::vector<FaultModeEvidence> evaluateContiguous(
       int dimension = 0;
       int physical_dimension = 0;
       bool found_all = !hypothesis.modes.empty();
-      std::vector<std::size_t> parts;
-      parts.reserve(hypothesis.modes.size());
-      for (const auto id : hypothesis.modes) {
-        const auto found = mode_index.find(id.value());
-        if (found == mode_index.end() || !mode_valid[found->second]) {
+      const auto& parts = hypothesis_descriptors[hypothesis_index].parts;
+      found_all = hypothesis_descriptors[hypothesis_index].all_ids_known;
+      for (const auto part : parts) {
+        if (!mode_valid[part]) {
           found_all = false;
           break;
         }
-        const auto& descriptor = descriptors[found->second];
+        const auto& descriptor = descriptors[part];
         dimension += descriptor.dimension;
         physical_dimension += descriptor.physical_dimension;
-        parts.push_back(found->second);
       }
       if (!found_all || dimension <= 0) {
         failDimension(&hypothesis, &evidence, physical_dimension);
@@ -1064,7 +1088,8 @@ std::vector<FaultModeEvidence> evaluateContiguous(
           analyzeFixed<1>(gram.topLeftCorner<1, 1>(), &raw_detection_factor,
                           score.head<1>(),
                           protected_fault.leftCols<1>(),
-                          frozenWindowNumericalProofIdentity(window, *window.numerics),
+                          admittedProofIdentity(window,
+                                                numerical_proof_identity),
                           raw_factor_scale,
                           physical_dimension,
                           window.numerics->statistic, squared_detector_threshold,
@@ -1073,14 +1098,16 @@ std::vector<FaultModeEvidence> evaluateContiguous(
           analyzeFixed<2>(gram.topLeftCorner<2, 2>(), &raw_detection_factor,
                           score.head<2>(),
                           protected_fault.leftCols<2>(),
-                          frozenWindowNumericalProofIdentity(window, *window.numerics),
+                          admittedProofIdentity(window,
+                                                numerical_proof_identity),
                           raw_factor_scale,
                           physical_dimension,
                           window.numerics->statistic, squared_detector_threshold,
                           config, &hypothesis, &evidence, &pl_entry, &work);
         } else {
           analyzeFixed<3>(gram, &raw_detection_factor, score, protected_fault,
-                          frozenWindowNumericalProofIdentity(window, *window.numerics),
+                          admittedProofIdentity(window,
+                                                numerical_proof_identity),
                           raw_factor_scale,
                           physical_dimension,
                           window.numerics->statistic, squared_detector_threshold,
@@ -1115,7 +1142,8 @@ std::vector<FaultModeEvidence> evaluateContiguous(
           left_offset += left_descriptor.dimension;
         }
         analyzeDynamic(gram, &raw_detection_factor, score, &protected_fault, true,
-                       frozenWindowNumericalProofIdentity(window, *window.numerics),
+                       admittedProofIdentity(window,
+                                             numerical_proof_identity),
                        raw_factor_scale,
                        physical_dimension,
                        window.numerics->statistic, squared_detector_threshold,
@@ -1195,12 +1223,11 @@ std::vector<FaultModeEvidence> evaluateContiguous(
     context->worker_blocks = 1;
     evaluate_range(0, hypotheses->size());
   }
-  for (const auto& hypothesis : *hypotheses) {
-    int dimension = 0;
-    for (const auto id : hypothesis.modes) {
-      const auto found = mode_index.find(id.value());
-      if (found != mode_index.end()) dimension += descriptors[found->second].dimension;
-    }
+  for (std::size_t hypothesis_index = 0;
+       hypothesis_index < hypotheses->size(); ++hypothesis_index) {
+    const auto& hypothesis = (*hypotheses)[hypothesis_index];
+    const int dimension =
+        hypothesis_descriptors[hypothesis_index].summary_dimension;
     if (dimension == 1) ++context->dimension_one_count;
     else if (dimension == 2) ++context->dimension_two_count;
     else if (dimension == 3) ++context->dimension_three_count;
@@ -1233,6 +1260,7 @@ std::vector<FaultModeEvidence> evaluateMapped(
     std::vector<FaultHypothesisV2>* hypotheses,
     double squared_detector_threshold,
     const HypothesisEvaluationConfig& config,
+    std::uint64_t numerical_proof_identity,
     std::shared_ptr<const FrozenHypothesisNumerics>* shared) {
   struct Projection {
     Eigen::MatrixXd dense;
@@ -1447,7 +1475,7 @@ std::vector<FaultModeEvidence> evaluateMapped(
     analyzeDynamic(gram,
                    raw_factor_available ? &raw_detection_factor : nullptr,
                    score, &protected_fault, allow_harmless_nullspace,
-                   frozenWindowNumericalProofIdentity(window, *window.numerics),
+                   admittedProofIdentity(window, numerical_proof_identity),
                    std::sqrt(raw_factor_scale_squared),
                    physical_dimension, window.numerics->statistic,
                    squared_detector_threshold, config, &hypothesis,
@@ -1709,25 +1737,45 @@ std::vector<HypothesisId> completePlausibleHypotheses(
   return complete;
 }
 
-std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
+namespace {
+
+std::vector<FaultModeEvidence> evaluateAllImpl(
+    const HypothesisEvaluationConfig& config_,
     const LinearizedIntegrityWindow& window,
     const std::vector<FaultModeBasis>& modes,
     std::vector<FaultHypothesisV2>* hypotheses,
     double squared_detector_threshold,
     std::shared_ptr<const FrozenHypothesisNumerics>* shared,
-    CandidateWorkerPool* worker_pool) const {
+    CandidateWorkerPool* worker_pool,
+    const FrozenWindowAdmission* admission) {
   if (!hypotheses) throw std::invalid_argument("hypotheses must not be null");
   if (shared) shared->reset();
+  const bool numerical_proof_valid = window.numerics &&
+      (admission
+           ? validateFrozenWindowNumericalProof(
+                 *admission, *window.numerics)
+           : window.numerics->content_fingerprint ==
+                 integrityWindowFingerprint(window) &&
+             validateFrozenWindowNumericalProof(window, *window.numerics));
   if (!window.model_valid || !window.numerics || !window.numerics->valid ||
-      window.numerics->content_fingerprint != integrityWindowFingerprint(window) ||
       !window.numerics->information_factorization ||
-      !validateFrozenWindowNumericalProof(window, *window.numerics)) return {};
+      !numerical_proof_valid) return {};
   if (window.numerics->numerical_contract_fingerprint !=
       numericalContractFingerprint(config_.rank_tolerance,
                                    config_.max_condition_number)) {
     NumericalWorkCounters::numericalContractMismatch();
     return {};
   }
+  // The admission above is the sole full-content validation for this call.
+  // `numerics` and its handle are immutable, so every hypothesis can consume
+  // the typed proof identity without rescanning H/z/metadata.  The environment
+  // switch is an equivalence/performance ablation only; it restores the old
+  // repeated proof construction without changing any result.
+  const bool disable_frozen_identity =
+      std::getenv("UWB_IMU_PL_DISABLE_FROZEN_IDENTITY_HANDLE") != nullptr;
+  const std::uint64_t numerical_proof_identity =
+      disable_frozen_identity || !admission
+      ? 0 : admission->owner->numerical_identity.proof_identity;
   if (modes.empty()) {
     std::vector<FaultModeEvidence> results;
     results.reserve(hypotheses->size());
@@ -1760,7 +1808,7 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
                      raw_detection_factor.rows() > 0
                          ? &raw_detection_factor : nullptr,
                      score, nullptr, false,
-                     frozenWindowNumericalProofIdentity(window, *window.numerics),
+                     admittedProofIdentity(window, numerical_proof_identity),
                      hypothesis.A.norm(),
                      hypothesis.A.cols(),
                      window.numerics->statistic, squared_detector_threshold,
@@ -1772,11 +1820,43 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
   }
   if (config_.enable_shared_context && config_.enable_low_dim_batch) {
     return evaluateContiguous(window, modes, hypotheses,
-                              squared_detector_threshold, config_, shared,
+                              squared_detector_threshold, config_,
+                              numerical_proof_identity, shared,
                               worker_pool);
   }
   return evaluateMapped(window, modes, hypotheses, squared_detector_threshold,
-                        config_, shared);
+                        config_, numerical_proof_identity, shared);
+}
+
+}  // namespace
+
+std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
+    const LinearizedIntegrityWindow& window,
+    const std::vector<FaultModeBasis>& modes,
+    std::vector<FaultHypothesisV2>* hypotheses,
+    double squared_detector_threshold,
+    std::shared_ptr<const FrozenHypothesisNumerics>* shared,
+    CandidateWorkerPool* worker_pool) const {
+  // Preserve the checkpoint contract for every legacy value-object caller.
+  return evaluateAllImpl(config_, window, modes, hypotheses,
+                         squared_detector_threshold, shared, worker_pool,
+                         nullptr);
+}
+
+std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
+    const FrozenWindowAdmission& admission,
+    const std::vector<FaultModeBasis>& modes,
+    std::vector<FaultHypothesisV2>* hypotheses,
+    double squared_detector_threshold,
+    std::shared_ptr<const FrozenHypothesisNumerics>* shared,
+    CandidateWorkerPool* worker_pool) const {
+  if (!admission) {
+    if (shared) shared->reset();
+    return {};
+  }
+  return evaluateAllImpl(config_, admission.window(), modes, hypotheses,
+                         squared_detector_threshold, shared, worker_pool,
+                         &admission);
 }
 
 std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(

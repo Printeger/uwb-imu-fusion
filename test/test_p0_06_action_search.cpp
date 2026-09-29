@@ -165,10 +165,14 @@ UwbBatch productionPipelineBatch(TimestampNs timestamp) {
 }
 
 struct RealGeneratedInputs {
-  LinearizedIntegrityWindow window;
+  FrozenIntegrityWindow frozen_window;
   EpochTransaction transaction;
   ImuFaultSubspaces imu_subspaces;
   LinearizedFactorBlock bridge_block;
+
+  const LinearizedIntegrityWindow& window() const {
+    return *frozen_window.seal->payload;
+  }
 };
 
 RealGeneratedInputs realGeneratedInputs(double amplitude,
@@ -196,7 +200,7 @@ RealGeneratedInputs realGeneratedInputs(double amplitude,
   if (joint) input.measurements.front().range_m += amplitude;
   RealGeneratedInputs out;
   out.transaction = estimator.prepareEpoch(input);
-  out.window = estimator.buildIntegrityWindow(
+  out.frozen_window = estimator.buildFrozenIntegrityWindow(
       out.transaction, IntegrityWindowRequest{});
   const auto imu_block = estimator.buildPendingFactorBlock(
       out.transaction, out.transaction.imu_group.id);
@@ -1197,7 +1201,7 @@ TEST(P006O07, ProductionBackedAmplitudeOnsetAxisJointGrid) {
           // injects a raw UWB range.  Each of the 54 cells constructs its own
           // production transaction/window and analytic IMU subspace.
           auto inputs = realGeneratedInputs(amplitude, onset, axis, joint);
-          ASSERT_TRUE(inputs.window.model_valid) << inputs.window.reason;
+          ASSERT_TRUE(inputs.window().model_valid) << inputs.window().reason;
           ASSERT_TRUE(inputs.imu_subspaces.analytic_input_valid);
           ASSERT_TRUE(inputs.imu_subspaces.analytic_computation_valid);
 
@@ -1209,7 +1213,7 @@ TEST(P006O07, ProductionBackedAmplitudeOnsetAxisJointGrid) {
           // This is the production mode/hypothesis entrypoint under review,
           // not a hand-filled FaultModeBasis/FaultUnit/Hypothesis fixture.
           auto models = HypothesisGenerator(generator_config).generate(
-              inputs.window, inputs.transaction, inputs.imu_subspaces,
+              inputs.window(), inputs.transaction, inputs.imu_subspaces,
               inputs.bridge_block);
           ASSERT_FALSE(models.modes.empty());
           ASSERT_FALSE(models.hypotheses.empty());
@@ -1240,7 +1244,7 @@ TEST(P006O07, ProductionBackedAmplitudeOnsetAxisJointGrid) {
           ASSERT_NE(target_it, models.hypotheses.end());
           const FaultHypothesisV2 target = *target_it;
 
-          const auto& window = inputs.window;
+          const auto& window = inputs.window();
           const auto all_in = JointWindowDetector().evaluate(
               window, detector_risk);
           ASSERT_TRUE(all_in.numerically_valid) << all_in.reason;
@@ -1287,7 +1291,7 @@ TEST(P006O07, ProductionBackedAmplitudeOnsetAxisJointGrid) {
 
           auto generated = HypothesisGenerator(generator_config)
               .actionsForPlausibleSetV1(
-                  inputs.window, inputs.transaction, &models,
+                  inputs.window(), inputs.transaction, &models,
                   evidence);
           ASSERT_TRUE(validateActionSearchCensusV1(generated).valid);
           ASSERT_TRUE(generated.census.exhaustive);

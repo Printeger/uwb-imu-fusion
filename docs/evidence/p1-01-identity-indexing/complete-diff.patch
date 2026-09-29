@@ -1,0 +1,2895 @@
+diff --git a/apps/realtime_performance_benchmark.cpp b/apps/realtime_performance_benchmark.cpp
+index 535a155..f2b9f99 100644
+--- a/apps/realtime_performance_benchmark.cpp
++++ b/apps/realtime_performance_benchmark.cpp
+@@ -456,0 +457,13 @@ int main(int argc, char** argv) {
++              << " window_content_hash_scans="
++              << work.window_content_hash_scans
++              << " frozen_identity_builds=" << work.frozen_identity_builds
++              << " frozen_identity_reuses=" << work.frozen_identity_reuses
++              << " frozen_admission_constant_validations="
++              << work.frozen_admission_constant_validations
++              << " descriptor_id_lookups=" << work.descriptor_id_lookups
++              << " descriptor_linear_scans="
++              << work.descriptor_linear_scans
++              << " block_rhs_solve_batches="
++              << work.block_rhs_solve_batches
++              << " block_rhs_unique_blocks="
++              << work.block_rhs_unique_blocks
+diff --git a/docs/evidence/p0-07-corrected-exhaustive/fixed-contract-map.tsv b/docs/evidence/p0-07-corrected-exhaustive/fixed-contract-map.tsv
+index c73524b..67e8cf2 100644
+--- a/docs/evidence/p0-07-corrected-exhaustive/fixed-contract-map.tsv
++++ b/docs/evidence/p0-07-corrected-exhaustive/fixed-contract-map.tsv
+@@ -3,14 +3,14 @@ authority	string	docs/evidence/p0-07-corrected-exhaustive/oracle-manifest-v1.jso
+-detector_and_action_recipe.action_generation.exact_duplicates	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+-detector_and_action_recipe.action_generation.full_union_when_single_anchor	boolean	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+-detector_and_action_recipe.action_generation.identity_fields[0]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+-detector_and_action_recipe.action_generation.identity_fields[1]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+-detector_and_action_recipe.action_generation.identity_fields[2]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+-detector_and_action_recipe.action_generation.identity_fields[3]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+-detector_and_action_recipe.action_generation.keep_all_first	boolean	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+-detector_and_action_recipe.action_generation.max_exclusion_cardinality	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+-detector_and_action_recipe.action_generation.one_occurrence_per_plausible_hypothesis	boolean	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
+-detector_and_action_recipe.action_generation.replacement_group.anchor_base	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity
+-detector_and_action_recipe.action_generation.replacement_group.anchor_stride	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity
+-detector_and_action_recipe.action_generation.replacement_group.current_transaction_multiplier	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity
+-detector_and_action_recipe.action_generation.replacement_group.historical_epoch_multiplier	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity
+-detector_and_action_recipe.action_generation.replacement_group.historical_transaction_multiplier	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity
++detector_and_action_recipe.action_generation.exact_duplicates	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
++detector_and_action_recipe.action_generation.full_union_when_single_anchor	boolean	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
++detector_and_action_recipe.action_generation.identity_fields[0]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
++detector_and_action_recipe.action_generation.identity_fields[1]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
++detector_and_action_recipe.action_generation.identity_fields[2]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
++detector_and_action_recipe.action_generation.identity_fields[3]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
++detector_and_action_recipe.action_generation.keep_all_first	boolean	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
++detector_and_action_recipe.action_generation.max_exclusion_cardinality	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
++detector_and_action_recipe.action_generation.one_occurrence_per_plausible_hypothesis	boolean	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action census contract
++detector_and_action_recipe.action_generation.replacement_group.anchor_base	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity
++detector_and_action_recipe.action_generation.replacement_group.anchor_stride	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity
++detector_and_action_recipe.action_generation.replacement_group.current_transaction_multiplier	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity
++detector_and_action_recipe.action_generation.replacement_group.historical_epoch_multiplier	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity
++detector_and_action_recipe.action_generation.replacement_group.historical_transaction_multiplier	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity
+@@ -49,6 +49,6 @@ detector_and_action_recipe.selection.tertiary	string	src/uwb_imu_pl/integrity/fd
+-factor_construction.history_raw.expected_rows	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.factor_order[0]	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.factor_order[1]	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.factor_order[2]	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.factor_order[3]	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.factor_order[4]	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.expected_rows	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.factor_order[0]	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.factor_order[1]	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.factor_order[2]	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.factor_order[3]	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.factor_order[4]	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+@@ -58,21 +58,21 @@ factor_construction.history_raw.group_rules.uwb_add	integer	src/uwb_imu_pl/estim
+-factor_construction.history_raw.imu_and_uwb_epochs.first	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.imu_and_uwb_epochs.imu_rows_each	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.imu_and_uwb_epochs.last	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.imu_and_uwb_epochs.uwb_rows_each	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.imu_only_epochs.first	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.imu_only_epochs.last	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.imu_only_epochs.rows_each	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.marginal_prior.group_id	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.marginal_prior.owner	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.marginal_prior.rows	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.marginal_prior.slot	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.row_identity.imu_prefix	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.row_identity.prior_prefix	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.row_identity.uwb_prefix	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.slot_rules.imu_add	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/factor-ledger slot identity
+-factor_construction.history_raw.slot_rules.imu_multiplier	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/factor-ledger slot identity
+-factor_construction.history_raw.slot_rules.uwb_add	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/factor-ledger slot identity
+-factor_construction.history_raw.slot_rules.uwb_multiplier	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/factor-ledger slot identity
+-factor_construction.history_raw.uwb_only_epochs.first	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.uwb_only_epochs.last	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+-factor_construction.history_raw.uwb_only_epochs.rows_each	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.imu_and_uwb_epochs.first	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.imu_and_uwb_epochs.imu_rows_each	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.imu_and_uwb_epochs.last	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.imu_and_uwb_epochs.uwb_rows_each	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.imu_only_epochs.first	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.imu_only_epochs.last	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.imu_only_epochs.rows_each	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.marginal_prior.group_id	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.marginal_prior.owner	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.marginal_prior.rows	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.marginal_prior.slot	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.row_identity.imu_prefix	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.row_identity.prior_prefix	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.row_identity.uwb_prefix	string	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.slot_rules.imu_add	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/factor-ledger slot identity
++factor_construction.history_raw.slot_rules.imu_multiplier	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/factor-ledger slot identity
++factor_construction.history_raw.slot_rules.uwb_add	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/factor-ledger slot identity
++factor_construction.history_raw.slot_rules.uwb_multiplier	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/factor-ledger slot identity
++factor_construction.history_raw.uwb_only_epochs.first	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.uwb_only_epochs.last	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
++factor_construction.history_raw.uwb_only_epochs.rows_each	integer	src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership
+@@ -104,28 +104,28 @@ factor_construction.whitening.uwb	string	src/uwb_imu_pl/estimation/incremental_e
+-fault_contract.double_fault_families	array	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[0].dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[0].kind	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[0].name	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[0].support	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[0].terminal_onset_effective_dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[1].dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[1].kind	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[1].name	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[1].support	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[1].terminal_onset_effective_dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[2].dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[2].kind	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[2].name	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[2].native_columns[0]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[2].native_columns[1]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[2].support	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.families[2].terminal_onset_effective_dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.hypothesis_rule	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.mode_order	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.onset_epochs.first	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.onset_epochs.last	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-fault_contract.window_boundary_onset_rule	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract
+-missing_provenance_fixture.anchor	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract
+-missing_provenance_fixture.expected_recoverability_rule	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract
+-missing_provenance_fixture.family_kind	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract
+-missing_provenance_fixture.onset_epoch	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract
+-missing_provenance_fixture.recipe	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract
++fault_contract.double_fault_families	array	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[0].dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[0].kind	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[0].name	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[0].support	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[0].terminal_onset_effective_dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[1].dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[1].kind	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[1].name	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[1].support	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[1].terminal_onset_effective_dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[2].dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[2].kind	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[2].name	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[2].native_columns[0]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[2].native_columns[1]	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[2].support	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.families[2].terminal_onset_effective_dimension	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.hypothesis_rule	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.mode_order	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.onset_epochs.first	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.onset_epochs.last	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++fault_contract.window_boundary_onset_rule	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract
++missing_provenance_fixture.anchor	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract
++missing_provenance_fixture.expected_recoverability_rule	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract
++missing_provenance_fixture.family_kind	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract
++missing_provenance_fixture.onset_epoch	integer	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract
++missing_provenance_fixture.recipe	string	src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract
+diff --git a/include/uwb_imu_pl/estimation/incremental_estimator.hpp b/include/uwb_imu_pl/estimation/incremental_estimator.hpp
+index 2a5b450..4a92dbf 100644
+--- a/include/uwb_imu_pl/estimation/incremental_estimator.hpp
++++ b/include/uwb_imu_pl/estimation/incremental_estimator.hpp
+@@ -164,0 +165,3 @@ class IncrementalUwbImuEstimator {
++  FrozenIntegrityWindow buildFrozenIntegrityWindow(
++      const EpochTransaction& transaction,
++      const IntegrityWindowRequest& request) const;
+diff --git a/include/uwb_imu_pl/estimation/integrity_window_snapshot.hpp b/include/uwb_imu_pl/estimation/integrity_window_snapshot.hpp
+index ce1cc52..52badb9 100644
+--- a/include/uwb_imu_pl/estimation/integrity_window_snapshot.hpp
++++ b/include/uwb_imu_pl/estimation/integrity_window_snapshot.hpp
+@@ -186,0 +187,14 @@ struct FrozenNumericalContract {
++// Typed identity minted once after every frozen numerical payload is complete.
++// Consumers may reuse `proof_identity` only after admitting the corresponding
++// immutable window (content/version match).  Keeping the identities together
++// prevents an untyped hash from being accidentally reused for a different
++// numerical contract.
++struct FrozenWindowIdentityHandle {
++  WindowId window_id;
++  LinearizationVersion version;
++  std::uint64_t content_fingerprint = 0;
++  std::uint64_t numerical_contract_fingerprint = 0;
++  std::uint64_t proof_identity = 0;
++  bool valid = false;
++};
++
+@@ -282,0 +297,52 @@ struct LinearizedIntegrityWindow {
++// R07 immutable ownership boundary.  `payload` is created by moving the
++// completed builder in production (copying is exposed only for tests and
++// legacy compatibility).  No non-const pointer to it is retained.
++struct FrozenIntegrityWindowSeal {
++  static constexpr std::uint64_t kSchema = 1;
++  static constexpr std::uint64_t kPayloadType = 0x554957504c57494eULL;
++  std::uint64_t schema = kSchema;
++  std::uint64_t payload_type = kPayloadType;
++  std::uint64_t owner_token = 0;
++  std::uint64_t content_hash = 0;
++  FrozenWindowIdentityHandle numerical_identity;
++  std::shared_ptr<const LinearizedIntegrityWindow> payload;
++};
++
++// New R07 wrapper; the established LinearizedIntegrityWindow layout remains
++// unchanged for golden-header/current-DSO clients.
++struct FrozenIntegrityWindow {
++  std::shared_ptr<const FrozenIntegrityWindowSeal> seal;
++};
++
++struct FrozenWindowAdmission {
++  std::shared_ptr<const FrozenIntegrityWindowSeal> owner;
++  const LinearizedIntegrityWindow* payload = nullptr;
++  std::string reason;
++
++  explicit operator bool() const { return owner && payload; }
++  const LinearizedIntegrityWindow& window() const { return *payload; }
++  std::uint64_t ownerToken() const {
++    return owner ? owner->owner_token : 0;
++  }
++};
++
++// Production factory: consumes the completed mutable builder and returns a
++// typed handle.  The source has been moved-from and must not be read again.
++FrozenIntegrityWindow freezeIntegrityWindow(
++    LinearizedIntegrityWindow&& builder);
++// Explicit compatibility/test factory.  Production must use the move form.
++FrozenIntegrityWindow freezeIntegrityWindowCopy(
++    const LinearizedIntegrityWindow& builder);
++FrozenWindowAdmission admitFrozenIntegrityWindow(
++    const FrozenIntegrityWindow& handle);
++bool validateFrozenWindowNumericalProof(
++    const FrozenWindowAdmission& admission,
++    const FrozenWindowNumerics& numerics,
++    std::string* reason = nullptr);
++bool frozenWindowHandleMatches(const FrozenWindowAdmission& admission,
++                               const FrozenIntegrityWindow& other);
++// Collision-safe cross-object equality: a hash hit is only a prefilter; the
++// complete canonical payload is then compared field by field.
++bool frozenWindowCanonicalEqual(const FrozenIntegrityWindowSeal& left,
++                                const FrozenIntegrityWindowSeal& right);
++
+diff --git a/include/uwb_imu_pl/estimation/numerical_work_counters.hpp b/include/uwb_imu_pl/estimation/numerical_work_counters.hpp
+index 6535ecf..4ad027f 100644
+--- a/include/uwb_imu_pl/estimation/numerical_work_counters.hpp
++++ b/include/uwb_imu_pl/estimation/numerical_work_counters.hpp
+@@ -80,0 +81,10 @@ struct NumericalWorkSnapshot {
++  // P1-01/R07 identity/indexing work.  A content scan reads the complete
++  // frozen window; an identity reuse consumes the typed immutable handle.
++  std::uint64_t window_content_hash_scans = 0;
++  std::uint64_t frozen_identity_builds = 0;
++  std::uint64_t frozen_identity_reuses = 0;
++  std::uint64_t descriptor_id_lookups = 0;
++  std::uint64_t descriptor_linear_scans = 0;
++  std::uint64_t block_rhs_solve_batches = 0;
++  std::uint64_t block_rhs_unique_blocks = 0;
++  std::uint64_t frozen_admission_constant_validations = 0;
+@@ -144 +154,9 @@ class NumericalWorkCounters {
+-            history_summary_invalid_.load()};
++            history_summary_invalid_.load(),
++            window_content_hash_scans_.load(),
++            frozen_identity_builds_.load(),
++            frozen_identity_reuses_.load(),
++            descriptor_id_lookups_.load(),
++            descriptor_linear_scans_.load(),
++            block_rhs_solve_batches_.load(),
++            block_rhs_unique_blocks_.load(),
++            frozen_admission_constant_validations_.load()};
+@@ -203,0 +222,8 @@ class NumericalWorkCounters {
++    window_content_hash_scans_ = 0;
++    frozen_identity_builds_ = 0;
++    frozen_identity_reuses_ = 0;
++    descriptor_id_lookups_ = 0;
++    descriptor_linear_scans_ = 0;
++    block_rhs_solve_batches_ = 0;
++    block_rhs_unique_blocks_ = 0;
++    frozen_admission_constant_validations_ = 0;
+@@ -303,0 +330,18 @@ class NumericalWorkCounters {
++  static void windowContentHashScan() { ++window_content_hash_scans_; }
++  static void frozenIdentityBuild() { ++frozen_identity_builds_; }
++  static void frozenIdentityReuse(std::uint64_t count = 1) {
++    frozen_identity_reuses_ += count;
++  }
++  static void descriptorIdLookup(std::uint64_t count = 1) {
++    descriptor_id_lookups_ += count;
++  }
++  static void descriptorLinearScan(std::uint64_t count = 1) {
++    descriptor_linear_scans_ += count;
++  }
++  static void blockRhsSolveBatch(std::uint64_t unique_blocks) {
++    ++block_rhs_solve_batches_;
++    block_rhs_unique_blocks_ += unique_blocks;
++  }
++  static void frozenAdmissionConstantValidation() {
++    ++frozen_admission_constant_validations_;
++  }
+@@ -362,0 +407,9 @@ class NumericalWorkCounters {
++  inline static std::atomic<std::uint64_t> window_content_hash_scans_{0};
++  inline static std::atomic<std::uint64_t> frozen_identity_builds_{0};
++  inline static std::atomic<std::uint64_t> frozen_identity_reuses_{0};
++  inline static std::atomic<std::uint64_t> descriptor_id_lookups_{0};
++  inline static std::atomic<std::uint64_t> descriptor_linear_scans_{0};
++  inline static std::atomic<std::uint64_t> block_rhs_solve_batches_{0};
++  inline static std::atomic<std::uint64_t> block_rhs_unique_blocks_{0};
++  inline static std::atomic<std::uint64_t>
++      frozen_admission_constant_validations_{0};
+diff --git a/include/uwb_imu_pl/estimation/rank_update_kernel.hpp b/include/uwb_imu_pl/estimation/rank_update_kernel.hpp
+index ebe9e5c..723d7a6 100644
+--- a/include/uwb_imu_pl/estimation/rank_update_kernel.hpp
++++ b/include/uwb_imu_pl/estimation/rank_update_kernel.hpp
+@@ -99,0 +100,3 @@ std::uint64_t candidateDetectorNumericalIdentity(
++std::uint64_t candidateDetectorNumericalIdentity(
++    const FrozenWindowAdmission& admission,
++    const ExclusionAction& action);
+@@ -102,0 +106,3 @@ std::uint64_t candidateNumericalProofIdentity(
++std::uint64_t candidateNumericalProofIdentity(
++    const FrozenWindowAdmission& admission,
++    const CandidateEvaluation& candidate);
+@@ -110,0 +117,4 @@ bool validateCandidateDetectorCertificate(
++bool validateCandidateDetectorCertificate(
++    const FrozenWindowAdmission& admission,
++    const CandidateEvaluation& candidate,
++    std::string* reason = nullptr);
+@@ -161,0 +172,3 @@ class RankUpdateEvaluator {
++  BaseCandidateKernel factorizeOnce(
++      const FrozenWindowAdmission& admission,
++      const std::vector<ExclusionAction>& actions = {}) const;
+@@ -168,0 +182,4 @@ class RankUpdateEvaluator {
++  CandidateEvaluation evaluate(const FrozenWindowAdmission& admission,
++                               const BaseCandidateKernel& base,
++                               const ExclusionAction& action,
++                               RankUpdateScratch* scratch = nullptr) const;
+@@ -170,0 +188,8 @@ class RankUpdateEvaluator {
++  BaseCandidateKernel factorizeOnceImpl(
++      const LinearizedIntegrityWindow& window,
++      const std::vector<ExclusionAction>& actions,
++      const FrozenWindowAdmission* admission) const;
++  CandidateEvaluation evaluateImpl(
++      const BaseCandidateKernel& base, const ExclusionAction& action,
++      RankUpdateScratch* scratch,
++      const FrozenWindowAdmission* admission) const;
+@@ -179,0 +205,2 @@ class DenseCandidateOracle {
++  CandidateEvaluation evaluate(const FrozenWindowAdmission& admission,
++                               const ExclusionAction& action) const;
+@@ -181,0 +209,4 @@ class DenseCandidateOracle {
++  CandidateEvaluation evaluateImpl(
++      const LinearizedIntegrityWindow& window,
++      const ExclusionAction& action,
++      const FrozenWindowAdmission* admission) const;
+@@ -233,0 +265,5 @@ class CandidateEvaluationRouterV1 {
++  CandidateEvaluation evaluate(const FrozenWindowAdmission& admission,
++                               const BaseCandidateKernel& base,
++                               const ExclusionAction& action,
++                               RankUpdateScratch* scratch = nullptr,
++                               CandidateRouteSafetyV1* safety = nullptr) const;
+@@ -235,0 +272,5 @@ class CandidateEvaluationRouterV1 {
++  CandidateEvaluation evaluateImpl(
++      const LinearizedIntegrityWindow& window,
++      const BaseCandidateKernel& base, const ExclusionAction& action,
++      RankUpdateScratch* scratch, CandidateRouteSafetyV1* safety,
++      const FrozenWindowAdmission* admission) const;
+diff --git a/include/uwb_imu_pl/integrity/hypothesis_evidence.hpp b/include/uwb_imu_pl/integrity/hypothesis_evidence.hpp
+index cdc394c..504c4e0 100644
+--- a/include/uwb_imu_pl/integrity/hypothesis_evidence.hpp
++++ b/include/uwb_imu_pl/integrity/hypothesis_evidence.hpp
+@@ -175,0 +176,7 @@ class HypothesisEvidenceEvaluator {
++  std::vector<FaultModeEvidence> evaluateAll(
++      const FrozenWindowAdmission& admission,
++      const std::vector<FaultModeBasis>& modes,
++      std::vector<FaultHypothesisV2>* hypotheses,
++      double squared_detector_threshold,
++      std::shared_ptr<const FrozenHypothesisNumerics>* shared = nullptr,
++      CandidateWorkerPool* worker_pool = nullptr) const;
+diff --git a/include/uwb_imu_pl/integrity/integrity_monitor.hpp b/include/uwb_imu_pl/integrity/integrity_monitor.hpp
+index 757518a..ca8a992 100644
+--- a/include/uwb_imu_pl/integrity/integrity_monitor.hpp
++++ b/include/uwb_imu_pl/integrity/integrity_monitor.hpp
+@@ -121,0 +122,5 @@ class RealtimeIntegrityPipeline {
++  // Deterministic replay/evidence seam. It freezes both watchdog time and
++  // end-of-attempt elapsed time without changing the configured deadline.
++  IntegrityOutput processUwbBatchWithFrozenFinishElapsed(
++      const UwbBatch& batch, const ClockSample& clock_sample,
++      double finish_elapsed_ms);
+@@ -168,0 +174,3 @@ class RealtimeIntegrityPipeline {
++  IntegrityOutput processUwbBatchWithFinishElapsedOverride(
++      const UwbBatch& batch, const ClockSample& clock_sample,
++      const std::optional<double>& finish_elapsed_ms);
+diff --git a/include/uwb_imu_pl/integrity/joint_window_detector.hpp b/include/uwb_imu_pl/integrity/joint_window_detector.hpp
+index 5d5ffbd..b7be87b 100644
+--- a/include/uwb_imu_pl/integrity/joint_window_detector.hpp
++++ b/include/uwb_imu_pl/integrity/joint_window_detector.hpp
+@@ -69,0 +70,2 @@ class JointWindowDetector {
++  DetectorResultV2 evaluate(const FrozenWindowAdmission& admission,
++                            const DetectorRiskContext& risk) const;
+@@ -72,0 +75,3 @@ class JointWindowDetector {
++  DetectorResultV2 evaluateCandidate(const FrozenWindowAdmission& admission,
++                                     const CandidateEvaluation& candidate,
++                                     const DetectorRiskContext& risk) const;
+diff --git a/include/uwb_imu_pl/integrity/protection_level_v2.hpp b/include/uwb_imu_pl/integrity/protection_level_v2.hpp
+index 18727d6..abff91a 100644
+--- a/include/uwb_imu_pl/integrity/protection_level_v2.hpp
++++ b/include/uwb_imu_pl/integrity/protection_level_v2.hpp
+@@ -172,0 +173,9 @@ bool mintCommitProtectionEvidenceV1(
++bool mintCommitProtectionEvidenceV1(
++    const EpochTransaction& transaction,
++    const FrozenWindowAdmission& admission,
++    const CandidateEvaluation& candidate,
++    const ProtectionLevelV2Result& result,
++    std::uint64_t protection_proof_identity,
++    const std::string& frame_id,
++    CommitProtectionEvidenceV1* evidence,
++    std::string* reason = nullptr);
+@@ -222,0 +232,7 @@ class ProtectionLevelV2 {
++  ProtectionLevelV2Result computeShared(
++      const FrozenWindowAdmission& admission,
++      CandidateEvaluation* candidate,
++      const DetectorResultV2& detector,
++      std::vector<FaultHypothesisV2>* remaining_hypotheses,
++      const ProtectionLevelSharedContext& shared,
++      const RiskBudgetV2& risk) const;
+@@ -234,0 +251,8 @@ class ProtectionLevelV2 {
++  ProtectionLevelV2Result computeShared(
++      const FrozenWindowAdmission& admission,
++      CandidateEvaluation* candidate,
++      const DetectorResultV2& detector,
++      std::vector<FaultHypothesisV2>* remaining_hypotheses,
++      const ProtectionLevelSharedContext& shared,
++      const RiskBudgetV2& risk,
++      ProtectionLevelV2ProofV1* computation_audit) const;
+@@ -251,0 +276,11 @@ class ProtectionLevelV2 {
++
++ private:
++  ProtectionLevelV2Result computeSharedImpl(
++      const LinearizedIntegrityWindow& window,
++      CandidateEvaluation* candidate,
++      const DetectorResultV2& detector,
++      std::vector<FaultHypothesisV2>* remaining_hypotheses,
++      const ProtectionLevelSharedContext& shared,
++      const RiskBudgetV2& risk,
++      ProtectionLevelV2ProofV1* computation_audit,
++      const FrozenWindowAdmission* admission) const;
+diff --git a/src/uwb_imu_pl/estimation/incremental_estimator.cpp b/src/uwb_imu_pl/estimation/incremental_estimator.cpp
+index 21a5961..fe8e91e 100644
+--- a/src/uwb_imu_pl/estimation/incremental_estimator.cpp
++++ b/src/uwb_imu_pl/estimation/incremental_estimator.cpp
+@@ -2262,0 +2263,6 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
++FrozenIntegrityWindow IncrementalUwbImuEstimator::buildFrozenIntegrityWindow(
++    const EpochTransaction& tx, const IntegrityWindowRequest& request) const {
++  LinearizedIntegrityWindow builder = buildIntegrityWindow(tx, request);
++  return freezeIntegrityWindow(std::move(builder));
++}
++
+diff --git a/src/uwb_imu_pl/estimation/integrity_window_snapshot.cpp b/src/uwb_imu_pl/estimation/integrity_window_snapshot.cpp
+index b2f00b7..ada8120 100644
+--- a/src/uwb_imu_pl/estimation/integrity_window_snapshot.cpp
++++ b/src/uwb_imu_pl/estimation/integrity_window_snapshot.cpp
+@@ -6,0 +7 @@
++#include <atomic>
+@@ -15,0 +17,220 @@ namespace {
++class CanonicalWriter {
++ public:
++  template <typename T>
++  void scalar(const T& value) {
++    const auto* begin = reinterpret_cast<const unsigned char*>(&value);
++    bytes_.insert(bytes_.end(), begin, begin + sizeof(value));
++  }
++  void string(const std::string& value) {
++    scalar(static_cast<std::uint64_t>(value.size()));
++    const auto* begin = reinterpret_cast<const unsigned char*>(value.data());
++    bytes_.insert(bytes_.end(), begin, begin + value.size());
++  }
++  template <class Derived>
++  void matrix(const Eigen::MatrixBase<Derived>& value) {
++    scalar(static_cast<std::int64_t>(value.rows()));
++    scalar(static_cast<std::int64_t>(value.cols()));
++    for (Eigen::Index column = 0; column < value.cols(); ++column) {
++      for (Eigen::Index row = 0; row < value.rows(); ++row) {
++        scalar(static_cast<double>(value(row, column)));
++      }
++    }
++  }
++  const std::vector<unsigned char>& bytes() const { return bytes_; }
++
++ private:
++  std::vector<unsigned char> bytes_;
++};
++
++void canonicalVersion(CanonicalWriter* out, const LinearizationVersion& value) {
++  out->scalar(value.graph_version);
++  out->scalar(value.ordering_version);
++  out->scalar(value.noise_model_version);
++  out->scalar(value.linpoint_version);
++}
++
++std::vector<unsigned char> canonicalWindowPayload(
++    const LinearizedIntegrityWindow& window) {
++  CanonicalWriter out;
++  constexpr std::uint64_t kCanonicalSchema = 1;
++  out.scalar(kCanonicalSchema);
++  out.scalar(window.id.value());
++  canonicalVersion(&out, window.version);
++  out.scalar(static_cast<std::uint64_t>(window.state_layout.size()));
++  for (const auto& entry : window.state_layout) {
++    out.scalar(entry.epoch);
++    out.scalar(entry.column_offset);
++    out.scalar(entry.dimension);
++    out.scalar(entry.protected_current_state);
++    out.scalar(static_cast<std::uint64_t>(entry.keys.size()));
++    for (const auto key : entry.keys) out.scalar(key);
++  }
++  out.scalar(static_cast<std::uint64_t>(window.blocks.size()));
++  for (const auto& block : window.blocks) {
++    out.scalar(block.group_id.value());
++    out.scalar(block.kind);
++    out.scalar(block.sensor);
++    out.scalar(block.role);
++    out.matrix(block.jacobian_raw);
++    out.matrix(block.residual_raw);
++    out.matrix(block.covariance);
++    out.matrix(block.whitener);
++    out.matrix(block.jacobian_whitened);
++    out.matrix(block.residual_whitened);
++    out.scalar(static_cast<std::uint64_t>(block.window_column_indices.size()));
++    for (const auto value : block.window_column_indices) out.scalar(value);
++    out.scalar(static_cast<std::uint64_t>(block.fault_units.size()));
++    for (const auto value : block.fault_units) out.scalar(value.value());
++    out.scalar(block.effective_weight);
++    out.string(block.whitening_model_id);
++    canonicalVersion(&out, block.version);
++  }
++  out.scalar(static_cast<std::uint64_t>(window.slot_accounting.size()));
++  for (const auto& slot : window.slot_accounting) {
++    out.scalar(slot.slot);
++    out.scalar(slot.group_id.has_value());
++    if (slot.group_id) out.scalar(slot.group_id->value());
++    out.scalar(slot.explicit_window_block);
++    out.scalar(slot.boundary_input);
++    out.scalar(slot.pointer_identity_valid);
++  }
++  out.scalar(static_cast<std::uint64_t>(window.factor_inventory.size()));
++  for (const auto& entry : window.factor_inventory) {
++    out.scalar(entry.group_id.value());
++    out.scalar(entry.epoch);
++    out.scalar(entry.kind);
++    out.scalar(entry.sensor);
++    out.scalar(entry.disposition);
++    out.scalar(static_cast<std::uint64_t>(entry.keys.size()));
++    for (const auto key : entry.keys) out.scalar(key);
++    out.scalar(static_cast<std::uint64_t>(entry.slots.size()));
++    for (const auto slot : entry.slots) out.scalar(slot);
++  }
++  out.scalar(window.detector_first_epoch);
++  out.scalar(window.recovery_first_epoch);
++  out.matrix(window.H);
++  out.matrix(window.z);
++  out.scalar(window.rank);
++  out.scalar(window.dof);
++  out.scalar(window.condition_number);
++  out.matrix(window.base_information);
++  out.matrix(window.base_information_rhs);
++  out.matrix(window.protected_state_map);
++  const auto& cap = window.capabilities;
++  out.scalar(cap.includes_boundary_prior);
++  out.scalar(cap.includes_pending_imu);
++  out.scalar(cap.includes_pending_uwb);
++  out.scalar(cap.complete_factor_provenance);
++  out.scalar(cap.history_provenance_valid);
++  out.scalar(cap.fixed_lag_maturity_valid);
++  out.scalar(cap.no_duplicate_rows);
++  out.scalar(cap.every_active_factor_accounted_once);
++  out.scalar(cap.frozen_slot_identity_valid);
++  out.scalar(cap.history_summary_present);
++  out.scalar(cap.history_summary_valid);
++  out.scalar(cap.history_summary_capacity_ok);
++  const auto& history = window.history_summary;
++  out.scalar(history.present);
++  out.scalar(history.valid);
++  out.string(history.reason);
++  out.scalar(history.fault_columns);
++  out.scalar(history.boundary_rows);
++  out.scalar(history.boundary_columns);
++  out.scalar(history.emitted_rows);
++  out.scalar(history.rank_boundary);
++  out.scalar(history.nu_perp);
++  out.scalar(history.kappa_b);
++  out.scalar(history.constant_energy);
++  out.scalar(history.injected_epochs);
++  out.scalar(static_cast<std::uint64_t>(history.column_ids.size()));
++  for (const auto& id : history.column_ids) {
++    out.scalar(id.kind);
++    out.scalar(id.source);
++    out.scalar(id.epoch);
++  }
++  out.scalar(history.constant_columns);
++  out.scalar(history.time_linear_columns);
++  out.scalar(history.imu_columns);
++  out.matrix(history.response);
++  out.matrix(history.detector_response);
++  out.matrix(history.d_perp);
++  out.scalar(history.constant_offset);
++  out.scalar(history.information_form_factors);
++  out.scalar(history.horizon_first_epoch);
++  out.scalar(history.window_first_epoch);
++  out.scalar(history.omitted_epoch_count);
++  out.scalar(history.material_gap_epoch_count);
++  out.scalar(history.claims_full_coverage);
++  out.string(history.assumptions);
++  out.string(history.omitted_risk_source);
++  out.scalar(history.skipped_columns);
++  out.string(history.scope_digest);
++  out.scalar(history.version.linearization);
++  out.scalar(history.version.whitening);
++  out.scalar(history.version.mode_set);
++  out.scalar(history.version.capacity);
++  out.scalar(history.version_digest);
++  out.scalar(history.capacity_ok);
++  out.string(history.capacity_action);
++  out.string(history.state);
++  out.scalar(window.model_valid);
++  out.string(window.reason);
++  // Wall-clock preparation timings are intentionally telemetry rather than
++  // semantic payload.  The immutable numerical products are bound by their
++  // own typed proof identity below.
++  if (window.numerics) {
++    out.scalar(true);
++    const auto& numerics = *window.numerics;
++    out.scalar(numerics.window_id.value());
++    canonicalVersion(&out, numerics.version);
++    out.scalar(numerics.content_fingerprint);
++    out.scalar(numerics.numerical_contract.policy_version);
++    out.scalar(numerics.numerical_contract.rank_tolerance);
++    out.scalar(numerics.numerical_contract.max_condition_number);
++    out.scalar(numerics.numerical_contract.solve_residual_limit);
++    out.scalar(numerics.numerical_contract.forward_error_limit);
++    out.scalar(numerics.numerical_contract.reference_relative_tolerance);
++    out.scalar(numerics.numerical_contract_fingerprint);
++    out.scalar(static_cast<bool>(numerics.information_factorization));
++    if (numerics.information_factorization) {
++      out.matrix(numerics.information_factorization->matrixL().toDenseMatrix());
++    }
++    out.scalar(static_cast<bool>(numerics.spectral_vectors));
++    if (numerics.spectral_vectors) out.matrix(*numerics.spectral_vectors);
++    out.matrix(numerics.spectral_inverse_squared);
++    out.matrix(numerics.spectral_state_increment);
++    out.matrix(numerics.base_state_increment);
++    out.matrix(numerics.parity);
++    out.scalar(static_cast<std::uint64_t>(numerics.block_row_offsets.size()));
++    for (const auto offset : numerics.block_row_offsets) out.scalar(offset);
++    out.scalar(numerics.statistic);
++    out.scalar(numerics.information_logdet);
++    out.scalar(numerics.smallest_singular_value);
++    out.scalar(numerics.largest_singular_value);
++    out.scalar(numerics.smallest_information_lower_bound);
++    out.scalar(numerics.largest_information_upper_bound);
++    out.scalar(numerics.solve_relative_residual);
++    out.scalar(numerics.normal_equation_forward_error_bound);
++    out.scalar(numerics.llt_svd_relative_difference);
++    out.scalar(numerics.canonical_spectral_solution);
++    out.scalar(numerics.square_root_statistic);
++    out.scalar(numerics.square_root_condition_estimate);
++    out.scalar(numerics.square_root_detector_only_rows);
++    out.scalar(numerics.square_root_certificate_ok);
++    out.scalar(numerics.exact_rank);
++    out.scalar(numerics.dof);
++    out.scalar(numerics.exact_condition);
++    out.scalar(numerics.valid);
++    out.string(numerics.reason);
++  } else {
++    out.scalar(false);
++  }
++  out.scalar(window.square_root ? window.square_root->proofIdentity() : 0);
++  return out.bytes();
++}
++
++std::uint64_t nextFrozenOwnerToken() {
++  static std::atomic<std::uint64_t> next{1};
++  return next.fetch_add(1, std::memory_order_relaxed);
++}
++
+@@ -261,0 +483 @@ std::uint64_t integrityWindowFingerprint(
++  NumericalWorkCounters::windowContentHashScan();
+@@ -378,0 +601,125 @@ std::uint64_t integrityWindowFingerprint(
++namespace {
++
++FrozenIntegrityWindow sealCompletedWindow(
++    LinearizedIntegrityWindow&& builder, std::uint64_t content_hash) {
++  const std::uint64_t owner_token = nextFrozenOwnerToken();
++  auto payload =
++      std::make_shared<LinearizedIntegrityWindow>(std::move(builder));
++  auto seal = std::make_shared<FrozenIntegrityWindowSeal>();
++  seal->owner_token = owner_token;
++  seal->content_hash = content_hash;
++  seal->payload = payload;
++  if (payload->numerics) {
++    auto& identity = seal->numerical_identity;
++    identity.window_id = payload->id;
++    identity.version = payload->version;
++    identity.content_fingerprint = content_hash;
++    identity.numerical_contract_fingerprint =
++        payload->numerics->numerical_contract_fingerprint;
++    identity.proof_identity =
++        frozenWindowNumericalProofIdentity(*payload, *payload->numerics);
++    identity.valid = identity.proof_identity != 0 &&
++        payload->numerics->content_fingerprint == content_hash;
++  }
++  return FrozenIntegrityWindow{std::move(seal)};
++}
++
++}  // namespace
++
++FrozenIntegrityWindow freezeIntegrityWindow(
++    LinearizedIntegrityWindow&& builder) {
++  const std::uint64_t content_hash = builder.numerics
++      ? builder.numerics->content_fingerprint
++      : integrityWindowFingerprint(builder);
++  return sealCompletedWindow(std::move(builder), content_hash);
++}
++
++FrozenIntegrityWindow freezeIntegrityWindowCopy(
++    const LinearizedIntegrityWindow& builder) {
++  LinearizedIntegrityWindow copy = builder;
++  const std::uint64_t content_hash = integrityWindowFingerprint(copy);
++  return sealCompletedWindow(std::move(copy), content_hash);
++}
++
++FrozenWindowAdmission admitFrozenIntegrityWindow(
++    const FrozenIntegrityWindow& handle) {
++  NumericalWorkCounters::frozenAdmissionConstantValidation();
++  FrozenWindowAdmission out;
++  out.owner = handle.seal;
++  if (!out.owner) {
++    out.reason = "window is not owned by an immutable frozen seal";
++    return out;
++  }
++  const auto& seal = *out.owner;
++  if (seal.schema != FrozenIntegrityWindowSeal::kSchema ||
++      seal.payload_type != FrozenIntegrityWindowSeal::kPayloadType ||
++      seal.owner_token == 0 || !seal.payload) {
++    out.owner.reset();
++    out.reason = "frozen window seal type/schema/owner is invalid";
++    return out;
++  }
++  const auto& payload = *seal.payload;
++  const bool numerics_match = payload.numerics &&
++      seal.numerical_identity.valid &&
++      seal.numerical_identity.window_id == payload.id &&
++      seal.numerical_identity.version == payload.version &&
++      seal.numerical_identity.content_fingerprint == seal.content_hash &&
++      payload.numerics->content_fingerprint == seal.content_hash;
++  if (!numerics_match) {
++    out.owner.reset();
++    out.reason = "frozen window constant admission identity mismatch";
++    return out;
++  }
++  out.payload = seal.payload.get();
++  return out;
++}
++
++bool validateFrozenWindowNumericalProof(
++    const FrozenWindowAdmission& admission,
++    const FrozenWindowNumerics& numerics, std::string* reason) {
++  if (!admission) {
++    if (reason) *reason = "immutable frozen-window admission is required";
++    return false;
++  }
++  const auto& payload = admission.window();
++  const auto& identity = admission.owner->numerical_identity;
++  const bool valid = payload.numerics &&
++      payload.numerics.get() == &numerics && numerics.valid &&
++      identity.valid && identity.window_id == payload.id &&
++      identity.version == payload.version &&
++      identity.content_fingerprint == admission.owner->content_hash &&
++      numerics.content_fingerprint == admission.owner->content_hash &&
++      identity.numerical_contract_fingerprint ==
++          numerics.numerical_contract_fingerprint &&
++      numerics.numerical_contract_fingerprint ==
++          numericalContractFingerprint(numerics.numerical_contract) &&
++      identity.proof_identity != 0;
++  if (!valid && reason) {
++    *reason = "frozen-window constant admission identity mismatch";
++  }
++  return valid;
++}
++
++bool frozenWindowHandleMatches(const FrozenWindowAdmission& admission,
++                               const FrozenIntegrityWindow& other) {
++  if (!admission) return false;
++  const FrozenWindowAdmission candidate = admitFrozenIntegrityWindow(other);
++  return candidate && admission.ownerToken() == candidate.ownerToken() &&
++      &admission.window() == &candidate.window();
++}
++
++bool frozenWindowCanonicalEqual(const FrozenIntegrityWindowSeal& left,
++                                const FrozenIntegrityWindowSeal& right) {
++  if (!left.payload || !right.payload ||
++      left.schema != FrozenIntegrityWindowSeal::kSchema ||
++      right.schema != FrozenIntegrityWindowSeal::kSchema ||
++      left.payload_type != FrozenIntegrityWindowSeal::kPayloadType ||
++      right.payload_type != FrozenIntegrityWindowSeal::kPayloadType ||
++      left.content_hash != right.content_hash) {
++    return false;
++  }
++  if (left.payload.get() == right.payload.get()) return true;
++  return canonicalWindowPayload(*left.payload) ==
++      canonicalWindowPayload(*right.payload);
++}
++
+@@ -589,0 +937 @@ void finalizeIntegrityWindow(LinearizedIntegrityWindow* window,
++  NumericalWorkCounters::frozenIdentityBuild();
+diff --git a/src/uwb_imu_pl/estimation/rank_update_kernel.cpp b/src/uwb_imu_pl/estimation/rank_update_kernel.cpp
+index 79e3d5b..06102cb 100644
+--- a/src/uwb_imu_pl/estimation/rank_update_kernel.cpp
++++ b/src/uwb_imu_pl/estimation/rank_update_kernel.cpp
+@@ -264 +264,2 @@ std::uint64_t candidateNumericalProofIdentityImpl(
+-    const CandidateEvaluation& candidate) {
++    const CandidateEvaluation& candidate,
++    const FrozenWindowAdmission* admission = nullptr) {
+@@ -266,2 +267,5 @@ std::uint64_t candidateNumericalProofIdentityImpl(
+-  const std::uint64_t parent = window.numerics
+-      ? frozenWindowNumericalProofIdentity(window, *window.numerics) : 0;
++  const std::uint64_t parent = admission
++      ? admission->owner->numerical_identity.proof_identity
++      : (window.numerics
++             ? frozenWindowNumericalProofIdentity(window, *window.numerics)
++             : 0);
+@@ -324,0 +329,33 @@ std::uint64_t blockCertificateIdentity(const LinearizedFactorBlock& block) {
++std::uint64_t constantWindowContentIdentity(
++    const LinearizedIntegrityWindow& window,
++    const FrozenWindowAdmission* admission = nullptr) {
++  if (admission && admission->owner->content_hash != 0) {
++    NumericalWorkCounters::frozenIdentityReuse();
++    return admission->owner->content_hash;
++  }
++  return integrityWindowFingerprint(window);
++}
++
++std::uint64_t candidateDetectorNumericalIdentityFromFingerprint(
++    const LinearizedIntegrityWindow& window,
++    const ExclusionAction& action,
++    std::uint64_t window_fingerprint) {
++  std::uint64_t hash = 1469598103934665603ULL;
++  hashCertificateScalar(&hash, window_fingerprint);
++  const std::uint64_t numerical_contract = window.numerics
++      ? window.numerics->numerical_contract_fingerprint : 0;
++  hashCertificateScalar(&hash, numerical_contract);
++  const bool no_op = action.groups_to_remove.empty() &&
++      action.groups_to_add.empty() && action.added_blocks.empty();
++  const std::uint64_t numerical_action = no_op
++      ? 0 : candidateDetectorActionIdentity(action);
++  hashCertificateScalar(&hash, numerical_action);
++  return hash;
++}
++
++std::uint64_t candidateDetectorCertificateDigestImpl(
++    const LinearizedIntegrityWindow& window,
++    const CandidateEvaluation& candidate,
++    const CandidateDetectorCertificate& certificate,
++    const FrozenWindowAdmission* admission);
++
+@@ -327 +364,2 @@ CandidateDetectorCertificate buildCandidateDetectorCertificate(
+-    const CandidateEvaluation& candidate, double rank_tolerance) {
++    const CandidateEvaluation& candidate, double rank_tolerance,
++    const FrozenWindowAdmission* admission = nullptr) {
+@@ -463 +501 @@ CandidateDetectorCertificate buildCandidateDetectorCertificate(
+-  out.window_fingerprint = integrityWindowFingerprint(window);
++  out.window_fingerprint = constantWindowContentIdentity(window, admission);
+@@ -467 +505,2 @@ CandidateDetectorCertificate buildCandidateDetectorCertificate(
+-  out.numerical_identity = candidateDetectorNumericalIdentity(window, action);
++  out.numerical_identity = candidateDetectorNumericalIdentityFromFingerprint(
++      window, action, out.window_fingerprint);
+@@ -469,2 +508,2 @@ CandidateDetectorCertificate buildCandidateDetectorCertificate(
+-  out.certificate_digest = candidateDetectorCertificateDigest(
+-      window, candidate, out);
++  out.certificate_digest = candidateDetectorCertificateDigestImpl(
++      window, candidate, out, admission);
+@@ -528,0 +568,9 @@ std::uint64_t candidateNumericalProofIdentity(
++std::uint64_t candidateNumericalProofIdentity(
++    const FrozenWindowAdmission& admission,
++    const CandidateEvaluation& candidate) {
++  return admission
++      ? candidateNumericalProofIdentityImpl(
++            admission.window(), candidate, &admission)
++      : 0;
++}
++
+@@ -579,11 +627,12 @@ std::uint64_t candidateDetectorNumericalIdentity(
+-  std::uint64_t hash = 1469598103934665603ULL;
+-  hashCertificateScalar(&hash, integrityWindowFingerprint(window));
+-  const std::uint64_t numerical_contract = window.numerics
+-      ? window.numerics->numerical_contract_fingerprint : 0;
+-  hashCertificateScalar(&hash, numerical_contract);
+-  const bool no_op = action.groups_to_remove.empty() &&
+-      action.groups_to_add.empty() && action.added_blocks.empty();
+-  const std::uint64_t numerical_action = no_op
+-      ? 0 : candidateDetectorActionIdentity(action);
+-  hashCertificateScalar(&hash, numerical_action);
+-  return hash;
++  return candidateDetectorNumericalIdentityFromFingerprint(
++      window, action, constantWindowContentIdentity(window));
++}
++
++std::uint64_t candidateDetectorNumericalIdentity(
++    const FrozenWindowAdmission& admission,
++    const ExclusionAction& action) {
++  return admission
++      ? candidateDetectorNumericalIdentityFromFingerprint(
++            admission.window(), action,
++            constantWindowContentIdentity(admission.window(), &admission))
++      : 0;
+@@ -595,0 +645,11 @@ std::uint64_t candidateDetectorCertificateDigest(
++  return candidateDetectorCertificateDigestImpl(
++      window, candidate, certificate, nullptr);
++}
++
++namespace {
++
++std::uint64_t candidateDetectorCertificateDigestImpl(
++    const LinearizedIntegrityWindow& window,
++    const CandidateEvaluation& candidate,
++    const CandidateDetectorCertificate& certificate,
++    const FrozenWindowAdmission* admission) {
+@@ -597 +657 @@ std::uint64_t candidateDetectorCertificateDigest(
+-  hashCertificateScalar(&hash, integrityWindowFingerprint(window));
++  hashCertificateScalar(&hash, certificate.window_fingerprint);
+@@ -612 +672,2 @@ std::uint64_t candidateDetectorCertificateDigest(
+-                        candidateNumericalProofIdentityImpl(window, candidate));
++                        candidateNumericalProofIdentityImpl(
++                            window, candidate, admission));
+@@ -614 +675,4 @@ std::uint64_t candidateDetectorCertificateDigest(
+-      ? integrityWindowFingerprint(*candidate.window_view) : 0;
++      ? (candidate.window_view == &window
++            ? certificate.window_fingerprint
++            : constantWindowContentIdentity(*candidate.window_view))
++      : 0;
+@@ -662 +726,5 @@ std::uint64_t candidateDetectorCertificateDigest(
+-bool validateCandidateDetectorCertificate(
++}  // namespace
++
++namespace {
++
++bool validateCandidateDetectorCertificateImpl(
+@@ -665 +733,2 @@ bool validateCandidateDetectorCertificate(
+-    std::string* reason) {
++    std::string* reason,
++    const FrozenWindowAdmission* admission) {
+@@ -673 +741,0 @@ bool validateCandidateDetectorCertificate(
+-      window.numerics->content_fingerprint != integrityWindowFingerprint(window) ||
+@@ -676 +744,4 @@ bool validateCandidateDetectorCertificate(
+-      !validateFrozenWindowNumericalProof(window, *window.numerics)) {
++      !(admission
++            ? validateFrozenWindowNumericalProof(
++                  *admission, *window.numerics)
++            : validateFrozenWindowNumericalProof(window, *window.numerics))) {
+@@ -683,6 +754,22 @@ bool validateCandidateDetectorCertificate(
+-      candidateNumericalProofIdentityImpl(window, candidate);
+-  if (candidate.window_view &&
+-      (candidate.window_view->id != window.id ||
+-       !(candidate.window_view->version == window.version) ||
+-       integrityWindowFingerprint(*candidate.window_view) !=
+-           integrityWindowFingerprint(window))) {
++      candidateNumericalProofIdentityImpl(window, candidate, admission);
++  if (admission) {
++    // A sealed candidate is valid only for the exact immutable owner that
++    // produced it.  The aliasing shared_ptr retains that owner while exposing
++    // the established LLT pointer, so this is constant-work, survives payload
++    // address reuse, and does not alter CandidateEvaluation's public layout.
++    const bool same_owner = candidate.shared_base_factorization &&
++        window.numerics->information_factorization &&
++        candidate.shared_base_factorization.get() ==
++            window.numerics->information_factorization.get() &&
++        !candidate.shared_base_factorization.owner_before(admission->owner) &&
++        !admission->owner.owner_before(candidate.shared_base_factorization);
++    if (candidate.window_view != &admission->window() || !same_owner) {
++      return reject("candidate source window owner/payload identity mismatch");
++    }
++  } else if (candidate.window_view && candidate.window_view != &window &&
++             (candidate.window_view->id != window.id ||
++              !(candidate.window_view->version == window.version) ||
++              integrityWindowFingerprint(*candidate.window_view) !=
++                  integrityWindowFingerprint(window))) {
++    // Compatibility API: without a typed admission there is no owner to bind.
++    // Preserve the checkpoint's complete content fingerprint fallback.
+@@ -698 +785 @@ bool validateCandidateDetectorCertificate(
+-          window.numerics->numerical_contract.rank_tolerance);
++          window.numerics->numerical_contract.rank_tolerance, admission);
+@@ -727,2 +814,2 @@ bool validateCandidateDetectorCertificate(
+-  const std::uint64_t recomputed = candidateDetectorCertificateDigest(
+-      window, candidate, actual);
++  const std::uint64_t recomputed = candidateDetectorCertificateDigestImpl(
++      window, candidate, actual, admission);
+@@ -736,0 +824,22 @@ bool validateCandidateDetectorCertificate(
++}  // namespace
++
++bool validateCandidateDetectorCertificate(
++    const LinearizedIntegrityWindow& window,
++    const CandidateEvaluation& candidate,
++    std::string* reason) {
++  return validateCandidateDetectorCertificateImpl(
++      window, candidate, reason, nullptr);
++}
++
++bool validateCandidateDetectorCertificate(
++    const FrozenWindowAdmission& admission,
++    const CandidateEvaluation& candidate,
++    std::string* reason) {
++  if (!admission) {
++    if (reason) *reason = "immutable frozen-window admission is invalid";
++    return false;
++  }
++  return validateCandidateDetectorCertificateImpl(
++      admission.window(), candidate, reason, &admission);
++}
++
+@@ -890,0 +1000,19 @@ BaseCandidateKernel RankUpdateEvaluator::factorizeOnce(
++  return factorizeOnceImpl(window, actions, nullptr);
++}
++
++BaseCandidateKernel RankUpdateEvaluator::factorizeOnce(
++    const FrozenWindowAdmission& admission,
++    const std::vector<ExclusionAction>& actions) const {
++  if (!admission) {
++    BaseCandidateKernel base;
++    base.reason = "invalid immutable frozen-window admission: " +
++        admission.reason;
++    return base;
++  }
++  return factorizeOnceImpl(admission.window(), actions, &admission);
++}
++
++BaseCandidateKernel RankUpdateEvaluator::factorizeOnceImpl(
++    const LinearizedIntegrityWindow& window,
++    const std::vector<ExclusionAction>& actions,
++    const FrozenWindowAdmission* admission) const {
+@@ -914 +1042,5 @@ BaseCandidateKernel RankUpdateEvaluator::factorizeOnce(
+-      window.numerics->content_fingerprint != integrityWindowFingerprint(window) ||
++      !(admission
++            ? validateFrozenWindowNumericalProof(
++                  *admission, *window.numerics)
++            : window.numerics->content_fingerprint ==
++                  integrityWindowFingerprint(window)) ||
+@@ -953,0 +1086 @@ void RankUpdateEvaluator::buildSharedCache(BaseCandidateKernel* kernel,
++    std::map<FactorGroupId, std::vector<const LinearizedFactorBlock*>> unique;
+@@ -956,5 +1089,6 @@ void RankUpdateEvaluator::buildSharedCache(BaseCandidateKernel* kernel,
+-      auto& entries = cache->blocks[block.group_id];
+-      if (std::any_of(entries.begin(), entries.end(), [&](const auto& e) { return sameBlock(e.block, block); })) return;
+-      entries.push_back({block, solveFrozenInformation(
+-          window.square_root.get(), *base.numerics, window.base_information,
+-          block.jacobian_whitened.transpose())});
++      auto& entries = unique[block.group_id];
++      if (std::any_of(entries.begin(), entries.end(),
++                      [&](const auto* entry) {
++                        return sameBlock(*entry, block);
++                      })) return;
++      entries.push_back(&block);
+@@ -968 +1102,35 @@ void RankUpdateEvaluator::buildSharedCache(BaseCandidateKernel* kernel,
+-    base.block_cache = std::move(cache);
++    std::vector<const LinearizedFactorBlock*> ordered;
++    Eigen::Index rhs_columns = 0;
++    for (const auto& group : unique) {
++      for (const auto* block : group.second) {
++        ordered.push_back(block);
++        rhs_columns += block->jacobian_whitened.rows();
++      }
++    }
++    if (rhs_columns > 0) {
++      Eigen::MatrixXd rhs(window.H.cols(), rhs_columns);
++      Eigen::Index offset = 0;
++      for (const auto* block : ordered) {
++        const Eigen::Index columns = block->jacobian_whitened.rows();
++        rhs.middleCols(offset, columns) =
++            block->jacobian_whitened.transpose();
++        offset += columns;
++      }
++      NumericalWorkCounters::blockRhsSolveBatch(ordered.size());
++      const Eigen::MatrixXd solved = solveFrozenInformation(
++          window.square_root.get(), *base.numerics, window.base_information,
++          rhs);
++      if (solved.rows() == window.H.cols() &&
++          solved.cols() == rhs_columns && solved.allFinite()) {
++        offset = 0;
++        for (const auto* block : ordered) {
++          const Eigen::Index columns = block->jacobian_whitened.rows();
++          cache->blocks[block->group_id].push_back(
++              {*block, solved.middleCols(offset, columns)});
++          offset += columns;
++        }
++        base.block_cache = std::move(cache);
++      }
++    } else {
++      base.block_cache = std::move(cache);
++    }
+@@ -974 +1142,7 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
+-  return evaluate(base, action, nullptr);
++  return evaluateImpl(base, action, nullptr, nullptr);
++}
++
++CandidateEvaluation RankUpdateEvaluator::evaluate(
++    const BaseCandidateKernel& base, const ExclusionAction& action,
++    RankUpdateScratch* scratch) const {
++  return evaluateImpl(base, action, scratch, nullptr);
+@@ -977,0 +1152 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
++    const FrozenWindowAdmission& admission,
+@@ -979,0 +1155,14 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
++  if (!admission) {
++    CandidateEvaluation result;
++    result.action = action;
++    result.reason = "invalid immutable frozen-window admission: " +
++        admission.reason;
++    return result;
++  }
++  return evaluateImpl(base, action, scratch, &admission);
++}
++
++CandidateEvaluation RankUpdateEvaluator::evaluateImpl(
++    const BaseCandidateKernel& base, const ExclusionAction& action,
++    RankUpdateScratch* scratch,
++    const FrozenWindowAdmission* admission) const {
+@@ -992,0 +1182,7 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
++    if (admission && window.numerics &&
++        window.numerics->information_factorization) {
++      result.shared_base_factorization =
++          std::shared_ptr<const Eigen::LLT<Eigen::MatrixXd>>(
++              admission->owner,
++              window.numerics->information_factorization.get());
++    }
+@@ -995 +1191 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
+-          window, action, result, config_.rank_tolerance);
++          window, action, result, config_.rank_tolerance, admission);
+@@ -1008 +1204,4 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
+-      base.numerics->content_fingerprint != integrityWindowFingerprint(window)) {
++      !(admission
++            ? validateFrozenWindowNumericalProof(*admission, *base.numerics)
++            : base.numerics->content_fingerprint ==
++                  integrityWindowFingerprint(window))) {
+@@ -1363,0 +1563,19 @@ CandidateEvaluation DenseCandidateOracle::evaluate(
++  return evaluateImpl(window, action, nullptr);
++}
++
++CandidateEvaluation DenseCandidateOracle::evaluate(
++    const FrozenWindowAdmission& admission,
++    const ExclusionAction& action) const {
++  if (!admission) {
++    CandidateEvaluation result;
++    result.action = action;
++    result.reason = "invalid immutable frozen-window admission: " +
++        admission.reason;
++    return result;
++  }
++  return evaluateImpl(admission.window(), action, &admission);
++}
++
++CandidateEvaluation DenseCandidateOracle::evaluateImpl(
++    const LinearizedIntegrityWindow& window, const ExclusionAction& action,
++    const FrozenWindowAdmission* admission) const {
+@@ -1368,0 +1587,7 @@ CandidateEvaluation DenseCandidateOracle::evaluate(
++  if (admission && window.numerics &&
++      window.numerics->information_factorization) {
++    result.shared_base_factorization =
++        std::shared_ptr<const Eigen::LLT<Eigen::MatrixXd>>(
++            admission->owner,
++            window.numerics->information_factorization.get());
++  }
+@@ -1406 +1631 @@ CandidateEvaluation DenseCandidateOracle::evaluate(
+-        window, action, result, config_.rank_tolerance);
++        window, action, result, config_.rank_tolerance, admission);
+@@ -1433,0 +1659,27 @@ CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
++  return evaluateImpl(window, base, action, scratch, safety_output, nullptr);
++}
++
++CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
++    const FrozenWindowAdmission& admission,
++    const BaseCandidateKernel& base,
++    const ExclusionAction& action,
++    RankUpdateScratch* scratch,
++    CandidateRouteSafetyV1* safety_output) const {
++  if (!admission) {
++    CandidateEvaluation result;
++    result.action = action;
++    result.reason = "invalid immutable frozen-window admission: " +
++        admission.reason;
++    return result;
++  }
++  return evaluateImpl(admission.window(), base, action, scratch,
++                      safety_output, &admission);
++}
++
++CandidateEvaluation CandidateEvaluationRouterV1::evaluateImpl(
++    const LinearizedIntegrityWindow& window,
++    const BaseCandidateKernel& base,
++    const ExclusionAction& action,
++    RankUpdateScratch* scratch,
++    CandidateRouteSafetyV1* safety_output,
++    const FrozenWindowAdmission* admission) const {
+@@ -1445 +1697,3 @@ CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
+-  CandidateEvaluation exact = dense_.evaluate(window, action);
++  CandidateEvaluation exact = admission
++      ? dense_.evaluate(*admission, action)
++      : dense_.evaluate(window, action);
+@@ -1481 +1735 @@ CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
+-            window, action, exact, config_.rank_tolerance);
++            window, action, exact, config_.rank_tolerance, admission);
+@@ -1504 +1758 @@ CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
+-          window, action, exact, config_.rank_tolerance);
++          window, action, exact, config_.rank_tolerance, admission);
+@@ -1512,2 +1766,3 @@ CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
+-      base.numerics->content_fingerprint != integrityWindowFingerprint(window) ||
+-      !validateFrozenWindowNumericalProof(window, *base.numerics)) {
++      !(admission
++            ? validateFrozenWindowNumericalProof(*admission, *base.numerics)
++            : validateFrozenWindowNumericalProof(window, *base.numerics))) {
+@@ -1566 +1821,2 @@ CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
+-  if (shape_safe) {
++  if (shape_safe && !changed_blocks.empty()) {
++    Eigen::Index rhs_columns = 0;
+@@ -1568,10 +1824,17 @@ CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
+-      const Eigen::MatrixXd solved = solveFrozenInformation(
+-          window.square_root.get(), *base.numerics, window.base_information,
+-          block->jacobian_whitened.transpose());
+-      if (solved.rows() != window.H.cols() ||
+-          solved.cols() != block->jacobian_whitened.rows() ||
+-          !solved.allFinite()) {
+-        refuse_rank("RANK_PRECONDITION_CHANGED_BLOCK_SOLVE");
+-        shape_safe = false;
+-        break;
+-      }
++      rhs_columns += block->jacobian_whitened.rows();
++    }
++    Eigen::MatrixXd rhs(window.H.cols(), rhs_columns);
++    Eigen::Index offset = 0;
++    for (const auto* block : changed_blocks) {
++      const Eigen::Index columns = block->jacobian_whitened.rows();
++      rhs.middleCols(offset, columns) = block->jacobian_whitened.transpose();
++      offset += columns;
++    }
++    NumericalWorkCounters::blockRhsSolveBatch(changed_blocks.size());
++    const Eigen::MatrixXd solved = solveFrozenInformation(
++        window.square_root.get(), *base.numerics, window.base_information,
++        rhs);
++    if (solved.rows() != window.H.cols() || solved.cols() != rhs_columns ||
++        !solved.allFinite()) {
++      refuse_rank("RANK_PRECONDITION_CHANGED_BLOCK_SOLVE");
++      shape_safe = false;
+@@ -1609 +1872,3 @@ CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
+-        : rank_.evaluate(base, action, scratch);
++        : (admission
++               ? rank_.evaluate(*admission, base, action, scratch)
++               : rank_.evaluate(base, action, scratch));
+diff --git a/src/uwb_imu_pl/integrity/hypothesis_evidence.cpp b/src/uwb_imu_pl/integrity/hypothesis_evidence.cpp
+index 9ff35ef..4ad8656 100644
+--- a/src/uwb_imu_pl/integrity/hypothesis_evidence.cpp
++++ b/src/uwb_imu_pl/integrity/hypothesis_evidence.cpp
+@@ -11,0 +12 @@
++#include <cstdlib>
+@@ -15,0 +17 @@
++#include <unordered_map>
+@@ -492,0 +495,11 @@ FaultUnitKind faultUnitKindOf(FaultKind kind, SensorType sensor) {
++std::uint64_t admittedProofIdentity(
++    const LinearizedIntegrityWindow& window,
++    std::uint64_t frozen_identity) {
++  if (frozen_identity != 0) {
++    NumericalWorkCounters::frozenIdentityReuse();
++    return frozen_identity;
++  }
++  NumericalWorkCounters::frozenIdentityBuild();
++  return frozenWindowNumericalProofIdentity(window, *window.numerics);
++}
++
+@@ -498,0 +512 @@ std::vector<FaultModeEvidence> evaluateContiguous(
++    std::uint64_t numerical_proof_identity,
+@@ -512 +526 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+-  std::map<std::uint64_t, std::size_t> mode_index;
++  std::unordered_map<std::uint64_t, std::size_t> mode_index;
+@@ -527,0 +542,29 @@ std::vector<FaultModeEvidence> evaluateContiguous(
++  // Resolve external mode IDs once.  Every later stage carries stable
++  // descriptor indices, so pair collection, numerical assembly and summary
++  // accounting cannot drift into repeated map/string lookup work.
++  struct HypothesisDescriptor {
++    std::vector<std::size_t> parts;
++    bool all_ids_known = false;
++    int summary_dimension = 0;
++  };
++  std::vector<HypothesisDescriptor> hypothesis_descriptors(
++      hypotheses->size());
++  for (std::size_t hypothesis_index = 0;
++       hypothesis_index < hypotheses->size(); ++hypothesis_index) {
++    const auto& hypothesis = (*hypotheses)[hypothesis_index];
++    auto& resolved = hypothesis_descriptors[hypothesis_index];
++    resolved.all_ids_known = !hypothesis.modes.empty();
++    resolved.parts.reserve(hypothesis.modes.size());
++    bool evaluation_prefix_valid = true;
++    for (const auto id : hypothesis.modes) {
++      NumericalWorkCounters::descriptorIdLookup();
++      const auto found = mode_index.find(id.value());
++      if (found == mode_index.end()) {
++        resolved.all_ids_known = false;
++        evaluation_prefix_valid = false;
++        continue;
++      }
++      resolved.summary_dimension += descriptors[found->second].dimension;
++      if (evaluation_prefix_valid) resolved.parts.push_back(found->second);
++    }
++  }
+@@ -812 +855,2 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+-  std::map<std::pair<int, int>, Eigen::MatrixXd> cross_block_cache;
++  std::map<std::pair<std::size_t, std::size_t>, Eigen::MatrixXd>
++      cross_block_cache;
+@@ -814,12 +858,6 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+-    std::set<std::pair<int, int>> requested;
+-    for (const auto& hypothesis : *hypotheses) {
+-      std::vector<std::size_t> parts;
+-      bool valid = !hypothesis.modes.empty();
+-      for (const auto id : hypothesis.modes) {
+-        const auto found = mode_index.find(id.value());
+-        if (found == mode_index.end() || !mode_valid[found->second]) {
+-          valid = false;
+-          break;
+-        }
+-        parts.push_back(found->second);
+-      }
++    std::set<std::pair<std::size_t, std::size_t>> requested;
++    for (const auto& hypothesis : hypothesis_descriptors) {
++      const auto& parts = hypothesis.parts;
++      const bool valid = hypothesis.all_ids_known &&
++          std::all_of(parts.begin(), parts.end(),
++                      [&](std::size_t index) { return mode_valid[index]; });
+@@ -829,6 +867,2 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+-          const int left_offset =
+-              static_cast<int>(descriptors[parts[left]].offset);
+-          const int right_offset =
+-              static_cast<int>(descriptors[parts[right]].offset);
+-          requested.emplace(std::min(left_offset, right_offset),
+-                            std::max(left_offset, right_offset));
++          requested.emplace(std::min(parts[left], parts[right]),
++                            std::max(parts[left], parts[right]));
+@@ -839,8 +873,2 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+-      const ModeDescriptor* first = nullptr;
+-      const ModeDescriptor* second = nullptr;
+-      for (const auto& descriptor : descriptors) {
+-        if (static_cast<int>(descriptor.offset) == key.first) first = &descriptor;
+-        if (static_cast<int>(descriptor.offset) == key.second) second = &descriptor;
+-      }
+-      if (!first || !second) continue;
+-      cross_block_cache.emplace(key, blockOf(*first, *second));
++      cross_block_cache.emplace(
++          key, blockOf(descriptors[key.first], descriptors[key.second]));
+@@ -854,6 +882,4 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+-    const int left_offset = static_cast<int>(left.offset);
+-    const int right_offset = static_cast<int>(right.offset);
+-    const bool ordered = left_offset <= right_offset;
+-    const std::pair<int, int> key = ordered
+-        ? std::make_pair(left_offset, right_offset)
+-        : std::make_pair(right_offset, left_offset);
++    const bool ordered = left.mode_number <= right.mode_number;
++    const std::pair<std::size_t, std::size_t> key = ordered
++        ? std::make_pair(left.mode_number, right.mode_number)
++        : std::make_pair(right.mode_number, left.mode_number);
+@@ -911,5 +937,4 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+-      std::vector<std::size_t> parts;
+-      parts.reserve(hypothesis.modes.size());
+-      for (const auto id : hypothesis.modes) {
+-        const auto found = mode_index.find(id.value());
+-        if (found == mode_index.end() || !mode_valid[found->second]) {
++      const auto& parts = hypothesis_descriptors[hypothesis_index].parts;
++      found_all = hypothesis_descriptors[hypothesis_index].all_ids_known;
++      for (const auto part : parts) {
++        if (!mode_valid[part]) {
+@@ -919 +944 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+-        const auto& descriptor = descriptors[found->second];
++        const auto& descriptor = descriptors[part];
+@@ -922 +946,0 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+-        parts.push_back(found->second);
+@@ -1067 +1091,2 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+-                          frozenWindowNumericalProofIdentity(window, *window.numerics),
++                          admittedProofIdentity(window,
++                                                numerical_proof_identity),
+@@ -1076 +1101,2 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+-                          frozenWindowNumericalProofIdentity(window, *window.numerics),
++                          admittedProofIdentity(window,
++                                                numerical_proof_identity),
+@@ -1083 +1109,2 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+-                          frozenWindowNumericalProofIdentity(window, *window.numerics),
++                          admittedProofIdentity(window,
++                                                numerical_proof_identity),
+@@ -1118 +1145,2 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+-                       frozenWindowNumericalProofIdentity(window, *window.numerics),
++                       admittedProofIdentity(window,
++                                             numerical_proof_identity),
+@@ -1198,6 +1226,5 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+-  for (const auto& hypothesis : *hypotheses) {
+-    int dimension = 0;
+-    for (const auto id : hypothesis.modes) {
+-      const auto found = mode_index.find(id.value());
+-      if (found != mode_index.end()) dimension += descriptors[found->second].dimension;
+-    }
++  for (std::size_t hypothesis_index = 0;
++       hypothesis_index < hypotheses->size(); ++hypothesis_index) {
++    const auto& hypothesis = (*hypotheses)[hypothesis_index];
++    const int dimension =
++        hypothesis_descriptors[hypothesis_index].summary_dimension;
+@@ -1235,0 +1263 @@ std::vector<FaultModeEvidence> evaluateMapped(
++    std::uint64_t numerical_proof_identity,
+@@ -1450 +1478 @@ std::vector<FaultModeEvidence> evaluateMapped(
+-                   frozenWindowNumericalProofIdentity(window, *window.numerics),
++                   admittedProofIdentity(window, numerical_proof_identity),
+@@ -1712 +1740,4 @@ std::vector<HypothesisId> completePlausibleHypotheses(
+-std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
++namespace {
++
++std::vector<FaultModeEvidence> evaluateAllImpl(
++    const HypothesisEvaluationConfig& config_,
+@@ -1718 +1749,2 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
+-    CandidateWorkerPool* worker_pool) const {
++    CandidateWorkerPool* worker_pool,
++    const FrozenWindowAdmission* admission) {
+@@ -1720,0 +1753,7 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
++  const bool numerical_proof_valid = window.numerics &&
++      (admission
++           ? validateFrozenWindowNumericalProof(
++                 *admission, *window.numerics)
++           : window.numerics->content_fingerprint ==
++                 integrityWindowFingerprint(window) &&
++             validateFrozenWindowNumericalProof(window, *window.numerics));
+@@ -1722 +1760,0 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
+-      window.numerics->content_fingerprint != integrityWindowFingerprint(window) ||
+@@ -1724 +1762 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
+-      !validateFrozenWindowNumericalProof(window, *window.numerics)) return {};
++      !numerical_proof_valid) return {};
+@@ -1730,0 +1769,10 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
++  // The admission above is the sole full-content validation for this call.
++  // `numerics` and its handle are immutable, so every hypothesis can consume
++  // the typed proof identity without rescanning H/z/metadata.  The environment
++  // switch is an equivalence/performance ablation only; it restores the old
++  // repeated proof construction without changing any result.
++  const bool disable_frozen_identity =
++      std::getenv("UWB_IMU_PL_DISABLE_FROZEN_IDENTITY_HANDLE") != nullptr;
++  const std::uint64_t numerical_proof_identity =
++      disable_frozen_identity || !admission
++      ? 0 : admission->owner->numerical_identity.proof_identity;
+@@ -1763 +1811 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
+-                     frozenWindowNumericalProofIdentity(window, *window.numerics),
++                     admittedProofIdentity(window, numerical_proof_identity),
+@@ -1775 +1823,2 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
+-                              squared_detector_threshold, config_, shared,
++                              squared_detector_threshold, config_,
++                              numerical_proof_identity, shared,
+@@ -1779 +1828,32 @@ std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
+-                        config_, shared);
++                        config_, numerical_proof_identity, shared);
++}
++
++}  // namespace
++
++std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
++    const LinearizedIntegrityWindow& window,
++    const std::vector<FaultModeBasis>& modes,
++    std::vector<FaultHypothesisV2>* hypotheses,
++    double squared_detector_threshold,
++    std::shared_ptr<const FrozenHypothesisNumerics>* shared,
++    CandidateWorkerPool* worker_pool) const {
++  // Preserve the checkpoint contract for every legacy value-object caller.
++  return evaluateAllImpl(config_, window, modes, hypotheses,
++                         squared_detector_threshold, shared, worker_pool,
++                         nullptr);
++}
++
++std::vector<FaultModeEvidence> HypothesisEvidenceEvaluator::evaluateAll(
++    const FrozenWindowAdmission& admission,
++    const std::vector<FaultModeBasis>& modes,
++    std::vector<FaultHypothesisV2>* hypotheses,
++    double squared_detector_threshold,
++    std::shared_ptr<const FrozenHypothesisNumerics>* shared,
++    CandidateWorkerPool* worker_pool) const {
++  if (!admission) {
++    if (shared) shared->reset();
++    return {};
++  }
++  return evaluateAllImpl(config_, admission.window(), modes, hypotheses,
++                         squared_detector_threshold, shared, worker_pool,
++                         &admission);
+diff --git a/src/uwb_imu_pl/integrity/hypothesis_generator.cpp b/src/uwb_imu_pl/integrity/hypothesis_generator.cpp
+index a5eadb7..46222fe 100644
+--- a/src/uwb_imu_pl/integrity/hypothesis_generator.cpp
++++ b/src/uwb_imu_pl/integrity/hypothesis_generator.cpp
+@@ -786 +786,4 @@ std::string exactActionOperationIdentityV1(const ExclusionAction& action) {
+-std::string exactActionSemanticIdentityV1(const ExclusionAction& action) {
++namespace {
++
++std::string exactActionSemanticIdentityFromOperationV1(
++    const ExclusionAction& action, const std::string& operation_identity) {
+@@ -789 +792 @@ std::string exactActionSemanticIdentityV1(const ExclusionAction& action) {
+-  appendStringIdentity(&out, exactActionOperationIdentityV1(action));
++  appendStringIdentity(&out, operation_identity);
+@@ -804,0 +808,7 @@ std::string exactActionSemanticIdentityV1(const ExclusionAction& action) {
++}  // namespace
++
++std::string exactActionSemanticIdentityV1(const ExclusionAction& action) {
++  const std::string operation = exactActionOperationIdentityV1(action);
++  return exactActionSemanticIdentityFromOperationV1(action, operation);
++}
++
+@@ -812,2 +822,4 @@ std::string exactGeneratedSnapshotIdentityV1(
+-    records.emplace_back(exactActionSemanticIdentityV1(action),
+-                         exactActionOperationIdentityV1(action));
++    std::string operation = exactActionOperationIdentityV1(action);
++    std::string semantics =
++        exactActionSemanticIdentityFromOperationV1(action, operation);
++    records.emplace_back(std::move(semantics), std::move(operation));
+@@ -860 +872,2 @@ ActionSearchResultV1 censusAndCapActionsV1(
+-    const std::string semantics = exactActionSemanticIdentityV1(action);
++    const std::string semantics =
++        exactActionSemanticIdentityFromOperationV1(action, operation);
+@@ -1131,0 +1145,4 @@ ActionSearchValidationV1 validateActionSearchCensusV1(
++      const std::string operation =
++          exactActionOperationIdentityV1(actual_evaluated_actions[i]);
++      const std::string semantics = exactActionSemanticIdentityFromOperationV1(
++          actual_evaluated_actions[i], operation);
+@@ -1134,4 +1151,2 @@ ActionSearchValidationV1 validateActionSearchCensusV1(
+-          record->second->operation_identity !=
+-              exactActionOperationIdentityV1(actual_evaluated_actions[i]) ||
+-          record->second->semantic_identity !=
+-              exactActionSemanticIdentityV1(actual_evaluated_actions[i]) ||
++          record->second->operation_identity != operation ||
++          record->second->semantic_identity != semantics ||
+@@ -1178,4 +1193,9 @@ ActionSearchValidationV1 validateActionSearchCensusV1(
+-    if (exactActionOperationIdentityV1(actual_evaluated_actions[i]) !=
+-            exactActionOperationIdentityV1(expected.actions[i]) ||
+-        exactActionSemanticIdentityV1(actual_evaluated_actions[i]) !=
+-            exactActionSemanticIdentityV1(expected.actions[i])) {
++    const std::string actual_operation =
++        exactActionOperationIdentityV1(actual_evaluated_actions[i]);
++    const std::string expected_operation =
++        exactActionOperationIdentityV1(expected.actions[i]);
++    if (actual_operation != expected_operation ||
++        exactActionSemanticIdentityFromOperationV1(
++            actual_evaluated_actions[i], actual_operation) !=
++            exactActionSemanticIdentityFromOperationV1(
++                expected.actions[i], expected_operation)) {
+diff --git a/src/uwb_imu_pl/integrity/integrity_monitor.cpp b/src/uwb_imu_pl/integrity/integrity_monitor.cpp
+index 2d63760..14601d5 100644
+--- a/src/uwb_imu_pl/integrity/integrity_monitor.cpp
++++ b/src/uwb_imu_pl/integrity/integrity_monitor.cpp
+@@ -1907,0 +1908,20 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(
++  return processUwbBatchWithFinishElapsedOverride(
++      batch, clock_sample, std::nullopt);
++}
++
++IntegrityOutput RealtimeIntegrityPipeline::
++processUwbBatchWithFrozenFinishElapsed(
++    const UwbBatch& batch, const ClockSample& clock_sample,
++    double finish_elapsed_ms) {
++  if (!std::isfinite(finish_elapsed_ms) || finish_elapsed_ms < 0.0) {
++    throw std::invalid_argument(
++        "frozen finish elapsed time must be finite and non-negative");
++  }
++  return processUwbBatchWithFinishElapsedOverride(
++      batch, clock_sample, finish_elapsed_ms);
++}
++
++IntegrityOutput RealtimeIntegrityPipeline::
++processUwbBatchWithFinishElapsedOverride(
++    const UwbBatch& batch, const ClockSample& clock_sample,
++    const std::optional<double>& finish_elapsed_ms_override) {
+@@ -2027,3 +2047,4 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(
+-    const double finish_elapsed_ms =
+-        std::chrono::duration<double, std::milli>(
+-            std::chrono::steady_clock::now() - start).count();
++    const double finish_elapsed_ms = finish_elapsed_ms_override
++        ? *finish_elapsed_ms_override
++        : std::chrono::duration<double, std::milli>(
++              std::chrono::steady_clock::now() - start).count();
+@@ -2277 +2298,9 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
+-    const auto window = estimator_->buildIntegrityWindow(transaction, request);
++    const auto window_handle =
++        estimator_->buildFrozenIntegrityWindow(transaction, request);
++    const FrozenWindowAdmission window_admission =
++        admitFrozenIntegrityWindow(window_handle);
++    if (!window_admission) {
++      throw std::logic_error("immutable frozen-window admission failed: " +
++                             window_admission.reason);
++    }
++    const LinearizedIntegrityWindow& window = window_admission.window();
+@@ -2286 +2315,2 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
+-                  << integrityWindowFingerprint(window);
++                  << (window.numerics
++                          ? window.numerics->content_fingerprint : 0);
+@@ -2426 +2456 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
+-        JointWindowDetector().evaluate(window, detector_risk);
++        JointWindowDetector().evaluate(window_admission, detector_risk);
+@@ -2806 +2836 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
+-            window, models.modes, &models.hypotheses,
++            window_admission, models.modes, &models.hypotheses,
+@@ -3156 +3186 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
+-        BaseCandidateKernel base = evaluator.factorizeOnce(window);
++        BaseCandidateKernel base = evaluator.factorizeOnce(window_admission);
+@@ -3244 +3274 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
+-                window, base, action, &scratch);
++                window_admission, base, action, &scratch);
+@@ -3292 +3322 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
+-                window, candidate, detector_risk);
++                window_admission, candidate, detector_risk);
+@@ -3381 +3411 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
+-                    window, &candidate, evaluated.post,
++                    window_admission, &candidate, evaluated.post,
+@@ -3387 +3417 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
+-                    window, &candidate, evaluated.post,
++                    window_admission, &candidate, evaluated.post,
+@@ -4067 +4097 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
+-                transaction, window, *selected, selected_pl->second,
++                transaction, window_admission, *selected, selected_pl->second,
+diff --git a/src/uwb_imu_pl/integrity/joint_window_detector.cpp b/src/uwb_imu_pl/integrity/joint_window_detector.cpp
+index c213f71..e6f89f7 100644
+--- a/src/uwb_imu_pl/integrity/joint_window_detector.cpp
++++ b/src/uwb_imu_pl/integrity/joint_window_detector.cpp
+@@ -146 +146,3 @@ std::uint64_t detectorContractDigest(const DetectorResultV2& detector) {
+-DetectorResultV2 JointWindowDetector::evaluate(
++namespace {
++
++DetectorResultV2 evaluateWindow(
+@@ -148 +150,2 @@ DetectorResultV2 JointWindowDetector::evaluate(
+-    const DetectorRiskContext& risk) const {
++    const DetectorRiskContext& risk,
++    const FrozenWindowAdmission* admission) {
+@@ -157,0 +161,6 @@ DetectorResultV2 JointWindowDetector::evaluate(
++  const bool numerical_proof_valid = window.numerics &&
++      (admission
++           ? validateFrozenWindowNumericalProof(
++                 *admission, *window.numerics)
++           : window.numerics->content_fingerprint ==
++                 integrityWindowFingerprint(window));
+@@ -159 +168 @@ DetectorResultV2 JointWindowDetector::evaluate(
+-      window.numerics->content_fingerprint != integrityWindowFingerprint(window) ||
++      !numerical_proof_valid ||
+@@ -226,2 +235,3 @@ DetectorResultV2 JointWindowDetector::evaluate(
+-    out.candidate_numerical_identity = candidateDetectorNumericalIdentity(
+-        window, ExclusionAction{});
++    out.candidate_numerical_identity = admission
++        ? candidateDetectorNumericalIdentity(*admission, ExclusionAction{})
++        : candidateDetectorNumericalIdentity(window, ExclusionAction{});
+@@ -251 +261,3 @@ DetectorResultV2 JointWindowDetector::evaluate(
+-DetectorResultV2 JointWindowDetector::evaluateCandidate(
++}  // namespace
++
++DetectorResultV2 JointWindowDetector::evaluate(
+@@ -253 +264,0 @@ DetectorResultV2 JointWindowDetector::evaluateCandidate(
+-    const CandidateEvaluation& candidate,
+@@ -254,0 +266,24 @@ DetectorResultV2 JointWindowDetector::evaluateCandidate(
++  // Legacy/unsealed API deliberately retains the checkpoint guard.  It must
++  // never infer immutable ownership from the address of a value object.
++  return evaluateWindow(window, risk, nullptr);
++}
++
++DetectorResultV2 JointWindowDetector::evaluate(
++    const FrozenWindowAdmission& admission,
++    const DetectorRiskContext& risk) const {
++  if (!admission) {
++    DetectorResultV2 out;
++    out.reason = "invalid immutable frozen-window admission: " +
++        admission.reason;
++    return out;
++  }
++  return evaluateWindow(admission.window(), risk, &admission);
++}
++
++namespace {
++
++DetectorResultV2 evaluateCandidateWindow(
++    const LinearizedIntegrityWindow& window,
++    const CandidateEvaluation& candidate,
++    const DetectorRiskContext& risk,
++    const FrozenWindowAdmission* admission) {
+@@ -263,2 +298,6 @@ DetectorResultV2 JointWindowDetector::evaluateCandidate(
+-  if (!validateCandidateDetectorCertificate(window, candidate,
+-                                            &certificate_reason)) {
++  const bool certificate_valid = admission
++      ? validateCandidateDetectorCertificate(
++            *admission, candidate, &certificate_reason)
++      : validateCandidateDetectorCertificate(
++            window, candidate, &certificate_reason);
++  if (!certificate_valid) {
+@@ -374,0 +414,23 @@ DetectorResultV2 JointWindowDetector::evaluateCandidate(
++}  // namespace
++
++DetectorResultV2 JointWindowDetector::evaluateCandidate(
++    const LinearizedIntegrityWindow& window,
++    const CandidateEvaluation& candidate,
++    const DetectorRiskContext& risk) const {
++  return evaluateCandidateWindow(window, candidate, risk, nullptr);
++}
++
++DetectorResultV2 JointWindowDetector::evaluateCandidate(
++    const FrozenWindowAdmission& admission,
++    const CandidateEvaluation& candidate,
++    const DetectorRiskContext& risk) const {
++  if (!admission) {
++    DetectorResultV2 out;
++    out.reason = "invalid immutable frozen-window admission: " +
++        admission.reason;
++    return out;
++  }
++  return evaluateCandidateWindow(
++      admission.window(), candidate, risk, &admission);
++}
++
+diff --git a/src/uwb_imu_pl/integrity/protection_level_v2.cpp b/src/uwb_imu_pl/integrity/protection_level_v2.cpp
+index c608a6f..6e1e0a7 100644
+--- a/src/uwb_imu_pl/integrity/protection_level_v2.cpp
++++ b/src/uwb_imu_pl/integrity/protection_level_v2.cpp
+@@ -431 +431,3 @@ bool detectorContractMatchesCandidate(const LinearizedIntegrityWindow& window,
+-                                      std::string* reason) {
++                                      std::string* reason,
++                                      const FrozenWindowAdmission* admission =
++                                          nullptr) {
+@@ -436,2 +438,6 @@ bool detectorContractMatchesCandidate(const LinearizedIntegrityWindow& window,
+-  if (!validateCandidateDetectorCertificate(window, candidate,
+-                                            &candidate_reason)) {
++  const bool candidate_valid = admission
++      ? validateCandidateDetectorCertificate(
++            *admission, candidate, &candidate_reason)
++      : validateCandidateDetectorCertificate(
++            window, candidate, &candidate_reason);
++  if (!candidate_valid) {
+@@ -944 +950,3 @@ std::uint64_t protectionLevelV2ProofIdentity(
+-bool mintCommitProtectionEvidenceV1(
++namespace {
++
++bool mintCommitProtectionEvidenceImpl(
+@@ -952 +960,2 @@ bool mintCommitProtectionEvidenceV1(
+-    std::string* reason) {
++    std::string* reason,
++    const FrozenWindowAdmission* admission) {
+@@ -958,0 +968,5 @@ bool mintCommitProtectionEvidenceV1(
++  const bool candidate_certificate_valid = admission
++      ? validateCandidateDetectorCertificate(
++            *admission, candidate, &candidate_reason)
++      : validateCandidateDetectorCertificate(
++            window, candidate, &candidate_reason);
+@@ -962,3 +976 @@ bool mintCommitProtectionEvidenceV1(
+-      candidate.window_view != &window ||
+-      !validateCandidateDetectorCertificate(window, candidate,
+-                                             &candidate_reason) ||
++      candidate.window_view != &window || !candidate_certificate_valid ||
+@@ -987 +999,3 @@ bool mintCommitProtectionEvidenceV1(
+-      candidateNumericalProofIdentity(window, candidate);
++      admission
++          ? candidateNumericalProofIdentity(*admission, candidate)
++          : candidateNumericalProofIdentity(window, candidate);
+@@ -1044,0 +1059,37 @@ bool mintCommitProtectionEvidenceV1(
++}  // namespace
++
++bool mintCommitProtectionEvidenceV1(
++    const EpochTransaction& transaction,
++    const LinearizedIntegrityWindow& window,
++    const CandidateEvaluation& candidate,
++    const ProtectionLevelV2Result& result,
++    std::uint64_t protection_proof_identity,
++    const std::string& frame_id,
++    CommitProtectionEvidenceV1* evidence,
++    std::string* reason) {
++  return mintCommitProtectionEvidenceImpl(
++      transaction, window, candidate, result, protection_proof_identity,
++      frame_id, evidence, reason, nullptr);
++}
++
++bool mintCommitProtectionEvidenceV1(
++    const EpochTransaction& transaction,
++    const FrozenWindowAdmission& admission,
++    const CandidateEvaluation& candidate,
++    const ProtectionLevelV2Result& result,
++    std::uint64_t protection_proof_identity,
++    const std::string& frame_id,
++    CommitProtectionEvidenceV1* evidence,
++    std::string* reason) {
++  if (!admission) {
++    if (reason) {
++      *reason = "invalid immutable frozen-window admission: " +
++          admission.reason;
++    }
++    return false;
++  }
++  return mintCommitProtectionEvidenceImpl(
++      transaction, admission.window(), candidate, result,
++      protection_proof_identity, frame_id, evidence, reason, &admission);
++}
++
+@@ -1603,0 +1655,11 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
++ProtectionLevelV2Result ProtectionLevelV2::computeShared(
++    const FrozenWindowAdmission& admission,
++    CandidateEvaluation* candidate,
++    const DetectorResultV2& detector,
++    std::vector<FaultHypothesisV2>* hypotheses,
++    const ProtectionLevelSharedContext& shared,
++    const RiskBudgetV2& risk) const {
++  return computeShared(admission, candidate, detector, hypotheses, shared,
++                       risk, nullptr);
++}
++
+@@ -1611,0 +1674,32 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
++  return computeSharedImpl(window, candidate, detector, hypotheses, shared,
++                           risk, computation_audit, nullptr);
++}
++
++ProtectionLevelV2Result ProtectionLevelV2::computeShared(
++    const FrozenWindowAdmission& admission,
++    CandidateEvaluation* candidate,
++    const DetectorResultV2& detector,
++    std::vector<FaultHypothesisV2>* hypotheses,
++    const ProtectionLevelSharedContext& shared,
++    const RiskBudgetV2& risk,
++    ProtectionLevelV2ProofV1* computation_audit) const {
++  if (!admission) {
++    ProtectionLevelV2Result result;
++    result.reason = "invalid immutable frozen-window admission: " +
++        admission.reason;
++    return result;
++  }
++  return computeSharedImpl(admission.window(), candidate, detector,
++                           hypotheses, shared, risk, computation_audit,
++                           &admission);
++}
++
++ProtectionLevelV2Result ProtectionLevelV2::computeSharedImpl(
++    const LinearizedIntegrityWindow& window,
++    CandidateEvaluation* candidate,
++    const DetectorResultV2& detector,
++    std::vector<FaultHypothesisV2>* hypotheses,
++    const ProtectionLevelSharedContext& shared,
++    const RiskBudgetV2& risk,
++    ProtectionLevelV2ProofV1* computation_audit,
++    const FrozenWindowAdmission* admission) const {
+@@ -1636 +1730,2 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
+-                                        &detector_contract_reason) ||
++                                        &detector_contract_reason,
++                                        admission) ||
+@@ -1932 +2027,2 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-      frozen.window_content_fingerprint == integrityWindowFingerprint(window) &&
++      frozen.window_content_fingerprint ==
++          integrityWindowFingerprint(window) &&
+@@ -1946 +2042 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-    result.reason = detector_contract_reason.empty()
++    result.reason = !identity_valid
+@@ -1948 +2044,3 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+-        : detector_contract_reason;
++        : (detector_contract_reason.empty()
++               ? "frozen all-in hypothesis context identity mismatch"
++               : detector_contract_reason);
+diff --git a/test/test_integrity_v2.cpp b/test/test_integrity_v2.cpp
+index f4138df..1fe96b3 100644
+--- a/test/test_integrity_v2.cpp
++++ b/test/test_integrity_v2.cpp
+@@ -13,0 +14 @@
++#include <cstdlib>
+@@ -14,0 +16 @@
++#include <new>
+@@ -2181 +2183,2 @@ TEST(IntegrityV2ProtectionLevel,
+-  EXPECT_NE(stale.reason.find("identity mismatch"), std::string::npos);
++  EXPECT_NE(stale.reason.find("identity mismatch"), std::string::npos)
++      << stale.reason;
+@@ -4725,0 +4729,530 @@ TEST(EnvelopeDominance, OneSidedRelativeRuleRejectsNarrowBandShortfall) {
++
++// ---------------------------------------------------------------------------
++// P1-01/R07: immutable identity reuse, descriptor indices, exact operation
++// deduplication and batched unique-block RHS.  The legacy identity ablation is
++// retained so this test proves numerical equivalence while exposing the work
++// removed by the optimized path.
++// ---------------------------------------------------------------------------
++TEST(P101IdentityIndexing, FrozenProofAndDirectDescriptorsAreExact) {
++  using namespace uwb_imu_pl;
++  auto optimized = makeCompactFixture();
++  NumericalWorkCounters::reset();
++  unsetenv("UWB_IMU_PL_DISABLE_FROZEN_IDENTITY_HANDLE");
++  const FrozenIntegrityWindow optimized_handle =
++      freezeIntegrityWindowCopy(optimized.window);
++  const FrozenWindowAdmission optimized_admission =
++      admitFrozenIntegrityWindow(optimized_handle);
++  ASSERT_TRUE(optimized_admission) << optimized_admission.reason;
++  std::shared_ptr<const FrozenHypothesisNumerics> optimized_shared;
++  const auto optimized_evidence = HypothesisEvidenceEvaluator().evaluateAll(
++      optimized_admission, optimized.modes, &optimized.hypotheses, 100.0,
++      &optimized_shared);
++  const auto optimized_work = NumericalWorkCounters::snapshot();
++
++  auto legacy = makeCompactFixture();
++  NumericalWorkCounters::reset();
++  ASSERT_EQ(setenv("UWB_IMU_PL_DISABLE_FROZEN_IDENTITY_HANDLE", "1", 1), 0);
++  std::shared_ptr<const FrozenHypothesisNumerics> legacy_shared;
++  const auto legacy_evidence = HypothesisEvidenceEvaluator().evaluateAll(
++      legacy.window, legacy.modes, &legacy.hypotheses, 100.0, &legacy_shared);
++  unsetenv("UWB_IMU_PL_DISABLE_FROZEN_IDENTITY_HANDLE");
++  const auto legacy_work = NumericalWorkCounters::snapshot();
++
++  ASSERT_EQ(optimized_evidence.size(), legacy_evidence.size());
++  ASSERT_TRUE(optimized_shared);
++  ASSERT_TRUE(legacy_shared);
++  ASSERT_EQ(optimized_shared->pl_entries.size(),
++            legacy_shared->pl_entries.size());
++  for (std::size_t index = 0; index < optimized_evidence.size(); ++index) {
++    EXPECT_EQ(optimized_evidence[index].plausible,
++              legacy_evidence[index].plausible);
++    EXPECT_EQ(optimized_evidence[index].log_evidence,
++              legacy_evidence[index].log_evidence);
++    EXPECT_EQ(optimized_evidence[index].all_in_statistic,
++              legacy_evidence[index].all_in_statistic);
++    EXPECT_EQ(optimized_evidence[index].conditioned_statistic,
++              legacy_evidence[index].conditioned_statistic);
++    EXPECT_EQ(optimized_evidence[index].explained_energy,
++              legacy_evidence[index].explained_energy);
++    EXPECT_EQ(optimized_evidence[index].profile_j,
++              legacy_evidence[index].profile_j);
++    EXPECT_EQ(optimized_evidence[index].profile_valid,
++              legacy_evidence[index].profile_valid);
++    EXPECT_EQ(optimized_evidence[index].monitorability.rank,
++              legacy_evidence[index].monitorability.rank);
++    EXPECT_EQ(optimized_evidence[index].monitorability.condition_number,
++              legacy_evidence[index].monitorability.condition_number);
++    EXPECT_EQ(optimized_evidence[index].monitorability.monitorable,
++              legacy_evidence[index].monitorability.monitorable);
++    EXPECT_TRUE((optimized_evidence[index].estimated_fault.array() ==
++                 legacy_evidence[index].estimated_fault.array()).all());
++    EXPECT_TRUE((optimized_evidence[index].fault_gram.array() ==
++                 legacy_evidence[index].fault_gram.array()).all());
++    FrozenHypothesisPlProofV1 optimized_proof;
++    FrozenHypothesisPlProofV1 legacy_proof;
++    ASSERT_TRUE(frozenHypothesisPlProof(
++        optimized_shared->pl_entries[index], &optimized_proof));
++    ASSERT_TRUE(frozenHypothesisPlProof(
++        legacy_shared->pl_entries[index], &legacy_proof));
++    EXPECT_EQ(optimized_proof.proof_identity, legacy_proof.proof_identity);
++    EXPECT_EQ(optimized_proof.parent_proof_identity,
++              legacy_proof.parent_proof_identity);
++    EXPECT_EQ(optimized_proof.nullspace_class,
++              legacy_proof.nullspace_class);
++    EXPECT_TRUE((optimized_proof.certified_gram.array() ==
++                 legacy_proof.certified_gram.array()).all());
++    EXPECT_TRUE((optimized_proof.protected_response.array() ==
++                 legacy_proof.protected_response.array()).all());
++    EXPECT_TRUE((optimized_proof.gram_eigenvalues.array() ==
++                 legacy_proof.gram_eigenvalues.array()).all());
++    EXPECT_TRUE((optimized_proof.gram_eigenvectors.array() ==
++                 legacy_proof.gram_eigenvectors.array()).all());
++    EXPECT_TRUE((optimized_proof.gram_eigenvalue_errors.array() ==
++                 legacy_proof.gram_eigenvalue_errors.array()).all());
++    EXPECT_TRUE((optimized_proof.nullspace_axis_residual.array() ==
++                 legacy_proof.nullspace_axis_residual.array()).all());
++    EXPECT_TRUE((optimized_proof.raw_detection_factor.array() ==
++                 legacy_proof.raw_detection_factor.array()).all());
++    EXPECT_EQ(optimized_proof.raw_factor_scale,
++              legacy_proof.raw_factor_scale);
++    EXPECT_TRUE((optimized_shared->pl_entries[index].protected_slopes.array() ==
++                 legacy_shared->pl_entries[index].protected_slopes.array())
++                    .all());
++  }
++  EXPECT_EQ(optimized_work.frozen_identity_builds, 0u);
++  EXPECT_EQ(optimized_work.frozen_identity_reuses,
++            optimized.hypotheses.size());
++  EXPECT_EQ(legacy_work.frozen_identity_builds, legacy.hypotheses.size());
++  EXPECT_EQ(legacy_work.frozen_identity_reuses, 0u);
++  EXPECT_EQ(optimized_work.descriptor_id_lookups, 3u);
++  EXPECT_EQ(optimized_work.descriptor_linear_scans, 0u);
++  EXPECT_EQ(optimized_work.window_content_hash_scans, 1u);
++}
++
++TEST(P101IdentityIndexing, UniqueBlockRhsUsesOneBatch) {
++  using namespace uwb_imu_pl;
++  auto window = syntheticWindow();
++  ExclusionAction action;
++  action.id = ExclusionActionId(101);
++  action.action_model_id = "P1_01_TWO_BLOCK_REMOVAL";
++  action.groups_to_remove = {FactorGroupId(1), FactorGroupId(2)};
++  action.exclusion_cardinality = 2;
++  NumericalWorkCounters::reset();
++  const auto base = RankUpdateEvaluator().factorizeOnce(window, {action});
++  const auto work = NumericalWorkCounters::snapshot();
++  ASSERT_TRUE(base.valid) << base.reason;
++  ASSERT_TRUE(base.block_cache);
++  EXPECT_EQ(base.block_cache->blocks.size(), 2u);
++  EXPECT_EQ(work.block_rhs_solve_batches, 1u);
++  EXPECT_EQ(work.block_rhs_unique_blocks, 2u);
++  EXPECT_EQ(work.square_root_information_solves, 1u);
++  EXPECT_EQ(work.square_root_information_columns, 5u);
++  EXPECT_EQ(work.covariance_rhs_solves, 0u);
++  for (const auto& group : base.block_cache->blocks) {
++    ASSERT_EQ(group.second.size(), 1u);
++    const auto& entry = group.second.front();
++    EXPECT_EQ(entry.base_solve.rows(), window.H.cols());
++    EXPECT_EQ(entry.base_solve.cols(),
++              entry.block.jacobian_whitened.rows());
++    EXPECT_TRUE(entry.base_solve.allFinite());
++  }
++}
++
++TEST(P101IdentityIndexing, BatchedRhsMatchesUncachedCandidateExactly) {
++  using namespace uwb_imu_pl;
++  auto window = syntheticWindow();
++  ExclusionAction action;
++  action.id = ExclusionActionId(102);
++  action.action_model_id = "P1_01_REPLACEMENT";
++  action.groups_to_remove = {FactorGroupId(1)};
++  action.groups_to_add = {FactorGroupId(1)};
++  action.added_blocks = {window.blocks.front()};
++  action.added_blocks.front().residual_whitened(0) += 0.01;
++  action.added_blocks.front().residual_raw(0) += 0.01;
++  action.exclusion_cardinality = 1;
++
++  unsetenv("UWB_IMU_PL_DISABLE_BLOCK_CACHE");
++  RankUpdateEvaluator evaluator;
++  const auto batched_base = evaluator.factorizeOnce(window, {action});
++  const auto batched = evaluator.evaluate(batched_base, action);
++  ASSERT_TRUE(batched.valid) << batched.reason;
++  ASSERT_EQ(setenv("UWB_IMU_PL_DISABLE_BLOCK_CACHE", "1", 1), 0);
++  const auto uncached_base = evaluator.factorizeOnce(window, {action});
++  const auto uncached = evaluator.evaluate(uncached_base, action);
++  unsetenv("UWB_IMU_PL_DISABLE_BLOCK_CACHE");
++  ASSERT_TRUE(uncached.valid) << uncached.reason;
++  EXPECT_TRUE((batched.state_increment.array() ==
++               uncached.state_increment.array()).all());
++  EXPECT_TRUE((batched.covariance.array() == uncached.covariance.array()).all());
++  EXPECT_EQ(batched.statistic, uncached.statistic);
++  EXPECT_EQ(batched.rank, uncached.rank);
++  EXPECT_EQ(batched.dof, uncached.dof);
++  EXPECT_EQ(batched.detector_certificate.certificate_digest,
++            uncached.detector_certificate.certificate_digest);
++}
++
++TEST(P101IdentityIndexing, ExactOperationDedupKeepsSemanticCoverage) {
++  using namespace uwb_imu_pl;
++  ExclusionAction first;
++  first.id = ExclusionActionId(201);
++  first.action_model_id = "EXACT";
++  first.groups_to_remove = {FactorGroupId(3), FactorGroupId(1)};
++  first.covered_modes = {FaultModeId(8)};
++  first.exclusion_cardinality = 2;
++  ExclusionAction duplicate = first;
++  const auto result = censusAndCapActionsV1({first, duplicate}, 2);
++  ASSERT_EQ(result.actions.size(), 1u);
++  ASSERT_EQ(result.census.omitted_actions.size(), 1u);
++  EXPECT_TRUE(result.census.omitted_actions.front().proven_safe);
++  EXPECT_EQ(result.census.omitted_actions.front().reason,
++            "EXACT_SEMANTIC_DUPLICATE");
++  EXPECT_EQ(result.census.generated, 2u);
++  EXPECT_EQ(result.census.evaluated, 1u);
++  EXPECT_EQ(result.census.omitted, 1u);
++  EXPECT_TRUE(result.census.exhaustive);
++}
++
++TEST(P101IdentityIndexing, FrozenOwnerIsImmutableAndAdmissionIsConstantWork) {
++  using namespace uwb_imu_pl;
++  auto builder = syntheticWindow();
++  const Eigen::MatrixXd expected_h = builder.H;
++  const Eigen::VectorXd expected_z = builder.z;
++  NumericalWorkCounters::reset();
++  auto frozen = freezeIntegrityWindowCopy(builder);
++  const auto after_freeze = NumericalWorkCounters::snapshot();
++  ASSERT_TRUE(frozen.seal);
++  EXPECT_EQ(after_freeze.window_content_hash_scans, 1u);
++
++  builder.H.setConstant(1234.0);
++  builder.z.setConstant(-5678.0);
++  const auto admission = admitFrozenIntegrityWindow(frozen);
++  ASSERT_TRUE(admission) << admission.reason;
++  EXPECT_TRUE((admission.window().H.array() == expected_h.array()).all());
++  EXPECT_TRUE((admission.window().z.array() == expected_z.array()).all());
++  const auto after_admission = NumericalWorkCounters::snapshot();
++  EXPECT_EQ(after_admission.window_content_hash_scans, 1u);
++  EXPECT_EQ(after_admission.frozen_admission_constant_validations, 1u);
++}
++
++TEST(P101IdentityIndexing, SealedCandidateIsBoundToItsExactOwner) {
++  using namespace uwb_imu_pl;
++  NumericalWorkCounters::reset();
++  const auto seal_a = freezeIntegrityWindowCopy(syntheticWindow());
++  const auto seal_b = freezeIntegrityWindowCopy(syntheticWindow());
++  const auto admission_a = admitFrozenIntegrityWindow(seal_a);
++  const auto admission_b = admitFrozenIntegrityWindow(seal_b);
++  ASSERT_TRUE(admission_a);
++  ASSERT_TRUE(admission_b);
++  ASSERT_NE(&admission_a.window(), &admission_b.window());
++  ASSERT_EQ(seal_a.seal->content_hash, seal_b.seal->content_hash);
++
++  ExclusionAction keep;
++  keep.id = ExclusionActionId(10101);
++  keep.action_model_id = "P1_01_OWNER_BOUND_KEEP";
++  RankUpdateEvaluator evaluator;
++  const auto base = evaluator.factorizeOnce(admission_a, {keep});
++  const auto candidate = evaluator.evaluate(admission_a, base, keep);
++  ASSERT_TRUE(candidate.valid) << candidate.reason;
++  const auto before_validation = NumericalWorkCounters::snapshot();
++  std::string reason;
++  EXPECT_TRUE(validateCandidateDetectorCertificate(
++      admission_a, candidate, &reason)) << reason;
++  EXPECT_FALSE(validateCandidateDetectorCertificate(
++      admission_b, candidate, &reason));
++  EXPECT_NE(reason.find("source window owner/payload identity mismatch"),
++            std::string::npos)
++      << reason;
++  const auto rejected = JointWindowDetector().evaluateCandidate(
++      admission_b, candidate, DetectorRiskContext{});
++  EXPECT_FALSE(rejected.numerically_valid);
++  EXPECT_NE(rejected.reason.find("source window owner/payload identity mismatch"),
++            std::string::npos) << rejected.reason;
++  const auto after_validation = NumericalWorkCounters::snapshot();
++  EXPECT_EQ(after_validation.window_content_hash_scans,
++            before_validation.window_content_hash_scans);
++}
++
++TEST(P101IdentityIndexing,
++     ForcedHashCollisionTransplantIsRejectedByRealSealedConsumer) {
++  using namespace uwb_imu_pl;
++  NumericalWorkCounters::reset();
++  const auto seal_a = freezeIntegrityWindowCopy(syntheticWindow());
++  const auto admission_a = admitFrozenIntegrityWindow(seal_a);
++  ASSERT_TRUE(admission_a);
++  ExclusionAction keep;
++  keep.id = ExclusionActionId(10102);
++  keep.action_model_id = "P1_01_COLLISION_KEEP";
++  RankUpdateEvaluator evaluator;
++  const auto base = evaluator.factorizeOnce(admission_a, {keep});
++  const auto candidate = evaluator.evaluate(admission_a, base, keep);
++  ASSERT_TRUE(candidate.valid) << candidate.reason;
++
++  auto different = syntheticWindow();
++  different.blocks.front().residual_whitened(0) = std::nextafter(
++      different.blocks.front().residual_whitened(0), 1.0);
++  different.blocks.front().residual_raw(0) =
++      different.blocks.front().residual_whitened(0);
++  finalizeIntegrityWindow(&different, 1e-10, 1e10);
++  const auto ordinary_b = freezeIntegrityWindowCopy(different);
++  auto forced_payload = std::make_shared<LinearizedIntegrityWindow>(
++      *ordinary_b.seal->payload);
++  auto forced_numerics = std::make_shared<FrozenWindowNumerics>(
++      *forced_payload->numerics);
++  forced_numerics->content_fingerprint = seal_a.seal->content_hash;
++  forced_payload->numerics = forced_numerics;
++  auto forced_seal = std::make_shared<FrozenIntegrityWindowSeal>(
++      *ordinary_b.seal);
++  forced_seal->content_hash = seal_a.seal->content_hash;
++  forced_seal->payload = forced_payload;
++  forced_seal->numerical_identity.content_fingerprint =
++      seal_a.seal->content_hash;
++  forced_seal->numerical_identity.proof_identity =
++      frozenWindowNumericalProofIdentity(*forced_payload, *forced_numerics);
++  forced_seal->numerical_identity.valid = true;
++  const FrozenIntegrityWindow forged_b{forced_seal};
++  const auto admission_b = admitFrozenIntegrityWindow(forged_b);
++  ASSERT_TRUE(admission_b) << admission_b.reason;
++  ASSERT_EQ(seal_a.seal->content_hash, forced_seal->content_hash);
++  ASSERT_FALSE(frozenWindowCanonicalEqual(*seal_a.seal, *forced_seal));
++
++  const auto before_validation = NumericalWorkCounters::snapshot();
++  const auto rejected = JointWindowDetector().evaluateCandidate(
++      admission_b, candidate, DetectorRiskContext{});
++  EXPECT_FALSE(rejected.numerically_valid);
++  EXPECT_NE(rejected.reason.find("source window owner/payload identity mismatch"),
++            std::string::npos) << rejected.reason;
++  const auto after_validation = NumericalWorkCounters::snapshot();
++  EXPECT_EQ(after_validation.window_content_hash_scans,
++            before_validation.window_content_hash_scans);
++}
++
++TEST(P101IdentityIndexing, ProductionMoveIsolatedFromReusedSourceObject) {
++  using namespace uwb_imu_pl;
++  auto source = syntheticWindow();
++  const Eigen::MatrixXd expected_h = source.H;
++  const auto frozen = freezeIntegrityWindow(std::move(source));
++  source = syntheticWindow();
++  source.H.setConstant(9999.0);
++  source.z.setConstant(-9999.0);
++  const auto admission = admitFrozenIntegrityWindow(frozen);
++  ASSERT_TRUE(admission) << admission.reason;
++  EXPECT_TRUE((admission.window().H.array() == expected_h.array()).all());
++  ExclusionAction keep;
++  keep.id = ExclusionActionId(10103);
++  keep.action_model_id = "P1_01_MOVE_KEEP";
++  RankUpdateEvaluator evaluator;
++  const auto base = evaluator.factorizeOnce(admission, {keep});
++  const auto candidate = evaluator.evaluate(admission, base, keep);
++  ASSERT_TRUE(candidate.valid) << candidate.reason;
++  EXPECT_TRUE(validateCandidateDetectorCertificate(admission, candidate));
++}
++
++TEST(P101IdentityIndexing, ReusedPayloadAddressCannotInheritOldOwner) {
++  using namespace uwb_imu_pl;
++  alignas(LinearizedIntegrityWindow)
++      unsigned char storage[sizeof(LinearizedIntegrityWindow)];
++  auto make_at_storage = [&](LinearizedIntegrityWindow value) {
++    auto* payload = new (storage) LinearizedIntegrityWindow(std::move(value));
++    return std::shared_ptr<const LinearizedIntegrityWindow>(
++        payload, [](const LinearizedIntegrityWindow* pointer) {
++          const_cast<LinearizedIntegrityWindow*>(pointer)
++              ->~LinearizedIntegrityWindow();
++        });
++  };
++  auto bind_payload = [&](const FrozenIntegrityWindow& minted,
++                          std::shared_ptr<const LinearizedIntegrityWindow> payload) {
++    auto seal = std::make_shared<FrozenIntegrityWindowSeal>(*minted.seal);
++    seal->payload = std::move(payload);
++    seal->content_hash = seal->payload->numerics->content_fingerprint;
++    seal->numerical_identity.window_id = seal->payload->id;
++    seal->numerical_identity.version = seal->payload->version;
++    seal->numerical_identity.content_fingerprint = seal->content_hash;
++    seal->numerical_identity.numerical_contract_fingerprint =
++        seal->payload->numerics->numerical_contract_fingerprint;
++    seal->numerical_identity.proof_identity = frozenWindowNumericalProofIdentity(
++        *seal->payload, *seal->payload->numerics);
++    seal->numerical_identity.valid = true;
++    return FrozenIntegrityWindow{std::move(seal)};
++  };
++
++  CandidateEvaluation held_candidate;
++  std::weak_ptr<const FrozenIntegrityWindowSeal> old_owner_lifetime;
++  std::uint64_t old_owner = 0;
++  const void* reused_address = nullptr;
++  {
++    auto first_payload = make_at_storage(syntheticWindow());
++    reused_address = first_payload.get();
++    const auto first_minted = freezeIntegrityWindowCopy(*first_payload);
++    auto first = bind_payload(first_minted, std::move(first_payload));
++    auto first_admission = admitFrozenIntegrityWindow(first);
++    ASSERT_TRUE(first_admission);
++    ExclusionAction keep;
++    keep.id = ExclusionActionId(10104);
++    keep.action_model_id = "P1_01_ADDRESS_REUSE_KEEP";
++    RankUpdateEvaluator evaluator;
++    const auto base = evaluator.factorizeOnce(first_admission, {keep});
++    held_candidate = evaluator.evaluate(first_admission, base, keep);
++    ASSERT_TRUE(held_candidate.valid) << held_candidate.reason;
++    old_owner = first_admission.ownerToken();
++    old_owner_lifetime = first.seal;
++    first_admission = FrozenWindowAdmission{};
++    first = FrozenIntegrityWindow{};
++    // The candidate aliases the seal's control block, so an allocator cannot
++    // reuse the payload address while a stale candidate still exists.
++    EXPECT_FALSE(old_owner_lifetime.expired());
++  }
++  EXPECT_FALSE(old_owner_lifetime.expired());
++  held_candidate = CandidateEvaluation{};
++  EXPECT_TRUE(old_owner_lifetime.expired());
++
++  auto second_value = syntheticWindow();
++  auto second_payload = make_at_storage(std::move(second_value));
++  ASSERT_EQ(reused_address, second_payload.get());
++  const auto second_minted = freezeIntegrityWindowCopy(*second_payload);
++  auto second = bind_payload(second_minted, std::move(second_payload));
++  const auto second_admission = admitFrozenIntegrityWindow(second);
++  ASSERT_TRUE(second_admission);
++  ASSERT_NE(old_owner, second_admission.ownerToken());
++  ASSERT_EQ(reused_address,
++            static_cast<const void*>(&second_admission.window()));
++  ExclusionAction keep;
++  keep.id = ExclusionActionId(10104);
++  keep.action_model_id = "P1_01_ADDRESS_REUSE_KEEP";
++  RankUpdateEvaluator evaluator;
++  const auto base = evaluator.factorizeOnce(second_admission, {keep});
++  const auto new_candidate = evaluator.evaluate(second_admission, base, keep);
++  ASSERT_TRUE(new_candidate.valid) << new_candidate.reason;
++  EXPECT_TRUE(validateCandidateDetectorCertificate(
++      second_admission, new_candidate));
++}
++
++TEST(P101IdentityIndexing, ForcedHashCollisionRequiresCanonicalEquality) {
++  using namespace uwb_imu_pl;
++  auto left_builder = syntheticWindow();
++  auto right_builder = syntheticWindow();
++  ASSERT_FALSE(right_builder.blocks.empty());
++  right_builder.blocks.front().residual_whitened(0) = std::nextafter(
++      right_builder.blocks.front().residual_whitened(0), 1.0);
++  right_builder.blocks.front().residual_raw(0) = std::nextafter(
++      right_builder.blocks.front().residual_raw(0), 1.0);
++  finalizeIntegrityWindow(&right_builder, 1e-10, 1e10);
++  auto left = freezeIntegrityWindowCopy(left_builder);
++  auto right = freezeIntegrityWindowCopy(right_builder);
++  ASSERT_TRUE(left.seal);
++  ASSERT_TRUE(right.seal);
++  FrozenIntegrityWindowSeal forced_left = *left.seal;
++  FrozenIntegrityWindowSeal forced_right = *right.seal;
++  forced_left.content_hash = 0x123456789abcdef0ULL;
++  forced_right.content_hash = forced_left.content_hash;
++  EXPECT_FALSE(frozenWindowCanonicalEqual(forced_left, forced_right));
++
++  FrozenIntegrityWindowSeal same_payload = forced_left;
++  EXPECT_TRUE(frozenWindowCanonicalEqual(forced_left, same_payload));
++}
++
++TEST(P101IdentityIndexing, OldHandleCannotAdmitNewObjectOrAddressReuse) {
++  using namespace uwb_imu_pl;
++  auto first = freezeIntegrityWindowCopy(syntheticWindow());
++  const auto first_admission = admitFrozenIntegrityWindow(first);
++  ASSERT_TRUE(first_admission);
++  auto second_builder = syntheticWindow();
++  second_builder.id = WindowId(first_admission.window().id.value() + 1);
++  finalizeIntegrityWindow(&second_builder, 1e-10, 1e10);
++  auto second = freezeIntegrityWindowCopy(second_builder);
++  const auto old_admission = admitFrozenIntegrityWindow(first);
++  const auto new_admission = admitFrozenIntegrityWindow(second);
++  ASSERT_TRUE(old_admission);
++  ASSERT_TRUE(new_admission);
++  EXPECT_NE(old_admission.ownerToken(), new_admission.ownerToken());
++  EXPECT_FALSE(frozenWindowHandleMatches(old_admission, second));
++  EXPECT_FALSE(frozenWindowHandleMatches(new_admission, first));
++
++  const std::uint64_t expired_token = old_admission.ownerToken();
++  first = FrozenIntegrityWindow{};
++  EXPECT_NE(expired_token, new_admission.ownerToken());
++  EXPECT_TRUE((new_admission.window().H.array() ==
++               second.seal->payload->H.array()).all());
++}
++
++TEST(P101IdentityIndexing, CopyMoveLifetimeAndConcurrentAdmissionAreStable) {
++  using namespace uwb_imu_pl;
++  auto frozen = freezeIntegrityWindowCopy(syntheticWindow());
++  auto copied = frozen;
++  auto moved = std::move(copied);
++  const auto baseline = admitFrozenIntegrityWindow(moved);
++  ASSERT_TRUE(baseline);
++  constexpr int kReaders = 16;
++  std::vector<std::future<std::pair<std::uint64_t, const void*>>> readers;
++  readers.reserve(kReaders);
++  for (int i = 0; i < kReaders; ++i) {
++    readers.emplace_back(std::async(std::launch::async, [&moved]()
++        -> std::pair<std::uint64_t, const void*> {
++      const auto admitted = admitFrozenIntegrityWindow(moved);
++      if (!admitted) return {0, nullptr};
++      return std::make_pair(admitted.ownerToken(),
++                            static_cast<const void*>(&admitted.window()));
++    }));
++  }
++  for (auto& reader : readers) {
++    const auto result = reader.get();
++    EXPECT_EQ(result.first, baseline.ownerToken());
++    EXPECT_EQ(result.second, static_cast<const void*>(&baseline.window()));
++  }
++  frozen = FrozenIntegrityWindow{};
++  EXPECT_TRUE(admitFrozenIntegrityWindow(moved));
++}
++
++TEST(P101IdentityIndexing, FrozenClockMakesTerminalDecisionExact) {
++  using namespace uwb_imu_pl;
++  const auto config = researchConfig();
++  IncrementalUwbImuEstimator left_estimator(config, Eigen::Vector3d::Zero());
++  IncrementalUwbImuEstimator right_estimator(config, Eigen::Vector3d::Zero());
++  NavigationState initial;
++  initial.position_world_m = {0.0, 0.0, 1.0};
++  left_estimator.initialize(initial, config.realtime.prior_sigmas);
++  right_estimator.initialize(initial, config.realtime.prior_sigmas);
++  addImu(&left_estimator, config.imu.gravity_mps2);
++  addImu(&right_estimator, config.imu.gravity_mps2);
++  RealtimeIntegrityPipeline left(
++      &left_estimator,
++      IntegrityMonitor(config.risk, config.snapshot.rank_tolerance,
++                       config.snapshot.max_condition_number));
++  RealtimeIntegrityPipeline right(
++      &right_estimator,
++      IntegrityMonitor(config.risk, config.snapshot.rank_tolerance,
++                       config.snapshot.max_condition_number));
++  const UwbBatch input = batch(config, 10000000);
++  ClockSample frozen_clock;
++  frozen_clock.wall_monotonic_ns = 10000000;
++  frozen_clock.sensor_timestamp_ns = input.timestamp.value();
++  const auto left_output = left.processUwbBatchWithFrozenFinishElapsed(
++      input, frozen_clock, 0.0);
++  const auto right_output = right.processUwbBatchWithFrozenFinishElapsed(
++      input, frozen_clock, 0.0);
++  EXPECT_EQ(left_output.batch_committed, right_output.batch_committed);
++  EXPECT_EQ(left_output.fde_status, right_output.fde_status);
++  EXPECT_EQ(left_output.reason_codes, right_output.reason_codes);
++  EXPECT_EQ(left_output.protection_level.formal_eligible,
++            right_output.protection_level.formal_eligible);
++  EXPECT_EQ(left_output.protection_level.reason,
++            right_output.protection_level.reason);
++  EXPECT_EQ(left_output.publication.protected_output,
++            right_output.publication.protected_output);
++  EXPECT_EQ(left_output.publication.unprotected_output,
++            right_output.publication.unprotected_output);
++  EXPECT_EQ(left_output.publication.wall_timeout,
++            right_output.publication.wall_timeout);
++  EXPECT_EQ(left_output.publication.refusal,
++            right_output.publication.refusal);
++  const auto exact_nonfinite = [](double lhs, double rhs) {
++    return (std::isnan(lhs) && std::isnan(rhs)) || lhs == rhs;
++  };
++  EXPECT_TRUE(exact_nonfinite(left_output.global_detector.statistic,
++                              right_output.global_detector.statistic));
++  EXPECT_TRUE(exact_nonfinite(left_output.postfit_detector.statistic,
++                              right_output.postfit_detector.statistic));
++  for (int axis = 0; axis < 3; ++axis) {
++    EXPECT_TRUE(exact_nonfinite(left_output.protection_level.pl_xyz_m(axis),
++                                right_output.protection_level.pl_xyz_m(axis)));
++  }
++}
+diff --git a/test/test_p0_06_action_search.cpp b/test/test_p0_06_action_search.cpp
+index 6333dab..fb5da76 100644
+--- a/test/test_p0_06_action_search.cpp
++++ b/test/test_p0_06_action_search.cpp
+@@ -168 +168 @@ struct RealGeneratedInputs {
+-  LinearizedIntegrityWindow window;
++  FrozenIntegrityWindow frozen_window;
+@@ -171,0 +172,4 @@ struct RealGeneratedInputs {
++
++  const LinearizedIntegrityWindow& window() const {
++    return *frozen_window.seal->payload;
++  }
+@@ -199 +203 @@ RealGeneratedInputs realGeneratedInputs(double amplitude,
+-  out.window = estimator.buildIntegrityWindow(
++  out.frozen_window = estimator.buildFrozenIntegrityWindow(
+@@ -1200 +1204 @@ TEST(P006O07, ProductionBackedAmplitudeOnsetAxisJointGrid) {
+-          ASSERT_TRUE(inputs.window.model_valid) << inputs.window.reason;
++          ASSERT_TRUE(inputs.window().model_valid) << inputs.window().reason;
+@@ -1212 +1216 @@ TEST(P006O07, ProductionBackedAmplitudeOnsetAxisJointGrid) {
+-              inputs.window, inputs.transaction, inputs.imu_subspaces,
++              inputs.window(), inputs.transaction, inputs.imu_subspaces,
+@@ -1243 +1247 @@ TEST(P006O07, ProductionBackedAmplitudeOnsetAxisJointGrid) {
+-          const auto& window = inputs.window;
++          const auto& window = inputs.window();
+@@ -1290 +1294 @@ TEST(P006O07, ProductionBackedAmplitudeOnsetAxisJointGrid) {
+-                  inputs.window, inputs.transaction, &models,
++                  inputs.window(), inputs.transaction, &models,
+diff --git a/tools/compare_p1_01_outputs.py b/tools/compare_p1_01_outputs.py
+new file mode 100644
+index 0000000..ee0ac65
+--- /dev/null
++++ b/tools/compare_p1_01_outputs.py
+@@ -0,0 +1,255 @@
++#!/usr/bin/env python3
++"""Compare P1-01 before/after outputs with field-specific tolerances."""
++
++from __future__ import annotations
++
++import argparse
++import csv
++import hashlib
++import json
++import math
++import pathlib
++import re
++
++
++FILES = {
++    "states.csv": {
++        "numeric": {"px", "py", "pz", "qw", "qx", "qy", "qz", "vx",
++                    "vy", "vz", "bax", "bay", "baz", "bgx", "bgy", "bgz"},
++        "ignore": set(),
++        "abs": 0.0,
++        "rel": 0.0,
++    },
++    "integrity.csv": {
++        "numeric": {"global_statistic", "global_threshold", "postfit_statistic",
++                    "postfit_threshold", "conditional_statistic",
++                    "conditional_threshold", "pl_x", "pl_y", "pl_z", "hpl_m",
++                    "vpl_m", "allocated_hmi_risk", "hmi_risk_requirement",
++                    "bridge_pl_x", "bridge_pl_y", "bridge_pl_z"},
++        # The real-time performance run intentionally retains the actual wall
++        # deadline.  Its packet digest and deadline bit therefore vary even
++        # between two unchanged checkpoint repeats; they are summarized as
++        # performance outcomes, not used as the deterministic computation
++        # oracle.  Injected-clock deadline tests cover those boundary fields.
++        "ignore": set(),
++        "abs": 0.0,
++        "rel": 0.0,
++    },
++    "diagnostic_candidates.csv": {
++        "numeric": {"condition_lower_bound", "condition_upper_bound",
++                    "certificate_margin"},
++        "ignore": {"kernel_ms", "post_ms", "bridge_ms", "fault_map_ms",
++                   "pl_ms", "cache_hits"},
++        "abs": 0.0,
++        "rel": 0.0,
++    },
++    "diagnostic_coverage.csv": {
++        "numeric": set(), "ignore": set(), "abs": 0.0, "rel": 0.0,
++    },
++    "diagnostic_snapshot_identity.csv": {
++        "numeric": set(), "ignore": set(), "abs": 0.0, "rel": 0.0,
++    },
++    "diagnostic_square_root.csv": {
++        "numeric": {"r_diagonal_min", "r_diagonal_max", "condition_estimate",
++                    "identity_residual_relative", "parity_relative_difference",
++                    "solution_relative_difference", "forward_error_bound",
++                    "statistic"},
++        "ignore": set(), "abs": 0.0, "rel": 0.0,
++    },
++    "transactions.csv": {
++        "numeric": set(), "ignore": set(), "abs": 0.0, "rel": 0.0,
++    },
++    "candidates.csv": {
++        "numeric": set(),
++        "ignore": {"evaluation_wall_ms"}, "abs": 0.0, "rel": 0.0,
++    },
++    "hypotheses.csv": {
++        "numeric": set(), "ignore": set(), "abs": 0.0, "rel": 0.0,
++    },
++    "bridge.csv": {
++        "numeric": set(), "ignore": set(), "abs": 0.0, "rel": 0.0,
++    },
++    "diagnostic_history_summary.csv": {
++        "numeric": set(), "ignore": set(), "abs": 0.0, "rel": 0.0,
++    },
++    "diagnostic_state_steps.csv": {
++        "numeric": set(), "ignore": set(), "abs": 0.0, "rel": 0.0,
++    },
++    "diagnostic_attempts.csv": {
++        "numeric": set(),
++        "ignore": {"base_svd", "base_llt", "base_state_solves",
++                   "llt_state_solve_calls", "svd_state_solve_calls",
++                   "detector_reference_qr", "candidate_reference_svd",
++                   "candidate_inner_llt", "fault_gram_eigen",
++                   "fault_gram_svd", "fault_gram_ldlt",
++                   "low_dim_fault_gram", "generic_fault_gram_fallback",
++                   "hypothesis_parallel_blocks", "hypothesis_shared_hits",
++                   "hypothesis_shared_misses", "covariance_rhs_solves",
++                   "covariance_rhs_columns", "spectral_rhs_solves",
++                   "spectral_rhs_columns", "watchdog_wall_elapsed_ns",
++                   "watchdog_sensor_elapsed_ns", "watchdog_sensor_delta_ns",
++                   "watchdog_sensor_lag_ns", "watchdog_sensor_stale",
++                   "watchdog_reason"},
++        "abs": 0.0,
++        "rel": 0.0,
++    },
++}
++
++
++def load(path: pathlib.Path) -> tuple[list[str], list[dict[str, str]]]:
++    with path.open(newline="", encoding="utf-8") as stream:
++        reader = csv.DictReader(stream)
++        return list(reader.fieldnames or []), list(reader)
++
++
++def same_number(left: str, right: str, absolute: float, relative: float) -> bool:
++    try:
++        a, b = float(left), float(right)
++    except ValueError:
++        return False
++    if math.isnan(a) or math.isnan(b):
++        return math.isnan(a) and math.isnan(b)
++    if math.isinf(a) or math.isinf(b):
++        return a == b
++    return abs(a - b) <= absolute + relative * max(abs(a), abs(b))
++
++
++def normalize_text(field: str, value: str) -> str:
++    if field == "reason_codes":
++        return ";".join(item for item in value.split(";")
++                        if item != "FINISH_DEADLINE_MISSED")
++    if field == "reason":
++        match = re.match(
++            r"FINISH_DEADLINE_MISSED after [0-9.eE+-]+ ms; upstream=(.*)",
++            value)
++        if match:
++            return match.group(1)
++        return value
++    return value
++
++
++def finish_deadline_present(row: dict[str, str]) -> bool:
++    return ("FINISH_DEADLINE_MISSED" in row.get("reason_codes", "").split(";")
++            and re.fullmatch(
++                r"FINISH_DEADLINE_MISSED after [0-9.eE+-]+ ms; upstream=.*",
++                row.get("reason", "")) is not None)
++
++
++def proved_finish_wall_transition(left: dict[str, str],
++                                  right: dict[str, str]) -> bool:
++    """Accept only the exact terminal transformation performed by finish()."""
++    left_finish = finish_deadline_present(left)
++    right_finish = finish_deadline_present(right)
++    if not left_finish and not right_finish:
++        return False
++    if normalize_text("reason", left.get("reason", "")) != normalize_text(
++            "reason", right.get("reason", "")):
++        return False
++    if normalize_text("reason_codes", left.get("reason_codes", "")) != \
++            normalize_text("reason_codes", right.get("reason_codes", "")):
++        return False
++    return ((left.get("deadline_missed") == "1") == left_finish and
++            (right.get("deadline_missed") == "1") == right_finish)
++
++
++def proved_publication_wall_bundle(left: dict[str, str],
++                                   right: dict[str, str]) -> bool:
++    def finish_side(row: dict[str, str]) -> bool:
++        return (row.get("publication_refusal") == "FINISH_DEADLINE_MISSED" and
++                row.get("publication_protected") == "0" and
++                row.get("publication_unprotected") == "1" and
++                row.get("watchdog_wall_timeout") == "1")
++    def ordinary_side(row: dict[str, str]) -> bool:
++        return (row.get("publication_refusal") != "FINISH_DEADLINE_MISSED" and
++                row.get("watchdog_wall_timeout") == "0")
++    return ((finish_side(left) and ordinary_side(right)) or
++            (finish_side(right) and ordinary_side(left)))
++
++
++def compare_file(before: pathlib.Path, after: pathlib.Path, policy: dict,
++                 proved_wall_rows: set[int]) -> dict:
++    before_fields, before_rows = load(before)
++    after_fields, after_rows = load(after)
++    mismatches = []
++    if before_fields != after_fields:
++        mismatches.append({"kind": "header", "before": before_fields,
++                           "after": after_fields})
++    if len(before_rows) != len(after_rows):
++        mismatches.append({"kind": "row_count", "before": len(before_rows),
++                           "after": len(after_rows)})
++    for row_index, (left, right) in enumerate(zip(before_rows, after_rows), 1):
++        for field in before_fields:
++            if field in policy["ignore"]:
++                continue
++            if (before.name == "integrity.csv" and
++                    field in {"deadline_missed", "reason_codes", "reason"} and
++                    proved_finish_wall_transition(left, right)):
++                continue
++            if (before.name == "diagnostic_attempts.csv" and
++                    row_index in proved_wall_rows and
++                    field in {"publication_protected",
++                              "publication_unprotected",
++                              "publication_refusal",
++                              "watchdog_wall_timeout"} and
++                    proved_publication_wall_bundle(left, right)):
++                continue
++            equal = (same_number(left[field], right[field], policy["abs"],
++                                 policy["rel"])
++                     if field in policy["numeric"]
++                     else normalize_text(field, left[field]) ==
++                          normalize_text(field, right[field]))
++            if not equal:
++                mismatches.append({"kind": "value", "row": row_index,
++                                   "field": field, "before": left[field],
++                                   "after": right[field]})
++                if len(mismatches) >= 50:
++                    break
++        if len(mismatches) >= 50:
++            break
++    return {
++        "status": "PASS" if not mismatches else "FAIL",
++        "rows": len(before_rows),
++        "before_sha256": hashlib.sha256(before.read_bytes()).hexdigest(),
++        "after_sha256": hashlib.sha256(after.read_bytes()).hexdigest(),
++        "mismatches": mismatches,
++    }
++
++
++def main() -> int:
++    parser = argparse.ArgumentParser()
++    parser.add_argument("before", type=pathlib.Path)
++    parser.add_argument("after", type=pathlib.Path)
++    parser.add_argument("--output", required=True, type=pathlib.Path)
++    args = parser.parse_args()
++    _, before_integrity = load(args.before / "integrity.csv")
++    _, after_integrity = load(args.after / "integrity.csv")
++    proved_wall_rows = {
++        index for index, (left, right) in enumerate(
++            zip(before_integrity, after_integrity), 1)
++        if proved_finish_wall_transition(left, right)
++    }
++    results = {name: compare_file(args.before / name, args.after / name, policy,
++                                  proved_wall_rows)
++               for name, policy in FILES.items()}
++    payload = {
++        "schema": "uwb-imu-pl/p1-01-output-equivalence/v1",
++        "before": str(args.before),
++        "after": str(args.after),
++        "status": "PASS" if all(item["status"] == "PASS"
++                                for item in results.values()) else "FAIL",
++        "mechanically_proved_finish_wall_rows": sorted(proved_wall_rows),
++        "policies": {name: {"numeric_fields": sorted(policy["numeric"]),
++                             "ignored_performance_fields": sorted(policy["ignore"]),
++                             "absolute_tolerance": policy["abs"],
++                             "relative_tolerance": policy["rel"]}
++                     for name, policy in FILES.items()},
++        "files": results,
++    }
++    args.output.parent.mkdir(parents=True, exist_ok=True)
++    args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n",
++                           encoding="utf-8")
++    return 0 if payload["status"] == "PASS" else 1
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+diff --git a/tools/p0_07_offline_oracle.py b/tools/p0_07_offline_oracle.py
+index b67d549..fd2634f 100644
+--- a/tools/p0_07_offline_oracle.py
++++ b/tools/p0_07_offline_oracle.py
+@@ -65 +65 @@ def fixed_contract_source(path):
+-        return "src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/factor-ledger slot identity"
++        return "src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/factor-ledger slot identity"
+@@ -69 +69 @@ def fixed_contract_source(path):
+-        return "src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity"
++        return "src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity"
+@@ -71 +71 @@ def fixed_contract_source(path):
+-        return "src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract"
++        return "src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract"
+@@ -75 +75 @@ def fixed_contract_source(path):
+-        return "src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract"
++        return "src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract"
+@@ -79 +79 @@ def fixed_contract_source(path):
+-        return "src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract"
++        return "src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action census contract"
+@@ -93 +93 @@ def fixed_contract_source(path):
+-        return "src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership"
++        return "src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership"
+diff --git a/tools/summarize_p1_01_performance.py b/tools/summarize_p1_01_performance.py
+new file mode 100644
+index 0000000..8af1c7b
+--- /dev/null
++++ b/tools/summarize_p1_01_performance.py
+@@ -0,0 +1,189 @@
++#!/usr/bin/env python3
++"""Summarize P1-01 all-attempt latency/RSS/work without dropping failures."""
++
++from __future__ import annotations
++
++import argparse
++import csv
++import json
++import math
++import pathlib
++import re
++from typing import Iterable, Optional
++
++
++def percentile(values: list[float], probability: float) -> Optional[float]:
++    if not values:
++        return None
++    ordered = sorted(values)
++    position = (len(ordered) - 1) * probability
++    lower = int(math.floor(position))
++    upper = int(math.ceil(position))
++    if lower == upper:
++        return ordered[lower]
++    weight = position - lower
++    return ordered[lower] * (1.0 - weight) + ordered[upper] * weight
++
++
++def distribution(values: Iterable[float]) -> dict:
++    items = list(values)
++    return {
++        "count": len(items),
++        "p50_ms": percentile(items, 0.50),
++        "p95_ms": percentile(items, 0.95),
++        "p99_ms": percentile(items, 0.99),
++        "max_ms": max(items) if items else None,
++    }
++
++
++def parse_work(path: pathlib.Path) -> dict[str, int]:
++    text = path.read_text(encoding="utf-8")
++    lines = [line for line in text.splitlines()
++             if line.startswith("numerical_work ")]
++    if len(lines) != 1:
++        raise ValueError(f"{path}: expected one numerical_work line")
++    return {key: int(value) for key, value in
++            re.findall(r"([a-z0-9_]+)=([0-9]+)", lines[0])}
++
++
++def parse_rss(path: pathlib.Path) -> int:
++    match = re.search(r"Maximum resident set size \(kbytes\): ([0-9]+)",
++                      path.read_text(encoding="utf-8"))
++    if not match:
++        raise ValueError(f"{path}: maximum RSS is absent")
++    return int(match.group(1))
++
++
++def summarize_run(run_dir: pathlib.Path, stdout: pathlib.Path,
++                  time_file: pathlib.Path) -> dict:
++    timings: dict[int, dict[str, dict[str, object]]] = {}
++    with (run_dir / "timing.csv").open(newline="", encoding="utf-8") as stream:
++        for row in csv.DictReader(stream):
++            attempt = int(row["epoch"])
++            timings.setdefault(attempt, {})[row["stage"]] = {
++                "wall_ms": float(row["wall_ms"]),
++                "success": row["success"] == "1",
++            }
++    integrity: list[dict[str, str]] = []
++    with (run_dir / "integrity.csv").open(newline="", encoding="utf-8") as stream:
++        integrity = list(csv.DictReader(stream))
++    with (run_dir / "diagnostic_attempts.csv").open(
++            newline="", encoding="utf-8") as stream:
++        diagnostics = list(csv.DictReader(stream))
++    attempted = len(integrity)
++    if len(diagnostics) != attempted:
++        raise ValueError(f"{run_dir}: diagnostic attempt denominator mismatch")
++    expected = list(range(1, attempted + 1))
++    complete = [attempt for attempt in expected
++                if "core_total" in timings.get(attempt, {}) and
++                "outer_epoch" in timings.get(attempt, {}) and
++                all(stage["success"]
++                    for stage in timings.get(attempt, {}).values())]
++    if len(timings) != attempted or len(complete) != attempted:
++        raise ValueError(f"{run_dir}: incomplete all-attempt timing denominator")
++    core = [timings[index]["core_total"]["wall_ms"] for index in expected]
++    # processUwbBatch return is the analysis-completion boundary in this
++    # benchmark, so core_total and analysis_completion deliberately share the
++    # same clock sample. outer_epoch ends after the durable final output sink.
++    publish = [timings[index]["outer_epoch"]["wall_ms"] for index in expected]
++    deadline_misses = sum(int(row["deadline_missed"]) for row in integrity)
++    sensor_stale = sum(int(row["watchdog_sensor_stale"])
++                       for row in diagnostics)
++    watchdog_refusals = sum(row["status"] == "WATCHDOG_REFUSED"
++                            for row in diagnostics)
++    unopened = sum(row["transaction_opened"] != "1" for row in diagnostics)
++    outcomes = []
++    for index, (integrity_row, diagnostic_row) in enumerate(
++            zip(integrity, diagnostics), 1):
++        outcomes.append({
++            "attempt": index,
++            "complete_work": index in complete,
++            "deadline_missed": integrity_row["deadline_missed"] == "1",
++            "sensor_stale": diagnostic_row["watchdog_sensor_stale"] == "1",
++            "status": diagnostic_row["status"],
++            "terminal_reason": diagnostic_row["reason"],
++            "transaction_opened": diagnostic_row["transaction_opened"] == "1",
++        })
++    return {
++        "run_directory": str(run_dir),
++        "attempted": attempted,
++        "excluded": 0,
++        "complete_work_attempts": len(complete),
++        "complete_work_rate": len(complete) / attempted if attempted else 0.0,
++        "deadline_misses": deadline_misses,
++        "deadline_miss_rate": deadline_misses / attempted if attempted else 0.0,
++        "sensor_stale_attempts": sensor_stale,
++        "watchdog_refused_attempts": watchdog_refusals,
++        "transaction_unopened_attempts": unopened,
++        "core_compute": distribution(core),
++        "analysis_completion": distribution(core),
++        "arrival_to_publish": distribution(publish),
++        "rss_peak_kib": parse_rss(time_file),
++        "work_counters": parse_work(stdout),
++        "raw_core_ms": core,
++        "raw_analysis_completion_ms": core,
++        "raw_arrival_to_publish_ms": publish,
++        "raw_attempt_outcomes": outcomes,
++    }
++
++
++def summarize_group(root: pathlib.Path) -> dict:
++    run_dirs = sorted(path for path in root.glob("run*") if path.is_dir())
++    if not run_dirs:
++        raise ValueError(f"{root}: no run directories")
++    runs = []
++    for run_dir in run_dirs:
++        suffix = run_dir.name[3:]
++        runs.append(summarize_run(run_dir, root / f"run{suffix}.stdout",
++                                  root / f"run{suffix}.time"))
++    all_core = [value for run in runs for value in run["raw_core_ms"]]
++    all_analysis = [value for run in runs
++                    for value in run["raw_analysis_completion_ms"]]
++    all_publish = [value for run in runs
++                   for value in run["raw_arrival_to_publish_ms"]]
++    aggregate = {
++        "attempted": sum(run["attempted"] for run in runs),
++        "excluded": 0,
++        "complete_work_attempts": sum(run["complete_work_attempts"]
++                                      for run in runs),
++        "deadline_misses": sum(run["deadline_misses"] for run in runs),
++        "sensor_stale_attempts": sum(run["sensor_stale_attempts"]
++                                      for run in runs),
++        "watchdog_refused_attempts": sum(run["watchdog_refused_attempts"]
++                                          for run in runs),
++        "transaction_unopened_attempts": sum(
++            run["transaction_unopened_attempts"] for run in runs),
++        "core_compute": distribution(all_core),
++        "analysis_completion": distribution(all_analysis),
++        "arrival_to_publish": distribution(all_publish),
++        "rss_peak_kib": max(run["rss_peak_kib"] for run in runs),
++    }
++    aggregate["complete_work_rate"] = (
++        aggregate["complete_work_attempts"] / aggregate["attempted"])
++    aggregate["deadline_miss_rate"] = (
++        aggregate["deadline_misses"] / aggregate["attempted"])
++    return {"root": str(root), "runs": runs, "aggregate": aggregate}
++
++
++def main() -> int:
++    parser = argparse.ArgumentParser()
++    parser.add_argument("roots", nargs="+", type=pathlib.Path)
++    parser.add_argument("--output", required=True, type=pathlib.Path)
++    args = parser.parse_args()
++    payload = {
++        "schema": "uwb-imu-pl/p1-01-performance/v1",
++        "timing_boundaries": {
++            "core_compute": "production processUwbBatch wall interval",
++            "analysis_completion": "same processUwbBatch return sample",
++            "arrival_to_publish": "arrival through durable final logger sink",
++        },
++        "groups": [summarize_group(root) for root in args.roots],
++    }
++    args.output.parent.mkdir(parents=True, exist_ok=True)
++    args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n",
++                           encoding="utf-8")
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())

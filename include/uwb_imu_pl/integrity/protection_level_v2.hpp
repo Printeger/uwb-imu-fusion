@@ -170,6 +170,15 @@ bool mintCommitProtectionEvidenceV1(
     const std::string& frame_id,
     CommitProtectionEvidenceV1* evidence,
     std::string* reason = nullptr);
+bool mintCommitProtectionEvidenceV1(
+    const EpochTransaction& transaction,
+    const FrozenWindowAdmission& admission,
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    std::uint64_t protection_proof_identity,
+    const std::string& frame_id,
+    CommitProtectionEvidenceV1* evidence,
+    std::string* reason = nullptr);
 bool consumeCommitProtectionEvidenceV1(
     const CommitProtectionEvidenceV1& evidence,
     const EpochTransaction& transaction,
@@ -220,12 +229,27 @@ class ProtectionLevelV2 {
       std::vector<FaultHypothesisV2>* remaining_hypotheses,
       const ProtectionLevelSharedContext& shared,
       const RiskBudgetV2& risk) const;
+  ProtectionLevelV2Result computeShared(
+      const FrozenWindowAdmission& admission,
+      CandidateEvaluation* candidate,
+      const DetectorResultV2& detector,
+      std::vector<FaultHypothesisV2>* remaining_hypotheses,
+      const ProtectionLevelSharedContext& shared,
+      const RiskBudgetV2& risk) const;
 
   // Additive P0-07 overload: returns the exact in-call proof payload even
   // when the served result fails closed before it can enter the ordinary
   // valid-result proof registry. Existing signatures/layouts stay unchanged.
   ProtectionLevelV2Result computeShared(
       const LinearizedIntegrityWindow& window,
+      CandidateEvaluation* candidate,
+      const DetectorResultV2& detector,
+      std::vector<FaultHypothesisV2>* remaining_hypotheses,
+      const ProtectionLevelSharedContext& shared,
+      const RiskBudgetV2& risk,
+      ProtectionLevelV2ProofV1* computation_audit) const;
+  ProtectionLevelV2Result computeShared(
+      const FrozenWindowAdmission& admission,
       CandidateEvaluation* candidate,
       const DetectorResultV2& detector,
       std::vector<FaultHypothesisV2>* remaining_hypotheses,
@@ -249,6 +273,17 @@ class ProtectionLevelV2 {
 
   static double detectionBoundaryNoncentralitySquared(
       int dof, double squared_threshold, double p_md);
+
+ private:
+  ProtectionLevelV2Result computeSharedImpl(
+      const LinearizedIntegrityWindow& window,
+      CandidateEvaluation* candidate,
+      const DetectorResultV2& detector,
+      std::vector<FaultHypothesisV2>* remaining_hypotheses,
+      const ProtectionLevelSharedContext& shared,
+      const RiskBudgetV2& risk,
+      ProtectionLevelV2ProofV1* computation_audit,
+      const FrozenWindowAdmission* admission) const;
 };
 
 }  // namespace uwb_imu_pl

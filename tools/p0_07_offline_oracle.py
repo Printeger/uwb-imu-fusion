@@ -62,21 +62,21 @@ def fixed_contract_source(path):
     if path == "authority":
         return "docs/evidence/p0-07-corrected-exhaustive/oracle-manifest-v1.json:3:authority/declarative authority boundary"
     if path.startswith("factor_construction.history_raw.slot_rules"):
-        return "src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/factor-ledger slot identity"
+        return "src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/factor-ledger slot identity"
     if path.startswith("factor_construction.history_raw.group_rules"):
         return "src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/factor group identity"
     if path.startswith("detector_and_action_recipe.action_generation.replacement_group"):
-        return "src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity"
+        return "src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/replacement identity"
     if path.startswith("fault_contract"):
-        return "src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1198:HypothesisGenerator::generate/physical fault-family contract"
+        return "src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1218:HypothesisGenerator::generate/physical fault-family contract"
     if path.startswith("tolerance_policy"):
         return "tools/p0_07_compare_protocols.py:15:close/quantity-aware comparison policy"
     if path.startswith("missing_provenance_fixture"):
-        return "src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract"
+        return "src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action provenance fail-closed contract"
     if path.startswith("detector_and_action_recipe.detector"):
         return "src/uwb_imu_pl/integrity/joint_window_detector.cpp:146:JointWindowDetector::evaluate/dual-channel detector contract"
     if path.startswith("detector_and_action_recipe.action_generation"):
-        return "src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1846:HypothesisGenerator::actionsForPlausibleSetV1/action census contract"
+        return "src/uwb_imu_pl/integrity/hypothesis_generator.cpp:1866:HypothesisGenerator::actionsForPlausibleSetV1/action census contract"
     if path.startswith("detector_and_action_recipe.risk"):
         return "src/uwb_imu_pl/integrity/risk_budget_audit.cpp:128:buildRiskLedger/risk contract"
     if path.startswith("detector_and_action_recipe.selection"):
@@ -90,7 +90,7 @@ def fixed_contract_source(path):
     if path.startswith("factor_construction.whitening"):
         return "src/uwb_imu_pl/estimation/incremental_estimator.cpp:1386:IncrementalUwbImuEstimator::buildIntegrityWindow/upper information root"
     if path.startswith("factor_construction.history_raw"):
-        return "src/uwb_imu_pl/estimation/incremental_estimator.cpp:3212:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership"
+        return "src/uwb_imu_pl/estimation/incremental_estimator.cpp:3218:IncrementalUwbImuEstimator::auditRawRowOwnershipV1/raw ownership"
     if path.startswith("replay"):
         return "tools/p0_07_production_probe.cpp:144:main/frozen replay protocol"
     raise KeyError("FIXED path has no audited production source: " + path)

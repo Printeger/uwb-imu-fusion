@@ -261,10 +261,14 @@ void hashCertificateEigen(std::uint64_t* hash,
 
 std::uint64_t candidateNumericalProofIdentityImpl(
     const LinearizedIntegrityWindow& window,
-    const CandidateEvaluation& candidate) {
+    const CandidateEvaluation& candidate,
+    const FrozenWindowAdmission* admission = nullptr) {
   std::uint64_t proof = 1469598103934665603ULL;
-  const std::uint64_t parent = window.numerics
-      ? frozenWindowNumericalProofIdentity(window, *window.numerics) : 0;
+  const std::uint64_t parent = admission
+      ? admission->owner->numerical_identity.proof_identity
+      : (window.numerics
+             ? frozenWindowNumericalProofIdentity(window, *window.numerics)
+             : 0);
   hashCertificateScalar(&proof, parent);
   hashCertificateScalar(&proof,
                         candidateDetectorActionIdentity(candidate.action));
@@ -322,9 +326,43 @@ std::uint64_t blockCertificateIdentity(const LinearizedFactorBlock& block) {
   return hash;
 }
 
+std::uint64_t constantWindowContentIdentity(
+    const LinearizedIntegrityWindow& window,
+    const FrozenWindowAdmission* admission = nullptr) {
+  if (admission && admission->owner->content_hash != 0) {
+    NumericalWorkCounters::frozenIdentityReuse();
+    return admission->owner->content_hash;
+  }
+  return integrityWindowFingerprint(window);
+}
+
+std::uint64_t candidateDetectorNumericalIdentityFromFingerprint(
+    const LinearizedIntegrityWindow& window,
+    const ExclusionAction& action,
+    std::uint64_t window_fingerprint) {
+  std::uint64_t hash = 1469598103934665603ULL;
+  hashCertificateScalar(&hash, window_fingerprint);
+  const std::uint64_t numerical_contract = window.numerics
+      ? window.numerics->numerical_contract_fingerprint : 0;
+  hashCertificateScalar(&hash, numerical_contract);
+  const bool no_op = action.groups_to_remove.empty() &&
+      action.groups_to_add.empty() && action.added_blocks.empty();
+  const std::uint64_t numerical_action = no_op
+      ? 0 : candidateDetectorActionIdentity(action);
+  hashCertificateScalar(&hash, numerical_action);
+  return hash;
+}
+
+std::uint64_t candidateDetectorCertificateDigestImpl(
+    const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate,
+    const CandidateDetectorCertificate& certificate,
+    const FrozenWindowAdmission* admission);
+
 CandidateDetectorCertificate buildCandidateDetectorCertificate(
     const LinearizedIntegrityWindow& window, const ExclusionAction& action,
-    const CandidateEvaluation& candidate, double rank_tolerance) {
+    const CandidateEvaluation& candidate, double rank_tolerance,
+    const FrozenWindowAdmission* admission = nullptr) {
   CandidateDetectorCertificate out;
   out.accepted_event_id = "dual_channel_intersection_v6";
   out.pooled_rank = candidate.rank;
@@ -460,14 +498,15 @@ CandidateDetectorCertificate buildCandidateDetectorCertificate(
     return out;
   }
 
-  out.window_fingerprint = integrityWindowFingerprint(window);
+  out.window_fingerprint = constantWindowContentIdentity(window, admission);
   out.numerical_contract_identity = window.numerics
       ? window.numerics->numerical_contract_fingerprint : 0;
   out.canonical_action_identity = candidateDetectorActionIdentity(action);
-  out.numerical_identity = candidateDetectorNumericalIdentity(window, action);
+  out.numerical_identity = candidateDetectorNumericalIdentityFromFingerprint(
+      window, action, out.window_fingerprint);
   out.valid = true;
-  out.certificate_digest = candidateDetectorCertificateDigest(
-      window, candidate, out);
+  out.certificate_digest = candidateDetectorCertificateDigestImpl(
+      window, candidate, out, admission);
   return out;
 }
 
@@ -526,6 +565,15 @@ std::uint64_t candidateNumericalProofIdentity(
   return candidateNumericalProofIdentityImpl(window, candidate);
 }
 
+std::uint64_t candidateNumericalProofIdentity(
+    const FrozenWindowAdmission& admission,
+    const CandidateEvaluation& candidate) {
+  return admission
+      ? candidateNumericalProofIdentityImpl(
+            admission.window(), candidate, &admission)
+      : 0;
+}
+
 std::uint64_t candidateDetectorActionIdentity(
     const ExclusionAction& action) {
   std::uint64_t hash = 1469598103934665603ULL;
@@ -576,25 +624,37 @@ std::uint64_t candidateDetectorActionIdentity(
 std::uint64_t candidateDetectorNumericalIdentity(
     const LinearizedIntegrityWindow& window,
     const ExclusionAction& action) {
-  std::uint64_t hash = 1469598103934665603ULL;
-  hashCertificateScalar(&hash, integrityWindowFingerprint(window));
-  const std::uint64_t numerical_contract = window.numerics
-      ? window.numerics->numerical_contract_fingerprint : 0;
-  hashCertificateScalar(&hash, numerical_contract);
-  const bool no_op = action.groups_to_remove.empty() &&
-      action.groups_to_add.empty() && action.added_blocks.empty();
-  const std::uint64_t numerical_action = no_op
-      ? 0 : candidateDetectorActionIdentity(action);
-  hashCertificateScalar(&hash, numerical_action);
-  return hash;
+  return candidateDetectorNumericalIdentityFromFingerprint(
+      window, action, constantWindowContentIdentity(window));
+}
+
+std::uint64_t candidateDetectorNumericalIdentity(
+    const FrozenWindowAdmission& admission,
+    const ExclusionAction& action) {
+  return admission
+      ? candidateDetectorNumericalIdentityFromFingerprint(
+            admission.window(), action,
+            constantWindowContentIdentity(admission.window(), &admission))
+      : 0;
 }
 
 std::uint64_t candidateDetectorCertificateDigest(
     const LinearizedIntegrityWindow& window,
     const CandidateEvaluation& candidate,
     const CandidateDetectorCertificate& certificate) {
+  return candidateDetectorCertificateDigestImpl(
+      window, candidate, certificate, nullptr);
+}
+
+namespace {
+
+std::uint64_t candidateDetectorCertificateDigestImpl(
+    const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate,
+    const CandidateDetectorCertificate& certificate,
+    const FrozenWindowAdmission* admission) {
   std::uint64_t hash = 1469598103934665603ULL;
-  hashCertificateScalar(&hash, integrityWindowFingerprint(window));
+  hashCertificateScalar(&hash, certificate.window_fingerprint);
   const std::uint64_t numerical_contract = window.numerics
       ? window.numerics->numerical_contract_fingerprint : 0;
   hashCertificateScalar(&hash, numerical_contract);
@@ -609,9 +669,13 @@ std::uint64_t candidateDetectorCertificateDigest(
   hashCertificateScalar(&hash, candidate.valid);
   hashCertificateScalar(&hash, candidate.exact_slow_path);
   hashCertificateScalar(&hash,
-                        candidateNumericalProofIdentityImpl(window, candidate));
+                        candidateNumericalProofIdentityImpl(
+                            window, candidate, admission));
   const std::uint64_t candidate_window_fingerprint = candidate.window_view
-      ? integrityWindowFingerprint(*candidate.window_view) : 0;
+      ? (candidate.window_view == &window
+            ? certificate.window_fingerprint
+            : constantWindowContentIdentity(*candidate.window_view))
+      : 0;
   hashCertificateScalar(&hash, candidate_window_fingerprint);
   hashCertificateEigen(&hash, candidate.state_increment);
   hashCertificateEigen(&hash, candidate.covariance);
@@ -659,10 +723,15 @@ std::uint64_t candidateDetectorCertificateDigest(
   return hash;
 }
 
-bool validateCandidateDetectorCertificate(
+}  // namespace
+
+namespace {
+
+bool validateCandidateDetectorCertificateImpl(
     const LinearizedIntegrityWindow& window,
     const CandidateEvaluation& candidate,
-    std::string* reason) {
+    std::string* reason,
+    const FrozenWindowAdmission* admission) {
   auto reject = [&](const std::string& message) {
     if (reason) *reason = message;
     return false;
@@ -670,22 +739,40 @@ bool validateCandidateDetectorCertificate(
   if (!window.model_valid || !window.numerics || !window.numerics->valid ||
       window.numerics->window_id != window.id ||
       !(window.numerics->version == window.version) ||
-      window.numerics->content_fingerprint != integrityWindowFingerprint(window) ||
       window.numerics->numerical_contract_fingerprint !=
           numericalContractFingerprint(window.numerics->numerical_contract) ||
-      !validateFrozenWindowNumericalProof(window, *window.numerics)) {
+      !(admission
+            ? validateFrozenWindowNumericalProof(
+                  *admission, *window.numerics)
+            : validateFrozenWindowNumericalProof(window, *window.numerics))) {
     return reject("candidate certificate window identity mismatch");
   }
   if (!(candidate.base_version == window.version)) {
     return reject("candidate certificate linearization version mismatch");
   }
   const std::uint64_t expected_proof =
-      candidateNumericalProofIdentityImpl(window, candidate);
-  if (candidate.window_view &&
-      (candidate.window_view->id != window.id ||
-       !(candidate.window_view->version == window.version) ||
-       integrityWindowFingerprint(*candidate.window_view) !=
-           integrityWindowFingerprint(window))) {
+      candidateNumericalProofIdentityImpl(window, candidate, admission);
+  if (admission) {
+    // A sealed candidate is valid only for the exact immutable owner that
+    // produced it.  The aliasing shared_ptr retains that owner while exposing
+    // the established LLT pointer, so this is constant-work, survives payload
+    // address reuse, and does not alter CandidateEvaluation's public layout.
+    const bool same_owner = candidate.shared_base_factorization &&
+        window.numerics->information_factorization &&
+        candidate.shared_base_factorization.get() ==
+            window.numerics->information_factorization.get() &&
+        !candidate.shared_base_factorization.owner_before(admission->owner) &&
+        !admission->owner.owner_before(candidate.shared_base_factorization);
+    if (candidate.window_view != &admission->window() || !same_owner) {
+      return reject("candidate source window owner/payload identity mismatch");
+    }
+  } else if (candidate.window_view && candidate.window_view != &window &&
+             (candidate.window_view->id != window.id ||
+              !(candidate.window_view->version == window.version) ||
+              integrityWindowFingerprint(*candidate.window_view) !=
+                  integrityWindowFingerprint(window))) {
+    // Compatibility API: without a typed admission there is no owner to bind.
+    // Preserve the checkpoint's complete content fingerprint fallback.
     return reject("candidate source window identity mismatch");
   }
   std::string action_reason;
@@ -695,7 +782,7 @@ bool validateCandidateDetectorCertificate(
   const CandidateDetectorCertificate expected =
       buildCandidateDetectorCertificate(
           window, candidate.action, candidate,
-          window.numerics->numerical_contract.rank_tolerance);
+          window.numerics->numerical_contract.rank_tolerance, admission);
   const auto& actual = candidate.detector_certificate;
   if (!actual.valid || !expected.valid) {
     return reject("candidate detector certificate is not valid");
@@ -724,14 +811,36 @@ bool validateCandidateDetectorCertificate(
   if (!fields_match) {
     return reject("candidate detector certificate payload mismatch");
   }
-  const std::uint64_t recomputed = candidateDetectorCertificateDigest(
-      window, candidate, actual);
+  const std::uint64_t recomputed = candidateDetectorCertificateDigestImpl(
+      window, candidate, actual, admission);
   if (actual.certificate_digest == 0 ||
       actual.certificate_digest != recomputed ||
       actual.certificate_digest != expected.certificate_digest) {
     return reject("candidate detector certificate digest mismatch");
   }
   return true;
+}
+
+}  // namespace
+
+bool validateCandidateDetectorCertificate(
+    const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate,
+    std::string* reason) {
+  return validateCandidateDetectorCertificateImpl(
+      window, candidate, reason, nullptr);
+}
+
+bool validateCandidateDetectorCertificate(
+    const FrozenWindowAdmission& admission,
+    const CandidateEvaluation& candidate,
+    std::string* reason) {
+  if (!admission) {
+    if (reason) *reason = "immutable frozen-window admission is invalid";
+    return false;
+  }
+  return validateCandidateDetectorCertificateImpl(
+      admission.window(), candidate, reason, &admission);
 }
 
 Eigen::MatrixXd CandidateEvaluation::covarianceTimes(
@@ -888,6 +997,25 @@ Eigen::MatrixXd CandidateEvaluation::normalCross(
 BaseCandidateKernel RankUpdateEvaluator::factorizeOnce(
     const LinearizedIntegrityWindow& window,
     const std::vector<ExclusionAction>& actions) const {
+  return factorizeOnceImpl(window, actions, nullptr);
+}
+
+BaseCandidateKernel RankUpdateEvaluator::factorizeOnce(
+    const FrozenWindowAdmission& admission,
+    const std::vector<ExclusionAction>& actions) const {
+  if (!admission) {
+    BaseCandidateKernel base;
+    base.reason = "invalid immutable frozen-window admission: " +
+        admission.reason;
+    return base;
+  }
+  return factorizeOnceImpl(admission.window(), actions, &admission);
+}
+
+BaseCandidateKernel RankUpdateEvaluator::factorizeOnceImpl(
+    const LinearizedIntegrityWindow& window,
+    const std::vector<ExclusionAction>& actions,
+    const FrozenWindowAdmission* admission) const {
   BaseCandidateKernel base;
   base.window_id = window.id;
   base.version = window.version;
@@ -911,7 +1039,11 @@ BaseCandidateKernel RankUpdateEvaluator::factorizeOnce(
   if (!window.numerics || !window.numerics->valid ||
       !(window.numerics->window_id == window.id) ||
       !(window.numerics->version == window.version) ||
-      window.numerics->content_fingerprint != integrityWindowFingerprint(window) ||
+      !(admission
+            ? validateFrozenWindowNumericalProof(
+                  *admission, *window.numerics)
+            : window.numerics->content_fingerprint ==
+                  integrityWindowFingerprint(window)) ||
       window.numerics->numerical_contract_fingerprint !=
           numericalContractFingerprint(config_.rank_tolerance,
                                        config_.max_condition_number)) {
@@ -951,13 +1083,15 @@ void RankUpdateEvaluator::buildSharedCache(BaseCandidateKernel* kernel,
       !std::getenv("UWB_IMU_PL_DISABLE_BLOCK_CACHE")) {
     auto cache = std::make_shared<FrozenBlockSolveCache>();
     cache->window_id = window.id; cache->version = window.version;
+    std::map<FactorGroupId, std::vector<const LinearizedFactorBlock*>> unique;
     auto add = [&](const LinearizedFactorBlock& block) {
       if (!validBlock(block, window)) return;
-      auto& entries = cache->blocks[block.group_id];
-      if (std::any_of(entries.begin(), entries.end(), [&](const auto& e) { return sameBlock(e.block, block); })) return;
-      entries.push_back({block, solveFrozenInformation(
-          window.square_root.get(), *base.numerics, window.base_information,
-          block.jacobian_whitened.transpose())});
+      auto& entries = unique[block.group_id];
+      if (std::any_of(entries.begin(), entries.end(),
+                      [&](const auto* entry) {
+                        return sameBlock(*entry, block);
+                      })) return;
+      entries.push_back(&block);
     };
     std::set<FactorGroupId> removals;
     for (const auto& action : actions) {
@@ -965,18 +1099,73 @@ void RankUpdateEvaluator::buildSharedCache(BaseCandidateKernel* kernel,
       for (const auto& block : action.added_blocks) add(block);
     }
     for (const auto& block : window.blocks) if (removals.count(block.group_id)) add(block);
-    base.block_cache = std::move(cache);
+    std::vector<const LinearizedFactorBlock*> ordered;
+    Eigen::Index rhs_columns = 0;
+    for (const auto& group : unique) {
+      for (const auto* block : group.second) {
+        ordered.push_back(block);
+        rhs_columns += block->jacobian_whitened.rows();
+      }
+    }
+    if (rhs_columns > 0) {
+      Eigen::MatrixXd rhs(window.H.cols(), rhs_columns);
+      Eigen::Index offset = 0;
+      for (const auto* block : ordered) {
+        const Eigen::Index columns = block->jacobian_whitened.rows();
+        rhs.middleCols(offset, columns) =
+            block->jacobian_whitened.transpose();
+        offset += columns;
+      }
+      NumericalWorkCounters::blockRhsSolveBatch(ordered.size());
+      const Eigen::MatrixXd solved = solveFrozenInformation(
+          window.square_root.get(), *base.numerics, window.base_information,
+          rhs);
+      if (solved.rows() == window.H.cols() &&
+          solved.cols() == rhs_columns && solved.allFinite()) {
+        offset = 0;
+        for (const auto* block : ordered) {
+          const Eigen::Index columns = block->jacobian_whitened.rows();
+          cache->blocks[block->group_id].push_back(
+              {*block, solved.middleCols(offset, columns)});
+          offset += columns;
+        }
+        base.block_cache = std::move(cache);
+      }
+    } else {
+      base.block_cache = std::move(cache);
+    }
   }
 }
 
 CandidateEvaluation RankUpdateEvaluator::evaluate(
     const BaseCandidateKernel& base, const ExclusionAction& action) const {
-  return evaluate(base, action, nullptr);
+  return evaluateImpl(base, action, nullptr, nullptr);
 }
 
 CandidateEvaluation RankUpdateEvaluator::evaluate(
     const BaseCandidateKernel& base, const ExclusionAction& action,
     RankUpdateScratch* scratch) const {
+  return evaluateImpl(base, action, scratch, nullptr);
+}
+
+CandidateEvaluation RankUpdateEvaluator::evaluate(
+    const FrozenWindowAdmission& admission,
+    const BaseCandidateKernel& base, const ExclusionAction& action,
+    RankUpdateScratch* scratch) const {
+  if (!admission) {
+    CandidateEvaluation result;
+    result.action = action;
+    result.reason = "invalid immutable frozen-window admission: " +
+        admission.reason;
+    return result;
+  }
+  return evaluateImpl(base, action, scratch, &admission);
+}
+
+CandidateEvaluation RankUpdateEvaluator::evaluateImpl(
+    const BaseCandidateKernel& base, const ExclusionAction& action,
+    RankUpdateScratch* scratch,
+    const FrozenWindowAdmission* admission) const {
   CandidateEvaluation result;
   const auto start = std::chrono::steady_clock::now();
   result.action = action;
@@ -990,9 +1179,16 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
   result.diagnostics.kernel_evaluated = true;
   result.diagnostics.numerical_path = "ADD_THEN_REMOVE_SVD";
   auto done = [&]() {
+    if (admission && window.numerics &&
+        window.numerics->information_factorization) {
+      result.shared_base_factorization =
+          std::shared_ptr<const Eigen::LLT<Eigen::MatrixXd>>(
+              admission->owner,
+              window.numerics->information_factorization.get());
+    }
     if (result.valid && !result.detector_certificate.valid) {
       result.detector_certificate = buildCandidateDetectorCertificate(
-          window, action, result, config_.rank_tolerance);
+          window, action, result, config_.rank_tolerance, admission);
     }
     result.wall_ms = std::chrono::duration<double, std::milli>(
         std::chrono::steady_clock::now() - start).count();
@@ -1005,7 +1201,10 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
   // Validate the complete change before any Eigen operation or early gate.
   if (!validateAction(window, action, &result.reason)) return done();
   if (!base.numerics ||
-      base.numerics->content_fingerprint != integrityWindowFingerprint(window)) {
+      !(admission
+            ? validateFrozenWindowNumericalProof(*admission, *base.numerics)
+            : base.numerics->content_fingerprint ==
+                  integrityWindowFingerprint(window))) {
     result.reason = "missing or stale frozen numerics";
     result.diagnostics.fallback_reason = result.reason;
     return done();
@@ -1361,11 +1560,37 @@ CandidateEvaluation RankUpdateEvaluator::evaluate(
 
 CandidateEvaluation DenseCandidateOracle::evaluate(
     const LinearizedIntegrityWindow& window, const ExclusionAction& action) const {
+  return evaluateImpl(window, action, nullptr);
+}
+
+CandidateEvaluation DenseCandidateOracle::evaluate(
+    const FrozenWindowAdmission& admission,
+    const ExclusionAction& action) const {
+  if (!admission) {
+    CandidateEvaluation result;
+    result.action = action;
+    result.reason = "invalid immutable frozen-window admission: " +
+        admission.reason;
+    return result;
+  }
+  return evaluateImpl(admission.window(), action, &admission);
+}
+
+CandidateEvaluation DenseCandidateOracle::evaluateImpl(
+    const LinearizedIntegrityWindow& window, const ExclusionAction& action,
+    const FrozenWindowAdmission* admission) const {
   CandidateEvaluation result;
   const auto wall_start = std::chrono::steady_clock::now();
   result.action = action;
   result.base_version = window.version;
   result.window_view = &window;
+  if (admission && window.numerics &&
+      window.numerics->information_factorization) {
+    result.shared_base_factorization =
+        std::shared_ptr<const Eigen::LLT<Eigen::MatrixXd>>(
+            admission->owner,
+            window.numerics->information_factorization.get());
+  }
   if (!validateAction(window, action, &result.reason)) return result;
   for (const auto& block : action.added_blocks) {
     if (!(block.version == window.version) ||
@@ -1403,7 +1628,7 @@ CandidateEvaluation DenseCandidateOracle::evaluate(
   result.diagnostics.numerical_path = "DENSE_DIRECT_SVD";
   if (result.valid) {
     result.detector_certificate = buildCandidateDetectorCertificate(
-        window, action, result, config_.rank_tolerance);
+        window, action, result, config_.rank_tolerance, admission);
   }
   result.diagnostics.condition_value_kind = "EXACT_SVD";
   result.wall_ms = std::chrono::duration<double, std::milli>(
@@ -1431,6 +1656,33 @@ CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
     const ExclusionAction& action,
     RankUpdateScratch* scratch,
     CandidateRouteSafetyV1* safety_output) const {
+  return evaluateImpl(window, base, action, scratch, safety_output, nullptr);
+}
+
+CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
+    const FrozenWindowAdmission& admission,
+    const BaseCandidateKernel& base,
+    const ExclusionAction& action,
+    RankUpdateScratch* scratch,
+    CandidateRouteSafetyV1* safety_output) const {
+  if (!admission) {
+    CandidateEvaluation result;
+    result.action = action;
+    result.reason = "invalid immutable frozen-window admission: " +
+        admission.reason;
+    return result;
+  }
+  return evaluateImpl(admission.window(), base, action, scratch,
+                      safety_output, &admission);
+}
+
+CandidateEvaluation CandidateEvaluationRouterV1::evaluateImpl(
+    const LinearizedIntegrityWindow& window,
+    const BaseCandidateKernel& base,
+    const ExclusionAction& action,
+    RankUpdateScratch* scratch,
+    CandidateRouteSafetyV1* safety_output,
+    const FrozenWindowAdmission* admission) const {
   CandidateRouteSafetyV1 safety;
   auto refuse_rank = [&](const std::string& reason) {
     safety.rank_path_safe = false;
@@ -1442,7 +1694,9 @@ CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
   // independent of the add/downdate implementation.  Consequently no rank
   // operation is attempted merely because an action happens to have a known
   // type, amplitude, or ID.
-  CandidateEvaluation exact = dense_.evaluate(window, action);
+  CandidateEvaluation exact = admission
+      ? dense_.evaluate(*admission, action)
+      : dense_.evaluate(window, action);
   // Keep the golden DenseCandidateOracle API/semantics untouched.  The new
   // P0-06 router strengthens only its own terminal fallback by recomputing the
   // final raw-H SVD state/covariance; this avoids using an H' H inverse as the
@@ -1478,7 +1732,7 @@ CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
       exact.detector_certificate = {};
       if (exact.valid) {
         exact.detector_certificate = buildCandidateDetectorCertificate(
-            window, action, exact, config_.rank_tolerance);
+            window, action, exact, config_.rank_tolerance, admission);
       }
     }
   }
@@ -1501,7 +1755,7 @@ CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
     exact.detector_certificate = {};
     if (exact.valid) {
       exact.detector_certificate = buildCandidateDetectorCertificate(
-          window, action, exact, config_.rank_tolerance);
+          window, action, exact, config_.rank_tolerance, admission);
     }
     return exact;
   };
@@ -1509,8 +1763,9 @@ CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
   bool shape_safe = true;
   if (!base.valid || base.window_view != &window || !base.numerics ||
       base.window_id != window.id || !(base.version == window.version) ||
-      base.numerics->content_fingerprint != integrityWindowFingerprint(window) ||
-      !validateFrozenWindowNumericalProof(window, *base.numerics)) {
+      !(admission
+            ? validateFrozenWindowNumericalProof(*admission, *base.numerics)
+            : validateFrozenWindowNumericalProof(window, *base.numerics))) {
     refuse_rank("RANK_PRECONDITION_BASE_IDENTITY");
     shape_safe = false;
   }
@@ -1563,18 +1818,26 @@ CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
   // block into a fixed row slice.  Certify that exact shape and finiteness
   // before the assignment; an empty/short solve was the concrete NDEBUG crash
   // mechanism reproduced by the fourth review.
-  if (shape_safe) {
+  if (shape_safe && !changed_blocks.empty()) {
+    Eigen::Index rhs_columns = 0;
     for (const auto* block : changed_blocks) {
-      const Eigen::MatrixXd solved = solveFrozenInformation(
-          window.square_root.get(), *base.numerics, window.base_information,
-          block->jacobian_whitened.transpose());
-      if (solved.rows() != window.H.cols() ||
-          solved.cols() != block->jacobian_whitened.rows() ||
-          !solved.allFinite()) {
-        refuse_rank("RANK_PRECONDITION_CHANGED_BLOCK_SOLVE");
-        shape_safe = false;
-        break;
-      }
+      rhs_columns += block->jacobian_whitened.rows();
+    }
+    Eigen::MatrixXd rhs(window.H.cols(), rhs_columns);
+    Eigen::Index offset = 0;
+    for (const auto* block : changed_blocks) {
+      const Eigen::Index columns = block->jacobian_whitened.rows();
+      rhs.middleCols(offset, columns) = block->jacobian_whitened.transpose();
+      offset += columns;
+    }
+    NumericalWorkCounters::blockRhsSolveBatch(changed_blocks.size());
+    const Eigen::MatrixXd solved = solveFrozenInformation(
+        window.square_root.get(), *base.numerics, window.base_information,
+        rhs);
+    if (solved.rows() != window.H.cols() || solved.cols() != rhs_columns ||
+        !solved.allFinite()) {
+      refuse_rank("RANK_PRECONDITION_CHANGED_BLOCK_SOLVE");
+      shape_safe = false;
     }
   }
 
@@ -1606,7 +1869,9 @@ CandidateEvaluation CandidateEvaluationRouterV1::evaluate(
   try {
     result = rank_dependency_
         ? rank_dependency_(base, action, scratch)
-        : rank_.evaluate(base, action, scratch);
+        : (admission
+               ? rank_.evaluate(*admission, base, action, scratch)
+               : rank_.evaluate(base, action, scratch));
   } catch (const std::exception& error) {
     safety.rank_path_safe = false;
     safety.reason = std::string("RANK_EXCEPTION_DENSE_EXACT:") + error.what();

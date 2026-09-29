@@ -67,7 +67,12 @@ class JointWindowDetector {
  public:
   DetectorResultV2 evaluate(const LinearizedIntegrityWindow& window,
                             const DetectorRiskContext& risk) const;
+  DetectorResultV2 evaluate(const FrozenWindowAdmission& admission,
+                            const DetectorRiskContext& risk) const;
   DetectorResultV2 evaluateCandidate(const LinearizedIntegrityWindow& window,
+                                     const CandidateEvaluation& candidate,
+                                     const DetectorRiskContext& risk) const;
+  DetectorResultV2 evaluateCandidate(const FrozenWindowAdmission& admission,
                                      const CandidateEvaluation& candidate,
                                      const DetectorRiskContext& risk) const;
 };

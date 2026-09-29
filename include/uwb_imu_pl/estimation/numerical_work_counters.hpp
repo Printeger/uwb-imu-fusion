@@ -78,6 +78,16 @@ struct NumericalWorkSnapshot {
   std::uint64_t history_perp_rows = 0;
   std::uint64_t history_capacity_refusals = 0;
   std::uint64_t history_summary_invalid = 0;
+  // P1-01/R07 identity/indexing work.  A content scan reads the complete
+  // frozen window; an identity reuse consumes the typed immutable handle.
+  std::uint64_t window_content_hash_scans = 0;
+  std::uint64_t frozen_identity_builds = 0;
+  std::uint64_t frozen_identity_reuses = 0;
+  std::uint64_t descriptor_id_lookups = 0;
+  std::uint64_t descriptor_linear_scans = 0;
+  std::uint64_t block_rhs_solve_batches = 0;
+  std::uint64_t block_rhs_unique_blocks = 0;
+  std::uint64_t frozen_admission_constant_validations = 0;
 };
 
 // Counts actual decomposition/solve construction points.  The counters are
@@ -141,7 +151,15 @@ class NumericalWorkCounters {
             history_emitted_rows_.load(),
             history_perp_rows_.load(),
             history_capacity_refusals_.load(),
-            history_summary_invalid_.load()};
+            history_summary_invalid_.load(),
+            window_content_hash_scans_.load(),
+            frozen_identity_builds_.load(),
+            frozen_identity_reuses_.load(),
+            descriptor_id_lookups_.load(),
+            descriptor_linear_scans_.load(),
+            block_rhs_solve_batches_.load(),
+            block_rhs_unique_blocks_.load(),
+            frozen_admission_constant_validations_.load()};
   }
   static void reset() {
     base_svd_ = 0;
@@ -201,6 +219,14 @@ class NumericalWorkCounters {
     history_perp_rows_ = 0;
     history_capacity_refusals_ = 0;
     history_summary_invalid_ = 0;
+    window_content_hash_scans_ = 0;
+    frozen_identity_builds_ = 0;
+    frozen_identity_reuses_ = 0;
+    descriptor_id_lookups_ = 0;
+    descriptor_linear_scans_ = 0;
+    block_rhs_solve_batches_ = 0;
+    block_rhs_unique_blocks_ = 0;
+    frozen_admission_constant_validations_ = 0;
   }
   static void baseSvd() { ++base_svd_; }
   static void baseLlt() { ++base_llt_; }
@@ -301,6 +327,24 @@ class NumericalWorkCounters {
   }
   static void historyCapacityRefusal() { ++history_capacity_refusals_; }
   static void historySummaryInvalid() { ++history_summary_invalid_; }
+  static void windowContentHashScan() { ++window_content_hash_scans_; }
+  static void frozenIdentityBuild() { ++frozen_identity_builds_; }
+  static void frozenIdentityReuse(std::uint64_t count = 1) {
+    frozen_identity_reuses_ += count;
+  }
+  static void descriptorIdLookup(std::uint64_t count = 1) {
+    descriptor_id_lookups_ += count;
+  }
+  static void descriptorLinearScan(std::uint64_t count = 1) {
+    descriptor_linear_scans_ += count;
+  }
+  static void blockRhsSolveBatch(std::uint64_t unique_blocks) {
+    ++block_rhs_solve_batches_;
+    block_rhs_unique_blocks_ += unique_blocks;
+  }
+  static void frozenAdmissionConstantValidation() {
+    ++frozen_admission_constant_validations_;
+  }
 
  private:
   inline static std::atomic<std::uint64_t> base_svd_{0};
@@ -360,6 +404,15 @@ class NumericalWorkCounters {
   inline static std::atomic<std::uint64_t> mode_dense_allocations_{0};
   inline static std::atomic<std::uint64_t> mode_dense_allocation_rows_{0};
   inline static std::atomic<std::uint64_t> mode_dense_allocation_columns_{0};
+  inline static std::atomic<std::uint64_t> window_content_hash_scans_{0};
+  inline static std::atomic<std::uint64_t> frozen_identity_builds_{0};
+  inline static std::atomic<std::uint64_t> frozen_identity_reuses_{0};
+  inline static std::atomic<std::uint64_t> descriptor_id_lookups_{0};
+  inline static std::atomic<std::uint64_t> descriptor_linear_scans_{0};
+  inline static std::atomic<std::uint64_t> block_rhs_solve_batches_{0};
+  inline static std::atomic<std::uint64_t> block_rhs_unique_blocks_{0};
+  inline static std::atomic<std::uint64_t>
+      frozen_admission_constant_validations_{0};
 };
 
 }  // namespace uwb_imu_pl

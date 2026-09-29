@@ -454,6 +454,19 @@ int main(int argc, char** argv) {
               << " numerical_contract_mismatches="
               << work.numerical_contract_mismatches
               << " imu_oracle_reintegrations=" << work.imu_oracle_reintegrations
+              << " window_content_hash_scans="
+              << work.window_content_hash_scans
+              << " frozen_identity_builds=" << work.frozen_identity_builds
+              << " frozen_identity_reuses=" << work.frozen_identity_reuses
+              << " frozen_admission_constant_validations="
+              << work.frozen_admission_constant_validations
+              << " descriptor_id_lookups=" << work.descriptor_id_lookups
+              << " descriptor_linear_scans="
+              << work.descriptor_linear_scans
+              << " block_rhs_solve_batches="
+              << work.block_rhs_solve_batches
+              << " block_rhs_unique_blocks="
+              << work.block_rhs_unique_blocks
               << '\n';
   } catch (const std::exception& error) {
     std::cerr << error.what() << '\n';

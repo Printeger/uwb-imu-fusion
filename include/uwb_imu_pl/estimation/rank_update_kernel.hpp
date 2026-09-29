@@ -97,8 +97,14 @@ std::uint64_t candidateDetectorActionIdentity(
 std::uint64_t candidateDetectorNumericalIdentity(
     const LinearizedIntegrityWindow& window,
     const ExclusionAction& action);
+std::uint64_t candidateDetectorNumericalIdentity(
+    const FrozenWindowAdmission& admission,
+    const ExclusionAction& action);
 std::uint64_t candidateNumericalProofIdentity(
     const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate);
+std::uint64_t candidateNumericalProofIdentity(
+    const FrozenWindowAdmission& admission,
     const CandidateEvaluation& candidate);
 std::uint64_t candidateDetectorCertificateDigest(
     const LinearizedIntegrityWindow& window,
@@ -106,6 +112,10 @@ std::uint64_t candidateDetectorCertificateDigest(
     const CandidateDetectorCertificate& certificate);
 bool validateCandidateDetectorCertificate(
     const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate,
+    std::string* reason = nullptr);
+bool validateCandidateDetectorCertificate(
+    const FrozenWindowAdmission& admission,
     const CandidateEvaluation& candidate,
     std::string* reason = nullptr);
 
@@ -159,6 +169,9 @@ class RankUpdateEvaluator {
   BaseCandidateKernel factorizeOnce(
       const LinearizedIntegrityWindow& window,
       const std::vector<ExclusionAction>& actions = {}) const;
+  BaseCandidateKernel factorizeOnce(
+      const FrozenWindowAdmission& admission,
+      const std::vector<ExclusionAction>& actions = {}) const;
   void buildSharedCache(BaseCandidateKernel* base,
                         const std::vector<ExclusionAction>& actions) const;
   CandidateEvaluation evaluate(const BaseCandidateKernel& base,
@@ -166,8 +179,20 @@ class RankUpdateEvaluator {
   CandidateEvaluation evaluate(const BaseCandidateKernel& base,
                                const ExclusionAction& action,
                                RankUpdateScratch* scratch) const;
+  CandidateEvaluation evaluate(const FrozenWindowAdmission& admission,
+                               const BaseCandidateKernel& base,
+                               const ExclusionAction& action,
+                               RankUpdateScratch* scratch = nullptr) const;
 
  private:
+  BaseCandidateKernel factorizeOnceImpl(
+      const LinearizedIntegrityWindow& window,
+      const std::vector<ExclusionAction>& actions,
+      const FrozenWindowAdmission* admission) const;
+  CandidateEvaluation evaluateImpl(
+      const BaseCandidateKernel& base, const ExclusionAction& action,
+      RankUpdateScratch* scratch,
+      const FrozenWindowAdmission* admission) const;
   RankUpdateConfig config_;
 };
 
@@ -177,8 +202,14 @@ class DenseCandidateOracle {
       : config_(config) {}
   CandidateEvaluation evaluate(const LinearizedIntegrityWindow& window,
                                const ExclusionAction& action) const;
+  CandidateEvaluation evaluate(const FrozenWindowAdmission& admission,
+                               const ExclusionAction& action) const;
 
  private:
+  CandidateEvaluation evaluateImpl(
+      const LinearizedIntegrityWindow& window,
+      const ExclusionAction& action,
+      const FrozenWindowAdmission* admission) const;
   RankUpdateConfig config_;
 };
 
@@ -231,8 +262,18 @@ class CandidateEvaluationRouterV1 {
                                const ExclusionAction& action,
                                RankUpdateScratch* scratch = nullptr,
                                CandidateRouteSafetyV1* safety = nullptr) const;
+  CandidateEvaluation evaluate(const FrozenWindowAdmission& admission,
+                               const BaseCandidateKernel& base,
+                               const ExclusionAction& action,
+                               RankUpdateScratch* scratch = nullptr,
+                               CandidateRouteSafetyV1* safety = nullptr) const;
 
  private:
+  CandidateEvaluation evaluateImpl(
+      const LinearizedIntegrityWindow& window,
+      const BaseCandidateKernel& base, const ExclusionAction& action,
+      RankUpdateScratch* scratch, CandidateRouteSafetyV1* safety,
+      const FrozenWindowAdmission* admission) const;
   RankUpdateConfig config_;
   RankUpdateEvaluator rank_;
   DenseCandidateOracle dense_;

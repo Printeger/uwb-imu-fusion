@@ -2260,6 +2260,12 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
   return window;
 }
 
+FrozenIntegrityWindow IncrementalUwbImuEstimator::buildFrozenIntegrityWindow(
+    const EpochTransaction& tx, const IntegrityWindowRequest& request) const {
+  LinearizedIntegrityWindow builder = buildIntegrityWindow(tx, request);
+  return freezeIntegrityWindow(std::move(builder));
+}
+
 LinearizedFactorBlock IncrementalUwbImuEstimator::buildPendingFactorBlock(
     const EpochTransaction& tx, FactorGroupId id) const {
   if (!active_transaction_id_ || *active_transaction_id_ != tx.id ||

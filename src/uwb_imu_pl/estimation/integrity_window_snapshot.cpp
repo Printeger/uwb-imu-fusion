@@ -4,6 +4,7 @@
 #include <Eigen/SVD>
 
 #include <algorithm>
+#include <atomic>
 #include <set>
 #include <chrono>
 #include <cstdlib>
@@ -12,6 +13,226 @@
 
 namespace uwb_imu_pl {
 namespace {
+
+class CanonicalWriter {
+ public:
+  template <typename T>
+  void scalar(const T& value) {
+    const auto* begin = reinterpret_cast<const unsigned char*>(&value);
+    bytes_.insert(bytes_.end(), begin, begin + sizeof(value));
+  }
+  void string(const std::string& value) {
+    scalar(static_cast<std::uint64_t>(value.size()));
+    const auto* begin = reinterpret_cast<const unsigned char*>(value.data());
+    bytes_.insert(bytes_.end(), begin, begin + value.size());
+  }
+  template <class Derived>
+  void matrix(const Eigen::MatrixBase<Derived>& value) {
+    scalar(static_cast<std::int64_t>(value.rows()));
+    scalar(static_cast<std::int64_t>(value.cols()));
+    for (Eigen::Index column = 0; column < value.cols(); ++column) {
+      for (Eigen::Index row = 0; row < value.rows(); ++row) {
+        scalar(static_cast<double>(value(row, column)));
+      }
+    }
+  }
+  const std::vector<unsigned char>& bytes() const { return bytes_; }
+
+ private:
+  std::vector<unsigned char> bytes_;
+};
+
+void canonicalVersion(CanonicalWriter* out, const LinearizationVersion& value) {
+  out->scalar(value.graph_version);
+  out->scalar(value.ordering_version);
+  out->scalar(value.noise_model_version);
+  out->scalar(value.linpoint_version);
+}
+
+std::vector<unsigned char> canonicalWindowPayload(
+    const LinearizedIntegrityWindow& window) {
+  CanonicalWriter out;
+  constexpr std::uint64_t kCanonicalSchema = 1;
+  out.scalar(kCanonicalSchema);
+  out.scalar(window.id.value());
+  canonicalVersion(&out, window.version);
+  out.scalar(static_cast<std::uint64_t>(window.state_layout.size()));
+  for (const auto& entry : window.state_layout) {
+    out.scalar(entry.epoch);
+    out.scalar(entry.column_offset);
+    out.scalar(entry.dimension);
+    out.scalar(entry.protected_current_state);
+    out.scalar(static_cast<std::uint64_t>(entry.keys.size()));
+    for (const auto key : entry.keys) out.scalar(key);
+  }
+  out.scalar(static_cast<std::uint64_t>(window.blocks.size()));
+  for (const auto& block : window.blocks) {
+    out.scalar(block.group_id.value());
+    out.scalar(block.kind);
+    out.scalar(block.sensor);
+    out.scalar(block.role);
+    out.matrix(block.jacobian_raw);
+    out.matrix(block.residual_raw);
+    out.matrix(block.covariance);
+    out.matrix(block.whitener);
+    out.matrix(block.jacobian_whitened);
+    out.matrix(block.residual_whitened);
+    out.scalar(static_cast<std::uint64_t>(block.window_column_indices.size()));
+    for (const auto value : block.window_column_indices) out.scalar(value);
+    out.scalar(static_cast<std::uint64_t>(block.fault_units.size()));
+    for (const auto value : block.fault_units) out.scalar(value.value());
+    out.scalar(block.effective_weight);
+    out.string(block.whitening_model_id);
+    canonicalVersion(&out, block.version);
+  }
+  out.scalar(static_cast<std::uint64_t>(window.slot_accounting.size()));
+  for (const auto& slot : window.slot_accounting) {
+    out.scalar(slot.slot);
+    out.scalar(slot.group_id.has_value());
+    if (slot.group_id) out.scalar(slot.group_id->value());
+    out.scalar(slot.explicit_window_block);
+    out.scalar(slot.boundary_input);
+    out.scalar(slot.pointer_identity_valid);
+  }
+  out.scalar(static_cast<std::uint64_t>(window.factor_inventory.size()));
+  for (const auto& entry : window.factor_inventory) {
+    out.scalar(entry.group_id.value());
+    out.scalar(entry.epoch);
+    out.scalar(entry.kind);
+    out.scalar(entry.sensor);
+    out.scalar(entry.disposition);
+    out.scalar(static_cast<std::uint64_t>(entry.keys.size()));
+    for (const auto key : entry.keys) out.scalar(key);
+    out.scalar(static_cast<std::uint64_t>(entry.slots.size()));
+    for (const auto slot : entry.slots) out.scalar(slot);
+  }
+  out.scalar(window.detector_first_epoch);
+  out.scalar(window.recovery_first_epoch);
+  out.matrix(window.H);
+  out.matrix(window.z);
+  out.scalar(window.rank);
+  out.scalar(window.dof);
+  out.scalar(window.condition_number);
+  out.matrix(window.base_information);
+  out.matrix(window.base_information_rhs);
+  out.matrix(window.protected_state_map);
+  const auto& cap = window.capabilities;
+  out.scalar(cap.includes_boundary_prior);
+  out.scalar(cap.includes_pending_imu);
+  out.scalar(cap.includes_pending_uwb);
+  out.scalar(cap.complete_factor_provenance);
+  out.scalar(cap.history_provenance_valid);
+  out.scalar(cap.fixed_lag_maturity_valid);
+  out.scalar(cap.no_duplicate_rows);
+  out.scalar(cap.every_active_factor_accounted_once);
+  out.scalar(cap.frozen_slot_identity_valid);
+  out.scalar(cap.history_summary_present);
+  out.scalar(cap.history_summary_valid);
+  out.scalar(cap.history_summary_capacity_ok);
+  const auto& history = window.history_summary;
+  out.scalar(history.present);
+  out.scalar(history.valid);
+  out.string(history.reason);
+  out.scalar(history.fault_columns);
+  out.scalar(history.boundary_rows);
+  out.scalar(history.boundary_columns);
+  out.scalar(history.emitted_rows);
+  out.scalar(history.rank_boundary);
+  out.scalar(history.nu_perp);
+  out.scalar(history.kappa_b);
+  out.scalar(history.constant_energy);
+  out.scalar(history.injected_epochs);
+  out.scalar(static_cast<std::uint64_t>(history.column_ids.size()));
+  for (const auto& id : history.column_ids) {
+    out.scalar(id.kind);
+    out.scalar(id.source);
+    out.scalar(id.epoch);
+  }
+  out.scalar(history.constant_columns);
+  out.scalar(history.time_linear_columns);
+  out.scalar(history.imu_columns);
+  out.matrix(history.response);
+  out.matrix(history.detector_response);
+  out.matrix(history.d_perp);
+  out.scalar(history.constant_offset);
+  out.scalar(history.information_form_factors);
+  out.scalar(history.horizon_first_epoch);
+  out.scalar(history.window_first_epoch);
+  out.scalar(history.omitted_epoch_count);
+  out.scalar(history.material_gap_epoch_count);
+  out.scalar(history.claims_full_coverage);
+  out.string(history.assumptions);
+  out.string(history.omitted_risk_source);
+  out.scalar(history.skipped_columns);
+  out.string(history.scope_digest);
+  out.scalar(history.version.linearization);
+  out.scalar(history.version.whitening);
+  out.scalar(history.version.mode_set);
+  out.scalar(history.version.capacity);
+  out.scalar(history.version_digest);
+  out.scalar(history.capacity_ok);
+  out.string(history.capacity_action);
+  out.string(history.state);
+  out.scalar(window.model_valid);
+  out.string(window.reason);
+  // Wall-clock preparation timings are intentionally telemetry rather than
+  // semantic payload.  The immutable numerical products are bound by their
+  // own typed proof identity below.
+  if (window.numerics) {
+    out.scalar(true);
+    const auto& numerics = *window.numerics;
+    out.scalar(numerics.window_id.value());
+    canonicalVersion(&out, numerics.version);
+    out.scalar(numerics.content_fingerprint);
+    out.scalar(numerics.numerical_contract.policy_version);
+    out.scalar(numerics.numerical_contract.rank_tolerance);
+    out.scalar(numerics.numerical_contract.max_condition_number);
+    out.scalar(numerics.numerical_contract.solve_residual_limit);
+    out.scalar(numerics.numerical_contract.forward_error_limit);
+    out.scalar(numerics.numerical_contract.reference_relative_tolerance);
+    out.scalar(numerics.numerical_contract_fingerprint);
+    out.scalar(static_cast<bool>(numerics.information_factorization));
+    if (numerics.information_factorization) {
+      out.matrix(numerics.information_factorization->matrixL().toDenseMatrix());
+    }
+    out.scalar(static_cast<bool>(numerics.spectral_vectors));
+    if (numerics.spectral_vectors) out.matrix(*numerics.spectral_vectors);
+    out.matrix(numerics.spectral_inverse_squared);
+    out.matrix(numerics.spectral_state_increment);
+    out.matrix(numerics.base_state_increment);
+    out.matrix(numerics.parity);
+    out.scalar(static_cast<std::uint64_t>(numerics.block_row_offsets.size()));
+    for (const auto offset : numerics.block_row_offsets) out.scalar(offset);
+    out.scalar(numerics.statistic);
+    out.scalar(numerics.information_logdet);
+    out.scalar(numerics.smallest_singular_value);
+    out.scalar(numerics.largest_singular_value);
+    out.scalar(numerics.smallest_information_lower_bound);
+    out.scalar(numerics.largest_information_upper_bound);
+    out.scalar(numerics.solve_relative_residual);
+    out.scalar(numerics.normal_equation_forward_error_bound);
+    out.scalar(numerics.llt_svd_relative_difference);
+    out.scalar(numerics.canonical_spectral_solution);
+    out.scalar(numerics.square_root_statistic);
+    out.scalar(numerics.square_root_condition_estimate);
+    out.scalar(numerics.square_root_detector_only_rows);
+    out.scalar(numerics.square_root_certificate_ok);
+    out.scalar(numerics.exact_rank);
+    out.scalar(numerics.dof);
+    out.scalar(numerics.exact_condition);
+    out.scalar(numerics.valid);
+    out.string(numerics.reason);
+  } else {
+    out.scalar(false);
+  }
+  out.scalar(window.square_root ? window.square_root->proofIdentity() : 0);
+  return out.bytes();
+}
+
+std::uint64_t nextFrozenOwnerToken() {
+  static std::atomic<std::uint64_t> next{1};
+  return next.fetch_add(1, std::memory_order_relaxed);
+}
 
 void hashBytes(std::uint64_t* hash, const void* data, std::size_t size) {
   const auto* bytes = static_cast<const unsigned char*>(data);
@@ -259,6 +480,7 @@ Eigen::MatrixXd solveFrozenInformation(
 
 std::uint64_t integrityWindowFingerprint(
     const LinearizedIntegrityWindow& window) {
+  NumericalWorkCounters::windowContentHashScan();
   std::uint64_t hash = 1469598103934665603ULL;
   const auto id = window.id.value();
   hashBytes(&hash, &id, sizeof(id));
@@ -374,6 +596,131 @@ std::uint64_t integrityWindowFingerprint(
               history.omitted_risk_source.size());
   }
   return hash;
+}
+
+namespace {
+
+FrozenIntegrityWindow sealCompletedWindow(
+    LinearizedIntegrityWindow&& builder, std::uint64_t content_hash) {
+  const std::uint64_t owner_token = nextFrozenOwnerToken();
+  auto payload =
+      std::make_shared<LinearizedIntegrityWindow>(std::move(builder));
+  auto seal = std::make_shared<FrozenIntegrityWindowSeal>();
+  seal->owner_token = owner_token;
+  seal->content_hash = content_hash;
+  seal->payload = payload;
+  if (payload->numerics) {
+    auto& identity = seal->numerical_identity;
+    identity.window_id = payload->id;
+    identity.version = payload->version;
+    identity.content_fingerprint = content_hash;
+    identity.numerical_contract_fingerprint =
+        payload->numerics->numerical_contract_fingerprint;
+    identity.proof_identity =
+        frozenWindowNumericalProofIdentity(*payload, *payload->numerics);
+    identity.valid = identity.proof_identity != 0 &&
+        payload->numerics->content_fingerprint == content_hash;
+  }
+  return FrozenIntegrityWindow{std::move(seal)};
+}
+
+}  // namespace
+
+FrozenIntegrityWindow freezeIntegrityWindow(
+    LinearizedIntegrityWindow&& builder) {
+  const std::uint64_t content_hash = builder.numerics
+      ? builder.numerics->content_fingerprint
+      : integrityWindowFingerprint(builder);
+  return sealCompletedWindow(std::move(builder), content_hash);
+}
+
+FrozenIntegrityWindow freezeIntegrityWindowCopy(
+    const LinearizedIntegrityWindow& builder) {
+  LinearizedIntegrityWindow copy = builder;
+  const std::uint64_t content_hash = integrityWindowFingerprint(copy);
+  return sealCompletedWindow(std::move(copy), content_hash);
+}
+
+FrozenWindowAdmission admitFrozenIntegrityWindow(
+    const FrozenIntegrityWindow& handle) {
+  NumericalWorkCounters::frozenAdmissionConstantValidation();
+  FrozenWindowAdmission out;
+  out.owner = handle.seal;
+  if (!out.owner) {
+    out.reason = "window is not owned by an immutable frozen seal";
+    return out;
+  }
+  const auto& seal = *out.owner;
+  if (seal.schema != FrozenIntegrityWindowSeal::kSchema ||
+      seal.payload_type != FrozenIntegrityWindowSeal::kPayloadType ||
+      seal.owner_token == 0 || !seal.payload) {
+    out.owner.reset();
+    out.reason = "frozen window seal type/schema/owner is invalid";
+    return out;
+  }
+  const auto& payload = *seal.payload;
+  const bool numerics_match = payload.numerics &&
+      seal.numerical_identity.valid &&
+      seal.numerical_identity.window_id == payload.id &&
+      seal.numerical_identity.version == payload.version &&
+      seal.numerical_identity.content_fingerprint == seal.content_hash &&
+      payload.numerics->content_fingerprint == seal.content_hash;
+  if (!numerics_match) {
+    out.owner.reset();
+    out.reason = "frozen window constant admission identity mismatch";
+    return out;
+  }
+  out.payload = seal.payload.get();
+  return out;
+}
+
+bool validateFrozenWindowNumericalProof(
+    const FrozenWindowAdmission& admission,
+    const FrozenWindowNumerics& numerics, std::string* reason) {
+  if (!admission) {
+    if (reason) *reason = "immutable frozen-window admission is required";
+    return false;
+  }
+  const auto& payload = admission.window();
+  const auto& identity = admission.owner->numerical_identity;
+  const bool valid = payload.numerics &&
+      payload.numerics.get() == &numerics && numerics.valid &&
+      identity.valid && identity.window_id == payload.id &&
+      identity.version == payload.version &&
+      identity.content_fingerprint == admission.owner->content_hash &&
+      numerics.content_fingerprint == admission.owner->content_hash &&
+      identity.numerical_contract_fingerprint ==
+          numerics.numerical_contract_fingerprint &&
+      numerics.numerical_contract_fingerprint ==
+          numericalContractFingerprint(numerics.numerical_contract) &&
+      identity.proof_identity != 0;
+  if (!valid && reason) {
+    *reason = "frozen-window constant admission identity mismatch";
+  }
+  return valid;
+}
+
+bool frozenWindowHandleMatches(const FrozenWindowAdmission& admission,
+                               const FrozenIntegrityWindow& other) {
+  if (!admission) return false;
+  const FrozenWindowAdmission candidate = admitFrozenIntegrityWindow(other);
+  return candidate && admission.ownerToken() == candidate.ownerToken() &&
+      &admission.window() == &candidate.window();
+}
+
+bool frozenWindowCanonicalEqual(const FrozenIntegrityWindowSeal& left,
+                                const FrozenIntegrityWindowSeal& right) {
+  if (!left.payload || !right.payload ||
+      left.schema != FrozenIntegrityWindowSeal::kSchema ||
+      right.schema != FrozenIntegrityWindowSeal::kSchema ||
+      left.payload_type != FrozenIntegrityWindowSeal::kPayloadType ||
+      right.payload_type != FrozenIntegrityWindowSeal::kPayloadType ||
+      left.content_hash != right.content_hash) {
+    return false;
+  }
+  if (left.payload.get() == right.payload.get()) return true;
+  return canonicalWindowPayload(*left.payload) ==
+      canonicalWindowPayload(*right.payload);
 }
 
 void finalizeIntegrityWindow(LinearizedIntegrityWindow* window,
@@ -587,6 +934,7 @@ void finalizeIntegrityWindow(LinearizedIntegrityWindow* window,
   numerics->content_fingerprint = integrityWindowFingerprint(*window);
   numerics->numerical_contract_fingerprint =
       numericalContractFingerprint(numerics->numerical_contract);
+  NumericalWorkCounters::frozenIdentityBuild();
   window->preparation_timing.fingerprint_ms = elapsed_ms();
   window->numerics = std::move(numerics);
 }

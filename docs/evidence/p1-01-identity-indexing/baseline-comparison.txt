@@ -1,0 +1,33 @@
+P1-01 direct checkpoint comparison
+status=PASS
+
+checkpoint=420cb00786b776d81b4ec9f5d430433b1378e7cb
+checkpoint_benchmark_sha256=6ff10fc98e0ce34e8de16d59eea2cc1e353ed10bfdce6b8e48914dc3d39d793c
+checkpoint_dso_sha256=927bd893b50abe2862d0b99c49bdfa3ef5687e224729e88b03e94d4c40e40cab
+
+The checkpoint was checked out into a detached temporary worktree and built
+with independent build/devel directories.  Before the accepted run, ldd
+confirmed that its benchmark loaded the checkpoint DSO from that temporary
+devel directory.  An earlier command whose ldd preflight exposed the current
+workspace DSO was interrupted with exit 130 and its incomplete output was
+kept outside the accepted output directory.
+
+Accepted command shape:
+  env LD_LIBRARY_PATH=CHECKPOINT_DEVEL/lib OMP_NUM_THREADS=1 \
+    OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+    UWB_IMU_PL_CANDIDATE_WORKERS=4 \
+    UWB_IMU_PL_BENCHMARK_SEED=20260928 taskset -c 0-3 \
+    CHECKPOINT_BENCHMARK config/fde_joint_order2.yaml RUN_DIR 45
+
+accepted baseline: processed=45 committed=45 rejected=0 errors=0
+candidate: three runs, each processed=45 committed=45 rejected=0 errors=0
+compare results: run1=PASS run2=PASS run3=PASS
+files per comparison=13; rows per comparison=855; total mismatches=0
+
+Candidate output root: `/tmp/p1-01-after-fix3.0KLaS2`.  All three commands
+exited zero.  Each run performed exactly 45 full-content scans for 45 windows,
+with zero descriptor linear scans and no owner/payload mismatch.
+
+The comparator retains exact zero-tolerance semantic comparisons and permits
+only mechanically proved finish-wall transitions.  Deadline boundary behavior
+is additionally covered by P101IdentityIndexing.FrozenClockMakesTerminalDecisionExact.

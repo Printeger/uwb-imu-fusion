@@ -1,0 +1,42 @@
+development_baseline=420cb00786b776d81b4ec9f5d430433b1378e7cb
+true_golden_commit=8ca1d713704e47b922b84d7cc854da97c27dc20b
+true_golden_tag=golden-p0-06-actions
+candidate_tree=accepted working tree immediately before the P1-01 commit
+os=Linux 6.18.33.2-microsoft-standard-WSL2 x86_64
+cpu=Intel(R) Core(TM) Ultra 5 125H
+compiler=c++ 9.4.0
+cmake=3.16.3
+gtsam=4.2a5
+eigen=3.3.7
+build_type=Release
+cpu_affinity=0-3
+OMP_NUM_THREADS=1
+OPENBLAS_NUM_THREADS=1
+MKL_NUM_THREADS=1
+VECLIB_MAXIMUM_THREADS=1
+NUMEXPR_NUM_THREADS=1
+BLIS_NUM_THREADS=1
+workers=4
+seed=20260928
+epochs_per_run=45
+runs_per_side=3
+denominator_per_side=135
+profile=joint_order2
+fault_mode=nominal
+
+candidate_benchmark_sha256=672dae3264494efd6cc33fa863581833070ba43c199fb0707caa36c0154f649e
+candidate_library_sha256=2773a3f3eb2e11f91919c37a74d86719d69e23523fd84afa9fd235cbc6f60530
+checkpoint_benchmark_sha256=6ff10fc98e0ce34e8de16d59eea2cc1e353ed10bfdce6b8e48914dc3d39d793c
+checkpoint_library_sha256=927bd893b50abe2862d0b99c49bdfa3ef5687e224729e88b03e94d4c40e40cab
+config_sha256=03c2d725900d8683e672a02e255f6cb80c2f01e466985f01ab3d65d3bd4d574d
+
+Benchmark executable arguments (each run used its own output directory):
+  realtime_performance_benchmark config/fde_joint_order2.yaml RUN_DIR 45
+
+The seed is supplied only through `UWB_IMU_PL_BENCHMARK_SEED=20260928`.
+The checkpoint comparison run additionally used an independent detached
+worktree/build/devel and placed its devel library first in `LD_LIBRARY_PATH`;
+`ldd` confirmed the checkpoint executable loaded that checkpoint DSO.
+
+The command was wrapped in taskset -c 0-3 and the numerical-thread environment
+above.  No attempt or failed outcome was filtered.

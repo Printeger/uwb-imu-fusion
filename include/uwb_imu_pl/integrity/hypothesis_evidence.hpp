@@ -174,6 +174,13 @@ class HypothesisEvidenceEvaluator {
       std::shared_ptr<const FrozenHypothesisNumerics>* shared = nullptr,
       CandidateWorkerPool* worker_pool = nullptr) const;
   std::vector<FaultModeEvidence> evaluateAll(
+      const FrozenWindowAdmission& admission,
+      const std::vector<FaultModeBasis>& modes,
+      std::vector<FaultHypothesisV2>* hypotheses,
+      double squared_detector_threshold,
+      std::shared_ptr<const FrozenHypothesisNumerics>* shared = nullptr,
+      CandidateWorkerPool* worker_pool = nullptr) const;
+  std::vector<FaultModeEvidence> evaluateAll(
       const LinearizedIntegrityWindow& window,
       std::vector<FaultHypothesisV2>* hypotheses,
       double squared_detector_threshold) const;

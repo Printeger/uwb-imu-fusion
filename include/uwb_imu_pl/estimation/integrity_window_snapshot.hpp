@@ -184,6 +184,20 @@ struct FrozenNumericalContract {
   double reference_relative_tolerance = 1e-7;
 };
 
+// Typed identity minted once after every frozen numerical payload is complete.
+// Consumers may reuse `proof_identity` only after admitting the corresponding
+// immutable window (content/version match).  Keeping the identities together
+// prevents an untyped hash from being accidentally reused for a different
+// numerical contract.
+struct FrozenWindowIdentityHandle {
+  WindowId window_id;
+  LinearizationVersion version;
+  std::uint64_t content_fingerprint = 0;
+  std::uint64_t numerical_contract_fingerprint = 0;
+  std::uint64_t proof_identity = 0;
+  bool valid = false;
+};
+
 // Immutable numerical products tied to the complete frozen-window identity.
 // Eigen decomposition objects are deliberately not serialized.
 struct FrozenWindowNumerics {
@@ -279,6 +293,58 @@ struct LinearizedIntegrityWindow {
   bool model_valid = false;
   std::string reason;
 };
+
+// R07 immutable ownership boundary.  `payload` is created by moving the
+// completed builder in production (copying is exposed only for tests and
+// legacy compatibility).  No non-const pointer to it is retained.
+struct FrozenIntegrityWindowSeal {
+  static constexpr std::uint64_t kSchema = 1;
+  static constexpr std::uint64_t kPayloadType = 0x554957504c57494eULL;
+  std::uint64_t schema = kSchema;
+  std::uint64_t payload_type = kPayloadType;
+  std::uint64_t owner_token = 0;
+  std::uint64_t content_hash = 0;
+  FrozenWindowIdentityHandle numerical_identity;
+  std::shared_ptr<const LinearizedIntegrityWindow> payload;
+};
+
+// New R07 wrapper; the established LinearizedIntegrityWindow layout remains
+// unchanged for golden-header/current-DSO clients.
+struct FrozenIntegrityWindow {
+  std::shared_ptr<const FrozenIntegrityWindowSeal> seal;
+};
+
+struct FrozenWindowAdmission {
+  std::shared_ptr<const FrozenIntegrityWindowSeal> owner;
+  const LinearizedIntegrityWindow* payload = nullptr;
+  std::string reason;
+
+  explicit operator bool() const { return owner && payload; }
+  const LinearizedIntegrityWindow& window() const { return *payload; }
+  std::uint64_t ownerToken() const {
+    return owner ? owner->owner_token : 0;
+  }
+};
+
+// Production factory: consumes the completed mutable builder and returns a
+// typed handle.  The source has been moved-from and must not be read again.
+FrozenIntegrityWindow freezeIntegrityWindow(
+    LinearizedIntegrityWindow&& builder);
+// Explicit compatibility/test factory.  Production must use the move form.
+FrozenIntegrityWindow freezeIntegrityWindowCopy(
+    const LinearizedIntegrityWindow& builder);
+FrozenWindowAdmission admitFrozenIntegrityWindow(
+    const FrozenIntegrityWindow& handle);
+bool validateFrozenWindowNumericalProof(
+    const FrozenWindowAdmission& admission,
+    const FrozenWindowNumerics& numerics,
+    std::string* reason = nullptr);
+bool frozenWindowHandleMatches(const FrozenWindowAdmission& admission,
+                               const FrozenIntegrityWindow& other);
+// Collision-safe cross-object equality: a hash hit is only a prefilter; the
+// complete canonical payload is then compared field by field.
+bool frozenWindowCanonicalEqual(const FrozenIntegrityWindowSeal& left,
+                                const FrozenIntegrityWindowSeal& right);
 
 // Rebuilds the aggregate matrices and validates that every block uses the
 // same frozen linearization version. This is shared by the estimator and

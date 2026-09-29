@@ -143,9 +143,12 @@ std::uint64_t detectorContractDigest(const DetectorResultV2& detector) {
   return hash;
 }
 
-DetectorResultV2 JointWindowDetector::evaluate(
+namespace {
+
+DetectorResultV2 evaluateWindow(
     const LinearizedIntegrityWindow& window,
-    const DetectorRiskContext& risk) const {
+    const DetectorRiskContext& risk,
+    const FrozenWindowAdmission* admission) {
   if (!window.model_valid) {
     DetectorResultV2 out;
     out.window_id = window.id;
@@ -155,8 +158,14 @@ DetectorResultV2 JointWindowDetector::evaluate(
     out.reason = "invalid integrity window: " + window.reason;
     return out;
   }
+  const bool numerical_proof_valid = window.numerics &&
+      (admission
+           ? validateFrozenWindowNumericalProof(
+                 *admission, *window.numerics)
+           : window.numerics->content_fingerprint ==
+                 integrityWindowFingerprint(window));
   if (!window.numerics || !window.numerics->valid ||
-      window.numerics->content_fingerprint != integrityWindowFingerprint(window) ||
+      !numerical_proof_valid ||
       window.numerics->numerical_contract_fingerprint !=
           numericalContractFingerprint(risk.rank_tolerance,
                                        risk.max_condition_number)) {
@@ -223,8 +232,9 @@ DetectorResultV2 JointWindowDetector::evaluate(
     out.channel_history_accepted = split.history.accepted;
     out.operation_p_fa_upper_bound = split.operation_p_fa_upper_bound;
     out.accepted_event_id = "dual_channel_intersection_v6";
-    out.candidate_numerical_identity = candidateDetectorNumericalIdentity(
-        window, ExclusionAction{});
+    out.candidate_numerical_identity = admission
+        ? candidateDetectorNumericalIdentity(*admission, ExclusionAction{})
+        : candidateDetectorNumericalIdentity(window, ExclusionAction{});
     out.history_constant = window.history_summary.present
         ? window.history_summary.constant_offset : 0.0;
     out.continuity_horizon_tests =
@@ -248,10 +258,35 @@ DetectorResultV2 JointWindowDetector::evaluate(
   return out;
 }
 
-DetectorResultV2 JointWindowDetector::evaluateCandidate(
+}  // namespace
+
+DetectorResultV2 JointWindowDetector::evaluate(
+    const LinearizedIntegrityWindow& window,
+    const DetectorRiskContext& risk) const {
+  // Legacy/unsealed API deliberately retains the checkpoint guard.  It must
+  // never infer immutable ownership from the address of a value object.
+  return evaluateWindow(window, risk, nullptr);
+}
+
+DetectorResultV2 JointWindowDetector::evaluate(
+    const FrozenWindowAdmission& admission,
+    const DetectorRiskContext& risk) const {
+  if (!admission) {
+    DetectorResultV2 out;
+    out.reason = "invalid immutable frozen-window admission: " +
+        admission.reason;
+    return out;
+  }
+  return evaluateWindow(admission.window(), risk, &admission);
+}
+
+namespace {
+
+DetectorResultV2 evaluateCandidateWindow(
     const LinearizedIntegrityWindow& window,
     const CandidateEvaluation& candidate,
-    const DetectorRiskContext& risk) const {
+    const DetectorRiskContext& risk,
+    const FrozenWindowAdmission* admission) {
   if (!candidate.valid) {
     DetectorResultV2 out;
     out.numerically_valid = false;
@@ -260,8 +295,12 @@ DetectorResultV2 JointWindowDetector::evaluateCandidate(
     return out;
   }
   std::string certificate_reason;
-  if (!validateCandidateDetectorCertificate(window, candidate,
-                                            &certificate_reason)) {
+  const bool certificate_valid = admission
+      ? validateCandidateDetectorCertificate(
+            *admission, candidate, &certificate_reason)
+      : validateCandidateDetectorCertificate(
+            window, candidate, &certificate_reason);
+  if (!certificate_valid) {
     DetectorResultV2 out;
     out.window_id = window.id;
     out.numerically_valid = false;
@@ -370,6 +409,29 @@ DetectorResultV2 JointWindowDetector::evaluateCandidate(
   else out.reason.clear();
   out.detector_contract_digest = detectorContractDigest(out);
   return out;
+}
+
+}  // namespace
+
+DetectorResultV2 JointWindowDetector::evaluateCandidate(
+    const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate,
+    const DetectorRiskContext& risk) const {
+  return evaluateCandidateWindow(window, candidate, risk, nullptr);
+}
+
+DetectorResultV2 JointWindowDetector::evaluateCandidate(
+    const FrozenWindowAdmission& admission,
+    const CandidateEvaluation& candidate,
+    const DetectorRiskContext& risk) const {
+  if (!admission) {
+    DetectorResultV2 out;
+    out.reason = "invalid immutable frozen-window admission: " +
+        admission.reason;
+    return out;
+  }
+  return evaluateCandidateWindow(
+      admission.window(), candidate, risk, &admission);
 }
 
 }  // namespace uwb_imu_pl

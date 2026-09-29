@@ -783,10 +783,13 @@ std::string exactActionOperationIdentityV1(const ExclusionAction& action) {
   return out.str();
 }
 
-std::string exactActionSemanticIdentityV1(const ExclusionAction& action) {
+namespace {
+
+std::string exactActionSemanticIdentityFromOperationV1(
+    const ExclusionAction& action, const std::string& operation_identity) {
   std::ostringstream out;
   out << "ACTION_SEMANTICS_V1|";
-  appendStringIdentity(&out, exactActionOperationIdentityV1(action));
+  appendStringIdentity(&out, operation_identity);
   appendIntegralIdentity(&out, action.id.value());
   appendStringIdentity(&out, action.action_model_id);
   const auto units = sortedCopy(action.covered_units);
@@ -802,6 +805,13 @@ std::string exactActionSemanticIdentityV1(const ExclusionAction& action) {
   return out.str();
 }
 
+}  // namespace
+
+std::string exactActionSemanticIdentityV1(const ExclusionAction& action) {
+  const std::string operation = exactActionOperationIdentityV1(action);
+  return exactActionSemanticIdentityFromOperationV1(action, operation);
+}
+
 namespace {
 
 std::string exactGeneratedSnapshotIdentityV1(
@@ -809,8 +819,10 @@ std::string exactGeneratedSnapshotIdentityV1(
   std::vector<std::pair<std::string, std::string>> records;
   records.reserve(generated.size());
   for (const auto& action : generated) {
-    records.emplace_back(exactActionSemanticIdentityV1(action),
-                         exactActionOperationIdentityV1(action));
+    std::string operation = exactActionOperationIdentityV1(action);
+    std::string semantics =
+        exactActionSemanticIdentityFromOperationV1(action, operation);
+    records.emplace_back(std::move(semantics), std::move(operation));
   }
   std::sort(records.begin(), records.end());
   std::ostringstream out;
@@ -857,7 +869,8 @@ ActionSearchResultV1 censusAndCapActionsV1(
   for (std::size_t raw_index = 0; raw_index < generated.size(); ++raw_index) {
     const auto& action = generated[raw_index];
     const std::string operation = exactActionOperationIdentityV1(action);
-    const std::string semantics = exactActionSemanticIdentityV1(action);
+    const std::string semantics =
+        exactActionSemanticIdentityFromOperationV1(action, operation);
     const auto occurrence_key = std::make_pair(action.id.value(), semantics);
     const std::uint64_t duplicate_index = occurrence_counts[occurrence_key]++;
     const std::string occurrence = occurrenceIdentity(
@@ -1129,12 +1142,14 @@ ActionSearchValidationV1 validateActionSearchCensusV1(
     }
     for (std::size_t i = 0; i < actual_evaluated_actions.size(); ++i) {
       const auto record = generated.find(census.evaluated_identities[i]);
+      const std::string operation =
+          exactActionOperationIdentityV1(actual_evaluated_actions[i]);
+      const std::string semantics = exactActionSemanticIdentityFromOperationV1(
+          actual_evaluated_actions[i], operation);
       if (record == generated.end() ||
           record->second->action_id != actual_evaluated_actions[i].id.value() ||
-          record->second->operation_identity !=
-              exactActionOperationIdentityV1(actual_evaluated_actions[i]) ||
-          record->second->semantic_identity !=
-              exactActionSemanticIdentityV1(actual_evaluated_actions[i]) ||
+          record->second->operation_identity != operation ||
+          record->second->semantic_identity != semantics ||
           !finiteActionOperation(actual_evaluated_actions[i])) {
         return fail("evaluated action does not match census bytes");
       }
@@ -1175,10 +1190,15 @@ ActionSearchValidationV1 validateActionSearchCensusV1(
     return fail("evaluated actions differ from trusted raw derivation");
   }
   for (std::size_t i = 0; i < actual_evaluated_actions.size(); ++i) {
-    if (exactActionOperationIdentityV1(actual_evaluated_actions[i]) !=
-            exactActionOperationIdentityV1(expected.actions[i]) ||
-        exactActionSemanticIdentityV1(actual_evaluated_actions[i]) !=
-            exactActionSemanticIdentityV1(expected.actions[i])) {
+    const std::string actual_operation =
+        exactActionOperationIdentityV1(actual_evaluated_actions[i]);
+    const std::string expected_operation =
+        exactActionOperationIdentityV1(expected.actions[i]);
+    if (actual_operation != expected_operation ||
+        exactActionSemanticIdentityFromOperationV1(
+            actual_evaluated_actions[i], actual_operation) !=
+            exactActionSemanticIdentityFromOperationV1(
+                expected.actions[i], expected_operation)) {
       return fail("evaluated action bytes differ from trusted raw derivation");
     }
   }

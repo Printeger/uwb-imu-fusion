@@ -162,6 +162,9 @@ class IncrementalUwbImuEstimator {
   LinearizedIntegrityWindow buildIntegrityWindow(
       const EpochTransaction& transaction,
       const IntegrityWindowRequest& request) const;
+  FrozenIntegrityWindow buildFrozenIntegrityWindow(
+      const EpochTransaction& transaction,
+      const IntegrityWindowRequest& request) const;
   LinearizedFactorBlock buildPendingFactorBlock(
       const EpochTransaction& transaction, FactorGroupId group) const;
   CommitReceipt commitEpoch(EpochTransaction&& transaction,

@@ -428,13 +428,19 @@ RawFactorCertificate rawFactorCertificate(
 bool detectorContractMatchesCandidate(const LinearizedIntegrityWindow& window,
                                       const CandidateEvaluation& candidate,
                                       const DetectorResultV2& detector,
-                                      std::string* reason) {
+                                      std::string* reason,
+                                      const FrozenWindowAdmission* admission =
+                                          nullptr) {
   if (detector.contract_mode == DetectorContractMode::LegacyPooledOffline) {
     return true;
   }
   std::string candidate_reason;
-  if (!validateCandidateDetectorCertificate(window, candidate,
-                                            &candidate_reason)) {
+  const bool candidate_valid = admission
+      ? validateCandidateDetectorCertificate(
+            *admission, candidate, &candidate_reason)
+      : validateCandidateDetectorCertificate(
+            window, candidate, &candidate_reason);
+  if (!candidate_valid) {
     if (reason) *reason = candidate_reason;
     return false;
   }
@@ -941,7 +947,9 @@ std::uint64_t protectionLevelV2ProofIdentity(
   return match == found->second.rend() ? 0 : match->proof_identity;
 }
 
-bool mintCommitProtectionEvidenceV1(
+namespace {
+
+bool mintCommitProtectionEvidenceImpl(
     const EpochTransaction& transaction,
     const LinearizedIntegrityWindow& window,
     const CandidateEvaluation& candidate,
@@ -949,19 +957,23 @@ bool mintCommitProtectionEvidenceV1(
     std::uint64_t protection_proof_identity,
     const std::string& frame_id,
     CommitProtectionEvidenceV1* evidence,
-    std::string* reason) {
+    std::string* reason,
+    const FrozenWindowAdmission* admission) {
   if (!evidence) {
     if (reason) *reason = "null commit-protection output";
     return false;
   }
   *evidence = CommitProtectionEvidenceV1{};
   std::string candidate_reason;
+  const bool candidate_certificate_valid = admission
+      ? validateCandidateDetectorCertificate(
+            *admission, candidate, &candidate_reason)
+      : validateCandidateDetectorCertificate(
+            window, candidate, &candidate_reason);
   if (transaction.id.value() == 0 || window.id != WindowId(transaction.id.value()) ||
       !(window.version == transaction.base_version) ||
       !(candidate.base_version == transaction.base_version) ||
-      candidate.window_view != &window ||
-      !validateCandidateDetectorCertificate(window, candidate,
-                                             &candidate_reason) ||
+      candidate.window_view != &window || !candidate_certificate_valid ||
       window.protected_state_map.rows() != 3 ||
       window.protected_state_map.cols() != candidate.state_increment.size() ||
       !candidate.state_increment.allFinite() || frame_id.empty()) {
@@ -984,7 +996,9 @@ bool mintCommitProtectionEvidenceV1(
     proof = found->second;
   }
   const std::uint64_t candidate_identity =
-      candidateNumericalProofIdentity(window, candidate);
+      admission
+          ? candidateNumericalProofIdentity(*admission, candidate)
+          : candidateNumericalProofIdentity(window, candidate);
   if (candidate_identity == 0 ||
       proof.proof_identity != protection_proof_identity ||
       proof.candidate_proof_identity != candidate_identity ||
@@ -1040,6 +1054,43 @@ bool mintCommitProtectionEvidenceV1(
   }
   *evidence = out;
   return true;
+}
+
+}  // namespace
+
+bool mintCommitProtectionEvidenceV1(
+    const EpochTransaction& transaction,
+    const LinearizedIntegrityWindow& window,
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    std::uint64_t protection_proof_identity,
+    const std::string& frame_id,
+    CommitProtectionEvidenceV1* evidence,
+    std::string* reason) {
+  return mintCommitProtectionEvidenceImpl(
+      transaction, window, candidate, result, protection_proof_identity,
+      frame_id, evidence, reason, nullptr);
+}
+
+bool mintCommitProtectionEvidenceV1(
+    const EpochTransaction& transaction,
+    const FrozenWindowAdmission& admission,
+    const CandidateEvaluation& candidate,
+    const ProtectionLevelV2Result& result,
+    std::uint64_t protection_proof_identity,
+    const std::string& frame_id,
+    CommitProtectionEvidenceV1* evidence,
+    std::string* reason) {
+  if (!admission) {
+    if (reason) {
+      *reason = "invalid immutable frozen-window admission: " +
+          admission.reason;
+    }
+    return false;
+  }
+  return mintCommitProtectionEvidenceImpl(
+      transaction, admission.window(), candidate, result,
+      protection_proof_identity, frame_id, evidence, reason, &admission);
 }
 
 bool consumeCommitProtectionEvidenceV1(
@@ -1602,6 +1653,17 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
 }
 
 ProtectionLevelV2Result ProtectionLevelV2::computeShared(
+    const FrozenWindowAdmission& admission,
+    CandidateEvaluation* candidate,
+    const DetectorResultV2& detector,
+    std::vector<FaultHypothesisV2>* hypotheses,
+    const ProtectionLevelSharedContext& shared,
+    const RiskBudgetV2& risk) const {
+  return computeShared(admission, candidate, detector, hypotheses, shared,
+                       risk, nullptr);
+}
+
+ProtectionLevelV2Result ProtectionLevelV2::computeShared(
     const LinearizedIntegrityWindow& window,
     CandidateEvaluation* candidate,
     const DetectorResultV2& detector,
@@ -1609,6 +1671,38 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
     const ProtectionLevelSharedContext& shared,
     const RiskBudgetV2& risk,
     ProtectionLevelV2ProofV1* computation_audit) const {
+  return computeSharedImpl(window, candidate, detector, hypotheses, shared,
+                           risk, computation_audit, nullptr);
+}
+
+ProtectionLevelV2Result ProtectionLevelV2::computeShared(
+    const FrozenWindowAdmission& admission,
+    CandidateEvaluation* candidate,
+    const DetectorResultV2& detector,
+    std::vector<FaultHypothesisV2>* hypotheses,
+    const ProtectionLevelSharedContext& shared,
+    const RiskBudgetV2& risk,
+    ProtectionLevelV2ProofV1* computation_audit) const {
+  if (!admission) {
+    ProtectionLevelV2Result result;
+    result.reason = "invalid immutable frozen-window admission: " +
+        admission.reason;
+    return result;
+  }
+  return computeSharedImpl(admission.window(), candidate, detector,
+                           hypotheses, shared, risk, computation_audit,
+                           &admission);
+}
+
+ProtectionLevelV2Result ProtectionLevelV2::computeSharedImpl(
+    const LinearizedIntegrityWindow& window,
+    CandidateEvaluation* candidate,
+    const DetectorResultV2& detector,
+    std::vector<FaultHypothesisV2>* hypotheses,
+    const ProtectionLevelSharedContext& shared,
+    const RiskBudgetV2& risk,
+    ProtectionLevelV2ProofV1* computation_audit,
+    const FrozenWindowAdmission* admission) const {
   ProtectionLevelV2Result result;
   ProtectionLevelV2ProofV1 sidecar;
   sidecar.risk = risk;
@@ -1633,7 +1727,8 @@ ProtectionLevelV2Result ProtectionLevelV2::computeShared(
   if (!candidate || !hypotheses || !candidate->valid ||
       !detector.numerically_valid ||
       !detectorContractMatchesCandidate(window, *candidate, detector,
-                                        &detector_contract_reason) ||
+                                        &detector_contract_reason,
+                                        admission) ||
       window.protected_state_map.cols() != candidate->state_increment.rows() ||
       window.protected_state_map.rows() != 3) {
     result.reason = detector_contract_reason.empty()
@@ -1929,7 +2024,8 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
       frozen.window_id == window.id && frozen.version == window.version &&
       frozen.window_content_fingerprint ==
           window.numerics->content_fingerprint &&
-      frozen.window_content_fingerprint == integrityWindowFingerprint(window) &&
+      frozen.window_content_fingerprint ==
+          integrityWindowFingerprint(window) &&
       frozen.numerical_contract_fingerprint ==
           window.numerics->numerical_contract_fingerprint &&
       frozen.hypothesis_fingerprint == hypothesisSetFingerprint(hypotheses) &&
@@ -1943,9 +2039,11 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
                                         &detector_contract_reason) ||
       !keep_all || !identity_valid) {
     NumericalWorkCounters::hypothesisSharedMiss();
-    result.reason = detector_contract_reason.empty()
+    result.reason = !identity_valid
         ? "frozen all-in hypothesis context identity mismatch"
-        : detector_contract_reason;
+        : (detector_contract_reason.empty()
+               ? "frozen all-in hypothesis context identity mismatch"
+               : detector_contract_reason);
     return result;
   }
   if (detector.contract_mode == DetectorContractMode::ActiveDualChannelV6 &&

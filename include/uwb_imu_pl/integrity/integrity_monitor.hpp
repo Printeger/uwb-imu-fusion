@@ -119,6 +119,11 @@ class RealtimeIntegrityPipeline {
   // object in both cases -- no second state source exists.
   IntegrityOutput processUwbBatch(const UwbBatch& batch,
                                   const ClockSample& clock_sample);
+  // Deterministic replay/evidence seam. It freezes both watchdog time and
+  // end-of-attempt elapsed time without changing the configured deadline.
+  IntegrityOutput processUwbBatchWithFrozenFinishElapsed(
+      const UwbBatch& batch, const ClockSample& clock_sample,
+      double finish_elapsed_ms);
   const PublicationController& publication() const { return publication_; }
   PipelineCommitBoundaryAuditV1 commitBoundaryAudit() const {
     PipelineCommitBoundaryAuditV1 out;
@@ -166,6 +171,9 @@ class RealtimeIntegrityPipeline {
   std::uint64_t input_attempt_count_ = 0;
   std::uint64_t consecutive_rejections_ = 0;
   IntegrityOutput processUwbBatchImpl(const UwbBatch& batch);
+  IntegrityOutput processUwbBatchWithFinishElapsedOverride(
+      const UwbBatch& batch, const ClockSample& clock_sample,
+      const std::optional<double>& finish_elapsed_ms);
   // C4/W2: assembles the published identity from production values and passes
   // the attempt through the publication state holder.
   void applyPublicationGate(IntegrityOutput* output, const UwbBatch& batch);

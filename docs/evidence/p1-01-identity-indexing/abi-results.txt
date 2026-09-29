@@ -1,0 +1,19 @@
+P1-01 ABI verification
+status=PASS
+
+checkpoint/current layouts:
+  LinearizedIntegrityWindow 896 / 896
+  FrozenWindowNumerics 384 / 384
+  BaseCandidateKernel 184 / 184
+  CandidateEvaluation 1088 / 1088
+
+The checkpoint-header client compiled from test/p003_old_abi_client.cpp linked
+and ran against the current candidate DSO with exit 0.  Its complete output
+matched the retained P0-03 layout evidence, including
+CandidateDetectorCertificate size 192 and reason offset 160.  The new sealed
+ownership/admission types are separate wrappers; no field was added to the
+four established structures above.
+
+The sealed candidate owner binding uses an aliasing shared-pointer control
+block already present in `CandidateEvaluation`; it adds no field and preserves
+the pointed-to LLT address and numerical behavior.

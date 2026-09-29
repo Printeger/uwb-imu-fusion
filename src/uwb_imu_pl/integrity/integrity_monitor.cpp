@@ -1905,6 +1905,26 @@ void RealtimeIntegrityPipeline::applyPublicationGate(IntegrityOutput* output,
 
 IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(
     const UwbBatch& batch, const ClockSample& clock_sample) {
+  return processUwbBatchWithFinishElapsedOverride(
+      batch, clock_sample, std::nullopt);
+}
+
+IntegrityOutput RealtimeIntegrityPipeline::
+processUwbBatchWithFrozenFinishElapsed(
+    const UwbBatch& batch, const ClockSample& clock_sample,
+    double finish_elapsed_ms) {
+  if (!std::isfinite(finish_elapsed_ms) || finish_elapsed_ms < 0.0) {
+    throw std::invalid_argument(
+        "frozen finish elapsed time must be finite and non-negative");
+  }
+  return processUwbBatchWithFinishElapsedOverride(
+      batch, clock_sample, finish_elapsed_ms);
+}
+
+IntegrityOutput RealtimeIntegrityPipeline::
+processUwbBatchWithFinishElapsedOverride(
+    const UwbBatch& batch, const ClockSample& clock_sample,
+    const std::optional<double>& finish_elapsed_ms_override) {
   const auto start = std::chrono::steady_clock::now();
   const auto before = estimator_->currentEpoch();
   ++input_attempt_count_;
@@ -2024,9 +2044,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatch(
         output.reason_codes.push_back("IMU_MODEL_UNQUALIFIED");
       }
     }
-    const double finish_elapsed_ms =
-        std::chrono::duration<double, std::milli>(
-            std::chrono::steady_clock::now() - start).count();
+    const double finish_elapsed_ms = finish_elapsed_ms_override
+        ? *finish_elapsed_ms_override
+        : std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - start).count();
     const bool finish_deadline_missed =
         finish_elapsed_ms > estimator_->config().publication.deadline_ms;
     if (finish_deadline_missed) {
@@ -2274,7 +2295,15 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
     IntegrityWindowRequest request;
     request.epochs = cfg.integrity_window.epochs;
     start_operation("integrity_window");
-    const auto window = estimator_->buildIntegrityWindow(transaction, request);
+    const auto window_handle =
+        estimator_->buildFrozenIntegrityWindow(transaction, request);
+    const FrozenWindowAdmission window_admission =
+        admitFrozenIntegrityWindow(window_handle);
+    if (!window_admission) {
+      throw std::logic_error("immutable frozen-window admission failed: " +
+                             window_admission.reason);
+    }
+    const LinearizedIntegrityWindow& window = window_admission.window();
     record_stage("integrity_window", window.model_valid);
     // A3: freeze the result identity block.  Only schema-provided values are
     // used; fields the schema cannot supply are marked NOT_AVAILABLE_IN_SCHEMA
@@ -2283,7 +2312,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
       IntegritySnapshotIdentity& identity = output.snapshot_identity;
       std::ostringstream fingerprint;
       fingerprint << std::hex << std::setfill('0') << std::setw(16)
-                  << integrityWindowFingerprint(window);
+                  << (window.numerics
+                          ? window.numerics->content_fingerprint : 0);
       identity.snapshot_id = "window:" + std::to_string(window.id.value()) +
           ":transaction:" + std::to_string(transaction.id.value());
       identity.source_revision = kNotAvailableInSchema;
@@ -2423,7 +2453,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         cfg.integrity_window.max_condition_number;
     start_operation("all_in_detector");
     const DetectorResultV2 all_in =
-        JointWindowDetector().evaluate(window, detector_risk);
+        JointWindowDetector().evaluate(window_admission, detector_risk);
     record_stage("all_in_detector", all_in.numerically_valid);
     output.detector.detector_type = "dual_channel_v1";
     output.detector.statistic = all_in.squared_parity_statistic;
@@ -2803,7 +2833,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
             shared_hypothesis_numerics;
         NumericalWorkCounters::evidenceCallFaultPath();
         auto evidence = HypothesisEvidenceEvaluator(evidence_config).evaluateAll(
-            window, models.modes, &models.hypotheses,
+            window_admission, models.modes, &models.hypotheses,
             all_in.squared_threshold, &shared_hypothesis_numerics,
             candidate_workers_.get());
         record_stage("hypothesis_evidence", true);
@@ -3153,7 +3183,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
         }
         const RankUpdateEvaluator evaluator(rank_config);
         const CandidateEvaluationRouterV1 candidate_router(rank_config);
-        BaseCandidateKernel base = evaluator.factorizeOnce(window);
+        BaseCandidateKernel base = evaluator.factorizeOnce(window_admission);
         output.diagnostics.base_step_norm = base.state_increment.norm();
         auto append_step_audit = [&](const Eigen::VectorXd& increment,
                                      const std::string& source) {
@@ -3241,7 +3271,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               candidate_seams->before_candidate(action.id);
             }
             candidate = candidate_router.evaluate(
-                window, base, action, &scratch);
+                window_admission, base, action, &scratch);
             markActionSearchTerminal(
                 &output, action, "CANDIDATE_COMPLETE");
           } catch (...) {
@@ -3289,7 +3319,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               post_seams->before_post_detector(action.id);
             }
             evaluated.post = JointWindowDetector().evaluateCandidate(
-                window, candidate, detector_risk);
+                window_admission, candidate, detector_risk);
             markActionSearchTerminal(&output, action, "POST_COMPLETE");
           } catch (...) {
             markActionSearchTerminal(&output, action, "POST_EXCEPTION");
@@ -3378,13 +3408,13 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               }
               if (capture_action_proof) {
                 evaluated.protection_level = ProtectionLevelV2().computeShared(
-                    window, &candidate, evaluated.post,
+                    window_admission, &candidate, evaluated.post,
                     &projected_modes.hypotheses, shared_pl, cfg.risk_v2,
                     &evaluated.computation_proof);
                 evaluated.has_computation_proof = true;
               } else {
                 evaluated.protection_level = ProtectionLevelV2().computeShared(
-                    window, &candidate, evaluated.post,
+                    window_admission, &candidate, evaluated.post,
                     &projected_modes.hypotheses, shared_pl, cfg.risk_v2);
               }
               markActionSearchTerminal(&output, action, "PL_COMPLETE");
@@ -4064,7 +4094,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(const UwbBatch& b
               window.protected_state_map.cols() ==
                   selected->state_increment.size()) {
             protection_minted = mintCommitProtectionEvidenceV1(
-                transaction, window, *selected, selected_pl->second,
+                transaction, window_admission, *selected, selected_pl->second,
                 selected_pl_proof_identity, cfg.realtime.world_frame,
                 &protection_evidence, &protection_mint_reason);
           }

@@ -1,0 +1,31 @@
+O12 candidate authoritative replay
+generator=tools/generate_p0_07_evidence.py
+binary=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_p0_07_corrected_exhaustive
+filter=P007CorrectedExhaustive.SameRawReplayDrivesProductionBuilderGeneratorAndFinalRefusal
+input=docs/evidence/p0-07-corrected-exhaustive/authoritative-replay/frozen-input.json
+truth=docs/evidence/p0-07-corrected-exhaustive/authoritative-replay/frozen-truth.json
+compare=docs/evidence/p0-07-corrected-exhaustive/authoritative-replay
+exit=0
+received=24
+attempted=24
+excluded=0
+complete_work=24
+alarm_generated=7
+alarm_kernel_evaluated=7
+expected_modes=504
+represented_modes=504
+evaluated_modes=504
+gram_profile_response_pl=PASS
+terminal_semantic_digest=2095395924847106241
+formal_eligible=0
+protected_output=0
+exception_backend_updates=1
+exception_backend_poisoned=1
+exception_publish_outcome=NOT_ATTEMPTED
+bundle_sha256=0027bdbc35031c95a8d4f3612e174497665f803106ba7e9190bbc91dff7d3046
+frozen_output_sha256=110189b2d8da633b59bba2e5345f82677be2dbd1d3abf468f668bfa1e2870bc5
+result=PASS
+
+This is correctness evidence only; it is not used as the P1 performance
+measurement.  Performance uses the three 45-attempt runs per side recorded in
+performance-summary.json.
