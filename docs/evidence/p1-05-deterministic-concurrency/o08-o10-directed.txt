@@ -1,0 +1,47 @@
+[==========] Running 13 tests from 5 test suites.
+[----------] Global test environment set-up.
+[----------] 2 tests from P005Transaction
+[ RUN      ] P005Transaction.EveryPostMutationBoundaryHasExplicitTerminalReceipt
+[ O08 RAW COVARIANCE ] worst_antisymmetry_norm=0 tolerance=1e-12
+[       OK ] P005Transaction.EveryPostMutationBoundaryHasExplicitTerminalReceipt (77 ms)
+[ RUN      ] P005Transaction.PreMutationFailureRemainsHonestlyDiscardable
+[       OK ] P005Transaction.PreMutationFailureRemainsHonestlyDiscardable (0 ms)
+[----------] 2 tests from P005Transaction (77 ms total)
+
+[----------] 2 tests from P005Reference
+[ RUN      ] P005Reference.FabricatedProofIsRejectedBeforeMutationAndLegacyIsUnprotected
+[       OK ] P005Reference.FabricatedProofIsRejectedBeforeMutationAndLegacyIsUnprotected (4 ms)
+[ RUN      ] P005Reference.GenuineP003CandidateCommitsActualBackendAndTransfersReference
+[       OK ] P005Reference.GenuineP003CandidateCommitsActualBackendAndTransfersReference (5 ms)
+[----------] 2 tests from P005Reference (9 ms total)
+
+[----------] 7 tests from P005Publication
+[ RUN      ] P005Publication.ImmutablePacketOwnsDeadlineAndAllSinkMaterial
+[       OK ] P005Publication.ImmutablePacketOwnsDeadlineAndAllSinkMaterial (0 ms)
+[ RUN      ] P005Publication.ClockJumpOverflowAndExceptionAreFailClosedPackets
+[       OK ] P005Publication.ClockJumpOverflowAndExceptionAreFailClosedPackets (0 ms)
+[ RUN      ] P005Publication.SlowPrepareReturnFreezesOneDeadlineMissedPacket
+[       OK ] P005Publication.SlowPrepareReturnFreezesOneDeadlineMissedPacket (0 ms)
+[ RUN      ] P005Publication.FailedPreparationAbortsBeforeAnySinkSeesAPacket
+[       OK ] P005Publication.FailedPreparationAbortsBeforeAnySinkSeesAPacket (0 ms)
+[ RUN      ] P005Publication.PartialSinkFailureCanLeaveOnlyNonAuthoritativeUnprotectedCandidate
+[       OK ] P005Publication.PartialSinkFailureCanLeaveOnlyNonAuthoritativeUnprotectedCandidate (0 ms)
+[ RUN      ] P005Publication.NonAtomicFanoutCanNeverActivateProtectedReceipt
+[       OK ] P005Publication.NonAtomicFanoutCanNeverActivateProtectedReceipt (0 ms)
+[ RUN      ] P005Publication.ProductionFanoutTimesActualCallsAndNeverClaimsAtomicAuthority
+[       OK ] P005Publication.ProductionFanoutTimesActualCallsAndNeverClaimsAtomicAuthority (1 ms)
+[----------] 7 tests from P005Publication (1 ms total)
+
+[----------] 1 test from P005Odometry
+[ RUN      ] P005Odometry.NinetyDegreeYawRotatesVelocityAndCovarianceToChildFrame
+[       OK ] P005Odometry.NinetyDegreeYawRotatesVelocityAndCovarianceToChildFrame (0 ms)
+[----------] 1 test from P005Odometry (0 ms total)
+
+[----------] 1 test from P005Abi
+[ RUN      ] P005Abi.PublicationPacketV1AndV2LayoutsRemainFrozen
+[       OK ] P005Abi.PublicationPacketV1AndV2LayoutsRemainFrozen (0 ms)
+[----------] 1 test from P005Abi (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 13 tests from 5 test suites ran. (87 ms total)
+[  PASSED  ] 13 tests.

@@ -280,6 +280,27 @@ struct ProtectionLevelSharedContext {
   std::vector<FrozenBridgeProjection> bridges;
 };
 
+// R11 batch boundary. The caller owns every pointer through the synchronous
+// call. Candidate order and each hypothesis vector order define the canonical
+// Cartesian slot order; workers never append to shared output containers.
+struct FlatProtectionCandidateV1 {
+  CandidateEvaluation* candidate = nullptr;
+  const DetectorResultV2* detector = nullptr;
+  std::vector<FaultHypothesisV2>* hypotheses = nullptr;
+  const ProtectionLevelSharedContext* shared = nullptr;
+  ProtectionLevelV2Result* result = nullptr;
+  ProtectionLevelV2ProofV1* computation_audit = nullptr;
+  AttemptProofArena* proof_arena = nullptr;
+  // Optional P1-02 KEEP_ALL fast root. When all fields are present the flat
+  // scheduler consumes the same shared dual blocks/proofs as
+  // computeFrozenAllIn; absence selects the ordinary candidate-specific root.
+  const std::vector<FaultModeBasis>* frozen_modes = nullptr;
+  const FrozenHypothesisNumerics* frozen = nullptr;
+  const FrozenHypothesisDualNumerics* frozen_dual = nullptr;
+  const AttemptProofArena* frozen_proof_arena = nullptr;
+  std::uint64_t fault_model_policy_fingerprint = 0;
+};
+
 class ProtectionLevelV2 {
  public:
   using FaultMapProvider = std::function<Eigen::MatrixXd(
@@ -332,6 +353,18 @@ class ProtectionLevelV2 {
       const ProtectionLevelSharedContext& shared,
       const RiskBudgetV2& risk,
       ProtectionLevelV2ProofV1* computation_audit) const;
+
+  // Phase 2 of R11: prepare all candidate roots, execute one flat Cartesian
+  // candidate×hypothesis task list, then reduce in canonical slot order.
+  // Root/precondition failures still receive terminal no-op leaf slots and
+  // fail closed after the common barrier.
+  void computeSharedFlatBatch(
+      const FrozenWindowAdmission& admission,
+      std::vector<FlatProtectionCandidateV1>* candidates,
+      const RiskBudgetV2& risk,
+      CandidateWorkerPool* worker_pool,
+      std::size_t active_workers,
+      std::size_t scratch_limit_bytes) const;
   ProtectionLevelV2Result computeShared(
       const FrozenWindowAdmission& admission,
       CandidateEvaluation* candidate,

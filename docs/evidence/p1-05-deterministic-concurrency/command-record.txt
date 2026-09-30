@@ -1,0 +1,76 @@
+P1-05 deterministic concurrency implementer command record
+baseline=golden-p1-04-streamed-recovery-search
+baseline_sha=fcc66dfa3bd3ef3f71860207ae313b7b74df550c
+
+Build:
+  cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl -j2 --target test_integrity_v2 test_p0_05_publication test_p0_07_corrected_exhaustive realtime_performance_benchmark
+  exit=0
+
+Focused P105, frozen P102 and one-attempt timer:
+  env LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib test_integrity_v2 --gtest_filter=P105FlatConcurrency.*:GateDDiagnostics.PreparationExceptionKeepsAttemptTimingAndZeroUpdates:P102SharedDualNumerics.*
+  exit=0; 5/5 PASS
+
+Scratch fail-closed repeated stress:
+  env LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib test_integrity_v2 --gtest_filter=P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic --gtest_repeat=100 --gtest_break_on_failure
+  exit=0; 100/100 PASS
+
+O08/O10 publication regression:
+  env LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib test_p0_05_publication
+  exit=0; 13/13 PASS
+
+O12 directed authoritative replay:
+  env LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib test_p0_07_corrected_exhaustive --gtest_filter=P007CorrectedExhaustive.SameRawReplayDrivesProductionBuilderGeneratorAndFinalRefusal:P007CorrectedExhaustive.MissingProvenanceCensusIsRetainedAndRefused
+  exit=0; 2/2 PASS; 11.09 seconds
+
+Complete CTest:
+  env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1 BLIS_NUM_THREADS=1 ctest --output-on-failure -j1
+  cwd=/home/mint/ws_fusion_uwb/build/uwb_imu_pl
+  exit=0; 34/34 PASS; 477.37 seconds
+
+Section 2.4, repeated for run1/run2/run3:
+  /usr/bin/time -v env LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1 BLIS_NUM_THREADS=1 UWB_IMU_PL_CANDIDATE_WORKERS=4 UWB_IMU_PL_BENCHMARK_SEED=20260928 taskset -c 0-3 /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark config/fde_joint_order2.yaml RUN_DIR 45
+  exits=0/0/0
+  walls=2:26.42/2:26.84/2:26.95
+  rss_kib=1111108/1109488/1110120
+
+Strict P1-04 comparison, repeated for matching run1/run2/run3:
+  python3 tools/compare_p1_04_outputs.py docs/evidence/p1-04-streamed-recovery-search/archived-raw/candidate-3x45/runN docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/runN --output docs/evidence/p1-05-deterministic-concurrency/equivalence-runN.json
+  exits=0/0/0; PASS/PASS/PASS
+
+All-attempt summary:
+  python3 tools/summarize_p1_01_performance.py docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45 --output docs/evidence/p1-05-deterministic-concurrency/all-attempt-performance.json
+  exit=0; 135/135 complete; 0 excluded
+
+Worker-count production comparison:
+  benchmark 8 attempts with UWB_IMU_PL_CANDIDATE_WORKERS=1,2,4 and otherwise identical environment/config/seed/affinity
+  compare worker1 against worker2 and worker4 using tools/compare_p1_04_outputs.py
+  exits=0/0; PASS/PASS; decisions, outputs, task terminals and work counters exact
+
+ThreadSanitizer availability probe:
+  c++ -std=c++14 -fsanitize=thread TSAN_PROBE.cpp -o TSAN_PROBE
+  exit=1; /usr/bin/ld: cannot find libtsan_preinit.o
+  result=NOT_RUN
+
+Static checks:
+  git diff --check
+  python3 -m py_compile tools/compare_p1_04_outputs.py tools/summarize_p1_01_performance.py
+  exits=0/0
+
+Second-review repair (supersedes the pre-repair numerical results above):
+  source: StatisticalBoundsCache exact-key lookup/solve/publish under one mutex;
+          invalid_inputs/non_converged/policy_mismatches under the same mutex
+  focused: P105/P102/timer 8/8 PASS
+  stress: all six P105 tests repeated 100 times, 600/600 PASS
+  cache unit work: same key 1 miss/63 hits; 24 different keys 24 misses;
+                   canonical 1/2/4 and repeated-4 work 12 misses/84 hits
+  production 8 attempts: 1/2/4/repeated-4 each has
+                         182775 hits/33 misses/50 entries;
+                         strict comparisons PASS/PASS/PASS
+  worker configuration diagnostic: hypothesis_parallel_blocks=0/2/4/4
+  complete CTest: 34/34 PASS, 485.49 seconds
+  section 2.4 run walls: 2:27.73/2:27.25/2:28.41
+  section 2.4 RSS KiB: 1045620/1104620/1108000
+  section 2.4 golden comparisons: PASS/PASS/PASS
+  section 2.4 repeat exact-work comparisons: PASS/PASS
+  section 2.4 denominator: 135/135 complete, 0 excluded, 132 misses
+  section 2.4 cache work per run: 5418131 hits/78 misses/100 entries

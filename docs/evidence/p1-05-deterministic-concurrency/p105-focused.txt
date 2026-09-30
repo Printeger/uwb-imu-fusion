@@ -1,0 +1,31 @@
+Note: Google Test filter = P105FlatConcurrency.*:GateDDiagnostics.PreparationExceptionKeepsAttemptTimingAndZeroUpdates:P102SharedDualNumerics.*
+[==========] Running 8 tests from 3 test suites.
+[----------] Global test environment set-up.
+[----------] 1 test from P102SharedDualNumerics
+[ RUN      ] P102SharedDualNumerics.ActiveDualKeepAllReusesEvidenceSmallBlocksWithoutChangingPl
+[       OK ] P102SharedDualNumerics.ActiveDualKeepAllReusesEvidenceSmallBlocksWithoutChangingPl (1 ms)
+[----------] 1 test from P102SharedDualNumerics (1 ms total)
+
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (12 ms)
+[----------] 6 tests from P105FlatConcurrency (29 ms total)
+
+[----------] 1 test from GateDDiagnostics
+[ RUN      ] GateDDiagnostics.PreparationExceptionKeepsAttemptTimingAndZeroUpdates
+[       OK ] GateDDiagnostics.PreparationExceptionKeepsAttemptTimingAndZeroUpdates (6 ms)
+[----------] 1 test from GateDDiagnostics (6 ms total)
+
+[----------] Global test environment tear-down
+[==========] 8 tests from 3 test suites ran. (36 ms total)
+[  PASSED  ] 8 tests.

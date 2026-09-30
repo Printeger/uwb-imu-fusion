@@ -1,0 +1,35 @@
+P1-05 implementer verification summary
+
+P105/P102/timer focused: PASS, 8/8
+P105 full concurrency/cache stress: PASS, 100/100 repeats (600 tests)
+same-key cache single-flight: PASS, 1 miss / 63 hits
+distinct-key concurrent cache: PASS, 24 misses / 0 hits
+concurrent failure counters: PASS, 48 invalid / 16 policy mismatch
+O08/O10 publication regression: PASS, 13/13
+O12 directed replay: PASS, 2/2
+workers 1 vs 2 strict equivalence: PASS
+workers 1 vs 4 strict equivalence: PASS
+workers 4 vs repeated 4 strict equivalence: PASS
+8-attempt exact cache work (1/2/4/4-repeat): 182775 hits / 33 misses / 50 entries
+8-attempt worker configuration diagnostic: hypothesis_parallel_blocks=0/2/4/4
+section 2.4 run1 vs P1-04: PASS
+section 2.4 run2 vs P1-04: PASS
+section 2.4 run3 vs P1-04: PASS
+complete work: 135/135
+excluded attempts: 0
+deadline misses retained: 132/135
+section 2.4 repeat run1 vs run2 exact algorithm work: PASS
+section 2.4 repeat run1 vs run3 exact algorithm work: PASS
+section 2.4 exact cache work per run: 5418131 hits / 78 misses / 100 entries
+complete CTest: PASS, 34/34, 485.49 seconds
+git diff --check: PASS
+comparator Python compilation: PASS
+ThreadSanitizer: NOT_RUN (toolchain linker missing libtsan_preinit.o)
+
+Performance disposition: REGRESSION, not hidden and no improvement claimed.
+Core p99: 7048.426 ms vs P1-04 5942.9354 ms.
+Peak RSS: 1108000 KiB vs P1-04 553024 KiB.
+
+Final independent review: PASS
+Reviewer complete CTest: PASS, 34/34, 486.89 seconds
+Supervisor acceptance: PASS

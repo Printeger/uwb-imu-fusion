@@ -1,0 +1,2412 @@
+diff --git a/include/uwb_imu_pl/estimation/candidate_worker_pool.hpp b/include/uwb_imu_pl/estimation/candidate_worker_pool.hpp
+index 74bc3d7..680c026 100644
+--- a/include/uwb_imu_pl/estimation/candidate_worker_pool.hpp
++++ b/include/uwb_imu_pl/estimation/candidate_worker_pool.hpp
+@@ -3,6 +3,7 @@
+ #include "uwb_imu_pl/estimation/rank_update_kernel.hpp"
+
+ #include <cstddef>
++#include <cstdint>
+ #include <functional>
+ #include <memory>
+
+@@ -24,7 +25,17 @@ class CandidateWorkerPool {
+   std::size_t workerCount() const;
+   void run(std::size_t task_count, std::size_t active_workers,
+            const Task& task);
++  // R11 flat scheduler. Tasks are claimed dynamically to balance numerical
++  // fallback tails, but the task index remains the sole output-slot identity.
++  // A task exception is retained, all remaining indexes still reach the
++  // barrier, and the first exception in task-index order is rethrown only
++  // after the barrier. Nested invocation on this same pool is rejected rather
++  // than deadlocking on the invocation mutex.
++  void runFlat(std::size_t task_count, std::size_t active_workers,
++               std::size_t scratch_limit_bytes, const Task& task);
+   void clearScratch();
++  std::size_t scratchBytes() const;
++  std::size_t scratchHighWaterBytes() const;
+
+  private:
+   struct Impl;
+diff --git a/include/uwb_imu_pl/integrity/protection_level_v2.hpp b/include/uwb_imu_pl/integrity/protection_level_v2.hpp
+index 43d566e..2ad0eb7 100644
+--- a/include/uwb_imu_pl/integrity/protection_level_v2.hpp
++++ b/include/uwb_imu_pl/integrity/protection_level_v2.hpp
+@@ -280,6 +280,27 @@ struct ProtectionLevelSharedContext {
+   std::vector<FrozenBridgeProjection> bridges;
+ };
+
++// R11 batch boundary. The caller owns every pointer through the synchronous
++// call. Candidate order and each hypothesis vector order define the canonical
++// Cartesian slot order; workers never append to shared output containers.
++struct FlatProtectionCandidateV1 {
++  CandidateEvaluation* candidate = nullptr;
++  const DetectorResultV2* detector = nullptr;
++  std::vector<FaultHypothesisV2>* hypotheses = nullptr;
++  const ProtectionLevelSharedContext* shared = nullptr;
++  ProtectionLevelV2Result* result = nullptr;
++  ProtectionLevelV2ProofV1* computation_audit = nullptr;
++  AttemptProofArena* proof_arena = nullptr;
++  // Optional P1-02 KEEP_ALL fast root. When all fields are present the flat
++  // scheduler consumes the same shared dual blocks/proofs as
++  // computeFrozenAllIn; absence selects the ordinary candidate-specific root.
++  const std::vector<FaultModeBasis>* frozen_modes = nullptr;
++  const FrozenHypothesisNumerics* frozen = nullptr;
++  const FrozenHypothesisDualNumerics* frozen_dual = nullptr;
++  const AttemptProofArena* frozen_proof_arena = nullptr;
++  std::uint64_t fault_model_policy_fingerprint = 0;
++};
++
+ class ProtectionLevelV2 {
+  public:
+   using FaultMapProvider = std::function<Eigen::MatrixXd(
+@@ -332,6 +353,18 @@ class ProtectionLevelV2 {
+       const ProtectionLevelSharedContext& shared,
+       const RiskBudgetV2& risk,
+       ProtectionLevelV2ProofV1* computation_audit) const;
++
++  // Phase 2 of R11: prepare all candidate roots, execute one flat Cartesian
++  // candidate×hypothesis task list, then reduce in canonical slot order.
++  // Root/precondition failures still receive terminal no-op leaf slots and
++  // fail closed after the common barrier.
++  void computeSharedFlatBatch(
++      const FrozenWindowAdmission& admission,
++      std::vector<FlatProtectionCandidateV1>* candidates,
++      const RiskBudgetV2& risk,
++      CandidateWorkerPool* worker_pool,
++      std::size_t active_workers,
++      std::size_t scratch_limit_bytes) const;
+   ProtectionLevelV2Result computeShared(
+       const FrozenWindowAdmission& admission,
+       CandidateEvaluation* candidate,
+diff --git a/src/uwb_imu_pl/estimation/candidate_worker_pool.cpp b/src/uwb_imu_pl/estimation/candidate_worker_pool.cpp
+index 23cd932..7100acd 100644
+--- a/src/uwb_imu_pl/estimation/candidate_worker_pool.cpp
++++ b/src/uwb_imu_pl/estimation/candidate_worker_pool.cpp
+@@ -1,15 +1,39 @@
+ #include "uwb_imu_pl/estimation/candidate_worker_pool.hpp"
+
+ #include <algorithm>
++#include <atomic>
+ #include <condition_variable>
+ #include <exception>
++#include <limits>
+ #include <mutex>
+ #include <stdexcept>
++#include <string>
+ #include <thread>
+ #include <vector>
+
+ namespace uwb_imu_pl {
+
++namespace {
++
++thread_local const void* active_pool = nullptr;
++
++std::size_t matrixBytes(const Eigen::MatrixXd& value) {
++  return static_cast<std::size_t>(value.size()) * sizeof(double);
++}
++
++std::size_t vectorBytes(const Eigen::VectorXd& value) {
++  return static_cast<std::size_t>(value.size()) * sizeof(double);
++}
++
++std::size_t scratchBytes(const RankUpdateScratch& scratch) {
++  return matrixBytes(scratch.update_columns) +
++      vectorBytes(scratch.update_signs) +
++      matrixBytes(scratch.whitened_update) +
++      matrixBytes(scratch.small_symmetric);
++}
++
++}  // namespace
++
+ struct CandidateWorkerPool::Impl {
+   explicit Impl(std::size_t count) : scratches(count) {
+     if (count == 0) throw std::invalid_argument("candidate worker count is zero");
+@@ -38,17 +62,68 @@ struct CandidateWorkerPool::Impl {
+       observed_generation = generation;
+       const std::size_t count = task_count;
+       const std::size_t active = active_workers;
++      const bool flat = flat_scheduling;
++      const std::size_t scratch_limit = scratch_limit_bytes;
+       const Task current = task;
+       lock.unlock();
+       if (worker < active) {
+-        try {
+-          for (std::size_t index = worker; index < count; index += active) {
+-            current(index, worker, scratches[worker]);
++        const void* prior_pool = active_pool;
++        active_pool = this;
++        if (flat) {
++          while (true) {
++            const std::size_t index = next_task.fetch_add(1);
++            if (index >= count) break;
++            std::exception_ptr task_error;
++            try {
++              current(index, worker, scratches[worker]);
++            } catch (...) {
++              task_error = std::current_exception();
++            }
++            const std::size_t bytes =
++                uwb_imu_pl::scratchBytes(scratches[worker]);
++            std::size_t observed = scratch_high_water_bytes.load();
++            while (observed < bytes &&
++                   !scratch_high_water_bytes.compare_exchange_weak(
++                       observed, bytes)) {}
++            const bool scratch_exceeded =
++                scratch_limit > 0 && bytes > scratch_limit;
++            if (scratch_exceeded) {
++              // The allocation has already occurred. Drop the oversized
++              // retained storage immediately; scheduling still drives every
++              // task to the common barrier before this identity fails closed.
++              scratches[worker] = RankUpdateScratch();
++            }
++            if (task_error || scratch_exceeded) {
++              std::exception_ptr selected = task_error;
++              if (!selected) {
++                selected = std::make_exception_ptr(std::runtime_error(
++                    "candidate worker scratch limit exceeded at task " +
++                    std::to_string(index)));
++              }
++              std::lock_guard<std::mutex> error_lock(mutex);
++              if (index < error_index) {
++                error_index = index;
++                error = std::move(selected);
++              }
++            }
++          }
++        } else {
++          try {
++            for (std::size_t index = worker; index < count; index += active) {
++              current(index, worker, scratches[worker]);
++            }
++          } catch (...) {
++            std::lock_guard<std::mutex> error_lock(mutex);
++            if (!error) error = std::current_exception();
+           }
+-        } catch (...) {
+-          std::lock_guard<std::mutex> error_lock(mutex);
+-          if (!error) error = std::current_exception();
++          const std::size_t bytes =
++              uwb_imu_pl::scratchBytes(scratches[worker]);
++          std::size_t observed = scratch_high_water_bytes.load();
++          while (observed < bytes &&
++                 !scratch_high_water_bytes.compare_exchange_weak(
++                     observed, bytes)) {}
+         }
++        active_pool = prior_pool;
+       }
+       lock.lock();
+       if (--remaining == 0) finished.notify_one();
+@@ -66,6 +141,11 @@ struct CandidateWorkerPool::Impl {
+   std::size_t active_workers = 0;
+   std::size_t remaining = 0;
+   std::size_t generation = 0;
++  std::atomic<std::size_t> next_task{0};
++  std::size_t error_index = std::numeric_limits<std::size_t>::max();
++  std::size_t scratch_limit_bytes = 0;
++  std::atomic<std::size_t> scratch_high_water_bytes{0};
++  bool flat_scheduling = false;
+   bool stopping = false;
+   std::exception_ptr error;
+ };
+@@ -81,6 +161,37 @@ void CandidateWorkerPool::run(std::size_t task_count,
+                               std::size_t active_workers,
+                               const Task& task) {
+   if (!task) throw std::invalid_argument("candidate worker task is empty");
++  if (active_pool == impl_.get()) {
++    throw std::logic_error("nested candidate worker pool invocation");
++  }
++  std::lock_guard<std::mutex> invocation(impl_->invocation_mutex);
++  std::unique_lock<std::mutex> lock(impl_->mutex);
++  if (impl_->stopping) throw std::logic_error("candidate worker pool is stopped");
++  impl_->task_count = task_count;
++  impl_->active_workers = std::max<std::size_t>(
++      1, std::min(active_workers, impl_->threads.size()));
++  impl_->task = task;
++  impl_->flat_scheduling = false;
++  impl_->scratch_limit_bytes = 0;
++  impl_->error = nullptr;
++  impl_->remaining = impl_->threads.size();
++  ++impl_->generation;
++  impl_->wake.notify_all();
++  impl_->finished.wait(lock, [&] { return impl_->remaining == 0; });
++  const std::exception_ptr error = impl_->error;
++  impl_->task = Task();
++  lock.unlock();
++  if (error) std::rethrow_exception(error);
++}
++
++void CandidateWorkerPool::runFlat(std::size_t task_count,
++                                  std::size_t active_workers,
++                                  std::size_t scratch_limit_bytes,
++                                  const Task& task) {
++  if (!task) throw std::invalid_argument("candidate worker task is empty");
++  if (active_pool == impl_.get()) {
++    throw std::logic_error("nested candidate worker pool invocation");
++  }
+   std::lock_guard<std::mutex> invocation(impl_->invocation_mutex);
+   std::unique_lock<std::mutex> lock(impl_->mutex);
+   if (impl_->stopping) throw std::logic_error("candidate worker pool is stopped");
+@@ -88,7 +199,11 @@ void CandidateWorkerPool::run(std::size_t task_count,
+   impl_->active_workers = std::max<std::size_t>(
+       1, std::min(active_workers, impl_->threads.size()));
+   impl_->task = task;
++  impl_->flat_scheduling = true;
++  impl_->scratch_limit_bytes = scratch_limit_bytes;
++  impl_->next_task = 0;
+   impl_->error = nullptr;
++  impl_->error_index = std::numeric_limits<std::size_t>::max();
+   impl_->remaining = impl_->threads.size();
+   ++impl_->generation;
+   impl_->wake.notify_all();
+@@ -106,4 +221,18 @@ void CandidateWorkerPool::clearScratch() {
+       });
+ }
+
++std::size_t CandidateWorkerPool::scratchBytes() const {
++  std::lock_guard<std::mutex> invocation(impl_->invocation_mutex);
++  std::size_t bytes = 0;
++  for (const auto& scratch : impl_->scratches) {
++    bytes += uwb_imu_pl::scratchBytes(scratch);
++  }
++  return bytes;
++}
++
++std::size_t CandidateWorkerPool::scratchHighWaterBytes() const {
++  std::lock_guard<std::mutex> invocation(impl_->invocation_mutex);
++  return impl_->scratch_high_water_bytes.load();
++}
++
+ }  // namespace uwb_imu_pl
+diff --git a/src/uwb_imu_pl/integrity/hypothesis_evidence.cpp b/src/uwb_imu_pl/integrity/hypothesis_evidence.cpp
+index aefe366..dc35849 100644
+--- a/src/uwb_imu_pl/integrity/hypothesis_evidence.cpp
++++ b/src/uwb_imu_pl/integrity/hypothesis_evidence.cpp
+@@ -1449,11 +1449,14 @@ std::vector<FaultModeEvidence> evaluateContiguous(
+   if (worker_pool && active_workers > 1) {
+     context->worker_blocks = active_workers;
+     NumericalWorkCounters::hypothesisParallelBlocks(active_workers);
+-    worker_pool->run(active_workers, active_workers,
+-        [&](std::size_t block, std::size_t, RankUpdateScratch&) {
+-          const std::size_t begin = hypotheses->size() * block / active_workers;
+-          const std::size_t end = hypotheses->size() * (block + 1) / active_workers;
+-          evaluate_range(begin, end);
++    // R11: each immutable hypothesis owns one fixed output slot. Dynamic
++    // claiming balances exact/SVD fallback tails without allowing completion
++    // order to affect the deterministic index-order reduction below.
++    constexpr std::size_t kRetainedWorkerScratchLimitBytes = 64u << 20;
++    worker_pool->runFlat(hypotheses->size(), active_workers,
++        kRetainedWorkerScratchLimitBytes,
++        [&](std::size_t hypothesis_index, std::size_t, RankUpdateScratch&) {
++          evaluate_range(hypothesis_index, hypothesis_index + 1);
+         });
+   } else {
+     context->worker_blocks = 1;
+diff --git a/src/uwb_imu_pl/integrity/integrity_monitor.cpp b/src/uwb_imu_pl/integrity/integrity_monitor.cpp
+index 3674822..5388e36 100644
+--- a/src/uwb_imu_pl/integrity/integrity_monitor.cpp
++++ b/src/uwb_imu_pl/integrity/integrity_monitor.cpp
+@@ -28,6 +28,7 @@
+ #include <cmath>
+ #include <deque>
+ #include <cstdlib>
++#include <exception>
+ #include <iomanip>
+ #include <iterator>
+ #include <map>
+@@ -48,6 +49,54 @@ bool bridgeTimeoutExceeded(std::uint32_t consecutive_epochs,
+ }
+ namespace {
+
++// R11 single wall-clock owner for one input attempt. The destructor records a
++// terminal sample for exceptions that occur before the ordinary processing
++// catch (for example watchdog admission). Normal/handled paths call finish()
++// exactly once, so no success/failure path can silently leave the denominator.
++class AllAttemptTimerV1 {
++ public:
++  explicit AllAttemptTimerV1(IntegrityOutput* fallback)
++      : fallback_(fallback), start_(std::chrono::steady_clock::now()) {}
++  ~AllAttemptTimerV1() noexcept {
++    if (finished_ || !fallback_) return;
++    try {
++      if (fallback_->diagnostics.status.empty()) {
++        fallback_->diagnostics.status = "EXCEPTION";
++      }
++      if (fallback_->diagnostics.reason.empty()) {
++        fallback_->diagnostics.reason =
++            "attempt exited before terminal finish";
++      }
++      append(fallback_, false, fallback_->diagnostics.status,
++             fallback_->diagnostics.reason);
++    } catch (...) {
++      // A timer must never replace the original exception. Allocation failure
++      // is observable as a missing terminal record and fails the outer gate.
++    }
++  }
++  double elapsedMs() const {
++    return std::chrono::duration<double, std::milli>(
++        std::chrono::steady_clock::now() - start_).count();
++  }
++  void finish(IntegrityOutput* output, bool success,
++              const std::string& status, const std::string& reason) {
++    if (finished_) throw std::logic_error("attempt timer finalized twice");
++    append(output, success, status, reason);
++    finished_ = true;
++  }
++
++ private:
++  void append(IntegrityOutput* output, bool success,
++              const std::string& status, const std::string& reason) const {
++    if (!output) return;
++    output->stage_timings.push_back(
++        {"core_total", elapsedMs(), success, status, reason});
++  }
++  IntegrityOutput* fallback_ = nullptr;
++  std::chrono::steady_clock::time_point start_;
++  bool finished_ = false;
++};
++
+ // Explicit test dependencies are an external sidecar so the public pipeline
+ // object retains its golden-p0-05 layout. Entries are never ambient: only the
+ // setter creates one, and construction/destruction erase by object address so
+@@ -2019,10 +2068,10 @@ processUwbBatchWithFinishElapsedOverride(
+     const UwbBatch& batch, const ClockSample& clock_sample,
+     const std::optional<double>& finish_elapsed_ms_override,
+     AttemptProofArena* proof_arena) {
+-  const auto start = std::chrono::steady_clock::now();
+   const auto before = estimator_->currentEpoch();
+   ++input_attempt_count_;
+   last_attempt_output_ = IntegrityOutput();
++  AllAttemptTimerV1 attempt_timer(&last_attempt_output_);
+   auto finish = [&](IntegrityOutput& output) {
+     const IntegrityConfig& config = estimator_->config();
+     output.attempted_timestamp = batch.timestamp;
+@@ -2090,10 +2139,9 @@ processUwbBatchWithFinishElapsedOverride(
+                                   : d.reason)});
+       }
+     }
+-    output.stage_timings.push_back({"core_total", std::chrono::duration<double, std::milli>(
+-        std::chrono::steady_clock::now() - start).count(), d.status != "EXCEPTION",
+-        d.status, d.reason});
+     applyImuModelQualificationGate(&output);
++    attempt_timer.finish(&output, d.status != "EXCEPTION", d.status,
++                         d.reason);
+   };
+   // C4/W2: the freshness channel is judged before any heavy FDE work.
+   publication_.beginAttempt(clock_sample);
+@@ -2102,8 +2150,11 @@ processUwbBatchWithFinishElapsedOverride(
+     // Backwards clock without a replay marker (or an unusable sample): refused
+     // the same way the platform's own input validation refuses stale batches --
+     // no FDE is entered and no estimator state is touched.
+-    throw std::invalid_argument(
+-        "publication watchdog refused the batch: " + watchdog.reason);
++    last_attempt_output_.attempted_timestamp = batch.timestamp;
++    last_attempt_output_.diagnostics.status = "EXCEPTION";
++    last_attempt_output_.diagnostics.reason =
++        "publication watchdog refused the batch: " + watchdog.reason;
++    throw std::invalid_argument(last_attempt_output_.diagnostics.reason);
+   }
+   if (publication_.watchdogRefused()) {
+     // Frozen data / wall-clock timeout: UNAVAILABLE is decided here, before the
+@@ -2140,8 +2191,7 @@ processUwbBatchWithFinishElapsedOverride(
+     }
+     const double finish_elapsed_ms = finish_elapsed_ms_override
+         ? *finish_elapsed_ms_override
+-        : std::chrono::duration<double, std::milli>(
+-              std::chrono::steady_clock::now() - start).count();
++        : attempt_timer.elapsedMs();
+     const bool finish_deadline_missed =
+         finish_elapsed_ms > estimator_->config().publication.deadline_ms;
+     if (finish_deadline_missed) {
+@@ -2188,8 +2238,8 @@ processUwbBatchWithFinishElapsedOverride(
+           "COMMITTED_UNPROTECTED_REINITIALIZE");
+     }
+     if (last_attempt_output_.stage_timings.empty()) {
+-      last_attempt_output_.stage_timings.push_back({"prepare", std::chrono::duration<double, std::milli>(
+-          std::chrono::steady_clock::now() - start).count(), false, "EXCEPTION", error.what()});
++      last_attempt_output_.stage_timings.push_back({"prepare",
++          attempt_timer.elapsedMs(), false, "EXCEPTION", error.what()});
+     }
+     finish(last_attempt_output_);
+     throw;
+@@ -3333,6 +3383,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+           DetectorResultV2 post;
+           ProtectionLevelV2Result protection_level;
+           ProtectionLevelV2ProofV1 computation_proof;
++          ProjectedPostActionModes projected_modes;
++          ProtectionLevelSharedContext shared_pl;
+           std::uint64_t protection_level_proof_identity = 0;
+           bool has_protection_level = false;
+           bool has_computation_proof = false;
+@@ -3350,10 +3402,15 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+         // reach the pool barrier.
+         const std::size_t action_batch_capacity =
+             std::max<std::size_t>(1, action_stream.batch_capacity);
++        // R11 bounds retained per-worker Eigen scratch. A task that exceeds
++        // the bound is recorded by canonical task index, its scratch is
++        // released, and the batch fails closed after the common barrier.
++        constexpr std::size_t kRetainedWorkerScratchLimitBytes = 64u << 20;
+         auto run_kernel_batch = [&](std::size_t batch_begin,
+                                     std::size_t batch_size,
+                                     std::vector<EvaluatedAction>* batch) {
+-        candidate_workers_->run(batch_size, active_workers,
++        candidate_workers_->runFlat(batch_size, active_workers,
++            kRetainedWorkerScratchLimitBytes,
+             [&](std::size_t work_index, std::size_t, RankUpdateScratch& scratch) {
+           const ExclusionAction& action =
+               *action_order[batch_begin + work_index];
+@@ -3467,6 +3524,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+             actionHypothesisProofAuditEnabledV1();
+         std::size_t peak_resident_evaluated_actions = 0;
+         std::size_t peak_batch_full_proofs = 0;
++        std::size_t flat_pl_candidate_roots = 0;
++        std::size_t flat_pl_tasks = 0;
+         const std::size_t main_full_proofs_before_actions = proof_arena
+             ? protectionLevelV2FullProofCount(*proof_arena) : 0;
+         std::function<void(std::vector<EvaluatedAction>*,
+@@ -3510,8 +3569,12 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+         evaluate_pl_batch = [&](std::vector<EvaluatedAction>* target_batch,
+                                 const std::vector<std::size_t>& target_passed,
+                                 AttemptProofArena* batch_proof_owner) {
+-        candidate_workers_->run(target_passed.size(), active_workers,
+-            [&](std::size_t passed_index, std::size_t, RankUpdateScratch&) {
++        std::vector<FlatProtectionCandidateV1> flat_jobs;
++        flat_jobs.reserve(target_passed.size());
++        // Phase 2a: build every immutable candidate root input in canonical
++        // action order. This performs no worker-pool invocation.
++        for (std::size_t passed_index = 0;
++             passed_index < target_passed.size(); ++passed_index) {
+           EvaluatedAction& evaluated = target_batch->at(
+               target_passed[passed_index]);
+           CandidateEvaluation& candidate = evaluated.candidate;
+@@ -3523,7 +3586,6 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+             part_start = now;
+             return ms;
+           };
+-            ProtectionLevelSharedContext shared_pl;
+             if (action.bridge_mode == BridgeMode::GenericKinematic) {
+               for (const auto& added : action.added_blocks) {
+                 if (added.kind != FactorKind::KinematicBridge) continue;
+@@ -3531,194 +3593,116 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+                 bridge.jacobian_whitened = added.jacobian_whitened;
+                 bridge.deterministic_bound = bridge_bounds.at(
+                     added.group_id.value());
+-                shared_pl.bridges.push_back(std::move(bridge));
++                evaluated.shared_pl.bridges.push_back(std::move(bridge));
+               }
+             }
+             candidate.diagnostics.bridge_ms = part_ms();
+-            const bool keep_all = action.groups_to_remove.empty() &&
+-                action.groups_to_add.empty() && action.added_blocks.empty();
+-            std::string frozen_dual_proof_reason;
+-            const bool frozen_dual_sealed = shared_hypothesis_numerics &&
+-                shared_hypothesis_dual_numerics &&
+-                validateFrozenHypothesisDualProof(
+-                    window_admission, *shared_hypothesis_numerics,
+-                    *shared_hypothesis_dual_numerics,
+-                    &frozen_dual_proof_reason);
+-            const bool reuse_frozen_dual = keep_all &&
+-                frozen_dual_sealed &&
+-                !capture_action_proof && shared_pl.bridges.empty();
+-            ProjectedPostActionModes projected_modes;
+-            ProjectedPostActionModes exact_projected_modes;
+-            bool exact_candidate_census_proven = false;
+-            if (reuse_frozen_dual &&
+-                shared_hypothesis_dual_numerics->candidate_mode_active.size() ==
+-                    models.modes.size()) {
+-              std::set<std::uint64_t> inactive_modes;
+-              for (std::size_t index = 0; index < models.modes.size(); ++index) {
+-                if (!shared_hypothesis_dual_numerics->candidate_mode_active[index]) {
+-                  inactive_modes.insert(models.modes[index].id.value());
+-                }
+-              }
+-              projected_modes.hypotheses = models.hypotheses;
+-              std::vector<FaultHypothesisV2> active_hypotheses;
+-              active_hypotheses.reserve(projected_modes.hypotheses.size());
+-              for (auto& hypothesis : projected_modes.hypotheses) {
+-                hypothesis.modes.erase(std::remove_if(
+-                    hypothesis.modes.begin(), hypothesis.modes.end(),
+-                    [&](FaultModeId id) {
+-                      return inactive_modes.count(id.value()) != 0;
+-                    }), hypothesis.modes.end());
+-                if (hypothesis.modes.empty()) continue;
+-                hypothesis.affected_groups.clear();
+-                for (const auto mode_id : hypothesis.modes) {
+-                  const auto mode = indexes.modes.find(mode_id.value());
+-                  if (mode == indexes.modes.end()) continue;
+-                  hypothesis.affected_groups.insert(
+-                      hypothesis.affected_groups.end(),
+-                      mode->second->affected_groups.begin(),
+-                      mode->second->affected_groups.end());
+-                }
+-                std::sort(hypothesis.affected_groups.begin(),
+-                          hypothesis.affected_groups.end());
+-                hypothesis.affected_groups.erase(std::unique(
+-                    hypothesis.affected_groups.begin(),
+-                    hypothesis.affected_groups.end()),
+-                    hypothesis.affected_groups.end());
+-                hypothesis.A.resize(0, 0);
+-                active_hypotheses.push_back(std::move(hypothesis));
+-              }
+-              projected_modes.hypotheses = std::move(active_hypotheses);
+-              // The compact activity bitmap is never a correctness oracle.
+-              // Prove its candidate census against the established exact
+-              // projector before consuming any frozen dual block.  A mismatch
+-              // keeps the exact maps and routes the entire candidate through
+-              // computeShared below.
+-              exact_projected_modes = projectPostActionModes(
+-                  window, transaction, models, action, indexes);
+-              exact_candidate_census_proven =
+-                  hypothesisSetFingerprint(projected_modes.hypotheses) ==
+-                      hypothesisSetFingerprint(
+-                          exact_projected_modes.hypotheses) &&
+-                  hypothesisSetFingerprint(
+-                      exact_projected_modes.hypotheses) ==
+-                      shared_hypothesis_dual_numerics
+-                          ->candidate_hypothesis_fingerprint;
+-              if (exact_candidate_census_proven) {
+-                projected_modes.hypotheses =
+-                    exact_projected_modes.hypotheses;
+-              }
+-            }
+-            std::map<std::uint64_t, const FrozenHypothesisDualBlock*>
+-                frozen_dual_by_hypothesis;
+-            std::map<std::uint64_t, const FrozenHypothesisPlEntry*>
+-                frozen_pl_by_hypothesis;
+-            if (reuse_frozen_dual) {
+-              for (const auto& block : shared_hypothesis_dual_numerics->dual_blocks) {
+-                frozen_dual_by_hypothesis.emplace(
+-                    block.hypothesis.value(), &block);
+-              }
+-              for (const auto& entry : shared_hypothesis_numerics->pl_entries) {
+-                frozen_pl_by_hypothesis.emplace(
+-                    entry.hypothesis.value(), &entry);
+-              }
+-            }
+-            const bool complete_frozen_dual = reuse_frozen_dual &&
+-                exact_candidate_census_proven &&
+-                shared_hypothesis_dual_numerics->candidate_mode_active.size() ==
+-                    models.modes.size() &&
+-                shared_hypothesis_dual_numerics->dual_blocks.size() ==
+-                    models.hypotheses.size() &&
+-                std::all_of(
+-                    projected_modes.hypotheses.begin(),
+-                    projected_modes.hypotheses.end(),
+-                    [&](const FaultHypothesisV2& hypothesis) {
+-                      const auto block = frozen_dual_by_hypothesis.find(
+-                          hypothesis.id.value());
+-                      const auto pl = frozen_pl_by_hypothesis.find(
+-                          hypothesis.id.value());
+-                      return block != frozen_dual_by_hypothesis.end() &&
+-                          block->second->valid &&
+-                          block->second->dimension > 0 &&
+-                          block->second->dimension <= 3 &&
+-                          pl != frozen_pl_by_hypothesis.end() &&
+-                          pl->second->valid &&
+-                          pl->second->monitorability.monitorable &&
+-                          (pl->second->gram_spd ||
+-                           pl->second->bound_from_projected_path);
+-                    });
+-            if (complete_frozen_dual) {
+-              // R08: evidence already produced Gamma_c/Gamma_h/t/G/J for
+-              // this exact immutable KEEP_ALL candidate.  Preserve every
+-              // hypothesis and consume that context directly; any identity
+-              // or fixed-block miss remains fail-closed inside the PL gate.
+-            } else {
+-              if (exact_projected_modes.hypotheses.empty() &&
+-                  exact_projected_modes.mode_maps.empty()) {
+-                exact_projected_modes = projectPostActionModes(
+-                    window, transaction, models, action, indexes);
+-              }
+-              projected_modes = std::move(exact_projected_modes);
+-              shared_pl.mode_maps = std::move(projected_modes.mode_maps);
+-            }
++            evaluated.projected_modes = projectPostActionModes(
++                window, transaction, models, action, indexes);
++            evaluated.shared_pl.mode_maps =
++                std::move(evaluated.projected_modes.mode_maps);
+             candidate.diagnostics.fault_map_ms = part_ms();
+             try {
+               const auto pl_seams = pipelineTestSeams(this);
+               if (pl_seams && pl_seams->before_protection_level) {
+                 pl_seams->before_protection_level(action.id);
+               }
++              FlatProtectionCandidateV1 job;
++              job.candidate = &candidate;
++              job.detector = &evaluated.post;
++              job.hypotheses = &evaluated.projected_modes.hypotheses;
++              job.shared = &evaluated.shared_pl;
++              job.result = &evaluated.protection_level;
++              job.computation_audit = capture_action_proof
++                  ? &evaluated.computation_proof : nullptr;
++              job.proof_arena = batch_proof_owner;
++              const bool keep_all = action.groups_to_remove.empty() &&
++                  action.groups_to_add.empty() &&
++                  action.added_blocks.empty();
++              std::string frozen_reason;
++              const bool frozen_sealed = shared_hypothesis_numerics &&
++                  shared_hypothesis_dual_numerics &&
++                  validateFrozenHypothesisDualProof(
++                      window_admission, *shared_hypothesis_numerics,
++                      *shared_hypothesis_dual_numerics, &frozen_reason);
++              const bool complete_frozen_dual = keep_all && frozen_sealed &&
++                  !capture_action_proof &&
++                  evaluated.shared_pl.bridges.empty() &&
++                  shared_hypothesis_dual_numerics
++                          ->candidate_mode_active.size() ==
++                      models.modes.size() &&
++                  shared_hypothesis_dual_numerics->dual_blocks.size() ==
++                      evaluated.projected_modes.hypotheses.size() &&
++                  shared_hypothesis_dual_numerics
++                          ->candidate_hypothesis_fingerprint ==
++                      hypothesisSetFingerprint(
++                          evaluated.projected_modes.hypotheses) &&
++                  shared_hypothesis_numerics->pl_entries.size() ==
++                      evaluated.projected_modes.hypotheses.size() &&
++                  std::all_of(
++                      shared_hypothesis_numerics->pl_entries.begin(),
++                      shared_hypothesis_numerics->pl_entries.end(),
++                      [](const FrozenHypothesisPlEntry& entry) {
++                        return entry.valid &&
++                            entry.monitorability.monitorable &&
++                            (entry.gram_spd ||
++                             entry.bound_from_projected_path);
++                      });
+               if (complete_frozen_dual) {
+-                evaluated.protection_level = batch_proof_owner
+-                    ? ProtectionLevelV2().computeFrozenAllIn(
+-                        window_admission, &candidate, evaluated.post,
+-                        projected_modes.hypotheses, models.modes,
+-                        *shared_hypothesis_numerics,
+-                        *shared_hypothesis_dual_numerics,
+-                        evidence_config.fault_model_policy_fingerprint,
+-                        cfg.risk_v2, proof_arena, batch_proof_owner)
+-                    : ProtectionLevelV2().computeFrozenAllIn(
+-                        window_admission, &candidate, evaluated.post,
+-                        projected_modes.hypotheses, models.modes,
+-                        *shared_hypothesis_numerics,
+-                        *shared_hypothesis_dual_numerics,
+-                        evidence_config.fault_model_policy_fingerprint,
+-                        cfg.risk_v2);
+-              } else if (capture_action_proof) {
+-                evaluated.protection_level = batch_proof_owner
+-                    ? ProtectionLevelV2().computeShared(
+-                        window_admission, &candidate, evaluated.post,
+-                        &projected_modes.hypotheses, shared_pl, cfg.risk_v2,
+-                        &evaluated.computation_proof, batch_proof_owner)
+-                    : ProtectionLevelV2().computeShared(
+-                        window_admission, &candidate, evaluated.post,
+-                        &projected_modes.hypotheses, shared_pl, cfg.risk_v2,
+-                        &evaluated.computation_proof);
+-                evaluated.has_computation_proof = true;
+-              } else {
+-                evaluated.protection_level = batch_proof_owner
+-                    ? ProtectionLevelV2().computeShared(
+-                        window_admission, &candidate, evaluated.post,
+-                        &projected_modes.hypotheses, shared_pl, cfg.risk_v2,
+-                        nullptr, batch_proof_owner)
+-                    : ProtectionLevelV2().computeShared(
+-                        window_admission, &candidate, evaluated.post,
+-                        &projected_modes.hypotheses, shared_pl, cfg.risk_v2);
++                job.frozen_modes = &models.modes;
++                job.frozen = shared_hypothesis_numerics.get();
++                job.frozen_dual = shared_hypothesis_dual_numerics.get();
++                job.frozen_proof_arena = proof_arena;
++                job.fault_model_policy_fingerprint =
++                    evidence_config.fault_model_policy_fingerprint;
+               }
+-              markActionSearchTerminal(&output, action, "PL_COMPLETE");
++              flat_jobs.push_back(job);
++              evaluated.has_computation_proof = capture_action_proof;
+             } catch (...) {
+               markActionSearchTerminal(&output, action, "PL_EXCEPTION");
+               throw;
+             }
++        }
++        const auto flat_start = std::chrono::steady_clock::now();
++        flat_pl_candidate_roots += flat_jobs.size();
++        for (const auto& job : flat_jobs) {
++          flat_pl_tasks += job.hypotheses ? job.hypotheses->size() : 0;
++        }
++        try {
++          ProtectionLevelV2().computeSharedFlatBatch(
++              window_admission, &flat_jobs, cfg.risk_v2,
++              candidate_workers_.get(), active_workers,
++              kRetainedWorkerScratchLimitBytes);
++        } catch (...) {
++          for (const auto offset : target_passed) {
++            markActionSearchTerminal(
++                &output, target_batch->at(offset).candidate.action,
++                "PL_EXCEPTION");
++          }
++          throw;
++        }
++        const double flat_ms = std::chrono::duration<double, std::milli>(
++            std::chrono::steady_clock::now() - flat_start).count();
++        // Phase 2c: canonical candidate-order proof validation and result
++        // publication. Completion order from the worker pool is irrelevant.
++        for (std::size_t passed_index = 0;
++             passed_index < target_passed.size(); ++passed_index) {
++          EvaluatedAction& evaluated = target_batch->at(
++              target_passed[passed_index]);
++          CandidateEvaluation& candidate = evaluated.candidate;
++          const ExclusionAction& action = candidate.action;
++          markActionSearchTerminal(&output, action, "PL_COMPLETE");
+             if (evaluated.protection_level.model_valid) {
+               std::string proof_reason;
+               const bool proof_valid = batch_proof_owner
+                   ? validateProtectionLevelV2Proof(
+                         candidate, evaluated.post,
+-                        projected_modes.hypotheses,
++                        evaluated.projected_modes.hypotheses,
+                         evaluated.protection_level, *batch_proof_owner,
+                         &proof_reason)
+                   : validateProtectionLevelV2Proof(
+                         candidate, evaluated.post,
+-                        projected_modes.hypotheses,
++                        evaluated.projected_modes.hypotheses,
+                         evaluated.protection_level, &proof_reason);
+               if (!proof_valid) {
+                 evaluated.protection_level.model_valid = false;
+@@ -3745,7 +3729,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+             }
+             evaluated.has_protection_level = true;
+             candidate.diagnostics.pl_evaluated = true;
+-            candidate.diagnostics.pl_ms = part_ms();
++            candidate.diagnostics.pl_ms = flat_ms;
+             const auto& pl = evaluated.protection_level;
+             candidate.pl_xyz_m = pl.pl_xyz_m;
+             candidate.hpl_m = pl.hpl_m;
+@@ -3757,7 +3741,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+           candidate.wall_ms = candidate.diagnostics.kernel_ms +
+               candidate.diagnostics.post_ms + candidate.diagnostics.bridge_ms +
+               candidate.diagnostics.fault_map_ms + candidate.diagnostics.pl_ms;
+-        });
++        }
+         };
+         evaluate_pl_batch(&evaluated_batch, post_passed, batch_proof_owner);
+         if (!capture_action_proof) {
+@@ -3913,6 +3897,14 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+             ";stream_retained_full_candidates=0" +
+             ";stream_retained_full_proofs=0" +
+             ";stream_full_action_heavy_copy=0" +
++            ";flat_pl_candidate_roots=" +
++            std::to_string(flat_pl_candidate_roots) +
++            ";flat_pl_candidate_hypothesis_tasks=" +
++            std::to_string(flat_pl_tasks) +
++            ";worker_scratch_bytes=" +
++            std::to_string(candidate_workers_->scratchBytes()) +
++            ";worker_scratch_high_water_bytes=" +
++            std::to_string(candidate_workers_->scratchHighWaterBytes()) +
+             ";stream_complete=" +
+             (action_stream_validation.valid &&
+                      action_stream_validation.exhaustive
+diff --git a/src/uwb_imu_pl/integrity/protection_level_v2.cpp b/src/uwb_imu_pl/integrity/protection_level_v2.cpp
+index de91771..dadce46 100644
+--- a/src/uwb_imu_pl/integrity/protection_level_v2.cpp
++++ b/src/uwb_imu_pl/integrity/protection_level_v2.cpp
+@@ -3,6 +3,7 @@
+ #include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
+ #include "uwb_imu_pl/integrity/dual_channel_detector.hpp"
+ #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
++#include "uwb_imu_pl/estimation/candidate_worker_pool.hpp"
+
+ #include <boost/math/distributions/non_central_chi_squared.hpp>
+ #include <boost/math/distributions/normal.hpp>
+@@ -2412,6 +2413,673 @@ ProtectionLevelV2Result ProtectionLevelV2::computeSharedImpl(
+   return result;
+ }
+
++void ProtectionLevelV2::computeSharedFlatBatch(
++    const FrozenWindowAdmission& admission,
++    std::vector<FlatProtectionCandidateV1>* jobs,
++    const RiskBudgetV2& risk,
++    CandidateWorkerPool* worker_pool,
++    std::size_t active_workers,
++    std::size_t scratch_limit_bytes) const {
++  if (!jobs || !worker_pool || !admission) {
++    throw std::invalid_argument("invalid R11 flat protection batch");
++  }
++  const auto& window = admission.window();
++  struct SolvedMode {
++    const Eigen::MatrixXd* map = nullptr;
++    Eigen::MatrixXd cross;
++    Eigen::Index solve_offset = 0;
++  };
++  struct FrozenModeSlice {
++    Eigen::Index offset = 0;
++    Eigen::Index columns = 0;
++  };
++  struct Root {
++    ProtectionLevelV2Result result;
++    ProtectionLevelV2ProofV1 sidecar;
++    std::map<std::uint64_t, SolvedMode> solved_modes;
++    RawFactorCertificate raw_factor;
++    Eigen::Vector3d sigma = Eigen::Vector3d::Zero();
++    double covariance_rank_tolerance = 1e-10;
++    double nominal_tail = 0.0;
++    RiskLedger complete_risk;
++    std::map<std::uint64_t, FrozenModeSlice> frozen_mode_slices;
++    std::map<std::uint64_t, std::size_t> frozen_hypothesis_indexes;
++    Eigen::Index frozen_mode_columns = 0;
++    std::uint64_t candidate_proof_identity = 0;
++    std::size_t frozen_terminal_limit =
++        std::numeric_limits<std::size_t>::max();
++    std::string failure;
++    bool frozen = false;
++    bool valid = false;
++  };
++  struct Slot {
++    FaultHypothesisV2 hypothesis;
++    FrozenHypothesisPlProofV1 hypothesis_proof;
++    DualChannelNumericalProofV1 dual_channel_proof;
++    ProtectionHypothesisComponentProofV1 component_proof;
++    Eigen::Vector3d component = Eigen::Vector3d::Constant(
++        std::numeric_limits<double>::infinity());
++    FaultAxisBounds bounds;
++    std::string detector_certificate;
++    std::string reason;
++    bool valid = false;
++  };
++  std::vector<Root> roots(jobs->size());
++  std::vector<std::size_t> offsets(jobs->size() + 1, 0);
++  for (std::size_t candidate_index = 0;
++       candidate_index < jobs->size(); ++candidate_index) {
++    auto& job = jobs->at(candidate_index);
++    auto& root = roots[candidate_index];
++    root.sidecar.risk = risk;
++    offsets[candidate_index + 1] = offsets[candidate_index] +
++        (job.hypotheses ? job.hypotheses->size() : 0);
++    auto fail = [&](const std::string& reason) {
++      if (root.failure.empty()) root.failure = reason;
++      root.result.reason = root.failure;
++    };
++    if (!job.candidate || !job.detector || !job.hypotheses || !job.shared ||
++        !job.result || !job.candidate->valid ||
++        !job.detector->numerically_valid) {
++      fail("invalid post-FDE candidate/protected-state map");
++      continue;
++    }
++    std::string detector_reason;
++    if (!detectorContractMatchesCandidate(
++            window, *job.candidate, *job.detector, &detector_reason,
++            &admission) ||
++        window.protected_state_map.cols() !=
++            job.candidate->state_increment.rows() ||
++        window.protected_state_map.rows() != 3) {
++      fail(detector_reason.empty()
++               ? "invalid post-FDE candidate/protected-state map"
++               : detector_reason);
++      continue;
++    }
++    // Candidate identity includes large frozen matrices.  It is immutable for
++    // the whole batch root and must never be re-hashed by every leaf task.
++    root.candidate_proof_identity = candidateProofIdentity(*job.candidate);
++    const bool requested_frozen = job.frozen_modes && job.frozen &&
++        job.frozen_dual;
++    if (requested_frozen) {
++      const bool keep_all = job.candidate->action.groups_to_remove.empty() &&
++          job.candidate->action.groups_to_add.empty() &&
++          job.candidate->action.added_blocks.empty();
++      std::string frozen_reason;
++      const bool frozen_valid = keep_all && job.frozen->valid &&
++          window.numerics &&
++          job.frozen->window_id == window.id &&
++          job.frozen->version == window.version &&
++          job.frozen->window_content_fingerprint ==
++              window.numerics->content_fingerprint &&
++          job.frozen->numerical_contract_fingerprint ==
++              window.numerics->numerical_contract_fingerprint &&
++          job.frozen->fault_mode_fingerprint ==
++              faultModeSetFingerprint(*job.frozen_modes) &&
++          job.frozen->fault_model_policy_fingerprint ==
++              job.fault_model_policy_fingerprint &&
++          job.frozen->hypothesis_count == job.hypotheses->size() &&
++          job.frozen->pl_entries.size() ==
++              job.frozen_dual->dual_blocks.size() &&
++          validateFrozenHypothesisDualProof(
++              admission, *job.frozen, *job.frozen_dual, &frozen_reason) &&
++          job.frozen_dual->candidate_hypothesis_fingerprint ==
++              hypothesisSetFingerprint(*job.hypotheses);
++      if (!frozen_valid) {
++        NumericalWorkCounters::hypothesisSharedMiss();
++        fail(frozen_reason.empty()
++                 ? "frozen all-in hypothesis context identity mismatch"
++                 : frozen_reason);
++        continue;
++      }
++      const RiskBudgetAudit allocation = auditRiskBudget(
++          risk, *job.hypotheses);
++      root.complete_risk = preSelectionRiskLedger(risk, *job.hypotheses);
++      root.result.allocated_outcome_risk = root.complete_risk.charged_total;
++      root.result.risk_budget_valid = root.complete_risk.closes &&
++          root.complete_risk.all_terms_validated;
++      if (!allocation.valid) {
++        fail("risk allocation precheck does not close");
++        continue;
++      }
++      root.covariance_rank_tolerance = window.numerics
++          ? window.numerics->numerical_contract.rank_tolerance : 1e-10;
++      const Eigen::Matrix3d protected_covariance =
++          job.frozen_dual->candidate_protected_covariance;
++      const Eigen::MatrixXd protected_factor =
++          job.frozen_dual->candidate_protected_factor.transpose();
++      const bool factor_valid = protected_factor.cols() == 3 &&
++          protected_factor.rows() == job.candidate->state_increment.size() &&
++          protected_factor.allFinite();
++      const auto covariance_certificate = factor_valid
++          ? certifyFactorGram(protected_factor, protected_covariance,
++                              root.covariance_rank_tolerance,
++                              root.candidate_proof_identity)
++          : SymmetricPsdCertificate{};
++      if (!covariance_certificate.valid ||
++          (protected_covariance.diagonal().array() <= 0.0).any()) {
++        fail("post-FDE protected covariance is invalid: " +
++             covariance_certificate.reason);
++        continue;
++      }
++      root.nominal_tail = std::max(1e-15, risk.nominal_axis_tail);
++      const double nominal_k =
++          StatisticalBoundsCache::normalTwoSidedMultiplier(root.nominal_tail);
++      root.sigma = protected_covariance.diagonal().cwiseSqrt();
++      root.sidecar.protected_covariance = protected_covariance;
++      root.sidecar.protected_covariance_factor = protected_factor;
++      root.sidecar.covariance_rank_tolerance =
++          root.covariance_rank_tolerance;
++      root.sidecar.nominal_tail = root.nominal_tail;
++      root.sidecar.nominal_multiplier = nominal_k;
++      root.sidecar.nominal_sigma = root.sigma;
++      root.result.nominal_component_m = nominal_k * root.sigma;
++      root.result.fault_component_m.setZero();
++      root.result.bridge_component_m.setZero();
++      for (const auto& mode : *job.frozen_modes) {
++        const Eigen::Index columns = mode.effective_basis_certified &&
++            mode.effective_parameter_dimension > 0 &&
++            mode.effective_parameter_basis.rows() ==
++                mode.parameter_dimension &&
++            mode.effective_parameter_basis.cols() ==
++                mode.effective_parameter_dimension
++            ? mode.effective_parameter_dimension : mode.parameter_dimension;
++        root.frozen_mode_slices.emplace(
++            mode.id.value(),
++            FrozenModeSlice{root.frozen_mode_columns, columns});
++        root.frozen_mode_columns += columns;
++      }
++      for (std::size_t index = 0;
++           index < job.frozen->pl_entries.size(); ++index) {
++        root.frozen_hypothesis_indexes.emplace(
++            job.frozen->pl_entries[index].hypothesis.value(), index);
++      }
++      // The frozen P1-02 path is fail-closed at the first canonical cached
++      // hypothesis that is absent or already certified unmonitorable.  Find
++      // that boundary before dispatch so every later flat slot can reach a
++      // deterministic terminal no-op without replacing the golden early-fail
++      // numerical workload with tens of thousands of unnecessary solves.
++      for (std::size_t h = 0; h < job.hypotheses->size(); ++h) {
++        const auto found = root.frozen_hypothesis_indexes.find(
++            job.hypotheses->at(h).id.value());
++        if (found == root.frozen_hypothesis_indexes.end()) {
++          root.frozen_terminal_limit = h;
++          break;
++        }
++        const auto& cached = job.frozen->pl_entries[found->second];
++        if (cached.hypothesis != job.hypotheses->at(h).id ||
++            !cached.valid ||
++            !(cached.gram_spd || cached.bound_from_projected_path) ||
++            !cached.monitorability.monitorable) {
++          root.frozen_terminal_limit = h;
++          break;
++        }
++      }
++      NumericalWorkCounters::hypothesisSharedHit();
++      root.frozen = true;
++      root.valid = true;
++      continue;
++    }
++    std::map<std::uint64_t, const Eigen::MatrixXd*> modes;
++    for (const auto& hypothesis : *job.hypotheses) {
++      for (const auto id : hypothesis.modes) {
++        const auto found = job.shared->mode_maps.find(id.value());
++        if (found == job.shared->mode_maps.end() ||
++            found->second.rows() != job.candidate->rows ||
++            found->second.cols() == 0 || !found->second.allFinite()) {
++          fail("remaining hypothesis cannot be mapped post-FDE");
++          break;
++        }
++        modes.emplace(id.value(), &found->second);
++      }
++      if (!root.failure.empty()) break;
++    }
++    if (!root.failure.empty()) continue;
++    const RiskBudgetAudit allocation = auditRiskBudget(risk, *job.hypotheses);
++    root.complete_risk = preSelectionRiskLedger(risk, *job.hypotheses);
++    root.result.allocated_outcome_risk = root.complete_risk.charged_total;
++    root.result.risk_budget_valid = root.complete_risk.closes &&
++        root.complete_risk.all_terms_validated;
++    if (!allocation.valid) {
++      fail("risk allocation precheck does not close");
++      continue;
++    }
++    Eigen::Index solve_columns = 3;
++    for (const auto& item : modes) {
++      SolvedMode mode;
++      mode.map = item.second;
++      mode.cross = job.candidate->normalCross(*item.second);
++      if (mode.cross.rows() != job.candidate->state_increment.rows()) {
++        fail("candidate normal cross-product failed");
++        break;
++      }
++      mode.solve_offset = solve_columns;
++      solve_columns += mode.cross.cols();
++      root.solved_modes.emplace(item.first, std::move(mode));
++    }
++    if (!root.failure.empty()) continue;
++    std::vector<Eigen::Index> bridge_offsets;
++    bridge_offsets.reserve(job.shared->bridges.size());
++    for (const auto& bridge : job.shared->bridges) {
++      if (bridge.jacobian_whitened.cols() !=
++              job.candidate->state_increment.rows() ||
++          bridge.jacobian_whitened.rows() !=
++              bridge.deterministic_bound.size() ||
++          !bridge.jacobian_whitened.allFinite() ||
++          !bridge.deterministic_bound.allFinite() ||
++          (bridge.deterministic_bound.array() < 0.0).any()) {
++        fail("bridge projection dimensions invalid");
++        break;
++      }
++      bridge_offsets.push_back(solve_columns);
++      solve_columns += bridge.jacobian_whitened.rows();
++    }
++    if (!root.failure.empty()) continue;
++    Eigen::MatrixXd rhs(job.candidate->state_increment.rows(), solve_columns);
++    rhs.leftCols<3>() = window.protected_state_map.transpose();
++    for (const auto& item : root.solved_modes) {
++      rhs.middleCols(item.second.solve_offset, item.second.cross.cols()) =
++          item.second.cross;
++    }
++    for (std::size_t i = 0; i < job.shared->bridges.size(); ++i) {
++      const auto& bridge = job.shared->bridges[i];
++      rhs.middleCols(bridge_offsets[i], bridge.jacobian_whitened.rows()) =
++          bridge.jacobian_whitened.transpose();
++    }
++    const Eigen::MatrixXd solutions = job.candidate->covarianceTimes(rhs);
++    ++job.candidate->diagnostics.covariance_solve_count;
++    if (solutions.rows() != job.candidate->state_increment.rows() ||
++        solutions.cols() != solve_columns || !solutions.allFinite()) {
++      fail("candidate covariance solve failed");
++      continue;
++    }
++    root.covariance_rank_tolerance = window.numerics
++        ? window.numerics->numerical_contract.rank_tolerance : 1e-10;
++    root.raw_factor = rawFactorCertificate(
++        window, *job.candidate, root.covariance_rank_tolerance);
++    if (!root.raw_factor.valid) {
++      fail("direct raw-H certificate failed: " + root.raw_factor.reason);
++      continue;
++    }
++    const Eigen::Matrix3d protected_covariance =
++        root.raw_factor.protected_covariance;
++    const auto covariance_certificate = certifyFactorGram(
++        root.raw_factor.protected_factor.transpose(), protected_covariance,
++        root.covariance_rank_tolerance,
++        root.candidate_proof_identity);
++    if (!covariance_certificate.valid ||
++        (protected_covariance.diagonal().array() <= 0.0).any()) {
++      fail("post-FDE protected covariance is invalid: " +
++           covariance_certificate.reason);
++      continue;
++    }
++    root.result.bridge_component_m.setZero();
++    for (std::size_t i = 0; i < job.shared->bridges.size(); ++i) {
++      const auto& bridge = job.shared->bridges[i];
++      const Eigen::MatrixXd gain = solutions.middleCols(
++          bridge_offsets[i], bridge.jacobian_whitened.rows());
++      ProtectionBridgeProofV1 bridge_proof;
++      bridge_proof.projected_gain = window.protected_state_map * gain;
++      bridge_proof.deterministic_bound = bridge.deterministic_bound;
++      bridge_proof.served_component =
++          bridge_proof.projected_gain.cwiseAbs() *
++          bridge_proof.deterministic_bound;
++      root.result.bridge_component_m += bridge_proof.served_component;
++      root.sidecar.bridge_proofs.push_back(std::move(bridge_proof));
++    }
++    root.nominal_tail = std::max(1e-15, risk.nominal_axis_tail);
++    const double nominal_k = StatisticalBoundsCache::normalTwoSidedMultiplier(
++        root.nominal_tail);
++    root.sigma = protected_covariance.diagonal().cwiseSqrt();
++    root.sidecar.protected_covariance = protected_covariance;
++    root.sidecar.protected_covariance_factor =
++        root.raw_factor.protected_factor.transpose();
++    root.sidecar.covariance_rank_tolerance =
++        root.covariance_rank_tolerance;
++    root.sidecar.nominal_tail = root.nominal_tail;
++    root.sidecar.nominal_multiplier = nominal_k;
++    root.sidecar.nominal_sigma = root.sigma;
++    root.result.nominal_component_m = nominal_k * root.sigma;
++    root.result.fault_component_m.setZero();
++    root.valid = true;
++  }
++
++  std::vector<Slot> slots(offsets.back());
++  std::vector<std::size_t> task_candidate(offsets.back());
++  std::vector<std::size_t> task_hypothesis(offsets.back());
++  for (std::size_t c = 0; c < jobs->size(); ++c) {
++    for (std::size_t h = 0; h < offsets[c + 1] - offsets[c]; ++h) {
++      task_candidate[offsets[c] + h] = c;
++      task_hypothesis[offsets[c] + h] = h;
++    }
++  }
++  const std::size_t bounded_workers = std::max<std::size_t>(1,
++      std::min(active_workers, slots.size()));
++  worker_pool->runFlat(slots.size(), bounded_workers, scratch_limit_bytes,
++      [&](std::size_t flat_index, std::size_t, RankUpdateScratch&) {
++        const std::size_t c = task_candidate[flat_index];
++        const std::size_t h = task_hypothesis[flat_index];
++        auto& root = roots[c];
++        auto& job = jobs->at(c);
++        auto& slot = slots[flat_index];
++        const auto& source_hypothesis = job.hypotheses->at(h);
++        if (!root.frozen) {
++          slot.hypothesis = source_hypothesis;
++        }
++        if (!root.valid) {
++          slot.reason = root.failure;
++          return;
++        }
++        if (root.frozen && h > root.frozen_terminal_limit) {
++          slot.reason =
++              "terminal after earlier canonical frozen hypothesis failure";
++          return;
++        }
++        const auto& detector = *job.detector;
++        const auto& candidate = *job.candidate;
++        if (root.frozen) {
++          const auto frozen_index = root.frozen_hypothesis_indexes.find(
++              source_hypothesis.id.value());
++          if (frozen_index == root.frozen_hypothesis_indexes.end()) {
++            slot.reason = "frozen candidate hypothesis block is absent";
++            return;
++          }
++          const auto& cached =
++              job.frozen->pl_entries[frozen_index->second];
++          if (cached.hypothesis != source_hypothesis.id || !cached.valid ||
++              !(cached.gram_spd || cached.bound_from_projected_path) ||
++              !cached.monitorability.monitorable) {
++            slot.reason = "remaining post-FDE hypothesis " +
++                std::to_string(source_hypothesis.id.value()) +
++                " is unmonitorable: rank=" +
++                std::to_string(cached.monitorability.rank) + "/" +
++                std::to_string(cached.monitorability.parameter_dimension) +
++                ";sigma_min=" +
++                std::to_string(cached.monitorability.sigma_min) +
++                ";condition=" +
++                std::to_string(cached.monitorability.condition_number);
++            return;
++          }
++          std::string cached_reason;
++          FrozenHypothesisPlProofV1 cached_proof;
++          const bool cached_found = job.frozen_proof_arena
++              ? frozenHypothesisPlProof(
++                    cached, *job.frozen_proof_arena, &cached_proof)
++              : frozenHypothesisPlProof(cached, &cached_proof);
++          if (!cached_found ||
++              !validateFrozenHypothesisPlEntry(cached_proof,
++                                                &cached_reason)) {
++            slot.reason = "frozen hypothesis proof rejected: " +
++                cached_reason;
++            return;
++          }
++          const auto& dual =
++              job.frozen_dual->dual_blocks[frozen_index->second];
++          if (!dual.valid || dual.hypothesis != source_hypothesis.id ||
++              dual.dimension <= 0 || dual.dimension > 3 ||
++              cached_proof.raw_detection_factor.cols() != dual.dimension) {
++            NumericalWorkCounters::hypothesisSharedMiss();
++            slot.reason = "frozen dual hypothesis block is invalid";
++            return;
++          }
++          const Eigen::MatrixXd total_gram = dual.total_gram.topLeftCorner(
++              dual.dimension, dual.dimension);
++          const Eigen::MatrixXd history_gram =
++              dual.history_gram.topLeftCorner(
++                  dual.dimension, dual.dimension);
++          const Eigen::MatrixXd protected_response =
++              dual.protected_response.leftCols(dual.dimension);
++          Eigen::MatrixXd raw_detection_factor(
++              job.frozen_dual->candidate_detection_modes.rows(),
++              dual.dimension);
++          Eigen::Index raw_offset = 0;
++          bool raw_valid =
++              job.frozen_dual->candidate_detection_modes.cols() ==
++              root.frozen_mode_columns;
++          for (const auto mode_id : source_hypothesis.modes) {
++            const auto slice = root.frozen_mode_slices.find(mode_id.value());
++            if (slice == root.frozen_mode_slices.end() ||
++                raw_offset + slice->second.columns > dual.dimension) {
++              raw_valid = false;
++              break;
++            }
++            raw_detection_factor.middleCols(
++                raw_offset, slice->second.columns) =
++                job.frozen_dual->candidate_detection_modes.middleCols(
++                    slice->second.offset, slice->second.columns);
++            raw_offset += slice->second.columns;
++          }
++          if (!raw_valid || raw_offset != dual.dimension ||
++              !raw_detection_factor.allFinite()) {
++            slot.reason = "frozen candidate mode response is incomplete";
++            return;
++          }
++          const auto response_certificate =
++              certifyFactorGramAndProtectedResponse(
++                  raw_detection_factor, total_gram, protected_response,
++                  root.covariance_rank_tolerance,
++                  root.candidate_proof_identity,
++                  cached_proof.raw_factor_scale);
++          if (!response_certificate.valid ||
++              response_certificate.nullspace_class ==
++                  GramNullspaceClass::Dangerous) {
++            slot.reason = "frozen dual hypothesis proof is unavailable: " +
++                response_certificate.reason;
++            return;
++          }
++          slot.hypothesis_proof = protectionHypothesisProof(
++              source_hypothesis.id, response_certificate,
++              raw_detection_factor, cached_proof.raw_factor_scale,
++              root.covariance_rank_tolerance);
++          slot.hypothesis_proof.protected_response = protected_response;
++          slot.hypothesis_proof.parent_proof_identity =
++              root.candidate_proof_identity;
++          slot.bounds = dualChannelAxisBounds(
++              detector, source_hypothesis, total_gram, history_gram,
++              protected_response, root.sigma, root.nominal_tail,
++              root.covariance_rank_tolerance,
++              root.candidate_proof_identity, &slot.component,
++              &slot.detector_certificate, &slot.dual_channel_proof);
++          if (!slot.bounds.valid) {
++            slot.reason = "remaining post-FDE hypothesis " +
++                std::to_string(source_hypothesis.id.value()) +
++                " has no valid section 5.9 bound: " + slot.bounds.reason;
++            return;
++          }
++          slot.component_proof.hypothesis = source_hypothesis.id;
++          slot.component_proof.detector_dof = detector.dof;
++          slot.component_proof.detector_threshold =
++              detector.squared_threshold;
++          slot.component_proof.hypothesis_tail =
++              slot.bounds.hypothesis_tail;
++          slot.component_proof.axis_tail = slot.bounds.axis_tail;
++          slot.component_proof.multiplier = slot.bounds.k;
++          slot.component_proof.noncentrality = slot.bounds.lambda;
++          slot.component_proof.dual_channel = true;
++          slot.component_proof.served_component = slot.component;
++          slot.valid = true;
++          return;
++        }
++        Eigen::Index columns = 0;
++        for (const auto id : slot.hypothesis.modes) {
++          columns += root.solved_modes.at(id.value()).map->cols();
++        }
++        Eigen::MatrixXd protected_fault(3, columns);
++        Eigen::MatrixXd fault_map(candidate.rows, columns);
++        Eigen::Index offset = 0;
++        for (const auto mode_id : slot.hypothesis.modes) {
++          const auto& mode = root.solved_modes.at(mode_id.value());
++          const Eigen::Index count = mode.map->cols();
++          fault_map.middleCols(offset, count) = *mode.map;
++          offset += count;
++        }
++        Eigen::MatrixXd gram;
++        Eigen::MatrixXd residual_factor;
++        if (!root.raw_factor.faultProducts(
++                fault_map, &gram, &protected_fault, &residual_factor)) {
++          slot.reason = "direct raw-H fault certificate failed";
++          return;
++        }
++        NumericalWorkCounters::faultGramEigen();
++        const auto gram_certificate = certifyFactorGramAndProtectedResponse(
++            residual_factor, gram, protected_fault,
++            root.covariance_rank_tolerance,
++            root.candidate_proof_identity, fault_map.norm());
++        slot.hypothesis_proof = protectionHypothesisProof(
++            slot.hypothesis.id, gram_certificate, residual_factor,
++            fault_map.norm(), root.covariance_rank_tolerance);
++        slot.hypothesis_proof.protected_response = protected_fault;
++        slot.hypothesis_proof.parent_proof_identity =
++            root.candidate_proof_identity;
++        auto& monitor = slot.hypothesis.monitorability;
++        monitor.parameter_dimension = columns;
++        monitor.rank = gram_certificate.gram.rank;
++        monitor.sigma_min = gram_certificate.gram.sigma_min;
++        monitor.sigma_max = gram_certificate.gram.sigma_max;
++        monitor.condition_number = gram_certificate.gram.condition;
++        monitor.monitorable = gram_certificate.valid &&
++            gram_certificate.nullspace_class != GramNullspaceClass::Dangerous;
++        slot.hypothesis.monitored = monitor.monitorable;
++        if (!slot.hypothesis.monitored) {
++          slot.reason = "remaining post-FDE hypothesis " +
++              std::to_string(slot.hypothesis.id.value()) +
++              " is unmonitorable: rank=" + std::to_string(monitor.rank) +
++              "/" + std::to_string(columns) + ";sigma_min=" +
++              std::to_string(monitor.sigma_min) + ";condition=" +
++              std::to_string(monitor.condition_number);
++          return;
++        }
++        monitor.protected_slopes = gram_certificate.protected_slopes;
++        const Eigen::MatrixXd history_gram = historyGramFromCertificate(
++            candidate, fault_map);
++        if (history_gram.rows() != columns) {
++          slot.reason = "candidate detector row-role payload is missing";
++          return;
++        }
++        slot.bounds = dualChannelAxisBounds(
++            detector, slot.hypothesis, gram, history_gram, protected_fault,
++            root.sigma, root.nominal_tail, root.covariance_rank_tolerance,
++            root.candidate_proof_identity, &slot.component,
++            &slot.detector_certificate, &slot.dual_channel_proof);
++        if (!slot.bounds.valid) {
++          slot.reason = "remaining post-FDE hypothesis " +
++              std::to_string(slot.hypothesis.id.value()) +
++              " has no valid section 5.9 bound: " + slot.bounds.reason;
++          return;
++        }
++        slot.component_proof.hypothesis = slot.hypothesis.id;
++        slot.component_proof.detector_dof = detector.dof;
++        slot.component_proof.detector_threshold = detector.squared_threshold;
++        slot.component_proof.hypothesis_tail = slot.bounds.hypothesis_tail;
++        slot.component_proof.axis_tail = slot.bounds.axis_tail;
++        slot.component_proof.multiplier = slot.bounds.k;
++        slot.component_proof.noncentrality = slot.bounds.lambda;
++        slot.component_proof.dual_channel = true;
++        slot.component_proof.served_component = slot.component;
++        slot.valid = true;
++      });
++
++  for (std::size_t c = 0; c < jobs->size(); ++c) {
++    auto& job = jobs->at(c);
++    auto& root = roots[c];
++    auto& result = root.result;
++    std::string audit_failure = root.failure;
++    for (std::size_t h = 0; h < offsets[c + 1] - offsets[c]; ++h) {
++      auto& slot = slots[offsets[c] + h];
++      if (!slot.valid) {
++        if (audit_failure.empty()) audit_failure = slot.reason;
++        if (!job.computation_audit) break;
++        // The legacy audit path retains a completed Gram/response proof even
++        // when a later monitorability/history/bound gate fails.  Preserve that
++        // distinction: a pre-proof failure has no hypothesis entry (and is
++        // reported as unavailable), while a post-proof failure keeps the
++        // certified numerical record plus an infinite terminal component.
++        if (slot.hypothesis_proof.proof_identity != 0) {
++          if (!root.frozen) job.hypotheses->at(h) = slot.hypothesis;
++          root.sidecar.hypothesis_proofs.push_back(
++              std::move(slot.hypothesis_proof));
++          ProtectionHypothesisComponentProofV1 unavailable_component;
++          unavailable_component.hypothesis = job.hypotheses->at(h).id;
++          if (job.detector) {
++            unavailable_component.detector_dof = job.detector->dof;
++            unavailable_component.detector_threshold =
++                job.detector->squared_threshold;
++          }
++          unavailable_component.served_component.setConstant(
++              std::numeric_limits<double>::infinity());
++          root.sidecar.component_proofs.push_back(
++              std::move(unavailable_component));
++        }
++        continue;
++      }
++      if (!root.frozen) job.hypotheses->at(h) = slot.hypothesis;
++      result.hypothesis_tail_used = std::max(
++          result.hypothesis_tail_used, slot.bounds.hypothesis_tail);
++      result.axis_tail_used = std::max(
++          result.axis_tail_used, slot.bounds.axis_tail);
++      result.fault_multiplier_used = std::max(
++          result.fault_multiplier_used, slot.bounds.k);
++      result.noncentrality_used = std::max(
++          result.noncentrality_used, slot.bounds.lambda);
++      result.detector_certificate_id = slot.detector_certificate;
++      result.fault_component_m =
++          result.fault_component_m.cwiseMax(slot.component);
++      root.sidecar.hypothesis_proofs.push_back(
++          std::move(slot.hypothesis_proof));
++      root.sidecar.dual_channel_proofs.push_back(
++          std::move(slot.dual_channel_proof));
++      root.sidecar.component_proofs.push_back(
++          std::move(slot.component_proof));
++    }
++    if (!audit_failure.empty()) {
++      result.reason = audit_failure;
++      result.model_valid = false;
++      result.availability = Availability::Unavailable;
++    } else {
++      result.pl_xyz_m = result.nominal_component_m.cwiseMax(
++          result.fault_component_m) + result.bridge_component_m;
++      result.hpl_m = std::hypot(result.pl_xyz_m.x(), result.pl_xyz_m.y());
++      result.vpl_m = result.pl_xyz_m.z();
++      result.model_valid = result.pl_xyz_m.allFinite() &&
++          job.detector->passed;
++      result.availability = result.model_valid && result.risk_budget_valid &&
++          result.hpl_m <= risk.horizontal_alert_limit_m &&
++          result.vpl_m <= risk.vertical_alert_limit_m
++          ? Availability::Available : Availability::Unavailable;
++      result.formal_eligible = false;
++      if (!job.detector->passed) result.reason = "post-FDE detector alarm";
++      else if (!result.risk_budget_valid) {
++        result.reason = root.complete_risk.reason;
++      } else if (result.availability != Availability::Available) {
++        result.reason = "post-FDE protection level exceeds alert limit";
++      } else {
++        result.reason =
++            "research V2 implemented; Gate J calibration/review pending";
++      }
++      bindProtectionResultProof(
++          *job.candidate, *job.detector, *job.hypotheses, &result,
++          &root.sidecar, job.proof_arena);
++    }
++    if (job.computation_audit) {
++      root.sidecar.candidate_proof_identity = job.candidate
++          ? candidateProofIdentity(*job.candidate) : 0;
++      root.sidecar.detector_proof_identity = job.detector
++          ? job.detector->detector_contract_digest : 0;
++      root.sidecar.detector_candidate_numerical_identity = job.detector
++          ? job.detector->candidate_numerical_identity : 0;
++      root.sidecar.pooled_only = job.detector &&
++          (job.detector->contract_mode ==
++               DetectorContractMode::LegacyPooledOffline ||
++           job.detector->channel_history_dof == 0);
++      root.sidecar.detector_passed = job.detector && job.detector->passed;
++      if (job.hypotheses) root.sidecar.hypotheses = *job.hypotheses;
++      root.sidecar.served_result = result;
++      root.sidecar.proof_identity = protectionResultProofIdentity(root.sidecar);
++      *job.computation_audit = root.sidecar;
++    }
++    *job.result = result;
++  }
++}
++
+ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
+     const LinearizedIntegrityWindow& window,
+     CandidateEvaluation* candidate,
+@@ -2647,19 +3315,33 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
+     frozen_hypothesis_indexes.emplace(
+         frozen.pl_entries[index].hypothesis.value(), index);
+   }
+-  for (std::size_t index = 0; index < hypotheses.size(); ++index) {
++  struct FrozenHypothesisSlot {
++    FaultAxisBounds bounds;
++    Eigen::Vector3d component = Eigen::Vector3d::Constant(
++        std::numeric_limits<double>::infinity());
++    FrozenHypothesisPlProofV1 hypothesis_proof;
++    DualChannelNumericalProofV1 dual_channel_proof;
++    ProtectionHypothesisComponentProofV1 component_proof;
++    std::string detector_certificate;
++    std::string reason;
++    bool has_dual_channel_proof = false;
++    bool valid = false;
++  };
++  std::vector<FrozenHypothesisSlot> hypothesis_slots(hypotheses.size());
++  auto evaluate_hypothesis = [&](std::size_t index) {
+     const auto& hypothesis = hypotheses[index];
++    auto& slot = hypothesis_slots[index];
+     const auto frozen_index = frozen_hypothesis_indexes.find(
+         hypothesis.id.value());
+     if (frozen_index == frozen_hypothesis_indexes.end()) {
+-      result.reason = "frozen candidate hypothesis block is absent";
+-      return result;
++      slot.reason = "frozen candidate hypothesis block is absent";
++      return;
+     }
+     const auto& cached = frozen.pl_entries[frozen_index->second];
+     if (cached.hypothesis != hypothesis.id || !cached.valid ||
+         !(cached.gram_spd || cached.bound_from_projected_path) ||
+         !cached.monitorability.monitorable) {
+-      result.reason = "remaining post-FDE hypothesis " +
++      slot.reason = "remaining post-FDE hypothesis " +
+           std::to_string(hypothesis.id.value()) +
+           " is unmonitorable: rank=" +
+           std::to_string(cached.monitorability.rank) + "/" +
+@@ -2667,7 +3349,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
+           ";sigma_min=" + std::to_string(cached.monitorability.sigma_min) +
+           ";condition=" +
+           std::to_string(cached.monitorability.condition_number);
+-      return result;
++      return;
+     }
+     std::string cached_proof_reason;
+     FrozenHypothesisPlProofV1 cached_proof;
+@@ -2677,21 +3359,18 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
+     if (!cached_found ||
+         !validateFrozenHypothesisPlEntry(cached_proof,
+                                          &cached_proof_reason)) {
+-      result.reason = "frozen hypothesis proof rejected: " +
++      slot.reason = "frozen hypothesis proof rejected: " +
+           cached_proof_reason;
+-      return result;
++      return;
+     }
+-    FaultAxisBounds bounds;
+-    Eigen::Vector3d component;
+-    std::string detector_certificate;
+     if (active_dual) {
+       const auto& dual = frozen_dual->dual_blocks[frozen_index->second];
+       if (!dual.valid || dual.hypothesis != hypothesis.id ||
+           dual.dimension <= 0 || dual.dimension > 3 ||
+           cached_proof.raw_detection_factor.cols() != dual.dimension) {
+         NumericalWorkCounters::hypothesisSharedMiss();
+-        result.reason = "frozen dual hypothesis block is invalid";
+-        return result;
++        slot.reason = "frozen dual hypothesis block is invalid";
++        return;
+       }
+       const Eigen::MatrixXd total_gram =
+           dual.total_gram.topLeftCorner(dual.dimension, dual.dimension);
+@@ -2718,8 +3397,8 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
+       }
+       if (!raw_response_valid || raw_offset != dual.dimension ||
+           !raw_detection_factor.allFinite()) {
+-        result.reason = "frozen candidate mode response is incomplete";
+-        return result;
++        slot.reason = "frozen candidate mode response is incomplete";
++        return;
+       }
+       const GramResponseCertificate response_certificate =
+           certifyFactorGramAndProtectedResponse(
+@@ -2730,39 +3409,59 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
+       if (!response_certificate.valid ||
+           response_certificate.nullspace_class ==
+               GramNullspaceClass::Dangerous) {
+-        result.reason = "frozen dual hypothesis proof is unavailable: " +
++        slot.reason = "frozen dual hypothesis proof is unavailable: " +
+             response_certificate.reason;
+-        return result;
++        return;
+       }
+-      sidecar.hypothesis_proofs.push_back(protectionHypothesisProof(
++      slot.hypothesis_proof = protectionHypothesisProof(
+           hypothesis.id, response_certificate,
+           raw_detection_factor, cached_proof.raw_factor_scale,
+-          covariance_rank_tolerance));
+-      sidecar.hypothesis_proofs.back().protected_response =
+-          protected_response;
+-      sidecar.hypothesis_proofs.back().parent_proof_identity =
++          covariance_rank_tolerance);
++      slot.hypothesis_proof.protected_response = protected_response;
++      slot.hypothesis_proof.parent_proof_identity =
+           candidateProofIdentity(*candidate);
+-      DualChannelNumericalProofV1 dual_channel_proof;
+-      bounds = dualChannelAxisBounds(
++      slot.bounds = dualChannelAxisBounds(
+           detector, hypothesis, total_gram, history_gram,
+           protected_response, sigma, nominal_tail,
+           covariance_rank_tolerance, candidateProofIdentity(*candidate),
+-          &component, &detector_certificate, &dual_channel_proof);
+-      if (bounds.valid) {
+-        sidecar.dual_channel_proofs.push_back(
+-            std::move(dual_channel_proof));
+-      }
++          &slot.component, &slot.detector_certificate,
++          &slot.dual_channel_proof);
++      slot.has_dual_channel_proof = slot.bounds.valid;
+     } else {
+-      sidecar.hypothesis_proofs.push_back(std::move(cached_proof));
+-      bounds = faultAxisBounds(detector, hypothesis, nominal_tail);
+-      component = cached.protected_slopes * bounds.lambda + bounds.k * sigma;
++      slot.hypothesis_proof = std::move(cached_proof);
++      slot.bounds = faultAxisBounds(detector, hypothesis, nominal_tail);
++      slot.component = cached.protected_slopes * slot.bounds.lambda +
++          slot.bounds.k * sigma;
+     }
+-    if (!bounds.valid) {
+-      result.reason = "remaining post-FDE hypothesis " +
++    if (!slot.bounds.valid) {
++      slot.reason = "remaining post-FDE hypothesis " +
+           std::to_string(hypothesis.id.value()) +
+-          " has no valid section 5.9 bound: " + bounds.reason;
++          " has no valid section 5.9 bound: " + slot.bounds.reason;
++      return;
++    }
++    slot.component_proof.hypothesis = hypothesis.id;
++    slot.component_proof.detector_dof = detector.dof;
++    slot.component_proof.detector_threshold = detector.squared_threshold;
++    slot.component_proof.hypothesis_tail = slot.bounds.hypothesis_tail;
++    slot.component_proof.axis_tail = slot.bounds.axis_tail;
++    slot.component_proof.multiplier = slot.bounds.k;
++    slot.component_proof.noncentrality = slot.bounds.lambda;
++    slot.component_proof.dual_channel = active_dual;
++    slot.component_proof.served_component = slot.component;
++    slot.valid = true;
++  };
++  for (std::size_t index = 0; index < hypotheses.size(); ++index) {
++    evaluate_hypothesis(index);
++  }
++  // Deterministic reduction is always hypothesis-index ordered, independent
++  // of worker assignment or completion order.
++  for (std::size_t index = 0; index < hypothesis_slots.size(); ++index) {
++    auto& slot = hypothesis_slots[index];
++    if (!slot.valid) {
++      result.reason = slot.reason;
+       return result;
+     }
++    const auto& bounds = slot.bounds;
+     result.hypothesis_tail_used = std::max(result.hypothesis_tail_used,
+                                            bounds.hypothesis_tail);
+     result.axis_tail_used = std::max(result.axis_tail_used, bounds.axis_tail);
+@@ -2770,19 +3469,17 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
+                                             bounds.k);
+     result.noncentrality_used = std::max(result.noncentrality_used,
+                                          bounds.lambda);
+-    if (active_dual) result.detector_certificate_id = detector_certificate;
+-    ProtectionHypothesisComponentProofV1 component_proof;
+-    component_proof.hypothesis = hypothesis.id;
+-    component_proof.detector_dof = detector.dof;
+-    component_proof.detector_threshold = detector.squared_threshold;
+-    component_proof.hypothesis_tail = bounds.hypothesis_tail;
+-    component_proof.axis_tail = bounds.axis_tail;
+-    component_proof.multiplier = bounds.k;
+-    component_proof.noncentrality = bounds.lambda;
+-    component_proof.dual_channel = active_dual;
+-    component_proof.served_component = component;
+-    sidecar.component_proofs.push_back(std::move(component_proof));
+-    result.fault_component_m = result.fault_component_m.cwiseMax(component);
++    if (active_dual) {
++      result.detector_certificate_id = slot.detector_certificate;
++    }
++    sidecar.hypothesis_proofs.push_back(std::move(slot.hypothesis_proof));
++    if (slot.has_dual_channel_proof) {
++      sidecar.dual_channel_proofs.push_back(
++          std::move(slot.dual_channel_proof));
++    }
++    sidecar.component_proofs.push_back(std::move(slot.component_proof));
++    result.fault_component_m =
++        result.fault_component_m.cwiseMax(slot.component);
+   }
+   result.pl_xyz_m = result.nominal_component_m.cwiseMax(
+       result.fault_component_m);
+diff --git a/src/uwb_imu_pl/integrity/statistical_bounds_cache.cpp b/src/uwb_imu_pl/integrity/statistical_bounds_cache.cpp
+index 597550e..a3bf1f5 100644
+--- a/src/uwb_imu_pl/integrity/statistical_bounds_cache.cpp
++++ b/src/uwb_imu_pl/integrity/statistical_bounds_cache.cpp
+@@ -71,13 +71,13 @@ double noncentralMissProbability(int dof, double noncentrality,
+ }  // namespace
+
+ double StatisticalBoundsCache::chiSquaredThreshold(int dof, double p_fa) {
++  Storage& data = storage();
++  std::lock_guard<std::mutex> lock(data.mutex);
+   if (dof <= 0 || !std::isfinite(p_fa) || p_fa <= 0.0 || p_fa >= 1.0) {
+-    ++storage().stats.invalid_inputs;
++    ++data.stats.invalid_inputs;
+     return std::numeric_limits<double>::infinity();
+   }
+-  Storage& data = storage();
+   const auto key = std::make_pair(dof, bits(p_fa));
+-  std::lock_guard<std::mutex> lock(data.mutex);
+   const auto found = data.chi.find(key);
+   if (found != data.chi.end()) {
+     ++data.stats.hits;
+@@ -107,52 +107,51 @@ StatisticalBoundsCache::noncentralityBoundaryVerified(
+     int dof, double squared_threshold, double p_md,
+     const StatisticalBoundKey& key) {
+   NoncentralityBoundaryResult result;
++  Storage& data = storage();
++  // R11 single-flight boundary: lookup, the one numerical solve for a missing
++  // exact key, and publication are one critical section.  Contending workers
++  // therefore observe one miss followed by hits; none can repeat the solve or
++  // publish a schedule-dependent cache/work count.
++  std::lock_guard<std::mutex> lock(data.mutex);
+   if (dof <= 0) {
+     result.reason = "zero or negative degrees of freedom";
+-    ++storage().stats.invalid_inputs;
++    ++data.stats.invalid_inputs;
+     return result;
+   }
+   if (!std::isfinite(squared_threshold) || squared_threshold <= 0.0) {
+     result.reason = "detector threshold is not a finite positive number";
+-    ++storage().stats.invalid_inputs;
++    ++data.stats.invalid_inputs;
+     return result;
+   }
+   if (!std::isfinite(p_md) || p_md <= 0.0 || p_md >= 1.0) {
+     result.reason = "p_md allocation outside (0, 1)";
+-    ++storage().stats.invalid_inputs;
++    ++data.stats.invalid_inputs;
+     return result;
+   }
+   if (key.dof != 0 && key.dof != static_cast<std::uint32_t>(dof)) {
+     result.reason = "cache key degrees of freedom disagree with the request";
+-    ++storage().stats.policy_mismatches;
++    ++data.stats.policy_mismatches;
+     return result;
+   }
+-  Storage& data = storage();
+   const NoncentralKey cache_key =
+       noncentralKey(dof, squared_threshold, p_md, key);
+-  {
+-    std::lock_guard<std::mutex> lock(data.mutex);
+-    const auto found = data.noncentral.find(cache_key);
+-    if (found != data.noncentral.end()) {
+-      ++data.stats.hits;
+-      result.value = found->second;
+-      result.valid = true;
+-      result.converged = true;
+-      result.residual =
+-          noncentralMissProbability(dof, found->second, squared_threshold) -
+-          p_md;
+-      return result;
+-    }
++  const auto found = data.noncentral.find(cache_key);
++  if (found != data.noncentral.end()) {
++    ++data.stats.hits;
++    result.value = found->second;
++    result.valid = true;
++    result.converged = true;
++    result.residual =
++        noncentralMissProbability(dof, found->second, squared_threshold) -
++        p_md;
++    return result;
+   }
+   auto missed = [&](double noncentrality) {
+     return noncentralMissProbability(dof, noncentrality, squared_threshold);
+   };
+   if (missed(0.0) < p_md) {
+-    {
+-      std::lock_guard<std::mutex> lock(data.mutex);
+-      data.noncentral.emplace(cache_key, 0.0);
+-      ++data.stats.misses;
+-    }
++    data.noncentral.emplace(cache_key, 0.0);
++    ++data.stats.misses;
+     result.value = 0.0;
+     result.valid = true;
+     result.converged = true;
+@@ -167,7 +166,7 @@ StatisticalBoundsCache::noncentralityBoundaryVerified(
+   while (missed(upper) > p_md && upper < 1e12) upper *= 2.0;
+   if (missed(upper) > p_md) {
+     result.reason = "cannot bracket the noncentrality boundary";
+-    ++storage().stats.invalid_inputs;
++    ++data.stats.invalid_inputs;
+     return result;
+   }
+   double previous_width = upper - lower;
+@@ -203,15 +202,12 @@ StatisticalBoundsCache::noncentralityBoundaryVerified(
+     result.reason =
+         "noncentrality solve did not produce a conservative side "
+         "endpoint";
+-    ++storage().stats.non_converged;
++    ++data.stats.non_converged;
+     return result;
+   }
+-  if (!result.converged) ++storage().stats.non_converged;
+-  {
+-    std::lock_guard<std::mutex> lock(data.mutex);
+-    data.noncentral.emplace(cache_key, result.value);
+-    ++data.stats.misses;
+-  }
++  if (!result.converged) ++data.stats.non_converged;
++  data.noncentral.emplace(cache_key, result.value);
++  ++data.stats.misses;
+   return result;
+ }
+
+@@ -225,14 +221,14 @@ double StatisticalBoundsCache::normalTwoSidedMultiplier(double tail) {
+ double StatisticalBoundsCache::normalTwoSidedMultiplierVerified(
+     double tail_probability, bool* valid) {
+   if (valid) *valid = false;
++  Storage& data = storage();
++  std::lock_guard<std::mutex> lock(data.mutex);
+   if (!std::isfinite(tail_probability) || tail_probability <= 0.0 ||
+       tail_probability >= 1.0) {
+-    ++storage().stats.invalid_inputs;
++    ++data.stats.invalid_inputs;
+     return std::numeric_limits<double>::quiet_NaN();
+   }
+-  Storage& data = storage();
+   const std::uint64_t key = bits(tail_probability);
+-  std::lock_guard<std::mutex> lock(data.mutex);
+   const auto found = data.normal.find(key);
+   double value = 0.0;
+   if (found != data.normal.end()) {
+diff --git a/test/test_integrity_v2.cpp b/test/test_integrity_v2.cpp
+index f205525..9580d1b 100644
+--- a/test/test_integrity_v2.cpp
++++ b/test/test_integrity_v2.cpp
+@@ -4,6 +4,7 @@
+ #include <unistd.h>
+
+ #include <algorithm>
++#include <array>
+ #include <atomic>
+ #include <boost/filesystem.hpp>
+ #include <boost/math/distributions/chi_squared.hpp>
+@@ -13,8 +14,10 @@
+ #include <cstdio>
+ #include <cstdlib>
+ #include <future>
++#include <mutex>
+ #include <new>
+ #include <random>
++#include <thread>
+
+ #include "uwb_imu_pl/config/integrity_config.hpp"
+ #include "uwb_imu_pl/estimation/candidate_replay.hpp"
+@@ -2810,6 +2813,123 @@ TEST(P102SharedDualNumerics,
+   EXPECT_FALSE(stale_candidate.reason.empty());
+ }
+
++TEST(P105FlatConcurrency,
++     CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers) {
++  using namespace uwb_imu_pl;
++  auto window = syntheticWindow();
++  window.protected_state_map.row(2) = window.protected_state_map.row(0);
++  finalizeIntegrityWindow(&window, 1e-10, 1e10);
++  const auto owner = freezeIntegrityWindowCopy(window);
++  const auto admission = admitFrozenIntegrityWindow(owner);
++  ASSERT_TRUE(admission) << admission.reason;
++
++  ExclusionAction keep;
++  keep.id = ExclusionActionId(1);
++  keep.action_model_id = "KEEP_ALL";
++  RankUpdateConfig rank_config{1e-10, 1e10, 10.0};
++  RankUpdateEvaluator evaluator(rank_config);
++  const auto base = evaluator.factorizeOnce(admission);
++  auto candidate = evaluator.evaluate(admission, base, keep);
++  ASSERT_TRUE(candidate.valid) << candidate.reason;
++  DetectorRiskContext detector_risk;
++  detector_risk.p_fa_per_test = 1e-6;
++  const auto detector = JointWindowDetector().evaluateCandidate(
++      admission, candidate, detector_risk);
++  ASSERT_TRUE(detector.numerically_valid) << detector.reason;
++
++  ProtectionLevelSharedContext context;
++  context.mode_maps[41] = Eigen::MatrixXd::Zero(candidate.rows, 1);
++  context.mode_maps[41](candidate.rows - 1, 0) = 1.0;
++  std::vector<FaultHypothesisV2> hypotheses;
++  for (std::uint64_t id = 1; id <= 4; ++id) {
++    FaultHypothesisV2 hypothesis;
++    hypothesis.id = HypothesisId(4100 + id);
++    hypothesis.modes = {FaultModeId(41)};
++    hypothesis.prior_probability_bound = 1e-4;
++    hypothesis.p_md_allocation = 1e-3;
++    hypothesis.hmi_allocation = 1e-6;
++    hypotheses.push_back(std::move(hypothesis));
++  }
++  auto serial_candidate = candidate;
++  auto serial_hypotheses = hypotheses;
++  AttemptProofArena serial_arena;
++  const auto serial = ProtectionLevelV2().computeShared(
++      admission, &serial_candidate, detector, &serial_hypotheses, context,
++      RiskBudgetV2{}, nullptr, &serial_arena);
++  ASSERT_TRUE(serial.model_valid) << serial.reason;
++
++  struct Digest {
++    std::vector<ProtectionLevelV2Result> results;
++    std::vector<std::uint64_t> proof_ids;
++    std::vector<std::vector<bool>> monitored;
++  };
++  auto run = [&](std::size_t workers) {
++    std::array<CandidateEvaluation, 2> candidates{
++        evaluator.evaluate(admission, base, keep),
++        evaluator.evaluate(admission, base, keep)};
++    std::array<DetectorResultV2, 2> detectors{
++        JointWindowDetector().evaluateCandidate(
++            admission, candidates[0], detector_risk),
++        JointWindowDetector().evaluateCandidate(
++            admission, candidates[1], detector_risk)};
++    std::array<std::vector<FaultHypothesisV2>, 2> candidate_hypotheses{
++        hypotheses, hypotheses};
++    std::array<ProtectionLevelSharedContext, 2> contexts{context, context};
++    std::array<ProtectionLevelV2Result, 2> results;
++    std::array<AttemptProofArena, 2> arenas;
++    std::vector<FlatProtectionCandidateV1> jobs(2);
++    for (std::size_t index = 0; index < jobs.size(); ++index) {
++      jobs[index].candidate = &candidates[index];
++      jobs[index].detector = &detectors[index];
++      jobs[index].hypotheses = &candidate_hypotheses[index];
++      jobs[index].shared = &contexts[index];
++      jobs[index].result = &results[index];
++      jobs[index].proof_arena = &arenas[index];
++    }
++    CandidateWorkerPool pool(4);
++    ProtectionLevelV2().computeSharedFlatBatch(
++        admission, &jobs, RiskBudgetV2{}, &pool, workers, 1u << 20);
++    Digest digest;
++    for (std::size_t index = 0; index < jobs.size(); ++index) {
++      EXPECT_TRUE(results[index].model_valid) << results[index].reason;
++      EXPECT_TRUE(results[index].pl_xyz_m.isApprox(serial.pl_xyz_m, 0.0));
++      EXPECT_DOUBLE_EQ(results[index].hpl_m, serial.hpl_m);
++      EXPECT_DOUBLE_EQ(results[index].vpl_m, serial.vpl_m);
++      EXPECT_EQ(results[index].reason, serial.reason);
++      EXPECT_TRUE(validateProtectionLevelV2Proof(
++          candidates[index], detectors[index], candidate_hypotheses[index],
++          results[index], arenas[index], nullptr));
++      digest.results.push_back(results[index]);
++      digest.proof_ids.push_back(protectionLevelV2ProofIdentity(
++          candidates[index], results[index], arenas[index]));
++      std::vector<bool> monitored;
++      for (const auto& hypothesis : candidate_hypotheses[index]) {
++        monitored.push_back(hypothesis.monitored);
++      }
++      digest.monitored.push_back(std::move(monitored));
++    }
++    return digest;
++  };
++  const auto one = run(1);
++  for (const auto workers : {2u, 4u}) {
++    const auto other = run(workers);
++    ASSERT_EQ(other.results.size(), one.results.size());
++    EXPECT_EQ(other.proof_ids, one.proof_ids);
++    EXPECT_EQ(other.monitored, one.monitored);
++    for (std::size_t index = 0; index < one.results.size(); ++index) {
++      EXPECT_TRUE(other.results[index].pl_xyz_m.isApprox(
++          one.results[index].pl_xyz_m, 0.0));
++      EXPECT_DOUBLE_EQ(other.results[index].hpl_m, one.results[index].hpl_m);
++      EXPECT_DOUBLE_EQ(other.results[index].vpl_m, one.results[index].vpl_m);
++      EXPECT_EQ(other.results[index].model_valid,
++                one.results[index].model_valid);
++      EXPECT_EQ(other.results[index].availability,
++                one.results[index].availability);
++      EXPECT_EQ(other.results[index].reason, one.results[index].reason);
++    }
++  }
++}
++
+ TEST(IntegrityV2ProtectionLevel,
+      FixedLowDimKeepsSingularStatusAndUncommonDimensionFallsBack) {
+   using namespace uwb_imu_pl;
+@@ -3803,6 +3923,19 @@ TEST(GateDDiagnostics, PreparationExceptionKeepsAttemptTimingAndZeroUpdates) {
+   EXPECT_EQ(prepare->status, "EXCEPTION");
+   EXPECT_TRUE(std::isfinite(prepare->wall_ms));
+   EXPECT_FALSE(prepare->success);
++  const auto core_total_count = static_cast<std::size_t>(std::count_if(
++      output.stage_timings.begin(), output.stage_timings.end(),
++      [](const auto& timing) { return timing.stage == "core_total"; }));
++  EXPECT_EQ(core_total_count, 1u);
++  const auto core_total =
++      std::find_if(output.stage_timings.begin(), output.stage_timings.end(),
++                   [](const auto& timing) {
++                     return timing.stage == "core_total";
++                   });
++  ASSERT_NE(core_total, output.stage_timings.end());
++  EXPECT_TRUE(std::isfinite(core_total->wall_ms));
++  EXPECT_FALSE(core_total->success);
++  EXPECT_EQ(core_total->status, "EXCEPTION");
+ }
+
+ TEST(GateDNumericalCertificate, ClearCandidateAvoidsFinalJacobianSvd) {
+@@ -3902,6 +4035,256 @@ TEST(GateDWorkerPool, StaticSchedulingExceptionBarrierAndScratchReuse) {
+   EXPECT_EQ(completed.load(), 8);
+ }
+
++TEST(P105FlatConcurrency,
++     DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic) {
++  using namespace uwb_imu_pl;
++  CandidateWorkerPool pool(4);
++  auto execute = [&](std::size_t workers) {
++    std::vector<std::uint64_t> slots(64, 0);
++    pool.runFlat(slots.size(), workers, 1u << 20,
++        [&](std::size_t index, std::size_t, RankUpdateScratch&) {
++          if (index % 7 == 0) std::this_thread::yield();
++          slots[index] = 0x9e3779b97f4a7c15ULL ^
++              (static_cast<std::uint64_t>(index) * 0x100000001b3ULL);
++        });
++    return slots;
++  };
++  const auto one = execute(1);
++  EXPECT_EQ(execute(2), one);
++  EXPECT_EQ(execute(4), one);
++
++  std::vector<std::atomic<int>> terminal(24);
++  for (auto& value : terminal) value = 0;
++  try {
++    pool.runFlat(terminal.size(), 4, 1u << 20,
++        [&](std::size_t index, std::size_t, RankUpdateScratch&) {
++          ++terminal[index];
++          if (index == 17) throw std::runtime_error("flat-17");
++          if (index == 3) throw std::runtime_error("flat-3");
++        });
++    FAIL() << "flat worker failure must be rethrown after the barrier";
++  } catch (const std::runtime_error& error) {
++    EXPECT_STREQ(error.what(), "flat-3");
++  }
++  for (const auto& value : terminal) EXPECT_EQ(value.load(), 1);
++
++  std::atomic<int> nested_attempts{0};
++  EXPECT_THROW(
++      pool.runFlat(8, 4, 1u << 20,
++          [&](std::size_t index, std::size_t, RankUpdateScratch&) {
++            if (index == 2) {
++              ++nested_attempts;
++              pool.runFlat(1, 1, 1u << 20,
++                  [](std::size_t, std::size_t, RankUpdateScratch&) {});
++            }
++          }),
++      std::logic_error);
++  EXPECT_EQ(nested_attempts.load(), 1);
++
++  std::array<std::atomic<bool>, 4> oversize_workers;
++  for (auto& seen : oversize_workers) seen = false;
++  std::vector<std::atomic<int>> oversize_terminal(24);
++  for (auto& value : oversize_terminal) value = 0;
++  std::atomic<std::size_t> oversize_started{0};
++  try {
++    pool.runFlat(oversize_terminal.size(), 4, 1024,
++        [&](std::size_t index, std::size_t worker,
++            RankUpdateScratch& scratch) {
++          ++oversize_terminal[index];
++          if (index < 4) {
++            oversize_workers[worker] = true;
++            scratch.update_columns = Eigen::MatrixXd::Zero(128, 128);
++            ++oversize_started;
++            while (oversize_started.load() < 4) std::this_thread::yield();
++          }
++        });
++    FAIL() << "scratch limit violation must fail closed after the barrier";
++  } catch (const std::runtime_error& error) {
++    EXPECT_STREQ(error.what(),
++                 "candidate worker scratch limit exceeded at task 0");
++  }
++  EXPECT_EQ(static_cast<std::size_t>(std::count_if(
++                oversize_workers.begin(), oversize_workers.end(),
++                [](const auto& seen) { return seen.load(); })),
++            4u);
++  for (const auto& value : oversize_terminal) EXPECT_EQ(value.load(), 1);
++  EXPECT_GE(pool.scratchHighWaterBytes(), 128u * 128u * sizeof(double));
++  EXPECT_EQ(pool.scratchBytes(), 0u)
++      << "every oversized worker scratch must be released at the barrier";
++
++  std::vector<std::atomic<int>> competing_terminal(24);
++  for (auto& value : competing_terminal) value = 0;
++  try {
++    pool.runFlat(competing_terminal.size(), 4, 1024,
++        [&](std::size_t index, std::size_t, RankUpdateScratch& scratch) {
++          ++competing_terminal[index];
++          if (index == 7 || index == 15) {
++            scratch.update_columns = Eigen::MatrixXd::Zero(128, 128);
++          }
++          if (index == 18) throw std::runtime_error("ordinary-18");
++          if (index == 3) throw std::runtime_error("ordinary-3");
++        });
++    FAIL() << "lowest task exception must win over scratch violations";
++  } catch (const std::runtime_error& error) {
++    EXPECT_STREQ(error.what(), "ordinary-3");
++  }
++  for (const auto& value : competing_terminal) EXPECT_EQ(value.load(), 1);
++  EXPECT_EQ(pool.scratchBytes(), 0u);
++
++  std::vector<std::uint64_t> reusable_slots(32, 0);
++  EXPECT_NO_THROW(pool.runFlat(
++      reusable_slots.size(), 4, 1u << 20,
++      [&](std::size_t index, std::size_t, RankUpdateScratch&) {
++        reusable_slots[index] = index + 1;
++      }));
++  for (std::size_t index = 0; index < reusable_slots.size(); ++index) {
++    EXPECT_EQ(reusable_slots[index], index + 1);
++  }
++}
++
++TEST(P105FlatConcurrency,
++     StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete) {
++  using namespace uwb_imu_pl;
++  CandidateWorkerPool pool(4);
++
++  StatisticalBoundsCache::clear();
++  const auto same_before = StatisticalBoundsCache::stats();
++  std::vector<double> same_values(64, 0.0);
++  StatisticalBoundKey same_key;
++  same_key.detector_id = 0x105;
++  same_key.dof = 4;
++  same_key.contract_version = 0x505;
++  pool.runFlat(same_values.size(), 4, 1u << 20,
++      [&](std::size_t index, std::size_t, RankUpdateScratch&) {
++        same_values[index] = StatisticalBoundsCache::
++            noncentralityBoundaryVerified(4, 21.125, 1e-3, same_key).value;
++      });
++  const auto same_after = StatisticalBoundsCache::stats();
++  ASSERT_TRUE(std::isfinite(same_values.front()));
++  for (const double value : same_values) {
++    EXPECT_DOUBLE_EQ(value, same_values.front());
++  }
++  EXPECT_EQ(same_after.misses - same_before.misses, 1u)
++      << "one exact cache key must have one actual solve";
++  EXPECT_EQ(same_after.hits - same_before.hits, same_values.size() - 1);
++  EXPECT_EQ(same_after.entries, 1u);
++
++  StatisticalBoundsCache::clear();
++  const auto distinct_before = StatisticalBoundsCache::stats();
++  constexpr std::size_t kDistinctKeys = 24;
++  std::vector<double> distinct_values(kDistinctKeys, 0.0);
++  pool.runFlat(kDistinctKeys, 4, 1u << 20,
++      [&](std::size_t index, std::size_t, RankUpdateScratch&) {
++        StatisticalBoundKey key;
++        key.detector_id = 0x205;
++        key.dof = 4;
++        key.contract_version = 0x605;
++        key.envelope_fingerprint = index + 1;
++        distinct_values[index] = StatisticalBoundsCache::
++            noncentralityBoundaryVerified(
++                4, 18.0 + 0.125 * static_cast<double>(index), 1e-3, key)
++                .value;
++      });
++  const auto distinct_after = StatisticalBoundsCache::stats();
++  for (const double value : distinct_values) EXPECT_TRUE(std::isfinite(value));
++  EXPECT_EQ(distinct_after.misses - distinct_before.misses, kDistinctKeys);
++  EXPECT_EQ(distinct_after.hits - distinct_before.hits, 0u);
++  EXPECT_EQ(distinct_after.entries, kDistinctKeys);
++}
++
++TEST(P105FlatConcurrency,
++     StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries) {
++  using namespace uwb_imu_pl;
++  CandidateWorkerPool pool(4);
++  StatisticalBoundsCache::clear();
++  const auto before = StatisticalBoundsCache::stats();
++  constexpr std::size_t kCallsPerBoundary = 16;
++  pool.runFlat(4 * kCallsPerBoundary, 4, 1u << 20,
++      [&](std::size_t index, std::size_t, RankUpdateScratch&) {
++        const std::size_t boundary = index / kCallsPerBoundary;
++        StatisticalBoundKey key;
++        key.dof = boundary == 3 ? 7 : 0;
++        NoncentralityBoundaryResult result;
++        if (boundary == 0) {
++          result = StatisticalBoundsCache::noncentralityBoundaryVerified(
++              0, 21.0, 1e-3, key);
++        } else if (boundary == 1) {
++          result = StatisticalBoundsCache::noncentralityBoundaryVerified(
++              4, 0.0, 1e-3, key);
++        } else if (boundary == 2) {
++          result = StatisticalBoundsCache::noncentralityBoundaryVerified(
++              4, 21.0, 1.0, key);
++        } else {
++          result = StatisticalBoundsCache::noncentralityBoundaryVerified(
++              4, 21.0, 1e-3, key);
++        }
++        EXPECT_FALSE(result.valid);
++      });
++  const auto after = StatisticalBoundsCache::stats();
++  EXPECT_EQ(after.invalid_inputs - before.invalid_inputs,
++            3 * kCallsPerBoundary);
++  EXPECT_EQ(after.policy_mismatches - before.policy_mismatches,
++            kCallsPerBoundary);
++  EXPECT_EQ(after.non_converged - before.non_converged, 0u);
++  EXPECT_EQ(after.hits - before.hits, 0u);
++  EXPECT_EQ(after.misses - before.misses, 0u);
++  EXPECT_EQ(after.entries, 0u);
++}
++
++TEST(P105FlatConcurrency,
++     StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers) {
++  using namespace uwb_imu_pl;
++  CandidateWorkerPool pool(4);
++  struct Outcome {
++    std::vector<double> values;
++    std::uint64_t hits = 0;
++    std::uint64_t misses = 0;
++    std::uint64_t entries = 0;
++  };
++  auto execute = [&](std::size_t workers) {
++    StatisticalBoundsCache::clear();
++    const auto before = StatisticalBoundsCache::stats();
++    Outcome outcome;
++    outcome.values.resize(96);
++    pool.runFlat(outcome.values.size(), workers, 1u << 20,
++        [&](std::size_t index, std::size_t, RankUpdateScratch&) {
++          const std::size_t canonical_key = index % 12;
++          StatisticalBoundKey key;
++          key.detector_id = 0x305;
++          key.dof = 4;
++          key.contract_version = 0x705;
++          key.envelope_kind = canonical_key % 3;
++          key.envelope_fingerprint = canonical_key + 1;
++          outcome.values[index] = StatisticalBoundsCache::
++              noncentralityBoundaryVerified(
++                  4, 17.0 + 0.25 * static_cast<double>(canonical_key),
++                  1e-3, key).value;
++        });
++    const auto after = StatisticalBoundsCache::stats();
++    outcome.hits = after.hits - before.hits;
++    outcome.misses = after.misses - before.misses;
++    outcome.entries = after.entries;
++    return outcome;
++  };
++  auto expect_same = [](const Outcome& actual, const Outcome& expected) {
++    EXPECT_EQ(actual.values, expected.values);
++    EXPECT_EQ(actual.hits, expected.hits);
++    EXPECT_EQ(actual.misses, expected.misses);
++    EXPECT_EQ(actual.entries, expected.entries);
++  };
++
++  const Outcome one = execute(1);
++  EXPECT_EQ(one.misses, 12u);
++  EXPECT_EQ(one.hits, 84u);
++  EXPECT_EQ(one.entries, 12u);
++  expect_same(execute(2), one);
++  const Outcome four = execute(4);
++  expect_same(four, one);
++  for (int repeat = 0; repeat < 10; ++repeat) {
++    expect_same(execute(4), four);
++  }
++}
++
+ TEST(GateDStatistics, ExactBitKeyProducesCacheHitWithoutQuantization) {
+   using namespace uwb_imu_pl;
+   const auto before = StatisticalBoundsCache::stats();
+@@ -5882,3 +6265,45 @@ TEST(P101IdentityIndexing, FrozenClockMakesTerminalDecisionExact) {
+                                 right_output.protection_level.pl_xyz_m(axis)));
+   }
+ }
++
++TEST(P105FlatConcurrency, WatchdogAdmissionExceptionStillHasOneAttemptTimer) {
++  using namespace uwb_imu_pl;
++  const auto config = researchConfig();
++  IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
++  NavigationState initial;
++  initial.position_world_m = {0.0, 0.0, 1.0};
++  estimator.initialize(initial, config.realtime.prior_sigmas);
++  addImu(&estimator, config.imu.gravity_mps2);
++  RealtimeIntegrityPipeline pipeline(
++      &estimator,
++      IntegrityMonitor(config.risk, config.snapshot.rank_tolerance,
++                       config.snapshot.max_condition_number));
++  const UwbBatch input = batch(config, 10000000);
++  ClockSample first_clock;
++  first_clock.wall_monotonic_ns = 10000000;
++  first_clock.sensor_timestamp_ns = input.timestamp.value();
++  (void)pipeline.processUwbBatchWithFrozenFinishElapsed(
++      input, first_clock, 0.0);
++
++  ClockSample backwards_clock = first_clock;
++  backwards_clock.wall_monotonic_ns -= 1;
++  EXPECT_ANY_THROW(pipeline.processUwbBatchWithFrozenFinishElapsed(
++      input, backwards_clock, 0.0));
++  const auto& failed = pipeline.lastAttemptOutput();
++  EXPECT_EQ(failed.diagnostics.status, "EXCEPTION");
++  EXPECT_NE(failed.diagnostics.reason.find("wall clock moved backwards"),
++            std::string::npos);
++  const auto core_total_count = static_cast<std::size_t>(std::count_if(
++      failed.stage_timings.begin(), failed.stage_timings.end(),
++      [](const auto& timing) { return timing.stage == "core_total"; }));
++  EXPECT_EQ(core_total_count, 1u);
++  const auto core_total =
++      std::find_if(failed.stage_timings.begin(), failed.stage_timings.end(),
++                   [](const auto& timing) {
++                     return timing.stage == "core_total";
++                   });
++  ASSERT_NE(core_total, failed.stage_timings.end());
++  EXPECT_TRUE(std::isfinite(core_total->wall_ms));
++  EXPECT_FALSE(core_total->success);
++  EXPECT_EQ(core_total->status, "EXCEPTION");
++}
+diff --git a/tools/compare_p1_05_workers.py b/tools/compare_p1_05_workers.py
+new file mode 100644
+index 0000000..028f57f
+--- /dev/null
++++ b/tools/compare_p1_05_workers.py
+@@ -0,0 +1,108 @@
++#!/usr/bin/env python3
++"""P1-05 worker equivalence with exact algorithm-work accounting.
++
++Only wall-clock diagnostics and the configured worker-use diagnostic may vary.
++In particular, statistical cache hits/misses and every numerical work counter
++are compared exactly; they are not performance-ignore fields.
++"""
++
++from __future__ import annotations
++
++import argparse
++import copy
++import csv
++import json
++import pathlib
++
++import compare_p1_02_outputs as p102
++import compare_p1_03_outputs as p103
++
++
++WORKER_CONFIGURATION_DIAGNOSTICS = {"hypothesis_parallel_blocks"}
++ATTEMPT_TIMING_DIAGNOSTICS = {
++    "watchdog_wall_elapsed_ns",
++    "watchdog_sensor_elapsed_ns",
++    "watchdog_sensor_delta_ns",
++    "watchdog_sensor_lag_ns",
++    "watchdog_sensor_stale",
++    "watchdog_reason",
++}
++CANDIDATE_TIMING_DIAGNOSTICS = {
++    "kernel_ms", "post_ms", "bridge_ms", "fault_map_ms", "pl_ms",
++}
++
++
++def column_values(path: pathlib.Path, field: str) -> list[str]:
++    with path.open(newline="", encoding="utf-8") as stream:
++        return [row[field] for row in csv.DictReader(stream)]
++
++
++def policies() -> dict:
++    policy = copy.deepcopy(p103.policies())
++    # Candidate cache/solve counts are algorithm work, not timing.
++    policy["diagnostic_candidates.csv"]["ignore"] = set(
++        CANDIDATE_TIMING_DIAGNOSTICS)
++    # All process and cache counters are exact.  The only worker-dependent
++    # field describes the requested execution configuration, not algorithmic
++    # work, so it is reported separately below.
++    policy["diagnostic_attempts.csv"]["ignore"] = (
++        ATTEMPT_TIMING_DIAGNOSTICS | WORKER_CONFIGURATION_DIAGNOSTICS)
++    return policy
++
++
++def main() -> int:
++    parser = argparse.ArgumentParser()
++    parser.add_argument("before", type=pathlib.Path)
++    parser.add_argument("after", type=pathlib.Path)
++    parser.add_argument("--before-workers", required=True, type=int)
++    parser.add_argument("--after-workers", required=True, type=int)
++    parser.add_argument("--output", required=True, type=pathlib.Path)
++    args = parser.parse_args()
++
++    policy = policies()
++    _, before_integrity = p102.load(args.before / "integrity.csv")
++    _, after_integrity = p102.load(args.after / "integrity.csv")
++    wall_rows = {i for i, (left, right) in enumerate(
++        zip(before_integrity, after_integrity), 1)
++        if p102.proved_finish_wall_transition(left, right)}
++    results = {name: p102.compare_file(
++        args.before / name, args.after / name, item, wall_rows)
++        for name, item in policy.items()}
++    status = all(item["status"] == "PASS" for item in results.values())
++    parallel_before = column_values(
++        args.before / "diagnostic_attempts.csv", "hypothesis_parallel_blocks")
++    parallel_after = column_values(
++        args.after / "diagnostic_attempts.csv", "hypothesis_parallel_blocks")
++    payload = {
++        "schema": "uwb-imu-pl/p1-05-worker-equivalence/v1",
++        "before": str(args.before),
++        "after": str(args.after),
++        "before_workers": args.before_workers,
++        "after_workers": args.after_workers,
++        "status": "PASS" if status else "FAIL",
++        "algorithm_work_contract": (
++            "exact comparison, including statistical cache hits/misses, "
++            "entries, candidate cache hits, solve counts, and all numerical "
++            "work counters"),
++        "worker_configuration_diagnostic": {
++            "field": "hypothesis_parallel_blocks",
++            "meaning": (
++                "configured/used parallel blocks; expected to vary with the "
++                "worker setting and never claimed as invariant algorithm work"),
++            "before_values": parallel_before,
++            "after_values": parallel_after,
++        },
++        "allowed_timing_diagnostics": {
++            name: sorted(item["ignore"]) for name, item in policy.items()
++            if item["ignore"]
++        },
++        "files": results,
++    }
++    args.output.parent.mkdir(parents=True, exist_ok=True)
++    args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n",
++                           encoding="utf-8")
++    return 0 if status else 1
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())

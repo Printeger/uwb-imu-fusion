@@ -1,0 +1,2400 @@
+
+Repeating all tests (iteration 1) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (4 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (11 ms)
+[----------] 6 tests from P105FlatConcurrency (28 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (28 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 2) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 3) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (11 ms)
+[----------] 6 tests from P105FlatConcurrency (27 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (27 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 4) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 5) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (26 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (26 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 6) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (9 ms)
+[----------] 6 tests from P105FlatConcurrency (26 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (26 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 7) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (12 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (14 ms)
+[----------] 6 tests from P105FlatConcurrency (32 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (32 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 8) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (4 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (9 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (3 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (12 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (36 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (36 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 9) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 10) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 11) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (9 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 12) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (12 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 13) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (26 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (26 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 14) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (23 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (23 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 15) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (23 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 16) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (9 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 17) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 18) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (9 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 19) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 20) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 21) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (12 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (21 ms)
+[----------] 6 tests from P105FlatConcurrency (40 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (40 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 22) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (15 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (29 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (29 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 23) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (9 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 24) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 25) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 26) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (9 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 27) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (23 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (23 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 28) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 29) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (9 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 30) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 31) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 32) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (4 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (12 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (26 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (26 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 33) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (11 ms)
+[----------] 6 tests from P105FlatConcurrency (27 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (27 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 34) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 35) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (12 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 36) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 37) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 38) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 39) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 40) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 41) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (12 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 42) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (9 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 43) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 44) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 45) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 46) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 47) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 48) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (12 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 49) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (23 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (23 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 50) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 51) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 52) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 53) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 54) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (23 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (23 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 55) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (9 ms)
+[----------] 6 tests from P105FlatConcurrency (26 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (26 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 56) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 57) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (23 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (23 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 58) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (9 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 59) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (23 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (23 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 60) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 61) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (9 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 62) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (23 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (23 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 63) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 64) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (9 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 65) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 66) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 67) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (13 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (9 ms)
+[----------] 6 tests from P105FlatConcurrency (27 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (27 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 68) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (4 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (13 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (11 ms)
+[----------] 6 tests from P105FlatConcurrency (31 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (31 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 69) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 70) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 71) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 72) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 73) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (12 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 74) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 75) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 76) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 77) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 78) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 79) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (12 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 80) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (4 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (26 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (26 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 81) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 82) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 83) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 84) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (23 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (23 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 85) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (4 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 86) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (23 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (23 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 87) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 88) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 89) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 90) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 91) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 92) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 93) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (9 ms)
+[----------] 6 tests from P105FlatConcurrency (25 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (25 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 94) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 95) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 96) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (9 ms)
+[----------] 6 tests from P105FlatConcurrency (27 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (27 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 97) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (2 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (10 ms)
+[----------] 6 tests from P105FlatConcurrency (26 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (26 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 98) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (10 ms)
+[----------] 6 tests from P105FlatConcurrency (27 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (27 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 99) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (1 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (10 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (7 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.
+
+Repeating all tests (iteration 100) . . .
+
+Note: Google Test filter = P105FlatConcurrency.*
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from P105FlatConcurrency
+[ RUN      ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers
+[       OK ] P105FlatConcurrency.CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers (3 ms)
+[ RUN      ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic
+[       OK ] P105FlatConcurrency.DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete
+[       OK ] P105FlatConcurrency.StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete (2 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries
+[       OK ] P105FlatConcurrency.StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries (0 ms)
+[ RUN      ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers
+[       OK ] P105FlatConcurrency.StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers (11 ms)
+[ RUN      ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer
+[       OK ] P105FlatConcurrency.WatchdogAdmissionExceptionStillHasOneAttemptTimer (8 ms)
+[----------] 6 tests from P105FlatConcurrency (24 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (24 ms total)
+[  PASSED  ] 6 tests.

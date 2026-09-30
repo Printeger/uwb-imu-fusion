@@ -1449,11 +1449,14 @@ std::vector<FaultModeEvidence> evaluateContiguous(
   if (worker_pool && active_workers > 1) {
     context->worker_blocks = active_workers;
     NumericalWorkCounters::hypothesisParallelBlocks(active_workers);
-    worker_pool->run(active_workers, active_workers,
-        [&](std::size_t block, std::size_t, RankUpdateScratch&) {
-          const std::size_t begin = hypotheses->size() * block / active_workers;
-          const std::size_t end = hypotheses->size() * (block + 1) / active_workers;
-          evaluate_range(begin, end);
+    // R11: each immutable hypothesis owns one fixed output slot. Dynamic
+    // claiming balances exact/SVD fallback tails without allowing completion
+    // order to affect the deterministic index-order reduction below.
+    constexpr std::size_t kRetainedWorkerScratchLimitBytes = 64u << 20;
+    worker_pool->runFlat(hypotheses->size(), active_workers,
+        kRetainedWorkerScratchLimitBytes,
+        [&](std::size_t hypothesis_index, std::size_t, RankUpdateScratch&) {
+          evaluate_range(hypothesis_index, hypothesis_index + 1);
         });
   } else {
     context->worker_blocks = 1;

@@ -1,0 +1,260 @@
+{
+  "after": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/workers-1-2-4/w4",
+  "after_workers": 4,
+  "algorithm_work_contract": "exact comparison, including statistical cache hits/misses, entries, candidate cache hits, solve counts, and all numerical work counters",
+  "allowed_timing_diagnostics": {
+    "candidates.csv": [
+      "evaluation_wall_ms"
+    ],
+    "diagnostic_attempts.csv": [
+      "hypothesis_parallel_blocks",
+      "watchdog_reason",
+      "watchdog_sensor_delta_ns",
+      "watchdog_sensor_elapsed_ns",
+      "watchdog_sensor_lag_ns",
+      "watchdog_sensor_stale",
+      "watchdog_wall_elapsed_ns"
+    ],
+    "diagnostic_candidates.csv": [
+      "bridge_ms",
+      "fault_map_ms",
+      "kernel_ms",
+      "pl_ms",
+      "post_ms"
+    ]
+  },
+  "before": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/workers-1-2-4/w1",
+  "before_workers": 1,
+  "files": {
+    "bridge.csv": {
+      "after_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+      "before_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+      "mismatches": [],
+      "rows": 0,
+      "status": "PASS"
+    },
+    "candidates.csv": {
+      "after_sha256": "134cf57632695a6400348a457a211d90717cadc67c2ef7a13b3abe50af0976aa",
+      "before_sha256": "cf41d67a5e36ca2c1647bbc6ac2935befdb64fd6ca41b8a661d92e6d0589dc4f",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    },
+    "diagnostic_attempts.csv": {
+      "after_sha256": "aef397c1eed6b0c007633b6e8f24f9212954ffcb22006828fb37aac5d9940492",
+      "before_sha256": "af35e671dee937973ae5a5eeffc45704eb764c0c83e336ac65aae715c589cb17",
+      "mismatches": [
+        {
+          "after": "1046",
+          "before": "1048",
+          "field": "statistical_cache_hits",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "7",
+          "before": "5",
+          "field": "statistical_cache_misses",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "4865",
+          "before": "4869",
+          "field": "statistical_cache_hits",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "13",
+          "before": "9",
+          "field": "statistical_cache_misses",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "13183",
+          "before": "13190",
+          "field": "statistical_cache_hits",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "20",
+          "before": "13",
+          "field": "statistical_cache_misses",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "27730",
+          "before": "27739",
+          "field": "statistical_cache_hits",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "26",
+          "before": "17",
+          "field": "statistical_cache_misses",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "50232",
+          "before": "50244",
+          "field": "statistical_cache_hits",
+          "kind": "value",
+          "row": 5
+        },
+        {
+          "after": "33",
+          "before": "21",
+          "field": "statistical_cache_misses",
+          "kind": "value",
+          "row": 5
+        },
+        {
+          "after": "82419",
+          "before": "82433",
+          "field": "statistical_cache_hits",
+          "kind": "value",
+          "row": 6
+        },
+        {
+          "after": "39",
+          "before": "25",
+          "field": "statistical_cache_misses",
+          "kind": "value",
+          "row": 6
+        },
+        {
+          "after": "126017",
+          "before": "126034",
+          "field": "statistical_cache_hits",
+          "kind": "value",
+          "row": 7
+        },
+        {
+          "after": "46",
+          "before": "29",
+          "field": "statistical_cache_misses",
+          "kind": "value",
+          "row": 7
+        },
+        {
+          "after": "182756",
+          "before": "182775",
+          "field": "statistical_cache_hits",
+          "kind": "value",
+          "row": 8
+        },
+        {
+          "after": "52",
+          "before": "33",
+          "field": "statistical_cache_misses",
+          "kind": "value",
+          "row": 8
+        }
+      ],
+      "rows": 8,
+      "status": "FAIL"
+    },
+    "diagnostic_candidates.csv": {
+      "after_sha256": "3fc2e827cd0510d427abe7835fdada25cf4ca82d01c46e7099e229939d5b6a9e",
+      "before_sha256": "11908033fad4821874b951e3aaa0aa379c974b128d89f9b5c9e6f972af48a16e",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    },
+    "diagnostic_coverage.csv": {
+      "after_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+      "before_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+      "mismatches": [],
+      "rows": 0,
+      "status": "PASS"
+    },
+    "diagnostic_history_summary.csv": {
+      "after_sha256": "d82a926ba6dbdb5bb997031c1f1ce2b2cbf4b772e10b926285c9219352aad39c",
+      "before_sha256": "d82a926ba6dbdb5bb997031c1f1ce2b2cbf4b772e10b926285c9219352aad39c",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    },
+    "diagnostic_snapshot_identity.csv": {
+      "after_sha256": "af14079c35f0107680bc01f0439fd85562c3bb6816c4c3467dcb146c24365449",
+      "before_sha256": "af14079c35f0107680bc01f0439fd85562c3bb6816c4c3467dcb146c24365449",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    },
+    "diagnostic_square_root.csv": {
+      "after_sha256": "f681454b84193f4ddabfa4e3e9dc4d339ca69742c4055b1678d7fb43f427f16f",
+      "before_sha256": "f681454b84193f4ddabfa4e3e9dc4d339ca69742c4055b1678d7fb43f427f16f",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    },
+    "diagnostic_state_steps.csv": {
+      "after_sha256": "626126884b7c0b6f71be5020ee1a71c584ea6211c2d462189cbe1349e1086171",
+      "before_sha256": "626126884b7c0b6f71be5020ee1a71c584ea6211c2d462189cbe1349e1086171",
+      "mismatches": [],
+      "rows": 44,
+      "status": "PASS"
+    },
+    "hypotheses.csv": {
+      "after_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+      "before_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+      "mismatches": [],
+      "rows": 0,
+      "status": "PASS"
+    },
+    "integrity.csv": {
+      "after_sha256": "cbd83d3e39405aa9ad02f42b1406cc5317c8d3c5001f0bcc5cc7e342db594ae1",
+      "before_sha256": "3534c772a2dc42a1e845e8102996d7d43a09aeacf4014098569668423148e383",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    },
+    "states.csv": {
+      "after_sha256": "894bec59444903268e2b787f57fc51e22f9d03c4a13f7407c44fb115be3b566e",
+      "before_sha256": "894bec59444903268e2b787f57fc51e22f9d03c4a13f7407c44fb115be3b566e",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    },
+    "transactions.csv": {
+      "after_sha256": "197601c0dca36510367fe94c841afeb60183ab3967f74b4040a0522a2b0552ff",
+      "before_sha256": "197601c0dca36510367fe94c841afeb60183ab3967f74b4040a0522a2b0552ff",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    }
+  },
+  "schema": "uwb-imu-pl/p1-05-worker-equivalence/v1",
+  "status": "FAIL",
+  "worker_configuration_diagnostic": {
+    "after_values": [
+      "4",
+      "4",
+      "4",
+      "4",
+      "4",
+      "4",
+      "4",
+      "4"
+    ],
+    "before_values": [
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    "field": "hypothesis_parallel_blocks",
+    "meaning": "configured/used parallel blocks; expected to vary with the worker setting and never claimed as invariant algorithm work"
+  }
+}

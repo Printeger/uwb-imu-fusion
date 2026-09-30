@@ -1,0 +1,38 @@
+{
+  "tests": 2,
+  "failures": 0,
+  "disabled": 0,
+  "errors": 0,
+  "timestamp": "2026-09-30T09:45:56Z",
+  "time": "11.041s",
+  "name": "AllTests",
+  "testsuites": [
+    {
+      "name": "P007CorrectedExhaustive",
+      "tests": 2,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2026-09-30T09:45:56Z",
+      "time": "11.041s",
+      "testsuite": [
+        {
+          "name": "SameRawReplayDrivesProductionBuilderGeneratorAndFinalRefusal",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "9.898s",
+          "classname": "P007CorrectedExhaustive"
+        },
+        {
+          "name": "MissingProvenanceCensusIsRetainedAndRefused",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:46:06Z",
+          "time": "1.143s",
+          "classname": "P007CorrectedExhaustive"
+        }
+      ]
+    }
+  ]
+}

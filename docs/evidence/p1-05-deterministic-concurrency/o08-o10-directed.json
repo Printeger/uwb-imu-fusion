@@ -1,0 +1,170 @@
+{
+  "tests": 13,
+  "failures": 0,
+  "disabled": 0,
+  "errors": 0,
+  "timestamp": "2026-09-30T09:45:56Z",
+  "time": "0.116s",
+  "name": "AllTests",
+  "testsuites": [
+    {
+      "name": "P005Transaction",
+      "tests": 2,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2026-09-30T09:45:56Z",
+      "time": "0.107s",
+      "testsuite": [
+        {
+          "name": "EveryPostMutationBoundaryHasExplicitTerminalReceipt",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0.106s",
+          "classname": "P005Transaction"
+        },
+        {
+          "name": "PreMutationFailureRemainsHonestlyDiscardable",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0.001s",
+          "classname": "P005Transaction"
+        }
+      ]
+    },
+    {
+      "name": "P005Reference",
+      "tests": 2,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2026-09-30T09:45:56Z",
+      "time": "0.009s",
+      "testsuite": [
+        {
+          "name": "FabricatedProofIsRejectedBeforeMutationAndLegacyIsUnprotected",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0.005s",
+          "classname": "P005Reference"
+        },
+        {
+          "name": "GenuineP003CandidateCommitsActualBackendAndTransfersReference",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0.004s",
+          "classname": "P005Reference"
+        }
+      ]
+    },
+    {
+      "name": "P005Publication",
+      "tests": 7,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2026-09-30T09:45:56Z",
+      "time": "0s",
+      "testsuite": [
+        {
+          "name": "ImmutablePacketOwnsDeadlineAndAllSinkMaterial",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0s",
+          "classname": "P005Publication"
+        },
+        {
+          "name": "ClockJumpOverflowAndExceptionAreFailClosedPackets",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0s",
+          "classname": "P005Publication"
+        },
+        {
+          "name": "SlowPrepareReturnFreezesOneDeadlineMissedPacket",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0s",
+          "classname": "P005Publication"
+        },
+        {
+          "name": "FailedPreparationAbortsBeforeAnySinkSeesAPacket",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0s",
+          "classname": "P005Publication"
+        },
+        {
+          "name": "PartialSinkFailureCanLeaveOnlyNonAuthoritativeUnprotectedCandidate",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0s",
+          "classname": "P005Publication"
+        },
+        {
+          "name": "NonAtomicFanoutCanNeverActivateProtectedReceipt",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0s",
+          "classname": "P005Publication"
+        },
+        {
+          "name": "ProductionFanoutTimesActualCallsAndNeverClaimsAtomicAuthority",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0s",
+          "classname": "P005Publication"
+        }
+      ]
+    },
+    {
+      "name": "P005Odometry",
+      "tests": 1,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2026-09-30T09:45:56Z",
+      "time": "0s",
+      "testsuite": [
+        {
+          "name": "NinetyDegreeYawRotatesVelocityAndCovarianceToChildFrame",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0s",
+          "classname": "P005Odometry"
+        }
+      ]
+    },
+    {
+      "name": "P005Abi",
+      "tests": 1,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2026-09-30T09:45:56Z",
+      "time": "0s",
+      "testsuite": [
+        {
+          "name": "PublicationPacketV1AndV2LayoutsRemainFrozen",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0s",
+          "classname": "P005Abi"
+        }
+      ]
+    }
+  ]
+}

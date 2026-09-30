@@ -3,6 +3,7 @@
 #include "uwb_imu_pl/integrity/risk_budget_audit.hpp"
 #include "uwb_imu_pl/integrity/dual_channel_detector.hpp"
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
+#include "uwb_imu_pl/estimation/candidate_worker_pool.hpp"
 
 #include <boost/math/distributions/non_central_chi_squared.hpp>
 #include <boost/math/distributions/normal.hpp>
@@ -2412,6 +2413,673 @@ ProtectionLevelV2Result ProtectionLevelV2::computeSharedImpl(
   return result;
 }
 
+void ProtectionLevelV2::computeSharedFlatBatch(
+    const FrozenWindowAdmission& admission,
+    std::vector<FlatProtectionCandidateV1>* jobs,
+    const RiskBudgetV2& risk,
+    CandidateWorkerPool* worker_pool,
+    std::size_t active_workers,
+    std::size_t scratch_limit_bytes) const {
+  if (!jobs || !worker_pool || !admission) {
+    throw std::invalid_argument("invalid R11 flat protection batch");
+  }
+  const auto& window = admission.window();
+  struct SolvedMode {
+    const Eigen::MatrixXd* map = nullptr;
+    Eigen::MatrixXd cross;
+    Eigen::Index solve_offset = 0;
+  };
+  struct FrozenModeSlice {
+    Eigen::Index offset = 0;
+    Eigen::Index columns = 0;
+  };
+  struct Root {
+    ProtectionLevelV2Result result;
+    ProtectionLevelV2ProofV1 sidecar;
+    std::map<std::uint64_t, SolvedMode> solved_modes;
+    RawFactorCertificate raw_factor;
+    Eigen::Vector3d sigma = Eigen::Vector3d::Zero();
+    double covariance_rank_tolerance = 1e-10;
+    double nominal_tail = 0.0;
+    RiskLedger complete_risk;
+    std::map<std::uint64_t, FrozenModeSlice> frozen_mode_slices;
+    std::map<std::uint64_t, std::size_t> frozen_hypothesis_indexes;
+    Eigen::Index frozen_mode_columns = 0;
+    std::uint64_t candidate_proof_identity = 0;
+    std::size_t frozen_terminal_limit =
+        std::numeric_limits<std::size_t>::max();
+    std::string failure;
+    bool frozen = false;
+    bool valid = false;
+  };
+  struct Slot {
+    FaultHypothesisV2 hypothesis;
+    FrozenHypothesisPlProofV1 hypothesis_proof;
+    DualChannelNumericalProofV1 dual_channel_proof;
+    ProtectionHypothesisComponentProofV1 component_proof;
+    Eigen::Vector3d component = Eigen::Vector3d::Constant(
+        std::numeric_limits<double>::infinity());
+    FaultAxisBounds bounds;
+    std::string detector_certificate;
+    std::string reason;
+    bool valid = false;
+  };
+  std::vector<Root> roots(jobs->size());
+  std::vector<std::size_t> offsets(jobs->size() + 1, 0);
+  for (std::size_t candidate_index = 0;
+       candidate_index < jobs->size(); ++candidate_index) {
+    auto& job = jobs->at(candidate_index);
+    auto& root = roots[candidate_index];
+    root.sidecar.risk = risk;
+    offsets[candidate_index + 1] = offsets[candidate_index] +
+        (job.hypotheses ? job.hypotheses->size() : 0);
+    auto fail = [&](const std::string& reason) {
+      if (root.failure.empty()) root.failure = reason;
+      root.result.reason = root.failure;
+    };
+    if (!job.candidate || !job.detector || !job.hypotheses || !job.shared ||
+        !job.result || !job.candidate->valid ||
+        !job.detector->numerically_valid) {
+      fail("invalid post-FDE candidate/protected-state map");
+      continue;
+    }
+    std::string detector_reason;
+    if (!detectorContractMatchesCandidate(
+            window, *job.candidate, *job.detector, &detector_reason,
+            &admission) ||
+        window.protected_state_map.cols() !=
+            job.candidate->state_increment.rows() ||
+        window.protected_state_map.rows() != 3) {
+      fail(detector_reason.empty()
+               ? "invalid post-FDE candidate/protected-state map"
+               : detector_reason);
+      continue;
+    }
+    // Candidate identity includes large frozen matrices.  It is immutable for
+    // the whole batch root and must never be re-hashed by every leaf task.
+    root.candidate_proof_identity = candidateProofIdentity(*job.candidate);
+    const bool requested_frozen = job.frozen_modes && job.frozen &&
+        job.frozen_dual;
+    if (requested_frozen) {
+      const bool keep_all = job.candidate->action.groups_to_remove.empty() &&
+          job.candidate->action.groups_to_add.empty() &&
+          job.candidate->action.added_blocks.empty();
+      std::string frozen_reason;
+      const bool frozen_valid = keep_all && job.frozen->valid &&
+          window.numerics &&
+          job.frozen->window_id == window.id &&
+          job.frozen->version == window.version &&
+          job.frozen->window_content_fingerprint ==
+              window.numerics->content_fingerprint &&
+          job.frozen->numerical_contract_fingerprint ==
+              window.numerics->numerical_contract_fingerprint &&
+          job.frozen->fault_mode_fingerprint ==
+              faultModeSetFingerprint(*job.frozen_modes) &&
+          job.frozen->fault_model_policy_fingerprint ==
+              job.fault_model_policy_fingerprint &&
+          job.frozen->hypothesis_count == job.hypotheses->size() &&
+          job.frozen->pl_entries.size() ==
+              job.frozen_dual->dual_blocks.size() &&
+          validateFrozenHypothesisDualProof(
+              admission, *job.frozen, *job.frozen_dual, &frozen_reason) &&
+          job.frozen_dual->candidate_hypothesis_fingerprint ==
+              hypothesisSetFingerprint(*job.hypotheses);
+      if (!frozen_valid) {
+        NumericalWorkCounters::hypothesisSharedMiss();
+        fail(frozen_reason.empty()
+                 ? "frozen all-in hypothesis context identity mismatch"
+                 : frozen_reason);
+        continue;
+      }
+      const RiskBudgetAudit allocation = auditRiskBudget(
+          risk, *job.hypotheses);
+      root.complete_risk = preSelectionRiskLedger(risk, *job.hypotheses);
+      root.result.allocated_outcome_risk = root.complete_risk.charged_total;
+      root.result.risk_budget_valid = root.complete_risk.closes &&
+          root.complete_risk.all_terms_validated;
+      if (!allocation.valid) {
+        fail("risk allocation precheck does not close");
+        continue;
+      }
+      root.covariance_rank_tolerance = window.numerics
+          ? window.numerics->numerical_contract.rank_tolerance : 1e-10;
+      const Eigen::Matrix3d protected_covariance =
+          job.frozen_dual->candidate_protected_covariance;
+      const Eigen::MatrixXd protected_factor =
+          job.frozen_dual->candidate_protected_factor.transpose();
+      const bool factor_valid = protected_factor.cols() == 3 &&
+          protected_factor.rows() == job.candidate->state_increment.size() &&
+          protected_factor.allFinite();
+      const auto covariance_certificate = factor_valid
+          ? certifyFactorGram(protected_factor, protected_covariance,
+                              root.covariance_rank_tolerance,
+                              root.candidate_proof_identity)
+          : SymmetricPsdCertificate{};
+      if (!covariance_certificate.valid ||
+          (protected_covariance.diagonal().array() <= 0.0).any()) {
+        fail("post-FDE protected covariance is invalid: " +
+             covariance_certificate.reason);
+        continue;
+      }
+      root.nominal_tail = std::max(1e-15, risk.nominal_axis_tail);
+      const double nominal_k =
+          StatisticalBoundsCache::normalTwoSidedMultiplier(root.nominal_tail);
+      root.sigma = protected_covariance.diagonal().cwiseSqrt();
+      root.sidecar.protected_covariance = protected_covariance;
+      root.sidecar.protected_covariance_factor = protected_factor;
+      root.sidecar.covariance_rank_tolerance =
+          root.covariance_rank_tolerance;
+      root.sidecar.nominal_tail = root.nominal_tail;
+      root.sidecar.nominal_multiplier = nominal_k;
+      root.sidecar.nominal_sigma = root.sigma;
+      root.result.nominal_component_m = nominal_k * root.sigma;
+      root.result.fault_component_m.setZero();
+      root.result.bridge_component_m.setZero();
+      for (const auto& mode : *job.frozen_modes) {
+        const Eigen::Index columns = mode.effective_basis_certified &&
+            mode.effective_parameter_dimension > 0 &&
+            mode.effective_parameter_basis.rows() ==
+                mode.parameter_dimension &&
+            mode.effective_parameter_basis.cols() ==
+                mode.effective_parameter_dimension
+            ? mode.effective_parameter_dimension : mode.parameter_dimension;
+        root.frozen_mode_slices.emplace(
+            mode.id.value(),
+            FrozenModeSlice{root.frozen_mode_columns, columns});
+        root.frozen_mode_columns += columns;
+      }
+      for (std::size_t index = 0;
+           index < job.frozen->pl_entries.size(); ++index) {
+        root.frozen_hypothesis_indexes.emplace(
+            job.frozen->pl_entries[index].hypothesis.value(), index);
+      }
+      // The frozen P1-02 path is fail-closed at the first canonical cached
+      // hypothesis that is absent or already certified unmonitorable.  Find
+      // that boundary before dispatch so every later flat slot can reach a
+      // deterministic terminal no-op without replacing the golden early-fail
+      // numerical workload with tens of thousands of unnecessary solves.
+      for (std::size_t h = 0; h < job.hypotheses->size(); ++h) {
+        const auto found = root.frozen_hypothesis_indexes.find(
+            job.hypotheses->at(h).id.value());
+        if (found == root.frozen_hypothesis_indexes.end()) {
+          root.frozen_terminal_limit = h;
+          break;
+        }
+        const auto& cached = job.frozen->pl_entries[found->second];
+        if (cached.hypothesis != job.hypotheses->at(h).id ||
+            !cached.valid ||
+            !(cached.gram_spd || cached.bound_from_projected_path) ||
+            !cached.monitorability.monitorable) {
+          root.frozen_terminal_limit = h;
+          break;
+        }
+      }
+      NumericalWorkCounters::hypothesisSharedHit();
+      root.frozen = true;
+      root.valid = true;
+      continue;
+    }
+    std::map<std::uint64_t, const Eigen::MatrixXd*> modes;
+    for (const auto& hypothesis : *job.hypotheses) {
+      for (const auto id : hypothesis.modes) {
+        const auto found = job.shared->mode_maps.find(id.value());
+        if (found == job.shared->mode_maps.end() ||
+            found->second.rows() != job.candidate->rows ||
+            found->second.cols() == 0 || !found->second.allFinite()) {
+          fail("remaining hypothesis cannot be mapped post-FDE");
+          break;
+        }
+        modes.emplace(id.value(), &found->second);
+      }
+      if (!root.failure.empty()) break;
+    }
+    if (!root.failure.empty()) continue;
+    const RiskBudgetAudit allocation = auditRiskBudget(risk, *job.hypotheses);
+    root.complete_risk = preSelectionRiskLedger(risk, *job.hypotheses);
+    root.result.allocated_outcome_risk = root.complete_risk.charged_total;
+    root.result.risk_budget_valid = root.complete_risk.closes &&
+        root.complete_risk.all_terms_validated;
+    if (!allocation.valid) {
+      fail("risk allocation precheck does not close");
+      continue;
+    }
+    Eigen::Index solve_columns = 3;
+    for (const auto& item : modes) {
+      SolvedMode mode;
+      mode.map = item.second;
+      mode.cross = job.candidate->normalCross(*item.second);
+      if (mode.cross.rows() != job.candidate->state_increment.rows()) {
+        fail("candidate normal cross-product failed");
+        break;
+      }
+      mode.solve_offset = solve_columns;
+      solve_columns += mode.cross.cols();
+      root.solved_modes.emplace(item.first, std::move(mode));
+    }
+    if (!root.failure.empty()) continue;
+    std::vector<Eigen::Index> bridge_offsets;
+    bridge_offsets.reserve(job.shared->bridges.size());
+    for (const auto& bridge : job.shared->bridges) {
+      if (bridge.jacobian_whitened.cols() !=
+              job.candidate->state_increment.rows() ||
+          bridge.jacobian_whitened.rows() !=
+              bridge.deterministic_bound.size() ||
+          !bridge.jacobian_whitened.allFinite() ||
+          !bridge.deterministic_bound.allFinite() ||
+          (bridge.deterministic_bound.array() < 0.0).any()) {
+        fail("bridge projection dimensions invalid");
+        break;
+      }
+      bridge_offsets.push_back(solve_columns);
+      solve_columns += bridge.jacobian_whitened.rows();
+    }
+    if (!root.failure.empty()) continue;
+    Eigen::MatrixXd rhs(job.candidate->state_increment.rows(), solve_columns);
+    rhs.leftCols<3>() = window.protected_state_map.transpose();
+    for (const auto& item : root.solved_modes) {
+      rhs.middleCols(item.second.solve_offset, item.second.cross.cols()) =
+          item.second.cross;
+    }
+    for (std::size_t i = 0; i < job.shared->bridges.size(); ++i) {
+      const auto& bridge = job.shared->bridges[i];
+      rhs.middleCols(bridge_offsets[i], bridge.jacobian_whitened.rows()) =
+          bridge.jacobian_whitened.transpose();
+    }
+    const Eigen::MatrixXd solutions = job.candidate->covarianceTimes(rhs);
+    ++job.candidate->diagnostics.covariance_solve_count;
+    if (solutions.rows() != job.candidate->state_increment.rows() ||
+        solutions.cols() != solve_columns || !solutions.allFinite()) {
+      fail("candidate covariance solve failed");
+      continue;
+    }
+    root.covariance_rank_tolerance = window.numerics
+        ? window.numerics->numerical_contract.rank_tolerance : 1e-10;
+    root.raw_factor = rawFactorCertificate(
+        window, *job.candidate, root.covariance_rank_tolerance);
+    if (!root.raw_factor.valid) {
+      fail("direct raw-H certificate failed: " + root.raw_factor.reason);
+      continue;
+    }
+    const Eigen::Matrix3d protected_covariance =
+        root.raw_factor.protected_covariance;
+    const auto covariance_certificate = certifyFactorGram(
+        root.raw_factor.protected_factor.transpose(), protected_covariance,
+        root.covariance_rank_tolerance,
+        root.candidate_proof_identity);
+    if (!covariance_certificate.valid ||
+        (protected_covariance.diagonal().array() <= 0.0).any()) {
+      fail("post-FDE protected covariance is invalid: " +
+           covariance_certificate.reason);
+      continue;
+    }
+    root.result.bridge_component_m.setZero();
+    for (std::size_t i = 0; i < job.shared->bridges.size(); ++i) {
+      const auto& bridge = job.shared->bridges[i];
+      const Eigen::MatrixXd gain = solutions.middleCols(
+          bridge_offsets[i], bridge.jacobian_whitened.rows());
+      ProtectionBridgeProofV1 bridge_proof;
+      bridge_proof.projected_gain = window.protected_state_map * gain;
+      bridge_proof.deterministic_bound = bridge.deterministic_bound;
+      bridge_proof.served_component =
+          bridge_proof.projected_gain.cwiseAbs() *
+          bridge_proof.deterministic_bound;
+      root.result.bridge_component_m += bridge_proof.served_component;
+      root.sidecar.bridge_proofs.push_back(std::move(bridge_proof));
+    }
+    root.nominal_tail = std::max(1e-15, risk.nominal_axis_tail);
+    const double nominal_k = StatisticalBoundsCache::normalTwoSidedMultiplier(
+        root.nominal_tail);
+    root.sigma = protected_covariance.diagonal().cwiseSqrt();
+    root.sidecar.protected_covariance = protected_covariance;
+    root.sidecar.protected_covariance_factor =
+        root.raw_factor.protected_factor.transpose();
+    root.sidecar.covariance_rank_tolerance =
+        root.covariance_rank_tolerance;
+    root.sidecar.nominal_tail = root.nominal_tail;
+    root.sidecar.nominal_multiplier = nominal_k;
+    root.sidecar.nominal_sigma = root.sigma;
+    root.result.nominal_component_m = nominal_k * root.sigma;
+    root.result.fault_component_m.setZero();
+    root.valid = true;
+  }
+
+  std::vector<Slot> slots(offsets.back());
+  std::vector<std::size_t> task_candidate(offsets.back());
+  std::vector<std::size_t> task_hypothesis(offsets.back());
+  for (std::size_t c = 0; c < jobs->size(); ++c) {
+    for (std::size_t h = 0; h < offsets[c + 1] - offsets[c]; ++h) {
+      task_candidate[offsets[c] + h] = c;
+      task_hypothesis[offsets[c] + h] = h;
+    }
+  }
+  const std::size_t bounded_workers = std::max<std::size_t>(1,
+      std::min(active_workers, slots.size()));
+  worker_pool->runFlat(slots.size(), bounded_workers, scratch_limit_bytes,
+      [&](std::size_t flat_index, std::size_t, RankUpdateScratch&) {
+        const std::size_t c = task_candidate[flat_index];
+        const std::size_t h = task_hypothesis[flat_index];
+        auto& root = roots[c];
+        auto& job = jobs->at(c);
+        auto& slot = slots[flat_index];
+        const auto& source_hypothesis = job.hypotheses->at(h);
+        if (!root.frozen) {
+          slot.hypothesis = source_hypothesis;
+        }
+        if (!root.valid) {
+          slot.reason = root.failure;
+          return;
+        }
+        if (root.frozen && h > root.frozen_terminal_limit) {
+          slot.reason =
+              "terminal after earlier canonical frozen hypothesis failure";
+          return;
+        }
+        const auto& detector = *job.detector;
+        const auto& candidate = *job.candidate;
+        if (root.frozen) {
+          const auto frozen_index = root.frozen_hypothesis_indexes.find(
+              source_hypothesis.id.value());
+          if (frozen_index == root.frozen_hypothesis_indexes.end()) {
+            slot.reason = "frozen candidate hypothesis block is absent";
+            return;
+          }
+          const auto& cached =
+              job.frozen->pl_entries[frozen_index->second];
+          if (cached.hypothesis != source_hypothesis.id || !cached.valid ||
+              !(cached.gram_spd || cached.bound_from_projected_path) ||
+              !cached.monitorability.monitorable) {
+            slot.reason = "remaining post-FDE hypothesis " +
+                std::to_string(source_hypothesis.id.value()) +
+                " is unmonitorable: rank=" +
+                std::to_string(cached.monitorability.rank) + "/" +
+                std::to_string(cached.monitorability.parameter_dimension) +
+                ";sigma_min=" +
+                std::to_string(cached.monitorability.sigma_min) +
+                ";condition=" +
+                std::to_string(cached.monitorability.condition_number);
+            return;
+          }
+          std::string cached_reason;
+          FrozenHypothesisPlProofV1 cached_proof;
+          const bool cached_found = job.frozen_proof_arena
+              ? frozenHypothesisPlProof(
+                    cached, *job.frozen_proof_arena, &cached_proof)
+              : frozenHypothesisPlProof(cached, &cached_proof);
+          if (!cached_found ||
+              !validateFrozenHypothesisPlEntry(cached_proof,
+                                                &cached_reason)) {
+            slot.reason = "frozen hypothesis proof rejected: " +
+                cached_reason;
+            return;
+          }
+          const auto& dual =
+              job.frozen_dual->dual_blocks[frozen_index->second];
+          if (!dual.valid || dual.hypothesis != source_hypothesis.id ||
+              dual.dimension <= 0 || dual.dimension > 3 ||
+              cached_proof.raw_detection_factor.cols() != dual.dimension) {
+            NumericalWorkCounters::hypothesisSharedMiss();
+            slot.reason = "frozen dual hypothesis block is invalid";
+            return;
+          }
+          const Eigen::MatrixXd total_gram = dual.total_gram.topLeftCorner(
+              dual.dimension, dual.dimension);
+          const Eigen::MatrixXd history_gram =
+              dual.history_gram.topLeftCorner(
+                  dual.dimension, dual.dimension);
+          const Eigen::MatrixXd protected_response =
+              dual.protected_response.leftCols(dual.dimension);
+          Eigen::MatrixXd raw_detection_factor(
+              job.frozen_dual->candidate_detection_modes.rows(),
+              dual.dimension);
+          Eigen::Index raw_offset = 0;
+          bool raw_valid =
+              job.frozen_dual->candidate_detection_modes.cols() ==
+              root.frozen_mode_columns;
+          for (const auto mode_id : source_hypothesis.modes) {
+            const auto slice = root.frozen_mode_slices.find(mode_id.value());
+            if (slice == root.frozen_mode_slices.end() ||
+                raw_offset + slice->second.columns > dual.dimension) {
+              raw_valid = false;
+              break;
+            }
+            raw_detection_factor.middleCols(
+                raw_offset, slice->second.columns) =
+                job.frozen_dual->candidate_detection_modes.middleCols(
+                    slice->second.offset, slice->second.columns);
+            raw_offset += slice->second.columns;
+          }
+          if (!raw_valid || raw_offset != dual.dimension ||
+              !raw_detection_factor.allFinite()) {
+            slot.reason = "frozen candidate mode response is incomplete";
+            return;
+          }
+          const auto response_certificate =
+              certifyFactorGramAndProtectedResponse(
+                  raw_detection_factor, total_gram, protected_response,
+                  root.covariance_rank_tolerance,
+                  root.candidate_proof_identity,
+                  cached_proof.raw_factor_scale);
+          if (!response_certificate.valid ||
+              response_certificate.nullspace_class ==
+                  GramNullspaceClass::Dangerous) {
+            slot.reason = "frozen dual hypothesis proof is unavailable: " +
+                response_certificate.reason;
+            return;
+          }
+          slot.hypothesis_proof = protectionHypothesisProof(
+              source_hypothesis.id, response_certificate,
+              raw_detection_factor, cached_proof.raw_factor_scale,
+              root.covariance_rank_tolerance);
+          slot.hypothesis_proof.protected_response = protected_response;
+          slot.hypothesis_proof.parent_proof_identity =
+              root.candidate_proof_identity;
+          slot.bounds = dualChannelAxisBounds(
+              detector, source_hypothesis, total_gram, history_gram,
+              protected_response, root.sigma, root.nominal_tail,
+              root.covariance_rank_tolerance,
+              root.candidate_proof_identity, &slot.component,
+              &slot.detector_certificate, &slot.dual_channel_proof);
+          if (!slot.bounds.valid) {
+            slot.reason = "remaining post-FDE hypothesis " +
+                std::to_string(source_hypothesis.id.value()) +
+                " has no valid section 5.9 bound: " + slot.bounds.reason;
+            return;
+          }
+          slot.component_proof.hypothesis = source_hypothesis.id;
+          slot.component_proof.detector_dof = detector.dof;
+          slot.component_proof.detector_threshold =
+              detector.squared_threshold;
+          slot.component_proof.hypothesis_tail =
+              slot.bounds.hypothesis_tail;
+          slot.component_proof.axis_tail = slot.bounds.axis_tail;
+          slot.component_proof.multiplier = slot.bounds.k;
+          slot.component_proof.noncentrality = slot.bounds.lambda;
+          slot.component_proof.dual_channel = true;
+          slot.component_proof.served_component = slot.component;
+          slot.valid = true;
+          return;
+        }
+        Eigen::Index columns = 0;
+        for (const auto id : slot.hypothesis.modes) {
+          columns += root.solved_modes.at(id.value()).map->cols();
+        }
+        Eigen::MatrixXd protected_fault(3, columns);
+        Eigen::MatrixXd fault_map(candidate.rows, columns);
+        Eigen::Index offset = 0;
+        for (const auto mode_id : slot.hypothesis.modes) {
+          const auto& mode = root.solved_modes.at(mode_id.value());
+          const Eigen::Index count = mode.map->cols();
+          fault_map.middleCols(offset, count) = *mode.map;
+          offset += count;
+        }
+        Eigen::MatrixXd gram;
+        Eigen::MatrixXd residual_factor;
+        if (!root.raw_factor.faultProducts(
+                fault_map, &gram, &protected_fault, &residual_factor)) {
+          slot.reason = "direct raw-H fault certificate failed";
+          return;
+        }
+        NumericalWorkCounters::faultGramEigen();
+        const auto gram_certificate = certifyFactorGramAndProtectedResponse(
+            residual_factor, gram, protected_fault,
+            root.covariance_rank_tolerance,
+            root.candidate_proof_identity, fault_map.norm());
+        slot.hypothesis_proof = protectionHypothesisProof(
+            slot.hypothesis.id, gram_certificate, residual_factor,
+            fault_map.norm(), root.covariance_rank_tolerance);
+        slot.hypothesis_proof.protected_response = protected_fault;
+        slot.hypothesis_proof.parent_proof_identity =
+            root.candidate_proof_identity;
+        auto& monitor = slot.hypothesis.monitorability;
+        monitor.parameter_dimension = columns;
+        monitor.rank = gram_certificate.gram.rank;
+        monitor.sigma_min = gram_certificate.gram.sigma_min;
+        monitor.sigma_max = gram_certificate.gram.sigma_max;
+        monitor.condition_number = gram_certificate.gram.condition;
+        monitor.monitorable = gram_certificate.valid &&
+            gram_certificate.nullspace_class != GramNullspaceClass::Dangerous;
+        slot.hypothesis.monitored = monitor.monitorable;
+        if (!slot.hypothesis.monitored) {
+          slot.reason = "remaining post-FDE hypothesis " +
+              std::to_string(slot.hypothesis.id.value()) +
+              " is unmonitorable: rank=" + std::to_string(monitor.rank) +
+              "/" + std::to_string(columns) + ";sigma_min=" +
+              std::to_string(monitor.sigma_min) + ";condition=" +
+              std::to_string(monitor.condition_number);
+          return;
+        }
+        monitor.protected_slopes = gram_certificate.protected_slopes;
+        const Eigen::MatrixXd history_gram = historyGramFromCertificate(
+            candidate, fault_map);
+        if (history_gram.rows() != columns) {
+          slot.reason = "candidate detector row-role payload is missing";
+          return;
+        }
+        slot.bounds = dualChannelAxisBounds(
+            detector, slot.hypothesis, gram, history_gram, protected_fault,
+            root.sigma, root.nominal_tail, root.covariance_rank_tolerance,
+            root.candidate_proof_identity, &slot.component,
+            &slot.detector_certificate, &slot.dual_channel_proof);
+        if (!slot.bounds.valid) {
+          slot.reason = "remaining post-FDE hypothesis " +
+              std::to_string(slot.hypothesis.id.value()) +
+              " has no valid section 5.9 bound: " + slot.bounds.reason;
+          return;
+        }
+        slot.component_proof.hypothesis = slot.hypothesis.id;
+        slot.component_proof.detector_dof = detector.dof;
+        slot.component_proof.detector_threshold = detector.squared_threshold;
+        slot.component_proof.hypothesis_tail = slot.bounds.hypothesis_tail;
+        slot.component_proof.axis_tail = slot.bounds.axis_tail;
+        slot.component_proof.multiplier = slot.bounds.k;
+        slot.component_proof.noncentrality = slot.bounds.lambda;
+        slot.component_proof.dual_channel = true;
+        slot.component_proof.served_component = slot.component;
+        slot.valid = true;
+      });
+
+  for (std::size_t c = 0; c < jobs->size(); ++c) {
+    auto& job = jobs->at(c);
+    auto& root = roots[c];
+    auto& result = root.result;
+    std::string audit_failure = root.failure;
+    for (std::size_t h = 0; h < offsets[c + 1] - offsets[c]; ++h) {
+      auto& slot = slots[offsets[c] + h];
+      if (!slot.valid) {
+        if (audit_failure.empty()) audit_failure = slot.reason;
+        if (!job.computation_audit) break;
+        // The legacy audit path retains a completed Gram/response proof even
+        // when a later monitorability/history/bound gate fails.  Preserve that
+        // distinction: a pre-proof failure has no hypothesis entry (and is
+        // reported as unavailable), while a post-proof failure keeps the
+        // certified numerical record plus an infinite terminal component.
+        if (slot.hypothesis_proof.proof_identity != 0) {
+          if (!root.frozen) job.hypotheses->at(h) = slot.hypothesis;
+          root.sidecar.hypothesis_proofs.push_back(
+              std::move(slot.hypothesis_proof));
+          ProtectionHypothesisComponentProofV1 unavailable_component;
+          unavailable_component.hypothesis = job.hypotheses->at(h).id;
+          if (job.detector) {
+            unavailable_component.detector_dof = job.detector->dof;
+            unavailable_component.detector_threshold =
+                job.detector->squared_threshold;
+          }
+          unavailable_component.served_component.setConstant(
+              std::numeric_limits<double>::infinity());
+          root.sidecar.component_proofs.push_back(
+              std::move(unavailable_component));
+        }
+        continue;
+      }
+      if (!root.frozen) job.hypotheses->at(h) = slot.hypothesis;
+      result.hypothesis_tail_used = std::max(
+          result.hypothesis_tail_used, slot.bounds.hypothesis_tail);
+      result.axis_tail_used = std::max(
+          result.axis_tail_used, slot.bounds.axis_tail);
+      result.fault_multiplier_used = std::max(
+          result.fault_multiplier_used, slot.bounds.k);
+      result.noncentrality_used = std::max(
+          result.noncentrality_used, slot.bounds.lambda);
+      result.detector_certificate_id = slot.detector_certificate;
+      result.fault_component_m =
+          result.fault_component_m.cwiseMax(slot.component);
+      root.sidecar.hypothesis_proofs.push_back(
+          std::move(slot.hypothesis_proof));
+      root.sidecar.dual_channel_proofs.push_back(
+          std::move(slot.dual_channel_proof));
+      root.sidecar.component_proofs.push_back(
+          std::move(slot.component_proof));
+    }
+    if (!audit_failure.empty()) {
+      result.reason = audit_failure;
+      result.model_valid = false;
+      result.availability = Availability::Unavailable;
+    } else {
+      result.pl_xyz_m = result.nominal_component_m.cwiseMax(
+          result.fault_component_m) + result.bridge_component_m;
+      result.hpl_m = std::hypot(result.pl_xyz_m.x(), result.pl_xyz_m.y());
+      result.vpl_m = result.pl_xyz_m.z();
+      result.model_valid = result.pl_xyz_m.allFinite() &&
+          job.detector->passed;
+      result.availability = result.model_valid && result.risk_budget_valid &&
+          result.hpl_m <= risk.horizontal_alert_limit_m &&
+          result.vpl_m <= risk.vertical_alert_limit_m
+          ? Availability::Available : Availability::Unavailable;
+      result.formal_eligible = false;
+      if (!job.detector->passed) result.reason = "post-FDE detector alarm";
+      else if (!result.risk_budget_valid) {
+        result.reason = root.complete_risk.reason;
+      } else if (result.availability != Availability::Available) {
+        result.reason = "post-FDE protection level exceeds alert limit";
+      } else {
+        result.reason =
+            "research V2 implemented; Gate J calibration/review pending";
+      }
+      bindProtectionResultProof(
+          *job.candidate, *job.detector, *job.hypotheses, &result,
+          &root.sidecar, job.proof_arena);
+    }
+    if (job.computation_audit) {
+      root.sidecar.candidate_proof_identity = job.candidate
+          ? candidateProofIdentity(*job.candidate) : 0;
+      root.sidecar.detector_proof_identity = job.detector
+          ? job.detector->detector_contract_digest : 0;
+      root.sidecar.detector_candidate_numerical_identity = job.detector
+          ? job.detector->candidate_numerical_identity : 0;
+      root.sidecar.pooled_only = job.detector &&
+          (job.detector->contract_mode ==
+               DetectorContractMode::LegacyPooledOffline ||
+           job.detector->channel_history_dof == 0);
+      root.sidecar.detector_passed = job.detector && job.detector->passed;
+      if (job.hypotheses) root.sidecar.hypotheses = *job.hypotheses;
+      root.sidecar.served_result = result;
+      root.sidecar.proof_identity = protectionResultProofIdentity(root.sidecar);
+      *job.computation_audit = root.sidecar;
+    }
+    *job.result = result;
+  }
+}
+
 ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllIn(
     const LinearizedIntegrityWindow& window,
     CandidateEvaluation* candidate,
@@ -2647,19 +3315,33 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
     frozen_hypothesis_indexes.emplace(
         frozen.pl_entries[index].hypothesis.value(), index);
   }
-  for (std::size_t index = 0; index < hypotheses.size(); ++index) {
+  struct FrozenHypothesisSlot {
+    FaultAxisBounds bounds;
+    Eigen::Vector3d component = Eigen::Vector3d::Constant(
+        std::numeric_limits<double>::infinity());
+    FrozenHypothesisPlProofV1 hypothesis_proof;
+    DualChannelNumericalProofV1 dual_channel_proof;
+    ProtectionHypothesisComponentProofV1 component_proof;
+    std::string detector_certificate;
+    std::string reason;
+    bool has_dual_channel_proof = false;
+    bool valid = false;
+  };
+  std::vector<FrozenHypothesisSlot> hypothesis_slots(hypotheses.size());
+  auto evaluate_hypothesis = [&](std::size_t index) {
     const auto& hypothesis = hypotheses[index];
+    auto& slot = hypothesis_slots[index];
     const auto frozen_index = frozen_hypothesis_indexes.find(
         hypothesis.id.value());
     if (frozen_index == frozen_hypothesis_indexes.end()) {
-      result.reason = "frozen candidate hypothesis block is absent";
-      return result;
+      slot.reason = "frozen candidate hypothesis block is absent";
+      return;
     }
     const auto& cached = frozen.pl_entries[frozen_index->second];
     if (cached.hypothesis != hypothesis.id || !cached.valid ||
         !(cached.gram_spd || cached.bound_from_projected_path) ||
         !cached.monitorability.monitorable) {
-      result.reason = "remaining post-FDE hypothesis " +
+      slot.reason = "remaining post-FDE hypothesis " +
           std::to_string(hypothesis.id.value()) +
           " is unmonitorable: rank=" +
           std::to_string(cached.monitorability.rank) + "/" +
@@ -2667,7 +3349,7 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
           ";sigma_min=" + std::to_string(cached.monitorability.sigma_min) +
           ";condition=" +
           std::to_string(cached.monitorability.condition_number);
-      return result;
+      return;
     }
     std::string cached_proof_reason;
     FrozenHypothesisPlProofV1 cached_proof;
@@ -2677,21 +3359,18 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
     if (!cached_found ||
         !validateFrozenHypothesisPlEntry(cached_proof,
                                          &cached_proof_reason)) {
-      result.reason = "frozen hypothesis proof rejected: " +
+      slot.reason = "frozen hypothesis proof rejected: " +
           cached_proof_reason;
-      return result;
+      return;
     }
-    FaultAxisBounds bounds;
-    Eigen::Vector3d component;
-    std::string detector_certificate;
     if (active_dual) {
       const auto& dual = frozen_dual->dual_blocks[frozen_index->second];
       if (!dual.valid || dual.hypothesis != hypothesis.id ||
           dual.dimension <= 0 || dual.dimension > 3 ||
           cached_proof.raw_detection_factor.cols() != dual.dimension) {
         NumericalWorkCounters::hypothesisSharedMiss();
-        result.reason = "frozen dual hypothesis block is invalid";
-        return result;
+        slot.reason = "frozen dual hypothesis block is invalid";
+        return;
       }
       const Eigen::MatrixXd total_gram =
           dual.total_gram.topLeftCorner(dual.dimension, dual.dimension);
@@ -2718,8 +3397,8 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
       }
       if (!raw_response_valid || raw_offset != dual.dimension ||
           !raw_detection_factor.allFinite()) {
-        result.reason = "frozen candidate mode response is incomplete";
-        return result;
+        slot.reason = "frozen candidate mode response is incomplete";
+        return;
       }
       const GramResponseCertificate response_certificate =
           certifyFactorGramAndProtectedResponse(
@@ -2730,39 +3409,59 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
       if (!response_certificate.valid ||
           response_certificate.nullspace_class ==
               GramNullspaceClass::Dangerous) {
-        result.reason = "frozen dual hypothesis proof is unavailable: " +
+        slot.reason = "frozen dual hypothesis proof is unavailable: " +
             response_certificate.reason;
-        return result;
+        return;
       }
-      sidecar.hypothesis_proofs.push_back(protectionHypothesisProof(
+      slot.hypothesis_proof = protectionHypothesisProof(
           hypothesis.id, response_certificate,
           raw_detection_factor, cached_proof.raw_factor_scale,
-          covariance_rank_tolerance));
-      sidecar.hypothesis_proofs.back().protected_response =
-          protected_response;
-      sidecar.hypothesis_proofs.back().parent_proof_identity =
+          covariance_rank_tolerance);
+      slot.hypothesis_proof.protected_response = protected_response;
+      slot.hypothesis_proof.parent_proof_identity =
           candidateProofIdentity(*candidate);
-      DualChannelNumericalProofV1 dual_channel_proof;
-      bounds = dualChannelAxisBounds(
+      slot.bounds = dualChannelAxisBounds(
           detector, hypothesis, total_gram, history_gram,
           protected_response, sigma, nominal_tail,
           covariance_rank_tolerance, candidateProofIdentity(*candidate),
-          &component, &detector_certificate, &dual_channel_proof);
-      if (bounds.valid) {
-        sidecar.dual_channel_proofs.push_back(
-            std::move(dual_channel_proof));
-      }
+          &slot.component, &slot.detector_certificate,
+          &slot.dual_channel_proof);
+      slot.has_dual_channel_proof = slot.bounds.valid;
     } else {
-      sidecar.hypothesis_proofs.push_back(std::move(cached_proof));
-      bounds = faultAxisBounds(detector, hypothesis, nominal_tail);
-      component = cached.protected_slopes * bounds.lambda + bounds.k * sigma;
+      slot.hypothesis_proof = std::move(cached_proof);
+      slot.bounds = faultAxisBounds(detector, hypothesis, nominal_tail);
+      slot.component = cached.protected_slopes * slot.bounds.lambda +
+          slot.bounds.k * sigma;
     }
-    if (!bounds.valid) {
-      result.reason = "remaining post-FDE hypothesis " +
+    if (!slot.bounds.valid) {
+      slot.reason = "remaining post-FDE hypothesis " +
           std::to_string(hypothesis.id.value()) +
-          " has no valid section 5.9 bound: " + bounds.reason;
+          " has no valid section 5.9 bound: " + slot.bounds.reason;
+      return;
+    }
+    slot.component_proof.hypothesis = hypothesis.id;
+    slot.component_proof.detector_dof = detector.dof;
+    slot.component_proof.detector_threshold = detector.squared_threshold;
+    slot.component_proof.hypothesis_tail = slot.bounds.hypothesis_tail;
+    slot.component_proof.axis_tail = slot.bounds.axis_tail;
+    slot.component_proof.multiplier = slot.bounds.k;
+    slot.component_proof.noncentrality = slot.bounds.lambda;
+    slot.component_proof.dual_channel = active_dual;
+    slot.component_proof.served_component = slot.component;
+    slot.valid = true;
+  };
+  for (std::size_t index = 0; index < hypotheses.size(); ++index) {
+    evaluate_hypothesis(index);
+  }
+  // Deterministic reduction is always hypothesis-index ordered, independent
+  // of worker assignment or completion order.
+  for (std::size_t index = 0; index < hypothesis_slots.size(); ++index) {
+    auto& slot = hypothesis_slots[index];
+    if (!slot.valid) {
+      result.reason = slot.reason;
       return result;
     }
+    const auto& bounds = slot.bounds;
     result.hypothesis_tail_used = std::max(result.hypothesis_tail_used,
                                            bounds.hypothesis_tail);
     result.axis_tail_used = std::max(result.axis_tail_used, bounds.axis_tail);
@@ -2770,19 +3469,17 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
                                             bounds.k);
     result.noncentrality_used = std::max(result.noncentrality_used,
                                          bounds.lambda);
-    if (active_dual) result.detector_certificate_id = detector_certificate;
-    ProtectionHypothesisComponentProofV1 component_proof;
-    component_proof.hypothesis = hypothesis.id;
-    component_proof.detector_dof = detector.dof;
-    component_proof.detector_threshold = detector.squared_threshold;
-    component_proof.hypothesis_tail = bounds.hypothesis_tail;
-    component_proof.axis_tail = bounds.axis_tail;
-    component_proof.multiplier = bounds.k;
-    component_proof.noncentrality = bounds.lambda;
-    component_proof.dual_channel = active_dual;
-    component_proof.served_component = component;
-    sidecar.component_proofs.push_back(std::move(component_proof));
-    result.fault_component_m = result.fault_component_m.cwiseMax(component);
+    if (active_dual) {
+      result.detector_certificate_id = slot.detector_certificate;
+    }
+    sidecar.hypothesis_proofs.push_back(std::move(slot.hypothesis_proof));
+    if (slot.has_dual_channel_proof) {
+      sidecar.dual_channel_proofs.push_back(
+          std::move(slot.dual_channel_proof));
+    }
+    sidecar.component_proofs.push_back(std::move(slot.component_proof));
+    result.fault_component_m =
+        result.fault_component_m.cwiseMax(slot.component);
   }
   result.pl_xyz_m = result.nominal_component_m.cwiseMax(
       result.fault_component_m);

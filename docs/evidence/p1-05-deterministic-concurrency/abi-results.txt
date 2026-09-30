@@ -1,0 +1,15 @@
+P1-05 additive ABI/API audit
+
+Golden reference: golden-p1-04-streamed-recovery-search
+Current DSO: /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/libuwb_imu_pl.so
+
+PASS: no existing public signature or layout-bearing data member changed.
+CandidateWorkerPool gained additive methods only. ProtectionLevelV2 gained an
+additive flat-batch value descriptor and one batch method only; the unused
+per-candidate worker overload from the failed implementation was removed and
+all golden P1-04 overloads remain. RealtimeIntegrityPipeline, the frozen P0 seam types, attempt arena,
+lease, final proof bundle and publication objects gained no data member.
+
+The complete suite exercises the legacy P0 ABI/API and publication path:
+test_p0_05_publication PASS (CTest test 20), complete CTest 34/34 PASS.
+The P1-04 V1 ABI restoration remains untouched by the P1-05 diff.

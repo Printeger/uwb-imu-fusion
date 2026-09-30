@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <boost/filesystem.hpp>
 #include <boost/math/distributions/chi_squared.hpp>
@@ -13,8 +14,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <future>
+#include <mutex>
 #include <new>
 #include <random>
+#include <thread>
 
 #include "uwb_imu_pl/config/integrity_config.hpp"
 #include "uwb_imu_pl/estimation/candidate_replay.hpp"
@@ -2810,6 +2813,123 @@ TEST(P102SharedDualNumerics,
   EXPECT_FALSE(stale_candidate.reason.empty());
 }
 
+TEST(P105FlatConcurrency,
+     CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers) {
+  using namespace uwb_imu_pl;
+  auto window = syntheticWindow();
+  window.protected_state_map.row(2) = window.protected_state_map.row(0);
+  finalizeIntegrityWindow(&window, 1e-10, 1e10);
+  const auto owner = freezeIntegrityWindowCopy(window);
+  const auto admission = admitFrozenIntegrityWindow(owner);
+  ASSERT_TRUE(admission) << admission.reason;
+
+  ExclusionAction keep;
+  keep.id = ExclusionActionId(1);
+  keep.action_model_id = "KEEP_ALL";
+  RankUpdateConfig rank_config{1e-10, 1e10, 10.0};
+  RankUpdateEvaluator evaluator(rank_config);
+  const auto base = evaluator.factorizeOnce(admission);
+  auto candidate = evaluator.evaluate(admission, base, keep);
+  ASSERT_TRUE(candidate.valid) << candidate.reason;
+  DetectorRiskContext detector_risk;
+  detector_risk.p_fa_per_test = 1e-6;
+  const auto detector = JointWindowDetector().evaluateCandidate(
+      admission, candidate, detector_risk);
+  ASSERT_TRUE(detector.numerically_valid) << detector.reason;
+
+  ProtectionLevelSharedContext context;
+  context.mode_maps[41] = Eigen::MatrixXd::Zero(candidate.rows, 1);
+  context.mode_maps[41](candidate.rows - 1, 0) = 1.0;
+  std::vector<FaultHypothesisV2> hypotheses;
+  for (std::uint64_t id = 1; id <= 4; ++id) {
+    FaultHypothesisV2 hypothesis;
+    hypothesis.id = HypothesisId(4100 + id);
+    hypothesis.modes = {FaultModeId(41)};
+    hypothesis.prior_probability_bound = 1e-4;
+    hypothesis.p_md_allocation = 1e-3;
+    hypothesis.hmi_allocation = 1e-6;
+    hypotheses.push_back(std::move(hypothesis));
+  }
+  auto serial_candidate = candidate;
+  auto serial_hypotheses = hypotheses;
+  AttemptProofArena serial_arena;
+  const auto serial = ProtectionLevelV2().computeShared(
+      admission, &serial_candidate, detector, &serial_hypotheses, context,
+      RiskBudgetV2{}, nullptr, &serial_arena);
+  ASSERT_TRUE(serial.model_valid) << serial.reason;
+
+  struct Digest {
+    std::vector<ProtectionLevelV2Result> results;
+    std::vector<std::uint64_t> proof_ids;
+    std::vector<std::vector<bool>> monitored;
+  };
+  auto run = [&](std::size_t workers) {
+    std::array<CandidateEvaluation, 2> candidates{
+        evaluator.evaluate(admission, base, keep),
+        evaluator.evaluate(admission, base, keep)};
+    std::array<DetectorResultV2, 2> detectors{
+        JointWindowDetector().evaluateCandidate(
+            admission, candidates[0], detector_risk),
+        JointWindowDetector().evaluateCandidate(
+            admission, candidates[1], detector_risk)};
+    std::array<std::vector<FaultHypothesisV2>, 2> candidate_hypotheses{
+        hypotheses, hypotheses};
+    std::array<ProtectionLevelSharedContext, 2> contexts{context, context};
+    std::array<ProtectionLevelV2Result, 2> results;
+    std::array<AttemptProofArena, 2> arenas;
+    std::vector<FlatProtectionCandidateV1> jobs(2);
+    for (std::size_t index = 0; index < jobs.size(); ++index) {
+      jobs[index].candidate = &candidates[index];
+      jobs[index].detector = &detectors[index];
+      jobs[index].hypotheses = &candidate_hypotheses[index];
+      jobs[index].shared = &contexts[index];
+      jobs[index].result = &results[index];
+      jobs[index].proof_arena = &arenas[index];
+    }
+    CandidateWorkerPool pool(4);
+    ProtectionLevelV2().computeSharedFlatBatch(
+        admission, &jobs, RiskBudgetV2{}, &pool, workers, 1u << 20);
+    Digest digest;
+    for (std::size_t index = 0; index < jobs.size(); ++index) {
+      EXPECT_TRUE(results[index].model_valid) << results[index].reason;
+      EXPECT_TRUE(results[index].pl_xyz_m.isApprox(serial.pl_xyz_m, 0.0));
+      EXPECT_DOUBLE_EQ(results[index].hpl_m, serial.hpl_m);
+      EXPECT_DOUBLE_EQ(results[index].vpl_m, serial.vpl_m);
+      EXPECT_EQ(results[index].reason, serial.reason);
+      EXPECT_TRUE(validateProtectionLevelV2Proof(
+          candidates[index], detectors[index], candidate_hypotheses[index],
+          results[index], arenas[index], nullptr));
+      digest.results.push_back(results[index]);
+      digest.proof_ids.push_back(protectionLevelV2ProofIdentity(
+          candidates[index], results[index], arenas[index]));
+      std::vector<bool> monitored;
+      for (const auto& hypothesis : candidate_hypotheses[index]) {
+        monitored.push_back(hypothesis.monitored);
+      }
+      digest.monitored.push_back(std::move(monitored));
+    }
+    return digest;
+  };
+  const auto one = run(1);
+  for (const auto workers : {2u, 4u}) {
+    const auto other = run(workers);
+    ASSERT_EQ(other.results.size(), one.results.size());
+    EXPECT_EQ(other.proof_ids, one.proof_ids);
+    EXPECT_EQ(other.monitored, one.monitored);
+    for (std::size_t index = 0; index < one.results.size(); ++index) {
+      EXPECT_TRUE(other.results[index].pl_xyz_m.isApprox(
+          one.results[index].pl_xyz_m, 0.0));
+      EXPECT_DOUBLE_EQ(other.results[index].hpl_m, one.results[index].hpl_m);
+      EXPECT_DOUBLE_EQ(other.results[index].vpl_m, one.results[index].vpl_m);
+      EXPECT_EQ(other.results[index].model_valid,
+                one.results[index].model_valid);
+      EXPECT_EQ(other.results[index].availability,
+                one.results[index].availability);
+      EXPECT_EQ(other.results[index].reason, one.results[index].reason);
+    }
+  }
+}
+
 TEST(IntegrityV2ProtectionLevel,
      FixedLowDimKeepsSingularStatusAndUncommonDimensionFallsBack) {
   using namespace uwb_imu_pl;
@@ -3803,6 +3923,19 @@ TEST(GateDDiagnostics, PreparationExceptionKeepsAttemptTimingAndZeroUpdates) {
   EXPECT_EQ(prepare->status, "EXCEPTION");
   EXPECT_TRUE(std::isfinite(prepare->wall_ms));
   EXPECT_FALSE(prepare->success);
+  const auto core_total_count = static_cast<std::size_t>(std::count_if(
+      output.stage_timings.begin(), output.stage_timings.end(),
+      [](const auto& timing) { return timing.stage == "core_total"; }));
+  EXPECT_EQ(core_total_count, 1u);
+  const auto core_total =
+      std::find_if(output.stage_timings.begin(), output.stage_timings.end(),
+                   [](const auto& timing) {
+                     return timing.stage == "core_total";
+                   });
+  ASSERT_NE(core_total, output.stage_timings.end());
+  EXPECT_TRUE(std::isfinite(core_total->wall_ms));
+  EXPECT_FALSE(core_total->success);
+  EXPECT_EQ(core_total->status, "EXCEPTION");
 }
 
 TEST(GateDNumericalCertificate, ClearCandidateAvoidsFinalJacobianSvd) {
@@ -3900,6 +4033,256 @@ TEST(GateDWorkerPool, StaticSchedulingExceptionBarrierAndScratchReuse) {
     ++completed;
   });
   EXPECT_EQ(completed.load(), 8);
+}
+
+TEST(P105FlatConcurrency,
+     DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic) {
+  using namespace uwb_imu_pl;
+  CandidateWorkerPool pool(4);
+  auto execute = [&](std::size_t workers) {
+    std::vector<std::uint64_t> slots(64, 0);
+    pool.runFlat(slots.size(), workers, 1u << 20,
+        [&](std::size_t index, std::size_t, RankUpdateScratch&) {
+          if (index % 7 == 0) std::this_thread::yield();
+          slots[index] = 0x9e3779b97f4a7c15ULL ^
+              (static_cast<std::uint64_t>(index) * 0x100000001b3ULL);
+        });
+    return slots;
+  };
+  const auto one = execute(1);
+  EXPECT_EQ(execute(2), one);
+  EXPECT_EQ(execute(4), one);
+
+  std::vector<std::atomic<int>> terminal(24);
+  for (auto& value : terminal) value = 0;
+  try {
+    pool.runFlat(terminal.size(), 4, 1u << 20,
+        [&](std::size_t index, std::size_t, RankUpdateScratch&) {
+          ++terminal[index];
+          if (index == 17) throw std::runtime_error("flat-17");
+          if (index == 3) throw std::runtime_error("flat-3");
+        });
+    FAIL() << "flat worker failure must be rethrown after the barrier";
+  } catch (const std::runtime_error& error) {
+    EXPECT_STREQ(error.what(), "flat-3");
+  }
+  for (const auto& value : terminal) EXPECT_EQ(value.load(), 1);
+
+  std::atomic<int> nested_attempts{0};
+  EXPECT_THROW(
+      pool.runFlat(8, 4, 1u << 20,
+          [&](std::size_t index, std::size_t, RankUpdateScratch&) {
+            if (index == 2) {
+              ++nested_attempts;
+              pool.runFlat(1, 1, 1u << 20,
+                  [](std::size_t, std::size_t, RankUpdateScratch&) {});
+            }
+          }),
+      std::logic_error);
+  EXPECT_EQ(nested_attempts.load(), 1);
+
+  std::array<std::atomic<bool>, 4> oversize_workers;
+  for (auto& seen : oversize_workers) seen = false;
+  std::vector<std::atomic<int>> oversize_terminal(24);
+  for (auto& value : oversize_terminal) value = 0;
+  std::atomic<std::size_t> oversize_started{0};
+  try {
+    pool.runFlat(oversize_terminal.size(), 4, 1024,
+        [&](std::size_t index, std::size_t worker,
+            RankUpdateScratch& scratch) {
+          ++oversize_terminal[index];
+          if (index < 4) {
+            oversize_workers[worker] = true;
+            scratch.update_columns = Eigen::MatrixXd::Zero(128, 128);
+            ++oversize_started;
+            while (oversize_started.load() < 4) std::this_thread::yield();
+          }
+        });
+    FAIL() << "scratch limit violation must fail closed after the barrier";
+  } catch (const std::runtime_error& error) {
+    EXPECT_STREQ(error.what(),
+                 "candidate worker scratch limit exceeded at task 0");
+  }
+  EXPECT_EQ(static_cast<std::size_t>(std::count_if(
+                oversize_workers.begin(), oversize_workers.end(),
+                [](const auto& seen) { return seen.load(); })),
+            4u);
+  for (const auto& value : oversize_terminal) EXPECT_EQ(value.load(), 1);
+  EXPECT_GE(pool.scratchHighWaterBytes(), 128u * 128u * sizeof(double));
+  EXPECT_EQ(pool.scratchBytes(), 0u)
+      << "every oversized worker scratch must be released at the barrier";
+
+  std::vector<std::atomic<int>> competing_terminal(24);
+  for (auto& value : competing_terminal) value = 0;
+  try {
+    pool.runFlat(competing_terminal.size(), 4, 1024,
+        [&](std::size_t index, std::size_t, RankUpdateScratch& scratch) {
+          ++competing_terminal[index];
+          if (index == 7 || index == 15) {
+            scratch.update_columns = Eigen::MatrixXd::Zero(128, 128);
+          }
+          if (index == 18) throw std::runtime_error("ordinary-18");
+          if (index == 3) throw std::runtime_error("ordinary-3");
+        });
+    FAIL() << "lowest task exception must win over scratch violations";
+  } catch (const std::runtime_error& error) {
+    EXPECT_STREQ(error.what(), "ordinary-3");
+  }
+  for (const auto& value : competing_terminal) EXPECT_EQ(value.load(), 1);
+  EXPECT_EQ(pool.scratchBytes(), 0u);
+
+  std::vector<std::uint64_t> reusable_slots(32, 0);
+  EXPECT_NO_THROW(pool.runFlat(
+      reusable_slots.size(), 4, 1u << 20,
+      [&](std::size_t index, std::size_t, RankUpdateScratch&) {
+        reusable_slots[index] = index + 1;
+      }));
+  for (std::size_t index = 0; index < reusable_slots.size(); ++index) {
+    EXPECT_EQ(reusable_slots[index], index + 1);
+  }
+}
+
+TEST(P105FlatConcurrency,
+     StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete) {
+  using namespace uwb_imu_pl;
+  CandidateWorkerPool pool(4);
+
+  StatisticalBoundsCache::clear();
+  const auto same_before = StatisticalBoundsCache::stats();
+  std::vector<double> same_values(64, 0.0);
+  StatisticalBoundKey same_key;
+  same_key.detector_id = 0x105;
+  same_key.dof = 4;
+  same_key.contract_version = 0x505;
+  pool.runFlat(same_values.size(), 4, 1u << 20,
+      [&](std::size_t index, std::size_t, RankUpdateScratch&) {
+        same_values[index] = StatisticalBoundsCache::
+            noncentralityBoundaryVerified(4, 21.125, 1e-3, same_key).value;
+      });
+  const auto same_after = StatisticalBoundsCache::stats();
+  ASSERT_TRUE(std::isfinite(same_values.front()));
+  for (const double value : same_values) {
+    EXPECT_DOUBLE_EQ(value, same_values.front());
+  }
+  EXPECT_EQ(same_after.misses - same_before.misses, 1u)
+      << "one exact cache key must have one actual solve";
+  EXPECT_EQ(same_after.hits - same_before.hits, same_values.size() - 1);
+  EXPECT_EQ(same_after.entries, 1u);
+
+  StatisticalBoundsCache::clear();
+  const auto distinct_before = StatisticalBoundsCache::stats();
+  constexpr std::size_t kDistinctKeys = 24;
+  std::vector<double> distinct_values(kDistinctKeys, 0.0);
+  pool.runFlat(kDistinctKeys, 4, 1u << 20,
+      [&](std::size_t index, std::size_t, RankUpdateScratch&) {
+        StatisticalBoundKey key;
+        key.detector_id = 0x205;
+        key.dof = 4;
+        key.contract_version = 0x605;
+        key.envelope_fingerprint = index + 1;
+        distinct_values[index] = StatisticalBoundsCache::
+            noncentralityBoundaryVerified(
+                4, 18.0 + 0.125 * static_cast<double>(index), 1e-3, key)
+                .value;
+      });
+  const auto distinct_after = StatisticalBoundsCache::stats();
+  for (const double value : distinct_values) EXPECT_TRUE(std::isfinite(value));
+  EXPECT_EQ(distinct_after.misses - distinct_before.misses, kDistinctKeys);
+  EXPECT_EQ(distinct_after.hits - distinct_before.hits, 0u);
+  EXPECT_EQ(distinct_after.entries, kDistinctKeys);
+}
+
+TEST(P105FlatConcurrency,
+     StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries) {
+  using namespace uwb_imu_pl;
+  CandidateWorkerPool pool(4);
+  StatisticalBoundsCache::clear();
+  const auto before = StatisticalBoundsCache::stats();
+  constexpr std::size_t kCallsPerBoundary = 16;
+  pool.runFlat(4 * kCallsPerBoundary, 4, 1u << 20,
+      [&](std::size_t index, std::size_t, RankUpdateScratch&) {
+        const std::size_t boundary = index / kCallsPerBoundary;
+        StatisticalBoundKey key;
+        key.dof = boundary == 3 ? 7 : 0;
+        NoncentralityBoundaryResult result;
+        if (boundary == 0) {
+          result = StatisticalBoundsCache::noncentralityBoundaryVerified(
+              0, 21.0, 1e-3, key);
+        } else if (boundary == 1) {
+          result = StatisticalBoundsCache::noncentralityBoundaryVerified(
+              4, 0.0, 1e-3, key);
+        } else if (boundary == 2) {
+          result = StatisticalBoundsCache::noncentralityBoundaryVerified(
+              4, 21.0, 1.0, key);
+        } else {
+          result = StatisticalBoundsCache::noncentralityBoundaryVerified(
+              4, 21.0, 1e-3, key);
+        }
+        EXPECT_FALSE(result.valid);
+      });
+  const auto after = StatisticalBoundsCache::stats();
+  EXPECT_EQ(after.invalid_inputs - before.invalid_inputs,
+            3 * kCallsPerBoundary);
+  EXPECT_EQ(after.policy_mismatches - before.policy_mismatches,
+            kCallsPerBoundary);
+  EXPECT_EQ(after.non_converged - before.non_converged, 0u);
+  EXPECT_EQ(after.hits - before.hits, 0u);
+  EXPECT_EQ(after.misses - before.misses, 0u);
+  EXPECT_EQ(after.entries, 0u);
+}
+
+TEST(P105FlatConcurrency,
+     StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers) {
+  using namespace uwb_imu_pl;
+  CandidateWorkerPool pool(4);
+  struct Outcome {
+    std::vector<double> values;
+    std::uint64_t hits = 0;
+    std::uint64_t misses = 0;
+    std::uint64_t entries = 0;
+  };
+  auto execute = [&](std::size_t workers) {
+    StatisticalBoundsCache::clear();
+    const auto before = StatisticalBoundsCache::stats();
+    Outcome outcome;
+    outcome.values.resize(96);
+    pool.runFlat(outcome.values.size(), workers, 1u << 20,
+        [&](std::size_t index, std::size_t, RankUpdateScratch&) {
+          const std::size_t canonical_key = index % 12;
+          StatisticalBoundKey key;
+          key.detector_id = 0x305;
+          key.dof = 4;
+          key.contract_version = 0x705;
+          key.envelope_kind = canonical_key % 3;
+          key.envelope_fingerprint = canonical_key + 1;
+          outcome.values[index] = StatisticalBoundsCache::
+              noncentralityBoundaryVerified(
+                  4, 17.0 + 0.25 * static_cast<double>(canonical_key),
+                  1e-3, key).value;
+        });
+    const auto after = StatisticalBoundsCache::stats();
+    outcome.hits = after.hits - before.hits;
+    outcome.misses = after.misses - before.misses;
+    outcome.entries = after.entries;
+    return outcome;
+  };
+  auto expect_same = [](const Outcome& actual, const Outcome& expected) {
+    EXPECT_EQ(actual.values, expected.values);
+    EXPECT_EQ(actual.hits, expected.hits);
+    EXPECT_EQ(actual.misses, expected.misses);
+    EXPECT_EQ(actual.entries, expected.entries);
+  };
+
+  const Outcome one = execute(1);
+  EXPECT_EQ(one.misses, 12u);
+  EXPECT_EQ(one.hits, 84u);
+  EXPECT_EQ(one.entries, 12u);
+  expect_same(execute(2), one);
+  const Outcome four = execute(4);
+  expect_same(four, one);
+  for (int repeat = 0; repeat < 10; ++repeat) {
+    expect_same(execute(4), four);
+  }
 }
 
 TEST(GateDStatistics, ExactBitKeyProducesCacheHitWithoutQuantization) {
@@ -5881,4 +6264,46 @@ TEST(P101IdentityIndexing, FrozenClockMakesTerminalDecisionExact) {
     EXPECT_TRUE(exact_nonfinite(left_output.protection_level.pl_xyz_m(axis),
                                 right_output.protection_level.pl_xyz_m(axis)));
   }
+}
+
+TEST(P105FlatConcurrency, WatchdogAdmissionExceptionStillHasOneAttemptTimer) {
+  using namespace uwb_imu_pl;
+  const auto config = researchConfig();
+  IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+  NavigationState initial;
+  initial.position_world_m = {0.0, 0.0, 1.0};
+  estimator.initialize(initial, config.realtime.prior_sigmas);
+  addImu(&estimator, config.imu.gravity_mps2);
+  RealtimeIntegrityPipeline pipeline(
+      &estimator,
+      IntegrityMonitor(config.risk, config.snapshot.rank_tolerance,
+                       config.snapshot.max_condition_number));
+  const UwbBatch input = batch(config, 10000000);
+  ClockSample first_clock;
+  first_clock.wall_monotonic_ns = 10000000;
+  first_clock.sensor_timestamp_ns = input.timestamp.value();
+  (void)pipeline.processUwbBatchWithFrozenFinishElapsed(
+      input, first_clock, 0.0);
+
+  ClockSample backwards_clock = first_clock;
+  backwards_clock.wall_monotonic_ns -= 1;
+  EXPECT_ANY_THROW(pipeline.processUwbBatchWithFrozenFinishElapsed(
+      input, backwards_clock, 0.0));
+  const auto& failed = pipeline.lastAttemptOutput();
+  EXPECT_EQ(failed.diagnostics.status, "EXCEPTION");
+  EXPECT_NE(failed.diagnostics.reason.find("wall clock moved backwards"),
+            std::string::npos);
+  const auto core_total_count = static_cast<std::size_t>(std::count_if(
+      failed.stage_timings.begin(), failed.stage_timings.end(),
+      [](const auto& timing) { return timing.stage == "core_total"; }));
+  EXPECT_EQ(core_total_count, 1u);
+  const auto core_total =
+      std::find_if(failed.stage_timings.begin(), failed.stage_timings.end(),
+                   [](const auto& timing) {
+                     return timing.stage == "core_total";
+                   });
+  ASSERT_NE(core_total, failed.stage_timings.end());
+  EXPECT_TRUE(std::isfinite(core_total->wall_ms));
+  EXPECT_FALSE(core_total->success);
+  EXPECT_EQ(core_total->status, "EXCEPTION");
 }

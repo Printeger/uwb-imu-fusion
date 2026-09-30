@@ -28,6 +28,7 @@
 #include <cmath>
 #include <deque>
 #include <cstdlib>
+#include <exception>
 #include <iomanip>
 #include <iterator>
 #include <map>
@@ -47,6 +48,54 @@ bool bridgeTimeoutExceeded(std::uint32_t consecutive_epochs,
       duration_s > max_duration_s;
 }
 namespace {
+
+// R11 single wall-clock owner for one input attempt. The destructor records a
+// terminal sample for exceptions that occur before the ordinary processing
+// catch (for example watchdog admission). Normal/handled paths call finish()
+// exactly once, so no success/failure path can silently leave the denominator.
+class AllAttemptTimerV1 {
+ public:
+  explicit AllAttemptTimerV1(IntegrityOutput* fallback)
+      : fallback_(fallback), start_(std::chrono::steady_clock::now()) {}
+  ~AllAttemptTimerV1() noexcept {
+    if (finished_ || !fallback_) return;
+    try {
+      if (fallback_->diagnostics.status.empty()) {
+        fallback_->diagnostics.status = "EXCEPTION";
+      }
+      if (fallback_->diagnostics.reason.empty()) {
+        fallback_->diagnostics.reason =
+            "attempt exited before terminal finish";
+      }
+      append(fallback_, false, fallback_->diagnostics.status,
+             fallback_->diagnostics.reason);
+    } catch (...) {
+      // A timer must never replace the original exception. Allocation failure
+      // is observable as a missing terminal record and fails the outer gate.
+    }
+  }
+  double elapsedMs() const {
+    return std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - start_).count();
+  }
+  void finish(IntegrityOutput* output, bool success,
+              const std::string& status, const std::string& reason) {
+    if (finished_) throw std::logic_error("attempt timer finalized twice");
+    append(output, success, status, reason);
+    finished_ = true;
+  }
+
+ private:
+  void append(IntegrityOutput* output, bool success,
+              const std::string& status, const std::string& reason) const {
+    if (!output) return;
+    output->stage_timings.push_back(
+        {"core_total", elapsedMs(), success, status, reason});
+  }
+  IntegrityOutput* fallback_ = nullptr;
+  std::chrono::steady_clock::time_point start_;
+  bool finished_ = false;
+};
 
 // Explicit test dependencies are an external sidecar so the public pipeline
 // object retains its golden-p0-05 layout. Entries are never ambient: only the
@@ -2019,10 +2068,10 @@ processUwbBatchWithFinishElapsedOverride(
     const UwbBatch& batch, const ClockSample& clock_sample,
     const std::optional<double>& finish_elapsed_ms_override,
     AttemptProofArena* proof_arena) {
-  const auto start = std::chrono::steady_clock::now();
   const auto before = estimator_->currentEpoch();
   ++input_attempt_count_;
   last_attempt_output_ = IntegrityOutput();
+  AllAttemptTimerV1 attempt_timer(&last_attempt_output_);
   auto finish = [&](IntegrityOutput& output) {
     const IntegrityConfig& config = estimator_->config();
     output.attempted_timestamp = batch.timestamp;
@@ -2090,10 +2139,9 @@ processUwbBatchWithFinishElapsedOverride(
                                   : d.reason)});
       }
     }
-    output.stage_timings.push_back({"core_total", std::chrono::duration<double, std::milli>(
-        std::chrono::steady_clock::now() - start).count(), d.status != "EXCEPTION",
-        d.status, d.reason});
     applyImuModelQualificationGate(&output);
+    attempt_timer.finish(&output, d.status != "EXCEPTION", d.status,
+                         d.reason);
   };
   // C4/W2: the freshness channel is judged before any heavy FDE work.
   publication_.beginAttempt(clock_sample);
@@ -2102,8 +2150,11 @@ processUwbBatchWithFinishElapsedOverride(
     // Backwards clock without a replay marker (or an unusable sample): refused
     // the same way the platform's own input validation refuses stale batches --
     // no FDE is entered and no estimator state is touched.
-    throw std::invalid_argument(
-        "publication watchdog refused the batch: " + watchdog.reason);
+    last_attempt_output_.attempted_timestamp = batch.timestamp;
+    last_attempt_output_.diagnostics.status = "EXCEPTION";
+    last_attempt_output_.diagnostics.reason =
+        "publication watchdog refused the batch: " + watchdog.reason;
+    throw std::invalid_argument(last_attempt_output_.diagnostics.reason);
   }
   if (publication_.watchdogRefused()) {
     // Frozen data / wall-clock timeout: UNAVAILABLE is decided here, before the
@@ -2140,8 +2191,7 @@ processUwbBatchWithFinishElapsedOverride(
     }
     const double finish_elapsed_ms = finish_elapsed_ms_override
         ? *finish_elapsed_ms_override
-        : std::chrono::duration<double, std::milli>(
-              std::chrono::steady_clock::now() - start).count();
+        : attempt_timer.elapsedMs();
     const bool finish_deadline_missed =
         finish_elapsed_ms > estimator_->config().publication.deadline_ms;
     if (finish_deadline_missed) {
@@ -2188,8 +2238,8 @@ processUwbBatchWithFinishElapsedOverride(
           "COMMITTED_UNPROTECTED_REINITIALIZE");
     }
     if (last_attempt_output_.stage_timings.empty()) {
-      last_attempt_output_.stage_timings.push_back({"prepare", std::chrono::duration<double, std::milli>(
-          std::chrono::steady_clock::now() - start).count(), false, "EXCEPTION", error.what()});
+      last_attempt_output_.stage_timings.push_back({"prepare",
+          attempt_timer.elapsedMs(), false, "EXCEPTION", error.what()});
     }
     finish(last_attempt_output_);
     throw;
@@ -3333,6 +3383,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
           DetectorResultV2 post;
           ProtectionLevelV2Result protection_level;
           ProtectionLevelV2ProofV1 computation_proof;
+          ProjectedPostActionModes projected_modes;
+          ProtectionLevelSharedContext shared_pl;
           std::uint64_t protection_level_proof_identity = 0;
           bool has_protection_level = false;
           bool has_computation_proof = false;
@@ -3350,10 +3402,15 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
         // reach the pool barrier.
         const std::size_t action_batch_capacity =
             std::max<std::size_t>(1, action_stream.batch_capacity);
+        // R11 bounds retained per-worker Eigen scratch. A task that exceeds
+        // the bound is recorded by canonical task index, its scratch is
+        // released, and the batch fails closed after the common barrier.
+        constexpr std::size_t kRetainedWorkerScratchLimitBytes = 64u << 20;
         auto run_kernel_batch = [&](std::size_t batch_begin,
                                     std::size_t batch_size,
                                     std::vector<EvaluatedAction>* batch) {
-        candidate_workers_->run(batch_size, active_workers,
+        candidate_workers_->runFlat(batch_size, active_workers,
+            kRetainedWorkerScratchLimitBytes,
             [&](std::size_t work_index, std::size_t, RankUpdateScratch& scratch) {
           const ExclusionAction& action =
               *action_order[batch_begin + work_index];
@@ -3467,6 +3524,8 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
             actionHypothesisProofAuditEnabledV1();
         std::size_t peak_resident_evaluated_actions = 0;
         std::size_t peak_batch_full_proofs = 0;
+        std::size_t flat_pl_candidate_roots = 0;
+        std::size_t flat_pl_tasks = 0;
         const std::size_t main_full_proofs_before_actions = proof_arena
             ? protectionLevelV2FullProofCount(*proof_arena) : 0;
         std::function<void(std::vector<EvaluatedAction>*,
@@ -3510,8 +3569,12 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
         evaluate_pl_batch = [&](std::vector<EvaluatedAction>* target_batch,
                                 const std::vector<std::size_t>& target_passed,
                                 AttemptProofArena* batch_proof_owner) {
-        candidate_workers_->run(target_passed.size(), active_workers,
-            [&](std::size_t passed_index, std::size_t, RankUpdateScratch&) {
+        std::vector<FlatProtectionCandidateV1> flat_jobs;
+        flat_jobs.reserve(target_passed.size());
+        // Phase 2a: build every immutable candidate root input in canonical
+        // action order. This performs no worker-pool invocation.
+        for (std::size_t passed_index = 0;
+             passed_index < target_passed.size(); ++passed_index) {
           EvaluatedAction& evaluated = target_batch->at(
               target_passed[passed_index]);
           CandidateEvaluation& candidate = evaluated.candidate;
@@ -3523,7 +3586,6 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
             part_start = now;
             return ms;
           };
-            ProtectionLevelSharedContext shared_pl;
             if (action.bridge_mode == BridgeMode::GenericKinematic) {
               for (const auto& added : action.added_blocks) {
                 if (added.kind != FactorKind::KinematicBridge) continue;
@@ -3531,194 +3593,116 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
                 bridge.jacobian_whitened = added.jacobian_whitened;
                 bridge.deterministic_bound = bridge_bounds.at(
                     added.group_id.value());
-                shared_pl.bridges.push_back(std::move(bridge));
+                evaluated.shared_pl.bridges.push_back(std::move(bridge));
               }
             }
             candidate.diagnostics.bridge_ms = part_ms();
-            const bool keep_all = action.groups_to_remove.empty() &&
-                action.groups_to_add.empty() && action.added_blocks.empty();
-            std::string frozen_dual_proof_reason;
-            const bool frozen_dual_sealed = shared_hypothesis_numerics &&
-                shared_hypothesis_dual_numerics &&
-                validateFrozenHypothesisDualProof(
-                    window_admission, *shared_hypothesis_numerics,
-                    *shared_hypothesis_dual_numerics,
-                    &frozen_dual_proof_reason);
-            const bool reuse_frozen_dual = keep_all &&
-                frozen_dual_sealed &&
-                !capture_action_proof && shared_pl.bridges.empty();
-            ProjectedPostActionModes projected_modes;
-            ProjectedPostActionModes exact_projected_modes;
-            bool exact_candidate_census_proven = false;
-            if (reuse_frozen_dual &&
-                shared_hypothesis_dual_numerics->candidate_mode_active.size() ==
-                    models.modes.size()) {
-              std::set<std::uint64_t> inactive_modes;
-              for (std::size_t index = 0; index < models.modes.size(); ++index) {
-                if (!shared_hypothesis_dual_numerics->candidate_mode_active[index]) {
-                  inactive_modes.insert(models.modes[index].id.value());
-                }
-              }
-              projected_modes.hypotheses = models.hypotheses;
-              std::vector<FaultHypothesisV2> active_hypotheses;
-              active_hypotheses.reserve(projected_modes.hypotheses.size());
-              for (auto& hypothesis : projected_modes.hypotheses) {
-                hypothesis.modes.erase(std::remove_if(
-                    hypothesis.modes.begin(), hypothesis.modes.end(),
-                    [&](FaultModeId id) {
-                      return inactive_modes.count(id.value()) != 0;
-                    }), hypothesis.modes.end());
-                if (hypothesis.modes.empty()) continue;
-                hypothesis.affected_groups.clear();
-                for (const auto mode_id : hypothesis.modes) {
-                  const auto mode = indexes.modes.find(mode_id.value());
-                  if (mode == indexes.modes.end()) continue;
-                  hypothesis.affected_groups.insert(
-                      hypothesis.affected_groups.end(),
-                      mode->second->affected_groups.begin(),
-                      mode->second->affected_groups.end());
-                }
-                std::sort(hypothesis.affected_groups.begin(),
-                          hypothesis.affected_groups.end());
-                hypothesis.affected_groups.erase(std::unique(
-                    hypothesis.affected_groups.begin(),
-                    hypothesis.affected_groups.end()),
-                    hypothesis.affected_groups.end());
-                hypothesis.A.resize(0, 0);
-                active_hypotheses.push_back(std::move(hypothesis));
-              }
-              projected_modes.hypotheses = std::move(active_hypotheses);
-              // The compact activity bitmap is never a correctness oracle.
-              // Prove its candidate census against the established exact
-              // projector before consuming any frozen dual block.  A mismatch
-              // keeps the exact maps and routes the entire candidate through
-              // computeShared below.
-              exact_projected_modes = projectPostActionModes(
-                  window, transaction, models, action, indexes);
-              exact_candidate_census_proven =
-                  hypothesisSetFingerprint(projected_modes.hypotheses) ==
-                      hypothesisSetFingerprint(
-                          exact_projected_modes.hypotheses) &&
-                  hypothesisSetFingerprint(
-                      exact_projected_modes.hypotheses) ==
-                      shared_hypothesis_dual_numerics
-                          ->candidate_hypothesis_fingerprint;
-              if (exact_candidate_census_proven) {
-                projected_modes.hypotheses =
-                    exact_projected_modes.hypotheses;
-              }
-            }
-            std::map<std::uint64_t, const FrozenHypothesisDualBlock*>
-                frozen_dual_by_hypothesis;
-            std::map<std::uint64_t, const FrozenHypothesisPlEntry*>
-                frozen_pl_by_hypothesis;
-            if (reuse_frozen_dual) {
-              for (const auto& block : shared_hypothesis_dual_numerics->dual_blocks) {
-                frozen_dual_by_hypothesis.emplace(
-                    block.hypothesis.value(), &block);
-              }
-              for (const auto& entry : shared_hypothesis_numerics->pl_entries) {
-                frozen_pl_by_hypothesis.emplace(
-                    entry.hypothesis.value(), &entry);
-              }
-            }
-            const bool complete_frozen_dual = reuse_frozen_dual &&
-                exact_candidate_census_proven &&
-                shared_hypothesis_dual_numerics->candidate_mode_active.size() ==
-                    models.modes.size() &&
-                shared_hypothesis_dual_numerics->dual_blocks.size() ==
-                    models.hypotheses.size() &&
-                std::all_of(
-                    projected_modes.hypotheses.begin(),
-                    projected_modes.hypotheses.end(),
-                    [&](const FaultHypothesisV2& hypothesis) {
-                      const auto block = frozen_dual_by_hypothesis.find(
-                          hypothesis.id.value());
-                      const auto pl = frozen_pl_by_hypothesis.find(
-                          hypothesis.id.value());
-                      return block != frozen_dual_by_hypothesis.end() &&
-                          block->second->valid &&
-                          block->second->dimension > 0 &&
-                          block->second->dimension <= 3 &&
-                          pl != frozen_pl_by_hypothesis.end() &&
-                          pl->second->valid &&
-                          pl->second->monitorability.monitorable &&
-                          (pl->second->gram_spd ||
-                           pl->second->bound_from_projected_path);
-                    });
-            if (complete_frozen_dual) {
-              // R08: evidence already produced Gamma_c/Gamma_h/t/G/J for
-              // this exact immutable KEEP_ALL candidate.  Preserve every
-              // hypothesis and consume that context directly; any identity
-              // or fixed-block miss remains fail-closed inside the PL gate.
-            } else {
-              if (exact_projected_modes.hypotheses.empty() &&
-                  exact_projected_modes.mode_maps.empty()) {
-                exact_projected_modes = projectPostActionModes(
-                    window, transaction, models, action, indexes);
-              }
-              projected_modes = std::move(exact_projected_modes);
-              shared_pl.mode_maps = std::move(projected_modes.mode_maps);
-            }
+            evaluated.projected_modes = projectPostActionModes(
+                window, transaction, models, action, indexes);
+            evaluated.shared_pl.mode_maps =
+                std::move(evaluated.projected_modes.mode_maps);
             candidate.diagnostics.fault_map_ms = part_ms();
             try {
               const auto pl_seams = pipelineTestSeams(this);
               if (pl_seams && pl_seams->before_protection_level) {
                 pl_seams->before_protection_level(action.id);
               }
+              FlatProtectionCandidateV1 job;
+              job.candidate = &candidate;
+              job.detector = &evaluated.post;
+              job.hypotheses = &evaluated.projected_modes.hypotheses;
+              job.shared = &evaluated.shared_pl;
+              job.result = &evaluated.protection_level;
+              job.computation_audit = capture_action_proof
+                  ? &evaluated.computation_proof : nullptr;
+              job.proof_arena = batch_proof_owner;
+              const bool keep_all = action.groups_to_remove.empty() &&
+                  action.groups_to_add.empty() &&
+                  action.added_blocks.empty();
+              std::string frozen_reason;
+              const bool frozen_sealed = shared_hypothesis_numerics &&
+                  shared_hypothesis_dual_numerics &&
+                  validateFrozenHypothesisDualProof(
+                      window_admission, *shared_hypothesis_numerics,
+                      *shared_hypothesis_dual_numerics, &frozen_reason);
+              const bool complete_frozen_dual = keep_all && frozen_sealed &&
+                  !capture_action_proof &&
+                  evaluated.shared_pl.bridges.empty() &&
+                  shared_hypothesis_dual_numerics
+                          ->candidate_mode_active.size() ==
+                      models.modes.size() &&
+                  shared_hypothesis_dual_numerics->dual_blocks.size() ==
+                      evaluated.projected_modes.hypotheses.size() &&
+                  shared_hypothesis_dual_numerics
+                          ->candidate_hypothesis_fingerprint ==
+                      hypothesisSetFingerprint(
+                          evaluated.projected_modes.hypotheses) &&
+                  shared_hypothesis_numerics->pl_entries.size() ==
+                      evaluated.projected_modes.hypotheses.size() &&
+                  std::all_of(
+                      shared_hypothesis_numerics->pl_entries.begin(),
+                      shared_hypothesis_numerics->pl_entries.end(),
+                      [](const FrozenHypothesisPlEntry& entry) {
+                        return entry.valid &&
+                            entry.monitorability.monitorable &&
+                            (entry.gram_spd ||
+                             entry.bound_from_projected_path);
+                      });
               if (complete_frozen_dual) {
-                evaluated.protection_level = batch_proof_owner
-                    ? ProtectionLevelV2().computeFrozenAllIn(
-                        window_admission, &candidate, evaluated.post,
-                        projected_modes.hypotheses, models.modes,
-                        *shared_hypothesis_numerics,
-                        *shared_hypothesis_dual_numerics,
-                        evidence_config.fault_model_policy_fingerprint,
-                        cfg.risk_v2, proof_arena, batch_proof_owner)
-                    : ProtectionLevelV2().computeFrozenAllIn(
-                        window_admission, &candidate, evaluated.post,
-                        projected_modes.hypotheses, models.modes,
-                        *shared_hypothesis_numerics,
-                        *shared_hypothesis_dual_numerics,
-                        evidence_config.fault_model_policy_fingerprint,
-                        cfg.risk_v2);
-              } else if (capture_action_proof) {
-                evaluated.protection_level = batch_proof_owner
-                    ? ProtectionLevelV2().computeShared(
-                        window_admission, &candidate, evaluated.post,
-                        &projected_modes.hypotheses, shared_pl, cfg.risk_v2,
-                        &evaluated.computation_proof, batch_proof_owner)
-                    : ProtectionLevelV2().computeShared(
-                        window_admission, &candidate, evaluated.post,
-                        &projected_modes.hypotheses, shared_pl, cfg.risk_v2,
-                        &evaluated.computation_proof);
-                evaluated.has_computation_proof = true;
-              } else {
-                evaluated.protection_level = batch_proof_owner
-                    ? ProtectionLevelV2().computeShared(
-                        window_admission, &candidate, evaluated.post,
-                        &projected_modes.hypotheses, shared_pl, cfg.risk_v2,
-                        nullptr, batch_proof_owner)
-                    : ProtectionLevelV2().computeShared(
-                        window_admission, &candidate, evaluated.post,
-                        &projected_modes.hypotheses, shared_pl, cfg.risk_v2);
+                job.frozen_modes = &models.modes;
+                job.frozen = shared_hypothesis_numerics.get();
+                job.frozen_dual = shared_hypothesis_dual_numerics.get();
+                job.frozen_proof_arena = proof_arena;
+                job.fault_model_policy_fingerprint =
+                    evidence_config.fault_model_policy_fingerprint;
               }
-              markActionSearchTerminal(&output, action, "PL_COMPLETE");
+              flat_jobs.push_back(job);
+              evaluated.has_computation_proof = capture_action_proof;
             } catch (...) {
               markActionSearchTerminal(&output, action, "PL_EXCEPTION");
               throw;
             }
+        }
+        const auto flat_start = std::chrono::steady_clock::now();
+        flat_pl_candidate_roots += flat_jobs.size();
+        for (const auto& job : flat_jobs) {
+          flat_pl_tasks += job.hypotheses ? job.hypotheses->size() : 0;
+        }
+        try {
+          ProtectionLevelV2().computeSharedFlatBatch(
+              window_admission, &flat_jobs, cfg.risk_v2,
+              candidate_workers_.get(), active_workers,
+              kRetainedWorkerScratchLimitBytes);
+        } catch (...) {
+          for (const auto offset : target_passed) {
+            markActionSearchTerminal(
+                &output, target_batch->at(offset).candidate.action,
+                "PL_EXCEPTION");
+          }
+          throw;
+        }
+        const double flat_ms = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - flat_start).count();
+        // Phase 2c: canonical candidate-order proof validation and result
+        // publication. Completion order from the worker pool is irrelevant.
+        for (std::size_t passed_index = 0;
+             passed_index < target_passed.size(); ++passed_index) {
+          EvaluatedAction& evaluated = target_batch->at(
+              target_passed[passed_index]);
+          CandidateEvaluation& candidate = evaluated.candidate;
+          const ExclusionAction& action = candidate.action;
+          markActionSearchTerminal(&output, action, "PL_COMPLETE");
             if (evaluated.protection_level.model_valid) {
               std::string proof_reason;
               const bool proof_valid = batch_proof_owner
                   ? validateProtectionLevelV2Proof(
                         candidate, evaluated.post,
-                        projected_modes.hypotheses,
+                        evaluated.projected_modes.hypotheses,
                         evaluated.protection_level, *batch_proof_owner,
                         &proof_reason)
                   : validateProtectionLevelV2Proof(
                         candidate, evaluated.post,
-                        projected_modes.hypotheses,
+                        evaluated.projected_modes.hypotheses,
                         evaluated.protection_level, &proof_reason);
               if (!proof_valid) {
                 evaluated.protection_level.model_valid = false;
@@ -3745,7 +3729,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
             }
             evaluated.has_protection_level = true;
             candidate.diagnostics.pl_evaluated = true;
-            candidate.diagnostics.pl_ms = part_ms();
+            candidate.diagnostics.pl_ms = flat_ms;
             const auto& pl = evaluated.protection_level;
             candidate.pl_xyz_m = pl.pl_xyz_m;
             candidate.hpl_m = pl.hpl_m;
@@ -3757,7 +3741,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
           candidate.wall_ms = candidate.diagnostics.kernel_ms +
               candidate.diagnostics.post_ms + candidate.diagnostics.bridge_ms +
               candidate.diagnostics.fault_map_ms + candidate.diagnostics.pl_ms;
-        });
+        }
         };
         evaluate_pl_batch(&evaluated_batch, post_passed, batch_proof_owner);
         if (!capture_action_proof) {
@@ -3913,6 +3897,14 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
             ";stream_retained_full_candidates=0" +
             ";stream_retained_full_proofs=0" +
             ";stream_full_action_heavy_copy=0" +
+            ";flat_pl_candidate_roots=" +
+            std::to_string(flat_pl_candidate_roots) +
+            ";flat_pl_candidate_hypothesis_tasks=" +
+            std::to_string(flat_pl_tasks) +
+            ";worker_scratch_bytes=" +
+            std::to_string(candidate_workers_->scratchBytes()) +
+            ";worker_scratch_high_water_bytes=" +
+            std::to_string(candidate_workers_->scratchHighWaterBytes()) +
             ";stream_complete=" +
             (action_stream_validation.valid &&
                      action_stream_validation.exhaustive

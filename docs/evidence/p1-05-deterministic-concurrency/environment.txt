@@ -1,0 +1,14 @@
+baseline tag: golden-p1-04-streamed-recovery-search
+baseline SHA: fcc66dfa3bd3ef3f71860207ae313b7b74df550c
+system: Linux mint 6.18.33.2-microsoft-standard-WSL2 x86_64
+compiler: c++ (Ubuntu 9.4.0-1ubuntu1~20.04.2) 9.4.0
+cmake: 3.16.3
+python: 3.8.10
+CPU: Intel(R) Core(TM) Ultra 5 125H
+online CPUs: 18 (0-17)
+benchmark affinity: taskset -c 0-3
+candidate workers: 4 for section 2.4; explicit 1/2/4/repeated-4 comparison
+numerical thread limits: OMP/OPENBLAS/MKL/VECLIB/NUMEXPR/BLIS=1
+benchmark seed: 20260928
+benchmark config: config/fde_joint_order2.yaml
+benchmark attempts: 45 per run, three runs, all attempts included

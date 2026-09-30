@@ -1,0 +1,108 @@
+{
+  "tests": 8,
+  "failures": 0,
+  "disabled": 0,
+  "errors": 0,
+  "timestamp": "2026-09-30T09:45:56Z",
+  "time": "0.032s",
+  "name": "AllTests",
+  "testsuites": [
+    {
+      "name": "P102SharedDualNumerics",
+      "tests": 1,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2026-09-30T09:45:56Z",
+      "time": "0.001s",
+      "testsuite": [
+        {
+          "name": "ActiveDualKeepAllReusesEvidenceSmallBlocksWithoutChangingPl",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0.001s",
+          "classname": "P102SharedDualNumerics"
+        }
+      ]
+    },
+    {
+      "name": "P105FlatConcurrency",
+      "tests": 6,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2026-09-30T09:45:56Z",
+      "time": "0.027s",
+      "testsuite": [
+        {
+          "name": "CartesianCandidateHypothesisBatchMatchesSerialForOneTwoFourWorkers",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0.002s",
+          "classname": "P105FlatConcurrency"
+        },
+        {
+          "name": "DynamicSlotsBarrierNestedRejectionAndScratchBoundAreDeterministic",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0.002s",
+          "classname": "P105FlatConcurrency"
+        },
+        {
+          "name": "StatisticalCacheSameKeyIsSingleFlightAndDifferentKeysAreComplete",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0.001s",
+          "classname": "P105FlatConcurrency"
+        },
+        {
+          "name": "StatisticalCacheFailureCountersAreRaceFreeAtConcurrentBoundaries",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0.001s",
+          "classname": "P105FlatConcurrency"
+        },
+        {
+          "name": "StatisticalCacheAlgorithmWorkIsExactForOneTwoFourAndRepeatedFourWorkers",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0.01s",
+          "classname": "P105FlatConcurrency"
+        },
+        {
+          "name": "WatchdogAdmissionExceptionStillHasOneAttemptTimer",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0.011s",
+          "classname": "P105FlatConcurrency"
+        }
+      ]
+    },
+    {
+      "name": "GateDDiagnostics",
+      "tests": 1,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2026-09-30T09:45:56Z",
+      "time": "0.004s",
+      "testsuite": [
+        {
+          "name": "PreparationExceptionKeepsAttemptTimingAndZeroUpdates",
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-09-30T09:45:56Z",
+          "time": "0.004s",
+          "classname": "GateDDiagnostics"
+        }
+      ]
+    }
+  ]
+}

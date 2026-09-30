@@ -1,0 +1,1 @@
+timestamp_ns,source_id,sensor,previous_state,current_state,trigger,evidence_statistic,evidence_threshold,plausible_hypothesis_ids,selected_action_id,suspicion_count,shadow_pass_count,recovery_pass_count,bridge_count,recovery_reset_count

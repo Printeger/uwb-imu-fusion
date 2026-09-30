@@ -71,13 +71,13 @@ double noncentralMissProbability(int dof, double noncentrality,
 }  // namespace
 
 double StatisticalBoundsCache::chiSquaredThreshold(int dof, double p_fa) {
+  Storage& data = storage();
+  std::lock_guard<std::mutex> lock(data.mutex);
   if (dof <= 0 || !std::isfinite(p_fa) || p_fa <= 0.0 || p_fa >= 1.0) {
-    ++storage().stats.invalid_inputs;
+    ++data.stats.invalid_inputs;
     return std::numeric_limits<double>::infinity();
   }
-  Storage& data = storage();
   const auto key = std::make_pair(dof, bits(p_fa));
-  std::lock_guard<std::mutex> lock(data.mutex);
   const auto found = data.chi.find(key);
   if (found != data.chi.end()) {
     ++data.stats.hits;
@@ -107,52 +107,51 @@ StatisticalBoundsCache::noncentralityBoundaryVerified(
     int dof, double squared_threshold, double p_md,
     const StatisticalBoundKey& key) {
   NoncentralityBoundaryResult result;
+  Storage& data = storage();
+  // R11 single-flight boundary: lookup, the one numerical solve for a missing
+  // exact key, and publication are one critical section.  Contending workers
+  // therefore observe one miss followed by hits; none can repeat the solve or
+  // publish a schedule-dependent cache/work count.
+  std::lock_guard<std::mutex> lock(data.mutex);
   if (dof <= 0) {
     result.reason = "zero or negative degrees of freedom";
-    ++storage().stats.invalid_inputs;
+    ++data.stats.invalid_inputs;
     return result;
   }
   if (!std::isfinite(squared_threshold) || squared_threshold <= 0.0) {
     result.reason = "detector threshold is not a finite positive number";
-    ++storage().stats.invalid_inputs;
+    ++data.stats.invalid_inputs;
     return result;
   }
   if (!std::isfinite(p_md) || p_md <= 0.0 || p_md >= 1.0) {
     result.reason = "p_md allocation outside (0, 1)";
-    ++storage().stats.invalid_inputs;
+    ++data.stats.invalid_inputs;
     return result;
   }
   if (key.dof != 0 && key.dof != static_cast<std::uint32_t>(dof)) {
     result.reason = "cache key degrees of freedom disagree with the request";
-    ++storage().stats.policy_mismatches;
+    ++data.stats.policy_mismatches;
     return result;
   }
-  Storage& data = storage();
   const NoncentralKey cache_key =
       noncentralKey(dof, squared_threshold, p_md, key);
-  {
-    std::lock_guard<std::mutex> lock(data.mutex);
-    const auto found = data.noncentral.find(cache_key);
-    if (found != data.noncentral.end()) {
-      ++data.stats.hits;
-      result.value = found->second;
-      result.valid = true;
-      result.converged = true;
-      result.residual =
-          noncentralMissProbability(dof, found->second, squared_threshold) -
-          p_md;
-      return result;
-    }
+  const auto found = data.noncentral.find(cache_key);
+  if (found != data.noncentral.end()) {
+    ++data.stats.hits;
+    result.value = found->second;
+    result.valid = true;
+    result.converged = true;
+    result.residual =
+        noncentralMissProbability(dof, found->second, squared_threshold) -
+        p_md;
+    return result;
   }
   auto missed = [&](double noncentrality) {
     return noncentralMissProbability(dof, noncentrality, squared_threshold);
   };
   if (missed(0.0) < p_md) {
-    {
-      std::lock_guard<std::mutex> lock(data.mutex);
-      data.noncentral.emplace(cache_key, 0.0);
-      ++data.stats.misses;
-    }
+    data.noncentral.emplace(cache_key, 0.0);
+    ++data.stats.misses;
     result.value = 0.0;
     result.valid = true;
     result.converged = true;
@@ -167,7 +166,7 @@ StatisticalBoundsCache::noncentralityBoundaryVerified(
   while (missed(upper) > p_md && upper < 1e12) upper *= 2.0;
   if (missed(upper) > p_md) {
     result.reason = "cannot bracket the noncentrality boundary";
-    ++storage().stats.invalid_inputs;
+    ++data.stats.invalid_inputs;
     return result;
   }
   double previous_width = upper - lower;
@@ -203,15 +202,12 @@ StatisticalBoundsCache::noncentralityBoundaryVerified(
     result.reason =
         "noncentrality solve did not produce a conservative side "
         "endpoint";
-    ++storage().stats.non_converged;
+    ++data.stats.non_converged;
     return result;
   }
-  if (!result.converged) ++storage().stats.non_converged;
-  {
-    std::lock_guard<std::mutex> lock(data.mutex);
-    data.noncentral.emplace(cache_key, result.value);
-    ++data.stats.misses;
-  }
+  if (!result.converged) ++data.stats.non_converged;
+  data.noncentral.emplace(cache_key, result.value);
+  ++data.stats.misses;
   return result;
 }
 
@@ -225,14 +221,14 @@ double StatisticalBoundsCache::normalTwoSidedMultiplier(double tail) {
 double StatisticalBoundsCache::normalTwoSidedMultiplierVerified(
     double tail_probability, bool* valid) {
   if (valid) *valid = false;
+  Storage& data = storage();
+  std::lock_guard<std::mutex> lock(data.mutex);
   if (!std::isfinite(tail_probability) || tail_probability <= 0.0 ||
       tail_probability >= 1.0) {
-    ++storage().stats.invalid_inputs;
+    ++data.stats.invalid_inputs;
     return std::numeric_limits<double>::quiet_NaN();
   }
-  Storage& data = storage();
   const std::uint64_t key = bits(tail_probability);
-  std::lock_guard<std::mutex> lock(data.mutex);
   const auto found = data.normal.find(key);
   double value = 0.0;
   if (found != data.normal.end()) {

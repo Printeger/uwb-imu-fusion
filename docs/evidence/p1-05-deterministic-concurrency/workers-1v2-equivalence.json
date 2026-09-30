@@ -1,0 +1,147 @@
+{
+  "after": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/workers-1-2-4/w2",
+  "after_workers": 2,
+  "algorithm_work_contract": "exact comparison, including statistical cache hits/misses, entries, candidate cache hits, solve counts, and all numerical work counters",
+  "allowed_timing_diagnostics": {
+    "candidates.csv": [
+      "evaluation_wall_ms"
+    ],
+    "diagnostic_attempts.csv": [
+      "hypothesis_parallel_blocks",
+      "watchdog_reason",
+      "watchdog_sensor_delta_ns",
+      "watchdog_sensor_elapsed_ns",
+      "watchdog_sensor_lag_ns",
+      "watchdog_sensor_stale",
+      "watchdog_wall_elapsed_ns"
+    ],
+    "diagnostic_candidates.csv": [
+      "bridge_ms",
+      "fault_map_ms",
+      "kernel_ms",
+      "pl_ms",
+      "post_ms"
+    ]
+  },
+  "before": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/workers-1-2-4/w1",
+  "before_workers": 1,
+  "files": {
+    "bridge.csv": {
+      "after_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+      "before_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+      "mismatches": [],
+      "rows": 0,
+      "status": "PASS"
+    },
+    "candidates.csv": {
+      "after_sha256": "f694c6f1a62246b5b6377b3238fea16c50a978fcd1e5cec66859f46c15be5a12",
+      "before_sha256": "0a2f247023b8a5399c463eaf8806c10ffa715826320c93843ec93d3aeb395c3c",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    },
+    "diagnostic_attempts.csv": {
+      "after_sha256": "8afe4179f78045c06448a2084bd52f915c9fb1ab2f7879428a758fdf07ee1a1d",
+      "before_sha256": "05705414fb8cd7be532aca2a94a98763115678926c7ed64365089071de8ce1c9",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    },
+    "diagnostic_candidates.csv": {
+      "after_sha256": "0eea2da7861a0007dcf94120bae46ebbd4acd6d0cf38b2ef9cca884bb34209d6",
+      "before_sha256": "e536c67d35ef87a3ba4f3f8735279161944595c33aad2bfd37a8038a230c1a0f",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    },
+    "diagnostic_coverage.csv": {
+      "after_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+      "before_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+      "mismatches": [],
+      "rows": 0,
+      "status": "PASS"
+    },
+    "diagnostic_history_summary.csv": {
+      "after_sha256": "d82a926ba6dbdb5bb997031c1f1ce2b2cbf4b772e10b926285c9219352aad39c",
+      "before_sha256": "d82a926ba6dbdb5bb997031c1f1ce2b2cbf4b772e10b926285c9219352aad39c",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    },
+    "diagnostic_snapshot_identity.csv": {
+      "after_sha256": "af14079c35f0107680bc01f0439fd85562c3bb6816c4c3467dcb146c24365449",
+      "before_sha256": "af14079c35f0107680bc01f0439fd85562c3bb6816c4c3467dcb146c24365449",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    },
+    "diagnostic_square_root.csv": {
+      "after_sha256": "f681454b84193f4ddabfa4e3e9dc4d339ca69742c4055b1678d7fb43f427f16f",
+      "before_sha256": "f681454b84193f4ddabfa4e3e9dc4d339ca69742c4055b1678d7fb43f427f16f",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    },
+    "diagnostic_state_steps.csv": {
+      "after_sha256": "626126884b7c0b6f71be5020ee1a71c584ea6211c2d462189cbe1349e1086171",
+      "before_sha256": "626126884b7c0b6f71be5020ee1a71c584ea6211c2d462189cbe1349e1086171",
+      "mismatches": [],
+      "rows": 44,
+      "status": "PASS"
+    },
+    "hypotheses.csv": {
+      "after_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+      "before_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+      "mismatches": [],
+      "rows": 0,
+      "status": "PASS"
+    },
+    "integrity.csv": {
+      "after_sha256": "281e1d38f70e612df0e633af89b64197a35bd9baf39bdbf3de9487c93a9ab99c",
+      "before_sha256": "fc30da2db0df37bb31709fbe29d199445ccbeaeb6b200acf5890e10b5996e11b",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    },
+    "states.csv": {
+      "after_sha256": "894bec59444903268e2b787f57fc51e22f9d03c4a13f7407c44fb115be3b566e",
+      "before_sha256": "894bec59444903268e2b787f57fc51e22f9d03c4a13f7407c44fb115be3b566e",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    },
+    "transactions.csv": {
+      "after_sha256": "197601c0dca36510367fe94c841afeb60183ab3967f74b4040a0522a2b0552ff",
+      "before_sha256": "197601c0dca36510367fe94c841afeb60183ab3967f74b4040a0522a2b0552ff",
+      "mismatches": [],
+      "rows": 8,
+      "status": "PASS"
+    }
+  },
+  "schema": "uwb-imu-pl/p1-05-worker-equivalence/v1",
+  "status": "PASS",
+  "worker_configuration_diagnostic": {
+    "after_values": [
+      "2",
+      "2",
+      "2",
+      "2",
+      "2",
+      "2",
+      "2",
+      "2"
+    ],
+    "before_values": [
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    "field": "hypothesis_parallel_blocks",
+    "meaning": "configured/used parallel blocks; expected to vary with the worker setting and never claimed as invariant algorithm work"
+  }
+}
