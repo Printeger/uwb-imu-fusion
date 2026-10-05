@@ -1,0 +1,13 @@
+item	status	evidence
+O01	PASS	process-separated raw replay and 174 typed leaves; effective-rank dof/carrier contract retained
+O02	PASS	final complete CTest dual-channel detector and integrity_v2
+O03	PASS	final complete CTest exhaustive action search plus 6 actions x 504 hypotheses
+O04	PASS	final complete CTest publication state machine
+O05	PASS	independent A/B matrices, Gram, protected response, PL and nullspace comparison
+O06	PASS	independent risk ledger and final complete CTest risk oracle
+O07	PASS	removed/replacement blocks rebuilt for every action x hypothesis; refusal and nonconstant winner compared
+O08	PASS	transaction/rollback and injected exception remain fail-closed
+O09	PASS_WITH_RETAINED_FAILURES	final ASan+UBSan 8/8 and LSan 2/2; two earlier stackless LSan startup loops retained; TSan/MSan NOT_RUN
+O10	PASS	fault recovery and atomic publication regressions; no SIGSEGV/SIGKILL
+O11	PASS_SOFTWARE_FAIL_CLOSED	simulation/synthetic scope only; hardware qualification CLOSED/NOT_CLAIMED and formal_eligible=false
+O12	PASS_CORRECTNESS_SMOKE	atomic evidence runners, content-addressed replay, final 35/35 CTest; realtime numeric gate DEFERRED_TO_REALTIME_GOAL

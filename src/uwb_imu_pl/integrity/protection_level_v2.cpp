@@ -2449,6 +2449,8 @@ void ProtectionLevelV2::computeSharedFlatBatch(
     std::size_t frozen_terminal_limit =
         std::numeric_limits<std::size_t>::max();
     std::string failure;
+    std::string audit_failure;
+    bool reduction_closed = false;
     bool frozen = false;
     bool valid = false;
   };
@@ -2743,24 +2745,27 @@ void ProtectionLevelV2::computeSharedFlatBatch(
     root.valid = true;
   }
 
-  std::vector<Slot> slots(offsets.back());
-  std::vector<std::size_t> task_candidate(offsets.back());
-  std::vector<std::size_t> task_hypothesis(offsets.back());
-  for (std::size_t c = 0; c < jobs->size(); ++c) {
-    for (std::size_t h = 0; h < offsets[c + 1] - offsets[c]; ++h) {
-      task_candidate[offsets[c] + h] = c;
-      task_hypothesis[offsets[c] + h] = h;
-    }
-  }
-  const std::size_t bounded_workers = std::max<std::size_t>(1,
-      std::min(active_workers, slots.size()));
-  worker_pool->runFlat(slots.size(), bounded_workers, scratch_limit_bytes,
-      [&](std::size_t flat_index, std::size_t, RankUpdateScratch&) {
-        const std::size_t c = task_candidate[flat_index];
-        const std::size_t h = task_hypothesis[flat_index];
+  for (auto& root : roots) root.audit_failure = root.failure;
+  constexpr std::size_t kFlatHypothesisBlock = 256;
+  const std::size_t total_tasks = offsets.back();
+  for (std::size_t block_begin = 0; block_begin < total_tasks;
+       block_begin += kFlatHypothesisBlock) {
+    const std::size_t block_count = std::min(
+        kFlatHypothesisBlock, total_tasks - block_begin);
+    std::vector<Slot> slots(block_count);
+    const std::size_t bounded_workers = std::max<std::size_t>(1,
+        std::min(active_workers, block_count));
+    worker_pool->runFlat(block_count, bounded_workers, scratch_limit_bytes,
+      [&](std::size_t local_index, std::size_t, RankUpdateScratch&) {
+        const std::size_t flat_index = block_begin + local_index;
+        const auto upper = std::upper_bound(
+            offsets.begin(), offsets.end(), flat_index);
+        const std::size_t c = static_cast<std::size_t>(
+            std::distance(offsets.begin(), upper) - 1);
+        const std::size_t h = flat_index - offsets[c];
         auto& root = roots[c];
         auto& job = jobs->at(c);
-        auto& slot = slots[flat_index];
+        auto& slot = slots[local_index];
         const auto& source_hypothesis = job.hypotheses->at(h);
         if (!root.frozen) {
           slot.hypothesis = source_hypothesis;
@@ -2977,17 +2982,28 @@ void ProtectionLevelV2::computeSharedFlatBatch(
         slot.component_proof.served_component = slot.component;
         slot.valid = true;
       });
-
-  for (std::size_t c = 0; c < jobs->size(); ++c) {
-    auto& job = jobs->at(c);
-    auto& root = roots[c];
-    auto& result = root.result;
-    std::string audit_failure = root.failure;
-    for (std::size_t h = 0; h < offsets[c + 1] - offsets[c]; ++h) {
-      auto& slot = slots[offsets[c] + h];
+    // Reduce this leased block immediately in global candidate-major order.
+    // Every task still executes; the block only shortens the lifetime of its
+    // dynamic matrices and proof objects.
+    for (std::size_t local_index = 0; local_index < block_count;
+         ++local_index) {
+      const std::size_t flat_index = block_begin + local_index;
+      const auto upper = std::upper_bound(
+          offsets.begin(), offsets.end(), flat_index);
+      const std::size_t c = static_cast<std::size_t>(
+          std::distance(offsets.begin(), upper) - 1);
+      const std::size_t h = flat_index - offsets[c];
+      auto& job = jobs->at(c);
+      auto& root = roots[c];
+      auto& result = root.result;
+      auto& slot = slots[local_index];
+      if (root.reduction_closed && !job.computation_audit) continue;
       if (!slot.valid) {
-        if (audit_failure.empty()) audit_failure = slot.reason;
-        if (!job.computation_audit) break;
+        if (root.audit_failure.empty()) root.audit_failure = slot.reason;
+        if (!job.computation_audit) {
+          root.reduction_closed = true;
+          continue;
+        }
         // The legacy audit path retains a completed Gram/response proof even
         // when a later monitorability/history/bound gate fails.  Preserve that
         // distinction: a pre-proof failure has no hypothesis entry (and is
@@ -3030,8 +3046,14 @@ void ProtectionLevelV2::computeSharedFlatBatch(
       root.sidecar.component_proofs.push_back(
           std::move(slot.component_proof));
     }
-    if (!audit_failure.empty()) {
-      result.reason = audit_failure;
+  }
+
+  for (std::size_t c = 0; c < jobs->size(); ++c) {
+    auto& job = jobs->at(c);
+    auto& root = roots[c];
+    auto& result = root.result;
+    if (!root.audit_failure.empty()) {
+      result.reason = root.audit_failure;
       result.model_valid = false;
       result.availability = Availability::Unavailable;
     } else {
@@ -3327,10 +3349,10 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
     bool has_dual_channel_proof = false;
     bool valid = false;
   };
-  std::vector<FrozenHypothesisSlot> hypothesis_slots(hypotheses.size());
-  auto evaluate_hypothesis = [&](std::size_t index) {
+  auto evaluate_hypothesis = [&](std::size_t index,
+                                 FrozenHypothesisSlot* output_slot) {
     const auto& hypothesis = hypotheses[index];
-    auto& slot = hypothesis_slots[index];
+    auto& slot = *output_slot;
     const auto frozen_index = frozen_hypothesis_indexes.find(
         hypothesis.id.value());
     if (frozen_index == frozen_hypothesis_indexes.end()) {
@@ -3450,36 +3472,56 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
     slot.component_proof.served_component = slot.component;
     slot.valid = true;
   };
-  for (std::size_t index = 0; index < hypotheses.size(); ++index) {
-    evaluate_hypothesis(index);
+  // P1-06: bound the transient hypothesis/proof live-set.  The canonical
+  // reduction and final V1 proof vectors remain complete and in hypothesis
+  // order; only the temporary slots are leased in fixed blocks.
+  constexpr std::size_t kHypothesisSlotBlock = 256;
+  sidecar.hypothesis_proofs.reserve(hypotheses.size());
+  sidecar.component_proofs.reserve(hypotheses.size());
+  if (active_dual) sidecar.dual_channel_proofs.reserve(hypotheses.size());
+  std::string first_failure;
+  bool reduction_closed = false;
+  for (std::size_t begin = 0; begin < hypotheses.size();
+       begin += kHypothesisSlotBlock) {
+    const std::size_t count = std::min(
+        kHypothesisSlotBlock, hypotheses.size() - begin);
+    std::vector<FrozenHypothesisSlot> slots(count);
+    for (std::size_t local = 0; local < count; ++local) {
+      evaluate_hypothesis(begin + local, &slots[local]);
+    }
+    // Deterministic reduction remains global hypothesis-index order.
+    for (std::size_t local = 0; local < count; ++local) {
+      auto& slot = slots[local];
+      if (!slot.valid) {
+        if (first_failure.empty()) first_failure = slot.reason;
+        reduction_closed = true;
+        continue;
+      }
+      if (reduction_closed) continue;
+      const auto& bounds = slot.bounds;
+      result.hypothesis_tail_used = std::max(result.hypothesis_tail_used,
+                                             bounds.hypothesis_tail);
+      result.axis_tail_used = std::max(result.axis_tail_used, bounds.axis_tail);
+      result.fault_multiplier_used = std::max(result.fault_multiplier_used,
+                                              bounds.k);
+      result.noncentrality_used = std::max(result.noncentrality_used,
+                                           bounds.lambda);
+      if (active_dual) {
+        result.detector_certificate_id = slot.detector_certificate;
+      }
+      sidecar.hypothesis_proofs.push_back(std::move(slot.hypothesis_proof));
+      if (slot.has_dual_channel_proof) {
+        sidecar.dual_channel_proofs.push_back(
+            std::move(slot.dual_channel_proof));
+      }
+      sidecar.component_proofs.push_back(std::move(slot.component_proof));
+      result.fault_component_m =
+          result.fault_component_m.cwiseMax(slot.component);
+    }
   }
-  // Deterministic reduction is always hypothesis-index ordered, independent
-  // of worker assignment or completion order.
-  for (std::size_t index = 0; index < hypothesis_slots.size(); ++index) {
-    auto& slot = hypothesis_slots[index];
-    if (!slot.valid) {
-      result.reason = slot.reason;
-      return result;
-    }
-    const auto& bounds = slot.bounds;
-    result.hypothesis_tail_used = std::max(result.hypothesis_tail_used,
-                                           bounds.hypothesis_tail);
-    result.axis_tail_used = std::max(result.axis_tail_used, bounds.axis_tail);
-    result.fault_multiplier_used = std::max(result.fault_multiplier_used,
-                                            bounds.k);
-    result.noncentrality_used = std::max(result.noncentrality_used,
-                                         bounds.lambda);
-    if (active_dual) {
-      result.detector_certificate_id = slot.detector_certificate;
-    }
-    sidecar.hypothesis_proofs.push_back(std::move(slot.hypothesis_proof));
-    if (slot.has_dual_channel_proof) {
-      sidecar.dual_channel_proofs.push_back(
-          std::move(slot.dual_channel_proof));
-    }
-    sidecar.component_proofs.push_back(std::move(slot.component_proof));
-    result.fault_component_m =
-        result.fault_component_m.cwiseMax(slot.component);
+  if (!first_failure.empty()) {
+    result.reason = first_failure;
+    return result;
   }
   result.pl_xyz_m = result.nominal_component_m.cwiseMax(
       result.fault_component_m);

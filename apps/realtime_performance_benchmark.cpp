@@ -3,12 +3,14 @@
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
 #include "uwb_imu_pl/integrity/integrity_monitor.hpp"
 #include "uwb_imu_pl/io/run_logger.hpp"
+#include "uwb_imu_pl/publication/final_output_packet.hpp"
 
 #include <chrono>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <random>
 #include <string>
@@ -188,6 +190,20 @@ int main(int argc, char** argv) {
       throw std::runtime_error("performance config/epoch contract mismatch");
     }
     uwb_imu_pl::RunLogger logger(argv[2], false, true);
+    std::ofstream terminal_packets(std::string(argv[2]) +
+                                   "/terminal_packets.csv");
+    if (!terminal_packets) {
+      throw std::runtime_error("failed to open terminal_packets.csv");
+    }
+    terminal_packets <<
+        "input_attempt_id,transaction_id,window_id,selected_action_id,"
+        "backend_epoch_before,backend_epoch_after,batch_committed,"
+        "risk_ledger_closes,risk_ledger_all_validated,"
+        "selection_risk_proof_id,publication_risk_proof_id,"
+        "publication_certificate_id,publication_protected,formal_eligible,"
+        "deadline_missed,publish_call_steady_ns,publish_return_steady_ns,"
+        "arrival_to_publish_ns,"
+        "final_packet_digest\n";
     logger.writeResolvedConfig(config.resolved_yaml);
     const std::string execution_command =
         uwb_imu_pl::bindExecutionCommandArguments(
@@ -358,8 +374,15 @@ int main(int argc, char** argv) {
         logger.writeIntegrity(pipeline.lastAttemptOutput());
         throw;
       }
+      const auto analysis_complete = std::chrono::steady_clock::now();
       const double core_ms = std::chrono::duration<double, std::milli>(
-          std::chrono::steady_clock::now()-start).count();
+          analysis_complete-start).count();
+      // Keep an explicit boundary even though this synchronous harness has no
+      // asynchronous continuation today.  Acceptance must read this sample,
+      // not silently alias core_total in the summarizer.
+      const double analysis_completion_ms =
+          std::chrono::duration<double, std::milli>(
+              analysis_complete-start).count();
       for (auto& stage : result.stage_timings) {
         if (stage.stage == "core_total") stage.wall_ms = core_ms;
       }
@@ -370,7 +393,44 @@ int main(int argc, char** argv) {
       }
       const auto outer_start = std::chrono::steady_clock::now();
       logger.writeState(result.state);
-      logger.writeIntegrity(result);
+      const auto steady_ns = [](const std::chrono::steady_clock::time_point& point) {
+        return static_cast<std::uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                point.time_since_epoch()).count());
+      };
+      // This is the sole integrity-output handoff.  The deadline flag and the
+      // reported arrival-to-publish denominator use this exact call sample;
+      // analysis completion is deliberately not a publication timestamp.
+      const auto publish_call = std::chrono::steady_clock::now();
+      uwb_imu_pl::FinalPacketTiming final_timing;
+      final_timing.arrival_steady_ns = steady_ns(start);
+      final_timing.compute_done_steady_ns = steady_ns(analysis_complete);
+      final_timing.packet_ready_steady_ns = final_timing.compute_done_steady_ns;
+      final_timing.publish_call_steady_ns = steady_ns(publish_call);
+      final_timing.deadline_boundary =
+          uwb_imu_pl::FinalPacketBoundary::PublishCall;
+      const auto final_packet = uwb_imu_pl::finalizeOutputPacket(
+          std::move(result), final_timing, 50000000ULL);
+      result = final_packet.output();
+      logger.writeIntegrity(result, final_packet.metadata());
+      const auto publish_return = std::chrono::steady_clock::now();
+      terminal_packets << result.diagnostics.input_attempt_id << ','
+          << result.transaction_id << ',' << result.window_id << ','
+          << result.selected_action_id << ','
+          << result.diagnostics.backend_epoch_before << ','
+          << result.diagnostics.backend_epoch_after << ','
+          << result.batch_committed << ','
+          << result.diagnostics.risk_ledger_closes << ','
+          << result.diagnostics.risk_ledger_all_validated << ','
+          << result.diagnostics.selection_risk_proof_id << ','
+          << result.publication.risk_proof_id << ','
+          << result.publication.certificate_id << ','
+          << result.publication.protected_output << ','
+          << result.protection_level.formal_eligible << ','
+          << result.deadline_missed << ',' << steady_ns(publish_call) << ','
+          << steady_ns(publish_return) << ','
+          << steady_ns(publish_call) - steady_ns(start) << ','
+          << final_packet.metadata().digest << '\n';
       logger.writeGroundTruth({batch.timestamp,
                                position(time, scenario.degenerate),
                                orientation(time, scenario.degenerate)});
@@ -409,6 +469,9 @@ int main(int argc, char** argv) {
             ";active_values=" + std::to_string(estimator.activeValueCount()) +
             ";active_factors=" + std::to_string(estimator.factorCount()));
       }
+      const double arrival_to_publish_ms =
+          std::chrono::duration<double, std::milli>(
+              publish_call - start).count();
       logger.flush();
       const auto flush_complete = std::chrono::steady_clock::now();
       const double logging_flush_ms = std::chrono::duration<double, std::milli>(
@@ -417,6 +480,8 @@ int main(int argc, char** argv) {
           flush_complete - start).count();
       timing("outer_logging_flush", logging_flush_ms);
       timing("outer_epoch", outer_epoch_ms);
+      timing("analysis_completion", analysis_completion_ms);
+      timing("arrival_to_publish", arrival_to_publish_ms);
       logger.flush();
       summary.processed++;
       summary.committed += result.batch_committed;

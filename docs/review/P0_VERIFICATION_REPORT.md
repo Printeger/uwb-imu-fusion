@@ -59,6 +59,30 @@ D09 is kept as a separate conditional-P0 record because its review priority chan
 
 ### 2.1 Scope and status vocabulary
 
+#### 2026-10-06 user-authorized revised Goal boundary
+
+This Goal now accepts P0-01 through P1-06 only for non-realtime functional
+behavior, mathematical correctness, fault/action/leaf coverage, bounded
+resources, transaction/publication safety and synthetic simulation quality.
+It does **not** claim that the original Section 2 acceptance contract passed
+in full.  The unchanged normal-path limits (`core p99 <= 40 ms`,
+`arrival-to-publish p99 <= 50 ms`, deadline-miss fraction `<= 1%`) and the
+audit report's corresponding 40 ms target remain measured over every attempt
+with no slow-frame removal or denominator change, but their result is recorded
+as `FAILED / DEFERRED_TO_REALTIME_GOAL` and does not stop the remaining
+non-realtime validation.
+
+All other gates remain mandatory.  Late results retain the existing deadline
+handling, incomplete proof remains fail-closed, and no late or partial result
+may become protected output.  Complete work, zero omitted fault leaves,
+unchanged risk/action decisions, atomic publication, no crash and peak RSS
+below 1 GiB are required.  The five-profile calibration record is strictly
+`simulation/synthetic`; hardware qualification remains
+`CLOSED/NOT_CLAIMED`, `formal_eligible=false`, and protected output disabled.
+No model, noise, prior, fault scope, risk budget, threshold or prescribed test
+size is changed.  A completion under this amendment receives no tag that could
+be read as the original P1-06 or original Section 2 contract passing in full.
+
 This plan has **13 development steps**: seven P0 correctness steps followed by
 six P1 optimization/acceptance steps.  R13 and R14 are intentionally excluded:
 they change the risk/selection contract or introduce research-only hierarchy
@@ -73,14 +97,22 @@ The table status is one of:
 - `FAILED`: the step was exercised and did not satisfy its exit gate;
 - `VALIDATION_PAUSED`: implementation is checkpointed, but the required
   independent review and golden acceptance are explicitly unfinished;
+- `PASS_REVISED_NONREALTIME`: all user-authorized non-realtime exit gates
+  passed, while the original realtime contract remains explicitly failed and
+  deferred; this status is not `GOLDEN`;
 - `GOLDEN`: the implementation commit, required tests and evidence bundle all
   passed, and an immutable golden tag points to that commit.
 
-Current project state is `P1_DEVELOPMENT_ON_WIP_CHECKPOINT`; the latest
-immutable golden baseline remains `golden-p0-06-actions`.  On 2026-09-28 the
+Current project state is `P1-06_REVISED_NONREALTIME_VALIDATION_IN_PROGRESS`.
+The latest true P0 golden remains `golden-p0-06-actions`; the current P1-06
+comparison reference is `golden-p1-05-deterministic-concurrency`.  On
+2026-09-28 the
 user explicitly paused P0-07 acceptance and authorized P1 development directly
 on the ordinary P0-07 checkpoint commit.  That checkpoint is not a golden
 baseline, does not satisfy D12, and does not authorize a `golden-p0-07` tag.
+The later 2026-10-06 revised non-realtime validation closes D12 for the
+software/simulation scope only; it does not retroactively make that checkpoint
+golden or qualify hardware/realtime behavior.
 P0-01 corrected the known
 `test_round2_tools` v5/v6 evidence-harness mismatch, and its complete CTest
 result is recorded in the evidence bundle; the historical
@@ -102,13 +134,13 @@ move an earlier golden tag.
 | **P0-04 Complete risk and selection events** | R03; D05, D06. Separate allocation validity, complete bound closure, validation status and formal eligibility. Charge or reject miss/escape/omitted/selection terms. Remove plausible-ID premerging without a numeric shared-event proof. | O06. High-precision ledger closes on the same total budget; unknown terms are not zero; disjoint action events are not merged; over-budget profiles become unavailable without changing budgets, alert limits or thresholds. | Commit: `fix(p0-04): close risk and selection accounting`; tag: `golden-p0-04-risk` | `GOLDEN` |
 | **P0-05 Transaction, reference and final packet** | R05; D07-A, D07-B, D11-B. Extend the mutation guard through receipt creation, stage metadata, bind committed mean to the PL reference or transfer it, and make ROS/logging consume one immutable final packet. Fix D11-A in the same output boundary by rotating Odometry velocity/covariance to the child frame. | O04, O08 and O10. Exception injection at every mutation/query/ledger/publication boundary yields one receipt or poison; committed mean is covered; ROS, CSV and mirrors agree; deadline timestamps include the defined packet/publish boundary; 90-degree-yaw velocity test passes. | Commit: `fix(p0-05): make commit and publication certificates atomic`; tag: `golden-p0-05-publication` | `GOLDEN` |
 | **P0-06 Action-search completeness** | Conditional-P0 D09. Eliminate silent action truncation. Exact duplicates may be merged; otherwise evaluate all actions or report `SEARCH_INCOMPLETE` with generated/evaluated/omitted identities. | O07. An uncapped reference and reordered enumeration produce the same winner/refusal. A resource-limited run cannot claim exhaustive selection or protected output. Increasing the cap alone does not pass. | Commit: `fix(p0-06): fail closed on incomplete action search`; tag: `golden-p0-06-actions` | `GOLDEN` |
-| **P0-07 Corrected exhaustive closure** | R06; complete D12 evidence and resolve N01's noise/trapezoid semantics. Produce a corrected exhaustive baseline and an evidence bundle. Missing external calibration may remain an explicit qualification blocker only if it is represented by a fail-closed model gate and protected/formal output remains disabled. | O01–O12 correctness smoke, complete CTest exit status, sanitizer subset where available, replay snapshots, source/diff/binary/library/config/input/output hashes and explicit `NOT_RUN`. No P0 finding may remain an uncontrolled behavior. | Ordinary checkpoint: `wip(p0-07): checkpoint implementation with formal validation pending`; **no golden tag** | `VALIDATION_PAUSED` |
+| **P0-07 Corrected exhaustive closure** | R06; complete D12 evidence and resolve N01's noise/trapezoid semantics. Produce a corrected exhaustive baseline and an evidence bundle. Missing external calibration may remain an explicit qualification blocker only if it is represented by a fail-closed model gate and protected/formal output remains disabled. | O01–O12 correctness smoke, complete CTest exit status, sanitizer subset where available, replay snapshots, source/diff/binary/library/config/input/output hashes and explicit `NOT_RUN`. No P0 finding may remain an uncontrolled behavior. | Scoped commit: `test(p0-07): validate revised non-realtime closure`; optional scope-explicit reference `validated-p0-07-nonrealtime`; **no `golden-p0-07` tag** | `PASS_REVISED_NONREALTIME` |
 | **P1-01 Immutable identity and indexing** | R07 only: frozen typed handles, one content hash, direct descriptor indices, compact pair descriptors, exact operation deduplication and batched unique-block RHS. | O03, O05, O09, O12 against the user-authorized checkpoint while retaining `golden-p0-06-actions` as the true P0 golden; census, decisions, risk and outputs unchanged; full-attempt time or work counters improve. | Commit: `perf(p1-01): remove redundant identity and lookup work`; tag: `golden-p1-01-identity-indexing` | `GOLDEN` |
 | **P1-02 Shared dual numerics** | R08: one candidate root/context, shared unique-mode responses and fixed-size pair blocks across detector, evidence and PL. Keep every hypothesis and fallback. | O02, O03, O05, O06, O07, O12. Per-hypothesis `Gamma_c/Gamma_h/t/G/J/L`, worst PL, winner and certificate match the latest golden baseline within the numerical contract. | Commit: `perf(p1-02): share dual-channel hypothesis numerics`; tag: `golden-p1-02-shared-dual-numerics` | `GOLDEN` |
 | **P1-03 Incremental history root** | R09: update only the proven dependency closure while preserving raw row provenance, fault columns, constants and the certified effective dof; retain full rebuild fallback. User-authorized carrier correction (2026-09-29): `nu_perp` is the effective numerical rank after orthogonal compression; injecting noise to preserve the legacy value is forbidden. User-authorized bounded-lifecycle extension (2026-09-30): explicit attempt arena, lease, self-contained final proof bundle and compatible overloads may bound proof/publication sidecars while preserving old P0 ABI/API and all numerical, coverage, risk, threshold, dof and fail-closed contracts. | O01, O03, O05, O09, O12. Every epoch matches a full rebuild under the corrected carrier contract; recovery invalidates affected cache entries; long-run RSS is bounded. | Commit: `perf(p1-03): incrementally maintain history root`; tag: `golden-p1-03-incremental-history-root` | `GOLDEN` |
 | **P1-04 Complete streamed recovery search** | R10: replace the P0 fail-closed incomplete-search behavior with bounded-memory full action streaming and a complete rejection funnel. Do not change plausible thresholds or selection ordering. | O03, O07, O12. Same winner/refusal as uncapped reference, order-independent result, no wrong-exclusion increase, and no omitted action without proof. | Commit: `perf(p1-04): stream complete recovery search`; tag: `golden-p1-04-streamed-recovery-search` | `GOLDEN` |
 | **P1-05 Deterministic concurrency and timing** | R11: flat candidate×hypothesis tasks, fixed output slots, deterministic reduction, bounded scratch and one all-attempt timer. No nested use of the same worker pool. | O08, O09, O10, O12 plus TSan where available. One/two/four workers produce identical decisions; exceptions and deadline misses remain in the denominator; p99 and RSS are reported, not assumed. | Commit: `perf(p1-05): parallelize deterministic integrity work` | `GOLDEN` |
-| **P1-06 Position-quality diagnosis and final acceptance** | R12 plus the complete P1 acceptance run. Diagnose off-profile attitude/long-run behavior in the required frame/observability/time/Jacobian/initialization order. Only proven implementation defects may be fixed here; a model, noise, prior or risk-contract change is moved to a separately authorized P2 step. | O04, O05, O11, O12. Re-run all profiles and all attempts on the same hardware/source/config/input; report core, analysis-completion and arrival-to-publish p50/p95/p99/max, complete-work rate, PL/recovery, navigation errors and RSS. | Commit: `test(p1-06): record full corrected performance acceptance` | `NOT_STARTED` |
+| **P1-06 Position-quality diagnosis and revised non-realtime acceptance** | R12 plus the complete prescribed P1 run. Diagnose off-profile attitude/long-run behavior in the required frame/observability/time/Jacobian/initialization order. Only proven implementation defects may be fixed; model, noise, prior or risk-contract changes remain out of scope. The 2026-10-06 amendment defers realtime optimization only. | O04, O05, O11, O12. Re-run every prescribed profile/attempt on the same hardware/source/config/input. Non-realtime PASS requires 100% complete terminal work, exact fault-leaf coverage with zero omissions, unchanged risk/action/winner and fail-closed/atomic publication semantics, no crash, RSS <1 GiB, and simulation quality gates. Report core, analysis-completion and arrival-to-publish p50/p95/p99/max and every timeout over the full denominator. The unchanged 40/50 ms and <=1% realtime results must be `FAILED / DEFERRED_TO_REALTIME_GOAL` when missed, but do not stop non-realtime validation. Hardware qualification remains `CLOSED/NOT_CLAIMED`. | Commit: `test(p1-06): record revised non-realtime acceptance`; **no original-full-acceptance golden tag** | `NOT_STARTED` |
 
 The normal ordering is strict: P1-01 starts only after every P0 row is
 `GOLDEN` and `golden-p0-07-corrected-exhaustive` exists.  A P0 result that is
@@ -200,7 +232,7 @@ The completion record is maintained here:
 | P0-04 | `GOLDEN` | this commit (`golden-p0-04-risk^{}`) | `golden-p0-04-risk` | [p0-04-risk](../evidence/p0-04-risk/README.md) | PASS: independent reviewer and supervisor; O06 13/13, grouping 3/3, complete CTest 27/27 |
 | P0-05 | `GOLDEN` | this commit (`golden-p0-05-publication^{}`) | `golden-p0-05-publication` | [p0-05-publication](../evidence/p0-05-publication/README.md) | PASS: eighth independent reviewer and supervisor; O04/O08/O10, directed 13/13, complete CTest 28/28 |
 | P0-06 | `GOLDEN` | this commit (`golden-p0-06-actions^{}`) | `golden-p0-06-actions` | [p0-06-actions](../evidence/p0-06-actions/README.md) | PASS: eighth independent reviewer and supervisor; O07 directed 24/24, complete CTest 29/29 |
-| P0-07 | `VALIDATION_PAUSED` | ordinary checkpoint carrying this record | **none; do not create `golden-p0-07`** | [p0-07-corrected-exhaustive](../evidence/p0-07-corrected-exhaustive/README.md) | Independent validation unfinished; full 174 gate interrupted after static PASS and DERIVED 11/13; user authorized P1 continuation on 2026-09-28 |
+| P0-07 | `PASS_REVISED_NONREALTIME` | this commit (`validated-p0-07-nonrealtime^{}`) | `validated-p0-07-nonrealtime`; **not golden and do not create `golden-p0-07`** | [p0-07-revised-nonrealtime-validation](../evidence/p0-07-revised-nonrealtime-validation/README.md) | PASS: independent reviewer and supervisor for the 2026-10-06 software/simulation scope; process-isolated A/B/C 3024/3024 with 2499 available, typed leaves 174/174 (153 FIXED, 13 DERIVED, 8 OBSERVED), CTest 35/35, golden-header ABI canary, ASan+UBSan 8/8, leak-enabled subset 2/2, RSS 239,140 KiB. TSan/MSan are explicit `NOT_RUN`; hardware is `CLOSED/NOT_CLAIMED`; realtime is `FAILED / DEFERRED_TO_REALTIME_GOAL`. |
 | P1-01 | `GOLDEN` | this commit (`golden-p1-01-identity-indexing^{}`) | `golden-p1-01-identity-indexing` (derived from user-authorized checkpoint `420cb007`; P0-07 remains paused) | [p1-01-identity-indexing](../evidence/p1-01-identity-indexing/README.md) | PASS: fourth independent reviewer and supervisor; P101 13/13, O03 24/24, O05 98/98, O09/O12, complete CTest 34/34; 135/135 complete and three strict checkpoint comparisons with zero mismatch |
 | P1-02 | `GOLDEN` | this commit (`golden-p1-02-shared-dual-numerics^{}`) | `golden-p1-02-shared-dual-numerics` (compared with `golden-p1-01-identity-indexing`; P0-07 remains paused) | [p1-02-shared-dual-numerics](../evidence/p1-02-shared-dual-numerics/README.md) | PASS: second independent reviewer and supervisor; ABI-stable sealed sidecar, P102/P002 8/8, O02/O03/O05/O06/O07/O12, complete CTest 34/34; 135/135 complete and three strict comparisons with zero mismatch |
 | P1-03 | `GOLDEN` | this commit (`golden-p1-03-incremental-history-root^{}`) | `golden-p1-03-incremental-history-root` (compared with `golden-p1-02-shared-dual-numerics`; P0-07 remains paused) | [p1-03-incremental-history-root](../evidence/p1-03-incremental-history-root/README.md) | PASS: independent reviewers and supervisor; corrected effective-rank carrier, incremental root/full oracle 30/30, lifecycle 7/7, P0-03 106/106, P0-05 13/13, complete CTest 34/34, three strict comparisons with 135/135 complete and zero exclusions, and 120/120 soak with bounded RSS. Median latency improved while p95/p99/max regressed and no tail-speedup claim is made. |

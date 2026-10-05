@@ -434,6 +434,10 @@ if(CATKIN_ENABLE_TESTING)
     COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools
       python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_gate_d_tools.py)
 
+  add_test(NAME test_simulation_calibrations
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools
+      python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_simulation_calibrations.py)
+
   add_test(NAME test_round3_tools
     COMMAND ${CMAKE_COMMAND} -E env
       PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools

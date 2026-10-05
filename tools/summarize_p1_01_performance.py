@@ -82,18 +82,20 @@ def summarize_run(run_dir: pathlib.Path, stdout: pathlib.Path,
     if len(diagnostics) != attempted:
         raise ValueError(f"{run_dir}: diagnostic attempt denominator mismatch")
     expected = list(range(1, attempted + 1))
+    required_stages = ("core_total", "analysis_completion",
+                       "arrival_to_publish", "outer_epoch")
     complete = [attempt for attempt in expected
-                if "core_total" in timings.get(attempt, {}) and
-                "outer_epoch" in timings.get(attempt, {}) and
+                if all(stage in timings.get(attempt, {})
+                       for stage in required_stages) and
                 all(stage["success"]
                     for stage in timings.get(attempt, {}).values())]
     if len(timings) != attempted or len(complete) != attempted:
         raise ValueError(f"{run_dir}: incomplete all-attempt timing denominator")
     core = [timings[index]["core_total"]["wall_ms"] for index in expected]
-    # processUwbBatch return is the analysis-completion boundary in this
-    # benchmark, so core_total and analysis_completion deliberately share the
-    # same clock sample. outer_epoch ends after the durable final output sink.
-    publish = [timings[index]["outer_epoch"]["wall_ms"] for index in expected]
+    analysis = [timings[index]["analysis_completion"]["wall_ms"]
+                for index in expected]
+    publish = [timings[index]["arrival_to_publish"]["wall_ms"]
+               for index in expected]
     deadline_misses = sum(int(row["deadline_missed"]) for row in integrity)
     sensor_stale = sum(int(row["watchdog_sensor_stale"])
                        for row in diagnostics)
@@ -107,7 +109,9 @@ def summarize_run(run_dir: pathlib.Path, stdout: pathlib.Path,
             "attempt": index,
             "complete_work": index in complete,
             "deadline_missed": integrity_row["deadline_missed"] == "1",
+            "timeout": diagnostic_row["watchdog_wall_timeout"] == "1",
             "sensor_stale": diagnostic_row["watchdog_sensor_stale"] == "1",
+            "watchdog_reason": diagnostic_row["watchdog_reason"],
             "status": diagnostic_row["status"],
             "terminal_reason": diagnostic_row["reason"],
             "transaction_opened": diagnostic_row["transaction_opened"] == "1",
@@ -124,12 +128,12 @@ def summarize_run(run_dir: pathlib.Path, stdout: pathlib.Path,
         "watchdog_refused_attempts": watchdog_refusals,
         "transaction_unopened_attempts": unopened,
         "core_compute": distribution(core),
-        "analysis_completion": distribution(core),
+        "analysis_completion": distribution(analysis),
         "arrival_to_publish": distribution(publish),
         "rss_peak_kib": parse_rss(time_file),
         "work_counters": parse_work(stdout),
         "raw_core_ms": core,
-        "raw_analysis_completion_ms": core,
+        "raw_analysis_completion_ms": analysis,
         "raw_arrival_to_publish_ms": publish,
         "raw_attempt_outcomes": outcomes,
     }
@@ -138,12 +142,19 @@ def summarize_run(run_dir: pathlib.Path, stdout: pathlib.Path,
 def summarize_group(root: pathlib.Path) -> dict:
     run_dirs = sorted(path for path in root.glob("run*") if path.is_dir())
     if not run_dirs:
+        run_dirs = sorted(path.parent for path in root.glob(
+            "*/validation_run.json"))
+    if not run_dirs:
         raise ValueError(f"{root}: no run directories")
     runs = []
-    for run_dir in run_dirs:
-        suffix = run_dir.name[3:]
-        runs.append(summarize_run(run_dir, root / f"run{suffix}.stdout",
-                                  root / f"run{suffix}.time"))
+    for index, run_dir in enumerate(run_dirs, 1):
+        stdout = run_dir / "stdout.log"
+        time_file = run_dir / "stderr.log"
+        if not stdout.exists() or not time_file.exists():
+            suffix = run_dir.name[3:] if run_dir.name.startswith("run") else str(index)
+            stdout, time_file = (root / f"run{suffix}.stdout",
+                                 root / f"run{suffix}.time")
+        runs.append(summarize_run(run_dir, stdout, time_file))
     all_core = [value for run in runs for value in run["raw_core_ms"]]
     all_analysis = [value for run in runs
                     for value in run["raw_analysis_completion_ms"]]

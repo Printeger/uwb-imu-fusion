@@ -1,0 +1,8 @@
+offline_product_map_entries=0
+comparator_product_map_entries=0
+production_product_map_entries=5
+typed_fixed=153
+typed_derived=13
+typed_observed=8
+P007_PROCESS_ABC_PASS records=3024 available=2499
+	Maximum resident set size (kbytes): 239140

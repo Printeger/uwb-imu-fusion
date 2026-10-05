@@ -80,6 +80,52 @@ FdeDecision FdeManager::decide(
     std::vector<CandidateEvaluation>* candidates,
     const std::vector<FactorGroupId>& mandatory_groups,
     const RiskBudgetV2& risk,
+    const FdeDecisionContextV3* context) const {
+  std::vector<ExclusionAction> consumed;
+  if (candidates) {
+    consumed.reserve(candidates->size());
+    for (const auto& candidate : *candidates) {
+      consumed.push_back(candidate.action);
+    }
+  }
+  const ActionSearchValidationV1 validation =
+      context && context->action_lease
+          ? validateCompactActionConsumptionV3(*context->action_lease,
+                                               consumed)
+          : ActionSearchValidationV1{
+                false, false, "compact action lease missing"};
+  if (!validation.valid || !validation.exhaustive) {
+    if (context && context->v1.risk_result) {
+      *context->v1.risk_result = {};
+      context->v1.risk_result->charged_total =
+          std::numeric_limits<double>::quiet_NaN();
+      context->v1.risk_result->declared_total =
+          std::numeric_limits<double>::quiet_NaN();
+      context->v1.risk_result->margin =
+          std::numeric_limits<double>::quiet_NaN();
+      context->v1.risk_result->terms =
+          "SEARCH_INCOMPLETE: compact census validation=" +
+          validation.reason;
+    }
+    FdeDecision decision;
+    decision.status = FdeStatus::SearchIncomplete;
+    decision.commit_allowed = false;
+    decision.integrity_available = false;
+    decision.reason =
+        "SEARCH_INCOMPLETE: compact validation=" + validation.reason;
+    return decision;
+  }
+  return decide(all_in, hypotheses, evidence, candidates, mandatory_groups,
+                risk, context ? &context->v1 : nullptr);
+}
+
+FdeDecision FdeManager::decide(
+    const DetectorResultV2& all_in,
+    const std::vector<FaultHypothesisV2>& hypotheses,
+    const std::vector<FaultModeEvidence>& evidence,
+    std::vector<CandidateEvaluation>* candidates,
+    const std::vector<FactorGroupId>& mandatory_groups,
+    const RiskBudgetV2& risk,
     const FdeDecisionContextV2* context) const {
   ActionSearchValidationV1 search_validation;
   if (context && context->action_search) {

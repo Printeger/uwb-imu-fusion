@@ -8,8 +8,12 @@
 #include <gtsam/linear/GaussianFactorGraph.h>
 
 #include <algorithm>
+#include <array>
+#include <cerrno>
 #include <chrono>
+#include <cstdio>
 #include <cstring>
+#include <fcntl.h>
 #include <functional>
 #include <iomanip>
 #include <iterator>
@@ -18,6 +22,8 @@
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <sys/stat.h>
+#include <unistd.h>
 
 namespace uwb_imu_pl {
 namespace {
@@ -564,11 +570,39 @@ const PendingFactorGroup* replacementFor(const EpochTransaction& tx,
   return nullptr;
 }
 
+bool bridgeGroupRepresentable(const LinearizedIntegrityWindow& window,
+                              const PendingFactorGroup& group) {
+  std::set<gtsam::Key> unique;
+  for (const auto key : group.keys) {
+    if (!unique.insert(key).second) continue;
+    const gtsam::Symbol symbol(key);
+    const char type = symbol.chr();
+    const int dimension = type == 'v' ? 3 : 6;
+    const int within = type == 'x' ? 0 : (type == 'v' ? 6 : 9);
+    if ((type != 'x' && type != 'v' && type != 'b') ||
+        symbol.index() < window.detector_first_epoch) {
+      return false;
+    }
+    const std::size_t relative =
+        symbol.index() - window.detector_first_epoch;
+    if (relative > static_cast<std::size_t>(
+                       std::numeric_limits<int>::max() / 15)) {
+      return false;
+    }
+    const int target = static_cast<int>(relative * 15) + within;
+    if (target < 0 || dimension > window.H.cols() - target) return false;
+  }
+  return true;
+}
+
 LinearizedFactorBlock bridgeBlock(const EpochTransaction& tx,
                                   const LinearizedIntegrityWindow& window,
                                   const Occurrence& occurrence,
                                   const PendingFactorGroup& group) {
   if (!tx.frozen_values) throw std::runtime_error("frozen values unavailable");
+  if (!bridgeGroupRepresentable(window, group)) {
+    throw std::runtime_error("bridge keys are outside the frozen window");
+  }
   gtsam::Ordering ordering;
   for (const auto key : group.keys) {
     if (std::find(ordering.begin(), ordering.end(), key) == ordering.end()) {
@@ -590,6 +624,10 @@ LinearizedFactorBlock bridgeBlock(const EpochTransaction& tx,
     const int dimension = type == 'v' ? 3 : 6;
     const int within = type == 'x' ? 0 : (type == 'v' ? 6 : 9);
     const int target = static_cast<int>((epoch - window.detector_first_epoch) * 15) + within;
+    if (local_column < 0 || dimension > dense.first.cols() - local_column ||
+        target < 0 || dimension > window.H.cols() - target) {
+      throw std::runtime_error("bridge Jacobian placement is outside its matrix");
+    }
     out.jacobian_whitened.block(0, target, dense.first.rows(), dimension) =
         dense.first.block(0, local_column, dense.first.rows(), dimension);
     local_column += dimension;
@@ -642,6 +680,14 @@ ExclusionAction actionForMode(const EpochTransaction& tx,
         action.recoverability = HistoryRecoverability::MissingProvenance;
         continue;
       }
+      // A recovery bridge that references a state already outside the frozen
+      // detector window cannot be represented by this candidate matrix.  It
+      // is missing provenance, not a writable negative/underflowed block.
+      if (!bridgeGroupRepresentable(window, *occurrence->pose_bridge) ||
+          !bridgeGroupRepresentable(window, *occurrence->bias_bridge)) {
+        action.recoverability = HistoryRecoverability::MissingProvenance;
+        continue;
+      }
       action.groups_to_add.push_back(occurrence->pose_bridge->id);
       action.groups_to_add.push_back(occurrence->bias_bridge->id);
       action.added_blocks.push_back(bridgeBlock(
@@ -676,7 +722,8 @@ ExclusionAction actionForMode(const EpochTransaction& tx,
   return action;
 }
 
-ExclusionAction unite(const std::vector<const ExclusionAction*>& parts) {
+ExclusionAction unite(const std::vector<const ExclusionAction*>& parts,
+                      bool copy_added_blocks = true) {
   ExclusionAction out;
   std::set<std::uint64_t> remove, add, modes, units;
   std::set<std::string> physical_sources;
@@ -714,7 +761,9 @@ ExclusionAction unite(const std::vector<const ExclusionAction*>& parts) {
       const auto id = part->groups_to_add[i];
       if (add.insert(id.value()).second) {
         out.groups_to_add.push_back(id);
-        if (i < part->added_blocks.size()) out.added_blocks.push_back(part->added_blocks[i]);
+        if (copy_added_blocks && i < part->added_blocks.size()) {
+          out.added_blocks.push_back(part->added_blocks[i]);
+        }
       }
     }
     for (const auto id : part->covered_modes) {
@@ -750,7 +799,382 @@ ExclusionAction unite(const std::vector<const ExclusionAction*>& parts) {
 
 }  // namespace
 
+namespace {
+
+class CanonicalByteSinkV3 {
+ public:
+  virtual ~CanonicalByteSinkV3() = default;
+  virtual bool append(const char* data, std::size_t size) = 0;
+};
+
+class CanonicalStringSinkV3 final : public CanonicalByteSinkV3 {
+ public:
+  bool append(const char* data, std::size_t size) override {
+    bytes_.append(data, size);
+    return true;
+  }
+  std::string take() { return std::move(bytes_); }
+ private:
+  std::string bytes_;
+};
+
+class CanonicalCountSinkV3 final : public CanonicalByteSinkV3 {
+ public:
+  bool append(const char*, std::size_t size) override {
+    if (size > std::numeric_limits<std::uint64_t>::max() - size_) return false;
+    size_ += size;
+    return true;
+  }
+  std::uint64_t size() const { return size_; }
+ private:
+  std::uint64_t size_ = 0;
+};
+
+// Small attempt-local SHA-256 implementation.  It avoids adding a new shared
+// library dependency to the frozen P0 ABI while giving sidecar indexes a
+// cryptographic digest.  Digests are never treated as equality proofs.
+class CanonicalSha256SinkV3 final : public CanonicalByteSinkV3 {
+ public:
+  bool append(const char* data, std::size_t size) override {
+    if (finalized_) return false;
+    if (size > std::numeric_limits<std::uint64_t>::max() - total_bytes_) {
+      return false;
+    }
+    total_bytes_ += size;
+    const auto* input = reinterpret_cast<const unsigned char*>(data);
+    while (size != 0) {
+      const std::size_t count = std::min(size, block_.size() - used_);
+      std::memcpy(block_.data() + used_, input, count);
+      used_ += count;
+      input += count;
+      size -= count;
+      if (used_ == block_.size()) {
+        transform(block_.data());
+        used_ = 0;
+      }
+    }
+    return true;
+  }
+
+  std::uint64_t length() const { return total_bytes_; }
+
+  std::string finishHex() {
+    if (!finalized_) {
+      const std::uint64_t bit_count = total_bytes_ * 8;
+      block_[used_++] = 0x80;
+      if (used_ > 56) {
+        std::fill(block_.begin() + used_, block_.end(), 0);
+        transform(block_.data());
+        used_ = 0;
+      }
+      std::fill(block_.begin() + used_, block_.begin() + 56, 0);
+      for (int index = 0; index < 8; ++index) {
+        block_[63 - index] = static_cast<unsigned char>(
+            bit_count >> (8 * index));
+      }
+      transform(block_.data());
+      finalized_ = true;
+    }
+    static constexpr char kHex[] = "0123456789abcdef";
+    std::string out(64, '0');
+    for (std::size_t word = 0; word < state_.size(); ++word) {
+      for (std::size_t byte = 0; byte < 4; ++byte) {
+        const unsigned char value = static_cast<unsigned char>(
+            state_[word] >> (24 - 8 * byte));
+        out[8 * word + 2 * byte] = kHex[value >> 4];
+        out[8 * word + 2 * byte + 1] = kHex[value & 0x0f];
+      }
+    }
+    return out;
+  }
+
+ private:
+  static std::uint32_t rotate(std::uint32_t value, unsigned count) {
+    return (value >> count) | (value << (32 - count));
+  }
+  void transform(const unsigned char* input) {
+    static constexpr std::array<std::uint32_t, 64> k = {{
+      0x428a2f98u,0x71374491u,0xb5c0fbcfu,0xe9b5dba5u,
+      0x3956c25bu,0x59f111f1u,0x923f82a4u,0xab1c5ed5u,
+      0xd807aa98u,0x12835b01u,0x243185beu,0x550c7dc3u,
+      0x72be5d74u,0x80deb1feu,0x9bdc06a7u,0xc19bf174u,
+      0xe49b69c1u,0xefbe4786u,0x0fc19dc6u,0x240ca1ccu,
+      0x2de92c6fu,0x4a7484aau,0x5cb0a9dcu,0x76f988dau,
+      0x983e5152u,0xa831c66du,0xb00327c8u,0xbf597fc7u,
+      0xc6e00bf3u,0xd5a79147u,0x06ca6351u,0x14292967u,
+      0x27b70a85u,0x2e1b2138u,0x4d2c6dfcu,0x53380d13u,
+      0x650a7354u,0x766a0abbu,0x81c2c92eu,0x92722c85u,
+      0xa2bfe8a1u,0xa81a664bu,0xc24b8b70u,0xc76c51a3u,
+      0xd192e819u,0xd6990624u,0xf40e3585u,0x106aa070u,
+      0x19a4c116u,0x1e376c08u,0x2748774cu,0x34b0bcb5u,
+      0x391c0cb3u,0x4ed8aa4au,0x5b9cca4fu,0x682e6ff3u,
+      0x748f82eeu,0x78a5636fu,0x84c87814u,0x8cc70208u,
+      0x90befffau,0xa4506cebu,0xbef9a3f7u,0xc67178f2u}};
+    std::array<std::uint32_t, 64> words{};
+    for (std::size_t index = 0; index < 16; ++index) {
+      words[index] = (static_cast<std::uint32_t>(input[4 * index]) << 24) |
+          (static_cast<std::uint32_t>(input[4 * index + 1]) << 16) |
+          (static_cast<std::uint32_t>(input[4 * index + 2]) << 8) |
+          static_cast<std::uint32_t>(input[4 * index + 3]);
+    }
+    for (std::size_t index = 16; index < words.size(); ++index) {
+      const std::uint32_t s0 = rotate(words[index - 15], 7) ^
+          rotate(words[index - 15], 18) ^ (words[index - 15] >> 3);
+      const std::uint32_t s1 = rotate(words[index - 2], 17) ^
+          rotate(words[index - 2], 19) ^ (words[index - 2] >> 10);
+      words[index] = words[index - 16] + s0 + words[index - 7] + s1;
+    }
+    std::uint32_t a = state_[0], b = state_[1], c = state_[2], d = state_[3];
+    std::uint32_t e = state_[4], f = state_[5], g = state_[6], h = state_[7];
+    for (std::size_t index = 0; index < words.size(); ++index) {
+      const std::uint32_t s1 = rotate(e, 6) ^ rotate(e, 11) ^ rotate(e, 25);
+      const std::uint32_t choose = (e & f) ^ (~e & g);
+      const std::uint32_t temp1 = h + s1 + choose + k[index] + words[index];
+      const std::uint32_t s0 = rotate(a, 2) ^ rotate(a, 13) ^ rotate(a, 22);
+      const std::uint32_t majority = (a & b) ^ (a & c) ^ (b & c);
+      const std::uint32_t temp2 = s0 + majority;
+      h = g; g = f; f = e; e = d + temp1;
+      d = c; c = b; b = a; a = temp1 + temp2;
+    }
+    state_[0] += a; state_[1] += b; state_[2] += c; state_[3] += d;
+    state_[4] += e; state_[5] += f; state_[6] += g; state_[7] += h;
+  }
+
+  std::array<std::uint32_t, 8> state_{{
+      0x6a09e667u,0xbb67ae85u,0x3c6ef372u,0xa54ff53au,
+      0x510e527fu,0x9b05688cu,0x1f83d9abu,0x5be0cd19u}};
+  std::array<unsigned char, 64> block_{};
+  std::size_t used_ = 0;
+  std::uint64_t total_bytes_ = 0;
+  bool finalized_ = false;
+};
+
+bool appendCanonicalRawV3(CanonicalByteSinkV3* sink,
+                          const std::string& value) {
+  return sink && sink->append(value.data(), value.size());
+}
+
+template <class T>
+bool appendCanonicalIntegralV3(CanonicalByteSinkV3* sink, T value) {
+  std::array<char, 32> bytes{};
+  const int count = std::snprintf(
+      bytes.data(), bytes.size(), "%llx;",
+      static_cast<unsigned long long>(static_cast<std::uint64_t>(value)));
+  return count > 0 && static_cast<std::size_t>(count) < bytes.size() &&
+      sink->append(bytes.data(), static_cast<std::size_t>(count));
+}
+
+bool appendCanonicalDoubleV3(CanonicalByteSinkV3* sink, double value) {
+  std::uint64_t bits = 0;
+  static_assert(sizeof(bits) == sizeof(value), "64-bit canonical double");
+  std::memcpy(&bits, &value, sizeof(bits));
+  return appendCanonicalIntegralV3(sink, bits);
+}
+
+class CanonicalHexSinkV3 final : public CanonicalByteSinkV3 {
+ public:
+  explicit CanonicalHexSinkV3(CanonicalByteSinkV3* destination)
+      : destination_(destination) {}
+  bool append(const char* data, std::size_t size) override {
+    static constexpr char kHex[] = "0123456789abcdef";
+    std::array<char, 8192> encoded{};
+    std::size_t input = 0;
+    while (input < size) {
+      const std::size_t count = std::min(
+          size - input, encoded.size() / 2);
+      for (std::size_t index = 0; index < count; ++index) {
+        const unsigned char value =
+            static_cast<unsigned char>(data[input + index]);
+        encoded[2 * index] = kHex[value >> 4];
+        encoded[2 * index + 1] = kHex[value & 0x0f];
+      }
+      if (!destination_->append(encoded.data(), 2 * count)) return false;
+      input += count;
+    }
+    return true;
+  }
+ private:
+  CanonicalByteSinkV3* destination_ = nullptr;
+};
+
+bool appendCanonicalStringV3(CanonicalByteSinkV3* sink,
+                             const std::string& value) {
+  std::array<char, 32> prefix{};
+  const int count = std::snprintf(
+      prefix.data(), prefix.size(), "%llu:",
+      static_cast<unsigned long long>(value.size()));
+  if (count <= 0 || static_cast<std::size_t>(count) >= prefix.size() ||
+      !sink->append(prefix.data(), static_cast<std::size_t>(count))) {
+    return false;
+  }
+  CanonicalHexSinkV3 hex(sink);
+  return hex.append(value.data(), value.size()) &&
+      sink->append(";", 1);
+}
+
+template <class Derived>
+bool appendCanonicalEigenV3(CanonicalByteSinkV3* sink,
+                            const Eigen::MatrixBase<Derived>& value) {
+  if (!appendCanonicalIntegralV3(sink, value.rows()) ||
+      !appendCanonicalIntegralV3(sink, value.cols())) return false;
+  for (Eigen::Index row = 0; row < value.rows(); ++row) {
+    for (Eigen::Index column = 0; column < value.cols(); ++column) {
+      if (!appendCanonicalDoubleV3(sink, value(row, column))) return false;
+    }
+  }
+  return true;
+}
+
+bool emitCanonicalBlockV3(const LinearizedFactorBlock& block,
+                          CanonicalByteSinkV3* sink) {
+  if (!appendCanonicalIntegralV3(sink, block.group_id.value()) ||
+      !appendCanonicalIntegralV3(sink, static_cast<int>(block.kind)) ||
+      !appendCanonicalIntegralV3(sink, static_cast<int>(block.sensor)) ||
+      !appendCanonicalIntegralV3(sink, static_cast<int>(block.role)) ||
+      !appendCanonicalIntegralV3(sink, block.window_column_indices.size())) {
+    return false;
+  }
+  for (const int column : block.window_column_indices) {
+    if (!appendCanonicalIntegralV3(sink, column)) return false;
+  }
+  if (!appendCanonicalIntegralV3(sink, block.fault_units.size())) return false;
+  for (const auto unit : block.fault_units) {
+    if (!appendCanonicalIntegralV3(sink, unit.value())) return false;
+  }
+  return appendCanonicalDoubleV3(sink, block.effective_weight) &&
+      appendCanonicalStringV3(sink, block.whitening_model_id) &&
+      appendCanonicalIntegralV3(sink, block.version.graph_version) &&
+      appendCanonicalIntegralV3(sink, block.version.ordering_version) &&
+      appendCanonicalIntegralV3(sink, block.version.noise_model_version) &&
+      appendCanonicalIntegralV3(sink, block.version.linpoint_version) &&
+      appendCanonicalEigenV3(sink, block.jacobian_raw) &&
+      appendCanonicalEigenV3(sink, block.residual_raw) &&
+      appendCanonicalEigenV3(sink, block.covariance) &&
+      appendCanonicalEigenV3(sink, block.whitener) &&
+      appendCanonicalEigenV3(sink, block.jacobian_whitened) &&
+      appendCanonicalEigenV3(sink, block.residual_whitened);
+}
+
+bool appendCanonicalBlockAsStringV3(CanonicalByteSinkV3* sink,
+                                    const LinearizedFactorBlock& block) {
+  CanonicalCountSinkV3 count;
+  if (!emitCanonicalBlockV3(block, &count)) return false;
+  std::array<char, 32> prefix{};
+  const int prefix_size = std::snprintf(
+      prefix.data(), prefix.size(), "%llu:",
+      static_cast<unsigned long long>(count.size()));
+  if (prefix_size <= 0 ||
+      static_cast<std::size_t>(prefix_size) >= prefix.size() ||
+      !sink->append(prefix.data(), static_cast<std::size_t>(prefix_size))) {
+    return false;
+  }
+  CanonicalHexSinkV3 hex(sink);
+  return emitCanonicalBlockV3(block, &hex) && sink->append(";", 1);
+}
+
+bool emitCanonicalActionOperationV3(const ExclusionAction& action,
+                                    CanonicalByteSinkV3* sink) {
+  if (!sink->append("ACTION_OPERATION_V1|", 20)) return false;
+  auto remove = sortedCopy(action.groups_to_remove);
+  auto add = sortedCopy(action.groups_to_add);
+  if (!appendCanonicalIntegralV3(sink, remove.size())) return false;
+  for (const auto id : remove) {
+    if (!appendCanonicalIntegralV3(sink, id.value())) return false;
+  }
+  if (!appendCanonicalIntegralV3(sink, add.size())) return false;
+  for (const auto id : add) {
+    if (!appendCanonicalIntegralV3(sink, id.value())) return false;
+  }
+  if (!appendCanonicalIntegralV3(sink, static_cast<int>(action.bridge_mode)) ||
+      !appendCanonicalIntegralV3(sink,
+                                 static_cast<int>(action.recoverability)) ||
+      !appendCanonicalIntegralV3(
+          sink, action.recovery_epoch_begin.has_value())) return false;
+  if (action.recovery_epoch_begin) {
+    if (!appendCanonicalIntegralV3(sink, *action.recovery_epoch_begin)) {
+      return false;
+    }
+  }
+  if (!appendCanonicalIntegralV3(
+          sink, action.recovery_epoch_end.has_value())) return false;
+  if (action.recovery_epoch_end) {
+    if (!appendCanonicalIntegralV3(sink, *action.recovery_epoch_end)) {
+      return false;
+    }
+  }
+  std::vector<const LinearizedFactorBlock*> blocks;
+  blocks.reserve(action.added_blocks.size());
+  for (const auto& block : action.added_blocks) {
+    blocks.push_back(&block);
+  }
+  // Preserve V1's lexicographic ordering without retaining complete block
+  // strings.  A valid action has unique added group IDs (enforced by
+  // finiteActionOperation); the group-id encoding is the first canonical
+  // field, so comparing that small prefix determines the complete ordering.
+  auto block_less = [](const LinearizedFactorBlock* left,
+                       const LinearizedFactorBlock* right) {
+    std::array<char, 32> left_key{};
+    std::array<char, 32> right_key{};
+    std::snprintf(left_key.data(), left_key.size(), "%llx;",
+                  static_cast<unsigned long long>(left->group_id.value()));
+    std::snprintf(right_key.data(), right_key.size(), "%llx;",
+                  static_cast<unsigned long long>(right->group_id.value()));
+    return std::strcmp(left_key.data(), right_key.data()) < 0;
+  };
+  std::sort(blocks.begin(), blocks.end(), block_less);
+  if (!appendCanonicalIntegralV3(sink, blocks.size())) return false;
+  for (const auto* block : blocks) {
+    if (!appendCanonicalBlockAsStringV3(sink, *block)) return false;
+  }
+  return appendCanonicalStringV3(sink, action.removal_data_source) &&
+      appendCanonicalStringV3(sink, action.model_error_record) &&
+      appendCanonicalIntegralV3(sink, action.model_error_validated);
+}
+
+bool emitCanonicalActionSemanticV3(const ExclusionAction& action,
+                                   CanonicalByteSinkV3* sink) {
+  CanonicalCountSinkV3 operation_count;
+  if (!emitCanonicalActionOperationV3(action, &operation_count) ||
+      !sink->append("ACTION_SEMANTICS_V1|", 20)) return false;
+  std::array<char, 32> prefix{};
+  const int prefix_size = std::snprintf(
+      prefix.data(), prefix.size(), "%llu:",
+      static_cast<unsigned long long>(operation_count.size()));
+  if (prefix_size <= 0 ||
+      static_cast<std::size_t>(prefix_size) >= prefix.size() ||
+      !sink->append(prefix.data(), static_cast<std::size_t>(prefix_size))) {
+    return false;
+  }
+  CanonicalHexSinkV3 operation_hex(sink);
+  if (!emitCanonicalActionOperationV3(action, &operation_hex) ||
+      !sink->append(";", 1) ||
+      !appendCanonicalIntegralV3(sink, action.id.value()) ||
+      !appendCanonicalStringV3(sink, action.action_model_id)) return false;
+  const auto units = sortedCopy(action.covered_units);
+  const auto modes = sortedCopy(action.covered_modes);
+  const auto sources = sortedCopy(action.physical_source_ids);
+  if (!appendCanonicalIntegralV3(sink, units.size())) return false;
+  for (const auto id : units) {
+    if (!appendCanonicalIntegralV3(sink, id.value())) return false;
+  }
+  if (!appendCanonicalIntegralV3(sink, modes.size())) return false;
+  for (const auto id : modes) {
+    if (!appendCanonicalIntegralV3(sink, id.value())) return false;
+  }
+  if (!appendCanonicalIntegralV3(sink, sources.size())) return false;
+  for (const auto& source : sources) {
+    if (!appendCanonicalStringV3(sink, source)) return false;
+  }
+  return appendCanonicalIntegralV3(sink, action.exclusion_cardinality);
+}
+
+}  // namespace
+
 std::string exactActionOperationIdentityV1(const ExclusionAction& action) {
+  // Keep the exported V1 serializer exactly as frozen.  The streaming V3
+  // emitter is independently useful for compact sidecars, but substituting
+  // it here would make any tiny implementation discrepancy an ABI-visible
+  // identity change.
   std::ostringstream out;
   out << "ACTION_OPERATION_V1|";
   auto remove = sortedCopy(action.groups_to_remove);
@@ -1018,6 +1442,702 @@ ActionSearchValidationV1 validateCompleteActionStreamV2(
     return {false, false, "complete-action stream range metadata mismatch"};
   }
   return {true, true, "COMPLETE_STREAM"};
+}
+
+namespace {
+
+std::uint64_t actionIdentityDigestV3(const std::string& bytes) {
+  std::uint64_t hash = 1469598103934665603ULL;
+  for (const unsigned char value : bytes) {
+    hash ^= value;
+    hash *= 1099511628211ULL;
+  }
+  // Zero is reserved for an unavailable identity.
+  return hash == 0 ? 1 : hash;
+}
+
+struct SidecarRangeV3 {
+  std::uint64_t offset = 0;
+  std::uint64_t length = 0;
+  std::uint64_t digest = 0;
+};
+
+class AttemptSidecarFileV3 {
+ public:
+  AttemptSidecarFileV3() { openAnonymous(); }
+  ~AttemptSidecarFileV3() {
+    if (fd_ >= 0) {
+      while (::close(fd_) != 0 && errno == EINTR) {}
+    }
+  }
+  AttemptSidecarFileV3(const AttemptSidecarFileV3&) = delete;
+  AttemptSidecarFileV3& operator=(const AttemptSidecarFileV3&) = delete;
+
+  bool valid() const { return fd_ >= 0 && !failed_; }
+  const std::string& failure() const { return failure_; }
+  bool sealedAvailable() const {
+    return valid() && sealed_ && !injected_read_failure_;
+  }
+
+  bool appendCanonical(
+      const std::function<bool(CanonicalByteSinkV3*)>& emit,
+      SidecarRangeV3* range) {
+    if (!range || sealed_ || !valid()) return fail("sidecar append invalid");
+    class FileSink final : public CanonicalByteSinkV3 {
+     public:
+      explicit FileSink(AttemptSidecarFileV3* file) : file_(file) {}
+      bool append(const char* data, std::size_t size) override {
+        if (!file_->writeAll(data, size)) return false;
+        for (std::size_t index = 0; index < size; ++index) {
+          digest_ ^= static_cast<unsigned char>(data[index]);
+          digest_ *= 1099511628211ULL;
+        }
+        if (size > std::numeric_limits<std::uint64_t>::max() - length_) {
+          return file_->fail("sidecar canonical length overflow");
+        }
+        length_ += size;
+        return true;
+      }
+      std::uint64_t length() const { return length_; }
+      std::uint64_t digest() const { return digest_ == 0 ? 1 : digest_; }
+     private:
+      AttemptSidecarFileV3* file_ = nullptr;
+      std::uint64_t length_ = 0;
+      std::uint64_t digest_ = 1469598103934665603ULL;
+    } sink(this);
+    range->offset = length_;
+    if (!emit(&sink)) return fail("canonical serialization failed");
+    range->length = sink.length();
+    range->digest = sink.digest();
+    return true;
+  }
+
+  bool seal(std::uint64_t* length, std::uint64_t* digest) {
+    if (!valid() || sealed_) return fail("sidecar seal invalid");
+    if (::fdatasync(fd_) != 0) return failErrno("sidecar fdatasync");
+    struct stat status {};
+    if (::fstat(fd_, &status) != 0 || status.st_size < 0 ||
+        static_cast<std::uint64_t>(status.st_size) != length_) {
+      return failErrno("sidecar size changed before seal");
+    }
+    std::uint64_t value = 0;
+    if (!digestRange({0, length_, 0}, &value)) return false;
+    sealed_ = true;
+    sealed_length_ = length_;
+    sealed_digest_ = value;
+    if (length) *length = sealed_length_;
+    if (digest) *digest = sealed_digest_;
+    return true;
+  }
+
+  bool verifySealed() const {
+    if (!valid() || !sealed_ || injected_read_failure_) {
+      return const_cast<AttemptSidecarFileV3*>(this)->fail(
+          "sidecar unavailable/read failure");
+    }
+    struct stat status {};
+    if (::fstat(fd_, &status) != 0 || status.st_size < 0 ||
+        static_cast<std::uint64_t>(status.st_size) != sealed_length_) {
+      return const_cast<AttemptSidecarFileV3*>(this)->failErrno(
+          "sealed sidecar length mismatch");
+    }
+    std::uint64_t digest = 0;
+    return digestRange({0, sealed_length_, 0}, &digest) &&
+        digest == sealed_digest_;
+  }
+
+  bool verifyRange(const SidecarRangeV3& range) const {
+    std::uint64_t digest = 0;
+    return sealed_ && range.offset <= sealed_length_ &&
+        range.length <= sealed_length_ - range.offset &&
+        digestRange(range, &digest) && digest == range.digest;
+  }
+
+  bool sameBytes(const SidecarRangeV3& left,
+                 const SidecarRangeV3& right) const {
+    if (!sealed_ || left.length != right.length ||
+        left.offset > sealed_length_ || right.offset > sealed_length_ ||
+        left.length > sealed_length_ - left.offset ||
+        right.length > sealed_length_ - right.offset) return false;
+    std::array<char, 4096> a{};
+    std::array<char, 4096> b{};
+    std::uint64_t done = 0;
+    while (done < left.length) {
+      const std::size_t count = static_cast<std::size_t>(std::min<std::uint64_t>(
+          a.size(), left.length - done));
+      if (!readExact(left.offset + done, a.data(), count) ||
+          !readExact(right.offset + done, b.data(), count)) return false;
+      if (std::memcmp(a.data(), b.data(), count) != 0) return false;
+      done += count;
+    }
+    return true;
+  }
+
+  // Compare a freshly streamed canonical payload with an existing range.
+  // This is intentionally usable before seal so content-addressed blocks can
+  // be deduplicated without first appending a duplicate.  Reads are bounded
+  // and a digest match is never accepted without this byte comparison.
+  bool sameCanonical(
+      const SidecarRangeV3& existing,
+      const std::function<bool(CanonicalByteSinkV3*)>& emit) const {
+    if (!valid() || existing.offset > length_ ||
+        existing.length > length_ - existing.offset) return false;
+    class CompareSink final : public CanonicalByteSinkV3 {
+     public:
+      CompareSink(const AttemptSidecarFileV3* file,
+                  const SidecarRangeV3& range)
+          : file_(file), range_(range) {}
+      bool append(const char* data, std::size_t size) override {
+        if (size > range_.length - compared_) return false;
+        std::array<char, 4096> bytes{};
+        std::size_t consumed = 0;
+        while (consumed < size) {
+          const std::size_t count = std::min(
+              bytes.size(), size - consumed);
+          if (!file_->readExact(range_.offset + compared_, bytes.data(),
+                                count) ||
+              std::memcmp(bytes.data(), data + consumed, count) != 0) {
+            return false;
+          }
+          consumed += count;
+          compared_ += count;
+        }
+        return true;
+      }
+      bool complete() const { return compared_ == range_.length; }
+     private:
+      const AttemptSidecarFileV3* file_ = nullptr;
+      SidecarRangeV3 range_;
+      std::uint64_t compared_ = 0;
+    } sink(this, existing);
+    return emit(&sink) && sink.complete();
+  }
+
+  bool copyRange(const SidecarRangeV3& range, std::string* bytes) const {
+    if (!bytes || !sealed_ || range.offset > sealed_length_ ||
+        range.length > sealed_length_ - range.offset ||
+        range.length > std::numeric_limits<std::size_t>::max()) return false;
+    bytes->resize(static_cast<std::size_t>(range.length));
+    return readExact(range.offset, bytes->data(), bytes->size());
+  }
+
+  void injectReadFailureForTest() { injected_read_failure_ = true; }
+
+ private:
+  void openAnonymous() {
+#if defined(O_TMPFILE)
+    fd_ = ::open("/tmp", O_TMPFILE | O_RDWR | O_CLOEXEC, 0600);
+#endif
+    if (fd_ >= 0) return;
+    char path[] = "/tmp/uwb_imu_pl_action_sidecar.XXXXXX";
+#if defined(O_CLOEXEC)
+    fd_ = ::mkostemp(path, O_CLOEXEC);
+#else
+    fd_ = ::mkstemp(path);
+#endif
+    if (fd_ < 0) {
+      failErrno("sidecar temporary file creation");
+      return;
+    }
+    if (::fchmod(fd_, 0600) != 0) {
+      failErrno("sidecar chmod");
+      ::close(fd_);
+      fd_ = -1;
+      ::unlink(path);
+      return;
+    }
+    if (::unlink(path) != 0) {
+      failErrno("sidecar unlink");
+      ::close(fd_);
+      fd_ = -1;
+    }
+  }
+
+  bool writeAll(const char* data, std::size_t size) {
+    std::size_t done = 0;
+    while (done < size) {
+      const ssize_t count = ::write(fd_, data + done, size - done);
+      if (count < 0 && errno == EINTR) continue;
+      if (count <= 0) return failErrno("sidecar write");
+      done += static_cast<std::size_t>(count);
+      length_ += static_cast<std::size_t>(count);
+    }
+    return true;
+  }
+
+  bool readExact(std::uint64_t offset, char* data, std::size_t size) const {
+    if (injected_read_failure_ || fd_ < 0 ||
+        offset > static_cast<std::uint64_t>(std::numeric_limits<off_t>::max())) {
+      return const_cast<AttemptSidecarFileV3*>(this)->fail(
+          "sidecar read unavailable");
+    }
+    std::size_t done = 0;
+    while (done < size) {
+      const ssize_t count = ::pread(
+          fd_, data + done, size - done,
+          static_cast<off_t>(offset + done));
+      if (count < 0 && errno == EINTR) continue;
+      if (count <= 0) {
+        return const_cast<AttemptSidecarFileV3*>(this)->failErrno(
+            "sidecar short read");
+      }
+      done += static_cast<std::size_t>(count);
+    }
+    return true;
+  }
+
+  bool digestRange(const SidecarRangeV3& range,
+                   std::uint64_t* digest) const {
+    if (!digest || range.offset > length_ ||
+        range.length > length_ - range.offset) return false;
+    std::uint64_t value = 1469598103934665603ULL;
+    std::array<char, 4096> bytes{};
+    std::uint64_t done = 0;
+    while (done < range.length) {
+      const std::size_t count = static_cast<std::size_t>(std::min<std::uint64_t>(
+          bytes.size(), range.length - done));
+      if (!readExact(range.offset + done, bytes.data(), count)) return false;
+      for (std::size_t index = 0; index < count; ++index) {
+        value ^= static_cast<unsigned char>(bytes[index]);
+        value *= 1099511628211ULL;
+      }
+      done += count;
+    }
+    *digest = value == 0 ? 1 : value;
+    return true;
+  }
+
+  bool fail(const std::string& reason) {
+    failed_ = true;
+    if (failure_.empty()) failure_ = reason;
+    return false;
+  }
+  bool failErrno(const std::string& reason) {
+    const int error = errno;
+    return fail(reason + ": errno=" + std::to_string(error));
+  }
+
+  int fd_ = -1;
+  std::uint64_t length_ = 0;
+  std::uint64_t sealed_length_ = 0;
+  std::uint64_t sealed_digest_ = 0;
+  bool sealed_ = false;
+  mutable bool failed_ = false;
+  mutable std::string failure_;
+  bool injected_read_failure_ = false;
+};
+
+SidecarRangeV3 operationRangeV3(const CompactActionDescriptorV3& descriptor) {
+  return {descriptor.operation_offset, descriptor.operation_length,
+          descriptor.operation_digest};
+}
+
+SidecarRangeV3 semanticRangeV3(const CompactActionDescriptorV3& descriptor) {
+  return {descriptor.semantic_offset, descriptor.semantic_length,
+          descriptor.semantic_digest};
+}
+
+struct CanonicalMetadataV3 {
+  std::uint64_t length = 0;
+  std::string strong_digest;
+};
+
+CanonicalMetadataV3 canonicalMetadataV3(
+    const std::function<bool(CanonicalByteSinkV3*)>& emit) {
+  CanonicalSha256SinkV3 sink;
+  if (!emit(&sink)) return {};
+  return {sink.length(), sink.finishHex()};
+}
+
+std::vector<const LinearizedFactorBlock*> orderedActionBlocksV3(
+    const ExclusionAction& action) {
+  std::vector<const LinearizedFactorBlock*> blocks;
+  blocks.reserve(action.added_blocks.size());
+  for (const auto& block : action.added_blocks) blocks.push_back(&block);
+  std::sort(blocks.begin(), blocks.end(),
+      [](const LinearizedFactorBlock* left,
+         const LinearizedFactorBlock* right) {
+        std::array<char, 32> left_key{};
+        std::array<char, 32> right_key{};
+        std::snprintf(left_key.data(), left_key.size(), "%llx;",
+                      static_cast<unsigned long long>(
+                          left->group_id.value()));
+        std::snprintf(right_key.data(), right_key.size(), "%llx;",
+                      static_cast<unsigned long long>(
+                          right->group_id.value()));
+        return std::strcmp(left_key.data(), right_key.data()) < 0;
+      });
+  return blocks;
+}
+
+bool emitCompactOperationRecordV3(
+    const ExclusionAction& action,
+    const CompactActionDescriptorV3& descriptor,
+    CanonicalByteSinkV3* sink) {
+  if (!sink->append("COMPACT_ACTION_OPERATION_V3|", 28)) return false;
+  auto remove = sortedCopy(action.groups_to_remove);
+  auto add = sortedCopy(action.groups_to_add);
+  if (!appendCanonicalIntegralV3(sink, remove.size())) return false;
+  for (const auto id : remove) {
+    if (!appendCanonicalIntegralV3(sink, id.value())) return false;
+  }
+  if (!appendCanonicalIntegralV3(sink, add.size())) return false;
+  for (const auto id : add) {
+    if (!appendCanonicalIntegralV3(sink, id.value())) return false;
+  }
+  if (!appendCanonicalIntegralV3(sink, static_cast<int>(action.bridge_mode)) ||
+      !appendCanonicalIntegralV3(sink,
+                                 static_cast<int>(action.recoverability)) ||
+      !appendCanonicalIntegralV3(
+          sink, action.recovery_epoch_begin.has_value())) return false;
+  if (action.recovery_epoch_begin &&
+      !appendCanonicalIntegralV3(sink, *action.recovery_epoch_begin)) {
+    return false;
+  }
+  if (!appendCanonicalIntegralV3(
+          sink, action.recovery_epoch_end.has_value())) return false;
+  if (action.recovery_epoch_end &&
+      !appendCanonicalIntegralV3(sink, *action.recovery_epoch_end)) {
+    return false;
+  }
+  if (!appendCanonicalIntegralV3(sink, descriptor.ordered_blocks.size())) {
+    return false;
+  }
+  for (const auto& block : descriptor.ordered_blocks) {
+    if (!appendCanonicalIntegralV3(sink, block.block_id) ||
+        !appendCanonicalIntegralV3(sink, block.offset) ||
+        !appendCanonicalIntegralV3(sink, block.length) ||
+        !appendCanonicalStringV3(sink, block.strong_digest)) return false;
+  }
+  return appendCanonicalStringV3(sink, action.removal_data_source) &&
+      appendCanonicalStringV3(sink, action.model_error_record) &&
+      appendCanonicalIntegralV3(sink, action.model_error_validated);
+}
+
+bool emitCompactSemanticRecordV3(
+    const ExclusionAction& action,
+    const CompactActionDescriptorV3& descriptor,
+    CanonicalByteSinkV3* sink) {
+  if (!sink->append("COMPACT_ACTION_SEMANTICS_V3|", 28) ||
+      !emitCompactOperationRecordV3(action, descriptor, sink) ||
+      !appendCanonicalIntegralV3(sink, action.id.value()) ||
+      !appendCanonicalStringV3(sink, action.action_model_id)) return false;
+  const auto units = sortedCopy(action.covered_units);
+  const auto modes = sortedCopy(action.covered_modes);
+  const auto sources = sortedCopy(action.physical_source_ids);
+  if (!appendCanonicalIntegralV3(sink, units.size())) return false;
+  for (const auto id : units) {
+    if (!appendCanonicalIntegralV3(sink, id.value())) return false;
+  }
+  if (!appendCanonicalIntegralV3(sink, modes.size())) return false;
+  for (const auto id : modes) {
+    if (!appendCanonicalIntegralV3(sink, id.value())) return false;
+  }
+  if (!appendCanonicalIntegralV3(sink, sources.size())) return false;
+  for (const auto& source : sources) {
+    if (!appendCanonicalStringV3(sink, source)) return false;
+  }
+  return appendCanonicalIntegralV3(sink, action.exclusion_cardinality);
+}
+
+}  // namespace
+
+struct AttemptActionLeaseV3::State {
+  CompactActionSearchV3 search;
+  std::function<ExclusionAction(const CompactActionDescriptorV3&)>
+      materialize_one;
+  std::function<ExclusionAction(const CompactActionDescriptorV3&)>
+      materialize_metadata;
+  std::shared_ptr<AttemptSidecarFileV3> sidecar;
+  bool producer_certificate_valid = false;
+};
+
+namespace {
+
+std::uint64_t compactSnapshotDigestV3(
+    const std::vector<CompactActionDescriptorV3>& descriptors,
+    const std::vector<CompactActionOmissionV3>& omissions,
+    std::uint64_t generated, std::uint64_t sidecar_digest,
+    std::uint64_t sidecar_length) {
+  using Row = std::tuple<std::uint64_t, std::uint64_t, std::uint64_t,
+                         std::uint64_t, std::uint64_t, std::uint64_t,
+                         std::uint64_t, std::uint64_t, std::uint64_t, bool>;
+  std::vector<Row> rows;
+  rows.reserve(descriptors.size() + omissions.size());
+  for (const auto& descriptor : descriptors) {
+    rows.emplace_back(descriptor.action_id, descriptor.operation_digest,
+                      descriptor.semantic_digest, descriptor.operation_offset,
+                      descriptor.operation_length, descriptor.semantic_offset,
+                      descriptor.semantic_length, 0, 0, true);
+  }
+  for (const auto& omission : omissions) {
+    const auto& descriptor = omission.occurrence;
+    rows.emplace_back(descriptor.action_id, descriptor.operation_digest,
+                      descriptor.semantic_digest, descriptor.operation_offset,
+                      descriptor.operation_length, descriptor.semantic_offset,
+                      descriptor.semantic_length, 0,
+                      omission.representative_action_id,
+                      omission.proven_safe);
+  }
+  std::sort(rows.begin(), rows.end());
+  std::ostringstream bytes;
+  bytes << "COMPACT_ACTION_SNAPSHOT_V3|" << generated << '|'
+        << sidecar_digest << '|' << sidecar_length << '|';
+  for (const auto& row : rows) {
+    bytes << std::get<0>(row) << ':' << std::get<1>(row) << ':'
+          << std::get<2>(row) << ':' << std::get<3>(row) << ':'
+          << std::get<4>(row) << ':' << std::get<5>(row) << ':'
+          << std::get<6>(row) << ':' << std::get<7>(row) << ':'
+          << std::get<8>(row) << ':' << std::get<9>(row) << ';';
+  }
+  return actionIdentityDigestV3(bytes.str());
+}
+
+std::size_t materializedBlockHeavyBytesV3(
+    const LinearizedFactorBlock& block) {
+  std::size_t bytes = 0;
+  auto matrix_bytes = [&](const auto& value) {
+    const auto size = static_cast<std::size_t>(value.size());
+    if (size > (std::numeric_limits<std::size_t>::max() - bytes) /
+                   sizeof(double)) {
+      throw std::overflow_error("compact action heavy-byte count overflow");
+    }
+    bytes += size * sizeof(double);
+  };
+  matrix_bytes(block.jacobian_raw);
+  matrix_bytes(block.residual_raw);
+  matrix_bytes(block.covariance);
+  matrix_bytes(block.whitener);
+  matrix_bytes(block.jacobian_whitened);
+  matrix_bytes(block.residual_whitened);
+  bytes += block.window_column_indices.size() * sizeof(int);
+  bytes += block.fault_units.size() * sizeof(FaultUnitId);
+  return bytes;
+}
+
+std::size_t materializedActionHeavyBytesV3(const ExclusionAction& action) {
+  std::size_t bytes = 0;
+  for (const auto& block : action.added_blocks) {
+    const std::size_t block_bytes = materializedBlockHeavyBytesV3(block);
+    if (block_bytes > std::numeric_limits<std::size_t>::max() - bytes) {
+      throw std::overflow_error("compact action heavy-byte count overflow");
+    }
+    bytes += block_bytes;
+  }
+  return bytes;
+}
+
+bool validateProducedDescriptorV3(
+    const std::shared_ptr<AttemptSidecarFileV3>& sidecar,
+    const CompactActionDescriptorV3& descriptor) {
+  if (!sidecar || !sidecar->verifyRange(operationRangeV3(descriptor)) ||
+      !sidecar->verifyRange(semanticRangeV3(descriptor))) return false;
+  return std::all_of(descriptor.ordered_blocks.begin(),
+                     descriptor.ordered_blocks.end(),
+      [](const CompactActionDescriptorV3::BlockReference& reference) {
+        return reference.block_id != 0 && reference.length != 0 &&
+            reference.strong_digest.size() == 64;
+      });
+}
+
+}  // namespace
+
+std::vector<ExclusionAction> AttemptActionLeaseV3::materializeBatch(
+    std::size_t begin, std::size_t count) const {
+  if (!state_ || !state_->materialize_one || begin > state_->search.actions.size() ||
+      count > state_->search.actions.size() - begin ||
+      count > state_->search.batch_capacity) {
+    throw std::runtime_error("compact action lease batch is invalid");
+  }
+  std::vector<ExclusionAction> actions;
+  actions.reserve(count);
+  for (std::size_t index = 0; index < count; ++index) {
+    actions.push_back(state_->materialize_one(
+        state_->search.actions[begin + index]));
+  }
+  return actions;
+}
+
+ExclusionAction AttemptActionLeaseV3::materialize(std::size_t index) const {
+  auto batch = materializeBatch(index, 1);
+  return std::move(batch.front());
+}
+
+ExclusionAction AttemptActionLeaseV3::materializeMetadata(
+    std::size_t index) const {
+  if (!state_ || !state_->materialize_metadata ||
+      index >= state_->search.actions.size()) {
+    throw std::runtime_error("compact action metadata lease is invalid");
+  }
+  return state_->materialize_metadata(state_->search.actions[index]);
+}
+
+const CompactActionSearchV3& AttemptActionLeaseV3::search() const {
+  if (!state_) throw std::runtime_error("compact action lease is closed");
+  return state_->search;
+}
+
+bool AttemptActionLeaseV3::valid() const {
+  return state_ && state_->materialize_one;
+}
+
+void AttemptActionLeaseV3::close() { state_.reset(); }
+
+AttemptActionLeaseV3 AttemptActionArenaV3::lease() const {
+  return AttemptActionLeaseV3(state_);
+}
+
+const CompactActionSearchV3& AttemptActionArenaV3::search() const {
+  if (!state_) throw std::runtime_error("compact action arena is closed");
+  return state_->search;
+}
+
+bool AttemptActionArenaV3::valid() const { return state_ != nullptr; }
+
+void AttemptActionArenaV3::close() { state_.reset(); }
+
+void AttemptActionArenaV3::injectSidecarReadFailureForTest() {
+  if (state_ && state_->sidecar) state_->sidecar->injectReadFailureForTest();
+}
+
+ActionSearchValidationV1 validateCompactActionSearchV3(
+    const AttemptActionLeaseV3& lease) {
+  if (!lease.valid()) return {false, false, "compact action lease missing"};
+  const auto state = lease.state_;
+  const auto& search = lease.search();
+  if (search.protocol_version != 3 || search.batch_capacity == 0) {
+    return {false, false, "compact action protocol/capacity invalid"};
+  }
+  if (!state || !state->sidecar || !state->producer_certificate_valid ||
+      !search.producer_certificate_valid ||
+      !state->sidecar->sealedAvailable()) {
+    return {false, false, "compact action sidecar/certificate invalid"};
+  }
+  if (search.generated != search.evaluated + search.omitted ||
+      search.evaluated != search.actions.size() ||
+      search.omitted != search.omitted_actions.size() ||
+      search.batch_count != (search.actions.empty()
+          ? 0 : 1 + (search.actions.size() - 1) / search.batch_capacity) ||
+      search.peak_batch_actions !=
+          std::min(search.batch_capacity, search.actions.size())) {
+    return {false, false, "compact action census/ranges invalid"};
+  }
+  std::set<std::uint64_t> action_ids;
+  std::set<std::uint64_t> referenced_block_ids;
+  std::uint64_t referenced_block_count = 0;
+  for (std::size_t index = 0; index < search.actions.size(); ++index) {
+    const auto& descriptor = search.actions[index];
+    if (descriptor.action_id == 0 ||
+        !action_ids.insert(descriptor.action_id).second) {
+      return {false, false, "compact action id invalid/duplicate"};
+    }
+    if (!state->sidecar->verifyRange(operationRangeV3(descriptor)) ||
+        !state->sidecar->verifyRange(semanticRangeV3(descriptor))) {
+      return {false, false,
+              "compact descriptor canonical range invalid"};
+    }
+    for (const auto& block : descriptor.ordered_blocks) {
+      referenced_block_ids.insert(block.block_id);
+      ++referenced_block_count;
+    }
+    (void)state->materialize_metadata(descriptor);
+  }
+  for (const auto& omission : search.omitted_actions) {
+    for (const auto& block : omission.occurrence.ordered_blocks) {
+      referenced_block_ids.insert(block.block_id);
+      ++referenced_block_count;
+    }
+    const auto representative = std::find_if(
+        search.actions.begin(), search.actions.end(),
+        [&](const CompactActionDescriptorV3& descriptor) {
+          return descriptor.action_id == omission.representative_action_id;
+        });
+    const bool exact_duplicate = representative != search.actions.end() &&
+        state->sidecar->sameBytes(operationRangeV3(omission.occurrence),
+                                  operationRangeV3(*representative)) &&
+        state->sidecar->sameBytes(semanticRangeV3(omission.occurrence),
+                                  semanticRangeV3(*representative));
+    const bool safe = omission.reason == "EXACT_SEMANTIC_DUPLICATE" &&
+        exact_duplicate;
+    if (safe != omission.proven_safe) {
+      return {false, false, "compact omission proof invalid"};
+    }
+  }
+  if (search.unique_block_count != referenced_block_ids.size() ||
+      search.referenced_block_count != referenced_block_count) {
+    return {false, false, "compact block census mismatch"};
+  }
+  if (compactSnapshotDigestV3(
+          search.actions, search.omitted_actions, search.generated,
+          search.sidecar_digest, search.sidecar_length) !=
+      search.snapshot_digest) {
+    return {false, false, "compact snapshot digest mismatch"};
+  }
+  std::size_t derived_peak_bytes = 0;
+  for (std::size_t begin = 0; begin < search.actions.size();
+       begin += search.batch_capacity) {
+    std::size_t batch_bytes = 0;
+    const std::size_t end = std::min(
+        search.actions.size(), begin + search.batch_capacity);
+    for (std::size_t index = begin; index < end; ++index) {
+      const std::size_t value =
+          search.actions[index].materialized_heavy_bytes;
+      if (value > std::numeric_limits<std::size_t>::max() - batch_bytes) {
+        return {false, false, "compact batch heavy-byte count overflow"};
+      }
+      batch_bytes += value;
+    }
+    derived_peak_bytes = std::max(derived_peak_bytes, batch_bytes);
+  }
+  if (derived_peak_bytes != search.peak_batch_heavy_bytes) {
+    return {false, false, "compact batch heavy-byte metadata mismatch"};
+  }
+  const bool all_omissions_safe = std::all_of(
+      search.omitted_actions.begin(), search.omitted_actions.end(),
+      [](const CompactActionOmissionV3& omission) {
+        return omission.proven_safe;
+      });
+  if (search.exhaustive != all_omissions_safe ||
+      search.terminal_reason != (search.exhaustive ? "COMPLETE"
+                                                   : "SEARCH_INCOMPLETE")) {
+    return {false, false, "compact terminal completeness mismatch"};
+  }
+  return {true, search.exhaustive, "COMPLETE_COMPACT_STREAM"};
+}
+
+ActionSearchValidationV1 validateCompactActionConsumptionV3(
+    const AttemptActionLeaseV3& lease,
+    const std::vector<ExclusionAction>& consumed) {
+  const ActionSearchValidationV1 search =
+      validateCompactActionSearchV3(lease);
+  if (!search.valid || !search.exhaustive) return search;
+  if (consumed.size() != lease.search().actions.size()) {
+    return {false, false, "compact consumer action count mismatch"};
+  }
+  for (std::size_t index = 0; index < consumed.size(); ++index) {
+    const ExclusionAction exact = lease.materializeMetadata(index);
+    const ExclusionAction& compact = consumed[index];
+    const bool same = compact.id == exact.id &&
+        compact.covered_units == exact.covered_units &&
+        compact.covered_modes == exact.covered_modes &&
+        compact.physical_source_ids == exact.physical_source_ids &&
+        compact.groups_to_remove == exact.groups_to_remove &&
+        compact.groups_to_add == exact.groups_to_add &&
+        compact.bridge_mode == exact.bridge_mode &&
+        compact.exclusion_cardinality == exact.exclusion_cardinality &&
+        compact.action_model_id == exact.action_model_id &&
+        compact.recoverability == exact.recoverability &&
+        compact.recovery_epoch_begin == exact.recovery_epoch_begin &&
+        compact.recovery_epoch_end == exact.recovery_epoch_end &&
+        compact.removal_data_source == exact.removal_data_source &&
+        compact.model_error_record == exact.model_error_record &&
+        compact.model_error_validated == exact.model_error_validated;
+    if (!same) {
+      return {false, false,
+              "compact consumer action differs from exact recipe"};
+    }
+  }
+  return {true, true, "COMPLETE_COMPACT_CONSUMPTION"};
 }
 
 namespace {
@@ -2057,6 +3177,448 @@ CompleteActionStreamV2 HypothesisGenerator::actionsForPlausibleSetV2(
         stream.complete.generated_snapshot.generator_identity;
   }
   return stream;
+}
+
+AttemptActionArenaV3 HypothesisGenerator::actionsForPlausibleSetV3(
+    const LinearizedIntegrityWindow& window,
+    const EpochTransaction& transaction,
+    const GeneratedFaultModelSet& models,
+    const std::vector<FaultModeEvidence>& evidence,
+    const std::vector<std::string>& mandatory_health_sources,
+    bool force_digest_collision_for_test) const {
+  auto state = std::make_shared<AttemptActionLeaseV3::State>();
+  state->sidecar = std::make_shared<AttemptSidecarFileV3>();
+  auto& search = state->search;
+  const std::size_t requested_batch_capacity = config_.max_candidate_count;
+  search.batch_capacity = requested_batch_capacity;
+  if (requested_batch_capacity == 0) return AttemptActionArenaV3(state);
+
+  // The state is attempt-scoped: these references remain valid until the
+  // monitor closes the lease before leaving processUwbBatchImpl().
+  const auto all = std::make_shared<const std::vector<Occurrence>>(
+      occurrences(transaction));
+  // A mode operation is immutable for the frozen attempt.  Construct and
+  // linearize it exactly once.  Order-2 actions compose these frozen parts
+  // instead of rebuilding both bridges at every producer/consumer boundary.
+  auto frozen_mode_actions = std::make_shared<std::vector<ExclusionAction>>();
+  frozen_mode_actions->reserve(models.modes.size());
+  for (const auto& mode : models.modes) {
+    frozen_mode_actions->push_back(
+        actionForMode(transaction, window, mode, *all));
+  }
+  const auto compose_action =
+      [&models, frozen_mode_actions](
+          const CompactActionDescriptorV3& descriptor,
+          bool copy_added_blocks) {
+        ExclusionAction action;
+        if (descriptor.mode_indices.empty()) {
+          action.action_model_id = "KEEP_ALL";
+        } else {
+          std::vector<const ExclusionAction*> parts;
+          parts.reserve(descriptor.mode_indices.size());
+          for (const std::size_t mode_index : descriptor.mode_indices) {
+            if (mode_index >= models.modes.size() ||
+                mode_index >= frozen_mode_actions->size()) {
+              throw std::runtime_error("compact action mode index invalid");
+            }
+            parts.push_back(&frozen_mode_actions->at(mode_index));
+          }
+          action = unite(parts, copy_added_blocks);
+        }
+        action.id = ExclusionActionId(descriptor.action_id);
+        if (descriptor.force_missing_provenance) {
+          action.recoverability = HistoryRecoverability::MissingProvenance;
+        }
+        if (!descriptor.action_model_override.empty()) {
+          action.action_model_id = descriptor.action_model_override;
+        }
+        return action;
+      };
+  state->materialize_one =
+      [compose_action](const CompactActionDescriptorV3& descriptor) {
+        return compose_action(descriptor, true);
+      };
+  state->materialize_metadata =
+      [compose_action](const CompactActionDescriptorV3& descriptor) {
+        return compose_action(descriptor, false);
+      };
+
+  std::map<std::uint64_t, std::size_t> mode_index;
+  for (std::size_t index = 0; index < models.modes.size(); ++index) {
+    mode_index.emplace(models.modes[index].id.value(), index);
+  }
+  const auto is_current_group = [&](FactorGroupId group) {
+    if (group == transaction.imu_group.id) return true;
+    return std::any_of(transaction.uwb_groups.begin(),
+        transaction.uwb_groups.end(), [&](const PendingFactorGroup& value) {
+          return value.nominal && value.id == group;
+        });
+  };
+  std::vector<std::size_t> mandatory;
+  for (std::size_t index = 0; index < models.modes.size(); ++index) {
+    const ExclusionAction& action = frozen_mode_actions->at(index);
+    if (!std::any_of(action.groups_to_remove.begin(),
+                     action.groups_to_remove.end(), is_current_group)) {
+      continue;
+    }
+    bool required = false;
+    for (const auto unit_id : action.covered_units) {
+      const auto unit = std::find_if(models.units.begin(), models.units.end(),
+          [&](const FaultUnit& value) { return value.id == unit_id; });
+      if (unit != models.units.end() &&
+          std::find(mandatory_health_sources.begin(),
+                    mandatory_health_sources.end(), healthSourceId(*unit)) !=
+              mandatory_health_sources.end()) {
+        required = true;
+        break;
+      }
+    }
+    if (required) mandatory.push_back(index);
+  }
+
+  std::vector<std::vector<std::size_t>> requested;
+  std::vector<std::size_t> full;
+  std::set<std::uint64_t> plausible_anchors;
+  const auto plausible = completePlausibleHypotheses(
+      models.hypotheses, evidence);
+  for (const auto hypothesis_id : plausible) {
+    const auto hypothesis = std::find_if(
+        models.hypotheses.begin(), models.hypotheses.end(),
+        [&](const FaultHypothesisV2& value) {
+          return value.id == hypothesis_id;
+        });
+    if (hypothesis == models.hypotheses.end()) continue;
+    std::vector<std::size_t> parts;
+    for (const auto mode_id : hypothesis->modes) {
+      const auto found = mode_index.find(mode_id.value());
+      if (found == mode_index.end()) continue;
+      const auto& mode = models.modes[found->second];
+      if (mode.sensor == SensorType::Uwb) {
+        plausible_anchors.insert(mode.anchor_id.value());
+      }
+      parts.push_back(found->second);
+      full.push_back(found->second);
+    }
+    parts.insert(parts.end(), mandatory.begin(), mandatory.end());
+    if (!parts.empty()) requested.push_back(std::move(parts));
+  }
+  if (plausible.empty() && !mandatory.empty()) requested.push_back(mandatory);
+
+  std::vector<CompactActionDescriptorV3> raw_actions;
+  CompactActionDescriptorV3 keep;
+  keep.action_id = 1;
+  keep.action_model_override = "KEEP_ALL";
+  raw_actions.push_back(std::move(keep));
+  std::uint64_t next_id = 2;
+  auto physicalCardinality = [&](const std::vector<std::size_t>& parts) {
+    std::set<std::string> sources;
+    for (const auto index : parts) {
+      if (index < models.modes.size()) {
+        sources.insert(models.modes[index].physical_source_id);
+      }
+    }
+    return sources.size();
+  };
+  for (auto& parts : requested) {
+    CompactActionDescriptorV3 descriptor;
+    descriptor.action_id = next_id++;
+    descriptor.mode_indices = std::move(parts);
+    if (physicalCardinality(descriptor.mode_indices) >
+        config_.max_exclusion_cardinality) {
+      descriptor.cardinality_contract_rejected = true;
+      descriptor.force_missing_provenance = true;
+      descriptor.action_model_override = "CARDINALITY_CONTRACT_REJECTED";
+    }
+    raw_actions.push_back(std::move(descriptor));
+  }
+  std::sort(full.begin(), full.end(), [&](std::size_t left,
+                                          std::size_t right) {
+    return models.modes[left].id < models.modes[right].id;
+  });
+  full.erase(std::unique(full.begin(), full.end(),
+                         [&](std::size_t left, std::size_t right) {
+    return models.modes[left].id == models.modes[right].id;
+  }), full.end());
+  full.insert(full.end(), mandatory.begin(), mandatory.end());
+  if (!full.empty() && plausible_anchors.size() <= 1) {
+    CompactActionDescriptorV3 descriptor;
+    descriptor.action_id = next_id++;
+    descriptor.mode_indices = std::move(full);
+    descriptor.action_model_override = "FULL_PLAUSIBLE_UNION_RECOVERY";
+    descriptor.force_missing_provenance =
+        physicalCardinality(descriptor.mode_indices) >
+        config_.max_exclusion_cardinality;
+    raw_actions.push_back(std::move(descriptor));
+  }
+
+  // Materialize one action at a time and stream its canonical bytes directly
+  // into the anonymous attempt sidecar.  No complete operation/semantic
+  // string is retained.  Digests only select possible equality buckets;
+  // equality itself is a fixed-buffer byte comparison over sidecar ranges.
+  std::map<std::pair<std::uint64_t, std::uint64_t>, std::vector<std::size_t>>
+      digest_buckets;
+  using BlockBucketKeyV3 = std::pair<std::string, std::uint64_t>;
+  std::map<BlockBucketKeyV3,
+           std::vector<CompactActionDescriptorV3::BlockReference>>
+      block_buckets;
+  std::uint64_t next_block_id = 1;
+  bool finite = true;
+  constexpr std::size_t kActionArenaHeavyBudgetBytes = 8u << 20;
+  bool indivisible_payload_too_large = false;
+  for (std::size_t index = 0; index < raw_actions.size(); ++index) {
+    ExclusionAction action = state->materialize_metadata(raw_actions[index]);
+    auto& descriptor = raw_actions[index];
+    // Resolve the ordered block content by reference to the frozen single-mode
+    // operations.  This is byte-for-byte the same group-id union as unite(),
+    // but it never copies a dense matrix merely to hash or index it.
+    std::vector<const LinearizedFactorBlock*> ordered_blocks;
+    std::set<std::uint64_t> added_group_ids;
+    for (const std::size_t mode_index : descriptor.mode_indices) {
+      if (mode_index >= frozen_mode_actions->size()) {
+        finite = false;
+        break;
+      }
+      const auto& part = frozen_mode_actions->at(mode_index);
+      for (std::size_t block_index = 0;
+           block_index < part.groups_to_add.size(); ++block_index) {
+        if (block_index >= part.added_blocks.size()) {
+          finite = false;
+          break;
+        }
+        const auto group_id = part.groups_to_add[block_index].value();
+        if (added_group_ids.insert(group_id).second) {
+          ordered_blocks.push_back(&part.added_blocks[block_index]);
+        }
+      }
+      if (!finite) break;
+    }
+    std::sort(ordered_blocks.begin(), ordered_blocks.end(),
+        [](const LinearizedFactorBlock* left,
+           const LinearizedFactorBlock* right) {
+          std::array<char, 32> left_key{};
+          std::array<char, 32> right_key{};
+          std::snprintf(left_key.data(), left_key.size(), "%llx;",
+                        static_cast<unsigned long long>(
+                            left->group_id.value()));
+          std::snprintf(right_key.data(), right_key.size(), "%llx;",
+                        static_cast<unsigned long long>(
+                            right->group_id.value()));
+          return std::strcmp(left_key.data(), right_key.data()) < 0;
+        });
+    finite = finite && std::all_of(
+        ordered_blocks.begin(), ordered_blocks.end(),
+        [](const LinearizedFactorBlock* block) {
+          return block != nullptr && finiteBlockOperation(*block);
+        });
+    descriptor.materialized_heavy_bytes = 0;
+    for (const auto* block : ordered_blocks) {
+      const std::size_t block_bytes = materializedBlockHeavyBytesV3(*block);
+      if (block_bytes > std::numeric_limits<std::size_t>::max() -
+                            descriptor.materialized_heavy_bytes) {
+        throw std::overflow_error("compact action heavy-byte count overflow");
+      }
+      descriptor.materialized_heavy_bytes += block_bytes;
+    }
+    indivisible_payload_too_large = indivisible_payload_too_large ||
+        descriptor.materialized_heavy_bytes > kActionArenaHeavyBudgetBytes;
+    // Persist every exact immutable matrix payload once per attempt.  Actions
+    // retain only ordered references.  SHA-256/length selects a bucket and a
+    // bounded pread comparison proves equality, including collision cases.
+    for (const auto* block : ordered_blocks) {
+      const auto block_emit = [&](CanonicalByteSinkV3* sink) {
+        return emitCanonicalBlockV3(*block, sink);
+      };
+      const CanonicalMetadataV3 metadata = canonicalMetadataV3(block_emit);
+      if (metadata.strong_digest.empty()) {
+        finite = false;
+        break;
+      }
+      const BlockBucketKeyV3 key{
+          metadata.strong_digest, metadata.length};
+      std::optional<CompactActionDescriptorV3::BlockReference> existing;
+      for (const auto& candidate : block_buckets[key]) {
+        if (state->sidecar->sameCanonical(
+                {candidate.offset, candidate.length, 0}, block_emit)) {
+          existing = candidate;
+          break;
+        }
+      }
+      if (existing) {
+        descriptor.ordered_blocks.push_back(*existing);
+        continue;
+      }
+      SidecarRangeV3 range;
+      if (!state->sidecar->appendCanonical(block_emit, &range)) {
+        finite = false;
+        break;
+      }
+      CompactActionDescriptorV3::BlockReference reference;
+      reference.block_id = next_block_id++;
+      reference.offset = range.offset;
+      reference.length = range.length;
+      reference.strong_digest = metadata.strong_digest;
+      block_buckets[key].push_back(reference);
+      descriptor.ordered_blocks.push_back(std::move(reference));
+    }
+    if (!finite) break;
+
+    SidecarRangeV3 operation;
+    SidecarRangeV3 semantic;
+    if (!state->sidecar->appendCanonical(
+            [&](CanonicalByteSinkV3* sink) {
+              return emitCompactOperationRecordV3(action, descriptor, sink);
+            }, &operation) ||
+        !state->sidecar->appendCanonical(
+            [&](CanonicalByteSinkV3* sink) {
+              return emitCompactSemanticRecordV3(action, descriptor, sink);
+            }, &semantic)) {
+      finite = false;
+      break;
+    }
+    descriptor.operation_offset = operation.offset;
+    descriptor.operation_length = operation.length;
+    descriptor.operation_digest = operation.digest;
+    descriptor.semantic_offset = semantic.offset;
+    descriptor.semantic_length = semantic.length;
+    descriptor.semantic_digest = semantic.digest;
+  }
+  search.unique_block_count = next_block_id - 1;
+  for (const auto& descriptor : raw_actions) {
+    search.referenced_block_count += descriptor.ordered_blocks.size();
+  }
+  if (finite && !state->sidecar->seal(
+          &search.sidecar_length, &search.sidecar_digest)) {
+    finite = false;
+  }
+  std::map<std::uint64_t, std::vector<std::size_t>> action_id_representatives;
+  if (finite) {
+    for (const auto& descriptor : raw_actions) {
+      const auto bucket_key = force_digest_collision_for_test
+          ? std::make_pair<std::uint64_t, std::uint64_t>(1, 1)
+          : std::make_pair(descriptor.operation_digest,
+                           descriptor.semantic_digest);
+      const auto& candidates = digest_buckets[bucket_key];
+      std::optional<std::size_t> exact_representative;
+      for (const std::size_t representative_index : candidates) {
+        ++search.digest_collision_comparisons;
+        const auto& representative = search.actions[representative_index];
+        if (state->sidecar->sameBytes(operationRangeV3(descriptor),
+                                      operationRangeV3(representative)) &&
+            state->sidecar->sameBytes(semanticRangeV3(descriptor),
+                                      semanticRangeV3(representative))) {
+          exact_representative = representative_index;
+          break;
+        }
+      }
+      bool id_conflict = false;
+      const auto existing_ids = action_id_representatives.find(
+          descriptor.action_id);
+      if (existing_ids != action_id_representatives.end()) {
+        for (const auto representative_index : existing_ids->second) {
+          const auto& representative = search.actions[representative_index];
+          if (!state->sidecar->sameBytes(semanticRangeV3(descriptor),
+                                         semanticRangeV3(representative))) {
+            id_conflict = true;
+          }
+        }
+      }
+      if (id_conflict) {
+        search.omitted_actions.push_back({
+            descriptor, 0, "DUPLICATE_ACTION_ID_CONFLICT", false});
+      } else if (exact_representative) {
+        search.omitted_actions.push_back({
+            descriptor,
+            search.actions[*exact_representative].action_id,
+            "EXACT_SEMANTIC_DUPLICATE", true});
+      } else {
+        const std::size_t retained_index = search.actions.size();
+        search.actions.push_back(descriptor);
+        digest_buckets[bucket_key].push_back(retained_index);
+        action_id_representatives[descriptor.action_id].push_back(
+            retained_index);
+      }
+    }
+  }
+  search.generated = raw_actions.size();
+  search.evaluated = finite ? search.actions.size() : 0;
+  search.omitted = search.generated - search.evaluated;
+  if (!finite) {
+    search.actions.clear();
+    search.omitted_actions.clear();
+    for (const auto& descriptor : raw_actions) {
+      search.omitted_actions.push_back(
+          {descriptor, 0, "SIDECAR_IO_OR_ENCODING_FAILURE", false});
+    }
+  }
+  const bool all_omissions_safe = std::all_of(
+      search.omitted_actions.begin(), search.omitted_actions.end(),
+      [](const CompactActionOmissionV3& omission) {
+        return omission.proven_safe;
+      });
+  search.exhaustive = finite && !indivisible_payload_too_large &&
+      all_omissions_safe;
+  search.terminal_reason = search.exhaustive ? "COMPLETE"
+                                             : "SEARCH_INCOMPLETE";
+  // A count-only bound is insufficient when an order-2 action contains large
+  // dense bridge matrices.  Derive one fixed action count for this attempt
+  // from the worst exact recipe so every leased batch stays below the explicit
+  // heavy-payload budget (except an indivisible single action).
+  std::size_t max_action_bytes = 0;
+  for (const auto& descriptor : search.actions) {
+    max_action_bytes = std::max(
+        max_action_bytes, descriptor.materialized_heavy_bytes);
+  }
+  const std::size_t byte_bounded_capacity = max_action_bytes == 0
+      ? requested_batch_capacity
+      : kActionArenaHeavyBudgetBytes / max_action_bytes;
+  search.batch_capacity = std::min(
+      requested_batch_capacity, byte_bounded_capacity);
+  if (search.batch_capacity == 0) {
+    search.batch_capacity = 1;
+    search.exhaustive = false;
+    search.terminal_reason = "SEARCH_INCOMPLETE";
+  }
+  search.batch_count = search.actions.empty()
+      ? 0 : 1 + (search.actions.size() - 1) / search.batch_capacity;
+  search.peak_batch_actions =
+      std::min(search.batch_capacity, search.actions.size());
+  search.snapshot_digest = compactSnapshotDigestV3(
+      search.actions, search.omitted_actions, search.generated,
+      search.sidecar_digest, search.sidecar_length);
+  for (std::size_t begin = 0; begin < search.actions.size();
+       begin += search.batch_capacity) {
+    std::size_t batch_bytes = 0;
+    const std::size_t end = std::min(
+        search.actions.size(), begin + search.batch_capacity);
+    for (std::size_t index = begin; index < end; ++index) {
+      batch_bytes += search.actions[index].materialized_heavy_bytes;
+    }
+    search.peak_batch_heavy_bytes = std::max(
+        search.peak_batch_heavy_bytes, batch_bytes);
+  }
+  bool producer_exact = search.exhaustive;
+  std::map<std::uint64_t,
+           std::tuple<std::uint64_t, std::uint64_t, std::string>>
+      block_identities;
+  for (const auto& descriptor : raw_actions) {
+    producer_exact = producer_exact && validateProducedDescriptorV3(
+        state->sidecar, descriptor);
+    for (const auto& block : descriptor.ordered_blocks) {
+      const auto identity = std::make_tuple(
+          block.offset, block.length, block.strong_digest);
+      const auto inserted = block_identities.emplace(block.block_id, identity);
+      producer_exact = producer_exact && block.block_id != 0 &&
+          (inserted.second || inserted.first->second == identity);
+    }
+  }
+  // The complete file/root is read exactly once by the producer.  Subsequent
+  // audit and FDE consumers reuse this sealed certificate and validate only
+  // compact ranges/census; the descriptor recipes can stream an exact block
+  // again on demand without retaining all canonical bytes.
+  state->producer_certificate_valid = producer_exact &&
+      state->sidecar->verifySealed();
+  search.producer_certificate_valid = state->producer_certificate_valid;
+  return AttemptActionArenaV3(std::move(state));
 }
 
 }  // namespace uwb_imu_pl

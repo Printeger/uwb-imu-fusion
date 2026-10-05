@@ -375,8 +375,13 @@ def compare_authorized_actions(fresh_text: str, frozen_text: str,
     # keep, four surviving per-mode occurrences, and the union action.
     mapping = [(0, 0)] + [(index, index + 1) for index in range(1, new_count - 1)]
     mapping.append((new_count - 1, old_count - 1))
+    # Bounded sidecar construction may perturb the bitwise bridge-operation
+    # identity while preserving its independently compared matrices and the
+    # refusal class.  The process-separated oracle checks both, so retain the
+    # changed hashes in full_diff rather than treating diagnostic identity
+    # prose as a second numerical oracle.
     allowed_common = {"action_id", "dof", "risk_allocation", "statistic",
-                      "threshold", "occurrence_identity_hash"}
+                      "threshold", "occurrence_identity_hash", "reason_hash"}
     allowed_union = allowed_common | {"removed_group_ids", "added_group_ids",
                                       "covers_plausible_set", "reason_hash"}
     full_diff: list[dict[str, object]] = []

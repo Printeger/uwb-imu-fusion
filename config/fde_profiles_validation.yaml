@@ -53,6 +53,33 @@ performance:
   arrival_to_publish_p99_ms_max: 50.0
   deadline_miss_fraction_max: 0.01
   rss_peak_mib_max: 1024.0
+acceptance_paths:
+  contract_version: p1-06-revised-nonrealtime-goal-v2
+  authorization_date: '2026-10-06'
+  artifact_class: simulation/synthetic
+  # The action census is an auditable consequence of the frozen detector
+  # result: KEEP_ALL is the sole normal action; more than one generated action
+  # means alarm/recovery analysis was entered.  Scenario labels are not used
+  # to move individual attempts between denominators.
+  classifier: complete_terminal_off_is_disabled_sole_keep_all_is_normal_else_alarm_or_unclassified
+  normal:
+    realtime_gate_disposition: FAILED_OR_PASS_REPORTED_DEFERRED_TO_REALTIME_GOAL
+    core_p99_ms_max: 40.0
+    arrival_to_publish_p99_ms_max: 50.0
+    deadline_miss_fraction_max: 0.01
+    complete_work_fraction_min: 1.0
+  alarm_recovery:
+    realtime_gate_disposition: FAILED_OR_PASS_REPORTED_DEFERRED_TO_REALTIME_GOAL
+    complete_work_fraction_min: 1.0
+    require_exact_leaf_partition: true
+    require_protected_output_disabled: true
+    require_atomic_terminal_packet: true
+  all_attempts:
+    complete_work_fraction_min: 1.0
+    rss_peak_mib_max: 1024.0
+    retain_all_timeouts_and_slow_attempts: true
+    realtime_gate_blocks_revised_goal: false
+  hardware_formal_qualification: CLOSED/NOT_CLAIMED
 gates:
   noiseless_position_rmse_m_max: 0.01
   noiseless_attitude_rmse_rad_max: 0.01
@@ -70,6 +97,18 @@ gates:
 formal_eligibility:
   expected: false
   reason: real calibration, rare-event campaign, Gate J and independent review are absent
+golden_reference_anchor:
+  schema: uwb-imu-pl/gate24-golden-anchor/v1
+  manifest_algorithm: sha256
+  canonical_serialization: canonical-json-sort-keys-compact-utf8-v1
+  reference: golden-p1-05-deterministic-concurrency
+  annotated_tag_object: 02344301915590881b08810f1c34f67aed04b9e4
+  peeled_commit: 4657cf87539cf7699231642d3356c08456b1833e
+  tree: 8d2ee279074fb02b269f20041eb6b8806980ca06
+  equivalence_runs: 3
+  files_per_run: 13
+  manifest_entries: 39
+  manifest_sha256: 5d53385b8f019c12e33c0db25c200556c60ca5941dad06b6a0cfd0fdc68960dc
 storage:
   task_budget_bytes: 2147483648
   minimum_free_bytes: 5368709120

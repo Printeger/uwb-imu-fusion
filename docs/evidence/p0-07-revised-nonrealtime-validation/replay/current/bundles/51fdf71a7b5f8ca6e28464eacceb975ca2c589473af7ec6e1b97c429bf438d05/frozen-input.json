@@ -1,0 +1,2522 @@
+{
+  "covariance": {
+    "diagonal_m2": 0.0025,
+    "off_diagonal_m2": 0.0002
+  },
+  "epochs": 24,
+  "imu": {
+    "angular_velocity_radps": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "boundary_timestamp_ns": 0,
+    "period_ns": 5000000,
+    "samples_per_epoch": 10,
+    "specific_force_mps2": [
+      0.0,
+      0.0,
+      9.80665
+    ]
+  },
+  "schema": "p0-07-production-raw-replay-v3",
+  "source": "test/test_p0_07_corrected_exhaustive.cpp",
+  "uwb_rows": [
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 1,
+      "measurement_id": 101,
+      "range_m": 7.0774420462405265,
+      "sigma_m": 0.05,
+      "timestamp_ns": 50000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 1,
+      "measurement_id": 102,
+      "range_m": 8.132218069756242,
+      "sigma_m": 0.05,
+      "timestamp_ns": 50000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 1,
+      "measurement_id": 103,
+      "range_m": 7.080758509070336,
+      "sigma_m": 0.05,
+      "timestamp_ns": 50000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 1,
+      "measurement_id": 104,
+      "range_m": 8.134891350908507,
+      "sigma_m": 0.05,
+      "timestamp_ns": 50000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 1,
+      "measurement_id": 105,
+      "range_m": 7.082692393066894,
+      "sigma_m": 0.05,
+      "timestamp_ns": 50000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 1,
+      "measurement_id": 106,
+      "range_m": 8.13601623430593,
+      "sigma_m": 0.05,
+      "timestamp_ns": 50000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 1,
+      "measurement_id": 107,
+      "range_m": 7.082967789590906,
+      "sigma_m": 0.05,
+      "timestamp_ns": 50000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 1,
+      "measurement_id": 108,
+      "range_m": 8.135432232014336,
+      "sigma_m": 0.05,
+      "timestamp_ns": 50000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 2,
+      "measurement_id": 201,
+      "range_m": 7.080687251156081,
+      "sigma_m": 0.05,
+      "timestamp_ns": 100000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 2,
+      "measurement_id": 202,
+      "range_m": 8.134839609942079,
+      "sigma_m": 0.05,
+      "timestamp_ns": 100000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 2,
+      "measurement_id": 203,
+      "range_m": 7.082662031284828,
+      "sigma_m": 0.05,
+      "timestamp_ns": 100000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 2,
+      "measurement_id": 204,
+      "range_m": 8.13600834447521,
+      "sigma_m": 0.05,
+      "timestamp_ns": 100000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 2,
+      "measurement_id": 205,
+      "range_m": 7.082982655678605,
+      "sigma_m": 0.05,
+      "timestamp_ns": 100000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 2,
+      "measurement_id": 206,
+      "range_m": 8.13546931896722,
+      "sigma_m": 0.05,
+      "timestamp_ns": 100000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 2,
+      "measurement_id": 207,
+      "range_m": 7.081603380621464,
+      "sigma_m": 0.05,
+      "timestamp_ns": 100000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 2,
+      "measurement_id": 208,
+      "range_m": 8.133299436580202,
+      "sigma_m": 0.05,
+      "timestamp_ns": 100000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 3,
+      "measurement_id": 301,
+      "range_m": 7.082630510090482,
+      "sigma_m": 0.05,
+      "timestamp_ns": 150000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 3,
+      "measurement_id": 302,
+      "range_m": 8.135999257660478,
+      "sigma_m": 0.05,
+      "timestamp_ns": 150000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 3,
+      "measurement_id": 303,
+      "range_m": 7.082996330291852,
+      "sigma_m": 0.05,
+      "timestamp_ns": 150000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 3,
+      "measurement_id": 304,
+      "range_m": 8.135505262838196,
+      "sigma_m": 0.05,
+      "timestamp_ns": 150000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 3,
+      "measurement_id": 305,
+      "range_m": 7.081660300075267,
+      "sigma_m": 0.05,
+      "timestamp_ns": 150000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 3,
+      "measurement_id": 306,
+      "range_m": 8.133375282998616,
+      "sigma_m": 0.05,
+      "timestamp_ns": 150000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 3,
+      "measurement_id": 307,
+      "range_m": 7.078813031845488,
+      "sigma_m": 0.05,
+      "timestamp_ns": 150000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 3,
+      "measurement_id": 308,
+      "range_m": 8.12991320391788,
+      "sigma_m": 0.05,
+      "timestamp_ns": 150000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 4,
+      "measurement_id": 401,
+      "range_m": 7.0830088120631975,
+      "sigma_m": 0.05,
+      "timestamp_ns": 200000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 4,
+      "measurement_id": 402,
+      "range_m": 8.135540060032907,
+      "sigma_m": 0.05,
+      "timestamp_ns": 200000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 4,
+      "measurement_id": 403,
+      "range_m": 7.081716160289076,
+      "sigma_m": 0.05,
+      "timestamp_ns": 200000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 4,
+      "measurement_id": 404,
+      "range_m": 8.133450195736973,
+      "sigma_m": 0.05,
+      "timestamp_ns": 200000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 4,
+      "measurement_id": 405,
+      "range_m": 7.078904300884343,
+      "sigma_m": 0.05,
+      "timestamp_ns": 200000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 4,
+      "measurement_id": 406,
+      "range_m": 8.130017544344902,
+      "sigma_m": 0.05,
+      "timestamp_ns": 200000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 4,
+      "measurement_id": 407,
+      "range_m": 7.074974403879686,
+      "sigma_m": 0.05,
+      "timestamp_ns": 200000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 4,
+      "measurement_id": 408,
+      "range_m": 8.125731844732679,
+      "sigma_m": 0.05,
+      "timestamp_ns": 200000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 5,
+      "measurement_id": 501,
+      "range_m": 7.081770955676916,
+      "sigma_m": 0.05,
+      "timestamp_ns": 250000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 5,
+      "measurement_id": 502,
+      "range_m": 8.133524167304065,
+      "sigma_m": 0.05,
+      "timestamp_ns": 250000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 5,
+      "measurement_id": 503,
+      "range_m": 7.078994786280826,
+      "sigma_m": 0.05,
+      "timestamp_ns": 250000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 5,
+      "measurement_id": 504,
+      "range_m": 8.130121286862938,
+      "sigma_m": 0.05,
+      "timestamp_ns": 250000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 5,
+      "measurement_id": 505,
+      "range_m": 7.075087669667346,
+      "sigma_m": 0.05,
+      "timestamp_ns": 250000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 5,
+      "measurement_id": 506,
+      "range_m": 8.125850557180996,
+      "sigma_m": 0.05,
+      "timestamp_ns": 250000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 5,
+      "measurement_id": 507,
+      "range_m": 7.0706070370114125,
+      "sigma_m": 0.05,
+      "timestamp_ns": 250000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 5,
+      "measurement_id": 508,
+      "range_m": 8.121321286374675,
+      "sigma_m": 0.05,
+      "timestamp_ns": 250000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 6,
+      "measurement_id": 601,
+      "range_m": 7.0790844789864735,
+      "sigma_m": 0.05,
+      "timestamp_ns": 300000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 6,
+      "measurement_id": 602,
+      "range_m": 8.130224421097818,
+      "sigma_m": 0.05,
+      "timestamp_ns": 300000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 6,
+      "measurement_id": 603,
+      "range_m": 7.075200533472576,
+      "sigma_m": 0.05,
+      "timestamp_ns": 300000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 6,
+      "measurement_id": 604,
+      "range_m": 8.12596908841557,
+      "sigma_m": 0.05,
+      "timestamp_ns": 300000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 6,
+      "measurement_id": 605,
+      "range_m": 7.0707269695548725,
+      "sigma_m": 0.05,
+      "timestamp_ns": 300000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 6,
+      "measurement_id": 606,
+      "range_m": 8.121438303671312,
+      "sigma_m": 0.05,
+      "timestamp_ns": 300000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 6,
+      "measurement_id": 607,
+      "range_m": 7.066302033858044,
+      "sigma_m": 0.05,
+      "timestamp_ns": 300000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 6,
+      "measurement_id": 608,
+      "range_m": 8.117278477226757,
+      "sigma_m": 0.05,
+      "timestamp_ns": 300000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 7,
+      "measurement_id": 701,
+      "range_m": 7.07531298400909,
+      "sigma_m": 0.05,
+      "timestamp_ns": 350000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 7,
+      "measurement_id": 702,
+      "range_m": 8.126087426583375,
+      "sigma_m": 0.05,
+      "timestamp_ns": 350000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 7,
+      "measurement_id": 703,
+      "range_m": 7.070846936182279,
+      "sigma_m": 0.05,
+      "timestamp_ns": 350000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 7,
+      "measurement_id": 704,
+      "range_m": 8.12155558097588,
+      "sigma_m": 0.05,
+      "timestamp_ns": 350000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 7,
+      "measurement_id": 705,
+      "range_m": 7.066412400850175,
+      "sigma_m": 0.05,
+      "timestamp_ns": 350000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 7,
+      "measurement_id": 706,
+      "range_m": 8.117377961629568,
+      "sigma_m": 0.05,
+      "timestamp_ns": 350000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 7,
+      "measurement_id": 707,
+      "range_m": 7.062642056400706,
+      "sigma_m": 0.05,
+      "timestamp_ns": 350000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 7,
+      "measurement_id": 708,
+      "range_m": 8.11415059254142,
+      "sigma_m": 0.05,
+      "timestamp_ns": 350000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 8,
+      "measurement_id": 801,
+      "range_m": 7.0709669248970695,
+      "sigma_m": 0.05,
+      "timestamp_ns": 400000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 8,
+      "measurement_id": 802,
+      "range_m": 8.121673106560745,
+      "sigma_m": 0.05,
+      "timestamp_ns": 400000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 8,
+      "measurement_id": 803,
+      "range_m": 7.066523233379527,
+      "sigma_m": 0.05,
+      "timestamp_ns": 400000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 8,
+      "measurement_id": 804,
+      "range_m": 8.11747811207113,
+      "sigma_m": 0.05,
+      "timestamp_ns": 400000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 8,
+      "measurement_id": 805,
+      "range_m": 7.062727920186878,
+      "sigma_m": 0.05,
+      "timestamp_ns": 400000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 8,
+      "measurement_id": 806,
+      "range_m": 8.114219079303188,
+      "sigma_m": 0.05,
+      "timestamp_ns": 400000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 8,
+      "measurement_id": 807,
+      "range_m": 7.060122465418519,
+      "sigma_m": 0.05,
+      "timestamp_ns": 400000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 8,
+      "measurement_id": 808,
+      "range_m": 8.112360976837259,
+      "sigma_m": 0.05,
+      "timestamp_ns": 400000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 9,
+      "measurement_id": 901,
+      "range_m": 7.066634520362942,
+      "sigma_m": 0.05,
+      "timestamp_ns": 450000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 9,
+      "measurement_id": 902,
+      "range_m": 8.11757891853648,
+      "sigma_m": 0.05,
+      "timestamp_ns": 450000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 9,
+      "measurement_id": 903,
+      "range_m": 7.062814617955268,
+      "sigma_m": 0.05,
+      "timestamp_ns": 450000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 9,
+      "measurement_id": 904,
+      "range_m": 8.114288547989306,
+      "sigma_m": 0.05,
+      "timestamp_ns": 450000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 9,
+      "measurement_id": 905,
+      "range_m": 7.060172204738079,
+      "sigma_m": 0.05,
+      "timestamp_ns": 450000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 9,
+      "measurement_id": 906,
+      "range_m": 8.11238919659606,
+      "sigma_m": 0.05,
+      "timestamp_ns": 450000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 9,
+      "measurement_id": 907,
+      "range_m": 7.059084275730986,
+      "sigma_m": 0.05,
+      "timestamp_ns": 450000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 9,
+      "measurement_id": 908,
+      "range_m": 8.11215184620436,
+      "sigma_m": 0.05,
+      "timestamp_ns": 450000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 10,
+      "measurement_id": 1001,
+      "range_m": 7.062902141036171,
+      "sigma_m": 0.05,
+      "timestamp_ns": 500000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 10,
+      "measurement_id": 1002,
+      "range_m": 8.114358991652962,
+      "sigma_m": 0.05,
+      "timestamp_ns": 500000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 10,
+      "measurement_id": 1003,
+      "range_m": 7.0602230336092715,
+      "sigma_m": 0.05,
+      "timestamp_ns": 500000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 10,
+      "measurement_id": 1004,
+      "range_m": 8.11241858126596,
+      "sigma_m": 0.05,
+      "timestamp_ns": 500000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 10,
+      "measurement_id": 1005,
+      "range_m": 7.059091158600369,
+      "sigma_m": 0.05,
+      "timestamp_ns": 500000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 10,
+      "measurement_id": 1006,
+      "range_m": 8.11213597954823,
+      "sigma_m": 0.05,
+      "timestamp_ns": 500000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 10,
+      "measurement_id": 1007,
+      "range_m": 7.059668001441946,
+      "sigma_m": 0.05,
+      "timestamp_ns": 500000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 10,
+      "measurement_id": 1008,
+      "range_m": 8.113551505492813,
+      "sigma_m": 0.05,
+      "timestamp_ns": 500000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 11,
+      "measurement_id": 1101,
+      "range_m": 7.060274946949253,
+      "sigma_m": 0.05,
+      "timestamp_ns": 550000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 11,
+      "measurement_id": 1102,
+      "range_m": 8.112449127908514,
+      "sigma_m": 0.05,
+      "timestamp_ns": 550000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 11,
+      "measurement_id": 1103,
+      "range_m": 7.059099239125098,
+      "sigma_m": 0.05,
+      "timestamp_ns": 550000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 11,
+      "measurement_id": 1104,
+      "range_m": 8.11212130312469,
+      "sigma_m": 0.05,
+      "timestamp_ns": 550000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 11,
+      "measurement_id": 1105,
+      "range_m": 7.059631096297071,
+      "sigma_m": 0.05,
+      "timestamp_ns": 550000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 11,
+      "measurement_id": 1106,
+      "range_m": 8.113493699899223,
+      "sigma_m": 0.05,
+      "timestamp_ns": 550000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 11,
+      "measurement_id": 1107,
+      "range_m": 7.061794638014804,
+      "sigma_m": 0.05,
+      "timestamp_ns": 550000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 11,
+      "measurement_id": 1108,
+      "range_m": 8.116370517384022,
+      "sigma_m": 0.05,
+      "timestamp_ns": 550000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 12,
+      "measurement_id": 1201,
+      "range_m": 7.059108516497128,
+      "sigma_m": 0.05,
+      "timestamp_ns": 600000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 12,
+      "measurement_id": 1202,
+      "range_m": 8.11210781840137,
+      "sigma_m": 0.05,
+      "timestamp_ns": 600000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 12,
+      "measurement_id": 1203,
+      "range_m": 7.059595334814222,
+      "sigma_m": 0.05,
+      "timestamp_ns": 600000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 12,
+      "measurement_id": 1204,
+      "range_m": 8.113436948767319,
+      "sigma_m": 0.05,
+      "timestamp_ns": 600000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 12,
+      "measurement_id": 1205,
+      "range_m": 7.061718939793899,
+      "sigma_m": 0.05,
+      "timestamp_ns": 600000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 12,
+      "measurement_id": 1206,
+      "range_m": 8.116278596568886,
+      "sigma_m": 0.05,
+      "timestamp_ns": 600000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 12,
+      "measurement_id": 1207,
+      "range_m": 7.065176355165924,
+      "sigma_m": 0.05,
+      "timestamp_ns": 600000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 12,
+      "measurement_id": 1208,
+      "range_m": 8.120227341843096,
+      "sigma_m": 0.05,
+      "timestamp_ns": 600000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 13,
+      "measurement_id": 1301,
+      "range_m": 7.059560720569518,
+      "sigma_m": 0.05,
+      "timestamp_ns": 650000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 13,
+      "measurement_id": 1302,
+      "range_m": 8.113381257772168,
+      "sigma_m": 0.05,
+      "timestamp_ns": 650000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 13,
+      "measurement_id": 1303,
+      "range_m": 7.06164417645241,
+      "sigma_m": 0.05,
+      "timestamp_ns": 650000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 13,
+      "measurement_id": 1304,
+      "range_m": 8.116187451728091,
+      "sigma_m": 0.05,
+      "timestamp_ns": 650000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 13,
+      "measurement_id": 1305,
+      "range_m": 7.065072109268073,
+      "sigma_m": 0.05,
+      "timestamp_ns": 650000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 13,
+      "measurement_id": 1306,
+      "range_m": 8.120113746857523,
+      "sigma_m": 0.05,
+      "timestamp_ns": 650000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 13,
+      "measurement_id": 1307,
+      "range_m": 7.069355453343256,
+      "sigma_m": 0.05,
+      "timestamp_ns": 650000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 13,
+      "measurement_id": 1308,
+      "range_m": 8.12459997577268,
+      "sigma_m": 0.05,
+      "timestamp_ns": 650000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 14,
+      "measurement_id": 1401,
+      "range_m": 7.06157035546661,
+      "sigma_m": 0.05,
+      "timestamp_ns": 700000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 14,
+      "measurement_id": 1402,
+      "range_m": 8.116097091976044,
+      "sigma_m": 0.05,
+      "timestamp_ns": 700000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 14,
+      "measurement_id": 1403,
+      "range_m": 7.064968462935484,
+      "sigma_m": 0.05,
+      "timestamp_ns": 700000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 14,
+      "measurement_id": 1404,
+      "range_m": 8.12000054433446,
+      "sigma_m": 0.05,
+      "timestamp_ns": 700000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 14,
+      "measurement_id": 1405,
+      "range_m": 7.069236768961693,
+      "sigma_m": 0.05,
+      "timestamp_ns": 700000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 14,
+      "measurement_id": 1406,
+      "range_m": 8.124480081165071,
+      "sigma_m": 0.05,
+      "timestamp_ns": 700000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 14,
+      "measurement_id": 1407,
+      "range_m": 7.073766311213534,
+      "sigma_m": 0.05,
+      "timestamp_ns": 700000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 14,
+      "measurement_id": 1408,
+      "range_m": 8.12889660368336,
+      "sigma_m": 0.05,
+      "timestamp_ns": 700000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 15,
+      "measurement_id": 1501,
+      "range_m": 7.064865426532706,
+      "sigma_m": 0.05,
+      "timestamp_ns": 750000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 15,
+      "measurement_id": 1502,
+      "range_m": 8.11988774559406,
+      "sigma_m": 0.05,
+      "timestamp_ns": 750000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 15,
+      "measurement_id": 1503,
+      "range_m": 7.069118267682894,
+      "sigma_m": 0.05,
+      "timestamp_ns": 750000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 15,
+      "measurement_id": 1504,
+      "range_m": 8.124360142390175,
+      "sigma_m": 0.05,
+      "timestamp_ns": 750000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 15,
+      "measurement_id": 1505,
+      "range_m": 7.07364925172253,
+      "sigma_m": 0.05,
+      "timestamp_ns": 750000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 15,
+      "measurement_id": 1506,
+      "range_m": 8.128786636626401,
+      "sigma_m": 0.05,
+      "timestamp_ns": 750000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 15,
+      "measurement_id": 1507,
+      "range_m": 7.077811939856284,
+      "sigma_m": 0.05,
+      "timestamp_ns": 750000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 15,
+      "measurement_id": 1508,
+      "range_m": 8.132535697143815,
+      "sigma_m": 0.05,
+      "timestamp_ns": 750000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 16,
+      "measurement_id": 1601,
+      "range_m": 7.068999961356888,
+      "sigma_m": 0.05,
+      "timestamp_ns": 800000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 16,
+      "measurement_id": 1602,
+      "range_m": 8.124240171441773,
+      "sigma_m": 0.05,
+      "timestamp_ns": 800000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 16,
+      "measurement_id": 1603,
+      "range_m": 7.07353193408969,
+      "sigma_m": 0.05,
+      "timestamp_ns": 800000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 16,
+      "measurement_id": 1604,
+      "range_m": 8.128676194750199,
+      "sigma_m": 0.05,
+      "timestamp_ns": 800000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 16,
+      "measurement_id": 1605,
+      "range_m": 7.077712348708795,
+      "sigma_m": 0.05,
+      "timestamp_ns": 800000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 16,
+      "measurement_id": 1606,
+      "range_m": 8.132450541162788,
+      "sigma_m": 0.05,
+      "timestamp_ns": 800000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 16,
+      "measurement_id": 1607,
+      "range_m": 7.080944782413614,
+      "sigma_m": 0.05,
+      "timestamp_ns": 800000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 16,
+      "measurement_id": 1608,
+      "range_m": 8.135024721925934,
+      "sigma_m": 0.05,
+      "timestamp_ns": 800000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 17,
+      "measurement_id": 1701,
+      "range_m": 7.073414370046682,
+      "sigma_m": 0.05,
+      "timestamp_ns": 850000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 17,
+      "measurement_id": 1702,
+      "range_m": 8.128565289098852,
+      "sigma_m": 0.05,
+      "timestamp_ns": 850000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 17,
+      "measurement_id": 1703,
+      "range_m": 7.077612093113159,
+      "sigma_m": 0.05,
+      "timestamp_ns": 850000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 17,
+      "measurement_id": 1704,
+      "range_m": 8.132364543975118,
+      "sigma_m": 0.05,
+      "timestamp_ns": 850000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 17,
+      "measurement_id": 1705,
+      "range_m": 7.08087613880425,
+      "sigma_m": 0.05,
+      "timestamp_ns": 850000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 17,
+      "measurement_id": 1706,
+      "range_m": 8.134975902483385,
+      "sigma_m": 0.05,
+      "timestamp_ns": 850000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 17,
+      "measurement_id": 1707,
+      "range_m": 7.082740823342216,
+      "sigma_m": 0.05,
+      "timestamp_ns": 850000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 17,
+      "measurement_id": 1708,
+      "range_m": 8.136026800201998,
+      "sigma_m": 0.05,
+      "timestamp_ns": 850000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 18,
+      "measurement_id": 1801,
+      "range_m": 7.077511183094852,
+      "sigma_m": 0.05,
+      "timestamp_ns": 900000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 18,
+      "measurement_id": 1802,
+      "range_m": 8.132277714180452,
+      "sigma_m": 0.05,
+      "timestamp_ns": 900000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 18,
+      "measurement_id": 1803,
+      "range_m": 7.080806514370365,
+      "sigma_m": 0.05,
+      "timestamp_ns": 900000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 18,
+      "measurement_id": 1804,
+      "range_m": 8.134925989300166,
+      "sigma_m": 0.05,
+      "timestamp_ns": 900000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 18,
+      "measurement_id": 1805,
+      "range_m": 7.082712417861482,
+      "sigma_m": 0.05,
+      "timestamp_ns": 900000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 18,
+      "measurement_id": 1806,
+      "range_m": 8.136020924780457,
+      "sigma_m": 0.05,
+      "timestamp_ns": 900000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 18,
+      "measurement_id": 1807,
+      "range_m": 7.082956976928013,
+      "sigma_m": 0.05,
+      "timestamp_ns": 900000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 18,
+      "measurement_id": 1808,
+      "range_m": 8.135406305378307,
+      "sigma_m": 0.05,
+      "timestamp_ns": 900000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 19,
+      "measurement_id": 1901,
+      "range_m": 7.080735916074346,
+      "sigma_m": 0.05,
+      "timestamp_ns": 950000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 19,
+      "measurement_id": 1902,
+      "range_m": 8.134874987367555,
+      "sigma_m": 0.05,
+      "timestamp_ns": 950000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 19,
+      "measurement_id": 1903,
+      "range_m": 7.082682847929854,
+      "sigma_m": 0.05,
+      "timestamp_ns": 950000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 19,
+      "measurement_id": 1904,
+      "range_m": 8.136013851116884,
+      "sigma_m": 0.05,
+      "timestamp_ns": 950000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 19,
+      "measurement_id": 1905,
+      "range_m": 7.082972654124472,
+      "sigma_m": 0.05,
+      "timestamp_ns": 950000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 19,
+      "measurement_id": 1906,
+      "range_m": 8.135444169188512,
+      "sigma_m": 0.05,
+      "timestamp_ns": 950000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 19,
+      "measurement_id": 1907,
+      "range_m": 7.081563987797191,
+      "sigma_m": 0.05,
+      "timestamp_ns": 950000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 19,
+      "measurement_id": 1908,
+      "range_m": 8.13324721851837,
+      "sigma_m": 0.05,
+      "timestamp_ns": 950000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 20,
+      "measurement_id": 2001,
+      "range_m": 7.082652116504297,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1000000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 20,
+      "measurement_id": 2002,
+      "range_m": 8.136005579918644,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1000000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 20,
+      "measurement_id": 2003,
+      "range_m": 7.082987140846625,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1000000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 20,
+      "measurement_id": 2004,
+      "range_m": 8.135480892431767,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1000000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 20,
+      "measurement_id": 2005,
+      "range_m": 7.0816216258358455,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1000000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 20,
+      "measurement_id": 2006,
+      "range_m": 8.13332369687124,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1000000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 20,
+      "measurement_id": 2007,
+      "range_m": 7.0787503904937985,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1000000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 20,
+      "measurement_id": 2008,
+      "range_m": 8.12984176189995,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1000000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 21,
+      "measurement_id": 2101,
+      "range_m": 7.083000435645813,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1050000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 21,
+      "measurement_id": 2102,
+      "range_m": 8.135516471435778,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1050000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 21,
+      "measurement_id": 2103,
+      "range_m": 7.0816782085018986,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1050000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 21,
+      "measurement_id": 2104,
+      "range_m": 8.133399246702625,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1050000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 21,
+      "measurement_id": 2105,
+      "range_m": 7.07884218833651,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1050000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 21,
+      "measurement_id": 2106,
+      "range_m": 8.1299465038092,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1050000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 21,
+      "measurement_id": 2107,
+      "range_m": 7.0748969922136675,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1050000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 21,
+      "measurement_id": 2108,
+      "range_m": 8.125650848100628,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1050000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 22,
+      "measurement_id": 2201,
+      "range_m": 7.081733730137129,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1100000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 22,
+      "measurement_id": 2202,
+      "range_m": 8.133473860457604,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1100000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 22,
+      "measurement_id": 2203,
+      "range_m": 7.078933208748053,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1100000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 22,
+      "measurement_id": 2204,
+      "range_m": 8.130050654913456,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1100000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 22,
+      "measurement_id": 2205,
+      "range_m": 7.0750105254530675,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1100000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 22,
+      "measurement_id": 2206,
+      "range_m": 8.125769677240207,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1100000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 22,
+      "measurement_id": 2207,
+      "range_m": 7.070525332336906,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1100000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 22,
+      "measurement_id": 2208,
+      "range_m": 8.121241697642677,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1100000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 23,
+      "measurement_id": 2301,
+      "range_m": 9.079023442626461,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1150000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 23,
+      "measurement_id": 2302,
+      "range_m": 8.130154204797694,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1150000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 23,
+      "measurement_id": 2303,
+      "range_m": 7.075123664424395,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1150000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 23,
+      "measurement_id": 2304,
+      "range_m": 8.125888333253968,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1150000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 23,
+      "measurement_id": 2305,
+      "range_m": 7.070645234781651,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1150000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 23,
+      "measurement_id": 2306,
+      "range_m": 8.121358531045995,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1150000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 23,
+      "measurement_id": 2307,
+      "range_m": 7.0662270945194505,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1150000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 23,
+      "measurement_id": 2308,
+      "range_m": 8.11721106835632,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1150000000
+    },
+    {
+      "anchor_id": 1,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 24,
+      "measurement_id": 2401,
+      "range_m": 7.075236397813845,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1200000000
+    },
+    {
+      "anchor_id": 2,
+      "anchor_position_m": [
+        -5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 24,
+      "measurement_id": 2402,
+      "range_m": 8.12600680427641,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1200000000
+    },
+    {
+      "anchor_id": 3,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 24,
+      "measurement_id": 2403,
+      "range_m": 7.070765179483751,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1200000000
+    },
+    {
+      "anchor_id": 4,
+      "anchor_position_m": [
+        -5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 24,
+      "measurement_id": 2404,
+      "range_m": 8.12147563243444,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1200000000
+    },
+    {
+      "anchor_id": 5,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        1.0
+      ],
+      "epoch": 24,
+      "measurement_id": 2405,
+      "range_m": 7.066337137936131,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1200000000
+    },
+    {
+      "anchor_id": 6,
+      "anchor_position_m": [
+        5.0,
+        -5.0,
+        5.0
+      ],
+      "epoch": 24,
+      "measurement_id": 2406,
+      "range_m": 8.117310093170332,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1200000000
+    },
+    {
+      "anchor_id": 7,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        1.0
+      ],
+      "epoch": 24,
+      "measurement_id": 2407,
+      "range_m": 7.062584025085947,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1200000000
+    },
+    {
+      "anchor_id": 8,
+      "anchor_position_m": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "epoch": 24,
+      "measurement_id": 2408,
+      "range_m": 8.114104487006934,
+      "sigma_m": 0.05,
+      "timestamp_ns": 1200000000
+    }
+  ]
+}

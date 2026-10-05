@@ -1,0 +1,12 @@
+schema=p0-07-final-replay-refresh-v1
+generated_at=2026-10-06T04:39:03+08:00
+command=python3 tools/generate_p0_07_evidence.py --binary /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_p0_07_corrected_exhaustive --input docs/evidence/p0-07-corrected-exhaustive/authoritative-replay/frozen-input.json --reference docs/evidence/p0-07-corrected-exhaustive/authoritative-replay/frozen-truth.json --output-dir docs/evidence/p0-07-revised-nonrealtime-validation/replay/current --compare-dir docs/evidence/p0-07-corrected-exhaustive/authoritative-replay
+exit=0
+bundle_sha256=51fdf71a7b5f8ca6e28464eacceb975ca2c589473af7ec6e1b97c429bf438d05
+dso_sha256=982348acefce41b124fe90cb48f73de6bbcd1cb3ebc3a17b0ca912f005314be3
+test_binary_sha256=ed8c5e5889e60059db1ae0ddb3a82ec1efaf00f527ef64824c09256597f951da
+terminal_semantic_digest=2095395924847106241
+exception_semantic_digest=14520030921107668164
+golden_baseline=golden-p1-05-deterministic-concurrency
+golden_commit=4657cf87539cf7699231642d3356c08456b1833e
+

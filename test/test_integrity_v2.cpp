@@ -5448,6 +5448,24 @@ TEST(B4LazyFde, FDE01HealthyFrameBuildsNoActionEntitiesButKeepsSensitivity) {
     EXPECT_GT(hypothesis.hmi_allocation, 0.0);
   }
 
+  // A bridge spanning a state before the frozen detector window must fail
+  // closed as missing provenance.  Before P1-06 this unsigned epoch
+  // subtraction wrote an Eigen block outside the matrix and corrupted the
+  // Gaussian factor graph during fault/recovery attempts.
+  auto narrow_window = window;
+  narrow_window.detector_first_epoch = transaction.proposed_epoch;
+  auto narrow = lazy;
+  HypothesisGenerator::ensureActionEntities(transaction, narrow_window, &narrow);
+  bool saw_unrepresentable_imu_bridge = false;
+  for (const auto& action : narrow.single_mode_actions) {
+    if (action.action_model_id == "IMU_HISTORY_BRIDGE_RECOVERY") {
+      saw_unrepresentable_imu_bridge = true;
+      EXPECT_EQ(action.recoverability, HistoryRecoverability::MissingProvenance);
+      EXPECT_TRUE(action.added_blocks.empty());
+    }
+  }
+  EXPECT_TRUE(saw_unrepresentable_imu_bridge);
+
   // Eager compatibility path produces the same identities.
   HypothesisGeneratorConfig eager_config;
   eager_config.lazy_action_entities = false;
@@ -5528,9 +5546,95 @@ TEST(B4LazyFde, FDE02IsolationPathStillMaterializesEvidenceOnDemand) {
     item.plausible = true;
     evidence.push_back(item);
   }
+  HypothesisGeneratorConfig compact_config;
+  compact_config.max_candidate_count = 2;
+  auto compact_arena = HypothesisGenerator(compact_config)
+      .actionsForPlausibleSetV3(window, transaction, models, evidence);
+  auto compact_lease = compact_arena.lease();
+  const auto compact_validation =
+      validateCompactActionSearchV3(compact_lease);
+  ASSERT_TRUE(compact_validation.valid) << compact_validation.reason;
+  ASSERT_TRUE(compact_validation.exhaustive) << compact_validation.reason;
+  EXPECT_EQ(compact_lease.search().generated,
+            compact_lease.search().evaluated);
+  EXPECT_EQ(compact_lease.search().omitted, 0u);
+  EXPECT_LE(compact_lease.search().peak_batch_actions, 2u);
+  EXPECT_GT(compact_lease.search().peak_batch_heavy_bytes, 0u);
+  std::uint64_t legacy_canonical_bytes = 0;
+  for (std::size_t descriptor_index = 0;
+       descriptor_index < compact_lease.search().actions.size();
+       ++descriptor_index) {
+    const auto& descriptor =
+        compact_lease.search().actions[descriptor_index];
+    const ExclusionAction exact = compact_lease.materialize(descriptor_index);
+    legacy_canonical_bytes += exactActionOperationIdentityV1(exact).size();
+    legacy_canonical_bytes += exactActionSemanticIdentityV1(exact).size();
+    for (const auto& block : descriptor.ordered_blocks) {
+      EXPECT_EQ(block.strong_digest.size(), 64u);
+    }
+  }
+  EXPECT_LT(compact_lease.search().sidecar_length,
+            legacy_canonical_bytes)
+      << "content-addressed blocks must not be repeated in every action";
+  EXPECT_GE(compact_lease.search().referenced_block_count,
+            compact_lease.search().unique_block_count);
+  auto collision_arena = HypothesisGenerator(compact_config)
+      .actionsForPlausibleSetV3(
+          window, transaction, models, evidence, {}, true);
+  auto collision_lease = collision_arena.lease();
+  const auto collision_validation =
+      validateCompactActionSearchV3(collision_lease);
+  ASSERT_TRUE(collision_validation.valid) << collision_validation.reason;
+  ASSERT_TRUE(collision_validation.exhaustive)
+      << collision_validation.reason;
+  EXPECT_EQ(collision_lease.search().evaluated,
+            compact_lease.search().evaluated)
+      << "distinct canonical bytes must survive a forced digest collision";
+  EXPECT_GT(collision_lease.search().digest_collision_comparisons, 0u);
+  collision_lease.close();
+  collision_arena.close();
+  auto io_failure_arena = HypothesisGenerator(compact_config)
+      .actionsForPlausibleSetV3(window, transaction, models, evidence);
+  auto io_failure_lease = io_failure_arena.lease();
+  io_failure_arena.injectSidecarReadFailureForTest();
+  const auto io_failure = validateCompactActionSearchV3(io_failure_lease);
+  EXPECT_FALSE(io_failure.valid);
+  EXPECT_FALSE(io_failure.exhaustive);
+  io_failure_lease.close();
+  io_failure_arena.close();
+  std::vector<ExclusionAction> compact_actions;
+  for (std::size_t begin = 0;
+       begin < compact_lease.search().actions.size(); begin += 2) {
+    const auto count = std::min<std::size_t>(
+        2, compact_lease.search().actions.size() - begin);
+    auto materialized = compact_lease.materializeBatch(begin, count);
+    compact_actions.insert(compact_actions.end(),
+                           std::make_move_iterator(materialized.begin()),
+                           std::make_move_iterator(materialized.end()));
+  }
+  auto compact_terminals = compact_actions;
+  for (auto& action : compact_terminals) action.added_blocks.clear();
+  const auto consumption = validateCompactActionConsumptionV3(
+      compact_lease, compact_terminals);
+  EXPECT_TRUE(consumption.valid) << consumption.reason;
+  ASSERT_FALSE(compact_terminals.empty());
+  compact_terminals.front().action_model_id = "TAMPERED";
+  EXPECT_FALSE(validateCompactActionConsumptionV3(
+      compact_lease, compact_terminals).valid);
   EXPECT_EQ(models.action_entities_constructed, 0u);
   const auto actions = HypothesisGenerator().actionsForPlausibleSet(
       window, transaction, &models, evidence);
+  ASSERT_EQ(compact_actions.size(), actions.size());
+  for (std::size_t index = 0; index < actions.size(); ++index) {
+    EXPECT_EQ(exactActionOperationIdentityV1(compact_actions[index]),
+              exactActionOperationIdentityV1(actions[index]));
+    EXPECT_EQ(exactActionSemanticIdentityV1(compact_actions[index]),
+              exactActionSemanticIdentityV1(actions[index]));
+  }
+  compact_lease.close();
+  EXPECT_FALSE(compact_lease.valid());
+  compact_arena.close();
+  EXPECT_FALSE(compact_arena.valid());
   EXPECT_GE(actions.size(), 2u)
       << "the isolation path must still build its candidate actions";
   EXPECT_GT(models.action_entities_constructed, 0u)
@@ -5550,7 +5654,6 @@ TEST(B4LazyFde, FDE02IsolationPathStillMaterializesEvidenceOnDemand) {
       std::move(transaction),
       {FdeStatus::ModelInvalid, "lazy FDE isolation test", false});
 }
-
 // ---------------------------------------------------------------------------
 // B3 Stage 2: the detection-space tri-state decides availability with
 // direction-level reasons (no dictionary-wide rejection).
@@ -5919,6 +6022,29 @@ TEST(P101IdentityIndexing, ExactOperationDedupKeepsSemanticCoverage) {
   EXPECT_EQ(result.census.evaluated, 1u);
   EXPECT_EQ(result.census.omitted, 1u);
   EXPECT_TRUE(result.census.exhaustive);
+}
+
+TEST(P101IdentityIndexing, LegacyV1V2DuplicateAddedGroupBehaviorIsPreserved) {
+  using namespace uwb_imu_pl;
+  ExclusionAction action;
+  action.id = ExclusionActionId(202);
+  action.action_model_id = "LEGACY_DUPLICATE_ADDED_GROUP";
+  const auto window = syntheticWindow();
+  action.groups_to_add = {window.blocks.front().group_id,
+                          window.blocks.front().group_id};
+  action.added_blocks = {window.blocks.front(), window.blocks.front()};
+  action.exclusion_cardinality = 0;
+
+  // golden-p1-05 treats this finite operation as representable.  The V3
+  // storage sidecar must not retroactively make V1/V2 search incomplete.
+  EXPECT_FALSE(exactActionOperationIdentityV1(action).empty());
+  const auto result = censusAndCapActionsV1({action}, 1);
+  ASSERT_EQ(result.actions.size(), 1u);
+  EXPECT_TRUE(result.census.exhaustive);
+  EXPECT_EQ(result.census.omitted, 0u);
+  EXPECT_TRUE(validateActionSearchCensusV1(
+      result.census, result.generated_snapshot, result.max_evaluated_actions,
+      result.lifecycle, result.actions).valid);
 }
 
 TEST(P101IdentityIndexing, FrozenOwnerIsImmutableAndAdmissionIsConstantWork) {
@@ -6306,4 +6432,26 @@ TEST(P105FlatConcurrency, WatchdogAdmissionExceptionStillHasOneAttemptTimer) {
   EXPECT_TRUE(std::isfinite(core_total->wall_ms));
   EXPECT_FALSE(core_total->success);
   EXPECT_EQ(core_total->status, "EXCEPTION");
+}
+
+TEST(P106SimulationAcceptance, PublishCallNotAnalysisControlsDeadline) {
+  using namespace uwb_imu_pl;
+  IntegrityOutput draft;
+  draft.attempted_timestamp = TimestampNs(1);
+  draft.state.timestamp = TimestampNs(1);
+  draft.timestamp = TimestampNs(1);
+  draft.publication.protected_output = true;
+  draft.protection_level.formal_eligible = true;
+  FinalPacketTiming timing;
+  timing.arrival_steady_ns = 1000000000ULL;
+  timing.compute_done_steady_ns = timing.arrival_steady_ns + 49000000ULL;
+  timing.packet_ready_steady_ns = timing.compute_done_steady_ns;
+  timing.publish_call_steady_ns = timing.arrival_steady_ns + 51000000ULL;
+  timing.deadline_boundary = FinalPacketBoundary::PublishCall;
+  const auto packet = finalizeOutputPacket(std::move(draft), timing,
+                                           50000000ULL);
+  EXPECT_TRUE(packet.output().deadline_missed);
+  EXPECT_FALSE(packet.output().publication.protected_output);
+  EXPECT_TRUE(packet.output().publication.unprotected_output);
+  EXPECT_FALSE(packet.output().protection_level.formal_eligible);
 }

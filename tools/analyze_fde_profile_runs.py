@@ -7,9 +7,16 @@ import hashlib
 import json
 import math
 import re
+import sys
 from collections import Counter
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
+
+
+# Diagnostic proof/census fields intentionally carry complete serialized
+# identities and can exceed Python's conservative 128 KiB CSV default.
+# Keep the full field; truncation would silently change the evidence.
+csv.field_size_limit(sys.maxsize)
 
 
 def rows(path: Path) -> List[dict]:
@@ -49,8 +56,16 @@ def sha256(path: Path) -> str:
 
 
 def quaternion_error(a: dict, b: dict) -> float:
-    dot = abs(sum(float(a[key]) * float(b[key])
-                  for key in ("qw", "qx", "qy", "qz")))
+    keys = ("qw", "qx", "qy", "qz")
+    av = [float(a[key]) for key in keys]
+    bv = [float(b[key]) for key in keys]
+    an = math.sqrt(sum(value * value for value in av))
+    bn = math.sqrt(sum(value * value for value in bv))
+    if (not all(math.isfinite(value) for value in av + bv) or
+            not math.isfinite(an) or not math.isfinite(bn) or
+            an <= 0.0 or bn <= 0.0):
+        raise ValueError("invalid quaternion")
+    dot = abs(sum(left * right for left, right in zip(av, bv)) / (an * bn))
     return 2.0 * math.acos(max(-1.0, min(1.0, dot)))
 
 
@@ -146,6 +161,8 @@ def analyze_run(run: Path) -> dict:
     warm_core = core[100:] if len(core) > 100 else core
     committed = sum(row.get("batch_committed") in ("1", "true", "True")
                     for row in integrity_rows)
+    state_valid = sum(row.get("state_valid") in ("1", "true", "True")
+                      for row in integrity_rows)
     fresh = sum(row.get("fresh") in ("1", "true", "True")
                 for row in integrity_rows)
     deadline = sum(row.get("deadline_missed") in ("1", "true", "True")
@@ -233,6 +250,7 @@ def analyze_run(run: Path) -> dict:
         **identity,
         "artifact_directory": str(run.resolve()),
         "counts": {"attempted": count, "committed": committed,
+                   "state_valid": state_valid,
                    "rejected": count - committed, "fresh": fresh,
                    "deadline_missed": deadline, "finite_pl": finite,
                    "within_alert_limits": within,
@@ -247,6 +265,14 @@ def analyze_run(run: Path) -> dict:
             "velocity_rmse_mps": rms(velocity_errors),
             "accel_bias_norm_rmse_mps2": rms(accel_bias_errors),
             "gyro_bias_norm_rmse_radps": rms(gyro_bias_errors),
+            "valid_counts": {
+                "position": len(position_errors),
+                "attitude": len(attitude_errors),
+                "velocity": len(velocity_errors),
+                "accel_bias": len(accel_bias_errors),
+                "gyro_bias": len(gyro_bias_errors),
+                "service_position": len(service_position_errors),
+            },
             "accel_bias_truth": [0.0, 0.0, 0.0],
             "gyro_bias_truth": [0.0, 0.0, 0.0],
         },

@@ -127,6 +127,29 @@ def main():
             raise AssertionError(f"action {action}: validity/post/disposition/eligibility/selection mismatch {expected[:5]} != {observed[:5]}")
         if not expected[3] and not observed[5]:
             raise AssertionError(f"action {action}: refusal reason missing")
+        # Process A emits a stable reason class rather than copying Process B's
+        # diagnostic prose.  Compare that independently derived class here so
+        # a non-empty but unrelated refusal cannot satisfy the oracle.
+        refusal = observed[5].lower()
+        reason_class = expected[5]
+        reason_markers = {
+            "STEP_GATE": ("step gate",),
+            "HISTORY_RANK_TRANSITION_INDETERMINATE":
+                ("history", "rank transition", "indeterminate"),
+            "ELIGIBLE": (),
+        }
+        if reason_class not in reason_markers:
+            raise AssertionError(
+                f"action {action}: unknown oracle refusal class {reason_class}")
+        markers = reason_markers[reason_class]
+        if markers and any(marker not in refusal for marker in markers):
+            raise AssertionError(
+                f"action {action}: refusal class {reason_class} does not match "
+                f"production reason {observed[5]!r}")
+        if not markers and observed[5]:
+            raise AssertionError(
+                f"action {action}: eligible oracle action has refusal "
+                f"{observed[5]!r}")
     if "risk" not in actual:
         raise AssertionError("actual risk protocol missing")
     close("risk ledger", np.asarray(oracle["risk"]), np.asarray(actual["risk"]))

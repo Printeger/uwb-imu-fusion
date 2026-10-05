@@ -1,0 +1,249 @@
+00400000-00423000 r--p 00000000 08:30 97287                              /usr/bin/python3.8
+00423000-006b8000 r-xp 00023000 08:30 97287                              /usr/bin/python3.8
+006b8000-008f5000 r--p 002b8000 08:30 97287                              /usr/bin/python3.8
+008f5000-008f6000 r--p 004f4000 08:30 97287                              /usr/bin/python3.8
+008f6000-0093d000 rw-p 004f5000 08:30 97287                              /usr/bin/python3.8
+0093d000-00960000 rw-p 00000000 00:00 0 
+0bced000-0c169000 rw-p 00000000 00:00 0                                  [heap]
+77dc6c400000-77dc6c478000 r--p 00000000 08:30 131272                     /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1
+77dc6c478000-77dc6c614000 r-xp 00078000 08:30 131272                     /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1
+77dc6c614000-77dc6c6a5000 r--p 00214000 08:30 131272                     /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1
+77dc6c6a5000-77dc6c6d1000 r--p 002a4000 08:30 131272                     /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1
+77dc6c6d1000-77dc6c6d3000 rw-p 002d0000 08:30 131272                     /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1
+77dc6c6d3000-77dc6c6d7000 rw-p 00000000 00:00 0 
+77dc6c800000-77dc80800000 rw-p 00000000 00:00 0 
+77dc809f7000-77dc809f8000 ---p 00000000 00:00 0 
+77dc809f8000-77dc811f8000 rw-p 00000000 00:00 0 
+77dc811f8000-77dc811f9000 ---p 00000000 00:00 0 
+77dc811f9000-77dc819f9000 rw-p 00000000 00:00 0 
+77dc819f9000-77dc819fa000 ---p 00000000 00:00 0 
+77dc819fa000-77dc821fa000 rw-p 00000000 00:00 0 
+77dc821fa000-77dc821fb000 ---p 00000000 00:00 0 
+77dc821fb000-77dc829fb000 rw-p 00000000 00:00 0 
+77dc829fb000-77dc829fc000 ---p 00000000 00:00 0 
+77dc829fc000-77dc831fc000 rw-p 00000000 00:00 0 
+77dc831fc000-77dc831fd000 ---p 00000000 00:00 0 
+77dc831fd000-77dc839fd000 rw-p 00000000 00:00 0 
+77dc839fd000-77dc839fe000 ---p 00000000 00:00 0 
+77dc839fe000-77dc841fe000 rw-p 00000000 00:00 0 
+77dc841fe000-77dc841ff000 ---p 00000000 00:00 0 
+77dc841ff000-77dc849ff000 rw-p 00000000 00:00 0 
+77dc849ff000-77dc84a00000 ---p 00000000 00:00 0 
+77dc84a00000-77dc85200000 rw-p 00000000 00:00 0 
+77dc85200000-77dc87200000 rw-p 00000000 00:00 0 
+77dc873ff000-77dc87400000 ---p 00000000 00:00 0 
+77dc87400000-77dc87c00000 rw-p 00000000 00:00 0 
+77dc87c00000-77dc89c00000 rw-p 00000000 00:00 0 
+77dc89dff000-77dc89e00000 ---p 00000000 00:00 0 
+77dc89e00000-77dc8a600000 rw-p 00000000 00:00 0 
+77dc8a600000-77dc8c600000 rw-p 00000000 00:00 0 
+77dc8c7ff000-77dc8c800000 ---p 00000000 00:00 0 
+77dc8c800000-77dc8d000000 rw-p 00000000 00:00 0 
+77dc8d000000-77dc91000000 rw-p 00000000 00:00 0 
+77dc910df000-77dc9111f000 rw-p 00000000 00:00 0 
+77dc9111f000-77dc9112c000 r--p 00000000 08:30 177360                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_generator.cpython-38-x86_64-linux-gnu.so
+77dc9112c000-77dc911a3000 r-xp 0000d000 08:30 177360                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_generator.cpython-38-x86_64-linux-gnu.so
+77dc911a3000-77dc911d4000 r--p 00084000 08:30 177360                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_generator.cpython-38-x86_64-linux-gnu.so
+77dc911d4000-77dc911d5000 r--p 000b4000 08:30 177360                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_generator.cpython-38-x86_64-linux-gnu.so
+77dc911d5000-77dc911fc000 rw-p 000b5000 08:30 177360                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_generator.cpython-38-x86_64-linux-gnu.so
+77dc911fc000-77dc911fe000 rw-p 00000000 00:00 0 
+77dc911fe000-77dc911ff000 ---p 00000000 00:00 0 
+77dc911ff000-77dc919ff000 rw-p 00000000 00:00 0 
+77dc919ff000-77dc91a00000 ---p 00000000 00:00 0 
+77dc91a00000-77dc92200000 rw-p 00000000 00:00 0 
+77dc92200000-77dc96200000 rw-p 00000000 00:00 0 
+77dc9620a000-77dc9628a000 rw-p 00000000 00:00 0 
+77dc9628a000-77dc9628f000 r--p 00000000 08:30 177370                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_bounded_integers.cpython-38-x86_64-linux-gnu.so
+77dc9628f000-77dc962d9000 r-xp 00005000 08:30 177370                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_bounded_integers.cpython-38-x86_64-linux-gnu.so
+77dc962d9000-77dc962e2000 r--p 0004f000 08:30 177370                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_bounded_integers.cpython-38-x86_64-linux-gnu.so
+77dc962e2000-77dc962e3000 r--p 00057000 08:30 177370                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_bounded_integers.cpython-38-x86_64-linux-gnu.so
+77dc962e3000-77dc962e4000 rw-p 00058000 08:30 177370                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_bounded_integers.cpython-38-x86_64-linux-gnu.so
+77dc962e4000-77dc963b6000 rw-p 00000000 00:00 0 
+77dc963b6000-77dc963bb000 r--p 00000000 08:30 177377                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_common.cpython-38-x86_64-linux-gnu.so
+77dc963bb000-77dc963f4000 r-xp 00005000 08:30 177377                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_common.cpython-38-x86_64-linux-gnu.so
+77dc963f4000-77dc963f8000 r--p 0003e000 08:30 177377                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_common.cpython-38-x86_64-linux-gnu.so
+77dc963f8000-77dc963f9000 ---p 00042000 08:30 177377                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_common.cpython-38-x86_64-linux-gnu.so
+77dc963f9000-77dc963fa000 r--p 00042000 08:30 177377                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_common.cpython-38-x86_64-linux-gnu.so
+77dc963fa000-77dc963fc000 rw-p 00043000 08:30 177377                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_common.cpython-38-x86_64-linux-gnu.so
+77dc963fc000-77dc963fd000 rw-p 00000000 00:00 0 
+77dc963fd000-77dc963fe000 ---p 00000000 00:00 0 
+77dc963fe000-77dc96bfe000 rw-p 00000000 00:00 0 
+77dc96bfe000-77dc96bff000 ---p 00000000 00:00 0 
+77dc96bff000-77dc973ff000 rw-p 00000000 00:00 0 
+77dc973ff000-77dc97400000 ---p 00000000 00:00 0 
+77dc97400000-77dc97c00000 rw-p 00000000 00:00 0 
+77dc97c00000-77dc97c3b000 r-xp 00000000 08:30 178127                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libquadmath-96973f99.so.0.0.0
+77dc97c3b000-77dc97e3a000 ---p 0003b000 08:30 178127                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libquadmath-96973f99.so.0.0.0
+77dc97e3a000-77dc97e3b000 r--p 0003a000 08:30 178127                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libquadmath-96973f99.so.0.0.0
+77dc97e3b000-77dc97e3d000 rw-p 0003b000 08:30 178127                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libquadmath-96973f99.so.0.0.0
+77dc97e5d000-77dc97e9d000 rw-p 00000000 00:00 0 
+77dc97e9d000-77dc97ea3000 r--p 00000000 08:30 177367                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/bit_generator.cpython-38-x86_64-linux-gnu.so
+77dc97ea3000-77dc97ebe000 r-xp 00006000 08:30 177367                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/bit_generator.cpython-38-x86_64-linux-gnu.so
+77dc97ebe000-77dc97ec6000 r--p 00021000 08:30 177367                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/bit_generator.cpython-38-x86_64-linux-gnu.so
+77dc97ec6000-77dc97ec7000 r--p 00028000 08:30 177367                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/bit_generator.cpython-38-x86_64-linux-gnu.so
+77dc97ec7000-77dc97ecc000 rw-p 00029000 08:30 177367                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/bit_generator.cpython-38-x86_64-linux-gnu.so
+77dc97ecc000-77dc97ed8000 r--p 00000000 08:30 177373                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/mtrand.cpython-38-x86_64-linux-gnu.so
+77dc97ed8000-77dc97f27000 r-xp 0000c000 08:30 177373                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/mtrand.cpython-38-x86_64-linux-gnu.so
+77dc97f27000-77dc97f55000 r--p 0005b000 08:30 177373                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/mtrand.cpython-38-x86_64-linux-gnu.so
+77dc97f55000-77dc97f56000 r--p 00088000 08:30 177373                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/mtrand.cpython-38-x86_64-linux-gnu.so
+77dc97f56000-77dc97f7e000 rw-p 00089000 08:30 177373                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/mtrand.cpython-38-x86_64-linux-gnu.so
+77dc97f7e000-77dc98000000 rw-p 00000000 00:00 0 
+77dc98000000-77dc98276000 r-xp 00000000 08:30 178126                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libgfortran-040039e1.so.5.0.0
+77dc98276000-77dc98475000 ---p 00276000 08:30 178126                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libgfortran-040039e1.so.5.0.0
+77dc98475000-77dc98476000 r--p 00275000 08:30 178126                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libgfortran-040039e1.so.5.0.0
+77dc98476000-77dc98478000 rw-p 00276000 08:30 178126                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libgfortran-040039e1.so.5.0.0
+77dc98478000-77dc9848d000 rw-p 0027b000 08:30 178126                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libgfortran-040039e1.so.5.0.0
+77dc98497000-77dc9849b000 r--p 00000000 08:30 177364                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_pcg64.cpython-38-x86_64-linux-gnu.so
+77dc9849b000-77dc984ab000 r-xp 00004000 08:30 177364                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_pcg64.cpython-38-x86_64-linux-gnu.so
+77dc984ab000-77dc984af000 r--p 00014000 08:30 177364                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_pcg64.cpython-38-x86_64-linux-gnu.so
+77dc984af000-77dc984b0000 r--p 00017000 08:30 177364                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_pcg64.cpython-38-x86_64-linux-gnu.so
+77dc984b0000-77dc984b3000 rw-p 00018000 08:30 177364                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_pcg64.cpython-38-x86_64-linux-gnu.so
+77dc984b3000-77dc984b4000 r--p 00000000 08:30 176673                     /home/mint/.local/lib/python3.8/site-packages/numpy/fft/_pocketfft_internal.cpython-38-x86_64-linux-gnu.so
+77dc984b4000-77dc984c7000 r-xp 00001000 08:30 176673                     /home/mint/.local/lib/python3.8/site-packages/numpy/fft/_pocketfft_internal.cpython-38-x86_64-linux-gnu.so
+77dc984c7000-77dc984c9000 r--p 00014000 08:30 176673                     /home/mint/.local/lib/python3.8/site-packages/numpy/fft/_pocketfft_internal.cpython-38-x86_64-linux-gnu.so
+77dc984c9000-77dc984ca000 r--p 00015000 08:30 176673                     /home/mint/.local/lib/python3.8/site-packages/numpy/fft/_pocketfft_internal.cpython-38-x86_64-linux-gnu.so
+77dc984ca000-77dc984cb000 rw-p 00016000 08:30 176673                     /home/mint/.local/lib/python3.8/site-packages/numpy/fft/_pocketfft_internal.cpython-38-x86_64-linux-gnu.so
+77dc984cb000-77dc9854b000 rw-p 00000000 00:00 0 
+77dc9854b000-77dc98552000 r--p 00000000 08:30 176693                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/_umath_linalg.cpython-38-x86_64-linux-gnu.so
+77dc98552000-77dc98573000 r-xp 00007000 08:30 176693                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/_umath_linalg.cpython-38-x86_64-linux-gnu.so
+77dc98573000-77dc98578000 r--p 00028000 08:30 176693                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/_umath_linalg.cpython-38-x86_64-linux-gnu.so
+77dc98578000-77dc98579000 ---p 0002d000 08:30 176693                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/_umath_linalg.cpython-38-x86_64-linux-gnu.so
+77dc98579000-77dc9857a000 r--p 0002d000 08:30 176693                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/_umath_linalg.cpython-38-x86_64-linux-gnu.so
+77dc9857a000-77dc9857b000 rw-p 0002e000 08:30 176693                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/_umath_linalg.cpython-38-x86_64-linux-gnu.so
+77dc9857b000-77dc9857c000 rw-p 00000000 00:00 0 
+77dc9857c000-77dc98580000 rw-p 00035000 08:30 176693                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/_umath_linalg.cpython-38-x86_64-linux-gnu.so
+77dc98580000-77dc98600000 rw-p 00000000 00:00 0 
+77dc98600000-77dc986fd000 r--p 00000000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+77dc986fd000-77dc98705000 r-xp 000fd000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+77dc98705000-77dc98708000 ---p 00105000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+77dc98708000-77dc9a1b3000 r-xp 00108000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+77dc9a1b3000-77dc9a3af000 r--p 01bb3000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+77dc9a3af000-77dc9a3b0000 ---p 01daf000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+77dc9a3b0000-77dc9a3b6000 r--p 01daf000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+77dc9a3b6000-77dc9a3cb000 rw-p 01db5000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+77dc9a3cb000-77dc9a3d8000 rw-p 00000000 00:00 0 
+77dc9a3d8000-77dc9a47a000 rw-p 01ecc000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+77dc9a481000-77dc9a484000 r--p 00000000 08:30 177381                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_sfc64.cpython-38-x86_64-linux-gnu.so
+77dc9a484000-77dc9a48c000 r-xp 00003000 08:30 177381                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_sfc64.cpython-38-x86_64-linux-gnu.so
+77dc9a48c000-77dc9a48e000 r--p 0000b000 08:30 177381                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_sfc64.cpython-38-x86_64-linux-gnu.so
+77dc9a48e000-77dc9a48f000 ---p 0000d000 08:30 177381                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_sfc64.cpython-38-x86_64-linux-gnu.so
+77dc9a48f000-77dc9a490000 r--p 0000d000 08:30 177381                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_sfc64.cpython-38-x86_64-linux-gnu.so
+77dc9a490000-77dc9a491000 rw-p 0000e000 08:30 177381                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_sfc64.cpython-38-x86_64-linux-gnu.so
+77dc9a491000-77dc9a493000 r--p 00000000 08:30 12684                      /usr/lib/x86_64-linux-gnu/libffi.so.7.1.0
+77dc9a493000-77dc9a499000 r-xp 00002000 08:30 12684                      /usr/lib/x86_64-linux-gnu/libffi.so.7.1.0
+77dc9a499000-77dc9a49a000 r--p 00008000 08:30 12684                      /usr/lib/x86_64-linux-gnu/libffi.so.7.1.0
+77dc9a49a000-77dc9a49b000 ---p 00009000 08:30 12684                      /usr/lib/x86_64-linux-gnu/libffi.so.7.1.0
+77dc9a49b000-77dc9a49c000 r--p 00009000 08:30 12684                      /usr/lib/x86_64-linux-gnu/libffi.so.7.1.0
+77dc9a49c000-77dc9a49d000 rw-p 0000a000 08:30 12684                      /usr/lib/x86_64-linux-gnu/libffi.so.7.1.0
+77dc9a49d000-77dc9a4a4000 r--p 00000000 08:30 73591                      /usr/lib/python3.8/lib-dynload/_ctypes.cpython-38-x86_64-linux-gnu.so
+77dc9a4a4000-77dc9a4b4000 r-xp 00007000 08:30 73591                      /usr/lib/python3.8/lib-dynload/_ctypes.cpython-38-x86_64-linux-gnu.so
+77dc9a4b4000-77dc9a4ba000 r--p 00017000 08:30 73591                      /usr/lib/python3.8/lib-dynload/_ctypes.cpython-38-x86_64-linux-gnu.so
+77dc9a4ba000-77dc9a4bb000 ---p 0001d000 08:30 73591                      /usr/lib/python3.8/lib-dynload/_ctypes.cpython-38-x86_64-linux-gnu.so
+77dc9a4bb000-77dc9a4bc000 r--p 0001d000 08:30 73591                      /usr/lib/python3.8/lib-dynload/_ctypes.cpython-38-x86_64-linux-gnu.so
+77dc9a4bc000-77dc9a4c0000 rw-p 0001e000 08:30 73591                      /usr/lib/python3.8/lib-dynload/_ctypes.cpython-38-x86_64-linux-gnu.so
+77dc9a4c0000-77dc9a600000 rw-p 00000000 00:00 0 
+77dc9a600000-77dc9a628000 r--p 00000000 08:30 177625                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_umath.cpython-38-x86_64-linux-gnu.so
+77dc9a628000-77dc9aa63000 r-xp 00028000 08:30 177625                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_umath.cpython-38-x86_64-linux-gnu.so
+77dc9aa63000-77dc9ab7a000 r--p 00463000 08:30 177625                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_umath.cpython-38-x86_64-linux-gnu.so
+77dc9ab7a000-77dc9ab7b000 ---p 0057a000 08:30 177625                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_umath.cpython-38-x86_64-linux-gnu.so
+77dc9ab7b000-77dc9ab7d000 r--p 0057a000 08:30 177625                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_umath.cpython-38-x86_64-linux-gnu.so
+77dc9ab7d000-77dc9ab9f000 rw-p 0057c000 08:30 177625                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_umath.cpython-38-x86_64-linux-gnu.so
+77dc9ab9f000-77dc9abc0000 rw-p 00000000 00:00 0 
+77dc9abc0000-77dc9abc7000 rw-p 005fe000 08:30 177625                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_umath.cpython-38-x86_64-linux-gnu.so
+77dc9abd0000-77dc9abd7000 r--p 00000000 08:30 177603                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_tests.cpython-38-x86_64-linux-gnu.so
+77dc9abd7000-77dc9abee000 r-xp 00007000 08:30 177603                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_tests.cpython-38-x86_64-linux-gnu.so
+77dc9abee000-77dc9abf4000 r--p 0001e000 08:30 177603                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_tests.cpython-38-x86_64-linux-gnu.so
+77dc9abf4000-77dc9abf5000 r--p 00023000 08:30 177603                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_tests.cpython-38-x86_64-linux-gnu.so
+77dc9abf5000-77dc9abf7000 rw-p 00024000 08:30 177603                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_tests.cpython-38-x86_64-linux-gnu.so
+77dc9abf7000-77dc9ad37000 rw-p 00000000 00:00 0 
+77dc9ad3e000-77dc9ad3f000 r--p 00000000 08:30 10543                      /usr/lib/python3.8/lib-dynload/_opcode.cpython-38-x86_64-linux-gnu.so
+77dc9ad3f000-77dc9ad40000 r-xp 00001000 08:30 10543                      /usr/lib/python3.8/lib-dynload/_opcode.cpython-38-x86_64-linux-gnu.so
+77dc9ad40000-77dc9ad41000 r--p 00002000 08:30 10543                      /usr/lib/python3.8/lib-dynload/_opcode.cpython-38-x86_64-linux-gnu.so
+77dc9ad41000-77dc9ad42000 r--p 00002000 08:30 10543                      /usr/lib/python3.8/lib-dynload/_opcode.cpython-38-x86_64-linux-gnu.so
+77dc9ad42000-77dc9ad43000 rw-p 00003000 08:30 10543                      /usr/lib/python3.8/lib-dynload/_opcode.cpython-38-x86_64-linux-gnu.so
+77dc9ad43000-77dc9ad46000 r--p 00000000 08:30 177379                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_philox.cpython-38-x86_64-linux-gnu.so
+77dc9ad46000-77dc9ad53000 r-xp 00003000 08:30 177379                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_philox.cpython-38-x86_64-linux-gnu.so
+77dc9ad53000-77dc9ad57000 r--p 00010000 08:30 177379                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_philox.cpython-38-x86_64-linux-gnu.so
+77dc9ad57000-77dc9ad58000 r--p 00013000 08:30 177379                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_philox.cpython-38-x86_64-linux-gnu.so
+77dc9ad58000-77dc9ad5a000 rw-p 00014000 08:30 177379                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_philox.cpython-38-x86_64-linux-gnu.so
+77dc9ad5a000-77dc9ad5e000 r--p 00000000 08:30 177362                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_mt19937.cpython-38-x86_64-linux-gnu.so
+77dc9ad5e000-77dc9ad6d000 r-xp 00004000 08:30 177362                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_mt19937.cpython-38-x86_64-linux-gnu.so
+77dc9ad6d000-77dc9ad72000 r--p 00013000 08:30 177362                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_mt19937.cpython-38-x86_64-linux-gnu.so
+77dc9ad72000-77dc9ad73000 r--p 00017000 08:30 177362                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_mt19937.cpython-38-x86_64-linux-gnu.so
+77dc9ad73000-77dc9ad75000 rw-p 00018000 08:30 177362                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_mt19937.cpython-38-x86_64-linux-gnu.so
+77dc9ad75000-77dc9ad78000 r--p 00000000 08:30 10542                      /usr/lib/python3.8/lib-dynload/_hashlib.cpython-38-x86_64-linux-gnu.so
+77dc9ad78000-77dc9ad7c000 r-xp 00003000 08:30 10542                      /usr/lib/python3.8/lib-dynload/_hashlib.cpython-38-x86_64-linux-gnu.so
+77dc9ad7c000-77dc9ad7e000 r--p 00007000 08:30 10542                      /usr/lib/python3.8/lib-dynload/_hashlib.cpython-38-x86_64-linux-gnu.so
+77dc9ad7e000-77dc9ad7f000 r--p 00008000 08:30 10542                      /usr/lib/python3.8/lib-dynload/_hashlib.cpython-38-x86_64-linux-gnu.so
+77dc9ad7f000-77dc9ad80000 rw-p 00009000 08:30 10542                      /usr/lib/python3.8/lib-dynload/_hashlib.cpython-38-x86_64-linux-gnu.so
+77dc9ad80000-77dc9b000000 rw-p 00000000 00:00 0 
+77dc9b000000-77dc9b2e6000 r--p 00000000 08:30 6102                       /usr/lib/locale/locale-archive
+77dc9b2ea000-77dc9b2ed000 r--p 00000000 08:30 42734                      /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+77dc9b2ed000-77dc9b2ff000 r-xp 00003000 08:30 42734                      /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+77dc9b2ff000-77dc9b303000 r--p 00015000 08:30 42734                      /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+77dc9b303000-77dc9b304000 r--p 00018000 08:30 42734                      /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+77dc9b304000-77dc9b305000 rw-p 00019000 08:30 42734                      /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+77dc9b305000-77dc9b307000 r--p 00000000 08:30 73606                      /usr/lib/python3.8/lib-dynload/_json.cpython-38-x86_64-linux-gnu.so
+77dc9b307000-77dc9b315000 r-xp 00002000 08:30 73606                      /usr/lib/python3.8/lib-dynload/_json.cpython-38-x86_64-linux-gnu.so
+77dc9b315000-77dc9b317000 r--p 00010000 08:30 73606                      /usr/lib/python3.8/lib-dynload/_json.cpython-38-x86_64-linux-gnu.so
+77dc9b317000-77dc9b318000 r--p 00011000 08:30 73606                      /usr/lib/python3.8/lib-dynload/_json.cpython-38-x86_64-linux-gnu.so
+77dc9b318000-77dc9b319000 rw-p 00012000 08:30 73606                      /usr/lib/python3.8/lib-dynload/_json.cpython-38-x86_64-linux-gnu.so
+77dc9b319000-77dc9b35c000 rw-p 00000000 00:00 0 
+77dc9b35c000-77dc9b35e000 r--p 00000000 08:30 13174                      /usr/lib/x86_64-linux-gnu/libz.so.1.2.11
+77dc9b35e000-77dc9b36f000 r-xp 00002000 08:30 13174                      /usr/lib/x86_64-linux-gnu/libz.so.1.2.11
+77dc9b36f000-77dc9b375000 r--p 00013000 08:30 13174                      /usr/lib/x86_64-linux-gnu/libz.so.1.2.11
+77dc9b375000-77dc9b376000 ---p 00019000 08:30 13174                      /usr/lib/x86_64-linux-gnu/libz.so.1.2.11
+77dc9b376000-77dc9b377000 r--p 00019000 08:30 13174                      /usr/lib/x86_64-linux-gnu/libz.so.1.2.11
+77dc9b377000-77dc9b378000 rw-p 0001a000 08:30 13174                      /usr/lib/x86_64-linux-gnu/libz.so.1.2.11
+77dc9b378000-77dc9b37c000 r--p 00000000 08:30 20733                      /usr/lib/x86_64-linux-gnu/libexpat.so.1.6.11
+77dc9b37c000-77dc9b398000 r-xp 00004000 08:30 20733                      /usr/lib/x86_64-linux-gnu/libexpat.so.1.6.11
+77dc9b398000-77dc9b3a2000 r--p 00020000 08:30 20733                      /usr/lib/x86_64-linux-gnu/libexpat.so.1.6.11
+77dc9b3a2000-77dc9b3a3000 ---p 0002a000 08:30 20733                      /usr/lib/x86_64-linux-gnu/libexpat.so.1.6.11
+77dc9b3a3000-77dc9b3a5000 r--p 0002a000 08:30 20733                      /usr/lib/x86_64-linux-gnu/libexpat.so.1.6.11
+77dc9b3a5000-77dc9b3a6000 rw-p 0002c000 08:30 20733                      /usr/lib/x86_64-linux-gnu/libexpat.so.1.6.11
+77dc9b3a6000-77dc9b3a8000 rw-p 00000000 00:00 0 
+77dc9b3a8000-77dc9b3b5000 r--p 00000000 08:30 66935                      /usr/lib/x86_64-linux-gnu/libm-2.31.so
+77dc9b3b5000-77dc9b45c000 r-xp 0000d000 08:30 66935                      /usr/lib/x86_64-linux-gnu/libm-2.31.so
+77dc9b45c000-77dc9b4f5000 r--p 000b4000 08:30 66935                      /usr/lib/x86_64-linux-gnu/libm-2.31.so
+77dc9b4f5000-77dc9b4f6000 r--p 0014c000 08:30 66935                      /usr/lib/x86_64-linux-gnu/libm-2.31.so
+77dc9b4f6000-77dc9b4f7000 rw-p 0014d000 08:30 66935                      /usr/lib/x86_64-linux-gnu/libm-2.31.so
+77dc9b4f7000-77dc9b4f8000 r--p 00000000 08:30 66950                      /usr/lib/x86_64-linux-gnu/libutil-2.31.so
+77dc9b4f8000-77dc9b4f9000 r-xp 00001000 08:30 66950                      /usr/lib/x86_64-linux-gnu/libutil-2.31.so
+77dc9b4f9000-77dc9b4fa000 r--p 00002000 08:30 66950                      /usr/lib/x86_64-linux-gnu/libutil-2.31.so
+77dc9b4fa000-77dc9b4fb000 r--p 00002000 08:30 66950                      /usr/lib/x86_64-linux-gnu/libutil-2.31.so
+77dc9b4fb000-77dc9b4fc000 rw-p 00003000 08:30 66950                      /usr/lib/x86_64-linux-gnu/libutil-2.31.so
+77dc9b4fc000-77dc9b4fd000 r--p 00000000 08:30 66934                      /usr/lib/x86_64-linux-gnu/libdl-2.31.so
+77dc9b4fd000-77dc9b4ff000 r-xp 00001000 08:30 66934                      /usr/lib/x86_64-linux-gnu/libdl-2.31.so
+77dc9b4ff000-77dc9b500000 r--p 00003000 08:30 66934                      /usr/lib/x86_64-linux-gnu/libdl-2.31.so
+77dc9b500000-77dc9b501000 r--p 00003000 08:30 66934                      /usr/lib/x86_64-linux-gnu/libdl-2.31.so
+77dc9b501000-77dc9b502000 rw-p 00004000 08:30 66934                      /usr/lib/x86_64-linux-gnu/libdl-2.31.so
+77dc9b502000-77dc9b508000 r--p 00000000 08:30 66946                      /usr/lib/x86_64-linux-gnu/libpthread-2.31.so
+77dc9b508000-77dc9b519000 r-xp 00006000 08:30 66946                      /usr/lib/x86_64-linux-gnu/libpthread-2.31.so
+77dc9b519000-77dc9b51f000 r--p 00017000 08:30 66946                      /usr/lib/x86_64-linux-gnu/libpthread-2.31.so
+77dc9b51f000-77dc9b520000 r--p 0001c000 08:30 66946                      /usr/lib/x86_64-linux-gnu/libpthread-2.31.so
+77dc9b520000-77dc9b521000 rw-p 0001d000 08:30 66946                      /usr/lib/x86_64-linux-gnu/libpthread-2.31.so
+77dc9b521000-77dc9b525000 rw-p 00000000 00:00 0 
+77dc9b525000-77dc9b547000 r--p 00000000 08:30 66933                      /usr/lib/x86_64-linux-gnu/libc-2.31.so
+77dc9b547000-77dc9b6bf000 r-xp 00022000 08:30 66933                      /usr/lib/x86_64-linux-gnu/libc-2.31.so
+77dc9b6bf000-77dc9b70d000 r--p 0019a000 08:30 66933                      /usr/lib/x86_64-linux-gnu/libc-2.31.so
+77dc9b70d000-77dc9b711000 r--p 001e7000 08:30 66933                      /usr/lib/x86_64-linux-gnu/libc-2.31.so
+77dc9b711000-77dc9b713000 rw-p 001eb000 08:30 66933                      /usr/lib/x86_64-linux-gnu/libc-2.31.so
+77dc9b713000-77dc9b717000 rw-p 00000000 00:00 0 
+77dc9b719000-77dc9b71a000 r--p 00000000 08:30 66140                      /usr/lib/python3.8/lib-dynload/_contextvars.cpython-38-x86_64-linux-gnu.so
+77dc9b71a000-77dc9b71b000 r-xp 00001000 08:30 66140                      /usr/lib/python3.8/lib-dynload/_contextvars.cpython-38-x86_64-linux-gnu.so
+77dc9b71b000-77dc9b71c000 r--p 00002000 08:30 66140                      /usr/lib/python3.8/lib-dynload/_contextvars.cpython-38-x86_64-linux-gnu.so
+77dc9b71c000-77dc9b71d000 r--p 00002000 08:30 66140                      /usr/lib/python3.8/lib-dynload/_contextvars.cpython-38-x86_64-linux-gnu.so
+77dc9b71d000-77dc9b71e000 rw-p 00003000 08:30 66140                      /usr/lib/python3.8/lib-dynload/_contextvars.cpython-38-x86_64-linux-gnu.so
+77dc9b71e000-77dc9b725000 r--s 00000000 08:30 207192                     /usr/lib/x86_64-linux-gnu/gconv/gconv-modules.cache
+77dc9b725000-77dc9b757000 r--p 00000000 08:30 22667                      /usr/lib/locale/C.UTF-8/LC_CTYPE
+77dc9b757000-77dc9b759000 rw-p 00000000 00:00 0 
+77dc9b759000-77dc9b75d000 r--p 00000000 00:00 0                          [vvar]
+77dc9b75d000-77dc9b75f000 r--p 00000000 00:00 0                          [vvar_vclock]
+77dc9b75f000-77dc9b761000 r-xp 00000000 00:00 0                          [vdso]
+77dc9b761000-77dc9b762000 r--p 00000000 08:30 66929                      /usr/lib/x86_64-linux-gnu/ld-2.31.so
+77dc9b762000-77dc9b785000 r-xp 00001000 08:30 66929                      /usr/lib/x86_64-linux-gnu/ld-2.31.so
+77dc9b785000-77dc9b78d000 r--p 00024000 08:30 66929                      /usr/lib/x86_64-linux-gnu/ld-2.31.so
+77dc9b78e000-77dc9b78f000 r--p 0002c000 08:30 66929                      /usr/lib/x86_64-linux-gnu/ld-2.31.so
+77dc9b78f000-77dc9b790000 rw-p 0002d000 08:30 66929                      /usr/lib/x86_64-linux-gnu/ld-2.31.so
+77dc9b790000-77dc9b791000 rw-p 00000000 00:00 0 
+7ffef3eb2000-7ffef3ed5000 rw-p 00000000 00:00 0                          [stack]

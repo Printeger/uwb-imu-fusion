@@ -1,0 +1,3791 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ade1b99..e37603f 100755
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -434,6 +434,10 @@ if(CATKIN_ENABLE_TESTING)
+     COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools
+       python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_gate_d_tools.py)
+ 
++  add_test(NAME test_simulation_calibrations
++    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools
++      python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_simulation_calibrations.py)
++
+   add_test(NAME test_round3_tools
+     COMMAND ${CMAKE_COMMAND} -E env
+       PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools
+diff --git a/apps/realtime_performance_benchmark.cpp b/apps/realtime_performance_benchmark.cpp
+index 19f3143..6a4a81b 100644
+--- a/apps/realtime_performance_benchmark.cpp
++++ b/apps/realtime_performance_benchmark.cpp
+@@ -3,12 +3,14 @@
+ #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
+ #include "uwb_imu_pl/integrity/integrity_monitor.hpp"
+ #include "uwb_imu_pl/io/run_logger.hpp"
++#include "uwb_imu_pl/publication/final_output_packet.hpp"
+ 
+ #include <chrono>
+ #include <algorithm>
+ #include <cmath>
+ #include <cstdint>
+ #include <cstdlib>
++#include <fstream>
+ #include <iostream>
+ #include <random>
+ #include <string>
+@@ -188,6 +190,20 @@ int main(int argc, char** argv) {
+       throw std::runtime_error("performance config/epoch contract mismatch");
+     }
+     uwb_imu_pl::RunLogger logger(argv[2], false, true);
++    std::ofstream terminal_packets(std::string(argv[2]) +
++                                   "/terminal_packets.csv");
++    if (!terminal_packets) {
++      throw std::runtime_error("failed to open terminal_packets.csv");
++    }
++    terminal_packets <<
++        "input_attempt_id,transaction_id,window_id,selected_action_id,"
++        "backend_epoch_before,backend_epoch_after,batch_committed,"
++        "risk_ledger_closes,risk_ledger_all_validated,"
++        "selection_risk_proof_id,publication_risk_proof_id,"
++        "publication_certificate_id,publication_protected,formal_eligible,"
++        "deadline_missed,publish_call_steady_ns,publish_return_steady_ns,"
++        "arrival_to_publish_ns,"
++        "final_packet_digest\n";
+     logger.writeResolvedConfig(config.resolved_yaml);
+     const std::string execution_command =
+         uwb_imu_pl::bindExecutionCommandArguments(
+@@ -358,8 +374,15 @@ int main(int argc, char** argv) {
+         logger.writeIntegrity(pipeline.lastAttemptOutput());
+         throw;
+       }
++      const auto analysis_complete = std::chrono::steady_clock::now();
+       const double core_ms = std::chrono::duration<double, std::milli>(
+-          std::chrono::steady_clock::now()-start).count();
++          analysis_complete-start).count();
++      // Keep an explicit boundary even though this synchronous harness has no
++      // asynchronous continuation today.  Acceptance must read this sample,
++      // not silently alias core_total in the summarizer.
++      const double analysis_completion_ms =
++          std::chrono::duration<double, std::milli>(
++              analysis_complete-start).count();
+       for (auto& stage : result.stage_timings) {
+         if (stage.stage == "core_total") stage.wall_ms = core_ms;
+       }
+@@ -370,7 +393,44 @@ int main(int argc, char** argv) {
+       }
+       const auto outer_start = std::chrono::steady_clock::now();
+       logger.writeState(result.state);
+-      logger.writeIntegrity(result);
++      const auto steady_ns = [](const std::chrono::steady_clock::time_point& point) {
++        return static_cast<std::uint64_t>(
++            std::chrono::duration_cast<std::chrono::nanoseconds>(
++                point.time_since_epoch()).count());
++      };
++      // This is the sole integrity-output handoff.  The deadline flag and the
++      // reported arrival-to-publish denominator use this exact call sample;
++      // analysis completion is deliberately not a publication timestamp.
++      const auto publish_call = std::chrono::steady_clock::now();
++      uwb_imu_pl::FinalPacketTiming final_timing;
++      final_timing.arrival_steady_ns = steady_ns(start);
++      final_timing.compute_done_steady_ns = steady_ns(analysis_complete);
++      final_timing.packet_ready_steady_ns = final_timing.compute_done_steady_ns;
++      final_timing.publish_call_steady_ns = steady_ns(publish_call);
++      final_timing.deadline_boundary =
++          uwb_imu_pl::FinalPacketBoundary::PublishCall;
++      const auto final_packet = uwb_imu_pl::finalizeOutputPacket(
++          std::move(result), final_timing, 50000000ULL);
++      result = final_packet.output();
++      logger.writeIntegrity(result, final_packet.metadata());
++      const auto publish_return = std::chrono::steady_clock::now();
++      terminal_packets << result.diagnostics.input_attempt_id << ','
++          << result.transaction_id << ',' << result.window_id << ','
++          << result.selected_action_id << ','
++          << result.diagnostics.backend_epoch_before << ','
++          << result.diagnostics.backend_epoch_after << ','
++          << result.batch_committed << ','
++          << result.diagnostics.risk_ledger_closes << ','
++          << result.diagnostics.risk_ledger_all_validated << ','
++          << result.diagnostics.selection_risk_proof_id << ','
++          << result.publication.risk_proof_id << ','
++          << result.publication.certificate_id << ','
++          << result.publication.protected_output << ','
++          << result.protection_level.formal_eligible << ','
++          << result.deadline_missed << ',' << steady_ns(publish_call) << ','
++          << steady_ns(publish_return) << ','
++          << steady_ns(publish_call) - steady_ns(start) << ','
++          << final_packet.metadata().digest << '\n';
+       logger.writeGroundTruth({batch.timestamp,
+                                position(time, scenario.degenerate),
+                                orientation(time, scenario.degenerate)});
+@@ -409,6 +469,9 @@ int main(int argc, char** argv) {
+             ";active_values=" + std::to_string(estimator.activeValueCount()) +
+             ";active_factors=" + std::to_string(estimator.factorCount()));
+       }
++      const double arrival_to_publish_ms =
++          std::chrono::duration<double, std::milli>(
++              publish_call - start).count();
+       logger.flush();
+       const auto flush_complete = std::chrono::steady_clock::now();
+       const double logging_flush_ms = std::chrono::duration<double, std::milli>(
+@@ -417,6 +480,8 @@ int main(int argc, char** argv) {
+           flush_complete - start).count();
+       timing("outer_logging_flush", logging_flush_ms);
+       timing("outer_epoch", outer_epoch_ms);
++      timing("analysis_completion", analysis_completion_ms);
++      timing("arrival_to_publish", arrival_to_publish_ms);
+       logger.flush();
+       summary.processed++;
+       summary.committed += result.batch_committed;
+diff --git a/config/fde_profiles_validation.yaml b/config/fde_profiles_validation.yaml
+index 0746847..7cb8269 100644
+--- a/config/fde_profiles_validation.yaml
++++ b/config/fde_profiles_validation.yaml
+@@ -53,6 +53,33 @@ performance:
+   arrival_to_publish_p99_ms_max: 50.0
+   deadline_miss_fraction_max: 0.01
+   rss_peak_mib_max: 1024.0
++acceptance_paths:
++  contract_version: p1-06-revised-nonrealtime-goal-v2
++  authorization_date: '2026-10-06'
++  artifact_class: simulation/synthetic
++  # The action census is an auditable consequence of the frozen detector
++  # result: KEEP_ALL is the sole normal action; more than one generated action
++  # means alarm/recovery analysis was entered.  Scenario labels are not used
++  # to move individual attempts between denominators.
++  classifier: complete_terminal_off_is_disabled_sole_keep_all_is_normal_else_alarm_or_unclassified
++  normal:
++    realtime_gate_disposition: FAILED_OR_PASS_REPORTED_DEFERRED_TO_REALTIME_GOAL
++    core_p99_ms_max: 40.0
++    arrival_to_publish_p99_ms_max: 50.0
++    deadline_miss_fraction_max: 0.01
++    complete_work_fraction_min: 1.0
++  alarm_recovery:
++    realtime_gate_disposition: FAILED_OR_PASS_REPORTED_DEFERRED_TO_REALTIME_GOAL
++    complete_work_fraction_min: 1.0
++    require_exact_leaf_partition: true
++    require_protected_output_disabled: true
++    require_atomic_terminal_packet: true
++  all_attempts:
++    complete_work_fraction_min: 1.0
++    rss_peak_mib_max: 1024.0
++    retain_all_timeouts_and_slow_attempts: true
++    realtime_gate_blocks_revised_goal: false
++  hardware_formal_qualification: CLOSED/NOT_CLAIMED
+ gates:
+   noiseless_position_rmse_m_max: 0.01
+   noiseless_attitude_rmse_rad_max: 0.01
+@@ -70,6 +97,18 @@ gates:
+ formal_eligibility:
+   expected: false
+   reason: real calibration, rare-event campaign, Gate J and independent review are absent
++golden_reference_anchor:
++  schema: uwb-imu-pl/gate24-golden-anchor/v1
++  manifest_algorithm: sha256
++  canonical_serialization: canonical-json-sort-keys-compact-utf8-v1
++  reference: golden-p1-05-deterministic-concurrency
++  annotated_tag_object: 02344301915590881b08810f1c34f67aed04b9e4
++  peeled_commit: 4657cf87539cf7699231642d3356c08456b1833e
++  tree: 8d2ee279074fb02b269f20041eb6b8806980ca06
++  equivalence_runs: 3
++  files_per_run: 13
++  manifest_entries: 39
++  manifest_sha256: 5d53385b8f019c12e33c0db25c200556c60ca5941dad06b6a0cfd0fdc68960dc
+ storage:
+   task_budget_bytes: 2147483648
+   minimum_free_bytes: 5368709120
+diff --git a/include/uwb_imu_pl/integrity/fde_manager.hpp b/include/uwb_imu_pl/integrity/fde_manager.hpp
+index c738c79..cb56562 100644
+--- a/include/uwb_imu_pl/integrity/fde_manager.hpp
++++ b/include/uwb_imu_pl/integrity/fde_manager.hpp
+@@ -81,6 +81,14 @@ struct FdeDecisionContextV2 {
+       ActionSearchLifecycleV1::ReadyForEvaluation;
+ };
+ 
++// P1-06 additive compact-action consumer.  V1/V2 layouts and overloads remain
++// unchanged.  The lease is the independent source used to reconstruct exact
++// action semantics at the FDE boundary.
++struct FdeDecisionContextV3 {
++  FdeDecisionContextV1 v1;
++  const AttemptActionLeaseV3* action_lease = nullptr;
++};
++
+ class FdeManager {
+  public:
+   FdeDecision decide(const DetectorResultV2& all_in,
+@@ -103,6 +111,13 @@ class FdeManager {
+                      const std::vector<FactorGroupId>& mandatory_groups,
+                      const RiskBudgetV2& risk,
+                      const FdeDecisionContextV2* context) const;
++  FdeDecision decide(const DetectorResultV2& all_in,
++                     const std::vector<FaultHypothesisV2>& hypotheses,
++                     const std::vector<FaultModeEvidence>& evidence,
++                     std::vector<CandidateEvaluation>* candidates,
++                     const std::vector<FactorGroupId>& mandatory_groups,
++                     const RiskBudgetV2& risk,
++                     const FdeDecisionContextV3* context) const;
+ };
+ 
+ }  // namespace uwb_imu_pl
+diff --git a/include/uwb_imu_pl/integrity/hypothesis_generator.hpp b/include/uwb_imu_pl/integrity/hypothesis_generator.hpp
+index 6246bc8..86cce70 100644
+--- a/include/uwb_imu_pl/integrity/hypothesis_generator.hpp
++++ b/include/uwb_imu_pl/integrity/hypothesis_generator.hpp
+@@ -3,6 +3,8 @@
+ #include "uwb_imu_pl/integrity/imu_fault_subspace.hpp"
+ #include "uwb_imu_pl/integrity/fault_model.hpp"
+ 
++#include <memory>
++
+ namespace uwb_imu_pl {
+ 
+ struct HypothesisGeneratorConfig {
+@@ -158,6 +160,127 @@ struct CompleteActionStreamV2 {
+   std::size_t peak_batch_actions = 0;
+ };
+ 
++// P1-06 additive production sidecar.  The frozen V1/V2 objects above retain
++// their layouts and behavior for ABI/API compatibility.  V3 keeps only an
++// attempt-scoped recipe for each terminal action.  Dense replacement/bridge
++// blocks are reconstructed into a leased batch and disappear when that lease
++// is destroyed; they are never resident for the complete action set.
++struct CompactActionDescriptorV3 {
++  struct BlockReference {
++    std::uint64_t block_id = 0;
++    std::uint64_t offset = 0;
++    std::uint64_t length = 0;
++    // SHA-256 of the exact, unhexed canonical V1 block payload.  The digest
++    // selects a candidate bucket only; equality is established by bounded
++    // pread comparison of the sidecar bytes.
++    std::string strong_digest;
++  };
++
++  std::uint64_t action_id = 0;
++  std::vector<std::size_t> mode_indices;
++  std::string action_model_override;
++  bool cardinality_contract_rejected = false;
++  bool force_missing_provenance = false;
++  std::uint64_t operation_digest = 0;
++  std::uint64_t semantic_digest = 0;
++  std::uint64_t operation_offset = 0;
++  std::uint64_t operation_length = 0;
++  std::uint64_t semantic_offset = 0;
++  std::uint64_t semantic_length = 0;
++  std::vector<BlockReference> ordered_blocks;
++  std::size_t materialized_heavy_bytes = 0;
++};
++
++struct CompactActionOmissionV3 {
++  CompactActionDescriptorV3 occurrence;
++  std::uint64_t representative_action_id = 0;
++  std::string reason;
++  bool proven_safe = false;
++};
++
++struct CompactActionSearchV3 {
++  std::uint32_t protocol_version = 3;
++  std::uint64_t generated = 0;
++  std::uint64_t evaluated = 0;
++  std::uint64_t omitted = 0;
++  bool exhaustive = false;
++  std::uint64_t snapshot_digest = 0;
++  std::uint64_t sidecar_digest = 0;
++  std::uint64_t sidecar_length = 0;
++  std::uint64_t unique_block_count = 0;
++  std::uint64_t referenced_block_count = 0;
++  // The producer sets this only after every canonical byte range, census
++  // record and snapshot/root binding has been checked against the sealed
++  // attempt-owned sidecar.  Consumers may re-read the sealed bytes, but never
++  // rebuild all canonical strings in memory.
++  bool producer_certificate_valid = false;
++  std::size_t batch_capacity = 0;
++  std::size_t batch_count = 0;
++  std::size_t peak_batch_actions = 0;
++  std::size_t peak_batch_heavy_bytes = 0;
++  std::uint64_t digest_collision_comparisons = 0;
++  std::vector<CompactActionDescriptorV3> actions;
++  std::vector<CompactActionOmissionV3> omitted_actions;
++  std::string terminal_reason;
++};
++
++class AttemptActionArenaV3;
++
++class AttemptActionLeaseV3 {
++ public:
++  AttemptActionLeaseV3() = default;
++
++  std::vector<ExclusionAction> materializeBatch(
++      std::size_t begin, std::size_t count) const;
++  ExclusionAction materialize(std::size_t index) const;
++  // Exact census/eligibility/FDE fields without dense block payload copies.
++  // Numerical consumers must use materialize()/materializeBatch().
++  ExclusionAction materializeMetadata(std::size_t index) const;
++  const CompactActionSearchV3& search() const;
++  bool valid() const;
++  void close();
++
++ private:
++  friend class AttemptActionArenaV3;
++  friend class HypothesisGenerator;
++  friend ActionSearchValidationV1 validateCompactActionSearchV3(
++      const AttemptActionLeaseV3& lease);
++  struct State;
++  explicit AttemptActionLeaseV3(std::shared_ptr<const State> state)
++      : state_(std::move(state)) {}
++  std::shared_ptr<const State> state_;
++};
++
++class AttemptActionArenaV3 {
++ public:
++  AttemptActionArenaV3() = default;
++  AttemptActionLeaseV3 lease() const;
++  const CompactActionSearchV3& search() const;
++  bool valid() const;
++  void close();
++  // Explicit per-arena fault seam used by directed fail-closed tests.  It is
++  // never process-global and cannot be activated by an environment variable.
++  void injectSidecarReadFailureForTest();
++
++ private:
++  friend class HypothesisGenerator;
++  explicit AttemptActionArenaV3(
++      std::shared_ptr<const AttemptActionLeaseV3::State> state)
++      : state_(std::move(state)) {}
++  std::shared_ptr<const AttemptActionLeaseV3::State> state_;
++};
++
++ActionSearchValidationV1 validateCompactActionSearchV3(
++    const AttemptActionLeaseV3& lease);
++
++// Consumer boundary for compact terminal candidates.  `consumed` may omit
++// heavy added_blocks after its numerical proof has been minted, but every
++// operation/coverage/selection field is compared with a freshly materialized
++// exact action from the lease.
++ActionSearchValidationV1 validateCompactActionConsumptionV3(
++    const AttemptActionLeaseV3& lease,
++    const std::vector<ExclusionAction>& consumed);
++
+ CompleteActionStreamV2 makeCompleteActionStreamV2(
+     const std::vector<ExclusionAction>& generated,
+     std::size_t batch_capacity,
+@@ -252,6 +375,18 @@ class HypothesisGenerator {
+       const std::vector<std::string>& mandatory_health_sources = {},
+       GeneratedActionSnapshotV1* trusted_generated_snapshot = nullptr) const;
+ 
++  // Production-only bounded sidecar.  Unlike V2 this never calls
++  // ensureActionEntities(): complete logical coverage is represented by
++  // compact mode recipes and heavy ExclusionAction objects exist only inside
++  // the returned lease's fixed-size materialization batches.
++  AttemptActionArenaV3 actionsForPlausibleSetV3(
++      const LinearizedIntegrityWindow& window,
++      const EpochTransaction& transaction,
++      const GeneratedFaultModelSet& models,
++      const std::vector<FaultModeEvidence>& evidence,
++      const std::vector<std::string>& mandatory_health_sources = {},
++      bool force_digest_collision_for_test = false) const;
++
+   // B4: materializes the exclusion-action entities (single-mode actions and
+   // their bridge/rollback blocks) exactly once, on demand.  Idempotent.
+   static void ensureActionEntities(const EpochTransaction& transaction,
+diff --git a/src/uwb_imu_pl/integrity/fde_manager.cpp b/src/uwb_imu_pl/integrity/fde_manager.cpp
+index 087f7b1..569b269 100644
+--- a/src/uwb_imu_pl/integrity/fde_manager.cpp
++++ b/src/uwb_imu_pl/integrity/fde_manager.cpp
+@@ -73,6 +73,52 @@ FdeDecision FdeManager::decide(
+                 risk, static_cast<const FdeDecisionContextV1*>(nullptr));
+ }
+ 
++FdeDecision FdeManager::decide(
++    const DetectorResultV2& all_in,
++    const std::vector<FaultHypothesisV2>& hypotheses,
++    const std::vector<FaultModeEvidence>& evidence,
++    std::vector<CandidateEvaluation>* candidates,
++    const std::vector<FactorGroupId>& mandatory_groups,
++    const RiskBudgetV2& risk,
++    const FdeDecisionContextV3* context) const {
++  std::vector<ExclusionAction> consumed;
++  if (candidates) {
++    consumed.reserve(candidates->size());
++    for (const auto& candidate : *candidates) {
++      consumed.push_back(candidate.action);
++    }
++  }
++  const ActionSearchValidationV1 validation =
++      context && context->action_lease
++          ? validateCompactActionConsumptionV3(*context->action_lease,
++                                               consumed)
++          : ActionSearchValidationV1{
++                false, false, "compact action lease missing"};
++  if (!validation.valid || !validation.exhaustive) {
++    if (context && context->v1.risk_result) {
++      *context->v1.risk_result = {};
++      context->v1.risk_result->charged_total =
++          std::numeric_limits<double>::quiet_NaN();
++      context->v1.risk_result->declared_total =
++          std::numeric_limits<double>::quiet_NaN();
++      context->v1.risk_result->margin =
++          std::numeric_limits<double>::quiet_NaN();
++      context->v1.risk_result->terms =
++          "SEARCH_INCOMPLETE: compact census validation=" +
++          validation.reason;
++    }
++    FdeDecision decision;
++    decision.status = FdeStatus::SearchIncomplete;
++    decision.commit_allowed = false;
++    decision.integrity_available = false;
++    decision.reason =
++        "SEARCH_INCOMPLETE: compact validation=" + validation.reason;
++    return decision;
++  }
++  return decide(all_in, hypotheses, evidence, candidates, mandatory_groups,
++                risk, context ? &context->v1 : nullptr);
++}
++
+ FdeDecision FdeManager::decide(
+     const DetectorResultV2& all_in,
+     const std::vector<FaultHypothesisV2>& hypotheses,
+diff --git a/src/uwb_imu_pl/integrity/hypothesis_generator.cpp b/src/uwb_imu_pl/integrity/hypothesis_generator.cpp
+index c054e55..3635337 100644
+--- a/src/uwb_imu_pl/integrity/hypothesis_generator.cpp
++++ b/src/uwb_imu_pl/integrity/hypothesis_generator.cpp
+@@ -8,8 +8,12 @@
+ #include <gtsam/linear/GaussianFactorGraph.h>
+ 
+ #include <algorithm>
++#include <array>
++#include <cerrno>
+ #include <chrono>
++#include <cstdio>
+ #include <cstring>
++#include <fcntl.h>
+ #include <functional>
+ #include <iomanip>
+ #include <iterator>
+@@ -18,6 +22,8 @@
+ #include <set>
+ #include <sstream>
+ #include <stdexcept>
++#include <sys/stat.h>
++#include <unistd.h>
+ 
+ namespace uwb_imu_pl {
+ namespace {
+@@ -564,11 +570,39 @@ const PendingFactorGroup* replacementFor(const EpochTransaction& tx,
+   return nullptr;
+ }
+ 
++bool bridgeGroupRepresentable(const LinearizedIntegrityWindow& window,
++                              const PendingFactorGroup& group) {
++  std::set<gtsam::Key> unique;
++  for (const auto key : group.keys) {
++    if (!unique.insert(key).second) continue;
++    const gtsam::Symbol symbol(key);
++    const char type = symbol.chr();
++    const int dimension = type == 'v' ? 3 : 6;
++    const int within = type == 'x' ? 0 : (type == 'v' ? 6 : 9);
++    if ((type != 'x' && type != 'v' && type != 'b') ||
++        symbol.index() < window.detector_first_epoch) {
++      return false;
++    }
++    const std::size_t relative =
++        symbol.index() - window.detector_first_epoch;
++    if (relative > static_cast<std::size_t>(
++                       std::numeric_limits<int>::max() / 15)) {
++      return false;
++    }
++    const int target = static_cast<int>(relative * 15) + within;
++    if (target < 0 || dimension > window.H.cols() - target) return false;
++  }
++  return true;
++}
++
+ LinearizedFactorBlock bridgeBlock(const EpochTransaction& tx,
+                                   const LinearizedIntegrityWindow& window,
+                                   const Occurrence& occurrence,
+                                   const PendingFactorGroup& group) {
+   if (!tx.frozen_values) throw std::runtime_error("frozen values unavailable");
++  if (!bridgeGroupRepresentable(window, group)) {
++    throw std::runtime_error("bridge keys are outside the frozen window");
++  }
+   gtsam::Ordering ordering;
+   for (const auto key : group.keys) {
+     if (std::find(ordering.begin(), ordering.end(), key) == ordering.end()) {
+@@ -590,6 +624,10 @@ LinearizedFactorBlock bridgeBlock(const EpochTransaction& tx,
+     const int dimension = type == 'v' ? 3 : 6;
+     const int within = type == 'x' ? 0 : (type == 'v' ? 6 : 9);
+     const int target = static_cast<int>((epoch - window.detector_first_epoch) * 15) + within;
++    if (local_column < 0 || dimension > dense.first.cols() - local_column ||
++        target < 0 || dimension > window.H.cols() - target) {
++      throw std::runtime_error("bridge Jacobian placement is outside its matrix");
++    }
+     out.jacobian_whitened.block(0, target, dense.first.rows(), dimension) =
+         dense.first.block(0, local_column, dense.first.rows(), dimension);
+     local_column += dimension;
+@@ -642,6 +680,14 @@ ExclusionAction actionForMode(const EpochTransaction& tx,
+         action.recoverability = HistoryRecoverability::MissingProvenance;
+         continue;
+       }
++      // A recovery bridge that references a state already outside the frozen
++      // detector window cannot be represented by this candidate matrix.  It
++      // is missing provenance, not a writable negative/underflowed block.
++      if (!bridgeGroupRepresentable(window, *occurrence->pose_bridge) ||
++          !bridgeGroupRepresentable(window, *occurrence->bias_bridge)) {
++        action.recoverability = HistoryRecoverability::MissingProvenance;
++        continue;
++      }
+       action.groups_to_add.push_back(occurrence->pose_bridge->id);
+       action.groups_to_add.push_back(occurrence->bias_bridge->id);
+       action.added_blocks.push_back(bridgeBlock(
+@@ -676,7 +722,8 @@ ExclusionAction actionForMode(const EpochTransaction& tx,
+   return action;
+ }
+ 
+-ExclusionAction unite(const std::vector<const ExclusionAction*>& parts) {
++ExclusionAction unite(const std::vector<const ExclusionAction*>& parts,
++                      bool copy_added_blocks = true) {
+   ExclusionAction out;
+   std::set<std::uint64_t> remove, add, modes, units;
+   std::set<std::string> physical_sources;
+@@ -714,7 +761,9 @@ ExclusionAction unite(const std::vector<const ExclusionAction*>& parts) {
+       const auto id = part->groups_to_add[i];
+       if (add.insert(id.value()).second) {
+         out.groups_to_add.push_back(id);
+-        if (i < part->added_blocks.size()) out.added_blocks.push_back(part->added_blocks[i]);
++        if (copy_added_blocks && i < part->added_blocks.size()) {
++          out.added_blocks.push_back(part->added_blocks[i]);
++        }
+       }
+     }
+     for (const auto id : part->covered_modes) {
+@@ -750,7 +799,382 @@ ExclusionAction unite(const std::vector<const ExclusionAction*>& parts) {
+ 
+ }  // namespace
+ 
++namespace {
++
++class CanonicalByteSinkV3 {
++ public:
++  virtual ~CanonicalByteSinkV3() = default;
++  virtual bool append(const char* data, std::size_t size) = 0;
++};
++
++class CanonicalStringSinkV3 final : public CanonicalByteSinkV3 {
++ public:
++  bool append(const char* data, std::size_t size) override {
++    bytes_.append(data, size);
++    return true;
++  }
++  std::string take() { return std::move(bytes_); }
++ private:
++  std::string bytes_;
++};
++
++class CanonicalCountSinkV3 final : public CanonicalByteSinkV3 {
++ public:
++  bool append(const char*, std::size_t size) override {
++    if (size > std::numeric_limits<std::uint64_t>::max() - size_) return false;
++    size_ += size;
++    return true;
++  }
++  std::uint64_t size() const { return size_; }
++ private:
++  std::uint64_t size_ = 0;
++};
++
++// Small attempt-local SHA-256 implementation.  It avoids adding a new shared
++// library dependency to the frozen P0 ABI while giving sidecar indexes a
++// cryptographic digest.  Digests are never treated as equality proofs.
++class CanonicalSha256SinkV3 final : public CanonicalByteSinkV3 {
++ public:
++  bool append(const char* data, std::size_t size) override {
++    if (finalized_) return false;
++    if (size > std::numeric_limits<std::uint64_t>::max() - total_bytes_) {
++      return false;
++    }
++    total_bytes_ += size;
++    const auto* input = reinterpret_cast<const unsigned char*>(data);
++    while (size != 0) {
++      const std::size_t count = std::min(size, block_.size() - used_);
++      std::memcpy(block_.data() + used_, input, count);
++      used_ += count;
++      input += count;
++      size -= count;
++      if (used_ == block_.size()) {
++        transform(block_.data());
++        used_ = 0;
++      }
++    }
++    return true;
++  }
++
++  std::uint64_t length() const { return total_bytes_; }
++
++  std::string finishHex() {
++    if (!finalized_) {
++      const std::uint64_t bit_count = total_bytes_ * 8;
++      block_[used_++] = 0x80;
++      if (used_ > 56) {
++        std::fill(block_.begin() + used_, block_.end(), 0);
++        transform(block_.data());
++        used_ = 0;
++      }
++      std::fill(block_.begin() + used_, block_.begin() + 56, 0);
++      for (int index = 0; index < 8; ++index) {
++        block_[63 - index] = static_cast<unsigned char>(
++            bit_count >> (8 * index));
++      }
++      transform(block_.data());
++      finalized_ = true;
++    }
++    static constexpr char kHex[] = "0123456789abcdef";
++    std::string out(64, '0');
++    for (std::size_t word = 0; word < state_.size(); ++word) {
++      for (std::size_t byte = 0; byte < 4; ++byte) {
++        const unsigned char value = static_cast<unsigned char>(
++            state_[word] >> (24 - 8 * byte));
++        out[8 * word + 2 * byte] = kHex[value >> 4];
++        out[8 * word + 2 * byte + 1] = kHex[value & 0x0f];
++      }
++    }
++    return out;
++  }
++
++ private:
++  static std::uint32_t rotate(std::uint32_t value, unsigned count) {
++    return (value >> count) | (value << (32 - count));
++  }
++  void transform(const unsigned char* input) {
++    static constexpr std::array<std::uint32_t, 64> k = {{
++      0x428a2f98u,0x71374491u,0xb5c0fbcfu,0xe9b5dba5u,
++      0x3956c25bu,0x59f111f1u,0x923f82a4u,0xab1c5ed5u,
++      0xd807aa98u,0x12835b01u,0x243185beu,0x550c7dc3u,
++      0x72be5d74u,0x80deb1feu,0x9bdc06a7u,0xc19bf174u,
++      0xe49b69c1u,0xefbe4786u,0x0fc19dc6u,0x240ca1ccu,
++      0x2de92c6fu,0x4a7484aau,0x5cb0a9dcu,0x76f988dau,
++      0x983e5152u,0xa831c66du,0xb00327c8u,0xbf597fc7u,
++      0xc6e00bf3u,0xd5a79147u,0x06ca6351u,0x14292967u,
++      0x27b70a85u,0x2e1b2138u,0x4d2c6dfcu,0x53380d13u,
++      0x650a7354u,0x766a0abbu,0x81c2c92eu,0x92722c85u,
++      0xa2bfe8a1u,0xa81a664bu,0xc24b8b70u,0xc76c51a3u,
++      0xd192e819u,0xd6990624u,0xf40e3585u,0x106aa070u,
++      0x19a4c116u,0x1e376c08u,0x2748774cu,0x34b0bcb5u,
++      0x391c0cb3u,0x4ed8aa4au,0x5b9cca4fu,0x682e6ff3u,
++      0x748f82eeu,0x78a5636fu,0x84c87814u,0x8cc70208u,
++      0x90befffau,0xa4506cebu,0xbef9a3f7u,0xc67178f2u}};
++    std::array<std::uint32_t, 64> words{};
++    for (std::size_t index = 0; index < 16; ++index) {
++      words[index] = (static_cast<std::uint32_t>(input[4 * index]) << 24) |
++          (static_cast<std::uint32_t>(input[4 * index + 1]) << 16) |
++          (static_cast<std::uint32_t>(input[4 * index + 2]) << 8) |
++          static_cast<std::uint32_t>(input[4 * index + 3]);
++    }
++    for (std::size_t index = 16; index < words.size(); ++index) {
++      const std::uint32_t s0 = rotate(words[index - 15], 7) ^
++          rotate(words[index - 15], 18) ^ (words[index - 15] >> 3);
++      const std::uint32_t s1 = rotate(words[index - 2], 17) ^
++          rotate(words[index - 2], 19) ^ (words[index - 2] >> 10);
++      words[index] = words[index - 16] + s0 + words[index - 7] + s1;
++    }
++    std::uint32_t a = state_[0], b = state_[1], c = state_[2], d = state_[3];
++    std::uint32_t e = state_[4], f = state_[5], g = state_[6], h = state_[7];
++    for (std::size_t index = 0; index < words.size(); ++index) {
++      const std::uint32_t s1 = rotate(e, 6) ^ rotate(e, 11) ^ rotate(e, 25);
++      const std::uint32_t choose = (e & f) ^ (~e & g);
++      const std::uint32_t temp1 = h + s1 + choose + k[index] + words[index];
++      const std::uint32_t s0 = rotate(a, 2) ^ rotate(a, 13) ^ rotate(a, 22);
++      const std::uint32_t majority = (a & b) ^ (a & c) ^ (b & c);
++      const std::uint32_t temp2 = s0 + majority;
++      h = g; g = f; f = e; e = d + temp1;
++      d = c; c = b; b = a; a = temp1 + temp2;
++    }
++    state_[0] += a; state_[1] += b; state_[2] += c; state_[3] += d;
++    state_[4] += e; state_[5] += f; state_[6] += g; state_[7] += h;
++  }
++
++  std::array<std::uint32_t, 8> state_{{
++      0x6a09e667u,0xbb67ae85u,0x3c6ef372u,0xa54ff53au,
++      0x510e527fu,0x9b05688cu,0x1f83d9abu,0x5be0cd19u}};
++  std::array<unsigned char, 64> block_{};
++  std::size_t used_ = 0;
++  std::uint64_t total_bytes_ = 0;
++  bool finalized_ = false;
++};
++
++bool appendCanonicalRawV3(CanonicalByteSinkV3* sink,
++                          const std::string& value) {
++  return sink && sink->append(value.data(), value.size());
++}
++
++template <class T>
++bool appendCanonicalIntegralV3(CanonicalByteSinkV3* sink, T value) {
++  std::array<char, 32> bytes{};
++  const int count = std::snprintf(
++      bytes.data(), bytes.size(), "%llx;",
++      static_cast<unsigned long long>(static_cast<std::uint64_t>(value)));
++  return count > 0 && static_cast<std::size_t>(count) < bytes.size() &&
++      sink->append(bytes.data(), static_cast<std::size_t>(count));
++}
++
++bool appendCanonicalDoubleV3(CanonicalByteSinkV3* sink, double value) {
++  std::uint64_t bits = 0;
++  static_assert(sizeof(bits) == sizeof(value), "64-bit canonical double");
++  std::memcpy(&bits, &value, sizeof(bits));
++  return appendCanonicalIntegralV3(sink, bits);
++}
++
++class CanonicalHexSinkV3 final : public CanonicalByteSinkV3 {
++ public:
++  explicit CanonicalHexSinkV3(CanonicalByteSinkV3* destination)
++      : destination_(destination) {}
++  bool append(const char* data, std::size_t size) override {
++    static constexpr char kHex[] = "0123456789abcdef";
++    std::array<char, 8192> encoded{};
++    std::size_t input = 0;
++    while (input < size) {
++      const std::size_t count = std::min(
++          size - input, encoded.size() / 2);
++      for (std::size_t index = 0; index < count; ++index) {
++        const unsigned char value =
++            static_cast<unsigned char>(data[input + index]);
++        encoded[2 * index] = kHex[value >> 4];
++        encoded[2 * index + 1] = kHex[value & 0x0f];
++      }
++      if (!destination_->append(encoded.data(), 2 * count)) return false;
++      input += count;
++    }
++    return true;
++  }
++ private:
++  CanonicalByteSinkV3* destination_ = nullptr;
++};
++
++bool appendCanonicalStringV3(CanonicalByteSinkV3* sink,
++                             const std::string& value) {
++  std::array<char, 32> prefix{};
++  const int count = std::snprintf(
++      prefix.data(), prefix.size(), "%llu:",
++      static_cast<unsigned long long>(value.size()));
++  if (count <= 0 || static_cast<std::size_t>(count) >= prefix.size() ||
++      !sink->append(prefix.data(), static_cast<std::size_t>(count))) {
++    return false;
++  }
++  CanonicalHexSinkV3 hex(sink);
++  return hex.append(value.data(), value.size()) &&
++      sink->append(";", 1);
++}
++
++template <class Derived>
++bool appendCanonicalEigenV3(CanonicalByteSinkV3* sink,
++                            const Eigen::MatrixBase<Derived>& value) {
++  if (!appendCanonicalIntegralV3(sink, value.rows()) ||
++      !appendCanonicalIntegralV3(sink, value.cols())) return false;
++  for (Eigen::Index row = 0; row < value.rows(); ++row) {
++    for (Eigen::Index column = 0; column < value.cols(); ++column) {
++      if (!appendCanonicalDoubleV3(sink, value(row, column))) return false;
++    }
++  }
++  return true;
++}
++
++bool emitCanonicalBlockV3(const LinearizedFactorBlock& block,
++                          CanonicalByteSinkV3* sink) {
++  if (!appendCanonicalIntegralV3(sink, block.group_id.value()) ||
++      !appendCanonicalIntegralV3(sink, static_cast<int>(block.kind)) ||
++      !appendCanonicalIntegralV3(sink, static_cast<int>(block.sensor)) ||
++      !appendCanonicalIntegralV3(sink, static_cast<int>(block.role)) ||
++      !appendCanonicalIntegralV3(sink, block.window_column_indices.size())) {
++    return false;
++  }
++  for (const int column : block.window_column_indices) {
++    if (!appendCanonicalIntegralV3(sink, column)) return false;
++  }
++  if (!appendCanonicalIntegralV3(sink, block.fault_units.size())) return false;
++  for (const auto unit : block.fault_units) {
++    if (!appendCanonicalIntegralV3(sink, unit.value())) return false;
++  }
++  return appendCanonicalDoubleV3(sink, block.effective_weight) &&
++      appendCanonicalStringV3(sink, block.whitening_model_id) &&
++      appendCanonicalIntegralV3(sink, block.version.graph_version) &&
++      appendCanonicalIntegralV3(sink, block.version.ordering_version) &&
++      appendCanonicalIntegralV3(sink, block.version.noise_model_version) &&
++      appendCanonicalIntegralV3(sink, block.version.linpoint_version) &&
++      appendCanonicalEigenV3(sink, block.jacobian_raw) &&
++      appendCanonicalEigenV3(sink, block.residual_raw) &&
++      appendCanonicalEigenV3(sink, block.covariance) &&
++      appendCanonicalEigenV3(sink, block.whitener) &&
++      appendCanonicalEigenV3(sink, block.jacobian_whitened) &&
++      appendCanonicalEigenV3(sink, block.residual_whitened);
++}
++
++bool appendCanonicalBlockAsStringV3(CanonicalByteSinkV3* sink,
++                                    const LinearizedFactorBlock& block) {
++  CanonicalCountSinkV3 count;
++  if (!emitCanonicalBlockV3(block, &count)) return false;
++  std::array<char, 32> prefix{};
++  const int prefix_size = std::snprintf(
++      prefix.data(), prefix.size(), "%llu:",
++      static_cast<unsigned long long>(count.size()));
++  if (prefix_size <= 0 ||
++      static_cast<std::size_t>(prefix_size) >= prefix.size() ||
++      !sink->append(prefix.data(), static_cast<std::size_t>(prefix_size))) {
++    return false;
++  }
++  CanonicalHexSinkV3 hex(sink);
++  return emitCanonicalBlockV3(block, &hex) && sink->append(";", 1);
++}
++
++bool emitCanonicalActionOperationV3(const ExclusionAction& action,
++                                    CanonicalByteSinkV3* sink) {
++  if (!sink->append("ACTION_OPERATION_V1|", 20)) return false;
++  auto remove = sortedCopy(action.groups_to_remove);
++  auto add = sortedCopy(action.groups_to_add);
++  if (!appendCanonicalIntegralV3(sink, remove.size())) return false;
++  for (const auto id : remove) {
++    if (!appendCanonicalIntegralV3(sink, id.value())) return false;
++  }
++  if (!appendCanonicalIntegralV3(sink, add.size())) return false;
++  for (const auto id : add) {
++    if (!appendCanonicalIntegralV3(sink, id.value())) return false;
++  }
++  if (!appendCanonicalIntegralV3(sink, static_cast<int>(action.bridge_mode)) ||
++      !appendCanonicalIntegralV3(sink,
++                                 static_cast<int>(action.recoverability)) ||
++      !appendCanonicalIntegralV3(
++          sink, action.recovery_epoch_begin.has_value())) return false;
++  if (action.recovery_epoch_begin) {
++    if (!appendCanonicalIntegralV3(sink, *action.recovery_epoch_begin)) {
++      return false;
++    }
++  }
++  if (!appendCanonicalIntegralV3(
++          sink, action.recovery_epoch_end.has_value())) return false;
++  if (action.recovery_epoch_end) {
++    if (!appendCanonicalIntegralV3(sink, *action.recovery_epoch_end)) {
++      return false;
++    }
++  }
++  std::vector<const LinearizedFactorBlock*> blocks;
++  blocks.reserve(action.added_blocks.size());
++  for (const auto& block : action.added_blocks) {
++    blocks.push_back(&block);
++  }
++  // Preserve V1's lexicographic ordering without retaining complete block
++  // strings.  A valid action has unique added group IDs (enforced by
++  // finiteActionOperation); the group-id encoding is the first canonical
++  // field, so comparing that small prefix determines the complete ordering.
++  auto block_less = [](const LinearizedFactorBlock* left,
++                       const LinearizedFactorBlock* right) {
++    std::array<char, 32> left_key{};
++    std::array<char, 32> right_key{};
++    std::snprintf(left_key.data(), left_key.size(), "%llx;",
++                  static_cast<unsigned long long>(left->group_id.value()));
++    std::snprintf(right_key.data(), right_key.size(), "%llx;",
++                  static_cast<unsigned long long>(right->group_id.value()));
++    return std::strcmp(left_key.data(), right_key.data()) < 0;
++  };
++  std::sort(blocks.begin(), blocks.end(), block_less);
++  if (!appendCanonicalIntegralV3(sink, blocks.size())) return false;
++  for (const auto* block : blocks) {
++    if (!appendCanonicalBlockAsStringV3(sink, *block)) return false;
++  }
++  return appendCanonicalStringV3(sink, action.removal_data_source) &&
++      appendCanonicalStringV3(sink, action.model_error_record) &&
++      appendCanonicalIntegralV3(sink, action.model_error_validated);
++}
++
++bool emitCanonicalActionSemanticV3(const ExclusionAction& action,
++                                   CanonicalByteSinkV3* sink) {
++  CanonicalCountSinkV3 operation_count;
++  if (!emitCanonicalActionOperationV3(action, &operation_count) ||
++      !sink->append("ACTION_SEMANTICS_V1|", 20)) return false;
++  std::array<char, 32> prefix{};
++  const int prefix_size = std::snprintf(
++      prefix.data(), prefix.size(), "%llu:",
++      static_cast<unsigned long long>(operation_count.size()));
++  if (prefix_size <= 0 ||
++      static_cast<std::size_t>(prefix_size) >= prefix.size() ||
++      !sink->append(prefix.data(), static_cast<std::size_t>(prefix_size))) {
++    return false;
++  }
++  CanonicalHexSinkV3 operation_hex(sink);
++  if (!emitCanonicalActionOperationV3(action, &operation_hex) ||
++      !sink->append(";", 1) ||
++      !appendCanonicalIntegralV3(sink, action.id.value()) ||
++      !appendCanonicalStringV3(sink, action.action_model_id)) return false;
++  const auto units = sortedCopy(action.covered_units);
++  const auto modes = sortedCopy(action.covered_modes);
++  const auto sources = sortedCopy(action.physical_source_ids);
++  if (!appendCanonicalIntegralV3(sink, units.size())) return false;
++  for (const auto id : units) {
++    if (!appendCanonicalIntegralV3(sink, id.value())) return false;
++  }
++  if (!appendCanonicalIntegralV3(sink, modes.size())) return false;
++  for (const auto id : modes) {
++    if (!appendCanonicalIntegralV3(sink, id.value())) return false;
++  }
++  if (!appendCanonicalIntegralV3(sink, sources.size())) return false;
++  for (const auto& source : sources) {
++    if (!appendCanonicalStringV3(sink, source)) return false;
++  }
++  return appendCanonicalIntegralV3(sink, action.exclusion_cardinality);
++}
++
++}  // namespace
++
+ std::string exactActionOperationIdentityV1(const ExclusionAction& action) {
++  // Keep the exported V1 serializer exactly as frozen.  The streaming V3
++  // emitter is independently useful for compact sidecars, but substituting
++  // it here would make any tiny implementation discrepancy an ABI-visible
++  // identity change.
+   std::ostringstream out;
+   out << "ACTION_OPERATION_V1|";
+   auto remove = sortedCopy(action.groups_to_remove);
+@@ -1022,6 +1446,702 @@ ActionSearchValidationV1 validateCompleteActionStreamV2(
+ 
+ namespace {
+ 
++std::uint64_t actionIdentityDigestV3(const std::string& bytes) {
++  std::uint64_t hash = 1469598103934665603ULL;
++  for (const unsigned char value : bytes) {
++    hash ^= value;
++    hash *= 1099511628211ULL;
++  }
++  // Zero is reserved for an unavailable identity.
++  return hash == 0 ? 1 : hash;
++}
++
++struct SidecarRangeV3 {
++  std::uint64_t offset = 0;
++  std::uint64_t length = 0;
++  std::uint64_t digest = 0;
++};
++
++class AttemptSidecarFileV3 {
++ public:
++  AttemptSidecarFileV3() { openAnonymous(); }
++  ~AttemptSidecarFileV3() {
++    if (fd_ >= 0) {
++      while (::close(fd_) != 0 && errno == EINTR) {}
++    }
++  }
++  AttemptSidecarFileV3(const AttemptSidecarFileV3&) = delete;
++  AttemptSidecarFileV3& operator=(const AttemptSidecarFileV3&) = delete;
++
++  bool valid() const { return fd_ >= 0 && !failed_; }
++  const std::string& failure() const { return failure_; }
++  bool sealedAvailable() const {
++    return valid() && sealed_ && !injected_read_failure_;
++  }
++
++  bool appendCanonical(
++      const std::function<bool(CanonicalByteSinkV3*)>& emit,
++      SidecarRangeV3* range) {
++    if (!range || sealed_ || !valid()) return fail("sidecar append invalid");
++    class FileSink final : public CanonicalByteSinkV3 {
++     public:
++      explicit FileSink(AttemptSidecarFileV3* file) : file_(file) {}
++      bool append(const char* data, std::size_t size) override {
++        if (!file_->writeAll(data, size)) return false;
++        for (std::size_t index = 0; index < size; ++index) {
++          digest_ ^= static_cast<unsigned char>(data[index]);
++          digest_ *= 1099511628211ULL;
++        }
++        if (size > std::numeric_limits<std::uint64_t>::max() - length_) {
++          return file_->fail("sidecar canonical length overflow");
++        }
++        length_ += size;
++        return true;
++      }
++      std::uint64_t length() const { return length_; }
++      std::uint64_t digest() const { return digest_ == 0 ? 1 : digest_; }
++     private:
++      AttemptSidecarFileV3* file_ = nullptr;
++      std::uint64_t length_ = 0;
++      std::uint64_t digest_ = 1469598103934665603ULL;
++    } sink(this);
++    range->offset = length_;
++    if (!emit(&sink)) return fail("canonical serialization failed");
++    range->length = sink.length();
++    range->digest = sink.digest();
++    return true;
++  }
++
++  bool seal(std::uint64_t* length, std::uint64_t* digest) {
++    if (!valid() || sealed_) return fail("sidecar seal invalid");
++    if (::fdatasync(fd_) != 0) return failErrno("sidecar fdatasync");
++    struct stat status {};
++    if (::fstat(fd_, &status) != 0 || status.st_size < 0 ||
++        static_cast<std::uint64_t>(status.st_size) != length_) {
++      return failErrno("sidecar size changed before seal");
++    }
++    std::uint64_t value = 0;
++    if (!digestRange({0, length_, 0}, &value)) return false;
++    sealed_ = true;
++    sealed_length_ = length_;
++    sealed_digest_ = value;
++    if (length) *length = sealed_length_;
++    if (digest) *digest = sealed_digest_;
++    return true;
++  }
++
++  bool verifySealed() const {
++    if (!valid() || !sealed_ || injected_read_failure_) {
++      return const_cast<AttemptSidecarFileV3*>(this)->fail(
++          "sidecar unavailable/read failure");
++    }
++    struct stat status {};
++    if (::fstat(fd_, &status) != 0 || status.st_size < 0 ||
++        static_cast<std::uint64_t>(status.st_size) != sealed_length_) {
++      return const_cast<AttemptSidecarFileV3*>(this)->failErrno(
++          "sealed sidecar length mismatch");
++    }
++    std::uint64_t digest = 0;
++    return digestRange({0, sealed_length_, 0}, &digest) &&
++        digest == sealed_digest_;
++  }
++
++  bool verifyRange(const SidecarRangeV3& range) const {
++    std::uint64_t digest = 0;
++    return sealed_ && range.offset <= sealed_length_ &&
++        range.length <= sealed_length_ - range.offset &&
++        digestRange(range, &digest) && digest == range.digest;
++  }
++
++  bool sameBytes(const SidecarRangeV3& left,
++                 const SidecarRangeV3& right) const {
++    if (!sealed_ || left.length != right.length ||
++        left.offset > sealed_length_ || right.offset > sealed_length_ ||
++        left.length > sealed_length_ - left.offset ||
++        right.length > sealed_length_ - right.offset) return false;
++    std::array<char, 4096> a{};
++    std::array<char, 4096> b{};
++    std::uint64_t done = 0;
++    while (done < left.length) {
++      const std::size_t count = static_cast<std::size_t>(std::min<std::uint64_t>(
++          a.size(), left.length - done));
++      if (!readExact(left.offset + done, a.data(), count) ||
++          !readExact(right.offset + done, b.data(), count)) return false;
++      if (std::memcmp(a.data(), b.data(), count) != 0) return false;
++      done += count;
++    }
++    return true;
++  }
++
++  // Compare a freshly streamed canonical payload with an existing range.
++  // This is intentionally usable before seal so content-addressed blocks can
++  // be deduplicated without first appending a duplicate.  Reads are bounded
++  // and a digest match is never accepted without this byte comparison.
++  bool sameCanonical(
++      const SidecarRangeV3& existing,
++      const std::function<bool(CanonicalByteSinkV3*)>& emit) const {
++    if (!valid() || existing.offset > length_ ||
++        existing.length > length_ - existing.offset) return false;
++    class CompareSink final : public CanonicalByteSinkV3 {
++     public:
++      CompareSink(const AttemptSidecarFileV3* file,
++                  const SidecarRangeV3& range)
++          : file_(file), range_(range) {}
++      bool append(const char* data, std::size_t size) override {
++        if (size > range_.length - compared_) return false;
++        std::array<char, 4096> bytes{};
++        std::size_t consumed = 0;
++        while (consumed < size) {
++          const std::size_t count = std::min(
++              bytes.size(), size - consumed);
++          if (!file_->readExact(range_.offset + compared_, bytes.data(),
++                                count) ||
++              std::memcmp(bytes.data(), data + consumed, count) != 0) {
++            return false;
++          }
++          consumed += count;
++          compared_ += count;
++        }
++        return true;
++      }
++      bool complete() const { return compared_ == range_.length; }
++     private:
++      const AttemptSidecarFileV3* file_ = nullptr;
++      SidecarRangeV3 range_;
++      std::uint64_t compared_ = 0;
++    } sink(this, existing);
++    return emit(&sink) && sink.complete();
++  }
++
++  bool copyRange(const SidecarRangeV3& range, std::string* bytes) const {
++    if (!bytes || !sealed_ || range.offset > sealed_length_ ||
++        range.length > sealed_length_ - range.offset ||
++        range.length > std::numeric_limits<std::size_t>::max()) return false;
++    bytes->resize(static_cast<std::size_t>(range.length));
++    return readExact(range.offset, bytes->data(), bytes->size());
++  }
++
++  void injectReadFailureForTest() { injected_read_failure_ = true; }
++
++ private:
++  void openAnonymous() {
++#if defined(O_TMPFILE)
++    fd_ = ::open("/tmp", O_TMPFILE | O_RDWR | O_CLOEXEC, 0600);
++#endif
++    if (fd_ >= 0) return;
++    char path[] = "/tmp/uwb_imu_pl_action_sidecar.XXXXXX";
++#if defined(O_CLOEXEC)
++    fd_ = ::mkostemp(path, O_CLOEXEC);
++#else
++    fd_ = ::mkstemp(path);
++#endif
++    if (fd_ < 0) {
++      failErrno("sidecar temporary file creation");
++      return;
++    }
++    if (::fchmod(fd_, 0600) != 0) {
++      failErrno("sidecar chmod");
++      ::close(fd_);
++      fd_ = -1;
++      ::unlink(path);
++      return;
++    }
++    if (::unlink(path) != 0) {
++      failErrno("sidecar unlink");
++      ::close(fd_);
++      fd_ = -1;
++    }
++  }
++
++  bool writeAll(const char* data, std::size_t size) {
++    std::size_t done = 0;
++    while (done < size) {
++      const ssize_t count = ::write(fd_, data + done, size - done);
++      if (count < 0 && errno == EINTR) continue;
++      if (count <= 0) return failErrno("sidecar write");
++      done += static_cast<std::size_t>(count);
++      length_ += static_cast<std::size_t>(count);
++    }
++    return true;
++  }
++
++  bool readExact(std::uint64_t offset, char* data, std::size_t size) const {
++    if (injected_read_failure_ || fd_ < 0 ||
++        offset > static_cast<std::uint64_t>(std::numeric_limits<off_t>::max())) {
++      return const_cast<AttemptSidecarFileV3*>(this)->fail(
++          "sidecar read unavailable");
++    }
++    std::size_t done = 0;
++    while (done < size) {
++      const ssize_t count = ::pread(
++          fd_, data + done, size - done,
++          static_cast<off_t>(offset + done));
++      if (count < 0 && errno == EINTR) continue;
++      if (count <= 0) {
++        return const_cast<AttemptSidecarFileV3*>(this)->failErrno(
++            "sidecar short read");
++      }
++      done += static_cast<std::size_t>(count);
++    }
++    return true;
++  }
++
++  bool digestRange(const SidecarRangeV3& range,
++                   std::uint64_t* digest) const {
++    if (!digest || range.offset > length_ ||
++        range.length > length_ - range.offset) return false;
++    std::uint64_t value = 1469598103934665603ULL;
++    std::array<char, 4096> bytes{};
++    std::uint64_t done = 0;
++    while (done < range.length) {
++      const std::size_t count = static_cast<std::size_t>(std::min<std::uint64_t>(
++          bytes.size(), range.length - done));
++      if (!readExact(range.offset + done, bytes.data(), count)) return false;
++      for (std::size_t index = 0; index < count; ++index) {
++        value ^= static_cast<unsigned char>(bytes[index]);
++        value *= 1099511628211ULL;
++      }
++      done += count;
++    }
++    *digest = value == 0 ? 1 : value;
++    return true;
++  }
++
++  bool fail(const std::string& reason) {
++    failed_ = true;
++    if (failure_.empty()) failure_ = reason;
++    return false;
++  }
++  bool failErrno(const std::string& reason) {
++    const int error = errno;
++    return fail(reason + ": errno=" + std::to_string(error));
++  }
++
++  int fd_ = -1;
++  std::uint64_t length_ = 0;
++  std::uint64_t sealed_length_ = 0;
++  std::uint64_t sealed_digest_ = 0;
++  bool sealed_ = false;
++  mutable bool failed_ = false;
++  mutable std::string failure_;
++  bool injected_read_failure_ = false;
++};
++
++SidecarRangeV3 operationRangeV3(const CompactActionDescriptorV3& descriptor) {
++  return {descriptor.operation_offset, descriptor.operation_length,
++          descriptor.operation_digest};
++}
++
++SidecarRangeV3 semanticRangeV3(const CompactActionDescriptorV3& descriptor) {
++  return {descriptor.semantic_offset, descriptor.semantic_length,
++          descriptor.semantic_digest};
++}
++
++struct CanonicalMetadataV3 {
++  std::uint64_t length = 0;
++  std::string strong_digest;
++};
++
++CanonicalMetadataV3 canonicalMetadataV3(
++    const std::function<bool(CanonicalByteSinkV3*)>& emit) {
++  CanonicalSha256SinkV3 sink;
++  if (!emit(&sink)) return {};
++  return {sink.length(), sink.finishHex()};
++}
++
++std::vector<const LinearizedFactorBlock*> orderedActionBlocksV3(
++    const ExclusionAction& action) {
++  std::vector<const LinearizedFactorBlock*> blocks;
++  blocks.reserve(action.added_blocks.size());
++  for (const auto& block : action.added_blocks) blocks.push_back(&block);
++  std::sort(blocks.begin(), blocks.end(),
++      [](const LinearizedFactorBlock* left,
++         const LinearizedFactorBlock* right) {
++        std::array<char, 32> left_key{};
++        std::array<char, 32> right_key{};
++        std::snprintf(left_key.data(), left_key.size(), "%llx;",
++                      static_cast<unsigned long long>(
++                          left->group_id.value()));
++        std::snprintf(right_key.data(), right_key.size(), "%llx;",
++                      static_cast<unsigned long long>(
++                          right->group_id.value()));
++        return std::strcmp(left_key.data(), right_key.data()) < 0;
++      });
++  return blocks;
++}
++
++bool emitCompactOperationRecordV3(
++    const ExclusionAction& action,
++    const CompactActionDescriptorV3& descriptor,
++    CanonicalByteSinkV3* sink) {
++  if (!sink->append("COMPACT_ACTION_OPERATION_V3|", 28)) return false;
++  auto remove = sortedCopy(action.groups_to_remove);
++  auto add = sortedCopy(action.groups_to_add);
++  if (!appendCanonicalIntegralV3(sink, remove.size())) return false;
++  for (const auto id : remove) {
++    if (!appendCanonicalIntegralV3(sink, id.value())) return false;
++  }
++  if (!appendCanonicalIntegralV3(sink, add.size())) return false;
++  for (const auto id : add) {
++    if (!appendCanonicalIntegralV3(sink, id.value())) return false;
++  }
++  if (!appendCanonicalIntegralV3(sink, static_cast<int>(action.bridge_mode)) ||
++      !appendCanonicalIntegralV3(sink,
++                                 static_cast<int>(action.recoverability)) ||
++      !appendCanonicalIntegralV3(
++          sink, action.recovery_epoch_begin.has_value())) return false;
++  if (action.recovery_epoch_begin &&
++      !appendCanonicalIntegralV3(sink, *action.recovery_epoch_begin)) {
++    return false;
++  }
++  if (!appendCanonicalIntegralV3(
++          sink, action.recovery_epoch_end.has_value())) return false;
++  if (action.recovery_epoch_end &&
++      !appendCanonicalIntegralV3(sink, *action.recovery_epoch_end)) {
++    return false;
++  }
++  if (!appendCanonicalIntegralV3(sink, descriptor.ordered_blocks.size())) {
++    return false;
++  }
++  for (const auto& block : descriptor.ordered_blocks) {
++    if (!appendCanonicalIntegralV3(sink, block.block_id) ||
++        !appendCanonicalIntegralV3(sink, block.offset) ||
++        !appendCanonicalIntegralV3(sink, block.length) ||
++        !appendCanonicalStringV3(sink, block.strong_digest)) return false;
++  }
++  return appendCanonicalStringV3(sink, action.removal_data_source) &&
++      appendCanonicalStringV3(sink, action.model_error_record) &&
++      appendCanonicalIntegralV3(sink, action.model_error_validated);
++}
++
++bool emitCompactSemanticRecordV3(
++    const ExclusionAction& action,
++    const CompactActionDescriptorV3& descriptor,
++    CanonicalByteSinkV3* sink) {
++  if (!sink->append("COMPACT_ACTION_SEMANTICS_V3|", 28) ||
++      !emitCompactOperationRecordV3(action, descriptor, sink) ||
++      !appendCanonicalIntegralV3(sink, action.id.value()) ||
++      !appendCanonicalStringV3(sink, action.action_model_id)) return false;
++  const auto units = sortedCopy(action.covered_units);
++  const auto modes = sortedCopy(action.covered_modes);
++  const auto sources = sortedCopy(action.physical_source_ids);
++  if (!appendCanonicalIntegralV3(sink, units.size())) return false;
++  for (const auto id : units) {
++    if (!appendCanonicalIntegralV3(sink, id.value())) return false;
++  }
++  if (!appendCanonicalIntegralV3(sink, modes.size())) return false;
++  for (const auto id : modes) {
++    if (!appendCanonicalIntegralV3(sink, id.value())) return false;
++  }
++  if (!appendCanonicalIntegralV3(sink, sources.size())) return false;
++  for (const auto& source : sources) {
++    if (!appendCanonicalStringV3(sink, source)) return false;
++  }
++  return appendCanonicalIntegralV3(sink, action.exclusion_cardinality);
++}
++
++}  // namespace
++
++struct AttemptActionLeaseV3::State {
++  CompactActionSearchV3 search;
++  std::function<ExclusionAction(const CompactActionDescriptorV3&)>
++      materialize_one;
++  std::function<ExclusionAction(const CompactActionDescriptorV3&)>
++      materialize_metadata;
++  std::shared_ptr<AttemptSidecarFileV3> sidecar;
++  bool producer_certificate_valid = false;
++};
++
++namespace {
++
++std::uint64_t compactSnapshotDigestV3(
++    const std::vector<CompactActionDescriptorV3>& descriptors,
++    const std::vector<CompactActionOmissionV3>& omissions,
++    std::uint64_t generated, std::uint64_t sidecar_digest,
++    std::uint64_t sidecar_length) {
++  using Row = std::tuple<std::uint64_t, std::uint64_t, std::uint64_t,
++                         std::uint64_t, std::uint64_t, std::uint64_t,
++                         std::uint64_t, std::uint64_t, std::uint64_t, bool>;
++  std::vector<Row> rows;
++  rows.reserve(descriptors.size() + omissions.size());
++  for (const auto& descriptor : descriptors) {
++    rows.emplace_back(descriptor.action_id, descriptor.operation_digest,
++                      descriptor.semantic_digest, descriptor.operation_offset,
++                      descriptor.operation_length, descriptor.semantic_offset,
++                      descriptor.semantic_length, 0, 0, true);
++  }
++  for (const auto& omission : omissions) {
++    const auto& descriptor = omission.occurrence;
++    rows.emplace_back(descriptor.action_id, descriptor.operation_digest,
++                      descriptor.semantic_digest, descriptor.operation_offset,
++                      descriptor.operation_length, descriptor.semantic_offset,
++                      descriptor.semantic_length, 0,
++                      omission.representative_action_id,
++                      omission.proven_safe);
++  }
++  std::sort(rows.begin(), rows.end());
++  std::ostringstream bytes;
++  bytes << "COMPACT_ACTION_SNAPSHOT_V3|" << generated << '|'
++        << sidecar_digest << '|' << sidecar_length << '|';
++  for (const auto& row : rows) {
++    bytes << std::get<0>(row) << ':' << std::get<1>(row) << ':'
++          << std::get<2>(row) << ':' << std::get<3>(row) << ':'
++          << std::get<4>(row) << ':' << std::get<5>(row) << ':'
++          << std::get<6>(row) << ':' << std::get<7>(row) << ':'
++          << std::get<8>(row) << ':' << std::get<9>(row) << ';';
++  }
++  return actionIdentityDigestV3(bytes.str());
++}
++
++std::size_t materializedBlockHeavyBytesV3(
++    const LinearizedFactorBlock& block) {
++  std::size_t bytes = 0;
++  auto matrix_bytes = [&](const auto& value) {
++    const auto size = static_cast<std::size_t>(value.size());
++    if (size > (std::numeric_limits<std::size_t>::max() - bytes) /
++                   sizeof(double)) {
++      throw std::overflow_error("compact action heavy-byte count overflow");
++    }
++    bytes += size * sizeof(double);
++  };
++  matrix_bytes(block.jacobian_raw);
++  matrix_bytes(block.residual_raw);
++  matrix_bytes(block.covariance);
++  matrix_bytes(block.whitener);
++  matrix_bytes(block.jacobian_whitened);
++  matrix_bytes(block.residual_whitened);
++  bytes += block.window_column_indices.size() * sizeof(int);
++  bytes += block.fault_units.size() * sizeof(FaultUnitId);
++  return bytes;
++}
++
++std::size_t materializedActionHeavyBytesV3(const ExclusionAction& action) {
++  std::size_t bytes = 0;
++  for (const auto& block : action.added_blocks) {
++    const std::size_t block_bytes = materializedBlockHeavyBytesV3(block);
++    if (block_bytes > std::numeric_limits<std::size_t>::max() - bytes) {
++      throw std::overflow_error("compact action heavy-byte count overflow");
++    }
++    bytes += block_bytes;
++  }
++  return bytes;
++}
++
++bool validateProducedDescriptorV3(
++    const std::shared_ptr<AttemptSidecarFileV3>& sidecar,
++    const CompactActionDescriptorV3& descriptor) {
++  if (!sidecar || !sidecar->verifyRange(operationRangeV3(descriptor)) ||
++      !sidecar->verifyRange(semanticRangeV3(descriptor))) return false;
++  return std::all_of(descriptor.ordered_blocks.begin(),
++                     descriptor.ordered_blocks.end(),
++      [](const CompactActionDescriptorV3::BlockReference& reference) {
++        return reference.block_id != 0 && reference.length != 0 &&
++            reference.strong_digest.size() == 64;
++      });
++}
++
++}  // namespace
++
++std::vector<ExclusionAction> AttemptActionLeaseV3::materializeBatch(
++    std::size_t begin, std::size_t count) const {
++  if (!state_ || !state_->materialize_one || begin > state_->search.actions.size() ||
++      count > state_->search.actions.size() - begin ||
++      count > state_->search.batch_capacity) {
++    throw std::runtime_error("compact action lease batch is invalid");
++  }
++  std::vector<ExclusionAction> actions;
++  actions.reserve(count);
++  for (std::size_t index = 0; index < count; ++index) {
++    actions.push_back(state_->materialize_one(
++        state_->search.actions[begin + index]));
++  }
++  return actions;
++}
++
++ExclusionAction AttemptActionLeaseV3::materialize(std::size_t index) const {
++  auto batch = materializeBatch(index, 1);
++  return std::move(batch.front());
++}
++
++ExclusionAction AttemptActionLeaseV3::materializeMetadata(
++    std::size_t index) const {
++  if (!state_ || !state_->materialize_metadata ||
++      index >= state_->search.actions.size()) {
++    throw std::runtime_error("compact action metadata lease is invalid");
++  }
++  return state_->materialize_metadata(state_->search.actions[index]);
++}
++
++const CompactActionSearchV3& AttemptActionLeaseV3::search() const {
++  if (!state_) throw std::runtime_error("compact action lease is closed");
++  return state_->search;
++}
++
++bool AttemptActionLeaseV3::valid() const {
++  return state_ && state_->materialize_one;
++}
++
++void AttemptActionLeaseV3::close() { state_.reset(); }
++
++AttemptActionLeaseV3 AttemptActionArenaV3::lease() const {
++  return AttemptActionLeaseV3(state_);
++}
++
++const CompactActionSearchV3& AttemptActionArenaV3::search() const {
++  if (!state_) throw std::runtime_error("compact action arena is closed");
++  return state_->search;
++}
++
++bool AttemptActionArenaV3::valid() const { return state_ != nullptr; }
++
++void AttemptActionArenaV3::close() { state_.reset(); }
++
++void AttemptActionArenaV3::injectSidecarReadFailureForTest() {
++  if (state_ && state_->sidecar) state_->sidecar->injectReadFailureForTest();
++}
++
++ActionSearchValidationV1 validateCompactActionSearchV3(
++    const AttemptActionLeaseV3& lease) {
++  if (!lease.valid()) return {false, false, "compact action lease missing"};
++  const auto state = lease.state_;
++  const auto& search = lease.search();
++  if (search.protocol_version != 3 || search.batch_capacity == 0) {
++    return {false, false, "compact action protocol/capacity invalid"};
++  }
++  if (!state || !state->sidecar || !state->producer_certificate_valid ||
++      !search.producer_certificate_valid ||
++      !state->sidecar->sealedAvailable()) {
++    return {false, false, "compact action sidecar/certificate invalid"};
++  }
++  if (search.generated != search.evaluated + search.omitted ||
++      search.evaluated != search.actions.size() ||
++      search.omitted != search.omitted_actions.size() ||
++      search.batch_count != (search.actions.empty()
++          ? 0 : 1 + (search.actions.size() - 1) / search.batch_capacity) ||
++      search.peak_batch_actions !=
++          std::min(search.batch_capacity, search.actions.size())) {
++    return {false, false, "compact action census/ranges invalid"};
++  }
++  std::set<std::uint64_t> action_ids;
++  std::set<std::uint64_t> referenced_block_ids;
++  std::uint64_t referenced_block_count = 0;
++  for (std::size_t index = 0; index < search.actions.size(); ++index) {
++    const auto& descriptor = search.actions[index];
++    if (descriptor.action_id == 0 ||
++        !action_ids.insert(descriptor.action_id).second) {
++      return {false, false, "compact action id invalid/duplicate"};
++    }
++    if (!state->sidecar->verifyRange(operationRangeV3(descriptor)) ||
++        !state->sidecar->verifyRange(semanticRangeV3(descriptor))) {
++      return {false, false,
++              "compact descriptor canonical range invalid"};
++    }
++    for (const auto& block : descriptor.ordered_blocks) {
++      referenced_block_ids.insert(block.block_id);
++      ++referenced_block_count;
++    }
++    (void)state->materialize_metadata(descriptor);
++  }
++  for (const auto& omission : search.omitted_actions) {
++    for (const auto& block : omission.occurrence.ordered_blocks) {
++      referenced_block_ids.insert(block.block_id);
++      ++referenced_block_count;
++    }
++    const auto representative = std::find_if(
++        search.actions.begin(), search.actions.end(),
++        [&](const CompactActionDescriptorV3& descriptor) {
++          return descriptor.action_id == omission.representative_action_id;
++        });
++    const bool exact_duplicate = representative != search.actions.end() &&
++        state->sidecar->sameBytes(operationRangeV3(omission.occurrence),
++                                  operationRangeV3(*representative)) &&
++        state->sidecar->sameBytes(semanticRangeV3(omission.occurrence),
++                                  semanticRangeV3(*representative));
++    const bool safe = omission.reason == "EXACT_SEMANTIC_DUPLICATE" &&
++        exact_duplicate;
++    if (safe != omission.proven_safe) {
++      return {false, false, "compact omission proof invalid"};
++    }
++  }
++  if (search.unique_block_count != referenced_block_ids.size() ||
++      search.referenced_block_count != referenced_block_count) {
++    return {false, false, "compact block census mismatch"};
++  }
++  if (compactSnapshotDigestV3(
++          search.actions, search.omitted_actions, search.generated,
++          search.sidecar_digest, search.sidecar_length) !=
++      search.snapshot_digest) {
++    return {false, false, "compact snapshot digest mismatch"};
++  }
++  std::size_t derived_peak_bytes = 0;
++  for (std::size_t begin = 0; begin < search.actions.size();
++       begin += search.batch_capacity) {
++    std::size_t batch_bytes = 0;
++    const std::size_t end = std::min(
++        search.actions.size(), begin + search.batch_capacity);
++    for (std::size_t index = begin; index < end; ++index) {
++      const std::size_t value =
++          search.actions[index].materialized_heavy_bytes;
++      if (value > std::numeric_limits<std::size_t>::max() - batch_bytes) {
++        return {false, false, "compact batch heavy-byte count overflow"};
++      }
++      batch_bytes += value;
++    }
++    derived_peak_bytes = std::max(derived_peak_bytes, batch_bytes);
++  }
++  if (derived_peak_bytes != search.peak_batch_heavy_bytes) {
++    return {false, false, "compact batch heavy-byte metadata mismatch"};
++  }
++  const bool all_omissions_safe = std::all_of(
++      search.omitted_actions.begin(), search.omitted_actions.end(),
++      [](const CompactActionOmissionV3& omission) {
++        return omission.proven_safe;
++      });
++  if (search.exhaustive != all_omissions_safe ||
++      search.terminal_reason != (search.exhaustive ? "COMPLETE"
++                                                   : "SEARCH_INCOMPLETE")) {
++    return {false, false, "compact terminal completeness mismatch"};
++  }
++  return {true, search.exhaustive, "COMPLETE_COMPACT_STREAM"};
++}
++
++ActionSearchValidationV1 validateCompactActionConsumptionV3(
++    const AttemptActionLeaseV3& lease,
++    const std::vector<ExclusionAction>& consumed) {
++  const ActionSearchValidationV1 search =
++      validateCompactActionSearchV3(lease);
++  if (!search.valid || !search.exhaustive) return search;
++  if (consumed.size() != lease.search().actions.size()) {
++    return {false, false, "compact consumer action count mismatch"};
++  }
++  for (std::size_t index = 0; index < consumed.size(); ++index) {
++    const ExclusionAction exact = lease.materializeMetadata(index);
++    const ExclusionAction& compact = consumed[index];
++    const bool same = compact.id == exact.id &&
++        compact.covered_units == exact.covered_units &&
++        compact.covered_modes == exact.covered_modes &&
++        compact.physical_source_ids == exact.physical_source_ids &&
++        compact.groups_to_remove == exact.groups_to_remove &&
++        compact.groups_to_add == exact.groups_to_add &&
++        compact.bridge_mode == exact.bridge_mode &&
++        compact.exclusion_cardinality == exact.exclusion_cardinality &&
++        compact.action_model_id == exact.action_model_id &&
++        compact.recoverability == exact.recoverability &&
++        compact.recovery_epoch_begin == exact.recovery_epoch_begin &&
++        compact.recovery_epoch_end == exact.recovery_epoch_end &&
++        compact.removal_data_source == exact.removal_data_source &&
++        compact.model_error_record == exact.model_error_record &&
++        compact.model_error_validated == exact.model_error_validated;
++    if (!same) {
++      return {false, false,
++              "compact consumer action differs from exact recipe"};
++    }
++  }
++  return {true, true, "COMPLETE_COMPACT_CONSUMPTION"};
++}
++
++namespace {
++
+ void abortIncompleteActionSearchUnchecked(ActionSearchResultV1* result) {
+   result->actions.clear();
+   result->census.evaluated = 0;
+@@ -2059,4 +3179,446 @@ CompleteActionStreamV2 HypothesisGenerator::actionsForPlausibleSetV2(
+   return stream;
+ }
+ 
++AttemptActionArenaV3 HypothesisGenerator::actionsForPlausibleSetV3(
++    const LinearizedIntegrityWindow& window,
++    const EpochTransaction& transaction,
++    const GeneratedFaultModelSet& models,
++    const std::vector<FaultModeEvidence>& evidence,
++    const std::vector<std::string>& mandatory_health_sources,
++    bool force_digest_collision_for_test) const {
++  auto state = std::make_shared<AttemptActionLeaseV3::State>();
++  state->sidecar = std::make_shared<AttemptSidecarFileV3>();
++  auto& search = state->search;
++  const std::size_t requested_batch_capacity = config_.max_candidate_count;
++  search.batch_capacity = requested_batch_capacity;
++  if (requested_batch_capacity == 0) return AttemptActionArenaV3(state);
++
++  // The state is attempt-scoped: these references remain valid until the
++  // monitor closes the lease before leaving processUwbBatchImpl().
++  const auto all = std::make_shared<const std::vector<Occurrence>>(
++      occurrences(transaction));
++  // A mode operation is immutable for the frozen attempt.  Construct and
++  // linearize it exactly once.  Order-2 actions compose these frozen parts
++  // instead of rebuilding both bridges at every producer/consumer boundary.
++  auto frozen_mode_actions = std::make_shared<std::vector<ExclusionAction>>();
++  frozen_mode_actions->reserve(models.modes.size());
++  for (const auto& mode : models.modes) {
++    frozen_mode_actions->push_back(
++        actionForMode(transaction, window, mode, *all));
++  }
++  const auto compose_action =
++      [&models, frozen_mode_actions](
++          const CompactActionDescriptorV3& descriptor,
++          bool copy_added_blocks) {
++        ExclusionAction action;
++        if (descriptor.mode_indices.empty()) {
++          action.action_model_id = "KEEP_ALL";
++        } else {
++          std::vector<const ExclusionAction*> parts;
++          parts.reserve(descriptor.mode_indices.size());
++          for (const std::size_t mode_index : descriptor.mode_indices) {
++            if (mode_index >= models.modes.size() ||
++                mode_index >= frozen_mode_actions->size()) {
++              throw std::runtime_error("compact action mode index invalid");
++            }
++            parts.push_back(&frozen_mode_actions->at(mode_index));
++          }
++          action = unite(parts, copy_added_blocks);
++        }
++        action.id = ExclusionActionId(descriptor.action_id);
++        if (descriptor.force_missing_provenance) {
++          action.recoverability = HistoryRecoverability::MissingProvenance;
++        }
++        if (!descriptor.action_model_override.empty()) {
++          action.action_model_id = descriptor.action_model_override;
++        }
++        return action;
++      };
++  state->materialize_one =
++      [compose_action](const CompactActionDescriptorV3& descriptor) {
++        return compose_action(descriptor, true);
++      };
++  state->materialize_metadata =
++      [compose_action](const CompactActionDescriptorV3& descriptor) {
++        return compose_action(descriptor, false);
++      };
++
++  std::map<std::uint64_t, std::size_t> mode_index;
++  for (std::size_t index = 0; index < models.modes.size(); ++index) {
++    mode_index.emplace(models.modes[index].id.value(), index);
++  }
++  const auto is_current_group = [&](FactorGroupId group) {
++    if (group == transaction.imu_group.id) return true;
++    return std::any_of(transaction.uwb_groups.begin(),
++        transaction.uwb_groups.end(), [&](const PendingFactorGroup& value) {
++          return value.nominal && value.id == group;
++        });
++  };
++  std::vector<std::size_t> mandatory;
++  for (std::size_t index = 0; index < models.modes.size(); ++index) {
++    const ExclusionAction& action = frozen_mode_actions->at(index);
++    if (!std::any_of(action.groups_to_remove.begin(),
++                     action.groups_to_remove.end(), is_current_group)) {
++      continue;
++    }
++    bool required = false;
++    for (const auto unit_id : action.covered_units) {
++      const auto unit = std::find_if(models.units.begin(), models.units.end(),
++          [&](const FaultUnit& value) { return value.id == unit_id; });
++      if (unit != models.units.end() &&
++          std::find(mandatory_health_sources.begin(),
++                    mandatory_health_sources.end(), healthSourceId(*unit)) !=
++              mandatory_health_sources.end()) {
++        required = true;
++        break;
++      }
++    }
++    if (required) mandatory.push_back(index);
++  }
++
++  std::vector<std::vector<std::size_t>> requested;
++  std::vector<std::size_t> full;
++  std::set<std::uint64_t> plausible_anchors;
++  const auto plausible = completePlausibleHypotheses(
++      models.hypotheses, evidence);
++  for (const auto hypothesis_id : plausible) {
++    const auto hypothesis = std::find_if(
++        models.hypotheses.begin(), models.hypotheses.end(),
++        [&](const FaultHypothesisV2& value) {
++          return value.id == hypothesis_id;
++        });
++    if (hypothesis == models.hypotheses.end()) continue;
++    std::vector<std::size_t> parts;
++    for (const auto mode_id : hypothesis->modes) {
++      const auto found = mode_index.find(mode_id.value());
++      if (found == mode_index.end()) continue;
++      const auto& mode = models.modes[found->second];
++      if (mode.sensor == SensorType::Uwb) {
++        plausible_anchors.insert(mode.anchor_id.value());
++      }
++      parts.push_back(found->second);
++      full.push_back(found->second);
++    }
++    parts.insert(parts.end(), mandatory.begin(), mandatory.end());
++    if (!parts.empty()) requested.push_back(std::move(parts));
++  }
++  if (plausible.empty() && !mandatory.empty()) requested.push_back(mandatory);
++
++  std::vector<CompactActionDescriptorV3> raw_actions;
++  CompactActionDescriptorV3 keep;
++  keep.action_id = 1;
++  keep.action_model_override = "KEEP_ALL";
++  raw_actions.push_back(std::move(keep));
++  std::uint64_t next_id = 2;
++  auto physicalCardinality = [&](const std::vector<std::size_t>& parts) {
++    std::set<std::string> sources;
++    for (const auto index : parts) {
++      if (index < models.modes.size()) {
++        sources.insert(models.modes[index].physical_source_id);
++      }
++    }
++    return sources.size();
++  };
++  for (auto& parts : requested) {
++    CompactActionDescriptorV3 descriptor;
++    descriptor.action_id = next_id++;
++    descriptor.mode_indices = std::move(parts);
++    if (physicalCardinality(descriptor.mode_indices) >
++        config_.max_exclusion_cardinality) {
++      descriptor.cardinality_contract_rejected = true;
++      descriptor.force_missing_provenance = true;
++      descriptor.action_model_override = "CARDINALITY_CONTRACT_REJECTED";
++    }
++    raw_actions.push_back(std::move(descriptor));
++  }
++  std::sort(full.begin(), full.end(), [&](std::size_t left,
++                                          std::size_t right) {
++    return models.modes[left].id < models.modes[right].id;
++  });
++  full.erase(std::unique(full.begin(), full.end(),
++                         [&](std::size_t left, std::size_t right) {
++    return models.modes[left].id == models.modes[right].id;
++  }), full.end());
++  full.insert(full.end(), mandatory.begin(), mandatory.end());
++  if (!full.empty() && plausible_anchors.size() <= 1) {
++    CompactActionDescriptorV3 descriptor;
++    descriptor.action_id = next_id++;
++    descriptor.mode_indices = std::move(full);
++    descriptor.action_model_override = "FULL_PLAUSIBLE_UNION_RECOVERY";
++    descriptor.force_missing_provenance =
++        physicalCardinality(descriptor.mode_indices) >
++        config_.max_exclusion_cardinality;
++    raw_actions.push_back(std::move(descriptor));
++  }
++
++  // Materialize one action at a time and stream its canonical bytes directly
++  // into the anonymous attempt sidecar.  No complete operation/semantic
++  // string is retained.  Digests only select possible equality buckets;
++  // equality itself is a fixed-buffer byte comparison over sidecar ranges.
++  std::map<std::pair<std::uint64_t, std::uint64_t>, std::vector<std::size_t>>
++      digest_buckets;
++  using BlockBucketKeyV3 = std::pair<std::string, std::uint64_t>;
++  std::map<BlockBucketKeyV3,
++           std::vector<CompactActionDescriptorV3::BlockReference>>
++      block_buckets;
++  std::uint64_t next_block_id = 1;
++  bool finite = true;
++  constexpr std::size_t kActionArenaHeavyBudgetBytes = 8u << 20;
++  bool indivisible_payload_too_large = false;
++  for (std::size_t index = 0; index < raw_actions.size(); ++index) {
++    ExclusionAction action = state->materialize_metadata(raw_actions[index]);
++    auto& descriptor = raw_actions[index];
++    // Resolve the ordered block content by reference to the frozen single-mode
++    // operations.  This is byte-for-byte the same group-id union as unite(),
++    // but it never copies a dense matrix merely to hash or index it.
++    std::vector<const LinearizedFactorBlock*> ordered_blocks;
++    std::set<std::uint64_t> added_group_ids;
++    for (const std::size_t mode_index : descriptor.mode_indices) {
++      if (mode_index >= frozen_mode_actions->size()) {
++        finite = false;
++        break;
++      }
++      const auto& part = frozen_mode_actions->at(mode_index);
++      for (std::size_t block_index = 0;
++           block_index < part.groups_to_add.size(); ++block_index) {
++        if (block_index >= part.added_blocks.size()) {
++          finite = false;
++          break;
++        }
++        const auto group_id = part.groups_to_add[block_index].value();
++        if (added_group_ids.insert(group_id).second) {
++          ordered_blocks.push_back(&part.added_blocks[block_index]);
++        }
++      }
++      if (!finite) break;
++    }
++    std::sort(ordered_blocks.begin(), ordered_blocks.end(),
++        [](const LinearizedFactorBlock* left,
++           const LinearizedFactorBlock* right) {
++          std::array<char, 32> left_key{};
++          std::array<char, 32> right_key{};
++          std::snprintf(left_key.data(), left_key.size(), "%llx;",
++                        static_cast<unsigned long long>(
++                            left->group_id.value()));
++          std::snprintf(right_key.data(), right_key.size(), "%llx;",
++                        static_cast<unsigned long long>(
++                            right->group_id.value()));
++          return std::strcmp(left_key.data(), right_key.data()) < 0;
++        });
++    finite = finite && std::all_of(
++        ordered_blocks.begin(), ordered_blocks.end(),
++        [](const LinearizedFactorBlock* block) {
++          return block != nullptr && finiteBlockOperation(*block);
++        });
++    descriptor.materialized_heavy_bytes = 0;
++    for (const auto* block : ordered_blocks) {
++      const std::size_t block_bytes = materializedBlockHeavyBytesV3(*block);
++      if (block_bytes > std::numeric_limits<std::size_t>::max() -
++                            descriptor.materialized_heavy_bytes) {
++        throw std::overflow_error("compact action heavy-byte count overflow");
++      }
++      descriptor.materialized_heavy_bytes += block_bytes;
++    }
++    indivisible_payload_too_large = indivisible_payload_too_large ||
++        descriptor.materialized_heavy_bytes > kActionArenaHeavyBudgetBytes;
++    // Persist every exact immutable matrix payload once per attempt.  Actions
++    // retain only ordered references.  SHA-256/length selects a bucket and a
++    // bounded pread comparison proves equality, including collision cases.
++    for (const auto* block : ordered_blocks) {
++      const auto block_emit = [&](CanonicalByteSinkV3* sink) {
++        return emitCanonicalBlockV3(*block, sink);
++      };
++      const CanonicalMetadataV3 metadata = canonicalMetadataV3(block_emit);
++      if (metadata.strong_digest.empty()) {
++        finite = false;
++        break;
++      }
++      const BlockBucketKeyV3 key{
++          metadata.strong_digest, metadata.length};
++      std::optional<CompactActionDescriptorV3::BlockReference> existing;
++      for (const auto& candidate : block_buckets[key]) {
++        if (state->sidecar->sameCanonical(
++                {candidate.offset, candidate.length, 0}, block_emit)) {
++          existing = candidate;
++          break;
++        }
++      }
++      if (existing) {
++        descriptor.ordered_blocks.push_back(*existing);
++        continue;
++      }
++      SidecarRangeV3 range;
++      if (!state->sidecar->appendCanonical(block_emit, &range)) {
++        finite = false;
++        break;
++      }
++      CompactActionDescriptorV3::BlockReference reference;
++      reference.block_id = next_block_id++;
++      reference.offset = range.offset;
++      reference.length = range.length;
++      reference.strong_digest = metadata.strong_digest;
++      block_buckets[key].push_back(reference);
++      descriptor.ordered_blocks.push_back(std::move(reference));
++    }
++    if (!finite) break;
++
++    SidecarRangeV3 operation;
++    SidecarRangeV3 semantic;
++    if (!state->sidecar->appendCanonical(
++            [&](CanonicalByteSinkV3* sink) {
++              return emitCompactOperationRecordV3(action, descriptor, sink);
++            }, &operation) ||
++        !state->sidecar->appendCanonical(
++            [&](CanonicalByteSinkV3* sink) {
++              return emitCompactSemanticRecordV3(action, descriptor, sink);
++            }, &semantic)) {
++      finite = false;
++      break;
++    }
++    descriptor.operation_offset = operation.offset;
++    descriptor.operation_length = operation.length;
++    descriptor.operation_digest = operation.digest;
++    descriptor.semantic_offset = semantic.offset;
++    descriptor.semantic_length = semantic.length;
++    descriptor.semantic_digest = semantic.digest;
++  }
++  search.unique_block_count = next_block_id - 1;
++  for (const auto& descriptor : raw_actions) {
++    search.referenced_block_count += descriptor.ordered_blocks.size();
++  }
++  if (finite && !state->sidecar->seal(
++          &search.sidecar_length, &search.sidecar_digest)) {
++    finite = false;
++  }
++  std::map<std::uint64_t, std::vector<std::size_t>> action_id_representatives;
++  if (finite) {
++    for (const auto& descriptor : raw_actions) {
++      const auto bucket_key = force_digest_collision_for_test
++          ? std::make_pair<std::uint64_t, std::uint64_t>(1, 1)
++          : std::make_pair(descriptor.operation_digest,
++                           descriptor.semantic_digest);
++      const auto& candidates = digest_buckets[bucket_key];
++      std::optional<std::size_t> exact_representative;
++      for (const std::size_t representative_index : candidates) {
++        ++search.digest_collision_comparisons;
++        const auto& representative = search.actions[representative_index];
++        if (state->sidecar->sameBytes(operationRangeV3(descriptor),
++                                      operationRangeV3(representative)) &&
++            state->sidecar->sameBytes(semanticRangeV3(descriptor),
++                                      semanticRangeV3(representative))) {
++          exact_representative = representative_index;
++          break;
++        }
++      }
++      bool id_conflict = false;
++      const auto existing_ids = action_id_representatives.find(
++          descriptor.action_id);
++      if (existing_ids != action_id_representatives.end()) {
++        for (const auto representative_index : existing_ids->second) {
++          const auto& representative = search.actions[representative_index];
++          if (!state->sidecar->sameBytes(semanticRangeV3(descriptor),
++                                         semanticRangeV3(representative))) {
++            id_conflict = true;
++          }
++        }
++      }
++      if (id_conflict) {
++        search.omitted_actions.push_back({
++            descriptor, 0, "DUPLICATE_ACTION_ID_CONFLICT", false});
++      } else if (exact_representative) {
++        search.omitted_actions.push_back({
++            descriptor,
++            search.actions[*exact_representative].action_id,
++            "EXACT_SEMANTIC_DUPLICATE", true});
++      } else {
++        const std::size_t retained_index = search.actions.size();
++        search.actions.push_back(descriptor);
++        digest_buckets[bucket_key].push_back(retained_index);
++        action_id_representatives[descriptor.action_id].push_back(
++            retained_index);
++      }
++    }
++  }
++  search.generated = raw_actions.size();
++  search.evaluated = finite ? search.actions.size() : 0;
++  search.omitted = search.generated - search.evaluated;
++  if (!finite) {
++    search.actions.clear();
++    search.omitted_actions.clear();
++    for (const auto& descriptor : raw_actions) {
++      search.omitted_actions.push_back(
++          {descriptor, 0, "SIDECAR_IO_OR_ENCODING_FAILURE", false});
++    }
++  }
++  const bool all_omissions_safe = std::all_of(
++      search.omitted_actions.begin(), search.omitted_actions.end(),
++      [](const CompactActionOmissionV3& omission) {
++        return omission.proven_safe;
++      });
++  search.exhaustive = finite && !indivisible_payload_too_large &&
++      all_omissions_safe;
++  search.terminal_reason = search.exhaustive ? "COMPLETE"
++                                             : "SEARCH_INCOMPLETE";
++  // A count-only bound is insufficient when an order-2 action contains large
++  // dense bridge matrices.  Derive one fixed action count for this attempt
++  // from the worst exact recipe so every leased batch stays below the explicit
++  // heavy-payload budget (except an indivisible single action).
++  std::size_t max_action_bytes = 0;
++  for (const auto& descriptor : search.actions) {
++    max_action_bytes = std::max(
++        max_action_bytes, descriptor.materialized_heavy_bytes);
++  }
++  const std::size_t byte_bounded_capacity = max_action_bytes == 0
++      ? requested_batch_capacity
++      : kActionArenaHeavyBudgetBytes / max_action_bytes;
++  search.batch_capacity = std::min(
++      requested_batch_capacity, byte_bounded_capacity);
++  if (search.batch_capacity == 0) {
++    search.batch_capacity = 1;
++    search.exhaustive = false;
++    search.terminal_reason = "SEARCH_INCOMPLETE";
++  }
++  search.batch_count = search.actions.empty()
++      ? 0 : 1 + (search.actions.size() - 1) / search.batch_capacity;
++  search.peak_batch_actions =
++      std::min(search.batch_capacity, search.actions.size());
++  search.snapshot_digest = compactSnapshotDigestV3(
++      search.actions, search.omitted_actions, search.generated,
++      search.sidecar_digest, search.sidecar_length);
++  for (std::size_t begin = 0; begin < search.actions.size();
++       begin += search.batch_capacity) {
++    std::size_t batch_bytes = 0;
++    const std::size_t end = std::min(
++        search.actions.size(), begin + search.batch_capacity);
++    for (std::size_t index = begin; index < end; ++index) {
++      batch_bytes += search.actions[index].materialized_heavy_bytes;
++    }
++    search.peak_batch_heavy_bytes = std::max(
++        search.peak_batch_heavy_bytes, batch_bytes);
++  }
++  bool producer_exact = search.exhaustive;
++  std::map<std::uint64_t,
++           std::tuple<std::uint64_t, std::uint64_t, std::string>>
++      block_identities;
++  for (const auto& descriptor : raw_actions) {
++    producer_exact = producer_exact && validateProducedDescriptorV3(
++        state->sidecar, descriptor);
++    for (const auto& block : descriptor.ordered_blocks) {
++      const auto identity = std::make_tuple(
++          block.offset, block.length, block.strong_digest);
++      const auto inserted = block_identities.emplace(block.block_id, identity);
++      producer_exact = producer_exact && block.block_id != 0 &&
++          (inserted.second || inserted.first->second == identity);
++    }
++  }
++  // The complete file/root is read exactly once by the producer.  Subsequent
++  // audit and FDE consumers reuse this sealed certificate and validate only
++  // compact ranges/census; the descriptor recipes can stream an exact block
++  // again on demand without retaining all canonical bytes.
++  state->producer_certificate_valid = producer_exact &&
++      state->sidecar->verifySealed();
++  search.producer_certificate_valid = state->producer_certificate_valid;
++  return AttemptActionArenaV3(std::move(state));
++}
++
+ }  // namespace uwb_imu_pl
+diff --git a/src/uwb_imu_pl/integrity/integrity_monitor.cpp b/src/uwb_imu_pl/integrity/integrity_monitor.cpp
+index 5388e36..dffe8de 100644
+--- a/src/uwb_imu_pl/integrity/integrity_monitor.cpp
++++ b/src/uwb_imu_pl/integrity/integrity_monitor.cpp
+@@ -979,10 +979,8 @@ bool actionCovers(const ExclusionAction& action,
+       });
+ }
+ 
+-// Pure, frozen-input eligibility check.  A negative result proves that an
+-// action cannot become the FDE winner regardless of its numerical kernel or
+-// PL result.  The exhaustive development mode bypasses this check so the same
+-// frozen input can be used as a decision-equivalence oracle.
++// Pure, frozen-input eligibility check used only to attribute a terminal
++// rejection after the action has completed the exact numerical path.
+ std::string actionIneligibilityReason(
+     const ExclusionAction& action,
+     const LinearizedIntegrityWindow& window,
+@@ -1593,6 +1591,11 @@ constexpr const char* kActionSearchOccurrenceAudit =
+ constexpr const char* kActionSearchCertificateAudit =
+     "ACTION_SEARCH_CERTIFICATE_V1";
+ 
++bool isActionSearchOccurrenceAudit(const CandidateAuditRecord& record) {
++  return record.action_type == kActionSearchOccurrenceAudit ||
++      record.action_type == "ACTION_SEARCH_OCCURRENCE_V3";
++}
++
+ const char* actionSearchLifecycleName(ActionSearchLifecycleV1 lifecycle) {
+   switch (lifecycle) {
+     case ActionSearchLifecycleV1::ReadyForEvaluation:
+@@ -1605,6 +1608,13 @@ const char* actionSearchLifecycleName(ActionSearchLifecycleV1 lifecycle) {
+ 
+ CandidateAuditRecord* actionSearchOccurrenceFor(
+     IntegrityOutput* output, const ExclusionAction& action) {
++  const auto compact = std::find_if(
++      output->candidate_audit.begin(), output->candidate_audit.end(),
++      [&](const CandidateAuditRecord& record) {
++        return record.action_type == "ACTION_SEARCH_OCCURRENCE_V3" &&
++            record.action_id == action.id.value();
++      });
++  if (compact != output->candidate_audit.end()) return &*compact;
+   const std::string operation = exactActionOperationIdentityV1(action);
+   const std::string semantic = exactActionSemanticIdentityV1(action);
+   const std::string planned = "PLANNED_EVALUATION;operation_identity=" +
+@@ -1640,7 +1650,7 @@ void refreshActionSearchAudit(IntegrityOutput* output) {
+   std::uint64_t pl_actual = 0;
+   std::uint64_t omitted = 0;
+   for (auto& record : output->candidate_audit) {
+-    if (record.action_type != kActionSearchOccurrenceAudit) continue;
++    if (!isActionSearchOccurrenceAudit(record)) continue;
+     if (record.model_error_record.rfind("PLANNED_EVALUATION;", 0) == 0) {
+       ++planned;
+     }
+@@ -1656,10 +1666,16 @@ void refreshActionSearchAudit(IntegrityOutput* output) {
+   output->diagnostics.kernel_evaluated_actions = candidate_actual;
+   output->diagnostics.post_passed_actions = post_actual;
+   output->diagnostics.pl_evaluated_actions = pl_actual;
+-  const std::string prefix = "ACTION_SEARCH_CERTIFICATE_V1:";
++  std::string prefix = "ACTION_SEARCH_CERTIFICATE_V1:";
+   auto reason = std::find_if(output->reason_codes.begin(),
+                              output->reason_codes.end(),
+       [&](const std::string& value) { return value.rfind(prefix, 0) == 0; });
++  if (reason == output->reason_codes.end()) {
++    prefix = "ACTION_SEARCH_CERTIFICATE_V3:";
++    reason = std::find_if(output->reason_codes.begin(),
++                          output->reason_codes.end(),
++        [&](const std::string& value) { return value.rfind(prefix, 0) == 0; });
++  }
+   if (reason == output->reason_codes.end()) return;
+   const std::size_t static_begin = reason->find("lifecycle=");
+   const std::string static_certificate = static_begin == std::string::npos
+@@ -1669,15 +1685,20 @@ void refreshActionSearchAudit(IntegrityOutput* output) {
+       ";planned_evaluations=" + std::to_string(planned) +
+       ";actual_candidate_evaluations=" + std::to_string(candidate_actual) +
+       ";actual_post_evaluations=" + std::to_string(post_actual) +
+-      ";actual_pl_evaluations=" + std::to_string(pl_actual) +
+-      ";omitted=" + std::to_string(omitted) + static_certificate;
++      ";actual_pl_evaluations=" + std::to_string(pl_actual);
++  // V3 owns an explicit terminal-action census.  Keep the established V1
++  // certificate byte-identical for old clients and frozen replay digests.
++  if (prefix == "ACTION_SEARCH_CERTIFICATE_V3:") {
++    *reason += ";terminal_actions=" + std::to_string(candidate_actual);
++  }
++  *reason += ";omitted=" + std::to_string(omitted) + static_certificate;
+ }
+ 
+ void closeExceptionalActionFunnel(IntegrityOutput* output) {
+   std::string funnel = "ACTION_REJECTION_FUNNEL_V2:";
+   std::size_t count = 0;
+   for (const auto& record : output->candidate_audit) {
+-    if (record.action_type != kActionSearchOccurrenceAudit) continue;
++    if (!isActionSearchOccurrenceAudit(record)) continue;
+     if (count++ != 0) funnel += ',';
+     const std::string& terminal = record.diagnostics.skip_reason;
+     std::string disposition = "REJECT_RESOURCE_NOT_RUN";
+@@ -1795,6 +1816,52 @@ void stageActionSearchAudit(IntegrityOutput* output,
+   refreshActionSearchAudit(output);
+ }
+ 
++void stageCompactActionSearchAudit(IntegrityOutput* output,
++                                   const AttemptActionLeaseV3& lease) {
++  const ActionSearchValidationV1 validation =
++      validateCompactActionSearchV3(lease);
++  const auto& search = lease.search();
++  for (std::size_t index = 0; index < search.actions.size(); ++index) {
++    const auto& descriptor = search.actions[index];
++    const ExclusionAction action = lease.materializeMetadata(index);
++    CandidateAuditRecord record;
++    record.action_id = descriptor.action_id;
++    record.action_type = "ACTION_SEARCH_OCCURRENCE_V3";
++    record.physical_source_ids = "ACTION_OCCURRENCE_V3|action=" +
++        std::to_string(descriptor.action_id) + "|operation_digest=" +
++        std::to_string(descriptor.operation_digest) +
++        "|semantic_digest=" + std::to_string(descriptor.semantic_digest);
++    record.removal_data_source = "COMPACT_ACTION_SNAPSHOT_V3|digest=" +
++        std::to_string(search.snapshot_digest);
++    auto join_group_ids = [](const std::vector<FactorGroupId>& ids) {
++      std::string joined;
++      for (const auto id : ids) {
++        if (!joined.empty()) joined += ';';
++        joined += std::to_string(id.value());
++      }
++      return joined;
++    };
++    record.removed_group_ids = join_group_ids(action.groups_to_remove);
++    record.added_group_ids = join_group_ids(action.groups_to_add);
++    record.model_error_record = "PLANNED_EVALUATION;operation_digest=" +
++        std::to_string(descriptor.operation_digest) +
++        ";semantic_digest=" + std::to_string(descriptor.semantic_digest);
++    record.model_error_validated = validation.valid;
++    record.diagnostics.skip_reason = "PLANNED_NOT_RUN";
++    record.reason = "terminal=PLANNED_NOT_RUN";
++    output->candidate_audit.push_back(std::move(record));
++  }
++  output->reason_codes.push_back(
++      "ACTION_SEARCH_CERTIFICATE_V3:lifecycle=ATTEMPT_ARENA_LEASED" +
++      std::string(";cap=") + std::to_string(search.batch_capacity) +
++      ";trusted_snapshot_digest=" + std::to_string(search.snapshot_digest) +
++      ";terminal_reason=" + search.terminal_reason +
++      ";validation=" + validation.reason +
++      ";validation_valid=" + (validation.valid ? "1" : "0") +
++      ";validation_exhaustive=" + (validation.exhaustive ? "1" : "0"));
++  refreshActionSearchAudit(output);
++}
++
+ }  // namespace
+ 
+ // The public stateless entry points append the C4 publication gate to the two
+@@ -3080,17 +3147,26 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+             models.action_entities_constructed);
+         CompleteActionStreamV2 action_stream;
+         ActionSearchResultV1& action_search = action_stream.complete;
++        AttemptActionArenaV3 compact_action_arena;
++        AttemptActionLeaseV3 compact_action_lease;
++        bool compact_action_search = false;
+         // Held independently from the certificate/result object and passed
+         // directly from the production generator boundary to the FDE
+         // consumer.  The certificate cannot substitute its own raw vector.
+         GeneratedActionSnapshotV1 trusted_generated_actions;
++        const auto generation_seams = pipelineTestSeams(this);
++        const bool legacy_action_sidecar_required =
++            (generation_seams &&
++             generation_seams->after_action_generation_before_census) ||
++            std::getenv("UWB_IMU_PL_REPLAY_EXPORT_DIR") != nullptr ||
++            actionHypothesisProofAuditEnabledV1();
+         if (all_in.passed && !hardware_barrier) {
+           ExclusionAction keep;
+           keep.id = ExclusionActionId(1);
+           keep.action_model_id = "KEEP_ALL";
+           action_stream = makeCompleteActionStreamV2(
+               {keep}, 1, &trusted_generated_actions);
+-        } else {
++        } else if (legacy_action_sidecar_required) {
+           // B4: this is the alarm/mandatory path: the exclusion-action
+           // entities and their bridge blocks are materialized here, once.
+           NumericalWorkCounters::candidateGraphBuilt();
+@@ -3101,8 +3177,17 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+           NumericalWorkCounters::actionEntitiesConstructed(
+               models.action_entities_constructed);
+           NumericalWorkCounters::bridgeBlocksBuilt(models.bridge_blocks_built);
++        } else {
++          // P1-06: the complete alarm-path action set is represented by
++          // compact recipes.  No vector of all bridge/replacement matrices or
++          // complete serialized identities exists at once.
++          NumericalWorkCounters::candidateGraphBuilt();
++          compact_action_arena = HypothesisGenerator(generator_config)
++              .actionsForPlausibleSetV3(window, transaction, models, evidence,
++                                        mandatory_health_sources);
++          compact_action_lease = compact_action_arena.lease();
++          compact_action_search = true;
+         }
+-        const auto generation_seams = pipelineTestSeams(this);
+         if (generation_seams &&
+             generation_seams->after_action_generation_before_census) {
+           // Exercise the actual pipeline boundary with a test-supplied raw
+@@ -3122,24 +3207,37 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+               trusted_generated_actions.generator_identity;
+         }
+         const ActionSearchValidationV1 action_stream_validation =
+-            validateCompleteActionStreamV2(
+-                action_stream, trusted_generated_actions);
++            compact_action_search
++                ? validateCompactActionSearchV3(compact_action_lease)
++                : validateCompleteActionStreamV2(
++                      action_stream, trusted_generated_actions);
+         if (!action_stream_validation.valid ||
+             !action_stream_validation.exhaustive) {
+-          abortIncompleteActionSearchBeforeEvaluationV1(&action_search);
++          if (!compact_action_search) {
++            abortIncompleteActionSearchBeforeEvaluationV1(&action_search);
++          }
+         }
+-        const ActionSearchCensusV1& action_search_census = action_search.census;
+-        output.diagnostics.generated_actions = action_search_census.generated;
++        const bool action_search_exhaustive =
++            compact_action_search
++                ? compact_action_lease.search().exhaustive
++                : action_search.census.exhaustive;
++        output.diagnostics.generated_actions = compact_action_search
++            ? compact_action_lease.search().generated
++            : action_search.census.generated;
+         // Freeze the complete raw search certificate before the first
+         // candidate/router/post/PL/FDE call.  Every exception path below moves
+         // this same output into last_attempt_output_; no catch reconstructs a
+         // second, self-reported census.
+-        stageActionSearchAudit(
+-            &output, action_search, trusted_generated_actions);
+-        models.actions = std::move(action_search.actions);
+-        action_search.generated_snapshot.actions.clear();
+-        action_search.generated_snapshot.actions.shrink_to_fit();
+-        if (!action_search_census.exhaustive) {
++        if (compact_action_search) {
++          stageCompactActionSearchAudit(&output, compact_action_lease);
++        } else {
++          stageActionSearchAudit(
++              &output, action_search, trusted_generated_actions);
++          models.actions = std::move(action_search.actions);
++          action_search.generated_snapshot.actions.clear();
++          action_search.generated_snapshot.actions.shrink_to_fit();
++        }
++        if (!action_search_exhaustive) {
+           output.fde_status = "SEARCH_INCOMPLETE";
+           output.reason_codes.push_back("SEARCH_INCOMPLETE");
+           output.protection_level.availability = Availability::Unavailable;
+@@ -3161,14 +3259,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+         for (const auto& hypothesis : models.hypotheses) {
+           frozen_hypotheses.emplace(hypothesis.id.value(), &hypothesis);
+         }
++        // Populated from each materialized action only for post-evaluation
++        // rejection attribution. It never skips candidate, post-detector or
++        // PL work.
+         std::map<std::uint64_t, std::string> action_ineligibility;
+-        for (const auto& action : models.actions) {
+-          std::string reason = actionIneligibilityReason(
+-              action, window, frozen_plausible, frozen_hypotheses,
+-              mandatory_exclusion_groups,
+-              cfg.fde.max_exclusion_cardinality);
+-          if (!reason.empty()) action_ineligibility.emplace(action.id.value(), reason);
+-        }
+         record_stage("health_actions");
+         start_operation("hypothesis_audit");
+         const bool calibration_hypothesis_audit =
+@@ -3377,7 +3471,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+         // CandidateDiagnostics::skip_reason.  That field is part of the
+         // action-search certificate accounting and the frozen O12 oracle.
+         std::map<std::uint64_t, std::string> action_rejection_funnel;
+-        candidates.reserve(models.actions.size());
++        const std::size_t compact_action_count = compact_action_search
++            ? compact_action_lease.search().actions.size()
++            : models.actions.size();
++        candidates.reserve(compact_action_count);
+         struct EvaluatedAction {
+           CandidateEvaluation candidate;
+           DetectorResultV2 post;
+@@ -3401,19 +3498,20 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+         // a fixed slot; a worker exception is rethrown only after all workers
+         // reach the pool barrier.
+         const std::size_t action_batch_capacity =
+-            std::max<std::size_t>(1, action_stream.batch_capacity);
++            std::max<std::size_t>(1, compact_action_search
++                ? compact_action_lease.search().batch_capacity
++                : action_stream.batch_capacity);
+         // R11 bounds retained per-worker Eigen scratch. A task that exceeds
+         // the bound is recorded by canonical task index, its scratch is
+         // released, and the batch fails closed after the common barrier.
+         constexpr std::size_t kRetainedWorkerScratchLimitBytes = 64u << 20;
+-        auto run_kernel_batch = [&](std::size_t batch_begin,
+-                                    std::size_t batch_size,
++        auto run_kernel_batch = [&](const std::vector<ExclusionAction>& actions,
+                                     std::vector<EvaluatedAction>* batch) {
++        const std::size_t batch_size = actions.size();
+         candidate_workers_->runFlat(batch_size, active_workers,
+             kRetainedWorkerScratchLimitBytes,
+             [&](std::size_t work_index, std::size_t, RankUpdateScratch& scratch) {
+-          const ExclusionAction& action =
+-              *action_order[batch_begin + work_index];
++          const ExclusionAction& action = actions[work_index];
+           EvaluatedAction& evaluated = batch->at(work_index);
+           const auto candidate_start = std::chrono::steady_clock::now();
+           // P6/C-round Stage 0: a step-gate rejection carries its physical
+@@ -3466,6 +3564,13 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+           candidate.diagnostics.slow_path = candidate.exact_slow_path;
+           candidate.diagnostics.kernel_ms = std::chrono::duration<double, std::milli>(
+               std::chrono::steady_clock::now() - candidate_start).count();
++        });
++        candidate_workers_->runFlat(batch_size, active_workers,
++            kRetainedWorkerScratchLimitBytes,
++            [&](std::size_t work_index, std::size_t, RankUpdateScratch&) {
++          const ExclusionAction& action = actions[work_index];
++          EvaluatedAction& evaluated = batch->at(work_index);
++          CandidateEvaluation& candidate = evaluated.candidate;
+           auto part_start = std::chrono::steady_clock::now();
+           auto part_ms = [&]() {
+             auto now = std::chrono::steady_clock::now();
+@@ -3488,17 +3593,19 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+           candidate.squared_threshold = evaluated.post.squared_threshold;
+           candidate.post_detector_passed = evaluated.post.passed;
+           candidate.diagnostics.post_ms = part_ms();
+-          candidate.wall_ms = std::chrono::duration<double, std::milli>(
+-              std::chrono::steady_clock::now() - candidate_start).count();
++          candidate.wall_ms = candidate.diagnostics.kernel_ms +
++              candidate.diagnostics.post_ms;
+         });
+         };
+ 
+         // Bridge uncertainty depends only on a frozen group/transaction and is
+         // shared by every successful candidate that contains the same bridge.
+         std::map<std::uint64_t, Eigen::VectorXd> bridge_bounds;
+-        for (const auto* action : action_order) {
+-          if (action->bridge_mode != BridgeMode::GenericKinematic) continue;
+-          for (const auto& added : action->added_blocks) {
++        auto bind_bridge_bounds = [&](
++            const std::vector<ExclusionAction>& actions) {
++        for (const auto& action : actions) {
++          if (action.bridge_mode != BridgeMode::GenericKinematic) continue;
++          for (const auto& added : action.added_blocks) {
+             if (added.kind != FactorKind::KinematicBridge ||
+                 bridge_bounds.count(added.group_id.value())) continue;
+             const EpochTransaction* bridge_transaction = &transaction;
+@@ -3517,6 +3624,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+                     cfg.bridge.generic).deterministic_bound);
+           }
+         }
++        };
+ 
+         // Full per-hypothesis continuation is an audit-only cost.  Normal
+         // production calls retain the original fail-closed early-return path.
+@@ -3532,17 +3640,33 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+                            const std::vector<std::size_t>&,
+                            AttemptProofArena*)> evaluate_pl_batch;
+         for (std::size_t batch_begin = 0;
+-             batch_begin < action_order.size();
++             batch_begin < compact_action_count;
+              batch_begin += action_batch_capacity) {
+           const std::size_t batch_size = std::min(
+               action_batch_capacity,
+-              action_order.size() - batch_begin);
++              compact_action_count - batch_begin);
+           std::vector<ExclusionAction> batch_actions;
+-          batch_actions.reserve(batch_size);
+-          for (std::size_t offset = 0; offset < batch_size; ++offset) {
+-            batch_actions.push_back(*action_order[batch_begin + offset]);
++          if (compact_action_search) {
++            batch_actions = compact_action_lease.materializeBatch(
++                batch_begin, batch_size);
++          } else {
++            batch_actions.reserve(batch_size);
++            for (std::size_t offset = 0; offset < batch_size; ++offset) {
++              batch_actions.push_back(*action_order[batch_begin + offset]);
++            }
+           }
++          bind_bridge_bounds(batch_actions);
+           std::vector<EvaluatedAction> evaluated_batch(batch_size);
++          for (const auto& action : batch_actions) {
++            std::string reason = actionIneligibilityReason(
++                action, window, frozen_plausible, frozen_hypotheses,
++                mandatory_exclusion_groups,
++                cfg.fde.max_exclusion_cardinality);
++            if (!reason.empty()) {
++              action_ineligibility.emplace(action.id.value(),
++                                           std::move(reason));
++            }
++          }
+           // Normal scoped production gives each numerical batch a short-lived
+           // arena. Thus at most B complete PL proofs coexist, and closing the
+           // batch drops every non-best proof. The explicit AH audit path keeps
+@@ -3553,7 +3677,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+           peak_resident_evaluated_actions = std::max(
+               peak_resident_evaluated_actions, evaluated_batch.size());
+           evaluator.buildSharedCache(&base, batch_actions);
+-          run_kernel_batch(batch_begin, batch_size, &evaluated_batch);
++          run_kernel_batch(batch_actions, &evaluated_batch);
+           std::vector<std::size_t> post_passed;
+           post_passed.reserve(batch_size);
+           for (std::size_t offset = 0; offset < batch_size; ++offset) {
+@@ -3865,6 +3989,14 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+             candidate.retained_residual.resize(0);
+             candidate.detector_certificate.row_roles.clear();
+           }
++          if (compact_action_search) {
++            // Exact operation bytes were bound and independently validated by
++            // the V3 descriptor before evaluation.  FDE consumes only the
++            // compact action fields below; the selected action is rebuilt
++            // from its recipe before proof retention and commit.
++            candidate.action.added_blocks.clear();
++            candidate.action.added_blocks.shrink_to_fit();
++          }
+           candidates.push_back(std::move(candidate));
+         }
+         if (!capture_action_proof) batch_proof_arena.close();
+@@ -3884,20 +4016,42 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+         }
+         std::string route_reason = "rank=" + std::to_string(routed_rank) +
+             ";dense=" + std::to_string(routed_dense) +
+-            ";stream_protocol=2;stream_batches=" +
+-            std::to_string(action_stream.batch_count) +
++            ";stream_protocol=" +
++            std::string(compact_action_search ? "3" : "2") +
++            ";stream_batches=" +
++            std::to_string(compact_action_search
++                ? compact_action_lease.search().batch_count
++                : action_stream.batch_count) +
+             ";stream_batch_capacity=" +
+-            std::to_string(action_stream.batch_capacity) +
++            std::to_string(action_batch_capacity) +
+             ";stream_peak_batch_actions=" +
+-            std::to_string(action_stream.peak_batch_actions) +
+-            ";stream_peak_resident_evaluated_actions=" +
++            std::to_string(compact_action_search
++                ? compact_action_lease.search().peak_batch_actions
++                : action_stream.peak_batch_actions);
++        // The compact protocol exposes additional bounded-memory accounting.
++        // Do not rewrite the legacy V2 diagnostic string: it is part of the
++        // public frozen semantic digest.
++        if (compact_action_search) {
++          route_reason += ";stream_peak_batch_heavy_bytes=" +
++              std::to_string(compact_action_lease.search().peak_batch_heavy_bytes) +
++              ";stream_action_sidecar_bytes=" +
++              std::to_string(compact_action_lease.search().sidecar_length) +
++              ";stream_unique_action_blocks=" +
++              std::to_string(compact_action_lease.search().unique_block_count) +
++              ";stream_referenced_action_blocks=" +
++              std::to_string(compact_action_lease.search().referenced_block_count);
++        }
++        route_reason += ";stream_peak_resident_evaluated_actions=" +
+             std::to_string(peak_resident_evaluated_actions) +
+             ";stream_peak_batch_full_proofs=" +
+             std::to_string(peak_batch_full_proofs) +
+             ";stream_retained_full_candidates=0" +
+             ";stream_retained_full_proofs=0" +
+-            ";stream_full_action_heavy_copy=0" +
+-            ";flat_pl_candidate_roots=" +
++            ";stream_full_action_heavy_copy=0";
++        if (compact_action_search) {
++          route_reason += ";stream_attempt_action_arena=1";
++        }
++        route_reason += ";flat_pl_candidate_roots=" +
+             std::to_string(flat_pl_candidate_roots) +
+             ";flat_pl_candidate_hypothesis_tasks=" +
+             std::to_string(flat_pl_tasks) +
+@@ -3942,9 +4096,21 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+         fde_context.max_evaluated_actions =
+             action_search.max_evaluated_actions;
+         fde_context.action_search_lifecycle = action_search.lifecycle;
+-        FdeDecision decision = FdeManager().decide(
+-            fde_trigger, models.hypotheses, evidence, &candidates,
+-            mandatory_exclusion_groups, cfg.risk_v2, &fde_context);
++        FdeDecision decision;
++        if (compact_action_search) {
++          FdeDecisionContextV3 compact_fde_context;
++          compact_fde_context.v1.protection_proof_ids = &candidate_pl_proof;
++          compact_fde_context.v1.risk_result = &final_risk;
++          compact_fde_context.action_lease = &compact_action_lease;
++          decision = FdeManager().decide(
++              fde_trigger, models.hypotheses, evidence, &candidates,
++              mandatory_exclusion_groups, cfg.risk_v2,
++              &compact_fde_context);
++        } else {
++          decision = FdeManager().decide(
++              fde_trigger, models.hypotheses, evidence, &candidates,
++              mandatory_exclusion_groups, cfg.risk_v2, &fde_context);
++        }
+         output.stage_timings[candidate_evaluation_stage_index].reason +=
+             ";stream_fde_preproof_selected_action=" +
+             std::to_string(decision.selected_action
+@@ -3970,16 +4136,27 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+               [&](const ExclusionAction* action) {
+                 return action->id == *proof_recompute_action;
+               });
++          const std::size_t selected_index = selected_summary == candidates.end()
++              ? compact_action_count
++              : static_cast<std::size_t>(
++                    std::distance(candidates.begin(), selected_summary));
+           bool recompute_valid = selected_summary != candidates.end() &&
+-              selected_order != action_order.end();
++              (compact_action_search
++                   ? selected_index < compact_action_count
++                   : selected_order != action_order.end());
+           std::vector<EvaluatedAction> recomputed(1);
+           AttemptProofArena recompute_proof_arena;
+           if (recompute_valid) {
+-            const std::size_t selected_index = static_cast<std::size_t>(
+-                std::distance(action_order.begin(), selected_order));
+-            evaluator.buildSharedCache(
+-                &base, std::vector<ExclusionAction>{**selected_order});
+-            run_kernel_batch(selected_index, 1, &recomputed);
++            std::vector<ExclusionAction> selected_actions;
++            if (compact_action_search) {
++              selected_actions = compact_action_lease.materializeBatch(
++                  selected_index, 1);
++            } else {
++              selected_actions.push_back(**selected_order);
++            }
++            bind_bridge_bounds(selected_actions);
++            evaluator.buildSharedCache(&base, selected_actions);
++            run_kernel_batch(selected_actions, &recomputed);
+             std::vector<std::size_t> passed;
+             if (recomputed.front().candidate.valid &&
+                 recomputed.front().post.numerically_valid &&
+@@ -4064,6 +4241,9 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+               recomputed.front().candidate.selected =
+                   !proof_recompute_test_seam;
+               *selected_summary = std::move(recomputed.front().candidate);
++              if (!proof_recompute_test_seam) {
++                decision.selected_action = selected_summary->action;
++              }
+             }
+           }
+           recompute_proof_arena.close();
+@@ -4310,7 +4490,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+           }
+           freezeActionProof(std::move(snapshot));
+         }
+-        if (!action_search_census.exhaustive) {
++        if (!action_search_exhaustive) {
+           output.reason_codes.push_back("SEARCH_INCOMPLETE");
+           note_failure("SEARCH_INCOMPLETE");
+         }
+@@ -4420,7 +4600,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+           record.condition_number = candidate.condition_number;
+           record.information_logdet = candidate.information_logdet;
+           record.risk_allocation = cfg.risk_v2.p_hmi_total /
+-              std::max<std::size_t>(1, models.actions.size());
++              std::max<std::size_t>(1, compact_action_count);
+           record.hpl_m = candidate.hpl_m;
+           record.vpl_m = candidate.vpl_m;
+           record.selected = candidate.selected;
+@@ -4432,8 +4612,13 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
+             record.reason = candidate.reason;
+           }
+           if (!record.reason.empty()) record.reason += ";";
+-          record.reason += "ACTION_OPERATION_IDENTITY=" +
+-              exactActionOperationIdentityV1(candidate.action);
++          if (record.action_type == "ACTION_SEARCH_OCCURRENCE_V3") {
++            record.reason += "ACTION_OPERATION_IDENTITY=" +
++                record.model_error_record;
++          } else {
++            record.reason += "ACTION_OPERATION_IDENTITY=" +
++                exactActionOperationIdentityV1(candidate.action);
++          }
+           const auto funnel = action_rejection_funnel.find(
+               candidate.action.id.value());
+           if (funnel != action_rejection_funnel.end()) {
+diff --git a/src/uwb_imu_pl/integrity/protection_level_v2.cpp b/src/uwb_imu_pl/integrity/protection_level_v2.cpp
+index dadce46..74f479d 100644
+--- a/src/uwb_imu_pl/integrity/protection_level_v2.cpp
++++ b/src/uwb_imu_pl/integrity/protection_level_v2.cpp
+@@ -2449,6 +2449,8 @@ void ProtectionLevelV2::computeSharedFlatBatch(
+     std::size_t frozen_terminal_limit =
+         std::numeric_limits<std::size_t>::max();
+     std::string failure;
++    std::string audit_failure;
++    bool reduction_closed = false;
+     bool frozen = false;
+     bool valid = false;
+   };
+@@ -2743,24 +2745,27 @@ void ProtectionLevelV2::computeSharedFlatBatch(
+     root.valid = true;
+   }
+ 
+-  std::vector<Slot> slots(offsets.back());
+-  std::vector<std::size_t> task_candidate(offsets.back());
+-  std::vector<std::size_t> task_hypothesis(offsets.back());
+-  for (std::size_t c = 0; c < jobs->size(); ++c) {
+-    for (std::size_t h = 0; h < offsets[c + 1] - offsets[c]; ++h) {
+-      task_candidate[offsets[c] + h] = c;
+-      task_hypothesis[offsets[c] + h] = h;
+-    }
+-  }
+-  const std::size_t bounded_workers = std::max<std::size_t>(1,
+-      std::min(active_workers, slots.size()));
+-  worker_pool->runFlat(slots.size(), bounded_workers, scratch_limit_bytes,
+-      [&](std::size_t flat_index, std::size_t, RankUpdateScratch&) {
+-        const std::size_t c = task_candidate[flat_index];
+-        const std::size_t h = task_hypothesis[flat_index];
++  for (auto& root : roots) root.audit_failure = root.failure;
++  constexpr std::size_t kFlatHypothesisBlock = 256;
++  const std::size_t total_tasks = offsets.back();
++  for (std::size_t block_begin = 0; block_begin < total_tasks;
++       block_begin += kFlatHypothesisBlock) {
++    const std::size_t block_count = std::min(
++        kFlatHypothesisBlock, total_tasks - block_begin);
++    std::vector<Slot> slots(block_count);
++    const std::size_t bounded_workers = std::max<std::size_t>(1,
++        std::min(active_workers, block_count));
++    worker_pool->runFlat(block_count, bounded_workers, scratch_limit_bytes,
++      [&](std::size_t local_index, std::size_t, RankUpdateScratch&) {
++        const std::size_t flat_index = block_begin + local_index;
++        const auto upper = std::upper_bound(
++            offsets.begin(), offsets.end(), flat_index);
++        const std::size_t c = static_cast<std::size_t>(
++            std::distance(offsets.begin(), upper) - 1);
++        const std::size_t h = flat_index - offsets[c];
+         auto& root = roots[c];
+         auto& job = jobs->at(c);
+-        auto& slot = slots[flat_index];
++        auto& slot = slots[local_index];
+         const auto& source_hypothesis = job.hypotheses->at(h);
+         if (!root.frozen) {
+           slot.hypothesis = source_hypothesis;
+@@ -2977,17 +2982,28 @@ void ProtectionLevelV2::computeSharedFlatBatch(
+         slot.component_proof.served_component = slot.component;
+         slot.valid = true;
+       });
+-
+-  for (std::size_t c = 0; c < jobs->size(); ++c) {
+-    auto& job = jobs->at(c);
+-    auto& root = roots[c];
+-    auto& result = root.result;
+-    std::string audit_failure = root.failure;
+-    for (std::size_t h = 0; h < offsets[c + 1] - offsets[c]; ++h) {
+-      auto& slot = slots[offsets[c] + h];
++    // Reduce this leased block immediately in global candidate-major order.
++    // Every task still executes; the block only shortens the lifetime of its
++    // dynamic matrices and proof objects.
++    for (std::size_t local_index = 0; local_index < block_count;
++         ++local_index) {
++      const std::size_t flat_index = block_begin + local_index;
++      const auto upper = std::upper_bound(
++          offsets.begin(), offsets.end(), flat_index);
++      const std::size_t c = static_cast<std::size_t>(
++          std::distance(offsets.begin(), upper) - 1);
++      const std::size_t h = flat_index - offsets[c];
++      auto& job = jobs->at(c);
++      auto& root = roots[c];
++      auto& result = root.result;
++      auto& slot = slots[local_index];
++      if (root.reduction_closed && !job.computation_audit) continue;
+       if (!slot.valid) {
+-        if (audit_failure.empty()) audit_failure = slot.reason;
+-        if (!job.computation_audit) break;
++        if (root.audit_failure.empty()) root.audit_failure = slot.reason;
++        if (!job.computation_audit) {
++          root.reduction_closed = true;
++          continue;
++        }
+         // The legacy audit path retains a completed Gram/response proof even
+         // when a later monitorability/history/bound gate fails.  Preserve that
+         // distinction: a pre-proof failure has no hypothesis entry (and is
+@@ -3030,8 +3046,14 @@ void ProtectionLevelV2::computeSharedFlatBatch(
+       root.sidecar.component_proofs.push_back(
+           std::move(slot.component_proof));
+     }
+-    if (!audit_failure.empty()) {
+-      result.reason = audit_failure;
++  }
++
++  for (std::size_t c = 0; c < jobs->size(); ++c) {
++    auto& job = jobs->at(c);
++    auto& root = roots[c];
++    auto& result = root.result;
++    if (!root.audit_failure.empty()) {
++      result.reason = root.audit_failure;
+       result.model_valid = false;
+       result.availability = Availability::Unavailable;
+     } else {
+@@ -3327,10 +3349,10 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
+     bool has_dual_channel_proof = false;
+     bool valid = false;
+   };
+-  std::vector<FrozenHypothesisSlot> hypothesis_slots(hypotheses.size());
+-  auto evaluate_hypothesis = [&](std::size_t index) {
++  auto evaluate_hypothesis = [&](std::size_t index,
++                                 FrozenHypothesisSlot* output_slot) {
+     const auto& hypothesis = hypotheses[index];
+-    auto& slot = hypothesis_slots[index];
++    auto& slot = *output_slot;
+     const auto frozen_index = frozen_hypothesis_indexes.find(
+         hypothesis.id.value());
+     if (frozen_index == frozen_hypothesis_indexes.end()) {
+@@ -3450,36 +3472,56 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
+     slot.component_proof.served_component = slot.component;
+     slot.valid = true;
+   };
+-  for (std::size_t index = 0; index < hypotheses.size(); ++index) {
+-    evaluate_hypothesis(index);
+-  }
+-  // Deterministic reduction is always hypothesis-index ordered, independent
+-  // of worker assignment or completion order.
+-  for (std::size_t index = 0; index < hypothesis_slots.size(); ++index) {
+-    auto& slot = hypothesis_slots[index];
+-    if (!slot.valid) {
+-      result.reason = slot.reason;
+-      return result;
+-    }
+-    const auto& bounds = slot.bounds;
+-    result.hypothesis_tail_used = std::max(result.hypothesis_tail_used,
+-                                           bounds.hypothesis_tail);
+-    result.axis_tail_used = std::max(result.axis_tail_used, bounds.axis_tail);
+-    result.fault_multiplier_used = std::max(result.fault_multiplier_used,
+-                                            bounds.k);
+-    result.noncentrality_used = std::max(result.noncentrality_used,
+-                                         bounds.lambda);
+-    if (active_dual) {
+-      result.detector_certificate_id = slot.detector_certificate;
++  // P1-06: bound the transient hypothesis/proof live-set.  The canonical
++  // reduction and final V1 proof vectors remain complete and in hypothesis
++  // order; only the temporary slots are leased in fixed blocks.
++  constexpr std::size_t kHypothesisSlotBlock = 256;
++  sidecar.hypothesis_proofs.reserve(hypotheses.size());
++  sidecar.component_proofs.reserve(hypotheses.size());
++  if (active_dual) sidecar.dual_channel_proofs.reserve(hypotheses.size());
++  std::string first_failure;
++  bool reduction_closed = false;
++  for (std::size_t begin = 0; begin < hypotheses.size();
++       begin += kHypothesisSlotBlock) {
++    const std::size_t count = std::min(
++        kHypothesisSlotBlock, hypotheses.size() - begin);
++    std::vector<FrozenHypothesisSlot> slots(count);
++    for (std::size_t local = 0; local < count; ++local) {
++      evaluate_hypothesis(begin + local, &slots[local]);
+     }
+-    sidecar.hypothesis_proofs.push_back(std::move(slot.hypothesis_proof));
+-    if (slot.has_dual_channel_proof) {
+-      sidecar.dual_channel_proofs.push_back(
+-          std::move(slot.dual_channel_proof));
++    // Deterministic reduction remains global hypothesis-index order.
++    for (std::size_t local = 0; local < count; ++local) {
++      auto& slot = slots[local];
++      if (!slot.valid) {
++        if (first_failure.empty()) first_failure = slot.reason;
++        reduction_closed = true;
++        continue;
++      }
++      if (reduction_closed) continue;
++      const auto& bounds = slot.bounds;
++      result.hypothesis_tail_used = std::max(result.hypothesis_tail_used,
++                                             bounds.hypothesis_tail);
++      result.axis_tail_used = std::max(result.axis_tail_used, bounds.axis_tail);
++      result.fault_multiplier_used = std::max(result.fault_multiplier_used,
++                                              bounds.k);
++      result.noncentrality_used = std::max(result.noncentrality_used,
++                                           bounds.lambda);
++      if (active_dual) {
++        result.detector_certificate_id = slot.detector_certificate;
++      }
++      sidecar.hypothesis_proofs.push_back(std::move(slot.hypothesis_proof));
++      if (slot.has_dual_channel_proof) {
++        sidecar.dual_channel_proofs.push_back(
++            std::move(slot.dual_channel_proof));
++      }
++      sidecar.component_proofs.push_back(std::move(slot.component_proof));
++      result.fault_component_m =
++          result.fault_component_m.cwiseMax(slot.component);
+     }
+-    sidecar.component_proofs.push_back(std::move(slot.component_proof));
+-    result.fault_component_m =
+-        result.fault_component_m.cwiseMax(slot.component);
++  }
++  if (!first_failure.empty()) {
++    result.reason = first_failure;
++    return result;
+   }
+   result.pl_xyz_m = result.nominal_component_m.cwiseMax(
+       result.fault_component_m);
+diff --git a/test/test_integrity_v2.cpp b/test/test_integrity_v2.cpp
+index 9580d1b..8adf02c 100644
+--- a/test/test_integrity_v2.cpp
++++ b/test/test_integrity_v2.cpp
+@@ -5448,6 +5448,24 @@ TEST(B4LazyFde, FDE01HealthyFrameBuildsNoActionEntitiesButKeepsSensitivity) {
+     EXPECT_GT(hypothesis.hmi_allocation, 0.0);
+   }
+ 
++  // A bridge spanning a state before the frozen detector window must fail
++  // closed as missing provenance.  Before P1-06 this unsigned epoch
++  // subtraction wrote an Eigen block outside the matrix and corrupted the
++  // Gaussian factor graph during fault/recovery attempts.
++  auto narrow_window = window;
++  narrow_window.detector_first_epoch = transaction.proposed_epoch;
++  auto narrow = lazy;
++  HypothesisGenerator::ensureActionEntities(transaction, narrow_window, &narrow);
++  bool saw_unrepresentable_imu_bridge = false;
++  for (const auto& action : narrow.single_mode_actions) {
++    if (action.action_model_id == "IMU_HISTORY_BRIDGE_RECOVERY") {
++      saw_unrepresentable_imu_bridge = true;
++      EXPECT_EQ(action.recoverability, HistoryRecoverability::MissingProvenance);
++      EXPECT_TRUE(action.added_blocks.empty());
++    }
++  }
++  EXPECT_TRUE(saw_unrepresentable_imu_bridge);
++
+   // Eager compatibility path produces the same identities.
+   HypothesisGeneratorConfig eager_config;
+   eager_config.lazy_action_entities = false;
+@@ -5528,9 +5546,95 @@ TEST(B4LazyFde, FDE02IsolationPathStillMaterializesEvidenceOnDemand) {
+     item.plausible = true;
+     evidence.push_back(item);
+   }
++  HypothesisGeneratorConfig compact_config;
++  compact_config.max_candidate_count = 2;
++  auto compact_arena = HypothesisGenerator(compact_config)
++      .actionsForPlausibleSetV3(window, transaction, models, evidence);
++  auto compact_lease = compact_arena.lease();
++  const auto compact_validation =
++      validateCompactActionSearchV3(compact_lease);
++  ASSERT_TRUE(compact_validation.valid) << compact_validation.reason;
++  ASSERT_TRUE(compact_validation.exhaustive) << compact_validation.reason;
++  EXPECT_EQ(compact_lease.search().generated,
++            compact_lease.search().evaluated);
++  EXPECT_EQ(compact_lease.search().omitted, 0u);
++  EXPECT_LE(compact_lease.search().peak_batch_actions, 2u);
++  EXPECT_GT(compact_lease.search().peak_batch_heavy_bytes, 0u);
++  std::uint64_t legacy_canonical_bytes = 0;
++  for (std::size_t descriptor_index = 0;
++       descriptor_index < compact_lease.search().actions.size();
++       ++descriptor_index) {
++    const auto& descriptor =
++        compact_lease.search().actions[descriptor_index];
++    const ExclusionAction exact = compact_lease.materialize(descriptor_index);
++    legacy_canonical_bytes += exactActionOperationIdentityV1(exact).size();
++    legacy_canonical_bytes += exactActionSemanticIdentityV1(exact).size();
++    for (const auto& block : descriptor.ordered_blocks) {
++      EXPECT_EQ(block.strong_digest.size(), 64u);
++    }
++  }
++  EXPECT_LT(compact_lease.search().sidecar_length,
++            legacy_canonical_bytes)
++      << "content-addressed blocks must not be repeated in every action";
++  EXPECT_GE(compact_lease.search().referenced_block_count,
++            compact_lease.search().unique_block_count);
++  auto collision_arena = HypothesisGenerator(compact_config)
++      .actionsForPlausibleSetV3(
++          window, transaction, models, evidence, {}, true);
++  auto collision_lease = collision_arena.lease();
++  const auto collision_validation =
++      validateCompactActionSearchV3(collision_lease);
++  ASSERT_TRUE(collision_validation.valid) << collision_validation.reason;
++  ASSERT_TRUE(collision_validation.exhaustive)
++      << collision_validation.reason;
++  EXPECT_EQ(collision_lease.search().evaluated,
++            compact_lease.search().evaluated)
++      << "distinct canonical bytes must survive a forced digest collision";
++  EXPECT_GT(collision_lease.search().digest_collision_comparisons, 0u);
++  collision_lease.close();
++  collision_arena.close();
++  auto io_failure_arena = HypothesisGenerator(compact_config)
++      .actionsForPlausibleSetV3(window, transaction, models, evidence);
++  auto io_failure_lease = io_failure_arena.lease();
++  io_failure_arena.injectSidecarReadFailureForTest();
++  const auto io_failure = validateCompactActionSearchV3(io_failure_lease);
++  EXPECT_FALSE(io_failure.valid);
++  EXPECT_FALSE(io_failure.exhaustive);
++  io_failure_lease.close();
++  io_failure_arena.close();
++  std::vector<ExclusionAction> compact_actions;
++  for (std::size_t begin = 0;
++       begin < compact_lease.search().actions.size(); begin += 2) {
++    const auto count = std::min<std::size_t>(
++        2, compact_lease.search().actions.size() - begin);
++    auto materialized = compact_lease.materializeBatch(begin, count);
++    compact_actions.insert(compact_actions.end(),
++                           std::make_move_iterator(materialized.begin()),
++                           std::make_move_iterator(materialized.end()));
++  }
++  auto compact_terminals = compact_actions;
++  for (auto& action : compact_terminals) action.added_blocks.clear();
++  const auto consumption = validateCompactActionConsumptionV3(
++      compact_lease, compact_terminals);
++  EXPECT_TRUE(consumption.valid) << consumption.reason;
++  ASSERT_FALSE(compact_terminals.empty());
++  compact_terminals.front().action_model_id = "TAMPERED";
++  EXPECT_FALSE(validateCompactActionConsumptionV3(
++      compact_lease, compact_terminals).valid);
+   EXPECT_EQ(models.action_entities_constructed, 0u);
+   const auto actions = HypothesisGenerator().actionsForPlausibleSet(
+       window, transaction, &models, evidence);
++  ASSERT_EQ(compact_actions.size(), actions.size());
++  for (std::size_t index = 0; index < actions.size(); ++index) {
++    EXPECT_EQ(exactActionOperationIdentityV1(compact_actions[index]),
++              exactActionOperationIdentityV1(actions[index]));
++    EXPECT_EQ(exactActionSemanticIdentityV1(compact_actions[index]),
++              exactActionSemanticIdentityV1(actions[index]));
++  }
++  compact_lease.close();
++  EXPECT_FALSE(compact_lease.valid());
++  compact_arena.close();
++  EXPECT_FALSE(compact_arena.valid());
+   EXPECT_GE(actions.size(), 2u)
+       << "the isolation path must still build its candidate actions";
+   EXPECT_GT(models.action_entities_constructed, 0u)
+@@ -5550,7 +5654,6 @@ TEST(B4LazyFde, FDE02IsolationPathStillMaterializesEvidenceOnDemand) {
+       std::move(transaction),
+       {FdeStatus::ModelInvalid, "lazy FDE isolation test", false});
+ }
+-
+ // ---------------------------------------------------------------------------
+ // B3 Stage 2: the detection-space tri-state decides availability with
+ // direction-level reasons (no dictionary-wide rejection).
+@@ -5921,6 +6024,29 @@ TEST(P101IdentityIndexing, ExactOperationDedupKeepsSemanticCoverage) {
+   EXPECT_TRUE(result.census.exhaustive);
+ }
+ 
++TEST(P101IdentityIndexing, LegacyV1V2DuplicateAddedGroupBehaviorIsPreserved) {
++  using namespace uwb_imu_pl;
++  ExclusionAction action;
++  action.id = ExclusionActionId(202);
++  action.action_model_id = "LEGACY_DUPLICATE_ADDED_GROUP";
++  const auto window = syntheticWindow();
++  action.groups_to_add = {window.blocks.front().group_id,
++                          window.blocks.front().group_id};
++  action.added_blocks = {window.blocks.front(), window.blocks.front()};
++  action.exclusion_cardinality = 0;
++
++  // golden-p1-05 treats this finite operation as representable.  The V3
++  // storage sidecar must not retroactively make V1/V2 search incomplete.
++  EXPECT_FALSE(exactActionOperationIdentityV1(action).empty());
++  const auto result = censusAndCapActionsV1({action}, 1);
++  ASSERT_EQ(result.actions.size(), 1u);
++  EXPECT_TRUE(result.census.exhaustive);
++  EXPECT_EQ(result.census.omitted, 0u);
++  EXPECT_TRUE(validateActionSearchCensusV1(
++      result.census, result.generated_snapshot, result.max_evaluated_actions,
++      result.lifecycle, result.actions).valid);
++}
++
+ TEST(P101IdentityIndexing, FrozenOwnerIsImmutableAndAdmissionIsConstantWork) {
+   using namespace uwb_imu_pl;
+   auto builder = syntheticWindow();
+@@ -6307,3 +6433,25 @@ TEST(P105FlatConcurrency, WatchdogAdmissionExceptionStillHasOneAttemptTimer) {
+   EXPECT_FALSE(core_total->success);
+   EXPECT_EQ(core_total->status, "EXCEPTION");
+ }
++
++TEST(P106SimulationAcceptance, PublishCallNotAnalysisControlsDeadline) {
++  using namespace uwb_imu_pl;
++  IntegrityOutput draft;
++  draft.attempted_timestamp = TimestampNs(1);
++  draft.state.timestamp = TimestampNs(1);
++  draft.timestamp = TimestampNs(1);
++  draft.publication.protected_output = true;
++  draft.protection_level.formal_eligible = true;
++  FinalPacketTiming timing;
++  timing.arrival_steady_ns = 1000000000ULL;
++  timing.compute_done_steady_ns = timing.arrival_steady_ns + 49000000ULL;
++  timing.packet_ready_steady_ns = timing.compute_done_steady_ns;
++  timing.publish_call_steady_ns = timing.arrival_steady_ns + 51000000ULL;
++  timing.deadline_boundary = FinalPacketBoundary::PublishCall;
++  const auto packet = finalizeOutputPacket(std::move(draft), timing,
++                                           50000000ULL);
++  EXPECT_TRUE(packet.output().deadline_missed);
++  EXPECT_FALSE(packet.output().publication.protected_output);
++  EXPECT_TRUE(packet.output().publication.unprotected_output);
++  EXPECT_FALSE(packet.output().protection_level.formal_eligible);
++}
+diff --git a/tools/analyze_fde_profile_runs.py b/tools/analyze_fde_profile_runs.py
+index 3d66e39..459a8f5 100755
+--- a/tools/analyze_fde_profile_runs.py
++++ b/tools/analyze_fde_profile_runs.py
+@@ -7,11 +7,18 @@ import hashlib
+ import json
+ import math
+ import re
++import sys
+ from collections import Counter
+ from pathlib import Path
+ from typing import Dict, Iterable, List, Optional
+ 
+ 
++# Diagnostic proof/census fields intentionally carry complete serialized
++# identities and can exceed Python's conservative 128 KiB CSV default.
++# Keep the full field; truncation would silently change the evidence.
++csv.field_size_limit(sys.maxsize)
++
++
+ def rows(path: Path) -> List[dict]:
+     if not path.exists():
+         return []
+@@ -49,8 +56,16 @@ def sha256(path: Path) -> str:
+ 
+ 
+ def quaternion_error(a: dict, b: dict) -> float:
+-    dot = abs(sum(float(a[key]) * float(b[key])
+-                  for key in ("qw", "qx", "qy", "qz")))
++    keys = ("qw", "qx", "qy", "qz")
++    av = [float(a[key]) for key in keys]
++    bv = [float(b[key]) for key in keys]
++    an = math.sqrt(sum(value * value for value in av))
++    bn = math.sqrt(sum(value * value for value in bv))
++    if (not all(math.isfinite(value) for value in av + bv) or
++            not math.isfinite(an) or not math.isfinite(bn) or
++            an <= 0.0 or bn <= 0.0):
++        raise ValueError("invalid quaternion")
++    dot = abs(sum(left * right for left, right in zip(av, bv)) / (an * bn))
+     return 2.0 * math.acos(max(-1.0, min(1.0, dot)))
+ 
+ 
+@@ -146,6 +161,8 @@ def analyze_run(run: Path) -> dict:
+     warm_core = core[100:] if len(core) > 100 else core
+     committed = sum(row.get("batch_committed") in ("1", "true", "True")
+                     for row in integrity_rows)
++    state_valid = sum(row.get("state_valid") in ("1", "true", "True")
++                      for row in integrity_rows)
+     fresh = sum(row.get("fresh") in ("1", "true", "True")
+                 for row in integrity_rows)
+     deadline = sum(row.get("deadline_missed") in ("1", "true", "True")
+@@ -233,6 +250,7 @@ def analyze_run(run: Path) -> dict:
+         **identity,
+         "artifact_directory": str(run.resolve()),
+         "counts": {"attempted": count, "committed": committed,
++                   "state_valid": state_valid,
+                    "rejected": count - committed, "fresh": fresh,
+                    "deadline_missed": deadline, "finite_pl": finite,
+                    "within_alert_limits": within,
+@@ -247,6 +265,14 @@ def analyze_run(run: Path) -> dict:
+             "velocity_rmse_mps": rms(velocity_errors),
+             "accel_bias_norm_rmse_mps2": rms(accel_bias_errors),
+             "gyro_bias_norm_rmse_radps": rms(gyro_bias_errors),
++            "valid_counts": {
++                "position": len(position_errors),
++                "attitude": len(attitude_errors),
++                "velocity": len(velocity_errors),
++                "accel_bias": len(accel_bias_errors),
++                "gyro_bias": len(gyro_bias_errors),
++                "service_position": len(service_position_errors),
++            },
+             "accel_bias_truth": [0.0, 0.0, 0.0],
+             "gyro_bias_truth": [0.0, 0.0, 0.0],
+         },
+diff --git a/tools/compare_p1_04_outputs.py b/tools/compare_p1_04_outputs.py
+index a33ef02..4f6b2d3 100644
+--- a/tools/compare_p1_04_outputs.py
++++ b/tools/compare_p1_04_outputs.py
+@@ -4,6 +4,7 @@
+ from __future__ import annotations
+ 
+ import argparse
++import copy
+ import json
+ import pathlib
+ 
+@@ -11,28 +12,43 @@ import compare_p1_02_outputs as p102
+ import compare_p1_03_outputs as p103
+ 
+ 
+-def main() -> int:
+-    parser = argparse.ArgumentParser()
+-    parser.add_argument("before", type=pathlib.Path)
+-    parser.add_argument("after", type=pathlib.Path)
+-    parser.add_argument("--output", required=True, type=pathlib.Path)
+-    args = parser.parse_args()
++GATE24_AUDIT_EXACT_FIELDS = frozenset({
++    "watchdog_sensor_elapsed_ns",
++    "watchdog_sensor_delta_ns",
++    "watchdog_sensor_lag_ns",
++    "watchdog_sensor_stale",
++    "watchdog_reason",
++})
+ 
++
++def compare_directories(before: pathlib.Path, after: pathlib.Path,
++                        gate24_audit: bool = False) -> dict:
++    """Run the established P1-04 quantity-aware golden comparator."""
+     policy = p103.policies()
+-    _, before_integrity = p102.load(args.before / "integrity.csv")
+-    _, after_integrity = p102.load(args.after / "integrity.csv")
++    if gate24_audit:
++        # These are sensor-time health and terminal decision fields, not
++        # performance counters.  Earlier P1 comparisons ignored them because
++        # they predated the P1-06 audit contract.  Gate 2.4 overlays an exact
++        # comparison without changing the established numerical policies.
++        policy = copy.deepcopy(policy)
++        policy["diagnostic_attempts.csv"]["ignore"].difference_update(
++            GATE24_AUDIT_EXACT_FIELDS)
++    _, before_integrity = p102.load(before / "integrity.csv")
++    _, after_integrity = p102.load(after / "integrity.csv")
+     wall_rows = {i for i, (left, right) in enumerate(
+         zip(before_integrity, after_integrity), 1)
+         if p102.proved_finish_wall_transition(left, right)}
+ 
+     results = {name: p102.compare_file(
+-        args.before / name, args.after / name, item, wall_rows)
++        before / name, after / name, item, wall_rows)
+         for name, item in policy.items()}
+     status = all(item["status"] == "PASS" for item in results.values())
+     payload = {
+-        "schema": "uwb-imu-pl/p1-04-stream-equivalence/v1",
+-        "before": str(args.before),
+-        "after": str(args.after),
++        "schema": ("uwb-imu-pl/p1-06-gate24-audit-equivalence/v1"
++                   if gate24_audit else
++                   "uwb-imu-pl/p1-04-stream-equivalence/v1"),
++        "before": str(before),
++        "after": str(after),
+         "status": "PASS" if status else "FAIL",
+         "allowed_semantic_delta": "none in frozen numerical/output files",
+         "additive_diagnostic":
+@@ -41,10 +57,24 @@ def main() -> int:
+             name: sorted(item["ignore"]) for name, item in policy.items()},
+         "files": results,
+     }
++    if gate24_audit:
++        payload["audit_exact_fields"] = sorted(GATE24_AUDIT_EXACT_FIELDS)
++    return payload
++
++
++def main() -> int:
++    parser = argparse.ArgumentParser()
++    parser.add_argument("before", type=pathlib.Path)
++    parser.add_argument("after", type=pathlib.Path)
++    parser.add_argument("--output", required=True, type=pathlib.Path)
++    parser.add_argument("--gate24-audit", action="store_true")
++    args = parser.parse_args()
++
++    payload = compare_directories(args.before, args.after, args.gate24_audit)
+     args.output.parent.mkdir(parents=True, exist_ok=True)
+     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n",
+                            encoding="utf-8")
+-    return 0 if status else 1
++    return 0 if payload["status"] == "PASS" else 1
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/tools/generate_p0_07_evidence.py b/tools/generate_p0_07_evidence.py
+index 5a5da4a..61ce153 100755
+--- a/tools/generate_p0_07_evidence.py
++++ b/tools/generate_p0_07_evidence.py
+@@ -375,8 +375,13 @@ def compare_authorized_actions(fresh_text: str, frozen_text: str,
+     # keep, four surviving per-mode occurrences, and the union action.
+     mapping = [(0, 0)] + [(index, index + 1) for index in range(1, new_count - 1)]
+     mapping.append((new_count - 1, old_count - 1))
++    # Bounded sidecar construction may perturb the bitwise bridge-operation
++    # identity while preserving its independently compared matrices and the
++    # refusal class.  The process-separated oracle checks both, so retain the
++    # changed hashes in full_diff rather than treating diagnostic identity
++    # prose as a second numerical oracle.
+     allowed_common = {"action_id", "dof", "risk_allocation", "statistic",
+-                      "threshold", "occurrence_identity_hash"}
++                      "threshold", "occurrence_identity_hash", "reason_hash"}
+     allowed_union = allowed_common | {"removed_group_ids", "added_group_ids",
+                                       "covers_plausible_set", "reason_hash"}
+     full_diff: list[dict[str, object]] = []
+diff --git a/tools/p0_07_compare_protocols.py b/tools/p0_07_compare_protocols.py
+index 371b591..969a14a 100644
+--- a/tools/p0_07_compare_protocols.py
++++ b/tools/p0_07_compare_protocols.py
+@@ -127,6 +127,29 @@ def main():
+             raise AssertionError(f"action {action}: validity/post/disposition/eligibility/selection mismatch {expected[:5]} != {observed[:5]}")
+         if not expected[3] and not observed[5]:
+             raise AssertionError(f"action {action}: refusal reason missing")
++        # Process A emits a stable reason class rather than copying Process B's
++        # diagnostic prose.  Compare that independently derived class here so
++        # a non-empty but unrelated refusal cannot satisfy the oracle.
++        refusal = observed[5].lower()
++        reason_class = expected[5]
++        reason_markers = {
++            "STEP_GATE": ("step gate",),
++            "HISTORY_RANK_TRANSITION_INDETERMINATE":
++                ("history", "rank transition", "indeterminate"),
++            "ELIGIBLE": (),
++        }
++        if reason_class not in reason_markers:
++            raise AssertionError(
++                f"action {action}: unknown oracle refusal class {reason_class}")
++        markers = reason_markers[reason_class]
++        if markers and any(marker not in refusal for marker in markers):
++            raise AssertionError(
++                f"action {action}: refusal class {reason_class} does not match "
++                f"production reason {observed[5]!r}")
++        if not markers and observed[5]:
++            raise AssertionError(
++                f"action {action}: eligible oracle action has refusal "
++                f"{observed[5]!r}")
+     if "risk" not in actual:
+         raise AssertionError("actual risk protocol missing")
+     close("risk ledger", np.asarray(oracle["risk"]), np.asarray(actual["risk"]))
+diff --git a/tools/run_fde_profile_validation.py b/tools/run_fde_profile_validation.py
+index 3c75bcd..2bfc406 100755
+--- a/tools/run_fde_profile_validation.py
++++ b/tools/run_fde_profile_validation.py
+@@ -4,34 +4,225 @@
+ import argparse
+ import hashlib
+ import json
++import math
+ import os
+ from pathlib import Path
++import re
+ import shutil
+ import subprocess
+ import sys
+ import time
+ import yaml
+ 
++from validate_simulation_calibrations import validate as validate_simulation_calibrations
++
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+ PROFILES = ("off", "uwb_order1", "imu_order1", "joint_order1", "joint_order2")
++FAULT_OVERRIDE_NAMES = (
++    "UWB_IMU_PL_UWB_BIAS_M",
++    "UWB_IMU_PL_ACCEL_BIAS_MPS2",
++    "UWB_IMU_PL_GYRO_BIAS_RADPS",
++)
++COMPLETION_FIELDS = frozenset(("exit_code", "runner_wall_s",
++                               "terminal_artifacts"))
++SOURCE_IDENTITY_ROOTS = (
++    "CMakeLists.txt", "package.xml", "apps", "config", "include", "src",
++    "tools", "test")
++TERMINAL_ARTIFACTS = (
++    "summary.json", "diagnostic_attempts.csv", "diagnostic_stages.csv",
++    "integrity.csv", "timing.csv", "candidates.csv", "transactions.csv",
++    "terminal_packets.csv", "stdout.log", "stderr.log")
++GATE24_EQUIVALENCE_FILES = (
++    "bridge.csv", "candidates.csv", "diagnostic_attempts.csv",
++    "diagnostic_candidates.csv", "diagnostic_coverage.csv",
++    "diagnostic_history_summary.csv", "diagnostic_snapshot_identity.csv",
++    "diagnostic_square_root.csv", "diagnostic_state_steps.csv",
++    "hypotheses.csv", "integrity.csv", "states.csv", "transactions.csv")
++GATE24_GOLDEN_PREFIX = (
++    "docs/evidence/p1-05-deterministic-concurrency/archived-raw/"
++    "candidate-3x45")
++GATE24_GOLDEN_ANCHOR = {
++    "schema": "uwb-imu-pl/gate24-golden-anchor/v1",
++    "manifest_algorithm": "sha256",
++    "canonical_serialization": "canonical-json-sort-keys-compact-utf8-v1",
++    "reference": "golden-p1-05-deterministic-concurrency",
++    "annotated_tag_object": "02344301915590881b08810f1c34f67aed04b9e4",
++    "peeled_commit": "4657cf87539cf7699231642d3356c08456b1833e",
++    "tree": "8d2ee279074fb02b269f20041eb6b8806980ca06",
++    "equivalence_runs": 3,
++    "files_per_run": 13,
++    "manifest_entries": 39,
++    "manifest_sha256":
++        "5d53385b8f019c12e33c0db25c200556c60ca5941dad06b6a0cfd0fdc68960dc",
++}
+ 
+ 
+ def digest(path: Path) -> str:
+     return hashlib.sha256(path.read_bytes()).hexdigest()
+ 
+ 
++def _resolve_golden_reference_manifest(reference: str, root=ROOT):
++    """Resolve a tag and every Gate 2.4 input blob without trusting it."""
++    if not re.fullmatch(r"[A-Za-z0-9._-]+", reference):
++        raise ValueError("invalid golden reference name")
++    def git(*arguments, text=True):
++        return subprocess.check_output(["git", *arguments], cwd=root,
++                                       text=text).strip() if text else \
++            subprocess.check_output(["git", *arguments], cwd=root)
++    if git("cat-file", "-t", reference) != "tag":
++        raise ValueError("golden reference is not an annotated tag")
++    payload = {
++        "schema": "uwb-imu-pl/gate24-golden-reference/v1",
++        "reference": reference,
++        "tag_object": git("rev-parse", reference),
++        "commit": git("rev-parse", f"{reference}^{{}}"),
++        "tree": git("rev-parse", f"{reference}^{{tree}}"),
++        "runs": {},
++    }
++    for index in (1, 2, 3):
++        files = {}
++        for name in GATE24_EQUIVALENCE_FILES:
++            path = f"{GATE24_GOLDEN_PREFIX}/run{index}/{name}"
++            blob = git("rev-parse", f"{reference}:{path}")
++            if git("cat-file", "-t", blob) != "blob":
++                raise ValueError(f"golden object is not a blob: {path}")
++            content = git("cat-file", "blob", blob, text=False)
++            files[name] = {
++                "path": path,
++                "blob": blob,
++                "sha256": hashlib.sha256(content).hexdigest(),
++                "bytes": len(content),
++            }
++        payload["runs"][f"run{index}"] = files
++    return payload
++
++
++def canonical_golden_manifest_sha256(payload) -> str:
++    """Hash the complete 3x13 manifest using the versioned serialization."""
++    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"),
++                           ensure_ascii=False).encode("utf-8")
++    return hashlib.sha256(canonical).hexdigest()
++
++
++def golden_anchor_from_protocol(protocol):
++    anchor = protocol.get("golden_reference_anchor")
++    if anchor != GATE24_GOLDEN_ANCHOR:
++        raise ValueError("validation protocol golden anchor differs from pins")
++    return anchor
++
++
++def golden_reference_manifest(reference: str, root=ROOT, protocol=None):
++    """Return the manifest only when tag, commit, tree and 39 blobs are pinned."""
++    anchor = (golden_anchor_from_protocol(protocol) if protocol is not None
++              else GATE24_GOLDEN_ANCHOR)
++    if reference != anchor["reference"]:
++        raise ValueError("golden reference name differs from pinned anchor")
++    payload = _resolve_golden_reference_manifest(reference, root)
++    actual = {
++        "annotated_tag_object": payload["tag_object"],
++        "peeled_commit": payload["commit"],
++        "tree": payload["tree"],
++    }
++    for key, value in actual.items():
++        if value != anchor[key]:
++            raise ValueError(f"golden reference {key} differs from pinned anchor")
++    entries = sum(len(files) for files in payload["runs"].values())
++    if (len(payload["runs"]) != anchor["equivalence_runs"] or
++            any(len(files) != anchor["files_per_run"]
++                for files in payload["runs"].values()) or
++            entries != anchor["manifest_entries"]):
++        raise ValueError("golden reference manifest is not canonical 3x13")
++    if canonical_golden_manifest_sha256(payload) != anchor["manifest_sha256"]:
++        raise ValueError("golden reference manifest digest differs from pinned anchor")
++    return payload
++
++
+ def git_identity():
+     sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+-    diff = subprocess.check_output(["git", "diff", "--binary", "HEAD"], cwd=ROOT)
+-    untracked = subprocess.check_output(["git", "ls-files", "--others", "--exclude-standard"],
+-                                        cwd=ROOT, text=True).splitlines()
+-    h = hashlib.sha256(diff)
+-    for name in sorted(untracked):
+-        path = ROOT / name
+-        if path.is_file():
+-            h.update(name.encode()); h.update(b"\0"); h.update(path.read_bytes())
+-    return sha, h.hexdigest()
++    return sha, source_tree_identity()["source_tree_sha256"]
++
++
++def source_tree_identity(root=ROOT):
++    """Hash executable inputs, never campaign output/evidence.
++
++    The old dirty-diff hash accidentally became self-referential when evidence
++    was written below the worktree.  This manifest hashes the complete set of
++    tracked and untracked source/config/test inputs in fixed roots instead.
++    """
++    command = ["git", "ls-files", "-co", "--exclude-standard", "--",
++               *SOURCE_IDENTITY_ROOTS]
++    names = subprocess.check_output(command, cwd=root, text=True).splitlines()
++    files = []
++    for name in sorted(set(names)):
++        path = root / name
++        if (path.is_file() and "__pycache__" not in path.parts and
++                not name.endswith((".pyc", ":Zone.Identifier"))):
++            files.append((name, digest(path)))
++    payload = "".join(f"{name}\0{sha}\n" for name, sha in files).encode()
++    return {"source_tree_sha256": hashlib.sha256(payload).hexdigest(),
++            "source_file_count": len(files)}
++
++
++def loaded_dso_hashes(binary: Path):
++    output = subprocess.check_output(["ldd", str(binary)], text=True,
++                                     stderr=subprocess.STDOUT)
++    result = {}
++    for line in output.splitlines():
++        match = re.search(r"=>\s+(/[^ ]+)\s+\(", line)
++        if not match:
++            match = re.match(r"\s*(/[^ ]+)\s+\(", line)
++        if match:
++            path = Path(match.group(1)).resolve()
++            if path.is_file():
++                result[str(path)] = digest(path)
++    if not result:
++        raise RuntimeError(f"no loaded DSO identity found for {binary}")
++    return dict(sorted(result.items()))
++
++
++def execution_identity(binary: Path):
++    binary = binary.resolve()
++    source = source_tree_identity()
++    sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT,
++                                  text=True).strip()
++    return {
++        "schema": "uwb-imu-pl/execution-identity/v1",
++        "git_sha": sha,
++        **source,
++        "benchmark_source_sha256": digest(
++            ROOT / "apps/realtime_performance_benchmark.cpp"),
++        "benchmark_path": str(binary),
++        "benchmark_sha256": digest(binary),
++        "loaded_dso_sha256": loaded_dso_hashes(binary),
++    }
++
++
++def terminal_artifact_manifest(run: Path):
++    manifest = {}
++    for name in TERMINAL_ARTIFACTS:
++        path = run / name
++        if not path.is_file():
++            raise ValueError(f"terminal raw artifact absent: {path}")
++        manifest[name] = {"sha256": digest(path), "bytes": path.stat().st_size}
++    return manifest
++
++
++def terminal_artifacts_match(run: Path, recorded):
++    try:
++        return recorded == terminal_artifact_manifest(run)
++    except (OSError, ValueError):
++        return False
++
++
++def resume_reusable(old, expected, run: Path, frozen_execution,
++                    current_execution):
++    return (current_execution == frozen_execution and old is not None and
++            immutable_identity(old) == expected and
++            old.get("exit_code") == 0 and
++            isinstance(old.get("runner_wall_s"), (int, float)) and
++            math.isfinite(old["runner_wall_s"]) and old["runner_wall_s"] >= 0 and
++            terminal_artifacts_match(run, old.get("terminal_artifacts")))
+ 
+ 
+ def select_profiles(text: str, active):
+@@ -51,6 +242,17 @@ def scenarios(protocol, gate, profile, explicit):
+     return data[gate].get(profile, [])
+ 
+ 
++def immutable_identity(identity):
++    """Return only fields fixed before execution.
++
++    Completion fields are intentionally excluded so --resume accepts a marker
++    written by this runner after a successful prior execution, while every
++    input/config/source/calibration field remains immutable.
++    """
++    return {key: value for key, value in identity.items()
++            if key not in COMPLETION_FIELDS}
++
++
+ def main() -> int:
+     parser = argparse.ArgumentParser()
+     parser.add_argument("--protocol", required=True, type=Path)
+@@ -62,21 +264,89 @@ def main() -> int:
+     parser.add_argument("--scenario")
+     parser.add_argument("--epochs", type=int)
+     parser.add_argument("--repeats", type=int)
++    parser.add_argument("--seed", type=int)
++    parser.add_argument("--golden-reference")
+     parser.add_argument("--binary", type=Path,
+                         default=Path("/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark"))
+     parser.add_argument("--resume", action="store_true")
++    parser.add_argument(
++        "--simulation-calibrations", type=Path,
++        default=ROOT / "config/p1_06_simulation_calibrations.json")
+     args = parser.parse_args()
+     protocol_path = args.protocol.resolve()
+     protocol = yaml.safe_load(protocol_path.read_text(encoding="utf-8"))
+     if protocol.get("schema") != "uwb-imu-pl/fde-profile-validation/v1":
+         raise SystemExit("unsupported validation protocol")
+     if not args.binary.is_file(): raise SystemExit(f"benchmark binary absent: {args.binary}")
++    args.binary = args.binary.resolve()
+     output = args.output.resolve(); output.mkdir(parents=True, exist_ok=True)
+     usage = shutil.disk_usage(output)
+     if usage.free < int(protocol["storage"]["minimum_free_bytes"]):
+         raise SystemExit("free-space floor would be violated")
+     protocol_hash = digest(protocol_path)
+-    sha, dirty_hash = git_identity()
++    simulation_calibrations = validate_simulation_calibrations(
++        args.simulation_calibrations.resolve(), ROOT)
++    simulation_by_profile = {
++        item["profile"]: item for item in simulation_calibrations["profiles"]}
++    frozen_execution = execution_identity(args.binary)
++    campaign_identity_path = output / "campaign_identity.json"
++    if campaign_identity_path.exists():
++        try:
++            recorded_execution = json.loads(
++                campaign_identity_path.read_text(encoding="utf-8"))
++        except (OSError, ValueError) as error:
++            raise SystemExit(f"invalid frozen campaign identity: {error}")
++        if recorded_execution != frozen_execution:
++            raise SystemExit(
++                "binary/source/DSO identity changed since campaign freeze")
++    else:
++        campaign_identity_path.write_text(
++            json.dumps(frozen_execution, indent=2, sort_keys=True) + "\n",
++            encoding="utf-8")
++    if args.golden_reference:
++        try:
++            anchor = golden_anchor_from_protocol(protocol)
++        except ValueError as error:
++            raise SystemExit(f"cannot bind golden reference: {error}")
++        gate_identity = dict(
++            frozen_execution, golden_reference=args.golden_reference,
++            golden_annotated_tag_object=anchor["annotated_tag_object"],
++            golden_peeled_commit=anchor["peeled_commit"],
++            golden_tree=anchor["tree"],
++            golden_manifest_sha256=anchor["manifest_sha256"],
++            golden_anchor_schema=anchor["schema"])
++        gate_identity_path = output / "gate24_run_identity.json"
++        if gate_identity_path.exists():
++            if json.loads(gate_identity_path.read_text(encoding="utf-8")) != gate_identity:
++                raise SystemExit("gate24 identity changed since campaign freeze")
++        else:
++            gate_identity_path.write_text(
++                json.dumps(gate_identity, indent=2, sort_keys=True) + "\n",
++                encoding="utf-8")
++        try:
++            golden_manifest = golden_reference_manifest(
++                args.golden_reference, protocol=protocol)
++        except (OSError, subprocess.CalledProcessError, ValueError) as error:
++            raise SystemExit(f"cannot bind golden reference: {error}")
++        golden_manifest_path = output / "golden_reference_manifest.json"
++        if golden_manifest_path.exists():
++            try:
++                recorded_manifest = json.loads(
++                    golden_manifest_path.read_text(encoding="utf-8"))
++            except (OSError, ValueError) as error:
++                raise SystemExit(f"invalid golden reference manifest: {error}")
++            if recorded_manifest != golden_manifest:
++                raise SystemExit("golden reference tag/blob manifest changed")
++        else:
++            golden_manifest_path.write_text(
++                json.dumps(golden_manifest, indent=2, sort_keys=True) + "\n",
++                encoding="utf-8")
++    active_overrides = {name: os.environ[name] for name in FAULT_OVERRIDE_NAMES
++                        if name in os.environ}
++    if active_overrides:
++        raise SystemExit(
++            "formal validation campaign refuses unbound synthetic fault "
++            "overrides: " + ",".join(sorted(active_overrides)))
+     snapshot = output / "protocol_snapshot.yaml"
+     if snapshot.exists() and digest(snapshot) != protocol_hash:
+         raise SystemExit("output has a different protocol snapshot")
+@@ -94,37 +364,63 @@ def main() -> int:
+                                           "full": "performance_full"}[args.scale]])
+     repeats = args.repeats or (int(protocol["performance"]["full_repeats"])
+                                if args.gate == "performance" and args.scale == "full" else 1)
++    identity_scale = ("full" if
++                      (args.gate == "fgo" or
++                       (args.gate == "profiles" and
++                        epochs == int(protocol["epochs"]["behavior"])))
++                      else args.scale)
+     failures = 0; executed = 0
+     for profile in selected:
+         config = ROOT / "config" / f"fde_{profile}.yaml"
+         config_hash = digest(config)
+         for scenario in scenarios(protocol, args.gate, profile, args.scenario):
+             for repeat in range(1, repeats + 1):
+-                seed = int(protocol["input"]["seeds"][(repeat - 1) % len(protocol["input"]["seeds"])])
++                seed = (args.seed if args.seed is not None else
++                        int(protocol["input"]["seeds"][
++                            (repeat - 1) % len(protocol["input"]["seeds"])]))
+                 run_id = f"{profile}__{scenario}__e{epochs}__s{seed}__r{repeat}"
+                 run = output / run_id
++                command = ["/usr/bin/time", "-v", str(args.binary),
++                           str(config), str(run), str(epochs)]
+                 identity = {"schema": "uwb-imu-pl/fde-validation-run/v1",
+-                            "run_id": run_id, "gate": args.gate, "scale": args.scale,
++                            "run_id": run_id, "gate": args.gate, "scale": identity_scale,
+                             "profile": profile, "scenario": scenario, "epochs": epochs,
+                             "seed": seed, "repeat": repeat, "protocol_id": protocol["protocol_id"],
+                             "protocol_hash": protocol_hash, "config_hash": config_hash,
+-                            "git_sha": sha, "dirty_diff_hash": dirty_hash,
+-                            "fault_overrides": {
+-                                name: os.environ.get(name) for name in (
+-                                    "UWB_IMU_PL_UWB_BIAS_M",
+-                                    "UWB_IMU_PL_ACCEL_BIAS_MPS2",
+-                                    "UWB_IMU_PL_GYRO_BIAS_RADPS")
+-                                if os.environ.get(name) is not None}}
++                            "calibration_artifact_class": "simulation/synthetic",
++                            "simulation_calibration_id":
++                                simulation_by_profile[profile]["calibration_id"],
++                            "complete_model_config_digest":
++                                simulation_by_profile[profile][
++                                    "complete_model_config_digest"],
++                            "hardware_formal_qualification": "CLOSED/NOT_CLAIMED",
++                            "git_sha": frozen_execution["git_sha"],
++                            "source_tree_sha256":
++                                frozen_execution["source_tree_sha256"],
++                            "source_file_count":
++                                frozen_execution["source_file_count"],
++                            "benchmark_source_sha256":
++                                frozen_execution["benchmark_source_sha256"],
++                            "benchmark_path": frozen_execution["benchmark_path"],
++                            "benchmark_sha256":
++                                frozen_execution["benchmark_sha256"],
++                            "loaded_dso_sha256":
++                                frozen_execution["loaded_dso_sha256"],
++                            "fault_overrides": {}, "command": command}
+                 marker = run / "validation_run.json"
+                 if run.exists():
+                     old = json.loads(marker.read_text()) if marker.exists() else None
+-                    complete = old == identity and (run / "summary.json").exists()
++                    current_execution = execution_identity(args.binary)
++                    complete = resume_reusable(
++                        old, identity, run, frozen_execution, current_execution)
+                     if args.resume and complete:
+                         print(f"RESUME {run_id}"); continue
+                     raise SystemExit(f"refusing to overwrite or reuse mismatched run: {run}")
+                 run.mkdir(parents=True)
+                 marker.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n")
+-                command = ["/usr/bin/time", "-v", str(args.binary), str(config), str(run), str(epochs)]
++                if execution_identity(args.binary) != frozen_execution:
++                    raise SystemExit(
++                        "binary/source/DSO identity changed during campaign")
+                 env = os.environ.copy(); env["UWB_IMU_PL_SCENARIO"] = scenario
+                 env["UWB_IMU_PL_BENCHMARK_SEED"] = str(seed)
+                 start = time.monotonic()
+@@ -136,6 +432,12 @@ def main() -> int:
+                 for canonical, source in (("attempts.csv", "diagnostic_attempts.csv"),
+                                           ("stages.csv", "diagnostic_stages.csv")):
+                     if (run / source).exists(): (run / canonical).symlink_to(source)
++                try:
++                    identity["terminal_artifacts"] = terminal_artifact_manifest(run)
++                except (OSError, ValueError) as error:
++                    identity["terminal_artifact_error"] = str(error)
++                    failures += 1
++                marker.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n")
+                 executed += 1; failures += result.returncode != 0
+                 print(f"{'PASS' if result.returncode == 0 else 'FAIL'} {run_id} "
+                       f"{identity['runner_wall_s']:.3f}s")
+diff --git a/tools/summarize_p1_01_performance.py b/tools/summarize_p1_01_performance.py
+index 83f631d..a18e44d 100644
+--- a/tools/summarize_p1_01_performance.py
++++ b/tools/summarize_p1_01_performance.py
+@@ -82,18 +82,20 @@ def summarize_run(run_dir: pathlib.Path, stdout: pathlib.Path,
+     if len(diagnostics) != attempted:
+         raise ValueError(f"{run_dir}: diagnostic attempt denominator mismatch")
+     expected = list(range(1, attempted + 1))
++    required_stages = ("core_total", "analysis_completion",
++                       "arrival_to_publish", "outer_epoch")
+     complete = [attempt for attempt in expected
+-                if "core_total" in timings.get(attempt, {}) and
+-                "outer_epoch" in timings.get(attempt, {}) and
++                if all(stage in timings.get(attempt, {})
++                       for stage in required_stages) and
+                 all(stage["success"]
+                     for stage in timings.get(attempt, {}).values())]
+     if len(timings) != attempted or len(complete) != attempted:
+         raise ValueError(f"{run_dir}: incomplete all-attempt timing denominator")
+     core = [timings[index]["core_total"]["wall_ms"] for index in expected]
+-    # processUwbBatch return is the analysis-completion boundary in this
+-    # benchmark, so core_total and analysis_completion deliberately share the
+-    # same clock sample. outer_epoch ends after the durable final output sink.
+-    publish = [timings[index]["outer_epoch"]["wall_ms"] for index in expected]
++    analysis = [timings[index]["analysis_completion"]["wall_ms"]
++                for index in expected]
++    publish = [timings[index]["arrival_to_publish"]["wall_ms"]
++               for index in expected]
+     deadline_misses = sum(int(row["deadline_missed"]) for row in integrity)
+     sensor_stale = sum(int(row["watchdog_sensor_stale"])
+                        for row in diagnostics)
+@@ -107,7 +109,9 @@ def summarize_run(run_dir: pathlib.Path, stdout: pathlib.Path,
+             "attempt": index,
+             "complete_work": index in complete,
+             "deadline_missed": integrity_row["deadline_missed"] == "1",
++            "timeout": diagnostic_row["watchdog_wall_timeout"] == "1",
+             "sensor_stale": diagnostic_row["watchdog_sensor_stale"] == "1",
++            "watchdog_reason": diagnostic_row["watchdog_reason"],
+             "status": diagnostic_row["status"],
+             "terminal_reason": diagnostic_row["reason"],
+             "transaction_opened": diagnostic_row["transaction_opened"] == "1",
+@@ -124,12 +128,12 @@ def summarize_run(run_dir: pathlib.Path, stdout: pathlib.Path,
+         "watchdog_refused_attempts": watchdog_refusals,
+         "transaction_unopened_attempts": unopened,
+         "core_compute": distribution(core),
+-        "analysis_completion": distribution(core),
++        "analysis_completion": distribution(analysis),
+         "arrival_to_publish": distribution(publish),
+         "rss_peak_kib": parse_rss(time_file),
+         "work_counters": parse_work(stdout),
+         "raw_core_ms": core,
+-        "raw_analysis_completion_ms": core,
++        "raw_analysis_completion_ms": analysis,
+         "raw_arrival_to_publish_ms": publish,
+         "raw_attempt_outcomes": outcomes,
+     }
+@@ -137,13 +141,20 @@ def summarize_run(run_dir: pathlib.Path, stdout: pathlib.Path,
+ 
+ def summarize_group(root: pathlib.Path) -> dict:
+     run_dirs = sorted(path for path in root.glob("run*") if path.is_dir())
++    if not run_dirs:
++        run_dirs = sorted(path.parent for path in root.glob(
++            "*/validation_run.json"))
+     if not run_dirs:
+         raise ValueError(f"{root}: no run directories")
+     runs = []
+-    for run_dir in run_dirs:
+-        suffix = run_dir.name[3:]
+-        runs.append(summarize_run(run_dir, root / f"run{suffix}.stdout",
+-                                  root / f"run{suffix}.time"))
++    for index, run_dir in enumerate(run_dirs, 1):
++        stdout = run_dir / "stdout.log"
++        time_file = run_dir / "stderr.log"
++        if not stdout.exists() or not time_file.exists():
++            suffix = run_dir.name[3:] if run_dir.name.startswith("run") else str(index)
++            stdout, time_file = (root / f"run{suffix}.stdout",
++                                 root / f"run{suffix}.time")
++        runs.append(summarize_run(run_dir, stdout, time_file))
+     all_core = [value for run in runs for value in run["raw_core_ms"]]
+     all_analysis = [value for run in runs
+                     for value in run["raw_analysis_completion_ms"]]

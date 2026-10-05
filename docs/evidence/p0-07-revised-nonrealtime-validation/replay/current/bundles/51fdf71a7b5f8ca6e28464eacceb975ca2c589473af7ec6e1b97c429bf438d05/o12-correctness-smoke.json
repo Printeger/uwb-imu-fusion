@@ -1,0 +1,38 @@
+{
+  "analysis_completion_ms": {
+    "max": 1409.440617,
+    "p50": 242.5023225,
+    "p95": 625.5684025999997,
+    "p99": 1233.4601118699998
+  },
+  "arrival_to_packet_ready_ms": {
+    "max": 1412.369259,
+    "p50": 242.5950785,
+    "p95": 625.7160070999997,
+    "p99": 1235.7498669999995
+  },
+  "claim": "correctness smoke only; not P1 performance acceptance",
+  "complete_work_attempts": 24,
+  "complete_work_rate": 1.0,
+  "core_compute_ms": {
+    "max": 1409.416566,
+    "p50": 242.48485549999998,
+    "p95": 625.5439168999998,
+    "p99": 1233.43597048
+  },
+  "deadline_miss_rate": 0.0,
+  "deadline_misses": 0,
+  "denominator": {
+    "attempted": 24,
+    "excluded": 0,
+    "received": 24
+  },
+  "rss_peak_kib": 224192,
+  "schema": "p0-07-o12-correctness-smoke-v2",
+  "timing_boundaries": {
+    "analysis_completion": "test-driver processUwbBatch return sample",
+    "arrival_to_packet_ready": "test-driver packet-ready/final immutable packet sample; no publisher was installed",
+    "core_compute": "production core_total stage sampled before publication gate return",
+    "publish_outcome": "NOT_ATTEMPTED (no transport installed)"
+  }
+}

@@ -1,0 +1,844 @@
+00400000-00423000 r--p 00000000 08:30 97287                              /usr/bin/python3.8
+00423000-006b8000 r-xp 00023000 08:30 97287                              /usr/bin/python3.8
+006b8000-008f5000 r--p 002b8000 08:30 97287                              /usr/bin/python3.8
+008f5000-008f6000 r--p 004f4000 08:30 97287                              /usr/bin/python3.8
+008f6000-0093d000 rw-p 004f5000 08:30 97287                              /usr/bin/python3.8
+0093d000-00960000 rw-p 00000000 00:00 0 
+17045000-17e05000 rw-p 00000000 00:00 0                                  [heap]
+73fb98000000-73fb98026000 r--p 00000000 08:30 181078                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_flapack.cpython-38-x86_64-linux-gnu.so
+73fb98026000-73fb9811c000 r-xp 00026000 08:30 181078                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_flapack.cpython-38-x86_64-linux-gnu.so
+73fb9811c000-73fb98187000 r--p 0011c000 08:30 181078                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_flapack.cpython-38-x86_64-linux-gnu.so
+73fb98187000-73fb98188000 ---p 00187000 08:30 181078                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_flapack.cpython-38-x86_64-linux-gnu.so
+73fb98188000-73fb98189000 r--p 00187000 08:30 181078                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_flapack.cpython-38-x86_64-linux-gnu.so
+73fb98189000-73fb98211000 rw-p 00188000 08:30 181078                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_flapack.cpython-38-x86_64-linux-gnu.so
+73fb98211000-73fb98212000 rw-p 00000000 00:00 0 
+73fb98212000-73fb98219000 rw-p 00228000 08:30 181078                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_flapack.cpython-38-x86_64-linux-gnu.so
+73fb98400000-73fbac400000 rw-p 00000000 00:00 0 
+73fbb0e00000-73fbb2e00000 rw-p 00000000 00:00 0 
+73fbb3800000-73fbb5800000 rw-p 00000000 00:00 0 
+73fbb6200000-73fbb8200000 rw-p 00000000 00:00 0 
+73fbb8c00000-73fbbac00000 rw-p 00000000 00:00 0 
+73fbbb600000-73fbbd600000 rw-p 00000000 00:00 0 
+73fbbd6bf000-73fbbd7ff000 rw-p 00000000 00:00 0 
+73fbbe000000-73fbc2000000 rw-p 00000000 00:00 0 
+73fbc203b000-73fbc2057000 r--p 00000000 08:30 131273                     /usr/lib/x86_64-linux-gnu/libssl.so.1.1
+73fbc2057000-73fbc20a6000 r-xp 0001c000 08:30 131273                     /usr/lib/x86_64-linux-gnu/libssl.so.1.1
+73fbc20a6000-73fbc20c0000 r--p 0006b000 08:30 131273                     /usr/lib/x86_64-linux-gnu/libssl.so.1.1
+73fbc20c0000-73fbc20c1000 ---p 00085000 08:30 131273                     /usr/lib/x86_64-linux-gnu/libssl.so.1.1
+73fbc20c1000-73fbc20ca000 r--p 00085000 08:30 131273                     /usr/lib/x86_64-linux-gnu/libssl.so.1.1
+73fbc20ca000-73fbc20ce000 rw-p 0008e000 08:30 131273                     /usr/lib/x86_64-linux-gnu/libssl.so.1.1
+73fbc20ce000-73fbc210e000 rw-p 00000000 00:00 0 
+73fbc210e000-73fbc211d000 r--p 00000000 08:30 10544                      /usr/lib/python3.8/lib-dynload/_ssl.cpython-38-x86_64-linux-gnu.so
+73fbc211d000-73fbc2128000 r-xp 0000f000 08:30 10544                      /usr/lib/python3.8/lib-dynload/_ssl.cpython-38-x86_64-linux-gnu.so
+73fbc2128000-73fbc2134000 r--p 0001a000 08:30 10544                      /usr/lib/python3.8/lib-dynload/_ssl.cpython-38-x86_64-linux-gnu.so
+73fbc2134000-73fbc2135000 r--p 00025000 08:30 10544                      /usr/lib/python3.8/lib-dynload/_ssl.cpython-38-x86_64-linux-gnu.so
+73fbc2135000-73fbc213c000 rw-p 00026000 08:30 10544                      /usr/lib/python3.8/lib-dynload/_ssl.cpython-38-x86_64-linux-gnu.so
+73fbc213c000-73fbc21fd000 rw-p 00000000 00:00 0 
+73fbc3a00000-73fbc5799000 r-xp 00000000 08:30 180489                     /home/mint/.local/lib/python3.8/site-packages/scipy.libs/libopenblasp-r0-41284840.3.18.so
+73fbc5799000-73fbc5998000 ---p 01d99000 08:30 180489                     /home/mint/.local/lib/python3.8/site-packages/scipy.libs/libopenblasp-r0-41284840.3.18.so
+73fbc5998000-73fbc599e000 r--p 01d98000 08:30 180489                     /home/mint/.local/lib/python3.8/site-packages/scipy.libs/libopenblasp-r0-41284840.3.18.so
+73fbc599e000-73fbc59b6000 rw-p 01d9e000 08:30 180489                     /home/mint/.local/lib/python3.8/site-packages/scipy.libs/libopenblasp-r0-41284840.3.18.so
+73fbc59b6000-73fbc59c3000 rw-p 00000000 00:00 0 
+73fbc59c3000-73fbc5a5d000 rw-p 01eb4000 08:30 180489                     /home/mint/.local/lib/python3.8/site-packages/scipy.libs/libopenblasp-r0-41284840.3.18.so
+73fbc5a87000-73fbc5a8a000 r--p 00000000 08:30 12847                      /usr/lib/x86_64-linux-gnu/liblzma.so.5.2.4
+73fbc5a8a000-73fbc5aa2000 r-xp 00003000 08:30 12847                      /usr/lib/x86_64-linux-gnu/liblzma.so.5.2.4
+73fbc5aa2000-73fbc5aad000 r--p 0001b000 08:30 12847                      /usr/lib/x86_64-linux-gnu/liblzma.so.5.2.4
+73fbc5aad000-73fbc5aae000 ---p 00026000 08:30 12847                      /usr/lib/x86_64-linux-gnu/liblzma.so.5.2.4
+73fbc5aae000-73fbc5aaf000 r--p 00026000 08:30 12847                      /usr/lib/x86_64-linux-gnu/liblzma.so.5.2.4
+73fbc5aaf000-73fbc5ab0000 rw-p 00027000 08:30 12847                      /usr/lib/x86_64-linux-gnu/liblzma.so.5.2.4
+73fbc5ab0000-73fbc5af0000 rw-p 00000000 00:00 0 
+73fbc5af0000-73fbc5af7000 r--p 00000000 08:30 180935                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_trlib/_trlib.cpython-38-x86_64-linux-gnu.so
+73fbc5af7000-73fbc5b2b000 r-xp 00007000 08:30 180935                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_trlib/_trlib.cpython-38-x86_64-linux-gnu.so
+73fbc5b2b000-73fbc5b36000 r--p 0003b000 08:30 180935                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_trlib/_trlib.cpython-38-x86_64-linux-gnu.so
+73fbc5b36000-73fbc5b37000 r--p 00045000 08:30 180935                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_trlib/_trlib.cpython-38-x86_64-linux-gnu.so
+73fbc5b37000-73fbc5b3b000 rw-p 00046000 08:30 180935                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_trlib/_trlib.cpython-38-x86_64-linux-gnu.so
+73fbc5b3b000-73fbc5b3c000 rw-p 00000000 00:00 0 
+73fbc5b3c000-73fbc5b40000 rw-p 00055000 08:30 180935                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_trlib/_trlib.cpython-38-x86_64-linux-gnu.so
+73fbc5b40000-73fbc5b80000 rw-p 00000000 00:00 0 
+73fbc5b80000-73fbc5b87000 r--p 00000000 08:30 185160                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_reordering.cpython-38-x86_64-linux-gnu.so
+73fbc5b87000-73fbc5bae000 r-xp 00007000 08:30 185160                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_reordering.cpython-38-x86_64-linux-gnu.so
+73fbc5bae000-73fbc5bb8000 r--p 0002e000 08:30 185160                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_reordering.cpython-38-x86_64-linux-gnu.so
+73fbc5bb8000-73fbc5bb9000 r--p 00037000 08:30 185160                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_reordering.cpython-38-x86_64-linux-gnu.so
+73fbc5bb9000-73fbc5bbe000 rw-p 00038000 08:30 185160                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_reordering.cpython-38-x86_64-linux-gnu.so
+73fbc5bbe000-73fbc5bc4000 r--p 00000000 08:30 185159                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_matching.cpython-38-x86_64-linux-gnu.so
+73fbc5bc4000-73fbc5bed000 r-xp 00006000 08:30 185159                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_matching.cpython-38-x86_64-linux-gnu.so
+73fbc5bed000-73fbc5bf8000 r--p 0002f000 08:30 185159                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_matching.cpython-38-x86_64-linux-gnu.so
+73fbc5bf8000-73fbc5bf9000 r--p 00039000 08:30 185159                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_matching.cpython-38-x86_64-linux-gnu.so
+73fbc5bf9000-73fbc5bff000 rw-p 0003a000 08:30 185159                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_matching.cpython-38-x86_64-linux-gnu.so
+73fbc5bff000-73fbc5c00000 rw-p 00000000 00:00 0 
+73fbc5c00000-73fbc5c03000 r--p 00000000 08:30 184978                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/_sparsetools.cpython-38-x86_64-linux-gnu.so
+73fbc5c03000-73fbc5edd000 r-xp 00003000 08:30 184978                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/_sparsetools.cpython-38-x86_64-linux-gnu.so
+73fbc5edd000-73fbc5f57000 r--p 002dd000 08:30 184978                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/_sparsetools.cpython-38-x86_64-linux-gnu.so
+73fbc5f57000-73fbc5f58000 r--p 00356000 08:30 184978                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/_sparsetools.cpython-38-x86_64-linux-gnu.so
+73fbc5f58000-73fbc5f59000 rw-p 00357000 08:30 184978                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/_sparsetools.cpython-38-x86_64-linux-gnu.so
+73fbc5f6a000-73fbc5f6e000 r--p 00000000 08:30 42565                      /usr/lib/python3.8/lib-dynload/_asyncio.cpython-38-x86_64-linux-gnu.so
+73fbc5f6e000-73fbc5f74000 r-xp 00004000 08:30 42565                      /usr/lib/python3.8/lib-dynload/_asyncio.cpython-38-x86_64-linux-gnu.so
+73fbc5f74000-73fbc5f78000 r--p 0000a000 08:30 42565                      /usr/lib/python3.8/lib-dynload/_asyncio.cpython-38-x86_64-linux-gnu.so
+73fbc5f78000-73fbc5f79000 ---p 0000e000 08:30 42565                      /usr/lib/python3.8/lib-dynload/_asyncio.cpython-38-x86_64-linux-gnu.so
+73fbc5f79000-73fbc5f7a000 r--p 0000e000 08:30 42565                      /usr/lib/python3.8/lib-dynload/_asyncio.cpython-38-x86_64-linux-gnu.so
+73fbc5f7a000-73fbc5f7c000 rw-p 0000f000 08:30 42565                      /usr/lib/python3.8/lib-dynload/_asyncio.cpython-38-x86_64-linux-gnu.so
+73fbc5f7c000-73fbc5f83000 r--p 00000000 08:30 185166                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_flow.cpython-38-x86_64-linux-gnu.so
+73fbc5f83000-73fbc5fad000 r-xp 00007000 08:30 185166                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_flow.cpython-38-x86_64-linux-gnu.so
+73fbc5fad000-73fbc5fb8000 r--p 00031000 08:30 185166                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_flow.cpython-38-x86_64-linux-gnu.so
+73fbc5fb8000-73fbc5fb9000 r--p 0003b000 08:30 185166                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_flow.cpython-38-x86_64-linux-gnu.so
+73fbc5fb9000-73fbc5fbf000 rw-p 0003c000 08:30 185166                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_flow.cpython-38-x86_64-linux-gnu.so
+73fbc5fbf000-73fbc6000000 rw-p 00000000 00:00 0 
+73fbc6000000-73fbda000000 rw-p 00000000 00:00 0 
+73fbda008000-73fbda009000 r--p 00000000 08:30 176696                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/lapack_lite.cpython-38-x86_64-linux-gnu.so
+73fbda009000-73fbda00b000 r-xp 00001000 08:30 176696                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/lapack_lite.cpython-38-x86_64-linux-gnu.so
+73fbda00b000-73fbda00c000 r--p 00003000 08:30 176696                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/lapack_lite.cpython-38-x86_64-linux-gnu.so
+73fbda00c000-73fbda00d000 r--p 00003000 08:30 176696                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/lapack_lite.cpython-38-x86_64-linux-gnu.so
+73fbda00d000-73fbda00e000 rw-p 00004000 08:30 176696                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/lapack_lite.cpython-38-x86_64-linux-gnu.so
+73fbda00e000-73fbda010000 rw-p 00006000 08:30 176696                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/lapack_lite.cpython-38-x86_64-linux-gnu.so
+73fbda010000-73fbda013000 r--p 00000000 08:30 73608                      /usr/lib/python3.8/lib-dynload/_lzma.cpython-38-x86_64-linux-gnu.so
+73fbda013000-73fbda017000 r-xp 00003000 08:30 73608                      /usr/lib/python3.8/lib-dynload/_lzma.cpython-38-x86_64-linux-gnu.so
+73fbda017000-73fbda01a000 r--p 00007000 08:30 73608                      /usr/lib/python3.8/lib-dynload/_lzma.cpython-38-x86_64-linux-gnu.so
+73fbda01a000-73fbda01b000 r--p 00009000 08:30 73608                      /usr/lib/python3.8/lib-dynload/_lzma.cpython-38-x86_64-linux-gnu.so
+73fbda01b000-73fbda01c000 rw-p 0000a000 08:30 73608                      /usr/lib/python3.8/lib-dynload/_lzma.cpython-38-x86_64-linux-gnu.so
+73fbda01c000-73fbda022000 r--p 00000000 08:30 185167                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_min_spanning_tree.cpython-38-x86_64-linux-gnu.so
+73fbda022000-73fbda03e000 r-xp 00006000 08:30 185167                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_min_spanning_tree.cpython-38-x86_64-linux-gnu.so
+73fbda03e000-73fbda046000 r--p 00022000 08:30 185167                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_min_spanning_tree.cpython-38-x86_64-linux-gnu.so
+73fbda046000-73fbda047000 r--p 00029000 08:30 185167                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_min_spanning_tree.cpython-38-x86_64-linux-gnu.so
+73fbda047000-73fbda04b000 rw-p 0002a000 08:30 185167                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_min_spanning_tree.cpython-38-x86_64-linux-gnu.so
+73fbda04b000-73fbda04f000 r--p 00000000 08:30 185163                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_traversal.cpython-38-x86_64-linux-gnu.so
+73fbda04f000-73fbda064000 r-xp 00004000 08:30 185163                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_traversal.cpython-38-x86_64-linux-gnu.so
+73fbda064000-73fbda06b000 r--p 00019000 08:30 185163                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_traversal.cpython-38-x86_64-linux-gnu.so
+73fbda06b000-73fbda06c000 r--p 0001f000 08:30 185163                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_traversal.cpython-38-x86_64-linux-gnu.so
+73fbda06c000-73fbda070000 rw-p 00020000 08:30 185163                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_traversal.cpython-38-x86_64-linux-gnu.so
+73fbda070000-73fbda071000 rw-p 00000000 00:00 0 
+73fbda071000-73fbda075000 r--p 00000000 08:30 185162                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_tools.cpython-38-x86_64-linux-gnu.so
+73fbda075000-73fbda08c000 r-xp 00004000 08:30 185162                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_tools.cpython-38-x86_64-linux-gnu.so
+73fbda08c000-73fbda093000 r--p 0001b000 08:30 185162                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_tools.cpython-38-x86_64-linux-gnu.so
+73fbda093000-73fbda094000 r--p 00021000 08:30 185162                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_tools.cpython-38-x86_64-linux-gnu.so
+73fbda094000-73fbda099000 rw-p 00022000 08:30 185162                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_tools.cpython-38-x86_64-linux-gnu.so
+73fbda099000-73fbda0a0000 r--p 00000000 08:30 185157                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_shortest_path.cpython-38-x86_64-linux-gnu.so
+73fbda0a0000-73fbda0e1000 r-xp 00007000 08:30 185157                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_shortest_path.cpython-38-x86_64-linux-gnu.so
+73fbda0e1000-73fbda0ef000 r--p 00048000 08:30 185157                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_shortest_path.cpython-38-x86_64-linux-gnu.so
+73fbda0ef000-73fbda0f0000 ---p 00056000 08:30 185157                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_shortest_path.cpython-38-x86_64-linux-gnu.so
+73fbda0f0000-73fbda0f1000 r--p 00056000 08:30 185157                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_shortest_path.cpython-38-x86_64-linux-gnu.so
+73fbda0f1000-73fbda0fa000 rw-p 00057000 08:30 185157                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/csgraph/_shortest_path.cpython-38-x86_64-linux-gnu.so
+73fbda0fa000-73fbda0fb000 rw-p 00000000 00:00 0 
+73fbda0fb000-73fbda101000 r--p 00000000 08:30 185115                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_eigen/arpack/_arpack.cpython-38-x86_64-linux-gnu.so
+73fbda101000-73fbda147000 r-xp 00006000 08:30 185115                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_eigen/arpack/_arpack.cpython-38-x86_64-linux-gnu.so
+73fbda147000-73fbda157000 r--p 0004c000 08:30 185115                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_eigen/arpack/_arpack.cpython-38-x86_64-linux-gnu.so
+73fbda157000-73fbda158000 r--p 0005b000 08:30 185115                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_eigen/arpack/_arpack.cpython-38-x86_64-linux-gnu.so
+73fbda158000-73fbda163000 rw-p 0005c000 08:30 185115                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_eigen/arpack/_arpack.cpython-38-x86_64-linux-gnu.so
+73fbda163000-73fbda164000 rw-p 00000000 00:00 0 
+73fbda164000-73fbda167000 rw-p 0006f000 08:30 185115                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_eigen/arpack/_arpack.cpython-38-x86_64-linux-gnu.so
+73fbda167000-73fbda1a7000 rw-p 00000000 00:00 0 
+73fbda1a7000-73fbda1aa000 r--p 00000000 08:30 185019                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_dsolve/_superlu.cpython-38-x86_64-linux-gnu.so
+73fbda1aa000-73fbda1e7000 r-xp 00003000 08:30 185019                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_dsolve/_superlu.cpython-38-x86_64-linux-gnu.so
+73fbda1e7000-73fbda1f2000 r--p 00040000 08:30 185019                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_dsolve/_superlu.cpython-38-x86_64-linux-gnu.so
+73fbda1f2000-73fbda1f3000 r--p 0004a000 08:30 185019                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_dsolve/_superlu.cpython-38-x86_64-linux-gnu.so
+73fbda1f3000-73fbda1f4000 rw-p 0004b000 08:30 185019                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_dsolve/_superlu.cpython-38-x86_64-linux-gnu.so
+73fbda1f4000-73fbda1f7000 rw-p 00053000 08:30 185019                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_dsolve/_superlu.cpython-38-x86_64-linux-gnu.so
+73fbda1f7000-73fbda1f8000 ---p 00000000 00:00 0 
+73fbda1f8000-73fbda9f8000 rw-p 00000000 00:00 0 
+73fbda9f8000-73fbda9f9000 ---p 00000000 00:00 0 
+73fbda9f9000-73fbdb1f9000 rw-p 00000000 00:00 0 
+73fbdb1f9000-73fbdb1fa000 ---p 00000000 00:00 0 
+73fbdb1fa000-73fbdb9fa000 rw-p 00000000 00:00 0 
+73fbdb9fa000-73fbdb9fb000 ---p 00000000 00:00 0 
+73fbdb9fb000-73fbdc1fb000 rw-p 00000000 00:00 0 
+73fbdea00000-73fbe0a00000 rw-p 00000000 00:00 0 
+73fbe0a05000-73fbe0a0a000 r--p 00000000 08:30 181065                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_decomp_update.cpython-38-x86_64-linux-gnu.so
+73fbe0a0a000-73fbe0a3c000 r-xp 00005000 08:30 181065                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_decomp_update.cpython-38-x86_64-linux-gnu.so
+73fbe0a3c000-73fbe0a49000 r--p 00037000 08:30 181065                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_decomp_update.cpython-38-x86_64-linux-gnu.so
+73fbe0a49000-73fbe0a4a000 r--p 00043000 08:30 181065                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_decomp_update.cpython-38-x86_64-linux-gnu.so
+73fbe0a4a000-73fbe0a50000 rw-p 00044000 08:30 181065                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_decomp_update.cpython-38-x86_64-linux-gnu.so
+73fbe0a50000-73fbe0a58000 r--p 00000000 08:30 181089                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/cython_blas.cpython-38-x86_64-linux-gnu.so
+73fbe0a58000-73fbe0a77000 r-xp 00008000 08:30 181089                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/cython_blas.cpython-38-x86_64-linux-gnu.so
+73fbe0a77000-73fbe0a85000 r--p 00027000 08:30 181089                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/cython_blas.cpython-38-x86_64-linux-gnu.so
+73fbe0a85000-73fbe0a86000 r--p 00034000 08:30 181089                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/cython_blas.cpython-38-x86_64-linux-gnu.so
+73fbe0a86000-73fbe0a89000 rw-p 00035000 08:30 181089                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/cython_blas.cpython-38-x86_64-linux-gnu.so
+73fbe0a89000-73fbe0a8a000 rw-p 00000000 00:00 0 
+73fbe0a8a000-73fbe0a8f000 rw-p 00045000 08:30 181089                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/cython_blas.cpython-38-x86_64-linux-gnu.so
+73fbe0a8f000-73fbe0acf000 rw-p 00000000 00:00 0 
+73fbe0acf000-73fbe0ae6000 r--p 00000000 08:30 181045                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/cython_lapack.cpython-38-x86_64-linux-gnu.so
+73fbe0ae6000-73fbe0b02000 r-xp 00017000 08:30 181045                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/cython_lapack.cpython-38-x86_64-linux-gnu.so
+73fbe0b02000-73fbe0b5b000 r--p 00033000 08:30 181045                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/cython_lapack.cpython-38-x86_64-linux-gnu.so
+73fbe0b5b000-73fbe0b5c000 r--p 0008b000 08:30 181045                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/cython_lapack.cpython-38-x86_64-linux-gnu.so
+73fbe0b5c000-73fbe0b60000 rw-p 0008c000 08:30 181045                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/cython_lapack.cpython-38-x86_64-linux-gnu.so
+73fbe0b60000-73fbe0b71000 rw-p 000b8000 08:30 181045                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/cython_lapack.cpython-38-x86_64-linux-gnu.so
+73fbe0b71000-73fbe0b79000 r--p 00000000 08:30 181053                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_matfuncs_expm.cpython-38-x86_64-linux-gnu.so
+73fbe0b79000-73fbe0bb9000 r-xp 00008000 08:30 181053                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_matfuncs_expm.cpython-38-x86_64-linux-gnu.so
+73fbe0bb9000-73fbe0bc5000 r--p 00048000 08:30 181053                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_matfuncs_expm.cpython-38-x86_64-linux-gnu.so
+73fbe0bc5000-73fbe0bc6000 ---p 00054000 08:30 181053                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_matfuncs_expm.cpython-38-x86_64-linux-gnu.so
+73fbe0bc6000-73fbe0bc7000 r--p 00054000 08:30 181053                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_matfuncs_expm.cpython-38-x86_64-linux-gnu.so
+73fbe0bc7000-73fbe0bcc000 rw-p 00055000 08:30 181053                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_matfuncs_expm.cpython-38-x86_64-linux-gnu.so
+73fbe0bcc000-73fbe0bcd000 rw-p 00000000 00:00 0 
+73fbe0bcd000-73fbe0bd3000 r--p 00000000 08:30 181049                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_matfuncs_sqrtm_triu.cpython-38-x86_64-linux-gnu.so
+73fbe0bd3000-73fbe0bf1000 r-xp 00006000 08:30 181049                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_matfuncs_sqrtm_triu.cpython-38-x86_64-linux-gnu.so
+73fbe0bf1000-73fbe0bfa000 r--p 00024000 08:30 181049                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_matfuncs_sqrtm_triu.cpython-38-x86_64-linux-gnu.so
+73fbe0bfa000-73fbe0bfb000 r--p 0002c000 08:30 181049                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_matfuncs_sqrtm_triu.cpython-38-x86_64-linux-gnu.so
+73fbe0bfb000-73fbe0bfe000 rw-p 0002d000 08:30 181049                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_matfuncs_sqrtm_triu.cpython-38-x86_64-linux-gnu.so
+73fbe0bfe000-73fbe0bff000 rw-p 00000000 00:00 0 
+73fbe1400000-73fbe3400000 rw-p 00000000 00:00 0 
+73fbe3403000-73fbe340a000 r--p 00000000 08:30 181032                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_solve_toeplitz.cpython-38-x86_64-linux-gnu.so
+73fbe340a000-73fbe342d000 r-xp 00007000 08:30 181032                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_solve_toeplitz.cpython-38-x86_64-linux-gnu.so
+73fbe342d000-73fbe3436000 r--p 0002a000 08:30 181032                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_solve_toeplitz.cpython-38-x86_64-linux-gnu.so
+73fbe3436000-73fbe3437000 r--p 00032000 08:30 181032                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_solve_toeplitz.cpython-38-x86_64-linux-gnu.so
+73fbe3437000-73fbe343b000 rw-p 00033000 08:30 181032                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_solve_toeplitz.cpython-38-x86_64-linux-gnu.so
+73fbe343b000-73fbe347b000 rw-p 00000000 00:00 0 
+73fbe347b000-73fbe3483000 r--p 00000000 08:30 181075                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_cythonized_array_utils.cpython-38-x86_64-linux-gnu.so
+73fbe3483000-73fbe34cc000 r-xp 00008000 08:30 181075                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_cythonized_array_utils.cpython-38-x86_64-linux-gnu.so
+73fbe34cc000-73fbe34dc000 r--p 00051000 08:30 181075                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_cythonized_array_utils.cpython-38-x86_64-linux-gnu.so
+73fbe34dc000-73fbe34dd000 r--p 00060000 08:30 181075                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_cythonized_array_utils.cpython-38-x86_64-linux-gnu.so
+73fbe34dd000-73fbe34e3000 rw-p 00061000 08:30 181075                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_cythonized_array_utils.cpython-38-x86_64-linux-gnu.so
+73fbe34e3000-73fbe34e4000 rw-p 00000000 00:00 0 
+73fbe34e4000-73fbe34f2000 r--p 00000000 08:30 181056                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_fblas.cpython-38-x86_64-linux-gnu.so
+73fbe34f2000-73fbe3537000 r-xp 0000e000 08:30 181056                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_fblas.cpython-38-x86_64-linux-gnu.so
+73fbe3537000-73fbe3557000 r--p 00053000 08:30 181056                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_fblas.cpython-38-x86_64-linux-gnu.so
+73fbe3557000-73fbe3558000 ---p 00073000 08:30 181056                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_fblas.cpython-38-x86_64-linux-gnu.so
+73fbe3558000-73fbe3559000 r--p 00073000 08:30 181056                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_fblas.cpython-38-x86_64-linux-gnu.so
+73fbe3559000-73fbe357f000 rw-p 00074000 08:30 181056                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_fblas.cpython-38-x86_64-linux-gnu.so
+73fbe357f000-73fbe3582000 rw-p 000a2000 08:30 181056                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_fblas.cpython-38-x86_64-linux-gnu.so
+73fbe3582000-73fbe35c2000 rw-p 00000000 00:00 0 
+73fbe35c2000-73fbe35c6000 r--p 00000000 08:30 185042                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_isolve/_iterative.cpython-38-x86_64-linux-gnu.so
+73fbe35c6000-73fbe35ea000 r-xp 00004000 08:30 185042                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_isolve/_iterative.cpython-38-x86_64-linux-gnu.so
+73fbe35ea000-73fbe35f3000 r--p 00028000 08:30 185042                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_isolve/_iterative.cpython-38-x86_64-linux-gnu.so
+73fbe35f3000-73fbe35f4000 ---p 00031000 08:30 185042                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_isolve/_iterative.cpython-38-x86_64-linux-gnu.so
+73fbe35f4000-73fbe35f5000 r--p 00031000 08:30 185042                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_isolve/_iterative.cpython-38-x86_64-linux-gnu.so
+73fbe35f5000-73fbe35fc000 rw-p 00032000 08:30 185042                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_isolve/_iterative.cpython-38-x86_64-linux-gnu.so
+73fbe35fc000-73fbe35fd000 rw-p 00000000 00:00 0 
+73fbe35fd000-73fbe35ff000 rw-p 00040000 08:30 185042                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/linalg/_isolve/_iterative.cpython-38-x86_64-linux-gnu.so
+73fbe3e00000-73fbe5e00000 rw-p 00000000 00:00 0 
+73fbe5e02000-73fbe5e04000 r--p 00000000 08:30 12598                      /usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4
+73fbe5e04000-73fbe5e11000 r-xp 00002000 08:30 12598                      /usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4
+73fbe5e11000-73fbe5e13000 r--p 0000f000 08:30 12598                      /usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4
+73fbe5e13000-73fbe5e14000 r--p 00010000 08:30 12598                      /usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4
+73fbe5e14000-73fbe5e15000 rw-p 00011000 08:30 12598                      /usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4
+73fbe5e15000-73fbe5e17000 r--p 00000000 08:30 42566                      /usr/lib/python3.8/lib-dynload/_bz2.cpython-38-x86_64-linux-gnu.so
+73fbe5e17000-73fbe5e19000 r-xp 00002000 08:30 42566                      /usr/lib/python3.8/lib-dynload/_bz2.cpython-38-x86_64-linux-gnu.so
+73fbe5e19000-73fbe5e1b000 r--p 00004000 08:30 42566                      /usr/lib/python3.8/lib-dynload/_bz2.cpython-38-x86_64-linux-gnu.so
+73fbe5e1b000-73fbe5e1c000 r--p 00005000 08:30 42566                      /usr/lib/python3.8/lib-dynload/_bz2.cpython-38-x86_64-linux-gnu.so
+73fbe5e1c000-73fbe5e1d000 rw-p 00006000 08:30 42566                      /usr/lib/python3.8/lib-dynload/_bz2.cpython-38-x86_64-linux-gnu.so
+73fbe5e1d000-73fbe5eb3000 r--p 00000000 08:30 42728                      /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.28
+73fbe5eb3000-73fbe5fa4000 r-xp 00096000 08:30 42728                      /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.28
+73fbe5fa4000-73fbe5fed000 r--p 00187000 08:30 42728                      /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.28
+73fbe5fed000-73fbe5fee000 ---p 001d0000 08:30 42728                      /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.28
+73fbe5fee000-73fbe5ff9000 r--p 001d0000 08:30 42728                      /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.28
+73fbe5ff9000-73fbe5ffc000 rw-p 001db000 08:30 42728                      /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.28
+73fbe5ffc000-73fbe5fff000 rw-p 00000000 00:00 0 
+73fbe6800000-73fbe8800000 rw-p 00000000 00:00 0 
+73fbe8807000-73fbe880a000 r--p 00000000 08:30 180796                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_group_columns.cpython-38-x86_64-linux-gnu.so
+73fbe880a000-73fbe8815000 r-xp 00003000 08:30 180796                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_group_columns.cpython-38-x86_64-linux-gnu.so
+73fbe8815000-73fbe881c000 r--p 0000e000 08:30 180796                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_group_columns.cpython-38-x86_64-linux-gnu.so
+73fbe881c000-73fbe881d000 r--p 00014000 08:30 180796                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_group_columns.cpython-38-x86_64-linux-gnu.so
+73fbe881d000-73fbe881e000 rw-p 00015000 08:30 180796                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_group_columns.cpython-38-x86_64-linux-gnu.so
+73fbe881e000-73fbe8820000 r--p 00000000 08:30 181063                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_flinalg.cpython-38-x86_64-linux-gnu.so
+73fbe8820000-73fbe8828000 r-xp 00002000 08:30 181063                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_flinalg.cpython-38-x86_64-linux-gnu.so
+73fbe8828000-73fbe882b000 r--p 0000a000 08:30 181063                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_flinalg.cpython-38-x86_64-linux-gnu.so
+73fbe882b000-73fbe882c000 r--p 0000c000 08:30 181063                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_flinalg.cpython-38-x86_64-linux-gnu.so
+73fbe882c000-73fbe882f000 rw-p 0000d000 08:30 181063                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_flinalg.cpython-38-x86_64-linux-gnu.so
+73fbe882f000-73fbe8831000 rw-p 00012000 08:30 181063                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_flinalg.cpython-38-x86_64-linux-gnu.so
+73fbe8831000-73fbe8871000 rw-p 00000000 00:00 0 
+73fbe8871000-73fbe887a000 r--p 00000000 08:30 184962                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/_csparsetools.cpython-38-x86_64-linux-gnu.so
+73fbe887a000-73fbe88d6000 r-xp 00009000 08:30 184962                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/_csparsetools.cpython-38-x86_64-linux-gnu.so
+73fbe88d6000-73fbe88e4000 r--p 00065000 08:30 184962                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/_csparsetools.cpython-38-x86_64-linux-gnu.so
+73fbe88e4000-73fbe88e5000 r--p 00072000 08:30 184962                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/_csparsetools.cpython-38-x86_64-linux-gnu.so
+73fbe88e5000-73fbe88eb000 rw-p 00073000 08:30 184962                     /home/mint/.local/lib/python3.8/site-packages/scipy/sparse/_csparsetools.cpython-38-x86_64-linux-gnu.so
+73fbe88eb000-73fbe89ac000 rw-p 00000000 00:00 0 
+73fbe89ac000-73fbe89b0000 r--p 00000000 08:30 180626                     /home/mint/.local/lib/python3.8/site-packages/scipy/_lib/_ccallback_c.cpython-38-x86_64-linux-gnu.so
+73fbe89b0000-73fbe89b9000 r-xp 00004000 08:30 180626                     /home/mint/.local/lib/python3.8/site-packages/scipy/_lib/_ccallback_c.cpython-38-x86_64-linux-gnu.so
+73fbe89b9000-73fbe89bc000 r--p 0000d000 08:30 180626                     /home/mint/.local/lib/python3.8/site-packages/scipy/_lib/_ccallback_c.cpython-38-x86_64-linux-gnu.so
+73fbe89bc000-73fbe89bd000 r--p 0000f000 08:30 180626                     /home/mint/.local/lib/python3.8/site-packages/scipy/_lib/_ccallback_c.cpython-38-x86_64-linux-gnu.so
+73fbe89bd000-73fbe89bf000 rw-p 00010000 08:30 180626                     /home/mint/.local/lib/python3.8/site-packages/scipy/_lib/_ccallback_c.cpython-38-x86_64-linux-gnu.so
+73fbe89bf000-73fbe89ff000 rw-p 00000000 00:00 0 
+73fbe9200000-73fbeb200000 rw-p 00000000 00:00 0 
+73fbeb201000-73fbeb241000 rw-p 00000000 00:00 0 
+73fbeb241000-73fbeb246000 r--p 00000000 08:30 306374                     /home/mint/.local/lib/python3.8/site-packages/yaml/_yaml.cpython-38-x86_64-linux-gnu.so
+73fbeb246000-73fbeb293000 r-xp 00005000 08:30 306374                     /home/mint/.local/lib/python3.8/site-packages/yaml/_yaml.cpython-38-x86_64-linux-gnu.so
+73fbeb293000-73fbeb29c000 r--p 00052000 08:30 306374                     /home/mint/.local/lib/python3.8/site-packages/yaml/_yaml.cpython-38-x86_64-linux-gnu.so
+73fbeb29c000-73fbeb29d000 r--p 0005a000 08:30 306374                     /home/mint/.local/lib/python3.8/site-packages/yaml/_yaml.cpython-38-x86_64-linux-gnu.so
+73fbeb29d000-73fbeb29f000 rw-p 0005b000 08:30 306374                     /home/mint/.local/lib/python3.8/site-packages/yaml/_yaml.cpython-38-x86_64-linux-gnu.so
+73fbeb29f000-73fbeb320000 rw-p 00000000 00:00 0 
+73fbeb320000-73fbeb32d000 r--p 00000000 08:30 177360                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_generator.cpython-38-x86_64-linux-gnu.so
+73fbeb32d000-73fbeb3a4000 r-xp 0000d000 08:30 177360                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_generator.cpython-38-x86_64-linux-gnu.so
+73fbeb3a4000-73fbeb3d5000 r--p 00084000 08:30 177360                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_generator.cpython-38-x86_64-linux-gnu.so
+73fbeb3d5000-73fbeb3d6000 r--p 000b4000 08:30 177360                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_generator.cpython-38-x86_64-linux-gnu.so
+73fbeb3d6000-73fbeb3fd000 rw-p 000b5000 08:30 177360                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_generator.cpython-38-x86_64-linux-gnu.so
+73fbeb3fd000-73fbeb3ff000 rw-p 00000000 00:00 0 
+73fbeb6b1000-73fbeb6b7000 r--p 00000000 08:30 185928                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_rcont/rcont.cpython-38-x86_64-linux-gnu.so
+73fbeb6b7000-73fbeb6d7000 r-xp 00006000 08:30 185928                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_rcont/rcont.cpython-38-x86_64-linux-gnu.so
+73fbeb6d7000-73fbeb6e4000 r--p 00026000 08:30 185928                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_rcont/rcont.cpython-38-x86_64-linux-gnu.so
+73fbeb6e4000-73fbeb6e5000 ---p 00033000 08:30 185928                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_rcont/rcont.cpython-38-x86_64-linux-gnu.so
+73fbeb6e5000-73fbeb6e6000 r--p 00033000 08:30 185928                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_rcont/rcont.cpython-38-x86_64-linux-gnu.so
+73fbeb6e6000-73fbeb6e9000 rw-p 00034000 08:30 185928                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_rcont/rcont.cpython-38-x86_64-linux-gnu.so
+73fbeb6e9000-73fbeb769000 rw-p 00000000 00:00 0 
+73fbeb769000-73fbeb770000 r--p 00000000 08:30 185725                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_qmc_cy.cpython-38-x86_64-linux-gnu.so
+73fbeb770000-73fbeb790000 r-xp 00007000 08:30 185725                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_qmc_cy.cpython-38-x86_64-linux-gnu.so
+73fbeb790000-73fbeb799000 r--p 00027000 08:30 185725                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_qmc_cy.cpython-38-x86_64-linux-gnu.so
+73fbeb799000-73fbeb79a000 ---p 00030000 08:30 185725                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_qmc_cy.cpython-38-x86_64-linux-gnu.so
+73fbeb79a000-73fbeb79b000 r--p 00030000 08:30 185725                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_qmc_cy.cpython-38-x86_64-linux-gnu.so
+73fbeb79b000-73fbeb79e000 rw-p 00031000 08:30 185725                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_qmc_cy.cpython-38-x86_64-linux-gnu.so
+73fbeb79e000-73fbeb79f000 rw-p 00000000 00:00 0 
+73fbeb79f000-73fbeb7a6000 r--p 00000000 08:30 185765                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_sobol.cpython-38-x86_64-linux-gnu.so
+73fbeb7a6000-73fbeb7d4000 r-xp 00007000 08:30 185765                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_sobol.cpython-38-x86_64-linux-gnu.so
+73fbeb7d4000-73fbeb7de000 r--p 00035000 08:30 185765                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_sobol.cpython-38-x86_64-linux-gnu.so
+73fbeb7de000-73fbeb7df000 ---p 0003f000 08:30 185765                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_sobol.cpython-38-x86_64-linux-gnu.so
+73fbeb7df000-73fbeb7e0000 r--p 0003f000 08:30 185765                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_sobol.cpython-38-x86_64-linux-gnu.so
+73fbeb7e0000-73fbeb7e5000 rw-p 00040000 08:30 185765                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_sobol.cpython-38-x86_64-linux-gnu.so
+73fbeb7e5000-73fbeb7e6000 rw-p 00000000 00:00 0 
+73fbeb7e6000-73fbeb7e8000 r--p 00000000 08:30 185768                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_mvn.cpython-38-x86_64-linux-gnu.so
+73fbeb7e8000-73fbeb7f1000 r-xp 00002000 08:30 185768                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_mvn.cpython-38-x86_64-linux-gnu.so
+73fbeb7f1000-73fbeb7f6000 r--p 0000b000 08:30 185768                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_mvn.cpython-38-x86_64-linux-gnu.so
+73fbeb7f6000-73fbeb7f7000 ---p 00010000 08:30 185768                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_mvn.cpython-38-x86_64-linux-gnu.so
+73fbeb7f7000-73fbeb7f8000 r--p 00010000 08:30 185768                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_mvn.cpython-38-x86_64-linux-gnu.so
+73fbeb7f8000-73fbeb7fa000 rw-p 00011000 08:30 185768                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_mvn.cpython-38-x86_64-linux-gnu.so
+73fbeb7fa000-73fbeb9f1000 rw-p 00000000 00:00 0 
+73fbeb9f1000-73fbeb9f8000 r--p 00000000 08:30 180698                     /home/mint/.local/lib/python3.8/site-packages/scipy/fft/_pocketfft/pypocketfft.cpython-38-x86_64-linux-gnu.so
+73fbeb9f8000-73fbebaa6000 r-xp 00007000 08:30 180698                     /home/mint/.local/lib/python3.8/site-packages/scipy/fft/_pocketfft/pypocketfft.cpython-38-x86_64-linux-gnu.so
+73fbebaa6000-73fbebac1000 r--p 000b5000 08:30 180698                     /home/mint/.local/lib/python3.8/site-packages/scipy/fft/_pocketfft/pypocketfft.cpython-38-x86_64-linux-gnu.so
+73fbebac1000-73fbebac3000 r--p 000cf000 08:30 180698                     /home/mint/.local/lib/python3.8/site-packages/scipy/fft/_pocketfft/pypocketfft.cpython-38-x86_64-linux-gnu.so
+73fbebac3000-73fbebac4000 rw-p 000d1000 08:30 180698                     /home/mint/.local/lib/python3.8/site-packages/scipy/fft/_pocketfft/pypocketfft.cpython-38-x86_64-linux-gnu.so
+73fbebac4000-73fbebb06000 rw-p 00000000 00:00 0 
+73fbebb06000-73fbebb0a000 r--p 00000000 08:30 180661                     /home/mint/.local/lib/python3.8/site-packages/scipy/_lib/_uarray/_uarray.cpython-38-x86_64-linux-gnu.so
+73fbebb0a000-73fbebb1b000 r-xp 00004000 08:30 180661                     /home/mint/.local/lib/python3.8/site-packages/scipy/_lib/_uarray/_uarray.cpython-38-x86_64-linux-gnu.so
+73fbebb1b000-73fbebb22000 r--p 00015000 08:30 180661                     /home/mint/.local/lib/python3.8/site-packages/scipy/_lib/_uarray/_uarray.cpython-38-x86_64-linux-gnu.so
+73fbebb22000-73fbebb23000 r--p 0001b000 08:30 180661                     /home/mint/.local/lib/python3.8/site-packages/scipy/_lib/_uarray/_uarray.cpython-38-x86_64-linux-gnu.so
+73fbebb23000-73fbebb24000 rw-p 0001c000 08:30 180661                     /home/mint/.local/lib/python3.8/site-packages/scipy/_lib/_uarray/_uarray.cpython-38-x86_64-linux-gnu.so
+73fbebb24000-73fbebb28000 r--p 00000000 08:30 185771                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_stats_pythran.cpython-38-x86_64-linux-gnu.so
+73fbebb28000-73fbebb3b000 r-xp 00004000 08:30 185771                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_stats_pythran.cpython-38-x86_64-linux-gnu.so
+73fbebb3b000-73fbebb46000 r--p 00017000 08:30 185771                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_stats_pythran.cpython-38-x86_64-linux-gnu.so
+73fbebb46000-73fbebb47000 r--p 00021000 08:30 185771                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_stats_pythran.cpython-38-x86_64-linux-gnu.so
+73fbebb47000-73fbebb48000 rw-p 00022000 08:30 185771                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_stats_pythran.cpython-38-x86_64-linux-gnu.so
+73fbebb48000-73fbebbc8000 rw-p 00000000 00:00 0 
+73fbebbc8000-73fbebbcd000 r--p 00000000 08:30 185759                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_biasedurn.cpython-38-x86_64-linux-gnu.so
+73fbebbcd000-73fbebbeb000 r-xp 00005000 08:30 185759                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_biasedurn.cpython-38-x86_64-linux-gnu.so
+73fbebbeb000-73fbebbfa000 r--p 00023000 08:30 185759                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_biasedurn.cpython-38-x86_64-linux-gnu.so
+73fbebbfa000-73fbebbfb000 r--p 00031000 08:30 185759                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_biasedurn.cpython-38-x86_64-linux-gnu.so
+73fbebbfb000-73fbebbfe000 rw-p 00032000 08:30 185759                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_biasedurn.cpython-38-x86_64-linux-gnu.so
+73fbebbfe000-73fbebc00000 rw-p 00000000 00:00 0 
+73fbebc00000-73fbefc00000 rw-p 00000000 00:00 0 
+73fbefc00000-73fbefc03000 r--p 00000000 08:30 180628                     /home/mint/.local/lib/python3.8/site-packages/scipy/_lib/messagestream.cpython-38-x86_64-linux-gnu.so
+73fbefc03000-73fbefc09000 r-xp 00003000 08:30 180628                     /home/mint/.local/lib/python3.8/site-packages/scipy/_lib/messagestream.cpython-38-x86_64-linux-gnu.so
+73fbefc09000-73fbefc0b000 r--p 00009000 08:30 180628                     /home/mint/.local/lib/python3.8/site-packages/scipy/_lib/messagestream.cpython-38-x86_64-linux-gnu.so
+73fbefc0b000-73fbefc0c000 r--p 0000a000 08:30 180628                     /home/mint/.local/lib/python3.8/site-packages/scipy/_lib/messagestream.cpython-38-x86_64-linux-gnu.so
+73fbefc0c000-73fbefc0d000 rw-p 0000b000 08:30 180628                     /home/mint/.local/lib/python3.8/site-packages/scipy/_lib/messagestream.cpython-38-x86_64-linux-gnu.so
+73fbefc0d000-73fbefccd000 rw-p 00000000 00:00 0 
+73fbefccd000-73fbefcd1000 r--p 00000000 08:30 177364                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_pcg64.cpython-38-x86_64-linux-gnu.so
+73fbefcd1000-73fbefce1000 r-xp 00004000 08:30 177364                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_pcg64.cpython-38-x86_64-linux-gnu.so
+73fbefce1000-73fbefce5000 r--p 00014000 08:30 177364                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_pcg64.cpython-38-x86_64-linux-gnu.so
+73fbefce5000-73fbefce6000 r--p 00017000 08:30 177364                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_pcg64.cpython-38-x86_64-linux-gnu.so
+73fbefce6000-73fbefce9000 rw-p 00018000 08:30 177364                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_pcg64.cpython-38-x86_64-linux-gnu.so
+73fbefce9000-73fbefcec000 r--p 00000000 08:30 177379                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_philox.cpython-38-x86_64-linux-gnu.so
+73fbefcec000-73fbefcf9000 r-xp 00003000 08:30 177379                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_philox.cpython-38-x86_64-linux-gnu.so
+73fbefcf9000-73fbefcfd000 r--p 00010000 08:30 177379                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_philox.cpython-38-x86_64-linux-gnu.so
+73fbefcfd000-73fbefcfe000 r--p 00013000 08:30 177379                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_philox.cpython-38-x86_64-linux-gnu.so
+73fbefcfe000-73fbefd00000 rw-p 00014000 08:30 177379                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_philox.cpython-38-x86_64-linux-gnu.so
+73fbefd00000-73fbefd04000 r--p 00000000 08:30 177362                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_mt19937.cpython-38-x86_64-linux-gnu.so
+73fbefd04000-73fbefd13000 r-xp 00004000 08:30 177362                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_mt19937.cpython-38-x86_64-linux-gnu.so
+73fbefd13000-73fbefd18000 r--p 00013000 08:30 177362                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_mt19937.cpython-38-x86_64-linux-gnu.so
+73fbefd18000-73fbefd19000 r--p 00017000 08:30 177362                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_mt19937.cpython-38-x86_64-linux-gnu.so
+73fbefd19000-73fbefd1b000 rw-p 00018000 08:30 177362                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_mt19937.cpython-38-x86_64-linux-gnu.so
+73fbefd1b000-73fbefd20000 r--p 00000000 08:30 177370                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_bounded_integers.cpython-38-x86_64-linux-gnu.so
+73fbefd20000-73fbefd6a000 r-xp 00005000 08:30 177370                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_bounded_integers.cpython-38-x86_64-linux-gnu.so
+73fbefd6a000-73fbefd73000 r--p 0004f000 08:30 177370                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_bounded_integers.cpython-38-x86_64-linux-gnu.so
+73fbefd73000-73fbefd74000 r--p 00057000 08:30 177370                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_bounded_integers.cpython-38-x86_64-linux-gnu.so
+73fbefd74000-73fbefd75000 rw-p 00058000 08:30 177370                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_bounded_integers.cpython-38-x86_64-linux-gnu.so
+73fbefd75000-73fbefdb6000 rw-p 00000000 00:00 0 
+73fbefdb6000-73fbefdbb000 r--p 00000000 08:30 177377                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_common.cpython-38-x86_64-linux-gnu.so
+73fbefdbb000-73fbefdf4000 r-xp 00005000 08:30 177377                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_common.cpython-38-x86_64-linux-gnu.so
+73fbefdf4000-73fbefdf8000 r--p 0003e000 08:30 177377                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_common.cpython-38-x86_64-linux-gnu.so
+73fbefdf8000-73fbefdf9000 ---p 00042000 08:30 177377                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_common.cpython-38-x86_64-linux-gnu.so
+73fbefdf9000-73fbefdfa000 r--p 00042000 08:30 177377                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_common.cpython-38-x86_64-linux-gnu.so
+73fbefdfa000-73fbefdfc000 rw-p 00043000 08:30 177377                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_common.cpython-38-x86_64-linux-gnu.so
+73fbefdfc000-73fbefdfd000 rw-p 00000000 00:00 0 
+73fbefe07000-73fbefe09000 r--p 00000000 08:30 185717                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_statlib.cpython-38-x86_64-linux-gnu.so
+73fbefe09000-73fbefe0e000 r-xp 00002000 08:30 185717                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_statlib.cpython-38-x86_64-linux-gnu.so
+73fbefe0e000-73fbefe10000 r--p 00007000 08:30 185717                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_statlib.cpython-38-x86_64-linux-gnu.so
+73fbefe10000-73fbefe11000 r--p 00008000 08:30 185717                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_statlib.cpython-38-x86_64-linux-gnu.so
+73fbefe11000-73fbefe12000 rw-p 00009000 08:30 185717                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_statlib.cpython-38-x86_64-linux-gnu.so
+73fbefe12000-73fbefe15000 r--p 00000000 08:30 185854                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_levy_stable/levyst.cpython-38-x86_64-linux-gnu.so
+73fbefe15000-73fbefe18000 r-xp 00003000 08:30 185854                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_levy_stable/levyst.cpython-38-x86_64-linux-gnu.so
+73fbefe18000-73fbefe1a000 r--p 00006000 08:30 185854                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_levy_stable/levyst.cpython-38-x86_64-linux-gnu.so
+73fbefe1a000-73fbefe1b000 r--p 00007000 08:30 185854                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_levy_stable/levyst.cpython-38-x86_64-linux-gnu.so
+73fbefe1b000-73fbefe1c000 rw-p 00008000 08:30 185854                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_levy_stable/levyst.cpython-38-x86_64-linux-gnu.so
+73fbefe1c000-73fbefe23000 r--p 00000000 08:30 180542                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_rgi_cython.cpython-38-x86_64-linux-gnu.so
+73fbefe23000-73fbefe44000 r-xp 00007000 08:30 180542                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_rgi_cython.cpython-38-x86_64-linux-gnu.so
+73fbefe44000-73fbefe4d000 r--p 00028000 08:30 180542                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_rgi_cython.cpython-38-x86_64-linux-gnu.so
+73fbefe4d000-73fbefe4e000 r--p 00030000 08:30 180542                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_rgi_cython.cpython-38-x86_64-linux-gnu.so
+73fbefe4e000-73fbefe52000 rw-p 00031000 08:30 180542                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_rgi_cython.cpython-38-x86_64-linux-gnu.so
+73fbefe52000-73fbefe56000 r--p 00000000 08:30 180544                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_rbfinterp_pythran.cpython-38-x86_64-linux-gnu.so
+73fbefe56000-73fbefe7a000 r-xp 00004000 08:30 180544                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_rbfinterp_pythran.cpython-38-x86_64-linux-gnu.so
+73fbefe7a000-73fbefe85000 r--p 00028000 08:30 180544                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_rbfinterp_pythran.cpython-38-x86_64-linux-gnu.so
+73fbefe85000-73fbefe86000 r--p 00032000 08:30 180544                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_rbfinterp_pythran.cpython-38-x86_64-linux-gnu.so
+73fbefe86000-73fbefe87000 rw-p 00033000 08:30 180544                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_rbfinterp_pythran.cpython-38-x86_64-linux-gnu.so
+73fbefe87000-73fbefe8f000 r--p 00000000 08:30 180537                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/interpnd.cpython-38-x86_64-linux-gnu.so
+73fbefe8f000-73fbefec9000 r-xp 00008000 08:30 180537                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/interpnd.cpython-38-x86_64-linux-gnu.so
+73fbefec9000-73fbefed6000 r--p 00042000 08:30 180537                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/interpnd.cpython-38-x86_64-linux-gnu.so
+73fbefed6000-73fbefed7000 r--p 0004e000 08:30 180537                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/interpnd.cpython-38-x86_64-linux-gnu.so
+73fbefed7000-73fbefedc000 rw-p 0004f000 08:30 180537                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/interpnd.cpython-38-x86_64-linux-gnu.so
+73fbefedc000-73fbeff1d000 rw-p 00000000 00:00 0 
+73fbeff1d000-73fbeff25000 r--p 00000000 08:30 180538                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_ppoly.cpython-38-x86_64-linux-gnu.so
+73fbeff25000-73fbeff5c000 r-xp 00008000 08:30 180538                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_ppoly.cpython-38-x86_64-linux-gnu.so
+73fbeff5c000-73fbeff67000 r--p 0003f000 08:30 180538                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_ppoly.cpython-38-x86_64-linux-gnu.so
+73fbeff67000-73fbeff68000 r--p 00049000 08:30 180538                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_ppoly.cpython-38-x86_64-linux-gnu.so
+73fbeff68000-73fbeff6e000 rw-p 0004a000 08:30 180538                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_ppoly.cpython-38-x86_64-linux-gnu.so
+73fbeff6e000-73fbeff75000 r--p 00000000 08:30 180543                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_bspl.cpython-38-x86_64-linux-gnu.so
+73fbeff75000-73fbeffa1000 r-xp 00007000 08:30 180543                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_bspl.cpython-38-x86_64-linux-gnu.so
+73fbeffa1000-73fbeffab000 r--p 00033000 08:30 180543                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_bspl.cpython-38-x86_64-linux-gnu.so
+73fbeffab000-73fbeffac000 ---p 0003d000 08:30 180543                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_bspl.cpython-38-x86_64-linux-gnu.so
+73fbeffac000-73fbeffad000 r--p 0003d000 08:30 180543                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_bspl.cpython-38-x86_64-linux-gnu.so
+73fbeffad000-73fbeffb3000 rw-p 0003e000 08:30 180543                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_bspl.cpython-38-x86_64-linux-gnu.so
+73fbeffb3000-73fbeffb7000 r--p 00000000 08:30 180534                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/dfitpack.cpython-38-x86_64-linux-gnu.so
+73fbeffb7000-73fbeffea000 r-xp 00004000 08:30 180534                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/dfitpack.cpython-38-x86_64-linux-gnu.so
+73fbeffea000-73fbefff5000 r--p 00037000 08:30 180534                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/dfitpack.cpython-38-x86_64-linux-gnu.so
+73fbefff5000-73fbefff6000 r--p 00041000 08:30 180534                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/dfitpack.cpython-38-x86_64-linux-gnu.so
+73fbefff6000-73fbefffd000 rw-p 00042000 08:30 180534                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/dfitpack.cpython-38-x86_64-linux-gnu.so
+73fbefffd000-73fbefffe000 rw-p 00000000 00:00 0 
+73fbefffe000-73fbf0000000 rw-p 0004d000 08:30 180534                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/dfitpack.cpython-38-x86_64-linux-gnu.so
+73fbf0000000-73fbf0100000 rw-p 00000000 00:00 0 
+73fbf0100000-73fbf0105000 r--p 00000000 08:30 185868                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/invgauss_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0105000-73fbf012f000 r-xp 00005000 08:30 185868                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/invgauss_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf012f000-73fbf013b000 r--p 0002f000 08:30 185868                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/invgauss_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf013b000-73fbf013c000 ---p 0003b000 08:30 185868                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/invgauss_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf013c000-73fbf013d000 r--p 0003b000 08:30 185868                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/invgauss_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf013d000-73fbf013e000 rw-p 0003c000 08:30 185868                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/invgauss_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf013e000-73fbf0143000 r--p 00000000 08:30 185867                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/skewnorm_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0143000-73fbf015d000 r-xp 00005000 08:30 185867                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/skewnorm_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf015d000-73fbf0168000 r--p 0001f000 08:30 185867                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/skewnorm_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0168000-73fbf0169000 ---p 0002a000 08:30 185867                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/skewnorm_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0169000-73fbf016a000 r--p 0002a000 08:30 185867                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/skewnorm_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf016a000-73fbf016b000 rw-p 0002b000 08:30 185867                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/skewnorm_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf016b000-73fbf0171000 r--p 00000000 08:30 185869                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/nct_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0171000-73fbf01ad000 r-xp 00006000 08:30 185869                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/nct_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf01ad000-73fbf01bc000 r--p 00042000 08:30 185869                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/nct_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf01bc000-73fbf01bd000 ---p 00051000 08:30 185869                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/nct_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf01bd000-73fbf01be000 r--p 00051000 08:30 185869                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/nct_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf01be000-73fbf01bf000 rw-p 00052000 08:30 185869                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/nct_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf01bf000-73fbf01c5000 r--p 00000000 08:30 185871                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/ncx2_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf01c5000-73fbf01f0000 r-xp 00006000 08:30 185871                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/ncx2_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf01f0000-73fbf01fd000 r--p 00031000 08:30 185871                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/ncx2_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf01fd000-73fbf01fe000 ---p 0003e000 08:30 185871                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/ncx2_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf01fe000-73fbf01ff000 r--p 0003e000 08:30 185871                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/ncx2_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf01ff000-73fbf0200000 rw-p 0003f000 08:30 185871                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/ncx2_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0200000-73fbf0217000 r--p 00000000 08:30 185520                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/cython_special.cpython-38-x86_64-linux-gnu.so
+73fbf0217000-73fbf03be000 r-xp 00017000 08:30 185520                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/cython_special.cpython-38-x86_64-linux-gnu.so
+73fbf03be000-73fbf0403000 r--p 001be000 08:30 185520                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/cython_special.cpython-38-x86_64-linux-gnu.so
+73fbf0403000-73fbf0404000 ---p 00203000 08:30 185520                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/cython_special.cpython-38-x86_64-linux-gnu.so
+73fbf0404000-73fbf0405000 r--p 00203000 08:30 185520                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/cython_special.cpython-38-x86_64-linux-gnu.so
+73fbf0405000-73fbf0417000 rw-p 00204000 08:30 185520                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/cython_special.cpython-38-x86_64-linux-gnu.so
+73fbf0417000-73fbf0418000 rw-p 00000000 00:00 0 
+73fbf0418000-73fbf041c000 rw-p 0028d000 08:30 185520                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/cython_special.cpython-38-x86_64-linux-gnu.so
+73fbf041f000-73fbf0421000 r--p 00000000 08:30 180529                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_fitpack.cpython-38-x86_64-linux-gnu.so
+73fbf0421000-73fbf0436000 r-xp 00002000 08:30 180529                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_fitpack.cpython-38-x86_64-linux-gnu.so
+73fbf0436000-73fbf0438000 r--p 00017000 08:30 180529                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_fitpack.cpython-38-x86_64-linux-gnu.so
+73fbf0438000-73fbf0439000 r--p 00018000 08:30 180529                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_fitpack.cpython-38-x86_64-linux-gnu.so
+73fbf0439000-73fbf043a000 rw-p 00019000 08:30 180529                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_fitpack.cpython-38-x86_64-linux-gnu.so
+73fbf043a000-73fbf043c000 rw-p 0001c000 08:30 180529                     /home/mint/.local/lib/python3.8/site-packages/scipy/interpolate/_fitpack.cpython-38-x86_64-linux-gnu.so
+73fbf043c000-73fbf0441000 r--p 00000000 08:30 185874                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/ncf_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0441000-73fbf046a000 r-xp 00005000 08:30 185874                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/ncf_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf046a000-73fbf0476000 r--p 0002e000 08:30 185874                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/ncf_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0476000-73fbf0477000 ---p 0003a000 08:30 185874                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/ncf_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0477000-73fbf0478000 r--p 0003a000 08:30 185874                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/ncf_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0478000-73fbf0479000 rw-p 0003b000 08:30 185874                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/ncf_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0479000-73fbf047e000 r--p 00000000 08:30 185875                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/hypergeom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf047e000-73fbf0495000 r-xp 00005000 08:30 185875                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/hypergeom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0495000-73fbf04a2000 r--p 0001c000 08:30 185875                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/hypergeom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf04a2000-73fbf04a3000 ---p 00029000 08:30 185875                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/hypergeom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf04a3000-73fbf04a4000 r--p 00029000 08:30 185875                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/hypergeom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf04a4000-73fbf04a5000 rw-p 0002a000 08:30 185875                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/hypergeom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf04a5000-73fbf04ab000 r--p 00000000 08:30 185873                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/nbinom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf04ab000-73fbf04d8000 r-xp 00006000 08:30 185873                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/nbinom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf04d8000-73fbf04e5000 r--p 00033000 08:30 185873                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/nbinom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf04e5000-73fbf04e6000 ---p 00040000 08:30 185873                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/nbinom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf04e6000-73fbf04e7000 r--p 00040000 08:30 185873                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/nbinom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf04e7000-73fbf04e8000 rw-p 00041000 08:30 185873                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/nbinom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf04e8000-73fbf04ed000 r--p 00000000 08:30 185870                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/binom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf04ed000-73fbf051a000 r-xp 00005000 08:30 185870                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/binom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf051a000-73fbf0527000 r--p 00032000 08:30 185870                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/binom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0527000-73fbf0528000 ---p 0003f000 08:30 185870                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/binom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0528000-73fbf0529000 r--p 0003f000 08:30 185870                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/binom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0529000-73fbf052a000 rw-p 00040000 08:30 185870                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/binom_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf052a000-73fbf0530000 r--p 00000000 08:30 185866                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/beta_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0530000-73fbf0564000 r-xp 00006000 08:30 185866                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/beta_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0564000-73fbf0573000 r--p 0003a000 08:30 185866                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/beta_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0573000-73fbf0574000 ---p 00049000 08:30 185866                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/beta_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0574000-73fbf0575000 r--p 00049000 08:30 185866                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/beta_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0575000-73fbf0576000 rw-p 0004a000 08:30 185866                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_boost/beta_ufunc.cpython-38-x86_64-linux-gnu.so
+73fbf0576000-73fbf05b6000 rw-p 00000000 00:00 0 
+73fbf05b6000-73fbf05c0000 r--p 00000000 08:30 185713                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_stats.cpython-38-x86_64-linux-gnu.so
+73fbf05c0000-73fbf063a000 r-xp 0000a000 08:30 185713                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_stats.cpython-38-x86_64-linux-gnu.so
+73fbf063a000-73fbf0649000 r--p 00084000 08:30 185713                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_stats.cpython-38-x86_64-linux-gnu.so
+73fbf0649000-73fbf064a000 r--p 00092000 08:30 185713                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_stats.cpython-38-x86_64-linux-gnu.so
+73fbf064a000-73fbf0651000 rw-p 00093000 08:30 185713                     /home/mint/.local/lib/python3.8/site-packages/scipy/stats/_stats.cpython-38-x86_64-linux-gnu.so
+73fbf0651000-73fbf0752000 rw-p 00000000 00:00 0 
+73fbf0752000-73fbf0754000 r--p 00000000 08:30 185237                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_lsoda.cpython-38-x86_64-linux-gnu.so
+73fbf0754000-73fbf0760000 r-xp 00002000 08:30 185237                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_lsoda.cpython-38-x86_64-linux-gnu.so
+73fbf0760000-73fbf0764000 r--p 0000e000 08:30 185237                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_lsoda.cpython-38-x86_64-linux-gnu.so
+73fbf0764000-73fbf0765000 r--p 00011000 08:30 185237                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_lsoda.cpython-38-x86_64-linux-gnu.so
+73fbf0765000-73fbf0766000 rw-p 00012000 08:30 185237                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_lsoda.cpython-38-x86_64-linux-gnu.so
+73fbf0766000-73fbf0767000 rw-p 00000000 00:00 0 
+73fbf0767000-73fbf076a000 rw-p 00016000 08:30 185237                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_lsoda.cpython-38-x86_64-linux-gnu.so
+73fbf076a000-73fbf076c000 r--p 00000000 08:30 185243                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_dop.cpython-38-x86_64-linux-gnu.so
+73fbf076c000-73fbf0778000 r-xp 00002000 08:30 185243                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_dop.cpython-38-x86_64-linux-gnu.so
+73fbf0778000-73fbf077b000 r--p 0000e000 08:30 185243                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_dop.cpython-38-x86_64-linux-gnu.so
+73fbf077b000-73fbf077c000 r--p 00010000 08:30 185243                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_dop.cpython-38-x86_64-linux-gnu.so
+73fbf077c000-73fbf077e000 rw-p 00011000 08:30 185243                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_dop.cpython-38-x86_64-linux-gnu.so
+73fbf077e000-73fbf0780000 rw-p 00015000 08:30 185243                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_dop.cpython-38-x86_64-linux-gnu.so
+73fbf0780000-73fbf0783000 r--p 00000000 08:30 185244                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_vode.cpython-38-x86_64-linux-gnu.so
+73fbf0783000-73fbf0799000 r-xp 00003000 08:30 185244                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_vode.cpython-38-x86_64-linux-gnu.so
+73fbf0799000-73fbf079e000 r--p 00019000 08:30 185244                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_vode.cpython-38-x86_64-linux-gnu.so
+73fbf079e000-73fbf079f000 ---p 0001e000 08:30 185244                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_vode.cpython-38-x86_64-linux-gnu.so
+73fbf079f000-73fbf07a0000 r--p 0001e000 08:30 185244                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_vode.cpython-38-x86_64-linux-gnu.so
+73fbf07a0000-73fbf07a2000 rw-p 0001f000 08:30 185244                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_vode.cpython-38-x86_64-linux-gnu.so
+73fbf07a2000-73fbf07a3000 rw-p 00000000 00:00 0 
+73fbf07a3000-73fbf07a6000 rw-p 00024000 08:30 185244                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_vode.cpython-38-x86_64-linux-gnu.so
+73fbf07a6000-73fbf07a8000 r--p 00000000 08:30 185234                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_quadpack.cpython-38-x86_64-linux-gnu.so
+73fbf07a8000-73fbf07b8000 r-xp 00002000 08:30 185234                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_quadpack.cpython-38-x86_64-linux-gnu.so
+73fbf07b8000-73fbf07bb000 r--p 00012000 08:30 185234                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_quadpack.cpython-38-x86_64-linux-gnu.so
+73fbf07bb000-73fbf07bc000 r--p 00014000 08:30 185234                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_quadpack.cpython-38-x86_64-linux-gnu.so
+73fbf07bc000-73fbf07bd000 rw-p 00015000 08:30 185234                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_quadpack.cpython-38-x86_64-linux-gnu.so
+73fbf07bd000-73fbf07bf000 rw-p 00018000 08:30 185234                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_quadpack.cpython-38-x86_64-linux-gnu.so
+73fbf07bf000-73fbf07c1000 r--p 00000000 08:30 185239                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_odepack.cpython-38-x86_64-linux-gnu.so
+73fbf07c1000-73fbf07cb000 r-xp 00002000 08:30 185239                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_odepack.cpython-38-x86_64-linux-gnu.so
+73fbf07cb000-73fbf07ce000 r--p 0000c000 08:30 185239                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_odepack.cpython-38-x86_64-linux-gnu.so
+73fbf07ce000-73fbf07cf000 r--p 0000e000 08:30 185239                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_odepack.cpython-38-x86_64-linux-gnu.so
+73fbf07cf000-73fbf07d0000 rw-p 0000f000 08:30 185239                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_odepack.cpython-38-x86_64-linux-gnu.so
+73fbf07d0000-73fbf07d2000 rw-p 00012000 08:30 185239                     /home/mint/.local/lib/python3.8/site-packages/scipy/integrate/_odepack.cpython-38-x86_64-linux-gnu.so
+73fbf07d2000-73fbf0812000 rw-p 00000000 00:00 0 
+73fbf0812000-73fbf0819000 r--p 00000000 08:30 185457                     /home/mint/.local/lib/python3.8/site-packages/scipy/ndimage/_ni_label.cpython-38-x86_64-linux-gnu.so
+73fbf0819000-73fbf084d000 r-xp 00007000 08:30 185457                     /home/mint/.local/lib/python3.8/site-packages/scipy/ndimage/_ni_label.cpython-38-x86_64-linux-gnu.so
+73fbf084d000-73fbf0857000 r--p 0003b000 08:30 185457                     /home/mint/.local/lib/python3.8/site-packages/scipy/ndimage/_ni_label.cpython-38-x86_64-linux-gnu.so
+73fbf0857000-73fbf0858000 r--p 00044000 08:30 185457                     /home/mint/.local/lib/python3.8/site-packages/scipy/ndimage/_ni_label.cpython-38-x86_64-linux-gnu.so
+73fbf0858000-73fbf085c000 rw-p 00045000 08:30 185457                     /home/mint/.local/lib/python3.8/site-packages/scipy/ndimage/_ni_label.cpython-38-x86_64-linux-gnu.so
+73fbf085c000-73fbf089d000 rw-p 00000000 00:00 0 
+73fbf089d000-73fbf089f000 r--p 00000000 08:30 185454                     /home/mint/.local/lib/python3.8/site-packages/scipy/ndimage/_nd_image.cpython-38-x86_64-linux-gnu.so
+73fbf089f000-73fbf08b5000 r-xp 00002000 08:30 185454                     /home/mint/.local/lib/python3.8/site-packages/scipy/ndimage/_nd_image.cpython-38-x86_64-linux-gnu.so
+73fbf08b5000-73fbf08b8000 r--p 00018000 08:30 185454                     /home/mint/.local/lib/python3.8/site-packages/scipy/ndimage/_nd_image.cpython-38-x86_64-linux-gnu.so
+73fbf08b8000-73fbf08b9000 ---p 0001b000 08:30 185454                     /home/mint/.local/lib/python3.8/site-packages/scipy/ndimage/_nd_image.cpython-38-x86_64-linux-gnu.so
+73fbf08b9000-73fbf08ba000 r--p 0001b000 08:30 185454                     /home/mint/.local/lib/python3.8/site-packages/scipy/ndimage/_nd_image.cpython-38-x86_64-linux-gnu.so
+73fbf08ba000-73fbf08bb000 rw-p 0001c000 08:30 185454                     /home/mint/.local/lib/python3.8/site-packages/scipy/ndimage/_nd_image.cpython-38-x86_64-linux-gnu.so
+73fbf08bb000-73fbf08fb000 rw-p 00000000 00:00 0 
+73fbf08fb000-73fbf08fc000 r--p 00000000 08:30 180772                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_direct.cpython-38-x86_64-linux-gnu.so
+73fbf08fc000-73fbf0901000 r-xp 00001000 08:30 180772                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_direct.cpython-38-x86_64-linux-gnu.so
+73fbf0901000-73fbf0903000 r--p 00006000 08:30 180772                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_direct.cpython-38-x86_64-linux-gnu.so
+73fbf0903000-73fbf0904000 r--p 00007000 08:30 180772                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_direct.cpython-38-x86_64-linux-gnu.so
+73fbf0904000-73fbf0905000 rw-p 00008000 08:30 180772                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_direct.cpython-38-x86_64-linux-gnu.so
+73fbf0905000-73fbf0985000 rw-p 00000000 00:00 0 
+73fbf0985000-73fbf098f000 r--p 00000000 08:30 181261                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/transform/_rotation.cpython-38-x86_64-linux-gnu.so
+73fbf098f000-73fbf09f1000 r-xp 0000a000 08:30 181261                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/transform/_rotation.cpython-38-x86_64-linux-gnu.so
+73fbf09f1000-73fbf0a0b000 r--p 0006c000 08:30 181261                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/transform/_rotation.cpython-38-x86_64-linux-gnu.so
+73fbf0a0b000-73fbf0a0c000 r--p 00085000 08:30 181261                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/transform/_rotation.cpython-38-x86_64-linux-gnu.so
+73fbf0a0c000-73fbf0a1d000 rw-p 00086000 08:30 181261                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/transform/_rotation.cpython-38-x86_64-linux-gnu.so
+73fbf0a1d000-73fbf0a1f000 rw-p 00000000 00:00 0 
+73fbf0a1f000-73fbf0a25000 r--p 00000000 08:30 181199                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_distance_pybind.cpython-38-x86_64-linux-gnu.so
+73fbf0a25000-73fbf0a5b000 r-xp 00006000 08:30 181199                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_distance_pybind.cpython-38-x86_64-linux-gnu.so
+73fbf0a5b000-73fbf0a69000 r--p 0003c000 08:30 181199                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_distance_pybind.cpython-38-x86_64-linux-gnu.so
+73fbf0a69000-73fbf0a6a000 r--p 00049000 08:30 181199                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_distance_pybind.cpython-38-x86_64-linux-gnu.so
+73fbf0a6a000-73fbf0a6b000 rw-p 0004a000 08:30 181199                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_distance_pybind.cpython-38-x86_64-linux-gnu.so
+73fbf0a6b000-73fbf0aab000 rw-p 00000000 00:00 0 
+73fbf0aab000-73fbf0aae000 r--p 00000000 08:30 185512                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ellip_harm_2.cpython-38-x86_64-linux-gnu.so
+73fbf0aae000-73fbf0aba000 r-xp 00003000 08:30 185512                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ellip_harm_2.cpython-38-x86_64-linux-gnu.so
+73fbf0aba000-73fbf0abd000 r--p 0000f000 08:30 185512                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ellip_harm_2.cpython-38-x86_64-linux-gnu.so
+73fbf0abd000-73fbf0abe000 r--p 00011000 08:30 185512                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ellip_harm_2.cpython-38-x86_64-linux-gnu.so
+73fbf0abe000-73fbf0abf000 rw-p 00012000 08:30 185512                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ellip_harm_2.cpython-38-x86_64-linux-gnu.so
+73fbf0abf000-73fbf0ac0000 rw-p 00000000 00:00 0 
+73fbf0ac0000-73fbf0ac3000 rw-p 00018000 08:30 185512                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ellip_harm_2.cpython-38-x86_64-linux-gnu.so
+73fbf0ac3000-73fbf0ac5000 r--p 00000000 08:30 185537                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_comb.cpython-38-x86_64-linux-gnu.so
+73fbf0ac5000-73fbf0ac9000 r-xp 00002000 08:30 185537                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_comb.cpython-38-x86_64-linux-gnu.so
+73fbf0ac9000-73fbf0aca000 r--p 00006000 08:30 185537                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_comb.cpython-38-x86_64-linux-gnu.so
+73fbf0aca000-73fbf0acb000 ---p 00007000 08:30 185537                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_comb.cpython-38-x86_64-linux-gnu.so
+73fbf0acb000-73fbf0acc000 r--p 00007000 08:30 185537                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_comb.cpython-38-x86_64-linux-gnu.so
+73fbf0acc000-73fbf0acd000 rw-p 00008000 08:30 185537                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_comb.cpython-38-x86_64-linux-gnu.so
+73fbf0acd000-73fbf0ad0000 r--p 00000000 08:30 185506                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_specfun.cpython-38-x86_64-linux-gnu.so
+73fbf0ad0000-73fbf0b1f000 r-xp 00003000 08:30 185506                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_specfun.cpython-38-x86_64-linux-gnu.so
+73fbf0b1f000-73fbf0b29000 r--p 00052000 08:30 185506                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_specfun.cpython-38-x86_64-linux-gnu.so
+73fbf0b29000-73fbf0b2a000 r--p 0005b000 08:30 185506                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_specfun.cpython-38-x86_64-linux-gnu.so
+73fbf0b2a000-73fbf0b2f000 rw-p 0005c000 08:30 185506                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_specfun.cpython-38-x86_64-linux-gnu.so
+73fbf0b2f000-73fbf0b31000 rw-p 00065000 08:30 185506                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_specfun.cpython-38-x86_64-linux-gnu.so
+73fbf0b31000-73fbf0b71000 rw-p 00000000 00:00 0 
+73fbf0b71000-73fbf0b76000 r--p 00000000 08:30 185505                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ufuncs_cxx.cpython-38-x86_64-linux-gnu.so
+73fbf0b76000-73fbf0bb8000 r-xp 00005000 08:30 185505                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ufuncs_cxx.cpython-38-x86_64-linux-gnu.so
+73fbf0bb8000-73fbf0bcd000 r--p 00047000 08:30 185505                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ufuncs_cxx.cpython-38-x86_64-linux-gnu.so
+73fbf0bcd000-73fbf0bce000 ---p 0005c000 08:30 185505                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ufuncs_cxx.cpython-38-x86_64-linux-gnu.so
+73fbf0bce000-73fbf0bcf000 r--p 0005c000 08:30 185505                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ufuncs_cxx.cpython-38-x86_64-linux-gnu.so
+73fbf0bcf000-73fbf0bd0000 rw-p 0005d000 08:30 185505                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ufuncs_cxx.cpython-38-x86_64-linux-gnu.so
+73fbf0bd0000-73fbf0c11000 rw-p 00000000 00:00 0 
+73fbf0c11000-73fbf0c1d000 r--p 00000000 08:30 185529                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ufuncs.cpython-38-x86_64-linux-gnu.so
+73fbf0c1d000-73fbf0cf7000 r-xp 0000c000 08:30 185529                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ufuncs.cpython-38-x86_64-linux-gnu.so
+73fbf0cf7000-73fbf0d66000 r--p 000e6000 08:30 185529                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ufuncs.cpython-38-x86_64-linux-gnu.so
+73fbf0d66000-73fbf0d67000 r--p 00154000 08:30 185529                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ufuncs.cpython-38-x86_64-linux-gnu.so
+73fbf0d67000-73fbf0d71000 rw-p 00155000 08:30 185529                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ufuncs.cpython-38-x86_64-linux-gnu.so
+73fbf0d71000-73fbf0d7a000 rw-p 00000000 00:00 0 
+73fbf0d7a000-73fbf0d7e000 rw-p 001c7000 08:30 185529                     /home/mint/.local/lib/python3.8/site-packages/scipy/special/_ufuncs.cpython-38-x86_64-linux-gnu.so
+73fbf0d7e000-73fbf0d84000 r--p 00000000 08:30 181188                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_hausdorff.cpython-38-x86_64-linux-gnu.so
+73fbf0d84000-73fbf0d9f000 r-xp 00006000 08:30 181188                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_hausdorff.cpython-38-x86_64-linux-gnu.so
+73fbf0d9f000-73fbf0da6000 r--p 00021000 08:30 181188                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_hausdorff.cpython-38-x86_64-linux-gnu.so
+73fbf0da6000-73fbf0da7000 r--p 00027000 08:30 181188                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_hausdorff.cpython-38-x86_64-linux-gnu.so
+73fbf0da7000-73fbf0daa000 rw-p 00028000 08:30 181188                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_hausdorff.cpython-38-x86_64-linux-gnu.so
+73fbf0daa000-73fbf0daf000 r--p 00000000 08:30 181203                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_voronoi.cpython-38-x86_64-linux-gnu.so
+73fbf0daf000-73fbf0dc8000 r-xp 00005000 08:30 181203                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_voronoi.cpython-38-x86_64-linux-gnu.so
+73fbf0dc8000-73fbf0dcf000 r--p 0001e000 08:30 181203                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_voronoi.cpython-38-x86_64-linux-gnu.so
+73fbf0dcf000-73fbf0dd0000 r--p 00024000 08:30 181203                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_voronoi.cpython-38-x86_64-linux-gnu.so
+73fbf0dd0000-73fbf0dd3000 rw-p 00025000 08:30 181203                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_voronoi.cpython-38-x86_64-linux-gnu.so
+73fbf0dd3000-73fbf0e13000 rw-p 00000000 00:00 0 
+73fbf0e13000-73fbf0e1e000 r--p 00000000 08:30 181191                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_qhull.cpython-38-x86_64-linux-gnu.so
+73fbf0e1e000-73fbf0ebe000 r-xp 0000b000 08:30 181191                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_qhull.cpython-38-x86_64-linux-gnu.so
+73fbf0ebe000-73fbf0ef5000 r--p 000ab000 08:30 181191                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_qhull.cpython-38-x86_64-linux-gnu.so
+73fbf0ef5000-73fbf0ef6000 r--p 000e1000 08:30 181191                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_qhull.cpython-38-x86_64-linux-gnu.so
+73fbf0ef6000-73fbf0eff000 rw-p 000e2000 08:30 181191                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_qhull.cpython-38-x86_64-linux-gnu.so
+73fbf0eff000-73fbf0f01000 rw-p 00000000 00:00 0 
+73fbf0f01000-73fbf0f06000 rw-p 00107000 08:30 181191                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_qhull.cpython-38-x86_64-linux-gnu.so
+73fbf0f06000-73fbf0f10000 r--p 00000000 08:30 181202                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_ckdtree.cpython-38-x86_64-linux-gnu.so
+73fbf0f10000-73fbf0f93000 r-xp 0000a000 08:30 181202                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_ckdtree.cpython-38-x86_64-linux-gnu.so
+73fbf0f93000-73fbf0faf000 r--p 0008d000 08:30 181202                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_ckdtree.cpython-38-x86_64-linux-gnu.so
+73fbf0faf000-73fbf0fb0000 r--p 000a8000 08:30 181202                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_ckdtree.cpython-38-x86_64-linux-gnu.so
+73fbf0fb0000-73fbf0fbb000 rw-p 000a9000 08:30 181202                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_ckdtree.cpython-38-x86_64-linux-gnu.so
+73fbf0fbb000-73fbf0fbc000 rw-p 00000000 00:00 0 
+73fbf0fbc000-73fbf0fc3000 r--p 00000000 08:30 180785                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_bglu_dense.cpython-38-x86_64-linux-gnu.so
+73fbf0fc3000-73fbf0fef000 r-xp 00007000 08:30 180785                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_bglu_dense.cpython-38-x86_64-linux-gnu.so
+73fbf0fef000-73fbf0ffa000 r--p 00033000 08:30 180785                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_bglu_dense.cpython-38-x86_64-linux-gnu.so
+73fbf0ffa000-73fbf0ffb000 r--p 0003d000 08:30 180785                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_bglu_dense.cpython-38-x86_64-linux-gnu.so
+73fbf0ffb000-73fbf1000000 rw-p 0003e000 08:30 180785                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_bglu_dense.cpython-38-x86_64-linux-gnu.so
+73fbf1000000-73fbf100f000 r--p 00000000 08:30 180940                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_highs/_highs_wrapper.cpython-38-x86_64-linux-gnu.so
+73fbf100f000-73fbf1297000 r-xp 0000f000 08:30 180940                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_highs/_highs_wrapper.cpython-38-x86_64-linux-gnu.so
+73fbf1297000-73fbf1301000 r--p 00297000 08:30 180940                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_highs/_highs_wrapper.cpython-38-x86_64-linux-gnu.so
+73fbf1301000-73fbf1302000 ---p 00301000 08:30 180940                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_highs/_highs_wrapper.cpython-38-x86_64-linux-gnu.so
+73fbf1302000-73fbf1304000 r--p 00301000 08:30 180940                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_highs/_highs_wrapper.cpython-38-x86_64-linux-gnu.so
+73fbf1304000-73fbf130b000 rw-p 00303000 08:30 180940                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_highs/_highs_wrapper.cpython-38-x86_64-linux-gnu.so
+73fbf130b000-73fbf130f000 rw-p 00000000 00:00 0 
+73fbf1318000-73fbf131a000 r--p 00000000 08:30 181194                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_distance_wrap.cpython-38-x86_64-linux-gnu.so
+73fbf131a000-73fbf132e000 r-xp 00002000 08:30 181194                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_distance_wrap.cpython-38-x86_64-linux-gnu.so
+73fbf132e000-73fbf1330000 r--p 00016000 08:30 181194                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_distance_wrap.cpython-38-x86_64-linux-gnu.so
+73fbf1330000-73fbf1331000 ---p 00018000 08:30 181194                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_distance_wrap.cpython-38-x86_64-linux-gnu.so
+73fbf1331000-73fbf1332000 r--p 00018000 08:30 181194                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_distance_wrap.cpython-38-x86_64-linux-gnu.so
+73fbf1332000-73fbf1333000 rw-p 00019000 08:30 181194                     /home/mint/.local/lib/python3.8/site-packages/scipy/spatial/_distance_wrap.cpython-38-x86_64-linux-gnu.so
+73fbf1333000-73fbf1334000 r--p 00000000 08:30 180782                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_lsap.cpython-38-x86_64-linux-gnu.so
+73fbf1334000-73fbf1336000 r-xp 00001000 08:30 180782                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_lsap.cpython-38-x86_64-linux-gnu.so
+73fbf1336000-73fbf1338000 r--p 00003000 08:30 180782                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_lsap.cpython-38-x86_64-linux-gnu.so
+73fbf1338000-73fbf1339000 r--p 00004000 08:30 180782                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_lsap.cpython-38-x86_64-linux-gnu.so
+73fbf1339000-73fbf133a000 rw-p 00005000 08:30 180782                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_lsap.cpython-38-x86_64-linux-gnu.so
+73fbf133a000-73fbf137a000 rw-p 00000000 00:00 0 
+73fbf137a000-73fbf1380000 r--p 00000000 08:30 181066                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_interpolative.cpython-38-x86_64-linux-gnu.so
+73fbf1380000-73fbf13ba000 r-xp 00006000 08:30 181066                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_interpolative.cpython-38-x86_64-linux-gnu.so
+73fbf13ba000-73fbf13cc000 r--p 00040000 08:30 181066                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_interpolative.cpython-38-x86_64-linux-gnu.so
+73fbf13cc000-73fbf13cd000 r--p 00051000 08:30 181066                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_interpolative.cpython-38-x86_64-linux-gnu.so
+73fbf13cd000-73fbf13dc000 rw-p 00052000 08:30 181066                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_interpolative.cpython-38-x86_64-linux-gnu.so
+73fbf13dc000-73fbf13dd000 rw-p 00000000 00:00 0 
+73fbf13dd000-73fbf13e0000 rw-p 00069000 08:30 181066                     /home/mint/.local/lib/python3.8/site-packages/scipy/linalg/_interpolative.cpython-38-x86_64-linux-gnu.so
+73fbf13e0000-73fbf13e2000 r--p 00000000 08:30 180939                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_highs/_highs_constants.cpython-38-x86_64-linux-gnu.so
+73fbf13e2000-73fbf13e4000 r-xp 00002000 08:30 180939                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_highs/_highs_constants.cpython-38-x86_64-linux-gnu.so
+73fbf13e4000-73fbf13e5000 r--p 00004000 08:30 180939                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_highs/_highs_constants.cpython-38-x86_64-linux-gnu.so
+73fbf13e5000-73fbf13e6000 r--p 00004000 08:30 180939                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_highs/_highs_constants.cpython-38-x86_64-linux-gnu.so
+73fbf13e6000-73fbf13e7000 rw-p 00005000 08:30 180939                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_highs/_highs_constants.cpython-38-x86_64-linux-gnu.so
+73fbf13e7000-73fbf13e9000 r--p 00000000 08:30 180765                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/__nnls.cpython-38-x86_64-linux-gnu.so
+73fbf13e9000-73fbf13ee000 r-xp 00002000 08:30 180765                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/__nnls.cpython-38-x86_64-linux-gnu.so
+73fbf13ee000-73fbf13f0000 r--p 00007000 08:30 180765                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/__nnls.cpython-38-x86_64-linux-gnu.so
+73fbf13f0000-73fbf13f1000 r--p 00008000 08:30 180765                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/__nnls.cpython-38-x86_64-linux-gnu.so
+73fbf13f1000-73fbf13f2000 rw-p 00009000 08:30 180765                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/__nnls.cpython-38-x86_64-linux-gnu.so
+73fbf13f2000-73fbf13f4000 rw-p 0000c000 08:30 180765                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/__nnls.cpython-38-x86_64-linux-gnu.so
+73fbf13f4000-73fbf1434000 rw-p 00000000 00:00 0 
+73fbf1434000-73fbf1439000 r--p 00000000 08:30 180961                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_lsq/givens_elimination.cpython-38-x86_64-linux-gnu.so
+73fbf1439000-73fbf1451000 r-xp 00005000 08:30 180961                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_lsq/givens_elimination.cpython-38-x86_64-linux-gnu.so
+73fbf1451000-73fbf1458000 r--p 0001d000 08:30 180961                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_lsq/givens_elimination.cpython-38-x86_64-linux-gnu.so
+73fbf1458000-73fbf1459000 r--p 00023000 08:30 180961                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_lsq/givens_elimination.cpython-38-x86_64-linux-gnu.so
+73fbf1459000-73fbf145c000 rw-p 00024000 08:30 180961                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_lsq/givens_elimination.cpython-38-x86_64-linux-gnu.so
+73fbf145c000-73fbf149c000 rw-p 00000000 00:00 0 
+73fbf149c000-73fbf149e000 r--p 00000000 08:30 180766                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_minpack.cpython-38-x86_64-linux-gnu.so
+73fbf149e000-73fbf14a9000 r-xp 00002000 08:30 180766                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_minpack.cpython-38-x86_64-linux-gnu.so
+73fbf14a9000-73fbf14ab000 r--p 0000d000 08:30 180766                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_minpack.cpython-38-x86_64-linux-gnu.so
+73fbf14ab000-73fbf14ac000 r--p 0000e000 08:30 180766                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_minpack.cpython-38-x86_64-linux-gnu.so
+73fbf14ac000-73fbf14ad000 rw-p 0000f000 08:30 180766                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_minpack.cpython-38-x86_64-linux-gnu.so
+73fbf14ad000-73fbf14af000 r--p 00000000 08:30 180780                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_slsqp.cpython-38-x86_64-linux-gnu.so
+73fbf14af000-73fbf14ba000 r-xp 00002000 08:30 180780                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_slsqp.cpython-38-x86_64-linux-gnu.so
+73fbf14ba000-73fbf14bd000 r--p 0000d000 08:30 180780                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_slsqp.cpython-38-x86_64-linux-gnu.so
+73fbf14bd000-73fbf14be000 r--p 0000f000 08:30 180780                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_slsqp.cpython-38-x86_64-linux-gnu.so
+73fbf14be000-73fbf14bf000 rw-p 00010000 08:30 180780                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_slsqp.cpython-38-x86_64-linux-gnu.so
+73fbf14bf000-73fbf1600000 rw-p 00000000 00:00 0 
+73fbf1600000-73fbf163b000 r-xp 00000000 08:30 178127                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libquadmath-96973f99.so.0.0.0
+73fbf163b000-73fbf183a000 ---p 0003b000 08:30 178127                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libquadmath-96973f99.so.0.0.0
+73fbf183a000-73fbf183b000 r--p 0003a000 08:30 178127                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libquadmath-96973f99.so.0.0.0
+73fbf183b000-73fbf183d000 rw-p 0003b000 08:30 178127                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libquadmath-96973f99.so.0.0.0
+73fbf1840000-73fbf1842000 r--p 00000000 08:30 180764                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_minpack2.cpython-38-x86_64-linux-gnu.so
+73fbf1842000-73fbf1848000 r-xp 00002000 08:30 180764                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_minpack2.cpython-38-x86_64-linux-gnu.so
+73fbf1848000-73fbf184a000 r--p 00008000 08:30 180764                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_minpack2.cpython-38-x86_64-linux-gnu.so
+73fbf184a000-73fbf184b000 r--p 00009000 08:30 180764                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_minpack2.cpython-38-x86_64-linux-gnu.so
+73fbf184b000-73fbf184c000 rw-p 0000a000 08:30 180764                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_minpack2.cpython-38-x86_64-linux-gnu.so
+73fbf184c000-73fbf1852000 r--p 00000000 08:30 177367                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/bit_generator.cpython-38-x86_64-linux-gnu.so
+73fbf1852000-73fbf186d000 r-xp 00006000 08:30 177367                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/bit_generator.cpython-38-x86_64-linux-gnu.so
+73fbf186d000-73fbf1875000 r--p 00021000 08:30 177367                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/bit_generator.cpython-38-x86_64-linux-gnu.so
+73fbf1875000-73fbf1876000 r--p 00028000 08:30 177367                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/bit_generator.cpython-38-x86_64-linux-gnu.so
+73fbf1876000-73fbf187b000 rw-p 00029000 08:30 177367                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/bit_generator.cpython-38-x86_64-linux-gnu.so
+73fbf187b000-73fbf1887000 r--p 00000000 08:30 177373                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/mtrand.cpython-38-x86_64-linux-gnu.so
+73fbf1887000-73fbf18d6000 r-xp 0000c000 08:30 177373                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/mtrand.cpython-38-x86_64-linux-gnu.so
+73fbf18d6000-73fbf1904000 r--p 0005b000 08:30 177373                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/mtrand.cpython-38-x86_64-linux-gnu.so
+73fbf1904000-73fbf1905000 r--p 00088000 08:30 177373                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/mtrand.cpython-38-x86_64-linux-gnu.so
+73fbf1905000-73fbf192d000 rw-p 00089000 08:30 177373                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/mtrand.cpython-38-x86_64-linux-gnu.so
+73fbf192d000-73fbf192f000 rw-p 00000000 00:00 0 
+73fbf1934000-73fbf1936000 r--p 00000000 08:30 180750                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_cobyla.cpython-38-x86_64-linux-gnu.so
+73fbf1936000-73fbf1942000 r-xp 00002000 08:30 180750                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_cobyla.cpython-38-x86_64-linux-gnu.so
+73fbf1942000-73fbf1945000 r--p 0000e000 08:30 180750                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_cobyla.cpython-38-x86_64-linux-gnu.so
+73fbf1945000-73fbf1946000 r--p 00010000 08:30 180750                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_cobyla.cpython-38-x86_64-linux-gnu.so
+73fbf1946000-73fbf1947000 rw-p 00011000 08:30 180750                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_cobyla.cpython-38-x86_64-linux-gnu.so
+73fbf1947000-73fbf1949000 rw-p 00015000 08:30 180750                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_cobyla.cpython-38-x86_64-linux-gnu.so
+73fbf1949000-73fbf194d000 r--p 00000000 08:30 180793                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_moduleTNC.cpython-38-x86_64-linux-gnu.so
+73fbf194d000-73fbf195f000 r-xp 00004000 08:30 180793                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_moduleTNC.cpython-38-x86_64-linux-gnu.so
+73fbf195f000-73fbf1963000 r--p 00016000 08:30 180793                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_moduleTNC.cpython-38-x86_64-linux-gnu.so
+73fbf1963000-73fbf1964000 r--p 00019000 08:30 180793                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_moduleTNC.cpython-38-x86_64-linux-gnu.so
+73fbf1964000-73fbf1966000 rw-p 0001a000 08:30 180793                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_moduleTNC.cpython-38-x86_64-linux-gnu.so
+73fbf1966000-73fbf1968000 r--p 00000000 08:30 180789                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_lbfgsb.cpython-38-x86_64-linux-gnu.so
+73fbf1968000-73fbf1978000 r-xp 00002000 08:30 180789                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_lbfgsb.cpython-38-x86_64-linux-gnu.so
+73fbf1978000-73fbf197c000 r--p 00012000 08:30 180789                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_lbfgsb.cpython-38-x86_64-linux-gnu.so
+73fbf197c000-73fbf197d000 r--p 00015000 08:30 180789                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_lbfgsb.cpython-38-x86_64-linux-gnu.so
+73fbf197d000-73fbf197e000 rw-p 00016000 08:30 180789                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_lbfgsb.cpython-38-x86_64-linux-gnu.so
+73fbf197e000-73fbf1980000 rw-p 0001a000 08:30 180789                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_lbfgsb.cpython-38-x86_64-linux-gnu.so
+73fbf1980000-73fbf1a00000 rw-p 00000000 00:00 0 
+73fbf1a00000-73fbf1c76000 r-xp 00000000 08:30 178126                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libgfortran-040039e1.so.5.0.0
+73fbf1c76000-73fbf1e75000 ---p 00276000 08:30 178126                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libgfortran-040039e1.so.5.0.0
+73fbf1e75000-73fbf1e76000 r--p 00275000 08:30 178126                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libgfortran-040039e1.so.5.0.0
+73fbf1e76000-73fbf1e78000 rw-p 00276000 08:30 178126                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libgfortran-040039e1.so.5.0.0
+73fbf1e78000-73fbf1e8d000 rw-p 0027b000 08:30 178126                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libgfortran-040039e1.so.5.0.0
+73fbf1e90000-73fbf1e91000 r--p 00000000 08:30 176673                     /home/mint/.local/lib/python3.8/site-packages/numpy/fft/_pocketfft_internal.cpython-38-x86_64-linux-gnu.so
+73fbf1e91000-73fbf1ea4000 r-xp 00001000 08:30 176673                     /home/mint/.local/lib/python3.8/site-packages/numpy/fft/_pocketfft_internal.cpython-38-x86_64-linux-gnu.so
+73fbf1ea4000-73fbf1ea6000 r--p 00014000 08:30 176673                     /home/mint/.local/lib/python3.8/site-packages/numpy/fft/_pocketfft_internal.cpython-38-x86_64-linux-gnu.so
+73fbf1ea6000-73fbf1ea7000 r--p 00015000 08:30 176673                     /home/mint/.local/lib/python3.8/site-packages/numpy/fft/_pocketfft_internal.cpython-38-x86_64-linux-gnu.so
+73fbf1ea7000-73fbf1ea8000 rw-p 00016000 08:30 176673                     /home/mint/.local/lib/python3.8/site-packages/numpy/fft/_pocketfft_internal.cpython-38-x86_64-linux-gnu.so
+73fbf1ea8000-73fbf1f68000 rw-p 00000000 00:00 0 
+73fbf1f68000-73fbf1f6f000 r--p 00000000 08:30 176693                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/_umath_linalg.cpython-38-x86_64-linux-gnu.so
+73fbf1f6f000-73fbf1f90000 r-xp 00007000 08:30 176693                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/_umath_linalg.cpython-38-x86_64-linux-gnu.so
+73fbf1f90000-73fbf1f95000 r--p 00028000 08:30 176693                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/_umath_linalg.cpython-38-x86_64-linux-gnu.so
+73fbf1f95000-73fbf1f96000 ---p 0002d000 08:30 176693                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/_umath_linalg.cpython-38-x86_64-linux-gnu.so
+73fbf1f96000-73fbf1f97000 r--p 0002d000 08:30 176693                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/_umath_linalg.cpython-38-x86_64-linux-gnu.so
+73fbf1f97000-73fbf1f98000 rw-p 0002e000 08:30 176693                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/_umath_linalg.cpython-38-x86_64-linux-gnu.so
+73fbf1f98000-73fbf1f99000 rw-p 00000000 00:00 0 
+73fbf1f99000-73fbf1f9d000 rw-p 00035000 08:30 176693                     /home/mint/.local/lib/python3.8/site-packages/numpy/linalg/_umath_linalg.cpython-38-x86_64-linux-gnu.so
+73fbf1f9d000-73fbf1fdd000 rw-p 00000000 00:00 0 
+73fbf1fdd000-73fbf1fe4000 r--p 00000000 08:30 73591                      /usr/lib/python3.8/lib-dynload/_ctypes.cpython-38-x86_64-linux-gnu.so
+73fbf1fe4000-73fbf1ff4000 r-xp 00007000 08:30 73591                      /usr/lib/python3.8/lib-dynload/_ctypes.cpython-38-x86_64-linux-gnu.so
+73fbf1ff4000-73fbf1ffa000 r--p 00017000 08:30 73591                      /usr/lib/python3.8/lib-dynload/_ctypes.cpython-38-x86_64-linux-gnu.so
+73fbf1ffa000-73fbf1ffb000 ---p 0001d000 08:30 73591                      /usr/lib/python3.8/lib-dynload/_ctypes.cpython-38-x86_64-linux-gnu.so
+73fbf1ffb000-73fbf1ffc000 r--p 0001d000 08:30 73591                      /usr/lib/python3.8/lib-dynload/_ctypes.cpython-38-x86_64-linux-gnu.so
+73fbf1ffc000-73fbf2000000 rw-p 0001e000 08:30 73591                      /usr/lib/python3.8/lib-dynload/_ctypes.cpython-38-x86_64-linux-gnu.so
+73fbf2000000-73fbf20fd000 r--p 00000000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+73fbf20fd000-73fbf2105000 r-xp 000fd000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+73fbf2105000-73fbf2108000 ---p 00105000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+73fbf2108000-73fbf3bb3000 r-xp 00108000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+73fbf3bb3000-73fbf3daf000 r--p 01bb3000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+73fbf3daf000-73fbf3db0000 ---p 01daf000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+73fbf3db0000-73fbf3db6000 r--p 01daf000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+73fbf3db6000-73fbf3dcb000 rw-p 01db5000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+73fbf3dcb000-73fbf3dd8000 rw-p 00000000 00:00 0 
+73fbf3dd8000-73fbf3e7a000 rw-p 01ecc000 08:30 178128                     /home/mint/.local/lib/python3.8/site-packages/numpy.libs/libopenblas64_p-r0-15028c96.3.21.so
+73fbf3e7a000-73fbf3e7b000 r--p 00000000 08:30 180806                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_zeros.cpython-38-x86_64-linux-gnu.so
+73fbf3e7b000-73fbf3e7d000 r-xp 00001000 08:30 180806                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_zeros.cpython-38-x86_64-linux-gnu.so
+73fbf3e7d000-73fbf3e7e000 r--p 00003000 08:30 180806                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_zeros.cpython-38-x86_64-linux-gnu.so
+73fbf3e7e000-73fbf3e7f000 r--p 00003000 08:30 180806                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_zeros.cpython-38-x86_64-linux-gnu.so
+73fbf3e7f000-73fbf3e80000 rw-p 00004000 08:30 180806                     /home/mint/.local/lib/python3.8/site-packages/scipy/optimize/_zeros.cpython-38-x86_64-linux-gnu.so
+73fbf3e80000-73fbf4000000 rw-p 00000000 00:00 0 
+73fbf4000000-73fbf4028000 r--p 00000000 08:30 177625                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_umath.cpython-38-x86_64-linux-gnu.so
+73fbf4028000-73fbf4463000 r-xp 00028000 08:30 177625                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_umath.cpython-38-x86_64-linux-gnu.so
+73fbf4463000-73fbf457a000 r--p 00463000 08:30 177625                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_umath.cpython-38-x86_64-linux-gnu.so
+73fbf457a000-73fbf457b000 ---p 0057a000 08:30 177625                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_umath.cpython-38-x86_64-linux-gnu.so
+73fbf457b000-73fbf457d000 r--p 0057a000 08:30 177625                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_umath.cpython-38-x86_64-linux-gnu.so
+73fbf457d000-73fbf459f000 rw-p 0057c000 08:30 177625                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_umath.cpython-38-x86_64-linux-gnu.so
+73fbf459f000-73fbf45c0000 rw-p 00000000 00:00 0 
+73fbf45c0000-73fbf45c7000 rw-p 005fe000 08:30 177625                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_umath.cpython-38-x86_64-linux-gnu.so
+73fbf45c9000-73fbf45cc000 r--p 00000000 08:30 177381                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_sfc64.cpython-38-x86_64-linux-gnu.so
+73fbf45cc000-73fbf45d4000 r-xp 00003000 08:30 177381                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_sfc64.cpython-38-x86_64-linux-gnu.so
+73fbf45d4000-73fbf45d6000 r--p 0000b000 08:30 177381                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_sfc64.cpython-38-x86_64-linux-gnu.so
+73fbf45d6000-73fbf45d7000 ---p 0000d000 08:30 177381                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_sfc64.cpython-38-x86_64-linux-gnu.so
+73fbf45d7000-73fbf45d8000 r--p 0000d000 08:30 177381                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_sfc64.cpython-38-x86_64-linux-gnu.so
+73fbf45d8000-73fbf45d9000 rw-p 0000e000 08:30 177381                     /home/mint/.local/lib/python3.8/site-packages/numpy/random/_sfc64.cpython-38-x86_64-linux-gnu.so
+73fbf45d9000-73fbf45e0000 r--p 00000000 08:30 177603                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_tests.cpython-38-x86_64-linux-gnu.so
+73fbf45e0000-73fbf45f7000 r-xp 00007000 08:30 177603                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_tests.cpython-38-x86_64-linux-gnu.so
+73fbf45f7000-73fbf45fd000 r--p 0001e000 08:30 177603                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_tests.cpython-38-x86_64-linux-gnu.so
+73fbf45fd000-73fbf45fe000 r--p 00023000 08:30 177603                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_tests.cpython-38-x86_64-linux-gnu.so
+73fbf45fe000-73fbf4600000 rw-p 00024000 08:30 177603                     /home/mint/.local/lib/python3.8/site-packages/numpy/core/_multiarray_tests.cpython-38-x86_64-linux-gnu.so
+73fbf4600000-73fbf4678000 r--p 00000000 08:30 131272                     /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1
+73fbf4678000-73fbf4814000 r-xp 00078000 08:30 131272                     /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1
+73fbf4814000-73fbf48a5000 r--p 00214000 08:30 131272                     /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1
+73fbf48a5000-73fbf48d1000 r--p 002a4000 08:30 131272                     /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1
+73fbf48d1000-73fbf48d3000 rw-p 002d0000 08:30 131272                     /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1
+73fbf48d3000-73fbf48d7000 rw-p 00000000 00:00 0 
+73fbf48dc000-73fbf491c000 rw-p 00000000 00:00 0 
+73fbf491c000-73fbf491f000 r--p 00000000 08:30 42734                      /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+73fbf491f000-73fbf4931000 r-xp 00003000 08:30 42734                      /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+73fbf4931000-73fbf4935000 r--p 00015000 08:30 42734                      /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+73fbf4935000-73fbf4936000 r--p 00018000 08:30 42734                      /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+73fbf4936000-73fbf4937000 rw-p 00019000 08:30 42734                      /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+73fbf4937000-73fbf4a37000 rw-p 00000000 00:00 0 
+73fbf4a3b000-73fbf4a3c000 r--p 00000000 08:30 10543                      /usr/lib/python3.8/lib-dynload/_opcode.cpython-38-x86_64-linux-gnu.so
+73fbf4a3c000-73fbf4a3d000 r-xp 00001000 08:30 10543                      /usr/lib/python3.8/lib-dynload/_opcode.cpython-38-x86_64-linux-gnu.so
+73fbf4a3d000-73fbf4a3e000 r--p 00002000 08:30 10543                      /usr/lib/python3.8/lib-dynload/_opcode.cpython-38-x86_64-linux-gnu.so
+73fbf4a3e000-73fbf4a3f000 r--p 00002000 08:30 10543                      /usr/lib/python3.8/lib-dynload/_opcode.cpython-38-x86_64-linux-gnu.so
+73fbf4a3f000-73fbf4a40000 rw-p 00003000 08:30 10543                      /usr/lib/python3.8/lib-dynload/_opcode.cpython-38-x86_64-linux-gnu.so
+73fbf4a40000-73fbf4c00000 rw-p 00000000 00:00 0 
+73fbf4c00000-73fbf4ee6000 r--p 00000000 08:30 6102                       /usr/lib/locale/locale-archive
+73fbf4ee7000-73fbf4ee9000 r--p 00000000 08:30 12684                      /usr/lib/x86_64-linux-gnu/libffi.so.7.1.0
+73fbf4ee9000-73fbf4eef000 r-xp 00002000 08:30 12684                      /usr/lib/x86_64-linux-gnu/libffi.so.7.1.0
+73fbf4eef000-73fbf4ef0000 r--p 00008000 08:30 12684                      /usr/lib/x86_64-linux-gnu/libffi.so.7.1.0
+73fbf4ef0000-73fbf4ef1000 ---p 00009000 08:30 12684                      /usr/lib/x86_64-linux-gnu/libffi.so.7.1.0
+73fbf4ef1000-73fbf4ef2000 r--p 00009000 08:30 12684                      /usr/lib/x86_64-linux-gnu/libffi.so.7.1.0
+73fbf4ef2000-73fbf4ef3000 rw-p 0000a000 08:30 12684                      /usr/lib/x86_64-linux-gnu/libffi.so.7.1.0
+73fbf4ef3000-73fbf4ef5000 r--p 00000000 08:30 73606                      /usr/lib/python3.8/lib-dynload/_json.cpython-38-x86_64-linux-gnu.so
+73fbf4ef5000-73fbf4f03000 r-xp 00002000 08:30 73606                      /usr/lib/python3.8/lib-dynload/_json.cpython-38-x86_64-linux-gnu.so
+73fbf4f03000-73fbf4f05000 r--p 00010000 08:30 73606                      /usr/lib/python3.8/lib-dynload/_json.cpython-38-x86_64-linux-gnu.so
+73fbf4f05000-73fbf4f06000 r--p 00011000 08:30 73606                      /usr/lib/python3.8/lib-dynload/_json.cpython-38-x86_64-linux-gnu.so
+73fbf4f06000-73fbf4f07000 rw-p 00012000 08:30 73606                      /usr/lib/python3.8/lib-dynload/_json.cpython-38-x86_64-linux-gnu.so
+73fbf4f07000-73fbf4f0a000 r--p 00000000 08:30 10542                      /usr/lib/python3.8/lib-dynload/_hashlib.cpython-38-x86_64-linux-gnu.so
+73fbf4f0a000-73fbf4f0e000 r-xp 00003000 08:30 10542                      /usr/lib/python3.8/lib-dynload/_hashlib.cpython-38-x86_64-linux-gnu.so
+73fbf4f0e000-73fbf4f10000 r--p 00007000 08:30 10542                      /usr/lib/python3.8/lib-dynload/_hashlib.cpython-38-x86_64-linux-gnu.so
+73fbf4f10000-73fbf4f11000 r--p 00008000 08:30 10542                      /usr/lib/python3.8/lib-dynload/_hashlib.cpython-38-x86_64-linux-gnu.so
+73fbf4f11000-73fbf4f12000 rw-p 00009000 08:30 10542                      /usr/lib/python3.8/lib-dynload/_hashlib.cpython-38-x86_64-linux-gnu.so
+73fbf4f12000-73fbf5055000 rw-p 00000000 00:00 0 
+73fbf5055000-73fbf5057000 r--p 00000000 08:30 13174                      /usr/lib/x86_64-linux-gnu/libz.so.1.2.11
+73fbf5057000-73fbf5068000 r-xp 00002000 08:30 13174                      /usr/lib/x86_64-linux-gnu/libz.so.1.2.11
+73fbf5068000-73fbf506e000 r--p 00013000 08:30 13174                      /usr/lib/x86_64-linux-gnu/libz.so.1.2.11
+73fbf506e000-73fbf506f000 ---p 00019000 08:30 13174                      /usr/lib/x86_64-linux-gnu/libz.so.1.2.11
+73fbf506f000-73fbf5070000 r--p 00019000 08:30 13174                      /usr/lib/x86_64-linux-gnu/libz.so.1.2.11
+73fbf5070000-73fbf5071000 rw-p 0001a000 08:30 13174                      /usr/lib/x86_64-linux-gnu/libz.so.1.2.11
+73fbf5071000-73fbf5075000 r--p 00000000 08:30 20733                      /usr/lib/x86_64-linux-gnu/libexpat.so.1.6.11
+73fbf5075000-73fbf5091000 r-xp 00004000 08:30 20733                      /usr/lib/x86_64-linux-gnu/libexpat.so.1.6.11
+73fbf5091000-73fbf509b000 r--p 00020000 08:30 20733                      /usr/lib/x86_64-linux-gnu/libexpat.so.1.6.11
+73fbf509b000-73fbf509c000 ---p 0002a000 08:30 20733                      /usr/lib/x86_64-linux-gnu/libexpat.so.1.6.11
+73fbf509c000-73fbf509e000 r--p 0002a000 08:30 20733                      /usr/lib/x86_64-linux-gnu/libexpat.so.1.6.11
+73fbf509e000-73fbf509f000 rw-p 0002c000 08:30 20733                      /usr/lib/x86_64-linux-gnu/libexpat.so.1.6.11
+73fbf509f000-73fbf50a1000 rw-p 00000000 00:00 0 
+73fbf50a1000-73fbf50ae000 r--p 00000000 08:30 66935                      /usr/lib/x86_64-linux-gnu/libm-2.31.so
+73fbf50ae000-73fbf5155000 r-xp 0000d000 08:30 66935                      /usr/lib/x86_64-linux-gnu/libm-2.31.so
+73fbf5155000-73fbf51ee000 r--p 000b4000 08:30 66935                      /usr/lib/x86_64-linux-gnu/libm-2.31.so
+73fbf51ee000-73fbf51ef000 r--p 0014c000 08:30 66935                      /usr/lib/x86_64-linux-gnu/libm-2.31.so
+73fbf51ef000-73fbf51f0000 rw-p 0014d000 08:30 66935                      /usr/lib/x86_64-linux-gnu/libm-2.31.so
+73fbf51f0000-73fbf51f1000 r--p 00000000 08:30 66950                      /usr/lib/x86_64-linux-gnu/libutil-2.31.so
+73fbf51f1000-73fbf51f2000 r-xp 00001000 08:30 66950                      /usr/lib/x86_64-linux-gnu/libutil-2.31.so
+73fbf51f2000-73fbf51f3000 r--p 00002000 08:30 66950                      /usr/lib/x86_64-linux-gnu/libutil-2.31.so
+73fbf51f3000-73fbf51f4000 r--p 00002000 08:30 66950                      /usr/lib/x86_64-linux-gnu/libutil-2.31.so
+73fbf51f4000-73fbf51f5000 rw-p 00003000 08:30 66950                      /usr/lib/x86_64-linux-gnu/libutil-2.31.so
+73fbf51f5000-73fbf51f6000 r--p 00000000 08:30 66934                      /usr/lib/x86_64-linux-gnu/libdl-2.31.so
+73fbf51f6000-73fbf51f8000 r-xp 00001000 08:30 66934                      /usr/lib/x86_64-linux-gnu/libdl-2.31.so
+73fbf51f8000-73fbf51f9000 r--p 00003000 08:30 66934                      /usr/lib/x86_64-linux-gnu/libdl-2.31.so
+73fbf51f9000-73fbf51fa000 r--p 00003000 08:30 66934                      /usr/lib/x86_64-linux-gnu/libdl-2.31.so
+73fbf51fa000-73fbf51fb000 rw-p 00004000 08:30 66934                      /usr/lib/x86_64-linux-gnu/libdl-2.31.so
+73fbf51fb000-73fbf5201000 r--p 00000000 08:30 66946                      /usr/lib/x86_64-linux-gnu/libpthread-2.31.so
+73fbf5201000-73fbf5212000 r-xp 00006000 08:30 66946                      /usr/lib/x86_64-linux-gnu/libpthread-2.31.so
+73fbf5212000-73fbf5218000 r--p 00017000 08:30 66946                      /usr/lib/x86_64-linux-gnu/libpthread-2.31.so
+73fbf5218000-73fbf5219000 r--p 0001c000 08:30 66946                      /usr/lib/x86_64-linux-gnu/libpthread-2.31.so
+73fbf5219000-73fbf521a000 rw-p 0001d000 08:30 66946                      /usr/lib/x86_64-linux-gnu/libpthread-2.31.so
+73fbf521a000-73fbf521e000 rw-p 00000000 00:00 0 
+73fbf521e000-73fbf5240000 r--p 00000000 08:30 66933                      /usr/lib/x86_64-linux-gnu/libc-2.31.so
+73fbf5240000-73fbf53b8000 r-xp 00022000 08:30 66933                      /usr/lib/x86_64-linux-gnu/libc-2.31.so
+73fbf53b8000-73fbf5406000 r--p 0019a000 08:30 66933                      /usr/lib/x86_64-linux-gnu/libc-2.31.so
+73fbf5406000-73fbf540a000 r--p 001e7000 08:30 66933                      /usr/lib/x86_64-linux-gnu/libc-2.31.so
+73fbf540a000-73fbf540c000 rw-p 001eb000 08:30 66933                      /usr/lib/x86_64-linux-gnu/libc-2.31.so
+73fbf540c000-73fbf5410000 rw-p 00000000 00:00 0 
+73fbf5412000-73fbf5413000 r--p 00000000 08:30 66140                      /usr/lib/python3.8/lib-dynload/_contextvars.cpython-38-x86_64-linux-gnu.so
+73fbf5413000-73fbf5414000 r-xp 00001000 08:30 66140                      /usr/lib/python3.8/lib-dynload/_contextvars.cpython-38-x86_64-linux-gnu.so
+73fbf5414000-73fbf5415000 r--p 00002000 08:30 66140                      /usr/lib/python3.8/lib-dynload/_contextvars.cpython-38-x86_64-linux-gnu.so
+73fbf5415000-73fbf5416000 r--p 00002000 08:30 66140                      /usr/lib/python3.8/lib-dynload/_contextvars.cpython-38-x86_64-linux-gnu.so
+73fbf5416000-73fbf5417000 rw-p 00003000 08:30 66140                      /usr/lib/python3.8/lib-dynload/_contextvars.cpython-38-x86_64-linux-gnu.so
+73fbf5417000-73fbf541e000 r--s 00000000 08:30 207192                     /usr/lib/x86_64-linux-gnu/gconv/gconv-modules.cache
+73fbf541e000-73fbf5450000 r--p 00000000 08:30 22667                      /usr/lib/locale/C.UTF-8/LC_CTYPE
+73fbf5450000-73fbf5452000 rw-p 00000000 00:00 0 
+73fbf5452000-73fbf5456000 r--p 00000000 00:00 0                          [vvar]
+73fbf5456000-73fbf5458000 r--p 00000000 00:00 0                          [vvar_vclock]
+73fbf5458000-73fbf545a000 r-xp 00000000 00:00 0                          [vdso]
+73fbf545a000-73fbf545b000 r--p 00000000 08:30 66929                      /usr/lib/x86_64-linux-gnu/ld-2.31.so
+73fbf545b000-73fbf547e000 r-xp 00001000 08:30 66929                      /usr/lib/x86_64-linux-gnu/ld-2.31.so
+73fbf547e000-73fbf5486000 r--p 00024000 08:30 66929                      /usr/lib/x86_64-linux-gnu/ld-2.31.so
+73fbf5487000-73fbf5488000 r--p 0002c000 08:30 66929                      /usr/lib/x86_64-linux-gnu/ld-2.31.so
+73fbf5488000-73fbf5489000 rw-p 0002d000 08:30 66929                      /usr/lib/x86_64-linux-gnu/ld-2.31.so
+73fbf5489000-73fbf548a000 rw-p 00000000 00:00 0 
+7ffc0d2a5000-7ffc0d2c8000 rw-p 00000000 00:00 0                          [stack]

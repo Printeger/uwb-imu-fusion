@@ -81,6 +81,14 @@ struct FdeDecisionContextV2 {
       ActionSearchLifecycleV1::ReadyForEvaluation;
 };
 
+// P1-06 additive compact-action consumer.  V1/V2 layouts and overloads remain
+// unchanged.  The lease is the independent source used to reconstruct exact
+// action semantics at the FDE boundary.
+struct FdeDecisionContextV3 {
+  FdeDecisionContextV1 v1;
+  const AttemptActionLeaseV3* action_lease = nullptr;
+};
+
 class FdeManager {
  public:
   FdeDecision decide(const DetectorResultV2& all_in,
@@ -103,6 +111,13 @@ class FdeManager {
                      const std::vector<FactorGroupId>& mandatory_groups,
                      const RiskBudgetV2& risk,
                      const FdeDecisionContextV2* context) const;
+  FdeDecision decide(const DetectorResultV2& all_in,
+                     const std::vector<FaultHypothesisV2>& hypotheses,
+                     const std::vector<FaultModeEvidence>& evidence,
+                     std::vector<CandidateEvaluation>* candidates,
+                     const std::vector<FactorGroupId>& mandatory_groups,
+                     const RiskBudgetV2& risk,
+                     const FdeDecisionContextV3* context) const;
 };
 
 }  // namespace uwb_imu_pl

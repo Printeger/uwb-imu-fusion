@@ -1,0 +1,5 @@
+command=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_p0_07_corrected_exhaustive --gtest_filter=P007CorrectedExhaustive.SameRawReplayDrivesProductionBuilderGeneratorAndFinalRefusal
+exit=0
+generator=tools/generate_p0_07_evidence.py
+input=docs/evidence/p0-07-corrected-exhaustive/authoritative-replay/frozen-input.json
+reference=docs/evidence/p0-07-corrected-exhaustive/authoritative-replay/frozen-truth.json
