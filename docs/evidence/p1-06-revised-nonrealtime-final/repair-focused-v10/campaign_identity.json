@@ -1,0 +1,23 @@
+{
+  "schema": "p1-06-focused-repair-v10",
+  "status": "FROZEN_NONREALTIME_ACCEPTANCE_BLOCKED",
+  "recorded_at": "2026-10-07T18:55:43+08:00",
+  "head_commit": "4e99d4d8aa9712300389a7caed9d7809afc87d5a",
+  "golden_tag_object": "02344301915590881b08810f1c34f67aed04b9e4",
+  "golden_commit": "4657cf87539cf7699231642d3356c08456b1833e",
+  "worktree_diff_sha256": "404aba75dc4ef1d2705f8aeb894f0bb65a4384cc2f0c881b1854c17fd883990d",
+  "identity_files": [
+    "source-hashes.sha256",
+    "binary-hashes.sha256",
+    "loaded-dso-hashes.sha256",
+    "commands.txt"
+  ],
+  "runs": [
+    {"name": "fallback-invalid-oracle-mutation", "exit": 0},
+    {"name": "complete-graph-oracles", "exit": 0},
+    {"name": "bounded-production-vs-batch", "exit": 0},
+    {"name": "golden-p1-05-abi-canary", "exit": 0}
+  ],
+  "long_campaigns_run": false,
+  "section_2_4_run": false
+}

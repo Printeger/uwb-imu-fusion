@@ -1,0 +1,98 @@
+Test project /home/mint/ws_fusion_uwb/build/uwb_imu_pl
+      Start  1: _ctest_uwb_imu_pl_gtest_test_snapshot_integrity
+ 1/35 Test  #1: _ctest_uwb_imu_pl_gtest_test_snapshot_integrity ...............   Passed    0.09 sec
+      Start  2: _ctest_uwb_imu_pl_gtest_test_integrity_config
+ 2/35 Test  #2: _ctest_uwb_imu_pl_gtest_test_integrity_config .................   Passed    0.24 sec
+      Start  3: _ctest_uwb_imu_pl_gtest_test_run_logger
+ 3/35 Test  #3: _ctest_uwb_imu_pl_gtest_test_run_logger .......................   Passed    0.08 sec
+      Start  4: _ctest_uwb_imu_pl_gtest_test_realtime_incremental
+ 4/35 Test  #4: _ctest_uwb_imu_pl_gtest_test_realtime_incremental .............   Passed    0.34 sec
+      Start  5: _ctest_uwb_imu_pl_gtest_test_deterministic_event
+ 5/35 Test  #5: _ctest_uwb_imu_pl_gtest_test_deterministic_event ..............   Passed    0.08 sec
+      Start  6: _ctest_uwb_imu_pl_gtest_test_dense_oracle
+ 6/35 Test  #6: _ctest_uwb_imu_pl_gtest_test_dense_oracle .....................   Passed    0.09 sec
+      Start  7: _ctest_uwb_imu_pl_gtest_test_integrity_v2
+ 7/35 Test  #7: _ctest_uwb_imu_pl_gtest_test_integrity_v2 .....................   Passed    1.47 sec
+      Start  8: _ctest_uwb_imu_pl_gtest_test_integrity_reference
+ 8/35 Test  #8: _ctest_uwb_imu_pl_gtest_test_integrity_reference ..............   Passed    0.08 sec
+      Start  9: _ctest_uwb_imu_pl_gtest_test_fault_manifest
+ 9/35 Test  #9: _ctest_uwb_imu_pl_gtest_test_fault_manifest ...................   Passed    0.10 sec
+      Start 10: _ctest_uwb_imu_pl_gtest_test_square_root_context
+10/35 Test #10: _ctest_uwb_imu_pl_gtest_test_square_root_context ..............   Passed    0.08 sec
+      Start 11: _ctest_uwb_imu_pl_gtest_test_history_fault_summary
+11/35 Test #11: _ctest_uwb_imu_pl_gtest_test_history_fault_summary ............   Passed    0.10 sec
+      Start 12: _ctest_uwb_imu_pl_gtest_test_history_fault_parameterization
+12/35 Test #12: _ctest_uwb_imu_pl_gtest_test_history_fault_parameterization ...   Passed   86.90 sec
+      Start 13: _ctest_uwb_imu_pl_gtest_test_history_summary_extraction
+13/35 Test #13: _ctest_uwb_imu_pl_gtest_test_history_summary_extraction .......   Passed    0.36 sec
+      Start 14: _ctest_uwb_imu_pl_gtest_test_history_summary_lifecycle
+14/35 Test #14: _ctest_uwb_imu_pl_gtest_test_history_summary_lifecycle ........   Passed    0.08 sec
+      Start 15: _ctest_uwb_imu_pl_gtest_test_dual_channel_detector
+15/35 Test #15: _ctest_uwb_imu_pl_gtest_test_dual_channel_detector ............   Passed    0.57 sec
+      Start 16: _ctest_uwb_imu_pl_gtest_test_fde_post_selection
+16/35 Test #16: _ctest_uwb_imu_pl_gtest_test_fde_post_selection ...............   Passed    0.09 sec
+      Start 17: _ctest_uwb_imu_pl_gtest_test_p0_04_risk_oracle
+17/35 Test #17: _ctest_uwb_imu_pl_gtest_test_p0_04_risk_oracle ................   Passed    0.09 sec
+      Start 18: _ctest_uwb_imu_pl_gtest_test_publication_identity
+18/35 Test #18: _ctest_uwb_imu_pl_gtest_test_publication_identity .............   Passed    0.08 sec
+      Start 19: _ctest_uwb_imu_pl_gtest_test_publication_wiring
+19/35 Test #19: _ctest_uwb_imu_pl_gtest_test_publication_wiring ...............   Passed    0.10 sec
+      Start 20: _ctest_uwb_imu_pl_gtest_test_p0_05_publication
+20/35 Test #20: _ctest_uwb_imu_pl_gtest_test_p0_05_publication ................   Passed    0.19 sec
+      Start 21: _ctest_uwb_imu_pl_gtest_test_p0_06_action_search
+21/35 Test #21: _ctest_uwb_imu_pl_gtest_test_p0_06_action_search ..............   Passed   76.76 sec
+      Start 22: _ctest_uwb_imu_pl_gtest_test_p0_07_corrected_exhaustive
+22/35 Test #22: _ctest_uwb_imu_pl_gtest_test_p0_07_corrected_exhaustive .......   Passed   12.69 sec
+      Start 23: test_p0_07_process_oracle
+23/35 Test #23: test_p0_07_process_oracle .....................................   Passed   10.90 sec
+      Start 24: test_p0_07_leaf_protocol
+24/35 Test #24: test_p0_07_leaf_protocol ......................................   Passed  218.70 sec
+      Start 25: test_p0_07_evidence_runner
+25/35 Test #25: test_p0_07_evidence_runner ....................................   Passed   11.42 sec
+      Start 26: test_p0_07_evidence_runner_atomic_failure
+26/35 Test #26: test_p0_07_evidence_runner_atomic_failure .....................   Passed   81.60 sec
+      Start 27: _ctest_uwb_imu_pl_gtest_test_history_summary_pipeline
+27/35 Test #27: _ctest_uwb_imu_pl_gtest_test_history_summary_pipeline .........   Passed    7.36 sec
+      Start 28: _ctest_uwb_imu_pl_rostest_test_realtime_integrity_viz.test
+28/35 Test #28: _ctest_uwb_imu_pl_rostest_test_realtime_integrity_viz.test ....   Passed    2.73 sec
+      Start 29: test_week4_tools
+29/35 Test #29: test_week4_tools ..............................................   Passed    0.71 sec
+      Start 30: test_advisor_report
+30/35 Test #30: test_advisor_report ...........................................   Passed    1.16 sec
+      Start 31: test_round2_tools
+31/35 Test #31: test_round2_tools .............................................   Passed    0.91 sec
+      Start 32: test_gate_d_tools
+32/35 Test #32: test_gate_d_tools .............................................   Passed    0.96 sec
+      Start 33: test_simulation_calibrations
+33/35 Test #33: test_simulation_calibrations ..................................   Passed   29.74 sec
+      Start 34: test_round3_tools
+34/35 Test #34: test_round3_tools .............................................   Passed    0.40 sec
+      Start 35: test_launch_contracts
+35/35 Test #35: test_launch_contracts .........................................   Passed    0.10 sec
+
+100% tests passed, 0 tests failed out of 35
+
+Total Test time (real) = 547.36 sec
+	Command being timed: "env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1 BLIS_NUM_THREADS=1 ctest --output-on-failure -j1"
+	User time (seconds): 551.83
+	System time (seconds): 32.98
+	Percent of CPU this job got: 106%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 9:07.37
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 420072
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 1
+	Minor (reclaiming a frame) page faults: 12681733
+	Voluntary context switches: 173966
+	Involuntary context switches: 4994
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

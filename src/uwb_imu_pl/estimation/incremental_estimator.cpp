@@ -39,6 +39,12 @@
 
 namespace uwb_imu_pl {
 
+struct P106HistoryRootMutationPeer {
+  static void corrupt(IncrementalHistoryRootCache* cache) {
+    cache->corruptTreeRootForTesting();
+  }
+};
+
 struct P103BoundaryGroupCacheValue {
   std::uint64_t fingerprint = 0;
   gtsam::GaussianFactorGraph rows;
@@ -66,6 +72,12 @@ class FixedLagBackend final : public gtsam::IncrementalFixedLagSmoother {
   }
   void enableHistoryRootOracleForTesting(bool enabled) {
     verify_history_root_oracle_ = enabled;
+  }
+  void corruptHistoryTreeRootForTesting() {
+    P106HistoryRootMutationPeer::corrupt(&history_root_);
+  }
+  void resetHistoryTreeForTesting() {
+    history_root_.invalidate("p106 test-only forced full rebuild");
   }
   HistoryRootCacheAudit historyRootAudit() const {
     HistoryRootCacheAudit result = history_root_.audit();
@@ -2604,6 +2616,20 @@ void IncrementalUwbImuEstimator::enableHistoryRootOracleForTesting(
     bool enabled) {
   if (fixed_lag_backend_)
     fixed_lag_backend_->enableHistoryRootOracleForTesting(enabled);
+}
+
+void IncrementalUwbImuEstimator::corruptHistoryTreeRootForTesting() {
+  if (!fixed_lag_backend_) {
+    throw std::logic_error("history root mutation requires fixed lag");
+  }
+  fixed_lag_backend_->corruptHistoryTreeRootForTesting();
+}
+
+void IncrementalUwbImuEstimator::resetHistoryTreeForTesting() {
+  if (!fixed_lag_backend_) {
+    throw std::logic_error("history root reset requires fixed lag");
+  }
+  fixed_lag_backend_->resetHistoryTreeForTesting();
 }
 
 void IncrementalUwbImuEstimator::queryCurrentState() {

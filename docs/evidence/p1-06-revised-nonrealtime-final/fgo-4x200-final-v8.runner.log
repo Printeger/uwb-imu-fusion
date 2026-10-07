@@ -1,0 +1,6 @@
+analyzed 4 runs; summary=/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/fgo-4x200-final-v8/validation_summary.json
+PASS off__noiseless__e200__s20260901__r1 0.366s
+PASS off__nominal__e200__s20260901__r1 0.286s
+PASS off__initial_error__e200__s20260901__r1 0.361s
+PASS off__degenerate__e200__s20260901__r1 0.342s
+completed=4 failures=0 output=/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/fgo-4x200-final-v8

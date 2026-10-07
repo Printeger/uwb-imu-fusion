@@ -1,0 +1,1801 @@
+{
+  "additive_diagnostic": "diagnostic_stages.csv candidate_audit reason funnel",
+  "after": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/gate24-final-v8/run2",
+  "allowed_semantic_delta": "none in frozen numerical/output files",
+  "audit_exact_fields": [
+    "watchdog_reason",
+    "watchdog_sensor_delta_ns",
+    "watchdog_sensor_elapsed_ns",
+    "watchdog_sensor_lag_ns",
+    "watchdog_sensor_stale"
+  ],
+  "before": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run2",
+  "files": {
+    "bridge.csv": {
+      "after_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+      "before_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+      "mismatches": [],
+      "rows": 0,
+      "status": "PASS"
+    },
+    "candidates.csv": {
+      "after_sha256": "3bea70d9af1f22d427efde95937a45bb944c64b5fa58299f56e55602550a77b1",
+      "before_sha256": "e80335a486cd4531dd9d5aa27b720df601de2e42dcdedfa979c64433eec5e00e",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "diagnostic_attempts.csv": {
+      "after_sha256": "63ebbf129c0b899b7b451c628fbca59ae19b80e96f26421d28462f50cc157adf",
+      "before_sha256": "9627cca3aee08802654380bacbb345b7e62dbca1d4e35f7a9ab1434997cc9b39",
+      "mismatches": [
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "4595095",
+          "before": "0",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "71481930",
+          "before": "63165392",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 5
+        },
+        {
+          "after": "251432192",
+          "before": "227111256",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 5
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 6
+        },
+        {
+          "after": "602238132",
+          "before": "530845195",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 6
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 7
+        },
+        {
+          "after": "1169781116",
+          "before": "1052289167",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 7
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 8
+        },
+        {
+          "after": "1972186545",
+          "before": "1825081558",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 8
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 9
+        },
+        {
+          "after": "3175126675",
+          "before": "2948588818",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 9
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 10
+        },
+        {
+          "after": "4759855767",
+          "before": "4458429547",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 10
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 11
+        },
+        {
+          "after": "6857454240",
+          "before": "6494749252",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 11
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 12
+        },
+        {
+          "after": "12761693971305021528",
+          "before": "1668204601344561976",
+          "field": "publication_history_summary_id",
+          "kind": "value",
+          "row": 12
+        },
+        {
+          "after": "9194967739",
+          "before": "8726841883",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 12
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 13
+        },
+        {
+          "after": "3173402232143476797",
+          "before": "7750193792930614952",
+          "field": "publication_history_summary_id",
+          "kind": "value",
+          "row": 13
+        },
+        {
+          "after": "10131489973",
+          "before": "9640635805",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 13
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 14
+        },
+        {
+          "after": "17343609759251125313",
+          "before": "10493874188089982455",
+          "field": "publication_history_summary_id",
+          "kind": "value",
+          "row": 14
+        },
+        {
+          "after": "11233983665",
+          "before": "10738634960",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 14
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 15
+        },
+        {
+          "after": "9349456301592934755",
+          "before": "7179758202508784779",
+          "field": "publication_history_summary_id",
+          "kind": "value",
+          "row": 15
+        },
+        {
+          "after": "12570297093",
+          "before": "12044168031",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 15
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 16
+        },
+        {
+          "after": "17781008912859137030",
+          "before": "15357755226667432704",
+          "field": "publication_history_summary_id",
+          "kind": "value",
+          "row": 16
+        },
+        {
+          "after": "14145770894",
+          "before": "13604524487",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 16
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 17
+        },
+        {
+          "after": "16683701438365112641",
+          "before": "2923661273206682671",
+          "field": "publication_history_summary_id",
+          "kind": "value",
+          "row": 17
+        },
+        {
+          "after": "16019263806",
+          "before": "15469800375",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 17
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 18
+        },
+        {
+          "after": "7229993691194612103",
+          "before": "7230935819099039268",
+          "field": "publication_history_summary_id",
+          "kind": "value",
+          "row": 18
+        },
+        {
+          "after": "18227700641",
+          "before": "17671626713",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 18
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 19
+        },
+        {
+          "after": "10612665910937047347",
+          "before": "16885878319772370663",
+          "field": "publication_history_summary_id",
+          "kind": "value",
+          "row": 19
+        },
+        {
+          "after": "20831446765",
+          "before": "20279161280",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 19
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 20
+        },
+        {
+          "after": "4219508618905533763",
+          "before": "14743753363409897357",
+          "field": "publication_history_summary_id",
+          "kind": "value",
+          "row": 20
+        },
+        {
+          "after": "23832121816",
+          "before": "23334483459",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 20
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 21
+        },
+        {
+          "after": "1335225546853370641",
+          "before": "451259521702538451",
+          "field": "publication_history_summary_id",
+          "kind": "value",
+          "row": 21
+        },
+        {
+          "after": "27423261235",
+          "before": "26919815336",
+          "field": "watchdog_sensor_lag_ns",
+          "kind": "value",
+          "row": 21
+        },
+        {
+          "after": "PUBLICATION_DEADLINE_MISSED",
+          "before": "FINISH_DEADLINE_MISSED",
+          "field": "publication_refusal",
+          "kind": "value",
+          "row": 22
+        }
+      ],
+      "rows": 45,
+      "status": "FAIL"
+    },
+    "diagnostic_candidates.csv": {
+      "after_sha256": "0fb26230d14d13de9d811131973348b29a199f9acdb5dbd3e1ec65cc5f4c6b5e",
+      "before_sha256": "f53109238d0ef7b7f9d43dc95df2fd40d3b39e45d51dc981776b3d20a7ebe9d2",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "diagnostic_coverage.csv": {
+      "after_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+      "before_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+      "mismatches": [],
+      "rows": 0,
+      "status": "PASS"
+    },
+    "diagnostic_history_summary.csv": {
+      "after_sha256": "ea6d9daf81d219a64a3cbf1adaa1a9a2762ecb7e7aafa6860c9ec8dca5b4ff6f",
+      "before_sha256": "0d33b2ac95c5f83d9967c1f2702f83eb3325c11ced66a5ae44fe2d8a746d276b",
+      "mismatches": [
+        {
+          "after": "12761693971305021528",
+          "before": "1668204601344561976",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 12
+        },
+        {
+          "after": "3173402232143476797",
+          "before": "7750193792930614952",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 13
+        },
+        {
+          "after": "17343609759251125313",
+          "before": "10493874188089982455",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 14
+        },
+        {
+          "after": "9349456301592934755",
+          "before": "7179758202508784779",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 15
+        },
+        {
+          "after": "17781008912859137030",
+          "before": "15357755226667432704",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 16
+        },
+        {
+          "after": "16683701438365112641",
+          "before": "2923661273206682671",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 17
+        },
+        {
+          "after": "7229993691194612103",
+          "before": "7230935819099039268",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 18
+        },
+        {
+          "after": "10612665910937047347",
+          "before": "16885878319772370663",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 19
+        },
+        {
+          "after": "4219508618905533763",
+          "before": "14743753363409897357",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 20
+        },
+        {
+          "after": "1335225546853370641",
+          "before": "451259521702538451",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 21
+        },
+        {
+          "after": "15866630358306212491",
+          "before": "16726875772226872306",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 22
+        },
+        {
+          "after": "10077113739613739568",
+          "before": "8175098158820548497",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 23
+        },
+        {
+          "after": "13532251701639377927",
+          "before": "7931716420409951521",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 24
+        },
+        {
+          "after": "4590304235755958993",
+          "before": "8576982657082501029",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 25
+        },
+        {
+          "after": "6539575675417766806",
+          "before": "9507093284648901258",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 26
+        },
+        {
+          "after": "18240760605550949792",
+          "before": "16777910421501621315",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 27
+        },
+        {
+          "after": "8282465598815188856",
+          "before": "14823077443860963275",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 28
+        },
+        {
+          "after": "18219937585327745342",
+          "before": "6115801752477813902",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 29
+        },
+        {
+          "after": "8264306198185919818",
+          "before": "44517169930282505",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 30
+        },
+        {
+          "after": "14448061771498354393",
+          "before": "9952197080313974771",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 31
+        },
+        {
+          "after": "168466883203939623",
+          "before": "11173593214915828214",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 32
+        },
+        {
+          "after": "1423308845959991872",
+          "before": "7591966664489312411",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 33
+        },
+        {
+          "after": "560938495201260167",
+          "before": "16644773512291851137",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 34
+        },
+        {
+          "after": "4256336844252964083",
+          "before": "3533785260542797043",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 35
+        },
+        {
+          "after": "8254014853222736844",
+          "before": "11379278119909379024",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 36
+        },
+        {
+          "after": "6063595291881177170",
+          "before": "3562547147044141773",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 37
+        },
+        {
+          "after": "13493704585096707419",
+          "before": "1828268734397488962",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 38
+        },
+        {
+          "after": "4553305849042395143",
+          "before": "7354227289555061194",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 39
+        },
+        {
+          "after": "975242830489377315",
+          "before": "2028125611642362392",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 40
+        },
+        {
+          "after": "940723555895745320",
+          "before": "9058038981883649865",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 41
+        },
+        {
+          "after": "9347340439881825923",
+          "before": "1742672976107157029",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 42
+        },
+        {
+          "after": "9040424140377684722",
+          "before": "16193054901010036025",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 43
+        },
+        {
+          "after": "12652278895110964037",
+          "before": "14442885045848754276",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 44
+        },
+        {
+          "after": "11855972465930648611",
+          "before": "1332392862347595626",
+          "field": "version_digest",
+          "kind": "value",
+          "row": 45
+        }
+      ],
+      "rows": 45,
+      "status": "FAIL"
+    },
+    "diagnostic_snapshot_identity.csv": {
+      "after_sha256": "c27aec642aeba75743719addc25f9636c237ed590fa2fc7351d702beb96dc1f4",
+      "before_sha256": "bb9a588a0fc2e752d36cf643af281ccc66910a14afa7a75b7bb957e0a0ed16c6",
+      "mismatches": [
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "frozen_block_whitener:470752ab9dd07759",
+          "before": "frozen_block_whitener:e52f3459755ae8fc",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "0410c1fac059d676",
+          "before": "aaac056f19c2c580",
+          "field": "identity_digest",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "frozen_block_whitener:7519f59e2205dc75",
+          "before": "frozen_block_whitener:53a057714ce0685e",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "fe6f106255c98030",
+          "before": "7ce4a4e35de93336",
+          "field": "identity_digest",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "frozen_block_whitener:3fbac14032e7c303",
+          "before": "frozen_block_whitener:869b14a7de84808b",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "3a0195ba45c032f0",
+          "before": "9661d2fbb554f239",
+          "field": "identity_digest",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "frozen_block_whitener:2d5b9716c4a96421",
+          "before": "frozen_block_whitener:91410bb6d801c9d4",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "0db49dc505b81ab2",
+          "before": "87214ef01a0d086e",
+          "field": "identity_digest",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 5
+        },
+        {
+          "after": "frozen_block_whitener:1d84c5334d2b1b77",
+          "before": "frozen_block_whitener:18f19e7ac8a5b72e",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 5
+        },
+        {
+          "after": "806d1800d35059f7",
+          "before": "74d756f2176c7726",
+          "field": "identity_digest",
+          "kind": "value",
+          "row": 5
+        },
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 6
+        },
+        {
+          "after": "frozen_block_whitener:2980c2711110f54e",
+          "before": "frozen_block_whitener:f9c7ddea3949791d",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 6
+        },
+        {
+          "after": "0f8afbb824e27cb8",
+          "before": "45880f47ade2827e",
+          "field": "identity_digest",
+          "kind": "value",
+          "row": 6
+        },
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 7
+        },
+        {
+          "after": "frozen_block_whitener:a12bb0f2b45aa8ee",
+          "before": "frozen_block_whitener:97028c2f0f4d413f",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 7
+        },
+        {
+          "after": "eb53413160eb826d",
+          "before": "cfc1702850eb3f49",
+          "field": "identity_digest",
+          "kind": "value",
+          "row": 7
+        },
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 8
+        },
+        {
+          "after": "frozen_block_whitener:de3ea5985f8e3177",
+          "before": "frozen_block_whitener:3b46a953c0201c69",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 8
+        },
+        {
+          "after": "e794f4f4f564d7ce",
+          "before": "1688466c6c08e823",
+          "field": "identity_digest",
+          "kind": "value",
+          "row": 8
+        },
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 9
+        },
+        {
+          "after": "frozen_block_whitener:335d4046691c63b1",
+          "before": "frozen_block_whitener:ebade25db97639f7",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 9
+        },
+        {
+          "after": "7e445d160cf98f19",
+          "before": "6191bd8e5f293b96",
+          "field": "identity_digest",
+          "kind": "value",
+          "row": 9
+        },
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 10
+        },
+        {
+          "after": "frozen_block_whitener:8f693826ce57f878",
+          "before": "frozen_block_whitener:d35cd28c56041a84",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 10
+        },
+        {
+          "after": "0b1c1b29f71b786d",
+          "before": "cc5f14ab972d1f1b",
+          "field": "identity_digest",
+          "kind": "value",
+          "row": 10
+        },
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 11
+        },
+        {
+          "after": "frozen_block_whitener:f7b521c9b13c53bf",
+          "before": "frozen_block_whitener:2bc8f486f1cc0083",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 11
+        },
+        {
+          "after": "dc22788c3655a19a",
+          "before": "ffd6bd294e74dfa9",
+          "field": "identity_digest",
+          "kind": "value",
+          "row": 11
+        },
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 12
+        },
+        {
+          "after": "frozen_block_whitener:2e556b143949df93",
+          "before": "frozen_block_whitener:3aa5586061dde2ae",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 12
+        },
+        {
+          "after": "49e0fe27a9e50011",
+          "before": "200483f771995c93",
+          "field": "identity_digest",
+          "kind": "value",
+          "row": 12
+        },
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 13
+        },
+        {
+          "after": "frozen_block_whitener:36845be50ec864fe",
+          "before": "frozen_block_whitener:24ffdc9a6d18fd22",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 13
+        },
+        {
+          "after": "182983cf99833f2a",
+          "before": "178a08253f5f0663",
+          "field": "identity_digest",
+          "kind": "value",
+          "row": 13
+        },
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 14
+        },
+        {
+          "after": "frozen_block_whitener:509c43212df4d453",
+          "before": "frozen_block_whitener:357b27e9cc61aeb1",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 14
+        },
+        {
+          "after": "d45683fc41a5d604",
+          "before": "f6ac05e5b4c8a04f",
+          "field": "identity_digest",
+          "kind": "value",
+          "row": 14
+        },
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 15
+        },
+        {
+          "after": "frozen_block_whitener:cf7d97a54510f666",
+          "before": "frozen_block_whitener:66949d9657b151cf",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 15
+        },
+        {
+          "after": "ecca8ca971f6f11a",
+          "before": "480723e1699a38db",
+          "field": "identity_digest",
+          "kind": "value",
+          "row": 15
+        },
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 16
+        },
+        {
+          "after": "frozen_block_whitener:e69dd129783b0eb3",
+          "before": "frozen_block_whitener:df960e027bb7d3e4",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 16
+        },
+        {
+          "after": "4c0e1cccf853f5b8",
+          "before": "8dd9b4735b1f1ae8",
+          "field": "identity_digest",
+          "kind": "value",
+          "row": 16
+        },
+        {
+          "after": "aa071bcf07bc4984",
+          "before": "daf9ab69391530ed",
+          "field": "config_digest",
+          "kind": "value",
+          "row": 17
+        },
+        {
+          "after": "frozen_block_whitener:f58347951e805bf2",
+          "before": "frozen_block_whitener:6abdd08801a27658",
+          "field": "whitening_id",
+          "kind": "value",
+          "row": 17
+        }
+      ],
+      "rows": 45,
+      "status": "FAIL"
+    },
+    "diagnostic_square_root.csv": {
+      "after_sha256": "48405557394f19c32781be2582c6afd85258a0c6fec2ddada247e7a0f852a31f",
+      "before_sha256": "e4c223b8b95a409860f009ed6d81f895fc71e2cb0bd9c0dfeb52ff788193c95e",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    },
+    "diagnostic_state_steps.csv": {
+      "after_sha256": "f5cc7aab3b51227e8d6a072f0941653288a52e636f139266314dc9d20cc641a9",
+      "before_sha256": "93c0505b72b98d325f0cfdcd8631f33a8025d339a51a266af84f1bbd0d578660",
+      "mismatches": [],
+      "rows": 450,
+      "status": "PASS"
+    },
+    "hypotheses.csv": {
+      "after_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+      "before_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+      "mismatches": [],
+      "rows": 0,
+      "status": "PASS"
+    },
+    "integrity.csv": {
+      "after_sha256": "8a70205a7ad9cdad059aa17637871c794724d40d51f1d3878054ec7bdce1b152",
+      "before_sha256": "695d220d2fb4de5535a35edff002ddf18851bacb8b36c0367e24748834798f22",
+      "mismatches": [
+        {
+          "after": "13613596837680441132",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "12116259004415960502",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "16466224660360238981",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "13304264911534977429",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 5
+        },
+        {
+          "after": "15737370831254615381",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 5
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 6
+        },
+        {
+          "after": "3373101994575402930",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 6
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 7
+        },
+        {
+          "after": "9841000237031675981",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 7
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 8
+        },
+        {
+          "after": "6842541361678240640",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 8
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 9
+        },
+        {
+          "after": "12418909320064810275",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 9
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 10
+        },
+        {
+          "after": "13158505777115457355",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 10
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 11
+        },
+        {
+          "after": "4820559195299283560",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 11
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 12
+        },
+        {
+          "after": "9733227949162560880",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 12
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 13
+        },
+        {
+          "after": "10852246121996788894",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 13
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 14
+        },
+        {
+          "after": "13154346485061243450",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 14
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 15
+        },
+        {
+          "after": "5729911180002357103",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 15
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 16
+        },
+        {
+          "after": "14225209097827657396",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 16
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 17
+        },
+        {
+          "after": "12667244420618061620",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 17
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 18
+        },
+        {
+          "after": "17071788110175088341",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 18
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 19
+        },
+        {
+          "after": "8829686761300337938",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 19
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 20
+        },
+        {
+          "after": "5942787611416554742",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 20
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 21
+        },
+        {
+          "after": "17678843913928997370",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 21
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 22
+        },
+        {
+          "after": "10115297679715193699",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 22
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 23
+        },
+        {
+          "after": "869184858388416903",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 23
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 24
+        },
+        {
+          "after": "588789312837703072",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 24
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 25
+        },
+        {
+          "after": "927581719701195462",
+          "before": "0",
+          "field": "final_packet_digest",
+          "kind": "value",
+          "row": 25
+        },
+        {
+          "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+          "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+          "field": "reason_codes",
+          "kind": "value",
+          "row": 26
+        }
+      ],
+      "rows": 45,
+      "status": "FAIL"
+    },
+    "states.csv": {
+      "after_sha256": "a69fda172fafe113e68894d0fbfb9db4acf44428999f363adf273aa97c7b7ed1",
+      "before_sha256": "25115849c2d6ba975d9ee7b95bc0c39cc0480e70bc63025996c9685b0421d890",
+      "mismatches": [
+        {
+          "after": "0.0313170506093911",
+          "before": "0.0313170506093915",
+          "field": "px",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "0.024548151692641",
+          "before": "0.0245481516926409",
+          "field": "py",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "0.000810036107095422",
+          "before": "0.000810036107094406",
+          "field": "qx",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "0.00036778156223326",
+          "before": "0.000367781562230692",
+          "field": "qy",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "0.500122932160615",
+          "before": "0.500122932160614",
+          "field": "vx",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "0.0956789058118342",
+          "before": "0.0956789058118339",
+          "field": "vz",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "-3.13792079590301e-07",
+          "before": "-3.1379207959032e-07",
+          "field": "bax",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "1.60754876463038e-07",
+          "before": "1.60754876463774e-07",
+          "field": "bay",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "-6.25026548680921e-07",
+          "before": "-6.25026548678872e-07",
+          "field": "baz",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "1.9833718098792e-08",
+          "before": "1.98337180989633e-08",
+          "field": "bgx",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "5.19095034328985e-08",
+          "before": "5.19095034333261e-08",
+          "field": "bgy",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "3.42963794859961e-09",
+          "before": "3.42963794859915e-09",
+          "field": "bgz",
+          "kind": "value",
+          "row": 1
+        },
+        {
+          "after": "0.0536828992743031",
+          "before": "0.053682899274304",
+          "field": "px",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "0.0557518485780834",
+          "before": "0.0557518485780841",
+          "field": "py",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "1.21410716467564",
+          "before": "1.21410716467563",
+          "field": "pz",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "-0.000107706839852716",
+          "before": "-0.000107706839854209",
+          "field": "qx",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "0.00280549571438349",
+          "before": "0.00280549571438048",
+          "field": "qy",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "0.0124151618553604",
+          "before": "0.012415161855359",
+          "field": "qz",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "0.487640485976146",
+          "before": "0.487640485976141",
+          "field": "vx",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "0.57302811140229",
+          "before": "0.573028111402292",
+          "field": "vy",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "0.0851194540231897",
+          "before": "0.085119454023193",
+          "field": "vz",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "2.77234464667471e-05",
+          "before": "2.77234464667489e-05",
+          "field": "bax",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "-3.76037706663678e-05",
+          "before": "-3.76037706663657e-05",
+          "field": "bay",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "2.34064446854092e-05",
+          "before": "2.34064446853942e-05",
+          "field": "baz",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "3.41720816560724e-07",
+          "before": "3.41720816561606e-07",
+          "field": "bgx",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "-3.24035869760278e-07",
+          "before": "-3.24035869755587e-07",
+          "field": "bgy",
+          "kind": "value",
+          "row": 2
+        },
+        {
+          "after": "0.0779262945095539",
+          "before": "0.0779262945095548",
+          "field": "px",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "0.0830947927528614",
+          "before": "0.0830947927528625",
+          "field": "py",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "0.00239427139094736",
+          "before": "0.00239427139094415",
+          "field": "qx",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "0.00139320970104847",
+          "before": "0.00139320970104315",
+          "field": "qy",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "0.0121533816818056",
+          "before": "0.0121533816818033",
+          "field": "qz",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "0.485064282015648",
+          "before": "0.485064282015638",
+          "field": "vx",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "0.56043611349632",
+          "before": "0.560436113496324",
+          "field": "vy",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "0.0900231185439718",
+          "before": "0.0900231185439805",
+          "field": "vz",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "3.46675254725445e-05",
+          "before": "3.46675254714208e-05",
+          "field": "bax",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "-9.00529900497621e-07",
+          "before": "-9.00529900497411e-07",
+          "field": "bay",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "8.46758743197191e-06",
+          "before": "8.4675874319376e-06",
+          "field": "baz",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "5.74422615078757e-08",
+          "before": "5.74422615087577e-08",
+          "field": "bgx",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "8.99872101521275e-08",
+          "before": "8.99872101568195e-08",
+          "field": "bgy",
+          "kind": "value",
+          "row": 3
+        },
+        {
+          "after": "0.100116072892948",
+          "before": "0.100116072892947",
+          "field": "px",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "0.111593386154282",
+          "before": "0.111593386154278",
+          "field": "py",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "0.00317036890749677",
+          "before": "0.00317036890749791",
+          "field": "qx",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "0.000378389685613962",
+          "before": "0.000378389685606127",
+          "field": "qy",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "0.0153892231889062",
+          "before": "0.0153892231889212",
+          "field": "qz",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "0.463646552983741",
+          "before": "0.46364655298372",
+          "field": "vx",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "0.564879413177343",
+          "before": "0.564879413177304",
+          "field": "vy",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "0.0825083759068865",
+          "before": "0.0825083759068801",
+          "field": "vz",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "9.50479174849503e-05",
+          "before": "9.50479174850019e-05",
+          "field": "bax",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "-1.60902414010804e-05",
+          "before": "-1.60902413998184e-05",
+          "field": "bay",
+          "kind": "value",
+          "row": 4
+        },
+        {
+          "after": "3.5770444717525e-05",
+          "before": "3.57704447175633e-05",
+          "field": "baz",
+          "kind": "value",
+          "row": 4
+        }
+      ],
+      "rows": 45,
+      "status": "FAIL"
+    },
+    "transactions.csv": {
+      "after_sha256": "57f048a0b79f7bf8e082723d7ca11b1148cbdcbfbfe37a8a5544a7ffc84a5ff9",
+      "before_sha256": "57f048a0b79f7bf8e082723d7ca11b1148cbdcbfbfe37a8a5544a7ffc84a5ff9",
+      "mismatches": [],
+      "rows": 45,
+      "status": "PASS"
+    }
+  },
+  "performance_ignores": {
+    "bridge.csv": [],
+    "candidates.csv": [
+      "evaluation_wall_ms"
+    ],
+    "diagnostic_attempts.csv": [
+      "base_llt",
+      "base_state_solves",
+      "base_svd",
+      "cache_entries",
+      "candidate_inner_llt",
+      "candidate_reference_svd",
+      "covariance_rhs_columns",
+      "covariance_rhs_solves",
+      "detector_reference_qr",
+      "fault_gram_eigen",
+      "fault_gram_ldlt",
+      "fault_gram_svd",
+      "generic_fault_gram_fallback",
+      "hypothesis_parallel_blocks",
+      "hypothesis_shared_hits",
+      "hypothesis_shared_misses",
+      "llt_state_solve_calls",
+      "low_dim_fault_gram",
+      "spectral_rhs_columns",
+      "spectral_rhs_solves",
+      "statistical_cache_hits",
+      "statistical_cache_misses",
+      "svd_state_solve_calls",
+      "watchdog_wall_elapsed_ns"
+    ],
+    "diagnostic_candidates.csv": [
+      "bridge_ms",
+      "cache_hits",
+      "covariance_solve_count",
+      "fault_map_ms",
+      "kernel_ms",
+      "pl_ms",
+      "post_ms"
+    ],
+    "diagnostic_coverage.csv": [],
+    "diagnostic_history_summary.csv": [],
+    "diagnostic_snapshot_identity.csv": [],
+    "diagnostic_square_root.csv": [],
+    "diagnostic_state_steps.csv": [],
+    "hypotheses.csv": [],
+    "integrity.csv": [],
+    "states.csv": [],
+    "transactions.csv": []
+  },
+  "schema": "uwb-imu-pl/p1-06-gate24-audit-equivalence/v1",
+  "status": "FAIL"
+}

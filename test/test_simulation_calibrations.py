@@ -16,12 +16,14 @@ from analyze_fde_profile_runs import analyze_run, rows
 from compare_p1_04_outputs import compare_directories
 from summarize_p1_06_simulation_acceptance import (
     acceptance_path, distribution, expected_run_identity, fgo_gates, identity_failures,
-    indexed, proof_partition,
-    publication_failures, revised_nonrealtime_pass, validate_gate24)
+    fault_injection_failures, index_attempt_timings, indexed, proof_partition,
+    profile_quality_gates, publication_failures, revised_nonrealtime_pass,
+    serialized_ms_tolerance, validate_gate24)
 from run_fde_profile_validation import (
     GATE24_GOLDEN_ANCHOR, _resolve_golden_reference_manifest,
     canonical_golden_manifest_sha256, golden_reference_manifest,
-    immutable_identity, resume_reusable, terminal_artifacts_match)
+    fault_schedule, immutable_identity, resume_reusable,
+    terminal_artifacts_match, validate_profile_matrix_protocol)
 
 
 MANIFEST = ROOT / "config/p1_06_simulation_calibrations.json"
@@ -218,6 +220,78 @@ class SimulationCalibrationTest(unittest.TestCase):
         self.assertEqual(result["hardware_formal_qualification"],
                          "CLOSED/NOT_CLAIMED")
 
+    def test_revised_matrix_is_exact_38x20_with_scaled_fault_segments(self):
+        protocol = yaml.safe_load(
+            (ROOT / "config/fde_profiles_validation.yaml").read_text())
+        contract = validate_profile_matrix_protocol(protocol)
+        self.assertEqual(contract["expected_runs"], 38)
+        self.assertEqual(contract["planned_attempts"], 760)
+        self.assertEqual(fault_schedule("uwb_fault", 300), {
+            "fault_expected": True, "epochs": 300, "pre": 100,
+            "begin": 101, "end": 200, "fault": 100, "post": 100})
+        self.assertEqual(fault_schedule("uwb_fault", 20), {
+            "fault_expected": True, "epochs": 20, "pre": 6,
+            "begin": 7, "end": 13, "fault": 7, "post": 7})
+        self.assertEqual(fault_schedule("history_uwb", 20)["fault"], 1)
+        self.assertEqual(fault_schedule("uwb_recovery", 20)["post"], 13)
+        self.assertEqual(fault_schedule("nominal", 20)["pre"], 20)
+
+    def test_revised_matrix_mutation_cannot_be_first_20_no_fault_rows(self):
+        protocol = yaml.safe_load(
+            (ROOT / "config/fde_profiles_validation.yaml").read_text())
+        protocol["profile_matrix"]["schedule"]["standard_interval"][
+            "scaled"]["begin"] = 21
+        with self.assertRaisesRegex(ValueError, "schedule mismatch"):
+            validate_profile_matrix_protocol(protocol)
+
+    def test_fault_truth_requires_actual_nonempty_scaled_injection(self):
+        schedule = fault_schedule("uwb_fault", 20)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fields = ("timestamp_ns", "active", "sensor_type", "epoch_begin",
+                      "epoch_end", "injected_value")
+            truth = root / "fault_truth.csv"
+            with truth.open("w", newline="") as stream:
+                writer = csv.DictWriter(stream, fieldnames=fields)
+                writer.writeheader()
+                for epoch in range(7, 14):
+                    writer.writerow({"timestamp_ns": epoch * 50_000_000,
+                                     "active": 1, "sensor_type": "UWB",
+                                     "epoch_begin": 7, "epoch_end": 13,
+                                     "injected_value": 1.0})
+            (root / "resolved_config.yaml").write_text(
+                "benchmark_fault_schedule_algorithm: "
+                "proportional_thirds_min5_history_tail25_v1\n"
+                "benchmark_fault_schedule_reference_epochs: 300\n"
+                "benchmark_fault_expected: true\n"
+                "benchmark_fault_reference_begin_epoch_1based: 101\n"
+                "benchmark_fault_reference_end_epoch_1based: 200\n"
+                "benchmark_fault_effective_epochs: 20\n"
+                "benchmark_fault_effective_begin_epoch_1based: 7\n"
+                "benchmark_fault_effective_end_epoch_1based: 13\n")
+            command = " ".join((
+                "fault_schedule_algorithm:=proportional_thirds_min5_history_tail25_v1",
+                "fault_schedule_reference_epochs:=300",
+                "fault_schedule_reference_begin_epoch_1based:=101",
+                "fault_schedule_reference_end_epoch_1based:=200",
+                "fault_schedule_effective_epochs:=20",
+                "fault_schedule_effective_begin_epoch_1based:=7",
+                "fault_schedule_effective_end_epoch_1based:=13"))
+            (root / "run_manifest.json").write_text(json.dumps(
+                {"execution_command": command}))
+            failures, evidence = fault_injection_failures(
+                root, "uwb_fault", schedule)
+            self.assertEqual(failures, [])
+            self.assertEqual(evidence["injected_epochs"], list(range(7, 14)))
+            with truth.open(newline="") as stream:
+                rows_payload = list(csv.DictReader(stream))[:-1]
+            with truth.open("w", newline="") as stream:
+                writer = csv.DictWriter(stream, fieldnames=fields)
+                writer.writeheader(); writer.writerows(rows_payload)
+            failures, _ = fault_injection_failures(root, "uwb_fault", schedule)
+            self.assertTrue(any("actual injected epochs differ" in value
+                                for value in failures))
+
     def test_digest_mutation_fails_closed(self):
         payload = json.loads(MANIFEST.read_text(encoding="utf-8"))
         payload["profiles"][0]["runtime_config"]["sha256"] = "0" * 64
@@ -278,6 +352,11 @@ class SimulationCalibrationTest(unittest.TestCase):
             {"generated_actions": "0", "kernel_evaluated_actions": "0"},
             [], {"fde_status": "FDE_DISABLED"}), "fde_disabled")
         self.assertEqual(acceptance_path(complete, keep_all), "normal")
+        encoded_keep_all = [dict(
+            keep_all[0],
+            physical_source_ids=(
+                "ACTION_OCCURRENCE_V1|semantic=8:4b4545505f414c4c;"))]
+        self.assertEqual(acceptance_path(complete, encoded_keep_all), "normal")
         # Post/PL failure must stay in the normal realtime denominator.
         incomplete = dict(complete, post_passed_actions="0",
                           pl_evaluated_actions="0")
@@ -361,6 +440,40 @@ class SimulationCalibrationTest(unittest.TestCase):
         failures = []
         indexed([{"input_attempt_id": "1"}, {"input_attempt_id": "1"}],
                 "input_attempt_id", failures, "attempts")
+        self.assertTrue(failures)
+
+    def test_timing_links_bind_rejected_attempts_with_repeated_epoch(self):
+        timing = [
+            {"timestamp_ns": "10", "epoch": "7", "stage": "core_total",
+             "wall_ms": "1.0"},
+            {"timestamp_ns": "10", "epoch": "7", "stage": "core_total",
+             "wall_ms": "2.0"},
+        ]
+        links = [
+            {"timing_row": "1", "input_attempt_id": "8",
+             "transaction_id": "8", "window_id": "8",
+             "stage": "core_total"},
+            {"timing_row": "2", "input_attempt_id": "9",
+             "transaction_id": "9", "window_id": "9",
+             "stage": "core_total"},
+        ]
+        failures = []
+        indexed_timing, identities = index_attempt_timings(
+            timing, links, failures)
+        self.assertEqual(failures, [])
+        self.assertEqual(indexed_timing[8]["core_total"]["wall_ms"], "1.0")
+        self.assertEqual(indexed_timing[9]["core_total"]["wall_ms"], "2.0")
+        self.assertEqual(identities[9], {(9, 9)})
+        # FDE-off has the legitimate sentinel window 0 and must retain all
+        # timing rows in the full denominator.
+        links[0]["window_id"] = "0"
+        failures = []
+        _, identities = index_attempt_timings(timing, links, failures)
+        self.assertEqual(failures, [])
+        self.assertEqual(identities[8], {(8, 0)})
+        links[1]["timing_row"] = "1"
+        failures = []
+        index_attempt_timings(timing, links, failures)
         self.assertTrue(failures)
 
     def test_publication_contract_rejects_missing_packet_and_late_protected(self):
@@ -450,6 +563,12 @@ class SimulationCalibrationTest(unittest.TestCase):
             selected_diag, dict(selected_integrity, selected_action_type="OTHER"),
             [winner], False, True, selected_transaction, selected_terminal,
             0.00005))
+
+    def test_terminal_timing_respects_csv_serialization_precision(self):
+        # timing.csv carries six significant digits; terminal_packets.csv
+        # carries the authoritative integer nanoseconds.
+        self.assertGreaterEqual(serialized_ms_tolerance(499902.0), 0.5)
+        self.assertGreaterEqual(serialized_ms_tolerance(14.653), 0.00005)
 
     def test_gate24_rejects_top_level_only_pass(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -865,6 +984,38 @@ class SimulationCalibrationTest(unittest.TestCase):
             result = fgo_gates(analyzed, protocol["gates"], protocol,
                                calibrations, None, root / "path")
             self.assertEqual(result["status"], "FAIL")
+
+    def test_synthetic_quality_does_not_claim_hardware_protected_pl(self):
+        protocol = yaml.safe_load(
+            (ROOT / "config/fde_profiles_validation.yaml").read_text())
+        run = {
+            "run_id": "joint_order2__nominal__e20__s20260901__r1",
+            "profile": "joint_order2", "scenario": "nominal",
+            "observed_attempts": 20, "valid_states": 20,
+            "finite_pl": 0, "within_alert_limits": 0,
+        }
+        result = profile_quality_gates([run], protocol)
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["checks"], {
+            f"{run['run_id']}:valid_new_state_fraction": True})
+        self.assertIn("NOT_APPLICABLE_HARDWARE_GATED",
+                      result["not_applicable"][
+                          "active_nominal_finite_pl_fraction_min"])
+
+    def test_formal_profile_quality_still_requires_protected_pl(self):
+        protocol = yaml.safe_load(
+            (ROOT / "config/fde_profiles_validation.yaml").read_text())
+        protocol["formal_eligibility"]["expected"] = True
+        protocol["acceptance_paths"]["hardware_formal_qualification"] = "OPEN"
+        run = {
+            "run_id": "joint_order2__nominal__e20__s20260901__r1",
+            "profile": "joint_order2", "scenario": "nominal",
+            "observed_attempts": 20, "valid_states": 20,
+            "finite_pl": 0, "within_alert_limits": 0,
+        }
+        result = profile_quality_gates([run], protocol)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertFalse(result["checks"][f"{run['run_id']}:finite_pl_fraction"])
 
 
 if __name__ == "__main__":

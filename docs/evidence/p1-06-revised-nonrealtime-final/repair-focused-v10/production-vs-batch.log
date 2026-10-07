@@ -1,0 +1,12 @@
+Note: Google Test filter = UwbImuIncremental.FiveSecondIsamMatchesBatchPoseAndMarginal
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from UwbImuIncremental
+[ RUN      ] UwbImuIncremental.FiveSecondIsamMatchesBatchPoseAndMarginal
+[P106-PRODUCTION-BATCH] epochs=50 pose_tangent_delta=5.8035018222787703e-16 marginal_relative_error=1.0536929884633784e-09
+[       OK ] UwbImuIncremental.FiveSecondIsamMatchesBatchPoseAndMarginal (115 ms)
+[----------] 1 test from UwbImuIncremental (115 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (115 ms total)
+[  PASSED  ] 1 test.

@@ -5,13 +5,18 @@
 #include <gtest/gtest.h>
 
 #include <Eigen/LU>
+#include <Eigen/SVD>
 
 #include <gtsam/inference/Symbol.h>
+#include <gtsam/linear/GaussianFactorGraph.h>
+#include <gtsam/linear/VectorValues.h>
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 #include <gtsam/nonlinear/Marginals.h>
 #include <gtsam/slam/PriorFactor.h>
 
 #include <cmath>
+#include <limits>
+#include <set>
 
 namespace {
 
@@ -93,6 +98,66 @@ uwb_imu_pl::IntegrityConfig config() {
   return config;
 }
 
+Eigen::Vector3d auditPosition(double t) {
+  return {2.0 * std::sin(.25 * t), 1.5 * std::sin(.37 * t),
+          1.2 + .5 * std::sin(.19 * t)};
+}
+
+Eigen::Vector3d auditVelocity(double t) {
+  return {.5 * std::cos(.25 * t), .555 * std::cos(.37 * t),
+          .095 * std::cos(.19 * t)};
+}
+
+Eigen::Vector3d auditAcceleration(double t) {
+  return {-.125 * std::sin(.25 * t), -.20535 * std::sin(.37 * t),
+          -.01805 * std::sin(.19 * t)};
+}
+
+Eigen::Quaterniond auditOrientation(double t) {
+  const double roll = .12 * std::sin(.31 * t);
+  const double pitch = .10 * std::sin(.27 * t);
+  const double yaw = .35 * std::sin(.21 * t) + .08 * t;
+  return Eigen::Quaterniond(
+      Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY()) *
+      Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX()));
+}
+
+Eigen::Vector3d auditAngularVelocity(double t) {
+  constexpr double kEpsilon = 1e-6;
+  Eigen::Quaterniond delta =
+      auditOrientation(t).conjugate() * auditOrientation(t + kEpsilon);
+  delta.normalize();
+  const Eigen::AngleAxisd axis_angle(delta);
+  return axis_angle.axis() * axis_angle.angle() / kEpsilon;
+}
+
+uwb_imu_pl::UwbBatch auditBatch(std::size_t epoch, double t,
+                                const Eigen::Vector3d& lever) {
+  static const std::vector<Eigen::Vector3d> anchors = {
+      {-5, -5, 1}, {-5, -5, 5}, {-5, 5, 1}, {-5, 5, 5},
+      {5, -5, 1},  {5, -5, 5},  {5, 5, 1},  {5, 5, 5}};
+  uwb_imu_pl::UwbBatch batch;
+  batch.id = uwb_imu_pl::BatchId(epoch);
+  batch.timestamp = uwb_imu_pl::TimestampNs(
+      static_cast<std::int64_t>(std::llround(t * 1e9)));
+  batch.covariance_model_id = "p1_06_full_graph_oracle";
+  const Eigen::Vector3d antenna =
+      auditPosition(t) + auditOrientation(t) * lever;
+  for (std::size_t i = 0; i < anchors.size(); ++i) {
+    uwb_imu_pl::UwbMeasurement m;
+    m.id = uwb_imu_pl::MeasurementId(epoch * 100 + i + 1);
+    m.factor_id = uwb_imu_pl::FactorId(m.id.value());
+    m.anchor_id = uwb_imu_pl::AnchorId(i + 1);
+    m.timestamp = batch.timestamp;
+    m.anchor_position_m = anchors[i];
+    m.range_m = (antenna - anchors[i]).norm();
+    m.sigma_m = 0.1;
+    batch.measurements.push_back(m);
+  }
+  return batch;
+}
+
 }  // namespace
 
 TEST(RealtimeFactors, WorldPositionUsesPoseTangentRotation) {
@@ -128,6 +193,178 @@ TEST(RealtimeFactors, NonzeroLeverArmRangeJacobianMatchesCentralDifference) {
          factor.evaluateError(pose.retract(-delta))) / (2.0 * epsilon);
     EXPECT_TRUE(analytic.col(column).isApprox(numerical, 1e-7));
   }
+}
+
+TEST(RealtimeFactors, P106FullTrajectoryBreaksSingleEpochLeverNullDirection) {
+  // This is the complete frozen synthetic model, not the isolated per-epoch
+  // UWB rotational block: initial pose/velocity/bias priors, gravity-aware
+  // CombinedImuFactor intervals (including bias evolution), and non-zero
+  // lever-arm UWB observations all enter the same whitened graph.
+  auto cfg = config();
+  cfg.imu.accelerometer_sigma = 0.0007071067811865475;
+  cfg.imu.gyroscope_sigma = 0.00007071067811865475;
+  const Eigen::Vector3d lever(0.25, -0.10, 0.08);
+  Eigen::Matrix<double, 15, 1> prior_sigmas;
+  prior_sigmas << .1, .1, .1, .5, .5, .5, .5, .5, .5,
+                  .1, .1, .1, .01, .01, .01;
+  auto xkey = [](std::size_t epoch) { return gtsam::Symbol('x', epoch); };
+  auto vkey = [](std::size_t epoch) { return gtsam::Symbol('v', epoch); };
+  auto bkey = [](std::size_t epoch) { return gtsam::Symbol('b', epoch); };
+  auto pose_at = [](double t) {
+    return gtsam::Pose3(gtsam::Rot3(auditOrientation(t).toRotationMatrix()),
+                        gtsam::Point3(auditPosition(t)));
+  };
+  const gtsam::imuBias::ConstantBias zero_bias;
+  gtsam::NonlinearFactorGraph graph;
+  gtsam::NonlinearFactorGraph prior_graph;
+  gtsam::NonlinearFactorGraph imu_graph;
+  gtsam::NonlinearFactorGraph uwb_graph;
+  gtsam::Values values;
+  prior_graph.addPrior(xkey(0), pose_at(0.0),
+                       gtsam::noiseModel::Diagonal::Sigmas(
+                           prior_sigmas.head<6>()));
+  prior_graph.addPrior(vkey(0), gtsam::Vector3(auditVelocity(0.0)),
+                       gtsam::noiseModel::Diagonal::Sigmas(
+                           prior_sigmas.segment<3>(6)));
+  prior_graph.addPrior(bkey(0), zero_bias,
+                       gtsam::noiseModel::Diagonal::Sigmas(
+                           prior_sigmas.tail<6>()));
+  graph.push_back(prior_graph);
+  values.insert(xkey(0), pose_at(0.0));
+  values.insert(vkey(0), gtsam::Vector3(auditVelocity(0.0)));
+  values.insert(bkey(0), zero_bias);
+  auto params = gtsam::PreintegratedCombinedMeasurements::Params::MakeSharedU(
+      cfg.imu.gravity_mps2);
+  params->accelerometerCovariance = Eigen::Matrix3d::Identity() *
+      std::pow(cfg.imu.accelerometer_sigma, 2);
+  params->gyroscopeCovariance = Eigen::Matrix3d::Identity() *
+      std::pow(cfg.imu.gyroscope_sigma, 2);
+  params->integrationCovariance = Eigen::Matrix3d::Identity() * 1e-9;
+  params->biasAccCovariance = Eigen::Matrix3d::Identity() *
+      std::pow(cfg.imu.accelerometer_bias_rw_sigma, 2);
+  params->biasOmegaCovariance = Eigen::Matrix3d::Identity() *
+      std::pow(cfg.imu.gyroscope_bias_rw_sigma, 2);
+
+  constexpr int kEpochs = 12;
+  for (int epoch = 1; epoch <= kEpochs; ++epoch) {
+    gtsam::PreintegratedCombinedMeasurements pim(params, zero_bias);
+    for (int sample = 1; sample <= 10; ++sample) {
+      const double t = (epoch - 1) * .05 + sample * .005;
+      const Eigen::Quaterniond q = auditOrientation(t);
+      pim.integrateMeasurement(
+          q.conjugate() *
+              (auditAcceleration(t) +
+               Eigen::Vector3d(0, 0, cfg.imu.gravity_mps2)),
+          auditAngularVelocity(t), .005);
+    }
+    const double t = epoch * .05;
+    imu_graph.add(gtsam::CombinedImuFactor(
+        xkey(epoch - 1), vkey(epoch - 1), xkey(epoch), vkey(epoch),
+        bkey(epoch - 1), bkey(epoch), pim));
+    uwb_graph.add(boost::make_shared<uwb_imu_pl::UwbPoseBatchFactor>(
+        xkey(epoch), auditBatch(epoch, t, lever), lever));
+    graph.add(imu_graph.back());
+    graph.add(uwb_graph.back());
+    values.insert(xkey(epoch), pose_at(t));
+    values.insert(vkey(epoch), gtsam::Vector3(auditVelocity(t)));
+    values.insert(bkey(epoch), zero_bias);
+
+    if (epoch == 4 || epoch == 8 || epoch == kEpochs) {
+      const auto linear = graph.linearize(values);
+      const auto system = linear->jacobian();
+      Eigen::JacobiSVD<Eigen::MatrixXd> svd(system.first,
+                                            Eigen::ComputeThinV);
+      const auto singular = svd.singularValues();
+      const double tolerance = singular(0) *
+          std::max(system.first.rows(), system.first.cols()) *
+          std::numeric_limits<double>::epsilon();
+      const int rank = static_cast<int>((singular.array() > tolerance).count());
+      EXPECT_EQ(rank, system.first.cols()) << "epoch=" << epoch;
+      EXPECT_GT(singular(singular.size() - 1), tolerance)
+          << "epoch=" << epoch;
+      std::printf("[P106-FULL-GRAPH] epoch=%d rows=%lld cols=%lld rank=%d "
+                  "sigma_max=%.17g sigma_min=%.17g tolerance=%.17g\n",
+                  epoch, static_cast<long long>(system.first.rows()),
+                  static_cast<long long>(system.first.cols()), rank,
+                  singular(0), singular(singular.size() - 1), tolerance);
+    }
+  }
+
+  // Apply the isolated UWB null motion (right rotation around the body-frame
+  // lever) to every pose.  It preserves every antenna point/range, but the
+  // complete trajectory's IMU/gravity and initial-prior objectives change.
+  gtsam::Values perturbed(values);
+  const Eigen::Vector3d axis = lever.normalized();
+  for (int epoch = 0; epoch <= kEpochs; ++epoch) {
+    gtsam::Vector6 delta = gtsam::Vector6::Zero();
+    delta.head<3>() = .05 * axis;
+    perturbed.update(xkey(epoch), values.at<gtsam::Pose3>(xkey(epoch)).retract(delta));
+  }
+  const double uwb_before = uwb_graph.error(values);
+  const double uwb_after = uwb_graph.error(perturbed);
+  const double imu_before = imu_graph.error(values);
+  const double imu_after = imu_graph.error(perturbed);
+  const double prior_before = prior_graph.error(values);
+  const double prior_after = prior_graph.error(perturbed);
+  EXPECT_NEAR(uwb_before, uwb_after, 1e-18);
+  EXPECT_GT(imu_after, imu_before + 1e-6);
+  EXPECT_GT(prior_after, prior_before + 1e-6);
+  EXPECT_GT(graph.error(perturbed), graph.error(values) + 1e-6);
+  std::printf("[P106-TRAJECTORY-PERTURBATION] uwb_before=%.17g "
+              "uwb_after=%.17g imu_before=%.17g imu_after=%.17g "
+              "prior_before=%.17g prior_after=%.17g\n",
+              uwb_before, uwb_after, imu_before, imu_after,
+              prior_before, prior_after);
+
+  // Independent central-difference check of the complete whitened graph's
+  // first derivative.  This covers the native CombinedImuFactor Jacobians
+  // (including bias evolution and gravity), the three initial priors, and the
+  // UWB/lever factors without reusing any individual factor's analytic
+  // derivative as the oracle.
+  auto check_directional_derivative = [&](const gtsam::NonlinearFactorGraph& g,
+                                          const char* name) {
+    std::set<gtsam::Key> keys;
+    for (const auto& factor : g) {
+      keys.insert(factor->keys().begin(), factor->keys().end());
+    }
+    gtsam::Ordering ordering;
+    for (const auto key : keys) ordering.push_back(key);
+    const auto dense = g.linearize(perturbed)->jacobian(ordering);
+    Eigen::VectorXd direction(dense.first.cols());
+    for (Eigen::Index i = 0; i < direction.size(); ++i)
+      direction(i) = std::sin(static_cast<double>(i + 1));
+    direction.normalize();
+    gtsam::VectorValues tangent;
+    Eigen::Index offset = 0;
+    for (const auto key : ordering) {
+      const char type = gtsam::Symbol(key).chr();
+      const int dimension = type == 'v' ? 3 : 6;
+      tangent.insert(key, direction.segment(offset, dimension));
+      offset += dimension;
+    }
+    ASSERT_EQ(offset, direction.size());
+    constexpr double epsilon = 1e-6;
+    gtsam::VectorValues plus_delta = tangent;
+    gtsam::VectorValues minus_delta = tangent;
+    for (auto& item : plus_delta) item.second *= epsilon;
+    for (auto& item : minus_delta) item.second *= -epsilon;
+    const double numerical =
+        (g.error(perturbed.retract(plus_delta)) -
+         g.error(perturbed.retract(minus_delta))) / (2.0 * epsilon);
+    const double analytic =
+        (-dense.first.transpose() * dense.second).dot(direction);
+    const double scale = std::max({1.0, std::abs(numerical),
+                                   std::abs(analytic)});
+    EXPECT_NEAR(analytic, numerical, 2e-6 * scale) << name;
+    std::printf("[P106-GRAPH-JACOBIAN] class=%s analytic=%.17g "
+                "finite_difference=%.17g relative_error=%.17g\n",
+                name, analytic, numerical,
+                std::abs(analytic - numerical) / scale);
+  };
+  check_directional_derivative(prior_graph, "initial_prior");
+  check_directional_derivative(imu_graph, "combined_imu_bias_gravity");
+  check_directional_derivative(uwb_graph, "uwb_lever");
+  check_directional_derivative(graph, "complete_graph");
 }
 
 TEST(UwbIncremental, RegularizerRowsAreExcludedByRole) {
@@ -505,10 +742,9 @@ TEST(UwbImuIncremental, FiveSecondIsamMatchesBatchPoseAndMarginal) {
   const gtsam::Pose3 isam_pose(
       gtsam::Rot3(state.q_world_body.toRotationMatrix()),
       gtsam::Point3(state.position_world_m));
-  EXPECT_LT(gtsam::Pose3::Logmap(
-                batch_values.at<gtsam::Pose3>(xkey(kEpochs)).between(isam_pose))
-                .norm(),
-            1e-5);
+  const double pose_delta = gtsam::Pose3::Logmap(
+      batch_values.at<gtsam::Pose3>(xkey(kEpochs)).between(isam_pose)).norm();
+  EXPECT_LT(pose_delta, 1e-5);
   gtsam::Marginals marginals(graph, batch_values);
   const gtsam::KeyVector keys{xkey(kEpochs), vkey(kEpochs), bkey(kEpochs)};
   const auto joint = marginals.jointMarginalCovariance(keys);
@@ -523,7 +759,12 @@ TEST(UwbImuIncremental, FiveSecondIsamMatchesBatchPoseAndMarginal) {
     }
   }
   const auto actual = estimator.audit().current_marginal;
-  EXPECT_LT((actual - expected).norm() / expected.norm(), 1e-5);
+  const double marginal_relative_error =
+      (actual - expected).norm() / expected.norm();
+  EXPECT_LT(marginal_relative_error, 1e-5);
+  std::printf("[P106-PRODUCTION-BATCH] epochs=%d pose_tangent_delta=%.17g "
+              "marginal_relative_error=%.17g\n",
+              kEpochs, pose_delta, marginal_relative_error);
 }
 
 TEST(UwbImuIncremental, GapFailsWithoutChangingEstimatorAudit) {

@@ -1,0 +1,12 @@
+Note: Google Test filter = HistorySummaryPipeline.P106TreeOnlyMutationFallsBackAndMatchesForcedFullRebuild
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from HistorySummaryPipeline
+[ RUN      ] HistorySummaryPipeline.P106TreeOnlyMutationFallsBackAndMatchesForcedFullRebuild
+[P106-TREE-MUTATION] fallback_count=1 reset=1 representation_identity_distinct=1 summary=PASS carrier=PASS dof=PASS gram=PASS response=PASS pl=PASS action=PASS winner=PASS receipt=PASS packet=PASS
+[       OK ] HistorySummaryPipeline.P106TreeOnlyMutationFallsBackAndMatchesForcedFullRebuild (23875 ms)
+[----------] 1 test from HistorySummaryPipeline (23875 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (23875 ms total)
+[  PASSED  ] 1 test.

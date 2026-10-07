@@ -1,6 +1,6 @@
 {
   "schema": "uwb-imu-pl/simulation-calibration-manifest/v1",
-  "manifest_id": "simcal-manifest-p1-06-2026-10-04-v1",
+  "manifest_id": "simcal-manifest-p1-06-2026-10-06-revised-38x20-v2",
   "artifact_class": "simulation/synthetic",
   "purpose": "P1-06 simulation quality acceptance only",
   "description": "Versioned identities for the deterministic synthetic sensor, bias, noise, fault and initialization parameters declared by the five-profile validation protocol.",
@@ -21,14 +21,20 @@
       "simulation_model.source.sha256",
       "profile_generator.version",
       "profile_generator.source.path",
-      "profile_generator.source.sha256"
+      "profile_generator.source.sha256",
+      "validation_runner.version",
+      "validation_runner.source.path",
+      "validation_runner.source.sha256",
+      "acceptance_summarizer.version",
+      "acceptance_summarizer.source.path",
+      "acceptance_summarizer.source.sha256"
     ]
   },
   "simulation_model": {
-    "version": "realtime-performance-benchmark/synthetic-model-v1",
+    "version": "realtime-performance-benchmark/synthetic-model-v2-scheduled",
     "source": {
       "path": "apps/realtime_performance_benchmark.cpp",
-      "sha256": "b7aa09775f610c4dd09bad2fa86f7d1aa0ec50579dde60e3e16b6855515f3518"
+      "sha256": "88e819cc887748908ce70f1c2e310e8b467eb00a03f35687f5ccd97691ea26f7"
     }
   },
   "profile_generator": {
@@ -36,6 +42,20 @@
     "source": {
       "path": "tools/generate_fde_profile_configs.py",
       "sha256": "ec35069c408fe8c87e7ae5a6c3469012eb49e32e6c7f1c09ec601352f6e2035b"
+    }
+  },
+  "validation_runner": {
+    "version": "fde-profile-validation-runner/v2-revised-38x20",
+    "source": {
+      "path": "tools/run_fde_profile_validation.py",
+      "sha256": "0eb7f112da206673d77551733ec8594e02d214523ab6ff024e8fd7a4618558c0"
+    }
+  },
+  "acceptance_summarizer": {
+    "version": "p1-06-simulation-acceptance/v4-revised-38x20",
+    "source": {
+      "path": "tools/summarize_p1_06_simulation_acceptance.py",
+      "sha256": "7d27bb57c324a8734aef5c986687d8c33d02b2babb6c3786bc22d252a8a40d08"
     }
   },
   "qualification_boundary": {
@@ -49,43 +69,43 @@
   "profiles": [
     {
       "profile": "off",
-      "calibration_id": "simcal-p1-06-v1-off-a8ba1bf56599e014",
-      "complete_model_config_digest": "a8ba1bf56599e014969fcd5919863951b6e67a87984042690c8d4bac211336c3",
+      "calibration_id": "simcal-p1-06-v2-off-d9ebcb75db11eac6",
+      "complete_model_config_digest": "d9ebcb75db11eac60a009cac71104c56e1e0f3de3a985de0ca61fed977fcccbd",
       "runtime_config": {"path": "config/fde_off.yaml", "sha256": "acf4a1a6ff15351384f0e230f2b91c067b7927ca9b184d6bf2e06860e26ff54a"},
       "fault_manifest": {"path": "config/integrity_fault_manifest.yaml", "sha256": "270a11fdb319b8beb8a535bc44550df00df499286e61bc21fd42a171d7171991"},
-      "validation_protocol": {"path": "config/fde_profiles_validation.yaml", "sha256": "1c19278475b3f71e4c8ec1b0304d0592ba99b73e6ce0e8874698aa4150e53d3c"}
+      "validation_protocol": {"path": "config/fde_profiles_validation.yaml", "sha256": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6"}
     },
     {
       "profile": "uwb_order1",
-      "calibration_id": "simcal-p1-06-v1-uwb_order1-a2de0cb4f43b266e",
-      "complete_model_config_digest": "a2de0cb4f43b266e6296e121f4accc93eea12a0149a2fce6fefd270288415348",
+      "calibration_id": "simcal-p1-06-v2-uwb_order1-37581984e370490e",
+      "complete_model_config_digest": "37581984e370490e0286c0522a8053c0289c425f4b587941f5369fe0a4a95488",
       "runtime_config": {"path": "config/fde_uwb_order1.yaml", "sha256": "98faf198f9fe244c176fb9851b4c6f88125295338e86010706a034ec8c0a410a"},
       "fault_manifest": {"path": "config/integrity_fault_manifest.yaml", "sha256": "270a11fdb319b8beb8a535bc44550df00df499286e61bc21fd42a171d7171991"},
-      "validation_protocol": {"path": "config/fde_profiles_validation.yaml", "sha256": "1c19278475b3f71e4c8ec1b0304d0592ba99b73e6ce0e8874698aa4150e53d3c"}
+      "validation_protocol": {"path": "config/fde_profiles_validation.yaml", "sha256": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6"}
     },
     {
       "profile": "imu_order1",
-      "calibration_id": "simcal-p1-06-v1-imu_order1-4860f694e8c22a94",
-      "complete_model_config_digest": "4860f694e8c22a9441ef7e8d047e66897b5e62dbdfbb4ea7fdaec16a5ffc327c",
+      "calibration_id": "simcal-p1-06-v2-imu_order1-dfa4c4f08276a5c7",
+      "complete_model_config_digest": "dfa4c4f08276a5c7f17eecf7cf44c351994966e6f92f875f27e710361d3765e6",
       "runtime_config": {"path": "config/fde_imu_order1.yaml", "sha256": "7feddddb68dc3872d19435c21538bbf8ab61c5316fc57dfcc23d056caf5dceee"},
       "fault_manifest": {"path": "config/integrity_fault_manifest.yaml", "sha256": "270a11fdb319b8beb8a535bc44550df00df499286e61bc21fd42a171d7171991"},
-      "validation_protocol": {"path": "config/fde_profiles_validation.yaml", "sha256": "1c19278475b3f71e4c8ec1b0304d0592ba99b73e6ce0e8874698aa4150e53d3c"}
+      "validation_protocol": {"path": "config/fde_profiles_validation.yaml", "sha256": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6"}
     },
     {
       "profile": "joint_order1",
-      "calibration_id": "simcal-p1-06-v1-joint_order1-caaf7ad957143853",
-      "complete_model_config_digest": "caaf7ad9571438530a331f6e7f5861a629ce0cfeaf0b421367233a61ee0ca419",
+      "calibration_id": "simcal-p1-06-v2-joint_order1-499717ea47710e6a",
+      "complete_model_config_digest": "499717ea47710e6a5b2d54bcbe36eca7e761d979caaef661f024d98b61a1bf70",
       "runtime_config": {"path": "config/fde_joint_order1.yaml", "sha256": "18cec5ece3cd6f33761b946b7815ea5a8d0c998e007ad2fe49eef122de4284f7"},
       "fault_manifest": {"path": "config/integrity_fault_manifest.yaml", "sha256": "270a11fdb319b8beb8a535bc44550df00df499286e61bc21fd42a171d7171991"},
-      "validation_protocol": {"path": "config/fde_profiles_validation.yaml", "sha256": "1c19278475b3f71e4c8ec1b0304d0592ba99b73e6ce0e8874698aa4150e53d3c"}
+      "validation_protocol": {"path": "config/fde_profiles_validation.yaml", "sha256": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6"}
     },
     {
       "profile": "joint_order2",
-      "calibration_id": "simcal-p1-06-v1-joint_order2-a1db4a9f6afad3b4",
-      "complete_model_config_digest": "a1db4a9f6afad3b4eb0c079e9b93e8c5ff745d41359eeed1188a2a9350cbb0d5",
+      "calibration_id": "simcal-p1-06-v2-joint_order2-15e2679e308dbcda",
+      "complete_model_config_digest": "15e2679e308dbcda0157741c595fe33a882a4524208036ce8afef043572e67b5",
       "runtime_config": {"path": "config/fde_joint_order2.yaml", "sha256": "03c2d725900d8683e672a02e255f6cb80c2f01e466985f01ab3d65d3bd4d574d"},
       "fault_manifest": {"path": "config/integrity_fault_manifest.yaml", "sha256": "270a11fdb319b8beb8a535bc44550df00df499286e61bc21fd42a171d7171991"},
-      "validation_protocol": {"path": "config/fde_profiles_validation.yaml", "sha256": "1c19278475b3f71e4c8ec1b0304d0592ba99b73e6ce0e8874698aa4150e53d3c"}
+      "validation_protocol": {"path": "config/fde_profiles_validation.yaml", "sha256": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6"}
     }
   ]
 }

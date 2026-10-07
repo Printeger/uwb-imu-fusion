@@ -27,6 +27,7 @@
 #include <cstring>
 #include <limits>
 #include <map>
+#include <mutex>
 #include <set>
 #include <type_traits>
 #include <vector>
@@ -224,6 +225,21 @@ const char* kNonFinite = "non_finite_input";
 const char* kShapeMismatch = "shape_mismatch";
 const char* kEmptyInput = "empty_input";
 const char* kRankDeficient = "h_o_rank_deficient";
+
+std::mutex& treeMutationMutex() {
+  static std::mutex mutex;
+  return mutex;
+}
+
+std::set<const IncrementalHistoryRootCache*>& armedTreeMutations() {
+  static std::set<const IncrementalHistoryRootCache*> instances;
+  return instances;
+}
+
+bool consumeTreeMutation(const IncrementalHistoryRootCache* cache) {
+  std::lock_guard<std::mutex> lock(treeMutationMutex());
+  return armedTreeMutations().erase(cache) != 0;
+}
 
 }  // namespace
 
@@ -818,6 +834,11 @@ HistoryFaultSummary IncrementalHistoryRootCache::update(
   return update(request, nullptr, options);
 }
 
+void IncrementalHistoryRootCache::corruptTreeRootForTesting() {
+  std::lock_guard<std::mutex> lock(treeMutationMutex());
+  armedTreeMutations().insert(this);
+}
+
 HistoryFaultSummary IncrementalHistoryRootCache::update(
     const HistoryRootCacheRequest& request,
     HistoryCarrierRankCertificate* carrier_rank,
@@ -922,8 +943,53 @@ HistoryFaultSummary IncrementalHistoryRootCache::update(
   audit_.internal_nodes_recomputed += recomputed;
   entry_->request = request;
   entry_->carrier_rank = {};
+  if (consumeTreeMutation(this)) {
+    // Test-only, instance-scoped mutation after the optimized tree update but
+    // before summary extraction.  Immutable raw request rows are untouched.
+    entry_->tree->aggregate.matrix(0, 0) =
+        std::numeric_limits<double>::quiet_NaN();
+  }
   entry_->summary = summaryFromTreeRoot(entry_->tree->aggregate, request,
                                         options, &entry_->carrier_rank);
+  if (!entry_->summary.valid) {
+    // The hierarchical representation is an optimization, not the numerical
+    // contract.  A long sliding run can expose roundoff in a repeatedly
+    // updated compact root even though the frozen raw rows are finite and the
+    // prescribed full orthogonal rebuild is valid.  In that case use the
+    // independent full-row oracle and discard the suspect tree so no later
+    // request can reuse it.  An invalid oracle still fails closed below.
+    ++audit_.full_oracle_checks;
+    const CertifiedHistoryFaultSummary rebuilt =
+        buildCertifiedHistoryFaultSummary(request.input, options);
+    if (rebuilt.summary.valid && rebuilt.carrier_rank.valid) {
+      HistoryFaultSummary result = rebuilt.summary;
+      HistoryCarrierRankCertificate proof = rebuilt.carrier_rank;
+      ++audit_.full_oracle_mismatches;
+      ++audit_.full_rebuilds;
+      ++audit_.invalidations;
+      audit_.retained_rows = 0;
+      audit_.retained_bytes = 0;
+      audit_.last_reason =
+          "history_root_fallback_v1:tree_invalid=1,full_oracle_valid=1,"
+          "full_oracle_used=1,tree_reset=1,fallback_sequence=" +
+          std::to_string(audit_.full_oracle_mismatches);
+      entry_.reset();
+      if (carrier_rank) *carrier_rank = std::move(proof);
+      return result;
+    }
+    // Neither representation is usable.  Discard the suspect tree before
+    // returning the invalid full-row result: a later request must rebuild
+    // from its immutable raw rows and may not reuse an invalid aggregate.
+    ++audit_.invalidations;
+    audit_.retained_rows = 0;
+    audit_.retained_bytes = 0;
+    audit_.last_reason =
+        "history_root_fallback_v1:tree_invalid=1,full_oracle_valid=0,"
+        "full_oracle_used=0,tree_reset=1,fail_closed=1";
+    entry_.reset();
+    if (carrier_rank) *carrier_rank = rebuilt.carrier_rank;
+    return rebuilt.summary;
+  }
   if (request.verify_full_oracle) {
     ++audit_.full_oracle_checks;
     const CertifiedHistoryFaultSummary oracle_certified =
@@ -1018,10 +1084,16 @@ static HistoryFaultSummary buildHistoryFaultSummaryImpl(
   const int q = summary.n_fault;
 
   // Degenerate handling, in order: non-finite, shapes, emptiness.
-  if (!allFinite(input.h_old_state) || !allFinite(input.h_boundary) ||
-      !allFinite(input.fault_map) || !input.rhs.allFinite()) {
-    invalidate(summary,
-               std::string(kNonFinite) + ": input contains a non-finite entry");
+  const bool old_finite = allFinite(input.h_old_state);
+  const bool boundary_finite = allFinite(input.h_boundary);
+  const bool fault_finite = allFinite(input.fault_map);
+  const bool rhs_finite = input.rhs.allFinite();
+  if (!old_finite || !boundary_finite || !fault_finite || !rhs_finite) {
+    invalidate(summary, std::string(kNonFinite) +
+        ": H_o=" + (old_finite ? "finite" : "non_finite") +
+        ",H_b=" + (boundary_finite ? "finite" : "non_finite") +
+        ",A=" + (fault_finite ? "finite" : "non_finite") +
+        ",z=" + (rhs_finite ? "finite" : "non_finite"));
     return summary;
   }
   if (input.h_old_state.rows() != m || input.h_boundary.rows() != m ||

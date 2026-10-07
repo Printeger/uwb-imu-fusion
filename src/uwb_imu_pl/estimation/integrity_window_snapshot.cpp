@@ -659,8 +659,26 @@ FrozenWindowAdmission admitFrozenIntegrityWindow(
     return out;
   }
   const auto& payload = *seal.payload;
-  const bool numerics_match = payload.numerics &&
-      seal.numerical_identity.valid &&
+  if (!payload.numerics) {
+    // A builder can fail before numerical products exist (for example when a
+    // retained marginal contains a non-finite row).  The owned payload is
+    // still immutable and must reach the detector so the attempt is refused
+    // through the normal fail-closed path.  A nominally valid payload may
+    // never use this exception.
+    if (!payload.model_valid) {
+      out.payload = seal.payload.get();
+      return out;
+    }
+    out.owner.reset();
+    out.reason = "frozen window has no completed numerics: " + payload.reason;
+    return out;
+  }
+  if (!seal.numerical_identity.valid) {
+    out.owner.reset();
+    out.reason = "frozen window sealed numerical identity is invalid";
+    return out;
+  }
+  const bool numerics_match =
       seal.numerical_identity.window_id == payload.id &&
       seal.numerical_identity.version == payload.version &&
       seal.numerical_identity.content_fingerprint == seal.content_hash &&

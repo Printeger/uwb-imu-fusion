@@ -5,13 +5,21 @@
 #include "uwb_imu_pl/io/run_logger.hpp"
 #include "uwb_imu_pl/publication/final_output_packet.hpp"
 
+#include <gtsam/inference/Symbol.h>
+#include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
+#include <gtsam/nonlinear/Marginals.h>
+#include <Eigen/SVD>
+
 #include <chrono>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
+#include <limits>
+#include <optional>
 #include <random>
 #include <string>
 #include <vector>
@@ -22,6 +30,48 @@
 #ifndef UWB_IMU_PL_GIT_DIRTY
 #define UWB_IMU_PL_GIT_DIRTY 1
 #endif
+
+namespace uwb_imu_pl {
+
+struct P106GraphSnapshotV1 {
+  static constexpr std::uint64_t kSchema = 1;
+  std::size_t attempt = 0;
+  double position_error_m = 0.0;
+  double attitude_error_rad = 0.0;
+  Eigen::Vector3d truth_position_m = Eigen::Vector3d::Zero();
+  Eigen::Quaterniond truth_orientation = Eigen::Quaterniond::Identity();
+  LinearizationVersion version;
+  std::size_t epoch = 0;
+  gtsam::NonlinearFactorGraph active_factors;
+  gtsam::Values linearization_point;
+  gtsam::Values production_estimate;
+  Eigen::Matrix<double, 15, 15> production_marginal;
+};
+
+struct P106ReadOnlyGraphSnapshotPeer {
+  static P106GraphSnapshotV1 capture(
+      const IncrementalUwbImuEstimator& estimator, std::size_t attempt,
+      double position_error_m, double attitude_error_rad,
+      const Eigen::Vector3d& truth_position_m,
+      const Eigen::Quaterniond& truth_orientation) {
+    P106GraphSnapshotV1 out;
+    out.attempt = attempt;
+    out.position_error_m = position_error_m;
+    out.attitude_error_rad = attitude_error_rad;
+    out.truth_position_m = truth_position_m;
+    out.truth_orientation = truth_orientation;
+    out.version = {estimator.graph_version_, estimator.ordering_version_, 1,
+                   estimator.linpoint_version_};
+    out.epoch = estimator.epoch_;
+    out.active_factors = estimator.activeGraph();
+    out.linearization_point = estimator.backendIsam().getLinearizationPoint();
+    out.production_estimate = estimator.backendIsam().calculateEstimate();
+    out.production_marginal = estimator.currentJointMarginal();
+    return out;
+  }
+};
+
+}  // namespace uwb_imu_pl
 
 namespace {
 constexpr double kImuDt = 0.005;
@@ -74,6 +124,218 @@ std::uint64_t environmentSeed(std::uint64_t fallback) {
   return value;
 }
 
+void hashBytes(std::uint64_t* hash, const void* data, std::size_t size) {
+  const auto* bytes = static_cast<const unsigned char*>(data);
+  for (std::size_t i = 0; i < size; ++i) {
+    *hash ^= bytes[i];
+    *hash *= 1099511628211ULL;
+  }
+}
+
+template <class T>
+void hashScalar(std::uint64_t* hash, const T& value) {
+  hashBytes(hash, &value, sizeof(value));
+}
+
+template <class Derived>
+void hashMatrix(std::uint64_t* hash, const Eigen::MatrixBase<Derived>& value) {
+  const Eigen::Index rows = value.rows();
+  const Eigen::Index cols = value.cols();
+  hashScalar(hash, rows);
+  hashScalar(hash, cols);
+  for (Eigen::Index column = 0; column < cols; ++column) {
+    for (Eigen::Index row = 0; row < rows; ++row) {
+      const double item = value(row, column);
+      hashScalar(hash, item);
+    }
+  }
+}
+
+struct P106KktAudit {
+  double production_objective = std::numeric_limits<double>::infinity();
+  double batch_objective = std::numeric_limits<double>::infinity();
+  double production_gradient_l2 = std::numeric_limits<double>::infinity();
+  double production_gradient_inf = std::numeric_limits<double>::infinity();
+  double batch_gradient_l2 = std::numeric_limits<double>::infinity();
+  double batch_gradient_inf = std::numeric_limits<double>::infinity();
+  int rank = 0;
+  double sigma_max = 0.0;
+  double sigma_min = 0.0;
+  double condition = std::numeric_limits<double>::infinity();
+  double state_delta_l2 = std::numeric_limits<double>::infinity();
+  double covariance_relative_error = std::numeric_limits<double>::infinity();
+  double covariance_vs_production_graph_relative_error =
+      std::numeric_limits<double>::infinity();
+  double covariance_vs_linpoint_graph_relative_error =
+      std::numeric_limits<double>::infinity();
+  double batch_position_error_m = std::numeric_limits<double>::infinity();
+  double batch_attitude_error_rad = std::numeric_limits<double>::infinity();
+  std::uint64_t local_graph_hash = 0;
+};
+
+std::pair<double, double> graphGradient(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values) {
+  const auto gaussian = graph.linearize(values);
+  const auto system = gaussian->jacobian();
+  const Eigen::VectorXd gradient = -system.first.transpose() * system.second;
+  return {gradient.norm(), gradient.size() == 0
+                               ? 0.0
+                               : gradient.cwiseAbs().maxCoeff()};
+}
+
+Eigen::Matrix<double, 15, 15> currentMarginal(
+    const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& values,
+    std::size_t epoch) {
+  const gtsam::KeyVector keys{gtsam::Symbol('x', epoch),
+                             gtsam::Symbol('v', epoch),
+                             gtsam::Symbol('b', epoch)};
+  const gtsam::JointMarginal joint =
+      gtsam::Marginals(graph, values).jointMarginalCovariance(keys);
+  Eigen::Matrix<double, 15, 15> out;
+  out.block<6, 6>(0, 0) = joint.at(keys[0], keys[0]);
+  out.block<6, 3>(0, 6) = joint.at(keys[0], keys[1]);
+  out.block<6, 6>(0, 9) = joint.at(keys[0], keys[2]);
+  out.block<3, 6>(6, 0) = joint.at(keys[1], keys[0]);
+  out.block<3, 3>(6, 6) = joint.at(keys[1], keys[1]);
+  out.block<3, 6>(6, 9) = joint.at(keys[1], keys[2]);
+  out.block<6, 6>(9, 0) = joint.at(keys[2], keys[0]);
+  out.block<6, 3>(9, 6) = joint.at(keys[2], keys[1]);
+  out.block<6, 6>(9, 9) = joint.at(keys[2], keys[2]);
+  return out;
+}
+
+P106KktAudit auditSnapshot(const uwb_imu_pl::P106GraphSnapshotV1& snapshot) {
+  P106KktAudit out;
+  const auto production_linear =
+      snapshot.active_factors.linearize(snapshot.production_estimate);
+  const auto system = production_linear->jacobian();
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(system.first);
+  const Eigen::VectorXd singular = svd.singularValues();
+  out.sigma_max = singular.size() == 0 ? 0.0 : singular(0);
+  const double tolerance = out.sigma_max *
+      static_cast<double>(std::max(system.first.rows(), system.first.cols())) *
+      std::numeric_limits<double>::epsilon();
+  out.rank = static_cast<int>((singular.array() > tolerance).count());
+  out.sigma_min = out.rank == 0 ? 0.0 : singular(out.rank - 1);
+  out.condition = out.sigma_min > 0.0
+                      ? out.sigma_max / out.sigma_min
+                      : std::numeric_limits<double>::infinity();
+  out.production_objective = snapshot.active_factors.error(
+      snapshot.production_estimate);
+  const auto production_gradient = graphGradient(
+      snapshot.active_factors, snapshot.production_estimate);
+  out.production_gradient_l2 = production_gradient.first;
+  out.production_gradient_inf = production_gradient.second;
+
+  gtsam::LevenbergMarquardtParams params;
+  params.setVerbosityLM("SILENT");
+  params.maxIterations = 200;
+  params.relativeErrorTol = 1e-12;
+  params.absoluteErrorTol = 1e-12;
+  const gtsam::Values batch = gtsam::LevenbergMarquardtOptimizer(
+      snapshot.active_factors, snapshot.production_estimate, params).optimize();
+  out.batch_objective = snapshot.active_factors.error(batch);
+  const auto batch_gradient = graphGradient(snapshot.active_factors, batch);
+  out.batch_gradient_l2 = batch_gradient.first;
+  out.batch_gradient_inf = batch_gradient.second;
+
+  const gtsam::Key x = gtsam::Symbol('x', snapshot.epoch);
+  const gtsam::Key v = gtsam::Symbol('v', snapshot.epoch);
+  const gtsam::Key b = gtsam::Symbol('b', snapshot.epoch);
+  Eigen::Matrix<double, 15, 1> delta;
+  delta.head<6>() = snapshot.production_estimate.at<gtsam::Pose3>(x)
+      .localCoordinates(batch.at<gtsam::Pose3>(x));
+  delta.segment<3>(6) = batch.at<gtsam::Vector3>(v) -
+      snapshot.production_estimate.at<gtsam::Vector3>(v);
+  delta.tail<6>() = batch.at<gtsam::imuBias::ConstantBias>(b).vector() -
+      snapshot.production_estimate.at<gtsam::imuBias::ConstantBias>(b).vector();
+  out.state_delta_l2 = delta.norm();
+  const auto batch_pose = batch.at<gtsam::Pose3>(x);
+  out.batch_position_error_m =
+      (batch_pose.translation() - snapshot.truth_position_m).norm();
+  const Eigen::Quaterniond batch_q(batch_pose.rotation().matrix());
+  const double batch_q_dot = std::min(
+      1.0, std::abs(batch_q.normalized().dot(
+               snapshot.truth_orientation.normalized())));
+  out.batch_attitude_error_rad = 2.0 * std::acos(batch_q_dot);
+  const auto batch_marginal = currentMarginal(
+      snapshot.active_factors, batch, snapshot.epoch);
+  const auto production_graph_marginal = currentMarginal(
+      snapshot.active_factors, snapshot.production_estimate, snapshot.epoch);
+  const auto linpoint_graph_marginal = currentMarginal(
+      snapshot.active_factors, snapshot.linearization_point, snapshot.epoch);
+  out.covariance_relative_error =
+      (snapshot.production_marginal - batch_marginal).norm() /
+      std::max({1.0, snapshot.production_marginal.norm(),
+                batch_marginal.norm()});
+  out.covariance_vs_production_graph_relative_error =
+      (snapshot.production_marginal - production_graph_marginal).norm() /
+      std::max({1.0, snapshot.production_marginal.norm(),
+                production_graph_marginal.norm()});
+  out.covariance_vs_linpoint_graph_relative_error =
+      (snapshot.production_marginal - linpoint_graph_marginal).norm() /
+      std::max({1.0, snapshot.production_marginal.norm(),
+                linpoint_graph_marginal.norm()});
+
+  std::uint64_t hash = 1469598103934665603ULL;
+  hashScalar(&hash, uwb_imu_pl::P106GraphSnapshotV1::kSchema);
+  hashScalar(&hash, snapshot.attempt);
+  hashScalar(&hash, snapshot.epoch);
+  hashScalar(&hash, snapshot.version.graph_version);
+  hashScalar(&hash, snapshot.version.ordering_version);
+  hashScalar(&hash, snapshot.version.noise_model_version);
+  hashScalar(&hash, snapshot.version.linpoint_version);
+  for (const auto key : snapshot.linearization_point.keys()) hashScalar(&hash, key);
+  const auto linpoint_system =
+      snapshot.active_factors.linearize(snapshot.linearization_point)->jacobian();
+  hashMatrix(&hash, linpoint_system.first);
+  hashMatrix(&hash, linpoint_system.second);
+  hashMatrix(&hash, system.first);
+  hashMatrix(&hash, system.second);
+  hashMatrix(&hash, snapshot.production_marginal);
+  out.local_graph_hash = hash;
+  return out;
+}
+
+void writeKktSnapshot(std::ostream& stream, const char* label,
+                      const uwb_imu_pl::P106GraphSnapshotV1& snapshot,
+                      const P106KktAudit& audit, bool trailing_comma) {
+  stream << "    \"" << label << "\": {\n"
+         << "      \"schema\": \"uwb-imu-pl/read-only-graph-snapshot/v1\",\n"
+         << "      \"attempt\": " << snapshot.attempt << ",\n"
+         << "      \"epoch\": " << snapshot.epoch << ",\n"
+         << "      \"graph_version\": " << snapshot.version.graph_version << ",\n"
+         << "      \"ordering_version\": " << snapshot.version.ordering_version << ",\n"
+         << "      \"noise_model_version\": " << snapshot.version.noise_model_version << ",\n"
+         << "      \"linpoint_version\": " << snapshot.version.linpoint_version << ",\n"
+         << "      \"active_factor_slots\": " << snapshot.active_factors.size() << ",\n"
+         << "      \"active_value_count\": " << snapshot.production_estimate.size() << ",\n"
+         << "      \"position_error_m\": " << snapshot.position_error_m << ",\n"
+         << "      \"attitude_error_rad\": " << snapshot.attitude_error_rad << ",\n"
+         << "      \"local_graph_hash_fnv1a64\": \"" << std::hex
+         << audit.local_graph_hash << std::dec << "\",\n"
+         << "      \"production_objective\": " << audit.production_objective << ",\n"
+         << "      \"batch_objective\": " << audit.batch_objective << ",\n"
+         << "      \"production_gradient_l2\": " << audit.production_gradient_l2 << ",\n"
+         << "      \"production_gradient_inf\": " << audit.production_gradient_inf << ",\n"
+         << "      \"batch_gradient_l2\": " << audit.batch_gradient_l2 << ",\n"
+         << "      \"batch_gradient_inf\": " << audit.batch_gradient_inf << ",\n"
+         << "      \"rank\": " << audit.rank << ",\n"
+         << "      \"sigma_max\": " << audit.sigma_max << ",\n"
+         << "      \"sigma_min\": " << audit.sigma_min << ",\n"
+         << "      \"condition\": " << audit.condition << ",\n"
+         << "      \"production_vs_batch_state_l2\": " << audit.state_delta_l2 << ",\n"
+         << "      \"batch_position_error_m\": " << audit.batch_position_error_m << ",\n"
+         << "      \"batch_attitude_error_rad\": " << audit.batch_attitude_error_rad << ",\n"
+         << "      \"production_vs_batch_covariance_relative_error\": "
+         << audit.covariance_relative_error << ",\n"
+         << "      \"production_covariance_vs_active_graph_at_production_relative_error\": "
+         << audit.covariance_vs_production_graph_relative_error << ",\n"
+         << "      \"production_covariance_vs_active_graph_at_linpoint_relative_error\": "
+         << audit.covariance_vs_linpoint_graph_relative_error << "\n"
+         << "    }" << (trailing_comma ? "," : "") << "\n";
+}
+
 struct Scenario {
   std::string name = "nominal";
   bool noiseless = false;
@@ -90,6 +352,22 @@ struct Scenario {
   double gyro_bias_radps = .12;
   int axis = 0;
 };
+
+struct FaultSchedule {
+  int begin = 0;  // zero based, inclusive
+  int end = -1;   // zero based, inclusive
+};
+
+// This is the frozen synthetic-campaign schedule.  Keeping the calculation in
+// one function makes the 300-attempt reference and a scaled campaign use the
+// same semantics instead of accidentally taking the first N pre-fault rows.
+FaultSchedule faultSchedule(const Scenario& scenario, int epochs) {
+  const int begin = scenario.historical ? 5 : std::max(5, epochs / 3);
+  const int end = scenario.single_epoch ? begin :
+      (scenario.historical ? std::max(5, epochs - 25) :
+                             std::max(begin, 2 * epochs / 3 - 1));
+  return {begin, end};
+}
 
 Scenario scenarioFromEnvironment() {
   Scenario result;
@@ -160,6 +438,11 @@ int main(int argc, char** argv) {
   try {
     auto config = uwb_imu_pl::IntegrityConfigLoader::load(argv[1]);
     const Scenario scenario = scenarioFromEnvironment();
+    const int epochs = std::stoi(argv[3]);
+    const FaultSchedule schedule = faultSchedule(scenario, epochs);
+    const FaultSchedule reference_schedule = faultSchedule(scenario, 300);
+    const bool fault_expected = scenario.uwb || scenario.imu_accel ||
+                                scenario.imu_gyro;
     config.seed = environmentSeed(config.seed);
     // This executable historically discarded these records after paying their
     // formatting cost. Preserve its external log mode while disabling their
@@ -178,11 +461,24 @@ int main(int argc, char** argv) {
         "benchmark_accel_bias_mps2: " +
             std::to_string(scenario.accel_bias_mps2) + "\n"
         "benchmark_gyro_bias_radps: " +
-            std::to_string(scenario.gyro_bias_radps) + "\n";
+            std::to_string(scenario.gyro_bias_radps) + "\n"
+        "benchmark_fault_schedule_algorithm: "
+            "proportional_thirds_min5_history_tail25_v1\n"
+        "benchmark_fault_schedule_reference_epochs: 300\n"
+        "benchmark_fault_expected: " +
+            std::string(fault_expected ? "true" : "false") + "\n"
+        "benchmark_fault_reference_begin_epoch_1based: " +
+            std::to_string(reference_schedule.begin + 1) + "\n"
+        "benchmark_fault_reference_end_epoch_1based: " +
+            std::to_string(reference_schedule.end + 1) + "\n"
+        "benchmark_fault_effective_epochs: " + std::to_string(epochs) + "\n"
+        "benchmark_fault_effective_begin_epoch_1based: " +
+            std::to_string(schedule.begin + 1) + "\n"
+        "benchmark_fault_effective_end_epoch_1based: " +
+            std::to_string(schedule.end + 1) + "\n";
     config.config_hash =
         uwb_imu_pl::IntegrityConfigLoader::hashResolvedYaml(
             config.resolved_yaml);
-    const int epochs = std::stoi(argv[3]);
     if (epochs <= 0 || config.incremental.fixed_lag_epochs <=
                            config.integrity_window.epochs +
                                config.integrity_window.recovery_margin_epochs ||
@@ -225,6 +521,18 @@ int main(int argc, char** argv) {
              {"gyro_fault_radps",
               std::to_string(scenario.gyro_bias_radps)},
              {"fault_axis", std::to_string(scenario.axis)},
+             {"fault_schedule_algorithm",
+              "proportional_thirds_min5_history_tail25_v1"},
+             {"fault_schedule_reference_epochs", "300"},
+             {"fault_schedule_reference_begin_epoch_1based",
+              std::to_string(reference_schedule.begin + 1)},
+             {"fault_schedule_reference_end_epoch_1based",
+              std::to_string(reference_schedule.end + 1)},
+             {"fault_schedule_effective_epochs", std::to_string(epochs)},
+             {"fault_schedule_effective_begin_epoch_1based",
+              std::to_string(schedule.begin + 1)},
+             {"fault_schedule_effective_end_epoch_1based",
+              std::to_string(schedule.end + 1)},
              {"packet_loss_prob", "0"},
              {"nlos_probability", "0"},
              {"enable_run_logging", "true"},
@@ -252,11 +560,17 @@ int main(int argc, char** argv) {
   // D round: offline replay declares its publication policy explicitly (the
   // default wall timeout is a bridge/streaming policy; this harness computes
   // slower than real time by construction).
-  uwb_imu_pl::RealtimeIntegrityPipeline pipeline(
+    uwb_imu_pl::RealtimeIntegrityPipeline pipeline(
       &estimator, uwb_imu_pl::IntegrityMonitor(
           config.risk, config.snapshot.rank_tolerance,
           config.snapshot.max_condition_number),
       uwb_imu_pl::offlineReplayPublicationLimits());
+    const bool run_kkt_diagnostic =
+        std::getenv("UWB_IMU_PL_KKT_DIAGNOSTIC") != nullptr;
+    std::optional<uwb_imu_pl::P106GraphSnapshotV1> worst_position_snapshot;
+    std::optional<uwb_imu_pl::P106GraphSnapshotV1> worst_attitude_snapshot;
+    double worst_position_error = -1.0;
+    double worst_attitude_error = -1.0;
     uwb_imu_pl::ImuMeasurement boundary;
     boundary.timestamp = initial.timestamp;
     boundary.specific_force_mps2 = orientation(0, scenario.degenerate).conjugate() *
@@ -271,10 +585,8 @@ int main(int argc, char** argv) {
     std::vector<double> candidate_wall_ms;
     const bool force_candidate_stress =
         std::getenv("UWB_IMU_PL_BENCHMARK_FORCE_ALARM") != nullptr;
-    const int fault_begin = scenario.historical ? 5 : std::max(5, epochs / 3);
-    const int fault_end = scenario.single_epoch ? fault_begin :
-        (scenario.historical ? std::max(5, epochs - 25) :
-                               std::max(fault_begin, 2*epochs/3-1));
+    const int fault_begin = schedule.begin;
+    const int fault_end = schedule.end;
     std::uint64_t fault_sequence = 0;
     summary.status = "IMPLEMENTED_UNVERIFIED";
     for (int epoch_index = 0; epoch_index < epochs; ++epoch_index) {
@@ -412,6 +724,34 @@ int main(int argc, char** argv) {
       const auto final_packet = uwb_imu_pl::finalizeOutputPacket(
           std::move(result), final_timing, 50000000ULL);
       result = final_packet.output();
+      if (run_kkt_diagnostic) {
+        const Eigen::Vector3d truth_position =
+            position(time, scenario.degenerate);
+        const Eigen::Quaterniond truth_orientation =
+            orientation(time, scenario.degenerate);
+        const double position_error =
+            (result.state.position_world_m - truth_position).norm();
+        const double quaternion_dot = std::min(
+            1.0, std::abs(result.state.q_world_body.normalized().dot(
+                     truth_orientation.normalized())));
+        const double attitude_error = 2.0 * std::acos(quaternion_dot);
+        if (position_error > worst_position_error) {
+          worst_position_error = position_error;
+          worst_position_snapshot =
+              uwb_imu_pl::P106ReadOnlyGraphSnapshotPeer::capture(
+                  estimator, static_cast<std::size_t>(epoch_index + 1),
+                  position_error, attitude_error, truth_position,
+                  truth_orientation);
+        }
+        if (attitude_error > worst_attitude_error) {
+          worst_attitude_error = attitude_error;
+          worst_attitude_snapshot =
+              uwb_imu_pl::P106ReadOnlyGraphSnapshotPeer::capture(
+                  estimator, static_cast<std::size_t>(epoch_index + 1),
+                  position_error, attitude_error, truth_position,
+                  truth_orientation);
+        }
+      }
       logger.writeIntegrity(result, final_packet.metadata());
       const auto publish_return = std::chrono::steady_clock::now();
       terminal_packets << result.diagnostics.input_attempt_id << ','
@@ -551,13 +891,54 @@ int main(int argc, char** argv) {
               << " full_oracle_checks=" << history_root.full_oracle_checks
               << " full_oracle_mismatches="
               << history_root.full_oracle_mismatches
+              << " history_root_fallback_count="
+              << history_root.full_oracle_mismatches
               << " reused_groups=" << history_root.reused_groups
               << " rebuilt_groups=" << history_root.rebuilt_groups
               << " factor_group_hits=" << history_root.factor_group_hits
               << " factor_group_misses=" << history_root.factor_group_misses
               << " retained_rows=" << history_root.retained_rows
               << " retained_bytes=" << history_root.retained_bytes
+              << " last_reason=" << history_root.last_reason
               << '\n';
+    if (run_kkt_diagnostic) {
+      if (!worst_position_snapshot || !worst_attitude_snapshot) {
+        throw std::runtime_error("KKT diagnostic captured no graph snapshot");
+      }
+      const P106KktAudit position_audit =
+          auditSnapshot(*worst_position_snapshot);
+      const bool same_snapshot =
+          worst_position_snapshot->attempt == worst_attitude_snapshot->attempt;
+      const P106KktAudit attitude_audit = same_snapshot
+          ? position_audit : auditSnapshot(*worst_attitude_snapshot);
+      const std::string kkt_path = std::string(argv[2]) +
+          "/kkt_diagnostic.json";
+      std::ofstream audit_file(kkt_path);
+      if (!audit_file) {
+        throw std::runtime_error("cannot create kkt_diagnostic.json");
+      }
+      audit_file << std::setprecision(17)
+                 << "{\n"
+                 << "  \"schema\": \"uwb-imu-pl/targeted-kkt-replay/v1\",\n"
+                 << "  \"source_revision\": \"" << UWB_IMU_PL_GIT_SHA << "\",\n"
+                 << "  \"source_dirty\": "
+                 << (UWB_IMU_PL_GIT_DIRTY != 0 ? "true" : "false") << ",\n"
+                 << "  \"seed\": " << config.seed << ",\n"
+                 << "  \"requested_attempts\": " << epochs << ",\n"
+                 << "  \"scenario\": \"" << scenario.name << "\",\n"
+                 << "  \"snapshots\": {\n";
+      writeKktSnapshot(audit_file, "worst_position",
+                       *worst_position_snapshot, position_audit, true);
+      writeKktSnapshot(audit_file, "worst_attitude",
+                       *worst_attitude_snapshot, attitude_audit, false);
+      audit_file << "  }\n}\n";
+      audit_file.close();
+      std::cout << "p106_kkt_diagnostic path=" << kkt_path
+                << " worst_position_attempt="
+                << worst_position_snapshot->attempt
+                << " worst_attitude_attempt="
+                << worst_attitude_snapshot->attempt << '\n';
+    }
   } catch (const std::exception& error) {
     std::cerr << error.what() << '\n';
     return 2;

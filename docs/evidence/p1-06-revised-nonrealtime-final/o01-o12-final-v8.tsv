@@ -1,0 +1,13 @@
+item	status	evidence
+O01	PASS	P0-07 raw replay and effective-rank nu_perp/dof contract; final CTest 35/35
+O02	PASS	dual-channel detector, immutable admission, and integrity_v2 final tests
+O03	PASS	complete hypothesis/action search; coverage and denominator unchanged
+O04	PASS	publication state machine and final fail-closed terminal packets
+O05	PASS	independent matrices, Gram, protected response, PL and nullspace oracle
+O06	PASS	independent risk ledger and risk oracle; risk budget unchanged
+O07	PASS	action/winner census and refusal behavior preserved
+O08	PASS	transaction rollback, atomic commit/publication and exception paths
+O09	PASS_WITH_TOOLCHAIN_NOT_RUN	ASan+UBSan 12/12 and focused LSan 1/1; TSan/MSan NOT_RUN
+O10	PASS	fault recovery and maturity/history invalid paths terminate fail-closed without crash
+O11	PASS_SOFTWARE_FAIL_CLOSED	simulation/synthetic only; hardware CLOSED/NOT_CLAIMED and formal_eligible=false
+O12	FAIL_REVISED_ACCEPTANCE	all required execution evidence exists, but off-profile quality and strict golden equivalence fail; realtime deferred

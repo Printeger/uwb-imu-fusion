@@ -1,0 +1,6 @@
+analyzed 4 runs; summary=/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/active-alarm-pilot-4x600-final-v9/validation_summary.json
+PASS uwb_order1__nominal__e600__s20260901__r1 358.217s
+PASS imu_order1__nominal__e600__s20260901__r1 218.554s
+PASS joint_order1__nominal__e600__s20260901__r1 350.989s
+PASS joint_order2__nominal__e600__s20260901__r1 2249.701s
+completed=4 failures=0 output=/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/active-alarm-pilot-4x600-final-v9

@@ -267,6 +267,13 @@ class IncrementalUwbImuEstimator {
       const Eigen::VectorXd& current_uwb_linear_measurement) const;
 
  private:
+  // Narrow diagnostic peers.  They expose no public method or data member and
+  // therefore preserve the P0 ABI/API while allowing current-instance tests
+  // to inspect a frozen active graph and mutate only its history tree root.
+  friend struct P106ReadOnlyGraphSnapshotPeer;
+  friend struct P106EstimatorHistoryMutationPeer;
+  void corruptHistoryTreeRootForTesting();
+  void resetHistoryTreeForTesting();
   struct CommittedEpochRecord {
     EpochTransaction transaction;
     std::vector<FactorGroupId> selected_groups;

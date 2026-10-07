@@ -264,6 +264,10 @@ class IncrementalHistoryRootCache {
   const HistoryRootCacheAudit& audit() const { return audit_; }
 
  private:
+  // Test peers are friends instead of public hooks so a mutation can target
+  // one cache instance without changing the shipped API or object layout.
+  friend struct P106HistoryRootMutationPeer;
+  void corruptTreeRootForTesting();
   struct Entry;
   std::shared_ptr<Entry> entry_;
   HistoryRootCacheAudit audit_;

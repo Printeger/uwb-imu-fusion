@@ -32,7 +32,8 @@ SOURCE_IDENTITY_ROOTS = (
 TERMINAL_ARTIFACTS = (
     "summary.json", "diagnostic_attempts.csv", "diagnostic_stages.csv",
     "integrity.csv", "timing.csv", "candidates.csv", "transactions.csv",
-    "terminal_packets.csv", "stdout.log", "stderr.log")
+    "terminal_packets.csv", "fault_truth.csv", "resolved_config.yaml",
+    "run_manifest.json", "stdout.log", "stderr.log")
 GATE24_EQUIVALENCE_FILES = (
     "bridge.csv", "candidates.csv", "diagnostic_attempts.csv",
     "diagnostic_candidates.csv", "diagnostic_coverage.csv",
@@ -242,6 +243,79 @@ def scenarios(protocol, gate, profile, explicit):
     return data[gate].get(profile, [])
 
 
+def fault_schedule(scenario: str, epochs: int):
+    """Mirror the benchmark's single versioned schedule calculation."""
+    historical = scenario == "history_uwb"
+    single_epoch = scenario in (
+        "uwb_recovery", "imu_recovery", "joint_recovery")
+    fault_expected = scenario != "nominal"
+    begin_zero = 5 if historical else max(5, epochs // 3)
+    end_zero = (begin_zero if single_epoch else
+                max(5, epochs - 25) if historical else
+                max(begin_zero, 2 * epochs // 3 - 1))
+    if not fault_expected:
+        return {"fault_expected": False, "epochs": epochs,
+                "pre": epochs, "begin": None, "end": None,
+                "fault": 0, "post": 0}
+    return {"fault_expected": True, "epochs": epochs,
+            "pre": begin_zero, "begin": begin_zero + 1,
+            "end": end_zero + 1, "fault": end_zero - begin_zero + 1,
+            "post": epochs - end_zero - 1}
+
+
+def validate_profile_matrix_protocol(protocol):
+    matrix = protocol.get("profile_matrix", {})
+    original = int(protocol["epochs"].get("behavior_original", 0))
+    scaled = int(protocol["epochs"]["behavior"])
+    expected_runs = sum(len(protocol["scenarios"]["profiles"].get(profile, []))
+                        for profile in protocol["profiles"])
+    if (matrix.get("disposition") != "REVISED_SCOPE_38X20" or
+            matrix.get("profile_scenario_runs") != expected_runs or
+            matrix.get("attempts_per_run") != scaled or
+            matrix.get("planned_attempts") != expected_runs * scaled or
+            original != 300 or scaled != 20 or
+            matrix.get("original_campaign", {}).get("status") !=
+            "SUPERSEDED_BY_USER_SCOPE_CHANGE/NOT_CLAIMED" or
+            matrix.get("schedule", {}).get("algorithm") !=
+            "proportional_thirds_min5_history_tail25_v1"):
+        raise ValueError("profile matrix scope/schedule contract mismatch")
+    sections = {
+        "standard_interval": set(matrix["schedule"]["standard_interval"]["scenarios"]),
+        "historical_interval": set(matrix["schedule"]["historical_interval"]["scenarios"]),
+        "recovery_impulse": set(matrix["schedule"]["recovery_impulse"]["scenarios"]),
+        "no_fault": set(matrix["schedule"]["no_fault"]["scenarios"]),
+    }
+    declared = set().union(*sections.values())
+    actual = {scenario for profile in protocol["profiles"]
+              for scenario in protocol["scenarios"]["profiles"].get(profile, [])}
+    if declared != actual or sum(map(len, sections.values())) != len(declared):
+        raise ValueError("scenario schedule partition mismatch")
+    for name, scenarios_in_class in sections.items():
+        spec = matrix["schedule"][name]
+        exemplar = next(iter(scenarios_in_class))
+        expected_original = fault_schedule(exemplar, original)
+        expected_scaled = fault_schedule(exemplar, scaled)
+        if name == "no_fault":
+            if (spec.get("original") != {"normal": original} or
+                    spec.get("scaled") != {"normal": scaled}):
+                raise ValueError("nominal schedule declaration mismatch")
+        else:
+            for label, expected in (("original", expected_original),
+                                    ("scaled", expected_scaled)):
+                recorded = spec.get(label, {})
+                keys = ("pre", "begin", "end", "fault", "post")
+                if any(recorded.get(key) != expected[key] for key in keys):
+                    raise ValueError(f"{name} {label} schedule mismatch")
+                if min(expected["pre"], expected["fault"], expected["post"]) <= 0:
+                    raise ValueError(f"{name} {label} has an empty segment")
+    return {"schema": "uwb-imu-pl/revised-profile-matrix/v1",
+            "disposition": matrix["disposition"],
+            "original_epochs": original, "scaled_epochs": scaled,
+            "expected_runs": expected_runs,
+            "planned_attempts": expected_runs * scaled,
+            "schedule_algorithm": matrix["schedule"]["algorithm"]}
+
+
 def immutable_identity(identity):
     """Return only fields fixed before execution.
 
@@ -277,6 +351,10 @@ def main() -> int:
     protocol = yaml.safe_load(protocol_path.read_text(encoding="utf-8"))
     if protocol.get("schema") != "uwb-imu-pl/fde-profile-validation/v1":
         raise SystemExit("unsupported validation protocol")
+    try:
+        matrix_contract = validate_profile_matrix_protocol(protocol)
+    except (KeyError, TypeError, ValueError) as error:
+        raise SystemExit(f"invalid revised profile matrix protocol: {error}")
     if not args.binary.is_file(): raise SystemExit(f"benchmark binary absent: {args.binary}")
     args.binary = args.binary.resolve()
     output = args.output.resolve(); output.mkdir(parents=True, exist_ok=True)
@@ -393,6 +471,11 @@ def main() -> int:
                             "complete_model_config_digest":
                                 simulation_by_profile[profile][
                                     "complete_model_config_digest"],
+                            "profile_matrix_contract": matrix_contract,
+                            "fault_schedule_original": fault_schedule(
+                                scenario, matrix_contract["original_epochs"]),
+                            "fault_schedule_effective": fault_schedule(
+                                scenario, epochs),
                             "hardware_formal_qualification": "CLOSED/NOT_CLAIMED",
                             "git_sha": frozen_execution["git_sha"],
                             "source_tree_sha256":

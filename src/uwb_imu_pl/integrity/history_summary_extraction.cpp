@@ -25,14 +25,18 @@ ExtractedBoundaryRows extractBoundaryRows(
     }
     for (std::size_t local = 0; local < jacobian->keys().size(); ++local) {
       const gtsam::Key key = jacobian->keys()[local];
+      const int width =
+          static_cast<int>(jacobian->getA(jacobian->begin() + local).cols());
       if (column_of_key.find(key) == column_of_key.end()) {
-        const int width =
-            static_cast<int>(jacobian->getA(jacobian->begin() + local).cols());
         column_of_key.emplace(key, static_cast<int>(out.keys.size()));
         out.keys.push_back(key);
         out.column_begin.push_back(out.total_columns);
         out.key_dim.push_back(width);
         out.total_columns += width;
+      } else if (out.key_dim[column_of_key.at(key)] != width) {
+        out.reason = "inconsistent tangent dimension for repeated key " +
+            std::to_string(static_cast<std::uint64_t>(key));
+        return out;
       }
     }
     rows += static_cast<std::size_t>(jacobian->getA().rows());
@@ -46,6 +50,10 @@ ExtractedBoundaryRows extractBoundaryRows(
       out.reason = "reduced factor is not a JacobianFactor";
       return out;
     }
+    if (!jacobian->getA().allFinite() || !jacobian->getb().allFinite()) {
+      out.reason = "input JacobianFactor contains a non-finite A or b";
+      return out;
+    }
     const int factor_rows = static_cast<int>(jacobian->getA().rows());
     for (std::size_t local = 0; local < jacobian->keys().size(); ++local) {
       const int index = column_of_key.at(jacobian->keys()[local]);
@@ -56,6 +64,10 @@ ExtractedBoundaryRows extractBoundaryRows(
     out.rows.block(cursor, out.total_columns, factor_rows, 1) =
         jacobian->getb();
     cursor += static_cast<std::size_t>(factor_rows);
+  }
+  if (!out.rows.allFinite()) {
+    out.reason = "assembled boundary rows became non-finite";
+    return out;
   }
   // Rank audit (no truncation anywhere: the rows are handed over intact).
   Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr(

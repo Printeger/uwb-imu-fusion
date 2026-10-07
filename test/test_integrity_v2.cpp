@@ -1371,6 +1371,14 @@ TEST(IntegrityV2Window, RejectsFixedLagWithoutMaturityMargin) {
   EXPECT_FALSE(window.capabilities.fixed_lag_maturity_valid);
   EXPECT_EQ(window.reason,
             "fixed lag violates integrity-window maturity delay");
+  const auto frozen = estimator.buildFrozenIntegrityWindow(
+      transaction, uwb_imu_pl::IntegrityWindowRequest{});
+  const auto admission = uwb_imu_pl::admitFrozenIntegrityWindow(frozen);
+  ASSERT_TRUE(admission) << admission.reason;
+  EXPECT_FALSE(admission.window().model_valid);
+  EXPECT_FALSE(admission.window().capabilities.fixed_lag_maturity_valid);
+  EXPECT_EQ(admission.window().reason,
+            "fixed lag violates integrity-window maturity delay");
   estimator.discardEpoch(
       std::move(transaction),
       {uwb_imu_pl::FdeStatus::ModelInvalid, "test complete", false});
@@ -6067,6 +6075,33 @@ TEST(P101IdentityIndexing, FrozenOwnerIsImmutableAndAdmissionIsConstantWork) {
   const auto after_admission = NumericalWorkCounters::snapshot();
   EXPECT_EQ(after_admission.window_content_hash_scans, 1u);
   EXPECT_EQ(after_admission.frozen_admission_constant_validations, 1u);
+}
+
+TEST(P101IdentityIndexing,
+     ImmutableInvalidWindowWithoutNumericsIsAdmittedOnlyToFailClosed) {
+  using namespace uwb_imu_pl;
+  auto builder = syntheticWindow();
+  builder.model_valid = false;
+  builder.reason = "history summary invalid: non_finite_input";
+  builder.numerics.reset();
+  const auto frozen = freezeIntegrityWindowCopy(builder);
+  const auto admission = admitFrozenIntegrityWindow(frozen);
+  ASSERT_TRUE(admission) << admission.reason;
+  EXPECT_FALSE(admission.window().model_valid);
+  EXPECT_FALSE(admission.window().numerics);
+  const auto detector = JointWindowDetector().evaluate(
+      admission, DetectorRiskContext{});
+  EXPECT_FALSE(detector.numerically_valid);
+  EXPECT_FALSE(detector.passed);
+  EXPECT_NE(detector.reason.find("invalid integrity window"),
+            std::string::npos) << detector.reason;
+
+  builder.model_valid = true;
+  const auto forged_valid = freezeIntegrityWindowCopy(builder);
+  const auto rejected = admitFrozenIntegrityWindow(forged_valid);
+  EXPECT_FALSE(rejected);
+  EXPECT_NE(rejected.reason.find("no completed numerics"), std::string::npos)
+      << rejected.reason;
 }
 
 TEST(P101IdentityIndexing, SealedCandidateIsBoundToItsExactOwner) {

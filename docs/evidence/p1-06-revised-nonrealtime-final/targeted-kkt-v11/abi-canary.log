@@ -1,0 +1,5 @@
+ImuNoiseConfig 80 8 0 8 16 24 32 40 48
+IntegrityConfig 2544 8
+FdeDecisionContextV1 16 8 0 8
+FdeDecisionContextV2 48 8 0 16 24 32 40
+load-by-value-vector-destruct-old-decide 1

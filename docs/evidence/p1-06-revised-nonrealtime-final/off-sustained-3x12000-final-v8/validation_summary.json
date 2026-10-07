@@ -1,0 +1,1094 @@
+{
+  "runs": [
+    {
+      "accuracy": {
+        "accel_bias_norm_rmse_mps2": 0.0028014950842347843,
+        "accel_bias_truth": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "attitude_geodesic_max_rad": 2.056067153237376,
+        "attitude_geodesic_rmse_rad": 0.739638219434134,
+        "gyro_bias_norm_rmse_radps": 7.371509022121115e-05,
+        "gyro_bias_truth": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "truth_at_attempt_position_rmse_m": 0.18338297652852784,
+        "truth_at_state_position_max_m": 0.46226695563216114,
+        "truth_at_state_position_p95_m": 0.39617989615989757,
+        "truth_at_state_position_rmse_m": 0.18338297652852784,
+        "valid_counts": {
+          "accel_bias": 12000,
+          "attitude": 12000,
+          "gyro_bias": 12000,
+          "position": 12000,
+          "service_position": 12000,
+          "velocity": 12000
+        },
+        "velocity_rmse_mps": 0.030756935558707788
+      },
+      "action_and_status_counts": {
+        "fde_status": {
+          "FDE_DISABLED": 12000
+        },
+        "selected_action": {
+          "KEEP_ALL": 12000
+        }
+      },
+      "artifact_directory": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/off-sustained-3x12000-final-v8/off__nominal__e12000__s20260901__r1",
+      "artifact_hashes": {
+        "diagnostic_attempts.csv": {
+          "bytes": 12320273,
+          "sha256": "27f2b5a1a43ca101fdc7360bfb415bbb2a8b14a200ce77e358765956d1e7ce38"
+        },
+        "diagnostic_stages.csv": {
+          "bytes": 32030462,
+          "sha256": "e4b5e5b132f1b6d8eb77264773e4972019e46e1789e216b272e85f07eab87264"
+        },
+        "fault_truth.csv": {
+          "bytes": 166,
+          "sha256": "19701bc32e4dfe433bcac91e977ca1b9e2bed9637b7bb1b24f59542f68db1a08"
+        },
+        "ground_truth.csv": {
+          "bytes": 1592616,
+          "sha256": "e80418b83a0844409746d622161c6165a94746a17ba03ecf467012c8359d2873"
+        },
+        "integrity.csv": {
+          "bytes": 6686039,
+          "sha256": "19168de8ef125eba69872198aa685212346abd77d4c879ed8504bd5d191049c5"
+        },
+        "resolved_config.yaml": {
+          "bytes": 13450,
+          "sha256": "3eb43175a8a512f9b127a202a73d4a98b23733f25ceab33665811e127f40537b"
+        },
+        "run_manifest.json": {
+          "bytes": 4154,
+          "sha256": "3fdda4d7db88de51ffe9c2fb73db21d3dcb55f447c5fb4dbd0c00c2a979df628"
+        },
+        "states.csv": {
+          "bytes": 3855371,
+          "sha256": "7efab5bb6c7fd6955f0da60126c4a96e2326adec9977837e9b302d9abd869777"
+        },
+        "stderr.log": {
+          "bytes": 1056,
+          "sha256": "d17d6f0d15df3f813da7a349af89391aae80deaa8217d0e7c0b534336148f8a9"
+        },
+        "stdout.log": {
+          "bytes": 906,
+          "sha256": "60c0caafc0226f7c5bbf5825f12ab57078f6ed5b83d66d8c80cef7588878e4d4"
+        },
+        "summary.json": {
+          "bytes": 283,
+          "sha256": "e5824934874cf50c92727a6df1e7ca5f42fb8813d11965630077841621f18b16"
+        },
+        "timing.csv": {
+          "bytes": 8863006,
+          "sha256": "4553be5aeb91bb4c11014325f74fb7047eaf2237e0ed4c774395e5e35e2fba37"
+        }
+      },
+      "benchmark_path": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+      "benchmark_sha256": "61d65b39c7f282ed33c99f1d64561b45a6a345d7851c45d8df7a8a1e73234663",
+      "benchmark_source_sha256": "88e819cc887748908ce70f1c2e310e8b467eb00a03f35687f5ccd97691ea26f7",
+      "calibration_artifact_class": "simulation/synthetic",
+      "command": [
+        "/usr/bin/time",
+        "-v",
+        "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_off.yaml",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/off-sustained-3x12000-final-v8/off__nominal__e12000__s20260901__r1",
+        "12000"
+      ],
+      "complete_model_config_digest": "d9ebcb75db11eac60a009cac71104c56e1e0f3de3a985de0ca61fed977fcccbd",
+      "config_hash": "acf4a1a6ff15351384f0e230f2b91c067b7927ca9b184d6bf2e06860e26ff54a",
+      "counts": {
+        "attempted": 12000,
+        "committed": 12000,
+        "deadline_missed": 0,
+        "finite_pl": 0,
+        "fresh": 12000,
+        "marginalizations": 11971,
+        "rejected": 0,
+        "state_valid": 12000,
+        "within_alert_limits": 0
+      },
+      "epochs": 12000,
+      "exit_code": 0,
+      "fault_overrides": {},
+      "fault_phases": {},
+      "fault_schedule_effective": {
+        "begin": null,
+        "end": null,
+        "epochs": 12000,
+        "fault": 0,
+        "fault_expected": false,
+        "post": 0,
+        "pre": 12000
+      },
+      "fault_schedule_original": {
+        "begin": null,
+        "end": null,
+        "epochs": 300,
+        "fault": 0,
+        "fault_expected": false,
+        "post": 0,
+        "pre": 300
+      },
+      "gate": "performance",
+      "git_sha": "4e99d4d8aa9712300389a7caed9d7809afc87d5a",
+      "hardware_formal_qualification": "CLOSED/NOT_CLAIMED",
+      "hypothesis_census_max": {
+        "double_uwb_accel_hypotheses": 0,
+        "double_uwb_gyro_hypotheses": 0,
+        "generated_actions": 0,
+        "single_accel_hypotheses": 0,
+        "single_gyro_hypotheses": 0,
+        "single_uwb_hypotheses": 0
+      },
+      "integrity": {
+        "deadline_miss_fraction": 0.0,
+        "finite_pl_fraction": 0.0,
+        "fresh_fraction": 1.0,
+        "within_alert_fraction": 0.0
+      },
+      "loaded_dso_sha256": {
+        "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/libuwb_imu_pl.so": "455f01fe81a4cf47a05891cb0c544a9f793e842ebc9dad31a9bc03350912ea26",
+        "/usr/lib/x86_64-linux-gnu/ld-2.31.so": "cfd44e4341767033532d1483c8250d200ad4cdf535d0abc19064ae34cdc51ca0",
+        "/usr/lib/x86_64-linux-gnu/libboost_chrono.so.1.71.0": "d1b51a0aaec8675081523ab596742813c14ede4832c529c1cca2f25d3aee5050",
+        "/usr/lib/x86_64-linux-gnu/libboost_filesystem.so.1.71.0": "e1ba3a5cf611782b0dd5d7981edd06504edcb867482d2929213ae655a98d0ae2",
+        "/usr/lib/x86_64-linux-gnu/libboost_serialization.so.1.71.0": "e1cd1dfdb60c9ac2e9c168cf2f0958a5ece96084604d21f7933250f5845bf1e8",
+        "/usr/lib/x86_64-linux-gnu/libboost_timer.so.1.71.0": "83e9597dda3f11709b591b2d89b50deda1035acffe18b1908c44c5cab430964a",
+        "/usr/lib/x86_64-linux-gnu/libc-2.31.so": "53b909551f8e581120ddc2d24cfb5df76c52e3c2e2a5dac0d202b25638b3e902",
+        "/usr/lib/x86_64-linux-gnu/libdl-2.31.so": "e0d0cace80b627e50ca3f7b621b64917677c27c74077080854d57cf4e548edc6",
+        "/usr/lib/x86_64-linux-gnu/libgcc_s.so.1": "489803ded8a4d803e2c792763a2767c12185f5764b7bba080742d14ef2452b27",
+        "/usr/lib/x86_64-linux-gnu/libm-2.31.so": "a0e70f48f02a399e8dd37f861a99e226c285a9daf50a25d19fff7ccf18b97f9c",
+        "/usr/lib/x86_64-linux-gnu/libpthread-2.31.so": "af27ed906f6185e0143b9c0d0da287788efa7eb6b2639e44d48fb2939415fdc5",
+        "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.28": "26916e7389a561537a0510661fc75538cea236139346f3dbe21bc64ba65605bf",
+        "/usr/lib/x86_64-linux-gnu/libtbb.so.2": "26115b1a00c49e84d314e3f75eab0c752a2dfb20a61c60897f5656b1db239cba",
+        "/usr/lib/x86_64-linux-gnu/libtbbmalloc.so.2": "14147fcfadccacb4ddf94738143a3fa999a065a303dda898da8ab057cfb483b4",
+        "/usr/lib/x86_64-linux-gnu/libyaml-cpp.so.0.6.2": "b8a2d129e9b39d03ad7dade4eaa4eb1327a2562e203c17b50bcd8eb117d1ed7e",
+        "/usr/local/lib/libgtsam.so.4.2.0": "00d83aa618194aefc4b2011e1d29bd9aba107a8b5e0ee8e946eb2455351219da",
+        "/usr/local/lib/libgtsam_unstable.so.4.2.0": "7e54a7f4603b30b755f9f0036034e19c9f753c985c82af83c1551b23a9358c23",
+        "/usr/local/lib/libmetis-gtsam.so": "0a9c286ec13c815313fbe004d9969c3ae0ff08523f38efb575ca785e98f24d2b"
+      },
+      "performance": {
+        "core_max_ms": 16.9761,
+        "core_p50_ms": 1.40976,
+        "core_p95_ms": 2.20393,
+        "core_p99_ms": 2.82592,
+        "outer_p99_ms": 3.09205,
+        "rss_peak_mib": 32.13671875
+      },
+      "profile": "off",
+      "profile_matrix_contract": {
+        "disposition": "REVISED_SCOPE_38X20",
+        "expected_runs": 38,
+        "original_epochs": 300,
+        "planned_attempts": 760,
+        "scaled_epochs": 20,
+        "schedule_algorithm": "proportional_thirds_min5_history_tail25_v1",
+        "schema": "uwb-imu-pl/revised-profile-matrix/v1"
+      },
+      "protection_level": {
+        "axis_error_coverage_fraction": null,
+        "finite_with_truth": 0,
+        "horizontal_error_coverage_fraction": null,
+        "hpl_max_m": null,
+        "hpl_p50_m": null,
+        "hpl_p95_m": null,
+        "vertical_error_coverage_fraction": null,
+        "vpl_max_m": null,
+        "vpl_p50_m": null,
+        "vpl_p95_m": null
+      },
+      "protocol_hash": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6",
+      "protocol_id": "fde-profiles-20261006-revised-38x20-v1",
+      "repeat": 1,
+      "run_id": "off__nominal__e12000__s20260901__r1",
+      "runner_wall_s": 19.752892233002058,
+      "scale": "smoke",
+      "scenario": "nominal",
+      "schema": "uwb-imu-pl/fde-validation-run/v1",
+      "seed": 20260901,
+      "simulation_calibration_id": "simcal-p1-06-v2-off-d9ebcb75db11eac6",
+      "source_file_count": 197,
+      "source_tree_sha256": "a488d2272d54c0813b65cc4608b88445aea1163817f63021837ae3e31b26dd31",
+      "stage_timings": {
+        "analysis_completion": {
+          "count": 12000,
+          "max_ms": 16.9761,
+          "p50_ms": 1.40888,
+          "p95_ms": 2.20896,
+          "p99_ms": 2.84288
+        },
+        "arrival_to_publish": {
+          "count": 12000,
+          "max_ms": 16.9994,
+          "p50_ms": 1.42171,
+          "p95_ms": 2.22739,
+          "p99_ms": 2.86213
+        },
+        "commit": {
+          "count": 12000,
+          "max_ms": 16.834,
+          "p50_ms": 1.31977,
+          "p95_ms": 2.09274,
+          "p99_ms": 2.6939
+        },
+        "core_total": {
+          "count": 12000,
+          "max_ms": 16.9761,
+          "p50_ms": 1.40888,
+          "p95_ms": 2.20896,
+          "p99_ms": 2.84288
+        },
+        "current_joint_marginal": {
+          "count": 12000,
+          "max_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0
+        },
+        "imu_preintegration": {
+          "count": 12000,
+          "max_ms": 0.210369,
+          "p50_ms": 0.018987,
+          "p95_ms": 0.028708,
+          "p99_ms": 0.049672
+        },
+        "no_uwb_isam_update": {
+          "count": 12000,
+          "max_ms": 0.252477,
+          "p50_ms": 0.040062,
+          "p95_ms": 0.061017,
+          "p99_ms": 0.099955
+        },
+        "outer_epoch": {
+          "count": 12000,
+          "max_ms": 17.2436,
+          "p50_ms": 1.58205,
+          "p95_ms": 2.43487,
+          "p99_ms": 3.11956
+        },
+        "outer_logging_flush": {
+          "count": 12000,
+          "max_ms": 5.60351,
+          "p50_ms": 0.172024,
+          "p95_ms": 0.267931,
+          "p99_ms": 0.355007
+        },
+        "prepare": {
+          "count": 12000,
+          "max_ms": 0.257916,
+          "p50_ms": 0.044599,
+          "p95_ms": 0.067834,
+          "p99_ms": 0.109917
+        },
+        "snapshot_extraction": {
+          "count": 12000,
+          "max_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0
+        },
+        "state_query": {
+          "count": 12000,
+          "max_ms": 0.188324,
+          "p50_ms": 0.025795,
+          "p95_ms": 0.050554,
+          "p99_ms": 0.07332
+        },
+        "uwb_commit": {
+          "count": 12000,
+          "max_ms": 16.8008,
+          "p50_ms": 1.30719,
+          "p95_ms": 2.07325,
+          "p99_ms": 2.66463
+        }
+      },
+      "terminal_artifacts": {
+        "candidates.csv": {
+          "bytes": 360,
+          "sha256": "fdb497a77f039684de83bead176e3fcb3bddd7001ce144ec4724c89a419fb0c9"
+        },
+        "diagnostic_attempts.csv": {
+          "bytes": 12320273,
+          "sha256": "27f2b5a1a43ca101fdc7360bfb415bbb2a8b14a200ce77e358765956d1e7ce38"
+        },
+        "diagnostic_stages.csv": {
+          "bytes": 32030462,
+          "sha256": "e4b5e5b132f1b6d8eb77264773e4972019e46e1789e216b272e85f07eab87264"
+        },
+        "fault_truth.csv": {
+          "bytes": 166,
+          "sha256": "19701bc32e4dfe433bcac91e977ca1b9e2bed9637b7bb1b24f59542f68db1a08"
+        },
+        "integrity.csv": {
+          "bytes": 6686039,
+          "sha256": "19168de8ef125eba69872198aa685212346abd77d4c879ed8504bd5d191049c5"
+        },
+        "resolved_config.yaml": {
+          "bytes": 13450,
+          "sha256": "3eb43175a8a512f9b127a202a73d4a98b23733f25ceab33665811e127f40537b"
+        },
+        "run_manifest.json": {
+          "bytes": 4154,
+          "sha256": "3fdda4d7db88de51ffe9c2fb73db21d3dcb55f447c5fb4dbd0c00c2a979df628"
+        },
+        "stderr.log": {
+          "bytes": 1056,
+          "sha256": "d17d6f0d15df3f813da7a349af89391aae80deaa8217d0e7c0b534336148f8a9"
+        },
+        "stdout.log": {
+          "bytes": 906,
+          "sha256": "60c0caafc0226f7c5bbf5825f12ab57078f6ed5b83d66d8c80cef7588878e4d4"
+        },
+        "summary.json": {
+          "bytes": 283,
+          "sha256": "e5824934874cf50c92727a6df1e7ca5f42fb8813d11965630077841621f18b16"
+        },
+        "terminal_packets.csv": {
+          "bytes": 1206473,
+          "sha256": "f2d78e1180a22b3eae36430e5c8355e002b8253bbe3cd231e0ac2570d5140400"
+        },
+        "timing.csv": {
+          "bytes": 8863006,
+          "sha256": "4553be5aeb91bb4c11014325f74fb7047eaf2237e0ed4c774395e5e35e2fba37"
+        },
+        "transactions.csv": {
+          "bytes": 636627,
+          "sha256": "588741266191f518a3f4aefe43964a3f393e09482408d997335b1fd11ec25082"
+        }
+      }
+    },
+    {
+      "accuracy": {
+        "accel_bias_norm_rmse_mps2": 0.0027851801253032907,
+        "accel_bias_truth": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "attitude_geodesic_max_rad": 2.5005410255557083,
+        "attitude_geodesic_rmse_rad": 1.5695516874359383,
+        "gyro_bias_norm_rmse_radps": 0.00015299444185869454,
+        "gyro_bias_truth": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "truth_at_attempt_position_rmse_m": 0.3558740224396974,
+        "truth_at_state_position_max_m": 0.5199927495578942,
+        "truth_at_state_position_p95_m": 0.49394418009246527,
+        "truth_at_state_position_rmse_m": 0.3558740224396974,
+        "valid_counts": {
+          "accel_bias": 12000,
+          "attitude": 12000,
+          "gyro_bias": 12000,
+          "position": 12000,
+          "service_position": 12000,
+          "velocity": 12000
+        },
+        "velocity_rmse_mps": 0.042412529826889964
+      },
+      "action_and_status_counts": {
+        "fde_status": {
+          "FDE_DISABLED": 12000
+        },
+        "selected_action": {
+          "KEEP_ALL": 12000
+        }
+      },
+      "artifact_directory": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/off-sustained-3x12000-final-v8/off__nominal__e12000__s20260902__r2",
+      "artifact_hashes": {
+        "diagnostic_attempts.csv": {
+          "bytes": 12320458,
+          "sha256": "04fa5f67c52050d79ccea715e25fe451c9c07d35e33d94ffa60c0b6c4be97a74"
+        },
+        "diagnostic_stages.csv": {
+          "bytes": 32029200,
+          "sha256": "4566b33e0ea23386b28dc76a815513e22c4db7a46b8a5e79cfade9381d959752"
+        },
+        "fault_truth.csv": {
+          "bytes": 166,
+          "sha256": "19701bc32e4dfe433bcac91e977ca1b9e2bed9637b7bb1b24f59542f68db1a08"
+        },
+        "ground_truth.csv": {
+          "bytes": 1592616,
+          "sha256": "e80418b83a0844409746d622161c6165a94746a17ba03ecf467012c8359d2873"
+        },
+        "integrity.csv": {
+          "bytes": 6686113,
+          "sha256": "2ec0c934f51a49b46f3be8950fee0439b6f38158e08677a66d2a0aacd104c428"
+        },
+        "resolved_config.yaml": {
+          "bytes": 13450,
+          "sha256": "872fdfac210a88defd8e6a1d76193e3343a9d07aefde16b0dc3ca0512389cdc2"
+        },
+        "run_manifest.json": {
+          "bytes": 4154,
+          "sha256": "5164d64e7548e13defffa4310efec2b5ec3c88ec3f2cda804972e9b1b63a0d63"
+        },
+        "states.csv": {
+          "bytes": 3852390,
+          "sha256": "4413c82b6ac44420fcbc7a47568c72589e676d3e696fab86d065f1907ed5cde2"
+        },
+        "stderr.log": {
+          "bytes": 1056,
+          "sha256": "d3474da34d3764c977232a5e4f5c3b84c0e35682b5e319deef72f598142af401"
+        },
+        "stdout.log": {
+          "bytes": 906,
+          "sha256": "60c0caafc0226f7c5bbf5825f12ab57078f6ed5b83d66d8c80cef7588878e4d4"
+        },
+        "summary.json": {
+          "bytes": 285,
+          "sha256": "c255ed30d5e2d548c2fb99aef624c26a3d1b7fa1023837cfd100fe4da111ab3e"
+        },
+        "timing.csv": {
+          "bytes": 8861456,
+          "sha256": "b009e5b64b54689b4e9ae864ce103ae3f1278ad9f0418bfd11e01a9557873aa2"
+        }
+      },
+      "benchmark_path": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+      "benchmark_sha256": "61d65b39c7f282ed33c99f1d64561b45a6a345d7851c45d8df7a8a1e73234663",
+      "benchmark_source_sha256": "88e819cc887748908ce70f1c2e310e8b467eb00a03f35687f5ccd97691ea26f7",
+      "calibration_artifact_class": "simulation/synthetic",
+      "command": [
+        "/usr/bin/time",
+        "-v",
+        "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_off.yaml",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/off-sustained-3x12000-final-v8/off__nominal__e12000__s20260902__r2",
+        "12000"
+      ],
+      "complete_model_config_digest": "d9ebcb75db11eac60a009cac71104c56e1e0f3de3a985de0ca61fed977fcccbd",
+      "config_hash": "acf4a1a6ff15351384f0e230f2b91c067b7927ca9b184d6bf2e06860e26ff54a",
+      "counts": {
+        "attempted": 12000,
+        "committed": 12000,
+        "deadline_missed": 0,
+        "finite_pl": 0,
+        "fresh": 12000,
+        "marginalizations": 11971,
+        "rejected": 0,
+        "state_valid": 12000,
+        "within_alert_limits": 0
+      },
+      "epochs": 12000,
+      "exit_code": 0,
+      "fault_overrides": {},
+      "fault_phases": {},
+      "fault_schedule_effective": {
+        "begin": null,
+        "end": null,
+        "epochs": 12000,
+        "fault": 0,
+        "fault_expected": false,
+        "post": 0,
+        "pre": 12000
+      },
+      "fault_schedule_original": {
+        "begin": null,
+        "end": null,
+        "epochs": 300,
+        "fault": 0,
+        "fault_expected": false,
+        "post": 0,
+        "pre": 300
+      },
+      "gate": "performance",
+      "git_sha": "4e99d4d8aa9712300389a7caed9d7809afc87d5a",
+      "hardware_formal_qualification": "CLOSED/NOT_CLAIMED",
+      "hypothesis_census_max": {
+        "double_uwb_accel_hypotheses": 0,
+        "double_uwb_gyro_hypotheses": 0,
+        "generated_actions": 0,
+        "single_accel_hypotheses": 0,
+        "single_gyro_hypotheses": 0,
+        "single_uwb_hypotheses": 0
+      },
+      "integrity": {
+        "deadline_miss_fraction": 0.0,
+        "finite_pl_fraction": 0.0,
+        "fresh_fraction": 1.0,
+        "within_alert_fraction": 0.0
+      },
+      "loaded_dso_sha256": {
+        "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/libuwb_imu_pl.so": "455f01fe81a4cf47a05891cb0c544a9f793e842ebc9dad31a9bc03350912ea26",
+        "/usr/lib/x86_64-linux-gnu/ld-2.31.so": "cfd44e4341767033532d1483c8250d200ad4cdf535d0abc19064ae34cdc51ca0",
+        "/usr/lib/x86_64-linux-gnu/libboost_chrono.so.1.71.0": "d1b51a0aaec8675081523ab596742813c14ede4832c529c1cca2f25d3aee5050",
+        "/usr/lib/x86_64-linux-gnu/libboost_filesystem.so.1.71.0": "e1ba3a5cf611782b0dd5d7981edd06504edcb867482d2929213ae655a98d0ae2",
+        "/usr/lib/x86_64-linux-gnu/libboost_serialization.so.1.71.0": "e1cd1dfdb60c9ac2e9c168cf2f0958a5ece96084604d21f7933250f5845bf1e8",
+        "/usr/lib/x86_64-linux-gnu/libboost_timer.so.1.71.0": "83e9597dda3f11709b591b2d89b50deda1035acffe18b1908c44c5cab430964a",
+        "/usr/lib/x86_64-linux-gnu/libc-2.31.so": "53b909551f8e581120ddc2d24cfb5df76c52e3c2e2a5dac0d202b25638b3e902",
+        "/usr/lib/x86_64-linux-gnu/libdl-2.31.so": "e0d0cace80b627e50ca3f7b621b64917677c27c74077080854d57cf4e548edc6",
+        "/usr/lib/x86_64-linux-gnu/libgcc_s.so.1": "489803ded8a4d803e2c792763a2767c12185f5764b7bba080742d14ef2452b27",
+        "/usr/lib/x86_64-linux-gnu/libm-2.31.so": "a0e70f48f02a399e8dd37f861a99e226c285a9daf50a25d19fff7ccf18b97f9c",
+        "/usr/lib/x86_64-linux-gnu/libpthread-2.31.so": "af27ed906f6185e0143b9c0d0da287788efa7eb6b2639e44d48fb2939415fdc5",
+        "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.28": "26916e7389a561537a0510661fc75538cea236139346f3dbe21bc64ba65605bf",
+        "/usr/lib/x86_64-linux-gnu/libtbb.so.2": "26115b1a00c49e84d314e3f75eab0c752a2dfb20a61c60897f5656b1db239cba",
+        "/usr/lib/x86_64-linux-gnu/libtbbmalloc.so.2": "14147fcfadccacb4ddf94738143a3fa999a065a303dda898da8ab057cfb483b4",
+        "/usr/lib/x86_64-linux-gnu/libyaml-cpp.so.0.6.2": "b8a2d129e9b39d03ad7dade4eaa4eb1327a2562e203c17b50bcd8eb117d1ed7e",
+        "/usr/local/lib/libgtsam.so.4.2.0": "00d83aa618194aefc4b2011e1d29bd9aba107a8b5e0ee8e946eb2455351219da",
+        "/usr/local/lib/libgtsam_unstable.so.4.2.0": "7e54a7f4603b30b755f9f0036034e19c9f753c985c82af83c1551b23a9358c23",
+        "/usr/local/lib/libmetis-gtsam.so": "0a9c286ec13c815313fbe004d9969c3ae0ff08523f38efb575ca785e98f24d2b"
+      },
+      "performance": {
+        "core_max_ms": 11.6905,
+        "core_p50_ms": 1.4639,
+        "core_p95_ms": 2.28962,
+        "core_p99_ms": 3.03878,
+        "outer_p99_ms": 3.32534,
+        "rss_peak_mib": 30.22265625
+      },
+      "profile": "off",
+      "profile_matrix_contract": {
+        "disposition": "REVISED_SCOPE_38X20",
+        "expected_runs": 38,
+        "original_epochs": 300,
+        "planned_attempts": 760,
+        "scaled_epochs": 20,
+        "schedule_algorithm": "proportional_thirds_min5_history_tail25_v1",
+        "schema": "uwb-imu-pl/revised-profile-matrix/v1"
+      },
+      "protection_level": {
+        "axis_error_coverage_fraction": null,
+        "finite_with_truth": 0,
+        "horizontal_error_coverage_fraction": null,
+        "hpl_max_m": null,
+        "hpl_p50_m": null,
+        "hpl_p95_m": null,
+        "vertical_error_coverage_fraction": null,
+        "vpl_max_m": null,
+        "vpl_p50_m": null,
+        "vpl_p95_m": null
+      },
+      "protocol_hash": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6",
+      "protocol_id": "fde-profiles-20261006-revised-38x20-v1",
+      "repeat": 2,
+      "run_id": "off__nominal__e12000__s20260902__r2",
+      "runner_wall_s": 20.42364507899765,
+      "scale": "smoke",
+      "scenario": "nominal",
+      "schema": "uwb-imu-pl/fde-validation-run/v1",
+      "seed": 20260902,
+      "simulation_calibration_id": "simcal-p1-06-v2-off-d9ebcb75db11eac6",
+      "source_file_count": 197,
+      "source_tree_sha256": "a488d2272d54c0813b65cc4608b88445aea1163817f63021837ae3e31b26dd31",
+      "stage_timings": {
+        "analysis_completion": {
+          "count": 12000,
+          "max_ms": 11.6905,
+          "p50_ms": 1.46046,
+          "p95_ms": 2.2888,
+          "p99_ms": 3.00813
+        },
+        "arrival_to_publish": {
+          "count": 12000,
+          "max_ms": 11.7094,
+          "p50_ms": 1.4741,
+          "p95_ms": 2.30593,
+          "p99_ms": 3.03032
+        },
+        "commit": {
+          "count": 12000,
+          "max_ms": 11.5942,
+          "p50_ms": 1.37015,
+          "p95_ms": 2.17393,
+          "p99_ms": 2.89793
+        },
+        "core_total": {
+          "count": 12000,
+          "max_ms": 11.6905,
+          "p50_ms": 1.46046,
+          "p95_ms": 2.2888,
+          "p99_ms": 3.00813
+        },
+        "current_joint_marginal": {
+          "count": 12000,
+          "max_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0
+        },
+        "imu_preintegration": {
+          "count": 12000,
+          "max_ms": 0.377218,
+          "p50_ms": 0.019455,
+          "p95_ms": 0.030655,
+          "p99_ms": 0.050664
+        },
+        "no_uwb_isam_update": {
+          "count": 12000,
+          "max_ms": 0.42795,
+          "p50_ms": 0.040841,
+          "p95_ms": 0.065754,
+          "p99_ms": 0.106317
+        },
+        "outer_epoch": {
+          "count": 12000,
+          "max_ms": 11.9247,
+          "p50_ms": 1.64106,
+          "p95_ms": 2.52109,
+          "p99_ms": 3.3244
+        },
+        "outer_logging_flush": {
+          "count": 12000,
+          "max_ms": 0.872108,
+          "p50_ms": 0.17513,
+          "p95_ms": 0.275474,
+          "p99_ms": 0.371196
+        },
+        "prepare": {
+          "count": 12000,
+          "max_ms": 0.433894,
+          "p50_ms": 0.045457,
+          "p95_ms": 0.073251,
+          "p99_ms": 0.118172
+        },
+        "snapshot_extraction": {
+          "count": 12000,
+          "max_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0
+        },
+        "state_query": {
+          "count": 12000,
+          "max_ms": 0.332406,
+          "p50_ms": 0.026443,
+          "p95_ms": 0.051364,
+          "p99_ms": 0.078039
+        },
+        "uwb_commit": {
+          "count": 12000,
+          "max_ms": 11.571,
+          "p50_ms": 1.35654,
+          "p95_ms": 2.15083,
+          "p99_ms": 2.87073
+        }
+      },
+      "terminal_artifacts": {
+        "candidates.csv": {
+          "bytes": 360,
+          "sha256": "fdb497a77f039684de83bead176e3fcb3bddd7001ce144ec4724c89a419fb0c9"
+        },
+        "diagnostic_attempts.csv": {
+          "bytes": 12320458,
+          "sha256": "04fa5f67c52050d79ccea715e25fe451c9c07d35e33d94ffa60c0b6c4be97a74"
+        },
+        "diagnostic_stages.csv": {
+          "bytes": 32029200,
+          "sha256": "4566b33e0ea23386b28dc76a815513e22c4db7a46b8a5e79cfade9381d959752"
+        },
+        "fault_truth.csv": {
+          "bytes": 166,
+          "sha256": "19701bc32e4dfe433bcac91e977ca1b9e2bed9637b7bb1b24f59542f68db1a08"
+        },
+        "integrity.csv": {
+          "bytes": 6686113,
+          "sha256": "2ec0c934f51a49b46f3be8950fee0439b6f38158e08677a66d2a0aacd104c428"
+        },
+        "resolved_config.yaml": {
+          "bytes": 13450,
+          "sha256": "872fdfac210a88defd8e6a1d76193e3343a9d07aefde16b0dc3ca0512389cdc2"
+        },
+        "run_manifest.json": {
+          "bytes": 4154,
+          "sha256": "5164d64e7548e13defffa4310efec2b5ec3c88ec3f2cda804972e9b1b63a0d63"
+        },
+        "stderr.log": {
+          "bytes": 1056,
+          "sha256": "d3474da34d3764c977232a5e4f5c3b84c0e35682b5e319deef72f598142af401"
+        },
+        "stdout.log": {
+          "bytes": 906,
+          "sha256": "60c0caafc0226f7c5bbf5825f12ab57078f6ed5b83d66d8c80cef7588878e4d4"
+        },
+        "summary.json": {
+          "bytes": 285,
+          "sha256": "c255ed30d5e2d548c2fb99aef624c26a3d1b7fa1023837cfd100fe4da111ab3e"
+        },
+        "terminal_packets.csv": {
+          "bytes": 1206763,
+          "sha256": "7307572533777afe670b3f4d2c87d270878fc9c007ca91004e60d2ea35170a2b"
+        },
+        "timing.csv": {
+          "bytes": 8861456,
+          "sha256": "b009e5b64b54689b4e9ae864ce103ae3f1278ad9f0418bfd11e01a9557873aa2"
+        },
+        "transactions.csv": {
+          "bytes": 636627,
+          "sha256": "588741266191f518a3f4aefe43964a3f393e09482408d997335b1fd11ec25082"
+        }
+      }
+    },
+    {
+      "accuracy": {
+        "accel_bias_norm_rmse_mps2": 0.002770068509007822,
+        "accel_bias_truth": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "attitude_geodesic_max_rad": 0.9361087276702195,
+        "attitude_geodesic_rmse_rad": 0.33106075731557266,
+        "gyro_bias_norm_rmse_radps": 3.356922209003275e-05,
+        "gyro_bias_truth": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "truth_at_attempt_position_rmse_m": 0.08778057841978862,
+        "truth_at_state_position_max_m": 0.2474328613126692,
+        "truth_at_state_position_p95_m": 0.18659063493588568,
+        "truth_at_state_position_rmse_m": 0.08778057841978862,
+        "valid_counts": {
+          "accel_bias": 12000,
+          "attitude": 12000,
+          "gyro_bias": 12000,
+          "position": 12000,
+          "service_position": 12000,
+          "velocity": 12000
+        },
+        "velocity_rmse_mps": 0.02687695538645991
+      },
+      "action_and_status_counts": {
+        "fde_status": {
+          "FDE_DISABLED": 12000
+        },
+        "selected_action": {
+          "KEEP_ALL": 12000
+        }
+      },
+      "artifact_directory": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/off-sustained-3x12000-final-v8/off__nominal__e12000__s20260903__r3",
+      "artifact_hashes": {
+        "diagnostic_attempts.csv": {
+          "bytes": 12320733,
+          "sha256": "55c2cc7c0d39a717d79018bed8f82ce74840fec7f040a0ac6b51f1483fa500e8"
+        },
+        "diagnostic_stages.csv": {
+          "bytes": 32033117,
+          "sha256": "1e5fdddd7dd6181d54f756bb383497f6c1373e554098861ad654b7ad31e4f765"
+        },
+        "fault_truth.csv": {
+          "bytes": 166,
+          "sha256": "19701bc32e4dfe433bcac91e977ca1b9e2bed9637b7bb1b24f59542f68db1a08"
+        },
+        "ground_truth.csv": {
+          "bytes": 1592616,
+          "sha256": "e80418b83a0844409746d622161c6165a94746a17ba03ecf467012c8359d2873"
+        },
+        "integrity.csv": {
+          "bytes": 6686155,
+          "sha256": "79d222d1eef7ea1f937a3240742f3ac5a4f711dbb1fee7e5607836b13524b04d"
+        },
+        "resolved_config.yaml": {
+          "bytes": 13450,
+          "sha256": "1e2cb473910a988ad316b5381266d0df930b94af70c1d0e51a0311de95d21a7c"
+        },
+        "run_manifest.json": {
+          "bytes": 4154,
+          "sha256": "4ef0816544349cb8d0ab3a14400b696e7e862650d17188a4daaa442497e5cc7d"
+        },
+        "states.csv": {
+          "bytes": 3854095,
+          "sha256": "7da2b0fbc675afb00a66ad66133ccc5c644a1f16d3107e5454356020359cc4a1"
+        },
+        "stderr.log": {
+          "bytes": 1056,
+          "sha256": "c5c08113f351cd1f09b78f0ee3d3c212d2cd5f68adca7d2b0949107807333f0b"
+        },
+        "stdout.log": {
+          "bytes": 906,
+          "sha256": "60c0caafc0226f7c5bbf5825f12ab57078f6ed5b83d66d8c80cef7588878e4d4"
+        },
+        "summary.json": {
+          "bytes": 285,
+          "sha256": "9decae72a3589987cbe5b260db9223922fc9e229794a45d1ace0cba9a5d21d3b"
+        },
+        "timing.csv": {
+          "bytes": 8863906,
+          "sha256": "e941df6b7755b6cf0a20d4c32359439d410a4a80b23bf11795eaab252d21e4b5"
+        }
+      },
+      "benchmark_path": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+      "benchmark_sha256": "61d65b39c7f282ed33c99f1d64561b45a6a345d7851c45d8df7a8a1e73234663",
+      "benchmark_source_sha256": "88e819cc887748908ce70f1c2e310e8b467eb00a03f35687f5ccd97691ea26f7",
+      "calibration_artifact_class": "simulation/synthetic",
+      "command": [
+        "/usr/bin/time",
+        "-v",
+        "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_off.yaml",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/off-sustained-3x12000-final-v8/off__nominal__e12000__s20260903__r3",
+        "12000"
+      ],
+      "complete_model_config_digest": "d9ebcb75db11eac60a009cac71104c56e1e0f3de3a985de0ca61fed977fcccbd",
+      "config_hash": "acf4a1a6ff15351384f0e230f2b91c067b7927ca9b184d6bf2e06860e26ff54a",
+      "counts": {
+        "attempted": 12000,
+        "committed": 12000,
+        "deadline_missed": 0,
+        "finite_pl": 0,
+        "fresh": 12000,
+        "marginalizations": 11971,
+        "rejected": 0,
+        "state_valid": 12000,
+        "within_alert_limits": 0
+      },
+      "epochs": 12000,
+      "exit_code": 0,
+      "fault_overrides": {},
+      "fault_phases": {},
+      "fault_schedule_effective": {
+        "begin": null,
+        "end": null,
+        "epochs": 12000,
+        "fault": 0,
+        "fault_expected": false,
+        "post": 0,
+        "pre": 12000
+      },
+      "fault_schedule_original": {
+        "begin": null,
+        "end": null,
+        "epochs": 300,
+        "fault": 0,
+        "fault_expected": false,
+        "post": 0,
+        "pre": 300
+      },
+      "gate": "performance",
+      "git_sha": "4e99d4d8aa9712300389a7caed9d7809afc87d5a",
+      "hardware_formal_qualification": "CLOSED/NOT_CLAIMED",
+      "hypothesis_census_max": {
+        "double_uwb_accel_hypotheses": 0,
+        "double_uwb_gyro_hypotheses": 0,
+        "generated_actions": 0,
+        "single_accel_hypotheses": 0,
+        "single_gyro_hypotheses": 0,
+        "single_uwb_hypotheses": 0
+      },
+      "integrity": {
+        "deadline_miss_fraction": 0.0,
+        "finite_pl_fraction": 0.0,
+        "fresh_fraction": 1.0,
+        "within_alert_fraction": 0.0
+      },
+      "loaded_dso_sha256": {
+        "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/libuwb_imu_pl.so": "455f01fe81a4cf47a05891cb0c544a9f793e842ebc9dad31a9bc03350912ea26",
+        "/usr/lib/x86_64-linux-gnu/ld-2.31.so": "cfd44e4341767033532d1483c8250d200ad4cdf535d0abc19064ae34cdc51ca0",
+        "/usr/lib/x86_64-linux-gnu/libboost_chrono.so.1.71.0": "d1b51a0aaec8675081523ab596742813c14ede4832c529c1cca2f25d3aee5050",
+        "/usr/lib/x86_64-linux-gnu/libboost_filesystem.so.1.71.0": "e1ba3a5cf611782b0dd5d7981edd06504edcb867482d2929213ae655a98d0ae2",
+        "/usr/lib/x86_64-linux-gnu/libboost_serialization.so.1.71.0": "e1cd1dfdb60c9ac2e9c168cf2f0958a5ece96084604d21f7933250f5845bf1e8",
+        "/usr/lib/x86_64-linux-gnu/libboost_timer.so.1.71.0": "83e9597dda3f11709b591b2d89b50deda1035acffe18b1908c44c5cab430964a",
+        "/usr/lib/x86_64-linux-gnu/libc-2.31.so": "53b909551f8e581120ddc2d24cfb5df76c52e3c2e2a5dac0d202b25638b3e902",
+        "/usr/lib/x86_64-linux-gnu/libdl-2.31.so": "e0d0cace80b627e50ca3f7b621b64917677c27c74077080854d57cf4e548edc6",
+        "/usr/lib/x86_64-linux-gnu/libgcc_s.so.1": "489803ded8a4d803e2c792763a2767c12185f5764b7bba080742d14ef2452b27",
+        "/usr/lib/x86_64-linux-gnu/libm-2.31.so": "a0e70f48f02a399e8dd37f861a99e226c285a9daf50a25d19fff7ccf18b97f9c",
+        "/usr/lib/x86_64-linux-gnu/libpthread-2.31.so": "af27ed906f6185e0143b9c0d0da287788efa7eb6b2639e44d48fb2939415fdc5",
+        "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.28": "26916e7389a561537a0510661fc75538cea236139346f3dbe21bc64ba65605bf",
+        "/usr/lib/x86_64-linux-gnu/libtbb.so.2": "26115b1a00c49e84d314e3f75eab0c752a2dfb20a61c60897f5656b1db239cba",
+        "/usr/lib/x86_64-linux-gnu/libtbbmalloc.so.2": "14147fcfadccacb4ddf94738143a3fa999a065a303dda898da8ab057cfb483b4",
+        "/usr/lib/x86_64-linux-gnu/libyaml-cpp.so.0.6.2": "b8a2d129e9b39d03ad7dade4eaa4eb1327a2562e203c17b50bcd8eb117d1ed7e",
+        "/usr/local/lib/libgtsam.so.4.2.0": "00d83aa618194aefc4b2011e1d29bd9aba107a8b5e0ee8e946eb2455351219da",
+        "/usr/local/lib/libgtsam_unstable.so.4.2.0": "7e54a7f4603b30b755f9f0036034e19c9f753c985c82af83c1551b23a9358c23",
+        "/usr/local/lib/libmetis-gtsam.so": "0a9c286ec13c815313fbe004d9969c3ae0ff08523f38efb575ca785e98f24d2b"
+      },
+      "performance": {
+        "core_max_ms": 14.1545,
+        "core_p50_ms": 1.42195,
+        "core_p95_ms": 2.4524,
+        "core_p99_ms": 3.59257,
+        "outer_p99_ms": 3.97825,
+        "rss_peak_mib": 28.0
+      },
+      "profile": "off",
+      "profile_matrix_contract": {
+        "disposition": "REVISED_SCOPE_38X20",
+        "expected_runs": 38,
+        "original_epochs": 300,
+        "planned_attempts": 760,
+        "scaled_epochs": 20,
+        "schedule_algorithm": "proportional_thirds_min5_history_tail25_v1",
+        "schema": "uwb-imu-pl/revised-profile-matrix/v1"
+      },
+      "protection_level": {
+        "axis_error_coverage_fraction": null,
+        "finite_with_truth": 0,
+        "horizontal_error_coverage_fraction": null,
+        "hpl_max_m": null,
+        "hpl_p50_m": null,
+        "hpl_p95_m": null,
+        "vertical_error_coverage_fraction": null,
+        "vpl_max_m": null,
+        "vpl_p50_m": null,
+        "vpl_p95_m": null
+      },
+      "protocol_hash": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6",
+      "protocol_id": "fde-profiles-20261006-revised-38x20-v1",
+      "repeat": 3,
+      "run_id": "off__nominal__e12000__s20260903__r3",
+      "runner_wall_s": 20.415043205000984,
+      "scale": "smoke",
+      "scenario": "nominal",
+      "schema": "uwb-imu-pl/fde-validation-run/v1",
+      "seed": 20260903,
+      "simulation_calibration_id": "simcal-p1-06-v2-off-d9ebcb75db11eac6",
+      "source_file_count": 197,
+      "source_tree_sha256": "a488d2272d54c0813b65cc4608b88445aea1163817f63021837ae3e31b26dd31",
+      "stage_timings": {
+        "analysis_completion": {
+          "count": 12000,
+          "max_ms": 14.1545,
+          "p50_ms": 1.42058,
+          "p95_ms": 2.44776,
+          "p99_ms": 3.59095
+        },
+        "arrival_to_publish": {
+          "count": 12000,
+          "max_ms": 14.1795,
+          "p50_ms": 1.43292,
+          "p95_ms": 2.47332,
+          "p99_ms": 3.61729
+        },
+        "commit": {
+          "count": 12000,
+          "max_ms": 14.0406,
+          "p50_ms": 1.33071,
+          "p95_ms": 2.32556,
+          "p99_ms": 3.42014
+        },
+        "core_total": {
+          "count": 12000,
+          "max_ms": 14.1545,
+          "p50_ms": 1.42058,
+          "p95_ms": 2.44776,
+          "p99_ms": 3.59095
+        },
+        "current_joint_marginal": {
+          "count": 12000,
+          "max_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0
+        },
+        "imu_preintegration": {
+          "count": 12000,
+          "max_ms": 0.285952,
+          "p50_ms": 0.018682,
+          "p95_ms": 0.036395,
+          "p99_ms": 0.059046
+        },
+        "no_uwb_isam_update": {
+          "count": 12000,
+          "max_ms": 0.947229,
+          "p50_ms": 0.039162,
+          "p95_ms": 0.074142,
+          "p99_ms": 0.119816
+        },
+        "outer_epoch": {
+          "count": 12000,
+          "max_ms": 14.4215,
+          "p50_ms": 1.59773,
+          "p95_ms": 2.70861,
+          "p99_ms": 3.96527
+        },
+        "outer_logging_flush": {
+          "count": 12000,
+          "max_ms": 1.69645,
+          "p50_ms": 0.168813,
+          "p95_ms": 0.307029,
+          "p99_ms": 0.424413
+        },
+        "prepare": {
+          "count": 12000,
+          "max_ms": 0.962835,
+          "p50_ms": 0.043596,
+          "p95_ms": 0.081615,
+          "p99_ms": 0.131763
+        },
+        "snapshot_extraction": {
+          "count": 12000,
+          "max_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0
+        },
+        "state_query": {
+          "count": 12000,
+          "max_ms": 0.889333,
+          "p50_ms": 0.025904,
+          "p95_ms": 0.056436,
+          "p99_ms": 0.083903
+        },
+        "uwb_commit": {
+          "count": 12000,
+          "max_ms": 14.0051,
+          "p50_ms": 1.3175,
+          "p95_ms": 2.29855,
+          "p99_ms": 3.38691
+        }
+      },
+      "terminal_artifacts": {
+        "candidates.csv": {
+          "bytes": 360,
+          "sha256": "fdb497a77f039684de83bead176e3fcb3bddd7001ce144ec4724c89a419fb0c9"
+        },
+        "diagnostic_attempts.csv": {
+          "bytes": 12320733,
+          "sha256": "55c2cc7c0d39a717d79018bed8f82ce74840fec7f040a0ac6b51f1483fa500e8"
+        },
+        "diagnostic_stages.csv": {
+          "bytes": 32033117,
+          "sha256": "1e5fdddd7dd6181d54f756bb383497f6c1373e554098861ad654b7ad31e4f765"
+        },
+        "fault_truth.csv": {
+          "bytes": 166,
+          "sha256": "19701bc32e4dfe433bcac91e977ca1b9e2bed9637b7bb1b24f59542f68db1a08"
+        },
+        "integrity.csv": {
+          "bytes": 6686155,
+          "sha256": "79d222d1eef7ea1f937a3240742f3ac5a4f711dbb1fee7e5607836b13524b04d"
+        },
+        "resolved_config.yaml": {
+          "bytes": 13450,
+          "sha256": "1e2cb473910a988ad316b5381266d0df930b94af70c1d0e51a0311de95d21a7c"
+        },
+        "run_manifest.json": {
+          "bytes": 4154,
+          "sha256": "4ef0816544349cb8d0ab3a14400b696e7e862650d17188a4daaa442497e5cc7d"
+        },
+        "stderr.log": {
+          "bytes": 1056,
+          "sha256": "c5c08113f351cd1f09b78f0ee3d3c212d2cd5f68adca7d2b0949107807333f0b"
+        },
+        "stdout.log": {
+          "bytes": 906,
+          "sha256": "60c0caafc0226f7c5bbf5825f12ab57078f6ed5b83d66d8c80cef7588878e4d4"
+        },
+        "summary.json": {
+          "bytes": 285,
+          "sha256": "9decae72a3589987cbe5b260db9223922fc9e229794a45d1ace0cba9a5d21d3b"
+        },
+        "terminal_packets.csv": {
+          "bytes": 1206432,
+          "sha256": "43c439c34dd622f3fe25d1f57ae0ee9301a2ee0da722c29434f05cda008a6a32"
+        },
+        "timing.csv": {
+          "bytes": 8863906,
+          "sha256": "e941df6b7755b6cf0a20d4c32359439d410a4a80b23bf11795eaab252d21e4b5"
+        },
+        "transactions.csv": {
+          "bytes": 636627,
+          "sha256": "588741266191f518a3f4aefe43964a3f393e09482408d997335b1fd11ec25082"
+        }
+      }
+    }
+  ],
+  "schema": "uwb-imu-pl/fde-validation-summary/v1"
+}

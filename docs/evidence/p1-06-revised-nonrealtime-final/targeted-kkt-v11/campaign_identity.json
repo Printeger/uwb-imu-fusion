@@ -1,0 +1,14 @@
+{
+  "schema": "uwb-imu-pl/p1-06-targeted-kkt-identity/v1",
+  "baseline_commit": "4e99d4d8aa9712300389a7caed9d7809afc87d5a",
+  "comparison_golden": "golden-p1-05-deterministic-concurrency",
+  "seed": 20260902,
+  "attempt_counts": [1200, 12000],
+  "source_dirty": true,
+  "worktree_diff_sha256": "48dfb5225e67bb44a1bb7dd5e71e08ef78df63d8419d68c6aa95511f60a5bd45",
+  "benchmark_sha256": "468deacb8b285abed0652c9b08a21d0bf1944deef621b8658a5e1cf5df2f50cd",
+  "loaded_dso_sha256": "0f80a6512976507d64ae6728f23d66d22a4d22b0092f52bcce6fa13960dab0c3",
+  "config_sha256": "acf4a1a6ff15351384f0e230f2b91c067b7927ca9b184d6bf2e06860e26ff54a",
+  "section_2_4": "FAIL_RETAINED_FINAL_V8/NOT_RUN_CURRENT_IDENTITY",
+  "full_campaign": "NOT_RUN_BY_TARGETED_FREEZE"
+}

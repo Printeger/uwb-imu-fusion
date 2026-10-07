@@ -1,0 +1,5 @@
+analyzed 3 runs; summary=/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/off-sustained-3x12000-final-v8/validation_summary.json
+PASS off__nominal__e12000__s20260901__r1 19.753s
+PASS off__nominal__e12000__s20260902__r2 20.424s
+PASS off__nominal__e12000__s20260903__r3 20.415s
+completed=3 failures=0 output=/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/off-sustained-3x12000-final-v8

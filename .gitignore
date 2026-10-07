@@ -112,3 +112,17 @@ data/*.bag
 *.bak
 *.tmp
 /scratch/
+
+# P1-06 pause checkpoint: large local evidence remains available for resume,
+# but is not part of Git transport.  The nested allowlist keeps only compact
+# status, summary, identity, hash, command and exit-code records visible.
+/docs/evidence/p1-06-position-quality-acceptance/
+/docs/evidence/p0-07-corrected-exhaustive/
+
+# User-owned review inputs kept locally for audit/reproduction. These exact
+# files are outside the P1-06 pause checkpoint; do not broadly ignore /doc/.
+/doc/UWB_IMU_PL_系统审计与复现报告.md
+/doc/review/UWB_IMU_FDE_Code_Review_c7fd4cc.md
+/doc/review/artifact_validation.json
+/doc/review/review_math_oracles.json
+/doc/review/review_math_oracles.py

@@ -388,6 +388,14 @@ HistoryFaultInjectionResult buildHistoricalFaultInjection(
         out.reason = "group factor did not linearize to a JacobianFactor";
         return out;
       }
+      if (!jacobian->getA().allFinite() || !jacobian->getb().allFinite()) {
+        out.reason = "non-finite historical factor linearization at epoch " +
+            std::to_string(epoch.proposed_epoch) + ", group " +
+            std::to_string(group_id.value()) +
+            ": A=" + (jacobian->getA().allFinite() ? "finite" : "non_finite") +
+            ", b=" + (jacobian->getb().allFinite() ? "finite" : "non_finite");
+        return out;
+      }
       for (std::size_t local = 0; local < jacobian->keys().size(); ++local) {
         const gtsam::Key key = jacobian->keys()[local];
         if (column_of_key.find(key) == column_of_key.end()) {
@@ -419,6 +427,14 @@ HistoryFaultInjectionResult buildHistoricalFaultInjection(
         out.reason = "fault column row count does not match the group stack";
         return out;
       }
+      if (!column->whitened_map.allFinite()) {
+        out.reason = "non-finite historical fault column at epoch " +
+            std::to_string(epoch.proposed_epoch) + ", group " +
+            std::to_string(group_id.value()) + ", basis " +
+            std::string(toString(column->id.kind)) + ", source " +
+            std::to_string(column->id.source);
+        return out;
+      }
     }
     // One augmented linear factor over [state keys | fault key columns].
     std::vector<std::pair<gtsam::Key, Eigen::MatrixXd>> terms;
@@ -444,7 +460,20 @@ HistoryFaultInjectionResult buildHistoricalFaultInjection(
       terms.emplace_back(fault_key, Eigen::MatrixXd(column->whitened_map));
       out.fault_keys.push_back(fault_key);
     }
-    out.graph.emplace_shared<gtsam::JacobianFactor>(terms, stacked_b);
+    const auto augmented_factor =
+        boost::make_shared<gtsam::JacobianFactor>(terms, stacked_b);
+    if (!augmented_factor->getA().allFinite() ||
+        !augmented_factor->getb().allFinite()) {
+      out.reason = "non-finite augmented historical factor at epoch " +
+          std::to_string(epoch.proposed_epoch) + ", group " +
+          std::to_string(group_id.value()) +
+          ": A=" +
+          (augmented_factor->getA().allFinite() ? "finite" : "non_finite") +
+          ", b=" +
+          (augmented_factor->getb().allFinite() ? "finite" : "non_finite");
+      return out;
+    }
+    out.graph.push_back(augmented_factor);
     for (const gtsam::Key key : key_order) out.state_keys.push_back(key);
     out.rows += rows;
   }

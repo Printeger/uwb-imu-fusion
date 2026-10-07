@@ -17,16 +17,28 @@ EXPECTED_FIELDS = (
     "validation_protocol.path", "validation_protocol.sha256",
     "simulation_model.version", "simulation_model.source.path",
     "simulation_model.source.sha256", "profile_generator.version",
-    "profile_generator.source.path", "profile_generator.source.sha256")
+    "profile_generator.source.path", "profile_generator.source.sha256",
+    "validation_runner.version", "validation_runner.source.path",
+    "validation_runner.source.sha256", "acceptance_summarizer.version",
+    "acceptance_summarizer.source.path",
+    "acceptance_summarizer.source.sha256")
 
 EXPECTED_SHARED_REFERENCES = {
     "simulation_model": {
-        "version": "realtime-performance-benchmark/synthetic-model-v1",
+        "version": "realtime-performance-benchmark/synthetic-model-v2-scheduled",
         "source": {"path": "apps/realtime_performance_benchmark.cpp"},
     },
     "profile_generator": {
         "version": "fde-profile-generator/v1",
         "source": {"path": "tools/generate_fde_profile_configs.py"},
+    },
+    "validation_runner": {
+        "version": "fde-profile-validation-runner/v2-revised-38x20",
+        "source": {"path": "tools/run_fde_profile_validation.py"},
+    },
+    "acceptance_summarizer": {
+        "version": "p1-06-simulation-acceptance/v4-revised-38x20",
+        "source": {"path": "tools/summarize_p1_06_simulation_acceptance.py"},
     },
 }
 
@@ -48,6 +60,8 @@ def binding_payload(manifest: dict, profile: dict) -> dict:
         "validation_protocol": profile["validation_protocol"],
         "simulation_model": manifest["simulation_model"],
         "profile_generator": manifest["profile_generator"],
+        "validation_runner": manifest["validation_runner"],
+        "acceptance_summarizer": manifest["acceptance_summarizer"],
     }
 
 
@@ -108,7 +122,7 @@ def validate(manifest_path: Path, root: Path = ROOT) -> dict:
         complete_digest = hashlib.sha256(payload).hexdigest()
         if item.get("complete_model_config_digest") != complete_digest:
             fail(f"{profile}: complete model/config digest mismatch")
-        expected_id = f"simcal-p1-06-v1-{profile}-{complete_digest[:16]}"
+        expected_id = f"simcal-p1-06-v2-{profile}-{complete_digest[:16]}"
         if item.get("calibration_id") != expected_id:
             fail(f"{profile}: calibration ID is not bound to complete digest")
         checked.append({"profile": profile, "calibration_id": expected_id,

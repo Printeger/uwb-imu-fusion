@@ -1,0 +1,44 @@
+{
+  "artifact_class": "simulation/synthetic",
+  "hardware_formal_qualification": "CLOSED/NOT_CLAIMED",
+  "profiles": [
+    {
+      "calibration_id": "simcal-p1-06-v2-off-d9ebcb75db11eac6",
+      "complete_model_config_digest": "d9ebcb75db11eac60a009cac71104c56e1e0f3de3a985de0ca61fed977fcccbd",
+      "profile": "off",
+      "runtime_config_sha256": "acf4a1a6ff15351384f0e230f2b91c067b7927ca9b184d6bf2e06860e26ff54a",
+      "validation_protocol_sha256": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6"
+    },
+    {
+      "calibration_id": "simcal-p1-06-v2-uwb_order1-37581984e370490e",
+      "complete_model_config_digest": "37581984e370490e0286c0522a8053c0289c425f4b587941f5369fe0a4a95488",
+      "profile": "uwb_order1",
+      "runtime_config_sha256": "98faf198f9fe244c176fb9851b4c6f88125295338e86010706a034ec8c0a410a",
+      "validation_protocol_sha256": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6"
+    },
+    {
+      "calibration_id": "simcal-p1-06-v2-imu_order1-dfa4c4f08276a5c7",
+      "complete_model_config_digest": "dfa4c4f08276a5c7f17eecf7cf44c351994966e6f92f875f27e710361d3765e6",
+      "profile": "imu_order1",
+      "runtime_config_sha256": "7feddddb68dc3872d19435c21538bbf8ab61c5316fc57dfcc23d056caf5dceee",
+      "validation_protocol_sha256": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6"
+    },
+    {
+      "calibration_id": "simcal-p1-06-v2-joint_order1-499717ea47710e6a",
+      "complete_model_config_digest": "499717ea47710e6a5b2d54bcbe36eca7e761d979caaef661f024d98b61a1bf70",
+      "profile": "joint_order1",
+      "runtime_config_sha256": "18cec5ece3cd6f33761b946b7815ea5a8d0c998e007ad2fe49eef122de4284f7",
+      "validation_protocol_sha256": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6"
+    },
+    {
+      "calibration_id": "simcal-p1-06-v2-joint_order2-15e2679e308dbcda",
+      "complete_model_config_digest": "15e2679e308dbcda0157741c595fe33a882a4524208036ce8afef043572e67b5",
+      "profile": "joint_order2",
+      "runtime_config_sha256": "03c2d725900d8683e672a02e255f6cb80c2f01e466985f01ab3d65d3bd4d574d",
+      "validation_protocol_sha256": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6"
+    }
+  ],
+  "schema": "uwb-imu-pl/simulation-calibration-manifest/v1",
+  "simulation_acceptance_eligible": true,
+  "status": "PASS"
+}

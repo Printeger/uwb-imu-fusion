@@ -1,0 +1,11 @@
+Note: Google Test filter = P101IdentityIndexing.ImmutableInvalidWindowWithoutNumericsIsAdmittedOnlyToFailClosed
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from P101IdentityIndexing
+[ RUN      ] P101IdentityIndexing.ImmutableInvalidWindowWithoutNumericsIsAdmittedOnlyToFailClosed
+[       OK ] P101IdentityIndexing.ImmutableInvalidWindowWithoutNumericsIsAdmittedOnlyToFailClosed (1 ms)
+[----------] 1 test from P101IdentityIndexing (1 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (2 ms total)
+[  PASSED  ] 1 test.

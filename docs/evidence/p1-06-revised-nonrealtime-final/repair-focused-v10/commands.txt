@@ -1,0 +1,21 @@
+All commands ran from:
+  /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl
+
+Fallback invalid-oracle mutation (exit 0):
+  /usr/bin/time -v -o fallback-mutations-time-rss.txt /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_fault_summary --gtest_filter=HistoryFaultSummary.P103OwnerCollisionTamperAndStaleCacheFailClosed
+
+Complete graph rank, trajectory perturbation, and finite-difference oracle
+(exit 0):
+  /usr/bin/time -v -o full-graph-oracle-time-rss.txt /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_realtime_incremental --gtest_filter=RealtimeFactors.P106FullTrajectoryBreaksSingleEpochLeverNullDirection:RealtimeFactors.NonzeroLeverArmRangeJacobianMatchesCentralDifference
+
+Production incremental versus independent batch optimization on the existing
+bounded 50-epoch fixture (exit 0):
+  /usr/bin/time -v -o production-vs-batch-time-rss.txt /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_realtime_incremental --gtest_filter=UwbImuIncremental.FiveSecondIsamMatchesBatchPoseAndMarginal
+
+ABI canary (exit 0):
+  git archive golden-p1-05-deterministic-concurrency include | tar -x -C /tmp/p106-v10-abi.WbRUPT
+  g++ -O3 -DNDEBUG -pthread -march=native -std=gnu++17 -DBOOST_ALL_NO_LIB -I/tmp/p106-v10-abi.WbRUPT/include -I/opt/ros/noetic/include -I/usr/include/eigen3 -I/usr/local/include/gtsam/3rdparty/SuiteSparse_config -I/usr/local/include/gtsam/3rdparty/CCOLAMD -I/usr/local/include/gtsam/3rdparty/metis docs/evidence/p0-07-revised-nonrealtime-validation/golden-p1-05-abi-canary.cpp -L/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib -L/usr/local/lib -Wl,-rpath,/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib:/usr/local/lib -luwb_imu_pl -lgtsam_unstable -lgtsam -o /tmp/p106-v10-abi.WbRUPT/golden-client-native
+  stdbuf -o0 /tmp/p106-v10-abi.WbRUPT/golden-client-native config/fde_off.yaml
+
+No complete campaign, 520-attempt replay, 38x20 matrix, CTest, sanitizer, or
+section 2.4 comparison was run in this focused pass.

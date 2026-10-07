@@ -1,0 +1,21 @@
+Note: Google Test filter = RealtimeFactors.P106FullTrajectoryBreaksSingleEpochLeverNullDirection:RealtimeFactors.NonzeroLeverArmRangeJacobianMatchesCentralDifference
+[==========] Running 2 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 2 tests from RealtimeFactors
+[ RUN      ] RealtimeFactors.NonzeroLeverArmRangeJacobianMatchesCentralDifference
+[       OK ] RealtimeFactors.NonzeroLeverArmRangeJacobianMatchesCentralDifference (0 ms)
+[ RUN      ] RealtimeFactors.P106FullTrajectoryBreaksSingleEpochLeverNullDirection
+[P106-FULL-GRAPH] epoch=4 rows=107 cols=75 rank=75 sigma_max=85065.083080370372 sigma_min=0.88102432699783739 tolerance=2.0210419759080513e-09
+[P106-FULL-GRAPH] epoch=8 rows=199 cols=135 rank=135 sigma_max=88083.883600543879 sigma_min=0.62499136359654417 tolerance=3.892151675734697e-09
+[P106-FULL-GRAPH] epoch=12 rows=291 cols=195 rank=195 sigma_max=88790.581099903167 sigma_min=0.51431248229488624 tolerance=5.7372016249050576e-09
+[P106-TRAJECTORY-PERTURBATION] uwb_before=0 uwb_after=0 imu_before=1.423942347033026e-06 imu_after=0.067150684934264765 prior_before=0 prior_after=0.12499999999999997
+[P106-GRAPH-JACOBIAN] class=initial_prior analytic=-0.5008372972042312 finite_difference=-0.50083729721817072 relative_error=1.3939516207983615e-11
+[P106-GRAPH-JACOBIAN] class=combined_imu_bias_gravity analytic=-0.9910362786325505 finite_difference=-0.99103627904106872 relative_error=4.0851821925258491e-10
+[P106-GRAPH-JACOBIAN] class=uwb_lever analytic=0 finite_difference=-9.414097508896715e-13 relative_error=9.414097508896715e-13
+[P106-GRAPH-JACOBIAN] class=complete_graph analytic=-1.282961849594175 finite_difference=-1.2829618499937689 relative_error=3.1146203880940127e-10
+[       OK ] RealtimeFactors.P106FullTrajectoryBreaksSingleEpochLeverNullDirection (48 ms)
+[----------] 2 tests from RealtimeFactors (48 ms total)
+
+[----------] Global test environment tear-down
+[==========] 2 tests from 1 test suite ran. (48 ms total)
+[  PASSED  ] 2 tests.

@@ -79,8 +79,16 @@ unchanged risk/action decisions, atomic publication, no crash and peak RSS
 below 1 GiB are required.  The five-profile calibration record is strictly
 `simulation/synthetic`; hardware qualification remains
 `CLOSED/NOT_CLAIMED`, `formal_eligible=false`, and protected output disabled.
-No model, noise, prior, fault scope, risk budget, threshold or prescribed test
-size is changed.  A completion under this amendment receives no tag that could
+No model, noise, prior, fault scope, risk budget or threshold is changed.  On
+2026-10-06 the user separately replaced only the 38-profile-scenario matrix
+size from 300 to 20 attempts per run (760 planned attempts).  Fault windows
+are deterministically rescaled so every fault run retains non-empty pre-fault,
+fault-active and post-fault/recovery segments; this is not a first-20-row
+truncation.  The stopped 38x300 campaign, including complete and partial raw
+records, is retained as `SUPERSEDED_BY_USER_SCOPE_CHANGE/NOT_CLAIMED` and is
+not included in the new denominator.  FGO 4x200, 20-seed/long-run checks,
+O01--O12, sanitizers, complete CTest and Section 2.4 keep their prescribed
+sizes.  A completion under this amendment receives no tag that could
 be read as the original P1-06 or original Section 2 contract passing in full.
 
 This plan has **13 development steps**: seven P0 correctness steps followed by
@@ -103,7 +111,11 @@ The table status is one of:
 - `GOLDEN`: the implementation commit, required tests and evidence bundle all
   passed, and an immutable golden tag points to that commit.
 
-Current project state is `P1-06_REVISED_NONREALTIME_VALIDATION_IN_PROGRESS`.
+Current project state is `GOAL_PAUSED_AT_P1-06` (user-requested pause on
+2026-10-07).  The pause preserves the unaccepted P1-06 diagnostic worktree on
+top of `4e99d4d8aa9712300389a7caed9d7809afc87d5a`; it is not a P1-06
+acceptance, does not change any failed or not-run result, and creates no
+golden tag.  See [the paused-state record](P1_06_PAUSED_STATE_2026-10-07.md).
 The latest true P0 golden remains `golden-p0-06-actions`; the current P1-06
 comparison reference is `golden-p1-05-deterministic-concurrency`.  On
 2026-09-28 the
@@ -140,7 +152,7 @@ move an earlier golden tag.
 | **P1-03 Incremental history root** | R09: update only the proven dependency closure while preserving raw row provenance, fault columns, constants and the certified effective dof; retain full rebuild fallback. User-authorized carrier correction (2026-09-29): `nu_perp` is the effective numerical rank after orthogonal compression; injecting noise to preserve the legacy value is forbidden. User-authorized bounded-lifecycle extension (2026-09-30): explicit attempt arena, lease, self-contained final proof bundle and compatible overloads may bound proof/publication sidecars while preserving old P0 ABI/API and all numerical, coverage, risk, threshold, dof and fail-closed contracts. | O01, O03, O05, O09, O12. Every epoch matches a full rebuild under the corrected carrier contract; recovery invalidates affected cache entries; long-run RSS is bounded. | Commit: `perf(p1-03): incrementally maintain history root`; tag: `golden-p1-03-incremental-history-root` | `GOLDEN` |
 | **P1-04 Complete streamed recovery search** | R10: replace the P0 fail-closed incomplete-search behavior with bounded-memory full action streaming and a complete rejection funnel. Do not change plausible thresholds or selection ordering. | O03, O07, O12. Same winner/refusal as uncapped reference, order-independent result, no wrong-exclusion increase, and no omitted action without proof. | Commit: `perf(p1-04): stream complete recovery search`; tag: `golden-p1-04-streamed-recovery-search` | `GOLDEN` |
 | **P1-05 Deterministic concurrency and timing** | R11: flat candidate×hypothesis tasks, fixed output slots, deterministic reduction, bounded scratch and one all-attempt timer. No nested use of the same worker pool. | O08, O09, O10, O12 plus TSan where available. One/two/four workers produce identical decisions; exceptions and deadline misses remain in the denominator; p99 and RSS are reported, not assumed. | Commit: `perf(p1-05): parallelize deterministic integrity work` | `GOLDEN` |
-| **P1-06 Position-quality diagnosis and revised non-realtime acceptance** | R12 plus the complete prescribed P1 run. Diagnose off-profile attitude/long-run behavior in the required frame/observability/time/Jacobian/initialization order. Only proven implementation defects may be fixed; model, noise, prior or risk-contract changes remain out of scope. The 2026-10-06 amendment defers realtime optimization only. | O04, O05, O11, O12. Re-run every prescribed profile/attempt on the same hardware/source/config/input. Non-realtime PASS requires 100% complete terminal work, exact fault-leaf coverage with zero omissions, unchanged risk/action/winner and fail-closed/atomic publication semantics, no crash, RSS <1 GiB, and simulation quality gates. Report core, analysis-completion and arrival-to-publish p50/p95/p99/max and every timeout over the full denominator. The unchanged 40/50 ms and <=1% realtime results must be `FAILED / DEFERRED_TO_REALTIME_GOAL` when missed, but do not stop non-realtime validation. Hardware qualification remains `CLOSED/NOT_CLAIMED`. | Commit: `test(p1-06): record revised non-realtime acceptance`; **no original-full-acceptance golden tag** | `NOT_STARTED` |
+| **P1-06 Position-quality diagnosis and revised non-realtime acceptance** | R12 plus the revised prescribed P1 run. Diagnose off-profile attitude/long-run behavior in the required frame/observability/time/Jacobian/initialization order. Only proven implementation defects may be fixed; model, noise, prior or risk-contract changes remain out of scope. The 2026-10-06 amendments defer realtime optimization and replace only the profile matrix from 38x300 with 38x20; the original matrix is `SUPERSEDED_BY_USER_SCOPE_CHANGE/NOT_CLAIMED`. | O04, O05, O11, O12. Run all 38 profile/scenario cells with 20 attempts each (760 planned) on the same hardware/source/config/input, using the versioned scaled schedule with non-empty pre/fault/post segments. Non-realtime PASS requires 100% complete terminal work, actual fault injection in every fault cell, exact fault-leaf coverage with zero omissions, unchanged risk/action/winner and fail-closed/atomic publication semantics, no crash, RSS <1 GiB, and simulation quality gates. Report core, analysis-completion and arrival-to-publish p50/p95/p99/max and every timeout over the full denominator. The unchanged 40/50 ms and <=1% realtime results must be `FAILED / DEFERRED_TO_REALTIME_GOAL` when missed, but do not stop non-realtime validation. Hardware qualification remains `CLOSED/NOT_CLAIMED`. FGO 4x200, 20-seed/long-run checks, O01--O12, sanitizer, complete CTest and Section 2.4 are not reduced. | Commit: `test(p1-06): record revised non-realtime acceptance`; **no original-full-acceptance golden tag** | `VALIDATION_PAUSED` |
 
 The normal ordering is strict: P1-01 starts only after every P0 row is
 `GOLDEN` and `golden-p0-07-corrected-exhaustive` exists.  A P0 result that is

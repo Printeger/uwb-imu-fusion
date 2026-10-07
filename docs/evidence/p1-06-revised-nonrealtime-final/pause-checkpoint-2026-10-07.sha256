@@ -1,0 +1,13 @@
+b47dbf89d431ef4b96f373a27a071c67de9a2f13723583f603fee8a4810f8b86  .gitignore
+c1e88a9b6ff5ce8cfa77d9321817ea1582972537708cb506268214854719bc8c  docs/review/P0_VERIFICATION_REPORT.md
+3433dd2a33a36988982785473b8be2aa217496a8d8154e745893da75e3748551  docs/review/P1_06_PAUSED_STATE_2026-10-07.md
+8db1594ffb0bd3dbff9501955f113a6d80eaa580456b3119664407e8a4cad8d4  docs/evidence/p1-06-revised-nonrealtime-final/.gitignore
+cd0b292e3c56940e050dbac2c17c175b1b0f6e269382e7251291aefe4707f849  docs/evidence/p1-06-revised-nonrealtime-final/README.md
+96f68f352e09afe4610433a67d8fa8d0a95ed1d3771e8a7f547b2ed0dfb89621  docs/evidence/p1-06-revised-nonrealtime-final/PAUSE_COMMIT_ALLOWLIST.md
+34300b63c64fcd5faaa5a93510517438863b734cea94294cc6240255e96db392  docs/evidence/p1-06-revised-nonrealtime-final/targeted-kkt-v11/README.md
+6e924983089e807a0279f2f9e03956f1e5e6396fd1fd6246e40d9e45db27f37a  docs/evidence/p1-06-revised-nonrealtime-final/targeted-kkt-v11/commands.txt
+84f1be520679093f0927cf10fbd6dbae15908976cc2a4cbad05a8133d6cfb0ff  docs/evidence/p1-06-revised-nonrealtime-final/targeted-kkt-v11/artifact-hashes.sha256
+656d0adf0990d1ba27f2868b424f2d74e3777182bcc963453cb3995f46437ec7  docs/evidence/p1-06-revised-nonrealtime-final/targeted-kkt-v11/worktree-diff.sha256
+9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa  docs/evidence/p1-06-revised-nonrealtime-final/targeted-kkt-v11/tree-mutation-pass.exit
+ae42297bf384f82fd12155546904761595f0e78acbd80936732b47ae9da79bf5  docs/evidence/p1-06-revised-nonrealtime-final/targeted-kkt-v11/tree-mutation-pass.log
+6f214aca2236147792caa7540a9f7410d16e088e25184d145456992204921bab  docs/evidence/p1-06-revised-nonrealtime-final/targeted-kkt-v11/tree-mutation-pass.time.txt

@@ -1,0 +1,14 @@
+bc0e30f35794b1b0c8ed5e992952f3f4f59ccdcfc4601627b5ed130074838368  docs/evidence/p1-06-revised-nonrealtime-final/repair-focused-v10/README.md
+4d66a0959327c83eeea3ec975c6be3254ee0f6b7a6deeab9bebd8a52053ece2a  docs/evidence/p1-06-revised-nonrealtime-final/repair-focused-v10/abi-canary.log
+cd800e003cd20386fc81e6173adf54e300ce9e9407af298ce278731831f6777a  docs/evidence/p1-06-revised-nonrealtime-final/repair-focused-v10/binary-hashes.sha256
+69a71c3c08df6a4c27d7b9437459590056c75f8978ed8d3acccf9b0052db9cc6  docs/evidence/p1-06-revised-nonrealtime-final/repair-focused-v10/campaign_identity.json
+ccdef8552dda236bb67745730b0c0815fb526b44379497101e7a8f16c61c311f  docs/evidence/p1-06-revised-nonrealtime-final/repair-focused-v10/commands.txt
+e72de376d16c6df97eb1b3923c7a8eff2db0b4787ee9eb579c5dd2a5b6cff791  docs/evidence/p1-06-revised-nonrealtime-final/repair-focused-v10/fallback-mutations-time-rss.txt
+3074e71851525f7b5a8a78ac9bffdfa51a539ab4317070f6c91f9a04bd0b4c3b  docs/evidence/p1-06-revised-nonrealtime-final/repair-focused-v10/fallback-mutations.log
+77d4952a60cbd8009df7f41708cc9371020f94a4c4d70e8995a3035f9be975a5  docs/evidence/p1-06-revised-nonrealtime-final/repair-focused-v10/full-graph-oracle-time-rss.txt
+92793f2dddf9b351ee5d61b56cb4f823a1aa54d74bbfa4fd11df257e34e33012  docs/evidence/p1-06-revised-nonrealtime-final/repair-focused-v10/full-graph-oracle.log
+f00e946d4e5a7a27f038e262ffcb10ce454f36ac6a6471b611f10cd3b1c98951  docs/evidence/p1-06-revised-nonrealtime-final/repair-focused-v10/loaded-dso-hashes.sha256
+1f562af288df21cc7fca8729878f93ad4d53960c5673ea24fb62af9d0727ccaa  docs/evidence/p1-06-revised-nonrealtime-final/repair-focused-v10/production-vs-batch-time-rss.txt
+ca3a79a811ffd627e5a560b9d5c2317d88e065f73bb474df74e987a59d0d258e  docs/evidence/p1-06-revised-nonrealtime-final/repair-focused-v10/production-vs-batch.log
+d1ee712790e8dd00df45c3b0963ec2724d93e97cb331532b0f49f52a798f1e82  docs/evidence/p1-06-revised-nonrealtime-final/repair-focused-v10/source-hashes.sha256
+b56a1153474162a596df0c62b21f74da8c7cb907388ff8d98a6e3786159958b8  docs/evidence/p1-06-revised-nonrealtime-final/repair-focused-v10/worktree-diff.sha256

@@ -37,6 +37,19 @@
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
 #include "uwb_imu_pl/integrity/history_fault_parameterization.hpp"
 #include "uwb_imu_pl/integrity/joint_window_detector.hpp"
+#include "uwb_imu_pl/integrity/integrity_monitor.hpp"
+#include "uwb_imu_pl/publication/final_output_packet.hpp"
+
+namespace uwb_imu_pl {
+struct P106EstimatorHistoryMutationPeer {
+  static void corrupt(IncrementalUwbImuEstimator* estimator) {
+    estimator->corruptHistoryTreeRootForTesting();
+  }
+  static void reset(IncrementalUwbImuEstimator* estimator) {
+    estimator->resetHistoryTreeForTesting();
+  }
+};
+}  // namespace uwb_imu_pl
 
 namespace {
 
@@ -1116,6 +1129,159 @@ TEST(HistorySummaryPipeline, P103ProductionClosureAudit) {
               audit.max_oracle_relative_error,
               audit.retained_rows, audit.retained_bytes,
               audit.last_reason.c_str());
+}
+
+TEST(HistorySummaryPipeline,
+     P106TreeOnlyMutationFallsBackAndMatchesForcedFullRebuild) {
+  const auto config = researchConfig();
+  IncrementalUwbImuEstimator fallback_estimator(config,
+                                                 Eigen::Vector3d::Zero());
+  IncrementalUwbImuEstimator rebuild_estimator(config,
+                                                Eigen::Vector3d::Zero());
+  NavigationState initial;
+  initial.timestamp = TimestampNs(0);
+  initial.position_world_m = {0, 0, 1};
+  fallback_estimator.initialize(initial, config.realtime.prior_sigmas);
+  rebuild_estimator.initialize(initial, config.realtime.prior_sigmas);
+  RealtimeIntegrityPipeline fallback_pipeline(
+      &fallback_estimator,
+      IntegrityMonitor(config.risk, config.snapshot.rank_tolerance,
+                       config.snapshot.max_condition_number),
+      offlineReplayPublicationLimits());
+  RealtimeIntegrityPipeline rebuild_pipeline(
+      &rebuild_estimator,
+      IntegrityMonitor(config.risk, config.snapshot.rank_tolerance,
+                       config.snapshot.max_condition_number),
+      offlineReplayPublicationLimits());
+  ImuMeasurement boundary;
+  boundary.timestamp = TimestampNs(0);
+  boundary.specific_force_mps2 = {0, 0, config.imu.gravity_mps2};
+  fallback_pipeline.ingestImu(boundary);
+  rebuild_pipeline.ingestImu(boundary);
+
+  IntegrityOutput fallback_output;
+  IntegrityOutput rebuild_output;
+  constexpr std::size_t kMutationEpoch = 35;
+  for (std::size_t epoch = 1; epoch <= kMutationEpoch; ++epoch) {
+    for (int sample = 1; sample <= 10; ++sample) {
+      ImuMeasurement imu;
+      imu.id = MeasurementId(epoch * 1000 + sample);
+      imu.timestamp = TimestampNs(static_cast<std::int64_t>(
+          ((epoch - 1) * 10 + sample) * 5000000));
+      imu.specific_force_mps2 = {0, 0, config.imu.gravity_mps2};
+      fallback_pipeline.ingestImu(imu);
+      rebuild_pipeline.ingestImu(imu);
+    }
+    const UwbBatch input = batch(
+        config, static_cast<std::int64_t>(epoch) * 50000000);
+    ClockSample clock;
+    clock.wall_monotonic_ns = input.timestamp.value();
+    clock.sensor_timestamp_ns = input.timestamp.value();
+    if (epoch == kMutationEpoch) {
+      ASSERT_GT(fallback_estimator.historyRootCacheAuditForTesting().requests,
+                0u);
+      P106EstimatorHistoryMutationPeer::corrupt(&fallback_estimator);
+      P106EstimatorHistoryMutationPeer::reset(&rebuild_estimator);
+    }
+    fallback_output = fallback_pipeline.processUwbBatchWithFrozenFinishElapsed(
+        input, clock, 0.0);
+    rebuild_output = rebuild_pipeline.processUwbBatchWithFrozenFinishElapsed(
+        input, clock, 0.0);
+  }
+
+  const auto fallback_audit =
+      fallback_estimator.historyRootCacheAuditForTesting();
+  const auto rebuild_audit =
+      rebuild_estimator.historyRootCacheAuditForTesting();
+  EXPECT_EQ(fallback_audit.full_oracle_mismatches, 1u);
+  EXPECT_NE(fallback_audit.last_reason.find("fallback"), std::string::npos);
+  EXPECT_GT(rebuild_audit.full_tree_rebuilds, 1u);
+
+  const auto& left_history = fallback_output.diagnostics.history_summary;
+  const auto& right_history = rebuild_output.diagnostics.history_summary;
+  EXPECT_TRUE(left_history.valid);
+  EXPECT_TRUE(right_history.valid);
+  // The version digest binds the exact orthogonal representation, so a
+  // monolithic fallback and a hierarchical cold rebuild are intentionally
+  // distinct identities even when every consumed invariant agrees.
+  EXPECT_NE(left_history.version_digest, right_history.version_digest);
+  EXPECT_EQ(left_history.scope_digest, right_history.scope_digest);
+  EXPECT_EQ(left_history.boundary_rows, right_history.boundary_rows);
+  EXPECT_EQ(left_history.emitted_rows, right_history.emitted_rows);
+  EXPECT_EQ(left_history.fault_columns, right_history.fault_columns);
+  EXPECT_EQ(left_history.rank_boundary, right_history.rank_boundary);
+  EXPECT_EQ(left_history.nu_perp, right_history.nu_perp);
+  EXPECT_LE(relErr(left_history.kappa_b, right_history.kappa_b), 1e-12);
+  EXPECT_LE(relErr(left_history.omega_trace, right_history.omega_trace),
+            1e-12);
+  EXPECT_LE(relErr(left_history.xi_norm, right_history.xi_norm), 1e-12);
+
+  EXPECT_EQ(fallback_output.detector.dof, rebuild_output.detector.dof);
+  EXPECT_NEAR(fallback_output.detector.statistic,
+              rebuild_output.detector.statistic, 1e-10);
+  EXPECT_EQ(fallback_output.detector.passed,
+            rebuild_output.detector.passed);
+  EXPECT_EQ(fallback_output.sensitivities.size(),
+            rebuild_output.sensitivities.size());
+  for (std::size_t i = 0; i < fallback_output.sensitivities.size(); ++i) {
+    const auto& left = fallback_output.sensitivities[i];
+    const auto& right = rebuild_output.sensitivities[i];
+    EXPECT_EQ(left.hypothesis_id, right.hypothesis_id);
+    EXPECT_TRUE(left.slope_xyz.isApprox(right.slope_xyz, 1e-10));
+    EXPECT_NEAR(left.detector_gram, right.detector_gram, 1e-10);
+  }
+  for (int axis = 0; axis < 3; ++axis) {
+    const double left = fallback_output.protection_level.pl_xyz_m(axis);
+    const double right = rebuild_output.protection_level.pl_xyz_m(axis);
+    EXPECT_TRUE((std::isinf(left) && std::isinf(right) &&
+                 std::signbit(left) == std::signbit(right)) ||
+                std::abs(left - right) <=
+                    1e-10 * std::max({1.0, std::abs(left), std::abs(right)}));
+  }
+  EXPECT_EQ(fallback_output.diagnostics.generated_actions,
+            rebuild_output.diagnostics.generated_actions);
+  EXPECT_EQ(fallback_output.diagnostics.kernel_evaluated_actions,
+            rebuild_output.diagnostics.kernel_evaluated_actions);
+  EXPECT_EQ(fallback_output.selected_action_id,
+            rebuild_output.selected_action_id);
+  EXPECT_EQ(fallback_output.selected_action_type,
+            rebuild_output.selected_action_type);
+  EXPECT_EQ(fallback_output.batch_committed, rebuild_output.batch_committed);
+  EXPECT_EQ(fallback_output.fde_status, rebuild_output.fde_status);
+  EXPECT_EQ(fallback_output.transaction_id, rebuild_output.transaction_id);
+
+  const auto fallback_receipt = fallback_estimator.commitBoundaryAudit();
+  const auto rebuild_receipt = rebuild_estimator.commitBoundaryAudit();
+  EXPECT_EQ(fallback_receipt.ledger_version, rebuild_receipt.ledger_version);
+  EXPECT_EQ(fallback_receipt.active_ledger_slots,
+            rebuild_receipt.active_ledger_slots);
+  EXPECT_TRUE(fallback_receipt.published_state.position_world_m.isApprox(
+      rebuild_receipt.published_state.position_world_m, 1e-12));
+  EXPECT_TRUE(fallback_receipt.published_covariance.isApprox(
+      rebuild_receipt.published_covariance, 1e-10));
+
+  FinalPacketTiming timing;
+  timing.arrival_steady_ns = 100;
+  timing.compute_done_steady_ns = 200;
+  timing.packet_ready_steady_ns = 200;
+  timing.publish_call_steady_ns = 300;
+  timing.deadline_boundary = FinalPacketBoundary::PublishCall;
+  const auto fallback_packet = finalizeOutputPacket(
+      std::move(fallback_output), timing, 1000);
+  const auto rebuild_packet = finalizeOutputPacket(
+      std::move(rebuild_output), timing, 1000);
+  EXPECT_EQ(fallback_packet.metadata().digest,
+            rebuild_packet.metadata().digest);
+  EXPECT_EQ(fallback_packet.output().publication.protected_output,
+            rebuild_packet.output().publication.protected_output);
+  EXPECT_EQ(fallback_packet.output().protection_level.formal_eligible,
+            rebuild_packet.output().protection_level.formal_eligible);
+  std::printf("[P106-TREE-MUTATION] fallback_count=%llu reset=1 "
+              "representation_identity_distinct=1 "
+              "summary=PASS carrier=PASS dof=PASS gram=PASS response=PASS "
+              "pl=PASS action=PASS winner=PASS receipt=PASS packet=PASS\n",
+              static_cast<unsigned long long>(
+                  fallback_audit.full_oracle_mismatches));
 }
 
 // 9. HIS-01 closure / readiness gaps 3+4: oracle on the *shipped* carrier.

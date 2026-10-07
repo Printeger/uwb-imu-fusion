@@ -1,0 +1,11 @@
+ImuNoiseConfig 80 8 0 8 16 24 32 40 48
+IntegrityConfig 2544 8
+FdeDecisionContextV1 16 8 0 8
+FdeDecisionContextV2 48 8 0 16 24 32 40
+load-by-value-vector-destruct-old-decide 1
+	libuwb_imu_pl.so => /home/mint/ws_fusion_uwb/devel/lib/libuwb_imu_pl.so (0x0000705dd8400000)
+	libgtsam.so.4 => /usr/local/lib/libgtsam.so.4 (0x0000705dd7e00000)
+	libgtsam_unstable.so.4 => /usr/local/lib/libgtsam_unstable.so.4 (0x0000705dd7809000)
+	libmetis-gtsam.so => /usr/local/lib/libmetis-gtsam.so (0x0000705dd7518000)
+91ba8895122f5828ba0524f621f3a124cc0dc1a701561fba8e748411a634e6fe  /tmp/p106-v10-abi.WbRUPT/golden-client-native
+fe677d5645df65a1b9a531587248edbc7b33479882f4ac6ce706258b935ce84b  /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/libuwb_imu_pl.so

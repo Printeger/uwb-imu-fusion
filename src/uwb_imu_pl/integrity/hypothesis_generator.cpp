@@ -3563,6 +3563,15 @@ AttemptActionArenaV3 HypothesisGenerator::actionsForPlausibleSetV3(
   // dense bridge matrices.  Derive one fixed action count for this attempt
   // from the worst exact recipe so every leased batch stays below the explicit
   // heavy-payload budget (except an indivisible single action).
+  //
+  // Conversely, a zero/small added-block payload does not imply a cheap
+  // evaluated action: candidate/post/PL continuation owns projected modes,
+  // hypotheses and proof scratch.  Recovery scenarios exposed that an
+  // otherwise legal 128-action batch can exceed the campaign's 1 GiB RSS
+  // boundary.  Bound that independent live set explicitly; this changes only
+  // deterministic batch partitioning, never the complete action census or
+  // canonical evaluation/reduction order.
+  constexpr std::size_t kActionArenaResidentActionLimit = 8;
   std::size_t max_action_bytes = 0;
   for (const auto& descriptor : search.actions) {
     max_action_bytes = std::max(
@@ -3572,7 +3581,8 @@ AttemptActionArenaV3 HypothesisGenerator::actionsForPlausibleSetV3(
       ? requested_batch_capacity
       : kActionArenaHeavyBudgetBytes / max_action_bytes;
   search.batch_capacity = std::min(
-      requested_batch_capacity, byte_bounded_capacity);
+      {requested_batch_capacity, byte_bounded_capacity,
+       kActionArenaResidentActionLimit});
   if (search.batch_capacity == 0) {
     search.batch_capacity = 1;
     search.exhaustive = false;

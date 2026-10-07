@@ -1,0 +1,249 @@
+{
+  "commit": "4657cf87539cf7699231642d3356c08456b1833e",
+  "reference": "golden-p1-05-deterministic-concurrency",
+  "runs": {
+    "run1": {
+      "bridge.csv": {
+        "blob": "b3fa669911b2c11994918b8b14f4b5744b2d96c3",
+        "bytes": 205,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run1/bridge.csv",
+        "sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3"
+      },
+      "candidates.csv": {
+        "blob": "6a2160ef28c63e62157b9b4d528969e46b9c2a11",
+        "bytes": 54691,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run1/candidates.csv",
+        "sha256": "13e2a0661d3340e291297dcd5a6a10e79359923facfc5f3505b8db7c191ee94e"
+      },
+      "diagnostic_attempts.csv": {
+        "blob": "e2131544a667c802c3cf322c80164e09ca48d277",
+        "bytes": 66057,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run1/diagnostic_attempts.csv",
+        "sha256": "88b169dd7d3f9b5a7544639f5f05442a88b34e709e0df4962da28f6be9b13b82"
+      },
+      "diagnostic_candidates.csv": {
+        "blob": "4428a5453a07d646e80b6fa66279a88644a88afd",
+        "bytes": 42104,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run1/diagnostic_candidates.csv",
+        "sha256": "43de5c786fe6819a4a98db7c2cff0c3c2e54474e702cdb416ee9f086b8adf352"
+      },
+      "diagnostic_coverage.csv": {
+        "blob": "058a77bdadc91fbd18552bd5c03c81c2c9fd78f3",
+        "bytes": 416,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run1/diagnostic_coverage.csv",
+        "sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e"
+      },
+      "diagnostic_history_summary.csv": {
+        "blob": "052c5d12c183a02b75c5a822955ee5c72436582d",
+        "bytes": 21124,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run1/diagnostic_history_summary.csv",
+        "sha256": "0d33b2ac95c5f83d9967c1f2702f83eb3325c11ced66a5ae44fe2d8a746d276b"
+      },
+      "diagnostic_snapshot_identity.csv": {
+        "blob": "5e4a8a1372c317bb88a9c80ebd31a46bea56a7f2",
+        "bytes": 33531,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run1/diagnostic_snapshot_identity.csv",
+        "sha256": "bb9a588a0fc2e752d36cf643af281ccc66910a14afa7a75b7bb957e0a0ed16c6"
+      },
+      "diagnostic_square_root.csv": {
+        "blob": "7691952ab7d292b52ef3fec7fddfd42b911b1029",
+        "bytes": 11267,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run1/diagnostic_square_root.csv",
+        "sha256": "e4c223b8b95a409860f009ed6d81f895fc71e2cb0bd9c0dfeb52ff788193c95e"
+      },
+      "diagnostic_state_steps.csv": {
+        "blob": "dc1a587f55949bcd2390349d6e04e8ed78c3c982",
+        "bytes": 97449,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run1/diagnostic_state_steps.csv",
+        "sha256": "93c0505b72b98d325f0cfdcd8631f33a8025d339a51a266af84f1bbd0d578660"
+      },
+      "hypotheses.csv": {
+        "blob": "c1ca55be3bc0e826106d94a3a24602d038f12238",
+        "bytes": 489,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run1/hypotheses.csv",
+        "sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77"
+      },
+      "integrity.csv": {
+        "blob": "8bb04c608657b877ea9627ae56bead00dd88275e",
+        "bytes": 64307,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run1/integrity.csv",
+        "sha256": "40aa0f2e5e70e0d1d763cfdb2d50d4bf4b64101a1d5542b77550b6e9cbc5bcbf"
+      },
+      "states.csv": {
+        "blob": "f0cd34d1a924c1e11e5919405f7d56a2b4d80ff3",
+        "bytes": 14209,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run1/states.csv",
+        "sha256": "25115849c2d6ba975d9ee7b95bc0c39cc0480e70bc63025996c9685b0421d890"
+      },
+      "transactions.csv": {
+        "blob": "7d23bffb107f69e99278308bc8a04bbf0da4c530",
+        "bytes": 2458,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run1/transactions.csv",
+        "sha256": "57f048a0b79f7bf8e082723d7ca11b1148cbdcbfbfe37a8a5544a7ffc84a5ff9"
+      }
+    },
+    "run2": {
+      "bridge.csv": {
+        "blob": "b3fa669911b2c11994918b8b14f4b5744b2d96c3",
+        "bytes": 205,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run2/bridge.csv",
+        "sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3"
+      },
+      "candidates.csv": {
+        "blob": "5c86df1ffbf9f6dc277c7540c464a093301730d7",
+        "bytes": 54690,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run2/candidates.csv",
+        "sha256": "e80335a486cd4531dd9d5aa27b720df601de2e42dcdedfa979c64433eec5e00e"
+      },
+      "diagnostic_attempts.csv": {
+        "blob": "2451a4a05649ed4e136ffd628decf09fd8433482",
+        "bytes": 66056,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run2/diagnostic_attempts.csv",
+        "sha256": "9627cca3aee08802654380bacbb345b7e62dbca1d4e35f7a9ab1434997cc9b39"
+      },
+      "diagnostic_candidates.csv": {
+        "blob": "ace3603a81362d5cf55b79ab92f1980fcc20c098",
+        "bytes": 41890,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run2/diagnostic_candidates.csv",
+        "sha256": "f53109238d0ef7b7f9d43dc95df2fd40d3b39e45d51dc981776b3d20a7ebe9d2"
+      },
+      "diagnostic_coverage.csv": {
+        "blob": "058a77bdadc91fbd18552bd5c03c81c2c9fd78f3",
+        "bytes": 416,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run2/diagnostic_coverage.csv",
+        "sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e"
+      },
+      "diagnostic_history_summary.csv": {
+        "blob": "052c5d12c183a02b75c5a822955ee5c72436582d",
+        "bytes": 21124,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run2/diagnostic_history_summary.csv",
+        "sha256": "0d33b2ac95c5f83d9967c1f2702f83eb3325c11ced66a5ae44fe2d8a746d276b"
+      },
+      "diagnostic_snapshot_identity.csv": {
+        "blob": "5e4a8a1372c317bb88a9c80ebd31a46bea56a7f2",
+        "bytes": 33531,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run2/diagnostic_snapshot_identity.csv",
+        "sha256": "bb9a588a0fc2e752d36cf643af281ccc66910a14afa7a75b7bb957e0a0ed16c6"
+      },
+      "diagnostic_square_root.csv": {
+        "blob": "7691952ab7d292b52ef3fec7fddfd42b911b1029",
+        "bytes": 11267,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run2/diagnostic_square_root.csv",
+        "sha256": "e4c223b8b95a409860f009ed6d81f895fc71e2cb0bd9c0dfeb52ff788193c95e"
+      },
+      "diagnostic_state_steps.csv": {
+        "blob": "dc1a587f55949bcd2390349d6e04e8ed78c3c982",
+        "bytes": 97449,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run2/diagnostic_state_steps.csv",
+        "sha256": "93c0505b72b98d325f0cfdcd8631f33a8025d339a51a266af84f1bbd0d578660"
+      },
+      "hypotheses.csv": {
+        "blob": "c1ca55be3bc0e826106d94a3a24602d038f12238",
+        "bytes": 489,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run2/hypotheses.csv",
+        "sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77"
+      },
+      "integrity.csv": {
+        "blob": "0049f38ba3963dd823be1f81eebe1a9bdc3fa76d",
+        "bytes": 64307,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run2/integrity.csv",
+        "sha256": "695d220d2fb4de5535a35edff002ddf18851bacb8b36c0367e24748834798f22"
+      },
+      "states.csv": {
+        "blob": "f0cd34d1a924c1e11e5919405f7d56a2b4d80ff3",
+        "bytes": 14209,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run2/states.csv",
+        "sha256": "25115849c2d6ba975d9ee7b95bc0c39cc0480e70bc63025996c9685b0421d890"
+      },
+      "transactions.csv": {
+        "blob": "7d23bffb107f69e99278308bc8a04bbf0da4c530",
+        "bytes": 2458,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run2/transactions.csv",
+        "sha256": "57f048a0b79f7bf8e082723d7ca11b1148cbdcbfbfe37a8a5544a7ffc84a5ff9"
+      }
+    },
+    "run3": {
+      "bridge.csv": {
+        "blob": "b3fa669911b2c11994918b8b14f4b5744b2d96c3",
+        "bytes": 205,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run3/bridge.csv",
+        "sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3"
+      },
+      "candidates.csv": {
+        "blob": "0d46d82e691db7d6fe7cd7b037d3710a3ef28e99",
+        "bytes": 54688,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run3/candidates.csv",
+        "sha256": "bbc70ab8285610a0c7f3395558f15d8e00d3a11303ded1fc16feb4fbe107d926"
+      },
+      "diagnostic_attempts.csv": {
+        "blob": "17761a6eb226cdbe4b798491dc4606d183bdd1e9",
+        "bytes": 66057,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run3/diagnostic_attempts.csv",
+        "sha256": "c2f3b58ef8e6bb3224ec63aa61e9c3a093cfdd5636054da5fa4b9efbcb97769b"
+      },
+      "diagnostic_candidates.csv": {
+        "blob": "a7d7ed7b14e3415bad742778935ad879fa240ca9",
+        "bytes": 41973,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run3/diagnostic_candidates.csv",
+        "sha256": "c16f4a2133a2a57f7651b9a02104b7c85f04b6a4f8d70e084589568a86bb6c73"
+      },
+      "diagnostic_coverage.csv": {
+        "blob": "058a77bdadc91fbd18552bd5c03c81c2c9fd78f3",
+        "bytes": 416,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run3/diagnostic_coverage.csv",
+        "sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e"
+      },
+      "diagnostic_history_summary.csv": {
+        "blob": "052c5d12c183a02b75c5a822955ee5c72436582d",
+        "bytes": 21124,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run3/diagnostic_history_summary.csv",
+        "sha256": "0d33b2ac95c5f83d9967c1f2702f83eb3325c11ced66a5ae44fe2d8a746d276b"
+      },
+      "diagnostic_snapshot_identity.csv": {
+        "blob": "5e4a8a1372c317bb88a9c80ebd31a46bea56a7f2",
+        "bytes": 33531,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run3/diagnostic_snapshot_identity.csv",
+        "sha256": "bb9a588a0fc2e752d36cf643af281ccc66910a14afa7a75b7bb957e0a0ed16c6"
+      },
+      "diagnostic_square_root.csv": {
+        "blob": "7691952ab7d292b52ef3fec7fddfd42b911b1029",
+        "bytes": 11267,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run3/diagnostic_square_root.csv",
+        "sha256": "e4c223b8b95a409860f009ed6d81f895fc71e2cb0bd9c0dfeb52ff788193c95e"
+      },
+      "diagnostic_state_steps.csv": {
+        "blob": "dc1a587f55949bcd2390349d6e04e8ed78c3c982",
+        "bytes": 97449,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run3/diagnostic_state_steps.csv",
+        "sha256": "93c0505b72b98d325f0cfdcd8631f33a8025d339a51a266af84f1bbd0d578660"
+      },
+      "hypotheses.csv": {
+        "blob": "c1ca55be3bc0e826106d94a3a24602d038f12238",
+        "bytes": 489,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run3/hypotheses.csv",
+        "sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77"
+      },
+      "integrity.csv": {
+        "blob": "3c92919ff39cd3ee2a7f4cfb273069bbfaa8fa72",
+        "bytes": 64307,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run3/integrity.csv",
+        "sha256": "2f6015c1e223b300681446b1b6959d1d0dcf227b5bd3e2949e6489552bc8c1a1"
+      },
+      "states.csv": {
+        "blob": "f0cd34d1a924c1e11e5919405f7d56a2b4d80ff3",
+        "bytes": 14209,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run3/states.csv",
+        "sha256": "25115849c2d6ba975d9ee7b95bc0c39cc0480e70bc63025996c9685b0421d890"
+      },
+      "transactions.csv": {
+        "blob": "7d23bffb107f69e99278308bc8a04bbf0da4c530",
+        "bytes": 2458,
+        "path": "docs/evidence/p1-05-deterministic-concurrency/archived-raw/candidate-3x45/run3/transactions.csv",
+        "sha256": "57f048a0b79f7bf8e082723d7ca11b1148cbdcbfbfe37a8a5544a7ffc84a5ff9"
+      }
+    }
+  },
+  "schema": "uwb-imu-pl/gate24-golden-reference/v1",
+  "tag_object": "02344301915590881b08810f1c34f67aed04b9e4",
+  "tree": "8d2ee279074fb02b269f20041eb6b8806980ca06"
+}

@@ -1,0 +1,25 @@
+All commands ran from:
+  /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl
+
+Build focused targets:
+  cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl --target realtime_performance_benchmark test_history_fault_summary test_history_summary_pipeline -j2
+
+Final 1200 replay (exit 0):
+  env UWB_IMU_PL_SCENARIO=nominal UWB_IMU_PL_BENCHMARK_SEED=20260902 UWB_IMU_PL_KKT_DIAGNOSTIC=1 /usr/bin/time -v -o targeted-kkt-v11/seed20260902-1200-final-identity.time.txt /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark config/fde_off.yaml targeted-kkt-v11/seed20260902-1200-final-identity 1200
+
+Final 12000 replay (exit 0):
+  env UWB_IMU_PL_SCENARIO=nominal UWB_IMU_PL_BENCHMARK_SEED=20260902 UWB_IMU_PL_KKT_DIAGNOSTIC=1 /usr/bin/time -v -o targeted-kkt-v11/seed20260902-12000-final-identity.time.txt /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark config/fde_off.yaml targeted-kkt-v11/seed20260902-12000-final-identity 12000
+
+Tree valid-oracle fallback versus forced rebuild (exit 0):
+  /usr/bin/time -v -o targeted-kkt-v11/tree-mutation-pass.time.txt /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.P106TreeOnlyMutationFallsBackAndMatchesForcedFullRebuild
+
+Focused numerical tests (exit 0):
+  test_history_fault_summary
+  test_history_summary_pipeline --gtest_filter=HistorySummaryPipeline.P103ProductionClosureAudit:HistorySummaryPipeline.CarrierInvariantsUnderRowPermutation
+  test_realtime_incremental --gtest_filter=RealtimeFactors.P106FullTrajectoryBreaksSingleEpochLeverNullDirection:RealtimeFactors.NonzeroLeverArmRangeJacobianMatchesCentralDifference:UwbImuIncremental.FiveSecondIsamMatchesBatchPoseAndMarginal
+
+ABI canary (exit 0):
+  Compile docs/evidence/p0-07-revised-nonrealtime-validation/golden-p1-05-abi-canary.cpp against headers archived from golden-p1-05-deterministic-concurrency, then run it against the current libuwb_imu_pl.so with config/fde_off.yaml.
+
+Not run:
+  38x20, FGO, complete CTest, sanitizers, Section 2.4, full acceptance summarizer.

@@ -1155,6 +1155,34 @@ TEST(HistoryFaultSummary, P103OwnerCollisionTamperAndStaleCacheFailClosed) {
   EXPECT_NE(duplicate.invalid_reason.find("not unique"), std::string::npos);
   EXPECT_EQ(cache.audit().retained_rows, 0u);
   EXPECT_EQ(cache.audit().retained_bytes, 0u);
+
+  // Mutation branch 2: both the hierarchical representation and the
+  // independent full-row oracle see the same non-finite immutable row.  The
+  // result must remain invalid and the tree must be discarded, rather than
+  // treating fallback as an invalid-value mask.
+  auto non_finite = tampered;
+  non_finite.input.rhs(0) =
+      std::numeric_limits<double>::quiet_NaN();
+  const auto refused = cache.update(non_finite);
+  EXPECT_FALSE(refused.valid);
+  EXPECT_NE(refused.invalid_reason.find("non_finite_input"),
+            std::string::npos);
+  EXPECT_EQ(cache.audit().retained_rows, 0u);
+  EXPECT_EQ(cache.audit().retained_bytes, 0u);
+  EXPECT_NE(cache.audit().last_reason.find("tree_invalid=1"),
+            std::string::npos);
+  EXPECT_NE(cache.audit().last_reason.find("full_oracle_valid=0"),
+            std::string::npos);
+  EXPECT_NE(cache.audit().last_reason.find("tree_reset=1"),
+            std::string::npos);
+  EXPECT_NE(cache.audit().last_reason.find("fail_closed=1"),
+            std::string::npos);
+
+  // A subsequent finite request has to cold-rebuild; no invalid tree can be
+  // reused across the refusal.
+  const auto rebuilds_before = cache.audit().full_tree_rebuilds;
+  ASSERT_TRUE(cache.update(tampered).valid);
+  EXPECT_EQ(cache.audit().full_tree_rebuilds, rebuilds_before + 1);
 }
 
 TEST(HistoryFaultSummary, P103CarrierRankCertificateRejectsNumericalNoise) {

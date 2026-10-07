@@ -1,0 +1,2099 @@
+{
+  "runs": [
+    {
+      "accuracy": {
+        "accel_bias_norm_rmse_mps2": 0.0004997591749851091,
+        "accel_bias_truth": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "attitude_geodesic_max_rad": 0.27591733139854707,
+        "attitude_geodesic_rmse_rad": 0.13375426322720887,
+        "gyro_bias_norm_rmse_radps": 1.3385842234391995e-05,
+        "gyro_bias_truth": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "truth_at_attempt_position_rmse_m": 0.5852263089114501,
+        "truth_at_state_position_max_m": 0.076696479158562,
+        "truth_at_state_position_p95_m": 0.06381429680243596,
+        "truth_at_state_position_rmse_m": 0.036941018493643105,
+        "valid_counts": {
+          "accel_bias": 600,
+          "attitude": 600,
+          "gyro_bias": 600,
+          "position": 600,
+          "service_position": 600,
+          "velocity": 600
+        },
+        "velocity_rmse_mps": 0.024045826379892395
+      },
+      "action_and_status_counts": {
+        "fde_status": {
+          "HISTORY_PRIOR_CONTAMINATED": 1,
+          "NOT_TRIGGERED": 89,
+          "RISK_BUDGET_INVALID": 510
+        },
+        "selected_action": {
+          "KEEP_ALL": 90,
+          "KEEP_ALL_BEST_EFFORT": 510
+        }
+      },
+      "artifact_directory": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/active-alarm-pilot-4x600-final-v9/imu_order1__nominal__e600__s20260901__r1",
+      "artifact_hashes": {
+        "diagnostic_attempts.csv": {
+          "bytes": 938524,
+          "sha256": "32218225ac6dc484737624258194646b6421907fa389f71303f77021a88ed96c"
+        },
+        "diagnostic_stages.csv": {
+          "bytes": 2447833,
+          "sha256": "6e847224fdcfe16e8224640d339137228a74abbc585683315289e4a4a3a8e071"
+        },
+        "fault_truth.csv": {
+          "bytes": 166,
+          "sha256": "19701bc32e4dfe433bcac91e977ca1b9e2bed9637b7bb1b24f59542f68db1a08"
+        },
+        "ground_truth.csv": {
+          "bytes": 78087,
+          "sha256": "03c3141adf55699625e5b4f4a6433853e51907043f0a4d39721fedab8aee9512"
+        },
+        "integrity.csv": {
+          "bytes": 799780,
+          "sha256": "cbf8a269f498ac8f7a06eb0883cd3548ea2b41df59ca1941bdca1a7467f909f7"
+        },
+        "resolved_config.yaml": {
+          "bytes": 13467,
+          "sha256": "19c814ed291d9ebd70faa61cc5345479b3d0a8e4dd43fd21a2aba7f375d84a74"
+        },
+        "run_manifest.json": {
+          "bytes": 4204,
+          "sha256": "3e6fd6b21dfc170854b2ba51c1e6ba4e5b2ece050690c5075a2d01ace44a190f"
+        },
+        "states.csv": {
+          "bytes": 191235,
+          "sha256": "e73f571e476dfcde133ebaecc3549ec5eea8afda3b9b399eb20740682d229fbe"
+        },
+        "stderr.log": {
+          "bytes": 1069,
+          "sha256": "6098e1cf153add08a2473accb1c98b8582e62dda70aade143236918692ecc112"
+        },
+        "stdout.log": {
+          "bytes": 1032,
+          "sha256": "0e8993d2f1bfa6b18091a58ddf55f0e8bf00fc6d3fad14849e3a3d7399ef8fa5"
+        },
+        "summary.json": {
+          "bytes": 280,
+          "sha256": "887a0f2f9400c8d8bd14f4e4be2244770a0a729a11e2de7e9fc12dd0f706e105"
+        },
+        "timing.csv": {
+          "bytes": 1052050,
+          "sha256": "b71937507ecc718fac16eefc6ac02c82c5e43278ff44e725b7921ef6f82d12cd"
+        }
+      },
+      "benchmark_path": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+      "benchmark_sha256": "61d65b39c7f282ed33c99f1d64561b45a6a345d7851c45d8df7a8a1e73234663",
+      "benchmark_source_sha256": "88e819cc887748908ce70f1c2e310e8b467eb00a03f35687f5ccd97691ea26f7",
+      "calibration_artifact_class": "simulation/synthetic",
+      "command": [
+        "/usr/bin/time",
+        "-v",
+        "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_imu_order1.yaml",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/active-alarm-pilot-4x600-final-v9/imu_order1__nominal__e600__s20260901__r1",
+        "600"
+      ],
+      "complete_model_config_digest": "dfa4c4f08276a5c7f17eecf7cf44c351994966e6f92f875f27e710361d3765e6",
+      "config_hash": "7feddddb68dc3872d19435c21538bbf8ab61c5316fc57dfcc23d056caf5dceee",
+      "counts": {
+        "attempted": 600,
+        "committed": 510,
+        "deadline_missed": 506,
+        "finite_pl": 0,
+        "fresh": 510,
+        "marginalizations": 481,
+        "rejected": 90,
+        "state_valid": 600,
+        "within_alert_limits": 0
+      },
+      "epochs": 600,
+      "exit_code": 0,
+      "fault_overrides": {},
+      "fault_phases": {},
+      "fault_schedule_effective": {
+        "begin": null,
+        "end": null,
+        "epochs": 600,
+        "fault": 0,
+        "fault_expected": false,
+        "post": 0,
+        "pre": 600
+      },
+      "fault_schedule_original": {
+        "begin": null,
+        "end": null,
+        "epochs": 300,
+        "fault": 0,
+        "fault_expected": false,
+        "post": 0,
+        "pre": 300
+      },
+      "gate": "performance",
+      "git_sha": "4e99d4d8aa9712300389a7caed9d7809afc87d5a",
+      "hardware_formal_qualification": "CLOSED/NOT_CLAIMED",
+      "hypothesis_census_max": {
+        "double_uwb_accel_hypotheses": 0,
+        "double_uwb_gyro_hypotheses": 0,
+        "generated_actions": 1,
+        "single_accel_hypotheses": 60,
+        "single_gyro_hypotheses": 60,
+        "single_uwb_hypotheses": 0
+      },
+      "integrity": {
+        "deadline_miss_fraction": 0.8433333333333334,
+        "finite_pl_fraction": 0.0,
+        "fresh_fraction": 0.85,
+        "within_alert_fraction": 0.0
+      },
+      "loaded_dso_sha256": {
+        "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/libuwb_imu_pl.so": "455f01fe81a4cf47a05891cb0c544a9f793e842ebc9dad31a9bc03350912ea26",
+        "/usr/lib/x86_64-linux-gnu/ld-2.31.so": "cfd44e4341767033532d1483c8250d200ad4cdf535d0abc19064ae34cdc51ca0",
+        "/usr/lib/x86_64-linux-gnu/libboost_chrono.so.1.71.0": "d1b51a0aaec8675081523ab596742813c14ede4832c529c1cca2f25d3aee5050",
+        "/usr/lib/x86_64-linux-gnu/libboost_filesystem.so.1.71.0": "e1ba3a5cf611782b0dd5d7981edd06504edcb867482d2929213ae655a98d0ae2",
+        "/usr/lib/x86_64-linux-gnu/libboost_serialization.so.1.71.0": "e1cd1dfdb60c9ac2e9c168cf2f0958a5ece96084604d21f7933250f5845bf1e8",
+        "/usr/lib/x86_64-linux-gnu/libboost_timer.so.1.71.0": "83e9597dda3f11709b591b2d89b50deda1035acffe18b1908c44c5cab430964a",
+        "/usr/lib/x86_64-linux-gnu/libc-2.31.so": "53b909551f8e581120ddc2d24cfb5df76c52e3c2e2a5dac0d202b25638b3e902",
+        "/usr/lib/x86_64-linux-gnu/libdl-2.31.so": "e0d0cace80b627e50ca3f7b621b64917677c27c74077080854d57cf4e548edc6",
+        "/usr/lib/x86_64-linux-gnu/libgcc_s.so.1": "489803ded8a4d803e2c792763a2767c12185f5764b7bba080742d14ef2452b27",
+        "/usr/lib/x86_64-linux-gnu/libm-2.31.so": "a0e70f48f02a399e8dd37f861a99e226c285a9daf50a25d19fff7ccf18b97f9c",
+        "/usr/lib/x86_64-linux-gnu/libpthread-2.31.so": "af27ed906f6185e0143b9c0d0da287788efa7eb6b2639e44d48fb2939415fdc5",
+        "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.28": "26916e7389a561537a0510661fc75538cea236139346f3dbe21bc64ba65605bf",
+        "/usr/lib/x86_64-linux-gnu/libtbb.so.2": "26115b1a00c49e84d314e3f75eab0c752a2dfb20a61c60897f5656b1db239cba",
+        "/usr/lib/x86_64-linux-gnu/libtbbmalloc.so.2": "14147fcfadccacb4ddf94738143a3fa999a065a303dda898da8ab057cfb483b4",
+        "/usr/lib/x86_64-linux-gnu/libyaml-cpp.so.0.6.2": "b8a2d129e9b39d03ad7dade4eaa4eb1327a2562e203c17b50bcd8eb117d1ed7e",
+        "/usr/local/lib/libgtsam.so.4.2.0": "00d83aa618194aefc4b2011e1d29bd9aba107a8b5e0ee8e946eb2455351219da",
+        "/usr/local/lib/libgtsam_unstable.so.4.2.0": "7e54a7f4603b30b755f9f0036034e19c9f753c985c82af83c1551b23a9358c23",
+        "/usr/local/lib/libmetis-gtsam.so": "0a9c286ec13c815313fbe004d9969c3ae0ff08523f38efb575ca785e98f24d2b"
+      },
+      "performance": {
+        "core_max_ms": 652.937,
+        "core_p50_ms": 406.255,
+        "core_p95_ms": 521.918,
+        "core_p99_ms": 582.411,
+        "outer_p99_ms": 582.767,
+        "rss_peak_mib": 59.7421875
+      },
+      "profile": "imu_order1",
+      "profile_matrix_contract": {
+        "disposition": "REVISED_SCOPE_38X20",
+        "expected_runs": 38,
+        "original_epochs": 300,
+        "planned_attempts": 760,
+        "scaled_epochs": 20,
+        "schedule_algorithm": "proportional_thirds_min5_history_tail25_v1",
+        "schema": "uwb-imu-pl/revised-profile-matrix/v1"
+      },
+      "protection_level": {
+        "axis_error_coverage_fraction": null,
+        "finite_with_truth": 0,
+        "horizontal_error_coverage_fraction": null,
+        "hpl_max_m": null,
+        "hpl_p50_m": null,
+        "hpl_p95_m": null,
+        "vertical_error_coverage_fraction": null,
+        "vpl_max_m": null,
+        "vpl_p50_m": null,
+        "vpl_p95_m": null
+      },
+      "protocol_hash": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6",
+      "protocol_id": "fde-profiles-20261006-revised-38x20-v1",
+      "repeat": 1,
+      "run_id": "imu_order1__nominal__e600__s20260901__r1",
+      "runner_wall_s": 218.55401840899867,
+      "scale": "smoke",
+      "scenario": "nominal",
+      "schema": "uwb-imu-pl/fde-validation-run/v1",
+      "seed": 20260901,
+      "simulation_calibration_id": "simcal-p1-06-v2-imu_order1-dfa4c4f08276a5c7",
+      "source_file_count": 197,
+      "source_tree_sha256": "a488d2272d54c0813b65cc4608b88445aea1163817f63021837ae3e31b26dd31",
+      "stage_timings": {
+        "all_in_detector": {
+          "count": 511,
+          "max_ms": 0.22704,
+          "p50_ms": 0.070619,
+          "p95_ms": 0.104977,
+          "p99_ms": 0.160772
+        },
+        "analysis_completion": {
+          "count": 600,
+          "max_ms": 1542.2,
+          "p50_ms": 406.684,
+          "p95_ms": 529.988,
+          "p99_ms": 652.937
+        },
+        "arrival_to_publish": {
+          "count": 600,
+          "max_ms": 1542.22,
+          "p50_ms": 406.696,
+          "p95_ms": 530.001,
+          "p99_ms": 652.949
+        },
+        "base_factorization": {
+          "count": 510,
+          "max_ms": 0.645075,
+          "p50_ms": 0.216683,
+          "p95_ms": 0.29261,
+          "p99_ms": 0.382766
+        },
+        "candidate_audit": {
+          "count": 510,
+          "max_ms": 0.025705,
+          "p50_ms": 0.008778,
+          "p95_ms": 0.011628,
+          "p99_ms": 0.018841
+        },
+        "candidate_evaluation": {
+          "count": 510,
+          "max_ms": 158.889,
+          "p50_ms": 142.049,
+          "p95_ms": 147.645,
+          "p99_ms": 151.981
+        },
+        "commit": {
+          "count": 510,
+          "max_ms": 4.4265,
+          "p50_ms": 1.74771,
+          "p95_ms": 3.02766,
+          "p99_ms": 3.59828
+        },
+        "core_total": {
+          "count": 600,
+          "max_ms": 1542.2,
+          "p50_ms": 406.684,
+          "p95_ms": 529.988,
+          "p99_ms": 652.937
+        },
+        "current_joint_marginal": {
+          "count": 600,
+          "max_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0
+        },
+        "current_sensitivity": {
+          "count": 510,
+          "max_ms": 0.706259,
+          "p50_ms": 0.257557,
+          "p95_ms": 0.346338,
+          "p99_ms": 0.463677
+        },
+        "discard": {
+          "count": 1,
+          "max_ms": 0.003524,
+          "p50_ms": 0.003524,
+          "p95_ms": 0.003524,
+          "p99_ms": 0.003524
+        },
+        "fde_decision": {
+          "count": 510,
+          "max_ms": 0.445672,
+          "p50_ms": 0.178551,
+          "p95_ms": 0.22718,
+          "p99_ms": 0.32526
+        },
+        "finalize_commit_audit": {
+          "count": 511,
+          "max_ms": 0.42288,
+          "p50_ms": 0.153847,
+          "p95_ms": 0.242563,
+          "p99_ms": 0.311347
+        },
+        "health_actions": {
+          "count": 510,
+          "max_ms": 0.711718,
+          "p50_ms": 0.229835,
+          "p95_ms": 0.319234,
+          "p99_ms": 0.48699
+        },
+        "historical_sensitivity": {
+          "count": 510,
+          "max_ms": 0.371429,
+          "p50_ms": 0.073136,
+          "p95_ms": 0.097525,
+          "p99_ms": 0.156473
+        },
+        "hypothesis_evidence": {
+          "count": 510,
+          "max_ms": 66.1779,
+          "p50_ms": 40.6595,
+          "p95_ms": 42.9522,
+          "p99_ms": 44.3359
+        },
+        "imu_preintegration": {
+          "count": 600,
+          "max_ms": 0.084498,
+          "p50_ms": 0.022736,
+          "p95_ms": 0.029346,
+          "p99_ms": 0.042105
+        },
+        "integrity_window": {
+          "count": 511,
+          "max_ms": 1350.8,
+          "p50_ms": 227.314,
+          "p95_ms": 356.684,
+          "p99_ms": 681.296
+        },
+        "model_generation": {
+          "count": 510,
+          "max_ms": 1.27207,
+          "p50_ms": 0.635396,
+          "p95_ms": 0.815962,
+          "p99_ms": 1.00562
+        },
+        "no_uwb_isam_update": {
+          "count": 600,
+          "max_ms": 1.78782,
+          "p50_ms": 0.939942,
+          "p95_ms": 1.18706,
+          "p99_ms": 1.64112
+        },
+        "outer_epoch": {
+          "count": 600,
+          "max_ms": 1542.51,
+          "p50_ms": 406.999,
+          "p95_ms": 530.338,
+          "p99_ms": 653.249
+        },
+        "outer_logging_flush": {
+          "count": 600,
+          "max_ms": 0.805111,
+          "p50_ms": 0.317405,
+          "p95_ms": 0.4245,
+          "p99_ms": 0.540657
+        },
+        "prepare": {
+          "count": 511,
+          "max_ms": 1.81347,
+          "p50_ms": 0.980603,
+          "p95_ms": 1.27037,
+          "p99_ms": 1.68776
+        },
+        "shared_cache": {
+          "count": 510,
+          "max_ms": 0.021328,
+          "p50_ms": 0.001278,
+          "p95_ms": 0.002098,
+          "p99_ms": 0.002675
+        },
+        "snapshot_extraction": {
+          "count": 600,
+          "max_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0
+        },
+        "state_audit": {
+          "count": 511,
+          "max_ms": 0.00052,
+          "p50_ms": 0.000186,
+          "p95_ms": 0.00025,
+          "p99_ms": 0.000384
+        },
+        "state_query": {
+          "count": 600,
+          "max_ms": 0.141202,
+          "p50_ms": 0.024387,
+          "p95_ms": 0.05004,
+          "p99_ms": 0.067646
+        },
+        "uwb_commit": {
+          "count": 510,
+          "max_ms": 4.37826,
+          "p50_ms": 1.6966,
+          "p95_ms": 2.97234,
+          "p99_ms": 3.53988
+        },
+        "uwb_reject": {
+          "count": 90,
+          "max_ms": 0.924764,
+          "p50_ms": 0.924764,
+          "p95_ms": 0.924764,
+          "p99_ms": 0.924764
+        },
+        "window_boundary_provenance": {
+          "count": 511,
+          "max_ms": 1337.59,
+          "p50_ms": 213.767,
+          "p95_ms": 343.779,
+          "p99_ms": 668.512
+        },
+        "window_dense_assembly": {
+          "count": 511,
+          "max_ms": 0.447211,
+          "p50_ms": 0.065924,
+          "p95_ms": 0.093109,
+          "p99_ms": 0.162776
+        },
+        "window_factor_linearization_whitening": {
+          "count": 511,
+          "max_ms": 1.77801,
+          "p50_ms": 0.710912,
+          "p95_ms": 0.972424,
+          "p99_ms": 1.30927
+        },
+        "window_fingerprint": {
+          "count": 511,
+          "max_ms": 4.80537,
+          "p50_ms": 3.14177,
+          "p95_ms": 3.55692,
+          "p99_ms": 4.22454
+        },
+        "window_llt_state_solves": {
+          "count": 511,
+          "max_ms": 0.30734,
+          "p50_ms": 0.111199,
+          "p95_ms": 0.135543,
+          "p99_ms": 0.172365
+        },
+        "window_normal_equations": {
+          "count": 511,
+          "max_ms": 1.14198,
+          "p50_ms": 0.297911,
+          "p95_ms": 0.365324,
+          "p99_ms": 0.421133
+        },
+        "window_svd": {
+          "count": 511,
+          "max_ms": 10.6408,
+          "p50_ms": 7.37827,
+          "p95_ms": 8.12407,
+          "p99_ms": 8.94952
+        }
+      },
+      "terminal_artifacts": {
+        "candidates.csv": {
+          "bytes": 544933,
+          "sha256": "19eb65e600c47e3e6ae1b9d3943b9e3d8a6e69be861ba24d3e169a7a6b8a2531"
+        },
+        "diagnostic_attempts.csv": {
+          "bytes": 938524,
+          "sha256": "32218225ac6dc484737624258194646b6421907fa389f71303f77021a88ed96c"
+        },
+        "diagnostic_stages.csv": {
+          "bytes": 2447833,
+          "sha256": "6e847224fdcfe16e8224640d339137228a74abbc585683315289e4a4a3a8e071"
+        },
+        "fault_truth.csv": {
+          "bytes": 166,
+          "sha256": "19701bc32e4dfe433bcac91e977ca1b9e2bed9637b7bb1b24f59542f68db1a08"
+        },
+        "integrity.csv": {
+          "bytes": 799780,
+          "sha256": "cbf8a269f498ac8f7a06eb0883cd3548ea2b41df59ca1941bdca1a7467f909f7"
+        },
+        "resolved_config.yaml": {
+          "bytes": 13467,
+          "sha256": "19c814ed291d9ebd70faa61cc5345479b3d0a8e4dd43fd21a2aba7f375d84a74"
+        },
+        "run_manifest.json": {
+          "bytes": 4204,
+          "sha256": "3e6fd6b21dfc170854b2ba51c1e6ba4e5b2ece050690c5075a2d01ace44a190f"
+        },
+        "stderr.log": {
+          "bytes": 1069,
+          "sha256": "6098e1cf153add08a2473accb1c98b8582e62dda70aade143236918692ecc112"
+        },
+        "stdout.log": {
+          "bytes": 1032,
+          "sha256": "0e8993d2f1bfa6b18091a58ddf55f0e8bf00fc6d3fad14849e3a3d7399ef8fa5"
+        },
+        "summary.json": {
+          "bytes": 280,
+          "sha256": "887a0f2f9400c8d8bd14f4e4be2244770a0a729a11e2de7e9fc12dd0f706e105"
+        },
+        "terminal_packets.csv": {
+          "bytes": 77721,
+          "sha256": "e2248fd54f2d3d1e8e8494ca515433d140ca68c1b112fd7329c4f2ed95ddd23e"
+        },
+        "timing.csv": {
+          "bytes": 1052050,
+          "sha256": "b71937507ecc718fac16eefc6ac02c82c5e43278ff44e725b7921ef6f82d12cd"
+        },
+        "transactions.csv": {
+          "bytes": 33073,
+          "sha256": "233fa854f357ef1049017c5420916ee1f962c6cb85aa7e1a9c6db80a9ccabfb7"
+        }
+      }
+    },
+    {
+      "accuracy": {
+        "accel_bias_norm_rmse_mps2": 0.0004997591749851091,
+        "accel_bias_truth": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "attitude_geodesic_max_rad": 0.27591733139854707,
+        "attitude_geodesic_rmse_rad": 0.13375426322720887,
+        "gyro_bias_norm_rmse_radps": 1.3385842234391995e-05,
+        "gyro_bias_truth": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "truth_at_attempt_position_rmse_m": 0.5852263089114501,
+        "truth_at_state_position_max_m": 0.076696479158562,
+        "truth_at_state_position_p95_m": 0.06381429680243596,
+        "truth_at_state_position_rmse_m": 0.036941018493643105,
+        "valid_counts": {
+          "accel_bias": 600,
+          "attitude": 600,
+          "gyro_bias": 600,
+          "position": 600,
+          "service_position": 600,
+          "velocity": 600
+        },
+        "velocity_rmse_mps": 0.024045826379892395
+      },
+      "action_and_status_counts": {
+        "fde_status": {
+          "HISTORY_PRIOR_CONTAMINATED": 1,
+          "NOT_TRIGGERED": 89,
+          "NO_VALID_CANDIDATE": 499,
+          "RISK_BUDGET_INVALID": 11
+        },
+        "selected_action": {
+          "KEEP_ALL": 90,
+          "KEEP_ALL_BEST_EFFORT": 510
+        }
+      },
+      "artifact_directory": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/active-alarm-pilot-4x600-final-v9/joint_order1__nominal__e600__s20260901__r1",
+      "artifact_hashes": {
+        "diagnostic_attempts.csv": {
+          "bytes": 820687,
+          "sha256": "10df3c2e0bf2bddf514c35f4a851dc4f3c99e136adf792b06767fcc562740783"
+        },
+        "diagnostic_stages.csv": {
+          "bytes": 2440425,
+          "sha256": "0ccbfe172345bd9e48ec9ad120ffa8d13320593b827b05e573f49d5d5f3fb3be"
+        },
+        "fault_truth.csv": {
+          "bytes": 166,
+          "sha256": "19701bc32e4dfe433bcac91e977ca1b9e2bed9637b7bb1b24f59542f68db1a08"
+        },
+        "ground_truth.csv": {
+          "bytes": 78087,
+          "sha256": "03c3141adf55699625e5b4f4a6433853e51907043f0a4d39721fedab8aee9512"
+        },
+        "integrity.csv": {
+          "bytes": 800593,
+          "sha256": "f265b0fbea57caef0ee20d4d4e1c0789d261ea37ae62ac40f4e5c8d94f640722"
+        },
+        "resolved_config.yaml": {
+          "bytes": 13473,
+          "sha256": "9f9a53f13e662e99b153199bb8ac4a01545bbe31863b42c58b2ccad14e009e81"
+        },
+        "run_manifest.json": {
+          "bytes": 4220,
+          "sha256": "1699f619c9e14b844dc177df4f08a453bb46782d50a6f70a5be452deddf0a1d4"
+        },
+        "states.csv": {
+          "bytes": 191235,
+          "sha256": "e73f571e476dfcde133ebaecc3549ec5eea8afda3b9b399eb20740682d229fbe"
+        },
+        "stderr.log": {
+          "bytes": 1075,
+          "sha256": "8356cfbdb1e078eb56e1f7dffac0be28485e3f2b7915ad7f4f95ce649e368f03"
+        },
+        "stdout.log": {
+          "bytes": 1034,
+          "sha256": "bba102028a70c1b784d1334145e3224c15ab433f108b67af5632d39aaa311ca3"
+        },
+        "summary.json": {
+          "bytes": 280,
+          "sha256": "8f81169f8bb51b7ec75895e9361cf561b89c965be9ce0fed5d8ab475b0f09429"
+        },
+        "timing.csv": {
+          "bytes": 1049832,
+          "sha256": "5f55e3449b1d1adb8cffc89fe88dd9f3af9cca92f1503924b0e0208e04cdc00e"
+        }
+      },
+      "benchmark_path": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+      "benchmark_sha256": "61d65b39c7f282ed33c99f1d64561b45a6a345d7851c45d8df7a8a1e73234663",
+      "benchmark_source_sha256": "88e819cc887748908ce70f1c2e310e8b467eb00a03f35687f5ccd97691ea26f7",
+      "calibration_artifact_class": "simulation/synthetic",
+      "command": [
+        "/usr/bin/time",
+        "-v",
+        "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order1.yaml",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/active-alarm-pilot-4x600-final-v9/joint_order1__nominal__e600__s20260901__r1",
+        "600"
+      ],
+      "complete_model_config_digest": "499717ea47710e6a5b2d54bcbe36eca7e761d979caaef661f024d98b61a1bf70",
+      "config_hash": "18cec5ece3cd6f33761b946b7815ea5a8d0c998e007ad2fe49eef122de4284f7",
+      "counts": {
+        "attempted": 600,
+        "committed": 510,
+        "deadline_missed": 507,
+        "finite_pl": 0,
+        "fresh": 510,
+        "marginalizations": 481,
+        "rejected": 90,
+        "state_valid": 600,
+        "within_alert_limits": 0
+      },
+      "epochs": 600,
+      "exit_code": 0,
+      "fault_overrides": {},
+      "fault_phases": {},
+      "fault_schedule_effective": {
+        "begin": null,
+        "end": null,
+        "epochs": 600,
+        "fault": 0,
+        "fault_expected": false,
+        "post": 0,
+        "pre": 600
+      },
+      "fault_schedule_original": {
+        "begin": null,
+        "end": null,
+        "epochs": 300,
+        "fault": 0,
+        "fault_expected": false,
+        "post": 0,
+        "pre": 300
+      },
+      "gate": "performance",
+      "git_sha": "4e99d4d8aa9712300389a7caed9d7809afc87d5a",
+      "hardware_formal_qualification": "CLOSED/NOT_CLAIMED",
+      "hypothesis_census_max": {
+        "double_uwb_accel_hypotheses": 0,
+        "double_uwb_gyro_hypotheses": 0,
+        "generated_actions": 1,
+        "single_accel_hypotheses": 60,
+        "single_gyro_hypotheses": 60,
+        "single_uwb_hypotheses": 504
+      },
+      "integrity": {
+        "deadline_miss_fraction": 0.845,
+        "finite_pl_fraction": 0.0,
+        "fresh_fraction": 0.85,
+        "within_alert_fraction": 0.0
+      },
+      "loaded_dso_sha256": {
+        "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/libuwb_imu_pl.so": "455f01fe81a4cf47a05891cb0c544a9f793e842ebc9dad31a9bc03350912ea26",
+        "/usr/lib/x86_64-linux-gnu/ld-2.31.so": "cfd44e4341767033532d1483c8250d200ad4cdf535d0abc19064ae34cdc51ca0",
+        "/usr/lib/x86_64-linux-gnu/libboost_chrono.so.1.71.0": "d1b51a0aaec8675081523ab596742813c14ede4832c529c1cca2f25d3aee5050",
+        "/usr/lib/x86_64-linux-gnu/libboost_filesystem.so.1.71.0": "e1ba3a5cf611782b0dd5d7981edd06504edcb867482d2929213ae655a98d0ae2",
+        "/usr/lib/x86_64-linux-gnu/libboost_serialization.so.1.71.0": "e1cd1dfdb60c9ac2e9c168cf2f0958a5ece96084604d21f7933250f5845bf1e8",
+        "/usr/lib/x86_64-linux-gnu/libboost_timer.so.1.71.0": "83e9597dda3f11709b591b2d89b50deda1035acffe18b1908c44c5cab430964a",
+        "/usr/lib/x86_64-linux-gnu/libc-2.31.so": "53b909551f8e581120ddc2d24cfb5df76c52e3c2e2a5dac0d202b25638b3e902",
+        "/usr/lib/x86_64-linux-gnu/libdl-2.31.so": "e0d0cace80b627e50ca3f7b621b64917677c27c74077080854d57cf4e548edc6",
+        "/usr/lib/x86_64-linux-gnu/libgcc_s.so.1": "489803ded8a4d803e2c792763a2767c12185f5764b7bba080742d14ef2452b27",
+        "/usr/lib/x86_64-linux-gnu/libm-2.31.so": "a0e70f48f02a399e8dd37f861a99e226c285a9daf50a25d19fff7ccf18b97f9c",
+        "/usr/lib/x86_64-linux-gnu/libpthread-2.31.so": "af27ed906f6185e0143b9c0d0da287788efa7eb6b2639e44d48fb2939415fdc5",
+        "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.28": "26916e7389a561537a0510661fc75538cea236139346f3dbe21bc64ba65605bf",
+        "/usr/lib/x86_64-linux-gnu/libtbb.so.2": "26115b1a00c49e84d314e3f75eab0c752a2dfb20a61c60897f5656b1db239cba",
+        "/usr/lib/x86_64-linux-gnu/libtbbmalloc.so.2": "14147fcfadccacb4ddf94738143a3fa999a065a303dda898da8ab057cfb483b4",
+        "/usr/lib/x86_64-linux-gnu/libyaml-cpp.so.0.6.2": "b8a2d129e9b39d03ad7dade4eaa4eb1327a2562e203c17b50bcd8eb117d1ed7e",
+        "/usr/local/lib/libgtsam.so.4.2.0": "00d83aa618194aefc4b2011e1d29bd9aba107a8b5e0ee8e946eb2455351219da",
+        "/usr/local/lib/libgtsam_unstable.so.4.2.0": "7e54a7f4603b30b755f9f0036034e19c9f753c985c82af83c1551b23a9358c23",
+        "/usr/local/lib/libmetis-gtsam.so": "0a9c286ec13c815313fbe004d9969c3ae0ff08523f38efb575ca785e98f24d2b"
+      },
+      "performance": {
+        "core_max_ms": 1195.06,
+        "core_p50_ms": 630.053,
+        "core_p95_ms": 907.596,
+        "core_p99_ms": 1105.76,
+        "outer_p99_ms": 1106.14,
+        "rss_peak_mib": 79.1640625
+      },
+      "profile": "joint_order1",
+      "profile_matrix_contract": {
+        "disposition": "REVISED_SCOPE_38X20",
+        "expected_runs": 38,
+        "original_epochs": 300,
+        "planned_attempts": 760,
+        "scaled_epochs": 20,
+        "schedule_algorithm": "proportional_thirds_min5_history_tail25_v1",
+        "schema": "uwb-imu-pl/revised-profile-matrix/v1"
+      },
+      "protection_level": {
+        "axis_error_coverage_fraction": null,
+        "finite_with_truth": 0,
+        "horizontal_error_coverage_fraction": null,
+        "hpl_max_m": null,
+        "hpl_p50_m": null,
+        "hpl_p95_m": null,
+        "vertical_error_coverage_fraction": null,
+        "vpl_max_m": null,
+        "vpl_p50_m": null,
+        "vpl_p95_m": null
+      },
+      "protocol_hash": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6",
+      "protocol_id": "fde-profiles-20261006-revised-38x20-v1",
+      "repeat": 1,
+      "run_id": "joint_order1__nominal__e600__s20260901__r1",
+      "runner_wall_s": 350.988871208996,
+      "scale": "smoke",
+      "scenario": "nominal",
+      "schema": "uwb-imu-pl/fde-validation-run/v1",
+      "seed": 20260901,
+      "simulation_calibration_id": "simcal-p1-06-v2-joint_order1-499717ea47710e6a",
+      "source_file_count": 197,
+      "source_tree_sha256": "a488d2272d54c0813b65cc4608b88445aea1163817f63021837ae3e31b26dd31",
+      "stage_timings": {
+        "all_in_detector": {
+          "count": 511,
+          "max_ms": 0.503833,
+          "p50_ms": 0.263931,
+          "p95_ms": 0.335814,
+          "p99_ms": 0.481063
+        },
+        "analysis_completion": {
+          "count": 600,
+          "max_ms": 3158.97,
+          "p50_ms": 634.086,
+          "p95_ms": 915.159,
+          "p99_ms": 1195.06
+        },
+        "arrival_to_publish": {
+          "count": 600,
+          "max_ms": 3158.98,
+          "p50_ms": 634.099,
+          "p95_ms": 915.173,
+          "p99_ms": 1195.07
+        },
+        "base_factorization": {
+          "count": 510,
+          "max_ms": 0.526484,
+          "p50_ms": 0.264735,
+          "p95_ms": 0.332131,
+          "p99_ms": 0.405524
+        },
+        "candidate_audit": {
+          "count": 510,
+          "max_ms": 0.040979,
+          "p50_ms": 0.007237,
+          "p95_ms": 0.010112,
+          "p99_ms": 0.012149
+        },
+        "candidate_evaluation": {
+          "count": 510,
+          "max_ms": 177.75,
+          "p50_ms": 148.334,
+          "p95_ms": 153.978,
+          "p99_ms": 157.539
+        },
+        "commit": {
+          "count": 510,
+          "max_ms": 3.7321,
+          "p50_ms": 2.00849,
+          "p95_ms": 2.76804,
+          "p99_ms": 3.15098
+        },
+        "core_total": {
+          "count": 600,
+          "max_ms": 3158.97,
+          "p50_ms": 634.086,
+          "p95_ms": 915.159,
+          "p99_ms": 1195.06
+        },
+        "current_joint_marginal": {
+          "count": 600,
+          "max_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0
+        },
+        "current_sensitivity": {
+          "count": 510,
+          "max_ms": 1.40549,
+          "p50_ms": 0.583384,
+          "p95_ms": 0.764714,
+          "p99_ms": 1.02137
+        },
+        "discard": {
+          "count": 1,
+          "max_ms": 0.003977,
+          "p50_ms": 0.003977,
+          "p95_ms": 0.003977,
+          "p99_ms": 0.003977
+        },
+        "fde_decision": {
+          "count": 510,
+          "max_ms": 0.361759,
+          "p50_ms": 0.173365,
+          "p95_ms": 0.220132,
+          "p99_ms": 0.275877
+        },
+        "finalize_commit_audit": {
+          "count": 511,
+          "max_ms": 2.34514,
+          "p50_ms": 1.26714,
+          "p95_ms": 1.6478,
+          "p99_ms": 1.91979
+        },
+        "health_actions": {
+          "count": 510,
+          "max_ms": 1.15756,
+          "p50_ms": 0.454089,
+          "p95_ms": 0.559532,
+          "p99_ms": 0.666288
+        },
+        "historical_sensitivity": {
+          "count": 510,
+          "max_ms": 0.373994,
+          "p50_ms": 0.101689,
+          "p95_ms": 0.149069,
+          "p99_ms": 0.214001
+        },
+        "hypothesis_evidence": {
+          "count": 510,
+          "max_ms": 88.9065,
+          "p50_ms": 69.8076,
+          "p95_ms": 73.4856,
+          "p99_ms": 77.5429
+        },
+        "imu_preintegration": {
+          "count": 600,
+          "max_ms": 0.135009,
+          "p50_ms": 0.025004,
+          "p95_ms": 0.036035,
+          "p99_ms": 0.045761
+        },
+        "integrity_window": {
+          "count": 511,
+          "max_ms": 2925.94,
+          "p50_ms": 426.129,
+          "p95_ms": 697.922,
+          "p99_ms": 1462.23
+        },
+        "model_generation": {
+          "count": 510,
+          "max_ms": 11.2222,
+          "p50_ms": 6.06105,
+          "p95_ms": 7.08517,
+          "p99_ms": 8.40779
+        },
+        "no_uwb_isam_update": {
+          "count": 600,
+          "max_ms": 2.64765,
+          "p50_ms": 1.58011,
+          "p95_ms": 1.95268,
+          "p99_ms": 2.28524
+        },
+        "outer_epoch": {
+          "count": 600,
+          "max_ms": 3159.29,
+          "p50_ms": 634.458,
+          "p95_ms": 915.593,
+          "p99_ms": 1195.49
+        },
+        "outer_logging_flush": {
+          "count": 600,
+          "max_ms": 1.03322,
+          "p50_ms": 0.370283,
+          "p95_ms": 0.482697,
+          "p99_ms": 0.571568
+        },
+        "prepare": {
+          "count": 511,
+          "max_ms": 2.69373,
+          "p50_ms": 1.63692,
+          "p95_ms": 2.02092,
+          "p99_ms": 2.32748
+        },
+        "shared_cache": {
+          "count": 510,
+          "max_ms": 0.003451,
+          "p50_ms": 0.001518,
+          "p95_ms": 0.002197,
+          "p99_ms": 0.002675
+        },
+        "snapshot_extraction": {
+          "count": 600,
+          "max_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0
+        },
+        "state_audit": {
+          "count": 511,
+          "max_ms": 0.000493,
+          "p50_ms": 0.000193,
+          "p95_ms": 0.000322,
+          "p99_ms": 0.00039
+        },
+        "state_query": {
+          "count": 600,
+          "max_ms": 0.080646,
+          "p50_ms": 0.023868,
+          "p95_ms": 0.046488,
+          "p99_ms": 0.059305
+        },
+        "uwb_commit": {
+          "count": 510,
+          "max_ms": 3.57841,
+          "p50_ms": 1.86603,
+          "p95_ms": 2.62809,
+          "p99_ms": 3.00708
+        },
+        "uwb_reject": {
+          "count": 90,
+          "max_ms": 1.33332,
+          "p50_ms": 1.33332,
+          "p95_ms": 1.33332,
+          "p99_ms": 1.33332
+        },
+        "window_boundary_provenance": {
+          "count": 511,
+          "max_ms": 2910.74,
+          "p50_ms": 410.484,
+          "p95_ms": 682.69,
+          "p99_ms": 1447.5
+        },
+        "window_dense_assembly": {
+          "count": 511,
+          "max_ms": 0.323238,
+          "p50_ms": 0.098183,
+          "p95_ms": 0.135172,
+          "p99_ms": 0.167619
+        },
+        "window_factor_linearization_whitening": {
+          "count": 511,
+          "max_ms": 2.19924,
+          "p50_ms": 1.11906,
+          "p95_ms": 1.45588,
+          "p99_ms": 1.87959
+        },
+        "window_fingerprint": {
+          "count": 511,
+          "max_ms": 6.374,
+          "p50_ms": 3.97099,
+          "p95_ms": 4.58032,
+          "p99_ms": 5.36586
+        },
+        "window_llt_state_solves": {
+          "count": 511,
+          "max_ms": 0.331085,
+          "p50_ms": 0.115281,
+          "p95_ms": 0.151397,
+          "p99_ms": 0.213321
+        },
+        "window_normal_equations": {
+          "count": 511,
+          "max_ms": 0.969546,
+          "p50_ms": 0.348188,
+          "p95_ms": 0.450667,
+          "p99_ms": 0.57428
+        },
+        "window_svd": {
+          "count": 511,
+          "max_ms": 10.5079,
+          "p50_ms": 7.91997,
+          "p95_ms": 8.81091,
+          "p99_ms": 9.50644
+        }
+      },
+      "terminal_artifacts": {
+        "candidates.csv": {
+          "bytes": 638356,
+          "sha256": "c2e31e8a871836348938be8798d8d0e3a6b3e7eda5486bc3d25cb98f14766cc0"
+        },
+        "diagnostic_attempts.csv": {
+          "bytes": 820687,
+          "sha256": "10df3c2e0bf2bddf514c35f4a851dc4f3c99e136adf792b06767fcc562740783"
+        },
+        "diagnostic_stages.csv": {
+          "bytes": 2440425,
+          "sha256": "0ccbfe172345bd9e48ec9ad120ffa8d13320593b827b05e573f49d5d5f3fb3be"
+        },
+        "fault_truth.csv": {
+          "bytes": 166,
+          "sha256": "19701bc32e4dfe433bcac91e977ca1b9e2bed9637b7bb1b24f59542f68db1a08"
+        },
+        "integrity.csv": {
+          "bytes": 800593,
+          "sha256": "f265b0fbea57caef0ee20d4d4e1c0789d261ea37ae62ac40f4e5c8d94f640722"
+        },
+        "resolved_config.yaml": {
+          "bytes": 13473,
+          "sha256": "9f9a53f13e662e99b153199bb8ac4a01545bbe31863b42c58b2ccad14e009e81"
+        },
+        "run_manifest.json": {
+          "bytes": 4220,
+          "sha256": "1699f619c9e14b844dc177df4f08a453bb46782d50a6f70a5be452deddf0a1d4"
+        },
+        "stderr.log": {
+          "bytes": 1075,
+          "sha256": "8356cfbdb1e078eb56e1f7dffac0be28485e3f2b7915ad7f4f95ce649e368f03"
+        },
+        "stdout.log": {
+          "bytes": 1034,
+          "sha256": "bba102028a70c1b784d1334145e3224c15ab433f108b67af5632d39aaa311ca3"
+        },
+        "summary.json": {
+          "bytes": 280,
+          "sha256": "8f81169f8bb51b7ec75895e9361cf561b89c965be9ce0fed5d8ab475b0f09429"
+        },
+        "terminal_packets.csv": {
+          "bytes": 59779,
+          "sha256": "50f2a32a33f259a39696a3cd26931fbaf879a5ba8dbdb9b224cb470f034a4e3b"
+        },
+        "timing.csv": {
+          "bytes": 1049832,
+          "sha256": "5f55e3449b1d1adb8cffc89fe88dd9f3af9cca92f1503924b0e0208e04cdc00e"
+        },
+        "transactions.csv": {
+          "bytes": 32574,
+          "sha256": "321c30cfe48c187e967d5d20ba531ce71c74bd3f1b3008aaa87a1d440440a78e"
+        }
+      }
+    },
+    {
+      "accuracy": {
+        "accel_bias_norm_rmse_mps2": 0.0004997591749851091,
+        "accel_bias_truth": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "attitude_geodesic_max_rad": 0.27591733139854707,
+        "attitude_geodesic_rmse_rad": 0.13375426322720887,
+        "gyro_bias_norm_rmse_radps": 1.3385842234391995e-05,
+        "gyro_bias_truth": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "truth_at_attempt_position_rmse_m": 0.5852263089114501,
+        "truth_at_state_position_max_m": 0.076696479158562,
+        "truth_at_state_position_p95_m": 0.06381429680243596,
+        "truth_at_state_position_rmse_m": 0.036941018493643105,
+        "valid_counts": {
+          "accel_bias": 600,
+          "attitude": 600,
+          "gyro_bias": 600,
+          "position": 600,
+          "service_position": 600,
+          "velocity": 600
+        },
+        "velocity_rmse_mps": 0.024045826379892395
+      },
+      "action_and_status_counts": {
+        "fde_status": {
+          "HISTORY_PRIOR_CONTAMINATED": 1,
+          "NOT_TRIGGERED": 89,
+          "NO_VALID_CANDIDATE": 499,
+          "RISK_BUDGET_INVALID": 11
+        },
+        "selected_action": {
+          "KEEP_ALL": 90,
+          "KEEP_ALL_BEST_EFFORT": 510
+        }
+      },
+      "artifact_directory": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/active-alarm-pilot-4x600-final-v9/joint_order2__nominal__e600__s20260901__r1",
+      "artifact_hashes": {
+        "diagnostic_attempts.csv": {
+          "bytes": 830615,
+          "sha256": "f881dcef1dd075bbbaa5efe3d6489ce552ddbe3bf5c247d1692bd9ee629f5dca"
+        },
+        "diagnostic_stages.csv": {
+          "bytes": 2443250,
+          "sha256": "800ef58a62b731c451e878e70f2a8acd16dfb1c283b82315b08714ed36afa971"
+        },
+        "fault_truth.csv": {
+          "bytes": 166,
+          "sha256": "19701bc32e4dfe433bcac91e977ca1b9e2bed9637b7bb1b24f59542f68db1a08"
+        },
+        "ground_truth.csv": {
+          "bytes": 78087,
+          "sha256": "03c3141adf55699625e5b4f4a6433853e51907043f0a4d39721fedab8aee9512"
+        },
+        "integrity.csv": {
+          "bytes": 801396,
+          "sha256": "736cf57b78b18133903cac2fe7b774d8ae5c21865b425a4357ad13d73c1be33c"
+        },
+        "resolved_config.yaml": {
+          "bytes": 13473,
+          "sha256": "a68eb5ada1004b22431d10d65db4ba2bba98b22483b1be4480e3a3f32e020cdd"
+        },
+        "run_manifest.json": {
+          "bytes": 4220,
+          "sha256": "72f8272eac90076af0bf3aa65c2f8a3ad339a68ff46cef9332139ba42462ee56"
+        },
+        "states.csv": {
+          "bytes": 191235,
+          "sha256": "e73f571e476dfcde133ebaecc3549ec5eea8afda3b9b399eb20740682d229fbe"
+        },
+        "stderr.log": {
+          "bytes": 1080,
+          "sha256": "7f010d619e135895e6b66d98f34126f21a8f4b30379840b2d4dcf64a2d486b69"
+        },
+        "stdout.log": {
+          "bytes": 1037,
+          "sha256": "85388cb6acbf54da52ea0d77d1278a83c57c4103eee7802c99d490eb7e17477d"
+        },
+        "summary.json": {
+          "bytes": 290,
+          "sha256": "a3b30acc49075a1f2303055a029e3efb7980ff3c58e7f0bf443acd74385cda34"
+        },
+        "timing.csv": {
+          "bytes": 1048793,
+          "sha256": "ab33e4e23c9fbeb264521ba8793d348d15c3b21b20d77465309cfb1911f2239e"
+        }
+      },
+      "benchmark_path": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+      "benchmark_sha256": "61d65b39c7f282ed33c99f1d64561b45a6a345d7851c45d8df7a8a1e73234663",
+      "benchmark_source_sha256": "88e819cc887748908ce70f1c2e310e8b467eb00a03f35687f5ccd97691ea26f7",
+      "calibration_artifact_class": "simulation/synthetic",
+      "command": [
+        "/usr/bin/time",
+        "-v",
+        "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order2.yaml",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/active-alarm-pilot-4x600-final-v9/joint_order2__nominal__e600__s20260901__r1",
+        "600"
+      ],
+      "complete_model_config_digest": "15e2679e308dbcda0157741c595fe33a882a4524208036ce8afef043572e67b5",
+      "config_hash": "03c2d725900d8683e672a02e255f6cb80c2f01e466985f01ab3d65d3bd4d574d",
+      "counts": {
+        "attempted": 600,
+        "committed": 510,
+        "deadline_missed": 510,
+        "finite_pl": 0,
+        "fresh": 510,
+        "marginalizations": 481,
+        "rejected": 90,
+        "state_valid": 600,
+        "within_alert_limits": 0
+      },
+      "epochs": 600,
+      "exit_code": 0,
+      "fault_overrides": {},
+      "fault_phases": {},
+      "fault_schedule_effective": {
+        "begin": null,
+        "end": null,
+        "epochs": 600,
+        "fault": 0,
+        "fault_expected": false,
+        "post": 0,
+        "pre": 600
+      },
+      "fault_schedule_original": {
+        "begin": null,
+        "end": null,
+        "epochs": 300,
+        "fault": 0,
+        "fault_expected": false,
+        "post": 0,
+        "pre": 300
+      },
+      "gate": "performance",
+      "git_sha": "4e99d4d8aa9712300389a7caed9d7809afc87d5a",
+      "hardware_formal_qualification": "CLOSED/NOT_CLAIMED",
+      "hypothesis_census_max": {
+        "double_uwb_accel_hypotheses": 30240,
+        "double_uwb_gyro_hypotheses": 30240,
+        "generated_actions": 1,
+        "single_accel_hypotheses": 60,
+        "single_gyro_hypotheses": 60,
+        "single_uwb_hypotheses": 504
+      },
+      "integrity": {
+        "deadline_miss_fraction": 0.85,
+        "finite_pl_fraction": 0.0,
+        "fresh_fraction": 0.85,
+        "within_alert_fraction": 0.0
+      },
+      "loaded_dso_sha256": {
+        "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/libuwb_imu_pl.so": "455f01fe81a4cf47a05891cb0c544a9f793e842ebc9dad31a9bc03350912ea26",
+        "/usr/lib/x86_64-linux-gnu/ld-2.31.so": "cfd44e4341767033532d1483c8250d200ad4cdf535d0abc19064ae34cdc51ca0",
+        "/usr/lib/x86_64-linux-gnu/libboost_chrono.so.1.71.0": "d1b51a0aaec8675081523ab596742813c14ede4832c529c1cca2f25d3aee5050",
+        "/usr/lib/x86_64-linux-gnu/libboost_filesystem.so.1.71.0": "e1ba3a5cf611782b0dd5d7981edd06504edcb867482d2929213ae655a98d0ae2",
+        "/usr/lib/x86_64-linux-gnu/libboost_serialization.so.1.71.0": "e1cd1dfdb60c9ac2e9c168cf2f0958a5ece96084604d21f7933250f5845bf1e8",
+        "/usr/lib/x86_64-linux-gnu/libboost_timer.so.1.71.0": "83e9597dda3f11709b591b2d89b50deda1035acffe18b1908c44c5cab430964a",
+        "/usr/lib/x86_64-linux-gnu/libc-2.31.so": "53b909551f8e581120ddc2d24cfb5df76c52e3c2e2a5dac0d202b25638b3e902",
+        "/usr/lib/x86_64-linux-gnu/libdl-2.31.so": "e0d0cace80b627e50ca3f7b621b64917677c27c74077080854d57cf4e548edc6",
+        "/usr/lib/x86_64-linux-gnu/libgcc_s.so.1": "489803ded8a4d803e2c792763a2767c12185f5764b7bba080742d14ef2452b27",
+        "/usr/lib/x86_64-linux-gnu/libm-2.31.so": "a0e70f48f02a399e8dd37f861a99e226c285a9daf50a25d19fff7ccf18b97f9c",
+        "/usr/lib/x86_64-linux-gnu/libpthread-2.31.so": "af27ed906f6185e0143b9c0d0da287788efa7eb6b2639e44d48fb2939415fdc5",
+        "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.28": "26916e7389a561537a0510661fc75538cea236139346f3dbe21bc64ba65605bf",
+        "/usr/lib/x86_64-linux-gnu/libtbb.so.2": "26115b1a00c49e84d314e3f75eab0c752a2dfb20a61c60897f5656b1db239cba",
+        "/usr/lib/x86_64-linux-gnu/libtbbmalloc.so.2": "14147fcfadccacb4ddf94738143a3fa999a065a303dda898da8ab057cfb483b4",
+        "/usr/lib/x86_64-linux-gnu/libyaml-cpp.so.0.6.2": "b8a2d129e9b39d03ad7dade4eaa4eb1327a2562e203c17b50bcd8eb117d1ed7e",
+        "/usr/local/lib/libgtsam.so.4.2.0": "00d83aa618194aefc4b2011e1d29bd9aba107a8b5e0ee8e946eb2455351219da",
+        "/usr/local/lib/libgtsam_unstable.so.4.2.0": "7e54a7f4603b30b755f9f0036034e19c9f753c985c82af83c1551b23a9358c23",
+        "/usr/local/lib/libmetis-gtsam.so": "0a9c286ec13c815313fbe004d9969c3ae0ff08523f38efb575ca785e98f24d2b"
+      },
+      "performance": {
+        "core_max_ms": 7113.32,
+        "core_p50_ms": 4303.87,
+        "core_p95_ms": 4981.51,
+        "core_p99_ms": 5363.44,
+        "outer_p99_ms": 5364.67,
+        "rss_peak_mib": 574.90625
+      },
+      "profile": "joint_order2",
+      "profile_matrix_contract": {
+        "disposition": "REVISED_SCOPE_38X20",
+        "expected_runs": 38,
+        "original_epochs": 300,
+        "planned_attempts": 760,
+        "scaled_epochs": 20,
+        "schedule_algorithm": "proportional_thirds_min5_history_tail25_v1",
+        "schema": "uwb-imu-pl/revised-profile-matrix/v1"
+      },
+      "protection_level": {
+        "axis_error_coverage_fraction": null,
+        "finite_with_truth": 0,
+        "horizontal_error_coverage_fraction": null,
+        "hpl_max_m": null,
+        "hpl_p50_m": null,
+        "hpl_p95_m": null,
+        "vertical_error_coverage_fraction": null,
+        "vpl_max_m": null,
+        "vpl_p50_m": null,
+        "vpl_p95_m": null
+      },
+      "protocol_hash": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6",
+      "protocol_id": "fde-profiles-20261006-revised-38x20-v1",
+      "repeat": 1,
+      "run_id": "joint_order2__nominal__e600__s20260901__r1",
+      "runner_wall_s": 2249.7012339110006,
+      "scale": "smoke",
+      "scenario": "nominal",
+      "schema": "uwb-imu-pl/fde-validation-run/v1",
+      "seed": 20260901,
+      "simulation_calibration_id": "simcal-p1-06-v2-joint_order2-15e2679e308dbcda",
+      "source_file_count": 197,
+      "source_tree_sha256": "a488d2272d54c0813b65cc4608b88445aea1163817f63021837ae3e31b26dd31",
+      "stage_timings": {
+        "all_in_detector": {
+          "count": 511,
+          "max_ms": 0.808238,
+          "p50_ms": 0.303975,
+          "p95_ms": 0.462192,
+          "p99_ms": 0.703639
+        },
+        "analysis_completion": {
+          "count": 600,
+          "max_ms": 7425.98,
+          "p50_ms": 4307.85,
+          "p95_ms": 5014.33,
+          "p99_ms": 6155.07
+        },
+        "arrival_to_publish": {
+          "count": 600,
+          "max_ms": 7426.0,
+          "p50_ms": 4307.86,
+          "p95_ms": 5014.35,
+          "p99_ms": 6155.09
+        },
+        "base_factorization": {
+          "count": 510,
+          "max_ms": 1.35672,
+          "p50_ms": 0.280703,
+          "p95_ms": 0.398592,
+          "p99_ms": 0.535098
+        },
+        "candidate_audit": {
+          "count": 510,
+          "max_ms": 0.209116,
+          "p50_ms": 0.040411,
+          "p95_ms": 0.05568,
+          "p99_ms": 0.094439
+        },
+        "candidate_evaluation": {
+          "count": 510,
+          "max_ms": 2555.51,
+          "p50_ms": 1354.81,
+          "p95_ms": 1564.01,
+          "p99_ms": 1904.07
+        },
+        "commit": {
+          "count": 510,
+          "max_ms": 16.0067,
+          "p50_ms": 2.95512,
+          "p95_ms": 4.47307,
+          "p99_ms": 6.46379
+        },
+        "core_total": {
+          "count": 600,
+          "max_ms": 7425.98,
+          "p50_ms": 4307.85,
+          "p95_ms": 5014.33,
+          "p99_ms": 6155.07
+        },
+        "current_joint_marginal": {
+          "count": 600,
+          "max_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0
+        },
+        "current_sensitivity": {
+          "count": 510,
+          "max_ms": 2.67874,
+          "p50_ms": 0.620889,
+          "p95_ms": 1.13705,
+          "p99_ms": 1.57056
+        },
+        "discard": {
+          "count": 1,
+          "max_ms": 0.005591,
+          "p50_ms": 0.005591,
+          "p95_ms": 0.005591,
+          "p99_ms": 0.005591
+        },
+        "fde_decision": {
+          "count": 510,
+          "max_ms": 91.4836,
+          "p50_ms": 26.8657,
+          "p95_ms": 31.7245,
+          "p99_ms": 35.9816
+        },
+        "finalize_commit_audit": {
+          "count": 511,
+          "max_ms": 137.994,
+          "p50_ms": 35.3843,
+          "p95_ms": 46.2346,
+          "p99_ms": 63.2521
+        },
+        "health_actions": {
+          "count": 510,
+          "max_ms": 48.1284,
+          "p50_ms": 22.8997,
+          "p95_ms": 30.4701,
+          "p99_ms": 37.668
+        },
+        "historical_sensitivity": {
+          "count": 510,
+          "max_ms": 0.558431,
+          "p50_ms": 0.125406,
+          "p95_ms": 0.185703,
+          "p99_ms": 0.262051
+        },
+        "hypothesis_evidence": {
+          "count": 510,
+          "max_ms": 3588.24,
+          "p50_ms": 2034.61,
+          "p95_ms": 2269.5,
+          "p99_ms": 2448.18
+        },
+        "imu_preintegration": {
+          "count": 600,
+          "max_ms": 0.134048,
+          "p50_ms": 0.043129,
+          "p95_ms": 0.062016,
+          "p99_ms": 0.079387
+        },
+        "integrity_window": {
+          "count": 511,
+          "max_ms": 3485.81,
+          "p50_ms": 567.179,
+          "p95_ms": 939.29,
+          "p99_ms": 1866.93
+        },
+        "model_generation": {
+          "count": 510,
+          "max_ms": 464.868,
+          "p50_ms": 314.201,
+          "p95_ms": 344.212,
+          "p99_ms": 397.06
+        },
+        "no_uwb_isam_update": {
+          "count": 600,
+          "max_ms": 51.2539,
+          "p50_ms": 2.76439,
+          "p95_ms": 16.0668,
+          "p99_ms": 25.9372
+        },
+        "outer_epoch": {
+          "count": 600,
+          "max_ms": 7426.84,
+          "p50_ms": 4308.64,
+          "p95_ms": 5015.04,
+          "p99_ms": 6155.63
+        },
+        "outer_logging_flush": {
+          "count": 600,
+          "max_ms": 3.52356,
+          "p50_ms": 0.74443,
+          "p95_ms": 1.18661,
+          "p99_ms": 1.72157
+        },
+        "prepare": {
+          "count": 511,
+          "max_ms": 51.4885,
+          "p50_ms": 2.76778,
+          "p95_ms": 16.4244,
+          "p99_ms": 27.7535
+        },
+        "shared_cache": {
+          "count": 510,
+          "max_ms": 0.039232,
+          "p50_ms": 0.00192,
+          "p95_ms": 0.00349,
+          "p99_ms": 0.005045
+        },
+        "snapshot_extraction": {
+          "count": 600,
+          "max_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0
+        },
+        "state_audit": {
+          "count": 511,
+          "max_ms": 0.000563,
+          "p50_ms": 0.000196,
+          "p95_ms": 0.00037,
+          "p99_ms": 0.000476
+        },
+        "state_query": {
+          "count": 600,
+          "max_ms": 0.134982,
+          "p50_ms": 0.026644,
+          "p95_ms": 0.05286,
+          "p99_ms": 0.091473
+        },
+        "uwb_commit": {
+          "count": 510,
+          "max_ms": 15.1785,
+          "p50_ms": 2.74277,
+          "p95_ms": 4.17538,
+          "p99_ms": 6.16794
+        },
+        "uwb_reject": {
+          "count": 90,
+          "max_ms": 2.04545,
+          "p50_ms": 2.04545,
+          "p95_ms": 2.04545,
+          "p99_ms": 2.04545
+        },
+        "window_boundary_provenance": {
+          "count": 511,
+          "max_ms": 3469.6,
+          "p50_ms": 549.56,
+          "p95_ms": 923.09,
+          "p99_ms": 1851.82
+        },
+        "window_dense_assembly": {
+          "count": 511,
+          "max_ms": 0.370842,
+          "p50_ms": 0.118938,
+          "p95_ms": 0.176145,
+          "p99_ms": 0.237956
+        },
+        "window_factor_linearization_whitening": {
+          "count": 511,
+          "max_ms": 8.5442,
+          "p50_ms": 1.28126,
+          "p95_ms": 2.20665,
+          "p99_ms": 2.96454
+        },
+        "window_fingerprint": {
+          "count": 511,
+          "max_ms": 10.5524,
+          "p50_ms": 4.08768,
+          "p95_ms": 5.16841,
+          "p99_ms": 6.16657
+        },
+        "window_llt_state_solves": {
+          "count": 511,
+          "max_ms": 0.825573,
+          "p50_ms": 0.120771,
+          "p95_ms": 0.193135,
+          "p99_ms": 0.292012
+        },
+        "window_normal_equations": {
+          "count": 511,
+          "max_ms": 1.78319,
+          "p50_ms": 0.374556,
+          "p95_ms": 0.55899,
+          "p99_ms": 0.767135
+        },
+        "window_svd": {
+          "count": 511,
+          "max_ms": 16.3518,
+          "p50_ms": 8.24544,
+          "p95_ms": 9.79396,
+          "p99_ms": 11.477
+        }
+      },
+      "terminal_artifacts": {
+        "candidates.csv": {
+          "bytes": 638359,
+          "sha256": "fcdb799bd3a5a3417e5c8576441040c5e149a9a0e1fe8bc4193a372f329a0ac1"
+        },
+        "diagnostic_attempts.csv": {
+          "bytes": 830615,
+          "sha256": "f881dcef1dd075bbbaa5efe3d6489ce552ddbe3bf5c247d1692bd9ee629f5dca"
+        },
+        "diagnostic_stages.csv": {
+          "bytes": 2443250,
+          "sha256": "800ef58a62b731c451e878e70f2a8acd16dfb1c283b82315b08714ed36afa971"
+        },
+        "fault_truth.csv": {
+          "bytes": 166,
+          "sha256": "19701bc32e4dfe433bcac91e977ca1b9e2bed9637b7bb1b24f59542f68db1a08"
+        },
+        "integrity.csv": {
+          "bytes": 801396,
+          "sha256": "736cf57b78b18133903cac2fe7b774d8ae5c21865b425a4357ad13d73c1be33c"
+        },
+        "resolved_config.yaml": {
+          "bytes": 13473,
+          "sha256": "a68eb5ada1004b22431d10d65db4ba2bba98b22483b1be4480e3a3f32e020cdd"
+        },
+        "run_manifest.json": {
+          "bytes": 4220,
+          "sha256": "72f8272eac90076af0bf3aa65c2f8a3ad339a68ff46cef9332139ba42462ee56"
+        },
+        "stderr.log": {
+          "bytes": 1080,
+          "sha256": "7f010d619e135895e6b66d98f34126f21a8f4b30379840b2d4dcf64a2d486b69"
+        },
+        "stdout.log": {
+          "bytes": 1037,
+          "sha256": "85388cb6acbf54da52ea0d77d1278a83c57c4103eee7802c99d490eb7e17477d"
+        },
+        "summary.json": {
+          "bytes": 290,
+          "sha256": "a3b30acc49075a1f2303055a029e3efb7980ff3c58e7f0bf443acd74385cda34"
+        },
+        "terminal_packets.csv": {
+          "bytes": 60275,
+          "sha256": "068cc63dd4144d912d6dc28f9e78e04275611f74211133121f50dd02dd314f70"
+        },
+        "timing.csv": {
+          "bytes": 1048793,
+          "sha256": "ab33e4e23c9fbeb264521ba8793d348d15c3b21b20d77465309cfb1911f2239e"
+        },
+        "transactions.csv": {
+          "bytes": 32574,
+          "sha256": "321c30cfe48c187e967d5d20ba531ce71c74bd3f1b3008aaa87a1d440440a78e"
+        }
+      }
+    },
+    {
+      "accuracy": {
+        "accel_bias_norm_rmse_mps2": 0.0005299765717727631,
+        "accel_bias_truth": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "attitude_geodesic_max_rad": 0.27591733139854707,
+        "attitude_geodesic_rmse_rad": 0.1242173181878959,
+        "gyro_bias_norm_rmse_radps": 1.240954508340773e-05,
+        "gyro_bias_truth": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "truth_at_attempt_position_rmse_m": 0.033988441424225295,
+        "truth_at_state_position_max_m": 0.076696479158562,
+        "truth_at_state_position_p95_m": 0.06781662233761326,
+        "truth_at_state_position_rmse_m": 0.033988441424225295,
+        "valid_counts": {
+          "accel_bias": 600,
+          "attitude": 600,
+          "gyro_bias": 600,
+          "position": 600,
+          "service_position": 600,
+          "velocity": 600
+        },
+        "velocity_rmse_mps": 0.025557698035323855
+      },
+      "action_and_status_counts": {
+        "fde_status": {
+          "NO_VALID_CANDIDATE": 589,
+          "RISK_BUDGET_INVALID": 11
+        },
+        "selected_action": {
+          "KEEP_ALL_BEST_EFFORT": 600
+        }
+      },
+      "artifact_directory": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/active-alarm-pilot-4x600-final-v9/uwb_order1__nominal__e600__s20260901__r1",
+      "artifact_hashes": {
+        "diagnostic_attempts.csv": {
+          "bytes": 840407,
+          "sha256": "e247044f015e7378552fbf2acd4774f90679e56aefc645f38e33286396cd3d7f"
+        },
+        "diagnostic_stages.csv": {
+          "bytes": 2586913,
+          "sha256": "2bd4ab4cd61b3f7cff3eb150dc041893351120560c5a97fdb249da56290d53a3"
+        },
+        "fault_truth.csv": {
+          "bytes": 166,
+          "sha256": "19701bc32e4dfe433bcac91e977ca1b9e2bed9637b7bb1b24f59542f68db1a08"
+        },
+        "ground_truth.csv": {
+          "bytes": 78087,
+          "sha256": "03c3141adf55699625e5b4f4a6433853e51907043f0a4d39721fedab8aee9512"
+        },
+        "integrity.csv": {
+          "bytes": 873457,
+          "sha256": "ccf018c8a10dd274a699009f0a1037fa52c24e9569ffb3a5f03a3ffcc68dca36"
+        },
+        "resolved_config.yaml": {
+          "bytes": 13467,
+          "sha256": "6a1b125ea6f9cb275bbac9338beaedb24ce347bb382e4e208c221aecee7d420b"
+        },
+        "run_manifest.json": {
+          "bytes": 4204,
+          "sha256": "843f17e405776f854a397ba564d84249d72f9bbe4c7f4a31d9f2abc0e3e0044c"
+        },
+        "states.csv": {
+          "bytes": 191391,
+          "sha256": "62cef9622fd938513dd406035f773547237f8828b9b24e442cca3209da92d8b3"
+        },
+        "stderr.log": {
+          "bytes": 1071,
+          "sha256": "9608851d191d426e983c3376fb34caf41c47f4caa760ff091040313aa96fe566"
+        },
+        "stdout.log": {
+          "bytes": 1033,
+          "sha256": "fb94c7c1f221b028e13794e2aa0ed6c2b8ed648c033e4ad5c897f4ae391f76d5"
+        },
+        "summary.json": {
+          "bytes": 279,
+          "sha256": "f1ff2454df3d0a41463f204fdf229c499ae8f4c921482c1e2e73cd39d174f6b0"
+        },
+        "timing.csv": {
+          "bytes": 1166512,
+          "sha256": "b3be416ef228c88381f39887b194781a2951dda81a358ed73ca0a41945893994"
+        }
+      },
+      "benchmark_path": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+      "benchmark_sha256": "61d65b39c7f282ed33c99f1d64561b45a6a345d7851c45d8df7a8a1e73234663",
+      "benchmark_source_sha256": "88e819cc887748908ce70f1c2e310e8b467eb00a03f35687f5ccd97691ea26f7",
+      "calibration_artifact_class": "simulation/synthetic",
+      "command": [
+        "/usr/bin/time",
+        "-v",
+        "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_uwb_order1.yaml",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/active-alarm-pilot-4x600-final-v9/uwb_order1__nominal__e600__s20260901__r1",
+        "600"
+      ],
+      "complete_model_config_digest": "37581984e370490e0286c0522a8053c0289c425f4b587941f5369fe0a4a95488",
+      "config_hash": "98faf198f9fe244c176fb9851b4c6f88125295338e86010706a034ec8c0a410a",
+      "counts": {
+        "attempted": 600,
+        "committed": 600,
+        "deadline_missed": 596,
+        "finite_pl": 0,
+        "fresh": 600,
+        "marginalizations": 571,
+        "rejected": 0,
+        "state_valid": 600,
+        "within_alert_limits": 0
+      },
+      "epochs": 600,
+      "exit_code": 0,
+      "fault_overrides": {},
+      "fault_phases": {},
+      "fault_schedule_effective": {
+        "begin": null,
+        "end": null,
+        "epochs": 600,
+        "fault": 0,
+        "fault_expected": false,
+        "post": 0,
+        "pre": 600
+      },
+      "fault_schedule_original": {
+        "begin": null,
+        "end": null,
+        "epochs": 300,
+        "fault": 0,
+        "fault_expected": false,
+        "post": 0,
+        "pre": 300
+      },
+      "gate": "performance",
+      "git_sha": "4e99d4d8aa9712300389a7caed9d7809afc87d5a",
+      "hardware_formal_qualification": "CLOSED/NOT_CLAIMED",
+      "hypothesis_census_max": {
+        "double_uwb_accel_hypotheses": 0,
+        "double_uwb_gyro_hypotheses": 0,
+        "generated_actions": 1,
+        "single_accel_hypotheses": 0,
+        "single_gyro_hypotheses": 0,
+        "single_uwb_hypotheses": 504
+      },
+      "integrity": {
+        "deadline_miss_fraction": 0.9933333333333333,
+        "finite_pl_fraction": 0.0,
+        "fresh_fraction": 1.0,
+        "within_alert_fraction": 0.0
+      },
+      "loaded_dso_sha256": {
+        "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/libuwb_imu_pl.so": "455f01fe81a4cf47a05891cb0c544a9f793e842ebc9dad31a9bc03350912ea26",
+        "/usr/lib/x86_64-linux-gnu/ld-2.31.so": "cfd44e4341767033532d1483c8250d200ad4cdf535d0abc19064ae34cdc51ca0",
+        "/usr/lib/x86_64-linux-gnu/libboost_chrono.so.1.71.0": "d1b51a0aaec8675081523ab596742813c14ede4832c529c1cca2f25d3aee5050",
+        "/usr/lib/x86_64-linux-gnu/libboost_filesystem.so.1.71.0": "e1ba3a5cf611782b0dd5d7981edd06504edcb867482d2929213ae655a98d0ae2",
+        "/usr/lib/x86_64-linux-gnu/libboost_serialization.so.1.71.0": "e1cd1dfdb60c9ac2e9c168cf2f0958a5ece96084604d21f7933250f5845bf1e8",
+        "/usr/lib/x86_64-linux-gnu/libboost_timer.so.1.71.0": "83e9597dda3f11709b591b2d89b50deda1035acffe18b1908c44c5cab430964a",
+        "/usr/lib/x86_64-linux-gnu/libc-2.31.so": "53b909551f8e581120ddc2d24cfb5df76c52e3c2e2a5dac0d202b25638b3e902",
+        "/usr/lib/x86_64-linux-gnu/libdl-2.31.so": "e0d0cace80b627e50ca3f7b621b64917677c27c74077080854d57cf4e548edc6",
+        "/usr/lib/x86_64-linux-gnu/libgcc_s.so.1": "489803ded8a4d803e2c792763a2767c12185f5764b7bba080742d14ef2452b27",
+        "/usr/lib/x86_64-linux-gnu/libm-2.31.so": "a0e70f48f02a399e8dd37f861a99e226c285a9daf50a25d19fff7ccf18b97f9c",
+        "/usr/lib/x86_64-linux-gnu/libpthread-2.31.so": "af27ed906f6185e0143b9c0d0da287788efa7eb6b2639e44d48fb2939415fdc5",
+        "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.28": "26916e7389a561537a0510661fc75538cea236139346f3dbe21bc64ba65605bf",
+        "/usr/lib/x86_64-linux-gnu/libtbb.so.2": "26115b1a00c49e84d314e3f75eab0c752a2dfb20a61c60897f5656b1db239cba",
+        "/usr/lib/x86_64-linux-gnu/libtbbmalloc.so.2": "14147fcfadccacb4ddf94738143a3fa999a065a303dda898da8ab057cfb483b4",
+        "/usr/lib/x86_64-linux-gnu/libyaml-cpp.so.0.6.2": "b8a2d129e9b39d03ad7dade4eaa4eb1327a2562e203c17b50bcd8eb117d1ed7e",
+        "/usr/local/lib/libgtsam.so.4.2.0": "00d83aa618194aefc4b2011e1d29bd9aba107a8b5e0ee8e946eb2455351219da",
+        "/usr/local/lib/libgtsam_unstable.so.4.2.0": "7e54a7f4603b30b755f9f0036034e19c9f753c985c82af83c1551b23a9358c23",
+        "/usr/local/lib/libmetis-gtsam.so": "0a9c286ec13c815313fbe004d9969c3ae0ff08523f38efb575ca785e98f24d2b"
+      },
+      "performance": {
+        "core_max_ms": 982.057,
+        "core_p50_ms": 577.699,
+        "core_p95_ms": 768.354,
+        "core_p99_ms": 918.121,
+        "outer_p99_ms": 918.506,
+        "rss_peak_mib": 72.8359375
+      },
+      "profile": "uwb_order1",
+      "profile_matrix_contract": {
+        "disposition": "REVISED_SCOPE_38X20",
+        "expected_runs": 38,
+        "original_epochs": 300,
+        "planned_attempts": 760,
+        "scaled_epochs": 20,
+        "schedule_algorithm": "proportional_thirds_min5_history_tail25_v1",
+        "schema": "uwb-imu-pl/revised-profile-matrix/v1"
+      },
+      "protection_level": {
+        "axis_error_coverage_fraction": null,
+        "finite_with_truth": 0,
+        "horizontal_error_coverage_fraction": null,
+        "hpl_max_m": null,
+        "hpl_p50_m": null,
+        "hpl_p95_m": null,
+        "vertical_error_coverage_fraction": null,
+        "vpl_max_m": null,
+        "vpl_p50_m": null,
+        "vpl_p95_m": null
+      },
+      "protocol_hash": "40e8539e1f8f455c48c35e6f6c280c59788e8a7c986edcd4e80b31ab72d4c0b6",
+      "protocol_id": "fde-profiles-20261006-revised-38x20-v1",
+      "repeat": 1,
+      "run_id": "uwb_order1__nominal__e600__s20260901__r1",
+      "runner_wall_s": 358.2170820300016,
+      "scale": "smoke",
+      "scenario": "nominal",
+      "schema": "uwb-imu-pl/fde-validation-run/v1",
+      "seed": 20260901,
+      "simulation_calibration_id": "simcal-p1-06-v2-uwb_order1-37581984e370490e",
+      "source_file_count": 197,
+      "source_tree_sha256": "a488d2272d54c0813b65cc4608b88445aea1163817f63021837ae3e31b26dd31",
+      "stage_timings": {
+        "all_in_detector": {
+          "count": 600,
+          "max_ms": 0.371938,
+          "p50_ms": 0.169819,
+          "p95_ms": 0.222869,
+          "p99_ms": 0.294972
+        },
+        "analysis_completion": {
+          "count": 600,
+          "max_ms": 2600.32,
+          "p50_ms": 576.296,
+          "p95_ms": 780.663,
+          "p99_ms": 982.057
+        },
+        "arrival_to_publish": {
+          "count": 600,
+          "max_ms": 2600.33,
+          "p50_ms": 576.311,
+          "p95_ms": 780.676,
+          "p99_ms": 982.072
+        },
+        "base_factorization": {
+          "count": 600,
+          "max_ms": 0.62697,
+          "p50_ms": 0.265096,
+          "p95_ms": 0.319798,
+          "p99_ms": 0.399102
+        },
+        "candidate_audit": {
+          "count": 600,
+          "max_ms": 0.061577,
+          "p50_ms": 0.007057,
+          "p95_ms": 0.010375,
+          "p99_ms": 0.014238
+        },
+        "candidate_evaluation": {
+          "count": 600,
+          "max_ms": 175.528,
+          "p50_ms": 145.253,
+          "p95_ms": 150.663,
+          "p99_ms": 154.265
+        },
+        "commit": {
+          "count": 600,
+          "max_ms": 11.2131,
+          "p50_ms": 2.16189,
+          "p95_ms": 3.48407,
+          "p99_ms": 4.06271
+        },
+        "core_total": {
+          "count": 600,
+          "max_ms": 2600.32,
+          "p50_ms": 576.296,
+          "p95_ms": 780.663,
+          "p99_ms": 982.057
+        },
+        "current_joint_marginal": {
+          "count": 600,
+          "max_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0
+        },
+        "current_sensitivity": {
+          "count": 600,
+          "max_ms": 0.021336,
+          "p50_ms": 0.002792,
+          "p95_ms": 0.00384,
+          "p99_ms": 0.00462
+        },
+        "fde_decision": {
+          "count": 600,
+          "max_ms": 0.556476,
+          "p50_ms": 0.153971,
+          "p95_ms": 0.228574,
+          "p99_ms": 0.290956
+        },
+        "finalize_commit_audit": {
+          "count": 600,
+          "max_ms": 2.19832,
+          "p50_ms": 1.19348,
+          "p95_ms": 1.54451,
+          "p99_ms": 1.90527
+        },
+        "health_actions": {
+          "count": 600,
+          "max_ms": 1.01727,
+          "p50_ms": 0.429581,
+          "p95_ms": 0.531125,
+          "p99_ms": 0.706871
+        },
+        "historical_sensitivity": {
+          "count": 600,
+          "max_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0
+        },
+        "hypothesis_evidence": {
+          "count": 600,
+          "max_ms": 89.0009,
+          "p50_ms": 68.6212,
+          "p95_ms": 71.7961,
+          "p99_ms": 77.8721
+        },
+        "imu_preintegration": {
+          "count": 600,
+          "max_ms": 0.141944,
+          "p50_ms": 0.025562,
+          "p95_ms": 0.036616,
+          "p99_ms": 0.055325
+        },
+        "integrity_window": {
+          "count": 600,
+          "max_ms": 2375.55,
+          "p50_ms": 351.974,
+          "p95_ms": 560.974,
+          "p99_ms": 752.579
+        },
+        "model_generation": {
+          "count": 600,
+          "max_ms": 8.70812,
+          "p50_ms": 4.96916,
+          "p95_ms": 5.86319,
+          "p99_ms": 6.81818
+        },
+        "no_uwb_isam_update": {
+          "count": 600,
+          "max_ms": 3.19419,
+          "p50_ms": 1.57347,
+          "p95_ms": 1.95422,
+          "p99_ms": 2.47573
+        },
+        "outer_epoch": {
+          "count": 600,
+          "max_ms": 2600.66,
+          "p50_ms": 576.758,
+          "p95_ms": 781.074,
+          "p99_ms": 982.441
+        },
+        "outer_logging_flush": {
+          "count": 600,
+          "max_ms": 0.692246,
+          "p50_ms": 0.378314,
+          "p95_ms": 0.495947,
+          "p99_ms": 0.569891
+        },
+        "prepare": {
+          "count": 600,
+          "max_ms": 3.26788,
+          "p50_ms": 1.60345,
+          "p95_ms": 1.99346,
+          "p99_ms": 2.51687
+        },
+        "shared_cache": {
+          "count": 600,
+          "max_ms": 0.003301,
+          "p50_ms": 0.001409,
+          "p95_ms": 0.002132,
+          "p99_ms": 0.002623
+        },
+        "snapshot_extraction": {
+          "count": 600,
+          "max_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0
+        },
+        "state_audit": {
+          "count": 600,
+          "max_ms": 0.000567,
+          "p50_ms": 0.000194,
+          "p95_ms": 0.000308,
+          "p99_ms": 0.000374
+        },
+        "state_query": {
+          "count": 600,
+          "max_ms": 0.172507,
+          "p50_ms": 0.027866,
+          "p95_ms": 0.049682,
+          "p99_ms": 0.065236
+        },
+        "uwb_commit": {
+          "count": 600,
+          "max_ms": 11.072,
+          "p50_ms": 2.02508,
+          "p95_ms": 3.32936,
+          "p99_ms": 3.91047
+        },
+        "window_boundary_provenance": {
+          "count": 600,
+          "max_ms": 2360.81,
+          "p50_ms": 336.592,
+          "p95_ms": 546.37,
+          "p99_ms": 737.22
+        },
+        "window_dense_assembly": {
+          "count": 600,
+          "max_ms": 0.703876,
+          "p50_ms": 0.094789,
+          "p95_ms": 0.138985,
+          "p99_ms": 0.20276
+        },
+        "window_factor_linearization_whitening": {
+          "count": 600,
+          "max_ms": 2.52258,
+          "p50_ms": 1.07377,
+          "p95_ms": 1.42151,
+          "p99_ms": 1.78906
+        },
+        "window_fingerprint": {
+          "count": 600,
+          "max_ms": 5.64562,
+          "p50_ms": 3.91807,
+          "p95_ms": 4.57968,
+          "p99_ms": 4.97211
+        },
+        "window_llt_state_solves": {
+          "count": 600,
+          "max_ms": 0.31197,
+          "p50_ms": 0.112877,
+          "p95_ms": 0.140718,
+          "p99_ms": 0.199215
+        },
+        "window_normal_equations": {
+          "count": 600,
+          "max_ms": 0.767021,
+          "p50_ms": 0.34836,
+          "p95_ms": 0.457771,
+          "p99_ms": 0.675806
+        },
+        "window_svd": {
+          "count": 600,
+          "max_ms": 18.2467,
+          "p50_ms": 7.87801,
+          "p95_ms": 8.76857,
+          "p99_ms": 9.47308
+        }
+      },
+      "terminal_artifacts": {
+        "candidates.csv": {
+          "bytes": 751355,
+          "sha256": "e9c66e54814ba123deb3fc1d3940b5da0d0f82251c58476f602adfd69127406f"
+        },
+        "diagnostic_attempts.csv": {
+          "bytes": 840407,
+          "sha256": "e247044f015e7378552fbf2acd4774f90679e56aefc645f38e33286396cd3d7f"
+        },
+        "diagnostic_stages.csv": {
+          "bytes": 2586913,
+          "sha256": "2bd4ab4cd61b3f7cff3eb150dc041893351120560c5a97fdb249da56290d53a3"
+        },
+        "fault_truth.csv": {
+          "bytes": 166,
+          "sha256": "19701bc32e4dfe433bcac91e977ca1b9e2bed9637b7bb1b24f59542f68db1a08"
+        },
+        "integrity.csv": {
+          "bytes": 873457,
+          "sha256": "ccf018c8a10dd274a699009f0a1037fa52c24e9569ffb3a5f03a3ffcc68dca36"
+        },
+        "resolved_config.yaml": {
+          "bytes": 13467,
+          "sha256": "6a1b125ea6f9cb275bbac9338beaedb24ce347bb382e4e208c221aecee7d420b"
+        },
+        "run_manifest.json": {
+          "bytes": 4204,
+          "sha256": "843f17e405776f854a397ba564d84249d72f9bbe4c7f4a31d9f2abc0e3e0044c"
+        },
+        "stderr.log": {
+          "bytes": 1071,
+          "sha256": "9608851d191d426e983c3376fb34caf41c47f4caa760ff091040313aa96fe566"
+        },
+        "stdout.log": {
+          "bytes": 1033,
+          "sha256": "fb94c7c1f221b028e13794e2aa0ed6c2b8ed648c033e4ad5c897f4ae391f76d5"
+        },
+        "summary.json": {
+          "bytes": 279,
+          "sha256": "f1ff2454df3d0a41463f204fdf229c499ae8f4c921482c1e2e73cd39d174f6b0"
+        },
+        "terminal_packets.csv": {
+          "bytes": 60456,
+          "sha256": "803cfade19808b6369b1356c219b0c2913ab6a8b2982408a38e5fed6f6bc202d"
+        },
+        "timing.csv": {
+          "bytes": 1166512,
+          "sha256": "b3be416ef228c88381f39887b194781a2951dda81a358ed73ca0a41945893994"
+        },
+        "transactions.csv": {
+          "bytes": 33723,
+          "sha256": "4dd0cb5c54ddb0fdf2b67ca3493cf523675298b2267a7c6560b7da57c27493d2"
+        }
+      }
+    }
+  ],
+  "schema": "uwb-imu-pl/fde-validation-summary/v1"
+}

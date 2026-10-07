@@ -1,0 +1,22 @@
+analyzed 20 runs; summary=/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/off-mc20x1200-final-v8/validation_summary.json
+PASS off__nominal__e1200__s20260901__r1 1.955s
+PASS off__nominal__e1200__s20260902__r2 2.036s
+PASS off__nominal__e1200__s20260903__r3 1.832s
+PASS off__nominal__e1200__s20260904__r4 1.816s
+PASS off__nominal__e1200__s20260905__r5 1.859s
+PASS off__nominal__e1200__s20260906__r6 1.948s
+PASS off__nominal__e1200__s20260907__r7 2.234s
+PASS off__nominal__e1200__s20260908__r8 1.842s
+PASS off__nominal__e1200__s20260909__r9 1.951s
+PASS off__nominal__e1200__s20260910__r10 1.858s
+PASS off__nominal__e1200__s20260911__r11 2.140s
+PASS off__nominal__e1200__s20260912__r12 1.942s
+PASS off__nominal__e1200__s20260913__r13 2.087s
+PASS off__nominal__e1200__s20260914__r14 2.095s
+PASS off__nominal__e1200__s20260915__r15 1.862s
+PASS off__nominal__e1200__s20260916__r16 1.893s
+PASS off__nominal__e1200__s20260917__r17 2.029s
+PASS off__nominal__e1200__s20260918__r18 2.065s
+PASS off__nominal__e1200__s20260919__r19 2.010s
+PASS off__nominal__e1200__s20260920__r20 1.887s
+completed=20 failures=0 output=/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/docs/evidence/p1-06-revised-nonrealtime-final/off-mc20x1200-final-v8

@@ -1,0 +1,84 @@
+[==========] Running 14 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 14 tests from HistoryFaultSummary
+[ RUN      ] HistoryFaultSummary.P001CorrelatedRawFactorOracle
+[       OK ] HistoryFaultSummary.P001CorrelatedRawFactorOracle (1 ms)
+[ RUN      ] HistoryFaultSummary.HISM1CostIdentity
+[       OK ] HistoryFaultSummary.HISM1CostIdentity (3 ms)
+[ RUN      ] HistoryFaultSummary.HISM1SchurEquivalence
+[       OK ] HistoryFaultSummary.HISM1SchurEquivalence (1 ms)
+[ RUN      ] HistoryFaultSummary.HISM1BoundaryResponseSignDuality
+[       OK ] HistoryFaultSummary.HISM1BoundaryResponseSignDuality (0 ms)
+[ RUN      ] HistoryFaultSummary.HISM1FaultGramKappaNu
+[       OK ] HistoryFaultSummary.HISM1FaultGramKappaNu (1 ms)
+[ RUN      ] HistoryFaultSummary.HISM1EliminationOrderInvariance
+[       OK ] HistoryFaultSummary.HISM1EliminationOrderInvariance (1 ms)
+[ RUN      ] HistoryFaultSummary.HISM1DegenerateRejection
+[       OK ] HistoryFaultSummary.HISM1DegenerateRejection (0 ms)
+[ RUN      ] HistoryFaultSummary.HISM1DetectorOnlyAndNominal
+[       OK ] HistoryFaultSummary.HISM1DetectorOnlyAndNominal (0 ms)
+[ RUN      ] HistoryFaultSummary.HISM1OracleTable
+[HISM1-TABLE] case=small_well m=12 no=4 nb=3 q=2 kappa_Ho=1.000e+00 pivot_ratio_Ho=1.000e+00 tier=well maxrel_cost=1.342e-15 maxrel_schur=4.084e-16 maxrel_omega=2.629e-15 maxrel_kappa=9.813e-16 maxrel_shift=1.131e-15 maxrel_delta=1.131e-15 nu_mismatch=0 tol=1.000e-09
+[HISM1-TABLE] case=medium_well m=60 no=10 nb=6 q=4 kappa_Ho=1.000e+00 pivot_ratio_Ho=1.000e+00 tier=well maxrel_cost=1.861e-15 maxrel_schur=3.737e-16 maxrel_omega=4.061e-15 maxrel_kappa=2.814e-15 maxrel_shift=4.668e-15 maxrel_delta=4.668e-15 nu_mismatch=0 tol=1.000e-09
+[HISM1-TABLE] case=moderate_k1e4 m=40 no=8 nb=5 q=3 kappa_Ho=1.000e+04 pivot_ratio_Ho=2.048e-03 tier=moderate maxrel_cost=1.176e-14 maxrel_schur=1.490e-14 maxrel_omega=6.136e-14 maxrel_kappa=1.493e-14 maxrel_shift=5.329e-13 maxrel_delta=5.329e-13 nu_mismatch=0 tol=1.000e-07
+[HISM1-TABLE] case=ill_k1e8 m=36 no=6 nb=4 q=3 kappa_Ho=1.000e+08 pivot_ratio_Ho=3.359e-08 tier=ill maxrel_cost=5.794e-10 maxrel_schur=5.588e-10 maxrel_omega=4.953e-10 maxrel_kappa=8.402e-11 maxrel_shift=5.646e-09 maxrel_delta=5.646e-09 nu_mismatch=0 tol=1.000e-07
+[HISM1-TABLE] case=harsh_k1e10 m=30 no=5 nb=3 q=2 kappa_Ho=1.000e+10 pivot_ratio_Ho=9.436e-10 tier=harsh(tagged,1e-6) maxrel_cost=9.096e-08 maxrel_schur=2.318e-08 maxrel_omega=9.913e-08 maxrel_kappa=5.174e-08 maxrel_shift=1.414e-07 maxrel_delta=1.414e-07 nu_mismatch=0 tol=1.000e-06
+[       OK ] HistoryFaultSummary.HISM1OracleTable (3 ms)
+[ RUN      ] HistoryFaultSummary.HISM1SplitHelperConsistency
+[       OK ] HistoryFaultSummary.HISM1SplitHelperConsistency (0 ms)
+[ RUN      ] HistoryFaultSummary.HISM2VersionDigestBindsAllComponents
+[       OK ] HistoryFaultSummary.HISM2VersionDigestBindsAllComponents (0 ms)
+[ RUN      ] HistoryFaultSummary.P103HierarchicalOrthogonalThirtyStepFeasibility
+[P103-FEASIBILITY] requests=30 path_updates=19 add=4 remove=5 relinearize=10 internal=293 full_tree=11
+[       OK ] HistoryFaultSummary.P103HierarchicalOrthogonalThirtyStepFeasibility (3 ms)
+[ RUN      ] HistoryFaultSummary.P103OwnerCollisionTamperAndStaleCacheFailClosed
+[       OK ] HistoryFaultSummary.P103OwnerCollisionTamperAndStaleCacheFailClosed (1 ms)
+[ RUN      ] HistoryFaultSummary.P103CarrierRankCertificateRejectsNumericalNoise
+[       OK ] HistoryFaultSummary.P103CarrierRankCertificateRejectsNumericalNoise (0 ms)
+[----------] 14 tests from HistoryFaultSummary (14 ms total)
+
+[----------] Global test environment tear-down
+[==========] 14 tests from 1 test suite ran. (14 ms total)
+[  PASSED  ] 14 tests.
+Note: Google Test filter = HistorySummaryPipeline.P103ProductionClosureAudit:HistorySummaryPipeline.CarrierInvariantsUnderRowPermutation
+[==========] Running 2 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 2 tests from HistorySummaryPipeline
+[ RUN      ] HistorySummaryPipeline.P103ProductionClosureAudit
+[P103-PRODUCTION-CLOSURE] requests=30 append=0 paths=23 add=39 remove=0 relinearize=63 internal=562 tree_full=1 group_updates=23 reused_groups=385 rebuilt_groups=105 factor_hits=439 factor_misses=51 exact=6 rebuilds=1 invalidations=0 oracle=30/0 oracle_max=1.508e-12 rows=467 bytes=4004992 reason=changed group paths recomputed in orthogonal tree
+[       OK ] HistorySummaryPipeline.P103ProductionClosureAudit (4149 ms)
+[ RUN      ] HistorySummaryPipeline.CarrierInvariantsUnderRowPermutation
+[HSP-ORACLE] rows=95 boundary_rows=15 q=220 nu_perp=80 kappa=3.585734e-32 offset=0.000e+00 offset_ratio=0.000e+00 omega_trace=2.858727e+04 xi_norm=1.627483e-15 reversed_rows=95 permuted_nu=80
+[       OK ] HistorySummaryPipeline.CarrierInvariantsUnderRowPermutation (222 ms)
+[----------] 2 tests from HistorySummaryPipeline (4371 ms total)
+
+[----------] Global test environment tear-down
+[==========] 2 tests from 1 test suite ran. (4371 ms total)
+[  PASSED  ] 2 tests.
+Note: Google Test filter = RealtimeFactors.P106FullTrajectoryBreaksSingleEpochLeverNullDirection:RealtimeFactors.NonzeroLeverArmRangeJacobianMatchesCentralDifference:UwbImuIncremental.FiveSecondIsamMatchesBatchPoseAndMarginal
+[==========] Running 3 tests from 2 test suites.
+[----------] Global test environment set-up.
+[----------] 2 tests from RealtimeFactors
+[ RUN      ] RealtimeFactors.NonzeroLeverArmRangeJacobianMatchesCentralDifference
+[       OK ] RealtimeFactors.NonzeroLeverArmRangeJacobianMatchesCentralDifference (0 ms)
+[ RUN      ] RealtimeFactors.P106FullTrajectoryBreaksSingleEpochLeverNullDirection
+[P106-FULL-GRAPH] epoch=4 rows=107 cols=75 rank=75 sigma_max=85065.083080370372 sigma_min=0.88102432699783739 tolerance=2.0210419759080513e-09
+[P106-FULL-GRAPH] epoch=8 rows=199 cols=135 rank=135 sigma_max=88083.883600543879 sigma_min=0.62499136359654417 tolerance=3.892151675734697e-09
+[P106-FULL-GRAPH] epoch=12 rows=291 cols=195 rank=195 sigma_max=88790.581099903167 sigma_min=0.51431248229488624 tolerance=5.7372016249050576e-09
+[P106-TRAJECTORY-PERTURBATION] uwb_before=0 uwb_after=0 imu_before=1.423942347033026e-06 imu_after=0.067150684934264765 prior_before=0 prior_after=0.12499999999999997
+[P106-GRAPH-JACOBIAN] class=initial_prior analytic=-0.5008372972042312 finite_difference=-0.50083729721817072 relative_error=1.3939516207983615e-11
+[P106-GRAPH-JACOBIAN] class=combined_imu_bias_gravity analytic=-0.9910362786325505 finite_difference=-0.99103627904106872 relative_error=4.0851821925258491e-10
+[P106-GRAPH-JACOBIAN] class=uwb_lever analytic=0 finite_difference=-9.414097508896715e-13 relative_error=9.414097508896715e-13
+[P106-GRAPH-JACOBIAN] class=complete_graph analytic=-1.282961849594175 finite_difference=-1.2829618499937689 relative_error=3.1146203880940127e-10
+[       OK ] RealtimeFactors.P106FullTrajectoryBreaksSingleEpochLeverNullDirection (48 ms)
+[----------] 2 tests from RealtimeFactors (48 ms total)
+
+[----------] 1 test from UwbImuIncremental
+[ RUN      ] UwbImuIncremental.FiveSecondIsamMatchesBatchPoseAndMarginal
+[P106-PRODUCTION-BATCH] epochs=50 pose_tangent_delta=5.8035018222787703e-16 marginal_relative_error=1.0536929884633784e-09
+[       OK ] UwbImuIncremental.FiveSecondIsamMatchesBatchPoseAndMarginal (100 ms)
+[----------] 1 test from UwbImuIncremental (100 ms total)
+
+[----------] Global test environment tear-down
+[==========] 3 tests from 2 test suites ran. (148 ms total)
+[  PASSED  ] 3 tests.

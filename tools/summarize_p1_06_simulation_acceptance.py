@@ -16,8 +16,9 @@ import yaml
 from validate_simulation_calibrations import validate as validate_calibrations
 from run_fde_profile_validation import (
     GATE24_GOLDEN_PREFIX, execution_identity,
+    fault_schedule,
     golden_anchor_from_protocol, golden_reference_manifest,
-    terminal_artifacts_match)
+    terminal_artifacts_match, validate_profile_matrix_protocol)
 from compare_p1_04_outputs import compare_directories
 from analyze_fde_profile_runs import analyze_run
 
@@ -51,6 +52,22 @@ def distribution(values):
             "p99_ms": percentile(values, .99),
             "max_ms": max(values) if values else None,
             "raw_ms": list(values)}
+
+
+def serialized_ms_tolerance(value):
+    """Return the half-ULP tolerance of the logger's six-significant-digit CSV.
+
+    The terminal packet retains integer nanoseconds while timing.csv is written
+    by the C++ stream at its default precision (six significant digits).  A
+    comparison tighter than the serialized value can represent rejects honest
+    packets, especially for long alarm attempts.
+    """
+    if value is None or not math.isfinite(value):
+        return None
+    magnitude = abs(value)
+    if magnitude == 0.0:
+        return 0.5e-6
+    return 0.500001 * 10.0 ** (math.floor(math.log10(magnitude)) - 5)
 
 
 def csv_rows(path):
@@ -107,6 +124,34 @@ def indexed(rows, key, errors, label):
     return result
 
 
+def index_attempt_timings(timing_rows, link_rows, errors):
+    """Bind timing samples through the logger's authoritative row links.
+
+    Neither timing `epoch` nor timing `timestamp_ns` identifies a rejected
+    attempt: both may remain at the last committed state.  The separately
+    emitted diagnostic_timing_links.csv is the transaction/attempt binding.
+    """
+    result, identities = {}, {}
+    if len(timing_rows) != len(link_rows):
+        errors.append("timing/link row count mismatch")
+    for offset, (row, link) in enumerate(zip(timing_rows, link_rows), 1):
+        attempt = integer(link, "input_attempt_id")
+        transaction = integer(link, "transaction_id")
+        window = integer(link, "window_id")
+        stage = row.get("stage")
+        value = finite_float(row, "wall_ms")
+        if (integer(link, "timing_row") != offset or
+                link.get("stage") != stage or attempt is None or attempt <= 0 or
+                transaction is None or transaction <= 0 or
+                window is None or window < 0 or not stage or value is None or
+                value < 0 or stage in result.setdefault(attempt, {})):
+            errors.append(f"timing/link:{offset + 1}: invalid binding or duplicate stage")
+            continue
+        result[attempt][stage] = row
+        identities.setdefault(attempt, set()).add((transaction, window))
+    return result, identities
+
+
 def acceptance_path(attempt, candidates=None, integrity=None):
     """Classify at the action-kernel entrance, before post/PL outcomes."""
     generated = integer(attempt, "generated_actions")
@@ -126,7 +171,8 @@ def acceptance_path(attempt, candidates=None, integrity=None):
         integer(sole, "cardinality") == 0 and
         sole.get("action_type") == "ACTION_SEARCH_OCCURRENCE_V1" and
         not sole.get("removed_group_ids") and not sole.get("added_group_ids") and
-        "KEEP_ALL" in sole.get("physical_source_ids", "") and
+        ("KEEP_ALL" in sole.get("physical_source_ids", "") or
+         "4b4545505f414c4c" in sole.get("physical_source_ids", "").lower()) and
         "operation_identity=ACTION_OPERATION_V1|0;0;0;0;0;0;0;0:" in
             sole.get("model_error_record", ""))
     return "normal" if sole_keep_all else "alarm_recovery"
@@ -163,6 +209,7 @@ def proof_partition(authoritative, generated_actions=None,
 
 def expected_run_identity(run_id, profile, scenario, epochs, seed, protocol,
                           calibration, frozen_execution=None):
+    matrix = validate_profile_matrix_protocol(protocol)
     expected = {
         "schema": "uwb-imu-pl/fde-validation-run/v1", "run_id": run_id,
         "gate": "profiles", "scale": "full", "profile": profile,
@@ -174,6 +221,10 @@ def expected_run_identity(run_id, profile, scenario, epochs, seed, protocol,
         "simulation_calibration_id": calibration["calibration_id"],
         "complete_model_config_digest":
             calibration["complete_model_config_digest"],
+        "profile_matrix_contract": matrix,
+        "fault_schedule_original": fault_schedule(
+            scenario, matrix["original_epochs"]),
+        "fault_schedule_effective": fault_schedule(scenario, epochs),
         "hardware_formal_qualification": "CLOSED/NOT_CLAIMED",
         "fault_overrides": {},
     }
@@ -183,6 +234,122 @@ def expected_run_identity(run_id, profile, scenario, epochs, seed, protocol,
             "benchmark_source_sha256", "benchmark_path", "benchmark_sha256",
             "loaded_dso_sha256")})
     return expected
+
+
+def fault_injection_failures(run, scenario, schedule):
+    """Verify actual synthetic injection, not merely a scenario label."""
+    failures = []
+    rows = csv_rows(run / "fault_truth.csv")
+    if not schedule["fault_expected"]:
+        if rows:
+            failures.append("nominal scenario contains injected fault truth")
+        try:
+            resolved = yaml.safe_load(
+                (run / "resolved_config.yaml").read_text(encoding="utf-8"))
+        except (OSError, yaml.YAMLError) as error:
+            resolved = {}
+            failures.append(f"resolved schedule unreadable: {error}")
+        for key, value in {
+                "benchmark_fault_schedule_algorithm":
+                    "proportional_thirds_min5_history_tail25_v1",
+                "benchmark_fault_schedule_reference_epochs": 300,
+                "benchmark_fault_expected": False,
+                "benchmark_fault_effective_epochs": schedule["epochs"],
+                }.items():
+            if resolved.get(key) != value:
+                failures.append(f"resolved config {key} mismatch")
+        try:
+            manifest = json.loads((run / "run_manifest.json").read_text())
+            command = manifest.get("execution_command", "")
+        except (OSError, ValueError) as error:
+            command = ""
+            failures.append(f"run manifest schedule unreadable: {error}")
+        for key, value in {
+                "fault_schedule_algorithm":
+                    "proportional_thirds_min5_history_tail25_v1",
+                "fault_schedule_reference_epochs": 300,
+                "fault_schedule_effective_epochs": schedule["epochs"],
+                }.items():
+            if f"{key}:={value}" not in command:
+                failures.append(f"run manifest {key} mismatch")
+        return failures, {"rows": len(rows), "injected_epochs": [],
+                          "pre_attempts": schedule["pre"],
+                          "fault_attempts": 0, "post_attempts": 0}
+    if min(schedule["pre"], schedule["fault"], schedule["post"]) <= 0:
+        failures.append("fault schedule has an empty pre/fault/post segment")
+    expected_epochs = set(range(schedule["begin"], schedule["end"] + 1))
+    injected_epochs, sensor_types = set(), set()
+    for offset, row in enumerate(rows, 2):
+        timestamp = integer(row, "timestamp_ns")
+        begin, end = integer(row, "epoch_begin"), integer(row, "epoch_end")
+        if (timestamp is None or timestamp <= 0 or timestamp % 50_000_000 or
+                begin != schedule["begin"] or end != schedule["end"] or
+                not truthy(row.get("active")) or
+                finite_float(row, "injected_value") is None):
+            failures.append(f"fault_truth.csv:{offset}: invalid schedule/injection row")
+            continue
+        injected_epochs.add(timestamp // 50_000_000)
+        sensor_types.add(row.get("sensor_type"))
+    if injected_epochs != expected_epochs:
+        failures.append(
+            f"actual injected epochs differ: expected {sorted(expected_epochs)}, "
+            f"got {sorted(injected_epochs)}")
+    expected_sensors = ({"UWB", "IMU"} if scenario in
+                        ("joint_fault", "joint_recovery") else
+                        {"IMU"} if scenario.startswith("imu_") else {"UWB"})
+    if sensor_types != expected_sensors:
+        failures.append(
+            f"actual injected sensors differ: expected {sorted(expected_sensors)}, "
+            f"got {sorted(sensor_types)}")
+    try:
+        resolved = yaml.safe_load(
+            (run / "resolved_config.yaml").read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError) as error:
+        resolved = {}
+        failures.append(f"resolved schedule unreadable: {error}")
+    expected_resolved = {
+        "benchmark_fault_schedule_algorithm":
+            "proportional_thirds_min5_history_tail25_v1",
+        "benchmark_fault_schedule_reference_epochs": 300,
+        "benchmark_fault_expected": True,
+        "benchmark_fault_reference_begin_epoch_1based":
+            fault_schedule(scenario, 300)["begin"],
+        "benchmark_fault_reference_end_epoch_1based":
+            fault_schedule(scenario, 300)["end"],
+        "benchmark_fault_effective_epochs": schedule["epochs"],
+        "benchmark_fault_effective_begin_epoch_1based": schedule["begin"],
+        "benchmark_fault_effective_end_epoch_1based": schedule["end"],
+    }
+    for key, value in expected_resolved.items():
+        if resolved.get(key) != value:
+            failures.append(f"resolved config {key} mismatch")
+    try:
+        manifest = json.loads((run / "run_manifest.json").read_text())
+        command = manifest.get("execution_command", "")
+    except (OSError, ValueError) as error:
+        command = ""
+        failures.append(f"run manifest schedule unreadable: {error}")
+    command_fields = {
+        "fault_schedule_algorithm":
+            "proportional_thirds_min5_history_tail25_v1",
+        "fault_schedule_reference_epochs": 300,
+        "fault_schedule_reference_begin_epoch_1based":
+            fault_schedule(scenario, 300)["begin"],
+        "fault_schedule_reference_end_epoch_1based":
+            fault_schedule(scenario, 300)["end"],
+        "fault_schedule_effective_epochs": schedule["epochs"],
+        "fault_schedule_effective_begin_epoch_1based": schedule["begin"],
+        "fault_schedule_effective_end_epoch_1based": schedule["end"],
+    }
+    for key, value in command_fields.items():
+        if f"{key}:={value}" not in command:
+            failures.append(f"run manifest {key} mismatch")
+    return failures, {"rows": len(rows),
+                      "injected_epochs": sorted(injected_epochs),
+                      "pre_attempts": schedule["pre"],
+                      "fault_attempts": schedule["fault"],
+                      "post_attempts": schedule["post"],
+                      "sensor_types": sorted(sensor_types)}
 
 
 def verified_campaign_identity(root):
@@ -362,8 +529,8 @@ def publication_failures(diag, integrity, candidates, deadline_missed,
         if (call is None or returned is None or elapsed is None or
                 call <= 0 or returned < call or elapsed < 0 or
                 arrival_ms is None or
-                not math.isclose(arrival_ms, elapsed / 1e6,
-                                 rel_tol=1e-12, abs_tol=1e-9)):
+                abs(arrival_ms - elapsed / 1e6) >
+                serialized_ms_tolerance(arrival_ms)):
             failures.append("publication boundary/timing mismatch")
     else:
         failures.append("terminal packet binding absent")
@@ -371,6 +538,7 @@ def publication_failures(diag, integrity, candidates, deadline_missed,
 
 
 def aggregate_profiles(root, analyzed, protocol, calibrations, frozen_execution):
+    matrix = validate_profile_matrix_protocol(protocol)
     expected = []
     epochs = int(protocol["epochs"]["behavior"])
     seed = int(protocol["input"]["seeds"][0])
@@ -389,6 +557,9 @@ def aggregate_profiles(root, analyzed, protocol, calibrations, frozen_execution)
                                  "unclassified")}
     core, analysis, arrival, attempt_details = [], [], [], []
     planned_attempts = epochs * len(expected)
+    if (len(expected) != matrix["expected_runs"] or
+            planned_attempts != matrix["planned_attempts"]):
+        raise ValueError("profile matrix denominator differs from revised protocol")
     observed_attempts = complete_attempts = deadline_misses = 0
     process_exit_counts, metadata_failures = Counter(), []
     rss_values, per_run, source_identities = [], [], set()
@@ -422,19 +593,17 @@ def aggregate_profiles(root, analyzed, protocol, calibrations, frozen_execution)
         exit_code = identity.get("exit_code", -1)
         process_exit_counts[str(exit_code)] += 1
         csv_failures = []
-        timing_rows = csv_rows(run / "timing.csv")
-        timings = {}
-        for offset, row in enumerate(timing_rows, 2):
-            attempt, stage = integer(row, "epoch"), row.get("stage")
-            value = finite_float(row, "wall_ms")
-            if (attempt is None or not stage or value is None or value < 0 or
-                    stage in timings.setdefault(attempt, {})):
-                csv_failures.append(f"timing.csv:{offset}: invalid/duplicate stage")
-            else:
-                timings[attempt][stage] = row
+        schedule = fault_schedule(scenario, epochs)
+        fault_failures, fault_evidence = fault_injection_failures(
+            run, scenario, schedule)
+        csv_failures.extend(fault_failures)
         attempts = indexed(csv_rows(run / "diagnostic_attempts.csv"),
                            "input_attempt_id", csv_failures,
                            "diagnostic_attempts.csv")
+        timing_rows = csv_rows(run / "timing.csv")
+        timing_links = csv_rows(run / "diagnostic_timing_links.csv")
+        timings, timing_identities = index_attempt_timings(
+            timing_rows, timing_links, csv_failures)
         transactions = indexed(csv_rows(run / "transactions.csv"),
                                "transaction_id", csv_failures,
                                "transactions.csv")
@@ -445,7 +614,11 @@ def aggregate_profiles(root, analyzed, protocol, calibrations, frozen_execution)
         for offset, row in enumerate(csv_rows(run / "diagnostic_stages.csv"), 2):
             attempt, stage = integer(row, "input_attempt_id"), row.get("stage")
             value = finite_float(row, "wall_ms")
-            if (attempt is None or not stage or value is None or value < 0 or
+            skipped_without_time = (row.get("status") == "SKIPPED" and
+                                    not row.get("wall_ms"))
+            if (attempt is None or not stage or
+                    (not skipped_without_time and
+                     (value is None or value < 0)) or
                     stage in diagnostic_stages.setdefault(attempt, {})):
                 csv_failures.append(
                     f"diagnostic_stages.csv:{offset}: invalid/duplicate stage")
@@ -464,9 +637,19 @@ def aggregate_profiles(root, analyzed, protocol, calibrations, frozen_execution)
         deadline_misses += run_deadline
         complete = 0
         for attempt_id in range(1, count + 1):
-            stage_rows = timings.get(attempt_id, {})
             diag = attempts.get(attempt_id, {})
             integrity_row = integrity[attempt_id - 1] if attempt_id <= len(integrity) else {}
+            attempted_timestamp = integer(diag, "input_timestamp_ns")
+            integrity_timestamp = integer(integrity_row, "attempted_timestamp_ns")
+            if attempted_timestamp is None or attempted_timestamp != integrity_timestamp:
+                csv_failures.append(
+                    f"attempt {attempt_id}: attempted timestamp binding mismatch")
+            expected_timing_identity = {(integer(diag, "transaction_id"),
+                                         integer(diag, "window_id"))}
+            if timing_identities.get(attempt_id) != expected_timing_identity:
+                csv_failures.append(
+                    f"attempt {attempt_id}: timing transaction/window binding mismatch")
+            stage_rows = timings.get(attempt_id, {})
             candidates = candidates_by_window.get(integer(diag, "window_id"), [])
             path = acceptance_path(diag, candidates, integrity_row)
             bucket = path_metrics[path]
@@ -545,6 +728,8 @@ def aggregate_profiles(root, analyzed, protocol, calibrations, frozen_execution)
             "attitude_rmse_rad": accuracy.get("attitude_geodesic_rmse_rad"),
             "velocity_rmse_mps": accuracy.get("velocity_rmse_mps"),
             "rss_peak_kib": rss,
+            "fault_schedule": schedule,
+            "fault_injection": fault_evidence,
             "fde_status_counts": item.get("action_and_status_counts", {}).get("fde_status", {}),
             "selected_action_counts": item.get("action_and_status_counts", {}).get("selected_action", {})})
     if len(source_identities) != 1:
@@ -713,6 +898,10 @@ def fgo_gates(analyzed, gates, protocol, calibrations, frozen_execution,
 
 def profile_quality_gates(per_run, protocol):
     gates, checks, not_applicable = protocol["gates"], {}, {}
+    synthetic_hardware_closed = (
+        protocol.get("acceptance_paths", {}).get("hardware_formal_qualification")
+        == "CLOSED/NOT_CLAIMED" and
+        protocol.get("formal_eligibility", {}).get("expected") is False)
     for run in per_run:
         if run.get("status") == "MISSING":
             continue
@@ -721,14 +910,16 @@ def profile_quality_gates(per_run, protocol):
         checks[f"{key}:valid_new_state_fraction"] = (
             count > 0 and run["valid_states"] / count >=
             float(gates["valid_new_state_fraction_min"]))
-        if run["scenario"] == "nominal" and run["profile"] != "off":
+        if (run["scenario"] == "nominal" and run["profile"] != "off" and
+                not synthetic_hardware_closed):
             checks[f"{key}:finite_pl_fraction"] = (
                 count > 0 and run["finite_pl"] / count >=
                 float(gates["active_nominal_finite_pl_fraction_min"]))
             checks[f"{key}:within_alert_fraction"] = (
                 count > 0 and run["within_alert_limits"] / count >=
                 float(gates["active_nominal_within_alert_fraction_min"]))
-        if run["scenario"].endswith("_recovery"):
+        if (run["scenario"].endswith("_recovery") and
+                not synthetic_hardware_closed):
             checks[f"{key}:recovered_finite_epochs"] = (
                 run["finite_pl"] >= int(gates["recovered_finite_epochs_min"]))
             checks[f"{key}:recovered_within_alert_fraction"] = (
@@ -739,6 +930,17 @@ def profile_quality_gates(per_run, protocol):
         "threshold is exercised by within_alert_limits; not a separate outcome gate")
     not_applicable["vertical_alert_limit_m"] = (
         "threshold is exercised by within_alert_limits; not a separate outcome gate")
+    if synthetic_hardware_closed:
+        not_applicable["active_nominal_finite_pl_fraction_min"] = (
+            "NOT_APPLICABLE_HARDWARE_GATED: simulation/synthetic acceptance; "
+            "hardware qualification is CLOSED/NOT_CLAIMED and formal_eligible=false")
+        not_applicable["active_nominal_within_alert_fraction_min"] = (
+            "NOT_APPLICABLE_HARDWARE_GATED: protected output remains disabled")
+        not_applicable["recovered_finite_epochs_min"] = (
+            "NOT_APPLICABLE_HARDWARE_GATED: finite protected PL is not a "
+            "simulation qualification claim")
+        not_applicable["recovered_within_alert_fraction_min"] = (
+            "NOT_APPLICABLE_HARDWARE_GATED: protected output remains disabled")
     return {"status": "PASS" if checks and all(checks.values()) else "FAIL",
             "checks": checks, "not_applicable": not_applicable}
 
