@@ -16,7 +16,8 @@ EstimationTuningV1 readEstimationTuningV1(const IntegrityConfig& config) {
   const std::set<std::string> allowed = {
       "version", "bias_integration_sigmas", "nominal_initial_guess",
       "nominal_lm_iterations", "nominal_lag_s", "nominal_robust_experimental",
-      "causal_bootstrap", "bootstrap_prefer_below_anchors"};
+      "causal_bootstrap", "bootstrap_prefer_below_anchors",
+      "bootstrap_exact_uwb_times", "bootstrap_uwb_motion_check", "bootstrap_seed_only", "bootstrap_enforce_below_anchors"};
   for (const auto& item : node)
     if (!allowed.count(item.first.as<std::string>()))
       throw std::runtime_error("unknown key estimation_tuning." + item.first.as<std::string>());
@@ -42,6 +43,14 @@ EstimationTuningV1 readEstimationTuningV1(const IntegrityConfig& config) {
   if (node["causal_bootstrap"]) out.causal_bootstrap = node["causal_bootstrap"].as<bool>();
   if (node["bootstrap_prefer_below_anchors"])
     out.bootstrap_prefer_below_anchors = node["bootstrap_prefer_below_anchors"].as<bool>();
+  if (node["bootstrap_exact_uwb_times"])
+    out.bootstrap_exact_uwb_times = node["bootstrap_exact_uwb_times"].as<bool>();
+  if (node["bootstrap_uwb_motion_check"])
+    out.bootstrap_uwb_motion_check = node["bootstrap_uwb_motion_check"].as<bool>();
+  if (node["bootstrap_seed_only"])
+    out.bootstrap_seed_only = node["bootstrap_seed_only"].as<bool>();
+  if (node["bootstrap_enforce_below_anchors"])
+    out.bootstrap_enforce_below_anchors = node["bootstrap_enforce_below_anchors"].as<bool>();
   if (out.nominal_initial_guess != "cv" && out.nominal_initial_guess != "imu")
     throw std::runtime_error("nominal_initial_guess must be cv or imu");
   if (out.nominal_lm_iterations < 0 || out.nominal_lm_iterations > 5 ||
@@ -51,7 +60,8 @@ EstimationTuningV1 readEstimationTuningV1(const IntegrityConfig& config) {
     throw std::runtime_error("nominal LM warm start requires imu initial guess");
   if (config.fde.profile != FdeProfile::Off &&
       (out.nominal_initial_guess != "cv" || out.nominal_lm_iterations ||
-       out.nominal_lag_s > 0.0 || out.nominal_robust_experimental || out.causal_bootstrap))
+       out.nominal_lag_s > 0.0 || out.nominal_robust_experimental || out.causal_bootstrap ||
+       out.bootstrap_exact_uwb_times || out.bootstrap_uwb_motion_check || out.bootstrap_seed_only || out.bootstrap_enforce_below_anchors))
     throw std::runtime_error("nominal-only estimation_tuning requires fde.profile=off");
   return out;
 }

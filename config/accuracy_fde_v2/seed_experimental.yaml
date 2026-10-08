@@ -1,0 +1,7 @@
+# Experimental single-mechanism overlay; use --stage causal.
+estimation_tuning:
+  version: 1
+  bias_integration_sigmas: [0.1, 0.1, 0.1, 0.01, 0.01, 0.01]
+  bootstrap_exact_uwb_times: true
+  bootstrap_uwb_motion_check: true
+  bootstrap_seed_only: true

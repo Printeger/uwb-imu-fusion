@@ -15,6 +15,10 @@ struct EstimationTuningV1 {
   bool nominal_robust_experimental = false;
   bool causal_bootstrap = false;
   bool bootstrap_prefer_below_anchors = false;
+  bool bootstrap_exact_uwb_times = false;
+  bool bootstrap_uwb_motion_check = false;
+  bool bootstrap_seed_only = false;
+  bool bootstrap_enforce_below_anchors = false;
 };
 
 EstimationTuningV1 readEstimationTuningV1(const IntegrityConfig& config);

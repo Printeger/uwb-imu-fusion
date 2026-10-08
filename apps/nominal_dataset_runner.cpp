@@ -8,6 +8,8 @@
 #include <boost/program_options.hpp>
 #include <yaml-cpp/yaml.h>
 #include <tbb/global_control.h>
+#include <gtsam/inference/Symbol.h>
+#include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 
 #include <Eigen/Cholesky>
 #include <Eigen/Geometry>
@@ -31,6 +33,15 @@
 #include <utility>
 #include <vector>
 
+// Existing read-only diagnostic friend; the snapshot never updates production.
+namespace uwb_imu_pl {
+struct P106ReadOnlyGraphSnapshotPeer {
+  static std::pair<gtsam::NonlinearFactorGraph,gtsam::Values> capture(
+      const IncrementalUwbImuEstimator& estimator) {
+    return {estimator.activeGraph(),estimator.backendIsam().calculateEstimate()};
+  }
+};
+}
 namespace {
 
 using Clock = std::chrono::steady_clock;
@@ -378,7 +389,8 @@ void writeStatus(const boost::filesystem::path& output, const std::string& statu
 int run(const boost::filesystem::path& config_path,
         const boost::filesystem::path& input,
         const boost::filesystem::path& output,
-        const std::string& tag_policy, bool export_historical) {
+        const std::string& tag_policy, bool export_historical,
+        const std::string& oracle_times) {
   const auto wall_start = Clock::now();
   const std::clock_t cpu_start = std::clock();
   boost::filesystem::create_directories(output);
@@ -417,7 +429,14 @@ int run(const boost::filesystem::path& config_path,
             << "\naccel_std_mps2: " << startup.accel_std_mps2
             << "\naccel_norm_error_mps2: " << startup.accel_norm_error_mps2
             << "\nwindow_cost_before: " << startup.window_cost_before
-            << "\nwindow_cost_after: " << startup.window_cost_after << '\n';
+            << "\nwindow_cost_after: " << startup.window_cost_after
+            << "\nmotion_status: " << startup.motion_status
+            << "\nuwb_speed_upper_mps: " << startup.uwb_speed_upper_mps
+            << "\ndiscrete_nodes: " << startup.discrete_nodes
+            << "\nrange_factors: " << startup.range_factors
+            << "\nmaximum_range_time_error_s: " << startup.maximum_range_time_error_s
+            << "\nposition_seed_m: [" << startup.position_seed_m.x()<<", "<<startup.position_seed_m.y()<<", "<<startup.position_seed_m.z()<<"]"
+            << "\nposition_prior_source: " << startup.position_prior_source << '\n';
     } else {
       initial = bootstrapState(imu, ranges, primary_tag,
                                              config.imu.gravity_mps2,
@@ -454,6 +473,13 @@ int run(const boost::filesystem::path& config_path,
     }
     uwb_imu_pl::IncrementalUwbImuEstimator estimator(config, primary_lever);
     estimator.initialize(initial, initial_priors);
+    std::set<double> pending_oracles;
+    if(!oracle_times.empty())for(const auto& item:split(oracle_times))pending_oracles.insert(std::stod(item));
+    std::ofstream oracle;
+    if(!pending_oracles.empty()) {
+      oracle.open((output/"local_oracle.csv").string());oracle<<std::setprecision(17);
+      oracle<<"requested_t,state_t,online_objective,batch_objective,online_scaled_gradient,batch_scaled_gradient,iterations,batch_ms,online_px,online_py,online_pz,batch_px,batch_py,batch_pz,rotation_change_rad,velocity_change_mps,bias_change,scope\n";
+    }
     std::ofstream resolved((output/"resolved_config.yaml").string());
     resolved << config.resolved_yaml;
     std::ofstream config_hash((output/"config_hash.txt").string());
@@ -499,6 +525,30 @@ int run(const boost::filesystem::path& config_path,
       const double epoch_total=elapsedMs(epoch_start);
       const Eigen::Vector3d tag_position = state.position_world_m + state.q_world_body * primary_lever;
       const Eigen::Quaterniond q = state.q_world_body.normalized();
+      while(!pending_oracles.empty() && *pending_oracles.begin()<=state.timestamp.seconds()) {
+        const double requested=*pending_oracles.begin();pending_oracles.erase(pending_oracles.begin());
+        const auto snapshot=uwb_imu_pl::P106ReadOnlyGraphSnapshotPeer::capture(estimator);
+        const auto& graph=snapshot.first;const auto& values=snapshot.second;
+        auto gradient=[&](const gtsam::Values& point) {
+          const auto linear=graph.linearize(point)->jacobian();
+          const auto g=(linear.first.transpose()*linear.second).eval();
+          double scaled=0;
+          for(int i=0;i<g.size();++i)scaled=std::max(scaled,std::abs(g(i))/std::max(1e-12,linear.first.col(i).norm()*std::max(1.,linear.second.norm())));
+          return scaled;
+        };
+        gtsam::LevenbergMarquardtParams params;params.maxIterations=100;
+        params.maxIterations=1000;params.relativeErrorTol=1e-9;params.absoluteErrorTol=1e-9;
+        const auto start=Clock::now();gtsam::LevenbergMarquardtOptimizer optimizer(graph,values,params);
+        const auto batch_values=optimizer.optimize();const double wall=elapsedMs(start);
+        const auto key=gtsam::Symbol('x',estimator.currentEpoch());
+        const auto online_pose=values.at<gtsam::Pose3>(key),batch_pose=batch_values.at<gtsam::Pose3>(key);
+        const Eigen::Vector3d op=online_pose.translation()+online_pose.rotation().matrix()*primary_lever;
+        const Eigen::Vector3d bp=batch_pose.translation()+batch_pose.rotation().matrix()*primary_lever;
+        oracle<<requested<<','<<state.timestamp.seconds()<<','<<graph.error(values)<<','<<graph.error(batch_values)<<','<<gradient(values)<<','<<gradient(batch_values)<<','<<optimizer.iterations()<<','<<wall<<','<<op.x()<<','<<op.y()<<','<<op.z()<<','<<bp.x()<<','<<bp.y()<<','<<bp.z()<<','
+          <<gtsam::Rot3::Logmap(online_pose.rotation().between(batch_pose.rotation())).norm()<<','
+          <<(values.at<gtsam::Vector3>(gtsam::Symbol('v',estimator.currentEpoch()))-batch_values.at<gtsam::Vector3>(gtsam::Symbol('v',estimator.currentEpoch()))).norm()<<','
+          <<(values.at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b',estimator.currentEpoch())).vector()-batch_values.at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b',estimator.currentEpoch())).vector()).norm()<<",SAME_ACTIVE_GRAPH_AND_PRODUCTION_BOUNDARY\n";
+      }
       trajectory << state.timestamp.seconds() << ' ' << tag_position.x() << ' '
                  << tag_position.y() << ' ' << tag_position.z() << ' '
                  << q.x() << ' ' << q.y() << ' ' << q.z() << ' ' << q.w() << '\n';
@@ -574,10 +624,12 @@ int main(int argc, char** argv) {
   namespace po = boost::program_options;
   po::options_description options("nominal_dataset_runner");
   std::string config, input, output, tag_policy;
+  std::string oracle_times;
   bool export_historical=false;
   options.add_options()
       ("help,h", "show help")
       ("export-historical", po::bool_switch(&export_historical), "separate smoothing diagnostic with information cutoff")
+      ("local-oracle-times", po::value<std::string>(&oracle_times)->default_value(""), "diagnostic batch LM at comma-separated times; does not update online graph")
       ("config", po::value<std::string>(&config)->required(), "integrity config")
       ("input", po::value<std::string>(&input)->required(), "canonical cache")
       ("output", po::value<std::string>(&output)->required(), "run directory")
@@ -590,7 +642,7 @@ int main(int argc, char** argv) {
     po::notify(variables);
     if (tag_policy != "primary" && tag_policy != "all")
       throw std::invalid_argument("tag-policy must be primary or all");
-    return run(config, input, output, tag_policy, export_historical);
+    return run(config, input, output, tag_policy, export_historical, oracle_times);
   } catch (const std::exception& error) {
     std::cerr << error.what() << "\n" << options << '\n';
     return 2;

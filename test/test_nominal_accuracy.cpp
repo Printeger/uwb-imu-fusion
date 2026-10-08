@@ -68,6 +68,73 @@ TEST(NominalAccuracy, DynamicBootstrapDoesNotInterpretRotationAsGyroBias) {
   EXPECT_FALSE(result.stationary);EXPECT_LT(result.state.gyro_bias_radps.norm(),.01);
   EXPECT_LE(result.window_cost_after,result.window_cost_before);EXPECT_TRUE(result.prior_sigmas.allFinite());
 }
+TEST(NominalAccuracy, DynamicRangesUseActualTimesWithoutDuplicateInformation) {
+  auto samples=imu(100,true);std::vector<UwbMeasurement> obs;
+  for(int i=0;i<10;++i) {
+    const double t=.07+.19*i;
+    auto batch=ranges(t,{1+.8*t,2,1});
+    for(auto& r:batch.measurements)r.sigma_m=.01;
+    obs.insert(obs.end(),batch.measurements.begin(),batch.measurements.end());
+  }
+  const auto legacy=initializeCausallyV1(samples,obs,config(),Eigen::Vector3d::Zero());
+  const auto exact=initializeCausallyV1(samples,obs,
+      config("  bootstrap_exact_uwb_times: true\n"),Eigen::Vector3d::Zero());
+  EXPECT_GT(legacy.maximum_range_time_error_s,.05);
+  EXPECT_EQ(exact.maximum_range_time_error_s,0);
+  EXPECT_EQ(exact.range_factors,obs.size());
+  EXPECT_GT(exact.discrete_nodes,legacy.discrete_nodes);
+  EXPECT_LT(std::abs(exact.state.position_world_m.x()-2.6),
+            std::abs(legacy.state.position_world_m.x()-2.6));
+}
+TEST(NominalAccuracy, ExplicitIntegrationModelIsIndependentOfInitializationPrior) {
+  Eigen::Matrix<double,15,15> cov[2];
+  for(int index=0;index<2;++index) {
+    auto c=config("  bias_integration_sigmas: [0.1,0.1,0.1,0.01,0.01,0.01]\n");
+    auto prior=c.realtime.prior_sigmas;prior.tail<6>()*=index?100.:1.;
+    IncrementalUwbImuEstimator e(c,Eigen::Vector3d::Zero());NavigationState s;e.initialize(s,prior);
+    feed(e,0,.1);auto tx=e.prepareEpoch(ranges(.1,{0,0,0}),EpochPreparationOptions::nominalOnly());
+    auto f=boost::dynamic_pointer_cast<gtsam::CombinedImuFactor>(tx.imu_group.factors.front());ASSERT_TRUE(f);
+    cov[index]=f->preintegratedMeasurements().preintMeasCov();
+    DiscardReason reason;e.discardEpoch(std::move(tx),reason);
+  }
+  EXPECT_LT((cov[0]-cov[1]).norm(),1e-15);
+}
+TEST(NominalAccuracy, IdenticalLowExcitationImuCannotConfirmConstantVelocityRest) {
+  const auto c=config("  bootstrap_uwb_motion_check: true\n  bootstrap_exact_uwb_times: true\n");
+  for(double speed:{0.,.8}) {
+    std::vector<UwbMeasurement> obs;
+    for(int i=0;i<=20;++i) {
+      const double t=.1*i;auto batch=ranges(t,{1+speed*t,2,1});
+      for(auto& r:batch.measurements)r.sigma_m=.001;
+      obs.insert(obs.end(),batch.measurements.begin(),batch.measurements.end());
+    }
+    const auto result=initializeCausallyV1(imu(100),obs,c,Eigen::Vector3d::Zero());
+    EXPECT_EQ(result.stationary,speed==0);
+    EXPECT_EQ(result.motion_status,speed==0?"STATIC_CONFIRMED":"DYNAMIC");
+    if(speed>0){EXPECT_GT(result.state.velocity_world_mps.x(),.5);}
+  }
+  auto single=ranges(1,{1,2,1});
+  const auto unresolved=initializeCausallyV1(imu(100),single.measurements,c,Eigen::Vector3d::Zero());
+  EXPECT_FALSE(unresolved.stationary);EXPECT_EQ(unresolved.motion_status,"MOTION_UNRESOLVED");
+}
+TEST(NominalAccuracy, DeclaredHeightPriorSelectsPhysicalBranchWithoutReusingSeedPrior) {
+  std::vector<UwbMeasurement> obs;
+  const std::vector<Eigen::Vector3d> anchors{{-5,-5,1.58},{5,-5,1.61},{5,5,1.59},{-5,5,1.62}};
+  for(int i=0;i<=10;++i) {
+    auto batch=ranges(.2*i,{1,2,3},4);
+    for(std::size_t j=0;j<4;++j){auto& r=batch.measurements[j];r.anchor_position_m=anchors[j];r.range_m=(Eigen::Vector3d(1,2,3)-anchors[j]).norm();}
+    obs.insert(obs.end(),batch.measurements.begin(),batch.measurements.end());
+  }
+  auto c=config("  bootstrap_seed_only: true\n  bootstrap_enforce_below_anchors: true\n");
+  EXPECT_THROW(initializeCausallyV1(imu(100,true),obs,c,Eigen::Vector3d::Zero(),false),std::runtime_error);
+  const auto result=initializeCausallyV1(imu(100,true),obs,c,Eigen::Vector3d::Zero(),true);
+  EXPECT_LT(result.position_seed_m.z(),1.6);EXPECT_LT(result.state.position_world_m.z(),1.6);
+  EXPECT_EQ(result.position_prior_source,"WEAK_CONFIGURED_ORIGIN_REGULARIZER_SIGMA_1E6");
+  auto prior_changed=c;prior_changed.realtime.prior_sigmas.segment<3>(3).setConstant(.001);
+  const auto changed=initializeCausallyV1(imu(100,true),obs,prior_changed,Eigen::Vector3d::Zero(),true);
+  EXPECT_LT((result.state.position_world_m-changed.state.position_world_m).norm(),1e-9);
+  EXPECT_EQ(result.range_factors,obs.size());
+}
 TEST(NominalAccuracy, BootstrapFailsClearlyWithMissingAnchorsOrImuGaps) {
   auto samples=imu(100);auto batch=ranges(1,{1,2,1},3);
   EXPECT_THROW(initializeCausallyV1(samples,batch.measurements,config(),Eigen::Vector3d::Zero()),std::runtime_error);

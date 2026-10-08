@@ -1,0 +1,6 @@
+# One solver mechanism relative to B; --stage covariance.
+estimation_tuning:
+  version: 1
+  bias_integration_sigmas: [0.1, 0.1, 0.1, 0.01, 0.01, 0.01]
+incremental:
+  relinearize_threshold: 0.01
