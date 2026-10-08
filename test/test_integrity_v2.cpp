@@ -4013,6 +4013,67 @@ TEST(GateDProtectionLevel, SharedModesUseOneCombinedCovarianceSolve) {
       legacy[0].monitorability.protected_slopes, 1e-9));
 }
 
+TEST(GateDProtectionLevel, ProtectedCovarianceMatchesItsActualDynamicFactor) {
+  using namespace uwb_imu_pl;
+  for (const int columns : {6, 30, 150}) {
+    const int rows = columns > 30 ? columns + 42 : 72;
+    LinearizedIntegrityWindow window;
+    window.id = WindowId(710 + columns);
+    window.version = {1, 2, 3, 4};
+    Eigen::MatrixXd h(rows, columns);
+    for (int row = 0; row < h.rows(); ++row) {
+      for (int col = 0; col < h.cols(); ++col) {
+        h(row, col) = std::sin(0.13 * (row + 1) * (col + 1)) +
+            (row == col ? 3.0 : 0.0);
+      }
+    }
+    window.blocks.push_back(block(1, h, Eigen::VectorXd::Zero(rows), window.version));
+    window.protected_state_map = Eigen::MatrixXd::Zero(3, columns);
+    window.protected_state_map.leftCols<3>().setIdentity();
+    finalizeIntegrityWindow(&window, 1e-10, 1e10);
+    const auto owner = freezeIntegrityWindowCopy(window);
+    const auto admission = admitFrozenIntegrityWindow(owner);
+    ASSERT_TRUE(admission) << admission.reason;
+    RankUpdateConfig config{1e-10, 1e10, 10.0};
+    RankUpdateEvaluator evaluator(config);
+    const auto base = evaluator.factorizeOnce(admission);
+    auto candidate = evaluator.evaluate(admission, base, ExclusionAction{});
+    ASSERT_TRUE(candidate.valid) << candidate.reason;
+    const auto detector = JointWindowDetector().evaluateCandidate(
+        admission, candidate, DetectorRiskContext{});
+    ASSERT_TRUE(detector.passed) << detector.reason;
+    ProtectionLevelSharedContext context;
+    context.mode_maps[11] = Eigen::MatrixXd::Zero(rows, 1);
+    context.mode_maps[11](rows - 2, 0) = 1.0;
+    FaultHypothesisV2 hypothesis;
+    hypothesis.id = HypothesisId(11);
+    hypothesis.modes = {FaultModeId(11)};
+    hypothesis.prior_probability_bound = 1e-4;
+    hypothesis.p_md_allocation = 1e-3;
+    hypothesis.hmi_allocation = 1e-6;
+    std::vector<FaultHypothesisV2> hypotheses{hypothesis};
+    ProtectionLevelV2ProofV1 proof;
+    AttemptProofArena arena;
+    const auto result = ProtectionLevelV2().computeShared(admission, &candidate,
+        detector, &hypotheses, context, RiskBudgetV2{}, &proof, &arena);
+    ASSERT_TRUE(result.model_valid) << result.reason;
+    const Eigen::MatrixXd actual_gram = proof.protected_covariance_factor.transpose() *
+        proof.protected_covariance_factor;
+    const Eigen::MatrixXd transposed_factor = proof.protected_covariance_factor.transpose();
+    const Eigen::Matrix3d legacy_fixed_gram = transposed_factor * transposed_factor.transpose();
+    // Preserve evidence of the platform's old fixed/dynamic reduction mismatch
+    // without requiring every Eigen/compiler combination to round differently.
+    RecordProperty("legacy_fixed_gram_matches_actual_factor_n" + std::to_string(columns),
+        static_cast<int>((legacy_fixed_gram.array() == actual_gram.array()).all()));
+    EXPECT_TRUE((actual_gram.array() == proof.protected_covariance.array()).all());
+    EXPECT_TRUE(certifyFactorGram(proof.protected_covariance_factor,
+        proof.protected_covariance, proof.covariance_rank_tolerance,
+        proof.candidate_proof_identity).valid);
+    EXPECT_TRUE(validateProtectionLevelV2Proof(candidate, detector, hypotheses,
+        result, arena, nullptr));
+  }
+}
+
 TEST(GateDWorkerPool, StaticSchedulingExceptionBarrierAndScratchReuse) {
   using namespace uwb_imu_pl;
   CandidateWorkerPool pool(4);

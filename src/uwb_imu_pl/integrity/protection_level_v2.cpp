@@ -460,8 +460,16 @@ RawFactorCertificate rawFactorCertificate(
   out.inverse_singular = singular.cwiseInverse();
   out.protected_factor = window.protected_state_map * out.v *
       out.inverse_singular.asDiagonal();
-  out.protected_covariance =
-      out.protected_factor * out.protected_factor.transpose();
+  // The consumer constructively certifies an n-by-3 factor by recomputing a
+  // dynamic factor' * factor and requires exact entry agreement. A fixed
+  // Matrix3d destination for factor * factor' can select a different Eigen
+  // reduction order and make a perfectly valid covariance fail that check.
+  // Form the served Gram with the same actual factor and dynamic operation;
+  // the certificate remains exact and no PSD/rank tolerance is relaxed.
+  const Eigen::MatrixXd covariance_factor = out.protected_factor.transpose();
+  const Eigen::MatrixXd covariance_gram =
+      covariance_factor.transpose() * covariance_factor;
+  out.protected_covariance = covariance_gram;
   out.valid = out.protected_covariance.allFinite();
   if (!out.valid) out.reason = "direct raw-H covariance is non-finite";
   return out;
