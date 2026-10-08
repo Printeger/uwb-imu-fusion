@@ -2,7 +2,9 @@
 
 These are overlays for `tools/run_nominal_accuracy_study.py`, not standalone
 ROS configurations. The runner writes the complete effective configuration.
-Old configs keep their original initialization and prior/integration coupling.
+`gaussian_nominal` with `--stage covariance` is the recommended research
+overlay: original bootstrap/CV/epoch lag and explicit baseline integration
+sigmas. Old configs retain their original behavior.
 No overlay enables formal integrity qualification.
 
 Use `--stage causal` with `bias_fixed_experimental`, `time_experimental`,
@@ -35,7 +37,8 @@ from GT. D2's mirror regression is fixed; the result is not better than B.
 relinearization threshold to 0.01. D1 gain was small, so it is not recommended.
 `robust_nominal_experiment` also uses `--stage covariance`: only existing scalar
 Huber is enabled, with B's original bootstrap/CV/epoch window. It remains
-UNPROTECTED and cannot enter Gaussian FDE/PL. Confirmation status and numbers
+UNPROTECTED and cannot enter Gaussian FDE/PL. It improves Walk1–3 but
+regresses STAR-Loc, so it is not the general recommendation. Confirmation numbers
 are in `docs/accuracy_fde_progress.md`.
 
 Example (writes a fresh result directory):
@@ -49,10 +52,28 @@ python3 tools/run_nominal_accuracy_study.py evaluate --stage causal \
   --output results/my_branch_test
 ```
 
-FDE same-model reference uses `UWB_IMU_PL_EXHAUSTIVE_BOUNDARY_RANK=1` and
-`UWB_IMU_PL_EXHAUSTIVE_MODE_RESPONSES=1`. Both preserve fault scope, thresholds
-and budgets. Optional in-scope mode-cache audits use
+FDE same-model reference uses `UWB_IMU_PL_EXHAUSTIVE_BOUNDARY_RANK=1`,
+`UWB_IMU_PL_EXHAUSTIVE_CARRIER_U=1` and
+`UWB_IMU_PL_EXHAUSTIVE_MODE_RESPONSES=1`. Default skips only redundant extractor
+rank and unused carrier U. Response caching is experimental and must be enabled
+explicitly with `UWB_IMU_PL_MODE_RESPONSE_CACHE=1`; exhaustive overrides it.
+No path changes fault scope, thresholds or budgets. Exact PL tie/alert boundary
+equivalence of cached products remains unproven. Optional in-scope mode-cache audits use
 `UWB_IMU_PL_MODE_CACHE_AUDIT_ATTEMPTS=10,12,32` plus
 `UWB_IMU_PL_MODE_CACHE_AUDIT_DIR=/absolute/new/directory`; the parent core timer
 includes diagnostic work, and must not be used as production speed evidence.
 Always bind LD_LIBRARY_PATH to the actual executable's companion DSO.
+
+Carrier-only diagnostics: set `UWB_IMU_PL_CARRIER_AUDIT_DIR` to capture one
+production matrix, then run `test_history_fault_summary` with
+`UWB_IMU_PL_CARRIER_BENCHMARK_FILE=<dir>/carrier.bin` and filter
+`HistoryFaultSummary.CapturedProductionCarrierMicrobenchmark`. Diagnostic parent
+timers and global numerical counters include extra computations; do not use
+them as production performance evidence.
+
+Reproduce the seven-sequence confirmation by passing each predeclared sequence
+with `--all --sequence NAME --stage covariance --profile` and a fresh `--output`.
+Use `gaussian_nominal.yaml` and `robust_nominal_experiment.yaml` separately.
+Evaluation is a separate `evaluate` command; GT never selects the run settings.
+The predeclared names and measured results are in the progress document and
+`docs/benchmark/accuracy_fde_confirmation_20261009.csv`.

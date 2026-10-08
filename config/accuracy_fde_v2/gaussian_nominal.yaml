@@ -1,0 +1,7 @@
+# Recommended research baseline overlay; use --stage covariance.
+# Original bootstrap/CV initialization, original epoch lag and Gaussian ranges.
+# Formal integrity qualification remains disabled.
+estimation_tuning:
+  version: 1
+  bias_integration_sigmas: [0.1, 0.1, 0.1, 0.01, 0.01, 0.01]
+  nominal_robust_experimental: false

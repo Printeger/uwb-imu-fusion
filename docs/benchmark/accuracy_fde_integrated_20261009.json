@@ -1,0 +1,682 @@
+{
+  "scope": "DEFAULT_EXHAUSTIVE_MODE_PRODUCTS_ONLY_QR_AND_CARRIER_U_REMOVED",
+  "profiles": {
+    "normal": {
+      "reference": {
+        "core_sum_ms": 10369.844690000002,
+        "core_mean_ms": 296.2812768571429,
+        "core_median_ms": 219.519,
+        "core_p95_ms": 622.1971999999998,
+        "core_max_ms": 763.062,
+        "recovery": {
+          "definition": "first_fault_input_to_first_protected_publication_wall_clock",
+          "status": "NO_FAULT_INPUT",
+          "recovery_latency_ms": null
+        },
+        "execution": {
+          "command": [
+            "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/integrated_binary/bin/realtime_performance_benchmark",
+            "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order1.yaml",
+            "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/fde_integrated/reference/normal",
+            "35"
+          ],
+          "environment": {
+            "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/integrated_binary",
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "MKL_NUM_THREADS": "1",
+            "UWB_IMU_PL_SCENARIO": "noiseless",
+            "UWB_IMU_PL_EXHAUSTIVE_CARRIER_U": "1",
+            "UWB_IMU_PL_EXHAUSTIVE_BOUNDARY_RANK": "1",
+            "UWB_IMU_PL_EXHAUSTIVE_MODE_RESPONSES": "1"
+          },
+          "exit_code": 0,
+          "wall_s": 10.427142598011415,
+          "binary_sha256": "aa08b44442c7827d30cec9d9bb4a6aed38328eb6be9f7e8cd8c9446f03e3004e",
+          "library_sha256": "88c8ae699da41ae587471d7a117f198cfa4cf6e77c6508bb4176ce40f8287152",
+          "diagnostics": false
+        }
+      },
+      "optimized": {
+        "core_sum_ms": 10375.549229999999,
+        "core_mean_ms": 296.4442637142857,
+        "core_median_ms": 223.09,
+        "core_p95_ms": 631.1274999999999,
+        "core_max_ms": 757.244,
+        "recovery": {
+          "definition": "first_fault_input_to_first_protected_publication_wall_clock",
+          "status": "NO_FAULT_INPUT",
+          "recovery_latency_ms": null
+        },
+        "execution": {
+          "command": [
+            "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/integrated_binary/bin/realtime_performance_benchmark",
+            "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order1.yaml",
+            "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/fde_integrated/optimized/normal",
+            "35"
+          ],
+          "environment": {
+            "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/integrated_binary",
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "MKL_NUM_THREADS": "1",
+            "UWB_IMU_PL_SCENARIO": "noiseless"
+          },
+          "exit_code": 0,
+          "wall_s": 10.414441823013476,
+          "binary_sha256": "aa08b44442c7827d30cec9d9bb4a6aed38328eb6be9f7e8cd8c9446f03e3004e",
+          "library_sha256": "88c8ae699da41ae587471d7a117f198cfa4cf6e77c6508bb4176ce40f8287152",
+          "diagnostics": false
+        }
+      },
+      "speedup": 0.9994501939248187,
+      "time_reduction_pct": -0.055010852819203926,
+      "comparison": {
+        "after": "results/accuracy_fde_20261009/fde_integrated/optimized/normal",
+        "after_workers": 1,
+        "algorithm_work_contract": "changed work reported separately; all decision semantics compared",
+        "allowed_timing_diagnostics": {
+          "candidates.csv": [
+            "evaluation_wall_ms"
+          ],
+          "diagnostic_attempts.csv": [
+            "base_llt",
+            "base_state_solves",
+            "base_svd",
+            "cache_entries",
+            "candidate_inner_llt",
+            "candidate_reference_svd",
+            "covariance_rhs_columns",
+            "covariance_rhs_solves",
+            "detector_reference_qr",
+            "fault_gram_eigen",
+            "fault_gram_ldlt",
+            "fault_gram_svd",
+            "generic_fault_gram_fallback",
+            "hypothesis_parallel_blocks",
+            "hypothesis_shared_hits",
+            "hypothesis_shared_misses",
+            "llt_state_solve_calls",
+            "low_dim_fault_gram",
+            "spectral_rhs_columns",
+            "spectral_rhs_solves",
+            "statistical_cache_hits",
+            "statistical_cache_misses",
+            "svd_state_solve_calls",
+            "watchdog_reason",
+            "watchdog_sensor_delta_ns",
+            "watchdog_sensor_elapsed_ns",
+            "watchdog_sensor_lag_ns",
+            "watchdog_sensor_stale",
+            "watchdog_wall_elapsed_ns"
+          ],
+          "diagnostic_candidates.csv": [
+            "bridge_ms",
+            "fault_map_ms",
+            "kernel_ms",
+            "pl_ms",
+            "post_ms",
+            "scratch_reuse_count"
+          ]
+        },
+        "before": "results/accuracy_fde_20261009/fde_integrated/reference/normal",
+        "before_workers": 1,
+        "files": {
+          "bridge.csv": {
+            "after_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+            "before_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+            "mismatches": [],
+            "rows": 0,
+            "status": "PASS"
+          },
+          "candidates.csv": {
+            "after_sha256": "3afb47ef58a849b49367f98d43526a74a1f5a279b226123f71c1d237fdb5b6c9",
+            "before_sha256": "0dd4f0cd664f919e760ac937395054504f90df7f9dbfd97fb493e8c86f374609",
+            "mismatches": [],
+            "rows": 35,
+            "status": "PASS"
+          },
+          "diagnostic_attempts.csv": {
+            "after_sha256": "2a06fc4762884094d59a6e94704f8a2501dbe173ed402f57daf742ac12da1695",
+            "before_sha256": "30fd5c7431636a6f70a3deccec25dedbaa12644656098ed56b77b307621eaa99",
+            "mismatches": [],
+            "rows": 35,
+            "status": "PASS"
+          },
+          "diagnostic_candidates.csv": {
+            "after_sha256": "a3698b41dc0c45d674597b7a918287379e605a3e196d7e6d08b49719efbf1d80",
+            "before_sha256": "a443b8b8273ad79ca416674fbcce877b93923046ebb686e114989cb48400d89e",
+            "mismatches": [],
+            "rows": 35,
+            "status": "PASS"
+          },
+          "diagnostic_coverage.csv": {
+            "after_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+            "before_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+            "mismatches": [],
+            "rows": 0,
+            "status": "PASS"
+          },
+          "diagnostic_history_summary.csv": {
+            "after_sha256": "bcfc7d9f5dfb971161ef4f68dcd189b4c737340a2dc54f258b6cbf6637a3d878",
+            "before_sha256": "bcfc7d9f5dfb971161ef4f68dcd189b4c737340a2dc54f258b6cbf6637a3d878",
+            "mismatches": [],
+            "rows": 35,
+            "status": "PASS"
+          },
+          "diagnostic_snapshot_identity.csv": {
+            "after_sha256": "94b3817fafebbef225062c591d4d714a24eb443ceb5869517d40fa50a0faa0dd",
+            "before_sha256": "94b3817fafebbef225062c591d4d714a24eb443ceb5869517d40fa50a0faa0dd",
+            "mismatches": [],
+            "rows": 35,
+            "status": "PASS"
+          },
+          "diagnostic_square_root.csv": {
+            "after_sha256": "2a5b5727d1dc30cc6f297d4cf03796d318172a555823b24970046abb46d857b1",
+            "before_sha256": "2a5b5727d1dc30cc6f297d4cf03796d318172a555823b24970046abb46d857b1",
+            "mismatches": [],
+            "rows": 35,
+            "status": "PASS"
+          },
+          "diagnostic_state_steps.csv": {
+            "after_sha256": "b179eca7d4afaf55d2acbab5e5f72d1d6bd69f26ac94152812172ef56c4e753e",
+            "before_sha256": "b179eca7d4afaf55d2acbab5e5f72d1d6bd69f26ac94152812172ef56c4e753e",
+            "mismatches": [],
+            "rows": 340,
+            "status": "PASS"
+          },
+          "hypotheses.csv": {
+            "after_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+            "before_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+            "mismatches": [],
+            "rows": 0,
+            "status": "PASS"
+          },
+          "integrity.csv": {
+            "after_sha256": "51d50ee96ae7839c237b01a785ba21683dc71efaf41769c58f95a9480220dfe3",
+            "before_sha256": "9fa0b6a6c69f2955f458a6eb672757984b5ea76152f1d72d8bbf4f55a1e5e4a7",
+            "mismatches": [],
+            "rows": 35,
+            "status": "PASS"
+          },
+          "states.csv": {
+            "after_sha256": "691516f89572e6b459d3f653b5515351f31cd4b081823e0cb43f55231a312662",
+            "before_sha256": "691516f89572e6b459d3f653b5515351f31cd4b081823e0cb43f55231a312662",
+            "mismatches": [],
+            "rows": 35,
+            "status": "PASS"
+          },
+          "transactions.csv": {
+            "after_sha256": "939823c6fbb88b846eb561364ffc1573c9e3cda4147bb6ac18f51ade3ad7ca6c",
+            "before_sha256": "939823c6fbb88b846eb561364ffc1573c9e3cda4147bb6ac18f51ade3ad7ca6c",
+            "mismatches": [],
+            "rows": 35,
+            "status": "PASS"
+          }
+        },
+        "publication_binding_checks": {
+          "after": {
+            "attempts": 35,
+            "failures": [],
+            "status": "PASS"
+          },
+          "before": {
+            "attempts": 35,
+            "failures": [],
+            "status": "PASS"
+          }
+        },
+        "schema": "uwb-imu-pl/p1-05-worker-equivalence/v1",
+        "status": "PASS",
+        "wall_packet_digest_contract": "checksum may differ only on independently proved finish-wall rows; state/proof/publication binding fields are still compared",
+        "work_counter_changed_rows": {
+          "diagnostic_attempts.csv": {
+            "base_llt": [],
+            "base_state_solves": [],
+            "base_svd": [],
+            "cache_entries": [],
+            "candidate_inner_llt": [],
+            "candidate_reference_svd": [],
+            "covariance_rhs_columns": [],
+            "covariance_rhs_solves": [],
+            "detector_reference_qr": [],
+            "fault_gram_eigen": [],
+            "fault_gram_ldlt": [],
+            "fault_gram_svd": [],
+            "generic_fault_gram_fallback": [],
+            "hypothesis_shared_hits": [],
+            "hypothesis_shared_misses": [],
+            "llt_state_solve_calls": [],
+            "low_dim_fault_gram": [],
+            "spectral_rhs_columns": [],
+            "spectral_rhs_solves": [],
+            "statistical_cache_hits": [],
+            "statistical_cache_misses": [],
+            "svd_state_solve_calls": []
+          },
+          "diagnostic_candidates.csv": {
+            "scratch_reuse_count": []
+          }
+        },
+        "worker_configuration_diagnostic": {
+          "after_values": [
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4"
+          ],
+          "before_values": [
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4"
+          ],
+          "field": "hypothesis_parallel_blocks",
+          "meaning": "configured/used parallel blocks; expected to vary with the worker setting and never claimed as invariant algorithm work"
+        }
+      }
+    },
+    "joint2": {
+      "reference": {
+        "core_sum_ms": 120696.68800000001,
+        "core_mean_ms": 3448.4768000000004,
+        "core_median_ms": 2608.31,
+        "core_p95_ms": 6593.007999999999,
+        "core_max_ms": 25577.3,
+        "recovery": {
+          "definition": "first_fault_input_to_first_protected_publication_wall_clock",
+          "status": "RIGHT_CENSORED",
+          "recovery_latency_ms": null
+        },
+        "execution": {
+          "command": [
+            "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/integrated_binary/bin/realtime_performance_benchmark",
+            "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order2.yaml",
+            "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/fde_integrated/reference/joint2",
+            "35"
+          ],
+          "environment": {
+            "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/integrated_binary",
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "MKL_NUM_THREADS": "1",
+            "UWB_IMU_PL_SCENARIO": "joint_recovery",
+            "UWB_IMU_PL_EXHAUSTIVE_CARRIER_U": "1",
+            "UWB_IMU_PL_EXHAUSTIVE_BOUNDARY_RANK": "1",
+            "UWB_IMU_PL_EXHAUSTIVE_MODE_RESPONSES": "1"
+          },
+          "exit_code": 0,
+          "wall_s": 122.16968124000414,
+          "binary_sha256": "aa08b44442c7827d30cec9d9bb4a6aed38328eb6be9f7e8cd8c9446f03e3004e",
+          "library_sha256": "88c8ae699da41ae587471d7a117f198cfa4cf6e77c6508bb4176ce40f8287152",
+          "diagnostics": false
+        }
+      },
+      "optimized": {
+        "core_sum_ms": 119150.37900000002,
+        "core_mean_ms": 3404.2965428571433,
+        "core_median_ms": 2556.04,
+        "core_p95_ms": 6436.256999999999,
+        "core_max_ms": 25582.2,
+        "recovery": {
+          "definition": "first_fault_input_to_first_protected_publication_wall_clock",
+          "status": "RIGHT_CENSORED",
+          "recovery_latency_ms": null
+        },
+        "execution": {
+          "command": [
+            "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/integrated_binary/bin/realtime_performance_benchmark",
+            "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order2.yaml",
+            "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/fde_integrated/optimized/joint2",
+            "35"
+          ],
+          "environment": {
+            "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/integrated_binary",
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "MKL_NUM_THREADS": "1",
+            "UWB_IMU_PL_SCENARIO": "joint_recovery"
+          },
+          "exit_code": 0,
+          "wall_s": 120.64560216300015,
+          "binary_sha256": "aa08b44442c7827d30cec9d9bb4a6aed38328eb6be9f7e8cd8c9446f03e3004e",
+          "library_sha256": "88c8ae699da41ae587471d7a117f198cfa4cf6e77c6508bb4176ce40f8287152",
+          "diagnostics": false
+        }
+      },
+      "speedup": 1.0129777933815887,
+      "time_reduction_pct": 1.281152801806773,
+      "comparison": {
+        "after": "results/accuracy_fde_20261009/fde_integrated/optimized/joint2",
+        "after_workers": 1,
+        "algorithm_work_contract": "changed work reported separately; all decision semantics compared",
+        "allowed_timing_diagnostics": {
+          "candidates.csv": [
+            "evaluation_wall_ms"
+          ],
+          "diagnostic_attempts.csv": [
+            "base_llt",
+            "base_state_solves",
+            "base_svd",
+            "cache_entries",
+            "candidate_inner_llt",
+            "candidate_reference_svd",
+            "covariance_rhs_columns",
+            "covariance_rhs_solves",
+            "detector_reference_qr",
+            "fault_gram_eigen",
+            "fault_gram_ldlt",
+            "fault_gram_svd",
+            "generic_fault_gram_fallback",
+            "hypothesis_parallel_blocks",
+            "hypothesis_shared_hits",
+            "hypothesis_shared_misses",
+            "llt_state_solve_calls",
+            "low_dim_fault_gram",
+            "spectral_rhs_columns",
+            "spectral_rhs_solves",
+            "statistical_cache_hits",
+            "statistical_cache_misses",
+            "svd_state_solve_calls",
+            "watchdog_reason",
+            "watchdog_sensor_delta_ns",
+            "watchdog_sensor_elapsed_ns",
+            "watchdog_sensor_lag_ns",
+            "watchdog_sensor_stale",
+            "watchdog_wall_elapsed_ns"
+          ],
+          "diagnostic_candidates.csv": [
+            "bridge_ms",
+            "fault_map_ms",
+            "kernel_ms",
+            "pl_ms",
+            "post_ms",
+            "scratch_reuse_count"
+          ]
+        },
+        "before": "results/accuracy_fde_20261009/fde_integrated/reference/joint2",
+        "before_workers": 1,
+        "files": {
+          "bridge.csv": {
+            "after_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+            "before_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+            "mismatches": [],
+            "rows": 0,
+            "status": "PASS"
+          },
+          "candidates.csv": {
+            "after_sha256": "9ed9463350f754aed6114baf6d13d28383db079fa254cca46c5d235db94a1807",
+            "before_sha256": "7cff2773f66ce1373a084d071f42738ee017f45fe73774a761bb23797087ccb3",
+            "mismatches": [],
+            "rows": 439,
+            "status": "PASS"
+          },
+          "diagnostic_attempts.csv": {
+            "after_sha256": "dd7f1b28849f07d1ec064ccb25ea620618efc16771ae0b2441641d2c5d99fd61",
+            "before_sha256": "b2b2d78152e8ded9c9e643c49a6e0b938a6a95607bc5f8401d95b9fee3f1e710",
+            "mismatches": [],
+            "rows": 35,
+            "status": "PASS"
+          },
+          "diagnostic_candidates.csv": {
+            "after_sha256": "dac962abd7c5f07343cd8ecb953d3477f45461d598f6389d386aa798c03df190",
+            "before_sha256": "f6d13545ef51fca767fef8e3906d6930a150649a12cbb39a64da31a4f5c85fcf",
+            "mismatches": [],
+            "rows": 439,
+            "status": "PASS"
+          },
+          "diagnostic_coverage.csv": {
+            "after_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+            "before_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+            "mismatches": [],
+            "rows": 0,
+            "status": "PASS"
+          },
+          "diagnostic_history_summary.csv": {
+            "after_sha256": "19dc24c4c7ba23eaf3480fdbb668ef0a2d479a19c12ab83739f73910532048ee",
+            "before_sha256": "19dc24c4c7ba23eaf3480fdbb668ef0a2d479a19c12ab83739f73910532048ee",
+            "mismatches": [],
+            "rows": 35,
+            "status": "PASS"
+          },
+          "diagnostic_snapshot_identity.csv": {
+            "after_sha256": "ef1c6ca8202dc7b9bb1814f05e0ab2ed25fe155af282b5fc02e7ed273b5de8f0",
+            "before_sha256": "ef1c6ca8202dc7b9bb1814f05e0ab2ed25fe155af282b5fc02e7ed273b5de8f0",
+            "mismatches": [],
+            "rows": 35,
+            "status": "PASS"
+          },
+          "diagnostic_square_root.csv": {
+            "after_sha256": "81d5e834186b1cbcc20c55cef9fff1a1c3722c287e5b33db18a8dd3d50df6a8c",
+            "before_sha256": "81d5e834186b1cbcc20c55cef9fff1a1c3722c287e5b33db18a8dd3d50df6a8c",
+            "mismatches": [],
+            "rows": 35,
+            "status": "PASS"
+          },
+          "diagnostic_state_steps.csv": {
+            "after_sha256": "d20da2ff7305eadf089c47a9ebfb2c1a71591f04547a4c44de8a1bce94432f9b",
+            "before_sha256": "d20da2ff7305eadf089c47a9ebfb2c1a71591f04547a4c44de8a1bce94432f9b",
+            "mismatches": [],
+            "rows": 340,
+            "status": "PASS"
+          },
+          "hypotheses.csv": {
+            "after_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+            "before_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+            "mismatches": [],
+            "rows": 0,
+            "status": "PASS"
+          },
+          "integrity.csv": {
+            "after_sha256": "baecfa70171a859bf859ca76bb8ceccb08b212e4e517f2fa373c1715ee8c77ec",
+            "before_sha256": "670318a200db1646ae4cae2c260230c3872e2ac89680d11fc4f7e5af292a90e1",
+            "mismatches": [],
+            "rows": 35,
+            "status": "PASS"
+          },
+          "states.csv": {
+            "after_sha256": "8bcab8d38588e6d300fc621ab33b7a3f32370284a4fe5850ce3a96ce99e9ee15",
+            "before_sha256": "8bcab8d38588e6d300fc621ab33b7a3f32370284a4fe5850ce3a96ce99e9ee15",
+            "mismatches": [],
+            "rows": 35,
+            "status": "PASS"
+          },
+          "transactions.csv": {
+            "after_sha256": "422e0b282e8718b4a6c02de3275b0e37d9b48a8724211ca85554d25a0b3165c0",
+            "before_sha256": "422e0b282e8718b4a6c02de3275b0e37d9b48a8724211ca85554d25a0b3165c0",
+            "mismatches": [],
+            "rows": 35,
+            "status": "PASS"
+          }
+        },
+        "publication_binding_checks": {
+          "after": {
+            "attempts": 35,
+            "failures": [],
+            "status": "PASS"
+          },
+          "before": {
+            "attempts": 35,
+            "failures": [],
+            "status": "PASS"
+          }
+        },
+        "schema": "uwb-imu-pl/p1-05-worker-equivalence/v1",
+        "status": "PASS",
+        "wall_packet_digest_contract": "checksum may differ only on independently proved finish-wall rows; state/proof/publication binding fields are still compared",
+        "work_counter_changed_rows": {
+          "diagnostic_attempts.csv": {
+            "base_llt": [],
+            "base_state_solves": [],
+            "base_svd": [],
+            "cache_entries": [],
+            "candidate_inner_llt": [],
+            "candidate_reference_svd": [],
+            "covariance_rhs_columns": [],
+            "covariance_rhs_solves": [],
+            "detector_reference_qr": [],
+            "fault_gram_eigen": [],
+            "fault_gram_ldlt": [],
+            "fault_gram_svd": [],
+            "generic_fault_gram_fallback": [],
+            "hypothesis_shared_hits": [],
+            "hypothesis_shared_misses": [],
+            "llt_state_solve_calls": [],
+            "low_dim_fault_gram": [],
+            "spectral_rhs_columns": [],
+            "spectral_rhs_solves": [],
+            "statistical_cache_hits": [],
+            "statistical_cache_misses": [],
+            "svd_state_solve_calls": []
+          },
+          "diagnostic_candidates.csv": {
+            "scratch_reuse_count": [
+              428,
+              432
+            ]
+          }
+        },
+        "worker_configuration_diagnostic": {
+          "after_values": [
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4"
+          ],
+          "before_values": [
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4"
+          ],
+          "field": "hypothesis_parallel_blocks",
+          "meaning": "configured/used parallel blocks; expected to vary with the worker setting and never claimed as invariant algorithm work"
+        }
+      }
+    }
+  }
+}

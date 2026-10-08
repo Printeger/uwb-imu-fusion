@@ -24,19 +24,15 @@ user-owned untracked `docs/requirements/` preserved. Old P1-06 remains failed.
 - WP-F: freeze useful candidates, one confirmation set and core safety regressions;
   High integration review; report remaining accuracy/realtime gaps.
 
-## Current evidence / decisions
+## Current disposition
 
-Existing report: current common-fix Walk mean 0.3505 m; experimental 0.3178 m,
-Huber 0.2272 m (historical identities, not new measurements). own_vicon
-experimental regression and SFUISE online/history mismatch require diagnosis.
-Initializer source confirms 0.2s nearest-node assignment, IMU-only stationarity,
-and posterior bias sigma fallback into later preintegration. Contributions
-remain unmeasured. No current test PASS claimed yet.
-
-## Blockers and next work
-
-Hardware qualification stays closed, `formal_eligible=false`. Slow frozen
-historical campaigns retain FAIL/NOT_RUN rather than being rewritten.
+WP-A/B are implemented with isolated flags and preserved reference identities.
+WP-C retains Gaussian baseline plus an independent Huber experiment; it does
+not promote extra online iterations or claim a fully converged local oracle.
+WP-D/E measured five profile streams containing normal/history/fault/fallback
+snapshots; strict S0–S5 protected-recovery qualification remains NOT_MET.
+WP-F confirmation, default-path measurement and core safety regressions
+are complete. Hardware qualification stays closed, formal_eligible=false.
 
 ## WP-A — implemented / measured
 
@@ -83,6 +79,16 @@ Thus on this run knot revision is the larger source of historical improvement;
 final calibration alone does not improve online states. All four fixed-grid
 coverage values 99.662%; cutoff quality WINDOW_BOUNDARY_ONLY.
 Evidence: `accuracy_fde_sfuise_four_views_20261009.json`.
+
+Walk1 output comparison (same sensor interval; offline evaluation grids,
+not authenticated identical information deadlines):
+
+| Output | APE / P95 / max m | SE(3) translation RPE m | World increment m | Fixed coverage | Init s |
+|---|---:|---:|---:|---:|---:|
+| Discrete Gaussian online | 0.396 / 0.496 / 4.009 | 1.035 | 0.524 | 96.28% | 2.064 |
+| Discrete Huber online (unprotected) | 0.245 / 0.413 / 0.638 | 0.915 | 0.238 | 96.28% | 2.064 |
+| SFUISE online/current calibration | 0.589 / 1.471 / 1.817 | 0.771 | 0.394 | 99.66% | 0.100 |
+| SFUISE revised history/final calibration (offline) | 0.157 / 0.293 / 0.363 | 0.728 | 0.084 | 99.66% | 0.100 |
 
 ## WP-B / WP-C — tests and isolated hypotheses
 
@@ -148,8 +154,135 @@ actual dynamic factor operation, without loosening any gate. Old failures kept;
 new reference/optimized use the same repaired model. Production extent remains
 to be measured; no claim that this explains all old infinite PL values.
 
-Same-model paired profile replay and optional in-scope cache microcomparison
-are in progress. Baseline selected CTest 31/32 PASS (259.45 s); failure is
-test_simulation_calibrations stale source binding. Four frozen P0-07 process
-campaigns and ROS visualization NOT_RUN this round; their historical FAIL is
-retained. Final related regression and frozen candidate confirmation pending.
+Same-model 35-attempt reference/experimental-cache pairs all complete:
+
+| Scenario | Reference mean ms | Cache + QR mean ms | Total speedup |
+|---|---:|---:|---:|
+| S0/S1 normal + history | 301.227 | 299.758 | 1.005 |
+| S2 UWB fault | 534.923 | 538.966 | 0.992 |
+| S3 IMU fault | 366.207 | 365.922 | 1.001 |
+| S4 joint order1 | 632.480 | 631.035 | 1.002 |
+| S5 joint order2 | 3471.212 | 3282.112 | 1.058 |
+
+Measured repaired-model bottlenecks over 35 attempts (not additive nesting):
+normal core 10.543s: window 5.868s (boundary nested 5.400s), evidence 1.517s,
+candidate stage 2.852s; base factorization only 7.63ms. Order2 core 121.492s:
+window 20.197s (boundary nested 19.728s), evidence 37.536s, candidate 54.551s,
+model generation 6.328s, action generation 1.549s, FDE decision 0.577s,
+commit 61.5ms. Worker post/PL timers are nested in candidate stage and not
+summed as wall time. Order2 max 61,104 hypotheses/405 actions, 439 generated
+and kernel/post-evaluated actions, 67 PL-evaluated, zero protected selections;
+base SVD/LLT 35 each, candidate reference SVD 1,340, inner LLT 1,317, fault Gram
+eigen 1,987,209. Primary proposed directions were redundant boundary work and
+repeated per-mode responses; neither window growth nor root base solve dominates.
+Counters and complete stage totals are in the same-model JSON.
+
+All five comparisons PASS for state, selected action, fault coverage, risks,
+PL status/values, commit and publication identities. Each of the 350 terminal
+packets separately passes the existing publication/transaction/timing binding
+verifier. Finish-wall reason/checksum may differ; protected binding fields are
+still checked. Initial strict worker comparison FAIL is retained. S5 attempt12
+fault_gram_eigen rises 733917→736396: cached provisional boundary certificates
+fall back to original products and are certified again. Three scratch reuse
+counts differ. Work changes are reported separately, never called identical.
+Evidence: accuracy_fde_same_model_20261009.csv/.json; full comparison reports
+under results/accuracy_fde_20261009/fde_same_model.
+
+High integration review identified unresolved exact PL tie/alert-boundary
+rounding equivalence. Therefore mode cache is NOT default: explicitly opt in
+with UWB_IMU_PL_MODE_RESPONSE_CACHE=1; EXHAUSTIVE overrides. Payload limit 16MiB
+is per root, not the entire batch. No protected-recovery or general 50% gain
+claim. Default retains every original per-hypothesis product. Default extractor
+QR removal is bit-identical for served rows. New carrier SVD requests only V;
+U never feeds σ/V in the installed Eigen implementation. Three deterministic
+tests PASS, including adjacent rank thresholds and incremental tree proof IDs.
+Reference UWB_IMU_PL_EXHAUSTIVE_CARRIER_U retains the original U+V path.
+
+## WP-F — frozen precision confirmation and integration
+
+Seven sequences replayed once per Gaussian/Huber frozen candidate, then evaluated.
+Gaussian trajectories/metrics exactly reproduce B. Huber Walk1/2/3 APE
+0.244599/0.213287/0.227860 m, mean 0.228582 vs Gaussian 0.350485 m (34.8% lower).
+Walk1/3 max errors 4.008583/3.944723→0.638048/0.702365 m. No output is deleted:
+fixed-grid coverage and initialization delay match the Gaussian candidate.
+own_vicon obstacle is unchanged 0.746763 m; no_obstacle improves
+1.249486→1.191427 m; simulation 0.049685→0.049715 m (0.06% change).
+STAR-Loc regresses 0.600472→0.874786 m (45.7%), with world increment
+0.421980→0.590414 m. This is a real confirmation failure, not an excuse to tune
+that sequence using GT. Huber downweights range constraints in a weakly
+initialized trajectory; whether calibration/yaw or weight loss causes the
+regression is unresolved. Keep Huber an independent UNPROTECTED experiment;
+recommend Gaussian for broad reproducible use. Full APE/P95/max, both RPE,
+world increment, coverage and initialization: accuracy_fde_confirmation_20261009.csv.
+
+Recommended overlay config/accuracy_fde_v2/gaussian_nominal.yaml uses original
+bootstrap/CV/epoch lag and explicit B bias integration sigmas. Experimental
+bootstrap changes are not promoted on theory alone. Bias covariance semantics
+checked against installed CombinedImuFactor.h sha256 31128962…c14285 and local
+CombinedImuFactor.cpp sha256 7dc20a6a…3402a: biasAccOmegaInt enters white-noise
+velocity/rotation propagation (and cross blocks), while bias random walks use
+dt*biasAccCovariance and dt*biasOmegaCovariance. This is local source inspection,
+not authentication of an external binary's build. Tests vary initialization
+prior by ×100 without changing preintegration covariance under explicit sigmas.
+
+Added safety_decision_latency, analysis_completion_latency, core_compute
+alongside arrival_to_publish. This synchronous runner emits the definitive
+safety result at publish_call; aliases are not additive timers. Recovery starts
+at the first affected IMU ingest (or UWB processing for range-only fault), ends
+at the first protected publication, and otherwise emits null/RIGHT_CENSORED.
+Unavailable is never counted as successful recovery. A short asynchronous
+40ms input-stream acceptance is NOT_RUN because measured computation still
+requires seconds; no stale PL or unfinished proof is reused to claim realtime.
+
+Baseline selected CTest 31/32 PASS (259.45 s); failure is stale calibration
+source binding. Four frozen P0-07 process campaigns and ROS visualization
+NOT_RUN this round; historical failures unchanged. Corrected PYTHONPATH
+invocation: dataset 10/10, round3 10/10, Gate-D 14/14 PASS. Initial import-error
+invocations retained. Final core safety CTest 25/25 suites PASS (212.59s), including publication,
+atomic transactions, IMU exclusion, history lifecycle and bridge/certificate
+checks. Optional carrier microbenchmark is NOT_RUN_NO_CAPTURE; this stream never
+produces a carrier with both dimensions >=200. This is not counted as a timing
+PASS. Core safety suites and the three carrier bit-identity tests did run. No test that was not executed is marked PASS.
+
+Local commits: f56a83a metrics/SFUISE, 8a1c294 bootstrap experiments,
+9f251c9 exact dynamic-factor Gram repair, 7245c6c default safe decomposition
+removal / opt-in cache / timing and comparison interfaces. No push. Git auto-GC reported an empty
+loose object 01c67b7906b9860f93ff0b138babc0e1150dc5e6; fsck failed. Current
+refs/commits work and rev-list does not reference this object. No destructive
+repair attempted; subsequent local commits disable automatic GC.
+
+Next justified research: profile/batch dirty historical-root recomputation
+(current per-leaf updates repeat shared ancestors), and establish calibrated
+Gaussian innovation/outlier models plus independently verified frame/yaw
+initialization. Any promotion needs final σ/V/proof/selection equivalence,
+measured wall-clock gain and valid normal/recovery snapshots. Current evidence
+does not justify top-K, relaxed rank/thresholds, raw-history oracle expansion,
+or further uninformed bootstrap/relinearization parameter searches.
+
+Frozen default integration, same ELF/DSO reference and optimized, audit OFF:
+normal mean 296.281→296.444ms (-0.055% reduction); joint-order2 mean
+3448.477→3404.297ms (1.281% reduction, 1.013×). Both complete 35 attempts and
+PASS decision/coverage/risk/transaction/publication-binding comparison. No
+protected recovery observed: recovery_latency null/RIGHT_CENSORED; normal
+NO_FAULT_INPUT. Evidence accuracy_fde_integrated_20261009.json. Single paired
+measurement supports only a small potential saving, not a statistically
+established broad gain or the 50% target. No more timing repeats justified.
+
+Independent same-production-snapshot audit at attempts 10/12/32: 13 compared
+batches / 39 roots pass numeric/discrete/hypothesis/proof-payload and within-batch
+ranking comparison; 40 empty batches are explicitly NOT_RUN_NO_POST_PASSED_ROOTS.
+Raw PL batches total 15747.876→10513.445ms (33.24% reduction, diagnostic scope);
+714555 hypothesis products reuse 12645 unique mode products, with 2479 original
+fallback recomputations retained. This explains why candidate substage gain does
+not imply a 50% pipeline gain. Parent timing, counters and cache state include
+audit overhead and are excluded from production comparisons. Full diagnostic
+records retained; compact summary accuracy_fde_production_audit_20261009.json.
+
+Final disposition: a runnable, reproducible research integration is delivered;
+WP-A–F have implementations or explicit evidence-based stopping decisions.
+Walk <0.20m target, 50% FDE target, fully qualified O-local convergence, strict
+S0–S5 recovery snapshots and hardware/formal integrity qualification are NOT_MET
+or OPEN, never relabeled PASS. Stop additional blind tuning/repeats. The next
+research needs the frame/calibration and historical-root evidence described
+above, not relaxed safety gates. Original P1-06 FAIL and stale-calibration FAIL
+remain intact. User-owned requirements and old evidence remain untouched.

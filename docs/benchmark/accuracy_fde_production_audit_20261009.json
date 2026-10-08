@@ -1,0 +1,108 @@
+{
+  "diagnostic_execution": {
+    "command": [
+      "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/integrated_binary/bin/realtime_performance_benchmark",
+      "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order2.yaml",
+      "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/production_audit/run",
+      "35"
+    ],
+    "environment": {
+      "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/integrated_binary",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "UWB_IMU_PL_SCENARIO": "joint_recovery",
+      "UWB_IMU_PL_MODE_CACHE_AUDIT_ATTEMPTS": "10,12,32",
+      "UWB_IMU_PL_MODE_CACHE_AUDIT_DIR": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/production_audit/mode",
+      "UWB_IMU_PL_CARRIER_AUDIT_DIR": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_20261009/production_audit/carrier"
+    },
+    "exit_code": 0,
+    "wall_s": 152.96904711700336,
+    "binary_sha256": "aa08b44442c7827d30cec9d9bb4a6aed38328eb6be9f7e8cd8c9446f03e3004e",
+    "library_sha256": "88c8ae699da41ae587471d7a117f198cfa4cf6e77c6508bb4176ce40f8287152",
+    "diagnostics": true,
+    "timing_and_work_polluted": true
+  },
+  "statuses": {
+    "NOT_RUN_NO_POST_PASSED_ROOTS": 40,
+    "COMPARED": 13
+  },
+  "attempts": [
+    10,
+    12,
+    32
+  ],
+  "compared_roots": 39,
+  "all_compared_equivalent": true,
+  "raw_batches_reference_ms": 15747.875816,
+  "raw_batches_optimized_ms": 10513.445323,
+  "reference_exhaustive_products": 714555,
+  "optimized_unique_mode_products": 12645,
+  "optimized_cached_products": 714555,
+  "optimized_exhaustive_fallback_products": 2479,
+  "carrier_capture_status": "NOT_RUN_NO_200_BY_200_CARRIER_IN_35_ATTEMPTS",
+  "timing_scope": "batch PL diagnostic only; parent timers/counters/cache state polluted; no production total-latency claim",
+  "source_records": "results/accuracy_fde_20261009/production_audit/mode/attempt-*-batch-*.json",
+  "representative_batches": [
+    {
+      "attempt": 10,
+      "batch": 1,
+      "candidate_roots": 1,
+      "frozen_roots": 1,
+      "hypothesis_slots": 14700,
+      "status": "COMPARED",
+      "equivalent": true,
+      "ranking_equivalent": true,
+      "reference_wall_ms": 898.596941,
+      "optimized_wall_ms": 895.81715,
+      "reference_exhaustive_products": 0,
+      "optimized_unique_mode_products": 0,
+      "optimized_cached_products": 0,
+      "optimized_exhaustive_products": 0,
+      "optimized_retained_bytes": 0,
+      "audit_overhead_ms": 3102.543751,
+      "core_compute_includes_diagnostic_overhead": true,
+      "scope": "batch PL only; production decision is unchanged; cross-batch ranking requires full pipeline comparison"
+    },
+    {
+      "attempt": 12,
+      "batch": 1,
+      "candidate_roots": 1,
+      "frozen_roots": 0,
+      "hypothesis_slots": 19251,
+      "status": "COMPARED",
+      "equivalent": true,
+      "ranking_equivalent": true,
+      "reference_wall_ms": 422.886681,
+      "optimized_wall_ms": 276.933502,
+      "reference_exhaustive_products": 19251,
+      "optimized_unique_mode_products": 333,
+      "optimized_cached_products": 19251,
+      "optimized_exhaustive_products": 67,
+      "optimized_retained_bytes": 864024,
+      "audit_overhead_ms": 703.729615,
+      "core_compute_includes_diagnostic_overhead": true,
+      "scope": "batch PL only; production decision is unchanged; cross-batch ranking requires full pipeline comparison"
+    },
+    {
+      "attempt": 32,
+      "batch": 1,
+      "candidate_roots": 1,
+      "frozen_roots": 1,
+      "hypothesis_slots": 61104,
+      "status": "COMPARED",
+      "equivalent": true,
+      "ranking_equivalent": true,
+      "reference_wall_ms": 1187.990895,
+      "optimized_wall_ms": 1149.263391,
+      "reference_exhaustive_products": 0,
+      "optimized_unique_mode_products": 0,
+      "optimized_cached_products": 0,
+      "optimized_exhaustive_products": 0,
+      "optimized_retained_bytes": 0,
+      "audit_overhead_ms": 2350.54324,
+      "core_compute_includes_diagnostic_overhead": true,
+      "scope": "batch PL only; production decision is unchanged; cross-batch ranking requires full pipeline comparison"
+    }
+  ]
+}
