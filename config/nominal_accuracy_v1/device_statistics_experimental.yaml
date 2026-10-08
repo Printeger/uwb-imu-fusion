@@ -1,0 +1,22 @@
+# Sensor-residual and bias-stability selection; frozen before final GT evaluation.
+# This is an experimental overlay, not a recommended preset until all gates pass.
+estimation_tuning:
+  version: 1
+  causal_bootstrap: true
+  nominal_initial_guess: imu
+  nominal_lm_iterations: 5
+  nominal_lag_s: 5.0
+  nominal_robust_experimental: false
+incremental:
+  relinearize_threshold: 0.01
+
+# Same waveshare device across all Walk recordings. Pooled stationary statistics
+# in the first 2 seconds: density sqrt(mean(axis variance)*median_dt).
+# Rounded upward across the three recordings, without using ground truth.
+# Provisional: short recording statistics do not establish a noise overbound
+# or bias random-walk calibration. Existing random-walk settings are retained.
+devices:
+  SFUISE:
+    imu:
+      accelerometer_sigma: 0.0042
+      gyroscope_sigma: 0.0016

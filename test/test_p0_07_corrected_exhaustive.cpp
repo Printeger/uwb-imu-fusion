@@ -2659,9 +2659,16 @@ CompleteRawReference completeRawReference(
   out.protected_state_map = Eigen::MatrixXd::Zero(3, columns);
   out.protected_state_map.block<3, 3>(0, columns - 12) =
       tx.nominal_predicted_state.q_world_body.normalized().toRotationMatrix();
-  out.information = boundary_h.transpose() * eliminate_old * boundary_h;
-  out.rhs = boundary_h.transpose() * eliminate_old * history_z;
-  out.constant = history_z.dot(eliminate_old * history_z) + history_offset;
+  // Form the same Schur quadratic through an orthogonal complement. Avoid
+  // subtracting nearly equal matrices (I-UU') with the smaller, explicit IMU
+  // covariance; that cancellation is magnified by the covariance inverse.
+  const Eigen::JacobiSVD<Eigen::MatrixXd> history_full_svd(old_h, Eigen::ComputeFullU);
+  const Eigen::MatrixXd complement = history_full_svd.matrixU().rightCols(history_rows-old_rank);
+  const Eigen::MatrixXd projected_boundary = complement.transpose()*boundary_h;
+  const Eigen::VectorXd projected_history = complement.transpose()*history_z;
+  out.information = projected_boundary.transpose()*projected_boundary;
+  out.rhs = projected_boundary.transpose()*projected_history;
+  out.constant = projected_history.squaredNorm() + history_offset;
   out.unique_raw_rows = static_cast<std::size_t>(history_rows - old_rank);
   {
     const OracleHistorySummary retained_summary = oracleHistorySummary(

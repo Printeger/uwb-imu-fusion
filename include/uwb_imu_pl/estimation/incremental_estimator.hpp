@@ -203,6 +203,8 @@ class IncrementalUwbImuEstimator {
   std::uint32_t retainedEpochs() const;
   std::uint64_t marginalizationCount() const { return marginalization_count_; }
   std::size_t oldestRetainedEpoch() const;
+  // Optional diagnostic export; no backend updates, no new object members.
+  std::vector<NavigationState> retainedSmoothedStatesV1() const;
   double globalGraphResidualStatistic() const;
   bool globalDiagnosticsEnabled() const {
     return config_.output.write_global_diagnostics;

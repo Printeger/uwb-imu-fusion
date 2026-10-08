@@ -1,0 +1,16 @@
+schema: uwb-imu-benchmark/v1
+dataset: own_vicon
+data_root: ../../data/own_vicon
+format: rosbag_own_vicon
+sequences:
+  - {id: 2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle, path: 2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag, timing_representative: true}
+  - {id: 2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle, path: 2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle.bag, recover_unindexed_copy: true}
+  - {id: 2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle, path: 2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle.bag, recover_unindexed_copy: true}
+imu: {topic: /livox/imu, acceleration_scale: 9.80665, acceleration_unit: g, gyro_scale: 1.0, gyro_unit: radps, frame: livox_frame}
+uwb: {topic: /nlink_linktrack_nodeframe3, range_field: "nodes[].dis", sigma_m: 0.20, epoch_batch_window_s: 0.0, tag_id: 0, lever_arm_body_m: [0.0, 0.0, 0.0]}
+anchors: {source_topics: "/vrpn_client_node/tas_uwb_{id}/pose", ids: [1, 2, 3, 4], aggregation: component_median}
+ground_truth: {topic: /vrpn_client_node/tas_uwb_0/pose, reference: uwb_tag0, frame: world}
+time: {source: header_stamp, offset_s: 0.0}
+primary_tag: 0
+bootstrap: {prefer_below_anchor_median: true, source: known_ground_robot_geometry}
+calibration: {policy: fit_missing_only_joint_family, label: GT-assisted_interface_calibration, seed: approximate_colocated_identity}

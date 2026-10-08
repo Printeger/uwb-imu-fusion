@@ -126,3 +126,32 @@ data/*.bag
 /doc/review/artifact_validation.json
 /doc/review/review_math_oracles.json
 /doc/review/review_math_oracles.py
+
+# Benchmark transport: keep source, configs, compact metrics and report figures.
+# Raw datasets, cached arrays, trajectories, binaries and logs stay local.
+/cache/
+/datasets/
+/benchmark/cache/
+/benchmark/results/
+/benchmark/build/
+/benchmark/devel/
+/benchmark/install/
+/benchmark/logs/
+
+# C++/CMake products, including standalone benchmark builds.
+*.o
+*.a
+*.so
+*.so.*
+/install/
+/install_isolated/
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+
+# Additional raw sensor recording formats (report PNG/JSON/CSV remain tracked).
+*.bag.active
+*.db3
+*.db3-shm
+*.db3-wal
+*.mcap

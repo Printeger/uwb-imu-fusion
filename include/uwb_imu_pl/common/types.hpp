@@ -55,12 +55,14 @@ class StrongId {
 };
 
 struct AnchorIdTag {};
+struct TagIdTag {};
 struct MeasurementIdTag {};
 struct FactorIdTag {};
 struct StateIdTag {};
 struct HypothesisIdTag {};
 struct BatchIdTag {};
 using AnchorId = StrongId<AnchorIdTag>;
+using TagId = StrongId<TagIdTag>;
 using MeasurementId = StrongId<MeasurementIdTag>;
 using FactorId = StrongId<FactorIdTag>;
 using StateId = StrongId<StateIdTag>;
@@ -81,9 +83,17 @@ struct UwbMeasurement {
   MeasurementId id;
   FactorId factor_id;
   AnchorId anchor_id;
+  // Physical mobile radio that produced this observation.  A zero value is
+  // the legacy/unknown tag and keeps the estimator's configured global lever
+  // arm behavior.
+  TagId tag_id;
   TimestampNs timestamp;
   double range_m = 0.0;
   Eigen::Vector3d anchor_position_m = Eigen::Vector3d::Zero();
+  // Dataset adapters set this for multi-tag rigs.  Realtime callers that do
+  // not provide it retain the estimator-wide lever arm passed to the
+  // IncrementalUwbImuEstimator constructor.
+  std::optional<Eigen::Vector3d> lever_arm_body_m;
   double sigma_m = 0.0;
   std::uint64_t sequence = 0;
   std::uint32_t quality_flags = 0;

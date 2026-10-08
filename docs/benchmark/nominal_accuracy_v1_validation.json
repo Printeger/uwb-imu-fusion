@@ -1,0 +1,15 @@
+{
+  "schema": "nominal-accuracy-validation/v1",
+  "new_cpp_tests": {"passed": 11, "total": 11},
+  "final_ctest": {"passed": 32, "total": 37, "failed": [
+    "test_p0_07_process_oracle", "test_p0_07_leaf_protocol",
+    "test_p0_07_evidence_runner", "test_p0_07_evidence_runner_atomic_failure",
+    "test_simulation_calibrations"
+  ]},
+  "cpp_fde_dense_history_publication_fault_injection_and_old_abi_layout": "PASS",
+  "frozen_numerical_evidence_migration": "NOT_COMPLETE; preserved old evidence rather than rewriting expected values",
+  "preexisting_failure": "simulation calibration manifest: stale simulation_model source sha256",
+  "current_process_isolated_fde_revalidation": {"status": "PASS", "records": 3024, "available": 2499, "tolerances_changed": false, "statistical_recipe_changed": false},
+  "old_frozen_observed_winner_compared_in_current_revalidation": false,
+  "regression_gate_all_green": false
+}

@@ -1,0 +1,303 @@
+{
+  "schema": "uwb-imu-accuracy-timing-summary/v1",
+  "generated_by": "tools/run_dataset_benchmark.py report",
+  "method_counts": {
+    "current": {
+      "total": 40,
+      "eligible": 36
+    },
+    "sfuise": {
+      "total": 40,
+      "eligible": 33
+    },
+    "current_all_tags": {
+      "total": 11,
+      "eligible": 10
+    }
+  },
+  "preflight": {
+    "status": "PASS",
+    "expected": 40,
+    "observed": 40
+  },
+  "family_summary": [
+    {
+      "dataset": "HUEC",
+      "method": "current",
+      "sequences": 5,
+      "equal_sequence_ape_rmse_mean": 1309.7956124681962,
+      "pooled_ape_rmse": 1986.1334313309935,
+      "equal_sequence_rpe_rmse_mean": 1773.905132728181,
+      "pooled_rpe_rmse": 2675.9034885566007
+    },
+    {
+      "dataset": "HUEC",
+      "method": "sfuise",
+      "sequences": 7,
+      "equal_sequence_ape_rmse_mean": 25.042193801984272,
+      "pooled_ape_rmse": 46.96674155147782,
+      "equal_sequence_rpe_rmse_mean": 2.8540996465563997,
+      "pooled_rpe_rmse": 3.8919619585562013
+    },
+    {
+      "dataset": "MILUV",
+      "method": "current",
+      "sequences": 2,
+      "equal_sequence_ape_rmse_mean": 0.9960404665176427,
+      "pooled_ape_rmse": 1.013620552159106,
+      "equal_sequence_rpe_rmse_mean": 1.0770173010978654,
+      "pooled_rpe_rmse": 1.0720547845859838
+    },
+    {
+      "dataset": "SFUISE",
+      "method": "current",
+      "sequences": 3,
+      "equal_sequence_ape_rmse_mean": 0.5916324525354301,
+      "pooled_ape_rmse": 0.6395003458328539,
+      "equal_sequence_rpe_rmse_mean": 0.9890757683744963,
+      "pooled_rpe_rmse": 1.0462089705378967
+    },
+    {
+      "dataset": "SFUISE",
+      "method": "sfuise",
+      "sequences": 3,
+      "equal_sequence_ape_rmse_mean": 0.1435355379608907,
+      "pooled_ape_rmse": 0.1434423945971477,
+      "equal_sequence_rpe_rmse_mean": 0.5784601220434314,
+      "pooled_rpe_rmse": 0.5733457011637304
+    },
+    {
+      "dataset": "own_vicon",
+      "method": "current",
+      "sequences": 3,
+      "equal_sequence_ape_rmse_mean": 1.0358358564094596,
+      "pooled_ape_rmse": 1.1950058499816547,
+      "equal_sequence_rpe_rmse_mean": 0.36659781882332165,
+      "pooled_rpe_rmse": 0.5255185732745036
+    },
+    {
+      "dataset": "own_vicon",
+      "method": "sfuise",
+      "sequences": 3,
+      "equal_sequence_ape_rmse_mean": 0.9843134493833002,
+      "pooled_ape_rmse": 1.1359539353013104,
+      "equal_sequence_rpe_rmse_mean": 0.22240657823311819,
+      "pooled_rpe_rmse": 0.4249770357327882
+    },
+    {
+      "dataset": "simulation",
+      "method": "current",
+      "sequences": 1,
+      "equal_sequence_ape_rmse_mean": 0.09913565087610601,
+      "pooled_ape_rmse": 0.09913565087610601,
+      "equal_sequence_rpe_rmse_mean": 1.1425626055235005,
+      "pooled_rpe_rmse": 1.1425626055235005
+    },
+    {
+      "dataset": "simulation",
+      "method": "sfuise",
+      "sequences": 1,
+      "equal_sequence_ape_rmse_mean": 0.28369878151151645,
+      "pooled_ape_rmse": 0.28369878151151645,
+      "equal_sequence_rpe_rmse_mean": 0.2299619629955945,
+      "pooled_rpe_rmse": 0.2299619629955945
+    },
+    {
+      "dataset": "starloc",
+      "method": "current",
+      "sequences": 22,
+      "equal_sequence_ape_rmse_mean": 1.1523602947124052,
+      "pooled_ape_rmse": 2.3289900632260316,
+      "equal_sequence_rpe_rmse_mean": 1.78730305601377,
+      "pooled_rpe_rmse": 3.403297197113026
+    },
+    {
+      "dataset": "starloc",
+      "method": "sfuise",
+      "sequences": 19,
+      "equal_sequence_ape_rmse_mean": 12363.048390209447,
+      "pooled_ape_rmse": 18917.993109023544,
+      "equal_sequence_rpe_rmse_mean": 429.94403126742833,
+      "pooled_rpe_rmse": 528.9894565563334
+    }
+  ],
+  "paired_current_minus_sfuise_ape_rmse_m": [
+    {
+      "dataset": "HUEC",
+      "sequence": "LOS_Trajectory_A_Case_1",
+      "delta_m": 3129.812599403631
+    },
+    {
+      "dataset": "HUEC",
+      "sequence": "LOS_Trajectory_B_Case_3",
+      "delta_m": 832.5463068887007
+    },
+    {
+      "dataset": "HUEC",
+      "sequence": "NLOS_Trajectory_A_Case_2",
+      "delta_m": 2392.7106948721007
+    },
+    {
+      "dataset": "HUEC",
+      "sequence": "NLOS_Trajectory_B_Case_3",
+      "delta_m": 72.91229700211207
+    },
+    {
+      "dataset": "HUEC",
+      "sequence": "NLOS_Trajectory_B_Case_4",
+      "delta_m": 18.858926731889554
+    },
+    {
+      "dataset": "SFUISE",
+      "sequence": "ISAS-Walk1",
+      "delta_m": 0.9003200058928698
+    },
+    {
+      "dataset": "SFUISE",
+      "sequence": "ISAS-Walk2",
+      "delta_m": 0.11885423309412782
+    },
+    {
+      "dataset": "SFUISE",
+      "sequence": "ISAS-Walk3",
+      "delta_m": 0.3251165047366205
+    },
+    {
+      "dataset": "own_vicon",
+      "sequence": "2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle",
+      "delta_m": 0.05157330904731383
+    },
+    {
+      "dataset": "own_vicon",
+      "sequence": "2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle",
+      "delta_m": 0.059359800153717446
+    },
+    {
+      "dataset": "own_vicon",
+      "sequence": "2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle",
+      "delta_m": 0.04363411187744737
+    },
+    {
+      "dataset": "simulation",
+      "sequence": "figure_eight_nominal_seed_20260901",
+      "delta_m": -0.18456313063541044
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "apriltag_s3",
+      "delta_m": -21327.810077448405
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "eight_s2",
+      "delta_m": -3109.9861867469253
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "eight_s3",
+      "delta_m": -11263.37035148884
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "ell_s3",
+      "delta_m": -25048.306773923752
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "grid_s3",
+      "delta_m": -6169.455501160989
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-2d-fast_s1",
+      "delta_m": -1446.7226723771353
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-2d-fast_s2",
+      "delta_m": -1809.9698080139744
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-2d-v2_s5",
+      "delta_m": -10540.250863018317
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-2d_s1",
+      "delta_m": -5968.9607975276585
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-2d_s2",
+      "delta_m": -13374.909537168183
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-2d_s3",
+      "delta_m": -19514.58700624404
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-2d_s5",
+      "delta_m": -6076.807378376701
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-3d-z_s3",
+      "delta_m": -17394.62769970415
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-3d_s1",
+      "delta_m": -12423.046787459947
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-3d_s2",
+      "delta_m": -8089.257207104965
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-3d_s5",
+      "delta_m": -1705.1677462146308
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "zigzag_s2",
+      "delta_m": -10149.955767502446
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "zigzag_s3",
+      "delta_m": -27715.58167233546
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "zigzag_s4",
+      "delta_m": -31745.03104992488
+    }
+  ],
+  "equivalence": {
+    "schema": "nominal-realtime-equivalence/v1",
+    "status": "FAIL",
+    "reason": "numeric mismatch, max dt=1.4210854715202004e-14",
+    "direct_samples": 2421,
+    "realtime_samples": 2421,
+    "max_tag_position_difference_m": 0.29254758015691174,
+    "max_orientation_difference_deg": 179.96417722377464,
+    "position_tolerance_m": 1e-05,
+    "rotation_tolerance_deg": 1e-05,
+    "fde_profile": "off",
+    "truth_topics_published": 0,
+    "forbidden_truth_subscriptions": [],
+    "playback_rate": 20.0,
+    "wall_s": 13.893688641001063
+  },
+  "artifacts": {
+    "sequence_metrics_csv": "sequence_metrics.csv",
+    "sequence_metrics_json": "sequence_metrics.json",
+    "report": "uwb_imu_accuracy_timing_report.md",
+    "figures": "figures/"
+  }
+}

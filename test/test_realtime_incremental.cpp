@@ -195,6 +195,49 @@ TEST(RealtimeFactors, NonzeroLeverArmRangeJacobianMatchesCentralDifference) {
   }
 }
 
+TEST(RealtimeFactors, PerMeasurementTagLeverOverridesLegacyGlobalLever) {
+  const gtsam::Pose3 pose(gtsam::Rot3::RzRyRx(0.3, -0.2, 0.1),
+                          gtsam::Point3(0.5, -1.0, 2.0));
+  const Eigen::Vector3d legacy_lever(9.0, 9.0, 9.0);
+  const std::array<Eigen::Vector3d, 2> tag_levers = {
+      Eigen::Vector3d(0.2, -0.1, 0.05),
+      Eigen::Vector3d(-0.15, 0.18, 0.04)};
+  uwb_imu_pl::UwbBatch batch;
+  batch.id = uwb_imu_pl::BatchId(1);
+  batch.timestamp = uwb_imu_pl::TimestampNs(10000000);
+  batch.covariance_model_id = "multi_tag_diagonal";
+  const std::array<Eigen::Vector3d, 2> anchors = {
+      Eigen::Vector3d(-3.0, 2.0, 1.0),
+      Eigen::Vector3d(4.0, -2.0, 3.0)};
+  for (std::size_t i = 0; i < anchors.size(); ++i) {
+    uwb_imu_pl::UwbMeasurement measurement;
+    measurement.id = uwb_imu_pl::MeasurementId(i + 1);
+    measurement.factor_id = uwb_imu_pl::FactorId(i + 1);
+    measurement.anchor_id = uwb_imu_pl::AnchorId(i + 1);
+    measurement.tag_id = uwb_imu_pl::TagId(10 + i);
+    measurement.timestamp = batch.timestamp;
+    measurement.anchor_position_m = anchors[i];
+    measurement.lever_arm_body_m = tag_levers[i];
+    measurement.range_m =
+        (pose.transformFrom(tag_levers[i]) - anchors[i]).norm();
+    measurement.sigma_m = 0.1;
+    batch.measurements.push_back(measurement);
+  }
+  uwb_imu_pl::UwbPoseBatchFactor factor(gtsam::Symbol('x', 0), batch,
+                                        legacy_lever);
+  gtsam::Matrix analytic;
+  EXPECT_TRUE(factor.evaluateError(pose, analytic).isZero(1e-12));
+  constexpr double kEpsilon = 1e-6;
+  for (int column = 0; column < 6; ++column) {
+    gtsam::Vector6 delta = gtsam::Vector6::Zero();
+    delta(column) = kEpsilon;
+    const Eigen::VectorXd numerical =
+        (factor.evaluateError(pose.retract(delta)) -
+         factor.evaluateError(pose.retract(-delta))) / (2.0 * kEpsilon);
+    EXPECT_TRUE(analytic.col(column).isApprox(numerical, 1e-7));
+  }
+}
+
 TEST(RealtimeFactors, P106FullTrajectoryBreaksSingleEpochLeverNullDirection) {
   // This is the complete frozen synthetic model, not the isolated per-epoch
   // UWB rotational block: initial pose/velocity/bias priors, gravity-aware
@@ -702,6 +745,8 @@ TEST(UwbImuIncremental, FiveSecondIsamMatchesBatchPoseAndMarginal) {
       std::pow(cfg.imu.accelerometer_bias_rw_sigma, 2);
   params->biasOmegaCovariance = Eigen::Matrix3d::Identity() *
       std::pow(cfg.imu.gyroscope_bias_rw_sigma, 2);
+  // Match the explicit bias-integration covariance of this independent graph.
+  params->biasAccOmegaInt = sigmas.tail<6>().array().square().matrix().asDiagonal();
 
   uwb_imu_pl::ImuMeasurement boundary;
   boundary.timestamp = initial.timestamp;

@@ -1,0 +1,11 @@
+# Sensor-residual and bias-stability selection; frozen before final GT evaluation.
+# This is an experimental overlay, not a recommended preset until all gates pass.
+estimation_tuning:
+  version: 1
+  causal_bootstrap: true
+  nominal_initial_guess: imu
+  nominal_lm_iterations: 5
+  nominal_lag_s: 5.0
+  nominal_robust_experimental: false
+incremental:
+  relinearize_threshold: 0.01

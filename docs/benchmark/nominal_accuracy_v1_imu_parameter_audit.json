@@ -1,0 +1,1488 @@
+{
+  "schema": "nominal-imu-sensor-statistics/v1",
+  "ground_truth_used": false,
+  "density_conversion_assumption": "independent_white_samples; variance_density = sample_variance * dt",
+  "bias_integration_fallback": "diagonal initialization bias prior covariance; never implicit I6",
+  "records": [
+    {
+      "dataset": "HUEC",
+      "sequence": "LOS_Trajectory_A_Case_1",
+      "source_sha256": "1acb4454a0fe4a738ad18aa557eccc21a151bc1f756e21b2490a053b632c8166",
+      "samples": 400,
+      "window_start_s": 0.11483931541442871,
+      "window_end_s": 2.1099817752838135,
+      "median_dt_s": 0.0049953460693359375,
+      "gyro_rms_radps": 0.002228221072329467,
+      "accel_std_mps2": 0.07181825000912187,
+      "accel_norm_error_mps2": 0.027381780881778894,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.05787275888572804,
+        0.032372694022807624,
+        0.027579222161489517
+      ],
+      "gyro_sample_std_radps": [
+        0.000775300328202012,
+        0.001142272212082645,
+        0.0017470374974117612
+      ],
+      "provisional_white_accel_density": 0.0029306029438914004,
+      "provisional_white_gyro_density": 9.086071363939887e-05,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.02,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "HUEC",
+      "sequence": "LOS_Trajectory_A_Case_2",
+      "source_sha256": "cd109e0dcdb77bd1a852dfd17cb8e436f396e8295558909937c8d22e1d57590d",
+      "samples": 400,
+      "window_start_s": 0.0713808536529541,
+      "window_end_s": 2.0668246746063232,
+      "median_dt_s": 0.004994869232177734,
+      "gyro_rms_radps": 0.002880197324221677,
+      "accel_std_mps2": 0.16114730289937576,
+      "accel_norm_error_mps2": 0.08191804266293268,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.13080102339170607,
+        0.08302100049472412,
+        0.04435153873633402
+      ],
+      "gyro_sample_std_radps": [
+        0.0009164579561443264,
+        0.0013459352721234702,
+        0.002299756620515581
+      ],
+      "provisional_white_accel_density": 0.006575434790553914,
+      "provisional_white_gyro_density": 0.00011497948708843297,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.02,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "HUEC",
+      "sequence": "LOS_Trajectory_B_Case_3",
+      "source_sha256": "40b095b4d4cd60d37b464b49bd6280991e9573517c793febed7118cfb1673752",
+      "samples": 400,
+      "window_start_s": 0.14917588233947754,
+      "window_end_s": 2.144733190536499,
+      "median_dt_s": 0.004996299743652344,
+      "gyro_rms_radps": 0.0025452190724712925,
+      "accel_std_mps2": 0.096551113144411,
+      "accel_norm_error_mps2": 0.0567197420482195,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.07921012590385876,
+        0.048148418885664,
+        0.027011167367041594
+      ],
+      "gyro_sample_std_radps": [
+        0.0008218211782729518,
+        0.001362010296678538,
+        0.001986521217634432
+      ],
+      "provisional_white_accel_density": 0.0039402238947746126,
+      "provisional_white_gyro_density": 0.0001038583613563173,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.02,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "HUEC",
+      "sequence": "LOS_Trajectory_B_Case_4",
+      "source_sha256": "2ccc6c5318e623eb1f4f29af04c62fd2228f5596f42bb3c8261f4502a406807f",
+      "samples": 400,
+      "window_start_s": 0.0,
+      "window_end_s": 1.9950640201568604,
+      "median_dt_s": 0.004990577697753906,
+      "gyro_rms_radps": 0.0039377544786801675,
+      "accel_std_mps2": 0.14727955003595225,
+      "accel_norm_error_mps2": 0.08089143118992581,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.1035509331875725,
+        0.07916311100458026,
+        0.06856873887459183
+      ],
+      "gyro_sample_std_radps": [
+        0.0016742052465145742,
+        0.0023640792327553847,
+        0.0026622751683668113
+      ],
+      "provisional_white_accel_density": 0.006006994468421538,
+      "provisional_white_gyro_density": 0.00016046999881567117,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.02,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "HUEC",
+      "sequence": "NLOS_Trajectory_A_Case_1",
+      "source_sha256": "5d42f1e5238c1f779a9afc429838b236864a2eeccc5eba823157f489e1aa16c3",
+      "samples": 401,
+      "window_start_s": 0.11723446846008301,
+      "window_end_s": 2.116656541824341,
+      "median_dt_s": 0.0049932003021240234,
+      "gyro_rms_radps": 0.0034591367135862372,
+      "accel_std_mps2": 0.08730136733044859,
+      "accel_norm_error_mps2": 0.05071877607401909,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.055024586718912735,
+        0.052016874901254465,
+        0.04345190812479944
+      ],
+      "gyro_sample_std_radps": [
+        0.0011424821047153226,
+        0.0013733766820351672,
+        0.002871728456681133
+      ],
+      "provisional_white_accel_density": 0.0035616391168514765,
+      "provisional_white_gyro_density": 0.00013797764230765851,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.02,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "HUEC",
+      "sequence": "NLOS_Trajectory_A_Case_2",
+      "source_sha256": "a4ef738be264b5a36c5f22ace9edaf88865776a07d7b3994d2f07c88fafb7d25",
+      "samples": 400,
+      "window_start_s": 0.0,
+      "window_end_s": 1.9954769611358643,
+      "median_dt_s": 0.0050013065338134766,
+      "gyro_rms_radps": 0.001394011079810048,
+      "accel_std_mps2": 0.02522538144501287,
+      "accel_norm_error_mps2": 0.0840298772187591,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.012141259395940096,
+        0.013047157677046495,
+        0.017851648827970554
+      ],
+      "gyro_sample_std_radps": [
+        0.0007192079164460056,
+        0.0007471238405681351,
+        0.0006989765829786665
+      ],
+      "provisional_white_accel_density": 0.0010299564260454733,
+      "provisional_white_gyro_density": 5.1062559887955524e-05,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.02,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "HUEC",
+      "sequence": "NLOS_Trajectory_B_Case_3",
+      "source_sha256": "7ab7e0e16a9243b9f00b4efe1f57f8033d406f6ccd96eb1548c67bce17a25999",
+      "samples": 400,
+      "window_start_s": 0.06578397750854492,
+      "window_end_s": 2.0603551864624023,
+      "median_dt_s": 0.00499415397644043,
+      "gyro_rms_radps": 0.0015865966022836496,
+      "accel_std_mps2": 0.03324249547435936,
+      "accel_norm_error_mps2": 0.05435906329666729,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.02266801341446825,
+        0.014638184245071085,
+        0.01941515478206761
+      ],
+      "gyro_sample_std_radps": [
+        0.0006985031251137961,
+        0.0008659435436090302,
+        0.001129743392184431
+      ],
+      "provisional_white_accel_density": 0.0013563255876972461,
+      "provisional_white_gyro_density": 6.469345006393276e-05,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.02,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "HUEC",
+      "sequence": "NLOS_Trajectory_B_Case_4",
+      "source_sha256": "26a776b48c28c59d9ecf8bd65012eeabc2003f8cf92eb772982d57ada6cb1a7d",
+      "samples": 401,
+      "window_start_s": 0.11854791641235352,
+      "window_end_s": 2.1179349422454834,
+      "median_dt_s": 0.004995465278625488,
+      "gyro_rms_radps": 0.0013233929986309547,
+      "accel_std_mps2": 0.029276228212559,
+      "accel_norm_error_mps2": 0.08190609218151579,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.012265251757610791,
+        0.017508608507535738,
+        0.020002743956920213
+      ],
+      "gyro_sample_std_radps": [
+        0.000778470453267548,
+        0.0007353803885620734,
+        0.0007121342981999787
+      ],
+      "provisional_white_accel_density": 0.0011946549004129413,
+      "provisional_white_gyro_density": 5.247913543401482e-05,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.02,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "MILUV",
+      "sequence": "cirObstacles_1_random3_0",
+      "source_sha256": "c6f471e81e1cb53756622a169763d503626309ded4a43fd055615e89c2c10837",
+      "samples": 386,
+      "window_start_s": 0.0,
+      "window_end_s": 1.996793508529663,
+      "median_dt_s": 0.004010915756225586,
+      "gyro_rms_radps": 0.0020856450768709854,
+      "accel_std_mps2": 0.024323135605158665,
+      "accel_norm_error_mps2": 0.003805425794917383,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.010062150663397777,
+        0.009556761200941013,
+        0.019975894599296662
+      ],
+      "gyro_sample_std_radps": [
+        0.0012453291632970008,
+        0.0011980837649250555,
+        0.0011569499103243448
+      ],
+      "provisional_white_accel_density": 0.0008893663712583522,
+      "provisional_white_gyro_density": 7.604020511707272e-05,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.04000477655029297,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "MILUV",
+      "sequence": "default_1_circular3D_0",
+      "source_sha256": "4874f2c6333fc53a975f7b7ceb0320814b348f6739201a3da57fed195edfecd0",
+      "samples": 388,
+      "window_start_s": 0.0,
+      "window_end_s": 1.9960200786590576,
+      "median_dt_s": 0.004014015197753906,
+      "gyro_rms_radps": 0.002074830851501084,
+      "accel_std_mps2": 0.02275232308285058,
+      "accel_norm_error_mps2": 0.0009457336534541838,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.009985885651226423,
+        0.010393408832372561,
+        0.01760475351347486
+      ],
+      "gyro_sample_std_radps": [
+        0.0012329655764431696,
+        0.0011930225307211185,
+        0.0011313934560833482
+      ],
+      "provisional_white_accel_density": 0.0008322515735319031,
+      "provisional_white_gyro_density": 7.517407819368804e-05,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.03998308045959473,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "MILUV",
+      "sequence": "default_1_random3_0",
+      "source_sha256": "1dcc279ee8faf793e3a597bb3daf947eb406e02d76a285f4873eb1b628249f86",
+      "samples": 394,
+      "window_start_s": 0.0,
+      "window_end_s": 1.9991848468780513,
+      "median_dt_s": 0.004014015197753906,
+      "gyro_rms_radps": 0.002069954823271889,
+      "accel_std_mps2": 0.023918531761128806,
+      "accel_norm_error_mps2": 0.0006176855596020658,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.009815055014889827,
+        0.009863819593363557,
+        0.01945420056677711
+      ],
+      "gyro_sample_std_radps": [
+        0.001242193285325368,
+        0.0011876625804778265,
+        0.0011353404090933801
+      ],
+      "provisional_white_accel_density": 0.000874910031045421,
+      "provisional_white_gyro_density": 7.534321090901623e-05,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.043999003005981446,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "SFUISE",
+      "sequence": "ISAS-Walk1",
+      "source_sha256": "64e0cf52190e3c1b810ed508a4721a7c736f3e21362adbafa13721f3f9204d89",
+      "samples": 165,
+      "window_start_s": 3.5742156505584717,
+      "window_end_s": 5.562164306640625,
+      "median_dt_s": 0.012112617492675781,
+      "gyro_rms_radps": 0.024362011736150328,
+      "accel_std_mps2": 0.05598963521343064,
+      "accel_norm_error_mps2": 0.17164505134313757,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.03204350292914732,
+        0.04007620145847917,
+        0.022404268522363116
+      ],
+      "gyro_sample_std_radps": [
+        0.008361547740429557,
+        0.014236603851565043,
+        0.013774646815886759
+      ],
+      "provisional_white_accel_density": 0.003557672870122787,
+      "provisional_white_gyro_density": 0.0013662740623629974,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.021365450454711915,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "SFUISE",
+      "sequence": "ISAS-Walk2",
+      "source_sha256": "b2c7a2baff2b546559cdc4c9bb8cf12899b4bb072c5db13b5d682e27953ef349",
+      "samples": 165,
+      "window_start_s": 2.4274559020996094,
+      "window_end_s": 4.415438890457153,
+      "median_dt_s": 0.012114286422729492,
+      "gyro_rms_radps": 0.027374943932737723,
+      "accel_std_mps2": 0.05076324524688535,
+      "accel_norm_error_mps2": 0.15823888143844123,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.02542544783464466,
+        0.03633519260011142,
+        0.024702377398056235
+      ],
+      "gyro_sample_std_radps": [
+        0.01003038552590647,
+        0.01703183384279233,
+        0.014502856550997777
+      ],
+      "provisional_white_accel_density": 0.0032258017249697105,
+      "provisional_white_gyro_density": 0.0015578818024748298,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.02,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "SFUISE",
+      "sequence": "ISAS-Walk3",
+      "source_sha256": "b20c33ef07e068643c6e14919b2b6ca392e82982e15f5bccaef918be46df3d51",
+      "samples": 165,
+      "window_start_s": 2.483362913131714,
+      "window_end_s": 4.471258878707886,
+      "median_dt_s": 0.012114524841308594,
+      "gyro_rms_radps": 0.022833328040569794,
+      "accel_std_mps2": 0.06584123300438785,
+      "accel_norm_error_mps2": 0.1694965646427935,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.034963083670158546,
+        0.04867537064053608,
+        0.027264611437136283
+      ],
+      "gyro_sample_std_radps": [
+        0.007897524557996558,
+        0.01372874541657908,
+        0.014035767489800463
+      ],
+      "provisional_white_accel_density": 0.00418398886761757,
+      "provisional_white_gyro_density": 0.0013448067468220218,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.02,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "own_vicon",
+      "sequence": "2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle",
+      "source_sha256": "9de3268aba3ee2088577d348b3e0805edf2cd39ada2b3ec9f8d18941dcf9bd11",
+      "samples": 401,
+      "window_start_s": 0.0031147003915578584,
+      "window_end_s": 2.0029413700845504,
+      "median_dt_s": 0.004766702651977539,
+      "gyro_rms_radps": 0.015319377086533048,
+      "accel_std_mps2": 0.18789719150197726,
+      "accel_norm_error_mps2": 0.10218963695541561,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.05639757119515243,
+        0.03624612191693122,
+        0.17553030275026985
+      ],
+      "gyro_sample_std_radps": [
+        0.005551563440526746,
+        0.0012302864427474846,
+        0.0007446877057937502
+      ],
+      "provisional_white_accel_density": 0.007489773634284496,
+      "provisional_white_gyro_density": 0.0002285952883796135,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.02,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "own_vicon",
+      "sequence": "2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle",
+      "source_sha256": "e935d2c333296b23dcff73257942de6c405db0278e8714efc543bc5dec12a8bf",
+      "samples": 401,
+      "window_start_s": 0.0031147003915578584,
+      "window_end_s": 2.003081083371905,
+      "median_dt_s": 0.004988431930541881,
+      "gyro_rms_radps": 0.01716429046025473,
+      "accel_std_mps2": 0.20535661197329377,
+      "accel_norm_error_mps2": 0.10769793267433059,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.0577027165007985,
+        0.02942985559260133,
+        0.1948733388367353
+      ],
+      "gyro_sample_std_radps": [
+        0.004851343787801907,
+        0.0013333799992401687,
+        0.0007692102561031283
+      ],
+      "provisional_white_accel_density": 0.00837394469844181,
+      "provisional_white_gyro_density": 0.00020754593361085286,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.02,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "own_vicon",
+      "sequence": "2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle",
+      "source_sha256": "14efe684c73c7f46672ca364a14fa85a60d8e6e9d5b8906da502103bb6de710c",
+      "samples": 400,
+      "window_start_s": 0.0031147003915578584,
+      "window_end_s": 1.9975950718667779,
+      "median_dt_s": 0.004905223846435498,
+      "gyro_rms_radps": 0.017277077995219402,
+      "accel_std_mps2": 0.20441978727348573,
+      "accel_norm_error_mps2": 0.10761008091250801,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.05301802266153708,
+        0.028847629629932627,
+        0.1953057934796921
+      ],
+      "gyro_sample_std_radps": [
+        0.004930623523592773,
+        0.0014247323192717518,
+        0.0007270493697855092
+      ],
+      "provisional_white_accel_density": 0.008265929942048061,
+      "provisional_white_gyro_density": 0.00020960356832710117,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.02,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "simulation",
+      "sequence": "figure_eight_nominal_seed_20260901",
+      "source_sha256": "9cf3f9f5bf9dea1ca1dbdace4ac307ba9124adf8d2c9e8e61b1a06912904b720",
+      "samples": 401,
+      "window_start_s": 0.0,
+      "window_end_s": 2.0,
+      "median_dt_s": 0.0050000000000000044,
+      "gyro_rms_radps": 0.0,
+      "accel_std_mps2": 7.105427357601002e-15,
+      "accel_norm_error_mps2": 7.105427357601002e-15,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.0,
+        0.0,
+        7.105427357601002e-15
+      ],
+      "gyro_sample_std_radps": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "provisional_white_accel_density": 2.9007785717557737e-16,
+      "provisional_white_gyro_density": 0.0,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.02,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "apriltag_s3",
+      "source_sha256": "23354dd3c261cfcd62859efe3ee8b1eab951d34b32029dc8432f254609a2c357",
+      "samples": 221,
+      "window_start_s": 1.43538838,
+      "window_end_s": 3.4306959,
+      "median_dt_s": 0.004945149999999954,
+      "gyro_rms_radps": 0.225145868963706,
+      "accel_std_mps2": 0.5471648069626867,
+      "accel_norm_error_mps2": 0.05681598249531383,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.39365727128713246,
+        0.33332314355442794,
+        0.18253482054741618
+      ],
+      "gyro_sample_std_radps": [
+        0.18277287253452176,
+        0.08888562516302925,
+        0.04083928930726403
+      ],
+      "provisional_white_accel_density": 0.022215048393394925,
+      "provisional_white_gyro_density": 0.008416550699435563,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.03708848000000006,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "eight_s2",
+      "source_sha256": "7ffa70ff02fbaaccb51e8b3de5047bc4aedce4e906231b9a164d2bad946b7c99",
+      "samples": 241,
+      "window_start_s": 0.11419241,
+      "window_end_s": 2.11242242,
+      "median_dt_s": 0.004940030000000151,
+      "gyro_rms_radps": 0.1821663855277745,
+      "accel_std_mps2": 0.7270737467099319,
+      "accel_norm_error_mps2": 0.012035667926069138,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.5225990343187062,
+        0.45485896987846747,
+        0.22052165427701964
+      ],
+      "gyro_sample_std_radps": [
+        0.11556203000209633,
+        0.044680453778622085,
+        0.06646410560052873
+      ],
+      "provisional_white_accel_density": 0.029504117514181395,
+      "provisional_white_gyro_density": 0.005705450732272024,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.037050860000001545,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "eight_s3",
+      "source_sha256": "9823e284423377622506e1df4d9a985bc0ca0cc1a6363b023d5ab293ff396b75",
+      "samples": 229,
+      "window_start_s": 1.58413897,
+      "window_end_s": 3.58191894,
+      "median_dt_s": 0.004945149999999732,
+      "gyro_rms_radps": 0.05648948965162678,
+      "accel_std_mps2": 0.3471947667366775,
+      "accel_norm_error_mps2": 0.042350606894270726,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.29181490099231994,
+        0.1200858171835275,
+        0.14480216199885554
+      ],
+      "gyro_sample_std_radps": [
+        0.027351144903407044,
+        0.020417568320504786,
+        0.029095946338807712
+      ],
+      "provisional_white_accel_density": 0.01409620729776679,
+      "provisional_white_gyro_density": 0.0018209291417674775,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.03708849000000111,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "ell_s3",
+      "source_sha256": "996ab214bc4230bce2576877d00ad28494128b0b76df8ea1ab4e3d192e5e3ff9",
+      "samples": 241,
+      "window_start_s": -9.807e-05,
+      "window_end_s": 1.99389796,
+      "median_dt_s": 0.005034109999999925,
+      "gyro_rms_radps": 0.10544904641098109,
+      "accel_std_mps2": 0.3636483027136303,
+      "accel_norm_error_mps2": 0.047433637333940126,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.23277932060917542,
+        0.24054980978747212,
+        0.14209034089073697
+      ],
+      "gyro_sample_std_radps": [
+        0.08903159377941074,
+        0.043259162171594936,
+        0.032978997229362456
+      ],
+      "provisional_white_accel_density": 0.014896433015283213,
+      "provisional_white_gyro_density": 0.004273923954952142,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 1.1119871800000005,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "grid_s3",
+      "source_sha256": "5d597b81b4e0b5a53e0e5552b086c963a9432c42fa48c52e0addc1736d7a5193",
+      "samples": 235,
+      "window_start_s": 1.1378353,
+      "window_end_s": 3.13561527,
+      "median_dt_s": 0.004945150000000176,
+      "gyro_rms_radps": 0.0433057684187876,
+      "accel_std_mps2": 0.16612137284247247,
+      "accel_norm_error_mps2": 0.04073242190198023,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.09846580337017823,
+        0.12427598807667381,
+        0.049560819901405734
+      ],
+      "gyro_sample_std_radps": [
+        0.03743955925501232,
+        0.014594483766530938,
+        0.013639323742438546
+      ],
+      "provisional_white_accel_density": 0.006744575473262251,
+      "provisional_white_gyro_density": 0.0017228834699082737,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.03461603999999138,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-2d-fast_s1",
+      "source_sha256": "8c10982d0209d92ce8da72045e8e923248f182afdf3cc8b184eb16f8c13e855d",
+      "samples": 232,
+      "window_start_s": 1.44835357,
+      "window_end_s": 3.43917367,
+      "median_dt_s": 0.004940039999999923,
+      "gyro_rms_radps": 0.11062015670358756,
+      "accel_std_mps2": 0.4016195340931419,
+      "accel_norm_error_mps2": 0.06212965407144644,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.2550106374095533,
+        0.2384501132322802,
+        0.1985179298518862
+      ],
+      "gyro_sample_std_radps": [
+        0.0673452088508795,
+        0.05218704427614922,
+        0.033943221004507994
+      ],
+      "provisional_white_accel_density": 0.01629744159621426,
+      "provisional_white_gyro_density": 0.0037215906549249293,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.029670890000000977,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-2d-fast_s2",
+      "source_sha256": "34ebdc38ba6765b8b0e055c965e1bf097973f5aab3f72b99f496da9284390356",
+      "samples": 233,
+      "window_start_s": -0.00157785,
+      "window_end_s": 1.99372967,
+      "median_dt_s": 0.004945150000000006,
+      "gyro_rms_radps": 0.1105346508093971,
+      "accel_std_mps2": 0.4245060108000067,
+      "accel_norm_error_mps2": 0.08042592775631974,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.2740761054517384,
+        0.27574584054086515,
+        0.17044610013184447
+      ],
+      "gyro_sample_std_radps": [
+        0.0924513080349469,
+        0.0486327089377715,
+        0.03305550724749178
+      ],
+      "provisional_white_accel_density": 0.01723506602253446,
+      "provisional_white_gyro_density": 0.004448474622961079,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.03461603999999849,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-2d-fast_s3",
+      "source_sha256": "8e0ecf5364d2a866662ffabc8b121f25044c9778dedd999c1e461f0879e8a272",
+      "samples": 236,
+      "window_start_s": -0.69683931,
+      "window_end_s": 1.29892056,
+      "median_dt_s": 0.00494003000000004,
+      "gyro_rms_radps": 0.09194728445049656,
+      "accel_std_mps2": 0.26652709987604967,
+      "accel_norm_error_mps2": 0.016792141544254235,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.12981820716126505,
+        0.10084546399099062,
+        0.20979542523662054
+      ],
+      "gyro_sample_std_radps": [
+        0.079077820391489,
+        0.03557391007244811,
+        0.02281036405771693
+      ],
+      "provisional_white_accel_density": 0.01081547354864687,
+      "provisional_white_gyro_density": 0.003638382490725737,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.03708848999999756,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-2d-v2_s5",
+      "source_sha256": "29e73c09f589d540f784180134e5afd796b0763978d15b06f8f369a020db9fd5",
+      "samples": 233,
+      "window_start_s": 1.43564567,
+      "window_end_s": 3.42337328,
+      "median_dt_s": 0.004945150000000176,
+      "gyro_rms_radps": 0.15651376377977985,
+      "accel_std_mps2": 0.7646549308879064,
+      "accel_norm_error_mps2": 0.05080259008104626,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.44135600558217714,
+        0.5719266910205804,
+        0.2506030721399554
+      ],
+      "gyro_sample_std_radps": [
+        0.12783907561792168,
+        0.06909186746079911,
+        0.05372490244734775
+      ],
+      "provisional_white_accel_density": 0.031045209921700383,
+      "provisional_white_gyro_density": 0.006290146917659151,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.03461603999999849,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-2d_s1",
+      "source_sha256": "95d8e390bcfa6570defbaa2ec9f079aab61bc45fe7bd4ab6354fab6446f4b26b",
+      "samples": 238,
+      "window_start_s": 1.53186475,
+      "window_end_s": 3.53009477,
+      "median_dt_s": 0.004940030000000206,
+      "gyro_rms_radps": 0.028065925200248355,
+      "accel_std_mps2": 0.14919590409677608,
+      "accel_norm_error_mps2": 0.048146776412409054,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.09211613473170494,
+        0.09235681619782654,
+        0.07241722186845938
+      ],
+      "gyro_sample_std_radps": [
+        0.018883095404719552,
+        0.01726584148429061,
+        0.011451754154830171
+      ],
+      "provisional_white_accel_density": 0.006054259979850422,
+      "provisional_white_gyro_density": 0.001137539804004834,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.03708848999999756,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-2d_s2",
+      "source_sha256": "8f48a1b6fd53b9a9562434915cb2d061aa64edd9132070ae5f82c2e7f102d535",
+      "samples": 236,
+      "window_start_s": 1.1963212,
+      "window_end_s": 3.19455122,
+      "median_dt_s": 0.004940030000000206,
+      "gyro_rms_radps": 0.07423270246733907,
+      "accel_std_mps2": 0.47768359760892054,
+      "accel_norm_error_mps2": 0.04445250229206721,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.4080178517642713,
+        0.21682397448890353,
+        0.12120402696736413
+      ],
+      "gyro_sample_std_radps": [
+        0.036454127543368096,
+        0.020999250946432946,
+        0.059577584007154356
+      ],
+      "provisional_white_accel_density": 0.01938404881516552,
+      "provisional_white_gyro_density": 0.0029596058470386807,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.03708849000000111,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-2d_s3",
+      "source_sha256": "8ec77e313c75d2c66e80e7c9447da246798204108d42b3a00b976463f143f962",
+      "samples": 222,
+      "window_start_s": 1.11013926,
+      "window_end_s": 3.10297433,
+      "median_dt_s": 0.004945150000000176,
+      "gyro_rms_radps": 0.03252271871901671,
+      "accel_std_mps2": 0.20534000308643172,
+      "accel_norm_error_mps2": 0.04858544058052772,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.17188657319027908,
+        0.09307854070653303,
+        0.06289601008315947
+      ],
+      "gyro_sample_std_radps": [
+        0.019946500079380234,
+        0.0122451311166455,
+        0.022110600570165093
+      ],
+      "provisional_white_accel_density": 0.008336863130848478,
+      "provisional_white_gyro_density": 0.0013072313791923978,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.03461603999999138,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-2d_s4",
+      "source_sha256": "bdcf113983d3b706c07db7d8e0c90affc5938a5239f6bfea1ed51ca67fe004fc",
+      "samples": 334,
+      "window_start_s": 0.94080366,
+      "window_end_s": 2.93116603,
+      "median_dt_s": 0.004945149999999732,
+      "gyro_rms_radps": 0.007363247398062263,
+      "accel_std_mps2": 0.11534198604587985,
+      "accel_norm_error_mps2": 0.043016376946278356,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.0902483131814447,
+        0.05182732916099345,
+        0.04972870061594065
+      ],
+      "gyro_sample_std_radps": [
+        0.0028620773687460877,
+        0.0027907111239345228,
+        0.0059686028838237615
+      ],
+      "provisional_white_accel_density": 0.004682917777594166,
+      "provisional_white_gyro_density": 0.00029165528284234155,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.3857110799999955,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-2d_s5",
+      "source_sha256": "74f4fb1da3ea5b68330ff24267f4647f13c6009387efab9c29780a21ded80b6c",
+      "samples": 219,
+      "window_start_s": 1.5313766,
+      "window_end_s": 3.5221967,
+      "median_dt_s": 0.004940040000000145,
+      "gyro_rms_radps": 0.08492256792765766,
+      "accel_std_mps2": 0.3676465868016075,
+      "accel_norm_error_mps2": 0.06208811893711896,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.3050026741740069,
+        0.1531675767668717,
+        0.13666409536136753
+      ],
+      "gyro_sample_std_radps": [
+        0.06365303589567255,
+        0.021930193930730348,
+        0.049277645802556364
+      ],
+      "provisional_white_accel_density": 0.014918843003929386,
+      "provisional_white_gyro_density": 0.003385619909441179,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.029670890000000977,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-3d-z_s3",
+      "source_sha256": "de56b873d40ef4c54e6bd1e525e25a65e46402569da17abb74524d59f95b0a34",
+      "samples": 218,
+      "window_start_s": 1.20878891,
+      "window_end_s": 3.19667909,
+      "median_dt_s": 0.004945149999999954,
+      "gyro_rms_radps": 0.022253170355151206,
+      "accel_std_mps2": 0.11348626158664153,
+      "accel_norm_error_mps2": 0.05585601455500111,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.08071540408983992,
+        0.05643606190979102,
+        0.056383739035644975
+      ],
+      "gyro_sample_std_radps": [
+        0.014978043569004632,
+        0.008854710374562182,
+        0.010851768004012283
+      ],
+      "provisional_white_accel_density": 0.004607574831296928,
+      "provisional_white_gyro_density": 0.0008325618845369759,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.25714096000000347,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-3d_s1",
+      "source_sha256": "2cdee28e845469da7ddab36a546b7c2040b1d913b323ac216fddfae6c8ec8d09",
+      "samples": 209,
+      "window_start_s": 1.44632015,
+      "window_end_s": 3.43173762,
+      "median_dt_s": 0.004945150000000176,
+      "gyro_rms_radps": 0.1357072912461434,
+      "accel_std_mps2": 0.4878726393514975,
+      "accel_norm_error_mps2": 0.056411041286013486,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.35876885847514955,
+        0.25714218616036066,
+        0.20780402910652343
+      ],
+      "gyro_sample_std_radps": [
+        0.08375407933803024,
+        0.03927375332932157,
+        0.06607950365760723
+      ],
+      "provisional_white_accel_density": 0.019807769350462197,
+      "provisional_white_gyro_density": 0.004615535650169126,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.03461604000000559,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-3d_s2",
+      "source_sha256": "0ff2dd5369240f8497d213e073ecd4ce10ed52ffc2ed18e2eabf4d6350e043e9",
+      "samples": 236,
+      "window_start_s": 0.02831067,
+      "window_end_s": 2.02114574,
+      "median_dt_s": 0.004945150000000009,
+      "gyro_rms_radps": 0.09678491433382166,
+      "accel_std_mps2": 0.2692135357749795,
+      "accel_norm_error_mps2": 0.07797740790428875,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.15536695579368395,
+        0.18849600149833823,
+        0.11316489875844049
+      ],
+      "gyro_sample_std_radps": [
+        0.07213322351801246,
+        0.02904979788369427,
+        0.03954167331905838
+      ],
+      "provisional_white_accel_density": 0.010930146912401842,
+      "provisional_white_gyro_density": 0.0035419269560794204,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.0345809700000029,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-3d_s3",
+      "source_sha256": "06026ae8681c8616d5c387fdc4d01413b9afe08b2600bac9a7a06ae18eded9a9",
+      "samples": 222,
+      "window_start_s": -0.78394041,
+      "window_end_s": 1.21383956,
+      "median_dt_s": 0.004945150000000009,
+      "gyro_rms_radps": 0.3257991734133463,
+      "accel_std_mps2": 1.2708819786835912,
+      "accel_norm_error_mps2": 0.12431404006359514,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.5180347524665726,
+        0.9981946157902106,
+        0.59193623641998
+      ],
+      "gyro_sample_std_radps": [
+        0.2372148936773389,
+        0.19201265069231163,
+        0.058183832030482566
+      ],
+      "provisional_white_accel_density": 0.05159817352923236,
+      "provisional_white_gyro_density": 0.01261389719901269,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.03461603999999849,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "loop-3d_s5",
+      "source_sha256": "e3e89b450ee2c9018d5f71c3df4498ff8a48c4e86f1fd2f0c07581eeac6e2b9b",
+      "samples": 251,
+      "window_start_s": 1.44672333,
+      "window_end_s": 3.44001332,
+      "median_dt_s": 0.004940030000000206,
+      "gyro_rms_radps": 0.34307174399478174,
+      "accel_std_mps2": 1.0385584537317873,
+      "accel_norm_error_mps2": 0.13026391899229317,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.5644902258208395,
+        0.4870521000291712,
+        0.7230039409489225
+      ],
+      "gyro_sample_std_radps": [
+        0.29942427470878413,
+        0.11505138913949402,
+        0.10240432259150244
+      ],
+      "provisional_white_accel_density": 0.042143937671942876,
+      "provisional_white_gyro_density": 0.013663729579856138,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.0345809700000029,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "zigzag_s2",
+      "source_sha256": "5c5caab76381c2c3d1bf2c0473a27f42067ec9a56ce8b02b0dbc3d5601c38cda",
+      "samples": 221,
+      "window_start_s": 0.1354813,
+      "window_end_s": 2.11595362,
+      "median_dt_s": 0.004945149999999995,
+      "gyro_rms_radps": 0.07818532158786559,
+      "accel_std_mps2": 0.2781842945396741,
+      "accel_norm_error_mps2": 0.04487707329699475,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.24121472579670464,
+        0.0931592344297719,
+        0.10258320928795102
+      ],
+      "gyro_sample_std_radps": [
+        0.03678942189750104,
+        0.016252702739065403,
+        0.04242359548783561
+      ],
+      "provisional_white_accel_density": 0.011294362296043548,
+      "provisional_white_gyro_density": 0.0023734239606488555,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.037088489999990454,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "zigzag_s3",
+      "source_sha256": "aff8a8112bdcc62e9e577dce2b929b5962c83f95798b0f43f46f6fd59b3a4f06",
+      "samples": 218,
+      "window_start_s": 1.5168534,
+      "window_end_s": 3.51395087,
+      "median_dt_s": 0.004945150000000176,
+      "gyro_rms_radps": 0.16505835505122013,
+      "accel_std_mps2": 0.600968797008043,
+      "accel_norm_error_mps2": 0.0801677615535592,
+      "stationary_entire_window": false,
+      "accel_sample_std_mps2": [
+        0.42312629313681527,
+        0.28163143713789746,
+        0.320642119268874
+      ],
+      "gyro_sample_std_radps": [
+        0.14493922719252944,
+        0.049730812393341414,
+        0.043290800532019315
+      ],
+      "provisional_white_accel_density": 0.024399505850098896,
+      "provisional_white_gyro_density": 0.0064648390591428235,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.2620861200000018,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    },
+    {
+      "dataset": "starloc",
+      "sequence": "zigzag_s4",
+      "source_sha256": "d51625264c01268374dcd2ecd719191518d0ba1db102c61a44192dc1b09e0f16",
+      "samples": 342,
+      "window_start_s": -0.08000637,
+      "window_end_s": 1.91575351,
+      "median_dt_s": 0.004940029999999998,
+      "gyro_rms_radps": 0.0059948705981416675,
+      "accel_std_mps2": 0.09024287907470437,
+      "accel_norm_error_mps2": 0.045313096370801276,
+      "stationary_entire_window": true,
+      "accel_sample_std_mps2": [
+        0.07007633641192383,
+        0.03546974771114589,
+        0.04444076165056418
+      ],
+      "gyro_sample_std_radps": [
+        0.002700035896135623,
+        0.0020000238541796876,
+        0.004922738572157276
+      ],
+      "provisional_white_accel_density": 0.0036619896139645984,
+      "provisional_white_gyro_density": 0.0002418593727688654,
+      "existing_parameters": {
+        "accelerometer_sigma": 0.0007071067811865475,
+        "gyroscope_sigma": 7.071067811865475e-05,
+        "accelerometer_bias_rw_sigma": 0.001,
+        "gyroscope_bias_rw_sigma": 0.0001,
+        "gravity_mps2": 9.80665,
+        "max_gap_s": 0.1854384400000154,
+        "sigma_semantics": "UNQUALIFIED_CONFIGURED_PARAMETER",
+        "trapezoid_correlation_model": "SHARED_SAMPLE_CORRELATION_UNQUALIFIED",
+        "noise_overbound_calibration_id": ""
+      },
+      "qualification": "PROVISIONAL_NO_ALLAN_NO_AUTOCORRELATION_OVERBOUND_NO_BIAS_RW_CALIBRATION"
+    }
+  ]
+}

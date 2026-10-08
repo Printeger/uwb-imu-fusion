@@ -1,0 +1,27 @@
+schema: uwb-imu-benchmark/v1
+dataset: HUEC
+data_root: ../../data/HUEC
+format: rosbag_huec
+sequences:
+  - {id: LOS_Trajectory_A_Case_1, path: Dynamic_measurements/LOS/Trajectory_A/Case_1/combined.bag, timing_representative: true}
+  - {id: LOS_Trajectory_A_Case_2, path: Dynamic_measurements/LOS/Trajectory_A/Case_2/combined.bag}
+  - {id: LOS_Trajectory_B_Case_3, path: Dynamic_measurements/LOS/Trajectory_B/Case_3/combined.bag}
+  - {id: LOS_Trajectory_B_Case_4, path: Dynamic_measurements/LOS/Trajectory_B/Case_4/combined.bag}
+  - {id: NLOS_Trajectory_A_Case_1, path: Dynamic_measurements/NLOS/Trajectory_A/Case_1/combined.bag}
+  - {id: NLOS_Trajectory_A_Case_2, path: Dynamic_measurements/NLOS/Trajectory_A/Case_2/combined.bag}
+  - {id: NLOS_Trajectory_B_Case_3, path: Dynamic_measurements/NLOS/Trajectory_B/Case_3/combined.bag}
+  - {id: NLOS_Trajectory_B_Case_4, path: Dynamic_measurements/NLOS/Trajectory_B/Case_4/combined.bag}
+imu: {topic: /imu/data, acceleration_scale: 1.0, acceleration_unit: mps2, gyro_scale: 1.0, gyro_unit: radps, frame: sensor_body}
+uwb:
+  topics: [/dwm1001/anchor3, /dwm1001/anchor5, /dwm1001/anchor9, /dwm1001/anchor12]
+  range_field: distanceFromTag
+  sigma_m: 0.30
+  epoch_batch_window_s: 0.02
+  tag_id: 0
+  lever_arm_body_m: [-0.055, -0.055, 0.668]
+  lever_source: dataset_Technical_validation/eskf.py:t_uv
+ground_truth: {topic: /odometry/local_gps, reference: uwb_tag, frame: map}
+time: {source: header_stamp, offset_s: 0.0, provenance: dataset_NTP_sync}
+primary_tag: 0
+bootstrap: {prefer_below_anchor_median: true, source: known_ground_vehicle_geometry}
+calibration: {policy: fit_missing_only, label: GT-assisted_interface_calibration}

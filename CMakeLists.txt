@@ -117,6 +117,8 @@ add_library(${PROJECT_NAME}
   src/uwb_imu_pl/integrity/dense_oracle.cpp
   src/uwb_imu_pl/factors/realtime_factors.cpp
   src/uwb_imu_pl/estimation/incremental_estimator.cpp
+  src/uwb_imu_pl/estimation/estimation_tuning.cpp
+  src/uwb_imu_pl/estimation/causal_initializer.cpp
   src/uwb_imu_pl/estimation/factor_ledger.cpp
   src/uwb_imu_pl/estimation/integrity_window_snapshot.cpp
   src/uwb_imu_pl/estimation/square_root_context.cpp
@@ -230,6 +232,15 @@ add_executable(advisor_paired_benchmark apps/advisor_paired_benchmark.cpp)
 target_link_libraries(advisor_paired_benchmark
   ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
 
+# Dataset benchmark: direct nominal estimator path.  This executable does not
+# construct the integrity pipeline, detector, FDE, bridge, or PL components.
+add_executable(nominal_dataset_runner apps/nominal_dataset_runner.cpp)
+target_compile_definitions(nominal_dataset_runner PRIVATE
+  UWB_IMU_PL_GIT_SHA="${UWB_IMU_PL_GIT_SHA}"
+  UWB_IMU_PL_GIT_DIRTY=${UWB_IMU_PL_GIT_DIRTY})
+target_link_libraries(nominal_dataset_runner
+  ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
+
 # =============================================
 # Simulator — quadrotor dynamics + SO3 control
 # =============================================
@@ -281,6 +292,9 @@ if(CATKIN_ENABLE_TESTING)
 
   catkin_add_gtest(test_run_logger test/test_run_logger.cpp test/test_main.cpp)
   target_link_libraries(test_run_logger ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
+  catkin_add_gtest(test_nominal_accuracy test/test_nominal_accuracy.cpp test/test_main.cpp)
+  target_link_libraries(test_nominal_accuracy ${PROJECT_NAME} gtsam yaml-cpp ${GTEST_LIBRARIES})
 
   catkin_add_gtest(test_realtime_incremental test/test_realtime_incremental.cpp test/test_main.cpp)
   target_link_libraries(test_realtime_incremental ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
@@ -445,4 +459,8 @@ if(CATKIN_ENABLE_TESTING)
 
   add_test(NAME test_launch_contracts
     COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_launch_contracts.py)
+
+  add_test(NAME test_dataset_benchmark
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools
+      python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_dataset_benchmark.py)
 endif()

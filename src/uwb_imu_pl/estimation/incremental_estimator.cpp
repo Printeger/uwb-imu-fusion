@@ -7,6 +7,7 @@
 #include <gtsam/linear/HessianFactor.h>
 #include <gtsam/navigation/NavState.h>
 #include <gtsam/nonlinear/LinearContainerFactor.h>
+#include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 #include <gtsam/nonlinear/Marginals.h>
 #include <gtsam/slam/PriorFactor.h>
 #include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
@@ -29,6 +30,7 @@
 #include <stdexcept>
 
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
+#include "uwb_imu_pl/estimation/estimation_tuning.hpp"
 #include "uwb_imu_pl/factors/kinematic_bridge_factor.hpp"
 #include "uwb_imu_pl/factors/realtime_factors.hpp"
 #include "uwb_imu_pl/integrity/history_fault_parameterization.hpp"
@@ -120,6 +122,20 @@ class FixedLagBackend final : public gtsam::IncrementalFixedLagSmoother {
 };
 
 namespace {
+
+struct EstimationRuntimeV1 {
+  EstimationTuningV1 tuning;
+  EstimatorNumericsAuditV1 audit;
+  double physical_time_s = 0.0;
+  const gtsam::VectorValues* accepted_delta = nullptr;
+  std::uint64_t accepted_delta_version = 0;
+};
+std::mutex estimation_runtime_mutex;
+std::map<const IncrementalUwbImuEstimator*, EstimationRuntimeV1> estimation_runtime;
+EstimationRuntimeV1 readEstimationRuntime(const IncrementalUwbImuEstimator* estimator) {
+  std::lock_guard<std::mutex> lock(estimation_runtime_mutex);
+  return estimation_runtime.at(estimator);
+}
 
 struct P005EstimatorRuntime {
   CommitFaultPoint fault_point = CommitFaultPoint::None;
@@ -390,6 +406,67 @@ gtsam::Pose3 toGtsamPose(const NavigationState& state) {
 gtsam::imuBias::ConstantBias toGtsamBias(const NavigationState& state) {
   return {state.accel_bias_mps2, state.gyro_bias_radps};
 }
+
+// A warm-start problem, not a backend factor: the previous accepted state is
+// fixed and only the new 15 variables are optimized. No information is added
+// to the persistent graph, nor to a frozen FDE candidate.
+class FixedPreviousImuWarmStart final
+    : public gtsam::NoiseModelFactor3<gtsam::Pose3, gtsam::Vector3,
+                                      gtsam::imuBias::ConstantBias> {
+ public:
+  FixedPreviousImuWarmStart(const gtsam::CombinedImuFactor& factor,
+                           const NavigationState& previous)
+      : NoiseModelFactor3(factor.noiseModel(), factor.keys()[2],
+                          factor.keys()[3], factor.keys()[5]),
+        factor_(factor), previous_(previous) {}
+  gtsam::Vector evaluateError(
+      const gtsam::Pose3& pose, const gtsam::Vector3& velocity,
+      const gtsam::imuBias::ConstantBias& bias,
+      boost::optional<gtsam::Matrix&> h1=boost::none,
+      boost::optional<gtsam::Matrix&> h2=boost::none,
+      boost::optional<gtsam::Matrix&> h3=boost::none) const override {
+    return factor_.evaluateError(toGtsamPose(previous_), previous_.velocity_world_mps,
+        pose, velocity, toGtsamBias(previous_), bias,
+        boost::none, boost::none, h1, h2, boost::none, h3);
+  }
+ private:
+  gtsam::CombinedImuFactor factor_;
+  NavigationState previous_;
+};
+
+class ExperimentalHuberRangeFactor final
+    : public gtsam::NoiseModelFactor1<gtsam::Pose3> {
+ public:
+  ExperimentalHuberRangeFactor(gtsam::Key key, const UwbBatch& batch,
+                              const Eigen::Vector3d& lever)
+      : NoiseModelFactor1(gtsam::noiseModel::Robust::Create(
+            gtsam::noiseModel::mEstimator::Huber::Create(
+                1.5, gtsam::noiseModel::mEstimator::Base::Scalar),
+            gtsam::noiseModel::Gaussian::Covariance(validatedUwbCovariance(batch))), key),
+        gaussian_(key,batch,lever) {
+    const auto covariance=validatedUwbCovariance(batch);
+    const Eigen::MatrixXd diagonal=covariance.diagonal().asDiagonal();
+    if (!covariance.isApprox(diagonal,1e-12))
+      throw std::invalid_argument("nominal robust experimental requires independent per-range covariance");
+  }
+  gtsam::Vector evaluateError(const gtsam::Pose3& pose,
+      boost::optional<gtsam::Matrix&> h=boost::none) const override {
+    return gaussian_.evaluateError(pose,h);
+  }
+  double error(const gtsam::Values& values) const override {
+    // GTSAM Robust::loss evaluates the block norm even with Scalar IRLS.
+    // Explicitly sum scalar Huber costs so LM acceptance matches its rows.
+    const auto residual=gaussian_.whitenedError(values);
+    double cost=0.0;
+    for (int i=0;i<residual.size();++i) {
+      const double magnitude=std::abs(residual(i));
+      cost+=magnitude<=1.5 ? 0.5*magnitude*magnitude : 1.5*(magnitude-0.75);
+    }
+    return cost;
+  }
+ private:
+  UwbPoseBatchFactor gaussian_;
+};
 
 NavigationState stateFromValues(const gtsam::Values& values, std::size_t epoch,
                                 TimestampNs timestamp) {
@@ -690,14 +767,20 @@ IncrementalUwbImuEstimator::IncrementalUwbImuEstimator(
       }()) {
   // Defensively clear any registry entry left at a recycled object address.
   eraseP007Certificates(this);
+  const auto tuning = readEstimationTuningV1(config_);
+  {
+    std::lock_guard<std::mutex> lock(estimation_runtime_mutex);
+    estimation_runtime[this] = EstimationRuntimeV1{tuning, {}, 0.0};
+  }
   if (config_.incremental.fixed_lag_epochs == 1) {
     throw std::invalid_argument("fixed_lag_epochs must be 0 or at least 2");
   }
-  if (config_.incremental.fixed_lag_epochs > 0) {
+  if (config_.incremental.fixed_lag_epochs > 0 || tuning.nominal_lag_s > 0.0) {
     gtsam::ISAM2Params params = isam2_.params();
     params.findUnusedFactorSlots = true;
     fixed_lag_backend_.reset(new FixedLagBackend(
-        static_cast<double>(config_.incremental.fixed_lag_epochs - 1), params));
+        tuning.nominal_lag_s > 0.0 ? tuning.nominal_lag_s :
+            static_cast<double>(config_.incremental.fixed_lag_epochs - 1), params));
   }
   auto params = gtsam::PreintegratedCombinedMeasurements::Params::MakeSharedU(
       config_.imu.gravity_mps2);
@@ -719,6 +802,13 @@ IncrementalUwbImuEstimator::IncrementalUwbImuEstimator(
 IncrementalUwbImuEstimator::~IncrementalUwbImuEstimator() {
   eraseP007Certificates(this);
   eraseP005Runtime(this);
+  std::lock_guard<std::mutex> lock(estimation_runtime_mutex);
+  estimation_runtime.erase(this);
+}
+
+EstimatorNumericsAuditV1 estimatorNumericsAuditV1(
+    const IncrementalUwbImuEstimator& estimator) {
+  return readEstimationRuntime(&estimator).audit;
 }
 
 bool IncrementalUwbImuEstimator::backendPoisoned() const {
@@ -782,7 +872,9 @@ IncrementalUwbImuEstimator::backendUpdate(
 
   gtsam::FixedLagSmoother::KeyTimestampMap timestamps;
   if (add_timestamps) {
-    const double logical_timestamp = static_cast<double>(timestamp_epoch);
+    const auto runtime = readEstimationRuntime(this);
+    const double logical_timestamp = runtime.tuning.nominal_lag_s > 0.0
+        ? runtime.physical_time_s : static_cast<double>(timestamp_epoch);
     timestamps.emplace(poseKey(timestamp_epoch), logical_timestamp);
     timestamps.emplace(velocityKey(timestamp_epoch), logical_timestamp);
     timestamps.emplace(biasKey(timestamp_epoch), logical_timestamp);
@@ -908,6 +1000,15 @@ void IncrementalUwbImuEstimator::initialize(
   values.insert(poseKey(0), pose);
   values.insert(velocityKey(0), velocity);
   values.insert(biasKey(0), bias);
+  {
+    std::lock_guard<std::mutex> lock(estimation_runtime_mutex);
+    auto& runtime = estimation_runtime.at(this);
+    runtime.physical_time_s = initial_state.timestamp.seconds();
+    runtime.audit.bias_integration_sigmas = runtime.tuning.bias_integration_sigmas
+        ? *runtime.tuning.bias_integration_sigmas : prior_sigmas.tail<6>().eval();
+    imu_params_->biasAccOmegaInt =
+        runtime.audit.bias_integration_sigmas.array().square().matrix().asDiagonal();
+  }
   const auto update = backendUpdate(graph, values, 0, true);
   if (update.marginalized_epochs != 0) {
     throw std::runtime_error("fixed-lag initialization marginalized state");
@@ -1349,8 +1450,16 @@ void IncrementalUwbImuEstimator::attachUwbGroups(EpochTransaction* tx,
     group.source_ids.push_back(
         "uwb:" + std::to_string(batch.measurements[i].anchor_id.value()));
   }
-  group.factors.add(boost::make_shared<UwbPoseBatchFactor>(
-      poseKey(tx->proposed_epoch), batch, lever_arm_body_m_));
+  if (readEstimationRuntime(this).tuning.nominal_robust_experimental) {
+    if (build_recovery_material || tx->preparation.build_integrity_material)
+      throw std::invalid_argument("experimental Huber is forbidden in an integrity transaction");
+    group.model_id = "nominal_robust_experimental_huber_scalar_1_5_v1";
+    group.factors.add(boost::make_shared<ExperimentalHuberRangeFactor>(
+        poseKey(tx->proposed_epoch),batch,lever_arm_body_m_));
+  } else {
+    group.factors.add(boost::make_shared<UwbPoseBatchFactor>(
+        poseKey(tx->proposed_epoch), batch, lever_arm_body_m_));
+  }
   tx->uwb_groups.push_back(std::move(group));
 
   if (!build_recovery_material) return;
@@ -2636,22 +2745,39 @@ void IncrementalUwbImuEstimator::queryCurrentState() {
   current_state_ = queryState(epoch_, state_timestamp_);
 }
 
+std::vector<NavigationState> IncrementalUwbImuEstimator::retainedSmoothedStatesV1() const {
+  std::vector<NavigationState> states;
+  if (!initialized_) return states;
+  if (backend_poisoned_) throw std::logic_error("historical export on poisoned backend");
+  const auto& theta=backendIsam().getLinearizationPoint();
+  for (const auto& item:state_history_) {
+    if (!theta.exists(poseKey(item.first))) continue;
+    states.push_back(queryState(item.first,item.second.timestamp));
+  }
+  return states;
+}
+
 NavigationState IncrementalUwbImuEstimator::queryState(
     std::size_t requested_epoch, TimestampNs timestamp) const {
-  // GTSAM's single-key calculateEstimate<T>() still enters getDelta(), whose
-  // wildfire update can visit the full Bayes tree. Solve only the current
-  // cliques and their ancestor closure, then retract these three keys at the
-  // stored linearization point. The closure is also the exact dependency set
-  // used by the current-state marginal below.
+  // A Bayes-tree backsolve returns the full Newton step, NOT the step accepted
+  // by Dogleg. Read the accepted delta once (GTSAM caches it until update) and
+  // retract only the three requested variables. The covariance still uses
+  // the Gaussian tree; it must not be confused with the nonlinear mean.
   const gtsam::KeyVector keys{poseKey(requested_epoch),
                               velocityKey(requested_epoch),
                               biasKey(requested_epoch)};
   const gtsam::ISAM2& isam = backendIsam();
-  const gtsam::GaussianBayesNet bayes_net = currentCliqueClosure(isam, keys);
-  gtsam::VectorValues local_delta;
-  for (std::size_t i = bayes_net.size(); i > 0; --i) {
-    local_delta.insert(bayes_net[i - 1]->solve(local_delta));
+  const gtsam::VectorValues* accepted_delta = nullptr;
+  {
+    std::lock_guard<std::mutex> lock(estimation_runtime_mutex);
+    auto& runtime = estimation_runtime.at(this);
+    if (!runtime.accepted_delta || runtime.accepted_delta_version != backend_update_count_) {
+      runtime.accepted_delta = &isam.getDelta();
+      runtime.accepted_delta_version = backend_update_count_;
+    }
+    accepted_delta = runtime.accepted_delta;
   }
+  const gtsam::VectorValues& local_delta = *accepted_delta;
   const gtsam::Values& theta = isam.getLinearizationPoint();
   const gtsam::Pose3 pose = gtsam::traits<gtsam::Pose3>::Retract(
       theta.at<gtsam::Pose3>(keys[0]), local_delta.at(keys[0]));
@@ -2929,10 +3055,53 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpochCertified(
         protection_evidence->token_identity;
   }
   gtsam::Values values;
-  values.insert(poseKey(tx.proposed_epoch), toGtsamPose(tx.cv_predicted_state));
+  const auto runtime = readEstimationRuntime(this);
+  const bool nominal_only = config_.fde.profile == FdeProfile::Off &&
+      !tx.preparation.build_integrity_material &&
+      !tx.preparation.build_uwb_recovery_material &&
+      !tx.preparation.build_imu_recovery_material &&
+      !tx.preparation.build_recoverable_history && has_imu && !has_bridge;
+  const NavigationState& seed = nominal_only && runtime.tuning.nominal_initial_guess == "imu"
+      ? tx.nominal_predicted_state : tx.cv_predicted_state;
+  values.insert(poseKey(tx.proposed_epoch), toGtsamPose(seed));
   values.insert(velocityKey(tx.proposed_epoch),
-                tx.cv_predicted_state.velocity_world_mps);
-  values.insert(biasKey(tx.proposed_epoch), toGtsamBias(tx.cv_predicted_state));
+                seed.velocity_world_mps);
+  values.insert(biasKey(tx.proposed_epoch), toGtsamBias(seed));
+  if (nominal_only && runtime.tuning.nominal_lm_iterations > 0) {
+    const auto warm_start = std::chrono::steady_clock::now();
+    double before=0.0, after=0.0;
+    bool accepted=false;
+    try {
+      gtsam::NonlinearFactorGraph local;
+      const auto* imu_factor=dynamic_cast<const gtsam::CombinedImuFactor*>(tx.imu_group.factors.front().get());
+      if (!imu_factor) throw std::logic_error("warm start requires CombinedImuFactor");
+      local.add(boost::make_shared<FixedPreviousImuWarmStart>(*imu_factor,tx.previous_state));
+      for (const auto& group:tx.uwb_groups)
+        if (group.nominal) for (const auto& factor:group.factors) local.push_back(factor);
+      before=local.error(values); after=before;
+      gtsam::LevenbergMarquardtParams params;
+      params.maxIterations=runtime.tuning.nominal_lm_iterations;
+      const auto refined=gtsam::LevenbergMarquardtOptimizer(local,values,params).optimize();
+      after=local.error(refined);
+      const auto refined_state=stateFromValues(refined,tx.proposed_epoch,tx.end);
+      if (std::isfinite(after) && after < before &&
+          refined_state.position_world_m.allFinite() &&
+          refined_state.velocity_world_mps.allFinite() &&
+          refined_state.accel_bias_mps2.allFinite() &&
+          refined_state.gyro_bias_radps.allFinite()) {
+        values=refined; accepted=true;
+      }
+    } catch (const std::exception&) {
+      // Warm-start failure is reversible: values retain the IMU prediction.
+      after=before;
+    }
+    std::lock_guard<std::mutex> lock(estimation_runtime_mutex);
+    auto& audit=estimation_runtime.at(this).audit;
+    ++audit.warm_start_attempts;
+    audit.warm_start_accepted+=accepted ? 1 : 0;
+    audit.last_warm_start_before=before; audit.last_warm_start_after=after;
+    audit.last_warm_start_ms=elapsedMs(warm_start);
+  }
   FactorLedger staged_ledger = factor_ledger_;
   auto staged_committed_epochs = committed_epochs_;
   auto staged_committed_batches = committed_uwb_batches_;
@@ -2967,6 +3136,10 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpochCertified(
   std::string boundary = "backend_update";
   tx.backend_mutated = true;  // guard is armed before iSAM can mutate
   try {
+    {
+      std::lock_guard<std::mutex> lock(estimation_runtime_mutex);
+      estimation_runtime.at(this).physical_time_s = tx.end.seconds();
+    }
     update = backendUpdate(graph, values, tx.proposed_epoch, true, remove_slots);
     boundary = "after_backend_update";
     inject(CommitFaultPoint::AfterBackendUpdate, boundary.c_str());
@@ -3048,12 +3221,28 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpochCertified(
               return factor && factor.get() == expected.get();
             });
         if (found == active.end()) {
+          // A sparse nominal epoch may marginalize its previous state in the
+          // same seconds-based update. Its just-added IMU factor is then
+          // represented by the Schur boundary, rather than an active slot.
+          // FDE binding remains strict and unchanged.
+          const bool marginalized_now = nominal_only && runtime.tuning.nominal_lag_s > 0.0 &&
+              std::any_of(expected->keys().begin(), expected->keys().end(),
+                  [&](gtsam::Key key) {
+                    return std::find(update.marginalized_keys.begin(),
+                        update.marginalized_keys.end(),key)!=update.marginalized_keys.end();
+                  });
+          if (marginalized_now) continue;
           throw std::runtime_error(
               "committed factor identity missing from backend");
         }
         slots.push_back(static_cast<std::size_t>(found - active.begin()));
       }
-      staged_ledger.activate(group->id, slots, staged_version);
+      if (slots.empty() && nominal_only && runtime.tuning.nominal_lag_s > 0.0) {
+        staged_ledger.transition(group->id, FactorLifecycle::Marginalized,
+                                 staged_version);
+      } else {
+        staged_ledger.activate(group->id, slots, staged_version);
+      }
       for (const auto slot : slots) {
         if (previously_occupied.count(slot)) reused_slots.insert(slot);
       }

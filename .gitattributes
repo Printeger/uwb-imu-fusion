@@ -1,0 +1,4 @@
+# Python csv.writer emits CRLF; preserve audited CSV bytes and recognize
+# carriage returns as line endings during Git whitespace checks. Quoted
+# multiline failure messages can contain trailing spaces as payload data.
+docs/benchmark/*.csv whitespace=cr-at-eol,-blank-at-eol

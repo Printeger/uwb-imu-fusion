@@ -1,0 +1,13 @@
+schema: uwb-imu-benchmark/v1
+dataset: simulation
+data_root: ../../data
+format: generated_simulation
+sequences:
+  - {id: figure_eight_nominal_seed_20260901, timing_representative: true}
+simulation: {duration_s: 123.0, bootstrap_static_s: 2.5, takeoff_s: 3.0, trajectory: figure_eight, body_yaw: fixed_world_x, radius_m: 3.0, period_s: 20.0, height_m: 2.0, seed: 20260901, packet_loss_probability: 0.0, nlos_probability: 0.0, fault_mode: none}
+imu: {topic: /sim/imu, acceleration_scale: 1.0, acceleration_unit: mps2, gyro_scale: 1.0, gyro_unit: radps, frame: base_link}
+uwb: {topic: /nlink_linktrack_nodeframe3, sigma_m: 0.10, epoch_batch_window_s: 0.0, tag_id: 0, lever_arm_body_m: [0.25, -0.1, 0.08]}
+ground_truth: {topic: /sim/odom, reference: body, frame: world}
+primary_tag: 0
+bootstrap: {prefer_below_anchor_median: true, source: simulator_anchor_geometry}
+calibration: {policy: exact_simulator_truth, label: deterministic_nominal}

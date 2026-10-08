@@ -1,4 +1,5 @@
 #include "uwb_imu_pl/config/integrity_config.hpp"
+#include "uwb_imu_pl/estimation/estimation_tuning.hpp"
 
 #include <yaml-cpp/yaml.h>
 
@@ -379,7 +380,7 @@ IntegrityConfig IntegrityConfigLoader::load(
                 {"schema_version", "seed", "snapshot", "incremental", "imu",
                  "integrity_window", "detector", "fault_models", "fde",
                  "bridge", "health", "risk", "robust_shadow", "output",
-                 "publication", "realtime", "anchors", "history"});
+                 "publication", "realtime", "anchors", "history", "estimation_tuning"});
   cfg.schema_version = required<std::string>(root, "schema_version", "root");
   cfg.seed = required<std::uint64_t>(root, "seed", "root");
 
@@ -1232,6 +1233,7 @@ IntegrityConfig IntegrityConfigLoader::load(
         cfg.resolved_scope.detector_contract_id + "\n";
     cfg.config_hash = fnv1a64(cfg.resolved_yaml);
   }
+  (void)readEstimationTuningV1(cfg);
   return cfg;
 }
 

@@ -74,11 +74,14 @@ gtsam::Vector UwbPoseBatchFactor::evaluateError(
     boost::optional<gtsam::Matrix&> jacobian) const {
   const Eigen::Index n = static_cast<Eigen::Index>(batch_.measurements.size());
   gtsam::Vector error(n);
-  gtsam::Matrix36 antenna_jacobian;
-  const gtsam::Point3 antenna = pose.transformFrom(lever_arm_body_m_, antenna_jacobian);
   if (jacobian) *jacobian = gtsam::Matrix::Zero(n, 6);
   for (Eigen::Index i = 0; i < n; ++i) {
     const auto& measurement = batch_.measurements[static_cast<std::size_t>(i)];
+    const gtsam::Point3 lever = measurement.lever_arm_body_m
+        ? gtsam::Point3(*measurement.lever_arm_body_m)
+        : lever_arm_body_m_;
+    gtsam::Matrix36 antenna_jacobian;
+    const gtsam::Point3 antenna = pose.transformFrom(lever, antenna_jacobian);
     const gtsam::Vector3 delta = antenna - measurement.anchor_position_m;
     const double range = delta.norm();
     if (range < 1e-9) throw std::runtime_error("UWB pose factor singular at anchor");

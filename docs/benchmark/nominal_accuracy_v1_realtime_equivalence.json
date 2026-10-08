@@ -1,0 +1,16 @@
+{
+  "schema": "nominal-realtime-equivalence/v1",
+  "status": "PASS",
+  "reason": "",
+  "direct_samples": 2420,
+  "realtime_samples": 2420,
+  "max_tag_position_difference_m": 4.965068306494546e-16,
+  "max_orientation_difference_deg": 1.7075472925031877e-06,
+  "position_tolerance_m": 1e-05,
+  "rotation_tolerance_deg": 1e-05,
+  "fde_profile": "off",
+  "truth_topics_published": 0,
+  "forbidden_truth_subscriptions": [],
+  "playback_rate": 20.0,
+  "wall_s": 16.66426542100089
+}

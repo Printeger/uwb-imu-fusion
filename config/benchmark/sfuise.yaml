@@ -1,0 +1,27 @@
+schema: uwb-imu-benchmark/v1
+dataset: SFUISE
+data_root: ../../data/SFUISE
+format: rosbag_sfuise
+sequences:
+  - {id: ISAS-Walk1, path: ISAS-Walk1.bag, sfuise_config: config_test_isas-walk1.yaml, timing_representative: true}
+  - {id: ISAS-Walk2, path: ISAS-Walk2.bag, sfuise_config: config_test_isas-walk2.yaml}
+  - {id: ISAS-Walk3, path: ISAS-Walk3.bag, sfuise_config: config_test_isas-walk3.yaml}
+imu: {topic: /waveshare_sense_hat_b, acceleration_scale: 1.0, acceleration_unit: mps2, gyro_scale: 1.0, gyro_unit: radps, frame: body}
+uwb:
+  topic: /rtls_flares
+  anchor_topic: /anchor_list
+  range_field: ranges[].range
+  validity_field: ranges[].ra
+  sigma_m: 0.15
+  epoch_batch_window_s: 0.0
+  lever_arm_body_m: [0.1, -0.025, 0.0]
+  toa_offsets_by_sequence:
+    ISAS-Walk1: [-0.0700, 0.1539, -0.0751, 0.1409, -0.0247]
+    ISAS-Walk2: [-0.0700, 0.1539, -0.0751, 0.1409, -0.0247]
+    ISAS-Walk3: [-0.0700, 0.1539, -0.0751, 0.1409, -0.0247]
+ground_truth: {topic: /vive/transform/tracker_1_ref, reference: tracker, frame: vive_reference}
+time: {source: header_stamp, offset_s: 0.0}
+primary_tag: 27956
+bootstrap: {prefer_below_anchor_median: true, source: published_indoor_setup_geometry}
+sfuise: {keep_official_rejection: true}
+calibration: {policy: fit_missing_world_transform_only, label: GT-assisted_interface_calibration}

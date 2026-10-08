@@ -1,6 +1,8 @@
 #include "uwb_imu_pl/config/integrity_config.hpp"
 #include "uwb_imu_pl/common/deterministic_event.hpp"
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
+#include "uwb_imu_pl/estimation/estimation_tuning.hpp"
+#include "uwb_imu_pl/estimation/causal_initializer.hpp"
 #include "uwb_imu_pl/integrity/integrity_monitor.hpp"
 #include "uwb_imu_pl/io/run_logger.hpp"
 #include "uwb_imu_pl/publication/final_output_packet.hpp"
@@ -10,6 +12,7 @@
 #include <diagnostic_msgs/KeyValue.h>
 #include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
+#include <tbb/global_control.h>
 #include <ros/serialization.h>
 #include <sensor_msgs/Imu.h>
 #include <uwb_imu_pl/IntegrityStatus.h>
@@ -152,8 +155,11 @@ class RealtimeNode {
  public:
   RealtimeNode(ros::NodeHandle& node, uwb_imu_pl::IntegrityConfig config,
                bool enable_run_logging, std::string run_directory,
-               std::string execution_command)
-      : node_(node), config_(std::move(config)) {
+               std::string execution_command, bool subscribe_truth_topics,
+               double worker_start_delay_s)
+      : node_(node), config_(std::move(config)),
+        worker_start_delay_s_(worker_start_delay_s) {
+    tuning_ = uwb_imu_pl::readEstimationTuningV1(config_);
     for (const auto& anchor : config_.anchors) {
       anchors_.emplace(anchor.id.value(), anchor);
     }
@@ -200,10 +206,12 @@ class RealtimeNode {
         config_.realtime.imu_topic, 1000, &RealtimeNode::imuCallback, this);
     uwb_subscriber_ = node_.subscribe(
         config_.realtime.uwb_topic, 100, &RealtimeNode::uwbCallback, this);
-    ground_truth_subscriber_ = node_.subscribe(
-        "/sim/odom", 100, &RealtimeNode::groundTruthCallback, this);
-    fault_truth_subscriber_ = node_.subscribe(
-        "/uwb_sim/fault_truth", 1000, &RealtimeNode::faultTruthCallback, this);
+    if (subscribe_truth_topics) {
+      ground_truth_subscriber_ = node_.subscribe(
+          "/sim/odom", 100, &RealtimeNode::groundTruthCallback, this);
+      fault_truth_subscriber_ = node_.subscribe(
+          "/uwb_sim/fault_truth", 1000, &RealtimeNode::faultTruthCallback, this);
+    }
     worker_ = std::thread(&RealtimeNode::workerLoop, this);
   }
 
@@ -325,7 +333,8 @@ class RealtimeNode {
 
   void initialize(uwb_imu_pl::TimestampNs time,
                   const std::optional<uwb_imu_pl::NavigationState>& seed_state =
-                      std::nullopt) {
+                      std::nullopt,
+                  const std::optional<Eigen::Matrix<double, 15, 1>>& prior = std::nullopt) {
     uwb_imu_pl::NavigationState initial;
     initial.timestamp = time;
     initial.position_world_m = seed_state
@@ -339,13 +348,23 @@ class RealtimeNode {
     }
     estimator_.reset(new uwb_imu_pl::IncrementalUwbImuEstimator(
         config_, config_.realtime.lever_arm_body_m));
-    estimator_->initialize(initial, config_.realtime.prior_sigmas);
+    estimator_->initialize(initial, prior ? *prior : config_.realtime.prior_sigmas);
     monitor_.reset(new uwb_imu_pl::IntegrityMonitor(
         config_.risk, config_.snapshot.rank_tolerance,
         config_.snapshot.max_condition_number));
     pipeline_.reset(new uwb_imu_pl::RealtimeIntegrityPipeline(
         estimator_.get(), *monitor_));
-    logger_.writeEvent(time, "INITIALIZED", "first ordered IMU timestamp");
+    logger_.writeEvent(time, "INITIALIZED", "ordered sensor boundary;config_hash=" + config_.config_hash);
+    ROS_INFO_STREAM("initial state t=" << time.seconds()
+        << " p=" << initial.position_world_m.transpose()
+        << " v=" << initial.velocity_world_mps.transpose()
+        << " q_xyzw=" << initial.q_world_body.coeffs().transpose()
+        << " ba=" << initial.accel_bias_mps2.transpose()
+        << " bg=" << initial.gyro_bias_radps.transpose()
+        << " priors=" << (prior ? *prior : config_.realtime.prior_sigmas).transpose()
+        << " bias_integration_sigmas="
+        << uwb_imu_pl::estimatorNumericsAuditV1(*estimator_).bias_integration_sigmas.transpose()
+        << " config_hash=" << config_.config_hash);
   }
 
   uwb_imu_pl::UwbBatch convert(const Event& event) const {
@@ -380,6 +399,17 @@ class RealtimeNode {
   }
 
   void processImu(const Event& event, const ProcessingMetrics& metrics) {
+    if (!estimator_ && tuning_.causal_bootstrap) {
+      uwb_imu_pl::ImuMeasurement sample;
+      sample.id = uwb_imu_pl::MeasurementId(event.sequence);
+      sample.timestamp = event.timestamp;
+      sample.specific_force_mps2 = {event.imu.linear_acceleration.x,
+          event.imu.linear_acceleration.y, event.imu.linear_acceleration.z};
+      sample.angular_velocity_radps = {event.imu.angular_velocity.x,
+          event.imu.angular_velocity.y, event.imu.angular_velocity.z};
+      bootstrap_imu_.push_back(sample);
+      return;
+    }
     if (!estimator_) {
       initialize(event.timestamp);
     } else if (last_processed_imu_ &&
@@ -435,6 +465,40 @@ class RealtimeNode {
   }
 
   void processUwb(const Event& event, const ProcessingMetrics& metrics) {
+    if (!pipeline_ && tuning_.causal_bootstrap) {
+      const auto batch = convert(event);
+      if (bootstrap_imu_.empty()) return;
+      const auto end = uwb_imu_pl::TimestampNs::fromSeconds(
+          bootstrap_imu_.front().timestamp.seconds() + 2.0);
+      if (!(end < event.timestamp)) {
+        bootstrap_ranges_.insert(bootstrap_ranges_.end(),
+            batch.measurements.begin(), batch.measurements.end());
+        return;
+      }
+      if (bootstrap_imu_.back().timestamp < end)
+        throw std::runtime_error("BOOTSTRAP_WAITING_FOR_TWO_SECONDS");
+      const auto initialized = uwb_imu_pl::initializeCausallyV1(
+          bootstrap_imu_, bootstrap_ranges_, config_,
+          config_.realtime.lever_arm_body_m,
+          tuning_.bootstrap_prefer_below_anchors);
+      initialize(initialized.state.timestamp, initialized.state,
+                 initialized.prior_sigmas);
+      pipeline_->ingestImu(initialized.boundary);
+      for (const auto& sample : bootstrap_imu_) {
+        if (!(end < sample.timestamp)) continue;
+        pipeline_->ingestImu(sample);
+        last_processed_imu_ = sample.timestamp;
+        last_imu_measurement_ = sample;
+      }
+      if (!last_processed_imu_) {
+        last_processed_imu_ = initialized.boundary.timestamp;
+        last_imu_measurement_ = initialized.boundary;
+      }
+      logger_.writeEvent(end, "CAUSAL_BOOTSTRAP",
+          std::string("stationary=") + booleanText(initialized.stationary) +
+          ";config_hash=" + config_.config_hash);
+      bootstrap_imu_.clear(); bootstrap_ranges_.clear();
+    }
     if (!pipeline_) {
       logger_.writeEvent(event.timestamp, "UWB_BEFORE_INITIALIZATION_REJECT",
                           "waiting for first ordered IMU sample");
@@ -576,6 +640,13 @@ class RealtimeNode {
   }
 
   void workerLoop() {
+    // Test/replay-only deterministic ingress barrier.  Production keeps the
+    // default zero; an offline equivalence replay may first enqueue both ROS
+    // topics so their shared timestamp ordering is independent of TCP arrival.
+    if (worker_start_delay_s_ > 0.0) {
+      std::this_thread::sleep_for(std::chrono::duration<double>(
+          worker_start_delay_s_));
+    }
     while (!stop_.load() && ros::ok()) {
       Event event;
       ProcessingMetrics metrics;
@@ -1059,11 +1130,15 @@ class RealtimeNode {
   std::atomic<std::uint64_t> queue_overflow_count_{0};
   std::atomic<std::uint64_t> dropped_uwb_count_{0};
   bool imu_overflow_pending_ = false;
+  double worker_start_delay_s_ = 0.0;
   std::string run_id_;
   uwb_imu_pl::TimestampNs latest_received_imu_;
   std::optional<uwb_imu_pl::TimestampNs> last_processed_imu_;
   std::optional<uwb_imu_pl::ImuMeasurement> last_imu_measurement_;
   std::optional<uwb_imu_pl::EventOrderKey> last_processed_event_;
+  uwb_imu_pl::EstimationTuningV1 tuning_;
+  std::vector<uwb_imu_pl::ImuMeasurement> bootstrap_imu_;
+  std::vector<uwb_imu_pl::UwbMeasurement> bootstrap_ranges_;
   uwb_imu_pl::RunSummary summary_;
 };
 
@@ -1084,6 +1159,8 @@ int main(int argc, char** argv) {
   std::string fde_profile_override;
   std::string execution_command;
   bool enable_run_logging = false;
+  bool subscribe_truth_topics = true;
+  double worker_start_delay_s = 0.0;
   private_node.param("config_path", config_path, std::string());
   private_node.param("run_directory", run_directory, std::string());
   private_node.param("fixed_lag_epochs", fixed_lag_epochs_override,
@@ -1098,6 +1175,12 @@ int main(int argc, char** argv) {
   private_node.param("fde_profile", fde_profile_override, std::string());
   private_node.param("execution_command", execution_command, std::string());
   private_node.param("enable_run_logging", enable_run_logging, false);
+  private_node.param("subscribe_truth_topics", subscribe_truth_topics, true);
+  private_node.param("worker_start_delay_s", worker_start_delay_s, 0.0);
+  if (!std::isfinite(worker_start_delay_s) || worker_start_delay_s < 0.0) {
+    ROS_FATAL("~worker_start_delay_s must be finite and non-negative");
+    return 2;
+  }
   if (config_path.empty()) {
     ROS_FATAL("~config_path is required");
     return 2;
@@ -1130,9 +1213,14 @@ int main(int argc, char** argv) {
     ROS_INFO_STREAM("resolved fixed_lag_epochs="
                     << config.incremental.fixed_lag_epochs
                     << " config_hash=" << config.config_hash);
+    std::unique_ptr<tbb::global_control> nominal_threads;
+    if (config.fde.profile == uwb_imu_pl::FdeProfile::Off)
+      nominal_threads.reset(new tbb::global_control(
+          tbb::global_control::max_allowed_parallelism, 1));
     RealtimeNode realtime(node, std::move(config), enable_run_logging,
                           run_directory,
-                          execution_command);
+                          execution_command, subscribe_truth_topics,
+                          worker_start_delay_s);
     ros::spin();
   } catch (const std::exception& error) {
     ROS_FATAL_STREAM(error.what());

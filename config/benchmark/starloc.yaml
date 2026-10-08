@@ -1,0 +1,34 @@
+schema: uwb-imu-benchmark/v1
+dataset: starloc
+data_root: ../../data/starloc
+format: starloc_csv
+sequence_manifest: dataset_params.json
+sequences: all
+imu: {file: imu.csv, acceleration_scale: 1.0, acceleration_unit: mps2, acceleration_frame: rig, gyro_scale: 1.0, gyro_unit: radps, gyro_frame: imu, rotation: C_r_i=C_c_r^T*C_c_i}
+uwb:
+  file: uwb.csv
+  range_field_s1_s4: range_calib
+  range_field_s5: range
+  default_sigma_m: 0.17
+  epoch_batch_window_s: 0.02
+  tag_levers_by_setup:
+    s1: {1: [-0.085, -0.207, 0.069], 2: [-0.085, 0.0, 0.069]}
+    s2: {1: [-0.085, -0.207, 0.069], 2: [-0.085, 0.0, 0.069]}
+    s3: {1: [-0.186, -0.113, 0.098]}
+    s4: {1: [-0.186, -0.113, 0.098]}
+    s5: {1: [-0.186, -0.113, 0.098]}
+anchors:
+  manifest: dataset_params.json
+  files: {v1: mocap/uwb_markers_v1.csv, v2: mocap/uwb_markers_v2.csv, v3: mocap/uwb_markers_v3.csv}
+  # v1's CSV index is the Vicon rigid-body marker ID, not the radio ID used
+  # by uwb.csv.  The fixed correspondence follows the room geometry in v2;
+  # gt_range is used only as an independent post-conversion audit.
+  radio_id_from_marker_id:
+    v1: {10: 11, 11: 7, 12: 4, 13: 10, 15: 5, 16: 6, 6: 12, 9: 9}
+    v2: {10: 10, 11: 11, 12: 12, 4: 4, 5: 5, 6: 6, 7: 7, 9: 9}
+    v3: {11: 11, 12: 12, 4: 4, 9: 9}
+ground_truth: {source: uwb.csv, body_fields: [x, y, z, w, rot_x, rot_y, rot_z], tag_fields: [tag_pos_x, tag_pos_y, tag_pos_z], frame: vicon}
+time: {source: time_s, offset_s: 0.0}
+primary_tag: 1
+supplemental_tags: [1, 2]
+calibration: {policy: published_plus_fixed_id_correspondence, label: official_geometry}
