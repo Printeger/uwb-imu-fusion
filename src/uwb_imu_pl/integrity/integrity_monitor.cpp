@@ -29,6 +29,7 @@
 #include <deque>
 #include <cstdlib>
 #include <exception>
+#include <fstream>
 #include <iomanip>
 #include <iterator>
 #include <map>
@@ -36,6 +37,7 @@
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <tuple>
 #include <unordered_map>
 
 namespace uwb_imu_pl {
@@ -977,6 +979,220 @@ bool actionCovers(const ExclusionAction& action,
                          action.covered_units.end(), unit) !=
                action.covered_units.end();
       });
+}
+
+struct ModeCacheAuditResult {
+  bool equivalent = true;
+  bool ranking_equivalent = true;
+  double overhead_ms = 0.0;
+};
+
+// Diagnostic only: both branches own all mutable candidate/hypothesis/result
+// and proof storage. Frozen contexts and mode maps remain borrowed from the
+// synchronous production batch. The production jobs are never rebound.
+ModeCacheAuditResult auditModeResponseCache(
+    const FrozenWindowAdmission& admission,
+    const std::vector<FlatProtectionCandidateV1>& source,
+    const RiskBudgetV2& risk, CandidateWorkerPool* workers,
+    std::size_t active_workers, std::size_t scratch_limit,
+    const std::string& directory, std::uint64_t attempt,
+    std::uint64_t audit_batch) {
+  const auto begin = std::chrono::steady_clock::now();
+  ModeCacheAuditResult audit;
+  struct Branch {
+    explicit Branch(std::size_t count)
+        : candidates(count), hypotheses(count), results(count),
+          proofs(count), arenas(count), jobs(count) {}
+    std::vector<CandidateEvaluation> candidates;
+    std::vector<std::vector<FaultHypothesisV2>> hypotheses;
+    std::vector<ProtectionLevelV2Result> results;
+    std::vector<ProtectionLevelV2ProofV1> proofs;
+    std::vector<AttemptProofArena> arenas;
+    std::vector<FlatProtectionCandidateV1> jobs;
+    ProtectionModeResponseCacheStatsV1 stats;
+    double wall_ms = 0.0;
+  };
+  Branch reference(source.size()), optimized(source.size());
+  auto prepare = [&](Branch* branch) {
+    for (std::size_t i = 0; i < source.size(); ++i) {
+      branch->candidates[i] = *source[i].candidate;
+      branch->hypotheses[i] = *source[i].hypotheses;
+      branch->jobs[i] = source[i];
+      branch->jobs[i].candidate = &branch->candidates[i];
+      branch->jobs[i].hypotheses = &branch->hypotheses[i];
+      branch->jobs[i].result = &branch->results[i];
+      branch->jobs[i].proof_arena = &branch->arenas[i];
+      branch->jobs[i].computation_audit = source[i].computation_audit
+          ? &branch->proofs[i] : nullptr;
+    }
+  };
+  prepare(&reference);
+  prepare(&optimized);
+  auto execute = [&](Branch* branch, bool enabled) {
+    const auto start = std::chrono::steady_clock::now();
+    ProtectionLevelV2().computeSharedFlatBatch(admission, &branch->jobs, risk,
+        workers, active_workers, scratch_limit, enabled, &branch->stats);
+    branch->wall_ms = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - start).count();
+  };
+  execute(&reference, false);
+  execute(&optimized, true);
+  const double tolerance = admission.window().numerics
+      ? admission.window().numerics->numerical_contract.reference_relative_tolerance
+      : 1e-9;
+  auto close = [&](double a, double b) {
+    return a == b || (std::isnan(a) && std::isnan(b)) ||
+        (std::isfinite(a) && std::isfinite(b) &&
+         std::abs(a - b) <= tolerance * std::max({1.0, std::abs(a), std::abs(b)}));
+  };
+  auto matrixClose = [&](const Eigen::MatrixXd& a, const Eigen::MatrixXd& b) {
+    if (a.rows() != b.rows() || a.cols() != b.cols()) return false;
+    for (Eigen::Index row = 0; row < a.rows(); ++row) {
+      for (Eigen::Index col = 0; col < a.cols(); ++col) {
+        if (!close(a(row, col), b(row, col))) return false;
+      }
+    }
+    return true;
+  };
+  auto order = [](const Branch& branch, std::size_t a, std::size_t b) {
+    auto key = [&](std::size_t i) {
+      return std::make_tuple(branch.candidates[i].action.exclusion_cardinality,
+          std::max(branch.results[i].hpl_m, branch.results[i].vpl_m),
+          -branch.candidates[i].information_logdet,
+          branch.candidates[i].action.id.value());
+    };
+    return key(a) < key(b);
+  };
+  for (std::size_t a = 0; a < source.size(); ++a) {
+    if (!reference.results[a].model_valid || !optimized.results[a].model_valid)
+      continue;
+    for (std::size_t b = a + 1; b < source.size(); ++b) {
+      if (reference.results[b].model_valid && optimized.results[b].model_valid &&
+          (order(reference, a, b) != order(optimized, a, b) ||
+           order(reference, b, a) != order(optimized, b, a))) {
+        audit.ranking_equivalent = false;
+      }
+    }
+  }
+  boost::filesystem::create_directories(directory);
+  const std::string prefix = directory + "/attempt-" + std::to_string(attempt) +
+      "-batch-" + std::to_string(audit_batch);
+  std::ofstream csv(prefix + ".csv");
+  if (!csv) throw std::runtime_error("mode response audit CSV cannot be written");
+  csv << std::setprecision(17)
+      << "action_id,hypotheses,reference_model_valid,optimized_model_valid,"
+         "reference_hpl_m,optimized_hpl_m,reference_vpl_m,optimized_vpl_m,"
+         "reference_risk,optimized_risk,reference_proof_valid,optimized_proof_valid,"
+         "reference_proof_id,optimized_proof_id,numeric_equivalent,"
+         "discrete_equivalent,hypothesis_equivalent,proof_payload_equivalent\n";
+  std::size_t hypothesis_count = 0, frozen_roots = 0;
+  for (std::size_t i = 0; i < source.size(); ++i) {
+    const auto& r = reference.results[i];
+    const auto& o = optimized.results[i];
+    bool numeric = close(r.hpl_m, o.hpl_m) && close(r.vpl_m, o.vpl_m);
+    for (int axis = 0; axis < 3; ++axis) {
+      numeric = numeric && close(r.pl_xyz_m(axis), o.pl_xyz_m(axis)) &&
+          close(r.nominal_component_m(axis), o.nominal_component_m(axis)) &&
+          close(r.fault_component_m(axis), o.fault_component_m(axis)) &&
+          close(r.bridge_component_m(axis), o.bridge_component_m(axis));
+    }
+    bool discrete = r.model_valid == o.model_valid &&
+        r.availability == o.availability && r.formal_eligible == o.formal_eligible &&
+        r.risk_budget_valid == o.risk_budget_valid &&
+        r.allocated_outcome_risk == o.allocated_outcome_risk &&
+        (r.hpl_m <= risk.horizontal_alert_limit_m) ==
+            (o.hpl_m <= risk.horizontal_alert_limit_m) &&
+        (r.vpl_m <= risk.vertical_alert_limit_m) ==
+            (o.vpl_m <= risk.vertical_alert_limit_m) && r.reason == o.reason;
+    bool hypotheses_equal = reference.hypotheses[i].size() ==
+        optimized.hypotheses[i].size();
+    for (std::size_t h = 0; hypotheses_equal && h < reference.hypotheses[i].size(); ++h) {
+      const auto& rh = reference.hypotheses[i][h];
+      const auto& oh = optimized.hypotheses[i][h];
+      hypotheses_equal = rh.id == oh.id && rh.modes == oh.modes &&
+          rh.monitored == oh.monitored &&
+          rh.monitorability.rank == oh.monitorability.rank &&
+          rh.monitorability.parameter_dimension == oh.monitorability.parameter_dimension;
+    }
+    auto proofValid = [&](Branch* branch) {
+      if (!branch->results[i].model_valid) return false;
+      return validateProtectionLevelV2Proof(branch->candidates[i],
+          *branch->jobs[i].detector, branch->hypotheses[i], branch->results[i],
+          branch->arenas[i], nullptr);
+    };
+    const bool r_proof = proofValid(&reference), o_proof = proofValid(&optimized);
+    const auto r_id = r_proof ? protectionLevelV2ProofIdentity(
+        reference.candidates[i], r, reference.arenas[i]) : 0;
+    const auto o_id = o_proof ? protectionLevelV2ProofIdentity(
+        optimized.candidates[i], o, optimized.arenas[i]) : 0;
+    bool proof_equal = r_proof == o_proof;
+    if (r_proof && o_proof) {
+      ProtectionLevelV2ProofV1 rp, op;
+      proof_equal = protectionLevelV2Proof(r, reference.candidates[i],
+          reference.arenas[i], &rp) &&
+          protectionLevelV2Proof(o, optimized.candidates[i],
+              optimized.arenas[i], &op) &&
+          rp.candidate_proof_identity == op.candidate_proof_identity &&
+          rp.detector_proof_identity == op.detector_proof_identity &&
+          rp.detector_candidate_numerical_identity == op.detector_candidate_numerical_identity &&
+          rp.hypothesis_proofs.size() == op.hypothesis_proofs.size() &&
+          rp.component_proofs.size() == op.component_proofs.size();
+      for (std::size_t h = 0; proof_equal && h < rp.hypothesis_proofs.size(); ++h) {
+        const auto& rh = rp.hypothesis_proofs[h];
+        const auto& oh = op.hypothesis_proofs[h];
+        proof_equal = rh.served_entry.hypothesis == oh.served_entry.hypothesis &&
+            rh.nullspace_class == oh.nullspace_class &&
+            matrixClose(rh.certified_gram, oh.certified_gram) &&
+            matrixClose(rh.protected_response, oh.protected_response) &&
+            matrixClose(rh.raw_detection_factor, oh.raw_detection_factor);
+      }
+      for (std::size_t h = 0; proof_equal && h < rp.component_proofs.size(); ++h) {
+        const auto& rh = rp.component_proofs[h];
+        const auto& oh = op.component_proofs[h];
+        proof_equal = rh.hypothesis == oh.hypothesis;
+        for (int axis = 0; axis < 3; ++axis) {
+          proof_equal = proof_equal && close(rh.served_component(axis),
+                                             oh.served_component(axis));
+        }
+      }
+    }
+    audit.equivalent = audit.equivalent && numeric && discrete && hypotheses_equal &&
+        proof_equal && (!r.model_valid || (r_proof && o_proof && r_id != 0 && o_id != 0));
+    hypothesis_count += source[i].hypotheses->size();
+    frozen_roots += source[i].frozen != nullptr;
+    csv << source[i].candidate->action.id.value() << ','
+        << source[i].hypotheses->size() << ',' << r.model_valid << ',' << o.model_valid
+        << ',' << r.hpl_m << ',' << o.hpl_m << ',' << r.vpl_m << ',' << o.vpl_m
+        << ',' << r.allocated_outcome_risk << ',' << o.allocated_outcome_risk
+        << ',' << r_proof << ',' << o_proof << ',' << r_id << ',' << o_id
+        << ',' << numeric << ',' << discrete << ',' << hypotheses_equal
+        << ',' << proof_equal << '\n';
+  }
+  csv.close();
+  audit.equivalent = audit.equivalent && audit.ranking_equivalent;
+  audit.overhead_ms = std::chrono::duration<double, std::milli>(
+      std::chrono::steady_clock::now() - begin).count();
+  std::ofstream summary(prefix + ".json");
+  if (!summary) throw std::runtime_error("mode response audit summary cannot be written");
+  summary << std::setprecision(17)
+      << "{\"attempt\":" << attempt << ",\"batch\":" << audit_batch
+      << ",\"candidate_roots\":" << source.size()
+      << ",\"frozen_roots\":" << frozen_roots
+      << ",\"hypothesis_slots\":" << hypothesis_count
+      << ",\"status\":\"" << (source.empty() ? "NOT_RUN_NO_POST_PASSED_ROOTS" : "COMPARED") << '\"'
+      << ",\"equivalent\":" << (source.empty() ? "null" : audit.equivalent ? "true" : "false")
+      << ",\"ranking_equivalent\":" << (audit.ranking_equivalent ? "true" : "false")
+      << ",\"reference_wall_ms\":" << reference.wall_ms
+      << ",\"optimized_wall_ms\":" << optimized.wall_ms
+      << ",\"reference_exhaustive_products\":" << reference.stats.exhaustive_hypothesis_products
+      << ",\"optimized_unique_mode_products\":" << optimized.stats.unique_mode_products
+      << ",\"optimized_cached_products\":" << optimized.stats.cached_hypothesis_products
+      << ",\"optimized_exhaustive_products\":" << optimized.stats.exhaustive_hypothesis_products
+      << ",\"optimized_retained_bytes\":" << optimized.stats.retained_bytes
+      << ",\"audit_overhead_ms\":" << audit.overhead_ms
+      << ",\"core_compute_includes_diagnostic_overhead\":true,"
+         "\"scope\":\"batch PL only; production decision is unchanged; cross-batch ranking requires full pipeline comparison\"}\n";
+  return audit;
 }
 
 // Pure, frozen-input eligibility check used only to attribute a terminal
@@ -3634,6 +3850,9 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
         std::size_t peak_batch_full_proofs = 0;
         std::size_t flat_pl_candidate_roots = 0;
         std::size_t flat_pl_tasks = 0;
+        std::uint64_t mode_cache_audit_batches = 0;
+        std::uint64_t mode_cache_audit_failures = 0;
+        double mode_cache_audit_overhead_ms = 0.0;
         const std::size_t main_full_proofs_before_actions = proof_arena
             ? protectionLevelV2FullProofCount(*proof_arena) : 0;
         std::function<void(std::vector<EvaluatedAction>*,
@@ -3786,6 +4005,38 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
               markActionSearchTerminal(&output, action, "PL_EXCEPTION");
               throw;
             }
+        }
+        if (const char* attempts = std::getenv("UWB_IMU_PL_MODE_CACHE_AUDIT_ATTEMPTS")) {
+          const std::string filter = std::string(",") + attempts + ",";
+          if (filter.find("," + std::to_string(input_attempt_count_) + ",") !=
+              std::string::npos) {
+            if (const char* directory = std::getenv("UWB_IMU_PL_MODE_CACHE_AUDIT_DIR")) {
+              const auto audit_start = std::chrono::steady_clock::now();
+              const auto audit_batch = ++mode_cache_audit_batches;
+              try {
+                const auto audit = auditModeResponseCache(window_admission,
+                    flat_jobs, cfg.risk_v2, candidate_workers_.get(), active_workers,
+                    kRetainedWorkerScratchLimitBytes, directory,
+                    input_attempt_count_, audit_batch);
+                if (!audit.equivalent) {
+                  ++mode_cache_audit_failures;
+                  output.reason_codes.push_back("MODE_CACHE_AUDIT_MISMATCH:batch=" +
+                      std::to_string(audit_batch));
+                }
+              } catch (const std::exception& error) {
+                ++mode_cache_audit_failures;
+                output.reason_codes.push_back("MODE_CACHE_AUDIT_EXCEPTION:" +
+                    std::string(error.what()));
+              } catch (...) {
+                ++mode_cache_audit_failures;
+                output.reason_codes.push_back("MODE_CACHE_AUDIT_EXCEPTION:unknown");
+              }
+              mode_cache_audit_overhead_ms += std::chrono::duration<double, std::milli>(
+                  std::chrono::steady_clock::now() - audit_start).count();
+            } else {
+              output.reason_codes.push_back("MODE_CACHE_AUDIT_NOT_RUN:MISSING_DIR");
+            }
+          }
         }
         const auto flat_start = std::chrono::steady_clock::now();
         flat_pl_candidate_roots += flat_jobs.size();
@@ -4028,6 +4279,13 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
             std::to_string(compact_action_search
                 ? compact_action_lease.search().peak_batch_actions
                 : action_stream.peak_batch_actions);
+        if (mode_cache_audit_batches != 0) {
+          route_reason += ";mode_cache_audit_batches=" +
+              std::to_string(mode_cache_audit_batches) +
+              ";mode_cache_audit_failures=" + std::to_string(mode_cache_audit_failures) +
+              ";mode_cache_audit_overhead_ms=" + std::to_string(mode_cache_audit_overhead_ms) +
+              ";core_compute_includes_diagnostic_overhead=1";
+        }
         // The compact protocol exposes additional bounded-memory accounting.
         // Do not rewrite the legacy V2 diagnostic string: it is part of the
         // public frozen semantic digest.

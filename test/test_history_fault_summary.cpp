@@ -20,8 +20,12 @@
 #include <Eigen/SVD>
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <cstdint>
+#include <cstring>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -1232,6 +1236,255 @@ TEST(HistoryFaultSummary, P103CarrierRankCertificateRejectsNumericalNoise) {
   EXPECT_EQ(scaled_summary.nuPerp(), summary.nuPerp());
   EXPECT_NE(scaled_certified.carrier_rank.proof_identity,
             rank.proof_identity);
+}
+
+class ScopedCarrierUEnvironment {
+ public:
+  ScopedCarrierUEnvironment() {
+    const char* value = std::getenv("UWB_IMU_PL_EXHAUSTIVE_CARRIER_U");
+    was_set_ = value != nullptr;
+    if (value) previous_ = value;
+  }
+  ~ScopedCarrierUEnvironment() {
+    if (was_set_)
+      setenv("UWB_IMU_PL_EXHAUSTIVE_CARRIER_U", previous_.c_str(), 1);
+    else
+      unsetenv("UWB_IMU_PL_EXHAUSTIVE_CARRIER_U");
+  }
+  void exhaustive(bool enabled) {
+    if (enabled) setenv("UWB_IMU_PL_EXHAUSTIVE_CARRIER_U", "1", 1);
+    else unsetenv("UWB_IMU_PL_EXHAUSTIVE_CARRIER_U");
+  }
+ private:
+  bool was_set_ = false;
+  std::string previous_;
+};
+
+template <typename A, typename B>
+bool matrixBitsIdentical(const Eigen::MatrixBase<A>& a,
+                         const Eigen::MatrixBase<B>& b) {
+  if (a.rows() != b.rows() || a.cols() != b.cols()) return false;
+  for (Eigen::Index j = 0; j < a.cols(); ++j)
+    for (Eigen::Index i = 0; i < a.rows(); ++i) {
+      const double av = a(i, j), bv = b(i, j);
+      if (std::memcmp(&av, &bv, sizeof(double)) != 0) return false;
+    }
+  return true;
+}
+
+void expectScalarBits(double a, double b) {
+  EXPECT_EQ(std::memcmp(&a, &b, sizeof(double)), 0);
+}
+
+void expectCertifiedBits(const CertifiedHistoryFaultSummary& a,
+                         const CertifiedHistoryFaultSummary& b) {
+  const auto& x = a.summary;
+  const auto& y = b.summary;
+  EXPECT_EQ(x.valid, y.valid);
+  EXPECT_EQ(x.invalid_reason, y.invalid_reason);
+  EXPECT_EQ(x.n_rows, y.n_rows);
+  EXPECT_EQ(x.n_old_state, y.n_old_state);
+  EXPECT_EQ(x.n_boundary, y.n_boundary);
+  EXPECT_EQ(x.n_fault, y.n_fault);
+  EXPECT_EQ(x.rank_h_old_state, y.rank_h_old_state);
+  EXPECT_EQ(x.rank_boundary, y.rank_boundary);
+  expectScalarBits(x.old_state_pivot_ratio, y.old_state_pivot_ratio);
+  EXPECT_TRUE(matrixBitsIdentical(x.R_b, y.R_b));
+  EXPECT_TRUE(matrixBitsIdentical(x.T_b, y.T_b));
+  EXPECT_TRUE(matrixBitsIdentical(x.d_b, y.d_b));
+  EXPECT_TRUE(matrixBitsIdentical(x.F_b, y.F_b));
+  EXPECT_TRUE(matrixBitsIdentical(x.d_perp, y.d_perp));
+  const auto& p = a.carrier_rank;
+  const auto& q = b.carrier_rank;
+  EXPECT_EQ(p.valid, q.valid);
+  EXPECT_EQ(p.storage_rows_before_compression, q.storage_rows_before_compression);
+  EXPECT_EQ(p.raw_residual_dof, q.raw_residual_dof);
+  EXPECT_EQ(p.effective_rank, q.effective_rank);
+  expectScalarBits(p.rank_tolerance, q.rank_tolerance);
+  expectScalarBits(p.factor_scale, q.factor_scale);
+  expectScalarBits(p.roundoff_error_bound, q.roundoff_error_bound);
+  expectScalarBits(p.rank_threshold, q.rank_threshold);
+  expectScalarBits(p.discarded_frobenius_bound, q.discarded_frobenius_bound);
+  EXPECT_TRUE(matrixBitsIdentical(p.singular_values, q.singular_values));
+  EXPECT_EQ(p.proof_identity, q.proof_identity);
+}
+
+TEST(HistoryFaultSummary, CarrierVOnlyPreservesSingularValuesAndRightVectors) {
+  Rng rng(20261009u);
+  for (const auto shape : std::vector<std::pair<int, int>>{
+           {18, 7}, {7, 18}, {12, 12}, {1, 7}, {7, 1}}) {
+    SCOPED_TRACE(::testing::Message() << shape.first << 'x' << shape.second);
+    const MatrixXd carrier = rng.normal(shape.first, shape.second);
+    const Eigen::JacobiSVD<MatrixXd> full(
+        carrier, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    const Eigen::JacobiSVD<MatrixXd> only_v(carrier, Eigen::ComputeThinV);
+    EXPECT_TRUE(matrixBitsIdentical(full.singularValues(), only_v.singularValues()));
+    EXPECT_TRUE(matrixBitsIdentical(full.matrixV(), only_v.matrixV()));
+  }
+}
+
+TEST(HistoryFaultSummary, CarrierVOnlyPreservesSummaryAndProofAtRankBoundary) {
+  ScopedCarrierUEnvironment environment;
+  Rng rng(20261010u);
+  auto check = [&](const HistoryFaultSummaryInput& input,
+                   const HistoryFaultSummaryOptions& options) {
+    environment.exhaustive(true);
+    const auto reference = buildCertifiedHistoryFaultSummary(input, options);
+    environment.exhaustive(false);
+    const auto optimized = buildCertifiedHistoryFaultSummary(input, options);
+    expectCertifiedBits(reference, optimized);
+    return optimized;
+  };
+  for (const auto shape : std::vector<std::array<int, 4>>{
+           {{24, 4, 3, 6}}, {{12, 2, 3, 15}}, {{8, 2, 2, 0}}, {{6, 2, 7, 3}}}) {
+    const auto input = makeInput(rng, shape[0], shape[1], shape[2], shape[3]);
+    check(input, {});
+  }
+  HistoryFaultSummaryInput near;
+  near.h_old_state = MatrixXd::Zero(6, 0);
+  near.h_boundary = MatrixXd::Zero(6, 0);
+  near.fault_map = MatrixXd::Zero(6, 3);
+  near.rhs = VectorXd::Zero(6);
+  near.fault_map(0, 0) = 1.0;
+  near.rhs(3) = 5e-15;
+  HistoryFaultSummaryOptions options;
+  options.rank_tolerance = 1e-10;
+  const double dimension_eps = 6.0 * std::numeric_limits<double>::epsilon();
+  const double threshold = options.rank_tolerance +
+                           dimension_eps / (1.0 - dimension_eps);
+  // norm(C) rounds to 1 here.  Exercise the two adjacent representable
+  // singular values and exact equality at the strict sigma > threshold gate.
+  near.fault_map(1, 1) = std::nextafter(threshold, 0.0);
+  near.fault_map(2, 2) = threshold;
+  const auto below = check(near, options);
+  ASSERT_TRUE(below.summary.valid);
+  EXPECT_EQ(below.carrier_rank.effective_rank, 1);
+  expectScalarBits(below.carrier_rank.rank_threshold, threshold);
+  near.fault_map(1, 1) = std::nextafter(threshold,
+                                     std::numeric_limits<double>::infinity());
+  const auto above = check(near, options);
+  ASSERT_TRUE(above.summary.valid);
+  EXPECT_EQ(above.carrier_rank.effective_rank, 2);
+  auto rejected = makeInput(rng, 12, 2, 3, 4);
+  rejected.h_old_state.col(1) = rejected.h_old_state.col(0);
+  EXPECT_FALSE(check(rejected, {}).summary.valid);
+}
+
+TEST(HistoryFaultSummary, CarrierVOnlyPreservesIncrementalTreeProofBinding) {
+  ScopedCarrierUEnvironment environment;
+  Rng rng(20261011u);
+  uwb_imu_pl::HistoryRootCacheRequest request;
+  request.input = makeInput(rng, 24, 4, 3, 6);
+  const auto owner = std::make_shared<const int>(5);
+  request.owner = owner;
+  request.owner_payload = owner.get();
+  request.ordering_version = 1;
+  request.whitening_version = 1;
+  request.recovery_version = 1;
+  for (int row = 0; row < request.input.rows(); ++row) {
+    request.row_uids.push_back("carrier-row:" + std::to_string(row));
+    request.row_provenance.push_back(1 + row / 4);
+  }
+  for (int column = 0; column < 7; ++column)
+    request.state_column_uids.push_back("carrier-state:" + std::to_string(column));
+  for (int column = 0; column < 6; ++column)
+    request.fault_column_uids.push_back("carrier-fault:" + std::to_string(column));
+  uwb_imu_pl::IncrementalHistoryRootCache reference_cache, optimized_cache;
+  for (int epoch = 0; epoch < 4; ++epoch) {
+    SCOPED_TRACE(epoch);
+    if (epoch == 1)
+      request.input.fault_map(5, 2) =
+          std::nextafter(request.input.fault_map(5, 2), 1.0);
+    if (epoch == 2) request.input.rhs(10) += 0.25;
+    if (epoch == 3) {
+      request.input.h_old_state = request.input.h_old_state.topRows(20).eval();
+      request.input.h_boundary = request.input.h_boundary.topRows(20).eval();
+      request.input.fault_map = request.input.fault_map.topRows(20).eval();
+      request.input.rhs = request.input.rhs.head(20).eval();
+      request.row_uids.resize(20);
+      request.row_provenance.resize(20);
+    }
+    CertifiedHistoryFaultSummary reference, optimized;
+    environment.exhaustive(true);
+    reference.summary = reference_cache.update(request, &reference.carrier_rank);
+    environment.exhaustive(false);
+    optimized.summary = optimized_cache.update(request, &optimized.carrier_rank);
+    ASSERT_TRUE(reference.summary.valid) << reference.summary.invalid_reason;
+    expectCertifiedBits(reference, optimized);
+    EXPECT_EQ(reference_cache.audit().internal_nodes_recomputed,
+              optimized_cache.audit().internal_nodes_recomputed);
+  }
+}
+
+TEST(HistoryFaultSummary, CapturedProductionCarrierMicrobenchmark) {
+  const char* filename = std::getenv("UWB_IMU_PL_CARRIER_BENCHMARK_FILE");
+  if (!filename || !*filename) {
+    RecordProperty("benchmark_status", "NOT_RUN_NO_CAPTURE");
+    return;
+  }
+  std::ifstream input(filename, std::ios::binary);
+  ASSERT_TRUE(input.good()) << filename;
+  char magic[8];
+  std::uint64_t rows = 0, cols = 0;
+  input.read(magic, sizeof(magic));
+  input.read(reinterpret_cast<char*>(&rows), sizeof(rows));
+  input.read(reinterpret_cast<char*>(&cols), sizeof(cols));
+  ASSERT_TRUE(input.good());
+  ASSERT_EQ(std::memcmp(magic, "UWBCAR1\0", sizeof(magic)), 0);
+  ASSERT_GT(rows, 0u);
+  ASSERT_GT(cols, 0u);
+  ASSERT_LE(rows, 10000u);
+  ASSERT_LE(cols, 10000u);
+  ASSERT_LE(rows * cols, 20000000u);
+  MatrixXd carrier(rows, cols);
+  input.read(reinterpret_cast<char*>(carrier.data()), carrier.size() * sizeof(double));
+  ASSERT_TRUE(input.good());
+  ASSERT_TRUE(carrier.allFinite());
+  int repetitions = 5;
+  if (const char* value = std::getenv("UWB_IMU_PL_CARRIER_BENCHMARK_REPETITIONS"))
+    repetitions = std::max(1, std::min(100, std::atoi(value)));
+  std::vector<double> full_times, v_times;
+  // First pair warms both paths; alternate order to reduce order bias.
+  for (int i = -1; i < repetitions; ++i) {
+    Eigen::JacobiSVD<MatrixXd> full, only_v;
+    double full_ms = 0.0, v_ms = 0.0;
+    auto compute_full = [&] {
+      const auto start = std::chrono::steady_clock::now();
+      full.compute(carrier, Eigen::ComputeThinU | Eigen::ComputeThinV);
+      full_ms = std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - start).count();
+    };
+    auto compute_v = [&] {
+      const auto start = std::chrono::steady_clock::now();
+      only_v.compute(carrier, Eigen::ComputeThinV);
+      v_ms = std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - start).count();
+    };
+    if (i % 2 == 0) { compute_full(); compute_v(); }
+    else { compute_v(); compute_full(); }
+    ASSERT_TRUE(matrixBitsIdentical(full.singularValues(), only_v.singularValues()));
+    ASSERT_TRUE(matrixBitsIdentical(full.matrixV(), only_v.matrixV()));
+    if (i >= 0) { full_times.push_back(full_ms); v_times.push_back(v_ms); }
+  }
+  std::sort(full_times.begin(), full_times.end());
+  std::sort(v_times.begin(), v_times.end());
+  auto median = [](const std::vector<double>& values) {
+    const std::size_t n = values.size();
+    return n % 2 ? values[n / 2] : 0.5 * (values[n / 2 - 1] + values[n / 2]);
+  };
+  const double full_median = median(full_times), v_median = median(v_times);
+  RecordProperty("benchmark_status", "MEASURED_CAPTURED_PRODUCTION_CARRIER");
+  RecordProperty("carrier_rows", std::to_string(rows));
+  RecordProperty("carrier_cols", std::to_string(cols));
+  RecordProperty("repetitions", std::to_string(repetitions));
+  RecordProperty("full_uv_median_ms", std::to_string(full_median));
+  RecordProperty("v_only_median_ms", std::to_string(v_median));
+  RecordProperty("svd_outputs_bit_identical", "1");
+  RecordProperty("speedup", std::to_string(full_median / v_median));
+  std::cout << "CARRIER_SVD_MICROBENCH rows=" << rows << " cols=" << cols
+            << " full_uv_median_ms=" << full_median
+            << " v_only_median_ms=" << v_median
+            << " speedup=" << full_median / v_median << '\n';
 }
 
 }  // namespace

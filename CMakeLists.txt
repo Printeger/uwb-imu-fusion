@@ -310,6 +310,9 @@ if(CATKIN_ENABLE_TESTING)
     UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
   target_link_libraries(test_integrity_v2 ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
 
+  catkin_add_gtest(test_protection_mode_cache test/test_protection_mode_cache.cpp test/test_main.cpp)
+  target_link_libraries(test_protection_mode_cache ${PROJECT_NAME} gtsam ${Boost_LIBRARIES} yaml-cpp ${GTEST_LIBRARIES})
+
   catkin_add_gtest(test_integrity_reference test/test_integrity_reference.cpp test/test_main.cpp)
   target_compile_definitions(test_integrity_reference PRIVATE
     UWB_IMU_PL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")

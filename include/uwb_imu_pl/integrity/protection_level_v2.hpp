@@ -301,6 +301,13 @@ struct FlatProtectionCandidateV1 {
   std::uint64_t fault_model_policy_fingerprint = 0;
 };
 
+struct ProtectionModeResponseCacheStatsV1 {
+  std::uint64_t unique_mode_products = 0;
+  std::uint64_t cached_hypothesis_products = 0;
+  std::uint64_t exhaustive_hypothesis_products = 0;
+  std::uint64_t retained_bytes = 0;
+};
+
 class ProtectionLevelV2 {
  public:
   using FaultMapProvider = std::function<Eigen::MatrixXd(
@@ -365,6 +372,18 @@ class ProtectionLevelV2 {
       CandidateWorkerPool* worker_pool,
       std::size_t active_workers,
       std::size_t scratch_limit_bytes) const;
+  // The exhaustive mode computes the original raw-H response for every
+  // hypothesis. Both modes retain all covariance, Gram, nullspace and proof
+  // checks. Stats cover this synchronous call and are reduced canonically.
+  void computeSharedFlatBatch(
+      const FrozenWindowAdmission& admission,
+      std::vector<FlatProtectionCandidateV1>* candidates,
+      const RiskBudgetV2& risk,
+      CandidateWorkerPool* worker_pool,
+      std::size_t active_workers,
+      std::size_t scratch_limit_bytes,
+      bool enable_mode_response_cache,
+      ProtectionModeResponseCacheStatsV1* stats = nullptr) const;
   ProtectionLevelV2Result computeShared(
       const FrozenWindowAdmission& admission,
       CandidateEvaluation* candidate,

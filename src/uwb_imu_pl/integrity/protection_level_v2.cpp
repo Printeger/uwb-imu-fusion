@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <functional>
 #include <map>
 #include <mutex>
@@ -2428,6 +2429,23 @@ void ProtectionLevelV2::computeSharedFlatBatch(
     CandidateWorkerPool* worker_pool,
     std::size_t active_workers,
     std::size_t scratch_limit_bytes) const {
+  const char* mode_cache = std::getenv("UWB_IMU_PL_MODE_RESPONSE_CACHE");
+  computeSharedFlatBatch(admission, jobs, risk, worker_pool, active_workers,
+      scratch_limit_bytes,
+      mode_cache && std::string(mode_cache) == "1" &&
+      std::getenv("UWB_IMU_PL_EXHAUSTIVE_MODE_RESPONSES") == nullptr);
+}
+
+void ProtectionLevelV2::computeSharedFlatBatch(
+    const FrozenWindowAdmission& admission,
+    std::vector<FlatProtectionCandidateV1>* jobs,
+    const RiskBudgetV2& risk,
+    CandidateWorkerPool* worker_pool,
+    std::size_t active_workers,
+    std::size_t scratch_limit_bytes,
+    bool enable_mode_response_cache,
+    ProtectionModeResponseCacheStatsV1* stats) const {
+  if (stats) *stats = {};
   if (!jobs || !worker_pool || !admission) {
     throw std::invalid_argument("invalid R11 flat protection batch");
   }
@@ -2441,11 +2459,16 @@ void ProtectionLevelV2::computeSharedFlatBatch(
     Eigen::Index offset = 0;
     Eigen::Index columns = 0;
   };
+  struct ModeResponse {
+    Eigen::MatrixXd residual;
+    Eigen::MatrixXd protected_response;
+  };
   struct Root {
     ProtectionLevelV2Result result;
     ProtectionLevelV2ProofV1 sidecar;
     std::map<std::uint64_t, SolvedMode> solved_modes;
     RawFactorCertificate raw_factor;
+    std::map<std::uint64_t, ModeResponse> mode_responses;
     Eigen::Vector3d sigma = Eigen::Vector3d::Zero();
     double covariance_rank_tolerance = 1e-10;
     double nominal_tail = 0.0;
@@ -2473,6 +2496,8 @@ void ProtectionLevelV2::computeSharedFlatBatch(
     std::string detector_certificate;
     std::string reason;
     bool valid = false;
+    bool cached_product = false;
+    bool exhaustive_product = false;
   };
   std::vector<Root> roots(jobs->size());
   std::vector<std::size_t> offsets(jobs->size() + 1, 0);
@@ -2750,6 +2775,40 @@ void ProtectionLevelV2::computeSharedFlatBatch(
     root.sidecar.nominal_sigma = root.sigma;
     root.result.nominal_component_m = nominal_k * root.sigma;
     root.result.fault_component_m.setZero();
+    // For this immutable candidate, P D and C H^+ D are linear in D.
+    // A hypothesis concatenates the same mode columns in its frozen order;
+    // concatenate their responses before performing the original Gram and
+    // nullspace checks. Do not reuse across candidates or drop any hypothesis.
+    // Limit the extra root live-set; capacity exhaustion uses the exhaustive
+    // formulation without changing the mathematical or fallback contract.
+    constexpr std::uint64_t kModeResponseCacheLimit = 16u << 20;
+    std::uint64_t response_bytes = 0;
+    std::size_t occurrences = 0;
+    for (const auto& hypothesis : *job.hypotheses) {
+      occurrences += hypothesis.modes.size();
+    }
+    for (const auto& mode : root.solved_modes) {
+      const auto columns = static_cast<std::uint64_t>(mode.second.map->cols());
+      response_bytes += columns *
+          static_cast<std::uint64_t>(job.candidate->rows + 3) * sizeof(double);
+    }
+    if (enable_mode_response_cache && occurrences > root.solved_modes.size() &&
+        response_bytes <= kModeResponseCacheLimit) {
+      for (const auto& mode : root.solved_modes) {
+        ModeResponse response;
+        Eigen::MatrixXd unused_gram;
+        if (!root.raw_factor.faultProducts(*mode.second.map, &unused_gram,
+              &response.protected_response, &response.residual)) {
+          root.mode_responses.clear();
+          break;
+        }
+        root.mode_responses.emplace(mode.first, std::move(response));
+        if (stats) ++stats->unique_mode_products;
+      }
+      if (!root.mode_responses.empty() && stats) {
+        stats->retained_bytes += response_bytes;
+      }
+    }
     root.valid = true;
   }
 
@@ -2927,19 +2986,72 @@ void ProtectionLevelV2::computeSharedFlatBatch(
         }
         Eigen::MatrixXd gram;
         Eigen::MatrixXd residual_factor;
-        if (!root.raw_factor.faultProducts(
+        if (!root.mode_responses.empty()) {
+          residual_factor.resize(candidate.rows, columns);
+          Eigen::Index response_offset = 0;
+          for (const auto mode_id : slot.hypothesis.modes) {
+            const auto& response = root.mode_responses.at(mode_id.value());
+            const auto count = response.residual.cols();
+            residual_factor.middleCols(response_offset, count) =
+                response.residual;
+            protected_fault.middleCols(response_offset, count) =
+                response.protected_response;
+            response_offset += count;
+          }
+          gram = residual_factor.transpose() * residual_factor;
+          slot.cached_product = true;
+        } else if (!root.raw_factor.faultProducts(
                 fault_map, &gram, &protected_fault, &residual_factor)) {
+          slot.exhaustive_product = true;
+          slot.reason = "direct raw-H fault certificate failed";
+          return;
+        } else {
+          slot.exhaustive_product = true;
+        }
+        if (!gram.allFinite() || !protected_fault.allFinite()) {
           slot.reason = "direct raw-H fault certificate failed";
           return;
         }
         NumericalWorkCounters::faultGramEigen();
-        const auto gram_certificate = certifyFactorGramAndProtectedResponse(
+        const double fault_map_norm = fault_map.norm();
+        auto gram_certificate = certifyFactorGramAndProtectedResponse(
             residual_factor, gram, protected_fault,
             root.covariance_rank_tolerance,
-            root.candidate_proof_identity, fault_map.norm());
+            root.candidate_proof_identity, fault_map_norm);
+        // Concatenated GEMM and per-mode GEMM can round differently. A
+        // rank/nullspace boundary must retain the original complete response
+        // computation, including its exact refusal and certificate payload.
+        // Include projection roundoff relative to D, not merely the residual
+        // factor's small singular value: a nearly state-supported D can have
+        // a tiny residual despite a nominally certified FullRank result.
+        const double projection_roundoff = slot.cached_product ? 512.0 *
+            std::numeric_limits<double>::epsilon() *
+            static_cast<double>(std::max(candidate.rows,
+                static_cast<int>(candidate.state_increment.rows()))) *
+            static_cast<double>(std::max<Eigen::Index>(
+                1, candidate.state_increment.rows())) * fault_map_norm : 0.0;
+        const bool rank_boundary = slot.cached_product &&
+            gram_certificate.gram.sigma_min <=
+            root.covariance_rank_tolerance * fault_map_norm +
+                projection_roundoff;
+        if (slot.cached_product &&
+            (!gram_certificate.valid || gram_certificate.nullspace_class !=
+                GramNullspaceClass::FullRank || rank_boundary)) {
+          slot.exhaustive_product = true;
+          if (!root.raw_factor.faultProducts(
+                  fault_map, &gram, &protected_fault, &residual_factor)) {
+            slot.reason = "direct raw-H fault certificate failed";
+            return;
+          }
+          NumericalWorkCounters::faultGramEigen();
+          gram_certificate = certifyFactorGramAndProtectedResponse(
+              residual_factor, gram, protected_fault,
+              root.covariance_rank_tolerance,
+              root.candidate_proof_identity, fault_map_norm);
+        }
         slot.hypothesis_proof = protectionHypothesisProof(
             slot.hypothesis.id, gram_certificate, residual_factor,
-            fault_map.norm(), root.covariance_rank_tolerance);
+            fault_map_norm, root.covariance_rank_tolerance);
         slot.hypothesis_proof.protected_response = protected_fault;
         slot.hypothesis_proof.parent_proof_identity =
             root.candidate_proof_identity;
@@ -3005,6 +3117,10 @@ void ProtectionLevelV2::computeSharedFlatBatch(
       auto& root = roots[c];
       auto& result = root.result;
       auto& slot = slots[local_index];
+      if (stats) {
+        stats->cached_hypothesis_products += slot.cached_product;
+        stats->exhaustive_hypothesis_products += slot.exhaustive_product;
+      }
       if (root.reduction_closed && !job.computation_audit) continue;
       if (!slot.valid) {
         if (root.audit_failure.empty()) root.audit_failure = slot.reason;

@@ -8,11 +8,19 @@
 #include <Eigen/QR>
 #include <boost/shared_ptr.hpp>
 #include <map>
+#include <chrono>
 
 namespace uwb_imu_pl {
 
 ExtractedBoundaryRows extractBoundaryRows(
     const gtsam::GaussianFactorGraph& reduced) {
+  return extractBoundaryRows(reduced,true);
+}
+
+ExtractedBoundaryRows extractBoundaryRows(
+    const gtsam::GaussianFactorGraph& reduced, bool audit_rank,
+    double* rank_audit_ms) {
+  if(rank_audit_ms)*rank_audit_ms=0;
   ExtractedBoundaryRows out;
   std::map<gtsam::Key, int> column_of_key;
   std::size_t rows = 0;
@@ -70,6 +78,8 @@ ExtractedBoundaryRows extractBoundaryRows(
     return out;
   }
   // Rank audit (no truncation anywhere: the rows are handed over intact).
+  if(audit_rank) {
+  const auto start=std::chrono::steady_clock::now();
   Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr(
       out.rows.leftCols(out.total_columns));
   const Eigen::VectorXd diagonal = qr.matrixR().diagonal().cwiseAbs();
@@ -77,6 +87,8 @@ ExtractedBoundaryRows extractBoundaryRows(
   for (int index = 0; index < diagonal.size(); ++index) {
     if (scale > 0.0 && diagonal(index) > 1e-12 * scale) ++out.rank;
   }
+  if(rank_audit_ms)*rank_audit_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();
+  } else out.rank=-1;
   out.valid = true;
   return out;
 }

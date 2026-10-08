@@ -183,6 +183,12 @@ def compare_file(before: pathlib.Path, after: pathlib.Path, policy: dict,
         for field in before_fields:
             if field in policy["ignore"]:
                 continue
+            if (policy.get("wall_packet_digest", False) and
+                    before.name == "integrity.csv" and
+                    field == "final_packet_digest" and row_index in proved_wall_rows):
+                # The finish reason contains measured wall milliseconds. All
+                # state/proof/publication binding fields remain compared.
+                continue
             if (before.name == "integrity.csv" and
                     field in {"deadline_missed", "reason_codes", "reason"} and
                     proved_finish_wall_transition(left, right)):

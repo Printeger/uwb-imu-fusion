@@ -71,6 +71,12 @@ struct ExtractedBoundaryRows {
 // are mapped to columns by first appearance.
 ExtractedBoundaryRows extractBoundaryRows(
     const gtsam::GaussianFactorGraph& graph);
+// Production needs every original row and its identity, not this redundant
+// diagnostic rank. When false, rank=-1 (NOT_COMPUTED); no rank assertion is
+// omitted from the downstream history-summary certification.
+ExtractedBoundaryRows extractBoundaryRows(
+    const gtsam::GaussianFactorGraph& graph, bool audit_rank,
+    double* rank_audit_ms = nullptr);
 
 // Route (ii): R = chol(Lambda); rows = [R | y] with R^T y = eta.  The dropped
 // normal-matrix constant sets `constant_energy = 0` and `reason` records the

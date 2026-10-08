@@ -22,9 +22,16 @@
 #include "uwb_imu_pl/integrity/history_fault_summary.hpp"
 
 #include <Eigen/SVD>
+#include <boost/filesystem.hpp>
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <limits>
 #include <map>
 #include <mutex>
@@ -141,6 +148,94 @@ std::uint64_t carrierRankProofIdentity(
   return identity;
 }
 
+// Diagnostic capture is deliberately opt-in and runs once on a mature-sized
+// carrier.  Its extra SVD and I/O are included in the enclosing production
+// timers; those runs cannot be used for total-latency comparisons.
+std::string claimCarrierAudit(const Eigen::MatrixXd& carrier) {
+  const char* directory = std::getenv("UWB_IMU_PL_CARRIER_AUDIT_DIR");
+  if (!directory || !*directory || carrier.rows() < 200 || carrier.cols() < 200)
+    return {};
+  static std::atomic<bool> claimed{false};
+  if (claimed.exchange(true)) return {};
+  return directory;
+}
+
+template <typename A, typename B>
+bool carrierBitsEqual(const Eigen::MatrixBase<A>& a,
+                      const Eigen::MatrixBase<B>& b) {
+  if (a.rows() != b.rows() || a.cols() != b.cols()) return false;
+  for (Eigen::Index j = 0; j < a.cols(); ++j) {
+    for (Eigen::Index i = 0; i < a.rows(); ++i) {
+      const double av = a(i, j), bv = b(i, j);
+      if (std::memcmp(&av, &bv, sizeof(double)) != 0) return false;
+    }
+  }
+  return true;
+}
+
+void auditCarrierSvd(const std::string& directory,
+                     const Eigen::MatrixXd& carrier,
+                     const HistoryFaultSummary& source,
+                     const Eigen::JacobiSVD<Eigen::MatrixXd>& selected,
+                     bool exhaustive_u, double selected_ms,
+                     const HistoryCarrierRankCertificate& proof,
+                     const Eigen::MatrixXd& compact) {
+  if (directory.empty()) return;
+  try {
+    const auto alternate_start = std::chrono::steady_clock::now();
+    Eigen::JacobiSVD<Eigen::MatrixXd> alternate(
+        carrier, exhaustive_u ? Eigen::ComputeThinV
+                              : Eigen::ComputeThinU | Eigen::ComputeThinV);
+    const double alternate_ms = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - alternate_start).count();
+    const bool singular_equal = carrierBitsEqual(
+        selected.singularValues(), alternate.singularValues());
+    const bool v_equal = carrierBitsEqual(selected.matrixV(), alternate.matrixV());
+    int alternate_rank = 0;
+    for (Eigen::Index i = 0; i < alternate.singularValues().size(); ++i)
+      if (alternate.singularValues()(i) > proof.rank_threshold) ++alternate_rank;
+    Eigen::MatrixXd alternate_compact = Eigen::MatrixXd::Zero(
+        alternate_rank, carrier.cols());
+    if (alternate_rank > 0)
+      alternate_compact = alternate.singularValues().head(alternate_rank)
+                              .asDiagonal() *
+                          alternate.matrixV().leftCols(alternate_rank).transpose();
+    boost::filesystem::create_directories(directory);
+    // Native-endian binary: 8-byte magic, uint64 rows/cols, then contiguous
+    // column-major doubles.  The source dimensions live in the adjacent CSV.
+    std::ofstream binary(directory + "/carrier.bin", std::ios::binary);
+    binary.exceptions(std::ios::badbit | std::ios::failbit);
+    const char magic[8] = {'U', 'W', 'B', 'C', 'A', 'R', '1', '\0'};
+    const std::uint64_t rows = carrier.rows(), cols = carrier.cols();
+    binary.write(magic, sizeof(magic));
+    binary.write(reinterpret_cast<const char*>(&rows), sizeof(rows));
+    binary.write(reinterpret_cast<const char*>(&cols), sizeof(cols));
+    binary.write(reinterpret_cast<const char*>(carrier.data()),
+                 carrier.size() * sizeof(double));
+    binary.close();
+    std::ofstream csv(directory + "/carrier_svd.csv");
+    csv.exceptions(std::ios::badbit | std::ios::failbit);
+    csv << "carrier_rows,carrier_cols,source_rows,old_state_cols,boundary_cols,"
+           "fault_cols,effective_rank,rank_threshold,local_carrier_proof_identity,full_uv_ms,"
+           "v_only_ms,singular_values_bit_identical,v_bit_identical,"
+           "compact_bit_identical,core_compute_includes_diagnostic_overhead\n";
+    csv << std::setprecision(17) << rows << ',' << cols << ',' << source.n_rows
+        << ',' << source.n_old_state << ',' << source.n_boundary << ','
+        << source.n_fault << ',' << proof.effective_rank << ','
+        << proof.rank_threshold << ',' << proof.proof_identity << ','
+        << (exhaustive_u ? selected_ms : alternate_ms) << ','
+        << (exhaustive_u ? alternate_ms : selected_ms) << ',' << singular_equal
+        << ',' << v_equal << ',' << carrierBitsEqual(compact, alternate_compact)
+        << ",1\n";
+    csv.close();
+    std::cerr << "CARRIER_SVD_AUDIT directory=" << directory
+              << " core_compute_includes_diagnostic_overhead=1\n";
+  } catch (const std::exception& error) {
+    std::cerr << "CARRIER_SVD_AUDIT_FAILED " << error.what()
+              << " core_compute_includes_diagnostic_overhead=1\n";
+  }
+}
+
 bool compressResidualCarrier(HistoryFaultSummary* summary,
                              double rank_tolerance,
                              HistoryCarrierRankCertificate* certificate) {
@@ -168,8 +263,20 @@ bool compressResidualCarrier(HistoryFaultSummary* summary,
     return true;
   }
 
+  const bool exhaustive_u =
+      std::getenv("UWB_IMU_PL_EXHAUSTIVE_CARRIER_U") != nullptr;
+  const std::string audit_directory = claimCarrierAudit(carrier);
+  const auto svd_start = audit_directory.empty()
+                             ? std::chrono::steady_clock::time_point{}
+                             : std::chrono::steady_clock::now();
+  // Only sigma and V enter S_r V_r^T.  Eigen's U accumulation never feeds
+  // the Jacobi work matrix, sigma, or V, including at the rank threshold.
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(
-      carrier, Eigen::ComputeThinU | Eigen::ComputeThinV);
+      carrier, exhaustive_u ? Eigen::ComputeThinU | Eigen::ComputeThinV
+                            : Eigen::ComputeThinV);
+  const double selected_svd_ms = audit_directory.empty() ? 0.0 :
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - svd_start).count();
   proof.singular_values = svd.singularValues();
   if (!proof.singular_values.allFinite()) return false;
   proof.factor_scale = proof.singular_values.size() == 0
@@ -206,11 +313,12 @@ bool compressResidualCarrier(HistoryFaultSummary* summary,
     compact = proof.singular_values.head(proof.effective_rank).asDiagonal() *
               svd.matrixV().leftCols(proof.effective_rank).transpose();
   }
-  summary->F_b = compact.leftCols(summary->n_fault);
-  summary->d_perp = compact.col(summary->n_fault);
-
   proof.proof_identity = carrierRankProofIdentity(proof);
   proof.valid = true;
+  auditCarrierSvd(audit_directory, carrier, *summary, svd, exhaustive_u,
+                  selected_svd_ms, proof, compact);
+  summary->F_b = compact.leftCols(summary->n_fault);
+  summary->d_perp = compact.col(summary->n_fault);
   if (certificate) *certificate = std::move(proof);
   return true;
 }

@@ -589,6 +589,8 @@ int main(int argc, char** argv) {
     const int fault_end = schedule.end;
     std::uint64_t fault_sequence = 0;
     summary.status = "IMPLEMENTED_UNVERIFIED";
+    std::optional<std::chrono::steady_clock::time_point> recovery_start;
+    std::optional<double> recovery_latency_ms;
     for (int epoch_index = 0; epoch_index < epochs; ++epoch_index) {
       const double time = (epoch_index+1)*.05;
       for (int sample = 1; sample <= 10; ++sample) {
@@ -603,6 +605,9 @@ int main(int argc, char** argv) {
              Eigen::Vector3d(0, 0, config.imu.gravity_mps2));
         imu.angular_velocity_radps = angularVelocity(sample_time, scenario.degenerate);
         const bool fault_active = epoch_index >= fault_begin && epoch_index <= fault_end;
+        if (!recovery_start && fault_active &&
+            (scenario.imu_accel || scenario.imu_gyro))
+          recovery_start = std::chrono::steady_clock::now();
         if (fault_active && scenario.imu_accel)
           imu.specific_force_mps2(scenario.axis) += scenario.accel_bias_mps2;
         if (fault_active && scenario.imu_gyro)
@@ -678,6 +683,8 @@ int main(int argc, char** argv) {
       }
       const std::uint64_t marginalizations_before = estimator.marginalizationCount();
       const auto start = std::chrono::steady_clock::now();
+      if (!recovery_start && (scenario.uwb || scenario.imu_accel || scenario.imu_gyro) &&
+          epoch_index == fault_begin) recovery_start = start;
       uwb_imu_pl::IntegrityOutput result;
       uwb_imu_pl::AttemptProofLease proof_lease;
       try {
@@ -822,6 +829,18 @@ int main(int argc, char** argv) {
       timing("outer_epoch", outer_epoch_ms);
       timing("analysis_completion", analysis_completion_ms);
       timing("arrival_to_publish", arrival_to_publish_ms);
+      // This synchronous runner emits its first definitive safety result at
+      // publish_call. Completion and publication remain separate boundaries;
+      // none of these aliases may be summed with the legacy parent timers.
+      timing("safety_decision_latency", arrival_to_publish_ms);
+      timing("analysis_completion_latency", analysis_completion_ms);
+      timing("core_compute", core_ms);
+      if (recovery_start && !recovery_latency_ms &&
+          result.publication.protected_output) {
+        recovery_latency_ms = std::chrono::duration<double, std::milli>(
+            publish_call - *recovery_start).count();
+        timing("recovery_latency", *recovery_latency_ms);
+      }
       logger.flush();
       summary.processed++;
       summary.committed += result.batch_committed;
@@ -831,6 +850,16 @@ int main(int argc, char** argv) {
     }
     summary.detail = "deterministic 3D rotating raw-stream benchmark; scenario=" +
                      scenario.name + "; seed=" + std::to_string(config.seed);
+    // An unavailable result is a safety decision, not successful recovery.
+    // Null/censored measurements must never be reported as zero latency.
+    std::ofstream recovery_file(std::string(argv[2]) + "/recovery_latency.json");
+    recovery_file << "{\"definition\":\"first_fault_input_to_first_protected_publication_wall_clock\","
+                  << "\"status\":\"" << (recovery_latency_ms ? "OBSERVED" :
+                      (recovery_start ? "RIGHT_CENSORED" : "NO_FAULT_INPUT"))
+                  << "\",\"recovery_latency_ms\":";
+    if (recovery_latency_ms) recovery_file << std::setprecision(17) << *recovery_latency_ms;
+    else recovery_file << "null";
+    recovery_file << "}\n";
     if (!candidate_wall_ms.empty()) {
       std::sort(candidate_wall_ms.begin(), candidate_wall_ms.end());
       auto percentile = [&](double p) {

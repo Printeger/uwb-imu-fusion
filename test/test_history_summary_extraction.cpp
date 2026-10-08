@@ -143,6 +143,14 @@ TEST(HistorySummaryExtraction,
   ASSERT_EQ(full.keys.size(), 3u);
   EXPECT_EQ(full.keys[0], k1);
   EXPECT_EQ(full.rank, 3);
+  const auto unaudited=extractBoundaryRows(graph,false);
+  ASSERT_TRUE(unaudited.valid);
+  EXPECT_EQ(unaudited.rank,-1);
+  EXPECT_TRUE((unaudited.rows.array()==full.rows.array()).all());
+  EXPECT_EQ(unaudited.keys,full.keys);
+  EXPECT_EQ(unaudited.column_begin,full.column_begin);
+  EXPECT_EQ(unaudited.key_dim,full.key_dim);
+  EXPECT_EQ(unaudited.constant_energy,full.constant_energy);
 
   // Direct reference: C1-a summary on the original block system.
   HistoryFaultSummaryInput direct_input;

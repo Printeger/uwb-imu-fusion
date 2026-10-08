@@ -2092,7 +2092,16 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
       }
     }
 
-    const ExtractedBoundaryRows extracted = extractBoundaryRows(augmented);
+    // extracted.rank has no consumer in the production history path. The
+    // complete rows/identities still reach the certified summary elimination.
+    double rank_audit_ms=0;
+    const bool audit_boundary_rank=std::getenv("UWB_IMU_PL_EXHAUSTIVE_BOUNDARY_RANK")!=nullptr;
+    const ExtractedBoundaryRows extracted = extractBoundaryRows(augmented,audit_boundary_rank,&rank_audit_ms);
+    if(std::getenv("UWB_IMU_PL_BOUNDARY_RANK_TIMING")) {
+      std::printf("boundary_rank_audit epoch=%zu rows=%ld columns=%d computed=%d wall_ms=%.9f\n",
+          tx.proposed_epoch,static_cast<long>(extracted.rows.rows()),
+          extracted.total_columns,audit_boundary_rank,rank_audit_ms);
+    }
     if (!extracted.valid || extracted.rows.rows() == 0 ||
         extracted.total_columns == 0) {
       history.valid = false;
