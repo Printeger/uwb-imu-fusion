@@ -85,6 +85,8 @@ def run(args):
                    str(manifest_path.parent), "--output", str(directory)]
         if args.export_historical:
             command.append("--export-historical")
+        if args.local_oracle_times:
+            command.extend(["--local-oracle-times", args.local_oracle_times])
         environment = dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
                            MKL_NUM_THREADS="1", EIGEN_DONT_PARALLELIZE="1",
                            LD_LIBRARY_PATH=str(args.binary.parent.parent)+":"+os.environ.get("LD_LIBRARY_PATH", ""))
@@ -97,25 +99,44 @@ def run(args):
                       binary_sha256=hashlib.sha256(args.binary.read_bytes()).hexdigest(),
                       cache_manifest_sha256=hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
                       library_sha256=hashlib.sha256((args.binary.parent.parent/"libuwb_imu_pl.so").read_bytes()).hexdigest())
+        record["source"] = common.git_identity(ROOT)
+        record["product_diff_sha256"] = hashlib.sha256(subprocess.check_output(
+            ["git", "diff", "--binary", "--", "CMakeLists.txt", "apps", "config", "include", "src", "test", "tools"], cwd=ROOT)).hexdigest()
         (directory/"execution.json").write_text(json.dumps(record, indent=2)+"\n")
         print(json.dumps(record), flush=True)
 
 
 def evaluate(args):
     records = []
-    for directory in sorted((args.output/"runs"/args.stage).glob("*/*")):
+    runs = args.runs_root or args.output/"runs"/args.stage
+    for directory in sorted(runs.glob("*/*")):
+        if args.sequence and args.sequence not in (directory.parent.name, directory.name):
+            continue
         record = dict(stage=args.stage, dataset=directory.parent.name, sequence=directory.name)
         try:
             status = json.loads((directory/"run_status.json").read_text())
             if status["status"] != "SUCCESS":
                 raise RuntimeError(status.get("reason", "RUN_FAILED"))
             manifest = json.loads((args.cache/record["dataset"]/record["sequence"]/"manifest.json").read_text())
+            cache = args.cache/record["dataset"]/record["sequence"]
+            bounds = []
+            for name in ("imu.csv", "uwb.csv"):
+                rows = common.read_csv(cache/name)
+                bounds.extend(float(row["t"]) for row in (rows[0], rows[-1]))
             metrics, samples = common.evaluate_trajectories(
                 common.load_tum(directory/"trajectory.tum"),
-                common.load_gt(args.cache/record["dataset"]/record["sequence"]/"gt.csv", manifest["primary_tag"]))
+                common.load_gt(cache/"gt.csv", manifest["primary_tag"]),
+                sensor_interval=(min(bounds), max(bounds)))
             record.update(metrics)
+            record.update(output_semantics="ONLINE_CURRENT",
+                          evaluation_semantics="OFFLINE_GRID_OF_ONLINE_OUTPUTS",
+                          attitude_reference="FRAME_VERIFIED_SYNTHETIC" if record["dataset"] == "simulation" else "FRAME_UNVERIFIED",
+                          reference_point="UWB_TAG", source_run=str(directory.resolve()),
+                          execution=json.loads((directory/"execution.json").read_text()))
             record["aggregate_eligible"] = metrics["coverage"] >= 0.8
-            (directory/"evaluation_samples.json").write_text(json.dumps(samples)+"\n")
+            samples_path = args.output/"samples"/args.stage/record["dataset"]/record["sequence"]
+            samples_path.mkdir(parents=True, exist_ok=True)
+            (samples_path/"evaluation_samples.json").write_text(json.dumps(samples)+"\n")
             timing = list(csv.DictReader((directory/"timing.csv").open()))
             # prepare + commit already includes nested preintegration, query,
             # marginal and warm-start work. Do not double-count nested columns.
@@ -130,8 +151,9 @@ def evaluate(args):
         records.append(record)
         print(json.dumps(record), flush=True)
     target = args.output/"evaluation"; target.mkdir(parents=True, exist_ok=True)
-    (target/(args.stage+".json")).write_text(json.dumps({"records":records},indent=2)+"\n")
-    common.write_csv(target/(args.stage+".csv"), sorted({k for r in records for k in r}), records)
+    label = args.stage + ("_" + args.sequence if args.sequence else "")
+    (target/(label+".json")).write_text(json.dumps({"records":records},indent=2)+"\n")
+    common.write_csv(target/(label+".csv"), sorted({k for r in records for k in r}), records)
 
 
 def main():
@@ -143,9 +165,11 @@ def main():
     parser.add_argument("--binary", type=Path, default=default_nominal_binary())
     parser.add_argument("--profile", type=Path)
     parser.add_argument("--sequence")
+    parser.add_argument("--runs-root", type=Path, help="Read-only existing stage directory for evaluation; new artifacts go to --output")
     parser.add_argument("--all", action="store_true")
     parser.add_argument("--rerun", action="store_true")
     parser.add_argument("--export-historical", action="store_true")
+    parser.add_argument("--local-oracle-times", default="")
     args = parser.parse_args()
     (run if args.command == "run" else evaluate)(args)
 

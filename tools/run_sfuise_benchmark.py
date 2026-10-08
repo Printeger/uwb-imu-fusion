@@ -332,6 +332,8 @@ def run_one(setup: Path, cache: Path, run: Path, playback_rate: float = 2.0) -> 
     cpu_s = (after.ru_utime + after.ru_stime) - (before.ru_utime + before.ru_stime)
     normalize_trajectory(run / "trajectory.tum")
     normalize_trajectory(run / "trajectory.tum.online.tum")
+    for view in ("online_final_calibration", "history_online_calibration", "history_final_calibration"):
+        normalize_trajectory(run / ("trajectory.tum."+view+".tum"))
     samples = sum(1 for _ in (run / "trajectory.tum").open()) if (run / "trajectory.tum").is_file() else 0
     metadata = {}
     metadata_path = run/"adapter.meta"

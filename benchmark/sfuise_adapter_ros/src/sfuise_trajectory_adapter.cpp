@@ -122,6 +122,8 @@ class TrajectoryAdapter {
                 << ' ' << q.z() << ' ' << q.w() << '\n';
         cutoff_ << t_ns << ',' << t_ns+1 << ',' << latest_sensor_ns_ << ','
                 << estimate_messages_+1 << ',' << calibration_messages_ << '\n';
+        online_records_.push_back({t_ns,local.itpPosition(t_ns),q_nav_body,
+                                   q_nav_uwb_,t_nav_uwb_});
         last_online_ns_ = t_ns; ++online_samples_;
       }
     }
@@ -157,6 +159,29 @@ class TrajectoryAdapter {
                    << q_uwb_body.w() << '\n';
         ++count;
       }
+      // One run, one identical timestamp set: separate knot revision from
+      // calibration revision without changing the upstream estimator.
+      std::ofstream online_final(output_path_+".online_final_calibration.tum");
+      std::ofstream history_online(output_path_+".history_online_calibration.tum");
+      std::ofstream history_final(output_path_+".history_final_calibration.tum");
+      if(!online_final || !history_online || !history_final)throw std::runtime_error("cannot open four-view exports");
+      auto write=[&](std::ofstream& stream,int64_t t,const Eigen::Vector3d& p,
+                     const Eigen::Quaterniond& q,const Eigen::Quaterniond& world_q,
+                     const Eigen::Vector3d& world_p) {
+        const auto rotation=(world_q*q).normalized();
+        const Eigen::Vector3d tag=world_q*(p+q*lever_body_)+world_p;
+        stream<<std::setprecision(17)<<static_cast<double>(t)*1e-9<<' '
+          <<tag.x()<<' '<<tag.y()<<' '<<tag.z()<<' '<<rotation.x()<<' '
+          <<rotation.y()<<' '<<rotation.z()<<' '<<rotation.w()<<'\n';
+      };
+      for(const auto& record:online_records_) {
+        if(record.time<lo || record.time>hi)continue;
+        Eigen::Quaterniond history_q;global_.itpQuaternion(record.time,&history_q);history_q.normalize();
+        const auto history_p=global_.itpPosition(record.time);
+        write(online_final,record.time,record.position,record.orientation,q_nav_uwb_,t_nav_uwb_);
+        write(history_online,record.time,history_p,history_q,record.world_rotation,record.world_translation);
+        write(history_final,record.time,history_p,history_q,q_nav_uwb_,t_nav_uwb_);
+      }
     }
     std::ofstream metadata(metadata_path_);
     if (!metadata) throw std::runtime_error("cannot open output metadata");
@@ -177,6 +202,13 @@ class TrajectoryAdapter {
   }
 
   ros::NodeHandle nh_;
+  struct OnlineRecord {
+    int64_t time;
+    Eigen::Vector3d position;
+    Eigen::Quaterniond orientation,world_rotation;
+    Eigen::Vector3d world_translation;
+  };
+  std::vector<OnlineRecord> online_records_;
   ros::Subscriber sub_start_, sub_calib_, sub_estimate_, sub_toa_, sub_imu_;
   SplineState global_;
   Eigen::Quaterniond q_nav_uwb_{Eigen::Quaterniond::Identity()};

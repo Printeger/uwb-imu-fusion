@@ -42,6 +42,31 @@ class DatasetBenchmarkTest(unittest.TestCase):
         actual = common.apply_tag_lever(position, quat, [1.0, 0.0, 0.0])
         np.testing.assert_allclose(actual, [1.0, 3.0, 3.0], atol=1e-12)
 
+    def test_world_increment_does_not_inherit_fixed_body_rotation(self):
+        gt = self.trajectory()
+        fixed = Rotation.from_euler("x", 90, degrees=True)
+        estimate = common.Trajectory(gt.time.copy(), gt.position.copy(),
+                                    (Rotation.from_quat(gt.quaternion)*fixed).as_quat())
+        estimate.quaternion[::2] *= -1  # q/-q must be identical
+        metrics, _ = common.evaluate_trajectories(estimate, gt)
+        self.assertAlmostEqual(metrics["ape_rotation_deg_rmse"], 90, places=8)
+        self.assertGreater(metrics["rpe_1s_translation_m_rmse"], 0.1)
+        self.assertLess(metrics["world_position_increment_1s_m_rmse"], 1e-12)
+        self.assertLess(metrics["diagnostic_body_right_residual_deg_rmse"], 1e-8)
+        rotated = self.trajectory((fixed.as_matrix(), np.zeros(3)))
+        metrics, _ = common.evaluate_trajectories(rotated, gt)
+        self.assertLess(metrics["diagnostic_world_left_residual_deg_rmse"], 1e-8)
+
+    def test_fixed_coverage_retains_delayed_start_and_early_failure(self):
+        gt = self.trajectory()
+        mask = (gt.time >= 2) & (gt.time <= 4)
+        estimate = common.Trajectory(gt.time[mask], gt.position[mask], gt.quaternion[mask])
+        metrics, _ = common.evaluate_trajectories(estimate, gt, sensor_interval=(0, 5))
+        self.assertGreater(metrics["coverage"], .9)
+        self.assertAlmostEqual(metrics["initialization_duration_s"], 2)
+        self.assertLess(metrics["fixed_interval_coverage"], .5)
+        self.assertAlmostEqual(metrics["max_no_output_gap_s"], 2)
+
     def test_six_configs_describe_forty_runs(self):
         configs = [yaml.safe_load(path.read_text()) for path in
                    sorted((common.ROOT/"config/benchmark").glob("*.yaml"))]

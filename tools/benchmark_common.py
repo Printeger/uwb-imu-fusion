@@ -223,7 +223,8 @@ def rigid_align(source: np.ndarray, target: np.ndarray) -> tuple[np.ndarray, np.
 
 def evaluate_trajectories(estimate: Trajectory, gt: Trajectory,
                           rate_hz: float = 10.0, delta_s: float = 1.0,
-                          max_bracket_s: float = 0.2) -> tuple[dict, dict]:
+                          max_bracket_s: float = 0.2,
+                          sensor_interval: tuple[float, float] | None = None) -> tuple[dict, dict]:
     start = max(estimate.time[0], gt.time[0])
     stop = min(estimate.time[-1], gt.time[-1])
     if stop - start < delta_s:
@@ -246,6 +247,39 @@ def evaluate_trajectories(estimate: Trajectory, gt: Trajectory,
                "start_s": float(common[0]), "stop_s": float(common[-1])}
     metrics.update(stats(ape, "ape_translation_m"))
     metrics.update(stats(rotation_angle_deg(qerr), "ape_rotation_deg"))
+    er = Rotation.from_quat(eq)
+    gr = Rotation.from_quat(gq)
+    # GT-fitted fixed rotations are diagnostics only. Check both sides:
+    # R_est = Q_world R_gt and R_est = R_gt Q_body.
+    for side, errors in (("world_left", er * gr.inv()),
+                         ("body_right", gr.inv() * er)):
+        fixed = errors.mean()
+        metrics[f"diagnostic_{side}_rotation_xyzw"] = fixed.as_quat().tolist()
+        metrics.update(stats(rotation_angle_deg(fixed.inv() * errors),
+                             f"diagnostic_{side}_residual_deg"))
+    up = np.array([0.0, 0.0, 1.0])
+    metrics.update(stats(np.rad2deg(np.arccos(np.clip(np.sum(
+        er.inv().apply(up) * gr.inv().apply(up), axis=1), -1, 1))),
+        "gravity_direction_error_deg"))
+    if sensor_interval is not None:
+        sensor_start, sensor_stop = sensor_interval
+        if not np.isfinite(sensor_interval).all() or sensor_stop <= sensor_start:
+            raise ValueError("invalid fixed sensor interval")
+        fixed_grid = np.arange(math.ceil(sensor_start * rate_hz) / rate_hz,
+                               sensor_stop + 0.5 / rate_hz, 1.0 / rate_hz)
+        output_valid, _, _ = interpolate(estimate, fixed_grid, max_bracket_s)
+        truth_valid, _, _ = interpolate(gt, fixed_grid, max_bracket_s)
+        padded = np.r_[False, ~output_valid, False].astype(int)
+        edges = np.diff(padded)
+        gaps = np.flatnonzero(edges == -1) - np.flatnonzero(edges == 1)
+        metrics.update(sensor_start_s=float(sensor_start), sensor_stop_s=float(sensor_stop),
+                       fixed_grid_samples=int(len(fixed_grid)),
+                       fixed_paired_samples=int((output_valid & truth_valid).sum()),
+                       fixed_interval_coverage=float((output_valid & truth_valid).mean()),
+                       valid_output_ratio=float(output_valid.mean()),
+                       initialization_duration_s=float(max(0, estimate.time[0]-sensor_start)),
+                       no_output_duration_s=float((~output_valid).sum()/rate_hz),
+                       max_no_output_gap_s=float(gaps.max()/rate_hz) if len(gaps) else 0.0)
     rot, trans = rigid_align(ep, gp)
     aligned = (rot @ ep.T).T + trans
     metrics.update(stats(np.linalg.norm(aligned - gp, axis=1),
@@ -262,18 +296,22 @@ def evaluate_trajectories(estimate: Trajectory, gt: Trajectory,
         est_rel = er[:-step].inv() * er[step:]
         gt_rel = gr[:-step].inv() * gr[step:]
         rpe_r = rotation_angle_deg(gt_rel.inv() * est_rel)[contiguous]
+        world_delta = np.linalg.norm((ep[step:]-ep[:-step]) -
+                                    (gp[step:]-gp[:-step]), axis=1)[contiguous]
         # Gaps in either trajectory can leave no valid one-second pairs even
         # when the common-position coverage is otherwise adequate.  Keep the
         # run valid and report RPE as unavailable instead of emitting NaNs.
         if len(rpe_t):
             metrics.update(stats(rpe_t, "rpe_1s_translation_m"))
             metrics.update(stats(rpe_r, "rpe_1s_rotation_deg"))
+            metrics.update(stats(world_delta, "world_position_increment_1s_m"))
     samples = {"time": common.tolist(), "ape_translation_m": ape.tolist(),
                "estimate": ep.tolist(), "ground_truth": gp.tolist()}
     if len(common) > step:
         samples["rpe_time"] = common[step:][contiguous].tolist()
         samples["rpe_1s_translation_m"] = rpe_t.tolist()
         samples["rpe_1s_rotation_deg"] = rpe_r.tolist()
+        samples["world_position_increment_1s_m"] = world_delta.tolist()
     return metrics, samples
 
 
