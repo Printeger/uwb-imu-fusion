@@ -4,6 +4,7 @@
 #include "uwb_imu_pl/integrity/integrity_monitor.hpp"
 #include "uwb_imu_pl/io/run_logger.hpp"
 #include "uwb_imu_pl/publication/final_output_packet.hpp"
+#include "../src/uwb_imu_pl/integrity/numerical_phase_profile.hpp"
 
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
@@ -874,6 +875,7 @@ int main(int argc, char** argv) {
     }
     logger.writeSummary(summary);
     const auto work = uwb_imu_pl::NumericalWorkCounters::snapshot();
+    uwb_imu_pl::detail::writeNumericalPhaseProfile(std::cout);
     std::cout << "numerical_work base_svd=" << work.base_svd
               << " base_llt=" << work.base_llt
               << " base_state_solves=" << work.base_state_solves

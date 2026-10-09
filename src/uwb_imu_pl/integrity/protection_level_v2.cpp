@@ -5,6 +5,7 @@
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
 #include "uwb_imu_pl/estimation/candidate_worker_pool.hpp"
 #include "successful_validation_memo.hpp"
+#include "numerical_phase_profile.hpp"
 
 #include <boost/math/distributions/non_central_chi_squared.hpp>
 #include <boost/math/distributions/normal.hpp>
@@ -855,6 +856,7 @@ bool validateProtectionLevelV2Proof(
 
 bool validateProtectionLevelV2ProofPayload(
     const ProtectionLevelV2ProofV1& proof, std::string* reason) {
+  detail::NumericalPhaseScope profile(detail::NumericalProfilePhase::ProtectionPayloadValidation);
   NumericalWorkCounters::plPayloadValidation();
   const auto same = [](const auto& left, const auto& right) {
     return left.rows() == right.rows() && left.cols() == right.cols() &&

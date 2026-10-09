@@ -2,6 +2,7 @@
 
 #include "uwb_imu_pl/estimation/candidate_worker_pool.hpp"
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
+#include "numerical_phase_profile.hpp"
 
 #include <Eigen/Cholesky>
 #include <Eigen/Eigenvalues>
@@ -1873,6 +1874,7 @@ std::uint64_t frozenHypothesisPlEntryIdentity(
 
 bool validateFrozenHypothesisPlEntry(
     const FrozenHypothesisPlProofV1& proof, std::string* reason) {
+  detail::NumericalPhaseScope profile(detail::NumericalProfilePhase::FrozenHypothesisValidation);
   auto reject = [&](const std::string& message) {
     if (reason) *reason = message;
     return false;
@@ -2006,6 +2008,7 @@ int classifyDetectionResponse(const Eigen::MatrixXd& z_h,
                               Eigen::Vector3d* axis_residual,
                               Eigen::Vector3d* harmless_slopes,
                               double raw_factor_scale) {
+  detail::NumericalPhaseScope profile(detail::NumericalProfilePhase::DetectionClassification);
   if (axis_residual) *axis_residual = Eigen::Vector3d::Zero();
   if (harmless_slopes) {
     *harmless_slopes = Eigen::Vector3d::Constant(

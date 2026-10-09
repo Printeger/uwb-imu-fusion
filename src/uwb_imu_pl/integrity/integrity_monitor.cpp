@@ -3724,6 +3724,7 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
         auto run_kernel_batch = [&](const std::vector<ExclusionAction>& actions,
                                     std::vector<EvaluatedAction>* batch) {
         const std::size_t batch_size = actions.size();
+        const auto kernel_batch_start = std::chrono::steady_clock::now();
         candidate_workers_->runFlat(batch_size, active_workers,
             kRetainedWorkerScratchLimitBytes,
             [&](std::size_t work_index, std::size_t, RankUpdateScratch& scratch) {
@@ -3781,6 +3782,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
           candidate.diagnostics.kernel_ms = std::chrono::duration<double, std::milli>(
               std::chrono::steady_clock::now() - candidate_start).count();
         });
+        const auto post_batch_start = std::chrono::steady_clock::now();
+        output.stage_timings.push_back({"candidate_batch_kernel",
+            std::chrono::duration<double, std::milli>(post_batch_start - kernel_batch_start).count(),
+            true, "EXECUTED", "batch wall, not per-worker sum"});
         candidate_workers_->runFlat(batch_size, active_workers,
             kRetainedWorkerScratchLimitBytes,
             [&](std::size_t work_index, std::size_t, RankUpdateScratch&) {
@@ -3812,6 +3817,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
           candidate.wall_ms = candidate.diagnostics.kernel_ms +
               candidate.diagnostics.post_ms;
         });
+        output.stage_timings.push_back({"candidate_batch_post",
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - post_batch_start).count(),
+            true, "EXECUTED", "batch wall, not per-worker sum"});
         };
 
         // Bridge uncertainty depends only on a frozen group/transaction and is
@@ -4058,6 +4067,9 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
         }
         const double flat_ms = std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - flat_start).count();
+        output.stage_timings.push_back({"candidate_batch_pl_flat", flat_ms,
+            true, "EXECUTED", "one shared batch wall, nested in candidate_evaluation"});
+        const auto consume_start = std::chrono::steady_clock::now();
         // Phase 2c: canonical candidate-order proof validation and result
         // publication. Completion order from the worker pool is irrelevant.
         for (std::size_t passed_index = 0;
@@ -4117,6 +4129,10 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
               candidate.diagnostics.post_ms + candidate.diagnostics.bridge_ms +
               candidate.diagnostics.fault_map_ms + candidate.diagnostics.pl_ms;
         }
+        output.stage_timings.push_back({"candidate_batch_pl_consume",
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - consume_start).count(),
+            true, "EXECUTED", "serial consumer wall, excludes shared flat batch"});
         };
         evaluate_pl_batch(&evaluated_batch, post_passed, batch_proof_owner);
         if (!capture_action_proof) {

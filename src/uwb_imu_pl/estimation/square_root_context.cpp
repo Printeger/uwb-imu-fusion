@@ -1,6 +1,7 @@
 #include "uwb_imu_pl/estimation/square_root_context.hpp"
 
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
+#include "../integrity/numerical_phase_profile.hpp"
 
 #include <Eigen/Householder>
 #include <Eigen/Eigenvalues>
@@ -324,6 +325,7 @@ SymmetricPsdCertificate certifyFactorGram(
     const Eigen::MatrixXd& raw_factor, const Eigen::MatrixXd& actual_gram,
     double rank_tolerance, std::uint64_t parent_proof_identity,
     double raw_factor_scale) {
+  detail::NumericalPhaseScope profile(detail::NumericalProfilePhase::FactorGram);
   SymmetricPsdCertificate out;
   std::uint64_t proof = 1469598103934665603ULL;
   const std::uint64_t domain = 0x464143544f524752ULL;  // "FACTORGR"
@@ -368,7 +370,9 @@ SymmetricPsdCertificate certifyFactorGram(
   }
 
   NumericalWorkCounters::faultGramSvd();
+  detail::NumericalPhaseScope svd_profile(detail::NumericalProfilePhase::FactorGramSvd);
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(raw_factor, Eigen::ComputeThinV);
+  svd_profile.finish();
   const Eigen::VectorXd singular_descending = svd.singularValues();
   if (!singular_descending.allFinite() || !svd.matrixV().allFinite()) {
     out.reason = "raw-factor SVD failed";
@@ -390,7 +394,9 @@ SymmetricPsdCertificate certifyFactorGram(
   // remain bound into the certificate.
   if (structural_nullity > 0) {
     NumericalWorkCounters::faultGramSvd();
+    detail::NumericalPhaseScope full_profile(detail::NumericalProfilePhase::FactorGramSvd);
     Eigen::JacobiSVD<Eigen::MatrixXd> full(raw_factor, Eigen::ComputeFullV);
+    full_profile.finish();
     if (!full.matrixV().allFinite() || full.matrixV().cols() != dimension) {
       out.reason = "raw-factor full-V SVD failed";
       return out;

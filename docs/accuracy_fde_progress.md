@@ -455,3 +455,13 @@ generation separately measured. A narrow classifier reuse idea was reviewed,
 but is not implemented or claimed as a gain; profile before another small change.
 No new large backups or binary copies; previous numerical/campaign/calibration
 FAIL records unchanged. Active goal and final integration remain OPEN.
+
+Numerical hotspot audit instrumentation: process-start opt-in
+UWB_IMU_PL_PROFILE_NUMERICAL_PHASES=1 records inclusive elapsed work/call counts
+for Gram construction/SVD, classifier and frozen/PL payload validation. Nested
+calls and worker times overlap; these are not exclusive wall or CPU timings.
+Candidate kernel/post/shared PL/serial consumer now have once-per-batch wall
+stages under candidate_evaluation. Public numerical behavior and reference
+switches unchanged. Build PASS; focused integrity/ownership/concurrency/positive
+controls and root math checks PASS. Profiling run pending; no performance gain
+claimed for instrumentation. No ELF/DSO copies or large backup artifacts.
