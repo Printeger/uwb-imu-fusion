@@ -161,12 +161,19 @@ DualChannelBoundResult computeDualChannelBoundCertified(
     }
     const SymmetricPsdCertificate gram_certificate = certifySymmetricPsd(
         channel.gram, rank_tolerance, parent_proof_identity);
-    if (!gram_certificate.valid) {
+    // Individual channel rank is not inverted or used for protection. A
+    // symmetric PSD channel with unresolved marginal rank can contribute to
+    // W; only W must certify rank and ker(W) containment. Keep every PSD and
+    // joint-rank tolerance unchanged, and reject every other failure.
+    const bool psd_with_unresolved_rank = gram_certificate.symmetric &&
+        gram_certificate.psd && !gram_certificate.rank_certified &&
+        gram_certificate.reason == "rank transition interval is numerically indeterminate";
+    if (!gram_certificate.valid && !psd_with_unresolved_rank) {
       out.reason = "channel " + channel.detector_id +
           " has no symmetric PSD certificate: " + gram_certificate.reason;
       return out;
     }
-    if (gram_certificate.rank == 0) {
+    if (gram_certificate.rank_certified && gram_certificate.rank == 0) {
       // A channel with no certified fault-response rank must not fabricate a
       // Lambda from solver roundoff.  Dense and matrix-free paths therefore
       // make the same discrete decision (or jointly fail closed).

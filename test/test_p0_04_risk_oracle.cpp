@@ -5,6 +5,7 @@
 #include <cmath>
 #include <limits>
 #include <vector>
+#include <functional>
 
 #include "uwb_imu_pl/integrity/fde_manager.hpp"
 #include "uwb_imu_pl/integrity/fde_post_selection.hpp"
@@ -634,6 +635,105 @@ TEST(P004RiskOracle, NoAlarmDoesNotMakeActionSelectionEventsFree) {
   EXPECT_FALSE(decision.selected_action.has_value());
   EXPECT_FALSE(candidates[0].selected);
   EXPECT_FALSE(candidates[1].selected);
+}
+
+
+TEST(FdeOperabilityRisk, FinalSelectorConsumesBoundEvidenceAndOwnsSelectionCharge) {
+  RiskBudgetV2 risk;
+  risk.nominal_axis_tail = 1e-6;
+  const auto fault = hypothesis(1, 1e-6, 1e-3, 1e-3);
+  std::vector<FaultHypothesisV2> hypotheses{fault};
+  DetectorResultV2 detector;
+  detector.window_id = WindowId(91);
+  detector.numerically_valid = true;
+  detector.passed = true;
+  auto candidate = candidateFor(10, fault);
+  candidate.base_version = {1,2,3,4};
+  candidate.action.exclusion_cardinality = 0;
+  candidate.action.action_model_id = "KEEP_ALL";
+  BoundRiskContextV1 bound;
+  bound.window_id = detector.window_id;
+  bound.version = candidate.base_version;
+  bound.valid_from = TimestampNs(100);
+  bound.valid_until = TimestampNs(200);
+  bound.scope_id = "scope"; bound.manifest_id = "manifest"; bound.model_id = "model";
+  bound.risk_contract_id = riskContractIdentityV1(risk, hypotheses);
+  // Numerical conditional witness: scope is exhaustive, envelope is absent,
+  // no bridge/history is used, model is assumed under the declared simulation.
+  bound.inputs = qualifiedInputs();
+  bound.inputs.model_formal_eligible = false;
+  for (const auto* id : {"omitted", "envelope", "bridge", "history"})
+    bound.evidence[id] = {RiskEvidenceDomainV1::Structural, "deterministic no-event fixture"};
+  bound.evidence["model"] = {RiskEvidenceDomainV1::SimulationConditional,
+      "declared linear Gaussian generator conditional model"};
+  FdeDecisionContextV4 context;
+  context.risk_context = &bound;
+  context.expected_scope_id = bound.scope_id;
+  context.expected_manifest_id = bound.manifest_id;
+  context.expected_model_id = bound.model_id;
+  context.information_cutoff = TimestampNs(150);
+  RiskLedger ledger;
+  FdeDecisionTraceV1 trace;
+  context.ledger_result = &ledger; context.trace = &trace;
+  FdeRiskDecisionV1 risk_result;
+  context.v2.v1.risk_result = &risk_result;
+  const auto run = [&](std::vector<CandidateEvaluation> candidates) {
+    std::vector<ExclusionAction> actions;
+    for (const auto& c : candidates) actions.push_back(c.action);
+    GeneratedActionSnapshotV1 generated;
+    const auto search = censusAndCapActionsV1(actions, 100, &generated);
+    context.v2.action_search = &search.census;
+    context.v2.trusted_generated_actions = &generated;
+    context.v2.max_evaluated_actions = 100;
+    context.v2.action_search_lifecycle = search.lifecycle;
+    return FdeManager().decide(detector, hypotheses, {evidenceFor(fault)},
+        &candidates, {}, risk, &context);
+  };
+  // Legacy final path drops all non-selection evidence: a minimal reproduction.
+  std::vector<CandidateEvaluation> old_candidates{candidate};
+  EXPECT_FALSE(FdeManager().decide(detector, hypotheses, {}, &old_candidates,
+      {}, risk).commit_allowed);
+  EXPECT_TRUE(run({candidate}).commit_allowed);
+  EXPECT_TRUE(ledger.closes); EXPECT_TRUE(ledger.all_terms_validated);
+  EXPECT_FALSE(ledger.formal_eligible);
+  EXPECT_EQ(trace.gates.at(1).state, DecisionGateStateV1::Pass);
+  EXPECT_EQ(trace.gates.at(4).state, DecisionGateStateV1::NotRun);
+  EXPECT_NE(ledger.find("model")->source.find("domain=2"), std::string::npos);
+  // Caller supplied selection flags/number are never authority.
+  bound.inputs.selection_extra_bound = 1.;
+  bound.inputs.selection_bound_known = false;
+  EXPECT_TRUE(run({candidate}).commit_allowed);
+  EXPECT_DOUBLE_EQ(ledger.find("selection")->value, 0.);
+  auto second = candidate; second.action.id = ExclusionActionId(11);
+  EXPECT_TRUE(run({candidate, second}).commit_allowed);
+  EXPECT_DOUBLE_EQ(ledger.find("selection")->value, fault.hmi_allocation);
+  for (const auto mutate : {
+      std::function<void(BoundRiskContextV1&)>([](auto& b){b.scope_id += "wrong";}),
+      std::function<void(BoundRiskContextV1&)>([](auto& b){b.manifest_id += "wrong";}),
+      std::function<void(BoundRiskContextV1&)>([](auto& b){b.model_id += "wrong";}),
+      std::function<void(BoundRiskContextV1&)>([](auto& b){b.valid_until = TimestampNs(149);}),
+      std::function<void(BoundRiskContextV1&)>([](auto& b){++b.version.linpoint_version;}),
+      std::function<void(BoundRiskContextV1&)>([](auto& b){b.evidence.erase("model");}),
+      std::function<void(BoundRiskContextV1&)>([](auto& b){b.inputs.model_formal_eligible = true;})}) {
+    const auto saved = bound; mutate(bound);
+    EXPECT_FALSE(run({candidate}).commit_allowed);
+    EXPECT_EQ(trace.gates.at(1).state, DecisionGateStateV1::Unknown);
+    EXPECT_EQ(trace.gates.at(3).state, DecisionGateStateV1::NotRun);
+    bound = saved;
+  }
+  // Alarm uses the same bound context and full eligible-event ledger.
+  detector.passed = false;
+  candidate.action.exclusion_cardinality = 1;
+  candidate.action.action_model_id = "EXCLUDE";
+  EXPECT_TRUE(run({candidate}).commit_allowed);
+  // Frozen budget is infeasible solely from known charge, even with UNKNOWNs.
+  hypotheses[0].prior_probability_bound = 0.1;
+  bound.risk_contract_id = riskContractIdentityV1(risk, hypotheses);
+  bound.inputs.model_escape_validated = false;
+  EXPECT_FALSE(run({candidate}).commit_allowed);
+  EXPECT_EQ(trace.gates.at(1).state, DecisionGateStateV1::Fail);
+  EXPECT_NE(trace.gates.at(1).reason.find("RISK_OVER_BUDGET"), std::string::npos);
+  EXPECT_GT(trace.gates.at(1).value, risk.p_hmi_total);
 }
 
 }  // namespace

@@ -168,6 +168,27 @@ FrozenHypothesisPlProofV1 protectionHypothesisProof(
   return proof;
 }
 
+// External values are authenticated by semantics, never by a lookup hash.
+// NaNs compare unequal; legitimate infinities retain their signed value.
+bool sameProtectionResult(const ProtectionLevelV2Result& a,
+                          const ProtectionLevelV2Result& b) {
+  return (a.pl_xyz_m.array() == b.pl_xyz_m.array()).all() &&
+      (a.nominal_component_m.array() == b.nominal_component_m.array()).all() &&
+      (a.fault_component_m.array() == b.fault_component_m.array()).all() &&
+      (a.bridge_component_m.array() == b.bridge_component_m.array()).all() &&
+      a.hpl_m == b.hpl_m && a.vpl_m == b.vpl_m &&
+      a.allocated_outcome_risk == b.allocated_outcome_risk &&
+      a.risk_budget_valid == b.risk_budget_valid &&
+      a.model_valid == b.model_valid && a.formal_eligible == b.formal_eligible &&
+      a.availability == b.availability &&
+      a.hypothesis_tail_used == b.hypothesis_tail_used &&
+      a.axis_tail_used == b.axis_tail_used &&
+      a.fault_multiplier_used == b.fault_multiplier_used &&
+      a.noncentrality_used == b.noncentrality_used &&
+      a.detector_certificate_id == b.detector_certificate_id &&
+      a.reason == b.reason;
+}
+
 std::uint64_t resultRegistryKey(const ProtectionLevelV2Result& result) {
   std::uint64_t key = 1469598103934665603ULL;
   hashMatrix(&key, result.pl_xyz_m);
@@ -772,6 +793,7 @@ bool validateProtectionLevelV2ProofSidecar(
       sidecar.dual_channel_proofs.size() == hypotheses.size() ||
       (pooled_only && sidecar.dual_channel_proofs.empty());
   const bool valid = result.model_valid && sidecar.schema_version == 1 &&
+      sameProtectionResult(sidecar.served_result, result) &&
       sidecar.candidate_proof_identity ==
           candidateProofIdentity(candidate) &&
       sidecar.detector_proof_identity == detector.detector_contract_digest &&
@@ -786,7 +808,9 @@ bool validateProtectionLevelV2ProofSidecar(
       sidecar.proof_identity ==
           protectionResultProofIdentity(sidecar);
   if (!valid && reason) {
-    if (!payload_valid) *reason = payload_reason;
+    if (!sameProtectionResult(sidecar.served_result, result))
+      *reason = "external protection-level result does not match served proof";
+    else if (!payload_valid) *reason = payload_reason;
     else if (!dual_proofs_valid) *reason = "protection-level dual proof mismatch";
     else if (sidecar.hypothesis_proofs.size() != hypotheses.size()) {
       *reason = "protection-level hypothesis proof count mismatch";
@@ -818,7 +842,8 @@ bool validateProtectionLevelV2Proof(
           found->second.rbegin(), found->second.rend(),
           [&](const ProtectionLevelV2ProofV1& proof) {
             return proof.candidate_proof_identity ==
-                candidateProofIdentity(candidate);
+                candidateProofIdentity(candidate) &&
+                sameProtectionResult(proof.served_result, result);
           });
       if (match != found->second.rend()) sidecar = *match;
     }
@@ -1056,7 +1081,12 @@ bool protectionLevelV2Proof(const ProtectionLevelV2Result& result,
   std::lock_guard<std::mutex> lock(registry.mutex);
   const auto found = registry.by_result.find(resultRegistryKey(result));
   if (found == registry.by_result.end() || found->second.empty()) return false;
-  *proof = found->second.back();
+  const auto match = std::find_if(found->second.rbegin(), found->second.rend(),
+      [&](const ProtectionLevelV2ProofV1& item) {
+        return sameProtectionResult(item.served_result, result);
+      });
+  if (match == found->second.rend()) return false;
+  *proof = *match;
   return true;
 }
 
@@ -1072,6 +1102,7 @@ bool protectionLevelV2Proof(const ProtectionLevelV2Result& result,
   if (!payload) return false;
   *proof = *std::static_pointer_cast<const ProtectionLevelV2ProofV1>(payload);
   return proof->candidate_proof_identity == candidateProofIdentity(candidate) &&
+      sameProtectionResult(proof->served_result, result) &&
       proof->proof_identity != 0;
 }
 
@@ -1086,7 +1117,7 @@ bool retainProtectionLevelV2Proof(
   if (candidate_identity == 0 ||
       proof.candidate_proof_identity != candidate_identity ||
       proof.proof_identity == 0 ||
-      resultRegistryKey(proof.served_result) != resultRegistryKey(result) ||
+      !sameProtectionResult(proof.served_result, result) ||
       !validateProtectionLevelV2ProofPayload(proof, &payload_reason)) {
     if (reason) {
       *reason = payload_reason.empty()
@@ -1155,7 +1186,8 @@ std::uint64_t protectionLevelV2ProofIdentity(
   const auto match = std::find_if(
       found->second.rbegin(), found->second.rend(),
       [&](const ProtectionLevelV2ProofV1& proof) {
-        return proof.candidate_proof_identity == candidateProofIdentity(candidate);
+        return proof.candidate_proof_identity == candidateProofIdentity(candidate) &&
+            sameProtectionResult(proof.served_result, result);
       });
   return match == found->second.rend() ? 0 : match->proof_identity;
 }
@@ -1227,7 +1259,7 @@ bool mintCommitProtectionEvidenceImpl(
   if (candidate_identity == 0 ||
       proof.proof_identity != protection_proof_identity ||
       proof.candidate_proof_identity != candidate_identity ||
-      resultRegistryKey(proof.served_result) != resultRegistryKey(result) ||
+      !sameProtectionResult(proof.served_result, result) ||
       !validateProtectionLevelV2ProofPayload(proof) ||
       !result.pl_xyz_m.allFinite() ||
       (result.pl_xyz_m.array() < 0.0).any()) {
@@ -1453,7 +1485,7 @@ bool bindProtectionLevelPublicationPacket(
   const std::uint64_t candidate_identity = candidateProofIdentity(candidate);
   if (candidate_identity == 0 ||
       proof.candidate_proof_identity != candidate_identity ||
-      resultRegistryKey(proof.served_result) != resultRegistryKey(result) ||
+      !sameProtectionResult(proof.served_result, result) ||
       !validateProtectionLevelV2ProofPayload(proof)) {
     return false;
   }
@@ -1516,7 +1548,7 @@ bool bindTransferredProtectionLevelPublicationPacketImpl(
       (committed_mean_world_m - reference_mean_world_m).cwiseAbs();
   if (candidate_identity == 0 ||
       proof.candidate_proof_identity != candidate_identity ||
-      resultRegistryKey(proof.served_result) != resultRegistryKey(result) ||
+      !sameProtectionResult(proof.served_result, result) ||
       !validateProtectionLevelV2ProofPayload(proof) ||
       !(transferred_pl_m.array() ==
         (result.pl_xyz_m + transfer).array()).all()) {

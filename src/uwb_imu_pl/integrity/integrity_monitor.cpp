@@ -3129,6 +3129,21 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
         output.diagnostics.risk_upper_bound = risk_audit.upper_bound;
         output.diagnostics.risk_margin = risk_audit.margin;
         output.diagnostics.hypothesis_count = risk_audit.hypothesis_count;
+        BoundRiskContextV1 attempt_risk_context;
+        attempt_risk_context.window_id = window.id;
+        attempt_risk_context.version = window.version;
+        attempt_risk_context.valid_from = transaction.end;
+        attempt_risk_context.valid_until = transaction.end;
+        attempt_risk_context.scope_id = cfg.resolved_scope.scope_digest;
+        attempt_risk_context.manifest_id = cfg.fault_manifest ? cfg.fault_manifest->digest : "";
+        std::ostringstream model_identity;
+        model_identity << std::setprecision(17) << cfg.imu.accelerometer_sigma << '|'
+            << cfg.imu.gyroscope_sigma << '|' << cfg.imu.accelerometer_bias_rw_sigma
+            << '|' << cfg.imu.gyroscope_bias_rw_sigma << '|' << cfg.imu.gravity_mps2
+            << '|' << cfg.imu.noise_overbound_calibration_id << '|'
+            << cfg.realtime.prior_sigmas.transpose();
+        attempt_risk_context.model_id = model_identity.str();
+        attempt_risk_context.risk_contract_id = riskContractIdentityV1(cfg.risk_v2, models.hypotheses);
         // B3 (§5.9): the ledger certificate travels with the published
         // attempt: every term with its value, source and status, so an
         // unvalidated channel can never pass as a proven zero.
@@ -3158,8 +3173,21 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
           ledger_inputs.envelope_leaf_count =
               coverage_certificate.enveloped_count;
           ledger_inputs.selection_contract_frozen = false;
+          attempt_risk_context.inputs.legacy = ledger_inputs;
+          if (coverage_certificate.complete && !coverage_certificate.capacity_exceeded &&
+              coverage_certificate.uncovered_count == 0 &&
+              coverage_certificate.exact_count == models.modes.size() &&
+              coverage_certificate.enveloped_count == 0) {
+            attempt_risk_context.inputs.envelope_event_bound_known = true;
+            attempt_risk_context.inputs.envelope_event_bound_validated = true;
+            attempt_risk_context.evidence["envelope"] = {
+                RiskEvidenceDomainV1::Structural,
+                "exact coverage of frozen generated mode registry;window=" + std::to_string(window.id.value())};
+          }
+          // Empty omitted vectors alone prove no completeness. The manifest's
+          // omitted declarations and inactive scope families remain explicit.
           const RiskLedger ledger = buildRiskLedger(
-              cfg.risk_v2, models.hypotheses, ledger_inputs);
+              cfg.risk_v2, models.hypotheses, attempt_risk_context.inputs, nullptr);
           output.diagnostics.risk_ledger_charged_total =
               ledger.charged_total;
           output.diagnostics.risk_ledger_declared_total =
@@ -4370,21 +4398,30 @@ IntegrityOutput RealtimeIntegrityPipeline::processUwbBatchImpl(
         fde_context.max_evaluated_actions =
             action_search.max_evaluated_actions;
         fde_context.action_search_lifecycle = action_search.lifecycle;
-        FdeDecision decision;
-        if (compact_action_search) {
-          FdeDecisionContextV3 compact_fde_context;
-          compact_fde_context.v1.protection_proof_ids = &candidate_pl_proof;
-          compact_fde_context.v1.risk_result = &final_risk;
-          compact_fde_context.action_lease = &compact_action_lease;
-          decision = FdeManager().decide(
-              fde_trigger, models.hypotheses, evidence, &candidates,
-              mandatory_exclusion_groups, cfg.risk_v2,
-              &compact_fde_context);
-        } else {
-          decision = FdeManager().decide(
-              fde_trigger, models.hypotheses, evidence, &candidates,
-              mandatory_exclusion_groups, cfg.risk_v2, &fde_context);
-        }
+        RiskLedger final_ledger;
+        FdeDecisionTraceV1 decision_trace;
+        FdeDecisionContextV4 complete_context;
+        complete_context.v2 = fde_context;
+        complete_context.action_lease = compact_action_search ? &compact_action_lease : nullptr;
+        complete_context.risk_context = &attempt_risk_context;
+        complete_context.expected_scope_id = cfg.resolved_scope.scope_digest;
+        complete_context.expected_manifest_id = cfg.fault_manifest ? cfg.fault_manifest->digest : "";
+        complete_context.expected_model_id = model_identity.str();
+        complete_context.information_cutoff = transaction.end;
+        complete_context.ledger_result = &final_ledger;
+        complete_context.trace = &decision_trace;
+        FdeDecision decision = FdeManager().decide(
+            fde_trigger, models.hypotheses, evidence, &candidates,
+            mandatory_exclusion_groups, cfg.risk_v2, &complete_context);
+        std::ostringstream trace_text;
+        trace_text << std::setprecision(17);
+        for (const auto& gate : decision_trace.gates)
+          trace_text << ";gate:" << gate.gate << ':' << static_cast<int>(gate.state)
+                     << ':' << gate.value << ':' << gate.threshold << ':' << gate.reason;
+        for (const auto& term : final_ledger.terms)
+          trace_text << ";ledger:" << term.id << ':' << term.value << ':'
+                     << toString(term.status) << ':' << term.source << ':' << term.note;
+        output.stage_timings.back().reason += trace_text.str();
         output.stage_timings[candidate_evaluation_stage_index].reason +=
             ";stream_fde_preproof_selected_action=" +
             std::to_string(decision.selected_action

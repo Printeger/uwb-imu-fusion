@@ -89,8 +89,44 @@ struct FdeDecisionContextV3 {
   const AttemptActionLeaseV3* action_lease = nullptr;
 };
 
+struct BoundRiskContextV1;
+struct RiskLedger;
+
+enum class DecisionGateStateV1 { Pass, Fail, Unknown, NotRun };
+struct DecisionGateV1 {
+  std::string gate;
+  DecisionGateStateV1 state = DecisionGateStateV1::NotRun;
+  double value = std::numeric_limits<double>::quiet_NaN();
+  double threshold = std::numeric_limits<double>::quiet_NaN();
+  std::string reason;
+};
+struct FdeDecisionTraceV1 {
+  std::vector<DecisionGateV1> gates;
+};
+
+// Source-bound non-selection evidence. Old contexts retain their ABI and
+// fail-closed defaults. Selection fields supplied by the caller are ignored.
+struct FdeDecisionContextV4 {
+  FdeDecisionContextV2 v2;
+  const AttemptActionLeaseV3* action_lease = nullptr;
+  const BoundRiskContextV1* risk_context = nullptr;
+  std::string expected_scope_id;
+  std::string expected_manifest_id;
+  std::string expected_model_id;
+  TimestampNs information_cutoff;
+  RiskLedger* ledger_result = nullptr;
+  FdeDecisionTraceV1* trace = nullptr;
+};
+
 class FdeManager {
  public:
+  FdeDecision decide(const DetectorResultV2& all_in,
+                     const std::vector<FaultHypothesisV2>& hypotheses,
+                     const std::vector<FaultModeEvidence>& evidence,
+                     std::vector<CandidateEvaluation>* candidates,
+                     const std::vector<FactorGroupId>& mandatory_groups,
+                     const RiskBudgetV2& risk,
+                     const FdeDecisionContextV4* context) const;
   FdeDecision decide(const DetectorResultV2& all_in,
                      const std::vector<FaultHypothesisV2>& hypotheses,
                      const std::vector<FaultModeEvidence>& evidence,
@@ -118,6 +154,16 @@ class FdeManager {
                      const std::vector<FactorGroupId>& mandatory_groups,
                      const RiskBudgetV2& risk,
                      const FdeDecisionContextV3* context) const;
+ private:
+  FdeDecision decideImpl(const DetectorResultV2& all_in,
+                        const std::vector<FaultHypothesisV2>& hypotheses,
+                        const std::vector<FaultModeEvidence>& evidence,
+                        std::vector<CandidateEvaluation>* candidates,
+                        const std::vector<FactorGroupId>& mandatory_groups,
+                        const RiskBudgetV2& risk,
+                        const FdeDecisionContextV1* context,
+                        const FdeDecisionContextV4* complete) const;
+
 };
 
 }  // namespace uwb_imu_pl

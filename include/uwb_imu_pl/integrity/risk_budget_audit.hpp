@@ -106,6 +106,35 @@ struct CompleteRiskInputsV1 {
   bool model_formal_eligible = false;
 };
 
+// Evidence domain separates software/model conditions from hardware approval.
+enum class RiskEvidenceDomainV1 { Missing, Structural, SimulationConditional, Deployment };
+struct RiskTermEvidenceV1 {
+  RiskEvidenceDomainV1 domain = RiskEvidenceDomainV1::Missing;
+  std::string source;
+};
+struct BoundRiskContextV1 {
+  std::uint64_t schema_version = 1;
+  WindowId window_id;
+  LinearizationVersion version;
+  TimestampNs valid_from;
+  TimestampNs valid_until;
+  std::string scope_id;
+  std::string manifest_id;
+  std::string model_id;
+  // Binds noise/prior/tail/AL and every represented hypothesis allocation.
+  std::uint64_t risk_contract_id = 0;
+  CompleteRiskInputsV1 inputs;
+  std::map<std::string, RiskTermEvidenceV1> evidence;
+};
+std::uint64_t riskContractIdentityV1(
+    const RiskBudgetV2& risk, const std::vector<FaultHypothesisV2>& hypotheses);
+bool validateBoundRiskContextV1(
+    const BoundRiskContextV1& bound, const FdeDecisionContextV4& expected,
+    const DetectorResultV2& detector,
+    const std::vector<CandidateEvaluation>& candidates,
+    const RiskBudgetV2& risk, const std::vector<FaultHypothesisV2>& hypotheses,
+    std::string* reason);
+
 struct CompleteRiskStatusV1 {
   bool allocation_valid = false;
   bool complete_bound_closes = false;

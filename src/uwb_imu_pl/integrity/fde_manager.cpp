@@ -182,9 +182,66 @@ FdeDecision FdeManager::decide(
     const std::vector<FaultModeEvidence>& evidence,
     std::vector<CandidateEvaluation>* candidates,
     const std::vector<FactorGroupId>& mandatory_groups,
+    const RiskBudgetV2& risk, const FdeDecisionContextV1* context) const {
+  return decideImpl(all_in, hypotheses, evidence, candidates, mandatory_groups,
+                    risk, context, nullptr);
+}
+
+FdeDecision FdeManager::decide(
+    const DetectorResultV2& all_in,
+    const std::vector<FaultHypothesisV2>& hypotheses,
+    const std::vector<FaultModeEvidence>& evidence,
+    std::vector<CandidateEvaluation>* candidates,
+    const std::vector<FactorGroupId>& mandatory_groups,
+    const RiskBudgetV2& risk, const FdeDecisionContextV4* context) const {
+  if (!context) return decideImpl(all_in, hypotheses, evidence, candidates,
+      mandatory_groups, risk, nullptr, nullptr);
+  std::vector<ExclusionAction> consumed;
+  if (candidates) for (const auto& c : *candidates) consumed.push_back(c.action);
+  ActionSearchValidationV1 validation{false, false, "action search evidence missing"};
+  if (context->action_lease) {
+    validation = validateCompactActionConsumptionV3(*context->action_lease, consumed);
+  } else if (context->v2.action_search && context->v2.trusted_generated_actions) {
+    validation = validateActionSearchCensusV1(*context->v2.action_search,
+        *context->v2.trusted_generated_actions, context->v2.max_evaluated_actions,
+        context->v2.action_search_lifecycle, consumed);
+  }
+  if (!validation.valid || !validation.exhaustive) {
+    FdeDecision decision;
+    decision.status = FdeStatus::SearchIncomplete;
+    decision.reason = "SEARCH_INCOMPLETE: " + validation.reason;
+    if (context->v2.v1.risk_result) *context->v2.v1.risk_result = {};
+    if (context->ledger_result) *context->ledger_result = {};
+    if (context->trace) context->trace->gates = {
+        {"search", DecisionGateStateV1::Fail, NAN, NAN, decision.reason},
+        {"numerical"}, {"risk"}, {"AL"}, {"qualification"}, {"deadline"}};
+    return decision;
+  }
+  return decideImpl(all_in, hypotheses, evidence, candidates, mandatory_groups,
+                    risk, &context->v2.v1, context);
+}
+
+FdeDecision FdeManager::decideImpl(
+    const DetectorResultV2& all_in,
+    const std::vector<FaultHypothesisV2>& hypotheses,
+    const std::vector<FaultModeEvidence>& evidence,
+    std::vector<CandidateEvaluation>* candidates,
+    const std::vector<FactorGroupId>& mandatory_groups,
     const RiskBudgetV2& risk,
-    const FdeDecisionContextV1* context) const {
+    const FdeDecisionContextV1* context,
+    const FdeDecisionContextV4* complete_context) const {
   FdeDecision decision;
+  if (complete_context && complete_context->ledger_result)
+    *complete_context->ledger_result = {};
+  if (complete_context && complete_context->trace)
+    complete_context->trace->gates = {{"numerical"}, {"risk"}, {"AL"},
+        {"qualification"}, {"deadline"}};
+  const auto gate = [&](std::size_t i, DecisionGateStateV1 state,
+                        double value, double threshold, const std::string& why) {
+    if (complete_context && complete_context->trace)
+      complete_context->trace->gates.at(i) = {
+          complete_context->trace->gates.at(i).gate, state, value, threshold, why};
+  };
   FdeRiskDecisionV1 local_risk;
   FdeRiskDecisionV1* risk_result = context && context->risk_result
       ? context->risk_result : &local_risk;
@@ -325,6 +382,8 @@ FdeDecision FdeManager::decide(
     }
   }
   if (eligible.empty()) {
+    gate(0, DecisionGateStateV1::Unknown, NAN, NAN,
+         "no finite post-passed covering candidate; inspect step/post/numerical evidence");
     decision.status = decision.plausible_hypotheses.size() > 1
         ? FdeStatus::AmbiguousUnavailable : FdeStatus::NoValidCandidate;
     decision.reason = "no valid action covers the complete plausible set";
@@ -340,11 +399,16 @@ FdeDecision FdeManager::decide(
                            std::max(y.hpl_m, y.vpl_m),
                            -y.information_logdet, y.action.id.value());
   });
+  gate(0, DecisionGateStateV1::Pass, 1., 1., "finite post-passed covering candidate");
   const std::size_t winner_index = eligible.front();
   const auto& winner = (*candidates)[winner_index];
   const bool winner_within_alert =
       winner.hpl_m <= risk.horizontal_alert_limit_m &&
       winner.vpl_m <= risk.vertical_alert_limit_m;
+  gate(2, winner_within_alert ? DecisionGateStateV1::Pass : DecisionGateStateV1::Fail,
+       winner.hpl_m, risk.horizontal_alert_limit_m,
+       "HPL=" + std::to_string(winner.hpl_m) + ";VPL=" + std::to_string(winner.vpl_m) +
+       ";VAL=" + std::to_string(risk.vertical_alert_limit_m));
   // §8.5 / P0-04: pass EVERY original eligible action into the strict grouping
   // layer.  Plausible IDs are fault labels, never a shared failure event.  A
   // candidate may reuse another action's event only through the actual numeric
@@ -422,8 +486,11 @@ FdeDecision FdeManager::decide(
     // ledger.  Hypothesis allocation is already charged once; only the excess
     // from disjoint action events is added as the selection term.
     CompleteRiskInputsV1 ledger_inputs;
-    ledger_inputs.legacy.envelope_online = false;
-    ledger_inputs.legacy.envelope_leaf_count = 0;
+    std::string binding_reason;
+    const bool bound_context_valid = complete_context && complete_context->risk_context &&
+        validateBoundRiskContextV1(*complete_context->risk_context, *complete_context,
+            all_in, *candidates, risk, hypotheses, &binding_reason);
+    if (bound_context_valid) ledger_inputs = complete_context->risk_context->inputs;
     ledger_inputs.legacy.selection_contract_frozen = true;
     ExactRisk exact_hypothesis_allocation = 0;
     for (const auto& hypothesis : hypotheses) {
@@ -435,10 +502,35 @@ FdeDecision FdeManager::decide(
     ledger_inputs.selection_extra_bound = roundRiskUp(selection_extra);
     ledger_inputs.selection_bound_known = true;
     ledger_inputs.selection_bound_validated = true;
-    ledger_inputs.model_formal_eligible = !risk.calibration_id.empty();
+    // A calibration label is not evidence. Domain validation controls this field.
+    if (!bound_context_valid) ledger_inputs.model_formal_eligible = false;
     CompleteRiskStatusV1 complete_status;
     const RiskLedger complete = buildRiskLedger(
         risk, hypotheses, ledger_inputs, &complete_status);
+    if (complete_context && complete_context->ledger_result) {
+      *complete_context->ledger_result = complete;
+      if (bound_context_valid) for (auto& term : complete_context->ledger_result->terms) {
+        const auto found = complete_context->risk_context->evidence.find(term.id);
+        if (found != complete_context->risk_context->evidence.end())
+          term.source = found->second.source + ";domain=" +
+              std::to_string(static_cast<int>(found->second.domain));
+      }
+    }
+    bool unknown_term = false;
+    for (const auto& term : complete.terms) {
+      if (!std::isfinite(term.value)) unknown_term = true;
+    }
+    // The ledger accumulates exact known terms before rounding upward once.
+    // Summing rounded term exports would manufacture a boundary overspend.
+    const double known_lower_bound = complete.charged_total;
+    gate(1, known_lower_bound > risk.p_hmi_total ? DecisionGateStateV1::Fail :
+         (unknown_term ? DecisionGateStateV1::Unknown :
+          (complete.closes ? DecisionGateStateV1::Pass : DecisionGateStateV1::Fail)),
+         known_lower_bound, risk.p_hmi_total,
+         known_lower_bound > risk.p_hmi_total ? "RISK_OVER_BUDGET: known charged lower bound" :
+         (unknown_term ? "RISK_UNKNOWN: " + binding_reason : complete.reason));
+    if (complete.closes && complete.all_terms_validated) gate(3, complete.formal_eligible ? DecisionGateStateV1::Pass : DecisionGateStateV1::Unknown,
+         NAN, NAN, complete.formal_eligible ? "DEPLOYMENT_VERIFIED" : "UNQUALIFIED_OR_CONDITIONAL");
     risk_result->allocation_valid = complete_status.allocation_valid;
     risk_result->complete_bound_closes =
         complete_status.complete_bound_closes;
@@ -460,8 +552,10 @@ FdeDecision FdeManager::decide(
         risk_result->terms += ";";
       }
       risk_result->terms += term.id + "=" +
-          (std::isfinite(term.value) ? std::to_string(term.value)
-                                     : std::string("UNKNOWN")) +
+          ([&] { std::ostringstream value; value << std::setprecision(17);
+            if (std::isfinite(term.value)) value << term.value;
+            else value << "UNKNOWN";
+            return value.str(); }()) +
           ":" + toString(term.status);
     }
     if (!groups.valid) {

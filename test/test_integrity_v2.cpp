@@ -458,6 +458,135 @@ TEST(FdeProfiles, NominalPipelineAndFaultCensusFollowResolvedScope) {
   }
 }
 
+TEST(FdeOperabilityBinding, ExternalResultScalarsRejectedAtRealConsumers) {
+  using namespace uwb_imu_pl;
+  const auto frozen_window = freezeIntegrityWindowCopy(
+      p002HistoryWindow(0.0, 0.0));
+  const auto admission = admitFrozenIntegrityWindow(frozen_window);
+  ASSERT_TRUE(admission) << admission.reason;
+  const auto& window = admission.window();
+  DetectorRiskContext detector_risk;
+  detector_risk.p_fa_per_test = 1e-6;
+  detector_risk.continuity_horizon_tests = 1000;
+  detector_risk.rank_tolerance = 1e-12;
+  detector_risk.max_condition_number = 1e10;
+  ExclusionAction action;
+  action.id = ExclusionActionId(10301);
+  action.action_model_id = "KEEP_ALL";
+  RankUpdateConfig rank_config;
+  rank_config.rank_tolerance = 1e-12;
+  rank_config.max_condition_number = 1e10;
+  rank_config.max_linearization_step_norm = 10.0;
+  auto scoped_candidate = DenseCandidateOracle(rank_config).evaluate(
+      admission, action);
+  auto legacy_candidate = DenseCandidateOracle(rank_config).evaluate(
+      admission, action);
+  ASSERT_TRUE(scoped_candidate.valid);
+  const auto detector = JointWindowDetector().evaluateCandidate(
+      window, scoped_candidate, detector_risk);
+  ASSERT_TRUE(detector.passed) << detector.reason;
+  Eigen::MatrixXd mode = Eigen::MatrixXd::Zero(scoped_candidate.rows, 1);
+  mode(0, 0) = 1.0;
+  mode(mode.rows() - 1, 0) = 1.0;
+  FaultHypothesisV2 hypothesis;
+  hypothesis.id = HypothesisId(10302);
+  hypothesis.modes = {FaultModeId(10303)};
+  hypothesis.A = mode;
+  hypothesis.p_md_allocation = 1e-3;
+  hypothesis.hmi_allocation = 1e-6;
+  hypothesis.prior_probability_bound = 1e-3;
+  std::vector<FaultHypothesisV2> scoped_hypotheses{hypothesis};
+  std::vector<FaultHypothesisV2> legacy_hypotheses{hypothesis};
+  ProtectionLevelSharedContext shared;
+  shared.mode_maps.emplace(10303, mode);
+  AttemptProofArena arena;
+  ProtectionLevelV2ProofV1 audit;
+  const auto scoped = ProtectionLevelV2().computeShared(
+      window, &scoped_candidate, detector, &scoped_hypotheses, shared,
+      RiskBudgetV2{}, &audit, &arena);
+  ASSERT_TRUE(scoped.model_valid) << scoped.reason;
+  ASSERT_TRUE(validateProtectionLevelV2Proof(
+      scoped_candidate, detector, scoped_hypotheses, scoped, arena, nullptr));
+  const auto scoped_identity = protectionLevelV2ProofIdentity(
+      scoped_candidate, scoped, arena);
+  ASSERT_NE(scoped_identity, 0u);
+  EpochTransaction transaction;
+  transaction.id = TransactionId(window.id.value());
+  transaction.base_version = window.version;
+  transaction.end = TimestampNs(1030000000);
+  transaction.nominal_predicted_state.position_world_m =
+      Eigen::Vector3d(4.0, -3.0, 2.0);
+
+  // A legal independent global proof exercises the legacy consumers too.
+  ProtectionLevelV2ProofV1 legacy_proof;
+  const auto legacy = ProtectionLevelV2().computeShared(window,
+      &legacy_candidate, detector, &legacy_hypotheses, shared, RiskBudgetV2{},
+      &legacy_proof);
+  ASSERT_TRUE(validateProtectionLevelV2Proof(legacy_candidate, detector,
+      legacy_hypotheses, legacy, nullptr));
+  std::string reason, packet;
+  CommitProtectionEvidenceV1 token;
+  const Eigen::Vector3d reference = Eigen::Vector3d::Zero();
+  const auto check = [&](const ProtectionLevelV2Result& changed,
+                         const ProtectionLevelV2Result& changed_legacy) {
+    EXPECT_FALSE(validateProtectionLevelV2Proof(scoped_candidate, detector,
+        scoped_hypotheses, changed, arena, &reason));
+    EXPECT_FALSE(validateProtectionLevelV2Proof(legacy_candidate, detector,
+        legacy_hypotheses, changed_legacy, &reason));
+    EXPECT_FALSE(retainProtectionLevelV2Proof(scoped_candidate, changed,
+        audit, &arena, &reason));
+    EXPECT_FALSE(retainProtectionLevelV2Proof(legacy_candidate, changed_legacy,
+        legacy_proof, nullptr, &reason));
+    EXPECT_FALSE(mintCommitProtectionEvidenceV1(transaction, admission,
+        scoped_candidate, changed, scoped_identity, "map", &arena, &token, &reason));
+    EXPECT_FALSE(mintCommitProtectionEvidenceV1(transaction, window,
+        legacy_candidate, changed_legacy, legacy_proof.proof_identity,
+        "map", &token, &reason));
+    EXPECT_FALSE(bindProtectionLevelPublicationPacket(legacy_candidate,
+        changed_legacy, legacy_proof.proof_identity, &packet));
+    EXPECT_FALSE(bindTransferredProtectionLevelPublicationPacket(scoped_candidate,
+        changed, scoped_identity, reference, reference, changed.pl_xyz_m,
+        transaction.end.value(), "map", "body_origin", &arena, &packet));
+  };
+  for (auto member : {&ProtectionLevelV2Result::hypothesis_tail_used,
+                      &ProtectionLevelV2Result::axis_tail_used,
+                      &ProtectionLevelV2Result::fault_multiplier_used,
+                      &ProtectionLevelV2Result::noncentrality_used}) {
+    auto changed = scoped, changed_legacy = legacy;
+    changed.*member = std::nextafter(changed.*member, INFINITY);
+    changed_legacy.*member = std::nextafter(changed_legacy.*member, INFINITY);
+    check(changed, changed_legacy);
+    changed.*member = std::numeric_limits<double>::quiet_NaN();
+    changed_legacy.*member = std::numeric_limits<double>::quiet_NaN();
+    check(changed, changed_legacy);
+  }
+  AttemptProofArena other_arena;
+  EXPECT_FALSE(validateProtectionLevelV2Proof(scoped_candidate, detector,
+      scoped_hypotheses, scoped, other_arena, &reason));
+  auto other_candidate = scoped_candidate;
+  other_candidate.action.id = ExclusionActionId(9999);
+  EXPECT_FALSE(retainProtectionLevelV2Proof(other_candidate, scoped, audit,
+      &arena, &reason));
+  ASSERT_TRUE(bindTransferredProtectionLevelPublicationPacket(scoped_candidate,
+      scoped, scoped_identity, reference, reference, scoped.pl_xyz_m,
+      transaction.end.value(), "map", "body_origin", &arena, &packet));
+  auto lease = arena.lease();
+  arena.close();
+  FinalProtectionProofBundleV1 bundle;
+  ASSERT_TRUE(freezeFinalProtectionProofBundleV1(lease, packet, &bundle, &reason));
+  lease.reset();
+  ASSERT_TRUE(validateFinalProtectionProofBundleV1(bundle, scoped.pl_xyz_m, packet, &reason));
+  for (auto member : {&ProtectionLevelV2Result::hypothesis_tail_used,
+                      &ProtectionLevelV2Result::axis_tail_used,
+                      &ProtectionLevelV2Result::fault_multiplier_used,
+                      &ProtectionLevelV2Result::noncentrality_used}) {
+    auto changed = bundle;
+    changed.protection_proof.served_result.*member = std::nextafter(
+        changed.protection_proof.served_result.*member, INFINITY);
+    EXPECT_FALSE(validateFinalProtectionProofBundleV1(changed, scoped.pl_xyz_m, packet, &reason));
+  }
+}
+
 TEST(P103ProofArena,
      ScopedAttemptFreezesSelfContainedBundleAndLegacyPathRemainsCompatible) {
   using namespace uwb_imu_pl;
@@ -7222,4 +7351,41 @@ TEST(Phase2FrozenValidationMemo, DefaultProducerAndReadersRemainPlainExhaustive)
     EXPECT_EQ(after.frozen_hypothesis_validations,before.frozen_hypothesis_validations+1);
     EXPECT_EQ(after.frozen_hypothesis_validation_reuses,before.frozen_hypothesis_validation_reuses);
   }
+}
+
+TEST(FdeOperabilityRank, ComplementaryPsdChannelsNeedOnlyJointCertifiedRank) {
+  using namespace uwb_imu_pl;
+  DualChannelBoundRequest request;
+  request.p_md = 1e-3;
+  request.protected_response = Eigen::MatrixXd::Zero(3,2);
+  request.protected_response.topRows(2).setIdentity();
+  ChannelBoundInput a;
+  a.detector_id = "current"; a.dof = 2; a.threshold = 20.; a.weight = .5;
+  a.gram = Eigen::Matrix2d::Zero(); a.gram(0,0) = 1.; a.gram(1,1) = 1e-20;
+  auto b = a; b.detector_id = "history";
+  b.gram(0,0) = 1e-20; b.gram(1,1) = 1.;
+  const auto marginal = certifySymmetricPsd(a.gram,1e-10);
+  ASSERT_TRUE(marginal.psd);
+  ASSERT_FALSE(marginal.rank_certified);
+  request.channels = {a,b};
+  DualChannelNumericalProofV1 proof;
+  const auto joint = computeDualChannelBoundCertified(request,1e-10,99,&proof);
+  ASSERT_TRUE(joint.valid) << joint.reason;
+  EXPECT_EQ(joint.w_rank,2.);
+  EXPECT_TRUE(joint.w_kernel_covered);
+  EXPECT_TRUE(validateDualChannelNumericalProof(proof,nullptr));
+  // Genuine singular complementary channels and a structural zero history.
+  request.channels[0].gram(1,1) = 0.;
+  request.channels[1].gram(0,0) = 0.;
+  EXPECT_TRUE(computeDualChannelBoundCertified(request,1e-10,99,nullptr).valid);
+  request.channels[1].gram.setZero();
+  EXPECT_FALSE(computeDualChannelBoundCertified(request,1e-10,99,nullptr).valid); // dangerous kernel
+  request.protected_response.col(1).setZero();
+  EXPECT_TRUE(computeDualChannelBoundCertified(request,1e-10,99,nullptr).valid); // harmless kernel
+  request.channels[0].gram(1,1) = -1e-20;
+  EXPECT_FALSE(computeDualChannelBoundCertified(request,1e-10,99,nullptr).valid); // no PSD proof
+  // Joint rank boundary must still refuse; no relaxed rank tolerance.
+  request.channels = {a};
+  request.protected_response.topRows(2).setIdentity();
+  EXPECT_FALSE(computeDualChannelBoundCertified(request,1e-10,99,nullptr).valid);
 }

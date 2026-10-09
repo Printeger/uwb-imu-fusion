@@ -5,6 +5,10 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <sstream>
+#include <iomanip>
+#include "uwb_imu_pl/common/integrity_identity.hpp"
+#include "uwb_imu_pl/integrity/joint_window_detector.hpp"
 
 namespace uwb_imu_pl {
 namespace {
@@ -115,6 +119,64 @@ AxisTailSplit axisTailSplit(double allocation, double prior_bound, double p_md,
   out.charge = std::max(out.hypothesis_tail, p_md);
   out.valid = true;
   return out;
+}
+
+std::uint64_t riskContractIdentityV1(
+    const RiskBudgetV2& risk, const std::vector<FaultHypothesisV2>& hypotheses) {
+  std::ostringstream out;
+  out << std::setprecision(17) << risk.p_hmi_total << '|' << risk.nominal_axis_tail
+      << '|' << risk.p_nm << '|' << risk.p_bridge_escape << '|'
+      << risk.p_history_contamination << '|' << risk.p_model_escape << '|'
+      << risk.horizontal_alert_limit_m << '|' << risk.vertical_alert_limit_m << '|'
+      << risk.allocation_policy << '|' << risk.calibration_id << '|'
+      << hypothesisSetFingerprint(hypotheses);
+  return identityHash64(out.str());
+}
+
+bool validateBoundRiskContextV1(
+    const BoundRiskContextV1& bound, const FdeDecisionContextV4& expected,
+    const DetectorResultV2& detector,
+    const std::vector<CandidateEvaluation>& candidates,
+    const RiskBudgetV2& risk, const std::vector<FaultHypothesisV2>& hypotheses,
+    std::string* reason) {
+  const auto refuse = [&](const char* why) { if (reason) *reason = why; return false; };
+  if (bound.schema_version != 1 || bound.window_id != detector.window_id ||
+      bound.scope_id.empty() || bound.manifest_id.empty() || bound.model_id.empty() ||
+      bound.scope_id != expected.expected_scope_id ||
+      bound.manifest_id != expected.expected_manifest_id ||
+      bound.model_id != expected.expected_model_id ||
+      bound.risk_contract_id != riskContractIdentityV1(risk, hypotheses))
+    return refuse("risk source/scope/manifest/model/contract binding mismatch");
+  if (bound.valid_from.value() > expected.information_cutoff.value() ||
+      bound.valid_until.value() < expected.information_cutoff.value() ||
+      bound.valid_until.value() < bound.valid_from.value())
+    return refuse("risk evidence expired or outside applicable interval");
+  for (const auto& c : candidates)
+    if (!(c.base_version == bound.version))
+      return refuse("risk evidence window version mismatch");
+  const auto qualified = [&](const char* id, bool asserted) {
+    if (!asserted) return true;
+    const auto found = bound.evidence.find(id);
+    return found != bound.evidence.end() && !found->second.source.empty() &&
+        found->second.domain != RiskEvidenceDomainV1::Missing;
+  };
+  const auto& input = bound.inputs;
+  if (!qualified("omitted", input.omitted_event_bound_known || input.omitted_event_bound_validated) ||
+      !qualified("envelope", input.envelope_event_bound_known || input.envelope_event_bound_validated) ||
+      !qualified("bridge", input.bridge_escape_validated) ||
+      !qualified("history", input.history_escape_validated) ||
+      !qualified("model", input.model_escape_validated))
+    return refuse("asserted risk bound has no source/domain evidence");
+  if (input.model_formal_eligible) {
+    for (const auto* id : {"omitted", "envelope", "bridge", "history", "model"}) {
+      const auto found = bound.evidence.find(id);
+      if (found == bound.evidence.end() ||
+          (found->second.domain != RiskEvidenceDomainV1::Deployment &&
+           found->second.domain != RiskEvidenceDomainV1::Structural))
+        return refuse("formal risk qualification requires deployment evidence");
+    }
+  }
+  return true;
 }
 
 RiskLedger buildRiskLedger(const RiskBudgetV2& risk,
