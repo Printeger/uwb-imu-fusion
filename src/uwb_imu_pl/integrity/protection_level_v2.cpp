@@ -6,6 +6,7 @@
 #include "uwb_imu_pl/estimation/candidate_worker_pool.hpp"
 #include "successful_validation_memo.hpp"
 #include "numerical_phase_profile.hpp"
+#include "scoped_frozen_validation.hpp"
 
 #include <boost/math/distributions/non_central_chi_squared.hpp>
 #include <boost/math/distributions/normal.hpp>
@@ -2921,13 +2922,12 @@ void ProtectionLevelV2::computeSharedFlatBatch(
           }
           std::string cached_reason;
           FrozenHypothesisPlProofV1 cached_proof;
-          const bool cached_found = job.frozen_proof_arena
-              ? frozenHypothesisPlProof(
-                    cached, *job.frozen_proof_arena, &cached_proof)
-              : frozenHypothesisPlProof(cached, &cached_proof);
-          if (!cached_found ||
-              !validateFrozenHypothesisPlEntry(cached_proof,
-                                                &cached_reason)) {
+          const bool cached_valid = job.frozen_proof_arena
+              ? detail::readAndValidateScopedFrozenHypothesisProof(
+                    cached, *job.frozen_proof_arena, &cached_proof, &cached_reason)
+              : (frozenHypothesisPlProof(cached, &cached_proof) &&
+                 validateFrozenHypothesisPlEntry(cached_proof, &cached_reason));
+          if (!cached_valid) {
             slot.reason = "frozen hypothesis proof rejected: " +
                 cached_reason;
             return;
@@ -3547,12 +3547,12 @@ ProtectionLevelV2Result ProtectionLevelV2::computeFrozenAllInImpl(
     }
     std::string cached_proof_reason;
     FrozenHypothesisPlProofV1 cached_proof;
-    const bool cached_found = frozen_proof_arena
-        ? frozenHypothesisPlProof(cached, *frozen_proof_arena, &cached_proof)
-        : frozenHypothesisPlProof(cached, &cached_proof);
-    if (!cached_found ||
-        !validateFrozenHypothesisPlEntry(cached_proof,
-                                         &cached_proof_reason)) {
+    const bool cached_valid = frozen_proof_arena
+        ? detail::readAndValidateScopedFrozenHypothesisProof(
+              cached, *frozen_proof_arena, &cached_proof, &cached_proof_reason)
+        : (frozenHypothesisPlProof(cached, &cached_proof) &&
+           validateFrozenHypothesisPlEntry(cached_proof, &cached_proof_reason));
+    if (!cached_valid) {
       slot.reason = "frozen hypothesis proof rejected: " +
           cached_proof_reason;
       return;

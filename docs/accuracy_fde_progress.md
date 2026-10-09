@@ -508,3 +508,29 @@ KEEP_ALL reading the same scoped proof, not cross-candidate root sharing.
 High-effort ownership/replacement review ongoing; no new proof memo implemented
 yet. Research targets and formal/risk qualification remain unmet; active goal
 and final integrated acceptance still OPEN.
+
+Frozen hypothesis scoped validation reuse implemented: producer-owned const V1
+proof plus private generation/memo wrapper, kind1 remains alias-to-V1 with new
+kind9 holding wrapper. Scoped seal/KEEP reader pins current kind1 then requires
+exact address/controlblock/generation match. Missing, overwritten or imported
+owner falls back to full; false/throw never cache. Returned mutable copies carry
+no trust. Public mutable/legacy readers and full PL payload validator unchanged,
+as are every root/window/dual/model/tail/risk/selection/publication check. New
+UWB_IMU_PL_EXHAUSTIVE_FROZEN_VALIDATION=1 restores original scoped copy/full
+path. Benchmark emits actual frozen validation execution/reuse counters.
+High-effort independent implementation review PASS. Full library, benchmark,
+tests, realtime node and nominal runner rebuilt for appended snapshot ABI.
+Focused tests PASS 41/41 (33 integrity/safety, 8 root/classifier). Includes
+concurrent first check, mutable import mutation after successful fallback,
+same-address wrong owner, same-key replacement, wrong generation with BOTH
+source indexes copied, and close/lease. Existing helper tests cover throw/false
+retry. No schema/hash/rank gate changed.
+
+Initial new fixture test FAIL: generic shared-context was incorrectly expected
+valid. Independent exhaustive fixture also rejects it; public validator reason
+and two repeated private failures now agree with full path and each executes
+again. This preserves the actual rejection rather than loosening a gate. Fixed
+positive fixture remains valid and memo-hit tested. The initial unit failure is
+retained here; existing baseline scientific FAIL records remain unchanged.
+Hash-only/memo gains and final integrated acceptance still unproven for this
+new layer until paired measurement; no gain claimed yet.

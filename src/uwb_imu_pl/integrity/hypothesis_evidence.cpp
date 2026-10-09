@@ -3,6 +3,8 @@
 #include "uwb_imu_pl/estimation/candidate_worker_pool.hpp"
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
 #include "numerical_phase_profile.hpp"
+#include "successful_validation_memo.hpp"
+#include "scoped_frozen_validation.hpp"
 #include "../estimation/classification_numerics.hpp"
 
 #include <Eigen/Cholesky>
@@ -23,6 +25,15 @@ namespace uwb_imu_pl {
 namespace {
 
 constexpr std::uint32_t kArenaFrozenHypothesisProof = 1;
+constexpr std::uint32_t kArenaFrozenHypothesisValidationMemo = 9;
+struct ImmutableFrozenHypothesisPayload {
+  ImmutableFrozenHypothesisPayload(FrozenHypothesisPlProofV1&& value,
+                                  std::uint64_t generation)
+      : proof(std::move(value)), arena_generation(generation) {}
+  const FrozenHypothesisPlProofV1 proof;
+  const std::uint64_t arena_generation;
+  detail::SuccessfulValidationMemo validation;
+};
 
 void hashBytes(std::uint64_t* hash, const void* data, std::size_t size) {
   const auto* bytes = static_cast<const unsigned char*>(data);
@@ -246,9 +257,14 @@ void storePlCertificate(const SymmetricPsdCertificate& gram,
   proof.served_entry_identity = frozenEntryProofKey(proof.served_entry);
   const auto key = frozenEntryProofKey(*entry);
   if (proof_arena) {
+    const auto immutable = std::make_shared<const ImmutableFrozenHypothesisPayload>(
+        std::move(proof), proof_arena->generation());
+    const std::shared_ptr<const FrozenHypothesisPlProofV1> payload(
+        immutable, &immutable->proof);
     (void)detail::AttemptProofArenaAccess::store(
-        proof_arena, kArenaFrozenHypothesisProof, key, nullptr,
-        std::make_shared<const FrozenHypothesisPlProofV1>(std::move(proof)));
+        proof_arena, kArenaFrozenHypothesisProof, key, nullptr, payload);
+    (void)detail::AttemptProofArenaAccess::store(
+        proof_arena, kArenaFrozenHypothesisValidationMemo, key, nullptr, immutable);
   } else {
     auto& registry = frozenProofRegistry();
     std::lock_guard<std::mutex> lock(registry.mutex);
@@ -1507,11 +1523,10 @@ std::vector<FaultModeEvidence> evaluateContiguous(
       std::all_of(context->pl_entries.begin(), context->pl_entries.end(),
           [&](const FrozenHypothesisPlEntry& entry) {
             FrozenHypothesisPlProofV1 proof;
-            return !entry.valid ||
-                ((proof_arena
-                      ? frozenHypothesisPlProof(entry, *proof_arena, &proof)
-                      : frozenHypothesisPlProof(entry, &proof)) &&
-                 validateFrozenHypothesisPlEntry(proof));
+            return !entry.valid || (proof_arena
+                ? detail::readAndValidateScopedFrozenHypothesisProof(entry, *proof_arena)
+                : (frozenHypothesisPlProof(entry, &proof) &&
+                   validateFrozenHypothesisPlEntry(proof)));
           });
   if (!context->valid) context->reason = "shared hypothesis context is incomplete";
   std::shared_ptr<const FrozenHypothesisNumerics> sealed_base = context;
@@ -1771,11 +1786,10 @@ std::vector<FaultModeEvidence> evaluateMapped(
         std::all_of(context->pl_entries.begin(), context->pl_entries.end(),
             [&](const FrozenHypothesisPlEntry& entry) {
               FrozenHypothesisPlProofV1 proof;
-              return !entry.valid ||
-                  ((proof_arena
-                        ? frozenHypothesisPlProof(entry, *proof_arena, &proof)
-                        : frozenHypothesisPlProof(entry, &proof)) &&
-                   validateFrozenHypothesisPlEntry(proof));
+              return !entry.valid || (proof_arena
+                  ? detail::readAndValidateScopedFrozenHypothesisProof(entry, *proof_arena)
+                  : (frozenHypothesisPlProof(entry, &proof) &&
+                     validateFrozenHypothesisPlEntry(proof)));
             });
     if (!context->valid) context->reason = "shared hypothesis context is incomplete";
     if (shared) *shared = std::move(context);
@@ -1876,6 +1890,7 @@ std::uint64_t frozenHypothesisPlEntryIdentity(
 bool validateFrozenHypothesisPlEntry(
     const FrozenHypothesisPlProofV1& proof, std::string* reason) {
   detail::NumericalPhaseScope profile(detail::NumericalProfilePhase::FrozenHypothesisValidation);
+  NumericalWorkCounters::frozenHypothesisValidation();
   auto reject = [&](const std::string& message) {
     if (reason) *reason = message;
     return false;
@@ -1987,6 +2002,47 @@ bool frozenHypothesisPlProof(const FrozenHypothesisPlEntry& entry,
                              FrozenHypothesisPlProofV1* proof) {
   return scopedFrozenHypothesisPlProof(entry, lease, proof);
 }
+
+namespace detail {
+bool readAndValidateScopedFrozenHypothesisProof(
+    const FrozenHypothesisPlEntry& entry, const AttemptProofArena& arena,
+    FrozenHypothesisPlProofV1* proof, std::string* reason) {
+  if (std::getenv("UWB_IMU_PL_EXHAUSTIVE_FROZEN_VALIDATION")) {
+    FrozenHypothesisPlProofV1 local;
+    auto* output = proof ? proof : &local;
+    return frozenHypothesisPlProof(entry, arena, output) &&
+        validateFrozenHypothesisPlEntry(*output, reason);
+  }
+  const auto key = frozenEntryProofKey(entry);
+  const auto payload = AttemptProofArenaAccess::find(
+      arena, kArenaFrozenHypothesisProof, key, nullptr);
+  if (!payload) return false;
+  const auto value = std::static_pointer_cast<const FrozenHypothesisPlProofV1>(payload);
+  if (proof) *proof = *value;
+  // The original reader's external served-entry bindings run on every call.
+  if (!(value->served_entry.hypothesis == entry.hypothesis &&
+        value->served_entry.protected_slopes == entry.protected_slopes &&
+        value->served_entry.valid == entry.valid)) return false;
+  const auto memo_payload = AttemptProofArenaAccess::find(
+      arena, kArenaFrozenHypothesisValidationMemo, key, nullptr);
+  if (memo_payload) {
+    const auto immutable =
+        std::static_pointer_cast<const ImmutableFrozenHypothesisPayload>(memo_payload);
+    if (immutable->arena_generation == arena.generation() &&
+        sameImmutablePayloadOwner(payload, memo_payload, &immutable->proof)) {
+      bool executed = false;
+      const bool valid = immutable->validation.check([&] {
+        executed = true;
+        return validateFrozenHypothesisPlEntry(*value, reason);
+      });
+      if (valid && !executed) NumericalWorkCounters::frozenHypothesisValidationReuse();
+      return valid;
+    }
+  }
+  // Missing/replaced private owner: never trust a key or caller-imported alias.
+  return validateFrozenHypothesisPlEntry(*value, reason);
+}
+}  // namespace detail
 
 int classifyDetectionResponse(const Eigen::MatrixXd& z_h,
                               const Eigen::MatrixXd& g_h,

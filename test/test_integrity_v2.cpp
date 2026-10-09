@@ -26,6 +26,7 @@
 #include "uwb_imu_pl/estimation/candidate_worker_pool.hpp"
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
+#include "../src/uwb_imu_pl/integrity/scoped_frozen_validation.hpp"
 #include "uwb_imu_pl/estimation/rank_update_kernel.hpp"
 #include "uwb_imu_pl/estimation/reinitialization.hpp"
 #include "uwb_imu_pl/factors/kinematic_bridge_factor.hpp"
@@ -7026,4 +7027,163 @@ TEST(P106SimulationAcceptance, PublishCallNotAnalysisControlsDeadline) {
   EXPECT_FALSE(packet.output().publication.protected_output);
   EXPECT_TRUE(packet.output().publication.unprotected_output);
   EXPECT_FALSE(packet.output().protection_level.formal_eligible);
+}
+
+
+
+namespace {
+struct FrozenValidationEnvironment {
+  const char* key = "UWB_IMU_PL_EXHAUSTIVE_FROZEN_VALIDATION";
+  bool existed = std::getenv(key) != nullptr;
+  std::string original = existed ? std::getenv(key) : "";
+  ~FrozenValidationEnvironment() {
+    if (existed) setenv(key, original.c_str(), 1); else unsetenv(key);
+  }
+};
+std::shared_ptr<const uwb_imu_pl::FrozenHypothesisNumerics> frozenMemoFixture(
+    uwb_imu_pl::AttemptProofArena* arena, bool fixed = true) {
+  using namespace uwb_imu_pl;
+  auto window = syntheticWindow();
+  finalizeIntegrityWindow(&window, 1e-10, 1e10);
+  const auto admission = admitFrozenIntegrityWindow(freezeIntegrityWindowCopy(window));
+  FaultModeBasis mode;
+  mode.id=FaultModeId(19001); mode.sensor=SensorType::Uwb;mode.parameter_dimension=1;
+  int offset=0;
+  for(const auto& block : window.blocks) {
+    Eigen::MatrixXd map(block.residual_raw.size(),1);
+    for(int row=0;row<map.rows();++row)map(row,0)=std::sin((offset+row+1)*1.3);
+    offset+=map.rows();mode.raw_group_maps[block.group_id]=map;
+  }
+  FaultHypothesisV2 h;h.id=HypothesisId(19002);h.modes={mode.id};
+  std::vector<FaultHypothesisV2> hypotheses{h};
+  HypothesisEvaluationConfig config;config.enable_low_dim_batch=fixed;
+  std::shared_ptr<const FrozenHypothesisNumerics> shared;
+  std::shared_ptr<const FrozenHypothesisDualNumerics> dual;
+  HypothesisEvidenceEvaluator(config).evaluateAll(admission,{mode},&hypotheses,
+      100.,&shared,&dual,nullptr,arena);
+  return shared;
+}
+}
+
+TEST(Phase2FrozenValidationMemo, SealReusePublicTamperAndOwnerReplacement) {
+  using namespace uwb_imu_pl;
+  FrozenValidationEnvironment env;unsetenv(env.key);
+  for(bool fixed : {true,false}) {
+    AttemptProofArena arena;
+    const auto shared=frozenMemoFixture(&arena,fixed);
+    ASSERT_TRUE(shared);ASSERT_EQ(shared->pl_entries.size(),1u);
+    const auto& entry=shared->pl_entries[0];ASSERT_TRUE(entry.valid);
+    if(!fixed && !shared->valid) {
+      // This generic fixture is already rejected by the original full path.
+      // Preserve that failure instead of granting trust to a producer payload.
+      setenv(env.key,"1",1);AttemptProofArena reference_arena;
+      const auto reference=frozenMemoFixture(&reference_arena,false);
+      ASSERT_TRUE(reference);EXPECT_FALSE(reference->valid);unsetenv(env.key);
+      FrozenHypothesisPlProofV1 original;
+      ASSERT_TRUE(frozenHypothesisPlProof(entry,arena,&original));
+      std::string expected_reason;EXPECT_FALSE(validateFrozenHypothesisPlEntry(original,&expected_reason));
+      for(int i=0;i<2;++i) {
+        const auto count=NumericalWorkCounters::snapshot().frozen_hypothesis_validations;
+        std::string reason;
+        EXPECT_FALSE(detail::readAndValidateScopedFrozenHypothesisProof(entry,arena,nullptr,&reason));
+        EXPECT_EQ(reason,expected_reason);
+        EXPECT_EQ(NumericalWorkCounters::snapshot().frozen_hypothesis_validations,count+1);
+      }
+      continue;
+    }
+    ASSERT_TRUE(shared->valid);
+    FrozenHypothesisPlProofV1 proof;
+    const auto before=NumericalWorkCounters::snapshot();
+    std::string reason="unchanged on success";
+    EXPECT_TRUE(detail::readAndValidateScopedFrozenHypothesisProof(entry,arena,&proof,&reason));
+    EXPECT_TRUE(detail::readAndValidateScopedFrozenHypothesisProof(entry,arena,nullptr,&reason));
+    EXPECT_EQ(reason,"unchanged on success");
+    auto after=NumericalWorkCounters::snapshot();
+    EXPECT_EQ(after.frozen_hypothesis_validations,before.frozen_hypothesis_validations);
+    EXPECT_EQ(after.fault_gram_svd,before.fault_gram_svd);
+    EXPECT_EQ(after.frozen_hypothesis_validation_reuses-before.frozen_hypothesis_validation_reuses,2u);
+    setenv(env.key,"1",1);
+    FrozenHypothesisPlProofV1 reference;
+    EXPECT_TRUE(detail::readAndValidateScopedFrozenHypothesisProof(entry,arena,&reference,&reason));
+    EXPECT_EQ(reference.proof_identity,proof.proof_identity);
+    EXPECT_EQ(reference.served_entry_identity,proof.served_entry_identity);
+    EXPECT_EQ(NumericalWorkCounters::snapshot().frozen_hypothesis_validations,
+              after.frozen_hypothesis_validations+1);
+    unsetenv(env.key);
+    auto mutable_copy=proof;
+    mutable_copy.certified_gram(0,0)=std::nextafter(mutable_copy.certified_gram(0,0),100.);
+    EXPECT_FALSE(validateFrozenHypothesisPlEntry(mutable_copy,&reason));
+    auto bad_entry=entry;bad_entry.protected_slopes.x()+=1.;
+    reason="missing proof leaves reason unchanged";
+    EXPECT_FALSE(detail::readAndValidateScopedFrozenHypothesisProof(bad_entry,arena,nullptr,&reason));
+    EXPECT_EQ(reason,"missing proof leaves reason unchanged");
+    const auto key=frozenHypothesisPlEntryIdentity(entry);
+    const auto payload=detail::AttemptProofArenaAccess::find(arena,1,key,nullptr);
+    ASSERT_TRUE(payload);
+    // Same address but independently owned control block cannot use old memo.
+    std::shared_ptr<const FrozenHypothesisPlProofV1> foreign_owner(
+        static_cast<const FrozenHypothesisPlProofV1*>(payload.get()),
+        [](const FrozenHypothesisPlProofV1*) {});
+    ASSERT_TRUE(detail::AttemptProofArenaAccess::store(&arena,1,key,nullptr,foreign_owner));
+    for(int i=0;i<2;++i) {
+      const auto count=NumericalWorkCounters::snapshot().frozen_hypothesis_validations;
+      EXPECT_TRUE(detail::readAndValidateScopedFrozenHypothesisProof(entry,arena,&reference));
+      EXPECT_EQ(NumericalWorkCounters::snapshot().frozen_hypothesis_validations,count+1);
+    }
+    ASSERT_TRUE(detail::AttemptProofArenaAccess::store(&arena,1,key,nullptr,
+        std::make_shared<const FrozenHypothesisPlProofV1>(proof)));
+    const auto count=NumericalWorkCounters::snapshot().frozen_hypothesis_validations;
+    EXPECT_TRUE(detail::readAndValidateScopedFrozenHypothesisProof(entry,arena));
+    EXPECT_EQ(NumericalWorkCounters::snapshot().frozen_hypothesis_validations,count+1);
+    // A caller-retained mutable import is never memoized even after success.
+    auto imported=std::make_shared<FrozenHypothesisPlProofV1>(proof);
+    ASSERT_TRUE(detail::AttemptProofArenaAccess::store(&arena,1,key,nullptr,imported));
+    EXPECT_TRUE(detail::readAndValidateScopedFrozenHypothesisProof(entry,arena));
+    *imported=mutable_copy;
+    ASSERT_TRUE(detail::AttemptProofArenaAccess::store(&arena,1,key,nullptr,imported));
+    std::string expected_reason;EXPECT_FALSE(validateFrozenHypothesisPlEntry(mutable_copy,&expected_reason));
+    for(int i=0;i<2;++i) {
+      const auto count=NumericalWorkCounters::snapshot().frozen_hypothesis_validations;
+      reason.clear();EXPECT_FALSE(detail::readAndValidateScopedFrozenHypothesisProof(entry,arena,&reference,&reason));
+      EXPECT_EQ(reason,expected_reason);
+      EXPECT_EQ(NumericalWorkCounters::snapshot().frozen_hypothesis_validations,count+1);
+    }
+  }
+}
+
+TEST(Phase2FrozenValidationMemo, ConcurrentFirstValidationCrossArenaAndLease) {
+  using namespace uwb_imu_pl;
+  FrozenValidationEnvironment env;setenv(env.key,"1",1);
+  AttemptProofArena arena;
+  const auto shared=frozenMemoFixture(&arena);
+  ASSERT_TRUE(shared && shared->valid);const auto& entry=shared->pl_entries[0];
+  unsetenv(env.key);
+  const auto before=NumericalWorkCounters::snapshot();
+  std::array<std::future<bool>,8> readers;
+  for(auto& reader : readers)reader=std::async(std::launch::async,[&] {
+    return detail::readAndValidateScopedFrozenHypothesisProof(entry,arena);
+  });
+  for(auto& reader : readers)EXPECT_TRUE(reader.get());
+  const auto after=NumericalWorkCounters::snapshot();
+  EXPECT_EQ(after.frozen_hypothesis_validations-before.frozen_hypothesis_validations,1u);
+  EXPECT_EQ(after.frozen_hypothesis_validation_reuses-before.frozen_hypothesis_validation_reuses,7u);
+  AttemptProofArena next;
+  const auto key=frozenHypothesisPlEntryIdentity(entry);
+  const auto payload=detail::AttemptProofArenaAccess::find(arena,1,key,nullptr);
+  ASSERT_TRUE(detail::AttemptProofArenaAccess::store(&next,1,key,nullptr,payload));
+  EXPECT_NE(next.generation(),arena.generation());
+  const auto memo_payload=detail::AttemptProofArenaAccess::find(arena,9,key,nullptr);
+  ASSERT_TRUE(memo_payload);
+  ASSERT_TRUE(detail::AttemptProofArenaAccess::store(&next,9,key,nullptr,memo_payload));
+  EXPECT_TRUE(detail::readAndValidateScopedFrozenHypothesisProof(entry,next));
+  EXPECT_EQ(NumericalWorkCounters::snapshot().frozen_hypothesis_validations,
+            after.frozen_hypothesis_validations+1);
+  auto lease=arena.lease();arena.close();
+  FrozenHypothesisPlProofV1 proof;
+  EXPECT_TRUE(frozenHypothesisPlProof(entry,lease,&proof));
+  EXPECT_TRUE(validateFrozenHypothesisPlEntry(proof));
+  // Ordinary immutable reads stay legal after close; no consume rights added.
+  const auto count=NumericalWorkCounters::snapshot().frozen_hypothesis_validations;
+  EXPECT_TRUE(detail::readAndValidateScopedFrozenHypothesisProof(entry,arena));
+  EXPECT_EQ(NumericalWorkCounters::snapshot().frozen_hypothesis_validations,count);
 }

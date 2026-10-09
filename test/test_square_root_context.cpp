@@ -819,8 +819,9 @@ TEST(Phase2ClassificationHashes, ClassifierAllOutputsAndNullPointersAreBitIdenti
     Eigen::MatrixXd z=randomMatrix(rows,cols,42+rows+cols);
     Eigen::MatrixXd g=randomMatrix(3,cols,73+cols);
     for(int kind=0;kind<4;++kind) {
-      if(kind==1)z.setZero();if(kind==2){z.setZero();z(0,0)=1.;}
-      if(kind==3)g.setZero();
+      if(kind==1) z.setZero();
+      if(kind==2) { z.setZero(); z(0,0)=1.; }
+      if(kind==3) g.setZero();
       for(double tol : {1e-12,1.,std::nextafter(1.,0.),std::nextafter(1.,2.),0.,-1.,
                          std::numeric_limits<double>::quiet_NaN()})
         for(double scale : {1.,0.,-1.,std::numeric_limits<double>::infinity(),

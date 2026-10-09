@@ -90,6 +90,8 @@ struct NumericalWorkSnapshot {
   std::uint64_t frozen_admission_constant_validations = 0;
   std::uint64_t pl_payload_validations = 0;
   std::uint64_t pl_payload_validation_reuses = 0;
+  std::uint64_t frozen_hypothesis_validations = 0;
+  std::uint64_t frozen_hypothesis_validation_reuses = 0;
 };
 
 // Counts actual decomposition/solve construction points.  The counters are
@@ -163,7 +165,9 @@ class NumericalWorkCounters {
             block_rhs_unique_blocks_.load(),
             frozen_admission_constant_validations_.load(),
             pl_payload_validations_.load(),
-            pl_payload_validation_reuses_.load()};
+            pl_payload_validation_reuses_.load(),
+            frozen_hypothesis_validations_.load(),
+            frozen_hypothesis_validation_reuses_.load()};
   }
   static void reset() {
     base_svd_ = 0;
@@ -233,6 +237,8 @@ class NumericalWorkCounters {
     frozen_admission_constant_validations_ = 0;
     pl_payload_validations_ = 0;
     pl_payload_validation_reuses_ = 0;
+    frozen_hypothesis_validations_ = 0;
+    frozen_hypothesis_validation_reuses_ = 0;
   }
   static void baseSvd() { ++base_svd_; }
   static void baseLlt() { ++base_llt_; }
@@ -353,6 +359,8 @@ class NumericalWorkCounters {
   }
   static void plPayloadValidation() { ++pl_payload_validations_; }
   static void plPayloadValidationReuse() { ++pl_payload_validation_reuses_; }
+  static void frozenHypothesisValidation() { ++frozen_hypothesis_validations_; }
+  static void frozenHypothesisValidationReuse() { ++frozen_hypothesis_validation_reuses_; }
 
  private:
   inline static std::atomic<std::uint64_t> base_svd_{0};
@@ -423,6 +431,8 @@ class NumericalWorkCounters {
       frozen_admission_constant_validations_{0};
   inline static std::atomic<std::uint64_t> pl_payload_validations_{0};
   inline static std::atomic<std::uint64_t> pl_payload_validation_reuses_{0};
+  inline static std::atomic<std::uint64_t> frozen_hypothesis_validations_{0};
+  inline static std::atomic<std::uint64_t> frozen_hypothesis_validation_reuses_{0};
 };
 
 }  // namespace uwb_imu_pl
