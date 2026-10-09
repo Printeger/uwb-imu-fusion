@@ -7443,6 +7443,56 @@ TEST(FdeOperabilityReference, ProductionMapUsesActualFrozenPoseAndMintUsesFrozen
   EXPECT_TRUE((evidence.reference.mean_world_m.array()==expected.array()).all());
 }
 
+TEST(FdeOperabilityImuReference, SensitivityUsesActualFrozenFactorPoint) {
+  using namespace uwb_imu_pl;
+  const auto config = researchConfig();
+  IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+  NavigationState initial;
+  initial.timestamp=TimestampNs(0);initial.position_world_m={0,0,1};
+  initial.velocity_world_mps={1,0,0};
+  estimator.initialize(initial,config.realtime.prior_sigmas);
+  for(int i=0;i<=10;++i) {
+    ImuMeasurement imu;imu.id=MeasurementId(9900+i);
+    imu.timestamp=TimestampNs(i*5000000LL);
+    imu.specific_force_mps2={20,0,config.imu.gravity_mps2};
+    imu.angular_velocity_radps={0,0,2};estimator.ingestImu(imu);
+  }
+  auto tx=estimator.prepareEpoch(batch(config,50000000));
+  ASSERT_TRUE(tx.frozen_values);
+  const auto block=estimator.buildPendingFactorBlock(tx,tx.imu_group.id);
+  const auto& values=*tx.frozen_values;
+  const auto p0=values.at<gtsam::Pose3>(gtsam::Symbol('x',tx.previous_epoch));
+  const auto p1=values.at<gtsam::Pose3>(gtsam::Symbol('x',tx.proposed_epoch));
+  ASSERT_GT((p1.rotation().matrix()-tx.nominal_predicted_state.q_world_body.toRotationMatrix()).norm(),.01);
+  gtsam::CombinedImuFactor factor(1,2,3,4,5,6,*tx.preintegration);
+  gtsam::Matrix h_bias;
+  factor.evaluateError(p0,values.at<gtsam::Vector3>(gtsam::Symbol('v',tx.previous_epoch)),
+      p1,values.at<gtsam::Vector3>(gtsam::Symbol('v',tx.proposed_epoch)),
+      values.at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b',tx.previous_epoch)),
+      values.at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b',tx.proposed_epoch)),
+      boost::none,boost::none,boost::none,boost::none,h_bias,boost::none);
+  Eigen::Matrix<double,15,6> raw=Eigen::Matrix<double,15,6>::Zero();
+  raw.topRows<9>()=h_bias.topRows(9);
+  const Eigen::MatrixXd expected=block.whitener*raw;
+  const auto actual=ImuFaultSubspaceBuilder().buildAnalytic(tx,block);
+  ASSERT_TRUE(actual.analytic_computation_valid);
+  Eigen::MatrixXd joined(15,6);joined<<actual.accel_xyz,actual.gyro_xyz;
+  EXPECT_TRUE((joined.array()==expected.array()).all())
+      <<"relative map mismatch="<<(joined-expected).norm()/std::max(1.,expected.norm());
+  const auto oracle=ImuFaultSubspaceBuilder().verifyFiniteDifferenceOracle(tx,block);
+  EXPECT_TRUE(oracle.oracle_verified)<<oracle.oracle_relative_error;
+  auto changed_nominal=tx;
+  changed_nominal.nominal_predicted_state.q_world_body=Eigen::Quaterniond(
+      Eigen::AngleAxisd(.7,Eigen::Vector3d::UnitY()));
+  const auto independent=ImuFaultSubspaceBuilder().buildAnalytic(changed_nominal,block);
+  EXPECT_TRUE((independent.gyro_xyz.array()==actual.gyro_xyz.array()).all());
+  auto partial=std::make_shared<gtsam::Values>(values);
+  partial->erase(gtsam::Symbol('x',tx.proposed_epoch));
+  changed_nominal.frozen_values=partial;
+  EXPECT_FALSE(ImuFaultSubspaceBuilder().buildAnalytic(changed_nominal,block).analytic_input_valid);
+  estimator.discardEpoch(std::move(tx),{FdeStatus::ModelInvalid,"reference test",false});
+}
+
 TEST(FdeOperabilityBatchProofs, ContinuousOwnerReuseRejectsImportsTamperAndClosedArena) {
   using namespace uwb_imu_pl;
   auto window = syntheticWindow();
