@@ -327,7 +327,7 @@ Checkpoint measurements: one same-ELF/DSO pair, 35 attempts per side, mode cache
 OFF. Normal core mean 293.268→180.120ms (38.58% reduction); joint-order2
 3174.216→2689.025ms (15.29%, 1.180×). Single pairs do not establish a broad or
 statistical speedup. Joint2 strict decision/coverage/risk/transaction/publication
-comparison PASS. Normal strict comparison FAIL: sixth attempt has a different
+comparison PASS. Normal strict comparison FAIL: input attempt 5 has a different
 finish/publication deadline refusal reason. State, numeric history proof and
 candidate comparisons PASS; independent publication-binding checks PASS on both
 sides. Preserve the FAIL; no threshold change or comparator relaxation. This is
@@ -349,3 +349,21 @@ and remove certified joint2 duplicate computation, explain Walk/STAR-Loc robust
 generalization, then freeze and run core integration regressions. No protected
 recovery yet; external IMU/formal qualification OPEN. Normal <100ms and joint2
 ~1s targets NOT_MET. This checkpoint does not complete the active goal.
+
+Joint2 hypothesis: evidence first certifies raw Gram, then the existing trusted
+combined protected-response constructor repeats the same Gram SVD/hash. Reuse
+the constructor's complete `.gram` inside the same call; retain the original
+non-raw/no-response paths and UWB_IMU_PL_EXHAUSTIVE_GRAM_CERTIFICATES=1 double
+construction. Count actual raw Gram SVD construction points (including full-V
+structural-kernel fallback), previously absent from fault_gram_svd counts.
+8/8 targeted tests PASS: exact evidence/monitor/entry/complete proof bits for
+dimensions 1–4 with fixed/generic paths and full/zero/hidden/near-rank cases,
+existing frozen invalidation, dangerous/harmless nullspace and positive controls.
+Reference proof is captured before optimized registry insertion to avoid a
+circular lookup comparison. Same-ELF wall measurements pending.
+
+Normal deadline diagnosis: comparator row 5 means input attempt 5 (previous
+"sixth attempt" wording corrected). Finish gate is 40ms; the existing benchmark
+packet gate is 50ms. Reference arrival-to-publish 83.842261ms breaches both;
+optimized 40.926478ms breaches finish only. Both remain unprotected. This explains
+the reason difference; retain strict FAIL and both gates, no comparison relaxation.

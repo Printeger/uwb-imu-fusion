@@ -280,7 +280,22 @@ void analyzeDynamic(const Eigen::MatrixXd& input_gram,
   const bool has_raw_factor = raw_detection_factor &&
       raw_detection_factor->cols() == dimension &&
       raw_detection_factor->rows() > 0 && raw_detection_factor->allFinite();
-  const SymmetricPsdCertificate gram_certificate = has_raw_factor
+  const bool has_protected_response = protected_fault &&
+      protected_fault->rows() == 3 &&
+      protected_fault->cols() == dimension && protected_fault->allFinite();
+  // The trusted combined constructor already certifies exactly this raw Gram.
+  // Reuse its complete certificate within this call only; never accept an
+  // externally supplied certificate or change the non-factor reference path.
+  const bool reuse_gram = has_raw_factor && has_protected_response &&
+      !std::getenv("UWB_IMU_PL_EXHAUSTIVE_GRAM_CERTIFICATES");
+  GramResponseCertificate response_certificate;
+  if (reuse_gram) {
+    response_certificate = certifyFactorGramAndProtectedResponse(
+        *raw_detection_factor, input_gram, *protected_fault,
+        config.rank_tolerance, parent_proof_identity, raw_factor_scale);
+  }
+  const SymmetricPsdCertificate gram_certificate = reuse_gram
+      ? response_certificate.gram : has_raw_factor
       ? certifyFactorGram(*raw_detection_factor, input_gram,
                           config.rank_tolerance, parent_proof_identity,
                           raw_factor_scale)
@@ -299,12 +314,8 @@ void analyzeDynamic(const Eigen::MatrixXd& input_gram,
   ++work->eigen;
   fillEvidenceMonitor(gram_certificate, dimension, physical_dimension,
                       config, hypothesis, evidence);
-  GramResponseCertificate response_certificate;
-  const bool has_protected_response = protected_fault &&
-      protected_fault->rows() == 3 &&
-      protected_fault->cols() == dimension && protected_fault->allFinite();
   if (has_protected_response) {
-    response_certificate = has_raw_factor
+    if (!reuse_gram) response_certificate = has_raw_factor
         ? certifyFactorGramAndProtectedResponse(
               *raw_detection_factor, input_gram, *protected_fault,
               config.rank_tolerance, parent_proof_identity, raw_factor_scale)
@@ -433,7 +444,17 @@ void analyzeFixed(const Eigen::Matrix<double, Dimension, Dimension>& input_gram,
   const bool has_raw_factor = raw_detection_factor &&
       raw_detection_factor->cols() == Dimension &&
       raw_detection_factor->rows() > 0 && raw_detection_factor->allFinite();
-  const SymmetricPsdCertificate gram_certificate = has_raw_factor
+  const bool reuse_gram = has_raw_factor && pl_entry &&
+      !std::getenv("UWB_IMU_PL_EXHAUSTIVE_GRAM_CERTIFICATES");
+  GramResponseCertificate response_certificate;
+  if (reuse_gram) {
+    response_certificate = certifyFactorGramAndProtectedResponse(
+        *raw_detection_factor, Eigen::MatrixXd(input_gram),
+        Eigen::MatrixXd(protected_fault), config.rank_tolerance,
+        parent_proof_identity, raw_factor_scale);
+  }
+  const SymmetricPsdCertificate gram_certificate = reuse_gram
+      ? response_certificate.gram : has_raw_factor
       ? certifyFactorGram(*raw_detection_factor, Eigen::MatrixXd(input_gram),
                           config.rank_tolerance, parent_proof_identity,
                           raw_factor_scale)
@@ -451,7 +472,7 @@ void analyzeFixed(const Eigen::Matrix<double, Dimension, Dimension>& input_gram,
   if (pl_entry) {
     fillPlMonitor(gram_certificate, Dimension, pl_entry);
     pl_entry->gram_spd = gram_certificate.psd;
-    const GramResponseCertificate response_certificate = has_raw_factor
+    if (!reuse_gram) response_certificate = has_raw_factor
         ? certifyFactorGramAndProtectedResponse(
               *raw_detection_factor, Eigen::MatrixXd(input_gram),
               Eigen::MatrixXd(protected_fault), config.rank_tolerance,

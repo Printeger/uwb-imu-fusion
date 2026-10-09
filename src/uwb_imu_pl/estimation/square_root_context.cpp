@@ -367,6 +367,7 @@ SymmetricPsdCertificate certifyFactorGram(
     return out;
   }
 
+  NumericalWorkCounters::faultGramSvd();
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(raw_factor, Eigen::ComputeThinV);
   const Eigen::VectorXd singular_descending = svd.singularValues();
   if (!singular_descending.allFinite() || !svd.matrixV().allFinite()) {
@@ -388,6 +389,7 @@ SymmetricPsdCertificate certifyFactorGram(
   // exact structural kernel from a full-V decomposition so all null directions
   // remain bound into the certificate.
   if (structural_nullity > 0) {
+    NumericalWorkCounters::faultGramSvd();
     Eigen::JacobiSVD<Eigen::MatrixXd> full(raw_factor, Eigen::ComputeFullV);
     if (!full.matrixV().allFinite() || full.matrixV().cols() != dimension) {
       out.reason = "raw-factor full-V SVD failed";

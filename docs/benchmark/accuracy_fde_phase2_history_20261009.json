@@ -346,9 +346,17 @@
   "interpretation": [
     "Single paired runs; no statistically established general speedup.",
     "joint2 decision/coverage/risk/transaction/publication-binding comparison PASS.",
-    "normal strict comparison FAIL at row 5 (sixth attempt): finish/publication deadline refusal reason differs; both sides independent publication-binding checks PASS. Do not relabel FAIL.",
+    "normal strict comparison FAIL at row 5 (input attempt 5): finish/publication deadline refusal reason differs; both sides independent publication-binding checks PASS. Do not relabel FAIL.",
     "No observed protected recovery. No gate, threshold, scope or qualification relaxation.",
     "History exact-bit/raw-row oracle 4/4 PASS after exception guard. Dirty refresh totals 1975 to 330; cold build 374 to 64.",
     "Normal remains above 100ms; joint2 remains above 1s. Joint2 Gram optimization and nominal generalization investigation remain OPEN."
-  ]
+  ],
+  "normal_deadline_diagnosis": {
+    "input_attempt_id": 5,
+    "monitor_finish_deadline_ms": 40.0,
+    "benchmark_final_packet_deadline_ms": 50.0,
+    "reference_arrival_to_publish_ms": 83.842261,
+    "optimized_arrival_to_publish_ms": 40.926478,
+    "interpretation": "Both exceed the 40ms finish gate. Reference also exceeds the unchanged 50ms benchmark packet gate; optimized does not. This explains the refusal string difference without a numeric/decision mismatch. Strict comparator FAIL remains recorded."
+  }
 }

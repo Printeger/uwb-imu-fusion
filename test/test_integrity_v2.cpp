@@ -13,6 +13,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <future>
 #include <mutex>
 #include <new>
@@ -6532,6 +6533,134 @@ TEST(P105FlatConcurrency, WatchdogAdmissionExceptionStillHasOneAttemptTimer) {
 
 // These witnesses certify individual numerical layers. They do not qualify a
 // production profile, close its complete risk ledger, or authorize publication.
+TEST(Phase2GramReuse, ExactEvidenceAndProofAcrossDimensionsAndRankCases) {
+  using namespace uwb_imu_pl;
+  const char* key = "UWB_IMU_PL_EXHAUSTIVE_GRAM_CERTIFICATES";
+  struct Restore {
+    const char* key;
+    bool present;
+    std::string value;
+    ~Restore() { if (present) setenv(key, value.c_str(), 1); else unsetenv(key); }
+  } restore{key, std::getenv(key) != nullptr,
+            std::getenv(key) ? std::getenv(key) : ""};
+  const auto scalar_bits = [](double a, double b) {
+    EXPECT_EQ(std::memcmp(&a, &b, sizeof(a)), 0);
+  };
+  const auto matrix_bits = [&scalar_bits](const Eigen::MatrixXd& a,
+                                         const Eigen::MatrixXd& b) {
+    ASSERT_EQ(a.rows(), b.rows());
+    ASSERT_EQ(a.cols(), b.cols());
+    for (Eigen::Index col = 0; col < a.cols(); ++col)
+      for (Eigen::Index row = 0; row < a.rows(); ++row)
+        scalar_bits(a(row, col), b(row, col));
+  };
+  const auto monitor_bits = [&](const MonitorabilityResult& a,
+                                const MonitorabilityResult& b) {
+    EXPECT_EQ(a.rank, b.rank);
+    EXPECT_EQ(a.parameter_dimension, b.parameter_dimension);
+    EXPECT_EQ(a.physical_parameter_dimension, b.physical_parameter_dimension);
+    EXPECT_EQ(a.monitorable, b.monitorable);
+    EXPECT_EQ(a.reason, b.reason);
+    scalar_bits(a.sigma_min, b.sigma_min);
+    scalar_bits(a.sigma_max, b.sigma_max);
+    scalar_bits(a.condition_number, b.condition_number);
+    matrix_bits(a.protected_slopes, b.protected_slopes);
+  };
+  std::uint64_t reference_svds = 0, optimized_svds = 0;
+  for (const bool fixed : {false, true})
+    for (int dimension = 1; dimension <= 4; ++dimension)
+      for (int rank_case = 0; rank_case < 4; ++rank_case) {
+        SCOPED_TRACE(::testing::Message() << fixed << '/' << dimension << '/' << rank_case);
+        auto window = syntheticWindow();
+        if (rank_case == 1) window.protected_state_map.setZero();
+        finalizeIntegrityWindow(&window, 1e-10, 1e10);
+        FaultModeBasis mode;
+        mode.id = FaultModeId(1);
+        mode.sensor = SensorType::Uwb;
+        mode.parameter_dimension = dimension;
+        Eigen::Index offset = 0;
+        for (const auto& block : window.blocks) {
+          Eigen::MatrixXd map(block.residual_raw.size(), dimension);
+          for (Eigen::Index row = 0; row < map.rows(); ++row)
+            for (int col = 0; col < dimension; ++col)
+              map(row, col) = std::sin((offset + row + 1) * (col + 1.3));
+          if (rank_case == 1) map.setZero();
+          if (rank_case == 2) map.col(dimension - 1) =
+              block.jacobian_raw.col(0);  // Invisible but protected direction.
+          if (rank_case == 3) map.col(dimension - 1) *= 1e-10;
+          mode.raw_group_maps[block.group_id] = map;
+          offset += map.rows();
+        }
+        FaultHypothesisV2 h;
+        h.id = HypothesisId(1);
+        h.modes = {mode.id};
+        HypothesisEvaluationConfig config;
+        config.enable_low_dim_batch = fixed;
+        std::vector<FaultHypothesisV2> reference{h}, optimized{h};
+        std::shared_ptr<const FrozenHypothesisNumerics> rf, of;
+        ASSERT_EQ(setenv(key, "1", 1), 0);
+        auto before = NumericalWorkCounters::snapshot().fault_gram_svd;
+        const auto re = HypothesisEvidenceEvaluator(config).evaluateAll(
+            window, {mode}, &reference, 100.0, &rf);
+        reference_svds += NumericalWorkCounters::snapshot().fault_gram_svd - before;
+        // Legacy proof lookup is keyed by served entry identity. Capture the
+        // reference before the second evaluator can replace that registry key.
+        ASSERT_TRUE(rf);
+        std::vector<FrozenHypothesisPlProofV1> reference_proofs(rf->pl_entries.size());
+        std::vector<bool> reference_found;
+        for (std::size_t i = 0; i < rf->pl_entries.size(); ++i)
+          reference_found.push_back(frozenHypothesisPlProof(
+              rf->pl_entries[i], &reference_proofs[i]));
+        ASSERT_EQ(unsetenv(key), 0);
+        before = NumericalWorkCounters::snapshot().fault_gram_svd;
+        const auto oe = HypothesisEvidenceEvaluator(config).evaluateAll(
+            window, {mode}, &optimized, 100.0, &of);
+        optimized_svds += NumericalWorkCounters::snapshot().fault_gram_svd - before;
+        ASSERT_EQ(re.size(), 1u);
+        ASSERT_EQ(oe.size(), 1u);
+        EXPECT_EQ(reference[0].monitored, optimized[0].monitored);
+        monitor_bits(reference[0].monitorability, optimized[0].monitorability);
+        monitor_bits(re[0].monitorability, oe[0].monitorability);
+        EXPECT_EQ(re[0].plausible, oe[0].plausible);
+        EXPECT_EQ(re[0].profile_valid, oe[0].profile_valid);
+        scalar_bits(re[0].all_in_statistic, oe[0].all_in_statistic);
+        scalar_bits(re[0].conditioned_statistic, oe[0].conditioned_statistic);
+        scalar_bits(re[0].explained_energy, oe[0].explained_energy);
+        scalar_bits(re[0].log_evidence, oe[0].log_evidence);
+        scalar_bits(re[0].profile_j, oe[0].profile_j);
+        matrix_bits(re[0].estimated_fault, oe[0].estimated_fault);
+        matrix_bits(re[0].fault_gram, oe[0].fault_gram);
+        ASSERT_TRUE(rf && of);
+        ASSERT_EQ(rf->pl_entries.size(), of->pl_entries.size());
+        for (std::size_t i = 0; i < rf->pl_entries.size(); ++i) {
+          EXPECT_EQ(frozenHypothesisPlEntryIdentity(rf->pl_entries[i]),
+                    frozenHypothesisPlEntryIdentity(of->pl_entries[i]));
+          const auto& rp = reference_proofs[i];
+          FrozenHypothesisPlProofV1 op;
+          const bool rfound = reference_found[i];
+          const bool ofound = frozenHypothesisPlProof(of->pl_entries[i], &op);
+          ASSERT_EQ(rfound, ofound);
+          if (!rfound) continue;
+          EXPECT_EQ(rp.proof_identity, op.proof_identity);
+          EXPECT_EQ(rp.parent_proof_identity, op.parent_proof_identity);
+          EXPECT_EQ(rp.served_entry_identity, op.served_entry_identity);
+          EXPECT_EQ(rp.nullspace_class, op.nullspace_class);
+          scalar_bits(rp.rank_tolerance, op.rank_tolerance);
+          scalar_bits(rp.raw_factor_scale, op.raw_factor_scale);
+          matrix_bits(rp.certified_gram, op.certified_gram);
+          matrix_bits(rp.raw_detection_factor, op.raw_detection_factor);
+          matrix_bits(rp.protected_response, op.protected_response);
+          matrix_bits(rp.gram_eigenvalues, op.gram_eigenvalues);
+          matrix_bits(rp.gram_eigenvectors, op.gram_eigenvectors);
+          matrix_bits(rp.gram_eigenvalue_errors, op.gram_eigenvalue_errors);
+          matrix_bits(rp.nullspace_axis_residual, op.nullspace_axis_residual);
+        }
+      }
+  EXPECT_LT(optimized_svds, reference_svds);
+  RecordProperty("reference_raw_gram_svds", reference_svds);
+  RecordProperty("optimized_raw_gram_svds", optimized_svds);
+}
+
 TEST(Phase2NumericLayerPositive, KeepHasFinitePlAndGenuineProofWithFormalClosed) {
   using namespace uwb_imu_pl;
   const auto owner = freezeIntegrityWindowCopy(p002HistoryWindow(0.0, 0.0));
