@@ -653,3 +653,121 @@ known risk4.6900000000000008e-05 still exceeds4e-05. IMU epoch7 statistic
 Actual18-epoch commit counts remain17/18, exclusion commits0/0. Generation is
 50 ms epochs and10 IMU samples per epoch at5 ms; truth fault labels never enter
 selection. Earlier geometry values remain as historical before-fix evidence.
+
+
+Continuation — actual IMU reference/row coordinate defects (`88e9ffa`, `ee87e43`,
+`a1ef121`), not a change to the probability contract:
+
+A real prepared CV transaction reproduced IMU analytic sensitivity at the
+measurement-only nominal point differing by4.156136% from the actual frozen
+CombinedImuFactor Jacobian. Its finite-difference oracle used that same wrong
+point, so mutual agreement alone had missed this. Both now use the six actual
+frozen Values; missing/wrong-typed/nonfinite frozen values refuse. Historical
+material uses its recorded actual states, and no-Values legacy semantics remain.
+The new deterministic positive compares directly with the physical factor's
+bias Jacobian, and changing unused nominal attitude cannot change the result.
+A separate physical-Jacobian assertion reproduced1.98403% raw mismatch: H/z
+were in GTSAM's upper information-root coordinate while Combined IMU raw rows,
+current sensitivities and historical material used a lower Cholesky root.
+Current and historical IMU material now use the actual Gaussian root; nominal
+backend factors/weights and H/z are unchanged. Generator raw-column recovery
+also still assumed a lower root: shared-material regression caught it, and
+coordinate-independent unwhitening now restores the physical column. No
+rank threshold, jitter, scope, gate or budget change accompanies these fixes.
+
+Regressions were expanded only because these shared IMU physical-response paths
+changed. Point repair5/5, row-coordinate direct tests21/21; historical
+parameterization9/10 initially, then shared-material failure rerun identified
+and closed the generator conversion:1/1 history and2/2 current tests passed.
+The new-samples-only support negative plus existing interval-interior negative
+pass2/2. Opt-in batch-owner negative passes1/1. Original failed XML and the
+initial wrong executable-path launch log remain. No second69/102-item campaign
+was run, and the old102-test source/library identity is not relabelled current.
+
+S3 causal calculation on actual epoch7 (one680 kB lossless numerical snapshot;
+pre-fix snapshot retained separately): corrected physical unit accel-x response
+has whitened norm2.2694023873263407, parity norm0.017456591641680029,
+Gamma=0.00030473259174437306, unit state-step norm0.047398551513348604.
+Only5.9169226e-05 of its whitened energy remains in parity; nearly all is fitted
+by state changes. For the full-interval declared template, amplitude20 gives
+lambda0.12189303669774923 and step0.947971030266972. Original observed S3 still
+has statistic0.18701637172207716 < threshold121.34881015252451 and dominant
+velocity step0.896043. Spectral/independent pivoted-QR state differences are
+<=2.04e-12, parity differences<=1.18e-10 across six axes. This is insufficient
+immediate detector power, not evidence that increasing the0.25 gate is valid.
+Under the conditional chi-square model, p_md=.001 needs lambda136.48083127273105;
+linear extrapolation would imply accel669.2315 m/s2. **No new injection uses
+that extrapolation**: it lies outside the observed linearization domain and
+preintegration covariance also depends on the trajectory/input.
+
+The current scalar step gate takes an identity-scaled concatenation of rad,
+local m, world m/s, m/s2 bias and rad/s bias components. It is not a physically
+normalized metre limit. This turn identifies its units without inventing new
+block scales or relaxing the frozen rule. Current IMU18 still has18 nominal
+best-effort commits, zero exclusion commits, zero conditional risk-valid or
+protected outputs; latency remains null/RIGHT_CENSORED.
+
+Raw-input support is also a concrete model gap. Existing runner corrupts the10
+new samples, leaves the old boundary sample healthy and carries the last bad
+sample into the next epoch's first trapezoid. Independent reintegration gives
+raw dp/dv=.025 for the whole-interval template versus.02381578947368421 for
+new-samples-only; best scalar fit leaves7.6028023944664% whitened residual.
+The inherited boundary alone gives5% of full-interval dv. This is not the
+manifest's currently implemented one-factor single-parameter response, which
+assumes the same bias in every interval mean. The original S3 therefore cannot
+qualify that full-interval PL merely by being named imu_recovery.
+
+Additional contract proposal (NOT APPLIED): review whether IMU events mean a
+preintegrated factor-bias template or a raw sensor-sample occurrence. For the
+latter, declare exact sample support and the adjacent-factor boundary exposure,
+with corresponding coverage/history/repair and probability-event identity.
+The current manifest declares single_parameter / same_epoch / one_imu_interval
+and excludes imu_imu. Do not silently widen this into a new two-factor fault
+scope or pass actual truth labels to selection. The existing risk-event proposal
+is also pending; known UWB charge4.69e-5 still cannot close4e-5. Neither proposal
+is implemented by these physical coordinate fixes.
+
+Numerical production/validation/consumption table (same structure in normal
+and joint2; current joint2 targeted pair confirms the owner path):
+
+| Numerical object | Production | Validation | Consumption / retained boundary |
+|---|---|---|---|
+| frozen H/z/C and spectral solve | actual frozen pose and Gaussian rows | existing frozen numerical contract and QR/rank fallback | FD, state increment, physical output map |
+| hypothesis raw response / Gamma / G | Evidence physical maps and projection | continuous owner root runs full original seal | exact-owner cached PL leaf read; imported/closed/near-rank uses full validation |
+| weighted dual W / nullspace / noncentrality | PL current/history channels | original dual numerical certificate | new W differs from pooled Gamma; the stopped root-response shortcut cannot substitute it |
+| result and final payload | PL candidate and immutable carrier | full result semantics and self-contained payload validation | retain/mint/publication; no external mutable-copy waiver |
+
+B-correct **958b700 and the140-attempt timings are now superseded** by the
+necessary IMU corrections. Their8.13% joint2 result remains historical, not a
+current-model speedup claim. Current mathematical B-correct is a1ef121 (subsequent
+test/report commits do not change it). One targeted joint2 reference/optimized
+pair of12 epochs with the original35-epoch fault schedule passes the unchanged
+strict comparator, zero numerical mismatches:31,560.910778→31,372.741081 ms total
+core,0.60% inconclusive difference. Complete frozen validations237945→165327,
+with72618 owner reuses; hypotheses92616/actions416/commits11 equal. Evidence
+mean129.417161→116.266462 ms, flat PL1583.542073→1587.124470 ms. No significant
+current full-core gain is claimed, and batch prototype remains opt-in off.
+No additional35-attempt processes were launched to evade the140-attempt limit.
+Current-model final35 comparison is consequently unverified, and A6 is explicitly
+incomplete for the latest model. The compact JSON distinguishes historical
+102-test/140-attempt results from current targeted results.
+
+Additional reproduction (existing programs; new output paths):
+```sh
+cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl --target test_integrity_v2 test_history_fault_parameterization candidate_replay realtime_performance_benchmark -j2
+"$BIN/test_integrity_v2" --gtest_filter=FdeOperabilityImuReference.*:IntegrityV2ImuOracle.*
+"$BIN/test_history_fault_parameterization" --gtest_filter=HistoryFaultParameterization.WindowAndHistoryColumnsAgreeOnSharedMaterial:FdeOperabilityImuSupport.*
+UWB_IMU_PL_SCENARIO=imu_recovery UWB_IMU_PL_REPLAY_EXPORT_DIR=results/IMU_NEW/replay UWB_IMU_PL_REPLAY_ATTEMPTS=7 "$BIN/realtime_performance_benchmark" config/fde_imu_order1.yaml results/IMU_NEW 18
+"$BIN/candidate_replay" results/IMU_NEW/replay/attempt-7.bin results/IMU_NEW/power.csv 1 1 imu-power
+python3 tools/run_accuracy_fde_phase2_integration.py --reference-model b-correct --workload joint2 --fault-schedule-epochs 35 --epochs 12 --binary "$BIN/realtime_performance_benchmark" --output results/JOINT_SNAPSHOT_NEW
+```
+Overall remains PARTIAL_BLOCKED. These are real implementation repairs and
+specific causal/coverage evidence, not an IMU or UWB conditional recovery claim.
+
+Expected missing-key/type exceptions alone become frozen-point refusals; other
+exceptions propagate. That filter rebuilt and its two directly related tests
+passed. It does not change valid-input numerical products or authorize broader
+fault events. No pending contract question is treated as approval. Remaining
+work includes actual conditional P-N/P-U/P-I recovery, complete applicable
+model/omitted/history/bridge evidence and current-model final integration; none
+is replaced by these software fixes or the historical performance result.

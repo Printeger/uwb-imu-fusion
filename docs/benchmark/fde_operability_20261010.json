@@ -1,7 +1,7 @@
 {
   "schema": "fde-operability-focused-development-v1",
   "functional_status": "PARTIAL_BLOCKED",
-  "b_correct": "958b700",
+  "b_correct": "a1ef121",
   "boundary": "No UWB or IMU conditional exclusion commit observed; no functional acceptance.",
   "snapshots": [
     {
@@ -609,6 +609,50 @@
       "mathematical_unboundedness_proven": false
     },
     {
+      "attempt": 7,
+      "window_id": "7",
+      "source": "results/fde_operability_20261010/current_imu_recovery",
+      "source_hashes": {
+        "integrity.csv": "63a893f9d332f614be4f29e0cd8434d5f943d5ee665f29b5e29d6bb94cbf6e85",
+        "diagnostic_attempts.csv": "88935c513c3f59529473721cfd4319f3bd2a5618c89a599c4f6f8eca54db38de",
+        "candidates.csv": "d0f018c1c87f6d6928d9a7e9188ab545314e5441bb034ef09ed77fab3158fbd6",
+        "diagnostic_stages.csv": "5313d77a4f4d73709d9b97e0dc8d2568cc5cc286e9b7f9236e705010a424fcf9"
+      },
+      "detector": {
+        "conditional_statistic": "0.18701637172207716",
+        "conditional_threshold": "121.34881015252451",
+        "conditional_passed": "1"
+      },
+      "production": {
+        "fde_status": "NO_VALID_CANDIDATE",
+        "batch_committed": "1",
+        "selected_action_id": "0",
+        "formal_eligible": "0",
+        "risk_budget_valid": "0",
+        "publication_protected": "0",
+        "deadline_missed": "1"
+      },
+      "candidate_count": 1,
+      "candidate_samples": [
+        {
+          "action_id": "1",
+          "hpl_m": "inf",
+          "vpl_m": "inf",
+          "reason": "candidate linearization step gate failed; step attribution: rotation=0.00945241 position=0.0131989 velocity=0.896043 accel_bias=0.000701674 gyro_bias=1.394e-05; dominant=velocity(epoch 7);ACTION_OPERATION_IDENTITY=ACTION_OPERATION_V1|0;0;0;0;0;0;0;0:;0:;0;"
+        }
+      ],
+      "ledger": {},
+      "known_export_sum_decimal": "0",
+      "budget_decimal": "0",
+      "cpp_exact_known_charge_export": null,
+      "known_charge_exceeds_budget": null,
+      "unknown_terms": [],
+      "decision_trace": [
+        "gate:numerical:2:nan:nan:no finite post-passed covering candidate;gate:risk:3:nan:nan:;gate:AL:3:nan:nan:;gate:qualification:3:nan:nan:;gate:deadline:3:nan:nan:"
+      ],
+      "mathematical_unboundedness_proven": false
+    },
+    {
       "attempt": 10,
       "window_id": "10",
       "source": "results/fde_operability_20261010/final_b_correct/reference/normal",
@@ -958,6 +1002,18 @@
         "sha256": "3c05df8f142834004c7c78f2850860963a88aa1b2ba79d962096c09a7409cc66"
       }
     },
+    "current_imu_recovery": {
+      "attempts": 18,
+      "commits": 18,
+      "exclusion_commits": 0,
+      "risk_valid": 0,
+      "protected": 0,
+      "deadline_misses": 13,
+      "execution": {
+        "path": "results/fde_operability_20261010/current_imu_recovery.execution.json",
+        "sha256": "f5b122764697b2e2ec070c800ba6087fba3406f2861dd6e2eb1b5510e7d7164d"
+      }
+    },
     "final_b_correct/reference/normal": {
       "attempts": 35,
       "commits": 35,
@@ -1005,7 +1061,7 @@
     "A3": "TRACE_IMPLEMENTED_DEADLINE_AT_PIPELINE",
     "A4": "FAIL_NO_CONDITIONAL_RECOVERY",
     "A5": "PASS",
-    "A6": "MEASURED_PROTOTYPE_DEFAULT_OFF",
+    "A6": "CURRENT_TARGETED_PAIR_PASS_35_PAIR_SUPERSEDED",
     "A7": "DELIVERED_WITH_BLOCKERS",
     "realtime": "NOT_MET",
     "deployment": "NOT_QUALIFIED",
@@ -1127,6 +1183,8 @@
     ],
     "source": "4aa795e65b79aede23f63727020db55145236f3a",
     "library_sha256": "09d4c646daed3d1a77aacb19aa6dbbb233191d8f5c5c1fc108020d78913fbc2f",
+    "valid_for_current_correctness_model": false,
+    "scope": "Historical 102-test run; subsequent common IMU corrections have separate targeted regressions below.",
     "default_only_rerun": {
       "path": "results/fde_operability_20261010/core_safety/default_only.xml",
       "sha256": "04cecda758511f798d4b0e142aa0463e804d974c3f0f34ed43e07ae49888d58b",
@@ -1699,6 +1757,8 @@
     "frozen_memo_default": false,
     "mode_cache_default": false,
     "reference_model": "b-correct",
+    "valid_for_current_correctness_model": false,
+    "superseded_by": "a1ef121: frozen IMU point and Gaussian row coordinate repairs",
     "distribution_ms": {
       "normal": {
         "reference": {
@@ -2312,5 +2372,480 @@
       "Prototype remains opt-in off; root response reuse and old mode/frozen memo are off.",
       "Unchanged strict comparator is authoritative; no deadline mismatch is waived."
     ]
+  },
+  "current_model_snapshot_pair": {
+    "schema": "uwb-imu-pl/phase2-combined-reference-default/v1",
+    "identity": {
+      "head": "a1ef1215ac6143f7cd002d8d238037ec690d4b3e",
+      "binary_sha256": "8ab78c4fde74333d52a84b4537d20e7896d97f9f0e3ce1a339eff7024778b942",
+      "library_sha256": "327e0f3aaa66b93f2192c4ff40da8b482e0d7249d95da4560be181c12fbf87a7",
+      "runner_sha256": "5578c7351c9ecda955dcae3f796c0efae999d9450f409d7ada438c346f658786",
+      "tracked_status": ""
+    },
+    "repetitions": 1,
+    "runs": {
+      "joint2": {
+        "sides": {
+          "reference": {
+            "execution": {
+              "head": "a1ef1215ac6143f7cd002d8d238037ec690d4b3e",
+              "binary_sha256": "8ab78c4fde74333d52a84b4537d20e7896d97f9f0e3ce1a339eff7024778b942",
+              "library_sha256": "327e0f3aaa66b93f2192c4ff40da8b482e0d7249d95da4560be181c12fbf87a7",
+              "runner_sha256": "5578c7351c9ecda955dcae3f796c0efae999d9450f409d7ada438c346f658786",
+              "tracked_status": "",
+              "command": [
+                "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+                "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order2.yaml",
+                "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/fde_operability_20261010/imu_corrected_joint_snapshot/reference/joint2",
+                "12"
+              ],
+              "config_sha256": "03c2d725900d8683e672a02e255f6cb80c2f01e466985f01ab3d65d3bd4d574d",
+              "environment": {
+                "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+                "OMP_NUM_THREADS": "1",
+                "OPENBLAS_NUM_THREADS": "1",
+                "MKL_NUM_THREADS": "1",
+                "UWB_IMU_PL_SCENARIO": "joint_recovery",
+                "UWB_IMU_PL_MODE_RESPONSE_CACHE": "0",
+                "UWB_IMU_PL_FROZEN_VALIDATION_REUSE": "0",
+                "UWB_IMU_PL_FAULT_SCHEDULE_EPOCHS": "35",
+                "UWB_IMU_PL_ROOT_RESPONSE_REUSE": "0",
+                "UWB_IMU_PL_BATCH_FROZEN_PROOFS": "1",
+                "UWB_IMU_PL_REFERENCE_BATCH_FROZEN_PROOFS": "1"
+              },
+              "exit_code": 0,
+              "wall_s": 31.684292191999702
+            },
+            "attempts": 12,
+            "stage_mean_ms": {
+              "prepare": 0.6624035833333334,
+              "integrity_window": 7.762901833333333,
+              "window_boundary_provenance": 0.29378575,
+              "window_factor_linearization_whitening": 0.3976804166666667,
+              "window_dense_assembly": 0.03601033333333333,
+              "window_svd": 4.73674,
+              "window_normal_equations": 0.12975133333333333,
+              "window_llt_state_solves": 0.06302983333333333,
+              "window_fingerprint": 1.5183203333333333,
+              "all_in_detector": 0.05984816666666667,
+              "current_sensitivity": 0.21945408333333336,
+              "model_generation": 32.2204165,
+              "historical_sensitivity": 0.06960258333333334,
+              "hypothesis_evidence": 129.41716116666666,
+              "health_actions": 98.02523841666665,
+              "base_factorization": 0.10363433333333333,
+              "shared_cache": 0.00127075,
+              "candidate_batch_kernel": 632.3688643333332,
+              "candidate_batch_post": 5.970268166666664,
+              "candidate_batch_pl_flat": 1583.5420727499995,
+              "candidate_batch_pl_consume": 53.783235166666664,
+              "candidate_evaluation": 2350.2574335,
+              "fde_decision": 6.830784416666667,
+              "candidate_audit": 0.09380408333333334,
+              "commit": 1.0395058333333331,
+              "state_audit": 0.0003448333333333333,
+              "finalize_commit_audit": 3.085369,
+              "core_total": 2630.075898166667,
+              "discard": 0.00024716666666666664
+            },
+            "arrival_to_publish_mean_ms": 2630.092375,
+            "work": {
+              "base_svd": 12,
+              "base_llt": 12,
+              "base_state_solves": 24,
+              "llt_state_solve_calls": 12,
+              "svd_state_solve_calls": 12,
+              "detector_reference_qr": 0,
+              "candidate_reference_svd": 1271,
+              "candidate_inner_llt": 1248,
+              "covariance_rhs_solves": 0,
+              "covariance_rhs_columns": 0,
+              "spectral_rhs_solves": 0,
+              "spectral_rhs_columns": 0,
+              "numerical_contract_mismatches": 0,
+              "imu_oracle_reintegrations": 0,
+              "window_content_hash_scans": 12,
+              "frozen_identity_builds": 12,
+              "frozen_identity_reuses": 92868,
+              "frozen_admission_constant_validations": 12,
+              "descriptor_id_lookups": 182904,
+              "descriptor_linear_scans": 0,
+              "block_rhs_solve_batches": 418,
+              "block_rhs_unique_blocks": 3080,
+              "pl_payload_validations": 11,
+              "pl_payload_validation_reuses": 11,
+              "frozen_hypothesis_validations": 237945,
+              "frozen_hypothesis_validation_reuses": 0,
+              "requests": 12,
+              "exact_hits": 0,
+              "incremental_path_updates": 11,
+              "incremental_add_paths": 3,
+              "incremental_remove_paths": 0,
+              "incremental_relinearize_paths": 34,
+              "internal_nodes_recomputed": 40,
+              "full_tree_rebuilds": 1,
+              "full_oracle_checks": 0,
+              "full_oracle_mismatches": 0,
+              "history_root_fallback_count": 0,
+              "reused_groups": 0,
+              "rebuilt_groups": 40,
+              "factor_group_hits": 0,
+              "factor_group_misses": 40,
+              "retained_rows": 53,
+              "retained_bytes": 57664
+            },
+            "hypotheses_total": 92616,
+            "generated_actions_total": 416,
+            "fault_gram_svd_total": 1448447,
+            "numerical_mismatches": 0,
+            "protected_outputs": 0,
+            "formal_eligible_outputs": 0,
+            "risk_valid_outputs": 0,
+            "deadline_missed_outputs": 10,
+            "committed_outputs": 11
+          },
+          "optimized": {
+            "execution": {
+              "head": "a1ef1215ac6143f7cd002d8d238037ec690d4b3e",
+              "binary_sha256": "8ab78c4fde74333d52a84b4537d20e7896d97f9f0e3ce1a339eff7024778b942",
+              "library_sha256": "327e0f3aaa66b93f2192c4ff40da8b482e0d7249d95da4560be181c12fbf87a7",
+              "runner_sha256": "5578c7351c9ecda955dcae3f796c0efae999d9450f409d7ada438c346f658786",
+              "tracked_status": "",
+              "command": [
+                "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+                "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order2.yaml",
+                "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/fde_operability_20261010/imu_corrected_joint_snapshot/optimized/joint2",
+                "12"
+              ],
+              "config_sha256": "03c2d725900d8683e672a02e255f6cb80c2f01e466985f01ab3d65d3bd4d574d",
+              "environment": {
+                "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+                "OMP_NUM_THREADS": "1",
+                "OPENBLAS_NUM_THREADS": "1",
+                "MKL_NUM_THREADS": "1",
+                "UWB_IMU_PL_SCENARIO": "joint_recovery",
+                "UWB_IMU_PL_MODE_RESPONSE_CACHE": "0",
+                "UWB_IMU_PL_FROZEN_VALIDATION_REUSE": "0",
+                "UWB_IMU_PL_FAULT_SCHEDULE_EPOCHS": "35",
+                "UWB_IMU_PL_ROOT_RESPONSE_REUSE": "0",
+                "UWB_IMU_PL_BATCH_FROZEN_PROOFS": "1"
+              },
+              "exit_code": 0,
+              "wall_s": 31.44812959200135
+            },
+            "attempts": 12,
+            "stage_mean_ms": {
+              "prepare": 0.5559331666666667,
+              "integrity_window": 7.487469416666666,
+              "window_boundary_provenance": 0.2078219166666667,
+              "window_factor_linearization_whitening": 0.3393595,
+              "window_dense_assembly": 0.041876166666666666,
+              "window_svd": 4.649882083333333,
+              "window_normal_equations": 0.12726475,
+              "window_llt_state_solves": 0.060108666666666664,
+              "window_fingerprint": 1.4913602500000003,
+              "all_in_detector": 0.04416124999999999,
+              "current_sensitivity": 0.16874,
+              "model_generation": 32.63032691666667,
+              "historical_sensitivity": 0.05679525,
+              "hypothesis_evidence": 116.26646208333334,
+              "health_actions": 95.56183400000002,
+              "base_factorization": 0.10444683333333334,
+              "shared_cache": 0.0011521666666666666,
+              "candidate_batch_kernel": 632.9281508333332,
+              "candidate_batch_post": 6.032079749999998,
+              "candidate_batch_pl_flat": 1587.1244703333334,
+              "candidate_batch_pl_consume": 51.780101916666666,
+              "candidate_evaluation": 2351.266982083333,
+              "fde_decision": 6.087082166666666,
+              "candidate_audit": 0.10207625,
+              "commit": 0.7832386666666667,
+              "state_audit": 0.00040283333333333333,
+              "finalize_commit_audit": 3.0870045833333335,
+              "core_total": 2614.3950900833333,
+              "discard": 0.00035224999999999997
+            },
+            "arrival_to_publish_mean_ms": 2614.418708333333,
+            "work": {
+              "base_svd": 12,
+              "base_llt": 12,
+              "base_state_solves": 24,
+              "llt_state_solve_calls": 12,
+              "svd_state_solve_calls": 12,
+              "detector_reference_qr": 0,
+              "candidate_reference_svd": 1271,
+              "candidate_inner_llt": 1248,
+              "covariance_rhs_solves": 0,
+              "covariance_rhs_columns": 0,
+              "spectral_rhs_solves": 0,
+              "spectral_rhs_columns": 0,
+              "numerical_contract_mismatches": 0,
+              "imu_oracle_reintegrations": 0,
+              "window_content_hash_scans": 12,
+              "frozen_identity_builds": 12,
+              "frozen_identity_reuses": 92868,
+              "frozen_admission_constant_validations": 12,
+              "descriptor_id_lookups": 182904,
+              "descriptor_linear_scans": 0,
+              "block_rhs_solve_batches": 418,
+              "block_rhs_unique_blocks": 3080,
+              "pl_payload_validations": 11,
+              "pl_payload_validation_reuses": 11,
+              "frozen_hypothesis_validations": 165327,
+              "frozen_hypothesis_validation_reuses": 72618,
+              "requests": 12,
+              "exact_hits": 0,
+              "incremental_path_updates": 11,
+              "incremental_add_paths": 3,
+              "incremental_remove_paths": 0,
+              "incremental_relinearize_paths": 34,
+              "internal_nodes_recomputed": 40,
+              "full_tree_rebuilds": 1,
+              "full_oracle_checks": 0,
+              "full_oracle_mismatches": 0,
+              "history_root_fallback_count": 0,
+              "reused_groups": 0,
+              "rebuilt_groups": 40,
+              "factor_group_hits": 0,
+              "factor_group_misses": 40,
+              "retained_rows": 53,
+              "retained_bytes": 57664
+            },
+            "hypotheses_total": 92616,
+            "generated_actions_total": 416,
+            "fault_gram_svd_total": 1303211,
+            "numerical_mismatches": 0,
+            "protected_outputs": 0,
+            "formal_eligible_outputs": 0,
+            "risk_valid_outputs": 0,
+            "deadline_missed_outputs": 10,
+            "committed_outputs": 11
+          }
+        },
+        "comparison_exit_code": 0,
+        "comparison": {
+          "status": "PASS",
+          "publication_binding_checks": {
+            "after": {
+              "attempts": 12,
+              "failures": [],
+              "status": "PASS"
+            },
+            "before": {
+              "attempts": 12,
+              "failures": [],
+              "status": "PASS"
+            }
+          },
+          "file_statuses": {
+            "bridge.csv": "PASS",
+            "candidates.csv": "PASS",
+            "diagnostic_attempts.csv": "PASS",
+            "diagnostic_candidates.csv": "PASS",
+            "diagnostic_coverage.csv": "PASS",
+            "diagnostic_history_summary.csv": "PASS",
+            "diagnostic_snapshot_identity.csv": "PASS",
+            "diagnostic_square_root.csv": "PASS",
+            "diagnostic_state_steps.csv": "PASS",
+            "hypotheses.csv": "PASS",
+            "integrity.csv": "PASS",
+            "states.csv": "PASS",
+            "transactions.csv": "PASS"
+          },
+          "mismatches": {},
+          "wall_packet_digest_contract": "checksum may differ only on independently proved finish-wall rows; state/proof/publication binding fields are still compared"
+        },
+        "comparison_sha256": "89ef6d2ece908a05486480ad227f3825c53c6b0a2dd184ac0fee02765e507339",
+        "core_reduction_percent": 0.5962112384005332
+      }
+    },
+    "scope": "12 warmup/fault epochs, original 35-epoch schedule; not another final 35 pair",
+    "caution": "batch children nested in candidate wall; no phase-sum or P99/statistical guarantee",
+    "frozen_memo_default": false,
+    "mode_cache_default": false,
+    "reference_model": "b-correct",
+    "net_gain_claim": "NONE; 0.60% single short-flow difference is inconclusive"
+  },
+  "continued_correctness_artifacts": {
+    "imu_reference_before": {
+      "path": "results/fde_operability_20261010/imu_reference_before.xml",
+      "sha256": "f85fb18b08a8fedaa5464fd438b81110c30fa257ed951045fbf66a7c5de6fcf3",
+      "tests": 1,
+      "failures": 1
+    },
+    "imu_reference_after": {
+      "path": "results/fde_operability_20261010/imu_reference_after.xml",
+      "sha256": "5feccf788fd5cb7708d28a3a5053cdd205368610f693b4459b57219538dd442f",
+      "tests": 5,
+      "failures": 0
+    },
+    "imu_whitening_before": {
+      "path": "results/fde_operability_20261010/imu_whitening_before.xml",
+      "sha256": "72ad76c8069197a0e9cba7f9986edac34748da615293b53aa534da1aac2c0f69",
+      "tests": 1,
+      "failures": 1
+    },
+    "imu_whitening_after": {
+      "path": "results/fde_operability_20261010/imu_whitening_after.xml",
+      "sha256": "0e0cd99d5fdeaa78c9062cd87670f593aa0b8bcac03b9e3f4520207aadb653a1",
+      "tests": 21,
+      "failures": 0
+    },
+    "imu_history_coordinate_after": {
+      "path": "results/fde_operability_20261010/imu_history_coordinate_after.xml",
+      "sha256": "59a370637a483f51997c53c177dd14c77672db78f3377876259e10bdb59b94ba",
+      "tests": 10,
+      "failures": 1
+    },
+    "imu_history_coordinate_rerun": {
+      "path": "results/fde_operability_20261010/imu_history_coordinate_rerun.xml",
+      "sha256": "f211ec45357580d7357bb001be6aec53b997845e1f9fcf928489f65eb10753fd",
+      "tests": 1,
+      "failures": 1
+    },
+    "imu_raw_conversion_history": {
+      "path": "results/fde_operability_20261010/imu_raw_conversion_history.xml",
+      "sha256": "bb7f64388f62a0b3927662856e1fa027290282b7a3817ae84d1c343d3c1b45c1",
+      "tests": 1,
+      "failures": 0
+    },
+    "imu_raw_conversion_current": {
+      "path": "results/fde_operability_20261010/imu_raw_conversion_current.xml",
+      "sha256": "60f8326666a4f0222e260f9e07b19edde7366569ae7ca46999a6de032817f045",
+      "tests": 2,
+      "failures": 0
+    },
+    "imu_corrected_batch_owner": {
+      "path": "results/fde_operability_20261010/imu_corrected_batch_owner.xml",
+      "sha256": "38bb1297685a38143ccf6de81c338d223be0ccb0fae1715aca6d32ffaf23c8c1",
+      "tests": 1,
+      "failures": 0
+    },
+    "imu_support": {
+      "path": "results/fde_operability_20261010/imu_support.xml",
+      "sha256": "7f90f1028a0183f66e3658de5237df3582d4be93982ef4917d808e5a7ffe9176",
+      "tests": 2,
+      "failures": 0
+    },
+    "imu_exception_filter": {
+      "path": "results/fde_operability_20261010/imu_exception_filter.xml",
+      "sha256": "b69780e7741fe26b370f5f3e217840b7ed32322e53107d5f74208d605a8077bb",
+      "tests": 2,
+      "failures": 0
+    }
+  },
+  "imu_causal_diagnostic": {
+    "path": "results/fde_operability_20261010/imu_power_corrected.csv",
+    "sha256": "78c1b62ef17d35b3c9cea378b0495e835dead806b8b7d027a10ed5354d130ff1",
+    "raw_snapshot": "results/fde_operability_20261010/consistent_imu_recovery/replay/attempt-7.bin",
+    "raw_snapshot_sha256": "bdbc23d1c416bdacc02ef2a564552d30daaf5d526295a86bd20f2847bc48a32a",
+    "coefficients": [
+      {
+        "attempt": "7",
+        "group_id": "7001",
+        "axis": "0",
+        "unit_fault_whitened_norm": "2.2694023873263407",
+        "unit_fault_parity_norm": "0.017456591641680029",
+        "lambda_per_amplitude_squared": "0.00030473259174437306",
+        "unit_fault_state_step": "0.047398551513348604",
+        "unit_fault_protected_shift": "0.00072194742793242606",
+        "observed_statistic": "0.18701637172207716",
+        "step_gate": "0.25",
+        "dof": "56",
+        "spectral_qr_state_relative": "1.759340133278211e-13",
+        "spectral_qr_parity_relative": "4.2553835035729493e-12"
+      },
+      {
+        "attempt": "7",
+        "group_id": "7001",
+        "axis": "1",
+        "unit_fault_whitened_norm": "2.2684978852141948",
+        "unit_fault_parity_norm": "0.017493142158688118",
+        "lambda_per_amplitude_squared": "0.00030601002258407155",
+        "unit_fault_state_step": "0.047393422240500443",
+        "unit_fault_protected_shift": "0.00071482065638042041",
+        "observed_statistic": "0.18701637172207716",
+        "step_gate": "0.25",
+        "dof": "56",
+        "spectral_qr_state_relative": "1.492550047156403e-13",
+        "spectral_qr_parity_relative": "3.5741986220293116e-12"
+      },
+      {
+        "attempt": "7",
+        "group_id": "7001",
+        "axis": "2",
+        "unit_fault_whitened_norm": "2.2687175423236363",
+        "unit_fault_parity_norm": "0.0094671737110982347",
+        "lambda_per_amplitude_squared": "8.962737807610951e-05",
+        "unit_fault_state_step": "0.048578748674182208",
+        "unit_fault_protected_shift": "0.00082818482073113804",
+        "observed_statistic": "0.18701637172207716",
+        "step_gate": "0.25",
+        "dof": "56",
+        "spectral_qr_state_relative": "2.2508675978036543e-13",
+        "spectral_qr_parity_relative": "1.0548553026600187e-11"
+      },
+      {
+        "attempt": "7",
+        "group_id": "7001",
+        "axis": "3",
+        "unit_fault_whitened_norm": "22.36006472845785",
+        "unit_fault_parity_norm": "0.069350378107502636",
+        "lambda_per_amplitude_squared": "0.0048094749436535817",
+        "unit_fault_state_step": "0.055938411731640478",
+        "unit_fault_protected_shift": "0.0022503007056452469",
+        "observed_statistic": "0.18701637172207716",
+        "step_gate": "0.25",
+        "dof": "56",
+        "spectral_qr_state_relative": "2.0328762220291893e-12",
+        "spectral_qr_parity_relative": "6.5871185520604943e-11"
+      },
+      {
+        "attempt": "7",
+        "group_id": "7001",
+        "axis": "4",
+        "unit_fault_whitened_norm": "22.360063667243718",
+        "unit_fault_parity_norm": "0.10615135351586144",
+        "lambda_per_amplitude_squared": "0.01126810985324939",
+        "unit_fault_state_step": "0.077531635075263824",
+        "unit_fault_protected_shift": "0.0046903988246144463",
+        "observed_statistic": "0.18701637172207716",
+        "step_gate": "0.25",
+        "dof": "56",
+        "spectral_qr_state_relative": "9.5202612517442739e-13",
+        "spectral_qr_parity_relative": "4.6645480257773619e-11"
+      },
+      {
+        "attempt": "7",
+        "group_id": "7001",
+        "axis": "5",
+        "unit_fault_whitened_norm": "22.360115713831298",
+        "unit_fault_parity_norm": "0.17832073846366456",
+        "lambda_per_amplitude_squared": "0.031798285766226661",
+        "unit_fault_state_step": "0.096878665729833724",
+        "unit_fault_protected_shift": "0.0061942079083939887",
+        "observed_statistic": "0.18701637172207716",
+        "step_gate": "0.25",
+        "dof": "56",
+        "spectral_qr_state_relative": "1.7262503941576109e-12",
+        "spectral_qr_parity_relative": "1.1795188387382925e-10"
+      }
+    ],
+    "full_interval_axis0_lambda_at_amplitude20": 0.12189303669774923,
+    "full_interval_axis0_state_step_at_amplitude20": 0.947971030266972,
+    "parity_energy_fraction": 5.916922631561239e-05,
+    "conditional_noncentrality_at_p_md_1e_minus3": 136.48083127273105,
+    "linear_extrapolated_amplitude": 669.2315035344982,
+    "extrapolation_used_for_new_injection": false,
+    "scipy_version": "1.10.1",
+    "limitation": "Coefficient is the full-interval declared template; new-samples-only S3 support differs, and extrapolation is outside the observed linearization domain.",
+    "step_contract": "Unscaled concatenated Pose3/velocity/bias norm; mixed physical units, original scalar threshold 0.25 unchanged",
+    "sample_support_negative": {
+      "raw_full_dp_over_dv": 0.024999999999999994,
+      "raw_new_dp_over_dv": 0.02381578947368421,
+      "next_boundary_dv_fraction": 0.049999999999999996,
+      "best_scalar_relative_residual": 0.07602802394466414
+    },
+    "support_proposal": "NOT_APPLIED: need reviewed raw-sample event support across adjacent preintegrations; manifest currently declares one_imu_interval, same_epoch, single_parameter."
   }
 }

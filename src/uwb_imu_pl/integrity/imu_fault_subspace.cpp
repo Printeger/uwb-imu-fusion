@@ -38,7 +38,9 @@ bool factorPoint(const EpochTransaction& tx, ImuFactorPoint* point) {
       point->current_velocity = values.at<gtsam::Vector3>(gtsam::Symbol('v', tx.proposed_epoch));
       point->previous_bias = values.at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b', tx.previous_epoch));
       point->current_bias = values.at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b', tx.proposed_epoch));
-    } catch (const std::exception&) {
+    } catch (const gtsam::ValuesKeyDoesNotExist&) {
+      return false;
+    } catch (const gtsam::ValuesIncorrectType&) {
       return false;
     }
   } else {

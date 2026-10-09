@@ -73,12 +73,13 @@ def main():
     specs=[('strict_noiseless',10),('strict_noiseless',32),
            ('strict_uwb_recovery',7),('strict_imu_recovery',7),('rank_fixed_normal',32)]
     for label,attempt in (('final_strict_uwb_recovery',7),('final_strict_imu_recovery',7),
+                          ('current_imu_recovery',7),
                           ('final_b_correct/reference/normal',10),
                           ('final_b_correct/reference/normal',32),
                           ('final_b_correct/reference/joint2',12)):
         if (args.results/label/'integrity.csv').exists():specs.append((label,attempt))
     data=dict(schema='fde-operability-focused-development-v1',
-        functional_status='PARTIAL_BLOCKED', b_correct='958b700',
+        functional_status='PARTIAL_BLOCKED', b_correct='a1ef121',
         boundary='No UWB or IMU conditional exclusion commit observed; no functional acceptance.',
         snapshots=[snapshot(args.results / label,n) for label,n in specs],
         recovery_latency=None,recovery_latency_status='RIGHT_CENSORED',
@@ -107,7 +108,7 @@ def main():
             data['flows'][label]['execution']=dict(path=str(execution),sha256=sha(execution))
     data['acceptance'] = dict(A1='PASS', A2='PASS_BOUNDARY_MISSING_PRODUCTION_EVIDENCE',
         A3='TRACE_IMPLEMENTED_DEADLINE_AT_PIPELINE', A4='FAIL_NO_CONDITIONAL_RECOVERY',
-        A5='PASS', A6='MEASURED_PROTOTYPE_DEFAULT_OFF', A7='DELIVERED_WITH_BLOCKERS',
+        A5='PASS', A6='CURRENT_TARGETED_PAIR_PASS_35_PAIR_SUPERSEDED', A7='DELIVERED_WITH_BLOCKERS',
         realtime='NOT_MET',deployment='NOT_QUALIFIED',simulation_flow='NOT_IMPLEMENTED')
     data['artifacts'] = {}
     data['performance_directions']=dict(
@@ -132,6 +133,8 @@ def main():
     safety=args.results/'core_safety'/'summary.json'
     if safety.exists():
         data['core_safety']=json.loads(safety.read_text())
+        data['core_safety']['valid_for_current_correctness_model']=False
+        data['core_safety']['scope']='Historical 102-test run; subsequent common IMU corrections have separate targeted regressions below.'
         rerun=args.results/'core_safety'/'default_only.xml'
         if rerun.exists():
             root=ET.parse(rerun).getroot()
@@ -144,6 +147,8 @@ def main():
     integration=args.results/'final_b_correct'/'integration_summary.json'
     if integration.exists():
         data['paired_performance']=json.loads(integration.read_text())
+        data['paired_performance']['valid_for_current_correctness_model']=False
+        data['paired_performance']['superseded_by']='a1ef121: frozen IMU point and Gaussian row coordinate repairs'
         data['paired_performance']['distribution_ms']={}
         for label,run in data['paired_performance']['runs'].items():
             sides={}
@@ -167,6 +172,49 @@ def main():
             'Short safety tests overlapped the initial normal run; small gains are not significant evidence.',
             'Prototype remains opt-in off; root response reuse and old mode/frozen memo are off.',
             'Unchanged strict comparator is authoritative; no deadline mismatch is waived.']
+    current=args.results/'imu_corrected_joint_snapshot'/'integration_summary.json'
+    if current.exists():
+        data['current_model_snapshot_pair']=json.loads(current.read_text())
+        data['current_model_snapshot_pair']['net_gain_claim']='NONE; 0.60% single short-flow difference is inconclusive'
+        data['current_model_snapshot_pair']['scope']='12 warmup/fault epochs, original 35-epoch schedule; not another final 35 pair'
+    data['continued_correctness_artifacts']={}
+    for name in ('imu_reference_before','imu_reference_after','imu_whitening_before',
+                 'imu_whitening_after','imu_history_coordinate_after','imu_history_coordinate_rerun',
+                 'imu_raw_conversion_history','imu_raw_conversion_current','imu_corrected_batch_owner',
+                 'imu_support','imu_exception_filter'):
+        path=args.results/(name+'.xml')
+        if path.exists():
+            root=ET.parse(path).getroot()
+            data['continued_correctness_artifacts'][name]=dict(path=str(path),sha256=sha(path),
+                tests=int(root.attrib['tests']),failures=int(root.attrib['failures']))
+    power=args.results/'imu_power_corrected.csv'
+    if power.exists():
+        from scipy.optimize import brentq
+        from scipy.stats import ncx2
+        import scipy
+        pr=read(power)
+        epoch=snapshot(args.results/'current_imu_recovery',7)
+        threshold=float(epoch['detector']['conditional_threshold'])
+        df=int(pr[0]['dof']);gamma=float(pr[0]['lambda_per_amplitude_squared'])
+        required=brentq(lambda x:ncx2.cdf(threshold,df,x)-.001,0.,1000.)
+        data['imu_causal_diagnostic']=dict(path=str(power),sha256=sha(power),
+            raw_snapshot=str(args.results/'consistent_imu_recovery'/'replay'/'attempt-7.bin'),
+            raw_snapshot_sha256=sha(args.results/'consistent_imu_recovery'/'replay'/'attempt-7.bin'),
+            coefficients=pr,full_interval_axis0_lambda_at_amplitude20=400.*gamma,
+            full_interval_axis0_state_step_at_amplitude20=20.*float(pr[0]['unit_fault_state_step']),
+            parity_energy_fraction=gamma/float(pr[0]['unit_fault_whitened_norm'])**2,
+            conditional_noncentrality_at_p_md_1e_minus3=required,
+            linear_extrapolated_amplitude=(required/gamma)**.5,
+            extrapolation_used_for_new_injection=False,scipy_version=scipy.__version__,
+            limitation='Coefficient is the full-interval declared template; new-samples-only S3 support differs, and extrapolation is outside the observed linearization domain.',
+            step_contract='Unscaled concatenated Pose3/velocity/bias norm; mixed physical units, original scalar threshold 0.25 unchanged')
+        support=args.results/'imu_support.log'
+        if support.exists():
+            import re
+            line=next(x for x in support.read_text().splitlines() if x.startswith('[FDE-IMU-SUPPORT]'))
+            data['imu_causal_diagnostic']['sample_support_negative']={
+                k:float(v) for k,v in re.findall(r'(\w+)=([\d.eE+-]+)',line)}
+            data['imu_causal_diagnostic']['support_proposal']='NOT_APPLIED: need reviewed raw-sample event support across adjacent preintegrations; manifest currently declares one_imu_interval, same_epoch, single_parameter.'
     args.output.write_text(json.dumps(data,indent=2,allow_nan=False)+'\n')
 
 

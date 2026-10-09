@@ -909,7 +909,7 @@ namespace {
 // the production code).
 gtsam::PreintegratedCombinedMeasurements reintegrateIntervalOnset(
     const EpochTransaction& tx, int axis, double perturbation,
-    std::size_t first_interval) {
+    std::size_t first_interval, int sample_support = 0) {
   gtsam::PreintegratedCombinedMeasurements pim(*tx.preintegration);
   pim.resetIntegration();
   for (std::size_t i = 1; i < tx.raw_imu_slice.size(); ++i) {
@@ -921,8 +921,10 @@ gtsam::PreintegratedCombinedMeasurements reintegrateIntervalOnset(
     Eigen::Vector3d gyro =
         0.5 * (left.angular_velocity_radps + right.angular_velocity_radps);
     if (i - 1 >= first_interval) {
-      if (axis < 3) acc(axis) += perturbation;
-      else gyro(axis - 3) += perturbation;
+      const double weight = sample_support == 1 ? (i == 1 ? .5 : 1.) :
+                            sample_support == 2 ? (i == 1 ? .5 : 0.) : 1.;
+      if (axis < 3) acc(axis) += weight * perturbation;
+      else gyro(axis - 3) += weight * perturbation;
     }
     pim.integrateMeasurement(acc, gyro, dt);
   }
@@ -942,6 +944,16 @@ gtsam::Vector intervalOnsetFactorError(
     return gtsam::imuBias::ConstantBias(state.accel_bias_mps2,
                                         state.gyro_bias_radps);
   };
+  if (tx.frozen_values) {
+    const auto& v=*tx.frozen_values;
+    return factor.evaluateError(
+        v.at<gtsam::Pose3>(gtsam::Symbol('x',tx.previous_epoch)),
+        v.at<gtsam::Vector3>(gtsam::Symbol('v',tx.previous_epoch)),
+        v.at<gtsam::Pose3>(gtsam::Symbol('x',tx.proposed_epoch)),
+        v.at<gtsam::Vector3>(gtsam::Symbol('v',tx.proposed_epoch)),
+        v.at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b',tx.previous_epoch)),
+        v.at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b',tx.proposed_epoch)));
+  }
   return factor.evaluateError(pose(tx.previous_state),
                               tx.previous_state.velocity_world_mps,
                               pose(tx.nominal_predicted_state),
@@ -953,11 +965,11 @@ gtsam::Vector intervalOnsetFactorError(
 Eigen::MatrixXd intervalOnsetOracleMap(const EpochTransaction& tx,
                                        const LinearizedFactorBlock& block,
                                        int axis, double epsilon,
-                                       std::size_t first_interval) {
+                                       std::size_t first_interval, int sample_support = 0) {
   const auto plus =
-      reintegrateIntervalOnset(tx, axis, epsilon, first_interval);
+      reintegrateIntervalOnset(tx, axis, epsilon, first_interval,sample_support);
   const auto minus =
-      reintegrateIntervalOnset(tx, axis, -epsilon, first_interval);
+      reintegrateIntervalOnset(tx, axis, -epsilon, first_interval,sample_support);
   const Eigen::VectorXd derivative =
       (intervalOnsetFactorError(tx, plus) -
        intervalOnsetFactorError(tx, minus)) / (2.0 * epsilon);
@@ -1118,4 +1130,30 @@ TEST(HistoryFaultParameterization,
   const double ratio = half.norm() / std::max(1e-12, full.norm());
   EXPECT_GT(ratio, 0.2);
   EXPECT_LT(ratio, 0.8);
+}
+
+TEST(FdeOperabilityImuSupport, NewSamplesOnlyIsNotTheWholeIntervalFaultTemplate) {
+  const auto config=researchConfig();
+  IncrementalUwbImuEstimator estimator(config,Eigen::Vector3d::Zero());
+  NavigationState initial;initial.position_world_m={0,0,1};
+  estimator.initialize(initial,config.realtime.prior_sigmas);
+  const auto tx=matureTransaction(&estimator,config,1);
+  ASSERT_EQ(tx.raw_imu_slice.size(),11u);
+  const auto block=estimator.buildPendingFactorBlock(tx,tx.imu_group.id);
+  const auto whole=intervalOnsetOracleMap(tx,block,0,1e-5,0);
+  // Existing stream corrupts the ten new samples, leaving the shared old
+  // boundary sample healthy. The next epoch then inherits a bad left sample.
+  const auto new_only=intervalOnsetOracleMap(tx,block,0,1e-5,0,1);
+  const auto boundary_only=intervalOnsetOracleMap(tx,block,0,1e-5,0,2);
+  const Eigen::VectorXd a=block.whitener.partialPivLu().solve(whole);
+  const Eigen::VectorXd b=block.whitener.partialPivLu().solve(new_only);
+  const Eigen::VectorXd c=block.whitener.partialPivLu().solve(boundary_only);
+  EXPECT_NEAR(std::abs(a(3)/a(6)),.025,1e-8);
+  EXPECT_NEAR(std::abs(b(3)/b(6)),.02381578947368421,1e-8);
+  EXPECT_NEAR(std::abs(c(6)/a(6)),.05,1e-8);
+  const double scale=whole.col(0).dot(new_only.col(0))/whole.squaredNorm();
+  const double off_template=(new_only-scale*whole).norm()/whole.norm();
+  EXPECT_GT(off_template,1e-6);
+  std::printf("[FDE-IMU-SUPPORT] raw_full_dp_over_dv=%.17g raw_new_dp_over_dv=%.17g next_boundary_dv_fraction=%.17g best_scalar_relative_residual=%.17g\n",
+      std::abs(a(3)/a(6)),std::abs(b(3)/b(6)),std::abs(c(6)/a(6)),off_template);
 }
