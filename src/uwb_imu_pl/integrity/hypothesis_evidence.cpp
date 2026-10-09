@@ -257,14 +257,21 @@ void storePlCertificate(const SymmetricPsdCertificate& gram,
   proof.served_entry_identity = frozenEntryProofKey(proof.served_entry);
   const auto key = frozenEntryProofKey(*entry);
   if (proof_arena) {
-    const auto immutable = std::make_shared<const ImmutableFrozenHypothesisPayload>(
-        std::move(proof), proof_arena->generation());
-    const std::shared_ptr<const FrozenHypothesisPlProofV1> payload(
-        immutable, &immutable->proof);
-    (void)detail::AttemptProofArenaAccess::store(
-        proof_arena, kArenaFrozenHypothesisProof, key, nullptr, payload);
-    (void)detail::AttemptProofArenaAccess::store(
-        proof_arena, kArenaFrozenHypothesisValidationMemo, key, nullptr, immutable);
+    if (std::getenv("UWB_IMU_PL_EXHAUSTIVE_FROZEN_VALIDATION")) {
+      // Reference restores original producer cost, not just full reader work.
+      (void)detail::AttemptProofArenaAccess::store(
+          proof_arena, kArenaFrozenHypothesisProof, key, nullptr,
+          std::make_shared<const FrozenHypothesisPlProofV1>(std::move(proof)));
+    } else {
+      const auto immutable = std::make_shared<const ImmutableFrozenHypothesisPayload>(
+          std::move(proof), proof_arena->generation());
+      const std::shared_ptr<const FrozenHypothesisPlProofV1> payload(
+          immutable, &immutable->proof);
+      (void)detail::AttemptProofArenaAccess::store(
+          proof_arena, kArenaFrozenHypothesisProof, key, nullptr, payload);
+      (void)detail::AttemptProofArenaAccess::store(
+          proof_arena, kArenaFrozenHypothesisValidationMemo, key, nullptr, immutable);
+    }
   } else {
     auto& registry = frozenProofRegistry();
     std::lock_guard<std::mutex> lock(registry.mutex);

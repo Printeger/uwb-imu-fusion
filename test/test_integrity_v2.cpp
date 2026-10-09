@@ -6681,6 +6681,17 @@ TEST(Phase2PlValidationMemo, ImmutablePayloadReuseKeepsBindingsAndReplacementChe
     EXPECT_TRUE(validateProtectionLevelV2Proof(candidate, detector, hypotheses, result, arena, &reason));
     EXPECT_EQ(NumericalWorkCounters::snapshot().pl_payload_validations, ++expected);
   }
+  // Exhaustive producer also restores the original plain proof allocation.
+  setenv(key,"1",1);AttemptProofArena reference_arena;
+  auto reference_candidate=candidate;auto reference_hypotheses=hypotheses;
+  const auto reference_result=ProtectionLevelV2().computeShared(admission,
+      &reference_candidate,detector,&reference_hypotheses,shared,RiskBudgetV2{},
+      nullptr,&reference_arena);
+  ASSERT_TRUE(reference_result.model_valid);
+  EXPECT_EQ(detail::AttemptProofArenaAccess::countKind(reference_arena,8),0u);
+  unsetenv(key);
+  EXPECT_TRUE(validateProtectionLevelV2Proof(reference_candidate,detector,
+      reference_hypotheses,reference_result,reference_arena,&reason));
   arena.close();
   EXPECT_TRUE(validateProtectionLevelV2Proof(candidate, detector, hypotheses, result, arena, &reason));
 }
@@ -7078,7 +7089,9 @@ TEST(Phase2FrozenValidationMemo, SealReusePublicTamperAndOwnerReplacement) {
       // Preserve that failure instead of granting trust to a producer payload.
       setenv(env.key,"1",1);AttemptProofArena reference_arena;
       const auto reference=frozenMemoFixture(&reference_arena,false);
-      ASSERT_TRUE(reference);EXPECT_FALSE(reference->valid);unsetenv(env.key);
+      ASSERT_TRUE(reference);EXPECT_FALSE(reference->valid);
+      EXPECT_EQ(detail::AttemptProofArenaAccess::countKind(reference_arena,9),0u);
+      unsetenv(env.key);
       FrozenHypothesisPlProofV1 original;
       ASSERT_TRUE(frozenHypothesisPlProof(entry,arena,&original));
       std::string expected_reason;EXPECT_FALSE(validateFrozenHypothesisPlEntry(original,&expected_reason));
@@ -7151,9 +7164,9 @@ TEST(Phase2FrozenValidationMemo, SealReusePublicTamperAndOwnerReplacement) {
   }
 }
 
-TEST(Phase2FrozenValidationMemo, ConcurrentFirstValidationCrossArenaAndLease) {
+TEST(Phase2FrozenValidationMemo, ConcurrentReuseCrossArenaAndLease) {
   using namespace uwb_imu_pl;
-  FrozenValidationEnvironment env;setenv(env.key,"1",1);
+  FrozenValidationEnvironment env;unsetenv(env.key);
   AttemptProofArena arena;
   const auto shared=frozenMemoFixture(&arena);
   ASSERT_TRUE(shared && shared->valid);const auto& entry=shared->pl_entries[0];
@@ -7165,8 +7178,8 @@ TEST(Phase2FrozenValidationMemo, ConcurrentFirstValidationCrossArenaAndLease) {
   });
   for(auto& reader : readers)EXPECT_TRUE(reader.get());
   const auto after=NumericalWorkCounters::snapshot();
-  EXPECT_EQ(after.frozen_hypothesis_validations-before.frozen_hypothesis_validations,1u);
-  EXPECT_EQ(after.frozen_hypothesis_validation_reuses-before.frozen_hypothesis_validation_reuses,7u);
+  EXPECT_EQ(after.frozen_hypothesis_validations-before.frozen_hypothesis_validations,0u);
+  EXPECT_EQ(after.frozen_hypothesis_validation_reuses-before.frozen_hypothesis_validation_reuses,8u);
   AttemptProofArena next;
   const auto key=frozenHypothesisPlEntryIdentity(entry);
   const auto payload=detail::AttemptProofArenaAccess::find(arena,1,key,nullptr);

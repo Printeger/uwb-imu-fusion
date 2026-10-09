@@ -555,3 +555,15 @@ commands/XML/ELF/DSO identities: accuracy_fde_phase2_core_safety_20261009.json.
 Independent High final audit found no semantic reduction, but requires final
 combined actual before/after evidence and integrated delivery table. Protected
 recovery, risk/formal and realtime latency qualifications remain NOT_MET.
+
+Reference-cost correction implemented after High independent review PASS:
+EXHAUSTIVE_FROZEN_VALIDATION now restores original plain immutable V1 producer
+(kind1 only); EXHAUSTIVE_PL_VALIDATION restores one plain PL proof shared by
+kind2/3 without kind8. Numerical fields/hash/failure paths unchanged. Dynamic
+flag changes leave stale memo indexes harmless via exact owner mismatch; no new
+index deletion. Normal sealed concurrency tests now assert 0 full/8 hits, while
+shared memo helper retains first-success/false/throw concurrency coverage.
+Tests assert no private memo index for freshly created reference payloads.
+Library/benchmark/node/nominal runner rebuilt; 34 targeted integrity tests PASS.
+Next measurement includes all producer setup cost, rather than just saved
+validation work. No net memo gain is claimed until that pair completes.

@@ -339,13 +339,17 @@ void bindProtectionResultProof(
   sidecar->proof_identity =
       protectionResultProofIdentity(*sidecar);
   if (proof_arena) {
-    const auto immutable =
-        std::make_shared<const ImmutableProtectionPayload>(
-            *sidecar, proof_arena->generation());
-    // Existing indexes retain their exact Proof payload type. Runtime memo
-    // and Proof share an owner; the immutable Proof itself is never mutated.
-    const std::shared_ptr<const ProtectionLevelV2ProofV1> payload(
-        immutable, &immutable->proof);
+    std::shared_ptr<const ImmutableProtectionPayload> immutable;
+    std::shared_ptr<const ProtectionLevelV2ProofV1> payload;
+    if (std::getenv("UWB_IMU_PL_EXHAUSTIVE_PL_VALIDATION")) {
+      payload = std::make_shared<const ProtectionLevelV2ProofV1>(*sidecar);
+    } else {
+      immutable = std::make_shared<const ImmutableProtectionPayload>(
+          *sidecar, proof_arena->generation());
+      // Original indexes keep their Proof type; memo shares immutable owner.
+      payload = std::shared_ptr<const ProtectionLevelV2ProofV1>(
+          immutable, &immutable->proof);
+    }
     (void)detail::AttemptProofArenaAccess::store(
         proof_arena, kArenaProtectionByResult,
         scopedResultKey(resultRegistryKey(*result),
@@ -354,11 +358,13 @@ void bindProtectionResultProof(
     (void)detail::AttemptProofArenaAccess::store(
         proof_arena, kArenaProtectionByIdentity, sidecar->proof_identity,
         nullptr, payload);
-    (void)detail::AttemptProofArenaAccess::store(
-        proof_arena, kArenaProtectionValidationMemo,
-        scopedResultKey(resultRegistryKey(*result),
-                        sidecar->candidate_proof_identity),
-        nullptr, immutable);
+    if (immutable) {
+      (void)detail::AttemptProofArenaAccess::store(
+          proof_arena, kArenaProtectionValidationMemo,
+          scopedResultKey(resultRegistryKey(*result),
+                          sidecar->candidate_proof_identity),
+          nullptr, immutable);
+    }
   } else {
     auto& registry = protectionProofRegistry();
     std::lock_guard<std::mutex> lock(registry.mutex);
