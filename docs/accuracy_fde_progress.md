@@ -290,300 +290,182 @@ remain intact. User-owned requirements and old evidence remain untouched.
 
 ## Next stage — structural compute and nominal generalization (2026-10-09)
 
-Active scope follows the new six-step objective; previous WP-A–F results above
-are reference evidence, not rerun requirements. Initial HEAD 27a339c, clean
-worktree. Work remains on feature/realtime-uwb-imu-pl, managed by commits. No new
-Git worktree. User explicitly rejects redundant large archives: initial bundle/
-tar copies were stopped/deleted; original raw results stay in place. Keep only
-compact metrics/hashes/commands. Original frozen ELF/DSO hashes verified.
+Six-step research delivery: implemented, built and measured on
+`feature/realtime-uwb-imu-pl`; initial HEAD `27a339c`, measured code `c84b13e`.
+Previous WP-A–F and their scientific FAIL records above are preserved. No new
+worktree, 40-sequence rerun, long campaign or nominal parameter search.
+Final compact identities, commands, all frozen precision metrics, raw-file hashes,
+latency distributions and 69 current-DSO tests:
+[accuracy_fde_phase2_integrated_20261009.json](benchmark/accuracy_fde_phase2_integrated_20261009.json).
 
-Preservation: all refs/reflog objects enumerated. Found 80 zero-byte loose
-objects, none reachable; moved intact to results/accuracy_fde_phase2_20261009/
-quarantine (zero payload bytes). Git connectivity fsck now exits 0; dangling
-objects and old temporary pack files retained, no destructive clean/repack.
-Auto-GC disabled locally. Baseline source and calibration FAIL status retained.
+### Preservation and scope
 
-Plan: (1) preservation complete; (2) layer-separated normal/UWB/IMU positive
-controls and actual production failure classification; (3) historical dirty
-closure; (4) profile joint-order2 evidence/candidate and optimize certified
-hotspot; (5) residual/robust-weight/conditioning explanation of STAR-Loc
-regression before any model change; (6) freeze beneficial candidate and paired
-integration/core safety checks. No top-K or scope/risk/publication relaxation.
+All refs/reflog objects inspected: 11,243 reachable objects; 80 zero-byte loose
+objects were unreachable and moved intact to ignored quarantine, connectivity
+fsck exited 0. No destructive clean/reset/repack; old temporary packs retained,
+local auto-GC disabled. Existing frozen ELF/DSO/source-diff hashes reverified at
+final delivery. Redundant bundle/tar copies stopped/deleted under user instruction;
+no new binary/dataset archives. `.gitignore` covers raw results, builds, datasets,
+cache and root archives; compact source/config/JSON/CSV evidence is committed.
+User-owned requirement file retained unchanged. Commits manage history.
 
-History hypothesis: per-leaf recomputation repeats shared ancestors during one
-request. Added dirty scheduling for upsert/erase/rotations and one left-right-
-node refresh after the mutation batch. Exact group/priority/topology, raw UID/
-provenance, merge order and full-row fallback unchanged. Exception clears the
-partially mutated tree then rethrows. UWB_IMU_PL_EXHAUSTIVE_HISTORY_UPDATES=1
-retains per-leaf reference in the same ELF/DSO. Mode response cache still opt-in.
-4/4 targeted tests initially PASS: cold build, batch RHS change, exact hit,
-insert/rotate/remove, one-bit fault edit, ordering/whitening/recovery rebuild,
-nonfinite refusal plus existing 30-step independent raw-row oracle. All served
-matrices and complete carrier rank/proof payload compare bit-identical; changed
-node counts separately reported in XML. Exception-guard rebuild and rerun also
-PASS (4/4); reference 1975 refreshed nodes vs batch 330, cold 374 vs 64.
+### Positive controls and production refusal
 
-Checkpoint measurements: one same-ELF/DSO pair, 35 attempts per side, mode cache
-OFF. Normal core mean 293.268→180.120ms (38.58% reduction); joint-order2
-3174.216→2689.025ms (15.29%, 1.180×). Single pairs do not establish a broad or
-statistical speedup. Joint2 strict decision/coverage/risk/transaction/publication
-comparison PASS. Normal strict comparison FAIL: input attempt 5 has a different
-finish/publication deadline refusal reason. State, numeric history proof and
-candidate comparisons PASS; independent publication-binding checks PASS on both
-sides. Preserve the FAIL; no threshold change or comparator relaxation. This is
-a research checkpoint, not final integration or proof of real-time readiness.
-Compact commands, identities, hashes and mismatches are in
-docs/benchmark/accuracy_fde_phase2_history_20261009.json. No new large archives.
+Three deterministic numerical controls PASS: KEEP finite certified PL; UWB
+exclusion removes the sole modeled faulty direction with finite PL; IMU bridge
+shows factor independence at a common CV reference and finite box bounds.
+The IMU result is BRIDGE_ONLY_NOT_FULL_PL. None bypasses risk/formal/publication
+requirements. Production normal attempt10 finite candidate HPL=6.3289m,
+VPL=1.31634m is blocked by risk/formal/deadline. Normal32/UWB S2 is a numerical
+rank transition uncertainty, not proven mathematical infinity. IMU S3 fails the
+step gate before PL (NOT_RUN), not a demonstrated recovered alarm. Compact
+[positive controls](benchmark/accuracy_fde_phase2_positive_controls_20261009.json)
+retain those distinct layers. No protected recovery was obtained.
 
-Positive controls: three new deterministic numerical-layer tests PASS (3/3).
-KEEP/UWB examples have finite PL and valid proof while risk availability and
-formal gates remain closed; IMU test proves bridge model independence at a
-common CV reference and finite box bounds only, not full protected recovery.
-Existing production records distinguish finite PL blocked by risk/formal gates,
-rank-certificate uncertainty (not proven mathematical infinity), and IMU step
-gate failure with PL NOT_RUN. Compact review:
-docs/benchmark/accuracy_fde_phase2_positive_controls_20261009.json.
+### Implemented compute changes and stopping decisions
 
-Remaining work: investigate the normal deadline boundary difference, profile
-and remove certified joint2 duplicate computation, explain Walk/STAR-Loc robust
-generalization, then freeze and run core integration regressions. No protected
-recovery yet; external IMU/formal qualification OPEN. Normal <100ms and joint2
-~1s targets NOT_MET. This checkpoint does not complete the active goal.
+| Change | Controlled checkpoint normal core ms | Joint2 core ms | Disposition |
+|---|---:|---:|---|
+| Batch dirty history dependency closure | 293.268→180.120 | 3174.216→2689.025 | Default; largest structural gain |
+| Same-call complete raw Gram certificate reuse | 176.716→179.395 | 2668.971→2626.770 | Default; narrow 1.58% joint2 gain, stop expansion |
+| Immutable full PL payload successful validation reuse | 179.687→179.390 | 2629.234→2572.669 | Default; narrow 2.15% joint2 gain, stop expansion |
+| Classifier-only unconsumed identity hash omission | 176.704→176.928 | 2555.401→2393.333 | Default; 6.34% joint2 gain, same SVD work |
+| Frozen hypothesis memo, setup-inclusive pair | 176.832→178.692 | 2389.299→2426.540 | No net gain; default OFF, stop direction |
 
-Joint2 hypothesis: evidence first certifies raw Gram, then the existing trusted
-combined protected-response constructor repeats the same Gram SVD/hash. Reuse
-the constructor's complete `.gram` inside the same call; retain the original
-non-raw/no-response paths and UWB_IMU_PL_EXHAUSTIVE_GRAM_CERTIFICATES=1 double
-construction. Count actual raw Gram SVD construction points (including full-V
-structural-kernel fallback), previously absent from fault_gram_svd counts.
-8/8 targeted tests PASS: exact evidence/monitor/entry/complete proof bits for
-dimensions 1–4 with fixed/generic paths and full/zero/hidden/near-rank cases,
-existing frozen invalidation, dangerous/harmless nullspace and positive controls.
-Reference proof is captured before optimized registry insertion to avoid a
-circular lookup comparison. Same-ELF normal/joint2 strict comparisons both PASS.
-Normal core 176.716→179.395ms (no gain observed); joint2 2668.971→2626.770ms
-(1.58% reduction). Evidence 995.331→948.990ms, candidate 1369.997→1368.008ms.
-Joint2 actual raw Gram SVDs 10823762→9552278; counts include proof verification.
-Small saving does not meet the structural performance target; stop extending
-this same-call optimization. Retain unchanged math and certified reuse; next
-investigate repeated proof verification and raw-factor work. Root/proof tests
-5/5, transaction/bridge/IMU/publication tests 12/12 and history oracle 4/4 PASS
-against the new DSO (29/29 targeted total). Compact performance/identity report:
-docs/benchmark/accuracy_fde_phase2_gram_reuse_20261009.json. One pair per scenario;
-no broad significance or final integration claim.
+One same-build pair/scenario at each checkpoint, 35 attempts/side. These are
+local experiments, not additive/multiplicative gains or statistical guarantees.
+Compact checkpoint records remain in `docs/benchmark/accuracy_fde_phase2_*`.
 
-Normal deadline diagnosis: comparator row 5 means input attempt 5 (previous
-"sixth attempt" wording corrected). Finish gate is 40ms; the existing benchmark
-packet gate is 50ms. Reference arrival-to-publish 83.842261ms breaches both;
-optimized 40.926478ms breaches finish only. Both remain unprotected. This explains
-the reason difference; retain strict FAIL and both gates, no comparison relaxation.
+History preserves treap topology/rotations, left-node-right merge arithmetic,
+raw row provenance, RHS/rank/dof/fault coverage and exact full-row fallback.
+Mutation exceptions invalidate partial tree and rethrow. Oracle includes original
+per-leaf bit/proof parity and 30-step full raw-row reconstruction; the raw builder
+is not an independent implementation of all mathematics. Initial history pair
+normal strict comparison FAIL at input attempt5: reference 83.842261ms breaches
+40ms finish and 50ms packet gates; optimized 40.926478ms breaches finish only.
+State/proof/bindings matched. Preserve that FAIL and both gates; no comparator
+relaxation. Joint2 checkpoint strict PASS.
 
-Nominal generalization diagnostic: added tools/diagnose_nominal_range_weights.py,
-reusing frozen Gaussian/Huber Walk1 and STAR-Loc states plus exact sensor batch
-timestamps, original filtered UWB batches, per-range sigma/lever and logged cost.
-No GT read or parameter selection. Every output batch/count binds; reconstructed
-Gaussian cost relative deviation max <1.4e-4 despite rounded state exports.
-Weights are posterior-implied Huber(k=1.5), not historical IRLS weights. Geometry
-information is range-only position information conditional on attitude, not full
-navigation covariance. Compact reports accuracy_fde_phase2_weights_{walk1,starloc}
-in docs/benchmark contain source hashes and reproduction commands.
+Gram reuse consumes the already complete protected-response constructor's `.gram`
+in that same call. Classifier omits only unused identity hashes via a private path;
+public certifiers retain original hashes, both SVDs, rank/kernel/error/reasons.
+Public proof identity tests pin original 902ff99 DSO IDs. Counted Gram SVDs exclude
+the classifier's separate no-V Z-reference SVD. No approximate Gram/rank shortcut.
 
-Gaussian |z|>1.5 fraction: Walk1 5.39%, STAR-Loc 34.88%; |z| P95 1.575 vs 3.643.
-Huber trajectories: 4.05% vs 38.70% downweighted, weight<0.5 0.32% vs 16.50%.
-Mean minimum-eigen information ratio under applied weights: 0.9875 vs 0.8132.
-Unweighted Gaussian geometry condition median 7.35 vs 20.11. STAR-Loc has broad
-residual downweighting and poorer geometry, while Walk mainly clips a small tail;
-this is consistent with the measured Walk gain/STAR-Loc regression, not a proof
-of its unique cause. Anchor signed residual means persist (STAR-Loc anchor 10
-+1.05 sigma, anchor 6 -0.77 Gaussian), so an IID outlier-only interpretation is
-not established. Calibration/frame identities remain the frozen GT-assisted
-Walk interface and STAR-Loc published rig/gyro rotation/range_calib/lever evidence.
-Neither metadata nor posterior residuals qualify physical extrinsics. Keep the
-Gaussian recommendation and separate Huber experiment; no unsupported new noise
-model or dataset-dependent threshold. Actual per-factor IRLS history and physical
-frame/calibration qualification remain needed to isolate causality.
+Full PL memo requires private const proof, exact address/shared owner and arena
+generation. Only successful full validation caches; false/throw retry. Mutable,
+imported, legacy and final proof bundles validate exhaustively; all external
+root/window/dual/model/tail/risk/selection/publication bindings remain. Trusted
+private typed-kind protocol is assumed, not arbitrary illegal C++ type writes.
+Reference flags now also restore original plain producer setup (no private memo
+index) for honest net cost. Frozen memo initial reuse-only pair suggested 2.09%
+joint2 gain but charged wrapper setup to both sides; corrected net pair regressed
+1.05% normal and 1.56% joint2. `UWB_IMU_PL_FROZEN_VALIDATION_REUSE=1` retains this
+experiment only; default plain/full, exhaustive overrides opt-in. Old mode response
+cache remains opt-in because strict tie/alert equivalence is unresolved.
 
-Next compute experiment identified by independent High safety review: scoped
-full PL validation repeats the same immutable arena payload at production bind
-and candidate consumption, then again in winner/publication paths. One frozen
-hypothesis check runs rebuilt Gram, independent Z SVD and another Gram
-certificate; counted Gram SVDs exclude the separate Z classification SVD. Try
-attempt-local reuse of successful full payload validation only, tied to actual
-shared owner and payload address (arena numeric keys can be overwritten). Keep
-every external candidate/detector/hypothesis/result binding, mutable public-proof
-validation, exception retry and single-consume contract. This is a next-step
-hypothesis, not an implemented optimization or permission to skip validation.
+Preserved engineering failures: generic frozen-proof fixture initially expected
+valid but exhaustive independently rejected it; corrected test checks identical
+reason/false retry, without weakening validator. Standalone classifier probe
+initially crashed with mismatched Eigen compile flags; exact target
+`-march=native -DNDEBUG` fixed it and temporary probe was removed. Neither is
+relabelled as a production acceptance failure or silently discarded.
 
-Scoped PL payload reuse implemented: private const wrapper owns const Proof;
-existing result/identity arena indexes retain an alias to that same immutable
-Proof. New runtime-only kind 8 holds its successful-validation memo. Require
-same proof address, shared control block and arena generation. No global memo,
-proof schema/hash change or caller-supplied validation receipt. Only full original
-payload validation returning true publishes success; false and exceptions retry.
-The per-payload lock is separate from the arena lock. Mutable public validators,
-retain imports, legacy registries and final bundles still fully validate. Each
-scoped consumer retains original external bindings/reason choices and proof hash.
-UWB_IMU_PL_EXHAUSTIVE_PL_VALIDATION=1 restores original copy/full-validation path.
-Actual full payload executions and reuse counters are emitted by the benchmark.
+Profiler is process-start opt-in `UWB_IMU_PL_PROFILE_NUMERICAL_PHASES=1`.
+One joint2 audit: Gram inclusive work 63.046s (SVD 15.476s), classifier 32.256s,
+frozen validation 37.042s, PL payload 1.981s. These nested/worker wall intervals
+are neither exclusive wall nor CPU; do not add. Frozen count 2,497,242 decomposes
+into 1,271,484 seals, 1,152,504 KEEP reads, 73,254 PL checks; the 534 difference
+from H is consistent with invalid/short-circuit seals, not exact callsite proof.
+Batch wall kernel244.855/post3.820/sharedPL971.078/consume18.838ms belongs under
+candidate1308.319ms. Per-root `pl_ms` duplicates flat-batch wall: never sum roots.
+Final profiling is OFF. Remaining major work is full hypothesis certification and
+flat candidate PL, not historical ancestor repetition.
 
-Scope limitation found in preexisting binding: result lookup key omits external
-hypothesis_tail_used, axis_tail_used, fault_multiplier_used and noncentrality_used.
-Full sidecar hash validates the stored proof, not every external result field.
-This optimization preserves that existing behavior; do not describe it as added
-all-field result authentication. That binding question remains OPEN separately.
-The memo assumes the existing trusted detail typed-kind producer protocol; it
-does not defend against arbitrary illegal C++ type writes or const_cast.
+### Nominal generalization
 
-Scoped reuse tests PASS 20/20 (owner/address, false/exception retry, concurrent
-first success, valid exhaustive comparison, external refusal reason equivalence,
-mutable tamper, retained-owner replacement, cross-attempt creation, arena close,
-existing proof ownership/concurrency and Gram/positive tests). Additional
-transaction/IMU/bridge/publication tests PASS 12/12. One same-ELF pair per scenario,
-35 attempts: both strict semantics and independent publication binding PASS.
-Normal core 179.687→179.390ms (0.17%, negligible); joint2 2629.234→2572.669ms
-(2.15%). Joint2 candidate 1378.704→1303.190ms; evidence 944.978→958.525ms.
-Full payload validations 22→11 with 11 reuses in each scenario; counted joint2
-Gram SVDs 9552278→9405759. Reuse coverage is small; stop extending this layer of
-memo rather than claiming the structural target met. Compact commands/hashes/
-metrics: docs/benchmark/accuracy_fde_phase2_pl_validation_20261009.json.
+Gaussian remains the research baseline; Huber(k=1.5) remains an independent
+UNPROTECTED experiment. All seven previous Gaussian/Huber execution pairs are
+reused with their original source/ELF/DSO/config identities, not c84b13e replays.
+No nominal estimation arithmetic, model/config or evaluation code changed here.
+All APE/RPE/world increment/coverage/valid ratio/initialization/gap fields remain
+in the frozen CSV and integrated JSON; no selective metric deletion.
 
-Profiler caution confirmed in source: diagnostic_candidates.pl_ms contains
-flat-batch wall assigned to every root, so per-root sums duplicate time (not
-worker CPU work). Use parent wall stages until batch-exclusive subdivisions are
-exported. Candidate and evidence remain the next investigation, with model
-generation separately measured. A narrow classifier reuse idea was reviewed,
-but is not implemented or claimed as a gain; profile before another small change.
-No new large backups or binary copies; previous numerical/campaign/calibration
-FAIL records unchanged. Active goal and final integration remain OPEN.
+| Sequence | Gaussian APE RMSE m | Frozen Huber APE RMSE m |
+|---|---:|---:|
+| Walk1 | .396252 | .244599 |
+| Walk2 | .226705 | .213287 |
+| Walk3 | .428497 | .227860 |
+| Own no-obstacle | 1.249486 | 1.191427 |
+| Own obstacle | .746763 | .746763 |
+| Simulation | .049685 | .049715 |
+| STAR-Loc loop-3d_s3 | .600472 | .874786 |
 
-Numerical hotspot audit instrumentation: process-start opt-in
-UWB_IMU_PL_PROFILE_NUMERICAL_PHASES=1 records inclusive elapsed work/call counts
-for Gram construction/SVD, classifier and frozen/PL payload validation. Nested
-calls and worker times overlap; these are not exclusive wall or CPU timings.
-Candidate kernel/post/shared PL/serial consumer now have once-per-batch wall
-stages under candidate_evaluation. Public numerical behavior and reference
-switches unchanged. Build PASS; focused integrity/ownership/concurrency/positive
-controls and root math checks PASS. Profiling run pending; no performance gain
-claimed for instrumentation. No ELF/DSO copies or large backup artifacts.
+`tools/diagnose_nominal_range_weights.py` reads no GT and selects no parameters.
+Exact sensor batches/counts and original sigma/lever bind, reconstructed Gaussian
+cost max relative discrepancy <1.4e-4 from rounded exports. Posterior-implied
+weights are not recorded historical IRLS. Geometry is range-only position
+information conditional on attitude, not full navigation covariance.
+Walk1/STAR Gaussian |z|>1.5: 5.39%/34.88%, P95 1.575/3.643. Huber downweight:
+4.05%/38.70%, weight<.5 .32%/16.50%; minimum-eigen information ratio .9875/.8132;
+Gaussian geometry condition median7.35/20.11. STAR anchor bias10 +1.05sigma and
+6 −.77sigma persists. Broad STAR downweight with poorer geometry is consistent
+with the regression; unique physical cause is unproven. Frozen Walk GT-assisted
+interface calibration and STAR published rig/gyro rotation/range_calib/lever are
+evidence, not formal physical extrinsic qualification. Actual IRLS histories and
+independent calibration evidence remain needed. No unsupported new noise model
+or sequence/dataset-specific tuning was introduced.
 
-One 35-attempt joint2 audit completed, exit 0; strict performance comparator and
-independent packet bindings PASS against previous optimized replay. Root numerical
-outputs unchanged. Audit core mean 2577.309ms is not a speedup comparison.
-Candidate batch wall means: kernel 244.855ms, post 3.820ms, shared PL 971.078ms,
-serial consumer 18.838ms; parent candidate 1308.319ms. Gram inclusive work
-63.046s includes SVD 15.476s; classifier 32.256s, frozen validator 37.042s.
-Do not add overlapping phases or attribute the entire non-SVD remainder to hash.
-Proceed to classifier-only unused hash A/B, keeping both SVDs and every consumed
-public proof hash; high-effort read-only review approved this narrow boundary.
-Compact profile record: docs/benchmark/accuracy_fde_phase2_profile_20261009.json.
+### Final combined acceptance and remaining gaps
 
-Classifier-only unused identity hashing removed via private numerical entry:
-compile-time false hash specialization retains the identical arithmetic and
-all failure paths; both returned proof identities stay zero. Only classifier
-calls it and discards the local certificate. Public certifiers fixed true,
-full validators and proof storage unchanged. Independent reference switch:
-UWB_IMU_PL_EXHAUSTIVE_CLASSIFICATION_HASHES=1. High-effort static review PASS.
-Build and 39 focused math/integrity/safety tests PASS. All fields/reasons/bits
-compared across full/rank-zero/wide/transition/nonfinite/invalid/extreme scales
-and null output pointers; captured pre-change public hash fixtures unchanged.
-Standalone probe initially missed target Eigen -march=native/NDEBUG ABI and
-crashed; rebuilt with exact target flags successfully, no production failure.
-Hash-only same-ELF normal/joint2 measurements pending; no gain yet claimed.
+Same current ELF/DSO, all five exhaustive flags versus defaults; four fresh native
+35-attempt processes, one pair/scenario, OMP/BLAS/MKL=1. Mode cache and frozen memo
+OFF on both sides. Final source c84b13e clean; profiler OFF. Actual combined
+measurement, not products of checkpoint gains:
 
-Classifier hash-only same-ELF pair completed (35 attempts/scenario; profiling
-off, one pair). Strict semantic comparison and independent publication binding
-PASS for both. Normal core 176.704→176.928ms: no gain. Joint2 core
-2555.401→2393.333ms (6.34%); counted Gram SVDs unchanged at 9,405,759
-(normal 113,194 both). This isolates an actual workload benefit without skipping
-numerical work; no statistical-generalization claim. Freeze the narrow change
-for joint2, do not extend hash omission into consumed public certificates.
-Compact exact commands/hashes/results:
-docs/benchmark/accuracy_fde_phase2_classification_hash_20261009.json.
+| Scenario | Core mean reference→default ms | Reduction | Arrival→publication mean reference→default ms | Strict / independent binding |
+|---|---:|---:|---:|---|
+| Normal | 280.398→176.517 | 37.05% | 280.411→176.530 | PASS / PASS both sides |
+| Joint-order2 | 3170.796→2395.440 | 24.45% | 3170.814→2395.461 | PASS / PASS both sides |
 
-Next measured question: audit frozen validation count decomposes consistently
-with H=1,272,018, shared-hit KEEP_ALL H=1,152,504, valid PL H=73,254:
-2,497,242=(H−534)+1,152,504+73,254. Exact callsite counters still needed to
-confirm the 534 invalid seal skips. Largest duplicate is evaluator seal then
-KEEP_ALL reading the same scoped proof, not cross-candidate root sharing.
-High-effort ownership/replacement review ongoing; no new proof memo implemented
-yet. Research targets and formal/risk qualification remain unmet; active goal
-and final integrated acceptance still OPEN.
+All 13 compared CSVs PASS, zero numerical mismatches, exact hypothesis/action
+counts retained (normal15,600/35; joint2 1,272,018/439). Only independently checked
+finish-wall packet checksum differences are admissible under unchanged comparator.
+Joint2 mean candidate1276.694ms includes flatPL938.877ms; evidence811.675ms,
+model generation175.942ms, history/window52.690ms. Default core P95 normal274.985ms,
+joint2 3030.985ms; maxima304.118ms/22802.5ms from rounded timing CSV. This is a fixed
+native stream, not a live frequency or tail guarantee. Detailed means use higher
+precision diagnostic stages; timing CSV rounding explains tiny mean differences.
 
-Frozen hypothesis scoped validation reuse implemented: producer-owned const V1
-proof plus private generation/memo wrapper, kind1 remains alias-to-V1 with new
-kind9 holding wrapper. Scoped seal/KEEP reader pins current kind1 then requires
-exact address/controlblock/generation match. Missing, overwritten or imported
-owner falls back to full; false/throw never cache. Returned mutable copies carry
-no trust. Public mutable/legacy readers and full PL payload validator unchanged,
-as are every root/window/dual/model/tail/risk/selection/publication check. New
-UWB_IMU_PL_EXHAUSTIVE_FROZEN_VALIDATION=1 restores original scoped copy/full
-path. Benchmark emits actual frozen validation execution/reuse counters.
-High-effort independent implementation review PASS. Full library, benchmark,
-tests, realtime node and nominal runner rebuilt for appended snapshot ABI.
-Focused tests PASS 41/41 (33 integrity/safety, 8 root/classifier). Includes
-concurrent first check, mutable import mutation after successful fallback,
-same-address wrong owner, same-key replacement, wrong generation with BOTH
-source indexes copied, and close/lease. Existing helper tests cover throw/false
-retry. No schema/hash/rank gate changed.
+Current-DSO core safety PASS **69/69**: integrity/proof ownership/concurrency/
+transaction/bridge/IMU/publish-boundary35, classifier/root8, history4, publication
+identity3, wiring6, P0-05 publication13. XML, binary, DSO hashes and exact filters
+are bound in the integrated JSON; earlier 68-test evidence has its old identity.
+CMake run-manifest Git stamp remains e3e0c80/dirty from configure time. Raw files
+are unchanged; actual clean c84b13e execution identity, build log and source/ELF/
+DSO hashes bind this measurement. No reproducible-build qualification is claimed.
 
-Initial new fixture test FAIL: generic shared-context was incorrectly expected
-valid. Independent exhaustive fixture also rejects it; public validator reason
-and two repeated private failures now agree with full path and each executes
-again. This preserves the actual rejection rather than loosening a gate. Fixed
-positive fixture remains valid and memo-hit tested. The initial unit failure is
-retained here; existing baseline scientific FAIL records remain unchanged.
-Hash-only/memo gains and final integrated acceptance still unproven for this
-new layer until paired measurement; no gain claimed yet.
+Reproduce after Release catkin build and clean tracked source, choosing a NEW
+output path (runner refuses overwrite):
+`python3 tools/run_accuracy_fde_phase2_integration.py --binary /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark --output results/accuracy_fde_phase2_reproduction_NEW --epochs 35`.
+Current safety test commands/LD_LIBRARY_PATH and frozen precision identities are
+in the integrated JSON; no new binary copies are needed.
 
-Frozen memo paired measurement completed: both strict semantics and independent
-publication bindings PASS. Normal 178.864→178.771ms (0.05%, no gain), joint2
-2487.516→2435.606ms (2.09%). Joint2 frozen full validations 2,497,242→1,344,738,
-reuses 1,152,504; Gram SVDs 9,405,759→7,100,751. This large work reduction
-yields only a small wall gain. Important measurement limitation: reference also
-constructs new wrapper/memo indexes, so this isolates reuse benefit rather than
-proving setup-inclusive net gain. Previous classifier-only DSO 2393.333ms vs
-new default 2435.606ms is uncontrolled across builds/pairs and cannot settle net
-benefit. Do not freeze this new layer as a net winner yet; stop extending memo
-and restore original reference producer setup before final combined comparison.
-Compact paired record: docs/benchmark/accuracy_fde_phase2_frozen_validation_20261009.json.
+Research <100ms normal/~1s joint2 targets **NOT_MET**; 40ms core/50ms protected
+publication and live/hardware qualification **NOT_MET/NOT_RUN**. Both final sides
+have zero protected, risk-valid and formal-eligible outputs. Joint2 recovery is
+RIGHT_CENSORED with null latency, not zero recovery time; normal NO_FAULT_INPUT.
+Default normal35/35 and joint2 34/35 committed (one joint attempt refused), with
+normal31 and joint2 33 deadline misses. Do not claim protected realtime readiness.
+Preexisting result binding OPEN: lookup key omits hypothesis_tail_used,
+axis_tail_used, fault_multiplier_used, noncentrality_used; stored proof hash does
+not authenticate every external result field. This phase preserves that behavior,
+without claiming to solve all-field result authentication.
 
-Final-DSO core safety PASS 68/68: previous 41 plus 4 history, 3 publication
-identity, 6 wiring, 13 P0-05 publication, and P106 publish-call deadline boundary.
-Original per-leaf bit/proof parity and full raw-row rebuild are distinct checks;
-the raw builder is not an independent mathematical implementation. Compact
-commands/XML/ELF/DSO identities: accuracy_fde_phase2_core_safety_20261009.json.
-Independent High final audit found no semantic reduction, but requires final
-combined actual before/after evidence and integrated delivery table. Protected
-recovery, risk/formal and realtime latency qualifications remain NOT_MET.
-
-Reference-cost correction implemented after High independent review PASS:
-EXHAUSTIVE_FROZEN_VALIDATION now restores original plain immutable V1 producer
-(kind1 only); EXHAUSTIVE_PL_VALIDATION restores one plain PL proof shared by
-kind2/3 without kind8. Numerical fields/hash/failure paths unchanged. Dynamic
-flag changes leave stale memo indexes harmless via exact owner mismatch; no new
-index deletion. Normal sealed concurrency tests now assert 0 full/8 hits, while
-shared memo helper retains first-success/false/throw concurrency coverage.
-Tests assert no private memo index for freshly created reference payloads.
-Library/benchmark/node/nominal runner rebuilt; 34 targeted integrity tests PASS.
-Next measurement includes all producer setup cost, rather than just saved
-validation work. No net memo gain is claimed until that pair completes.
-
-Setup-inclusive frozen memo pair completed, strict semantics/bindings PASS:
-normal 176.832→178.692ms (−1.05% reduction), joint2 2389.299→2426.540ms
-(−1.56%). No net gain demonstrated in either workload. Stop this direction;
-retain UWB_IMU_PL_FROZEN_VALIDATION_REUSE=1 as explicit experiment only, default
-producer/reader plain/full. Exhaustive flag overrides opt-in. Large validation
-count reduction was not sufficient evidence of wall benefit. Keep both failed
-performance hypotheses and controlled net results. Compact record:
-accuracy_fde_phase2_frozen_net_20261009.json. Final combination excludes this
-opt-in memo, and must measure actual full before/after rather than stage products.
-
-Frozen opt-in/default split built, independent High review PASS, 35 focused
-integrity tests PASS including publish-call boundary and plain default reader.
-Final fixed runner tools/run_accuracy_fde_phase2_integration.py compares complete
-35-epoch normal/joint2 streams with five exhaustive reference flags versus
-defaults. Both old mode cache and new frozen memo explicitly OFF. It preserves
-any strict FAIL and still finishes the second scenario, exits nonzero for an
-equivalence failure, binds source/config/ELF/DSO/environment and records
-arrival-to-publish separately. It never copies binaries or overwrites output
-directories. Final combined measurement is pending.
+The six requested research steps are complete as a research delivery: executable
+changes, minimal measured experiments and explicit stopping decisions. Independent
+High final review PASS, 218 read-only checks of execution/comparison/test/frozen
+baseline identities and report conclusions; no further build or experiment needed.
+This completion does not imply realtime or protected qualification. Further work
+needs certification/flat-PL cost reduction and independent calibration/risk/formal
+evidence; no blind long campaign or relaxation of gates is justified by results.
