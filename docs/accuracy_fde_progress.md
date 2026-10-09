@@ -567,3 +567,23 @@ Tests assert no private memo index for freshly created reference payloads.
 Library/benchmark/node/nominal runner rebuilt; 34 targeted integrity tests PASS.
 Next measurement includes all producer setup cost, rather than just saved
 validation work. No net memo gain is claimed until that pair completes.
+
+Setup-inclusive frozen memo pair completed, strict semantics/bindings PASS:
+normal 176.832→178.692ms (−1.05% reduction), joint2 2389.299→2426.540ms
+(−1.56%). No net gain demonstrated in either workload. Stop this direction;
+retain UWB_IMU_PL_FROZEN_VALIDATION_REUSE=1 as explicit experiment only, default
+producer/reader plain/full. Exhaustive flag overrides opt-in. Large validation
+count reduction was not sufficient evidence of wall benefit. Keep both failed
+performance hypotheses and controlled net results. Compact record:
+accuracy_fde_phase2_frozen_net_20261009.json. Final combination excludes this
+opt-in memo, and must measure actual full before/after rather than stage products.
+
+Frozen opt-in/default split built, independent High review PASS, 35 focused
+integrity tests PASS including publish-call boundary and plain default reader.
+Final fixed runner tools/run_accuracy_fde_phase2_integration.py compares complete
+35-epoch normal/joint2 streams with five exhaustive reference flags versus
+defaults. Both old mode cache and new frozen memo explicitly OFF. It preserves
+any strict FAIL and still finishes the second scenario, exits nonzero for an
+equivalence failure, binds source/config/ELF/DSO/environment and records
+arrival-to-publish separately. It never copies binaries or overwrites output
+directories. Final combined measurement is pending.

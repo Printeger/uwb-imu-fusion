@@ -1,0 +1,290 @@
+{
+  "schema": "uwb-imu-pl/phase2-frozen-memo-net-cost/v1",
+  "source_commit": "8c70ece",
+  "timing_repetitions": 1,
+  "scope": "plain original producer reference vs immutable memo producer and reuse; other changes fixed",
+  "decision": "no net gain in either workload; retain explicit opt-in experiment and restore plain default",
+  "runs": {
+    "normal": {
+      "semantic_comparison": "PASS",
+      "publication_bindings": {
+        "after": {
+          "attempts": 35,
+          "failures": [],
+          "status": "PASS"
+        },
+        "before": {
+          "attempts": 35,
+          "failures": [],
+          "status": "PASS"
+        }
+      },
+      "comparison_sha256": "b860b9568db3913427c1511e6457ee874131bed2f7c16c0c95436d33a4e1cc9b",
+      "mismatches": {},
+      "sides": {
+        "reference": {
+          "execution": {
+            "binary_sha256": "4c544aaee96e5e823543edac1422fce6f9cdea33d88ba49be5d06883c0386efe",
+            "library_sha256": "878b0ff03bd91fb0581db2ced68fa5c0d3dd7128e9f882df120e1c5233ea419a",
+            "head": "8c70ece7e22aea6624849b1c57725d5e6bf6bdce",
+            "config_sha256": "18cec5ece3cd6f33761b946b7815ea5a8d0c998e007ad2fe49eef122de4284f7",
+            "command": [
+              "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order1.yaml",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_phase2_20261009/frozen_net_pairs/reference/normal",
+              "35"
+            ],
+            "environment": {
+              "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+              "OMP_NUM_THREADS": "1",
+              "OPENBLAS_NUM_THREADS": "1",
+              "MKL_NUM_THREADS": "1",
+              "UWB_IMU_PL_SCENARIO": "noiseless",
+              "UWB_IMU_PL_EXHAUSTIVE_FROZEN_VALIDATION": "1"
+            },
+            "exit_code": 0,
+            "wall_s": 6.223789403999945,
+            "audit": false
+          },
+          "stage_mean_ms": {
+            "prepare": 0.9666333428571429,
+            "integrity_window": 48.529336542857145,
+            "window_boundary_provenance": 35.56428057142857,
+            "window_factor_linearization_whitening": 0.6926352857142856,
+            "window_dense_assembly": 0.07354791428571429,
+            "window_svd": 7.869453885714285,
+            "window_normal_equations": 0.2614178,
+            "window_llt_state_solves": 0.09242731428571428,
+            "window_fingerprint": 2.923918657142857,
+            "all_in_detector": 0.15469768571428574,
+            "current_sensitivity": 0.3743975714285714,
+            "model_generation": 3.8125780857142857,
+            "historical_sensitivity": 0.08558528571428574,
+            "hypothesis_evidence": 41.44661585714286,
+            "health_actions": 0.3484500285714286,
+            "base_factorization": 0.20441157142857141,
+            "shared_cache": 0.0012726000000000003,
+            "candidate_batch_kernel": 60.71420317142857,
+            "candidate_batch_post": 1.7280854857142858,
+            "candidate_batch_pl_flat": 11.50621725714286,
+            "candidate_batch_pl_consume": 1.0490584857142855,
+            "candidate_evaluation": 78.46149885714286,
+            "fde_decision": 0.1922714857142858,
+            "candidate_audit": 0.008259942857142853,
+            "commit": 1.296097,
+            "state_audit": 0.00035594285714285717,
+            "finalize_commit_audit": 0.7144664857142857,
+            "core_total": 176.8318183142857
+          },
+          "work": {
+            "frozen_hypothesis_validations": 33174,
+            "frozen_hypothesis_validation_reuses": 0
+          }
+        },
+        "optimized": {
+          "execution": {
+            "binary_sha256": "4c544aaee96e5e823543edac1422fce6f9cdea33d88ba49be5d06883c0386efe",
+            "library_sha256": "878b0ff03bd91fb0581db2ced68fa5c0d3dd7128e9f882df120e1c5233ea419a",
+            "head": "8c70ece7e22aea6624849b1c57725d5e6bf6bdce",
+            "config_sha256": "18cec5ece3cd6f33761b946b7815ea5a8d0c998e007ad2fe49eef122de4284f7",
+            "command": [
+              "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order1.yaml",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_phase2_20261009/frozen_net_pairs/optimized/normal",
+              "35"
+            ],
+            "environment": {
+              "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+              "OMP_NUM_THREADS": "1",
+              "OPENBLAS_NUM_THREADS": "1",
+              "MKL_NUM_THREADS": "1",
+              "UWB_IMU_PL_SCENARIO": "noiseless"
+            },
+            "exit_code": 0,
+            "wall_s": 6.293621242999507,
+            "audit": false
+          },
+          "stage_mean_ms": {
+            "prepare": 1.1973561428571429,
+            "integrity_window": 50.151408057142866,
+            "window_boundary_provenance": 36.927687428571424,
+            "window_factor_linearization_whitening": 0.7144809714285713,
+            "window_dense_assembly": 0.07943468571428569,
+            "window_svd": 7.978257371428569,
+            "window_normal_equations": 0.2612505428571429,
+            "window_llt_state_solves": 0.09579897142857144,
+            "window_fingerprint": 3.0268203428571434,
+            "all_in_detector": 0.1447963142857143,
+            "current_sensitivity": 0.37426711428571424,
+            "model_generation": 3.714375085714286,
+            "historical_sensitivity": 0.08521579999999998,
+            "hypothesis_evidence": 41.49283694285714,
+            "health_actions": 0.36760999999999994,
+            "base_factorization": 0.2128875714285714,
+            "shared_cache": 0.0013552,
+            "candidate_batch_kernel": 60.744072342857145,
+            "candidate_batch_post": 1.5064373428571427,
+            "candidate_batch_pl_flat": 11.381691857142856,
+            "candidate_batch_pl_consume": 1.0303208571428575,
+            "candidate_evaluation": 78.14433434285714,
+            "fde_decision": 0.2034063714285715,
+            "candidate_audit": 0.008262485714285717,
+            "commit": 1.4637763714285714,
+            "state_audit": 0.0004034857142857143,
+            "finalize_commit_audit": 0.8750290285714286,
+            "core_total": 178.69236539999997
+          },
+          "work": {
+            "frozen_hypothesis_validations": 17574,
+            "frozen_hypothesis_validation_reuses": 15600
+          }
+        }
+      },
+      "core_reduction_percent": -1.0521562824216943
+    },
+    "joint2": {
+      "semantic_comparison": "PASS",
+      "publication_bindings": {
+        "after": {
+          "attempts": 35,
+          "failures": [],
+          "status": "PASS"
+        },
+        "before": {
+          "attempts": 35,
+          "failures": [],
+          "status": "PASS"
+        }
+      },
+      "comparison_sha256": "14529eb42a11e2431f27ef3d6cd7cd06ebcf574094571872df86a813f4502027",
+      "mismatches": {},
+      "sides": {
+        "reference": {
+          "execution": {
+            "binary_sha256": "4c544aaee96e5e823543edac1422fce6f9cdea33d88ba49be5d06883c0386efe",
+            "library_sha256": "878b0ff03bd91fb0581db2ced68fa5c0d3dd7128e9f882df120e1c5233ea419a",
+            "head": "8c70ece7e22aea6624849b1c57725d5e6bf6bdce",
+            "config_sha256": "03c2d725900d8683e672a02e255f6cb80c2f01e466985f01ab3d65d3bd4d574d",
+            "command": [
+              "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order2.yaml",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_phase2_20261009/frozen_net_pairs/reference/joint2",
+              "35"
+            ],
+            "environment": {
+              "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+              "OMP_NUM_THREADS": "1",
+              "OPENBLAS_NUM_THREADS": "1",
+              "MKL_NUM_THREADS": "1",
+              "UWB_IMU_PL_SCENARIO": "joint_recovery",
+              "UWB_IMU_PL_EXHAUSTIVE_FROZEN_VALIDATION": "1"
+            },
+            "exit_code": 0,
+            "wall_s": 85.12266467399968,
+            "audit": false
+          },
+          "stage_mean_ms": {
+            "prepare": 1.4071228857142857,
+            "integrity_window": 52.92846480000001,
+            "window_boundary_provenance": 39.610368314285715,
+            "window_factor_linearization_whitening": 0.7290632857142857,
+            "window_dense_assembly": 0.08279785714285715,
+            "window_svd": 7.995743114285713,
+            "window_normal_equations": 0.2813588285714287,
+            "window_llt_state_solves": 0.1057834857142857,
+            "window_fingerprint": 3.0617761714285714,
+            "all_in_detector": 0.17336728571428572,
+            "current_sensitivity": 0.3860507999999999,
+            "model_generation": 174.6077327142857,
+            "historical_sensitivity": 0.1131954857142857,
+            "hypothesis_evidence": 808.6775993142855,
+            "health_actions": 42.16045362857143,
+            "base_factorization": 0.2093823714285714,
+            "shared_cache": 0.0014924000000000005,
+            "candidate_batch_kernel": 246.65038600000017,
+            "candidate_batch_post": 3.776984542857143,
+            "candidate_batch_pl_flat": 936.1961594285717,
+            "candidate_batch_pl_consume": 18.086979428571432,
+            "candidate_evaluation": 1274.5715089142857,
+            "fde_decision": 15.811956657142854,
+            "candidate_audit": 0.053590657142857136,
+            "commit": 1.7786926285714286,
+            "state_audit": 0.0004093999999999999,
+            "finalize_commit_audit": 15.979091371428572,
+            "core_total": 2389.2985721428577,
+            "discard": 0.00013725714285714287
+          },
+          "work": {
+            "frozen_hypothesis_validations": 2497242,
+            "frozen_hypothesis_validation_reuses": 0
+          }
+        },
+        "optimized": {
+          "execution": {
+            "binary_sha256": "4c544aaee96e5e823543edac1422fce6f9cdea33d88ba49be5d06883c0386efe",
+            "library_sha256": "878b0ff03bd91fb0581db2ced68fa5c0d3dd7128e9f882df120e1c5233ea419a",
+            "head": "8c70ece7e22aea6624849b1c57725d5e6bf6bdce",
+            "config_sha256": "03c2d725900d8683e672a02e255f6cb80c2f01e466985f01ab3d65d3bd4d574d",
+            "command": [
+              "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order2.yaml",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_phase2_20261009/frozen_net_pairs/optimized/joint2",
+              "35"
+            ],
+            "environment": {
+              "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+              "OMP_NUM_THREADS": "1",
+              "OPENBLAS_NUM_THREADS": "1",
+              "MKL_NUM_THREADS": "1",
+              "UWB_IMU_PL_SCENARIO": "joint_recovery"
+            },
+            "exit_code": 0,
+            "wall_s": 86.74247555599959,
+            "audit": false
+          },
+          "stage_mean_ms": {
+            "prepare": 1.4811923142857142,
+            "integrity_window": 55.0171730857143,
+            "window_boundary_provenance": 41.65400662857143,
+            "window_factor_linearization_whitening": 0.8069534857142856,
+            "window_dense_assembly": 0.07261128571428571,
+            "window_svd": 7.997839371428571,
+            "window_normal_equations": 0.3074777714285715,
+            "window_llt_state_solves": 0.09801702857142858,
+            "window_fingerprint": 3.0089332285714288,
+            "all_in_detector": 0.1647515142857143,
+            "current_sensitivity": 0.3978419428571428,
+            "model_generation": 175.65213271428567,
+            "historical_sensitivity": 0.10338714285714287,
+            "hypothesis_evidence": 841.2195009142855,
+            "health_actions": 42.091770257142855,
+            "base_factorization": 0.21448328571428574,
+            "shared_cache": 0.0021680285714285714,
+            "candidate_batch_kernel": 246.01396748571423,
+            "candidate_batch_post": 3.8435392285714287,
+            "candidate_batch_pl_flat": 920.0868365999997,
+            "candidate_batch_pl_consume": 17.872143599999994,
+            "candidate_evaluation": 1266.733342142857,
+            "fde_decision": 24.602381599999998,
+            "candidate_audit": 0.05546568571428571,
+            "commit": 1.895452457142857,
+            "state_audit": 0.00040237142857142856,
+            "finalize_commit_audit": 16.467961457142856,
+            "core_total": 2426.5395144571426,
+            "discard": 9.84e-05
+          },
+          "work": {
+            "frozen_hypothesis_validations": 1344738,
+            "frozen_hypothesis_validation_reuses": 1152504
+          }
+        }
+      },
+      "core_reduction_percent": -1.5586558644650725
+    }
+  },
+  "limitations": [
+    "one deterministic pair per scenario, no statistical significance claim",
+    "large work-count reduction did not produce net wall benefit; previous 2.09% was setup-excluded",
+    "PL/formal/realtime qualifications remain unmet"
+  ]
+}

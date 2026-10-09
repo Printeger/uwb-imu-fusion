@@ -7047,8 +7047,13 @@ struct FrozenValidationEnvironment {
   const char* key = "UWB_IMU_PL_EXHAUSTIVE_FROZEN_VALIDATION";
   bool existed = std::getenv(key) != nullptr;
   std::string original = existed ? std::getenv(key) : "";
+  const char* reuse_key = "UWB_IMU_PL_FROZEN_VALIDATION_REUSE";
+  bool reuse_existed = std::getenv(reuse_key) != nullptr;
+  std::string reuse_original = reuse_existed ? std::getenv(reuse_key) : "";
+  FrozenValidationEnvironment() { setenv(reuse_key,"1",1); }
   ~FrozenValidationEnvironment() {
     if (existed) setenv(key, original.c_str(), 1); else unsetenv(key);
+    if (reuse_existed) setenv(reuse_key,reuse_original.c_str(),1);else unsetenv(reuse_key);
   }
 };
 std::shared_ptr<const uwb_imu_pl::FrozenHypothesisNumerics> frozenMemoFixture(
@@ -7199,4 +7204,22 @@ TEST(Phase2FrozenValidationMemo, ConcurrentReuseCrossArenaAndLease) {
   const auto count=NumericalWorkCounters::snapshot().frozen_hypothesis_validations;
   EXPECT_TRUE(detail::readAndValidateScopedFrozenHypothesisProof(entry,arena));
   EXPECT_EQ(NumericalWorkCounters::snapshot().frozen_hypothesis_validations,count);
+}
+
+
+TEST(Phase2FrozenValidationMemo, DefaultProducerAndReadersRemainPlainExhaustive) {
+  using namespace uwb_imu_pl;
+  FrozenValidationEnvironment env;
+  unsetenv(env.key);unsetenv(env.reuse_key);
+  AttemptProofArena arena;const auto shared=frozenMemoFixture(&arena);
+  ASSERT_TRUE(shared && shared->valid);
+  EXPECT_EQ(detail::AttemptProofArenaAccess::countKind(arena,9),0u);
+  const auto& entry=shared->pl_entries[0];
+  for(int i=0;i<2;++i) {
+    const auto before=NumericalWorkCounters::snapshot();
+    EXPECT_TRUE(detail::readAndValidateScopedFrozenHypothesisProof(entry,arena));
+    const auto after=NumericalWorkCounters::snapshot();
+    EXPECT_EQ(after.frozen_hypothesis_validations,before.frozen_hypothesis_validations+1);
+    EXPECT_EQ(after.frozen_hypothesis_validation_reuses,before.frozen_hypothesis_validation_reuses);
+  }
 }

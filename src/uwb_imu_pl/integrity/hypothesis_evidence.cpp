@@ -26,6 +26,13 @@ namespace {
 
 constexpr std::uint32_t kArenaFrozenHypothesisProof = 1;
 constexpr std::uint32_t kArenaFrozenHypothesisValidationMemo = 9;
+// Net-cost experiment did not justify the new per-hypothesis wrapper/index.
+// Keep it opt-in; exhaustive always overrides even when reuse is requested.
+bool scopedFrozenValidationReuseEnabled() {
+  const char* reuse = std::getenv("UWB_IMU_PL_FROZEN_VALIDATION_REUSE");
+  return reuse && std::string(reuse) == "1" &&
+      !std::getenv("UWB_IMU_PL_EXHAUSTIVE_FROZEN_VALIDATION");
+}
 struct ImmutableFrozenHypothesisPayload {
   ImmutableFrozenHypothesisPayload(FrozenHypothesisPlProofV1&& value,
                                   std::uint64_t generation)
@@ -257,7 +264,7 @@ void storePlCertificate(const SymmetricPsdCertificate& gram,
   proof.served_entry_identity = frozenEntryProofKey(proof.served_entry);
   const auto key = frozenEntryProofKey(*entry);
   if (proof_arena) {
-    if (std::getenv("UWB_IMU_PL_EXHAUSTIVE_FROZEN_VALIDATION")) {
+    if (!scopedFrozenValidationReuseEnabled()) {
       // Reference restores original producer cost, not just full reader work.
       (void)detail::AttemptProofArenaAccess::store(
           proof_arena, kArenaFrozenHypothesisProof, key, nullptr,
@@ -2014,7 +2021,7 @@ namespace detail {
 bool readAndValidateScopedFrozenHypothesisProof(
     const FrozenHypothesisPlEntry& entry, const AttemptProofArena& arena,
     FrozenHypothesisPlProofV1* proof, std::string* reason) {
-  if (std::getenv("UWB_IMU_PL_EXHAUSTIVE_FROZEN_VALIDATION")) {
+  if (!scopedFrozenValidationReuseEnabled()) {
     FrozenHypothesisPlProofV1 local;
     auto* output = proof ? proof : &local;
     return frozenHypothesisPlProof(entry, arena, output) &&
