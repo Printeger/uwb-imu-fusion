@@ -68,9 +68,14 @@ def main():
     parser.add_argument('--epochs', type=int, default=35)
     parser.add_argument('--reference-model', choices=('phase2', 'b-correct'), default='phase2',
                         help='b-correct disables only the new continuous proof prototype')
+    parser.add_argument('--workload', choices=('all','normal','joint2'), default='all')
+    parser.add_argument('--fault-schedule-epochs', type=int,
+                        help='generation-only schedule identity for a targeted short snapshot')
     args = parser.parse_args()
     if args.epochs <= 0:
         parser.error('epochs must be positive')
+    if args.fault_schedule_epochs is not None and args.fault_schedule_epochs <= 0:
+        parser.error('fault schedule epochs must be positive')
     binary = args.binary.resolve()
     library = binary.parent.parent / 'libuwb_imu_pl.so'
     output = args.output.resolve()
@@ -94,6 +99,7 @@ def main():
     for scenario, label, config_name in (
             ('noiseless', 'normal', 'fde_joint_order1.yaml'),
             ('joint_recovery', 'joint2', 'fde_joint_order2.yaml')):
+        if args.workload != 'all' and args.workload != label:continue
         config = ROOT / 'config' / config_name
         config_hash = sha(config)
         item = {'sides': {}}
@@ -106,6 +112,8 @@ def main():
                 MKL_NUM_THREADS='1', LD_LIBRARY_PATH=str(library.parent),
                 UWB_IMU_PL_SCENARIO=scenario, UWB_IMU_PL_MODE_RESPONSE_CACHE='0',
                 UWB_IMU_PL_FROZEN_VALIDATION_REUSE='0')
+            if args.fault_schedule_epochs is not None:
+                environment['UWB_IMU_PL_FAULT_SCHEDULE_EPOCHS'] = str(args.fault_schedule_epochs)
             if args.reference_model == 'b-correct':
                 environment.update(UWB_IMU_PL_ROOT_RESPONSE_REUSE='0',
                                    UWB_IMU_PL_BATCH_FROZEN_PROOFS='1')

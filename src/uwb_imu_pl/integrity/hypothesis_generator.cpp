@@ -2783,7 +2783,10 @@ GeneratedFaultModelSet HypothesisGenerator::generate(
         const Eigen::VectorXd whitened = axis < 3
             ? subspaces.accel_axis[axis] : subspaces.gyro_axis[axis - 3];
         mode.raw_group_maps[occurrence.imu->id] =
-            block->whitener.triangularView<Eigen::Lower>().solve(whitened);
+            // Recover the physical column in the actual row coordinate.
+            // CombinedImuFactor uses an upper information root; assuming a
+            // lower root here silently rotates the declared sample fault.
+            block->whitener.partialPivLu().solve(whitened);
       }
       if (history_block != nullptr &&
           hasHistoryColumn(window, HistoryFaultBasisKind::ImuAxisConstant,
