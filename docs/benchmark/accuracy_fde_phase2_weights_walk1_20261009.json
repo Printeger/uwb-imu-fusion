@@ -323,5 +323,6 @@
     "Residuals cannot alone identify NLOS, noise calibration, extrinsic or attitude error."
   ],
   "reproduction_command": "python3 tools/diagnose_nominal_range_weights.py --cache results/accuracy_fde_20261009/selected_cache/SFUISE/ISAS-Walk1 --gaussian results/accuracy_fde_20261009/confirmation/gaussian/runs/covariance/SFUISE/ISAS-Walk1 --robust results/accuracy_fde_20261009/confirmation/robust/runs/covariance/SFUISE/ISAS-Walk1 --output results/accuracy_fde_phase2_20261009/weights_walk1.json",
-  "diagnostic_tool_sha256": "778f7b5005fd8d943892f75791092b3d246cc8c35b878834a7f66049e8f8c1f6"
+  "diagnostic_tool_sha256": "899d89ab7f9f410e39e7ed2c5eea7be956b3801a2cf6e78096faddc2b8082052",
+  "role_and_identity_checks": "PASS: source config role and original execution config/manifest hashes verified"
 }

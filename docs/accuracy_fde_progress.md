@@ -402,3 +402,14 @@ Neither metadata nor posterior residuals qualify physical extrinsics. Keep the
 Gaussian recommendation and separate Huber experiment; no unsupported new noise
 model or dataset-dependent threshold. Actual per-factor IRLS history and physical
 frame/calibration qualification remain needed to isolate causality.
+
+Next compute experiment identified by independent High safety review: scoped
+full PL validation repeats the same immutable arena payload at production bind
+and candidate consumption, then again in winner/publication paths. One frozen
+hypothesis check runs rebuilt Gram, independent Z SVD and another Gram
+certificate; counted Gram SVDs exclude the separate Z classification SVD. Try
+attempt-local reuse of successful full payload validation only, tied to actual
+shared owner and payload address (arena numeric keys can be overwritten). Keep
+every external candidate/detector/hypothesis/result binding, mutable public-proof
+validation, exception retry and single-consume contract. This is a next-step
+hypothesis, not an implemented optimization or permission to skip validation.

@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+import yaml
 
 
 def rows(path):
@@ -67,7 +68,7 @@ def rotation(state):
                      [2*(x*z-y*w), 2*(y*z+x*w), 1 - 2*(x*x+y*y)]])
 
 
-def analyze(run, native_batches, robust):
+def analyze(run, native_batches, robust, manifest_hash):
     states, diagnostics = rows(run / "states.csv"), rows(run / "sensor_diagnostics.csv")
     if len(states) != len(diagnostics):
         raise ValueError("state/diagnostic row count mismatch")
@@ -77,6 +78,14 @@ def analyze(run, native_batches, robust):
         raise ValueError("this diagnostic binds primary-tag runs only")
     if execution["exit_code"] != 0:
         raise ValueError("source run did not complete")
+    config_path = run / "effective_nominal_config.yaml"
+    if identity(config_path)["sha256"] != execution["effective_config_sha256"]:
+        raise ValueError("effective config changed after source run")
+    if manifest_hash != execution["cache_manifest_sha256"]:
+        raise ValueError("cache manifest changed after source run")
+    config = yaml.safe_load(config_path.read_text())
+    if config.get("estimation_tuning", {}).get("nominal_robust_experimental", False) != robust:
+        raise ValueError("source config does not match requested Gaussian/Huber role")
     z_values, weights, loss, information_ratios, covariance_checks = [], [], [], [], []
     raw_conditions, weighted_conditions = [], []
     by_anchor = {}
@@ -155,8 +164,9 @@ def main():
     args = parser.parse_args()
     manifest = json.loads((args.cache / "manifest.json").read_text())
     native = batches(args.cache, manifest)
-    g = analyze(args.gaussian, native, False)
-    h = analyze(args.robust, native, True)
+    manifest_hash = identity(args.cache / "manifest.json")["sha256"]
+    g = analyze(args.gaussian, native, False, manifest_hash)
+    h = analyze(args.robust, native, True, manifest_hash)
     if g["batch_signature_sha256"] != h["batch_signature_sha256"]:
         raise ValueError("paired output batch coverage differs")
     result = {"schema": "uwb-imu-pl/posterior-range-weight-diagnostic/v1",
