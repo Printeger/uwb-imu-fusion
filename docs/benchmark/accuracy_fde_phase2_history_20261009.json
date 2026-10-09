@@ -1,0 +1,354 @@
+{
+  "schema": "uwb-imu-pl/phase2-history-checkpoint/v1",
+  "scope": "RESEARCH_CHECKPOINT_NOT_FINAL_INTEGRATION",
+  "source_commit": "56a5d8c",
+  "formal_eligible": false,
+  "timing_repetitions": 1,
+  "comparison_command": "python3 tools/compare_p1_05_workers.py <reference> <optimized> --before-workers 1 --after-workers 1 --performance-optimization --output <comparison.json>",
+  "runs": {
+    "normal": {
+      "semantic_comparison": "FAIL",
+      "publication_binding_checks": {
+        "after": {
+          "attempts": 35,
+          "failures": [],
+          "status": "PASS"
+        },
+        "before": {
+          "attempts": 35,
+          "failures": [],
+          "status": "PASS"
+        }
+      },
+      "comparison_failures": {
+        "diagnostic_attempts.csv": [
+          {
+            "after": "FINISH_DEADLINE_MISSED",
+            "before": "PUBLICATION_DEADLINE_MISSED",
+            "field": "publication_refusal",
+            "kind": "value",
+            "row": 5
+          }
+        ],
+        "integrity.csv": [
+          {
+            "after": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED",
+            "before": "ACTION_SEARCH_CERTIFICATE_V1:generated=1;planned_evaluations=1;actual_candidate_evaluations=1;actual_post_evaluations=1;actual_pl_evaluations=1;omitted=0;lifecycle=READY_FOR_EVALUATION;cap=1;trusted_snapshot=GENERATED_ACTION_SNAPSHOT_V1|1;137:414354494f4e5f53454d414e544943535f56317c34323a3431343335343439346634653566346635303435353234313534343934663465356635363331376333303362333033623330336233303362333033623330336233303362333033613362333033613362333033623b313b383a346234353435353035663431346334633b303b303b303b303b;42:414354494f4e5f4f5045524154494f4e5f56317c303b303b303b303b303b303b303b303a3b303a3b303b;;generator_identity=censusAndCapActionsV1/raw-generator-output;terminal_reason=COMPLETE;validation=VALID;validation_valid=1;validation_exhaustive=1;IMU_MODEL_UNQUALIFIED;FINISH_DEADLINE_MISSED;PUBLICATION_DEADLINE_MISSED",
+            "field": "reason_codes",
+            "kind": "value",
+            "row": 5
+          },
+          {
+            "after": "2324120455966504572",
+            "before": "11495026796585641924",
+            "field": "final_packet_digest",
+            "kind": "value",
+            "row": 5
+          }
+        ]
+      },
+      "files": {
+        "bridge.csv": {
+          "before_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+          "after_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+          "rows": 0,
+          "status": "PASS"
+        },
+        "candidates.csv": {
+          "before_sha256": "abd96d2670ef5fd4cd72052476b8ef886b403b4a97e75690bbe064959370b7ee",
+          "after_sha256": "766baef33b818db6b8bbb31d06836543c734be9c80b865250172565a3bad3e31",
+          "rows": 35,
+          "status": "PASS"
+        },
+        "diagnostic_attempts.csv": {
+          "before_sha256": "7a4db224aa40c92b1c0e217df44ecf0473959c9a29f6e79c1cd4a54e047ae528",
+          "after_sha256": "8ba35987dd0fc1224be33d78da74acf00dd364a239a8b3af2f52a155fe425cde",
+          "rows": 35,
+          "status": "FAIL"
+        },
+        "diagnostic_candidates.csv": {
+          "before_sha256": "a50f9e84dbe8600145106de474b193266fc26fabc6698def50a53428e82e66a7",
+          "after_sha256": "2a216c4700afaa0fb5235592dc6c16d2d7520b8c101a1e861bcddbd22e79c822",
+          "rows": 35,
+          "status": "PASS"
+        },
+        "diagnostic_coverage.csv": {
+          "before_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+          "after_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+          "rows": 0,
+          "status": "PASS"
+        },
+        "diagnostic_history_summary.csv": {
+          "before_sha256": "bcfc7d9f5dfb971161ef4f68dcd189b4c737340a2dc54f258b6cbf6637a3d878",
+          "after_sha256": "bcfc7d9f5dfb971161ef4f68dcd189b4c737340a2dc54f258b6cbf6637a3d878",
+          "rows": 35,
+          "status": "PASS"
+        },
+        "diagnostic_snapshot_identity.csv": {
+          "before_sha256": "94b3817fafebbef225062c591d4d714a24eb443ceb5869517d40fa50a0faa0dd",
+          "after_sha256": "94b3817fafebbef225062c591d4d714a24eb443ceb5869517d40fa50a0faa0dd",
+          "rows": 35,
+          "status": "PASS"
+        },
+        "diagnostic_square_root.csv": {
+          "before_sha256": "2a5b5727d1dc30cc6f297d4cf03796d318172a555823b24970046abb46d857b1",
+          "after_sha256": "2a5b5727d1dc30cc6f297d4cf03796d318172a555823b24970046abb46d857b1",
+          "rows": 35,
+          "status": "PASS"
+        },
+        "diagnostic_state_steps.csv": {
+          "before_sha256": "b179eca7d4afaf55d2acbab5e5f72d1d6bd69f26ac94152812172ef56c4e753e",
+          "after_sha256": "b179eca7d4afaf55d2acbab5e5f72d1d6bd69f26ac94152812172ef56c4e753e",
+          "rows": 340,
+          "status": "PASS"
+        },
+        "hypotheses.csv": {
+          "before_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+          "after_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+          "rows": 0,
+          "status": "PASS"
+        },
+        "integrity.csv": {
+          "before_sha256": "b05700c5be6fc3aab9ada12511e0fb3df43d19f377b9ef3f5aba391a77c83685",
+          "after_sha256": "37f0e97952cb4cab3f521e003d6e7aaad6bc88135f0416de29cdf27115cc282d",
+          "rows": 35,
+          "status": "FAIL"
+        },
+        "states.csv": {
+          "before_sha256": "691516f89572e6b459d3f653b5515351f31cd4b081823e0cb43f55231a312662",
+          "after_sha256": "691516f89572e6b459d3f653b5515351f31cd4b081823e0cb43f55231a312662",
+          "rows": 35,
+          "status": "PASS"
+        },
+        "transactions.csv": {
+          "before_sha256": "939823c6fbb88b846eb561364ffc1573c9e3cda4147bb6ac18f51ade3ad7ca6c",
+          "after_sha256": "939823c6fbb88b846eb561364ffc1573c9e3cda4147bb6ac18f51ade3ad7ca6c",
+          "rows": 35,
+          "status": "PASS"
+        }
+      },
+      "timing": {
+        "reference": {
+          "count": 35,
+          "core_compute_mean_ms": 293.26769914285717,
+          "core_compute_median_ms": 222.054,
+          "core_compute_max_ms": 730.219,
+          "execution": {
+            "binary_sha256": "aa08b44442c7827d30cec9d9bb4a6aed38328eb6be9f7e8cd8c9446f03e3004e",
+            "library_sha256": "24af183159f40ce2fa9bf441d924a92141cc481f01630ed00e5c3e7d0c301181",
+            "head": "56a5d8c4420c55c690b2bf0a552c219acc672433",
+            "command": [
+              "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order1.yaml",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_phase2_20261009/history_pairs/reference/normal",
+              "35"
+            ],
+            "environment": {
+              "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+              "OMP_NUM_THREADS": "1",
+              "OPENBLAS_NUM_THREADS": "1",
+              "MKL_NUM_THREADS": "1",
+              "UWB_IMU_PL_SCENARIO": "noiseless",
+              "UWB_IMU_PL_EXHAUSTIVE_HISTORY_UPDATES": "1"
+            },
+            "exit_code": 0,
+            "wall_s": 10.303429215999927,
+            "audit": false
+          }
+        },
+        "optimized": {
+          "count": 35,
+          "core_compute_mean_ms": 180.11992571428573,
+          "core_compute_median_ms": 195.448,
+          "core_compute_max_ms": 305.634,
+          "execution": {
+            "binary_sha256": "aa08b44442c7827d30cec9d9bb4a6aed38328eb6be9f7e8cd8c9446f03e3004e",
+            "library_sha256": "24af183159f40ce2fa9bf441d924a92141cc481f01630ed00e5c3e7d0c301181",
+            "head": "56a5d8c4420c55c690b2bf0a552c219acc672433",
+            "command": [
+              "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order1.yaml",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_phase2_20261009/history_pairs/optimized/normal",
+              "35"
+            ],
+            "environment": {
+              "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+              "OMP_NUM_THREADS": "1",
+              "OPENBLAS_NUM_THREADS": "1",
+              "MKL_NUM_THREADS": "1",
+              "UWB_IMU_PL_SCENARIO": "noiseless"
+            },
+            "exit_code": 0,
+            "wall_s": 6.341329734000055,
+            "audit": false
+          }
+        }
+      },
+      "reduction_percent": 38.581737354393965,
+      "speedup": 1.6281802137096786
+    },
+    "joint2": {
+      "semantic_comparison": "PASS",
+      "publication_binding_checks": {
+        "after": {
+          "attempts": 35,
+          "failures": [],
+          "status": "PASS"
+        },
+        "before": {
+          "attempts": 35,
+          "failures": [],
+          "status": "PASS"
+        }
+      },
+      "comparison_failures": {},
+      "files": {
+        "bridge.csv": {
+          "before_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+          "after_sha256": "95aaee8d99d3c92c5aa0238a375e96a8dba6567ba99166328e8d997218eb61c3",
+          "rows": 0,
+          "status": "PASS"
+        },
+        "candidates.csv": {
+          "before_sha256": "23dd6a16cd9b1a938e56b8cc052478b6bd2351ce47c94055d04b415662eea716",
+          "after_sha256": "e6ad32ad80d7237cefe42525fabda4b327b61dc11d8b64d111bcf14e1484c723",
+          "rows": 439,
+          "status": "PASS"
+        },
+        "diagnostic_attempts.csv": {
+          "before_sha256": "1e4cea01263bebc21027c50bdce52ec9b0be6271c67ca78367ea88bed9dd090a",
+          "after_sha256": "954e90f223ec0219886797e4625354d6fdbc00ccb81f9a36bbb4699366fde83e",
+          "rows": 35,
+          "status": "PASS"
+        },
+        "diagnostic_candidates.csv": {
+          "before_sha256": "30930a6e9b38b40b6c147e0e847d5f98136aff78cc96cd60f615c7390662249e",
+          "after_sha256": "b0f700ecac80b881a7f3e3f0ab2b1fcf2a9987e57db593fab8ef0a9776cb8a09",
+          "rows": 439,
+          "status": "PASS"
+        },
+        "diagnostic_coverage.csv": {
+          "before_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+          "after_sha256": "4f3ca21129826b9a4997247d82338c2bafba12f520d893292851cb8cb7a0ec2e",
+          "rows": 0,
+          "status": "PASS"
+        },
+        "diagnostic_history_summary.csv": {
+          "before_sha256": "19dc24c4c7ba23eaf3480fdbb668ef0a2d479a19c12ab83739f73910532048ee",
+          "after_sha256": "19dc24c4c7ba23eaf3480fdbb668ef0a2d479a19c12ab83739f73910532048ee",
+          "rows": 35,
+          "status": "PASS"
+        },
+        "diagnostic_snapshot_identity.csv": {
+          "before_sha256": "ef1c6ca8202dc7b9bb1814f05e0ab2ed25fe155af282b5fc02e7ed273b5de8f0",
+          "after_sha256": "ef1c6ca8202dc7b9bb1814f05e0ab2ed25fe155af282b5fc02e7ed273b5de8f0",
+          "rows": 35,
+          "status": "PASS"
+        },
+        "diagnostic_square_root.csv": {
+          "before_sha256": "81d5e834186b1cbcc20c55cef9fff1a1c3722c287e5b33db18a8dd3d50df6a8c",
+          "after_sha256": "81d5e834186b1cbcc20c55cef9fff1a1c3722c287e5b33db18a8dd3d50df6a8c",
+          "rows": 35,
+          "status": "PASS"
+        },
+        "diagnostic_state_steps.csv": {
+          "before_sha256": "d20da2ff7305eadf089c47a9ebfb2c1a71591f04547a4c44de8a1bce94432f9b",
+          "after_sha256": "d20da2ff7305eadf089c47a9ebfb2c1a71591f04547a4c44de8a1bce94432f9b",
+          "rows": 340,
+          "status": "PASS"
+        },
+        "hypotheses.csv": {
+          "before_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+          "after_sha256": "4f5e90aaf84a283a8242e0893bfe99603b7161aa137dab194e5ed34501a6dd77",
+          "rows": 0,
+          "status": "PASS"
+        },
+        "integrity.csv": {
+          "before_sha256": "a10b2d6733d656c8e304c58927b3228927503f989c5e74056b9cfc13dc2271fa",
+          "after_sha256": "9274c2fbd090149ba2bd026272802034fcad07b43770eb191b64d62885dac347",
+          "rows": 35,
+          "status": "PASS"
+        },
+        "states.csv": {
+          "before_sha256": "8bcab8d38588e6d300fc621ab33b7a3f32370284a4fe5850ce3a96ce99e9ee15",
+          "after_sha256": "8bcab8d38588e6d300fc621ab33b7a3f32370284a4fe5850ce3a96ce99e9ee15",
+          "rows": 35,
+          "status": "PASS"
+        },
+        "transactions.csv": {
+          "before_sha256": "422e0b282e8718b4a6c02de3275b0e37d9b48a8724211ca85554d25a0b3165c0",
+          "after_sha256": "422e0b282e8718b4a6c02de3275b0e37d9b48a8724211ca85554d25a0b3165c0",
+          "rows": 35,
+          "status": "PASS"
+        }
+      },
+      "timing": {
+        "reference": {
+          "count": 35,
+          "core_compute_mean_ms": 3174.215525714286,
+          "core_compute_median_ms": 2422.57,
+          "core_compute_max_ms": 22996.5,
+          "execution": {
+            "binary_sha256": "aa08b44442c7827d30cec9d9bb4a6aed38328eb6be9f7e8cd8c9446f03e3004e",
+            "library_sha256": "24af183159f40ce2fa9bf441d924a92141cc481f01630ed00e5c3e7d0c301181",
+            "head": "56a5d8c4420c55c690b2bf0a552c219acc672433",
+            "command": [
+              "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order2.yaml",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_phase2_20261009/history_pairs/reference/joint2",
+              "35"
+            ],
+            "environment": {
+              "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+              "OMP_NUM_THREADS": "1",
+              "OPENBLAS_NUM_THREADS": "1",
+              "MKL_NUM_THREADS": "1",
+              "UWB_IMU_PL_SCENARIO": "joint_recovery",
+              "UWB_IMU_PL_EXHAUSTIVE_HISTORY_UPDATES": "1"
+            },
+            "exit_code": 0,
+            "wall_s": 112.604175726,
+            "audit": false
+          }
+        },
+        "optimized": {
+          "count": 35,
+          "core_compute_mean_ms": 2689.0251314285715,
+          "core_compute_median_ms": 2287.91,
+          "core_compute_max_ms": 23057.4,
+          "execution": {
+            "binary_sha256": "aa08b44442c7827d30cec9d9bb4a6aed38328eb6be9f7e8cd8c9446f03e3004e",
+            "library_sha256": "24af183159f40ce2fa9bf441d924a92141cc481f01630ed00e5c3e7d0c301181",
+            "head": "56a5d8c4420c55c690b2bf0a552c219acc672433",
+            "command": [
+              "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order2.yaml",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_phase2_20261009/history_pairs/optimized/joint2",
+              "35"
+            ],
+            "environment": {
+              "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+              "OMP_NUM_THREADS": "1",
+              "OPENBLAS_NUM_THREADS": "1",
+              "MKL_NUM_THREADS": "1",
+              "UWB_IMU_PL_SCENARIO": "joint_recovery"
+            },
+            "exit_code": 0,
+            "wall_s": 95.56077489300003,
+            "audit": false
+          }
+        }
+      },
+      "reduction_percent": 15.285363906615423,
+      "speedup": 1.1804335662820495
+    }
+  },
+  "interpretation": [
+    "Single paired runs; no statistically established general speedup.",
+    "joint2 decision/coverage/risk/transaction/publication-binding comparison PASS.",
+    "normal strict comparison FAIL at row 5 (sixth attempt): finish/publication deadline refusal reason differs; both sides independent publication-binding checks PASS. Do not relabel FAIL.",
+    "No observed protected recovery. No gate, threshold, scope or qualification relaxation.",
+    "History exact-bit/raw-row oracle 4/4 PASS after exception guard. Dirty refresh totals 1975 to 330; cold build 374 to 64.",
+    "Normal remains above 100ms; joint2 remains above 1s. Joint2 Gram optimization and nominal generalization investigation remain OPEN."
+  ]
+}

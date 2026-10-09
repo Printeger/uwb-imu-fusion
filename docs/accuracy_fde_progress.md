@@ -320,5 +320,32 @@ retains per-leaf reference in the same ELF/DSO. Mode response cache still opt-in
 insert/rotate/remove, one-bit fault edit, ordering/whitening/recovery rebuild,
 nonfinite refusal plus existing 30-step independent raw-row oracle. All served
 matrices and complete carrier rank/proof payload compare bit-identical; changed
-node counts separately reported in XML. Final exception-guard rebuild and actual
-normal/joint2 wall-clock comparison pending. No runtime gain claimed yet.
+node counts separately reported in XML. Exception-guard rebuild and rerun also
+PASS (4/4); reference 1975 refreshed nodes vs batch 330, cold 374 vs 64.
+
+Checkpoint measurements: one same-ELF/DSO pair, 35 attempts per side, mode cache
+OFF. Normal core mean 293.268→180.120ms (38.58% reduction); joint-order2
+3174.216→2689.025ms (15.29%, 1.180×). Single pairs do not establish a broad or
+statistical speedup. Joint2 strict decision/coverage/risk/transaction/publication
+comparison PASS. Normal strict comparison FAIL: sixth attempt has a different
+finish/publication deadline refusal reason. State, numeric history proof and
+candidate comparisons PASS; independent publication-binding checks PASS on both
+sides. Preserve the FAIL; no threshold change or comparator relaxation. This is
+a research checkpoint, not final integration or proof of real-time readiness.
+Compact commands, identities, hashes and mismatches are in
+docs/benchmark/accuracy_fde_phase2_history_20261009.json. No new large archives.
+
+Positive controls: three new deterministic numerical-layer tests PASS (3/3).
+KEEP/UWB examples have finite PL and valid proof while risk availability and
+formal gates remain closed; IMU test proves bridge model independence at a
+common CV reference and finite box bounds only, not full protected recovery.
+Existing production records distinguish finite PL blocked by risk/formal gates,
+rank-certificate uncertainty (not proven mathematical infinity), and IMU step
+gate failure with PL NOT_RUN. Compact review:
+docs/benchmark/accuracy_fde_phase2_positive_controls_20261009.json.
+
+Remaining work: investigate the normal deadline boundary difference, profile
+and remove certified joint2 duplicate computation, explain Walk/STAR-Loc robust
+generalization, then freeze and run core integration regressions. No protected
+recovery yet; external IMU/formal qualification OPEN. Normal <100ms and joint2
+~1s targets NOT_MET. This checkpoint does not complete the active goal.

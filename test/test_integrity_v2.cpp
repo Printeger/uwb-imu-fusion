@@ -6530,6 +6530,202 @@ TEST(P105FlatConcurrency, WatchdogAdmissionExceptionStillHasOneAttemptTimer) {
   EXPECT_EQ(core_total->status, "EXCEPTION");
 }
 
+// These witnesses certify individual numerical layers. They do not qualify a
+// production profile, close its complete risk ledger, or authorize publication.
+TEST(Phase2NumericLayerPositive, KeepHasFinitePlAndGenuineProofWithFormalClosed) {
+  using namespace uwb_imu_pl;
+  const auto owner = freezeIntegrityWindowCopy(p002HistoryWindow(0.0, 0.0));
+  const auto admission = admitFrozenIntegrityWindow(owner);
+  ASSERT_TRUE(admission) << admission.reason;
+  RankUpdateConfig rank{1e-12, 1e10, 10.0};  // Existing P103 fixture contract.
+  ExclusionAction keep;
+  keep.id = ExclusionActionId(10301);
+  keep.action_model_id = "KEEP_ALL";
+  auto candidate = DenseCandidateOracle(rank).evaluate(admission, keep);
+  ASSERT_TRUE(candidate.valid) << candidate.reason;
+  DetectorRiskContext detector_risk;
+  detector_risk.p_fa_per_test = 1e-6;
+  detector_risk.rank_tolerance = rank.rank_tolerance;
+  detector_risk.max_condition_number = rank.max_condition_number;
+  const auto detector = JointWindowDetector().evaluateCandidate(
+      admission, candidate, detector_risk);
+  ASSERT_TRUE(detector.passed) << detector.reason;
+  // Preserve the complete existing P103 single-mode fixture universe.
+  Eigen::MatrixXd mode = Eigen::MatrixXd::Zero(candidate.rows, 1);
+  mode(0, 0) = 1.0;
+  mode(mode.rows() - 1, 0) = 1.0;
+  FaultHypothesisV2 h;
+  h.id = HypothesisId(10302);
+  h.modes = {FaultModeId(10303)};
+  h.p_md_allocation = 1e-3;
+  h.hmi_allocation = 1e-6;
+  h.prior_probability_bound = 1e-3;
+  std::vector<FaultHypothesisV2> hypotheses{h};
+  ProtectionLevelSharedContext shared;
+  shared.mode_maps.emplace(10303, mode);
+  AttemptProofArena arena;
+  ProtectionLevelV2ProofV1 proof;
+  const auto pl = ProtectionLevelV2().computeShared(admission, &candidate,
+      detector, &hypotheses, shared, RiskBudgetV2{}, &proof, &arena);
+  ASSERT_TRUE(pl.model_valid) << pl.reason;
+  EXPECT_TRUE(pl.pl_xyz_m.allFinite());
+  EXPECT_FALSE(pl.risk_budget_valid);
+  EXPECT_EQ(pl.availability, Availability::Unavailable);
+  EXPECT_FALSE(pl.formal_eligible);
+  EXPECT_TRUE(validateProtectionLevelV2Proof(candidate, detector, hypotheses,
+      pl, arena, nullptr));
+  ASSERT_EQ(proof.hypothesis_proofs.size(), hypotheses.size());
+  RecordProperty("qualification", "NUMERIC_LAYER_POSITIVE");
+}
+
+TEST(Phase2NumericLayerPositive, UwbExclusionRemovesExactlyItsCoveredScope) {
+  using namespace uwb_imu_pl;
+  auto window = p002HistoryWindow(0.0, 0.0);
+  // Fault only the existing third current measurement; preserve every row,
+  // its original noise, and the current/history detector contracts.
+  window.blocks[2].sensor = SensorType::Uwb;
+  window.blocks[2].kind = FactorKind::UwbBatch;
+  window.blocks[2].residual_raw(0) = 20.0;
+  window.blocks[2].residual_whitened(0) = 20.0;
+  finalizeIntegrityWindow(&window, 1e-12, 1e10);
+  DetectorRiskContext detector_risk;
+  detector_risk.p_fa_per_test = 1e-6;
+  detector_risk.rank_tolerance = 1e-12;
+  detector_risk.max_condition_number = 1e10;
+  const auto all_in = JointWindowDetector().evaluate(window, detector_risk);
+  ASSERT_TRUE(all_in.numerically_valid) << all_in.reason;
+  ASSERT_FALSE(all_in.passed);
+  FaultHypothesisV2 fault;
+  fault.id = HypothesisId(10302);
+  fault.modes = {FaultModeId(10303)};
+  fault.affected_groups = {FactorGroupId(3)};
+  fault.p_md_allocation = 1e-3;
+  fault.hmi_allocation = 1e-6;
+  fault.prior_probability_bound = 1e-3;
+  const std::vector<FaultHypothesisV2> complete_scope{fault};
+  ExclusionAction action;
+  action.id = ExclusionActionId(10304);
+  action.groups_to_remove = {FactorGroupId(3)};
+  action.covered_modes = fault.modes;
+  action.exclusion_cardinality = 1;
+  // The production semantic projector, not a test filter, removes the sole
+  // represented fault. An uncovered copy must remain in the original scope.
+  auto remaining = projectRemainingHypothesesForActionV1(complete_scope, action);
+  ASSERT_TRUE(remaining.empty());
+  auto uncovered = action;
+  uncovered.covered_modes.clear();
+  EXPECT_EQ(projectRemainingHypothesesForActionV1(complete_scope, uncovered).size(),
+            complete_scope.size());
+  const auto admission = admitFrozenIntegrityWindow(freezeIntegrityWindowCopy(window));
+  ASSERT_TRUE(admission) << admission.reason;
+  RankUpdateConfig rank{1e-12, 1e10, 10.0};
+  auto candidate = DenseCandidateOracle(rank).evaluate(admission, action);
+  ASSERT_TRUE(candidate.valid) << candidate.reason;
+  const auto detector = JointWindowDetector().evaluateCandidate(
+      admission, candidate, detector_risk);
+  ASSERT_TRUE(detector.passed) << detector.reason;
+  AttemptProofArena arena;
+  ProtectionLevelV2ProofV1 proof;
+  const auto pl = ProtectionLevelV2().computeShared(admission, &candidate,
+      detector, &remaining, ProtectionLevelSharedContext{}, RiskBudgetV2{},
+      &proof, &arena);
+  ASSERT_TRUE(pl.model_valid) << pl.reason;
+  EXPECT_TRUE(pl.pl_xyz_m.allFinite());
+  EXPECT_FALSE(pl.risk_budget_valid);
+  EXPECT_EQ(pl.availability, Availability::Unavailable);
+  EXPECT_FALSE(pl.formal_eligible);
+  EXPECT_TRUE(validateProtectionLevelV2Proof(candidate, detector, remaining,
+      pl, arena, nullptr));
+  // Removed-source risk is still due at FDE selection/publication. This test
+  // does not fabricate a closing selection ledger or a protected packet.
+  RecordProperty("qualification", "NUMERIC_LAYER_POSITIVE");
+}
+
+TEST(Phase2NumericLayerPositive, ImuBridgeIsIndependentAndItsBoxMarginFinite) {
+  using namespace uwb_imu_pl;
+  const auto config = researchConfig();
+  std::vector<LinearizedFactorBlock> bridges;
+  std::vector<BridgeUncertainty> uncertainties;
+  std::vector<Eigen::MatrixXd> cv_jacobians;
+  std::vector<Eigen::VectorXd> cv_residuals;
+  for (const double fault : {0.0, 10.0}) {
+    IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+    NavigationState initial;
+    initial.timestamp = TimestampNs(0);
+    initial.position_world_m = {0, 0, 1};
+    estimator.initialize(initial, config.realtime.prior_sigmas);
+    for (int sample = 0; sample <= 2; ++sample) {
+      ImuMeasurement imu;
+      imu.id = MeasurementId(100 + sample);
+      imu.timestamp = TimestampNs(sample * 5000000LL);
+      imu.specific_force_mps2 = {fault, 0, config.imu.gravity_mps2};
+      estimator.ingestImu(imu);
+    }
+    auto transaction = estimator.prepareEpoch(batch(config, 10000000));
+    const auto window = estimator.buildIntegrityWindow(transaction, IntegrityWindowRequest{});
+    const auto imu = estimator.buildPendingFactorBlock(transaction, transaction.imu_group.id);
+    bridges.push_back(estimator.buildPendingFactorBlock(transaction,
+        transaction.generic_bridge_group.id));
+    // The pending block's residual is evaluated at the IMU-influenced frozen
+    // linearization point. Independence belongs to the bridge factor/model:
+    // compare it at the same previous/CV state, not at two different points.
+    const auto factor = boost::dynamic_pointer_cast<KinematicPoseVelocityBridgeFactor>(
+        transaction.generic_bridge_group.factors.at(0));
+    ASSERT_TRUE(factor);
+    const auto pose = [](const NavigationState& state) {
+      return gtsam::Pose3(gtsam::Rot3(state.q_world_body.toRotationMatrix()),
+                         state.position_world_m);
+    };
+    gtsam::Matrix h0, v0, h1, v1;
+    cv_residuals.push_back(factor->evaluateError(pose(transaction.previous_state),
+        transaction.previous_state.velocity_world_mps,
+        pose(transaction.cv_predicted_state),
+        transaction.cv_predicted_state.velocity_world_mps, h0, v0, h1, v1));
+    Eigen::MatrixXd cv_h(9, 18);
+    cv_h << h0, v0, h1, v1;
+    cv_jacobians.push_back(std::move(cv_h));
+    EXPECT_LT(cv_residuals.back().norm(), 1e-12);
+    EXPECT_TRUE(bridges.back().jacobian_raw.allFinite());
+    EXPECT_TRUE(bridges.back().residual_raw.allFinite());
+    auto models = HypothesisGenerator().generate(window, transaction,
+        ImuFaultSubspaceBuilder().build(transaction, imu), bridges.back());
+    // Preserve every production-generated mode/hypothesis. Materialization
+    // supplies interval recovery operations but is not a successful selection.
+    const auto scope_count = models.hypotheses.size();
+    HypothesisGenerator::ensureActionEntities(transaction, window, &models);
+    EXPECT_EQ(models.hypotheses.size(), scope_count);
+    EXPECT_EQ(models.single_accel_hypotheses, 3u);
+    EXPECT_EQ(models.single_gyro_hypotheses, 3u);
+    const auto bridge_action = std::find_if(models.single_mode_actions.begin(),
+        models.single_mode_actions.end(), [](const auto& a) {
+          return a.bridge_mode == BridgeMode::GenericKinematic;
+        });
+    ASSERT_NE(bridge_action, models.single_mode_actions.end());
+    EXPECT_NE(std::find(bridge_action->groups_to_remove.begin(),
+        bridge_action->groups_to_remove.end(), transaction.imu_group.id),
+        bridge_action->groups_to_remove.end());
+    uncertainties.push_back(BridgeFactory().uncertainty(transaction, GenericBridgeSpec{}));
+    EXPECT_EQ(uncertainties.back().integrity_model,
+              BridgeUncertainty::IntegrityModel::DeterministicBox);
+    EXPECT_TRUE(uncertainties.back().optimization_covariance.allFinite());
+    EXPECT_TRUE(uncertainties.back().deterministic_bound.allFinite());
+    Eigen::Matrix<double, 3, Eigen::Dynamic> protected_map = Eigen::MatrixXd::Zero(3, 9);
+    protected_map.middleCols(3, 3).setIdentity();
+    const auto margin = BridgeFactory().propagateBoxMargin(protected_map,
+        Eigen::MatrixXd::Identity(9, 9), uncertainties.back().deterministic_bound);
+    EXPECT_TRUE(margin.allFinite());
+    EXPECT_GT(margin.minCoeff(), 0.0);
+    estimator.discardEpoch(std::move(transaction),
+        {FdeStatus::ModelInvalid, "NUMERIC_LAYER_POSITIVE bridge witness", false});
+  }
+  EXPECT_TRUE((cv_jacobians[0].array() == cv_jacobians[1].array()).all());
+  EXPECT_TRUE((cv_residuals[0].array() == cv_residuals[1].array()).all());
+  EXPECT_TRUE((bridges[0].covariance.array() == bridges[1].covariance.array()).all());
+  EXPECT_TRUE((uncertainties[0].deterministic_bound.array() ==
+               uncertainties[1].deterministic_bound.array()).all());
+  RecordProperty("qualification", "NUMERIC_LAYER_POSITIVE_BRIDGE_ONLY_NOT_FULL_PL");
+}
+
 TEST(P106SimulationAcceptance, PublishCallNotAnalysisControlsDeadline) {
   using namespace uwb_imu_pl;
   IntegrityOutput draft;

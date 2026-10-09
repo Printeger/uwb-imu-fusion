@@ -159,3 +159,13 @@ compile_commands.json
 *.db3-shm
 *.db3-wal
 *.mcap
+
+# Local preservation archives and disposable caches. Commit source/history and
+# compact summaries instead of duplicating reproducible trees or Git objects.
+/*.bundle
+/*.tar
+/*.tar.gz
+/*.tgz
+/*.zip
+/.cache/
+/benchmark/.cache/

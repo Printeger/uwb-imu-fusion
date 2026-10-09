@@ -1,0 +1,367 @@
+{
+  "schema": "accuracy-fde-phase2-positive-control-review-v1",
+  "base_head": "27a339c",
+  "scope": "Read-only four fixed production records plus numerical-layer tests; no replay, risk/scope/threshold/source-contract changes.",
+  "production_snapshot_qualification": "NOT_MET",
+  "formal_eligible": false,
+  "snapshots": [
+    {
+      "name": "normal",
+      "source_directory": "results/accuracy_fde_20261009/fde_integrated/reference/normal",
+      "source_sha256": {
+        "integrity.csv": "9fa0b6a6c69f2955f458a6eb672757984b5ea76152f1d72d8bbf4f55a1e5e4a7",
+        "diagnostic_attempts.csv": "30fd5c7431636a6f70a3deccec25dedbaa12644656098ed56b77b307621eaa99",
+        "candidates.csv": "0dd4f0cd664f919e760ac937395054504f90df7f9dbfd97fb493e8c86f374609"
+      },
+      "input_attempt_id": 10,
+      "input_timestamp_ns": 500000000,
+      "transaction_id": 10,
+      "window_id": 10,
+      "profile": "joint_order1",
+      "scope_digest": "88d5401651284008",
+      "history_provenance_valid": true,
+      "marginalization_count": 0,
+      "hypothesis_count": 300,
+      "coverage_status": "COMPLETE",
+      "detector": {
+        "statistic": 4.2048609317370607e-07,
+        "threshold": 155.08052230817057,
+        "passed": true
+      },
+      "candidate_funnel": {
+        "generated_actions": 1,
+        "kernel_evaluated_actions": 1,
+        "post_passed_actions": 1,
+        "pl_evaluated_actions": 1,
+        "selected_actions": 0
+      },
+      "candidates": [
+        {
+          "action_id": 1,
+          "candidate_timestamp_ns": 500000000,
+          "valid": true,
+          "post_detector_passed": true,
+          "covers_plausible_set": true,
+          "hpl_m": 6.3289,
+          "vpl_m": 1.31634,
+          "classification": "FINITE_CANDIDATE",
+          "reason": "terminal=PL_COMPLETE"
+        }
+      ],
+      "risk": {
+        "closes": false,
+        "all_validated": false,
+        "terms": "nominal=0.000030:VALIDATED;p_nm=0.000000:VALIDATED;hypotheses=0.000010:VALIDATED;hypotheses_miss_channel=0.000016:VALIDATED;bridge=UNKNOWN:ASSUMED_UNVALIDATED;history=UNKNOWN:ASSUMED_UNVALIDATED;model=UNKNOWN:ASSUMED_UNVALIDATED;omitted=UNKNOWN:NOT_IMPLEMENTED;envelope=UNKNOWN:NOT_IMPLEMENTED;selection=0.000000:VALIDATED"
+      },
+      "terminal": {
+        "pl_status": "UNBOUNDED",
+        "fde_status": "RISK_BUDGET_INVALID",
+        "formal_eligible": false,
+        "risk_budget_valid": false,
+        "publication_protected": false,
+        "deadline_missed": true,
+        "external_qualification": "IMU_MODEL_UNQUALIFIED"
+      },
+      "mathematical_unboundedness_proven": false,
+      "interpretation": "Finite KEEP candidate exists; terminal infinity reflects risk/qualification/publication refusal, not a mathematical-unbounded witness."
+    },
+    {
+      "name": "normal_history",
+      "source_directory": "results/accuracy_fde_20261009/fde_integrated/reference/normal",
+      "source_sha256": {
+        "integrity.csv": "9fa0b6a6c69f2955f458a6eb672757984b5ea76152f1d72d8bbf4f55a1e5e4a7",
+        "diagnostic_attempts.csv": "30fd5c7431636a6f70a3deccec25dedbaa12644656098ed56b77b307621eaa99",
+        "candidates.csv": "0dd4f0cd664f919e760ac937395054504f90df7f9dbfd97fb493e8c86f374609"
+      },
+      "input_attempt_id": 32,
+      "input_timestamp_ns": 1600000000,
+      "transaction_id": 32,
+      "window_id": 32,
+      "profile": "joint_order1",
+      "scope_digest": "88d5401651284008",
+      "history_provenance_valid": true,
+      "marginalization_count": 3,
+      "hypothesis_count": 624,
+      "coverage_status": "COMPLETE",
+      "detector": {
+        "statistic": 0.0016084673164500247,
+        "threshold": 271.1895361870205,
+        "passed": true
+      },
+      "candidate_funnel": {
+        "generated_actions": 1,
+        "kernel_evaluated_actions": 1,
+        "post_passed_actions": 1,
+        "pl_evaluated_actions": 1,
+        "selected_actions": 0
+      },
+      "candidates": [
+        {
+          "action_id": 1,
+          "candidate_timestamp_ns": 1600000000,
+          "valid": false,
+          "post_detector_passed": true,
+          "covers_plausible_set": true,
+          "hpl_m": null,
+          "vpl_m": null,
+          "classification": "NUMERICAL_CERTIFICATE_UNRESOLVED",
+          "reason": "remaining post-FDE hypothesis 30 has no valid section 5.9 bound: dual-channel PL bound: channel history_eliminated_detector_only has no symmetric PSD certificate: rank transition interval is numerically indeterminate"
+        }
+      ],
+      "risk": {
+        "closes": false,
+        "all_validated": false,
+        "terms": "complete risk ledger unavailable before selection closure"
+      },
+      "terminal": {
+        "pl_status": "UNBOUNDED",
+        "fde_status": "NO_VALID_CANDIDATE",
+        "formal_eligible": false,
+        "risk_budget_valid": false,
+        "publication_protected": false,
+        "deadline_missed": true,
+        "external_qualification": "IMU_MODEL_UNQUALIFIED"
+      },
+      "mathematical_unboundedness_proven": false,
+      "interpretation": "Post detector passes, but retained hypothesis history-channel PSD/rank certificate is indeterminate; mathematical unboundedness is not proven."
+    },
+    {
+      "name": "uwb_single_fault",
+      "source_directory": "results/accuracy_fde_20261009/fde_same_model/reference/S2",
+      "source_sha256": {
+        "integrity.csv": "c779454375fce8c02e6c393f17b1ef1d92c488bbd50bf615b3014d71519c6128",
+        "diagnostic_attempts.csv": "1b8062e2b935fa3a82fe85dc2a252a36d50485aefc8f5d2225a4509a8b7c4df0",
+        "candidates.csv": "e3a7b5ee5fe5298611a20050c00dedf217437cf9bdf27b74647c7ffd27bdf1ce"
+      },
+      "input_attempt_id": 12,
+      "input_timestamp_ns": 600000000,
+      "transaction_id": 12,
+      "window_id": 12,
+      "profile": "uwb_order1",
+      "scope_digest": "15f126bec131810f",
+      "history_provenance_valid": true,
+      "marginalization_count": 0,
+      "hypothesis_count": 288,
+      "coverage_status": "COMPLETE",
+      "detector": {
+        "statistic": 448.86293706159074,
+        "threshold": 176.77757234093806,
+        "passed": false
+      },
+      "candidate_funnel": {
+        "generated_actions": 8,
+        "kernel_evaluated_actions": 8,
+        "post_passed_actions": 8,
+        "pl_evaluated_actions": 7,
+        "selected_actions": 0
+      },
+      "candidates": [
+        {
+          "action_id": 1,
+          "candidate_timestamp_ns": 550000000,
+          "valid": false,
+          "post_detector_passed": false,
+          "covers_plausible_set": false,
+          "hpl_m": null,
+          "vpl_m": null,
+          "classification": "LINEARIZATION_GATE_FAILED",
+          "reason": "candidate linearization step gate failed; step attribution: rotation=0.264568 position=0.240989 velocity=1.23895 accel_bias=0.0269994 gyro_bias=0.00111785; dominant=velocity(epoch 12)"
+        },
+        {
+          "action_id": 2,
+          "candidate_timestamp_ns": 550000000,
+          "valid": false,
+          "post_detector_passed": true,
+          "covers_plausible_set": false,
+          "hpl_m": null,
+          "vpl_m": null,
+          "classification": "NUMERICAL_CERTIFICATE_UNRESOLVED",
+          "reason": "remaining post-FDE hypothesis 3 has no valid section 5.9 bound: dual-channel PL bound: channel history_eliminated_detector_only has no symmetric PSD certificate: rank transition interval is numerically indeterminate"
+        },
+        {
+          "action_id": 3,
+          "candidate_timestamp_ns": 550000000,
+          "valid": false,
+          "post_detector_passed": true,
+          "covers_plausible_set": false,
+          "hpl_m": null,
+          "vpl_m": null,
+          "classification": "NUMERICAL_CERTIFICATE_UNRESOLVED",
+          "reason": "remaining post-FDE hypothesis 3 has no valid section 5.9 bound: dual-channel PL bound: channel history_eliminated_detector_only has no symmetric PSD certificate: rank transition interval is numerically indeterminate"
+        },
+        {
+          "action_id": 4,
+          "candidate_timestamp_ns": 550000000,
+          "valid": false,
+          "post_detector_passed": true,
+          "covers_plausible_set": false,
+          "hpl_m": null,
+          "vpl_m": null,
+          "classification": "NUMERICAL_CERTIFICATE_UNRESOLVED",
+          "reason": "remaining post-FDE hypothesis 3 has no valid section 5.9 bound: dual-channel PL bound: channel history_eliminated_detector_only has no symmetric PSD certificate: rank transition interval is numerically indeterminate"
+        },
+        {
+          "action_id": 5,
+          "candidate_timestamp_ns": 550000000,
+          "valid": false,
+          "post_detector_passed": true,
+          "covers_plausible_set": false,
+          "hpl_m": null,
+          "vpl_m": null,
+          "classification": "NUMERICAL_CERTIFICATE_UNRESOLVED",
+          "reason": "remaining post-FDE hypothesis 3 has no valid section 5.9 bound: dual-channel PL bound: channel history_eliminated_detector_only has no symmetric PSD certificate: rank transition interval is numerically indeterminate"
+        },
+        {
+          "action_id": 6,
+          "candidate_timestamp_ns": 550000000,
+          "valid": false,
+          "post_detector_passed": true,
+          "covers_plausible_set": false,
+          "hpl_m": null,
+          "vpl_m": null,
+          "classification": "NUMERICAL_CERTIFICATE_UNRESOLVED",
+          "reason": "remaining post-FDE hypothesis 3 has no valid section 5.9 bound: dual-channel PL bound: channel history_eliminated_detector_only has no symmetric PSD certificate: rank transition interval is numerically indeterminate"
+        },
+        {
+          "action_id": 7,
+          "candidate_timestamp_ns": 550000000,
+          "valid": false,
+          "post_detector_passed": true,
+          "covers_plausible_set": false,
+          "hpl_m": null,
+          "vpl_m": null,
+          "classification": "NUMERICAL_CERTIFICATE_UNRESOLVED",
+          "reason": "remaining post-FDE hypothesis 3 has no valid section 5.9 bound: dual-channel PL bound: channel history_eliminated_detector_only has no symmetric PSD certificate: rank transition interval is numerically indeterminate"
+        },
+        {
+          "action_id": 8,
+          "candidate_timestamp_ns": 550000000,
+          "valid": false,
+          "post_detector_passed": true,
+          "covers_plausible_set": true,
+          "hpl_m": null,
+          "vpl_m": null,
+          "classification": "NUMERICAL_CERTIFICATE_UNRESOLVED",
+          "reason": "remaining post-FDE hypothesis 3 has no valid section 5.9 bound: dual-channel PL bound: channel history_eliminated_detector_only has no symmetric PSD certificate: rank transition interval is numerically indeterminate"
+        }
+      ],
+      "risk": {
+        "closes": false,
+        "all_validated": false,
+        "terms": "complete risk ledger unavailable before selection closure"
+      },
+      "terminal": {
+        "pl_status": "UNBOUNDED",
+        "fde_status": "AMBIGUOUS_UNAVAILABLE",
+        "formal_eligible": false,
+        "risk_budget_valid": false,
+        "publication_protected": false,
+        "deadline_missed": true,
+        "external_qualification": "IMU_MODEL_UNQUALIFIED"
+      },
+      "mathematical_unboundedness_proven": false,
+      "interpretation": "Alarm is real; recovery candidates can pass post detector but retained hypothesis numerical certificate is unresolved; no selected recovery or protected publication. Candidate timestamp refers to prior committed state; bind by window_id."
+    },
+    {
+      "name": "imu_interval_fault",
+      "source_directory": "results/accuracy_fde_20261009/fde_same_model/reference/S3",
+      "source_sha256": {
+        "integrity.csv": "3ecb3f0e475faf090e7bde074f1b107364b7ddb2fb211c71cba36b47c957d5d2",
+        "diagnostic_attempts.csv": "567c3c67afa26b0c19dbb57fb6fecf0fa1e27918b4525738e14a7e497bf10dd8",
+        "candidates.csv": "2adcf0880dd5c9612a1a274cbf857fb67de9033af3309428fed5772cab1d19ad"
+      },
+      "input_attempt_id": 12,
+      "input_timestamp_ns": 600000000,
+      "transaction_id": 12,
+      "window_id": 12,
+      "profile": "imu_order1",
+      "scope_digest": "f7d31e6776e6dff0",
+      "history_provenance_valid": true,
+      "marginalization_count": 0,
+      "hypothesis_count": 66,
+      "coverage_status": "COMPLETE",
+      "detector": {
+        "statistic": 0.30030713794225156,
+        "threshold": 171.40028590957914,
+        "passed": true
+      },
+      "candidate_funnel": {
+        "generated_actions": 1,
+        "kernel_evaluated_actions": 1,
+        "post_passed_actions": 1,
+        "pl_evaluated_actions": 0,
+        "selected_actions": 0
+      },
+      "candidates": [
+        {
+          "action_id": 1,
+          "candidate_timestamp_ns": 600000000,
+          "valid": false,
+          "post_detector_passed": false,
+          "covers_plausible_set": true,
+          "hpl_m": null,
+          "vpl_m": null,
+          "classification": "LINEARIZATION_GATE_FAILED",
+          "reason": "candidate linearization step gate failed; step attribution: rotation=0.0113613 position=0.0147319 velocity=0.906452 accel_bias=0.000941 gyro_bias=3.99182e-05; dominant=velocity(epoch 12)"
+        }
+      ],
+      "risk": {
+        "closes": false,
+        "all_validated": false,
+        "terms": "complete risk ledger unavailable before selection closure"
+      },
+      "terminal": {
+        "pl_status": "UNBOUNDED",
+        "fde_status": "NO_VALID_CANDIDATE",
+        "formal_eligible": false,
+        "risk_budget_valid": false,
+        "publication_protected": false,
+        "deadline_missed": true,
+        "external_qualification": "IMU_MODEL_UNQUALIFIED"
+      },
+      "mathematical_unboundedness_proven": false,
+      "interpretation": "Input fault does not trigger conditional alarm; original candidate linearization gate fails and PL is not evaluated. No IMU recovery witness."
+    }
+  ],
+  "tests": {
+    "status": "PASS",
+    "filter": "Phase2NumericLayerPositive.*",
+    "source": "test/test_integrity_v2.cpp",
+    "witnesses": [
+      "KeepHasFinitePlAndGenuineProofWithFormalClosed: complete existing P103 single-mode fixture, original allocations and numerics; finite PL proof only.",
+      "UwbExclusionRemovesExactlyItsCoveredScope: existing current/history fixture; sole represented faulty mode projected only by production covered-mode projector; removed source risk still requires final selection ledger.",
+      "ImuBridgeIsIndependentAndItsBoxMarginFinite: real research config, unchanged generated hypothesis census, original bridge specification; production bridge factor H/z at a common previous/CV reference and covariance are independent of injected IMU accel, deterministic margin finite; pending raw H/z at distinct IMU-influenced linearization points need not match; NOT_FULL_PL."
+    ],
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "elapsed_seconds": "0.02",
+    "binary_sha256": "aabb8cf32b34c4b417b8247f33bdbc120ac79a5332c10751d60c33a84017ff08",
+    "library_sha256": "24af183159f40ce2fa9bf441d924a92141cc481f01630ed00e5c3e7d0c301181",
+    "source_sha256": "e93ec807b7def9fd34f4242972fdd0f39d7f24b0e9888f0b5a3c1c0ca9f89e1e",
+    "command": "LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2 --gtest_filter=Phase2NumericLayerPositive.* --gtest_output=xml:results/accuracy_fde_phase2_20261009/positive_control_test.xml",
+    "test_xml_sha256": "16abeebc5d99a6f6ff843edd473fbb8660bda2f3bcf1d4e9475f77a7f45bbdf1"
+  },
+  "treap_review": {
+    "required_conditions": [
+      "Topology and mutation order depend only on group/priority; never read stale aggregate for mutation or decisions.",
+      "Every changed child/leaf and all current ancestors are dirty; rotation marks both old and new parents. Clean-parent implies all descendants clean.",
+      "Final refresh recursively left, right, node before summary or certification; keep exact merge(left,leaf) then merge(result,right) with original requested UID order.",
+      "Reference retains original per-leaf refresh; compare final matrix bits, sigma/V, rank, proof identities, detector/PL/selection/publication; only work counts may differ.",
+      "Full raw oracle fallback, invalid-tree reset, all rank/threshold/risk/publication gates stay unchanged."
+    ],
+    "exception_review": "The preexisting implementation lacked a mutation reset guard. Commit 56a5d8c wraps mutations plus dirty refresh in catch: invalidate and rethrow. This protects reuse after failure without swallowing exceptions. The normal-path exact-bit oracle PASS does not itself exercise allocation failures."
+  },
+  "limitations": [
+    "The four production records are existing measured evidence, not a new timing experiment.",
+    "Terminal UNBOUNDED with null candidate values is not alone proof of mathematical unboundedness.",
+    "Finite numerical-layer PL and bridge witnesses do not close the complete production risk ledger or establish external formal qualification.",
+    "Candidate HPL/VPL values are taken at the original candidates.csv logging precision; this review does not reconstruct full precision numerical matrices."
+  ],
+  "checkpoint_review": {
+    "status": "NO_BLOCKING_ISSUE_FOUND",
+    "model": "GPT-6.1 Sol",
+    "reasoning_effort": "High",
+    "scope": "read-only dirty closure, positive witness qualification and gitignore review; not final goal integration"
+  }
+}
