@@ -465,3 +465,27 @@ stages under candidate_evaluation. Public numerical behavior and reference
 switches unchanged. Build PASS; focused integrity/ownership/concurrency/positive
 controls and root math checks PASS. Profiling run pending; no performance gain
 claimed for instrumentation. No ELF/DSO copies or large backup artifacts.
+
+One 35-attempt joint2 audit completed, exit 0; strict performance comparator and
+independent packet bindings PASS against previous optimized replay. Root numerical
+outputs unchanged. Audit core mean 2577.309ms is not a speedup comparison.
+Candidate batch wall means: kernel 244.855ms, post 3.820ms, shared PL 971.078ms,
+serial consumer 18.838ms; parent candidate 1308.319ms. Gram inclusive work
+63.046s includes SVD 15.476s; classifier 32.256s, frozen validator 37.042s.
+Do not add overlapping phases or attribute the entire non-SVD remainder to hash.
+Proceed to classifier-only unused hash A/B, keeping both SVDs and every consumed
+public proof hash; high-effort read-only review approved this narrow boundary.
+Compact profile record: docs/benchmark/accuracy_fde_phase2_profile_20261009.json.
+
+Classifier-only unused identity hashing removed via private numerical entry:
+compile-time false hash specialization retains the identical arithmetic and
+all failure paths; both returned proof identities stay zero. Only classifier
+calls it and discards the local certificate. Public certifiers fixed true,
+full validators and proof storage unchanged. Independent reference switch:
+UWB_IMU_PL_EXHAUSTIVE_CLASSIFICATION_HASHES=1. High-effort static review PASS.
+Build and 39 focused math/integrity/safety tests PASS. All fields/reasons/bits
+compared across full/rank-zero/wide/transition/nonfinite/invalid/extreme scales
+and null output pointers; captured pre-change public hash fixtures unchanged.
+Standalone probe initially missed target Eigen -march=native/NDEBUG ABI and
+crashed; rebuilt with exact target flags successfully, no production failure.
+Hash-only same-ELF normal/joint2 measurements pending; no gain yet claimed.

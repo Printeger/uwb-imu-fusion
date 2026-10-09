@@ -2,6 +2,7 @@
 
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
 #include "../integrity/numerical_phase_profile.hpp"
+#include "classification_numerics.hpp"
 
 #include <Eigen/Householder>
 #include <Eigen/Eigenvalues>
@@ -321,7 +322,9 @@ GramResponseCertificate certifyGramAndProtectedResponse(
   return out;
 }
 
-SymmetricPsdCertificate certifyFactorGram(
+namespace {
+template <bool HashProof>
+SymmetricPsdCertificate certifyFactorGramImpl(
     const Eigen::MatrixXd& raw_factor, const Eigen::MatrixXd& actual_gram,
     double rank_tolerance, std::uint64_t parent_proof_identity,
     double raw_factor_scale) {
@@ -329,13 +332,15 @@ SymmetricPsdCertificate certifyFactorGram(
   SymmetricPsdCertificate out;
   std::uint64_t proof = 1469598103934665603ULL;
   const std::uint64_t domain = 0x464143544f524752ULL;  // "FACTORGR"
-  hashScalar(&proof, domain);
-  hashScalar(&proof, parent_proof_identity);
-  hashScalar(&proof, rank_tolerance);
-  hashScalar(&proof, raw_factor_scale);
-  hashMatrix(&proof, raw_factor);
-  hashMatrix(&proof, actual_gram);
-  out.proof_identity = proof;
+  if constexpr (HashProof) {
+    hashScalar(&proof, domain);
+    hashScalar(&proof, parent_proof_identity);
+    hashScalar(&proof, rank_tolerance);
+    hashScalar(&proof, raw_factor_scale);
+    hashMatrix(&proof, raw_factor);
+    hashMatrix(&proof, actual_gram);
+    out.proof_identity = proof;
+  }
   if (raw_factor.rows() <= 0 || raw_factor.cols() <= 0 ||
       actual_gram.rows() != raw_factor.cols() ||
       actual_gram.cols() != raw_factor.cols() ||
@@ -450,27 +455,42 @@ SymmetricPsdCertificate certifyFactorGram(
   out.condition = out.rank > 0 && out.sigma_min > 0.0
       ? out.sigma_max / out.sigma_min
       : std::numeric_limits<double>::infinity();
-  hashMatrix(&proof, reconstructed);
-  hashMatrix(&proof, out.eigenvalues);
-  hashMatrix(&proof, out.eigenvectors);
-  hashMatrix(&proof, out.eigenvalue_errors);
-  hashScalar(&proof, out.rank_eigenvalue_gate);
-  hashScalar(&proof, out.rank);
-  hashScalar(&proof, out.rank_certified);
-  hashScalar(&proof, out.psd);
-  out.proof_identity = proof;
+  if constexpr (HashProof) {
+    hashMatrix(&proof, reconstructed);
+    hashMatrix(&proof, out.eigenvalues);
+    hashMatrix(&proof, out.eigenvectors);
+    hashMatrix(&proof, out.eigenvalue_errors);
+    hashScalar(&proof, out.rank_eigenvalue_gate);
+    hashScalar(&proof, out.rank);
+    hashScalar(&proof, out.rank_certified);
+    hashScalar(&proof, out.psd);
+    out.proof_identity = proof;
+  }
   out.valid = true;
   return out;
 }
 
+}  // namespace
+
+SymmetricPsdCertificate certifyFactorGram(
+    const Eigen::MatrixXd& raw_factor, const Eigen::MatrixXd& actual_gram,
+    double rank_tolerance, std::uint64_t parent_proof_identity,
+    double raw_factor_scale) {
+  return certifyFactorGramImpl<true>(raw_factor, actual_gram, rank_tolerance,
+                                    parent_proof_identity, raw_factor_scale);
+}
+
 namespace {
+template <bool HashProof>
 GramResponseCertificate finishGramResponseCertificate(
     SymmetricPsdCertificate gram, const Eigen::MatrixXd& protected_response) {
   GramResponseCertificate out;
   out.gram = std::move(gram);
   std::uint64_t proof = out.gram.proof_identity;
-  hashMatrix(&proof, protected_response);
-  out.proof_identity = proof;
+  if constexpr (HashProof) {
+    hashMatrix(&proof, protected_response);
+    out.proof_identity = proof;
+  }
   if (!out.gram.valid) {
     out.reason = out.gram.reason;
     return out;
@@ -517,11 +537,13 @@ GramResponseCertificate finishGramResponseCertificate(
   if (out.nullspace_class == GramNullspaceClass::Dangerous) {
     out.reason = "Gram nullspace has an unbounded protected response";
   }
-  hashScalar(&proof, static_cast<int>(out.nullspace_class));
-  hashMatrix(&proof, out.axis_residual);
-  hashMatrix(&proof, out.protected_slopes);
-  hashScalar(&proof, out.response_tolerance);
-  out.proof_identity = proof;
+  if constexpr (HashProof) {
+    hashScalar(&proof, static_cast<int>(out.nullspace_class));
+    hashMatrix(&proof, out.axis_residual);
+    hashMatrix(&proof, out.protected_slopes);
+    hashScalar(&proof, out.response_tolerance);
+    out.proof_identity = proof;
+  }
   out.valid = out.nullspace_class != GramNullspaceClass::Indeterminate;
   return out;
 }
@@ -531,11 +553,22 @@ GramResponseCertificate certifyFactorGramAndProtectedResponse(
     const Eigen::MatrixXd& raw_factor, const Eigen::MatrixXd& actual_gram,
     const Eigen::MatrixXd& protected_response, double rank_tolerance,
     std::uint64_t parent_proof_identity, double raw_factor_scale) {
-  return finishGramResponseCertificate(
+  return finishGramResponseCertificate<true>(
       certifyFactorGram(raw_factor, actual_gram, rank_tolerance,
                         parent_proof_identity, raw_factor_scale),
       protected_response);
 }
+
+namespace detail {
+GramResponseCertificate classificationNumericsWithoutProofIdentity(
+    const Eigen::MatrixXd& raw_factor, const Eigen::MatrixXd& actual_gram,
+    const Eigen::MatrixXd& protected_response, double rank_tolerance,
+    double raw_factor_scale) {
+  return finishGramResponseCertificate<false>(
+      certifyFactorGramImpl<false>(raw_factor, actual_gram, rank_tolerance,
+                                  0, raw_factor_scale), protected_response);
+}
+}  // namespace detail
 
 struct FrozenSquareRootContext::ImplicitQ {
   std::shared_ptr<const Eigen::HouseholderQR<Eigen::MatrixXd>> natural;

@@ -3,6 +3,7 @@
 #include "uwb_imu_pl/estimation/candidate_worker_pool.hpp"
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
 #include "numerical_phase_profile.hpp"
+#include "../estimation/classification_numerics.hpp"
 
 #include <Eigen/Cholesky>
 #include <Eigen/Eigenvalues>
@@ -2035,9 +2036,11 @@ int classifyDetectionResponse(const Eigen::MatrixXd& z_h,
   }
   const Eigen::MatrixXd gram = z_h.transpose() * z_h;
   const GramResponseCertificate certificate =
-      certifyFactorGramAndProtectedResponse(z_h, gram, g_h,
-                                            rank_tolerance, 0,
-                                            factor_scale);
+      std::getenv("UWB_IMU_PL_EXHAUSTIVE_CLASSIFICATION_HASHES")
+          ? certifyFactorGramAndProtectedResponse(z_h, gram, g_h,
+                                                rank_tolerance, 0, factor_scale)
+          : detail::classificationNumericsWithoutProofIdentity(
+                z_h, gram, g_h, rank_tolerance, factor_scale);
   if (rank_out) *rank_out = certificate.gram.rank;
   if (smallest_singular_value) {
     *smallest_singular_value = certificate.gram.sigma_min;

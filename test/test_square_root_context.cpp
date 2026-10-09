@@ -17,6 +17,9 @@
 #include <Eigen/SVD>
 
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include "../src/uwb_imu_pl/estimation/classification_numerics.hpp"
 #include <random>
 #include <sstream>
 
@@ -706,3 +709,144 @@ TEST(SquareRootContext, P003EveryRhsUsesCertifiedRootAndSvdReference) {
 }
 
 }  // namespace
+
+namespace {
+void expectSameBits(double a, double b) {
+  EXPECT_EQ(std::memcmp(&a, &b, sizeof(double)), 0);
+}
+template <class A, class B>
+void expectSameMatrixBits(const A& a, const B& b) {
+  ASSERT_EQ(a.rows(), b.rows()); ASSERT_EQ(a.cols(), b.cols());
+  for (Eigen::Index row = 0; row < a.rows(); ++row)
+    for (Eigen::Index col = 0; col < a.cols(); ++col)
+      expectSameBits(a(row, col), b(row, col));
+}
+void expectSameNumericalCertificate(const uwb_imu_pl::GramResponseCertificate& a,
+                                    const uwb_imu_pl::GramResponseCertificate& b) {
+  const auto& x = a.gram; const auto& y = b.gram;
+  expectSameMatrixBits(x.symmetric_matrix, y.symmetric_matrix);
+  expectSameMatrixBits(x.eigenvalues, y.eigenvalues);
+  expectSameMatrixBits(x.eigenvectors, y.eigenvectors);
+  expectSameMatrixBits(x.eigenvalue_errors, y.eigenvalue_errors);
+#define CHECK_DOUBLE(field) expectSameBits(x.field, y.field)
+  CHECK_DOUBLE(matrix_scale); CHECK_DOUBLE(symmetry_error);
+  CHECK_DOUBLE(symmetry_tolerance); CHECK_DOUBLE(eigenvalue_error);
+  CHECK_DOUBLE(rank_eigenvalue_gate); CHECK_DOUBLE(sigma_min);
+  CHECK_DOUBLE(sigma_max); CHECK_DOUBLE(condition);
+#undef CHECK_DOUBLE
+  EXPECT_EQ(x.rank, y.rank); EXPECT_EQ(x.symmetric, y.symmetric);
+  EXPECT_EQ(x.psd, y.psd); EXPECT_EQ(x.rank_certified, y.rank_certified);
+  EXPECT_EQ(x.valid, y.valid); EXPECT_EQ(x.reason, y.reason);
+  EXPECT_EQ(a.nullspace_class, b.nullspace_class);
+  expectSameMatrixBits(a.axis_residual, b.axis_residual);
+  expectSameMatrixBits(a.protected_slopes, b.protected_slopes);
+  expectSameBits(a.response_tolerance, b.response_tolerance);
+  EXPECT_EQ(a.valid, b.valid); EXPECT_EQ(a.reason, b.reason);
+  EXPECT_EQ(b.proof_identity, 0u); EXPECT_EQ(b.gram.proof_identity, 0u);
+}
+struct ClassificationHashEnvironment {
+  const char* key = "UWB_IMU_PL_EXHAUSTIVE_CLASSIFICATION_HASHES";
+  bool existed = std::getenv(key) != nullptr;
+  std::string original = existed ? std::getenv(key) : "";
+  ~ClassificationHashEnvironment() {
+    if (existed) setenv(key, original.c_str(), 1); else unsetenv(key);
+  }
+};
+}
+
+TEST(Phase2ClassificationHashes, CompleteNumericalCertificateIncludingFailureReasons) {
+  using namespace uwb_imu_pl;
+  const auto compare = [](const Eigen::MatrixXd& z, const Eigen::MatrixXd& gram,
+                          const Eigen::MatrixXd& g, double tol, double scale) {
+    expectSameNumericalCertificate(
+        certifyFactorGramAndProtectedResponse(z, gram, g, tol, 0, scale),
+        detail::classificationNumericsWithoutProofIdentity(z, gram, g, tol, scale));
+  };
+  for (int cols = 1; cols <= 4; ++cols) for (int rows = 1; rows <= 8; ++rows) {
+    Eigen::MatrixXd z = randomMatrix(rows, cols, rows * 11 + cols);
+    Eigen::MatrixXd g = randomMatrix(3, cols, 19 + cols);
+    for (int kind = 0; kind < 4; ++kind) {
+      if (kind == 1) z.setZero();
+      if (kind == 2) { z.setZero(); z(0,0)=1.; }
+      if (kind == 3) g.setZero();
+      const Eigen::MatrixXd gram=z.transpose()*z;
+      for (double tol : {1e-12, 1., std::nextafter(1., 0.), 0., -1.})
+        for (double scale : {1., 0., -1., std::numeric_limits<double>::infinity()})
+          compare(z, gram, g, tol, scale);
+      Eigen::MatrixXd bad=gram; bad(0,0)=std::nextafter(bad(0,0), 100.);
+      compare(z,bad,g,1e-12,1.);
+      if(cols>1) { bad=gram;bad(0,1)+=1.;compare(z,bad,g,1e-12,1.); }
+      bad=gram;bad(0,0)=std::numeric_limits<double>::quiet_NaN();
+      compare(z,bad,g,1e-12,1.);
+    }
+  }
+  for(double scale : {1e-200, 1e-100, 1e100, 1e200}) {
+    const Eigen::MatrixXd z=scale*Eigen::MatrixXd::Identity(3,3);
+    compare(z,z.transpose()*z,z,1e-12,scale);
+  }
+  compare(Eigen::MatrixXd(),Eigen::MatrixXd(),Eigen::MatrixXd(),1e-12,1.);
+  Eigen::MatrixXd invalid=Eigen::MatrixXd::Identity(3,3);
+  invalid(0,0)=std::numeric_limits<double>::quiet_NaN();
+  compare(invalid,Eigen::MatrixXd::Identity(3,3),Eigen::MatrixXd::Identity(3,3),1e-12,1.);
+  compare(Eigen::MatrixXd::Identity(3,3),Eigen::MatrixXd::Identity(3,3),invalid,1e-12,1.);
+  compare(Eigen::MatrixXd::Identity(3,3),Eigen::MatrixXd::Identity(2,2),
+          Eigen::MatrixXd::Identity(3,3),1e-12,1.);
+  compare(Eigen::MatrixXd::Identity(2,2),Eigen::MatrixXd::Identity(2,2),
+          Eigen::MatrixXd::Zero(2,2),1e-12,1.);
+}
+
+TEST(Phase2ClassificationHashes, ClassifierAllOutputsAndNullPointersAreBitIdentical) {
+  using namespace uwb_imu_pl;
+  ClassificationHashEnvironment env;
+  const auto compare = [&](const Eigen::MatrixXd& z, const Eigen::MatrixXd& g,
+                           double tol, double scale) {
+    double sigma[2]={123.,123.},condition[2]={456.,456.};int rank[2]={789,789};
+    Eigen::Vector3d axis[2],slopes[2];int classes[2];
+    for(int side=0;side<2;++side) {
+      if(side==0)setenv(env.key,"1",1);else unsetenv(env.key);
+      classes[side]=classifyDetectionResponse(z,g,tol,&sigma[side],&condition[side],
+          &rank[side],&axis[side],&slopes[side],scale);
+      EXPECT_EQ(classes[side],classifyDetectionResponse(z,g,tol,nullptr,nullptr,
+          nullptr,nullptr,nullptr,scale));
+    }
+    EXPECT_EQ(classes[0],classes[1]);EXPECT_EQ(rank[0],rank[1]);
+    expectSameBits(sigma[0],sigma[1]);expectSameBits(condition[0],condition[1]);
+    expectSameMatrixBits(axis[0],axis[1]);expectSameMatrixBits(slopes[0],slopes[1]);
+    if(classes[0]==0) { EXPECT_EQ(sigma[1],123.);EXPECT_EQ(condition[1],456.);
+      EXPECT_EQ(rank[1],789);EXPECT_TRUE(axis[1].isZero(0.)); }
+  };
+  for(int cols=1;cols<=4;++cols)for(int rows=1;rows<=8;++rows) {
+    Eigen::MatrixXd z=randomMatrix(rows,cols,42+rows+cols);
+    Eigen::MatrixXd g=randomMatrix(3,cols,73+cols);
+    for(int kind=0;kind<4;++kind) {
+      if(kind==1)z.setZero();if(kind==2){z.setZero();z(0,0)=1.;}
+      if(kind==3)g.setZero();
+      for(double tol : {1e-12,1.,std::nextafter(1.,0.),std::nextafter(1.,2.),0.,-1.,
+                         std::numeric_limits<double>::quiet_NaN()})
+        for(double scale : {1.,0.,-1.,std::numeric_limits<double>::infinity(),
+                            std::numeric_limits<double>::quiet_NaN()})
+          compare(z,g,tol,scale);
+    }
+  }
+  compare(Eigen::MatrixXd(),Eigen::MatrixXd(),1e-12,1.);
+  Eigen::MatrixXd z=Eigen::MatrixXd::Identity(3,3),g=z;
+  z(0,0)=std::numeric_limits<double>::quiet_NaN();compare(z,g,1e-12,1.);
+  z.setIdentity();g(0,0)=std::numeric_limits<double>::infinity();compare(z,g,1e-12,1.);
+  for(double scale : {1e-200,1e-100,1e100,1e200})compare(scale*z,z,1e-12,scale);
+}
+
+TEST(Phase2ClassificationHashes, PublicProofIdentitiesKeepPreChangeByteOrder) {
+  using namespace uwb_imu_pl;
+  ClassificationHashEnvironment env;
+  // Captured from 902ff99's DSO using the target's -march=native/NDEBUG ABI.
+  for (int side=0; side<2; ++side) {
+    if(side==0)setenv(env.key,"1",1);else unsetenv(env.key);
+    Eigen::MatrixXd z=Eigen::MatrixXd::Identity(3,3),g=2.*z;
+    auto c=certifyFactorGramAndProtectedResponse(z,z.transpose()*z,g,1e-12,123,1.);
+    EXPECT_EQ(c.gram.proof_identity,5586683906216623275ULL);
+    EXPECT_EQ(c.proof_identity,4623873127458493770ULL);
+    z(2,2)=0.;c=certifyFactorGramAndProtectedResponse(z,z.transpose()*z,g,1e-12,123,1.);
+    EXPECT_EQ(c.gram.proof_identity,2213805839774945581ULL);
+    EXPECT_EQ(c.proof_identity,14122314800303469774ULL);
+  }
+}

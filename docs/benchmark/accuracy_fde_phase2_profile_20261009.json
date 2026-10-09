@@ -1,0 +1,104 @@
+{
+  "schema": "uwb-imu-pl/phase2-numerical-hotspot-audit/v1",
+  "audit_only": true,
+  "execution": {
+    "binary_sha256": "abeea348f190dd2c5c4bb5b99f624e4a48f0e93e4f4ca43aa863c8aff72cea79",
+    "library_sha256": "9f38e29699f685c946080f6b78235e581763e6f1d1b530027973ce7650f45fa7",
+    "config_sha256": "03c2d725900d8683e672a02e255f6cb80c2f01e466985f01ab3d65d3bd4d574d",
+    "head": "902ff99f0f9da95b3023c59c4d4471a38a95c084",
+    "command": [
+      "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+      "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order2.yaml",
+      "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_phase2_20261009/phase_profile_joint2",
+      "35"
+    ],
+    "environment": {
+      "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "UWB_IMU_PL_SCENARIO": "joint_recovery",
+      "UWB_IMU_PL_PROFILE_NUMERICAL_PHASES": "1"
+    },
+    "exit_code": 0,
+    "wall_s": 91.6280409280007,
+    "audit": true
+  },
+  "attempts": 35,
+  "timing_caution": "inclusive elapsed work overlaps nesting and worker threads; wall batch stages nested under candidate_evaluation; no production speedup claim",
+  "phase_work": {
+    "factor_gram": {
+      "calls": 9406293,
+      "inclusive_elapsed_work_s": 63.045999095
+    },
+    "factor_gram_svd": {
+      "calls": 9405759,
+      "inclusive_elapsed_work_s": 15.475831035
+    },
+    "detection_classification": {
+      "calls": 3769260,
+      "inclusive_elapsed_work_s": 32.256189701
+    },
+    "frozen_hypothesis_validation": {
+      "calls": 2497242,
+      "inclusive_elapsed_work_s": 37.042168007
+    },
+    "pl_payload_validation": {
+      "calls": 11,
+      "inclusive_elapsed_work_s": 1.980888496
+    }
+  },
+  "wall_stage_mean_ms": {
+    "prepare": 1.7569618,
+    "integrity_window": 52.497780228571436,
+    "window_boundary_provenance": 38.937188171428566,
+    "window_factor_linearization_whitening": 0.7271264857142857,
+    "window_dense_assembly": 0.07285674285714289,
+    "window_svd": 8.284975885714285,
+    "window_normal_equations": 0.26647219999999994,
+    "window_llt_state_solves": 0.0947244,
+    "window_fingerprint": 3.0204682571428565,
+    "all_in_detector": 0.16697957142857145,
+    "current_sensitivity": 0.40065514285714277,
+    "model_generation": 176.35256154285716,
+    "historical_sensitivity": 0.10526702857142857,
+    "hypothesis_evidence": 962.9055579428572,
+    "health_actions": 41.621862,
+    "base_factorization": 0.20433971428571426,
+    "shared_cache": 0.0016592857142857143,
+    "candidate_batch_kernel": 244.85460588571425,
+    "candidate_batch_post": 3.8197390857142857,
+    "candidate_batch_pl_flat": 971.0783116857141,
+    "candidate_batch_pl_consume": 18.838127085714273,
+    "candidate_evaluation": 1308.3191267428572,
+    "fde_decision": 15.801849257142855,
+    "candidate_audit": 0.05336371428571428,
+    "commit": 1.8015492000000002,
+    "state_audit": 0.0003979999999999999,
+    "finalize_commit_audit": 14.890071714285714,
+    "core_total": 2577.3087220857146,
+    "discard": 9.234285714285714e-05
+  },
+  "semantic_comparison": "PASS",
+  "comparison_sha256": "f9c2625fa54cd17f0d317af9bdd708b8980f4b68931566b3a09e1ee457b94224",
+  "mismatches": {},
+  "tests": {
+    "integrity_ownership_concurrency_positive": 19,
+    "safety": 12,
+    "root_math": 5,
+    "status": "PASS"
+  },
+  "next_hypothesis": "classifier-only unused hash removal; exact numerical body and public proof hash unchanged; hash share not inferred from non-SVD remainder",
+  "publication_bindings": {
+    "after": {
+      "attempts": 35,
+      "failures": [],
+      "status": "PASS"
+    },
+    "before": {
+      "attempts": 35,
+      "failures": [],
+      "status": "PASS"
+    }
+  }
+}
