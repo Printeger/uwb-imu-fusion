@@ -66,6 +66,8 @@ def main():
     parser.add_argument('--binary', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--epochs', type=int, default=35)
+    parser.add_argument('--reference-model', choices=('phase2', 'b-correct'), default='phase2',
+                        help='b-correct disables only the new continuous proof prototype')
     args = parser.parse_args()
     if args.epochs <= 0:
         parser.error('epochs must be positive')
@@ -88,6 +90,7 @@ def main():
               'scope': 'complete analysis; fixed native rotating synthetic stream, not live real-time acceptance',
               'caution': 'batch children nested in candidate wall; no phase-sum or P99/statistical guarantee',
               'frozen_memo_default': False, 'mode_cache_default': False}
+    report['reference_model'] = args.reference_model
     for scenario, label, config_name in (
             ('noiseless', 'normal', 'fde_joint_order1.yaml'),
             ('joint_recovery', 'joint2', 'fde_joint_order2.yaml')):
@@ -103,7 +106,12 @@ def main():
                 MKL_NUM_THREADS='1', LD_LIBRARY_PATH=str(library.parent),
                 UWB_IMU_PL_SCENARIO=scenario, UWB_IMU_PL_MODE_RESPONSE_CACHE='0',
                 UWB_IMU_PL_FROZEN_VALIDATION_REUSE='0')
-            if side == 'reference':
+            if args.reference_model == 'b-correct':
+                environment.update(UWB_IMU_PL_ROOT_RESPONSE_REUSE='0',
+                                   UWB_IMU_PL_BATCH_FROZEN_PROOFS='1')
+                if side == 'reference':
+                    environment['UWB_IMU_PL_REFERENCE_BATCH_FROZEN_PROOFS'] = '1'
+            elif side == 'reference':
                 environment.update({'UWB_IMU_PL_EXHAUSTIVE_' + flag: '1'
                                     for flag in REFERENCE_FLAGS})
             command = [str(binary), str(config), str(directory), str(args.epochs)]
