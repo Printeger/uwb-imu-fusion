@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <vector>
+#include <utility>
 
 namespace uwb_imu_pl {
 
@@ -64,6 +66,9 @@ class AttemptProofArenaAccess {
   static bool store(AttemptProofArena* arena, std::uint32_t kind,
                     std::uint64_t numeric_key, const char* string_key,
                     std::shared_ptr<const void> payload);
+  // Producer-owned continuous batch; identical ordinary read protocol.
+  static bool storeNumericBatch(AttemptProofArena* arena, std::uint32_t kind,
+      const std::vector<std::pair<std::uint64_t, std::shared_ptr<const void>>>& payloads);
   static std::shared_ptr<const void> find(
       const AttemptProofArena& arena, std::uint32_t kind,
       std::uint64_t numeric_key, const char* string_key);

@@ -8,7 +8,7 @@ namespace uwb_imu_pl {
 namespace detail {
 enum class NumericalProfilePhase : unsigned {
   FactorGram, FactorGramSvd, DetectionClassification,
-  FrozenHypothesisValidation, ProtectionPayloadValidation, RootResponseReuse, RootResponseFallback, Count
+  FrozenHypothesisValidation, ProtectionPayloadValidation, RootResponseReuse, RootResponseFallback, ContinuousProofBatches, ContinuousProofLeaves, Count
 };
 // Process-start opt-in diagnostics. Elapsed work overlaps nested calls and
 // worker threads; it is not pipeline wall time or measured thread CPU time.

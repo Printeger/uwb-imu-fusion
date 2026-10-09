@@ -7442,3 +7442,105 @@ TEST(FdeOperabilityReference, ProductionMapUsesActualFrozenPoseAndMintUsesFrozen
       admission.window().protected_state_map*candidate.state_increment;
   EXPECT_TRUE((evidence.reference.mean_world_m.array()==expected.array()).all());
 }
+
+TEST(FdeOperabilityBatchProofs, ContinuousOwnerReuseRejectsImportsTamperAndClosedArena) {
+  using namespace uwb_imu_pl;
+  auto window = syntheticWindow();
+  auto history = block(
+      4, Eigen::MatrixXd::Zero(2, 2), Eigen::Vector2d::Zero(),
+      window.version);
+  history.kind = FactorKind::BoundaryPrior;
+  history.sensor = SensorType::Prior;
+  history.role = RowRole::TrustedPrior;
+  history.whitening_model_id = "history_summary_sqrt_d1";
+  window.blocks.push_back(std::move(history));
+  window.history_summary.present = true;
+  window.history_summary.valid = true;
+  window.history_summary.nu_perp = 2;
+  window.history_summary.kappa_b = 0.0;
+  window.history_summary.constant_offset = 0.0;
+  window.history_summary.emitted_rows = 2;
+  window.history_summary.detector_response = Eigen::MatrixXd::Zero(2, 0);
+  window.protected_state_map.row(2) = window.protected_state_map.row(0);
+  finalizeIntegrityWindow(&window, 1e-10, 1e10);
+  ASSERT_TRUE(window.model_valid) << window.reason;
+  std::string window_proof_reason;
+  ASSERT_TRUE(validateFrozenWindowNumericalProof(
+      window, *window.numerics, &window_proof_reason))
+      << window_proof_reason;
+  const auto frozen_window = freezeIntegrityWindowCopy(window);
+  const auto admission = admitFrozenIntegrityWindow(frozen_window);
+  ASSERT_TRUE(admission) << admission.reason;
+  FaultModeBasis mode;
+  mode.id = FaultModeId(2101);
+  mode.sensor = SensorType::Uwb;
+  mode.parameter_dimension = 1;
+  mode.raw_group_maps[FactorGroupId(1)] =
+      Eigen::Vector2d::Ones();
+  std::vector<FaultModeBasis> modes{mode};
+  FaultHypothesisV2 hypothesis;
+  hypothesis.id = HypothesisId(2101);
+  hypothesis.modes = {mode.id};
+  hypothesis.prior_probability_bound = 1e-4;
+  hypothesis.p_md_allocation = 1e-3;
+  hypothesis.hmi_allocation = 1e-6;
+  std::vector<FaultHypothesisV2> hypotheses{hypothesis};
+  std::shared_ptr<const FrozenHypothesisNumerics> frozen;
+  std::shared_ptr<const FrozenHypothesisDualNumerics> frozen_dual;
+  AttemptProofArena arena;
+  const auto evidence = HypothesisEvidenceEvaluator().evaluateAll(
+      admission, modes, &hypotheses, 100.0, &frozen, &frozen_dual, nullptr, &arena);
+  ASSERT_EQ(evidence.size(), 1u);
+  ASSERT_TRUE(frozen && frozen->valid);
+  ASSERT_TRUE(frozen_dual && frozen_dual->valid);
+
+
+  const auto& entry=frozen->pl_entries.front();
+  FrozenHypothesisPlProofV1 proof;std::string reason;
+  const auto before=NumericalWorkCounters::snapshot();
+  for(int i=0;i<3;++i) ASSERT_TRUE(detail::readAndValidateScopedFrozenHypothesisProof(
+      entry,arena,&proof,&reason))<<reason;
+  const auto after=NumericalWorkCounters::snapshot();
+  const bool requested=std::getenv("UWB_IMU_PL_BATCH_FROZEN_PROOFS") &&
+      std::string(std::getenv("UWB_IMU_PL_BATCH_FROZEN_PROOFS"))=="1" &&
+      !std::getenv("UWB_IMU_PL_REFERENCE_BATCH_FROZEN_PROOFS") &&
+      !std::getenv("UWB_IMU_PL_EXHAUSTIVE_FROZEN_VALIDATION");
+  if(requested) {
+    EXPECT_EQ(after.frozen_hypothesis_validations,before.frozen_hypothesis_validations);
+    EXPECT_EQ(after.frozen_hypothesis_validation_reuses-before.frozen_hypothesis_validation_reuses,3u);
+  } else EXPECT_EQ(after.frozen_hypothesis_validations-before.frozen_hypothesis_validations,3u);
+  AttemptProofArena closed_root;
+  auto closed_hypotheses=hypotheses;
+  std::shared_ptr<const FrozenHypothesisNumerics> closed_frozen;
+  std::shared_ptr<const FrozenHypothesisDualNumerics> closed_dual;
+  (void)HypothesisEvidenceEvaluator().evaluateAll(admission,modes,&closed_hypotheses,
+      100.,&closed_frozen,&closed_dual,nullptr,&closed_root);
+  ASSERT_TRUE(closed_frozen && closed_frozen->valid);
+  closed_root.close();
+  const auto closed_before=NumericalWorkCounters::snapshot().frozen_hypothesis_validations;
+  EXPECT_TRUE(detail::readAndValidateScopedFrozenHypothesisProof(
+      closed_frozen->pl_entries.front(),closed_root,nullptr,&reason));
+  EXPECT_EQ(NumericalWorkCounters::snapshot().frozen_hypothesis_validations,closed_before+1);
+  auto modified=entry;modified.z_rank++;
+  EXPECT_FALSE(detail::readAndValidateScopedFrozenHypothesisProof(modified,arena,nullptr,&reason));
+  auto modified_proof=proof;modified_proof.certified_gram(0,0)=std::nextafter(
+      modified_proof.certified_gram(0,0),INFINITY);
+  EXPECT_FALSE(validateFrozenHypothesisPlEntry(modified_proof,&reason));
+  AttemptProofArena other;
+  EXPECT_FALSE(detail::readAndValidateScopedFrozenHypothesisProof(entry,other,nullptr,&reason));
+  // A replacement at the exact same key loses batch owner authority.
+  const auto original_count=NumericalWorkCounters::snapshot().frozen_hypothesis_validations;
+  ASSERT_TRUE(detail::AttemptProofArenaAccess::store(&arena,1,
+      frozenHypothesisPlEntryIdentity(entry),nullptr,
+      std::make_shared<const FrozenHypothesisPlProofV1>(proof)));
+  EXPECT_TRUE(detail::readAndValidateScopedFrozenHypothesisProof(entry,arena,nullptr,&reason));
+  EXPECT_EQ(NumericalWorkCounters::snapshot().frozen_hypothesis_validations,original_count+1);
+  ASSERT_TRUE(detail::AttemptProofArenaAccess::store(&arena,1,
+      frozenHypothesisPlEntryIdentity(entry),nullptr,
+      std::make_shared<const FrozenHypothesisPlProofV1>(modified_proof)));
+  EXPECT_FALSE(detail::readAndValidateScopedFrozenHypothesisProof(entry,arena,nullptr,&reason));
+  EXPECT_FALSE(detail::readAndValidateScopedFrozenHypothesisProof(entry,arena,nullptr,&reason));
+  arena.close();
+  // Ordinary readers survive close, but closed arenas are fully revalidated.
+  EXPECT_FALSE(detail::readAndValidateScopedFrozenHypothesisProof(entry,arena,nullptr,&reason));
+}

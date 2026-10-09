@@ -12,6 +12,7 @@
 #include <Eigen/SVD>
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdlib>
 #include <map>
@@ -41,6 +42,36 @@ struct ImmutableFrozenHypothesisPayload {
   const std::uint64_t arena_generation;
   detail::SuccessfulValidationMemo validation;
 };
+
+constexpr std::uint32_t kArenaFrozenProofBatch = 10;
+bool continuousFrozenProofsEnabled() {
+  static const bool enabled = std::getenv("UWB_IMU_PL_BATCH_FROZEN_PROOFS") &&
+      std::string(std::getenv("UWB_IMU_PL_BATCH_FROZEN_PROOFS")) == "1" &&
+      !std::getenv("UWB_IMU_PL_REFERENCE_BATCH_FROZEN_PROOFS");
+  return enabled;
+}
+// Private producer owns the only mutable reference until the full seal. No
+// per-leaf memo wrappers/indexes: all aliases share this one continuous owner.
+struct ContinuousFrozenProofBatch {
+  ContinuousFrozenProofBatch(std::size_t count, std::uint64_t generation)
+      : proofs(count), arena_generation(generation) {}
+  std::vector<FrozenHypothesisPlProofV1> proofs;
+  const std::uint64_t arena_generation;
+  std::atomic<bool> fully_validated{false};
+};
+
+bool sameFrozenEntry(const FrozenHypothesisPlEntry& a, const FrozenHypothesisPlEntry& b) {
+  const auto& x=a.monitorability; const auto& y=b.monitorability;
+  return a.hypothesis==b.hypothesis && a.protected_slopes==b.protected_slopes &&
+      a.gram_spd==b.gram_spd && a.valid==b.valid && a.z_rank==b.z_rank &&
+      a.z_smallest_singular_value==b.z_smallest_singular_value && a.z_condition==b.z_condition &&
+      a.z_classification==b.z_classification && a.bound_from_projected_path==b.bound_from_projected_path &&
+      x.rank==y.rank && x.parameter_dimension==y.parameter_dimension &&
+      x.physical_parameter_dimension==y.physical_parameter_dimension &&
+      x.sigma_min==y.sigma_min && x.sigma_max==y.sigma_max &&
+      x.condition_number==y.condition_number && x.protected_slopes==y.protected_slopes &&
+      x.monitorable==y.monitorable && x.reason==y.reason;
+}
 
 void hashBytes(std::uint64_t* hash, const void* data, std::size_t size) {
   const auto* bytes = static_cast<const unsigned char*>(data);
@@ -245,7 +276,8 @@ void storePlCertificate(const SymmetricPsdCertificate& gram,
                         double rank_tolerance,
                         std::uint64_t parent_proof_identity,
                         FrozenHypothesisPlEntry* entry,
-                        AttemptProofArena* proof_arena) {
+                        AttemptProofArena* proof_arena,
+                        FrozenHypothesisPlProofV1* staged_proof = nullptr) {
   if (!entry) return;
   FrozenHypothesisPlProofV1 proof;
   proof.served_entry = *entry;
@@ -263,6 +295,7 @@ void storePlCertificate(const SymmetricPsdCertificate& gram,
   proof.parent_proof_identity = parent_proof_identity;
   proof.served_entry_identity = frozenEntryProofKey(proof.served_entry);
   const auto key = frozenEntryProofKey(*entry);
+  if (staged_proof) { *staged_proof = std::move(proof); return; }
   if (proof_arena) {
     if (!scopedFrozenValidationReuseEnabled()) {
       // Reference restores original producer cost, not just full reader work.
@@ -300,7 +333,8 @@ void analyzeDynamic(const Eigen::MatrixXd& input_gram,
                     FaultModeEvidence* evidence,
                     FrozenHypothesisPlEntry* pl_entry,
                     WorkDelta* work,
-                    AttemptProofArena* proof_arena) {
+                    AttemptProofArena* proof_arena,
+                    FrozenHypothesisPlProofV1* staged_proof = nullptr) {
   ++work->generic;
   const int dimension = input_gram.rows();
   if (dimension <= 0 || input_gram.cols() != dimension ||
@@ -387,7 +421,7 @@ void analyzeDynamic(const Eigen::MatrixXd& input_gram,
       storePlCertificate(gram_certificate, *protected_fault,
                          response_certificate, raw_detection_factor,
                          raw_factor_scale, config.rank_tolerance,
-                         parent_proof_identity, pl_entry, proof_arena);
+                         parent_proof_identity, pl_entry, proof_arena, staged_proof);
     } else {
       pl_entry->monitorability.monitorable = false;
       pl_entry->monitorability.reason =
@@ -464,7 +498,8 @@ void analyzeFixed(const Eigen::Matrix<double, Dimension, Dimension>& input_gram,
                   FaultModeEvidence* evidence,
                   FrozenHypothesisPlEntry* pl_entry,
                   WorkDelta* work,
-                  AttemptProofArena* proof_arena) {
+                  AttemptProofArena* proof_arena,
+                  FrozenHypothesisPlProofV1* staged_proof = nullptr) {
   ++work->low_dim;
   const auto gram = (0.5 * (input_gram + input_gram.transpose())).eval();
   if (!gram.allFinite() || !score.allFinite() || !protected_fault.allFinite()) {
@@ -526,7 +561,7 @@ void analyzeFixed(const Eigen::Matrix<double, Dimension, Dimension>& input_gram,
     storePlCertificate(gram_certificate, Eigen::MatrixXd(protected_fault),
                        response_certificate, raw_detection_factor,
                        raw_factor_scale, config.rank_tolerance,
-                       parent_proof_identity, pl_entry, proof_arena);
+                       parent_proof_identity, pl_entry, proof_arena, staged_proof);
   }
   if (!hypothesis->monitored) return;
   if (hypothesis->monitored) {
@@ -1159,6 +1194,10 @@ std::vector<FaultModeEvidence> evaluateContiguous(
   context->mode_count = modes.size();
   context->hypothesis_count = hypotheses->size();
 
+  const auto continuous_proofs = proof_arena && continuousFrozenProofsEnabled() &&
+          !scopedFrozenValidationReuseEnabled()
+      ? std::make_shared<ContinuousFrozenProofBatch>(hypotheses->size(), proof_arena->generation())
+      : std::shared_ptr<ContinuousFrozenProofBatch>{};
   auto evaluate_range = [&](std::size_t begin, std::size_t end) {
     WorkDelta work;
     for (std::size_t hypothesis_index = begin;
@@ -1378,7 +1417,7 @@ std::vector<FaultModeEvidence> evaluateContiguous(
                           physical_dimension,
                           window.numerics->statistic, squared_detector_threshold,
                           config, &hypothesis, &evidence, &pl_entry, &work,
-                          proof_arena);
+                          proof_arena, continuous_proofs ? &continuous_proofs->proofs[hypothesis_index] : nullptr);
         } else if (dimension == 2) {
           analyzeFixed<2>(gram.topLeftCorner<2, 2>(), &raw_detection_factor,
                           score.head<2>(),
@@ -1389,7 +1428,7 @@ std::vector<FaultModeEvidence> evaluateContiguous(
                           physical_dimension,
                           window.numerics->statistic, squared_detector_threshold,
                           config, &hypothesis, &evidence, &pl_entry, &work,
-                          proof_arena);
+                          proof_arena, continuous_proofs ? &continuous_proofs->proofs[hypothesis_index] : nullptr);
         } else {
           analyzeFixed<3>(gram, &raw_detection_factor, score, protected_fault,
                           admittedProofIdentity(window,
@@ -1398,7 +1437,7 @@ std::vector<FaultModeEvidence> evaluateContiguous(
                           physical_dimension,
                           window.numerics->statistic, squared_detector_threshold,
                           config, &hypothesis, &evidence, &pl_entry, &work,
-                          proof_arena);
+                          proof_arena, continuous_proofs ? &continuous_proofs->proofs[hypothesis_index] : nullptr);
         }
         dual_block.profile_statistic = evidence.profile_j;
       } else {
@@ -1436,7 +1475,7 @@ std::vector<FaultModeEvidence> evaluateContiguous(
                        physical_dimension,
                        window.numerics->statistic, squared_detector_threshold,
                        config, &hypothesis, &evidence, &pl_entry, &work,
-                       proof_arena);
+                       proof_arena, continuous_proofs ? &continuous_proofs->proofs[hypothesis_index] : nullptr);
       }
       // B3 (section 5.5 / 5.8): the detection-space classification decides
       // availability.  A structurally harmless nullspace keeps a finite bound
@@ -1515,6 +1554,29 @@ std::vector<FaultModeEvidence> evaluateContiguous(
     context->worker_blocks = 1;
     evaluate_range(0, hypotheses->size());
   }
+  if (continuous_proofs) {
+    std::vector<std::pair<std::uint64_t, std::shared_ptr<const void>>> indexed;
+    indexed.reserve(continuous_proofs->proofs.size());
+    std::set<std::uint64_t> parent_ids;
+    for (const auto& proof : continuous_proofs->proofs) {
+      if (proof.served_entry_identity == 0) continue;
+      indexed.emplace_back(proof.served_entry_identity,
+          std::shared_ptr<const void>(continuous_proofs, &proof));
+      parent_ids.insert(proof.parent_proof_identity);
+    }
+    if (!detail::AttemptProofArenaAccess::storeNumericBatch(proof_arena,
+            kArenaFrozenHypothesisProof, indexed))
+      throw std::runtime_error("continuous frozen proof arena is closed");
+    for (const auto parent : parent_ids)
+      if (!detail::AttemptProofArenaAccess::store(proof_arena, kArenaFrozenProofBatch,
+          parent, nullptr, continuous_proofs))
+        throw std::runtime_error("continuous frozen proof seal arena is closed");
+    if (detail::numericalPhaseProfilingEnabled()) {
+      detail::recordNumericalPhase(detail::NumericalProfilePhase::ContinuousProofBatches, 0);
+      for (std::size_t i=0;i<indexed.size();++i)
+        detail::recordNumericalPhase(detail::NumericalProfilePhase::ContinuousProofLeaves, 0);
+    }
+  }
   for (std::size_t hypothesis_index = 0;
        hypothesis_index < hypotheses->size(); ++hypothesis_index) {
     const auto& hypothesis = (*hypotheses)[hypothesis_index];
@@ -1542,6 +1604,8 @@ std::vector<FaultModeEvidence> evaluateContiguous(
                 : (frozenHypothesisPlProof(entry, &proof) &&
                    validateFrozenHypothesisPlEntry(proof)));
           });
+  if (continuous_proofs && context->valid)
+    continuous_proofs->fully_validated.store(true, std::memory_order_release);
   if (!context->valid) context->reason = "shared hypothesis context is incomplete";
   std::shared_ptr<const FrozenHypothesisNumerics> sealed_base = context;
   dual_context->base_owner = sealed_base;
@@ -2029,6 +2093,37 @@ bool readAndValidateScopedFrozenHypothesisProof(
     const FrozenHypothesisPlEntry& entry, const AttemptProofArena& arena,
     FrozenHypothesisPlProofV1* proof, std::string* reason,
     GramResponseCertificate* validated_response) {
+  if (!validated_response && continuousFrozenProofsEnabled() &&
+      !std::getenv("UWB_IMU_PL_EXHAUSTIVE_FROZEN_VALIDATION")) {
+    const auto payload = AttemptProofArenaAccess::find(arena,
+        kArenaFrozenHypothesisProof, frozenEntryProofKey(entry), nullptr);
+    if (payload) {
+      const auto value = std::static_pointer_cast<const FrozenHypothesisPlProofV1>(payload);
+      const auto batch_payload = AttemptProofArenaAccess::find(arena,
+          kArenaFrozenProofBatch, value->parent_proof_identity, nullptr);
+      if (batch_payload) {
+        const auto batch = std::static_pointer_cast<const ContinuousFrozenProofBatch>(batch_payload);
+        const auto begin = reinterpret_cast<std::uintptr_t>(batch->proofs.data());
+        const auto address = reinterpret_cast<std::uintptr_t>(value.get());
+        const auto bytes = batch->proofs.size() * sizeof(FrozenHypothesisPlProofV1);
+        if (batch->arena_generation == arena.generation() &&
+            batch->fully_validated.load(std::memory_order_acquire) &&
+            address >= begin && address - begin < bytes &&
+            (address - begin) % sizeof(FrozenHypothesisPlProofV1) == 0 &&
+            sameImmutablePayloadOwner(payload, batch,
+                &batch->proofs[(address - begin) / sizeof(FrozenHypothesisPlProofV1)]) &&
+            value->served_entry_identity == frozenEntryProofKey(entry) &&
+            !arena.closed() && sameFrozenEntry(value->served_entry, entry) &&
+            value->served_entry.z_classification == static_cast<int>(GramNullspaceClass::FullRank) &&
+            value->served_entry.z_smallest_singular_value >
+                2. * value->rank_tolerance * value->raw_factor_scale) {
+          if (proof) *proof = *value;
+          NumericalWorkCounters::frozenHypothesisValidationReuse();
+          return true;
+        }
+      }
+    }
+  }
   // An optional numerical output requires actual full validation. The old
   // scalar memo carries no numerical certificate and is never upgraded here.
   if (validated_response || !scopedFrozenValidationReuseEnabled()) {

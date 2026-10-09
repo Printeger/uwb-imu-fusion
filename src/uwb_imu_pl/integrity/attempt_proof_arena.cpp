@@ -138,6 +138,19 @@ bool detail::AttemptProofArenaAccess::store(
   return true;
 }
 
+bool detail::AttemptProofArenaAccess::storeNumericBatch(
+    AttemptProofArena* arena, std::uint32_t kind,
+    const std::vector<std::pair<std::uint64_t, std::shared_ptr<const void>>>& payloads) {
+  if (!arena || !arena->state_) return false;
+  for (const auto& value : payloads) if (!value.second) return false;
+  auto& state = *arena->state_;
+  std::lock_guard<std::mutex> lock(state.mutex);
+  if (state.closed) return false;
+  for (const auto& value : payloads)
+    state.entries[{kind, value.first, ""}] = value.second;
+  return true;
+}
+
 namespace {
 std::shared_ptr<const void> findImpl(
     const std::shared_ptr<AttemptProofArena::State>& state,
