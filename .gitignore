@@ -127,6 +127,10 @@ data/*.bag
 /doc/review/review_math_oracles.json
 /doc/review/review_math_oracles.py
 
+# Local user-provided requirements for the accuracy/FDE research iteration.
+# Keep the input available locally; transport implementation and compact evidence.
+/docs/requirements/UWB_IMU_Accuracy_FDE_Requirements.md
+
 # Benchmark transport: keep source, configs, compact metrics and report figures.
 # Raw datasets, cached arrays, trajectories, binaries and logs stay local.
 /cache/
