@@ -7389,3 +7389,56 @@ TEST(FdeOperabilityRank, ComplementaryPsdChannelsNeedOnlyJointCertifiedRank) {
   request.protected_response.topRows(2).setIdentity();
   EXPECT_FALSE(computeDualChannelBoundCertified(request,1e-10,99,nullptr).valid);
 }
+
+TEST(FdeOperabilityReference, ProductionMapUsesActualFrozenPoseAndMintUsesFrozenCentre) {
+  using namespace uwb_imu_pl;
+  const auto config = researchConfig();
+  IncrementalUwbImuEstimator estimator(config, Eigen::Vector3d::Zero());
+  NavigationState initial;
+  initial.timestamp = TimestampNs(0); initial.position_world_m = {0,0,1};
+  initial.velocity_world_mps = {1,0,0};
+  estimator.initialize(initial, config.realtime.prior_sigmas);
+  for (int i=0;i<=2;++i) {
+    ImuMeasurement imu; imu.id=MeasurementId(900+i);
+    imu.timestamp=TimestampNs(i*5000000LL);
+    imu.specific_force_mps2={10,0,config.imu.gravity_mps2};
+    imu.angular_velocity_radps={0,0,2}; estimator.ingestImu(imu);
+  }
+  const auto tx=estimator.prepareEpoch(batch(config,10000000));
+  ASSERT_TRUE(tx.frozen_values);
+  const auto frozen_pose=tx.frozen_values->at<gtsam::Pose3>(gtsam::Symbol('x',tx.proposed_epoch));
+  ASSERT_GT((tx.nominal_predicted_state.position_world_m-frozen_pose.translation()).norm(),1e-5);
+  const auto production_window=estimator.buildIntegrityWindow(tx,IntegrityWindowRequest{});
+  ASSERT_GE(production_window.protected_state_map.cols(),15);
+  EXPECT_TRUE((production_window.protected_state_map.block<3,3>(0,
+      production_window.protected_state_map.cols()-12).array()==
+      frozen_pose.rotation().matrix().array()).all());
+  // Legal P103 PL fixture for the mint consumer; centre comes from the same
+  // explicit frozen transaction Values contract, not an injected fault label.
+  const auto admission=admitFrozenIntegrityWindow(freezeIntegrityWindowCopy(p002HistoryWindow(0.,0.)));
+  RankUpdateConfig rank{1e-12,1e10,10.};
+  ExclusionAction keep; keep.id=ExclusionActionId(901);keep.action_model_id="KEEP_ALL";
+  auto candidate=DenseCandidateOracle(rank).evaluate(admission,keep);
+  ASSERT_TRUE(candidate.valid);
+  DetectorRiskContext dr;dr.p_fa_per_test=1e-6;dr.rank_tolerance=rank.rank_tolerance;
+  const auto detector=JointWindowDetector().evaluateCandidate(admission,candidate,dr);
+  ASSERT_TRUE(detector.passed);
+  Eigen::MatrixXd mode=Eigen::MatrixXd::Zero(candidate.rows,1);
+  mode(0,0)=1.;mode(mode.rows()-1,0)=1.;
+  FaultHypothesisV2 h;h.id=HypothesisId(902);h.modes={FaultModeId(903)};
+  h.p_md_allocation=1e-3;h.hmi_allocation=1e-6;h.prior_probability_bound=1e-3;
+  std::vector<FaultHypothesisV2> hypotheses{h};
+  ProtectionLevelSharedContext shared;shared.mode_maps.emplace(903,mode);
+  AttemptProofArena arena; ProtectionLevelV2ProofV1 proof;
+  const auto pl=ProtectionLevelV2().computeShared(admission,&candidate,detector,
+      &hypotheses,shared,RiskBudgetV2{},&proof,&arena);
+  ASSERT_TRUE(pl.model_valid);
+  auto mint_tx=tx;mint_tx.id=TransactionId(admission.window().id.value());
+  mint_tx.base_version=admission.window().version;
+  CommitProtectionEvidenceV1 evidence;std::string reason;
+  ASSERT_TRUE(mintCommitProtectionEvidenceV1(mint_tx,admission,candidate,pl,
+      proof.proof_identity,"map",&arena,&evidence,&reason))<<reason;
+  const Eigen::Vector3d expected=frozen_pose.translation()+
+      admission.window().protected_state_map*candidate.state_increment;
+  EXPECT_TRUE((evidence.reference.mean_world_m.array()==expected.array()).all());
+}

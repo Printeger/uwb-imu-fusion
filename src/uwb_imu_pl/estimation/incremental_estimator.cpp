@@ -2604,7 +2604,8 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
   }
   window.protected_state_map = Eigen::MatrixXd::Zero(3, total_columns);
   window.protected_state_map.block<3, 6>(0, total_columns - 15) =
-      worldPositionPoseTangentJacobian(toGtsamPose(tx.nominal_predicted_state));
+      worldPositionPoseTangentJacobian(
+          transactionValues(tx).at<gtsam::Pose3>(poseKey(tx.proposed_epoch)));
   window.capabilities.complete_factor_provenance =
       factor_ledger_.hasCompleteActiveProvenance(activeGraph());
   window.capabilities.history_provenance_valid =
