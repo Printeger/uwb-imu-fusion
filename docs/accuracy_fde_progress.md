@@ -489,3 +489,22 @@ and null output pointers; captured pre-change public hash fixtures unchanged.
 Standalone probe initially missed target Eigen -march=native/NDEBUG ABI and
 crashed; rebuilt with exact target flags successfully, no production failure.
 Hash-only same-ELF normal/joint2 measurements pending; no gain yet claimed.
+
+Classifier hash-only same-ELF pair completed (35 attempts/scenario; profiling
+off, one pair). Strict semantic comparison and independent publication binding
+PASS for both. Normal core 176.704→176.928ms: no gain. Joint2 core
+2555.401→2393.333ms (6.34%); counted Gram SVDs unchanged at 9,405,759
+(normal 113,194 both). This isolates an actual workload benefit without skipping
+numerical work; no statistical-generalization claim. Freeze the narrow change
+for joint2, do not extend hash omission into consumed public certificates.
+Compact exact commands/hashes/results:
+docs/benchmark/accuracy_fde_phase2_classification_hash_20261009.json.
+
+Next measured question: audit frozen validation count decomposes consistently
+with H=1,272,018, shared-hit KEEP_ALL H=1,152,504, valid PL H=73,254:
+2,497,242=(H−534)+1,152,504+73,254. Exact callsite counters still needed to
+confirm the 534 invalid seal skips. Largest duplicate is evaluator seal then
+KEEP_ALL reading the same scoped proof, not cross-candidate root sharing.
+High-effort ownership/replacement review ongoing; no new proof memo implemented
+yet. Research targets and formal/risk qualification remain unmet; active goal
+and final integrated acceptance still OPEN.
