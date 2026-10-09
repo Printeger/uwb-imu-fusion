@@ -433,3 +433,25 @@ This optimization preserves that existing behavior; do not describe it as added
 all-field result authentication. That binding question remains OPEN separately.
 The memo assumes the existing trusted detail typed-kind producer protocol; it
 does not defend against arbitrary illegal C++ type writes or const_cast.
+
+Scoped reuse tests PASS 20/20 (owner/address, false/exception retry, concurrent
+first success, valid exhaustive comparison, external refusal reason equivalence,
+mutable tamper, retained-owner replacement, cross-attempt creation, arena close,
+existing proof ownership/concurrency and Gram/positive tests). Additional
+transaction/IMU/bridge/publication tests PASS 12/12. One same-ELF pair per scenario,
+35 attempts: both strict semantics and independent publication binding PASS.
+Normal core 179.687→179.390ms (0.17%, negligible); joint2 2629.234→2572.669ms
+(2.15%). Joint2 candidate 1378.704→1303.190ms; evidence 944.978→958.525ms.
+Full payload validations 22→11 with 11 reuses in each scenario; counted joint2
+Gram SVDs 9552278→9405759. Reuse coverage is small; stop extending this layer of
+memo rather than claiming the structural target met. Compact commands/hashes/
+metrics: docs/benchmark/accuracy_fde_phase2_pl_validation_20261009.json.
+
+Profiler caution confirmed in source: diagnostic_candidates.pl_ms contains
+flat-batch wall assigned to every root, so per-root sums duplicate time (not
+worker CPU work). Use parent wall stages until batch-exclusive subdivisions are
+exported. Candidate and evidence remain the next investigation, with model
+generation separately measured. A narrow classifier reuse idea was reviewed,
+but is not implemented or claimed as a gain; profile before another small change.
+No new large backups or binary copies; previous numerical/campaign/calibration
+FAIL records unchanged. Active goal and final integration remain OPEN.

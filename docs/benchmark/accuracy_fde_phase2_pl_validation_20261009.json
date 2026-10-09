@@ -1,0 +1,254 @@
+{
+  "schema": "uwb-imu-pl/phase2-scoped-pl-validation-reuse/v1",
+  "source_commit": "3046872",
+  "timing_repetitions": 1,
+  "scope": "immutable successful complete payload validation reuse within same arena generation; all public mutable validators remain exhaustive",
+  "formal_eligible": false,
+  "runs": {
+    "normal": {
+      "semantic_comparison": "PASS",
+      "publication_binding_checks": {
+        "after": {
+          "attempts": 35,
+          "failures": [],
+          "status": "PASS"
+        },
+        "before": {
+          "attempts": 35,
+          "failures": [],
+          "status": "PASS"
+        }
+      },
+      "mismatches": {},
+      "comparison_sha256": "b41e67423fd0a6a70480e8840f212c5d2c96f2f3b3c37c9756cbfed4056b1a53",
+      "sides": {
+        "reference": {
+          "execution": {
+            "binary_sha256": "0be0bbd6c7ca45bea2a794ac5c7bcd09bd4658abc3029c3396cfd8d66a5da05e",
+            "library_sha256": "f0795ef00f4b96084be599089ed30545e5f9af72b4cfff97312dd18a477bb74d",
+            "head": "30468729c29256cb09889f38cf166b945ceb87b7",
+            "command": [
+              "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order1.yaml",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_phase2_20261009/pl_memo_pairs/reference/normal",
+              "35"
+            ],
+            "environment": {
+              "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+              "OMP_NUM_THREADS": "1",
+              "OPENBLAS_NUM_THREADS": "1",
+              "MKL_NUM_THREADS": "1",
+              "UWB_IMU_PL_SCENARIO": "noiseless",
+              "UWB_IMU_PL_EXHAUSTIVE_PL_VALIDATION": "1"
+            },
+            "exit_code": 0,
+            "wall_s": 6.32594447800011,
+            "audit": false
+          },
+          "stage_mean_ms": {
+            "core_compute": 179.68663714285714,
+            "candidate_evaluation": 79.79053942857144,
+            "hypothesis_evidence": 42.5910162,
+            "model_generation": 3.7321095714285715,
+            "integrity_window": 48.73281791428571
+          },
+          "core_count": 35,
+          "counted_gram_svds": 117153,
+          "validation_counters": {
+            "pl_payload_validations": 22,
+            "pl_payload_validation_reuses": 0
+          },
+          "files_sha256": {
+            "timing.csv": "d893d3b4106cafb944a885fb5465534c9831f127ca1682755c8fbb20a52a3500",
+            "diagnostic_attempts.csv": "ba6ead104bc0167ab369fce90f6e748a2533e8e8232e0a38f788bbae9823c4cb",
+            "states.csv": "691516f89572e6b459d3f653b5515351f31cd4b081823e0cb43f55231a312662",
+            "integrity.csv": "be1a0c4993995d593bc4803ed9340dde8d22b469feb1bd991507677403ef2ce2",
+            "terminal_packets.csv": "ce2382b529f49b279391f9c7c0772c26395e71c97c7d7d2a7c1d76a329de95b2",
+            "candidates.csv": "92c75740a97b371e87dac6f3ac9ff2fcafff1583d216ba16f52b18993731e328"
+          }
+        },
+        "optimized": {
+          "execution": {
+            "binary_sha256": "0be0bbd6c7ca45bea2a794ac5c7bcd09bd4658abc3029c3396cfd8d66a5da05e",
+            "library_sha256": "f0795ef00f4b96084be599089ed30545e5f9af72b4cfff97312dd18a477bb74d",
+            "head": "30468729c29256cb09889f38cf166b945ceb87b7",
+            "command": [
+              "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order1.yaml",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_phase2_20261009/pl_memo_pairs/optimized/normal",
+              "35"
+            ],
+            "environment": {
+              "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+              "OMP_NUM_THREADS": "1",
+              "OPENBLAS_NUM_THREADS": "1",
+              "MKL_NUM_THREADS": "1",
+              "UWB_IMU_PL_SCENARIO": "noiseless"
+            },
+            "exit_code": 0,
+            "wall_s": 6.316328088999853,
+            "audit": false
+          },
+          "stage_mean_ms": {
+            "core_compute": 179.38981114285716,
+            "candidate_evaluation": 78.71366228571429,
+            "hypothesis_evidence": 43.4113356,
+            "model_generation": 3.900652885714286,
+            "integrity_window": 48.621363314285716
+          },
+          "core_count": 35,
+          "counted_gram_svds": 113194,
+          "validation_counters": {
+            "pl_payload_validations": 11,
+            "pl_payload_validation_reuses": 11
+          },
+          "files_sha256": {
+            "timing.csv": "29bddbeebaf0dafa092b9fc9a4a244693f3ed22a92d6f05b29670a9d2d83ea21",
+            "diagnostic_attempts.csv": "69ed8be2b999530539bd45472b1ac2052658cc5efd78d098baf836de05fc60bb",
+            "states.csv": "691516f89572e6b459d3f653b5515351f31cd4b081823e0cb43f55231a312662",
+            "integrity.csv": "3c68cc09db198a25dd91b2d01dcfcb8daac6b65115d4f9297c9b49afbcd47d18",
+            "terminal_packets.csv": "858bdd9569ad454cb4970fd79e6e2d29549c8222be4415e30198449cfaed9a71",
+            "candidates.csv": "fb458e3c2ec80daaa229c9441d34f10e3e3a113c9e600544147e1a094201600e"
+          }
+        }
+      },
+      "core_reduction_percent": 0.1651909149838371,
+      "speedup": 1.0016546424688724
+    },
+    "joint2": {
+      "semantic_comparison": "PASS",
+      "publication_binding_checks": {
+        "after": {
+          "attempts": 35,
+          "failures": [],
+          "status": "PASS"
+        },
+        "before": {
+          "attempts": 35,
+          "failures": [],
+          "status": "PASS"
+        }
+      },
+      "mismatches": {},
+      "comparison_sha256": "12944e7443214dc8f75bb0bbb022caeaa3471cb813efaac3c4addda01c3b9a70",
+      "sides": {
+        "reference": {
+          "execution": {
+            "binary_sha256": "0be0bbd6c7ca45bea2a794ac5c7bcd09bd4658abc3029c3396cfd8d66a5da05e",
+            "library_sha256": "f0795ef00f4b96084be599089ed30545e5f9af72b4cfff97312dd18a477bb74d",
+            "head": "30468729c29256cb09889f38cf166b945ceb87b7",
+            "command": [
+              "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order2.yaml",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_phase2_20261009/pl_memo_pairs/reference/joint2",
+              "35"
+            ],
+            "environment": {
+              "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+              "OMP_NUM_THREADS": "1",
+              "OPENBLAS_NUM_THREADS": "1",
+              "MKL_NUM_THREADS": "1",
+              "UWB_IMU_PL_SCENARIO": "joint_recovery",
+              "UWB_IMU_PL_EXHAUSTIVE_PL_VALIDATION": "1"
+            },
+            "exit_code": 0,
+            "wall_s": 93.52557434100027,
+            "audit": false
+          },
+          "stage_mean_ms": {
+            "core_compute": 2629.234062857143,
+            "candidate_evaluation": 1378.7037348571428,
+            "hypothesis_evidence": 944.9777685714286,
+            "model_generation": 173.30924594285713,
+            "integrity_window": 52.54937977142857
+          },
+          "core_count": 35,
+          "counted_gram_svds": 9552278,
+          "validation_counters": {
+            "pl_payload_validations": 22,
+            "pl_payload_validation_reuses": 0
+          },
+          "files_sha256": {
+            "timing.csv": "80ac3e2b84af7a64f5c7f1766ca4a445bf0d349e9c45a6a2a833afef2fa8930c",
+            "diagnostic_attempts.csv": "c5625448edd0338b237f1520f153e8c49a4a34629c0152837336cf734c78b015",
+            "states.csv": "8bcab8d38588e6d300fc621ab33b7a3f32370284a4fe5850ce3a96ce99e9ee15",
+            "integrity.csv": "c3ff044df30388e424df867b124f8f5b6ebfcfa5fda2f15a7f1c7813e7899a32",
+            "terminal_packets.csv": "0513ec04b3dec29e6fb0bed2733f8bf877626df1e21c9d18ed5e52ba45e70fe7",
+            "candidates.csv": "2d7a8fc14ea3e206045e4a0db9c73a3d2ba60c24d1e462cd8a6c07706163afbe"
+          }
+        },
+        "optimized": {
+          "execution": {
+            "binary_sha256": "0be0bbd6c7ca45bea2a794ac5c7bcd09bd4658abc3029c3396cfd8d66a5da05e",
+            "library_sha256": "f0795ef00f4b96084be599089ed30545e5f9af72b4cfff97312dd18a477bb74d",
+            "head": "30468729c29256cb09889f38cf166b945ceb87b7",
+            "command": [
+              "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order2.yaml",
+              "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/accuracy_fde_phase2_20261009/pl_memo_pairs/optimized/joint2",
+              "35"
+            ],
+            "environment": {
+              "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+              "OMP_NUM_THREADS": "1",
+              "OPENBLAS_NUM_THREADS": "1",
+              "MKL_NUM_THREADS": "1",
+              "UWB_IMU_PL_SCENARIO": "joint_recovery"
+            },
+            "exit_code": 0,
+            "wall_s": 91.51986458100009,
+            "audit": false
+          },
+          "stage_mean_ms": {
+            "core_compute": 2572.669394285714,
+            "candidate_evaluation": 1303.1903914285715,
+            "hypothesis_evidence": 958.524754,
+            "model_generation": 175.9987894,
+            "integrity_window": 55.37751325714286
+          },
+          "core_count": 35,
+          "counted_gram_svds": 9405759,
+          "validation_counters": {
+            "pl_payload_validations": 11,
+            "pl_payload_validation_reuses": 11
+          },
+          "files_sha256": {
+            "timing.csv": "9696bc9124d92256b455794026bb1d9756eab22a6023fc69d336635a2cdbdb61",
+            "diagnostic_attempts.csv": "0e1fdfe61c6aacd326ce45fd0932732641180fdbff548f97a6b052460d21322e",
+            "states.csv": "8bcab8d38588e6d300fc621ab33b7a3f32370284a4fe5850ce3a96ce99e9ee15",
+            "integrity.csv": "cd0e4f32cc766cdddc06c2d54ef5bc27c783c8712635cc64acc9ea5ffdd7401b",
+            "terminal_packets.csv": "19b77085ca70e7b92feb14cd918b8c09ec9ca8e03c5537a7e0a9f01b805f2f5e",
+            "candidates.csv": "133ec5dc65d0a5e2989ffb101b55dd49e31b9c6d2ac85c3d3e60b31d5b46b683"
+          }
+        }
+      },
+      "core_reduction_percent": 2.1513744010284497,
+      "speedup": 1.0219867615703235
+    }
+  },
+  "tests": [
+    {
+      "name": "pl_memo_tests",
+      "tests": 20,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "2e859cd0d805654ca69752c5489381ff4d4daf3646f7d649d314802e669968d2"
+    },
+    {
+      "name": "pl_memo_safety_tests",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "2659dee4ef5a26fc9e4b985ff3e08b70d1e8f748648859271895a2f421ff772c"
+    }
+  ],
+  "interpretation": [
+    "Both strict semantic comparisons and independent publication bindings PASS.",
+    "Single pairs establish measured work elimination, not statistical broad runtime gain. Normal wall difference is negligible; joint2 gain is small.",
+    "Only 11 valid immutable payloads were reused per scenario; do not expand this memo direction on the current evidence.",
+    "Candidate diagnostic pl_ms is shared flat-batch wall assigned to each root (integrity_monitor.cpp), so summing those rows double-counts; parent stage wall is reported instead.",
+    "Counted Gram SVDs exclude separate classifier Z reference SVD.",
+    "No protected recovery; research realtime targets remain unmet; mode response cache stays opt-in.",
+    "Original external *_used result fields not fully key-bound; this preexisting binding limitation is OPEN, unchanged here."
+  ]
+}
