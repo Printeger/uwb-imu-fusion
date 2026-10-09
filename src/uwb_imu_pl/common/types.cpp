@@ -45,6 +45,7 @@ const char* toString(ProtectionLevelStatus value) {
     case ProtectionLevelStatus::Finite: return "FINITE";
     case ProtectionLevelStatus::Unbounded: return "UNBOUNDED";
     case ProtectionLevelStatus::Invalid: return "INVALID";
+    case ProtectionLevelStatus::Indeterminate: return "INDETERMINATE";
   }
   return "INVALID";
 }

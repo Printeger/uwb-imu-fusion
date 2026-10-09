@@ -77,7 +77,8 @@ enum class IntegrityLabel {
   HeuristicDebug
 };
 enum class Availability { Available, Alert, Unavailable };
-enum class ProtectionLevelStatus { NotComputed, Finite, Unbounded, Invalid };
+// Append diagnostic states; retain every existing wire/ABI ordinal.
+enum class ProtectionLevelStatus { NotComputed, Finite, Unbounded, Invalid, Indeterminate };
 
 struct UwbMeasurement {
   MeasurementId id;
@@ -654,7 +655,7 @@ struct IntegrityOutput {
   std::string fde_profile = "joint_order1";
   std::string scope_digest;
   std::string detector_contract_id;
-  ProtectionLevelStatus pl_status = ProtectionLevelStatus::Unbounded;
+  ProtectionLevelStatus pl_status = ProtectionLevelStatus::NotComputed;
   bool within_alert_limits = false;
   bool state_valid = false;
   bool fresh = false;

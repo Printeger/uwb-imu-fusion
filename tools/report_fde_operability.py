@@ -91,6 +91,13 @@ def main():
         decision='event partition proposal pending; no probability contract changes applied',
         uwb_node='FdeManager::decideImpl / completeRiskLedger known charge 4.69e-5 > 4e-5',
         imu_node='joint detector passes; RankUpdateKernel KEEP step norm > 0.25; PL NOT_RUN')
+    prefix=read(args.results/'strict_noiseless'/'diagnostic_attempts.csv')[:4]
+    data['normal_prefix_budget_obstruction']=dict(
+        source=str(args.results/'strict_noiseless'/'diagnostic_attempts.csv'),
+        scope='Existing frozen probability ledger evidence; not a new current-model numerical or recovery run.',
+        known_charges=[r['risk_ledger_charged_total'] for r in prefix],
+        fourth_epoch_known_charge='4.1680000000000008e-05', budget='4.0000000000000003e-05',
+        implication='Even KEEP at epoch 1 followed by three epochs reaches an over-budget ledger at epoch 4 on this original profile; shifting the fault earlier does not demonstrate all three required loops.')
     for label,_ in specs:
         directory=args.results / label
         if label in data['flows']:continue
@@ -107,7 +114,7 @@ def main():
         if execution.exists():
             data['flows'][label]['execution']=dict(path=str(execution),sha256=sha(execution))
     data['acceptance'] = dict(A1='PASS', A2='PASS_BOUNDARY_MISSING_PRODUCTION_EVIDENCE',
-        A3='TRACE_IMPLEMENTED_DEADLINE_AT_PIPELINE', A4='FAIL_NO_CONDITIONAL_RECOVERY',
+        A3='PARTIAL_FIVE_SELECTOR_GATES_AND_PIPELINE_DIAGNOSTICS', A4='FAIL_NO_CONDITIONAL_RECOVERY',
         A5='PASS', A6='CURRENT_TARGETED_PAIR_PASS_35_PAIR_SUPERSEDED', A7='DELIVERED_WITH_BLOCKERS',
         realtime='NOT_MET',deployment='NOT_QUALIFIED',simulation_flow='NOT_IMPLEMENTED')
     data['artifacts'] = {}
@@ -181,12 +188,21 @@ def main():
     for name in ('imu_reference_before','imu_reference_after','imu_whitening_before',
                  'imu_whitening_after','imu_history_coordinate_after','imu_history_coordinate_rerun',
                  'imu_raw_conversion_history','imu_raw_conversion_current','imu_corrected_batch_owner',
-                 'imu_support','imu_exception_filter'):
+                 'imu_support','imu_exception_filter','status_before','status_after'):
         path=args.results/(name+'.xml')
         if path.exists():
             root=ET.parse(path).getroot()
             data['continued_correctness_artifacts'][name]=dict(path=str(path),sha256=sha(path),
                 tests=int(root.attrib['tests']),failures=int(root.attrib['failures']))
+    data['terminal_pl_status_fix'] = dict(
+        scope='Diagnostic classification only; numerical B-correct remains a1ef121.',
+        reproduced='Real pipeline had a valid measurement model and refused final Inf result, incorrectly labelled UNBOUNDED.',
+        classification={'no_candidate_pl_execution': 'NOT_COMPUTED',
+                        'candidate_work_without_final_result': 'INDETERMINATE'},
+        preserved='Existing enum ordinals, numerical operations, selection and publication refusal.',
+        regression='8 targeted tests passed using the current build DSO explicitly.',
+        retained_launch_error=str(args.results/'status_after.log'),
+        trace_limit='Five selector gates plus pipeline diagnostics exist; a single dependency-bearing trace across every requirements section 4.4 gate is not yet complete.')
     power=args.results/'imu_power_corrected.csv'
     if power.exists():
         from scipy.optimize import brentq

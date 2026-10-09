@@ -2380,7 +2380,11 @@ processUwbBatchWithFinishElapsedOverride(
             output.protection_level.vpl_m <=
                 config.risk.vertical_alert_limit_m;
       } else if (output.measurement_model_valid) {
-        output.pl_status = ProtectionLevelStatus::Unbounded;
+        // An unavailable final result may be a risk/step/selection refusal.
+        // Candidate work is not an unboundedness proof for the final mean.
+        output.pl_status = output.diagnostics.pl_evaluated_actions == 0
+            ? ProtectionLevelStatus::NotComputed
+            : ProtectionLevelStatus::Indeterminate;
       } else {
         output.pl_status = ProtectionLevelStatus::Invalid;
       }

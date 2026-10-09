@@ -7443,6 +7443,26 @@ TEST(FdeOperabilityReference, ProductionMapUsesActualFrozenPoseAndMintUsesFrozen
   EXPECT_TRUE((evidence.reference.mean_world_m.array()==expected.array()).all());
 }
 
+TEST(FdeOperabilityStatus, RefusedFinalResultIsNotAnUnboundednessProof) {
+  using namespace uwb_imu_pl;
+  const auto config=researchConfig();
+  IncrementalUwbImuEstimator estimator(config,Eigen::Vector3d::Zero());
+  NavigationState initial;initial.position_world_m={0,0,1};
+  estimator.initialize(initial,config.realtime.prior_sigmas);
+  RealtimeIntegrityPipeline pipeline(&estimator,
+      IntegrityMonitor(config.risk,config.snapshot.rank_tolerance,
+                       config.snapshot.max_condition_number),offlineReplayPublicationLimits());
+  for(int i=0;i<=2;++i) {
+    ImuMeasurement imu;imu.timestamp=TimestampNs(i*5000000LL);
+    imu.specific_force_mps2={0,0,config.imu.gravity_mps2};pipeline.ingestImu(imu);
+  }
+  const auto output=pipeline.processUwbBatch(batch(config,10000000));
+  ASSERT_TRUE(output.measurement_model_valid);
+  ASSERT_FALSE(output.protection_level.pl_xyz_m.allFinite());
+  EXPECT_NE(output.pl_status,ProtectionLevelStatus::Unbounded);
+  EXPECT_FALSE(output.publication.protected_output);
+}
+
 TEST(FdeOperabilityImuReference, SensitivityUsesActualFrozenFactorPoint) {
   using namespace uwb_imu_pl;
   const auto config = researchConfig();

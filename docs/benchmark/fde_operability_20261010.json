@@ -1055,10 +1055,23 @@
     "uwb_node": "FdeManager::decideImpl / completeRiskLedger known charge 4.69e-5 > 4e-5",
     "imu_node": "joint detector passes; RankUpdateKernel KEEP step norm > 0.25; PL NOT_RUN"
   },
+  "normal_prefix_budget_obstruction": {
+    "source": "results/fde_operability_20261010/strict_noiseless/diagnostic_attempts.csv",
+    "scope": "Existing frozen probability ledger evidence; not a new current-model numerical or recovery run.",
+    "known_charges": [
+      "4.0000000000000003e-05",
+      "4.0000000000000003e-05",
+      "4.0000000000000003e-05",
+      "4.1680000000000008e-05"
+    ],
+    "fourth_epoch_known_charge": "4.1680000000000008e-05",
+    "budget": "4.0000000000000003e-05",
+    "implication": "Even KEEP at epoch 1 followed by three epochs reaches an over-budget ledger at epoch 4 on this original profile; shifting the fault earlier does not demonstrate all three required loops."
+  },
   "acceptance": {
     "A1": "PASS",
     "A2": "PASS_BOUNDARY_MISSING_PRODUCTION_EVIDENCE",
-    "A3": "TRACE_IMPLEMENTED_DEADLINE_AT_PIPELINE",
+    "A3": "PARTIAL_FIVE_SELECTOR_GATES_AND_PIPELINE_DIAGNOSTICS",
     "A4": "FAIL_NO_CONDITIONAL_RECOVERY",
     "A5": "PASS",
     "A6": "CURRENT_TARGETED_PAIR_PASS_35_PAIR_SUPERSEDED",
@@ -2732,7 +2745,31 @@
       "sha256": "b69780e7741fe26b370f5f3e217840b7ed32322e53107d5f74208d605a8077bb",
       "tests": 2,
       "failures": 0
+    },
+    "status_before": {
+      "path": "results/fde_operability_20261010/status_before.xml",
+      "sha256": "59583480fa35efe230961675fb7ef9318aaa5e1130581313b46e4b2a423785c0",
+      "tests": 1,
+      "failures": 1
+    },
+    "status_after": {
+      "path": "results/fde_operability_20261010/status_after.xml",
+      "sha256": "3a95bf055558912597a1e6196385108b0d24dd8031d738ea09bafd6e80bdb1cd",
+      "tests": 8,
+      "failures": 0
     }
+  },
+  "terminal_pl_status_fix": {
+    "scope": "Diagnostic classification only; numerical B-correct remains a1ef121.",
+    "reproduced": "Real pipeline had a valid measurement model and refused final Inf result, incorrectly labelled UNBOUNDED.",
+    "classification": {
+      "no_candidate_pl_execution": "NOT_COMPUTED",
+      "candidate_work_without_final_result": "INDETERMINATE"
+    },
+    "preserved": "Existing enum ordinals, numerical operations, selection and publication refusal.",
+    "regression": "8 targeted tests passed using the current build DSO explicitly.",
+    "retained_launch_error": "results/fde_operability_20261010/status_after.log",
+    "trace_limit": "Five selector gates plus pipeline diagnostics exist; a single dependency-bearing trace across every requirements section 4.4 gate is not yet complete."
   },
   "imu_causal_diagnostic": {
     "path": "results/fde_operability_20261010/imu_power_corrected.csv",

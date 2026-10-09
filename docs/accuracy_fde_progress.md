@@ -771,3 +771,47 @@ fault events. No pending contract question is treated as approval. Remaining
 work includes actual conditional P-N/P-U/P-I recovery, complete applicable
 model/omitted/history/bridge evidence and current-model final integration; none
 is replaced by these software fixes or the historical performance result.
+
+Further terminal-status repair (same mathematical B-correct a1ef121): a real
+raw IMU/UWB pipeline fixture with a valid measurement model returned an
+unavailable final Inf PL labelled UNBOUNDED, despite having no unboundedness
+proof for the final reference. The new deterministic test failed before the
+change (`status_before.xml`, one failure). `IntegrityOutput` now defaults to
+NOT_COMPUTED; pipeline finalization classifies no candidate PL execution as
+NOT_COMPUTED and candidate work without a final result as INDETERMINATE.
+Existing enum ordinals, numeric matrices, risk contract, selection and
+publication refusal remain unchanged. UNBOUNDED is retained as an explicit
+status, not inferred from a final placeholder. Candidate bounds remain in the
+existing candidate audit rather than becoming final protected bounds.
+
+Both test_integrity_v2 and realtime_performance_benchmark rebuilt successfully.
+The eight directly related operability/profile/publication tests passed in
+`status_after.xml`; no full safety campaign or new 35-attempt processes were
+run. An initial launch loaded the old DSO through the existing LD_LIBRARY_PATH
+and exited before any test; `status_after.log` retains that symbol error. The
+successful launch explicitly prepended the current private build library:
+```sh
+LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib:$LD_LIBRARY_PATH "$BIN/test_integrity_v2" --gtest_filter='FdeOperability*:FdeProfiles.NominalPipelineAndFaultCensusFollowResolvedScope:P106SimulationAcceptance.PublishCallNotAnalysisControlsDeadline'
+python3 tools/report_fde_operability.py --results results/fde_operability_20261010 --output docs/benchmark/fde_operability_20261010.json
+```
+The JSON now explicitly marks A3 partial: the five selector gates and separate
+pipeline diagnostics are present, but a single dependency-bearing trace across
+every section 4.4 gate is not complete. Correct terminal Inf classification
+does not by itself establish that wider trace or any recovery.
+
+The unchanged risk contract remains a concrete functional blocker across
+three consecutive goal turns, independent of the newly repaired software
+defects. Reading the existing strict_noiseless ledger, without another run,
+gives known charge4.0000000000000003e-5 at epochs1–3 and
+4.1680000000000008e-5 at epoch4, versus the binary64 budget
+4.0000000000000003e-5. Thus even the earliest normal KEEP plus three subsequent
+epochs hits a known over-budget ledger on that original profile. This is
+probability-contract evidence from the retained flow, not a new-model numeric
+qualification. The UWB alarm at epoch7 separately charges4.69e-5; missing
+evidence cannot lower either charge. The IMU raw-sample support and weak parity
+response blockers above also remain. Pending risk-event and IMU support
+proposals have not been authorized or applied. No earlier-fault shortcut,
+budget/AL/step change, history removal or hardware qualification claim resolves
+these blockers. Overall remains PARTIAL_BLOCKED, recovery latency
+null/RIGHT_CENSORED, simulation-conditional flow not implemented and current
+full 35-attempt integration unverified.
