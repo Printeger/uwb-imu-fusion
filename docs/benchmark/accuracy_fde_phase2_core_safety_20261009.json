@@ -1,0 +1,90 @@
+{
+  "schema": "uwb-imu-pl/phase2-current-dso-core-safety/v1",
+  "source_commit": "603455a9e266bc18661e6a5d7c25b1d8767fbbaa",
+  "library_sha256": "2374c172412a8ccb95e93c7946d881258c826dc637555812c48bd95ae79eb475",
+  "environment": {
+    "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib"
+  },
+  "tests": [
+    {
+      "binary": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2",
+      "binary_sha256": "5207e105e1a54aba36164f0366bc2b4a05618358def71546bfbadea4075c741c",
+      "filter": "Phase2*.*:P103ProofArena.*:P104ProofOwnership.*:P105FlatConcurrency.*:IntegrityV2Transaction.*:IntegrityV2Bridge.*:IntegrityV2ImuOracle.*",
+      "xml_path": "results/accuracy_fde_phase2_20261009/frozen_memo_integrity_tests.xml",
+      "xml_sha256": "95138e8ab0a60a017fb6cf0ca5546718006976c2664bdea2fde0d4ec14ebc894",
+      "tests": 33,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    {
+      "binary": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_square_root_context",
+      "binary_sha256": "c103ccdd83227301a291fa56c265d3644834da563cd8667a6d93a447fc7614cf",
+      "filter": "Phase2ClassificationHashes.*:SquareRootContext.P003*",
+      "xml_path": "results/accuracy_fde_phase2_20261009/frozen_memo_math_tests.xml",
+      "xml_sha256": "0255cd24cefaec636314a465825b71fd29586206e61160542f803ab0f32cd318",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    {
+      "binary": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_fault_summary",
+      "binary_sha256": "c78edd00f8de3c9303570c04ed77b504f292e39e4bc125001efbe4784e414b6a",
+      "filter": "HistoryFaultSummary.P103HierarchicalOrthogonalThirtyStepFeasibility:HistoryFaultSummary.P103OwnerCollisionTamperAndStaleCacheFailClosed:HistoryFaultSummary.P103CarrierRankCertificateRejectsNumericalNoise:HistoryFaultSummary.BatchDirtyClosurePreservesExhaustiveBitsAndFallback",
+      "xml_path": "results/accuracy_fde_phase2_20261009/final_test_history_fault_summary.xml",
+      "xml_sha256": "23f113ba9a1b5bbba5056590cca8397221828537466105ae43d9514b502872e3",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    {
+      "binary": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_publication_identity",
+      "binary_sha256": "7c96b9f8f94187f28b8b98dd4db843f07186da2e8fdea0928cbc8766a4a23fe4",
+      "filter": "*",
+      "xml_path": "results/accuracy_fde_phase2_20261009/final_test_publication_identity.xml",
+      "xml_sha256": "87ee00f8e312ea5f22543d6aa5b4a60088d867983d4a1c6158524a4b31905734",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    {
+      "binary": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_publication_wiring",
+      "binary_sha256": "786b86e73bccb0db2717e24b9b13449a9494da22a4a82ae9968fe98935e09f2c",
+      "filter": "*",
+      "xml_path": "results/accuracy_fde_phase2_20261009/final_test_publication_wiring.xml",
+      "xml_sha256": "e586037d0f8a271a01ec4ed70befc0e67ba9241909bd1f5d13280e3c64279cc4",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    {
+      "binary": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_p0_05_publication",
+      "binary_sha256": "bee8e5d9764b85a778a1863721d3943da48c7e0f245eeb6148a2649ddf605587",
+      "filter": "*",
+      "xml_path": "results/accuracy_fde_phase2_20261009/final_test_p0_05_publication.xml",
+      "xml_sha256": "449237aa0b69794a5b537428d677b961664ff969855a4a4324214ed85c4de852",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    {
+      "binary": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2",
+      "binary_sha256": "5207e105e1a54aba36164f0366bc2b4a05618358def71546bfbadea4075c741c",
+      "filter": "P106SimulationAcceptance.PublishCallNotAnalysisControlsDeadline",
+      "xml_path": "results/accuracy_fde_phase2_20261009/final_test_integrity_v2.xml",
+      "xml_sha256": "77e88ab29e8bc12c08e0f4bddd0ff271006afd841f55b865d92a0b46d12b9750",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    }
+  ],
+  "total_tests": 68,
+  "status": "PASS",
+  "oracle_scope": "original per-leaf bit/proof parity plus full raw-row rebuild, existing dense/rank oracles; not a claim of independent implementation of every mathematical component"
+}

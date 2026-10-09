@@ -534,3 +534,24 @@ positive fixture remains valid and memo-hit tested. The initial unit failure is
 retained here; existing baseline scientific FAIL records remain unchanged.
 Hash-only/memo gains and final integrated acceptance still unproven for this
 new layer until paired measurement; no gain claimed yet.
+
+Frozen memo paired measurement completed: both strict semantics and independent
+publication bindings PASS. Normal 178.864→178.771ms (0.05%, no gain), joint2
+2487.516→2435.606ms (2.09%). Joint2 frozen full validations 2,497,242→1,344,738,
+reuses 1,152,504; Gram SVDs 9,405,759→7,100,751. This large work reduction
+yields only a small wall gain. Important measurement limitation: reference also
+constructs new wrapper/memo indexes, so this isolates reuse benefit rather than
+proving setup-inclusive net gain. Previous classifier-only DSO 2393.333ms vs
+new default 2435.606ms is uncontrolled across builds/pairs and cannot settle net
+benefit. Do not freeze this new layer as a net winner yet; stop extending memo
+and restore original reference producer setup before final combined comparison.
+Compact paired record: docs/benchmark/accuracy_fde_phase2_frozen_validation_20261009.json.
+
+Final-DSO core safety PASS 68/68: previous 41 plus 4 history, 3 publication
+identity, 6 wiring, 13 P0-05 publication, and P106 publish-call deadline boundary.
+Original per-leaf bit/proof parity and full raw-row rebuild are distinct checks;
+the raw builder is not an independent mathematical implementation. Compact
+commands/XML/ELF/DSO identities: accuracy_fde_phase2_core_safety_20261009.json.
+Independent High final audit found no semantic reduction, but requires final
+combined actual before/after evidence and integrated delivery table. Protected
+recovery, risk/formal and realtime latency qualifications remain NOT_MET.
