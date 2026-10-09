@@ -1,0 +1,394 @@
+{
+  "schema": "uwb-imu-pl/posterior-range-weight-diagnostic/v1",
+  "gt_read": false,
+  "parameter_selection_performed": false,
+  "cache_identity": [
+    {
+      "path": "results/accuracy_fde_20261009/selected_cache/starloc/loop-3d_s3/manifest.json",
+      "sha256": "cea873a7ed3c6d0a0905e17ec881e8d5a7b280c9ba1d2ab34e9a637fc9d8d955"
+    },
+    {
+      "path": "results/accuracy_fde_20261009/selected_cache/starloc/loop-3d_s3/uwb.csv",
+      "sha256": "d1f3b180f753030f971ac10c3ff166dd3d732948613fd8340f7e3fb0cadbd35c"
+    }
+  ],
+  "calibration_label": "official_geometry",
+  "frame_provenance": {
+    "gyro_rotation_C_r_i_xyzw": [
+      -0.503718511837862,
+      0.49762412832847086,
+      0.5122618000350989,
+      -0.4860305915906731
+    ],
+    "acceleration_frame": "rig_as_published",
+    "range_field": "range_calib",
+    "setup": "s3",
+    "landmarks": "v2",
+    "anchor_marker_id_to_radio_id": {
+      "10": 10,
+      "11": 11,
+      "12": 12,
+      "4": 4,
+      "5": 5,
+      "6": 6,
+      "7": 7,
+      "9": 9
+    },
+    "anchor_id_mapping_provenance": "published_v1_room_geometry_correspondence_to_v2_radio_ids",
+    "gt_reference": "uwb_csv_official_tag_position_and_rig_orientation",
+    "source_file_sha256": {
+      "/home/mint/ws_fusion_uwb/data/starloc/data/loop-3d_s3/imu.csv": "440df4b0d912eedb4d5a98014acacc6bb6988a13a26c124eb7a35dd19681b3de",
+      "/home/mint/ws_fusion_uwb/data/starloc/data/loop-3d_s3/uwb.csv": "5a57fe667f9dec68b9ae3829e0b8b1171bd53d0098000ce419fb7ac2d2b36905",
+      "/home/mint/ws_fusion_uwb/data/starloc/data/loop-3d_s3/calib.json": "d8a24657bab1dafd80f2e2449742dbe1322f6d6cbcb00585c831c43502955a80",
+      "/home/mint/ws_fusion_uwb/data/starloc/mocap/uwb_markers_v2.csv": "4d7476ff36d9f88db66cf8101ce17d8225e5fa1faf63ff4226418512a945dd64"
+    }
+  },
+  "huber_k": 1.5,
+  "gaussian": {
+    "rows": 4195,
+    "batch_signature_sha256": "d00e2701b13f9b164fb9a2b0892c9eb942c9915754b208a60811a96714be11de",
+    "source_files": [
+      {
+        "path": "results/accuracy_fde_20261009/confirmation/gaussian/runs/covariance/starloc/loop-3d_s3/states.csv",
+        "sha256": "56c36a2de2901e6867c93369639d5092f9e500a170dc0547148fadb06e0b6540"
+      },
+      {
+        "path": "results/accuracy_fde_20261009/confirmation/gaussian/runs/covariance/starloc/loop-3d_s3/sensor_diagnostics.csv",
+        "sha256": "57db473c15556feac2db607b32955ddaa75cfc0e1fe9bdf1c38690e7d4481f59"
+      },
+      {
+        "path": "results/accuracy_fde_20261009/confirmation/gaussian/runs/covariance/starloc/loop-3d_s3/execution.json",
+        "sha256": "e69eee009aff60e0a5763e5ab2271ce904b291d2d4b84219d93964aa4442c97b"
+      },
+      {
+        "path": "results/accuracy_fde_20261009/confirmation/gaussian/runs/covariance/starloc/loop-3d_s3/effective_nominal_config.yaml",
+        "sha256": "1625ff3235a5e332d07d86d9aa8ede098e06f1ffaf65a88383859207e3471066"
+      }
+    ],
+    "standardized_residual_abs": {
+      "count": 23088,
+      "nonfinite": 0,
+      "mean": 1.3593483576586127,
+      "p50": 1.0366327212402773,
+      "p95": 3.6430201300018745,
+      "p99": 5.353654066090739,
+      "max": 36.50642932130643
+    },
+    "signed_residual": {
+      "count": 23088,
+      "nonfinite": 0,
+      "mean": -0.0561453774074515,
+      "p50": -0.012031530847013269,
+      "p95": 2.948990549822619,
+      "p99": 4.112536098272791,
+      "max": 6.975553992615265
+    },
+    "implied_huber_weight": {
+      "count": 23088,
+      "nonfinite": 0,
+      "mean": 0.8760769157659888,
+      "p50": 1.0,
+      "p95": 1.0,
+      "p99": 1.0,
+      "max": 1.0
+    },
+    "fraction_above_huber_k": 0.34875259875259873,
+    "fraction_weight_below_half": 0.09368503118503119,
+    "conditional_position_information_trace_ratio": {
+      "count": 4195,
+      "nonfinite": 0,
+      "mean": 1.0,
+      "p50": 1.0,
+      "p95": 1.0,
+      "p99": 1.0,
+      "max": 1.0
+    },
+    "conditional_position_information_min_eigen_ratio": {
+      "count": 4030,
+      "nonfinite": 0,
+      "mean": 1.0,
+      "p50": 1.0,
+      "p95": 1.0,
+      "p99": 1.0,
+      "max": 1.0
+    },
+    "conditional_position_information_condition_unweighted": {
+      "count": 4195,
+      "nonfinite": 165,
+      "mean": 1286.6181749201266,
+      "p50": 20.10729461466299,
+      "p95": 115.06936314725033,
+      "p99": 311.304548683236,
+      "max": 4910335.216589025
+    },
+    "conditional_position_information_condition_applied": {
+      "count": 4195,
+      "nonfinite": 165,
+      "mean": 1286.6181749201266,
+      "p50": 20.10729461466299,
+      "p95": 115.06936314725033,
+      "p99": 311.304548683236,
+      "max": 4910335.216589025
+    },
+    "rounded_export_cost_relative_deviation": {
+      "count": 4195,
+      "nonfinite": 0,
+      "mean": 1.2005615577010723e-05,
+      "p50": 8.397803984864662e-06,
+      "p95": 3.54524737896124e-05,
+      "p99": 5.8256527145115115e-05,
+      "max": 0.0001107328810744379
+    },
+    "per_anchor_signed_standardized_residual": {
+      "10": {
+        "count": 2889,
+        "nonfinite": 0,
+        "mean": 1.051564235776406,
+        "p50": 0.9077528379671211,
+        "p95": 3.4716275965162877,
+        "p99": 4.141787968515372,
+        "max": 5.5161287679864905
+      },
+      "11": {
+        "count": 2888,
+        "nonfinite": 0,
+        "mean": 0.09028689271653491,
+        "p50": -0.1957319847640857,
+        "p95": 3.6572256019361262,
+        "p99": 5.8316798321713526,
+        "max": 6.975553992615265
+      },
+      "12": {
+        "count": 2888,
+        "nonfinite": 0,
+        "mean": -0.10126993903085703,
+        "p50": -0.1005096204309265,
+        "p95": 2.61236254336987,
+        "p99": 3.9358740714802756,
+        "max": 6.58519182872438
+      },
+      "4": {
+        "count": 2889,
+        "nonfinite": 0,
+        "mean": -0.3002396851674702,
+        "p50": -0.15529586631035133,
+        "p95": 2.865746473187712,
+        "p99": 4.291799505913299,
+        "max": 5.623474285499882
+      },
+      "5": {
+        "count": 2886,
+        "nonfinite": 0,
+        "mean": 0.2109356894864542,
+        "p50": 0.153467483934896,
+        "p95": 2.551511933715685,
+        "p99": 3.178433267487969,
+        "max": 4.05757724790935
+      },
+      "6": {
+        "count": 2875,
+        "nonfinite": 0,
+        "mean": -0.771436581934593,
+        "p50": -0.5409547821331858,
+        "p95": 1.944001284196124,
+        "p99": 2.960340171174813,
+        "max": 4.883810322878697
+      },
+      "7": {
+        "count": 2886,
+        "nonfinite": 0,
+        "mean": -0.13066417248908907,
+        "p50": -0.047751934338840285,
+        "p95": 2.9971922534873894,
+        "p99": 3.9458856934413777,
+        "max": 6.44219484573006
+      },
+      "9": {
+        "count": 2887,
+        "nonfinite": 0,
+        "mean": -0.5018792821368666,
+        "p50": -0.361734977559156,
+        "p95": 2.7301647471677706,
+        "p99": 3.761976904190659,
+        "max": 4.952539296056321
+      }
+    }
+  },
+  "robust": {
+    "rows": 4195,
+    "batch_signature_sha256": "d00e2701b13f9b164fb9a2b0892c9eb942c9915754b208a60811a96714be11de",
+    "source_files": [
+      {
+        "path": "results/accuracy_fde_20261009/confirmation/robust/runs/covariance/starloc/loop-3d_s3/states.csv",
+        "sha256": "ec2e8fc0d8f199198abbd6d79e77c8d260aaee64c871054897ecfe8e87343e4d"
+      },
+      {
+        "path": "results/accuracy_fde_20261009/confirmation/robust/runs/covariance/starloc/loop-3d_s3/sensor_diagnostics.csv",
+        "sha256": "ece0477b8a9b5a261d6cbda62a7989b04027f9798b2e23b6ebd79fafd33bd6bd"
+      },
+      {
+        "path": "results/accuracy_fde_20261009/confirmation/robust/runs/covariance/starloc/loop-3d_s3/execution.json",
+        "sha256": "46c0e0d538ffd6f4cb270bf7b620b6ccabe8ac61119a19da27214ad20836eef4"
+      },
+      {
+        "path": "results/accuracy_fde_20261009/confirmation/robust/runs/covariance/starloc/loop-3d_s3/effective_nominal_config.yaml",
+        "sha256": "d4ca54633263d7756e0ab59c63ab0c8796b4307ff7d80de868ced75400c66932"
+      }
+    ],
+    "standardized_residual_abs": {
+      "count": 23088,
+      "nonfinite": 0,
+      "mean": 1.7818179848392508,
+      "p50": 1.113697568734726,
+      "p95": 5.480481238535034,
+      "p99": 11.285492501399773,
+      "max": 38.60019456560012
+    },
+    "signed_residual": {
+      "count": 23088,
+      "nonfinite": 0,
+      "mean": -0.24064586137412083,
+      "p50": -0.17549169849171342,
+      "p95": 3.5393363881520448,
+      "p99": 6.869234288635928,
+      "max": 38.60019456560012
+    },
+    "implied_huber_weight": {
+      "count": 23088,
+      "nonfinite": 0,
+      "mean": 0.8302041358254282,
+      "p50": 1.0,
+      "p95": 1.0,
+      "p99": 1.0,
+      "max": 1.0
+    },
+    "fraction_above_huber_k": 0.387040887040887,
+    "fraction_weight_below_half": 0.16502079002079,
+    "conditional_position_information_trace_ratio": {
+      "count": 4195,
+      "nonfinite": 0,
+      "mean": 0.8257615982132245,
+      "p50": 0.8761698589778154,
+      "p95": 1.0,
+      "p99": 1.0,
+      "max": 1.0
+    },
+    "conditional_position_information_min_eigen_ratio": {
+      "count": 4030,
+      "nonfinite": 0,
+      "mean": 0.8131706058274526,
+      "p50": 0.8998022881336394,
+      "p95": 1.0,
+      "p99": 1.0,
+      "max": 1.0
+    },
+    "conditional_position_information_condition_unweighted": {
+      "count": 4195,
+      "nonfinite": 165,
+      "mean": 4757.460012099297,
+      "p50": 17.13189020564598,
+      "p95": 100.01202861173358,
+      "p99": 302.96631927669597,
+      "max": 18751136.28104022
+    },
+    "conditional_position_information_condition_applied": {
+      "count": 4195,
+      "nonfinite": 165,
+      "mean": 4389.871231649336,
+      "p50": 17.54051188795625,
+      "p95": 106.49984979101296,
+      "p99": 342.06439600617887,
+      "max": 17290574.271029916
+    },
+    "rounded_export_cost_relative_deviation": {
+      "count": 4195,
+      "nonfinite": 0,
+      "mean": 1.1182783786557078e-05,
+      "p50": 7.243139562738338e-06,
+      "p95": 3.6168474128010944e-05,
+      "p99": 5.6634600214166116e-05,
+      "max": 0.00013928611518632117
+    },
+    "per_anchor_signed_standardized_residual": {
+      "10": {
+        "count": 2889,
+        "nonfinite": 0,
+        "mean": 0.646439935569363,
+        "p50": 0.6298669075109674,
+        "p95": 3.719385303771316,
+        "p99": 5.95982306208132,
+        "max": 9.020062096209058
+      },
+      "11": {
+        "count": 2888,
+        "nonfinite": 0,
+        "mean": -0.25391754190881144,
+        "p50": -0.3545675950270441,
+        "p95": 2.9571652108053432,
+        "p99": 5.227975957062761,
+        "max": 7.315611973221065
+      },
+      "12": {
+        "count": 2888,
+        "nonfinite": 0,
+        "mean": -0.4544432030074441,
+        "p50": -0.37787852579124126,
+        "p95": 3.9430304124841853,
+        "p99": 6.352213591293295,
+        "max": 9.191980736651882
+      },
+      "4": {
+        "count": 2889,
+        "nonfinite": 0,
+        "mean": 0.15720499806073426,
+        "p50": -0.19354553685353026,
+        "p95": 6.66830381699302,
+        "p99": 21.68094879783834,
+        "max": 38.60019456560012
+      },
+      "5": {
+        "count": 2886,
+        "nonfinite": 0,
+        "mean": 0.20988222222030944,
+        "p50": 0.023640896223558566,
+        "p95": 3.496462163058401,
+        "p99": 8.934855124636963,
+        "max": 11.05052381129024
+      },
+      "6": {
+        "count": 2875,
+        "nonfinite": 0,
+        "mean": -1.1817708005560073,
+        "p50": -0.5090944656303833,
+        "p95": 2.893171487198603,
+        "p99": 4.243501276897126,
+        "max": 7.800923288957139
+      },
+      "7": {
+        "count": 2886,
+        "nonfinite": 0,
+        "mean": -0.5805935823195648,
+        "p50": -0.5188954742793354,
+        "p95": 2.6718113605887233,
+        "p99": 5.531347248942575,
+        "max": 10.053844030900516
+      },
+      "9": {
+        "count": 2887,
+        "nonfinite": 0,
+        "mean": -0.47265396345685307,
+        "p50": -0.2300530789732653,
+        "p95": 3.7413750408183293,
+        "p99": 5.481391005316551,
+        "max": 6.872552648678815
+      }
+    }
+  },
+  "limitations": [
+    "Rounded posterior exports; implied weights are not historical solver IRLS weights.",
+    "Position information conditions on fixed attitude; excludes IMU/prior/history and is not navigation covariance.",
+    "Residuals cannot alone identify NLOS, noise calibration, extrinsic or attitude error."
+  ],
+  "reproduction_command": "python3 tools/diagnose_nominal_range_weights.py --cache results/accuracy_fde_20261009/selected_cache/starloc/loop-3d_s3 --gaussian results/accuracy_fde_20261009/confirmation/gaussian/runs/covariance/starloc/loop-3d_s3 --robust results/accuracy_fde_20261009/confirmation/robust/runs/covariance/starloc/loop-3d_s3 --output results/accuracy_fde_phase2_20261009/weights_starloc.json",
+  "diagnostic_tool_sha256": "778f7b5005fd8d943892f75791092b3d246cc8c35b878834a7f66049e8f8c1f6"
+}

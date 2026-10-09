@@ -1,0 +1,327 @@
+{
+  "schema": "uwb-imu-pl/posterior-range-weight-diagnostic/v1",
+  "gt_read": false,
+  "parameter_selection_performed": false,
+  "cache_identity": [
+    {
+      "path": "results/accuracy_fde_20261009/selected_cache/SFUISE/ISAS-Walk1/manifest.json",
+      "sha256": "12ce31928428a4cc3f942453cd69450bf999a6d4668467c5dfcd0553fd8f144c"
+    },
+    {
+      "path": "results/accuracy_fde_20261009/selected_cache/SFUISE/ISAS-Walk1/uwb.csv",
+      "sha256": "56d75728fb31fa9019c47f4d0198859ef75fabede4a4b70b3f695ed4942e3a91"
+    }
+  ],
+  "calibration_label": "GT-assisted_interface_calibration",
+  "frame_provenance": {
+    "range": "raw_plus_official_toa_offset",
+    "toa_offset_by_anchor": {
+      "7475": -0.07,
+      "9524": 0.1539,
+      "10548": -0.0751,
+      "15155": 0.1409,
+      "20276": -0.0247
+    },
+    "sfuise_rejection": "official_enabled",
+    "gt_reference": "vive_body_projected_to_physical_uwb_tag",
+    "source_file_sha256": {
+      "/home/mint/ws_fusion_uwb/data/SFUISE/ISAS-Walk1.bag": "ca577e3666ad5876aa8347289a98793b8da0e68b5db459f2d7d69a6adcacd944"
+    },
+    "gt_world_transform": "joint_GT_assisted_frozen",
+    "world_calibration_artifact": "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/benchmark/calibration/sfuise_vive_to_anchor.json"
+  },
+  "huber_k": 1.5,
+  "gaussian": {
+    "rows": 882,
+    "batch_signature_sha256": "50dd614a9c6f7affbe9e15c80c849302c3d5d1aef25adebf977dccc6b8c9038c",
+    "source_files": [
+      {
+        "path": "results/accuracy_fde_20261009/confirmation/gaussian/runs/covariance/SFUISE/ISAS-Walk1/states.csv",
+        "sha256": "539a88cd7b565c4e7add63e1b7bebbf5f9444c23871dbe07e69fa56192a7e2e0"
+      },
+      {
+        "path": "results/accuracy_fde_20261009/confirmation/gaussian/runs/covariance/SFUISE/ISAS-Walk1/sensor_diagnostics.csv",
+        "sha256": "0cf0917a37b6c39aa4f84bfd7a0610368e463c9b70529a3fbf6e2b49fc92e10d"
+      },
+      {
+        "path": "results/accuracy_fde_20261009/confirmation/gaussian/runs/covariance/SFUISE/ISAS-Walk1/execution.json",
+        "sha256": "1021a0bf63df68b0871e55d77b00d03428a262ec201bcb95b61c4c0075ba9b97"
+      },
+      {
+        "path": "results/accuracy_fde_20261009/confirmation/gaussian/runs/covariance/SFUISE/ISAS-Walk1/effective_nominal_config.yaml",
+        "sha256": "000604209c0d2306dd59823ea94bc1260112b8dbecae4193e59fdd9b4e61ec90"
+      }
+    ],
+    "standardized_residual_abs": {
+      "count": 4120,
+      "nonfinite": 0,
+      "mean": 0.6857851533685648,
+      "p50": 0.44380936684512634,
+      "p95": 1.5746181396851608,
+      "p99": 3.9094431660522213,
+      "max": 121.0525968457464
+    },
+    "signed_residual": {
+      "count": 4120,
+      "nonfinite": 0,
+      "mean": 0.12394980980602607,
+      "p50": 0.11339182696211925,
+      "p95": 1.154362590586958,
+      "p99": 3.4303657513274923,
+      "max": 24.25081167377092
+    },
+    "implied_huber_weight": {
+      "count": 4120,
+      "nonfinite": 0,
+      "mean": 0.9812536025515721,
+      "p50": 1.0,
+      "p95": 1.0,
+      "p99": 1.0,
+      "max": 1.0
+    },
+    "fraction_above_huber_k": 0.053883495145631066,
+    "fraction_weight_below_half": 0.014563106796116505,
+    "conditional_position_information_trace_ratio": {
+      "count": 882,
+      "nonfinite": 0,
+      "mean": 1.0,
+      "p50": 1.0,
+      "p95": 1.0,
+      "p99": 1.0,
+      "max": 1.0
+    },
+    "conditional_position_information_min_eigen_ratio": {
+      "count": 882,
+      "nonfinite": 0,
+      "mean": 1.0,
+      "p50": 1.0,
+      "p95": 1.0,
+      "p99": 1.0,
+      "max": 1.0
+    },
+    "conditional_position_information_condition_unweighted": {
+      "count": 882,
+      "nonfinite": 0,
+      "mean": 65.62265391660291,
+      "p50": 7.346636874582886,
+      "p95": 22.413061690783803,
+      "p99": 294.2275406020365,
+      "max": 21997.694305017187
+    },
+    "conditional_position_information_condition_applied": {
+      "count": 882,
+      "nonfinite": 0,
+      "mean": 65.62265391660291,
+      "p50": 7.346636874582886,
+      "p95": 22.413061690783803,
+      "p99": 294.2275406020365,
+      "max": 21997.694305017187
+    },
+    "rounded_export_cost_relative_deviation": {
+      "count": 882,
+      "nonfinite": 0,
+      "mean": 1.2521248884725462e-05,
+      "p50": 7.921904108441837e-06,
+      "p95": 4.289798146598747e-05,
+      "p99": 6.128020940982501e-05,
+      "max": 7.27393249122521e-05
+    },
+    "per_anchor_signed_standardized_residual": {
+      "10548": {
+        "count": 818,
+        "nonfinite": 0,
+        "mean": 0.3508470227159888,
+        "p50": 0.3126182125426317,
+        "p95": 1.026441149172329,
+        "p99": 5.047665204866947,
+        "max": 16.06201688717734
+      },
+      "15155": {
+        "count": 830,
+        "nonfinite": 0,
+        "mean": -0.08983721480945871,
+        "p50": -0.02093681753830771,
+        "p95": 1.6824956141108867,
+        "p99": 7.0692577257300435,
+        "max": 24.25081167377092
+      },
+      "20276": {
+        "count": 822,
+        "nonfinite": 0,
+        "mean": 0.0658651463654545,
+        "p50": -0.024039763853408818,
+        "p95": 1.133271302378531,
+        "p99": 2.302719269465994,
+        "max": 14.072753800714803
+      },
+      "7475": {
+        "count": 860,
+        "nonfinite": 0,
+        "mean": 0.3558960583695414,
+        "p50": 0.29606872071339535,
+        "p95": 1.0991624314969723,
+        "p99": 5.899757004663021,
+        "max": 19.699190551659168
+      },
+      "9524": {
+        "count": 790,
+        "nonfinite": 0,
+        "mean": -0.07843863341672128,
+        "p50": -0.1966104486112874,
+        "p95": 1.009927162210622,
+        "p99": 1.4018663354303487,
+        "max": 4.85238828725677
+      }
+    }
+  },
+  "robust": {
+    "rows": 882,
+    "batch_signature_sha256": "50dd614a9c6f7affbe9e15c80c849302c3d5d1aef25adebf977dccc6b8c9038c",
+    "source_files": [
+      {
+        "path": "results/accuracy_fde_20261009/confirmation/robust/runs/covariance/SFUISE/ISAS-Walk1/states.csv",
+        "sha256": "2a552b674ca8842931bbe24b03e2c551ad0d6344c3040e623d50c2b16d166574"
+      },
+      {
+        "path": "results/accuracy_fde_20261009/confirmation/robust/runs/covariance/SFUISE/ISAS-Walk1/sensor_diagnostics.csv",
+        "sha256": "df1ee1c5db9f2369141c6e09f5273a82b1e5c13fcfe38b7ce89f962548b45b6b"
+      },
+      {
+        "path": "results/accuracy_fde_20261009/confirmation/robust/runs/covariance/SFUISE/ISAS-Walk1/execution.json",
+        "sha256": "36c70af7beb129183a63c416f15550d24a64b79bb5317ffcefdf1f604d6533f1"
+      },
+      {
+        "path": "results/accuracy_fde_20261009/confirmation/robust/runs/covariance/SFUISE/ISAS-Walk1/effective_nominal_config.yaml",
+        "sha256": "9c2f44a700b57852b9ad3ab757b1b6e76d3cbaad2d01feb464cb26273d59c754"
+      }
+    ],
+    "standardized_residual_abs": {
+      "count": 4120,
+      "nonfinite": 0,
+      "mean": 0.5877554699769368,
+      "p50": 0.42696981203881695,
+      "p95": 1.3265273006970073,
+      "p99": 2.2190308433704464,
+      "max": 136.57118253441786
+    },
+    "signed_residual": {
+      "count": 4120,
+      "nonfinite": 0,
+      "mean": 0.02579849627440681,
+      "p50": 0.10796442233649284,
+      "p95": 1.074161925012891,
+      "p99": 1.8658435527838133,
+      "max": 4.412523349514592
+    },
+    "implied_huber_weight": {
+      "count": 4120,
+      "nonfinite": 0,
+      "mean": 0.9898429708970097,
+      "p50": 1.0,
+      "p95": 1.0,
+      "p99": 1.0,
+      "max": 1.0
+    },
+    "fraction_above_huber_k": 0.04053398058252427,
+    "fraction_weight_below_half": 0.0031553398058252425,
+    "conditional_position_information_trace_ratio": {
+      "count": 882,
+      "nonfinite": 0,
+      "mean": 0.9896938520890304,
+      "p50": 1.0,
+      "p95": 1.0,
+      "p99": 1.0,
+      "max": 1.0
+    },
+    "conditional_position_information_min_eigen_ratio": {
+      "count": 882,
+      "nonfinite": 0,
+      "mean": 0.9874708461636459,
+      "p50": 1.0,
+      "p95": 1.0,
+      "p99": 1.0,
+      "max": 1.0
+    },
+    "conditional_position_information_condition_unweighted": {
+      "count": 882,
+      "nonfinite": 0,
+      "mean": 106.25775961961489,
+      "p50": 7.260093075030027,
+      "p95": 22.368933970483546,
+      "p99": 1127.2438401755078,
+      "max": 22605.029156628545
+    },
+    "conditional_position_information_condition_applied": {
+      "count": 882,
+      "nonfinite": 0,
+      "mean": 106.69566804937375,
+      "p50": 7.221516689512411,
+      "p95": 22.368933970483546,
+      "p99": 1127.2438401755078,
+      "max": 23189.73904332089
+    },
+    "rounded_export_cost_relative_deviation": {
+      "count": 882,
+      "nonfinite": 0,
+      "mean": 1.2256040122032676e-05,
+      "p50": 8.285604825758581e-06,
+      "p95": 3.965256777485043e-05,
+      "p99": 6.140727697129959e-05,
+      "max": 8.449353686890149e-05
+    },
+    "per_anchor_signed_standardized_residual": {
+      "10548": {
+        "count": 818,
+        "nonfinite": 0,
+        "mean": 0.23380463771302684,
+        "p50": 0.3103943301419232,
+        "p95": 0.9733590636347693,
+        "p99": 1.5799167712955366,
+        "max": 2.995203379595992
+      },
+      "15155": {
+        "count": 830,
+        "nonfinite": 0,
+        "mean": -0.2800338565474674,
+        "p50": -0.02735617952114966,
+        "p95": 1.5918953585524656,
+        "p99": 2.120924349933132,
+        "max": 2.3614304070076417
+      },
+      "20276": {
+        "count": 822,
+        "nonfinite": 0,
+        "mean": 0.021745233748660494,
+        "p50": -0.019094105544733196,
+        "p95": 1.0973476797480477,
+        "p99": 1.8507529965926985,
+        "max": 4.412523349514592
+      },
+      "7475": {
+        "count": 860,
+        "nonfinite": 0,
+        "mean": 0.23910409591253973,
+        "p50": 0.2763334513466124,
+        "p95": 1.0669041444928378,
+        "p99": 1.4203571708412628,
+        "max": 2.1410903839257975
+      },
+      "9524": {
+        "count": 790,
+        "nonfinite": 0,
+        "mean": -0.09625112998795582,
+        "p50": -0.21783616073723108,
+        "p95": 0.9315838408669082,
+        "p99": 1.2276150327969872,
+        "max": 1.7114666611473073
+      }
+    }
+  },
+  "limitations": [
+    "Rounded posterior exports; implied weights are not historical solver IRLS weights.",
+    "Position information conditions on fixed attitude; excludes IMU/prior/history and is not navigation covariance.",
+    "Residuals cannot alone identify NLOS, noise calibration, extrinsic or attitude error."
+  ],
+  "reproduction_command": "python3 tools/diagnose_nominal_range_weights.py --cache results/accuracy_fde_20261009/selected_cache/SFUISE/ISAS-Walk1 --gaussian results/accuracy_fde_20261009/confirmation/gaussian/runs/covariance/SFUISE/ISAS-Walk1 --robust results/accuracy_fde_20261009/confirmation/robust/runs/covariance/SFUISE/ISAS-Walk1 --output results/accuracy_fde_phase2_20261009/weights_walk1.json",
+  "diagnostic_tool_sha256": "778f7b5005fd8d943892f75791092b3d246cc8c35b878834a7f66049e8f8c1f6"
+}

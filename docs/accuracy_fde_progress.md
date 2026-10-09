@@ -360,10 +360,45 @@ structural-kernel fallback), previously absent from fault_gram_svd counts.
 dimensions 1–4 with fixed/generic paths and full/zero/hidden/near-rank cases,
 existing frozen invalidation, dangerous/harmless nullspace and positive controls.
 Reference proof is captured before optimized registry insertion to avoid a
-circular lookup comparison. Same-ELF wall measurements pending.
+circular lookup comparison. Same-ELF normal/joint2 strict comparisons both PASS.
+Normal core 176.716→179.395ms (no gain observed); joint2 2668.971→2626.770ms
+(1.58% reduction). Evidence 995.331→948.990ms, candidate 1369.997→1368.008ms.
+Joint2 actual raw Gram SVDs 10823762→9552278; counts include proof verification.
+Small saving does not meet the structural performance target; stop extending
+this same-call optimization. Retain unchanged math and certified reuse; next
+investigate repeated proof verification and raw-factor work. Root/proof tests
+5/5, transaction/bridge/IMU/publication tests 12/12 and history oracle 4/4 PASS
+against the new DSO (29/29 targeted total). Compact performance/identity report:
+docs/benchmark/accuracy_fde_phase2_gram_reuse_20261009.json. One pair per scenario;
+no broad significance or final integration claim.
 
 Normal deadline diagnosis: comparator row 5 means input attempt 5 (previous
 "sixth attempt" wording corrected). Finish gate is 40ms; the existing benchmark
 packet gate is 50ms. Reference arrival-to-publish 83.842261ms breaches both;
 optimized 40.926478ms breaches finish only. Both remain unprotected. This explains
 the reason difference; retain strict FAIL and both gates, no comparison relaxation.
+
+Nominal generalization diagnostic: added tools/diagnose_nominal_range_weights.py,
+reusing frozen Gaussian/Huber Walk1 and STAR-Loc states plus exact sensor batch
+timestamps, original filtered UWB batches, per-range sigma/lever and logged cost.
+No GT read or parameter selection. Every output batch/count binds; reconstructed
+Gaussian cost relative deviation max <1.4e-4 despite rounded state exports.
+Weights are posterior-implied Huber(k=1.5), not historical IRLS weights. Geometry
+information is range-only position information conditional on attitude, not full
+navigation covariance. Compact reports accuracy_fde_phase2_weights_{walk1,starloc}
+in docs/benchmark contain source hashes and reproduction commands.
+
+Gaussian |z|>1.5 fraction: Walk1 5.39%, STAR-Loc 34.88%; |z| P95 1.575 vs 3.643.
+Huber trajectories: 4.05% vs 38.70% downweighted, weight<0.5 0.32% vs 16.50%.
+Mean minimum-eigen information ratio under applied weights: 0.9875 vs 0.8132.
+Unweighted Gaussian geometry condition median 7.35 vs 20.11. STAR-Loc has broad
+residual downweighting and poorer geometry, while Walk mainly clips a small tail;
+this is consistent with the measured Walk gain/STAR-Loc regression, not a proof
+of its unique cause. Anchor signed residual means persist (STAR-Loc anchor 10
++1.05 sigma, anchor 6 -0.77 Gaussian), so an IID outlier-only interpretation is
+not established. Calibration/frame identities remain the frozen GT-assisted
+Walk interface and STAR-Loc published rig/gyro rotation/range_calib/lever evidence.
+Neither metadata nor posterior residuals qualify physical extrinsics. Keep the
+Gaussian recommendation and separate Huber experiment; no unsupported new noise
+model or dataset-dependent threshold. Actual per-factor IRLS history and physical
+frame/calibration qualification remain needed to isolate causality.
