@@ -372,6 +372,7 @@ struct HistoryTreeNode {
   HierarchicalBlockRoot aggregate;
   std::shared_ptr<HistoryTreeNode> left;
   std::shared_ptr<HistoryTreeNode> right;
+  bool dirty = false;
 };
 
 struct IncrementalHistoryRootCache::Entry {
@@ -682,30 +683,54 @@ void refreshTreeNode(HistoryTreeNode* node,
     root = mergeBlockRoots(root, node->right->aggregate, requested_states,
                            requested_faults);
   node->aggregate = std::move(root);
+  node->dirty = false;
   if (recomputed) ++*recomputed;
+}
+
+// A request owns the complete mutation batch. Searches and rotations depend
+// only on group/priority, never on aggregates; defer intermediate arithmetic
+// and refresh the union of dirty paths once, in the original merge order.
+void scheduleTreeRefresh(HistoryTreeNode* node,
+                         const std::vector<std::string>& states,
+                         const std::vector<std::string>& faults,
+                         std::uint64_t* recomputed, bool defer_refresh) {
+  if (defer_refresh) node->dirty = true;
+  else refreshTreeNode(node, states, faults, recomputed);
+}
+
+void refreshDirtyTree(const std::shared_ptr<HistoryTreeNode>& node,
+                      const std::vector<std::string>& states,
+                      const std::vector<std::string>& faults,
+                      std::uint64_t* recomputed) {
+  if (!node || !node->dirty) return;
+  refreshDirtyTree(node->left, states, faults, recomputed);
+  refreshDirtyTree(node->right, states, faults, recomputed);
+  refreshTreeNode(node.get(), states, faults, recomputed);
 }
 
 std::shared_ptr<HistoryTreeNode> rotateTreeRight(
     std::shared_ptr<HistoryTreeNode> node,
     const std::vector<std::string>& states,
-    const std::vector<std::string>& faults, std::uint64_t* recomputed) {
+    const std::vector<std::string>& faults, std::uint64_t* recomputed,
+    bool defer_refresh) {
   auto child = node->left;
   node->left = child->right;
   child->right = node;
-  refreshTreeNode(node.get(), states, faults, recomputed);
-  refreshTreeNode(child.get(), states, faults, recomputed);
+  scheduleTreeRefresh(node.get(), states, faults, recomputed, defer_refresh);
+  scheduleTreeRefresh(child.get(), states, faults, recomputed, defer_refresh);
   return child;
 }
 
 std::shared_ptr<HistoryTreeNode> rotateTreeLeft(
     std::shared_ptr<HistoryTreeNode> node,
     const std::vector<std::string>& states,
-    const std::vector<std::string>& faults, std::uint64_t* recomputed) {
+    const std::vector<std::string>& faults, std::uint64_t* recomputed,
+    bool defer_refresh) {
   auto child = node->right;
   node->right = child->left;
   child->left = node;
-  refreshTreeNode(node.get(), states, faults, recomputed);
-  refreshTreeNode(child.get(), states, faults, recomputed);
+  scheduleTreeRefresh(node.get(), states, faults, recomputed, defer_refresh);
+  scheduleTreeRefresh(child.get(), states, faults, recomputed, defer_refresh);
   return child;
 }
 
@@ -713,14 +738,15 @@ std::shared_ptr<HistoryTreeNode> upsertTree(
     std::shared_ptr<HistoryTreeNode> node, std::uint64_t group,
     std::vector<std::string> row_uids, HierarchicalBlockRoot leaf,
     const std::vector<std::string>& states,
-    const std::vector<std::string>& faults, std::uint64_t* recomputed) {
+    const std::vector<std::string>& faults, std::uint64_t* recomputed,
+    bool defer_refresh) {
   if (!node) {
     node = std::make_shared<HistoryTreeNode>();
     node->group = group;
     node->priority = treePriority(group);
     node->row_uids = std::move(row_uids);
     node->leaf = std::move(leaf);
-    refreshTreeNode(node.get(), states, faults, recomputed);
+    scheduleTreeRefresh(node.get(), states, faults, recomputed, defer_refresh);
     return node;
   }
   if (group == node->group) {
@@ -728,16 +754,16 @@ std::shared_ptr<HistoryTreeNode> upsertTree(
     node->leaf = std::move(leaf);
   } else if (group < node->group) {
     node->left = upsertTree(node->left, group, std::move(row_uids),
-                            std::move(leaf), states, faults, recomputed);
+                            std::move(leaf), states, faults, recomputed, defer_refresh);
     if (node->left->priority > node->priority)
-      return rotateTreeRight(node, states, faults, recomputed);
+      return rotateTreeRight(node, states, faults, recomputed, defer_refresh);
   } else {
     node->right = upsertTree(node->right, group, std::move(row_uids),
-                             std::move(leaf), states, faults, recomputed);
+                             std::move(leaf), states, faults, recomputed, defer_refresh);
     if (node->right->priority > node->priority)
-      return rotateTreeLeft(node, states, faults, recomputed);
+      return rotateTreeLeft(node, states, faults, recomputed, defer_refresh);
   }
-  refreshTreeNode(node.get(), states, faults, recomputed);
+  scheduleTreeRefresh(node.get(), states, faults, recomputed, defer_refresh);
   return node;
 }
 
@@ -760,24 +786,25 @@ void collectTreeGroups(const std::shared_ptr<HistoryTreeNode>& node,
 std::shared_ptr<HistoryTreeNode> eraseTree(
     std::shared_ptr<HistoryTreeNode> node, std::uint64_t group,
     const std::vector<std::string>& states,
-    const std::vector<std::string>& faults, std::uint64_t* recomputed) {
+    const std::vector<std::string>& faults, std::uint64_t* recomputed,
+    bool defer_refresh) {
   if (!node) return node;
   if (group < node->group) {
-    node->left = eraseTree(node->left, group, states, faults, recomputed);
+    node->left = eraseTree(node->left, group, states, faults, recomputed, defer_refresh);
   } else if (group > node->group) {
-    node->right = eraseTree(node->right, group, states, faults, recomputed);
+    node->right = eraseTree(node->right, group, states, faults, recomputed, defer_refresh);
   } else {
     if (!node->left) return node->right;
     if (!node->right) return node->left;
     if (node->left->priority > node->right->priority) {
-      node = rotateTreeRight(node, states, faults, recomputed);
-      node->right = eraseTree(node->right, group, states, faults, recomputed);
+      node = rotateTreeRight(node, states, faults, recomputed, defer_refresh);
+      node->right = eraseTree(node->right, group, states, faults, recomputed, defer_refresh);
     } else {
-      node = rotateTreeLeft(node, states, faults, recomputed);
-      node->left = eraseTree(node->left, group, states, faults, recomputed);
+      node = rotateTreeLeft(node, states, faults, recomputed, defer_refresh);
+      node->left = eraseTree(node->left, group, states, faults, recomputed, defer_refresh);
     }
   }
-  refreshTreeNode(node.get(), states, faults, recomputed);
+  scheduleTreeRefresh(node.get(), states, faults, recomputed, defer_refresh);
   return node;
 }
 
@@ -1001,34 +1028,46 @@ HistoryFaultSummary IncrementalHistoryRootCache::update(
   std::uint64_t added_groups = 0;
   std::uint64_t removed_groups = 0;
   std::uint64_t relinearized_groups = 0;
+  const bool defer_refresh =
+      std::getenv("UWB_IMU_PL_EXHAUSTIVE_HISTORY_UPDATES") == nullptr;
   std::set<std::uint64_t> active;
-  for (const auto& item : requested_groups) {
-    active.insert(item.first);
-    std::vector<std::string> row_uids;
-    row_uids.reserve(item.second.size());
-    for (const int row : item.second)
-      row_uids.push_back(request.row_uids[static_cast<std::size_t>(row)]);
-    HierarchicalBlockRoot leaf = groupLeaf(request, item.second);
-    HistoryTreeNode* previous = findTreeNode(entry_->tree, item.first);
-    if (previous && sameLeaf(*previous, row_uids, leaf)) {
-      ++reused_groups;
-      continue;
+  try {
+    for (const auto& item : requested_groups) {
+      active.insert(item.first);
+      std::vector<std::string> row_uids;
+      row_uids.reserve(item.second.size());
+      for (const int row : item.second)
+        row_uids.push_back(request.row_uids[static_cast<std::size_t>(row)]);
+      HierarchicalBlockRoot leaf = groupLeaf(request, item.second);
+      HistoryTreeNode* previous = findTreeNode(entry_->tree, item.first);
+      if (previous && sameLeaf(*previous, row_uids, leaf)) {
+        ++reused_groups;
+        continue;
+      }
+      if (previous) ++relinearized_groups;
+      else ++added_groups;
+      entry_->tree = upsertTree(entry_->tree, item.first, std::move(row_uids),
+                                std::move(leaf), request.state_column_uids,
+                                request.fault_column_uids, &recomputed, defer_refresh);
+      ++changed_groups;
     }
-    if (previous) ++relinearized_groups;
-    else ++added_groups;
-    entry_->tree = upsertTree(entry_->tree, item.first, std::move(row_uids),
-                              std::move(leaf), request.state_column_uids,
-                              request.fault_column_uids, &recomputed);
-    ++changed_groups;
-  }
-  std::vector<std::uint64_t> old_groups;
-  collectTreeGroups(entry_->tree, &old_groups);
-  for (const std::uint64_t group : old_groups) {
-    if (active.count(group) != 0) continue;
-    entry_->tree = eraseTree(entry_->tree, group, request.state_column_uids,
-                             request.fault_column_uids, &recomputed);
-    ++changed_groups;
-    ++removed_groups;
+    std::vector<std::uint64_t> old_groups;
+    collectTreeGroups(entry_->tree, &old_groups);
+    for (const std::uint64_t group : old_groups) {
+      if (active.count(group) != 0) continue;
+      entry_->tree = eraseTree(entry_->tree, group, request.state_column_uids,
+                               request.fault_column_uids, &recomputed, defer_refresh);
+      ++changed_groups;
+      ++removed_groups;
+    }
+    if (defer_refresh)
+      refreshDirtyTree(entry_->tree, request.state_column_uids,
+                       request.fault_column_uids, &recomputed);
+  } catch (...) {
+    // A partial mutation/refresh is never reusable after an exception. Keep
+    // the original global exception path; do not turn missing work into data.
+    invalidate("history dependency closure update threw; tree discarded");
+    throw;
   }
   if (!entry_->tree) {
     invalidate("hierarchical tree contains no factor groups");

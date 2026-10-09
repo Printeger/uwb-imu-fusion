@@ -1488,3 +1488,91 @@ TEST(HistoryFaultSummary, CapturedProductionCarrierMicrobenchmark) {
 }
 
 }  // namespace
+
+// Compare the original per-leaf arithmetic to the dependency-closure batch on
+// the very same immutable rows. This oracle requires bits/proof identity,
+// rather than only agreement of normal equations within a loose tolerance.
+TEST(HistoryFaultSummary, BatchDirtyClosurePreservesExhaustiveBitsAndFallback) {
+  const char* old_environment = std::getenv("UWB_IMU_PL_EXHAUSTIVE_HISTORY_UPDATES");
+  const bool had_environment = old_environment != nullptr;
+  const std::string saved_environment = old_environment ? old_environment : "";
+  struct Restore {
+    bool present; std::string value;
+    ~Restore() {
+      if (present) setenv("UWB_IMU_PL_EXHAUSTIVE_HISTORY_UPDATES", value.c_str(), 1);
+      else unsetenv("UWB_IMU_PL_EXHAUSTIVE_HISTORY_UPDATES");
+    }
+  } restore{had_environment, saved_environment};
+  Rng rng(20261012u);
+  std::map<std::uint64_t, Eigen::MatrixXd> groups;
+  for (int i = 0; i < 64; ++i) groups.emplace(1000 + i, rng.normal(4, 14));
+  auto owner = std::make_shared<const int>(1);
+  uwb_imu_pl::IncrementalHistoryRootCache reference_cache, batch_cache;
+  std::uint64_t ordering = 1, whitening = 1, recovery = 1;
+  auto request_from_groups = [&]() {
+    uwb_imu_pl::HistoryRootCacheRequest request;
+    request.owner = owner; request.owner_payload = owner.get();
+    request.ordering_version = ordering;
+    request.whitening_version = whitening;
+    request.recovery_version = recovery;
+    request.verify_full_oracle = true;
+    const int rows = static_cast<int>(4 * groups.size());
+    request.input.h_old_state.resize(rows, 4);
+    request.input.h_boundary.resize(rows, 3);
+    request.input.fault_map.resize(rows, 6);
+    request.input.rhs.resize(rows);
+    for (int c = 0; c < 7; ++c)
+      request.state_column_uids.push_back("batch-state:" + std::to_string(c));
+    for (int c = 0; c < 6; ++c)
+      request.fault_column_uids.push_back("batch-fault:" + std::to_string(c));
+    int row = 0;
+    for (const auto& group : groups) {
+      request.input.h_old_state.middleRows(row, 4) = group.second.leftCols(4);
+      request.input.h_boundary.middleRows(row, 4) = group.second.middleCols(4, 3);
+      request.input.fault_map.middleRows(row, 4) = group.second.middleCols(7, 6);
+      request.input.rhs.segment(row, 4) = group.second.col(13);
+      for (int r = 0; r < 4; ++r) {
+        request.row_uids.push_back("batch:" + std::to_string(group.first) + ":" + std::to_string(r));
+        request.row_provenance.push_back(group.first);
+      }
+      row += 4;
+    }
+    return request;
+  };
+  std::uint64_t reference_cold = 0, batch_cold = 0;
+  for (int step = 0; step < 10; ++step) {
+    SCOPED_TRACE(step);
+    if (step == 1) for (auto& g : groups) g.second(0, 13) += 0.125;
+    if (step == 3) for (int i = 0; i < 12; ++i) groups.emplace(2000 + i, rng.normal(4, 14));
+    if (step == 4) for (int i = 0; i < 20; ++i) groups.erase(1000 + i);
+    if (step == 5) groups.rbegin()->second(2, 9) = std::nextafter(groups.rbegin()->second(2, 9), 1.0);
+    if (step == 6) ++ordering;
+    if (step == 7) ++whitening;
+    if (step == 8) ++recovery;
+    auto request = request_from_groups();
+    if (step == 9) request.input.rhs(0) = std::numeric_limits<double>::quiet_NaN();
+    CertifiedHistoryFaultSummary reference, batch;
+    const auto previous_reference = reference_cache.audit().internal_nodes_recomputed;
+    const auto previous_batch = batch_cache.audit().internal_nodes_recomputed;
+    setenv("UWB_IMU_PL_EXHAUSTIVE_HISTORY_UPDATES", "1", 1);
+    reference.summary = reference_cache.update(request, &reference.carrier_rank);
+    unsetenv("UWB_IMU_PL_EXHAUSTIVE_HISTORY_UPDATES");
+    batch.summary = batch_cache.update(request, &batch.carrier_rank);
+    expectCertifiedBits(reference, batch);
+    const auto reference_nodes = reference_cache.audit().internal_nodes_recomputed - previous_reference;
+    const auto batch_nodes = batch_cache.audit().internal_nodes_recomputed - previous_batch;
+    EXPECT_LE(batch_nodes, groups.size());
+    if (step == 0) { reference_cold = reference_nodes; batch_cold = batch_nodes; }
+    if (step == 0 || step == 1) EXPECT_LT(batch_nodes, reference_nodes);
+    if (step == 2) { EXPECT_EQ(reference_nodes, 0u); EXPECT_EQ(batch_nodes, 0u); }
+    EXPECT_EQ(reference_cache.audit().full_oracle_mismatches, batch_cache.audit().full_oracle_mismatches);
+    EXPECT_EQ(reference_cache.audit().full_rebuilds, batch_cache.audit().full_rebuilds);
+    EXPECT_EQ(reference_cache.audit().retained_rows, batch_cache.audit().retained_rows);
+    if (step != 9) EXPECT_TRUE(batch.summary.valid) << batch.summary.invalid_reason;
+    else EXPECT_FALSE(batch.summary.valid);
+  }
+  RecordProperty("reference_cold_nodes", std::to_string(reference_cold));
+  RecordProperty("batch_cold_nodes", std::to_string(batch_cold));
+  RecordProperty("reference_total_nodes", std::to_string(reference_cache.audit().internal_nodes_recomputed));
+  RecordProperty("batch_total_nodes", std::to_string(batch_cache.audit().internal_nodes_recomputed));
+}

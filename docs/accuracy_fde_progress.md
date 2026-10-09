@@ -286,3 +286,39 @@ or OPEN, never relabeled PASS. Stop additional blind tuning/repeats. The next
 research needs the frame/calibration and historical-root evidence described
 above, not relaxed safety gates. Original P1-06 FAIL and stale-calibration FAIL
 remain intact. User-owned requirements and old evidence remain untouched.
+
+
+## Next stage — structural compute and nominal generalization (2026-10-09)
+
+Active scope follows the new six-step objective; previous WP-A–F results above
+are reference evidence, not rerun requirements. Initial HEAD 27a339c, clean
+worktree. Work remains on feature/realtime-uwb-imu-pl, managed by commits. No new
+Git worktree. User explicitly rejects redundant large archives: initial bundle/
+tar copies were stopped/deleted; original raw results stay in place. Keep only
+compact metrics/hashes/commands. Original frozen ELF/DSO hashes verified.
+
+Preservation: all refs/reflog objects enumerated. Found 80 zero-byte loose
+objects, none reachable; moved intact to results/accuracy_fde_phase2_20261009/
+quarantine (zero payload bytes). Git connectivity fsck now exits 0; dangling
+objects and old temporary pack files retained, no destructive clean/repack.
+Auto-GC disabled locally. Baseline source and calibration FAIL status retained.
+
+Plan: (1) preservation complete; (2) layer-separated normal/UWB/IMU positive
+controls and actual production failure classification; (3) historical dirty
+closure; (4) profile joint-order2 evidence/candidate and optimize certified
+hotspot; (5) residual/robust-weight/conditioning explanation of STAR-Loc
+regression before any model change; (6) freeze beneficial candidate and paired
+integration/core safety checks. No top-K or scope/risk/publication relaxation.
+
+History hypothesis: per-leaf recomputation repeats shared ancestors during one
+request. Added dirty scheduling for upsert/erase/rotations and one left-right-
+node refresh after the mutation batch. Exact group/priority/topology, raw UID/
+provenance, merge order and full-row fallback unchanged. Exception clears the
+partially mutated tree then rethrows. UWB_IMU_PL_EXHAUSTIVE_HISTORY_UPDATES=1
+retains per-leaf reference in the same ELF/DSO. Mode response cache still opt-in.
+4/4 targeted tests initially PASS: cold build, batch RHS change, exact hit,
+insert/rotate/remove, one-bit fault edit, ordering/whitening/recovery rebuild,
+nonfinite refusal plus existing 30-step independent raw-row oracle. All served
+matrices and complete carrier rank/proof payload compare bit-identical; changed
+node counts separately reported in XML. Final exception-guard rebuild and actual
+normal/joint2 wall-clock comparison pending. No runtime gain claimed yet.
