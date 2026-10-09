@@ -902,6 +902,8 @@ int main(int argc, char** argv) {
               << work.block_rhs_solve_batches
               << " block_rhs_unique_blocks="
               << work.block_rhs_unique_blocks
+              << " pl_payload_validations=" << work.pl_payload_validations
+              << " pl_payload_validation_reuses=" << work.pl_payload_validation_reuses
               << '\n';
     const auto history_root = estimator.historyRootCacheAuditForTesting();
     std::cout << "history_root_work requests=" << history_root.requests

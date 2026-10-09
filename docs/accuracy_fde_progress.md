@@ -413,3 +413,23 @@ shared owner and payload address (arena numeric keys can be overwritten). Keep
 every external candidate/detector/hypothesis/result binding, mutable public-proof
 validation, exception retry and single-consume contract. This is a next-step
 hypothesis, not an implemented optimization or permission to skip validation.
+
+Scoped PL payload reuse implemented: private const wrapper owns const Proof;
+existing result/identity arena indexes retain an alias to that same immutable
+Proof. New runtime-only kind 8 holds its successful-validation memo. Require
+same proof address, shared control block and arena generation. No global memo,
+proof schema/hash change or caller-supplied validation receipt. Only full original
+payload validation returning true publishes success; false and exceptions retry.
+The per-payload lock is separate from the arena lock. Mutable public validators,
+retain imports, legacy registries and final bundles still fully validate. Each
+scoped consumer retains original external bindings/reason choices and proof hash.
+UWB_IMU_PL_EXHAUSTIVE_PL_VALIDATION=1 restores original copy/full-validation path.
+Actual full payload executions and reuse counters are emitted by the benchmark.
+
+Scope limitation found in preexisting binding: result lookup key omits external
+hypothesis_tail_used, axis_tail_used, fault_multiplier_used and noncentrality_used.
+Full sidecar hash validates the stored proof, not every external result field.
+This optimization preserves that existing behavior; do not describe it as added
+all-field result authentication. That binding question remains OPEN separately.
+The memo assumes the existing trusted detail typed-kind producer protocol; it
+does not defend against arbitrary illegal C++ type writes or const_cast.

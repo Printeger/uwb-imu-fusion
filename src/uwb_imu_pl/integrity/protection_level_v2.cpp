@@ -4,6 +4,7 @@
 #include "uwb_imu_pl/integrity/dual_channel_detector.hpp"
 #include "uwb_imu_pl/estimation/numerical_work_counters.hpp"
 #include "uwb_imu_pl/estimation/candidate_worker_pool.hpp"
+#include "successful_validation_memo.hpp"
 
 #include <boost/math/distributions/non_central_chi_squared.hpp>
 #include <boost/math/distributions/normal.hpp>
@@ -29,6 +30,16 @@ constexpr std::uint32_t kArenaProtectionByIdentity = 3;
 constexpr std::uint32_t kArenaPublicationPacketV1 = 4;
 constexpr std::uint32_t kArenaPublicationPacketV2 = 5;
 constexpr std::uint32_t kArenaCommitToken = 6;
+constexpr std::uint32_t kArenaProtectionValidationMemo = 8;
+
+struct ImmutableProtectionPayload {
+  ImmutableProtectionPayload(const ProtectionLevelV2ProofV1& value,
+                             std::uint64_t generation)
+      : proof(value), arena_generation(generation) {}
+  const ProtectionLevelV2ProofV1 proof;
+  const std::uint64_t arena_generation;
+  detail::SuccessfulValidationMemo validation;
+};
 
 bool validateProtectionLevelPublicationProofPayloads(
     std::uint64_t proof_identity, const Eigen::Vector3d& served_pl,
@@ -326,8 +337,13 @@ void bindProtectionResultProof(
   sidecar->proof_identity =
       protectionResultProofIdentity(*sidecar);
   if (proof_arena) {
-    const auto payload =
-        std::make_shared<const ProtectionLevelV2ProofV1>(*sidecar);
+    const auto immutable =
+        std::make_shared<const ImmutableProtectionPayload>(
+            *sidecar, proof_arena->generation());
+    // Existing indexes retain their exact Proof payload type. Runtime memo
+    // and Proof share an owner; the immutable Proof itself is never mutated.
+    const std::shared_ptr<const ProtectionLevelV2ProofV1> payload(
+        immutable, &immutable->proof);
     (void)detail::AttemptProofArenaAccess::store(
         proof_arena, kArenaProtectionByResult,
         scopedResultKey(resultRegistryKey(*result),
@@ -336,6 +352,11 @@ void bindProtectionResultProof(
     (void)detail::AttemptProofArenaAccess::store(
         proof_arena, kArenaProtectionByIdentity, sidecar->proof_identity,
         nullptr, payload);
+    (void)detail::AttemptProofArenaAccess::store(
+        proof_arena, kArenaProtectionValidationMemo,
+        scopedResultKey(resultRegistryKey(*result),
+                        sidecar->candidate_proof_identity),
+        nullptr, immutable);
   } else {
     auto& registry = protectionProofRegistry();
     std::lock_guard<std::mutex> lock(registry.mutex);
@@ -721,14 +742,21 @@ bool validateProtectionLevelV2ProofSidecar(
     const CandidateEvaluation& candidate, const DetectorResultV2& detector,
     const std::vector<FaultHypothesisV2>& hypotheses,
     const ProtectionLevelV2Result& result,
-    const ProtectionLevelV2ProofV1& sidecar, std::string* reason) {
+    const ProtectionLevelV2ProofV1& sidecar, std::string* reason,
+    const ImmutableProtectionPayload* immutable = nullptr) {
   if (sidecar.proof_identity == 0) {
     if (reason) *reason = "protection-level proof sidecar is unavailable";
     return false;
   }
   std::string payload_reason;
-  const bool payload_valid =
-      validateProtectionLevelV2ProofPayload(sidecar, &payload_reason);
+  bool recomputed = false;
+  const auto validate_payload = [&] {
+    recomputed = true;
+    return validateProtectionLevelV2ProofPayload(sidecar, &payload_reason);
+  };
+  const bool payload_valid = immutable
+      ? immutable->validation.check(validate_payload) : validate_payload();
+  if (!recomputed) NumericalWorkCounters::plPayloadValidationReuse();
   const bool pooled_only =
       detector.contract_mode == DetectorContractMode::LegacyPooledOffline ||
       detector.channel_history_dof == 0;
@@ -800,6 +828,23 @@ bool validateProtectionLevelV2Proof(
       arena, kArenaProtectionByResult,
       scopedResultKey(resultRegistryKey(result), candidateProofIdentity(candidate)),
       nullptr);
+  if (payload && !std::getenv("UWB_IMU_PL_EXHAUSTIVE_PL_VALIDATION")) {
+    const auto memo_payload = detail::AttemptProofArenaAccess::find(
+        arena, kArenaProtectionValidationMemo,
+        scopedResultKey(resultRegistryKey(result), candidateProofIdentity(candidate)),
+        nullptr);
+    if (memo_payload) {
+      const auto immutable =
+          std::static_pointer_cast<const ImmutableProtectionPayload>(memo_payload);
+      if (immutable->arena_generation == arena.generation() &&
+          detail::sameImmutablePayloadOwner(payload, memo_payload,
+                                            &immutable->proof)) {
+        return validateProtectionLevelV2ProofSidecar(
+            candidate, detector, hypotheses, result, immutable->proof, reason,
+            immutable.get());
+      }
+    }
+  }
   ProtectionLevelV2ProofV1 sidecar;
   if (payload) {
     sidecar = *std::static_pointer_cast<const ProtectionLevelV2ProofV1>(payload);
@@ -810,6 +855,7 @@ bool validateProtectionLevelV2Proof(
 
 bool validateProtectionLevelV2ProofPayload(
     const ProtectionLevelV2ProofV1& proof, std::string* reason) {
+  NumericalWorkCounters::plPayloadValidation();
   const auto same = [](const auto& left, const auto& right) {
     return left.rows() == right.rows() && left.cols() == right.cols() &&
         (left.array() == right.array()).all();

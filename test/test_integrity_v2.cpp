@@ -43,6 +43,7 @@
 #include "uwb_imu_pl/integrity/statistical_bounds_cache.hpp"
 #include "uwb_imu_pl/io/run_logger.hpp"
 #include "uwb_imu_pl/publication/final_output_packet.hpp"
+#include "../src/uwb_imu_pl/integrity/successful_validation_memo.hpp"
 
 namespace {
 
@@ -6533,6 +6534,156 @@ TEST(P105FlatConcurrency, WatchdogAdmissionExceptionStillHasOneAttemptTimer) {
 
 // These witnesses certify individual numerical layers. They do not qualify a
 // production profile, close its complete risk ledger, or authorize publication.
+TEST(Phase2PlValidationMemo, FailureExceptionConcurrencyAndExactOwnerBinding) {
+  using namespace uwb_imu_pl;
+  detail::SuccessfulValidationMemo memo;
+  int calls = 0;
+  EXPECT_THROW(memo.check([&]() -> bool {
+    ++calls;
+    throw std::runtime_error("validation failed before success publication");
+  }), std::runtime_error);
+  EXPECT_FALSE(memo.check([&] { ++calls; return false; }));
+  EXPECT_FALSE(memo.check([&] { ++calls; return false; }));
+  EXPECT_TRUE(memo.check([&] { ++calls; return true; }));
+  EXPECT_TRUE(memo.check([&] { ++calls; return false; }));
+  EXPECT_EQ(calls, 4);
+  detail::SuccessfulValidationMemo concurrent;
+  std::atomic<int> parallel_calls{0};
+  std::vector<std::future<bool>> readers;
+  for (int i = 0; i < 8; ++i) readers.push_back(std::async(std::launch::async, [&] {
+    return concurrent.check([&] { ++parallel_calls; return true; });
+  }));
+  for (auto& reader : readers) EXPECT_TRUE(reader.get());
+  EXPECT_EQ(parallel_calls.load(), 1);
+  struct Owner { const int prefix = 7; const int value = 42; };
+  const auto owner = std::make_shared<const Owner>();
+  const std::shared_ptr<const void> payload(owner, &owner->value);
+  EXPECT_TRUE(detail::sameImmutablePayloadOwner(payload, owner, &owner->value));
+  const std::shared_ptr<const void> other_control_block(payload.get(), [](const void*) {});
+  EXPECT_FALSE(detail::sameImmutablePayloadOwner(other_control_block, owner, &owner->value));
+  EXPECT_FALSE(detail::sameImmutablePayloadOwner(payload, owner, owner.get()));
+  const auto next_owner = std::make_shared<const Owner>();
+  EXPECT_FALSE(detail::sameImmutablePayloadOwner(payload, next_owner, &owner->value));
+}
+
+TEST(Phase2PlValidationMemo, ImmutablePayloadReuseKeepsBindingsAndReplacementChecks) {
+  using namespace uwb_imu_pl;
+  const char* key = "UWB_IMU_PL_EXHAUSTIVE_PL_VALIDATION";
+  struct Restore {
+    const char* key;
+    bool present;
+    std::string value;
+    ~Restore() { if (present) setenv(key, value.c_str(), 1); else unsetenv(key); }
+  } restore{key, std::getenv(key) != nullptr,
+            std::getenv(key) ? std::getenv(key) : ""};
+  ASSERT_EQ(unsetenv(key), 0);
+  const auto admission = admitFrozenIntegrityWindow(
+      freezeIntegrityWindowCopy(p002HistoryWindow(0.0, 0.0)));
+  ASSERT_TRUE(admission) << admission.reason;
+  RankUpdateConfig rank{1e-12, 1e10, 10.0};
+  ExclusionAction keep;
+  keep.id = ExclusionActionId(10301);
+  keep.action_model_id = "KEEP_ALL";
+  auto candidate = DenseCandidateOracle(rank).evaluate(admission, keep);
+  ASSERT_TRUE(candidate.valid) << candidate.reason;
+  DetectorRiskContext detector_risk;
+  detector_risk.p_fa_per_test = 1e-6;
+  detector_risk.rank_tolerance = rank.rank_tolerance;
+  const auto detector = JointWindowDetector().evaluateCandidate(admission, candidate, detector_risk);
+  ASSERT_TRUE(detector.passed) << detector.reason;
+  Eigen::MatrixXd mode = Eigen::MatrixXd::Zero(candidate.rows, 1);
+  mode(0, 0) = 1.;
+  mode(mode.rows() - 1, 0) = 1.;
+  FaultHypothesisV2 h;
+  h.id = HypothesisId(10302);
+  h.modes = {FaultModeId(10303)};
+  h.p_md_allocation = 1e-3;
+  h.hmi_allocation = 1e-6;
+  h.prior_probability_bound = 1e-3;
+  std::vector<FaultHypothesisV2> hypotheses{h};
+  ProtectionLevelSharedContext shared;
+  shared.mode_maps.emplace(10303, mode);
+  AttemptProofArena arena;
+  ProtectionLevelV2ProofV1 audit;
+  const auto initial_validations = NumericalWorkCounters::snapshot().pl_payload_validations;
+  const auto result = ProtectionLevelV2().computeShared(admission, &candidate,
+      detector, &hypotheses, shared, RiskBudgetV2{}, &audit, &arena);
+  ASSERT_TRUE(result.model_valid) << result.reason;
+  EXPECT_GT(NumericalWorkCounters::snapshot().pl_payload_validations, initial_validations);
+  const auto before = NumericalWorkCounters::snapshot();
+  std::string reason = "leave success reason untouched";
+  for (int i = 0; i < 3; ++i) EXPECT_TRUE(validateProtectionLevelV2Proof(
+      candidate, detector, hypotheses, result, arena, &reason));
+  EXPECT_EQ(reason, "leave success reason untouched");
+  const auto after = NumericalWorkCounters::snapshot();
+  EXPECT_EQ(after.pl_payload_validations, before.pl_payload_validations);
+  EXPECT_EQ(after.fault_gram_svd, before.fault_gram_svd);
+  EXPECT_EQ(after.pl_payload_validation_reuses - before.pl_payload_validation_reuses, 3u);
+  ASSERT_EQ(setenv(key, "1", 1), 0);
+  EXPECT_TRUE(validateProtectionLevelV2Proof(candidate, detector, hypotheses,
+      result, arena, &reason));
+  EXPECT_EQ(reason, "leave success reason untouched");
+  EXPECT_EQ(NumericalWorkCounters::snapshot().pl_payload_validations,
+            after.pl_payload_validations + 1);
+  ASSERT_EQ(unsetenv(key), 0);
+  // A hit never authenticates a new external detector/hypothesis/result.
+  auto bad_detector = detector;
+  ++bad_detector.detector_contract_digest;
+  auto bad_hypotheses = hypotheses;
+  bad_hypotheses[0].p_md_allocation *= 2.;
+  auto bad_result = result;
+  bad_result.pl_xyz_m.x() = std::nextafter(bad_result.pl_xyz_m.x(), 100.);
+  const auto compare_refusal = [&](const DetectorResultV2& d,
+                                   const std::vector<FaultHypothesisV2>& hs,
+                                   const ProtectionLevelV2Result& pl) {
+    std::string optimized_reason, reference_reason;
+    unsetenv(key);
+    const bool optimized = validateProtectionLevelV2Proof(candidate, d, hs, pl, arena, &optimized_reason);
+    setenv(key, "1", 1);
+    const bool reference = validateProtectionLevelV2Proof(candidate, d, hs, pl, arena, &reference_reason);
+    EXPECT_FALSE(optimized);
+    EXPECT_EQ(optimized, reference);
+    EXPECT_EQ(optimized_reason, reference_reason);
+    unsetenv(key);
+  };
+  compare_refusal(bad_detector, hypotheses, result);
+  compare_refusal(detector, bad_hypotheses, result);
+  compare_refusal(detector, hypotheses, bad_result);
+  auto bad_candidate = candidate;
+  bad_candidate.window_view = nullptr;
+  std::string optimized_candidate_reason, reference_candidate_reason;
+  EXPECT_FALSE(validateProtectionLevelV2Proof(bad_candidate, detector, hypotheses,
+      result, arena, &optimized_candidate_reason));
+  setenv(key, "1", 1);
+  EXPECT_FALSE(validateProtectionLevelV2Proof(bad_candidate, detector, hypotheses,
+      result, arena, &reference_candidate_reason));
+  EXPECT_EQ(optimized_candidate_reason, reference_candidate_reason);
+  unsetenv(key);
+  AttemptProofArena next_attempt;
+  auto next_candidate = candidate;
+  auto next_hypotheses = hypotheses;
+  const auto previous_validation_count = NumericalWorkCounters::snapshot().pl_payload_validations;
+  const auto next_result = ProtectionLevelV2().computeShared(admission, &next_candidate,
+      detector, &next_hypotheses, shared, RiskBudgetV2{}, nullptr, &next_attempt);
+  ASSERT_TRUE(next_result.model_valid) << next_result.reason;
+  EXPECT_GT(NumericalWorkCounters::snapshot().pl_payload_validations, previous_validation_count);
+  EXPECT_NE(next_attempt.generation(), arena.generation());
+  auto tampered = audit;
+  tampered.hypothesis_proofs[0].certified_gram(0, 0) = std::nextafter(
+      tampered.hypothesis_proofs[0].certified_gram(0, 0), 100.);
+  EXPECT_FALSE(validateProtectionLevelV2ProofPayload(tampered, &reason));
+  // Retention creates a new immutable owner at the same lookup key. The old
+  // successful memo cannot follow it; mutable import still runs full checking.
+  ASSERT_TRUE(retainProtectionLevelV2Proof(candidate, result, audit, &arena, &reason)) << reason;
+  auto expected = NumericalWorkCounters::snapshot().pl_payload_validations;
+  for (int i = 0; i < 2; ++i) {
+    EXPECT_TRUE(validateProtectionLevelV2Proof(candidate, detector, hypotheses, result, arena, &reason));
+    EXPECT_EQ(NumericalWorkCounters::snapshot().pl_payload_validations, ++expected);
+  }
+  arena.close();
+  EXPECT_TRUE(validateProtectionLevelV2Proof(candidate, detector, hypotheses, result, arena, &reason));
+}
+
 TEST(Phase2GramReuse, ExactEvidenceAndProofAcrossDimensionsAndRankCases) {
   using namespace uwb_imu_pl;
   const char* key = "UWB_IMU_PL_EXHAUSTIVE_GRAM_CERTIFICATES";
