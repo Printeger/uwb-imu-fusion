@@ -469,3 +469,187 @@ baseline identities and report conclusions; no further build or experiment neede
 This completion does not imply realtime or protected qualification. Further work
 needs certification/flat-PL cost reduction and independent calibration/risk/formal
 evidence; no blind long campaign or relaxation of gates is justified by results.
+
+
+## 2026-10-10 — FDE operability W1–W5 focused development (PARTIAL_BLOCKED)
+
+Scope is `requirements/FDE_Operability_PL_Performance_Requirements.md`; historical
+WP-A–F conclusions above remain historical. Initial actual HEAD was
+750953e606a3d55e8777ffafb183981c1ba3edc8, clean tracked worktree; user-owned
+untracked requirements retained. No reset, Huber experiment, budget/prior/p_md/AL,
+fault scope, selection, rank tolerance or step gate change. Gaussian nominal,
+Combined IMU, iSAM2 and fixed lag retained. B-correct correctness source is
+958b700; the later performance prototype adds no model changes. Actual run HEAD,
+ELF/DSO/config hashes are in execution records; the configure-time Git stamp is
+stale and is not the source identity.
+
+W1 (`b1206b0`): the four externally mutable `*_used` scalars were accepted at real
+validate/retain/mint/publication consumers: 57 failed assertions before repair.
+Exact semantic comparison now covers every external ProtectionLevelV2Result
+member against proof.served_result; registry key remains only an index. Positive
+fixtures, nextafter/NaN mutations, cross-candidate/arena and self-contained final
+bundle cases pass. Existing immutable binding and bundle tests remain passing.
+
+W2 (`b1206b0`): additive FdeDecisionContextV4 binds CompleteRiskInputs to attempt,
+window/version/time domain, scope/manifest/model and risk-contract identity. It
+validates each source/domain and keeps simulation separate from deployment.
+Final selector consumes non-selection evidence and derives selection-extra from
+its actual eligible guarantees. A nonempty calibration_id no longer manufactures
+model qualification. Production binds exact envelope coverage, but missing
+omitted/bridge/history/model evidence stays UNKNOWN. Unit positive context is a
+conditional mathematical selector test, **not a raw-stream recovery**. Wrong
+identity/source/domain and simulation qualification claims fail. Gate trace
+separates numerical, risk, AL, qualification and deadline; unreachable gates are
+NOT_RUN. Selector deadline is NOT_RUN and existing actual pipeline deadline
+metrics remain authoritative. Exact ledger known charge determines overspend;
+individually upward-rounded exported terms must not be summed as a new decision.
+Full-precision normal10 and UWB7 ledger/trace are retained in the compact JSON.
+Legacy final Inf does not establish mathematical unboundedness.
+
+W3 correctness repairs: an individual PSD history channel need not have resolved
+rank when it is never inverted; combined detector W still needs its original
+certified rank/nullspace containment. Complementary PSD/true singular, negative
+PSD and joint rank-transition negatives pass. Normal32 history rank transition
+now yields a finite bound, without jitter or removing history. Other PSD interval
+failures remain refused. Separately, a real transaction reproduced protected map
+using nominal IMU attitude while frozen factors used CV pose, and mint centre
+using nominal position. Map and mint now use the actual frozen proposed Pose3
+(`45d5005`, `958b700`); deterministic before/after tests preserve this evidence.
+
+Three fixed original-profile streams were attempted, with raw generated IMU and
+ranges entering the production estimator/detector/actions/post/PL/risk/selector
+and transaction core. GT is generation/evaluation only. Normal32: 32 best-effort
+nominal commits, zero selected conditional FDE results. UWB18: single-epoch
+2.25 m bias at epoch7 alarms and produces six finite exclusion candidates, but
+zero exclusion commits. One covering candidate has HPL=0.55107088655002923 m
+(<HAL=2), with exact known risk charge=4.6900000000000008e-05 >
+4.0000000000000003e-05. IMU18: single-epoch 20 m/s2 accel fault at epoch7 does not
+alarm; KEEP's dominant velocity correction=0.896043 exceeds unchanged0.25 gate;
+PL is NOT_RUN, independent bridge plus full conditional PL recovery is absent.
+17 UWB/18 IMU nominal commits are **not** exclusion recovery. Normal10 known
+charge=5.6080000000000005e-05; rank-fixed normal32=8.2403846153846172e-05,
+both exceed4e-05 even if missing nonnegative terms were proved zero. Recovery
+latency is null/RIGHT_CENSORED. No new simulation-positive stream or Gaussian
+FDE-OFF paired accuracy claim is made. A4 fails; software blocks are not attributed
+to unavailable hardware qualification.
+
+Concrete contract decision proposal (NOT APPLIED): current ledger charges each
+hypothesis occurrence's prior times miss bound. Normal10 has nominal3e-05,
+p_nm1e-07, allocation9.9e-06 plus miss excess1.608e-05. UWB7 already requires at
+least4.69e-05 before unknown terms. No source binding or implementation speedup
+can make this satisfy4e-05. If persistent occurrences describe the same physical
+fault event, a separately reviewed event partition with authenticated mapping
+could remove duplicate *event* charges; this changes the probability contract
+and requires explicit approval plus new event-union counterexamples before any
+implementation. If occurrences are distinct events, reject this proposal and
+retain these profiles as unavailable. This proposal authorizes neither different
+priors/p_md nor larger budget. IMU no-alarm/step attribution remains a separate
+software/model problem; approving an event partition alone would not solve it.
+
+W4: numerical production/validation/consumption was traced in normal/joint2 fixed
+12-epoch snapshots (original35-epoch fault schedule). Evidence produces raw/Gram,
+state response and root seals; PL reads the frozen leaf, forms dual certificates,
+and immutable result/bundle consumers validate self-contained payloads. The first
+root-response reuse direction had zero matching reuse (normal2328/joint272618
+fallbacks), same SVD work, and was stopped; flag remains opt-in off. Direction2
+(`1182dc5`) stores one continuous immutable proof vector, indexes alias owners in
+one arena batch, runs original complete root seal once, then permits exact-owner
+read reuse only after successful root validation and away from rank boundaries.
+Imported/replaced/tampered/closed-arena and failed roots fall back to original
+validation; external/final bundle validation remains full. Old mode cache and
+old per-leaf frozen memo remain off. Micro probe: normal960.101→962.492 ms core
+(regression), joint231988.332→31485.795 ms (1.57% local decrease); validation
+237954→165336. Both unchanged strict comparisons pass. Small timing differences
+are not a significant-gain claim, and this prototype remains opt-in off.
+No second speculative memo direction is added. Final35 pairs and safety results
+are appended below after completion; their failures remain part of the evidence.
+
+Reproduction, after building the existing Release workspace:
+```sh
+cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl --target realtime_performance_benchmark test_integrity_v2 test_square_root_context test_p0_04_risk_oracle -j2
+export LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib
+BIN=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl
+# Strict production research replay: unknown evidence never grants protection.
+UWB_IMU_PL_SCENARIO=noiseless "$BIN/realtime_performance_benchmark" config/fde_joint_order1.yaml results/fde_NORMAL_NEW 32
+UWB_IMU_PL_SCENARIO=uwb_recovery "$BIN/realtime_performance_benchmark" config/fde_uwb_order1.yaml results/fde_UWB_NEW 18
+UWB_IMU_PL_SCENARIO=imu_recovery "$BIN/realtime_performance_benchmark" config/fde_imu_order1.yaml results/fde_IMU_NEW 18
+# B-correct paired timing; clean tracked source, NEW destination, no old exhaustive flags.
+python3 tools/run_accuracy_fde_phase2_integration.py --reference-model b-correct --binary "$BIN/realtime_performance_benchmark" --output results/fde_PAIR_NEW --epochs 35
+# Conditional context boundary only; not a simulation-conditional recovery entry.
+"$BIN/test_p0_04_risk_oracle" --gtest_filter=FdeOperabilityRisk.*
+"$BIN/test_integrity_v2" --gtest_filter=FdeOperabilityBinding.*:FdeOperabilityRank.*:FdeOperabilityReference.*
+# Default prototype OFF; opt-in reader/owner negative tests:
+UWB_IMU_PL_BATCH_FROZEN_PROOFS=1 "$BIN/test_integrity_v2" --gtest_filter=FdeOperabilityBatchProofs.*
+```
+Frozen Gaussian nominal continues through the existing nominal replay commands
+and original configs documented above; no nominal tuning is included here.
+There is currently **no accepted simulation-conditional raw-flow command**.
+Such a caller needs generator-derived omitted/envelope/bridge/history/model
+bounds bound to the exact attempt/model/contract, with production formal and
+publication gates false. A literal known/validated flag or calibration name is
+not an admissible substitute. integrity.csv, diagnostic_attempts/stages.csv,
+candidates.csv and timing.csv expose actual commits/refusals/deadlines. A finite
+but late result remains unprotected. No recovered latency or hardware/formal
+qualification is claimed.
+
+
+Final frozen integration (`4aa795e`, numerics ELF/DSO from `1182dc5` build):
+normal/reference35, normal/optimized35, joint2/reference35, joint2/optimized35;
+exactly four benchmark processes,140 attempts, profiler off. Both original
+strict comparisons PASS, zero numerical contract mismatches, same hypothesis/
+action/commit counts. Per-side deadline misses remain visible (normal31/30,
+joint233/33); no comparator relaxation. Normal mean core205.102505→202.941219 ms
+(1.05%, no significant gain claim); joint2 mean2613.468418→2400.921788 ms
+(8.13% measured net decrease). Evidence851.300048→744.691796 ms and flat PL
+1092.354543→1001.214316 ms account for the structural benefit. Joint2 full frozen
+validations2497242→1344738, with1152504 exact-owner reuses; generated hypotheses
+1272018 and actions439 unchanged. Root seal, indexing and construction are
+included in core. The returned arena lease keeps proof storage until the end of
+an epoch: its final destruction is outside the core sample, so complete process
+wall93.126784→84.813356 s (8.93% decrease, includes generation/logging/teardown)
+is also retained. Do not label core alone as including all lease destruction.
+Normal entire process7.244267→7.142598 s. Short safety tests overlapped the start
+of the first normal run; that limits interpretation of its small gain. No
+benchmark repetition was added to hide this limitation.
+
+Worst optimized normal is attempt30 at358.174065 ms; worst joint2 is fault
+attempt12 at25163.722096 ms (reference25675.154478 ms), retained along with its
+refusal. Joint2 fault action fan-out and full immutable payload work dominate;
+no failed attempt or history transition was dropped. P95 normal326.532533 ms,
+joint22981.347125 ms;35 samples establish neither P99 nor rare-event probability.
+Normal35/35 and joint234/35 nominal commits, zero protected/risk-valid/formal
+outputs on both sides. <100 ms / ~1 s exploratory targets and40/50 ms deployment
+thresholds are NOT_MET. Finite late candidates do not receive timely protection.
+
+Final safety:102 distinct deterministic tests cover all original69 plus new
+binding/risk/map/rank/owner tests and directly affected dual-channel/nullspace/
+risk boundaries. Original69 test names were checked as a subset of this run.
+One historical default-off invariant failed under the opt-in batch environment;
+only that test was rerun with BATCH_FROZEN_PROOFS=0 and passed, without a code
+change. Its failure/XML is retained. Remaining101 passed initially; the new
+batch-owner test also passed separately in reference and optimized environments.
+The expanded mathematical coverage is required by the public dual-channel rank
+repair, not an old whole-project acceptance campaign. Test filters, ELF/DSO
+identities, XML and single rerun are recorded in the compact result JSON.
+
+Use `UWB_IMU_PL_BATCH_FROZEN_PROOFS=1` explicitly for the measured continuous
+proof path; absent flag retains B-correct storage/validation. Root-response reuse,
+mode cache and old frozen memo remain off. This provides an opt-in measured
+joint2 cost reduction, not conditional recovery or deployment qualification.
+A1/A2 binding boundaries and negatives are closed; A3 trace exists with noted
+legacy Inf/deadline boundaries; A4 fails; A5 remains fail-closed; A6 paired timing
+and numeric comparison completed; A7 code,commands,102-test evidence and compact
+`benchmark/fde_operability_20261010.json` delivered. Overall **PARTIAL_BLOCKED**:
+UWB over-budget selection and IMU no-alarm/step path still prevent actual
+conditional exclusion plus three subsequent commits. Contract proposal above is
+pending, not applied; no FUNCTIONAL_ACCEPTED or goal-complete claim.
+
+The frozen-pose repair affected PL geometry, so only the affected UWB18/IMU18
+short flows were rerun once on the final library (`final_strict_*` execution
+records); no additional35-attempt pair. UWB epoch7 statistic440.7804520984601 >
+threshold121.34881015252451, revised finite covering HPL0.55117685012311124 m,
+known risk4.6900000000000008e-05 still exceeds4e-05. IMU epoch7 statistic
+0.18701637172207716 <121.34881015252451, same velocity step0.896043 >0.25.
+Actual18-epoch commit counts remain17/18, exclusion commits0/0. Generation is
+50 ms epochs and10 IMU samples per epoch at5 ms; truth fault labels never enter
+selection. Earlier geometry values remain as historical before-fix evidence.

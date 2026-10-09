@@ -1,0 +1,2316 @@
+{
+  "schema": "fde-operability-focused-development-v1",
+  "functional_status": "PARTIAL_BLOCKED",
+  "b_correct": "958b700",
+  "boundary": "No UWB or IMU conditional exclusion commit observed; no functional acceptance.",
+  "snapshots": [
+    {
+      "attempt": 10,
+      "window_id": "10",
+      "source": "results/fde_operability_20261010/strict_noiseless",
+      "source_hashes": {
+        "integrity.csv": "ccffe3133deab26a701a2517d5fe5d238e19a8b058c984fd8f35104c2861e2ff",
+        "diagnostic_attempts.csv": "74d31dc1c34735d210c862ec064dea47eec9d961a80dc6a392dc73308a156c1c",
+        "candidates.csv": "efb19651933daad622c2d4d9c080b1aea9a02477e039ab37e43b401600fd8a82",
+        "diagnostic_stages.csv": "afcfffedc45531bb767224f8c4eefdee1d9515faaa315c7ab30c023c8d35d52b"
+      },
+      "detector": {
+        "conditional_statistic": "4.2048609317370607e-07",
+        "conditional_threshold": "155.08052230817057",
+        "conditional_passed": "1"
+      },
+      "production": {
+        "fde_status": "RISK_BUDGET_INVALID",
+        "batch_committed": "1",
+        "selected_action_id": "0",
+        "formal_eligible": "0",
+        "risk_budget_valid": "0",
+        "publication_protected": "0",
+        "deadline_missed": "1"
+      },
+      "candidate_count": 1,
+      "candidate_samples": [
+        {
+          "action_id": "1",
+          "hpl_m": "6.3289",
+          "vpl_m": "1.31634",
+          "reason": "terminal=PL_COMPLETE;ACTION_OPERATION_IDENTITY=ACTION_OPERATION_V1|0;0;0;0;0;0;0;0:;0:;0;"
+        }
+      ],
+      "ledger": {
+        "nominal": {
+          "value": 3.0000000000000004e-05,
+          "binary64_hex": "0x1.f75104d551d6ap-16",
+          "status": "VALIDATED"
+        },
+        "p_nm": {
+          "value": 1e-07,
+          "binary64_hex": "0x1.ad7f29abcaf48p-24",
+          "status": "VALIDATED"
+        },
+        "hypotheses": {
+          "value": 9.9e-06,
+          "binary64_hex": "0x1.4c305a3adef92p-17",
+          "status": "VALIDATED"
+        },
+        "hypotheses_miss_channel": {
+          "value": 1.6080000000000005e-05,
+          "binary64_hex": "0x1.0dc712f981e1bp-16",
+          "status": "VALIDATED"
+        },
+        "bridge": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "history": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "model": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "omitted": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "NOT_IMPLEMENTED"
+        },
+        "envelope": {
+          "value": 0.0,
+          "binary64_hex": "0x0.0p+0",
+          "status": "VALIDATED"
+        },
+        "selection": {
+          "value": 7.676236084492097e-22,
+          "binary64_hex": "0x1.d000000000000p-71",
+          "status": "VALIDATED"
+        }
+      },
+      "known_export_sum_decimal": "0.000056080000000000010278941394337333392616784522033412940800189971923828125",
+      "budget_decimal": "0",
+      "cpp_exact_known_charge_export": 5.6080000000000005e-05,
+      "known_charge_exceeds_budget": true,
+      "unknown_terms": [
+        "bridge",
+        "history",
+        "model",
+        "omitted"
+      ],
+      "decision_trace": [
+        "gate:numerical:0:1:1:finite post-passed covering candidate;gate:risk:1:5.6080000000000012e-05:4.0000000000000003e-05:RISK_OVER_BUDGET: known charged lower bound;gate:AL:1:6.3289011975425344:2:HPL=6.328901;gate:qualification:3:nan:nan:;gate:deadline:3:nan:nan:;ledger:nominal:3.0000000000000004e-05:VALIDATED:config risk.nominal_axis_tail x 3 protected axes:pi0 * alpha0 for the alarm-free outcome;ledger:p_nm:9.9999999999999995e-08:VALIDATED:config risk.p_nm:non-nominal outcome mass not attributable to a hypothesis;ledger:hypotheses:9.9000000000000001e-06:VALIDATED:per-hypothesis allocation / prior bound (allocation policy: prior_weighted_outcome_conditioned):sum of pi_h * alpha_h over charged hypotheses;ledger:hypotheses_miss_channel:1.6080000000000005e-05:VALIDATED:section 5.9 union bound: sum of pi_h * max(0, beta_h - alpha_h):charged detector-miss excess above the allocation-derived tail;ledger:bridge:nan:ASSUMED_UNVALIDATED:config risk.p_bridge_escape:configured zero has no zero proof: value is UNKNOWN;ledger:history:nan:ASSUMED_UNVALIDATED:config risk.p_history_contamination:configured zero has no zero proof: value is UNKNOWN;ledger:model:nan:ASSUMED_UNVALIDATED:config risk.p_model_escape:configured zero has no zero proof: value is UNKNOWN;ledger:omitted:nan:NOT_IMPLEMENTED:config/integrity_fault_manifest.yaml omitted_event_set:omitted-event mass is UNKNOWN unless the complete scope carries a finite known bound;ledger:envelope:0:VALIDATED:exact coverage of frozen generated mode registry;ledger:selection:7.6762360844920968e-22:VALIDATED:numeric FDE guarantee groups over every eligible action:extra union charge beyond the once-charged hypothesis allocation"
+      ],
+      "mathematical_unboundedness_proven": false
+    },
+    {
+      "attempt": 32,
+      "window_id": "32",
+      "source": "results/fde_operability_20261010/strict_noiseless",
+      "source_hashes": {
+        "integrity.csv": "ccffe3133deab26a701a2517d5fe5d238e19a8b058c984fd8f35104c2861e2ff",
+        "diagnostic_attempts.csv": "74d31dc1c34735d210c862ec064dea47eec9d961a80dc6a392dc73308a156c1c",
+        "candidates.csv": "efb19651933daad622c2d4d9c080b1aea9a02477e039ab37e43b401600fd8a82",
+        "diagnostic_stages.csv": "afcfffedc45531bb767224f8c4eefdee1d9515faaa315c7ab30c023c8d35d52b"
+      },
+      "detector": {
+        "conditional_statistic": "0.0016084673164500247",
+        "conditional_threshold": "271.18953618702051",
+        "conditional_passed": "1"
+      },
+      "production": {
+        "fde_status": "NO_VALID_CANDIDATE",
+        "batch_committed": "1",
+        "selected_action_id": "0",
+        "formal_eligible": "0",
+        "risk_budget_valid": "0",
+        "publication_protected": "0",
+        "deadline_missed": "1"
+      },
+      "candidate_count": 1,
+      "candidate_samples": [
+        {
+          "action_id": "1",
+          "hpl_m": "inf",
+          "vpl_m": "inf",
+          "reason": "remaining post-FDE hypothesis 30 has no valid section 5.9 bound: dual-channel PL bound: channel history_eliminated_detector_only has no symmetric PSD certificate: rank transition interval is numerically indeterminate;ACTION_OPERATION_IDENTITY=ACTION_OPERATION_V1|0;0;0;0;0;0;0;0:;0:;0;"
+        }
+      ],
+      "ledger": {},
+      "known_export_sum_decimal": "0",
+      "budget_decimal": "0",
+      "cpp_exact_known_charge_export": null,
+      "known_charge_exceeds_budget": null,
+      "unknown_terms": [],
+      "decision_trace": [
+        "gate:numerical:2:nan:nan:no finite post-passed covering candidate;gate:risk:3:nan:nan:;gate:AL:3:nan:nan:;gate:qualification:3:nan:nan:;gate:deadline:3:nan:nan:"
+      ],
+      "mathematical_unboundedness_proven": false
+    },
+    {
+      "attempt": 7,
+      "window_id": "7",
+      "source": "results/fde_operability_20261010/strict_uwb_recovery",
+      "source_hashes": {
+        "integrity.csv": "54785f0b6fbce92f0c41c4049e09175915ac14ea2de01dec7bdacf25e1e3fa53",
+        "diagnostic_attempts.csv": "1dae138d5769124b761e8f13851e3e7802b83012a54afb999c7d902409cbbe4d",
+        "candidates.csv": "5e45915c8612532738238f6c5100b9b8eb79e97240e4d51db1571dd3006e14f0",
+        "diagnostic_stages.csv": "32d9ba7249664c207e8a6549c6b166d1d064822e71cd0bb3880576d7d14fdc2d"
+      },
+      "detector": {
+        "conditional_statistic": "440.7804520984601",
+        "conditional_threshold": "121.34881015252451",
+        "conditional_passed": "0"
+      },
+      "production": {
+        "fde_status": "RISK_BUDGET_INVALID",
+        "batch_committed": "0",
+        "selected_action_id": "0",
+        "formal_eligible": "0",
+        "risk_budget_valid": "0",
+        "publication_protected": "0",
+        "deadline_missed": "1"
+      },
+      "candidate_count": 7,
+      "candidate_samples": [
+        {
+          "action_id": "1",
+          "hpl_m": "inf",
+          "vpl_m": "inf",
+          "reason": "candidate linearization step gate failed; step attribution: rotation=0.194586 position=0.278977 velocity=1.52607 accel_bias=0.0199209 gyro_bias=0.000382524; dominant=velocity(epoch 7);ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=7352091632812430309;semantic_digest=13681401928444685145"
+        },
+        {
+          "action_id": "2",
+          "hpl_m": "0.551071",
+          "vpl_m": "0.744828",
+          "reason": "terminal=PL_COMPLETE;ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=6055885651989097703;semantic_digest=16555256789167163146"
+        },
+        {
+          "action_id": "3",
+          "hpl_m": "0.526895",
+          "vpl_m": "0.734759",
+          "reason": "terminal=PL_COMPLETE;ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=13500351250677632256;semantic_digest=16976639598523591728"
+        },
+        {
+          "action_id": "4",
+          "hpl_m": "0.489899",
+          "vpl_m": "0.718967",
+          "reason": "terminal=PL_COMPLETE;ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=15945324397658615379;semantic_digest=17709325572852895498"
+        },
+        {
+          "action_id": "5",
+          "hpl_m": "0.489899",
+          "vpl_m": "0.718967",
+          "reason": "terminal=PL_COMPLETE;ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=15945324397658615379;semantic_digest=14542529871030407671"
+        },
+        {
+          "action_id": "6",
+          "hpl_m": "0.489899",
+          "vpl_m": "0.718967",
+          "reason": "terminal=PL_COMPLETE;ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=15945324397658615379;semantic_digest=13776960799273687004"
+        },
+        {
+          "action_id": "7",
+          "hpl_m": "0.551071",
+          "vpl_m": "0.744828",
+          "reason": "terminal=PL_COMPLETE;ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=3518416586672856885;semantic_digest=5696139657149686697"
+        }
+      ],
+      "ledger": {
+        "nominal": {
+          "value": 3.0000000000000004e-05,
+          "binary64_hex": "0x1.f75104d551d6ap-16",
+          "status": "VALIDATED"
+        },
+        "p_nm": {
+          "value": 1e-07,
+          "binary64_hex": "0x1.ad7f29abcaf48p-24",
+          "status": "VALIDATED"
+        },
+        "hypotheses": {
+          "value": 9.9e-06,
+          "binary64_hex": "0x1.4c305a3adef92p-17",
+          "status": "VALIDATED"
+        },
+        "hypotheses_miss_channel": {
+          "value": 6.9000000000000025e-06,
+          "binary64_hex": "0x1.cf0d18ed36cfdp-18",
+          "status": "VALIDATED"
+        },
+        "bridge": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "history": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "model": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "omitted": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "NOT_IMPLEMENTED"
+        },
+        "envelope": {
+          "value": 0.0,
+          "binary64_hex": "0x0.0p+0",
+          "status": "VALIDATED"
+        },
+        "selection": {
+          "value": 8.470329472543003e-22,
+          "binary64_hex": "0x1.0000000000000p-70",
+          "status": "VALIDATED"
+        }
+      },
+      "known_export_sum_decimal": "0.0000469000000000000076185653380585194316410024839569814503192901611328125",
+      "budget_decimal": "0",
+      "cpp_exact_known_charge_export": 4.690000000000001e-05,
+      "known_charge_exceeds_budget": true,
+      "unknown_terms": [
+        "bridge",
+        "history",
+        "model",
+        "omitted"
+      ],
+      "decision_trace": [
+        "gate:numerical:0:1:1:finite post-passed covering candidate;gate:risk:1:4.6900000000000008e-05:4.0000000000000003e-05:RISK_OVER_BUDGET: known charged lower bound;gate:AL:0:0.55107088655002923:2:HPL=0.551071;gate:qualification:3:nan:nan:;gate:deadline:3:nan:nan:;ledger:nominal:3.0000000000000004e-05:VALIDATED:config risk.nominal_axis_tail x 3 protected axes:pi0 * alpha0 for the alarm-free outcome;ledger:p_nm:9.9999999999999995e-08:VALIDATED:config risk.p_nm:non-nominal outcome mass not attributable to a hypothesis;ledger:hypotheses:9.9000000000000001e-06:VALIDATED:per-hypothesis allocation / prior bound (allocation policy: prior_weighted_outcome_conditioned):sum of pi_h * alpha_h over charged hypotheses;ledger:hypotheses_miss_channel:6.9000000000000025e-06:VALIDATED:section 5.9 union bound: sum of pi_h * max(0, beta_h - alpha_h):charged detector-miss excess above the allocation-derived tail;ledger:bridge:nan:ASSUMED_UNVALIDATED:config risk.p_bridge_escape:configured zero has no zero proof: value is UNKNOWN;ledger:history:nan:ASSUMED_UNVALIDATED:config risk.p_history_contamination:configured zero has no zero proof: value is UNKNOWN;ledger:model:nan:ASSUMED_UNVALIDATED:config risk.p_model_escape:configured zero has no zero proof: value is UNKNOWN;ledger:omitted:nan:NOT_IMPLEMENTED:config/integrity_fault_manifest.yaml omitted_event_set:omitted-event mass is UNKNOWN unless the complete scope carries a finite known bound;ledger:envelope:0:VALIDATED:exact coverage of frozen generated mode registry;ledger:selection:8.4703294725430034e-22:VALIDATED:numeric FDE guarantee groups over every eligible action:extra union charge beyond the once-charged hypothesis allocation"
+      ],
+      "mathematical_unboundedness_proven": false
+    },
+    {
+      "attempt": 7,
+      "window_id": "7",
+      "source": "results/fde_operability_20261010/strict_imu_recovery",
+      "source_hashes": {
+        "integrity.csv": "3e88e6089d72dbb1da4f77e9ce78dae5b5532b156bc504658a73a7fbfa8804e5",
+        "diagnostic_attempts.csv": "a21bd9abec24bb44040f28404217d9d620ee5f35f12b12de35e578fb3d0cd206",
+        "candidates.csv": "ed7fefa056d87742e8fd70d24831c4dc04bd554086fc2d1f7205ba69075ff8ee",
+        "diagnostic_stages.csv": "d2fe842810da792f48d9197e47d12c31ec5a5a0562c8524c60af22c568e1a985"
+      },
+      "detector": {
+        "conditional_statistic": "0.18701637172207716",
+        "conditional_threshold": "121.34881015252451",
+        "conditional_passed": "1"
+      },
+      "production": {
+        "fde_status": "NO_VALID_CANDIDATE",
+        "batch_committed": "1",
+        "selected_action_id": "0",
+        "formal_eligible": "0",
+        "risk_budget_valid": "0",
+        "publication_protected": "0",
+        "deadline_missed": "1"
+      },
+      "candidate_count": 1,
+      "candidate_samples": [
+        {
+          "action_id": "1",
+          "hpl_m": "inf",
+          "vpl_m": "inf",
+          "reason": "candidate linearization step gate failed; step attribution: rotation=0.00945241 position=0.0131989 velocity=0.896043 accel_bias=0.000701674 gyro_bias=1.394e-05; dominant=velocity(epoch 7);ACTION_OPERATION_IDENTITY=ACTION_OPERATION_V1|0;0;0;0;0;0;0;0:;0:;0;"
+        }
+      ],
+      "ledger": {},
+      "known_export_sum_decimal": "0",
+      "budget_decimal": "0",
+      "cpp_exact_known_charge_export": null,
+      "known_charge_exceeds_budget": null,
+      "unknown_terms": [],
+      "decision_trace": [
+        "gate:numerical:2:nan:nan:no finite post-passed covering candidate;gate:risk:3:nan:nan:;gate:AL:3:nan:nan:;gate:qualification:3:nan:nan:;gate:deadline:3:nan:nan:"
+      ],
+      "mathematical_unboundedness_proven": false
+    },
+    {
+      "attempt": 32,
+      "window_id": "32",
+      "source": "results/fde_operability_20261010/rank_fixed_normal",
+      "source_hashes": {
+        "integrity.csv": "a94dccf88a1e8035ae18d2ad1b0185eab3795eb3354ec6649b2167dc6a1913e6",
+        "diagnostic_attempts.csv": "d0aa575dff2007fa8b8cbeaa98f6ba1067d2bea822fab9d6c8eb54ae1dcdd88b",
+        "candidates.csv": "55f02de4ecf6b84aa7396698911d36781c4cfb624323ee6e2aea788db09c8f93",
+        "diagnostic_stages.csv": "9a281a094f6d3d01a853b60159c8bc16c78ab620944853a16a4a3413020cb567"
+      },
+      "detector": {
+        "conditional_statistic": "0.0016084673164500247",
+        "conditional_threshold": "271.18953618702051",
+        "conditional_passed": "1"
+      },
+      "production": {
+        "fde_status": "RISK_BUDGET_INVALID",
+        "batch_committed": "1",
+        "selected_action_id": "0",
+        "formal_eligible": "0",
+        "risk_budget_valid": "0",
+        "publication_protected": "0",
+        "deadline_missed": "1"
+      },
+      "candidate_count": 1,
+      "candidate_samples": [
+        {
+          "action_id": "1",
+          "hpl_m": "1.22899",
+          "vpl_m": "1.3924",
+          "reason": "terminal=PL_COMPLETE;ACTION_OPERATION_IDENTITY=ACTION_OPERATION_V1|0;0;0;0;0;0;0;0:;0:;0;"
+        }
+      ],
+      "ledger": {
+        "nominal": {
+          "value": 3.0000000000000004e-05,
+          "binary64_hex": "0x1.f75104d551d6ap-16",
+          "status": "VALIDATED"
+        },
+        "p_nm": {
+          "value": 1e-07,
+          "binary64_hex": "0x1.ad7f29abcaf48p-24",
+          "status": "VALIDATED"
+        },
+        "hypotheses": {
+          "value": 9.9e-06,
+          "binary64_hex": "0x1.4c305a3adef92p-17",
+          "status": "VALIDATED"
+        },
+        "hypotheses_miss_channel": {
+          "value": 4.240384615384616e-05,
+          "binary64_hex": "0x1.63b590f44c4cap-15",
+          "status": "VALIDATED"
+        },
+        "bridge": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "history": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "model": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "omitted": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "NOT_IMPLEMENTED"
+        },
+        "envelope": {
+          "value": 0.0,
+          "binary64_hex": "0x0.0p+0",
+          "status": "VALIDATED"
+        },
+        "selection": {
+          "value": 1.3234889800848443e-21,
+          "binary64_hex": "0x1.9000000000000p-70",
+          "status": "VALIDATED"
+        }
+      },
+      "known_export_sum_decimal": "0.00008240384615384616740809870546850823824769349812413565814495086669921875",
+      "budget_decimal": "0",
+      "cpp_exact_known_charge_export": 8.240384615384617e-05,
+      "known_charge_exceeds_budget": true,
+      "unknown_terms": [
+        "bridge",
+        "history",
+        "model",
+        "omitted"
+      ],
+      "decision_trace": [
+        "gate:numerical:0:1:1:finite post-passed covering candidate;gate:risk:1:8.2403846153846172e-05:4.0000000000000003e-05:RISK_OVER_BUDGET: known charged lower bound;gate:AL:0:1.228988483204305:2:HPL=1.228988;gate:qualification:3:nan:nan:;gate:deadline:3:nan:nan:;ledger:nominal:3.0000000000000004e-05:VALIDATED:config risk.nominal_axis_tail x 3 protected axes:pi0 * alpha0 for the alarm-free outcome;ledger:p_nm:9.9999999999999995e-08:VALIDATED:config risk.p_nm:non-nominal outcome mass not attributable to a hypothesis;ledger:hypotheses:9.9000000000000001e-06:VALIDATED:per-hypothesis allocation / prior bound (allocation policy: prior_weighted_outcome_conditioned):sum of pi_h * alpha_h over charged hypotheses;ledger:hypotheses_miss_channel:4.2403846153846162e-05:VALIDATED:section 5.9 union bound: sum of pi_h * max(0, beta_h - alpha_h):charged detector-miss excess above the allocation-derived tail;ledger:bridge:nan:ASSUMED_UNVALIDATED:config risk.p_bridge_escape:configured zero has no zero proof: value is UNKNOWN;ledger:history:nan:ASSUMED_UNVALIDATED:config risk.p_history_contamination:configured zero has no zero proof: value is UNKNOWN;ledger:model:nan:ASSUMED_UNVALIDATED:config risk.p_model_escape:configured zero has no zero proof: value is UNKNOWN;ledger:omitted:nan:NOT_IMPLEMENTED:config/integrity_fault_manifest.yaml omitted_event_set:omitted-event mass is UNKNOWN unless the complete scope carries a finite known bound;ledger:envelope:0:VALIDATED:exact coverage of frozen generated mode registry;ledger:selection:1.3234889800848443e-21:VALIDATED:numeric FDE guarantee groups over every eligible action:extra union charge beyond the once-charged hypothesis allocation"
+      ],
+      "mathematical_unboundedness_proven": false
+    },
+    {
+      "attempt": 7,
+      "window_id": "7",
+      "source": "results/fde_operability_20261010/final_strict_uwb_recovery",
+      "source_hashes": {
+        "integrity.csv": "366962a93541c456848067760ad23dc408e20d716236db919652746d98a94e16",
+        "diagnostic_attempts.csv": "76538c287c04a57ad272b2ac2332e6181576a04cc8acc8cd4ac96c1a260fb8e1",
+        "candidates.csv": "baeb0c6902e9e1936c0076005b772932726d85ad9e8696d2c56c05322ac1ec05",
+        "diagnostic_stages.csv": "3878048a1389c1d83de74dae18f8b7b8bd3fd8001e8c776390dd360d750eb441"
+      },
+      "detector": {
+        "conditional_statistic": "440.7804520984601",
+        "conditional_threshold": "121.34881015252451",
+        "conditional_passed": "0"
+      },
+      "production": {
+        "fde_status": "RISK_BUDGET_INVALID",
+        "batch_committed": "0",
+        "selected_action_id": "0",
+        "formal_eligible": "0",
+        "risk_budget_valid": "0",
+        "publication_protected": "0",
+        "deadline_missed": "1"
+      },
+      "candidate_count": 7,
+      "candidate_samples": [
+        {
+          "action_id": "1",
+          "hpl_m": "inf",
+          "vpl_m": "inf",
+          "reason": "candidate linearization step gate failed; step attribution: rotation=0.194586 position=0.278977 velocity=1.52607 accel_bias=0.0199209 gyro_bias=0.000382524; dominant=velocity(epoch 7);ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=7352091632812430309;semantic_digest=13681401928444685145"
+        },
+        {
+          "action_id": "2",
+          "hpl_m": "0.551177",
+          "vpl_m": "0.744743",
+          "reason": "terminal=PL_COMPLETE;ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=6055885651989097703;semantic_digest=16555256789167163146"
+        },
+        {
+          "action_id": "3",
+          "hpl_m": "0.527002",
+          "vpl_m": "0.734679",
+          "reason": "terminal=PL_COMPLETE;ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=13500351250677632256;semantic_digest=16976639598523591728"
+        },
+        {
+          "action_id": "4",
+          "hpl_m": "0.489918",
+          "vpl_m": "0.718893",
+          "reason": "terminal=PL_COMPLETE;ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=15945324397658615379;semantic_digest=17709325572852895498"
+        },
+        {
+          "action_id": "5",
+          "hpl_m": "0.489918",
+          "vpl_m": "0.718893",
+          "reason": "terminal=PL_COMPLETE;ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=15945324397658615379;semantic_digest=14542529871030407671"
+        },
+        {
+          "action_id": "6",
+          "hpl_m": "0.489918",
+          "vpl_m": "0.718893",
+          "reason": "terminal=PL_COMPLETE;ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=15945324397658615379;semantic_digest=13776960799273687004"
+        },
+        {
+          "action_id": "7",
+          "hpl_m": "0.551177",
+          "vpl_m": "0.744743",
+          "reason": "terminal=PL_COMPLETE;ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=3518416586672856885;semantic_digest=5696139657149686697"
+        }
+      ],
+      "ledger": {
+        "nominal": {
+          "value": 3.0000000000000004e-05,
+          "binary64_hex": "0x1.f75104d551d6ap-16",
+          "status": "VALIDATED"
+        },
+        "p_nm": {
+          "value": 1e-07,
+          "binary64_hex": "0x1.ad7f29abcaf48p-24",
+          "status": "VALIDATED"
+        },
+        "hypotheses": {
+          "value": 9.9e-06,
+          "binary64_hex": "0x1.4c305a3adef92p-17",
+          "status": "VALIDATED"
+        },
+        "hypotheses_miss_channel": {
+          "value": 6.9000000000000025e-06,
+          "binary64_hex": "0x1.cf0d18ed36cfdp-18",
+          "status": "VALIDATED"
+        },
+        "bridge": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "history": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "model": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "omitted": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "NOT_IMPLEMENTED"
+        },
+        "envelope": {
+          "value": 0.0,
+          "binary64_hex": "0x0.0p+0",
+          "status": "VALIDATED"
+        },
+        "selection": {
+          "value": 8.470329472543003e-22,
+          "binary64_hex": "0x1.0000000000000p-70",
+          "status": "VALIDATED"
+        }
+      },
+      "known_export_sum_decimal": "0.0000469000000000000076185653380585194316410024839569814503192901611328125",
+      "budget_decimal": "0",
+      "cpp_exact_known_charge_export": 4.690000000000001e-05,
+      "known_charge_exceeds_budget": true,
+      "unknown_terms": [
+        "bridge",
+        "history",
+        "model",
+        "omitted"
+      ],
+      "decision_trace": [
+        "gate:numerical:0:1:1:finite post-passed covering candidate;gate:risk:1:4.6900000000000008e-05:4.0000000000000003e-05:RISK_OVER_BUDGET: known charged lower bound;gate:AL:0:0.55117685012311124:2:HPL=0.551177;gate:qualification:3:nan:nan:;gate:deadline:3:nan:nan:;ledger:nominal:3.0000000000000004e-05:VALIDATED:config risk.nominal_axis_tail x 3 protected axes:pi0 * alpha0 for the alarm-free outcome;ledger:p_nm:9.9999999999999995e-08:VALIDATED:config risk.p_nm:non-nominal outcome mass not attributable to a hypothesis;ledger:hypotheses:9.9000000000000001e-06:VALIDATED:per-hypothesis allocation / prior bound (allocation policy: prior_weighted_outcome_conditioned):sum of pi_h * alpha_h over charged hypotheses;ledger:hypotheses_miss_channel:6.9000000000000025e-06:VALIDATED:section 5.9 union bound: sum of pi_h * max(0, beta_h - alpha_h):charged detector-miss excess above the allocation-derived tail;ledger:bridge:nan:ASSUMED_UNVALIDATED:config risk.p_bridge_escape:configured zero has no zero proof: value is UNKNOWN;ledger:history:nan:ASSUMED_UNVALIDATED:config risk.p_history_contamination:configured zero has no zero proof: value is UNKNOWN;ledger:model:nan:ASSUMED_UNVALIDATED:config risk.p_model_escape:configured zero has no zero proof: value is UNKNOWN;ledger:omitted:nan:NOT_IMPLEMENTED:config/integrity_fault_manifest.yaml omitted_event_set:omitted-event mass is UNKNOWN unless the complete scope carries a finite known bound;ledger:envelope:0:VALIDATED:exact coverage of frozen generated mode registry;ledger:selection:8.4703294725430034e-22:VALIDATED:numeric FDE guarantee groups over every eligible action:extra union charge beyond the once-charged hypothesis allocation"
+      ],
+      "mathematical_unboundedness_proven": false
+    },
+    {
+      "attempt": 7,
+      "window_id": "7",
+      "source": "results/fde_operability_20261010/final_strict_imu_recovery",
+      "source_hashes": {
+        "integrity.csv": "e502fa3f71b289359204dab55fc59ded5ca10adaa02ab6415fc249135fa4e531",
+        "diagnostic_attempts.csv": "c9392deb11c59479c981601aa04b197eafa17f3e7dcaf72f9ba826707fcc7b0f",
+        "candidates.csv": "a068aa4d002e11cf00e25149337874dea5bef64d9d8728b0b2f2d9248e9bf5db",
+        "diagnostic_stages.csv": "55445a5632c054fe37ec0fb74487ef0e5b86a61cae819910096a58aac7119415"
+      },
+      "detector": {
+        "conditional_statistic": "0.18701637172207716",
+        "conditional_threshold": "121.34881015252451",
+        "conditional_passed": "1"
+      },
+      "production": {
+        "fde_status": "NO_VALID_CANDIDATE",
+        "batch_committed": "1",
+        "selected_action_id": "0",
+        "formal_eligible": "0",
+        "risk_budget_valid": "0",
+        "publication_protected": "0",
+        "deadline_missed": "1"
+      },
+      "candidate_count": 1,
+      "candidate_samples": [
+        {
+          "action_id": "1",
+          "hpl_m": "inf",
+          "vpl_m": "inf",
+          "reason": "candidate linearization step gate failed; step attribution: rotation=0.00945241 position=0.0131989 velocity=0.896043 accel_bias=0.000701674 gyro_bias=1.394e-05; dominant=velocity(epoch 7);ACTION_OPERATION_IDENTITY=ACTION_OPERATION_V1|0;0;0;0;0;0;0;0:;0:;0;"
+        }
+      ],
+      "ledger": {},
+      "known_export_sum_decimal": "0",
+      "budget_decimal": "0",
+      "cpp_exact_known_charge_export": null,
+      "known_charge_exceeds_budget": null,
+      "unknown_terms": [],
+      "decision_trace": [
+        "gate:numerical:2:nan:nan:no finite post-passed covering candidate;gate:risk:3:nan:nan:;gate:AL:3:nan:nan:;gate:qualification:3:nan:nan:;gate:deadline:3:nan:nan:"
+      ],
+      "mathematical_unboundedness_proven": false
+    },
+    {
+      "attempt": 10,
+      "window_id": "10",
+      "source": "results/fde_operability_20261010/final_b_correct/reference/normal",
+      "source_hashes": {
+        "integrity.csv": "5c00a5edb3e0893054a9435c800ad2d44f215b738d09ccb4c068c366fe2bed27",
+        "diagnostic_attempts.csv": "81d50301ddffde424a1ba2b0b9672dfed06e8c49bd0a385be71df3477d530c50",
+        "candidates.csv": "1908490d292614383b00555209bf43a2ba53a1169e53fb6fe639433354e2e0bd",
+        "diagnostic_stages.csv": "3f1b3df438963350d669e44d58039b91db8a535d574be18e5416b5b644a21f95"
+      },
+      "detector": {
+        "conditional_statistic": "4.2048609317370607e-07",
+        "conditional_threshold": "155.08052230817057",
+        "conditional_passed": "1"
+      },
+      "production": {
+        "fde_status": "RISK_BUDGET_INVALID",
+        "batch_committed": "1",
+        "selected_action_id": "0",
+        "formal_eligible": "0",
+        "risk_budget_valid": "0",
+        "publication_protected": "0",
+        "deadline_missed": "1"
+      },
+      "candidate_count": 1,
+      "candidate_samples": [
+        {
+          "action_id": "1",
+          "hpl_m": "6.32927",
+          "vpl_m": "1.3164",
+          "reason": "terminal=PL_COMPLETE;ACTION_OPERATION_IDENTITY=ACTION_OPERATION_V1|0;0;0;0;0;0;0;0:;0:;0;"
+        }
+      ],
+      "ledger": {
+        "nominal": {
+          "value": 3.0000000000000004e-05,
+          "binary64_hex": "0x1.f75104d551d6ap-16",
+          "status": "VALIDATED"
+        },
+        "p_nm": {
+          "value": 1e-07,
+          "binary64_hex": "0x1.ad7f29abcaf48p-24",
+          "status": "VALIDATED"
+        },
+        "hypotheses": {
+          "value": 9.9e-06,
+          "binary64_hex": "0x1.4c305a3adef92p-17",
+          "status": "VALIDATED"
+        },
+        "hypotheses_miss_channel": {
+          "value": 1.6080000000000005e-05,
+          "binary64_hex": "0x1.0dc712f981e1bp-16",
+          "status": "VALIDATED"
+        },
+        "bridge": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "history": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "model": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "omitted": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "NOT_IMPLEMENTED"
+        },
+        "envelope": {
+          "value": 0.0,
+          "binary64_hex": "0x0.0p+0",
+          "status": "VALIDATED"
+        },
+        "selection": {
+          "value": 7.676236084492097e-22,
+          "binary64_hex": "0x1.d000000000000p-71",
+          "status": "VALIDATED"
+        }
+      },
+      "known_export_sum_decimal": "0.000056080000000000010278941394337333392616784522033412940800189971923828125",
+      "budget_decimal": "0",
+      "cpp_exact_known_charge_export": 5.6080000000000005e-05,
+      "known_charge_exceeds_budget": true,
+      "unknown_terms": [
+        "bridge",
+        "history",
+        "model",
+        "omitted"
+      ],
+      "decision_trace": [
+        "gate:numerical:0:1:1:finite post-passed covering candidate;gate:risk:1:5.6080000000000005e-05:4.0000000000000003e-05:RISK_OVER_BUDGET: known charged lower bound;gate:AL:1:6.3292737057314294:2:HPL=6.329274;gate:qualification:3:nan:nan:;gate:deadline:3:nan:nan:;ledger:nominal:3.0000000000000004e-05:VALIDATED:config risk.nominal_axis_tail x 3 protected axes:pi0 * alpha0 for the alarm-free outcome;ledger:p_nm:9.9999999999999995e-08:VALIDATED:config risk.p_nm:non-nominal outcome mass not attributable to a hypothesis;ledger:hypotheses:9.9000000000000001e-06:VALIDATED:per-hypothesis allocation / prior bound (allocation policy: prior_weighted_outcome_conditioned):sum of pi_h * alpha_h over charged hypotheses;ledger:hypotheses_miss_channel:1.6080000000000005e-05:VALIDATED:section 5.9 union bound: sum of pi_h * max(0, beta_h - alpha_h):charged detector-miss excess above the allocation-derived tail;ledger:bridge:nan:ASSUMED_UNVALIDATED:config risk.p_bridge_escape:configured zero has no zero proof: value is UNKNOWN;ledger:history:nan:ASSUMED_UNVALIDATED:config risk.p_history_contamination:configured zero has no zero proof: value is UNKNOWN;ledger:model:nan:ASSUMED_UNVALIDATED:config risk.p_model_escape:configured zero has no zero proof: value is UNKNOWN;ledger:omitted:nan:NOT_IMPLEMENTED:config/integrity_fault_manifest.yaml omitted_event_set:omitted-event mass is UNKNOWN unless the complete scope carries a finite known bound;ledger:envelope:0:VALIDATED:exact coverage of frozen generated mode registry;ledger:selection:7.6762360844920968e-22:VALIDATED:numeric FDE guarantee groups over every eligible action:extra union charge beyond the once-charged hypothesis allocation"
+      ],
+      "mathematical_unboundedness_proven": false
+    },
+    {
+      "attempt": 32,
+      "window_id": "32",
+      "source": "results/fde_operability_20261010/final_b_correct/reference/normal",
+      "source_hashes": {
+        "integrity.csv": "5c00a5edb3e0893054a9435c800ad2d44f215b738d09ccb4c068c366fe2bed27",
+        "diagnostic_attempts.csv": "81d50301ddffde424a1ba2b0b9672dfed06e8c49bd0a385be71df3477d530c50",
+        "candidates.csv": "1908490d292614383b00555209bf43a2ba53a1169e53fb6fe639433354e2e0bd",
+        "diagnostic_stages.csv": "3f1b3df438963350d669e44d58039b91db8a535d574be18e5416b5b644a21f95"
+      },
+      "detector": {
+        "conditional_statistic": "0.0016084673164500247",
+        "conditional_threshold": "271.18953618702051",
+        "conditional_passed": "1"
+      },
+      "production": {
+        "fde_status": "RISK_BUDGET_INVALID",
+        "batch_committed": "1",
+        "selected_action_id": "0",
+        "formal_eligible": "0",
+        "risk_budget_valid": "0",
+        "publication_protected": "0",
+        "deadline_missed": "1"
+      },
+      "candidate_count": 1,
+      "candidate_samples": [
+        {
+          "action_id": "1",
+          "hpl_m": "1.22856",
+          "vpl_m": "1.39257",
+          "reason": "terminal=PL_COMPLETE;ACTION_OPERATION_IDENTITY=ACTION_OPERATION_V1|0;0;0;0;0;0;0;0:;0:;0;"
+        }
+      ],
+      "ledger": {
+        "nominal": {
+          "value": 3.0000000000000004e-05,
+          "binary64_hex": "0x1.f75104d551d6ap-16",
+          "status": "VALIDATED"
+        },
+        "p_nm": {
+          "value": 1e-07,
+          "binary64_hex": "0x1.ad7f29abcaf48p-24",
+          "status": "VALIDATED"
+        },
+        "hypotheses": {
+          "value": 9.9e-06,
+          "binary64_hex": "0x1.4c305a3adef92p-17",
+          "status": "VALIDATED"
+        },
+        "hypotheses_miss_channel": {
+          "value": 4.240384615384616e-05,
+          "binary64_hex": "0x1.63b590f44c4cap-15",
+          "status": "VALIDATED"
+        },
+        "bridge": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "history": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "model": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "ASSUMED_UNVALIDATED"
+        },
+        "omitted": {
+          "value": null,
+          "binary64_hex": null,
+          "status": "NOT_IMPLEMENTED"
+        },
+        "envelope": {
+          "value": 0.0,
+          "binary64_hex": "0x0.0p+0",
+          "status": "VALIDATED"
+        },
+        "selection": {
+          "value": 1.3234889800848443e-21,
+          "binary64_hex": "0x1.9000000000000p-70",
+          "status": "VALIDATED"
+        }
+      },
+      "known_export_sum_decimal": "0.00008240384615384616740809870546850823824769349812413565814495086669921875",
+      "budget_decimal": "0",
+      "cpp_exact_known_charge_export": 8.240384615384617e-05,
+      "known_charge_exceeds_budget": true,
+      "unknown_terms": [
+        "bridge",
+        "history",
+        "model",
+        "omitted"
+      ],
+      "decision_trace": [
+        "gate:numerical:0:1:1:finite post-passed covering candidate;gate:risk:1:8.2403846153846172e-05:4.0000000000000003e-05:RISK_OVER_BUDGET: known charged lower bound;gate:AL:0:1.2285557105130551:2:HPL=1.228556;gate:qualification:3:nan:nan:;gate:deadline:3:nan:nan:;ledger:nominal:3.0000000000000004e-05:VALIDATED:config risk.nominal_axis_tail x 3 protected axes:pi0 * alpha0 for the alarm-free outcome;ledger:p_nm:9.9999999999999995e-08:VALIDATED:config risk.p_nm:non-nominal outcome mass not attributable to a hypothesis;ledger:hypotheses:9.9000000000000001e-06:VALIDATED:per-hypothesis allocation / prior bound (allocation policy: prior_weighted_outcome_conditioned):sum of pi_h * alpha_h over charged hypotheses;ledger:hypotheses_miss_channel:4.2403846153846162e-05:VALIDATED:section 5.9 union bound: sum of pi_h * max(0, beta_h - alpha_h):charged detector-miss excess above the allocation-derived tail;ledger:bridge:nan:ASSUMED_UNVALIDATED:config risk.p_bridge_escape:configured zero has no zero proof: value is UNKNOWN;ledger:history:nan:ASSUMED_UNVALIDATED:config risk.p_history_contamination:configured zero has no zero proof: value is UNKNOWN;ledger:model:nan:ASSUMED_UNVALIDATED:config risk.p_model_escape:configured zero has no zero proof: value is UNKNOWN;ledger:omitted:nan:NOT_IMPLEMENTED:config/integrity_fault_manifest.yaml omitted_event_set:omitted-event mass is UNKNOWN unless the complete scope carries a finite known bound;ledger:envelope:0:VALIDATED:exact coverage of frozen generated mode registry;ledger:selection:1.3234889800848443e-21:VALIDATED:numeric FDE guarantee groups over every eligible action:extra union charge beyond the once-charged hypothesis allocation"
+      ],
+      "mathematical_unboundedness_proven": false
+    },
+    {
+      "attempt": 12,
+      "window_id": "12",
+      "source": "results/fde_operability_20261010/final_b_correct/reference/joint2",
+      "source_hashes": {
+        "integrity.csv": "4dcab505883b365ede02e5f97ca48a6dc7ab3c1f8f7eea6f9483941ae2f0d147",
+        "diagnostic_attempts.csv": "2ef1ae3944a293f1d3aca70317ab9b22ec8e00a2eb6b92f2d0484c4fa0369f2e",
+        "candidates.csv": "1766e4aa663bb74e637b9163c35839d7589dd11a854dc394c31d4d1b50d30996",
+        "diagnostic_stages.csv": "17d80fb28fd62536d11b406c35709baf4354c4a07295f4eb89753b8ab2ce1a66"
+      },
+      "detector": {
+        "conditional_statistic": "444.20624833231949",
+        "conditional_threshold": "176.77757234093806",
+        "conditional_passed": "0"
+      },
+      "production": {
+        "fde_status": "AMBIGUOUS_UNAVAILABLE",
+        "batch_committed": "0",
+        "selected_action_id": "0",
+        "formal_eligible": "0",
+        "risk_budget_valid": "0",
+        "publication_protected": "0",
+        "deadline_missed": "1"
+      },
+      "candidate_count": 405,
+      "candidate_samples": [
+        {
+          "action_id": "1",
+          "hpl_m": "inf",
+          "vpl_m": "inf",
+          "reason": "candidate linearization step gate failed; step attribution: rotation=0.257113 position=0.251151 velocity=2.02612 accel_bias=0.0262595 gyro_bias=0.00108739; dominant=velocity(epoch 12);ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=7352091632812430309;semantic_digest=13681401928444685145"
+        },
+        {
+          "action_id": "2",
+          "hpl_m": "inf",
+          "vpl_m": "inf",
+          "reason": "candidate linearization step gate failed; step attribution: rotation=0.0101949 position=0.0156521 velocity=0.912371 accel_bias=0.000799835 gyro_bias=3.36318e-05; dominant=velocity(epoch 12);ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=11385354897684055217;semantic_digest=18370915539368691136"
+        },
+        {
+          "action_id": "3",
+          "hpl_m": "inf",
+          "vpl_m": "inf",
+          "reason": "candidate linearization step gate failed; step attribution: rotation=0.0102049 position=0.0156932 velocity=0.912424 accel_bias=0.000801193 gyro_bias=3.37509e-05; dominant=velocity(epoch 12);ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=18308626767262946016;semantic_digest=372466515551556082"
+        },
+        {
+          "action_id": "4",
+          "hpl_m": "inf",
+          "vpl_m": "inf",
+          "reason": "candidate linearization step gate failed; step attribution: rotation=0.0101593 position=0.0158711 velocity=0.912973 accel_bias=0.000795999 gyro_bias=3.37584e-05; dominant=velocity(epoch 12);ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=14477873154684110680;semantic_digest=11299319052005024021"
+        },
+        {
+          "action_id": "5",
+          "hpl_m": "inf",
+          "vpl_m": "inf",
+          "reason": "candidate linearization step gate failed; step attribution: rotation=0.0102126 position=0.0157886 velocity=0.912605 accel_bias=0.000802434 gyro_bias=3.39705e-05; dominant=velocity(epoch 12);ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=17917626470454005757;semantic_digest=9348338779631281287"
+        },
+        {
+          "action_id": "6",
+          "hpl_m": "inf",
+          "vpl_m": "inf",
+          "reason": "candidate linearization step gate failed; step attribution: rotation=0.0102126 position=0.0157886 velocity=0.912605 accel_bias=0.000802434 gyro_bias=3.39705e-05; dominant=velocity(epoch 12);ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=17917626470454005757;semantic_digest=12207877533795407912"
+        },
+        {
+          "action_id": "7",
+          "hpl_m": "inf",
+          "vpl_m": "inf",
+          "reason": "candidate linearization step gate failed; step attribution: rotation=0.0102126 position=0.0157886 velocity=0.912605 accel_bias=0.000802434 gyro_bias=3.39705e-05; dominant=velocity(epoch 12);ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=17917626470454005757;semantic_digest=12823731621225825229"
+        },
+        {
+          "action_id": "8",
+          "hpl_m": "inf",
+          "vpl_m": "inf",
+          "reason": "remaining post-FDE hypothesis 78 has no valid section 5.9 bound: dual-channel PL bound: channel history_eliminated_detector_only has no symmetric PSD certificate: PSD interval crosses zero and is numerically indeterminate;ACTION_OPERATION_IDENTITY=PLANNED_EVALUATION;operation_digest=13826967336932187917;semantic_digest=2123325829877379743"
+        }
+      ],
+      "ledger": {},
+      "known_export_sum_decimal": "0",
+      "budget_decimal": "0",
+      "cpp_exact_known_charge_export": null,
+      "known_charge_exceeds_budget": null,
+      "unknown_terms": [],
+      "decision_trace": [
+        "gate:numerical:2:nan:nan:no finite post-passed covering candidate;gate:risk:3:nan:nan:;gate:AL:3:nan:nan:;gate:qualification:3:nan:nan:;gate:deadline:3:nan:nan:"
+      ],
+      "mathematical_unboundedness_proven": false
+    }
+  ],
+  "recovery_latency": null,
+  "recovery_latency_status": "RIGHT_CENSORED",
+  "qualifications": {
+    "formal_eligible": false,
+    "publication_protected": false
+  },
+  "flows": {
+    "strict_noiseless": {
+      "attempts": 32,
+      "commits": 32,
+      "exclusion_commits": 0,
+      "risk_valid": 0,
+      "protected": 0,
+      "deadline_misses": 28
+    },
+    "strict_uwb_recovery": {
+      "attempts": 18,
+      "commits": 17,
+      "exclusion_commits": 0,
+      "risk_valid": 0,
+      "protected": 0,
+      "deadline_misses": 14
+    },
+    "strict_imu_recovery": {
+      "attempts": 18,
+      "commits": 18,
+      "exclusion_commits": 0,
+      "risk_valid": 0,
+      "protected": 0,
+      "deadline_misses": 13
+    },
+    "rank_fixed_normal": {
+      "attempts": 32,
+      "commits": 32,
+      "exclusion_commits": 0,
+      "risk_valid": 0,
+      "protected": 0,
+      "deadline_misses": 28
+    },
+    "final_strict_uwb_recovery": {
+      "attempts": 18,
+      "commits": 17,
+      "exclusion_commits": 0,
+      "risk_valid": 0,
+      "protected": 0,
+      "deadline_misses": 14,
+      "execution": {
+        "path": "results/fde_operability_20261010/final_strict_uwb_recovery.execution.json",
+        "sha256": "31103d9c12b5cf2243a09f3e4dffd959f299d3d7fc2fcc0fe019a5b881752198"
+      }
+    },
+    "final_strict_imu_recovery": {
+      "attempts": 18,
+      "commits": 18,
+      "exclusion_commits": 0,
+      "risk_valid": 0,
+      "protected": 0,
+      "deadline_misses": 13,
+      "execution": {
+        "path": "results/fde_operability_20261010/final_strict_imu_recovery.execution.json",
+        "sha256": "3c05df8f142834004c7c78f2850860963a88aa1b2ba79d962096c09a7409cc66"
+      }
+    },
+    "final_b_correct/reference/normal": {
+      "attempts": 35,
+      "commits": 35,
+      "exclusion_commits": 0,
+      "risk_valid": 0,
+      "protected": 0,
+      "deadline_misses": 31,
+      "execution": {
+        "path": "results/fde_operability_20261010/final_b_correct/reference/normal.execution.json",
+        "sha256": "36d03981cdc86fad6f3ebbfe9a26d3a5a74b1ae7c9c6ff068e5689f1aaadb863"
+      }
+    },
+    "final_b_correct/reference/joint2": {
+      "attempts": 35,
+      "commits": 34,
+      "exclusion_commits": 0,
+      "risk_valid": 0,
+      "protected": 0,
+      "deadline_misses": 33,
+      "execution": {
+        "path": "results/fde_operability_20261010/final_b_correct/reference/joint2.execution.json",
+        "sha256": "b3ae9170573131e9e5350798d2cd557038d11dc5d121b11d46a20d669e3cdacf"
+      }
+    }
+  },
+  "gate_state_codes": {
+    "0": "PASS",
+    "1": "FAIL",
+    "2": "UNKNOWN",
+    "3": "NOT_RUN"
+  },
+  "blocked_inputs": {
+    "epoch_period_s": 0.05,
+    "imu_sample_period_s": 0.005,
+    "fault_epoch": 7,
+    "uwb_bias_m": 2.25,
+    "imu_accel_bias_mps2": 20.0,
+    "decision": "event partition proposal pending; no probability contract changes applied",
+    "uwb_node": "FdeManager::decideImpl / completeRiskLedger known charge 4.69e-5 > 4e-5",
+    "imu_node": "joint detector passes; RankUpdateKernel KEEP step norm > 0.25; PL NOT_RUN"
+  },
+  "acceptance": {
+    "A1": "PASS",
+    "A2": "PASS_BOUNDARY_MISSING_PRODUCTION_EVIDENCE",
+    "A3": "TRACE_IMPLEMENTED_DEADLINE_AT_PIPELINE",
+    "A4": "FAIL_NO_CONDITIONAL_RECOVERY",
+    "A5": "PASS",
+    "A6": "MEASURED_PROTOTYPE_DEFAULT_OFF",
+    "A7": "DELIVERED_WITH_BLOCKERS",
+    "realtime": "NOT_MET",
+    "deployment": "NOT_QUALIFIED",
+    "simulation_flow": "NOT_IMPLEMENTED"
+  },
+  "artifacts": {
+    "w1_before": {
+      "path": "results/fde_operability_20261010/w1_before.xml",
+      "sha256": "a50fd1eb6c8eb9da743cb582eeb9eaf3aebfa1f59c1f936c1b2ce87fd6e56b99",
+      "tests": 1,
+      "failures": 1
+    },
+    "w1_after": {
+      "path": "results/fde_operability_20261010/w1_after.xml",
+      "sha256": "5b3466c1804f14ac0bdf0b3f759dbb92f1626cdf69d55bd195c1b38f76bc7284",
+      "tests": 3,
+      "failures": 0
+    },
+    "map_mint_after": {
+      "path": "results/fde_operability_20261010/w3_reference_after.xml",
+      "sha256": "a95a6a4cfa51511ff23f8690bce04427094b8b312c58a31825c90e71882ba70e",
+      "tests": 3,
+      "failures": 0
+    }
+  },
+  "performance_directions": {
+    "root_response": {
+      "status": "STOPPED_ZERO_REUSE",
+      "default": false,
+      "normal_fallbacks": 2328,
+      "joint2_fallbacks": 72618,
+      "reuse": 0,
+      "early_binary_hashes": "NOT_CAPTURED; no reconstruction or rerun",
+      "normal_strict": "FAIL_RETAINED",
+      "joint2_strict": "PASS",
+      "artifacts": "results/fde_operability_20261010/root_probe"
+    },
+    "continuous_proofs": {
+      "status": "MEASURED_OPT_IN",
+      "default": false,
+      "micro_normal_core_total_ms": [
+        960.100996,
+        962.492028
+      ],
+      "micro_joint2_core_total_ms": [
+        31988.332453,
+        31485.795341
+      ],
+      "artifacts": "results/fde_operability_20261010/batch_probe",
+      "sensitive_boundary": "original full validation fallback",
+      "final_bundle": "full validation unchanged"
+    }
+  },
+  "core_safety": {
+    "tests": [
+      {
+        "binary": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_integrity_v2",
+        "binary_sha256": "6836fb090fd9ab7f8cd08d31b371355b9193e1242f5ae94088c8fd5176a85d69",
+        "filter": "Phase2*.*:P103ProofArena.*:P104ProofOwnership.*:P105FlatConcurrency.*:IntegrityV2Transaction.*:IntegrityV2Bridge.*:IntegrityV2ImuOracle.*:P106SimulationAcceptance.PublishCallNotAnalysisControlsDeadline:FdeOperability*.*:P002DualChannelContract.*:B3ZeroSpace.*:B3Risk.*",
+        "xml": "results/fde_operability_20261010/core_safety/test_integrity_v2.xml",
+        "exit_code": 1,
+        "tests": 53,
+        "failures": 1
+      },
+      {
+        "binary": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_square_root_context",
+        "binary_sha256": "277f6a757b963c3eff2fcd2af5b1c7a68b5f76bc81c789309e53c1f628f2d39a",
+        "filter": "Phase2ClassificationHashes.*:SquareRootContext.P003*:FdeOperabilityRootReuse.*",
+        "xml": "results/fde_operability_20261010/core_safety/test_square_root_context.xml",
+        "exit_code": 0,
+        "tests": 9,
+        "failures": 0
+      },
+      {
+        "binary": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_fault_summary",
+        "binary_sha256": "c78edd00f8de3c9303570c04ed77b504f292e39e4bc125001efbe4784e414b6a",
+        "filter": "HistoryFaultSummary.P103HierarchicalOrthogonalThirtyStepFeasibility:HistoryFaultSummary.P103OwnerCollisionTamperAndStaleCacheFailClosed:HistoryFaultSummary.P103CarrierRankCertificateRejectsNumericalNoise:HistoryFaultSummary.BatchDirtyClosurePreservesExhaustiveBitsAndFallback",
+        "xml": "results/fde_operability_20261010/core_safety/test_history_fault_summary.xml",
+        "exit_code": 0,
+        "tests": 4,
+        "failures": 0
+      },
+      {
+        "binary": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_publication_identity",
+        "binary_sha256": "7c96b9f8f94187f28b8b98dd4db843f07186da2e8fdea0928cbc8766a4a23fe4",
+        "filter": "*",
+        "xml": "results/fde_operability_20261010/core_safety/test_publication_identity.xml",
+        "exit_code": 0,
+        "tests": 3,
+        "failures": 0
+      },
+      {
+        "binary": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_publication_wiring",
+        "binary_sha256": "786b86e73bccb0db2717e24b9b13449a9494da22a4a82ae9968fe98935e09f2c",
+        "filter": "*",
+        "xml": "results/fde_operability_20261010/core_safety/test_publication_wiring.xml",
+        "exit_code": 0,
+        "tests": 6,
+        "failures": 0
+      },
+      {
+        "binary": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_p0_05_publication",
+        "binary_sha256": "bee8e5d9764b85a778a1863721d3943da48c7e0f245eeb6148a2649ddf605587",
+        "filter": "*",
+        "xml": "results/fde_operability_20261010/core_safety/test_p0_05_publication.xml",
+        "exit_code": 0,
+        "tests": 13,
+        "failures": 0
+      },
+      {
+        "binary": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_p0_04_risk_oracle",
+        "binary_sha256": "8af836fcc71bdb8b2747ba9a243cb89a723480329c20b354f87b449d7d847ff6",
+        "filter": "*",
+        "xml": "results/fde_operability_20261010/core_safety/test_p0_04_risk_oracle.xml",
+        "exit_code": 0,
+        "tests": 14,
+        "failures": 0
+      }
+    ],
+    "source": "4aa795e65b79aede23f63727020db55145236f3a",
+    "library_sha256": "09d4c646daed3d1a77aacb19aa6dbbb233191d8f5c5c1fc108020d78913fbc2f",
+    "default_only_rerun": {
+      "path": "results/fde_operability_20261010/core_safety/default_only.xml",
+      "sha256": "04cecda758511f798d4b0e142aa0463e804d974c3f0f34ed43e07ae49888d58b",
+      "tests": 1,
+      "failures": 0,
+      "reason": "Default-off invariant must be run with new opt-in prototype disabled; no code change"
+    },
+    "unique_tests": 102,
+    "historical_69_subset_verified": true,
+    "resolved_status": "PASS_WITH_RETAINED_ENVIRONMENT_FAILURE"
+  },
+  "paired_performance": {
+    "schema": "uwb-imu-pl/phase2-combined-reference-default/v1",
+    "identity": {
+      "head": "4aa795e65b79aede23f63727020db55145236f3a",
+      "binary_sha256": "8ab78c4fde74333d52a84b4537d20e7896d97f9f0e3ce1a339eff7024778b942",
+      "library_sha256": "09d4c646daed3d1a77aacb19aa6dbbb233191d8f5c5c1fc108020d78913fbc2f",
+      "runner_sha256": "f4253eb229d61e6713806b97365c4d47dd58e40f6caebb12450f8cfdd9868d7a",
+      "tracked_status": ""
+    },
+    "repetitions": 1,
+    "runs": {
+      "normal": {
+        "sides": {
+          "reference": {
+            "execution": {
+              "head": "4aa795e65b79aede23f63727020db55145236f3a",
+              "binary_sha256": "8ab78c4fde74333d52a84b4537d20e7896d97f9f0e3ce1a339eff7024778b942",
+              "library_sha256": "09d4c646daed3d1a77aacb19aa6dbbb233191d8f5c5c1fc108020d78913fbc2f",
+              "runner_sha256": "f4253eb229d61e6713806b97365c4d47dd58e40f6caebb12450f8cfdd9868d7a",
+              "tracked_status": "",
+              "command": [
+                "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+                "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order1.yaml",
+                "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/fde_operability_20261010/final_b_correct/reference/normal",
+                "35"
+              ],
+              "config_sha256": "18cec5ece3cd6f33761b946b7815ea5a8d0c998e007ad2fe49eef122de4284f7",
+              "environment": {
+                "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+                "OMP_NUM_THREADS": "1",
+                "OPENBLAS_NUM_THREADS": "1",
+                "MKL_NUM_THREADS": "1",
+                "UWB_IMU_PL_SCENARIO": "noiseless",
+                "UWB_IMU_PL_MODE_RESPONSE_CACHE": "0",
+                "UWB_IMU_PL_FROZEN_VALIDATION_REUSE": "0",
+                "UWB_IMU_PL_ROOT_RESPONSE_REUSE": "0",
+                "UWB_IMU_PL_BATCH_FROZEN_PROOFS": "1",
+                "UWB_IMU_PL_REFERENCE_BATCH_FROZEN_PROOFS": "1"
+              },
+              "exit_code": 0,
+              "wall_s": 7.244266671998048
+            },
+            "attempts": 35,
+            "stage_mean_ms": {
+              "prepare": 0.9918891714285715,
+              "integrity_window": 51.140233314285716,
+              "window_boundary_provenance": 37.82503402857142,
+              "window_factor_linearization_whitening": 0.7332117714285713,
+              "window_dense_assembly": 0.06811062857142856,
+              "window_svd": 7.927370399999998,
+              "window_normal_equations": 0.29740308571428575,
+              "window_llt_state_solves": 0.10911979999999999,
+              "window_fingerprint": 3.134279514285714,
+              "all_in_detector": 0.1610225142857143,
+              "current_sensitivity": 0.4192836571428572,
+              "model_generation": 4.741760485714285,
+              "historical_sensitivity": 0.10090851428571429,
+              "hypothesis_evidence": 42.53114420000001,
+              "health_actions": 0.3579072285714285,
+              "base_factorization": 0.19681502857142852,
+              "shared_cache": 0.0012771428571428571,
+              "candidate_batch_kernel": 62.2075154,
+              "candidate_batch_post": 1.5087135142857142,
+              "candidate_batch_pl_flat": 26.68053177142857,
+              "candidate_batch_pl_consume": 7.473910914285715,
+              "candidate_evaluation": 101.40395451428572,
+              "fde_decision": 0.5734817999999999,
+              "candidate_audit": 0.011009828571428572,
+              "commit": 1.5265061428571425,
+              "state_audit": 0.00035654285714285713,
+              "finalize_commit_audit": 0.7042156857142856,
+              "core_total": 205.1025050571429
+            },
+            "arrival_to_publish_mean_ms": 205.11574142857148,
+            "work": {
+              "base_svd": 35,
+              "base_llt": 35,
+              "base_state_solves": 70,
+              "llt_state_solve_calls": 35,
+              "svd_state_solve_calls": 35,
+              "detector_reference_qr": 0,
+              "candidate_reference_svd": 115,
+              "candidate_inner_llt": 105,
+              "covariance_rhs_solves": 0,
+              "covariance_rhs_columns": 0,
+              "spectral_rhs_solves": 0,
+              "spectral_rhs_columns": 0,
+              "numerical_contract_mismatches": 0,
+              "imu_oracle_reintegrations": 0,
+              "window_content_hash_scans": 35,
+              "frozen_identity_builds": 35,
+              "frozen_identity_reuses": 15810,
+              "frozen_admission_constant_validations": 35,
+              "descriptor_id_lookups": 15600,
+              "descriptor_linear_scans": 0,
+              "block_rhs_solve_batches": 0,
+              "block_rhs_unique_blocks": 0,
+              "pl_payload_validations": 34,
+              "pl_payload_validation_reuses": 34,
+              "frozen_hypothesis_validations": 46446,
+              "frozen_hypothesis_validation_reuses": 0,
+              "requests": 35,
+              "exact_hits": 1,
+              "incremental_path_updates": 28,
+              "incremental_add_paths": 39,
+              "incremental_remove_paths": 0,
+              "incremental_relinearize_paths": 78,
+              "internal_nodes_recomputed": 419,
+              "full_tree_rebuilds": 6,
+              "full_oracle_checks": 0,
+              "full_oracle_mismatches": 0,
+              "history_root_fallback_count": 0,
+              "reused_groups": 370,
+              "rebuilt_groups": 325,
+              "factor_group_hits": 614,
+              "factor_group_misses": 81,
+              "retained_rows": 475,
+              "retained_bytes": 3833472
+            },
+            "hypotheses_total": 15600,
+            "generated_actions_total": 35,
+            "fault_gram_svd_total": 139761,
+            "numerical_mismatches": 0,
+            "protected_outputs": 0,
+            "formal_eligible_outputs": 0,
+            "risk_valid_outputs": 0,
+            "deadline_missed_outputs": 31,
+            "committed_outputs": 35
+          },
+          "optimized": {
+            "execution": {
+              "head": "4aa795e65b79aede23f63727020db55145236f3a",
+              "binary_sha256": "8ab78c4fde74333d52a84b4537d20e7896d97f9f0e3ce1a339eff7024778b942",
+              "library_sha256": "09d4c646daed3d1a77aacb19aa6dbbb233191d8f5c5c1fc108020d78913fbc2f",
+              "runner_sha256": "f4253eb229d61e6713806b97365c4d47dd58e40f6caebb12450f8cfdd9868d7a",
+              "tracked_status": "",
+              "command": [
+                "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+                "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order1.yaml",
+                "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/fde_operability_20261010/final_b_correct/optimized/normal",
+                "35"
+              ],
+              "config_sha256": "18cec5ece3cd6f33761b946b7815ea5a8d0c998e007ad2fe49eef122de4284f7",
+              "environment": {
+                "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+                "OMP_NUM_THREADS": "1",
+                "OPENBLAS_NUM_THREADS": "1",
+                "MKL_NUM_THREADS": "1",
+                "UWB_IMU_PL_SCENARIO": "noiseless",
+                "UWB_IMU_PL_MODE_RESPONSE_CACHE": "0",
+                "UWB_IMU_PL_FROZEN_VALIDATION_REUSE": "0",
+                "UWB_IMU_PL_ROOT_RESPONSE_REUSE": "0",
+                "UWB_IMU_PL_BATCH_FROZEN_PROOFS": "1"
+              },
+              "exit_code": 0,
+              "wall_s": 7.142598493999685
+            },
+            "attempts": 35,
+            "stage_mean_ms": {
+              "prepare": 0.9886660857142859,
+              "integrity_window": 51.90749397142857,
+              "window_boundary_provenance": 38.51510328571429,
+              "window_factor_linearization_whitening": 0.8100852285714286,
+              "window_dense_assembly": 0.07333531428571428,
+              "window_svd": 8.012535771428572,
+              "window_normal_equations": 0.2813296,
+              "window_llt_state_solves": 0.1028811714285714,
+              "window_fingerprint": 3.065897742857143,
+              "all_in_detector": 0.1625031142857143,
+              "current_sensitivity": 0.4235532285714286,
+              "model_generation": 3.947849028571428,
+              "historical_sensitivity": 0.0912522857142857,
+              "hypothesis_evidence": 41.96611317142855,
+              "health_actions": 0.3711233428571428,
+              "base_factorization": 0.20145882857142858,
+              "shared_cache": 0.0013191999999999998,
+              "candidate_batch_kernel": 61.15700105714285,
+              "candidate_batch_post": 1.508651971428571,
+              "candidate_batch_pl_flat": 26.39459834285714,
+              "candidate_batch_pl_consume": 7.427880714285716,
+              "candidate_evaluation": 99.99243902857144,
+              "fde_decision": 0.4818169999999999,
+              "candidate_audit": 0.01055942857142857,
+              "commit": 1.4396330857142858,
+              "state_audit": 0.00035679999999999994,
+              "finalize_commit_audit": 0.7122078285714284,
+              "core_total": 202.94121860000004
+            },
+            "arrival_to_publish_mean_ms": 202.95491542857144,
+            "work": {
+              "base_svd": 35,
+              "base_llt": 35,
+              "base_state_solves": 70,
+              "llt_state_solve_calls": 35,
+              "svd_state_solve_calls": 35,
+              "detector_reference_qr": 0,
+              "candidate_reference_svd": 115,
+              "candidate_inner_llt": 105,
+              "covariance_rhs_solves": 0,
+              "covariance_rhs_columns": 0,
+              "spectral_rhs_solves": 0,
+              "spectral_rhs_columns": 0,
+              "numerical_contract_mismatches": 0,
+              "imu_oracle_reintegrations": 0,
+              "window_content_hash_scans": 35,
+              "frozen_identity_builds": 35,
+              "frozen_identity_reuses": 15810,
+              "frozen_admission_constant_validations": 35,
+              "descriptor_id_lookups": 15600,
+              "descriptor_linear_scans": 0,
+              "block_rhs_solve_batches": 0,
+              "block_rhs_unique_blocks": 0,
+              "pl_payload_validations": 34,
+              "pl_payload_validation_reuses": 34,
+              "frozen_hypothesis_validations": 30846,
+              "frozen_hypothesis_validation_reuses": 15600,
+              "requests": 35,
+              "exact_hits": 1,
+              "incremental_path_updates": 28,
+              "incremental_add_paths": 39,
+              "incremental_remove_paths": 0,
+              "incremental_relinearize_paths": 78,
+              "internal_nodes_recomputed": 419,
+              "full_tree_rebuilds": 6,
+              "full_oracle_checks": 0,
+              "full_oracle_mismatches": 0,
+              "history_root_fallback_count": 0,
+              "reused_groups": 370,
+              "rebuilt_groups": 325,
+              "factor_group_hits": 614,
+              "factor_group_misses": 81,
+              "retained_rows": 475,
+              "retained_bytes": 3833472
+            },
+            "hypotheses_total": 15600,
+            "generated_actions_total": 35,
+            "fault_gram_svd_total": 108561,
+            "numerical_mismatches": 0,
+            "protected_outputs": 0,
+            "formal_eligible_outputs": 0,
+            "risk_valid_outputs": 0,
+            "deadline_missed_outputs": 30,
+            "committed_outputs": 35
+          }
+        },
+        "comparison_exit_code": 0,
+        "comparison": {
+          "status": "PASS",
+          "publication_binding_checks": {
+            "after": {
+              "attempts": 35,
+              "failures": [],
+              "status": "PASS"
+            },
+            "before": {
+              "attempts": 35,
+              "failures": [],
+              "status": "PASS"
+            }
+          },
+          "file_statuses": {
+            "bridge.csv": "PASS",
+            "candidates.csv": "PASS",
+            "diagnostic_attempts.csv": "PASS",
+            "diagnostic_candidates.csv": "PASS",
+            "diagnostic_coverage.csv": "PASS",
+            "diagnostic_history_summary.csv": "PASS",
+            "diagnostic_snapshot_identity.csv": "PASS",
+            "diagnostic_square_root.csv": "PASS",
+            "diagnostic_state_steps.csv": "PASS",
+            "hypotheses.csv": "PASS",
+            "integrity.csv": "PASS",
+            "states.csv": "PASS",
+            "transactions.csv": "PASS"
+          },
+          "mismatches": {},
+          "wall_packet_digest_contract": "checksum may differ only on independently proved finish-wall rows; state/proof/publication binding fields are still compared"
+        },
+        "comparison_sha256": "7e919dea27249efe7bb3168c862921f74730cfd7ac627eab7affcc89a5eaf8fe",
+        "core_reduction_percent": 1.0537591710743444,
+        "complete_process_wall_reduction_percent": 1.4034295340251688
+      },
+      "joint2": {
+        "sides": {
+          "reference": {
+            "execution": {
+              "head": "4aa795e65b79aede23f63727020db55145236f3a",
+              "binary_sha256": "8ab78c4fde74333d52a84b4537d20e7896d97f9f0e3ce1a339eff7024778b942",
+              "library_sha256": "09d4c646daed3d1a77aacb19aa6dbbb233191d8f5c5c1fc108020d78913fbc2f",
+              "runner_sha256": "f4253eb229d61e6713806b97365c4d47dd58e40f6caebb12450f8cfdd9868d7a",
+              "tracked_status": "",
+              "command": [
+                "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+                "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order2.yaml",
+                "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/fde_operability_20261010/final_b_correct/reference/joint2",
+                "35"
+              ],
+              "config_sha256": "03c2d725900d8683e672a02e255f6cb80c2f01e466985f01ab3d65d3bd4d574d",
+              "environment": {
+                "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+                "OMP_NUM_THREADS": "1",
+                "OPENBLAS_NUM_THREADS": "1",
+                "MKL_NUM_THREADS": "1",
+                "UWB_IMU_PL_SCENARIO": "joint_recovery",
+                "UWB_IMU_PL_MODE_RESPONSE_CACHE": "0",
+                "UWB_IMU_PL_FROZEN_VALIDATION_REUSE": "0",
+                "UWB_IMU_PL_ROOT_RESPONSE_REUSE": "0",
+                "UWB_IMU_PL_BATCH_FROZEN_PROOFS": "1",
+                "UWB_IMU_PL_REFERENCE_BATCH_FROZEN_PROOFS": "1"
+              },
+              "exit_code": 0,
+              "wall_s": 93.12678371600123
+            },
+            "attempts": 35,
+            "stage_mean_ms": {
+              "prepare": 1.4436322285714285,
+              "integrity_window": 57.762873285714285,
+              "window_boundary_provenance": 44.61934154285714,
+              "window_factor_linearization_whitening": 0.7358773714285712,
+              "window_dense_assembly": 0.07364757142857142,
+              "window_svd": 7.925788857142857,
+              "window_normal_equations": 0.2670062285714286,
+              "window_llt_state_solves": 0.09340965714285716,
+              "window_fingerprint": 2.9801139714285716,
+              "all_in_detector": 0.16557962857142855,
+              "current_sensitivity": 0.4151958857142858,
+              "model_generation": 174.0194649428572,
+              "historical_sensitivity": 0.12034579999999998,
+              "hypothesis_evidence": 851.3000480571428,
+              "health_actions": 44.84462217142857,
+              "base_factorization": 0.20164534285714283,
+              "shared_cache": 0.0015079714285714282,
+              "candidate_batch_kernel": 265.26194140000007,
+              "candidate_batch_post": 3.7021217142857137,
+              "candidate_batch_pl_flat": 1092.3545427428571,
+              "candidate_batch_pl_consume": 19.195334800000012,
+              "candidate_evaluation": 1449.6109386285716,
+              "fde_decision": 15.314491057142858,
+              "candidate_audit": 0.05253302857142858,
+              "commit": 2.485964571428571,
+              "state_audit": 0.00037759999999999996,
+              "finalize_commit_audit": 15.111048857142857,
+              "core_total": 2613.4684178285715,
+              "discard": 0.0001
+            },
+            "arrival_to_publish_mean_ms": 2613.4867914285715,
+            "work": {
+              "base_svd": 35,
+              "base_llt": 35,
+              "base_state_solves": 70,
+              "llt_state_solve_calls": 35,
+              "svd_state_solve_calls": 35,
+              "detector_reference_qr": 0,
+              "candidate_reference_svd": 1340,
+              "candidate_inner_llt": 1317,
+              "covariance_rhs_solves": 0,
+              "covariance_rhs_columns": 0,
+              "spectral_rhs_solves": 0,
+              "spectral_rhs_columns": 0,
+              "numerical_contract_mismatches": 0,
+              "imu_oracle_reintegrations": 0,
+              "window_content_hash_scans": 35,
+              "frozen_identity_builds": 35,
+              "frozen_identity_reuses": 1272388,
+              "frozen_admission_constant_validations": 35,
+              "descriptor_id_lookups": 2528706,
+              "descriptor_linear_scans": 0,
+              "block_rhs_solve_batches": 418,
+              "block_rhs_unique_blocks": 3080,
+              "pl_payload_validations": 11,
+              "pl_payload_validation_reuses": 11,
+              "frozen_hypothesis_validations": 2497242,
+              "frozen_hypothesis_validation_reuses": 0,
+              "requests": 35,
+              "exact_hits": 1,
+              "incremental_path_updates": 29,
+              "incremental_add_paths": 39,
+              "incremental_remove_paths": 0,
+              "incremental_relinearize_paths": 448,
+              "internal_nodes_recomputed": 654,
+              "full_tree_rebuilds": 5,
+              "full_oracle_checks": 0,
+              "full_oracle_mismatches": 0,
+              "history_root_fallback_count": 0,
+              "reused_groups": 6,
+              "rebuilt_groups": 654,
+              "factor_group_hits": 6,
+              "factor_group_misses": 654,
+              "retained_rows": 475,
+              "retained_bytes": 3833472
+            },
+            "hypotheses_total": 1272018,
+            "generated_actions_total": 439,
+            "fault_gram_svd_total": 9405759,
+            "numerical_mismatches": 0,
+            "protected_outputs": 0,
+            "formal_eligible_outputs": 0,
+            "risk_valid_outputs": 0,
+            "deadline_missed_outputs": 33,
+            "committed_outputs": 34
+          },
+          "optimized": {
+            "execution": {
+              "head": "4aa795e65b79aede23f63727020db55145236f3a",
+              "binary_sha256": "8ab78c4fde74333d52a84b4537d20e7896d97f9f0e3ce1a339eff7024778b942",
+              "library_sha256": "09d4c646daed3d1a77aacb19aa6dbbb233191d8f5c5c1fc108020d78913fbc2f",
+              "runner_sha256": "f4253eb229d61e6713806b97365c4d47dd58e40f6caebb12450f8cfdd9868d7a",
+              "tracked_status": "",
+              "command": [
+                "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+                "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/config/fde_joint_order2.yaml",
+                "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/fde_operability_20261010/final_b_correct/optimized/joint2",
+                "35"
+              ],
+              "config_sha256": "03c2d725900d8683e672a02e255f6cb80c2f01e466985f01ab3d65d3bd4d574d",
+              "environment": {
+                "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+                "OMP_NUM_THREADS": "1",
+                "OPENBLAS_NUM_THREADS": "1",
+                "MKL_NUM_THREADS": "1",
+                "UWB_IMU_PL_SCENARIO": "joint_recovery",
+                "UWB_IMU_PL_MODE_RESPONSE_CACHE": "0",
+                "UWB_IMU_PL_FROZEN_VALIDATION_REUSE": "0",
+                "UWB_IMU_PL_ROOT_RESPONSE_REUSE": "0",
+                "UWB_IMU_PL_BATCH_FROZEN_PROOFS": "1"
+              },
+              "exit_code": 0,
+              "wall_s": 84.81335588900038
+            },
+            "attempts": 35,
+            "stage_mean_ms": {
+              "prepare": 1.4242615142857142,
+              "integrity_window": 55.75386811428571,
+              "window_boundary_provenance": 42.26014528571428,
+              "window_factor_linearization_whitening": 0.7777835999999999,
+              "window_dense_assembly": 0.07782651428571428,
+              "window_svd": 8.190784171428572,
+              "window_normal_equations": 0.2733218285714285,
+              "window_llt_state_solves": 0.09570985714285715,
+              "window_fingerprint": 3.015770542857143,
+              "all_in_detector": 0.17457911428571424,
+              "current_sensitivity": 0.41564831428571436,
+              "model_generation": 173.8039678857143,
+              "historical_sensitivity": 0.10247608571428571,
+              "hypothesis_evidence": 744.6917955142858,
+              "health_actions": 42.76220682857143,
+              "base_factorization": 0.20282905714285715,
+              "shared_cache": 0.0015830571428571431,
+              "candidate_batch_kernel": 261.0090565714286,
+              "candidate_batch_post": 3.682285571428572,
+              "candidate_batch_pl_flat": 1001.2143161142855,
+              "candidate_batch_pl_consume": 17.610626628571424,
+              "candidate_evaluation": 1349.6571627142855,
+              "fde_decision": 12.039001142857146,
+              "candidate_audit": 0.050574828571428566,
+              "commit": 2.5455307142857144,
+              "state_audit": 0.00036777142857142864,
+              "finalize_commit_audit": 16.383674885714285,
+              "core_total": 2400.921787542857,
+              "discard": 0.00010071428571428571
+            },
+            "arrival_to_publish_mean_ms": 2400.9379599999997,
+            "work": {
+              "base_svd": 35,
+              "base_llt": 35,
+              "base_state_solves": 70,
+              "llt_state_solve_calls": 35,
+              "svd_state_solve_calls": 35,
+              "detector_reference_qr": 0,
+              "candidate_reference_svd": 1340,
+              "candidate_inner_llt": 1317,
+              "covariance_rhs_solves": 0,
+              "covariance_rhs_columns": 0,
+              "spectral_rhs_solves": 0,
+              "spectral_rhs_columns": 0,
+              "numerical_contract_mismatches": 0,
+              "imu_oracle_reintegrations": 0,
+              "window_content_hash_scans": 35,
+              "frozen_identity_builds": 35,
+              "frozen_identity_reuses": 1272388,
+              "frozen_admission_constant_validations": 35,
+              "descriptor_id_lookups": 2528706,
+              "descriptor_linear_scans": 0,
+              "block_rhs_solve_batches": 418,
+              "block_rhs_unique_blocks": 3080,
+              "pl_payload_validations": 11,
+              "pl_payload_validation_reuses": 11,
+              "frozen_hypothesis_validations": 1344738,
+              "frozen_hypothesis_validation_reuses": 1152504,
+              "requests": 35,
+              "exact_hits": 1,
+              "incremental_path_updates": 29,
+              "incremental_add_paths": 39,
+              "incremental_remove_paths": 0,
+              "incremental_relinearize_paths": 448,
+              "internal_nodes_recomputed": 654,
+              "full_tree_rebuilds": 5,
+              "full_oracle_checks": 0,
+              "full_oracle_mismatches": 0,
+              "history_root_fallback_count": 0,
+              "reused_groups": 6,
+              "rebuilt_groups": 654,
+              "factor_group_hits": 6,
+              "factor_group_misses": 654,
+              "retained_rows": 475,
+              "retained_bytes": 3833472
+            },
+            "hypotheses_total": 1272018,
+            "generated_actions_total": 439,
+            "fault_gram_svd_total": 7100751,
+            "numerical_mismatches": 0,
+            "protected_outputs": 0,
+            "formal_eligible_outputs": 0,
+            "risk_valid_outputs": 0,
+            "deadline_missed_outputs": 33,
+            "committed_outputs": 34
+          }
+        },
+        "comparison_exit_code": 0,
+        "comparison": {
+          "status": "PASS",
+          "publication_binding_checks": {
+            "after": {
+              "attempts": 35,
+              "failures": [],
+              "status": "PASS"
+            },
+            "before": {
+              "attempts": 35,
+              "failures": [],
+              "status": "PASS"
+            }
+          },
+          "file_statuses": {
+            "bridge.csv": "PASS",
+            "candidates.csv": "PASS",
+            "diagnostic_attempts.csv": "PASS",
+            "diagnostic_candidates.csv": "PASS",
+            "diagnostic_coverage.csv": "PASS",
+            "diagnostic_history_summary.csv": "PASS",
+            "diagnostic_snapshot_identity.csv": "PASS",
+            "diagnostic_square_root.csv": "PASS",
+            "diagnostic_state_steps.csv": "PASS",
+            "hypotheses.csv": "PASS",
+            "integrity.csv": "PASS",
+            "states.csv": "PASS",
+            "transactions.csv": "PASS"
+          },
+          "mismatches": {},
+          "wall_packet_digest_contract": "checksum may differ only on independently proved finish-wall rows; state/proof/publication binding fields are still compared"
+        },
+        "comparison_sha256": "0282b2e9786f2324fe6956b3317c1317b4fe9f65813aaa06d2f426bccfee9d2d",
+        "core_reduction_percent": 8.13274148773954,
+        "complete_process_wall_reduction_percent": 8.926999833209553
+      }
+    },
+    "scope": "complete analysis; fixed native rotating synthetic stream, not live real-time acceptance",
+    "caution": "batch children nested in candidate wall; no phase-sum or P99/statistical guarantee",
+    "frozen_memo_default": false,
+    "mode_cache_default": false,
+    "reference_model": "b-correct",
+    "distribution_ms": {
+      "normal": {
+        "reference": {
+          "count": 35,
+          "mean": 205.1025050571429,
+          "p50": 222.360558,
+          "p95": 351.84444,
+          "maximum": 366.346577,
+          "slowest_attempt": 29,
+          "all_attempts": [
+            [
+              1,
+              5.566552
+            ],
+            [
+              2,
+              8.788143
+            ],
+            [
+              3,
+              16.095892
+            ],
+            [
+              4,
+              26.435635
+            ],
+            [
+              5,
+              42.927553
+            ],
+            [
+              6,
+              56.777019
+            ],
+            [
+              7,
+              75.191938
+            ],
+            [
+              8,
+              117.097557
+            ],
+            [
+              9,
+              119.075236
+            ],
+            [
+              10,
+              173.646994
+            ],
+            [
+              11,
+              183.060546
+            ],
+            [
+              12,
+              151.32755
+            ],
+            [
+              13,
+              204.39756
+            ],
+            [
+              14,
+              178.579296
+            ],
+            [
+              15,
+              180.729875
+            ],
+            [
+              16,
+              195.950085
+            ],
+            [
+              17,
+              236.266128
+            ],
+            [
+              18,
+              222.360558
+            ],
+            [
+              19,
+              217.917515
+            ],
+            [
+              20,
+              242.760536
+            ],
+            [
+              21,
+              252.793691
+            ],
+            [
+              22,
+              269.858788
+            ],
+            [
+              23,
+              265.102831
+            ],
+            [
+              24,
+              289.833018
+            ],
+            [
+              25,
+              288.941017
+            ],
+            [
+              26,
+              311.674954
+            ],
+            [
+              27,
+              311.989905
+            ],
+            [
+              28,
+              336.313114
+            ],
+            [
+              29,
+              366.346577
+            ],
+            [
+              30,
+              351.84444
+            ],
+            [
+              31,
+              294.725094
+            ],
+            [
+              32,
+              298.594158
+            ],
+            [
+              33,
+              296.666804
+            ],
+            [
+              34,
+              288.002833
+            ],
+            [
+              35,
+              300.948285
+            ]
+          ]
+        },
+        "optimized": {
+          "count": 35,
+          "mean": 202.94121860000004,
+          "p50": 214.82151,
+          "p95": 326.532533,
+          "maximum": 358.174065,
+          "slowest_attempt": 30,
+          "all_attempts": [
+            [
+              1,
+              5.75827
+            ],
+            [
+              2,
+              8.578984
+            ],
+            [
+              3,
+              16.280958
+            ],
+            [
+              4,
+              27.52324
+            ],
+            [
+              5,
+              39.093371
+            ],
+            [
+              6,
+              60.332972
+            ],
+            [
+              7,
+              75.641976
+            ],
+            [
+              8,
+              108.112758
+            ],
+            [
+              9,
+              142.522409
+            ],
+            [
+              10,
+              153.892322
+            ],
+            [
+              11,
+              179.905317
+            ],
+            [
+              12,
+              135.818006
+            ],
+            [
+              13,
+              196.352614
+            ],
+            [
+              14,
+              175.903315
+            ],
+            [
+              15,
+              184.532204
+            ],
+            [
+              16,
+              193.676195
+            ],
+            [
+              17,
+              265.27304
+            ],
+            [
+              18,
+              208.938659
+            ],
+            [
+              19,
+              214.82151
+            ],
+            [
+              20,
+              230.615392
+            ],
+            [
+              21,
+              251.022136
+            ],
+            [
+              22,
+              249.131741
+            ],
+            [
+              23,
+              267.148583
+            ],
+            [
+              24,
+              288.45172
+            ],
+            [
+              25,
+              286.717248
+            ],
+            [
+              26,
+              297.584899
+            ],
+            [
+              27,
+              307.656858
+            ],
+            [
+              28,
+              315.863999
+            ],
+            [
+              29,
+              326.532533
+            ],
+            [
+              30,
+              358.174065
+            ],
+            [
+              31,
+              318.193435
+            ],
+            [
+              32,
+              306.60505
+            ],
+            [
+              33,
+              301.772593
+            ],
+            [
+              34,
+              292.744614
+            ],
+            [
+              35,
+              311.769665
+            ]
+          ]
+        }
+      },
+      "joint2": {
+        "reference": {
+          "count": 35,
+          "mean": 2613.468417828571,
+          "p50": 2242.076537,
+          "p95": 3358.431768,
+          "maximum": 25675.154478,
+          "slowest_attempt": 12,
+          "all_attempts": [
+            [
+              1,
+              11.634464
+            ],
+            [
+              2,
+              33.66983
+            ],
+            [
+              3,
+              81.934808
+            ],
+            [
+              4,
+              169.677917
+            ],
+            [
+              5,
+              261.062562
+            ],
+            [
+              6,
+              408.649003
+            ],
+            [
+              7,
+              597.529811
+            ],
+            [
+              8,
+              824.354252
+            ],
+            [
+              9,
+              1070.382218
+            ],
+            [
+              10,
+              1404.876599
+            ],
+            [
+              11,
+              1548.236617
+            ],
+            [
+              12,
+              25675.154478
+            ],
+            [
+              13,
+              544.558741
+            ],
+            [
+              14,
+              633.577052
+            ],
+            [
+              15,
+              735.885208
+            ],
+            [
+              16,
+              875.169873
+            ],
+            [
+              17,
+              1642.542313
+            ],
+            [
+              18,
+              1914.492241
+            ],
+            [
+              19,
+              2242.076537
+            ],
+            [
+              20,
+              2499.618733
+            ],
+            [
+              21,
+              2816.685224
+            ],
+            [
+              22,
+              3290.810384
+            ],
+            [
+              23,
+              3172.328104
+            ],
+            [
+              24,
+              3264.571536
+            ],
+            [
+              25,
+              3266.911234
+            ],
+            [
+              26,
+              3231.13592
+            ],
+            [
+              27,
+              3294.941508
+            ],
+            [
+              28,
+              3282.526228
+            ],
+            [
+              29,
+              3243.807606
+            ],
+            [
+              30,
+              3224.683179
+            ],
+            [
+              31,
+              3358.431768
+            ],
+            [
+              32,
+              3214.008506
+            ],
+            [
+              33,
+              3207.862265
+            ],
+            [
+              34,
+              3201.291152
+            ],
+            [
+              35,
+              3226.316753
+            ]
+          ]
+        },
+        "optimized": {
+          "count": 35,
+          "mean": 2400.9217875428567,
+          "p50": 2091.741977,
+          "p95": 2981.347125,
+          "maximum": 25163.722096,
+          "slowest_attempt": 12,
+          "all_attempts": [
+            [
+              1,
+              11.468161
+            ],
+            [
+              2,
+              33.692072
+            ],
+            [
+              3,
+              82.454566
+            ],
+            [
+              4,
+              156.152107
+            ],
+            [
+              5,
+              248.475952
+            ],
+            [
+              6,
+              387.406273
+            ],
+            [
+              7,
+              548.613011
+            ],
+            [
+              8,
+              774.068789
+            ],
+            [
+              9,
+              1011.787022
+            ],
+            [
+              10,
+              1315.110742
+            ],
+            [
+              11,
+              1457.361674
+            ],
+            [
+              12,
+              25163.722096
+            ],
+            [
+              13,
+              500.990356
+            ],
+            [
+              14,
+              586.774387
+            ],
+            [
+              15,
+              676.810621
+            ],
+            [
+              16,
+              834.854597
+            ],
+            [
+              17,
+              1478.719974
+            ],
+            [
+              18,
+              1680.830649
+            ],
+            [
+              19,
+              2091.741977
+            ],
+            [
+              20,
+              2235.732142
+            ],
+            [
+              21,
+              2521.327496
+            ],
+            [
+              22,
+              2800.693967
+            ],
+            [
+              23,
+              2825.891838
+            ],
+            [
+              24,
+              2981.347125
+            ],
+            [
+              25,
+              2833.659376
+            ],
+            [
+              26,
+              2859.631011
+            ],
+            [
+              27,
+              2870.811305
+            ],
+            [
+              28,
+              2964.072129
+            ],
+            [
+              29,
+              2875.32019
+            ],
+            [
+              30,
+              2876.846693
+            ],
+            [
+              31,
+              2906.028519
+            ],
+            [
+              32,
+              2853.463481
+            ],
+            [
+              33,
+              2851.731962
+            ],
+            [
+              34,
+              2876.854898
+            ],
+            [
+              35,
+              2857.815406
+            ]
+          ]
+        }
+      }
+    },
+    "limitations": [
+      "No P99 or rare-event qualification from 35 samples.",
+      "Core includes root indexing/construction/seal and final consumers; retained lease destruction is included in complete process wall, outside core.",
+      "Short safety tests overlapped the initial normal run; small gains are not significant evidence.",
+      "Prototype remains opt-in off; root response reuse and old mode/frozen memo are off.",
+      "Unchanged strict comparator is authoritative; no deadline mismatch is waived."
+    ]
+  }
+}
