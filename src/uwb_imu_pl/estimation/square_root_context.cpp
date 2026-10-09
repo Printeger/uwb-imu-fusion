@@ -560,6 +560,40 @@ GramResponseCertificate certifyFactorGramAndProtectedResponse(
 }
 
 namespace detail {
+GramResponseCertificate rebindValidatedFactorResponse(
+    const GramResponseCertificate& validated, const Eigen::MatrixXd& raw,
+    const Eigen::MatrixXd& actual_gram, const Eigen::MatrixXd& protected_response,
+    double rank_tolerance, double raw_factor_scale, std::uint64_t parent) {
+  // The internal caller retains the exact validated raw/Gram/G tuple. This
+  // reproduces the existing public certifier's identity arithmetic only.
+  GramResponseCertificate out = validated;
+  std::uint64_t identity = 1469598103934665603ULL;
+  hashScalar(&identity, std::uint64_t(0x464143544f524752ULL));
+  hashScalar(&identity, parent);
+  hashScalar(&identity, rank_tolerance);
+  hashScalar(&identity, raw_factor_scale);
+  hashMatrix(&identity, raw);
+  hashMatrix(&identity, actual_gram);
+  hashMatrix(&identity, actual_gram); // reconstructed factor Gram (exact match)
+  hashMatrix(&identity, out.gram.eigenvalues);
+  hashMatrix(&identity, out.gram.eigenvectors);
+  hashMatrix(&identity, out.gram.eigenvalue_errors);
+  hashScalar(&identity, out.gram.rank_eigenvalue_gate);
+  hashScalar(&identity, out.gram.rank);
+  hashScalar(&identity, out.gram.rank_certified);
+  hashScalar(&identity, out.gram.psd);
+  out.gram.proof_identity = identity;
+  hashMatrix(&identity, protected_response);
+  hashScalar(&identity, static_cast<int>(out.nullspace_class));
+  hashMatrix(&identity, out.axis_residual);
+  hashMatrix(&identity, out.protected_slopes);
+  hashScalar(&identity, out.response_tolerance);
+  out.proof_identity = identity;
+  return out;
+}
+} // namespace detail
+
+namespace detail {
 GramResponseCertificate classificationNumericsWithoutProofIdentity(
     const Eigen::MatrixXd& raw_factor, const Eigen::MatrixXd& actual_gram,
     const Eigen::MatrixXd& protected_response, double rank_tolerance,

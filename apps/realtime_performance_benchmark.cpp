@@ -440,7 +440,12 @@ int main(int argc, char** argv) {
     auto config = uwb_imu_pl::IntegrityConfigLoader::load(argv[1]);
     const Scenario scenario = scenarioFromEnvironment();
     const int epochs = std::stoi(argv[3]);
-    const FaultSchedule schedule = faultSchedule(scenario, epochs);
+    int schedule_epochs = epochs;
+    if (const char* value = std::getenv("UWB_IMU_PL_FAULT_SCHEDULE_EPOCHS")) {
+      schedule_epochs = std::stoi(value);
+      if (schedule_epochs <= 0) throw std::invalid_argument("fault schedule epochs must be positive");
+    }
+    const FaultSchedule schedule = faultSchedule(scenario, schedule_epochs);
     const FaultSchedule reference_schedule = faultSchedule(scenario, 300);
     const bool fault_expected = scenario.uwb || scenario.imu_accel ||
                                 scenario.imu_gyro;
@@ -472,6 +477,7 @@ int main(int argc, char** argv) {
             std::to_string(reference_schedule.begin + 1) + "\n"
         "benchmark_fault_reference_end_epoch_1based: " +
             std::to_string(reference_schedule.end + 1) + "\n"
+        "benchmark_fault_schedule_epochs: " + std::to_string(schedule_epochs) + "\n"
         "benchmark_fault_effective_epochs: " + std::to_string(epochs) + "\n"
         "benchmark_fault_effective_begin_epoch_1based: " +
             std::to_string(schedule.begin + 1) + "\n"

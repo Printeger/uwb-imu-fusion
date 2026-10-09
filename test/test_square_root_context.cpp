@@ -851,3 +851,24 @@ TEST(Phase2ClassificationHashes, PublicProofIdentitiesKeepPreChangeByteOrder) {
     EXPECT_EQ(c.proof_identity,14122314800303469774ULL);
   }
 }
+
+#include "../src/uwb_imu_pl/integrity/scoped_frozen_validation.hpp"
+TEST(FdeOperabilityRootReuse, RebindingPreservesAllOriginalCertificateNumbersAndIdentity) {
+  using namespace uwb_imu_pl;
+  for (double small : {0., 1e-12, 1e-10, 1., 2.}) {
+    Eigen::MatrixXd raw = Eigen::MatrixXd::Zero(3,2);
+    raw(0,0)=1.; raw(1,1)=small;
+    Eigen::MatrixXd g = Eigen::MatrixXd::Zero(3,2);
+    g(0,0)=1.; if (small>0.) g(1,1)=1.;
+    const Eigen::MatrixXd gram = raw.transpose()*raw;
+    const auto original = certifyFactorGramAndProtectedResponse(raw,gram,g,1e-10,7,1.);
+    if (!original.valid) continue;
+    const auto moved = detail::rebindValidatedFactorResponse(original,raw,gram,g,1e-10,1.,99);
+    const auto reference = certifyFactorGramAndProtectedResponse(raw,gram,g,1e-10,99,1.);
+    EXPECT_EQ(moved.proof_identity,reference.proof_identity);
+    EXPECT_EQ(moved.gram.proof_identity,reference.gram.proof_identity);
+    EXPECT_TRUE((moved.protected_slopes.array()==reference.protected_slopes.array()).all());
+    EXPECT_TRUE((moved.gram.eigenvalues.array()==reference.gram.eigenvalues.array()).all());
+    EXPECT_EQ(moved.nullspace_class,reference.nullspace_class);
+  }
+}

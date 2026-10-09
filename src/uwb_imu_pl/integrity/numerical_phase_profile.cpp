@@ -12,7 +12,7 @@ constexpr unsigned count = static_cast<unsigned>(NumericalProfilePhase::Count);
 std::array<std::atomic<std::uint64_t>, count> calls{};
 std::array<std::atomic<std::uint64_t>, count> elapsed{};
 constexpr const char* names[] = {"factor_gram", "factor_gram_svd",
-    "detection_classification", "frozen_hypothesis_validation", "pl_payload_validation"};
+    "detection_classification", "frozen_hypothesis_validation", "pl_payload_validation", "root_response_reuse", "root_response_fallback"};
 }
 bool numericalPhaseProfilingEnabled() {
   static const bool enabled = std::getenv("UWB_IMU_PL_PROFILE_NUMERICAL_PHASES") != nullptr;

@@ -1903,6 +1903,12 @@ std::uint64_t frozenHypothesisPlEntryIdentity(
 
 bool validateFrozenHypothesisPlEntry(
     const FrozenHypothesisPlProofV1& proof, std::string* reason) {
+  return detail::validateFrozenHypothesisWithResponse(proof, reason, nullptr);
+}
+
+bool detail::validateFrozenHypothesisWithResponse(
+    const FrozenHypothesisPlProofV1& proof, std::string* reason,
+    GramResponseCertificate* validated_response) {
   detail::NumericalPhaseScope profile(detail::NumericalProfilePhase::FrozenHypothesisValidation);
   NumericalWorkCounters::frozenHypothesisValidation();
   auto reject = [&](const std::string& message) {
@@ -1915,7 +1921,7 @@ bool validateFrozenHypothesisPlEntry(
       proof.protected_response.cols() != proof.certified_gram.cols()) {
     return reject("frozen hypothesis proof payload is incomplete");
   }
-  const GramResponseCertificate rebuilt = proof.raw_detection_factor.rows() > 0
+  GramResponseCertificate rebuilt = proof.raw_detection_factor.rows() > 0
       ? certifyFactorGramAndProtectedResponse(
             proof.raw_detection_factor, proof.certified_gram,
             proof.protected_response, proof.rank_tolerance,
@@ -1973,6 +1979,7 @@ bool validateFrozenHypothesisPlEntry(
       entry.z_classification == z_classification &&
       entry.bound_from_projected_path == expected_projected;
   if (!valid) return reject("frozen hypothesis numerical proof mismatch");
+  if (validated_response) *validated_response = std::move(rebuilt);
   return true;
 }
 
@@ -2020,12 +2027,15 @@ bool frozenHypothesisPlProof(const FrozenHypothesisPlEntry& entry,
 namespace detail {
 bool readAndValidateScopedFrozenHypothesisProof(
     const FrozenHypothesisPlEntry& entry, const AttemptProofArena& arena,
-    FrozenHypothesisPlProofV1* proof, std::string* reason) {
-  if (!scopedFrozenValidationReuseEnabled()) {
+    FrozenHypothesisPlProofV1* proof, std::string* reason,
+    GramResponseCertificate* validated_response) {
+  // An optional numerical output requires actual full validation. The old
+  // scalar memo carries no numerical certificate and is never upgraded here.
+  if (validated_response || !scopedFrozenValidationReuseEnabled()) {
     FrozenHypothesisPlProofV1 local;
     auto* output = proof ? proof : &local;
     return frozenHypothesisPlProof(entry, arena, output) &&
-        validateFrozenHypothesisPlEntry(*output, reason);
+        validateFrozenHypothesisWithResponse(*output, reason, validated_response);
   }
   const auto key = frozenEntryProofKey(entry);
   const auto payload = AttemptProofArenaAccess::find(

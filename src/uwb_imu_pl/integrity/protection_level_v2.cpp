@@ -13,6 +13,8 @@
 
 #include <Eigen/Cholesky>
 #include <Eigen/SVD>
+#include <gtsam/inference/Symbol.h>
+#include <gtsam/geometry/Pose3.h>
 
 #include <algorithm>
 #include <cmath>
@@ -1266,8 +1268,18 @@ bool mintCommitProtectionEvidenceImpl(
     if (reason) *reason = "P0-03 candidate/protection proof mismatch";
     return false;
   }
-  const Eigen::Vector3d mean =
-      transaction.nominal_predicted_state.position_world_m +
+  Eigen::Vector3d frozen_centre = transaction.nominal_predicted_state.position_world_m;
+  if (transaction.frozen_values) {
+    const auto key = gtsam::Symbol('x', transaction.proposed_epoch);
+    if (!transaction.frozen_values->exists(key)) {
+      if (reason) *reason = "protected frozen pose is absent";
+      return false;
+    }
+    frozen_centre = transaction.frozen_values->at<gtsam::Pose3>(key).translation();
+  }
+  // Legacy transactions without frozen Values retain their nominal basis.
+  // Production uses the actual CV pose where H/z and the map were frozen.
+  const Eigen::Vector3d mean = frozen_centre +
       window.protected_state_map * candidate.state_increment;
   if (!mean.allFinite()) {
     if (reason) *reason = "derived protected reference is non-finite";
@@ -2960,9 +2972,15 @@ void ProtectionLevelV2::computeSharedFlatBatch(
           }
           std::string cached_reason;
           FrozenHypothesisPlProofV1 cached_proof;
+          GramResponseCertificate validated_response;
+          // Opt-in until measured setup-inclusive net benefit is established.
+          static const bool root_response_reuse = std::getenv("UWB_IMU_PL_ROOT_RESPONSE_REUSE") &&
+              std::string(std::getenv("UWB_IMU_PL_ROOT_RESPONSE_REUSE")) == "1" &&
+              !std::getenv("UWB_IMU_PL_REFERENCE_ROOT_RESPONSE_REUSE");
           const bool cached_valid = job.frozen_proof_arena
               ? detail::readAndValidateScopedFrozenHypothesisProof(
-                    cached, *job.frozen_proof_arena, &cached_proof, &cached_reason)
+                    cached, *job.frozen_proof_arena, &cached_proof, &cached_reason,
+                    root_response_reuse ? &validated_response : nullptr)
               : (frozenHypothesisPlProof(cached, &cached_proof) &&
                  validateFrozenHypothesisPlEntry(cached_proof, &cached_reason));
           if (!cached_valid) {
@@ -3011,8 +3029,31 @@ void ProtectionLevelV2::computeSharedFlatBatch(
             slot.reason = "frozen candidate mode response is incomplete";
             return;
           }
-          const auto response_certificate =
-              certifyFactorGramAndProtectedResponse(
+          const auto same_matrix = [](const auto& a, const auto& b) {
+            return a.rows() == b.rows() && a.cols() == b.cols() &&
+                (a.array() == b.array()).all();
+          };
+          // All comparisons use the actual tuple, not a hash/index hit. Near
+          // rank/nullspace boundaries retain the original arithmetic path.
+          const bool same_root_numerics = root_response_reuse &&
+              validated_response.valid && validated_response.gram.valid &&
+              validated_response.nullspace_class == GramNullspaceClass::FullRank &&
+              validated_response.gram.sigma_min > 2. *
+                  std::sqrt(validated_response.gram.rank_eigenvalue_gate) &&
+              cached_proof.rank_tolerance == root.covariance_rank_tolerance &&
+              same_matrix(raw_detection_factor, cached_proof.raw_detection_factor) &&
+              same_matrix(total_gram, cached_proof.certified_gram) &&
+              same_matrix(protected_response, cached_proof.protected_response);
+          if (detail::numericalPhaseProfilingEnabled())
+            detail::recordNumericalPhase(same_root_numerics
+                ? detail::NumericalProfilePhase::RootResponseReuse
+                : detail::NumericalProfilePhase::RootResponseFallback, 0);
+          const auto response_certificate = same_root_numerics
+              ? detail::rebindValidatedFactorResponse(validated_response,
+                  raw_detection_factor, total_gram, protected_response,
+                  root.covariance_rank_tolerance, cached_proof.raw_factor_scale,
+                  root.candidate_proof_identity)
+              : certifyFactorGramAndProtectedResponse(
                   raw_detection_factor, total_gram, protected_response,
                   root.covariance_rank_tolerance,
                   root.candidate_proof_identity,
