@@ -7471,6 +7471,9 @@ TEST(FdeOperabilityImuReference, SensitivityUsesActualFrozenFactorPoint) {
       values.at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b',tx.previous_epoch)),
       values.at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b',tx.proposed_epoch)),
       boost::none,boost::none,boost::none,boost::none,h_bias,boost::none);
+  EXPECT_LT((block.jacobian_raw.middleCols(9,6)-h_bias).norm()/
+      std::max(1.,h_bias.norm()),1e-12)
+      <<"unwhitened production block must be the physical factor Jacobian";
   Eigen::Matrix<double,15,6> raw=Eigen::Matrix<double,15,6>::Zero();
   raw.topRows<9>()=h_bias.topRows(9);
   const Eigen::MatrixXd expected=block.whitener*raw;

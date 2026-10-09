@@ -6,6 +6,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cmath>
+#include <Eigen/QR>
 
 using namespace uwb_imu_pl;
 int main(int argc,char** argv) {
@@ -31,7 +32,10 @@ int main(int argc,char** argv) {
           [&](const auto& l){return l.epoch+1==latest->epoch;});
       if(previous==w.state_layout.end() || latest->dimension!=15 || previous->dimension!=15)
         throw std::runtime_error("imu-power state ordering unavailable");
-      out<<std::setprecision(17)<<"attempt,group_id,axis,unit_fault_whitened_norm,unit_fault_parity_norm,lambda_per_amplitude_squared,unit_fault_state_step,unit_fault_protected_shift,observed_statistic,step_gate,dof\n";
+      Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr(w.H);
+      qr.setThreshold(replay.config.rank_tolerance);
+      if(qr.rank()!=w.H.cols())throw std::runtime_error("imu-power independent QR rank unresolved");
+      out<<std::setprecision(17)<<"attempt,group_id,axis,unit_fault_whitened_norm,unit_fault_parity_norm,lambda_per_amplitude_squared,unit_fault_state_step,unit_fault_protected_shift,observed_statistic,step_gate,dof,spectral_qr_state_relative,spectral_qr_parity_relative\n";
       std::size_t count=0;
       for(const auto& block:w.blocks) {
         if(block.kind!=FactorKind::CombinedImu || block.jacobian_raw.rows()!=15 ||
@@ -45,12 +49,16 @@ int main(int argc,char** argv) {
         const auto& v=*n.spectral_vectors;
         const Eigen::MatrixXd state=v*n.spectral_inverse_squared.asDiagonal()*v.transpose()*(w.H.transpose()*response);
         const Eigen::MatrixXd parity=response-w.H*state;
+        const Eigen::MatrixXd qr_state=qr.solve(response);
+        const Eigen::MatrixXd qr_parity=response-w.H*qr_state;
         for(int axis=0;axis<6;++axis) {
           out<<replay.input_attempt_id<<','<<block.group_id.value()<<','<<axis<<','
               <<response.col(axis).norm()<<','<<parity.col(axis).norm()<<','
               <<parity.col(axis).squaredNorm()<<','<<state.col(axis).norm()<<','
               <<(w.protected_state_map*state.col(axis)).norm()<<','<<n.statistic<<','
-              <<replay.config.max_linearization_step_norm<<','<<n.dof<<'\n';
+              <<replay.config.max_linearization_step_norm<<','<<n.dof<<','
+              <<(state.col(axis)-qr_state.col(axis)).norm()/std::max(1.,qr_state.col(axis).norm())<<','
+              <<(parity.col(axis)-qr_parity.col(axis)).norm()/std::max(1.,qr_parity.col(axis).norm())<<'\n';
         }
         ++count;
       }

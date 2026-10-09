@@ -279,9 +279,11 @@ TEST(HistoryFaultParameterization, ColumnsMatchIndependentSelectionOracle) {
       ASSERT_TRUE(record->preintegration);
       Eigen::LLT<Eigen::MatrixXd> llt(record->preintegration->preintMeasCov());
       ASSERT_EQ(llt.info(), Eigen::Success);
-      // raw = L * whitened  <=>  whitened = L^-1 * raw
+      // The physical factor uses GTSAM's upper information root. A
+      // lower-Cholesky round-trip alone would miss a rotated fault column.
       const Eigen::VectorXd expected_whitened =
-          llt.matrixL().solve(column.raw_map);
+          gtsam::noiseModel::Gaussian::Covariance(
+              record->preintegration->preintMeasCov())->R() * column.raw_map;
       const double scale = std::max(1.0, column.whitened_map.norm());
       worst_imu = std::max(
           worst_imu, (column.whitened_map - expected_whitened).norm() / scale);
@@ -455,7 +457,18 @@ TEST(HistoryFaultParameterization,
   current.begin = tx.begin;
   current.end = tx.end;
   current.previous_state = tx.previous_state;
-  current.current_state = tx.nominal_predicted_state;
+  current.current_state = tx.cv_predicted_state;
+  ASSERT_TRUE(tx.frozen_values);
+  for (const auto entry : {std::make_pair(tx.previous_epoch,&current.previous_state),
+                           std::make_pair(tx.proposed_epoch,&current.current_state)}) {
+    const auto p=tx.frozen_values->at<gtsam::Pose3>(gtsam::Symbol('x',entry.first));
+    const auto b=tx.frozen_values->at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b',entry.first));
+    entry.second->q_world_body=Eigen::Quaterniond(p.rotation().matrix());
+    entry.second->position_world_m=p.translation();
+    entry.second->velocity_world_mps=tx.frozen_values->at<gtsam::Vector3>(gtsam::Symbol('v',entry.first));
+    entry.second->accel_bias_mps2=b.accelerometer();
+    entry.second->gyro_bias_radps=b.gyroscope();
+  }
   current.raw_imu_slice = tx.raw_imu_slice;
   current.preintegration = tx.preintegration;
   current.uwb_batch = tx.uwb_batch;

@@ -1563,12 +1563,11 @@ LinearizedFactorBlock IncrementalUwbImuEstimator::linearizePendingGroup(
   } else {
     block.covariance = Eigen::MatrixXd::Identity(h.rows(), h.rows());
   }
-  block.whitener = whitener(block.covariance);
-  if (group.kind == FactorKind::UwbBatch) {
+  if (group.kind == FactorKind::UwbBatch || group.kind == FactorKind::CombinedImu) {
     // `GaussianFactor::jacobian()` is expressed using GTSAM's upper-triangular
     // square-root information convention.  It is not, in general, the same
-    // matrix as the lower-Cholesky whitener initially constructed above for
-    // correlated UWB covariance.  Recover the physical raw range system with
+    // matrix as an independent lower-Cholesky whitener for correlated
+    // covariance. Recover the physical raw range/IMU system with
     // the matching GTSAM model and retain its exact deterministic whitening
     // coordinate, avoiding a gratuitous row rotation of rank-update inputs.
     const auto gaussian_noise =
@@ -1581,6 +1580,7 @@ LinearizedFactorBlock IncrementalUwbImuEstimator::linearizePendingGroup(
     }
     block.residual_raw = gaussian_noise->unwhiten(rhs);
   } else {
+    block.whitener = whitener(block.covariance);
     block.jacobian_raw =
         block.whitener.triangularView<Eigen::Lower>().solve(h);
     block.residual_raw =

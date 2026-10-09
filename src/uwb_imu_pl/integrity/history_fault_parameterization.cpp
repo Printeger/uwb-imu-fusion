@@ -9,6 +9,7 @@
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/linear/JacobianFactor.h>
 #include <gtsam/linear/VectorValues.h>
+#include <gtsam/linear/NoiseModel.h>
 
 #include <algorithm>
 #include <boost/shared_ptr.hpp>
@@ -21,7 +22,7 @@
 namespace uwb_imu_pl {
 namespace {
 
-// Lower-Cholesky coordinate used by the IMU material builder.
+// Same upper information coordinate as the actual CombinedImuFactor rows.
 bool whitenerFromCovariance(const Eigen::MatrixXd& covariance,
                             Eigen::MatrixXd* whitener) {
   if (covariance.rows() != covariance.cols() || covariance.rows() == 0) {
@@ -31,9 +32,8 @@ bool whitenerFromCovariance(const Eigen::MatrixXd& covariance,
   if (llt.info() != Eigen::Success) {
     return false;
   }
-  *whitener = llt.matrixL().solve(
-      Eigen::MatrixXd::Identity(covariance.rows(), covariance.cols()));
-  return true;
+  *whitener = gtsam::noiseModel::Gaussian::Covariance(covariance)->R();
+  return whitener->allFinite();
 }
 
 // UWB Gaussian factors use GTSAM's upper square-root information coordinate.
@@ -277,7 +277,7 @@ std::vector<HistoryFaultColumn> buildHistoricalImuColumnsForEpoch(
         axis < 3 ? subspaces.accel_axis[axis] : subspaces.gyro_axis[axis - 3];
     column.whitened_map = whitened;
     column.raw_map =
-        material.whitener.triangularView<Eigen::Lower>().solve(whitened);
+        material.whitener.triangularView<Eigen::Upper>().solve(whitened);
     column.time_begin_s = epoch.begin.seconds();
     column.time_end_s = epoch.end.seconds();
     columns.push_back(std::move(column));
