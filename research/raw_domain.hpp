@@ -1,5 +1,7 @@
 #pragma once
 #include <Eigen/Geometry>
+#include <Eigen/QR>
+#include <vector>
 #include <boost/math/distributions/normal.hpp>
 #include <cmath>
 #include <string>
@@ -11,8 +13,12 @@ inline double upper(double x){return std::nextafter(x,INFINITY);}
 // No assumption of Gaussian noise conditional on a fitted root is made.
 struct RawNoiseEvent {
  int coordinates; double risk,q;
+ static double coordinateRadius(int n,double delta){
+  if(n<=0 || !(delta>0 && delta<1))throw std::runtime_error("invalid raw event");
+  return upper(boost::math::quantile(boost::math::complement(boost::math::normal(),delta/(2*n))));
+ }
  RawNoiseEvent(int n,double delta):coordinates(n),risk(delta),
-   q(upper(boost::math::quantile(boost::math::complement(boost::math::normal(),delta/(2*n))))){
+   q(coordinateRadius(n,delta)){
   if(n<=0 || !(delta>0 && delta<1))throw std::runtime_error("invalid raw event");
  }
 };
@@ -30,6 +36,40 @@ inline TagRemainder tagRemainder(double distance,double theta,double rho,double 
 struct NavigationDomain {
  double position,velocity,rotation,accel_bias,gyro_bias;
 };
+struct RangeDomainBranch {
+ int excluded_anchor=-1;
+ Eigen::Vector3d center=Eigen::Vector3d::Constant(NAN),box=Eigen::Vector3d::Constant(INFINITY);
+ bool valid=false;
+};
+// Same raw event, no new measurement or Gaussian prior. For any branch whose
+// retained anchors are healthy, squared-range differences give A*t=b+error,
+// |error_i| <= (2|r_i|eps+eps^2)+(2|r_ref|eps+eps^2).
+// All one-anchor exclusions are retained: choosing the smallest fitted box
+// would silently assume the fault identity. This bounds the world TAG only;
+// it does not identify attitude, velocity, bias or a Combined-factor domain.
+inline std::vector<RangeDomainBranch> rangeDomainBranches(
+ const std::vector<Eigen::Vector3d>& anchors,const std::vector<double>& ranges,double eps){
+ std::vector<RangeDomainBranch> out;
+ if(anchors.size()!=ranges.size() || anchors.size()<5 || !std::isfinite(eps) || eps<0)return out;
+ for(size_t omit=0;omit<anchors.size();++omit){
+  RangeDomainBranch branch;branch.excluded_anchor=int(omit);
+  std::vector<int> rows;for(size_t i=0;i<anchors.size();++i)if(i!=omit)rows.push_back(int(i));
+  const int ref=rows.front();Eigen::MatrixXd a(rows.size()-1,3);Eigen::VectorXd b(rows.size()-1),error(rows.size()-1);
+  bool finite=true;
+  for(size_t k=1;k<rows.size();++k){int i=rows[k];
+   finite=finite && anchors[i].allFinite() && anchors[ref].allFinite() && std::isfinite(ranges[i]) && std::isfinite(ranges[ref]);
+   a.row(k-1)=2*(anchors[i]-anchors[ref]).transpose();
+   b(k-1)=anchors[i].squaredNorm()-anchors[ref].squaredNorm()-ranges[i]*ranges[i]+ranges[ref]*ranges[ref];
+   error(k-1)=upper(2*(std::abs(ranges[i])+std::abs(ranges[ref]))*eps+2*eps*eps);
+  }
+  if(finite){Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr(a);qr.setThreshold(1e-12);
+   if(qr.rank()==3){auto inverse=qr.solve(Eigen::MatrixXd::Identity(a.rows(),a.rows())).eval();
+    branch.center=inverse*b;branch.box=inverse.cwiseAbs()*error;
+    branch.valid=branch.center.allFinite() && branch.box.allFinite();}}
+  out.push_back(branch);
+ }
+ return out;
+}
 // Domain centered on the *observed* initial constant-velocity path. Physical
 // world acceleration/angle-motion bounds are declared generator assumptions.
 // It does not claim an algorithm's fitted trajectory is inside this ball.
@@ -62,7 +102,7 @@ struct PimRemainder {
 // and cancels here. This does not certify Combined factor chart/bias correction.
 inline PimRemainder healthyIntegrationRemainder(double t,double gyro_radius,
  double accel_radius,double force_norm){
- if(t<0 || gyro_radius<0 || accel_radius<0 || force_norm<0)
+ if(!std::isfinite(t) || !std::isfinite(gyro_radius) || !std::isfinite(accel_radius) || !std::isfinite(force_norm) || t<0 || gyro_radius<0 || accel_radius<0 || force_norm<0)
   throw std::runtime_error("invalid PIM domain");
  long double theta=(long double)t*gyro_radius;
  long double force_rem=.5L*theta*theta*force_norm+theta*accel_radius;

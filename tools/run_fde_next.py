@@ -42,10 +42,8 @@ def read_matrices(path):
     return matrices, metadata
 
 
-def compare(left, right, left_dump, right_dump):
-    a, b = read_rows(left)[0], read_rows(right)[0]
-    excluded = {"core_ms", "commit_ms", "cycle_ms", "end_to_end_ms", "cleanup_ms", "gaussian_decompositions"}
-    max_delta = 0.0
+def compare_rows(a, b):
+    excluded = {"core_ms", "commit_ms", "cycle_ms", "end_to_end_ms", "cleanup_ms", "gaussian_decompositions", "source_products", "covariance_fallback"}
     for key in a.keys() - excluded:
         try:
             av, bv = float(a[key]), float(b[key])
@@ -55,6 +53,11 @@ def compare(left, right, left_dump, right_dump):
             continue
         if not np.isclose(av, bv, rtol=1e-10, atol=1e-10, equal_nan=True):
             raise RuntimeError(f"different result: {key}: {av} vs {bv}")
+
+
+def compare(left, right, left_dump, right_dump):
+    compare_rows(read_rows(left)[0], read_rows(right)[0])
+    max_delta = 0.0
     aa, am = read_matrices(left_dump)
     bb, bm = read_matrices(right_dump)
     if am != bm or aa.keys() != bb.keys():
@@ -74,14 +77,17 @@ def compare(left, right, left_dump, right_dump):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["check", "run", "audit", "bench", "replay"])
+    parser.add_argument("command", choices=["check", "run", "history", "recovery", "audit", "bench", "stream", "replay"])
     parser.add_argument("--build", action="store_true")
     parser.add_argument("--config", type=Path, default=ROOT / "config/fde_next.yaml")
     parser.add_argument("--scene", default="U0")
     parser.add_argument("--scope", default="uwb")
     parser.add_argument("--seed", type=int, default=20261010)
     parser.add_argument("--epochs", type=int)
+    parser.add_argument("--initial-law", choices=["configured", "gaussian"], default="configured")
     parser.add_argument("--numeric", choices=["reference", "optimized"], default="optimized")
+    parser.add_argument("--position-functional", action="store_true", help="IMU-only recovery; current tag conditional, navigation unprotected")
+    parser.add_argument("--history-reference", action="store_true", help="use the finite raw prefix reference for actual selection")
     parser.add_argument("--cache", type=Path)
     parser.add_argument("--plot", type=Path)
     args = parser.parse_args()
@@ -95,13 +101,28 @@ def main():
         subprocess.run(["cmake", "--build", str(BUILD), "--target", "fde_next_runner", "fde_next_checks", "-j2"], env=env, check=True)
     with tempfile.TemporaryDirectory(prefix="fde-next-") as temp:
         tmp = Path(temp)
+        if args.initial_law == "gaussian":
+            config = tmp / "input-law.yaml"
+            config.write_text(args.config.read_text() + "\ninitial_observation_law: independent-tangent-gaussian-v1\n")
+            args.config = config
+        if args.history_reference or args.command == "stream":
+            env["FDE_NEXT_USE_PREFIX_REFERENCE"] = "1"
+        if args.command == "history":
+            env["FDE_NEXT_HISTORY_AUDIT"] = "1"
+            env["FDE_NEXT_RAW_PREFIX_HISTORY"] = "1"
+        if args.command == "recovery":
+            env["FDE_NEXT_BOUNDED_RECOVERY"] = "1"
+        if args.position_functional:
+            env["FDE_NEXT_IMU_POSITION_FUNCTIONAL"] = "1"
 
-        def run(name, scene, scope, epochs, numeric, attempts=None, audit=False, seed=None):
+        def run(name, scene, scope, epochs, numeric, attempts=None, audit=False, seed=None, continuous=False):
             path = tmp / (name + ".csv")
             cmd = [str(BIN / "fde_next_runner"), str(args.config), str(path), scene, scope,
                    str(args.seed if seed is None else seed), str(epochs), numeric]
             if attempts is not None:
                 cmd.append(str(attempts))
+            if continuous:
+                cmd.extend(["1", "continuous"])
             current = dict(env)
             if audit:
                 current["FDE_NEXT_NUMERIC_AUDIT"] = str(tmp / (name + ".matrices"))
@@ -115,8 +136,14 @@ def main():
 
         if args.command == "check":
             subprocess.run([str(BIN / "fde_next_checks"), str(args.config)], cwd=ROOT, env=env, check=True)
-        elif args.command == "run":
-            path, wall = run("run", args.scene, args.scope, args.epochs or 50, args.numeric)
+        elif args.command in ["run", "history", "recovery"]:
+            scene = "I2" if args.command == "recovery" else args.scene
+            scope = "imu-diagnostic" if args.command == "recovery" else args.scope
+            path, wall = run("run", scene, scope, args.epochs or (32 if args.command == "history" else 50), args.numeric)
+            if args.command in ["history", "recovery"] or args.initial_law == "gaussian":
+                for line in (tmp / "run.log").read_text().splitlines():
+                    if line.startswith(("HISTORY", "RAW_PREFIX_HISTORY", "RAW_DOMAIN", "G_TAG_CONTRACTION", "BOUNDED_RECOVERY", "IMU_POSITION_FUNCTIONAL")):
+                        print(line)
             rows = read_rows(path)
             print(f"{len(rows)} outputs; selected={sum(x['selected']=='1' for x in rows)}; "
                   f"exclusions={sum(x['exclusion']=='1' for x in rows)}; "
@@ -145,6 +172,37 @@ def main():
                 count, delta = compare(ref, opt, ref.with_suffix(".matrices"), opt.with_suffix(".matrices"))
                 print(f"{name}: complete fields/recipes/fault maps/means/covariances/PL agree; "
                       f"matrices={count}, max_abs_delta={delta:.17g}")
+        elif args.command == "stream":
+            for scene in ["U0", "U1"]:
+                reference_rows = None
+                for numeric in ["reference", "optimized"]:
+                    path, wall = run(scene + "-" + numeric, scene, "uwb", 48, numeric, continuous=True)
+                    rows = read_rows(path)
+                    for line in path.with_suffix(".log").read_text().splitlines():
+                        if line.startswith("STREAM_PHASES"):
+                            print(line, flush=True)
+                    if len(rows) != 35 or [int(x["epoch"]) for x in rows] != list(range(14,49)):
+                        raise RuntimeError("stream must measure35 consecutive epochs14–48")
+                    if reference_rows is None:
+                        reference_rows = rows
+                    else:
+                        for left, right in zip(reference_rows, rows):
+                            compare_rows(left, right)
+                        print(f"STREAM_PAIR {scene} all35 result semantics agree", flush=True)
+                    values = lambda key: np.array([float(x[key]) for x in rows])
+                    core, full = values("core_ms"), values("end_to_end_ms")
+                    wait = np.zeros(35)
+                    for k in range(1,35):
+                        wait[k] = max(0., wait[k-1]+full[k-1]-50.)
+                    stats = lambda x: "/".join(f"{v:.3f}" for v in (np.mean(x), np.median(x), np.percentile(x,95), np.max(x)))
+                    print(f"STREAM {scene} {numeric} core={stats(core)} full={stats(full)} commit_median={np.median(values('commit_ms')):.3f} cleanup_median={np.median(values('cleanup_ms')):.3f} "
+                          f"selected={sum(x['selected']=='1' for x in rows)}/35 updates={sum(int(x['updates']) for x in rows)} "
+                          f"core40={sum(core>40)}/35 full50={sum(full>50)}/35 modeled_queue_max={max(wait):.3f} modeled_latency_max={max(wait+full):.3f} "
+                          f"process_s={wall:.3f} setup_prewarm_teardown_s={wall-sum(full)/1000:.3f}", flush=True)
+                    print("STREAM_ACTIONS", [(x["epoch"],x["selected_action"],x["removed_groups"],x["correct"]) for x in rows if x["alarm"]=="1"], flush=True)
+                    print("STREAM_COUNTS", scene, numeric, {key: (min(values(key)), max(values(key))) for key in
+                          ["rows", "cols", "noise_source_columns", "reference_faults", "actions", "post", "pl_evaluated", "integrations", "gaussian_decompositions", "source_products", "covariance_fallback"]},
+                          f"rejected={sum(x['selected']!='1' for x in rows)} dropped=0 unfinished=0 queue_drained_after_last_arrival_ms={wait[-1]+full[-1]:.3f}", flush=True)
         else:
             results = {}
             print("| Workload | Mode | Core mean/median/P95/max ms | Full mean/median/P95/max ms | "
@@ -154,6 +212,9 @@ def main():
                 for numeric in ["reference", "optimized"]:
                     path, wall = run(name + "-" + numeric, scene, "uwb", epochs, numeric, 35)
                     rows = read_rows(path)
+                    for line in path.with_suffix(".log").read_text().splitlines():
+                        if line.startswith("STREAM_PHASES"):
+                            print(line, flush=True)
                     if len(rows) != 35 or any(x["selected"] != "1" or x["updates"] != "1" for x in rows):
                         raise RuntimeError("benchmark is not an effective committed workload")
                     if scene == "U1" and any(x["correct"] != "1" for x in rows):

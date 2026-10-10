@@ -543,14 +543,85 @@ A fixed semantic exclusion regression changes all excluded samples from +20 to
 checks reference states/objective/boundary covariance agree to1e-10. Both make
 only one actual nominal backend commit per input; candidate solves do not write
 the backend. The bridge cross-covariance and deterministic box tests pass.
-The20–24 flow contains five actual alarms, no IMU exclusion/recovery commit,
-and14/24 unavailable candidate outputs. New references ran, but acceptance is
-still missing. Cases retaining a post-onset PIM or lacking marginalized raw
-prefix are explicitly refused: reintegration and candidate-specific historical
-source deletion remain safe implementation work, not external hardware blockers.
-I remains in progress rather than declaring its limited exit complete.
+The original20–24 diagnostic had five alarms and no recovery commit. The next
+increment reintegrates every retained PIM from actually observed raw samples at
+the original observed bias, including post-onset factors. Existing kinematic
+bridge metrics are excluded from Gaussian information rank. The healthy boundary
+remains before the earliest bridge, preserving all joint boundary cross terms.
 
-Reproduce current I diagnostic:
-`FDE_NEXT_BOUNDED_RECOVERY=1 "$BIN/fde_next_runner" config/fde_next.yaml "$TMP/I2.csv" I2 imu-diagnostic 20261010 24 optimized`.
-The existing checks now exercise the independent recovery and bridge in addition
-to H/G checks. G/raw/formal/protected qualification stays false/UNKNOWN.
+### H/G/I integration (latest research model)
+
+H now has an actual finite raw-prefix consumer, `raw_prefix_history.hpp`. It
+archives physical factor/measurement/source lineage in memory, fixes each old
+state chart when it leaves the explicit window, and reconstructs retained raw
+rows and source covariance after real commit recipes. This is a distinct
+independent research reference, not a claim that a localization marginal prior
+contains discarded raw noise. At one common prefix chart, dense and orthogonally
+condensed references agree:30/31/32 dof240/248/255 in the diagnostic graph;
+mean differences <=4.52e-12, covariance <=7.54e-15, PL <=9.07e-13. Historical
+latent anchor episodes and raw ADC cross maps are transformed with the rows.
+The old localization carrier remains untouched.
+
+Actual new-reference U0/U1 prefixes each ran32 commits,31/32 selected; U0 has
+zero alarms/exclusions, U1 one correct exclusion at15 and four available followup
+outputs. U0 at32 has751 rows/dof256, S275.005 versus tau378.288; U1 after its
+real range deletion has750 rows/dof255, S273.956 versus377.078. Thus dimension
+and raw-history preservation removes the old spurious31 event in this sample;
+no seed-specific detector threshold or production contract was changed.
+`history_fixed_model_valid` means algebraic fixed-model history consistency;
+it grants neither an adaptive Gaussian law nor raw qualification.
+
+I now has an opt-in, narrow functional selector, `--position-functional`, for I2
+only. It uses the two-rebuild independent candidate reference and the same fixed
+per-unit correction scales; the terminal current-tag model uses the actual eight
+current UWB measurements, no velocity observation/prior. Current-position post,
+PL/AL and center transfer are evaluated in this separate research model. Native
+strict selection and risk flags are unchanged. All declared IMU fault columns
+have zero direct response in this UWB-only reference; the reference still depends
+on the measurements, so its Gaussian interpretation remains conditional.
+No full-state/history/raw qualification is inferred from position success.
+
+A complete50-epoch I2 functional flow actually commits action22 at20, removing
+15001–20001. Its declared physical support, rather than injected truth, determines
+quarantine [.705,1.205)s. Epoch21–25 replace pending IMU with real generic bridge
+and bias-continuity factors;25 retains the last corrupted boundary sample carry.
+At26 nominal IMU resumes. Every following output builds a fresh same-time UWB
+reference and transfers its bound to the actual committed tag; earlier PL is not
+reused. There are50 backend commits,39 selected,6 correct IMU exclusions,31
+current-position conditional outputs (20–50), no formal/protected outputs.
+Sensor-time raw onset→alarm/exclusion is295ms (first affected batch→alarm250ms).
+The20 exclusion service is1048.40ms; cumulative processing through20 is2602.77ms
+in this offline functional run, not an arrival-to-output hardware measurement.
+
+Post-commit evaluation only:20–25 tag/velocity/attitude RMSE
+.12807m/.17304m/s/.09987rad, maxima .20034m/.20560m/s/.12138rad.
+After IMU resumes,26–50 tag RMSE .07623m, velocity .65576m/s, attitude .65950rad;
+maxima .12514m/1.57304m/s/1.60470rad. Current position recovers; navigation does
+not. The bridge box already exceeds the old local domain at20 and grows through
+quarantine. Gaussian information rank remains deficient, and G provides no
+uniform full-state Combined-factor remainder. A stochastic bridge alternative
+has no matched independent generator/process law; numerical bridge weights are
+not such a law. No second fake velocity/bias measurement is introduced to repair
+that rank. Full navigation/raw recovery remains a core gap with new evidence.
+
+Reproduce: `python3 tools/run_fde_next.py history --history-reference`;
+`python3 tools/run_fde_next.py recovery --position-functional --epochs 50`.
+The source/test/config files and this document are permanent; run logs/matrices
+remain only in the owned cache until final aggregation. R final measurements and
+regression are pending below; this intermediate save is not a Goal endpoint.
+
+G additionally implements same-event squared-range-difference contraction with
+all eight one-anchor exclusion branches. It never uses GT or picks a small box
+as known healthy.24 fixed fault sign/amplitude cases enclose the tag in the
+correct retained branch; coplanar rank failure refuses. In U1 with the original
+independent noisy initialization, at14 the union tag radius contracts from the
+propagated16.783m to4.869m, but its uniform range remainder is6.070m; at the actual
+fault15 radius7.348m crosses an anchor, so it refuses. At30/31/32 radii are
+4.930/4.976/4.899m with remainders6.161/6.445/6.067m. This addresses measurement
+contraction with new executable evidence but remains unusable for the existing
+local tag guarantee, and does not bound velocity/attitude/bias. The complete
+fixed-grid alternative still exceeds budget even for position alone. A small
+executable adaptive-root counterexample fits a column to the same noise:
+fixed-model parity energy>0.1 becomes<1e-20 with just one visited fitted root.
+This explicitly prevents interpreting the128 visited candidate cap as covering
+all adaptive Gaussian models. Full raw risk remains UNKNOWN in both routes.

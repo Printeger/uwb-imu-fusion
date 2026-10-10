@@ -29,6 +29,14 @@ int main(int argc,char** argv){
  check((r.mean-exact).norm()<1e-12);
  auto wrong=gaussianReference(a,z,Eigen::MatrixXd::Identity(5,5),c,{b},1e-3,1e-6);
  check((wrong.mean-r.mean).norm()>1e-4);
+ // One visited model is already enough to violate a fixed-model parity law:
+ // fitting its column to the same noise forces its residual to zero. Candidate
+ // count alone cannot charge this adaptive family as one fixed Gaussian root.
+ Eigen::Vector3d noise(.4,-.3,.2);Eigen::MatrixXd fixed(3,1),fitted(3,1),point=Eigen::MatrixXd::Zero(3,1);
+ fixed<<1,0,0;fitted=noise.normalized();point(0,0)=1.;
+ auto fixed_noise=gaussianReference(fixed,noise,Eigen::Matrix3d::Identity(),point,{},1e-3,1e-6);
+ auto adaptive_noise=gaussianReference(fitted,noise,Eigen::Matrix3d::Identity(),point,{},1e-3,1e-6);
+ check(fixed_noise.statistic>.1 && adaptive_noise.statistic<1e-20);
  Eigen::MatrixXd safe_c=Eigen::MatrixXd::Zero(3,2);safe_c(0,1)=1;
  check(gaussianReference(a,z,sigma,safe_c,{a.col(0)},1e-3,1e-6).pl.allFinite());
  check(gaussianReference(a,z,sigma,c,{a.col(0)},1e-3,1e-6).status=="DANGEROUS_NULLSPACE");
@@ -68,6 +76,18 @@ int main(int argc,char** argv){
  }
  // Uniform analytic remainder over a right Pose3 Expmap ball.
  RawNoiseEvent event(3421,1e-5);check(event.q>5. && event.q<7.);
+ // Fixed fault semantics, arbitrary bad amplitude; the healthy branch must
+ // enclose the tag for every predetermined +/- noise realization tested.
+ std::vector<Eigen::Vector3d> anchors{{0,0,0},{6,0,0},{0,6,0},{0,0,6},{6,6,6},{6,0,6},{0,6,6},{6,6,0}};
+ Eigen::Vector3d true_tag(2,3,1);double eps=.6;
+ for(int fault=0;fault<8;++fault)for(double amplitude:{-20.,0.,20.}){
+  std::vector<double> ranges;for(int i=0;i<8;++i)ranges.push_back((true_tag-anchors[i]).norm()+(i%2?eps:-eps)+(i==fault?amplitude:0.));
+  auto branches=rangeDomainBranches(anchors,ranges,eps);check(branches.size()==8);
+  auto& healthy=branches[fault];check(healthy.valid);
+  check(((true_tag-healthy.center).cwiseAbs().array()<=healthy.box.array()+1e-12).all());
+ }
+ for(auto& anchor:anchors)anchor.z()=0.;
+ check(!rangeDomainBranches(anchors,std::vector<double>(8,3.),eps)[0].valid);
  for(double theta:{.01,.2,.8})for(double rho:{.01,.1,.4}){
   auto bound=tagRemainder(5.,theta,rho,.25);check(bound.valid && bound.range>0.);
   gtsam::Pose3 center(gtsam::Rot3::RzRyRx(.1,.2,.3),gtsam::Point3(1,2,3));
@@ -115,6 +135,10 @@ int main(int argc,char** argv){
  auto missing=*it;missing.recoverability=HistoryRecoverability::MissingProvenance;check(!episodeCoverageComplete(missing,incomplete));
  check(bridgeMotionDomain(.03,.2,4.,2.));check(!bridgeMotionDomain(5.4,.2,4.,2.));
  auto native_joint=rawGaussianWindow(w,second,episodes.modes,.02,.001,Eigen::Vector3d(.2,-.1,.08));
+ auto shared_joint=rawGaussianWindow(w,second,episodes.modes,.02,.001,Eigen::Vector3d(.2,-.1,.08),true);
+ check((shared_joint.sigma-native_joint.sigma).norm()<1e-18);
+ check(shared_joint.noise_source_ids==native_joint.noise_source_ids);
+ check((shared_joint.noise_j-native_joint.noise_j).norm()==0);
  check(native_joint.cross_norm>1e-12);check(Eigen::LLT<Eigen::MatrixXd>(native_joint.sigma).info()==Eigen::Success);
  NoisyMotionScenario s0(argv[1],"U0",20261010,2),s1(argv[1],"U0",20261010,2);
  check(s0.imu[10].specific_force_mps2==s1.imu[10].specific_force_mps2);
@@ -150,7 +174,7 @@ int main(int argc,char** argv){
    if(e==20){ExclusionAction action;action.bridge_mode=BridgeMode::GenericKinematic;
     for(const auto& past:t.recoverable_history)if(past.proposed_epoch>=15)for(const auto& group:past.groups)if(group.kind==FactorKind::CombinedImu)action.groups_to_remove.push_back(group.id);
     action.groups_to_remove.push_back(t.imu_group.id);
-    independent[sign]=boundedRecovery(t,action,noisy.initial_observation,4.,2.);
+    independent[sign]=boundedRecovery(t,action,noisy.initial_observation,4.,2.,&noisy.imu,&noisy.cfg.bridge.generic);
     check(independent[sign].rebuilds==2 && independent[sign].status=="BRIDGE_DOMAIN_EXCEEDS_LOCAL_MODEL");
     check(independent[sign].healthy_rank<independent[sign].healthy_columns);
     check(std::abs(independent[sign].full_state_domain_ratio-2.4)<1e-12);
@@ -160,6 +184,9 @@ int main(int argc,char** argv){
  }
  check(std::abs(independent[0].objective_after-independent[1].objective_after)<1e-10);
  check((independent[0].bridge.covariance-independent[1].bridge.covariance).norm()<1e-10);
- for(int e=0;e<=20;++e){check(independent[0].reference.at<gtsam::Pose3>(gtsam::Symbol('x',e)).localCoordinates(independent[1].reference.at<gtsam::Pose3>(gtsam::Symbol('x',e))).norm()<1e-10);}
+ for(int e=0;e<=20;++e){check(independent[0].reference.at<gtsam::Pose3>(gtsam::Symbol('x',e)).localCoordinates(independent[1].reference.at<gtsam::Pose3>(gtsam::Symbol('x',e))).norm()<1e-10);
+  check((independent[0].reference.at<gtsam::Vector3>(gtsam::Symbol('v',e))-independent[1].reference.at<gtsam::Vector3>(gtsam::Symbol('v',e))).norm()<1e-10);
+  check((independent[0].reference.at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b',e)).vector()-independent[1].reference.at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b',e)).vector()).norm()<1e-10);
+ }
  std::cout<<"legacy_checks=43 history_parameter_cases=3 finite_pl="<<r.pl.transpose()<<" statistic="<<r.statistic<<" threshold="<<r.threshold<<"\n";
 }

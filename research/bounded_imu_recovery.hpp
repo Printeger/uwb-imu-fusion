@@ -1,14 +1,17 @@
 #pragma once
 #include "imu_recovery_scope.hpp"
 #include "uwb_imu_pl/factors/kinematic_bridge_factor.hpp"
+#include "uwb_imu_pl/factors/realtime_factors.hpp"
+#include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/nonlinear/GaussNewtonOptimizer.h>
 #include <gtsam/nonlinear/Marginals.h>
 #include <gtsam/navigation/NavState.h>
 #include <set>
+#include <Eigen/Eigenvalues>
 namespace uwb_imu_pl::research {
 struct FullStateBridge {
- Eigen::Matrix<double,15,15> transition,covariance;
- Eigen::Matrix<double,15,1> box;
+ Eigen::Matrix<double,15,15> transition=Eigen::Matrix<double,15,15>::Constant(NAN),covariance=Eigen::Matrix<double,15,15>::Constant(NAN);
+ Eigen::Matrix<double,15,1> box=Eigen::Matrix<double,15,1>::Constant(NAN);
 };
 // World-frame acceleration box already includes force/gravity/attitude
 // conversion. No suspect accelerometer or gyro appears in this propagation.
@@ -17,6 +20,8 @@ inline FullStateBridge fullStateBridge(const Eigen::Matrix<double,15,15>& p,
  double t,double accel,double rate){
  if(t<0 || accel<0 || rate<0 || !p.allFinite() || !p.isApprox(p.transpose(),1e-12))
   throw std::runtime_error("invalid bridge boundary");
+ Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double,15,15>> eig(p);
+ if(eig.info()!=Eigen::Success || eig.eigenvalues().minCoeff()<0)throw std::runtime_error("bridge boundary covariance is not PSD");
  FullStateBridge o;o.transition.setIdentity();o.transition.block<3,3>(3,6)=t*Eigen::Matrix3d::Identity();
  o.covariance=o.transition*p*o.transition.transpose();o.box.setZero();
  o.box.head<3>().setConstant(rate*t);o.box.segment<3>(3).setConstant(.5*accel*t*t);o.box.segment<3>(6).setConstant(accel*t);
@@ -35,7 +40,8 @@ struct BoundedRecoveryAttempt {
 // iteration budget; no post-detector retry loop and no real backend writes.
 // Existing bridge weights are optimization metrics, NEVER Gaussian evidence.
 inline BoundedRecoveryAttempt boundedRecovery(const EpochTransaction& tx,
- const ExclusionAction& action,const NavigationState& initial,double accel,double rate){
+ const ExclusionAction& action,const NavigationState& initial,double accel,double rate,
+ const std::vector<ImuMeasurement>* raw_prefix=nullptr,const GenericBridgeSpec* bridge_spec=nullptr){
  BoundedRecoveryAttempt o;if(action.bridge_mode==BridgeMode::None)return o;
  std::set<std::uint64_t> removed;for(auto id:action.groups_to_remove)removed.insert(id.value());
  std::map<std::size_t,const PendingFactorGroup*> imu;
@@ -47,18 +53,39 @@ inline BoundedRecoveryAttempt boundedRecovery(const EpochTransaction& tx,
  // fault/sample dependence cannot be erased by dropping a fault column.
  if(!tx.frozen_values->exists(gtsam::Symbol('x',0))){o.status="MARGINAL_RAW_PREFIX_MISSING";return o;}
  std::size_t first=tx.proposed_epoch;for(const auto& kv:imu)if(removed.count(kv.second->id.value()))first=std::min(first,kv.first);
- for(const auto& h:history)if(h.first>=first && h.first<=tx.proposed_epoch &&
-     h.second->preintegration && !removed.count(imu.count(h.first)?imu.at(h.first)->id.value():0)){
-  // Verify complete endpoint support for every excluded episode separately in
-  // the caller. Healthy post-onset biasHat still depends on corrupted states;
-  // candidate-specific reintegration is required before allowing that case.
-  o.status="POST_ONSET_HEALTHY_PIM_REBUILD_REQUIRED";return o;
- }
  gtsam::NonlinearFactorGraph graph;
  for(const auto& f:tx.frozen_slots)if(f.factor){if(f.group_id && removed.count(f.group_id->value())){++o.removed;continue;}graph.push_back(f.factor);++o.retained;}
  if(!removed.count(tx.imu_group.id.value()))graph.push_back(tx.imu_group.factors);
+ if(raw_prefix){
+  // Rebuild every retained PIM from observed raw input and the ORIGINAL bias
+  // observation. Neither polluted online biasHat nor a removed sample enters
+  // the new reference. Future samples beyond this transaction are never read.
+  gtsam::NonlinearFactorGraph rebuilt;
+  for(const auto& f:graph){auto imu_factor=dynamic_cast<const gtsam::CombinedImuFactor*>(f.get());
+   if(!imu_factor){rebuilt.push_back(f);continue;}
+   size_t prev=gtsam::Symbol(imu_factor->key1()).index(),next=gtsam::Symbol(imu_factor->key3()).index();
+   double begin=.05*prev,end=.05*next;
+   if(end>tx.end.seconds()+1e-12){o.status="NONCAUSAL_RAW_PREFIX";return o;}
+   std::vector<const ImuMeasurement*> slice;
+   for(const auto& sample:*raw_prefix)if(sample.timestamp.seconds()>=begin-1e-12 && sample.timestamp.seconds()<=end+1e-12)slice.push_back(&sample);
+   if(slice.size()<2 || std::abs(slice.front()->timestamp.seconds()-begin)>1e-12 || std::abs(slice.back()->timestamp.seconds()-end)>1e-12){o.status="RAW_PREFIX_ENDPOINT_MISSING";return o;}
+   auto params=boost::dynamic_pointer_cast<gtsam::PreintegrationCombinedParams>(imu_factor->preintegratedMeasurements().params());
+   gtsam::PreintegratedCombinedMeasurements pim(params,gtsam::imuBias::ConstantBias(initial.accel_bias_mps2,initial.gyro_bias_radps));
+   for(size_t k=1;k<slice.size();++k)pim.integrateMeasurement(.5*(slice[k-1]->specific_force_mps2+slice[k]->specific_force_mps2),.5*(slice[k-1]->angular_velocity_radps+slice[k]->angular_velocity_radps),slice[k]->timestamp.seconds()-slice[k-1]->timestamp.seconds());
+   rebuilt.emplace_shared<gtsam::CombinedImuFactor>(imu_factor->key1(),imu_factor->key2(),imu_factor->key3(),imu_factor->key4(),imu_factor->key5(),imu_factor->key6(),pim);
+  }
+  graph=std::move(rebuilt);
+ }else for(const auto& h:history)if(h.first>=first && h.second->preintegration && !removed.count(imu.count(h.first)?imu.at(h.first)->id.value():0)){
+  o.status="POST_ONSET_HEALTHY_PIM_REBUILD_REQUIRED";return o;
+ }
  for(const auto& g:tx.uwb_groups)if(g.nominal && !removed.count(g.id.value()))graph.push_back(g.factors);
- gtsam::NonlinearFactorGraph healthy_graph=graph;
+ gtsam::NonlinearFactorGraph healthy_graph;
+ for(const auto& f:graph){auto bridge=dynamic_cast<const KinematicPoseVelocityBridgeFactor*>(f.get());
+  auto bias_metric=dynamic_cast<const gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>*>(f.get());
+  if(bridge){first=std::min(first,(size_t)gtsam::Symbol(bridge->key3()).index());continue;}
+  if(bias_metric)continue;
+  healthy_graph.push_back(f);
+ }
  // Exact original factors before onset, with freshly reconstructed numerical
  // initial Values. Starting from polluted tx.frozen_values is prohibited.
  gtsam::Values values;gtsam::Pose3 pose(gtsam::Rot3(initial.q_world_body.toRotationMatrix()),initial.position_world_m);
@@ -68,12 +95,14 @@ inline BoundedRecoveryAttempt boundedRecovery(const EpochTransaction& tx,
   bool excluded=imu.count(e) && removed.count(imu.at(e)->id.value());
   if(excluded){pose=gtsam::Pose3(pose.rotation(),pose.translation()+dt*velocity);
    EpochTransaction bt;bt.previous_epoch=e-1;bt.proposed_epoch=e;bt.begin=TimestampNs((e-1)*50000000LL);bt.end=TimestampNs(e*50000000LL);
-   GenericBridgeSpec spec;graph.push_back(BridgeFactory().makeGeneric(bt,spec).factors);graph.push_back(BridgeFactory().makeBiasContinuity(bt,spec).factors);
+   GenericBridgeSpec spec=bridge_spec?*bridge_spec:GenericBridgeSpec{};graph.push_back(BridgeFactory().makeGeneric(bt,spec).factors);graph.push_back(BridgeFactory().makeBiasContinuity(bt,spec).factors);
   }else{
    const gtsam::CombinedImuFactor* factor=nullptr;
    for(const auto& f:graph)if(auto c=dynamic_cast<const gtsam::CombinedImuFactor*>(f.get()))if(c->key3()==gtsam::Symbol('x',e)){factor=c;break;}
-   if(!factor){o.status="HEALTHY_PREFIX_MATERIAL_MISSING";return o;}
-   auto next=factor->preintegratedMeasurements().predict(gtsam::NavState(pose,velocity),bias);pose=next.pose();velocity=next.velocity();
+   if(!factor){bool bridge_present=false;for(const auto& f:graph)if(auto bridge=dynamic_cast<const KinematicPoseVelocityBridgeFactor*>(f.get()))bridge_present=bridge_present || bridge->key3()==gtsam::Symbol('x',e);
+    if(!bridge_present){o.status="HEALTHY_PREFIX_MATERIAL_MISSING";return o;}
+    pose=gtsam::Pose3(pose.rotation(),pose.translation()+dt*velocity);
+   }else{auto next=factor->preintegratedMeasurements().predict(gtsam::NavState(pose,velocity),bias);pose=next.pose();velocity=next.velocity();}
   }add(e);
  }
  auto initial_values=values;
