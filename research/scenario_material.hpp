@@ -3,6 +3,8 @@
 #include "uwb_imu_pl/config/integrity_config.hpp"
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 #include <Eigen/Geometry>
+#include <yaml-cpp/yaml.h>
+#include <random>
 
 namespace uwb_imu_pl::research {
 inline Eigen::Quaterniond attitude(double time,bool rotating) {
@@ -33,4 +35,38 @@ inline EpochTransaction prepare(IncrementalUwbImuEstimator& estimator,const Inte
   for(int i=(epoch-1)*10+1;i<=epoch*10;++i)estimator.ingestImu(sample(cfg,i,rotating));
   return estimator.prepareEpoch(ranges(cfg,epoch,rotating));
 }
+inline Eigen::Vector3d researchVector(const YAML::Node& n){return {n[0].as<double>(),n[1].as<double>(),n[2].as<double>()};}
+struct NoisyMotionScenario {
+ YAML::Node law;IntegrityConfig cfg;Eigen::Vector3d lever,amp,freq;
+ std::vector<ImuMeasurement> imu;std::vector<UwbBatch> uwb;
+ int epochs;double dt,rate;
+ NavigationState truth(double t)const{
+  NavigationState s;s.timestamp=TimestampNs(std::llround(t*1e9));
+  s.position_world_m=amp.cwiseProduct((freq*t).array().sin().matrix())+Eigen::Vector3d(0,0,1);
+  s.velocity_world_mps=amp.cwiseProduct(freq).cwiseProduct((freq*t).array().cos().matrix());
+  s.q_world_body=Eigen::Quaterniond(Eigen::AngleAxisd(rate*t,Eigen::Vector3d(1,2,3).normalized()));return s;
+ }
+ NoisyMotionScenario(const std::string& path,const std::string& kind,int seed,int count):law(YAML::LoadFile(path)),cfg(IntegrityConfigLoader::load(law["base_config"].as<std::string>())){
+  epochs=count?count:law["epochs"].as<int>();dt=law["epoch_s"].as<double>();rate=law["angular_rate_radps"].as<double>();
+  if(dt!=.05 || law["imu_sample_s"].as<double>()!=.005 || epochs>law["epochs"].as<int>())throw std::runtime_error("unsupported timestamp/horizon contract");
+  lever=researchVector(law["lever"]);amp=researchVector(law["translation_amplitude"]);freq=researchVector(law["translation_frequency"]);
+  cfg.incremental.fixed_lag_epochs=law["fixed_lag_epochs"].as<int>();cfg.integrity_window.epochs=law["window_epochs"].as<int>();
+  cfg.realtime.range_sigma_m=law["range_sigma_m"].as<double>();
+  std::mt19937 imu_rng(seed),uwb_rng(seed+7919);std::normal_distribution<double> normal(0,1);
+  for(int i=0;i<=epochs*10;++i){double t=i*.005;auto state=truth(t);auto m=sample(cfg,i);
+   auto acc=-amp.cwiseProduct(freq.cwiseProduct(freq)).cwiseProduct((freq*t).array().sin().matrix());
+   m.specific_force_mps2=state.q_world_body.conjugate()*(acc+Eigen::Vector3d(0,0,cfg.imu.gravity_mps2));
+   m.angular_velocity_radps=rate*Eigen::Vector3d(1,2,3).normalized();
+   for(int j=0;j<3;++j){m.specific_force_mps2(j)+=law["raw_accel_sigma_mps2"].as<double>()*normal(imu_rng);m.angular_velocity_radps(j)+=law["raw_gyro_sigma_radps"].as<double>()*normal(imu_rng);}
+   imu.push_back(m);
+  }
+  for(int e=1;e<=epochs;++e){auto b=ranges(cfg,e);auto s=truth(e*dt);auto tag=s.position_world_m+s.q_world_body*lever;
+   for(auto& m:b.measurements){if(kind=="U3")m.anchor_position_m.z()=1.1;m.range_m=(m.anchor_position_m-tag).norm()+cfg.realtime.range_sigma_m*normal(uwb_rng);}
+   const int f=law["fault_epoch"].as<int>(),end=f+(kind=="U2"?law["persistent_epochs"].as<int>():1);
+   if((kind=="U1" || kind=="U2") && e>=f && e<end)b.measurements.at(law["fault_anchor_index"].as<int>()).range_m+=law["uwb_amplitude_m"].as<double>();
+   uwb.push_back(b);
+  }
+ }
+};
+
 } // namespace

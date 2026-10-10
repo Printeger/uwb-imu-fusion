@@ -40,3 +40,11 @@ bridge_angular_rate_bound_radps: 2.0
 nonlinear_remainder: UNQUALIFIED
 formal_eligible: false
 publication_protected: false
+# Research per-state gate, no mixed units or window-length accumulation.
+# Pose .25 is a local numerical domain, vel/bias scales are initial prior
+# sigmas; no full nonlinear qualification is asserted by passing this gate.
+recovery_rotation_rad: 0.25
+recovery_position_m: 0.25
+recovery_velocity_mps: 0.5
+recovery_accel_bias_mps2: 0.1
+recovery_gyro_bias_radps: 0.01

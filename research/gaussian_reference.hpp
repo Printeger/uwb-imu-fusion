@@ -40,6 +40,7 @@ inline GaussianReference gaussianReference(const Eigen::MatrixXd& a,const Eigen:
   r.mean=r.gain*r.whitener*z;r.covariance=r.gain*r.gain.transpose();
   r.statistic=(r.parity*r.whitener*z).squaredNorm();
   r.threshold=boost::math::quantile(boost::math::complement(boost::math::chi_squared(r.dof),alpha));
+  if(r.statistic>r.threshold){r.status="POST_REJECTED";return r;}
   // Each candidate pays tail for three coordinate Gaussian errors and tail for
   // its parity noise. All fault leaves share that candidate noise event.
   double k=boost::math::quantile(boost::math::complement(boost::math::normal(),tail/6));

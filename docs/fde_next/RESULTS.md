@@ -7,7 +7,7 @@ probability contracts and publication gates are unchanged. All new runs use
 | Stage | Work | Capability / guarantee |
 |---|---|---|
 | S1 | Complete fixed-model reference | Finite Gaussian oracle; raw nonlinear qualification pending |
-| S2 | Pending | No claim yet |
+| S2 | Functional work complete; Gaussian raw qualification gap | U1 correct commit + 4 epochs; finite-episode U2; raw empirical only |
 | S3 | Pending | No claim yet |
 | S4 | Pending | No claim yet |
 
@@ -68,3 +68,100 @@ BIN=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl
 Machine: Intel Core Ultra 5 125H, 18 logical CPUs; single-thread reference.
 Tested source is the S1 working tree derived from baseline (commit recorded by
 next stage; no self-SHA amendment). No figures are needed for this oracle.
+
+## S2
+
+S1 commit: `b9a9bd3`. The shared `NoisyMotionScenario` in
+`scenario_material.hpp` generates the configured smooth translation and body
+rotation, true specific force and gyro, and ranges at `p_body+R*lever`.
+Independent PRNG streams pre-generate untruncated ADC/range Gaussian noise.
+ON/OFF reuse identical inputs. Initial error is configured once, with no
+per-epoch truth reset. The 50 epochs cross fixed-lag exit at epoch 31.
+
+`gaussian_window.hpp` differentiates actual reintegrated Combined factors for
+each raw sample and axis, including the shared endpoint. It constructs
+`J Q J^T` with cross-factor blocks. PIM is separately reintegrated with zero
+accelerometer/gyro ADC covariances to retain only auxiliary bias/process
+covariance; ADC noise is not added on top of its old marginal contribution.
+Observed cross-block norm is about `1.30051e-8` in native residual units.
+Candidate UWB replacements are checked as literal original raw-row subsets;
+the retained covariance principal submatrix is selected before whitening.
+The joint Gaussian statistic drives the research alarm and post test. Existing
+estimator-weight Evidence supplies a conservative candidate-search heuristic,
+not a calibrated probability or a merged failure event. The Gaussian PL still
+covers **every** configured fault space for each evaluated candidate. The
+existing rank-update solver and atomic transaction supply the actual estimate;
+its different weighting is handled by transferring the reference PL to the
+actual nonlinear committed tag mean. No range-union call is used.
+
+Finite three-epoch UWB episodes have one shared amplitude across exact onset/stop
+support. Their maps sum constituent raw/history single-epoch maps; they are
+not persistent-to-window-end columns. The synthetic task law allows one
+UWB episode, uniformly over onset 1–50, anchor and duration 1 or 3; events
+continue naturally beyond the task cutoff. No carry-in exists at initialization.
+This is a conditional research law, not a hardware event-rate estimate.
+
+Two mechanism corrections were retained: a per-state, unit-specific numerical
+recovery gate replaces the mixed-unit full-window norm **only in this runner**;
+and research alarms/post statistics use the joint reference covariance.
+Rotation/position numerical domains are .25 rad/.25 m; velocity and bias scales
+are the original initial prior sigmas (.5 m/s, .1 m/s², .01 rad/s). These scales
+are not full nonlinear remainder certificates. Candidate reference means must
+pass the same domain. Incomplete V1 action census refuses selection rather than
+throwing away the remainder of the stream. This is not top-K acceptance.
+
+| Flow (seed) | Commits / total | Local available | Alarms | Exclusions | Correct fault epochs / injected | Other exclusions | Tag APE RMSE / P95 / max (m) | Increment RMSE (m) | SE3 translation / rotation RPE RMSE (m/rad) |
+|---|---:|---:|---:|---:|---:|---:|---|---:|---|
+| U0-uwb (20261010) | 50/50 | 49/50 | 1 | 1 | 0/0 | 1 | 0.068989 / 0.102512 / 0.165751 | 0.044544 | 0.044092 / 0.021015 |
+| U1-uwb (20261010) | 50/50 | 49/50 | 2 | 2 | 1/1 | 1 | 0.069311 / 0.103407 / 0.165751 | 0.044323 | 0.043872 / 0.020596 |
+| U2-uwb (20261010) | 50/50 | 49/50 | 4 | 4 | 3/3 | 1 | 0.069470 / 0.102929 / 0.165751 | 0.044449 | 0.043972 / 0.020919 |
+| U3-uwb (20261010) | 50/50 | 0/50 | 1 | 0 | 0/0 | 0 | 0.367938 / 0.555703 / 0.582021 | 0.067223 | 0.066338 / 0.021042 |
+| U0-off (20261010) | 50/50 | 0/50 | 1 | 0 | 0/0 | 0 | 0.069253 / 0.102512 / 0.165751 | 0.044547 | 0.044087 / 0.021030 |
+| U1-off (20261010) | 50/50 | 0/50 | 31 | 0 | 0/1 | 0 | 0.086662 / 0.142114 / 0.226145 | 0.052472 | 0.051439 / 0.034269 |
+| U1-confirm (20261011) | 50/50 | 49/50 | 1 | 1 | 1/1 | 0 | 0.064366 / 0.119656 / 0.208344 | 0.051613 | 0.050990 / 0.017671 |
+
+OFF alarm counts are diagnostic Gaussian tests, with no FDE selection.
+All commits, including best-effort and failed qualification, remain in the
+50-output denominator. Timestamp-grid output proportion is 50/50, not a
+real-time delivery proportion. Formal/protected output count is 0/50 in every
+flow. ON/OFF APE uses all common 50 timestamps.
+
+U1-uwb: at epoch 15, actual tag error 0.033196 m, served local HPL/VPL 0.877375/1.023034 m. Following four selected/local-available commits: 4/4 and 4/4. Timestamp detection/recovery delay at the injected U1 epoch is 0 epochs; computation/output delay remains nonzero and is measured in S4.
+U2-uwb: at epoch 17, actual tag error 0.030933 m, served local HPL/VPL 0.985751/0.999054 m. Following four selected/local-available commits: 4/4 and 4/4. Timestamp detection/recovery delay at the injected U1 epoch is 0 epochs; computation/output delay remains nonzero and is measured in S4.
+U1-confirm: at epoch 15, actual tag error 0.083711 m, served local HPL/VPL 0.873153/1.024232 m. Following four selected/local-available commits: 4/4 and 4/4. Timestamp detection/recovery delay at the injected U1 epoch is 0 epochs; computation/output delay remains nonzero and is measured in S4.
+
+U2 removes the bad current lineage on each of its three contaminated epochs;
+those rows never enter the backend, and the four epochs after stop run. This
+is a functional finite-episode witness, not qualification of arbitrary
+hardware persistent faults. U3 refuses all 50 local protection outputs because
+coplanar ranges do not supply a global mirror-branch certificate.
+
+**Guarantee limit:** the small fixed-model S1 theorem holds. The raw runner
+outputs `LINEARIZATION_UNQUALIFIED`, with `raw_qualified=false`; its noise-to-
+condensed-history transform, random linearization point and complete IMU/pose
+nonlinear remainder are not certified. Initial prior centre error is configured,
+not a calibrated stochastic prior. `1.28e-5` is the fixed-law union charge,
+**not** a raw-stream HMI bound. The healthy epoch-31 false exclusion is a new
+empirical counterexample to extending frozen false-alarm calibration to this
+path. Functional U1 recovery is implemented; a strictly qualified raw Gaussian
+closed loop remains a core gap. No formal risk closure or deployment protection
+is claimed.
+
+Five directly relevant existing transaction/PL tests pass (0/5 failures),
+covering prepare/discard, one update, principal covariance, historical atomic
+replacement and research-only PL. Sixteen mathematical checks still pass.
+The development prefixes were discarded after the corrected model was frozen;
+the table contains one final flow per requested case and one U1 confirmation.
+
+Reproduction, after building `fde_next_runner` in the same build directory:
+
+```sh
+cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl --target fde_next_runner -j2
+TMP=$(mktemp -d /tmp/fde-next-replay.XXXXXXXX)
+for SPEC in U0:uwb U1:uwb U2:uwb U3:uwb U0:off U1:off; do
+  SCENE=${SPEC%:*}; SCOPE=${SPEC#*:}
+  "$BIN/fde_next_runner" config/fde_next.yaml "$TMP/$SCENE-$SCOPE.csv" "$SCENE" "$SCOPE"
+done
+"$BIN/fde_next_runner" config/fde_next.yaml "$TMP/U1-confirm.csv" U1 uwb 20261011
+# Summarize/inspect transient output, then remove only this created TMP.
+```
