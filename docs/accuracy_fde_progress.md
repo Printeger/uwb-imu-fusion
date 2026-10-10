@@ -1275,3 +1275,85 @@ LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib /home/min
 LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_fault_parameterization --gtest_filter=FdeOperabilityImuSupport.FiniteInjectedAccelerationChangesActualFactorResidual
 python3 tools/research_prior_and_imu.py --self-test --results results/fde_operability_20261010 --report docs/benchmark/fde_operability_20261010.json
 ```
+
+### 2026-10-10：授权后的隔离 raw-episode / 条件恢复研究（A–E）
+
+**结论仍为 PARTIAL_BLOCKED；研究正例为 CONDITIONAL。** 从 d9e575aa 的
+工作区继续，完整读取当天进度；没有重做已接受的 prior 审计、persistent
+合并反例或旧 campaign。新增 research/ 独立静态库与 EXCLUDE_FROM_ALL
+入口，不链接回生产 DSO/node、不安装、不 mint/publish。原配置、概率预算、
+检测/step/rank 门限、Gaussian nominal、Huber 和发布资格均未替换。
+
+**A VERIFIED（声明的局部数学模型）。** 从真实 raw 样本重积分，使用真实
+CombinedImuFactor 做 central/half-step FD 与独立原始样本腐化 oracle。
+静止/旋转、六轴、非零 biasHat/端点 bias 漂移、相邻共享样本、协方差导数
+和无支持负例通过。一个 episode 同时映射两个相邻因子后，真实 H/z 的历史
+正交消元与独立 QR 最小化成本相等。原 batch 响应 dp/f=.00113125、
+dv/f=.0475；下一因子 .00011875、.0025，不使用整 interval bias J 比例。
+实际 FD 还检出共享样本 cross covariance 范数约 4.335038e-9；生产独立
+PIM/history 噪声合同未悄悄改动。剔除后从 raw history 枚举 latent carry。
+
+**B CONDITIONAL / 不可检测情形保留。** 仅四个定向窗口，没有 seeds 或
+大矩阵。静止 epoch12、accel-x=20、持续 .05/.25/.5 s 的 lambda 为
+2.95938/77.1511/174.6448，冻结独立 Gaussian p_md 为
+.99999656/.579234/.000236743。500 ms 的 unit step .348918，乘20后
+仍超过 .25，不能把功效通过叫恢复通过。静止 gyro-z 的 lambda 约1e-26，
+缺少 yaw 独立信息。共享 raw 噪声时普通 nc-chi² 前提失效；新隔离
+quadraticPower 推导/验证 generalized quadratic 的均值、方差与 Cantelli
+漏检界，两个真实因子窗口得到 miss 下界约 .98244。没有降门限、冻结速度
+或扩大 step；硬件 p_md 保持 UNQUALIFIED。
+
+**C CONDITIONAL 实际闭环。** 新合同 simulation-only/raw-range-episode/v1：
+350 ms 内完整 categorical law，nominal 或一个 epoch/anchor UWB +2.25m，
+或一个 accel-x raw batch +20m/s²；原1e-4/1e-5作为声明生成参数，nominal
+质量 .99433，不声称硬件先验。物理条件为 stationary、零 lever arm、健康
+range 误差≤1e-12m、每 epoch 至多一坏 range。IMU 正例另有明确的独立
+仿真 odometer（优化 sigma .02m/s，速度仍为变量）。GT只生成/评价输入。
+所有模式 raw map 行数及独立观测行 lineage 均检查，未喂 GT 故障标签。
+
+新增独立 range 可行集 union/共同参考三角界，拒绝不一致子集，不将 LS
+残差无限放大成半径；源码/时间/模型/完整 PL 字段重算匹配，KEEP 和成功
+IMU 路径也在实际 FdeManager 前验证，逻辑 proof ID 仅作索引。共同事件
+只用于隔离仿真选择器，保留原 strict singleton 风险 FAIL，不改变生产函数。
+健康/UWB/IMU 各7次 selected、风险闭合、实际一次 backend update/commit；
+UWB及IMU在epoch3自动剔除，随后4次selected commit。IMU为覆盖时间歧义
+保守移除2001和3001，独立generic bridge加完整当前位置条件PL，非
+BRIDGE_ONLY。非线性commit后再绑定实际mean。全精度KEEP/报警账本保存：
+nominal3e-5、p_nm1e-7、hypotheses9.9e-6，已知miss项保留，selection-extra
+由选择器算，合计原4e-5；escape零来自独立range保证的声明条件。
+该精度与数学合同是研究场景，不能称原joint-order2或硬件已可用。
+formal_eligible/publication_protected始终false；故障处理超过40/50ms，
+过时有限值不算及时保护，生产未恢复latency仍null/RIGHT_CENSORED。
+
+**D UNQUALIFIED / fail-closed。** PriorEvidence只读原型明确事件谓词、
+onset、duration、每声明horizon的时间单位、互斥categorical联合概率与有效
+范围；过期、错模型、重复/非法质量、越域onset、deployment查询均拒绝。
+不凭calibration字符串证明概率，不调小原先验，不推断独立乘积。旧依据
+审计结果直接复用。生产原合同修改与真实odometer/noise证据仍需另行批准。
+
+**E VERIFIED 限定成本收益；不是保护延迟。** 先冻结新正确 raw 支持模型，
+normal/joint2（98模式，98/2450假设）逐数值字段对照一致，之后仅四进程
+各35次，共140连续attempt。新增默认关闭的无raw支持精确零分支仍执行一次
+实际重积分/噪声/错误校验；敏感/非空支持回到四次FD。216/294配对无支持，
+integrations1176→528。包含对象/索引、seal、arena、最终验证与销毁；复用
+原Evidence与exhaustive Flat，不启用mode cache/frozen memo。总中位数
+normal49.20→35.58ms（27.68%），joint2 173.68→161.46ms（7.04%）。
+收益在研究Evidence输入构造，Evidence/Flat自身无可宣称收益。两侧Gaussian
+Flat全部保留hypothesis62不可监测拒绝；不以失败计时宣称可用或完成部署。
+normal的40/50ms逐侧耗时判定有35/10次差异，strict时间比较FAIL单独保留，
+固定快照数值比较PASS，旧production strict比较未改/未重跑。所有attempt、
+失败和最慢值保留，35样本不宣称P99。此研究快照不是旧joint-order2验收。
+
+验证：184个实际support/history/noise检查、23个range/prior/consumer正负例、
+11个PriorEvidence检查通过；最后一次核心边界回归6项通过，复用前102项
+结果，未改公共数值层而扩大回归。全部运行命令、数值生产/校验/消费表、
+假设及生产建议见 research/README.md；单一原JSON追加research_continuation，
+报告生成器保留该字段。research/report_results.py实际校验21次selected
+commit、两个排除及其4次后续commit、140attempt与数值对照。新增结果文本
+约0.5MB，未归档新snapshot/binary备份；旧失败与用户未提交requirements保留。
+
+停止边界有具体证据：原UWB epoch7 4.69e-5超预算不变；原50ms IMU缺独立
+信息/被velocity吸收不变；新正例依赖明确的额外sensor/有界range/事件合同，
+不能未经批准进入生产受保护路径。只读证据接口、原始支持/lineage与拒绝
+诊断可建议常规review；raw episode/joint covariance、odometer、range PL和
+共同参考选择器的生产采用仍需合同批准与传感器证据，不自动切换。

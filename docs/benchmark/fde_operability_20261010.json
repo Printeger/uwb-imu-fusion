@@ -4832,5 +4832,627 @@
       "frozen_snapshots": 1
     },
     "campaigns_run": 0
+  },
+  "research_continuation": {
+    "status": "PARTIAL_BLOCKED",
+    "research_status": "CONDITIONAL; isolated A-D prototypes and scoped E comparison executed",
+    "production_contract_changed": false,
+    "production_prior_qualification": "UNQUALIFIED",
+    "formal_eligible": false,
+    "publication_protected": false,
+    "parent_head": "d9e575aa3a6d659f66303fd27eeb7d3bdff1e6b6",
+    "production_numerical_reference": "a1ef121; later metadata/exception fixes retained",
+    "research_reference": "exact raw-sample/adjacent-episode model; not the old joint-order2 profile",
+    "config_sha256": "7feddddb68dc3872d19435c21538bbf8ab61c5316fc57dfcc23d056caf5dceee",
+    "source_sha256": {
+      "research/common_reference_selection.hpp": "e2cd4721211fbaaeb44c164705282ffdf69f6bfbbf104577ac87f6a107405bda",
+      "research/contract_checks.cpp": "1230cc83927d8030db01ef7a6613bc2311c1091182e08c65dac409ae11cd0229",
+      "research/cost_experiment.cpp": "5da7f33abe26246f5ecaaedaa06429693e4b6adec515470a609da9473d195ae8",
+      "research/power_experiment.cpp": "2a662209e10b101d1c9950cc582bc14acad851b0459049781d7d7703d29ce54a",
+      "research/prior_evidence.hpp": "548daf81a01b54e78d1d5b412fe42a45c8597c2fb2f07a38410d460b65d56f47",
+      "research/prior_experiment.cpp": "e491ef00f268cda5e38638e475e0587e8770d13457c9d6531d34bd84ed14035d",
+      "research/quadratic_power.hpp": "cd50fe2517ac7ce28673d53550430c75ba31f42c811e6c20e4d6702ca17e9109",
+      "research/range_position_bound.hpp": "665b6c07f564c83e1333adc25576cfbece829a95a786a6af82ce407568ffb798",
+      "research/raw_imu_episode.cpp": "dd2a741c12f783914d2f847d751ddb6b4665ba259304d60ba0eeeb97ce0876da",
+      "research/raw_imu_episode.hpp": "cd73237e2ebacdf5973b4dd87ae69e0a85ac2b00b33ec7327c37f50e28309298",
+      "research/recovery_experiment.cpp": "0168ebab5345f287ffd7174d6a08c78e64d9f8239802e51d6957499ac2a1f25d",
+      "research/scenario_material.hpp": "0ec69cd5f80d976a1a6544c3270a55828b90d093f7682607ba7160545cbc1aab",
+      "research/support_experiment.cpp": "3341d7eef3167241f98b925319ee4982771a85fb69db00ce864b28803cb9b9b1"
+    },
+    "assumptions": {
+      "contract": "simulation-only/raw-range-episode/v1",
+      "horizon_seconds": 0.35,
+      "event_partition": "nominal or one (epoch,anchor) UWB event or one accel-x raw batch; categorical",
+      "uwb_atom_probability": 0.0001,
+      "imu_atom_probability": 1e-05,
+      "nominal_mass": 0.99433,
+      "hardware_probability_evidence": null,
+      "raw_period_seconds": 0.005,
+      "episode_seconds": 0.05,
+      "healthy_range_error_bound_m": 1e-12,
+      "lever_arm_m": [
+        0,
+        0,
+        0
+      ],
+      "motion": "declared stationary generator",
+      "imu_positive_additional_sensor": "independent simulated velocity observation, weight sigma .02 m/s",
+      "joint_probability": "categorical intersection, no independence product and no persistent-source merging",
+      "scope_limit": "seven epochs; no evidence eligibility past horizon; no hardware qualification"
+    },
+    "verification": {
+      "support_checks": 184,
+      "range_prior_consumer_checks": 23,
+      "prior_checks": 11,
+      "production_boundary_gtests": 6,
+      "prior_core_suite": "previous 102 PASS reused; public numerical layer unchanged"
+    },
+    "flows": {
+      "normal": {
+        "status": "CONDITIONAL",
+        "selected_commits": 7,
+        "fault_epoch": null,
+        "subsequent_selected_commits": null,
+        "fault_row": {
+          "epoch": 3.0,
+          "alarm": 0.0,
+          "statistic": 1.6623205944302308e-38,
+          "threshold": 72.22885382014431,
+          "hypotheses": 42.0,
+          "actions": 1.0,
+          "numerical_candidates": 1.0,
+          "post_candidates": 1.0,
+          "pl_candidates": 1.0,
+          "risk_closes": 1.0,
+          "selected": 1.0,
+          "exclusion": 0.0,
+          "bridge": 0.0,
+          "commit": 1.0,
+          "backend_updates": 1.0,
+          "conditional_available": 1.0,
+          "formal_eligible": 0.0,
+          "publication_protected": 0.0,
+          "position_error": 1.2229494336404604e-36,
+          "hpl": 1.52396290263497e-11,
+          "vpl": 1.077741038850329e-11,
+          "core_ms": 17.98915,
+          "within_40ms": 1.0,
+          "within_50ms": 1.0,
+          "strict_status": 1.0,
+          "strict_risk_closes": 1.0,
+          "strict_reason": "",
+          "reason": ""
+        },
+        "first_fault_processing_ms": null,
+        "protected_recovery_latency_ms": null,
+        "protected_latency_status": "RIGHT_CENSORED",
+        "source": "results/fde_research_20261010/accepted_normal.csv",
+        "sha256": "e822f58a03b0819b1c6a464f647ca6d211fcea6b85053be4d5cd45e022504219"
+      },
+      "uwb": {
+        "status": "CONDITIONAL",
+        "selected_commits": 7,
+        "fault_epoch": 3,
+        "subsequent_selected_commits": 4,
+        "fault_row": {
+          "epoch": 3.0,
+          "alarm": 1.0,
+          "statistic": 435.4703186273039,
+          "threshold": 72.22885382014431,
+          "hypotheses": 42.0,
+          "actions": 3.0,
+          "numerical_candidates": 2.0,
+          "post_candidates": 2.0,
+          "pl_candidates": 2.0,
+          "risk_closes": 1.0,
+          "selected": 1.0,
+          "exclusion": 1.0,
+          "bridge": 0.0,
+          "commit": 1.0,
+          "backend_updates": 1.0,
+          "conditional_available": 1.0,
+          "formal_eligible": 0.0,
+          "publication_protected": 0.0,
+          "position_error": 3.709411778173264e-36,
+          "hpl": 1.52396290263497e-11,
+          "vpl": 1.077741038850329e-11,
+          "core_ms": 56.32886,
+          "within_40ms": 0.0,
+          "within_50ms": 0.0,
+          "strict_status": 13.0,
+          "strict_risk_closes": 0.0,
+          "strict_reason": "complete risk bound exceeds the unchanged total budget",
+          "reason": "CONDITIONAL simulation-only/common-range-reference/v1"
+        },
+        "first_fault_processing_ms": 56.32886,
+        "protected_recovery_latency_ms": null,
+        "protected_latency_status": "RIGHT_CENSORED",
+        "source": "results/fde_research_20261010/accepted_uwb_final.csv",
+        "sha256": "7b6bc6c4f023f337adfd827b9d1c0c99a77637e1c0ef9a92a143372b6b81cb7f"
+      },
+      "imu": {
+        "status": "CONDITIONAL",
+        "selected_commits": 7,
+        "fault_epoch": 3,
+        "subsequent_selected_commits": 4,
+        "fault_row": {
+          "epoch": 3.0,
+          "alarm": 1.0,
+          "statistic": 344.5269975233699,
+          "threshold": 86.81167453426313,
+          "hypotheses": 42.0,
+          "actions": 4.0,
+          "numerical_candidates": 3.0,
+          "post_candidates": 3.0,
+          "pl_candidates": 3.0,
+          "risk_closes": 1.0,
+          "selected": 1.0,
+          "exclusion": 1.0,
+          "bridge": 1.0,
+          "commit": 1.0,
+          "backend_updates": 1.0,
+          "conditional_available": 1.0,
+          "formal_eligible": 0.0,
+          "publication_protected": 0.0,
+          "position_error": 6.072853358663221e-38,
+          "hpl": 1.52396290263497e-11,
+          "vpl": 1.077741038850329e-11,
+          "core_ms": 87.963778,
+          "within_40ms": 0.0,
+          "within_50ms": 0.0,
+          "strict_status": 6.0,
+          "strict_risk_closes": 1.0,
+          "strict_reason": "",
+          "reason": ""
+        },
+        "first_fault_processing_ms": 87.963778,
+        "protected_recovery_latency_ms": null,
+        "protected_latency_status": "RIGHT_CENSORED",
+        "source": "results/fde_research_20261010/accepted_imu.csv",
+        "sha256": "f36c761ccbe57be837a70a99c9a68fbe0b7dcdefd251b7f727eb935d988274ce"
+      }
+    },
+    "performance": {
+      "normal": {
+        "reference": {
+          "attempts": 35,
+          "median_ms": {
+            "model_ms": 25.737503,
+            "evidence_ms": 6.652695,
+            "flat_ms": 16.315976,
+            "total_ms": 49.202668
+          },
+          "maximum_total_ms": 54.530959,
+          "slowest_attempt": {
+            "attempt": "1",
+            "modes": "98",
+            "hypotheses": "98",
+            "response_calls": "294",
+            "empty_support": "216",
+            "integrations": "1176",
+            "model_ms": "29.869274999999998",
+            "evidence_ms": "7.1583439999999996",
+            "flat_ms": "17.253302000000001",
+            "total_ms": "54.530959000000003",
+            "mode_fingerprint": "16657027688458468558",
+            "profile_sum": "inf",
+            "hpl": "inf",
+            "vpl": "inf",
+            "pl_status": "2",
+            "formal_eligible": "0"
+          },
+          "source": "results/fde_research_20261010/cost_normal_reference_35.csv",
+          "sha256": "43288aeb1e6270d599b6c1810f47f376cdaaaa765738f469b4dcc849ab100f77"
+        },
+        "optimized": {
+          "attempts": 35,
+          "median_ms": {
+            "model_ms": 12.319142,
+            "evidence_ms": 6.433153,
+            "flat_ms": 16.522565,
+            "total_ms": 35.583219
+          },
+          "maximum_total_ms": 39.61718,
+          "slowest_attempt": {
+            "attempt": "1",
+            "modes": "98",
+            "hypotheses": "98",
+            "response_calls": "294",
+            "empty_support": "216",
+            "integrations": "528",
+            "model_ms": "14.454744",
+            "evidence_ms": "7.4030269999999998",
+            "flat_ms": "17.619164000000001",
+            "total_ms": "39.617179999999998",
+            "mode_fingerprint": "16657027688458468558",
+            "profile_sum": "inf",
+            "hpl": "inf",
+            "vpl": "inf",
+            "pl_status": "2",
+            "formal_eligible": "0"
+          },
+          "source": "results/fde_research_20261010/cost_normal_optimized_35.csv",
+          "sha256": "93fcf4b54d601f88abbe9689c41d0b5678c134069000f34e05e2ce664be03391"
+        },
+        "median_total_gain_fraction": 0.27680305872844135,
+        "deadline_branch_flips": {
+          "40": 35,
+          "50": 10
+        },
+        "strict_elapsed_deadline_comparison": "FAIL",
+        "fixed_snapshot_numerical_comparison": "PASS",
+        "original_production_strict_comparator": "NOT_RERUN; prior strict FAIL preserved",
+        "protected_latency_ms": null,
+        "protected_latency_status": "RIGHT_CENSORED",
+        "terminal": "original exhaustive Flat PL rejects unmonitorable hypothesis 62; every attempt retained",
+        "scope": "research construction+Evidence+exhaustive Flat+seal/index/validation/destruction; no claim of protected availability or isolated Flat gain"
+      },
+      "joint2": {
+        "reference": {
+          "attempts": 35,
+          "median_ms": {
+            "model_ms": 26.178888,
+            "evidence_ms": 37.227671,
+            "flat_ms": 105.730104,
+            "total_ms": 173.67721
+          },
+          "maximum_total_ms": 203.879347,
+          "slowest_attempt": {
+            "attempt": "34",
+            "modes": "98",
+            "hypotheses": "2450",
+            "response_calls": "294",
+            "empty_support": "216",
+            "integrations": "1176",
+            "model_ms": "36.944580999999999",
+            "evidence_ms": "37.281885000000003",
+            "flat_ms": "124.22685799999999",
+            "total_ms": "203.879347",
+            "mode_fingerprint": "16657027688458468558",
+            "profile_sum": "inf",
+            "hpl": "inf",
+            "vpl": "inf",
+            "pl_status": "2",
+            "formal_eligible": "0"
+          },
+          "source": "results/fde_research_20261010/cost_joint2_reference_35.csv",
+          "sha256": "ad4e35063d8cfe582958c4768c58b277d0c24782ccbee9c22c36c10b25ecb8a5"
+        },
+        "optimized": {
+          "attempts": 35,
+          "median_ms": {
+            "model_ms": 13.005041,
+            "evidence_ms": 36.724955,
+            "flat_ms": 106.485037,
+            "total_ms": 161.455809
+          },
+          "maximum_total_ms": 193.70123,
+          "slowest_attempt": {
+            "attempt": "12",
+            "modes": "98",
+            "hypotheses": "2450",
+            "response_calls": "294",
+            "empty_support": "216",
+            "integrations": "528",
+            "model_ms": "18.273430999999999",
+            "evidence_ms": "42.333897",
+            "flat_ms": "125.345873",
+            "total_ms": "193.70123000000001",
+            "mode_fingerprint": "16657027688458468558",
+            "profile_sum": "inf",
+            "hpl": "inf",
+            "vpl": "inf",
+            "pl_status": "2",
+            "formal_eligible": "0"
+          },
+          "source": "results/fde_research_20261010/cost_joint2_optimized_35.csv",
+          "sha256": "fffb1a48bd272b8e85009c8151938cc0afd6cd9969e1359fd26c3d222c82e6a1"
+        },
+        "median_total_gain_fraction": 0.07036847839736726,
+        "deadline_branch_flips": {
+          "40": 0,
+          "50": 0
+        },
+        "strict_elapsed_deadline_comparison": "PASS",
+        "fixed_snapshot_numerical_comparison": "PASS",
+        "original_production_strict_comparator": "NOT_RERUN; prior strict FAIL preserved",
+        "protected_latency_ms": null,
+        "protected_latency_status": "RIGHT_CENSORED",
+        "terminal": "original exhaustive Flat PL rejects unmonitorable hypothesis 62; every attempt retained",
+        "scope": "research construction+Evidence+exhaustive Flat+seal/index/validation/destruction; no claim of protected availability or isolated Flat gain"
+      }
+    },
+    "risk_ledgers": {
+      "normal": {
+        "nominal": {
+          "value": 3.0000000000000004e-05,
+          "status": "VALIDATED",
+          "source": "config risk.nominal_axis_tail x 3 protected axes"
+        },
+        "p_nm": {
+          "value": 1e-07,
+          "status": "VALIDATED",
+          "source": "config risk.p_nm"
+        },
+        "hypotheses": {
+          "value": 9.9e-06,
+          "status": "VALIDATED",
+          "source": "per-hypothesis allocation / prior bound (allocation policy: prior_weighted_outcome_conditioned)"
+        },
+        "hypotheses_miss_channel": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "section 5.9 union bound: sum of pi_h * max(0, beta_h - alpha_h)"
+        },
+        "bridge": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "simulation-only/deterministic-range-union-v1|bridge;domain=2"
+        },
+        "history": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "simulation-only/deterministic-range-union-v1|history;domain=2"
+        },
+        "model": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "simulation-only/deterministic-range-union-v1|model;domain=2"
+        },
+        "omitted": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "simulation-only/deterministic-range-union-v1|omitted;domain=2"
+        },
+        "envelope": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "simulation-only/deterministic-range-union-v1|envelope;domain=2"
+        },
+        "selection": {
+          "value": 8.470329472543003e-22,
+          "status": "VALIDATED",
+          "source": "numeric FDE guarantee groups over every eligible action"
+        }
+      },
+      "uwb": {
+        "nominal": {
+          "value": 3.0000000000000004e-05,
+          "status": "VALIDATED",
+          "source": "config risk.nominal_axis_tail x 3 protected axes"
+        },
+        "p_nm": {
+          "value": 1e-07,
+          "status": "VALIDATED",
+          "source": "config risk.p_nm"
+        },
+        "hypotheses": {
+          "value": 9.9e-06,
+          "status": "VALIDATED",
+          "source": "per-hypothesis allocation / prior bound (allocation policy: prior_weighted_outcome_conditioned)"
+        },
+        "hypotheses_miss_channel": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "section 5.9 union bound: sum of pi_h * max(0, beta_h - alpha_h)"
+        },
+        "bridge": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "simulation-only/deterministic-range-union-v1|bridge;domain=2"
+        },
+        "history": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "simulation-only/deterministic-range-union-v1|history;domain=2"
+        },
+        "model": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "simulation-only/deterministic-range-union-v1|model;domain=2"
+        },
+        "omitted": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "simulation-only/deterministic-range-union-v1|omitted;domain=2"
+        },
+        "envelope": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "simulation-only/deterministic-range-union-v1|envelope;domain=2"
+        },
+        "selection": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "numeric FDE guarantee groups over every eligible action"
+        }
+      },
+      "imu": {
+        "nominal": {
+          "value": 3.0000000000000004e-05,
+          "status": "VALIDATED",
+          "source": "config risk.nominal_axis_tail x 3 protected axes"
+        },
+        "p_nm": {
+          "value": 1e-07,
+          "status": "VALIDATED",
+          "source": "config risk.p_nm"
+        },
+        "hypotheses": {
+          "value": 9.9e-06,
+          "status": "VALIDATED",
+          "source": "per-hypothesis allocation / prior bound (allocation policy: prior_weighted_outcome_conditioned)"
+        },
+        "hypotheses_miss_channel": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "section 5.9 union bound: sum of pi_h * max(0, beta_h - alpha_h)"
+        },
+        "bridge": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "simulation-only/deterministic-range-union-v1|bridge;domain=2"
+        },
+        "history": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "simulation-only/deterministic-range-union-v1|history;domain=2"
+        },
+        "model": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "simulation-only/deterministic-range-union-v1|model;domain=2"
+        },
+        "omitted": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "simulation-only/deterministic-range-union-v1|omitted;domain=2"
+        },
+        "envelope": {
+          "value": 0.0,
+          "status": "VALIDATED",
+          "source": "simulation-only/deterministic-range-union-v1|envelope;domain=2"
+        },
+        "selection": {
+          "value": 8.470329472543003e-22,
+          "status": "VALIDATED",
+          "source": "numeric FDE guarantee groups over every eligible action"
+        }
+      }
+    },
+    "semantic_audit": {
+      "normal": {
+        "literal_numeric_fields_equal": true,
+        "bytes_compared": 63188,
+        "sha256": "8fc045b08b08b08c04e8a38a2b947f8bba67e4de3a551011ba56e35a7f26e2d4"
+      },
+      "joint2": {
+        "literal_numeric_fields_equal": true,
+        "bytes_compared": 996721,
+        "sha256": "392fba3ee1e95d73f6c2507fc73afe08085ae2451f9a06ce65857d92b9f94af9"
+      }
+    },
+    "power": {
+      "status": "CONDITIONAL frozen linear Gaussian; not hardware p_md",
+      "four_windows": "stationary epoch3/12, rotating12, flat-geometry12",
+      "source": "results/fde_research_20261010/power.csv",
+      "stationary_epoch12": [
+        {
+          "case": "stationary",
+          "epoch": 12.0,
+          "axis": 0.0,
+          "duration_s": 0.05,
+          "raw_blocks": 2.0,
+          "parity_energy": 0.007398456405636063,
+          "lambda_at_amplitude": 2.959382562254425,
+          "amplitude": 20.0,
+          "p_md_conditional": 0.9999965593332439,
+          "threshold": 176.77757234093806,
+          "dof": 96.0,
+          "unit_step": 0.06277771030551967,
+          "unit_protected_shift": 0.0001080565582797309,
+          "orthogonality": 3.6902184710128075e-17,
+          "whitening_derivative_difference": 5.755520293715423e-16
+        },
+        {
+          "case": "stationary",
+          "epoch": 12.0,
+          "axis": 0.0,
+          "duration_s": 0.25,
+          "raw_blocks": 6.0,
+          "parity_energy": 0.19287777417779556,
+          "lambda_at_amplitude": 77.15110967111823,
+          "amplitude": 20.0,
+          "p_md_conditional": 0.5792341582231684,
+          "threshold": 176.77757234093806,
+          "dof": 96.0,
+          "unit_step": 0.23668972197131324,
+          "unit_protected_shift": 0.0033487132593035896,
+          "orthogonality": 1.37839296866425e-16,
+          "whitening_derivative_difference": 9.245149079996205e-16
+        },
+        {
+          "case": "stationary",
+          "epoch": 12.0,
+          "axis": 0.0,
+          "duration_s": 0.5,
+          "raw_blocks": 10.0,
+          "parity_energy": 0.43661206407602454,
+          "lambda_at_amplitude": 174.6448256304098,
+          "amplitude": 20.0,
+          "p_md_conditional": 0.00023674322993177453,
+          "threshold": 176.77757234093806,
+          "dof": 96.0,
+          "unit_step": 0.34891767936292784,
+          "unit_protected_shift": 0.01263407977697238,
+          "orthogonality": 2.004858113696532e-16,
+          "whitening_derivative_difference": 1.0543009377796707e-15
+        },
+        {
+          "case": "stationary",
+          "epoch": 12.0,
+          "axis": 5.0,
+          "duration_s": 0.05,
+          "raw_blocks": 2.0,
+          "parity_energy": 1.0342980268633867e-27,
+          "lambda_at_amplitude": 6.619507371925676e-28,
+          "amplitude": 0.8,
+          "p_md_conditional": 0.999999,
+          "threshold": 176.77757234093806,
+          "dof": 96.0,
+          "unit_step": 0.15734118977559597,
+          "unit_protected_shift": 8.927257844500663e-17,
+          "orthogonality": 3.1058898275098924e-18,
+          "whitening_derivative_difference": 3.552713678800501e-15
+        },
+        {
+          "case": "stationary",
+          "epoch": 12.0,
+          "axis": 5.0,
+          "duration_s": 0.25,
+          "raw_blocks": 6.0,
+          "parity_energy": 1.9140111548666396e-26,
+          "lambda_at_amplitude": 1.2249671391146493e-26,
+          "amplitude": 0.8,
+          "p_md_conditional": 0.999999,
+          "threshold": 176.77757234093806,
+          "dof": 96.0,
+          "unit_step": 0.668042850422037,
+          "unit_protected_shift": 2.8006659734845105e-16,
+          "orthogonality": 4.9946840349205e-18,
+          "whitening_derivative_difference": 7.105427357601002e-15
+        },
+        {
+          "case": "stationary",
+          "epoch": 12.0,
+          "axis": 5.0,
+          "duration_s": 0.5,
+          "raw_blocks": 10.0,
+          "parity_energy": 3.995841969265568e-26,
+          "lambda_at_amplitude": 2.557338860329964e-26,
+          "amplitude": 0.8,
+          "p_md_conditional": 0.999999,
+          "threshold": 176.77757234093806,
+          "dof": 96.0,
+          "unit_step": 0.9740700693481964,
+          "unit_protected_shift": 4.3390297612459105e-16,
+          "orthogonality": 4.697188498284914e-18,
+          "whitening_derivative_difference": 8.702335715267317e-15
+        }
+      ],
+      "shared_noise": "actual Combined FD cross covariance norm ~4.335038e-9; generalized quadratic law checked; Cantelli lower miss bound ~.98244 in the two-factor fixture"
+    },
+    "stopping_conditions": [
+      "Old UWB epoch7 risk 4.69e-5 > 4e-5 remains; accepted event counterexample not repeated.",
+      "Original 50ms IMU fault lacks parity power and is absorbed mainly by velocity; no lowered detector or expanded step gate.",
+      "Stationary gyro-z has no independent yaw observation; raw shared noise prevents inferring ordinary nc-chi-square calibration.",
+      "Protected adoption of raw episode/joint covariance/odometer/range-set/shared-selector contract requires approved production scope and external sensor evidence.",
+      "Only research input-construction optimization has measured net gain; Evidence/Flat algorithms and old disabled caches unchanged."
+    ],
+    "production_candidates": [
+      "Readonly default fail-closed PriorEvidence interface, subject to normal review.",
+      "Raw support/adjacent sample and malformed proof diagnostics; no automatic scope switch.",
+      "Actual odometer and raw episode/noise/common-reference PL adoption need explicit contract approval and hardware evidence."
+    ]
   }
 }

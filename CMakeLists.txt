@@ -225,6 +225,24 @@ target_link_libraries(gate_d_development ${PROJECT_NAME} ${Boost_LIBRARIES} yaml
 add_executable(candidate_replay apps/candidate_replay.cpp)
 target_link_libraries(candidate_replay ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)
 
+# Research-only targets: excluded from ordinary builds and never linked into
+# the production DSO/node. No installation or protected publication entry.
+add_library(fde_research STATIC EXCLUDE_FROM_ALL research/raw_imu_episode.cpp)
+target_include_directories(fde_research PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/research)
+target_link_libraries(fde_research ${PROJECT_NAME} gtsam yaml-cpp)
+add_executable(fde_research_support EXCLUDE_FROM_ALL research/support_experiment.cpp)
+target_link_libraries(fde_research_support fde_research)
+add_executable(fde_research_prior EXCLUDE_FROM_ALL research/prior_experiment.cpp)
+target_link_libraries(fde_research_prior fde_research)
+add_executable(fde_research_power EXCLUDE_FROM_ALL research/power_experiment.cpp)
+target_link_libraries(fde_research_power fde_research)
+add_executable(fde_research_recovery EXCLUDE_FROM_ALL research/recovery_experiment.cpp)
+target_link_libraries(fde_research_recovery fde_research)
+add_executable(fde_research_contract_checks EXCLUDE_FROM_ALL research/contract_checks.cpp)
+target_link_libraries(fde_research_contract_checks fde_research)
+add_executable(fde_research_cost EXCLUDE_FROM_ALL research/cost_experiment.cpp)
+target_link_libraries(fde_research_cost fde_research)
+
 add_executable(integrity_round2_scenario apps/integrity_round2_scenario.cpp)
 target_link_libraries(integrity_round2_scenario
   ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-cpp)

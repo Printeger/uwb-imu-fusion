@@ -235,7 +235,7 @@ def main():
     # report. Regenerating operability evidence must not erase its provenance.
     if args.output.exists():
         previous=json.loads(args.output.read_text())
-        for section in ('event_contract_research', 'prior_imu_followup'):
+        for section in ('event_contract_research', 'prior_imu_followup', 'research_continuation'):
             if section in previous:
                 data[section]=previous[section]
     args.output.write_text(json.dumps(data,indent=2,allow_nan=False)+'\n')

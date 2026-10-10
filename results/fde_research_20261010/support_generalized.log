@@ -1,0 +1,5 @@
+motion=0 generalized_mean=16.0038 generalized_variance=32.0151 Cantelli_md_interval=[0.982439,1]
+motion=0 shared_sample_cross_covariance_norm=4.3350380119090915e-09
+motion=1 generalized_mean=16.003765350143098 generalized_variance=32.015061400629143 Cantelli_md_interval=[0.98243873972398665,1]
+motion=1 shared_sample_cross_covariance_norm=4.3350380124726041e-09
+VERIFIED research support checks=184; production publication_protected=false

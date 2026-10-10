@@ -1,0 +1,12 @@
+risk epoch=3 total=4.0000000000000003e-05 budget=4.0000000000000003e-05
+nominal=3.0000000000000004e-05 status=VALIDATED source=config risk.nominal_axis_tail x 3 protected axes
+p_nm=9.9999999999999995e-08 status=VALIDATED source=config risk.p_nm
+hypotheses=9.9000000000000001e-06 status=VALIDATED source=per-hypothesis allocation / prior bound (allocation policy: prior_weighted_outcome_conditioned)
+hypotheses_miss_channel=0 status=VALIDATED source=section 5.9 union bound: sum of pi_h * max(0, beta_h - alpha_h)
+bridge=0 status=VALIDATED source=simulation-only/deterministic-range-union-v1|bridge;domain=2
+history=0 status=VALIDATED source=simulation-only/deterministic-range-union-v1|history;domain=2
+model=0 status=VALIDATED source=simulation-only/deterministic-range-union-v1|model;domain=2
+omitted=0 status=VALIDATED source=simulation-only/deterministic-range-union-v1|omitted;domain=2
+envelope=0 status=VALIDATED source=simulation-only/deterministic-range-union-v1|envelope;domain=2
+selection=8.4703294725430034e-22 status=VALIDATED source=numeric FDE guarantee groups over every eligible action
+CONDITIONAL scenario=normal independent_velocity=0 exclusions=0 subsequent_selected_commits=0 formal_eligible=false publication_protected=false

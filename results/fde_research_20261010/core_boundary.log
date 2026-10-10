@@ -1,0 +1,33 @@
+Note: Google Test filter = FdeOperabilityBinding.*:P103ProofArena.NonemptyInvalidFinalBundleFailsClosed:P103ProofArena.ScopedPipelineExceptionClosesArenaAndDiscardsAttempt:FdeOperabilityStatus.*:FdeOperabilityImuReference.*:FdeOperabilityBatchProofs.*
+[==========] Running 6 tests from 5 test suites.
+[----------] Global test environment set-up.
+[----------] 1 test from FdeOperabilityBinding
+[ RUN      ] FdeOperabilityBinding.ExternalResultScalarsRejectedAtRealConsumers
+[       OK ] FdeOperabilityBinding.ExternalResultScalarsRejectedAtRealConsumers (2 ms)
+[----------] 1 test from FdeOperabilityBinding (2 ms total)
+
+[----------] 2 tests from P103ProofArena
+[ RUN      ] P103ProofArena.NonemptyInvalidFinalBundleFailsClosed
+[       OK ] P103ProofArena.NonemptyInvalidFinalBundleFailsClosed (0 ms)
+[ RUN      ] P103ProofArena.ScopedPipelineExceptionClosesArenaAndDiscardsAttempt
+[       OK ] P103ProofArena.ScopedPipelineExceptionClosesArenaAndDiscardsAttempt (11 ms)
+[----------] 2 tests from P103ProofArena (11 ms total)
+
+[----------] 1 test from FdeOperabilityStatus
+[ RUN      ] FdeOperabilityStatus.RefusedFinalResultIsNotAnUnboundednessProof
+[       OK ] FdeOperabilityStatus.RefusedFinalResultIsNotAnUnboundednessProof (11 ms)
+[----------] 1 test from FdeOperabilityStatus (11 ms total)
+
+[----------] 1 test from FdeOperabilityImuReference
+[ RUN      ] FdeOperabilityImuReference.SensitivityUsesActualFrozenFactorPoint
+[       OK ] FdeOperabilityImuReference.SensitivityUsesActualFrozenFactorPoint (6 ms)
+[----------] 1 test from FdeOperabilityImuReference (7 ms total)
+
+[----------] 1 test from FdeOperabilityBatchProofs
+[ RUN      ] FdeOperabilityBatchProofs.ContinuousOwnerReuseRejectsImportsTamperAndClosedArena
+[       OK ] FdeOperabilityBatchProofs.ContinuousOwnerReuseRejectsImportsTamperAndClosedArena (0 ms)
+[----------] 1 test from FdeOperabilityBatchProofs (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 5 test suites ran. (31 ms total)
+[  PASSED  ] 6 tests.
