@@ -779,4 +779,6 @@ noise/prior/anchor/lever/frame/process validation and hardware timing evidence.
 None grants production probability, risk/AL, formal or protected publication.
 Owned cache and this run's bytecode are cleaned after the summary is checked;
 user files and the old four S1–S4 figures remain untouched. No new figure is
-necessary for these tables. Final R is saved by the next local commit.
+necessary for these tables. R validation/measurement savepoint is `556d214`; final receipt only records
+that owned temporary artifacts were cleaned. All numerical source remains
+`a53de94`; this final document change needs no repeated test or timing.
