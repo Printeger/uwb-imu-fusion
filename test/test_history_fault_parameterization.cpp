@@ -1157,3 +1157,28 @@ TEST(FdeOperabilityImuSupport, NewSamplesOnlyIsNotTheWholeIntervalFaultTemplate)
   std::printf("[FDE-IMU-SUPPORT] raw_full_dp_over_dv=%.17g raw_new_dp_over_dv=%.17g next_boundary_dv_fraction=%.17g best_scalar_relative_residual=%.17g\n",
       std::abs(a(3)/a(6)),std::abs(b(3)/b(6)),std::abs(c(6)/a(6)),off_template);
 }
+
+TEST(FdeOperabilityImuSupport, FiniteInjectedAccelerationChangesActualFactorResidual) {
+  const auto config=researchConfig();
+  IncrementalUwbImuEstimator estimator(config,Eigen::Vector3d::Zero());
+  NavigationState initial;initial.position_world_m={0,0,1};
+  estimator.initialize(initial,config.realtime.prior_sigmas);
+  const auto tx=matureTransaction(&estimator,config,1);
+  const auto block=estimator.buildPendingFactorBlock(tx,tx.imu_group.id);
+  const auto healthy=reintegrateIntervalOnset(tx,0,0.,0,1);
+  const auto faulted=reintegrateIntervalOnset(tx,0,20.,0,1);
+  const Eigen::VectorXd raw=intervalOnsetFactorError(tx,faulted)-intervalOnsetFactorError(tx,healthy);
+  const Eigen::VectorXd predicted=-20.*intervalOnsetOracleMap(tx,block,0,1e-5,0,1);
+  const Eigen::VectorXd actual=block.whitener*raw;
+  // At this frozen state acceleration enters linearly. This proves the raw
+  // injection is not lost before CombinedImuFactor; it does not claim power.
+  EXPECT_GT(raw.segment<3>(3).norm(),.02);
+  EXPECT_GT(raw.segment<3>(6).norm(),.9);
+  EXPECT_LT((actual-predicted).norm()/actual.norm(),1e-7);
+  EXPECT_DOUBLE_EQ(raw.tail<6>().norm(),0.);
+  const double covariance_change=(faulted.preintMeasCov()-healthy.preintMeasCov()).norm()/healthy.preintMeasCov().norm();
+  EXPECT_TRUE(std::isfinite(covariance_change));
+  std::printf("[FDE-IMU-FINITE] amplitude=20 raw_dp=%.17g raw_dv=%.17g whitened_norm=%.17g linear_relative=%.17g covariance_relative=%.17g\n",
+      raw.segment<3>(3).norm(),raw.segment<3>(6).norm(),actual.norm(),
+      (actual-predicted).norm()/actual.norm(),covariance_change);
+}

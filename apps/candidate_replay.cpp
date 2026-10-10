@@ -10,16 +10,17 @@
 
 using namespace uwb_imu_pl;
 int main(int argc,char** argv) {
-  if(argc<3 || argc>6) { std::cerr<<"usage: candidate_replay SNAPSHOT OUTPUT_CSV [WORKERS=4] [REPEATS=1] [fast|oracle|imu-power]\n"; return 2; }
+  if(argc<3 || argc>6) { std::cerr<<"usage: candidate_replay SNAPSHOT OUTPUT_CSV [WORKERS=4] [REPEATS=1] [fast|oracle|imu-power|imu-absorption]\n"; return 2; }
   try {
     auto replay=readCandidateReplay(argv[1]);
     const int workers=argc>3?std::stoi(argv[3]):4, repeats=argc>4?std::stoi(argv[4]):1;
     const bool oracle=argc>5 && std::string(argv[5])=="oracle";
     const bool imu_power=argc>5 && std::string(argv[5])=="imu-power";
-    if(argc>5 && !oracle && !imu_power && std::string(argv[5])!="fast") throw std::runtime_error("invalid replay mode");
+    const bool imu_absorption=argc>5 && std::string(argv[5])=="imu-absorption";
+    if(argc>5 && !oracle && !imu_power && !imu_absorption && std::string(argv[5])!="fast") throw std::runtime_error("invalid replay mode");
     if((workers!=1 && workers!=4)||repeats<1) throw std::runtime_error("invalid replay arguments");
     std::ofstream out(argv[2]); if(!out) throw std::runtime_error("cannot open replay output");
-    if(imu_power) {
+    if(imu_power || imu_absorption) {
       // Offline sensitivity diagnostic only. Never supplies an action or
       // truth label to selection, and never changes the detector/step gate.
       if(repeats!=1 || workers!=1 || !replay.window.numerics ||
@@ -35,7 +36,11 @@ int main(int argc,char** argv) {
       Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr(w.H);
       qr.setThreshold(replay.config.rank_tolerance);
       if(qr.rank()!=w.H.cols())throw std::runtime_error("imu-power independent QR rank unresolved");
-      out<<std::setprecision(17)<<"attempt,group_id,axis,unit_fault_whitened_norm,unit_fault_parity_norm,lambda_per_amplitude_squared,unit_fault_state_step,unit_fault_protected_shift,observed_statistic,step_gate,dof,spectral_qr_state_relative,spectral_qr_parity_relative\n";
+      out<<std::setprecision(17);
+      if(imu_absorption)
+        out<<"attempt,group_id,constraint,rhs,rank,dof,whitened_norm,parity_energy,step_norm,rotation_rad,translation_m,velocity_mps,accel_bias_mps2,gyro_bias_radps,protected_shift_m,normal_equation_relative,observed_statistic,step_gate\n";
+      else
+        out<<"attempt,group_id,axis,unit_fault_whitened_norm,unit_fault_parity_norm,lambda_per_amplitude_squared,unit_fault_state_step,unit_fault_protected_shift,observed_statistic,step_gate,dof,spectral_qr_state_relative,spectral_qr_parity_relative\n";
       std::size_t count=0;
       for(const auto& block:w.blocks) {
         if(block.kind!=FactorKind::CombinedImu || block.jacobian_raw.rows()!=15 ||
@@ -46,6 +51,51 @@ int main(int argc,char** argv) {
         const auto block_index=static_cast<std::size_t>(&block-w.blocks.data());
         Eigen::MatrixXd response=Eigen::MatrixXd::Zero(w.H.rows(),6);
         response.middleRows(n.block_row_offsets.at(block_index),15)=block.whitener*raw;
+        if(imu_absorption) {
+          // Counterfactual column constraints only: not a new prior, detector,
+          // fault model or production step norm. All quantities use the same H/z.
+          for(int constraint=0;constraint<4;++constraint) {
+            std::vector<int> columns;
+            for(int col=0;col<w.H.cols();++col) {
+              bool retain=true;
+              for(const auto& layout:w.state_layout) {
+                if(layout.dimension!=15)throw std::runtime_error("absorption requires Pose3/velocity/bias layout");
+                const int local=col-layout.column_offset;
+                if(local>=0 && local<15 &&
+                    (((constraint&1) && local>=9) ||
+                     ((constraint&2) && local>=6 && local<9)))retain=false;
+              }
+              if(retain)columns.push_back(col);
+            }
+            Eigen::MatrixXd restricted(w.H.rows(),columns.size());
+            for(std::size_t i=0;i<columns.size();++i)restricted.col(i)=w.H.col(columns[i]);
+            Eigen::ColPivHouseholderQR<Eigen::MatrixXd> constrained_qr(restricted);
+            constrained_qr.setThreshold(replay.config.rank_tolerance);
+            if(constrained_qr.rank()!=restricted.cols())throw std::runtime_error("absorption constrained rank unresolved");
+            for(int rhs_index=-1;rhs_index<6;++rhs_index) {
+              const Eigen::VectorXd rhs=rhs_index<0 ? Eigen::VectorXd(w.z) : Eigen::VectorXd(response.col(rhs_index));
+              const Eigen::VectorXd local_step=constrained_qr.solve(rhs);
+              Eigen::VectorXd step=Eigen::VectorXd::Zero(w.H.cols());
+              for(std::size_t i=0;i<columns.size();++i)step(columns[i])=local_step(i);
+              const Eigen::VectorXd residual=rhs-w.H*step;
+              const double normal=(restricted.transpose()*residual).norm()/std::max(1.,restricted.norm()*rhs.norm());
+              if(!step.allFinite() || !residual.allFinite() || normal>1e-10)throw std::runtime_error("absorption QR verification failed");
+              if(constraint==0 && rhs_index==-1 && std::abs(residual.squaredNorm()-n.statistic)>1e-8*std::max(1.,n.statistic))throw std::runtime_error("absorption observed statistic mismatch");
+              double components[5]={0.,0.,0.,0.,0.};
+              for(const auto& layout:w.state_layout)
+                for(int component=0;component<5;++component)
+                  components[component]+=step.segment(layout.column_offset+3*component,3).squaredNorm();
+              const char* names[]={"free","bias_fixed","velocity_fixed","bias_velocity_fixed"};
+              out<<replay.input_attempt_id<<','<<block.group_id.value()<<','<<names[constraint]<<',';
+              if(rhs_index<0)out<<"observed";else out<<"unit_axis_"<<rhs_index;
+              out<<','<<constrained_qr.rank()<<','<<w.H.rows()-constrained_qr.rank()<<','<<rhs.norm()<<','<<residual.squaredNorm()<<','<<step.norm();
+              for(double component:components)out<<','<<std::sqrt(component);
+              out<<','<<(w.protected_state_map*step).norm()<<','<<normal<<','<<n.statistic<<','<<replay.config.max_linearization_step_norm<<'\n';
+            }
+          }
+          ++count;
+          continue;
+        }
         const auto& v=*n.spectral_vectors;
         const Eigen::MatrixXd state=v*n.spectral_inverse_squared.asDiagonal()*v.transpose()*(w.H.transpose()*response);
         const Eigen::MatrixXd parity=response-w.H*state;

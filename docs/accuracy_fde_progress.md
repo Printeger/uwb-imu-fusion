@@ -1148,3 +1148,130 @@ python3 tools/research_physical_event_contract.py --self-test --snapshot results
 区分primitive events与互斥完备的组合fault modes，并在consolidation时保留
 所合并模式的概率质量。该GNSS文献的独立性前提不适用于本工程，不予继承；
 上面的时序分区、相关性反例、PL/选择边界与具体金额来自本地合同与独立推导。
+
+### 2026-10-10：先验溯源与 IMU 速度吸收的独立开发
+
+用户接受 `4f21648` 的研究及停止结论，不批准更换事件合同。本次没有重跑
+persistent-constant 合并研究、原短流、35-attempt 或核心安全大矩阵。
+旧 prior、预算、p_md、AL、检测门限、history、step gate 和发布逻辑均未改变。
+结论仍为 **PARTIAL_BLOCKED**，没有新的剔除/bridge/后续受保护 commit。
+
+**先验来源与当前实际语义。** `git log -S prior_probability_bound` 将当前
+配置/类型默认值追溯至 `1c547f31981854c03d68f557c7fd5179fd35c417`
+（2026-09-04，research Gates B–I）。UWB `1e-4`、加速度/陀螺各 `1e-5`
+已作为常量出现；提交和当前配置没有硬件型号、观测暴露量、故障次数、置信度、
+故障持续时间分布或供应商概率承诺。仓库中不能证明这些数字来自测量，当前应
+作为**人为配置的研究参数，概率资格 UNQUALIFIED**。不是经硬件证明的保守界。
+手册 §34.3 明列 prior 来源为待确认；§35.6 禁止无 calibration 的正式标签。
+loader 的 probability 检查只证明数值合法，非空 calibration_id 也不提供概率证据。
+
+路径：`integrity_config.hpp:79/90/91` → research/FDE YAML →
+`IntegrityConfigLoader` → `integrity_monitor.cpp` generator_config →
+`hypothesis_generator.cpp:2663/2731/2778/2816` → risk allocation/audit。
+manifest 声明 per_protected_epoch，但没有把“每个保护时刻”转换为物理故障
+起始率或任务风险的公式。生成器对每个 anchor/onset/shape 赋同一个 UWB prior；
+IMU 对每个 occurrence 的 xyz 单轴分别赋 accel/gyro prior。它不是整个设备、
+整个 anchor 集合、每秒、每个新样本或整条序列的概率。加速度三轴的上界之和
+可以是 `3e-5`；不能未经事件证明把单轴 `1e-5` 当作设备全集的上界。
+原始样本批次与 manifest one_imu_interval 的差异也使真实事件映射尚未合格。
+
+联合事件使用 `min(member bounds)`，不是乘积。对 E、F：
+`P(E∩F) ≤ min(P(E),P(F))` 不需独立性，嵌套事件可取等号；
+两个数 `1e-4`、`1e-5` 不能推出联合 `1e-9`。该 min 是有效**形式上界**，
+前提是边缘概率本身合格；当前边缘概率 UNQUALIFIED，因此联合也 UNQUALIFIED。
+loader 明确拒绝 assume_independent_priors=true。未覆盖 two-UWB、IMU×IMU、
+共同原因多轴事件不能因参数可分离而获零风险或独立性。
+
+已有文献核对：
+[Walter et al., Determination of Fault Probabilities for ARAIM, 2019, §III–IV](https://www.aoe.vt.edu/content/dam/aoe_vt_edu/people/faculty/joerger/publications/Determination_of_Fault_Probabilities_for_ARAIM_2019.pdf)
+定义 GNSS SIS 故障状态、起始率和共同原因，并以供应商承诺/观测历史支持参数。
+其时间与持续时长的区分可作为方法参考，不能将卫星概率借给 UWB 或 IMU。
+[Bruvik et al., Protection Levels for Vision-Based Pose Estimation, §IV-C1](https://arxiv.org/html/2608.10023v1#S4.SS3.SSS1)
+明确将 keypoint 故障概率实测标定留待后续，假设 keypoint 独立；它也不提供
+本工程传感器 prior 的实证来源。这两篇文献各只用于此处的语义/前提核对。
+
+**供审查的 prior 证据合同提案，未实施、无替代数值。** 保留当前逐叶 union
+账本，不重新研究合并收益。新增只读 PriorEvidence 设计：绑定物理来源/型号、
+轴/共同原因、可独立判定的故障谓词、适用环境、时间单位、窗口及 history
+影响范围、initial occupancy、onset count 上界、有效期限、数据来源/置信度和
+model/scope/manifest digest。它输出叶事件的合格上界或 UNKNOWN；没有证据时
+不猜测数值、不默认 validated=true。数学上令窗口起点已有影响事件概率为
+q0，窗口 W 内新 onset 的期望次数 ≤ λW，则 union + Markov 给出
+
+`P(任何相关故障影响窗口) ≤ min(1, q0 + λW)`。
+
+这不要求相邻 epoch 独立。若另外证明平稳 episode 过程、影响持续时长 D 和
+history 保留影响 L，则 Campbell/期望占用界给 q0 ≤ λ E[D+L]；未证明这些
+条件时 q0 必须单独提供证据，不能取零。因此不能把 per-hour 起始率简单乘
+50 ms 当成故障状态概率。每个已证明属于此来源全集的叶事件可继承该上界，
+原逐叶计费仍保守，**不因此合并叶或保证预算通过**。组合继续用 min；只有
+明确覆盖共同原因、适用环境和事件条件的独立性证明才允许另审查乘积。
+漏检、nominal tail、selection-extra 及 omitted/bridge/history/model 仍全部计费。
+
+统计证据若为事先固定定义的独立 Bernoulli trial，零故障的单侧置信上界为
+`1-δ^(1/n)`；若另外证明齐次 Poisson onset，暴露时间 T、k 次 onset 的率界为
+`χ²_(2k+2,1-δ)/(2T)`，k=0 为 `-lnδ/T`。不能把连续相关流的 35 行当作
+35 独立 trial，更不能将确定性注入的成功/失败比例当成自然硬件故障 prior。
+置信失覆盖 δ 必须作为 qualification 的显式假设，或经批准计入系统风险，
+不能藏在 p_nm 中。审批对象是此 evidence/时间映射接口及适用模型，绝非调小
+`1e-4` 的请求；没有采集/硬件证据前仍 UNQUALIFIED。
+
+**IMU 新假设及最小验证。** 假设“偏置吸收导致无报警”与“原始注入未到达
+预积分残差”分别验证。新增 `candidate_replay ... imu-absorption`，对已有
+`consistent_imu_recovery/replay/attempt-7.bin` 只运行一次。用独立列主元 QR，
+在同一个 H/z 上作四种离线列约束，分解 Pose3/速度/偏置增量，并核对原始
+statistic 与 normal-equation residual。受约束模型不是生产模型，各自 dof
+不同，不能把它们与原阈值比较来声称生产报警或合法恢复。
+
+| 离线约束 | observed 残差平方 | 全状态增量范数 | 速度范数 | accel bias 范数 |
+|---|---:|---:|---:|---:|
+| 原自由状态 | 0.18701637172207713 | 0.90280503676313051 | 0.90239885717078627 | 0.0019846221592347188 |
+| 偏置列固定 | 0.18706763052887970 | 0.90291237655202083 | 0.90250774735406880 | 0 |
+| 速度列固定 | 1542.9977892477254 | 0.78656877111335122 | 0 | 0.0962773154215886 |
+| 速度与偏置固定 | 1545.1411474199867 | 0.7868721164844239 | 0 | 0 |
+
+完整 interval accel-x 的单位故障 parity 能量为 `0.00030473259174437328`，
+固定 bias 为 `0.00030489194855592289`，固定 velocity 为 `4.2789798528082121`。
+所以主要是速度状态解释了输入，不是 bias 吸收。该快照满列秩 120，dof 56，
+这是有限但很弱的故障可观测性，不能误称所有方向严格不可观测或算法漏算。
+28 行 QR 正交性相对误差最大 `1.8915282072069805e-15`；与已冻结 statistic 匹配。
+
+新增确定性有限幅值测试，对单个静止 epoch 的十个新 raw samples 注入
+`20 m/s²`、保留健康左边界，再独立 reintegrate 并求实际 frozen-point
+CombinedImuFactor error。raw dp=`0.022625 m`，dv=`0.95 m/s`，bias residual
+变化为零，whitened norm=`30.16445995740861`，与同样 sample-support 的微分
+预测相对差 `1.1892274488700195e-16`。因此注入确实影响真实因子残差。
+此处 covariance 相对变化 `0.0058016760542469667` 是该静止小 fixture 的值，
+不是运动 epoch7 的值，不能据此改 production whitening/noise 合同。
+此前 sample-support 阴性结果直接复用：健康左端导致首梯形只有半幅，下一
+epoch 继承坏边界；它不等价于整个 interval 常量故障，不再次运行旧测试。
+
+因果链：真实流 all_in statistic≈0.187 < 原阈值121.348810，
+`integrity_monitor.cpp:3411` 只生成 KEEP；没有硬件 barrier。
+随后 KEEP 的原线性步长仍超 0.25，PL 未运行；不是 step gate 阻止了一个已
+通过独立 detector/风险/PL 的剔除恢复。表中 QR base 是原 H/z 的增量，不能
+冒充 pipeline 的 canonical KEEP 数值（已有流 KEEP step≈0.896）。
+本次未发现可据此自主修补的 detector 实现错误：当前测试场景的短时间位移
+很小、速度自由，导致弱 parity；当前故障模型与 raw sample-support 不一致则
+是需要明确审查的建模问题。未降低门限、冻结生产速度、加 prior 或扩 step。
+
+**下一数学决策，独立于概率事件合并。** 建议先批准把“十个新样本的单轴
+故障 episode”精确卷积到两个相邻 preintegration 及 history 的共享参数图：
+每个梯形的权重为 `(s_left+s_right)/2`，旧健康边界 s=0、新批次 s=1，
+次 epoch 第一梯形保留 1/2 carry。实际姿态/旋转必须逐段求导，不能将整段
+bias Jacobian 乘 0.95 替代。该支持模型变化需要 scope/manifest、故障映射、
+桥接剔除集合、history 和完整条件 PL 的共同检查；并不会自动提供检测功效。
+如要获得独立 IMU 检测功效，另需批准并证明独立运动/速度参考或物理 envelope
+的适用条件和误差上界。上述冻结 velocity 仅用于定位问题，**不提议作为真实
+传感器约束**。在没有独立参考时，不承诺这个 50 ms 单故障场景可按原合同恢复。
+
+构建 candidate_replay 与 test_history_fault_parameterization 成功。新有限
+注入 gtest 1 项通过，prior 形式检查 4 项通过；未改公共数学层，未扩大回归。
+新增证据统一存入原 JSON 的 `prior_imu_followup`，报告生成器保留该段。
+
+```sh
+cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl --target candidate_replay test_history_fault_parameterization -j2
+LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/candidate_replay results/fde_operability_20261010/consistent_imu_recovery/replay/attempt-7.bin results/fde_operability_20261010/imu_absorption.csv 1 1 imu-absorption
+LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib /home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/test_history_fault_parameterization --gtest_filter=FdeOperabilityImuSupport.FiniteInjectedAccelerationChangesActualFactorResidual
+python3 tools/research_prior_and_imu.py --self-test --results results/fde_operability_20261010 --report docs/benchmark/fde_operability_20261010.json
+```
