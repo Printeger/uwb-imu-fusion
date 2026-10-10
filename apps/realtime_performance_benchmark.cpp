@@ -453,12 +453,17 @@ int main(int argc, char** argv) {
     // This executable historically discarded these records after paying their
     // formatting cost. Preserve its external log mode while disabling their
     // creation at the source; numerical risk/action summaries remain.
-    config.output.write_hypothesis_evidence = false;
+    // Offline event-contract research can retain the existing audit. This
+    // changes logging work only and is not a performance comparison mode.
+    const char* hypothesis_audit = std::getenv("UWB_IMU_PL_RESEARCH_HYPOTHESIS_AUDIT");
+    config.output.write_hypothesis_evidence = hypothesis_audit &&
+        std::string(hypothesis_audit) == "1";
     config.output.write_health = false;
     config.output.write_factor_ledger = false;
     config.resolved_yaml +=
         "\n# realtime_performance_benchmark runtime output mode\n"
-        "benchmark_write_hypothesis_evidence: false\n"
+        "benchmark_write_hypothesis_evidence: " +
+        std::string(config.output.write_hypothesis_evidence ? "true\n" : "false\n") +
         "benchmark_write_health: false\n"
         "benchmark_write_factor_ledger: false\n"
         "benchmark_scenario: " + scenario.name + "\n"

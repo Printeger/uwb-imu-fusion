@@ -166,6 +166,8 @@ RunLogger::RunLogger(const std::string& output_directory,
   fault_truth_.open(directory_ + "/fault_truth.csv");
   transactions_.open(directory_ + "/transactions.csv");
   hypotheses_.open(directory_ + "/hypotheses.csv");
+  // Risk-contract research must round-trip each binary64 prior/allocation.
+  hypotheses_ << std::setprecision(17);
   candidates_.open(directory_ + "/candidates.csv");
   factor_ledger_.open(directory_ + "/factor_ledger.csv");
   health_.open(directory_ + "/health.csv");
