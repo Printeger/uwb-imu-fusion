@@ -88,7 +88,7 @@ def main():
     data['gate_state_codes']={'0':'PASS','1':'FAIL','2':'UNKNOWN','3':'NOT_RUN'}
     data['blocked_inputs']=dict(epoch_period_s=.05,imu_sample_period_s=.005,
         fault_epoch=7,uwb_bias_m=2.25,imu_accel_bias_mps2=20.,
-        decision='event partition proposal pending; no probability contract changes applied',
+        decision='Event-contract research authorized; implementation not authorized. Mass-preserving offline comparison gives no current budget gain.',
         uwb_node='FdeManager::decideImpl / completeRiskLedger known charge 4.69e-5 > 4e-5',
         imu_node='joint detector passes; RankUpdateKernel KEEP step norm > 0.25; PL NOT_RUN')
     prefix=read(args.results/'strict_noiseless'/'diagnostic_attempts.csv')[:4]
@@ -231,6 +231,12 @@ def main():
             data['imu_causal_diagnostic']['sample_support_negative']={
                 k:float(v) for k,v in re.findall(r'(\w+)=([\d.eE+-]+)',line)}
             data['imu_causal_diagnostic']['support_proposal']='NOT_APPLIED: need reviewed raw-sample event support across adjacent preintegrations; manifest currently declares one_imu_interval, same_epoch, single_parameter.'
+    # Retain the separately authorized, offline research in the same compact
+    # report. Regenerating operability evidence must not erase its provenance.
+    if args.output.exists():
+        previous=json.loads(args.output.read_text())
+        if 'event_contract_research' in previous:
+            data['event_contract_research']=previous['event_contract_research']
     args.output.write_text(json.dumps(data,indent=2,allow_nan=False)+'\n')
 
 

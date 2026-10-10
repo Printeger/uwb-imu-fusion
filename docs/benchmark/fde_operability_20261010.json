@@ -1051,7 +1051,7 @@
     "fault_epoch": 7,
     "uwb_bias_m": 2.25,
     "imu_accel_bias_mps2": 20.0,
-    "decision": "event partition proposal pending; no probability contract changes applied",
+    "decision": "Event-contract research authorized; implementation not authorized. Mass-preserving offline comparison gives no current budget gain.",
     "uwb_node": "FdeManager::decideImpl / completeRiskLedger known charge 4.69e-5 > 4e-5",
     "imu_node": "joint detector passes; RankUpdateKernel KEEP step norm > 0.25; PL NOT_RUN"
   },
@@ -2884,5 +2884,1695 @@
       "best_scalar_relative_residual": 0.07602802394466414
     },
     "support_proposal": "NOT_APPLIED: need reviewed raw-sample event support across adjacent preintegrations; manifest currently declares one_imu_interval, same_epoch, single_parameter."
+  },
+  "event_contract_research": {
+    "status": "RESEARCH_ONLY_REVIEW_REQUIRED",
+    "production_contract_changed": false,
+    "approval": "Research authorized; implementation/reinterpretation of priors not authorized.",
+    "source": "results/fde_operability_20261010/event_contract_snapshot",
+    "source_hashes": {
+      "hypotheses.csv": "054100718575c8b9e97fe5ba1db2a4a9d9d729d52342261b3e8bf1d21a4ae78b",
+      "diagnostic_attempts.csv": "f0b3649371b8cd7cbba44514819137308cadb518eb60b4881f15876ab511d6ac",
+      "diagnostic_stages.csv": "fd004c24677ef4f85eca88adf302e764ac915ce63074302b4ce985271a9019e8",
+      "candidates.csv": "5780a46d02cac08599e123c61e07f2516adbabfc0b8be47b80702bd5bbab8ef9",
+      "resolved_config.yaml": "b2a1ece2fa537bda3b61989891027a8880846c2aa5baedae4aef8898c962eb5f"
+    },
+    "snapshots": [
+      {
+        "epoch": 4,
+        "window": "4",
+        "leaf_count": 96,
+        "leaf_shapes": {
+          "ANCHOR_BIAS_EPOCH_INDEPENDENT": 32,
+          "ANCHOR_BIAS_PERSISTENT_CONSTANT": 32,
+          "ANCHOR_BIAS_RAMP": 32
+        },
+        "raw_ledger": {
+          "nominal": {
+            "value": "3.0000000000000004e-05",
+            "status": "VALIDATED"
+          },
+          "p_nm": {
+            "value": "9.9999999999999995e-08",
+            "status": "VALIDATED"
+          },
+          "hypotheses": {
+            "value": "9.9000000000000001e-06",
+            "status": "VALIDATED"
+          },
+          "hypotheses_miss_channel": {
+            "value": "0",
+            "status": "VALIDATED"
+          },
+          "bridge": {
+            "value": "UNKNOWN",
+            "status": "ASSUMED_UNVALIDATED"
+          },
+          "history": {
+            "value": "UNKNOWN",
+            "status": "ASSUMED_UNVALIDATED"
+          },
+          "model": {
+            "value": "UNKNOWN",
+            "status": "ASSUMED_UNVALIDATED"
+          },
+          "omitted": {
+            "value": "UNKNOWN",
+            "status": "NOT_IMPLEMENTED"
+          },
+          "envelope": {
+            "value": "0",
+            "status": "VALIDATED"
+          },
+          "selection": {
+            "value": "8.4703294725430034e-22",
+            "status": "VALIDATED"
+          }
+        },
+        "allocation": {
+          "exact_fraction": "11687857045102371/1180591620717411303424",
+          "decimal": "0.0000098999999999999992343689518559113338369570556096732616424560546875",
+          "rounded_up": 9.9e-06,
+          "rounded_up_hex": "0x1.4c305a3adef92p-17"
+        },
+        "miss_excess": {
+          "exact_fraction": "0",
+          "decimal": "0",
+          "rounded_up": 0.0,
+          "rounded_up_hex": "0x0.0p+0"
+        },
+        "nominal_plus_p_nm": {
+          "exact_fraction": "284286462268752665/9444732965739290427392",
+          "decimal": "0.0000301000000000000024495664286035279122444308086414821445941925048828125",
+          "rounded_up": 3.0100000000000003e-05,
+          "rounded_up_hex": "0x1.f8fe83fefda19p-16"
+        },
+        "other_known": {
+          "exact_fraction": "1/1180591620717411303424",
+          "decimal": "8.470329472543003390683225006796419620513916015625E-22",
+          "rounded_up": 8.470329472543003e-22,
+          "rounded_up_hex": "0x1.0000000000000p-70"
+        },
+        "exact_known": {
+          "exact_fraction": "377789318629571641/9444732965739290427392",
+          "decimal": "0.0000400000000000000025309683277137395851497103649307973682880401611328125",
+          "rounded_up": 4e-05,
+          "rounded_up_hex": "0x1.4f8b588e368f1p-15"
+        },
+        "cpp_known": 4e-05,
+        "budget": {
+          "exact_fraction": "5902958103587057/147573952589676412928",
+          "decimal": "0.0000400000000000000032721221565612523818344925530254840850830078125",
+          "rounded_up": 4e-05,
+          "rounded_up_hex": "0x1.4f8b588e368f1p-15"
+        },
+        "known_overspend": {
+          "exact_fraction": "0",
+          "decimal": "0",
+          "rounded_up": 0.0,
+          "rounded_up_hex": "0x0.0p+0"
+        },
+        "physical_source_groups": [
+          {
+            "group": "uwb:1",
+            "leaf_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12
+            ],
+            "mass_upper": {
+              "exact_fraction": "22136092888451463/18446744073709551616",
+              "decimal": "0.0012000000000000000575060832286311551797552965581417083740234375",
+              "rounded_up": 0.0012000000000000001,
+              "rounded_up_hex": "0x1.3a92a30553262p-10"
+            },
+            "epsilon": {
+              "exact_fraction": "3895952348367457/3777893186295716352",
+              "decimal": "0.00103124999999999987082747554371920448225243717575191934907115173083521488998469644387601916",
+              "rounded_up": 0.00103125,
+              "rounded_up_hex": "0x1.0e5604189374cp-10"
+            },
+            "charge": {
+              "exact_fraction": "11687857045102371/9444732965739290427392",
+              "decimal": "0.0000012374999999999999042961189819889167296196319512091577053070068359375",
+              "rounded_up": 1.2375e-06,
+              "rounded_up_hex": "0x1.4c305a3adef92p-20"
+            }
+          },
+          {
+            "group": "uwb:2",
+            "leaf_ids": [
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24
+            ],
+            "mass_upper": {
+              "exact_fraction": "22136092888451463/18446744073709551616",
+              "decimal": "0.0012000000000000000575060832286311551797552965581417083740234375",
+              "rounded_up": 0.0012000000000000001,
+              "rounded_up_hex": "0x1.3a92a30553262p-10"
+            },
+            "epsilon": {
+              "exact_fraction": "3895952348367457/3777893186295716352",
+              "decimal": "0.00103124999999999987082747554371920448225243717575191934907115173083521488998469644387601916",
+              "rounded_up": 0.00103125,
+              "rounded_up_hex": "0x1.0e5604189374cp-10"
+            },
+            "charge": {
+              "exact_fraction": "11687857045102371/9444732965739290427392",
+              "decimal": "0.0000012374999999999999042961189819889167296196319512091577053070068359375",
+              "rounded_up": 1.2375e-06,
+              "rounded_up_hex": "0x1.4c305a3adef92p-20"
+            }
+          },
+          {
+            "group": "uwb:3",
+            "leaf_ids": [
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33,
+              34,
+              35,
+              36
+            ],
+            "mass_upper": {
+              "exact_fraction": "22136092888451463/18446744073709551616",
+              "decimal": "0.0012000000000000000575060832286311551797552965581417083740234375",
+              "rounded_up": 0.0012000000000000001,
+              "rounded_up_hex": "0x1.3a92a30553262p-10"
+            },
+            "epsilon": {
+              "exact_fraction": "3895952348367457/3777893186295716352",
+              "decimal": "0.00103124999999999987082747554371920448225243717575191934907115173083521488998469644387601916",
+              "rounded_up": 0.00103125,
+              "rounded_up_hex": "0x1.0e5604189374cp-10"
+            },
+            "charge": {
+              "exact_fraction": "11687857045102371/9444732965739290427392",
+              "decimal": "0.0000012374999999999999042961189819889167296196319512091577053070068359375",
+              "rounded_up": 1.2375e-06,
+              "rounded_up_hex": "0x1.4c305a3adef92p-20"
+            }
+          },
+          {
+            "group": "uwb:4",
+            "leaf_ids": [
+              37,
+              38,
+              39,
+              40,
+              41,
+              42,
+              43,
+              44,
+              45,
+              46,
+              47,
+              48
+            ],
+            "mass_upper": {
+              "exact_fraction": "22136092888451463/18446744073709551616",
+              "decimal": "0.0012000000000000000575060832286311551797552965581417083740234375",
+              "rounded_up": 0.0012000000000000001,
+              "rounded_up_hex": "0x1.3a92a30553262p-10"
+            },
+            "epsilon": {
+              "exact_fraction": "3895952348367457/3777893186295716352",
+              "decimal": "0.00103124999999999987082747554371920448225243717575191934907115173083521488998469644387601916",
+              "rounded_up": 0.00103125,
+              "rounded_up_hex": "0x1.0e5604189374cp-10"
+            },
+            "charge": {
+              "exact_fraction": "11687857045102371/9444732965739290427392",
+              "decimal": "0.0000012374999999999999042961189819889167296196319512091577053070068359375",
+              "rounded_up": 1.2375e-06,
+              "rounded_up_hex": "0x1.4c305a3adef92p-20"
+            }
+          },
+          {
+            "group": "uwb:5",
+            "leaf_ids": [
+              49,
+              50,
+              51,
+              52,
+              53,
+              54,
+              55,
+              56,
+              57,
+              58,
+              59,
+              60
+            ],
+            "mass_upper": {
+              "exact_fraction": "22136092888451463/18446744073709551616",
+              "decimal": "0.0012000000000000000575060832286311551797552965581417083740234375",
+              "rounded_up": 0.0012000000000000001,
+              "rounded_up_hex": "0x1.3a92a30553262p-10"
+            },
+            "epsilon": {
+              "exact_fraction": "3895952348367457/3777893186295716352",
+              "decimal": "0.00103124999999999987082747554371920448225243717575191934907115173083521488998469644387601916",
+              "rounded_up": 0.00103125,
+              "rounded_up_hex": "0x1.0e5604189374cp-10"
+            },
+            "charge": {
+              "exact_fraction": "11687857045102371/9444732965739290427392",
+              "decimal": "0.0000012374999999999999042961189819889167296196319512091577053070068359375",
+              "rounded_up": 1.2375e-06,
+              "rounded_up_hex": "0x1.4c305a3adef92p-20"
+            }
+          },
+          {
+            "group": "uwb:6",
+            "leaf_ids": [
+              61,
+              62,
+              63,
+              64,
+              65,
+              66,
+              67,
+              68,
+              69,
+              70,
+              71,
+              72
+            ],
+            "mass_upper": {
+              "exact_fraction": "22136092888451463/18446744073709551616",
+              "decimal": "0.0012000000000000000575060832286311551797552965581417083740234375",
+              "rounded_up": 0.0012000000000000001,
+              "rounded_up_hex": "0x1.3a92a30553262p-10"
+            },
+            "epsilon": {
+              "exact_fraction": "3895952348367457/3777893186295716352",
+              "decimal": "0.00103124999999999987082747554371920448225243717575191934907115173083521488998469644387601916",
+              "rounded_up": 0.00103125,
+              "rounded_up_hex": "0x1.0e5604189374cp-10"
+            },
+            "charge": {
+              "exact_fraction": "11687857045102371/9444732965739290427392",
+              "decimal": "0.0000012374999999999999042961189819889167296196319512091577053070068359375",
+              "rounded_up": 1.2375e-06,
+              "rounded_up_hex": "0x1.4c305a3adef92p-20"
+            }
+          },
+          {
+            "group": "uwb:7",
+            "leaf_ids": [
+              73,
+              74,
+              75,
+              76,
+              77,
+              78,
+              79,
+              80,
+              81,
+              82,
+              83,
+              84
+            ],
+            "mass_upper": {
+              "exact_fraction": "22136092888451463/18446744073709551616",
+              "decimal": "0.0012000000000000000575060832286311551797552965581417083740234375",
+              "rounded_up": 0.0012000000000000001,
+              "rounded_up_hex": "0x1.3a92a30553262p-10"
+            },
+            "epsilon": {
+              "exact_fraction": "3895952348367457/3777893186295716352",
+              "decimal": "0.00103124999999999987082747554371920448225243717575191934907115173083521488998469644387601916",
+              "rounded_up": 0.00103125,
+              "rounded_up_hex": "0x1.0e5604189374cp-10"
+            },
+            "charge": {
+              "exact_fraction": "11687857045102371/9444732965739290427392",
+              "decimal": "0.0000012374999999999999042961189819889167296196319512091577053070068359375",
+              "rounded_up": 1.2375e-06,
+              "rounded_up_hex": "0x1.4c305a3adef92p-20"
+            }
+          },
+          {
+            "group": "uwb:8",
+            "leaf_ids": [
+              85,
+              86,
+              87,
+              88,
+              89,
+              90,
+              91,
+              92,
+              93,
+              94,
+              95,
+              96
+            ],
+            "mass_upper": {
+              "exact_fraction": "22136092888451463/18446744073709551616",
+              "decimal": "0.0012000000000000000575060832286311551797552965581417083740234375",
+              "rounded_up": 0.0012000000000000001,
+              "rounded_up_hex": "0x1.3a92a30553262p-10"
+            },
+            "epsilon": {
+              "exact_fraction": "3895952348367457/3777893186295716352",
+              "decimal": "0.00103124999999999987082747554371920448225243717575191934907115173083521488998469644387601916",
+              "rounded_up": 0.00103125,
+              "rounded_up_hex": "0x1.0e5604189374cp-10"
+            },
+            "charge": {
+              "exact_fraction": "11687857045102371/9444732965739290427392",
+              "decimal": "0.0000012374999999999999042961189819889167296196319512091577053070068359375",
+              "rounded_up": 1.2375e-06,
+              "rounded_up_hex": "0x1.4c305a3adef92p-20"
+            }
+          }
+        ],
+        "first_source_numerical_cover_mapping": [
+          {
+            "leaf_id": 1,
+            "source": "uwb:1",
+            "onset_epoch": 1,
+            "numerical_shape": "ANCHOR_BIAS_EPOCH_INDEPENDENT",
+            "raw_support": "EXACT_ONSET_OCCURRENCE",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 2,
+            "source": "uwb:1",
+            "onset_epoch": 1,
+            "numerical_shape": "ANCHOR_BIAS_PERSISTENT_CONSTANT",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 3,
+            "source": "uwb:1",
+            "onset_epoch": 1,
+            "numerical_shape": "ANCHOR_BIAS_RAMP",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 4,
+            "source": "uwb:1",
+            "onset_epoch": 2,
+            "numerical_shape": "ANCHOR_BIAS_EPOCH_INDEPENDENT",
+            "raw_support": "EXACT_ONSET_OCCURRENCE",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 5,
+            "source": "uwb:1",
+            "onset_epoch": 2,
+            "numerical_shape": "ANCHOR_BIAS_PERSISTENT_CONSTANT",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 6,
+            "source": "uwb:1",
+            "onset_epoch": 2,
+            "numerical_shape": "ANCHOR_BIAS_RAMP",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 7,
+            "source": "uwb:1",
+            "onset_epoch": 3,
+            "numerical_shape": "ANCHOR_BIAS_EPOCH_INDEPENDENT",
+            "raw_support": "EXACT_ONSET_OCCURRENCE",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 8,
+            "source": "uwb:1",
+            "onset_epoch": 3,
+            "numerical_shape": "ANCHOR_BIAS_PERSISTENT_CONSTANT",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 9,
+            "source": "uwb:1",
+            "onset_epoch": 3,
+            "numerical_shape": "ANCHOR_BIAS_RAMP",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 10,
+            "source": "uwb:1",
+            "onset_epoch": 4,
+            "numerical_shape": "ANCHOR_BIAS_EPOCH_INDEPENDENT",
+            "raw_support": "EXACT_ONSET_OCCURRENCE",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 11,
+            "source": "uwb:1",
+            "onset_epoch": 4,
+            "numerical_shape": "ANCHOR_BIAS_PERSISTENT_CONSTANT",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 12,
+            "source": "uwb:1",
+            "onset_epoch": 4,
+            "numerical_shape": "ANCHOR_BIAS_RAMP",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          }
+        ],
+        "concrete_physical_cell_cover_examples": [
+          {
+            "source": "uwb:1",
+            "onset_epoch": 1,
+            "last_affected_occurrence": 1,
+            "physical_law": "constant; episode ended before later observations",
+            "cover_ids": [
+              1
+            ]
+          },
+          {
+            "source": "uwb:1",
+            "onset_epoch": 1,
+            "last_affected_occurrence": 4,
+            "physical_law": "constant; episode affects through protected measurement",
+            "cover_ids": [
+              2,
+              3
+            ]
+          },
+          {
+            "source": "uwb:1",
+            "onset_epoch": 1,
+            "last_affected_occurrence": 4,
+            "physical_law": "affine nonzero slope; episode affects through protected measurement",
+            "cover_ids": [
+              3
+            ]
+          },
+          {
+            "source": "uwb:1",
+            "onset_epoch": 4,
+            "last_affected_occurrence": 4,
+            "physical_law": "one observed occurrence; any declared constant/affine law or duration compatible with that occurrence",
+            "cover_ids": [
+              10,
+              11,
+              12
+            ]
+          }
+        ],
+        "last_onset_numerical_aliases": [
+          {
+            "source": "uwb:1",
+            "leaf_ids": [
+              10,
+              11,
+              12
+            ],
+            "claim": "Equal numerical audit at the last onset; NOT a probability-event identity certificate."
+          },
+          {
+            "source": "uwb:2",
+            "leaf_ids": [
+              22,
+              23,
+              24
+            ],
+            "claim": "Equal numerical audit at the last onset; NOT a probability-event identity certificate."
+          },
+          {
+            "source": "uwb:3",
+            "leaf_ids": [
+              34,
+              35,
+              36
+            ],
+            "claim": "Equal numerical audit at the last onset; NOT a probability-event identity certificate."
+          },
+          {
+            "source": "uwb:4",
+            "leaf_ids": [
+              46,
+              47,
+              48
+            ],
+            "claim": "Equal numerical audit at the last onset; NOT a probability-event identity certificate."
+          },
+          {
+            "source": "uwb:5",
+            "leaf_ids": [
+              58,
+              59,
+              60
+            ],
+            "claim": "Equal numerical audit at the last onset; NOT a probability-event identity certificate."
+          },
+          {
+            "source": "uwb:6",
+            "leaf_ids": [
+              70,
+              71,
+              72
+            ],
+            "claim": "Equal numerical audit at the last onset; NOT a probability-event identity certificate."
+          },
+          {
+            "source": "uwb:7",
+            "leaf_ids": [
+              82,
+              83,
+              84
+            ],
+            "claim": "Equal numerical audit at the last onset; NOT a probability-event identity certificate."
+          },
+          {
+            "source": "uwb:8",
+            "leaf_ids": [
+              94,
+              95,
+              96
+            ],
+            "claim": "Equal numerical audit at the last onset; NOT a probability-event identity certificate."
+          }
+        ],
+        "mass_preserving_partition_known": {
+          "exact_fraction": "377789318629571641/9444732965739290427392",
+          "decimal": "0.0000400000000000000025309683277137395851497103649307973682880401611328125",
+          "rounded_up": 4e-05,
+          "rounded_up_hex": "0x1.4f8b588e368f1p-15"
+        },
+        "unknown_terms": [
+          "bridge",
+          "history",
+          "model",
+          "omitted"
+        ],
+        "current_candidate_bounds": [
+          {
+            "action_id": "1",
+            "hpl_m": "0.429654",
+            "vpl_m": "0.667565",
+            "post_detector_passed": "1",
+            "covers_plausible_set": "1"
+          }
+        ],
+        "selector_trace": [
+          "gate:numerical:0:1:1:finite post-passed covering candidate;gate:risk:2:4.0000000000000003e-05:4.0000000000000003e-05:RISK_UNKNOWN: ;gate:AL:0:0.42965370154916632:2:HPL=0.429654;gate:qualification:3:nan:nan:;gate:deadline:3:nan:nan:;ledger:nominal:3.0000000000000004e-05:VALIDATED:config risk.nominal_axis_tail x 3 protected axes:pi0 * alpha0 for the alarm-free outcome;ledger:p_nm:9.9999999999999995e-08:VALIDATED:config risk.p_nm:non-nominal outcome mass not attributable to a hypothesis;ledger:hypotheses:9.9000000000000001e-06:VALIDATED:per-hypothesis allocation / prior bound (allocation policy: prior_weighted_outcome_conditioned):sum of pi_h * alpha_h over charged hypotheses;ledger:hypotheses_miss_channel:0:VALIDATED:section 5.9 union bound: sum of pi_h * max(0, beta_h - alpha_h):charged detector-miss excess above the allocation-derived tail;ledger:bridge:nan:ASSUMED_UNVALIDATED:config risk.p_bridge_escape:configured zero has no zero proof: value is UNKNOWN;ledger:history:nan:ASSUMED_UNVALIDATED:config risk.p_history_contamination:configured zero has no zero proof: value is UNKNOWN;ledger:model:nan:ASSUMED_UNVALIDATED:config risk.p_model_escape:configured zero has no zero proof: value is UNKNOWN;ledger:omitted:nan:NOT_IMPLEMENTED:config/integrity_fault_manifest.yaml omitted_event_set:omitted-event mass is UNKNOWN unless the complete scope carries a finite known bound;ledger:envelope:0:VALIDATED:exact coverage of frozen generated mode registry;ledger:selection:8.4703294725430034e-22:VALIDATED:numeric FDE guarantee groups over every eligible action:extra union charge beyond the once-charged hypothesis allocation"
+        ],
+        "pl_comparison": "UNCHANGED: old per-leaf alpha/beta, every numerical witness, common-reference and selection requirements retained. No new PL certificate minted.",
+        "old_availability": "UNAVAILABLE",
+        "new_availability": "UNAVAILABLE",
+        "protected_output": false,
+        "new_contract_implemented": false,
+        "persistent_only_best_case_floor": {
+          "exact_fraction": "48516821846149434327682926114131/1329227995784915872903807060280344576",
+          "decimal": "0.0000365000000000000037365252493655465368400751234457985083542759861143465609538069638340118672",
+          "rounded_up": 3.6500000000000006e-05,
+          "rounded_up_hex": "0x1.322f2734f82f6p-15"
+        },
+        "persistent_only_can_close_even_if_other_persistent_charges_zero": true
+      },
+      {
+        "epoch": 7,
+        "window": "7",
+        "leaf_count": 168,
+        "leaf_shapes": {
+          "ANCHOR_BIAS_EPOCH_INDEPENDENT": 56,
+          "ANCHOR_BIAS_PERSISTENT_CONSTANT": 56,
+          "ANCHOR_BIAS_RAMP": 56
+        },
+        "raw_ledger": {
+          "nominal": {
+            "value": "3.0000000000000004e-05",
+            "status": "VALIDATED"
+          },
+          "p_nm": {
+            "value": "9.9999999999999995e-08",
+            "status": "VALIDATED"
+          },
+          "hypotheses": {
+            "value": "9.9000000000000001e-06",
+            "status": "VALIDATED"
+          },
+          "hypotheses_miss_channel": {
+            "value": "6.9000000000000025e-06",
+            "status": "VALIDATED"
+          },
+          "bridge": {
+            "value": "UNKNOWN",
+            "status": "ASSUMED_UNVALIDATED"
+          },
+          "history": {
+            "value": "UNKNOWN",
+            "status": "ASSUMED_UNVALIDATED"
+          },
+          "model": {
+            "value": "UNKNOWN",
+            "status": "ASSUMED_UNVALIDATED"
+          },
+          "omitted": {
+            "value": "UNKNOWN",
+            "status": "NOT_IMPLEMENTED"
+          },
+          "envelope": {
+            "value": "0",
+            "status": "VALIDATED"
+          },
+          "selection": {
+            "value": "8.4703294725430034e-22",
+            "status": "VALIDATED"
+          }
+        },
+        "allocation": {
+          "exact_fraction": "11687857045102371/1180591620717411303424",
+          "decimal": "0.0000098999999999999992343689518559113338369570556096732616424560546875",
+          "rounded_up": 9.9e-06,
+          "rounded_up_hex": "0x1.4c305a3adef92p-17"
+        },
+        "miss_excess": {
+          "exact_fraction": "73373385367327376605873468678095/10633823966279326983230456482242756608",
+          "decimal": "0.00000690000000000000192043646610184916567226270646759704284286012944371441000374328006428115145",
+          "rounded_up": 6.9000000000000025e-06,
+          "rounded_up_hex": "0x1.cf0d18ed36cfdp-18"
+        },
+        "nominal_plus_p_nm": {
+          "exact_fraction": "284286462268752665/9444732965739290427392",
+          "decimal": "0.0000301000000000000024495664286035279122444308086414821445941925048828125",
+          "rounded_up": 3.0100000000000003e-05,
+          "rounded_up_hex": "0x1.f8fe83fefda19p-16"
+        },
+        "other_known": {
+          "exact_fraction": "1/1180591620717411303424",
+          "decimal": "8.470329472543003390683225006796419620513916015625E-22",
+          "rounded_up": 8.470329472543003e-22,
+          "rounded_up_hex": "0x1.0000000000000p-70"
+        },
+        "exact_known": {
+          "exact_fraction": "498726344018500482848963389104079/10633823966279326983230456482242756608",
+          "decimal": "0.0000469000000000000044514047938155887508219730713983944111309002905765269100037432800642811515",
+          "rounded_up": 4.690000000000001e-05,
+          "rounded_up_hex": "0x1.896cfbabdd691p-15"
+        },
+        "cpp_known": 4.690000000000001e-05,
+        "budget": {
+          "exact_fraction": "5902958103587057/147573952589676412928",
+          "decimal": "0.0000400000000000000032721221565612523818344925530254840850830078125",
+          "rounded_up": 4e-05,
+          "rounded_up_hex": "0x1.4f8b588e368f1p-15"
+        },
+        "known_overspend": {
+          "exact_fraction": "73373385367327368724574120779727/10633823966279326983230456482242756608",
+          "decimal": "0.00000690000000000000117928263725433636898748051837291032604789247807652691000374328006428115145",
+          "rounded_up": 6.900000000000002e-06,
+          "rounded_up_hex": "0x1.cf0d18ed36cfcp-18"
+        },
+        "physical_source_groups": [
+          {
+            "group": "uwb:1",
+            "leaf_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21
+            ],
+            "mass_upper": {
+              "exact_fraction": "154952650219160241/73786976294838206464",
+              "decimal": "0.002100000000000000100635645650104521564571768976747989654541015625",
+              "rounded_up": 0.0021000000000000003,
+              "rounded_up_hex": "0x1.13404ea4a8c16p-9"
+            },
+            "epsilon": {
+              "exact_fraction": "1152921504606847/1152921504606846976",
+              "decimal": "0.001000000000000000020816681711721685132943093776702880859375",
+              "rounded_up": 0.001,
+              "rounded_up_hex": "0x1.0624dd2f1a9fcp-10"
+            },
+            "charge": {
+              "exact_fraction": "178648242633492705598269198770127/85070591730234615865843651857942052864",
+              "decimal": "0.00000210000000000000014435067724472006243865247025965878806066452301640180125046791000803514393",
+              "rounded_up": 2.1000000000000002e-06,
+              "rounded_up_hex": "0x1.19db7358bd308p-19"
+            }
+          },
+          {
+            "group": "uwb:2",
+            "leaf_ids": [
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33,
+              34,
+              35,
+              36,
+              37,
+              38,
+              39,
+              40,
+              41,
+              42
+            ],
+            "mass_upper": {
+              "exact_fraction": "154952650219160241/73786976294838206464",
+              "decimal": "0.002100000000000000100635645650104521564571768976747989654541015625",
+              "rounded_up": 0.0021000000000000003,
+              "rounded_up_hex": "0x1.13404ea4a8c16p-9"
+            },
+            "epsilon": {
+              "exact_fraction": "1152921504606847/1152921504606846976",
+              "decimal": "0.001000000000000000020816681711721685132943093776702880859375",
+              "rounded_up": 0.001,
+              "rounded_up_hex": "0x1.0624dd2f1a9fcp-10"
+            },
+            "charge": {
+              "exact_fraction": "178648242633492705598269198770127/85070591730234615865843651857942052864",
+              "decimal": "0.00000210000000000000014435067724472006243865247025965878806066452301640180125046791000803514393",
+              "rounded_up": 2.1000000000000002e-06,
+              "rounded_up_hex": "0x1.19db7358bd308p-19"
+            }
+          },
+          {
+            "group": "uwb:3",
+            "leaf_ids": [
+              43,
+              44,
+              45,
+              46,
+              47,
+              48,
+              49,
+              50,
+              51,
+              52,
+              53,
+              54,
+              55,
+              56,
+              57,
+              58,
+              59,
+              60,
+              61,
+              62,
+              63
+            ],
+            "mass_upper": {
+              "exact_fraction": "154952650219160241/73786976294838206464",
+              "decimal": "0.002100000000000000100635645650104521564571768976747989654541015625",
+              "rounded_up": 0.0021000000000000003,
+              "rounded_up_hex": "0x1.13404ea4a8c16p-9"
+            },
+            "epsilon": {
+              "exact_fraction": "1152921504606847/1152921504606846976",
+              "decimal": "0.001000000000000000020816681711721685132943093776702880859375",
+              "rounded_up": 0.001,
+              "rounded_up_hex": "0x1.0624dd2f1a9fcp-10"
+            },
+            "charge": {
+              "exact_fraction": "178648242633492705598269198770127/85070591730234615865843651857942052864",
+              "decimal": "0.00000210000000000000014435067724472006243865247025965878806066452301640180125046791000803514393",
+              "rounded_up": 2.1000000000000002e-06,
+              "rounded_up_hex": "0x1.19db7358bd308p-19"
+            }
+          },
+          {
+            "group": "uwb:4",
+            "leaf_ids": [
+              64,
+              65,
+              66,
+              67,
+              68,
+              69,
+              70,
+              71,
+              72,
+              73,
+              74,
+              75,
+              76,
+              77,
+              78,
+              79,
+              80,
+              81,
+              82,
+              83,
+              84
+            ],
+            "mass_upper": {
+              "exact_fraction": "154952650219160241/73786976294838206464",
+              "decimal": "0.002100000000000000100635645650104521564571768976747989654541015625",
+              "rounded_up": 0.0021000000000000003,
+              "rounded_up_hex": "0x1.13404ea4a8c16p-9"
+            },
+            "epsilon": {
+              "exact_fraction": "1152921504606847/1152921504606846976",
+              "decimal": "0.001000000000000000020816681711721685132943093776702880859375",
+              "rounded_up": 0.001,
+              "rounded_up_hex": "0x1.0624dd2f1a9fcp-10"
+            },
+            "charge": {
+              "exact_fraction": "178648242633492705598269198770127/85070591730234615865843651857942052864",
+              "decimal": "0.00000210000000000000014435067724472006243865247025965878806066452301640180125046791000803514393",
+              "rounded_up": 2.1000000000000002e-06,
+              "rounded_up_hex": "0x1.19db7358bd308p-19"
+            }
+          },
+          {
+            "group": "uwb:5",
+            "leaf_ids": [
+              85,
+              86,
+              87,
+              88,
+              89,
+              90,
+              91,
+              92,
+              93,
+              94,
+              95,
+              96,
+              97,
+              98,
+              99,
+              100,
+              101,
+              102,
+              103,
+              104,
+              105
+            ],
+            "mass_upper": {
+              "exact_fraction": "154952650219160241/73786976294838206464",
+              "decimal": "0.002100000000000000100635645650104521564571768976747989654541015625",
+              "rounded_up": 0.0021000000000000003,
+              "rounded_up_hex": "0x1.13404ea4a8c16p-9"
+            },
+            "epsilon": {
+              "exact_fraction": "1152921504606847/1152921504606846976",
+              "decimal": "0.001000000000000000020816681711721685132943093776702880859375",
+              "rounded_up": 0.001,
+              "rounded_up_hex": "0x1.0624dd2f1a9fcp-10"
+            },
+            "charge": {
+              "exact_fraction": "178648242633492705598269198770127/85070591730234615865843651857942052864",
+              "decimal": "0.00000210000000000000014435067724472006243865247025965878806066452301640180125046791000803514393",
+              "rounded_up": 2.1000000000000002e-06,
+              "rounded_up_hex": "0x1.19db7358bd308p-19"
+            }
+          },
+          {
+            "group": "uwb:6",
+            "leaf_ids": [
+              106,
+              107,
+              108,
+              109,
+              110,
+              111,
+              112,
+              113,
+              114,
+              115,
+              116,
+              117,
+              118,
+              119,
+              120,
+              121,
+              122,
+              123,
+              124,
+              125,
+              126
+            ],
+            "mass_upper": {
+              "exact_fraction": "154952650219160241/73786976294838206464",
+              "decimal": "0.002100000000000000100635645650104521564571768976747989654541015625",
+              "rounded_up": 0.0021000000000000003,
+              "rounded_up_hex": "0x1.13404ea4a8c16p-9"
+            },
+            "epsilon": {
+              "exact_fraction": "1152921504606847/1152921504606846976",
+              "decimal": "0.001000000000000000020816681711721685132943093776702880859375",
+              "rounded_up": 0.001,
+              "rounded_up_hex": "0x1.0624dd2f1a9fcp-10"
+            },
+            "charge": {
+              "exact_fraction": "178648242633492705598269198770127/85070591730234615865843651857942052864",
+              "decimal": "0.00000210000000000000014435067724472006243865247025965878806066452301640180125046791000803514393",
+              "rounded_up": 2.1000000000000002e-06,
+              "rounded_up_hex": "0x1.19db7358bd308p-19"
+            }
+          },
+          {
+            "group": "uwb:7",
+            "leaf_ids": [
+              127,
+              128,
+              129,
+              130,
+              131,
+              132,
+              133,
+              134,
+              135,
+              136,
+              137,
+              138,
+              139,
+              140,
+              141,
+              142,
+              143,
+              144,
+              145,
+              146,
+              147
+            ],
+            "mass_upper": {
+              "exact_fraction": "154952650219160241/73786976294838206464",
+              "decimal": "0.002100000000000000100635645650104521564571768976747989654541015625",
+              "rounded_up": 0.0021000000000000003,
+              "rounded_up_hex": "0x1.13404ea4a8c16p-9"
+            },
+            "epsilon": {
+              "exact_fraction": "1152921504606847/1152921504606846976",
+              "decimal": "0.001000000000000000020816681711721685132943093776702880859375",
+              "rounded_up": 0.001,
+              "rounded_up_hex": "0x1.0624dd2f1a9fcp-10"
+            },
+            "charge": {
+              "exact_fraction": "178648242633492705598269198770127/85070591730234615865843651857942052864",
+              "decimal": "0.00000210000000000000014435067724472006243865247025965878806066452301640180125046791000803514393",
+              "rounded_up": 2.1000000000000002e-06,
+              "rounded_up_hex": "0x1.19db7358bd308p-19"
+            }
+          },
+          {
+            "group": "uwb:8",
+            "leaf_ids": [
+              148,
+              149,
+              150,
+              151,
+              152,
+              153,
+              154,
+              155,
+              156,
+              157,
+              158,
+              159,
+              160,
+              161,
+              162,
+              163,
+              164,
+              165,
+              166,
+              167,
+              168
+            ],
+            "mass_upper": {
+              "exact_fraction": "154952650219160241/73786976294838206464",
+              "decimal": "0.002100000000000000100635645650104521564571768976747989654541015625",
+              "rounded_up": 0.0021000000000000003,
+              "rounded_up_hex": "0x1.13404ea4a8c16p-9"
+            },
+            "epsilon": {
+              "exact_fraction": "1152921504606847/1152921504606846976",
+              "decimal": "0.001000000000000000020816681711721685132943093776702880859375",
+              "rounded_up": 0.001,
+              "rounded_up_hex": "0x1.0624dd2f1a9fcp-10"
+            },
+            "charge": {
+              "exact_fraction": "178648242633492705598269198770127/85070591730234615865843651857942052864",
+              "decimal": "0.00000210000000000000014435067724472006243865247025965878806066452301640180125046791000803514393",
+              "rounded_up": 2.1000000000000002e-06,
+              "rounded_up_hex": "0x1.19db7358bd308p-19"
+            }
+          }
+        ],
+        "first_source_numerical_cover_mapping": [
+          {
+            "leaf_id": 1,
+            "source": "uwb:1",
+            "onset_epoch": 1,
+            "numerical_shape": "ANCHOR_BIAS_EPOCH_INDEPENDENT",
+            "raw_support": "EXACT_ONSET_OCCURRENCE",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 2,
+            "source": "uwb:1",
+            "onset_epoch": 1,
+            "numerical_shape": "ANCHOR_BIAS_PERSISTENT_CONSTANT",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 3,
+            "source": "uwb:1",
+            "onset_epoch": 1,
+            "numerical_shape": "ANCHOR_BIAS_RAMP",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 4,
+            "source": "uwb:1",
+            "onset_epoch": 2,
+            "numerical_shape": "ANCHOR_BIAS_EPOCH_INDEPENDENT",
+            "raw_support": "EXACT_ONSET_OCCURRENCE",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 5,
+            "source": "uwb:1",
+            "onset_epoch": 2,
+            "numerical_shape": "ANCHOR_BIAS_PERSISTENT_CONSTANT",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 6,
+            "source": "uwb:1",
+            "onset_epoch": 2,
+            "numerical_shape": "ANCHOR_BIAS_RAMP",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 7,
+            "source": "uwb:1",
+            "onset_epoch": 3,
+            "numerical_shape": "ANCHOR_BIAS_EPOCH_INDEPENDENT",
+            "raw_support": "EXACT_ONSET_OCCURRENCE",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 8,
+            "source": "uwb:1",
+            "onset_epoch": 3,
+            "numerical_shape": "ANCHOR_BIAS_PERSISTENT_CONSTANT",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 9,
+            "source": "uwb:1",
+            "onset_epoch": 3,
+            "numerical_shape": "ANCHOR_BIAS_RAMP",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 10,
+            "source": "uwb:1",
+            "onset_epoch": 4,
+            "numerical_shape": "ANCHOR_BIAS_EPOCH_INDEPENDENT",
+            "raw_support": "EXACT_ONSET_OCCURRENCE",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 11,
+            "source": "uwb:1",
+            "onset_epoch": 4,
+            "numerical_shape": "ANCHOR_BIAS_PERSISTENT_CONSTANT",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 12,
+            "source": "uwb:1",
+            "onset_epoch": 4,
+            "numerical_shape": "ANCHOR_BIAS_RAMP",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 13,
+            "source": "uwb:1",
+            "onset_epoch": 5,
+            "numerical_shape": "ANCHOR_BIAS_EPOCH_INDEPENDENT",
+            "raw_support": "EXACT_ONSET_OCCURRENCE",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 14,
+            "source": "uwb:1",
+            "onset_epoch": 5,
+            "numerical_shape": "ANCHOR_BIAS_PERSISTENT_CONSTANT",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 15,
+            "source": "uwb:1",
+            "onset_epoch": 5,
+            "numerical_shape": "ANCHOR_BIAS_RAMP",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 16,
+            "source": "uwb:1",
+            "onset_epoch": 6,
+            "numerical_shape": "ANCHOR_BIAS_EPOCH_INDEPENDENT",
+            "raw_support": "EXACT_ONSET_OCCURRENCE",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 17,
+            "source": "uwb:1",
+            "onset_epoch": 6,
+            "numerical_shape": "ANCHOR_BIAS_PERSISTENT_CONSTANT",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 18,
+            "source": "uwb:1",
+            "onset_epoch": 6,
+            "numerical_shape": "ANCHOR_BIAS_RAMP",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 19,
+            "source": "uwb:1",
+            "onset_epoch": 7,
+            "numerical_shape": "ANCHOR_BIAS_EPOCH_INDEPENDENT",
+            "raw_support": "EXACT_ONSET_OCCURRENCE",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 20,
+            "source": "uwb:1",
+            "onset_epoch": 7,
+            "numerical_shape": "ANCHOR_BIAS_PERSISTENT_CONSTANT",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          },
+          {
+            "leaf_id": 21,
+            "source": "uwb:1",
+            "onset_epoch": 7,
+            "numerical_shape": "ANCHOR_BIAS_RAMP",
+            "raw_support": "ONSET_THROUGH_PROTECTED_EPOCH",
+            "status": "Numerical cover description only; NOT an exclusive physical event or a prior constraint."
+          }
+        ],
+        "concrete_physical_cell_cover_examples": [
+          {
+            "source": "uwb:1",
+            "onset_epoch": 1,
+            "last_affected_occurrence": 1,
+            "physical_law": "constant; episode ended before later observations",
+            "cover_ids": [
+              1
+            ]
+          },
+          {
+            "source": "uwb:1",
+            "onset_epoch": 1,
+            "last_affected_occurrence": 7,
+            "physical_law": "constant; episode affects through protected measurement",
+            "cover_ids": [
+              2,
+              3
+            ]
+          },
+          {
+            "source": "uwb:1",
+            "onset_epoch": 1,
+            "last_affected_occurrence": 7,
+            "physical_law": "affine nonzero slope; episode affects through protected measurement",
+            "cover_ids": [
+              3
+            ]
+          },
+          {
+            "source": "uwb:1",
+            "onset_epoch": 7,
+            "last_affected_occurrence": 7,
+            "physical_law": "one observed occurrence; any declared constant/affine law or duration compatible with that occurrence",
+            "cover_ids": [
+              19,
+              20,
+              21
+            ]
+          }
+        ],
+        "last_onset_numerical_aliases": [
+          {
+            "source": "uwb:1",
+            "leaf_ids": [
+              19,
+              20,
+              21
+            ],
+            "claim": "Equal numerical audit at the last onset; NOT a probability-event identity certificate."
+          },
+          {
+            "source": "uwb:2",
+            "leaf_ids": [
+              40,
+              41,
+              42
+            ],
+            "claim": "Equal numerical audit at the last onset; NOT a probability-event identity certificate."
+          },
+          {
+            "source": "uwb:3",
+            "leaf_ids": [
+              61,
+              62,
+              63
+            ],
+            "claim": "Equal numerical audit at the last onset; NOT a probability-event identity certificate."
+          },
+          {
+            "source": "uwb:4",
+            "leaf_ids": [
+              82,
+              83,
+              84
+            ],
+            "claim": "Equal numerical audit at the last onset; NOT a probability-event identity certificate."
+          },
+          {
+            "source": "uwb:5",
+            "leaf_ids": [
+              103,
+              104,
+              105
+            ],
+            "claim": "Equal numerical audit at the last onset; NOT a probability-event identity certificate."
+          },
+          {
+            "source": "uwb:6",
+            "leaf_ids": [
+              124,
+              125,
+              126
+            ],
+            "claim": "Equal numerical audit at the last onset; NOT a probability-event identity certificate."
+          },
+          {
+            "source": "uwb:7",
+            "leaf_ids": [
+              145,
+              146,
+              147
+            ],
+            "claim": "Equal numerical audit at the last onset; NOT a probability-event identity certificate."
+          },
+          {
+            "source": "uwb:8",
+            "leaf_ids": [
+              166,
+              167,
+              168
+            ],
+            "claim": "Equal numerical audit at the last onset; NOT a probability-event identity certificate."
+          }
+        ],
+        "mass_preserving_partition_known": {
+          "exact_fraction": "498726344018500482848963389104079/10633823966279326983230456482242756608",
+          "decimal": "0.0000469000000000000044514047938155887508219730713983944111309002905765269100037432800642811515",
+          "rounded_up": 4.690000000000001e-05,
+          "rounded_up_hex": "0x1.896cfbabdd691p-15"
+        },
+        "unknown_terms": [
+          "bridge",
+          "history",
+          "model",
+          "omitted"
+        ],
+        "current_candidate_bounds": [
+          {
+            "action_id": "2",
+            "hpl_m": "0.551177",
+            "vpl_m": "0.744743",
+            "post_detector_passed": "1",
+            "covers_plausible_set": "0"
+          },
+          {
+            "action_id": "3",
+            "hpl_m": "0.527002",
+            "vpl_m": "0.734679",
+            "post_detector_passed": "1",
+            "covers_plausible_set": "0"
+          },
+          {
+            "action_id": "4",
+            "hpl_m": "0.489918",
+            "vpl_m": "0.718893",
+            "post_detector_passed": "1",
+            "covers_plausible_set": "0"
+          },
+          {
+            "action_id": "5",
+            "hpl_m": "0.489918",
+            "vpl_m": "0.718893",
+            "post_detector_passed": "1",
+            "covers_plausible_set": "0"
+          },
+          {
+            "action_id": "6",
+            "hpl_m": "0.489918",
+            "vpl_m": "0.718893",
+            "post_detector_passed": "1",
+            "covers_plausible_set": "0"
+          },
+          {
+            "action_id": "7",
+            "hpl_m": "0.551177",
+            "vpl_m": "0.744743",
+            "post_detector_passed": "1",
+            "covers_plausible_set": "1"
+          }
+        ],
+        "selector_trace": [
+          "gate:numerical:0:1:1:finite post-passed covering candidate;gate:risk:1:4.6900000000000008e-05:4.0000000000000003e-05:RISK_OVER_BUDGET: known charged lower bound;gate:AL:0:0.55117685012311124:2:HPL=0.551177;gate:qualification:3:nan:nan:;gate:deadline:3:nan:nan:;ledger:nominal:3.0000000000000004e-05:VALIDATED:config risk.nominal_axis_tail x 3 protected axes:pi0 * alpha0 for the alarm-free outcome;ledger:p_nm:9.9999999999999995e-08:VALIDATED:config risk.p_nm:non-nominal outcome mass not attributable to a hypothesis;ledger:hypotheses:9.9000000000000001e-06:VALIDATED:per-hypothesis allocation / prior bound (allocation policy: prior_weighted_outcome_conditioned):sum of pi_h * alpha_h over charged hypotheses;ledger:hypotheses_miss_channel:6.9000000000000025e-06:VALIDATED:section 5.9 union bound: sum of pi_h * max(0, beta_h - alpha_h):charged detector-miss excess above the allocation-derived tail;ledger:bridge:nan:ASSUMED_UNVALIDATED:config risk.p_bridge_escape:configured zero has no zero proof: value is UNKNOWN;ledger:history:nan:ASSUMED_UNVALIDATED:config risk.p_history_contamination:configured zero has no zero proof: value is UNKNOWN;ledger:model:nan:ASSUMED_UNVALIDATED:config risk.p_model_escape:configured zero has no zero proof: value is UNKNOWN;ledger:omitted:nan:NOT_IMPLEMENTED:config/integrity_fault_manifest.yaml omitted_event_set:omitted-event mass is UNKNOWN unless the complete scope carries a finite known bound;ledger:envelope:0:VALIDATED:exact coverage of frozen generated mode registry;ledger:selection:8.4703294725430034e-22:VALIDATED:numeric FDE guarantee groups over every eligible action:extra union charge beyond the once-charged hypothesis allocation"
+        ],
+        "pl_comparison": "UNCHANGED: old per-leaf alpha/beta, every numerical witness, common-reference and selection requirements retained. No new PL certificate minted.",
+        "old_availability": "UNAVAILABLE",
+        "new_availability": "UNAVAILABLE",
+        "protected_output": false,
+        "new_contract_implemented": false,
+        "persistent_only_best_case_floor": {
+          "exact_fraction": "219588464903668123824770161423685/5316911983139663491615228241121378304",
+          "decimal": "0.0000413000000000000040664696544963352509855664840393043096357948958661221066691621867095207676",
+          "rounded_up": 4.130000000000001e-05,
+          "rounded_up_hex": "0x1.5a73131d13365p-15"
+        },
+        "persistent_only_can_close_even_if_other_persistent_charges_zero": false
+      }
+    ],
+    "counterexamples": {
+      "disjoint_168_atoms": {
+        "each_prior": {
+          "exact_fraction": "7378697629483821/73786976294838206464",
+          "decimal": "0.000100000000000000004792173602385929598312941379845142364501953125",
+          "rounded_up": 0.0001,
+          "rounded_up_hex": "0x1.a36e2eb1c432dp-14"
+        },
+        "fault_union_mass": {
+          "exact_fraction": "154952650219160241/9223372036854775808",
+          "decimal": "0.016800000000000000805085165200836172516574151813983917236328125",
+          "rounded_up": 0.016800000000000002,
+          "rounded_up_hex": "0x1.13404ea4a8c16p-6"
+        },
+        "nominal_mass": {
+          "exact_fraction": "9068419386635615567/9223372036854775808",
+          "decimal": "0.983199999999999999194914834799163827483425848186016082763671875",
+          "rounded_up": 0.9832000000000001,
+          "rounded_up_hex": "0x1.f765fd8adaba0p-1"
+        },
+        "conditional_miss": {
+          "exact_fraction": "1152921504606847/1152921504606846976",
+          "decimal": "0.001000000000000000020816681711721685132943093776702880859375",
+          "rounded_up": 0.001,
+          "rounded_up_hex": "0x1.0624dd2f1a9fcp-10"
+        },
+        "miss_charge": {
+          "exact_fraction": "178648242633492705598269198770127/10633823966279326983230456482242756608",
+          "decimal": "0.0000168000000000000011548054179577604995092197620772703044853161841312144100037432800642811515",
+          "rounded_up": 1.6800000000000002e-05,
+          "rounded_up_hex": "0x1.19db7358bd308p-16"
+        },
+        "falsely_merged_eight_source_charge": {
+          "exact_fraction": "8507059173023462171346152322387/10633823966279326983230456482242756608",
+          "decimal": "8.00000000000000054990734188464785690915226765584300213586484958629257619225870479251483403E-7",
+          "rounded_up": 8.000000000000001e-07,
+          "rounded_up_hex": "0x1.ad7f29abcaf49p-21"
+        },
+        "conclusion": "All current per-leaf priors permit this partition. A source-union prior of 1e-4 is an additional assumption, not an implication of those priors."
+      },
+      "certified_identical_event_21_labels": {
+        "old": {
+          "exact_fraction": "178648242633492705598269198770127/85070591730234615865843651857942052864",
+          "decimal": "0.00000210000000000000014435067724472006243865247025965878806066452301640180125046791000803514393",
+          "rounded_up": 2.1000000000000002e-06,
+          "rounded_up_hex": "0x1.19db7358bd308p-19"
+        },
+        "new": {
+          "exact_fraction": "8507059173023462171346152322387/85070591730234615865843651857942052864",
+          "decimal": "1.00000000000000006873841773558098211364403345698037526698310619828657202403233809906435425E-7",
+          "rounded_up": 1.0000000000000001e-07,
+          "rounded_up_hex": "0x1.ad7f29abcaf49p-24"
+        },
+        "prior_changed": false,
+        "prerequisite": "All 21 labels are proven covers of one identical physical event, whose union prior is already bounded by the SAME original 1e-4.",
+        "applicable_to_epoch7": false
+      },
+      "correlated_pair": {
+        "p": {
+          "exact_fraction": "7378697629483821/73786976294838206464",
+          "decimal": "0.000100000000000000004792173602385929598312941379845142364501953125",
+          "rounded_up": 0.0001,
+          "rounded_up_hex": "0x1.a36e2eb1c432dp-14"
+        },
+        "q": {
+          "exact_fraction": "5902958103587057/590295810358705651712",
+          "decimal": "0.000010000000000000000818030539140313095458623138256371021270751953125",
+          "rounded_up": 1e-05,
+          "rounded_up_hex": "0x1.4f8b588e368f1p-17"
+        },
+        "joint_bounds": [
+          {
+            "exact_fraction": "0",
+            "decimal": "0",
+            "rounded_up": 0.0,
+            "rounded_up_hex": "0x0.0p+0"
+          },
+          {
+            "exact_fraction": "5902958103587057/590295810358705651712",
+            "decimal": "0.000010000000000000000818030539140313095458623138256371021270751953125",
+            "rounded_up": 1e-05,
+            "rounded_up_hex": "0x1.4f8b588e368f1p-17"
+          }
+        ],
+        "perfect_correlation_joint": {
+          "exact_fraction": "5902958103587057/590295810358705651712",
+          "decimal": "0.000010000000000000000818030539140313095458623138256371021270751953125",
+          "rounded_up": 1e-05,
+          "rounded_up_hex": "0x1.4f8b588e368f1p-17"
+        },
+        "independent_product": {
+          "exact_fraction": "43556142965880128973623446504797/43556142965880123323311949751266331066368",
+          "decimal": "1.00000000000000012972478993789060944913608323782691322195451717959488850068957862366695460E-9",
+          "rounded_up": 1.0000000000000003e-09,
+          "rounded_up_hex": "0x1.12e0be826d696p-30"
+        },
+        "product_understates_possible_joint_by": 10000.0,
+        "old_marginal_plus_joint_charge": {
+          "exact_fraction": "40833884030512618653045832068827/340282366920938463463374607431768211456",
+          "decimal": "1.20000000000000008926236486073158138997874225248808697303924471711336776707867253152772768E-7",
+          "rounded_up": 1.2000000000000002e-07,
+          "rounded_up_hex": "0x1.01b2b29a4692cp-23"
+        },
+        "worst_partition_union_charge": {
+          "exact_fraction": "74862120722606467338430441358375/680564733841876926926749214863536422912",
+          "decimal": "1.10000000000000007900039129815628175181138785473423112001117545769996989555550531529604097E-7",
+          "rounded_up": 1.1000000000000002e-07,
+          "rounded_up_hex": "0x1.d87247702c0d1p-24"
+        },
+        "prerequisite": "Bounds must be authenticated marginals of the same primitive events, not unrelated exclusive-mode upper bounds."
+      },
+      "onset_witness": {
+        "fault": [
+          1,
+          1,
+          1
+        ],
+        "latest_only_span": [
+          0,
+          0,
+          1
+        ],
+        "uncovered_residual_squared": 2,
+        "conclusion": "Retaining only one onset loses earlier persistent faults."
+      },
+      "duration_witness": {
+        "fault": [
+          0,
+          1,
+          1,
+          0
+        ],
+        "result": "Outside the currently enumerated one-epoch or onset-to-end constant/affine families; must stay in omitted/escape unless scope is explicitly extended."
+      },
+      "merged_full_span": {
+        "detector": [
+          1,
+          1
+        ],
+        "protected": [
+          1,
+          -1
+        ],
+        "individual_slopes": [
+          1,
+          1
+        ],
+        "dangerous_null_vector": [
+          1,
+          -1
+        ],
+        "detector_response": 0,
+        "protected_response": 2,
+        "conclusion": "Union of two single-fault spaces is not their concatenated span; concatenation admits a new dangerous combined fault. Keep union witnesses and their max bounds."
+      },
+      "sequence_reuse": {
+        "single_persistent_event_prior": {
+          "exact_fraction": "7378697629483821/73786976294838206464",
+          "decimal": "0.000100000000000000004792173602385929598312941379845142364501953125",
+          "rounded_up": 0.0001,
+          "rounded_up_hex": "0x1.a36e2eb1c432dp-14"
+        },
+        "per_epoch_conditional_miss": {
+          "exact_fraction": "1152921504606847/1152921504606846976",
+          "decimal": "0.001000000000000000020816681711721685132943093776702880859375",
+          "rounded_up": 0.001,
+          "rounded_up_hex": "0x1.0624dd2f1a9fcp-10"
+        },
+        "three_disjoint_conditional_miss_sets": {
+          "exact_fraction": "3458764513820541/1152921504606846976",
+          "decimal": "0.003000000000000000062450045135165055398829281330108642578125",
+          "rounded_up": 0.003,
+          "rounded_up_hex": "0x1.89374bc6a7efap-9"
+        },
+        "mission_charge": {
+          "exact_fraction": "25521177519070386514038456967161/85070591730234615865843651857942052864",
+          "decimal": "3.00000000000000020621525320674294634093210037094112580094931859485971607209701429719306276E-7",
+          "rounded_up": 3.0000000000000004e-07,
+          "rounded_up_hex": "0x1.421f5f40d8377p-22"
+        },
+        "conclusion": "A per-protected-epoch bound cannot be charged once across multiple published epochs. Sequence risk requires its own conditional union bound."
+      },
+      "adaptive_output_groups": {
+        "conditional_failure_per_group": {
+          "exact_fraction": "1152921504606847/1152921504606846976",
+          "decimal": "0.001000000000000000020816681711721685132943093776702880859375",
+          "rounded_up": 0.001,
+          "rounded_up_hex": "0x1.0624dd2f1a9fcp-10"
+        },
+        "two_disjoint_failure_sets": {
+          "exact_fraction": "1152921504606847/576460752303423488",
+          "decimal": "0.00200000000000000004163336342344337026588618755340576171875",
+          "rounded_up": 0.002,
+          "rounded_up_hex": "0x1.0624dd2f1a9fcp-9"
+        },
+        "incorrectly_merged_max": {
+          "exact_fraction": "1152921504606847/1152921504606846976",
+          "decimal": "0.001000000000000000020816681711721685132943093776702880859375",
+          "rounded_up": 0.001,
+          "rounded_up_hex": "0x1.0624dd2f1a9fcp-10"
+        },
+        "conclusion": "A shared physical source does not prove a shared output failure event. Without common-reference evidence, sum group bounds inside each physical event."
+      }
+    },
+    "physical_source_union_prior": "UNKNOWN: existing per-leaf bound does not identify or bound the union event.",
+    "conclusion": "No defensible net budget or availability gain on epoch7 from currently supplied priors; event grouping with conserved mass gives the same 4.69e-5 known total.",
+    "imu_diagnostic": "Independent blocker retained: weak parity response, unchanged step gate, new-samples-only versus whole-interval support mismatch.",
+    "proof_domain": "Frozen linear Gaussian / event-conditional uniform certificates, with complete fault coverage and same accepted output reference as prerequisites. No hardware or publication qualification.",
+    "deterministic_checks": 8,
+    "research_script_sha256": "78cfeda42c6a9f5e8d4bf9b403e1d90841fdf481b04bdb83f40d1acfa4a54b68",
+    "runtime": {
+      "python": "3.8.10",
+      "numpy": "1.24.4"
+    },
+    "selection_boundary": "The existing action groups are retained. A lower physical tail charge cannot be subtracted from the old 9.9e-6 selection reserve without a new quantitative union certificate. No hypothetical lower-prior availability is claimed.",
+    "capture": {
+      "head": "9ebbf99bd79d64869fafb3aef7a39d0b306532d5",
+      "binary_sha256": "54581c0b504f9f59fc7f5eea1385feed36bbe42c748fe5f4983346eebec03776",
+      "library_sha256": "1044b4606640698bd2c56ec8a93afbc6c9f453c4135636b8dec67bd0f1432bcf",
+      "config_sha256": "98faf198f9fe244c176fb9851b4c6f88125295338e86010706a034ec8c0a410a",
+      "manifest_sha256": "270a11fdb319b8beb8a535bc44550df00df499286e61bc21fd42a171d7171991",
+      "command": [
+        "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib/uwb_imu_pl/realtime_performance_benchmark",
+        "config/fde_uwb_order1.yaml",
+        "/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-pl/results/fde_operability_20261010/event_contract_snapshot",
+        "7"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1",
+        "UWB_IMU_PL_SCENARIO": "uwb_recovery",
+        "UWB_IMU_PL_FAULT_SCHEDULE_EPOCHS": "18",
+        "UWB_IMU_PL_RESEARCH_HYPOTHESIS_AUDIT": "1",
+        "UWB_IMU_PL_BATCH_FROZEN_PROOFS": "0",
+        "UWB_IMU_PL_ROOT_RESPONSE_REUSE": "0",
+        "UWB_IMU_PL_MODE_RESPONSE_CACHE": "0",
+        "UWB_IMU_PL_FROZEN_VALIDATION_REUSE": "0"
+      },
+      "exit_code": 0,
+      "wall_s": 0.4692192040020018,
+      "scope": "One diagnostic capture, seven prefix epochs with unchanged 18-epoch fault schedule; not timing qualification"
+    }
   }
 }
