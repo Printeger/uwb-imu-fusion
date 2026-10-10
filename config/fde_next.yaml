@@ -1,0 +1,42 @@
+# Isolated research contract. Never load this as a production integrity profile.
+model_version: fde-next-gaussian-v1
+event_version: categorical-single-episode-task-v1
+noise_version: raw-adc-gaussian-v1
+probability_domain: FROZEN_MODEL_ONLY
+protection_point: uwb_tag_world
+base_config: config/fde_uwb_order1.yaml
+epoch_s: 0.05
+imu_sample_s: 0.005
+epochs: 50
+window_epochs: 10
+fixed_lag_epochs: 30
+seed: 20261010
+confirmation_seed: 20261011
+lever: [0.2, -0.1, 0.08]
+# p=(0.1 sin(.5t), .08 sin(.4t), 1+.05 sin(.3t)); R=Exp(.2t axis).
+translation_amplitude: [0.1, 0.08, 0.05]
+translation_frequency: [0.5, 0.4, 0.3]
+angular_rate_radps: 0.2
+range_sigma_m: 0.1
+raw_accel_sigma_mps2: 0.02
+raw_gyro_sigma_radps: 0.001
+initial_position_error_m: [0.01, -0.01, 0.005]
+# No IMU-fault event in S1/S2 conditional scope; not a hardware claim.
+uwb_task_event_mass: 0.001
+imu_task_event_mass: 0.0
+carry_in: none_at_initialization
+fault_epoch: 15
+fault_anchor_index: 0
+uwb_amplitude_m: 2.25
+persistent_epochs: 3
+alpha_per_test: 0.000001
+noise_tail_per_candidate: 0.000000001
+max_candidates: 128
+risk_budget: 0.00004
+# Simultaneous noise-event union: 2*tail*max_candidates*epochs=1.28e-5.
+selection_rule: complete_candidate_union_min_cardinality_then_pl
+bridge_acceleration_bound_mps2: 4.0
+bridge_angular_rate_bound_radps: 2.0
+nonlinear_remainder: UNQUALIFIED
+formal_eligible: false
+publication_protected: false

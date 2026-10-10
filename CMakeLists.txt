@@ -486,3 +486,6 @@ if(CATKIN_ENABLE_TESTING)
     COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools
       python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_dataset_benchmark.py)
 endif()
+
+add_executable(fde_next_checks EXCLUDE_FROM_ALL research/gaussian_checks.cpp)
+target_link_libraries(fde_next_checks fde_research)
