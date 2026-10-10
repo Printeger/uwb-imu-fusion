@@ -1,5 +1,13 @@
 # Isolated UWB–IMU FDE research, 2026-10-10
 
+The bounded original-sensor convergence task is complete; see
+[functional results and refusal boundaries](../docs/fde_functional_convergence.md).
+It retains the evidence below, adds two six-axis motion snapshots and actual
+UWB exclusion-lineage evaluation, and does not promote the odometer comparison
+to an original UWB+IMU positive. `fde_research_power CONFIG OUTPUT directions`
+executes the new directed checks. `report_convergence.py` validates the retained
+small runs and appends `functional_convergence` to the existing JSON.
+
 Production remains **PARTIAL_BLOCKED**. These `EXCLUDE_FROM_ALL` targets are
 physically separate from the production library/node, are not installed, and
 never retain/mint a protected output or call a publisher. Simulation results

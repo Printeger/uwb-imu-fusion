@@ -88,7 +88,7 @@ int main(int argc,char** argv) {
     IncrementalUwbImuEstimator estimator(cfg,Eigen::Vector3d::Zero());
     estimator.initialize(initialState(),cfg.realtime.prior_sigmas);estimator.ingestImu(sample(cfg,0));
     std::ofstream out(argv[2]);if(!out)throw std::runtime_error("output unavailable");
-    out<<std::setprecision(17)<<"epoch,alarm,statistic,threshold,hypotheses,actions,numerical_candidates,post_candidates,pl_candidates,risk_closes,selected,exclusion,bridge,commit,backend_updates,conditional_available,formal_eligible,publication_protected,position_error,hpl,vpl,core_ms,within_40ms,within_50ms,strict_status,strict_risk_closes,strict_reason,reason\n";
+    out<<std::setprecision(17)<<"epoch,alarm,statistic,threshold,hypotheses,actions,numerical_candidates,post_candidates,pl_candidates,risk_closes,selected,exclusion,bridge,commit,backend_updates,conditional_available,formal_eligible,publication_protected,position_error,hpl,vpl,core_ms,within_40ms,within_50ms,strict_status,strict_risk_closes,strict_reason,reason,retained_current_ranges,uwb_exclusion_correct,position_x,position_y,position_z\n";
     int exclusions=0,after=0;
     for(int epoch=1;epoch<=epochs;++epoch) {
       const auto start=std::chrono::steady_clock::now();
@@ -241,7 +241,8 @@ int main(int argc,char** argv) {
           w,cfg.risk_v2,models.hypotheses,bound,candidates,ledger);
       if(decision.commit_allowed && ledger.closes)risk_result.complete_bound_closes=true;
       if(epoch==fault_epoch) {
-        std::cerr<<std::setprecision(17)<<"risk epoch="<<epoch<<" total="<<ledger.charged_total<<" budget="<<ledger.budget<<"\n";
+        if(ledger.terms.empty())std::cerr<<"risk epoch="<<epoch<<" NOT_RUN (no eligible bounded candidate)\n";
+        else std::cerr<<std::setprecision(17)<<"risk epoch="<<epoch<<" total="<<ledger.charged_total<<" budget="<<ledger.budget<<"\n";
         for(const auto& term:ledger.terms)std::cerr<<term.id<<"="<<term.value<<" status="<<toString(term.status)<<" source="<<term.source<<"\n";
       }
       EpochCommitPlan plan;
@@ -262,6 +263,20 @@ int main(int argc,char** argv) {
         for(const auto id:a.groups_to_add)if(std::find(plan.groups_to_add.begin(),plan.groups_to_add.end(),id)==plan.groups_to_add.end())plan.groups_to_add.push_back(id);
         for(const auto& c:candidates)if(c.selected){hpl=c.hpl_m;vpl=c.vpl_m;}
       }else {plan=EpochCommitPlan::nominalPlan(tx);plan.best_effort_integrity_unavailable=true;}
+      // Evaluation ONLY, after the selector and final add recipe are fixed.
+      // Check actual source lineage rather than treating any exclusion as a
+      // correct one. The injected label never enters a numerical consumer.
+      std::vector<MeasurementId> retained_ranges;
+      for(const auto& group:tx.uwb_groups)
+        if(std::find(plan.groups_to_add.begin(),plan.groups_to_add.end(),group.id)!=plan.groups_to_add.end())
+          retained_ranges.insert(retained_ranges.end(),group.source_measurements.begin(),group.source_measurements.end());
+      int correct=-1;
+      if(scenario=="uwb" && epoch==fault_epoch) {
+        const auto bad=tx.uwb_batch.measurements.front().id;
+        correct=selected && decision.selected_action && !decision.selected_action->groups_to_remove.empty() &&
+          retained_ranges.size()==tx.uwb_batch.measurements.size()-1 &&
+          std::find(retained_ranges.begin(),retained_ranges.end(),bad)==retained_ranges.end();
+      }
       // Ordinary simulation transaction: no protected token or certification.
       const auto receipt=estimator.commitEpoch(std::move(tx),plan);
       const bool exclusion=selected && decision.selected_action && !decision.selected_action->groups_to_remove.empty();exclusions+=exclusion;
@@ -273,7 +288,8 @@ int main(int argc,char** argv) {
       if(exclusions && epoch>fault_epoch && available)++after;
       const double error=(estimator.currentState().position_world_m-Eigen::Vector3d(0,0,1)).norm();
       const double wall=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();
-      out<<epoch<<','<<!detector.passed<<','<<detector.squared_parity_statistic<<','<<detector.squared_threshold<<','<<models.hypotheses.size()<<','<<actions.size()<<','<<numerical<<','<<post<<','<<pl_count<<','<<risk_result.complete_bound_closes<<','<<selected<<','<<exclusion<<','<<int(plan.bridge_mode)<<",1,"<<receipt.backend_updates<<','<<available<<",0,0,"<<error<<','<<hpl<<','<<vpl<<','<<wall<<','<<(available && wall<=40.)<<','<<(available && wall<=50.)<<','<<int(strict_decision.status)<<','<<strict_risk<<','<<std::quoted(strict_decision.reason)<<','<<std::quoted(decision.reason)<<'\n';
+      const auto position=estimator.currentState().position_world_m;
+      out<<epoch<<','<<!detector.passed<<','<<detector.squared_parity_statistic<<','<<detector.squared_threshold<<','<<models.hypotheses.size()<<','<<actions.size()<<','<<numerical<<','<<post<<','<<pl_count<<','<<risk_result.complete_bound_closes<<','<<selected<<','<<exclusion<<','<<int(plan.bridge_mode)<<",1,"<<receipt.backend_updates<<','<<available<<",0,0,"<<error<<','<<hpl<<','<<vpl<<','<<wall<<','<<(available && wall<=40.)<<','<<(available && wall<=50.)<<','<<int(strict_decision.status)<<','<<strict_risk<<','<<std::quoted(strict_decision.reason)<<','<<std::quoted(decision.reason)<<','<<retained_ranges.size()<<','<<correct<<','<<position.x()<<','<<position.y()<<','<<position.z()<<'\n';
     }
     std::cout<<"CONDITIONAL scenario="<<scenario<<" independent_velocity="<<odometer<<" exclusions="<<exclusions<<" subsequent_selected_commits="<<after<<" formal_eligible=false publication_protected=false\n";
   }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}

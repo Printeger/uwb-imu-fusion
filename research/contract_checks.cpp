@@ -18,6 +18,21 @@ int main(int argc,char** argv) {
   faulty.measurements.back().range_m+=1.75;
   require(!rangePositionSet(faulty).valid,"two faults not refused in this fixture");
   auto flat=ranges(cfg,3,false,0.,true);require(!rangePositionSet(flat).valid,"flat geometry not refused");
+  // Physical UWB+IMU counterexample, not just a singular abstract matrix:
+  // static worlds reflected about the anchor plane have identical ranges,
+  // gravity and gyro inputs at every epoch. A bootstrap branch does not add
+  // an independently qualified sensor observation of the true branch.
+  const Eigen::Vector3d mirror(0,0,1.2);
+  for(const auto& m:flat.measurements)
+    require(std::abs((m.anchor_position_m-truth).norm()-(m.anchor_position_m-mirror).norm())<1e-12,
+            "coplanar reflected world not measurement-identical");
+  auto tangent=healthy;
+  for(auto& m:tangent.measurements) {
+    m.anchor_position_m.z()=truth.z();m.range_m=(m.anchor_position_m-truth).norm();
+    require(m.range_m>0. && (truth-m.anchor_position_m).normalized().z()==0.,
+            "vertical protected direction not in range linear nullspace");
+  }
+  require(!rangePositionSet(tangent).valid,"dangerous vertical geometry accepted");
   auto invalid=healthy;invalid.measurements.front().range_m=std::numeric_limits<double>::quiet_NaN();
   require(!rangePositionSet(invalid).valid,"NaN accepted");
   const Eigen::Vector3d shifted(.02,-.03,.04);

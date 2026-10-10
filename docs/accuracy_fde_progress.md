@@ -1357,3 +1357,33 @@ commit、两个排除及其4次后续commit、140attempt与数值对照。新增
 不能未经批准进入生产受保护路径。只读证据接口、原始支持/lineage与拒绝
 诊断可建议常规review；raw episode/joint covariance、odometer、range PL和
 共同参考选择器的生产采用仍需合同批准与传感器证据，不自动切换。
+
+### 2026-10-10：新的原始 UWB＋IMU 功能收敛任务完成
+
+本轮可实施工作正常结束，未延长隔离研究campaign，也未因硬件资格缺失
+阻止研发。报告：[FDE功能与边界](fde_functional_convergence.md)；原JSON追加
+`functional_convergence`，历史章节和用户未提交requirements保持原样。
+
+**FUNCTIONAL / CONDITIONAL：** 原始UWB＋IMU、真实range+2.25m在epoch3
+报警（435.4703>72.22885）；实际提交替换group3002，评价代码检查提交配方
+确实保留七条健康range、排除故障measurement，随后四次selected commit。
+有界range条件下位置误差<1e-12m；这是精确静止仿真的数值结果，非硬件精度。
+原严格风险仍拒绝，common-reference研究条件选择才通过。故障耗时54.661ms，
+后续存在超时，所有正式发布资格保持false。
+
+**BLOCKED / FUNCTIONAL拒绝：** 原始50ms raw accel-x20m/s²不报警，
+epoch3–7 KEEP step均超原.25，无IMU剔除或条件可用；best-effort七次位置
+RMSE .023094m，最大 .033230m。真实后续状态保存，未用额外里程计造成功。
+
+两组定向快照补齐六轴、50/500ms实际有限raw腐化。静止gyro-z是当前位置
+一阶无害零方向；平移旋转让其500ms lambda从约1e-26变为1.6992，仍不足。
+500ms accel-x条件p_md从.00023674改善为.00002075，但当前激励超原bridge
+4m/s²范围且非旧50ms模式，不能称合法隔离闭环。all-in步长冲突不用于
+证明所有剔除候选必败。共面镜像世界具有同一UWB/IMU输入，真实分支必须
+拒绝；数值rank拒绝与危险零方向、缺失硬件概率分开记录。
+
+新增40项合同小检查、24行方向结果和最后一次核心回归9项通过（38ms）；
+方向进程0.12s。无新增生产数学/性能候选，原冻结35-attempt配对和历史大
+矩阵直接复用，不重复回放。代码改动仅研究诊断、定向验证和报告保留。
+**UNQUALIFIED：** raw噪声/故障时域、先验/共同原因、bridge/model域及截止
+时刻资格继续需要独立证据；生产prior、预算、AL、正式故障合同未改变。

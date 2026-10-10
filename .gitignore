@@ -129,7 +129,11 @@ data/*.bag
 
 # Local user-provided requirements for the accuracy/FDE research iteration.
 # Keep the input available locally; transport implementation and compact evidence.
-/docs/requirements/UWB_IMU_Accuracy_FDE_Requirements.md
+/docs/requirements/
+
+# Full numeric comparison dumps are disposable intermediate evidence.
+# Keep executable checks and compact JSON summaries instead.
+*.semantics.txt
 
 # Benchmark transport: keep source, configs, compact metrics and report figures.
 # Raw datasets, cached arrays, trajectories, binaries and logs stay local.
