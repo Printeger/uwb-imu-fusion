@@ -147,6 +147,7 @@ def main():
             rows = read_rows(path)
             print(f"{len(rows)} outputs; selected={sum(x['selected']=='1' for x in rows)}; "
                   f"exclusions={sum(x['exclusion']=='1' for x in rows)}; "
+                  f"correct_exclusions={sum(x['exclusion']=='1' and x['correct']=='1' for x in rows)}; "
                   f"formal={sum(x['formal_eligible']=='1' for x in rows)}; "
                   f"protected={sum(x['publication_protected']=='1' for x in rows)}; process={wall:.3f}s")
             print("statuses:", dict(Counter(x["status"] for x in rows)))
@@ -199,7 +200,9 @@ def main():
                           f"selected={sum(x['selected']=='1' for x in rows)}/35 updates={sum(int(x['updates']) for x in rows)} "
                           f"core40={sum(core>40)}/35 full50={sum(full>50)}/35 modeled_queue_max={max(wait):.3f} modeled_latency_max={max(wait+full):.3f} "
                           f"process_s={wall:.3f} setup_prewarm_teardown_s={wall-sum(full)/1000:.3f}", flush=True)
-                    print("STREAM_ACTIONS", [(x["epoch"],x["selected_action"],x["removed_groups"],x["correct"]) for x in rows if x["alarm"]=="1"], flush=True)
+                    print("STREAM_ACTIONS", [{key: x[key] for key in
+                          ["epoch", "timestamp_ns", "selected_action", "removed_groups", "correct", "core_ms", "end_to_end_ms"]}
+                          for x in rows if x["alarm"]=="1"], flush=True)
                     print("STREAM_COUNTS", scene, numeric, {key: (min(values(key)), max(values(key))) for key in
                           ["rows", "cols", "noise_source_columns", "reference_faults", "actions", "post", "pl_evaluated", "integrations", "gaussian_decompositions", "source_products", "covariance_fallback"]},
                           f"rejected={sum(x['selected']!='1' for x in rows)} dropped=0 unfinished=0 queue_drained_after_last_arrival_ms={wait[-1]+full[-1]:.3f}", flush=True)

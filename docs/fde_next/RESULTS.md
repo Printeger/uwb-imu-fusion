@@ -429,18 +429,18 @@ Only this results document, four conclusion figures, source/tests/config and
 the single entry script are retained. Owned temporary outputs are deleted
 after summary verification; historical files and user data are unchanged.
 
-## HGIR gap closure (active)
+## HGIR gap closure: HANDOFF_WITH_CORE_GAPS
 
 Local baseline verified: HEAD `98bfe92`, clean worktree, existing private Release
-DSO and runner reused. No S1–S4 replay campaign or rollback. Current cache:
-`.cache/fde-gap-closure/hgir-20261011/` (owned by this run; temporary).
+DSO/build workspace reused. No S1–S4 replay campaign or rollback. Owned cache
+`.cache/fde-gap-closure/hgir-20261011/` is cleaned after final aggregation.
 
 | Package | Work | Capability |
 |---|---|---|
-| H | New joint statistical-history adapter and actual same-freeze boundary audit | Fixed-model dimension defect located; complete raw history still in progress |
-| G | In progress | Raw risk UNKNOWN |
-| I | In progress | No new recovery commit yet |
-| R | Pending stable model | Old S4 timings are not new-model evidence |
+| H | Implemented/verified: actual-boundary audit, statistical adapter, finite raw-prefix consumer | Fixed-model dimensions/source/fault/cross history consistent; adaptive law still separate |
+| G | New components plus quantified finite exit | Common event, nonlinear/domain/contraction mechanisms run; raw risk UNKNOWN |
+| I | New recovery/bridge/recentering and real commits; full-state finite exit | I2 current-position functional recovery; future navigation/raw guarantee unclosed |
+| R | Integrated, paired, regressed and continuously measured | Effective UWB outputs; small observed optimization gain; NOT_REALTIME |
 
 H adds an opt-in sidecar capturing the actual boundary rows **before**
 compression, identical frozen Values, weights, source-row/group/fault identity,
@@ -475,8 +475,8 @@ Reproduce H: build `fde_next_runner fde_next_checks` in the existing build,
 set the private library path from S1, run checks, then
 `FDE_NEXT_HISTORY_AUDIT=1 "$BIN/fde_next_runner" config/fde_next.yaml "$TMP/U0.csv" U0 uwb 20261010 32 optimized`.
 Diagnostics compare30/31/32 in memory; CSV/logs are temporary. H stage saves the
-adapter/audit; next work is consuming the preserved dimension and raw provenance
-in the isolated reference, followed by G/I and new R measurement.
+adapter/audit. The subsequent raw-provenance consumer and R measurements are
+reported below; production behavior is preserved.
 
 G implements `raw_domain.hpp`: a single coordinate Gaussian event over all
 3421 initialized/raw coordinates in50 epochs, risk1e-5, standardized radius
@@ -508,8 +508,8 @@ but no accepted useful family. No near-exact range-union demo substitutes for G.
 New consumer fields separate initial-law/common-event/range-domain validity and
 raw qualification. To reproduce: `python3 tools/run_fde_next.py run --initial-law gaussian --scene U1 --epochs 32`
 (the entry creates and cleans a temporary input-law overlay); U0 is analogous.
-G status: `G_NEW_COMPONENTS_PARTIAL`; core guarantee remains open. This save
-point is not the total Goal endpoint; I/R and raw history consumption continue.
+G status: `G_NEW_COMPONENTS_PARTIAL`; core guarantee remains open. The later
+contraction and I/R integration below add evidence rather than upgrading risk.
 
 I adds an actually executed fault-independent retained-factor recovery solver
 and full-state mixed bridge propagation. It rebuilds initial Values from the
@@ -607,8 +607,8 @@ that rank. Full navigation/raw recovery remains a core gap with new evidence.
 Reproduce: `python3 tools/run_fde_next.py history --history-reference`;
 `python3 tools/run_fde_next.py recovery --position-functional --epochs 50`.
 The source/test/config files and this document are permanent; run logs/matrices
-remain only in the owned cache until final aggregation. R final measurements and
-regression are pending below; this intermediate save is not a Goal endpoint.
+were kept only in the owned cache until final aggregation. R measurements and
+regression below complete the prescribed limited research work.
 
 G additionally implements same-event squared-range-difference contraction with
 all eight one-anchor exclusion branches. It never uses GT or picks a small box
@@ -625,3 +625,158 @@ executable adaptive-root counterexample fits a column to the same noise:
 fixed-model parity energy>0.1 becomes<1e-20 with just one visited fitted root.
 This explicitly prevents interpreting the128 visited candidate cap as covering
 all adaptive Gaussian models. Full raw risk remains UNKNOWN in both routes.
+
+### R frozen baseline and applicable limits
+
+`B-HGIR-correct` is source commit `a53de94`, model
+`fde-hgir-finite-raw-prefix-v1`, UWB single-anchor/single or fixed-three-epoch
+amplitude episode, same world tag/time,50-epoch contract. It is algebraically
+consistent conditional Gaussian research, not a raw-qualified detector. Current
+position I2 has a separate narrower model and is excluded from the UWB speed
+comparison. H/G/I original saves are `5f1b3a6`, `1004ac0`, `8f17029` respectively;
+initial actual HEAD was `98bfe92`. No S1–S4 rollback or redevelopment occurred.
+
+| Quantity | Random law / dependence | Qualification consequence |
+|---|---|---|
+| Initial observation | Default configured bias; optional one independent tangent Gaussian observation | Only optional input law supplies initial noise evidence |
+| ADC/range noise | Independent generator samples, complete50-horizon common coordinate event | Event failure <=1e-5 for its declared3421 coordinates |
+| PIM bias/process auxiliary covariance | Numerical model retained, not silently removed or recharged as ADC | Full matched residual/process law and uniform chart bounds still missing |
+| Reference/H/J/Sigma/whitener | Fit/reintegrate from noisy retained measurements at frozen charts | Data dependent; fixed-root Gaussian law cannot qualify raw risk |
+| Actions/recentering/output | Generated/selected from the same input, at most two candidate reference rebuilds | Same-event uniform bound or complete predetermined family required |
+| UWB fault | Unrestricted declared single-anchor episode amplitude; no test-amplitude prior | Full anchor branch/fault lineage retained; no GT healthy-branch selection |
+
+A prospective raw HMI bound must include the common-event1e-5 plus valid
+initial/domain/process/remainder/selection events on the same probability space.
+Those remaining terms cannot currently be bounded by this implementation, so the
+sum is UNKNOWN; neither old1.28e-5 root charge nor unused budget fills the gap.
+`adaptive_event_valid` means applicability of the raw-coordinate event, not
+calibration of the adaptive chi-square detector. Hardware qualification stays
+false. `imu-supported`/`joint-supported` remain refused; the explicit I2
+functional scope does not open them.
+
+One current-version exclusive wall profile (reference normal14 / actual alarm15,
+ms): preparation20.912/21.872, models3.611/3.760, raw-prefix noise/history40.490/
+43.934, detector82.118/126.856, evidence/actions33.903/47.391, candidates9.091/
+150.339, commit/final1.007/.874. These sequential stages are not added to worker
+CPU totals. Old119.428/174.141ms snapshots remain historical small-model data;
+they are not the new correctness baseline or a new speedup denominator.
+
+R implements one structural direction: ADC source Gram assembly uses actual
+shared timestamp/axis columns per pair of PIM blocks, preserving adjacent-sample
+cross covariance. It retains the original FD Jacobian oracle; no source-ID-only
+reuse at changed state/bias is allowed. Componentwise product/addition error
+bounds and a units-normalized Gershgorin PSD witness guard the fast assembly;
+unresolved cases use the original dense Gram, no covariance jitter. S4 numerical
+cache/batched evidence/KEEP reuse and the existing ownership arena are enabled
+in BOTH new reference/optimized baselines; their old gains are not recounted.
+Near AL/tie scalar fallbacks retain complete prefix embedding. Deterministic
+source-map/covariance tests and full normal/alarm audits pass before timing:
+236/262 matrices, maximum discrepancy0/8.08e-28, all actual recipe/selection/
+commit fields identical. Final continuous runs also compare every semantic field
+for all35 measured epochs, not just the chosen snapshot.
+
+Final current-model safety regression:9 transaction/covariance/bridge/ownership
+checks,5 complete-risk/shared-event checks,3 unprotected-publication checks all
+pass. The research check entry passes its existing Gaussian cases and new history,
+adaptivity, domain/remainder, rank-refusal, shared-source assembly and independent
+recovery tests. The frozen U1 confirmation seed20261011 runs50 commits with49
+selected and one range exclusion (the confirmation summary retains counts, not
+its support oracle); main-seed recovery/followup correctness is audited above;
+tag APE RMSE/P95/max .064366/.119656/.208344m. No multi-seed tail inference.
+
+### Final continuous measurement
+
+Each of four sequential processes keeps one estimator,13 nominal prewarm epochs,
+then35 consecutive measured epochs14–48, including U1 fault15, followup16–19 and
+history exit31. Total140 measured epochs +52 prewarm =192 raw epochs; the50-epoch
+law is unchanged. Input PRNG is separate from branches. No simultaneous build,
+test or second performance process; debug/profile/matrix dumps are disabled.
+Core includes ingestion/preparation through actual plan selection; commit/final
+is measured separately; full includes record formatting and per-epoch temporary/
+arena destruction. Final estimator destruction is outside each measured service
+and listed separately. All35 semantic fields agree in each reference/optimized
+pair; these are effective outputs, not timed rejections.
+
+Numbers in each slash group: mean/median/P95/max ms, denominator35 per row.
+
+| Scene/mode | Core | Full cycle | Commit median | Cleanup median | Selected / commits | Core>40 / full>50 |
+|---|---|---|---:|---:|---|---|
+| U0 reference | 2312.754/1743.945/6202.590/7035.415 | 2316.909/1749.025/6208.179/7042.891 | 1.782 | 2.460 | 35/35 / 35 | 35/35 / 35/35 |
+| U0 optimized | 2281.997/1750.030/6114.523/6828.469 | 2286.327/1754.657/6120.625/6837.460 | 1.741 | 2.771 | 35/35 / 35 | 35/35 / 35/35 |
+| U1 reference | 2318.683/1780.082/6243.139/7118.845 | 2323.062/1786.372/6250.266/7125.977 | 1.599 | 2.502 | 35/35 / 35 | 35/35 / 35/35 |
+| U1 optimized | 2268.841/1756.690/6107.462/6876.108 | 2272.422/1762.110/6110.284/6880.809 | 1.661 | 1.810 | 35/35 / 35 | 35/35 / 35/35 |
+
+Observed same-model full mean reductions1.32% U0 /2.18% U1, small relative to
+full-prefix factorization/fault-family cost. U0 median is slightly worse. This
+ordered35-point comparison establishes the observed cost, not a statistical
+speedup certificate, P99 or WCET. The source assembly direction is retained in
+explicit optimized research mode; no second optimization loop is undertaken.
+
+| Scene/mode | Generation / init /13 prewarm / final teardown ms | Process s | Modeled max wait ms | Modeled max arrival→output ms |
+|---|---|---:|---:|---:|
+| U0 reference | 9.656/1.863/11.793/.808 | 81.127 | 72348.920 | 79391.811 |
+| U0 optimized | 9.152/1.906/12.669/.930 | 80.054 | 71483.992 | 78321.452 |
+| U1 reference | 8.795/1.554/11.270/.687 | 81.338 | 72664.806 | 79607.153 |
+| U1 optimized | 10.153/1.606/11.267/.644 | 79.566 | 71131.862 | 77834.781 |
+
+The queue numbers use FIFO single-service50ms arrivals and measured service,
+not paced/hardware measurements. Queue is fully drained offline; at the last
+modeled arrival the remaining drain time equals the last-column value. No
+inputs dropped, unfinished or candidate outputs rejected in these140 measured
+epochs. All140 violate both deadline targets. No nominal-fast asynchronous
+protected path is claimed.
+
+U1 actual action2 at15 removes group15002, correct in both modes. Raw range fault,
+alarm and exclusion share timestamp750000000ns (sensor delay0 epochs); exclusion
+full service390.232ms reference /389.227ms optimized. Following16–19 are4/4
+selected and current-tag local-available;31 is selected without a false alarm.
+The same transferred HPL/VPL at15 is .875772/1.022719m, at31 .756700/.884196m.
+All formal/protected flags remain0. U0 has no alarm/exclusion in35 measured epochs.
+
+Workload grows from337 rows/225 columns to1119/735 (U1 final1118 after deletion),
+846→2886 raw ADC source columns,224→768 full historical fault modes,
+1862→6384 actual sensitivity integrations per epoch. History/noise graph rebuilt
+once per epoch, Gaussian decompositions1 for normal and at most2 for U1;
+actions1→4, post/PL1→3. Dense source products1 versus27→95 small shared-support
+products in optimized mode; covariance fallback0/35 in every measured process.
+Candidate family coverage was not reduced to obtain this cost improvement.
+
+Reproduce final entry: `python3 tools/run_fde_next.py check`;
+`python3 tools/run_fde_next.py audit --history-reference`;
+`python3 tools/run_fde_next.py stream`. The latter automatically selects the
+finite-prefix model and performs exactly the four consecutive runs. Existing
+private library path is set by the entry. Hardware/OS: Intel Core Ultra5 125H,
+18 logical CPUs, Linux6.18.40.1 WSL2; Release GCC9/C++17, Eigen3, GTSAM4.2,
+`-O3 -march=native`, TBB single worker and OMP/BLAS/MKL1. Measured numerical
+source is `a53de94`; final R changes only documentation/summary output.
+SHA256 runner `f326cd8b49c378c2093cddfcd259f028130be9e82395b959edb7f132d806a9e2`,
+SDK DSO `9f0280990e4561634ae44089990595168e975c61d8ed8b317339ac413b9802de`,
+GTSAM `00d83aa618194aefc4b2011e1d29bd9aba107a8b5e0ee8e946eb2455351219da`.
+No binary, dataset, repository or evidence backup is made; no push.
+
+### Limited exit and core gaps
+
+Prescribed H/G/I/R development and applicable validation are delivered as
+`HANDOFF_WITH_CORE_GAPS`, capability `NOT_REALTIME`, not all-function completion.
+H is consistent within the finite independent prefix/reference contract. G's
+common-event/remainder/contraction route has actual excessive/crossing domains,
+and the complete fixed-family alternative exceeds budget. I's new independent
+mixed bridge has deficient measurement rank and excessive rotation/velocity
+boxes; two bounded rebuilds produce actual current-position recovery commits,
+but no full-navigation certificate. A Gaussian-process bridge would require a
+new matched process law; reinterpreting its numerical weights is refused. More
+local iterations, visited-root charging, smaller unsupported domains or GT resets
+cannot close these failures under the present contract. These are new finite
+exit results, not an external hardware-prior blockage or repeated S3 conclusion.
+The bounded routes and final R measurement are exhausted for this task; no
+additional seed sweep/repeated timing is justified.
+
+Core gaps retained: calibrated adaptive/nonlinear raw HMI (including complete
+Combined-factor/bias/process and history operator remainder), full-navigation
+IMU recovery and fault-qualified history after loss of the original boundary,
+and40/50ms execution. Deployment additionally needs independent physical
+noise/prior/anchor/lever/frame/process validation and hardware timing evidence.
+None grants production probability, risk/AL, formal or protected publication.
+Owned cache and this run's bytecode are cleaned after the summary is checked;
+user files and the old four S1–S4 figures remain untouched. No new figure is
+necessary for these tables. Final R is saved by the next local commit.
