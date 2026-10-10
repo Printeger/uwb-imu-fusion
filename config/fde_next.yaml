@@ -48,3 +48,10 @@ recovery_position_m: 0.25
 recovery_velocity_mps: 0.5
 recovery_accel_bias_mps2: 0.1
 recovery_gyro_bias_radps: 0.01
+# S3 diagnostic scope, frozen before its first evaluation. No supported IMU
+# guarantee is advertised. Law: one accel-x raw episode, 50 or 500 ms.
+imu_episode_durations_ms: [50, 500]
+imu_accel_amplitude_mps2: 20.0
+imu_target_beta: 0.001
+imu_diagnostic_event_mass: 0.001
+imu_base_config: config/fde_imu_order1.yaml

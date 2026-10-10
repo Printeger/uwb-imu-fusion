@@ -8,7 +8,7 @@ probability contracts and publication gates are unchanged. All new runs use
 |---|---|---|
 | S1 | Complete fixed-model reference | Finite Gaussian oracle; raw nonlinear qualification pending |
 | S2 | Functional work complete; Gaussian raw qualification gap | U1 correct commit + 4 epochs; finite-episode U2; raw empirical only |
-| S3 | Pending | No claim yet |
+| S3 | Complete limited exit B | New matched-power/bridge-domain attempt; no IMU recovery commit |
 | S4 | Pending | No claim yet |
 
 ## S1
@@ -164,4 +164,96 @@ for SPEC in U0:uwb U1:uwb U2:uwb U3:uwb U0:off U1:off; do
 done
 "$BIN/fde_next_runner" config/fde_next.yaml "$TMP/U1-confirm.csv" U1 uwb 20261011
 # Summarize/inspect transient output, then remove only this created TMP.
+```
+
+## S3
+
+S2 commit: `f2b7790`. `imu_recovery_scope.hpp` defines one physical accel-x
+raw episode with exact sample IDs/timestamps and a shared amplitude over all
+affected factors. The original native IMU generator supplies action recipes;
+new raw response maps replace interval surrogates. Both 50 and 500 ms supports
+include the trailing shared sample contribution. When an affected interval
+becomes condensed, its raw episode map is explicitly unqualified; an old
+interval column or disappearance of a sample does not certify carry-in removal.
+Incomplete support and unqualified historical modes forbid research selection.
+Production interval contracts are unchanged.
+
+Before actual episode trials, one healthy epoch-24 design snapshot screened
+the configured 20 m/s² amplitude. Its complete fixed-law parity responses are:
+
+| Raw duration | Lambda | Conditional miss | Target beta | Explicit affected factors | Motion in bridge box | Actual isolation |
+|---|---:|---:|---:|---:|---|---|
+| 50 ms | 8.04809 | .999984 | .001 | 2 | yes | 0/1 episode |
+| 500 ms | 387.421 | 7.83524e-19 | .001 | 10 at epoch 24, plus carry factor 25 | yes | 0/1 episode |
+
+The acceleration bound is derived before evaluation from
+`||amplitude * frequency²||=.0284445 m/s²`; angular speed is .2 rad/s.
+Both lie inside the existing 4 m/s² and 2 rad/s limits. This is not the old
+5.4 m/s² out-of-domain trajectory. These power figures are **conditional
+frozen-model predictions**, not empirical miss rates or hardware probabilities.
+The bias/process auxiliary covariance, finite-amplitude/input-dependent noise
+and random linearization remain unqualified for a raw probability guarantee.
+
+| Flow | Commits / total | First alarm | Actual IMU exclusion commits | Post-fault four recovered outputs | Tag APE RMSE / P95 / max (m) | Current UWB-only local diagnostic finite | Full pipeline selected |
+|---|---:|---|---:|---:|---|---:|---:|
+| I1, seed 20261010 | 50/50 | epoch 24 | 0/50 (0/1 episode) | 0/4 | 0.085047 / 0.128544 / 0.165751 | 49/50 | 10/50 |
+| I2, seed 20261010 | 50/50 | epoch 20 | 0/50 (0/1 episode) | 0/4 | 0.382898 / 0.574901 / 0.586891 | 18/50 | 10/50 |
+
+The I1 brief episode is not detected at its injection: epoch-15 statistic
+130.5339 < 183.4599. The later epoch-24 alarm is mixed with history/model
+inconsistency and cannot be scored as correct timely isolation. I2 first
+alarms at epoch 20: 235.4541 > 203.2736, 250 ms after the first affected epoch
+(timestamp delay; wall computation is additional). No IMU exclusion commit
+occurs. All 50 best-effort commits remain in each error denominator.
+
+The correct-support I2 candidate at epoch 20 is generated automatically as
+`imu_accel:0:interval:15|raw-accel-x-500ms` (action 22). It removes groups
+15001,16001,17001,18001,19001,20001, covering every affected factor then
+available. The actual exclusion solve yields maximum blocks
+`rotation=.280861 rad, position=.394342 m, velocity=3.19672 m/s,
+accel-bias=.0260087 m/s², gyro-bias=.00270694 rad/s`. It exceeds the frozen
+research local recovery domain; this is an **excluded-candidate** result, not
+an inference from the all-in step. At epoch 21 its respective first three
+blocks are .368155/.439467/3.50529. By epoch 23 the matching onset is in the
+condensed boundary and exact raw-history support is not available to certify
+recovery. The gate failure indicates an unsuitable local reference/limited
+recovery mechanism, not a proof that the native sensors can never recover.
+
+Other numerically valid episode actions still require a full-state,
+fault-independent bridge noise/remainder certificate. `gaussianCandidate`
+refuses synthetic bridge rows as unqualified rather than inheriting deleted
+IMU covariance. Only passing the acceleration box would omit initial velocity/
+attitude uncertainty and gravity coupling. No risk-closing bridge or Gaussian
+IMU-recovery positive is claimed. A bounded candidate relinearization with
+qualified bridge/history propagation remains a precise implementation gap.
+
+Capability output is usable: `HISTORY_RAW_EPISODE_UNQUALIFIED`,
+`IMU_CANDIDATE_DOMAIN_OR_PROVENANCE_FAILED` and
+`BRIDGE_GAUSSIAN_UNQUALIFIED` identify refusal. `current_tag_local_hpl/vpl`
+is a separate UWB-only current-position diagnostic, transferred to the actual
+committed tag, available only within its .25 m local position domain. It is
+never injected back as independent velocity information or used for action
+selection. It illustrates why an unresolved IMU event can coexist with
+possible local current-position bounds. `future_state_status=UNPROTECTED`
+never inherits stationary-yaw harmlessness or the previous epoch PL.
+All raw coverage and future protection remain unqualified.
+
+Twenty-eight deterministic checks pass (0/28 failures), including a new actual
+two-factor raw support test, omitted-boundary-factor refusal, history coverage
+refusal, joint ADC covariance, candidate-deletion negative and reproducible
+noise inputs. The existing fault-independent bridge/box test also passes (1/1).
+The two affected flow qualifications were rerun after fixing the condensed-
+episode refusal; earlier output qualification counts were discarded.
+This is S3 limited exit B: new legal-motion candidate development, screening
+and actual excluded solves are complete; legal IMU recovery remains absent.
+
+Reproduction:
+
+```sh
+cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl --target fde_next_runner fde_next_checks -j2
+"$BIN/fde_next_checks" config/fde_next.yaml
+"$BIN/fde_next_runner" config/fde_next.yaml "$TMP/screen.csv" screen imu-diagnostic 20261010 24
+"$BIN/fde_next_runner" config/fde_next.yaml "$TMP/I1.csv" I1 imu-diagnostic
+"$BIN/fde_next_runner" config/fde_next.yaml "$TMP/I2.csv" I2 imu-diagnostic
+"$BIN/test_integrity_v2" --gtest_filter=Phase2NumericLayerPositive.ImuBridgeIsIndependentAndItsBoxMarginFinite
 ```

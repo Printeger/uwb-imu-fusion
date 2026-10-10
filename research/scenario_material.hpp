@@ -46,7 +46,7 @@ struct NoisyMotionScenario {
   s.velocity_world_mps=amp.cwiseProduct(freq).cwiseProduct((freq*t).array().cos().matrix());
   s.q_world_body=Eigen::Quaterniond(Eigen::AngleAxisd(rate*t,Eigen::Vector3d(1,2,3).normalized()));return s;
  }
- NoisyMotionScenario(const std::string& path,const std::string& kind,int seed,int count):law(YAML::LoadFile(path)),cfg(IntegrityConfigLoader::load(law["base_config"].as<std::string>())){
+ NoisyMotionScenario(const std::string& path,const std::string& kind,int seed,int count):law(YAML::LoadFile(path)),cfg(IntegrityConfigLoader::load(law[(kind=="I1" || kind=="I2" || kind=="screen")?"imu_base_config":"base_config"].as<std::string>())){
   epochs=count?count:law["epochs"].as<int>();dt=law["epoch_s"].as<double>();rate=law["angular_rate_radps"].as<double>();
   if(dt!=.05 || law["imu_sample_s"].as<double>()!=.005 || epochs>law["epochs"].as<int>())throw std::runtime_error("unsupported timestamp/horizon contract");
   lever=researchVector(law["lever"]);amp=researchVector(law["translation_amplitude"]);freq=researchVector(law["translation_frequency"]);
@@ -58,6 +58,11 @@ struct NoisyMotionScenario {
    m.specific_force_mps2=state.q_world_body.conjugate()*(acc+Eigen::Vector3d(0,0,cfg.imu.gravity_mps2));
    m.angular_velocity_radps=rate*Eigen::Vector3d(1,2,3).normalized();
    for(int j=0;j<3;++j){m.specific_force_mps2(j)+=law["raw_accel_sigma_mps2"].as<double>()*normal(imu_rng);m.angular_velocity_radps(j)+=law["raw_gyro_sigma_radps"].as<double>()*normal(imu_rng);}
+   const int fault_epoch=law["fault_epoch"].as<int>();
+   const double begin=(fault_epoch-1)*dt+.005;
+   const double duration=kind=="I1"?.05:.5;
+   if((kind=="I1" || kind=="I2") && t>=begin-1e-12 && t<begin+duration-1e-12)
+    m.specific_force_mps2.x()+=law["imu_accel_amplitude_mps2"].as<double>();
    imu.push_back(m);
   }
   for(int e=1;e<=epochs;++e){auto b=ranges(cfg,e);auto s=truth(e*dt);auto tag=s.position_world_m+s.q_world_body*lever;
