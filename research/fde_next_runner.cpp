@@ -2,6 +2,7 @@
 #include "gaussian_window.hpp"
 #include "statistical_history.hpp"
 #include "raw_domain.hpp"
+#include "bounded_imu_recovery.hpp"
 #include "imu_recovery_scope.hpp"
 #include "raw_cache_replay.hpp"
 #include <tbb/global_control.h>
@@ -175,7 +176,17 @@ int main(int argc,char** argv){try{
   GaussianCandidateCache gaussian_cache(joint,w,alpha,tail);size_t decompositions=1;
   int numerical=0,post=0,pl_count=0;int best=-1;double best_cost=INFINITY;GaussianReference selected_ref;Eigen::VectorXd best_increment;
   std::string status="NO_ADMISSIBLE_CANDIDATE";
-  for(size_t k=0;k<actions.size();++k){auto c=evaluator.evaluate(admission,base,actions[k]);
+  for(size_t k=0;k<actions.size();++k){
+   if(scope=="imu-diagnostic" && alarm && std::getenv("FDE_NEXT_BOUNDED_RECOVERY") && actions[k].bridge_mode!=BridgeMode::None){
+    bool complete=true;for(auto id:actions[k].covered_modes){auto it=std::find_if(models.modes.begin(),models.modes.end(),[&](const auto& m){return m.id==id;});complete=complete && it!=models.modes.end() && episodeCoverageComplete(*it,actions[k]);}
+    if(complete){auto recovery=boundedRecovery(tx,actions[k],init,law["bridge_acceleration_bound_mps2"].as<double>(),law["bridge_angular_rate_bound_radps"].as<double>());
+     std::cout<<"BOUNDED_RECOVERY epoch="<<e<<" action="<<actions[k].id.value()<<" status="<<recovery.status<<" rebuilds="<<recovery.rebuilds<<" removed="<<recovery.removed<<" retained="<<recovery.retained
+       <<" objective="<<recovery.objective_before<<"->"<<recovery.objective_after<<" local="<<recovery.local.transpose()<<" cumulative="<<recovery.cumulative.transpose();
+     if(recovery.rebuilds==2 && std::isfinite(recovery.objective_after))std::cout<<" bridge_sd="<<recovery.bridge.covariance.diagonal().cwiseMax(0.).cwiseSqrt().transpose()<<" bridge_box="<<recovery.bridge.box.transpose();
+     std::cout<<" healthy_rank="<<recovery.healthy_rank<<" healthy_columns="<<recovery.healthy_columns<<" bridge_domain_ratio="<<recovery.full_state_domain_ratio<<" actual_recovery_commits=0\n";
+    }
+   }
+   auto c=evaluator.evaluate(admission,base,actions[k]);
    bool domain=true;Eigen::VectorXd block_max=Eigen::VectorXd::Zero(5);
    if(c.state_increment.size()%15)domain=false;
    for(int q=0;q+15<=c.state_increment.size();q+=15){

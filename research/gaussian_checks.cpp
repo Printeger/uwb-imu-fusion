@@ -2,6 +2,7 @@
 #include "gaussian_window.hpp"
 #include "statistical_history.hpp"
 #include "raw_domain.hpp"
+#include "bounded_imu_recovery.hpp"
 #include "imu_recovery_scope.hpp"
 #include "scenario_material.hpp"
 #include <Eigen/Geometry>
@@ -83,6 +84,12 @@ int main(int argc,char** argv){
  check(healthyIntegrationRemainder(.05,0,1.3,11.).velocity==std::nextafter(0.,INFINITY));
  check(fixedReferenceFamilyCharge(5.,.25,50,128,1e-9)>cfg["risk_budget"].as<double>());
  check(!tagRemainder(.1,.2,.4,.25).valid);check(!tagRemainder(5.,3.2,.1,.25).valid);
+ // Preserve full-state cross covariance; bounded acceleration is not random.
+ Eigen::Matrix<double,15,15> boundary=Eigen::Matrix<double,15,15>::Identity();boundary(3,6)=boundary(6,3)=.2;boundary(0,3)=boundary(3,0)=.1;
+ auto bridge=fullStateBridge(boundary,.3,4.,2.);
+ check(std::abs(bridge.covariance(3,3)-1.21)<1e-12);
+ check(std::abs(bridge.covariance(3,6)-.5)<1e-12 && bridge.covariance(0,3)==.1);
+ check(std::abs(bridge.box(3)-.18)<1e-12 && std::abs(bridge.box(6)-1.2)<1e-12);
  // Independent body->tag right-local rotation derivative.
  Eigen::Vector3d lever(.2,-.1,.08);Eigen::Matrix3d rot=Eigen::AngleAxisd(.3,Eigen::Vector3d(1,2,3).normalized()).toRotationMatrix();
  Eigen::Matrix3d skew;skew<<0,-lever.z(),lever.y(),lever.z(),0,-lever.x(),-lever.y(),lever.x(),0;
@@ -131,5 +138,28 @@ int main(int argc,char** argv){
  auto foreign=native_joint;bool rejected=false;try{gaussianCandidate(foreign,w,keep_all,1e-6,1e-9,true,&base,&cache);}catch(const std::runtime_error&){rejected=true;}check(rejected);
  check(gaussianReference(a,z,sigma,c,{1e-11*a.col(0)},1e-3,1e-6).status=="INDETERMINATE");
  check(gaussianReference(a,z,sigma,c,{1e-11*a.col(0)},1e-3,1e-6,true).status=="INDETERMINATE");
+ // Fixed semantic exclusion: changing all removed ADC samples must not
+ // change retained nonlinear reference, bridge boundary, or its covariance.
+ BoundedRecoveryAttempt independent[2];
+ for(int sign=0;sign<2;++sign){
+  NoisyMotionScenario noisy(argv[1],"I2",20261010,20);
+  if(sign)for(auto& sample:noisy.imu)if(sample.timestamp.seconds()>=.705-1e-12 && sample.timestamp.seconds()<1.205-1e-12)sample.specific_force_mps2.x()-=40.;
+  IncrementalUwbImuEstimator backend(noisy.cfg,noisy.lever);backend.initialize(noisy.initial_observation,noisy.cfg.realtime.prior_sigmas);backend.ingestImu(noisy.imu[0]);size_t cursor=1;
+  for(int e=1;e<=20;++e){while(cursor<noisy.imu.size() && !(noisy.uwb[e-1].timestamp<noisy.imu[cursor].timestamp))backend.ingestImu(noisy.imu[cursor++]);
+   auto t=backend.prepareEpoch(noisy.uwb[e-1]);
+   if(e==20){ExclusionAction action;action.bridge_mode=BridgeMode::GenericKinematic;
+    for(const auto& past:t.recoverable_history)if(past.proposed_epoch>=15)for(const auto& group:past.groups)if(group.kind==FactorKind::CombinedImu)action.groups_to_remove.push_back(group.id);
+    action.groups_to_remove.push_back(t.imu_group.id);
+    independent[sign]=boundedRecovery(t,action,noisy.initial_observation,4.,2.);
+    check(independent[sign].rebuilds==2 && independent[sign].status=="BRIDGE_DOMAIN_EXCEEDS_LOCAL_MODEL");
+    check(independent[sign].healthy_rank<independent[sign].healthy_columns);
+    check(std::abs(independent[sign].full_state_domain_ratio-2.4)<1e-12);
+   }
+   auto p=EpochCommitPlan::nominalPlan(t);check(backend.commitEpoch(std::move(t),p).backend_updates==1);
+  }
+ }
+ check(std::abs(independent[0].objective_after-independent[1].objective_after)<1e-10);
+ check((independent[0].bridge.covariance-independent[1].bridge.covariance).norm()<1e-10);
+ for(int e=0;e<=20;++e){check(independent[0].reference.at<gtsam::Pose3>(gtsam::Symbol('x',e)).localCoordinates(independent[1].reference.at<gtsam::Pose3>(gtsam::Symbol('x',e))).norm()<1e-10);}
  std::cout<<"legacy_checks=43 history_parameter_cases=3 finite_pl="<<r.pl.transpose()<<" statistic="<<r.statistic<<" threshold="<<r.threshold<<"\n";
 }

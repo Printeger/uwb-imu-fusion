@@ -510,3 +510,47 @@ raw qualification. To reproduce: `python3 tools/run_fde_next.py run --initial-la
 (the entry creates and cleans a temporary input-law overlay); U0 is analogous.
 G status: `G_NEW_COMPONENTS_PARTIAL`; core guarantee remains open. This save
 point is not the total Goal endpoint; I/R and raw history consumption continue.
+
+I adds an actually executed fault-independent retained-factor recovery solver
+and full-state mixed bridge propagation. It rebuilds initial Values from the
+original observation and healthy prefix factors, not polluted backend Values;
+excluded raw support and all neighboring affected groups come from generated
+candidate semantics. Bridge optimization weights remain a numerical metric,
+not random sensors. It solves two predefined reference rebuilds (8 GN iterations
+maximum each), then reports terminal and cumulative changes. Prefix boundary
+p/v/R/bias covariance is jointly obtained from the independently solved healthy
+prefix; right-local position covariance and all cross terms are transformed to
+world before F P F' propagation. The deterministic world-acceleration box already
+includes force/gravity conversion; no suspect force/gyro readout enters it.
+Constant bias drift is a generator assumption, not hardware evidence.
+
+I2/20261010 original input ran through24. The automatically generated correct
+support action22 at20 removed historical15–19 plus pending20 (five graph slots,
+six IMU factors in total). New two-rebuild objective85.1307→76.7010; terminal
+rotation/position/velocity steps1.31e-5rad/8.14e-6m/1.67e-6m/s, cumulative clean
+initial-reference steps.04384rad/.14235m/.18211m/s. This is different from the old
+polluted-reference .281/.394/3.197. Healthy retained-factor rank is243/315:
+72 full-navigation directions lack Gaussian measurement information across the
+six excluded intervals. The independent .3s bridge gives position SD
+[.08700,.08970,.09144]m, velocity SD[.20404,.20394,.14523]m/s, attitude SD
+[.05893,.05876,.10025]rad, with propagated cross terms. Its additional declared
+box is rotation .6rad, position .18m, velocity1.2m/s: normalized rotation/velocity
+domain ratio2.4, so the bridge cannot certify the existing local nonlinear model.
+No box is converted into Gaussian covariance to conceal this failure.
+
+A fixed semantic exclusion regression changes all excluded samples from +20 to
+−20m/s², reconstructs both complete prefixes, executes both new recoveries, and
+checks reference states/objective/boundary covariance agree to1e-10. Both make
+only one actual nominal backend commit per input; candidate solves do not write
+the backend. The bridge cross-covariance and deterministic box tests pass.
+The20–24 flow contains five actual alarms, no IMU exclusion/recovery commit,
+and14/24 unavailable candidate outputs. New references ran, but acceptance is
+still missing. Cases retaining a post-onset PIM or lacking marginalized raw
+prefix are explicitly refused: reintegration and candidate-specific historical
+source deletion remain safe implementation work, not external hardware blockers.
+I remains in progress rather than declaring its limited exit complete.
+
+Reproduce current I diagnostic:
+`FDE_NEXT_BOUNDED_RECOVERY=1 "$BIN/fde_next_runner" config/fde_next.yaml "$TMP/I2.csv" I2 imu-diagnostic 20261010 24 optimized`.
+The existing checks now exercise the independent recovery and bridge in addition
+to H/G checks. G/raw/formal/protected qualification stays false/UNKNOWN.
