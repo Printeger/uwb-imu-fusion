@@ -165,6 +165,19 @@ struct FrozenWindowFactorInventoryEntry {
   std::vector<std::size_t> slots;
 };
 
+// Opt-in research sidecar. Existing window/transaction ABI and production
+// consumers are unchanged. Rows are captured before history compression, at
+// exactly the same frozen points/weights as the emitted boundary.
+struct ResearchHistoryAudit {
+  HistoryFaultSummaryInput input;
+  Eigen::MatrixXd boundary_embedding; // x_b -> explicit window tangent
+  std::vector<std::string> row_uids;
+  std::vector<std::uint64_t> row_provenance;
+  std::vector<std::string> fault_uids;
+  LinearizationVersion version;
+  bool available = false;
+};
+
 struct IntegrityWindowRequest {
   std::uint32_t epochs = 20;
   bool include_pending_imu = true;

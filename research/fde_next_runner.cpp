@@ -1,5 +1,6 @@
 #include "scenario_material.hpp"
 #include "gaussian_window.hpp"
+#include "statistical_history.hpp"
 #include "imu_recovery_scope.hpp"
 #include "raw_cache_replay.hpp"
 #include <tbb/global_control.h>
@@ -77,7 +78,10 @@ int main(int argc,char** argv){try{
   auto tx=estimator.prepareEpoch(scene.uwb[e-1]);
   if((kind=="screen" || benchmark) && e<scene.epochs){auto prewarm_plan=EpochCommitPlan::nominalPlan(tx);estimator.commitEpoch(std::move(tx),prewarm_plan);continue;}
   if(benchmark)measured_start=start;
-  IntegrityWindowRequest req;req.epochs=scene.cfg.integrity_window.epochs;auto seal=freezeIntegrityWindow(estimator.buildIntegrityWindow(tx,req));auto admission=admitFrozenIntegrityWindow(seal);
+  IntegrityWindowRequest req;req.epochs=scene.cfg.integrity_window.epochs;ResearchHistoryAudit history_audit;
+  bool history_check=std::getenv("FDE_NEXT_HISTORY_AUDIT") && e>=30 && e<=32;
+  auto built=history_check?estimator.buildIntegrityWindowWithResearchHistory(tx,req,&history_audit):estimator.buildIntegrityWindow(tx,req);
+  auto seal=freezeIntegrityWindow(std::move(built));auto admission=admitFrozenIntegrityWindow(seal);
   if(!admission)throw std::runtime_error(admission.reason);
   const auto& w=admission.window();auto t_window=Clock::now();
   DetectorRiskContext dr;dr.p_fa_per_test=alpha;dr.continuity_horizon_tests=law["epochs"].as<int>();
@@ -88,6 +92,27 @@ int main(int argc,char** argv){try{
   else finiteUwbModes(models,law["persistent_epochs"].as<int>());
   auto t_models=Clock::now();
   auto joint=rawGaussianWindow(w,tx,models.modes,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),scene.lever);
+  if(history_check && history_audit.available){
+   const auto& h=history_audit.input;int m=h.rows(),old=h.oldStateColumns();
+   auto compressed=statisticalHistory(h.h_old_state,h.h_boundary*history_audit.boundary_embedding,h.rhs,
+       Eigen::MatrixXd::Identity(m,m),h.fault_map,Eigen::MatrixXd::Identity(m,m),Eigen::MatrixXd(m,0));
+   int current=0;for(const auto& b:w.blocks)if(b.kind!=FactorKind::BoundaryPrior)current+=b.residual_whitened.size();
+   Eigen::MatrixXd a=Eigen::MatrixXd::Zero(m+current,old+w.H.cols());Eigen::VectorXd z(m+current);
+   a.topLeftCorner(m,old)=h.h_old_state;a.topRightCorner(m,w.H.cols())=h.h_boundary*history_audit.boundary_embedding;z.head(m)=h.rhs;
+   Eigen::MatrixXd ac=Eigen::MatrixXd::Zero(compressed.z.size()+current,w.H.cols());Eigen::VectorXd zc(ac.rows());
+   ac.topRows(compressed.z.size())=compressed.a;zc.head(compressed.z.size())=compressed.z;
+   int rawoff=m,off=compressed.z.size();for(const auto& b:w.blocks)if(b.kind!=FactorKind::BoundaryPrior){
+    int n=b.residual_whitened.size();a.block(rawoff,old,n,w.H.cols())=b.jacobian_whitened;z.segment(rawoff,n)=b.residual_whitened;
+    ac.middleRows(off,n)=b.jacobian_whitened;zc.segment(off,n)=b.residual_whitened;rawoff+=n;off+=n;}
+   Eigen::MatrixXd c=Eigen::MatrixXd::Zero(3,a.cols());c.rightCols(w.H.cols())=joint.c;
+   auto direct=gaussianReference(a,z,Eigen::MatrixXd::Identity(a.rows(),a.rows()),c,{},alpha,tail);
+   auto adapted=gaussianReference(ac,zc,Eigen::MatrixXd::Identity(ac.rows(),ac.rows()),joint.c,{},alpha,tail);
+   auto legacy=gaussianReference(w.H,w.z,Eigen::MatrixXd::Identity(w.H.rows(),w.H.rows()),joint.c,{},alpha,tail);
+   std::cout<<"HISTORY epoch="<<e<<" raw_rows="<<m<<" eliminated="<<old<<" raw_dof="<<direct.dof<<" adapted_dof="<<adapted.dof<<" legacy_dof="<<legacy.dof
+     <<" S_direct="<<direct.statistic<<" S_adapted="<<adapted.statistic<<" S_legacy="<<legacy.statistic<<" tau_raw="<<direct.threshold<<" tau_legacy="<<legacy.threshold
+     <<" mean_diff="<<(direct.mean.tail(w.H.cols())-adapted.mean).norm()<<" cov_diff="<<(c*direct.covariance*c.transpose()-joint.c*adapted.covariance*joint.c.transpose()).norm()
+     <<" info_factors="<<w.history_summary.information_form_factors<<" offset="<<w.history_summary.constant_offset<<" raw_noise_history=UNQUALIFIED\n";
+  }
   auto t_raw=Clock::now();
   auto raw_detector=gaussianReference(joint.a,joint.z,joint.sigma,joint.c,{},alpha,tail);
   auto t_detector=Clock::now();

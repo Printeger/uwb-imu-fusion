@@ -428,3 +428,52 @@ probability contract, risk/AL or protected release logic is replaced.
 Only this results document, four conclusion figures, source/tests/config and
 the single entry script are retained. Owned temporary outputs are deleted
 after summary verification; historical files and user data are unchanged.
+
+## HGIR gap closure (active)
+
+Local baseline verified: HEAD `98bfe92`, clean worktree, existing private Release
+DSO and runner reused. No S1–S4 replay campaign or rollback. Current cache:
+`.cache/fde-gap-closure/hgir-20261011/` (owned by this run; temporary).
+
+| Package | Work | Capability |
+|---|---|---|
+| H | New joint statistical-history adapter and actual same-freeze boundary audit | Fixed-model dimension defect located; complete raw history still in progress |
+| G | In progress | Raw risk UNKNOWN |
+| I | In progress | No new recovery commit yet |
+| R | Pending stable model | Old S4 timings are not new-model evidence |
+
+H adds an opt-in sidecar capturing the actual boundary rows **before**
+compression, identical frozen Values, weights, source-row/group/fault identity,
+and boundary embedding. Existing window/transaction layouts are unchanged.
+`statistical_history.hpp` eliminates old states after joint whitening, retaining
+all residual dimensions, transforming A/z/B/J/covariance and future cross blocks
+with one T. Three parameterized covariance cases pass mean/covariance/S/dof,
+shared-source, cross-map and objective identities; the legacy 43 checks pass.
+
+U0/20261010 prefix through32 reproduces the old single false exclusion at31.
+Actual same-frozen-point boundary comparison:
+
+| Epoch | Direct / adapted / legacy dof | S (all three) | Direct / legacy threshold | Mean difference norm | Protected covariance difference norm |
+|---|---|---:|---|---:|---:|
+| 30 | 240 / 240 / 169 | 254.411139 | 358.882 / 271.190 | 8.30e-13 | 2.04e-15 |
+| 31 | 248 / 248 / 169 | 273.200991 | 368.599 / 271.190 | 1.45e-12 | 1.27e-14 |
+| 32 | 247 / 247 / 168 | 263.563100 | 367.386 / 269.932 | 5.61e-13 | 4.17e-15 |
+
+First divergence is Gaussian residual dimension: the optimization carrier
+compresses realized `[fault,z]` rank, preserving objective energy but losing
+independent noise dimensions. This defect is already present before fixed-lag
+exit; epoch31 is its first threshold crossing in this prefix, not proof that
+backend marginalization alone caused it. At31 the information-form factor count
+becomes1; at32, after the old exclusion changes the graph, the information
+constant offset is6.96168. Those are separate from same-model equivalence.
+The direct oracle here uses the actual precompression **nominal weighted**
+boundary, not yet a full raw ADC covariance oracle. It does not certify random
+linearization, discarded marginal raw sources, or Gaussian law of old priors.
+Production detector/probability/release behavior remains unchanged.
+
+Reproduce H: build `fde_next_runner fde_next_checks` in the existing build,
+set the private library path from S1, run checks, then
+`FDE_NEXT_HISTORY_AUDIT=1 "$BIN/fde_next_runner" config/fde_next.yaml "$TMP/U0.csv" U0 uwb 20261010 32 optimized`.
+Diagnostics compare30/31/32 in memory; CSV/logs are temporary. H stage saves the
+adapter/audit; next work is consuming the preserved dimension and raw provenance
+in the isolated reference, followed by G/I and new R measurement.

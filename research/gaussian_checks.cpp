@@ -1,5 +1,6 @@
 #include "gaussian_reference.hpp"
 #include "gaussian_window.hpp"
+#include "statistical_history.hpp"
 #include "imu_recovery_scope.hpp"
 #include "scenario_material.hpp"
 #include <Eigen/Geometry>
@@ -40,6 +41,29 @@ int main(int argc,char** argv){
  check((deleted.mean-mixed.mean).norm()>1e-4);
  Eigen::MatrixXd j(4,1);j<<1,2,3,4;auto joint=(j*j.transpose()).eval();check(joint(0,3)==4);
  check((principal(joint,rows={0,2})-(Eigen::Vector2d(1,3)*Eigen::Vector2d(1,3).transpose())).norm()==0);
+ // Full Gaussian dimension survives condensation, including detector-only
+ // directions even when [B,z] has low realized rank. Shared source/cross maps
+ // must be transformed together; raw deletion reconstructs the new root.
+ for(double correlation : {0., .4, -.3}) {
+  auto cov=sigma;cov(0,1)=cov(1,0)=correlation;
+  Eigen::MatrixXd src=Eigen::LLT<Eigen::MatrixXd>(cov).matrixL();
+  Eigen::MatrixXd future=src.col(0);
+  auto hist=statisticalHistory(a.leftCols(1),a.rightCols(1),z,cov,b,src,future);
+  Eigen::MatrixXd cp=Eigen::MatrixXd::Zero(3,1);cp(0,0)=1;
+  auto full=gaussianReference(a,z,cov,safe_c,{b},1e-3,1e-6);
+  auto compact=gaussianReference(hist.a,hist.z,hist.sigma,cp,{hist.b},1e-3,1e-6);
+  check(full.dof==compact.dof && hist.z.size()==4);
+  check(std::abs(full.statistic-compact.statistic)<1e-12);
+  check(std::abs(full.mean(1)-compact.mean(0))<1e-12);
+  check(std::abs(full.covariance(1,1)-compact.covariance(0,0))<1e-12);
+  check((hist.j*hist.j.transpose()-hist.sigma).norm()<1e-12);
+  check((hist.cross-hist.transform*future).norm()<1e-12);
+  auto rhs=z-a.col(1)*.2-b.col(0)*.3;
+  auto white=Eigen::LLT<Eigen::MatrixXd>(cov).matrixL().solve(rhs).eval();
+  auto ho=Eigen::LLT<Eigen::MatrixXd>(cov).matrixL().solve(a.leftCols(1)).eval();
+  double x=(ho.col(0).dot(white))/ho.squaredNorm();
+  check(std::abs((white-ho*x).squaredNorm()-(hist.z-hist.a.col(0)*.2-hist.b.col(0)*.3).squaredNorm())<1e-12);
+ }
  // Independent body->tag right-local rotation derivative.
  Eigen::Vector3d lever(.2,-.1,.08);Eigen::Matrix3d rot=Eigen::AngleAxisd(.3,Eigen::Vector3d(1,2,3).normalized()).toRotationMatrix();
  Eigen::Matrix3d skew;skew<<0,-lever.z(),lever.y(),lever.z(),0,-lever.x(),-lever.y(),lever.x(),0;
@@ -88,5 +112,5 @@ int main(int argc,char** argv){
  auto foreign=native_joint;bool rejected=false;try{gaussianCandidate(foreign,w,keep_all,1e-6,1e-9,true,&base,&cache);}catch(const std::runtime_error&){rejected=true;}check(rejected);
  check(gaussianReference(a,z,sigma,c,{1e-11*a.col(0)},1e-3,1e-6).status=="INDETERMINATE");
  check(gaussianReference(a,z,sigma,c,{1e-11*a.col(0)},1e-3,1e-6,true).status=="INDETERMINATE");
- std::cout<<"checks=43 finite_pl="<<r.pl.transpose()<<" statistic="<<r.statistic<<" threshold="<<r.threshold<<"\n";
+ std::cout<<"legacy_checks=43 history_parameter_cases=3 finite_pl="<<r.pl.transpose()<<" statistic="<<r.statistic<<" threshold="<<r.threshold<<"\n";
 }

@@ -162,6 +162,9 @@ class IncrementalUwbImuEstimator {
   LinearizedIntegrityWindow buildIntegrityWindow(
       const EpochTransaction& transaction,
       const IntegrityWindowRequest& request) const;
+  LinearizedIntegrityWindow buildIntegrityWindowWithResearchHistory(
+      const EpochTransaction& transaction, const IntegrityWindowRequest& request,
+      ResearchHistoryAudit* audit) const;
   FrozenIntegrityWindow buildFrozenIntegrityWindow(
       const EpochTransaction& transaction,
       const IntegrityWindowRequest& request) const;

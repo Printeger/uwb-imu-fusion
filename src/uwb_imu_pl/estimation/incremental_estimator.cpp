@@ -1618,6 +1618,13 @@ CurrentStatePrior IncrementalUwbImuEstimator::pendingCurrentPrior(
 
 LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     const EpochTransaction& tx, const IntegrityWindowRequest& request) const {
+  return buildIntegrityWindowWithResearchHistory(tx, request, nullptr);
+}
+
+LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindowWithResearchHistory(
+    const EpochTransaction& tx, const IntegrityWindowRequest& request,
+    ResearchHistoryAudit* audit) const {
+  if (audit) *audit = ResearchHistoryAudit{};
   const auto preparation_start = std::chrono::steady_clock::now();
   if (!active_transaction_id_ || *active_transaction_id_ != tx.id ||
       tx.backend_mutated || tx.base_graph_version != graph_version_ ||
@@ -2182,6 +2189,30 @@ LinearizedIntegrityWindow IncrementalUwbImuEstimator::buildIntegrityWindow(
     // GTSAM JacobianFactor uses 0.5 ||A x - b||^2.  The summary uses the same
     // H x - z convention, so getb()/the extracted last column is already z.
     summary_input.rhs = extracted.rows.col(extracted.total_columns);
+    if (audit) {
+      audit->input = summary_input;
+      audit->version = tx.base_version;
+      audit->row_uids = augmented_row_uids;
+      audit->row_provenance = augmented_row_provenance;
+      audit->boundary_embedding = Eigen::MatrixXd::Zero(
+          summary_input.h_boundary.cols(), total_columns);
+      int cursor = 0;
+      for (const int column : boundary_columns) {
+        const auto key = extracted.keys[column];
+        const int width = extracted.key_dim[column];
+        const int offset = 15 * (gtsam::Symbol(key).index() - first_epoch) +
+            (gtsam::Symbol(key).chr() == 'x' ? 0 :
+             (gtsam::Symbol(key).chr() == 'v' ? 6 : 9));
+        audit->boundary_embedding.block(cursor, offset, width, width).setIdentity();
+        cursor += width;
+      }
+      for (const int column : fault_columns) {
+        const auto& id = column_id_of_key.at(extracted.keys[column]);
+        audit->fault_uids.push_back(std::to_string(static_cast<unsigned>(id.kind)) +
+            ":" + std::to_string(id.source) + ":" + std::to_string(id.epoch));
+      }
+      audit->available = true;
+    }
     HistoryRootCacheRequest root_request;
     root_request.input = summary_input;
     root_request.linearization_version = tx.base_version.linpoint_version;
