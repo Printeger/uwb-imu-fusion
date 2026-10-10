@@ -477,3 +477,36 @@ set the private library path from S1, run checks, then
 Diagnostics compare30/31/32 in memory; CSV/logs are temporary. H stage saves the
 adapter/audit; next work is consuming the preserved dimension and raw provenance
 in the isolated reference, followed by G/I and new R measurement.
+
+G implements `raw_domain.hpp`: a single coordinate Gaussian event over all
+3421 initialized/raw coordinates in50 epochs, risk1e-5, standardized radius
+q=5.93586; it covers arbitrary adaptive references without assuming conditional
+Gaussian noise at the fitted point. This is separate from the old1.28e-5 fixed
+root charge. A new independent tangent-Gaussian initialization observation is
+sampled once with the original prior sigmas and separate PRNG. The configured
+initial-bias scene remains the default. The runner consumes the new law, domain,
+range/Pose3 Expmap remainder, healthy discrete rotation/force integration
+remainder (including gyro/force coupling), and full fixed-family charge guard.
+None of those grants Combined-factor/bias-correction/history qualification.
+
+A/B analytic bounds pass9 small-domain pose/range cases plus anchor-crossing
+and rotation-chart refusals. The integration remainder is nonzero, grows with
+integration duration, and rejects invalid input. A complete position covering
+family costs more than the risk budget even before including attitude/bias
+families; visited-candidate count is never used to qualify adaptive roots.
+U0/U1/20261010 with noisy initialization each actually ran32 epochs:
+32/32 initial-law and common-event applicability;0/32 range-domain validity;
+30/32 selected local outputs each; U1 epoch15 correctly excluded its bad range.
+At14 the initial/CV/physical propagated position radius is9.719m and tag radius
+16.783m; at30 position17.352m and angular radius4.273rad cross the local chart.
+Thus finite uniform Taylor domains fail, rather than setting missing terms zero.
+The common-event approach needs certified measurement contraction and complete
+Combined-factor/history source/derivative bounds; total raw risk remains UNKNOWN.
+The predetermined-grid fallback has an executable complete-family budget guard,
+but no accepted useful family. No near-exact range-union demo substitutes for G.
+
+New consumer fields separate initial-law/common-event/range-domain validity and
+raw qualification. To reproduce: `python3 tools/run_fde_next.py run --initial-law gaussian --scene U1 --epochs 32`
+(the entry creates and cleans a temporary input-law overlay); U0 is analogous.
+G status: `G_NEW_COMPONENTS_PARTIAL`; core guarantee remains open. This save
+point is not the total Goal endpoint; I/R and raw history consumption continue.

@@ -1,6 +1,7 @@
 #include "scenario_material.hpp"
 #include "gaussian_window.hpp"
 #include "statistical_history.hpp"
+#include "raw_domain.hpp"
 #include "imu_recovery_scope.hpp"
 #include "raw_cache_replay.hpp"
 #include <tbb/global_control.h>
@@ -57,7 +58,7 @@ int main(int argc,char** argv){try{
  double task_risk=std::nextafter(2*tail*law["epochs"].as<int>()*law["max_candidates"].as<int>(),INFINITY);
  if(task_risk>law["risk_budget"].as<double>())throw std::runtime_error("risk precheck rejects before replay");
  std::ofstream out(argv[2]);if(!out)throw std::runtime_error("output unavailable");out<<std::setprecision(17);
- out<<"epoch,alarm,statistic,threshold,rows,cols,hypotheses,actions,numerical,post,pl_evaluated,selected,exclusion,correct,updates,error,hpl,vpl,reference_x,reference_y,reference_z,commit_x,commit_y,commit_z,core_ms,commit_ms,cycle_ms,cross_covariance,integrations,status,frozen_union_charge,raw_qualified,formal_eligible,publication_protected,increment_error,rotation_rpe,velocity_error,se3_translation_rpe,final_local_available,legacy_alarm,current_tag_local_hpl,current_tag_local_vpl,future_state_status,raw_total_risk,model,scope,protection_point,timestamp_ns,attempt,end_to_end_ms,cleanup_ms,gaussian_decompositions,proof_entries,selected_action,removed_groups\n";
+ out<<"epoch,alarm,statistic,threshold,rows,cols,hypotheses,actions,numerical,post,pl_evaluated,selected,exclusion,correct,updates,error,hpl,vpl,reference_x,reference_y,reference_z,commit_x,commit_y,commit_z,core_ms,commit_ms,cycle_ms,cross_covariance,integrations,status,frozen_union_charge,raw_qualified,formal_eligible,publication_protected,increment_error,rotation_rpe,velocity_error,se3_translation_rpe,final_local_available,legacy_alarm,current_tag_local_hpl,current_tag_local_vpl,future_state_status,raw_total_risk,model,scope,protection_point,timestamp_ns,attempt,end_to_end_ms,cleanup_ms,gaussian_decompositions,proof_entries,selected_action,removed_groups,initial_law_valid,adaptive_event_valid,range_domain_valid,range_remainder_m,raw_domain_status\n";
  std::unique_ptr<std::ofstream> audit;
  if(const char* path=std::getenv("FDE_NEXT_NUMERIC_AUDIT")){
   if(!benchmark || attempts!=1)throw std::runtime_error("numeric audit requires one benchmark snapshot");
@@ -68,7 +69,7 @@ int main(int argc,char** argv){try{
  for(int attempt=0;attempt<attempts;++attempt){
  Clock::time_point measured_start;double measured_compute=0.;std::string benchmark_record,benchmark_suffix;
  {
- IncrementalUwbImuEstimator estimator(scene.cfg,scene.lever);auto init=kind=="replay"?initialState():scene.truth(0);if(kind!="replay")init.position_world_m+=researchVector(law["initial_position_error_m"]);
+ IncrementalUwbImuEstimator estimator(scene.cfg,scene.lever);auto init=kind=="replay"?initialState():scene.initial_observation;
  estimator.initialize(init,scene.cfg.realtime.prior_sigmas);estimator.ingestImu(scene.imu[0]);
  Eigen::Vector3d previous_tag=init.position_world_m+init.q_world_body*scene.lever;auto previous_truth=scene.truth(0);
  Eigen::Quaterniond previous_rotation=init.q_world_body;Eigen::Vector3d previous_body=init.position_world_m;
@@ -116,6 +117,28 @@ int main(int argc,char** argv){try{
   auto t_raw=Clock::now();
   auto raw_detector=gaussianReference(joint.a,joint.z,joint.sigma,joint.c,{},alpha,tail);
   auto t_detector=Clock::now();
+  RawDomainAssessment domain_assessment;
+  if(law["raw_event_risk"] && kind!="replay"){
+   RawNoiseEvent event(6*(10*law["epochs"].as<int>()+1)+scene.cfg.anchors.size()*law["epochs"].as<int>()+15,law["raw_event_risk"].as<double>());
+   domain_assessment.initial_law_valid=scene.initial_law_valid;domain_assessment.adaptive_event_valid=true;domain_assessment.event_risk=event.risk;
+   auto d=physicalDomain(e*scene.dt,scene.cfg.realtime.prior_sigmas,event,
+       law["bridge_acceleration_bound_mps2"].as<double>(),law["bridge_angular_rate_bound_radps"].as<double>());
+   auto current=tx.frozen_values->at<gtsam::Pose3>(gtsam::Symbol('x',tx.proposed_epoch));
+   Eigen::Vector3d center=init.position_world_m+e*scene.dt*init.velocity_world_mps;
+   double worldp=d.position+(current.translation()-center).norm();
+   double theta=d.rotation+Eigen::AngleAxisd(init.q_world_body.conjugate()*Eigen::Quaterniond(current.rotation().matrix())).angle();
+   double rho=1.570796326794897*worldp; // inverse SO(3) left-Jacobian bound for theta < pi
+   bool valid=scene.initial_law_valid;double remainder=0.,radius=0.;
+   Eigen::Vector3d frozen_tag=current.translation()+current.rotation().matrix()*scene.lever;
+   for(const auto& measurement:tx.uwb_batch.measurements){auto bound=tagRemainder((frozen_tag-measurement.anchor_position_m).norm(),theta,rho,scene.lever.norm());
+    valid=valid && bound.valid;remainder=std::max(remainder,bound.range);radius=std::max(radius,bound.radius);}
+   domain_assessment.range_remainder=remainder;domain_assessment.tag_radius=radius;domain_assessment.range_domain_valid=valid;
+   domain_assessment.status=!scene.initial_law_valid?"INITIAL_LAW_MISSING":(valid?"PIM_HISTORY_UNIFORM_BOUND_MISSING":"DOMAIN_CROSSES_ANCHOR_OR_ROTATION_CHART");
+   double force_norm=0.;for(const auto& sample:tx.raw_imu_slice)force_norm=std::max(force_norm,sample.specific_force_mps2.norm());
+   auto pim_rem=healthyIntegrationRemainder(scene.dt,event.q*std::sqrt(3.)*law["raw_gyro_sigma_radps"].as<double>()+d.gyro_bias,
+       event.q*std::sqrt(3.)*law["raw_accel_sigma_mps2"].as<double>()+d.accel_bias,force_norm+d.accel_bias);
+   if(e==14 || e==15 || (e>=30 && e<=32))std::cout<<"RAW_DOMAIN epoch="<<e<<" coordinates="<<event.coordinates<<" q="<<event.q<<" risk="<<event.risk<<" p="<<d.position<<" v="<<d.velocity<<" theta="<<theta<<" tag_radius="<<radius<<" range_rem="<<remainder<<" status="<<domain_assessment.status<<" pim_rot_pos_vel_rem="<<pim_rem.rotation<<';'<<pim_rem.position<<';'<<pim_rem.velocity<<" raw_risk=UNKNOWN fixed_position_grid_charge_lower="<<fixedReferenceFamilyCharge(d.position,law["recovery_position_m"].as<double>(),law["epochs"].as<int>(),law["max_candidates"].as<int>(),tail)<<"\n";
+  }
   bool alarm=raw_detector.status!="FROZEN_MODEL_ONLY" || raw_detector.statistic>raw_detector.threshold;alarms+=alarm;
   if(kind=="screen"){
    double max_a=scene.amp.cwiseProduct(scene.freq.cwiseProduct(scene.freq)).norm();
@@ -249,10 +272,11 @@ int main(int argc,char** argv){try{
   if(benchmark){benchmark_record=row.str();measured_compute=core+commit;
    std::ostringstream suffix;suffix<<decompositions<<','<<arena.entryCount()<<','<<(selected?actions[best].id.value():0)<<',';
    if(selected)for(auto id:actions[best].groups_to_remove)suffix<<id.value()<<';';
+   suffix<<','<<domain_assessment.initial_law_valid<<','<<domain_assessment.adaptive_event_valid<<','<<domain_assessment.range_domain_valid<<','<<domain_assessment.range_remainder<<','<<domain_assessment.status;
    benchmark_suffix=suffix.str();}
   else {out<<row.str()<<','<<attempt<<','<<(core+commit)<<",0,"<<decompositions<<','<<arena.entryCount()<<','<<(selected?actions[best].id.value():0)<<',';
    if(selected)for(auto id:actions[best].groups_to_remove)out<<id.value()<<';';
-   out<<'\n';}
+   out<<','<<domain_assessment.initial_law_valid<<','<<domain_assessment.adaptive_event_valid<<','<<domain_assessment.range_domain_valid<<','<<domain_assessment.range_remainder<<','<<domain_assessment.status<<'\n';}
   if(profile){auto ms=[](auto a,auto b){return std::chrono::duration<double,std::milli>(b-a).count();};
    std::cout<<"PROFILE prep="<<ms(start,t_window)<<" models="<<ms(t_window,t_models)<<" raw_cov="<<ms(t_models,t_raw)<<" detector="<<ms(t_raw,t_detector)<<" evidence_actions="<<ms(t_detector,t_actions)<<" candidates="<<ms(t_actions,core_end)<<" commit_final="<<commit<<'\n';}
   previous_body=state.position_world_m;previous_tag=tag;previous_truth=truth;previous_rotation=state.q_world_body;

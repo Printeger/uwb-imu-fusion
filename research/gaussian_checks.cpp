@@ -1,6 +1,7 @@
 #include "gaussian_reference.hpp"
 #include "gaussian_window.hpp"
 #include "statistical_history.hpp"
+#include "raw_domain.hpp"
 #include "imu_recovery_scope.hpp"
 #include "scenario_material.hpp"
 #include <Eigen/Geometry>
@@ -64,6 +65,24 @@ int main(int argc,char** argv){
   double x=(ho.col(0).dot(white))/ho.squaredNorm();
   check(std::abs((white-ho*x).squaredNorm()-(hist.z-hist.a.col(0)*.2-hist.b.col(0)*.3).squaredNorm())<1e-12);
  }
+ // Uniform analytic remainder over a right Pose3 Expmap ball.
+ RawNoiseEvent event(3421,1e-5);check(event.q>5. && event.q<7.);
+ for(double theta:{.01,.2,.8})for(double rho:{.01,.1,.4}){
+  auto bound=tagRemainder(5.,theta,rho,.25);check(bound.valid && bound.range>0.);
+  gtsam::Pose3 center(gtsam::Rot3::RzRyRx(.1,.2,.3),gtsam::Point3(1,2,3));
+  Eigen::Vector3d arm(.2,-.1,.08),anchor(-2,-1,0),dir(1,2,3);dir.normalize();
+  Eigen::Matrix<double,6,1> tangent;tangent<<theta*dir,rho*dir;
+  auto moved=center.retract(tangent);auto tag=(center.translation()+center.rotation().matrix()*arm).eval();
+  auto delta=(center.rotation().matrix()*(tangent.tail<3>()+tangent.head<3>().cross(arm))).eval();
+  double actual=std::abs((moved.translation()+moved.rotation().matrix()*arm-anchor).norm()-(tag-anchor).norm()-(tag-anchor).normalized().dot(delta));
+  check(actual<=tagRemainder((tag-anchor).norm(),theta,rho,arm.norm()).range);
+ }
+ auto short_pim=healthyIntegrationRemainder(.05,.12,1.3,11.);
+ auto long_pim=healthyIntegrationRemainder(1.55,.12,1.3,11.);
+ check(short_pim.rotation>0 && long_pim.velocity>short_pim.velocity);
+ check(healthyIntegrationRemainder(.05,0,1.3,11.).velocity==std::nextafter(0.,INFINITY));
+ check(fixedReferenceFamilyCharge(5.,.25,50,128,1e-9)>cfg["risk_budget"].as<double>());
+ check(!tagRemainder(.1,.2,.4,.25).valid);check(!tagRemainder(5.,3.2,.1,.25).valid);
  // Independent body->tag right-local rotation derivative.
  Eigen::Vector3d lever(.2,-.1,.08);Eigen::Matrix3d rot=Eigen::AngleAxisd(.3,Eigen::Vector3d(1,2,3).normalized()).toRotationMatrix();
  Eigen::Matrix3d skew;skew<<0,-lever.z(),lever.y(),lever.z(),0,-lever.x(),-lever.y(),lever.x(),0;

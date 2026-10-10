@@ -55,3 +55,7 @@ imu_accel_amplitude_mps2: 20.0
 imu_target_beta: 0.001
 imu_diagnostic_event_mass: 0.001
 imu_base_config: config/fde_imu_order1.yaml
+# HGIR shared raw coordinate event, fixed before evaluating either seed.
+# This is separate from the old frozen-root union and is never summed with it
+# as a qualified raw risk. Old fixed initialization remains the default.
+raw_event_risk: 0.00001
