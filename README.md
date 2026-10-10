@@ -152,3 +152,21 @@ python3 tools/analyze_fde_profile_runs.py \
 These commands can be expensive. The preserved implementation results and
 known failures are in the implementation report; a short interface smoke must
 not be represented as a replacement for those campaigns.
+
+
+## Conditional Gaussian FDE research entry
+
+The isolated nonprotected research runner supports noisy native UWB+IMU
+motion experiments and actual UWB recovery commits:
+
+```sh
+python3 tools/run_fde_next.py check --build
+python3 tools/run_fde_next.py run --scene U1 --scope uwb
+python3 tools/run_fde_next.py audit
+```
+
+`off` selects best effort and `imu-diagnostic` exposes bounded IMU research
+attempts; unsupported IMU/joint recovery scopes explicitly reject. The default
+optimized numeric path preserves the reference model. Temporary run artifacts
+are automatically removed. See [four-stage results](docs/fde_next/RESULTS.md)
+for guarantees, limitations, replay, paired benchmarks and reproduction.

@@ -69,5 +69,24 @@ int main(int argc,char** argv){
  NoisyMotionScenario s0(argv[1],"U0",20261010,2),s1(argv[1],"U0",20261010,2);
  check(s0.imu[10].specific_force_mps2==s1.imu[10].specific_force_mps2);
  check(s0.uwb[1].measurements[0].range_m==s1.uwb[1].measurements[0].range_m);
- std::cout<<"checks=28 finite_pl="<<r.pl.transpose()<<" statistic="<<r.statistic<<" threshold="<<r.threshold<<"\n";
+ auto batched=gaussianReference(a,z,sigma,c,{b},1e-3,1e-6,true);
+ check((batched.mean-r.mean).norm()==0);check((batched.covariance-r.covariance).norm()==0);
+ check((batched.pl.array()>=r.pl.array()-1e-12).all());check((batched.pl-r.pl).norm()<1e-9);
+ check(gaussianReference(a,z,sigma,c,{a.col(0)},1e-3,1e-6,true).status=="DANGEROUS_NULLSPACE");
+ check(gaussianReference(a,z,sigma,c,{1e-10*b},1e-3,1e-6,true).status=="INDETERMINATE");
+ auto asymmetric=sigma;asymmetric(0,1)+=.1;
+ check(gaussianReference(a,z,asymmetric,c,{},1e-3,1e-6).status=="INDETERMINATE");
+ auto malformed=b;malformed(0,0)=NAN;check(gaussianReference(a,z,sigma,c,{malformed},1e-3,1e-6,true).status=="INDETERMINATE");
+ ExclusionAction keep_all;keep_all.id=ExclusionActionId(1);
+ auto base=gaussianReference(native_joint.a,native_joint.z,native_joint.sigma,native_joint.c,{},1e-6,1e-9);
+ GaussianCandidateCache cache(native_joint,w,1e-6,1e-9);size_t decompositions=1;
+ auto reference=gaussianCandidate(native_joint,w,keep_all,1e-6,1e-9);
+ auto cached=gaussianCandidate(native_joint,w,keep_all,1e-6,1e-9,true,&base,&cache,&decompositions);
+ check(reference.status==cached.status);check((reference.mean-cached.mean).norm()<1e-12);
+ keep_all.id=ExclusionActionId(2);auto again=gaussianCandidate(native_joint,w,keep_all,1e-6,1e-9,true,&base,&cache,&decompositions);
+ check((again.pl.array()==cached.pl.array()).all());check(decompositions==1 && cache.entries.size()==1);
+ auto foreign=native_joint;bool rejected=false;try{gaussianCandidate(foreign,w,keep_all,1e-6,1e-9,true,&base,&cache);}catch(const std::runtime_error&){rejected=true;}check(rejected);
+ check(gaussianReference(a,z,sigma,c,{1e-11*a.col(0)},1e-3,1e-6).status=="INDETERMINATE");
+ check(gaussianReference(a,z,sigma,c,{1e-11*a.col(0)},1e-3,1e-6,true).status=="INDETERMINATE");
+ std::cout<<"checks=43 finite_pl="<<r.pl.transpose()<<" statistic="<<r.statistic<<" threshold="<<r.threshold<<"\n";
 }

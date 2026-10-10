@@ -9,7 +9,7 @@ probability contracts and publication gates are unchanged. All new runs use
 | S1 | Complete fixed-model reference | Finite Gaussian oracle; raw nonlinear qualification pending |
 | S2 | Functional work complete; Gaussian raw qualification gap | U1 correct commit + 4 epochs; finite-episode U2; raw empirical only |
 | S3 | Complete limited exit B | New matched-power/bridge-domain attempt; no IMU recovery commit |
-| S4 | Pending | No claim yet |
+| S4 | Complete integrated entry and same-model benchmark | UWB research normal/recovery acceleration; not real time |
 
 ## S1
 
@@ -23,9 +23,12 @@ pseudoinverse slope. A separate three-coordinate noise event costs another
 selection without inferring shared failure events from matching IDs or Grams.
 This bound is conditional on fixed A, covariance, C and covered fault spaces.
 No range-union routine is called. Unresolved state rank or nearly singular
-fault response refuses; a dangerous nullspace returns infinite PL. The
-floating-point nullspace classification is a numerical oracle, not interval
-certification for arbitrary ill-conditioned inputs.
+fault response refuses; a dangerous nullspace returns infinite PL. Exact harmlessness requires a literal zero raw fault column or an exact
+raw state-column alias whose protection column is exactly zero. An exact
+state alias with nonzero protection is dangerous. Other unresolved responses
+refuse with infinite PL; small floating-point protection response is never
+proof of zero. The full-rank numerical oracle is not interval certification
+for arbitrary ill-conditioned inputs.
 
 The research YAML fixes a 50-epoch horizon, 128-candidate cap, `tail=1e-9`,
 `alpha=1e-6`, budget `4e-5`, seed 20261010 (confirmation 20261011) **before raw
@@ -257,3 +260,171 @@ cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl --target fde_next_runner
 "$BIN/fde_next_runner" config/fde_next.yaml "$TMP/I2.csv" I2 imu-diagnostic
 "$BIN/test_integrity_v2" --gtest_filter=Phase2NumericLayerPositive.ImuBridgeIsIndependentAndItsBoxMarginFinite
 ```
+
+
+## S4
+
+The single recommended entry is `tools/run_fde_next.py`. It builds only the
+necessary targets on request, selects scope, sets library/thread environment,
+runs checks/audit/bench/replay and automatically deletes temporary CSV, matrix
+and log files. Defaults are the isolated YAML, seed 20261010, U0, scope `uwb`,
+numeric `optimized`. `off` performs best-effort commits with FDE diagnostic
+fields; `imu-diagnostic` exposes the S3 limited exit. `imu-supported` and
+`joint-supported` reject at startup with an explicit unsupported-scope error.
+No scope silently claims joint recovery. Every row identifies model, scope,
+world-frame UWB tag protection point, timestamp, frozen union charge,
+`raw_total_risk=UNKNOWN`, and false raw/formal/publication qualifications.
+Ordinary streaming timing excludes final object destruction; benchmark
+`end_to_end_ms` includes it. This is a nonprotected executable, without ROS
+protected publication or hardware/deployment admission.
+
+One current-code profiler investigation identified raw covariance assembly,
+Gaussian decomposition and full candidate/proof work as costs. With the
+existing immutable admission/arena machinery already applied to **both**
+baselines, indicative exclusive normal phase times were prep19.639,
+models3.592, raw-cov24.551, detector33.408, evidence35.569,
+candidates47.957, final2.385 ms; alarm times21.785/3.747/26.336/33.953/
+47.954/151.087/1.075 ms. These investigative values are not the paired timing
+result. Reusing the existing seal/arena is not counted as a new optimization.
+
+Exactly two structural directions remain: batch RHS/one-dimensional fault
+projection operations under each immutable Gaussian root (with componentwise
+roundoff guards and scalar fallback), and reuse for **identical raw retained
+row vectors** within that same window/version/alpha/tail owner. Replacement
+validation precedes cache lookup. The cache is destroyed each attempt;
+proof/consumer/action identities and all physical leaves still pass through
+selection. KEEP reuses its already-computed Gaussian reference. Near-rank,
+AL and distinct-action tie boundaries use conservative reference fallback.
+No fault, window, prior, event charge, rank/step threshold or candidate is
+removed to obtain the timings.
+
+The final normal/alarm numerical audit compared 234/260 matrices respectively:
+raw A/covariance, protection/fault maps, actual candidate deltas/covariance
+operators, Gaussian deltas/covariances/PL, recipes and proof census. Maximum
+absolute differences were 4.93827e-13 and 4.99822e-13, with conservative upward
+PL guards; final result fields, actual actions and commit bindings agreed.
+Forty-three deterministic checks pass (0/43 failures), including malformed
+covariance, exact cache ownership, replacement checks and tiny nonzero
+undetectable protection response refusal. A safety review found an earlier
+numerical null test could mistake a tiny response for exact harmlessness.
+It was replaced by the structural witnesses described in S1; the first paired
+140 timings were withdrawn. Only the final repaired four-process 140-attempt
+measurements below are used. The directly affected IMU prefix was checked:
+10 selected / 11 commits (first epoch unavailable), preserving S3 counts.
+
+Both workloads create a fresh estimator for each attempt, nominally prewarm
+to the same mature frozen input, then execute and actually commit the measured
+epoch. P-N is U0 epoch14; P-U is the successful S2 U1 fault at epoch15.
+This is a repeated mature-snapshot microbenchmark, not 35 consecutive online
+epochs. Per-process input generation/initialization/prewarm are outside core
+and full-attempt measurements but included in process wall time. No tests,
+builds, profiler or numeric matrix dumps ran concurrently with the final pairs.
+
+| Workload | Mode | Core mean / median / P95 / max ms | Full mean / median / P95 / max ms | Commit median ms | Cleanup median ms | Success / reject | Core >40 / full >50 | Gaussian decompositions | Process wall s |
+|---|---|---|---|---:|---:|---|---|---:|---:|
+| P-N | reference | 159.278 / 158.426 / 165.612 / 180.890 | 160.934 / 160.066 / 167.480 / 182.481 | .932 | .682 | 35/0 | 35/35 / 35/35 | 2 | 6.049 |
+| P-N | optimized | 117.936 / 118.096 / 121.806 / 123.585 | 119.428 / 119.469 / 123.442 / 125.019 | .929 | .493 | 35/0 | 35/35 / 35/35 | 1 | 4.604 |
+| P-U | reference | 271.232 / 269.638 / 278.749 / 322.498 | 273.429 / 271.814 / 280.781 / 324.623 | .846 | 1.266 | 35/0 | 35/35 / 35/35 | 4 | 10.043 |
+| P-U | optimized | 172.044 / 171.583 / 177.066 / 180.063 | 174.141 / 173.708 / 179.196 / 182.238 | .842 | 1.206 | 35/0 | 35/35 / 35/35 | 2 | 6.568 |
+
+Full mean decreases 25.8% / 36.3%; all 140 attempts exceed both deadlines.
+There are 0/140 incomplete attempts, 0/140 numerical selections refused,
+140/140 actual single-update commits, 35/35 correct U1 exclusions per mode,
+and 0/140 protected publications. These successful research calculations do
+not satisfy real-time protected availability. The synchronous harness has
+zero modeled input-available-to-start scheduling delay; physical arrival,
+queue and hardware latencies are unknown. Full time is modeled arrival-to-
+finalized-output, conservatively including numerical/arena/estimator cleanup.
+U1 alarms and recovers on its first injected epoch (zero timestamp delay;
+wall compute is the P-U duration). S2 supplies its four subsequent epoch
+results; I2's alarm delay is 250 ms and no IMU recovery exists. No asynchronous
+queue or stale-PL publication mechanism is introduced. Thirty-five samples
+per group establish neither P99/WCET nor rare-event risk.
+
+| Workload | Raw rows / state cols | Hypotheses / actions | Numerical / post / PL | Proof entries | Winning action / removal | HPL / VPL m |
+|---|---|---|---|---:|---|---|
+| P-N, both modes | 277 / 165 | 224 / 1 | 1 / 1 / 1 | 224 | 1 / none | .8071197017 / 1.0405118430 |
+| P-U, both modes | 285 / 165 | 240 / 4 | 3 / 3 / 3 | 240 | 2 / group15002 | .8773751859 / 1.0230335886 |
+
+Both have configured window10, applicable fixed-lag history, the same finite
+one-episode law/128 candidate cap, union charge1.28e-5 and unknown raw risk.
+The alarm removes the actual pending corrupted UWB group and commits the
+native candidate, not a KEEP-only or rejection surrogate. No IMU/joint
+recovery performance claim is made.
+
+![Same-model full-cycle performance](performance.png)
+
+One existing raw-cache engineering smoke uses 20 UWB batches and their
+native IMU samples: 20/20 outputs and backend updates, 2.058 s process wall,
+all `RAWDATA_UNQUALIFIED`. The adapter reads `imu.csv` and
+`uwb_observations.csv`, preserving timestamps and rejecting asynchronous
+within-batch observations. It ignores orientation/GT/refit files; configured
+anchors/frame/lever/initial state remain unqualified. Natural-fault labels,
+recording provenance and accuracy are unknown, so no TP or hardware claim is
+made. Original user cache files are referenced without copying or deleting:
+`/home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t07_review_fix_20260907T062126Z/cache/eb0b87b4c6effd68d2249b68ffe35da60fa6bd34c0604813f8521781d45cc9bd`.
+
+Final necessary safety regression passes 9/9 transaction/covariance/bridge/
+owner/arena tests, 5/5 prior-miss-floor/shared-event risk tests and 3/3
+nonprotected/controller/watchdog publication tests, plus 43/43 new checks.
+No old all-data campaign or seed matrix was rerun. The final test filters are
+reproducible with the `$BIN`/library setup from S1:
+
+```sh
+"$BIN/test_integrity_v2" --gtest_filter='IntegrityV2Transaction.PrepareAndDiscardNeverMutateBackend:IntegrityV2Transaction.CommitIsOneAtomicBackendUpdateAndLedgerIsComplete:IntegrityV2Transaction.CorrelatedUwbExclusionUsesPrincipalCovariance:IntegrityV2Transaction.HistoricalUwbReplacementCommitsAtomically:IntegrityV2ProtectionLevel.RecomputesPostCandidateAndStaysResearchOnly:Phase2NumericLayerPositive.ImuBridgeIsIndependentAndItsBoxMarginFinite:P101IdentityIndexing.SealedCandidateIsBoundToItsExactOwner:P103ProofArena.ScopedCommittedStateDoesNotGrowLegacyRegistry:P104ProofOwnership.BatchArenaHighWaterTracksCapacityAndOnlyWinnerReachesMainArena'
+"$BIN/test_p0_04_risk_oracle" --gtest_filter='P004RiskOracle.MissChannelIsChargedIntoTheSameTotal:P004RiskOracle.ZeroAllocationStillChargesPriorWeightedMiss:P004RiskOracle.AllocationCanFitWhileCompleteMissBoundExceedsBudget:P004RiskOracle.ReviewerExactMissBoundaryRemainsOverBudget:P004RiskOracle.UnverifiableSharedEventClaimsRemainSingletons'
+"$BIN/test_publication_wiring" --gtest_filter='PublicationWiring.StatelessMonitorPathIsExplicitlyUnprotected:PublicationWiring.ControllerTriStateAndAtomicChain:PublicationWiring.WatchdogClauseSemanticsAreExplicit'
+```
+
+Reproduction from repository root (temporary numeric outputs self-clean):
+
+```sh
+python3 tools/run_fde_next.py check --build
+python3 tools/run_fde_next.py run --scene U1 --scope uwb
+python3 tools/run_fde_next.py run --scene U0 --scope off
+python3 tools/run_fde_next.py run --scene I2 --scope imu-diagnostic
+python3 tools/run_fde_next.py audit
+python3 tools/run_fde_next.py bench --plot docs/fde_next/performance.png
+python3 tools/run_fde_next.py replay --epochs 20 --cache /home/mint/ws_fusion_uwb/src/uwb-imu-fusion-ie/doc/ie_sprint/evidence/t07_review_fix_20260907T062126Z/cache/eb0b87b4c6effd68d2249b68ffe35da60fa6bd34c0604813f8521781d45cc9bd
+```
+
+Version: S1 `b9a9bd3`, S2 `f2b7790`, S3 `74ff18b`; final S4 is the commit
+containing this section, based on `74ff18b`. Release build, GTSAM4.2a5,
+Eigen3.3.7, Boost1.71, yaml-cpp0.6.2, Intel Core Ultra5 125H (18 logical CPUs).
+TBB and Eigen numerical work are limited to one thread; OMP/BLAS/MKL=1.
+Final measured source SHA256:
+`gaussian_reference.hpp=24c8654ce2b0a9d917d8e7f3e324fc47caee43753d5cbb355a7a8b9508b45446`,
+`gaussian_window.hpp=5511a1d5814c46e27201098c12eea4a1ba1141d38c777625ce07c7082c67ce0d`,
+`fde_next_runner.cpp=c9e6e660bd7deb99161efddaa8c051b477b1538689cec67db9a1043347a2de39`.
+Executable SHA256 `35c32dd9a0bfb30bc11d92dbfe0ef3f8379e45c0c7c03f19d711b9bf43f97285`;
+loaded SDK library `1044b4606640698bd2c56ec8a93afbc6c9f453c4135636b8dec67bd0f1432bcf`,
+GTSAM library `00d83aa618194aefc4b2011e1d29bd9aba107a8b5e0ee8e946eb2455351219da`.
+Binary hashes identify this machine's measurement, not portable rebuild hashes.
+
+## Delivery and remaining gaps
+
+All four prescribed stages have actual code, targeted validation and local
+stage commits. **Research delivery complete; UWB research function implemented;
+full raw Gaussian closed-loop guarantee not established.** S1 is a usable
+fixed conditional Gaussian numerical/risk reference. S2 has actual noisy,
+moving, lever-arm UWB recovery and four-epoch follow-through. S3 is limited
+exit B with new matched information/support and actual candidate-domain
+failure evidence; no IMU recovery positive. S4 delivers the integrated
+nonprotected entry and same-model finite PL/recovery performance improvement.
+
+Remaining gaps are specific: (1) jointly propagate condensed raw noise and
+fault maps through history; (2) qualify random linearization and nonlinear
+IMU/pose/range remainders, configured initial-error law and final committed
+center for a raw Gaussian total-risk proof; (3) bounded IMU candidate
+relinearization plus fault-independent full-state bridge covariance/remainders
+including velocity, attitude and gravity coupling; (4) meet the40/50 ms targets
+on effective recovery work; (5) external anchor/lever/frame/noise/prior,
+geometry and hardware qualification. Local synthetic Gaussian theory, raw
+nonlinear observed error and hardware qualification are separate throughout.
+The U0 false alarm/exclusion and S3 0/1 recovered episodes prevent any claim
+of calibrated raw false-alarm or IMU recovery capability. No production
+probability contract, risk/AL or protected release logic is replaced.
+
+Only this results document, four conclusion figures, source/tests/config and
+the single entry script are retained. Owned temporary outputs are deleted
+after summary verification; historical files and user data are unchanged.

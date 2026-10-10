@@ -57,8 +57,18 @@ inline GaussianWindow rawGaussianWindow(const LinearizedIntegrityWindow& w,const
   o.faults.push_back(std::move(b));}
  return o;
 }
+struct GaussianCandidateCache {
+ const GaussianWindow* root;
+ WindowId window;LinearizationVersion version;
+ double alpha,tail;
+ std::map<std::vector<int>,GaussianReference> entries;
+ GaussianCandidateCache(const GaussianWindow& r,const LinearizedIntegrityWindow& w,double a,double t):root(&r),window(w.id),version(w.version),alpha(a),tail(t){}
+};
 inline GaussianReference gaussianCandidate(const GaussianWindow& o,const LinearizedIntegrityWindow& w,
-    const ExclusionAction& action,double alpha,double tail) {
+    const ExclusionAction& action,double alpha,double tail,bool batched=false,
+    const GaussianReference* base=nullptr,GaussianCandidateCache* cache=nullptr,size_t* decompositions=nullptr) {
+ if(cache && (cache->root!=&o || cache->window!=w.id || !(cache->version==w.version) || cache->alpha!=alpha || cache->tail!=tail))
+  throw std::runtime_error("foreign Gaussian candidate cache root");
  std::vector<int> rows;
  for(size_t k=0;k<w.blocks.size();++k)if(std::find(action.groups_to_remove.begin(),action.groups_to_remove.end(),w.blocks[k].group_id)==action.groups_to_remove.end())
   for(int j=0;j<w.blocks[k].residual_raw.size();++j)rows.push_back(o.offsets[k]+j);
@@ -72,9 +82,15 @@ inline GaussianReference gaussianCandidate(const GaussianWindow& o,const Lineari
   if(std::find(rows.begin(),rows.end(),match)!=rows.end())throw std::runtime_error("duplicate candidate raw row");
   rows.push_back(match);
  }
+ if(cache){auto it=cache->entries.find(rows);if(it!=cache->entries.end())return it->second;}
+ bool keep=rows.size()==size_t(o.a.rows());for(size_t i=0;i<rows.size();++i)keep=keep && rows[i]==int(i);
+ if(base && keep){auto result=gaussianFaultBounds(*base,o.c,o.faults,tail,batched,&o.a);if(cache)cache->entries.emplace(rows,result);return result;}
  Eigen::MatrixXd a(rows.size(),o.a.cols());Eigen::VectorXd z(rows.size());std::vector<Eigen::MatrixXd> faults;
  for(size_t i=0;i<rows.size();++i){a.row(i)=o.a.row(rows[i]);z(i)=o.z(rows[i]);}
  for(const auto& b:o.faults){Eigen::MatrixXd selected(rows.size(),b.cols());for(size_t i=0;i<rows.size();++i)selected.row(i)=b.row(rows[i]);faults.push_back(std::move(selected));}
- return gaussianReference(a,z,principal(o.sigma,rows),o.c,faults,alpha,tail);
+ if(decompositions)++*decompositions;
+ auto result=gaussianReference(a,z,principal(o.sigma,rows),o.c,faults,alpha,tail,batched);
+ if(cache)cache->entries.emplace(rows,result);
+ return result;
 }
 }
