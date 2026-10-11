@@ -15,10 +15,10 @@ BIN = ROOT.parents[1] / 'devel/.private/uwb_imu_pl/lib/uwb_imu_pl'
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['check', 'compare'])
+    parser.add_argument('command', choices=['check', 'compare', 'check-hybrid', 'hybrid', 'lifecycle'])
     parser.add_argument('--build', action='store_true')
     parser.add_argument('--historical', action='store_true', help='execute existing C once per U0/U1, epochs14-20')
-    parser.add_argument('--scene', choices=['U0','U1','U2','U3','I2'], help='run just the selected fixed scene')
+    parser.add_argument('--scene', choices=['U0','U1','U2','U3','I2','H1'], help='run just the selected fixed scene')
     args = parser.parse_args()
     env = dict(os.environ, OMP_NUM_THREADS='1', OPENBLAS_NUM_THREADS='1', MKL_NUM_THREADS='1')
     env['LD_LIBRARY_PATH'] = str(BIN.parent) + ':' + env.get('LD_LIBRARY_PATH', '')
@@ -26,12 +26,55 @@ def main():
         if name.startswith('FDE_'):
             env.pop(name)
     targets = ['epoch_raim_checks', 'fused_epoch_checks', 'epoch_raim_runner']
+    if args.command in ('hybrid','check-hybrid','lifecycle'):
+        targets = ['hybrid_checks', 'epoch_raim_runner']
     if args.historical:
         targets.append('fde_next_runner')
     if args.build:
         subprocess.run(['cmake', '-S', str(ROOT), '-B', str(BUILD)], cwd=ROOT, env=env, check=True)
         subprocess.run(['cmake', '--build', str(BUILD), '--target', *targets, '-j2'], env=env, check=True)
     config = 'config/fde_next.yaml'
+    if args.command in ('check-hybrid','lifecycle'):
+        subprocess.run([str(BIN / 'hybrid_checks'), config], cwd=ROOT, env=env, check=True)
+        return
+    if args.command == 'hybrid':
+        cache = ROOT / '.cache/hybrid'
+        cache.mkdir(parents=True, exist_ok=True)
+        scenarios = [args.scene] if args.scene else ['U0','U1','U2','U3','H1','I2']
+        with tempfile.TemporaryDirectory(prefix='final-', dir=cache) as temp:
+            for scenario in scenarios:
+                variants = [''] if scenario != 'I2' else ['', 'imu-invalid']
+                for evidence in variants:
+                    count = 50 if scenario in ('U0','U1') else 21 if scenario=='U2' else 20
+                    output = Path(temp) / (scenario + evidence + '.csv')
+                    cmd = [str(BIN/'epoch_raim_runner'), config, str(output), scenario, 'hybrid', 'on', str(count)]
+                    if evidence:
+                        cmd.append(evidence)
+                    subprocess.run(cmd, cwd=ROOT, env=env, check=True)
+                    with output.open() as f:
+                        rows = list(csv.DictReader(f))
+                    assert len(rows)==count and all(r['updates']=='1' and r['formal_eligible']=='0' and r['publication_protected']=='0' and r['fused_conditional_available']=='0' and r['raw_total_risk']=='UNKNOWN' and r['full_C_calls']=='0' for r in rows)
+                    assert all(r['evidence_level']=='RAW_UNQUALIFIED' for r in rows)
+                    if scenario=='U1':
+                        assert rows[14]['excluded']=='0' and rows[14]['correct']=='1' and rows[14]['candidates']=='9' and rows[14]['committed_retained']=='7' and '1501' not in rows[14]['retained_ids'].split('|')
+                        assert all(r['updates']=='1' for r in rows[15:19])
+                    if scenario=='H1':
+                        assert rows[2]['excluded']=='-1' and rows[2]['alarm']=='0'
+                        assert float(rows[3]['history_bound'])>0
+                    if scenario=='U2':
+                        assert sum(r['correct']=='1' for r in rows)==3
+                        assert all(float(r['history_bound'])>0 for r in rows[17:21])
+                    if scenario=='U3':
+                        assert all(r['status']=='GEOMETRY_OR_MIRROR_UNQUALIFIED' for r in rows)
+                    if evidence:
+                        assert all(r['status']=='IMU_EVIDENCE_MISSING' and r['available']=='0' for r in rows)
+                    def stats(key):
+                        values=np.array([float(r[key]) for r in rows]);values=values[np.isfinite(values)]
+                        return '/'.join(f'{x:.6f}' for x in [values.mean(),np.median(values),np.percentile(values,95),values.max()]) if values.size else 'UNKNOWN'
+                    print(f'HYBRID {scenario} {evidence or "unlabelled"}: outputs={count} H_bounded={sum(r["history_status"]=="BOUNDED" for r in rows)} nonzero_H={sum(float(r["history_bound"])>0 for r in rows)} exclusions={sum(int(r["excluded"])>=0 for r in rows)} correct={sum(r["correct"]=="1" for r in rows)} AL_numeric={sum(r["within_al"]=="1" for r in rows)} max_bytes={max(int(r["history_bytes"]) for r in rows)} full_C_calls=0 status={dict(Counter(r["status"] for r in rows))}', flush=True)
+                    for key in ['history_bound','history_eta','hpl','vpl','error','h_ms','prediction_ms','a_ms','b_ms','core_ms','verification_ms','commit_ms','h_update_ms','finalization_ms','cleanup_ms','full_ms']:
+                        print(f'  {key} mean/median/P95/max={stats(key)}', flush=True)
+        return
     if args.command == 'check':
         for target in targets[:2]:
             subprocess.run([str(BIN / target), config], cwd=ROOT, env=env, check=True)

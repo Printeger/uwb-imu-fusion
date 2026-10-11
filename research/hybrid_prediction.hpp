@@ -1,6 +1,7 @@
 #pragma once
 #include "hybrid_evidence.hpp"
 namespace uwb_imu_pl::research {
+inline bool sameMatrix(const Eigen::MatrixXd& a,const Eigen::MatrixXd& b){return a.rows()==b.rows() && a.cols()==b.cols() && a.allFinite() && b.allFinite() && a.isApprox(b,0);}
 inline bool sameHistory(const HybridHistoryEvidence& a,const HybridHistoryEvidence& b){
  if(a.status!=b.status || a.model!=b.model || a.epoch!=b.epoch || a.generation!=b.generation || a.horizon!=b.horizon || a.radius!=b.radius || a.risk!=b.risk || a.retained_sources!=b.retained_sources || a.segments.size()!=b.segments.size())return false;
  if(a.mean.size()!=b.mean.size() || a.covariance.rows()!=b.covariance.rows() || a.covariance.cols()!=b.covariance.cols() || !a.mean.isApprox(b.mean,0) || !a.covariance.isApprox(b.covariance,0))return false;
@@ -45,6 +46,7 @@ inline HybridBound hybridBound(const Eigen::MatrixXd& P,const Eigen::MatrixXd& H
  int excluded,double alpha,double q){
  HybridBound b;b.excluded=excluded;
  int d=P.rows(),n=H.rows();if(history.status!="BOUNDED" || P.cols()!=d || H.cols()!=d || N.rows()!=d || N.cols()!=n || R.rows()!=n || R.cols()!=n || C.cols()!=d || innovation.size()!=n || !(q>0))return b;
+ for(const auto& segment:history.segments)if(segment.direction.size()!=d || !segment.direction.allFinite() || !std::isfinite(segment.low) || !std::isfinite(segment.high) || segment.low>segment.high)return b;
  for(int i=0;i<n;++i)if(i!=excluded)b.retained.push_back(i);
  int m=b.retained.size();Eigen::MatrixXd h(m,d),cross(d,m);Eigen::VectorXd y(m);
  for(int i=0;i<m;++i){h.row(i)=H.row(b.retained[i]);cross.col(i)=N.col(b.retained[i]);y(i)=innovation(b.retained[i]);}
@@ -74,14 +76,17 @@ inline HybridBound hybridBound(const Eigen::MatrixXd& P,const Eigen::MatrixXd& H
  return b;
 }
 inline HybridBound hybridFixedCurrent(const HybridFixedLaw& law,const HybridHistoryProducer& producer,const HybridPrediction& p,
- const Eigen::VectorXd& ranges,bool a_alarm=true){
+ const Eigen::VectorXd& ranges,bool a_alarm=true,double horizontalAL=2,double verticalAL=3){
  auto expected=hybridPredict(law,producer,producer.query(),p.epoch,p.generation);
- if(p.status!="FIXED_MODEL_VERIFIED" || expected.status!=p.status || p.source!=expected.source || !sameHistory(p.history,expected.history) || p.mean.size()!=expected.mean.size() || p.covariance.rows()!=expected.covariance.rows() || p.N.rows()!=expected.N.rows() || p.N.cols()!=expected.N.cols() || !p.mean.isApprox(expected.mean,0) || !p.covariance.isApprox(expected.covariance,0) || !p.N.isApprox(expected.N,0) || !p.transport.isApprox(expected.transport,0))return {};
+ if(p.status!="FIXED_MODEL_VERIFIED" || expected.status!=p.status || p.source!=expected.source || !sameHistory(p.history,expected.history) || p.mean.size()!=expected.mean.size() || !sameMatrix(p.mean,expected.mean) || !sameMatrix(p.covariance,expected.covariance) || !sameMatrix(p.N,expected.N) || !sameMatrix(p.transport,expected.transport))return {};
  Eigen::MatrixXd r=Eigen::MatrixXd::Identity(law.ranges,law.ranges)*law.range_sigma*law.range_sigma;
  Eigen::VectorXd innovation=ranges-law.H*p.mean;
- auto candidate=[&](int excluded){return hybridBound(p.covariance,law.H,r,p.N,law.C,innovation,p.history,excluded,law.alpha,p.history.radius);};
+ auto candidate=[&](int excluded){auto bound=hybridBound(p.covariance,law.H,r,p.N,law.C,innovation,p.history,excluded,law.alpha,p.history.radius);
+  if(bound.status=="FIXED_MODEL_VERIFIED" && (bound.gaussian.pl.head<2>().norm()>horizontalAL || bound.gaussian.pl.z()>verticalAL))bound.status="AL_REJECTED";
+  return bound;
+ };
  auto keep=candidate(-1);
- if(keep.status=="FIXED_MODEL_VERIFIED" && !a_alarm)return keep;
+ if(!a_alarm && keep.gaussian.dof>0 && keep.gaussian.statistic<=keep.gaussian.threshold)return keep;
  HybridBound best;double score=INFINITY;
  // Complete fixed family, including KEEP. Selection never drops a hypothesis.
  for(int i=-1;i<law.ranges;++i){auto b=candidate(i);if(b.status=="FIXED_MODEL_VERIFIED" && b.gaussian.statistic<score){score=b.gaussian.statistic;best=std::move(b);}}

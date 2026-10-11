@@ -52,6 +52,24 @@ int main(int argc,char** argv){try{
   }
   require(next.epoch==size_t(epoch),"commit-before-H");
   if(epoch==8){
+   auto stable=producer.query();
+   for(int field=0;field<12;++field){auto forged=stable;
+    if(field==0)forged.model="other";
+    if(field==1)forged.epoch++;
+    if(field==2)forged.horizon++;
+    if(field==3)forged.radius*=2;
+    if(field==4)forged.risk=0;
+    if(field==5)forged.retained_sources.pop_back();
+    if(field==6)forged.mean(0)+=1;
+    if(field==7)forged.covariance(0,0)*=2;
+    if(field==8)forged.segments[0].low=0;
+    if(field==9)forged.segments[0].direction(3)+=1;
+    if(field==10)forged.segments[0].episode="other";
+    if(field==11)forged.status="UNKNOWN";
+    require(hybridPredict(law,producer,forged,9,8).status!="FIXED_MODEL_VERIFIED","complete H semantic tamper");
+   }
+   auto nextP=hybridPredict(law,producer,stable,9,8);nextP.covariance.resize(1,1);
+   require(hybridFixedCurrent(law,producer,nextP,Eigen::VectorXd::Zero(8),false).status=="EVIDENCE_REFUSED","P covariance tamper");
    producer.invalidate("STALE");require(hybridPredict(law,producer,producer.query(),9,8).status!="FIXED_MODEL_VERIFIED","stale rejection");
    producer.rebuiltFrom(replay);require(producer.query().status=="BOUNDED","recipe rebuild");
   }
@@ -64,6 +82,9 @@ int main(int argc,char** argv){try{
  h.segments.push_back({"scalar",direction,-10,10});
  Eigen::MatrixXd one=Eigen::MatrixXd::Ones(1,1),zero=Eigen::MatrixXd::Zero(1,1),c=Eigen::MatrixXd::Ones(3,1);
  auto b=hybridBound(one,one,one,zero,c,Eigen::VectorXd::Zero(1),h,-1,1e-6,1);
+ HybridHistoryEvidence currentOnly;currentOnly.status="BOUNDED";
+ auto old=hybridBound(one,one,one,zero,c,Eigen::VectorXd::Zero(1),currentOnly,-1,1e-6,1);
+ require(old.gaussian.pl(0)+b.history(0)<10,"output-history-only cancellation counterexample");
  require(std::abs(b.eta-10/std::sqrt(2.))<1e-10 && std::abs(b.history(0)-5)<1e-10 && b.gaussian.pl(0)>=10,"history cancellation");
  // Nonzero N: independent direct S/K normal equations versus augmented QR.
  Eigen::MatrixXd P=Eigen::MatrixXd::Identity(15,15),H=law.H,R=Eigen::MatrixXd::Identity(8,8);

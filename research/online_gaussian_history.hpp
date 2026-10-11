@@ -1,8 +1,18 @@
 #pragma once
 #include "gaussian_sufficient_summary.hpp"
 #include "gaussian_window.hpp"
+#include "hybrid_evidence.hpp"
 #include <memory>
 namespace uwb_imu_pl::research {
+struct OnlinePreUwbEvidence {
+ HybridHistoryEvidence history;
+ NavigationState chart;
+ Eigen::VectorXd correction;
+ TransactionId transaction;
+ BatchId excluded_batch;
+ LinearizationVersion version;
+ std::string domain="RAW_UNQUALIFIED";
+};
 struct OnlineHistoryCounts {
  size_t frontier_epoch=0,active_groups=0,active_states=0,history_rows=0,fault_modes=0;
  size_t source_columns=0,integrations=0,bytes=0,orthogonal_updates=0,state_decompositions=0,fault_products=0;
@@ -16,7 +26,7 @@ class OnlineGaussianHistory {
  public:
  OnlineGaussianHistory(size_t lag,int duration,double sa,double sg,Eigen::Vector3d lever,bool optimized=true,size_t max_numeric_bytes=64u*1024u*1024u);
  ~OnlineGaussianHistory();
- void prepare(const EpochTransaction& tx);
+ void prepare(const EpochTransaction& tx,bool build_current_root=true);
  SummaryEvaluation evaluate(const EpochTransaction& tx,const ExclusionAction* action,double alpha,double tail,bool faults=true)const;
  Eigen::MatrixXd tagMap()const;
  Eigen::Matrix<double,5,1> referenceSteps(const GaussianReference&)const;
@@ -26,6 +36,10 @@ class OnlineGaussianHistory {
  Eigen::MatrixXd navigationCovariance(const GaussianReference&)const;
  OnlineHistoryCounts counts()const;
  void committed(const EpochTransaction& tx,const EpochCommitPlan& plan);
+ // Extraction only: remove ALL current UWB rows before square-root evaluation.
+ // Includes pending IMU and shared ADC separators, but no current measurement.
+ // No C candidate search or historical PL computation is invoked.
+ OnlinePreUwbEvidence preUwbEvidence(const EpochTransaction& tx,double radius)const;
  private:
  struct Impl;std::unique_ptr<Impl> impl;
 };

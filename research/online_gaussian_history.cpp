@@ -175,7 +175,9 @@ struct OnlineGaussianHistory::Impl {
 };
 OnlineGaussianHistory::OnlineGaussianHistory(size_t lag,int duration,double sa,double sg,Eigen::Vector3d lever,bool optimized,size_t max_numeric_bytes):impl(new Impl(lag,duration,sa,sg,lever,optimized,max_numeric_bytes)){}
 OnlineGaussianHistory::~OnlineGaussianHistory()=default;
-void OnlineGaussianHistory::prepare(const EpochTransaction& tx){auto& s=*impl;auto timing_begin=std::chrono::steady_clock::now();s.work={};s.prepared_active=false;
+void OnlineGaussianHistory::prepare(const EpochTransaction& tx,bool build_current_root){
+ if(!tx.frozen_values)throw std::runtime_error("UNAVAILABLE_HISTORY_FROZEN_VALUES");
+ auto& s=*impl;auto timing_begin=std::chrono::steady_clock::now();s.work={};s.prepared_active=false;
  size_t future_states=21*(std::min(tx.proposed_epoch,s.lag+1)+1);std::set<AnchorId> future_anchors;for(const auto& m:tx.uwb_batch.measurements)future_anchors.insert(m.anchor_id);s.requireResources(future_states,s.modes.size()+2*future_anchors.size(),0,0);
  if(tx.proposed_epoch!=s.epoch+1 || tx.proposed_epoch>50)throw std::runtime_error("UNAVAILABLE_HISTORY_SEQUENCE_OR_HORIZON");
  if(!tx.preintegration)throw std::runtime_error("UNAVAILABLE_PIM_NOISE_MODEL");
@@ -224,7 +226,7 @@ void OnlineGaussianHistory::prepare(const EpochTransaction& tx){auto& s=*impl;au
  // effective history frontier is updated only through the bounded suffix map.
  s.frontier=old_frontier;
  auto query_begin=std::chrono::steady_clock::now();s.work.retire_ms=std::chrono::duration<double,std::milli>(query_begin-retire_begin).count();
- s.prepared_query=std::make_shared<const GaussianSufficientSummary>(s.query(tx,nullptr));
+ if(build_current_root)s.prepared_query=std::make_shared<const GaussianSufficientSummary>(s.query(tx,nullptr));
  s.work.root_build_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-query_begin).count();
  // Optional census of exact original scalar row supports, not Gram-based
  // equivalence and never a physical-event/risk merge. Excluded sources stay out.
@@ -240,7 +242,7 @@ void OnlineGaussianHistory::prepare(const EpochTransaction& tx){auto& s=*impl;au
 }
 SummaryEvaluation OnlineGaussianHistory::evaluate(const EpochTransaction& tx,const ExclusionAction* action,double alpha,double tail,bool faults)const{
  const auto& s=*impl;if(!s.prepared_active || tx.id!=s.prepared_id || !(tx.base_version==s.prepared_version))throw std::runtime_error("foreign online summary root");
- s.validateTransaction(tx);if(s.work.resource_refused)throw std::runtime_error("UNAVAILABLE_SUMMARY_RESOURCES");
+ s.validateTransaction(tx);if(!s.prepared_query)throw std::runtime_error("UNAVAILABLE_CURRENT_ROOT_NOT_REQUESTED");if(s.work.resource_refused)throw std::runtime_error("UNAVAILABLE_SUMMARY_RESOURCES");
  if(!(alpha>0 && alpha<1 && tail>0 && tail<1))throw std::runtime_error("INDETERMINATE_RISK_ARGUMENTS");
  bool keep=!action || (action->groups_to_remove.empty() && action->groups_to_add.empty() && action->bridge_mode==BridgeMode::None);
  auto record=[&](const SummaryEvaluation& result){s.work.state_ms+=result.state_ms;s.work.fault_ms+=result.fault_ms;s.work.leaf_svds+=result.leaf_svds;for(const auto& leaf:result.faults)if(leaf.second.classification=="MONITORABLE")++s.work.accepted_leaf_rank;};
@@ -295,6 +297,41 @@ OnlineHistoryCounts OnlineGaussianHistory::counts()const{const auto& s=*impl;Onl
  c.orthogonal_updates=s.history.orthogonal_updates;c.original_rows=s.original_rows;c.eliminated_navigation_states=15*first;
  for(const auto& b:s.local_window.blocks)if(!s.retired_groups.count(b.group_id.value()))c.original_rows+=b.residual_raw.size();
  return c;}
+OnlinePreUwbEvidence OnlineGaussianHistory::preUwbEvidence(const EpochTransaction& tx,double radius)const{
+ const auto& s=*impl;OnlinePreUwbEvidence result;
+ if(!s.prepared_active || tx.id!=s.prepared_id || !(radius>0))throw std::runtime_error("foreign history extraction");
+ s.validateTransaction(tx);
+ ExclusionAction removal;for(const auto& g:tx.uwb_groups)if(g.nominal)removal.groups_to_remove.push_back(g.id);
+ auto summary=s.query(tx,&removal);
+ auto& h=result.history;h.epoch=tx.previous_epoch;h.generation=tx.base_graph_version;
+ h.horizon=50;h.radius=radius;h.risk=NAN;h.model="raw-frozen-prefix-with-shared-adc-v1";
+ result.transaction=tx.id;result.excluded_batch=tx.uwb_batch.id;result.version=tx.base_version;
+ auto pose=s.points.at<gtsam::Pose3>(gtsam::Symbol('x',tx.proposed_epoch));
+ result.chart.timestamp=tx.end;result.chart.q_world_body=Eigen::Quaterniond(pose.rotation().matrix());result.chart.position_world_m=pose.translation();
+ result.chart.velocity_world_mps=s.points.at<gtsam::Vector3>(gtsam::Symbol('v',tx.proposed_epoch));
+ auto bias=s.points.at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b',tx.proposed_epoch));result.chart.accel_bias_mps2=bias.accelerometer();result.chart.gyro_bias_radps=bias.gyroscope();
+ ++s.state_decompositions;Eigen::JacobiSVD<Eigen::MatrixXd> svd(summary.h,Eigen::ComputeFullU|Eigen::ComputeThinV);
+ const auto singular=svd.singularValues();int n=summary.states();
+ if(singular.size()!=n || singular.minCoeff()<1e-9*singular.maxCoeff()){h.status="INDETERMINATE";return result;}
+ Eigen::MatrixXd gain=svd.matrixV()*singular.cwiseInverse().asDiagonal()*svd.matrixU().leftCols(n).transpose();
+ Eigen::MatrixXd boundary=gain.bottomRows(21).topRows(15);
+ result.correction=boundary*summary.d;h.mean=result.correction;h.covariance=boundary*boundary.transpose();
+ Eigen::MatrixXd parity=svd.matrixU().rightCols(summary.h.rows()-n).transpose();
+ Eigen::VectorXd residual=parity*summary.d;
+ for(const auto& item:summary.faults){const auto& f=item.second;if(!f.ever_nonzero)continue;
+  Eigen::VectorXd direction=-boundary*f.top.col(0);
+  if((direction.array()==0.).all())continue;
+  Eigen::VectorXd response(parity.rows()+f.residual.rows()),observed(residual.size()+f.residual.rows());
+  response.head(parity.rows())=parity*f.top.col(0);response.tail(f.residual.rows())=f.residual.col(0);
+  observed.head(residual.size())=residual;observed.tail(f.residual.rows())=f.residual.col(1);
+  double norm=response.norm();if(norm<1e-8){h.status="INDETERMINATE";return result;}
+  double estimate=response.dot(observed)/(norm*norm),half=radius/norm;
+  h.segments.push_back({item.first,direction,estimate-half,estimate+half});
+ }
+ for(const auto& item:s.groups)if(item.second.sensor==SensorType::Uwb)for(auto id:item.second.source_measurements)h.retained_sources.push_back(id.value());
+ for(const auto& item:s.retired_lineage)h.retained_sources.push_back(item.first);
+ h.status="BOUNDED";return result;
+}
 void OnlineGaussianHistory::committed(const EpochTransaction& tx,const EpochCommitPlan& plan){auto& s=*impl;if(!s.prepared_active || tx.id!=s.prepared_id)throw std::runtime_error("foreign online commit");
  for(auto id:plan.groups_to_remove){if(s.retired_groups.count(id.value()))throw std::runtime_error("UNAVAILABLE_RETIRED_COMMIT");s.groups.erase(id.value());}
  std::vector<const PendingFactorGroup*> catalog{&tx.imu_group};for(const auto& g:tx.uwb_groups)catalog.push_back(&g);for(const auto& h:tx.recoverable_history)for(const auto& g:h.groups)catalog.push_back(&g);
