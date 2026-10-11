@@ -77,7 +77,7 @@ def compare(left, right, left_dump, right_dump):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["check", "run", "history", "recovery", "audit", "bench", "stream", "replay"])
+    parser.add_argument("command", choices=["check", "summary", "run", "history", "recovery", "audit", "bench", "stream", "replay"])
     parser.add_argument("--build", action="store_true")
     parser.add_argument("--config", type=Path, default=ROOT / "config/fde_next.yaml")
     parser.add_argument("--scene", default="U0")
@@ -87,6 +87,7 @@ def main():
     parser.add_argument("--initial-law", choices=["configured", "gaussian"], default="configured")
     parser.add_argument("--numeric", choices=["reference", "optimized"], default="optimized")
     parser.add_argument("--position-functional", action="store_true", help="IMU-only recovery; current tag conditional, navigation unprotected")
+    parser.add_argument("--online-summary", action="store_true", help="incremental fixed-model UWB history; full raw oracle retained")
     parser.add_argument("--history-reference", action="store_true", help="use the finite raw prefix reference for actual selection")
     parser.add_argument("--cache", type=Path)
     parser.add_argument("--plot", type=Path)
@@ -105,7 +106,9 @@ def main():
             config = tmp / "input-law.yaml"
             config.write_text(args.config.read_text() + "\ninitial_observation_law: independent-tangent-gaussian-v1\n")
             args.config = config
-        if args.history_reference or args.command == "stream":
+        if args.online_summary:
+            env["FDE_NEXT_ONLINE_SUMMARY"] = "1"
+        elif args.history_reference or args.command == "stream":
             env["FDE_NEXT_USE_PREFIX_REFERENCE"] = "1"
         if args.command == "history":
             env["FDE_NEXT_HISTORY_AUDIT"] = "1"
@@ -134,7 +137,10 @@ def main():
                 raise RuntimeError(result.stdout + result.stderr)
             return path, process_seconds
 
-        if args.command == "check":
+        if args.command == "summary":
+            subprocess.run([str(BIN / "fde_summary_checks")], cwd=ROOT, env=env, check=True)
+            subprocess.run([str(BIN / "fde_online_checks"), str(args.config)], cwd=ROOT, env=env, check=True)
+        elif args.command == "check":
             subprocess.run([str(BIN / "fde_next_checks"), str(args.config)], cwd=ROOT, env=env, check=True)
         elif args.command in ["run", "history", "recovery"]:
             scene = "I2" if args.command == "recovery" else args.scene
@@ -142,7 +148,7 @@ def main():
             path, wall = run("run", scene, scope, args.epochs or (32 if args.command == "history" else 50), args.numeric)
             if args.command in ["history", "recovery"] or args.initial_law == "gaussian":
                 for line in (tmp / "run.log").read_text().splitlines():
-                    if line.startswith(("HISTORY", "RAW_PREFIX_HISTORY", "RAW_DOMAIN", "G_TAG_CONTRACTION", "BOUNDED_RECOVERY", "IMU_POSITION_FUNCTIONAL")):
+                    if line.startswith(("HISTORY", "RAW_PREFIX_HISTORY", "RAW_DOMAIN", "G_TAG_CONTRACTION", "BOUNDED_RECOVERY", "IMU_POSITION_FUNCTIONAL", "ONLINE_SUMMARY")):
                         print(line)
             rows = read_rows(path)
             print(f"{len(rows)} outputs; selected={sum(x['selected']=='1' for x in rows)}; "

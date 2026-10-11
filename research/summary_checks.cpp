@@ -43,6 +43,11 @@ int main(){
  require(actual.reference.dof==oracle.dof,"shared-source dof");close(actual.reference.mean.head(2),oracle.mean,1e-11,"shared-source mean");close(actual.reference.covariance.topLeftCorner(2,2),oracle.covariance,1e-11,"shared-source covariance");close(actual.reference.pl,oracle.pl,1e-10,"shared-source PL");
  auto independent=gaussianReference(h,z,Eigen::MatrixXd::Identity(5,5),c,{b},1e-6,1e-9);require((independent.covariance-oracle.covariance).norm()>1e-4,"correlation counterexample");
  bool late_refused=false;try{shared.declareFault("invented-old-joint",2);}catch(const std::runtime_error&){late_refused=true;}require(late_refused,"late historical fault insertion must fail closed");
+ GaussianSufficientSummary zero(2);zero.declareFault("removed-source",1);zero.append(h,z,{});
+ require(zero.evaluate(c,1e-6,1e-9).faults.at("removed-source").classification=="EXACT_HARMLESS","literal removed fault zero");
+ GaussianSufficientSummary alias_history(2);alias_history.declareFault("retired-alias",1,0);alias_history.append(h,z,{{"retired-alias",h.col(0)}});alias_history.retire(1);
+ alias_history.append(Eigen::MatrixXd::Ones(1,1),Eigen::VectorXd::Zero(1),{{"retired-alias",Eigen::MatrixXd::Constant(1,1,1e-11)}});
+ require(alias_history.evaluate(c.rightCols(1),1e-6,1e-9).faults.at("retired-alias").classification=="INDETERMINATE","retired alias cannot cover new source support");
  // Structural witnesses survive the transform; tiny unidentified residuals
  // are refused rather than assigned zero risk.
  for(int relation:{1,2,0}){GaussianSufficientSummary s(2);s.declareFault("alias",1,relation==0?-1:0);s.append(h,z,{{"alias",relation==0?Eigen::MatrixXd(1e-11*b):Eigen::MatrixXd(h.col(0))}});

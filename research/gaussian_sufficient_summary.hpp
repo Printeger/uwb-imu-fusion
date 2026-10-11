@@ -11,6 +11,7 @@ namespace uwb_imu_pl::research {
 struct SummaryFault {
  Eigen::MatrixXd top, residual;
  int alias_state=-1; // -2: certified alias of an eliminated, unprotected state
+ bool ever_nonzero=false;
 };
 struct SummaryFaultResult {
  Eigen::MatrixXd residual_gram, response;
@@ -23,6 +24,7 @@ struct SummaryEvaluation {
  std::map<std::string,SummaryFaultResult> faults;
  int state_rank=0,total_rank=0;
 };
+struct SummaryRetirement {Eigen::MatrixXd coefficients;Eigen::VectorXd offset;};
 class GaussianSufficientSummary {
  public:
  Eigen::MatrixXd h;
@@ -59,6 +61,8 @@ class GaussianSufficientSummary {
   Eigen::VectorXd rotated=qr.householderQ().adjoint()*rhs;
   for(auto& item:faults){auto& f=item.second;Eigen::MatrixXd fb=Eigen::MatrixXd::Zero(m,f.top.cols());fb.topRows(old)=f.top;
    auto it=b.find(item.first);if(it!=b.end())fb.bottomRows(a.rows())=it->second;
+   bool nonzero=it!=b.end() && (it->second.array()!=0.).any();f.ever_nonzero=f.ever_nonzero || nonzero;
+   if(f.alias_state==-2 && nonzero)f.alias_state=-1;
    if(f.alias_state>=0){bool alias=it!=b.end()?(it->second.col(0).array()==a.col(f.alias_state).array()).all():(a.col(f.alias_state).array()==0.).all();if(!alias)f.alias_state=-1;}
    Eigen::MatrixXd transformed=qr.householderQ().adjoint()*fb;
    appendResidual(f,transformed.bottomRows(m-keep),rotated.tail(m-keep));f.top=transformed.topRows(keep);
@@ -67,15 +71,19 @@ class GaussianSufficientSummary {
   h=(qr.householderQ().adjoint()*stack).topRows(keep);d=rotated.head(keep);equations+=a.rows();++orthogonal_updates;
  }
  // Eliminate only a full-rank old-state block. Frontier sources stay columns.
- void retire(int count){
+ SummaryRetirement retire(int count){
   if(count<=0 || count>=states() || count>h.rows())throw std::runtime_error("invalid summary retirement");
   Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr(h.leftCols(count));qr.setThreshold(1e-10);
   if(qr.rank()!=count)throw std::runtime_error("INDETERMINATE_OLD_STATE_RANK");
   Eigen::MatrixXd rotated=qr.householderQ().adjoint()*h.rightCols(states()-count);
   Eigen::VectorXd rhs=qr.householderQ().adjoint()*d;
+  auto upper=qr.matrixR().topLeftCorner(count,count).eval();SummaryRetirement recovery;
+  recovery.offset=qr.colsPermutation()*upper.triangularView<Eigen::Upper>().solve(rhs.head(count));
+  recovery.coefficients=-(qr.colsPermutation()*upper.triangularView<Eigen::Upper>().solve(rotated.topRows(count))).eval();
   for(auto& item:faults){item.second.top=(qr.householderQ().adjoint()*item.second.top).bottomRows(h.rows()-count).eval();
    if(item.second.alias_state>=0)item.second.alias_state=item.second.alias_state<count?-2:item.second.alias_state-count;}
   d=rhs.tail(h.rows()-count);h=rotated.bottomRows(h.rows()-count);equations-=count;eliminated_states+=count;++orthogonal_updates;
+  return recovery;
  }
  SummaryEvaluation evaluate(const Eigen::MatrixXd& c,double alpha,double tail,bool include_faults=true)const{
   SummaryEvaluation out;auto& r=out.reference;
@@ -96,13 +104,14 @@ class GaussianSufficientSummary {
   if(!include_faults)return out;
   double radius=std::sqrt(r.threshold)+std::sqrt(boost::math::quantile(boost::math::complement(boost::math::chi_squared(r.dof),tail)));
   Eigen::Vector3d bound=Eigen::Vector3d::Zero();
+  Eigen::MatrixXd protected_gain=c*gain;
   for(const auto& item:faults){const auto& f=item.second;int dim=f.top.cols();
    Eigen::MatrixXd pb(parity.rows()+f.residual.rows(),dim);pb.topRows(parity.rows())=parity*f.top;pb.bottomRows(f.residual.rows())=f.residual.leftCols(dim);
    Eigen::VectorXd rz(pz.size()+f.residual.rows());rz.head(pz.size())=pz;rz.tail(f.residual.rows())=f.residual.col(dim);
-   SummaryFaultResult fr;fr.residual_gram=pb.transpose()*pb;fr.profile_rhs=pb.transpose()*rz;fr.response=c*gain*f.top;
+   SummaryFaultResult fr;fr.residual_gram=pb.transpose()*pb;fr.profile_rhs=pb.transpose()*rz;fr.response=protected_gain*f.top;
    Eigen::JacobiSVD<Eigen::MatrixXd> fs(pb,Eigen::ComputeThinU|Eigen::ComputeFullV);auto singular=fs.singularValues();
    if(singular.size()<dim || singular.minCoeff()<=1e-12){fr.classification="INDETERMINATE";
-    if(f.alias_state==-2 || (f.alias_state>=0 && (c.col(f.alias_state).array()==0.).all()))fr.classification="EXACT_HARMLESS";
+    if(!f.ever_nonzero || f.alias_state==-2 || (f.alias_state>=0 && (c.col(f.alias_state).array()==0.).all()))fr.classification="EXACT_HARMLESS";
     else if(f.alias_state>=0)fr.classification="DANGEROUS_NULLSPACE";}
    else if(singular.minCoeff()<=1e-8)fr.classification="INDETERMINATE";
    else {fr.classification="MONITORABLE";fr.profile_estimate=fs.solve(rz);auto slope=(fr.response*fs.matrixV()*singular.cwiseInverse().asDiagonal()).eval();

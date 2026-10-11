@@ -826,3 +826,43 @@ only factors whose BOTH state charts have frozen, rebuild only the active suffix
 for relinearization/candidate deletion, and compare against the unchanged full
 raw-prefix reference at15/30/31/32. No online performance or full-delivery claim
 is made at this WP1 savepoint.
+
+WP2 integration now runs `OnlineGaussianHistory` through the existing research
+runner, Evidence/candidates, center transfer and actual backend transaction under
+`--online-summary`. Retired state charts freeze at the same point as the original
+prefix; the history boundary has21 columns (15 nav +6 shared ADC). Only active
+raw factors are relinearized/reintegrated. Each endpoint source receives exactly
+one standard Gaussian nuisance prior; internal ADC sources are marginalized in
+the independent conditional block covariance. This is an algebraic covariance
+representation, not a new physical sensor/process law.
+
+Actual U0 snapshots12/31 agree with unchanged full raw-prefix oracle in dof
+96/248, S100.088/272.988, thresholds/status, current15-state mean/covariance, tag
+mean/PL, and all192/496 historical fault Gram/profile/protection responses.
+Activity is252 state columns,21 history state rows,726 raw source columns and
+1596 real sensitivity integrations at12/31/32; historical mode count192/496/512
+is retained. Numeric persistent/local matrix lower bound about2.75–2.86MB (not
+RSS or complete allocation high water); unoptimized diagnostic build/evaluate
+~279/400/391ms before batching. No new timing conclusion yet.
+
+The legacy reference-domain gate inspected ALL old state increments. To preserve
+that selector, old nav means have affine back-substitution maps from the current
+21D frontier; their five-unit maximum agrees with dense oracle. This incurs
+O(retired-state count x frontier width) storage/update and is disclosed, rather
+than quietly removing the old gate. Candidate deletion of retired sources and
+unsupported bridge/IMU scopes refuses; local replacements use original raw
+source subsets before conditional whitening. Source/version identity is bound to
+its exact prepared transaction. Original risk/AL/formal/publication flags remain.
+
+U1 main seed actual19-epoch online run:19 backend commits,18 selected/available,
+one correct automatic range exclusion and0 formal/protected. Final served
+HPL/VPL .827698/.941213m match the former prefix path; no GT selection. Full
+31/32/U1 paired and I2 rejection regressions, growth measurements and final
+performance pairing remain required. Current integration save is not completion.
+
+A new translation unit exposed two dangling Eigen lazy expressions in the
+existing scenario generator (acceleration/tag), causing invalid UWB input before
+any Gaussian computation. Both now materialize Vector3d values; distributions,
+seed and declared motion formulas are unchanged. The raw-prefix solver itself
+has not been altered. New comparisons use this corrected generator for BOTH
+paths; old undefined-expression timings are not inherited as numerical evidence.

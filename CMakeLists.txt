@@ -227,7 +227,7 @@ target_link_libraries(candidate_replay ${PROJECT_NAME} ${Boost_LIBRARIES} yaml-c
 
 # Research-only targets: excluded from ordinary builds and never linked into
 # the production DSO/node. No installation or protected publication entry.
-add_library(fde_research STATIC EXCLUDE_FROM_ALL research/raw_imu_episode.cpp)
+add_library(fde_research STATIC EXCLUDE_FROM_ALL research/raw_imu_episode.cpp research/online_gaussian_history.cpp)
 target_include_directories(fde_research PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/research)
 target_link_libraries(fde_research ${PROJECT_NAME} gtsam yaml-cpp)
 add_executable(fde_research_support EXCLUDE_FROM_ALL research/support_experiment.cpp)
@@ -491,5 +491,7 @@ add_executable(fde_next_checks EXCLUDE_FROM_ALL research/gaussian_checks.cpp)
 target_link_libraries(fde_next_checks fde_research)
 add_executable(fde_summary_checks EXCLUDE_FROM_ALL research/summary_checks.cpp)
 target_link_libraries(fde_summary_checks gtsam)
+add_executable(fde_online_checks EXCLUDE_FROM_ALL research/online_history_checks.cpp)
+target_link_libraries(fde_online_checks fde_research)
 add_executable(fde_next_runner EXCLUDE_FROM_ALL research/fde_next_runner.cpp)
 target_link_libraries(fde_next_runner fde_research tbb)

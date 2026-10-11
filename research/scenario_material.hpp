@@ -67,7 +67,7 @@ struct NoisyMotionScenario {
   }else initial_observation.position_world_m+=researchVector(law["initial_position_error_m"]);
   std::mt19937 imu_rng(seed),uwb_rng(seed+7919);std::normal_distribution<double> normal(0,1);
   for(int i=0;i<=epochs*10;++i){double t=i*.005;auto state=truth(t);auto m=sample(cfg,i);
-   auto acc=-amp.cwiseProduct(freq.cwiseProduct(freq)).cwiseProduct((freq*t).array().sin().matrix());
+   Eigen::Vector3d acc=-amp.cwiseProduct(freq.cwiseProduct(freq)).cwiseProduct((freq*t).array().sin().matrix());
    m.specific_force_mps2=state.q_world_body.conjugate()*(acc+Eigen::Vector3d(0,0,cfg.imu.gravity_mps2));
    m.angular_velocity_radps=rate*Eigen::Vector3d(1,2,3).normalized();
    for(int j=0;j<3;++j){m.specific_force_mps2(j)+=law["raw_accel_sigma_mps2"].as<double>()*normal(imu_rng);m.angular_velocity_radps(j)+=law["raw_gyro_sigma_radps"].as<double>()*normal(imu_rng);}
@@ -78,7 +78,7 @@ struct NoisyMotionScenario {
     m.specific_force_mps2.x()+=law["imu_accel_amplitude_mps2"].as<double>();
    imu.push_back(m);
   }
-  for(int e=1;e<=epochs;++e){auto b=ranges(cfg,e);auto s=truth(e*dt);auto tag=s.position_world_m+s.q_world_body*lever;
+  for(int e=1;e<=epochs;++e){auto b=ranges(cfg,e);auto s=truth(e*dt);Eigen::Vector3d tag=s.position_world_m+s.q_world_body*lever;
    for(auto& m:b.measurements){if(kind=="U3")m.anchor_position_m.z()=1.1;m.range_m=(m.anchor_position_m-tag).norm()+cfg.realtime.range_sigma_m*normal(uwb_rng);}
    const int f=law["fault_epoch"].as<int>(),end=f+(kind=="U2"?law["persistent_epochs"].as<int>():1);
    if((kind=="U1" || kind=="U2") && e>=f && e<end)b.measurements.at(law["fault_anchor_index"].as<int>()).range_m+=law["uwb_amplitude_m"].as<double>();

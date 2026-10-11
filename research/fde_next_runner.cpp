@@ -4,6 +4,7 @@
 #include "raw_domain.hpp"
 #include "bounded_imu_recovery.hpp"
 #include "raw_prefix_history.hpp"
+#include "online_gaussian_history.hpp"
 #include "imu_recovery_scope.hpp"
 #include "raw_cache_replay.hpp"
 #include <tbb/global_control.h>
@@ -71,6 +72,10 @@ int main(int argc,char** argv){try{
  }
  auto dump=[&](const std::string& label,const Eigen::MatrixXd& m){if(audit){*audit<<label<<' '<<m.rows()<<' '<<m.cols()<<'\n';for(int i=0;i<m.rows();++i)for(int j=0;j<m.cols();++j)*audit<<m(i,j)<<' ';*audit<<'\n';}};
  int exclusions=0,alarms=0,failures=0;
+ bool online_reference=std::getenv("FDE_NEXT_ONLINE_SUMMARY")!=nullptr;
+ if(online_reference && (scope!="uwb" || (kind!="U0" && kind!="U1" && kind!="U2" && kind!="U3")))throw std::runtime_error("UNAVAILABLE_ONLINE_SUMMARY_SCOPE");
+ if(online_reference && std::getenv("FDE_NEXT_USE_PREFIX_REFERENCE"))throw std::runtime_error("choose online summary or dense prefix oracle");
+ if(online_reference && std::getenv("FDE_NEXT_NUMERIC_AUDIT"))throw std::runtime_error("online uses independent oracle checks rather than identical raw matrices");
  bool imu_functional=std::getenv("FDE_NEXT_IMU_POSITION_FUNCTIONAL")!=nullptr;
  if(imu_functional && (scope!="imu-diagnostic" || kind!="I2"))throw std::runtime_error("position-functional recovery requires the declared I2 IMU-only synthetic scope");
  for(int attempt=0;attempt<attempts;++attempt){
@@ -85,6 +90,8 @@ int main(int argc,char** argv){try{
  Eigen::Quaterniond previous_rotation=init.q_world_body;Eigen::Vector3d previous_body=init.position_world_m;
  TimestampNs quarantine_begin,quarantine_end;bool quarantine_active=false,functional_recovery_seen=false;
  RawPrefixHistory raw_prefix_history;
+ std::unique_ptr<OnlineGaussianHistory> online;
+ if(online_reference)online=std::make_unique<OnlineGaussianHistory>(scene.cfg.integrity_window.epochs,law["persistent_epochs"].as<int>(),law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),scene.lever);
  size_t imu_cursor=1;std::vector<ImuMeasurement> observed_raw_prefix{scene.imu[0]};
  for(int e=1;e<=scene.epochs;++e){auto cycle_start=Clock::now();
  if(continuous && e==14)prewarm_ms=std::chrono::duration<double,std::milli>(cycle_start-initialized_at).count();
@@ -92,11 +99,12 @@ int main(int argc,char** argv){try{
  {auto start=cycle_start;
   while(imu_cursor<scene.imu.size() && !(scene.uwb[e-1].timestamp<scene.imu[imu_cursor].timestamp)){observed_raw_prefix.push_back(scene.imu[imu_cursor]);estimator.ingestImu(scene.imu[imu_cursor++]);}
   auto tx=estimator.prepareEpoch(scene.uwb[e-1]);
+  if(online)online->prepare(tx);
   bool prefix_reference=std::getenv("FDE_NEXT_USE_PREFIX_REFERENCE")!=nullptr;
   bool prefix_enabled=prefix_reference || std::getenv("FDE_NEXT_RAW_PREFIX_HISTORY")!=nullptr;
   if(prefix_reference && scope=="imu-diagnostic")throw std::runtime_error("prefix Gaussian reference does not include IMU bridge law");
   if(prefix_enabled)raw_prefix_history.observe(tx,scene.cfg.integrity_window.epochs);
-  if(((kind=="screen" || benchmark) && e<scene.epochs) || (continuous && e<=13)){auto prewarm_plan=EpochCommitPlan::nominalPlan(tx);if(prefix_enabled)raw_prefix_history.committed(tx,prewarm_plan);estimator.commitEpoch(std::move(tx),prewarm_plan);continue;}
+  if(((kind=="screen" || benchmark) && e<scene.epochs) || (continuous && e<=13)){auto prewarm_plan=EpochCommitPlan::nominalPlan(tx);if(prefix_enabled)raw_prefix_history.committed(tx,prewarm_plan);if(online)online->committed(tx,prewarm_plan);estimator.commitEpoch(std::move(tx),prewarm_plan);continue;}
   if(benchmark)measured_start=start;
   IntegrityWindowRequest req;req.epochs=scene.cfg.integrity_window.epochs;ResearchHistoryAudit history_audit;
   bool history_check=std::getenv("FDE_NEXT_HISTORY_AUDIT") && e>=30 && e<=32;
@@ -113,7 +121,7 @@ int main(int argc,char** argv){try{
   auto t_models=Clock::now();
   GaussianWindow joint;
   auto native_tag_map=worldTagMap(w,tx,scene.lever);
-  if(!prefix_reference || history_check)joint=rawGaussianWindow(w,tx,models.modes,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),scene.lever);
+  if((!prefix_reference && !online) || history_check)joint=rawGaussianWindow(w,tx,models.modes,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),scene.lever);
   if(history_check && history_audit.available){
    const auto& h=history_audit.input;int m=h.rows(),old=h.oldStateColumns();
    auto compressed=statisticalHistory(h.h_old_state,h.h_boundary*history_audit.boundary_embedding,h.rhs,
@@ -163,6 +171,8 @@ int main(int argc,char** argv){try{
    joint=rawGaussianWindow(prefix_window,prefix_material,reference_modes,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),scene.lever,optimized);
    joint.history_qualified=true; // fixed finite raw model only, NOT raw law qualification
   }
+  OnlineHistoryCounts online_counts;
+  if(online){online_counts=online->counts();joint.c=online->tagMap();joint.history_qualified=true;joint.integrations=online_counts.integrations;}
   const auto& reference_window=prefix_reference?prefix_window:w;
   const bool reuse_numerics=optimized || prefix_reference; // S4 optimizations in BOTH HGIR baselines
   auto referenceAction=[&](const ExclusionAction& a){auto adapted=a;
@@ -171,7 +181,7 @@ int main(int argc,char** argv){try{
    return adapted;
   };
   auto t_raw=Clock::now();
-  auto raw_detector=gaussianReference(joint.a,joint.z,joint.sigma,joint.c,{},alpha,tail);
+  auto raw_detector=online?online->evaluate(tx,nullptr,alpha,tail,false).reference:gaussianReference(joint.a,joint.z,joint.sigma,joint.c,{},alpha,tail);
   auto t_detector=Clock::now();
   RawDomainAssessment domain_assessment;
   if(law["raw_event_risk"] && kind!="replay"){
@@ -234,7 +244,7 @@ int main(int argc,char** argv){try{
   if(actions.size()>law["max_candidates"].as<unsigned>())throw std::runtime_error("candidate cap: union proof invalid");
   if(audit){dump("raw_design",joint.a);dump("raw_covariance",joint.sigma);dump("raw_source_map",joint.noise_j);dump("raw_auxiliary_covariance",joint.auxiliary_sigma);dump("tag_map",joint.c);
    for(size_t i=0;i<joint.faults.size();++i){dump("fault_"+std::to_string(i),joint.faults[i]);*audit<<"#mode "<<reference_modes[i].id.value()<<' '<<reference_modes[i].physical_source_id<<'\n';}}
-  if(e==2){
+  if(e==2 && !online){
    Eigen::LLT<Eigen::MatrixXd> check_cov(joint.sigma);
    if(check_cov.info()!=Eigen::Success || joint.cross_norm<=1e-12)throw std::runtime_error("joint ADC covariance check failed");
    Eigen::MatrixXd check_w=check_cov.matrixL().solve(Eigen::MatrixXd::Identity(joint.sigma.rows(),joint.sigma.rows()));
@@ -246,6 +256,10 @@ int main(int argc,char** argv){try{
   rc.max_linearization_step_norm=std::sqrt((w.H.cols()/15)*square_sum); // enclosing gate; individual physical gates follow
   RankUpdateEvaluator evaluator(rc);auto base=evaluator.factorizeOnce(admission,actions);
   GaussianCandidateCache gaussian_cache(joint,reference_window,alpha,tail);size_t decompositions=1;
+  auto candidateReference=[&](const ExclusionAction& action,bool fast,const GaussianReference* root,GaussianCandidateCache* cache){
+   if(online){++decompositions;try{return online->evaluate(tx,&action,alpha,tail,true).reference;}catch(const std::runtime_error&){return GaussianReference{};}}
+   return gaussianCandidate(joint,reference_window,referenceAction(action),alpha,tail,fast,root,cache,&decompositions);
+  };
   int numerical=0,post=0,pl_count=0;int best=-1;double best_cost=INFINITY;GaussianReference selected_ref;Eigen::VectorXd best_increment;
   std::string status="NO_ADMISSIBLE_CANDIDATE";
   int functional_best=-1,functional_numerical=0,functional_post=0;double functional_cost=INFINITY;
@@ -304,24 +318,27 @@ int main(int argc,char** argv){try{
     std::cerr<<"epoch="<<e<<" action="<<actions[k].id.value()<<" removed_groups=";for(auto id:actions[k].groups_to_remove)std::cerr<<id.value()<<';';
     std::cerr<<" native_post="<<JointWindowDetector{}.evaluateCandidate(w,c,dr).passed<<" bridge_covariance=UNQUALIFIED\n";
    }
-   auto r=gaussianCandidate(joint,reference_window,reference_action,alpha,tail,reuse_numerics,reuse_numerics?&raw_detector:nullptr,reuse_numerics?&gaussian_cache:nullptr,&decompositions);++pl_count;
+   auto r=candidateReference(actions[k],reuse_numerics,reuse_numerics?&raw_detector:nullptr,reuse_numerics?&gaussian_cache:nullptr);++pl_count;
    if(r.status!="FROZEN_MODEL_ONLY"){status=scope=="imu-diagnostic" && actions[k].bridge_mode!=BridgeMode::None?"BRIDGE_GAUSSIAN_UNQUALIFIED":r.status;continue;}
    if(r.statistic>r.threshold)continue;
    ++post;
    bool reference_domain=true;
-   for(int q=0;q+15<=r.mean.size();q+=15)for(int j=0;j<5;++j)
-    reference_domain=reference_domain && r.mean.segment(q+3*j,3).norm()<=scales[j];
+   if(online){auto steps=online->referenceSteps(r);for(int j=0;j<5;++j)reference_domain=reference_domain && steps(j)<=scales[j];}
+   else for(int q=0;q+15<=r.mean.size();q+=15)for(int j=0;j<5;++j)reference_domain=reference_domain && r.mean.segment(q+3*j,3).norm()<=scales[j];
    if(!reference_domain){status="REFERENCE_DOMAIN_EXCEEDED";continue;}
    auto pl=(r.pl+(native_tag_map*c.state_increment-joint.c*r.mean).cwiseAbs()).eval();
    if(reuse_numerics && (std::abs(pl.head<2>().norm()-scene.cfg.risk_v2.horizontal_alert_limit_m)<1e-6 || std::abs(pl.z()-scene.cfg.risk_v2.vertical_alert_limit_m)<1e-6)){
-    r=gaussianCandidate(joint,reference_window,reference_action,alpha,tail,false,nullptr,nullptr,&decompositions);pl=r.pl+(native_tag_map*c.state_increment-joint.c*r.mean).cwiseAbs();
+    if(online){status="INDETERMINATE_AL_OR_TIE";continue;}
+    r=candidateReference(actions[k],false,nullptr,nullptr);pl=r.pl+(native_tag_map*c.state_increment-joint.c*r.mean).cwiseAbs();
    }
    if(pl.head<2>().norm()>scene.cfg.risk_v2.horizontal_alert_limit_m || pl.z()>scene.cfg.risk_v2.vertical_alert_limit_m) {status="AL_EXCEEDED";continue;}
    double cost=actions[k].exclusion_cardinality*1000.+pl.norm();
    if(reuse_numerics && best>=0 && std::abs(cost-best_cost)<1e-7 &&
       (actions[k].groups_to_remove!=actions[best].groups_to_remove || actions[k].groups_to_add!=actions[best].groups_to_add)){
-    auto old=gaussianCandidate(joint,reference_window,referenceAction(actions[best]),alpha,tail,false,nullptr,nullptr,&decompositions);
-    r=gaussianCandidate(joint,reference_window,reference_action,alpha,tail,false,nullptr,nullptr,&decompositions);
+    if(online){best=-1;best_cost=INFINITY;status="INDETERMINATE_AL_OR_TIE";continue;}
+    auto old=candidateReference(actions[best],false,nullptr,nullptr);
+    if(online){status="INDETERMINATE_AL_OR_TIE";continue;}
+    r=candidateReference(actions[k],false,nullptr,nullptr);
     if(old.status!="FROZEN_MODEL_ONLY" || r.status!="FROZEN_MODEL_ONLY"){best=-1;best_cost=INFINITY;status="INDETERMINATE_TIE";continue;}
     best_cost=actions[best].exclusion_cardinality*1000.+(old.pl+(native_tag_map*best_increment-joint.c*old.mean).cwiseAbs()).norm();selected_ref=std::move(old);
     pl=r.pl+(native_tag_map*c.state_increment-joint.c*r.mean).cwiseAbs();cost=actions[k].exclusion_cardinality*1000.+pl.norm();
@@ -383,6 +400,7 @@ int main(int argc,char** argv){try{
   }
   if(benchmark && (!selected || (kind=="U1" && correct!=1)))throw std::runtime_error("benchmark requires successful declared normal/recovery workload");
   if(prefix_enabled)raw_prefix_history.committed(tx,plan);
+  if(online)online->committed(tx,plan);
   auto core_end=Clock::now();auto receipt=estimator.commitEpoch(std::move(tx),plan);auto state=estimator.currentState();auto tag=state.position_world_m+state.q_world_body*scene.lever;
   Eigen::Vector3d pl=selected?Eigen::Vector3d((functional_selected?functional_pl:selected_ref.pl)+(tag-reference).cwiseAbs()):Eigen::Vector3d::Constant(INFINITY);
   double hpl=pl.head<2>().norm(),vpl=pl.z();if(selected && !functional_selected)status="LINEARIZATION_UNQUALIFIED";else if(functional_selected)status="CURRENT_POSITION_CONDITIONAL_NAVIGATION_UNPROTECTED";else {++failures;if(scope=="imu-diagnostic" && alarm && numerical==0)status="IMU_CANDIDATE_DOMAIN_OR_PROVENANCE_FAILED";}
@@ -406,16 +424,17 @@ int main(int argc,char** argv){try{
   double attitude_error=Eigen::AngleAxisd(state.q_world_body.conjugate()*truth.q_world_body).angle();
   double error=(tag-truth_tag).norm(),velocity_error=(state.velocity_world_mps-truth.velocity_world_mps).norm();
   if(kind=="replay")error=velocity_error=inc=rot=se3_translation=NAN;
-  std::ostringstream row;row<<std::setprecision(17)<<e<<','<<alarm<<','<<raw_detector.statistic<<','<<raw_detector.threshold<<','<<joint.a.rows()<<','<<joint.a.cols()<<','<<models.hypotheses.size()<<','<<actions.size()<<','<<numerical<<','<<post<<','<<pl_count<<','<<selected<<','<<exclusion<<','<<correct<<','<<receipt.backend_updates<<','<<error<<','<<hpl<<','<<vpl<<','<<reference.x()<<','<<reference.y()<<','<<reference.z()<<','<<tag.x()<<','<<tag.y()<<','<<tag.z()<<','<<core<<','<<commit<<','<<(core+commit)<<','<<joint.cross_norm<<','<<joint.integrations<<','<<status<<','<<task_risk<<",0,0,0,"<<inc<<','<<rot<<','<<velocity_error<<','<<se3_translation<<','<<final_available<<','<<!detector.passed<<','<<tag_hpl<<','<<tag_vpl<<",UNPROTECTED,UNKNOWN,"<<(functional_selected?"fde-hgir-imu-current-position-v1":(prefix_reference?"fde-hgir-finite-raw-prefix-v1":law["model_version"].as<std::string>()))<<','<<(imu_functional?"imu-current-position-functional":scope)<<",uwb_tag_world,"<<state.timestamp.value();
+  std::ostringstream row;row<<std::setprecision(17)<<e<<','<<alarm<<','<<raw_detector.statistic<<','<<raw_detector.threshold<<','<<(online?online_counts.original_rows:joint.a.rows())<<','<<(online?online_counts.active_states:joint.a.cols())<<','<<models.hypotheses.size()<<','<<actions.size()<<','<<numerical<<','<<post<<','<<pl_count<<','<<selected<<','<<exclusion<<','<<correct<<','<<receipt.backend_updates<<','<<error<<','<<hpl<<','<<vpl<<','<<reference.x()<<','<<reference.y()<<','<<reference.z()<<','<<tag.x()<<','<<tag.y()<<','<<tag.z()<<','<<core<<','<<commit<<','<<(core+commit)<<','<<joint.cross_norm<<','<<joint.integrations<<','<<status<<','<<task_risk<<",0,0,0,"<<inc<<','<<rot<<','<<velocity_error<<','<<se3_translation<<','<<final_available<<','<<!detector.passed<<','<<tag_hpl<<','<<tag_vpl<<",UNPROTECTED,UNKNOWN,"<<(functional_selected?"fde-hgir-imu-current-position-v1":(online?"fde-online-sufficient-summary-v1":(prefix_reference?"fde-hgir-finite-raw-prefix-v1":law["model_version"].as<std::string>())))<<','<<(imu_functional?"imu-current-position-functional":scope)<<",uwb_tag_world,"<<state.timestamp.value();
   if(benchmark || continuous){benchmark_record=row.str();measured_compute=core+commit;
    std::ostringstream suffix;suffix<<decompositions<<','<<arena.entryCount()<<','<<(selected?actions[best].id.value():0)<<',';
    if(selected)for(auto id:actions[best].groups_to_remove)suffix<<id.value()<<';';
-   suffix<<','<<domain_assessment.initial_law_valid<<','<<domain_assessment.adaptive_event_valid<<','<<domain_assessment.range_domain_valid<<','<<domain_assessment.range_remainder<<','<<domain_assessment.status<<','<<joint.history_qualified<<','<<joint.noise_j.cols()<<','<<joint.faults.size()<<','<<joint.source_products<<','<<joint.covariance_fallback<<','<<attitude_error;
+   suffix<<','<<domain_assessment.initial_law_valid<<','<<domain_assessment.adaptive_event_valid<<','<<domain_assessment.range_domain_valid<<','<<domain_assessment.range_remainder<<','<<domain_assessment.status<<','<<joint.history_qualified<<','<<(online?online_counts.source_columns:joint.noise_j.cols())<<','<<(online?online_counts.fault_modes:joint.faults.size())<<','<<joint.source_products<<','<<joint.covariance_fallback<<','<<attitude_error;
    benchmark_suffix=suffix.str();
    if(continuous){stream_record=benchmark_record;stream_suffix=benchmark_suffix;stream_compute=measured_compute;}}
   else {out<<row.str()<<','<<attempt<<','<<(core+commit)<<",0,"<<decompositions<<','<<arena.entryCount()<<','<<(selected?actions[best].id.value():0)<<',';
    if(selected)for(auto id:actions[best].groups_to_remove)out<<id.value()<<';';
-   out<<','<<domain_assessment.initial_law_valid<<','<<domain_assessment.adaptive_event_valid<<','<<domain_assessment.range_domain_valid<<','<<domain_assessment.range_remainder<<','<<domain_assessment.status<<','<<joint.history_qualified<<','<<joint.noise_j.cols()<<','<<joint.faults.size()<<','<<joint.source_products<<','<<joint.covariance_fallback<<','<<attitude_error<<'\n';}
+   out<<','<<domain_assessment.initial_law_valid<<','<<domain_assessment.adaptive_event_valid<<','<<domain_assessment.range_domain_valid<<','<<domain_assessment.range_remainder<<','<<domain_assessment.status<<','<<joint.history_qualified<<','<<(online?online_counts.source_columns:joint.noise_j.cols())<<','<<(online?online_counts.fault_modes:joint.faults.size())<<','<<joint.source_products<<','<<joint.covariance_fallback<<','<<attitude_error<<'\n';}
+  if(online && !benchmark && !continuous && (e==15 || (e>=30 && e<=32)))std::cout<<"ONLINE_SUMMARY epoch="<<e<<" dof="<<raw_detector.dof<<" active_states="<<online_counts.active_states<<" history_rows="<<online_counts.history_rows<<" faults="<<online_counts.fault_modes<<" numeric_bytes_lower="<<online_counts.bytes<<" frontier="<<online_counts.frontier_epoch<<" ortho_updates="<<online_counts.orthogonal_updates<<"\n";
   if(profile){auto ms=[](auto a,auto b){return std::chrono::duration<double,std::milli>(b-a).count();};
    std::cout<<"PROFILE prep="<<ms(start,t_window)<<" models="<<ms(t_window,t_models)<<" raw_cov="<<ms(t_models,t_raw)<<" detector="<<ms(t_raw,t_detector)<<" evidence_actions="<<ms(t_detector,t_actions)<<" candidates="<<ms(t_actions,core_end)<<" commit_final="<<commit<<'\n';}
   previous_body=state.position_world_m;previous_tag=tag;previous_truth=truth;previous_rotation=state.q_world_body;
