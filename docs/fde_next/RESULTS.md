@@ -1015,3 +1015,49 @@ any Gaussian computation. Both now materialize Vector3d values; distributions,
 seed and declared motion formulas are unchanged. The raw-prefix solver itself
 has not been altered. New comparisons use this corrected generator for BOTH
 paths; old undefined-expression timings are not inherited as numerical evidence.
+
+## Historical fault cost and actual alarm acceleration (active Goal)
+
+Baseline HEAD `a6c217e`, clean tree; no completed square-root history work is
+replaced. Owned cache `.cache/fde-fault-cost/run-20261011/` is temporary while
+this Goal remains active. Native Evidence, candidate/PL proof owners, FdeManager
+risk/coverage consumers and production publication remain unchanged.
+
+A: instrumented current online model (same lag10, ADC boundary law, seed20261010,
+S4 optimized native consumers, actual transactions). Two sequential32-epoch
+U0/U1 flows measure19 continuous outputs14–32. U1 epoch15 service525.443ms,
+core523.120ms;4 actions,3 numerical/post/PL successes, one correct exclusion,
+one real backend update. Exclusive native phases: prep67.613, hypotheses3.714,
+raw metadata .088, detector80.536, Evidence/actions48.466, candidates322.702,
+commit/final .861ms. Within online work (nested, not added to that phase table),
+4 state SVDs take336.960ms,4 suffix builds contain13.765ms state QR and50.438ms
+fault transforms, candidate suffix creation53.354ms,720 small fault SVDs and
+fault PL1.523ms. Main bottleneck is repeated state decomposition, then repeated
+suffix/fault projection; leaf PL itself is not dominant.
+
+U0 epoch15/31 state SVDs166.734/171.729ms; fault QR12.756/26.609ms, leaf PL
+.685/1.121ms. History catalogue240→496 with192 active/48→304 retired modes;
+native hypotheses240→336 (U1 mature334), proof entries match each census.
+RSS in the directed32 flows59212/59628KiB. Each measured epoch has one update;
+raw/formal/protected qualification remainsfalse. The original385→533ms result
+compared different numerical architectures of the same conditional Gaussian
+law, not different physical noise/fault contracts; this Goal's reference is
+the latest252-state online architecture itself, not the cheaper early dense root.
+
+Exact-support snapshot at U1 epoch15:240 scalar columns, raw rank120 (the
+single-onset disjoint row supports form a basis; duration3 columns are sums),
+8 exactly duplicate current raw supports, no root-zero columns. Across the3
+post candidates714 accepted scalar ranks and6 exactly removed/harmless leaves
+are retained. No approximate Gram/subspace comparison or event merge is used.
+Actions2/3/4 each remove15002 and add15010 but cover1/1/2 modes separately.
+They require separate semantic/proof consumers, yet the conditional numerical
+row model is identical. This supplies two concrete optimization targets:
+shared immutable state factorization and canonical candidate row-set numerical
+reuse; historical transforms can share the same21-row frontier operator.
+One census metadata test exposed pruned old UID lineage; only immutable retired
+UID/epoch/anchor descriptors are now retained for the optional exact census,
+not old factors or raw data. The corrected snapshot is executable and passes.
+
+B/C development follows this measured ordering; no performance delivery claim
+is made at this profiling savepoint. Pending: new batch path, exact-bound cache,
+all-field/negative regressions,32/50/80 growth and final same-ELF online pairs.

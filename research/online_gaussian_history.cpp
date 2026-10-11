@@ -13,6 +13,7 @@ struct OnlineGaussianHistory::Impl {
  std::map<size_t,HistoricalEpochContext> episodes;
  std::map<uint64_t,std::pair<size_t,AnchorId>> lineage;
  std::set<uint64_t> retired_groups;
+ std::map<uint64_t,std::pair<size_t,AnchorId>> retired_lineage;
  std::vector<Mode> modes;
  std::set<AnchorId> anchor_catalog;
  boost::shared_ptr<gtsam::PreintegrationCombinedParams> noise_law;
@@ -25,6 +26,7 @@ struct OnlineGaussianHistory::Impl {
  bool prepared_active=false;
  std::shared_ptr<const GaussianSufficientSummary> prepared_query;
  mutable std::map<std::tuple<double,double,bool>,SummaryEvaluation> root_evaluations;
+ mutable OnlineHistoryCounts work;
  mutable size_t state_decompositions=0,fault_products=0;
  LinearizationVersion prepared_version;
  size_t original_rows=0;
@@ -98,7 +100,7 @@ struct OnlineGaussianHistory::Impl {
   target.append(a,z,b);
  }
  GaussianSufficientSummary query(const EpochTransaction& tx,const ExclusionAction* action)const{
-  size_t first=epoch>lag+1?epoch-lag-1:0;GaussianSufficientSummary result=history;result.addStateColumns(21*(epoch-first));std::vector<WhiteBlock> batch;
+  size_t first=epoch>lag+1?epoch-lag-1:0;GaussianSufficientSummary result=history;result.append_state_ms=0.;result.append_fault_ms=0.;result.addStateColumns(21*(epoch-first));std::vector<WhiteBlock> batch;
   for(size_t e=first+1;e<=epoch;++e)noisePrior(result,first,e,&batch);
   auto current=groups;current[tx.imu_group.id.value()]=tx.imu_group;for(const auto& g:tx.uwb_groups)if(g.nominal)current[g.id.value()]=g;
   if(action){if(action->bridge_mode!=BridgeMode::None)throw std::runtime_error("UNAVAILABLE_BRIDGE_SUMMARY_SCOPE");
@@ -122,12 +124,12 @@ struct OnlineGaussianHistory::Impl {
     for(auto measurement:replacement->source_measurements){auto row=std::find(g.source_measurements.begin(),g.source_measurements.end(),measurement);if(row!=g.source_measurements.end())retain.push_back(row-g.source_measurements.begin());}}
    if(!retain.empty()){std::sort(retain.begin(),retain.end());if(std::adjacent_find(retain.begin(),retain.end())!=retain.end())throw std::runtime_error("duplicate replacement source");appendBlock(result,g,first,epoch,&retain,&batch);}
   }
-  appendBatch(result,batch);return result;
+  appendBatch(result,batch);++work.queries;work.query_columns+=modes.size();work.query_state_qr_ms+=result.append_state_ms;work.query_fault_qr_ms+=result.append_fault_ms;return result;
  }
 };
 OnlineGaussianHistory::OnlineGaussianHistory(size_t lag,int duration,double sa,double sg,Eigen::Vector3d lever):impl(new Impl(lag,duration,sa,sg,lever)){}
 OnlineGaussianHistory::~OnlineGaussianHistory()=default;
-void OnlineGaussianHistory::prepare(const EpochTransaction& tx){auto& s=*impl;
+void OnlineGaussianHistory::prepare(const EpochTransaction& tx){auto& s=*impl;auto timing_begin=std::chrono::steady_clock::now();s.work={};
  if(tx.proposed_epoch!=s.epoch+1 || tx.proposed_epoch>50)throw std::runtime_error("UNAVAILABLE_HISTORY_SEQUENCE_OR_HORIZON");
  if(!tx.preintegration)throw std::runtime_error("UNAVAILABLE_PIM_NOISE_MODEL");
  auto params=boost::dynamic_pointer_cast<gtsam::PreintegrationCombinedParams>(tx.preintegration->params());
@@ -161,11 +163,12 @@ void OnlineGaussianHistory::prepare(const EpochTransaction& tx){auto& s=*impl;
  if(s.epoch==2){Eigen::LLT<Eigen::MatrixXd> chol(s.local_noise.sigma);if(chol.info()!=Eigen::Success || s.local_noise.cross_norm<=1e-12)throw std::runtime_error("joint ADC covariance check failed");
   auto w=chol.matrixL().solve(Eigen::MatrixXd::Identity(s.local_noise.sigma.rows(),s.local_noise.sigma.rows())).eval();
   if((w*s.local_noise.sigma*w.transpose()-Eigen::MatrixXd::Identity(w.rows(),w.rows())).norm()>1e-7)throw std::runtime_error("joint whitening check failed");}
+ auto retire_begin=std::chrono::steady_clock::now();s.work.source_ms=std::chrono::duration<double,std::milli>(retire_begin-timing_begin).count();
  size_t next=s.epoch>s.lag+1?s.epoch-s.lag-1:0;
  // local rows use the old frontier column origin until all retirement completes.
  const size_t old_frontier=s.frontier;
  if(next>s.frontier){s.history.addStateColumns(21);s.noisePrior(s.history,s.frontier,next);
-  for(const auto& g:current)if(Impl::endEpoch(g.second)<=next){s.appendBlock(s.history,g.second,s.frontier,next);s.retired_groups.insert(g.first);s.groups.erase(g.first);
+  for(const auto& g:current)if(Impl::endEpoch(g.second)<=next){s.appendBlock(s.history,g.second,s.frontier,next);s.retired_groups.insert(g.first);if(g.second.sensor==SensorType::Uwb)for(auto id:g.second.source_measurements)s.retired_lineage.emplace(id.value(),s.lineage.at(id.value()));s.groups.erase(g.first);
    auto block=std::find_if(s.local_window.blocks.begin(),s.local_window.blocks.end(),[&](const auto& b){return b.group_id==g.second.id;});s.original_rows+=block->residual_raw.size();}
   auto recovery=s.history.retire(21);
   s.old_navigation.push_back(std::move(recovery));
@@ -173,7 +176,20 @@ void OnlineGaussianHistory::prepare(const EpochTransaction& tx){auto& s=*impl;
  // Leave the local matrix origin immutable for candidate evaluation; the
  // effective history frontier is updated only through the bounded suffix map.
  s.frontier=old_frontier;
+ auto query_begin=std::chrono::steady_clock::now();s.work.retire_ms=std::chrono::duration<double,std::milli>(query_begin-retire_begin).count();
  s.prepared_query=std::make_shared<const GaussianSufficientSummary>(s.query(tx,nullptr));
+ s.work.root_build_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-query_begin).count();
+ // Optional census of exact original scalar row supports, not Gram-based
+ // equivalence and never a physical-event/risk merge. Excluded sources stay out.
+ if(std::getenv("FDE_FAULT_COST")){
+  std::set<uint64_t> sources;for(const auto& row:s.retired_lineage)sources.insert(row.first);for(const auto& item:current)if(item.second.sensor==SensorType::Uwb)for(auto id:item.second.source_measurements)sources.insert(id.value());
+  std::map<std::pair<size_t,AnchorId>,std::vector<uint64_t>> rows;
+  for(auto id:sources){auto source=s.retired_lineage.count(id)?s.retired_lineage.at(id):s.lineage.at(id);rows[source].push_back(id);}s.work.raw_rank=rows.size();
+  std::set<std::vector<uint64_t>> signatures;
+  for(const auto& mode:s.modes){std::vector<uint64_t> ids;for(size_t e=mode.onset;e<=s.epoch && e<mode.onset+mode.duration;++e){auto it=rows.find({e,mode.anchor});if(it!=rows.end())ids.insert(ids.end(),it->second.begin(),it->second.end());}
+   std::sort(ids.begin(),ids.end());if(ids.empty())++s.work.zero_raw_columns;if(!signatures.insert(ids).second)++s.work.equal_raw_columns;}
+ }
+
 }
 SummaryEvaluation OnlineGaussianHistory::evaluate(const EpochTransaction& tx,const ExclusionAction* action,double alpha,double tail,bool faults)const{
  const auto& s=*impl;if(!s.prepared_active || tx.id!=s.prepared_id || !(tx.base_version==s.prepared_version))throw std::runtime_error("foreign online summary root");
@@ -181,9 +197,9 @@ SummaryEvaluation OnlineGaussianHistory::evaluate(const EpochTransaction& tx,con
  bool keep=!action || (action->groups_to_remove.empty() && action->groups_to_add.empty() && action->bridge_mode==BridgeMode::None);
  if(keep){auto key=std::make_tuple(alpha,tail,faults);auto it=s.root_evaluations.find(key);if(it!=s.root_evaluations.end())return it->second;
   ++s.state_decompositions;if(faults)s.fault_products+=s.modes.size();
-  auto result=s.prepared_query->evaluate(tagMap(),alpha,tail,faults);s.root_evaluations.emplace(key,result);return result;}
- auto query=s.query(tx,action);++s.state_decompositions;if(faults)s.fault_products+=s.modes.size();
- return query.evaluate(tagMap(),alpha,tail,faults);
+  auto result=s.prepared_query->evaluate(tagMap(),alpha,tail,faults);s.work.state_ms+=result.state_ms;s.work.fault_ms+=result.fault_ms;s.work.leaf_svds+=result.leaf_svds;for(const auto& leaf:result.faults)if(leaf.second.classification=="MONITORABLE")++s.work.accepted_leaf_rank;s.root_evaluations.emplace(key,result);return result;}
+ auto query_begin=std::chrono::steady_clock::now();auto query=s.query(tx,action);s.work.candidate_build_ms+=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-query_begin).count();++s.state_decompositions;if(faults)s.fault_products+=s.modes.size();
+ auto result=query.evaluate(tagMap(),alpha,tail,faults);s.work.state_ms+=result.state_ms;s.work.fault_ms+=result.fault_ms;s.work.leaf_svds+=result.leaf_svds;for(const auto& leaf:result.faults)if(leaf.second.classification=="MONITORABLE")++s.work.accepted_leaf_rank;return result;
 }
 Eigen::MatrixXd OnlineGaussianHistory::tagMap()const{const auto& s=*impl;size_t first=s.epoch>s.lag+1?s.epoch-s.lag-1:0;Eigen::MatrixXd c=Eigen::MatrixXd::Zero(3,21*(s.epoch-first+1));
  auto pose=s.points.at<gtsam::Pose3>(gtsam::Symbol('x',s.epoch));Eigen::Matrix3d skew;skew<<0,-s.lever.z(),s.lever.y(),s.lever.z(),0,-s.lever.x(),-s.lever.y(),s.lever.x(),0;
@@ -209,7 +225,7 @@ Eigen::MatrixXd OnlineGaussianHistory::navigationCovariance(const GaussianRefere
   extended.topRightCorner(21,n)=old.coefficients*covariance.topRows(21);extended.bottomLeftCorner(n,21)=extended.topRightCorner(21,n).transpose();extended.bottomRightCorner(n,n)=covariance;covariance=std::move(extended);}
  Eigen::MatrixXd nav(15*(s.epoch+1),15*(s.epoch+1));for(size_t i=0;i<=s.epoch;++i)for(size_t j=0;j<=s.epoch;++j)nav.block(15*i,15*j,15,15)=covariance.block(21*i,21*j,15,15);return nav;
 }
-OnlineHistoryCounts OnlineGaussianHistory::counts()const{const auto& s=*impl;OnlineHistoryCounts c;size_t first=s.epoch>s.lag+1?s.epoch-s.lag-1:0;c.frontier_epoch=first;c.active_groups=s.groups.size();c.active_states=21*(s.epoch-first+1);c.history_rows=s.history.h.rows();c.fault_modes=s.modes.size();c.source_columns=s.local_noise.noise_j.cols();c.integrations=s.local_noise.integrations;c.bytes=s.history.bytes()+8*(s.local_noise.a.size()+s.local_noise.sigma.size()+s.local_noise.noise_j.size());if(s.prepared_query)c.bytes+=s.prepared_query->bytes();
+OnlineHistoryCounts OnlineGaussianHistory::counts()const{const auto& s=*impl;OnlineHistoryCounts c=s.work;size_t first=s.epoch>s.lag+1?s.epoch-s.lag-1:0;c.frontier_epoch=first;c.active_groups=s.groups.size();c.active_states=21*(s.epoch-first+1);c.history_rows=s.history.h.rows();c.fault_modes=s.modes.size();for(const auto& mode:s.modes)if(std::min(s.epoch,mode.onset+mode.duration-1)>first)++c.active_modes;c.source_columns=s.local_noise.noise_j.cols();c.integrations=s.local_noise.integrations;c.bytes=s.history.bytes()+8*(s.local_noise.a.size()+s.local_noise.sigma.size()+s.local_noise.noise_j.size());if(s.prepared_query)c.bytes+=s.prepared_query->bytes();
  for(const auto& old:s.old_navigation)c.bytes+=8*(old.coefficients.size()+old.offset.size()+old.conditional_covariance.size());
  for(const auto& cached:s.root_evaluations){const auto& r=cached.second.reference;c.bytes+=8*(r.mean.size()+r.covariance.size());}
  c.state_decompositions=s.state_decompositions;c.fault_products=s.fault_products;

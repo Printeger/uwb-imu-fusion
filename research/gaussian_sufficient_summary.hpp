@@ -3,6 +3,7 @@
 #include <Eigen/QR>
 #include <map>
 #include <stdexcept>
+#include <chrono>
 
 namespace uwb_imu_pl::research {
 // Mutually exclusive fault leaves need B_i' P B_i and B_i' P z, not
@@ -23,6 +24,7 @@ struct SummaryEvaluation {
  GaussianReference reference;
  std::map<std::string,SummaryFaultResult> faults;
  int state_rank=0,total_rank=0;
+ double state_ms=0.,fault_ms=0.;size_t leaf_svds=0;
 };
 struct SummaryRetirement {Eigen::MatrixXd coefficients;Eigen::VectorXd offset;Eigen::MatrixXd conditional_covariance;};
 class GaussianSufficientSummary {
@@ -33,6 +35,7 @@ class GaussianSufficientSummary {
  long long equations=0,residual_dimensions=0,eliminated_states=0;
  double residual_norm=0.;
  size_t orthogonal_updates=0;
+ double append_state_ms=0.,append_fault_ms=0.;
  explicit GaussianSufficientSummary(int states=0):h(0,states),d(0){}
  int states()const{return h.cols();}
  size_t bytes()const{
@@ -52,6 +55,7 @@ class GaussianSufficientSummary {
  // frontier noise variables and their ONE Gaussian prior. No mixed-row deletion.
  void append(const Eigen::MatrixXd& a,const Eigen::VectorXd& z,
              const std::map<std::string,Eigen::MatrixXd>& b){
+  auto timing_begin=std::chrono::steady_clock::now();
   if(a.cols()!=states() || a.rows()!=z.size() || !a.allFinite() || !z.allFinite())throw std::runtime_error("invalid summary append");
   for(const auto& item:b)if(!faults.count(item.first) || item.second.rows()!=a.rows() || item.second.cols()!=faults.at(item.first).top.cols() || !item.second.allFinite())throw std::runtime_error("foreign summary fault rows");
   int old=h.rows(),m=old+a.rows(),keep=std::min(m,states());
@@ -59,6 +63,7 @@ class GaussianSufficientSummary {
   Eigen::VectorXd rhs(m);rhs.head(old)=d;rhs.tail(a.rows())=z;
   Eigen::HouseholderQR<Eigen::MatrixXd> qr(stack);
   Eigen::VectorXd rotated=qr.householderQ().adjoint()*rhs;
+  auto fault_begin=std::chrono::steady_clock::now();
   for(auto& item:faults){auto& f=item.second;Eigen::MatrixXd fb=Eigen::MatrixXd::Zero(m,f.top.cols());fb.topRows(old)=f.top;
    auto it=b.find(item.first);if(it!=b.end())fb.bottomRows(a.rows())=it->second;
    bool nonzero=it!=b.end() && (it->second.array()!=0.).any();f.ever_nonzero=f.ever_nonzero || nonzero;
@@ -67,8 +72,11 @@ class GaussianSufficientSummary {
    Eigen::MatrixXd transformed=qr.householderQ().adjoint()*fb;
    appendResidual(f,transformed.bottomRows(m-keep),rotated.tail(m-keep));f.top=transformed.topRows(keep);
   }
+  auto fault_end=std::chrono::steady_clock::now();
+  append_fault_ms+=std::chrono::duration<double,std::milli>(fault_end-fault_begin).count();
   residual_norm=std::hypot(residual_norm,rotated.tail(m-keep).norm());residual_dimensions+=m-keep;
   h=(qr.householderQ().adjoint()*stack).topRows(keep);d=rotated.head(keep);equations+=a.rows();++orthogonal_updates;
+  append_state_ms+=std::chrono::duration<double,std::milli>(fault_begin-timing_begin+std::chrono::steady_clock::now()-fault_end).count();
  }
  // Eliminate only a full-rank old-state block. Frontier sources stay columns.
  SummaryRetirement retire(int count){
@@ -88,6 +96,7 @@ class GaussianSufficientSummary {
   return recovery;
  }
  SummaryEvaluation evaluate(const Eigen::MatrixXd& c,double alpha,double tail,bool include_faults=true)const{
+  auto timing_begin=std::chrono::steady_clock::now();
   SummaryEvaluation out;auto& r=out.reference;
   if(c.rows()!=3 || c.cols()!=states() || !c.allFinite() || h.rows()<states() || states()==0 || !(alpha>0 && alpha<1 && tail>0 && tail<1))return out;
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(h,Eigen::ComputeFullU|Eigen::ComputeFullV);auto s=svd.singularValues();
@@ -103,6 +112,7 @@ class GaussianSufficientSummary {
   r.status=r.statistic>r.threshold?"POST_REJECTED":"FROZEN_MODEL_ONLY";
   double k=boost::math::quantile(boost::math::complement(boost::math::normal(),tail/6));
   r.pl=k*(c*r.covariance*c.transpose()).diagonal().cwiseMax(0.).cwiseSqrt();
+  auto fault_begin=std::chrono::steady_clock::now();out.state_ms=std::chrono::duration<double,std::milli>(fault_begin-timing_begin).count();
   if(!include_faults){if(r.status=="POST_REJECTED")r.pl.setConstant(INFINITY);return out;}
   double radius=std::sqrt(r.threshold)+std::sqrt(boost::math::quantile(boost::math::complement(boost::math::chi_squared(r.dof),tail)));
   Eigen::Vector3d bound=Eigen::Vector3d::Zero();
@@ -111,7 +121,7 @@ class GaussianSufficientSummary {
    Eigen::MatrixXd pb(parity.rows()+f.residual.rows(),dim);pb.topRows(parity.rows())=parity*f.top;pb.bottomRows(f.residual.rows())=f.residual.leftCols(dim);
    Eigen::VectorXd rz(pz.size()+f.residual.rows());rz.head(pz.size())=pz;rz.tail(f.residual.rows())=f.residual.col(dim);
    SummaryFaultResult fr;fr.residual_gram=pb.transpose()*pb;fr.profile_rhs=pb.transpose()*rz;fr.response=protected_gain*f.top;
-   Eigen::JacobiSVD<Eigen::MatrixXd> fs(pb,Eigen::ComputeThinU|Eigen::ComputeFullV);auto singular=fs.singularValues();
+   ++out.leaf_svds;Eigen::JacobiSVD<Eigen::MatrixXd> fs(pb,Eigen::ComputeThinU|Eigen::ComputeFullV);auto singular=fs.singularValues();
    if(singular.size()<dim || singular.minCoeff()<=1e-12){fr.classification="INDETERMINATE";
     if(!f.ever_nonzero || f.alias_state==-2 || (f.alias_state>=0 && (c.col(f.alias_state).array()==0.).all()))fr.classification="EXACT_HARMLESS";
     else if(f.alias_state>=0)fr.classification="DANGEROUS_NULLSPACE";}
@@ -121,6 +131,7 @@ class GaussianSufficientSummary {
    out.faults.emplace(item.first,fr);
    if(include_faults && r.status!="POST_REJECTED" && fr.classification!="MONITORABLE" && fr.classification!="EXACT_HARMLESS")r.status=fr.classification;
   }
+  out.fault_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-fault_begin).count();
   r.pl+=bound;
   if(include_faults && r.status!="FROZEN_MODEL_ONLY")r.pl.setConstant(INFINITY);
   return out;
