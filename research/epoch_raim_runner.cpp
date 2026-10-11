@@ -30,7 +30,7 @@ int main(int argc,char** argv){try{
   // Explicit conditional frozen research law. I2 is a known unsupported test
   // supplied by the scenario law, not a GT label used to choose an exclusion.
   PredictionConditionsV1 conditions{true,true,!quarantined,hybrid || (kind!="I2" && kind!="I1"),true};
-  auto coreStart=Clock::now();EpochRaim advisory;EpochRaim r;if(hybrid){advisory=uwbEpochRaim(b,fde,alpha,tail);r=hybridCurrent(b,pred,scene.lever,conditions,advisory,fde,alpha,tail);}else r=isB?fusedEpochPl(b,pred,scene.lever,conditions,fde,alpha,tail):uwbEpochRaim(b,fde,alpha,tail);auto coreEnd=Clock::now();
+  auto coreStart=Clock::now();EpochRaim advisory;EpochRaim r;if(hybrid){advisory=uwbEpochRaim(b,fde,alpha,tail);r=hybridCurrent(b,pred,scene.lever,advisory,fde,alpha,tail);}else r=isB?fusedEpochPl(b,pred,scene.lever,conditions,fde,alpha,tail):uwbEpochRaim(b,fde,alpha,tail);auto coreEnd=Clock::now();
   auto plan=EpochCommitPlan::nominalPlan(tx);
   if(r.excluded>=0){
    const PendingFactorGroup* selected=nullptr;

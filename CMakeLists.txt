@@ -502,3 +502,6 @@ add_executable(epoch_raim_runner EXCLUDE_FROM_ALL research/epoch_raim_runner.cpp
 target_link_libraries(epoch_raim_runner fde_research)
 add_executable(fused_epoch_checks EXCLUDE_FROM_ALL research/fused_epoch_checks.cpp)
 target_link_libraries(fused_epoch_checks fde_research)
+
+add_executable(hybrid_checks EXCLUDE_FROM_ALL research/hybrid_checks.cpp research/hybrid_native_flow.cpp)
+target_link_libraries(hybrid_checks fde_research)

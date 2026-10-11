@@ -20,11 +20,10 @@ inline Eigen::Matrix<double,3,15> tagMap(const NavigationState& s,const Eigen::V
  gtsam::Matrix36 j;pose.transformFrom(lever,j);
  Eigen::Matrix<double,3,15> c=Eigen::Matrix<double,3,15>::Zero();c.leftCols<6>()=j;return c;
 }
-inline EpochRaim fusedCandidate(const UwbBatch& batch,int excluded,
+inline EpochRaim fusedCandidateNumerical(const UwbBatch& batch,int excluded,
  const ResearchEpochPredictionV1& prediction,const Eigen::Vector3d& lever,
- const PredictionConditionsV1& conditions,double alpha,double tail) {
- EpochRaim r;r.excluded=excluded;r.status=predictionRefusal(conditions);
- if(!r.status.empty())return r;
+ double alpha,double tail) {
+ EpochRaim r;r.excluded=excluded;
  if(!prediction.prior.excludes_current_uwb || prediction.excluded_batch_id!=batch.id || prediction.prior.mean.timestamp!=batch.timestamp){r.status="PREDICTION_LINEAGE_FAILED";return r;}
  auto b=retainRanges(batch,excluded);int n=b.measurements.size();
  if(!spatialAnchors(b)){r.status="GEOMETRY_OR_MIRROR_UNQUALIFIED";return r;}
@@ -52,6 +51,14 @@ inline EpochRaim fusedCandidate(const UwbBatch& batch,int excluded,
  // Local domain check is numerical qualification, not a remainder proof.
  if(r.gaussian.mean.head(3).norm()>.25 || r.gaussian.mean.segment(3,3).norm()>.25){r.status="NONLINEAR_DOMAIN_FAILED";r.gaussian.pl.setConstant(INFINITY);}
  return r;
+}
+// Legacy condition adapter remains confined to the old A/B comparison.
+inline EpochRaim fusedCandidate(const UwbBatch& batch,int excluded,
+ const ResearchEpochPredictionV1& prediction,const Eigen::Vector3d& lever,
+ const PredictionConditionsV1& conditions,double alpha,double tail) {
+ auto refusal=predictionRefusal(conditions);
+ if(!refusal.empty()){EpochRaim r;r.excluded=excluded;r.status=refusal;return r;}
+ return fusedCandidateNumerical(batch,excluded,prediction,lever,alpha,tail);
 }
 inline EpochRaim fusedEpochPl(const UwbBatch& b,const ResearchEpochPredictionV1& p,
  const Eigen::Vector3d& lever,const PredictionConditionsV1& c,bool fde=true,double alpha=1e-6,double tail=1e-9) {
