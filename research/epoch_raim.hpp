@@ -71,10 +71,11 @@ template<class Candidate> inline EpochRaim epochFde(int n,bool enabled,Candidate
   all.alarm=all.gaussian.dof>0 && all.gaussian.statistic>all.gaussian.threshold;
   if((!all.alarm && !external_alarm) || !enabled)return all;
   EpochRaim best;double score=INFINITY;
+  if(external_alarm && all.status=="FROZEN_MODEL_ONLY" && all.gaussian.statistic<=all.gaussian.threshold){best=all;score=all.gaussian.statistic;}
   for(int i=0;i<n;++i){auto r=evaluate(i);if(r.status=="FROZEN_MODEL_ONLY" && r.gaussian.statistic<score){score=r.gaussian.statistic;best=std::move(r);}}
   best.candidates=n+1;best.alarm=true;
   best.detection_statistic=all.detection_statistic;best.detection_threshold=all.detection_threshold;best.detection_dof=all.detection_dof;
-  if(best.excluded<0)best.status="FDE_NO_QUALIFIED_CANDIDATE";
+  if(!std::isfinite(score))best.status="FDE_NO_QUALIFIED_CANDIDATE";
   return best;
 }
 inline EpochRaim uwbEpochRaim(const UwbBatch& b,bool fde=true,double alpha=1e-6,double tail=1e-9) {

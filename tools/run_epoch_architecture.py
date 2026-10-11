@@ -72,6 +72,7 @@ def main():
                         values=np.array([float(r[key]) for r in rows]);values=values[np.isfinite(values)]
                         return '/'.join(f'{x:.6f}' for x in [values.mean(),np.median(values),np.percentile(values,95),values.max()]) if values.size else 'UNKNOWN'
                     print(f'HYBRID {scenario} {evidence or "unlabelled"}: outputs={count} H_bounded={sum(r["history_status"]=="BOUNDED" for r in rows)} nonzero_H={sum(float(r["history_bound"])>0 for r in rows)} exclusions={sum(int(r["excluded"])>=0 for r in rows)} correct={sum(r["correct"]=="1" for r in rows)} AL_numeric={sum(r["within_al"]=="1" for r in rows)} max_bytes={max(int(r["history_bytes"]) for r in rows)} full_C_calls=0 status={dict(Counter(r["status"] for r in rows))}', flush=True)
+                    print(f'  denominators B_finite={sum(r["numerical_status"]=="FINITE" for r in rows)}/{count} A_available={sum(r["a_available"]=="1" for r in rows)}/{count} A_alarms={sum(r["a_alarm"]=="1" for r in rows)}/{count} B_alarms={sum(int(r["dof"])>0 and float(r["statistic"])>float(r["threshold"]) for r in rows)}/{count} healthy_exclusions={sum(r["healthy_excluded"]=="1" for r in rows)}/{count} on_time={sum(r["on_time"]=="1" for r in rows)}/{count} qualified=0/{count}', flush=True)
                     for key in ['history_bound','history_eta','hpl','vpl','error','h_ms','prediction_ms','a_ms','b_ms','core_ms','verification_ms','commit_ms','h_update_ms','finalization_ms','cleanup_ms','full_ms']:
                         print(f'  {key} mean/median/P95/max={stats(key)}', flush=True)
         return
@@ -103,7 +104,7 @@ def main():
             available = 'selected' if historical else 'available'
             timing = 'end_to_end_ms' if historical else 'full_ms'
             print(f'{name}: n={len(rows)} commits={sum(int(r["updates"]) for r in rows)} '
-                  f'valid={sum(r[available]=="1" for r in rows)} alarm={sum(r["alarm"]=="1" for r in rows)} '
+                  f'valid={sum(r[available]=="1" for r in rows)} alarm={sum(int(r["dof"])>0 and float(r["statistic"])>float(r["threshold"]) for r in rows)} '
                   f'correct={sum(r["correct"]=="1" for r in rows)} '
                   f'APE_RMSE={rmse("error"):.6f} '
                   f'APE_mean/median/P95/max={stats("error")} '

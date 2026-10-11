@@ -11,6 +11,9 @@ double elapsed(Clock::time_point a,Clock::time_point b){return std::chrono::dura
 void check(bool b,const char* message){if(!b)throw std::runtime_error(message);}
 }
 void runHybridNative(const std::string& path,bool currentFault){
+ int evaluated=0;
+ auto advisoryConflict=epochFde(8,true,[&](int excluded){++evaluated;EpochRaim r;r.excluded=excluded;r.status="FROZEN_MODEL_ONLY";r.gaussian.dof=5;r.gaussian.threshold=10;r.gaussian.statistic=excluded<0?1:2;return r;},true);
+ check(evaluated==9 && advisoryConflict.candidates==9 && advisoryConflict.excluded==-1 && advisoryConflict.status=="FROZEN_MODEL_ONLY","A-only alarm retains qualified B KEEP in complete census");
  NoisyMotionScenario scene(path,"U0",20261010,24);HybridFixedLaw law;
  // Matrices registered once, before drawing noise or observing any data.
  Eigen::Vector3d body(0,0,1),base=body+scene.lever;law.reference_tag=base;

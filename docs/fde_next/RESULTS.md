@@ -1,5 +1,7 @@
 # FDE next: isolated research results
 
+[HYBRID_RESULTS.md](HYBRID_RESULTS.md)：H/P/B 固定联合模型集成、原生事务/历史生命周期、raw短流及完整成本（2026-10-11）；raw/hardware仍未资格。
+
 Baseline: `8fe833c`; clean working tree at start. Production configurations,
 probability contracts and publication gates are unchanged. All new runs use
 `formal_eligible=false`, `publication_protected=false`. No extra sensor is used.
