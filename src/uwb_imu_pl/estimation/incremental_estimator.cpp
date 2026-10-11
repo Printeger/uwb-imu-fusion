@@ -1589,6 +1589,40 @@ LinearizedFactorBlock IncrementalUwbImuEstimator::linearizePendingGroup(
   return block;
 }
 
+ResearchEpochPredictionV1 IncrementalUwbImuEstimator::researchPreUwbPredictionV1(
+    const EpochTransaction& tx) const {
+  if (!active_transaction_id_ || *active_transaction_id_ != tx.id ||
+      tx.backend_mutated || tx.base_graph_version != graph_version_ ||
+      tx.ledger_version != factor_ledger_.version() ||
+      !(tx.base_version == debugVersion()))
+    throw std::logic_error("research prediction requires current active transaction");
+  ResearchEpochPredictionV1 result;
+  result.transaction_id = tx.id;
+  result.excluded_batch_id = tx.uwb_batch.id;
+  result.backend_updates = backend_update_count_;
+  result.previous_covariance = currentJointMarginal();
+  // Ignore frozen CV initial values. Both mean and covariance use the same
+  // measurement-only IMU prediction; no current UWB group is linearized.
+  EpochTransaction local;
+  local.previous_epoch = tx.previous_epoch;
+  local.proposed_epoch = tx.proposed_epoch;
+  local.previous_state = tx.previous_state;
+  local.nominal_predicted_state = tx.nominal_predicted_state;
+  result.transition_design = linearizeGroupDense(tx.imu_group, local).first;
+  Eigen::LLT<Eigen::MatrixXd> prev(result.previous_covariance);
+  if (prev.info() != Eigen::Success) throw std::runtime_error("research prior not SPD");
+  Eigen::MatrixXd information = result.transition_design.transpose()*result.transition_design;
+  information.topLeftCorner(15,15) += prev.solve(Eigen::MatrixXd::Identity(15,15));
+  Eigen::LLT<Eigen::MatrixXd> joint(information);
+  if (joint.info() != Eigen::Success) throw std::runtime_error("research prediction not SPD");
+  Eigen::MatrixXd covariance = joint.solve(Eigen::MatrixXd::Identity(30,30));
+  result.prior.mean = tx.nominal_predicted_state;
+  result.prior.covariance = covariance.bottomRightCorner(15,15);
+  result.prior.excludes_current_uwb = true;
+  result.prior.version = tx.base_version;
+  return result;
+}
+
 CurrentStatePrior IncrementalUwbImuEstimator::pendingCurrentPrior(
     const EpochTransaction& tx) const {
   const Eigen::Matrix<double, 15, 15> previous_covariance =

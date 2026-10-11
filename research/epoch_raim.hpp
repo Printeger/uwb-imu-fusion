@@ -11,6 +11,8 @@ struct EpochRaim {
   Eigen::MatrixXd response, slope;
   std::vector<int> retained;
   int excluded=-1, candidates=0;
+  double detection_statistic=INFINITY, detection_threshold=0;
+  int detection_dof=0;
   bool alarm=false;
   std::string status="MODEL_UNQUALIFIED";
 };
@@ -65,11 +67,13 @@ inline EpochRaim uwbCandidate(const UwbBatch& batch,int excluded,double alpha,do
 // healthy rows. Every retained single-fault direction remains in its PL.
 template<class Candidate> inline EpochRaim epochFde(int n,bool enabled,Candidate evaluate) {
   auto all=evaluate(-1);all.candidates=1;
+  all.detection_statistic=all.gaussian.statistic;all.detection_threshold=all.gaussian.threshold;all.detection_dof=all.gaussian.dof;
   all.alarm=all.gaussian.dof>0 && all.gaussian.statistic>all.gaussian.threshold;
   if(!all.alarm || !enabled)return all;
   EpochRaim best;double score=INFINITY;
   for(int i=0;i<n;++i){auto r=evaluate(i);if(r.status=="FROZEN_MODEL_ONLY" && r.gaussian.statistic<score){score=r.gaussian.statistic;best=std::move(r);}}
   best.candidates=n+1;best.alarm=true;
+  best.detection_statistic=all.detection_statistic;best.detection_threshold=all.detection_threshold;best.detection_dof=all.detection_dof;
   if(best.excluded<0)best.status="FDE_NO_QUALIFIED_CANDIDATE";
   return best;
 }

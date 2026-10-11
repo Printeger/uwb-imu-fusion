@@ -498,3 +498,7 @@ target_link_libraries(fde_next_runner fde_research tbb)
 
 add_executable(epoch_raim_checks EXCLUDE_FROM_ALL research/epoch_raim_checks.cpp)
 target_link_libraries(epoch_raim_checks fde_research)
+add_executable(epoch_raim_runner EXCLUDE_FROM_ALL research/epoch_raim_runner.cpp)
+target_link_libraries(epoch_raim_runner fde_research)
+add_executable(fused_epoch_checks EXCLUDE_FROM_ALL research/fused_epoch_checks.cpp)
+target_link_libraries(fused_epoch_checks fde_research)

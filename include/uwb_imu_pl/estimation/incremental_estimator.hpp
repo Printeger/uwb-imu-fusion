@@ -45,6 +45,16 @@ struct EstimatorAudit {
   std::optional<BatchId> pending_batch_id;
 };
 
+// Research-only prior: backend Gaussian marginal + current Combined IMU.
+// No hardware independence, clean-history, or nonlinear certificate is implied.
+struct ResearchEpochPredictionV1 {
+  CurrentStatePrior prior;
+  Eigen::MatrixXd previous_covariance, transition_design;
+  TransactionId transaction_id;
+  BatchId excluded_batch_id;
+  std::uint64_t backend_updates = 0;
+};
+
 struct MethodBCandidatePrior {
   Eigen::Matrix<double, 15, 1> mean =
       Eigen::Matrix<double, 15, 1>::Constant(
@@ -191,6 +201,8 @@ class IncrementalUwbImuEstimator {
   [[deprecated("use commitEpoch/discardEpoch")]]
   void rejectUwbBatch(const UwbBatch& batch, const std::string& reason);
 
+  ResearchEpochPredictionV1 researchPreUwbPredictionV1(
+      const EpochTransaction& transaction) const;
   NavigationState currentState() const;
   bool hasPendingEpoch() const { return active_transaction_id_.has_value(); }
   double lastNoUwbUpdateMs() const { return last_no_uwb_update_ms_; }
