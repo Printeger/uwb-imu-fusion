@@ -1061,3 +1061,24 @@ not old factors or raw data. The corrected snapshot is executable and passes.
 B/C development follows this measured ordering; no performance delivery claim
 is made at this profiling savepoint. Pending: new batch path, exact-bound cache,
 all-field/negative regressions,32/50/80 growth and final same-ELF online pairs.
+
+B1 now runs the new exact temporal-incidence generator and common frontier QR
+kernel. For a leaf with zero new raw support, Q'[F_old;0] is computed through
+one common Q'[I_old;0] operator; a common QR of its residual basis plus z leaves
+at most old_rows+1 new residual rows per leaf. Each leaf keeps its own square
+root/profile and global residual energy/dimension is unchanged. Active leaves
+use the original full transform; no approximate-response clustering.
+
+36 scalar/six-axis/correlated/raw-deletion deterministic cases pass against
+unchanged dense oracle. Actual U0 raw oracle30/31/32 matches all old/current
+state mean/covariance, rank/dof, Grams/profiles/response/class and PL; ν31=248.
+50 epochs keep252 active coordinates/21 history rows,800 leaves and1596
+integrations. Directed build+full evaluate31/32/50 is133/133/137ms (not whole
+service timing). U1 19 measured outputs match the original reference CSV in
+all non-timing fields, actual recipe, single commit, correct exclusion and
+four followups. At31, full fault transforms fall496→192;304 old leaves use
+one21-row kernel, fault QR26.047→10.017ms. At32, full transforms remain192
+while320 old profiles are retained. U1 alarm still needs4 SVDs; measured
+service525.443→523.828ms is within ordinary timing variation, so no alarm
+speedup is claimed for B alone. C must remove the proven duplicate state/root
+work before final delivery. Reference append remains selectable independently.

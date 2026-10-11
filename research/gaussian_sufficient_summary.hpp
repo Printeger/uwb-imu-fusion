@@ -34,6 +34,8 @@ class GaussianSufficientSummary {
  std::map<std::string,SummaryFault> faults;
  long long equations=0,residual_dimensions=0,eliminated_states=0;
  double residual_norm=0.;
+ bool optimized=false;
+ size_t full_fault_transforms=0,frontier_fault_transforms=0,frontier_kernels=0;
  size_t orthogonal_updates=0;
  double append_state_ms=0.,append_fault_ms=0.;
  explicit GaussianSufficientSummary(int states=0):h(0,states),d(0){}
@@ -64,13 +66,29 @@ class GaussianSufficientSummary {
   Eigen::HouseholderQR<Eigen::MatrixXd> qr(stack);
   Eigen::VectorXd rotated=qr.householderQ().adjoint()*rhs;
   auto fault_begin=std::chrono::steady_clock::now();
+  Eigen::MatrixXd frontier_top,frontier_residual;
+  if(optimized && !faults.empty()){
+   // Only the old retained rows carry a retired mode. Transform their common
+   // basis once; no probability identity or cross-leaf Gram is shared.
+   Eigen::MatrixXd basis=Eigen::MatrixXd::Zero(m,old);basis.topRows(old).setIdentity();
+   Eigen::MatrixXd qbasis=qr.householderQ().adjoint()*basis;
+   frontier_top=qbasis.topRows(keep);
+   Eigen::MatrixXd joint(m-keep,old+1);joint.leftCols(old)=qbasis.bottomRows(m-keep);joint.col(old)=rotated.tail(m-keep);
+   Eigen::HouseholderQR<Eigen::MatrixXd> residual_qr(joint);
+   frontier_residual=(residual_qr.householderQ().adjoint()*joint).topRows(std::min(m-keep,old+1));++frontier_kernels;
+  }
   for(auto& item:faults){auto& f=item.second;Eigen::MatrixXd fb=Eigen::MatrixXd::Zero(m,f.top.cols());fb.topRows(old)=f.top;
    auto it=b.find(item.first);if(it!=b.end())fb.bottomRows(a.rows())=it->second;
    bool nonzero=it!=b.end() && (it->second.array()!=0.).any();f.ever_nonzero=f.ever_nonzero || nonzero;
    if(f.alias_state==-2 && nonzero)f.alias_state=-1;
    if(f.alias_state>=0){bool alias=it!=b.end()?(it->second.col(0).array()==a.col(f.alias_state).array()).all():(a.col(f.alias_state).array()==0.).all();if(!alias)f.alias_state=-1;}
-   Eigen::MatrixXd transformed=qr.householderQ().adjoint()*fb;
-   appendResidual(f,transformed.bottomRows(m-keep),rotated.tail(m-keep));f.top=transformed.topRows(keep);
+   if(optimized && !nonzero){
+    Eigen::MatrixXd residual_b=frontier_residual.leftCols(old)*f.top;
+    appendResidual(f,residual_b,frontier_residual.col(old));f.top=(frontier_top*f.top).eval();++frontier_fault_transforms;
+   }else{
+    Eigen::MatrixXd transformed=qr.householderQ().adjoint()*fb;
+    appendResidual(f,transformed.bottomRows(m-keep),rotated.tail(m-keep));f.top=transformed.topRows(keep);++full_fault_transforms;
+   }
   }
   auto fault_end=std::chrono::steady_clock::now();
   append_fault_ms+=std::chrono::duration<double,std::milli>(fault_end-fault_begin).count();

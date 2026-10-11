@@ -13,7 +13,7 @@ int main(){
  double old_threshold=boost::math::quantile(boost::math::complement(boost::math::chi_squared(169),1e-6));
  require(regression.dof==248 && regression.statistic>old_threshold && regression.statistic<regression.threshold,"epoch31 dimension regression");
  std::cout<<"DIMENSION_REGRESSION dof="<<regression.dof<<" statistic="<<regression.statistic<<" threshold="<<regression.threshold<<" old_threshold="<<old_threshold<<" alarm=0\n";
- for(double correlation:{0.,.35,-.2})for(int removed:{-1,3,14})for(int dimension:{1,6}){
+ for(bool optimized:{false,true})for(double correlation:{0.,.35,-.2})for(int removed:{-1,3,14})for(int dimension:{1,6}){
   const int m=24,n=6;Eigen::MatrixXd a(m,n),b=Eigen::MatrixXd::Zero(m,dimension);Eigen::VectorXd z(m);
   for(int i=0;i<m;++i){z(i)=.01*std::sin(.7*i);for(int j=0;j<n;++j)a(i,j)=std::sin(.43*(i+1)*(j+1))+(i==j?2.:0.);}
   for(int k=0;k<dimension;++k){b(2+k,k)=1.;b(8+k,k)=.7;b(17+k,k)=-.2;} // one physical latent response spans three blocks
@@ -24,7 +24,7 @@ int main(){
   Eigen::LLT<Eigen::MatrixXd> chol(principal(sigma,rows));Eigen::MatrixXd aw=chol.matrixL().solve(ar),bw=chol.matrixL().solve(br);Eigen::VectorXd zw=chol.matrixL().solve(zr);
   Eigen::MatrixXd c=Eigen::MatrixXd::Zero(3,n);c.rightCols(3).setIdentity();
   auto oracle=gaussianReference(ar,zr,principal(sigma,rows),c,{br},1e-6,1e-9);
-  GaussianSufficientSummary summary(n);summary.declareFault("physical-episode",dimension);
+  GaussianSufficientSummary summary(n);summary.optimized=optimized;summary.declareFault("physical-episode",dimension);
   for(int first=0;first<aw.rows();first+=7){int length=std::min(7,int(aw.rows())-first);summary.append(aw.middleRows(first,length),zw.segment(first,length),{{"physical-episode",bw.middleRows(first,length)}});}
   auto before=summary.evaluate(c,1e-6,1e-9);
   require(before.reference.status==oracle.status && before.reference.dof==oracle.dof && before.total_rank==n,"rank/dof/status");

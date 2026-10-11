@@ -7,6 +7,7 @@ namespace uwb_imu_pl::research {
 struct OnlineGaussianHistory::Impl {
  struct WhiteBlock {Eigen::MatrixXd a;Eigen::VectorXd z;std::map<std::string,Eigen::MatrixXd> b;};
  struct Mode {std::string id;AnchorId anchor;size_t onset;int duration;};
+ bool optimized;
  size_t lag,frontier=0,epoch=0;int duration;double sa,sg;Eigen::Vector3d lever;
  GaussianSufficientSummary history{21};
  std::map<uint64_t,PendingFactorGroup> groups;
@@ -30,8 +31,9 @@ struct OnlineGaussianHistory::Impl {
  mutable size_t state_decompositions=0,fault_products=0;
  LinearizationVersion prepared_version;
  size_t original_rows=0;
- Impl(size_t w,int d,double a,double g,Eigen::Vector3d l):lag(w),duration(d),sa(a),sg(g),lever(l){
+ Impl(size_t w,int d,double a,double g,Eigen::Vector3d l,bool opt):optimized(opt),lag(w),duration(d),sa(a),sg(g),lever(l){
   if(w<2 || d<1 || !(a>0 && g>0))throw std::runtime_error("invalid online history model");
+  history.optimized=optimized;
   Eigen::MatrixXd prior=Eigen::MatrixXd::Zero(6,21);prior.rightCols(6).setIdentity();history.append(prior,Eigen::VectorXd::Zero(6),{});
  }
  static size_t endEpoch(const PendingFactorGroup& g){size_t e=0;for(auto key:g.keys)e=std::max(e,(size_t)gtsam::Symbol(key).index());return e;}
@@ -51,6 +53,15 @@ struct OnlineGaussianHistory::Impl {
  }
  std::map<std::string,Eigen::MatrixXd> faultRows(const PendingFactorGroup& g)const{
   std::map<std::string,Eigen::MatrixXd> out;if(g.sensor!=SensorType::Uwb)return out;
+  if(optimized){
+   // Temporal incidence is exact: scalar onset1/length3 leaves cover only
+   // these raw UID rows. Missing entries are literal zero, not dropped leaves.
+   for(size_t row=0;row<g.source_measurements.size();++row){auto source=lineage.find(g.source_measurements[row].value());if(source==lineage.end())throw std::runtime_error("UNAVAILABLE_UWB_SOURCE_LINEAGE");
+    size_t e=source->second.first;for(int length:{1,duration})for(size_t onset=e>=size_t(length)?e-length+1:1;onset<=e;++onset){
+     std::string id="prefix-anchor:"+std::to_string(source->second.second.value())+":onset:"+std::to_string(onset)+":duration:"+std::to_string(length);
+     auto found=out.find(id);if(found==out.end())found=out.emplace(id,Eigen::MatrixXd::Zero(g.source_measurements.size(),1)).first;found->second(row)=1.;}
+   }return out;
+  }
   for(const auto& mode:modes){Eigen::MatrixXd b=Eigen::MatrixXd::Zero(g.source_measurements.size(),1);
    for(size_t i=0;i<g.source_measurements.size();++i){auto it=lineage.find(g.source_measurements[i].value());if(it==lineage.end())throw std::runtime_error("UNAVAILABLE_UWB_SOURCE_LINEAGE");
     if(it->second.second==mode.anchor && it->second.first>=mode.onset && it->second.first<mode.onset+mode.duration)b(i)=1.;}
@@ -100,7 +111,7 @@ struct OnlineGaussianHistory::Impl {
   target.append(a,z,b);
  }
  GaussianSufficientSummary query(const EpochTransaction& tx,const ExclusionAction* action)const{
-  size_t first=epoch>lag+1?epoch-lag-1:0;GaussianSufficientSummary result=history;result.append_state_ms=0.;result.append_fault_ms=0.;result.addStateColumns(21*(epoch-first));std::vector<WhiteBlock> batch;
+  size_t first=epoch>lag+1?epoch-lag-1:0;GaussianSufficientSummary result=history;result.append_state_ms=0.;result.append_fault_ms=0.;result.full_fault_transforms=0;result.frontier_fault_transforms=0;result.frontier_kernels=0;result.addStateColumns(21*(epoch-first));std::vector<WhiteBlock> batch;
   for(size_t e=first+1;e<=epoch;++e)noisePrior(result,first,e,&batch);
   auto current=groups;current[tx.imu_group.id.value()]=tx.imu_group;for(const auto& g:tx.uwb_groups)if(g.nominal)current[g.id.value()]=g;
   if(action){if(action->bridge_mode!=BridgeMode::None)throw std::runtime_error("UNAVAILABLE_BRIDGE_SUMMARY_SCOPE");
@@ -124,10 +135,10 @@ struct OnlineGaussianHistory::Impl {
     for(auto measurement:replacement->source_measurements){auto row=std::find(g.source_measurements.begin(),g.source_measurements.end(),measurement);if(row!=g.source_measurements.end())retain.push_back(row-g.source_measurements.begin());}}
    if(!retain.empty()){std::sort(retain.begin(),retain.end());if(std::adjacent_find(retain.begin(),retain.end())!=retain.end())throw std::runtime_error("duplicate replacement source");appendBlock(result,g,first,epoch,&retain,&batch);}
   }
-  appendBatch(result,batch);++work.queries;work.query_columns+=modes.size();work.query_state_qr_ms+=result.append_state_ms;work.query_fault_qr_ms+=result.append_fault_ms;return result;
+  appendBatch(result,batch);++work.queries;work.query_columns+=modes.size();work.query_state_qr_ms+=result.append_state_ms;work.query_fault_qr_ms+=result.append_fault_ms;work.full_fault_transforms+=result.full_fault_transforms;work.frontier_fault_transforms+=result.frontier_fault_transforms;work.frontier_kernels+=result.frontier_kernels;return result;
  }
 };
-OnlineGaussianHistory::OnlineGaussianHistory(size_t lag,int duration,double sa,double sg,Eigen::Vector3d lever):impl(new Impl(lag,duration,sa,sg,lever)){}
+OnlineGaussianHistory::OnlineGaussianHistory(size_t lag,int duration,double sa,double sg,Eigen::Vector3d lever,bool optimized):impl(new Impl(lag,duration,sa,sg,lever,optimized)){}
 OnlineGaussianHistory::~OnlineGaussianHistory()=default;
 void OnlineGaussianHistory::prepare(const EpochTransaction& tx){auto& s=*impl;auto timing_begin=std::chrono::steady_clock::now();s.work={};
  if(tx.proposed_epoch!=s.epoch+1 || tx.proposed_epoch>50)throw std::runtime_error("UNAVAILABLE_HISTORY_SEQUENCE_OR_HORIZON");
