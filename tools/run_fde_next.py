@@ -42,8 +42,11 @@ def read_matrices(path):
     return matrices, metadata
 
 
-def compare_rows(a, b):
+def compare_rows(a, b, summary=False):
     excluded = {"core_ms", "commit_ms", "cycle_ms", "end_to_end_ms", "cleanup_ms", "gaussian_decompositions", "source_products", "covariance_fallback"}
+    if summary:
+        excluded |= {"model", "cols", "noise_source_columns", "integrations", "cross_covariance",
+                     "summary_bytes", "summary_rows", "summary_updates", "summary_frontier"}
     for key in a.keys() - excluded:
         try:
             av, bv = float(a[key]), float(b[key])
@@ -51,7 +54,8 @@ def compare_rows(a, b):
             if a[key] != b[key]:
                 raise RuntimeError(f"different result semantics: {key}")
             continue
-        if not np.isclose(av, bv, rtol=1e-10, atol=1e-10, equal_nan=True):
+        strict = key in {"frozen_union_charge", "raw_total_risk", "detector_dof", "updates", "selected", "selected_action", "formal_eligible", "publication_protected", "alarm", "rows", "reference_faults", "actions", "post", "pl_evaluated", "proof_entries"}
+        if not np.isclose(av, bv, rtol=1e-7 if summary and not strict else 1e-10, atol=1e-7 if summary and not strict else 1e-14, equal_nan=True):
             raise RuntimeError(f"different result: {key}: {av} vs {bv}")
 
 
@@ -99,7 +103,7 @@ def main():
     env.pop("FDE_NEXT_NUMERIC_AUDIT", None)
     if args.build:
         subprocess.run(["cmake", "-S", str(ROOT), "-B", str(BUILD)], cwd=ROOT, env=env, check=True)
-        subprocess.run(["cmake", "--build", str(BUILD), "--target", "fde_next_runner", "fde_next_checks", "-j2"], env=env, check=True)
+        subprocess.run(["cmake", "--build", str(BUILD), "--target", "fde_next_runner", "fde_next_checks", "fde_summary_checks", "fde_online_checks", "-j2"], env=env, check=True)
     with tempfile.TemporaryDirectory(prefix="fde-next-") as temp:
         tmp = Path(temp)
         if args.initial_law == "gaussian":
@@ -121,14 +125,21 @@ def main():
         def run(name, scene, scope, epochs, numeric, attempts=None, audit=False, seed=None, continuous=False):
             path = tmp / (name + ".csv")
             cmd = [str(BIN / "fde_next_runner"), str(args.config), str(path), scene, scope,
-                   str(args.seed if seed is None else seed), str(epochs), numeric]
+                   str(args.seed if seed is None else seed), str(epochs), "optimized" if continuous and args.online_summary else numeric]
             if attempts is not None:
                 cmd.append(str(attempts))
             if continuous:
                 cmd.extend(["1", "continuous"])
             current = dict(env)
+            if continuous and args.online_summary:
+                current.pop("FDE_NEXT_ONLINE_SUMMARY", None)
+                current.pop("FDE_NEXT_USE_PREFIX_REFERENCE", None)
+                current["FDE_NEXT_USE_PREFIX_REFERENCE" if numeric == "reference" else "FDE_NEXT_ONLINE_SUMMARY"] = "1"
             if audit:
                 current["FDE_NEXT_NUMERIC_AUDIT"] = str(tmp / (name + ".matrices"))
+            if continuous:
+                current["FDE_NEXT_PROFILE"] = "1"
+                cmd = ["/usr/bin/time", "-f", "MAX_RSS_KB=%M", "-o", str(tmp / (name + ".rss"))] + cmd
             before = time.perf_counter()
             result = subprocess.run(cmd, cwd=ROOT, env=current, text=True, capture_output=True)
             process_seconds = time.perf_counter() - before
@@ -146,7 +157,7 @@ def main():
             scene = "I2" if args.command == "recovery" else args.scene
             scope = "imu-diagnostic" if args.command == "recovery" else args.scope
             path, wall = run("run", scene, scope, args.epochs or (32 if args.command == "history" else 50), args.numeric)
-            if args.command in ["history", "recovery"] or args.initial_law == "gaussian":
+            if args.command in ["history", "recovery"] or args.initial_law == "gaussian" or args.online_summary:
                 for line in (tmp / "run.log").read_text().splitlines():
                     if line.startswith(("HISTORY", "RAW_PREFIX_HISTORY", "RAW_DOMAIN", "G_TAG_CONTRACTION", "BOUNDED_RECOVERY", "IMU_POSITION_FUNCTIONAL", "ONLINE_SUMMARY")):
                         print(line)
@@ -188,14 +199,24 @@ def main():
                     for line in path.with_suffix(".log").read_text().splitlines():
                         if line.startswith("STREAM_PHASES"):
                             print(line, flush=True)
+                    profiles = [dict(item.split("=") for item in line.split()[1:]) for line in path.with_suffix(".log").read_text().splitlines() if line.startswith("PROFILE ")]
+                    if len(profiles) != 35:
+                        raise RuntimeError("expected35 measured phase profiles after13 prewarm")
+                    print("STREAM_PHASE_MEANS_MS", scene, numeric, {key: round(float(np.mean([float(x[key]) for x in profiles])),3) for key in profiles[0]}, flush=True)
                     if len(rows) != 35 or [int(x["epoch"]) for x in rows] != list(range(14,49)):
                         raise RuntimeError("stream must measure35 consecutive epochs14–48")
                     if reference_rows is None:
                         reference_rows = rows
                     else:
                         for left, right in zip(reference_rows, rows):
-                            compare_rows(left, right)
+                            compare_rows(left, right, summary=args.online_summary)
                         print(f"STREAM_PAIR {scene} all35 result semantics agree", flush=True)
+                    if any(x["updates"] != "1" or x["formal_eligible"] != "0" or x["publication_protected"] != "0" for x in rows):
+                        raise RuntimeError("stream single commit / research qualification regression")
+                    if scene == "U1" and (sum(x["exclusion"] == "1" and x["correct"] == "1" for x in rows) != 1 or
+                                          any(x["selected"] != "1" for x in rows if int(x["epoch"]) in range(16,20))):
+                        raise RuntimeError("U1 exclusion or four followups regression")
+                    print("STREAM_RSS", scene, numeric, path.with_suffix(".rss").read_text().strip(), flush=True)
                     values = lambda key: np.array([float(x[key]) for x in rows])
                     core, full = values("core_ms"), values("end_to_end_ms")
                     wait = np.zeros(35)
@@ -210,7 +231,7 @@ def main():
                           ["epoch", "timestamp_ns", "selected_action", "removed_groups", "correct", "core_ms", "end_to_end_ms"]}
                           for x in rows if x["alarm"]=="1"], flush=True)
                     print("STREAM_COUNTS", scene, numeric, {key: (min(values(key)), max(values(key))) for key in
-                          ["rows", "cols", "noise_source_columns", "reference_faults", "actions", "post", "pl_evaluated", "integrations", "gaussian_decompositions", "source_products", "covariance_fallback"]},
+                          ["rows", "cols", "noise_source_columns", "reference_faults", "actions", "post", "pl_evaluated", "integrations", "gaussian_decompositions", "source_products", "covariance_fallback", "detector_dof", "summary_bytes", "summary_rows", "summary_updates", "summary_frontier"]},
                           f"rejected={sum(x['selected']!='1' for x in rows)} dropped=0 unfinished=0 queue_drained_after_last_arrival_ms={wait[-1]+full[-1]:.3f}", flush=True)
         else:
             results = {}

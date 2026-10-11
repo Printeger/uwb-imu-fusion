@@ -57,14 +57,14 @@ int main(int argc,char** argv){try{
  auto generation_end=Clock::now();
  bool continuous=argc>9 && std::string(argv[9])=="continuous";
  bool benchmark=argc>8 && !continuous;int attempts=benchmark?std::stoi(argv[8]):1;
- std::string numeric=argc>7?argv[7]:"reference";bool profile=numeric=="profile";bool optimized=numeric=="optimized";
+ std::string numeric=argc>7?argv[7]:"reference";bool profile=numeric=="profile" || std::getenv("FDE_NEXT_PROFILE")!=nullptr;bool optimized=numeric=="optimized";
  if(numeric!="reference" && numeric!="profile" && numeric!="optimized")throw std::runtime_error("unsupported numerical mode");
  if(attempts<1 || attempts>35 || (benchmark && scope!="uwb"))throw std::runtime_error("invalid benchmark workload");
  double alpha=law["alpha_per_test"].as<double>(),tail=law["noise_tail_per_candidate"].as<double>();
  double task_risk=std::nextafter(2*tail*law["epochs"].as<int>()*law["max_candidates"].as<int>(),INFINITY);
  if(task_risk>law["risk_budget"].as<double>())throw std::runtime_error("risk precheck rejects before replay");
  std::ofstream out(argv[2]);if(!out)throw std::runtime_error("output unavailable");out<<std::setprecision(17);
- out<<"epoch,alarm,statistic,threshold,rows,cols,hypotheses,actions,numerical,post,pl_evaluated,selected,exclusion,correct,updates,error,hpl,vpl,reference_x,reference_y,reference_z,commit_x,commit_y,commit_z,core_ms,commit_ms,cycle_ms,cross_covariance,integrations,status,frozen_union_charge,raw_qualified,formal_eligible,publication_protected,increment_error,rotation_rpe,velocity_error,se3_translation_rpe,final_local_available,legacy_alarm,current_tag_local_hpl,current_tag_local_vpl,future_state_status,raw_total_risk,model,scope,protection_point,timestamp_ns,attempt,end_to_end_ms,cleanup_ms,gaussian_decompositions,proof_entries,selected_action,removed_groups,initial_law_valid,adaptive_event_valid,range_domain_valid,range_remainder_m,raw_domain_status,history_fixed_model_valid,noise_source_columns,reference_faults,source_products,covariance_fallback,attitude_error_rad\n";
+ out<<"epoch,alarm,statistic,threshold,rows,cols,hypotheses,actions,numerical,post,pl_evaluated,selected,exclusion,correct,updates,error,hpl,vpl,reference_x,reference_y,reference_z,commit_x,commit_y,commit_z,core_ms,commit_ms,cycle_ms,cross_covariance,integrations,status,frozen_union_charge,raw_qualified,formal_eligible,publication_protected,increment_error,rotation_rpe,velocity_error,se3_translation_rpe,final_local_available,legacy_alarm,current_tag_local_hpl,current_tag_local_vpl,future_state_status,raw_total_risk,model,scope,protection_point,timestamp_ns,attempt,end_to_end_ms,cleanup_ms,gaussian_decompositions,proof_entries,selected_action,removed_groups,initial_law_valid,adaptive_event_valid,range_domain_valid,range_remainder_m,raw_domain_status,history_fixed_model_valid,noise_source_columns,reference_faults,source_products,covariance_fallback,attitude_error_rad,detector_dof,summary_bytes,summary_rows,summary_updates,summary_frontier\n";
  std::unique_ptr<std::ofstream> audit;
  if(const char* path=std::getenv("FDE_NEXT_NUMERIC_AUDIT")){
   if(!benchmark || attempts!=1)throw std::runtime_error("numeric audit requires one benchmark snapshot");
@@ -399,12 +399,13 @@ int main(int argc,char** argv){try{
    dump("actual_recipe_add",add);dump("actual_recipe_remove",remove);
   }
   if(benchmark && (!selected || (kind=="U1" && correct!=1)))throw std::runtime_error("benchmark requires successful declared normal/recovery workload");
+  if(online){online_counts=online->counts();decompositions=online_counts.state_decompositions;joint.source_products=online_counts.fault_products;}
   if(prefix_enabled)raw_prefix_history.committed(tx,plan);
   if(online)online->committed(tx,plan);
-  auto core_end=Clock::now();auto receipt=estimator.commitEpoch(std::move(tx),plan);auto state=estimator.currentState();auto tag=state.position_world_m+state.q_world_body*scene.lever;
+  auto core_end=Clock::now();auto receipt=estimator.commitEpoch(std::move(tx),plan);auto state=estimator.currentState();Eigen::Vector3d tag=state.position_world_m+state.q_world_body*scene.lever;
   Eigen::Vector3d pl=selected?Eigen::Vector3d((functional_selected?functional_pl:selected_ref.pl)+(tag-reference).cwiseAbs()):Eigen::Vector3d::Constant(INFINITY);
   double hpl=pl.head<2>().norm(),vpl=pl.z();if(selected && !functional_selected)status="LINEARIZATION_UNQUALIFIED";else if(functional_selected)status="CURRENT_POSITION_CONDITIONAL_NAVIGATION_UNPROTECTED";else {++failures;if(scope=="imu-diagnostic" && alarm && numerical==0)status="IMU_CANDIDATE_DOMAIN_OR_PROVENANCE_FAILED";}
-  auto truth=scene.truth(e*scene.dt);auto truth_tag=truth.position_world_m+truth.q_world_body*scene.lever;
+  auto truth=scene.truth(e*scene.dt);Eigen::Vector3d truth_tag=truth.position_world_m+truth.q_world_body*scene.lever;
   double inc=((tag-previous_tag)-(truth_tag-(previous_truth.position_world_m+previous_truth.q_world_body*scene.lever))).norm();
   double rot=Eigen::AngleAxisd((previous_rotation.conjugate()*state.q_world_body).conjugate()*(previous_truth.q_world_body.conjugate()*truth.q_world_body)).angle();
   double se3_translation=(previous_rotation.conjugate()*(state.position_world_m-previous_body)-previous_truth.q_world_body.conjugate()*(truth.position_world_m-previous_truth.position_world_m)).norm();
@@ -428,12 +429,12 @@ int main(int argc,char** argv){try{
   if(benchmark || continuous){benchmark_record=row.str();measured_compute=core+commit;
    std::ostringstream suffix;suffix<<decompositions<<','<<arena.entryCount()<<','<<(selected?actions[best].id.value():0)<<',';
    if(selected)for(auto id:actions[best].groups_to_remove)suffix<<id.value()<<';';
-   suffix<<','<<domain_assessment.initial_law_valid<<','<<domain_assessment.adaptive_event_valid<<','<<domain_assessment.range_domain_valid<<','<<domain_assessment.range_remainder<<','<<domain_assessment.status<<','<<joint.history_qualified<<','<<(online?online_counts.source_columns:joint.noise_j.cols())<<','<<(online?online_counts.fault_modes:joint.faults.size())<<','<<joint.source_products<<','<<joint.covariance_fallback<<','<<attitude_error;
+   suffix<<','<<domain_assessment.initial_law_valid<<','<<domain_assessment.adaptive_event_valid<<','<<domain_assessment.range_domain_valid<<','<<domain_assessment.range_remainder<<','<<domain_assessment.status<<','<<joint.history_qualified<<','<<(online?online_counts.source_columns:joint.noise_j.cols())<<','<<(online?online_counts.fault_modes:joint.faults.size())<<','<<joint.source_products<<','<<joint.covariance_fallback<<','<<attitude_error<<','<<raw_detector.dof<<','<<(online?online_counts.bytes:0)<<','<<(online?online_counts.history_rows:0)<<','<<(online?online_counts.orthogonal_updates:0)<<','<<(online?online_counts.frontier_epoch:0);
    benchmark_suffix=suffix.str();
    if(continuous){stream_record=benchmark_record;stream_suffix=benchmark_suffix;stream_compute=measured_compute;}}
   else {out<<row.str()<<','<<attempt<<','<<(core+commit)<<",0,"<<decompositions<<','<<arena.entryCount()<<','<<(selected?actions[best].id.value():0)<<',';
    if(selected)for(auto id:actions[best].groups_to_remove)out<<id.value()<<';';
-   out<<','<<domain_assessment.initial_law_valid<<','<<domain_assessment.adaptive_event_valid<<','<<domain_assessment.range_domain_valid<<','<<domain_assessment.range_remainder<<','<<domain_assessment.status<<','<<joint.history_qualified<<','<<(online?online_counts.source_columns:joint.noise_j.cols())<<','<<(online?online_counts.fault_modes:joint.faults.size())<<','<<joint.source_products<<','<<joint.covariance_fallback<<','<<attitude_error<<'\n';}
+   out<<','<<domain_assessment.initial_law_valid<<','<<domain_assessment.adaptive_event_valid<<','<<domain_assessment.range_domain_valid<<','<<domain_assessment.range_remainder<<','<<domain_assessment.status<<','<<joint.history_qualified<<','<<(online?online_counts.source_columns:joint.noise_j.cols())<<','<<(online?online_counts.fault_modes:joint.faults.size())<<','<<joint.source_products<<','<<joint.covariance_fallback<<','<<attitude_error<<','<<raw_detector.dof<<','<<(online?online_counts.bytes:0)<<','<<(online?online_counts.history_rows:0)<<','<<(online?online_counts.orthogonal_updates:0)<<','<<(online?online_counts.frontier_epoch:0)<<'\n';}
   if(online && !benchmark && !continuous && (e==15 || (e>=30 && e<=32)))std::cout<<"ONLINE_SUMMARY epoch="<<e<<" dof="<<raw_detector.dof<<" active_states="<<online_counts.active_states<<" history_rows="<<online_counts.history_rows<<" faults="<<online_counts.fault_modes<<" numeric_bytes_lower="<<online_counts.bytes<<" frontier="<<online_counts.frontier_epoch<<" ortho_updates="<<online_counts.orthogonal_updates<<"\n";
   if(profile){auto ms=[](auto a,auto b){return std::chrono::duration<double,std::milli>(b-a).count();};
    std::cout<<"PROFILE prep="<<ms(start,t_window)<<" models="<<ms(t_window,t_models)<<" raw_cov="<<ms(t_models,t_raw)<<" detector="<<ms(t_raw,t_detector)<<" evidence_actions="<<ms(t_detector,t_actions)<<" candidates="<<ms(t_actions,core_end)<<" commit_final="<<commit<<'\n';}

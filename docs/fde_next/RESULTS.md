@@ -783,12 +783,13 @@ necessary for these tables. R validation/measurement savepoint is `556d214`; fin
 that owned temporary artifacts were cleaned. All numerical source remains
 `a53de94`; this final document change needs no repeated test or timing.
 
-## Online Gaussian sufficient summary (active new Goal)
+## Online Gaussian sufficient summary — finite fixed-model delivery
 
 Actual baseline HEAD `50ca054`, clean tree; HGIR is not repeated. This task keeps
-raw/nonlinear/hardware qualification unchanged and targets incremental algebra
-and bounded historical state cost. Owned temporary cache:
-`.cache/fde-online-summary/run-20261011/`; retain while this Goal is active.
+raw/nonlinear/hardware qualification unchanged and delivers incremental algebra
+and bounded historical state cost. Temporary products belonged only to
+`.cache/fde-online-summary/run-20261011/` and are removed after this conclusion
+is checked. No push, backup, dataset copy or additional figure.
 
 WP1 implements `gaussian_sufficient_summary.hpp`, independent of the estimator.
 Orthogonal append/old-state retirement maintains a state square root, transformed
@@ -802,7 +803,8 @@ protection map. Late historical fault insertion without proof of zero past
 support throws UNAVAILABLE rather than inventing zero response.
 
 `fde_summary_checks` compares18 deterministic parameter combinations (3 covariance
-cross terms x3 raw deletion choices x scalar/six-axis shared fault dimensions), before/after3-state retirement, to the
+cross terms x3 raw deletion choices x scalar/six-axis shared fault dimensions),
+before/after3-state retirement, to the
 unchanged dense SVD oracle. Rank/dof, statistic/threshold/status, mean/covariance,
 fault Gram/profile/estimated amplitude/protected response and coordinate PL
 agree at1e-11 relative+absolute scales (PL1e-10). Shared-source latent-variable
@@ -819,14 +821,6 @@ old fault responses. The implementation retains every declared leaf separately;
 its mode memory may grow. Joint modes need their own predeclared multi-column
 square root; cross-leaf Grams cannot be invented after retirement.
 
-Reproduce: build/run `fde_summary_checks` in the existing private Release build.
-Next active work is real lifecycle integration: whiten each PIM conditional on
-its two shared6D ADC boundary sources, preserve the single source prior, retire
-only factors whose BOTH state charts have frozen, rebuild only the active suffix
-for relinearization/candidate deletion, and compare against the unchanged full
-raw-prefix reference at15/30/31/32. No online performance or full-delivery claim
-is made at this WP1 savepoint.
-
 WP2 integration now runs `OnlineGaussianHistory` through the existing research
 runner, Evidence/candidates, center transfer and actual backend transaction under
 `--online-summary`. Retired state charts freeze at the same point as the original
@@ -840,7 +834,7 @@ WP3: actual U0 snapshots30/31/32 agree with the unchanged full raw-prefix
 oracle: dof240/248/256, S254.384/272.988/275.005, threshold/alarm/status,
 original physical rank, current and ALL historical15-state means and covariance
 blocks, tag mean/coordinate PL, and all480/496/512 historical fault Grams,
-profiles and protected responses. Compare physical quantities at relative+absolute
+profiles/estimated amplitudes, monitorability and protected responses. Compare physical quantities at relative+absolute
 1e-7 in their native rad/m/mps/bias units (coordinate PL1e-6m); fixed dimensionless
 prototype1e-11. Rank/status are exact assertions. The separately constructed
 273.201 regression has ν248 and threshold368.599 rather than old169/271.190;
@@ -863,8 +857,12 @@ only within the exact live transaction, parameters and protection chart.
 Candidate deletion rebuilds the finite suffix with principal covariance
 selection; retired/unknown source deletion, bridge/IMU scopes, changed sample
 continuity/model and stale post-commit roots refuse. These are executable
-refusals, not recycled PLs. Matrix lower bounds at12/31/32 are
-4,284,168/4,926,256/4,969,448 bytes at12/31/32; epoch50 retains800
+refusals, not recycled PLs. Conditional covariance must be finite/symmetric and
+LLT-positive; deficient old/live state rank and unresolved tiny fault singular
+values are INDETERMINATE. Exact harmless aliases require literal raw lineage
+witnesses; AL/tie grey bands in the online selector refuse rather than granting
+a floating-point equality certificate. No normal inversion or gauge jitter. Matrix lower bounds at12/31/32 are
+4,284,168/4,926,256/4,969,448 bytes; epoch50 retains800
 fault modes with5,746,904 bytes and the same252/21/726/1596 active counts.
 These include conditional chains and cached
 state matrices, excluding object/container overhead and peak workspace/RSS.
@@ -873,18 +871,143 @@ in the final diagnostic run;
 independent dense snapshot work is outside that timer. These are not final
 service-time results.
 
-U1 main seed actual19-epoch preliminary online run:19 backend commits,
-18 selected/available, one correct automatic range exclusion and0
-formal/protected. Final served HPL/VPL .827698/.941213m match former prefix
-results; GT is only scored after selection. Final continuous paired stream and
+Final U1 replay uses the actual selector and backend. Epoch15 automatically
+chooses action2, removes group15002 and commits exactly once. All four followups
+16–19 and30/31/32 remain selected; every measured epoch14–48 matches the dense
+prefix in detector/status, counts and final candidate decision, actual recipe,
+state/tag output, HPL/VPL, reference gates, frozen risk and qualification fields.
+The unchanged hypothesis/action generator receives identical native windows
+and detector thresholds, preserving candidate coverage and generator ordering.
+Both have35 selected outputs/35 backend updates, zero rejected, zero formal and
+zero protected. GT is used only for reporting error/correctness after selection.
 I2 scope rejection returns `UNAVAILABLE_ONLINE_SUMMARY_SCOPE` with zero CSV
-outputs; no long-IMU history gains qualification. Gaussian43 checks and existing
-9 transaction/proof +5 risk +3 publication filters all pass once after freeze. WP4 records new actual
-state decomposition/fault product counters, detector dof, matrix bytes,
-frontier and historical QR counts in the existing CSV entry. Final stream under
-`--online-summary` compares dense-prefix reference against incremental optimized
-with identical UWB leaf/candidate census; structural representation counters are
-reported separately, while all decision/risk/recipe fields are compared.
+outputs; no long-IMU history gains qualification. Retired-source deletion and
+stale post-commit roots are separately exercised in the actual history checker.
+Gaussian43 checks and existing9 transaction/proof +5 risk +3 publication filters
+all pass once after final numerical freeze. Probability/risk/AL and production
+proof/publication sources are unchanged.
+
+### WP4: one final same-model continuous pair
+
+Final review found the same output-tag/truth-tag Eigen temporary lifetime bug
+in the runner: `auto tag=p+q*lever` retains a reference to a destroyed quaternion
+product. Minimal GCC ASan `-fsanitize-address-use-after-scope` reproduction
+reports stack-use-after-scope; explicit Vector3d materialization passes. The
+initial output pair is superseded by the corrected pair below. Only these
+affected output/performance runs were repeated, as allowed for an actual bug;
+summary algebra and production safety sources are unchanged and were not rerun.
+
+The valid final pair comprises four sequential single-worker processes: U0/U1 x dense-prefix/incremental,
+13 prewarm epochs then35 measured consecutive epochs14–48, seed20261010. BOTH
+use the existing optimized S4 covariance and candidate baseline; `reference` in
+this table identifies the dense architecture. All35 result semantics agree per
+pair. Discrete/risk/recipe fields are checked strictly; physical floating fields
+have1e-7 relative+absolute native-unit tolerances. Matrix shape, logical model
+label and operation counters differ by representation and are reported separately.
+The independent snapshot tests compare actual matrices/coordinates/PL, not just
+this output comparison.
+
+| Scene/path | Core mean/median/P95/max ms | Full service mean/median/P95/max ms | Commit/cleanup median ms | Peak RSS KiB |
+|---|---|---|---|---:|
+| U0 dense | 2244.810/1725.470/5947.360/6849.223 | 2248.381/1728.904/5953.266/6854.796 | 1.721/1.578 | 205204 |
+| U0 incremental | 366.902/377.859/408.053/414.639 | 369.309/382.277/410.534/418.132 | 1.549/0.718 | 59248 |
+| U1 dense | 2247.944/1753.204/5940.515/6743.184 | 2251.297/1757.722/5945.442/6748.512 | 1.579/1.590 | 207812 |
+| U1 incremental | 374.104/384.333/418.146/530.658 | 376.483/386.341/421.374/532.744 | 1.690/0.675 | 61952 |
+
+Whole-service mean improves6.09x/5.98x, but ALL35 epochs on each path exceed
+40ms core/50ms service. New augmented state dimension252 (180 nav +72
+shared-source nuisance coordinates) is fixed versus old physical nav dimension
+225→735. New source/sensitivity counts726/1596 are fixed versus846→2886 and
+1862→6384. Historical UWB modes224→768, physical raw rows337→1119 (U1 final1118),
+and detector dof112→384 (U1 final383) are retained. The single removed range
+reduces U1 residual dimension by one legitimately; no historical dimensions or
+fault leaves disappear. Incremental summary has21 history rows, cumulative
+history orthogonal updates16→152 (four per subsequent retirement). The prepared
+suffix needs one additional QR per epoch, separate from that history counter.
+Candidate reconstruction needs an additional
+suffix QR for each non-KEEP query. State SVD census is2 per normal epoch,
+2–4 with the alarm candidate set; dense is1 and1–2. Online `source_products`
+records224→768 per-leaf fault products (up to720 at epoch15); the dense column
+counts27→95 raw covariance products, so these operation units must not be
+compared as equivalent. Persistent/local matrix lower bounds during this full
+pipeline are4.70→6.17MB for U0 and4.24→6.17MB for U1, distinct from RSS.
+Certificate/evidence census, candidate coverage and actual recipes are identical.
+
+Mean phase costs, ms (model prep includes online append/retire in its first
+phase; the candidate phase includes Gaussian fault PL, native certificate checks
+and center transfer, not a separately invented PL-only timer):
+
+| Scene/path | Preparation | Hypotheses | Raw model/covariance | Detector | Evidence/actions | Candidates incl. PL | Commit/finalization |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| U0 dense | 76.062 | 5.402 | 87.833 | 1981.322 | 39.980 | 54.211 | 1.665 |
+| U0 incremental | 139.603 | 5.562 | 0.191 | 88.137 | 40.995 | 92.414 | 1.677 |
+| U1 dense | 76.642 | 5.523 | 86.257 | 1979.679 | 40.772 | 59.072 | 1.698 |
+| U1 incremental | 140.577 | 5.668 | 0.190 | 87.504 | 40.758 | 99.406 | 1.663 |
+
+The old full-prefix detector SVD dominated the cycle; it has been replaced by
+a fixed252-column solve. Remaining costs are finite-suffix construction, the
+second state solve for fault PL, native Evidence and candidate checks. In the
+alarm epoch15, incremental latency532.744ms is WORSE than dense385.102ms:
+small-prefix candidate reuse beats the larger latent-source suffix there.
+This is disclosed, not hidden by the overall mean gain; no claim of faster
+alarm response or realtime protection. Detection and removal occur in the same
+750ms-input epoch with one commit; computation/service delay is additional.
+
+Generation≈9–10ms, initialization≈1.7–1.9ms; prefix prewarm13≈11ms, incremental
+prewarm≈323–326ms (its history is actually built), estimator teardown≈.6–1.7ms.
+Processes take78.730/13.277s (U0 dense/incremental) and78.831/13.521s (U1).
+A FIFO50ms arrival simulation from these measured services yields maximum queue
+70139/10808ms for U0 and70469/11058ms for U1; maximum latency and final drain
+76993/11226ms and77095/11477ms. This is modeled backlog, not a hardware arrival
+scheduler experiment. No drops, unfinished epochs or protected outputs.
+
+Same hardware/build as the existing R environment: Intel Core Ultra5 125H,
+Linux6.18.40.1 WSL2, Release GCC9 C++17 `-O3 -march=native`, Eigen3/GTSAM4.2,
+TBB one worker and OMP/BLAS/MKL1. No concurrent build/test/performance workloads.
+The sufficient-summary/library/checker freeze is `aea535f`; WP4 contains the
+measured runner/entry instrumentation, output-vector lifetime fix and this final
+table. There were no later numerical changes or repeat campaigns.
+
+### Completion boundary and reproduction
+
+A is delivered for the declared finite50-epoch fixed-chart Gaussian UWB scope:
+append/retire, original residual dimension, all configured historical leaves,
+shared raw ADC frontier, finite candidate deletion/replacement, protected PL,
+and the unchanged selector/actual commit are executable and oracle-consistent.
+The online branch does NOT construct or decompose all old raw rows/states.
+Its summary library keeps bounded active raw factors and frontier states; the
+existing localization backend and synthetic input storage are still included in
+process RSS. Per-fault profiles, lineage and conditional old-state recovery still grow linearly. Arbitrary new
+historic joint modes cannot be synthesized from independent leaf profiles;
+the independent information counterexample and executable UNAVAILABLE guard
+remain part of the delivered capability. This is not a constant-memory claim
+for an unlimited general fault/noise contract or an80-epoch raw qualification.
+
+B/C remain open: adaptive/nonlinear raw HMI, complete IMU/bias/process/history
+remainders and full-navigation I2 recovery, hardware statistical qualification,
+and40/50ms realtime. G/I core gaps in HGIR remain explicitly unclosed.
+`history_fixed_model_valid=1` is conditional algebra only; `raw_qualified`,
+`formal_eligible`, `publication_protected` stay0, raw total risk UNKNOWN and
+future navigation UNPROTECTED. Experiment is opt-in; default path stays intact.
+Further speed work would require safe reuse of the two state solves and finite
+candidate factorizations/native Evidence, not omitting faults or widening AL.
+No additional main route or repeated timing is needed for this delivered Goal.
+
+Reproduce from repository root:
+
+```sh
+python3 tools/run_fde_next.py summary --build
+python3 tools/run_fde_next.py check
+python3 tools/run_fde_next.py stream --online-summary
+python3 tools/run_fde_next.py run --online-summary --scene I2 --scope imu-diagnostic --epochs 32  # expected UNAVAILABLE/nonzero
+```
+
+The entry uses and deletes temporary CSV/matrix/log products. To constrain
+its temporary location, set TMPDIR to a fresh owned directory. Core production
+safety filters are the same9/5/3 commands recorded in the prior R section.
+Local savepoints: `c637052` (prototype), `0418cb0` (lifecycle), `aea535f`
+(full historical oracle/batched suffix), followed by WP4 final pairing commit.
+Only source/tests and this conclusion are retained; no new picture is necessary.
 
 A new translation unit exposed two dangling Eigen lazy expressions in the
 existing scenario generator (acceleration/tag), causing invalid UWB input before
