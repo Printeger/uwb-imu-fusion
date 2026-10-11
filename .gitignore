@@ -173,3 +173,12 @@ compile_commands.json
 /*.zip
 /.cache/
 /benchmark/.cache/
+
+# Epoch RAIM / fused-PL research scratch outputs (including TMPDIR=$PWD).
+# Keep algorithm sources, configs and compact reports/figures trackable.
+/epoch-architecture-*/
+/fde-next-*/
+/research/output/
+/docs/fde_next/raw/
+/docs/fde_next/snapshots/
+*.matrices
