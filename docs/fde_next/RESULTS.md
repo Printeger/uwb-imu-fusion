@@ -1224,3 +1224,13 @@ Local saves: A `4171c53`, B `745d99e`, C `5ddaf41`, D `77ab915`; final E
 commit changes only this conclusion. No push, binary/data/repository backup,
 extra figure or permanent logs/matrices are created. The owned run cache is
 cleaned after checking this table; existing user data are not deleted.
+
+
+## 单历元架构对照（2026-10-11）
+
+[ARCHITECTURE_DECISION.md](ARCHITECTURE_DECISION.md)：已实现纯 UWB slope
+RAIM/FDE 与当前融合 Gaussian 条件 PL，完成 U1/U2 原生恢复及负例验证。
+决策 **HYBRID**：轻量当前路径配合独立历史有效性/风险摘要，C 保留为历史
+研究参考；A 的 PL 仅保护纯 UWB tag，B 不继承完整历史/IMU/raw HMI 资格。
+共同 epoch14–20 B/C committed tag 相同；B full median约1–1.3ms，C约201–209ms，
+仅为不同 fault scope 的架构成本对照。生产概率、AL、预算及发布逻辑不变。
