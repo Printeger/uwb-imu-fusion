@@ -7,6 +7,7 @@ namespace uwb_imu_pl::research {
 struct HybridFixedLaw {
  int horizon=24, ranges=8, episode_duration=3;
  double epsilon=1e-6, budget=2e-6, alpha=1e-6;
+ bool simultaneous_projections=false;
  Eigen::MatrixXd F=Eigen::MatrixXd::Identity(15,15);
  Eigen::MatrixXd L=Eigen::MatrixXd::Zero(15,6);
  Eigen::MatrixXd H=Eigen::MatrixXd::Zero(8,15);
@@ -24,9 +25,14 @@ struct HybridFixedLaw {
  }
  bool same(const HybridFixedLaw& b)const{
   auto matrix=[](const Eigen::MatrixXd& x,const Eigen::MatrixXd& y){return x.rows()==y.rows() && x.cols()==y.cols() && x.allFinite() && y.allFinite() && x.isApprox(y,0);};
-  return reference_tag.isApprox(b.reference_tag,0) && horizon==b.horizon && ranges==b.ranges && episode_duration==b.episode_duration && epsilon==b.epsilon && budget==b.budget && alpha==b.alpha && initial_sigma==b.initial_sigma && process_sigma==b.process_sigma && endpoint_sigma==b.endpoint_sigma && range_sigma==b.range_sigma && matrix(F,b.F) && matrix(L,b.L) && matrix(H,b.H) && matrix(C,b.C);
+  return simultaneous_projections==b.simultaneous_projections && reference_tag.isApprox(b.reference_tag,0) && horizon==b.horizon && ranges==b.ranges && episode_duration==b.episode_duration && epsilon==b.epsilon && budget==b.budget && alpha==b.alpha && initial_sigma==b.initial_sigma && process_sigma==b.process_sigma && endpoint_sigma==b.endpoint_sigma && range_sigma==b.range_sigma && matrix(F,b.F) && matrix(L,b.L) && matrix(H,b.H) && matrix(C,b.C);
  }
- double radius()const{return std::sqrt(boost::math::quantile(boost::math::complement(
+ // A prior count of ALL retained histories, not the visited candidates.
+ // Each path has <=3 scalar output projections, one <=8D innovation,
+ // and <=16*horizon scalar historical-profile projections. Chi8 dominates
+ // their individual tails; a union with epsilon/count needs no independence.
+ double projectionCount()const{return horizon*(4.+16*horizon)*std::pow(9.,horizon);}
+ double radius()const{if(simultaneous_projections)return std::sqrt(boost::math::quantile(boost::math::complement(boost::math::chi_squared(8),epsilon/projectionCount())));return std::sqrt(boost::math::quantile(boost::math::complement(
   boost::math::chi_squared(21+horizon*(21+ranges)),epsilon)));}
 };
 struct HistorySegment {
@@ -58,7 +64,7 @@ class HybridHistoryProducer {
  struct Episode{std::string id;int onset,source,length;};
  std::vector<Episode> episodes_;
  HybridHistoryEvidence calculate()const{
-  HybridHistoryEvidence e;e.epoch=epoch_;e.generation=generation_;e.horizon=law_.horizon;
+  HybridHistoryEvidence e;if(law_.simultaneous_projections)e.model="hybrid-fixed-21-projections-v1";e.epoch=epoch_;e.generation=generation_;e.horizon=law_.horizon;
   e.radius=law_.radius();e.risk=law_.epsilon;e.retained_sources=sources_;
   if(!invalid_.empty()){e.status=invalid_;return e;}
   if(bytes()>max_bytes_){e.status="EXHAUSTED";return e;}

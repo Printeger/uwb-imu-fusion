@@ -505,3 +505,7 @@ target_link_libraries(fused_epoch_checks fde_research)
 
 add_executable(hybrid_checks EXCLUDE_FROM_ALL research/hybrid_checks.cpp research/hybrid_native_flow.cpp)
 target_link_libraries(hybrid_checks fde_research)
+
+# Isolated PL decomposition and joint-episode / simultaneous-projection oracle.
+add_executable(hybrid_tightening_checks EXCLUDE_FROM_ALL research/hybrid_tightening_checks.cpp research/hybrid_pl_diagnostics.cpp)
+target_link_libraries(hybrid_tightening_checks fde_research)

@@ -13,21 +13,32 @@ inline EpochRaim hybridCurrent(const UwbBatch& batch,
   return fusedCandidateNumerical(batch,excluded,prediction,lever,alpha,tail);
  },a.alarm);
 }
+inline bool hybridRawEpisodeColumns(const UwbBatch& batch,const HybridHistoryEvidence& history,std::vector<int>& columns){
+ columns.clear();for(const auto& segment:history.segments){int anchor,onset,duration;
+  if(!hybridEpisodeIdentity(segment.episode,anchor,onset,duration,true) || onset>int(history.epoch))return false;
+  int column=-1;for(size_t i=0;i<batch.measurements.size();++i)if(batch.measurements[i].anchor_id.value()==uint64_t(anchor))column=i;
+  if(column<0)return false;
+  columns.push_back(int(history.epoch+1)<onset+duration?column:-1);
+ }return true;
+}
 // Raw path consumes the extracted historical set and full joint prediction.
 // Its mathematical snapshot is diagnostic: random chart/nonlinear remainder
 // and hardware laws remain unqualified even when all numbers are finite.
 inline EpochRaim hybridRawCurrent(const UwbBatch& batch,const OnlinePreUwbEvidence& evidence,
  const Eigen::Vector3d& lever,const EpochRaim& a,bool fde,double alpha,
- Eigen::Vector3d* history_part=nullptr,double* eta=nullptr){
+ Eigen::Vector3d* history_part=nullptr,double* eta=nullptr,bool shared_episode=false){
  if(evidence.history.status!="BOUNDED" || evidence.transaction.value()==0 || evidence.excluded_batch!=batch.id || evidence.chart.timestamp!=batch.timestamp){EpochRaim r;r.status="HISTORY_EVIDENCE_REFUSED";return r;}
  auto c=tagMap(evidence.chart,lever);
  gtsam::Pose3 pose(gtsam::Rot3(evidence.chart.q_world_body.toRotationMatrix()),evidence.chart.position_world_m);
  gtsam::Matrix hp;Eigen::VectorXd innovation=-UwbPoseBatchFactor(1,batch,lever).evaluateError(pose,hp);
  Eigen::MatrixXd h=Eigen::MatrixXd::Zero(batch.measurements.size(),15);h.leftCols(6)=hp;
  innovation-=h*evidence.correction;
+ std::vector<int> continuing;
+ if(shared_episode && !hybridRawEpisodeColumns(batch,evidence.history,continuing)){EpochRaim r;r.status="HISTORY_EPISODE_PROVENANCE_REFUSED";return r;}
  auto candidate=[&](int excluded){EpochRaim r;r.excluded=excluded;
   if(!spatialAnchors(retainRanges(batch,excluded))){r.status="GEOMETRY_OR_MIRROR_UNQUALIFIED";return r;}
   auto bound=hybridBound(evidence.history.covariance,h,validatedUwbCovariance(batch),Eigen::MatrixXd::Zero(15,batch.measurements.size()),c,innovation,evidence.history,excluded,alpha,evidence.history.radius);
+  if(shared_episode)bound=hybridJointEpisodeBound(std::move(bound),h,c,innovation,evidence.history,continuing,evidence.history.radius);
   r.gaussian=bound.gaussian;r.retained=bound.retained;
   if(r.gaussian.gain.size())responses(r,c,15,bound.retained.size());
   r.status=bound.status=="FIXED_MODEL_VERIFIED"?"FROZEN_MODEL_ONLY":bound.status;

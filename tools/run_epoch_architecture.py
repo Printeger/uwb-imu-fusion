@@ -15,25 +15,62 @@ BIN = ROOT.parents[1] / 'devel/.private/uwb_imu_pl/lib/uwb_imu_pl'
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['check', 'compare', 'check-hybrid', 'hybrid', 'lifecycle'])
+    parser.add_argument('command', choices=['check', 'compare', 'check-hybrid', 'hybrid', 'lifecycle', 'check-tightening', 'diagnose-hybrid'])
     parser.add_argument('--build', action='store_true')
     parser.add_argument('--historical', action='store_true', help='execute existing C once per U0/U1, epochs14-20')
     parser.add_argument('--scene', choices=['U0','U1','U2','U3','I2','H1'], help='run just the selected fixed scene')
+    parser.add_argument('--joint-episode', action='store_true', help='use the verified shared-episode PL representation in the raw diagnostic HYBRID stream')
     args = parser.parse_args()
+    if args.joint_episode and args.command!='hybrid':
+        parser.error('--joint-episode requires hybrid')
     env = dict(os.environ, OMP_NUM_THREADS='1', OPENBLAS_NUM_THREADS='1', MKL_NUM_THREADS='1')
     env['LD_LIBRARY_PATH'] = str(BIN.parent) + ':' + env.get('LD_LIBRARY_PATH', '')
     for name in list(env):
         if name.startswith('FDE_'):
             env.pop(name)
+    env.pop('HYBRID_SHARED_EPISODE', None)
+    if args.joint_episode:
+        env['HYBRID_SHARED_EPISODE']='1'
     targets = ['epoch_raim_checks', 'fused_epoch_checks', 'epoch_raim_runner']
     if args.command in ('hybrid','check-hybrid','lifecycle'):
         targets = ['hybrid_checks', 'epoch_raim_runner']
+    if args.command in ('check-tightening','diagnose-hybrid'):
+        targets = ['hybrid_tightening_checks', 'hybrid_checks']
     if args.historical:
         targets.append('fde_next_runner')
     if args.build:
         subprocess.run(['cmake', '-S', str(ROOT), '-B', str(BUILD)], cwd=ROOT, env=env, check=True)
         subprocess.run(['cmake', '--build', str(BUILD), '--target', *targets, '-j2'], env=env, check=True)
     config = 'config/fde_next.yaml'
+    if args.command == 'check-tightening':
+        subprocess.run([str(BIN/'hybrid_tightening_checks')], cwd=ROOT, env=env, check=True)
+        return
+    if args.command == 'diagnose-hybrid':
+        cache = ROOT / '.cache/hybrid'
+        cache.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix='tightening-', dir=cache) as temp:
+            subprocess.run([str(BIN/'hybrid_tightening_checks'), config, temp], cwd=ROOT, env=env, check=True)
+            with (Path(temp)/'candidates.csv').open() as f:
+                rows = list(csv.DictReader(f))
+            assert len(rows)==36 and {(r['scene'],r['epoch']) for r in rows}=={(s,e) for s in ('U0','U1') for e in ('15','31')}
+            for r in rows:
+                assert r['qualified']=='0' and r['raw_risk']=='UNKNOWN'
+                old = np.array([sum(float(r[k+'_'+axis]) for k in ('nominal','threshold','noise','eta','history','center')) for axis in ('x','y','z')])
+                joint = np.array([sum(float(r[k+'_'+axis]) for k in ('nominal','joint_fault','center')) for axis in ('x','y','z')])
+                assert np.isclose(np.linalg.norm(old[:2]),float(r['old_hpl'])) and np.isclose(old[2],float(r['old_vpl']))
+                assert np.isclose(np.linalg.norm(joint[:2]),float(r['joint_hpl'])) and np.isclose(joint[2],float(r['joint_vpl']))
+                assert np.all(joint<=old+1e-8)
+            with (Path(temp)/'audit.csv').open() as f:
+                audits=list(csv.DictReader(f))
+            assert len(audits)==2 and all(r['epoch']=='31' for r in audits)
+            for r in audits:
+                assert float(r['P_raw_vs_prefix_relative'])<1e-6
+                print('RAW_AUDIT',r,flush=True)
+            with (Path(temp)/'intervals.csv').open() as f:
+                intervals=list(csv.DictReader(f))
+            assert intervals and all(r['epoch'] in ('15','31') for r in intervals)
+            print(f'DECOMPOSITION candidates={len(rows)} historical_intervals={len(intervals)} statistical_audits={len(audits)} all component sums/coverage/refusal labels PASS',flush=True)
+        return
     if args.command in ('check-hybrid','lifecycle'):
         subprocess.run([str(BIN / 'hybrid_checks'), config], cwd=ROOT, env=env, check=True)
         return
