@@ -75,7 +75,7 @@ int main(int argc,char** argv){try{
  bool online_reference=std::getenv("FDE_NEXT_ONLINE_SUMMARY")!=nullptr;
  if(online_reference && (scope!="uwb" || (kind!="U0" && kind!="U1" && kind!="U2" && kind!="U3")))throw std::runtime_error("UNAVAILABLE_ONLINE_SUMMARY_SCOPE");
  if(online_reference && std::getenv("FDE_NEXT_USE_PREFIX_REFERENCE"))throw std::runtime_error("choose online summary or dense prefix oracle");
- if(online_reference && std::getenv("FDE_NEXT_NUMERIC_AUDIT"))throw std::runtime_error("online uses independent oracle checks rather than identical raw matrices");
+ if(online_reference && std::getenv("FDE_NEXT_NUMERIC_AUDIT") && !std::getenv("FDE_FAULT_AUDIT"))throw std::runtime_error("online audit requires same-representation fault pair");
  bool imu_functional=std::getenv("FDE_NEXT_IMU_POSITION_FUNCTIONAL")!=nullptr;
  if(imu_functional && (scope!="imu-diagnostic" || kind!="I2"))throw std::runtime_error("position-functional recovery requires the declared I2 IMU-only synthetic scope");
  for(int attempt=0;attempt<attempts;++attempt){
@@ -242,7 +242,7 @@ int main(int argc,char** argv){try{
    else quarantine_active=false;
   }
   if(actions.size()>law["max_candidates"].as<unsigned>())throw std::runtime_error("candidate cap: union proof invalid");
-  if(audit){dump("raw_design",joint.a);dump("raw_covariance",joint.sigma);dump("raw_source_map",joint.noise_j);dump("raw_auxiliary_covariance",joint.auxiliary_sigma);dump("tag_map",joint.c);
+  if(audit){dump("raw_design",joint.a);dump("raw_covariance",joint.sigma);dump("raw_source_map",joint.noise_j);dump("raw_auxiliary_covariance",joint.auxiliary_sigma);dump("tag_map",joint.c);dump("native_tag_map",native_tag_map);
    for(size_t i=0;i<joint.faults.size();++i){dump("fault_"+std::to_string(i),joint.faults[i]);*audit<<"#mode "<<reference_modes[i].id.value()<<' '<<reference_modes[i].physical_source_id<<'\n';}}
   if(e==2 && !online){
    Eigen::LLT<Eigen::MatrixXd> check_cov(joint.sigma);
@@ -257,7 +257,7 @@ int main(int argc,char** argv){try{
   RankUpdateEvaluator evaluator(rc);auto base=evaluator.factorizeOnce(admission,actions);
   GaussianCandidateCache gaussian_cache(joint,reference_window,alpha,tail);size_t decompositions=1;
   auto candidateReference=[&](const ExclusionAction& action,bool fast,const GaussianReference* root,GaussianCandidateCache* cache){
-   if(online){++decompositions;try{return online->evaluate(tx,&action,alpha,tail,true).reference;}catch(const std::runtime_error&){return GaussianReference{};}}
+   if(online){++decompositions;try{auto result=online->evaluate(tx,&action,alpha,tail,true);if(audit){std::string prefix="action_"+std::to_string(action.id.value());*audit<<"#action "<<action.id.value();for(auto id:action.covered_modes)*audit<<' '<<id.value();*audit<<'\n';for(const auto& item:result.faults){*audit<<"#leaf "<<prefix<<' '<<item.first<<' '<<item.second.classification<<'\n';dump(prefix+item.first+"_gram",item.second.residual_gram);dump(prefix+item.first+"_profile",item.second.profile_rhs);dump(prefix+item.first+"_estimate",item.second.profile_estimate);dump(prefix+item.first+"_response",item.second.response);}}return result.reference;}catch(const std::runtime_error&){return GaussianReference{};}}
    return gaussianCandidate(joint,reference_window,referenceAction(action),alpha,tail,fast,root,cache,&decompositions);
   };
   int numerical=0,post=0,pl_count=0;int best=-1;double best_cost=INFINITY;GaussianReference selected_ref;Eigen::VectorXd best_increment;
@@ -374,6 +374,7 @@ int main(int argc,char** argv){try{
   // full rank. Local PL does not choose the physical branch.
   if(kind=="U3"){best=-1;status="GEOMETRY_GLOBAL_BRANCH_UNQUALIFIED";}
   if(scope=="off"){best=-1;status=kind=="replay"?"RAWDATA_UNQUALIFIED":"FDE_OFF";}
+  if(online && online->counts().resource_refused){best=-1;status="UNAVAILABLE_SUMMARY_RESOURCES";}
   bool selected=best>=0;auto plan=selected?planFor(tx,actions[best]):EpochCommitPlan::nominalPlan(tx);plan.best_effort_integrity_unavailable=!selected;
   bool exclusion=selected&&!actions[best].groups_to_remove.empty();exclusions+=exclusion;
   auto pose=tx.frozen_values->at<gtsam::Pose3>(gtsam::Symbol('x',tx.proposed_epoch));
@@ -437,7 +438,7 @@ int main(int argc,char** argv){try{
    out<<','<<domain_assessment.initial_law_valid<<','<<domain_assessment.adaptive_event_valid<<','<<domain_assessment.range_domain_valid<<','<<domain_assessment.range_remainder<<','<<domain_assessment.status<<','<<joint.history_qualified<<','<<(online?online_counts.source_columns:joint.noise_j.cols())<<','<<(online?online_counts.fault_modes:joint.faults.size())<<','<<joint.source_products<<','<<joint.covariance_fallback<<','<<attitude_error<<','<<raw_detector.dof<<','<<(online?online_counts.bytes:0)<<','<<(online?online_counts.history_rows:0)<<','<<(online?online_counts.orthogonal_updates:0)<<','<<(online?online_counts.frontier_epoch:0)<<'\n';}
   if(online && !benchmark && !continuous && (e==15 || (e>=30 && e<=32)))std::cout<<"ONLINE_SUMMARY epoch="<<e<<" dof="<<raw_detector.dof<<" active_states="<<online_counts.active_states<<" history_rows="<<online_counts.history_rows<<" faults="<<online_counts.fault_modes<<" numeric_bytes_lower="<<online_counts.bytes<<" frontier="<<online_counts.frontier_epoch<<" ortho_updates="<<online_counts.orthogonal_updates<<"\n";
   if(online && std::getenv("FDE_FAULT_COST")){
-   std::cout<<"FAULT_COST epoch="<<e<<" events="<<online_counts.fault_modes<<" native_hypotheses="<<models.hypotheses.size()<<" active="<<online_counts.active_modes<<" retired="<<online_counts.fault_modes-online_counts.active_modes<<" raw_columns="<<online_counts.fault_modes<<" raw_rank="<<online_counts.raw_rank<<" equal_raw_columns="<<online_counts.equal_raw_columns<<" zero_raw_columns="<<online_counts.zero_raw_columns<<" accepted_leaf_rank="<<online_counts.accepted_leaf_rank<<" state_svds="<<online_counts.state_decompositions<<" leaf_svds="<<online_counts.leaf_svds<<" queries="<<online_counts.queries<<" query_columns="<<online_counts.query_columns<<" source_ms="<<online_counts.source_ms<<" retirement_ms="<<online_counts.retire_ms<<" root_build_ms="<<online_counts.root_build_ms<<" candidate_build_ms="<<online_counts.candidate_build_ms<<" state_svd_ms="<<online_counts.state_ms<<" fault_pl_ms="<<online_counts.fault_ms<<" query_state_qr_ms="<<online_counts.query_state_qr_ms<<" query_fault_qr_ms="<<online_counts.query_fault_qr_ms<<" full_fault_transforms="<<online_counts.full_fault_transforms<<" frontier_fault_transforms="<<online_counts.frontier_fault_transforms<<" frontier_kernels="<<online_counts.frontier_kernels<<" proof_entries="<<arena.entryCount()<<'\n';
+   std::cout<<"FAULT_COST epoch="<<e<<" events="<<online_counts.fault_modes<<" native_hypotheses="<<models.hypotheses.size()<<" active="<<online_counts.active_modes<<" retired="<<online_counts.fault_modes-online_counts.active_modes<<" raw_columns="<<online_counts.fault_modes<<" raw_rank="<<online_counts.raw_rank<<" equal_raw_columns="<<online_counts.equal_raw_columns<<" zero_raw_columns="<<online_counts.zero_raw_columns<<" accepted_leaf_rank="<<online_counts.accepted_leaf_rank<<" state_svds="<<online_counts.state_decompositions<<" leaf_svds="<<online_counts.leaf_svds<<" queries="<<online_counts.queries<<" query_columns="<<online_counts.query_columns<<" source_ms="<<online_counts.source_ms<<" retirement_ms="<<online_counts.retire_ms<<" root_build_ms="<<online_counts.root_build_ms<<" candidate_build_ms="<<online_counts.candidate_build_ms<<" state_svd_ms="<<online_counts.state_ms<<" fault_pl_ms="<<online_counts.fault_ms<<" query_state_qr_ms="<<online_counts.query_state_qr_ms<<" query_fault_qr_ms="<<online_counts.query_fault_qr_ms<<" full_fault_transforms="<<online_counts.full_fault_transforms<<" frontier_fault_transforms="<<online_counts.frontier_fault_transforms<<" frontier_kernels="<<online_counts.frontier_kernels<<" candidate_hits="<<online_counts.candidate_hits<<" proof_entries="<<arena.entryCount()<<'\n';
    if(alarm)for(const auto& action:actions){std::cout<<"ACTION_COST epoch="<<e<<" id="<<action.id.value()<<" covered="<<action.covered_modes.size()<<" remove=";for(auto id:action.groups_to_remove)std::cout<<id.value()<<';';std::cout<<" add=";for(auto id:action.groups_to_add)std::cout<<id.value()<<';';std::cout<<'\n';}
   }
   if(profile){auto ms=[](auto a,auto b){return std::chrono::duration<double,std::milli>(b-a).count();};

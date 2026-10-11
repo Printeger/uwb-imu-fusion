@@ -4,6 +4,7 @@
 #include <map>
 #include <stdexcept>
 #include <chrono>
+#include <memory>
 
 namespace uwb_imu_pl::research {
 // Mutually exclusive fault leaves need B_i' P B_i and B_i' P z, not
@@ -25,6 +26,18 @@ struct SummaryEvaluation {
  std::map<std::string,SummaryFaultResult> faults;
  int state_rank=0,total_rank=0;
  double state_ms=0.,fault_ms=0.;size_t leaf_svds=0;
+};
+class GaussianSufficientSummary;
+class SummaryStateRoot {
+ friend class GaussianSufficientSummary;
+ const GaussianSufficientSummary* owner=nullptr;
+ Eigen::MatrixXd h,c;Eigen::VectorXd d;
+ long long equations=0,eliminated=0;double residual_norm=0.,alpha=0.,tail=0.;
+ SummaryEvaluation nominal;
+ SummaryStateRoot()=default;
+ public:
+ double stateMilliseconds()const{return nominal.state_ms;}
+ size_t bytes()const{return sizeof(double)*(h.size()+c.size()+d.size()+nominal.reference.gain.size()+nominal.reference.parity.size()+nominal.reference.covariance.size()+nominal.reference.mean.size());}
 };
 struct SummaryRetirement {Eigen::MatrixXd coefficients;Eigen::VectorXd offset;Eigen::MatrixXd conditional_covariance;};
 class GaussianSufficientSummary {
@@ -77,8 +90,8 @@ class GaussianSufficientSummary {
    Eigen::HouseholderQR<Eigen::MatrixXd> residual_qr(joint);
    frontier_residual=(residual_qr.householderQ().adjoint()*joint).topRows(std::min(m-keep,old+1));++frontier_kernels;
   }
-  for(auto& item:faults){auto& f=item.second;Eigen::MatrixXd fb=Eigen::MatrixXd::Zero(m,f.top.cols());fb.topRows(old)=f.top;
-   auto it=b.find(item.first);if(it!=b.end())fb.bottomRows(a.rows())=it->second;
+  for(auto& item:faults){auto& f=item.second;
+   auto it=b.find(item.first);
    bool nonzero=it!=b.end() && (it->second.array()!=0.).any();f.ever_nonzero=f.ever_nonzero || nonzero;
    if(f.alias_state==-2 && nonzero)f.alias_state=-1;
    if(f.alias_state>=0){bool alias=it!=b.end()?(it->second.col(0).array()==a.col(f.alias_state).array()).all():(a.col(f.alias_state).array()==0.).all();if(!alias)f.alias_state=-1;}
@@ -86,6 +99,7 @@ class GaussianSufficientSummary {
     Eigen::MatrixXd residual_b=frontier_residual.leftCols(old)*f.top;
     appendResidual(f,residual_b,frontier_residual.col(old));f.top=(frontier_top*f.top).eval();++frontier_fault_transforms;
    }else{
+    Eigen::MatrixXd fb=Eigen::MatrixXd::Zero(m,f.top.cols());fb.topRows(old)=f.top;if(it!=b.end())fb.bottomRows(a.rows())=it->second;
     Eigen::MatrixXd transformed=qr.householderQ().adjoint()*fb;
     appendResidual(f,transformed.bottomRows(m-keep),rotated.tail(m-keep));f.top=transformed.topRows(keep);++full_fault_transforms;
    }
@@ -113,24 +127,36 @@ class GaussianSufficientSummary {
   d=rhs.tail(h.rows()-count);h=rotated.bottomRows(h.rows()-count);equations-=count;eliminated_states+=count;++orthogonal_updates;
   return recovery;
  }
- SummaryEvaluation evaluate(const Eigen::MatrixXd& c,double alpha,double tail,bool include_faults=true)const{
+ std::shared_ptr<const SummaryStateRoot> freezeState(const Eigen::MatrixXd& c,double alpha,double tail)const{
+  auto root=std::shared_ptr<SummaryStateRoot>(new SummaryStateRoot);root->owner=this;root->h=h;root->d=d;root->c=c;root->equations=equations;root->eliminated=eliminated_states;root->residual_norm=residual_norm;root->alpha=alpha;root->tail=tail;root->nominal=evaluate(c,alpha,tail,false);return root;
+ }
+ SummaryEvaluation evaluate(const Eigen::MatrixXd& c,double alpha,double tail,bool include_faults=true,const SummaryStateRoot* state=nullptr)const{
   auto timing_begin=std::chrono::steady_clock::now();
   SummaryEvaluation out;auto& r=out.reference;
   if(c.rows()!=3 || c.cols()!=states() || !c.allFinite() || h.rows()<states() || states()==0 || !(alpha>0 && alpha<1 && tail>0 && tail<1))return out;
+  Eigen::MatrixXd gain,parity;Eigen::VectorXd pz;
+  if(state){
+   auto equal=[](const auto& a,const auto& b){return a.rows()==b.rows() && a.cols()==b.cols() && (a.array()==b.array()).all();};
+   if(state->owner!=this || !equal(h,state->h) || !equal(d,state->d) || !equal(c,state->c) || equations!=state->equations || eliminated_states!=state->eliminated || residual_norm!=state->residual_norm || alpha!=state->alpha || tail!=state->tail)throw std::runtime_error("UNAVAILABLE_STATE_ROOT_BINDING");
+   out=state->nominal;out.state_ms=0.;if(out.state_rank!=states() || r.mean.size()!=states() || r.gain.rows()!=states() || r.dof<=0)return out;
+   gain=r.gain;parity=r.parity;pz=parity*d;
+  }else{
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(h,Eigen::ComputeFullU|Eigen::ComputeFullV);auto s=svd.singularValues();
   if(s.size()==0 || s.maxCoeff()==0)return out;
   out.state_rank=(s.array()>1e-9*s.maxCoeff()).count();out.total_rank=out.state_rank+eliminated_states;
   if(out.state_rank!=states())return out; // no gauge jitter or numerical-zero certificate
-  auto gain=(svd.matrixV()*s.cwiseInverse().asDiagonal()*svd.matrixU().leftCols(states()).transpose()).eval();
-  auto parity=svd.matrixU().rightCols(h.rows()-states()).transpose().eval();
-  Eigen::VectorXd pz=parity*d;
+  gain=(svd.matrixV()*s.cwiseInverse().asDiagonal()*svd.matrixU().leftCols(states()).transpose()).eval();
+  parity=svd.matrixU().rightCols(h.rows()-states()).transpose().eval();
+  pz=parity*d;
   r.mean=gain*d;r.covariance=gain*gain.transpose();r.dof=equations-states();if(r.dof<=0)return out;
   r.statistic=residual_norm*residual_norm+pz.squaredNorm();
   r.threshold=boost::math::quantile(boost::math::complement(boost::math::chi_squared(r.dof),alpha));
   r.status=r.statistic>r.threshold?"POST_REJECTED":"FROZEN_MODEL_ONLY";
   double k=boost::math::quantile(boost::math::complement(boost::math::normal(),tail/6));
   r.pl=k*(c*r.covariance*c.transpose()).diagonal().cwiseMax(0.).cwiseSqrt();
-  auto fault_begin=std::chrono::steady_clock::now();out.state_ms=std::chrono::duration<double,std::milli>(fault_begin-timing_begin).count();
+   r.gain=gain;r.parity=parity;
+  }
+  auto fault_begin=std::chrono::steady_clock::now();out.state_ms=state?0.:std::chrono::duration<double,std::milli>(fault_begin-timing_begin).count();
   if(!include_faults){if(r.status=="POST_REJECTED")r.pl.setConstant(INFINITY);return out;}
   double radius=std::sqrt(r.threshold)+std::sqrt(boost::math::quantile(boost::math::complement(boost::math::chi_squared(r.dof),tail)));
   Eigen::Vector3d bound=Eigen::Vector3d::Zero();

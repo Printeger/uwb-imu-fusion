@@ -1,5 +1,6 @@
 #include "gaussian_sufficient_summary.hpp"
 #include <iostream>
+#include <chrono>
 using namespace uwb_imu_pl::research;
 void require(bool condition,const char* label){if(!condition)throw std::runtime_error(label);}
 void close(const Eigen::MatrixXd& a,const Eigen::MatrixXd& b,double tolerance,const char* label){require(a.rows()==b.rows() && a.cols()==b.cols() && (a-b).norm()<=tolerance*(1+a.norm()),label);}
@@ -37,6 +38,17 @@ int main(){
   require(after.reference.dof==oracle.dof && after.total_rank==n,"retirement dof/rank");
   close(after.reference.mean,oracle.mean.tail(3),1e-11,"retired mean");close(after.reference.covariance,oracle.covariance.bottomRightCorner(3,3),1e-11,"retired covariance");close(after.reference.pl,oracle.pl,1e-10,"retired PL");
   close(after.faults.at("physical-episode").residual_gram,fault.residual_gram,1e-11,"retired fault Gram");++cases;
+ }
+ // Exact cached state binding and conservative rank boundary; no approximate
+ // hash/Gram certificate or cross-object/window borrowing.
+ {GaussianSufficientSummary bound(2);Eigen::MatrixXd a(4,2);a<<1,0,0,1,1,1,1,-1;Eigen::VectorXd z=Eigen::VectorXd::Constant(4,.01);Eigen::MatrixXd c=Eigen::MatrixXd::Zero(3,2);c.topRows(2).setIdentity();bound.declareFault("f",1);bound.append(a,z,{{"f",Eigen::MatrixXd::Ones(4,1)}});
+  auto root=bound.freezeState(c,1e-6,1e-9);auto cached=bound.evaluate(c,1e-6,1e-9,true,root.get());auto strict=bound.evaluate(c,1e-6,1e-9);close(cached.reference.pl,strict.reference.pl,1e-12,"cached state PL");
+  for(int mutation=0;mutation<6;++mutation){bool refused=false;auto copy=bound;auto changed=c;double alpha=1e-6,tail=1e-9;
+   if(mutation==1)changed(0,0)+=1e-12;if(mutation==2)alpha=1e-5;if(mutation==3)tail=1e-8;if(mutation==4)bound.h(0,0)=std::nextafter(bound.h(0,0),INFINITY);if(mutation==5)++bound.equations;
+   try{(mutation==0?copy:bound).evaluate(changed,alpha,tail,true,root.get());}catch(const std::runtime_error&){refused=true;}require(refused,"state owner/chart/risk/numeric binding");
+   if(mutation==4)bound=copy;if(mutation==5)--bound.equations;
+  }
+  GaussianSufficientSummary uncertain(2);Eigen::MatrixXd weak=Eigen::MatrixXd::Zero(3,2);weak(0,0)=1.;weak(1,1)=1e-10;uncertain.append(weak,Eigen::VectorXd::Zero(3),{});auto weak_root=uncertain.freezeState(c,1e-6,1e-9);require(uncertain.evaluate(c,1e-6,1e-9,true,weak_root.get()).reference.status=="INDETERMINATE","cached rank boundary");
  }
  // Future-correlated observations: shared standard-normal source is an
  // explicit nuisance variable with exactly ONE independent prior.
@@ -81,5 +93,23 @@ int main(){
  auto compact_chain=chain.evaluate(compact_c,1e-6,1e-9);
  require(compact_chain.reference.dof==80 && compact_chain.reference.status==dense_chain.status,"growth dof/status");
  close(compact_chain.reference.mean,dense_chain.mean.tail(1),1e-10,"growth mean");close(compact_chain.reference.pl,dense_chain.pl,1e-10,"growth PL");
+ // Scale the same append/frontier algorithm at the actual 21/252 sizes.
+ // Pure linear stress only: no extension of the online 50-epoch contract.
+ {GaussianSufficientSummary old(21),fast(21);fast.optimized=true;auto eye=Eigen::MatrixXd::Identity(21,21).eval();old.append(eye,Eigen::VectorXd::Zero(21),{});fast.append(eye,Eigen::VectorXd::Zero(21),{});
+  for(int e=1;e<=80;++e){std::map<std::string,Eigen::MatrixXd> inputs;
+   for(int a=0;a<8;++a)for(int duration:{1,3}){auto id=std::to_string(e)+":"+std::to_string(a)+":"+std::to_string(duration);old.declareFault(id,1,-1,true);fast.declareFault(id,1,-1,true);auto f=Eigen::MatrixXd::Zero(29,1).eval();f(21+a)=1;inputs[id]=f;}
+   auto design=Eigen::MatrixXd::Zero(29,42).eval();design.topLeftCorner(21,21)=-eye;design.topRightCorner(21,21)=eye;for(int a=0;a<8;++a)design(21+a,21+a)=1;
+   auto rhs=Eigen::VectorXd::Zero(29).eval();for(int a=0;a<8;++a)rhs(21+a)=.01*std::sin(e+a);
+   old.addStateColumns(21);fast.addStateColumns(21);old.append(design,rhs,inputs);fast.append(design,rhs,inputs);old.retire(21);fast.retire(21);
+   if(e==32 || e==50 || e==80){SummaryEvaluation results[2];for(int side=0;side<2;++side){auto q=side?fast:old;q.addStateColumns(231);q.append_state_ms=q.append_fault_ms=0;q.full_fault_transforms=q.frontier_fault_transforms=q.frontier_kernels=0;
+     auto h=Eigen::MatrixXd::Zero(260,252).eval();h.topRows(252).setIdentity();h.topLeftCorner(21,21)=-eye;h.block(0,21,21,21)=eye;for(int a=0;a<8;++a)h(252+a,244+a)=1;
+     std::map<std::string,Eigen::MatrixXd> active;for(int onset=e-11;onset<=e;++onset)for(int a=0;a<8;++a)for(int duration:{1,3}){auto f=Eigen::MatrixXd::Zero(260,1).eval();f(252+a)=1;active[std::to_string(onset)+":"+std::to_string(a)+":"+std::to_string(duration)]=f;}
+     auto begin=std::chrono::steady_clock::now();q.append(h,Eigen::VectorXd::Zero(260),active);auto c=Eigen::MatrixXd::Zero(3,252).eval();c.rightCols(3).setIdentity();results[side]=q.evaluate(c,1e-6,1e-9);
+     auto ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-begin).count();std::cout<<"FAULT_GROWTH epoch="<<e<<" optimized="<<side<<" states="<<q.states()<<" boundary=21 faults="<<q.faults.size()<<" full="<<q.full_fault_transforms<<" frontier="<<q.frontier_fault_transforms<<" kernels="<<q.frontier_kernels<<" bytes="<<q.bytes()<<" query_ms="<<ms<<" fault_qr_ms="<<q.append_fault_ms<<"\n";
+    }
+    require(results[0].reference.dof==results[1].reference.dof && results[0].reference.status==results[1].reference.status,"scale status/dof");close(results[0].reference.mean,results[1].reference.mean,1e-10,"scale mean");close(results[0].reference.covariance,results[1].reference.covariance,1e-10,"scale covariance");close(results[0].reference.pl,results[1].reference.pl,1e-10,"scale PL");for(const auto& item:results[0].faults){auto& b=results[1].faults.at(item.first);require(item.second.classification==b.classification,"scale leaf class");close(item.second.residual_gram,b.residual_gram,1e-10,"scale Gram");close(item.second.profile_rhs,b.profile_rhs,1e-10,"scale profile");close(item.second.profile_estimate,b.profile_estimate,1e-10,"scale amplitude");close(item.second.response,b.response,1e-10,"scale response");}
+   }
+  }
+ }
  std::cout<<"summary_parameter_cases="<<cases<<" shared_source=PASS nullspace=PASS residual_dof=PASS candidate_raw_deletion=PASS\n";
 }

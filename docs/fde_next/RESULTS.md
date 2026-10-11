@@ -1082,3 +1082,30 @@ while320 old profiles are retained. U1 alarm still needs4 SVDs; measured
 service525.443→523.828ms is within ordinary timing variation, so no alarm
 speedup is claimed for B alone. C must remove the proven duplicate state/root
 work before final delivery. Reference append remains selectable independently.
+
+C implements an immutable state root bound to exact owner, h/d, protected C,
+independent equation/retirement counts, residual energy and risk arguments.
+Detector and KEEP PL share that decomposition. Candidate reuse is keyed by
+exact retained original group/row identities within one prepared transaction;
+source UID matching and replacement principal covariance are revalidated even
+on a hit. It shares only numbers: action2/3/4 retain separate covered modes,
+proof owners, native post/PL consumers and commit identities. State roots and
+candidate caches are destroyed at the next prepare; committed roots refuse.
+
+Directed actual U1 flow14–32: all visible non-timing fields agree with the
+original online implementation; epoch15 service525.443→317.010ms,4 actions,
+3 post/PL consumers, one correct removal of15002/add15010,7 healthy rows kept,
+one backend commit and four selected followups. SVDs4→2, suffix queries4→2,
+leaf SVDs720→240;2 exact row-set hits. Normal epochs use one state SVD instead
+of two. This is a measured whole-service benefit, pending the frozen35-pair.
+
+Preflight bounds the numerical workspace/cache allowance (default64MiB),
+1024 augmented state coordinates and4096 scalar leaves. A budget failure is
+latched and invalidates the whole epoch, including any earlier candidate;
+no event is discarded. This allowance is not an RSS or probability guarantee.
+The existing fixed-model50-epoch horizon remains a separate qualification
+boundary. Independent B_i'Pz profiles require O(F) information: coordinate
+impulses span N residual dimensions; vectors(1,2,3) and(3,2,1) have the same
+energy but different profiles. Common operators reduce repeated work, not
+that lower bound or native hypothesis/proof census. All16 events/epoch,
+physical identities, priors, union charge and coverage remain intact.

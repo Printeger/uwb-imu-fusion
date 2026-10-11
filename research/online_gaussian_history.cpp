@@ -7,7 +7,8 @@ namespace uwb_imu_pl::research {
 struct OnlineGaussianHistory::Impl {
  struct WhiteBlock {Eigen::MatrixXd a;Eigen::VectorXd z;std::map<std::string,Eigen::MatrixXd> b;};
  struct Mode {std::string id;AnchorId anchor;size_t onset;int duration;};
- bool optimized;
+ bool optimized;size_t max_numeric_bytes;
+ std::shared_ptr<const gtsam::Values> prepared_values;
  size_t lag,frontier=0,epoch=0;int duration;double sa,sg;Eigen::Vector3d lever;
  GaussianSufficientSummary history{21};
  std::map<uint64_t,PendingFactorGroup> groups;
@@ -28,13 +29,32 @@ struct OnlineGaussianHistory::Impl {
  std::shared_ptr<const GaussianSufficientSummary> prepared_query;
  mutable std::map<std::tuple<double,double,bool>,SummaryEvaluation> root_evaluations;
  mutable OnlineHistoryCounts work;
+ mutable std::map<std::pair<double,double>,std::shared_ptr<const SummaryStateRoot>> state_roots;
+ mutable std::map<std::tuple<std::vector<std::pair<uint64_t,int>>,double,double,bool>,SummaryEvaluation> candidate_results;
  mutable size_t state_decompositions=0,fault_products=0;
  LinearizationVersion prepared_version;
  size_t original_rows=0;
- Impl(size_t w,int d,double a,double g,Eigen::Vector3d l,bool opt):optimized(opt),lag(w),duration(d),sa(a),sg(g),lever(l){
+ Impl(size_t w,int d,double a,double g,Eigen::Vector3d l,bool opt,size_t budget):optimized(opt),max_numeric_bytes(budget),lag(w),duration(d),sa(a),sg(g),lever(l){
   if(w<2 || d<1 || !(a>0 && g>0))throw std::runtime_error("invalid online history model");
   history.optimized=optimized;
   Eigen::MatrixXd prior=Eigen::MatrixXd::Zero(6,21);prior.rightCols(6).setIdentity();history.append(prior,Eigen::VectorXd::Zero(6),{});
+ }
+ void requireResources(size_t n,size_t leaves,size_t roots,size_t results)const{
+  // Conservative numeric workspace/cache allowance, not an RSS guarantee.
+  // Every event stays declared; exceeding resources refuses the whole epoch.
+  long double bytes=sizeof(double)*(8.L*n*n+4.L*n*leaves+2.L*21*21*(epoch+1)+roots*(7.L*n*n+8*n+8.L*leaves)+results*(2.L*n*n+8.L*leaves));
+  if(leaves>4096 || n>1024 || bytes>max_numeric_bytes){work.resource_refused=true;throw std::runtime_error("UNAVAILABLE_SUMMARY_RESOURCES");}
+ }
+ void validateTransaction(const EpochTransaction& tx)const{
+  if(tx.proposed_epoch!=epoch || tx.begin!=material.begin || tx.end!=material.end || tx.preintegration!=material.preintegration || tx.frozen_values!=prepared_values || tx.uwb_groups.size()!=material.uwb_groups.size())throw std::runtime_error("UNAVAILABLE_SUMMARY_TRANSACTION_BINDING");
+  if(tx.base_graph_version!=material.base_graph_version || tx.ledger_version!=material.ledger_version || tx.previous_epoch!=material.previous_epoch || tx.raw_imu_slice.size()!=material.raw_imu_slice.size())throw std::runtime_error("UNAVAILABLE_SUMMARY_TRANSACTION_BINDING");
+  if(!tx.preintegration->params()->equals(*noise_law,0.))throw std::runtime_error("UNAVAILABLE_NOISE_MODEL_CHANGE");
+  for(size_t i=0;i<tx.raw_imu_slice.size();++i){const auto& a=tx.raw_imu_slice[i];const auto& b=material.raw_imu_slice[i];if(a.id!=b.id || a.timestamp!=b.timestamp || a.specific_force_mps2!=b.specific_force_mps2 || a.angular_velocity_radps!=b.angular_velocity_radps || a.quality_flags!=b.quality_flags)throw std::runtime_error("UNAVAILABLE_SUMMARY_RAW_BINDING");}
+  auto group=[](const PendingFactorGroup& a,const PendingFactorGroup& b){
+   if(a.id!=b.id || a.kind!=b.kind || a.sensor!=b.sensor || a.nominal!=b.nominal || a.keys!=b.keys || a.source_measurements!=b.source_measurements || a.raw_covariance.rows()!=b.raw_covariance.rows() || a.raw_covariance.cols()!=b.raw_covariance.cols() || !(a.raw_covariance.array()==b.raw_covariance.array()).all() || a.factors.size()!=b.factors.size())throw std::runtime_error("UNAVAILABLE_SUMMARY_SOURCE_BINDING");
+   for(size_t j=0;j<a.factors.size();++j)if(a.factors[j]!=b.factors[j])throw std::runtime_error("UNAVAILABLE_SUMMARY_FACTOR_BINDING");
+  };
+  group(tx.imu_group,material.imu_group);for(size_t i=0;i<tx.uwb_groups.size();++i)group(tx.uwb_groups[i],material.uwb_groups[i]);
  }
  static size_t endEpoch(const PendingFactorGroup& g){size_t e=0;for(auto key:g.keys)e=std::max(e,(size_t)gtsam::Symbol(key).index());return e;}
  LinearizedFactorBlock block(const PendingFactorGroup& g,size_t first,size_t last)const{
@@ -110,10 +130,9 @@ struct OnlineGaussianHistory::Impl {
    for(const auto& f:item.b)b.at(f.first).middleRows(off,item.a.rows())=f.second;off+=item.a.rows();}
   target.append(a,z,b);
  }
- GaussianSufficientSummary query(const EpochTransaction& tx,const ExclusionAction* action)const{
-  size_t first=epoch>lag+1?epoch-lag-1:0;GaussianSufficientSummary result=history;result.append_state_ms=0.;result.append_fault_ms=0.;result.full_fault_transforms=0;result.frontier_fault_transforms=0;result.frontier_kernels=0;result.addStateColumns(21*(epoch-first));std::vector<WhiteBlock> batch;
-  for(size_t e=first+1;e<=epoch;++e)noisePrior(result,first,e,&batch);
-  auto current=groups;current[tx.imu_group.id.value()]=tx.imu_group;for(const auto& g:tx.uwb_groups)if(g.nominal)current[g.id.value()]=g;
+ using RowKey=std::vector<std::pair<uint64_t,int>>;
+ RowKey selectedRows(const EpochTransaction& tx,const ExclusionAction* action)const{
+  size_t first=epoch>lag+1?epoch-lag-1:0;auto current=groups;current[tx.imu_group.id.value()]=tx.imu_group;for(const auto& g:tx.uwb_groups)if(g.nominal)current[g.id.value()]=g;
   if(action){if(action->bridge_mode!=BridgeMode::None)throw std::runtime_error("UNAVAILABLE_BRIDGE_SUMMARY_SCOPE");
    for(auto added:action->groups_to_add){auto replacement=std::find_if(tx.uwb_groups.begin(),tx.uwb_groups.end(),[&](const auto& g){return g.id==added;});
     if(replacement==tx.uwb_groups.end())throw std::runtime_error("UNAVAILABLE_ADDED_GROUP_PROVENANCE");
@@ -127,6 +146,22 @@ struct OnlineGaussianHistory::Impl {
      if(replacement->raw_covariance(i,j)!=expected)throw std::runtime_error("UNAVAILABLE_REPLACEMENT_NOISE_LAW");}
    }
    for(auto id:action->groups_to_remove)if(retired_groups.count(id.value()) || !current.count(id.value()))throw std::runtime_error("UNAVAILABLE_RETIRED_CANDIDATE_SOURCE");}
+  RowKey key;
+  for(const auto& item:current){const auto& g=item.second;if(endEpoch(g)<first || (first>0 && endEpoch(g)==first))continue;
+   bool remove=action && std::find(action->groups_to_remove.begin(),action->groups_to_remove.end(),g.id)!=action->groups_to_remove.end();
+   std::vector<int> retain;
+   if(remove){for(auto added:action->groups_to_add){auto replacement=std::find_if(tx.uwb_groups.begin(),tx.uwb_groups.end(),[&](const auto& candidate){return candidate.id==added;});
+    for(auto measurement:replacement->source_measurements){auto row=std::find(g.source_measurements.begin(),g.source_measurements.end(),measurement);if(row!=g.source_measurements.end())retain.push_back(row-g.source_measurements.begin());}}
+    std::sort(retain.begin(),retain.end());if(std::adjacent_find(retain.begin(),retain.end())!=retain.end())throw std::runtime_error("duplicate replacement source");
+   }else{auto block=std::find_if(local_window.blocks.begin(),local_window.blocks.end(),[&](const auto& value){return value.group_id==g.id;});if(block==local_window.blocks.end())throw std::runtime_error("UNAVAILABLE_REPLACEMENT_BLOCK");for(int row=0;row<block->residual_raw.size();++row)retain.push_back(row);}
+   for(int row:retain)key.emplace_back(item.first,row);
+  }return key;
+ }
+ GaussianSufficientSummary query(const EpochTransaction& tx,const ExclusionAction* action)const{
+  size_t first=epoch>lag+1?epoch-lag-1:0;GaussianSufficientSummary result=history;result.append_state_ms=0.;result.append_fault_ms=0.;result.full_fault_transforms=0;result.frontier_fault_transforms=0;result.frontier_kernels=0;result.addStateColumns(21*(epoch-first));std::vector<WhiteBlock> batch;
+  for(size_t e=first+1;e<=epoch;++e)noisePrior(result,first,e,&batch);
+  auto current=groups;current[tx.imu_group.id.value()]=tx.imu_group;for(const auto& g:tx.uwb_groups)if(g.nominal)current[g.id.value()]=g;
+  selectedRows(tx,action);
   for(const auto& item:current){const auto& g=item.second;if(endEpoch(g)<first || (first>0 && endEpoch(g)==first))continue;
    bool remove=action && std::find(action->groups_to_remove.begin(),action->groups_to_remove.end(),g.id)!=action->groups_to_remove.end();
    if(!remove){appendBlock(result,g,first,epoch,nullptr,&batch);continue;}
@@ -138,9 +173,10 @@ struct OnlineGaussianHistory::Impl {
   appendBatch(result,batch);++work.queries;work.query_columns+=modes.size();work.query_state_qr_ms+=result.append_state_ms;work.query_fault_qr_ms+=result.append_fault_ms;work.full_fault_transforms+=result.full_fault_transforms;work.frontier_fault_transforms+=result.frontier_fault_transforms;work.frontier_kernels+=result.frontier_kernels;return result;
  }
 };
-OnlineGaussianHistory::OnlineGaussianHistory(size_t lag,int duration,double sa,double sg,Eigen::Vector3d lever,bool optimized):impl(new Impl(lag,duration,sa,sg,lever,optimized)){}
+OnlineGaussianHistory::OnlineGaussianHistory(size_t lag,int duration,double sa,double sg,Eigen::Vector3d lever,bool optimized,size_t max_numeric_bytes):impl(new Impl(lag,duration,sa,sg,lever,optimized,max_numeric_bytes)){}
 OnlineGaussianHistory::~OnlineGaussianHistory()=default;
-void OnlineGaussianHistory::prepare(const EpochTransaction& tx){auto& s=*impl;auto timing_begin=std::chrono::steady_clock::now();s.work={};
+void OnlineGaussianHistory::prepare(const EpochTransaction& tx){auto& s=*impl;auto timing_begin=std::chrono::steady_clock::now();s.work={};s.prepared_active=false;
+ size_t future_states=21*(std::min(tx.proposed_epoch,s.lag+1)+1);std::set<AnchorId> future_anchors;for(const auto& m:tx.uwb_batch.measurements)future_anchors.insert(m.anchor_id);s.requireResources(future_states,s.modes.size()+2*future_anchors.size(),0,0);
  if(tx.proposed_epoch!=s.epoch+1 || tx.proposed_epoch>50)throw std::runtime_error("UNAVAILABLE_HISTORY_SEQUENCE_OR_HORIZON");
  if(!tx.preintegration)throw std::runtime_error("UNAVAILABLE_PIM_NOISE_MODEL");
  auto params=boost::dynamic_pointer_cast<gtsam::PreintegrationCombinedParams>(tx.preintegration->params());
@@ -151,7 +187,7 @@ void OnlineGaussianHistory::prepare(const EpochTransaction& tx){auto& s=*impl;au
  for(size_t i=0;i<tx.raw_imu_slice.size();++i)if(tx.raw_imu_slice[i].timestamp.value()!=tx.begin.value()+5000000LL*i)throw std::runtime_error("UNAVAILABLE_NOISE_SUPPORT_MODEL");
  if(s.epoch>0){const auto& previous=s.episodes.at(s.epoch).raw_imu_slice.back();const auto& current=tx.raw_imu_slice.front();
   if(previous.id!=current.id || previous.specific_force_mps2!=current.specific_force_mps2 || previous.angular_velocity_radps!=current.angular_velocity_radps)throw std::runtime_error("UNAVAILABLE_SHARED_SAMPLE_IDENTITY");}
- s.epoch=tx.proposed_epoch;s.prepared_id=tx.id;s.prepared_version=tx.base_version;s.prepared_active=true;s.prepared_query.reset();s.root_evaluations.clear();s.state_decompositions=0;s.fault_products=0;
+ s.epoch=tx.proposed_epoch;s.prepared_id=tx.id;s.prepared_values=tx.frozen_values;s.prepared_version=tx.base_version;s.prepared_active=true;s.prepared_query.reset();s.root_evaluations.clear();s.state_roots.clear();s.candidate_results.clear();s.state_decompositions=0;s.fault_products=0;
  size_t changing=s.epoch>s.lag?s.epoch-s.lag:0;
  for(const auto& item:*tx.frozen_values){if(gtsam::Symbol(item.key).index()<s.frontier)continue;
   if(!s.points.exists(item.key))s.points.insert(item.key,item.value);else if(gtsam::Symbol(item.key).index()>=changing)s.points.update(item.key,item.value);}
@@ -204,14 +240,28 @@ void OnlineGaussianHistory::prepare(const EpochTransaction& tx){auto& s=*impl;au
 }
 SummaryEvaluation OnlineGaussianHistory::evaluate(const EpochTransaction& tx,const ExclusionAction* action,double alpha,double tail,bool faults)const{
  const auto& s=*impl;if(!s.prepared_active || tx.id!=s.prepared_id || !(tx.base_version==s.prepared_version))throw std::runtime_error("foreign online summary root");
+ s.validateTransaction(tx);if(s.work.resource_refused)throw std::runtime_error("UNAVAILABLE_SUMMARY_RESOURCES");
  if(!(alpha>0 && alpha<1 && tail>0 && tail<1))throw std::runtime_error("INDETERMINATE_RISK_ARGUMENTS");
  bool keep=!action || (action->groups_to_remove.empty() && action->groups_to_add.empty() && action->bridge_mode==BridgeMode::None);
+ auto record=[&](const SummaryEvaluation& result){s.work.state_ms+=result.state_ms;s.work.fault_ms+=result.fault_ms;s.work.leaf_svds+=result.leaf_svds;for(const auto& leaf:result.faults)if(leaf.second.classification=="MONITORABLE")++s.work.accepted_leaf_rank;};
  if(keep){auto key=std::make_tuple(alpha,tail,faults);auto it=s.root_evaluations.find(key);if(it!=s.root_evaluations.end())return it->second;
-  ++s.state_decompositions;if(faults)s.fault_products+=s.modes.size();
-  auto result=s.prepared_query->evaluate(tagMap(),alpha,tail,faults);s.work.state_ms+=result.state_ms;s.work.fault_ms+=result.fault_ms;s.work.leaf_svds+=result.leaf_svds;for(const auto& leaf:result.faults)if(leaf.second.classification=="MONITORABLE")++s.work.accepted_leaf_rank;s.root_evaluations.emplace(key,result);return result;}
+  const SummaryStateRoot* state=nullptr;
+  if(s.optimized){auto risk=std::make_pair(alpha,tail);auto root=s.state_roots.find(risk);if(root==s.state_roots.end()){
+    s.requireResources(s.prepared_query->states(),s.modes.size(),s.state_roots.size()+1,s.candidate_results.size());
+    auto created=s.prepared_query->freezeState(tagMap(),alpha,tail);s.work.state_ms+=created->stateMilliseconds();++s.state_decompositions;root=s.state_roots.emplace(risk,std::move(created)).first;}state=root->second.get();
+  }else ++s.state_decompositions;
+  if(faults)s.fault_products+=s.modes.size();
+  auto result=s.prepared_query->evaluate(tagMap(),alpha,tail,faults,state);record(result);s.root_evaluations.emplace(key,result);return result;
+ }
+ // Validate the complete source/covariance replacement EVERY time, including
+ // cache hits. The key shares numbers, never action identity or proof leases.
+ auto rows=s.selectedRows(tx,action);auto key=std::make_tuple(rows,alpha,tail,faults);
+ if(s.optimized){auto found=s.candidate_results.find(key);if(found!=s.candidate_results.end()){++s.work.candidate_hits;return found->second;}}
+ s.requireResources(s.prepared_query->states(),s.modes.size(),s.state_roots.size(),s.candidate_results.size()+1);
  auto query_begin=std::chrono::steady_clock::now();auto query=s.query(tx,action);s.work.candidate_build_ms+=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-query_begin).count();++s.state_decompositions;if(faults)s.fault_products+=s.modes.size();
- auto result=query.evaluate(tagMap(),alpha,tail,faults);s.work.state_ms+=result.state_ms;s.work.fault_ms+=result.fault_ms;s.work.leaf_svds+=result.leaf_svds;for(const auto& leaf:result.faults)if(leaf.second.classification=="MONITORABLE")++s.work.accepted_leaf_rank;return result;
+ auto result=query.evaluate(tagMap(),alpha,tail,faults);record(result);if(s.optimized)s.candidate_results.emplace(std::move(key),result);return result;
 }
+
 Eigen::MatrixXd OnlineGaussianHistory::tagMap()const{const auto& s=*impl;size_t first=s.epoch>s.lag+1?s.epoch-s.lag-1:0;Eigen::MatrixXd c=Eigen::MatrixXd::Zero(3,21*(s.epoch-first+1));
  auto pose=s.points.at<gtsam::Pose3>(gtsam::Symbol('x',s.epoch));Eigen::Matrix3d skew;skew<<0,-s.lever.z(),s.lever.y(),s.lever.z(),0,-s.lever.x(),-s.lever.y(),s.lever.x(),0;
  c.block<3,3>(0,c.cols()-21)=-pose.rotation().matrix()*skew;c.block<3,3>(0,c.cols()-18)=pose.rotation().matrix();return c;}
@@ -238,7 +288,9 @@ Eigen::MatrixXd OnlineGaussianHistory::navigationCovariance(const GaussianRefere
 }
 OnlineHistoryCounts OnlineGaussianHistory::counts()const{const auto& s=*impl;OnlineHistoryCounts c=s.work;size_t first=s.epoch>s.lag+1?s.epoch-s.lag-1:0;c.frontier_epoch=first;c.active_groups=s.groups.size();c.active_states=21*(s.epoch-first+1);c.history_rows=s.history.h.rows();c.fault_modes=s.modes.size();for(const auto& mode:s.modes)if(std::min(s.epoch,mode.onset+mode.duration-1)>first)++c.active_modes;c.source_columns=s.local_noise.noise_j.cols();c.integrations=s.local_noise.integrations;c.bytes=s.history.bytes()+8*(s.local_noise.a.size()+s.local_noise.sigma.size()+s.local_noise.noise_j.size());if(s.prepared_query)c.bytes+=s.prepared_query->bytes();
  for(const auto& old:s.old_navigation)c.bytes+=8*(old.coefficients.size()+old.offset.size()+old.conditional_covariance.size());
- for(const auto& cached:s.root_evaluations){const auto& r=cached.second.reference;c.bytes+=8*(r.mean.size()+r.covariance.size());}
+ for(const auto& root:s.state_roots)c.bytes+=root.second->bytes();
+ for(const auto& cached:s.candidate_results){const auto& r=cached.second.reference;c.bytes+=8*(r.mean.size()+r.covariance.size()+r.gain.size()+r.parity.size());}
+ for(const auto& cached:s.root_evaluations){const auto& r=cached.second.reference;c.bytes+=8*(r.mean.size()+r.covariance.size()+r.gain.size()+r.parity.size());}
  c.state_decompositions=s.state_decompositions;c.fault_products=s.fault_products;
  c.orthogonal_updates=s.history.orthogonal_updates;c.original_rows=s.original_rows;c.eliminated_navigation_states=15*first;
  for(const auto& b:s.local_window.blocks)if(!s.retired_groups.count(b.group_id.value()))c.original_rows+=b.residual_raw.size();
