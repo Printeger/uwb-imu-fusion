@@ -65,11 +65,11 @@ inline EpochRaim uwbCandidate(const UwbBatch& batch,int excluded,double alpha,do
 }
 // Union over ALL n+1 candidates pays 2*(n+1)*tail, including wrongly deleted
 // healthy rows. Every retained single-fault direction remains in its PL.
-template<class Candidate> inline EpochRaim epochFde(int n,bool enabled,Candidate evaluate) {
+template<class Candidate> inline EpochRaim epochFde(int n,bool enabled,Candidate evaluate,bool external_alarm=false) {
   auto all=evaluate(-1);all.candidates=1;
   all.detection_statistic=all.gaussian.statistic;all.detection_threshold=all.gaussian.threshold;all.detection_dof=all.gaussian.dof;
   all.alarm=all.gaussian.dof>0 && all.gaussian.statistic>all.gaussian.threshold;
-  if(!all.alarm || !enabled)return all;
+  if((!all.alarm && !external_alarm) || !enabled)return all;
   EpochRaim best;double score=INFINITY;
   for(int i=0;i<n;++i){auto r=evaluate(i);if(r.status=="FROZEN_MODEL_ONLY" && r.gaussian.statistic<score){score=r.gaussian.statistic;best=std::move(r);}}
   best.candidates=n+1;best.alarm=true;
