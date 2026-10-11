@@ -48,8 +48,8 @@ B无current fault时E保证新的接受门限，task B误报≤1e-6。固定A是
 
 | 固定native | max history norm(m) | max eta | max center shift(m) | max served HPL(m) | max error(m) |
 |---|---:|---:|---:|---:|---:|
-| weak history | 2.86787/2.91437/3.79551/6.26776 | 0.011253 | 0.00434215 | 0.091047 | 0.00474523 |
-| current | 2.76068/2.87654/3.79403/5.94709 | 0.007017 | 0.00434000 | 0.091047 | 0.00474888 |
+| weak history | 0.0206654 | 9.73409 | 0.00434215 | 0.091047 | 0.00474523 |
+| current | 0.0206559 | 9.7351 | 0.00434000 | 0.091047 | 0.00474888 |
 
 实际拒绝：12类H字段篡改、P covariance shape、generation、source/重复更新、resource cap、stale refresh/fresh initializer。核验完整law/mean/cov/segments/risk/source，不只ID。每条native epoch8撤销，P9拒绝，从initial law和已提交observation/subset recipes**新建producer重放append/retire**后恢复，epoch9继续，epoch24 H STALE。backend_updates=0 receipt及伪造observations不推进H；错误receipt、迟到、final center超AL降级不增加commit。迟到可保留numeric availability，但timelyAvailable=false。
 
@@ -148,3 +148,103 @@ cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl --target fde_online_chec
 `lifecycle`运行完整固定检查；`hybrid --scene U1`仅复现50epoch故障流。外部H缺失用`epoch_raim_runner CONFIG CSV U0 hybrid on 3 history-invalid`，CSV放独占cache并删除。CLI成功后自动清理CSV。永久仅源码/必要测试/此报告，无新图/数据/二进制/矩阵归档；本轮cache核对汇总后清理，旧资料/用户文件保留。
 
 仍缺raw真实初始/噪声law、随机线性化与非线性余项、域外IMU fault风险、任务carry-in/跨horizon，以及H外包络保守性与raw提取成本。hardware/受保护发布未准入。可据当前full-state/source oracle继续局部raw/noise/linearization资格研究；本轮不批准生产替换，不用C SVD提速代替证据闭环。
+
+
+## 2026-10-12：raw PL 保守性定位与最小收紧
+
+基线 `919760e` 已包含 `c6c1e45/a5d4fe0/7d55cf6/1708c62`；数学增量提交 `f2f14b0`。复用原 A/B/H/P、事务和 Gaussian oracle，不改 C、生产配置、AL、sigma、故障域或风险金额。上面的固定 native 表修正了误填的 history/eta 两列；新回归确认其值，原计时表保留。
+
+**结果：共享 episode 表示有效降低冻结 raw PL；raw 仍未获得统计资格。** U0/U1 各只运行31epoch前缀，定向分解15/31epoch；两个统计审计限于 U0/31、U1/31。诊断比较始终使用同一输入、旧策略实际提交轨迹及同一冻结预测，不重放另一条状态轨迹。每个快照输出 KEEP+8删除，共36候选；历史区间共12,663条。所有31epoch新旧选择一致，36候选保留原检测阈值和接受结论。另运行新研究入口 U1/19：19次唯一 commit，15epoch实际排除source0/measurement1501、保留7条，之后4epoch H仍BOUNDED，C调用0，protected输出0。
+
+| scene/epoch | 选择 | H解释数 | eta_H | 原 HPL/VPL(m) | 联合 HPL/VPL(m) |
+|---|---:|---:|---:|---|---|
+| U0/15 | KEEP | 224 | 25.9225 | 6.51054 / 7.62651 | 4.79304 / 5.49138 |
+| U0/31 | KEEP | 480 | 18.6061 | 4.99895 / 5.55910 | 3.85030 / 4.22948 |
+| U1/15 | 删除0 | 224 | 25.9202 | 6.92490 / 7.65219 | 5.01455 / 5.49114 |
+| U1/31 | KEEP | 479 | 18.6082 | 5.00356 / 5.55948 | 3.85271 / 4.22980 |
+
+共同 q=70.2045，声明50epoch球维度4465，诊断 epsilon=1e-6；raw risk始终UNKNOWN、qualified=0。U1/15由A报警触发9候选，B KEEP未报警；其余三个快照A/B均未报警。AL仍2/3m，表中所有新旧结果均超AL。
+
+旧 PL 每坐标分解为 `nominal + slope*sqrt(threshold) + slope*q + slope*eta_H + history_output + committed_center`；新 PL 为 `nominal + joint_fault_support + committed_center`。以下为实际提交候选的V坐标，单位m；HPL由完整x/y分量合成，不能用各项HPL直接相加。
+
+| scene/epoch | nominal | 阈值项 | noise项 | eta项 | history_output | center | joint_fault |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| U0/15 | 3.52457 | 1.30684 | .954427 | .352415 | 1.48662 | .00163151 | 1.96517 |
+| U0/31 | 2.90939 | .816081 | .645109 | .170972 | 1.01376 | .00378878 | 1.31630 |
+| U1/15 | 3.52473 | 1.31983 | .963938 | .355895 | 1.48679 | .00100760 | 1.96540 |
+| U1/31 | 2.90927 | .816122 | .645127 | .170995 | 1.01377 | .00419194 | 1.31633 |
+
+主要来源是大维度共同球乘预测/后验标准差，以及单episode被拆成独立历史与当前极值：旧VPL的nominal占46–52%，history占18–20%，current占其余约29–34%，center不到0.1%。共享表示使HPL下降23–28%、VPL下降24–28%；新VPL中nominal占64–69%。原式 `sqrt(threshold)=q+eta_H`，故current系数为 `2q+2eta_H`。这是三角不等式和独立极值的数值外包络，不是重复收取失败概率；同一Gaussian realization同时用于nominal、历史幅值拟合及innovation，不能把它们当独立噪声。联合表示仍分别最大化nominal和故障项，尚不是整个噪声—故障集合的精确联合优化。
+
+`rawGaussianWindow`重建先去掉PIM ADC部分，再一次加入 `J Q_ADC J'`，端点source保持共享；未发现ADC covariance重复计入。4465按每factor11个IMU样本计数，50epoch实际unique501个样本对应维度4171，差294=49个共享端点×6；这是安全过计数，不是漏收风险。31epoch实际prefix维度2594，但本轮继续使用整个50epoch q，没有按访问历元缩小合同。即使仅纠正共享端点计数，q也只小幅下降，不能解释主要米级差距，且本轮未接入此调整。
+
+### A：同一历史—当前 episode 的联合可行集合
+
+实现见 `hybridJointEpisodeBound`：对原来的每个 source/onset/duration 解释保留同一幅值theta、历史方向D及正在持续的当前源列b；停止后的b=0。当前新onset仍覆盖全部源、duration1/3及无界幅值；没有剪去未选候选或按真实故障选择解释。
+
+设 W白化原innovation covariance S、y为原innovation、K为原gain：
+
+```
+a = W (H D + b)
+u = C (I-KH) D - C K b
+I_joint = I_history ∩ {theta : ||W y - a theta|| <= q}
+support_j = max_episode max_theta∈I_joint |u_j theta|
+PL_j = q sqrt((C P_post C')_jj) + support_j + center_j
+```
+
+非零a时，以 `a'Wy/||a||²` 为中心、`sqrt(q²-||perp_a Wy||²)/||a||` 为半径求区间，采用向外roundoff allowance。相同共同噪声事件保证真实幅值同时满足历史区间和当前约束；输出使用组合响应u后才取union支持函数，故保留过去与当前的抵消和强化。无需独立性或新增risk。检测仍沿用原 `(q+eta_H)²`，阈值不收紧；若联合集合不一致则拒绝。危险无界literal nullspace返回UNBOUNDED_PROVEN；没有精确source-column alias见证的数值零/近零返回INDETERMINATE，不能按epsilon宣称无害。
+
+边界快照中最大V支持解释均为anchor6/onset29/duration3：U0历史与联合幅值区间均为[-5.52680,5.45258]，支持1.31630m；U1为[-5.52689,5.45259]、支持1.31633m。幅值区间在这些最坏解释上未缩小，下降来自共享响应与避免分别选择互不相容的历史/当前极值，不能归因为削减故障幅度。15epoch对应anchor6/onset13/duration3，区间[-5.62494,5.83348]，支持约1.965m。完整CSV逐候选记录原区间、active源列、可行交集及三坐标支持；H不可能解释与零故障/当前新onset也由代码处理。
+
+### B：完整固定策略族的低维同时Gaussian事件
+
+固定模型另提供 `simultaneous_projections` opt-in，不改变初始/process/端点/range sigma及fault域。T=24，每epoch9种retained选择，事先计入所有历史路径而非实际访问路径：
+
+```
+M = T (4 + 16 T) 9^T = 7.42785e26
+q_projection = sqrt(chi2_8 upper_quantile(epsilon/M)) = 13.2167
+```
+
+每条路径/输出至多3个标量nominal投影、1个至多8维innovation、16T个历史残差幅值投影；矩阵族在数据之前固定。白化Gaussian innovation至多8维，标量投影至多1维，均由chi8尾界支配；对全部M投影union bound后，完整自适应选择任务risk仍≤1e-6，不要求投影独立。原717维球q=30.1928；预算仍2e-6、事件金额仍1e-6。这个数值界依赖固定有限族，不是raw随机chart的资格。
+
+独立小oracle实际枚举两epoch全部9×9=81路径、162候选，对照未退休full-prefix QR及原固定H/P/B：covariance/mean/共享fault response匹配，真实幅值在可行区间，覆盖与原检测接受均成立；old/joint/joint-low最大PL向量norm分别 .132214/.103295/.0455811m。另有强current故障实际排除source0；标量精确区间P=R=H=C=1、y=.4、q=1得到1.61421（原2.12132），以及停止episode、历史—当前完全抵消、危险/无害/近零nullspace检查。原 `check-hybrid` 20模型输出和48 native输出回归通过；这些是参数化代数/指定realization检查，非经验tail资格或seed campaign。
+
+**raw保留原球界的具体原因：** 数据驱动方向 `a(xi)=xi/||xi||`，xi为100维标准Gaussian，使用预注册标量1e-6半径4.89164，实际投影变成||xi||，越界概率> .99。有限族也不能只为访问的1个候选收费：512个独立标量里选择最大绝对值，单个1e-6尾界的实际失败概率 `1-(1-1e-6)^512=.000511869`。两项均由oracle解析计算。raw图、Jacobian及白化矩阵随噪声连续变化，未证明可由上述固定族覆盖，因此新q只用于固定研究模型，raw仍70.2045。
+
+### 两个raw边界快照的统计资格审查
+
+| 核对量 | U0/31 | U1/31 |
+|---|---:|---:|
+| native P 与 raw frozen P 相对Frobenius差 | .0569617 | .0567531 |
+| raw P 与独立full-prefix oracle相对差 | 6.52e-10 | 5.25e-10 |
+| raw mean 与独立prefix差(norm) | 9.88e-12 | 6.60e-12 |
+| current PIM 与 raw current covariance相对差 | 1.39923e-4 | 1.39923e-4 |
+| 共享端点ADC跨factor covariance norm | 2.37440e-8 | 2.37440e-8 |
+| chart相对truth旋转(rad)/位置(m) | .043416 / .096366 | .041792 / .098106 |
+| native位置相对frozen chart(m) | .0002203 | .0002310 |
+
+两者初始law_valid=0：实际初始化position确定偏置[.01,-.01,.005]m、norm .015m，prior位置sigma=.5m（归一化norm .03），并未按所用Gaussian prior独立抽样完整rotation/position/velocity/bias。实际IMU样本sigma为.02m/s²/.001rad/s；PIM配置.000707107/.0000707107具有连续时间covariance语义，不能直接与每样本sigma作同比。raw构造用实际ADC generator重建了每个样本的Jacobian与共享端点相关性，但不是backend covariance本身。native/raw约5.7%差还包含参考图、历史窗口与线性化差异，不能全部归因ADC。
+
+当前IMU块的辅助covariance trace约.001516905，raw ADC trace仅2.85975e-7。代码核对发现未配置 `bias_integration_sigmas` 时，`biasAccOmegaInt`复用initial prior bias sigma .1/.01。**仅审计重新积分**关闭ADC并去掉这项，aux trace变为1.51758e-7，差值.001516753来自预积分bias uncertainty，约占原aux的99.99%。实际PL、风险和生产PIM均未删改此项。实际生成器bias为零且无相应bias random walk；把这类aux逐factor作为独立Gaussian源、同时又有initial bias prior和bias状态，是否对应同一个真实生成机制、是否有重复物理不确定性或跨factor相关性，现有证据不足。PIM/raw covariance很接近主要因为共享这项，不能据此证明raw ADC/noise law一致。
+
+| 证据级别 | 本轮结论 |
+|---|---|
+| 已有严格证据 | 冻结线性代数层：真实retained/source；不复用当前range；ADC仅一次、共享IMU端点cross保留；raw H/P与独立未退休prefix解一致；固定有限矩阵族的完整策略风险及联合episode推导成立。 |
+| 仅冻结模型成立 | Gaussian initial/aux/process假设下的S/K/P、H幅值集合及共同球支持；使用实际noisy PIM/estimated chart冻结Jacobian后成立。单坐标nominal项是该球的精确支持，不能任意缩小，但整个PL仍有三角外包络余量。 |
+| 需要新理论或标定 | 初始完整15D生成law；bias/integration/process的物理source及跨factor相关性；随机线性化点和数据依赖白化/选择事件；非线性range/IMU与积分离散化余项；有效域及域外/未建模IMU故障概率、任务carry-in/跨horizon。现有快照没有这些概率上界，误差小或PL低于AL都不能补足资格。 |
+
+**决定：值得开展聚焦的完整raw Gaussian需求书。** 本轮已定位可合法消除的episode外包络及占主导的nominal/预积分bias uncertainty，下一步应先约定真实初始/ADC/bias/process联合生成源、共享相关性、随机chart同时事件和非线性余项/域外风险，再决定如何收紧nominal。不能靠降低AL、sigma、fault scope或risk达到通过；本轮不创建新资格/证书框架，也不改变正式发布。
+
+最少复现（CLI自动删除自身CSV；完整逐候选CSV可用最后一条直接命令查看后删除）：
+
+```bash
+python3 tools/run_epoch_architecture.py check-tightening --build
+python3 tools/run_epoch_architecture.py diagnose-hybrid
+python3 tools/run_epoch_architecture.py check-hybrid
+# 使用上文BIN与LD_LIBRARY_PATH设置；输出只放本轮scratch
+"$BIN/hybrid_tightening_checks" config/fde_next.yaml .cache/hybrid/decomposition
+# 可选研究表示入口；默认hybrid仍沿用旧表示
+python3 tools/run_epoch_architecture.py hybrid --scene U1 --joint-episode
+```
+
+本轮最终验证包括上述三项及直接U1/19 opt-in。没有运行新表示50epoch campaign或性能竞赛；可选CLI命令是复现入口而非本轮新增实验分母。永久保留源码/oracle与本报告，临时CSV/日志核对后清理，本地提交，不push。

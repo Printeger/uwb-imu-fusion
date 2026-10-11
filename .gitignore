@@ -189,3 +189,6 @@ compile_commands.json
 /hybrid*.csv
 /hybrid*.json
 /hybrid*.xml
+
+# Standalone Gaussian tightening oracle scratch; the CLI uses .cache/hybrid/.
+/tightening-*/
