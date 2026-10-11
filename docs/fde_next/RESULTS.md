@@ -1016,11 +1016,11 @@ seed and declared motion formulas are unchanged. The raw-prefix solver itself
 has not been altered. New comparisons use this corrected generator for BOTH
 paths; old undefined-expression timings are not inherited as numerical evidence.
 
-## Historical fault cost and actual alarm acceleration (active Goal)
+## Historical fault cost and actual alarm acceleration — delivered
 
 Baseline HEAD `a6c217e`, clean tree; no completed square-root history work is
-replaced. Owned cache `.cache/fde-fault-cost/run-20261011/` is temporary while
-this Goal remains active. Native Evidence, candidate/PL proof owners, FdeManager
+replaced. The owned cache `.cache/fde-fault-cost/run-20261011/` is removed after
+final extraction. Native Evidence, candidate/PL proof owners, FdeManager
 risk/coverage consumers and production publication remain unchanged.
 
 A: instrumented current online model (same lag10, ADC boundary law, seed20261010,
@@ -1058,10 +1058,6 @@ One census metadata test exposed pruned old UID lineage; only immutable retired
 UID/epoch/anchor descriptors are now retained for the optional exact census,
 not old factors or raw data. The corrected snapshot is executable and passes.
 
-B/C development follows this measured ordering; no performance delivery claim
-is made at this profiling savepoint. Pending: new batch path, exact-bound cache,
-all-field/negative regressions,32/50/80 growth and final same-ELF online pairs.
-
 B1 now runs the new exact temporal-incidence generator and common frontier QR
 kernel. For a leaf with zero new raw support, Q'[F_old;0] is computed through
 one common Q'[I_old;0] operator; a common QR of its residual basis plus z leaves
@@ -1080,8 +1076,8 @@ four followups. At31, full fault transforms fall496→192;304 old leaves use
 one21-row kernel, fault QR26.047→10.017ms. At32, full transforms remain192
 while320 old profiles are retained. U1 alarm still needs4 SVDs; measured
 service525.443→523.828ms is within ordinary timing variation, so no alarm
-speedup is claimed for B alone. C must remove the proven duplicate state/root
-work before final delivery. Reference append remains selectable independently.
+speedup is claimed for B alone. C below removes the proven duplicate state/root
+work. Reference append remains selectable independently.
 
 C implements an immutable state root bound to exact owner, h/d, protected C,
 independent equation/retirement counts, residual energy and risk arguments.
@@ -1097,7 +1093,7 @@ original online implementation; epoch15 service525.443→317.010ms,4 actions,
 3 post/PL consumers, one correct removal of15002/add15010,7 healthy rows kept,
 one backend commit and four selected followups. SVDs4→2, suffix queries4→2,
 leaf SVDs720→240;2 exact row-set hits. Normal epochs use one state SVD instead
-of two. This is a measured whole-service benefit, pending the frozen35-pair.
+of two. The frozen35-pair below confirms this whole-service benefit.
 
 Preflight bounds the numerical workspace/cache allowance (default64MiB),
 1024 augmented state coordinates and4096 scalar leaves. A budget failure is
@@ -1130,8 +1126,10 @@ identical U1 recipes may share numbers while keeping all3 proof consumers.
 Preflight exhaustion and exhaustion after one cached candidate both latch
 UNAVAILABLE_SUMMARY_RESOURCES, including subsequent access to that old hit.
 I2 original/optimized online scope negatives refuse before any output/commit;
-no cache opens IMU eligibility. Final existing shared-episode/MissingProvenance
-and safety regressions remain to be run once after performance.
+no cache opens IMU eligibility. After performance, the existing43 checks (including shared-episode complete
+isolation, MissingProvenance and rank/PSD/indeterminate negatives) and the
+necessary9 transaction/bridge/ownership +5 risk/miss +3 publication checks all
+pass once. The three source filters remain those recorded in the R section.
 
 Pure linear21/252-size growth tests (not80-epoch raw qualification):
 
@@ -1144,3 +1142,85 @@ Pure linear21/252-size growth tests (not80-epoch raw qualification):
 Each optimized query uses one common frontier kernel. Both paths compare all
 leaf fields and mean/covariance/PL; own profiles still grow linearly. These
 structured synthetic query timings are not real motion service measurements.
+
+
+E: frozen at `77ab915`, one final sequential four-process pair, each35 measured
+continuous epochs14–48 after13 nominal prewarm, U0/U1 seed20261010. Both sides
+use the same online conditional law, every event, native S4 proof consumer,
+AL, selection and real commit; only `FDE_FAULT_REFERENCE=1` switches off this
+Goal's optimized kernel/root/cache. Release GCC9 Eigen3 GTSAM4.2, -O3
+-march=native, TBB/Eigen/OMP/OpenBLAS/MKL1; no concurrent build or tests.
+ELF SHA256 `f4c6b3e749149a39219f81a638c636b8966d61ef3e22685a8d6522bbbee2f17b`;
+production DSO `9f0280990e4561634ae44089990595168e975c61d8ed8b317339ac413b9802de`.
+All70 paired result semantics agree; all140 attempts selected and committed
+once, none rejected/dropped/unfinished; all formal/protected/raw flags0.
+Full service includes ingestion/preparation, all candidates, actual commit,
+final validation and epoch-local destruction; setup/prewarm/estimator teardown
+are separately measured (.34–.37s/process).
+
+| Flow/path | Core mean/median/P95/max ms | Full service mean/median/P95/max ms | Peak RSS KiB |
+|---|---|---|---:|
+|U0 original|365.033/372.007/421.281/427.983|367.341/374.874/423.780/430.342|59628|
+|U0 optimized|264.107/274.349/300.200/308.238|266.417/276.542/304.203/310.298|59124|
+|U1 original|372.851/382.117/416.981/520.521|375.218/384.026/419.543/522.382|64272|
+|U1 optimized|270.115/277.467/320.545/351.063|272.330/279.557/323.080/352.786|62596|
+
+U1 actual alarm epoch15 core520.521→320.587ms; full522.382→322.273ms
+(38.31% reduction). Both choose action2, remove15002/add15010, preserve7 healthy
+rows, commit once, then select four followups16–19. Fault observation, alarm,
+isolation and recovery occur in the same epoch at750ms; service adds the times
+above. Four actions/three numerical-post-PL consumers and240 native proof entries
+remain. State SVD4→2; suffix queries4→2; leaf SVD720→240; exact numeric hits2;
+full fault transforms960→382 plus98 frontier transforms through2 kernels.
+State SVD333.104→173.695ms and candidate creation55.762→17.269ms (nested
+instrumentation, never added to whole-service). Exclusive cycle-mean candidate
+phase U0/U1:90.928/97.793→5.321/8.108ms; prep141.468/141.852→124.784/127.585ms.
+
+At epoch48 all768 leaves remain; the fixed192 active full transforms replace
+768 full transforms,576 profiles use one common kernel. U0 fault QR39.818→11.534ms.
+Native hypotheses/proof entries224→336 (U1 mature334), active252/history21,
+726 noise columns/1596 integrations, original detection dimension112→384
+(U1 ends383 after one row exclusion). Normal SVD2→1. Retained numeric payload
+is larger because of reusable roots: U0 e14–48 bytes5,718,104–7,186,632→
+7,252,280–8,720,808. Observed whole-process RSS falls slightly; this is not an
+RSS bound or a claim of constant historical memory.
+
+Mean full-service reductions U0/U1 are27.47%/27.42%. Both sides still exceed
+40ms core and50ms full in35/35 attempts per process (140/140 total), so no
+real-time qualification. With50ms fixed arrivals and empty queue at measured
+start, modeled maximum backlog U0 original/optimized10730.768/7320.680ms,
+U1 11010.311/7534.345ms; maximum latency and drain after last arrival
+11156.923/7624.599ms and11432.630/7831.554ms. At U1 alarm, modeled wait
+225.782→141.777ms, observation-to-commit latency748.164→464.051ms. These are
+queue models, not actual robot deadline observations.35 samples give empirical
+P95, not P99/WCET/HMI evidence. The earlier approximately533ms cost is improved
+by a matched522→322ms experiment; no gain is inferred from comparing it with
+the earlier385ms architecture.
+
+Remaining limits: exact per-event profiles, metadata, smoothing conditionals
+and native evidence still cost O(history) work/storage. Temporal sparsity and
+exact same-source row models share operators/numbers; independent profiles
+or merely similar Grams/PLs cannot be merged. Resource/horizon refusal retains
+all identities, coverage and probability charging; it does not qualify arbitrary
+long tasks. Nonlinear/raw HMI G, independent fully qualified IMU recovery I,
+hardware prior and protected publication remain unresolved outside this scoped
+performance delivery. Production probability/risk/AL/publication sources are
+unchanged; this research result remains LINEARIZATION_UNQUALIFIED/raw risk UNKNOWN.
+
+Reproduce from repository root (the entry uses one ELF and removes per-run
+files; set TMPDIR to an owned cache):
+
+```bash
+mkdir -p .cache/fde-fault-cost/reproduce
+export TMPDIR="$PWD/.cache/fde-fault-cost/reproduce"
+export PYTHONPYCACHEPREFIX="$TMPDIR/pycache"
+python3 tools/run_fde_next.py summary --build
+python3 tools/run_fde_next.py audit --fault-pair
+python3 tools/run_fde_next.py stream --fault-pair --fault-cost
+python3 tools/run_fde_next.py check
+```
+
+Local saves: A `4171c53`, B `745d99e`, C `5ddaf41`, D `77ab915`; final E
+commit changes only this conclusion. No push, binary/data/repository backup,
+extra figure or permanent logs/matrices are created. The owned run cache is
+cleaned after checking this table; existing user data are not deleted.
