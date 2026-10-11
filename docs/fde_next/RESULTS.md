@@ -801,8 +801,8 @@ state aliases are checked on every append and classified against the current
 protection map. Late historical fault insertion without proof of zero past
 support throws UNAVAILABLE rather than inventing zero response.
 
-`fde_summary_checks` compares9 deterministic parameter combinations (3 covariance
-cross terms x3 raw deletion choices), before/after3-state retirement, to the
+`fde_summary_checks` compares18 deterministic parameter combinations (3 covariance
+cross terms x3 raw deletion choices x scalar/six-axis shared fault dimensions), before/after3-state retirement, to the
 unchanged dense SVD oracle. Rank/dof, statistic/threshold/status, mean/covariance,
 fault Gram/profile/estimated amplitude/protected response and coordinate PL
 agree at1e-11 relative+absolute scales (PL1e-10). Shared-source latent-variable
@@ -836,29 +836,55 @@ one standard Gaussian nuisance prior; internal ADC sources are marginalized in
 the independent conditional block covariance. This is an algebraic covariance
 representation, not a new physical sensor/process law.
 
-Actual U0 snapshots12/31 agree with unchanged full raw-prefix oracle in dof
-96/248, S100.088/272.988, thresholds/status, current15-state mean/covariance, tag
-mean/PL, and all192/496 historical fault Gram/profile/protection responses.
-Activity is252 state columns,21 history state rows,726 raw source columns and
-1596 real sensitivity integrations at12/31/32; historical mode count192/496/512
-is retained. Numeric persistent/local matrix lower bound about2.75–2.86MB (not
-RSS or complete allocation high water); unoptimized diagnostic build/evaluate
-~279/400/391ms before batching. No new timing conclusion yet.
+WP3: actual U0 snapshots30/31/32 agree with the unchanged full raw-prefix
+oracle: dof240/248/256, S254.384/272.988/275.005, threshold/alarm/status,
+original physical rank, current and ALL historical15-state means and covariance
+blocks, tag mean/coordinate PL, and all480/496/512 historical fault Grams,
+profiles and protected responses. Compare physical quantities at relative+absolute
+1e-7 in their native rad/m/mps/bias units (coordinate PL1e-6m); fixed dimensionless
+prototype1e-11. Rank/status are exact assertions. The separately constructed
+273.201 regression has ν248 and threshold368.599 rather than old169/271.190;
+no probability/dof field is overwritten.
 
-The legacy reference-domain gate inspected ALL old state increments. To preserve
-that selector, old nav means have affine back-substitution maps from the current
-21D frontier; their five-unit maximum agrees with dense oracle. This incurs
-O(retired-state count x frontier width) storage/update and is disclosed, rather
-than quietly removing the old gate. Candidate deletion of retired sources and
-unsupported bridge/IMU scopes refuses; local replacements use original raw
-source subsets before conditional whitening. Source/version identity is bound to
-its exact prepared transaction. Original risk/AL/formal/publication flags remain.
+The legacy reference-domain gate still inspects ALL historical increments using
+an immutable conditional back-substitution chain per retired21D state. Its five
+physical-unit maxima and optional full joint covariance match dense oracle.
+Only the diagnostic covariance request uses O(history²) output memory; detector,
+PL and selector never request it. Chain storage is O(retired frames x21²), with
+no per-epoch propagation of historical dense state matrices. Every historical
+mutually exclusive fault leaf is retained. Pure linear80-step growth keeps one
+active state/one state row and32/50/80 fault profiles using1280/2000/3200 bytes;
+this test does not extend the raw50-epoch domain.
 
-U1 main seed actual19-epoch online run:19 backend commits,18 selected/available,
-one correct automatic range exclusion and0 formal/protected. Final served
-HPL/VPL .827698/.941213m match the former prefix path; no GT selection. Full
-31/32/U1 paired and I2 rejection regressions, growth measurements and final
-performance pairing remain required. Current integration save is not completion.
+Active raw state dimension252, frozen boundary21 rows, sensitivity source
+columns726 and1596 integrations are constant after lag warmup. Immutable
+prepared suffix is appended in one joint QR; root/KEEP evaluations are cached
+only within the exact live transaction, parameters and protection chart.
+Candidate deletion rebuilds the finite suffix with principal covariance
+selection; retired/unknown source deletion, bridge/IMU scopes, changed sample
+continuity/model and stale post-commit roots refuse. These are executable
+refusals, not recycled PLs. Matrix lower bounds at12/31/32 are
+4,284,168/4,926,256/4,969,448 bytes at12/31/32; epoch50 retains800
+fault modes with5,746,904 bytes and the same252/21/726/1596 active counts.
+These include conditional chains and cached
+state matrices, excluding object/container overhead and peak workspace/RSS.
+Directed build+evaluate is about135/151/154/171ms at12/31/32/50
+in the final diagnostic run;
+independent dense snapshot work is outside that timer. These are not final
+service-time results.
+
+U1 main seed actual19-epoch preliminary online run:19 backend commits,
+18 selected/available, one correct automatic range exclusion and0
+formal/protected. Final served HPL/VPL .827698/.941213m match former prefix
+results; GT is only scored after selection. Final continuous paired stream and
+I2 scope rejection returns `UNAVAILABLE_ONLINE_SUMMARY_SCOPE` with zero CSV
+outputs; no long-IMU history gains qualification. Gaussian43 checks and existing
+9 transaction/proof +5 risk +3 publication filters all pass once after freeze. WP4 records new actual
+state decomposition/fault product counters, detector dof, matrix bytes,
+frontier and historical QR counts in the existing CSV entry. Final stream under
+`--online-summary` compares dense-prefix reference against incremental optimized
+with identical UWB leaf/candidate census; structural representation counters are
+reported separately, while all decision/risk/recipe fields are compared.
 
 A new translation unit exposed two dangling Eigen lazy expressions in the
 existing scenario generator (acceleration/tag), causing invalid UWB input before

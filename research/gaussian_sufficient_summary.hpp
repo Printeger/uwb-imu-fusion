@@ -24,7 +24,7 @@ struct SummaryEvaluation {
  std::map<std::string,SummaryFaultResult> faults;
  int state_rank=0,total_rank=0;
 };
-struct SummaryRetirement {Eigen::MatrixXd coefficients;Eigen::VectorXd offset;};
+struct SummaryRetirement {Eigen::MatrixXd coefficients;Eigen::VectorXd offset;Eigen::MatrixXd conditional_covariance;};
 class GaussianSufficientSummary {
  public:
  Eigen::MatrixXd h;
@@ -80,6 +80,8 @@ class GaussianSufficientSummary {
   auto upper=qr.matrixR().topLeftCorner(count,count).eval();SummaryRetirement recovery;
   recovery.offset=qr.colsPermutation()*upper.triangularView<Eigen::Upper>().solve(rhs.head(count));
   recovery.coefficients=-(qr.colsPermutation()*upper.triangularView<Eigen::Upper>().solve(rotated.topRows(count))).eval();
+  Eigen::MatrixXd conditional_gain=qr.colsPermutation()*upper.triangularView<Eigen::Upper>().solve(Eigen::MatrixXd::Identity(count,count));
+  recovery.conditional_covariance=conditional_gain*conditional_gain.transpose();
   for(auto& item:faults){item.second.top=(qr.householderQ().adjoint()*item.second.top).bottomRows(h.rows()-count).eval();
    if(item.second.alias_state>=0)item.second.alias_state=item.second.alias_state<count?-2:item.second.alias_state-count;}
   d=rhs.tail(h.rows()-count);h=rotated.bottomRows(h.rows()-count);equations-=count;eliminated_states+=count;++orthogonal_updates;
@@ -101,7 +103,7 @@ class GaussianSufficientSummary {
   r.status=r.statistic>r.threshold?"POST_REJECTED":"FROZEN_MODEL_ONLY";
   double k=boost::math::quantile(boost::math::complement(boost::math::normal(),tail/6));
   r.pl=k*(c*r.covariance*c.transpose()).diagonal().cwiseMax(0.).cwiseSqrt();
-  if(!include_faults)return out;
+  if(!include_faults){if(r.status=="POST_REJECTED")r.pl.setConstant(INFINITY);return out;}
   double radius=std::sqrt(r.threshold)+std::sqrt(boost::math::quantile(boost::math::complement(boost::math::chi_squared(r.dof),tail)));
   Eigen::Vector3d bound=Eigen::Vector3d::Zero();
   Eigen::MatrixXd protected_gain=c*gain;
