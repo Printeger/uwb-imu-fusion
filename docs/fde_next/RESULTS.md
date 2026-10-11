@@ -1109,3 +1109,38 @@ impulses span N residual dimensions; vectors(1,2,3) and(3,2,1) have the same
 energy but different profiles. Common operators reduce repeated work, not
 that lower bound or native hypothesis/proof census. All16 events/epoch,
 physical identities, priors, union charge and coverage remain intact.
+
+D: original incremental plus full raw-prefix oracle30/31/32 agree on rank,
+ν=240/248/256, S=254.384/272.988/275.005, threshold, all historical/current
+navigation means/covariances, three protected coordinate PLs and every leaf
+Gram/profile/amplitude/response/class. The deterministic248-dimensional
+regression retains S273.201 below correct threshold368.599 (old169 threshold
+271.190). Actual50-epoch oracle wrapper retains800 events,252 active states,
+21 boundary rows,726 source columns and1596 integrations.
+
+Same-ELF online audits at U0 epoch14 and U1 actual alarm15 compare909/2903
+matrix payloads plus all CSV semantic fields, exact recipes, covered-mode
+identities and leaf classes; maximum absolute differences2.274e-13/3.411e-13.
+Both sides use the same S4/native consumers and AL/tie guards. The actual
+near-AL transaction refuses selection on both sides and commits one unavailable
+nominal plan. Rank1e-10, tiny unclassified fault responses, dangerous nullspace,
+exact removed-source zero, exact-owner/one-ULP/risk/chart binding and stale
+post-commit negatives pass. Different retained row keys cannot share results;
+identical U1 recipes may share numbers while keeping all3 proof consumers.
+Preflight exhaustion and exhaustion after one cached candidate both latch
+UNAVAILABLE_SUMMARY_RESOURCES, including subsequent access to that old hit.
+I2 original/optimized online scope negatives refuse before any output/commit;
+no cache opens IMU eligibility. Final existing shared-episode/MissingProvenance
+and safety regressions remain to be run once after performance.
+
+Pure linear21/252-size growth tests (not80-epoch raw qualification):
+
+| Epoch | Leaves | Full transforms ref→opt | Shared frontier leaves | Numeric bytes both | Fault QR ms ref→opt | Query+PL ms ref→opt |
+|---:|---:|---:|---:|---:|---:|---:|
+|32|512|512→192|320|1558624|20.460→10.103|27.184→15.917|
+|50|800|800→192|608|2148448|32.919→11.986|40.186→19.321|
+|80|1280|1280→192|1088|3131488|52.152→10.870|60.889→17.936|
+
+Each optimized query uses one common frontier kernel. Both paths compare all
+leaf fields and mean/covariance/PL; own profiles still grow linearly. These
+structured synthetic query timings are not real motion service measurements.

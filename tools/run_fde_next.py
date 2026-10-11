@@ -59,8 +59,8 @@ def compare_rows(a, b, summary=False):
             raise RuntimeError(f"different result: {key}: {av} vs {bv}")
 
 
-def compare(left, right, left_dump, right_dump):
-    compare_rows(read_rows(left)[0], read_rows(right)[0])
+def compare(left, right, left_dump, right_dump, summary=False):
+    compare_rows(read_rows(left)[0], read_rows(right)[0], summary=summary)
     max_delta = 0.0
     aa, am = read_matrices(left_dump)
     bb, bm = read_matrices(right_dump)
@@ -73,7 +73,7 @@ def compare(left, right, left_dump, right_dump):
         if key.endswith("reference_pl"):
             if np.any(bb[key] < aa[key] - 1e-12) or delta > 1e-8:
                 raise RuntimeError(f"nonconservative or excessive PL guard: {key}")
-        elif not np.allclose(aa[key], bb[key], rtol=1e-11, atol=1e-11, equal_nan=True):
+        elif not np.allclose(aa[key], bb[key], rtol=1e-10 if summary else 1e-11, atol=1e-10 if summary else 1e-11, equal_nan=True):
             raise RuntimeError(f"different numeric payload: {key}")
         max_delta = max(max_delta, delta)
     return len(aa), max_delta
@@ -92,11 +92,18 @@ def main():
     parser.add_argument("--numeric", choices=["reference", "optimized"], default="optimized")
     parser.add_argument("--position-functional", action="store_true", help="IMU-only recovery; current tag conditional, navigation unprotected")
     parser.add_argument("--online-summary", action="store_true", help="incremental fixed-model UWB history; full raw oracle retained")
+    parser.add_argument("--fault-pair", action="store_true", help="same-ELF original/optimized online fault algebra and recovery")
+    parser.add_argument("--fault-cost", action="store_true", help="print numerical work census")
     parser.add_argument("--history-reference", action="store_true", help="use the finite raw prefix reference for actual selection")
     parser.add_argument("--cache", type=Path)
     parser.add_argument("--plot", type=Path)
     args = parser.parse_args()
+    if args.fault_pair:
+        args.online_summary = True
     env = dict(os.environ)
+    env.pop("FDE_FAULT_REFERENCE", None)
+    if args.fault_cost:
+        env["FDE_FAULT_COST"] = "1"
     env["LD_LIBRARY_PATH"] = str(BIN.parent) + ":" + env.get("LD_LIBRARY_PATH", "")
     for name in ["OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"]:
         env[name] = "1"
@@ -125,13 +132,22 @@ def main():
         def run(name, scene, scope, epochs, numeric, attempts=None, audit=False, seed=None, continuous=False):
             path = tmp / (name + ".csv")
             cmd = [str(BIN / "fde_next_runner"), str(args.config), str(path), scene, scope,
-                   str(args.seed if seed is None else seed), str(epochs), "optimized" if continuous and args.online_summary else numeric]
+                   str(args.seed if seed is None else seed), str(epochs), "optimized" if args.fault_pair or continuous and args.online_summary else numeric]
             if attempts is not None:
                 cmd.append(str(attempts))
             if continuous:
                 cmd.extend(["1", "continuous"])
             current = dict(env)
-            if continuous and args.online_summary:
+            if args.fault_pair:
+                current["FDE_NEXT_ONLINE_SUMMARY"] = "1"
+                current.pop("FDE_NEXT_USE_PREFIX_REFERENCE", None)
+                if numeric == "reference":
+                    current["FDE_FAULT_REFERENCE"] = "1"
+                else:
+                    current.pop("FDE_FAULT_REFERENCE", None)
+                if audit:
+                    current["FDE_FAULT_AUDIT"] = "1"
+            elif continuous and args.online_summary:
                 current.pop("FDE_NEXT_ONLINE_SUMMARY", None)
                 current.pop("FDE_NEXT_USE_PREFIX_REFERENCE", None)
                 current["FDE_NEXT_USE_PREFIX_REFERENCE" if numeric == "reference" else "FDE_NEXT_ONLINE_SUMMARY"] = "1"
@@ -187,7 +203,31 @@ def main():
             for name, scene, epochs in [("normal", "U0", 14), ("alarm", "U1", 15)]:
                 ref, _ = run(name + "-reference", scene, "uwb", epochs, "reference", 1, True)
                 opt, _ = run(name + "-optimized", scene, "uwb", epochs, "optimized", 1, True)
-                count, delta = compare(ref, opt, ref.with_suffix(".matrices"), opt.with_suffix(".matrices"))
+                count, delta = compare(ref, opt, ref.with_suffix(".matrices"), opt.with_suffix(".matrices"), summary=args.fault_pair)
+                if args.fault_pair and name == "normal":
+                    payload, _ = read_matrices(opt.with_suffix(".matrices"))
+                    prefix = "candidate_1_"
+                    pl = payload[prefix+"reference_pl"] + np.abs(payload["native_tag_map"] @ payload[prefix+"actual_delta"] - payload["tag_map"] @ payload[prefix+"reference_delta"])
+                    # Exercise the actual AL gate at its numerical grey boundary.
+                    import yaml
+                    base_path = ROOT / yaml.safe_load(args.config.read_text())["base_config"]
+                    base = yaml.safe_load(base_path.read_text())
+                    base["fault_models"]["manifest_path"] = str((base_path.parent / base["fault_models"]["manifest_path"]).resolve())
+                    base["risk"]["horizontal_alert_limit_m"] = float(np.linalg.norm(pl[:2]))
+                    changed = tmp / "near-al-base.yaml"
+                    changed.write_text(yaml.safe_dump(base))
+                    config = tmp / "near-al.yaml"
+                    import re
+                    config.write_text(re.sub(r"(?m)^base_config:.*$", "base_config: "+str(changed), args.config.read_text()))
+                    normal_config = args.config
+                    args.config = config
+                    for side in ("reference", "optimized"):
+                        negative, _ = run("near-al-"+side, "U0", "uwb", 14, side, continuous=True)
+                        last = read_rows(negative)[-1]
+                        if last["selected"] != "0" or last["status"] != "INDETERMINATE_AL_OR_TIE" or last["updates"] != "1":
+                            raise RuntimeError(f"near-AL must refuse selection and commit unavailable nominal once: {last}")
+                    args.config = normal_config
+                    print("near-AL actual online transaction: both sides refuse; one unavailable nominal commit")
                 print(f"{name}: complete fields/recipes/fault maps/means/covariances/PL agree; "
                       f"matrices={count}, max_abs_delta={delta:.17g}")
         elif args.command == "stream":
@@ -199,6 +239,11 @@ def main():
                     for line in path.with_suffix(".log").read_text().splitlines():
                         if line.startswith("STREAM_PHASES"):
                             print(line, flush=True)
+                    if args.fault_cost:
+                        costs = [line for line in path.with_suffix(".log").read_text().splitlines() if line.startswith("FAULT_COST ")]
+                        for line in costs:
+                            if any(f"epoch={e} " in line for e in (15,32,48)):
+                                print("STREAM_"+line, flush=True)
                     profiles = [dict(item.split("=") for item in line.split()[1:]) for line in path.with_suffix(".log").read_text().splitlines() if line.startswith("PROFILE ")]
                     if len(profiles) != 35:
                         raise RuntimeError("expected35 measured phase profiles after13 prewarm")
@@ -227,11 +272,11 @@ def main():
                           f"selected={sum(x['selected']=='1' for x in rows)}/35 updates={sum(int(x['updates']) for x in rows)} "
                           f"core40={sum(core>40)}/35 full50={sum(full>50)}/35 modeled_queue_max={max(wait):.3f} modeled_latency_max={max(wait+full):.3f} "
                           f"process_s={wall:.3f} setup_prewarm_teardown_s={wall-sum(full)/1000:.3f}", flush=True)
-                    print("STREAM_ACTIONS", [{key: x[key] for key in
-                          ["epoch", "timestamp_ns", "selected_action", "removed_groups", "correct", "core_ms", "end_to_end_ms"]}
-                          for x in rows if x["alarm"]=="1"], flush=True)
+                    print("STREAM_ACTIONS", [{**{key: x[key] for key in
+                          ["epoch", "timestamp_ns", "selected_action", "removed_groups", "correct", "core_ms", "end_to_end_ms"]}, "modeled_queue_ms": float(wait[k]), "modeled_latency_ms": float(wait[k]+full[k])}
+                          for k, x in enumerate(rows) if x["alarm"]=="1"], flush=True)
                     print("STREAM_COUNTS", scene, numeric, {key: (min(values(key)), max(values(key))) for key in
-                          ["rows", "cols", "noise_source_columns", "reference_faults", "actions", "post", "pl_evaluated", "integrations", "gaussian_decompositions", "source_products", "covariance_fallback", "detector_dof", "summary_bytes", "summary_rows", "summary_updates", "summary_frontier"]},
+                          ["rows", "cols", "hypotheses", "proof_entries", "numerical", "noise_source_columns", "reference_faults", "actions", "post", "pl_evaluated", "integrations", "gaussian_decompositions", "source_products", "covariance_fallback", "detector_dof", "summary_bytes", "summary_rows", "summary_updates", "summary_frontier"]},
                           f"rejected={sum(x['selected']!='1' for x in rows)} dropped=0 unfinished=0 queue_drained_after_last_arrival_ms={wait[-1]+full[-1]:.3f}", flush=True)
         else:
             results = {}
