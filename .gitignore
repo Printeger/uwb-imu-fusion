@@ -174,7 +174,7 @@ compile_commands.json
 /.cache/
 /benchmark/.cache/
 
-# Epoch RAIM / fused-PL research scratch outputs (including TMPDIR=$PWD).
+# Epoch RAIM / fused-PL / HYBRID research scratch outputs (including TMPDIR=$PWD).
 # Keep algorithm sources, configs and compact reports/figures trackable.
 /epoch-architecture-*/
 /fde-next-*/
@@ -182,3 +182,10 @@ compile_commands.json
 /docs/fde_next/raw/
 /docs/fde_next/snapshots/
 *.matrices
+
+# HYBRID direct-run outputs written to the repository root. The CLI's default
+# .cache/hybrid/ directory is already covered by /.cache/ above.
+/hybrid-*/
+/hybrid*.csv
+/hybrid*.json
+/hybrid*.xml
