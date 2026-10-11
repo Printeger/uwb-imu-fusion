@@ -489,5 +489,7 @@ endif()
 
 add_executable(fde_next_checks EXCLUDE_FROM_ALL research/gaussian_checks.cpp)
 target_link_libraries(fde_next_checks fde_research)
+add_executable(fde_summary_checks EXCLUDE_FROM_ALL research/summary_checks.cpp)
+target_link_libraries(fde_summary_checks gtsam)
 add_executable(fde_next_runner EXCLUDE_FROM_ALL research/fde_next_runner.cpp)
 target_link_libraries(fde_next_runner fde_research tbb)

@@ -782,3 +782,47 @@ user files and the old four S1–S4 figures remain untouched. No new figure is
 necessary for these tables. R validation/measurement savepoint is `556d214`; final receipt only records
 that owned temporary artifacts were cleaned. All numerical source remains
 `a53de94`; this final document change needs no repeated test or timing.
+
+## Online Gaussian sufficient summary (active new Goal)
+
+Actual baseline HEAD `50ca054`, clean tree; HGIR is not repeated. This task keeps
+raw/nonlinear/hardware qualification unchanged and targets incremental algebra
+and bounded historical state cost. Owned temporary cache:
+`.cache/fde-online-summary/run-20261011/`; retain while this Goal is active.
+
+WP1 implements `gaussian_sufficient_summary.hpp`, independent of the estimator.
+Orthogonal append/old-state retirement maintains a state square root, transformed
+rhs and per-mutually-exclusive-fault transformed columns. Residual norm and
+independent residual dimension count are separate from realized `[B,z]` rank.
+Each fault carries a small square root of its residual `[B_i,z]` Gram, hence
+profile rhs/estimate, monitorability and protected response survive old-state
+elimination. No normal-equation inversion or covariance jitter. Raw structural
+state aliases are checked on every append and classified against the current
+protection map. Late historical fault insertion without proof of zero past
+support throws UNAVAILABLE rather than inventing zero response.
+
+`fde_summary_checks` compares9 deterministic parameter combinations (3 covariance
+cross terms x3 raw deletion choices), before/after3-state retirement, to the
+unchanged dense SVD oracle. Rank/dof, statistic/threshold/status, mean/covariance,
+fault Gram/profile/estimated amplitude/protected response and coordinate PL
+agree at1e-11 relative+absolute scales (PL1e-10). Shared-source latent-variable
+prior test also agrees with marginal correlated covariance; falsely dropping
+that correlation changes covariance by>1e-4. Exact harmless/dangerous fault
+aliases and near-zero unresolved response are distinguished; late historical
+mode insertion refuses. These are minimal mathematics tests, not raw/HMI proof.
+
+Finite-history information limit: with N mutually exclusive coordinate-impulse
+faults in independent historical residual directions, N separate B_i'z profiles
+are independent information. Vectors(1,2,3)/(3,2,1) have equal residual energy
+but different first fault profile. Thus one energy+dof cannot restore arbitrary
+old fault responses. The implementation retains every declared leaf separately;
+its mode memory may grow. Joint modes need their own predeclared multi-column
+square root; cross-leaf Grams cannot be invented after retirement.
+
+Reproduce: build/run `fde_summary_checks` in the existing private Release build.
+Next active work is real lifecycle integration: whiten each PIM conditional on
+its two shared6D ADC boundary sources, preserve the single source prior, retire
+only factors whose BOTH state charts have frozen, rebuild only the active suffix
+for relinearization/candidate deletion, and compare against the unchanged full
+raw-prefix reference at15/30/31/32. No online performance or full-delivery claim
+is made at this WP1 savepoint.
