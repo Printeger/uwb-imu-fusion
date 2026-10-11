@@ -495,3 +495,6 @@ add_executable(fde_online_checks EXCLUDE_FROM_ALL research/online_history_checks
 target_link_libraries(fde_online_checks fde_research tbb)
 add_executable(fde_next_runner EXCLUDE_FROM_ALL research/fde_next_runner.cpp)
 target_link_libraries(fde_next_runner fde_research tbb)
+
+add_executable(epoch_raim_checks EXCLUDE_FROM_ALL research/epoch_raim_checks.cpp)
+target_link_libraries(epoch_raim_checks fde_research)
