@@ -1596,6 +1596,9 @@ ResearchEpochPredictionV1 IncrementalUwbImuEstimator::researchPreUwbPredictionV1
       tx.ledger_version != factor_ledger_.version() ||
       !(tx.base_version == debugVersion()))
     throw std::logic_error("research prediction requires current active transaction");
+  for (const auto& committed : committed_uwb_batches_)
+    if (committed.second == tx.uwb_batch.id)
+      throw std::logic_error("research current UWB batch identity already committed");
   ResearchEpochPredictionV1 result;
   result.transaction_id = tx.id;
   result.excluded_batch_id = tx.uwb_batch.id;

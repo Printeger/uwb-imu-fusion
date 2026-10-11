@@ -17,7 +17,8 @@ int main(int argc,char** argv){try{
  est.initialize(scene.initial_observation,scene.cfg.realtime.prior_sigmas);est.ingestImu(scene.imu[0]);
  Eigen::MatrixXd response14;
  for(int e=1;e<=15;++e){
- for(int i=(e-1)*10+1;i<=e*10;++i)est.ingestImu(scene.imu[i]);auto b=scene.uwb[e-1];if(e==15)b.measurements[0].range_m+=2.25;
+ for(int i=(e-1)*10+1;i<=e*10;++i){est.ingestImu(scene.imu[i]);}
+ auto b=scene.uwb[e-1];if(e==15)b.measurements[0].range_m+=2.25;
  auto tx=est.prepareEpoch(b,EpochPreparationOptions{false,true,false,false});auto pred=est.researchPreUwbPredictionV1(tx);
  require(est.backendUpdateCount()==pred.backend_updates && pred.excluded_batch_id==b.id,"read only/source lineage");
  auto sameTx=tx;for(auto& m:sameTx.uwb_batch.measurements)m.range_m+=100.;auto same=est.researchPreUwbPredictionV1(sameTx);
@@ -28,7 +29,13 @@ int main(int argc,char** argv){try{
  Eigen::MatrixXd h=Eigen::MatrixXd::Zero(n,15);h.leftCols(6)=hp;Eigen::MatrixXd s=h*p*h.transpose()+validatedUwbCovariance(b);
  Eigen::MatrixXd k=p*h.transpose()*s.inverse();auto all=fusedCandidate(b,-1,pred,scene.lever,valid(),1e-6,1e-9);
  require(std::abs(all.gaussian.statistic-innovation.dot(s.ldlt().solve(innovation)))<1e-8,"NIS vs joint parity");
- require(all.gaussian.dof==n,"NIS dof");require((all.response-c*k).norm()<1e-9,"gain response vs SVD");
+ require(all.gaussian.dof==n,"NIS dof");
+ gtsam::Matrix tagH;Eigen::Vector3d predictedTag=state.position_world_m+state.q_world_body*scene.lever;
+ UwbPositionBatchFactor(1,b).evaluateError(predictedTag,tagH);
+ require((h-tagH*c).norm()<1e-12,"tag range Jacobian factorization");
+ auto parity=gaussianReference(tagH,innovation,validatedUwbCovariance(b),Eigen::Matrix3d::Identity(),{},1e-6,1e-9);
+ require(parity.dof==n-3,"alternative parity dof");
+ std::cout<<"detector comparison epoch="<<e<<" NIS="<<all.gaussian.statistic<<" threshold="<<all.gaussian.threshold<<" range_parity="<<parity.statistic<<" threshold="<<parity.threshold<<" parity_dof="<<parity.dof<<"\n";require((all.response-c*k).norm()<1e-9,"gain response vs SVD");
  require((all.gaussian.covariance-(p-k*h*p)).norm()<1e-9,"posterior covariance");
  // Independent uncondensed 30-state QR oracle; same Gaussian subproblem as
  // historical reference, current single-range faults only.
@@ -48,8 +55,23 @@ int main(int argc,char** argv){try{
  auto full=gaussianReference(a,z,Eigen::MatrixXd::Identity(30+n,30+n),cc,faults,1e-6,1e-9);
  if(e==14)require((full.pl-all.gaussian.pl).norm()<1e-8,"same scope PL equality");
  for(int j=0;j<6;++j){gtsam::Vector6 dx=gtsam::Vector6::Zero();dx(j)=1e-6;Eigen::Vector3d fd=(pose.retract(dx).transformFrom(scene.lever)-pose.retract(-dx).transformFrom(scene.lever))/2e-6;require((fd-c.col(j)).norm()<1e-8,"lever rotation map");}
+ // A coherent prior/current fault can exactly imitate a protected state
+ // translation; the current-only fault contract must not cover it silently.
+ if(e==14){
+  Eigen::MatrixXd aliasA=Eigen::MatrixXd::Zero(15+n,15),aliasCov=Eigen::MatrixXd::Zero(15+n,15+n);
+  aliasA.topRows(15).setIdentity();aliasA.bottomRows(n)=h;
+  aliasCov.topLeftCorner(15,15)=p;aliasCov.bottomRightCorner(n,n)=validatedUwbCovariance(b);
+  auto historyAlias=gaussianReference(aliasA,Eigen::VectorXd::Zero(15+n),aliasCov,c,{aliasA.col(3)},1e-6,1e-9);
+  require(historyAlias.status=="DANGEROUS_NULLSPACE","history/current alias counterexample");
+ }
  for(int j=0;j<5;++j){auto bad=valid();if(j==0)bad.covariance_certified=false;if(j==1)bad.independent_current_noise=false;if(j==2)bad.clean_history=false;if(j==3)bad.clean_imu=false;if(j==4)bad.no_current_reuse=false;require(fusedEpochPl(b,pred,scene.lever,bad).status==predictionRefusal(bad),"negative prediction condition");}
+ auto flat=b;for(auto& m:flat.measurements)m.anchor_position_m.z()=1.1;
+ require(fusedEpochPl(flat,pred,scene.lever,valid()).status=="GEOMETRY_OR_MIRROR_UNQUALIFIED","B candidate geometry refusal");
+ auto nonlinear=b;for(auto& m:nonlinear.measurements)m.range_m+=100.;
+ require(fusedCandidate(nonlinear,-1,pred,scene.lever,valid(),1e-6,1e-9).status=="NONLINEAR_DOMAIN_FAILED","B nonlinear domain refusal");
  auto invalid=pred;invalid.prior.covariance(0,0)=-1;require(fusedEpochPl(b,invalid,scene.lever,valid()).status=="PREDICTION_COVARIANCE_UNQUALIFIED","invalid covariance");
+ invalid=pred;invalid.prior.covariance=Eigen::MatrixXd::Identity(15,15);invalid.prior.covariance(0,0)=1e-24;
+ require(fusedEpochPl(b,invalid,scene.lever,valid()).status!="FROZEN_MODEL_ONLY","ill-conditioned model refuses");
  invalid=pred;invalid.excluded_batch_id=BatchId(999);require(fusedEpochPl(b,invalid,scene.lever,valid()).status=="PREDICTION_LINEAGE_FAILED","wrong batch");
  if(e==14)response14=all.response;
  std::cout<<"snapshot "<<e<<" NIS="<<all.gaussian.statistic<<" dof="<<all.gaussian.dof<<" Schur/QR response_error="<<(c*fullResponse.bottomRows(15)-all.response).norm()<<"\n";
@@ -57,6 +79,18 @@ int main(int argc,char** argv){try{
  auto r=fusedEpochPl(b,pred,scene.lever,valid());auto plan=EpochCommitPlan::nominalPlan(tx);
  if(e==15){require(r.alarm && r.excluded==0 && r.status=="FROZEN_MODEL_ONLY","B real recovery");for(auto& g:tx.uwb_groups)if(!g.nominal && g.source_measurements.size()==b.measurements.size()-1 && std::find(g.source_measurements.begin(),g.source_measurements.end(),b.measurements[0].id)==g.source_measurements.end())plan.groups_to_add={tx.imu_group.id,g.id};}
  auto receipt=est.commitEpoch(std::move(tx),plan);require(receipt.backend_updates==1,"single commit");
+ if(e==15){
+  std::vector<MeasurementId> actual;
+  for(auto id:plan.groups_to_add)for(const auto& entry:est.factorLedger().groupEntries(id))
+   if(entry.kind==FactorKind::UwbBatch && entry.lifecycle==FactorLifecycle::Active)
+    actual.insert(actual.end(),entry.source_measurements.begin(),entry.source_measurements.end());
+  require(actual.size()==7 && std::find(actual.begin(),actual.end(),b.measurements[0].id)==actual.end(),"bad pending raw range absent from ledger");
+  for(int i=1;i<8;++i)require(std::find(actual.begin(),actual.end(),b.measurements[i].id)!=actual.end(),"healthy pending range retained");
+  auto committed=est.currentState();Eigen::Vector3d tag=committed.position_world_m+committed.q_world_body*scene.lever;
+  Eigen::Vector3d transfer=r.gaussian.pl+(tag-r.tag).cwiseAbs();
+  require(committed.timestamp==b.timestamp && (tag-r.tag).norm()<.25 && transfer.allFinite(),"PL/committed center/time binding");
+  std::cout<<"native recovery ledger: exclude "<<b.measurements[0].id.value()<<" keep="<<actual.size()<<" center_shift="<<(tag-r.tag).norm()<<" transferred_pl="<<transfer.transpose()<<"\n";
+ }
  }
  double eps=1e-4;Eigen::Vector3d actual=(committedPerturb(argv[1],14,eps)-committedPerturb(argv[1],14,-eps))/(2*eps);
  double difference=(actual-response14.col(0)).norm();std::cout<<"actual nonlinear finite difference="<<actual.transpose()<<" frozen="<<response14.col(0).transpose()<<" difference="<<difference<<"\n";
