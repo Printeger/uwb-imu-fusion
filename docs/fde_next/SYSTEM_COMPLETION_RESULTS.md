@@ -27,3 +27,38 @@ is the conditional world map; UwbBatch itself has no frame field.
 NONE and all eight omitted physical rows form the complete current
 single-fault outer relaxation of the original 1/3-epoch episode contract.
 It does not enforce cross-epoch shared amplitudes or qualify extra episodes.
+
+W2 mathematical argument: in each omitted-row branch choose a healthy
+reference. Exact subtraction of squared ranges gives
+`2(a_i-a_0)'p = |a_i|²-|a_0|²+d_0²-d_i²`.
+Directed intervals enclose every coefficient and RHS. Solving one coordinate
+with interval remainder encloses every solution with other coordinates in
+the current box; a coefficient containing zero is skipped. Intersection
+therefore loses no feasible point. Each upper shell also gives
+`p_j in a_ij + [-u_i,u_i]`. A squared-distance interval disjoint from the
+squared shell certifies emptiness. Lower-shell sign is never selected.
+All arithmetic is Boost directed interval arithmetic with `-frounding-math`
+and `-ffp-contract=off`, checked by the runtime 1+2^-53 witness.
+Nonfinite arithmetic falls back to the full inertial box, not an empty branch.
+
+Bisection uses two closed boxes sharing the midpoint, whose union covers
+the parent. Global budget expiry retains every queued box and every later
+unvisited fault root. Hulling all retained branches gives `S subset Q subset B`.
+An all-empty union reports MODEL_INCONSISTENT with infinite PL and no issuance.
+Signed distance from Q to the actual center and horizontal sqrt are also
+outward interval operations. By monotonicity these bounds cannot exceed the
+same directed operations on B at that center. Finite overflow fallback is
+explicit; it does not certify invalid input or unsupported IMU laws.
+
+On E, the original proof places truth in B; the healthy UWB shells hold for
+the true current fault projection, included among NONE/eight masks. Thus
+truth belongs to S and Q regardless of FDE or the data-dependent center.
+The same task event and amount apply simultaneously at all 50 epochs.
+This argument does not require independent inertial and UWB sets.
+
+W1/W2 executed checks: source certificates at 16 epochs of U0/U1/U2/U3;
+100-digit independent distance oracle for all eight fault rows, zero/weak/
+strong faults and both 7-sigma boundaries; 155 independently feasible lattice
+points; 1D/2D/3D analytic unit-ball hulls, coplanar mirrors, near tangency,
+zero height, negative shells, overflow and nonempty/zero-budget frontier.
+All pass. Deterministic fixtures are geometry checks, not probability samples.
