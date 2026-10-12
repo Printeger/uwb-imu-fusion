@@ -517,3 +517,9 @@ target_link_libraries(hybrid_raw_checks fde_research)
 # Only the proof oracle needs directed rounding; production arithmetic untouched.
 set_source_files_properties(research/raw_nonlinear_inclusion.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
 target_sources(fde_research PRIVATE research/raw_nonlinear_inclusion.cpp)
+
+# SC1 isolated measurement contractor shares the raw directed-rounding contract.
+set_source_files_properties(research/raw_range_contraction.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+target_sources(fde_research PRIVATE research/raw_range_contraction.cpp)
+add_executable(raw_range_checks EXCLUDE_FROM_ALL research/raw_range_checks.cpp)
+target_link_libraries(raw_range_checks fde_research)

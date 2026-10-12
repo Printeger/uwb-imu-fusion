@@ -1,4 +1,5 @@
 #include "raw_nonlinear_inclusion.hpp"
+#include "raw_range_contraction.hpp"
 #include <boost/numeric/interval.hpp>
 #include <boost/numeric/interval/rounded_arith.hpp>
 #include <array>
@@ -58,6 +59,26 @@ RawInputRoundoff certifyRawGenerator(const NavigationState& obs,const Eigen::Mat
   for(int j=0;j<3;++j){I f=force[j]+bias[j]+I(sa)*I(adc[i](j));I g=I(rate)*double(j+1)/axisnorm+bias[j+3]+I(sg)*I(adc[i](j+3));out.accel_sample=std::max(out.accel_sample,abs(I(samples[i].specific_force_mps2(j))-f).upper());out.gyro_sample=std::max(out.gyro_sample,abs(I(samples[i].angular_velocity_radps(j))-g).upper());}
  }
  out.valid=std::isfinite(out.position+out.rotation_matrix+out.accel_sample+out.gyro_sample) && out.velocity.allFinite() && out.bias.allFinite() && out.position<=1e-10 && out.rotation_matrix<=1e-10 && out.accel_sample<=1e-10 && out.gyro_sample<=1e-10 && out.velocity.maxCoeff()<=1e-10 && out.bias.maxCoeff()<=1e-10;return out;
+}
+// Directed forward evaluation of ideal continuous tag and the actual UWB
+// arithmetic. The residual encloses all libm/Eigen/time/multiply/add rounding
+// used by the generator, including addition of an arbitrary episode amplitude.
+RawRangeLawEvidence certifyRawRanges(const UwbBatch& batch,const Eigen::Vector3d& amp,
+ const Eigen::Vector3d& freq,double rate,const Eigen::Vector3d& lever,
+ const std::array<double,8>& draws,const std::array<double,8>& faults){
+ RawRangeLawEvidence out;out.batch=batch;
+ if(batch.measurements.size()!=8 || !amp.allFinite() || !freq.allFinite() || !lever.allFinite() || !std::isfinite(rate))return out;
+ I t=I(double(batch.timestamp.value()))/1e9;V angle,pos;
+ for(int j=0;j<3;++j){angle[j]=I(rate)*t*double(j+1)/sqrt(I(14));pos[j]=I(amp(j))*sine(I(freq(j))*t);}pos[2]+=1.;
+ auto offset=multiply(expAndV(angle).first,fixed(lever));for(int j=0;j<3;++j)pos[j]+=offset[j];
+ for(size_t i=0;i<8;++i){const auto& m=batch.measurements[i];
+  if(!m.anchor_position_m.allFinite() || !std::isfinite(m.range_m) || !std::isfinite(m.sigma_m) || m.sigma_m<=0 || !std::isfinite(draws[i]) || !std::isfinite(faults[i]))return out;
+  V difference;for(int j=0;j<3;++j)difference[j]=pos[j]-I(m.anchor_position_m(j));
+  I ideal=norm(difference)+I(m.sigma_m)*I(draws[i])+I(faults[i]);
+  out.rho_num[i]=abs(I(m.range_m)-ideal).upper();
+  if(!std::isfinite(out.rho_num[i]) || out.rho_num[i]>1e-8)return out;
+ }
+ out.valid=true;return out;
 }
 struct RawNonlinearInclusion::Impl {
  RawInclusionParameters law;NavigationState initial;M r;V p,v;

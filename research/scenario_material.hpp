@@ -1,6 +1,7 @@
 #pragma once
 #include "raw_imu_episode.hpp"
 #include "raw_nonlinear_inclusion.hpp"
+#include "raw_range_contraction.hpp"
 #include "uwb_imu_pl/config/integrity_config.hpp"
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 #include <Eigen/Geometry>
@@ -47,6 +48,7 @@ inline YAML::Node researchLaw(const std::string& path){
 struct NoisyMotionScenario {
  YAML::Node law;IntegrityConfig cfg;Eigen::Vector3d lever,amp,freq;
  std::vector<ImuMeasurement> imu;std::vector<UwbBatch> uwb;
+ std::vector<RawRangeLawEvidence> range_certificates;
  int epochs;double dt,rate;
  NavigationState initial_observation;
  bool initial_law_valid=false,physical_source_reference=false;
@@ -103,10 +105,12 @@ struct NoisyMotionScenario {
   }
   if(physical_source_reference)numeric_certificate=certifyRawGenerator(initial_observation,initial_normals,cfg.realtime.prior_sigmas,amp,freq,rate,cfg.imu.gravity_mps2,true_bias.front(),cfg.imu.accelerometer_bias_rw_sigma,cfg.imu.gyroscope_bias_rw_sigma,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),bias_normals,adc_normals,imu);
   for(int e=1;e<=epochs;++e){auto b=ranges(cfg,e);auto s=truth(e*dt);Eigen::Vector3d tag=s.position_world_m+s.q_world_body*lever;
-   for(auto& m:b.measurements){if(kind=="U3")m.anchor_position_m.z()=1.1;m.range_m=(m.anchor_position_m-tag).norm()+cfg.realtime.range_sigma_m*normal(uwb_rng);}
+   std::array<double,8> range_draws{},faults{};size_t row=0;
+   for(auto& m:b.measurements){if(kind=="U3")m.anchor_position_m.z()=1.1;m.range_m=(m.anchor_position_m-tag).norm()+cfg.realtime.range_sigma_m*(range_draws[row++]=normal(uwb_rng));}
    const int f=law["fault_epoch"].as<int>(),end=f+(kind=="U2"?law["persistent_epochs"].as<int>():1);
-   if((kind=="U1" || kind=="U2") && e>=f && e<end)b.measurements.at(law["fault_anchor_index"].as<int>()).range_m+=law["uwb_amplitude_m"].as<double>();
+   if((kind=="U1" || kind=="U2") && e>=f && e<end){size_t index=law["fault_anchor_index"].as<int>();faults[index]=law["uwb_amplitude_m"].as<double>();b.measurements.at(index).range_m+=faults[index];}
    uwb.push_back(b);
+   if(physical_source_reference)range_certificates.push_back(certifyRawRanges(b,amp,freq,rate,lever,range_draws,faults));
   }
  }
 };
