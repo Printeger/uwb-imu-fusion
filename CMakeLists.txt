@@ -509,3 +509,7 @@ target_link_libraries(hybrid_checks fde_research)
 # Isolated PL decomposition and joint-episode / simultaneous-projection oracle.
 add_executable(hybrid_tightening_checks EXCLUDE_FROM_ALL research/hybrid_tightening_checks.cpp research/hybrid_pl_diagnostics.cpp)
 target_link_libraries(hybrid_tightening_checks fde_research)
+
+# Raw-source and nonlinear inclusion research oracles, never production linked.
+add_executable(hybrid_raw_checks EXCLUDE_FROM_ALL research/hybrid_raw_checks.cpp)
+target_link_libraries(hybrid_raw_checks fde_research)

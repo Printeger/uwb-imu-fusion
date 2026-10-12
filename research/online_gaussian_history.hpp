@@ -24,7 +24,7 @@ struct OnlineHistoryCounts {
 // Actual localization and commit remain the existing epoch transaction.
 class OnlineGaussianHistory {
  public:
- OnlineGaussianHistory(size_t lag,int duration,double sa,double sg,Eigen::Vector3d lever,bool optimized=true,size_t max_numeric_bytes=64u*1024u*1024u);
+ OnlineGaussianHistory(size_t lag,int duration,double sa,double sg,Eigen::Vector3d lever,bool optimized=true,size_t max_numeric_bytes=64u*1024u*1024u,bool physical_sources=false);
  ~OnlineGaussianHistory();
  void prepare(const EpochTransaction& tx,bool build_current_root=true);
  SummaryEvaluation evaluate(const EpochTransaction& tx,const ExclusionAction* action,double alpha,double tail,bool faults=true)const;

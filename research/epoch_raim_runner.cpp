@@ -1,5 +1,6 @@
 #include "hybrid_coordinator.hpp"
 #include "scenario_material.hpp"
+#include "raw_source_law.hpp"
 #include <chrono>
 #include <fstream>
 #include <iomanip>
@@ -23,7 +24,7 @@ int main(int argc,char** argv){try{
  out<<"epoch,algorithm,label,status,alarm,excluded,correct,healthy_excluded,retained,updates,available,statistic,threshold,dof,hpl,vpl,error,increment_error,translation_rpe,rotation_rpe,core_ms,prediction_ms,commit_ms,full_ms,candidates,rows,cols,center_shift,union_charge,tag_x,tag_y,tag_z,timestamp_ns,formal_eligible,publication_protected,raw_total_risk,pure_uwb_pl,post_statistic,post_dof,excluded_anchor,excluded_measurement,max_slope_x,max_slope_y,max_slope_z,reference_x,reference_y,reference_z,horizontal_al,vertical_al,within_al,transaction_id,prediction_version,protection_frame,prior_independence,history_condition,model_version,linearization_tag_x,linearization_tag_y,linearization_tag_z,evidence_level,history_status,history_segments,history_bound,history_eta,a_alarm,a_available,a_tag_x,a_tag_y,a_tag_z,a_hpl,a_vpl,h_ms,h_update_ms,verification_ms,finalization_ms,cleanup_ms,a_ms,b_ms,full_C_calls,history_bytes,functional_status,numerical_status,model_status,risk_status,on_time,fused_conditional_available,committed_retained,retained_ids,selection_policy,finite_bound_qualified,application_policy_status,application_available\n";
  Eigen::Vector3d lastTag=Eigen::Vector3d::Zero(),lastTruth=Eigen::Vector3d::Zero();NavigationState lastState,lastGt;
  std::unique_ptr<OnlineGaussianHistory> online;
- if(hybrid)online=std::make_unique<OnlineGaussianHistory>(scene.cfg.integrity_window.epochs,3,scene.law["raw_accel_sigma_mps2"].as<double>(),scene.law["raw_gyro_sigma_radps"].as<double>(),scene.lever);
+ if(hybrid)online=std::make_unique<OnlineGaussianHistory>(scene.cfg.integrity_window.epochs,3,scene.law["raw_accel_sigma_mps2"].as<double>(),scene.law["raw_gyro_sigma_radps"].as<double>(),scene.lever,true,64u*1024u*1024u,scene.physical_source_reference);
  bool imuEvidenceMissing=argc>7 && std::string(argv[7])=="imu-invalid";
  bool quarantined=argc>7 && std::string(argv[7])=="history-invalid";
  for(int e=1;e<=scene.epochs;++e){
@@ -38,7 +39,9 @@ int main(int argc,char** argv){try{
    try{if(!online)throw std::runtime_error("H_LATCHED_UNKNOWN");online->prepare(tx,false);
    // Fixed primitive dimension bound is only a frozen raw diagnostic radius.
    // It does not pay for random linearization/model escape; raw risk UNKNOWN.
-   double q=std::sqrt(boost::math::quantile(boost::math::complement(boost::math::chi_squared(15+50*(66+15+8)),1e-6)));
+   int dimension=15+50*(66+15+8);
+   if(scene.physical_source_reference)dimension=rawSourceInventory(50,scene.cfg.anchors.size(),scene.cfg.realtime.prior_sigmas,scene.law["raw_accel_sigma_mps2"].as<double>(),scene.law["raw_gyro_sigma_radps"].as<double>(),scene.cfg.imu.accelerometer_bias_rw_sigma,scene.cfg.imu.gyroscope_bias_rw_sigma,scene.cfg.realtime.range_sigma_m).size();
+   double q=std::sqrt(boost::math::quantile(boost::math::complement(boost::math::chi_squared(dimension),1e-6)));
    rawEvidence=online->preUwbEvidence(tx,q);
    hBytes=online->counts().bytes;
    }catch(const std::exception&){online.reset();rawEvidence.history.status="UNKNOWN";}

@@ -23,8 +23,34 @@ inline Eigen::MatrixXd worldTagMap(const LinearizedIntegrityWindow& w,
  c.block<3,3>(0,w.H.cols()-15)=-pose.rotation().matrix()*skew;
  return c;
 }
+// Condition on b_i: an increment at sample k changes every later ADC bias
+// and the terminal b_j. b_i and biasHat are estimator states/conditioning
+// variables, not fresh physical noises. No GTSAM auxiliary covariance enters.
+inline Eigen::VectorXd physicalBiasIncrementResidual(const EpochTransaction& tx,size_t k,int axis,double amplitude){
+ auto pim=*tx.preintegration;pim.resetIntegration();
+ for(size_t i=1;i<tx.raw_imu_slice.size();++i){auto l=tx.raw_imu_slice[i-1],r=tx.raw_imu_slice[i];
+  auto perturb=[&](ImuMeasurement& m,size_t index){if(index>=k){if(axis<3)m.specific_force_mps2(axis)+=amplitude;else m.angular_velocity_radps(axis-3)+=amplitude;}};
+  perturb(l,i-1);perturb(r,i);
+  pim.integrateMeasurement(.5*(l.specific_force_mps2+r.specific_force_mps2),.5*(l.angular_velocity_radps+r.angular_velocity_radps),r.timestamp.seconds()-l.timestamp.seconds());
+ }
+ if(!tx.frozen_values)throw std::runtime_error("physical RW requires frozen material");
+ auto values=std::make_shared<gtsam::Values>(*tx.frozen_values);
+ auto key=gtsam::Symbol('b',tx.proposed_epoch);auto end=values->at<gtsam::imuBias::ConstantBias>(key).vector();end(axis)+=amplitude;
+ values->update(key,gtsam::imuBias::ConstantBias(end.head<3>(),end.tail<3>()));
+ auto material=tx;material.frozen_values=values;return episodeFactorError(material,pim);
+}
+inline Eigen::MatrixXd physicalBiasIncrementMap(const EpochTransaction& tx){
+ auto params=boost::dynamic_pointer_cast<gtsam::PreintegrationCombinedParams>(tx.preintegration->params());
+ Eigen::MatrixXd j(15,6*(tx.raw_imu_slice.size()-1));
+ for(size_t k=1;k<tx.raw_imu_slice.size();++k){double dt=tx.raw_imu_slice[k].timestamp.seconds()-tx.raw_imu_slice[k-1].timestamp.seconds();
+  for(int axis=0;axis<6;++axis){double eps=1e-5,variance=axis<3?params->biasAccCovariance(axis,axis):params->biasOmegaCovariance(axis-3,axis-3);
+   j.col(6*(k-1)+axis)=-(physicalBiasIncrementResidual(tx,k,axis,eps)-physicalBiasIncrementResidual(tx,k,axis,-eps))/(2*eps)*std::sqrt(variance*dt);
+  }
+ }
+ return j;
+}
 inline GaussianWindow rawGaussianWindow(const LinearizedIntegrityWindow& w,const EpochTransaction& tx,
-    const std::vector<FaultModeBasis>& modes,double sa,double sg,const Eigen::Vector3d& lever,bool shared_gram=false) {
+    const std::vector<FaultModeBasis>& modes,double sa,double sg,const Eigen::Vector3d& lever,bool shared_gram=false,bool physical_sources=false) {
  GaussianWindow o;int n=0;for(const auto& b:w.blocks){o.offsets.push_back(n);n+=b.residual_raw.size();}
  o.a.resize(n,w.H.cols());o.z.resize(n);o.sigma=Eigen::MatrixXd::Zero(n,n);o.c=worldTagMap(w,tx,lever);
  // A shared sample owns ONE noise column, across all affected factors.
@@ -52,6 +78,8 @@ inline GaussianWindow rawGaussianWindow(const LinearizedIntegrityWindow& w,const
   for(size_t i=1;i<t.raw_imu_slice.size();++i){const auto& l=t.raw_imu_slice[i-1];const auto& r=t.raw_imu_slice[i];
    aux.integrateMeasurement(.5*(l.specific_force_mps2+r.specific_force_mps2),.5*(l.angular_velocity_radps+r.angular_velocity_radps),r.timestamp.seconds()-l.timestamp.seconds());}
   o.sigma.block(off,off,m,m)=aux.preintMeasCov();++o.integrations;
+  if(physical_sources){auto rw=physicalBiasIncrementMap(t);o.sigma.block(off,off,m,m)=rw*rw.transpose();o.integrations+=12*(t.raw_imu_slice.size()-1);}
+
   for(const auto& s:t.raw_imu_slice)for(int axis=0;axis<6;++axis){
    RawImuEpisode e{"adc-sample-v1",s.timestamp,TimestampNs(s.timestamp.value()+1),axis};double eps=1e-5;
    Eigen::VectorXd d=-(episodeFactorError(t,integrateEpisode(t,e,eps))-episodeFactorError(t,integrateEpisode(t,e,-eps)))/(2*eps);

@@ -7,7 +7,7 @@ namespace uwb_imu_pl::research {
 struct OnlineGaussianHistory::Impl {
  struct WhiteBlock {Eigen::MatrixXd a;Eigen::VectorXd z;std::map<std::string,Eigen::MatrixXd> b;};
  struct Mode {std::string id;AnchorId anchor;size_t onset;int duration;};
- bool optimized;size_t max_numeric_bytes;
+ bool optimized,physical_sources;size_t max_numeric_bytes;
  std::shared_ptr<const gtsam::Values> prepared_values;
  size_t lag,frontier=0,epoch=0;int duration;double sa,sg;Eigen::Vector3d lever;
  GaussianSufficientSummary history{21};
@@ -34,7 +34,7 @@ struct OnlineGaussianHistory::Impl {
  mutable size_t state_decompositions=0,fault_products=0;
  LinearizationVersion prepared_version;
  size_t original_rows=0;
- Impl(size_t w,int d,double a,double g,Eigen::Vector3d l,bool opt,size_t budget):optimized(opt),max_numeric_bytes(budget),lag(w),duration(d),sa(a),sg(g),lever(l){
+ Impl(size_t w,int d,double a,double g,Eigen::Vector3d l,bool opt,size_t budget,bool physical):optimized(opt),physical_sources(physical),max_numeric_bytes(budget),lag(w),duration(d),sa(a),sg(g),lever(l){
   if(w<2 || d<1 || !(a>0 && g>0))throw std::runtime_error("invalid online history model");
   history.optimized=optimized;
   Eigen::MatrixXd prior=Eigen::MatrixXd::Zero(6,21);prior.rightCols(6).setIdentity();history.append(prior,Eigen::VectorXd::Zero(6),{});
@@ -173,7 +173,7 @@ struct OnlineGaussianHistory::Impl {
   appendBatch(result,batch);++work.queries;work.query_columns+=modes.size();work.query_state_qr_ms+=result.append_state_ms;work.query_fault_qr_ms+=result.append_fault_ms;work.full_fault_transforms+=result.full_fault_transforms;work.frontier_fault_transforms+=result.frontier_fault_transforms;work.frontier_kernels+=result.frontier_kernels;return result;
  }
 };
-OnlineGaussianHistory::OnlineGaussianHistory(size_t lag,int duration,double sa,double sg,Eigen::Vector3d lever,bool optimized,size_t max_numeric_bytes):impl(new Impl(lag,duration,sa,sg,lever,optimized,max_numeric_bytes)){}
+OnlineGaussianHistory::OnlineGaussianHistory(size_t lag,int duration,double sa,double sg,Eigen::Vector3d lever,bool optimized,size_t max_numeric_bytes,bool physical_sources):impl(new Impl(lag,duration,sa,sg,lever,optimized,max_numeric_bytes,physical_sources)){}
 OnlineGaussianHistory::~OnlineGaussianHistory()=default;
 void OnlineGaussianHistory::prepare(const EpochTransaction& tx,bool build_current_root){
  if(!tx.frozen_values)throw std::runtime_error("UNAVAILABLE_HISTORY_FROZEN_VALUES");
@@ -208,7 +208,7 @@ void OnlineGaussianHistory::prepare(const EpochTransaction& tx,bool build_curren
  s.local_window.protected_state_map.rightCols(12).leftCols(3)=s.points.at<gtsam::Pose3>(gtsam::Symbol('x',s.epoch)).rotation().matrix();
  s.material=tx;s.material.frozen_values=std::make_shared<const gtsam::Values>(s.points);s.material.recoverable_history.clear();
  for(const auto& h:s.episodes)if(h.first<s.epoch)s.material.recoverable_history.push_back(h.second);
- s.local_noise=rawGaussianWindow(s.local_window,s.material,{},s.sa,s.sg,s.lever,true);
+ s.local_noise=rawGaussianWindow(s.local_window,s.material,{},s.sa,s.sg,s.lever,true,s.physical_sources);
  if(s.epoch==2){Eigen::LLT<Eigen::MatrixXd> chol(s.local_noise.sigma);if(chol.info()!=Eigen::Success || s.local_noise.cross_norm<=1e-12)throw std::runtime_error("joint ADC covariance check failed");
   auto w=chol.matrixL().solve(Eigen::MatrixXd::Identity(s.local_noise.sigma.rows(),s.local_noise.sigma.rows())).eval();
   if((w*s.local_noise.sigma*w.transpose()-Eigen::MatrixXd::Identity(w.rows(),w.rows())).norm()>1e-7)throw std::runtime_error("joint whitening check failed");}
@@ -304,7 +304,7 @@ OnlinePreUwbEvidence OnlineGaussianHistory::preUwbEvidence(const EpochTransactio
  ExclusionAction removal;for(const auto& g:tx.uwb_groups)if(g.nominal)removal.groups_to_remove.push_back(g.id);
  auto summary=s.query(tx,&removal);
  auto& h=result.history;h.epoch=tx.previous_epoch;h.generation=tx.base_graph_version;
- h.horizon=50;h.radius=radius;h.risk=NAN;h.model="raw-frozen-prefix-with-shared-adc-v1";
+ h.horizon=50;h.radius=radius;h.risk=NAN;h.model=s.physical_sources?"raw-source-rw-frozen-prefix-v1":"raw-frozen-prefix-with-shared-adc-v1";
  result.transaction=tx.id;result.excluded_batch=tx.uwb_batch.id;result.version=tx.base_version;
  auto pose=s.points.at<gtsam::Pose3>(gtsam::Symbol('x',tx.proposed_epoch));
  result.chart.timestamp=tx.end;result.chart.q_world_body=Eigen::Quaterniond(pose.rotation().matrix());result.chart.position_world_m=pose.translation();

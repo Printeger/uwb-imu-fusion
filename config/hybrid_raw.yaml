@@ -1,0 +1,19 @@
+# Independent, nonprotected research model. Old fde_next.yaml remains legacy.
+raw_base_law: config/fde_next.yaml
+model_version: hybrid-raw-source-rw-v1
+source_law_id: raw-source-rw-v1
+initial_observation_law: independent-tangent-gaussian-v1
+bias_process: sample-grid-gaussian-rw
+true_initial_accel_bias_mps2: [0.015, -0.008, 0.006]
+true_initial_gyro_bias_radps: [0.0004, -0.0002, 0.0003]
+nominal_weights_are_metric: true
+# Auxiliary integration/biasHat covariance belongs only to the nominal metric.
+# Integrity reference uses ADC and actual RW increments, including 15D cross.
+selection_policy: bound_first_research-v1
+raw_event_risk: 0.000001
+risk_horizon_epochs: 50
+# Continuous physical motion conditions, fixed before stream evaluation.
+# Their analytic verification uses amplitudes/frequencies, never GT errors.
+physical_acceleration_bound_mps2: 0.04
+specific_force_lipschitz_mps3: 2.1
+angular_acceleration_bound_radps2: 0.0
