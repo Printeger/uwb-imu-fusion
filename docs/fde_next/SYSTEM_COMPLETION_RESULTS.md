@@ -634,3 +634,49 @@ pushed. Own `.cache/sc2-imu/` CSV/log/build diagnostics and generated Python
 bytecode are cleaned after aggregation. No new figure, evidence database,
 backup, binary or duplicate results document is retained. Existing SC1
 artifacts and user files are preserved.
+
+## SC3 — unified physical faults and joint fusion (in progress)
+
+Starting local HEAD `c254e46`, clean tree. SC1 and SC2 are preserved. This stage
+uses SC3-spec-1.0 and the actual SC2 handoff above; joint qualification is not
+inherited from either single-sensor proof. Production source law, weights,
+risks, AL and release policy remain unchanged.
+
+W1 preregisters `config/sc3_joint.yaml` on the same50epoch/6421-source law,
+original initial15D observation, actual ADC/RW and lever/anchors. Requested:
+H0, one UWB single-anchor constant episode (onsets1–50, durations1/3epochs,
+unbounded metres), one IMU single-axis constant raw episode (six axes,
+onsets1–50, durations50/500ms, unbounded physical amplitude), and BOTH allowed
+families UWB+accel and UWB+gyro, overlapping or staggered. No carry-in or task
+renewal; same independently declared world acceleration .04m/s² and angular
+speed .2rad/s. Neither category can disappear following local FD PASS.
+Frozen intended witnesses are original+2.25m UWB anchor0/3epochs at15 and
+SC2 accel-x+20m/s² or gyro-x+1rad/s/500ms at0.705s; staggered UWB begins12.
+Native recovery in other directions/onsets remains unverified, not inferred.
+
+Implemented at W1: `HypothesisGenerator::generateRawJointResearch` uses the
+existing FaultUnit/FaultModeBasis/FaultHypothesisV2 and pair-family rule to
+represent an exact factored Cartesian product: 800 UWB episodes,300 accel,
+300 gyro,240000 UWB+accel,240000 UWB+gyro plus H0, total481401 physical
+hypotheses. A bijective indexed recipe keeps mode storage1400 and distinct
+physical source/time/constant-parameter identities; no dense481401-row registry
+or mode copies. The initial logical evaluation counter is0: generation is not proof
+consumption. W2 will count recipe-covered branches only after consuming all9 current
+UWB projections and the independent full-state envelope at W2. It must retain
+all physical branches when numerical roots are shared. Capacity1399, duplicate
+identity and missing consumption refuse, not truncate. Action cap18 is
+preregistered separately from physical identity counts; range queue256.
+
+Verified at entry: SC1 UWB-only theorem and SC2 IMU-only conditional theorem
+remain their own scopes; NO JOINT RAW/NATIVE QUALIFICATION is claimed at W1.
+The reused SC2 initial full-state physical envelope is independent of UWB,
+but its all-healthy-shell contraction is not a joint proof. W2 must replace
+those shell premises before any joint output can qualify. W3 must jointly
+remove affected UWB and complete raw/PIM/history dependencies in one native
+transaction; W4 must establish actual UA/UG and post-stop chains.
+
+W1 actual parameterized check PASS: all481401 indexed identities traversed,
+category counts exactly match, two-mode hypotheses retain independent blocks,
+SC2 raw support mapping reused, duplicate/missing-mode/capacity1399 refusal.
+This is a registry/support verification, not a joint source theorem or native
+recovery. No stream/epoch qualification was claimed or tested in W1.

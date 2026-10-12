@@ -532,3 +532,8 @@ target_link_libraries(sc2_imu_checks fde_research)
 set_source_files_properties(research/sc2_imu_bridge.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
 target_sources(fde_research PRIVATE research/sc2_imu_bridge.cpp)
 target_sources(fde_research PRIVATE research/sc2_imu_coordinator.cpp)
+
+# SC3 independent joint research sidecars; no production DSO link.
+target_sources(fde_research PRIVATE research/sc3_joint_scope.cpp)
+add_executable(sc3_joint_checks EXCLUDE_FROM_ALL research/sc3_joint_checks.cpp)
+target_link_libraries(sc3_joint_checks fde_research)

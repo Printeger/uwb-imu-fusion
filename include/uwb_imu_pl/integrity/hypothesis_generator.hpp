@@ -6,6 +6,7 @@
 #include <memory>
 
 namespace uwb_imu_pl {
+namespace research { struct Sc3FaultPool; }
 
 struct HypothesisGeneratorConfig {
   bool include_uwb_faults = true;
@@ -345,6 +346,11 @@ class HypothesisGenerator {
  public:
   explicit HypothesisGenerator(HypothesisGeneratorConfig config = {})
       : config_(config) {}
+
+  // Isolated research implementation is linked only by fde_research. Existing
+  // production generation/default contracts and object layout are unchanged.
+  research::Sc3FaultPool generateRawJointResearch(
+      const UwbBatch& identity_batch, std::size_t mode_capacity = 1400) const;
 
   GeneratedFaultModelSet generate(
       const LinearizedIntegrityWindow& window,

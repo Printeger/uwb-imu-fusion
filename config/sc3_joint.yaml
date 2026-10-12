@@ -1,0 +1,18 @@
+# SC3 research preregistration; original raw source, weights, AL and release unchanged.
+raw_base_law: config/sc2_imu.yaml
+sc3_scope_id: sc3-one-uwb-one-imu-episode-rw-v1
+sc3_requested_categories: [H0, UWB, ACCEL, GYRO, UWB_ACCEL, UWB_GYRO]
+sc3_uwb_durations_epochs: [1, 3]
+sc3_uwb_theta_domain: unbounded-constant-single-anchor
+sc3_imu_scope: sc2-single-imu-episode-rw-v1
+sc3_initial_carry_in: false
+sc3_mode_capacity: 1400
+sc3_action_capacity: 18
+sc3_range_box_capacity: 256
+# Witnesses are generator/scoring input only, never online selector inputs.
+sc3_uwb_witness_anchor_index: 0
+sc3_uwb_witness_onset_epoch: 15
+sc3_uwb_witness_duration_epochs: 3
+sc3_uwb_witness_amplitude_m: 2.25
+sc3_staggered_uwb_onset_epoch: 12
+sc3_final_epochs: 30
