@@ -1,9 +1,10 @@
-# System completion — SC1
+# System completion — SC1 and SC2
 
 Status: **MEASUREMENT_CONSTRAINED_RAW_BOUND_VERIFIED** — SC1 only.
 Starting HEAD `0e88303f9f22b6c47ecb440042f3f513780caf8e`, clean tree.
 FGO, FDE, raw-source-rw-v1, sigmas, risk, AL and production publication
-remain the original contracts. SC2–SC4 are outside this work.
+remain the original contracts. The SC1 section below is its frozen result;
+the independent SC2 result follows. SC3/SC4 remain outside this work.
 
 W1 adds a simulation adapter certificate for the actual raw UWB batch.
 Directed Taylor evaluation (the existing exp/sine kernel) encloses the exact
@@ -251,10 +252,10 @@ This establishes only the declared healthy-IMU, conditional simulation,
 the original Gaussian PL's raw nonlinear theorem, complete system readiness,
 hardware qualification, application admission or real-time completion.
 
-## SC2 — IMU fault scope and legal recovery (in progress)
+## SC2 — IMU fault scope and legal recovery
 
-Starting local HEAD `50b7582`, clean tree, SC1 retained. No SC2 completion is
-claimed yet. Legacy I2 (`config/fde_next.yaml`) uses accel-x +20m/s² on raw
+Starting local HEAD `50b7582`, clean tree, SC1 retained. W1–W3 below describe
+the staged implementation; W4 below is the final scoped acceptance. Legacy I2 (`config/fde_next.yaml`) uses accel-x +20m/s² on raw
 sample times [.705,1.205), without the matched initial Gaussian/RW generator.
 Matched `config/hybrid_raw.yaml` has actual initial15D observation and
 sample-grid RW. Their numerical results are distinct laws, not an improvement
@@ -391,3 +392,245 @@ widened nor certified. Qualification instead uses the new global independent
 physical source theorem covering arbitrary committed centers, full original
 initial uncertainty and true RW. No claim of accurately recovered full-nav
 covariance is made. Frozen final streams and acceptance remain pending W4.
+
+
+### W4 frozen native acceptance and measured limitations
+
+Status: **IMU_FAULT_SCOPE_VERIFIED**, with `verified_scope` split into the
+conditional mathematical six-axis domain and actually exercised recovery
+subdomain in the handoff below. Accel-x/500ms and representative gyro-x/500ms
+both complete the native automatic isolation and IMU-return chain. Other
+axis/onset/amplitude combinations have a uniform conditional protection
+argument and six-axis response checks, but their native recovery performance
+is OPEN, not inferred from this one gyro direction. SC3, SC4, joint faults,
+application AL and deployment are not completed.
+
+Frozen functional source SHA: `32360ecfd7514f7a7beb6bb296470643513c93b3`.
+The W4 commit adds only direct negative/regression tests and this conclusion;
+no functional mathematics or preregistered witness changed after freezing.
+One invocation of `python3 tools/run_epoch_architecture.py sc2` runs six scored
+30-epoch streams, one same-input redacted30 stream and SC1 U1/19 compatibility:
+229 scheduled/attempted/committed, 0 aborted/cancelled/unattempted, 229 finite
+and raw-qualified, 229 contracted, 0 fallback/refused; 0 scored PE exceedances
+among199 scored outputs, with30 redacted outputs deliberately unscored.
+All210 SC2 commits retain the complete8-row native UWB batch, exactly one
+backend update and the constant full-task risk3.7375139072537422e-7.
+SC1 U1 retains its own9 physical range branches, actually excludes1501 at15
+and contracts all19; the four follow-up commits16–19 are qualified. Its full
+legacy H/P branch remains costly; a directed19-row metric audit records13/19
+late at the50ms service criterion,
+whereas the six timed SC2 streams have0/180 late. Redacted timing is not used
+as a performance comparison (truth scoring is disabled).
+
+The strong A/G witnesses start at sensor timestamp0.705s. Their first affected
+batch ends0.750s, raw alarm first sample0.705s, isolation commit at epoch15;
+that is45ms of acquisition to the first available batch, plus measured service,
+not a wall-clock hardware TTA/queue guarantee. Both bridge epochs15–25
+(11 commits, each exactly two rebuilds), and actually rejoin CombinedIMU at26
+with five consecutive restored propagation commits26–30. The injection stops
+at1.205s; PIM25 remains suspect due to the1.200s shared raw endpoint. At25
+the surviving physical episode bank is one, but no true label was read.
+The delayed17 witness retains the polluted native15/16 commits, then purges
+history from epoch8 through16 at17, bridges17–25 and rejoins26–30. Its first
+raw alarm remains0.705s; isolation at0.850s was deliberately delayed by a
+registered test control, rather than credited as automatic prompt response.
+The weak+1m/s²/50ms witness never alarms: NONE remains possible, all30 actual
+commits are still protected by the independent full-state proof. Thus this
+negative is not rejected by its scene name or the failed healthy certificate.
+
+Same actual30-epoch input with scene output `REDACTED` and all truth reads for
+scoring disabled yields exactly identical candidates, actions, graph IDs,
+receipts, state, bound coordinates, H/V and task risk at all30 commits.
+Independent same-input shadow candidate checks also agree, with no label
+argument in monitor/coordinator/bridge interfaces. Offline label/scoring and
+source-adapter numerical validation do not participate in FD/action selection.
+
+Each row in this paired table is30 actual/scored/contracted commits. Values
+are mean / median / P95 / max; PE and PL in m, velocity error in m/s, rotation
+error in rad. FDE-off/on use identical physical draws and input samples, with
+bit-identical committed tag/v/quaternion for the first14 healthy epochs.
+
+Tag output and error
+
+| Stream | hpl | vpl | horizontal_pe | vertical_pe |
+|---|---|---|---|---|
+| SC2_A-off | 1.5662568/1.5562569/1.7230799/1.8110788 | 2.9342508/2.8595102/3.2984265/3.3042523 | 0.11147395/0.07121812/0.26211135/0.27382342 | 0.17227005/0.05105432/0.57902726/0.58576838 |
+| SC2_A-on | 1.5294371/1.5253252/1.6530924/1.6875554 | 2.8916332/2.8588933/3.1918016/3.2497189 | 0.064178254/0.059905361/0.14218363/0.15466215 | 0.055308198/0.038904028/0.12321773/0.13432393 |
+| SC2_G-off | 1.5422968/1.529139/1.6963915/1.7484034 | 2.9007281/2.8588933/3.2159218/3.3234106 | 0.062614031/0.059905361/0.10322719/0.14450141 | 0.047316182/0.036607578/0.10085514/0.12020374 |
+| SC2_G-on | 1.5277415/1.5253474/1.6616319/1.6875554 | 2.8927099/2.8588933/3.1924341/3.2857979 | 0.064167804/0.054880992/0.15331177/0.19834765 | 0.061500553/0.045467856/0.13231237/0.18234861 |
+| SC2_S-weak-negative | 1.538758/1.5395883/1.6685817/1.6875554 | 2.8969035/2.8588933/3.2028091/3.3004479 | 0.049958126/0.048278245/0.07937195/0.089212407 | 0.038997772/0.035187582/0.091052049/0.12020374 |
+| SC2_A-delayed17 | 1.5317657/1.536959/1.6487513/1.6875554 | 2.8904733/2.8555888/3.1923412/3.2453707 | 0.053336599/0.047226128/0.093720607/0.15473437 | 0.046774366/0.03458169/0.12326396/0.1344196 |
+
+Full navigation estimate diagnostics
+
+| Stream | velocity_error | rotation_error |
+|---|---|---|
+| SC2_A-off | 1.7443714/1.2213753/4.141185/4.5256405 | 0.33334223/0.10895265/0.89302214/0.90992108 |
+| SC2_A-on | 0.55549349/0.39216213/1.5434941/1.8996587 | 0.19024039/0.11222941/0.58101868/1.1999434 |
+| SC2_G-off | 0.53961969/0.46292879/0.97810485/1.1326836 | 0.20826064/0.14317519/0.42535787/0.45254264 |
+| SC2_G-on | 0.62507551/0.29583371/2.3118088/3.5769127 | 0.18828773/0.07484959/0.93552831/1.7808487 |
+| SC2_S-weak-negative | 0.31851273/0.25674013/0.57020908/0.86835852 | 0.069277835/0.069358431/0.093334214/0.094253709 |
+| SC2_A-delayed17 | 0.54504981/0.4187837/1.2396107/1.574392 | 0.15249708/0.10737995/0.35331408/0.66423548 |
+
+Service time (ms)
+
+| Stream | candidate_ms | range_contraction_ms | full_ms |
+|---|---|---|---|
+| SC2_A-off | 0.0010917667/0.0009525/0.002222/0.002519 | 0.0454638/0.0440675/0.05291975/0.065061 | 2.1791011/2.146334/3.9801468/6.310948 |
+| SC2_A-on | 2.6548523/0.034498/9.3083219/11.76623 | 0.055002667/0.0489225/0.09957375/0.15441 | 4.5781565/2.5336995/12.297196/14.589193 |
+| SC2_G-off | 0.0010882667/0.000988/0.0020201/0.00213 | 0.047387367/0.044714/0.051211/0.106614 | 1.9795354/1.8863485/3.7553712/4.601319 |
+| SC2_G-on | 3.9844286/0.0354505/13.587577/14.172504 | 0.0517307/0.049512/0.0726027/0.111438 | 5.8097596/2.41574/16.239895/17.187232 |
+| SC2_S-weak-negative | 0.0019023/0.000825/0.0028694/0.028519 | 0.0478589/0.0446315/0.0658682/0.067643 | 1.8650802/1.8601955/2.979595/3.130938 |
+| SC2_A-delayed17 | 2.6244556/0.001327/10.069715/11.769709 | 0.0485511/0.047636/0.05762105/0.063903 | 4.5471784/1.901378/12.432784/14.019093 |
+
+The service boundary includes ingest/monitor, native preparation, candidate
+rebuild, prefix maintenance, unique commit, final state read, receipt checks,
+raw full-state bridge, shell contraction, transfer and offline scoring; it
+ends before CSV serialization/file I/O. Source initialization is separate:
+56.05–59.34ms per SC2 stream (both numeric certifications and scenario build);
+SC1 compatibility source init20.7ms. Prefix retained-group peaks are63(off),
+83(accel-on),74(gyro-on),63(weak),81(delayed). The physical hypothesis bank has
+600 entries plus NONE; the maximum range box queue is bounded256, passes8,
+no splitting, no omitted frontier. This is finite measured service on this
+PC, not WCET, acquisition timing, sustained ROS performance or SC4 success.
+The SC2 bound consumes no legacy Gaussian H/P computation: those diagnostics
+are unnecessary for this global physical proof. The unchanged SC1 chain still
+runs its original H/P and remains NOT_REALTIME. These timings are not evidence
+that the original combined system meets40/50ms.
+
+Post-return evidence is retained explicitly below. For all shown epochs the
+actual current IMU group is present, `imu_rejoined=1`, update count1, raw
+qualified1; no raw tag contraction is fed back to v/R/bias.
+
+| Stream | Epoch | HPL/VPL m | PE H/V m | Velocity error m/s | Rotation error rad |
+|---|---|---|---|---|---|
+| SC2_A-on | 26 | 1.569117/3.187419 | 0.018479/0.040099 | 1.143992 | 0.166207 |
+| SC2_A-on | 27 | 1.554843/2.950810 | 0.140890/0.061456 | 1.754564 | 0.501680 |
+| SC2_A-on | 28 | 1.669381/2.914401 | 0.143242/0.120105 | 1.073592 | 1.199943 |
+| SC2_A-on | 29 | 1.633184/3.249719 | 0.139762/0.015781 | 1.899659 | 0.601483 |
+| SC2_A-on | 30 | 1.622814/2.764989 | 0.120193/0.026658 | 1.285520 | 0.556006 |
+| SC2_G-on | 26 | 1.570279/3.188825 | 0.020877/0.041505 | 1.086479 | 0.065255 |
+| SC2_G-on | 27 | 1.559667/2.937978 | 0.147653/0.048625 | 1.702258 | 0.279373 |
+| SC2_G-on | 28 | 1.678529/2.976645 | 0.151688/0.182349 | 1.796893 | 1.780849 |
+| SC2_G-on | 29 | 1.640979/3.285798 | 0.198348/0.051860 | 2.733104 | 0.623585 |
+| SC2_G-on | 30 | 1.548627/2.715473 | 0.044127/0.130331 | 3.576913 | 1.190755 |
+
+The restored v/R estimates are NOT uniformly improved by isolation: gyro-on
+max velocity error3.5769m/s versus off1.1327, max rotation1.78085rad versus
+off0.45254. This is a real limitation of the retained native regularized
+candidate/observable navigation accuracy. The full-state TRUE uncertainty
+envelope and future tag coverage remain fault independent over the registered
+finite task; it does not assert that the estimate lies near truth in every
+state, or that a low-residual bridge proves truth. No Gaussian covariance,
+zero-bias box or enlarged local trust gate is credited. SC3 must preserve the
+same independent physical bridge or supply a new proof before relying on v/R.
+
+AL2/3m is independent post-processing: numeric passes A-off20/30, A-on23/30,
+G-off23/30, G-on23/30, weak24/30, delayed23/30. AL5/5 and10/10 each pass30/30
+in all six scored SC2 streams. These copies leave state, FDE, PL, receipt and
+risk exactly unchanged. All rows keep formal eligibility, publication
+protection and application availability0. No policy was relaxed to obtain a
+pass; production AL and risk configuration are unchanged.
+
+Development/failure accounting is separate from the frozen acceptance:
+two16-epoch diagnostic snapshot streams completed32/32 commits; W1/W2/W3
+parameterized tests passed after their local changes. Two initial compile
+attempts failed (W2 two-word cast syntax; W3 missing Symbol include/wrong
+existing enum), and one pre-freeze Python syntax check failed (f-string quotes).
+They produced no native epoch attempts; all were corrected before freezing.
+The frozen stream harness had0 failures,0 cancellations; deliberate invalid
+fixtures (capacity600, stale prefix/receipt, fake invalid source evidence,
+wrong frame, polluted boundary, absent x0/history, expiry51, simultaneous
+unrepresented two-axis violations) are expected safe refusals, not discarded
+positive attempts. One final regression harness invocation omitted the existing required YAML
+argument to `epoch_raim_checks`, aborting before any native epoch; its
+remaining fused target was then unattempted. Both targets were run once with
+`config/fde_next.yaml` and passed; the four already passed targets were not
+repeated. A directed SC1 metric audit (the initial compatibility logger had
+not printed lateness) adds19 scheduled/attempted/committed/finite/qualified/
+contracted outputs,0 aborted/refused/fallback,13 late; service mean/median/P95/
+max=104.472/128.290/166.502/168.159ms. This is separately accounted, not hidden
+in the frozen229-output denominator. The unrelated earlier SC1 failure denominators remain in
+the unchanged SC1 section. No long campaign/seed search was run.
+
+### SC2 → SC3 capability handoff
+
+| Dimension | Actual upstream capability and limits |
+|---|---|
+| Source / scope / method | Frozen source `32360ecfd7514f7a7beb6bb296470643513c93b3`; `sc2-single-imu-episode-rw-v1`; `raw-imu-fault-independent-bridge-uwb-v1`. W4 changes tests/reporting only. |
+| Requested physical family | NONE or one deterministic constant additive raw single-axis episode: accel xyz or gyro xyz, theta in all real numbers, onset `(j-1)*50ms+5ms`, j=1…50, duration50 or500ms; half-open support, no initial carry-in. End may extend beyond task; no post-horizon claim. All8 UWB and original initialization satisfy nominal source law. |
+| Verified mathematical domain | All six axes and theta values in this family, arbitrary adaptive candidate/action/committed center, issued epochs1…50 under original initialization and independently declared motion bounds. True branch/theta remains in the complete bank on E; all possible branches share one valid full-state physical outer envelope. Valid proof does not require an alarm. |
+| Verified native recovery domain | Actual matched-law accel-x+20m/s²/500ms and gyro-x+1rad/s/500ms at0.705s, isolation15, bridge15–25, rejoin26–30; delayed accel isolation17 also tested. Six-axis raw response/detection/support mechanism is implemented; native recovery quality for untested directions, amplitudes, onsets and other motions is OPEN. Do not infer joint gyro capability from gyro-x alone. |
+| Detection levels | FUNCTIONAL_ALARM for strong A/G witnesses; RAW_DETECTOR_BOUND for healthy false alarm <=same full-task E complement. No arbitrary amplitude missed-detection bound. A sufficient gyro raw condition is an additive shift exceeding twice the healthy coordinate radius (both signs); weak/zero/cancelled explanations can remain possible. Gaussian frozen-profile tools remain diagnostics in the original path, not this proof's power certificate. |
+| Supports / history | 500ms witness100 unique raw sample indices141…240 (measurement IDs142…241), directly PIM15…25 including1.200s shared endpoint; all subsequent reference/biasHat dependencies. Alarm action quarantines union of possible supports; earliest actual A union6, G15, delayed A8. RawPrefixHistory and original observed raw prefix reused. Never silently eliminate historical fault parameters. |
+| Legal boundary | Immutable original observed p/v/R/ba/bg at timestamp0, source-aware independent initial15D law. No polluted posterior, fitted range velocity or marginalized Gaussian boundary substitutes. Actual recovery requires original active x0 and recoverable native raw history; missing/marginalized prefix safely aborts before commit. Late first recovery after fixed-lag loss is not a promised success. |
+| Bridge lifetime / physics | Task envelope2.5s max, world acceleration norm<=0.04m/s², angular speed<=0.2rad/s, consistent with original analytic motion amplitudes/frequencies/rate. This is a registered conditional physical domain, not hardware prior calibration. The witness current quarantine lasts11 batches0.55s; first A historical replacement span6–25 is1.0s. No arbitrary-duration bridge. |
+| Full state / future tag | Independent integral p/v bounds; rotation operator diameter and matrix-entry enclosure; original initial bias plus all preceding actual RW sources and directed arithmetic residue. Cartesian outer enclosure conservatively retains correlations. UWB only contracts tag p+R*l; no contraction/reset of v/R/bias. Thus future issued tag remains valid even with substantial navigation estimation error. |
+| Candidate / native action | Existing two bounded GN rebuilds of retained raw graph, original bias reference; finite result is only a pending initial guess. Native deletes each affected selected historical CombinedIMU group and adds its complete pose+bias pair, current IMU xor current complete pair. Ledger and receipt attest actual removal and one backend update. No second estimator, post-commit write or optimizer Hessian qualification. |
+| Restoration | Monotone retained support interval ends by contract/evidence; last shared point remains quarantined. From26, reintegrate each healthy complete raw slice at original observed bias and commit its native CombinedIMU. This avoids inherited contaminated biasHat; physical process bias RW is still included. |
+| Risk / posterior action | SAME6421 source coordinates and50epoch event E (each original standard-normal coordinate <=7); `2*6421/2^35=3.7375139072537422e-7`. Sup over registered faults/actions of any issued H/V exceedance is bounded by E complement, simultaneously all task outputs. No per-candidate, per-epoch or task renewal charge. Conditional source/physics theorem, not empirical zero-failure inference or hardware HMI. |
+| Capacity / fallback / refusal | Exactly601 explanations required; capacity600 refuses whole scope. Range queue<=256/pass8, unresolved frontier retained; numeric contraction failure can retain valid physical tag box, never zero PL. Invalid boundary/source/frame/prefix/receipt, scope contradiction, time51 and missing history refuse; runner discards illegal action before commit. An unrepresented fault may mimic the declared family: no universal out-of-scope detector is claimed. |
+| Missing scope | Simultaneous UWB+IMU faults, multiple axes/episodes, arbitrary onset/duration/shape/carry-in, task beyond2.5s/risk renewal, unsupported physical motions, independent hardware priors, original Gaussian PL's global raw proof, uniformly accurate navigation recovery, real-time service/WCET and application admission. |
+| Normal research configuration | `config/sc2_imu.yaml` inherits `config/hybrid_raw.yaml`; no production risk/AL/source sigmas or native FGO weights changed. Explicit opt-in `SC2_IMU_RECOVERY=1`; default legacy/SC1 chain unchanged. Source adapter numerical evidence carries no actual fault labels/draws to the online classes. |
+| Callable evidence | `Sc2ImuMonitor`, `sc2SupportClosure`, `Sc2IndependentBridge::envelope/issue`, `Sc2RecoveryCoordinator::prepare/committed/issue`, `sc2CommitPlan`; same existing EpochTransaction/ledger/CommitReceipt. Finite/qualified/raw source/scope fields, alarm, support bank, history purge, rebuild count, restored status, actual state/receipt/time and fixed risk are recorded in the short trace. |
+
+Minimal reproduction (from this repository; scripts constrain thread counts,
+set the native library path and delete their own transient traces):
+
+```bash
+python3 tools/run_epoch_architecture.py check-sc2 --build
+python3 tools/run_epoch_architecture.py sc2
+```
+
+The finite safety suite is `sc2_imu_checks`, `raw_range_checks`,
+`hybrid_raw_checks`, `hybrid_checks`, plus existing `epoch_raim_checks
+config/fde_next.yaml` and `fused_epoch_checks config/fde_next.yaml`.
+The final build runs these directly, not a new campaign. Target-specific
+failure/repair and final test outcomes are stated below.
+
+### SC2 acceptance against SC2-spec-1.0
+
+| Clause | Concrete verification |
+|---|---|
+| A01 | Local SC1 `50b7582` preserved; original I2/legacy source unchanged; independent config/scope inherits actual matched initial/RW law. No old/new-law improvement ratio or production change. |
+| A02 | Monitor/coordinator/bridge accept observed inputs only; no generator-health failure alarm. Redacted30 and no-label shadow are exactly invariant; weak scene remains qualified without alarm. |
+| A03 | Six independent literal-axis perturbation/reintegration oracles, continuous shared theta, raw-to-adjacent PIM and downstream reference closure; actual active-slot removals and original-biasHat rejoin. |
+| A04 | Actual sensor alarm/time reported separately from same-event false-alarm bound; no arbitrary-amplitude power or hardware TTA claim; no frozen velocity or reduced threshold. |
+| A05 | New operational pathB global physical full-state bridge and healthy noisy shells. Old healthy-IMU certificate stays invalid on fault data and does not qualify this branch. |
+| A06 | Original initial p/v/R/ba/bg, true nonzero RW plus source roundoff, independent integral/matrix/lever envelope; 100-digit extremal endpoint oracle. No zero-bias/CV Hessian proof or tag feedback. |
+| A07 | Frozen accel30: native alarm/isolate15, complete history replacement, bridge through shared-tail25, actual restored IMU26–30, one commit and qualified conditional tag per epoch. |
+| A08 | Actual gyro-x30 off/on and six-axis response family; raw alarm and two-rebuild native bridge15–25, actual restoration26–30. Other direction recovery is explicitly OPEN; no joint claim. |
+| A09 | Weak/cancelled explanations retained and protected; actual deliberately wrong healthy-IMU deletion fixture remains covered; stopping support and delayed history purge verified; invalid source, stale receipt, missing history/x0, capacity and51 expiry safely refuse. Unrepresented two-axis violation inconsistent, without a universal domain detector claim. |
+| A10 | One common event and sup-fault/adaptive-action theorem, immutable full batch, world lever tag from actual one-commit state and version/time receipt; numerical source certification separated from hardware admission. |
+| A11 | Full finite stream denominators, development/harness failures and costs below; original U1 compatibility, raw source/correlation/native/core regressions; immutable AL post-processing with all application/formal flags0. |
+| A12 | Capability table, normal minimal config/API/commands, verified native subdomain and OPEN limits; four locally committed work packages, no push; only source/config/tests/CLI and this unique report retained. |
+
+SC2 status is **IMU_FAULT_SCOPE_VERIFIED** for the stated conditional family and
+actual recovery subdomain; it is not SC3/SC4, `JOINT_TARGET_COMPLETE`, hardware
+qualification, uniformly accurate full navigation or whole-system completion.
+`APPLICATION_AL_UNQUALIFIED`, `DEPLOYMENT_UNQUALIFIED` and
+`SC4_PERFORMANCE_OPEN` remain. Any SC3 combination must establish its own joint
+physical hypotheses and raw inclusion; intersecting the two independent SC1
+and SC2 scopes is not a valid joint theorem.
+
+
+Final regression outcome: all six distinct targets PASS. Initial batch:
+6 scheduled,5 attempted,4 passed,1 harness-aborted before epochs,1 unattempted;
+corrected existing-CLI follow-up:2/2 passed. The final additional wrong-healthy-
+IMU action/stale-invalid evidence fixture reruns only `sc2_imu_checks`:1/1 PASS.
+Thus8 target invocations attempted,7 passed,1 corrected harness abort, with no
+unresolved failure. The raw source oracle checks all6421 unique source IDs,
+full15D actual RW/ADC/history/cross-covariance (`max_cov_relative=6.12865e-11`),
+and continuous inclusion; SC1 range geometry/tamper/frontier/wrong-UWB-action
+and explicit rejection of healthy-only range masks PASS. Existing native
+hybrid correlation/lifecycle and UWB WLS/Schur/lever/recovery checks PASS.
+The new wrong-IMU fixture actually replaces a HEALTHY current IMU at14 with
+its native complete bridge pair and still protects the actual tag, then
+protects polluted FDE-off15/16; it is not only a hypothetical selection claim.
+
+Local package commits: W1 `e63fcba`, W2 `136665a`, W3 `32360ec`, and this W4
+acceptance/test commit (obtain its exact hash with `git log -1`). Nothing was
+pushed. Own `.cache/sc2-imu/` CSV/log/build diagnostics and generated Python
+bytecode are cleaned after aggregation. No new figure, evidence database,
+backup, binary or duplicate results document is retained. Existing SC1
+artifacts and user files are preserved.

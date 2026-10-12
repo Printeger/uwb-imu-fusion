@@ -80,7 +80,7 @@ def streams(temp):
     with path.open() as f:rows=list(csv.DictReader(f))
     assert len(rows)==19 and all(r['updates']=='1' and r['sc1_valid']=='1' and float(r['sc1_hpl'])<=float(r['sc1_old_hpl']) and float(r['sc1_vpl'])<=float(r['sc1_old_vpl']) for r in rows)
     assert rows[14]['excluded_measurement']=='1501' and rows[14]['committed_retained']=='7' and all(r['sc1_valid']=='1' for r in rows[15:19])
-    print('SC1 U1 compatibility scheduled=19 actual_commits=19 qualified=19 actual_exclusion=1501 four-followup PASS',flush=True)
+    print('SC1 U1 compatibility scheduled=19 attempted=19 actual_commits=19 aborted=0 finite=19 qualified=19 contracted=19 fallback=0 refused=0 late='+str(sum(r['on_time']=='0' for r in rows))+' actual_exclusion=1501 four-followup PASS',flush=True)
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)

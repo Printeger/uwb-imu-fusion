@@ -33,6 +33,7 @@ void bridgeChecks(){
    auto rotation=truth.q_world_body.toRotationMatrix();require((rotation.array()>=envelope.rotation_low.array()).all() && (rotation.array()<=envelope.rotation_high.array()).all(),"rotation bridge");require((tag.array()>=envelope.tag_low.array()).all() && (tag.array()<=envelope.tag_high.array()).all(),"lever tag bridge");
   }
   require(!bridge.envelope(51,scenario.lever).valid,"bridge horizon expires");
+  auto uncertified=law;uncertified.numeric.valid=false;bool fakeRejected=false;try{Sc2IndependentBridge fake(scenario.initial_observation,uncertified);}catch(const std::exception&){fakeRejected=true;}require(fakeRejected,"invalid source certificate cannot mint a bridge");
   auto invalidScope=Sc2ImuScope{};invalidScope.acceleration_bound=.001;bool rejected=false;try{Sc2IndependentBridge invalid(scenario.initial_observation,law,invalidScope);}catch(const std::exception&){rejected=true;}require(rejected,"physical motion domain cannot silently shrink");
  }
  // Analytic extremal double-integral and sample-grid RW at t=2.5, with no
@@ -48,11 +49,15 @@ void bridgeChecks(){
 void issueChecks(){
  NoisyMotionScenario scenario("config/sc2_imu.yaml","SC2_A",20261010,16);auto law=parameters(scenario);law.numeric=scenario.imu_fault_numeric_certificate;Sc2IndependentBridge bridge(scenario.initial_observation,law);Sc2ImuMonitor monitor(scenario.initial_observation,law);
  IncrementalUwbImuEstimator backend(scenario.cfg,scenario.lever);backend.initialize(scenario.initial_observation,scenario.cfg.realtime.prior_sigmas);backend.ingestImu(scenario.imu[0]);monitor.append(scenario.imu[0]);
- for(int epoch=1;epoch<=16;++epoch){for(int i=(epoch-1)*10+1;i<=epoch*10;++i){backend.ingestImu(scenario.imu[i]);monitor.append(scenario.imu[i]);}auto tx=backend.prepareEpoch(scenario.uwb[epoch-1]);auto retained=tx;auto receipt=backend.commitEpoch(std::move(tx),EpochCommitPlan::nominalPlan(retained));auto state=backend.currentState();
-  if(epoch!=15 && epoch!=16)continue;
+ for(int epoch=1;epoch<=16;++epoch){for(int i=(epoch-1)*10+1;i<=epoch*10;++i){backend.ingestImu(scenario.imu[i]);monitor.append(scenario.imu[i]);}auto tx=backend.prepareEpoch(scenario.uwb[epoch-1]);auto retained=tx;auto plan=EpochCommitPlan::nominalPlan(retained);
+  if(epoch==14){plan.groups_to_add.erase(std::remove(plan.groups_to_add.begin(),plan.groups_to_add.end(),retained.imu_group.id),plan.groups_to_add.end());plan.groups_to_add.push_back(retained.generic_bridge_group.id);plan.groups_to_add.push_back(retained.generic_bias_continuity_group.id);plan.bridge_mode=BridgeMode::GenericKinematic;}
+  auto receipt=backend.commitEpoch(std::move(tx),plan);auto state=backend.currentState();
+  if(epoch==14)require(!receipt.group_to_slots.count(retained.imu_group.id.value()) && receipt.group_to_slots.count(retained.generic_bridge_group.id.value()) && receipt.group_to_slots.count(retained.generic_bias_continuity_group.id.value()),"deliberately wrong healthy IMU isolation really committed");
+  if(epoch!=14 && epoch!=15 && epoch!=16)continue;
   auto out=bridge.issue(monitor,scenario.range_certificates[epoch-1],retained,receipt,state,scenario.lever);require(out.valid && out.considered==1 && out.event_risk==std::ldexp(2.*6421,-35),"new IMU-fault proof, healthy UWB, same event and actual FDE-off center");auto truth=scenario.truth(epoch*.05);Eigen::Vector3d trueTag=truth.position_world_m+truth.q_world_body*scenario.lever;require((trueTag.array()>=out.low.array()).all() && (trueTag.array()<=out.high.array()).all(),"polluted center does not discard truth");
   auto changed=retained;changed.raw_imu_slice.back().specific_force_mps2.x()+=1;require(!bridge.issue(monitor,scenario.range_certificates[epoch-1],changed,receipt,state,scenario.lever).valid,"raw prefix receipt mutation refused");
   auto wrongReceipt=receipt;wrongReceipt.backend_updates=2;require(!bridge.issue(monitor,scenario.range_certificates[epoch-1],retained,wrongReceipt,state,scenario.lever).valid,"multiple update receipt refused");
+  auto expiredReceipt=receipt;expiredReceipt.state_timestamp=TimestampNs(0);require(!bridge.issue(monitor,scenario.range_certificates[epoch-1],retained,expiredReceipt,state,scenario.lever).valid,"stale receipt refused");
   auto wrongRange=scenario.range_certificates[epoch-1];wrongRange.frame="body";require(!bridge.issue(monitor,wrongRange,retained,receipt,state,scenario.lever).valid,"wrong frame evidence refused");
   bool rejected=false;try{Sc2IndependentBridge pollutedBoundary(state,law);}catch(const std::exception&){rejected=true;}require(rejected,"polluted posterior is not an initial boundary");
  }
