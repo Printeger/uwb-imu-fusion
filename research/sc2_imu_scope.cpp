@@ -40,8 +40,13 @@ void Sc2ImuMonitor::append(const ImuMeasurement& sample){
   }
   if(candidate.possible){++result_.possible;begin=std::min(begin,(long long)candidate.episode.begin.value());end=std::max(end,(long long)candidate.episode.end.value());}
  }
+ recent_.push_back(sample);if(recent_.size()>11)recent_.pop_front();
  ++result_.samples;result_.union_begin=TimestampNs(begin==std::numeric_limits<long long>::max()?0:begin);result_.union_end=TimestampNs(end);
  result_.status=result_.nominal_possible?"NOMINAL_POSSIBLE":result_.possible?"IMU_EPISODE_ALARM":"SCOPE_INCONSISTENT";
+}
+bool Sc2ImuMonitor::matches(const EpochTransaction& tx)const{
+ if(!result_.valid || tx.proposed_epoch<1 || tx.proposed_epoch>50 || result_.samples!=int(10*tx.proposed_epoch+1) || recent_.size()!=tx.raw_imu_slice.size())return false;
+ for(size_t i=0;i<recent_.size();++i){const auto& a=recent_[i];const auto& b=tx.raw_imu_slice[i];if(a.id!=b.id || a.timestamp!=b.timestamp || a.specific_force_mps2!=b.specific_force_mps2 || a.angular_velocity_radps!=b.angular_velocity_radps || a.quality_flags!=b.quality_flags)return false;}return true;
 }
 Sc2FaultSupportClosure sc2SupportClosure(const RawImuEpisode& episode,int through,int horizon){
  Sc2FaultSupportClosure out;

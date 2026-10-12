@@ -1,7 +1,9 @@
 #include "scenario_material.hpp"
 #include "sc2_imu_scope.hpp"
+#include "sc2_imu_bridge.hpp"
 #include <iostream>
 #include <gtsam/linear/NoiseModel.h>
+#include <boost/multiprecision/cpp_dec_float.hpp>
 using namespace uwb_imu_pl;using namespace uwb_imu_pl::research;
 void require(bool ok,const char* message){if(!ok)throw std::runtime_error(message);}
 RawInclusionParameters parameters(const NoisyMotionScenario& s){RawInclusionParameters p;p.numeric=s.numeric_certificate;p.initial_sigmas=s.cfg.realtime.prior_sigmas;p.gravity=s.cfg.imu.gravity_mps2;return p;}
@@ -16,9 +18,49 @@ void responseOracle(const NoisyMotionScenario& scenario){
   auto plan=EpochCommitPlan::nominalPlan(tx);backend.commitEpoch(std::move(tx),plan);
  }
 }
+
+void bridgeChecks(){
+ for(const auto* kind:{"SC2_A","SC2_G","SC2_S"}){
+  NoisyMotionScenario scenario("config/sc2_imu.yaml",kind,20261010,30);require(!scenario.numeric_certificate.valid && scenario.imu_fault_numeric_certificate.valid,"fault addition numerical certificate is not healthy-IMU attestation");
+  auto law=parameters(scenario);law.numeric=scenario.imu_fault_numeric_certificate;Sc2IndependentBridge bridge(scenario.initial_observation,law);Sc2ImuMonitor monitor(scenario.initial_observation,law);
+  for(const auto& sample:scenario.imu)monitor.append(sample);
+  require(monitor.assessment().valid && (std::string(kind)=="SC2_S" || monitor.assessment().alarm),"unlabelled matched-law monitor");
+  for(int epoch:{15,25,26,30}){auto envelope=bridge.envelope(epoch,scenario.lever);auto truth=scenario.truth(epoch*.05);auto tag=truth.position_world_m+truth.q_world_body*scenario.lever;
+   require(envelope.valid && (truth.position_world_m.array()>=envelope.position_low.array()).all() && (truth.position_world_m.array()<=envelope.position_high.array()).all(),"fault-independent body position bridge");
+   require((truth.velocity_world_mps.array()>=envelope.velocity_low.array()).all() && (truth.velocity_world_mps.array()<=envelope.velocity_high.array()).all(),"fault-independent velocity bridge");
+   Eigen::Matrix<double,6,1> bias;bias<<truth.accel_bias_mps2,truth.gyro_bias_radps;require((bias.array()>=envelope.bias_low.array()).all() && (bias.array()<=envelope.bias_high.array()).all() && (envelope.bias_high-envelope.bias_low).minCoeff()>0,"nonzero initial/RW bias enclosure");
+   auto rotation=truth.q_world_body.toRotationMatrix();require((rotation.array()>=envelope.rotation_low.array()).all() && (rotation.array()<=envelope.rotation_high.array()).all(),"rotation bridge");require((tag.array()>=envelope.tag_low.array()).all() && (tag.array()<=envelope.tag_high.array()).all(),"lever tag bridge");
+  }
+  require(!bridge.envelope(51,scenario.lever).valid,"bridge horizon expires");
+  auto invalidScope=Sc2ImuScope{};invalidScope.acceleration_bound=.001;bool rejected=false;try{Sc2IndependentBridge invalid(scenario.initial_observation,law,invalidScope);}catch(const std::exception&){rejected=true;}require(rejected,"physical motion domain cannot silently shrink");
+ }
+ // Analytic extremal double-integral and sample-grid RW at t=2.5, with no
+ // measured IMU values or truth trajectory used by the bridge kernel.
+ NavigationState observation;observation.position_world_m.setZero();observation.velocity_world_mps.setZero();RawInclusionParameters law;law.numeric.valid=true;law.initial_sigmas.setConstant(.001);law.motion_amplitude.setZero();law.motion_frequency.setZero();law.motion_angular_rate=0;Sc2IndependentBridge bridge(observation,law);
+ auto envelope=bridge.envelope(50,Eigen::Vector3d::Zero());double t=2.5;
+ using MP=boost::multiprecision::cpp_dec_float_100;MP positionMax=7*MP(.001)*sqrt(MP(3))+MP(t)*7*MP(.001)+MP(.04)*MP(t)*MP(t)/2;MP biasMax=7*(MP(.001)+500*MP(.001)*sqrt(MP(1)/200));
+ require(MP(envelope.position_high(0))>=positionMax && MP(envelope.position_low(0))<=-positionMax && MP(envelope.bias_high(0))>=biasMax && MP(envelope.bias_low(0))<=-biasMax,"100-digit integral/RW endpoint oracle");
+ for(double sign:{-1.,1.}){Eigen::Vector3d p=Eigen::Vector3d::Constant(sign*(7*.001+t*7*.001+.5*.04*t*t));require((p.array()>=envelope.position_low.array()).all() && (p.array()<=envelope.position_high.array()).all(),"analytic signed acceleration integral");double bias=sign*(7*.001+7*500*.001*std::sqrt(.005));require(bias>=envelope.bias_low(0) && bias<=envelope.bias_high(0),"RW signed boundary");}
+ std::cout<<"SC2 independent full-state/RW/tag bridge and fault-source numeric checks PASS\n";
+}
+
+void issueChecks(){
+ NoisyMotionScenario scenario("config/sc2_imu.yaml","SC2_A",20261010,16);auto law=parameters(scenario);law.numeric=scenario.imu_fault_numeric_certificate;Sc2IndependentBridge bridge(scenario.initial_observation,law);Sc2ImuMonitor monitor(scenario.initial_observation,law);
+ IncrementalUwbImuEstimator backend(scenario.cfg,scenario.lever);backend.initialize(scenario.initial_observation,scenario.cfg.realtime.prior_sigmas);backend.ingestImu(scenario.imu[0]);monitor.append(scenario.imu[0]);
+ for(int epoch=1;epoch<=16;++epoch){for(int i=(epoch-1)*10+1;i<=epoch*10;++i){backend.ingestImu(scenario.imu[i]);monitor.append(scenario.imu[i]);}auto tx=backend.prepareEpoch(scenario.uwb[epoch-1]);auto retained=tx;auto receipt=backend.commitEpoch(std::move(tx),EpochCommitPlan::nominalPlan(retained));auto state=backend.currentState();
+  if(epoch!=15 && epoch!=16)continue;
+  auto out=bridge.issue(monitor,scenario.range_certificates[epoch-1],retained,receipt,state,scenario.lever);require(out.valid && out.considered==1 && out.event_risk==std::ldexp(2.*6421,-35),"new IMU-fault proof, healthy UWB, same event and actual FDE-off center");auto truth=scenario.truth(epoch*.05);Eigen::Vector3d trueTag=truth.position_world_m+truth.q_world_body*scenario.lever;require((trueTag.array()>=out.low.array()).all() && (trueTag.array()<=out.high.array()).all(),"polluted center does not discard truth");
+  auto changed=retained;changed.raw_imu_slice.back().specific_force_mps2.x()+=1;require(!bridge.issue(monitor,scenario.range_certificates[epoch-1],changed,receipt,state,scenario.lever).valid,"raw prefix receipt mutation refused");
+  auto wrongReceipt=receipt;wrongReceipt.backend_updates=2;require(!bridge.issue(monitor,scenario.range_certificates[epoch-1],retained,wrongReceipt,state,scenario.lever).valid,"multiple update receipt refused");
+  auto wrongRange=scenario.range_certificates[epoch-1];wrongRange.frame="body";require(!bridge.issue(monitor,wrongRange,retained,receipt,state,scenario.lever).valid,"wrong frame evidence refused");
+  bool rejected=false;try{Sc2IndependentBridge pollutedBoundary(state,law);}catch(const std::exception&){rejected=true;}require(rejected,"polluted posterior is not an initial boundary");
+ }
+ Sc2ImuMonitor inconsistent(scenario.initial_observation,law);for(int i=0;i<=141;++i){auto sample=scenario.imu[i];if(i==141)sample.angular_velocity_radps.y()+=1;inconsistent.append(sample);}require(inconsistent.assessment().alarm && inconsistent.assessment().possible==0 && inconsistent.assessment().status=="SCOPE_INCONSISTENT","two-axis explanation cannot silently qualify single-axis scope");
+ std::cout<<"SC2 polluted-center receipt/prefix/frame/boundary and unrepresented two-axis checks PASS\n";
+}
 int main(){try{
  NoisyMotionScenario nominal("config/sc2_imu.yaml","U0",20261010,30);
- responseOracle(nominal);
+ responseOracle(nominal);bridgeChecks();issueChecks();
  auto law=parameters(nominal);Sc2ImuMonitor healthy(nominal.initial_observation,law);
  for(auto sample:nominal.imu)healthy.append(sample);require(healthy.assessment().valid && !healthy.assessment().alarm,"nominal shared source prefix");
  for(int axis=0;axis<6;++axis){Sc2ImuMonitor monitor(nominal.initial_observation,law);double amplitude=axis<3?20.:1.;

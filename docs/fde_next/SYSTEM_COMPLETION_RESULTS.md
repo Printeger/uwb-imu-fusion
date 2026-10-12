@@ -298,3 +298,59 @@ independent literal-sample perturbation/reintegration response oracle at the
 matched-RW two-PIM shared endpoint. These are finite deterministic checks,
 not an empirical tail certificate. Nested research-law loading was made
 recursive so SC2 inherits the actual SC1 nominal law instead of copying it.
+
+W2 implements `Sc2IndependentBridge`, a new fault-independent full-state proof,
+not a relabeling of healthy-IMU inclusion. With original observed boundary O,
+`r_p=||7 sigma_translation||+rho_initial`, `r_vj=7 sigma_vj+rho_vj`, and
+time t=k/20, true body position belongs to
+`O.p + [-r_p,r_p] + t*(O.v +/- r_v) +/- A*t²/2`, velocity to
+`O.v +/- r_v +/- A*t`. Initial attitude error plus `Omega*t` bounds matrix
+operator distance by `min(2,||7 sigma_rotation||+rho_rotation+Omega*t)`.
+Add represented initial R times lever plus the diameter times lever norm for
+a tag box. Matrix-entry envelopes preserve all possible R, without pretending
+their independent entries define a unique rotation. Each bias coordinate keeps
+its original initial-observation error plus the SAME first10k RW increments,
+`7*(sigma_bias+10k*sigma_RW*sqrt(1/200))`, and directed initial/process
+roundoff. The adapter now separately bounds accumulated RW arithmetic residue
+against its exact source mapping; that term is consumed by the new bias box.
+No zero-bias premise, polluted posterior, range-derived velocity measurement,
+Gaussian covariance or optimizer regularization enters these equations.
+
+The motion bounds are checked against directed
+`norm(abs(amplitude)*frequency²)` and registered absolute angular rate before
+use; reducing A below the actual declared analytic domain refuses the bridge.
+The valid boundary is timestamp0 original observation only, with no carry-in.
+All branches share this conservative full-state envelope, which contains the
+true branch independently of the selected action or any IMU corruption within
+the declared task. Current all-healthy UWB shells safely contract only its tag
+projection; no contracted tag box is written into p/v/R/bias. SC1's consumer
+continues to require all9 UWB masks and explicitly rejects the new healthy-only
+kernel option; SC2's separate contract uses only NONE (all8 ranges healthy).
+SC2 does not claim simultaneous UWB+IMU protection.
+
+On E the initial envelope holds; integrating independent acceleration/angular
+bounds and the true RW retains the full state, so the true tag belongs to B_k
+for every physical IMU hypothesis. The monitor preserves the true h/theta via
+necessary raw intervals. Intersecting the healthy range shells preserves the
+true tag; directed contraction gives Q_k and signed transfer to the actual
+committed tag. All candidate/center choices are covered simultaneously by
+these inclusions. Risk remains `2*6421/2^35=3.7375139072537422e-7` over full50,
+without new source draws, per-branch charge or per-epoch refresh. This is a
+conditional sup-fault task bound, not hardware HMI qualification.
+
+Fault forward-map certification subtracts the additive raw fault inside the
+directed source evaluator, including rounding of that addition. Its evidence
+contains numeric residue only, never amplitude/onset/axis labels or actual
+draws. The old healthy certificate remains invalid on SC2_A/G/S injected input;
+this failure is not used to alarm. The online monitor still consumes actual
+observations and registered physical intervals. Default SC1 generation avoids
+the extra fault-source certification pass.
+
+W2 checks: new source cert valid while healthy cert invalid; full p/v/R/bias/tag
+envelopes contain matched-law witnesses at15/25/26/30 for accel, gyro and weak
+short inputs; 100-digit extremal integral/RW endpoint oracle; expiry and invalid
+physical domain refusal. Actual FDE-off native commits at15/16 retain polluted
+centers but issue the new same-event raw bound correctly. Prefix/receipt/frame
+mutation, polluted boundary and unrepresented simultaneous two-axis raw
+violations refuse. The unaffected SC1 range checks also pass. Native recovery
+and final stage acceptance remain pending W3/W4.

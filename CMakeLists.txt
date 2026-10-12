@@ -529,3 +529,5 @@ set_source_files_properties(research/sc2_imu_scope.cpp PROPERTIES COMPILE_OPTION
 target_sources(fde_research PRIVATE research/sc2_imu_scope.cpp)
 add_executable(sc2_imu_checks EXCLUDE_FROM_ALL research/sc2_imu_checks.cpp)
 target_link_libraries(sc2_imu_checks fde_research)
+set_source_files_properties(research/sc2_imu_bridge.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+target_sources(fde_research PRIVATE research/sc2_imu_bridge.cpp)

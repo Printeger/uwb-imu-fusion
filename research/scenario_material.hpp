@@ -52,7 +52,7 @@ struct NoisyMotionScenario {
  int epochs;double dt,rate;
  NavigationState initial_observation;
  bool initial_law_valid=false,physical_source_reference=false;
- RawInputRoundoff numeric_certificate;
+ RawInputRoundoff numeric_certificate,imu_fault_numeric_certificate;
  std::vector<Eigen::Matrix<double,6,1>> true_bias;
 
  NavigationState truth(double t)const{
@@ -62,14 +62,14 @@ struct NoisyMotionScenario {
   s.q_world_body=Eigen::Quaterniond(Eigen::AngleAxisd(rate*t,Eigen::Vector3d(1,2,3).normalized()));
   if(!true_bias.empty()){size_t i=size_t(std::llround(t/.005));if(i>=true_bias.size())throw std::runtime_error("bias truth outside registered sample grid");s.accel_bias_mps2=true_bias[i].head<3>();s.gyro_bias_radps=true_bias[i].tail<3>();}return s;
  }
- NoisyMotionScenario(const std::string& path,const std::string& kind,int seed,int count):law(researchLaw(path)),cfg(IntegrityConfigLoader::load(law[(kind=="I1" || kind=="I2" || kind=="screen")?"imu_base_config":"base_config"].as<std::string>())){
+ NoisyMotionScenario(const std::string& path,const std::string& kind,int seed,int count):law(researchLaw(path)),cfg(IntegrityConfigLoader::load(law[(kind=="I1" || kind=="I2" || kind=="screen" || kind.rfind("SC2_",0)==0)?"imu_base_config":"base_config"].as<std::string>())){
   epochs=count?count:law["epochs"].as<int>();dt=law["epoch_s"].as<double>();rate=law["angular_rate_radps"].as<double>();
   if(dt!=.05 || law["imu_sample_s"].as<double>()!=.005 || epochs>law["epochs"].as<int>())throw std::runtime_error("unsupported timestamp/horizon contract");
   lever=researchVector(law["lever"]);amp=researchVector(law["translation_amplitude"]);freq=researchVector(law["translation_frequency"]);
   cfg.incremental.fixed_lag_epochs=law["fixed_lag_epochs"].as<int>();cfg.integrity_window.epochs=law["window_epochs"].as<int>();
   cfg.realtime.range_sigma_m=law["range_sigma_m"].as<double>();
   Eigen::Matrix<double,15,1> initial_normals=Eigen::Matrix<double,15,1>::Zero();
-  std::vector<Eigen::Matrix<double,6,1>> bias_normals,adc_normals;
+  std::vector<Eigen::Matrix<double,6,1>> bias_normals,adc_normals,additive_imu_fault;
   physical_source_reference=law["source_law_id"] && law["source_law_id"].as<std::string>()=="raw-source-rw-v1";
   if(physical_source_reference){
    if(law["bias_process"].as<std::string>()!="sample-grid-gaussian-rw" || !law["nominal_weights_are_metric"].as<bool>())throw std::runtime_error("unsupported primitive law");
@@ -96,14 +96,21 @@ struct NoisyMotionScenario {
    m.angular_velocity_radps=rate*Eigen::Vector3d(1,2,3).normalized();
    m.specific_force_mps2+=state.accel_bias_mps2;m.angular_velocity_radps+=state.gyro_bias_radps;
    Eigen::Matrix<double,6,1> draw;for(int j=0;j<3;++j){draw(j)=normal(imu_rng);draw(j+3)=normal(imu_rng);m.specific_force_mps2(j)+=law["raw_accel_sigma_mps2"].as<double>()*draw(j);m.angular_velocity_radps(j)+=law["raw_gyro_sigma_radps"].as<double>()*draw(j+3);}adc_normals.push_back(draw);
+   Eigen::Matrix<double,6,1> fault=Eigen::Matrix<double,6,1>::Zero();
    const int fault_epoch=law["fault_epoch"].as<int>();
    const double begin=(fault_epoch-1)*dt+.005;
    const double duration=kind=="I1"?.05:.5;
    if((kind=="I1" || kind=="I2") && t>=begin-1e-12 && t<begin+duration-1e-12)
-    m.specific_force_mps2.x()+=law["imu_accel_amplitude_mps2"].as<double>();
+    {fault(0)=law["imu_accel_amplitude_mps2"].as<double>();m.specific_force_mps2.x()+=fault(0);}
+   if(kind.rfind("SC2_",0)==0){int onset=law["sc2_witness_onset_epoch"].as<int>();long long begin=(onset-1)*50000000LL+5000000LL;long long end=begin+(kind=="SC2_S"?50:law["sc2_witness_duration_ms"].as<int>())*1000000LL;
+    if(m.timestamp.value()>=begin && m.timestamp.value()<end){int axis=kind=="SC2_G"?law["sc2_gyro_witness_axis"].as<int>():law["sc2_accel_witness_axis"].as<int>();double amplitude=kind=="SC2_G"?law["sc2_gyro_witness_amplitude_radps"].as<double>():kind=="SC2_S"?law["sc2_short_witness_amplitude_mps2"].as<double>():law["sc2_accel_witness_amplitude_mps2"].as<double>();fault(axis)=amplitude;if(axis<3)m.specific_force_mps2(axis)+=amplitude;else m.angular_velocity_radps(axis-3)+=amplitude;}
+   }
+   additive_imu_fault.push_back(fault);
    imu.push_back(m);
   }
   if(physical_source_reference)numeric_certificate=certifyRawGenerator(initial_observation,initial_normals,cfg.realtime.prior_sigmas,amp,freq,rate,cfg.imu.gravity_mps2,true_bias.front(),cfg.imu.accelerometer_bias_rw_sigma,cfg.imu.gyroscope_bias_rw_sigma,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),bias_normals,adc_normals,imu);
+  if(physical_source_reference && kind.rfind("SC2_",0)==0)imu_fault_numeric_certificate=certifyRawGenerator(initial_observation,initial_normals,cfg.realtime.prior_sigmas,amp,freq,rate,cfg.imu.gravity_mps2,true_bias.front(),cfg.imu.accelerometer_bias_rw_sigma,cfg.imu.gyroscope_bias_rw_sigma,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),bias_normals,adc_normals,imu,&additive_imu_fault,&true_bias);
+  else imu_fault_numeric_certificate=numeric_certificate;
   for(int e=1;e<=epochs;++e){auto b=ranges(cfg,e);auto s=truth(e*dt);Eigen::Vector3d tag=s.position_world_m+s.q_world_body*lever;
    std::array<double,8> range_draws{},faults{};size_t row=0;
    for(auto& m:b.measurements){if(kind=="U3")m.anchor_position_m.z()=1.1;m.range_m=(m.anchor_position_m-tag).norm()+cfg.realtime.range_sigma_m*(range_draws[row++]=normal(uwb_rng));}

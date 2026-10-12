@@ -7,12 +7,12 @@ namespace uwb_imu_pl::research {
 // It consumes no truth state, fault labels, optimizer convergence or AL.
 struct RawInputRoundoff {
  double position=0,rotation_matrix=0,accel_sample=0,gyro_sample=0;
- Eigen::Vector3d velocity=Eigen::Vector3d::Zero();Eigen::Matrix<double,6,1> bias=Eigen::Matrix<double,6,1>::Zero();bool valid=false;
+ Eigen::Vector3d velocity=Eigen::Vector3d::Zero();Eigen::Matrix<double,6,1> bias=Eigen::Matrix<double,6,1>::Zero(),bias_process=Eigen::Matrix<double,6,1>::Zero();bool valid=false;
 };
 RawInputRoundoff certifyRawGenerator(const NavigationState&,const Eigen::Matrix<double,15,1>& initial_normals,
  const Eigen::Matrix<double,15,1>& sigmas,const Eigen::Vector3d& amplitude,const Eigen::Vector3d& frequency,
  double rate,double gravity,const Eigen::Matrix<double,6,1>& initial_bias,double accel_rw,double gyro_rw,double accel_adc,double gyro_adc,
- const std::vector<Eigen::Matrix<double,6,1>>& bias_normals,const std::vector<Eigen::Matrix<double,6,1>>& adc_normals,const std::vector<ImuMeasurement>& samples);
+ const std::vector<Eigen::Matrix<double,6,1>>& bias_normals,const std::vector<Eigen::Matrix<double,6,1>>& adc_normals,const std::vector<ImuMeasurement>& samples,const std::vector<Eigen::Matrix<double,6,1>>* additive_fault=nullptr,const std::vector<Eigen::Matrix<double,6,1>>* observed_bias=nullptr);
 struct RawInclusionParameters {
  RawInputRoundoff numeric;
  Eigen::Matrix<double,15,1> initial_sigmas;

@@ -3,6 +3,7 @@
 #include "raw_nonlinear_inclusion.hpp"
 #include "uwb_imu_pl/integrity/fault_model.hpp"
 #include <array>
+#include <deque>
 namespace uwb_imu_pl::research {
 struct Sc2ImuScope {
  std::string id="sc2-single-imu-episode-rw-v1";
@@ -24,9 +25,11 @@ struct Sc2ImuAssessment {
 class Sc2ImuMonitor {
  NavigationState initial_;RawInclusionParameters law_;Sc2ImuScope scope_;
  std::vector<Sc2PhysicalCandidate> candidates_;Sc2ImuAssessment result_;
+ std::deque<ImuMeasurement> recent_;
  public:
  Sc2ImuMonitor(const NavigationState&,const RawInclusionParameters&,Sc2ImuScope={});
  void append(const ImuMeasurement&);
+ bool matches(const EpochTransaction&)const;
  Sc2ImuAssessment assessment()const{return result_;}
  const std::vector<Sc2PhysicalCandidate>& candidates()const{return candidates_;}
 };

@@ -44,8 +44,8 @@ I sine(I x){I value(0),power=x,factorial(1);for(int k=1;k<=49;++k){if(k>1){power
 RawInputRoundoff certifyRawGenerator(const NavigationState& obs,const Eigen::Matrix<double,15,1>& draws,
  const Eigen::Matrix<double,15,1>& sigmas,const Eigen::Vector3d& amp,const Eigen::Vector3d& freq,
  double rate,double gravity,const Eigen::Matrix<double,6,1>& initialBias,double ba,double bg,double sa,double sg,
- const std::vector<Eigen::Matrix<double,6,1>>& rw,const std::vector<Eigen::Matrix<double,6,1>>& adc,const std::vector<ImuMeasurement>& samples){
- RawInputRoundoff out;if(samples.size()!=adc.size() || rw.size()+1!=samples.size())return out;
+ const std::vector<Eigen::Matrix<double,6,1>>& rw,const std::vector<Eigen::Matrix<double,6,1>>& adc,const std::vector<ImuMeasurement>& samples,const std::vector<Eigen::Matrix<double,6,1>>* additive_fault,const std::vector<Eigen::Matrix<double,6,1>>* observed_bias){
+ RawInputRoundoff out;if(samples.size()!=adc.size() || rw.size()+1!=samples.size() || (additive_fault && additive_fault->size()!=samples.size()) || (observed_bias && observed_bias->size()!=samples.size()))return out;
  V phi,rho;for(int j=0;j<3;++j){phi[j]=I(sigmas(j))*I(draws(j));rho[j]=I(sigmas(j+3))*I(draws(j+3));}
  auto initial=expAndV(phi);auto observedR=rotation(obs.q_world_body);V pos=multiply(initial.second,rho);pos[2]+=I(1);V dp;I dr(0);
  for(int j=0;j<3;++j){dp[j]=I(obs.position_world_m(j))-pos[j];for(int k=0;k<3;++k)dr+=square(observedR[j][k]-initial.first[j][k]);out.velocity(j)=abs(I(obs.velocity_world_mps(j))-(I(amp(j))*I(freq(j))+I(sigmas(j+6))*I(draws(j+6)))).upper();}
@@ -56,9 +56,10 @@ RawInputRoundoff certifyRawGenerator(const NavigationState& obs,const Eigen::Mat
   for(int j=0;j<3;++j){angle[j]=I(rate)*t*double(j+1)/axisnorm;acc[j]=-I(amp(j))*square(I(freq(j)))*sine(I(freq(j))*t);}acc[2]+=I(gravity);
   auto r=expAndV(angle).first;V force{I(0),I(0),I(0)};for(int j=0;j<3;++j)for(int k=0;k<3;++k)force[j]+=r[k][j]*acc[k];
   if(i)for(int j=0;j<6;++j)bias[j]+=I(j<3?ba:bg)*sqrt(dt)*I(rw[i-1](j));
-  for(int j=0;j<3;++j){I f=force[j]+bias[j]+I(sa)*I(adc[i](j));I g=I(rate)*double(j+1)/axisnorm+bias[j+3]+I(sg)*I(adc[i](j+3));out.accel_sample=std::max(out.accel_sample,abs(I(samples[i].specific_force_mps2(j))-f).upper());out.gyro_sample=std::max(out.gyro_sample,abs(I(samples[i].angular_velocity_radps(j))-g).upper());}
+  if(observed_bias)for(int j=0;j<6;++j){if(!(*observed_bias)[i].allFinite())return out;out.bias_process(j)=std::max(out.bias_process(j),abs(I((*observed_bias)[i](j))-bias[j]).upper());}
+  for(int j=0;j<3;++j){I f=force[j]+bias[j]+I(sa)*I(adc[i](j));I g=I(rate)*double(j+1)/axisnorm+bias[j+3]+I(sg)*I(adc[i](j+3));if(additive_fault){if(!(*additive_fault)[i].allFinite())return out;f+=I((*additive_fault)[i](j));g+=I((*additive_fault)[i](j+3));}out.accel_sample=std::max(out.accel_sample,abs(I(samples[i].specific_force_mps2(j))-f).upper());out.gyro_sample=std::max(out.gyro_sample,abs(I(samples[i].angular_velocity_radps(j))-g).upper());}
  }
- out.valid=std::isfinite(out.position+out.rotation_matrix+out.accel_sample+out.gyro_sample) && out.velocity.allFinite() && out.bias.allFinite() && out.position<=1e-10 && out.rotation_matrix<=1e-10 && out.accel_sample<=1e-10 && out.gyro_sample<=1e-10 && out.velocity.maxCoeff()<=1e-10 && out.bias.maxCoeff()<=1e-10;return out;
+ out.valid=std::isfinite(out.position+out.rotation_matrix+out.accel_sample+out.gyro_sample) && out.velocity.allFinite() && out.bias.allFinite() && out.position<=1e-10 && out.rotation_matrix<=1e-10 && out.accel_sample<=1e-10 && out.gyro_sample<=1e-10 && out.velocity.maxCoeff()<=1e-10 && out.bias.maxCoeff()<=1e-10 && out.bias_process.allFinite() && out.bias_process.maxCoeff()<=1e-10;return out;
 }
 // Directed forward evaluation of ideal continuous tag and the actual UWB
 // arithmetic. The residual encloses all libm/Eigen/time/multiply/add rounding
