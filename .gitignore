@@ -197,3 +197,12 @@ compile_commands.json
 /candidates.csv
 /intervals.csv
 /audit.csv
+
+# Raw-source / nonlinear inclusion and AL-policy direct-run scratch outputs.
+# Default .cache/hybrid-raw/ runs are covered by /.cache/ above. Root-only
+# patterns keep implementation, policy YAML and compact docs trackable.
+/raw-source-*/
+/raw-bound-*/
+/raw-source*.csv
+/raw-bound*.csv
+/application-al*.json
