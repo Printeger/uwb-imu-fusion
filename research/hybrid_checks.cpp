@@ -5,6 +5,25 @@ using namespace uwb_imu_pl::research;
 void require(bool b,const char* s){if(!b)throw std::runtime_error(s);}
 void runHybridNative(const std::string&,bool);
 int main(int argc,char** argv){try{
+ // The three AL evaluations advance independent H producers from identical
+ // observations. Large physical sigmas exercise results above legacy AL.
+ for(bool joint:{false,true}){
+  HybridFixedLaw alLaw;alLaw.initial_sigma=.4;alLaw.range_sigma=.3;
+  std::vector<HybridHistoryProducer> histories;for(int k=0;k<3;++k)histories.emplace_back(alLaw);
+  for(int e=1;e<=5;++e){
+   Eigen::VectorXd z=Eigen::VectorXd::Zero(8);if(e==3)z(0)=10;
+   HybridBound first;
+   for(int k=0;k<3;++k){double hal=k==0?2:k==1?5:10,val=k==0?3:hal;
+    auto prediction=hybridPredict(alLaw,histories[k],histories[k].query(),e,e-1);
+    auto chosen=hybridFixedCurrent(alLaw,histories[k],prediction,z,true,hal,val,joint,HybridSelectionPolicy::BoundFirstResearch);
+    require(chosen.status=="FIXED_MODEL_VERIFIED","bound-first finite positive");
+    if(k==0)first=chosen;else require(chosen.status==first.status && chosen.retained==first.retained && chosen.excluded==first.excluded && chosen.gaussian.pl.isApprox(first.gaussian.pl,0),"AL-independent full selection");
+    std::vector<uint64_t> sources;for(int row:chosen.retained)sources.push_back(e*100+row+1);
+    histories[k].committed(e,e,z,chosen.retained,sources);
+    require(sameHistory(histories[0].query(),histories[k].query()),"AL-independent H next version and risk");
+   }
+  }
+ }
  HybridFixedLaw law;HybridHistoryProducer producer(law),replay(law);
  size_t nonzero=0,finite=0;
  Eigen::MatrixXd dense=Eigen::MatrixXd::Zero(21,21);

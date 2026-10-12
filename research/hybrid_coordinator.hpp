@@ -57,6 +57,11 @@ enum class HybridDomain { FixedModel, RawUnqualified };
 struct HybridFinalResult {
  Eigen::Vector3d pl=Eigen::Vector3d::Constant(INFINITY),center=Eigen::Vector3d::Constant(INFINITY);
  bool numerical=false,model=false,risk=false,within_al=false,receipt_bound=false,on_time=false;
+ bool finiteBoundQualified()const{return numerical && model && risk && receipt_bound;}
+ // Unknown application requirements never acquire qualification from a
+ // diagnostic AL pair. Legacy available() retains its historical semantics.
+ bool application_policy_qualified=false,formal_eligible=false,publication_protected=false;
+ bool applicationAvailable()const{return finiteBoundQualified() && application_policy_qualified && within_al && on_time;}
  bool available()const{return numerical && model && risk && within_al && receipt_bound;}
  bool timelyAvailable()const{return available() && on_time;}
 };

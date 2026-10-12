@@ -2,6 +2,10 @@
 #include "hybrid_evidence.hpp"
 #include <cstdio>
 namespace uwb_imu_pl::research {
+enum class HybridSelectionPolicy { LegacyAlGated, BoundFirstResearch };
+inline const char* hybridSelectionPolicyId(HybridSelectionPolicy policy){
+ return policy==HybridSelectionPolicy::BoundFirstResearch?"bound_first_research-v1":"legacy_al_gated";
+}
 inline bool sameMatrix(const Eigen::MatrixXd& a,const Eigen::MatrixXd& b){return a.rows()==b.rows() && a.cols()==b.cols() && a.allFinite() && b.allFinite() && a.isApprox(b,0);}
 inline bool sameHistory(const HybridHistoryEvidence& a,const HybridHistoryEvidence& b){
  if(a.status!=b.status || a.model!=b.model || a.epoch!=b.epoch || a.generation!=b.generation || a.horizon!=b.horizon || a.radius!=b.radius || a.risk!=b.risk || a.retained_sources!=b.retained_sources || a.segments.size()!=b.segments.size())return false;
@@ -158,7 +162,8 @@ inline HybridBound hybridJointEpisodeBound(HybridBound base,const Eigen::MatrixX
  return base;
 }
 inline HybridBound hybridFixedCurrent(const HybridFixedLaw& law,const HybridHistoryProducer& producer,const HybridPrediction& p,
- const Eigen::VectorXd& ranges,bool a_alarm=true,double horizontalAL=2,double verticalAL=3,bool shared_episode=false){
+ const Eigen::VectorXd& ranges,bool a_alarm=true,double horizontalAL=2,double verticalAL=3,bool shared_episode=false,
+ HybridSelectionPolicy policy=HybridSelectionPolicy::LegacyAlGated){
  auto expected=hybridPredict(law,producer,producer.query(),p.epoch,p.generation);
  if(p.status!="FIXED_MODEL_VERIFIED" || expected.status!=p.status || p.source!=expected.source || !sameHistory(p.history,expected.history) || p.mean.size()!=expected.mean.size() || !sameMatrix(p.mean,expected.mean) || !sameMatrix(p.covariance,expected.covariance) || !sameMatrix(p.N,expected.N) || !sameMatrix(p.transport,expected.transport))return {};
  Eigen::MatrixXd r=Eigen::MatrixXd::Identity(law.ranges,law.ranges)*law.range_sigma*law.range_sigma;
@@ -170,7 +175,7 @@ inline HybridBound hybridFixedCurrent(const HybridFixedLaw& law,const HybridHist
  }
  auto candidate=[&](int excluded){auto bound=hybridBound(p.covariance,law.H,r,p.N,law.C,innovation,p.history,excluded,law.alpha,p.history.radius);
   if(shared_episode)bound=hybridJointEpisodeBound(std::move(bound),law.H,law.C,innovation,p.history,active,p.history.radius);
-  if(bound.status=="FIXED_MODEL_VERIFIED" && (bound.gaussian.pl.head<2>().norm()>horizontalAL || bound.gaussian.pl.z()>verticalAL))bound.status="AL_REJECTED";
+  if(policy==HybridSelectionPolicy::LegacyAlGated && bound.status=="FIXED_MODEL_VERIFIED" && (bound.gaussian.pl.head<2>().norm()>horizontalAL || bound.gaussian.pl.z()>verticalAL))bound.status="AL_REJECTED";
   return bound;
  };
  auto keep=candidate(-1);

@@ -248,3 +248,5 @@ python3 tools/run_epoch_architecture.py hybrid --scene U1 --joint-episode
 ```
 
 本轮最终验证包括上述三项及直接U1/19 opt-in。没有运行新表示50epoch campaign或性能竞赛；可选CLI命令是复现入口而非本轮新增实验分母。永久保留源码/oracle与本报告，临时CSV/日志核对后清理，本地提交，不push。
+
+Raw qualification development now lives in [HYBRID_RAW_RESULTS.md](HYBRID_RAW_RESULTS.md); legacy results above retain their original scope.

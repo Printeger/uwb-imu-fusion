@@ -69,6 +69,17 @@ void runHybridNative(const std::string& path,bool currentFault){
   auto finalResult=finalizeHybrid(result.gaussian.pl,reference,actual,scene.lever,receipt,id,e,b.timestamp,version,HybridDomain::FixedModel,law.epsilon,law.budget,scene.cfg.risk_v2.horizontal_alert_limit_m,scene.cfg.risk_v2.vertical_alert_limit_m,elapsed(start,Clock::now()));
   bool final=finalResult.available() && estimator.backendUpdateCount()==updates+1;
   check((finalResult.pl-served).norm()==0,"final scalar recomputation");
+  // Evaluate three AL policies on identical candidates and committed receipt.
+  // Exercise a finite mathematical result above the legacy AL as well.
+  for(auto limits:std::vector<std::pair<double,double>>{{2,3},{5,5},{10,10}}){
+   auto chosen=hybridFixedCurrent(law,history,p,observed,a.alarm,limits.first,limits.second,false,HybridSelectionPolicy::BoundFirstResearch);
+   check(chosen.status==result.status && chosen.retained==result.retained && chosen.excluded==result.excluded && chosen.gaussian.pl.isApprox(result.gaussian.pl,0),"bound-first AL candidate invariance");
+   auto post=finalizeHybrid(result.gaussian.pl,reference+Eigen::Vector3d(4,0,4),actual,scene.lever,receipt,id,e,b.timestamp,version,HybridDomain::FixedModel,law.epsilon,law.budget,limits.first,limits.second,1);
+   check(post.finiteBoundQualified() && !post.applicationAvailable(),"mathematical qualification independent of missing application");
+   auto raw=finalizeHybrid(result.gaussian.pl,reference,actual,scene.lever,receipt,id,e,b.timestamp,version,HybridDomain::RawUnqualified,NAN,law.budget,limits.first,limits.second,1);
+   check(!raw.finiteBoundQualified() && !raw.applicationAvailable(),"small raw PL cannot qualify unknown risk");
+  }
+
   if(e==7){auto forged=receipt;forged.transaction_id=TransactionId(receipt.transaction_id.value()+1);
    auto invalid=finalizeHybrid(result.gaussian.pl,reference,actual,scene.lever,forged,id,e,b.timestamp,version,HybridDomain::FixedModel,law.epsilon,law.budget,2,3,1);check(!invalid.available(),"wrong receipt downgrade");
    auto late=finalizeHybrid(result.gaussian.pl,reference,actual,scene.lever,receipt,id,e,b.timestamp,version,HybridDomain::FixedModel,law.epsilon,law.budget,2,3,51);check(late.available() && !late.timelyAvailable(),"late result downgrade");
