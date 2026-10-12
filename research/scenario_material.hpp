@@ -109,6 +109,7 @@ struct NoisyMotionScenario {
    for(auto& m:b.measurements){if(kind=="U3")m.anchor_position_m.z()=1.1;m.range_m=(m.anchor_position_m-tag).norm()+cfg.realtime.range_sigma_m*(range_draws[row++]=normal(uwb_rng));}
    const int f=law["fault_epoch"].as<int>(),end=f+(kind=="U2"?law["persistent_epochs"].as<int>():1);
    if((kind=="U1" || kind=="U2") && e>=f && e<end){size_t index=law["fault_anchor_index"].as<int>();faults[index]=law["uwb_amplitude_m"].as<double>();b.measurements.at(index).range_m+=faults[index];}
+   if(kind=="H1" && e==3){faults[0]=.02;b.measurements[0].range_m+=.02;}
    uwb.push_back(b);
    if(physical_source_reference)range_certificates.push_back(certifyRawRanges(b,amp,freq,rate,lever,range_draws,faults));
   }

@@ -9,6 +9,10 @@ struct RawRangeLawEvidence {
  std::array<double,8> rho_num{};
  std::string source_law_id="raw-source-rw-v1",frame="world";
  bool valid=false;
+ private:
+ UwbBatch sealed_batch_;std::array<double,8> sealed_rho_{};
+ friend RawRangeLawEvidence certifyRawRanges(const UwbBatch&,const Eigen::Vector3d&,const Eigen::Vector3d&,double,const Eigen::Vector3d&,const std::array<double,8>&,const std::array<double,8>&);
+ friend bool rawRangeShells(const RawRangeLawEvidence&,const UwbBatch&,int,std::array<struct RawRangeShell,8>&);
 };
 RawRangeLawEvidence certifyRawRanges(const UwbBatch&,const Eigen::Vector3d& amplitude,
  const Eigen::Vector3d& frequency,double rate,const Eigen::Vector3d& lever,

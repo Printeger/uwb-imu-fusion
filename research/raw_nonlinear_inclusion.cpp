@@ -78,7 +78,7 @@ RawRangeLawEvidence certifyRawRanges(const UwbBatch& batch,const Eigen::Vector3d
   out.rho_num[i]=abs(I(m.range_m)-ideal).upper();
   if(!std::isfinite(out.rho_num[i]) || out.rho_num[i]>1e-8)return out;
  }
- out.valid=true;return out;
+ out.sealed_batch_=batch;out.sealed_rho_=out.rho_num;out.valid=true;return out;
 }
 struct RawNonlinearInclusion::Impl {
  RawInclusionParameters law;NavigationState initial;M r;V p,v;
@@ -147,7 +147,8 @@ RawInclusionEvidence RawNonlinearInclusion::issue(const EpochTransaction& tx,con
  auto e=tag(lever,state.position_world_m+state.q_world_body*lever);const auto& s=*impl;
  e.receipt_bound=e.valid && tx.proposed_epoch==size_t(e.epoch) && tx.previous_epoch+1==tx.proposed_epoch && tx.begin.value()==(e.epoch-1)*50000000LL && tx.end.value()==e.epoch*50000000LL && tx.raw_imu_slice.size()==s.recent.size() && receipt.transaction_id==tx.id && receipt.committed_epoch==tx.proposed_epoch && receipt.state_timestamp==tx.end && state.timestamp==tx.end && receipt.graph_version==tx.base_graph_version+1 && receipt.backend_updates==1;
  if(e.receipt_bound)for(size_t i=0;i<s.recent.size();++i){const auto& a=s.recent[i];const auto& b=tx.raw_imu_slice[i];e.receipt_bound=e.receipt_bound && a.id==b.id && a.timestamp==b.timestamp && a.specific_force_mps2==b.specific_force_mps2 && a.angular_velocity_radps==b.angular_velocity_radps;}
- e.valid=e.valid && e.receipt_bound;return e;
+ e.valid=e.valid && e.receipt_bound;
+ if(e.valid){e.transaction_id=receipt.transaction_id;e.graph_version=receipt.graph_version;e.timestamp=receipt.state_timestamp;e.committed_tag=state.position_world_m+state.q_world_body*lever;e.committed_lever=lever;}return e;
 }
 
 }

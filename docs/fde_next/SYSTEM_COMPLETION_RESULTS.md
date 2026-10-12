@@ -62,3 +62,28 @@ strong faults and both 7-sigma boundaries; 155 independently feasible lattice
 points; 1D/2D/3D analytic unit-ball hulls, coplanar mirrors, near tangency,
 zero height, negative shells, overflow and nonempty/zero-budget frontier.
 All pass. Deterministic fixtures are geometry checks, not probability samples.
+
+W3 integration: opt-in `SC1_RANGE_CONTRACTION=1` or
+`tools/run_epoch_architecture.py raw --contract-ranges`. After the original
+single native commit, inertial issue is evaluated first; SC1 validates that
+same receipt, recorded actual tag/lever/time/graph, the complete original
+transaction batch, sealed numeric residue and frame/law. No selected subset,
+future measurements, truth, scene or injection ID enters the kernel. It does
+not feed back position, velocity, rotation, bias, FGO, H/P or FDE decisions.
+The paired old/new fields come from one native estimator execution. Missing
+old qualification cannot be inherited; SC1 evidence refusal or model
+inconsistency also refuses the opt-in served raw output. Default paths remain
+unchanged. H1's existing weak injection is merely certified at generation,
+with the same raw values and detector behavior as its previous runner injection.
+
+Native fixture forces deletion of healthy 1502 at U1/15 while retaining
+faulty 1501. Both this commit and the following epoch retain truth within Q.
+ID/value/anchor/sigma/time/frame/law/subset/correlation/tag/lever/receipt/
+box/center/expiry/IMU-law mutations refuse; changing future UWB leaves current
+Q and PL exactly unchanged. Predefined development snapshots U0/U1 epoch31
+show HPL 42.4638/42.4636 -> 2.96203/2.96305m and VPL
+30.4284/30.4286 -> 5.63746/5.63767m. These are paired raw bounds at the same
+center, not a comparison with frozen Gaussian. Final acceptance awaits W4.
+Frozen budget: 256 visited boxes globally, 8 propagation passes, no default
+splitting. Optional depth is capped at16 and passes at64; budget-limited
+splitting tests explicitly retain frontier. Default nine root boxes suffice.
