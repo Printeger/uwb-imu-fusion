@@ -426,3 +426,7 @@ world-tag case, and verified end-to-end TTA. The original frozen Gaussian PL
 formula itself still lacks raw nonlinear qualification; the implemented signed
 bound uses the independently proved inertial inclusion transferred to the actual
 fusion tag. No result claims hardware, formal or production protection.
+
+SC1 noisy-UWB measurement contraction, same-event paired raw results and
+acceptance are in [SYSTEM_COMPLETION_RESULTS.md](SYSTEM_COMPLETION_RESULTS.md).
+The original inertial and frozen-Gaussian conclusions above retain their scope.

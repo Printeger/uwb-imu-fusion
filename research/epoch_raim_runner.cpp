@@ -16,7 +16,7 @@ int main(int argc,char** argv){try{
  if(!isB && algorithm!="uwb_epoch_raim")throw std::runtime_error("unsupported algorithm");
  bool sharedEpisode=hybrid && std::getenv("HYBRID_SHARED_EPISODE") && std::string(std::getenv("HYBRID_SHARED_EPISODE"))=="1";
  bool rangeContraction=hybrid && std::getenv("SC1_RANGE_CONTRACTION") && std::string(std::getenv("SC1_RANGE_CONTRACTION"))=="1";
- auto sourceInitBegin=Clock::now();NoisyMotionScenario scene(argv[1],kind,20261010,argc>6?std::stoi(argv[6]):50);
+ auto sourceInitBegin=Clock::now();NoisyMotionScenario scene(argv[1],kind=="H1" && !hybrid?"U0":kind,20261010,argc>6?std::stoi(argv[6]):50);
  std::cout<<"source_law_init_ms="<<ms(sourceInitBegin,Clock::now())<<" numeric_mapping_valid="<<scene.numeric_certificate.valid<<"\n";
  double alpha=scene.law["alpha_per_test"].as<double>(),tail=scene.law["noise_tail_per_candidate"].as<double>();
  double risk=2*(scene.cfg.anchors.size()+1)*scene.epochs*tail;

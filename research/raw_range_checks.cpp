@@ -9,7 +9,8 @@ MP distance(const Eigen::Vector3d& p,const Eigen::Vector3d& a){MP sum=0;for(int 
 bool feasible(const Eigen::Vector3d& p,const UwbBatch& b,const std::array<RawRangeShell,8>& sh){
  for(int omitted:rawRangeFaultMasks()){bool good=true;for(int i=0;i<8;++i)if(i!=omitted){MP d=distance(p,b.measurements[i].anchor_position_m);good=good && d>=MP(sh[i].low) && d<=MP(sh[i].high);}if(good)return true;}return false;
 }
-void contains(const RawRangeResult& r,const Eigen::Vector3d& p){require(r.valid && (r.low.array()<=p.array()).all() && (r.high.array()>=p.array()).all(),"feasible point lost");}
+void contains(const RawRangeResult& r,const Eigen::Vector3d& p){
+ require(MP(r.hpl)>=sqrt(MP(r.pl.x())*MP(r.pl.x())+MP(r.pl.y())*MP(r.pl.y())),"100-digit outward horizontal norm");require(r.valid && (r.low.array()<=p.array()).all() && (r.high.array()>=p.array()).all(),"feasible point lost");}
 void geometryChecks(){
  UwbBatch b;std::array<RawRangeShell,8> shells;
  for(int i=0;i<8;++i){UwbMeasurement m;m.anchor_position_m={double(i&1)*8-4,double((i>>1)&1)*8-4,double((i>>2)&1)*8-4};b.measurements.push_back(m);}
@@ -43,8 +44,10 @@ void geometryChecks(){
  for(int dim:{1,2,3}){for(auto& m:b.measurements)m.anchor_position_m.setZero();for(auto& sh:shells)sh={0,1};Eigen::Vector3d l=Eigen::Vector3d::Zero(),h=l;for(int j=0;j<dim;++j){l(j)=-10;h(j)=10;}
   auto analytic=contractRawRangeBox(l,h,b,shells,point);require(analytic.low.head(dim).minCoeff()==-1 && analytic.high.head(dim).maxCoeff()==1,"analytic unit ball box");contains(analytic,Eigen::Vector3d::Zero());
  }
- for(auto& sh:shells)sh={0,-1};auto empty=contractRawRangeBox(lo,hi,b,shells,point);require(!empty.valid && empty.status=="MODEL_INCONSISTENT" && std::isinf(empty.hpl),"empty is not zero PL");
- for(auto& sh:shells)sh={0,1e308};auto overflow=contractRawRangeBox(lo,hi,b,shells,point);require(overflow.valid && overflow.status=="FALLBACK_INERTIAL_VERIFIED" && overflow.low==lo,"overflow safe fallback");
+ for(auto& sh:shells)sh={0,-1};
+ auto empty=contractRawRangeBox(lo,hi,b,shells,point);require(!empty.valid && empty.status=="MODEL_INCONSISTENT" && std::isinf(empty.hpl),"empty is not zero PL");
+ for(auto& sh:shells)sh={0,1e308};
+ auto overflow=contractRawRangeBox(lo,hi,b,shells,point);require(overflow.valid && overflow.status=="FALLBACK_INERTIAL_VERIFIED" && overflow.low==lo,"overflow safe fallback");
  std::cout<<"geometry oracle feasible_lattice="<<checked<<" fault/boundary/mirror/analytic/frontier/overflow passed\n";
 }
 
@@ -84,12 +87,12 @@ void bindingChecks(){
  RawNonlinearInclusion inclusion(s.initial_observation,param);inclusion.append(s.imu[0]);
  for(int e=1;e<=2;++e){for(int i=(e-1)*10+1;i<=e*10;++i){backend.ingestImu(s.imu[i]);inclusion.append(s.imu[i]);}
   auto tx=backend.prepareEpoch(s.uwb[e-1]);auto retained=tx;auto receipt=backend.commitEpoch(std::move(tx),EpochCommitPlan::nominalPlan(retained));auto state=backend.currentState();
-  auto proof=inclusion.issue(retained,receipt,state,s.lever);require(proof.valid,"inertial issue");
+  auto proof=inclusion.issue(retained,receipt,state,s.lever);require(proof.valid,"inertial issue");require(MP(proof.hpl)>=sqrt(MP(proof.pl.x())*MP(proof.pl.x())+MP(proof.pl.y())*MP(proof.pl.y())),"100-digit old outward horizontal norm");
   const auto& law=s.range_certificates[e-1];auto result=issueRawRangeContraction(proof,law,retained,receipt,state,s.lever);require(result.valid && result.event_risk==proof.event_risk,"native same event receipt");
   auto refuse=[&](const RawInclusionEvidence& p,const RawRangeLawEvidence& l,const EpochTransaction& t,const CommitReceipt& r,const NavigationState& a){auto out=issueRawRangeContraction(p,l,t,r,a,s.lever);require(!out.valid && out.status=="EVIDENCE_REFUSED","tamper/stale/missing refused");};
   for(int field=0;field<10;++field){auto t=retained;auto& m=t.uwb_batch.measurements[0];switch(field){case 0:m.range_m+=1e-9;break;case 1:m.id=MeasurementId(999);break;case 2:m.anchor_position_m.x()+=1e-9;break;case 3:m.sigma_m*=.5;break;case 4:m.timestamp=TimestampNs(0);break;case 5:m.anchor_id=AnchorId(999);break;case 6:t.uwb_batch.measurements.pop_back();break;case 7:t.uwb_batch.covariance_model_id="correlated";break;case 8:m.tag_id=TagId(1);break;case 9:m.lever_arm_body_m=s.lever;break;}refuse(proof,law,t,receipt,state);}
   for(int field=0;field<6;++field){auto l=law;switch(field){case 0:l.valid=false;break;case 1:l.frame="body";break;case 2:l.source_law_id="other";break;case 3:l.rho_num[0]=0;break;case 4:l.batch.measurements[0].range_m+=1e-9;break;case 5:l.rho_num[0]=NAN;break;}refuse(proof,l,retained,receipt,state);}
-  for(int field=0;field<6;++field){auto p=proof;switch(field){case 0:p.valid=false;break;case 1:p.receipt_bound=false;break;case 2:p.event_risk=0;break;case 3:p.horizon=51;break;case 4:p.low.x()+=.001;break;case 5:p.source_law_id="legacy";break;}refuse(p,law,retained,receipt,state);}
+  for(int field=0;field<9;++field){auto p=proof;switch(field){case 0:p.valid=false;break;case 1:p.receipt_bound=false;break;case 2:p.event_risk=0;break;case 3:p.horizon=51;break;case 4:p.low.x()+=.001;break;case 5:p.source_law_id="legacy";break;case 6:p.low.x()=NAN;break;case 7:p.low.x()=p.high.x()+1;break;case 8:p.pl.z()=INFINITY;break;}refuse(p,law,retained,receipt,state);}
   auto r=receipt;r.backend_updates=2;refuse(proof,law,retained,r,state);r=receipt;r.transaction_id=TransactionId(999);refuse(proof,law,retained,r,state);
   auto a=state;a.timestamp=TimestampNs(0);refuse(proof,law,retained,receipt,a);a=state;a.position_world_m.x()+=.01;refuse(proof,law,retained,receipt,a);
   auto expired=proof;expired.epoch=51;refuse(expired,law,retained,receipt,state);

@@ -61,13 +61,15 @@ def run_streams(scenes, temporary, contract_ranges=False):
         subprocess.run([str(BIN/'epoch_raim_runner'),'config/hybrid_raw.yaml',str(path),scene,'hybrid','on',str(count)],cwd=ROOT,env=env,check=True)
         with path.open() as f: rows=list(csv.DictReader(f))
         assert len(rows)==count and all(r['updates']=='1' and r['formal_eligible']=='0' and r['publication_protected']=='0' and r['application_available']=='0' for r in rows)
-        if scene in ['U0','U1','U2']:
+        if scene in ['U0','U1','U2','H1']:
             assert all(r['finite_bound_qualified']=='1' and r['bound_scope']=='healthy-IMU-single-UWB-episode-50-v1' and float(r['bound_risk_upper'])<=1e-6 for r in rows)
         else:
             assert all(r['finite_bound_qualified']=='0' for r in rows)
         if scene=='U1':
             assert rows[14]['excluded']=='0' and rows[14]['correct']=='1' and rows[14]['candidates']=='9' and rows[14]['committed_retained']=='7' and '1501' not in rows[14]['retained_ids'].split('|')
             assert len(rows[15:19])==4 and all(r['finite_bound_qualified']=='1' for r in rows[15:19])
+        if scene=='H1':
+            assert rows[2]['excluded']=='-1' and rows[2]['alarm']=='0' and float(rows[3]['history_bound'])>0
         if scene=='U2': assert sum(r['correct']=='1' for r in rows)==3
         if contract_ranges:
             paired = [r for r in rows if r['sc1_valid']=='1']
@@ -80,6 +82,8 @@ def run_streams(scenes, temporary, contract_ranges=False):
                 assert int(r['sc1_considered'])==9 and len(r['sc1_input_ids'].split('|'))==8
                 assert float(r['sc1_hpl'])<=float(r['sc1_old_hpl']) and float(r['sc1_vpl'])<=float(r['sc1_old_vpl'])
                 assert float(r['horizontal_pe'])<=float(r['sc1_hpl']) and float(r['vertical_pe'])<=float(r['sc1_vpl'])
+                for axis in ['x','y','z']:
+                    assert float(r['sc1_'+axis])<=float(r['sc1_old_'+axis])
                 assert r['hpl']==r['sc1_hpl'] and r['vpl']==r['sc1_vpl']
             if scene in ['U0','U1']:
                 for epoch in [31,50]:
