@@ -214,3 +214,105 @@ They must be consumed together. Formal/hardware/protected/application fields
 remain false or unknown. The new claim is not raw Gaussian-error qualification
 of the old PL formula. Cross-horizon, IMU faults and unverified real hardware
 remain outside this conditional theorem.
+
+## N3 — full denominators, tightness and costs
+
+Source/model frozen at N2. Only one U0/50 and U1/50 stream was run, followed by
+one U2/21 and the targeted U3/3 and I2/20 negatives. No confirmation seed was
+needed. No repeats of old S1–S4, HGIR, architecture or power campaigns. Results
+were consumed from the identical streams; AL pairs never re-run estimation.
+
+| Stream | Scheduled/actual commits | Finite numeric | Raw qualified | Rejected/unknown | Correct exclusions | <=50ms service |
+|---|---:|---:|---:|---:|---:|---:|
+| U0 | 50/50 | 50 | 50 | 0 | 0 | 6 |
+| U1 | 50/50 | 50 | 50 | 0 | 1 | 6 |
+| U2 | 21/21 | 21 | 21 | 0 | 3 | 6 |
+| U3 | 3/3 | 0 | 0 | 3 geometry refusals | 0 | 3 |
+| I2 | 20/20 | 20 frozen only | 0 | 20 source-law mismatches | 0 | 6 |
+
+Healthy UWB exclusions:0 over all144 scheduled outputs. Every row has exactly
+one backend update; formal/protected/application availability remains0/144.
+U2 removes the persistent source at15–17;18–21 remain finite qualified after
+stopping, carrying the entire source prefix. I2's source producer cannot attest
+the healthy-IMU law (its actual injected20m/s² disagrees with that law), so its
+numeric Gaussian outputs do not acquire raw protection. This is simulation-law
+attestation, **not an online IMU fault detector**. Domain and receipt mutations,
+missing history and expiry are deterministic refusals, not removed denominators.
+Zero PE-over-PL in the121 qualified stream outputs is a replay check; the
+analytical common event, not this sample, proves the conditional risk bound.
+
+| Full50 | HPL mean/median/P95/max (m) | VPL mean/median/P95/max (m) | Full service mean/median/P95/max (ms) |
+|---|---|---|---|
+| U0 | 39.2374/32.5697/85.7064/93.7941 | 27.9136/23.3768/60.4766/66.0843 | 148.876/170.410/183.832/224.689 |
+| U1 | 39.2372/32.5705/85.7062/93.7939 | 27.9139/23.3771/60.4766/66.0843 | 157.030/179.917/198.753/204.560 |
+
+New-law precommit frozen-envelope comparison uses two targeted snapshots of the
+independent check, same6421-source radius and same input/subset: epoch1 old
+H/V=12.0293/21.7439 versus joint9.15162/15.4228; epoch5 old9.02991/11.9245 versus
+joint6.59229/8.21546m. **Both are frozen numerical diagnostics**, with no raw
+nonlinear qualification. Full50 frozen joint mean H/V is5.05301/6.02022m (U0),
+5.06646/6.02071m (U1). The wider signed inertial inclusion is a different
+reference/event/proof, and these numbers are not an equivalent tightening ratio.
+Legacy zero-bias/fixed-initial results above belong to another model.
+
+U1 VPL composition, all supports in metres in the same world output direction:
+
+| epoch | initial position/velocity | ADC + numeric | initial accel bias | RW | rotation/continuous discretization | lever | actual-center shift | VPL |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 15 | 8.68718 | .06820 | .34100 | .01218 | 3.56276 | .34633 | .42333 | 13.44097 |
+| 50 | 14.81218 | .75777 | 3.78886 | .44786 | 45.52306 | .47497 | .27957 | 66.08428 |
+
+The angle/force coupling envelope dominates late in the task; initial position
+and velocity dominate startup. ADC/RW contributions are not mixed-unit traces.
+These are deterministic supports on the SAME event, not independent Gaussian
+standard deviations. UWB fault/selection and nonlinear backend response enter
+through the measured actual-center transfer; there is no UWB-only constraint
+or current/history fault Gaussian term in this containment reference. Removing
+that center term would invalidate arbitrary-fault coverage. The tiny interval
+arithmetic width is contained by directed endpoints rather than jitter.
+
+Diagnostic AL postprocessing on the immutable U0/U1 traces:
+
+| AL H/V (m) | U0 numeric/qualified pass | U1 numeric/qualified pass | Qualified application |
+|---|---:|---:|---:|
+| 2/3 | 0/50 | 0/50 | 0/50 |
+| 5/5 | 0/50 | 0/50 | 0/50 |
+| 10/10 | 1/50 | 1/50 | 0/50 |
+
+All50 epochs remain in every denominator. The trace is identical for all pairs:
+state, retained IDs, PL, risk and H are unchanged. Increasing diagnostic AL
+cannot qualify frozen/unknown outputs or unknown application evidence. Tables
+explain the findings; no new plots or plot/data archives are needed.
+
+Reproduce the core oracle and minimal streams (CSV automatically removed):
+
+```sh
+python3 tools/run_epoch_architecture.py check-raw --build
+python3 tools/run_epoch_architecture.py raw --scene U0
+python3 tools/run_epoch_architecture.py raw --scene U1
+python3 tools/hybrid_raw_research.py raw-bound --scene U2
+python3 tools/hybrid_raw_research.py raw-bound --scene U3
+python3 tools/hybrid_raw_research.py raw-bound --scene I2
+```
+
+Full-service stages, mean/median/P95/max in ms (same continuous streams):
+
+| Stage | U0 | U1 |
+|---|---|---|
+| h_ms | 145.553/166.969/178.789/220.644 | 153.161/175.981/193.404/199.986 |
+| prediction_ms | 0.334201/0.253086/0.714608/0.877841 | 0.3464/0.243978/0.759787/0.85724 |
+| a_ms | 0.0664756/0.064923/0.0859691/0.09539 | 0.0747448/0.0665585/0.0940349/0.256997 |
+| b_ms | 0.408921/0.389979/0.650503/0.822279 | 0.477175/0.45246/0.901177/1.66468 |
+| verification_ms | 0.0150886/0.013984/0.0243127/0.048495 | 0.0152084/0.0141325/0.0283159/0.031165 |
+| commit_ms | 1.81173/1.6418/3.97499/4.68578 | 2.19233/1.75198/5.18967/8.96415 |
+| finalization_ms | 0.0523011/0.049673/0.0693508/0.131673 | 0.0556566/0.052171/0.0747609/0.126319 |
+| h_update_ms | 0.022509/0.0231285/0.0312503/0.047558 | 0.0271733/0.024921/0.0432608/0.124643 |
+| cleanup_ms | 0.037898/0.0211135/0.0712214/0.527437 | 0.0294386/0.0242005/0.0771562/0.092667 |
+| full_ms | 148.876/170.41/183.832/224.689 | 157.03/179.917/198.753/204.56 |
+
+Full service includes ingestion/preparation and raw interval propagation in
+addition to the named stages; their remaining mean is about .575/.651ms for
+U0/U1. H includes the physical source/covariance extraction. Initialization
+(source generation/certification and estimator setup), CSV output and process
+shutdown are outside epoch service. These are service samples, not WCET or
+hardware TTA. No C calls, speed optimization or new performance campaign.

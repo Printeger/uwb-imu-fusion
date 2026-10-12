@@ -15,12 +15,18 @@ BIN = ROOT.parents[1] / 'devel/.private/uwb_imu_pl/lib/uwb_imu_pl'
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['check', 'compare', 'check-hybrid', 'hybrid', 'lifecycle', 'check-tightening', 'diagnose-hybrid'])
+    parser.add_argument('command', choices=['check', 'compare', 'check-hybrid', 'hybrid', 'lifecycle', 'check-tightening', 'diagnose-hybrid','check-raw','raw'])
     parser.add_argument('--build', action='store_true')
     parser.add_argument('--historical', action='store_true', help='execute existing C once per U0/U1, epochs14-20')
     parser.add_argument('--scene', choices=['U0','U1','U2','U3','I2','H1'], help='run just the selected fixed scene')
     parser.add_argument('--joint-episode', action='store_true', help='use the verified shared-episode PL representation in the raw diagnostic HYBRID stream')
     args = parser.parse_args()
+    if args.command in ('check-raw','raw'):
+        cmd=['python3',str(ROOT/'tools/hybrid_raw_research.py'),'noise-model' if args.command=='check-raw' else 'raw-bound']
+        if args.build: cmd.append('--build')
+        if args.scene: cmd += ['--scene',args.scene]
+        subprocess.run(cmd,cwd=ROOT,check=True)
+        return
     if args.joint_episode and args.command!='hybrid':
         parser.error('--joint-episode requires hybrid')
     env = dict(os.environ, OMP_NUM_THREADS='1', OPENBLAS_NUM_THREADS='1', MKL_NUM_THREADS='1')
