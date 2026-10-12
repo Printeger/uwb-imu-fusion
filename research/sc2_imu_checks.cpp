@@ -1,6 +1,7 @@
 #include "scenario_material.hpp"
 #include "sc2_imu_scope.hpp"
 #include "sc2_imu_bridge.hpp"
+#include "sc2_imu_coordinator.hpp"
 #include <iostream>
 #include <gtsam/linear/NoiseModel.h>
 #include <boost/multiprecision/cpp_dec_float.hpp>
@@ -58,9 +59,33 @@ void issueChecks(){
  Sc2ImuMonitor inconsistent(scenario.initial_observation,law);for(int i=0;i<=141;++i){auto sample=scenario.imu[i];if(i==141)sample.angular_velocity_radps.y()+=1;inconsistent.append(sample);}require(inconsistent.assessment().alarm && inconsistent.assessment().possible==0 && inconsistent.assessment().status=="SCOPE_INCONSISTENT","two-axis explanation cannot silently qualify single-axis scope");
  std::cout<<"SC2 polluted-center receipt/prefix/frame/boundary and unrepresented two-axis checks PASS\n";
 }
+
+void nativeRecoveryChecks(){
+ NoisyMotionScenario scenario("config/sc2_imu.yaml","SC2_A",20261010,26);auto law=parameters(scenario);law.numeric=scenario.imu_fault_numeric_certificate;
+ Sc2RecoveryCoordinator recovery(scenario.initial_observation,law),shadow(scenario.initial_observation,law);
+ IncrementalUwbImuEstimator backend(scenario.cfg,scenario.lever);backend.initialize(scenario.initial_observation,scenario.cfg.realtime.prior_sigmas);backend.ingestImu(scenario.imu[0]);recovery.append(scenario.imu[0]);shadow.append(scenario.imu[0]);
+ for(int epoch=1;epoch<=26;++epoch){for(int i=(epoch-1)*10+1;i<=epoch*10;++i){backend.ingestImu(scenario.imu[i]);recovery.append(scenario.imu[i]);shadow.append(scenario.imu[i]);}
+  auto tx=backend.prepareEpoch(scenario.uwb[epoch-1]);
+  if(epoch==15){
+   auto missing=tx;missing.history_recoverability=HistoryRecoverability::MissingProvenance;
+   auto refusal=shadow.prepare(missing,true,scenario.cfg.bridge.generic);require(!refusal.legal && refusal.status=="BOUNDARY_OR_ACTIVE_PREFIX_MISSING","missing raw history cannot become a healthy marginal");
+   auto noInitial=tx;auto values=std::make_shared<gtsam::Values>(*tx.frozen_values);values->erase(gtsam::Symbol('x',0));noInitial.frozen_values=values;
+   refusal=shadow.prepare(noInitial,true,scenario.cfg.bridge.generic);require(!refusal.legal && refusal.status=="BOUNDARY_OR_ACTIVE_PREFIX_MISSING","missing original boundary cannot be replaced by posterior");
+  }
+  auto shadowTx=tx;auto assessment=recovery.prepare(tx,true,scenario.cfg.bridge.generic);auto other=shadow.prepare(shadowTx,true,scenario.cfg.bridge.generic);
+  require(assessment.legal && other.legal && assessment.status==other.status && assessment.action.groups_to_remove==other.action.groups_to_remove && assessment.action.groups_to_add==other.action.groups_to_add && tx.cv_predicted_state.position_world_m==shadowTx.cv_predicted_state.position_world_m,"same-input candidate identity without any truth view");
+  if(epoch>=15 && epoch<=25)require(assessment.current_bridge && assessment.candidate.rebuilds==2,"sustained complete bridge through last shared sample");if(epoch==26){require(!assessment.current_bridge && assessment.status=="IMU_REJOINED_ORIGINAL_BIAS_REINTEGRATION","support-contract IMU restoration");require(tx.preintegration->biasHat().accelerometer()==scenario.initial_observation.accel_bias_mps2 && tx.preintegration->biasHat().gyroscope()==scenario.initial_observation.gyro_bias_radps,"healthy rejoin cannot inherit polluted posterior biasHat");}
+  auto plan=sc2CommitPlan(tx,assessment);auto retained=tx;auto receipt=backend.commitEpoch(std::move(tx),plan);recovery.committed(assessment,retained,receipt);shadow.committed(other,shadowTx,receipt);auto state=backend.currentState();auto bound=recovery.issue(scenario.range_certificates[epoch-1],retained,receipt,state,scenario.lever);require(bound.valid,"native recovery raw issuance");
+  // Complete raw supports are removed from ACTUAL active slots, not merely
+  // the candidate graph. Each old row has a native pose/bias replacement.
+  for(auto group:assessment.action.groups_to_remove)if(group!=retained.imu_group.id)require(backend.factorLedger().activeSlots(group).empty(),"old contaminated/dependent slots remain active");
+  if(assessment.current_bridge)require(receipt.group_to_slots.count(retained.imu_group.id.value())==0,"current suspect PIM really absent");else require(receipt.group_to_slots.count(retained.imu_group.id.value())==1,"restored IMU really committed");
+ }
+ std::cout<<"SC2 native full-support deletion/two rebuilds/shared-tail25/rejoin26 and same-data shadow PASS\n";
+}
 int main(){try{
  NoisyMotionScenario nominal("config/sc2_imu.yaml","U0",20261010,30);
- responseOracle(nominal);bridgeChecks();issueChecks();
+ responseOracle(nominal);bridgeChecks();issueChecks();nativeRecoveryChecks();
  auto law=parameters(nominal);Sc2ImuMonitor healthy(nominal.initial_observation,law);
  for(auto sample:nominal.imu)healthy.append(sample);require(healthy.assessment().valid && !healthy.assessment().alarm,"nominal shared source prefix");
  for(int axis=0;axis<6;++axis){Sc2ImuMonitor monitor(nominal.initial_observation,law);double amplitude=axis<3?20.:1.;
@@ -71,6 +96,11 @@ int main(){try{
   bool retained=false;for(const auto& candidate:monitor.candidates())if(candidate.possible && candidate.episode.axis==axis && candidate.episode.begin==trueEpisode.begin && candidate.episode.end==trueEpisode.end){require(candidate.theta_low<=amplitude && candidate.theta_high>=amplitude,"single shared amplitude retained");retained=true;}
   require(retained,"true physical explanation never discarded");
  }
+ // Zero additive fault is part of the unbounded family: absence of a raw
+ // violation cannot erase its physical explanation or force an alarm.
+ Sc2ImuMonitor cancelled(nominal.initial_observation,law);for(auto sample:nominal.imu)cancelled.append(sample);
+ bool zeroRetained=false;for(const auto& c:cancelled.candidates())if(c.possible && c.episode.axis==0 && c.episode.begin==TimestampNs(705000000) && c.episode.end==TimestampNs(1205000000))zeroRetained=c.theta_low<=0 && c.theta_high>=0;
+ require(zeroRetained && !cancelled.assessment().alarm,"cancelled/zero fault explanation retained without manufactured detection");
  RawImuEpisode shortEpisode{"short",TimestampNs(705000000),TimestampNs(755000000),0};auto shortClosure=sc2SupportClosure(shortEpisode,30);require(shortClosure.raw_samples.size()==10 && shortClosure.direct_pim_epochs==std::vector<size_t>({15,16}),"50ms endpoint closure");
  auto capacity=Sc2ImuScope{};capacity.candidate_capacity=600;bool rejected=false;try{Sc2ImuMonitor incomplete(nominal.initial_observation,law,capacity);}catch(const std::exception&){rejected=true;}require(rejected,"capacity cannot truncate fault scope");
  auto bad=nominal.imu[0];bad.id=MeasurementId(999);healthy.append(bad);require(!healthy.assessment().valid,"duplicate/stale prefix refused");

@@ -354,3 +354,40 @@ centers but issue the new same-event raw bound correctly. Prefix/receipt/frame
 mutation, polluted boundary and unrepresented simultaneous two-axis raw
 violations refuse. The unaffected SC1 range checks also pass. Native recovery
 and final stage acceptance remain pending W3/W4.
+
+W3 adds the opt-in `SC2_IMU_RECOVERY=1` coordinator to the existing native
+runner and CLI (`check-sc2`, `sc2`). The frozen raw candidate bank determines
+a conservative monotone quarantine interval. An alarm removes each selected
+active CombinedIMU group from the earliest still-plausible dependency onward,
+and adds exactly one native pose/bias bridge pair per removed historical group
+plus the complete current pair. Missing original x0 or raw recoverability
+refuses before commit; contaminated marginal priors cannot substitute. The
+existing retained-original-prefix routine performs exactly two finite GN
+rebuilds (bounded iteration counts); only its candidate initial guess is
+passed into the pending transaction. Receipt/ledger checks prove the actual
+historical deletions and exactly one backend update. There is no second
+estimator and no post-commit state write. The raw bound comes from W2, not the
+candidate optimizer covariance.
+
+The support-union quarantine persists through epoch25, including the shared
+1.200s endpoint. Epoch26 returns to the actual CombinedIMU factor using a new
+integration of its complete healthy raw slice at the ORIGINAL observed bias
+reference; true process bias RW remains in both physical law and protection
+envelope. Restoration is derived from the registered retained support interval,
+not the injection-stop label. Native tests check actual slots and original
+biasHat, missing history/x0 refusal, same-data shadow candidate identity and
+coverage through this first restored commit. Six-axis zero-amplitude/cancelled
+explanations remain present without manufacturing an alarm.
+
+Development snapshots (not final acceptance denominators): accel-x and gyro-x,
+16 commits each, all qualified. Both first raw alarm at0.705s and first native
+isolation at epoch15 (batch ends0.750s). Accel's possible onset union initially
+starts at epoch6: 9 historical PIMs plus the current PIM are replaced; gyro
+initially starts at15. At15, accel H/V=1.46192/2.67915m, gyro=1.46226/2.67522m.
+The retained-graph diagnostic candidate displacement is about0.772/0.783m,
+which EXCEEDS the old0.25m local position domain; old diagnostic status remains
+`PIM_HISTORY_UNIFORM_BOUND_MISSING`. That Gaussian local gate was neither
+widened nor certified. Qualification instead uses the new global independent
+physical source theorem covering arbitrary committed centers, full original
+initial uncertainty and true RW. No claim of accurately recovered full-nav
+covariance is made. Frozen final streams and acceptance remain pending W4.

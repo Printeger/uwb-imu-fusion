@@ -15,7 +15,7 @@ BIN = ROOT.parents[1] / 'devel/.private/uwb_imu_pl/lib/uwb_imu_pl'
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['check', 'compare', 'check-hybrid', 'hybrid', 'lifecycle', 'check-tightening', 'diagnose-hybrid','check-raw','raw'])
+    parser.add_argument('command', choices=['check', 'compare', 'check-hybrid', 'hybrid', 'lifecycle', 'check-tightening', 'diagnose-hybrid','check-raw','raw','check-sc2','sc2'])
     parser.add_argument('--build', action='store_true')
     parser.add_argument('--historical', action='store_true', help='execute existing C once per U0/U1, epochs14-20')
     parser.add_argument('--scene', choices=['U0','U1','U2','U3','I2','H1'], help='run just the selected fixed scene')
@@ -23,6 +23,11 @@ def main():
     parser.add_argument('--contract-ranges',action='store_true',help='SC1 same-commit raw range contraction; requires raw')
     args = parser.parse_args()
     if args.contract_ranges and args.command!='raw': parser.error('--contract-ranges requires raw')
+    if args.command in ('check-sc2','sc2'):
+        cmd=['python3',str(ROOT/'tools/sc2_imu_research.py'),'checks' if args.command=='check-sc2' else 'streams']
+        if args.build:cmd.append('--build')
+        subprocess.run(cmd,cwd=ROOT,check=True)
+        return
     if args.command in ('check-raw','raw'):
         cmd=['python3',str(ROOT/'tools/hybrid_raw_research.py'),'noise-model' if args.command=='check-raw' else 'raw-bound']
         if args.contract_ranges: cmd.append('--contract-ranges')
