@@ -18,7 +18,10 @@ class Sc2RecoveryCoordinator {
  void append(const ImuMeasurement&);
  Sc2ImuAssessment monitor()const{return monitor_.assessment();}
  const std::vector<Sc2PhysicalCandidate>& candidates()const{return monitor_.candidates();}
- Sc2NativeAssessment prepare(EpochTransaction&,bool fde,const GenericBridgeSpec&);
+ const Sc2ImuMonitor& rawMonitor()const{return monitor_;}
+ const std::vector<ImuMeasurement>& observedPrefix()const{return prefix_;}
+ Sc2NativeAssessment prepare(EpochTransaction&,bool fde,const GenericBridgeSpec&,
+  const ExclusionAction* joint_removals=nullptr,bool force_isolation=false,bool defer_rebuild=false);
  void committed(const Sc2NativeAssessment&,const EpochTransaction&,const CommitReceipt&);
  RawRangeResult issue(const RawRangeLawEvidence& r,const EpochTransaction& tx,const CommitReceipt& receipt,const NavigationState& state,const Eigen::Vector3d& lever)const{return bridge_.issue(monitor_,r,tx,receipt,state,lever);}
  Sc2StateEnvelope envelope(int epoch,const Eigen::Vector3d& lever)const{return bridge_.envelope(epoch,lever);}

@@ -19,17 +19,18 @@ void refreshPendingBiasHat(EpochTransaction& tx,const NavigationState& initial){
 }
 EpochCommitPlan sc2CommitPlan(const EpochTransaction& tx,const Sc2NativeAssessment& assessment){
  auto plan=EpochCommitPlan::nominalPlan(tx);plan.action_id=assessment.action.id;plan.bridge_mode=assessment.action.bridge_mode;
- for(auto id:assessment.action.groups_to_remove){plan.groups_to_add.erase(std::remove(plan.groups_to_add.begin(),plan.groups_to_add.end(),id),plan.groups_to_add.end());if(id!=tx.imu_group.id)plan.groups_to_remove.push_back(id);}
+ for(auto id:assessment.action.groups_to_remove){plan.groups_to_add.erase(std::remove(plan.groups_to_add.begin(),plan.groups_to_add.end(),id),plan.groups_to_add.end());if(id!=tx.imu_group.id && std::none_of(tx.uwb_groups.begin(),tx.uwb_groups.end(),[&](const PendingFactorGroup& group){return group.id==id;}))plan.groups_to_remove.push_back(id);}
  for(auto id:assessment.action.groups_to_add)plan.groups_to_add.push_back(id);
  if(assessment.current_bridge || assessment.history_purge){plan.fde_status=FdeStatus::SuccessImuExclusionGenericBridge;plan.recovery_epoch_begin=assessment.first_dependency;plan.recovery_epoch_end=tx.proposed_epoch;}
  return plan;
 }
-Sc2NativeAssessment Sc2RecoveryCoordinator::prepare(EpochTransaction& tx,bool fde,const GenericBridgeSpec& spec){
+Sc2NativeAssessment Sc2RecoveryCoordinator::prepare(EpochTransaction& tx,bool fde,const GenericBridgeSpec& spec,const ExclusionAction* joint_removals,bool force_isolation,bool defer_rebuild){
  Sc2NativeAssessment out;out.action.id=ExclusionActionId(2001);out.action.action_model_id="sc2-complete-raw-support-union";
+ if(joint_removals)out.action=*joint_removals;
  auto monitor=monitor_.assessment();
  if(!monitor.valid || (!monitor.nominal_possible && !monitor.possible) || !monitor_.matches(tx)){out.legal=false;out.status="SCOPE_OR_PREFIX_REFUSED";return out;}
  if(!fde){out.status="FDE_OFF";return out;}
- if(!monitor.alarm)return out;
+ if(!monitor.alarm && !force_isolation)return out;
  // A contracting hypothesis bank cannot move the already quarantined prefix
  // forward or release its last shared sample early. No injection-end input.
  if(quarantine_begin_.value()==0 || monitor.union_begin<quarantine_begin_)quarantine_begin_=monitor.union_begin;
@@ -40,7 +41,7 @@ Sc2NativeAssessment Sc2RecoveryCoordinator::prepare(EpochTransaction& tx,bool fd
  out.current_bridge=direct || !isolated_;
  if(!out.current_bridge){refreshPendingBiasHat(tx,initial_);out.status="IMU_REJOINED_ORIGINAL_BIAS_REINTEGRATION";return out;}
  if(!closure.valid || !closure.first_epoch || !tx.frozen_values || !tx.frozen_values->exists(gtsam::Symbol('x',0)) || tx.history_recoverability!=HistoryRecoverability::Recoverable){out.legal=false;out.status="BOUNDARY_OR_ACTIVE_PREFIX_MISSING";return out;}
- out.action.bridge_mode=BridgeMode::GenericKinematic;out.action.groups_to_remove={tx.imu_group.id};out.action.groups_to_add={tx.generic_bridge_group.id,tx.generic_bias_continuity_group.id};out.action.exclusion_cardinality=1;
+ out.action.bridge_mode=BridgeMode::GenericKinematic;out.action.groups_to_remove.push_back(tx.imu_group.id);out.action.groups_to_add.push_back(tx.generic_bridge_group.id);out.action.groups_to_add.push_back(tx.generic_bias_continuity_group.id);++out.action.exclusion_cardinality;
  for(const auto& history:tx.recoverable_history)if(history.proposed_epoch>=closure.first_epoch){
   for(const auto& group:history.groups)if(group.kind==FactorKind::CombinedImu && std::find(history.selected_groups.begin(),history.selected_groups.end(),group.id)!=history.selected_groups.end()){
    out.history_purge=true;out.action.groups_to_remove.push_back(group.id);int pose=0,bias=0;
@@ -51,6 +52,7 @@ Sc2NativeAssessment Sc2RecoveryCoordinator::prepare(EpochTransaction& tx,bool fd
  // Existing finite two-rebuild optimizer is a candidate calculation, never a
  // Gaussian/raw boundary certificate. New physical proof is independent of
  // its inverse Hessian, CV/bias weights and old constant-bias bridge.box.
+ if(defer_rebuild){out.status="FULL_RAW_SUPPORT_BRIDGE";return out;}
  out.candidate=boundedRecovery(tx,out.action,initial_,scope_.acceleration_bound,scope_.angular_rate_bound,&prefix_,&spec);
  if(out.candidate.rebuilds!=2 || !std::isfinite(out.candidate.objective_after)){out.legal=false;out.status="FINITE_CANDIDATE_REBUILD_REFUSED";out.reason=out.candidate.status;return out;}
  auto pose=out.candidate.reference.at<gtsam::Pose3>(gtsam::Symbol('x',tx.proposed_epoch));auto bias=out.candidate.reference.at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b',tx.proposed_epoch));
@@ -60,7 +62,7 @@ Sc2NativeAssessment Sc2RecoveryCoordinator::prepare(EpochTransaction& tx,bool fd
 void Sc2RecoveryCoordinator::committed(const Sc2NativeAssessment& assessment,const EpochTransaction& tx,const CommitReceipt& receipt){
  if(!assessment.legal || receipt.transaction_id!=tx.id || receipt.graph_version!=tx.base_graph_version+1 || receipt.backend_updates!=1 || receipt.committed_epoch!=tx.proposed_epoch || receipt.state_timestamp!=tx.end)throw std::runtime_error("SC2 native recovery receipt refused");
  if(assessment.current_bridge){if(!receipt.group_to_slots.count(tx.generic_bridge_group.id.value()) || !receipt.group_to_slots.count(tx.generic_bias_continuity_group.id.value()) || receipt.group_to_slots.count(tx.imu_group.id.value()))throw std::runtime_error("SC2 current raw support not excluded");isolated_=true;}
- for(auto id:assessment.action.groups_to_remove)if(id!=tx.imu_group.id && std::find(receipt.historical_groups_removed.begin(),receipt.historical_groups_removed.end(),id)==receipt.historical_groups_removed.end())throw std::runtime_error("SC2 historical support receipt incomplete");
+ for(auto id:assessment.action.groups_to_remove)if(id!=tx.imu_group.id && std::none_of(tx.uwb_groups.begin(),tx.uwb_groups.end(),[&](const PendingFactorGroup& group){return group.id==id;}) && std::find(receipt.historical_groups_removed.begin(),receipt.historical_groups_removed.end(),id)==receipt.historical_groups_removed.end())throw std::runtime_error("SC2 historical support receipt incomplete");
 }
 int runSc2Imu(int argc,char** argv){
  using Clock=std::chrono::steady_clock;auto ms=[](auto a,auto b){return std::chrono::duration<double,std::milli>(b-a).count();};

@@ -1,6 +1,7 @@
 #include "sc3_joint_scope.hpp"
 #include "scenario_material.hpp"
 #include "sc3_joint_bound.hpp"
+#include "sc3_joint_coordinator.hpp"
 #include "gaussian_reference.hpp"
 #include "uwb_imu_pl/integrity/hypothesis_evidence.hpp"
 #include <gtsam/inference/Symbol.h>
@@ -44,11 +45,27 @@ void jointResponseOracle(){
   check(offset==w.H.rows() && (B.col(1)-observed).norm()<2e-6*std::max(1e-12,observed.norm()),"independent literal raw six-axis joint response and shared-PIM coefficient");
   Eigen::MatrixXd QR=w.H.colPivHouseholderQr().solve(B);Eigen::JacobiSVD<Eigen::MatrixXd> svd(w.H,Eigen::ComputeThinU|Eigen::ComputeThinV);Eigen::MatrixXd SVD=svd.solve(B);
   check((w.protected_state_map*(QR-SVD)).norm()<1e-6,"joint response protected QR/SVD oracle");
+  auto pool=makeSc3FaultPool(s.uwb[0]);auto boundMode=bindSc3PhysicalEpisode(pool.imu.at(axis*100),tx);check(boundMode.mode.raw_group_maps.size()==2 && boundMode.unit.affected_measurements.size()==10,"lazy episode material carries native two-PIM response/support under shared amplitude");
   auto z=w.z+1e-5*B.col(0)-2e-5*B.col(1);auto qr=w.H.colPivHouseholderQr();Eigen::VectorXd independent=qr.solve(z)-qr.solve(w.z);
   check((w.protected_state_map*(independent-(1e-5*QR.col(0)-2e-5*QR.col(1)))).norm()<1e-8,"two-parameter joint response cannot use max(single slope)");
  }
  backend.discardEpoch(std::move(tx),DiscardReason{FdeStatus::NotTriggered,"read-only joint response oracle",false});
  std::cout<<"SC3 actual native shared-two-PIM six-axis joint amplitude response and independent QR/SVD/difference oracle PASS\n";
+}
+void nativeJointChecks(){
+ for(const auto* kind:{"SC3_A","SC3_G"}){
+  NoisyMotionScenario s("config/sc3_joint.yaml",kind,20261010,26);auto law=lawOf(s);Sc3JointCoordinator joint(s.initial_observation,law,s.uwb[0]);IncrementalUwbImuEstimator backend(s.cfg,s.lever);backend.initialize(s.initial_observation,s.cfg.realtime.prior_sigmas);backend.ingestImu(s.imu[0]);joint.append(s.imu[0]);
+  for(int e=1;e<=26;++e){for(int i=(e-1)*10+1;i<=e*10;++i){backend.ingestImu(s.imu[i]);joint.append(s.imu[i]);}auto tx=backend.prepareEpoch(s.uwb[e-1],EpochPreparationOptions{true,true,true,true});auto assessment=joint.prepare(tx,s.range_certificates[e-1],s.lever,s.cfg.bridge.generic,true);check(assessment.legal,"actual joint native candidate selection");
+   if(e>=15 && e<=17)check(assessment.excluded==0 && assessment.imu.current_bridge && assessment.status=="JOINT_UWB_IMU_BRIDGE","simultaneous real UWB and full IMU support action");
+   if(e>=15 && e<=25)check(assessment.expected_actions==18 && assessment.evaluated_actions==18 && assessment.imu.candidate.rebuilds==2 && assessment.imu.current_bridge,"complete joint roots and bounded two rebuilds");
+   if(e==26)check(assessment.imu_rejoined && !assessment.imu.current_bridge,"true support-contract native IMU rejoin");
+   auto retained=tx;auto plan=sc2CommitPlan(tx,assessment.imu);auto receipt=backend.commitEpoch(std::move(tx),plan);joint.committed(assessment,retained,receipt);auto state=backend.currentState();auto proof=joint.issue(s.range_certificates[e-1],retained,receipt,state,s.lever);check(proof.valid && receipt.backend_updates==1,"joint actual raw receipt issuance");
+   for(auto id:assessment.imu.action.groups_to_remove)if(id!=retained.imu_group.id && id!=retained.uwb_groups.front().id)check(backend.factorLedger().activeSlots(id).empty(),"actual historical joint slots still active");
+   if(e>=15 && e<=17){check(!receipt.group_to_slots.count(retained.imu_group.id.value()) && !receipt.group_to_slots.count(retained.uwb_groups.front().id.value()),"pending IMU and faulty full UWB group really removed");}
+   if(e==15)std::cout<<"SC3 native "<<kind<<" simultaneous commit15 actions18 H/V="<<proof.geometry.hpl<<"/"<<proof.geometry.pl.z()<<" historicalUWB="<<assessment.uwb_history_removed<<"\n";
+  }
+ }
+ std::cout<<"SC3 actual UA/UG native full-support/history removal, shared-tail25 and restored IMU26 PASS\n";
 }
 void cancellationOracle(){
  // Frozen 1D UWB displacement row + integrated raw acceleration row. Two
@@ -68,8 +85,9 @@ void cancellationOracle(){
  std::cout<<"SC3 UWB/physical-integrated-accel cancellation local residuals0, joint protected shift2m, rank1/q2 and Gaussian unbounded PASS\n";
 }
 int main(int argc,char** argv){try{
+ if(argc==2 && std::string(argv[1])=="native-only"){nativeJointChecks();return 0;}
  if(argc==2 && std::string(argv[1])=="linear-only"){jointResponseOracle();cancellationOracle();return 0;}
- jointBoundChecks();jointResponseOracle();cancellationOracle();
+ jointBoundChecks();jointResponseOracle();cancellationOracle();nativeJointChecks();
  NoisyMotionScenario scene("config/sc3_joint.yaml","U0",20261010,1);auto pool=makeSc3FaultPool(scene.uwb[0]);check(pool.complete() && pool.at(0).identity=="NONE","full raw physical census");
  size_t u=0,a=0,g=0,ua=0,ug=0;
  for(size_t n=1;n<pool.size();++n){auto h=pool.at(n);check(h.hypothesis.id.value()==n+1 && h.hypothesis.modes.size()==size_t((h.uwb>=0)+(h.imu>=0)),"bijection/parameter dimension");

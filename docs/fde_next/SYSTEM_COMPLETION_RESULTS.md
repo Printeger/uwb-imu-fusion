@@ -737,3 +737,40 @@ fixed the oracle; only the affected linear response/cancellation branch reran
 and passed. No source sigma, witness, threshold, AL or math envelope changed;
 no native epoch was aborted by that oracle assertion. W1 generation checks
 remain passed. Final frozen native joint acceptance remains pending W3/W4.
+
+W3 actual integration PASS: one Sc3JointCoordinator and existing FdeManager
+research consumer evaluate KEEP/UWB/IMU/both roots (18 when triggered), each
+against all481401 physical branches via all9 projections. Native temporary
+rebuilds preserve selected historical UWB rows, remove the complete SC2 IMU
+support closure, use original observed bias and exactly two GN rounds. No
+candidate performs backend update; the selected native transaction commits
+once. Full historical UWB source removal starts at epoch1, not at injected
+labels. Current replacement and historical deletion have distinct receipt
+semantics. Gaussian functional evidence selects actions; new raw protection
+never upgrades the old Gaussian recovery covariance or production risk ledger.
+
+W3 actual 26-epoch A/G checks:52 scheduled/attempted/committed,0 aborted,
+52 qualified. Both simultaneous at15–17, IMU bridge15–25 including shared
+endpoint1.200s, native IMU returned26. At15 A H/V=3.4128/6.11873m,
+G=3.41189/6.11471m;14 historical UWB groups removed. All18 roots retained
+when alarmed. Independent six-axis response/support oracle rerun PASS after
+lazy native material binding; missing native PIM provenance refuses response.
+Fixed G runner snapshot:16 scheduled/attempted/committed,0 aborted/16 valid.
+
+W3 failures retained in denominators: initial native unit run scheduled52,
+attempted16, committed15, aborted1, unattempted36; targeted debug run
+scheduled16, attempted16, committed15, aborted1. Historical selected7-row
+replacement needed6 rows when another hypothetical root removed a different
+anchor. Fixed selection to preserve actual selected rows minus that anchor;
+no witness/law/threshold changes. Audit also fixed UWB search trigger to use
+explicit statistic>detection threshold because the reused WLS result does
+not set its alarm flag. Across these W3 native attempts including repaired
+52 and fixed16: scheduled136, attempted100, committed98, aborted2,
+unattempted36. Linear oracle has one actual commit and one discarded pending
+transaction separately, never treated as a failed navigation epoch.
+
+W4 preregistered freeze:320 stream epochs,12 streams: joint A/G off/on30
+(120), IMU-only A/G on30(60), staggered on30, redacted A on30,
+new-pool UWB U1/U2 on19/21(40), original SC1 U1/U2 on19/21(40).
+No seed/amplitude search.290 scored,30 redacted. Acceptance and final affected
+regression remain pending W4. No SC3 completion or SC4 work claimed here.

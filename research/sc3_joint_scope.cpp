@@ -1,6 +1,8 @@
 #include "sc3_joint_scope.hpp"
 #include <set>
 #include <stdexcept>
+#include <gtsam/linear/NoiseModel.h>
+#include <gtsam/inference/Symbol.h>
 namespace uwb_imu_pl::research {
 Sc3PhysicalHypothesis Sc3FaultPool::at(size_t index)const{
  if(index>=represented)throw std::out_of_range("SC3 physical hypothesis index");
@@ -20,6 +22,22 @@ bool Sc3FaultPool::complete()const{
  std::set<std::string> identities;std::set<uint64_t> ids;
  for(const auto* group:{&uwb,&imu})for(const auto& e:*group)if(!identities.insert(e.identity).second || !ids.insert(e.mode.id.value()).second || e.unit.id.value()!=e.mode.id.value() || e.mode.parameter_dimension!=1 || e.unit.parameter_dimension!=1 || e.identity.empty() || e.unit.physical_source_id!=e.mode.physical_source_id || e.unit.axis!=e.mode.axis || e.unit.time_begin!=e.mode.onset_time || !(e.unit.time_begin<e.unit.time_end))return false;
  return represented==1+uwb.size()+imu.size()+uwb.size()*imu.size();
+}
+Sc3PhysicalEpisode bindSc3PhysicalEpisode(const Sc3PhysicalEpisode& physical,const EpochTransaction& tx){
+ auto bound=physical;auto& mode=bound.mode;auto& unit=bound.unit;
+ if(unit.sensor==SensorType::Uwb){auto add=[&](const UwbBatch& batch,const std::vector<PendingFactorGroup>& groups,const std::vector<FactorGroupId>* selected){if(batch.timestamp<unit.time_begin || !(batch.timestamp<unit.time_end))return;
+  for(const auto& measurement:batch.measurements)if(measurement.anchor_id==mode.anchor_id){unit.affected_measurements.push_back(measurement.id);for(const auto& g:groups)if(g.kind==FactorKind::UwbBatch && (selected?std::find(selected->begin(),selected->end(),g.id)!=selected->end():g.nominal)){Eigen::VectorXd map=Eigen::VectorXd::Zero(g.source_measurements.size());for(size_t i=0;i<g.source_measurements.size();++i)if(g.source_measurements[i]==measurement.id)map(i)=1.;if(map.squaredNorm()>0){unit.affected_groups.push_back(g.id);mode.raw_group_maps[g.id]=map;}}}
+ };add(tx.uwb_batch,tx.uwb_groups,nullptr);for(const auto& h:tx.recoverable_history)add(h.uwb_batch,h.groups,&h.selected_groups);
+ }else{
+  RawImuEpisode episode{bound.identity,unit.time_begin,unit.time_end,unit.axis};auto closure=sc2SupportClosure(episode,int(tx.proposed_epoch));unit.affected_measurements=closure.raw_samples;
+  auto add=[&](const EpochTransaction& material){if(!material.preintegration)return;bool direct=false;for(const auto& sample:material.raw_imu_slice)direct=direct || (!(sample.timestamp<episode.begin) && sample.timestamp<episode.end);
+   if(material.imu_group.id.value()==0){if(direct)mode.recoverability=HistoryRecoverability::MissingProvenance;return;}
+   if(direct){LinearizedFactorBlock block;block.whitener=gtsam::noiseModel::Gaussian::Covariance(material.preintegration->preintMeasCov())->R();mode.raw_group_maps[material.imu_group.id]=episodeResponse(material,block,episode).raw;}
+   if(closure.first_epoch && material.proposed_epoch>=closure.first_epoch)unit.affected_groups.push_back(material.imu_group.id);
+  };add(tx);for(const auto& h:tx.recoverable_history){auto material=historicalEpisodeTransaction(h);for(const auto& group:h.groups)if(group.kind==FactorKind::CombinedImu){material.imu_group=group;break;}material.frozen_values=tx.frozen_values;add(material);}
+  if(!closure.valid || (closure.first_epoch && !tx.frozen_values->exists(gtsam::Symbol('x',0))))mode.recoverability=HistoryRecoverability::MissingProvenance;
+ }
+ mode.affected_measurements=unit.affected_measurements;mode.affected_groups=unit.affected_groups;return bound;
 }
 Sc3FaultPool makeSc3FaultPool(const UwbBatch& batch,size_t capacity){
  HypothesisGeneratorConfig config;config.double_faults_enabled=true;

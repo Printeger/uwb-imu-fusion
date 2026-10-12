@@ -7,6 +7,7 @@
 #include <map>
 
 namespace uwb_imu_pl {
+namespace research { struct Sc3DecisionContext; }
 
 struct RiskBudgetV2 {
   double p_hmi_total = 4e-5;
@@ -120,6 +121,10 @@ struct FdeDecisionContextV4 {
 
 class FdeManager {
  public:
+  // Opt-in research-only producer/consumer contract. Definition lives in
+  // fde_research; no old production decision or prior-weighted risk gate changes.
+  FdeDecision decideRawJointResearch(std::vector<CandidateEvaluation>* candidates,
+                                    const research::Sc3DecisionContext&) const;
   FdeDecision decide(const DetectorResultV2& all_in,
                      const std::vector<FaultHypothesisV2>& hypotheses,
                      const std::vector<FaultModeEvidence>& evidence,

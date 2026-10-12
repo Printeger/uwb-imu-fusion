@@ -21,5 +21,6 @@ struct Sc3FaultPool {
  size_t size()const{return represented;}
  bool complete()const;
 };
+Sc3PhysicalEpisode bindSc3PhysicalEpisode(const Sc3PhysicalEpisode&,const EpochTransaction&);
 Sc3FaultPool makeSc3FaultPool(const UwbBatch& identity_batch,size_t capacity=1400);
 }

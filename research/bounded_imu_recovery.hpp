@@ -79,6 +79,12 @@ inline BoundedRecoveryAttempt boundedRecovery(const EpochTransaction& tx,
   o.status="POST_ONSET_HEALTHY_PIM_REBUILD_REQUIRED";return o;
  }
  for(const auto& g:tx.uwb_groups)if(g.nominal && !removed.count(g.id.value()))graph.push_back(g.factors);
+ // Joint research retains the native seven-row UWB replacements in BOTH
+ // the candidate graph and actual commit. Original IMU-only calls add none.
+ for(auto id:action.groups_to_add){
+  for(const auto& g:tx.uwb_groups)if(g.id==id && g.kind==FactorKind::UwbBatch && !g.nominal)graph.push_back(g.factors);
+  for(const auto& historyRow:tx.recoverable_history)for(const auto& g:historyRow.groups)if(g.id==id && g.kind==FactorKind::UwbBatch && g.replaces_group)graph.push_back(g.factors);
+ }
  gtsam::NonlinearFactorGraph healthy_graph;
  for(const auto& f:graph){auto bridge=dynamic_cast<const KinematicPoseVelocityBridgeFactor*>(f.get());
   auto bias_metric=dynamic_cast<const gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>*>(f.get());
