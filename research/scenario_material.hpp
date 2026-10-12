@@ -41,7 +41,7 @@ inline Eigen::Vector3d researchVector(const YAML::Node& n){return {n[0].as<doubl
 inline YAML::Node researchLaw(const std::string& path){
  auto node=YAML::LoadFile(path);
  if(!node["raw_base_law"])return node;
- auto base=YAML::LoadFile(node["raw_base_law"].as<std::string>());
+ auto base=researchLaw(node["raw_base_law"].as<std::string>());
  for(auto item:node)base[item.first.as<std::string>()]=item.second;
  return base;
 }

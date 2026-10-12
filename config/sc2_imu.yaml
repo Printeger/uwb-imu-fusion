@@ -1,0 +1,21 @@
+# Research-only SC2 preregistration; nominal source and estimator weights unchanged.
+raw_base_law: config/hybrid_raw.yaml
+sc2_scope_id: sc2-single-imu-episode-rw-v1
+sc2_fault_axes: [0, 1, 2, 3, 4, 5]
+sc2_durations_ms: [50, 500]
+sc2_theta_domain: unbounded-constant-single-axis
+sc2_uwb_domain: all-healthy-raw-source-rw-v1
+sc2_acceleration_bound_mps2: 0.04
+sc2_angular_rate_bound_radps: 0.2
+sc2_boundary: original-initial-observation-only
+sc2_max_bridge_s: 2.5
+sc2_candidate_capacity: 601
+# Prespecified witnesses, not values available to the online coordinator.
+sc2_accel_witness_axis: 0
+sc2_accel_witness_amplitude_mps2: 20.0
+sc2_gyro_witness_axis: 3
+sc2_gyro_witness_amplitude_radps: 1.0
+sc2_witness_onset_epoch: 15
+sc2_witness_duration_ms: 500
+sc2_short_witness_amplitude_mps2: 1.0
+sc2_final_epochs: 30

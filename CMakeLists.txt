@@ -523,3 +523,9 @@ set_source_files_properties(research/raw_range_contraction.cpp PROPERTIES COMPIL
 target_sources(fde_research PRIVATE research/raw_range_contraction.cpp)
 add_executable(raw_range_checks EXCLUDE_FROM_ALL research/raw_range_checks.cpp)
 target_link_libraries(raw_range_checks fde_research)
+
+# SC2 physical episode consistency and independent bridge proof (research only).
+set_source_files_properties(research/sc2_imu_scope.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+target_sources(fde_research PRIVATE research/sc2_imu_scope.cpp)
+add_executable(sc2_imu_checks EXCLUDE_FROM_ALL research/sc2_imu_checks.cpp)
+target_link_libraries(sc2_imu_checks fde_research)

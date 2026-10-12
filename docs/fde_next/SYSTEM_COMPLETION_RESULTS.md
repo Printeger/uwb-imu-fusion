@@ -250,3 +250,51 @@ This establishes only the declared healthy-IMU, conditional simulation,
 50-epoch/no-carry-in/single-UWB-episode scope. It does not establish SC2–SC4,
 the original Gaussian PL's raw nonlinear theorem, complete system readiness,
 hardware qualification, application admission or real-time completion.
+
+## SC2 — IMU fault scope and legal recovery (in progress)
+
+Starting local HEAD `50b7582`, clean tree, SC1 retained. No SC2 completion is
+claimed yet. Legacy I2 (`config/fde_next.yaml`) uses accel-x +20m/s² on raw
+sample times [.705,1.205), without the matched initial Gaussian/RW generator.
+Matched `config/hybrid_raw.yaml` has actual initial15D observation and
+sample-grid RW. Their numerical results are distinct laws, not an improvement
+ratio. The old healthy source certificate correctly fails on injected IMU;
+that failure is not the new online detector. Old `fullStateBridge` has zero
+bias drift under its stated constant-bias premise and cannot prove the RW case.
+
+W1 preregisters `config/sc2_imu.yaml`: nominal raw-source-rw-v1 unchanged,
+IMU-only single constant episode, six axes, onsets1–50, durations50/500ms,
+unbounded amplitude, no initial carry-in, full50 event, all UWB healthy.
+Representative accel-x +20m/s² and gyro-x +1rad/s start at epoch15; short
+accel-x +1m/s²/50ms is a weak negative. Final recovery stream is30 epochs,
+covering the shared-tail bridge at25, restored IMU26 and following26–30.
+Independent world acceleration <=.04m/s² and angular speed <=.2rad/s are
+registered motion assumptions of the original smooth-motion law; they are not
+extra sensors or optimizer weights. The original initialization is the only
+fault-independent boundary, maximum task bridge2.5s. All601 explanations
+(NONE plus600 physical episodes) must fit; capacity failure refuses the scope.
+
+`Sc2ImuMonitor` consumes only observed raw samples, initial observation and
+registered source/domain parameters. In E a healthy sample's bias departure
+is bounded coordinatewise by the original initial-bias error, the sum of all
+preceding RW increments and ADC error. Its ideal body force coordinate lies
+within +/- (g+A); gyro coordinate within +/-Omega. Directed arithmetic derives
+an interval H_j for each healthy coordinate. A value outside H_j proves NONE
+inconsistent; on E this detector has no healthy false alarm, hence its full-task
+conditional false-alarm upper is at most the existing E complement. It makes
+no arbitrary-amplitude detection-power claim. For each episode, outside-support
+samples must satisfy H, while inside-support fault coordinates intersect one
+shared amplitude interval `[m_j-H_j.upper,m_j-H_j.lower]`. Only proved-empty
+explanations are removed. This preserves the true episode/parameter on E even
+when weak faults are not alarmed. No draw, truth or injection label is an input.
+
+Support closure uses integer half-open sample times, maps every raw point to
+both adjacent trapezoids/PIMs at shared boundaries, and marks all later
+state/biasHat/reference dependencies. For [.705,1.205):100 raw points, direct
+PIMs15–25, downstream dependencies through the current epoch. For50ms:
+10 points and PIMs15–16. W1 checks pass for all six axes, actual raw alarms,
+shared-theta retention, nominal30 prefix, capacity/prefix refusal, and an
+independent literal-sample perturbation/reintegration response oracle at the
+matched-RW two-PIM shared endpoint. These are finite deterministic checks,
+not an empirical tail certificate. Nested research-law loading was made
+recursive so SC2 inherits the actual SC1 nominal law instead of copying it.
