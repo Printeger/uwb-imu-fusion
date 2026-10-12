@@ -680,3 +680,60 @@ category counts exactly match, two-mode hypotheses retain independent blocks,
 SC2 raw support mapping reused, duplicate/missing-mode/capacity1399 refusal.
 This is a registry/support verification, not a joint source theorem or native
 recovery. No stream/epoch qualification was claimed or tested in W1.
+
+W2 supplies a NEW joint proof consumer, `Sc3IndependentJointBound`. It uses
+only SC2's ORIGINAL-initial independent physical FULL-STATE envelope B_k,
+which never depends on healthy UWB or measured IMU. For a physical pair h,
+form `X_h = physical_X intersect (healthy rows' noisy UWB shells)`; the true
+joint branch belongs on the SAME E. Its current UWB projection is NONE or
+one of8 anchor omissions. Relaxing past/future shared-theta constraints may
+only enlarge X_h. Each physical episode branch is therefore contained in one
+of the9 current shell intersections with B_k; their UNION, NOT a healthy-UWB
+intersection and not two sensor PLs, gives Q_k. IMU-dependent state/bias
+correlations remain conservatively enclosed in the independent full-state
+Cartesian envelope. Shell intersection changes only current tag projection.
+The consumer binds the entire481401-branch recipe only after a valid9-mask
+kernel result, original raw-prefix identity, full sealed8-row batch and
+source/time/frame/domain checks. A final issue also verifies actual single-
+commit receipt/version/time and signed transfer to actual world lever tag.
+
+For every registered joint deterministic h/theta and every data-dependent
+candidate/action/center, on E true tag belongs to Q_k. Thus
+`sup_h,theta P(exists issued k<=50: PE_H>HPL or PE_V>VPL)` is bounded by
+`P(E^c)<=2*6421/2^35=3.7375139072537422e-7`. No new stochastic source, hardware
+fault prior, independent prior product or per-action risk charge is introduced.
+All mode/pair identity and sup-fault semantics survive the9-root projection
+relaxation, including local PASS and missed/incorrect isolation. This does
+not certify out-of-scope physical motions, initialization, horizon or hardware.
+
+Two actual16-epoch FDE-off fixtures (32 commits total, all finite/qualified)
+use joint raw input with original+2.25m UWB and original accel/gyro episodes.
+At15, A H/V=3.07720/6.03422m, G=3.07152/6.03461m,9 masks,481401 proof-consumed
+branches; true tag remains included despite polluted native output. A healthy-
+only consumer premise is disproved directly by true range outside faulty
+row's nominal shell (finite optimizer/interval relaxations cannot repair that
+premise). Healthy-only projection requests, foreign receipt version and
+invalid evidence refuse. Box budget0 keeps the valid physical frontier for
+ALL9 masks and all physical branches, not omitted branches with zero risk.
+No actual joint recovery success is claimed before W3.
+
+W2 independent deterministic oracles: literal raw perturbations/reintegrations
+for all six axes across two native PIMs sharing an endpoint, frozen current
+UWB basis concatenation, QR versus SVD protected response and a two-parameter
+superposition check. The separate integrated-accel/UWB 1D frozen alias has
+`A=[1;1]`, `B_U=[1;0]`, `B_I=[0;dt²/2]`: theta=(2m,1600m/s²) yields a2m
+protected shift, zero joint residual, each local1-row fit also zero residual,
+but individually nonzero joint parity directions. Existing response
+classification reports dangerous rank1/q2, and Gaussian joint PL is unbounded.
+This is a fixed linear small-oracle detectability counterexample, NOT an
+actual raw-likelihood/trajectory guarantee or a claim that the raw detector
+misses this strong acceleration. Raw physical coverage never borrows its
+single slopes. Geometry/nullspace handling will remain separately labeled.
+
+Failure accounting: W2 first check invocation passed both joint32-commit
+fixtures, then failed its response-superposition oracle due to an Eigen
+lazy-expression holding expired QR temporaries. Concrete QR/vector lifetimes
+fixed the oracle; only the affected linear response/cancellation branch reran
+and passed. No source sigma, witness, threshold, AL or math envelope changed;
+no native epoch was aborted by that oracle assertion. W1 generation checks
+remain passed. Final frozen native joint acceptance remains pending W3/W4.
