@@ -62,17 +62,34 @@ def run_streams(scenes, temporary):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command',choices=['noise-model','raw-bound','summarize'])
+    parser.add_argument('command',choices=['noise-model','raw-bound','summarize','evaluate-al'])
     parser.add_argument('--build',action='store_true')
     parser.add_argument('--scene',choices=['U0','U1','U2','U3','I2'])
     parser.add_argument('--csv',type=Path)
+    parser.add_argument('--policy',type=Path,default=ROOT/'config/application_al_policy.yaml')
     args=parser.parse_args()
     env=dict(os.environ,OMP_NUM_THREADS='1',OPENBLAS_NUM_THREADS='1',MKL_NUM_THREADS='1')
     env['LD_LIBRARY_PATH']=str(BIN.parent)+':'+env.get('LD_LIBRARY_PATH','')
     if args.build:
         subprocess.run(['cmake','-S',str(ROOT),'-B',str(BUILD)],env=env,check=True)
         subprocess.run(['cmake','--build',str(BUILD),'--target','hybrid_raw_checks','epoch_raim_runner','-j2'],env=env,check=True)
-    if args.command=='noise-model':
+    if args.command=='evaluate-al':
+        import json
+        import yaml
+        from application_al_policy import validate,evaluate
+        policy=yaml.safe_load(args.policy.read_text())
+        print(json.dumps(validate(policy),indent=2))
+        if args.csv:
+            with args.csv.open() as f: rows=list(csv.DictReader(f))
+            available=0
+            for original in rows:
+                row=dict(original)
+                for key in ['hpl','vpl','bound_risk_upper']: row[key]=float(row.get(key,'nan'))
+                row['risk_horizon_s']=float(row.get('risk_horizon','nan'))*.05 if row.get('source_law_id')=='raw-source-rw-v1' else None
+                row['timeliness_status']=row.get('timeliness_status','UNKNOWN')
+                available+=evaluate(policy,row)['application_available']
+            print(f'fixed_trace_application_available={available}/{len(rows)}; estimator/retained/risk/H unchanged')
+    elif args.command=='noise-model':
         subprocess.run([str(BIN/'hybrid_raw_checks'),'config/hybrid_raw.yaml'],cwd=ROOT,env=env,check=True)
     elif args.command=='summarize':
         if not args.csv: parser.error('--csv required for summarize')

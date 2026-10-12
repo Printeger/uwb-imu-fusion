@@ -1,6 +1,8 @@
 # HYBRID raw qualification
 
-Research implementation in progress. Production qualification and protected
+N0–N4 completed for the declared conditional simulation scope.
+**RAW_BOUND_VERIFIED_FOR_DECLARED_SCOPE**, full50. Application AL remains
+**APPLICATION_AL_UNQUALIFIED**; production qualification and protected
 publication remain disabled. Starting HEAD: b051b151028dfc799ac0ae5845f2fcdae40d5f7c,
 branch feature/realtime-uwb-imu-pl; initial working tree clean.
 
@@ -43,8 +45,8 @@ integration covariance, and B/C times `(ADC covariance + biasAccOmegaInt)/dt`.
 The latter injects fresh per-step covariance, and cannot represent one constant
 latent initial-bias error shared across all integration steps. Backend initialize
 maps the initial bias prior sigmas into this parameter unless explicitly supplied.
-The auxiliary trace diagnostic is not a removal justification. The new source law
-and physical reference are still being implemented; no raw coverage is claimed.
+The auxiliary trace diagnostic is not a removal justification. The implemented new source law and independent physical reference are described
+below; this trace alone is not raw coverage evidence.
 
 ## N1 — executable primitive law and conditional physical covariance
 
@@ -88,7 +90,7 @@ states; their ADC endpoint remains shared.
 
 Source derivative oracle independently mutates literal samples and b_j and
 reintegrates through the public episode entry at a different step size. It tests
-all six axes at first/last increments; the direct raw prefix QR is compared to
+all six axes at all ten increments and eleven ADC points; the direct raw prefix QR is compared to
 online retirement on full15 mean/covariance and adjacent PIM cross. These are
 frozen derivative/covariance checks; nonlinear covariance is not declared
 Gaussian, and inverse nominal Hessians are not used as physical covariance.
@@ -97,11 +99,11 @@ Installed source HEAD is `46f3a48a5b1e6b57bc5da5374c74a8f5248b6fec`;
 installed CombinedImuFactor header equals the local source header.
 
 Reproduce: build `hybrid_raw_checks` and run it with `config/hybrid_raw.yaml`
-using the environment above. N2 must still establish uniform nonlinear
-containment before any new raw qualification is issued.
+using the environment above. The N2 uniform nonlinear containment below is
+required in addition to these frozen derivative checks.
 
 N1 targeted result: five actual raw commits, lag2 retirement; full15 prefix QR
-covariance maximum relative difference `6.12865e-11`, adjacent ADC cross norm
+covariance maximum relative difference `1.2563e-10`, adjacent ADC cross norm
 maximum `8.67008e-9`; all independent increment residual checks pass, conditional
 covariance SPD without jitter. The initial normal-equation oracle lost about
 `7.8e-7` relative precision because of conditioning; it was replaced with the
@@ -217,9 +219,12 @@ remain outside this conditional theorem.
 
 ## N3 — full denominators, tightness and costs
 
-Source/model frozen at N2. Only one U0/50 and U1/50 stream was run, followed by
-one U2/21 and the targeted U3/3 and I2/20 negatives. No confirmation seed was
-needed. No repeats of old S1–S4, HGIR, architecture or power campaigns. Results
+Source/model frozen at N2. Initial U0/50 and U1/50 streams were followed by
+one U2/21 and targeted U3/3 and I2/20 negatives. Final numerical review found
+that horizontal norm synthesis also needs directed rounding. After that output
+correction, only affected qualified U0/U1/U2 streams were repeated; their final results replace
+the initial outputs below. The source law and actual estimation trajectory did
+not change. No confirmation seed was needed. No repeats of old S1–S4, HGIR, architecture or power campaigns. Results
 were consumed from the identical streams; AL pairs never re-run estimation.
 
 | Stream | Scheduled/actual commits | Finite numeric | Raw qualified | Rejected/unknown | Correct exclusions | <=50ms service |
@@ -243,13 +248,13 @@ analytical common event, not this sample, proves the conditional risk bound.
 
 | Full50 | HPL mean/median/P95/max (m) | VPL mean/median/P95/max (m) | Full service mean/median/P95/max (ms) |
 |---|---|---|---|
-| U0 | 39.2374/32.5697/85.7064/93.7941 | 27.9136/23.3768/60.4766/66.0843 | 148.876/170.410/183.832/224.689 |
-| U1 | 39.2372/32.5705/85.7062/93.7939 | 27.9139/23.3771/60.4766/66.0843 | 157.030/179.917/198.753/204.560 |
+| U0 | 39.2374/32.5697/85.7064/93.7941 | 27.9136/23.3768/60.4766/66.0843 | 146.190/165.803/181.023/213.600 |
+| U1 | 39.2372/32.5705/85.7062/93.7939 | 27.9139/23.3771/60.4766/66.0843 | 149.171/168.172/186.561/276.422 |
 
 New-law precommit frozen-envelope comparison uses two targeted snapshots of the
 independent check, same6421-source radius and same input/subset: epoch1 old
-H/V=12.0293/21.7439 versus joint9.15162/15.4228; epoch5 old9.02991/11.9245 versus
-joint6.59229/8.21546m. **Both are frozen numerical diagnostics**, with no raw
+H/V=12.0293/21.7439 versus joint9.15162/15.4228; epoch5 old9.01915/11.8913 versus
+joint6.58891/8.19793m. **Both are frozen numerical diagnostics**, with no raw
 nonlinear qualification. Full50 frozen joint mean H/V is5.05301/6.02022m (U0),
 5.06646/6.02071m (U1). The wider signed inertial inclusion is a different
 reference/event/proof, and these numbers are not an equivalent tightening ratio.
@@ -299,20 +304,125 @@ Full-service stages, mean/median/P95/max in ms (same continuous streams):
 
 | Stage | U0 | U1 |
 |---|---|---|
-| h_ms | 145.553/166.969/178.789/220.644 | 153.161/175.981/193.404/199.986 |
-| prediction_ms | 0.334201/0.253086/0.714608/0.877841 | 0.3464/0.243978/0.759787/0.85724 |
-| a_ms | 0.0664756/0.064923/0.0859691/0.09539 | 0.0747448/0.0665585/0.0940349/0.256997 |
-| b_ms | 0.408921/0.389979/0.650503/0.822279 | 0.477175/0.45246/0.901177/1.66468 |
-| verification_ms | 0.0150886/0.013984/0.0243127/0.048495 | 0.0152084/0.0141325/0.0283159/0.031165 |
-| commit_ms | 1.81173/1.6418/3.97499/4.68578 | 2.19233/1.75198/5.18967/8.96415 |
-| finalization_ms | 0.0523011/0.049673/0.0693508/0.131673 | 0.0556566/0.052171/0.0747609/0.126319 |
-| h_update_ms | 0.022509/0.0231285/0.0312503/0.047558 | 0.0271733/0.024921/0.0432608/0.124643 |
-| cleanup_ms | 0.037898/0.0211135/0.0712214/0.527437 | 0.0294386/0.0242005/0.0771562/0.092667 |
-| full_ms | 148.876/170.41/183.832/224.689 | 157.03/179.917/198.753/204.56 |
+| h_ms | 142.949/162.574/178.113/211.295 | 145.613/164.616/181.225/266.746 |
+| prediction_ms | 0.323166/0.243632/0.698525/0.830028 | 0.3736/0.249211/0.723283/2.22123 |
+| a_ms | 0.0681262/0.0657985/0.0837066/0.112102 | 0.0788085/0.0669275/0.158996/0.240828 |
+| b_ms | 0.418678/0.421931/0.675293/0.958785 | 0.500327/0.404408/1.01339/2.50053 |
+| verification_ms | 0.0141295/0.0131/0.0196584/0.056698 | 0.0153114/0.0138285/0.0276479/0.03294 |
+| commit_ms | 1.73099/1.49455/3.45027/3.58781 | 1.89185/1.61062/3.60548/5.46431 |
+| finalization_ms | 0.053455/0.049901/0.0691927/0.107741 | 0.0527402/0.0497695/0.0698547/0.097951 |
+| h_update_ms | 0.0229187/0.023155/0.035075/0.045074 | 0.0245258/0.024083/0.0374353/0.063315 |
+| cleanup_ms | 0.0270082/0.020819/0.0527005/0.227456 | 0.0271562/0.0230205/0.0586081/0.080443 |
+| full_ms | 146.19/165.803/181.023/213.6 | 149.171/168.172/186.561/276.422 |
 
 Full service includes ingestion/preparation and raw interval propagation in
-addition to the named stages; their remaining mean is about .575/.651ms for
+addition to the named stages; their remaining mean is about .583/.594ms for
 U0/U1. H includes the physical source/covariance extraction. Initialization
 (source generation/certification and estimator setup), CSV output and process
 shutdown are outside epoch service. These are service samples, not WCET or
 hardware TTA. No C calls, speed optimization or new performance campaign.
+
+## N4 — application AL policy
+
+`tools/application_al_policy.py` reads APPLICATION_AL_TEMPLATE and validates the
+required application mode, protected point/frame and body mapping references,
+hazard clearance, directional/time-aligned deterministic or probability bounds,
+source references, finite-mission risk, TTA, delay/motion/safe-action evidence and
+prior selection of AL. Its output never trusts `expected_validation` or a caller's
+qualified flag. This version implements a conservative horizontal-ball/world-tag
+budget; vertical-critical or other protected-point budgets explicitly refuse
+until a corresponding directional mapping is supplied/implemented. Unknown
+horizontal/vertical safety-critical declarations are not large AL defaults.
+
+Additional binding declarations are required: `application.expected_bound_scope`,
+`application.expected_source_law_id`, and each allowance's `time_horizon_s`.
+`risk_time_basis` must be `specified_finite_mission`. A claimed allowance already
+in PL requires its source in `pl_included_sources`; it is then not deducted
+again. Unknown/different direction/time, RMSE, duplicate sources, unsupported
+units, nonpositive residual budget, AL selected after evaluation, insufficient
+delay allowance and TTA excess refuse. Nonlocalization event risks use a
+conservative union, not independent square-sum assumptions.
+
+`evaluate(policy,row)` is pure postprocessing: it also requires the SAME qualified
+source/scope/frame/receipt, finite-mission horizon and risk plus independently
+VERIFIED timeliness. Raw `on_time` service samples alone do not establish that
+field. Example fixture policy succeeds only with hypothetical test references;
+`.25m clearance - .15m allowances = .10m budget` is explicitly an arithmetic
+example, never a project AL. Unit/direction/time/RMSE/double-count/negative-budget,
+TTA and unknown-raw-risk/timeliness tests refuse as required. No estimator or
+production YAML is mutated.
+
+The actual provided template remains **APPLICATION_AL_UNQUALIFIED**. Missing
+real application mode, hazard/geometry/map/control evidence, protected-point
+mapping, mission risk and time basis, delay/actuation model, approved requirements,
+chosen limits and proof-scope references are returned by the validator. No robot
+size, speed, map accuracy, hardware response or safe AL has been invented.
+Mathematical raw coverage and an application's HMI/TTA/deployment qualification
+remain distinct. Scope risk concerns PE>PL; HMI also needs AL, timely warning and
+verified safe action. Protected publication remains closed.
+
+```sh
+python3 tools/hybrid_raw_research.py evaluate-al
+python3 tools/test_application_al_policy.py
+```
+
+The runnable application template is tracked at
+`config/application_al_policy.yaml`, retaining the supplied proposal and null
+project requirements, with the additional binding/time fields above. The incoming
+requirements directory is Git-ignored; its original user files were not modified.
+Budget sums, subtraction, risk union and delay-motion calculations round outward,
+so a floating boundary cannot silently enlarge a permitted AL. The arithmetic
+fixture selects .099m strictly inside the approximate .10m upper budget; neither
+number is assigned to this project's configuration. Actual bound evidence must
+also attest any source claimed to be already included in PL.
+
+Final core regression: fixed H/P and both24-epoch native fixtures, joint episode
+and complete fixed81-path/adaptive-direction/512-selection counterexamples,
+A/B source/rank/correlated raw deletion/lever checks, summary source/nullspace/dof
+family, seven transaction/PL tests and six terminal/reference/nonprotected/ABI
+tests all pass. No full historical campaign was repeated. A final finite-result
+review additionally rejects final-center/horizontal-norm overflow, invalid risk
+budgets, missing AL and invalid service time; only directly affected boundary
+checks are rerun. These guards preserve the normal source law, state trajectory and candidate
+choices. Signed horizontal PL is synthesized by directed interval square/sum/
+sqrt, and only that certified upper endpoint enters CSV and AL evaluation.
+The final full15 source covariance oracle independently assembles all ADC/RW
+columns at generating endpoints: units-normalized covariance difference
+`5.02285e-8`, adjacent cross relative difference `3.23152e-9`.
+A separately scheduled missing-history one-epoch raw negative makes one actual
+commit but signs no qualified bound (0/1); policy postprocessing returns0/1.
+Together with the main144 scheduled rows, there are145 final evaluated outputs,
+121 qualified; this extra negative is separate from the full50 denominators.
+
+
+## Final RG01–RG12 audit and stage status
+
+| Requirement | Result and inspectable evidence |
+|---|---|
+| RG01 | Complete: actual starting HEAD/branch and installed GTSAM audit above; original backend/production contract retained. |
+| RG02 | Complete: `hybrid_prediction.hpp`, `hybrid_coordinator.hpp`, `hybrid_checks`/native AL invariants and immutable trace postprocessing. |
+| RG03 | Complete: `raw_source_law.hpp`, `scenario_material.hpp`, `config/hybrid_raw.yaml`; all6421 primitive sources, sample units and true RW. |
+| RG04 | Complete: `gaussian_window.hpp` physical full15 source reference; auxiliary remains nominal backend metric; no jitter. |
+| RG05 | Complete within derivative/conditional covariance meaning: `hybrid_raw_checks.cpp` independent full15/cross, prefix QR/retirement and tag containment oracles; no Gaussian nonlinear covariance claim. |
+| RG06 | Complete for declared scope: `raw_nonlinear_inclusion.cpp` directed continuous-domain enclosure and source numeric attestation, common-event adaptive-centre theorem, receipt consumer. |
+| RG07 | Complete: final U0/U1 actual50/50 each; epoch15 measurement1501 exclusion and16–19 four finite qualified outputs. |
+| RG08 | Complete: fixed full50 event/horizon, healthy IMU conditional known calibration, single UWB episode scope; cross-horizon/hardware/IMU-fault protection refused. |
+| RG09 | Complete: full denominators, same-law frozen snapshots separately labeled, source-to-tag composition and conditional inclusion distributions above. |
+| RG10 | Complete policy implementation: `application_al_policy.py`/tests and tracked template; actual application requirements remain missing and unqualified. |
+| RG11 | Complete research validation: core safety regressions and final affected numeric checks pass; full service samples measured; hardware TTA and protected publication remain unqualified. |
+| RG12 | Complete: only this new report plus old report entry, code/necessary configs/tests; five local stage commits, own cache artifacts removed, no push. |
+
+Local stage commits: N0 `e38cd94`, N1 `449a0b1`, N2 `c81c260`, N3 `e8e100d`,
+N4 is the commit containing this final report and application evaluator. Each
+stage proceeded without a permission pause. Final elapsed goal time is about
+120 minutes, including source audit, proof implementation, builds and evaluation;
+it is distinct from epoch service cost.
+
+Remaining work outside the fulfilled conditional research claim: calibrated
+hardware/initial information and IMU-fault coverage, certification across new
+missions, a tighter nonlinear reference, real application geometry/control/map/
+action requirements, directional mappings beyond the implemented horizontal-ball
+world-tag case, and verified end-to-end TTA. The original frozen Gaussian PL
+formula itself still lacks raw nonlinear qualification; the implemented signed
+bound uses the independently proved inertial inclusion transferred to the actual
+fusion tag. No result claims hardware, formal or production protection.

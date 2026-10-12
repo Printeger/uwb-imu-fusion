@@ -19,12 +19,12 @@ struct RawInclusionParameters {
  double accel_adc=.02,gyro_adc=.001,accel_rw=.001,gyro_rw=.0001;
  Eigen::Vector3d motion_amplitude{.1,.08,.05},motion_frequency{.5,.4,.3};double motion_angular_rate=.2;
  double force_lipschitz=2.1,gyro_lipschitz=0,gravity=9.81;
- int horizon=50,coordinates=6421;
+ double risk_budget=1e-6;int horizon=50,coordinates=6421;
 };
 struct RawInclusionEvidence {
  Eigen::Vector3d low=Eigen::Vector3d::Constant(NAN),high=low,reference=low,pl=low,initial=low;
  double adc=0,initial_bias=0,bias_rw=0,rotation_discretization=0,lever=0;
- double event_risk=INFINITY,rotation_diameter=INFINITY;
+ double hpl=INFINITY,event_risk=INFINITY,rotation_diameter=INFINITY;
  int epoch=0,horizon=50;std::string source_law_id="raw-source-rw-v1",scope="healthy-IMU-single-UWB-episode-50-v1";bool valid=false,receipt_bound=false;
 };
 class RawNonlinearInclusion {

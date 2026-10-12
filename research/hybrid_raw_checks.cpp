@@ -33,8 +33,9 @@ int main(int argc,char** argv){try{
   Eigen::Vector3d trueTag=scene.lever;auto outerBound=outer.tag(scene.lever,Eigen::Vector3d::Constant(sign*100));check(outerBound.valid && (trueTag.array()>=outerBound.low.array()).all() && (trueTag.array()<=outerBound.high.array()).all(),"boundary source/RW/shared-endpoint full horizon inclusion");
   auto extra=sample(scene.cfg,501);bool refused=false;try{outer.append(extra);}catch(const std::exception&){refused=true;}check(refused,"source horizon expiry");
  }
+ auto smallBudget=param;smallBudget.risk_budget=1e-7;RawNonlinearInclusion unpaid(scene.initial_observation,smallBudget);for(int i=0;i<=10;++i)unpaid.append(scene.imu[i]);check(!unpaid.tag(scene.lever,Eigen::Vector3d::Zero()).valid,"raw event cannot exceed registered budget");
  RawNonlinearInclusion inclusion(scene.initial_observation,param);inclusion.append(scene.imu[0]);
- double maxCov=0,maxCross=0;
+ double maxCov=0,maxCross=0,maxSourceCov=0,maxSourceCross=0;Eigen::MatrixXd previousEndpoint;FactorGroupId previousImu;
  for(int epoch=1;epoch<=5;++epoch){for(int i=(epoch-1)*10+1;i<=epoch*10;++i){backend.ingestImu(scene.imu[i]);inclusion.append(scene.imu[i]);}
   auto tx=backend.prepareEpoch(scene.uwb[epoch-1],EpochPreparationOptions{true,true,false,false});prefix.observe(tx,2);online.prepare(tx,false);
   auto window=prefix.window(tx);auto material=prefix.material(tx);auto raw=rawGaussianWindow(window,material,{},.02,.001,scene.lever,false,true);
@@ -51,25 +52,46 @@ int main(int argc,char** argv){try{
   check(rel<1e-6 && (mean.tail(15)-evidence.correction).norm()<1e-6,"physical source prefix/retirement full15 oracle");
   // Independent residual oracle mutates literal input samples and terminal
   // bias, then uses the public reintegration entry, not its RW map builder.
-  auto sourceTx=tx;auto trueValues=std::make_shared<gtsam::Values>(*tx.frozen_values);
-  for(size_t e:{tx.previous_epoch,tx.proposed_epoch}){auto trueState=scene.truth(e*.05);trueValues->update(gtsam::Symbol('x',e),gtsam::Pose3(gtsam::Rot3(trueState.q_world_body.toRotationMatrix()),trueState.position_world_m));trueValues->update(gtsam::Symbol('v',e),gtsam::Vector3(trueState.velocity_world_mps));trueValues->update(gtsam::Symbol('b',e),gtsam::imuBias::ConstantBias(trueState.accel_bias_mps2,trueState.gyro_bias_radps));}sourceTx.frozen_values=trueValues;
+  auto sourceTx=prefix.material(tx);auto trueValues=std::make_shared<gtsam::Values>(*sourceTx.frozen_values);
+  for(size_t e=0;e<=tx.proposed_epoch;++e){auto trueState=scene.truth(e*.05);trueValues->update(gtsam::Symbol('x',e),gtsam::Pose3(gtsam::Rot3(trueState.q_world_body.toRotationMatrix()),trueState.position_world_m));trueValues->update(gtsam::Symbol('v',e),gtsam::Vector3(trueState.velocity_world_mps));trueValues->update(gtsam::Symbol('b',e),gtsam::imuBias::ConstantBias(trueState.accel_bias_mps2,trueState.gyro_bias_radps));}sourceTx.frozen_values=trueValues;
   auto rw=physicalBiasIncrementMap(sourceTx);
-  for(size_t k:{size_t(1),size_t(10)})for(int axis=0;axis<6;++axis){auto plus=sourceTx,minus=sourceTx;double eps=2e-5;
+  Eigen::MatrixXd independentRw(15,60);
+  for(size_t k=1;k<=10;++k)for(int axis=0;axis<6;++axis){auto plus=sourceTx,minus=sourceTx;double eps=2e-5;
    auto mutate=[&](EpochTransaction& t,double d){for(size_t i=k;i<t.raw_imu_slice.size();++i){if(axis<3)t.raw_imu_slice[i].specific_force_mps2(axis)+=d;else t.raw_imu_slice[i].angular_velocity_radps(axis-3)+=d;}auto values=std::make_shared<gtsam::Values>(*t.frozen_values);auto key=gtsam::Symbol('b',t.proposed_epoch);auto bias=values->at<gtsam::imuBias::ConstantBias>(key).vector();bias(axis)+=d;values->update(key,gtsam::imuBias::ConstantBias(bias.head<3>(),bias.tail<3>()));t.frozen_values=values;};
    mutate(plus,eps);mutate(minus,-eps);RawImuEpisode empty{"oracle",tx.begin,TimestampNs(tx.begin.value()+1),0};
    auto jp=episodeFactorError(plus,integrateEpisode(plus,empty,0));auto jm=episodeFactorError(minus,integrateEpisode(minus,empty,0));double sig=(axis<3?scene.cfg.imu.accelerometer_bias_rw_sigma:scene.cfg.imu.gyroscope_bias_rw_sigma)*std::sqrt(.005);
-   check((-(jp-jm)/(2*eps)*sig-rw.col(6*(k-1)+axis)).norm()<1e-9,"independent full15 RW source residual");
+   independentRw.col(6*(k-1)+axis)=-(jp-jm)/(2*eps)*sig;
+   check((independentRw.col(6*(k-1)+axis)-rw.col(6*(k-1)+axis)).norm()<1e-6*rw.col(6*(k-1)+axis).norm()+1e-14,"independent full15 RW source residual");
   }
+  // Independent covariance assembler uses literal primitive perturbations at
+  // truth, all ADC/RW columns, and does not read the covariance under test.
+  Eigen::MatrixXd independentAdc(15,66);
+  for(size_t k=0;k<=10;++k)for(int axis=0;axis<6;++axis){auto plus=sourceTx,minus=sourceTx;double eps=2e-5;
+   if(axis<3){plus.raw_imu_slice[k].specific_force_mps2(axis)+=eps;minus.raw_imu_slice[k].specific_force_mps2(axis)-=eps;}
+   else{plus.raw_imu_slice[k].angular_velocity_radps(axis-3)+=eps;minus.raw_imu_slice[k].angular_velocity_radps(axis-3)-=eps;}
+   RawImuEpisode empty{"independent-adc",tx.begin,TimestampNs(tx.begin.value()+1),0};
+   independentAdc.col(6*k+axis)=-(episodeFactorError(plus,integrateEpisode(plus,empty,0))-episodeFactorError(minus,integrateEpisode(minus,empty,0)))/(2*eps)*(axis<3?.02:.001);
+  }
+  auto oneWindow=window;oneWindow.blocks.clear();for(const auto& block:window.blocks)if(block.group_id==tx.imu_group.id)oneWindow.blocks.push_back(block);
+  auto tested=rawGaussianWindow(oneWindow,sourceTx,{},.02,.001,scene.lever,false,true);
+  Eigen::MatrixXd expected=independentAdc*independentAdc.transpose()+independentRw*independentRw.transpose();
+  Eigen::VectorXd scale=expected.diagonal().cwiseSqrt().cwiseInverse();
+  double sourceDifference=(scale.asDiagonal()*(tested.sigma-expected)*scale.asDiagonal()).norm();maxSourceCov=std::max(maxSourceCov,sourceDifference);check(sourceDifference<1e-6,"independent units-normalized full15 source covariance");
+  if(epoch>1){auto twoWindow=window;twoWindow.blocks.clear();for(auto id:{previousImu,tx.imu_group.id})for(const auto& block:window.blocks)if(block.group_id==id)twoWindow.blocks.push_back(block);
+   auto pair=rawGaussianWindow(twoWindow,sourceTx,{},.02,.001,scene.lever,false,true);
+   Eigen::MatrixXd cross=previousEndpoint*independentAdc.leftCols(6).transpose();double difference=(pair.sigma.topRightCorner(15,15)-cross).norm()/cross.norm();maxSourceCross=std::max(maxSourceCross,difference);check(difference<1e-6,"independent adjacent full15 source cross covariance");}
+  previousEndpoint=independentAdc.rightCols(6);previousImu=tx.imu_group.id;
   auto plan=EpochCommitPlan::nominalPlan(tx);auto receipt=backend.commitEpoch(EpochTransaction(tx),plan);check(receipt.backend_updates==1,"actual source commit");
-  auto actual=backend.currentState();auto enclosed=inclusion.issue(tx,receipt,actual,scene.lever);check(enclosed.valid && enclosed.event_risk<=1e-6,"raw continuous inclusion actual receipt");
+  auto actual=backend.currentState();auto enclosed=inclusion.issue(tx,receipt,actual,scene.lever);check(enclosed.valid && enclosed.event_risk<=1e-6 && enclosed.hpl>=std::hypot(enclosed.pl.x(),enclosed.pl.y()),"raw continuous inclusion actual receipt and outward horizontal support");
   auto truth=scene.truth(epoch*.05);Eigen::Vector3d trueTag=truth.position_world_m+truth.q_world_body*scene.lever;
   check((trueTag.array()>=enclosed.low.array()).all() && (trueTag.array()<=enclosed.high.array()).all(),"independent raw inclusion realization");
+  check(!inclusion.tag(scene.lever,Eigen::Vector3d::Constant(1e308)).valid,"raw horizontal output overflow refuses finite qualification");
   auto forged=receipt;forged.backend_updates=0;check(!inclusion.issue(tx,forged,actual,scene.lever).valid,"inclusion receipt tamper");
   auto altered=tx;altered.raw_imu_slice[0].specific_force_mps2.x()+=1;check(!inclusion.issue(altered,receipt,actual,scene.lever).valid,"inclusion raw source tamper");
   for(double offset:{-100.,0.,100.}){Eigen::Vector3d center(offset,-offset,offset);auto outside=inclusion.tag(scene.lever,center);check(((trueTag-center).cwiseAbs().array()<=outside.pl.array()).all(),"arbitrary adaptive center uniform transfer");}
 online.committed(tx,plan);prefix.committed(tx,plan);
  }
  check(maxCross>0,"adjacent PIM shared source cross");
- std::cout<<"raw source inventory="<<ids.size()<<" full15 RW/ADC/cross/history oracle PASS max_cov_relative="<<maxCov<<" cross="<<maxCross<<" numerical_source_accel="<<scene.numeric_certificate.accel_sample<<" continuous_inclusion=PASS\n";
+ std::cout<<"raw source inventory="<<ids.size()<<" full15 RW/ADC/cross/history oracle PASS max_cov_relative="<<maxCov<<" cross="<<maxCross<<" source_cov_normalized="<<maxSourceCov<<" source_cross_relative="<<maxSourceCross<<" numerical_source_accel="<<scene.numeric_certificate.accel_sample<<" continuous_inclusion=PASS\n";
  return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

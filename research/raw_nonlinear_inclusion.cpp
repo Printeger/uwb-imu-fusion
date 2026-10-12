@@ -64,7 +64,7 @@ struct RawNonlinearInclusion::Impl {
  std::array<I,4> component_p{I(0),I(0),I(0),I(0)},component_v{I(0),I(0),I(0),I(0)};
  I angular;std::deque<ImuMeasurement> recent;ImuMeasurement previous;int samples=0;bool initialized=false;
  Impl(const NavigationState& obs,const RawInclusionParameters& param):law(param),initial(obs),r(rotation(obs.q_world_body)){
-  if(!law.numeric.valid || law.horizon!=50 || law.coordinates!=6421 || !law.initial_sigmas.allFinite() || (law.initial_sigmas.array()<=0).any() || !(law.accel_adc>0 && law.gyro_adc>0 && law.accel_rw>0 && law.gyro_rw>0 && law.force_lipschitz>=0 && law.gyro_lipschitz>=0) || !obs.position_world_m.allFinite() || !obs.velocity_world_mps.allFinite() || !obs.accel_bias_mps2.allFinite() || !obs.gyro_bias_radps.allFinite())throw std::runtime_error("unregistered inclusion law");
+  if(!law.numeric.valid || !std::isfinite(law.risk_budget) || law.risk_budget<=0 || law.risk_budget>=1 || law.horizon!=50 || law.coordinates!=6421 || !law.initial_sigmas.allFinite() || (law.initial_sigmas.array()<=0).any() || !(law.accel_adc>0 && law.gyro_adc>0 && law.accel_rw>0 && law.gyro_rw>0 && law.force_lipschitz>=0 && law.gyro_lipschitz>=0) || !obs.position_world_m.allFinite() || !obs.velocity_world_mps.allFinite() || !obs.accel_bias_mps2.allFinite() || !obs.gyro_bias_radps.allFinite())throw std::runtime_error("unregistered inclusion law");
   I acceleration(0),jerk(0);for(int j=0;j<3;++j){I a(std::abs(law.motion_amplitude(j))),f(std::abs(law.motion_frequency(j)));acceleration+=a*square(f);jerk+=a*square(f)*f;}
   I required=I(std::abs(law.motion_angular_rate))*(I(law.gravity)+acceleration)+jerk;
   if(required.upper()>law.force_lipschitz || law.gyro_lipschitz!=0)throw std::runtime_error("continuous motion derivative domain refused");
@@ -118,8 +118,9 @@ RawInclusionEvidence RawNonlinearInclusion::tag(const Eigen::Vector3d& lever,con
  for(int j=0;j<3;++j){I value=s.p[j]+offset[j]+I(-error.upper(),error.upper());e.low(j)=value.lower();e.high(j)=value.upper();e.reference(j)=value.lower()/2+value.upper()/2.;e.pl(j)=abs(value-I(actual(j))).upper();}
  // Chernoff: P(|Z|>7)<=2 exp(-49/2)<2/2^35, since ln(2)<.7.
  // Union over the ENTIRE inventory, without assuming independent projections.
+ e.hpl=sqrt(square(I(e.pl.x()))+square(I(e.pl.y()))).upper();
  e.event_risk=std::ldexp(2.*s.law.coordinates,-35);
- e.valid=e.low.allFinite() && e.high.allFinite() && e.pl.allFinite() && e.event_risk<=1e-6;return e;
+ e.valid=e.low.allFinite() && e.high.allFinite() && e.pl.allFinite() && std::isfinite(e.hpl) && e.event_risk<=std::min(1e-6,s.law.risk_budget);return e;
 }
 RawInclusionEvidence RawNonlinearInclusion::issue(const EpochTransaction& tx,const CommitReceipt& receipt,const NavigationState& state,const Eigen::Vector3d& lever)const{
  auto e=tag(lever,state.position_world_m+state.q_world_body*lever);const auto& s=*impl;

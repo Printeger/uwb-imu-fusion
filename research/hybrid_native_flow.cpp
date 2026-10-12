@@ -81,6 +81,13 @@ void runHybridNative(const std::string& path,bool currentFault){
   }
 
   if(e==7){auto forged=receipt;forged.transaction_id=TransactionId(receipt.transaction_id.value()+1);
+   auto huge=actual;huge.position_world_m=Eigen::Vector3d::Constant(1e308);
+   auto overflow=finalizeHybrid(result.gaussian.pl,Eigen::Vector3d::Constant(-1e308),huge,scene.lever,receipt,id,e,b.timestamp,version,HybridDomain::FixedModel,law.epsilon,law.budget,2,3,1);
+   check(!overflow.numerical && !overflow.finiteBoundQualified(),"overflow cannot be a finite bound");
+   auto horizontalOverflow=finalizeHybrid(Eigen::Vector3d::Constant(1e308),reference,actual,scene.lever,receipt,id,e,b.timestamp,version,HybridDomain::FixedModel,law.epsilon,law.budget,2,3,1);
+   check(!horizontalOverflow.finiteBoundQualified(),"reported horizontal norm must be finite");
+   auto unknownAL=finalizeHybrid(result.gaussian.pl,reference,actual,scene.lever,receipt,id,e,b.timestamp,version,HybridDomain::FixedModel,law.epsilon,law.budget,NAN,3,-1);
+   check(unknownAL.finiteBoundQualified() && !unknownAL.within_al && !unknownAL.on_time,"missing AL and invalid time remain independent");
    auto invalid=finalizeHybrid(result.gaussian.pl,reference,actual,scene.lever,forged,id,e,b.timestamp,version,HybridDomain::FixedModel,law.epsilon,law.budget,2,3,1);check(!invalid.available(),"wrong receipt downgrade");
    auto late=finalizeHybrid(result.gaussian.pl,reference,actual,scene.lever,receipt,id,e,b.timestamp,version,HybridDomain::FixedModel,law.epsilon,law.budget,2,3,51);check(late.available() && !late.timelyAvailable(),"late result downgrade");
    Eigen::Vector3d away=reference+Eigen::Vector3d(10,0,0);auto shifted=finalizeHybrid(result.gaussian.pl,away,actual,scene.lever,receipt,id,e,b.timestamp,version,HybridDomain::FixedModel,law.epsilon,law.budget,2,3,1);check(!shifted.available(),"final center AL downgrade");

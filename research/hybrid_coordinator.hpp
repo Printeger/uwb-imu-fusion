@@ -72,12 +72,12 @@ inline HybridFinalResult finalizeHybrid(const Eigen::Vector3d& referencePL,
  double verticalAL,double serviceMs){
  HybridFinalResult result;Eigen::Vector3d tag=actual.position_world_m+actual.q_world_body*lever;
  result.center=(tag-reference).cwiseAbs();result.pl=referencePL+result.center;
- result.numerical=referencePL.allFinite() && (referencePL.array()>=0).all() && reference.allFinite() && tag.allFinite();
+ result.numerical=referencePL.allFinite() && (referencePL.array()>=0).all() && reference.allFinite() && tag.allFinite() && result.pl.allFinite() && std::isfinite(result.pl.head<2>().norm());
  result.model=domain==HybridDomain::FixedModel;
- result.risk=result.model && std::isfinite(risk) && risk>0 && risk<=budget;
+ result.risk=result.model && std::isfinite(risk) && risk>0 && std::isfinite(budget) && budget>0 && budget<1 && risk<=budget;
  result.receipt_bound=receipt.transaction_id==expected && receipt.committed_epoch==epoch && receipt.state_timestamp==time && actual.timestamp==time && receipt.graph_version==previousGraph+1 && receipt.backend_updates==1;
- result.within_al=result.numerical && result.pl.head<2>().norm()<=horizontalAL && result.pl.z()<=verticalAL;
- result.on_time=serviceMs<=50;return result;
+ result.within_al=result.numerical && std::isfinite(horizontalAL) && horizontalAL>0 && std::isfinite(verticalAL) && verticalAL>0 && result.pl.head<2>().norm()<=horizontalAL && result.pl.z()<=verticalAL;
+ result.on_time=std::isfinite(serviceMs) && serviceMs>=0 && serviceMs<=50;return result;
 }
 inline void advanceNativeHistory(HybridHistoryProducer& producer,const EpochTransaction& tx,
  const EpochCommitPlan& plan,const CommitReceipt& receipt,const Eigen::VectorXd& observations,

@@ -1,0 +1,132 @@
+# 设计模板，不是现有程序已经支持的配置，更不是安全认证。
+# N4实现解析器后使用。null表示缺少任务依据，不允许自动填默认安全值。
+# 原生产risk YAML不得被本文件覆盖。
+schema: hybrid-application-al-policy-proposal-v1
+policy_id: application-not-yet-specified
+purpose: diagnostic_and_requirements_only
+
+legacy_reference:
+  horizontal_alert_limit_m: 2.0
+  vertical_alert_limit_m: 3.0
+  provenance: inherited_research_constants
+  application_qualified: false
+
+# 仅对同一固定结果后处理，不重跑FDE，不改变当前/未来commit。
+diagnostic_evaluation:
+  mutates_estimator: false
+  evaluates_existing_results_only: true
+  pairs_m:
+    - [2.0, 3.0]
+    - [5.0, 5.0]
+    - [10.0, 10.0]
+  label: NOT_APPLICATION_SAFETY_LIMITS
+
+application:
+  vertical_noncritical_rationale_reference: null
+  expected_bound_scope: null
+  expected_source_law_id: null
+  name: null
+  operating_mode: null
+  hazard_description: null
+  risk_requirement_source: null
+  hazard_risk_limit: null
+  risk_time_basis: null              # per operation / specified finite mission
+  mission_horizon_s: null
+  required_protection_frame: null
+  required_protection_point: null    # world UWB tag / body / payload
+  horizontal_is_safety_critical: null
+  vertical_is_safety_critical: null
+  user_approved_requirement_reference: null
+
+geometry_and_motion:
+  obstacle_or_geofence_reference: null
+  clearance_for_protected_point_m: null
+  clearance_direction_or_region: null
+  body_or_payload_geometry_reference: null
+  tag_to_safety_point_transform_reference: null
+  speed_bound_mps: null
+  acceleration_bound_mps2: null
+  angular_rate_bound_radps: null
+  admissible_motion_domain_reference: null
+
+time_and_safe_action:
+  time_to_alert_requirement_s: null
+  measurement_age_bound_s: null
+  processing_delay_bound_s: null
+  communications_delay_bound_s: null
+  safe_action: null
+  actuation_or_braking_model_reference: null
+  safe_action_delay_bound_s: null
+  delay_and_motion_already_in_PL: null
+  evidence_reference: null
+
+# 每项必须说明是可信确定性界还是某概率事件下的界；不得填RMSE冒充上界。
+# 对同一误差在PL内与预算内重复计入要由validator报错/要求解释。
+nonlocalization_allowances:
+  geometry_extrinsic:
+    time_horizon_s: null
+    bound_m: null
+    direction: null
+    evidence_kind: null
+    event_failure_bound: null
+    source_reference: null
+    already_in_position_PL: null
+  map_environment:
+    time_horizon_s: null
+    bound_m: null
+    direction: null
+    evidence_kind: null
+    event_failure_bound: null
+    source_reference: null
+    already_in_position_PL: null
+  control_tracking:
+    time_horizon_s: null
+    bound_m: null
+    direction: null
+    evidence_kind: null
+    event_failure_bound: null
+    source_reference: null
+    already_in_position_PL: null
+  delay_safe_action:
+    time_horizon_s: null
+    bound_m: null
+    direction: null
+    evidence_kind: null
+    event_failure_bound: null
+    source_reference: null
+    already_in_position_PL: null
+  other:
+    time_horizon_s: null
+    bound_m: null
+    direction: null
+    evidence_kind: null
+    event_failure_bound: null
+    source_reference: null
+    already_in_position_PL: null
+  joint_event_or_conservative_union_reference: null
+
+# Must also be present in bound evidence before omission from the budget.
+pl_included_sources: []
+
+chosen_limits:
+  horizontal_alert_limit_m: null
+  vertical_alert_limit_m: null
+  selection_rationale_reference: null
+  selected_before_evaluation: null
+  # validator应计算允许上界并检查chosen<=upper，不能从PL反推。
+
+# 以下字段仅是预期输出示意；真实实现不得信任用户填写的qualified=true。
+expected_validation:
+  status: APPLICATION_AL_UNQUALIFIED
+  action_on_missing_evidence: refuse_application_qualification
+  zero_or_negative_budget_action: INFEASIBLE
+  numerical_PL_below_AL_is_not_sufficient: true
+  requires_bound_scope_and_timeliness_match: true
+  permits_production_publication: false
+
+# 独立算术测试的假设值，不属于application配置。
+illustrative_unit_test_only:
+  clearance_m: 0.25
+  sum_other_supported_allowances_m: 0.15
+  expected_localization_budget_upper_m: 0.10
+  label: ARITHMETIC_EXAMPLE_NOT_A_RECOMMENDED_AL
