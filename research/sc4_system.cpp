@@ -22,7 +22,7 @@ Sc4System::Sc4System(Sc4Input input):input_(std::move(input)){
  if(input_.matched_source){joint_=std::make_unique<Sc3JointCoordinator>(input_.initial,input_.law,input_.batches.front());joint_->append(input_.imu.front());risk_=std::ldexp(2.*6421,-35);}
 }
 Sc4Output Sc4System::process(size_t index,bool fde,Sc4Clock::time_point release,Sc4Clock::time_point origin){
- Sc4Output out;out.sequence=++sequence_;out.source=input_.source;out.scope=input_.scope;out.cumulative_risk=risk_;
+ Sc4Output out;out.sequence=++sequence_;out.source=input_.source;out.scope=input_.scope;out.cumulative_risk=risk_;out.version=last_version_;out.physical_expected=joint_?481401:0;
  auto start=Sc4Clock::now();out.timing.start_ns=stamp(start,origin);out.timing.release_ns=stamp(release,origin);out.timing.queue_ms=std::max(0.,duration(release,start));
  if(index>=input_.batches.size())throw std::out_of_range("SC4 input sequence");
  const auto& batch=input_.batches[index];
@@ -59,7 +59,7 @@ Sc4Output Sc4System::process(size_t index,bool fde,Sc4Clock::time_point release,
    auto retained=tx;auto commit=Sc4Clock::now();auto before=backend_->backendUpdateCount();auto receipt=backend_->commitEpoch(std::move(tx),plan);
    if(receipt.backend_updates!=1 || backend_->backendUpdateCount()!=before+1)throw std::runtime_error("SC4 nonunique commit");
    if(jointAction)joint_->committed(out.action,retained,receipt);
-   out.state=backend_->currentState();out.updates=receipt.backend_updates;out.version=receipt.graph_version;out.timing.commit_ns=stamp(Sc4Clock::now(),origin);out.timing.commit_ms=duration(commit,Sc4Clock::now());
+   out.state=backend_->currentState();out.updates=receipt.backend_updates;out.version=receipt.graph_version;last_version_=out.version;out.timing.commit_ns=stamp(Sc4Clock::now(),origin);out.timing.commit_ms=duration(commit,Sc4Clock::now());
    auto bound=Sc4Clock::now();if(jointAction){out.proof=joint_->issue(input_.ranges[index],retained,receipt,out.state,input_.lever);out.bound_status=out.proof.valid?out.proof.geometry.status:"JOINT_BOUND_REFUSED";out.physical_evaluated=out.proof.evaluated;}
    out.timing.bound_ms=duration(bound,Sc4Clock::now());out.timing.proof_ns=stamp(Sc4Clock::now(),origin);
    out.active_slots=backend_->factorLedger().activeEntries(0,out.epoch).size();out.carry=carry_;out.action.imu.candidate.reference.clear();
@@ -77,23 +77,44 @@ Sc4Output Sc4System::process(size_t index,bool fde,Sc4Clock::time_point release,
  // application/hardware qualification is synthesized.
  out.protected_output=false;return out;
 }
+Sc4Output Sc4System::reject(size_t index,const std::string& reason,Sc4Clock::time_point release,Sc4Clock::time_point origin){
+ sourceGap();auto out=process(index,false,release,origin);out.functional=reason;out.bound_status="CONTINUITY_REFUSED";out.version=last_version_;return out;
+}
 int runSc4System(int argc,char** argv){
  const tbb::global_control single_thread(tbb::global_control::max_allowed_parallelism,1);
  if(argc<7)throw std::runtime_error("usage: epoch_raim_runner CONFIG CSV SCENE|record:CACHE system on|off EPOCHS [reference|optimized] [offline|paced]");
  auto init=Sc4Clock::now();std::string source=argv[3];int count=std::stoi(argv[6]);bool fde=std::string(argv[5])=="on";
  if(argc>7 && std::string(argv[7])!="reference")throw std::runtime_error("optimized SC4 profile not implemented yet");
- bool paced=argc>8 && std::string(argv[8])=="paced";
+ bool paced=argc>8 && std::string(argv[8])=="paced";auto cfg=researchLaw(argv[1]);
+ if(cfg["sc4_threads"].as<int>()!=1 || cfg["sc4_core_deadline_ms"].as<int>()!=40 || cfg["sc4_full_deadline_ms"].as<int>()!=50 || cfg["sc4_overload_policy"].as<std::string>()!="reject-new-latch-unprotected" || cfg["sc4_after_horizon"].as<std::string>()!="continue-unprotected-preserve-carry" || cfg["sc4_initial_carry_in"].as<std::string>()!="unsupported")throw std::runtime_error("SC4 runtime contract mismatch");
  Sc4System system(source.rfind("record:",0)==0?sc4RecordInput(argv[1],source.substr(7),count):sc4MatchedInput(argv[1],source,count));double initMs=duration(init,Sc4Clock::now());
  std::ofstream csv(argv[2]);if(!csv)throw std::runtime_error("SC4 output unavailable");csv<<std::setprecision(17);
- csv<<"sequence,epoch,functional,bound_status,finite,qualified,source,scope,timestamp_ns,transaction,version,updates,tag_x,tag_y,tag_z,vx,vy,vz,qw,qx,qy,qz,hpl,vpl,cumulative_risk,physical_expected,physical_evaluated,range_masks,excluded,imu_bridge,imu_rejoined,carry,actions_expected,actions_evaluated,rebuilds,history_epochs,active_slots,retained_ids,input_ids,removed_groups,release_ns,start_ns,alarm_ns,selected_ns,commit_ns,proof_ns,output_ns,ingest_ms,prepare_ms,candidate_ms,commit_ms,bound_ms,cleanup_ms,core_ms,full_ms,queue_ms,arrival_to_output_ms,measurement_age_ms,core_on_time,on_time,source_init_ms,max_rss_kb,formal_eligible,publication_protected,application_available\n";
- auto origin=Sc4Clock::now();
- for(size_t i=0;i<system.input().batches.size();++i){auto release=origin+std::chrono::nanoseconds(system.input().batches[i].timestamp.value());if(paced)std::this_thread::sleep_until(release);else release=Sc4Clock::now();
-  auto row=system.process(i,fde,release,origin);struct rusage resource{};getrusage(RUSAGE_SELF,&resource);
+ csv<<"sequence,epoch,functional,bound_status,finite,qualified,source,scope,timestamp_ns,transaction,version,updates,tag_x,tag_y,tag_z,vx,vy,vz,qw,qx,qy,qz,hpl,vpl,cumulative_risk,physical_expected,physical_evaluated,range_masks,excluded,imu_bridge,imu_rejoined,carry,actions_expected,actions_evaluated,rebuilds,history_epochs,active_slots,retained_ids,input_ids,removed_groups,release_ns,start_ns,alarm_ns,selected_ns,commit_ns,proof_ns,output_ns,ingest_ms,prepare_ms,candidate_ms,commit_ms,bound_ms,cleanup_ms,core_ms,full_ms,queue_ms,arrival_to_output_ms,measurement_age_ms,core_on_time,on_time,source_init_ms,max_rss_kb,enqueue_ns,formal_eligible,publication_protected,application_available\n";
+ auto origin=Sc4Clock::now();Sc4Queue queue(cfg["sc4_queue_capacity"].as<size_t>());size_t next=0,reported=0,firstMissing=system.input().batches.size();std::deque<Sc4QueuedBatch> rejected;
+ double loggerMs=0,maxLoggerMs=0;
+ auto emit=[&](const Sc4Output& row){auto logging=Sc4Clock::now();struct rusage resource{};getrusage(RUSAGE_SELF,&resource);
   csv<<row.sequence<<','<<row.epoch<<','<<row.functional<<','<<row.bound_status<<','<<row.finite<<','<<row.proof.valid<<','<<row.source<<','<<row.scope<<','<<row.state.timestamp.value()<<','<<row.transaction<<','<<row.version<<','<<row.updates;
   for(const auto& vector:{row.tag,row.state.velocity_world_mps})for(int j=0;j<3;++j)csv<<','<<vector(j);
   csv<<','<<row.state.q_world_body.w()<<','<<row.state.q_world_body.x()<<','<<row.state.q_world_body.y()<<','<<row.state.q_world_body.z()<<','<<row.proof.geometry.hpl<<','<<row.proof.geometry.pl.z()<<','<<row.cumulative_risk<<','<<row.physical_expected<<','<<row.physical_evaluated<<','<<row.proof.geometry.considered<<','<<row.action.excluded<<','<<row.action.imu.current_bridge<<','<<row.action.imu_rejoined<<','<<row.carry<<','<<row.action.expected_actions<<','<<row.action.evaluated_actions<<','<<row.action.imu.candidate.rebuilds<<','<<row.history_epochs<<','<<row.active_slots<<','<<row.retained_ids<<','<<row.input_ids<<','<<row.removed_groups;
-  const auto& t=row.timing;csv<<','<<t.release_ns<<','<<t.start_ns<<','<<t.alarm_ns<<','<<t.selected_ns<<','<<t.commit_ns<<','<<t.proof_ns<<','<<t.output_ns<<','<<t.ingest_ms<<','<<t.prepare_ms<<','<<t.candidate_ms<<','<<t.commit_ms<<','<<t.bound_ms<<','<<t.cleanup_ms<<','<<t.core_ms<<','<<t.full_ms<<','<<t.queue_ms<<','<<t.arrival_to_output_ms<<','<<t.measurement_age_ms<<','<<row.core_on_time<<','<<row.on_time<<','<<initMs<<','<<resource.ru_maxrss<<",0,0,0\n";csv.flush();
+  const auto& t=row.timing;csv<<','<<t.release_ns<<','<<t.start_ns<<','<<t.alarm_ns<<','<<t.selected_ns<<','<<t.commit_ns<<','<<t.proof_ns<<','<<t.output_ns<<','<<t.ingest_ms<<','<<t.prepare_ms<<','<<t.candidate_ms<<','<<t.commit_ms<<','<<t.bound_ms<<','<<t.cleanup_ms<<','<<t.core_ms<<','<<t.full_ms<<','<<t.queue_ms<<','<<t.arrival_to_output_ms<<','<<t.measurement_age_ms<<','<<row.core_on_time<<','<<row.on_time<<','<<initMs<<','<<resource.ru_maxrss<<','<<t.enqueue_ns<<",0,0,0\n";csv.flush();auto elapsed=duration(logging,Sc4Clock::now());loggerMs+=elapsed;maxLoggerMs=std::max(maxLoggerMs,elapsed);++reported;
+ };
+ while(reported<system.input().batches.size()){
+  auto now=Sc4Clock::now();
+  while(next<system.input().batches.size()){
+   auto release=paced?origin+std::chrono::nanoseconds(system.input().batches[next].timestamp.value()):now;
+   if(paced && now<release)break;
+   if(!paced && queue.size())break;
+   Sc4QueuedBatch job{next,release,now};if(!queue.push(job)){rejected.push_back(job);firstMissing=std::min(firstMissing,next);}++next;
+  }
+  if(!queue.size()){
+   if(next<system.input().batches.size()){std::this_thread::sleep_until(origin+std::chrono::nanoseconds(system.input().batches[next].timestamp.value()));continue;}
+   while(!rejected.empty()){auto job=rejected.front();rejected.pop_front();auto row=system.reject(job.index,"QUEUE_OVERLOAD_REJECTED",job.release,origin);row.timing.enqueue_ns=stamp(job.enqueued,origin);emit(row);}break;
+  }
+  auto job=queue.pop();
+  while(!rejected.empty() && rejected.front().index<job.index){auto drop=rejected.front();rejected.pop_front();auto row=system.reject(drop.index,"QUEUE_OVERLOAD_REJECTED",drop.release,origin);row.timing.enqueue_ns=stamp(drop.enqueued,origin);emit(row);}
+  if(job.index>=firstMissing)system.sourceGap();
+  auto row=system.process(job.index,fde,job.release,origin);row.timing.enqueue_ns=stamp(job.enqueued,origin);emit(row);
  }
- std::cout<<"SC4 reference source_init_ms="<<initMs<<" epochs="<<count<<'\n';return 0;
+ std::cout<<"SC4 reference source_init_ms="<<initMs<<" epochs="<<count<<" queue_peak="<<queue.peak()<<" diagnostic_logging_ms="<<loggerMs<<" max_logging_ms="<<maxLoggerMs<<'\n';return 0;
 }
 }

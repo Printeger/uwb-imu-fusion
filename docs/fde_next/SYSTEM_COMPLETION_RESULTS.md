@@ -1020,3 +1020,42 @@ native commits by construction. These local samples are not a realtime result.
 Platform observed WSL2 Linux6.18.40.1 x86_64, Intel Core Ultra5 125H; runtime
 pins OMP/BLAS/MKL and TBB to1. W1 saves actual source+time interface; W2/W3/W4
 and SC4 acceptance remain active, not completed after this local save.
+
+W2 operational lifecycle PASS: one continuous60-epoch actual backend run
+with late UA/UG resource-stress registration (actual test UG48).60 scheduled/
+attempted/committed,0 abort;50 spatial qualified,10 TASK_HORIZON_EXPIRED.
+Original≤501 raw observations match the50-input generator exactly. Version
+at50=51,51=52,58=59,60=61: no estimator/H/event restart. Old physical fault
+carry remains true through60; shared affected support is bridged through58,
+with no new proof after50, including at51/58. Cumulative admitted event risk
+stays3.7375139072537422e-7; future output risk is UNKNOWN, never this old amount
+relabeled as a renewed mission. Continuous integrity remains
+MISSION_CONTINUATION_OPEN; operational result is
+CONTINUOUS_UNPROTECTED_AFTER_HORIZON, not arbitrary-long protection.
+
+Finite FIFO supports cancel only while queued; no callback interrupts native
+commit. Reject-new overload retains queued earlier raw history. The first
+missing batch latches source continuity failure before any later accepted
+batch can prepare/commit; no old PL is reused. Cancel-before-prepare produces0
+updates and all following source-gap outputs remain unprotected. Existing
+SC3 final receipt checks remain the sole issue authority, with no second
+commit patch-up. A late spatial certificate remains tagged with its original
+measurement/graph/time; all production protected-publication flags remain0.
+
+Actual paced overload fixture: queue2, original SC4_G shifted witness,
+25 scheduled,18 native attempted/committed,0 native abort,7 refused before
+prepare (5 queue-overload,2 downstream gap).25 finite diagnostic estimates,
+18 spatial qualified,10 arrival-to-output late. Old current state timestamps
+remain.900s/version19 on later gap rows20/23, not falsely updated to those
+measurement times. Queue peak2; diagnostic logging total1.6055ms,max.1101ms
+is separately visible and contributes to paced backlog. Ordinary queue64
+continues to retain every requested batch; it is not an infinite queue.
+The60-unit fixture did not separately persist contracted/fallback counters;
+its50 valid geometric outputs are not called50 contracted without evidence.
+Final affected regression will explicitly collect these classifications.
+
+W2 deterministic checks also pass time/source/missing/expiry admission and
+actual two healthy commits, pending cancellation and source-gap refusal.
+No production default, raw law, risk amount, fault bank or AL is changed.
+W2 local save closes lifecycle work; computational optimization and final
+performance/real-record/application acceptance are still active W3/W4.
