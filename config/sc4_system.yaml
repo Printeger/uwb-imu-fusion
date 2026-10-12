@@ -1,0 +1,13 @@
+# Research runtime only; the SC3 mathematical contract is unchanged.
+raw_base_law: config/sc3_joint.yaml
+sc4_source_commit: 5b7d960
+sc4_scope_id: sc3-one-uwb-one-imu-episode-rw-v1
+sc4_core_deadline_ms: 40
+sc4_full_deadline_ms: 50
+sc4_queue_capacity: 64
+sc4_max_input_epochs: 120
+sc4_overload_policy: reject-new-latch-unprotected
+sc4_after_horizon: continue-unprotected-preserve-carry
+sc4_initial_carry_in: unsupported
+sc4_profile: reference
+sc4_threads: 1

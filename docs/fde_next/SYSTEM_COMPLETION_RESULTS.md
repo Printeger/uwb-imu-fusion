@@ -870,8 +870,8 @@ undetected IMU cases remain covered by upstream SC2 regression, without
 upgrading them to joint recovery positives. Resource failures never remove
 physical explanations or count unevaluated numerical branches as risk0.
 
-Final affected build/regression and cleanup are pending below; status is
-not yet normal success until every SC3-A01–A12 audit row is filled.
+The final SC3 acceptance and completed regression are recorded below.
+This earlier W4 checkpoint was superseded by the completed audit.
 
 Fixed off/on comparison: accel horizontal PE mean/max .1900/.6300m →
 .06519/.15466m and vertical .1692/.5787m → .05525/.13432m. Gyro horizontal
@@ -933,3 +933,90 @@ functions link only through fde_research and require explicit SC3 opt-in.
 Own temporary logs/CSV and frozen stream directories are removed after this
 summary. No old-stage or user artifacts are deleted. No new plots, binaries,
 backup registries or repeated manifests are retained; no remote push.
+
+
+## SC4 — continuous system and realtime/application evaluation (in progress)
+
+Entry actual local clean HEAD `5b7d960`; no reset, old-stage redo or remote
+push. SC4-spec-1.0 and COMMON_REQUIREMENTS bind the actual SC3 handoff.
+Requested H0/UWB/all six raw IMU axes/UA/UG remain named. Raw mathematical
+qualification remains SC3's full481401 physical product/all9 current UWB
+projections/original6421-source50epoch event; actual native recovery remains
+registered accel-x/gyro-x witnesses, not an all-axis navigation qualification.
+The old SC3 checkpoint sentence above is corrected to point to its completed
+final audit; this is a documentation correction, not a new SC3 claim.
+
+W1 entry/runtime preregistration: config/sc4_system.yaml explicitly binds
+source5b7d960, original scope, single-thread runtime, core40/full50ms,
+queue64 and max120 replay epochs. No production contract/source sigma/risk/AL
+is changed. New `epoch_raim_runner CONFIG CSV SCENE|record:CACHE system
+on|off COUNT reference offline|paced` routes one system entry. Matched replay
+uses existing NoisyMotionScenario and actual Sc3JointCoordinator/backend;
+record replay consumes existing canonical benchmark measurements and causal
+initializer, never GT or simulation draw certification. Both adapters use
+one FGO instance; record geometry/source insufficiency remains unprotected.
+Illegal source IDs, timestamps, missing shared samples/batches, expired
+numeric evidence and insufficient IMU tail have explicit admission reasons.
+
+| Final field / consumer | Required computation, retained |
+|---|---|
+| functional alarm/search/posttest |raw IMU necessary interval bank; current Gaussian UWB WLS; all18 action roots when triggered/held; no local PASS physical pruning|
+| candidate numerical center |selected retained graph, original-observed-bias raw PIM reconstruction, full support/history deletion and native UWB replacement, exactly two GN rounds|
+| candidate/final raw proof |original-initial independent full-state physical envelope, sealed complete original batch, all9 shell intersections, full481401 logical product; source/time/version/prefix/census checks|
+| selection/commit |existing FdeManager research consumer reproof, trusted complete action census; cardinality/statistic order; one native transaction/receipt; no AL ranking|
+| rank/boundary covariance diagnostic |boundedRecovery healthy_graph QR/Marginals/fullStateBridge/local-domain status; SC3 numerical selection reads only rebuilds/finite objective/reference, NOT these diagnostics; potential W3 profile omission requires equivalence evidence|
+| old Gaussian H/P / independent oracles |SC3 never consumes old OnlineGaussianHistory/preUwbPrediction; not silently removed from a dependent pipeline; legacy paths and strict response/range oracles retained|
+
+Runtime clocks use steady_clock, independent sensor timestamp domain:
+measurement/replay release, processing start, first observed raw alarm,
+selected candidate, actual commit, proof completion and in-process output.
+Stage timings include ingest, native prepare/evidence extraction, every
+candidate/rebuild/reproof, commit, final proof, transaction cleanup and packet
+packaging. Replay age is release-to-output (same-domain replay measurement
+mapping), not age of a historical bag relative to current UTC. Offline replay
+maps each available batch to its actual processing release, without negative
+ages. Paced replay maps original sensor intervals onto steady_clock. Hardware
+capture/transport/TTA are unknown. Source parsing/generation/certification/
+bootstrap/backend initial setup is measured separately as cold initialization;
+no cold-start realtime claim. CSV diagnostic logging is outside in-process
+output packaging and will be accounted as runtime overhead/queue service;
+there is no production publication. Queue/overload lifecycle is W2, not yet
+implemented or claimed by W1.
+
+SC4 mathematical contract remains finite50, no initial carry-in/renewal.
+Explicit unprotected stress generation may extend input to120 epochs, but
+certifyRawGenerator consumes only the original≤501 sample task prefix;
+extra sources do not acquire an inventory/risk claim. W2 must prove operational
+carry and expiry behavior before this becomes a continuous-system result.
+
+Pre-registered final performance workloads: config/sc4_performance.yaml
+normal SC3_U0 and heaviest successful SC3_G (selected from actual SC3 cost,
+not fastest observed frame),50 input epochs:15 warmup +35 measured. Fault
+onset is16 for both UWB and gyro so measurement includes actual first alarm,
+500ms support and rejoin. This shifted witness has no inherited native
+success; local actual attempt must validate it before freeze. Resource/carry
+stress separately registers late fault48,60 input epochs and fixed lag80 in
+config/sc4_carry.yaml; it is NOT an equivalent performance profile or longer
+protected mathematical scope. Both profiles retain original source weights.
+
+Build accounting so far: first W1 build refused missing direct config/backend
+header declarations; second refused optional lever→vector assignment. Both
+are compilation failures before any native epochs, not hidden navigation
+abort counts. Fixes add explicit include and value_or for an absent lever.
+W1 actual validation/local save remain pending.
+
+W1 verification PASS after the two compile fixes. Deterministic adapter/source/
+time checks plus two actual single-commit healthy outputs pass. The initial
+check harness assumed graph version starts0; actual initialization consumes
+version1. It failed after one valid native commit,0 native abort,1 scheduled
+unattempted. Corrected check verifies actual proof receipt version and +1
+monotonicity, not an invented initial version. Repaired check commits2/2.
+The shifted heavy gyro witness local snapshot commits17/17, all raw qualified:
+actual joint exclusion at16/17,18 evaluated roots; core/full at16
+322.1125/322.1375ms and17 230.9248/230.9494ms. Cold source/init38.41ms.
+Across W1 native check/snapshot attempts:21 scheduled,20 attempted/committed,
+0 aborted,1 unattempted; no failure erased. Input negative fixtures have0
+native commits by construction. These local samples are not a realtime result.
+Platform observed WSL2 Linux6.18.40.1 x86_64, Intel Core Ultra5 125H; runtime
+pins OMP/BLAS/MKL and TBB to1. W1 saves actual source+time interface; W2/W3/W4
+and SC4 acceptance remain active, not completed after this local save.

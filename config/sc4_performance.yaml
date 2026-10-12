@@ -1,0 +1,9 @@
+# Same original task; warmup1..15, measured16..50. No new source law/risk.
+raw_base_law: config/sc4_system.yaml
+sc3_uwb_witness_onset_epoch: 16
+sc2_witness_onset_epoch: 16
+sc4_warmup_epochs: 15
+sc4_measure_epochs: 35
+# Preregistered from SC3 actual cost: healthy U0 and joint gyro recovery.
+sc4_normal_load: SC3_U0
+sc4_heavy_load: SC3_G

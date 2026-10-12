@@ -1,0 +1,7 @@
+# Different resource stress profile, never claimed as an equivalent speedup.
+# Keeps original x0 until the late registered fault has entered the history.
+raw_base_law: config/sc4_system.yaml
+sc4_stress_fixed_lag_epochs: 80
+sc3_uwb_witness_onset_epoch: 48
+sc2_witness_onset_epoch: 48
+sc4_stress_epochs: 60

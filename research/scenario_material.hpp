@@ -62,9 +62,9 @@ struct NoisyMotionScenario {
   s.q_world_body=Eigen::Quaterniond(Eigen::AngleAxisd(rate*t,Eigen::Vector3d(1,2,3).normalized()));
   if(!true_bias.empty()){size_t i=size_t(std::llround(t/.005));if(i>=true_bias.size())throw std::runtime_error("bias truth outside registered sample grid");s.accel_bias_mps2=true_bias[i].head<3>();s.gyro_bias_radps=true_bias[i].tail<3>();}return s;
  }
- NoisyMotionScenario(const std::string& path,const std::string& kind,int seed,int count):law(researchLaw(path)),cfg(IntegrityConfigLoader::load(law[(kind=="I1" || kind=="I2" || kind=="screen" || kind.rfind("SC2_",0)==0 || kind.rfind("SC3_",0)==0)?"imu_base_config":"base_config"].as<std::string>())){
+ NoisyMotionScenario(const std::string& path,const std::string& kind,int seed,int count,bool unprotected_continuation=false):law(researchLaw(path)),cfg(IntegrityConfigLoader::load(law[(kind=="I1" || kind=="I2" || kind=="screen" || kind.rfind("SC2_",0)==0 || kind.rfind("SC3_",0)==0)?"imu_base_config":"base_config"].as<std::string>())){
   epochs=count?count:law["epochs"].as<int>();dt=law["epoch_s"].as<double>();rate=law["angular_rate_radps"].as<double>();
-  if(dt!=.05 || law["imu_sample_s"].as<double>()!=.005 || epochs>law["epochs"].as<int>())throw std::runtime_error("unsupported timestamp/horizon contract");
+  if(dt!=.05 || law["imu_sample_s"].as<double>()!=.005 || epochs<1 || (epochs>law["epochs"].as<int>() && (!unprotected_continuation || epochs>120)))throw std::runtime_error("unsupported timestamp/horizon contract");
   lever=researchVector(law["lever"]);amp=researchVector(law["translation_amplitude"]);freq=researchVector(law["translation_frequency"]);
   cfg.incremental.fixed_lag_epochs=law["fixed_lag_epochs"].as<int>();cfg.integrity_window.epochs=law["window_epochs"].as<int>();
   cfg.realtime.range_sigma_m=law["range_sigma_m"].as<double>();
@@ -108,8 +108,13 @@ struct NoisyMotionScenario {
    additive_imu_fault.push_back(fault);
    imu.push_back(m);
   }
-  if(physical_source_reference)numeric_certificate=certifyRawGenerator(initial_observation,initial_normals,cfg.realtime.prior_sigmas,amp,freq,rate,cfg.imu.gravity_mps2,true_bias.front(),cfg.imu.accelerometer_bias_rw_sigma,cfg.imu.gyroscope_bias_rw_sigma,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),bias_normals,adc_normals,imu);
-  if(physical_source_reference && (kind.rfind("SC2_",0)==0 || kind.rfind("SC3_",0)==0))imu_fault_numeric_certificate=certifyRawGenerator(initial_observation,initial_normals,cfg.realtime.prior_sigmas,amp,freq,rate,cfg.imu.gravity_mps2,true_bias.front(),cfg.imu.accelerometer_bias_rw_sigma,cfg.imu.gyroscope_bias_rw_sigma,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),bias_normals,adc_normals,imu,&additive_imu_fault,&true_bias);
+  // SC4 stress input may continue, but numerical admission consumes only the
+  // ORIGINAL task prefix. Extra draws never extend its inventory or risk.
+  auto cert_imu=imu;auto cert_adc=adc_normals;auto cert_rw=bias_normals;
+  auto cert_fault=additive_imu_fault;auto cert_bias=true_bias;
+  if(unprotected_continuation && epochs>50){cert_imu.resize(501);cert_adc.resize(501);cert_rw.resize(500);cert_fault.resize(501);cert_bias.resize(501);}
+  if(physical_source_reference)numeric_certificate=certifyRawGenerator(initial_observation,initial_normals,cfg.realtime.prior_sigmas,amp,freq,rate,cfg.imu.gravity_mps2,true_bias.front(),cfg.imu.accelerometer_bias_rw_sigma,cfg.imu.gyroscope_bias_rw_sigma,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),cert_rw,cert_adc,cert_imu);
+  if(physical_source_reference && (kind.rfind("SC2_",0)==0 || kind.rfind("SC3_",0)==0))imu_fault_numeric_certificate=certifyRawGenerator(initial_observation,initial_normals,cfg.realtime.prior_sigmas,amp,freq,rate,cfg.imu.gravity_mps2,true_bias.front(),cfg.imu.accelerometer_bias_rw_sigma,cfg.imu.gyroscope_bias_rw_sigma,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),cert_rw,cert_adc,cert_imu,&cert_fault,&cert_bias);
   else imu_fault_numeric_certificate=numeric_certificate;
   for(int e=1;e<=epochs;++e){auto b=ranges(cfg,e);auto s=truth(e*dt);Eigen::Vector3d tag=s.position_world_m+s.q_world_body*lever;
    std::array<double,8> range_draws{},faults{};size_t row=0;
