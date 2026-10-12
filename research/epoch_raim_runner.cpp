@@ -1,6 +1,7 @@
 #include "hybrid_coordinator.hpp"
 #include "scenario_material.hpp"
 #include "raw_source_law.hpp"
+#include "raw_nonlinear_inclusion.hpp"
 #include <chrono>
 #include <fstream>
 #include <iomanip>
@@ -14,21 +15,27 @@ int main(int argc,char** argv){try{
  std::string algorithm=argv[4],kind=argv[3];bool hybrid=algorithm=="hybrid",isB=hybrid || algorithm=="fused_epoch_pl",fde=argc<6 || std::string(argv[5])=="on";
  if(!isB && algorithm!="uwb_epoch_raim")throw std::runtime_error("unsupported algorithm");
  bool sharedEpisode=hybrid && std::getenv("HYBRID_SHARED_EPISODE") && std::string(std::getenv("HYBRID_SHARED_EPISODE"))=="1";
- NoisyMotionScenario scene(argv[1],kind=="H1"?"U0":kind,20261010,argc>6?std::stoi(argv[6]):50);
+ auto sourceInitBegin=Clock::now();NoisyMotionScenario scene(argv[1],kind=="H1"?"U0":kind,20261010,argc>6?std::stoi(argv[6]):50);
+ std::cout<<"source_law_init_ms="<<ms(sourceInitBegin,Clock::now())<<" numeric_mapping_valid="<<scene.numeric_certificate.valid<<"\n";
  double alpha=scene.law["alpha_per_test"].as<double>(),tail=scene.law["noise_tail_per_candidate"].as<double>();
  double risk=2*(scene.cfg.anchors.size()+1)*scene.epochs*tail;
  if(risk>scene.law["risk_budget"].as<double>())throw std::runtime_error("fixed candidate union exceeds budget");
  IncrementalUwbImuEstimator estimator(scene.cfg,scene.lever);
  estimator.initialize(scene.initial_observation,scene.cfg.realtime.prior_sigmas);estimator.ingestImu(scene.imu[0]);
  std::ofstream out(argv[2]);out<<std::setprecision(17);
- out<<"epoch,algorithm,label,status,alarm,excluded,correct,healthy_excluded,retained,updates,available,statistic,threshold,dof,hpl,vpl,error,increment_error,translation_rpe,rotation_rpe,core_ms,prediction_ms,commit_ms,full_ms,candidates,rows,cols,center_shift,union_charge,tag_x,tag_y,tag_z,timestamp_ns,formal_eligible,publication_protected,raw_total_risk,pure_uwb_pl,post_statistic,post_dof,excluded_anchor,excluded_measurement,max_slope_x,max_slope_y,max_slope_z,reference_x,reference_y,reference_z,horizontal_al,vertical_al,within_al,transaction_id,prediction_version,protection_frame,prior_independence,history_condition,model_version,linearization_tag_x,linearization_tag_y,linearization_tag_z,evidence_level,history_status,history_segments,history_bound,history_eta,a_alarm,a_available,a_tag_x,a_tag_y,a_tag_z,a_hpl,a_vpl,h_ms,h_update_ms,verification_ms,finalization_ms,cleanup_ms,a_ms,b_ms,full_C_calls,history_bytes,functional_status,numerical_status,model_status,risk_status,on_time,fused_conditional_available,committed_retained,retained_ids,selection_policy,finite_bound_qualified,application_policy_status,application_available\n";
+ out<<"epoch,algorithm,label,status,alarm,excluded,correct,healthy_excluded,retained,updates,available,statistic,threshold,dof,hpl,vpl,error,increment_error,translation_rpe,rotation_rpe,core_ms,prediction_ms,commit_ms,full_ms,candidates,rows,cols,center_shift,union_charge,tag_x,tag_y,tag_z,timestamp_ns,formal_eligible,publication_protected,raw_total_risk,pure_uwb_pl,post_statistic,post_dof,excluded_anchor,excluded_measurement,max_slope_x,max_slope_y,max_slope_z,reference_x,reference_y,reference_z,horizontal_al,vertical_al,within_al,transaction_id,prediction_version,protection_frame,prior_independence,history_condition,model_version,linearization_tag_x,linearization_tag_y,linearization_tag_z,evidence_level,history_status,history_segments,history_bound,history_eta,a_alarm,a_available,a_tag_x,a_tag_y,a_tag_z,a_hpl,a_vpl,h_ms,h_update_ms,verification_ms,finalization_ms,cleanup_ms,a_ms,b_ms,full_C_calls,history_bytes,functional_status,numerical_status,model_status,risk_status,on_time,fused_conditional_available,committed_retained,retained_ids,selection_policy,finite_bound_qualified,application_policy_status,application_available,source_law_id,bound_risk_upper,risk_horizon,bound_scope,proof_binding_status,frozen_hpl,frozen_vpl,inclusion_x,inclusion_y,inclusion_z,inclusion_center_x,inclusion_center_y,inclusion_center_z,guarantee_domain,remainder_status,scope_risk_status,horizontal_pe,vertical_pe,initial_support_x,initial_support_y,initial_support_z,adc_support,initial_bias_support,bias_rw_support,rotation_discretization_support,lever_support\n";
  Eigen::Vector3d lastTag=Eigen::Vector3d::Zero(),lastTruth=Eigen::Vector3d::Zero();NavigationState lastState,lastGt;
  std::unique_ptr<OnlineGaussianHistory> online;
  if(hybrid)online=std::make_unique<OnlineGaussianHistory>(scene.cfg.integrity_window.epochs,3,scene.law["raw_accel_sigma_mps2"].as<double>(),scene.law["raw_gyro_sigma_radps"].as<double>(),scene.lever,true,64u*1024u*1024u,scene.physical_source_reference);
+ std::unique_ptr<RawNonlinearInclusion> inclusion;
+ if(hybrid && scene.physical_source_reference && scene.initial_law_valid && scene.numeric_certificate.valid){
+  RawInclusionParameters p;p.numeric=scene.numeric_certificate;p.initial_sigmas=scene.cfg.realtime.prior_sigmas;p.accel_adc=scene.law["raw_accel_sigma_mps2"].as<double>();p.gyro_adc=scene.law["raw_gyro_sigma_radps"].as<double>();p.accel_rw=scene.cfg.imu.accelerometer_bias_rw_sigma;p.gyro_rw=scene.cfg.imu.gyroscope_bias_rw_sigma;p.gravity=scene.cfg.imu.gravity_mps2;p.force_lipschitz=scene.law["specific_force_lipschitz_mps3"].as<double>();p.motion_amplitude=scene.amp;p.motion_frequency=scene.freq;p.motion_angular_rate=scene.rate;
+  inclusion=std::make_unique<RawNonlinearInclusion>(scene.initial_observation,p);inclusion->append(scene.imu[0]);
+ }
  bool imuEvidenceMissing=argc>7 && std::string(argv[7])=="imu-invalid";
  bool quarantined=argc>7 && std::string(argv[7])=="history-invalid";
  for(int e=1;e<=scene.epochs;++e){
-  auto start=Clock::now();for(int i=(e-1)*10+1;i<=e*10;++i)estimator.ingestImu(scene.imu[i]);
+  auto start=Clock::now();for(int i=(e-1)*10+1;i<=e*10;++i){estimator.ingestImu(scene.imu[i]);if(inclusion)inclusion->append(scene.imu[i]);}
   auto b=scene.uwb[e-1];if(hybrid && kind=="H1" && e==3)b.measurements[0].range_m+=.02;EpochPreparationOptions options{hybrid,true,false,false};auto tx=estimator.prepareEpoch(b,options);
   auto predStart=Clock::now();ResearchEpochPredictionV1 pred;
   double hMs=0,hUpdateMs=0,verificationMs=0,finalizationMs=0,cleanupMs=0;size_t hBytes=0;
@@ -83,11 +90,19 @@ int main(int argc,char** argv){try{
   for(auto group:plan.groups_to_add)for(const auto& entry:estimator.factorLedger().groupEntries(group))if(entry.kind==FactorKind::UwbBatch && entry.lifecycle==FactorLifecycle::Active)for(auto source:entry.source_measurements)actualSources.insert(source.value());
   if(hybrid){std::set<uint64_t> expectedSources;for(auto group:plan.groups_to_add)for(const auto& g:retainedTx->uwb_groups)if(g.id==group)for(auto source:g.source_measurements)expectedSources.insert(source.value());if(actualSources!=expectedSources)throw std::runtime_error("actual retained lineage mismatch");}
   std::ostringstream sourceIds;bool firstSource=true;for(auto source:actualSources){if(!firstSource)sourceIds<<'|';sourceIds<<source;firstSource=false;}
-  auto fs=commitEnd;
+  auto fs=commitEnd;RawInclusionEvidence rawBound;bool rawQualified=false;
+  Eigen::Vector3d frozenPL=r.gaussian.pl;
+
   if(hybrid){auto final=finalizeHybrid(r.gaussian.pl,r.tag,state,scene.lever,receipt,TransactionId(transactionId),e,b.timestamp,predictionVersion,HybridDomain::RawUnqualified,NAN,scene.law["risk_budget"].as<double>(),scene.cfg.risk_v2.horizontal_alert_limit_m,scene.cfg.risk_v2.vertical_alert_limit_m,ms(start,fs));
    if(!final.receipt_bound)throw std::runtime_error("hybrid final receipt failed");
    if(final.numerical)pl=final.pl;
-   available=final.available();
+   available=final.available();frozenPL=pl;
+   if(inclusion && !imuEvidenceMissing && !quarantined && rawEvidence.history.status=="BOUNDED" && r.status=="FROZEN_MODEL_ONLY"){
+    rawBound=inclusion->issue(*retainedTx,receipt,state,scene.lever);
+    rawQualified=rawBound.valid && final.receipt_bound && rawBound.source_law_id==scene.law["source_law_id"].as<std::string>() && rawBound.epoch==e && rawBound.horizon==50;
+    if(rawQualified)pl=rawBound.pl;
+   }
+
   }
   if(hybrid){auto hu=Clock::now();for(auto group:plan.groups_to_add)if(!receipt.group_to_slots.count(group.value()))throw std::runtime_error("missing committed group receipt");
    if(online)online->committed(*retainedTx,plan);hUpdateMs=ms(hu,Clock::now());}
@@ -116,7 +131,10 @@ int main(int argc,char** argv){try{
   if(hybrid)linearization=rawEvidence.chart.position_world_m+rawEvidence.chart.q_world_body*scene.lever;
   else if(isB)linearization=pred.prior.mean.position_world_m+pred.prior.mean.q_world_body*scene.lever;
   else if(r.gaussian.mean.size()==3)linearization=r.tag-r.gaussian.mean;
-  out<<','<<linearization.x()<<','<<linearization.y()<<','<<linearization.z()<<','<<(hybrid?"RAW_UNQUALIFIED":"ASSUMPTION_ONLY")<<','<<(hybrid?rawEvidence.history.status:"NOT_USED")<<','<<historySegments<<','<<historyPart.norm()<<','<<historyEta<<','<<advisory.alarm<<','<<(advisory.status=="FROZEN_MODEL_ONLY")<<','<<advisory.tag.x()<<','<<advisory.tag.y()<<','<<advisory.tag.z()<<','<<advisory.gaussian.pl.head<2>().norm()<<','<<advisory.gaussian.pl.z()<<','<<hMs<<','<<hUpdateMs<<','<<verificationMs<<','<<finalizationMs<<','<<cleanupMs<<','<<aMs<<','<<bMs<<",0,"<<hBytes<<','<<(r.excluded>=0?"UWB_EXCLUDED":hybrid?"BEST_EFFORT":"NOMINAL")<<','<<(r.gaussian.pl.allFinite()?"FINITE":"INDETERMINATE")<<','<<(hybrid?"RAW_UNQUALIFIED":"ASSUMPTION_ONLY")<<",UNKNOWN,"<<(ms(start,end)<=50)<<",0,"<<actualSources.size()<<','<<sourceIds.str()<<','<<(hybrid?"bound_first_research-v1":"legacy_al_gated")<<",0,APPLICATION_AL_UNQUALIFIED,0\n";
+  out<<','<<linearization.x()<<','<<linearization.y()<<','<<linearization.z()<<','<<(hybrid?"RAW_UNQUALIFIED":"ASSUMPTION_ONLY")<<','<<(hybrid?rawEvidence.history.status:"NOT_USED")<<','<<historySegments<<','<<historyPart.norm()<<','<<historyEta<<','<<advisory.alarm<<','<<(advisory.status=="FROZEN_MODEL_ONLY")<<','<<advisory.tag.x()<<','<<advisory.tag.y()<<','<<advisory.tag.z()<<','<<advisory.gaussian.pl.head<2>().norm()<<','<<advisory.gaussian.pl.z()<<','<<hMs<<','<<hUpdateMs<<','<<verificationMs<<','<<finalizationMs<<','<<cleanupMs<<','<<aMs<<','<<bMs<<",0,"<<hBytes<<','<<(r.excluded>=0?"UWB_EXCLUDED":hybrid?"BEST_EFFORT":"NOMINAL")<<','<<(r.gaussian.pl.allFinite()?"FINITE":"INDETERMINATE")<<','<<(hybrid?"RAW_UNQUALIFIED":"ASSUMPTION_ONLY")<<",UNKNOWN,"<<(ms(start,end)<=50)<<",0,"<<actualSources.size()<<','<<sourceIds.str()<<','<<(hybrid?"bound_first_research-v1":"legacy_al_gated")<<','<<rawQualified<<",APPLICATION_AL_UNQUALIFIED,0,"<<(scene.physical_source_reference?"raw-source-rw-v1":"legacy-mismatch")<<','<<(rawQualified?rawBound.event_risk:NAN)<<",50,"<<(rawQualified?rawBound.scope:"UNQUALIFIED")<<','<<(rawQualified?"BOUND_TO_ACTUAL_RECEIPT":"REFUSED")<<','<<frozenPL.head<2>().norm()<<','<<frozenPL.z();
+  Eigen::Vector3d inclusionPart=Eigen::Vector3d::Constant(NAN),inclusionCenter=Eigen::Vector3d::Constant(NAN);
+  if(rawQualified){inclusionPart=(rawBound.high-rawBound.low)/2;inclusionCenter=(fusedTag-rawBound.reference).cwiseAbs();}
+  out<<','<<inclusionPart.x()<<','<<inclusionPart.y()<<','<<inclusionPart.z()<<','<<inclusionCenter.x()<<','<<inclusionCenter.y()<<','<<inclusionCenter.z()<<','<<(rawQualified?"RAW_GENERATOR_CONDITIONAL":"FROZEN_LINEAR_DIAGNOSTIC")<<','<<(rawQualified?"CONTINUOUS_INTERVAL_INCLUSION":"UNQUALIFIED")<<','<<(rawQualified?"VERIFIED":"UNKNOWN")<<','<<(tag-truth).head<2>().norm()<<','<<std::abs((tag-truth).z())<<','<<rawBound.initial.x()<<','<<rawBound.initial.y()<<','<<rawBound.initial.z()<<','<<rawBound.adc<<','<<rawBound.initial_bias<<','<<rawBound.bias_rw<<','<<rawBound.rotation_discretization<<','<<rawBound.lever<<'\n';
   if(e==14 || e==15)std::cout<<algorithm<<" "<<kind<<" epoch="<<e<<" status="<<r.status<<" exclude="<<r.excluded<<" stat="<<r.gaussian.statistic<<" hpl="<<pl.head<2>().norm()<<" vpl="<<pl.z()<<" core_ms="<<ms(coreStart,coreEnd)<<" full_ms="<<ms(start,end)<<"\n";
   lastTag=tag;lastTruth=truth;lastState=state;lastGt=gt;
  }

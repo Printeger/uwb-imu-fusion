@@ -513,3 +513,7 @@ target_link_libraries(hybrid_tightening_checks fde_research)
 # Raw-source and nonlinear inclusion research oracles, never production linked.
 add_executable(hybrid_raw_checks EXCLUDE_FROM_ALL research/hybrid_raw_checks.cpp)
 target_link_libraries(hybrid_raw_checks fde_research)
+
+# Only the proof oracle needs directed rounding; production arithmetic untouched.
+set_source_files_properties(research/raw_nonlinear_inclusion.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+target_sources(fde_research PRIVATE research/raw_nonlinear_inclusion.cpp)

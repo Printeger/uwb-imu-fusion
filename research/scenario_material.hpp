@@ -1,5 +1,6 @@
 #pragma once
 #include "raw_imu_episode.hpp"
+#include "raw_nonlinear_inclusion.hpp"
 #include "uwb_imu_pl/config/integrity_config.hpp"
 #include "uwb_imu_pl/estimation/incremental_estimator.hpp"
 #include <Eigen/Geometry>
@@ -49,6 +50,7 @@ struct NoisyMotionScenario {
  int epochs;double dt,rate;
  NavigationState initial_observation;
  bool initial_law_valid=false,physical_source_reference=false;
+ RawInputRoundoff numeric_certificate;
  std::vector<Eigen::Matrix<double,6,1>> true_bias;
 
  NavigationState truth(double t)const{
@@ -64,19 +66,21 @@ struct NoisyMotionScenario {
   lever=researchVector(law["lever"]);amp=researchVector(law["translation_amplitude"]);freq=researchVector(law["translation_frequency"]);
   cfg.incremental.fixed_lag_epochs=law["fixed_lag_epochs"].as<int>();cfg.integrity_window.epochs=law["window_epochs"].as<int>();
   cfg.realtime.range_sigma_m=law["range_sigma_m"].as<double>();
+  Eigen::Matrix<double,15,1> initial_normals=Eigen::Matrix<double,15,1>::Zero();
+  std::vector<Eigen::Matrix<double,6,1>> bias_normals,adc_normals;
   physical_source_reference=law["source_law_id"] && law["source_law_id"].as<std::string>()=="raw-source-rw-v1";
   if(physical_source_reference){
    if(law["bias_process"].as<std::string>()!="sample-grid-gaussian-rw" || !law["nominal_weights_are_metric"].as<bool>())throw std::runtime_error("unsupported primitive law");
    std::mt19937 bias_rng(seed+23497);std::normal_distribution<double> bias_normal(0,1);
    Eigen::Matrix<double,6,1> bias;bias.head<3>()=researchVector(law["true_initial_accel_bias_mps2"]);bias.tail<3>()=researchVector(law["true_initial_gyro_bias_radps"]);
    true_bias.push_back(bias);
-   for(int i=1;i<=epochs*10;++i){for(int axis=0;axis<6;++axis)bias(axis)+=(axis<3?cfg.imu.accelerometer_bias_rw_sigma:cfg.imu.gyroscope_bias_rw_sigma)*std::sqrt(.005)*bias_normal(bias_rng);true_bias.push_back(bias);}
+   for(int i=1;i<=epochs*10;++i){Eigen::Matrix<double,6,1> draw;for(int axis=0;axis<6;++axis){draw(axis)=bias_normal(bias_rng);bias(axis)+=(axis<3?cfg.imu.accelerometer_bias_rw_sigma:cfg.imu.gyroscope_bias_rw_sigma)*std::sqrt(.005)*draw(axis);}bias_normals.push_back(draw);true_bias.push_back(bias);}
   }
   initial_observation=truth(0);
   initial_law_valid=law["initial_observation_law"] && law["initial_observation_law"].as<std::string>()=="independent-tangent-gaussian-v1";
   if(initial_law_valid){
    std::mt19937 initial_rng(seed+15401);std::normal_distribution<double> initial_normal(0,1);
-   Eigen::Matrix<double,15,1> eta;for(int k=0;k<15;++k)eta(k)=cfg.realtime.prior_sigmas(k)*initial_normal(initial_rng);
+   Eigen::Matrix<double,15,1> eta;for(int k=0;k<15;++k){initial_normals(k)=initial_normal(initial_rng);eta(k)=cfg.realtime.prior_sigmas(k)*initial_normals(k);}
    gtsam::Pose3 true_pose(gtsam::Rot3(initial_observation.q_world_body.toRotationMatrix()),initial_observation.position_world_m);
    auto observed=true_pose.retract(eta.head<6>());
    initial_observation.q_world_body=Eigen::Quaterniond(observed.rotation().matrix());initial_observation.position_world_m=observed.translation();
@@ -89,7 +93,7 @@ struct NoisyMotionScenario {
    m.specific_force_mps2=state.q_world_body.conjugate()*(acc+Eigen::Vector3d(0,0,cfg.imu.gravity_mps2));
    m.angular_velocity_radps=rate*Eigen::Vector3d(1,2,3).normalized();
    m.specific_force_mps2+=state.accel_bias_mps2;m.angular_velocity_radps+=state.gyro_bias_radps;
-   for(int j=0;j<3;++j){m.specific_force_mps2(j)+=law["raw_accel_sigma_mps2"].as<double>()*normal(imu_rng);m.angular_velocity_radps(j)+=law["raw_gyro_sigma_radps"].as<double>()*normal(imu_rng);}
+   Eigen::Matrix<double,6,1> draw;for(int j=0;j<3;++j){draw(j)=normal(imu_rng);draw(j+3)=normal(imu_rng);m.specific_force_mps2(j)+=law["raw_accel_sigma_mps2"].as<double>()*draw(j);m.angular_velocity_radps(j)+=law["raw_gyro_sigma_radps"].as<double>()*draw(j+3);}adc_normals.push_back(draw);
    const int fault_epoch=law["fault_epoch"].as<int>();
    const double begin=(fault_epoch-1)*dt+.005;
    const double duration=kind=="I1"?.05:.5;
@@ -97,6 +101,7 @@ struct NoisyMotionScenario {
     m.specific_force_mps2.x()+=law["imu_accel_amplitude_mps2"].as<double>();
    imu.push_back(m);
   }
+  if(physical_source_reference)numeric_certificate=certifyRawGenerator(initial_observation,initial_normals,cfg.realtime.prior_sigmas,amp,freq,rate,cfg.imu.gravity_mps2,true_bias.front(),cfg.imu.accelerometer_bias_rw_sigma,cfg.imu.gyroscope_bias_rw_sigma,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),bias_normals,adc_normals,imu);
   for(int e=1;e<=epochs;++e){auto b=ranges(cfg,e);auto s=truth(e*dt);Eigen::Vector3d tag=s.position_world_m+s.q_world_body*lever;
    for(auto& m:b.measurements){if(kind=="U3")m.anchor_position_m.z()=1.1;m.range_m=(m.anchor_position_m-tag).norm()+cfg.realtime.range_sigma_m*normal(uwb_rng);}
    const int f=law["fault_epoch"].as<int>(),end=f+(kind=="U2"?law["persistent_epochs"].as<int>():1);
