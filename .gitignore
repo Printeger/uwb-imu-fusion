@@ -192,3 +192,8 @@ compile_commands.json
 
 # Standalone Gaussian tightening oracle scratch; the CLI uses .cache/hybrid/.
 /tightening-*/
+# Direct oracle runs with destination '.' emit these full numeric tables.
+# Root-only rules keep compact evidence under doc/ and docs/ trackable.
+/candidates.csv
+/intervals.csv
+/audit.csv
