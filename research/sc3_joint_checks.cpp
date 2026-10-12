@@ -14,13 +14,22 @@ void jointBoundChecks(){
   NoisyMotionScenario s("config/sc3_joint.yaml",kind,20261010,16);auto law=lawOf(s);check(law.numeric.valid && !s.numeric_certificate.valid,"joint numeric admission is distinct from healthy-IMU detector");
   Sc2ImuMonitor monitor(s.initial_observation,law);Sc3IndependentJointBound bound(s.initial_observation,law,s.uwb[0]);Sc2IndependentBridge old(s.initial_observation,law);
   IncrementalUwbImuEstimator backend(s.cfg,s.lever);backend.initialize(s.initial_observation,s.cfg.realtime.prior_sigmas);backend.ingestImu(s.imu[0]);monitor.append(s.imu[0]);
-  for(int e=1;e<=16;++e){for(int i=(e-1)*10+1;i<=e*10;++i){backend.ingestImu(s.imu[i]);monitor.append(s.imu[i]);}auto tx=backend.prepareEpoch(s.uwb[e-1]);auto retained=tx;auto receipt=backend.commitEpoch(std::move(tx),EpochCommitPlan::nominalPlan(retained));auto state=backend.currentState();
+  for(int e=1;e<=16;++e){for(int i=(e-1)*10+1;i<=e*10;++i){backend.ingestImu(s.imu[i]);monitor.append(s.imu[i]);}auto tx=backend.prepareEpoch(s.uwb[e-1],EpochPreparationOptions{true,true,true,true});auto plan=EpochCommitPlan::nominalPlan(tx);
+   if(std::string(kind)=="SC3_A" && e==14){plan.groups_to_add={tx.generic_bridge_group.id,tx.generic_bias_continuity_group.id,tx.uwb_groups.front().id};plan.bridge_mode=BridgeMode::GenericKinematic;}
+   if(std::string(kind)=="SC3_A" && e==15){bool found=false;for(const auto& g:tx.uwb_groups)if(!g.nominal && g.source_measurements.size()==7 && std::find(g.source_measurements.begin(),g.source_measurements.end(),tx.uwb_batch.measurements[1].id)==g.source_measurements.end()){plan.groups_to_add={tx.imu_group.id,g.id};found=true;break;}check(found,"actual wrong UWB action retains true faulty anchor0");}
+   auto retained=tx;auto receipt=backend.commitEpoch(std::move(tx),plan);auto state=backend.currentState();
+   if(std::string(kind)=="SC3_A" && e==14)check(!receipt.group_to_slots.count(retained.imu_group.id.value()),"wrong healthy IMU deletion actually committed");
    auto out=bound.issue(monitor,s.range_certificates[e-1],retained,receipt,state,s.lever);check(out.valid && out.expected==481401 && out.evaluated==out.expected && out.geometry.considered==9,"entire physical product shares valid current projection recipe");
-   if(e==15)std::cout<<"SC3 snapshot "<<kind<<" native FDE-off epoch15 H/V="<<out.geometry.hpl<<"/"<<out.geometry.pl.z()<<" masks="<<out.geometry.considered<<" product="<<out.evaluated<<"\n";
-   auto truth=s.truth(e*.05);Eigen::Vector3d tag=truth.position_world_m+truth.q_world_body*s.lever;check((tag.array()>=out.geometry.low.array()).all() && (tag.array()<=out.geometry.high.array()).all(),"joint polluted output preserves actual tag truth");
+   if(e==15)std::cout<<"SC3 snapshot "<<kind<<" native wrong-FDE/off epoch15 H/V="<<out.geometry.hpl<<"/"<<out.geometry.pl.z()<<" masks="<<out.geometry.considered<<" product="<<out.evaluated<<"\n";
+   auto truth=s.truth(e*.05);Eigen::Vector3d tag=truth.position_world_m+truth.q_world_body*s.lever;check((tag.array()>=out.geometry.low.array()).all() && (tag.array()<=out.geometry.high.array()).all(),"joint wrong/FDE-off output preserves actual tag truth");
    if(e>=15){check(monitor.assessment().alarm,"actual no-label IMU alarm");std::array<RawRangeShell,8> shell;check(rawRangeShells(s.range_certificates[e-1],retained.uwb_batch,e,shell),"actual certified noisy shells");double truthRange=(tag-retained.uwb_batch.measurements[0].anchor_position_m).norm();check(truthRange<shell[0].low || truthRange>shell[0].high,"joint truth violates SC2 all-healthy-UWB shell premise even if its numerical relaxation is finite");
     RawRangeBudget wrong;wrong.all_ranges_healthy=true;check(!bound.issue(monitor,s.range_certificates[e-1],retained,receipt,state,s.lever,wrong).valid,"joint proof cannot silently drop UWB masks");
     RawRangeBudget exhausted;exhausted.max_boxes=0;auto fallback=bound.issue(monitor,s.range_certificates[e-1],retained,receipt,state,s.lever,exhausted);check(fallback.valid && fallback.geometry.budget_exhausted && fallback.evaluated==481401,"all unprocessed joint branches remain via physical frontier");
+    auto mutated=retained;mutated.raw_imu_slice.back().specific_force_mps2.x()+=1;check(!bound.issue(monitor,s.range_certificates[e-1],mutated,receipt,state,s.lever).valid,"mutated raw prefix refuses");
+    auto foreign=s.range_certificates[e-1];foreign.frame="body";check(!bound.issue(monitor,foreign,retained,receipt,state,s.lever).valid,"foreign range frame refuses");
+    auto twice=receipt;twice.backend_updates=2;check(!bound.issue(monitor,s.range_certificates[e-1],retained,twice,state,s.lever).valid,"two-update receipt refuses");
+    auto late=state;late.timestamp=TimestampNs(2550000000LL);check(!bound.issue(monitor,s.range_certificates[e-1],retained,receipt,late,s.lever).valid,"expired state refuses");
+    check(!old.envelope(51,s.lever).valid,"whole task horizon cannot renew after50");
     auto stale=receipt;stale.graph_version++;check(!bound.issue(monitor,s.range_certificates[e-1],retained,stale,state,s.lever).valid,"foreign receipt version refused");
    }
   }
@@ -90,11 +99,12 @@ int main(int argc,char** argv){try{
  jointBoundChecks();jointResponseOracle();cancellationOracle();nativeJointChecks();
  NoisyMotionScenario scene("config/sc3_joint.yaml","U0",20261010,1);auto pool=makeSc3FaultPool(scene.uwb[0]);check(pool.complete() && pool.at(0).identity=="NONE","full raw physical census");
  size_t u=0,a=0,g=0,ua=0,ug=0;
- for(size_t n=1;n<pool.size();++n){auto h=pool.at(n);check(h.hypothesis.id.value()==n+1 && h.hypothesis.modes.size()==size_t((h.uwb>=0)+(h.imu>=0)),"bijection/parameter dimension");
+ for(size_t n=1;n<pool.size();++n){auto h=pool.at(n);check(h.bound_status=="NOT_CONSUMED" && h.detector_status=="LOCAL_PASS_NEVER_EXCLUDES_PHYSICAL_BRANCH" && h.source_event=="raw-source-rw-v1:E6421-7sigma-50epoch" && h.hypothesis.id.value()==n+1 && h.hypothesis.modes.size()==size_t((h.uwb>=0)+(h.imu>=0)),"bijection/parameter dimension");
   if(h.imu<0)++u;else if(pool.imu[h.imu].unit.axis<3){if(h.uwb>=0)++ua;else ++a;}else{if(h.uwb>=0)++ug;else ++g;}
  }
  check(u==800 && a==300 && g==300 && ua==240000 && ug==240000,"H0/UWB/accel/gyro/joint categories cannot disappear");
  auto corrupted=pool;corrupted.imu.pop_back();check(!corrupted.complete(),"missing consumed family refused");corrupted=pool;corrupted.imu[0].identity=corrupted.imu[1].identity;check(!corrupted.complete(),"duplicate physical identity refused");
+ bool actionRefused=false;try{Sc3JointCoordinator limited(scene.initial_observation,lawOf(scene),scene.uwb[0],17);}catch(const std::exception&){actionRefused=true;}check(actionRefused,"action17 rejects entire joint scope");
  bool refused=false;try{makeSc3FaultPool(scene.uwb[0],1399);}catch(const std::exception&){refused=true;}check(refused,"capacity cannot silently truncate requested scope");
  auto h=pool.at(1+800+600);check(h.uwb==0 && h.imu==0 && h.hypothesis.modes.size()==2,"two independent shared physical amplitudes");
  auto episode=pool.imu.at(28);auto closure=sc2SupportClosure({episode.identity,episode.unit.time_begin,episode.unit.time_end,episode.unit.axis},30);check(closure.valid,"upstream raw support mapper consumed");

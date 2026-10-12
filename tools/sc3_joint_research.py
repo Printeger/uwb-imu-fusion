@@ -38,6 +38,7 @@ def native(scene,mode,count,directory,redact=False,compat=False):
         for e in [12,15,17,25,26,30]:
             if e<=count:print('SNAPSHOT',scene,mode,{k:rows[e-1][k] for k in ['epoch','status','excluded','imu_bridge','imu_rejoined','history_uwb_removed','hpl','vpl','horizontal_pe','vertical_pe','actions_evaluated','rebuilds']},flush=True)
         for hal,val in [(2,3),(5,5),(10,10)]:print('AL',scene,mode,hal,val,'numeric_pass',sum(float(r['hpl'])<=hal and float(r['vpl'])<=val for r in rows),'application_available=0',flush=True)
+    print('BOUND_COUNTS',scene,mode,'redacted' if redact else '',{status:sum(r.get('raw_bound_status',r.get('sc1_status',''))==status for r in rows) for status in sorted({r.get('raw_bound_status',r.get('sc1_status','')) for r in rows})},flush=True)
     print('DENOM',scene,mode,'redacted' if redact else '', 'scheduled=attempted=committed=finite=qualified='+str(count),'aborted=refused=0','late='+str(sum(r['on_time']=='0' for r in rows)),flush=True)
     return rows
 

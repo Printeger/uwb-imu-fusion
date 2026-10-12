@@ -635,7 +635,7 @@ bytecode are cleaned after aggregation. No new figure, evidence database,
 backup, binary or duplicate results document is retained. Existing SC1
 artifacts and user files are preserved.
 
-## SC3 — unified physical faults and joint fusion (in progress)
+## SC3 — unified physical faults and joint fusion
 
 Starting local HEAD `c254e46`, clean tree. SC1 and SC2 are preserved. This stage
 uses SC3-spec-1.0 and the actual SC2 handoff above; joint qualification is not
@@ -774,3 +774,162 @@ W4 preregistered freeze:320 stream epochs,12 streams: joint A/G off/on30
 new-pool UWB U1/U2 on19/21(40), original SC1 U1/U2 on19/21(40).
 No seed/amplitude search.290 scored,30 redacted. Acceptance and final affected
 regression remain pending W4. No SC3 completion or SC4 work claimed here.
+
+### SC3 W4 acceptance and SC4 handoff
+
+Functional freeze SHA: `90c58a6`; W1 `bd5fe70`, W2 `7a805ee`. Final W4
+adds refusal/receipt assertions and source-scope admission guards, preserving
+all fixed numeric inputs. Commands: `python3 tools/sc3_joint_research.py
+checks --build` and `python3 tools/sc3_joint_research.py streams`.
+
+Both frozen runs completed320 scheduled/attempted/committed/finite/qualified
+raw positions each,0 aborted/refused. First run omitted contracted/fallback
+counters in its harness; the affected fixed matrix was rerun only to recover
+these counters. This is640 actual commits,580 scored positions,60 redacted;
+not640 independent risk trials. Corrected run:320 CONTRACTED_VERIFIED,
+0 fallback. Both runs have the same per-stream late counts below. Geometric
+qualification here is spatial coverage; late rows are NOT timely protected
+publications. All application/formal/publication fields remain0.
+
+| Frozen stream | Epochs | Contracted | Fallback/refused/abort | Late (>50ms) |
+|---|---:|---:|---:|---:|
+| joint accel off/on |30/30|30/30|0/0|0/16|
+| joint gyro off/on |30/30|30/30|0/0|0/16|
+| IMU-only accel/gyro on |30/30|30/30|0/0|16/16|
+| staggered on |30|30|0|19|
+| joint accel scoring-redacted |30|30|0|16|
+| new-pool UWB1/UWB3 |19/21|19/21|0/0|3/3|
+| original SC1 U1/U2 |19/21|19/21|0/0|13/16|
+
+Scoring redaction leaves every online state, action, root count, PL, raw
+source, risk and receipt exactly identical. Before faults, on/off native
+states match exactly. Both overlapping families actually remove anchor0
+and full IMU support at15–17, bridge15–25, rejoin26–30 and retain valid
+all9/all481401 raw coverage. Staggered UWB12–14 precedes IMU15; historical
+UWB removal remains in the actual single graph, and the physical bank/event
+never resets. New-pool UWB-only fixtures actually exclude anchor0 at15
+without IMU removal; original SC1 U1/U2 remain valid and never widen their
+old raw inertial bound.
+
+| Actual joint snapshot | HPL/VPL m | PE_H/PE_V m | Native action |
+|---|---|---|---|
+| accel15 |3.412803/6.118728|.123237/.100731|both,14 historical UWB removed|
+| accel17 |3.617849/6.809397|.027318/.013716|both|
+| accel25 |2.846389/5.222348|.023760/.125685|IMU bridge shared tail|
+| accel26 |2.845210/5.313355|.018512/.040100|IMU rejoined|
+| accel30 |3.000259/5.208363|.119962/.026270|four subsequent outputs|
+| gyro15 |3.411885/6.114706|.122326/.096709|both,14 historical UWB removed|
+| gyro17 |3.617971/6.808945|.027270/.013263|both|
+| gyro25 |2.846424/5.222090|.023751/.125427|IMU bridge shared tail|
+| gyro26 |2.846523/5.314759|.020881/.041503|IMU rejoined|
+| gyro30 |2.903242/5.364836|.043575/.130203|four subsequent outputs|
+
+First fixed-run mean/median/P95/max ms (no concurrent build): accel candidate
+101.38/142.09/231.16/254.58, final bound .600/.574/.796/1.046, full service
+104.99/146.13/236.07/260.67; gyro candidate141.76/210.26/336.60/376.93,
+final bound .572/.566/.671/.715, full145.15/214.26/342.12/382.35.
+Source initialization is separate,87.11ms accel/59.34ms gyro. Service includes
+monitor/search/copies/rebuilds/candidate proof and consumer reproof/native
+commit/final issue/score/retained-ID collection, excludes CSV serialization
+and I/O. These are PC service samples, not hardware TTA/WCET. Full overhead
+includes the native commit; no expensive rebuild is omitted as diagnostic.
+Most cost is candidate work. No SC4 performance claim.
+
+Raw position protection is not a full navigation accuracy guarantee: accel
+velocity/rotation maxima1.8923m/s/1.1982rad, gyro3.5772m/s/1.7784rad.
+AL remains postprocessing: e.g.10/10m numeric passes all30 A/G positions,
+while2/3m passes0; application availability remains0 regardless. The risk
+amount, actual FDE action and PL never depend on this numeric AL filter.
+
+| SC3→SC4 field | Actual binding / limitation |
+|---|---|
+| requested |H0/UWB/all six raw IMU axes/UWB+accel/UWB+gyro; constant single episodes, declared onsets/durations, any amplitudes, overlapping or staggered|
+| implemented |481401 exact physical identities;1400 stored modes; complete18 numerical action roots on alarm/held isolation; raw support closure and native UWB replacements|
+| verified mathematical scope |full requested raw position union on original6421-source E; full-state independent propagation, all9 UWB masks, any selected center/action|
+| verified native recovery subdomain |registered anchor0+accel-x20 or gyro-x1 at.705s/500ms,3 UWB epochs at15 or stagger12; real backend/history/tail/rejoin; UWB1/3 and IMU-only actual cases|
+| missing native scope |other axes/amplitudes/onsets/long-term navigation not empirically qualified; no silent removal of gyro or other requested physical categories|
+| online proof dependencies |matched original initial law/numeric process certificate/raw prefix/sealed full8-row range evidence/full physical envelope/all9 projections/action census/final actual receipt+tag|
+| oracle only |six-axis finite difference/QR/SVD and cancellation frozen model; neither supplies online raw risk|
+| resource |mode1400,action18,range256; physical recipe481401 distinct identities; capacity1399 or17 refuses globally; range0 retains every physical frontier|
+| worst declared work |18 candidate copies; up to17 retained-graph optimizations×2 GN rounds×8 iterations; all9 range projections for each producer+consumer proof and final issue, at most333 projection calls per alarmed epoch; no481401 dense numeric fit claim|
+| task termination |at most50epochs/2.5s from original valid initial boundary; task-internal history persists; no initial carry-in or cross-task renewal|
+| conditional task risk |sup joint deterministic fault/action/issued k≤50 PE>PL ≤3.7375139072537422e-7; same E, no new charge per root, no independent prior product|
+| detection/continuity |raw IMU necessary test false-alarm conditional E bound inherited; weak faults can be unmonitorable; functional UWB/Gaussian post-test has no new raw false-alarm/MD/HMI theorem|
+| omission/deployment |out-of-domain initial/source/motion/horizon/multiple episodes/axes unknown or refused, never risk0; hardware priors/calibration/HMI/infinite horizon OPEN|
+| lifecycle/failure |missing original x0/irreversible marginal history rejects recovery; proof can independently protect current position when valid; expired evidence/invalid source/unknown finite reference refuses; no second commit repair|
+| output schema |CSV action/support/history/root/receipt/state/tag/proof/count/risk/timing fields in runSc3Joint; raw and functional Gaussian levels separate; formal/publication/application0|
+
+Negative coverage: actual wrong healthy IMU deletion at14 and wrong healthy
+UWB anchor1 deletion at15 retain the true joint fault explanation under the
+all9 raw bound; raw-prefix/frame/receipt/version/update-count/state-expiry
+mutations refuse. Physical envelope51 refuses renewal. Existing shared
+range kernel mirror/singular/slab/lattice/frontier tests protect both mirror
+branches and are part of final regression. Dangerous joint nullspace oracle
+returns unbounded Gaussian PL. Source-domain two-axis refusal and weak
+undetected IMU cases remain covered by upstream SC2 regression, without
+upgrading them to joint recovery positives. Resource failures never remove
+physical explanations or count unevaluated numerical branches as risk0.
+
+Final affected build/regression and cleanup are pending below; status is
+not yet normal success until every SC3-A01–A12 audit row is filled.
+
+Fixed off/on comparison: accel horizontal PE mean/max .1900/.6300m →
+.06519/.15466m and vertical .1692/.5787m → .05525/.13432m. Gyro horizontal
+.1273/.5338m → .06520/.19819m; vertical .04938/.12020m → .06141/.18218m,
+so vertical gyro accuracy worsens despite all raw coverage passing. This
+precludes a general navigation accuracy improvement claim. A/G on HPL
+mean/median/P95/max2.9583/2.9055/3.4144/3.6178m and
+2.9551/2.9029/3.4140/3.6180m; VPL5.4494/5.3837/6.1107/6.8094m and
+5.4572/5.3821/6.1083/6.8089m. Zero observed violations are implementation
+checks, never a statistical proof of the conditional task-risk amount.
+
+Each indexed physical hypothesis also carries explicit original source-event,
+branch-constraint recipe and separate NOT_CONSUMED bound/local-PASS retention/
+native-recovery-unqualified statuses. Generation cannot qualify a physical
+hypothesis; the receipt-bound all-branch consumer supplies the coverage result.
+Functional action statuses are distinct from these physical evidence statuses.
+
+Final affected regression: sc3_joint_checks, sc2_imu_checks,
+raw_range_checks, hybrid_raw_checks, hybrid_checks, epoch_raim_checks and
+fused_epoch_checks all PASS (last two with config/fde_next.yaml). Final SC3
+native fixtures84 scheduled/attempted/committed,0 aborted,84 raw qualified;
+plus one diagnostic setup commit and one pending oracle discard. Combining
+SC3 trajectory attempts across W2/W3/W4, including both frozen runs and both
+W3 failures:892 scheduled,856 attempted,854 committed,2 aborted,
+36 unattempted. Diagnostic response oracles are separate:four invocations,
+one initial Eigen harness assertion failure and three passes, one setup
+commit each; the failed invocation's read-only pending transaction was
+abandoned on process exit, three successful invocations discard it. Old-stage
+regressions are listed separately and not added as new SC3 evidence trials.
+Build warnings remain pre-existing/compact-statement style warnings; all
+final targets compile/link successfully, no failed build hidden as success.
+
+| Clause | Actual acceptance evidence | Result |
+|---|---|---|
+| SC3-A01 |requested/implemented/math verified/native verified/missing all explicit; actual SC2 bridge interface and original boundary|PASS for declared scope|
+| SC3-A02 |481401 bijective physical identities,1400 source modes, common source event, lazy native shared-amplitude support closure and independent statuses|PASS|
+| SC3-A03 |local PASS preserves full product; KEEP coverage all9, alarm roots18 with trusted census and consumer reproof|PASS|
+| SC3-A04 |new independent-full-state plus branch-valid shells union; no healthy-IMU/healthy-UWB joint inheritance|PASS|
+| SC3-A05 |six-axis actual shared-PIM response versus literal reintegration/QR/SVD; dangerous joint cancellation unbounded; shared geometry mirror oracle|PASS|
+| SC3-A06 |same6421-source E, sup deterministic h/theta/action/center, task-wide raw PE event; omitted/application risks explicitly unknown|PASS conditional theorem|
+| SC3-A07 |actual UA simultaneous15–17, bridge through25, restored26 and four further raw tag outputs27–30|PASS native registered accel witness|
+| SC3-A08 |actual UG same complete lifecycle; gyro category retained, full native-axis expansion remains unknown|PASS native registered gyro witness|
+| SC3-A09 |actual wrong healthy IMU/UWB deletion; history removal, shared tail25, original-bias IMU rejoin26; raw union never drops real explanation|PASS|
+| SC3-A10 |one actual backend, selected transaction one update, receipt/source/time/tag/version/current replacement/history slots checked; Gaussian/raw independent|PASS|
+| SC3-A11 |mode1399/action17 refusal, box0 all-frontier fallback, prefix/frame/receipt/expiry/domain refusals, full service costs, AL postfilter|PASS|
+| SC3-A12 |all attempt/failure/late denominators, original affected regressions PASS, SC4 handoff and retained CLI/config/source/unique conclusion, W1–W4 local commits|PASS after local W4 save|
+
+SC3 completion status: `JOINT_FDE_FUSED_BOUND_VERIFIED_FOR_SCOPE` for the
+mathematical physical domain and the separately stated actual native witness
+subdomain above. Both required joint categories have real successful results;
+this is not an accel-only substitution. Broad native recovery for every
+requested axis/amplitude/onset remains OPEN, so unrestricted
+`JOINT_TARGET_COMPLETE` is NOT asserted. No SC4 or whole-system completion is
+claimed. `SC4_PERFORMANCE_OPEN`, `APPLICATION_AL_UNQUALIFIED` and
+`DEPLOYMENT_UNQUALIFIED` remain. Production ABI layouts/default behavior,
+original source law, FGO, risk and AL are preserved; new research member
+functions link only through fde_research and require explicit SC3 opt-in.
+
+Own temporary logs/CSV and frozen stream directories are removed after this
+summary. No old-stage or user artifacts are deleted. No new plots, binaries,
+backup registries or repeated manifests are retained; no remote push.

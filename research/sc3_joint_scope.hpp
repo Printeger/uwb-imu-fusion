@@ -8,6 +8,13 @@ struct Sc3PhysicalEpisode {
 };
 struct Sc3PhysicalHypothesis {
  FaultHypothesisV2 hypothesis;std::string identity;
+ // Recipe-level evidence is distinct from a particular native action. The
+ // bound consumer returns a separate receipt covering every indexed branch.
+ std::string source_event="raw-source-rw-v1:E6421-7sigma-50epoch";
+ std::string constraints="original-initial-independent-full-state;healthy-UWB-shells-under-this-branch";
+ std::string bound_status="NOT_CONSUMED";
+ std::string detector_status="LOCAL_PASS_NEVER_EXCLUDES_PHYSICAL_BRANCH";
+ std::string recovery_status="NATIVE_RECOVERY_NOT_QUALIFIED_BY_POOL_GENERATION";
  int uwb=-1,imu=-1;
 };
 // Exact factored Cartesian product. Physical identity is never merged by a
