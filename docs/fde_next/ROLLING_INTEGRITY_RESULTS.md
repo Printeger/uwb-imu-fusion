@@ -47,3 +47,20 @@ W0 verification: actual HEAD/status, local GTSAM config, native timestamp,
 receipt/prune order, raw source count and SC3/SC4 handoff inspected directly.
 RI01 baseline PASS; remaining clauses OPEN until implementation and tests.
 Core status: **RAW_TRANSFER_OPEN / HISTORY_RECOVERY_OPEN / RISK_EXTENSION_OPEN**.
+
+## W1 window/lifecycle
+
+`sc5_rolling_checks` PASS: each30/30,20/20,40/40,30/10 runs70 native
+epochs and70 independent control epochs,560 commits total,0 native aborts.
+All full navigation states are exactly equal to observation-free control.
+Actual x0 exits at30,20,40,30 respectively; actual marginalized key totals
+123,153,93,123. Post window counts are min(k+1,Lf); proposal checks actual
+disappeared keys, full selected source groups and transaction/version receipt.
+Wrong/overflow/conflicting windows, Li>Lf, stale receipts and hot resize refuse.
+First build failed for a missing Symbol include, repaired; first invocation
+loaded an older library from the ambient environment and failed before any
+native attempt. Explicit local LD_LIBRARY_PATH resolves the correct build.
+Lifecycle alone does not certify raw transfer or historical recovery.
+
+Reproduce: build target `sc5_rolling_checks` in the existing build, then run
+with `LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib:$LD_LIBRARY_PATH`.

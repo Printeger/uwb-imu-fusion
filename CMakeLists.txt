@@ -542,3 +542,7 @@ add_executable(sc3_joint_checks EXCLUDE_FROM_ALL research/sc3_joint_checks.cpp)
 target_link_libraries(sc3_joint_checks fde_research)
 target_sources(fde_research PRIVATE research/sc3_joint_bound.cpp)
 target_sources(fde_research PRIVATE research/sc3_joint_coordinator.cpp)
+
+# Finite rolling research; no production link or default change.
+add_executable(sc5_rolling_checks EXCLUDE_FROM_ALL research/sc5_rolling_checks.cpp)
+target_link_libraries(sc5_rolling_checks fde_research)

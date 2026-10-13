@@ -944,6 +944,11 @@ std::size_t IncrementalUwbImuEstimator::factorCount() const {
   return count;
 }
 
+std::vector<gtsam::Key> IncrementalUwbImuEstimator::retainedKeysV1() const {
+  const auto keys = backendIsam().getLinearizationPoint().keys();
+  return {keys.begin(), keys.end()};
+}
+
 std::size_t IncrementalUwbImuEstimator::activeValueCount() const {
   return initialized_ ? backendIsam().getLinearizationPoint().size() : 0;
 }

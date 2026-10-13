@@ -218,6 +218,8 @@ class IncrementalUwbImuEstimator {
   std::uint32_t retainedEpochs() const;
   std::uint64_t marginalizationCount() const { return marginalization_count_; }
   std::size_t oldestRetainedEpoch() const;
+  // Actual live backend keys, independent of logical-window arithmetic.
+  std::vector<gtsam::Key> retainedKeysV1() const;
   // Optional diagnostic export; no backend updates, no new object members.
   std::vector<NavigationState> retainedSmoothedStatesV1() const;
   double globalGraphResidualStatistic() const;

@@ -1,0 +1,14 @@
+# Explicit research opt-in. Legacy SC1–SC4 configuration is unchanged.
+raw_base_law: config/sc3_joint.yaml
+fixed_lag_epochs: 30
+rolling_integrity:
+  version: 1
+  enabled: true
+  window_mode: follow_fgo
+  explicit_epochs: null
+  risk_mode: finite_mission
+  mission_epochs: 200
+  task_exceedance_budget: 1.0e-6
+  boundary_method: raw_outer_projection
+  recovery_extra_epochs: 20
+  runtime_resize: disabled
