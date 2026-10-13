@@ -206,3 +206,13 @@ compile_commands.json
 /raw-source*.csv
 /raw-bound*.csv
 /application-al*.json
+
+# SC research replay scratch written directly to the repository root.
+# Default .cache/sc* outputs are already ignored. Keep source, config and
+# compact evidence in docs/ trackable by rooting these patterns here.
+/sc2-imu-*/
+/sc3-joint-*/
+/sc4-system-*/
+/sc[1-4]*.csv
+/sc[1-4]*.json
+/sc[1-4]*.xml
