@@ -1,5 +1,6 @@
 #include "sc4_system.hpp"
 #include <iostream>
+#include <map>
 using namespace uwb_imu_pl;using namespace uwb_imu_pl::research;
 void check(bool condition,const char* reason){if(!condition)throw std::runtime_error(reason);}
 int main(int argc,char** argv){try{
@@ -16,13 +17,14 @@ int main(int argc,char** argv){try{
  if(argc==2 && std::string(argv[1])=="carry"){
   auto input=sc4MatchedInput("config/sc4_carry.yaml","SC3_G",60);auto old=sc4MatchedInput("config/sc4_carry.yaml","SC3_G",50);
   for(size_t i=0;i<old.imu.size();++i)check(input.imu[i].specific_force_mps2==old.imu[i].specific_force_mps2 && input.imu[i].angular_velocity_radps==old.imu[i].angular_velocity_radps,"same original source prefix in long input");
-  Sc4System longSystem(std::move(input));auto origin=Sc4Clock::now();uint64_t last=1;
-  for(size_t i=0;i<60;++i){auto out=longSystem.process(i,true,Sc4Clock::now(),origin);check(out.updates==1 && out.version==last+1,"continuous one backend/version");last=out.version;
+  Sc4System longSystem(std::move(input));auto origin=Sc4Clock::now();uint64_t last=1;std::map<std::string,int> statuses;
+  for(size_t i=0;i<60;++i){auto out=longSystem.process(i,true,Sc4Clock::now(),origin);check(out.updates==1 && out.version==last+1,"continuous one backend/version");last=out.version;++statuses[out.bound_status];
    check(out.proof.valid==(i<50) && out.cumulative_risk==std::ldexp(2.*6421,-35),"expired proof never renews or clears risk");
    if(i>=47)check(out.carry,"old physical fault remains in bank across horizon");
    if(i>=50 && i<58)check(out.action.imu.current_bridge && out.physical_evaluated==0 && !out.protected_output,"unprotected carry bridge keeps contaminated raw support out");
    if(i==49 || i==50 || i==57 || i==59)std::cout<<"SC4 carry "<<i+1<<" version="<<out.version<<" qualified="<<out.proof.valid<<" bridge="<<out.action.imu.current_bridge<<" carry="<<out.carry<<" risk="<<out.cumulative_risk<<"\n";
   }
+  for(const auto& status:statuses)std::cout<<"SC4 carry bound_count "<<status.first<<'='<<status.second<<"\n";
   std::cout<<"SC4 continuous60 late joint episode48, original prefix, horizon/carry/risk PASS\n";return 0;
  }
  auto input=sc4MatchedInput("config/sc4_system.yaml","SC3_U0",2);check(sc4InputError(input).empty(),"matched admission");

@@ -935,7 +935,7 @@ summary. No old-stage or user artifacts are deleted. No new plots, binaries,
 backup registries or repeated manifests are retained; no remote push.
 
 
-## SC4 — continuous system and realtime/application evaluation (in progress)
+## SC4 — continuous system and realtime/application evaluation (scoped delivery)
 
 Entry actual local clean HEAD `5b7d960`; no reset, old-stage redo or remote
 push. SC4-spec-1.0 and COMMON_REQUIREMENTS bind the actual SC3 handoff.
@@ -1138,3 +1138,213 @@ Final W4 freeze will measure original healthy and shifted joint gyro50-input
 reference/optimized pairs (15 warmup+35 measured), plus real service times for
 other actual supported classes. Numerical elision cannot extend missing
 native axes, mission horizon, application or hardware qualification.
+
+
+### SC4 frozen evaluation and final capability audit
+
+Frozen computational candidate SHA `a20061f` (W1 `b695668`, W2 `43c4e0e`).
+Exactly four serial processes, each one50-epoch mission with15 warmup+35
+continuous measured epochs:200 actual commits,60 warmup/140 measured. No
+seed search, sigma/AL/threshold reduction or task renewal. Healthy and the
+preregistered shifted joint gyro load each reference/optimized pair match
+all50 full navigation states including bias, actual raw retained/removal IDs,
+source/scope, action census, timestamps/graph/receipt, risk and HPL/VPL exactly.
+Final W4 changes only diagnostic CSV method/current-risk telemetry and test
+classification counters, not the frozen in-process compute/selection/proof
+path; two actual telemetry commits verify those added fields. The matrix is
+not repeated for documentation/diagnostic-only changes.
+
+Mean/median/P95/max ms for the35 measured epochs:
+
+| Load/profile | core | full in-process service | arrival-to-output |
+|---|---|---|---|
+| healthy reference |5.4496/5.5483/6.5370/6.8936|5.4784/5.5727/6.5673/6.9183|5.6248/5.7193/6.7092/7.1638|
+| healthy optimized |5.4507/5.4677/6.2279/7.6532|5.4802/5.4923/6.2617/7.6867|5.6113/5.6179/6.4315/7.9559|
+| joint gyro reference |97.9188/27.9863/250.1159/266.5676|97.9493/28.0132/250.1543/266.5961|1564.2510/1821.7022/2152.1300/2194.1941|
+| joint gyro optimized |17.5879/17.3660/19.9833/20.4181|17.6200/17.3927/20.0145/20.4462|17.7623/17.4844/20.1678/20.5488|
+
+Healthy paths have no omitted numerical consumer and no measured speed gain;
+minor differences are ordinary sample variation. Reference gyro misses
+core40ms in15/35 and arrival-to-output50ms in35/35; optimized gyro misses0/35
+for both. Both healthy profiles miss0/35. No output is hidden as a timeout
+or silently dropped. All200 outputs are finite/CONTRACTED_VERIFIED spatial
+bounds; reference late outputs remain historical diagnostics, never current-
+time protected publications. Measured warm optimized service/queue results
+meet the declared40/50 engineering targets on this PC replay profile. They
+are35 samples, not P99/WCET or a proof for every possible admitted fault/noise.
+
+| Profile | cold init ms | maximum RSS KiB | maximum queue | queue wait mean/P95/max ms |
+|---|---:|---:|---:|---|
+| healthy reference |87.8667|21696|1|.14635/.20407/.24555|
+| healthy optimized |88.5431|21660|1|.13105/.16946/.26917|
+| gyro reference |91.7970|35820|25|1466.3/2102.3/2144.3|
+| gyro optimized |91.9990|34592|1|.14228/.18627/.23744|
+
+These initialization costs include parsing, matched input generation, original
+source numeric certification and backend/monitor/physical pool setup. They
+exceed50ms: cold-start realtime is NOT claimed. Replay releases begin after
+initialization, as explicitly registered. Full service includes raw monitor,
+native prepare/evidence/history material extraction, all action eligibility,
+necessary original-bias reintegration/two-GN recovery, complete selected raw
+proof+consumer reproof, real commit, final bound/receipt, cleanup,17-digit
+output packaging and caller delivery. Diagnostic CSV serialization/I/O is
+separate, measured and adds to paced backlog; optimized healthy/gyro total
+logging4.6285/4.8293ms,max .20384/.17845ms. Even adding the maximum logging
+cost conservatively to every measured optimized delivery gives maxima
+8.1598/20.7273ms<50ms. No hidden background C or Jacobian worker exists.
+
+Alarm/rebuild spikes are explicit: shifted joint gyro at16 has18 functional
+actions,1 numerical evaluation,17 post rejections,2 GN rounds and15 retained
+raw PIM reintegrations. Reference performs18 numerical evaluations,34 GN and
+263 PIM reintegrations. At26 (shared tail) optimized has1 numerical root,
+9 post rejections/8 strictly dominated actions,2 GN; at27 it actually rejoins
+original-bias IMU with0 GN and the complete action/physical bank retained.
+All50 measured mission states preserve the same version and source semantics.
+Maximum recoverable history catalog20,active slots61 healthy/72 gyro is
+observed, NOT proof of infinite-history O(1). Raw physical bank1400 modes/
+481401 logical hypotheses and original501-sample task prefix persist; runtime
+input cap120 and queue64 bound this replay process, not an infinite mission.
+
+Truth/onset scoring is after the immutable online decisions. For gyro16:
+physical first IMU onset.755s→observed alarm45.372ms,→candidate selection
+59.865ms,→actual exclusion commit61.580ms. Functional rejoin27 occurs
+110.329ms after the true episode end1.255s (including shared tail and output
+processing). This explicitly distinguishes40/50ms batch service from fault-
+onset TTA; no50ms physical TTA/hardware claim is inferred.
+
+Other supported classes, one frozen30-epoch functional stream each, actual
+complete service on the same optimized path (offline release, no paced queue
+claim for these streams):
+
+| Actual class | commits/finite/raw qualified | core maximum ms | full maximum ms |
+|---|---:|---:|---:|
+| UWB one epoch |30/30/30|16.8679|16.8943|
+| UWB three epochs |30/30/30|16.7845|16.8124|
+| accel-only |30/30/30|18.0168|18.0458|
+| gyro-only |30/30/30|18.1212|18.1466|
+| UWB+accel |30/30/30|17.8327|17.8702|
+| staggered UWB then accel |30/30/30|19.5810|19.6071|
+
+All180 commit once per epoch, all CONTRACTED_VERIFIED,0 refusal/abort/core or
+service miss. The overlapping UA and UG tests actually remove both sources,
+complete history/support, shared tail and IMU return; source bank/history
+never become a new clean H0. Subsequent outputs remain raw covered in the
+original finite mission. Post-scoring finds PE within signed PL on all180;
+this is implementation evidence, not a statistical risk estimate.
+
+Real record adapter actual evidence: existing read-only
+`/home/mint/ws_fusion_uwb/data/own_vicon/2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle.bag`,
+SHA256 `4b973dd5a6faa8a4b523017feaccb59f4f085e50592a114a963dbd9a816de8be`.
+First8s supplies1571 actual IMU,1568 range rows and2310 GT poses for POST
+scoring. Reused benchmark topics/units (Livox g×9.80665/rad/s), actual anchor
+pose medians and canonical source rows. Causal initialization consumes only
+IMU/UWB prefix, no GT state initialization, injection label or GT-fitted
+extrinsic. Identity/colocation is an explicit uncalibrated interface seed.
+Two35-epoch actual FGO replays,off/on70 total commits, all finite,0 native
+abort,70 REAL_SOURCE_UNQUALIFIED. Four anchors do not qualify the existing
+≥5-anchor spatial/monitorability branch, so no exclusion/benefit is invented.
+Both trajectories/accuracy are identical: approximate world-tag PE
+mean/median/P95/max .72406/.72498/.73446/.73762m,RMSE .72411m.
+Off/on core maxima2.1724/2.1734ms,full2.1900/2.1943ms. Calibration, physical
+noise/fault probabilities, natural-fault labels and hardware TTA remain
+UNKNOWN; these numerical accuracy/timing results are not a source certificate.
+DATA_VALIDATION_OPEN is retained for qualified/calibrated real-data use,
+although actual nonprotected adapter playback has been exercised.
+
+Application evaluation reuses `application_al_policy.py` and the existing
+unaltered template. Four policy tests PASS, including missing/invalid evidence
+and budget checks. Each trace is immutable before/after2/3,5/5,10/10m numeric
+postfilters; no FDE/PL/source/risk/state/receipt mutation. Joint gyro35 outputs
+pass0/2/35 at those three AL pairs, respectively; application available0 at
+all pairs. All real-record outputs pass0 because no finite qualified bound
+exists. No larger AL, RMSE allowance or arbitrary HMI prior is substituted
+for clearance/mapping/time/safe-action/mission evidence. Template missing
+actual application fields means APPLICATION_AL_UNQUALIFIED and production
+protected publication remains disabled.
+
+Final affected regression once: sc4_system_checks (source/time/missing/expiry/
+queue/cancel/gap), sc3_joint_checks (full factored pool, joint response,
+cancellation, actual simultaneous actions and wrong FDE/receipt),
+sc2_imu_checks, raw_range_checks (mirror/lattice/overflow/frontier/binding),
+hybrid_raw_checks, hybrid_checks, epoch_raim_checks and fused_epoch_checks
+all PASS; last two use config/fde_next.yaml. Final continuous60 check PASS,
+explicit counts50 CONTRACTED_VERIFIED/10 TASK_HORIZON_EXPIRED,0 native abort,
+60 actual commits; confirms original-prefix/carry/no-risk-reset again after
+optimization interfaces. It completes the earlier unit fixture's missing
+classification counters without retroactively fabricating them. Final source/
+method/current-risk telemetry smoke adds2 actual qualified commits. Old-stage
+regression native fixtures are recorded as regression, not independent SC4
+risk trials or performance evidence.
+
+| SC4 attempt bucket | scheduled | native attempted/committed | native abort | unattempted/refused before prepare |
+|---|---:|---:|---:|---:|
+| W1 source/time checks+shifted17 snapshot, including failed version harness |21|20/20|0|1 unattempted|
+| W2 two valid+two cancel/gap outcomes,60 carry,25 overload |89|80/80|0|9|
+| W3 three local profile comparisons+two valid/two cancel ready check |118|116/116|0|2|
+| W4 frozen performance+other classes+real record |450|450/450|0|0|
+| final SC4 two valid/two cancel+60 carry+two telemetry |66|64/64|0|2|
+| total own SC4 outcomes |744|730/730|0|14 (one unattempted harness;13 explicit cancel/gap/overload refusals)|
+
+Conditional raw-qualified commits total640;90 committed outputs are
+unprotected (20 after-horizon across two carry runs,70 real record). Another
+13 pre-prepare refusal outcomes retain finite diagnostic prior/current states,
+and one scheduled harness outcome was unattempted. Thus743 finite returned
+outcomes comprise640 qualified and103 unqualified, with1 unattempted; these
+are engineering outcomes, not independent probability trials. Development
+unit/carry checks outside the timed campaign did not retain deadline-miss
+counts and make no deadline claim; all profiling/functional/record/overload
+streams retain the exact late counts described above. Compile failures:2 before native epochs (W1
+include/optional lever); version harness1 after one actual valid commit.
+Tool observation of an already terminal build later returned unknown handle;
+authoritative build log showed success, and no process was restarted from an
+observation timeout. No cancelled profiling campaign or discarded failed
+native run is omitted. Arithmetic audited from the actual run buckets; own temporary files are cleaned after this summary.
+
+| SC4-A clause | Actual evidence | Status |
+|---|---|---|
+| A01 |actual5b7d960 SC3 handoff, full requested physical families and missing native axes retained|PASS scoped|
+| A02 |one system input/profile entry, same single FGO/transaction chain, real canonical adapter, independent functional/raw/source/risk/timing/application fields|PASS|
+| A03 |continuous60 without restart, actual late48 fault through50/58, no proof51+, original carrier bank retained|PASS minimum; protected extension OPEN|
+| A04 |one original event/initial evidence/prefix, cumulative risk unchanged, no new H0/task charge at50, long outputs not qualified|PASS|
+| A05 |steady-clock release/enqueue/start/alarm/selection/commit/proof/delivery, finite FIFO/reject-new/cancel-before-prepare/gap latch; late history never current PL|PASS replay semantics|
+| A06 |explicit dependency proof for diagnostic/post-failed/strictly dominated numeric omissions; default reference and all physical source branches/fallback/oracles retained|PASS|
+| A07 |actual healthy/joint gyro50-pairs and other supported classes, exact full-state/source/action/PL comparison, history/queue/RSS costs visible|PASS measured scope|
+| A08 |35 continuous measured epochs per side on declared PC, warm optimized40/50 targets met; cold88–92ms and hardware/WCET are separate and OPEN|PASS warm measured target|
+| A09 |read-only real bag35 off/on, no forged draw/initial/calibration evidence;4-anchor/GT-colocation limitations and unknown hardware TTA explicit|PASS nonprotected adaptation|
+| A10 |existing policy/tests, immutable AL postfilter, actual missing application evidence remains UNQUALIFIED|PASS evaluator; application OPEN|
+| A11 |exact scheduled/attempted/committed/refused and campaign late counts; development untimed counters explicitly not claimed; final affected safety checks and minimal reproduction|PASS|
+| A12 |single conclusion and capability matrix, cost/resources/missing targets, verified local W1–W4 saves, own temporary cleanup|PASS after the final local W4 save/cleanup|
+
+Final capabilities: SYSTEM_RESEARCH_READY_FOR_DECLARED_SCOPE means finite
+conditional matched-source SC3 position protection plus the actually verified
+native witness subdomain and safe unprotected continuation, NOT unrestricted
+hardware/continuous/full-navigation readiness. REALTIME_TARGET_MET_ON_TESTED_PLATFORM
+is LIMITED to the measured warm PC replay workloads and service-tested
+registered classes; no P99/WCET/cold-start/hardware target is asserted.
+MISSION_CONTINUATION_OPEN, DATA_VALIDATION_OPEN, APPLICATION_AL_UNQUALIFIED
+and DEPLOYMENT_UNQUALIFIED remain. Broader cold-start, untested-load and
+hardware realtime qualification remains SC4_PERFORMANCE_OPEN; the measured
+warm40/50ms success is not generalized to these missing engineering domains. Original requested full native axes/
+amplitudes/onsets are not silently erased; unrestricted JOINT_TARGET_COMPLETE
+is NOT asserted (JOINT_TARGET_INCOMPLETE_FOR_UNVERIFIED_NATIVE_DOMAIN).
+Both actual required UA and UG categories exist, rather than deleting gyro.
+No arbitrary long mission, formal protected release or whole original system
+completion is claimed.
+
+Minimal reproduction: `python3 tools/sc4_system_research.py checks --build`,
+`... local`, `... performance` (clean frozen tree), `... functional`,
+`... record`; direct continuous boundary check `sc4_system_checks carry`.
+CMake research targets remain EXCLUDE_FROM_ALL; no production profile/ABI
+layout/source law/risk/AL/default FGO behavior changed, no remote push.
+
+SC4-A01–A12 scope audit is complete for the minimum finite-source lifecycle,
+measured warm runtime target and explicit nonprotected real/application
+adaptation. This closes the requested SC4 research implementation/evaluation
+work packages; open protected mission extension, unrestricted native fault
+recovery, cold-start/general/hardware realtime and external application
+qualification are preserved as missing dimensions, not converted to success.
+W4 saves source/CLI/config and this unique conclusion locally. Own temporary
+CSV/log/short-record cache/queue fixture and own helper bytecode are removed
+only after denominator/cost/qualification summaries. Existing user data,
+SC1–SC3 artifacts and original bag remain unchanged; no plots, binary copies,
+backup registries or remote push are retained.
