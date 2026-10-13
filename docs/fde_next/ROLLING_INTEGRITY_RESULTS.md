@@ -398,3 +398,32 @@ remain. Recovery outside the buffer is unavailable; actual navigation recovery
 for other axes and full15D accuracy are not inferred from accel-x/gyro-x.
 No infinite mission, renewed episode budget, real-data calibration or formal
 release is claimed.
+
+## Goal02 — open-ended development contract
+
+Entry actual clean HEAD ea31992. RI01–RI16 source and native evidence above
+are the prerequisite; no mock upstream qualification is used. Production and
+finite mission entry stay unchanged. New research scope permits repeated
+non-overlapping episodes per channel: at most one active UWB single-anchor
+episode (1/3 epochs) and one active IMU single-axis episode (50/500ms), with
+all six IMU axes. UWB and IMU may coexist. Unknown/out-of-scope concurrency
+is not assigned zero risk. Physical motion/noise/extrinsic conditions remain
+the original registered simulation conditions. No hardware/AL qualification.
+
+Frozen positive inputs before results: healthy500; mixed1000 with UA61 and
+UG321; repeated UG500 with UG61 and UG261. Original amplitudes20m/s²,
+1rad/s,2.25m and seed20261010; no seed search. Short window variants20/20,
+40/40,30/10 bind the same infinite event. Negatives include mixed certificate
+modes, source reuse, future changes, capacity, concurrency, cancel/overload,
+and out-of-replay recovery. Long-flow samples prove runtime dependencies,
+not the all-time theorem. Core is OPEN until boundary/repeated recovery runs.
+
+Goal02 event implementation: directed allocation lower/upper endpoints;
+integer q with5q²≥7m and exact binary2n·2^-m≤delta_lower, n0=21,nk=128.
+The infinite telescope is eps/2+sum eps/(2k(k+1))=eps, without independent
+windows.100-digit oracle PASS1001 blocks plus large global indices;
+60006 unique ADC IDs, shared sample10 retains block1 at reuse in epoch2.
+q0/200/1000=7/8/9. q has no ceiling; representation failures refuse rather
+than restart or truncate. First compilation failed on a multiprecision
+conditional expression type; explicit assignment repaired it,0 native epochs.
+Risk accounting alone is not upstream/time-uniform rolling qualification.

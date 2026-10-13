@@ -1,0 +1,16 @@
+# Separate research contract: repeated episodes, at most one active per channel.
+raw_base_law: config/sc5_rolling.yaml
+rolling_integrity:
+  version: 1
+  enabled: true
+  window_mode: follow_fgo
+  explicit_epochs: null
+  risk_mode: time_uniform_blocks
+  task_exceedance_budget: 1.0e-6
+  boundary_method: raw_outer_projection
+  recovery_extra_epochs: 30
+  runtime_resize: disabled
+  fault_mode: repeated_one_per_channel
+  max_fault_records: 4096
+  queue_capacity: 8
+  full_deadline_ms: 50
