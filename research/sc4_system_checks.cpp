@@ -3,6 +3,16 @@
 using namespace uwb_imu_pl;using namespace uwb_imu_pl::research;
 void check(bool condition,const char* reason){if(!condition)throw std::runtime_error(reason);}
 int main(int argc,char** argv){try{
+ if(argc==2 && std::string(argv[1])=="local"){
+  for(const auto& recipe:std::vector<std::pair<std::string,int>>{{"SC3_U0",2},{"SC3_IG",17}}){auto input=sc4MatchedInput("config/sc4_performance.yaml",recipe.first,recipe.second);Sc4System reference(input),optimized(input,true);auto origin=Sc4Clock::now();
+   for(int i=0;i<recipe.second;++i){auto a=reference.process(i,true,Sc4Clock::now(),origin);auto b=optimized.process(i,true,Sc4Clock::now(),origin);
+    check(a.tag==b.tag && a.state.velocity_world_mps==b.state.velocity_world_mps && a.state.q_world_body.coeffs()==b.state.q_world_body.coeffs() && a.state.accel_bias_mps2==b.state.accel_bias_mps2 && a.state.gyro_bias_radps==b.state.gyro_bias_radps,"profile exact full native output state");
+    check(a.retained_ids==b.retained_ids && a.removed_groups==b.removed_groups && a.input_ids==b.input_ids && a.action.excluded==b.action.excluded && a.action.imu.current_bridge==b.action.imu.current_bridge && a.action.expected_actions==b.action.expected_actions && a.action.evaluated_actions==b.action.evaluated_actions && a.version==b.version && a.transaction==b.transaction,"complete source/action/transaction equivalence");
+    check(a.proof.valid && b.proof.valid && a.proof.geometry.low==b.proof.geometry.low && a.proof.geometry.high==b.proof.geometry.high && a.proof.geometry.pl==b.proof.geometry.pl && a.proof.geometry.hpl==b.proof.geometry.hpl && a.cumulative_risk==b.cumulative_risk,"same conditional physical coverage/source/risk");
+    if(i==0 || i>=15)std::cout<<"SC4 local "<<recipe.first<<" epoch="<<i+1<<" roots="<<a.action.evaluated_actions<<" GN="<<a.action.total_rebuilds<<" optGN="<<b.action.total_rebuilds<<" optNumeric="<<b.action.numeric_evaluated<<" postRejected="<<b.action.numeric_skipped_post_rejected<<" dominated="<<b.action.numeric_skipped_dominated<<" rawPIM="<<a.action.total_reintegrations<<" diagnostic="<<a.action.diagnostic_calls<<" ref/opt core="<<a.timing.core_ms<<'/'<<b.timing.core_ms<<" GNms="<<a.action.optimizer_ms<<" diagnosticms="<<a.action.diagnostics_ms<<" rawms="<<a.action.reintegrations_ms<<"\n";
+   }
+  }std::cout<<"SC4 local two profiles full-state/source/action/receipt/PL exact equivalence PASS\n";return 0;
+ }
  if(argc==2 && std::string(argv[1])=="carry"){
   auto input=sc4MatchedInput("config/sc4_carry.yaml","SC3_G",60);auto old=sc4MatchedInput("config/sc4_carry.yaml","SC3_G",50);
   for(size_t i=0;i<old.imu.size();++i)check(input.imu[i].specific_force_mps2==old.imu[i].specific_force_mps2 && input.imu[i].angular_velocity_radps==old.imu[i].angular_velocity_radps,"same original source prefix in long input");

@@ -12,6 +12,7 @@ struct Sc4Input {
  NavigationState initial;
  Eigen::Vector3d lever=Eigen::Vector3d::Zero();
  RawInclusionParameters law;
+ double source_time_origin_s=0;
  std::vector<ImuMeasurement> imu;
  std::vector<UwbBatch> batches;
  std::vector<RawRangeLawEvidence> ranges;
@@ -62,7 +63,7 @@ class Sc4System {
  TimestampNs carry_end_;
  double risk_=0;
  public:
- explicit Sc4System(Sc4Input);
+ explicit Sc4System(Sc4Input,bool optimized=false);
  const Sc4Input& input()const{return input_;}
  Sc4Output process(size_t index,bool fde,Sc4Clock::time_point release,
                    Sc4Clock::time_point mission_origin);

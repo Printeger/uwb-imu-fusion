@@ -29,14 +29,14 @@ std::vector<Row> csv(const std::string& path){std::ifstream stream(path);if(!str
 double number(const Row& row,const std::string& key){size_t end=0;double x=std::stod(row.at(key),&end);if(end!=row.at(key).size() || !std::isfinite(x))throw std::runtime_error("nonfinite/invalid canonical input");return x;}
 }
 Sc4Input sc4RecordInput(const std::string& config,const std::string& cache,int count){
- auto law=researchLaw(config);Sc4Input out;out.config=IntegrityConfigLoader::load(law["imu_base_config"].as<std::string>());
+ auto law=researchLaw(config);if(count<1 || count>law["sc4_max_input_epochs"].as<int>())throw std::runtime_error("record input epoch capacity refused");Sc4Input out;out.config=IntegrityConfigLoader::load(law["imu_base_config"].as<std::string>());
  std::vector<ImuMeasurement> imu;std::vector<UwbMeasurement> ranges;
  for(const auto& row:csv(cache+"/imu.csv")){ImuMeasurement m;m.id=MeasurementId(imu.size()+1);m.timestamp=TimestampNs(std::llround(number(row,"t")*1e9));m.specific_force_mps2={number(row,"ax"),number(row,"ay"),number(row,"az")};m.angular_velocity_radps={number(row,"gx"),number(row,"gy"),number(row,"gz")};imu.push_back(m);}
  std::map<int64_t,UwbBatch> batches;uint64_t rid=1;
  for(const auto& row:csv(cache+"/uwb.csv")){if(number(row,"valid")!=1 || number(row,"tag_id")!=0)continue;UwbMeasurement m;m.id=MeasurementId(rid++);m.factor_id=FactorId(m.id.value());m.timestamp=TimestampNs(std::llround(number(row,"t")*1e9));m.anchor_id=AnchorId(uint64_t(number(row,"anchor_id")));m.range_m=number(row,"range");m.sigma_m=number(row,"sigma");m.anchor_position_m={number(row,"anchor_x"),number(row,"anchor_y"),number(row,"anchor_z")};m.lever_arm_body_m={number(row,"lever_x"),number(row,"lever_y"),number(row,"lever_z")};ranges.push_back(m);auto& b=batches[m.timestamp.value()];b.timestamp=m.timestamp;b.measurements.push_back(m);}
  if(imu.size()<2 || ranges.empty() || count<1)throw std::runtime_error("insufficient real input");
  out.lever=ranges.front().lever_arm_body_m.value_or(Eigen::Vector3d::Zero());auto initial=initializeCausallyV1(imu,ranges,out.config,out.lever,true);
- auto origin=initial.state.timestamp;out.initial=initial.state;out.initial.timestamp=TimestampNs(0);out.config.realtime.prior_sigmas=initial.prior_sigmas;
+ auto origin=initial.state.timestamp;out.source_time_origin_s=origin.seconds();out.initial=initial.state;out.initial.timestamp=TimestampNs(0);out.config.realtime.prior_sigmas=initial.prior_sigmas;
  // Causal bootstrap consumes the prefix. No GT, labels or draw certification.
  auto boundary=initial.boundary;boundary.id=MeasurementId(1);boundary.timestamp=TimestampNs(0);out.imu.push_back(boundary);
  for(auto m:imu)if(origin<m.timestamp){m.id=MeasurementId(out.imu.size()+1);m.timestamp=TimestampNs(m.timestamp.value()-origin.value());out.imu.push_back(m);}

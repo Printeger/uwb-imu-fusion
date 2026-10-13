@@ -12,14 +12,23 @@ namespace uwb_imu_pl::research {
 namespace {
 double duration(Sc4Clock::time_point a,Sc4Clock::time_point b){return std::chrono::duration<double,std::milli>(b-a).count();}
 int64_t stamp(Sc4Clock::time_point t,Sc4Clock::time_point origin){return std::chrono::duration_cast<std::chrono::nanoseconds>(t-origin).count();}
+void delivered(Sc4Output& out,Sc4Clock::time_point origin){
+ // Caller owns the complete packet: process() locals and serialization
+ // temporaries have now been destroyed. Include that final return/cleanup.
+ out.timing.output_ns=stamp(Sc4Clock::now(),origin);
+ out.timing.full_ms=(out.timing.output_ns-out.timing.start_ns)/1e6;
+ out.timing.arrival_to_output_ms=std::max(0.,(out.timing.output_ns-out.timing.release_ns)/1e6);
+ out.timing.measurement_age_ms=out.timing.arrival_to_output_ms;
+ out.on_time=out.timing.output_ns<=out.timing.release_ns+50000000;
+}
 template<class Id> std::string ids(const std::vector<Id>& ids){std::ostringstream out;bool first=true;for(auto id:ids){if(!first)out<<'|';first=false;out<<id.value();}return out.str();}
 }
-Sc4System::Sc4System(Sc4Input input):input_(std::move(input)){
+Sc4System::Sc4System(Sc4Input input,bool optimized):input_(std::move(input)){
  auto error=sc4InputError(input_);if(!error.empty())throw std::runtime_error(error);
  backend_=std::make_unique<IncrementalUwbImuEstimator>(input_.config,input_.lever);
  backend_->initialize(input_.initial,input_.config.realtime.prior_sigmas);
  backend_->ingestImu(input_.imu.front());imu_cursor_=1;
- if(input_.matched_source){joint_=std::make_unique<Sc3JointCoordinator>(input_.initial,input_.law,input_.batches.front());joint_->append(input_.imu.front());risk_=std::ldexp(2.*6421,-35);}
+ if(input_.matched_source){joint_=std::make_unique<Sc3JointCoordinator>(input_.initial,input_.law,input_.batches.front(),18,!optimized,optimized);joint_->append(input_.imu.front());risk_=std::ldexp(2.*6421,-35);}
 }
 Sc4Output Sc4System::process(size_t index,bool fde,Sc4Clock::time_point release,Sc4Clock::time_point origin){
  Sc4Output out;out.sequence=++sequence_;out.source=input_.source;out.scope=input_.scope;out.cumulative_risk=risk_;out.version=last_version_;out.physical_expected=joint_?481401:0;
@@ -69,7 +78,7 @@ Sc4Output Sc4System::process(size_t index,bool fde,Sc4Clock::time_point release,
  out.tag=out.state.position_world_m+out.state.q_world_body*input_.lever;out.finite=out.tag.allFinite();
  // Deliver a complete in-process research packet; CSV is a diagnostic sink.
  // Native transaction/candidate temporaries have been released before output.
- std::ostringstream packet;packet<<out.sequence<<' '<<out.state.timestamp.value()<<' '<<out.tag.transpose()<<' '<<out.state.velocity_world_mps.transpose()<<' '<<out.state.q_world_body.coeffs().transpose()<<' '<<out.bound_status<<' '<<out.source<<' '<<out.scope<<' '<<out.proof.valid<<' '<<out.proof.geometry.hpl<<' '<<out.proof.geometry.pl.z()<<' '<<out.cumulative_risk<<' '<<out.retained_ids<<' '<<out.removed_groups<<' '<<out.version<<' '<<out.transaction<<' '<<out.carry;
+ std::ostringstream packet;packet<<std::setprecision(17)<<out.sequence<<' '<<out.state.timestamp.value()<<' '<<out.tag.transpose()<<' '<<out.state.velocity_world_mps.transpose()<<' '<<out.state.q_world_body.coeffs().transpose()<<' '<<out.bound_status<<' '<<out.source<<' '<<out.scope<<' '<<out.proof.valid<<' '<<out.proof.geometry.hpl<<' '<<out.proof.geometry.pl.z()<<' '<<out.cumulative_risk<<' '<<out.retained_ids<<' '<<out.removed_groups<<' '<<out.version<<' '<<out.transaction<<' '<<out.carry;
  auto payload=packet.str();if(payload.empty())throw std::runtime_error("empty output packet");
  auto output=Sc4Clock::now();out.timing.output_ns=stamp(output,origin);out.timing.full_ms=duration(start,output);out.timing.arrival_to_output_ms=std::max(0.,duration(release,output));out.timing.measurement_age_ms=out.timing.arrival_to_output_ms;
  out.core_on_time=out.timing.core_ms<=40;out.on_time=out.timing.arrival_to_output_ms<=50;
@@ -84,19 +93,19 @@ int runSc4System(int argc,char** argv){
  const tbb::global_control single_thread(tbb::global_control::max_allowed_parallelism,1);
  if(argc<7)throw std::runtime_error("usage: epoch_raim_runner CONFIG CSV SCENE|record:CACHE system on|off EPOCHS [reference|optimized] [offline|paced]");
  auto init=Sc4Clock::now();std::string source=argv[3];int count=std::stoi(argv[6]);bool fde=std::string(argv[5])=="on";
- if(argc>7 && std::string(argv[7])!="reference")throw std::runtime_error("optimized SC4 profile not implemented yet");
+ bool optimized=argc>7 && std::string(argv[7])=="optimized";if(argc>7 && !optimized && std::string(argv[7])!="reference")throw std::runtime_error("unknown SC4 profile");
  bool paced=argc>8 && std::string(argv[8])=="paced";auto cfg=researchLaw(argv[1]);
  if(cfg["sc4_threads"].as<int>()!=1 || cfg["sc4_core_deadline_ms"].as<int>()!=40 || cfg["sc4_full_deadline_ms"].as<int>()!=50 || cfg["sc4_overload_policy"].as<std::string>()!="reject-new-latch-unprotected" || cfg["sc4_after_horizon"].as<std::string>()!="continue-unprotected-preserve-carry" || cfg["sc4_initial_carry_in"].as<std::string>()!="unsupported")throw std::runtime_error("SC4 runtime contract mismatch");
- Sc4System system(source.rfind("record:",0)==0?sc4RecordInput(argv[1],source.substr(7),count):sc4MatchedInput(argv[1],source,count));double initMs=duration(init,Sc4Clock::now());
+ Sc4System system(source.rfind("record:",0)==0?sc4RecordInput(argv[1],source.substr(7),count):sc4MatchedInput(argv[1],source,count),optimized);double initMs=duration(init,Sc4Clock::now());
  std::ofstream csv(argv[2]);if(!csv)throw std::runtime_error("SC4 output unavailable");csv<<std::setprecision(17);
- csv<<"sequence,epoch,functional,bound_status,finite,qualified,source,scope,timestamp_ns,transaction,version,updates,tag_x,tag_y,tag_z,vx,vy,vz,qw,qx,qy,qz,hpl,vpl,cumulative_risk,physical_expected,physical_evaluated,range_masks,excluded,imu_bridge,imu_rejoined,carry,actions_expected,actions_evaluated,rebuilds,history_epochs,active_slots,retained_ids,input_ids,removed_groups,release_ns,start_ns,alarm_ns,selected_ns,commit_ns,proof_ns,output_ns,ingest_ms,prepare_ms,candidate_ms,commit_ms,bound_ms,cleanup_ms,core_ms,full_ms,queue_ms,arrival_to_output_ms,measurement_age_ms,core_on_time,on_time,source_init_ms,max_rss_kb,enqueue_ns,formal_eligible,publication_protected,application_available\n";
+ csv<<"sequence,epoch,functional,bound_status,finite,qualified,source,scope,timestamp_ns,transaction,version,updates,tag_x,tag_y,tag_z,vx,vy,vz,bax,bay,baz,bgx,bgy,bgz,qw,qx,qy,qz,hpl,vpl,cumulative_risk,physical_expected,physical_evaluated,range_masks,excluded,imu_bridge,imu_rejoined,carry,actions_expected,actions_evaluated,rebuilds,history_epochs,active_slots,retained_ids,input_ids,removed_groups,release_ns,start_ns,alarm_ns,selected_ns,commit_ns,proof_ns,output_ns,ingest_ms,prepare_ms,candidate_ms,commit_ms,bound_ms,cleanup_ms,core_ms,full_ms,queue_ms,arrival_to_output_ms,measurement_age_ms,core_on_time,on_time,source_init_ms,max_rss_kb,enqueue_ns,total_rebuilds,total_reintegrations,diagnostic_calls,optimizer_ms,reintegrations_ms,diagnostics_ms,numeric_evaluated,numeric_skipped_post_rejected,numeric_skipped_dominated,source_time_origin_s,delivery_deadline_ns,task_horizon_ns,current_risk_status,formal_eligible,publication_protected,application_available\n";
  auto origin=Sc4Clock::now();Sc4Queue queue(cfg["sc4_queue_capacity"].as<size_t>());size_t next=0,reported=0,firstMissing=system.input().batches.size();std::deque<Sc4QueuedBatch> rejected;
  double loggerMs=0,maxLoggerMs=0;
  auto emit=[&](const Sc4Output& row){auto logging=Sc4Clock::now();struct rusage resource{};getrusage(RUSAGE_SELF,&resource);
   csv<<row.sequence<<','<<row.epoch<<','<<row.functional<<','<<row.bound_status<<','<<row.finite<<','<<row.proof.valid<<','<<row.source<<','<<row.scope<<','<<row.state.timestamp.value()<<','<<row.transaction<<','<<row.version<<','<<row.updates;
-  for(const auto& vector:{row.tag,row.state.velocity_world_mps})for(int j=0;j<3;++j)csv<<','<<vector(j);
+  for(const auto& vector:{row.tag,row.state.velocity_world_mps,row.state.accel_bias_mps2,row.state.gyro_bias_radps})for(int j=0;j<3;++j)csv<<','<<vector(j);
   csv<<','<<row.state.q_world_body.w()<<','<<row.state.q_world_body.x()<<','<<row.state.q_world_body.y()<<','<<row.state.q_world_body.z()<<','<<row.proof.geometry.hpl<<','<<row.proof.geometry.pl.z()<<','<<row.cumulative_risk<<','<<row.physical_expected<<','<<row.physical_evaluated<<','<<row.proof.geometry.considered<<','<<row.action.excluded<<','<<row.action.imu.current_bridge<<','<<row.action.imu_rejoined<<','<<row.carry<<','<<row.action.expected_actions<<','<<row.action.evaluated_actions<<','<<row.action.imu.candidate.rebuilds<<','<<row.history_epochs<<','<<row.active_slots<<','<<row.retained_ids<<','<<row.input_ids<<','<<row.removed_groups;
-  const auto& t=row.timing;csv<<','<<t.release_ns<<','<<t.start_ns<<','<<t.alarm_ns<<','<<t.selected_ns<<','<<t.commit_ns<<','<<t.proof_ns<<','<<t.output_ns<<','<<t.ingest_ms<<','<<t.prepare_ms<<','<<t.candidate_ms<<','<<t.commit_ms<<','<<t.bound_ms<<','<<t.cleanup_ms<<','<<t.core_ms<<','<<t.full_ms<<','<<t.queue_ms<<','<<t.arrival_to_output_ms<<','<<t.measurement_age_ms<<','<<row.core_on_time<<','<<row.on_time<<','<<initMs<<','<<resource.ru_maxrss<<','<<t.enqueue_ns<<",0,0,0\n";csv.flush();auto elapsed=duration(logging,Sc4Clock::now());loggerMs+=elapsed;maxLoggerMs=std::max(maxLoggerMs,elapsed);++reported;
+  const auto& t=row.timing;csv<<','<<t.release_ns<<','<<t.start_ns<<','<<t.alarm_ns<<','<<t.selected_ns<<','<<t.commit_ns<<','<<t.proof_ns<<','<<t.output_ns<<','<<t.ingest_ms<<','<<t.prepare_ms<<','<<t.candidate_ms<<','<<t.commit_ms<<','<<t.bound_ms<<','<<t.cleanup_ms<<','<<t.core_ms<<','<<t.full_ms<<','<<t.queue_ms<<','<<t.arrival_to_output_ms<<','<<t.measurement_age_ms<<','<<row.core_on_time<<','<<row.on_time<<','<<initMs<<','<<resource.ru_maxrss<<','<<t.enqueue_ns<<','<<row.action.total_rebuilds<<','<<row.action.total_reintegrations<<','<<row.action.diagnostic_calls<<','<<row.action.optimizer_ms<<','<<row.action.reintegrations_ms<<','<<row.action.diagnostics_ms<<','<<row.action.numeric_evaluated<<','<<row.action.numeric_skipped_post_rejected<<','<<row.action.numeric_skipped_dominated<<','<<system.input().source_time_origin_s<<','<<(t.release_ns+50000000)<<','<<2500000000LL<<','<<(row.proof.valid?"CONDITIONAL_TASK_BOUND":"UNKNOWN_CURRENT_OUTPUT_RISK")<<",0,0,0\n";csv.flush();auto elapsed=duration(logging,Sc4Clock::now());loggerMs+=elapsed;maxLoggerMs=std::max(maxLoggerMs,elapsed);++reported;
  };
  while(reported<system.input().batches.size()){
   auto now=Sc4Clock::now();
@@ -108,13 +117,13 @@ int runSc4System(int argc,char** argv){
   }
   if(!queue.size()){
    if(next<system.input().batches.size()){std::this_thread::sleep_until(origin+std::chrono::nanoseconds(system.input().batches[next].timestamp.value()));continue;}
-   while(!rejected.empty()){auto job=rejected.front();rejected.pop_front();auto row=system.reject(job.index,"QUEUE_OVERLOAD_REJECTED",job.release,origin);row.timing.enqueue_ns=stamp(job.enqueued,origin);emit(row);}break;
+   while(!rejected.empty()){auto job=rejected.front();rejected.pop_front();auto row=system.reject(job.index,"QUEUE_OVERLOAD_REJECTED",job.release,origin);row.timing.enqueue_ns=stamp(job.enqueued,origin);delivered(row,origin);emit(row);}break;
   }
   auto job=queue.pop();
-  while(!rejected.empty() && rejected.front().index<job.index){auto drop=rejected.front();rejected.pop_front();auto row=system.reject(drop.index,"QUEUE_OVERLOAD_REJECTED",drop.release,origin);row.timing.enqueue_ns=stamp(drop.enqueued,origin);emit(row);}
+  while(!rejected.empty() && rejected.front().index<job.index){auto drop=rejected.front();rejected.pop_front();auto row=system.reject(drop.index,"QUEUE_OVERLOAD_REJECTED",drop.release,origin);row.timing.enqueue_ns=stamp(drop.enqueued,origin);delivered(row,origin);emit(row);}
   if(job.index>=firstMissing)system.sourceGap();
-  auto row=system.process(job.index,fde,job.release,origin);row.timing.enqueue_ns=stamp(job.enqueued,origin);emit(row);
+  auto row=system.process(job.index,fde,job.release,origin);row.timing.enqueue_ns=stamp(job.enqueued,origin);delivered(row,origin);emit(row);
  }
- std::cout<<"SC4 reference source_init_ms="<<initMs<<" epochs="<<count<<" queue_peak="<<queue.peak()<<" diagnostic_logging_ms="<<loggerMs<<" max_logging_ms="<<maxLoggerMs<<'\n';return 0;
+ std::cout<<"SC4 "<<(optimized?"optimized":"reference")<<" source_init_ms="<<initMs<<" epochs="<<count<<" queue_peak="<<queue.peak()<<" diagnostic_logging_ms="<<loggerMs<<" max_logging_ms="<<maxLoggerMs<<'\n';return 0;
 }
 }

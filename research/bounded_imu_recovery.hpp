@@ -5,6 +5,7 @@
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/nonlinear/GaussNewtonOptimizer.h>
 #include <gtsam/nonlinear/Marginals.h>
+#include <chrono>
 #include <gtsam/navigation/NavState.h>
 #include <set>
 #include <Eigen/Eigenvalues>
@@ -34,6 +35,8 @@ struct BoundedRecoveryAttempt {
  double full_state_domain_ratio=INFINITY;
  Eigen::Matrix<double,5,1> cumulative=Eigen::Matrix<double,5,1>::Zero(),local=Eigen::Matrix<double,5,1>::Zero();
  FullStateBridge bridge;gtsam::Values reference;
+ size_t raw_reintegrations=0,diagnostic_calls=0;
+ double raw_reintegration_ms=0,optimizer_ms=0,diagnostic_ms=0;
 };
 // New reference built solely from retained graph factors and one original
 // initialization observation. Recenter twice, each optimizer has a fixed
@@ -41,7 +44,7 @@ struct BoundedRecoveryAttempt {
 // Existing bridge weights are optimization metrics, NEVER Gaussian evidence.
 inline BoundedRecoveryAttempt boundedRecovery(const EpochTransaction& tx,
  const ExclusionAction& action,const NavigationState& initial,double accel,double rate,
- const std::vector<ImuMeasurement>* raw_prefix=nullptr,const GenericBridgeSpec* bridge_spec=nullptr){
+ const std::vector<ImuMeasurement>* raw_prefix=nullptr,const GenericBridgeSpec* bridge_spec=nullptr,bool diagnostics=true){
  BoundedRecoveryAttempt o;if(action.bridge_mode==BridgeMode::None)return o;
  std::set<std::uint64_t> removed;for(auto id:action.groups_to_remove)removed.insert(id.value());
  std::map<std::size_t,const PendingFactorGroup*> imu;
@@ -57,6 +60,7 @@ inline BoundedRecoveryAttempt boundedRecovery(const EpochTransaction& tx,
  for(const auto& f:tx.frozen_slots)if(f.factor){if(f.group_id && removed.count(f.group_id->value())){++o.removed;continue;}graph.push_back(f.factor);++o.retained;}
  if(!removed.count(tx.imu_group.id.value()))graph.push_back(tx.imu_group.factors);
  if(raw_prefix){
+  auto raw_start=std::chrono::steady_clock::now();
   // Rebuild every retained PIM from observed raw input and the ORIGINAL bias
   // observation. Neither polluted online biasHat nor a removed sample enters
   // the new reference. Future samples beyond this transaction are never read.
@@ -73,8 +77,10 @@ inline BoundedRecoveryAttempt boundedRecovery(const EpochTransaction& tx,
    gtsam::PreintegratedCombinedMeasurements pim(params,gtsam::imuBias::ConstantBias(initial.accel_bias_mps2,initial.gyro_bias_radps));
    for(size_t k=1;k<slice.size();++k)pim.integrateMeasurement(.5*(slice[k-1]->specific_force_mps2+slice[k]->specific_force_mps2),.5*(slice[k-1]->angular_velocity_radps+slice[k]->angular_velocity_radps),slice[k]->timestamp.seconds()-slice[k-1]->timestamp.seconds());
    rebuilt.emplace_shared<gtsam::CombinedImuFactor>(imu_factor->key1(),imu_factor->key2(),imu_factor->key3(),imu_factor->key4(),imu_factor->key5(),imu_factor->key6(),pim);
+   ++o.raw_reintegrations;
   }
   graph=std::move(rebuilt);
+  o.raw_reintegration_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-raw_start).count();
  }else for(const auto& h:history)if(h.first>=first && h.second->preintegration && !removed.count(imu.count(h.first)?imu.at(h.first)->id.value():0)){
   o.status="POST_ONSET_HEALTHY_PIM_REBUILD_REQUIRED";return o;
  }
@@ -114,6 +120,7 @@ inline BoundedRecoveryAttempt boundedRecovery(const EpochTransaction& tx,
  auto initial_values=values;
  o.objective_before=graph.error(values);
  try{
+  auto optimize_start=std::chrono::steady_clock::now();
   for(int r=0;r<2;++r){auto before=values;gtsam::GaussNewtonParams params;params.maxIterations=8;params.relativeErrorTol=1e-7;params.absoluteErrorTol=1e-7;
    values=gtsam::GaussNewtonOptimizer(graph,values,params).optimize();++o.rebuilds;
    o.local.setZero();for(size_t e=0;e<=tx.proposed_epoch;++e){
@@ -132,6 +139,12 @@ inline BoundedRecoveryAttempt boundedRecovery(const EpochTransaction& tx,
    o.cumulative(3)=std::max(o.cumulative(3),db.head<3>().norm());o.cumulative(4)=std::max(o.cumulative(4),db.tail<3>().norm());
   }
   o.objective_after=graph.error(values);o.reference=values;
+  o.optimizer_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-optimize_start).count();
+  // SC3 selection and raw coverage consume only finite objective/two rebuilds/
+  // reference. This opt-in profile omits an unconsumed covariance diagnostic;
+  // it never upgrades the original Gaussian recovery qualification.
+  if(!diagnostics){o.status="NUMERICAL_REFERENCE_ONLY_DIAGNOSTICS_SKIPPED";return o;}
+  auto diagnostic_start=std::chrono::steady_clock::now();++o.diagnostic_calls;
   auto healthy_linear=healthy_graph.linearize(values);
   auto h=healthy_linear->jacobian().first;
   Eigen::ColPivHouseholderQR<Eigen::MatrixXd> rank(h);rank.setThreshold(1e-10);
@@ -151,6 +164,7 @@ inline BoundedRecoveryAttempt boundedRecovery(const EpochTransaction& tx,
   o.bridge=fullStateBridge(world*p*world.transpose(),.05*(tx.proposed_epoch-first+1),accel,rate);
   o.full_state_domain_ratio=std::max(o.bridge.box.head<3>().maxCoeff()/.25,o.bridge.box.segment<3>(6).maxCoeff()/.5);
   o.status=o.full_state_domain_ratio>1.?"BRIDGE_DOMAIN_EXCEEDS_LOCAL_MODEL":"PIM_HISTORY_UNIFORM_BOUND_MISSING";
+  o.diagnostic_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-diagnostic_start).count();
  }catch(const std::exception& ex){o.status="RECOVERY_SOLVE_FAILED:"+std::string(ex.what());}
  return o;
 }

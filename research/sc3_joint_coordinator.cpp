@@ -6,6 +6,7 @@
 #include <sstream>
 #include <iostream>
 #include <tuple>
+#include <optional>
 namespace uwb_imu_pl {
 FdeDecision FdeManager::decideRawJointResearch(std::vector<CandidateEvaluation>* candidates,const research::Sc3DecisionContext& context)const{
  FdeDecision decision;decision.status=FdeStatus::ModelInvalid;
@@ -33,7 +34,7 @@ FdeDecision FdeManager::decideRawJointResearch(std::vector<CandidateEvaluation>*
 }
 }
 namespace uwb_imu_pl::research {
-Sc3JointCoordinator::Sc3JointCoordinator(const NavigationState& initial,const RawInclusionParameters& law,const UwbBatch& identity,size_t capacity):initial_(initial),law_(law),imu_(initial,law),bound_(initial,law,identity),action_capacity_(capacity){if(capacity<18)throw std::runtime_error("SC3 complete action capacity refused");}
+Sc3JointCoordinator::Sc3JointCoordinator(const NavigationState& initial,const RawInclusionParameters& law,const UwbBatch& identity,size_t capacity,bool diagnostics,bool skip):initial_(initial),law_(law),imu_(initial,law),bound_(initial,law,identity),action_capacity_(capacity),recovery_diagnostics_(diagnostics),skip_post_rejected_numeric_(skip){if(capacity<18)throw std::runtime_error("SC3 complete action capacity refused");}
 namespace {
 ExclusionAction rangeAction(const EpochTransaction& tx,int excluded){
  ExclusionAction a;if(excluded<0)return a;
@@ -59,26 +60,39 @@ Sc3NativeAssessment Sc3JointCoordinator::prepare(EpochTransaction& tx,const RawR
  Sc3NativeAssessment out;auto start=std::chrono::steady_clock::now();auto all=uwbCandidate(tx.uwb_batch,-1,1e-6,1e-9);out.uwb_alarm=all.gaussian.dof>0 && all.gaussian.statistic>all.gaussian.threshold;out.detector_statistic=all.gaussian.statistic;out.detector_threshold=all.gaussian.threshold;
  bool held=anchor_>=0 && int(tx.proposed_epoch)<=uwb_end_;bool search=fde && (out.uwb_alarm || imu_.monitor().alarm || held);
  std::vector<ExclusionAction> actions;std::vector<EpochTransaction> transactions;std::vector<Sc2RecoveryCoordinator> coordinators;std::vector<Sc2NativeAssessment> assessments;std::vector<NavigationState> centers;std::vector<CandidateEvaluation> candidates;
+ std::optional<std::tuple<size_t,double,uint64_t>> knownEligible;
  for(int mask=-1;mask<(search?8:0);++mask){auto post=mask<0?all:uwbCandidate(tx.uwb_batch,mask,1e-6,1e-9);
   for(int removeImu=0;removeImu<(search?2:1);++removeImu){auto candidateTx=tx;auto coordinator=imu_;auto action=rangeAction(candidateTx,mask);action.id=ExclusionActionId(5000+(mask+1)*2+removeImu);action.action_model_id="sc3-raw-full-product-root-mask-"+std::to_string(mask)+"-imu-"+std::to_string(removeImu);
    auto assessment=coordinator.prepare(candidateTx,removeImu!=0,spec,&action,removeImu!=0,true);CandidateEvaluation candidate;candidate.action=assessment.action;candidate.statistic=post.gaussian.statistic;
    candidate.valid=assessment.legal;NavigationState center=candidateTx.cv_predicted_state;center.timestamp=tx.end;
-   if(candidate.valid && !assessment.action.groups_to_remove.empty()){
-    if(!candidateTx.frozen_values->exists(gtsam::Symbol('x',0)) || candidateTx.history_recoverability!=HistoryRecoverability::Recoverable)candidate.valid=false;
-    else{auto rebuildAction=assessment.action;if(rebuildAction.bridge_mode==BridgeMode::None)rebuildAction.bridge_mode=BridgeMode::GenericKinematic;
-     assessment.candidate=boundedRecovery(candidateTx,rebuildAction,initial_,.04,.2,&coordinator.observedPrefix(),&spec);
-     candidate.valid=assessment.candidate.rebuilds==2 && std::isfinite(assessment.candidate.objective_after);
-     if(candidate.valid){seedFrom(assessment.candidate,tx.proposed_epoch,center);candidateTx.cv_predicted_state=center;}
-    }
-   }
-   auto proof=bound_.project(coordinator.rawMonitor(),source,candidateTx,center,lever);
-   candidate.valid=candidate.valid && proof.valid;candidate.pl_xyz_m=proof.geometry.pl;candidate.hpl_m=proof.geometry.hpl;candidate.vpl_m=proof.geometry.pl.z();
-   // Gaussian range profile is functional evidence only; no source/fault branch
-   // is removed. The raw final proof protects even a missed/incorrect action.
+   // This predicate has no graph-reference dependency. A false predicate can
+   // NEVER enter the manager's eligible set, regardless of numeric validity.
+   // Keep its action/physical identity; omit only its unconsumed GN/PL work.
    bool rangePassed=post.status=="FROZEN_MODEL_ONLY" && post.gaussian.statistic<=post.gaussian.threshold;
    bool imuPassed=!imu_.monitor().alarm || removeImu;
    bool heldPassed=!held || mask==anchor_;
    candidate.post_detector_passed=!fde || ((!search || rangePassed) && imuPassed && heldPassed);
+   auto priority=std::make_tuple(size_t(candidate.action.exclusion_cardinality),candidate.statistic,candidate.action.id.value());
+   bool postRejected=skip_post_rejected_numeric_ && !candidate.post_detector_passed;
+   bool dominated=skip_post_rejected_numeric_ && candidate.post_detector_passed && knownEligible && priority>*knownEligible;
+   bool skipNumeric=postRejected || dominated;
+   if(skipNumeric){candidate.valid=false;assessment.candidate.status=postRejected?"POST_REJECTED_NO_NUMERIC_CONSUMER":"ORDER_DOMINATED_BY_VALID_ELIGIBLE_ACTION";if(postRejected)++out.numeric_skipped_post_rejected;else ++out.numeric_skipped_dominated;}
+   else ++out.numeric_evaluated;
+   if(candidate.valid && !assessment.action.groups_to_remove.empty()){
+    if(!candidateTx.frozen_values->exists(gtsam::Symbol('x',0)) || candidateTx.history_recoverability!=HistoryRecoverability::Recoverable)candidate.valid=false;
+    else{auto rebuildAction=assessment.action;if(rebuildAction.bridge_mode==BridgeMode::None)rebuildAction.bridge_mode=BridgeMode::GenericKinematic;
+     assessment.candidate=boundedRecovery(candidateTx,rebuildAction,initial_,.04,.2,&coordinator.observedPrefix(),&spec,recovery_diagnostics_);
+     out.total_rebuilds+=assessment.candidate.rebuilds;out.total_reintegrations+=assessment.candidate.raw_reintegrations;out.diagnostic_calls+=assessment.candidate.diagnostic_calls;
+     out.optimizer_ms+=assessment.candidate.optimizer_ms;out.reintegrations_ms+=assessment.candidate.raw_reintegration_ms;out.diagnostics_ms+=assessment.candidate.diagnostic_ms;
+     candidate.valid=assessment.candidate.rebuilds==2 && std::isfinite(assessment.candidate.objective_after);
+     if(candidate.valid){seedFrom(assessment.candidate,tx.proposed_epoch,center);candidateTx.cv_predicted_state=center;}
+    }
+   }
+   Sc3JointBound proof;if(!skipNumeric)proof=bound_.project(coordinator.rawMonitor(),source,candidateTx,center,lever);
+   candidate.valid=candidate.valid && proof.valid;candidate.pl_xyz_m=proof.geometry.pl;candidate.hpl_m=proof.geometry.hpl;candidate.vpl_m=proof.geometry.pl.z();
+   if(candidate.valid && candidate.post_detector_passed && (!knownEligible || priority<*knownEligible))knownEligible=priority;
+   // Gaussian range profile is functional evidence only; no source/fault branch
+   // is removed. The raw final proof protects even a missed/incorrect action.
    actions.push_back(candidate.action);transactions.push_back(std::move(candidateTx));coordinators.push_back(std::move(coordinator));assessments.push_back(std::move(assessment));centers.push_back(center);candidates.push_back(std::move(candidate));
   }
  }

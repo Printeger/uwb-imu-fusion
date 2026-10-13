@@ -1059,3 +1059,82 @@ actual two healthy commits, pending cancellation and source-gap refusal.
 No production default, raw law, risk amount, fault bank or AL is changed.
 W2 local save closes lifecycle work; computational optimization and final
 performance/real-record/application acceptance are still active W3/W4.
+
+W3 first local candidate PASS (38 native commits across healthy2/ref+opt and
+shifted gyro17/ref+opt): exact full navigation state including bias, selected
+raw IDs, deletion groups, action roots, source/risk, receipt and PL match.
+Alarm16 reference/diagnostic-omission-only core313.883/132.718ms;17
+234.708/151.281ms. Reference16 counts18 action roots,34 GN rounds,263 raw PIM
+reintegration,17 diagnostic computations; GN140.879ms,diagnostic130.492ms,
+raw5.286ms (component samples vary with cold caches). This verified candidate
+still misses40/50; it is not credited as realtime. No frozen matrix run yet.
+
+W3 next structural proposal, registered before testing: all18 actions still
+materialize and their full functional post predicates are checked. Numerical
+reference/PL evaluation is unnecessary for an action whose predicate is
+already FALSE: manager eligibility is `valid AND post_detector_passed`, and
+cardinality/statistic ordering examines only that eligible set. The post
+predicate depends exclusively on the already evaluated UWB subset WLS,
+retained raw IMU alarm and persistent UWB hold, NOT GN/reference/PL. Therefore
+skipping a false-predicate root cannot change any selected action or reference;
+all true-predicate roots retain exactly the same numeric computation and
+manager reproof. This is action eligibility, NOT physical fault exclusion:
+local PASS never removes any of481401 h, and every selected candidate still
+covers their complete all9 union under the same E. FDE-off has every predicate
+true and therefore takes the unchanged numeric path. All action identities/
+census remain18, while separate numeric-evaluated and post-rejected/skipped
+counts expose the actual reduction. Skipped numeric references are UNKNOWN,
+not finite or zero-risk. Near-rank/domain errors and raw proof fallbacks for
+any eligible root remain untouched. Original SC3/default callers keep both
+old diagnostics and full numeric evaluation; only the explicit SC4 optimized
+profile uses this dependency-based omission. This needs independent same-
+input source/state/selection/PL equivalence before final freeze.
+
+W3 post-predicate eligibility elision local PASS: another38 native commits,
+full state/bias, actual source IDs/removal groups/transaction/risk/PL exactly
+match reference. Joint gyro16 reference/optimized core343.762/20.3136ms,
+17 293.727/16.9125ms. This result has18 functional action evaluations, not18
+numeric solves. The final matrix remains unfrozen while the following
+structural workload reduction is checked for single-IMU loads.
+
+Additional strict ordering dominance: once an actually computed, raw-proof-
+valid AND post-passed action has key(cardinality,statistic,id), any later
+candidate with a strictly WORSE key cannot be the selected minimum, even
+if its numeric solve were valid. Such actions keep their source/action
+identity and explicit ORDER_DOMINATED_BY_VALID_ELIGIBLE_ACTION status, but
+need no numeric reference. Better-key actions are always computed, including
+all fallback attempts when an earlier candidate is invalid. Equal keys are
+not pruned. This follows the unchanged manager ordering exactly, uses no
+fault label/AL/physical-hypothesis exclusion, and leaves selected reproof and
+all481401 physical branches intact. It particularly avoids eight redundant
+higher-cardinality UWB+IMU solves when an actual IMU-only root is already
+valid. Actual numeric/post-rejected/dominated counters separately sum to the
+complete action count. Next local deterministic full-state/PL comparison
+uses healthy and IMU-only gyro; joint comparison already passed the prior
+case and is included in the final affected semantic regression.
+
+W3 strict-order local PASS:38 further actual native commits. Healthy/IMU-only
+gyro full state+bias/action/source/receipt/PL exactly equal. At16 all18 action
+predicates remain evaluated; optimized numeric1,post-rejected9,dominated8,
+GN2 versus reference34,core279.371→17.5905ms;17 209.517→17.3415ms.
+No source/Jacobian/cache/tail-risk approximation, matrix thread pool or new
+mission law is used. Existing strict Gaussian and raw geometry oracles remain
+available unchanged. Failed eligible numeric solves still permit every
+better-ranked/fallback root, with conservative raw frontier fallback intact.
+Three local comparison invocations total114 actual native commits, all spatial
+qualified; no aborted epoch or source-label assistance. These are development
+snapshots, not final35-sample/WCET evidence.
+
+The W3 candidate now retains original reference defaults and exposes opt-in
+optimized dependency elision; source/body/noise/AL and final selection are
+unchanged. Diagnostics disclose actual numerical root/skip/GN/PIM work instead
+of calling18 functional eligibility evaluations18 numeric solves. Packet
+serialization uses17 decimal digits for double roundtrip at the signed
+world tag. Final delivery clock is captured by the caller after process()
+returns and destroys its native transaction/serialization temporaries.
+Diagnostic CSV logging is separately measured and adds to paced backlog;
+no hardware transport or publisher is implied by in-process delivery.
+Final W4 freeze will measure original healthy and shifted joint gyro50-input
+reference/optimized pairs (15 warmup+35 measured), plus real service times for
+other actual supported classes. Numerical elision cannot extend missing
+native axes, mission horizon, application or hardware qualification.

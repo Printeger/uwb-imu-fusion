@@ -19,14 +19,18 @@ struct Sc3NativeAssessment {
  size_t expected_actions=0,evaluated_actions=0,uwb_history_removed=0;
  double candidate_ms=0,detector_statistic=INFINITY,detector_threshold=0;
  bool uwb_alarm=false,legal=false,imu_rejoined=false;
+ size_t total_rebuilds=0,total_reintegrations=0,diagnostic_calls=0;
+ size_t numeric_evaluated=0,numeric_skipped_post_rejected=0;
+ size_t numeric_skipped_dominated=0;
+ double optimizer_ms=0,reintegrations_ms=0,diagnostics_ms=0;
  std::string status="NOT_RUN";
 };
 class Sc3JointCoordinator {
  NavigationState initial_;RawInclusionParameters law_;
  Sc2RecoveryCoordinator imu_;Sc3IndependentJointBound bound_;
- int anchor_=-1,uwb_end_=0;size_t action_capacity_;
+ int anchor_=-1,uwb_end_=0;size_t action_capacity_;bool recovery_diagnostics_,skip_post_rejected_numeric_;
  public:
- Sc3JointCoordinator(const NavigationState&,const RawInclusionParameters&,const UwbBatch&,size_t action_capacity=18);
+ Sc3JointCoordinator(const NavigationState&,const RawInclusionParameters&,const UwbBatch&,size_t action_capacity=18,bool recovery_diagnostics=true,bool skip_post_rejected_numeric=false);
  void append(const ImuMeasurement& x){imu_.append(x);}
  Sc3NativeAssessment prepare(EpochTransaction&,const RawRangeLawEvidence&,const Eigen::Vector3d&,const GenericBridgeSpec&,bool fde);
  void committed(const Sc3NativeAssessment&,const EpochTransaction&,const CommitReceipt&);
