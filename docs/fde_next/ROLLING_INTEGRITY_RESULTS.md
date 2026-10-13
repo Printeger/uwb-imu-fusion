@@ -137,3 +137,47 @@ Reproduce: `epoch_raim_runner config/sc5_rolling.yaml OUTPUT SC3_U0 rolling off 
 Raw transfer main algorithm is implemented; T200 and actual FDE remain OPEN
 until W4/W5 validation. Dynamic source-event plumbing enters here because all
 operators and monitor constraints must consume the same predeclared radius.
+
+## W4 bounded native recovery
+
+Actual UA75 and UG75 witnesses PASS75/75 raw/native each: x0 absent at61,
+joint UWB/IMU exclusion, actual complete bridge pairs through71, and actual
+original-bias CombinedIMU reintegration/rejoin72–75. UA61 removes39 groups,
+including1 actual LinearContainerFactor boundary; candidate uses exactly two
+bounded8-iteration GN rounds on live keys. The first possible IMU onset52 is
+a conservative raw monitor union, not the generator's hidden true label61.
+
+Delayed onset20, isolation55, replay60:80/80 receipts/raw outputs PASS. At55
+FGO separator26, actual original fault factors20–22 have marginalized; one
+polluted numerical boundary plus58 active affected groups are really removed.
+Three recorded regularization factors replace the discarded prior at26;
+ledger marks their explicit source/metric and prior replacement relation.
+Old boundary pointer absence, actual removed slots, full metric receipt and
+all historical removals are checked.56–60 genuinely rejoin IMU. At55 actual
+tag horizontal/vertical error .11096/.10275m; no full15D accuracy claim.
+Numerical metric centers are representatives of certified raw capsules,
+not independent observations; their weights retain original nominal metric
+sigmas and never narrow raw proof. The optimizer visits only live keys, never
+reconstructs epoch0..k. Capsules/raw tail are explicitly bounded by replay.
+
+The existing strict slot binding initially failed at55 because the earliest
+historical replacement pair itself marginalized during that same update.
+A narrow explicit `commitEpochRollingResearchV1` now accepts only a complete
+rolling action and a replacement tied to this transaction whose actual keys
+marginalized; its ledger lifecycle is Marginalized, not an invented live slot.
+Legacy commit signatures/layout/default binding remain unchanged. Two failed
+80-scheduled runs occurred: each54 emitted protected receipts, one additional
+native mutation terminal at55,25 unattempted. The second mistakenly launched
+before the new runner finished linking, thus used the old interface. Neither
+failed backend received a second mutation. Corrected80 run is separate.
+
+Out-of-buffer onset20, extra0/replay30, isolation55:60/60 native/raw PASS;
+all6 epochs55–60 return `BOUND_VALID_BUT_RECOVERY_UNAVAILABLE`, no repair,
+no false FDE_SUCCESS. Bound and recovery are separate decisions. The buffer
+gate checks the preceding shared endpoint, not only the first bad sample.
+Reproduce delayed/outside by overriding onset fields to20 and extra to30/0
+in a transient SC5 config, runner `SC3_A rolling on 80|60 55`.
+
+W4 stream attempts:75+75+80+60+80+80=450 scheduled;
+75+75+80+60+54+54=398 protected receipts;2 additional terminal native
+mutations;50 unattempted. No failed row is recategorized as successful.

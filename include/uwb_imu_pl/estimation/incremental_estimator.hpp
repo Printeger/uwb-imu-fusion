@@ -186,6 +186,10 @@ class IncrementalUwbImuEstimator {
       EpochTransaction&& transaction, const EpochCommitPlan& plan,
       const CommitProtectionEvidenceV1* protection_evidence,
       CommitCertificationV1* certification);
+  // Opt-in rolling recovery: account replacements which become a Schur
+  // boundary in the same one native update. Legacy binding remains strict.
+  CommitReceipt commitEpochRollingResearchV1(EpochTransaction&& transaction,
+                                            const EpochCommitPlan& plan);
   DiscardReceipt discardEpoch(EpochTransaction&& transaction,
                               const DiscardReason& reason);
 
@@ -315,6 +319,10 @@ class IncrementalUwbImuEstimator {
   EpochTransaction prepareTransaction(TimestampNs timestamp,
                                       const UwbBatch* batch,
                                       const EpochPreparationOptions& options);
+  CommitReceipt commitEpochImpl(EpochTransaction&& transaction,
+      const EpochCommitPlan& plan,
+      const CommitProtectionEvidenceV1* protection_evidence,
+      CommitCertificationV1* certification,bool rolling_recovery);
   void attachUwbGroups(EpochTransaction* transaction,
                        const UwbBatch& batch,
                        bool build_recovery_material) const;

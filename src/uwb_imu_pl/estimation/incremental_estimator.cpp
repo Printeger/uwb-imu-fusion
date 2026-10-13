@@ -3034,6 +3034,22 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpochCertified(
     EpochTransaction&& tx, const EpochCommitPlan& plan,
     const CommitProtectionEvidenceV1* protection_evidence,
     CommitCertificationV1* certification) {
+  return commitEpochImpl(std::move(tx),plan,protection_evidence,certification,false);
+}
+
+CommitReceipt IncrementalUwbImuEstimator::commitEpochRollingResearchV1(
+    EpochTransaction&& tx,const EpochCommitPlan& plan) {
+  if (!fixed_lag_backend_ || readEstimationRuntime(this).tuning.nominal_lag_s!=0.0 ||
+      plan.bridge_mode==BridgeMode::None || !plan.recovery_epoch_begin ||
+      !plan.recovery_epoch_end || *plan.recovery_epoch_end!=tx.proposed_epoch)
+    throw std::invalid_argument("ROLLING_RECOVERY_EXPLICIT_ACTION_REQUIRED");
+  return commitEpochImpl(std::move(tx),plan,nullptr,nullptr,true);
+}
+
+CommitReceipt IncrementalUwbImuEstimator::commitEpochImpl(
+    EpochTransaction&& tx,const EpochCommitPlan& plan,
+    const CommitProtectionEvidenceV1* protection_evidence,
+    CommitCertificationV1* certification,bool rolling_recovery) {
   if (backendPoisoned()) throw std::runtime_error("backend is fail-closed");
   if (!active_transaction_id_ || *active_transaction_id_ != tx.id ||
       tx.backend_mutated || tx.base_graph_version != graph_version_ ||
@@ -3308,7 +3324,11 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpochCertified(
           // same seconds-based update. Its just-added IMU factor is then
           // represented by the Schur boundary, rather than an active slot.
           // FDE binding remains strict and unchanged.
-          const bool marginalized_now = nominal_only && runtime.tuning.nominal_lag_s > 0.0 &&
+          const bool historical_rolling_replacement = rolling_recovery &&
+              group->replaces_group && group->recovery_epoch==tx.proposed_epoch &&
+              (group->kind==FactorKind::KinematicBridge || group->kind==FactorKind::BiasContinuity);
+          const bool marginalized_now = ((nominal_only && runtime.tuning.nominal_lag_s > 0.0) ||
+                  historical_rolling_replacement) &&
               std::any_of(expected->keys().begin(), expected->keys().end(),
                   [&](gtsam::Key key) {
                     return std::find(update.marginalized_keys.begin(),
@@ -3320,7 +3340,8 @@ CommitReceipt IncrementalUwbImuEstimator::commitEpochCertified(
         }
         slots.push_back(static_cast<std::size_t>(found - active.begin()));
       }
-      if (slots.empty() && nominal_only && runtime.tuning.nominal_lag_s > 0.0) {
+      if (slots.empty() && ((nominal_only && runtime.tuning.nominal_lag_s > 0.0) ||
+              (rolling_recovery && group->replaces_group && group->recovery_epoch==tx.proposed_epoch))) {
         staged_ledger.transition(group->id, FactorLifecycle::Marginalized,
                                  staged_version);
       } else {
