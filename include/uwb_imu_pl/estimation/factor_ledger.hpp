@@ -72,6 +72,11 @@ class FactorLedger {
   bool hasCompleteActiveProvenance(
       const gtsam::NonlinearFactorGraph& active_graph) const;
   std::uint64_t version() const { return version_; }
+  std::size_t storedEntryCountV1() const {
+    std::size_t count=0;
+    for (const auto& group:groups_) count+=group.second.size();
+    return count;
+  }
 
  private:
   std::map<std::uint64_t, std::vector<FactorLedgerEntry>> groups_;

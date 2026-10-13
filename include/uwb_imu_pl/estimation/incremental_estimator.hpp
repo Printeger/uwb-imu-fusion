@@ -74,6 +74,11 @@ struct EstimatorCacheAudit {
   std::string last_invalidation_reason;
 };
 
+struct OnlineMaterialAuditV1 {
+  std::size_t factor_slots=0,active_factors=0,values=0,ledger_entries=0;
+  std::size_t committed_intervals=0,committed_raw_samples=0;
+};
+
 struct CommittedEpochCatalogAuditV1 {
   TransactionId transaction_id;
   std::size_t previous_epoch = 0;
@@ -224,6 +229,7 @@ class IncrementalUwbImuEstimator {
   std::size_t oldestRetainedEpoch() const;
   // Actual live backend keys, independent of logical-window arithmetic.
   std::vector<gtsam::Key> retainedKeysV1() const;
+  OnlineMaterialAuditV1 onlineMaterialAuditV1() const;
   // Optional diagnostic export; no backend updates, no new object members.
   std::vector<NavigationState> retainedSmoothedStatesV1() const;
   double globalGraphResidualStatistic() const;

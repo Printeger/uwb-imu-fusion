@@ -33,7 +33,8 @@ void omitRange(EpochTransaction& tx,EpochCommitPlan& plan,int mask){
 }
 PendingFactorGroup metric(const RollingRawState& raw,const IntegrityConfig& config,
  const EpochTransaction& tx,FactorGroupId replaces){
- PendingFactorGroup g;g.id=FactorGroupId(0xd000000000000000ULL+tx.id.value());
+ // Low namespace bit survives the ledger's <<8 factor-ID encoding.
+ PendingFactorGroup g;g.id=FactorGroupId(0xd001000000000000ULL+tx.id.value());
  g.kind=FactorKind::BoundaryPrior;g.sensor=SensorType::Prior;g.nominal=false;
  g.model_id="sc5-discarded-boundary-recovery-metric-v1";g.noise_model_id="optimization-metric-NOT-independent-source";
  g.source_ids={"raw-capsule-epoch:"+std::to_string(raw.epoch),"discarded-prior-group:"+std::to_string(replaces.value())};
@@ -144,13 +145,17 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Sc2ImuM
 }
 void RollingRecovery::committed(const RollingFdeAssessment& a,const EpochTransaction& tx,const CommitReceipt& r,const FactorLedger& ledger){
  if(r.transaction_id!=tx.id || r.graph_version!=tx.base_graph_version+1 || r.backend_updates!=1)throw std::runtime_error("ROLLING_RECOVERY_RECEIPT_REFUSED");
- if(a.current_bridge){if(r.group_to_slots.count(tx.imu_group.id.value()) || !r.group_to_slots.count(tx.generic_bridge_group.id.value()) || !r.group_to_slots.count(tx.generic_bias_continuity_group.id.value()))throw std::runtime_error("ACTUAL_BRIDGE_RECEIPT_INCOMPLETE");isolated_=true;}
+ if(a.current_bridge){if(r.group_to_slots.count(tx.imu_group.id.value()) || !r.group_to_slots.count(tx.generic_bridge_group.id.value()) || !r.group_to_slots.count(tx.generic_bias_continuity_group.id.value()))throw std::runtime_error("ACTUAL_BRIDGE_RECEIPT_INCOMPLETE");}
  if(a.rejoined && (!r.group_to_slots.count(tx.imu_group.id.value()) || r.group_to_slots.count(tx.generic_bridge_group.id.value())))throw std::runtime_error("ACTUAL_IMU_REJOIN_RECEIPT_INCOMPLETE");
+ if(a.current_bridge && (!ledger.activeSlots(tx.imu_group.id).empty() || ledger.activeSlots(tx.generic_bridge_group.id)!=r.group_to_slots.at(tx.generic_bridge_group.id.value()) || ledger.activeSlots(tx.generic_bias_continuity_group.id)!=r.group_to_slots.at(tx.generic_bias_continuity_group.id.value())))throw std::runtime_error("ACTUAL_BRIDGE_LEDGER_MISMATCH");
+ if(a.rejoined && ledger.activeSlots(tx.imu_group.id)!=r.group_to_slots.at(tx.imu_group.id.value()))throw std::runtime_error("ACTUAL_REJOIN_LEDGER_MISMATCH");
  for(auto id:a.plan.groups_to_remove)if(std::find(r.historical_groups_removed.begin(),r.historical_groups_removed.end(),id)==r.historical_groups_removed.end())throw std::runtime_error("HISTORY_REMOVAL_RECEIPT_INCOMPLETE");
  if(a.boundary_repair){
   if(!r.group_to_slots.count(a.metric_group.value()) || r.group_to_slots.at(a.metric_group.value()).size()!=3)throw std::runtime_error("REPLACEMENT_METRIC_RECEIPT_MISSING");
+  if(ledger.activeSlots(a.metric_group)!=r.group_to_slots.at(a.metric_group.value()))throw std::runtime_error("REPLACEMENT_METRIC_LEDGER_MISMATCH");
   for(size_t slot:a.removed_prior_slots)if(std::find(r.removed_factor_slots.begin(),r.removed_factor_slots.end(),slot)==r.removed_factor_slots.end())throw std::runtime_error("POLLUTED_PRIOR_SLOT_NOT_REMOVED");
   for(const auto& e:ledger.entries())if(e.lifecycle==FactorLifecycle::Active)for(const auto& f:a.removed_boundary)if(e.factor.get()==f.get())throw std::runtime_error("POLLUTED_PRIOR_STILL_ACTIVE");
  }
+ if(a.current_bridge)isolated_=true;
 }
 }

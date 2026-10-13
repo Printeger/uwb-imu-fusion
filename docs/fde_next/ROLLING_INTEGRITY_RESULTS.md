@@ -155,7 +155,8 @@ ledger marks their explicit source/metric and prior replacement relation.
 Old boundary pointer absence, actual removed slots, full metric receipt and
 all historical removals are checked.56–60 genuinely rejoin IMU. At55 actual
 tag horizontal/vertical error .11096/.10275m; no full15D accuracy claim.
-Numerical metric centers are representatives of certified raw capsules,
+Numerical metric seeds use coordinate midpoints and nearest SO(3) rotation
+from certified raw capsules; they need not be jointly feasible points,
 not independent observations; their weights retain original nominal metric
 sigmas and never narrow raw proof. The optimizer visits only live keys, never
 reconstructs epoch0..k. Capsules/raw tail are explicitly bounded by replay.
@@ -181,3 +182,72 @@ in a transient SC5 config, runner `SC3_A rolling on 80|60 55`.
 W4 stream attempts:75+75+80+60+80+80=450 scheduled;
 75+75+80+60+54+54=398 protected receipts;2 additional terminal native
 mutations;50 unattempted. No failed row is recategorized as successful.
+
+## W5 finite task theorem and T200
+
+One predeclared event owns N(T)=15+6(10T+1)+60T+8T=21+128T standard-normal
+coordinates. Compact source IDs match the legacy6421 inventory exactly at50;
+the original50/q7/2·6421·2^-35 path is unchanged. New event selects integer m
+with exact binary upper 2N·2^-m≤budget, then integer q with5q²≥7m. A rational
+Taylor partial sum proves exp(7/10)>2, hence ln2<7/10 and
+2N exp(-q²/2)≤2N·2^-m.100-digit independent checks PASS for11 task lengths
+1,2,7,49,50,51,100,200,201,777,10000. Large test tasks use compact recipes,
+not million-entry inventories. At200 N=25621,m=36,q=8, booked upper
+**7.4566924013197422e-7**; exact Chernoff expression≈6.48937e-10 is checked
+but not substituted for the conservative binary amount. Every raw monitor,
+theta interval, initial set, ADC/RW support and range shell consumes this same
+event radius. Mission cap10000 is explicit; larger missions refuse. Numeric
+adapter domains can additionally refuse an arrived batch; invalid future
+certification never changes an earlier accepted batch or radius.
+
+Let F_k be the exact feasible relation under the declared single UWB and IMU
+episodes, source event E_T, numeric mapping certificates and physical motion
+domain. W2 initial inclusion and propagation establish true absolute states
+inside each box. For each allowed UWB episode its current row omission is
+among all9 retained branches; fault-independent physical reach contains every
+IMU branch. Every necessary tag and dynamics contraction retains the true
+trajectory. Each Cartesian separator projection therefore contains π_B F_k,
+and its next-window use preserves this invariant by induction. Shared latent
+correlation can be outer-projected, never counted as a new independent draw.
+Bias propagation additionally outward-inflates2e-10 per edge for numerical
+mapping support; it does not reset bias or spend probabilistic risk.
+
+On E_T every accepted, receipt-bound actual tag center is protected by the
+componentwise supremum over its absolute feasible tag outer set. This holds
+for **all data-dependent actions and centers at once**, including an incorrect
+FDE selection: neither the raw set nor the event assumes the chosen label is
+true. Horizontal norm and vertical absolute bounds are outward-rounded.
+Thus for every deterministic allowed h,theta,
+P(any issued k≤T exceeds HPL or VPL)≤P(E_T^c)≤budget, and the supremum over
+those faults obeys the same inequality. There is no extra candidate union,
+window reset, random-linearization Gaussian assumption, or risk multiplication
+by the7,685,601 logical fault hypotheses. Simulation PE checks validate the
+implementation; they are not a probability estimate or a hardware HMI proof.
+
+New numerical proposal seal compares actual interval endpoints, source/window
+fields, phases and IDs, not merely a hash or valid flag. Tampered small sets,
+forged FDE receipts vs actual ledger, stale/future proposals, whole-bank
+capacity, Gaussian rank deficiency, pre-update retry and injected post-update
+failure PASS. The latest boundary test has3 successful native commits and1
+deliberate terminal mutation; retries preserve149 introduced sources at1 and
+the original event amount. No second mutation follows a post-update failure.
+
+`python3 tools/sc4_system_research.py rolling --main-only`:600 scheduled,
+600 native receipts/finite qualified outputs,0 aborts. Each stream actually
+marginalizes513 keys, x0 exits30.51/90/150/200 are qualified in all3; source
+prefixes6549/11541/19221/25621, separator22/61/121/171, parent50/89/149/199.
+Their event amount never changes. UA/UG automatically isolate61, bridge
+through71, actually rejoin72–75 and continue through200. Final H/V meters:
+healthy4.31743/6.86663, UA4.31536/6.86788, UG4.31225/6.86758.
+All600 post-scored PE are inside their signed PL. Application status remains
+APPLICATION_AL_UNQUALIFIED;2/3 and5/5 pass0 of200 each,10/10 pass200 each,
+without modifying native decisions/states/sets/PL/risk.
+
+Main full service mean/median/P95/max ms: healthy27.8249/29.4941/31.2860/54.5562;
+UA27.7894/29.5208/32.1623/39.6093; UG27.8853/29.4816/32.2305/38.3583.
+Healthy core40 misses2/200, full50 misses1/200; UA/UG miss0/200. Cold source
+initialization221.25/208.15/209.25ms is separate. Actual `/proc/self/statm`
+resident maxima23524/23684/23848KiB; `getrusage` maxima can include inherited
+pre-exec high-water marks and are not substituted for resident memory.
+ROLLING_PERFORMANCE_OPEN remains. W6 variants, delayed final and relevant
+legacy safety regression are still required before RI01–RI16 completion.

@@ -126,7 +126,8 @@ struct NoisyMotionScenario {
    for(int e=1;e<=epochs;++e){size_t begin=(e-1)*10,end=e*10;
     std::vector<ImuMeasurement> samples(imu.begin()+begin,imu.begin()+end+1);
     std::vector<Eigen::Matrix<double,6,1>> adc(adc_normals.begin()+begin,adc_normals.begin()+end+1),rw(bias_normals.begin()+begin,bias_normals.begin()+end),fault(additive_imu_fault.begin()+begin,additive_imu_fault.begin()+end+1),bias(true_bias.begin()+begin,true_bias.begin()+end+1);
-    auto certificate=certifyRawGenerator(initial_observation,initial_normals,cfg.realtime.prior_sigmas,amp,freq,rate,cfg.imu.gravity_mps2,true_bias[begin],cfg.imu.accelerometer_bias_rw_sigma,cfg.imu.gyroscope_bias_rw_sigma,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),rw,adc,samples,&fault,&bias,int(begin),carry);
+    RawInputRoundoff certificate;
+    try{certificate=certifyRawGenerator(initial_observation,initial_normals,cfg.realtime.prior_sigmas,amp,freq,rate,cfg.imu.gravity_mps2,true_bias[begin],cfg.imu.accelerometer_bias_rw_sigma,cfg.imu.gyroscope_bias_rw_sigma,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),rw,adc,samples,&fault,&bias,int(begin),carry);}catch(const std::exception&){certificate.valid=false;}
     causal_imu_certificates.push_back(certificate);carry=certificate.bias_process.maxCoeff();
    }
   }
@@ -141,7 +142,10 @@ struct NoisyMotionScenario {
    }
    if(kind=="H1" && e==3){faults[0]=.02;b.measurements[0].range_m+=.02;}
    uwb.push_back(b);
-   if(physical_source_reference)range_certificates.push_back(certifyRawRanges(b,amp,freq,rate,lever,range_draws,faults));
+   if(physical_source_reference){
+    if(rolling){RawRangeLawEvidence certificate;try{certificate=certifyRawRanges(b,amp,freq,rate,lever,range_draws,faults);}catch(const std::exception&){certificate.valid=false;}range_certificates.push_back(std::move(certificate));}
+    else range_certificates.push_back(certifyRawRanges(b,amp,freq,rate,lever,range_draws,faults));
+   }
   }
  }
 };

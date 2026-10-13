@@ -15,6 +15,8 @@ struct RollingBoundaryCertificateV1 {
  size_t covered_through=0,shared_adc_index=0;
  std::string event_id;
  size_t fault_not_started=0,fault_active=0,fault_ended_residual=0,fault_excluded=0;
+ std::array<AnchorId,8> anchor_ids;
+ std::array<Eigen::Vector3d,8> anchor_positions;
 };
 struct RollingBoundaryProposalV1 {
  BoundaryMaterialViewV1 material;
@@ -24,6 +26,17 @@ struct RollingBoundaryProposalV1 {
  uint64_t parent_generation=0;
  size_t raw_read_first=0,raw_read_last=0,physical_branches=0;
  RawRangeResult geometry;
+ private:
+ struct Seal {
+  const void* owner;
+  BoundaryMaterialViewV1 material;
+  RollingBoundaryCertificateV1 certificate;
+  RollingRawState current;
+  std::deque<RollingRawMaterial> explicit_material;
+  uint64_t parent;
+ };
+ std::shared_ptr<const Seal> seal_;
+ friend class RollingIntegrity;
 };
 class RollingIntegrity {
  ResolvedRollingPolicyV1 policy_;RollingSourceEvent event_;

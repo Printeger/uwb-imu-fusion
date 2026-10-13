@@ -949,6 +949,16 @@ std::vector<gtsam::Key> IncrementalUwbImuEstimator::retainedKeysV1() const {
   return {keys.begin(), keys.end()};
 }
 
+OnlineMaterialAuditV1 IncrementalUwbImuEstimator::onlineMaterialAuditV1() const {
+  OnlineMaterialAuditV1 a;
+  a.factor_slots=activeGraph().size();a.active_factors=factorCount();
+  a.values=activeValueCount();a.ledger_entries=factor_ledger_.storedEntryCountV1();
+  a.committed_intervals=committed_epochs_.size();
+  for(const auto& record:committed_epochs_)
+    a.committed_raw_samples+=record.transaction.raw_imu_slice.size();
+  return a;
+}
+
 std::size_t IncrementalUwbImuEstimator::activeValueCount() const {
   return initialized_ ? backendIsam().getLinearizationPoint().size() : 0;
 }

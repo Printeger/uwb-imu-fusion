@@ -30,6 +30,8 @@ int main(){try{
  check(near(f.profile_rhs,b.transpose()*parity*y),"joint fault rhs");
  check(near(f.response,c*gain.bottomRows(2)*b),"joint fault response");
  check(std::abs(f.residual_gram(0,1))>.1,"oracle cross fixture degenerate");
+ GaussianSufficientSummary rank_deficient(2);rank_deficient.append(Eigen::MatrixXd::Zero(3,2),Eigen::VectorXd::Zero(3),{});
+ check(rank_deficient.evaluate(Eigen::MatrixXd::Zero(3,2),1e-6,1e-9).reference.status=="INDETERMINATE","rank-deficient certificate admitted");
  // Shared ADC endpoint is a single retained latent coordinate, one prior.
  Eigen::MatrixXd shared(3,2);shared<<1,1,1,-1,0,1;Eigen::VectorXd z(3);z<<.2,-.1,0;
  GaussianSufficientSummary s(2);s.append(shared,z,{});Eigen::MatrixXd protect=Eigen::MatrixXd::Zero(3,2);protect(0,0)=1;
@@ -69,6 +71,16 @@ int main(){try{
  check(same_raw.p[0].upper()>propagated.p[0].upper(),"parent ignored");
  UwbBatch batch;for(int k=0;k<8;++k){UwbMeasurement m;m.anchor_position_m=Eigen::Vector3d(k,0,0);batch.measurements.push_back(m);}
  std::array<RawRangeShell,8> shells;for(auto& shell:shells)shell={0,10};
+ // Analytic retired relation: z_old=v_old+theta+noise=0,
+ // |noise|<=.005. H0 gives[-.005,.005]; an ended episode with
+ // theta in[-.035,.035] projects to[-.04,.04]. No live fault row remains.
+ auto past_healthy=x,past_fault=x;past_healthy.p=past_fault.p={I(0),I(0),I(0)};
+ past_healthy.v[0]=I(-.005,.005);past_fault.v[0]=I(-.04,.04);
+ auto healthy_next=rollingPropagate(past_healthy,0,0,0,0,8),fault_next=rollingPropagate(past_fault,0,0,0,0,8);
+ Eigen::Vector3d hl,hu,fl,fu;for(int j=0;j<3;++j){hl(j)=healthy_next.p[j].lower();hu(j)=healthy_next.p[j].upper();fl(j)=fault_next.p[j].lower();fu(j)=fault_next.p[j].upper();}
+ auto healthy_pl=contractRawRangeBox(hl,hu,batch,shells,Eigen::Vector3d::Zero());
+ auto fault_pl=contractRawRangeBox(fl,fu,batch,shells,Eigen::Vector3d::Zero());
+ check(healthy_pl.valid && fault_pl.valid && fault_pl.pl.x()>healthy_pl.pl.x(),"retired fault projection forgotten with identical current raw");
  auto fallback=contractRawRangeBox(Eigen::Vector3d(-1,-1,-1),Eigen::Vector3d(1,1,1),batch,shells,Eigen::Vector3d::Zero(),{0,8,0,false});
  check(fallback.valid && fallback.considered==9 && fallback.frontier==9 && fallback.retained==9,"frontier resource dropped physical branch");
  std::cout<<"W2 PASS dense SVD residual/dof/state/joint2-column cross; shared endpoint; 100-digit reach; p/v feedback; rotation/lever; RW; parent dependency; frontier9 retained\n";

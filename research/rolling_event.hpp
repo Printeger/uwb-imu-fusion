@@ -25,5 +25,14 @@ struct RollingSourceEvent {
   if(epoch>size_t(mission))throw std::invalid_argument("TASK_HORIZON_EXPIRED");
   return 21+128ULL*epoch;
  }
+ std::string sourceId(uint64_t index)const{
+  if(index>=coordinates)throw std::out_of_range("SOURCE_OUTSIDE_PREDECLARED_TASK");
+  if(index<15)return "initial:"+std::to_string(index);
+  index-=15;const uint64_t adc=6ULL*(10*mission+1);
+  if(index<adc)return "adc:"+std::to_string((index/6)*5000000ULL)+":"+std::to_string(index%6);
+  index-=adc;const uint64_t rw=60ULL*mission;
+  if(index<rw)return "bias-increment:"+std::to_string((index/6+1)*5000000ULL)+":"+std::to_string(index%6);
+  index-=rw;return "uwb:"+std::to_string(index/8+1)+":"+std::to_string(index%8);
+ }
 };
 }

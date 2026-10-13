@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """SC4 fixed replay, dependency-equivalence and runtime/application evaluation."""
-import argparse,csv,hashlib,json,os,re,subprocess,time
+import argparse,csv,hashlib,json,os,re,subprocess,time,tempfile
 from collections import Counter
 from pathlib import Path
 import numpy as np
@@ -124,8 +124,95 @@ def record():
         actual=np.array([[float(r[k]) for k in STATE[:3]] for r in rows]);pe=np.linalg.norm(actual-target,axis=1)
         print('REAL_POST_SCORE',mode,'world-tag identity-colocated approximation PE mean/median/P95/max',statistics(pe),'RMSE',float(np.sqrt(np.mean(pe**2))),'not a safety bound',flush=True)
     print('REAL_RECORD actual35 off/on native epochs; calibration/admitted integrity/hardware TTA UNKNOWN; natural-fault detection rate UNKNOWN',flush=True)
+def rolling_native(config,scene,count,folder,label,enable=1):
+    trace=folder/(label+'.csv')
+    result=subprocess.run([str(BIN/'epoch_raim_runner'),str(config),str(trace),scene,'rolling','on',str(count),str(enable)],cwd=ROOT,env=environment(),capture_output=True,text=True)
+    rows=[]
+    if trace.exists():
+        with trace.open() as stream:rows=list(csv.DictReader(stream))
+    if result.returncode:
+        actual=sum(int(r['updates']) for r in rows)
+        terminal=sum(int(x) for x in re.findall(r'failed epoch=\d+ backend_updates=(\d+)',result.stderr))
+        print('ROLLING FAILED',label,'scheduled',count,'receipts',actual,'terminal_updates',terminal,'unattempted',count-len(rows)-bool(terminal),result.stdout,result.stderr,flush=True)
+        result.check_returncode()
+    assert len(rows)==count and all(None not in r and None not in r.values() for r in rows),(label,'trace schema')
+    print(result.stdout.strip(),flush=True)
+    return rows
+
+def rolling_validate(label,rows,lf=30,li=30,replay=50,mission=200):
+    issued=[r for r in rows if r['qualified']=='1']
+    assert len(issued)==min(len(rows),mission),label
+    risk=issued[0]['risk_upper'];event=issued[0]['source_event']
+    for r in issued:
+        k=int(r['epoch'])
+        assert r['updates']=='1' and int(r['version'])==k+1
+        assert int(r['fgo_nodes'])==min(k+1,lf) and r['x0_present']==str(int(k<lf))
+        assert int(r['boundary_epoch'])==max(0,k+1-li)
+        assert int(r['generation'])==k and int(r['parent'])==k-1
+        assert int(r['integrity_material'])<=li-1 and int(r['replay_samples'])<=10*replay+1 and int(r['capsules'])<=replay+1
+        assert int(r['source_prefix'])==21+128*k and int(r['task_horizon'])==mission
+        assert r['risk_upper']==risk and r['source_event']==event and float(risk)<=1e-6
+        assert sum(int(r[x]) for x in ['not_started','active','ended_residual','excluded'])==28*mission
+        assert int(r['shared_adc_index'])==10*int(r['boundary_epoch'])
+        assert int(r['imu_read_first'])==10*(k-1)+1 and int(r['imu_read_last'])==10*k+1
+        assert int(r['proof_uwb_first'])>=max(1,k-li+1) and int(r['proof_uwb_last'])==k
+        assert float(r['horizontal_pe'])<=float(r['hpl']) and float(r['vertical_pe'])<=float(r['vpl'])
+        assert r['application_status']=='APPLICATION_AL_UNQUALIFIED' and r['formal_eligible']==r['publication_protected']=='0'
+    for r in rows[len(issued):]:
+        assert r['bound_status']=='TASK_HORIZON_EXPIRED' and r['updates']=='0' and r['risk_upper']==risk and r['source_event']==event
+    print('ROLLING DENOM',label,'scheduled',len(rows),'receipts',len(issued),'qualified',len(issued),'abort0','expired',len(rows)-len(issued),'core40_miss',sum(r['core_on_time']=='0' for r in issued),'full50_miss',sum(r['on_time']=='0' for r in issued),flush=True)
+    for key in ['hpl','vpl','horizontal_pe','vertical_pe','core_ms','full_ms','resident_kib','factor_slots','active_factors','backend_values','ledger_entries','native_intervals','native_raw_samples','replay_samples','capsules','proof_bytes','physical_mask_visits']:
+        print('ROLLING STATS',label,key,statistics([r[key] for r in issued]),flush=True)
+    for k in [51,61,72,90,150,200]:
+        if k<=len(issued):print('ROLLING SNAPSHOT',label,{x:issued[k-1][x] for x in ['epoch','qualified','x0_present','boundary_epoch','parent','proof_uwb_first','imu_read_first','recovery_status','imu_bridge','imu_rejoined','excluded_anchor','removed_priors','hpl','vpl','source_prefix','risk_upper']},flush=True)
+    before=json.dumps(rows,sort_keys=True)
+    for hal,val in [(2,3),(5,5),(10,10)]:
+        count=sum(float(r['hpl'])<=hal and float(r['vpl'])<=val for r in issued)
+        print('ROLLING AL',label,hal,val,'numeric',count,'application_available0',flush=True)
+    assert before==json.dumps(rows,sort_keys=True),'AL changed immutable native trace'
+    return issued
+
+def rolling(main_only=False,remaining_only=False):
+    root=ROOT/'.cache/sc5-rolling';root.mkdir(parents=True,exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='matrix-',dir=root) as name:
+        folder=Path(name);config=yaml.safe_load((ROOT/'config/sc5_rolling.yaml').read_text())
+        if not remaining_only:
+            for label,scene in [('R0','SC3_U0'),('R1','SC3_A'),('R2','SC3_G')]:
+                rows=rolling_native('config/sc5_rolling.yaml',scene,200,folder,label)
+                issued=rolling_validate(label,rows)
+                if label!='R0':
+                    assert issued[60]['imu_bridge']=='1' and issued[60]['excluded_anchor']=='0' and issued[60]['removed_priors']=='1'
+                    assert all(r['imu_rejoined']=='1' for r in issued[71:75])
+                else:assert all(r['imu_bridge']=='0' for r in issued)
+        if main_only:return
+        delayed=dict(config,sc2_witness_onset_epoch=20,sc3_uwb_witness_onset_epoch=20)
+        delayed['rolling_integrity']=dict(config['rolling_integrity'],recovery_extra_epochs=30)
+        path=folder/'delayed.yaml';path.write_text(yaml.safe_dump(delayed,sort_keys=False))
+        rows=rolling_native(path,'SC3_A',80,folder,'R3',55);rolling_validate('R3',rows,replay=60)
+        assert rows[54]['history_marginalized']==rows[54]['boundary_repair']=='1' and rows[54]['removed_priors']=='1'
+        assert all(r['imu_rejoined']=='1' for r in rows[55:60])
+        for lf,li in [(20,20),(40,40),(30,10)]:
+            variant=dict(config,fixed_lag_epochs=lf)
+            variant['rolling_integrity']=dict(config['rolling_integrity'],window_mode='follow_fgo' if lf==li else 'explicit',explicit_epochs=None if lf==li else li)
+            path=folder/f'{lf}-{li}.yaml';path.write_text(yaml.safe_dump(variant,sort_keys=False))
+            rows=rolling_native(path,'SC3_U0',70,folder,f'R4-{lf}-{li}');rolling_validate(f'R4-{lf}-{li}',rows,lf,li,lf+20)
+        delayed['rolling_integrity']=dict(config['rolling_integrity'],recovery_extra_epochs=0)
+        path=folder/'outside.yaml';path.write_text(yaml.safe_dump(delayed,sort_keys=False))
+        rows=rolling_native(path,'SC3_A',60,folder,'R5-outside',55);rolling_validate('R5-outside',rows,replay=30)
+        assert all(r['recovery_status']=='BOUND_VALID_BUT_RECOVERY_UNAVAILABLE' and r['boundary_repair']=='0' for r in rows[54:])
+        short=dict(config);short['rolling_integrity']=dict(config['rolling_integrity'],mission_epochs=2)
+        path=folder/'expiry.yaml';path.write_text(yaml.safe_dump(short,sort_keys=False))
+        rows=rolling_native(path,'SC3_U0',3,folder,'R5-expiry');rolling_validate('R5-expiry',rows,mission=2)
+    print('ROLLING matrix PASS; temporary traces removed; math/recovery separate from realtime/AL/hardware',flush=True)
+
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('command',choices=['checks','local','performance','functional','record']);parser.add_argument('--build',action='store_true');args=parser.parse_args();CACHE.mkdir(parents=True,exist_ok=True)
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('command',choices=['checks','local','performance','functional','record','rolling-check','rolling','rolling-boundary']);parser.add_argument('--build',action='store_true');parser.add_argument('--main-only',action='store_true');parser.add_argument('--remaining-only',action='store_true');args=parser.parse_args();CACHE.mkdir(parents=True,exist_ok=True)
+    if args.command.startswith('rolling'):
+        if args.build:subprocess.run(['cmake','--build',str(BUILD),'--target','sc5_rolling_checks','sc5_math_checks','sc5_event_checks','epoch_raim_runner','-j2'],cwd=ROOT,env=environment(),check=True)
+        if args.command=='rolling':rolling(args.main_only,args.remaining_only)
+        else:
+            for target,extra in ([('sc5_rolling_checks',['boundary'])] if args.command=='rolling-boundary' else [('sc5_rolling_checks',[]),('sc5_rolling_checks',['boundary']),('sc5_math_checks',[]),('sc5_event_checks',[])]):subprocess.run([str(BIN/target),*extra],cwd=ROOT,env=environment(),check=True)
+        return
     if args.build:subprocess.run(['cmake','--build',str(BUILD),'--target','sc4_system_checks','epoch_raim_runner','-j2'],cwd=ROOT,env=environment(),check=True)
     if args.command in ['checks','local']:
         command=[str(BIN/'sc4_system_checks')]+([] if args.command=='checks' else ['local']);subprocess.run(command,cwd=ROOT,env=environment(),check=True)

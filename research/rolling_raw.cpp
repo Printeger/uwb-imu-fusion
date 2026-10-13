@@ -32,7 +32,7 @@ RollingRawState rollingPropagate(const RollingRawState& old,double acceleration,
  // Ten distinct RW increments per interval. Their support is Minkowski sum,
  // never a new independent posterior draw. Endpoint ADC is projected, not
  // counted again: physics does not consume ADC in this fault-independent reach.
- for(int j=0;j<6;++j)a.bias[j]=old.bias[j]+symmetric(10.*I(q)*I(j<3?ba:bg)*sqrt(I(1)/200.));
+ for(int j=0;j<6;++j)a.bias[j]=old.bias[j]+symmetric(10.*I(q)*I(j<3?ba:bg)*sqrt(I(1)/200.)+I(2e-10));
  return rollingProject(a);
 }
 RollingVector rollingTag(const RollingRawState& s,const Eigen::Vector3d& lever){
