@@ -53,6 +53,7 @@ struct NoisyMotionScenario {
  NavigationState initial_observation;
  bool initial_law_valid=false,physical_source_reference=false;
  RawInputRoundoff numeric_certificate,imu_fault_numeric_certificate;
+ std::vector<RawInputRoundoff> causal_imu_certificates;
  std::vector<Eigen::Matrix<double,6,1>> true_bias;
 
  NavigationState truth(double t)const{
@@ -64,7 +65,9 @@ struct NoisyMotionScenario {
  }
  NoisyMotionScenario(const std::string& path,const std::string& kind,int seed,int count,bool unprotected_continuation=false):law(researchLaw(path)),cfg(IntegrityConfigLoader::load(law[(kind=="I1" || kind=="I2" || kind=="screen" || kind.rfind("SC2_",0)==0 || kind.rfind("SC3_",0)==0)?"imu_base_config":"base_config"].as<std::string>())){
   epochs=count?count:law["epochs"].as<int>();dt=law["epoch_s"].as<double>();rate=law["angular_rate_radps"].as<double>();
-  if(dt!=.05 || law["imu_sample_s"].as<double>()!=.005 || epochs<1 || (epochs>law["epochs"].as<int>() && (!unprotected_continuation || epochs>120)))throw std::runtime_error("unsupported timestamp/horizon contract");
+  const bool rolling=law["rolling_integrity"] && law["rolling_integrity"]["enabled"].as<bool>();
+  const int declared=rolling?law["rolling_integrity"]["mission_epochs"].as<int>():law["epochs"].as<int>();
+  if(dt!=.05 || law["imu_sample_s"].as<double>()!=.005 || epochs<1 || (epochs>declared && (!unprotected_continuation || epochs>(rolling?declared+1:120))))throw std::runtime_error("unsupported timestamp/horizon contract");
   lever=researchVector(law["lever"]);amp=researchVector(law["translation_amplitude"]);freq=researchVector(law["translation_frequency"]);
   cfg.incremental.fixed_lag_epochs=law["fixed_lag_epochs"].as<int>();cfg.integrity_window.epochs=law["window_epochs"].as<int>();
   cfg.realtime.range_sigma_m=law["range_sigma_m"].as<double>();
@@ -112,10 +115,21 @@ struct NoisyMotionScenario {
   // ORIGINAL task prefix. Extra draws never extend its inventory or risk.
   auto cert_imu=imu;auto cert_adc=adc_normals;auto cert_rw=bias_normals;
   auto cert_fault=additive_imu_fault;auto cert_bias=true_bias;
-  if(unprotected_continuation && epochs>50){cert_imu.resize(501);cert_adc.resize(501);cert_rw.resize(500);cert_fault.resize(501);cert_bias.resize(501);}
+  if(rolling){cert_imu.resize(1);cert_adc.resize(1);cert_rw.clear();cert_fault.resize(1);cert_bias.resize(1);}
+  else if(unprotected_continuation && epochs>50){cert_imu.resize(501);cert_adc.resize(501);cert_rw.resize(500);cert_fault.resize(501);cert_bias.resize(501);}
   if(physical_source_reference)numeric_certificate=certifyRawGenerator(initial_observation,initial_normals,cfg.realtime.prior_sigmas,amp,freq,rate,cfg.imu.gravity_mps2,true_bias.front(),cfg.imu.accelerometer_bias_rw_sigma,cfg.imu.gyroscope_bias_rw_sigma,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),cert_rw,cert_adc,cert_imu);
   if(physical_source_reference && (kind.rfind("SC2_",0)==0 || kind.rfind("SC3_",0)==0))imu_fault_numeric_certificate=certifyRawGenerator(initial_observation,initial_normals,cfg.realtime.prior_sigmas,amp,freq,rate,cfg.imu.gravity_mps2,true_bias.front(),cfg.imu.accelerometer_bias_rw_sigma,cfg.imu.gyroscope_bias_rw_sigma,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),cert_rw,cert_adc,cert_imu,&cert_fault,&cert_bias);
   else imu_fault_numeric_certificate=numeric_certificate;
+  if(rolling){
+   causal_imu_certificates.push_back(imu_fault_numeric_certificate);
+   double carry=imu_fault_numeric_certificate.bias_process.maxCoeff();
+   for(int e=1;e<=epochs;++e){size_t begin=(e-1)*10,end=e*10;
+    std::vector<ImuMeasurement> samples(imu.begin()+begin,imu.begin()+end+1);
+    std::vector<Eigen::Matrix<double,6,1>> adc(adc_normals.begin()+begin,adc_normals.begin()+end+1),rw(bias_normals.begin()+begin,bias_normals.begin()+end),fault(additive_imu_fault.begin()+begin,additive_imu_fault.begin()+end+1),bias(true_bias.begin()+begin,true_bias.begin()+end+1);
+    auto certificate=certifyRawGenerator(initial_observation,initial_normals,cfg.realtime.prior_sigmas,amp,freq,rate,cfg.imu.gravity_mps2,true_bias[begin],cfg.imu.accelerometer_bias_rw_sigma,cfg.imu.gyroscope_bias_rw_sigma,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),rw,adc,samples,&fault,&bias,int(begin),carry);
+    causal_imu_certificates.push_back(certificate);carry=certificate.bias_process.maxCoeff();
+   }
+  }
   for(int e=1;e<=epochs;++e){auto b=ranges(cfg,e);auto s=truth(e*dt);Eigen::Vector3d tag=s.position_world_m+s.q_world_body*lever;
    std::array<double,8> range_draws{},faults{};size_t row=0;
    for(auto& m:b.measurements){if(kind=="U3")m.anchor_position_m.z()=1.1;m.range_m=(m.anchor_position_m-tag).norm()+cfg.realtime.range_sigma_m*(range_draws[row++]=normal(uwb_rng));}

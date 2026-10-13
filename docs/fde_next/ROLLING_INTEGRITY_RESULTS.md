@@ -98,3 +98,42 @@ qualification; frontier exhaustion keeps all raw outer branches.
 
 W2 has no nonlinear native rolling/recovery claim yet. Reproduce target
 `sc5_math_checks`, same local library environment as W1.
+
+## W3 actual nonlinear rolling
+
+One70-epoch healthy native stream:70 scheduled/70 committed/70 qualified,
+0 native abort; x0 actually disappears30,123 marginalized keys. Proof keeps
+at most29 explicit raw UWB batches plus its boundary,501 observed IMU replay
+samples; at51 the raw replay first ID is11 (initial raw retired), proof material
+first endpoint ID211, separator22, parent50. All70 post-scored errors are inside
+their actual committed tag bounds. At30 H/V=4.32087/6.79909m; at51
+4.36458/6.86485m. AL is not a qualification gate. Performance remains open.
+The first source-domain check erroneously used a sum of acceleration maxima
+instead of its vector norm and refused before any epoch; corrected to a
+directed Euclidean bound. This failed admission is not a native success.
+
+`sc5_rolling_checks boundary` PASS2/2 native commits: sealed full batch,
+unregistered scope, future transaction and old proposal refuse; post-commit
+proof failure never calls a second update. Changing future raw UWB/IMU and
+future numeric admission leaves current bounds/separator bitwise unchanged.
+Initial p/v/R raw observation is not stored in the proof after construction;
+the monitor retains only the6 bias source-recipe centers. Source mapping
+certification processes11-sample arrived blocks with carried RW rounding,
+and supplies fixed1e-10 bounds, never future max residues to online decisions.
+Generator buffers are separate simulation-provider memory.
+
+Each proposal starts from the preceding certificate's absolute joint box,
+propagates only its bounded explicit window, contracts all9 UWB mask branches,
+performs two forward/backward necessary-relation passes, and projects to actual
+integrity cutoff. Finalization verifies actual native keys/receipt, then
+publishes the parent-linked set and releases retired batches. Repeated set
+intersections are deterministic/idempotent evidence, not additional Gaussian
+weights or fresh probability events. IMU faults are outer-covered by declared
+fault-independent physical reach. The task fault recipe remains1 UWB/1 IMU;
+per-epoch mask relaxation is explicitly an outer superset, not a newly allowed
+episode per window. History phase persists after fault end.
+
+Reproduce: `epoch_raim_runner config/sc5_rolling.yaml OUTPUT SC3_U0 rolling off 70`.
+Raw transfer main algorithm is implemented; T200 and actual FDE remain OPEN
+until W4/W5 validation. Dynamic source-event plumbing enters here because all
+operators and monitor constraints must consume the same predeclared radius.

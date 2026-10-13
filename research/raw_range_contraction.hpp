@@ -13,6 +13,7 @@ struct RawRangeLawEvidence {
  UwbBatch sealed_batch_;std::array<double,8> sealed_rho_{};
  friend RawRangeLawEvidence certifyRawRanges(const UwbBatch&,const Eigen::Vector3d&,const Eigen::Vector3d&,double,const Eigen::Vector3d&,const std::array<double,8>&,const std::array<double,8>&);
  friend bool rawRangeShells(const RawRangeLawEvidence&,const UwbBatch&,int,std::array<struct RawRangeShell,8>&);
+ friend bool rawRangeShells(const RawRangeLawEvidence&,const UwbBatch&,int,std::array<struct RawRangeShell,8>&,int,double);
 };
 RawRangeLawEvidence certifyRawRanges(const UwbBatch&,const Eigen::Vector3d& amplitude,
  const Eigen::Vector3d& frequency,double rate,const Eigen::Vector3d& lever,
@@ -21,6 +22,8 @@ struct RawRangeShell { double low=0,high=0; };
 bool sameRawBatch(const UwbBatch&,const UwbBatch&);
 bool rawRangeShells(const RawRangeLawEvidence&,const UwbBatch&,int epoch,
  std::array<RawRangeShell,8>&);
+bool rawRangeShells(const RawRangeLawEvidence&,const UwbBatch&,int epoch,
+ std::array<RawRangeShell,8>&,int mission,double coordinate_radius);
 // NONE (-1) plus each physical row: current projection of the episode scope.
 std::array<int,9> rawRangeFaultMasks();
 struct RawRangeBudget { size_t max_boxes=256;unsigned passes=8,split_depth=0;bool all_ranges_healthy=false; };

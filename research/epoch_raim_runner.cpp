@@ -5,6 +5,7 @@
 #include "sc2_imu_coordinator.hpp"
 #include "sc3_joint_coordinator.hpp"
 #include "sc4_system.hpp"
+#include "rolling_boundary.hpp"
 #include <chrono>
 #include <fstream>
 #include <iomanip>
@@ -15,6 +16,7 @@ using Clock=std::chrono::steady_clock;
 double ms(Clock::time_point a,Clock::time_point b){return std::chrono::duration<double,std::milli>(b-a).count();}
 int main(int argc,char** argv){try{
  if(argc>=5 && std::string(argv[4])=="system")return runSc4System(argc,argv);
+ if(argc>=5 && std::string(argv[4])=="rolling")return runSc5Rolling(argc,argv);
  if(std::getenv("SC3_JOINT_RECOVERY") && std::string(std::getenv("SC3_JOINT_RECOVERY"))=="1")return runSc3Joint(argc,argv);
  if(std::getenv("SC2_IMU_RECOVERY") && std::string(std::getenv("SC2_IMU_RECOVERY"))=="1")return runSc2Imu(argc,argv);
  if(argc<5)throw std::runtime_error("usage: epoch_raim_runner CONFIG CSV SCENE uwb_epoch_raim|fused_epoch_pl|hybrid [on|off] [epochs<=50] [history-invalid|imu-invalid]");

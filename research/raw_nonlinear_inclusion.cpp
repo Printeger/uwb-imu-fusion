@@ -44,15 +44,18 @@ I sine(I x){I value(0),power=x,factorial(1);for(int k=1;k<=49;++k){if(k>1){power
 RawInputRoundoff certifyRawGenerator(const NavigationState& obs,const Eigen::Matrix<double,15,1>& draws,
  const Eigen::Matrix<double,15,1>& sigmas,const Eigen::Vector3d& amp,const Eigen::Vector3d& freq,
  double rate,double gravity,const Eigen::Matrix<double,6,1>& initialBias,double ba,double bg,double sa,double sg,
- const std::vector<Eigen::Matrix<double,6,1>>& rw,const std::vector<Eigen::Matrix<double,6,1>>& adc,const std::vector<ImuMeasurement>& samples,const std::vector<Eigen::Matrix<double,6,1>>* additive_fault,const std::vector<Eigen::Matrix<double,6,1>>* observed_bias){
+ const std::vector<Eigen::Matrix<double,6,1>>& rw,const std::vector<Eigen::Matrix<double,6,1>>& adc,const std::vector<ImuMeasurement>& samples,const std::vector<Eigen::Matrix<double,6,1>>* additive_fault,const std::vector<Eigen::Matrix<double,6,1>>* observed_bias,int sample_offset,double carried_bias_roundoff){
  RawInputRoundoff out;if(samples.size()!=adc.size() || rw.size()+1!=samples.size() || (additive_fault && additive_fault->size()!=samples.size()) || (observed_bias && observed_bias->size()!=samples.size()))return out;
+ if(sample_offset<0 || !std::isfinite(carried_bias_roundoff) || carried_bias_roundoff<0)return out;
+ if(sample_offset==0){
  V phi,rho;for(int j=0;j<3;++j){phi[j]=I(sigmas(j))*I(draws(j));rho[j]=I(sigmas(j+3))*I(draws(j+3));}
  auto initial=expAndV(phi);auto observedR=rotation(obs.q_world_body);V pos=multiply(initial.second,rho);pos[2]+=I(1);V dp;I dr(0);
  for(int j=0;j<3;++j){dp[j]=I(obs.position_world_m(j))-pos[j];for(int k=0;k<3;++k)dr+=square(observedR[j][k]-initial.first[j][k]);out.velocity(j)=abs(I(obs.velocity_world_mps(j))-(I(amp(j))*I(freq(j))+I(sigmas(j+6))*I(draws(j+6)))).upper();}
  out.position=norm(dp).upper();out.rotation_matrix=sqrt(dr).upper();
  for(int j=0;j<6;++j){double observed=j<3?obs.accel_bias_mps2(j):obs.gyro_bias_radps(j-3);out.bias(j)=abs(I(observed)-(I(initialBias(j))+I(sigmas(j+9))*I(draws(j+9)))).upper();}
- std::array<I,6> bias;for(int j=0;j<6;++j)bias[j]=I(initialBias(j));I dt=I(1)/200.;I axisnorm=sqrt(I(14));
- for(size_t i=0;i<samples.size();++i){I t=double(i)*dt;V angle,acc;
+ }
+ std::array<I,6> bias;for(int j=0;j<6;++j)bias[j]=I(initialBias(j))+I(-carried_bias_roundoff,carried_bias_roundoff);I dt=I(1)/200.;I axisnorm=sqrt(I(14));
+ for(size_t i=0;i<samples.size();++i){I t=double(sample_offset+i)*dt;V angle,acc;
   for(int j=0;j<3;++j){angle[j]=I(rate)*t*double(j+1)/axisnorm;acc[j]=-I(amp(j))*square(I(freq(j)))*sine(I(freq(j))*t);}acc[2]+=I(gravity);
   auto r=expAndV(angle).first;V force{I(0),I(0),I(0)};for(int j=0;j<3;++j)for(int k=0;k<3;++k)force[j]+=r[k][j]*acc[k];
   if(i)for(int j=0;j<6;++j)bias[j]+=I(j<3?ba:bg)*sqrt(dt)*I(rw[i-1](j));

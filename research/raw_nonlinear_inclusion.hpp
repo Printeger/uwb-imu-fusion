@@ -12,7 +12,7 @@ struct RawInputRoundoff {
 RawInputRoundoff certifyRawGenerator(const NavigationState&,const Eigen::Matrix<double,15,1>& initial_normals,
  const Eigen::Matrix<double,15,1>& sigmas,const Eigen::Vector3d& amplitude,const Eigen::Vector3d& frequency,
  double rate,double gravity,const Eigen::Matrix<double,6,1>& initial_bias,double accel_rw,double gyro_rw,double accel_adc,double gyro_adc,
- const std::vector<Eigen::Matrix<double,6,1>>& bias_normals,const std::vector<Eigen::Matrix<double,6,1>>& adc_normals,const std::vector<ImuMeasurement>& samples,const std::vector<Eigen::Matrix<double,6,1>>* additive_fault=nullptr,const std::vector<Eigen::Matrix<double,6,1>>* observed_bias=nullptr);
+ const std::vector<Eigen::Matrix<double,6,1>>& bias_normals,const std::vector<Eigen::Matrix<double,6,1>>& adc_normals,const std::vector<ImuMeasurement>& samples,const std::vector<Eigen::Matrix<double,6,1>>* additive_fault=nullptr,const std::vector<Eigen::Matrix<double,6,1>>* observed_bias=nullptr,int sample_offset=0,double carried_bias_roundoff=0);
 struct RawInclusionParameters {
  RawInputRoundoff numeric;
  Eigen::Matrix<double,15,1> initial_sigmas;
@@ -20,6 +20,8 @@ struct RawInclusionParameters {
  Eigen::Vector3d motion_amplitude{.1,.08,.05},motion_frequency{.5,.4,.3};double motion_angular_rate=.2;
  double force_lipschitz=2.1,gyro_lipschitz=0,gravity=9.81;
  double risk_budget=1e-6;int horizon=50,coordinates=6421;
+ // Research opt-in only; legacy constructors retain their original contract.
+ bool rolling_source=false;double coordinate_radius=7;
 };
 struct RawInclusionEvidence {
  Eigen::Vector3d low=Eigen::Vector3d::Constant(NAN),high=low,reference=low,pl=low,initial=low;

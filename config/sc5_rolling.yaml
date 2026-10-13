@@ -1,6 +1,9 @@
 # Explicit research opt-in. Legacy SC1–SC4 configuration is unchanged.
 raw_base_law: config/sc3_joint.yaml
 fixed_lag_epochs: 30
+epochs: 200
+sc2_witness_onset_epoch: 61
+sc3_uwb_witness_onset_epoch: 61
 rolling_integrity:
   version: 1
   enabled: true

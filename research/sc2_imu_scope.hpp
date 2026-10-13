@@ -23,7 +23,9 @@ struct Sc2ImuAssessment {
 // Immutable observed prefix only. Force/gyro domain and all nominal source
 // coordinates are registered independently of the actual fault realization.
 class Sc2ImuMonitor {
- NavigationState initial_;RawInclusionParameters law_;Sc2ImuScope scope_;
+ // Fixed initial-bias observation is a source-recipe center, not an x0 node
+ // or an accessible initial raw navigation record.
+ Eigen::Matrix<double,6,1> observed_bias_;RawInclusionParameters law_;Sc2ImuScope scope_;
  std::vector<Sc2PhysicalCandidate> candidates_;Sc2ImuAssessment result_;
  std::deque<ImuMeasurement> recent_;
  public:

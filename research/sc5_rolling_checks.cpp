@@ -4,7 +4,9 @@ using namespace uwb_imu_pl;
 using namespace uwb_imu_pl::research;
 void require(bool ok,const char* reason){if(!ok)throw std::runtime_error(reason);}
 template<class F> void refuses(F f){bool rejected=false;try{f();}catch(const std::exception&){rejected=true;}require(rejected,"expected refusal");}
-int main(){try{
+int rollingBoundaryChecks();
+int main(int argc,char** argv){try{
+ if(argc>1 && std::string(argv[1])=="boundary")return rollingBoundaryChecks();
  auto root=researchLaw("config/sc5_rolling.yaml");
  auto base=IntegrityConfigLoader::load(root["imu_base_config"].as<std::string>());
  for(auto pair:std::vector<std::pair<int,int>>{{30,30},{20,20},{40,40},{30,10}}){
