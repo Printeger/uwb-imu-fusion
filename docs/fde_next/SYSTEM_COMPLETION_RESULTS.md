@@ -1,5 +1,8 @@
 # System completion — SC1 and SC2
 
+SC5 finite rolling integrity results and scoped completion audit:
+[ROLLING_INTEGRITY_RESULTS.md](ROLLING_INTEGRITY_RESULTS.md).
+
 Status: **MEASUREMENT_CONSTRAINED_RAW_BOUND_VERIFIED** — SC1 only.
 Starting HEAD `0e88303f9f22b6c47ecb440042f3f513780caf8e`, clean tree.
 FGO, FDE, raw-source-rw-v1, sigmas, risk, AL and production publication

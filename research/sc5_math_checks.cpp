@@ -67,6 +67,13 @@ int main(){try{
  check(rotation.rotation[0][0].lower()<=0 && rotation.rotation[0][0].upper()>=0,"rotation inverse dropped feasible rotation");
  auto uncertain=x;for(auto& row:uncertain.rotation)for(auto& entry:row)entry=I(-1,1);
  auto uncertain_tag=rollingTag(uncertain,lever);check(uncertain_tag[0].upper()-uncertain_tag[0].lower()>=2,"lever uncertainty reset");
+ uncertain.p={I(-1,1),I(-1,1),I(-1,1)};
+ check(rollingContractTag(uncertain,zero,lever),"small tag inverse refused");
+ // A real SO(3) witness: p=(-1,0,0), R=I, l=(1,0,0), tag=0.
+ // Assigning body p=tag would delete this feasible point.
+ check(uncertain.p[0].lower()<=-1 && uncertain.p[0].upper()>=1 &&
+       uncertain.rotation[0][0].lower()<=1 && uncertain.rotation[0][0].upper()>=1 &&
+       uncertain.rotation[1][0].lower()<=0 && uncertain.rotation[1][0].upper()>=0,"small tag cleared body/rotation uncertainty");
  auto changed=x;changed.v[0]=I(-2,2);auto same_raw=rollingPropagate(changed,.04,.2,.001,.0001,8);
  check(same_raw.p[0].upper()>propagated.p[0].upper(),"parent ignored");
  UwbBatch batch;for(int k=0;k<8;++k){UwbMeasurement m;m.anchor_position_m=Eigen::Vector3d(k,0,0);batch.measurements.push_back(m);}

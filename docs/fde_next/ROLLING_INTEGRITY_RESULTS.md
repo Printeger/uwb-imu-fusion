@@ -251,3 +251,150 @@ resident maxima23524/23684/23848KiB; `getrusage` maxima can include inherited
 pre-exec high-water marks and are not substituted for resident memory.
 ROLLING_PERFORMANCE_OPEN remains. W6 variants, delayed final and relevant
 legacy safety regression are still required before RI01–RI16 completion.
+
+## W6 final acceptance
+
+Implementation identity: **4d7d2bd**. W6 adds an explicit SO(3)/lever-arm
+inverse witness and this report, without changing or repeating the three
+frozen T200 streams. W6's doc/test commit is the final local HEAD (`git log -1`);
+no self-referential hash is invented here. Actual work-package saves:
+W0 `70caf0f`, W1 `32c1ced`, W2 `ee9cfc3`, W3 `f399cb6`, W4 `df921d1`,
+W5 `4d7d2bd`. No push.
+
+Final matrix: **953 scheduled / 952 native receipts / 952 finite qualified
+tag outputs / 0 unexpected native abort / 1 expected expired admission**.
+Earlier development failures remain in W1/W3/W4 accounting above. An initial
+new-math-target invocation preceded CMake reconfiguration and failed before
+any native epoch. Expected negative fixtures/injected mutations are separate
+from positive stream qualification.
+
+| Row | Played/mission | Actual FGO/proof | Native/qualified | x0 exit | Marginalized keys | core40/full50 misses |
+|---|---|---|---|---|---|---|
+| R0 healthy |200/200|30/30|200/200|30|513|2/1|
+| R1 UA |200/200|30/30|200/200|30|513|0/0|
+| R2 UG |200/200|30/30|200/200|30|513|0/0|
+| R3 delayed |80/200|30/30; replay60|80/80|30|153|0/0|
+| R4 follow20 |70/200|20/20|70/70|20|153|0/0|
+| R4 follow40 |70/200|40/40|70/70|40|93|14/0|
+| R4 explicit10 |70/200|30/10|70/70|30|123|0/0|
+| R5 outside |60/200|30/30; replay30|60/60; recovery unavailable55–60|30|93|0/0|
+| R5 expiry |3/2|30/30 warmup|2/2; epoch3 refused|not reached|0|0/0|
+
+Every admitted row checks actual state keys, unique native version/update,
+separator/parent, bounded material, actual raw read range, source prefix,
+persistent phases/event amount, PE inside PL and closed production flags.
+The T200 event unit directly rejects prefix201; native T2+1 demonstrates
+parameterized expiry without another full200 replay. Source event/radius is
+the same T200 event for all R4 window comparisons.
+
+Remaining full service mean/median/P95/max ms: R3
+24.6762/28.5989/32.6185/36.7745;20/20
+17.5343/19.7326/21.3908/22.7259;40/40
+28.8110/34.8133/41.8752/43.8457;30/10
+10.8776/11.4622/13.3694/14.5909;outside
+22.6952/27.4650/32.0249/32.7733. Main HPL maxima
+4.55790/5.06488/5.06510m, VPL maxima7.33206/7.37146/7.37157m
+(R0/UA/UG). Corresponding protection-disk diameters reach10.13020m,
+vertical interval widths14.74315m; these are conservative position bounds.
+Finite rate952/952 admitted outputs. AL failures do not negate the theorem.
+
+### Resources, access and timing limits
+
+| Quantity | Main30/30 maximum | Other tested maximum/scope |
+|---|---|---|
+| Live FGO states/values |30/90|40/120 in40/40; no lag enlargement|
+| Native intervals/raw endpoint copies |29/319|39/429 in40/40; repeated endpoints are not new noise|
+| Proof explicit batches after projection |29|19/39/9 for20/20,40/40,30/10|
+| Observed IMU replay ring |501|401 follow20;601 follow40/delayed;301 outside|
+| Raw recovery capsules |51|61 follow40/delayed;41 follow20;31 outside|
+| Set/capsule/material payload |121960 bytes|161160 follow40;125400 delayed;50440 explicit10|
+| Stored IMU physical parameters |2400|12T fixed task bank; UWB16T symbolic recipe|
+| Joint logical hypotheses |7685601|0 dense joint optimizers/inventories|
+| Native ledger entries |141|178 delayed|
+| Native factor slots |253|empty tombstones included, see below|
+| Resident memory after service |23848KiB|24424KiB follow40; provider included|
+| Separate simulation provider |2001 IMU/200 batches|full requested playback; no retired-prefix online reads|
+
+At200 proof reads UWB171–200 and new IMU endpoint IDs1991–2001, then
+retains separator171 and29 explicit batches. Recovery uses live graph keys
+and bounded capsules, checking the preceding shared endpoint. It never scans
+epoch0..k or reads the provider's retired raw prefix. `raw_read_first/last`
+denote material endpoint ownership; `imu_read_first/last` and
+`proof_uwb_first/last` denote actual sensor reads. Actual keys, marginalized
+keys, numerical boundary/removed-prior slots, method/scope/frontier/event are
+verified in the transient trace. Initial p/v/R raw is unavailable to the proof.
+
+Explicit state/raw/proof storage is bounded by Lf+Li+replay. GTSAM's native
+slot array retains empty tombstones and grows roughly one slot per marginal
+epoch: R0 max234, UA253, UG235 at200. This is disclosed, not claimed as O(1)
+total process memory; tombstones hold no retired raw information and are not
+a full-prefix rebuild. Task cap10000 and the O(T) IMU parameter recipe are
+explicit finite limits. Open-ended slot compaction, time-uniform risk,
+repeated episodes and long-run box tightness remain outside this completion.
+
+Platform: WSL2 Linux6.18.54.1 x86_64, Intel Core Ultra5 125H, TBB/OMP/BLAS/MKL
+limited to1. Core includes ingest, native preparation, complete action bank,
+temporary candidate GN, proposal, one commit, state/receipt/ledger checks,
+raw issue, cleanup and resource reads. Full adds serialized output packaging.
+CSV I/O is separate: main totals15.8042/15.7942/15.6650ms,
+maxima .1654/.2255/.1962ms; other-row maximum .8857ms. Cold source
+initialization exceeds50ms. These are PC continuous service samples, not
+hardware arrival/transport/TTA, paced-queue qualification, P99 or WCET.
+**ROLLING_PERFORMANCE_OPEN** remains.
+
+Final related safety regression:10 invocations PASS — `sc5_math_checks`,
+`sc4_system_checks`, its `carry` fixture, `sc3_joint_checks`, `sc2_imu_checks`,
+`raw_range_checks`, `hybrid_raw_checks`, `hybrid_checks config/fde_next.yaml`,
+`epoch_raim_checks config/fde_next.yaml`, `fused_epoch_checks config/fde_next.yaml`.
+This is one core regression, not SC1–SC4 campaigns. It covers original50/6421,
+expiry/carry, joint response/cancellation, frontier/binding, retained covariance
+and legacy recovery/receipts. The final SO(3) witness retains p=(-1,0,0),R=I,
+lever=(1,0,0),tag=0; a small tag cannot reset body/rotation uncertainty.
+
+### RI01–RI16 audit
+
+| Clause | Authoritative evidence | Result |
+|---|---|---|
+| RI01 |clean d668bcb entry; old configs/source/default/release unchanged; final legacy checks|PASS|
+| RI02 |four real profiles;560 observation/control commits; invalid/hot resize refusals; independent T event|PASS|
+| RI03 |actual retained/marginal keys and source receipts; x0 exits; requested Lf unchanged|PASS|
+| RI04 |dense SVD residual/dof/state/joint two-column Gram/cross/RHS/response; shared latent prior|PASS|
+| RI05 |directed p/v/R/bias reach/inverse/projection;100-digit oracle; operator inclusion proof|PASS|
+| RI06 |tag=p+Rl inverse/SO(3) witness; p→v→future p; ended-fault→future PL; no state reset|PASS|
+| RI07 |actual parent numerical set consumed; bounded raw released;200 streaming outputs; no t0 formula|PASS|
+| RI08 |unique ADC/RW/shared endpoint; persistent shared-theta bank and residual phases; one event|PASS|
+| RI09 |N(T), integer/binary tail proof,11 T sizes, adaptive task induction and T+1 refusals|PASS|
+| RI10 |three T200 streams600/600,51/90/150/200 qualified; final953 admissions reconciled|PASS|
+| RI11 |UA/UG isolation61 after x0 exit; actual bridge and CombinedIMU72–75; single mutation|PASS|
+| RI12 |marginalized onset20 pollution repaired55 by real prior replacement; replay60 positive/replay30 refusal|PASS|
+| RI13 |stale/future/batch/scope/set tamper, rank/resource/wrong-FDE/ledger, AL, pre/post-update and retry tests|PASS|
+| RI14 |actual states/raw/capsules/modes/ledger/slots/resident/provider/read ranges; compact product; finite growth disclosed|PASS finite scope|
+| RI15 |complete service/late/cold/I/O denominators;10 final regressions; no hardware/P99/WCET claim|PASS evaluation; performance OPEN|
+| RI16 |necessary source/test/config, one report, local W0–W6 saves, reproduction and own transient cleanup|PASS after W6 save|
+
+### Reproduction and final scope
+
+From the repository root in its existing ROS/GTSAM build environment:
+
+```bash
+cmake -S . -B /home/mint/ws_fusion_uwb/build/uwb_imu_pl
+python3 tools/sc4_system_research.py rolling-check --build
+python3 tools/sc4_system_research.py rolling
+```
+
+The matrix command removes its own temporary traces. `--main-only` and
+`--remaining-only` permit targeted resumption. The existing native runner is
+`epoch_raim_runner CONFIG CSV SCENE rolling on|off PLAYED [FDE_ENABLE_EPOCH]`.
+Python supplies the explicit local library path. Development logs/CSV/configs
+are removed after reconciliation; no raw/binary/evidence backup is retained,
+no old/user files are deleted, no automatic push occurs.
+
+Final: **SC5_FINITE_ROLLING_INTEGRITY_COMPLETE**,
+**ROLLING_RAW_BOUND_VERIFIED_FOR_FINITE_SCOPE** and
+**ROLLING_FDE_VERIFIED_WITHIN_RECOVERY_HORIZON**. This is conditional on the
+declared simulation source/physical/fault model. **ROLLING_PERFORMANCE_OPEN /
+TIME_UNIFORM_OPEN / APPLICATION_AL_UNQUALIFIED / DEPLOYMENT_UNQUALIFIED**
+remain. Recovery outside the buffer is unavailable; actual navigation recovery
+for other axes and full15D accuracy are not inferred from accel-x/gyro-x.
+No infinite mission, renewed episode budget, real-data calibration or formal
+release is claimed.
