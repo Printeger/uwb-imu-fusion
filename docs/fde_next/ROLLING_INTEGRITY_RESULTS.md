@@ -64,3 +64,37 @@ Lifecycle alone does not certify raw transfer or historical recovery.
 
 Reproduce: build target `sc5_rolling_checks` in the existing build, then run
 with `LD_LIBRARY_PATH=/home/mint/ws_fusion_uwb/devel/.private/uwb_imu_pl/lib:$LD_LIBRARY_PATH`.
+
+## W2 operator and fixed-model evidence
+
+`sc5_math_checks` PASS: independent dense SVD of12 original white rows checks
+state mean/covariance,8 residual dof, residual energy, joint two-column
+UWB/IMU response, full residual Gram including nonzero cross term, and RHS
+after retiring two state columns. One joint leaf is used: old mutually exclusive
+leaves are not misinterpreted as coexistence. A shared ADC latent with one
+prior has a different covariance from the deliberately duplicated-source model.
+100-digit independent rational endpoint arithmetic verifies continuous reach.
+Small fixtures check p→v contraction→future p, small velocity carry, rotation
+lever uncertainty, RW carry, changed parent dependence, and all9 nonempty
+branches retained when the box budget is zero. No full-prefix statistical
+interpretation is attached to the raw representation.
+
+Operator proof (absolute state, conditional declared physical motion domain):
+initial tangent translation has norm≤||rho|| since SE(3) V is an integral of
+rotations. Rotation displacement operator norm≤min(2,||phi||); matrix entries
+are enclosed by normalized quaternion interval arithmetic plus this radius.
+For each actual edge dt=1/20, bounded acceleration gives p1=p0+dt v0+rp,
+|rp_j|≤A dt²/2, v1=v0+rv, |rv_j|≤A dt. Angular-rate norm gives each matrix
+entry displacement≤w dt; intersecting[-1,1] retains every rotation. Ten RW
+increments have support within ±10 q sigma sqrt(1/200); Cartesian hull loses
+correlation conservatively. Every tag/body/rotation contraction is an inverse
+of p_tag=p+Rl with interval remainders. Every backward dynamics intersection
+uses a necessary rearrangement of the same physical relation. Thus no feasible
+trajectory is lost. Projection retains coordinate hulls of p/v/R/bias, not
+independent Gaussian marginals. Directed Boost interval arithmetic and explicit
+finite-domain checks cover rounding; a runtime rounding witness rejects an
+unsupported arithmetic environment. Rank/gauge deficiencies refuse Gaussian
+qualification; frontier exhaustion keeps all raw outer branches.
+
+W2 has no nonlinear native rolling/recovery claim yet. Reproduce target
+`sc5_math_checks`, same local library environment as W1.

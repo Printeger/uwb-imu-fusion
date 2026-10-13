@@ -546,3 +546,7 @@ target_sources(fde_research PRIVATE research/sc3_joint_coordinator.cpp)
 # Finite rolling research; no production link or default change.
 add_executable(sc5_rolling_checks EXCLUDE_FROM_ALL research/sc5_rolling_checks.cpp)
 target_link_libraries(sc5_rolling_checks fde_research)
+set_source_files_properties(research/rolling_raw.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+target_sources(fde_research PRIVATE research/rolling_raw.cpp)
+add_executable(sc5_math_checks EXCLUDE_FROM_ALL research/sc5_math_checks.cpp)
+target_link_libraries(sc5_math_checks fde_research)
