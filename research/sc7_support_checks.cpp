@@ -8,6 +8,9 @@ template<class F>void refuses(F f){bool refused=false;try{f();}catch(...){refuse
 int main(){try{
  tbb::global_control serial(tbb::global_control::max_allowed_parallelism,1);
  Sc6Provider src("config/sc7.yaml","S0",20261010,40);auto envelope=src.certify(1);auto policy=resolveRollingPolicy(src.law,src.cfg);TimeUniformEvent event(policy.budget);
+ // The joint contractor consumes global time-uniform birth q. A finite
+ // event certificate cannot silently borrow its narrower initial q.
+ auto finite_policy=policy;finite_policy.open=false;finite_policy.mission=200;RollingIntegrity finite_proof(finite_policy,src.initial,src.cfg.realtime.prior_sigmas,.001,.0001,src.lever,.04,.2,true,true);JointRawLaw finite_law;finite_law.gravity=src.cfg.imu.gravity_mps2;bool scope_refused=false;try{finite_proof.enableJoint(src.imu[0],finite_law);}catch(const std::invalid_argument& error){scope_refused=std::string(error.what())=="JOINT_REQUIRES_TIME_UNIFORM_EVENT";}require(scope_refused && finite_proof.certificate().generation==0,"finite/time-uniform joint scope mixed");
  CommitReceipt receipt;receipt.transaction_id=TransactionId(1);receipt.graph_version=2;receipt.committed_epoch=1;receipt.state_timestamp=TimestampNs(50000000);receipt.backend_updates=1;
  RawRangeResult geometry;geometry.valid=true;geometry.input_low={0,0,-1};geometry.input_high={3,4,2};geometry.support={{{3,0,-1},{3,0,0},-1,false},{{0,4,1},{0,4,2},0,true}};RollingVector tag{I(0,3),I(0,4),I(-1,2)};
  auto b=issueTagSupport(geometry,tag,Eigen::Vector3d::Zero(),envelope.uwb,receipt,0,event.id(),149,event.block(1).q);require(b.hpl>=4 && b.hpl<4+1e-12 && b.pl.z()==2 && b.old_hpl>=5,"branch H3/4/5 or frontier coverage");

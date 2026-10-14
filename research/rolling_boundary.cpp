@@ -104,6 +104,7 @@ RollingBoundaryProposalV1 RollingIntegrity::propose(const EpochTransaction& tx,
  return out;
 }
 void RollingIntegrity::enableJoint(const ImuMeasurement& first,const JointRawLaw& law,unsigned sweeps){
+ if(!policy_.open)throw std::invalid_argument("JOINT_REQUIRES_TIME_UNIFORM_EVENT");
  if(sweeps<1 || sweeps>2)throw std::invalid_argument("JOINT_SCHEDULE_UNREGISTERED");
  if(certificate_.generation || certificate_.separator.epoch || joint_)throw std::invalid_argument("JOINT_MUST_START_FROM_ORIGINAL_INITIAL_SCOPE");
  auto state=certificate_.separator;

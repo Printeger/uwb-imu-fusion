@@ -178,7 +178,7 @@ def plots(runs):
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     from sc6_closure import current, spatial
-    chosen=[(name,d) for name,d in runs if any('-'+c+'-' in name for c in ['S0','S1','S2','S3','L0','L1'])]
+    chosen=[(name,d) for name,d in runs if '-cancel-' not in name and '-delay-' not in name and any('-'+c+'-' in name for c in ['S0','S1','S2','S3','L0','L1'])]
     for axis,pe,pl in [('H','hpe','hpl'),('V','vpe','vpl')]:
         fig,axs=plt.subplots(2,3,figsize=(15,9),constrained_layout=True)
         for ax,case in zip(axs.flat,['S0','S1','S2','S3','L0','L1']):
