@@ -1,0 +1,42 @@
+# Isolated SC6 runtime and frozen simulation recipes. Original law inherited.
+raw_base_law: config/sc5_open.yaml
+sc6:
+  version: sc6-motion-v1
+  seed: 20261010
+  confirmation_seed: 20261011
+  domains:
+    D0: {acceleration: 0.04, angular_rate: 0.2, jerk: 0.02, angular_acceleration: 0.0}
+    D1: {acceleration: 1.0, angular_rate: 1.0, jerk: 2.0, angular_acceleration: 2.0}
+  # M1: quintic travel over 4s, rest 2s, return 4s, rest 2s.
+  stop_go: {displacement: [0.8, 0.4, 0.2], travel_s: 4.0, rest_s: 2.0}
+  # M2/M3 translation; orientation Rx(.3 sin(.4t)) Ry(.4 sin(.3t)) Rz(.5 sin(.2t)).
+  cycle: {amplitude: [0.8, 0.6, 0.4], frequency: [0.6, 0.5, 0.4]}
+  euler_amplitude: [0.3, 0.4, 0.5]
+  euler_frequency: [0.4, 0.3, 0.2]
+  geometry_G1: {x: [-4.0, 4.0], y: [-4.0, 4.0], z: [0.0, 4.0]}
+  geometry_G2: {x: [-4.0, 4.0], y: [-4.0, 4.0], z: [0.0, 0.001]}
+  profiles: [baseline-adapter, tight-reference, tight-optimized]
+  queue_capacity: 8
+  core_deadline_ms: 40.0
+  delivery_deadline_ms: 50.0
+  fault_record_capacity: 4096
+  # Episodes are provider/scorer only. IMU onset samples=(epoch-1)*10+1.
+  cases:
+    B0: {epochs: 250, motion: M0, geometry: G0, faults: []}
+    B1: {epochs: 400, motion: M0, geometry: G0, faults: [[61, 0, 500, 20.0, 61], [321, 3, 500, 1.0, 321]]}
+    S0: {epochs: 300, motion: M0, geometry: G0, faults: []}
+    S1: {epochs: 400, motion: M1, geometry: G1, faults: [[61, 0, 500, 20.0, 58], [261, 3, 500, 1.0, 264]]}
+    S2: {epochs: 400, motion: M2, geometry: G1, faults: [[61, 0, 500, 20.0, 61], [261, 3, 500, 1.0, 261]]}
+    S3: {epochs: 300, motion: M3, geometry: G2, faults: []}
+    F0: {epochs: 160, motion: M0, geometry: G0, faults: [[61, 0, 500, 20.0, 61]]}
+    F1: {epochs: 160, motion: M0, geometry: G0, faults: [[61, 1, 500, 20.0, 61]]}
+    F2: {epochs: 160, motion: M0, geometry: G0, faults: [[61, 2, 500, 20.0, 61]]}
+    F3: {epochs: 160, motion: M0, geometry: G0, faults: [[61, 3, 500, 1.0, 61]]}
+    F4: {epochs: 160, motion: M0, geometry: G0, faults: [[61, 4, 500, 1.0, 61]]}
+    F5: {epochs: 160, motion: M0, geometry: G0, faults: [[61, 5, 500, 1.0, 61]]}
+    W0: {epochs: 200, motion: M0, geometry: G0, faults: [[61, 0, 50, 1.0, 61]]}
+    W1: {epochs: 200, motion: M0, geometry: G0, faults: [[61, 3, 500, 0.3, 61]]}
+    W2: {epochs: 200, motion: M0, geometry: G0, faults: [[61, 0, 50, 20.0, 61]]}
+    V: {epochs: 250, motion: M0, geometry: G0, faults: [[61, 0, 500, 20.0, 61], [161, 3, 500, 1.0, 161]]}
+    L0: {epochs: 5000, motion: M0, geometry: G0, faults: []}
+    L1: {epochs: 10000, motion: M3, geometry: G1, faults: [[121, 0, 500, 20.0, 124], [1121, 3, 500, 1.0, 1118], [3121, 0, 500, 20.0, 3124], [5121, 3, 500, 1.0, 5118], [7121, 0, 500, 20.0, 7124], [9121, 3, 500, 1.0, 9118]]}
