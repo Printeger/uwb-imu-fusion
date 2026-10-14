@@ -13,15 +13,16 @@ bool sameCertificate(const RollingBoundaryCertificateV1& a,const RollingBoundary
  for(int j=0;j<8;++j)if(a.anchor_positions[j]!=b.anchor_positions[j])return false;return true;
 }
 RollingVector contracted(RollingRawState& s,const RollingRawMaterial& m,
- const RollingSourceEvent& e,const Eigen::Vector3d& l,size_t& branches,bool tight,bool optimized){
+ const RollingSourceEvent& e,const Eigen::Vector3d& l,size_t& branches,bool tight,bool optimized,std::vector<AttributionSnapshot>* audit=nullptr){
  std::array<RawRangeShell,8> shells;
  const int epoch=int(m.batch.id.value());
  if(!rawRangeShells(m.range,m.batch,epoch,shells,e.open?std::numeric_limits<int>::max():e.mission,e.radius(epoch)))throw std::invalid_argument("RAW_BATCH_SOURCE_SCOPE_REFUSED");
  auto t=tight?rollingTagSphere(s,l):rollingTag(s,l);Eigen::Vector3d low,high;
  for(int j=0;j<3;++j){low(j)=t[j].lower();high(j)=t[j].upper();}
- RawRangeBudget budget;budget.tight_shell=tight;budget.optimized=optimized;auto result=contractRawRangeBox(low,high,m.batch,shells,Eigen::Vector3d::Zero(),budget);
+ RawRangeBudget budget;budget.retain_support=audit;budget.tight_shell=tight;budget.optimized=optimized;auto result=contractRawRangeBox(low,high,m.batch,shells,Eigen::Vector3d::Zero(),budget);
  if(!result.valid || result.considered!=9)throw std::invalid_argument("RAW_CONTRACTION_SCOPE_INCONSISTENT");
  branches+=9;
+ if(audit){for(const auto& leaf:result.support)audit->push_back({leaf.frontier?"range_frontier":"range_leaf",s.epoch,leaf.omitted,leaf.low,leaf.high});audit->push_back({"range_hull",s.epoch,-2,result.low,result.high});}
  for(int j=0;j<3;++j)t[j]=I(result.low(j),result.high(j));
  if(!(tight?rollingContractTagSphere(s,t,l):rollingContractTag(s,t,l)))throw std::invalid_argument("RAW_TAG_BODY_INCONSISTENT");
  return t;
@@ -46,26 +47,29 @@ RollingBoundaryProposalV1 RollingIntegrity::propose(const EpochTransaction& tx,
  if(!monitor.matches(tx) || (!monitor.state.nominal_possible && !monitor.state.possible))
   throw std::invalid_argument("IMU_TASK_SCOPE_INCONSISTENT");
  RollingBoundaryProposalV1 out;out.material=captureBeforeUpdate(tx,plan,policy_);
- out.parent_generation=certificate_.generation;out.explicit_material=explicit_;
+ out.parent_generation=certificate_.generation;
+ const bool capture=attribute_ && (tx.proposed_epoch==1 || tx.proposed_epoch==31 || tx.proposed_epoch==61 || tx.proposed_epoch==250 || tx.proposed_epoch==300);
+ auto snapshot=[&](const char* stage,const RollingRawState& s){if(!capture)return;auto t=tight_?rollingTagSphere(s,lever_):rollingTag(s,lever_);AttributionSnapshot a;a.stage=stage;a.epoch=s.epoch;for(int j=0;j<3;++j){a.low(j)=t[j].lower();a.high(j)=t[j].upper();}out.attribution.push_back(a);};
+ snapshot("parent_separator",certificate_.separator);out.explicit_material=explicit_;
  out.explicit_material.push_back({tx.uwb_batch,source,out.material.raw_first,out.material.raw_last});
  std::vector<RollingRawState> states{certificate_.separator};
  size_t expected=certificate_.separator.epoch+1;
  for(const auto& m:out.explicit_material){
   if(m.batch.id.value()!=expected++)throw std::invalid_argument("EXPLICIT_WINDOW_SOURCE_GAP");
   auto s=rollingPropagate(states.back(),acceleration_,rate_,accel_rw_,gyro_rw_,event_.radius(states.back().epoch+1));
-  contracted(s,m,event_,lever_,out.physical_branches,tight_,optimized_);states.push_back(std::move(s));
+  snapshot("propagated",s);contracted(s,m,event_,lever_,out.physical_branches,tight_,optimized_,capture?&out.attribution:nullptr);snapshot("tag_lever_contracted",s);states.push_back(std::move(s));
  }
  // Registered bounded number of forward/backward necessary-constraint passes.
  for(int pass=0;pass<2;++pass){
   for(size_t j=states.size()-1;j>0;--j)if(!rollingContractDynamics(states[j-1],states[j],acceleration_) || (tight_ && !rollingContractCoupledDynamics(states[j-1],states[j],acceleration_)))throw std::invalid_argument("RAW_BACKWARD_RELATION_INCONSISTENT");
   for(size_t j=1;j<states.size();++j){
    if(!rollingContractDynamics(states[j-1],states[j],acceleration_) || (tight_ && !rollingContractCoupledDynamics(states[j-1],states[j],acceleration_)))throw std::invalid_argument("RAW_FORWARD_RELATION_INCONSISTENT");
-   contracted(states[j],out.explicit_material[j-1],event_,lever_,out.physical_branches,tight_,optimized_);
+   snapshot("time_contracted",states[j]);contracted(states[j],out.explicit_material[j-1],event_,lever_,out.physical_branches,tight_,optimized_,capture?&out.attribution:nullptr);snapshot("tag_lever_contracted",states[j]);
   }
  }
  const size_t offset=out.material.cutoff-certificate_.separator.epoch;
  if(offset>=states.size())throw std::invalid_argument("SEPARATOR_PROJECTION_MISSING");
- out.current=rollingProject(states.back());out.certificate=certificate_;
+ snapshot("before_projection",states.back());out.current=rollingProject(states.back());snapshot("after_projection",out.current);snapshot("next_propagation",rollingPropagate(out.current,acceleration_,rate_,accel_rw_,gyro_rw_,event_.radius(tx.proposed_epoch+1)));out.certificate=certificate_;
  for(size_t j=0;j<8;++j){
   const auto& m=tx.uwb_batch.measurements[j];
   if(certificate_.covered_through && (certificate_.anchor_ids[j]!=m.anchor_id || certificate_.anchor_positions[j]!=m.anchor_position_m))throw std::invalid_argument("TASK_ANCHOR_SOURCE_IDENTITY_CHANGED");
@@ -102,6 +106,7 @@ RawRangeResult RollingIntegrity::finalize(RollingBoundaryProposalV1&& p,const Co
   finalizeTransfer(p.material,r,keys);
   auto t=tight_?rollingTagSphere(p.current,lever_):rollingTag(p.current,lever_);Eigen::Vector3d actual=committedTag(state);
   RawRangeResult bound;bound.source=tight_?"sc6-coupled-sphere-outer-v1":"sc5-raw-rolling-full-state-outer-v1";
+  bound.attribution=std::move(p.attribution);
   bound.relaxation="FULL_TASK_PRODUCT_OUTER_MASK_RELAXATION_NO_PROBABILISTIC_PRUNING";
   for(int j=0;j<3;++j){bound.low(j)=t[j].lower();bound.high(j)=t[j].upper();bound.pl(j)=abs(t[j]-I(actual(j))).upper();}
   bound.hpl=sqrt(square(I(bound.pl.x()))+square(I(bound.pl.y()))).upper();

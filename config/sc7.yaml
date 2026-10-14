@@ -1,0 +1,7 @@
+# Research opt-in; source, risk, physical fault, AL and publication laws inherited.
+raw_base_law: config/sc6_closure.yaml
+sc7:
+  version: sc7-r1
+  attribute: false
+  development_seed: 20261010
+  confirmation_seed: 20261011

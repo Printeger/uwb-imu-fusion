@@ -576,3 +576,8 @@ set_source_files_properties(research/sc6_checks.cpp PROPERTIES COMPILE_OPTIONS "
 add_executable(sc6_closure_checks EXCLUDE_FROM_ALL research/sc6_closure_checks.cpp)
 target_link_libraries(sc6_closure_checks fde_research)
 set_source_files_properties(research/sc6_closure_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+
+# SC7 research-only independent oracles and attribution driver.
+add_executable(sc7_checks EXCLUDE_FROM_ALL research/sc7_checks.cpp)
+target_link_libraries(sc7_checks fde_research tbb)
+set_source_files_properties(research/sc7_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")

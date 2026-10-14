@@ -1,0 +1,63 @@
+/goal 执行 SC7：在现有 UWB–IMU FGO、联合 FDE、开放式滚动 raw 保护界上，完成 HPL/VPL 归因、G2 困难几何原生恢复，以及带故障分支的多时刻全状态／bias 观测收缩。一个连续 Goal 按 W0→W1→W2→W3 进行，每个工作包验证并本地 Git commit 后继续，最终在本轮完成实际集成验证。
+
+【主合同和当前基线】
+完整读取 docs/requirements/sc7/SC7_REQUIREMENTS.md，第0–14节和 SC7-A01—A20 是正式验收依据。本Prompt不替代或缩小主合同。
+读取本地AGENTS.md、git status/HEAD、docs/fde_next/SC6_CLOSURE_RESULTS.md与相关实际实现。需求审阅基线为43abd3fcb35568259e6b2e4131dfdc909e216c3a；本地若较新，做窄范围差异核对，不回退、不覆盖用户工作。
+重点文件：epoch_raim.hpp、rolling_raw.cpp、rolling_boundary.cpp、raw_range_contraction.cpp、sc6_service.cpp、rolling_recovery.*、open_fault_pool.*、time_uniform_event.hpp、tools/sc6_closure_observability.py、tools/sc6_closure.py、sc6_system_research.py和实际sc6配置。
+
+当前不是重建系统。保留原离散FGO、source sigma/birth q/开放式epsilon、共享ADC/RW、原故障范围和重复episode、AL与正式发布开关。保持默认30/30，兼容20/20、40/40、30/10；不加新传感器或连续时间估计器。当前真实强故障已具备时序FD与恢复，不要把它们重做后称为新进展。
+
+【本轮终点】
+- 实际解释H/V大界的来源，而非猜测bias或几何是唯一主因。
+- G2不再因当前平方差唯一初值约−325m、原始GN步超10m而直接失效；必须接入原生300epoch、真实边缘化和唯一commit。
+- 新多时刻UWB–IMU关系真实进入raw保护链，争取使全部允许fault解释合并后的bias集合得到观测收缩。仅改FGO bias mean或只收紧一个健康分支不关闭C13。
+- 一套共同集合方法改善HPL和VPL，垂直优先，不能只优化VPL而隐藏HPL退化。
+- 保持P95(core)≤40ms、P95(measurement-to-sink)≤50ms与注册正例及时空间有效率≥95%；不是零超时合同。
+- 最终输出一个SC7_RESULTS.md、必要代码/测试/config和最多4张新增结论图；不保留冗余过程文件或备份。
+
+【W0：先归因和冻结，再改算法】
+1. 在同raw输入、同父证书、同event/q/fault域、同actual committed tag下，记录传播后、每个9-mask/叶盒、hull前后、时间/lever收缩、separator投影与下一步传播的H/V。
+2. 记录决定z两端及x/y极值的分支/source，区分合法见证、仅外包络角点和未知。VPL使用半宽+中心偏移的精确分解，其它影响允许交互，不画伪造100%归因饼图。
+3. 必须实现主合同§2澄清的测试：同一批集合的当前VPL在取坐标hull前后相同；HPL可因拼接互斥x/y极值变宽；投影丢关系对VPL的影响须在后续传播/约束中验证。
+4. 做M0/M3 × G0/G1控制短实验，geometry主比较使用共同合法D1包络，不把同时变化的运动、几何和公开域混为一个因素。原M0/D0仍保留legacy参考。改变geometry时原始range值不同，固定标准化draw而非声称raw字节相同。
+5. 只把固定姿态、全range健康、改变q/bias等视作DIAGNOSTIC_ONLY，不能把其小界发布。冻结开发/确认seed与主合同快照、后续评价矩阵后保存commit并继续。
+
+【W1：C15 G2数值恢复】
+6. 先复现旧首失败输入和独立多初值oracle，分别查anchor差分设计矩阵、实际range Jacobian、全局镜像；不能说近共面必定局部秩亏，也不能说满rank就唯一。
+7. 实现确定性多seed、尺度归一化和信赖域LM或稳定阻尼GN；保留正确raw残差/协方差及最终点重线性化。不要简单把原10m拒绝门槛改大。
+8. seed仅由原始测量、预注册几何或有资格的边界生成，不能GT选镜像。纯UWB A若借融合先验必须改清语义，禁止仍称独立纯UWB。
+9. 数值求出一个根不证明所有其它根不存在。最终raw集合必须覆盖所有合法未排除分支，包括求解器没找到的分支。不要要求每个seed成功，但失败不等于物理无解。
+10. 分开数值收敛、功能post-test、Gaussian固定模型资格和raw资格。多root搜索改变选择事件后不能直接继承旧N+1风险/alpha标签。
+11. 原生S3/G2 300epoch，包括首epoch、x0退出、实际commit与有限raw界。可有大VPL，不要求小于AL；只有更安全拒绝而无原生正例时C15仍OPEN。保存实质修改/验证commit并继续。
+
+【W2：C13联合state/bias收缩】
+12. 从5–10epoch的小模型入手，使用原始IMU方程、p-v积分、R/lever、UWB壳、bias RW及共享theta；验证健康正例和yaw/bias/fault不可辨识反例，再接30epoch主raw。
+13. 在每个合法fault解释内求交，在解释间保留并集。允许任意theta时不得截到注入值附近；允许重复/相邻episode时不得假设窗口里必有健康间隔。
+14. raw新算子需证明 F_h∩X_h ⊆ C_h(X_h) ⊆ X_h，包含source共用、连续时间/数值余项、旋转chart及预算frontier。保守投影不能丢真实历史；旧父集合已丢相关时不能凭空选择更窄历史。
+15. 至少实现一种新的joint必要约束或有限相关表示，并让它经separator被下一窗口真实消费。已有p/v两轮收缩不是新C13，FGO covariance也不是raw证明。
+16. 在主注册流记录某bias方向每分支和全fault并集宽度；只有全并集发生严格观测收缩、事件与跨窗证据齐全才关闭MAIN_RAW_BIAS_CONTRACTION。仅其它非位置状态或健康分支改善要单独标成果，C13保持OPEN。
+17. 必须给不可辨识的合法测量重叠/不同state历史证据；局部rank或单次未报警不自动证明全局不可能。噪声支持重叠不等于任何统计检测毫无功效。
+18. 首先保持功能检测/恢复策略不变。若新集合进入检测或影响prior metric，单独证明相互使用/选择合法性并做A类闭环对照；原Closure时序FD、强故障48/48类别和缓冲外拒绝不得静默退化。commit后proof失败不能再第二次update补证。
+
+【W3：联合H/V支持、最后集成和P95】
+19. 优先利用保留的当前分支/叶盒计算HPL=max_j hypot(dx_j,dy_j)，避免先对所有分支各坐标取max再hypot。所有未处理frontier也在内；围绕最终actual center计算，不把原点半径贴给别的输出。
+20. VPL真正收紧必须减少z可行极值或提高跨时关系；单纯先算分支VPL再max不会改善同一集合的当前VPL。按W0主因选择更强联合壳、跨历元episode/theta保留或减少投影损失。
+21. 不用有限方向抽样/局部求出的最大值冒充上界。新的非box输出需升级bound_method与支持证据、seal/receipt消费者；不能只改显示数字而保留旧box公式认证。
+22. 风险不重置、不新增独立样本、不以比较几何/修改q当同模型收紧。旧安全方法保留fallback；只有新旧均对同一事件/scope/center已证明时才允许保守组合。未raw合格Gaussian PL不得取min。
+23. 明确M同中心数学、A实际闭环、P同数学性能三种对照。H/V各自需注册原生场景严格收益，同center不加宽；闭环轨迹改变则不声称逐bit/逐PL等价。
+24. 冻结候选后做必要S0/S1/S2两个seed新旧与ON/OFF、G2、20/20/40/40/30/10短流；相关K族与一次核心安全回归。再按主合同做受影响L0 5000/L1 10000新方法paced；改变恢复/FDE且要新长期收益时L1补同源OFF，不复跑五种子×所有算法的大矩阵。
+25. 同一trace给出位置/H/V/速度/姿态/bias、episode恢复和配对差、H/V Stanford与研究AL敏感性、P95/P99/max/所有miss/资源。AL只能后处理，迟到空间有效点不能装作及时可用，零underbound样本不是epsilon证明。
+26. P95使用nearest-rank和全部可测服务包括超时；缺失/拒绝/未尝试另计，正例及时空间有效率≥95%。全部候选/证明/来源验证/边缘化/commit/清理/排队/sink费用计入；不靠降输入频率、扩大deadline或藏后台工作达标。
+
+【执行权限和失败处理】
+以上research-only代码、数值求解器、raw算子、接口与测试开发已获授权，不需每项询问。生产合同/应用AL/硬件发布、破坏性操作仍不得改。
+工作包只要有实质代码与直接验证就本地Git保存并继续下一项；不要在W0归因表、W1独立WLS、W2健康小例完成后结束整个Goal。
+普通实现失败应调试，首个研究原型不收紧应诊断或换有依据的路线，不无目的调sigma/seed/步数。真正不可辨识可以交付明确反例，但不能以它代替其它仍可实现工作。
+仅预算/工具/权限真实中断或所有剩余安全路线有明确新阻塞时做非成功交接；已完成代码与下一命令写同一报告，恢复从未完成条款继续，不重做SC1–SC6。
+
+【文件和最终验收】
+实际结果写 docs/fde_next/SC7_RESULTS.md，逐SC7-A01–A20给PASS/OPEN、证据/分母、方法版本、源码SHA、复现命令。完成状态依据主合同，核心缺口存在时使用SC7_IMPLEMENTED_WITH_OPEN_CAPABILITIES，不改小范围造SC7_COMPLETE。
+永久仅保留必要源码/参数化测试/最小配置、需求、一个结果报告和最多4张真实结果图。临时box/矩阵/CSV/raw audit只在本轮独占.cache/sc7/；配对需要时保留，摘要/分母核对后清理，不造数据/二进制/仓库备份。
+显式stage本包修改，不git add .盲加，不自动push、不reset --hard、不破坏性clean、不覆盖用户未提交工作。被测SHA与文档SHA分列，检查实际ELF/DSO不是旧库。
+
+现在开始实际代码读取、窄范围基线核对和W0实施，不只回复一份计划。

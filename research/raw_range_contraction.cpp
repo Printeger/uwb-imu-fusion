@@ -83,17 +83,18 @@ RawRangeResult contractRawRangeBox(const Eigen::Vector3d& low,const Eigen::Vecto
  r.low=low;r.high=high;bounds(r,actual);r.old_pl=r.pl;r.old_hpl=r.hpl;
  Box original;for(int j=0;j<3;++j)original[j]=I(low(j),high(j));
  Eigen::Vector3d unionLow=Eigen::Vector3d::Constant(INFINITY),unionHigh=Eigen::Vector3d::Constant(-INFINITY);
- auto retain=[&](const Box& box){++r.retained;for(int j=0;j<3;++j){unionLow(j)=std::min(unionLow(j),box[j].lower());unionHigh(j)=std::max(unionHigh(j),box[j].upper());}};
+ int current_mask=-1;bool current_frontier=false;
+ auto retain=[&](const Box& box){if(budget.retain_support){RawSupportBox leaf;leaf.omitted=current_mask;leaf.frontier=current_frontier;for(int j=0;j<3;++j){leaf.low(j)=box[j].lower();leaf.high(j)=box[j].upper();}r.support.push_back(leaf);}++r.retained;for(int j=0;j<3;++j){unionLow(j)=std::min(unionLow(j),box[j].lower());unionHigh(j)=std::max(unionHigh(j),box[j].upper());}};
  try{
   // Run-time directed addition witness, same as the inertial kernel.
   I witness=I(1)+I(std::ldexp(1.,-53));if(witness.lower()>1 || witness.upper()<std::nextafter(1.,INFINITY))throw std::runtime_error("directed arithmetic unavailable");
   for(int omitted:rawRangeFaultMasks()){
    if(budget.all_ranges_healthy && omitted!=-1)continue;
-   ++r.considered;size_t branchRetained=r.retained;
+   current_mask=omitted;current_frontier=false;++r.considered;size_t branchRetained=r.retained;
    std::deque<std::pair<Box,unsigned>> queue{{original,0}};
    while(!queue.empty()){
     r.peak_boxes=std::max(r.peak_boxes,queue.size());
-    if(r.visited>=budget.max_boxes){r.budget_exhausted=true;r.frontier+=queue.size();for(const auto& item:queue)retain(item.first);queue.clear();break;}
+    if(r.visited>=budget.max_boxes){current_frontier=true;r.budget_exhausted=true;r.frontier+=queue.size();for(const auto& item:queue)retain(item.first);queue.clear();break;}
     auto item=queue.front();queue.pop_front();++r.visited;
     if(!propagate(item.first,batch,shells,omitted,budget.passes,budget.tight_shell,budget.optimized))continue;
     if(!finiteBox(item.first))throw std::runtime_error("nonfinite interval arithmetic");
@@ -111,7 +112,7 @@ RawRangeResult contractRawRangeBox(const Eigen::Vector3d& low,const Eigen::Vecto
    if(!r.valid)throw std::runtime_error("nonfinite transferred bound");
    r.status=(r.low!=low || r.high!=high)?"CONTRACTED_VERIFIED":"UNCHANGED_VERIFIED";
   }
- }catch(const std::exception& e){r.low=low;r.high=high;bounds(r,actual);r.valid=r.pl.allFinite() && std::isfinite(r.hpl);r.status="FALLBACK_INERTIAL_VERIFIED";r.reason=e.what();}
+ }catch(const std::exception& e){r.support.clear();r.low=low;r.high=high;bounds(r,actual);r.valid=r.pl.allFinite() && std::isfinite(r.hpl);r.status="FALLBACK_INERTIAL_VERIFIED";r.reason=e.what();}
  r.elapsed_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-begin).count();return r;
 }
 RawRangeResult issueRawRangeContraction(const RawInclusionEvidence& inertial,const RawRangeLawEvidence& law,

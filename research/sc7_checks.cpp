@@ -1,0 +1,38 @@
+#include "sc6_service.hpp"
+#include <tbb/global_control.h>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+using namespace uwb_imu_pl;using namespace uwb_imu_pl::research;
+using I=RollingInterval;
+void require(bool v,const char* why){if(!v)throw std::runtime_error(why);}
+double vpl(double l,double u,double c){return std::max(std::abs(l-c),std::abs(u-c));}
+int main(int argc,char** argv){try{
+ tbb::global_control serial(tbb::global_control::max_allowed_parallelism,1);
+ if(argc>1 && std::string(argv[1])=="attribute"){
+  if(argc!=7)throw std::invalid_argument("attribute CONFIG CASE EPOCHS SEED CSV");
+  Sc6Provider src(argv[2],argv[3],std::stoi(argv[5]),std::stoi(argv[4]));src.law["sc7"]["attribute"]=true;
+  Sc6Service service(src.law,src.cfg,src.initial,src.lever,src.domain,src.imu.front(),true,false,true);
+  std::ofstream out(argv[6]);out<<std::setprecision(17)<<"output_epoch,state_epoch,parent,source_prefix,q,event,stage,mask,center_x,center_y,center_z,low_x,low_y,low_z,high_x,high_y,high_z,hpl,vpl,z_half,z_offset,witness\n";
+  for(int k=1;k<=src.epochs;++k){auto r=service.step(src.certify(k),true);for(const auto& a:r.bound.attribution){Eigen::Vector3d d=(a.low-r.tag).cwiseAbs().cwiseMax((a.high-r.tag).cwiseAbs());out<<k<<','<<a.epoch<<','<<r.parent<<','<<r.source_prefix<<','<<r.q<<",time-uniform-source-birth-v1,"<<a.stage<<','<<a.omitted;for(const auto& v:{r.tag,a.low,a.high})for(int j=0;j<3;++j)out<<','<<v(j);double half=(a.high.z()-a.low.z())/2,offset=std::abs(r.tag.z()-(a.high.z()/2+a.low.z()/2));out<<','<<d.head<2>().norm()<<','<<d.z()<<','<<half<<','<<offset<<','<<a.extremum_class<<'\n';}}
+  std::cout<<"SC7 ATTRIBUTION native commits="<<service.updateCount()-1<<" domain="<<src.domain.id<<'\n';return 0;
+ }
+ // K1: exact VPL decomposition and invariance under current coordinate hull.
+ for(double c:{-7.,0.,2.,8.}){double merged=vpl(-3,5,c),branch=std::max(vpl(-3,-1,c),vpl(2,5,c));require(merged==branch,"V hull changed same-set VPL");require(merged==4+std::abs(c-1),"V half/offset");}
+ require(std::hypot(3.,4.)==5 && std::max(std::hypot(3.,0.),std::hypot(0.,4.))==4,"H artificial corner");
+ // K2: Q1=(x,z)=(0,0), Q2=(2,2), next observation x=0,
+ // dynamics z_next=z+x. Keeping branch relation yields z_next=0;
+ // projecting first admits (0,2), hence a spurious z_next=2.
+ auto evolve=[](I x,I z){return x+z;};
+ I exact=evolve(I(0),I(0)),projected=evolve(I(0),I(0,2));
+ require(exact.upper()==0 && projected.upper()==2,"two-update projection fixture");
+ Sc6Provider source("config/sc7.yaml","S0",20261010,1);auto s=rollingInitial(source.initial,source.cfg.realtime.prior_sigmas,7,1e-10),b=s;
+ for(auto& v:b.bias)v=I(-100,100);auto x=rollingTagSphere(rollingPropagate(s,.04,.2,.001,.0001,7),source.lever),y=rollingTagSphere(rollingPropagate(b,.04,.2,.001,.0001,7),source.lever);
+ for(int j=0;j<3;++j)require(x[j].lower()==y[j].lower() && x[j].upper()==y[j].upper(),"legacy raw p/tag directly depends on bias");
+ // Read-only snapshots must not perturb actual FGO/action/certificates.
+ Sc6Provider small("config/sc7.yaml","S0",20261010,31);
+ auto diagnostic=YAML::Clone(small.law);diagnostic["sc7"]["attribute"]=true;
+ Sc6Service normal(small.law,small.cfg,small.initial,small.lever,small.domain,small.imu.front(),true,false,true),observed(diagnostic,small.cfg,small.initial,small.lever,small.domain,small.imu.front(),true,false,true);
+ for(int k=1;k<=31;++k){auto envelope=small.certify(k);auto a=normal.step(envelope,true),b=observed.step(envelope,true);require(a.tag==b.tag && a.bound.low==b.bound.low && a.bound.high==b.bound.high && a.bound.hpl==b.bound.hpl && a.bound.pl==b.bound.pl && a.bound.event_risk==b.bound.event_risk && a.source_prefix==b.source_prefix && a.parent==b.parent && a.generation==b.generation && a.action.status==b.action.status && a.action.excluded==b.action.excluded && a.x0==b.x0,"attribution perturbed native semantics");if(k==31)require(!b.x0 && !b.bound.attribution.empty(),"no native post-marginalization snapshot");}
+ std::cout<<"SC7 K1/K2 PASS V hull and half/offset; H3/4/5; two-time projection; bias-only kernel noninterference DIAGNOSTIC_ONLY\n";return 0;
+ }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

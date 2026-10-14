@@ -27,13 +27,23 @@ bool rawRangeShells(const RawRangeLawEvidence&,const UwbBatch&,int epoch,
  std::array<RawRangeShell,8>&,int mission,double coordinate_radius);
 // NONE (-1) plus each physical row: current projection of the episode scope.
 std::array<int,9> rawRangeFaultMasks();
-struct RawRangeBudget { size_t max_boxes=256;unsigned passes=8,split_depth=0;bool all_ranges_healthy=false;bool tight_shell=false;bool optimized=false; };
+struct RawSupportBox {
+ Eigen::Vector3d low,high;int omitted=-1;bool frontier=false;
+};
+struct AttributionSnapshot {
+ std::string stage;size_t epoch=0;int omitted=-2;
+ Eigen::Vector3d low,high;
+ std::string extremum_class="OUTER_ENDPOINT_NO_FEASIBILITY_WITNESS";
+};
+struct RawRangeBudget { size_t max_boxes=256;unsigned passes=8,split_depth=0;bool all_ranges_healthy=false;bool tight_shell=false;bool optimized=false;bool retain_support=false; };
 struct RawRangeResult {
  std::string status="EVIDENCE_REFUSED",reason,source="raw-imu-uwb-contracted-v1";
  std::string relaxation="CURRENT_SINGLE_FAULT_OUTER_RELAXATION_OF_EPISODE_SCOPE";
  Eigen::Vector3d low=Eigen::Vector3d::Constant(NAN),high=low,pl=low,old_pl=low;
  double hpl=INFINITY,old_hpl=INFINITY,event_risk=INFINITY,elapsed_ms=0;
  size_t considered=0,empty=0,unresolved=0,visited=0,retained=0,frontier=0,peak_boxes=0;
+ std::vector<RawSupportBox> support;
+ std::vector<AttributionSnapshot> attribution;
  bool valid=false,budget_exhausted=false;
 };
 // Geometry kernel: all nine branches are mandatory; no FDE/truth input.

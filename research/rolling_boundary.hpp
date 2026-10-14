@@ -27,6 +27,7 @@ struct RollingBoundaryProposalV1 {
  uint64_t parent_generation=0;
  size_t raw_read_first=0,raw_read_last=0,physical_branches=0;
  RawRangeResult geometry;
+ std::vector<AttributionSnapshot> attribution;
  private:
  struct Seal {
   const void* owner;
@@ -45,11 +46,12 @@ class RollingIntegrity {
  std::deque<RollingRawMaterial> explicit_;
  double accel_rw_,gyro_rw_,acceleration_,rate_;
  Eigen::Vector3d lever_;
- bool failed_=false,tight_=false,optimized_=false;
+ bool failed_=false,tight_=false,optimized_=false,attribute_=false;
  public:
  RollingIntegrity(const ResolvedRollingPolicyV1&,const NavigationState&,
   const Eigen::Matrix<double,15,1>&,double ba,double bg,const Eigen::Vector3d&,
   double acceleration=.04,double rate=.2,bool tight=false,bool optimized=false);
+ void enableAttribution(bool enabled){attribute_=enabled;}
  const RollingBoundaryCertificateV1& certificate()const{return certificate_;}
  const RollingSourceEvent& event()const{return event_;}
  size_t explicitSize()const{return explicit_.size();}
