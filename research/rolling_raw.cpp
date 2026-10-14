@@ -54,6 +54,26 @@ bool rollingContractDynamics(RollingRawState& old,RollingRawState& next,double a
     !intersect(next.v[j],old.v[j]+rv) || !intersect(old.v[j],next.v[j]-rv))return false;}
  return true;
 }
+bool rollingContractCoupledDynamics(RollingRawState& old,RollingRawState& next,double acceleration){
+ if(next.epoch!=old.epoch+1 || !std::isfinite(acceleration) || acceleration<0)throw std::invalid_argument("COUPLED_DYNAMICS_DOMAIN");
+ I dt=I(1)/20.,half=dt/2.,remainder=symmetric(I(acceleration)*square(dt)/4.);
+ // p1-p0-dt*(v0+v1)/2 = integral (dt/2-s)*a(s) ds.
+ // Norm <= A*dt^2/4; these are coordinate necessary projections.
+ for(int j=0;j<3;++j)if(!intersect(next.p[j],old.p[j]+half*(old.v[j]+next.v[j])+remainder) ||
+  !intersect(old.p[j],next.p[j]-half*(old.v[j]+next.v[j])-remainder) ||
+  !intersect(old.v[j],(next.p[j]-old.p[j]-remainder)/half-next.v[j]) ||
+  !intersect(next.v[j],(next.p[j]-old.p[j]-remainder)/half-old.v[j]))return false;
+ return true;
+}
+RollingVector rollingTagSphere(const RollingRawState& state,const Eigen::Vector3d& lever){
+ auto tag=rollingTag(state,lever);I r=sqrt(square(I(lever.x()))+square(I(lever.y()))+square(I(lever.z())));
+ for(int j=0;j<3;++j)if(!intersect(tag[j],state.p[j]+symmetric(r)))throw std::invalid_argument("LEVER_SPHERE_EMPTY");return tag;
+}
+bool rollingContractTagSphere(RollingRawState& state,const RollingVector& tag,const Eigen::Vector3d& lever){
+ I r=sqrt(square(I(lever.x()))+square(I(lever.y()))+square(I(lever.z())));
+ for(int j=0;j<3;++j)if(!intersect(state.p[j],tag[j]+symmetric(r)))return false;
+ return rollingContractTag(state,tag,lever);
+}
 RollingRawState rollingProject(const RollingRawState& s){
  // Coordinate hull Cartesian product is an existential outer projection. No
  // covariance independence or division by an event radius is inferred.

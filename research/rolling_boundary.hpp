@@ -45,11 +45,11 @@ class RollingIntegrity {
  std::deque<RollingRawMaterial> explicit_;
  double accel_rw_,gyro_rw_,acceleration_,rate_;
  Eigen::Vector3d lever_;
- bool failed_=false;
+ bool failed_=false,tight_=false;
  public:
  RollingIntegrity(const ResolvedRollingPolicyV1&,const NavigationState&,
   const Eigen::Matrix<double,15,1>&,double ba,double bg,const Eigen::Vector3d&,
-  double acceleration=.04,double rate=.2);
+  double acceleration=.04,double rate=.2,bool tight=false);
  const RollingBoundaryCertificateV1& certificate()const{return certificate_;}
  const RollingSourceEvent& event()const{return event_;}
  size_t explicitSize()const{return explicit_.size();}

@@ -38,7 +38,7 @@ void bounds(RawRangeResult& r,const Eigen::Vector3d& actual){
  r.hpl=sqrt(square(I(r.pl.x()))+square(I(r.pl.y()))).upper();
 }
 // Every update is a necessary condition; interval dependency only weakens it.
-bool propagate(Box& box,const UwbBatch& b,const std::array<RawRangeShell,8>& shells,int omitted,unsigned passes){
+bool propagate(Box& box,const UwbBatch& b,const std::array<RawRangeShell,8>& shells,int omitted,unsigned passes,bool tight_shell){
  int ref=omitted==0?1:0;
  for(size_t i=0;i<8;++i)if(int(i)!=omitted && shells[i].high<shells[i].low)return false;
  for(unsigned pass=0;pass<passes;++pass){
@@ -51,6 +51,13 @@ bool propagate(Box& box,const UwbBatch& b,const std::array<RawRangeShell,8>& she
    // Upper shell gives each coordinate |p_j-a_j| <= u. No sign
    // selection from lower shell, so both mirror branches are retained.
    for(int j=0;j<3;++j)if(!intersect(box[j],I(a(j))+I(-shells[i].high,shells[i].high)))return false;
+   if(tight_shell)for(int j=0;j<3;++j){
+    // Sum of other squared distances is a necessary nonnegative quantity.
+    I rest(0);for(int k=0;k<3;++k)if(k!=j)rest+=square(box[k]-I(a(k)));
+    I cap=square(I(shells[i].high))-I(rest.lower());if(cap.upper()<0)return false;
+    double radius=sqrt(I(0,std::max(0.,cap.upper()))).upper();
+    if(!intersect(box[j],I(a(j))+I(-radius,radius)))return false;
+   }
    if(int(i)==ref)continue;
    const auto& a0=b.measurements[ref].anchor_position_m;
    std::array<I,3> c;for(int j=0;j<3;++j)c[j]=2.*(I(a(j))-I(a0(j)));
@@ -85,7 +92,7 @@ RawRangeResult contractRawRangeBox(const Eigen::Vector3d& low,const Eigen::Vecto
     r.peak_boxes=std::max(r.peak_boxes,queue.size());
     if(r.visited>=budget.max_boxes){r.budget_exhausted=true;r.frontier+=queue.size();for(const auto& item:queue)retain(item.first);queue.clear();break;}
     auto item=queue.front();queue.pop_front();++r.visited;
-    if(!propagate(item.first,batch,shells,omitted,budget.passes))continue;
+    if(!propagate(item.first,batch,shells,omitted,budget.passes,budget.tight_shell))continue;
     if(!finiteBox(item.first))throw std::runtime_error("nonfinite interval arithmetic");
     int axis=0;for(int j=1;j<3;++j)if(item.first[j].upper()-item.first[j].lower()>item.first[axis].upper()-item.first[axis].lower())axis=j;
     double mid=item.first[axis].lower()/2+item.first[axis].upper()/2;

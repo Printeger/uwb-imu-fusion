@@ -1,4 +1,5 @@
 #include "sc6_service.hpp"
+#include "sc6_bias_prototype.hpp"
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #include <iostream>
 using namespace uwb_imu_pl;using namespace uwb_imu_pl::research;
@@ -14,5 +15,12 @@ int main(){try{
  Sc6Service a(input.law,input.cfg,input.initial,input.lever,input.domain,input.imu[0]),b(input.law,input.cfg,input.initial,input.lever,input.domain,input.imu[0]);
  auto first=a.step(envelope,true);input.imu.back().specific_force_mps2.setConstant(999);input.uwb.back().measurements[0].range_m=999;auto second=b.step(envelope,true);
  require(first.state.position_world_m==second.state.position_world_m && first.state.accel_bias_mps2==second.state.accel_bias_mps2 && first.bound.hpl==second.bound.hpl && first.action.excluded==second.action.excluded,"future noninterference failed");
- std::cout<<"SC6 W1 CHECKS PASS analytic interval oracle, frozen domains, certified new motion and future/GT-free shared step\n";return 0;
+ using I=RollingInterval;RollingRawState prev,next;next.epoch=1;for(int j=0;j<3;++j){prev.p[j]=I(0);prev.v[j]=I(0);next.p[j]=I(-.00125,.00125);next.v[j]=I(0);}require(rollingContractCoupledDynamics(prev,next,1),"coupled positive empty");Q extremum=Q(1)/1600;require(Q(next.p[0].lower())<=-extremum && extremum<=Q(next.p[0].upper()) && next.p[0].upper()<.00125,"bang-bang extremum or contraction lost");
+ auto healthy=sc6BiasConstraint(I(0),I(.5),I(2),1,I(3),I(-.1,.1),I(-10,10),I(-.01,.01),I(0));require(healthy.feasible && healthy.bias.lower()<=1.9 && healthy.bias.upper()>=2.1 && healthy.bias.upper()-healthy.bias.lower()<.21,"bias informative prototype");
+ auto ambiguous=sc6BiasConstraint(I(0),I(.5),I(2),1,I(3),I(0),I(-10,10),I(0),I(-INFINITY,INFINITY));require(ambiguous.feasible && ambiguous.bias.lower()<=1 && ambiguous.bias.upper()>=2,"fault-bias cancellation dropped solution");
+ // y=3, a=1: (b=1,f=1) and (b=2,f=0) both exact lawful solutions.
+ auto positive1=sc6BiasConstraint(I(0),I(.5),I(2),1,I(3),I(0),I(-10,10),I(0),I(1));require(positive1.bias.lower()<=1 && positive1.bias.upper()>=1,"shared-fault prototype");
+ RollingRawState rotations;for(int j=0;j<3;++j){rotations.p[j]=I(0);for(int h=0;h<3;++h)rotations.rotation[j][h]=I(-1,1);}auto sphere=rollingTagSphere(rotations,Eigen::Vector3d(.2,-.1,.08));Q lever_norm=sqrt(Q(.2)*Q(.2)+Q(.1)*Q(.1)+Q(.08)*Q(.08));require(Q(sphere[0].lower())<=-lever_norm && lever_norm<=Q(sphere[0].upper()) && sphere[0].upper()<.38,"SO3 norm sphere misses extrema");
+ std::array<RawRangeShell,8> shells;for(auto& shell:shells)shell={0,20};RawRangeBudget scarce;scarce.max_boxes=0;scarce.tight_shell=true;auto frontier=contractRawRangeBox(Eigen::Vector3d(-10,-10,-10),Eigen::Vector3d(10,10,10),input.uwb[0],shells,Eigen::Vector3d::Zero(),scarce);require(frontier.valid && frontier.frontier==9 && frontier.low.x()==-10 && frontier.high.x()==10,"budget frontier lost");
+ std::cout<<"SC6 CHECKS PASS coupled bang-bang oracle, SO3 sphere, bias positive/cancellation, all-mask frontier, analytic interval oracle, frozen domains, certified new motion and future/GT-free shared step\n";return 0;
  }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

@@ -20,5 +20,8 @@ RollingVector rollingTag(const RollingRawState&,const Eigen::Vector3d& lever);
 bool rollingContractTag(RollingRawState&,const RollingVector&,const Eigen::Vector3d&);
 // Necessary bidirectional continuous bounded-acceleration relation.
 bool rollingContractDynamics(RollingRawState& previous,RollingRawState& next,double acceleration);
+bool rollingContractCoupledDynamics(RollingRawState&,RollingRawState&,double acceleration);
+RollingVector rollingTagSphere(const RollingRawState&,const Eigen::Vector3d&);
+bool rollingContractTagSphere(RollingRawState&,const RollingVector&,const Eigen::Vector3d&);
 RollingRawState rollingProject(const RollingRawState&);
 }

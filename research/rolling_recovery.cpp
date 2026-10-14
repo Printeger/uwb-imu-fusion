@@ -32,11 +32,11 @@ void omitRange(EpochTransaction& tx,EpochCommitPlan& plan,int mask){
  }
 }
 PendingFactorGroup metric(const RollingRawState& raw,const IntegrityConfig& config,
- const EpochTransaction& tx,FactorGroupId replaces){
+ const EpochTransaction& tx,FactorGroupId replaces,bool stable_rotation){
  // Low namespace bit survives the ledger's <<8 factor-ID encoding.
  PendingFactorGroup g;g.id=FactorGroupId(0xd001000000000000ULL+tx.id.value());
  g.kind=FactorKind::BoundaryPrior;g.sensor=SensorType::Prior;g.nominal=false;
- g.model_id="sc5-discarded-boundary-recovery-metric-v1";g.noise_model_id="optimization-metric-NOT-independent-source";
+ g.model_id=stable_rotation?"sc6-boundary-numerical-rotation-metric-v1":"sc5-discarded-boundary-recovery-metric-v1";g.noise_model_id="optimization-metric-NOT-independent-source";
  g.source_ids={"raw-capsule-epoch:"+std::to_string(raw.epoch),"discarded-prior-group:"+std::to_string(replaces.value())};
  g.replaces_group=replaces;g.recovery_epoch=tx.proposed_epoch;
  g.keys={gtsam::Symbol('x',raw.epoch),gtsam::Symbol('v',raw.epoch),gtsam::Symbol('b',raw.epoch)};
@@ -46,6 +46,11 @@ PendingFactorGroup metric(const RollingRawState& raw,const IntegrityConfig& conf
  Eigen::JacobiSVD<Eigen::Matrix3d> svd(middle,Eigen::ComputeFullU|Eigen::ComputeFullV);
  Eigen::Matrix3d correction=Eigen::Matrix3d::Identity();correction(2,2)=(svd.matrixU()*svd.matrixV().transpose()).determinant()<0?-1:1;
  Eigen::Matrix3d rotation=svd.matrixU()*correction*svd.matrixV().transpose();
+ // Capsule rotation boxes can be symmetric/full: their midpoint has no
+ // identifiable orientation, and its polar factor is numerically arbitrary.
+ // Retain the already-existing boundary orientation as an OPTIMIZATION metric;
+ // this is not a new measurement or a raw integrity constraint.
+ if(stable_rotation)rotation=tx.frozen_values->at<gtsam::Pose3>(g.keys[0]).rotation().matrix();
  auto sigmas=config.realtime.prior_sigmas;
  g.factors.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(g.keys[0],gtsam::Pose3(gtsam::Rot3(rotation),p),gtsam::noiseModel::Diagonal::Sigmas(sigmas.head<6>()));
  g.factors.emplace_shared<gtsam::PriorFactor<gtsam::Vector3>>(g.keys[1],v,gtsam::noiseModel::Diagonal::Sigmas(sigmas.segment<3>(6)));
@@ -54,7 +59,7 @@ PendingFactorGroup metric(const RollingRawState& raw,const IntegrityConfig& conf
 }
 void seed(const gtsam::Values& values,size_t e,NavigationState& s){auto p=values.at<gtsam::Pose3>(gtsam::Symbol('x',e));auto b=values.at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b',e));s.position_world_m=p.translation();s.q_world_body=Eigen::Quaterniond(p.rotation().matrix());s.velocity_world_mps=values.at<gtsam::Vector3>(gtsam::Symbol('v',e));s.accel_bias_mps2=b.accelerometer();s.gyro_bias_radps=b.gyroscope();}
 }
-RollingRecovery::RollingRecovery(const NavigationState& s,const ResolvedRollingPolicyV1& p):policy_(p){bias_observation_.head<3>()=s.accel_bias_mps2;bias_observation_.tail<3>()=s.gyro_bias_radps;}
+RollingRecovery::RollingRecovery(const NavigationState& s,const ResolvedRollingPolicyV1& p,bool stable_rotation):policy_(p),stable_rotation_(stable_rotation){bias_observation_.head<3>()=s.accel_bias_mps2;bias_observation_.tail<3>()=s.gyro_bias_radps;}
 RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Sc2ImuMonitor& monitor,
  const std::deque<ImuMeasurement>& replay,const std::deque<RollingRawState>& capsules,
  const IntegrityConfig& config,bool fde){
@@ -139,7 +144,7 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
     replaces=*slot.group_id;result.removed_boundary.push_back(slot.factor);result.removed_prior_slots.push_back(slot.slot);
    }
    if(result.removed_boundary.empty())throw std::runtime_error("ACTUAL_NUMERICAL_BOUNDARY_MISSING");
-   auto regularizer=metric(*capsule,config,tx,replaces);result.metric_group=regularizer.id;result.plan.groups_to_add.push_back(regularizer.id);
+   auto regularizer=metric(*capsule,config,tx,replaces,stable_rotation_);result.metric_group=regularizer.id;result.plan.groups_to_add.push_back(regularizer.id);
    for(auto prior:ids)result.plan.replacement_relations[prior]=regularizer.id.value();
    HistoricalEpochContext provenance;provenance.previous_epoch=boundary;provenance.proposed_epoch=boundary;provenance.begin=provenance.end=TimestampNs(boundary*50000000LL);provenance.groups.push_back(std::move(regularizer));tx.recoverable_history.push_back(std::move(provenance));
    result.boundary_repair=true;result.history_marginalized=result.first_dependency<=boundary;

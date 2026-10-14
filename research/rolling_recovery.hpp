@@ -16,14 +16,14 @@ struct RollingFdeAssessment {
 class RollingRecovery {
  Eigen::Matrix<double,6,1> bias_observation_;
  ResolvedRollingPolicyV1 policy_;
- bool isolated_=false;
+ bool isolated_=false,stable_rotation_=false;
  TimestampNs quarantine_begin_,quarantine_end_;
  int held_anchor_=-1,held_until_=0,observed_anchor_=-1;
  size_t observed_uwb_onset_=0;
  uint64_t alert_generation_=0;
  bool open_pending_=false,history_unavailable_=false;
  public:
- RollingRecovery(const NavigationState&,const ResolvedRollingPolicyV1&);
+ RollingRecovery(const NavigationState&,const ResolvedRollingPolicyV1&,bool stable_rotation=false);
  RollingFdeAssessment prepare(EpochTransaction&,const Sc2ImuMonitor&,
    const std::deque<ImuMeasurement>&,const std::deque<RollingRawState>&,
    const IntegrityConfig&,bool fde);

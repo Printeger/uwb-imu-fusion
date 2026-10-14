@@ -84,3 +84,57 @@ conditioning must be evaluated in W2 A comparisons. Stable new S1/S2 paced
 core40 misses1/7 and measurement-to-sink50 misses0/1 are retained.
 W1 scorer evaluates actual online terminal states and post-delivery GT,
 including body SE(3) RPE Δ1/20, velocity/rotation/bias and stage error.
+
+## Mathematical changes (W2, verification in progress)
+
+SC6 candidate intersects only necessary constraints on the same E/domain.
+For the continuous acceleration relation, eliminating the common a(s) gives
+p1−p0−dt(v0+v1)/2=∫(dt/2−s)a(s)ds, hence norm≤A dt²/4.
+The implemented coordinate inverse intersections contain every full-norm
+solution. The independent exact bang-bang extremum with v0=v1=0 attains
+±A dt²/4 and halves the old displacement enclosure. This is a new relation,
+not an extra pass of the old independent acceleration projections.
+
+For every SO(3) rotation, ‖Rl‖=‖l‖. Intersecting the rotation-entry tag box
+with p±‖l‖, and its inverse p with tag±‖l‖, therefore preserves every true
+lever configuration, including unobservable/multiple attitudes. For a healthy
+range row, (xj−aj)²≤u²−Σ(other coordinate distance²); subtracting an outward
+lower bound of the latter and taking an outward square root gives a necessary
+coordinate enclosure. It is applied **within** each of all nine physical masks;
+their union is retained. Budget exhaustion still keeps every unprocessed box.
+The new relations add no random source and inherit original all-time E/risk;
+no FDE selection is used as truth, and neither Gaussian PL nor an optimizer
+maximum is a protection bound. Directed rounding and original fallback stay.
+
+Prototype `sc6_bias_prototype.hpp` implements a known-R scalar constant-a
+three-pose model a=(p2−2p1+p0)/dt² and y=a+b+f+n with carried RW support.
+With p=(0,.5,2), dt=1, y=3 and n∈[−.1,.1], a=1 and the healthy branch
+shrinks b from [−10,10] to [1.9,2.1]. Allowing unbounded f keeps the full bias
+interval: (b=1,f=1) and (b=2,f=0) give the same measurements. This prototype
+has limited declared assumptions and is not silently inserted into the main
+fault union. Main bias remains RW-only; all-direction observability is OPEN.
+
+W2 initial operator checks PASS. Same-center M comparison actual denoms:
+
+|case|native/raw|HPL strict|VPL strict|mean H new/old|mean V new/old|
+|---|---|---|---|---|---|
+|S0|300/300|300/300|300/300|0.767141|0.897589|
+|S1|400/400|400/400|400/400|0.799357|0.802006|
+
+All 700 comparisons use the same actual committed center and unchanged event. No sampled PE>PL; this observation is not the risk proof. Shadow performs two proof chains and its costs are not a normal realtime candidate. Initial six-axis tests: 960/960 native/raw, each real repair61 and original IMU rejoin80–83; no native abort. These results establish functional scope, not full-state accuracy: accel cases rotation RMSE1.236rad and gyro cases .662rad. D1 S1 second gyro was NOT detected (no second repair); preexisting rejoined flags are not success for this missed episode. Main bias contraction remains OPEN.
+
+W2 A change: tight profiles use `sc6-boundary-numerical-rotation-metric-v1`.
+A full/symmetric raw rotation box's polar midpoint has no identifiable
+orientation. The new optimization prior retains the frozen boundary's
+existing numerical orientation; this is explicitly not an independent
+source or a raw constraint. Position/velocity/bias still use the new capsule.
+Actual discarded prior removal and replacement receipts remain checked.
+Directed test PASS after this change. F0 160/160 repair/rejoin retained;
+rotation RMSE improved 1.236→.339rad, tag RMSE .07535→.07345m.
+S1 400/400 native/raw, but tag RMSE .08730→.09960m and rotation
+.743→2.334rad worsened, with second gyro still missed. This mixed result is
+retained; the metric change is A, not P or an accuracy guarantee. Further
+ON/OFF and baseline comparisons belong to the mandatory frozen W4 matrix.
+Native accuracy, D1 gyro detectability and recovered baseline compatibility
+remain explicit OPEN. One same-ELF old-entry B1 comparison confirmed the
+recovered state difference (max1.686); no production DSO changed (SHA equal).

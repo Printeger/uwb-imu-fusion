@@ -27,7 +27,7 @@ bool rawRangeShells(const RawRangeLawEvidence&,const UwbBatch&,int epoch,
  std::array<RawRangeShell,8>&,int mission,double coordinate_radius);
 // NONE (-1) plus each physical row: current projection of the episode scope.
 std::array<int,9> rawRangeFaultMasks();
-struct RawRangeBudget { size_t max_boxes=256;unsigned passes=8,split_depth=0;bool all_ranges_healthy=false; };
+struct RawRangeBudget { size_t max_boxes=256;unsigned passes=8,split_depth=0;bool all_ranges_healthy=false;bool tight_shell=false; };
 struct RawRangeResult {
  std::string status="EVIDENCE_REFUSED",reason,source="raw-imu-uwb-contracted-v1";
  std::string relaxation="CURRENT_SINGLE_FAULT_OUTER_RELAXATION_OF_EPISODE_SCOPE";

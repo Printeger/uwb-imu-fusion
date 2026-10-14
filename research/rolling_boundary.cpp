@@ -13,23 +13,23 @@ bool sameCertificate(const RollingBoundaryCertificateV1& a,const RollingBoundary
  for(int j=0;j<8;++j)if(a.anchor_positions[j]!=b.anchor_positions[j])return false;return true;
 }
 RollingVector contracted(RollingRawState& s,const RollingRawMaterial& m,
- const RollingSourceEvent& e,const Eigen::Vector3d& l,size_t& branches){
+ const RollingSourceEvent& e,const Eigen::Vector3d& l,size_t& branches,bool tight){
  std::array<RawRangeShell,8> shells;
  const int epoch=int(m.batch.id.value());
  if(!rawRangeShells(m.range,m.batch,epoch,shells,e.open?std::numeric_limits<int>::max():e.mission,e.radius(epoch)))throw std::invalid_argument("RAW_BATCH_SOURCE_SCOPE_REFUSED");
- auto t=rollingTag(s,l);Eigen::Vector3d low,high;
+ auto t=tight?rollingTagSphere(s,l):rollingTag(s,l);Eigen::Vector3d low,high;
  for(int j=0;j<3;++j){low(j)=t[j].lower();high(j)=t[j].upper();}
- auto result=contractRawRangeBox(low,high,m.batch,shells,Eigen::Vector3d::Zero());
+ RawRangeBudget budget;budget.tight_shell=tight;auto result=contractRawRangeBox(low,high,m.batch,shells,Eigen::Vector3d::Zero(),budget);
  if(!result.valid || result.considered!=9)throw std::invalid_argument("RAW_CONTRACTION_SCOPE_INCONSISTENT");
  branches+=9;
  for(int j=0;j<3;++j)t[j]=I(result.low(j),result.high(j));
- if(!rollingContractTag(s,t,l))throw std::invalid_argument("RAW_TAG_BODY_INCONSISTENT");
+ if(!(tight?rollingContractTagSphere(s,t,l):rollingContractTag(s,t,l)))throw std::invalid_argument("RAW_TAG_BODY_INCONSISTENT");
  return t;
 }
 }
 RollingIntegrity::RollingIntegrity(const ResolvedRollingPolicyV1& p,const NavigationState& s,
- const Eigen::Matrix<double,15,1>& sigmas,double ba,double bg,const Eigen::Vector3d& lever,double acceleration,double rate):
- policy_(p),event_(p.mission,p.budget,p.open),accel_rw_(ba),gyro_rw_(bg),acceleration_(acceleration),rate_(rate),lever_(lever){
+ const Eigen::Matrix<double,15,1>& sigmas,double ba,double bg,const Eigen::Vector3d& lever,double acceleration,double rate,bool tight):
+ policy_(p),event_(p.mission,p.budget,p.open),accel_rw_(ba),gyro_rw_(bg),acceleration_(acceleration),rate_(rate),lever_(lever),tight_(tight){
  certificate_.separator=rollingInitial(s,sigmas,event_.q,1e-10);
  certificate_.event_id=event_.id;certificate_.fault_not_started=28ULL*p.mission;
 }
@@ -53,14 +53,14 @@ RollingBoundaryProposalV1 RollingIntegrity::propose(const EpochTransaction& tx,
  for(const auto& m:out.explicit_material){
   if(m.batch.id.value()!=expected++)throw std::invalid_argument("EXPLICIT_WINDOW_SOURCE_GAP");
   auto s=rollingPropagate(states.back(),acceleration_,rate_,accel_rw_,gyro_rw_,event_.radius(states.back().epoch+1));
-  contracted(s,m,event_,lever_,out.physical_branches);states.push_back(std::move(s));
+  contracted(s,m,event_,lever_,out.physical_branches,tight_);states.push_back(std::move(s));
  }
  // Registered bounded number of forward/backward necessary-constraint passes.
  for(int pass=0;pass<2;++pass){
-  for(size_t j=states.size()-1;j>0;--j)if(!rollingContractDynamics(states[j-1],states[j],acceleration_))throw std::invalid_argument("RAW_BACKWARD_RELATION_INCONSISTENT");
+  for(size_t j=states.size()-1;j>0;--j)if(!rollingContractDynamics(states[j-1],states[j],acceleration_) || (tight_ && !rollingContractCoupledDynamics(states[j-1],states[j],acceleration_)))throw std::invalid_argument("RAW_BACKWARD_RELATION_INCONSISTENT");
   for(size_t j=1;j<states.size();++j){
-   if(!rollingContractDynamics(states[j-1],states[j],acceleration_))throw std::invalid_argument("RAW_FORWARD_RELATION_INCONSISTENT");
-   contracted(states[j],out.explicit_material[j-1],event_,lever_,out.physical_branches);
+   if(!rollingContractDynamics(states[j-1],states[j],acceleration_) || (tight_ && !rollingContractCoupledDynamics(states[j-1],states[j],acceleration_)))throw std::invalid_argument("RAW_FORWARD_RELATION_INCONSISTENT");
+   contracted(states[j],out.explicit_material[j-1],event_,lever_,out.physical_branches,tight_);
   }
  }
  const size_t offset=out.material.cutoff-certificate_.separator.epoch;
@@ -99,8 +99,8 @@ RawRangeResult RollingIntegrity::finalize(RollingBoundaryProposalV1&& p,const Co
      p.certificate.version!=certificate_.version+1 || p.certificate.event_id!=event_.id ||
      state.timestamp!=p.material.end)throw std::invalid_argument("BOUNDARY_STALE_PROPOSAL");
   finalizeTransfer(p.material,r,keys);
-  auto t=rollingTag(p.current,lever_);Eigen::Vector3d actual=state.position_world_m+state.q_world_body*lever_;
-  RawRangeResult bound;bound.source="sc5-raw-rolling-full-state-outer-v1";
+  auto t=tight_?rollingTagSphere(p.current,lever_):rollingTag(p.current,lever_);Eigen::Vector3d actual=state.position_world_m+state.q_world_body*lever_;
+  RawRangeResult bound;bound.source=tight_?"sc6-coupled-sphere-outer-v1":"sc5-raw-rolling-full-state-outer-v1";
   bound.relaxation="FULL_TASK_PRODUCT_OUTER_MASK_RELAXATION_NO_PROBABILISTIC_PRUNING";
   for(int j=0;j<3;++j){bound.low(j)=t[j].lower();bound.high(j)=t[j].upper();bound.pl(j)=abs(t[j]-I(actual(j))).upper();}
   bound.hpl=sqrt(square(I(bound.pl.x()))+square(I(bound.pl.y()))).upper();
