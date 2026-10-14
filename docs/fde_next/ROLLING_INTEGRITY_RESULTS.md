@@ -441,3 +441,15 @@ One compile attempt failed for unsupported Timestamp comparison operators;
 strict comparisons repaired it before native playback. Native local360 has
 no abort or hidden refusal. Open automaton/queue/mode/identity tests and SC5
 boundary/math regressions PASS. Long matrix and final audit still pending.
+
+Goal02 frozen implementation d2fd8c5: main positive matrix PASS2000/2000
+actual native commits and raw tag bounds (healthy500, mixed UA61→UG321
+1000, repeated UG61/261 500). Each repeated stream has two actual prior
+repairs and ≥4 actual CombinedIMU rejoin epochs per repair; event/source/
+parent/risk continue past200 to1000. No repeated finite mission construction.
+First harness used legacy STATE bias column names absent from this logger;
+after500 successful native/raw outputs it failed before validating the whole
+stream. Corrected explicit p/v/quaternion schema replays the positive matrix;
+that500-run is not hidden or claimed as fully verified. No source/noise/AL
+or input amplitudes were changed. Long-flow qualification and realtime/box
+tightness are independent; final variants/negative and resource audit follow.

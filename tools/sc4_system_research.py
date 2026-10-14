@@ -205,8 +205,81 @@ def rolling(main_only=False,remaining_only=False):
         rows=rolling_native(path,'SC3_U0',3,folder,'R5-expiry');rolling_validate('R5-expiry',rows,mission=2)
     print('ROLLING matrix PASS; temporary traces removed; math/recovery separate from realtime/AL/hardware',flush=True)
 
+def open_native(config,scene,count,folder,label,hook=None):
+    trace=folder/(label+'.csv')
+    cmd=[str(BIN/'epoch_raim_runner'),str(config),str(trace),scene,'open-rolling','on',str(count)]
+    if hook:cmd.append(hook)
+    r=subprocess.run(cmd,cwd=ROOT,env=environment(),capture_output=True,text=True)
+    rows=[]
+    if trace.exists():
+        with trace.open() as f:rows=list(csv.DictReader(f))
+    print(r.stdout.strip(),flush=True)
+    if r.returncode:
+        print('OPEN FAILURE',label,'scheduled',count,'emitted',len(rows),'stderr',r.stderr,'unattempted',count-len(rows),flush=True)
+        r.check_returncode()
+    assert len(rows)==count
+    return rows
+
+def open_validate(label,rows,lf=30,li=30,replay=60,repeated=False):
+    previous=0
+    for x in rows:
+        k=int(x['epoch'])
+        assert None not in x and None not in x.values(),(label,k,'schema')
+        assert x['qualified']==x['updates']=='1' and int(x['version'])==k+1
+        assert int(x['generation'])==k and int(x['parent'])==k-1 and int(x['source_prefix'])==21+128*k
+        assert int(x['boundary'])==max(0,k+1-li) and x['x0']==str(int(k<lf))
+        risk=float(x['risk_upper']);assert previous<risk<=1e-6;previous=risk
+        assert x['event'].startswith('time-uniform-block-rw-repeat-v1:')
+        assert int(x['replay_samples'])<=10*replay+1 and int(x['capsules'])<=replay+1 and int(x['explicit_batches'])<=li-1
+        assert int(x['proof_uwb_first'])>=max(1,k-li+1) and int(x['imu_first'])==10*(k-1)+1
+        assert float(x['horizontal_pe'])<=float(x['hpl']) and float(x['vertical_pe'])<=float(x['vpl'])
+        assert all(np.isfinite(float(x[key])) for key in ['tag_x','tag_y','tag_z','vx','vy','vz','qw','qx','qy','qz'])
+        assert x['formal_eligible']==x['publication_protected']=='0' and x['application_status']=='APPLICATION_AL_UNQUALIFIED'
+        assert x['current_protected']==str(int(x['on_time']=='1'))
+    repairs=[x for x in rows if x['prior_repaired']=='1']
+    if repeated:
+        assert len(repairs)==2 and rows[-1]['alerts']=='2',(label,'repeat recovery',[(x['epoch'],x['alerts']) for x in repairs])
+        for repair in repairs:
+            tail=[x for x in rows if int(x['epoch'])>int(repair['epoch']) and x['alerts']==repair['alerts'] and x['rejoined']=='1']
+            assert len(tail)>=4
+            print('OPEN RECOVERY',label,'repair',repair['epoch'],'removed_priors',repair['removed_priors'],'removed_groups',repair['removed_groups'],'rejoin4',[x['epoch'] for x in tail[:4]],flush=True)
+    print('OPEN DENOM',label,'scheduled',len(rows),'native',len(rows),'qualified',len(rows),'abort0','core40_miss',sum(x['core_on_time']=='0' for x in rows),'full50_miss',sum(x['on_time']=='0' for x in rows),flush=True)
+    for key in ['hpl','vpl','width_x','width_y','width_z','horizontal_pe','vertical_pe','bias_width','core_ms','full_ms','resident_kib','slots','live_factors','ledger_entries','active_imu','ended_imu','births']:
+        print('OPEN STATS',label,key,'min',min(float(x[key]) for x in rows),'mean/median/P95/max',statistics([x[key] for x in rows]),flush=True)
+    for k in [51,200,201,321,500,1000]:
+        if k<=len(rows):print('OPEN SNAPSHOT',label,{key:rows[k-1][key] for key in ['epoch','qualified','event','risk_upper','q','q_shared_first','generation','parent','boundary','source_prefix','alerts','ended_imu','recovery','hpl','vpl','proof_uwb_first','imu_first']},flush=True)
+    before=json.dumps(rows,sort_keys=True)
+    for hal,val in [(2,3),(5,5),(10,10)]:print('OPEN AL',label,hal,val,'numeric',sum(float(x['hpl'])<=hal and float(x['vpl'])<=val for x in rows),'application_available0',flush=True)
+    assert before==json.dumps(rows,sort_keys=True)
+
+def open_matrix(remaining=False):
+    root=ROOT/'.cache/sc5-open';root.mkdir(parents=True,exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='matrix-',dir=root) as name:
+        folder=Path(name)
+        if not remaining:
+            for label,scene,count in [('O0','OE_HEALTHY',500),('O1','OE_MIXED',1000),('O2','OE_GYRO',500)]:
+                rows=open_native('config/sc5_open.yaml',scene,count,folder,label)
+                open_validate(label,rows,repeated=label!='O0')
+        else:
+            config=yaml.safe_load((ROOT/'config/sc5_open.yaml').read_text())
+            for lf,li in [(20,20),(40,40),(30,10)]:
+                v=dict(config,fixed_lag_epochs=lf);v['rolling_integrity']=dict(config['rolling_integrity'],window_mode='follow_fgo' if lf==li else 'explicit',explicit_epochs=None if lf==li else li)
+                path=folder/f'window-{lf}-{li}.yaml';path.write_text(yaml.safe_dump(v,sort_keys=False))
+                rows=open_native(path,'OE_HEALTHY',250,folder,f'O3-{lf}-{li}');open_validate(f'O3-{lf}-{li}',rows,lf,li,lf+30)
+            for hook in ['cancel:3','overload:3']:
+                rows=open_native('config/sc5_open.yaml','OE_HEALTHY',8,folder,hook.replace(':','-'),hook)
+                assert all(x['qualified']==x['current_protected']==x['updates']=='0' for x in rows[2:])
+                print('OPEN NEGATIVE',hook,'2 native/qualified,6 refused,0 stale protection',flush=True)
+    print('OPEN MATRIX PASS transient artifacts removed',flush=True)
+
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('command',choices=['checks','local','performance','functional','record','rolling-check','rolling','rolling-boundary']);parser.add_argument('--build',action='store_true');parser.add_argument('--main-only',action='store_true');parser.add_argument('--remaining-only',action='store_true');args=parser.parse_args();CACHE.mkdir(parents=True,exist_ok=True)
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('command',choices=['checks','local','performance','functional','record','rolling-check','rolling','rolling-boundary','open-check','open','open-remaining']);parser.add_argument('--build',action='store_true');parser.add_argument('--main-only',action='store_true');parser.add_argument('--remaining-only',action='store_true');args=parser.parse_args();CACHE.mkdir(parents=True,exist_ok=True)
+    if args.command.startswith('open'):
+        if args.build:subprocess.run(['cmake','--build',str(BUILD),'--target','time_uniform_event_checks','open_rolling_checks','epoch_raim_runner','-j2'],cwd=ROOT,env=environment(),check=True)
+        if args.command=='open-check':
+            for target in ['time_uniform_event_checks','open_rolling_checks']:subprocess.run([str(BIN/target)],cwd=ROOT,env=environment(),check=True)
+        else:open_matrix(args.command=='open-remaining')
+        return
     if args.command.startswith('rolling'):
         if args.build:subprocess.run(['cmake','--build',str(BUILD),'--target','sc5_rolling_checks','sc5_math_checks','sc5_event_checks','epoch_raim_runner','-j2'],cwd=ROOT,env=environment(),check=True)
         if args.command=='rolling':rolling(args.main_only,args.remaining_only)
