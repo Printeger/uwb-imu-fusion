@@ -18,6 +18,7 @@ import yaml
 from scipy.spatial.transform import Rotation
 from sc4_system_research import BIN, BUILD, ROOT, environment
 from sc6_system_research import CORE_CHECKS
+CLOSURE_CHECKS = CORE_CHECKS + [('sc6_closure_checks', [])]
 
 CACHE = ROOT / '.cache/sc6-closure'
 CONFIG = ROOT / 'config/sc6_closure.yaml'
@@ -50,7 +51,8 @@ def dump(path, value):
 def identity():
     sources = subprocess.check_output(['git', 'ls-files', 'research', 'src', 'include',
                                       'config', 'tools', 'CMakeLists.txt'], cwd=ROOT, text=True).splitlines()
-    sources += ['config/sc6_closure.yaml', 'tools/sc6_closure.py', 'tools/test_sc6_closure.py']
+    sources += ['config/sc6_closure.yaml', 'tools/sc6_closure.py', 'tools/test_sc6_closure.py',
+                'tools/sc6_closure_observability.py', 'research/sc6_temporal_monitor.hpp', 'research/sc6_closure_checks.cpp']
     return {'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
             'elf': sha(BIN / 'epoch_raim_runner'), 'dso': sha(BIN.parent / 'libuwb_imu_pl.so'),
             'sources': {p: sha(ROOT / p) for p in sorted(set(sources)) if (ROOT / p).is_file()},
@@ -143,6 +145,7 @@ def stanford(rows, scheduled, axis, al):
     counts = dict(scheduled=scheduled, received=len(rows),
                   attempted=sum(r.get('status') != 'SOURCE_GAP_OR_ABORT' for r in rows),
                   committed=sum(committed(r) for r in rows),
+                  native_committed=sum(value(r, 'mutations', 0) > 0 for r in rows),
                   spatial_qualified=sum(spatial(r) for r in rows),
                   time_current=sum(current(r) for r in rows),
                   refused=scheduled-sum(committed(r) for r in rows),
@@ -187,6 +190,8 @@ def verified_rows(rows, lever):
     for r in rows:
         if not committed(r):
             continue
+        assert all(np.isclose(np.linalg.norm([value(r, prefix+j) for j in 'xyzw']), 1,
+                              rtol=0, atol=1e-10) for prefix in ['q', 'gt_q']), 'non-unit quaternion'
         tag = vec(r, 'tag_')
         gt_tag = vec(r, 'gt_p') + rot(r, 'gt_q').apply(lever)
         assert np.allclose(tag, vec(r, 'p') + rot(r).apply(lever), rtol=0, atol=1e-10)
@@ -210,17 +215,22 @@ def episodes(rows, manifest):
         begin_ns = (onset-1)*50000000+5000000
         end_ns = begin_ns+duration*1000000
         next_onset = manifest['faults'][i+1][0] if i+1 < len(manifest['faults']) else math.inf
-        relevant = [r for r in good if onset <= int(r['epoch']) < next_onset]
+        relevant = [r for r in good if onset <= int(value(r, 'epoch')) < next_onset]
         alarm = [r for r in relevant if value(r, 'imu_alarm') == 1 and value(r, 'first_imu_alarm_ns') >= begin_ns]
         bridge = [r for r in relevant if value(r, 'bridge') == 1]
         repairs = [r for r in bridge if value(r, 'repair') == 1 and value(r, 'removed_priors') > 0]
-        rejoin = [r for r in relevant if value(r, 'rejoined') == 1 and value(r, 'stamp_ns') >= end_ns and bridge and int(r['epoch']) > int(bridge[0]['epoch'])]
-        first = lambda items: int(items[0]['epoch']) if items else None
+        unsafe_rejoin = [r for r in relevant if value(r, 'rejoined') == 1 and
+                         (int(value(r, 'epoch'))-1)*50000000 < end_ns and bridge]
+        rejoin = [r for r in relevant if value(r, 'rejoined') == 1 and
+                  (int(value(r, 'epoch'))-1)*50000000 >= end_ns and bridge and
+                  int(value(r, 'epoch')) > int(bridge[0]['epoch'])]
+        first = lambda items: int(value(items[0], 'epoch')) if items else None
         fd, bi, re = first(alarm), first(bridge), first(rejoin)
         result.append(dict(onset=onset, axis=axis, duration_ms=duration, amplitude=amplitude,
                            begin_ns=begin_ns, end_ns=end_ns, first_fd=fd, first_bridge=bi,
                            first_prior_repair=first(repairs), first_rejoin=re,
-                           rejoin4=[int(r['epoch']) for r in rejoin[:4]],
+                           rejoin4=[int(value(r, 'epoch')) for r in rejoin[:4]],
+                           rejoin_on_fault_shared_endpoint=[int(value(r, 'epoch')) for r in unsafe_rejoin],
                            TTD_ms=(value(alarm[0], 'first_imu_alarm_ns')-begin_ns)/1e6 if alarm else None,
                            TTI_ms=(bi*50-begin_ns/1e6) if bi else None,
                            TTR_ms=(re*50-begin_ns/1e6) if re else None,
@@ -228,14 +238,14 @@ def episodes(rows, manifest):
                            TTI_wall_ms=value(bridge[0], 'commit_time_ms')-begin_ns/1e6 if bridge else None,
                            TTR_wall_ms=value(rejoin[0], 'commit_time_ms')-begin_ns/1e6 if rejoin else None,
                            uwb_onset=uwb_onset,
-                           first_uwb_fd=first([r for r in good if uwb_onset <= int(r['epoch']) < uwb_onset+3 and value(r, 'uwb_alarm') == 1]),
-                           correct_uwb_exclusion=[int(r['epoch']) for r in good if uwb_onset <= int(r['epoch']) < uwb_onset+3 and value(r, 'excluded') == 0],
-                           recovered=bool(repairs and len(rejoin) >= 4)))
+                           first_uwb_fd=first([r for r in good if uwb_onset <= int(value(r, 'epoch')) < uwb_onset+3 and value(r, 'uwb_alarm') == 1]),
+                           correct_uwb_exclusion=[int(value(r, 'epoch')) for r in good if uwb_onset <= int(value(r, 'epoch')) < uwb_onset+3 and value(r, 'excluded') == 0],
+                           recovered=bool(repairs and len(rejoin) >= 4 and not unsafe_rejoin)))
     return result
 
 
 def phase(r, eps):
-    k = int(r['epoch'])
+    k = int(value(r, 'epoch'))
     if value(r, 'bridge') == 1:
         return 'quarantine_bridge'
     relevant = [e for e in eps if e['begin_ns'] <= k*50000000]
@@ -255,7 +265,7 @@ def phase(r, eps):
 def metric_stats(rows):
     good = [r for r in rows if committed(r)]
     result = {key: stats([value(r, key) for r in good]) for key in METRICS}
-    by_epoch = {int(r['epoch']): r for r in good}
+    by_epoch = {int(value(r, 'epoch')): r for r in good}
     for d in [1, 20]:
         translation, angles = [], []
         for k, a in by_epoch.items():
@@ -281,7 +291,8 @@ def score(rows, manifest, scheduled):
                   committed=sum(committed(r) for r in rows),
                   qualified=sum(spatial(r) for r in rows), timely=sum(current(r) for r in rows),
                   missing=scheduled-len(rows), refused=scheduled-sum(committed(r) for r in rows),
-                  unattempted=scheduled-len(timing_rows),
+                  unattempted=sum(r.get('status') == 'SOURCE_GAP_OR_ABORT' for r in rows),
+                  unknown_missing_service=scheduled-len(rows),
                   abort=sum(r.get('status') == 'ABORT' for r in rows),
                   metrics=metric_stats(rows), episodes=eps)
     result['timing'] = {key: stats([value(r, key) for r in timing_rows if value(r, key) >= 0])
@@ -294,14 +305,25 @@ def score(rows, manifest, scheduled):
     good = [r for r in rows if committed(r)]
     result['stages'] = {name: metric_stats([r for r in good if phase(r, eps) == name]) for name in PHASES}
     # Parallel channel labels; never add these to the unique overall partition.
-    uwb_active = lambda r: any(e['uwb_onset'] <= int(r['epoch']) < e['uwb_onset']+3 for e in eps)
+    uwb_active = lambda r: any(e['uwb_onset'] <= int(value(r, 'epoch')) < e['uwb_onset']+3 for e in eps)
     result['uwb_stages'] = {name: metric_stats([r for r in good if uwb_active(r) == active])
                             for name, active in [('fault_active', True), ('healthy', False)]}
     assert sum(result['stages'][name]['ape']['n'] for name in PHASES) == len(good)
     result['false_uwb_exclusions'] = sum(value(r, 'excluded') >= 0 and
-        not any(e['uwb_onset'] <= int(r['epoch']) < e['uwb_onset']+3 for e in eps) for r in good)
+        not any(e['uwb_onset'] <= int(value(r, 'epoch')) < e['uwb_onset']+3 for e in eps) for r in good)
     result['stanford'] = {f'{h}/{v}': {a: stanford(rows, scheduled, a, limit)
                           for a, limit in [('H', h), ('V', v)]} for h, v in ALS}
+    by_epoch = {int(value(r, 'epoch')): r for r in rows}
+    result['stanford_by_stage'] = {}
+    for stage_name in PHASES:
+        # Allocate planned phase denominators using real action receipts when
+        # present. A missing row contributes only its scheduled epoch, never PE/PL.
+        stage_epochs = {k for k in range(1, scheduled+1)
+                        if phase(by_epoch.get(k, {'epoch': str(k)}), eps) == stage_name}
+        stage_rows = [r for r in rows if int(value(r, 'epoch')) in stage_epochs]
+        result['stanford_by_stage'][stage_name] = {f'{h}/{v}': {
+            a: stanford(stage_rows, len(stage_epochs), a, limit)
+            for a, limit in [('H', h), ('V', v)]} for h, v in ALS}
     result['resource'] = {key: dict(stats([value(r, key) for r in good]),
                         first=value(good[0], key) if good else None, last=value(good[-1], key) if good else None)
                           for key in ['slots', 'live', 'ledger', 'rss', 'alerts', 'bias_width', 'q', 'risk', 'replay', 'capsules', 'hpl', 'vpl']}
@@ -350,9 +372,15 @@ def run(entry):
                'sc6', entry['fde'], '16' if entry['group'] == 'N' else '0',
                entry['profile'], entry['mode'], str(entry['seed']), entry['hook']]
     ident = identity()
+    registration = json.loads((CACHE/'registration.json').read_text())
+    assert all(ident[k] == registration['identity'][k] for k in ['elf', 'dso']), 'registered online candidate changed'
+    assert sha(CONFIG) == registration['config_sha'], 'registered recipe changed'
     print('START', name, flush=True)
     with log.open('w') as sink:
         rc = subprocess.run(command, cwd=ROOT, env=environment(), stdout=sink, stderr=subprocess.STDOUT).returncode
+    dump(CACHE/(name+'.execution.json'), dict(identity=ident, command=command, native_returncode=rc,
+         registration_sha=sha(CACHE/'registration.json'), trace_sha=sha(trace) if trace.exists() else None,
+         log_sha=sha(log), config_sha=sha(config)))
     rows = list(csv.DictReader(trace.open())) if trace.exists() else []
     resolved = law(config)
     manifest = resolved['sc6']['cases'].get(entry['case']) or resolved['closure']['additional_cases'][entry['case']]
@@ -398,8 +426,8 @@ def paired_scores():
         assert on['identity']['elf'] == off['identity']['elf']
         on_rows = list(csv.DictReader((CACHE/(label(on['entry'])+'.csv')).open()))
         off_rows = list(csv.DictReader((CACHE/(label(off_entry)+'.csv')).open()))
-        indices = {int(r['epoch']) for r in on_rows if committed(r)} & {int(r['epoch']) for r in off_rows if committed(r)}
-        selected = [[r for r in rows if int(r['epoch']) in indices] for rows in [on_rows, off_rows]]
+        indices = {int(value(r, 'epoch')) for r in on_rows if committed(r)} & {int(value(r, 'epoch')) for r in off_rows if committed(r)}
+        selected = [[r for r in rows if int(value(r, 'epoch')) in indices] for rows in [on_rows, off_rows]]
         metrics_on, metrics_off = map(metric_stats, selected)
         delta = {}
         for key in metrics_on:
@@ -419,11 +447,11 @@ def checks(build=False):
     if build:
         with (CACHE/'build.log').open('w') as sink:
             subprocess.run(['cmake', '--build', str(BUILD), '--target', 'epoch_raim_runner',
-                            *sorted({t for t, _ in CORE_CHECKS}), '-j2'], cwd=ROOT,
+                            *sorted({t for t, _ in CLOSURE_CHECKS}), '-j2'], cwd=ROOT,
                            env=environment(), stdout=sink, stderr=subprocess.STDOUT, check=True)
     subprocess.run(['python3', '-m', 'unittest', 'discover', '-s', 'tools', '-p', 'test_sc6_closure.py'], cwd=ROOT, check=True)
     evidence = []
-    for target, args in CORE_CHECKS:
+    for target, args in CLOSURE_CHECKS:
         with (CACHE/('check-'+target+('-boundary' if args == ['boundary'] else '')+'.log')).open('w') as sink:
             rc = subprocess.run([str(BIN/target), *args], cwd=ROOT, env=environment(), stdout=sink, stderr=subprocess.STDOUT).returncode
         evidence.append(dict(target=target, args=args, returncode=rc))
@@ -622,15 +650,33 @@ def report(runs, pairs):
 
 
 def main():
+    global CACHE
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('command', choices=['register', 'paired', 'checks', 'stanford'])
     p.add_argument('--group', choices=['P0', 'P1', 'P2', 'P3', 'P4', 'N'], default='P0')
     p.add_argument('--build', action='store_true')
+    p.add_argument('--campaign', choices=['w0', 'w1', 'final'], default='w0',
+                   help='Keep earlier candidates and failures; never overwrite their frozen traces')
+    p.add_argument('--case', help='Run only a case already in the preregistered matrix')
+    p.add_argument('--revision', choices=['endpoint-fixed'], help='Separate evidence for the diagnosed shared-endpoint correction')
     a = p.parse_args()
+    if a.campaign != 'w0':
+        CACHE = CACHE/a.campaign
+    if a.revision:
+        CACHE = CACHE/a.revision
     if a.command == 'register':
         register()
     elif a.command == 'paired':
-        paired(a.group)
+        if a.case:
+            entries = json.loads((CACHE/'registration.json').read_text())['matrix']
+            selected = [e for e in entries if e['group'] == a.group and e['case'] == a.case]
+            if not selected:
+                raise ValueError('case not in registered group')
+            for entry in selected:
+                run(entry)
+            paired_scores()
+        else:
+            paired(a.group)
     elif a.command == 'checks':
         checks(a.build)
     else:

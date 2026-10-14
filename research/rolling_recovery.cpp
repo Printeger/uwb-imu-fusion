@@ -92,13 +92,17 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
  if(!fde){result.status=assessment.alarm || uwb_alarm?"DETECTION_HELD":"KEEP";result.recovery="FDE_DISABLED";return result;}
  if(policy_.open && history_unavailable_){result.status="RECOVERY_OUT_OF_BUFFER";result.recovery="BOUND_VALID_BUT_RECOVERY_UNAVAILABLE";return result;}
  bool held=held_anchor_>=0 && int(tx.proposed_epoch)<=held_until_;
- bool bridge=assessment.alarm && (!isolated_ || std::any_of(tx.raw_imu_slice.begin(),tx.raw_imu_slice.end(),[&](const auto& m){return !(m.timestamp<quarantine_begin_) && m.timestamp<quarantine_end_;}));
+ // A retired alarm does not make the previous shared PIM endpoint healthy.
+ // Keep the inferred support until no physical sample of this PIM overlaps.
+ auto touches_quarantine=[&]{return std::any_of(tx.raw_imu_slice.begin(),tx.raw_imu_slice.end(),[&](const auto& m){return !(m.timestamp<quarantine_begin_) && m.timestamp<quarantine_end_;});};
+ bool bridge=(assessment.alarm && !isolated_) || (isolated_ && touches_quarantine());
  if(assessment.alarm){
   if(quarantine_begin_.value()==0 || assessment.union_begin<quarantine_begin_)quarantine_begin_=assessment.union_begin;
   if(quarantine_end_<assessment.union_end)quarantine_end_=assessment.union_end;
   bridge=!isolated_ || std::any_of(tx.raw_imu_slice.begin(),tx.raw_imu_slice.end(),[&](const auto& m){return !(m.timestamp<quarantine_begin_) && m.timestamp<quarantine_end_;});
   result.first_dependency=size_t((quarantine_begin_.value()-5000000)/50000000+1);
  }
+ if(bridge && !result.first_dependency)result.first_dependency=size_t((quarantine_begin_.value()-5000000)/50000000+1);
  const bool historical_range=observed_anchor_>=0 && !isolated_ && observed_uwb_onset_<tx.proposed_epoch;
  if(bridge && !isolated_){
   auto first=result.first_dependency;if(historical_range)first=std::min(first,observed_uwb_onset_);

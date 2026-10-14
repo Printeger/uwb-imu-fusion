@@ -39,6 +39,8 @@ class OpenFaultPool {
  uint64_t endedUwb()const{return uwb_ended_;}
  uint64_t samples()const{return samples_;}
  const OpenImuDiagnostic& diagnostic()const{return diagnostic_;}
+ bool currentAlarm()const{return result_.alarm;}
+ const std::vector<Sc2PhysicalCandidate>& activeCandidates()const{return active_;}
  size_t activeSize()const{return active_.size();}
  uint64_t births()const{return births_;}
  uint64_t ended()const{return ended_;}

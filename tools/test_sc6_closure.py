@@ -1,7 +1,7 @@
 """Independent Stanford boundary, receipt gating and statistical-denominator tests."""
 import math
 import unittest
-from sc6_closure import partition, quantile, stanford, spatial, current, metric_stats
+from sc6_closure import partition, quantile, stanford, spatial, current, metric_stats, score
 
 
 def receipt(**change):
@@ -72,6 +72,16 @@ class StanfordContract(unittest.TestCase):
         for field, val in [('version', '3'), ('generation', '0'), ('parent', '1'),
                            ('source_prefix', '148'), ('vpl', 'inf')]:
             self.assertFalse(spatial(receipt(**{field: val})))
+
+    def test_actual_decimal_refusal_epoch_has_no_synthetic_point(self):
+        row = receipt(epoch='1.000000', updates='0', mutations='0', qualified='0',
+                      timely='0', status='ABORT', core_ms='10', hpe='nan', vpe='nan',
+                      hpl='nan', vpl='nan')
+        result = score([row], {'faults': []}, 3)
+        self.assertEqual(result['attempted'], 1)
+        self.assertEqual(result['unknown_missing_service'], 2)
+        self.assertEqual(result['unattempted'], 0)
+        self.assertEqual(result['stanford']['5/5']['H']['plot_points'], 0)
 
 
 if __name__ == '__main__':

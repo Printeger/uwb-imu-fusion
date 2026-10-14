@@ -2765,3 +2765,50 @@ Reproduce: `python3 tools/sc6_closure.py checks --build`; `register`; `paired --
 ![Actual Closure vertical_stanford](sc6_closure_vertical_stanford.png)
 
 Timing context: no concurrent native runs. Short independent observability postprocessing (<1s) ran during parts of P0; initial figure rendering overlapped the first D1 early run. Those measured samples, including every timeout, remain in the evidence; no fastest rerun or frame removal.
+
+
+## W1 — necessary temporal FD and actual recovery
+
+The new FD is an A-policy change, not a P-equivalent estimator claim. On the original all-time event E, h_a=Rᵀ(a+g) has derivative norm ≤ J+Omega(A+g), and body angular-rate derivative norm ≤ alpha. For adjacent physical samples separated by dt=.005s, healthy |Δy_j| ≤ D_j dt +(q_i+q_{i−1})sigma_ADC,j +q_i sigma_RW,j sqrt(dt)+4e−10. Initial bias cancels exactly; every original ADC/RW birth is reused, with no new probability allocation. Boost directed arithmetic is checked by an independent100-digit oracle.
+
+A violated necessary relation certifies a fault at an endpoint under E. Both NEW and ENDING50/500ms constant-axis episodes remain in the support union. The functional recovery view uses this union; the original OpenFaultPool view, raw physical branches, separator, risk and source IDs are unchanged. All prior replacement/bridge/rejoin claims still pass actual native receipt+ledger checks. Wrong functional choice is never used to remove a raw physical branch.
+
+Shared endpoint defect discovered in the first1240 ON/1240 OFF D1_G_L trial: native rejoin1131 reused the last contaminated endpoint. All2480 initial trial frames are retained as failed functional-boundary evidence, not restoration success. The correction holds bridge whenever any physical PIM sample overlaps the inferred quarantine, even after the current alarm retires. Independent native80 test now repairs61, keeps bridge71, rejoins72–75; actual12 early/late six-axis difference witnesses and directed-radius tests pass.
+
+|W1 run|scheduled/native/raw/timely|FD/prior/rejoin4|unsafe shared endpoint|P95 core/sink ms|
+|---|---|---|---|---|
+|P1/F0/20261010/on|160/160/160/160|61/61/[81, 82, 83, 84]|[]|23.710462/23.826142|
+|P1/F0/20261011/on|160/160/160/160|61/61/[81, 82, 83, 84]|[]|23.532462/23.718029|
+|P1/F1/20261010/on|160/160/160/160|61/61/[81, 82, 83, 84]|[]|23.233758/23.363779|
+|P1/F2/20261010/on|160/160/160/160|61/61/[81, 82, 83, 84]|[]|23.465005/23.616426|
+|P1/F3/20261010/on|160/160/160/160|61/61/[81, 82, 83, 84]|[]|24.028206/24.210672|
+|P1/F4/20261010/on|160/160/160/159|61/61/[81, 82, 83, 84]|[]|23.058601/23.243122|
+|P1/F5/20261010/on|160/160/160/160|61/61/[81, 82, 83, 84]|[]|23.012342/23.218446|
+|P1/V/20261010/on|250/250/250/249|61/61/[81, 82, 83, 84]|[]|23.140507/23.306563|
+|P2/D1_A_E/20261010/off|160/160/160/160|61/None/[]|[]|22.443208/22.592264|
+|P2/D1_A_E/20261010/on|160/160/160/160|61/61/[81, 82, 83, 84]|[]|22.783601/22.941141|
+|P2/D1_A_L/20261010/off|3240/3240/3240/3238|3121/None/[]|[]|21.915347/22.077361|
+|P2/D1_A_L/20261010/on|3240/3240/3240/3238|3121/3121/[3132, 3133, 3134, 3135]|[]|21.360609/21.523025|
+|P2/D1_G_E/20261010/off|160/160/160/160|61/None/[]|[]|22.317601/22.500223|
+|P2/D1_G_E/20261010/on|160/160/160/160|61/61/[72, 73, 74, 75]|[]|23.905357/24.05016|
+|P2/D1_G_L/20261010/off|1240/1240/1240/1240|1121/None/[]|[]|22.419488/22.573223|
+|P2/D1_G_L/20261010/on|1240/1240/1240/1240|1121/1121/[1132, 1133, 1134, 1135]|[]|22.403925/22.615139|
+|P2/W0/20261010/off|200/200/200/200|61/None/[]|[]|21.479032/21.610281|
+|P2/W0/20261010/on|200/200/200/200|61/61/[72, 73, 74, 75]|[]|20.931499/21.125937|
+|P2/W1/20261010/off|200/200/200/200|61/None/[]|[]|21.015282/21.221293|
+|P2/W1/20261010/on|200/200/200/200|61/61/[81, 82, 83, 84]|[]|23.721877/23.893777|
+|P2/W2/20261010/off|200/200/200/200|61/None/[]|[]|21.98672/22.22692|
+|P2/W2/20261010/on|200/200/200/200|61/61/[72, 73, 74, 75]|[]|22.635896/22.77491|
+|P3/S3/20261010/on|300/0/0/0|NA|NA|5.184323/5.356379|
+
+W1 P2:14 paired native runs,10800 scheduled/committed/raw,10796 timely; all14 profile gates pass. ON restoration7/7 for early/late accel/gyro and original weak/short recipes. D0 six native axes, F0 confirmation seed20261011 and repeated V are also actually executed above. Core regression11/11 PASS; Stanford/refusal tests7/7 PASS. W1 is saved in the next local Git entry.
+
+Independent full15D static-model Jacobian: tag-only rank11/15; added independently observed orientations produce15/15 in the positive toy. Exact ±.1rad static yaw witnesses preserve tag and gravity measurements with compensating body position, within the original initial support. No toy orientation measurements enter the main raw. Original accel/gyro noise permits weak θ=.3m/s² and.01rad/s histories with opposite ADC coordinates ±7.5 and±5 to yield identical joint observations, preserving initial/bias/RW/UWB and shared-sample identities. This proves DETECTABILITY_LIMIT_PROVED_FOR_SCOPE for those weak support-overlap witnesses, not for20m/s² or1rad/s late steps, which are now actually detected. MAIN_BIAS_OBSERVATION_CONTRACTION_OPEN remains.
+
+S2 scoring independently verifies unit quaternion, world/body conventions, sign-invariant SO(3) magnitude0..pi and actual terminal tag=p+R*lever. W0’s3/5 worsened attitude seeds remain visible. The recovery metric preserves a possibly biased frozen boundary orientation as a numerical regularizer, not a physical observation. The exact yaw gauge and numerical rank deficiency explain why tag improvement alone cannot certify full-state recovery; no GT orientation or healthy-only fault contraction is installed.
+
+G2 is NUMERICAL_INDETERMINATE/functional OPEN: new S3 has300 scheduled,1 attempted,0 native/raw. Actual first ranges give full algebraic anchor rank but squared-range seed z=−325.126m and first GN step319.827m; every9 mask exceeds the original10m domain guard (minimum22.324m). Independent observation-only fixed seeds z=−2,−1,+1,+2 find36/36 local WLS post-passed candidates. This proves the current rejection is a seed/numerical defect, not physical emptiness. Mirror-like points also share legal original-noise observation support. These standalone fits have no native FGO/receipt/raw-binding certificate and are not presented as G2 recovery.
+
+Reproduction: `python3 tools/sc6_closure.py register --campaign w1 --revision endpoint-fixed`; `paired --campaign w1 --revision endpoint-fixed --group P2`, then groupsP1 and P3/S3; `checks --campaign w1 --revision endpoint-fixed --build`; `python3 tools/sc6_closure_observability.py`. Earlier candidate is separately retained under w1 before endpoint-fixed.
+
+W1 failures retained: int64_t/long-long std::min compilation error corrected; first temporal candidate shared-endpoint functional failure corrected; refusal CSV epoch1.000000 initially rejected by integer parser, existing300-row S3 trace rescored without rerun; original native return code was not saved before that scorer exception and is marked unknown. Future invocations now persist actual execution status before scoring. Independent oracle JSON initially required numpy.bool_ conversion, corrected without changing its mathematics.
