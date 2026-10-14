@@ -1,5 +1,6 @@
 """Independent Stanford boundary, receipt gating and statistical-denominator tests."""
 import math
+import copy
 import unittest
 from sc6_closure import partition, quantile, stanford, spatial, current, metric_stats, score
 
@@ -82,6 +83,14 @@ class StanfordContract(unittest.TestCase):
         self.assertEqual(result['unknown_missing_service'], 2)
         self.assertEqual(result['unattempted'], 0)
         self.assertEqual(result['stanford']['5/5']['H']['plot_points'], 0)
+
+    def test_posthoc_al_does_not_change_trace_or_current_gate(self):
+        rows=[receipt(hpe='6',hpl='4'),receipt(delivery_ms='51',timely='0')]
+        before=copy.deepcopy(rows)
+        outputs=[stanford(rows,2,'H',limit) for limit in [2,5,10]]
+        self.assertEqual(rows,before)
+        self.assertEqual([x['plot_points'] for x in outputs],[1,1,1])
+        self.assertEqual([x['timely_AL_admissible'] for x in outputs],[0,1,1])
 
 
 if __name__ == '__main__':

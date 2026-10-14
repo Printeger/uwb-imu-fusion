@@ -1,0 +1,51 @@
+# ONE CONTINUOUS GOAL — SC6 Closure
+
+你正在 `Printeger/uwb-imu-fusion` 的 `feature/realtime-uwb-imu-pl` 本地 ROS/GTSAM 工作区开发。现在开始实际工具操作，不要只产出计划或代码草稿。
+
+## 任务依据与约束
+
+必须阅读、逐条实施并验收：
+`docs/requirements/sc6_closure/SC6_CLOSURE_REQUIREMENTS.md`，SC6-C01—C20。
+同时先阅读仓库的 `docs/fde_next/SC6_RESULTS.md` 和受直接影响的 SC5/SC6 实现及其回归；以本地实际HEAD/差异为准，不覆盖用户未提交的新工作。文档作者审阅的远端HEAD为 `6b780101e6ff61cf614df1b457111502e0248d4e`，不是要求强行checkout该提交。
+
+**一个 Goal 连续执行 W0→W1→W2→W3，阶段验证并本地commit后自动继续，不拆成多个独立 Goal。** 既有 FGO、FDE、滚动 raw PL 和开放式时间一致风险已经实现，禁止为完成本任务重写系统、重复SC1–SC6全量历史实验。每一条数学结果、实时性和恢复结论都必须来自实际运行和明示的证据。
+
+## W0 — 优先完成导师能看的可量化成果
+
+1. 冻结配对实验manifest。对 S0健康、S1联合加速度故障、S2联合陀螺故障，用五个指定种子分别执行 **FDE ON/OFF相同原始输入、同一paced服务入口**的配对实验。保留输入hash/source ID/stamp/初始观测/FGO窗口/噪声/故障manifest/风险完全一致的证据。FDE OFF关闭的只是排除恢复行动，仍跑实际名义FGO、监测、raw PL与source/time门控。禁止比较ON paced和OFF offline的性能。
+2. 正确计算 tag APE/H/V RMSE、RPE1/20、速度、SO(3)姿态、六轴bias ON/OFF差值和百分比；分健康、故障、隔离bridge、恢复后、晚期未恢复阶段；报告真实首FD、排除、prior修复、rejoin、false exclusion。每个seed/episode保留失败与退化，种子为统计单位，不能将时间相关样本当独立试验。
+3. 实现**真实逐历元** Horizontal (HPE,HPL) 与 Vertical (VPE,VPL) Stanford Plot；ON/OFF同尺度分面、PE=PL对角线、AL横纵线、故障阶段、时间/来源资格、样本与拒绝分母。输出三张必须的PNG（含FDE精度比较）。对2/3、5/5、10/10m研究AL给出覆盖、underbound、候选MI/HMI和数值可用率。现有生产发布资格0，候选MI/HMI不能冒充实际运营事件；零次样本underbound不能当作1e-6证明。提供单位测试检查边界分区与不画假数据。阶段验证、保存本地commit后继续。
+4. 新实时标准为 **P95(core)≤40ms、P95(measurement→sink)≤50ms**（nearest rank，包含所有可测的慢/超时已准入服务），并在每个注册正例另验 `timely_spatial_qualified/scheduled≥95%`。不要求零超时，但必须输出P50/P95/P99/max、超时次数、拒绝/缺失、队列峰值；旧SC6严格A18结论不得回写。不要改生产端的Deadline/AL/发布规则来降低门槛。
+
+## W1 — 解决功能缺口，不能把安全保护冒充真实恢复
+
+5. 在D0六轴强故障正例基础上，用相同强度比较D1 early/late gyro和accel（包含报告中第1121、3121、5121、7121、9121等晚期故障）、弱短故障、重复/交错、超replay。追踪健康IMU必要区间、全球q/RW、自动机候选/历史、UWB观测、实际FD/FDE和prior ledger，逐episode说明漏检机制。
+6. 当存在有依据的测量区分能力时，实现相应的跨历元UWB/IMU联合必要收缩、故障分支或修复改进，证明保留所有原声明物理故障解释，实际原生commit、bridge、prior替换和IMU再接入；错误FDE选择仍需raw保护。若当前合同下不可检测，必须用两种合法真值/故障历史的观测重叠反例证明，并诚实标记 `DETECTABILITY_LIMIT_PROVED_FOR_SCOPE`、`LATE_FDE_RECOVERY_OPEN`；不能简单提高fault注入值、减小偏置RW、相信GT或降低报警阈值制造成功。
+7. 专项调查S2姿态ON明显劣于OFF：核对SO(3)评分、可观测性、GTSAM恢复metric/边界prior及FDE后的状态。对完整state和bias给独立小模型正负例；安全可用才接入主raw的带故障分支，不能以健康分支代替故障并集。G2弱几何实际功能候选拒绝需检查镜像/秩/初值，不可用GT选支或宣称物理解集为空。保存真实测试与commit，然后继续。
+
+## W2 — P95保护与长期资源
+
+8. 在不重新设计系统的情况下，针对40/40与故障慢路径做实际 profiling；仅在同模型语义对照相等（或更改算法另有证明）时合入性能优化。冻结后复验所有必验paced场景的40/50ms双P95和≥95%及时空间有效率；不追求每帧零超时，不能剔除慢帧、把在线工作移出计时或用offline样本冒充paced。
+9. 针对 `marginalizeLeaves` 的原生空slot和历史alert记录增长，研究实际安全整理与版本对账；如果不能在当前GTSAM下确保所有ledger/receipt一致，保留原实现和诚实O(T)/容量界，不为了常数内存牺牲证明。监测bias物理集合增长与晚期漏检关联；不可通过截断区间伪造稳定性。必要回归、本地commit后继续。
+
+## W3 — 冻结候选与最终仿真验收（不推给下一Goal）
+
+10. 冻结真实源码/binary/config/source manifest、五种子配对、时钟与验证脚本；完成C01–C20全部验收清单。必验短场景、六轴、D1 early/late、20/20、30/10、40/40、S3/G2负例、取消/过载/错FD/source tamper等。对更改影响的历史正确性回归与真正原生prior修复、回放外拒绝必须运行。
+11. 复用现有L0 5000和L1 10000 paced框架；若数学/功能/计时有变，必须在冻结候选下重新运行受影响的长流。L0 5000和L1 10000都必须完成 FDE ON/OFF 同源同paced配对；OFF 因故障失败要保留真实分母，不能改种子或只比较成功尾段；不能把旧不同版本长流冒充同源配对。报告位置、速度、姿态、bias、HPL/VPL、Stanford区域、TTD/TTI/TTR、raw风险、P95/P99/max、超时与拒绝、factor slot/RSS/告警与bias增长。
+12. 写唯一最终报告 `docs/fde_next/SC6_CLOSURE_RESULTS.md`，逐条C01–C20写 PASS/OPEN、证据、数学证明或反例、实际分母、关键差值、相关源文件/复现命令和剩余研究边界。保留三张导师可直接使用的论文级PNG；生产资格保持OFF。禁止根据跑出的结果改种子/噪声/AL/故障强度或缩减困难测试。仅清除自己生成的临时材料，记录全部本地阶段commit和干净工作树，不自动push。
+
+## 结项逻辑
+
+**必须完成实际代码、测试、配对实验和Stanford图片**，不能只写需求分析就结束。科学上不可辨识或G2确实存在的困难可保留为OPEN，但必须有独立证据和实际失败记录；不准把安全拒绝等同于功能恢复，也不准仅靠把某个任务标志设为true宣布达标。
+
+分别签发：
+`FDE_ACCURACY_BENEFIT_EVALUATED`（不代表任何场景均提升），
+`STANFORD_INTEGRITY_EVALUATED`，
+`REALTIME_P95_TARGET_MET_FOR_TESTED_PROFILES`，
+`RECOVERY_OBSERVABILITY_RESOLVED_FOR_SCOPE`（按可检测/不可辨识类别分别解释），
+`RESOURCE_BEHAVIOR_EVALUATED`。
+如有原定必需能力未通过，结论为 `SC6_CLOSURE_EVALUATED_WITH_GAPS` 并明确未完成条款，不得写 `SC6_CLOSURE_COMPLETE_FOR_REGISTERED_SCOPE`。
+
+每个工作包实施、验证、局部Git commit后继续，无需请求用户逐阶段批准。中断后从本地已完成阶段/未通过条款恢复，不重置实验与历史风险。不自动push。
+
+**现在检查实际代码并开始执行W0。**

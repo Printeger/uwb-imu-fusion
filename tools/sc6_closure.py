@@ -226,6 +226,13 @@ def episodes(rows, manifest):
                   int(value(r, 'epoch')) > int(bridge[0]['epoch'])]
         first = lambda items: int(value(items[0], 'epoch')) if items else None
         fd, bi, re = first(alarm), first(bridge), first(rejoin)
+        uwb_next = manifest['faults'][i+1][4] if i+1<len(manifest['faults']) else math.inf
+        uwb_rows = [r for r in good if uwb_onset <= int(value(r,'epoch')) < uwb_next]
+        uwb_fd = [r for r in uwb_rows if int(value(r,'epoch'))<uwb_onset+3 and value(r,'uwb_alarm')==1]
+        uwb_isolated = [r for r in uwb_rows if int(value(r,'epoch'))<uwb_onset+3 and value(r,'excluded')==0]
+        uwb_rejoined = [r for r in uwb_rows if int(value(r,'epoch'))>=uwb_onset+3 and
+                        value(r,'excluded')==-1 and uwb_isolated]
+        uwb_alarm_key = 'uwb_alarm_ms' if uwb_fd and 'uwb_alarm_ms' in uwb_fd[0] else 'alarm_ms'
         result.append(dict(onset=onset, axis=axis, duration_ms=duration, amplitude=amplitude,
                            begin_ns=begin_ns, end_ns=end_ns, first_fd=fd, first_bridge=bi,
                            first_prior_repair=first(repairs), first_rejoin=re,
@@ -239,6 +246,14 @@ def episodes(rows, manifest):
                            TTR_wall_ms=value(rejoin[0], 'commit_time_ms')-begin_ns/1e6 if rejoin else None,
                            uwb_onset=uwb_onset,
                            first_uwb_fd=first([r for r in good if uwb_onset <= int(value(r, 'epoch')) < uwb_onset+3 and value(r, 'uwb_alarm') == 1]),
+                           first_uwb_isolation=first(uwb_isolated),
+                           first_uwb_nominal_receipt_after_exclusion=first(uwb_rejoined),
+                           uwb_TTD_source_ms=(first(uwb_fd)-uwb_onset)*50 if uwb_fd else None,
+                           uwb_TTI_source_ms=(first(uwb_isolated)-uwb_onset)*50 if uwb_isolated else None,
+                           uwb_TTR_source_ms=(first(uwb_rejoined)-uwb_onset)*50 if uwb_rejoined else None,
+                           uwb_TTD_wall_ms=value(uwb_fd[0],uwb_alarm_key)-uwb_onset*50 if uwb_fd else None,
+                           uwb_TTI_wall_ms=value(uwb_isolated[0],'commit_time_ms')-uwb_onset*50 if uwb_isolated else None,
+                           uwb_TTR_wall_ms=value(uwb_rejoined[0],'commit_time_ms')-uwb_onset*50 if uwb_rejoined else None,
                            correct_uwb_exclusion=[int(value(r, 'epoch')) for r in good if uwb_onset <= int(value(r, 'epoch')) < uwb_onset+3 and value(r, 'excluded') == 0],
                            recovered=bool(repairs and len(rejoin) >= 4 and not unsafe_rejoin)))
     return result
@@ -467,9 +482,31 @@ def paired_scores():
             delta[key] = dict(on=a, off=b, improvement=b-a if a is not None and b is not None else None,
                               percent=100*(b-a)/b if a is not None and b else None,
                               n=metrics_on[key]['n'])
+        def stage_delta(selected_indices):
+            ma,mb=[metric_stats([r for r in rows if int(value(r,'epoch')) in selected_indices])
+                   for rows in [on_rows,off_rows]]
+            output={}
+            for key in ma:
+                a,b=ma[key]['rmse'],mb[key]['rmse']
+                output[key]=dict(on=a,off=b,improvement=b-a if a is not None and b is not None else None,
+                    percent=100*(b-a)/b if a is not None and b else None,n=ma[key]['n'])
+            return output
+        # ON receipts define the treatment phase; OFF is scored at EXACTLY
+        # those same epochs, and is never relabeled as having rejoined.
+        phase_indices={stage:{int(value(r,'epoch')) for r in on_rows
+                      if int(value(r,'epoch')) in indices and phase(r,on['episodes'])==stage}
+                       for stage in PHASES}
+        stage_pairs={stage:stage_delta(selected_indices) for stage,selected_indices in phase_indices.items()}
+        episode_stage_pairs=[]
+        for i,e in enumerate(on['episodes']):
+            begin=1 if i==0 else e['onset']
+            end=on['episodes'][i+1]['onset'] if i+1<len(on['episodes']) else on['scheduled']+1
+            episode_stage_pairs.append(dict(onset=e['onset'],axis=e['axis'],segment_begin=begin,segment_end_exclusive=end,
+                phases={stage:stage_delta({k for k in selected_indices if begin<=k<end})
+                        for stage,selected_indices in phase_indices.items()}))
         pairs.append(dict(entry=on['entry'], input_sha=on['input_sha'],
                           scheduled=on['scheduled'], paired=len(indices), paired_missing=on['scheduled']-len(indices),
-                          metrics=delta))
+                          metrics=delta,stage_pairs=stage_pairs,episode_stage_pairs=episode_stage_pairs))
     dump(CACHE/'pairs.json', pairs)
     return pairs
 
@@ -593,6 +630,8 @@ def seed_summary(pairs):
                 median=float(np.median(values)) if values else None,
                 minimum=min(values) if values else None, maximum=max(values) if values else None,
                 percent_mean=float(np.mean(percents)) if percents else None,
+                percent_median=float(np.median(percents)) if percents else None,
+                percent_minimum=min(percents) if percents else None,percent_maximum=max(percents) if percents else None,
                 descriptive_seed_bootstrap95=list(map(float, np.quantile(
                     rng.choice(values, (10000, len(values)), replace=True).mean(axis=1), [.025, .975]))) if values else None)
     return result
@@ -669,8 +708,8 @@ def plots():
                     ax.scatter([value(r,pe) for r in delayed],[value(r,pl) for r in delayed],s=24,marker='x',c='gray',linewidths=.7)
                 ax.plot([0,limit],[0,limit],'--',color='black',lw=1)
                 ax.axhline(5,color='#d62728',ls=':',lw=1.2);ax.axvline(5,color='#d62728',ls=':',lw=1.2)
-                ax.set(xlim=(0,limit),ylim=(0,limit),xlabel=f'{axis}PE (m)',ylabel=f'{axis}PL (m)',
-                       title=f'{panel_name} | FDE {fde.upper()}\ncurrent N={points}/{schedule}; excluded={excluded}; late reference={late}')
+                ax.set(xlim=(0,limit),ylim=(0,limit),xlabel=f'{axis}PE (m)',ylabel=f'{axis}PL (m)')
+                ax.set_title(f'{panel_name}\nFDE {fde.upper()} | current N={points}/{schedule}\nexcluded={excluded}; late reference={late}',fontsize=9)
                 ax.set_aspect('equal',adjustable='box');ax.grid(alpha=.15)
         handles=[Line2D([],[],marker='o',ls='',color=phase_colors[stage],label=stage.replace('_',' ')) for stage in PHASES]
         handles += [Line2D([],[],marker=m,ls='',color='black',label=str(seed)) for m,seed in zip(markers,SEEDS)]
@@ -750,12 +789,20 @@ def report(runs, pairs):
                 '|REALTIME_P95_TARGET_MET_FOR_TESTED_PROFILES|'+('PASS all registered positive per-run dualP95 and timely-spatial≥.95.' if audit['all_registered_positive_rt'] else 'OPEN: failed positive profiles remain in the table.')+'|',
                 '|RECOVERY_OBSERVABILITY_RESOLVED_FOR_SCOPE|'+('Registered ON recovery episodes all have actual prior repair and healthy rejoin4.' if all_recovery else 'OPEN actual required ON recovery misses remain.')+' Weak support-overlap scope separately proved; G2 and main15D/bias remain limited.|',
                 '|RESOURCE_BEHAVIOR_EVALUATED|Actual finite long-flow slot/RSS/alert/bias trends; O(T) slot/provider growth,4096 identity limit; no O(1)/WCET award.|',
-                f"Final native matrix:{audit['registered_runs']} runs, {audit['scheduled']} scheduled/{audit['qualified']} raw/{audit['timely']} timely; {audit['pairs']} complete input pairs.",
-                f"ELF `{registration['identity']['elf']}`; production DSO `{registration['identity']['dso']}`.",
+                '',f"Final native matrix:{audit['registered_runs']} runs, {audit['scheduled']} scheduled/{audit['qualified']} raw/{audit['timely']} timely; {audit['pairs']} complete input pairs.",'',
+                f"ELF `{registration['identity']['elf']}`; production DSO `{registration['identity']['dso']}`.",'',
                 'Original sourceσ range=.1m, accel ADC=.02m/s², gyro ADC=.001rad/s, accel/gyro RW=.001/.0001, original initial15D sigmas. Original AL/publication/deadlines/risk unchanged; main numerical rotation metric frozen_boundary.',
                 'Actual Linux/WSL platform: '+registration['identity']['platform'],
                 'GTSAM4.2a5/Eigen3.3.7/TBB2020.1; Release-O3-march=native; proof/temporal/service-frounding-math-ffp-contract=off. Single TBB/BLAS worker, no affinity; finite software timing only.',
-                'Counts below distinguish actual native mutations, complete receipts, missing/rejected outputs and measured services. All measurable admitted slow/timeout/abort rows enter nearest-rank timing.','']
+                'Counts below distinguish actual native mutations, complete receipts, missing/rejected outputs and measured services. All measurable admitted slow/timeout/abort rows enter nearest-rank timing.','',
+                '|Main pair|seed-unit mean OFF/ON tag RMSE m|mean absolute improvement m; mean %; seed range %|','|---|---|---|']
+        for case in ['S0','S1','S2']:
+            selected=[p for p in pairs if p['entry']['group']=='P0' and p['entry']['case']==case]
+            metric=[p['metrics']['ape'] for p in selected]
+            lead.append(f"|{case}, N={len(metric)}|{f(float(np.mean([m['off'] for m in metric])))}/{f(float(np.mean([m['on'] for m in metric])))}|{f(float(np.mean([m['improvement'] for m in metric])))};{f(float(np.mean([m['percent'] for m in metric])))}%;[{f(min(m['percent'] for m in metric))},{f(max(m['percent'] for m in metric))}]|")
+        lead += ['', 'Attitude degradation remains: S1='+str(sum(p['metrics']['rotation_error']['improvement']<0 for p in pairs if p['entry']['group']=='P0' and p['entry']['case']=='S1'))+'/5; S2='+str(sum(p['metrics']['rotation_error']['improvement']<0 for p in pairs if p['entry']['group']=='P0' and p['entry']['case']=='S2'))+'/5. L1 gyro-bias vector RMSE is also worse with ON; all adverse values remain below.',
+                 f"Actual ON restoration {sum(e['recovered'] for e in recovery_episodes)}/{len(recovery_episodes)} episodes; L1 covers original121/1121/3121/5121/7121/9121, with actual dirty-prior and replay-boundary tests separate.",
+                 f"Worst registered positive core/sink P95={max(r['timing']['core_ms']['p95'] for r in runs if r['entry']['positive']):.6g}/{max(r['timing']['delivery_ms']['p95'] for r in runs if r['entry']['positive']):.6g}ms; minimum timely-spatial/scheduled={min(r['timely']/r['scheduled'] for r in runs if r['entry']['positive']):.6g}.",'']
         lines[3:3] = lead
     for r in runs:
         timing = lambda k: '/'.join(f(r['timing'][k][q]) for q in ['p50', 'p95', 'p99', 'max'])
@@ -767,11 +814,11 @@ def report(runs, pairs):
         lines.append(f"|{label(p['entry'])}|{p['scheduled']}/{p['paired']}/{p['paired_missing']}|{f(a['off'])}/{f(a['on'])}; {f(a['improvement'])}; {f(a['percent'])}%|"+
                      f"{f(m['velocity_error']['off'])}/{f(m['velocity_error']['on'])}|{f(m['rotation_error']['off'])}/{f(m['rotation_error']['on'])}|{f(m['accel_bias_error']['improvement'])}/{f(m['gyro_bias_error']['improvement'])}|")
     lines += ['', 'Seed is the statistical unit; descriptive seed bootstrap uses 10000 resamples, fixed bootstrap seed61020. No independent-frame inference. N<5 is incomplete.', '',
-              '|Scene/metric|N|delta mean/median/range|delta descriptive95 interval|mean %|', '|---|---|---|---|---|']
+              '|Scene/metric|N|delta mean/median/range|delta descriptive95 interval|% mean/median/range|', '|---|---|---|---|---|']
     seed_stats = seed_summary(pairs)
     for scene, metrics in seed_stats.items():
         for metric, s in metrics.items():
-            lines.append(f"|{scene}/{metric}|{s['N']}|{f(s['mean'])}/{f(s['median'])}/[{f(s['minimum'])},{f(s['maximum'])}]|{s['descriptive_seed_bootstrap95']}|{f(s['percent_mean'])}|")
+            lines.append(f"|{scene}/{metric}|{s['N']}|{f(s['mean'])}/{f(s['median'])}/[{f(s['minimum'])},{f(s['maximum'])}]|{s['descriptive_seed_bootstrap95']}|{f(s['percent_mean'])}/{f(s['percent_median'])}/[{f(s['percent_minimum'])},{f(s['percent_maximum'])}]|")
     lines += ['', 'Preregistered scene-equal aggregate (S0/S1/S2 each 1/3; no scenario selected by benefit):', '', '|metric|equal-weight mean delta|equal-weight mean seed %|', '|---|---|---|']
     for metric in METRICS:
         means = [seed_stats[c][metric]['mean'] for c in ['S0', 'S1', 'S2']]
@@ -780,15 +827,32 @@ def report(runs, pairs):
     lines += ['', 'Stanford uses classic actual-output PE versus PL, not all-geometries Stanford–ESA enumeration. Region definitions follow the [ESA reference](https://gssc.esa.int/navipedia/index.php/The_Stanford_%E2%80%93_ESA_Integrity_Diagram:_Focusing_on_SBAS_Integrity).',
               'Only same-stamp/version/source, finite, spatial-qualified and current receipts enter the colored plot. Late spatial-qualified points are gray and unavailable. Missing outputs are never fabricated.',
               'MI/HMI below are counterfactual numerical candidates; operational HMI = NOT_QUALIFIED. Zero observed underbound does not establish epsilon=1e-6.', '',
-              '|Run/AL/axis|scheduled/current/plot-excluded/late|covered/underbound|nominal/MI/HMI/unavailable|spatial/timely AL admissible|', '|---|---|---|---|---|']
+              '|Run/AL/axis|scheduled/current/plot-excluded/late|covered/underbound|nominal/MI/HMI/unavailable|spatial/timely AL admissible|spatial/timely availability %|', '|---|---|---|---|---|---|']
     for r in runs:
         for al, axes in r['stanford'].items():
             for axis, c in axes.items():
-                lines.append(f"|{label(r['entry'])}/{al}/{axis}|{c['scheduled']}/{c['time_current']}/{c['excluded_from_plot']}/{c['expired']}|{c['covered']}/{c['underbound']}|{c['nominal_admissible']}/{c['MI_candidate']}/{c['HMI_candidate']}/{c['AL_unavailable']}|{c['spatial_AL_admissible']}/{c['timely_AL_admissible']}|")
+                lines.append(f"|{label(r['entry'])}/{al}/{axis}|{c['scheduled']}/{c['time_current']}/{c['excluded_from_plot']}/{c['expired']}|{c['covered']}/{c['underbound']}|{c['nominal_admissible']}/{c['MI_candidate']}/{c['HMI_candidate']}/{c['AL_unavailable']}|{c['spatial_AL_admissible']}/{c['timely_AL_admissible']}|{f(100*c['numerical_availability']) if c['numerical_availability'] is not None else 'NA'}/{f(100*c['timely_numerical_availability']) if c['timely_numerical_availability'] is not None else 'NA'}|")
     lines += ['', 'TTD/TTI/TTR below are respectively source-stamp and actual steady-clock action/commit latencies from registered onset, not an operator-hold latency.', '', '|Run/episode axis|onset/duration/amplitude|FD/bridge/prior/rejoin|source TTD/TTI/TTR ms|wall TTD/TTI/TTR ms|rejoin4; UWB isolation|', '|---|---|---|---|---|---|---|']
     for r in runs:
         for e in r['episodes']:
             lines.append(f"|{label(r['entry'])}/{e['axis']}|{e['onset']}/{e['duration_ms']}/{e['amplitude']}|{e['first_fd']}/{e['first_bridge']}/{e['first_prior_repair']}/{e['first_rejoin']}|{f(e['TTD_ms'])}/{f(e['TTI_ms'])}/{f(e['TTR_ms'])}|{f(e.get('TTD_wall_ms'))}/{f(e.get('TTI_wall_ms'))}/{f(e.get('TTR_wall_ms'))}|{e['rejoin4']}; {e['correct_uwb_exclusion']}|")
+    lines += ['', '|UWB episode/run|onset|first FD/isolation/nominal receipt|source TTD/TTI/TTR ms|wall TTD/TTI/TTR ms|', '|---|---|---|---|---|']
+    for r in runs:
+        for e in r['episodes']:
+            lines.append(f"|{label(r['entry'])}|{e['uwb_onset']}|{e['first_uwb_fd']}/{e.get('first_uwb_isolation')}/{e.get('first_uwb_nominal_receipt_after_exclusion')}|{f(e.get('uwb_TTD_source_ms'))}/{f(e.get('uwb_TTI_source_ms'))}/{f(e.get('uwb_TTR_source_ms'))}|{f(e.get('uwb_TTD_wall_ms'))}/{f(e.get('uwb_TTI_wall_ms'))}/{f(e.get('uwb_TTR_wall_ms'))}|")
+    lines += ['', 'UWB TTR denotes the first actual nominal-UWB receipt after a real exclusion; it is not an IMU rejoin or a claim that all old numerical effects vanish.', '',
+              '<details><summary>Common-clock paired treatment-phase and per-episode differences</summary>', '',
+              'ON receipts define each treatment phase. OFF uses the exact same common epochs, without claiming OFF performed the ON restoration. First episode owns the initial prefix; later segments start at their onset and end at the next onset. Empty phases are NA; these disjoint IMU segments do not select successful tails.', '',
+              '|Pair/episode/ON phase/metric|n|OFF/ON RMSE|OFF−ON; improvement %|', '|---|---|---|---|']
+    for p in pairs:
+        for stage_name,metrics in p.get('stage_pairs',{}).items():
+            for key,s in metrics.items():
+                lines.append(f"|{label(p['entry'])}/all/{stage_name}/{key}|{s['n']}|{f(s['off'])}/{f(s['on'])}|{f(s['improvement'])};{f(s['percent'])}|")
+        for episode in p.get('episode_stage_pairs',[]):
+            for stage_name,metrics in episode['phases'].items():
+                for key,s in metrics.items():
+                    lines.append(f"|{label(p['entry'])}/{episode['onset']}/{stage_name}/{key}|{s['n']}|{f(s['off'])}/{f(s['on'])}|{f(s['improvement'])};{f(s['percent'])}|")
+    lines += ['', '</details>', '']
     if is_final:
         lines += ['', '## Actual final source, physical detector and resources', '',
                   '|Run|native mutations/complete receipts|abort/unattempted/unknown missing|source released/enqueued IMU;UWB|cold init/audit/ready ms|', '|---|---|---|---|---|']
@@ -850,7 +914,7 @@ def report(runs, pairs):
         7:('PASS','N=5 paired seed statistics and fixed bootstrap; equal scene weights; every negative difference and missing pair retained'),
         8:('PASS','actual HPE/HPL points, same scale ON/OFF; diagonal/AL, all qualifying/late/refused denominators; real long histogram'),
         9:('PASS','actual VPE/VPL, same three AL traces, per-run/seed/phase partitions and unavailable denominators'),
-        10:('PASS','seven independent boundary/gating/unit/refusal tests; actual publication0; operational HMI NOT_QUALIFIED'),
+        10:('PASS','frozen7 plus delivery8 independent boundary/gating/unit/refusal/noninterference tests; actual publication0; operational HMI NOT_QUALIFIED'),
         11:('PASS','all early/late/weak strong amplitudes and complete originalq/RW/necessary-interval/mode diagnostics; no miss=>unidentifiable inference'),
         12:('PASS' if is_final and all_recovery else 'OPEN','actual native bridge+prior-ledger+healthy rejoin counts below; polluted temporal120 repair95/rejoin96-99; replay104 refusal100-104; full original raw union'),
         13:('OPEN','independent full15D/rank/known-R-bias and all-fault/weak-overlap prototypes delivered; main bias observation contraction not installed or qualified'),
@@ -858,7 +922,7 @@ def report(runs, pairs):
         15:('OPEN','G2 actual numerical rejection retained; all9 ill-conditioned seeds and36 independent observation-only fits, mirror/noise support; no physical-empty or GT-branch claim'),
         16:('PASS' if is_final and audit['all_registered_positive_rt'] else 'OPEN','every positive profile exact nearest-rank P95/core40/sink50 plus timely-spatial/scheduled>=.95; table preserves all misses/rejections'),
         17:('PASS','actual four long source/certificate/slots/RSS/alerts/bias trends; unchanged ledger/no unsafe compaction; O(T) and4096 limits explicit'),
-        18:('PASS','final11 native invocations plus7 unit checks, wrong-FDE/tamper/post-update/identity-cap/source/future/real cancel/overload; source/risk/AL/production unchanged'),
+        18:('PASS','final11 native invocations plus frozen7/delivery8 unit checks, wrong-FDE/tamper/post-update/identity-cap/source/future/real cancel/overload; source/risk/AL/production unchanged'),
         19:('PASS','frozen final62 native runs including four same-source paced5000/10000 long runs; actual denominators, paired SHA,3 paper PNG and code reproduction'),
         20:('PASS','sole new report with20 clauses, source/ELF/inputs/traces/proofs/counterexamples/remaining boundaries; localstage commits; own-cache cleanup/Git delivery audit')}
     for i in range(1,21):
@@ -868,6 +932,7 @@ def report(runs, pairs):
         lines += ['', 'Source freeze file digests:', '', '<details><summary>Exact research/source/config/tool fingerprints</summary>', '', '|path|SHA256|', '|---|---|']
         for path,digest in registration['identity']['sources'].items():lines.append(f'|{path}|`{digest}`|')
         lines += ['', '</details>', '', 'Local stages: W0 preregistrationcf11f60; W0 resultsc146615; W16980f5e; temporal history supplement4454f13; W2be5d84c; final source freeze'+registration['initial_head']+'. Final delivery commit is the subsequent Git results entry.',
+                  'Delivery scoring supplement adds same-epoch ON-treatment phase deltas, UWB episode latencies and AL percentage displays after the frozen driver completed. It changes no online source/math/action/timing and reuses every original native trace. Current scoring SHA256 `'+sha(Path(__file__))+'`; original execution/validation script fingerprints remain in the frozen table above.',
                   'Reproduce from a clean clone/build: `python3 tools/sc6_closure.py checks --campaign final --build`; `register --campaign final`; `final --campaign final`; `stanford --campaign final`. The final driver validates every registered summary against immutable trace values and all input pairs. It refuses mixed binary/config and never discards a failed profile.',
                   'Cache cleanup is performed only after independent final artifact audit; only task-owned .cache/sc6-closure files and named build/driver logs are disposable. Requirement files, old evidence and user work remain untouched.', '',
                   '<details><summary>Earlier W1/W2 real evidence, proofs, experiments and retained failures</summary>', history, '', '</details>']
