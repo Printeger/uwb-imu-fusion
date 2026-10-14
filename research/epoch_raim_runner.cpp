@@ -13,9 +13,10 @@
 #include <sstream>
 using namespace uwb_imu_pl;using namespace uwb_imu_pl::research;
 using Clock=std::chrono::steady_clock;
-namespace uwb_imu_pl::research {int runOpenRolling(int,char**);}
+namespace uwb_imu_pl::research {int runOpenRolling(int,char**);int runSc6System(int,char**);}
 double ms(Clock::time_point a,Clock::time_point b){return std::chrono::duration<double,std::milli>(b-a).count();}
 int main(int argc,char** argv){try{
+ if(argc>=5 && std::string(argv[4])=="sc6")return runSc6System(argc,argv);
  if(argc>=5 && std::string(argv[4])=="system")return runSc4System(argc,argv);
  if(argc>=5 && std::string(argv[4])=="rolling")return runSc5Rolling(argc,argv);
  if(argc>=5 && std::string(argv[4])=="open-rolling")return runOpenRolling(argc,argv);

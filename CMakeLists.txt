@@ -563,3 +563,11 @@ target_sources(fde_research PRIVATE research/open_fault_pool.cpp research/open_r
 set_source_files_properties(research/open_fault_pool.cpp research/open_rolling.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
 add_executable(open_rolling_checks EXCLUDE_FROM_ALL research/open_rolling_checks.cpp)
 target_link_libraries(open_rolling_checks fde_research)
+
+# SC6 simulation source qualification and shared native service, research only.
+target_sources(fde_research PRIVATE research/sc6_provider.cpp research/sc6_service.cpp research/sc6_system.cpp)
+set_source_files_properties(research/sc6_provider.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+
+add_executable(sc6_checks EXCLUDE_FROM_ALL research/sc6_checks.cpp)
+target_link_libraries(sc6_checks fde_research)
+set_source_files_properties(research/sc6_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")

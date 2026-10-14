@@ -1,7 +1,7 @@
 #include "open_fault_pool.hpp"
 namespace uwb_imu_pl::research {
-OpenFaultPool::OpenFaultPool(const NavigationState& s,const RawInclusionParameters& law,double budget,size_t cap):event_(budget),law_(law),capacity_(cap){
- if(!cap || !law.numeric.valid || !law.initial_sigmas.allFinite() || (law.initial_sigmas.array()<=0).any() || law.accel_rw<=0 || law.gyro_rw<=0 || law.accel_adc<=0 || law.gyro_adc<=0 || s.timestamp.value()!=0)throw std::invalid_argument("OPEN_SOURCE_SCOPE_INVALID");
+OpenFaultPool::OpenFaultPool(const NavigationState& s,const RawInclusionParameters& law,double budget,size_t cap,double acceleration,double rate):event_(budget),law_(law),capacity_(cap),acceleration_(acceleration),rate_(rate){
+ if(!std::isfinite(acceleration+rate) || acceleration<0 || rate<0 || !cap || !law.numeric.valid || !law.initial_sigmas.allFinite() || (law.initial_sigmas.array()<=0).any() || law.accel_rw<=0 || law.gyro_rw<=0 || law.accel_adc<=0 || law.gyro_adc<=0 || s.timestamp.value()!=0)throw std::invalid_argument("OPEN_SOURCE_SCOPE_INVALID");
  bias_center_.head<3>()=s.accel_bias_mps2;bias_center_.tail<3>()=s.gyro_bias_radps;
  for(auto& a:rw_support_)a=RollingInterval(0);
  result_.valid=true;result_.status="REPEATED_EPISODE_OUTER_AUTOMATON";
@@ -22,7 +22,7 @@ void OpenFaultPool::append(const ImuMeasurement& sample){
  for(int axis=0;axis<6;++axis){bool accel=axis<3;int j=axis%3;
   if(samples_)rw_support_[axis]+=I(q)*I(accel?law_.accel_rw:law_.gyro_rw)*sqrt(I(1)/200.);
   I noise=I(q0)*I(law_.initial_sigmas(axis+9))+rw_support_[axis]+I(q)*I(accel?law_.accel_adc:law_.gyro_adc)+I(2e-10);
-  double radius=(noise+I(accel?law_.gravity+.04:.2)).upper();healthy[axis]=I(bias_center_(axis))+I(-radius,radius);
+  double radius=(noise+I(accel?law_.gravity+acceleration_:rate_)).upper();healthy[axis]=I(bias_center_(axis))+I(-radius,radius);
   measured[axis]=accel?sample.specific_force_mps2(j):sample.angular_velocity_radps(j);
   violation|=measured[axis]<healthy[axis].lower() || measured[axis]>healthy[axis].upper();
  }

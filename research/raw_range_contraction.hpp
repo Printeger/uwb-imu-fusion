@@ -11,6 +11,7 @@ struct RawRangeLawEvidence {
  bool valid=false;
  private:
  UwbBatch sealed_batch_;std::array<double,8> sealed_rho_{};
+ friend RawRangeLawEvidence certifySc6Ranges(const UwbBatch&,const struct Sc6MotionValue&,const Eigen::Vector3d&,const std::array<double,8>&,const std::array<double,8>&);
  friend RawRangeLawEvidence certifyRawRanges(const UwbBatch&,const Eigen::Vector3d&,const Eigen::Vector3d&,double,const Eigen::Vector3d&,const std::array<double,8>&,const std::array<double,8>&);
  friend bool rawRangeShells(const RawRangeLawEvidence&,const UwbBatch&,int,std::array<struct RawRangeShell,8>&);
  friend bool rawRangeShells(const RawRangeLawEvidence&,const UwbBatch&,int,std::array<struct RawRangeShell,8>&,int,double);

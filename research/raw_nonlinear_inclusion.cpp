@@ -1,5 +1,6 @@
 #include "raw_nonlinear_inclusion.hpp"
 #include "raw_range_contraction.hpp"
+#include "sc6_motion.hpp"
 #include <boost/numeric/interval.hpp>
 #include <boost/numeric/interval/rounded_arith.hpp>
 #include <array>
@@ -101,6 +102,43 @@ RawRangeLawEvidence certifyRawRanges(const UwbBatch& batch,const Eigen::Vector3d
   out.rho_num[i]=abs(I(m.range_m)-ideal).upper();
   if(!std::isfinite(out.rho_num[i]) || out.rho_num[i]>1e-8)return out;
  }
+ out.sealed_batch_=batch;out.sealed_rho_=out.rho_num;out.valid=true;return out;
+}
+Sc6MotionDomain sc6Domain(const Sc6MotionRecipe& recipe){
+ if(recipe.kind<0 || recipe.kind>3)throw std::invalid_argument("MOTION_RECIPE_UNKNOWN");
+ if(recipe.kind==0){I a2(0);for(int j=0;j<3;++j)a2+=square(I(recipe.amp(j))*square(I(recipe.freq(j))));if(sqrt(a2).upper()>.04)throw std::invalid_argument("D0_OUTSIDE");return {"D0",.04,.2,.02,0};}
+ // M1 quintic extrema: max second derivative=10/sqrt(3), third derivative=60.
+ // ||d||=sqrt(.84), travel 4s: A<.331, J<.860. C2 seams include rests.
+ // M2/3: A<.332, J<.191. Rx Ry Rz: rate<=.12+.12+.10=.34;
+ // alpha<=.048+.036+.020+2*(.12*.12+.12*.10+.12*.10)<.181.
+ return {"D1",1,1,2,2};
+}
+Sc6MotionValue sc6MotionAt(int64_t index,const Sc6MotionRecipe& recipe){
+ if(index<0 || index>1000000000LL)throw std::invalid_argument("SOURCE_TIME_DOMAIN");
+ I t=I(double(index))/200.;Sc6MotionValue out;out.r=identity();
+ if(recipe.kind==1){
+  int64_t phase=index%2400;bool reverse=phase>=1200;int64_t travel=reverse?phase-1200:phase;
+  I u=I(double(std::min<int64_t>(travel,800)))/800.;
+  I q=10.*pow(u,3)-15.*pow(u,4)+6.*pow(u,5);
+  I qp=(30.*square(u)-60.*pow(u,3)+30.*pow(u,4))/4.;
+  I qpp=(60.*u-180.*square(u)+120.*pow(u,3))/16.;
+  if(travel>=800){q=I(1);qp=qpp=I(0);}
+  for(int j=0;j<3;++j){I d(j==0?.8:j==1?.4:.2);out.p[j]=d*(reverse?1.-q:q);out.v[j]=d*(reverse?-qp:qp);out.a[j]=d*(reverse?-qpp:qpp);}
+ }else for(int j=0;j<3;++j){I amp(recipe.kind==0?recipe.amp(j):j==0?.8:j==1?.6:.4),f(recipe.kind==0?recipe.freq(j):j==0?.6:j==1?.5:.4);I phase=f*t;
+  out.p[j]=amp*reducedSine(phase);out.v[j]=amp*f*reducedSine(phase+piEnclosure()/2.);out.a[j]=-amp*square(f)*reducedSine(phase);}
+ out.p[2]+=1.;
+ if(recipe.kind==0){V angle;for(int j=0;j<3;++j){angle[j]=I(.2)*t*double(j+1)/sqrt(I(14));out.omega[j]=I(.2)*double(j+1)/sqrt(I(14));}out.r=rotationExp(angle);}
+ else{
+  V e,ed;for(int j=0;j<3;++j){I amplitude(j==0?.3:j==1?.4:.5),f(j==0?.4:j==1?.3:.2);e[j]=amplitude*reducedSine(f*t);ed[j]=amplitude*f*reducedSine(f*t+piEnclosure()/2.);}
+  M rotations[3];for(int j=0;j<3;++j){V angle{I(0),I(0),I(0)};angle[j]=e[j];rotations[j]=rotationExp(angle);}out.r=product(product(rotations[0],rotations[1]),rotations[2]);
+  M yz=product(rotations[1],rotations[2]);for(int j=0;j<3;++j)out.omega[j]=yz[0][j]*ed[0]+rotations[2][1][j]*ed[1]+(j==2?ed[2]:I(0));
+ }
+ return out;
+}
+RawRangeLawEvidence certifySc6Ranges(const UwbBatch& batch,const Sc6MotionValue& motion,const Eigen::Vector3d& lever,const std::array<double,8>& draws,const std::array<double,8>& faults){
+ RawRangeLawEvidence out;out.batch=batch;if(batch.measurements.size()!=8)return out;
+ V tag=motion.p,offset=multiply(motion.r,fixed(lever));for(int j=0;j<3;++j)tag[j]+=offset[j];
+ for(int i=0;i<8;++i){const auto& m=batch.measurements[i];V d;for(int j=0;j<3;++j)d[j]=tag[j]-I(m.anchor_position_m(j));I ideal=norm(d)+I(m.sigma_m)*I(draws[i])+I(faults[i]);out.rho_num[i]=abs(I(m.range_m)-ideal).upper();if(!std::isfinite(out.rho_num[i]) || out.rho_num[i]>1e-8)return out;}
  out.sealed_batch_=batch;out.sealed_rho_=out.rho_num;out.valid=true;return out;
 }
 struct RawNonlinearInclusion::Impl {
