@@ -1,4 +1,5 @@
 #include "rolling_boundary.hpp"
+#include "tag_support.hpp"
 namespace uwb_imu_pl::research {
 namespace {
 using I=RollingInterval;
@@ -65,9 +66,17 @@ RollingBoundaryProposalV1 RollingIntegrity::propose(const EpochTransaction& tx,
   for(size_t j=states.size()-1;j>0;--j)if(!rollingContractDynamics(states[j-1],states[j],acceleration_) || (tight_ && !rollingContractCoupledDynamics(states[j-1],states[j],acceleration_)))throw std::invalid_argument("RAW_BACKWARD_RELATION_INCONSISTENT");
   for(size_t j=1;j<states.size();++j){
    if(!rollingContractDynamics(states[j-1],states[j],acceleration_) || (tight_ && !rollingContractCoupledDynamics(states[j-1],states[j],acceleration_)))throw std::invalid_argument("RAW_FORWARD_RELATION_INCONSISTENT");
-   snapshot("time_contracted",states[j]);if(joint_)out.joint=jointContract(states[j-1],states[j],out.explicit_material[j-1].imu,joint_law_,TimeUniformEvent(policy_.budget));
+   snapshot("time_contracted",states[j]);if(joint_ && pass>=2-int(joint_sweeps_))out.joint=jointContract(states[j-1],states[j],out.explicit_material[j-1].imu,joint_law_,TimeUniformEvent(policy_.budget));
    contracted(states[j],out.explicit_material[j-1],event_,lever_,out.physical_branches,tight_,optimized_,capture?&out.attribution:nullptr);snapshot("tag_lever_contracted",states[j]);
   }
+ }
+ // Current tag support is retained through actual-center binding. Its
+ // complete branch/frontier union also contracts the separator tag hull.
+ if(support_){const auto& m=out.explicit_material.back();std::array<RawRangeShell,8> shells;if(!rawRangeShells(m.range,m.batch,int(m.batch.id.value()),shells,event_.open?std::numeric_limits<int>::max():event_.mission,event_.radius(m.batch.id.value())))throw std::invalid_argument("SUPPORT_SOURCE_SCOPE_REFUSED");
+  auto tag=tight_?rollingTagSphere(states.back(),lever_):rollingTag(states.back(),lever_);Eigen::Vector3d low,high;for(int j=0;j<3;++j){low(j)=tag[j].lower();high(j)=tag[j].upper();}RawRangeBudget budget;budget.tight_shell=true;budget.optimized=optimized_;budget.retain_support=true;budget.lower_shell=true;budget.split_depth=2;budget.max_boxes=support_budget_;
+  out.geometry=contractRawRangeBox(low,high,m.batch,shells,Eigen::Vector3d::Zero(),budget);
+  if(!out.geometry.valid)throw std::invalid_argument("SUPPORT_ALL_BRANCHES_INCONSISTENT");
+  for(int j=0;j<3;++j)tag[j]=I(out.geometry.low(j),out.geometry.high(j));if(!(tight_?rollingContractTagSphere(states.back(),tag,lever_):rollingContractTag(states.back(),tag,lever_)))throw std::invalid_argument("SUPPORT_STATE_INTERSECTION_EMPTY");
  }
  const size_t offset=out.material.cutoff-certificate_.separator.epoch;
  if(offset>=states.size())throw std::invalid_argument("SEPARATOR_PROJECTION_MISSING");
@@ -91,21 +100,23 @@ RollingBoundaryProposalV1 RollingIntegrity::propose(const EpochTransaction& tx,
  out.raw_read_first=out.explicit_material.front().raw_first;
  out.raw_read_last=out.explicit_material.back().raw_last;
  while(!out.explicit_material.empty() && out.explicit_material.front().batch.id.value()<=out.material.cutoff)out.explicit_material.pop_front();
- out.seal_=std::make_shared<const RollingBoundaryProposalV1::Seal>(RollingBoundaryProposalV1::Seal{this,out.material,out.certificate,out.current,out.explicit_material,out.joint,out.parent_generation});
+ out.seal_=std::make_shared<const RollingBoundaryProposalV1::Seal>(RollingBoundaryProposalV1::Seal{this,out.material,out.certificate,out.current,out.explicit_material,out.joint,out.geometry,out.parent_generation});
  return out;
 }
-void RollingIntegrity::enableJoint(const ImuMeasurement& first,const JointRawLaw& law){
+void RollingIntegrity::enableJoint(const ImuMeasurement& first,const JointRawLaw& law,unsigned sweeps){
+ if(sweeps<1 || sweeps>2)throw std::invalid_argument("JOINT_SCHEDULE_UNREGISTERED");
  if(certificate_.generation || certificate_.separator.epoch || joint_)throw std::invalid_argument("JOINT_MUST_START_FROM_ORIGINAL_INITIAL_SCOPE");
  auto state=certificate_.separator;
  if(!jointInitial(state,first,law,TimeUniformEvent(policy_.budget)))throw std::invalid_argument("JOINT_INITIAL_INCONSISTENT");
  state.tag_relation=rollingTagSphere(state,lever_);state.tag_lever=lever_;state.has_tag_relation=true;
- certificate_.separator=rollingProject(state);certificate_.state_method="sc7-joint-imu-tag-relation-v1";joint_law_=law;joint_=true;
+ certificate_.separator=rollingProject(state);certificate_.state_method="sc7-joint-imu-tag-relation-v1";joint_law_=law;joint_sweeps_=sweeps;joint_=true;
 }
 Eigen::Vector3d RollingIntegrity::committedTag(const NavigationState& state)const{return state.position_world_m+state.q_world_body*lever_;}
 RawRangeResult RollingIntegrity::finalize(RollingBoundaryProposalV1&& p,const CommitReceipt& r,
  const std::vector<gtsam::Key>& keys,const NavigationState& state){
  try{
   if(!p.seal_ || p.seal_->owner!=this || !sameState(p.current,p.seal_->current) || !sameCertificate(p.certificate,p.seal_->certificate) || p.parent_generation!=p.seal_->parent || p.explicit_material.size()!=p.seal_->explicit_material.size())throw std::invalid_argument("BOUNDARY_NUMERIC_SET_TAMPERED");
+  if(support_){const auto& a=p.geometry;const auto& b=p.seal_->geometry;if(a.valid!=b.valid || a.bound_method!=b.bound_method || a.low!=b.low || a.high!=b.high || a.input_low!=b.input_low || a.input_high!=b.input_high || a.considered!=b.considered || a.frontier!=b.frontier || a.support.size()!=b.support.size())throw std::invalid_argument("TAG_SUPPORT_SEAL_TAMPERED");for(size_t i=0;i<a.support.size();++i)if(a.support[i].low!=b.support[i].low || a.support[i].high!=b.support[i].high || a.support[i].omitted!=b.support[i].omitted || a.support[i].frontier!=b.support[i].frontier)throw std::invalid_argument("TAG_SUPPORT_SEAL_TAMPERED");}
   const auto& material=p.seal_->material;
   if(p.material.transaction!=material.transaction || p.material.version!=material.version || p.material.epoch!=material.epoch || p.material.cutoff!=material.cutoff || p.material.begin!=material.begin || p.material.end!=material.end || p.material.pre_keys!=material.pre_keys || p.material.expected_retired!=material.expected_retired || p.material.selected!=material.selected || p.material.raw_first!=material.raw_first || p.material.raw_last!=material.raw_last)throw std::invalid_argument("BOUNDARY_MATERIAL_TAMPERED");
   for(size_t j=0;j<p.explicit_material.size();++j){const auto& a=p.explicit_material[j];const auto& b=p.seal_->explicit_material[j];if(a.imu.size()!=b.imu.size())throw std::invalid_argument("JOINT_RAW_SOURCE_TAMPERED");for(size_t k=0;k<a.imu.size();++k)if(a.imu[k].id!=b.imu[k].id || a.imu[k].timestamp!=b.imu[k].timestamp || a.imu[k].specific_force_mps2!=b.imu[k].specific_force_mps2 || a.imu[k].angular_velocity_radps!=b.imu[k].angular_velocity_radps)throw std::invalid_argument("JOINT_RAW_SOURCE_TAMPERED");if(!sameRawBatch(a.batch,b.batch) || !sameRawBatch(a.range.batch,b.range.batch) || a.range.valid!=b.range.valid || a.range.rho_num!=b.range.rho_num || a.range.source_law_id!=b.range.source_law_id || a.range.frame!=b.range.frame || a.raw_first!=b.raw_first || a.raw_last!=b.raw_last)throw std::invalid_argument("BOUNDARY_RAW_WINDOW_TAMPERED");}
@@ -119,6 +130,7 @@ RawRangeResult RollingIntegrity::finalize(RollingBoundaryProposalV1&& p,const Co
   bound.relaxation="FULL_TASK_PRODUCT_OUTER_MASK_RELAXATION_NO_PROBABILISTIC_PRUNING";
   for(int j=0;j<3;++j){bound.low(j)=t[j].lower();bound.high(j)=t[j].upper();bound.pl(j)=abs(t[j]-I(actual(j))).upper();}
   bound.hpl=sqrt(square(I(bound.pl.x()))+square(I(bound.pl.y()))).upper();
+  if(support_ && !p.seal_->geometry.support.empty()){auto branch=issueTagSupport(p.seal_->geometry,t,actual,p.seal_->explicit_material.back().batch,r,p.parent_generation,event_.id,event_.prefix(p.material.epoch),event_.radius(p.material.epoch));branch.relaxation=bound.relaxation;branch.attribution=std::move(bound.attribution);branch.joint=bound.joint;bound=std::move(branch);}
   bound.valid=bound.pl.allFinite() && actual.allFinite() && std::isfinite(bound.hpl);
   if(!bound.valid)throw std::invalid_argument("COMMITTED_TAG_NONFINITE");
   bound.status=event_.open?"TIME_UNIFORM_RAW_BOUND_VERIFIED":"ROLLING_RAW_BOUND_VERIFIED_FOR_FINITE_SCOPE";bound.event_risk=event_.risk(p.material.epoch);

@@ -16,6 +16,7 @@ bool forceShell(std::array<I,6>& bias,const Eigen::Vector3d& measured,I noise,I 
   if(!meet(bias[j],I(measured(j))+noise-allowed))return false;
  }return true;
 }
+bool sameState(const RollingRawState& a,const RollingRawState& b){auto same=[](I x,I y){return x.lower()==y.lower() && x.upper()==y.upper();};if(a.epoch!=b.epoch || a.has_tag_relation!=b.has_tag_relation || a.tag_lever!=b.tag_lever)return false;for(int j=0;j<3;++j){if(!same(a.p[j],b.p[j]) || !same(a.v[j],b.v[j]))return false;for(int k=0;k<3;++k)if(!same(a.rotation[j][k],b.rotation[j][k]))return false;if(a.has_tag_relation && !same(a.tag_relation[j],b.tag_relation[j]))return false;}for(int j=0;j<6;++j)if(!same(a.bias[j],b.bias[j]))return false;return true;}
 void validate(const JointRawLaw& l){if(!std::isfinite(l.gravity+l.acceleration+l.rate+l.jerk+l.accel_adc+l.gyro_adc+l.accel_rw+l.gyro_rw) || l.gravity<=0 || std::min({l.acceleration,l.rate,l.jerk,l.accel_adc,l.gyro_adc,l.accel_rw,l.gyro_rw})<0)throw std::invalid_argument("JOINT_LAW_REFUSED");}
 }
 bool jointInitial(RollingRawState& s,const ImuMeasurement& m,const JointRawLaw& l,const TimeUniformEvent& event){
@@ -26,15 +27,24 @@ bool jointInitial(RollingRawState& s,const ImuMeasurement& m,const JointRawLaw& 
   if(!meet(result.rotation[2][j],(I(m.specific_force_mps2(j))-result.bias[j]+sym(I(l.acceleration))+na)/I(l.gravity)))return false;}
  s=result;return true;
 }
-JointConstraintEvidence jointContract(RollingRawState& old,RollingRawState& next,const std::vector<ImuMeasurement>& raw,const JointRawLaw& l,const TimeUniformEvent& event,size_t budget){
+JointConstraintEvidence jointContract(RollingRawState& old,RollingRawState& next,const std::vector<ImuMeasurement>& raw,const JointRawLaw& l,const TimeUniformEvent& event,size_t budget,bool dominant_hull_shortcut){
  validate(l);if(next.epoch!=old.epoch+1 || raw.size()!=11)throw std::invalid_argument("JOINT_WINDOW_ORDER");
  for(size_t i=0;i<raw.size();++i)if(raw[i].id.value()!=old.epoch*10+i+1 || raw[i].timestamp.value()!=int64_t(old.epoch*10+i)*5000000LL || !raw[i].specific_force_mps2.allFinite() || !raw[i].angular_velocity_radps.allFinite())throw std::invalid_argument("JOINT_SHARED_SOURCE_GAP");
  JointConstraintEvidence evidence;evidence.first_source=raw.front().id.value();evidence.last_source=raw.back().id.value();
  for(int j=0;j<6;++j)evidence.before[j]=next.bias[j].upper()-next.bias[j].lower();
  auto original_old=old,original_next=next;RollingRawState union_old,union_next;bool any=false;
  const I ds=I(1)/200.,dt=I(1)/20.;const double q=event.block(next.epoch).q;const I accel_noise=sym(I(q)*I(l.accel_adc)+I(2e-10)),gyro_noise=sym(I(q)*I(l.gyro_adc)+I(2e-10));const I accel_step=I(q)*I(l.accel_rw)*sqrt(ds)+I(2e-10),gyro_step=I(q)*I(l.gyro_rw)*sqrt(ds)+I(2e-10);
- try{for(int omitted=-1;omitted<6;++omitted){++evidence.branches;auto a=original_old,b=original_next;bool possible=true;
-   if(size_t(omitted+1)>=budget){++evidence.frontier;}
+ // Common physical integral image bounds every branch's final p/v image.
+ // Evaluate with the identical sum/order as the measurement integrals, so
+ // monotonic directed arithmetic preserves inclusion including roundoff.
+ auto common_old=original_old,common_next=original_next;RollingVector max_v{I(0),I(0),I(0)},max_p=max_v;
+ for(int i=1;i<=10;++i)for(int j=0;j<3;++j){max_v[j]+=ds*sym(I(l.acceleration));max_p[j]+=ds*(dt-(double(i)-.5)*ds)*sym(I(l.acceleration));}
+ bool common_possible=true;for(int j=0;j<3;++j){I dv=max_v[j]+sym(I(l.jerk)*dt*ds/2.+I(4e-10)),dp=max_p[j]+sym(I(l.jerk)*square(dt)*ds/2.+I(4e-10));common_possible&=meet(common_next.v[j],common_old.v[j]+dv);common_possible&=meet(common_old.v[j],common_next.v[j]-dv);common_possible&=meet(common_next.p[j],common_old.p[j]+dt*common_old.v[j]+dp);common_possible&=meet(common_old.p[j],common_next.p[j]-dt*common_old.v[j]-dp);common_possible&=meet(common_old.v[j],(common_next.p[j]-common_old.p[j]-dp)/dt);}
+ if(!common_possible)throw std::invalid_argument("JOINT_COMMON_PHYSICS_INCONSISTENT");
+ // Fixed coordinate order; no GT, FDE-selected axis or probabilistic pruning.
+ const std::array<int,7> order{-1,2,5,0,1,3,4};
+ try{for(size_t order_index=0;order_index<order.size();++order_index){int omitted=order[order_index];++evidence.branches;auto a=original_old,b=original_next;bool possible=true;
+   if(order_index>=budget){++evidence.frontier;}
    else{
     I theta;bool theta_started=false;RollingVector integral_v{I(0),I(0),I(0)},integral_p=integral_v;
     for(int i=1;i<=10 && possible;++i){const auto& m=raw[i];I t=double(i)*ds,remaining=dt-t;std::array<RollingVector,3> rotation;std::array<I,6> bias,signal;
@@ -58,6 +68,14 @@ JointConstraintEvidence jointContract(RollingRawState& old,RollingRawState& next
    if(!possible){++evidence.empty;continue;}
    for(int j=0;j<6;++j)evidence.branch_widths[omitted+1][j]=b.bias[j].upper()-b.bias[j].lower();
    if(!any){union_old=a;union_next=b;any=true;}else{unite(union_old,a);unite(union_next,b);}
+   // Exact union-hull dominance: one branch equal to X fixes hull=X since
+   // every other contractor is a subset of X. Preserve every unprocessed
+   // branch as its original X frontier; no physical explanation is pruned.
+   if(dominant_hull_shortcut && ((sameState(union_old,original_old) && sameState(union_next,original_next)) || (budget>=7 && sameState(union_old,common_old) && sameState(union_next,common_next)))){
+    const size_t remaining=order.size()-order_index-1;evidence.frontier+=remaining;evidence.branches+=remaining;
+    for(size_t k=order_index+1;k<order.size();++k)evidence.branch_widths[order[k]+1]=evidence.before;
+    break;
+   }
   }
   if(!any)throw std::invalid_argument("JOINT_ALL_BRANCHES_INCONSISTENT");
   old=rollingProject(union_old);next=rollingProject(union_next);evidence.valid=true;

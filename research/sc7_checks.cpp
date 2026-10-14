@@ -21,12 +21,12 @@ int main(int argc,char** argv){try{
   for(auto& m:b.measurements)m.range_m=(m.anchor_position_m-b.measurements[0].anchor_position_m).norm();auto zero=numericalUwbCandidate(b,-1);require(!zero.gaussian_reference_qualified,"near-zero domain falsely Gaussian qualified");
   std::cout<<"SC7 K3/K4 PASS both coplanar roots, local/full design ranks separate, all9 first G2 masks, no Gaussian inheritance; raw never consumes roots for pruning\n";return 0;
  }
- if(argc>1 && std::string(argv[1])=="attribute"){
+ if(argc>1 && (std::string(argv[1])=="attribute" || std::string(argv[1])=="inputs")){
   if(argc!=7)throw std::invalid_argument("attribute CONFIG CASE EPOCHS SEED CSV");
-  Sc6Provider src(argv[2],argv[3],std::stoi(argv[5]),std::stoi(argv[4]));src.law["sc7"]["attribute"]=true;
+  Sc6Provider src(argv[2],argv[3],std::stoi(argv[5]),std::stoi(argv[4]));if(std::string(argv[1])=="inputs"){src.writeInputAudit(argv[6]);std::cout<<"SC7 input audit epochs="<<src.epochs<<" domain="<<src.domain.id<<'\n';return 0;}src.law["sc7"]["attribute"]=true;
   Sc6Service service(src.law,src.cfg,src.initial,src.lever,src.domain,src.imu.front(),true,false,true);
   std::ofstream out(argv[6]);out<<std::setprecision(17)<<"output_epoch,state_epoch,parent,source_prefix,q,event,stage,mask,center_x,center_y,center_z,low_x,low_y,low_z,high_x,high_y,high_z,hpl,vpl,z_half,z_offset,witness\n";
-  for(int k=1;k<=src.epochs;++k){auto r=service.step(src.certify(k),true);for(const auto& a:r.bound.attribution){Eigen::Vector3d d=(a.low-r.tag).cwiseAbs().cwiseMax((a.high-r.tag).cwiseAbs());out<<k<<','<<a.epoch<<','<<r.parent<<','<<r.source_prefix<<','<<r.q<<",time-uniform-source-birth-v1,"<<a.stage<<','<<a.omitted;for(const auto& v:{r.tag,a.low,a.high})for(int j=0;j<3;++j)out<<','<<v(j);double half=(a.high.z()-a.low.z())/2,offset=std::abs(r.tag.z()-(a.high.z()/2+a.low.z()/2));out<<','<<d.head<2>().norm()<<','<<d.z()<<','<<half<<','<<offset<<','<<a.extremum_class<<'\n';}}
+  for(int k=1;k<=src.epochs;++k){auto r=service.step(src.certify(k),true);for(const auto& a:r.bound.attribution){Eigen::Vector3d d=(a.low-r.tag).cwiseAbs().cwiseMax((a.high-r.tag).cwiseAbs());out<<k<<','<<a.epoch<<','<<r.parent<<','<<r.source_prefix<<','<<r.q<<','<<TimeUniformEvent(src.law["rolling_integrity"]["task_exceedance_budget"].as<double>()).id()<<','<<a.stage<<','<<a.omitted;for(const auto& v:{r.tag,a.low,a.high})for(int j=0;j<3;++j)out<<','<<v(j);double half=(a.high.z()-a.low.z())/2,offset=std::abs(r.tag.z()-(a.high.z()/2+a.low.z()/2));out<<','<<d.head<2>().norm()<<','<<d.z()<<','<<half<<','<<offset<<','<<a.extremum_class<<'\n';}}
   std::cout<<"SC7 ATTRIBUTION native commits="<<service.updateCount()-1<<" domain="<<src.domain.id<<'\n';return 0;
  }
  // K1: exact VPL decomposition and invariance under current coordinate hull.

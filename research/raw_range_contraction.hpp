@@ -43,14 +43,16 @@ struct AttributionSnapshot {
  Eigen::Vector3d low,high;
  std::string extremum_class="OUTER_ENDPOINT_NO_FEASIBILITY_WITNESS";
 };
-struct RawRangeBudget { size_t max_boxes=256;unsigned passes=8,split_depth=0;bool all_ranges_healthy=false;bool tight_shell=false;bool optimized=false;bool retain_support=false; };
+struct TagSupportEvidence;
+struct RawRangeBudget { size_t max_boxes=256;unsigned passes=8,split_depth=0;bool all_ranges_healthy=false;bool tight_shell=false;bool optimized=false;bool retain_support=false;bool lower_shell=false; };
 struct RawRangeResult {
  std::string bound_method="coordinate-box-v1";
  std::string status="EVIDENCE_REFUSED",reason,source="raw-imu-uwb-contracted-v1";
  std::string relaxation="CURRENT_SINGLE_FAULT_OUTER_RELAXATION_OF_EPISODE_SCOPE";
- Eigen::Vector3d low=Eigen::Vector3d::Constant(NAN),high=low,pl=low,old_pl=low;
+ Eigen::Vector3d low=Eigen::Vector3d::Constant(NAN),high=low,pl=low,old_pl=low,input_low=low,input_high=low;
  double hpl=INFINITY,old_hpl=INFINITY,event_risk=INFINITY,elapsed_ms=0;
  size_t considered=0,empty=0,unresolved=0,visited=0,retained=0,frontier=0,peak_boxes=0;
+ std::shared_ptr<const TagSupportEvidence> tag_support;
  JointConstraintEvidence joint;
  std::vector<RawSupportBox> support;
  std::vector<AttributionSnapshot> attribution;

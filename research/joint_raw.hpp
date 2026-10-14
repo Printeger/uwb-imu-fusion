@@ -10,5 +10,5 @@ struct JointRawLaw {
 // necessary constraint, not FD declaring a later sample healthy.
 bool jointInitial(RollingRawState&,const ImuMeasurement&,const JointRawLaw&,const TimeUniformEvent&);
 JointConstraintEvidence jointContract(RollingRawState&,RollingRawState&,
- const std::vector<ImuMeasurement>&,const JointRawLaw&,const TimeUniformEvent&,size_t branch_budget=7);
+ const std::vector<ImuMeasurement>&,const JointRawLaw&,const TimeUniformEvent&,size_t branch_budget=7,bool dominant_hull_shortcut=true);
 }

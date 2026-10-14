@@ -7,3 +7,5 @@ sc7:
   confirmation_seed: 20261011
   numerical_recovery: true
   joint_raw: true
+  joint_sweeps: 1
+  tag_support: true

@@ -10,6 +10,7 @@ struct Sc6Result {
  std::chrono::steady_clock::time_point alarm_time,selected_time,commit_time,proof_time;
  std::chrono::steady_clock::time_point imu_alarm_time;
  uint64_t version=0,generation=0,parent=0,source_prefix=0;
+ size_t active_states=0,proof_explicit=0;
  size_t boundary=0,alerts=0,slots=0,live=0,ledger=0,replay=0,capsules=0,rss=0;
  std::array<double,6> reference_bias_width{};
  bool x0=false;double bias_width=0,q=0,shared_q=0;

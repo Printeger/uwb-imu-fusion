@@ -38,7 +38,7 @@ void bounds(RawRangeResult& r,const Eigen::Vector3d& actual){
  r.hpl=sqrt(square(I(r.pl.x()))+square(I(r.pl.y()))).upper();
 }
 // Every update is a necessary condition; interval dependency only weakens it.
-bool propagate(Box& box,const UwbBatch& b,const std::array<RawRangeShell,8>& shells,int omitted,unsigned passes,bool tight_shell,bool optimized){
+bool propagate(Box& box,const UwbBatch& b,const std::array<RawRangeShell,8>& shells,int omitted,unsigned passes,bool tight_shell,bool optimized,bool lower_shell){
  int ref=omitted==0?1:0;
  for(size_t i=0;i<8;++i)if(int(i)!=omitted && shells[i].high<shells[i].low)return false;
  std::array<I,8> shell_squared,upper_squared,linear_rhs;std::array<std::array<I,3>,8> coefficients;
@@ -59,6 +59,10 @@ bool propagate(Box& box,const UwbBatch& b,const std::array<RawRangeShell,8>& she
     I cap=(optimized?upper_squared[i]:square(I(shells[i].high)))-I(rest.lower());if(cap.upper()<0)return false;
     double radius=sqrt(I(0,std::max(0.,cap.upper()))).upper();
     if(!intersect(box[j],I(a(j))+I(-radius,radius)))return false;
+    if(lower_shell){I floor=square(I(shells[i].low))-I(rest.upper());double minimum=sqrt(I(std::max(0.,floor.lower()),std::max(0.,floor.upper()))).lower();I delta=box[j]-I(a(j));
+     if(delta.lower()>=0){if(!intersect(box[j],I(a(j))+I(minimum,radius)))return false;}
+     else if(delta.upper()<=0){if(!intersect(box[j],I(a(j))+I(-radius,-minimum)))return false;}
+    }
    }
    if(int(i)==ref)continue;
    const auto& a0=b.measurements[ref].anchor_position_m;
@@ -80,7 +84,7 @@ RawRangeResult contractRawRangeBox(const Eigen::Vector3d& low,const Eigen::Vecto
  RawRangeResult r;auto begin=std::chrono::steady_clock::now();
  if(!low.allFinite() || !high.allFinite() || !actual.allFinite() || (low.array()>high.array()).any() || batch.measurements.size()!=8 || budget.passes>64 || budget.split_depth>16){r.reason="invalid kernel input";return r;}
  for(size_t i=0;i<8;++i)if(!batch.measurements[i].anchor_position_m.allFinite() || !std::isfinite(shells[i].low) || !std::isfinite(shells[i].high) || shells[i].low<0){r.reason="invalid shell";return r;}
- r.low=low;r.high=high;bounds(r,actual);r.old_pl=r.pl;r.old_hpl=r.hpl;
+ r.input_low=low;r.input_high=high;r.low=low;r.high=high;bounds(r,actual);r.old_pl=r.pl;r.old_hpl=r.hpl;
  Box original;for(int j=0;j<3;++j)original[j]=I(low(j),high(j));
  Eigen::Vector3d unionLow=Eigen::Vector3d::Constant(INFINITY),unionHigh=Eigen::Vector3d::Constant(-INFINITY);
  int current_mask=-1;bool current_frontier=false;
@@ -96,7 +100,7 @@ RawRangeResult contractRawRangeBox(const Eigen::Vector3d& low,const Eigen::Vecto
     r.peak_boxes=std::max(r.peak_boxes,queue.size());
     if(r.visited>=budget.max_boxes){current_frontier=true;r.budget_exhausted=true;r.frontier+=queue.size();for(const auto& item:queue)retain(item.first);queue.clear();break;}
     auto item=queue.front();queue.pop_front();++r.visited;
-    if(!propagate(item.first,batch,shells,omitted,budget.passes,budget.tight_shell,budget.optimized))continue;
+    if(!propagate(item.first,batch,shells,omitted,budget.passes,budget.tight_shell,budget.optimized,budget.lower_shell))continue;
     if(!finiteBox(item.first))throw std::runtime_error("nonfinite interval arithmetic");
     int axis=0;for(int j=1;j<3;++j)if(item.first[j].upper()-item.first[j].lower()>item.first[axis].upper()-item.first[axis].lower())axis=j;
     double mid=item.first[axis].lower()/2+item.first[axis].upper()/2;

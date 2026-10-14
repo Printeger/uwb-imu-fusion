@@ -589,3 +589,9 @@ set_source_files_properties(research/joint_raw.cpp PROPERTIES COMPILE_OPTIONS "-
 add_executable(sc7_joint_checks EXCLUDE_FROM_ALL research/sc7_joint_checks.cpp)
 target_link_libraries(sc7_joint_checks fde_research tbb)
 set_source_files_properties(research/sc7_joint_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+
+target_sources(fde_research PRIVATE research/tag_support.cpp)
+set_source_files_properties(research/tag_support.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+add_executable(sc7_support_checks EXCLUDE_FROM_ALL research/sc7_support_checks.cpp)
+target_link_libraries(sc7_support_checks fde_research tbb)
+set_source_files_properties(research/sc7_support_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")

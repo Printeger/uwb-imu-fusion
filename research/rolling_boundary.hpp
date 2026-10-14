@@ -39,6 +39,7 @@ struct RollingBoundaryProposalV1 {
   RollingRawState current;
   std::deque<RollingRawMaterial> explicit_material;
   JointConstraintEvidence joint;
+  RawRangeResult geometry;
   uint64_t parent;
  };
  std::shared_ptr<const Seal> seal_;
@@ -50,12 +51,13 @@ class RollingIntegrity {
  std::deque<RollingRawMaterial> explicit_;
  double accel_rw_,gyro_rw_,acceleration_,rate_;
  Eigen::Vector3d lever_;
- bool failed_=false,tight_=false,optimized_=false,attribute_=false,joint_=false;JointRawLaw joint_law_;
+ bool failed_=false,tight_=false,optimized_=false,attribute_=false,joint_=false;JointRawLaw joint_law_;unsigned joint_sweeps_=2;bool support_=false;size_t support_budget_=256;
  public:
  RollingIntegrity(const ResolvedRollingPolicyV1&,const NavigationState&,
   const Eigen::Matrix<double,15,1>&,double ba,double bg,const Eigen::Vector3d&,
   double acceleration=.04,double rate=.2,bool tight=false,bool optimized=false);
- void enableJoint(const ImuMeasurement&,const JointRawLaw&);
+ void enableJoint(const ImuMeasurement&,const JointRawLaw&,unsigned sweeps=2);
+ void enableTagSupport(size_t max_boxes=256){support_=true;support_budget_=max_boxes;}
  void enableAttribution(bool enabled){attribute_=enabled;}
  const RollingBoundaryCertificateV1& certificate()const{return certificate_;}
  const RollingSourceEvent& event()const{return event_;}
