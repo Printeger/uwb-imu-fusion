@@ -13656,3 +13656,13 @@ Original report/SC5/SC6/source-noise/AL/production configs are byte-equal to6b78
 Own-cache cleanup after the actual independent audit:850 task-created files under .cache/sc6-closure removed, plus exact owned files .cache/sc6-closure-build.log, .cache/sc6-closure-check-driver.log, .cache/sc6-20261014/check-polluted.yaml, .cache/sc6-20261014/check-outside.yaml, tools/__pycache__/sc6_closure.cpython-38.pyc, tools/__pycache__/sc6_closure_observability.cpython-38.pyc, tools/__pycache__/test_sc6_closure.cpython-38.pyc. No old evidence, requirement or user file was deleted. Reproduction regenerates temporary traces, and native tests regenerate their own known fixture paths. Final source/test/config/requirement/sole conclusion/three PNG are retained.
 
 Local stage Git history is recorded above. Final delivery commit and clean worktree are verified using git log/status after this report is saved. Push occurs only after all Goal work and final local save, under the Goal’s last explicit whole-goal push instruction; no stage was automatically pushed.
+
+Final platform and artifact bookkeeping:Intel Core Ultra5 125H,18 logical CPUs, x86_64 little-endian, Microsoft/WSL2 hypervisor;1 TBB/BLAS/FGO worker,no affinity. Actual final result local commit67bb1d86c74bd2ea70d1b0b07ee781fa4c7d4bbb was saved with clean worktree; this CPU/artifact bookkeeping is a later documentation-only local save.
+
+|Required retained artifact|SHA256|
+|---|---|
+|docs/fde_next/sc6_closure_fde_accuracy.png|`1f8c69edbfae9421576325a74a223094381fad1d4955c0902a14cc5ceb8867a7`|
+|docs/fde_next/sc6_closure_horizontal_stanford.png|`4e742328b06d8b92df3566eb11bd282d41689c02238abc45a059bfd72c65c4d0`|
+|docs/fde_next/sc6_closure_vertical_stanford.png|`4f3faa638d5c40c35d0e087ea5b815e7515fdd46e1c8e66fde58afd0165b6290`|
+|docs/requirements/sc6_closure/SC6_CLOSURE_REQUIREMENTS.md|`a89961e5267554af3288dee9a7f1f079fef308c7cdb970a751fdb4795f55967f`|
+|docs/requirements/sc6_closure/GOAL_SC6_CLOSURE.txt|`20d9e7bdd46353daae23e176c0aa81db56c7819d3b5528af6e50b29148f2e35e`|
