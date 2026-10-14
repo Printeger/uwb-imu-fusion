@@ -18,6 +18,7 @@ class Sc6Provider {
  Sc6Provider(const std::string& path,const std::string& id,int seed,int count=0);
  NavigationState truth(int index,bool uwb_time=false)const;
  Sc6Envelope certify(size_t epoch); // privileged simulation adapter, timed online
+ void writeInputAudit(const std::string& path)const; // offline evidence, never consumed by service
  const Sc6MotionRecipe& recipe()const{return recipe_;}
 };
 }

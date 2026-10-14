@@ -24,9 +24,11 @@ void OpenFaultPool::append(const ImuMeasurement& sample){
   I noise=I(q0)*I(law_.initial_sigmas(axis+9))+rw_support_[axis]+I(q)*I(accel?law_.accel_adc:law_.gyro_adc)+I(2e-10);
   double radius=(noise+I(accel?law_.gravity+acceleration_:rate_)).upper();healthy[axis]=I(bias_center_(axis))+I(-radius,radius);
   measured[axis]=accel?sample.specific_force_mps2(j):sample.angular_velocity_radps(j);
+  diagnostic_.measured[axis]=measured[axis];diagnostic_.healthy_low[axis]=healthy[axis].lower();diagnostic_.healthy_high[axis]=healthy[axis].upper();diagnostic_.rw_radius[axis]=rw_support_[axis].upper();
   violation|=measured[axis]<healthy[axis].lower() || measured[axis]>healthy[axis].upper();
  }
  if(violation)no_active_=false;
+ diagnostic_.q=q;diagnostic_.violation=violation;diagnostic_.no_active=no_active_;
  for(auto it=active_.begin();it!=active_.end();){bool possible=true;
   for(int axis=0;axis<6;++axis){if(axis==it->episode.axis){I theta=I(measured[axis])-healthy[axis];it->theta_low=std::max(it->theta_low,theta.lower());it->theta_high=std::min(it->theta_high,theta.upper());possible&=it->theta_low<=it->theta_high;}
    else possible&=healthy[axis].lower()<=measured[axis] && measured[axis]<=healthy[axis].upper();}

@@ -1,0 +1,22 @@
+# Closure changes only research recipes; every original source/production law is inherited.
+raw_base_law: config/sc6.yaml
+closure:
+  version: sc6-closure-r1
+  seeds: [20261010, 20261011, 20261012, 20261013, 20261014]
+  scenario_weights: {S0: 0.3333333333333333, S1: 0.3333333333333333, S2: 0.3333333333333333}
+  diagnostic_al_m: [[2, 3], [5, 5], [10, 10]]
+  percentile: nearest_rank
+  core_p95_ms: 40.0
+  measurement_to_sink_p95_ms: 50.0
+  timely_spatial_fraction: 0.95
+  runtime: paced
+  profile: tight-optimized
+  # Fixed unique phase precedence, selected before looking at new outcomes.
+  phase_precedence: [quarantine_bridge, detected_not_isolated, fault_active, late_unrecovered, post_rejoin, healthy_before]
+  bootstrap: {unit: seed, draws: 10000, seed: 61020}
+  # P0 five seeds; all other rows fixed at the first seed except D0 confirmation.
+  additional_cases:
+    D1_A_E: {epochs: 160, motion: M1, geometry: G1, faults: [[61, 0, 500, 20.0, 61]]}
+    D1_G_E: {epochs: 160, motion: M2, geometry: G1, faults: [[61, 3, 500, 1.0, 61]]}
+    D1_A_L: {epochs: 3240, motion: M1, geometry: G1, faults: [[3121, 0, 500, 20.0, 3124]]}
+    D1_G_L: {epochs: 1240, motion: M2, geometry: G1, faults: [[1121, 3, 500, 1.0, 1118]]}

@@ -7,6 +7,10 @@ struct OpenFaultRecord {
  uint64_t generation=0;TimestampNs begin,end;std::string id;
 };
 struct OpenUwbCandidate {uint64_t begin=0,end=0;unsigned anchor=0;double low=-INFINITY,high=INFINITY;std::string id;};
+struct OpenImuDiagnostic {
+ std::array<double,6> measured{},healthy_low{},healthy_high{},rw_radius{};
+ double q=0;bool violation=false,no_active=true;
+};
 // An outer automaton over ALL nonoverlapping IMU episode sequences. Ended
 // paths merge existentially into a no-active state; their state effects stay
 // in the rolling certificate, and global birth identities remain a recipe.
@@ -21,6 +25,7 @@ class OpenFaultPool {
  uint64_t samples_=0,births_=0,ended_=0,excluded_=0,generation_=0;
  size_t capacity_;double acceleration_,rate_;
  bool no_active_=true,alert_=false;
+ OpenImuDiagnostic diagnostic_;
  TimestampNs alert_begin_,alert_end_;
  std::vector<OpenUwbCandidate> uwb_active_;
  uint64_t uwb_epoch_=0,uwb_ended_=0;
@@ -33,6 +38,7 @@ class OpenFaultPool {
  size_t activeUwb()const{return uwb_active_.size();}
  uint64_t endedUwb()const{return uwb_ended_;}
  uint64_t samples()const{return samples_;}
+ const OpenImuDiagnostic& diagnostic()const{return diagnostic_;}
  size_t activeSize()const{return active_.size();}
  uint64_t births()const{return births_;}
  uint64_t ended()const{return ended_;}

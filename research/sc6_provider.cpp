@@ -1,5 +1,19 @@
 #include "sc6_provider.hpp"
+#include "time_uniform_event.hpp"
+#include <fstream>
+#include <iomanip>
 namespace uwb_imu_pl::research {
+void Sc6Provider::writeInputAudit(const std::string& path)const{
+ std::ofstream out(path,std::ios::binary);if(!out)throw std::runtime_error("INPUT_AUDIT_UNAVAILABLE");
+ out<<"SC6-input-audit-v1\n"<<law<<'\n'<<manifest<<'\n'<<std::hexfloat;
+ auto vector=[&](const auto& v){for(int j=0;j<v.size();++j)out<<' '<<v(j);};
+ out<<"initial "<<initial.timestamp.value();vector(initial.position_world_m);vector(initial.velocity_world_mps);vector(initial.q_world_body.coeffs());vector(initial.accel_bias_mps2);vector(initial.gyro_bias_radps);vector(initial_draws_);out<<'\n';
+ TimeUniformEvent event(law["rolling_integrity"]["task_exceedance_budget"].as<double>());
+ out<<"source_id_recipes initial:tangent:0..14,adc:stamp:axis,rw:sample:axis,range:epoch:anchor; initial_birth=0; rw/uwb_birth=epoch; shared_adc_birth=ceil(sample/10)\n";
+ for(size_t i=0;i<imu.size();++i){const auto& m=imu[i];out<<"imu "<<m.id.value()<<' '<<m.timestamp.value()<<' '<<event.adcBirth(i);vector(m.specific_force_mps2);vector(m.angular_velocity_radps);vector(adc_[i]);vector(biases_[i]);vector(injections_[i]);if(i)vector(rw_[i-1]);out<<'\n';}
+ for(size_t k=0;k<uwb.size();++k){const auto& b=uwb[k];for(size_t a=0;a<b.measurements.size();++a){const auto& m=b.measurements[a];out<<"uwb "<<b.id.value()<<' '<<b.timestamp.value()<<' '<<m.id.value()<<' '<<m.factor_id.value()<<' '<<m.anchor_id.value()<<' '<<m.tag_id.value()<<' '<<m.sequence<<' '<<m.quality_flags<<' '<<m.timestamp.value();vector(m.anchor_position_m);out<<' '<<m.range_m<<' '<<m.sigma_m<<' '<<range_draws_[k][a]<<' '<<range_faults_[k][a]<<'\n';}}
+ if(!out)throw std::runtime_error("INPUT_AUDIT_WRITE_FAILED");
+}
 namespace {
 using I=RollingInterval;
 double middle(I x){return x.lower()/2+x.upper()/2;}
@@ -16,7 +30,7 @@ NavigationState Sc6Provider::truth(int index,bool uwb_time)const{
 }
 Sc6Provider::Sc6Provider(const std::string& path,const std::string& id,int seed,int count):law(researchLaw(path)),cfg(IntegrityConfigLoader::load(law["imu_base_config"].as<std::string>())){
  if(law["source_law_id"].as<std::string>()!="raw-source-rw-v1" || law["initial_observation_law"].as<std::string>()!="independent-tangent-gaussian-v1" || law["bias_process"].as<std::string>()!="sample-grid-gaussian-rw" || law["sc6"]["version"].as<std::string>()!="sc6-motion-v1")throw std::invalid_argument("SC6_SOURCE_LAW_MIX");
- manifest=law["sc6"]["cases"][id];if(!manifest)throw std::invalid_argument("SC6_CASE_UNKNOWN");
+ manifest=law["sc6"]["cases"][id];if(!manifest && law["closure"])manifest=law["closure"]["additional_cases"][id];if(!manifest)throw std::invalid_argument("SC6_CASE_UNKNOWN");
  epochs=count?count:manifest["epochs"].as<int>();recipe_.kind=std::stoi(manifest["motion"].as<std::string>().substr(1));domain=sc6Domain(recipe_);auto frozen=law["sc6"]["domains"][domain.id];if(frozen["acceleration"].as<double>()!=domain.acceleration || frozen["angular_rate"].as<double>()!=domain.rate || frozen["jerk"].as<double>()!=domain.jerk || frozen["angular_acceleration"].as<double>()!=domain.alpha)throw std::invalid_argument("SC6_DOMAIN_VERSION_MISMATCH");lever=researchVector(law["lever"]);
  cfg.incremental.fixed_lag_epochs=law["fixed_lag_epochs"].as<int>();cfg.integrity_window.epochs=law["window_epochs"].as<int>();cfg.realtime.range_sigma_m=law["range_sigma_m"].as<double>();
  // The same frozen domain is consumed by the real bridge factory.
