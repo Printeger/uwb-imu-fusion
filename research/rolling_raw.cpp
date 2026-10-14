@@ -33,13 +33,15 @@ RollingRawState rollingPropagate(const RollingRawState& old,double acceleration,
  // never a new independent posterior draw. Endpoint ADC is projected, not
  // counted again: physics does not consume ADC in this fault-independent reach.
  for(int j=0;j<6;++j)a.bias[j]=old.bias[j]+symmetric(10.*I(q)*I(j<3?ba:bg)*sqrt(I(1)/200.)+I(2e-10));
+ if(old.has_tag_relation){I lever_norm=sqrt(square(I(old.tag_lever.x()))+square(I(old.tag_lever.y()))+square(I(old.tag_lever.z())));for(int j=0;j<3;++j)a.tag_relation[j]=old.tag_relation[j]+dt*old.v[j]+symmetric(rp+lever_norm*I(angular_rate)*dt);}
  return rollingProject(a);
 }
 RollingVector rollingTag(const RollingRawState& s,const Eigen::Vector3d& lever){
  if(!lever.allFinite())throw std::invalid_argument("RAW_LEVER_INVALID");
- RollingVector out=s.p;for(int j=0;j<3;++j)for(int k=0;k<3;++k)out[j]+=s.rotation[j][k]*I(lever(k));return out;
+ RollingVector out=s.p;for(int j=0;j<3;++j)for(int k=0;k<3;++k)out[j]+=s.rotation[j][k]*I(lever(k));if(s.has_tag_relation && lever==s.tag_lever)for(int j=0;j<3;++j)if(!intersect(out[j],s.tag_relation[j]))throw std::invalid_argument("TAG_RELATION_EMPTY");return out;
 }
 bool rollingContractTag(RollingRawState& s,const RollingVector& tag,const Eigen::Vector3d& l){
+ if(s.has_tag_relation && l==s.tag_lever)for(int j=0;j<3;++j)if(!intersect(s.tag_relation[j],tag[j]))return false;
  for(int j=0;j<3;++j){I offset(0);for(int k=0;k<3;++k)offset+=s.rotation[j][k]*I(l(k));
   if(!intersect(s.p[j],tag[j]-offset))return false;
   for(int k=0;k<3;++k)if(l(k)!=0){I rhs=tag[j]-s.p[j];for(int h=0;h<3;++h)if(h!=k)rhs-=s.rotation[j][h]*I(l(h));if(!intersect(s.rotation[j][k],rhs/I(l(k))))return false;}
@@ -77,6 +79,7 @@ bool rollingContractTagSphere(RollingRawState& state,const RollingVector& tag,co
 RollingRawState rollingProject(const RollingRawState& s){
  // Coordinate hull Cartesian product is an existential outer projection. No
  // covariance independence or division by an event radius is inferred.
+ if(s.has_tag_relation){if(!s.tag_lever.allFinite())throw std::invalid_argument("TAG_LEVER_NONFINITE");for(auto x:s.tag_relation)check(x);}
  for(int j=0;j<3;++j){check(s.p[j]);check(s.v[j]);for(int k=0;k<3;++k)check(s.rotation[j][k]);}for(auto b:s.bias)check(b);return s;
 }
 }

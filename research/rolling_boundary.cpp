@@ -4,12 +4,13 @@ namespace {
 using I=RollingInterval;
 bool sameState(const RollingRawState& a,const RollingRawState& b){
  auto equal=[](I x,I y){return x.lower()==y.lower() && x.upper()==y.upper();};
- if(a.epoch!=b.epoch)return false;
+ if(a.epoch!=b.epoch || a.has_tag_relation!=b.has_tag_relation || a.tag_lever!=b.tag_lever)return false;
+ if(a.has_tag_relation)for(int j=0;j<3;++j)if(!equal(a.tag_relation[j],b.tag_relation[j]))return false;
  for(int j=0;j<3;++j){if(!equal(a.p[j],b.p[j]) || !equal(a.v[j],b.v[j]))return false;for(int k=0;k<3;++k)if(!equal(a.rotation[j][k],b.rotation[j][k]))return false;}
  for(int j=0;j<6;++j)if(!equal(a.bias[j],b.bias[j]))return false;return true;
 }
 bool sameCertificate(const RollingBoundaryCertificateV1& a,const RollingBoundaryCertificateV1& b){
- if(!sameState(a.separator,b.separator) || a.generation!=b.generation || a.parent!=b.parent || a.version!=b.version || a.source_prefix!=b.source_prefix || a.covered_through!=b.covered_through || a.shared_adc_index!=b.shared_adc_index || a.event_id!=b.event_id || a.fault_not_started!=b.fault_not_started || a.fault_active!=b.fault_active || a.fault_ended_residual!=b.fault_ended_residual || a.fault_excluded!=b.fault_excluded || a.anchor_ids!=b.anchor_ids)return false;
+ if(!sameState(a.separator,b.separator) || a.generation!=b.generation || a.parent!=b.parent || a.version!=b.version || a.source_prefix!=b.source_prefix || a.covered_through!=b.covered_through || a.shared_adc_index!=b.shared_adc_index || a.event_id!=b.event_id || a.state_method!=b.state_method || a.fault_not_started!=b.fault_not_started || a.fault_active!=b.fault_active || a.fault_ended_residual!=b.fault_ended_residual || a.fault_excluded!=b.fault_excluded || a.anchor_ids!=b.anchor_ids)return false;
  for(int j=0;j<8;++j)if(a.anchor_positions[j]!=b.anchor_positions[j])return false;return true;
 }
 RollingVector contracted(RollingRawState& s,const RollingRawMaterial& m,
@@ -51,7 +52,7 @@ RollingBoundaryProposalV1 RollingIntegrity::propose(const EpochTransaction& tx,
  const bool capture=attribute_ && (tx.proposed_epoch==1 || tx.proposed_epoch==31 || tx.proposed_epoch==61 || tx.proposed_epoch==250 || tx.proposed_epoch==300);
  auto snapshot=[&](const char* stage,const RollingRawState& s){if(!capture)return;auto t=tight_?rollingTagSphere(s,lever_):rollingTag(s,lever_);AttributionSnapshot a;a.stage=stage;a.epoch=s.epoch;for(int j=0;j<3;++j){a.low(j)=t[j].lower();a.high(j)=t[j].upper();}out.attribution.push_back(a);};
  snapshot("parent_separator",certificate_.separator);out.explicit_material=explicit_;
- out.explicit_material.push_back({tx.uwb_batch,source,out.material.raw_first,out.material.raw_last});
+ out.explicit_material.push_back({tx.uwb_batch,source,out.material.raw_first,out.material.raw_last,tx.raw_imu_slice});
  std::vector<RollingRawState> states{certificate_.separator};
  size_t expected=certificate_.separator.epoch+1;
  for(const auto& m:out.explicit_material){
@@ -64,7 +65,8 @@ RollingBoundaryProposalV1 RollingIntegrity::propose(const EpochTransaction& tx,
   for(size_t j=states.size()-1;j>0;--j)if(!rollingContractDynamics(states[j-1],states[j],acceleration_) || (tight_ && !rollingContractCoupledDynamics(states[j-1],states[j],acceleration_)))throw std::invalid_argument("RAW_BACKWARD_RELATION_INCONSISTENT");
   for(size_t j=1;j<states.size();++j){
    if(!rollingContractDynamics(states[j-1],states[j],acceleration_) || (tight_ && !rollingContractCoupledDynamics(states[j-1],states[j],acceleration_)))throw std::invalid_argument("RAW_FORWARD_RELATION_INCONSISTENT");
-   snapshot("time_contracted",states[j]);contracted(states[j],out.explicit_material[j-1],event_,lever_,out.physical_branches,tight_,optimized_,capture?&out.attribution:nullptr);snapshot("tag_lever_contracted",states[j]);
+   snapshot("time_contracted",states[j]);if(joint_)out.joint=jointContract(states[j-1],states[j],out.explicit_material[j-1].imu,joint_law_,TimeUniformEvent(policy_.budget));
+   contracted(states[j],out.explicit_material[j-1],event_,lever_,out.physical_branches,tight_,optimized_,capture?&out.attribution:nullptr);snapshot("tag_lever_contracted",states[j]);
   }
  }
  const size_t offset=out.material.cutoff-certificate_.separator.epoch;
@@ -89,8 +91,15 @@ RollingBoundaryProposalV1 RollingIntegrity::propose(const EpochTransaction& tx,
  out.raw_read_first=out.explicit_material.front().raw_first;
  out.raw_read_last=out.explicit_material.back().raw_last;
  while(!out.explicit_material.empty() && out.explicit_material.front().batch.id.value()<=out.material.cutoff)out.explicit_material.pop_front();
- out.seal_=std::make_shared<const RollingBoundaryProposalV1::Seal>(RollingBoundaryProposalV1::Seal{this,out.material,out.certificate,out.current,out.explicit_material,out.parent_generation});
+ out.seal_=std::make_shared<const RollingBoundaryProposalV1::Seal>(RollingBoundaryProposalV1::Seal{this,out.material,out.certificate,out.current,out.explicit_material,out.joint,out.parent_generation});
  return out;
+}
+void RollingIntegrity::enableJoint(const ImuMeasurement& first,const JointRawLaw& law){
+ if(certificate_.generation || certificate_.separator.epoch || joint_)throw std::invalid_argument("JOINT_MUST_START_FROM_ORIGINAL_INITIAL_SCOPE");
+ auto state=certificate_.separator;
+ if(!jointInitial(state,first,law,TimeUniformEvent(policy_.budget)))throw std::invalid_argument("JOINT_INITIAL_INCONSISTENT");
+ state.tag_relation=rollingTagSphere(state,lever_);state.tag_lever=lever_;state.has_tag_relation=true;
+ certificate_.separator=rollingProject(state);certificate_.state_method="sc7-joint-imu-tag-relation-v1";joint_law_=law;joint_=true;
 }
 Eigen::Vector3d RollingIntegrity::committedTag(const NavigationState& state)const{return state.position_world_m+state.q_world_body*lever_;}
 RawRangeResult RollingIntegrity::finalize(RollingBoundaryProposalV1&& p,const CommitReceipt& r,
@@ -99,14 +108,14 @@ RawRangeResult RollingIntegrity::finalize(RollingBoundaryProposalV1&& p,const Co
   if(!p.seal_ || p.seal_->owner!=this || !sameState(p.current,p.seal_->current) || !sameCertificate(p.certificate,p.seal_->certificate) || p.parent_generation!=p.seal_->parent || p.explicit_material.size()!=p.seal_->explicit_material.size())throw std::invalid_argument("BOUNDARY_NUMERIC_SET_TAMPERED");
   const auto& material=p.seal_->material;
   if(p.material.transaction!=material.transaction || p.material.version!=material.version || p.material.epoch!=material.epoch || p.material.cutoff!=material.cutoff || p.material.begin!=material.begin || p.material.end!=material.end || p.material.pre_keys!=material.pre_keys || p.material.expected_retired!=material.expected_retired || p.material.selected!=material.selected || p.material.raw_first!=material.raw_first || p.material.raw_last!=material.raw_last)throw std::invalid_argument("BOUNDARY_MATERIAL_TAMPERED");
-  for(size_t j=0;j<p.explicit_material.size();++j){const auto& a=p.explicit_material[j];const auto& b=p.seal_->explicit_material[j];if(!sameRawBatch(a.batch,b.batch) || !sameRawBatch(a.range.batch,b.range.batch) || a.range.valid!=b.range.valid || a.range.rho_num!=b.range.rho_num || a.range.source_law_id!=b.range.source_law_id || a.range.frame!=b.range.frame || a.raw_first!=b.raw_first || a.raw_last!=b.raw_last)throw std::invalid_argument("BOUNDARY_RAW_WINDOW_TAMPERED");}
+  for(size_t j=0;j<p.explicit_material.size();++j){const auto& a=p.explicit_material[j];const auto& b=p.seal_->explicit_material[j];if(a.imu.size()!=b.imu.size())throw std::invalid_argument("JOINT_RAW_SOURCE_TAMPERED");for(size_t k=0;k<a.imu.size();++k)if(a.imu[k].id!=b.imu[k].id || a.imu[k].timestamp!=b.imu[k].timestamp || a.imu[k].specific_force_mps2!=b.imu[k].specific_force_mps2 || a.imu[k].angular_velocity_radps!=b.imu[k].angular_velocity_radps)throw std::invalid_argument("JOINT_RAW_SOURCE_TAMPERED");if(!sameRawBatch(a.batch,b.batch) || !sameRawBatch(a.range.batch,b.range.batch) || a.range.valid!=b.range.valid || a.range.rho_num!=b.range.rho_num || a.range.source_law_id!=b.range.source_law_id || a.range.frame!=b.range.frame || a.raw_first!=b.raw_first || a.raw_last!=b.raw_last)throw std::invalid_argument("BOUNDARY_RAW_WINDOW_TAMPERED");}
   if(failed_ || p.parent_generation!=certificate_.generation || p.certificate.parent!=certificate_.generation ||
      p.certificate.version!=certificate_.version+1 || p.certificate.event_id!=event_.id ||
      state.timestamp!=p.material.end)throw std::invalid_argument("BOUNDARY_STALE_PROPOSAL");
   finalizeTransfer(p.material,r,keys);
   auto t=tight_?rollingTagSphere(p.current,lever_):rollingTag(p.current,lever_);Eigen::Vector3d actual=committedTag(state);
-  RawRangeResult bound;bound.source=tight_?"sc6-coupled-sphere-outer-v1":"sc5-raw-rolling-full-state-outer-v1";
-  bound.attribution=std::move(p.attribution);
+  RawRangeResult bound;bound.source=joint_?"sc7-joint-imu-tag-relation-box-v1":tight_?"sc6-coupled-sphere-outer-v1":"sc5-raw-rolling-full-state-outer-v1";
+  bound.bound_method=joint_?"sc7-joint-imu-tag-box-v1":"coordinate-box-v1";bound.attribution=std::move(p.attribution);bound.joint=p.seal_->joint;
   bound.relaxation="FULL_TASK_PRODUCT_OUTER_MASK_RELAXATION_NO_PROBABILISTIC_PRUNING";
   for(int j=0;j<3;++j){bound.low(j)=t[j].lower();bound.high(j)=t[j].upper();bound.pl(j)=abs(t[j]-I(actual(j))).upper();}
   bound.hpl=sqrt(square(I(bound.pl.x()))+square(I(bound.pl.y()))).upper();

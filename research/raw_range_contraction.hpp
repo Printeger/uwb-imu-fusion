@@ -27,6 +27,14 @@ bool rawRangeShells(const RawRangeLawEvidence&,const UwbBatch&,int epoch,
  std::array<RawRangeShell,8>&,int mission,double coordinate_radius);
 // NONE (-1) plus each physical row: current projection of the episode scope.
 std::array<int,9> rawRangeFaultMasks();
+struct JointConstraintEvidence {
+ std::string method="sc7-raw-imu-state-integral-theta-v1";
+ std::string fault_relaxation="ALL7_EPOCH_CONSTANT_THETA_REPEAT_OUTER_NO_HEALTHY_GAP";
+ size_t first_source=0,last_source=0,branches=0,empty=0,frontier=0;
+ std::array<double,6> before{},after{};
+ std::array<std::array<double,6>,7> branch_widths{};
+ bool valid=false,fallback=false;
+};
 struct RawSupportBox {
  Eigen::Vector3d low,high;int omitted=-1;bool frontier=false;
 };
@@ -37,11 +45,13 @@ struct AttributionSnapshot {
 };
 struct RawRangeBudget { size_t max_boxes=256;unsigned passes=8,split_depth=0;bool all_ranges_healthy=false;bool tight_shell=false;bool optimized=false;bool retain_support=false; };
 struct RawRangeResult {
+ std::string bound_method="coordinate-box-v1";
  std::string status="EVIDENCE_REFUSED",reason,source="raw-imu-uwb-contracted-v1";
  std::string relaxation="CURRENT_SINGLE_FAULT_OUTER_RELAXATION_OF_EPISODE_SCOPE";
  Eigen::Vector3d low=Eigen::Vector3d::Constant(NAN),high=low,pl=low,old_pl=low;
  double hpl=INFINITY,old_hpl=INFINITY,event_risk=INFINITY,elapsed_ms=0;
  size_t considered=0,empty=0,unresolved=0,visited=0,retained=0,frontier=0,peak_boxes=0;
+ JointConstraintEvidence joint;
  std::vector<RawSupportBox> support;
  std::vector<AttributionSnapshot> attribution;
  bool valid=false,budget_exhausted=false;

@@ -1,6 +1,7 @@
 #pragma once
 #include "rolling_policy.hpp"
 #include "rolling_raw.hpp"
+#include "joint_raw.hpp"
 #include "rolling_event.hpp"
 #include "sc2_imu_scope.hpp"
 #include "rolling_monitor.hpp"
@@ -9,12 +10,13 @@ namespace uwb_imu_pl::research {
 struct RollingRawMaterial {
  UwbBatch batch;RawRangeLawEvidence range;
  size_t raw_first=0,raw_last=0;
+ std::vector<ImuMeasurement> imu;
 };
 struct RollingBoundaryCertificateV1 {
  RollingRawState separator;
  uint64_t generation=0,parent=0,version=1,source_prefix=21;
  size_t covered_through=0,shared_adc_index=0;
- std::string event_id;
+ std::string event_id,state_method="coordinate-state-box-v1";
  size_t fault_not_started=0,fault_active=0,fault_ended_residual=0,fault_excluded=0;
  std::array<AnchorId,8> anchor_ids;
  std::array<Eigen::Vector3d,8> anchor_positions;
@@ -26,6 +28,7 @@ struct RollingBoundaryProposalV1 {
  std::deque<RollingRawMaterial> explicit_material;
  uint64_t parent_generation=0;
  size_t raw_read_first=0,raw_read_last=0,physical_branches=0;
+ JointConstraintEvidence joint;
  RawRangeResult geometry;
  std::vector<AttributionSnapshot> attribution;
  private:
@@ -35,6 +38,7 @@ struct RollingBoundaryProposalV1 {
   RollingBoundaryCertificateV1 certificate;
   RollingRawState current;
   std::deque<RollingRawMaterial> explicit_material;
+  JointConstraintEvidence joint;
   uint64_t parent;
  };
  std::shared_ptr<const Seal> seal_;
@@ -46,11 +50,12 @@ class RollingIntegrity {
  std::deque<RollingRawMaterial> explicit_;
  double accel_rw_,gyro_rw_,acceleration_,rate_;
  Eigen::Vector3d lever_;
- bool failed_=false,tight_=false,optimized_=false,attribute_=false;
+ bool failed_=false,tight_=false,optimized_=false,attribute_=false,joint_=false;JointRawLaw joint_law_;
  public:
  RollingIntegrity(const ResolvedRollingPolicyV1&,const NavigationState&,
   const Eigen::Matrix<double,15,1>&,double ba,double bg,const Eigen::Vector3d&,
   double acceleration=.04,double rate=.2,bool tight=false,bool optimized=false);
+ void enableJoint(const ImuMeasurement&,const JointRawLaw&);
  void enableAttribution(bool enabled){attribute_=enabled;}
  const RollingBoundaryCertificateV1& certificate()const{return certificate_;}
  const RollingSourceEvent& event()const{return event_;}

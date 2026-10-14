@@ -6,3 +6,4 @@ sc7:
   development_seed: 20261010
   confirmation_seed: 20261011
   numerical_recovery: true
+  joint_raw: true

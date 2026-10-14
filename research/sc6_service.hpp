@@ -11,6 +11,7 @@ struct Sc6Result {
  std::chrono::steady_clock::time_point imu_alarm_time;
  uint64_t version=0,generation=0,parent=0,source_prefix=0;
  size_t boundary=0,alerts=0,slots=0,live=0,ledger=0,replay=0,capsules=0,rss=0;
+ std::array<double,6> reference_bias_width{};
  bool x0=false;double bias_width=0,q=0,shared_q=0;
  OpenImuDiagnostic monitor;std::array<double,6> monitor_min_margin{};
  bool imu_alarm=false;uint64_t alert_generation=0;size_t imu_active=0,imu_ended=0,imu_excluded=0,uwb_active=0;int64_t first_imu_alarm_ns=0;
@@ -24,6 +25,7 @@ class Sc6Service {
  std::unique_ptr<Sc6TemporalMonitor> temporal_;uint64_t combined_alert_generation_=0;
  std::unique_ptr<RollingIntegrity> shadow_;
  IncrementalUwbImuEstimator backend_;
+ std::array<RollingInterval,6> reference_bias_;
  std::deque<ImuMeasurement> replay_;std::deque<RollingRawState> capsules_;
  public:
  Sc6Service(const YAML::Node&,const IntegrityConfig&,const NavigationState&,

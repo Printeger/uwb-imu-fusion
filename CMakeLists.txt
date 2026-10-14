@@ -583,3 +583,9 @@ target_link_libraries(sc7_checks fde_research tbb)
 set_source_files_properties(research/sc7_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
 
 target_sources(fde_research PRIVATE research/numerical_candidate.cpp)
+
+target_sources(fde_research PRIVATE research/joint_raw.cpp)
+set_source_files_properties(research/joint_raw.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+add_executable(sc7_joint_checks EXCLUDE_FROM_ALL research/sc7_joint_checks.cpp)
+target_link_libraries(sc7_joint_checks fde_research tbb)
+set_source_files_properties(research/sc7_joint_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")

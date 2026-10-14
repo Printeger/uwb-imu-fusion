@@ -8,6 +8,7 @@ using RollingInterval=boost::numeric::interval<double>;
 using RollingVector=std::array<RollingInterval,3>;
 struct RollingRawState {
  size_t epoch=0;
+ bool has_tag_relation=false;RollingVector tag_relation;Eigen::Vector3d tag_lever=Eigen::Vector3d::Zero();
  RollingVector p,v;
  std::array<RollingVector,3> rotation;
  std::array<RollingInterval,6> bias;
