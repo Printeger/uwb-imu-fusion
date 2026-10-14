@@ -224,6 +224,9 @@ def episodes(rows, manifest):
                            TTD_ms=(value(alarm[0], 'first_imu_alarm_ns')-begin_ns)/1e6 if alarm else None,
                            TTI_ms=(bi*50-begin_ns/1e6) if bi else None,
                            TTR_ms=(re*50-begin_ns/1e6) if re else None,
+                           TTD_wall_ms=value(alarm[0], 'alarm_ms')-begin_ns/1e6 if alarm and math.isfinite(value(alarm[0], 'alarm_ms')) else None,
+                           TTI_wall_ms=value(bridge[0], 'commit_time_ms')-begin_ns/1e6 if bridge else None,
+                           TTR_wall_ms=value(rejoin[0], 'commit_time_ms')-begin_ns/1e6 if rejoin else None,
                            uwb_onset=uwb_onset,
                            first_uwb_fd=first([r for r in good if uwb_onset <= int(r['epoch']) < uwb_onset+3 and value(r, 'uwb_alarm') == 1]),
                            correct_uwb_exclusion=[int(r['epoch']) for r in good if uwb_onset <= int(r['epoch']) < uwb_onset+3 and value(r, 'excluded') == 0],
@@ -290,6 +293,10 @@ def score(rows, manifest, scheduled):
         result['timely']/scheduled >= .95)
     good = [r for r in rows if committed(r)]
     result['stages'] = {name: metric_stats([r for r in good if phase(r, eps) == name]) for name in PHASES}
+    # Parallel channel labels; never add these to the unique overall partition.
+    uwb_active = lambda r: any(e['uwb_onset'] <= int(r['epoch']) < e['uwb_onset']+3 for e in eps)
+    result['uwb_stages'] = {name: metric_stats([r for r in good if uwb_active(r) == active])
+                            for name, active in [('fault_active', True), ('healthy', False)]}
     assert sum(result['stages'][name]['ape']['n'] for name in PHASES) == len(good)
     result['false_uwb_exclusions'] = sum(value(r, 'excluded') >= 0 and
         not any(e['uwb_onset'] <= int(r['epoch']) < e['uwb_onset']+3 for e in eps) for r in good)
@@ -373,7 +380,7 @@ def paired(group):
 
 
 def paired_scores():
-    data = [json.loads(p.read_text()) for p in CACHE.glob('P*.json') if p.name != 'pairs.json']
+    data = [json.loads(p.read_text()) for p in sorted(CACHE.glob('P*.json')) if p.name != 'pairs.json']
     data = [r for r in data if isinstance(r, dict) and 'entry' in r]
     pairs = []
     for on in data:
@@ -551,7 +558,7 @@ def report(runs, pairs):
              'All runs below use the same actual Sc6Service and paced 200Hz/20Hz shell. FDE OFF retains nominal FGO, monitoring, raw PL and receiver gate.',
              'Input audit contains hex-float raw observations, IDs, stamps, initial observation/draws, shared ADC births, RW draws, bias path and injections; pairs assert SHA256 and exact byte equality.',
              'Timing uses nearest rank on every measurable admitted service (including abort and timeout); never-started latched refusals are counted separately.',
-             'Phase precedence: quarantine/bridge, detected active, active, late unrecovered, post rejoin, healthy before. Latest commenced IMU episode wins; UWB episodes are tabulated separately.',
+             'Phase precedence: quarantine/bridge, detected active, active, late unrecovered, post rejoin, healthy before. Latest commenced IMU episode wins; UWB active/healthy scores are parallel labels, not added to the overall RMSE denominator.',
              'GT scoring checks terminal tag=p+R*lever, world frame, independent SO(3) log/magnitude in [0,pi], velocity and bias errors. RPE is body relative pose at deltas 1/20, on common terminal indices.', '',
              '|Run|scheduled/rows/attempted/committed/raw/timely|P50/P95/P99/max core ms|P50/P95/P99/max sink ms|core40/sink50|queue|',
              '|---|---|---|---|---|---|']
@@ -566,9 +573,15 @@ def report(runs, pairs):
                      f"{f(m['velocity_error']['off'])}/{f(m['velocity_error']['on'])}|{f(m['rotation_error']['off'])}/{f(m['rotation_error']['on'])}|{f(m['accel_bias_error']['improvement'])}/{f(m['gyro_bias_error']['improvement'])}|")
     lines += ['', 'Seed is the statistical unit; descriptive seed bootstrap uses 10000 resamples, fixed bootstrap seed61020. No independent-frame inference. N<5 is incomplete.', '',
               '|Scene/metric|N|delta mean/median/range|delta descriptive95 interval|mean %|', '|---|---|---|---|---|']
-    for scene, metrics in seed_summary(pairs).items():
+    seed_stats = seed_summary(pairs)
+    for scene, metrics in seed_stats.items():
         for metric, s in metrics.items():
             lines.append(f"|{scene}/{metric}|{s['N']}|{f(s['mean'])}/{f(s['median'])}/[{f(s['minimum'])},{f(s['maximum'])}]|{s['descriptive_seed_bootstrap95']}|{f(s['percent_mean'])}|")
+    lines += ['', 'Preregistered scene-equal aggregate (S0/S1/S2 each 1/3; no scenario selected by benefit):', '', '|metric|equal-weight mean delta|equal-weight mean seed %|', '|---|---|---|']
+    for metric in METRICS:
+        means = [seed_stats[c][metric]['mean'] for c in ['S0', 'S1', 'S2']]
+        percents = [seed_stats[c][metric]['percent_mean'] for c in ['S0', 'S1', 'S2']]
+        lines.append(f"|{metric}|{f(float(np.mean(means))) if all(x is not None for x in means) else 'NA'}|{f(float(np.mean(percents))) if all(x is not None for x in percents) else 'NA'}|")
     lines += ['', 'Stanford uses classic actual-output PE versus PL, not all-geometries Stanford–ESA enumeration. Region definitions follow the [ESA reference](https://gssc.esa.int/navipedia/index.php/The_Stanford_%E2%80%93_ESA_Integrity_Diagram:_Focusing_on_SBAS_Integrity).',
               'Only same-stamp/version/source, finite, spatial-qualified and current receipts enter the colored plot. Late spatial-qualified points are gray and unavailable. Missing outputs are never fabricated.',
               'MI/HMI below are counterfactual numerical candidates; operational HMI = NOT_QUALIFIED. Zero observed underbound does not establish epsilon=1e-6.', '',
@@ -577,10 +590,10 @@ def report(runs, pairs):
         for al, axes in r['stanford'].items():
             for axis, c in axes.items():
                 lines.append(f"|{label(r['entry'])}/{al}/{axis}|{c['scheduled']}/{c['time_current']}/{c['excluded_from_plot']}/{c['expired']}|{c['covered']}/{c['underbound']}|{c['nominal_admissible']}/{c['MI_candidate']}/{c['HMI_candidate']}/{c['AL_unavailable']}|{c['spatial_AL_admissible']}/{c['timely_AL_admissible']}|")
-    lines += ['', '|Run/episode axis|onset/duration/amplitude|FD/bridge/prior/rejoin|TTD/TTI/TTR ms|rejoin4; UWB isolation|', '|---|---|---|---|---|---|']
+    lines += ['', 'TTD/TTI/TTR below are respectively source-stamp and actual steady-clock action/commit latencies from registered onset, not an operator-hold latency.', '', '|Run/episode axis|onset/duration/amplitude|FD/bridge/prior/rejoin|source TTD/TTI/TTR ms|wall TTD/TTI/TTR ms|rejoin4; UWB isolation|', '|---|---|---|---|---|---|---|']
     for r in runs:
         for e in r['episodes']:
-            lines.append(f"|{label(r['entry'])}/{e['axis']}|{e['onset']}/{e['duration_ms']}/{e['amplitude']}|{e['first_fd']}/{e['first_bridge']}/{e['first_prior_repair']}/{e['first_rejoin']}|{f(e['TTD_ms'])}/{f(e['TTI_ms'])}/{f(e['TTR_ms'])}|{e['rejoin4']}; {e['correct_uwb_exclusion']}|")
+            lines.append(f"|{label(r['entry'])}/{e['axis']}|{e['onset']}/{e['duration_ms']}/{e['amplitude']}|{e['first_fd']}/{e['first_bridge']}/{e['first_prior_repair']}/{e['first_rejoin']}|{f(e['TTD_ms'])}/{f(e['TTI_ms'])}/{f(e['TTR_ms'])}|{f(e.get('TTD_wall_ms'))}/{f(e.get('TTI_wall_ms'))}/{f(e.get('TTR_wall_ms'))}|{e['rejoin4']}; {e['correct_uwb_exclusion']}|")
     lines += ['', '<details><summary>Complete run and unique-phase metrics (n/RMSE/P95/max), paired differences and frozen identities</summary>', '']
     for r in runs:
         lines += [f"**{label(r['entry'])}**", '',
@@ -589,6 +602,11 @@ def report(runs, pairs):
         for key, s in r['metrics'].items():
             cell = lambda m: '/'.join(f(m[k]) for k in ['n', 'rmse', 'p95', 'max'])
             lines.append('|'+key+'|'+cell(s)+'|'+ '|'.join(cell(r['stages'][phase_name][key]) for phase_name in PHASES)+'|')
+        if 'uwb_stages' in r:
+            lines += ['', '|Parallel UWB label/metric|n/RMSE/P95/max|', '|---|---|']
+            for stage_name, metrics in r['uwb_stages'].items():
+                for key, s in metrics.items():
+                    lines.append(f'|{stage_name}/{key}|'+cell(s)+'|')
     lines += ['', 'All pair metric differences (OFF−ON; improvement%; common valid n):', '', '|Pair/metric|OFF/ON|delta;%|n|', '|---|---|---|---|']
     for p in pairs:
         for key, s in p['metrics'].items():
