@@ -3,6 +3,7 @@ raw_base_law: config/sc6.yaml
 closure:
   version: sc6-closure-r1
   temporal_fd: sc6-adjacent-necessary-v1
+  rotation_metric: frozen_boundary
   seeds: [20261010, 20261011, 20261012, 20261013, 20261014]
   scenario_weights: {S0: 0.3333333333333333, S1: 0.3333333333333333, S2: 0.3333333333333333}
   diagnostic_al_m: [[2, 3], [5, 5], [10, 10]]

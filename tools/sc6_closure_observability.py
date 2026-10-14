@@ -212,8 +212,60 @@ def actual_g2_oracle(folder=CACHE/'w1/endpoint-fixed'):
     return dict(input_sha=sha(path), candidates=evidence,
                 scope='Actual first S3 ranges, all9 masks, fixed observation-only initial seeds; independent diagnostic, not a committed candidate or a raw inclusion proof. Native failure remains in denominator.')
 
+
+def actual_yaw_support_oracle():
+    # Left multiplication by a constant WORLD yaw Q preserves gravity and
+    # every body IMU signal when p,v,a and R are all rotated by Q. UWB noise
+    # coordinates and the independent initial tangent draw may differ.
+    # Scope: the ONLINE domain/noise support, not the private fixed GT recipe.
+    root = law()
+    sigmas = np.array([.1]*3+[.5]*6+[.1]*3+[.01]*3)
+    results = []
+    for path in sorted(CACHE.glob('P0-S2-*-on-audit.csv.input')):
+        lines = path.read_text().splitlines()
+        initial = next(line.split() for line in lines if line.startswith('initial '))
+        z = np.array([float.fromhex(x) for x in initial[2:]])
+        p_obs, v_obs, r_obs = z[:3], z[3:6], Rotation.from_quat(z[6:10])
+        biases = np.r_[root['true_initial_accel_bias_mps2'],root['true_initial_gyro_bias_radps']]
+        for yaw in [-.2,.2]:
+            q = Rotation.from_rotvec([0,0,yaw])
+            rotation_delta = (q.inv()*r_obs).as_rotvec()
+            theta = np.linalg.norm(rotation_delta)
+            def cross(v):
+                x,y,z = v
+                return np.array([[0,-z,y],[z,0,-x],[-y,x,0]])
+            w = cross(rotation_delta)
+            vinv = np.eye(3)-.5*w+(1/theta**2-(1+np.cos(theta))/(2*theta*np.sin(theta)))*(w@w)
+            translation_delta = vinv@q.inv().apply(p_obs-np.array([0,0,1]))
+            tangent = np.r_[rotation_delta,translation_delta,
+                            v_obs-q.apply([.48,.3,.16]),z[10:16]-biases]
+            initial_max = float(np.max(np.abs(tangent/sigmas)))
+            margins = [];invariance_error = 0.
+            for line in lines:
+                if not line.startswith('uwb '):continue
+                fields = line.split();epoch = int(fields[1]);t = epoch*.05
+                body = np.array([.8*np.sin(.6*t),.6*np.sin(.5*t),1+.4*np.sin(.4*t)])
+                r = Rotation.from_euler('X',.3*np.sin(.4*t))*Rotation.from_euler('Y',.4*np.sin(.3*t))*Rotation.from_euler('Z',.5*np.sin(.2*t))
+                acceleration = np.array([-.288*np.sin(.6*t),-.15*np.sin(.5*t),-.064*np.sin(.4*t)])
+                original_force = r.inv().apply(acceleration+np.array([0,0,9.80665]))
+                alternate_force = (q*r).inv().apply(q.apply(acceleration)+np.array([0,0,9.80665]))
+                invariance_error = max(invariance_error,float(np.max(np.abs(original_force-alternate_force))))
+                tag = body+r.apply(root['lever'])
+                anchor = np.array([float.fromhex(x) for x in fields[10:13]])
+                observed, sigma, fault = float.fromhex(fields[13]),float.fromhex(fields[14]),float.fromhex(fields[16])
+                alternative_draw = (observed-np.linalg.norm(anchor-q.apply(tag))-fault)/sigma
+                margins.append(global_q(epoch*10)-abs(alternative_draw))
+            assert initial_max < 7 and min(margins)>1e-8 and invariance_error<1e-12
+            results.append(dict(input_name=path.name,yaw_delta_rad=yaw,
+                                initial_standardized_max=initial_max,
+                                range_support_min_margin=float(min(margins)),ranges=len(margins),
+                                sampled_body_force_invariance_max=invariance_error,
+                                same_body_imu_bias_RW_injection=bool(invariance_error<1e-12),
+                                scope='Actual rawS2 observations admit a different yaw history in the online D1/initial-Gaussian/range-support model; all physical motion norms unchanged. Private simulator recipe is not an online heading measurement. This does not certify the entire2rad numerical error or identical private adapter signatures.'))
+    return results
+
 def main():
-    result = dict(rank=rank_oracle(), geometry=geometry_oracle(), actual_g2=actual_g2_oracle(), weak_overlap=overlap_oracle(),
+    result = dict(actual_yaw_support=actual_yaw_support_oracle(), rank=rank_oracle(), geometry=geometry_oracle(), actual_g2=actual_g2_oracle(), weak_overlap=overlap_oracle(),
                   temporal_diagnosis=diagnose_inputs(),
                   theorem='|d specific_force/dt| <= J+Omega*(A+g); |d body_omega/dt|<=alpha. Bias initial cancels in adjacent differences; one original RW increment and each original ADC coordinate remain. This is necessary in every declared healthy interval, not a new Gaussian draw.')
     dump(CACHE/'observability-prototype.json', result)

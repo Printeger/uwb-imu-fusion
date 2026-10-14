@@ -2815,3 +2815,41 @@ W1 failures retained: int64_t/long-long std::min compilation error corrected; fi
 
 
 W1 historical-support supplement: a retired temporal generation now carries its original observed begin/end into later operator-held recovery. Actual temporal-only D1 gyro120 steps held until95 perform dirty marginalized-prior replacement95 and healthy IMU rejoin96–99. A separate104-step replay30 test held until100 refuses restoration100–104 while all raw bounds remain valid; no source/risk reset or double commit. Four directly affected regression invocations PASS. A normal160-step D1_G_E old-paced/new-offline comparison is bit-equal in all deterministic state/action/raw/source/ledger/diagnostic fields and whole input SHA; this is strictly a semantic comparison, with no cross-mode performance claim. YAML Node reference compilation error was corrected before these tests. This supplement is saved as the next local Git commit.
+
+
+## W2 — profiling, numerical metric diagnosis and resource boundaries
+
+Actual same-model reference/optimized90-step pairs for S0/S2/D1_G_E are exact in all deterministic state/action/receipt/raw/source/risk/ledger/monitor fields and original-byte input SHA. Both computation comparisons are offline; they do not award paced40/50ms qualification.
+
+|P case|reference/optimized core P50 ms|semantic rows|
+|---|---|---|
+|S0|50.8685/16.358961|90|
+|S2|52.834227/18.227983|90|
+|D1_G_E|52.064974/18.112395|90|
+
+Cold init/input audit/ready are separately measured before RUN_READY; origin is established after offline evidence hashing. Privileged arrived-prefix numerical source verification stays inside core. Envelope teardown now also occurs before core_done. Post-sink scoring/formatting/I/O is separately recorded (the last diagnostic field/newline itself is not in that diagnostic subtotal). These clock-boundary changes require fresh W3 paced results.
+
+|Paced window|core/sink P95 ms|timely/scheduled|source/prepare/candidate/proof/commit/cleanup P95 ms|
+|---|---|---|---|
+|20/20|16.595511/16.715914|250/250|2.21299/2.22233/2.82717/9.25879/2.36944/0.245029|
+|30/10|13.604716/13.76517|250/250|1.85776/2.71703/3.12717/4.69705/2.86517/0.24544|
+|40/40|33.96111/34.132992|250/250|1.87011/4.14623/7.19413/17.9451/4.38289/0.469533|
+
+All three750 paced window outputs are real, qualified and timely.40/40 proof P95=17.945ms is the principal measured stage; candidate P95=7.194ms, commit4.383ms, prepare4.146ms. No required online work or slow frame was removed. Existing certified caches/early-stop/copy optimizations are retained; no unproved slot remapping is introduced.
+
+Controlled S2 numerical-prior experiment preregistered both frozen_boundary and polar_prototype, each FDE ON/OFF, same400 samples/seed20261010/paced/model/noise/source history. Only the numerical restoration orientation target differs; both preserve the entire original raw union.
+
+|orientation metric/FDE|tag RMSE m|velocity RMSE m/s|SO3 RMSE rad|accel/gyro bias RMSE|
+|---|---|---|---|---|
+|frozen_boundary/on|0.0737421|0.379712|1.24783|0.185888/0.0196517|
+|frozen_boundary/off|0.224942|1.23731|1.74072|0.892338/0.0715566|
+|polar_prototype/on|0.0740747|0.410072|0.834515|0.199443/0.01753|
+|polar_prototype/off|0.224942|1.23731|1.74072|0.892338/0.0715566|
+
+All four observation-history SHA match (`7150b46fece7…`); both OFF trajectories are exact in deterministic outputs. Changing the numerical metric improves this one ON orientation from1.247828 to.834515rad but worsens velocity/tag/accel-bias. Main policy remains frozen_boundary, chosen before final results. No selected prototype is treated as a new attitude observation. New gyro FD itself already improves the frozen ON orientation relative to its OFF1.740718rad in this seed; old SC6 ON2.21514 remains historical.
+
+Actual five-seed S2 input-support oracle: ten ±.2rad alternative WORLD-yaw histories retain every body IMU/bias/RW/injection and raw UWB value within the ONLINE D1/initial/range-support model. Maximum standardized initial coordinate=4.52701024<7; minimum range-support margin=2.35654597>0 across32000 range checks. Q preserves gravity, body angular signals and all motion norms. This is not equality of private simulator recipe signatures, nor proof that the entire2rad numerical error is indistinguishable. It supports heading ambiguity and separates scoring correctness from numerical-prior side effects.
+
+Installed GTSAM source46f3a48a5b1e6b57bc5da5374c74a8f5248b6fec, ISAM2.cpp lines659–681: marginalizeLeaves appends new LinearContainerFactor with nonlinearFactors_.push_back and only then removes old factors, bypassing findUnusedFactorSlots. Safe compaction requires consistent remapping of nonlinear/linear factor graphs, variableIndex, cached tree, frozen slot refs, factorLedger, group_to_slots, removed_factor_slots and boundary prior identities. The current public API provides no verified atomic mapping, and rebuilding changes the numerical state/reference. No library patch or unsafe remap is made. Native slots and provider dataset are honestly O(T); retained proof/replay windows are separately bounded. Observed-alert IDs persist up to the original4096 combined capacity, then fail closed. Physical bias support sums globally born RW coordinates; truncation or healthy-only union would discard lawful paths. Final5000/10000 ON/OFF actual slot/RSS/alert/bias trends are required in W3.
+
+W2 reproduction: `compare --campaign w2`; `paired --campaign w2 --group P3 --case V`; `rotation --campaign w2 --revision rotation-study`; observer prototypes remain separate from the online estimator. The source/clock freeze is saved in the next local Git entry; no push yet.

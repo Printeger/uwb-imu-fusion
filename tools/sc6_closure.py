@@ -339,7 +339,14 @@ def register():
                  protocol=law()['closure'], config_sha=sha(CONFIG), identity=identity(),
                  clock='steady_clock; IMU 5ms and UWB 50ms; source+native+raw+cleanup in core; sink includes queue',
                  phase_definition='Latest commenced IMU episode; bridge > detected active > active > unresolved after end > post rejoin > before. UWB episodes scored separately.',
-                 negative_regressions=CORE_CHECKS))
+                 negative_regressions=CLOSURE_CHECKS,
+                 performance_comparisons=dict(cases=['S0', 'S2', 'D1_G_E'], count=90,
+                     seed=SEEDS[0], fde='on', mode='offline',
+                     profiles=['tight-reference', 'tight-optimized'],
+                     purpose='same-model deterministic semantics and measured computation only; no paced deadline award'),
+                 rotation_experiment=dict(case='S2', seed=SEEDS[0], count=400, mode='paced',
+                     fde=['on', 'off'], metrics=['frozen_boundary', 'polar_prototype'],
+                     purpose='controlled numerical-prior A diagnosis; original noise/raw/fault union; main policy remains frozen_boundary')))
     print('REGISTERED', sha(p), len(matrix()), 'native runs', flush=True)
 
 
@@ -350,6 +357,8 @@ def configured(entry):
     v['rolling_integrity'] = dict(law()['rolling_integrity'],
                                 window_mode='follow_fgo' if lf == li else 'explicit',
                                 explicit_epochs=None if lf == li else li)
+    if entry.get('rotation_metric'):
+        v['closure']['rotation_metric'] = entry['rotation_metric']
     p = CACHE/(label(entry)+'.yaml')
     p.write_text(yaml.safe_dump(v, sort_keys=True))
     return p
@@ -369,7 +378,7 @@ def run(entry):
     trace = CACHE/(name+'.csv')
     log = CACHE/(name+'.log')
     command = [str(BIN/'epoch_raim_runner'), str(config), str(trace), entry['case'],
-               'sc6', entry['fde'], '16' if entry['group'] == 'N' else '0',
+               'sc6', entry['fde'], str(entry.get('count', 16 if entry['group'] == 'N' else 0)),
                entry['profile'], entry['mode'], str(entry['seed']), entry['hook']]
     ident = identity()
     registration = json.loads((CACHE/'registration.json').read_text())
@@ -384,7 +393,7 @@ def run(entry):
     rows = list(csv.DictReader(trace.open())) if trace.exists() else []
     resolved = law(config)
     manifest = resolved['sc6']['cases'].get(entry['case']) or resolved['closure']['additional_cases'][entry['case']]
-    scheduled = 16 if entry['group'] == 'N' else manifest['epochs']
+    scheduled = entry.get('count', 16 if entry['group'] == 'N' else manifest['epochs'])
     verified_rows(rows, resolved['lever'])
     data = dict(entry=entry, identity=ident, command=command, returncode=rc,
                 registration_sha=sha(CACHE/'registration.json'), config_sha=sha(config),
@@ -392,6 +401,10 @@ def run(entry):
                 input_sha=sha(str(trace)+'.input') if entry['hook'] == 'audit' else None,
                 manifest=manifest, **score(rows, manifest, scheduled))
     data['input_counters'] = {key: int(v) for key, v in re.findall(r'(released_imu|enqueued_imu|released_uwb|enqueued_uwb|queue_peak)=(\d+)', log.read_text())}
+    data['cold_start'] = {key: float(v) for key, v in re.findall(r'(initialized_ms|input_audit_ms|ready_ms)=([0-9.]+)', log.read_text())}
+    data['profile_costs'] = {key: stats([value(r, key) for r in rows if committed(r)])
+        for key in ['source_ms', 'prepare_ms', 'candidate_ms', 'proof_ms', 'commit_ms', 'cleanup_ms',
+                    'envelope_cleanup_ms', 'post_sink_score_io_ms']}
     dump(summary, data)
     print('END', name, rc, f"{data['committed']}/{scheduled} committed; {data['timely']} timely",
           'P95', data['timing']['core_ms']['p95'], data['timing']['delivery_ms']['p95'], flush=True)
@@ -440,6 +453,58 @@ def paired_scores():
                           metrics=delta))
     dump(CACHE/'pairs.json', pairs)
     return pairs
+
+
+def compare():
+    registration = json.loads((CACHE/'registration.json').read_text())
+    protocol = registration['performance_comparisons']
+    evidence = []
+    for case in protocol['cases']:
+        results = []
+        for profile in protocol['profiles']:
+            entry = dict(group='Pperf-'+profile, case=case, seed=protocol['seed'], window='30/30',
+                         fde='on', mode='offline', profile=profile, positive=False, hook='audit',
+                         count=protocol['count'])
+            results.append(run(entry))
+        a, b = results
+        assert a['input_sha'] == b['input_sha']
+        assert (CACHE/(label(a['entry'])+'.csv.input')).read_bytes() == (CACHE/(label(b['entry'])+'.csv.input')).read_bytes()
+        ar = list(csv.DictReader((CACHE/(label(a['entry'])+'.csv')).open()))
+        br = list(csv.DictReader((CACHE/(label(b['entry'])+'.csv')).open()))
+        keys = [k for k in ar[0] if not k.endswith('_ms') and k not in ['timely', 'rss']]
+        assert len(ar) == len(br) == protocol['count']
+        for x, y in zip(ar, br):
+            for key in keys:
+                assert x[key] == y[key], (case, x['epoch'], key, x[key], y[key])
+        evidence.append(dict(case=case, count=len(ar), semantic_fields=keys, input_sha=a['input_sha'],
+                             reference_core=a['timing']['core_ms'], optimized_core=b['timing']['core_ms']))
+        print('P exact semantic PASS', case, len(ar), flush=True)
+    dump(CACHE/'performance-comparison.json', evidence)
+
+
+def rotation_comparison():
+    protocol = json.loads((CACHE/'registration.json').read_text())['rotation_experiment']
+    evidence = []
+    for metric in protocol['metrics']:
+        for fde in protocol['fde']:
+            entry = dict(group='A-'+metric, case=protocol['case'], seed=protocol['seed'],
+                         count=protocol['count'], fde=fde, window='30/30', mode=protocol['mode'],
+                         profile='tight-optimized', hook='audit', positive=False, rotation_metric=metric)
+            r = run(entry)
+            original = (CACHE/(label(entry)+'.csv.input')).read_bytes().splitlines(keepends=True)
+            observable = b''.join(x for x in original if x.startswith((b'initial ', b'imu ', b'uwb ')))
+            r['observation_history_sha'] = hashlib.sha256(observable).hexdigest()
+            evidence.append(r)
+    assert len({r['observation_history_sha'] for r in evidence}) == 1
+    # In OFF no restoration metric is used: identical actual state and raw proof.
+    off = [r for r in evidence if r['entry']['fde'] == 'off']
+    a, b = [list(csv.DictReader((CACHE/(label(r['entry'])+'.csv')).open())) for r in off]
+    keys = [k for k in a[0] if not k.endswith('_ms') and k not in ['timely', 'rss']]
+    assert len(a) == len(b) == protocol['count']
+    for x,y in zip(a,b):
+        for key in keys:
+            assert x[key] == y[key], (x['epoch'],key,x[key],y[key])
+    dump(CACHE/'rotation-comparison.json', evidence)
 
 
 def checks(build=False):
@@ -652,13 +717,13 @@ def report(runs, pairs):
 def main():
     global CACHE
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('command', choices=['register', 'paired', 'checks', 'stanford'])
+    p.add_argument('command', choices=['register', 'paired', 'checks', 'stanford', 'compare', 'rotation'])
     p.add_argument('--group', choices=['P0', 'P1', 'P2', 'P3', 'P4', 'N'], default='P0')
     p.add_argument('--build', action='store_true')
-    p.add_argument('--campaign', choices=['w0', 'w1', 'final'], default='w0',
+    p.add_argument('--campaign', choices=['w0', 'w1', 'w2', 'final'], default='w0',
                    help='Keep earlier candidates and failures; never overwrite their frozen traces')
     p.add_argument('--case', help='Run only a case already in the preregistered matrix')
-    p.add_argument('--revision', choices=['endpoint-fixed'], help='Separate evidence for the diagnosed shared-endpoint correction')
+    p.add_argument('--revision', choices=['endpoint-fixed', 'rotation-study'], help='Preserve separate diagnostic candidates and trials')
     a = p.parse_args()
     if a.campaign != 'w0':
         CACHE = CACHE/a.campaign
@@ -679,6 +744,10 @@ def main():
             paired(a.group)
     elif a.command == 'checks':
         checks(a.build)
+    elif a.command == 'compare':
+        compare()
+    elif a.command == 'rotation':
+        rotation_comparison()
     else:
         plots()
 
