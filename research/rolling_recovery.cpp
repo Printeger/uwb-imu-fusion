@@ -85,7 +85,7 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
  if(!monitor.matches(tx) || (!assessment.nominal_possible && !assessment.possible))throw std::runtime_error("RECOVERY_MONITOR_SCOPE_REFUSED");
  std::array<std::optional<EpochRaim>,9> cached;
  auto candidate=[&](int mask){if(!optimized_)return uwbCandidate(tx.uwb_batch,mask,1e-6,1e-9);auto& item=cached[mask+1];if(!item)item=uwbCandidate(tx.uwb_batch,mask,1e-6,1e-9);return *item;};
- auto all=candidate(-1);bool uwb_alarm=all.gaussian.statistic>all.gaussian.threshold;
+ auto all=candidate(-1);bool uwb_alarm=all.gaussian.statistic>all.gaussian.threshold;result.uwb_alarm=uwb_alarm;if(uwb_alarm)result.uwb_alarm_time=Clock::now();
  int detected=-1;
  if(uwb_alarm){double best=INFINITY;for(int mask=0;mask<8;++mask){auto c=candidate(mask);if(c.gaussian.statistic<=c.gaussian.threshold && c.gaussian.statistic<best){best=c.gaussian.statistic;detected=mask;}}}
  if(detected>=0){observed_anchor_=detected;if(!observed_uwb_onset_)observed_uwb_onset_=tx.proposed_epoch;}

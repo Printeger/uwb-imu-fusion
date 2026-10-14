@@ -3,7 +3,7 @@
 #include "bounded_imu_recovery.hpp"
 namespace uwb_imu_pl::research {
 struct RollingFdeAssessment {
- EpochCommitPlan plan;
+ EpochCommitPlan plan;std::chrono::steady_clock::time_point uwb_alarm_time;bool uwb_alarm=false;
  bool current_bridge=false,rejoined=false,boundary_repair=false,history_marginalized=false;
  int excluded=-1,rebuilds=0;
  size_t actions=1,numeric_evaluated=0,reintegrations=0,first_dependency=0;
