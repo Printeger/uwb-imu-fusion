@@ -213,6 +213,14 @@ compile_commands.json
 /sc2-imu-*/
 /sc3-joint-*/
 /sc4-system-*/
-/sc[1-4]*.csv
-/sc[1-4]*.json
-/sc[1-4]*.xml
+/sc5-rolling-*/
+/sc5-open-*/
+/sc[1-5]*.csv
+/sc[1-5]*.json
+/sc[1-5]*.xml
+
+# Open rolling direct-run outputs; default .cache/sc5-open/ is covered above.
+/open-rolling-*/
+/open-rolling*.csv
+/open-rolling*.json
+/open-rolling*.xml
