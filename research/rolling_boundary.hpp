@@ -45,11 +45,11 @@ class RollingIntegrity {
  std::deque<RollingRawMaterial> explicit_;
  double accel_rw_,gyro_rw_,acceleration_,rate_;
  Eigen::Vector3d lever_;
- bool failed_=false,tight_=false;
+ bool failed_=false,tight_=false,optimized_=false;
  public:
  RollingIntegrity(const ResolvedRollingPolicyV1&,const NavigationState&,
   const Eigen::Matrix<double,15,1>&,double ba,double bg,const Eigen::Vector3d&,
-  double acceleration=.04,double rate=.2,bool tight=false);
+  double acceleration=.04,double rate=.2,bool tight=false,bool optimized=false);
  const RollingBoundaryCertificateV1& certificate()const{return certificate_;}
  const RollingSourceEvent& event()const{return event_;}
  size_t explicitSize()const{return explicit_.size();}
@@ -59,6 +59,7 @@ class RollingIntegrity {
   const RawRangeLawEvidence&,const RollingMonitorView&)const;
  RawRangeResult finalize(RollingBoundaryProposalV1&&,const CommitReceipt&,
   const std::vector<gtsam::Key>&,const NavigationState&);
+ Eigen::Vector3d committedTag(const NavigationState&)const;
  void failAfterCommit(){failed_=true;}
 };
 int runSc5Rolling(int,char**);

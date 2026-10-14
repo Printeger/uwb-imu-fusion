@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """SC6 shared native simulation runner and independent post-delivery scorer."""
-import argparse,csv,hashlib,json,subprocess,sys
+import argparse,csv,hashlib,json,subprocess,sys,re
 from pathlib import Path
 import numpy as np
 import yaml
@@ -19,11 +19,12 @@ def stats(values):
     return {} if not len(v) else dict(mean=float(v.mean()),median=float(np.median(v)),p95=float(np.percentile(v,95)),max=float(v.max()),first=float(v[0]),last=float(v[-1]))
 def score(rows,manifest):
     good=[r for r in rows if r['updates']=='1']
-    n=len(rows);result=dict(scheduled=n,native=len(good),finite=0,qualified=0,timely=0,abort=sum(r['status']=='ABORT' for r in rows),unattempted=sum(r['status']=='SOURCE_GAP_OR_ABORT' for r in rows),refused=n-len(good))
+    n=len(rows);result=dict(scheduled=n,native=len(good),finite=0,qualified=0,timely=0,abort=sum(r['status']=='ABORT' for r in rows),unattempted=sum(r['status']=='SOURCE_GAP_OR_ABORT' for r in rows),refused=n-len(good),backend_mutations=sum(int(float(r.get('mutations') or r['updates'])) for r in rows))
+    result['performance_all']={key:stats([float(r[key]) for r in rows if r.get(key) not in [None,'']]) for key in ['core_ms','delivery_ms']}
     if not good:return result
     assert all(None not in r and None not in r.values() for r in good),'malformed complete row'
     result.update(finite=sum(bool(np.isfinite(float(r['ape']))) for r in good),qualified=sum(r['qualified']=='1' for r in good),timely=sum(r['timely']=='1' for r in good),core40_miss=sum(float(r['core_ms'])>40 for r in good),delivery50_miss=sum(float(r['delivery_ms'])>50 for r in good),h_exceed=sum(float(r['hpe'])>float(r['hpl']) for r in good),v_exceed=sum(float(r['vpe'])>float(r['vpl']) for r in good))
-    result['metrics']={k:stats([float(r[k]) for r in good]) for k in ['ape','hpe','vpe','hpl','vpl','velocity_error','rotation_error','accel_bias_error','gyro_bias_error','source_ms','prepare_ms','candidate_ms','proof_ms','commit_ms','cleanup_ms','core_ms','delivery_ms','slots','live','ledger','rss','bias_width','alerts','replay','capsules','q','risk']}
+    result['metrics']={k:stats([float(r[k]) for r in good]) for k in ['ape','hpe','vpe','hpl','vpl','velocity_error','rotation_error','accel_bias_error','gyro_bias_error','source_ms','prepare_ms','candidate_ms','proof_ms','commit_ms','cleanup_ms','core_ms','delivery_ms','width_x','width_y','width_z','vwidth_x','vwidth_y','vwidth_z','rwidth_x','rwidth_y','rwidth_z','slots','live','ledger','rss','bias_width','alerts','replay','capsules','q','risk']}
     result['rmse']={k:float(np.sqrt(np.mean([float(r[k])**2 for r in good]))) for k in ['ape','hpe','vpe','velocity_error','rotation_error','accel_bias_error','gyro_bias_error']}
     # Online body RPE. Only immutable terminal outputs are used; no alignment.
     by_epoch={int(r['epoch']):r for r in good};rpe={}
@@ -68,7 +69,7 @@ def run(case,profile='tight-optimized',fde='on',mode='offline',count=0,seed=2026
     csv_path=CACHE/(label+'.csv');summary_path=CACHE/(label+'.json');log=CACHE/(label+'.log')
     if summary_path.exists():
         old=json.loads(summary_path.read_text())
-        if old['identity']==identity():print('REUSE',label,flush=True);return old
+        if all(old['identity'].get(k)==identity()[k] for k in ['elf','dso','config']):print('REUSE',label,flush=True);return old
         raise RuntimeError('existing result has different identity: '+label)
     config=CONFIG
     if window:
@@ -80,15 +81,37 @@ def run(case,profile='tight-optimized',fde='on',mode='offline',count=0,seed=2026
     rows=list(csv.DictReader(csv_path.open())) if csv_path.exists() else []
     manifest=yaml.safe_load(CONFIG.read_text())['sc6']['cases'][case]
     summary=dict(identity=ident,command=command,case=case,profile=profile,fde=fde,mode=mode,seed=seed,window=window or '30/30',returncode=r.returncode,**score(rows,manifest))
+    logtext=log.read_text();digest=re.search(r'raw_digest=(\d+)',logtext);summary['raw_digest']=digest.group(1) if digest else None;summary['input_counters']={key:int(value) for key,value in re.findall(r'(released_imu|enqueued_imu|released_uwb|enqueued_uwb|queue_peak)=(\d+)',logtext)}
     summary['planned']=count or manifest['epochs'];summary['never_emitted']=summary['planned']-len(rows)
     summary_path.write_text(json.dumps(summary,indent=2));print('SC6 RESULT',label,json.dumps({k:v for k,v in summary.items() if k not in ['metrics','command','identity','rpe','stage_rmse']}),flush=True)
     if r.returncode:print(log.read_text()[-2000:],flush=True)
     return summary
 
+def final(group):
+    freeze=CACHE/'freeze.json'
+    if not freeze.exists():raise RuntimeError('W3 freeze is required')
+    expected=json.loads(freeze.read_text());actual=identity()
+    if any(expected[k]!=actual[k] for k in ['elf','dso','config']):raise RuntimeError('frozen executable/config changed')
+    if group=='long':
+        for case in ['L0','L1']:run(case,mode='paced',label='final-'+case)
+        return
+    for case in ['S0','S1','S2']:run(case,'baseline-adapter',label='final-baseline-'+case)
+    run('S1','baseline-adapter',fde='off',label='final-baseline-S1-off')
+    for case in ['S0','S1','S2']:
+        run(case,mode='paced',label='final-'+case)
+        run(case,fde='off',label='final-'+case+'-off')
+    run('S3',mode='paced',label='final-S3')
+    for case in [*[f'F{i}' for i in range(6)],'W0','W1','W2']:run(case,mode='paced',label='final-'+case)
+    for window in ['20/20','40/40','30/10']:run('V',mode='paced',window=window,label='final-V-'+window.replace('/','-'))
+    run('S0',mode='paced',seed=20261011,label='final-C1')
+    run('S2',mode='paced',seed=20261011,label='final-C2')
+
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=['run','check','evaluate']);p.add_argument('--case',default='S0');p.add_argument('--profile',default='tight-optimized');p.add_argument('--fde',default='on');p.add_argument('--mode',default='offline');p.add_argument('--epochs',type=int,default=0);p.add_argument('--seed',type=int,default=20261010);p.add_argument('--window');p.add_argument('--label');p.add_argument('--build',action='store_true');p.add_argument('--shadow',action='store_true');a=p.parse_args();CACHE.mkdir(parents=True,exist_ok=True)
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=['run','check','evaluate','final','freeze']);p.add_argument('--group',choices=['short','long'],default='short');p.add_argument('--case',default='S0');p.add_argument('--profile',default='tight-optimized');p.add_argument('--fde',default='on');p.add_argument('--mode',default='offline');p.add_argument('--epochs',type=int,default=0);p.add_argument('--seed',type=int,default=20261010);p.add_argument('--window');p.add_argument('--label');p.add_argument('--build',action='store_true');p.add_argument('--shadow',action='store_true');a=p.parse_args();CACHE.mkdir(parents=True,exist_ok=True)
     if a.build:subprocess.run(['cmake','--build',str(BUILD),'--target','epoch_raim_runner','open_rolling_checks','-j2'],cwd=ROOT,env=environment(),check=True)
     if a.command=='run':run(a.case,a.profile,a.fde,a.mode,a.epochs,a.seed,a.window,a.label,a.shadow)
+    elif a.command=='freeze':(CACHE/'freeze.json').write_text(json.dumps(identity(),indent=2))
+    elif a.command=='final':final(a.group)
     elif a.command=='check':subprocess.run([str(BIN/'open_rolling_checks')],cwd=ROOT,env=environment(),check=True)
     else:
         for path in sorted(CACHE.glob('*.json')):

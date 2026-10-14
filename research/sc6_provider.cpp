@@ -15,8 +15,9 @@ NavigationState Sc6Provider::truth(int index,bool uwb_time)const{
  if(!biases_.empty()){s.accel_bias_mps2=biases_.at(index).head<3>();s.gyro_bias_radps=biases_.at(index).tail<3>();}return s;
 }
 Sc6Provider::Sc6Provider(const std::string& path,const std::string& id,int seed,int count):law(researchLaw(path)),cfg(IntegrityConfigLoader::load(law["imu_base_config"].as<std::string>())){
+ if(law["source_law_id"].as<std::string>()!="raw-source-rw-v1" || law["initial_observation_law"].as<std::string>()!="independent-tangent-gaussian-v1" || law["bias_process"].as<std::string>()!="sample-grid-gaussian-rw" || law["sc6"]["version"].as<std::string>()!="sc6-motion-v1")throw std::invalid_argument("SC6_SOURCE_LAW_MIX");
  manifest=law["sc6"]["cases"][id];if(!manifest)throw std::invalid_argument("SC6_CASE_UNKNOWN");
- epochs=count?count:manifest["epochs"].as<int>();recipe_.kind=std::stoi(manifest["motion"].as<std::string>().substr(1));domain=sc6Domain(recipe_);lever=researchVector(law["lever"]);
+ epochs=count?count:manifest["epochs"].as<int>();recipe_.kind=std::stoi(manifest["motion"].as<std::string>().substr(1));domain=sc6Domain(recipe_);auto frozen=law["sc6"]["domains"][domain.id];if(frozen["acceleration"].as<double>()!=domain.acceleration || frozen["angular_rate"].as<double>()!=domain.rate || frozen["jerk"].as<double>()!=domain.jerk || frozen["angular_acceleration"].as<double>()!=domain.alpha)throw std::invalid_argument("SC6_DOMAIN_VERSION_MISMATCH");lever=researchVector(law["lever"]);
  cfg.incremental.fixed_lag_epochs=law["fixed_lag_epochs"].as<int>();cfg.integrity_window.epochs=law["window_epochs"].as<int>();cfg.realtime.range_sigma_m=law["range_sigma_m"].as<double>();
  // The same frozen domain is consumed by the real bridge factory.
  if(recipe_.kind){cfg.bridge.generic.acceleration_bound_mps2=domain.acceleration;cfg.bridge.generic.angular_rate_bound_radps=domain.rate;cfg.bridge.generic.angular_acceleration_bound_radps2=domain.alpha;cfg.bridge.generic.calibration_id="sc6-D1-simulation-motion-v1";}

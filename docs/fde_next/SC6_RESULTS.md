@@ -138,3 +138,54 @@ ON/OFF and baseline comparisons belong to the mandatory frozen W4 matrix.
 Native accuracy, D1 gyro detectability and recovered baseline compatibility
 remain explicit OPEN. One same-ELF old-entry B1 comparison confirmed the
 recovered state difference (max1.686); no production DSO changed (SHA equal).
+
+## Realtime/resource implementation and W3 verification
+
+The W1 recovered compatibility gap was an adapter configuration bug: policy
+resolved the integrity window in a config copy, but backend received the
+unresolved provider config. W3 passes the same resolved config to the backend.
+B1 now differs from W0 by at most5.399e-8 across state and PL components
+(existing candidate GN stopping tolerances1e-7 unchanged), preserves400/400,
+repairs61/321 and rejoins80–83/340–343. The earlier1.686 difference was not
+an acceptable performance equivalence; those debug rows are retained.
+
+P optimizations: cache directed shell/geometry constants within a branch,
+stop scans only at an exactly unchanged complete-pass interval fixed point,
+memoize the same nine functional candidates within a transaction, and keep
+only IDs/version needed by postcommit ledger checks instead of deep-copying
+all historical transaction factors. No slot remap, record erasure, fault/risk
+reset, extra commit or mathematical iteration tolerance was introduced.
+Original default paths keep these optimizations disabled. Omitting invalid
+fault rows from constant preparation preserves their branch semantics.
+
+Two same-input90-epoch P pairs PASS exact state/action/PL/risk/source/ledger
+and raw-digest equality: S0 median core51.4368→16.5313ms; S2 (real joint repair)
+52.7797→18.2749ms. Optimized core40/delivery50 misses0/0 in each90; reference
+misses68/62 and69/62. These offline service pairs are not the paced acceptance.
+Native receipts180/180 per profile; no abort. Source, cleanup and payload are
+counted; GT/scoring and diagnostic CSV are after delivery.
+
+Independent producer releases every5ms, and UWB availability every50ms;
+actual released/enqueued counts, queue peak, measurement/release/enqueue/
+ready/start/alarm/selected/commit/proof/sink clocks are recorded. Sink snapshots
+payload then gates global stamp/version/receipt, measures through the completed
+gate, and invalidates late/gap/duplicate protection. The tag is produced by
+the identical function used in the proof center. Refusal rows retain actual
+backend mutation counts and total failure-path timing; unavailable state is
+NaN, never filled from a stale output. Causal source numerical validation stays
+inside service, not in producer precomputation.
+
+Receiver unit tests PASS timeout then source-continuous next receipt,
+duplicate/gap/stamp refusal. Real paced negatives each16 scheduled:
+cancel3 has2 commits+14 refusals,160/160 IMU and16/16 UWB enqueued;
+worker600ms delay3 causes queue peak80 and true overflow:160 released/110
+enqueued IMU,16 released/11 enqueued UWB,3 commits+13 refusals. Every epoch≥3
+has protected/timely=0; stale deliveries0. One verifier initially parsed a
+refusal integer encoded as decimal and failed; parser fixed without changing
+native measurements, state or proof; the existing cancel rows were rescored.
+
+Resource optimization is a reduced transient transaction copy, not an iSAM2
+compaction. GTSAM tombstones and retained observed-alert records still grow;
+record capacity4096 refuses safely. Active states/window/replay/capsules stay
+bounded; total memory and bias/q/PL are not claimed uniformly bounded.
+Frozen long streams will quantify the actual finite-duration resource limit.

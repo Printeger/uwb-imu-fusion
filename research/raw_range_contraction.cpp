@@ -38,14 +38,16 @@ void bounds(RawRangeResult& r,const Eigen::Vector3d& actual){
  r.hpl=sqrt(square(I(r.pl.x()))+square(I(r.pl.y()))).upper();
 }
 // Every update is a necessary condition; interval dependency only weakens it.
-bool propagate(Box& box,const UwbBatch& b,const std::array<RawRangeShell,8>& shells,int omitted,unsigned passes,bool tight_shell){
+bool propagate(Box& box,const UwbBatch& b,const std::array<RawRangeShell,8>& shells,int omitted,unsigned passes,bool tight_shell,bool optimized){
  int ref=omitted==0?1:0;
  for(size_t i=0;i<8;++i)if(int(i)!=omitted && shells[i].high<shells[i].low)return false;
- for(unsigned pass=0;pass<passes;++pass){
+ std::array<I,8> shell_squared,upper_squared,linear_rhs;std::array<std::array<I,3>,8> coefficients;
+ if(optimized)for(int i=0;i<8;++i){if(i==omitted)continue;shell_squared[i]=square(I(shells[i].low,shells[i].high));upper_squared[i]=square(I(shells[i].high));const auto& a=b.measurements[i].anchor_position_m;const auto& a0=b.measurements[ref].anchor_position_m;for(int j=0;j<3;++j)coefficients[i][j]=2.*(I(a(j))-I(a0(j)));linear_rhs[i]=squaredNorm(a)-squaredNorm(a0)+square(I(shells[ref].low,shells[ref].high))-square(I(shells[i].low,shells[i].high));}
+ for(unsigned pass=0;pass<passes;++pass){Box previous=box;
   for(size_t i=0;i<8;++i)if(int(i)!=omitted){
    const auto& a=b.measurements[i].anchor_position_m;
    I distance2(0);for(int j=0;j<3;++j)distance2+=square(box[j]-I(a(j)));
-   I shell2=square(I(shells[i].low,shells[i].high));
+   I shell2=optimized?shell_squared[i]:square(I(shells[i].low,shells[i].high));
    checkFinite(distance2);checkFinite(shell2);
    if(distance2.lower()>shell2.upper() || distance2.upper()<shell2.lower())return false;
    // Upper shell gives each coordinate |p_j-a_j| <= u. No sign
@@ -54,20 +56,21 @@ bool propagate(Box& box,const UwbBatch& b,const std::array<RawRangeShell,8>& she
    if(tight_shell)for(int j=0;j<3;++j){
     // Sum of other squared distances is a necessary nonnegative quantity.
     I rest(0);for(int k=0;k<3;++k)if(k!=j)rest+=square(box[k]-I(a(k)));
-    I cap=square(I(shells[i].high))-I(rest.lower());if(cap.upper()<0)return false;
+    I cap=(optimized?upper_squared[i]:square(I(shells[i].high)))-I(rest.lower());if(cap.upper()<0)return false;
     double radius=sqrt(I(0,std::max(0.,cap.upper()))).upper();
     if(!intersect(box[j],I(a(j))+I(-radius,radius)))return false;
    }
    if(int(i)==ref)continue;
    const auto& a0=b.measurements[ref].anchor_position_m;
-   std::array<I,3> c;for(int j=0;j<3;++j)c[j]=2.*(I(a(j))-I(a0(j)));
-   I rhs=squaredNorm(a)-squaredNorm(a0)+square(I(shells[ref].low,shells[ref].high))-square(I(shells[i].low,shells[i].high));
+   std::array<I,3> c;if(optimized)c=coefficients[i];else for(int j=0;j<3;++j)c[j]=2.*(I(a(j))-I(a0(j)));
+   I rhs=optimized?linear_rhs[i]:squaredNorm(a)-squaredNorm(a0)+square(I(shells[ref].low,shells[ref].high))-square(I(shells[i].low,shells[i].high));
    checkFinite(rhs);for(auto coefficient:c)checkFinite(coefficient);
    for(int j=0;j<3;++j){if(c[j].lower()<=0 && c[j].upper()>=0)continue;
     I remainder=rhs;for(int k=0;k<3;++k)if(k!=j)remainder-=c[k]*box[k];
     if(!intersect(box[j],remainder/c[j]))return false;
    }
   }
+  if(optimized){bool unchanged=true;for(int j=0;j<3;++j)unchanged&=previous[j].lower()==box[j].lower() && previous[j].upper()==box[j].upper();if(unchanged)break;}
  }
  return true;
 }
@@ -92,7 +95,7 @@ RawRangeResult contractRawRangeBox(const Eigen::Vector3d& low,const Eigen::Vecto
     r.peak_boxes=std::max(r.peak_boxes,queue.size());
     if(r.visited>=budget.max_boxes){r.budget_exhausted=true;r.frontier+=queue.size();for(const auto& item:queue)retain(item.first);queue.clear();break;}
     auto item=queue.front();queue.pop_front();++r.visited;
-    if(!propagate(item.first,batch,shells,omitted,budget.passes,budget.tight_shell))continue;
+    if(!propagate(item.first,batch,shells,omitted,budget.passes,budget.tight_shell,budget.optimized))continue;
     if(!finiteBox(item.first))throw std::runtime_error("nonfinite interval arithmetic");
     int axis=0;for(int j=1;j<3;++j)if(item.first[j].upper()-item.first[j].lower()>item.first[axis].upper()-item.first[axis].lower())axis=j;
     double mid=item.first[axis].lower()/2+item.first[axis].upper()/2;

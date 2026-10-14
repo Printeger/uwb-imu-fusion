@@ -59,7 +59,7 @@ PendingFactorGroup metric(const RollingRawState& raw,const IntegrityConfig& conf
 }
 void seed(const gtsam::Values& values,size_t e,NavigationState& s){auto p=values.at<gtsam::Pose3>(gtsam::Symbol('x',e));auto b=values.at<gtsam::imuBias::ConstantBias>(gtsam::Symbol('b',e));s.position_world_m=p.translation();s.q_world_body=Eigen::Quaterniond(p.rotation().matrix());s.velocity_world_mps=values.at<gtsam::Vector3>(gtsam::Symbol('v',e));s.accel_bias_mps2=b.accelerometer();s.gyro_bias_radps=b.gyroscope();}
 }
-RollingRecovery::RollingRecovery(const NavigationState& s,const ResolvedRollingPolicyV1& p,bool stable_rotation):policy_(p),stable_rotation_(stable_rotation){bias_observation_.head<3>()=s.accel_bias_mps2;bias_observation_.tail<3>()=s.gyro_bias_radps;}
+RollingRecovery::RollingRecovery(const NavigationState& s,const ResolvedRollingPolicyV1& p,bool stable_rotation,bool optimized):policy_(p),stable_rotation_(stable_rotation),optimized_(optimized){bias_observation_.head<3>()=s.accel_bias_mps2;bias_observation_.tail<3>()=s.gyro_bias_radps;}
 RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Sc2ImuMonitor& monitor,
  const std::deque<ImuMeasurement>& replay,const std::deque<RollingRawState>& capsules,
  const IntegrityConfig& config,bool fde){
@@ -83,9 +83,11 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
  }
  if(policy_.open && open_pending_)assessment.alarm=true;
  if(!monitor.matches(tx) || (!assessment.nominal_possible && !assessment.possible))throw std::runtime_error("RECOVERY_MONITOR_SCOPE_REFUSED");
- auto all=uwbCandidate(tx.uwb_batch,-1,1e-6,1e-9);bool uwb_alarm=all.gaussian.statistic>all.gaussian.threshold;
+ std::array<std::optional<EpochRaim>,9> cached;
+ auto candidate=[&](int mask){if(!optimized_)return uwbCandidate(tx.uwb_batch,mask,1e-6,1e-9);auto& item=cached[mask+1];if(!item)item=uwbCandidate(tx.uwb_batch,mask,1e-6,1e-9);return *item;};
+ auto all=candidate(-1);bool uwb_alarm=all.gaussian.statistic>all.gaussian.threshold;
  int detected=-1;
- if(uwb_alarm){double best=INFINITY;for(int mask=0;mask<8;++mask){auto c=uwbCandidate(tx.uwb_batch,mask,1e-6,1e-9);if(c.gaussian.statistic<=c.gaussian.threshold && c.gaussian.statistic<best){best=c.gaussian.statistic;detected=mask;}}}
+ if(uwb_alarm){double best=INFINITY;for(int mask=0;mask<8;++mask){auto c=candidate(mask);if(c.gaussian.statistic<=c.gaussian.threshold && c.gaussian.statistic<best){best=c.gaussian.statistic;detected=mask;}}}
  if(detected>=0){observed_anchor_=detected;if(!observed_uwb_onset_)observed_uwb_onset_=tx.proposed_epoch;}
  if(!fde){result.status=assessment.alarm || uwb_alarm?"DETECTION_HELD":"KEEP";result.recovery="FDE_DISABLED";return result;}
  if(policy_.open && history_unavailable_){result.status="RECOVERY_OUT_OF_BUFFER";result.recovery="BOUND_VALID_BUT_RECOVERY_UNAVAILABLE";return result;}
@@ -112,7 +114,7 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
  // keeps all task branches independently of this data-driven action selection.
  size_t best_card=100;double best_stat=INFINITY;int selected=-2;
  for(int mask=-1;mask<8;++mask)for(int imu=0;imu<2;++imu){
-  auto post=uwbCandidate(tx.uwb_batch,mask,1e-6,1e-9);
+  auto post=candidate(mask);
   bool eligible=post.gaussian.statistic<=post.gaussian.threshold && bool(imu)==bridge;
   if(held && mask!=held_anchor_)eligible=false;
   if(historical_range && mask!=observed_anchor_)eligible=false;

@@ -1,5 +1,6 @@
 #include "sc6_service.hpp"
 #include "sc6_bias_prototype.hpp"
+#include "sc6_delivery.hpp"
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #include <iostream>
 using namespace uwb_imu_pl;using namespace uwb_imu_pl::research;
@@ -15,6 +16,7 @@ int main(){try{
  Sc6Service a(input.law,input.cfg,input.initial,input.lever,input.domain,input.imu[0]),b(input.law,input.cfg,input.initial,input.lever,input.domain,input.imu[0]);
  auto first=a.step(envelope,true);input.imu.back().specific_force_mps2.setConstant(999);input.uwb.back().measurements[0].range_m=999;auto second=b.step(envelope,true);
  require(first.state.position_world_m==second.state.position_world_m && first.state.accel_bias_mps2==second.state.accel_bias_mps2 && first.bound.hpl==second.bound.hpl && first.action.excluded==second.action.excluded,"future noninterference failed");
+ Sc6Delivery sink;require(!sink.accept(1,0,2,true,1),"bad stamp delivered");require(!sink.accept(1,50000000,2,true,50.1),"late delivered");require(!sink.currentProtected(),"late protection retained");require(sink.accept(2,100000000,3,true,1),"source continuity lost after timeout");require(!sink.accept(2,100000000,3,true,1),"duplicate receipt delivered");sink.sourceGap();require(!sink.accept(3,150000000,4,true,1),"gap delivered stale protection");
  using I=RollingInterval;RollingRawState prev,next;next.epoch=1;for(int j=0;j<3;++j){prev.p[j]=I(0);prev.v[j]=I(0);next.p[j]=I(-.00125,.00125);next.v[j]=I(0);}require(rollingContractCoupledDynamics(prev,next,1),"coupled positive empty");Q extremum=Q(1)/1600;require(Q(next.p[0].lower())<=-extremum && extremum<=Q(next.p[0].upper()) && next.p[0].upper()<.00125,"bang-bang extremum or contraction lost");
  auto healthy=sc6BiasConstraint(I(0),I(.5),I(2),1,I(3),I(-.1,.1),I(-10,10),I(-.01,.01),I(0));require(healthy.feasible && healthy.bias.lower()<=1.9 && healthy.bias.upper()>=2.1 && healthy.bias.upper()-healthy.bias.lower()<.21,"bias informative prototype");
  auto ambiguous=sc6BiasConstraint(I(0),I(.5),I(2),1,I(3),I(0),I(-10,10),I(0),I(-INFINITY,INFINITY));require(ambiguous.feasible && ambiguous.bias.lower()<=1 && ambiguous.bias.upper()>=2,"fault-bias cancellation dropped solution");
