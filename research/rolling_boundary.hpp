@@ -3,6 +3,7 @@
 #include "rolling_raw.hpp"
 #include "rolling_event.hpp"
 #include "sc2_imu_scope.hpp"
+#include "rolling_monitor.hpp"
 #include <deque>
 namespace uwb_imu_pl::research {
 struct RollingRawMaterial {
@@ -54,6 +55,8 @@ class RollingIntegrity {
  size_t explicitSize()const{return explicit_.size();}
  RollingBoundaryProposalV1 propose(const EpochTransaction&,const EpochCommitPlan&,
   const RawRangeLawEvidence&,const Sc2ImuMonitor&)const;
+ RollingBoundaryProposalV1 propose(const EpochTransaction&,const EpochCommitPlan&,
+  const RawRangeLawEvidence&,const RollingMonitorView&)const;
  RawRangeResult finalize(RollingBoundaryProposalV1&&,const CommitReceipt&,
   const std::vector<gtsam::Key>&,const NavigationState&);
  void failAfterCommit(){failed_=true;}

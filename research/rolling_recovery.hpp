@@ -20,9 +20,14 @@ class RollingRecovery {
  TimestampNs quarantine_begin_,quarantine_end_;
  int held_anchor_=-1,held_until_=0,observed_anchor_=-1;
  size_t observed_uwb_onset_=0;
+ uint64_t alert_generation_=0;
+ bool open_pending_=false,history_unavailable_=false;
  public:
  RollingRecovery(const NavigationState&,const ResolvedRollingPolicyV1&);
  RollingFdeAssessment prepare(EpochTransaction&,const Sc2ImuMonitor&,
+   const std::deque<ImuMeasurement>&,const std::deque<RollingRawState>&,
+   const IntegrityConfig&,bool fde);
+ RollingFdeAssessment prepare(EpochTransaction&,const RollingMonitorView&,
    const std::deque<ImuMeasurement>&,const std::deque<RollingRawState>&,
    const IntegrityConfig&,bool fde);
  void committed(const RollingFdeAssessment&,const EpochTransaction&,const CommitReceipt&,

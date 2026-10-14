@@ -559,3 +559,7 @@ set_source_files_properties(research/sc5_rolling.cpp PROPERTIES COMPILE_OPTIONS 
 add_executable(time_uniform_event_checks EXCLUDE_FROM_ALL research/time_uniform_event_checks.cpp)
 target_link_libraries(time_uniform_event_checks gtsam)
 set_source_files_properties(research/time_uniform_event_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+target_sources(fde_research PRIVATE research/open_fault_pool.cpp research/open_rolling.cpp)
+set_source_files_properties(research/open_fault_pool.cpp research/open_rolling.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+add_executable(open_rolling_checks EXCLUDE_FROM_ALL research/open_rolling_checks.cpp)
+target_link_libraries(open_rolling_checks fde_research)

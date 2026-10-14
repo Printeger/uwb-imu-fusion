@@ -63,10 +63,11 @@ struct NoisyMotionScenario {
   s.q_world_body=Eigen::Quaterniond(Eigen::AngleAxisd(rate*t,Eigen::Vector3d(1,2,3).normalized()));
   if(!true_bias.empty()){size_t i=size_t(std::llround(t/.005));if(i>=true_bias.size())throw std::runtime_error("bias truth outside registered sample grid");s.accel_bias_mps2=true_bias[i].head<3>();s.gyro_bias_radps=true_bias[i].tail<3>();}return s;
  }
- NoisyMotionScenario(const std::string& path,const std::string& kind,int seed,int count,bool unprotected_continuation=false):law(researchLaw(path)),cfg(IntegrityConfigLoader::load(law[(kind=="I1" || kind=="I2" || kind=="screen" || kind.rfind("SC2_",0)==0 || kind.rfind("SC3_",0)==0)?"imu_base_config":"base_config"].as<std::string>())){
+ NoisyMotionScenario(const std::string& path,const std::string& kind,int seed,int count,bool unprotected_continuation=false):law(researchLaw(path)),cfg(IntegrityConfigLoader::load(law[(kind=="I1" || kind=="I2" || kind=="screen" || kind.rfind("SC2_",0)==0 || kind.rfind("SC3_",0)==0 || kind.rfind("OE_",0)==0)?"imu_base_config":"base_config"].as<std::string>())){
   epochs=count?count:law["epochs"].as<int>();dt=law["epoch_s"].as<double>();rate=law["angular_rate_radps"].as<double>();
   const bool rolling=law["rolling_integrity"] && law["rolling_integrity"]["enabled"].as<bool>();
-  const int declared=rolling?law["rolling_integrity"]["mission_epochs"].as<int>():law["epochs"].as<int>();
+  const bool open=rolling && law["rolling_integrity"]["risk_mode"].as<std::string>()=="time_uniform_blocks";
+  const int declared=open?std::numeric_limits<int>::max()-1:rolling?law["rolling_integrity"]["mission_epochs"].as<int>():law["epochs"].as<int>();
   if(dt!=.05 || law["imu_sample_s"].as<double>()!=.005 || epochs<1 || (epochs>declared && (!unprotected_continuation || epochs>(rolling?declared+1:120))))throw std::runtime_error("unsupported timestamp/horizon contract");
   lever=researchVector(law["lever"]);amp=researchVector(law["translation_amplitude"]);freq=researchVector(law["translation_frequency"]);
   cfg.incremental.fixed_lag_epochs=law["fixed_lag_epochs"].as<int>();cfg.integrity_window.epochs=law["window_epochs"].as<int>();
@@ -108,6 +109,16 @@ struct NoisyMotionScenario {
    if(kind.rfind("SC2_",0)==0 || kind=="SC3_A" || kind=="SC3_G" || kind=="SC3_IA" || kind=="SC3_IG" || kind=="SC3_STAGGERED"){int onset=law["sc2_witness_onset_epoch"].as<int>();long long begin=(onset-1)*50000000LL+5000000LL;long long end=begin+(kind=="SC2_S"?50:law["sc2_witness_duration_ms"].as<int>())*1000000LL;
     if(m.timestamp.value()>=begin && m.timestamp.value()<end){int axis=(kind=="SC2_G" || kind=="SC3_G" || kind=="SC3_IG")?law["sc2_gyro_witness_axis"].as<int>():law["sc2_accel_witness_axis"].as<int>();double amplitude=(kind=="SC2_G" || kind=="SC3_G" || kind=="SC3_IG")?law["sc2_gyro_witness_amplitude_radps"].as<double>():kind=="SC2_S"?law["sc2_short_witness_amplitude_mps2"].as<double>():law["sc2_accel_witness_amplitude_mps2"].as<double>();fault(axis)=amplitude;if(axis<3)m.specific_force_mps2(axis)+=amplitude;else m.angular_velocity_radps(axis-3)+=amplitude;}
    }
+   if(open && kind.rfind("OE_",0)==0 && kind!="OE_HEALTHY"){
+    const int second=kind=="OE_MIXED"?321:261;
+    for(int onset:{61,second}){long long begin=(onset-1)*50000000LL+5000000LL;
+     if(m.timestamp.value()>=begin && m.timestamp.value()<begin+500000000LL){
+      int axis=kind=="OE_MIXED" && onset==61?0:3;double value=axis==0?law["sc2_accel_witness_amplitude_mps2"].as<double>():law["sc2_gyro_witness_amplitude_radps"].as<double>();
+      fault(axis)+=value;if(axis<3)m.specific_force_mps2(axis)+=value;else m.angular_velocity_radps(axis-3)+=value;
+      if(kind=="OE_OUTSIDE"){fault(0)+=law["sc2_accel_witness_amplitude_mps2"].as<double>();m.specific_force_mps2.x()+=law["sc2_accel_witness_amplitude_mps2"].as<double>();}
+     }
+    }
+   }
    additive_imu_fault.push_back(fault);
    imu.push_back(m);
   }
@@ -118,7 +129,7 @@ struct NoisyMotionScenario {
   if(rolling){cert_imu.resize(1);cert_adc.resize(1);cert_rw.clear();cert_fault.resize(1);cert_bias.resize(1);}
   else if(unprotected_continuation && epochs>50){cert_imu.resize(501);cert_adc.resize(501);cert_rw.resize(500);cert_fault.resize(501);cert_bias.resize(501);}
   if(physical_source_reference)numeric_certificate=certifyRawGenerator(initial_observation,initial_normals,cfg.realtime.prior_sigmas,amp,freq,rate,cfg.imu.gravity_mps2,true_bias.front(),cfg.imu.accelerometer_bias_rw_sigma,cfg.imu.gyroscope_bias_rw_sigma,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),cert_rw,cert_adc,cert_imu);
-  if(physical_source_reference && (kind.rfind("SC2_",0)==0 || kind.rfind("SC3_",0)==0))imu_fault_numeric_certificate=certifyRawGenerator(initial_observation,initial_normals,cfg.realtime.prior_sigmas,amp,freq,rate,cfg.imu.gravity_mps2,true_bias.front(),cfg.imu.accelerometer_bias_rw_sigma,cfg.imu.gyroscope_bias_rw_sigma,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),cert_rw,cert_adc,cert_imu,&cert_fault,&cert_bias);
+  if(physical_source_reference && (kind.rfind("SC2_",0)==0 || kind.rfind("SC3_",0)==0 || open))imu_fault_numeric_certificate=certifyRawGenerator(initial_observation,initial_normals,cfg.realtime.prior_sigmas,amp,freq,rate,cfg.imu.gravity_mps2,true_bias.front(),cfg.imu.accelerometer_bias_rw_sigma,cfg.imu.gyroscope_bias_rw_sigma,law["raw_accel_sigma_mps2"].as<double>(),law["raw_gyro_sigma_radps"].as<double>(),cert_rw,cert_adc,cert_imu,&cert_fault,&cert_bias);
   else imu_fault_numeric_certificate=numeric_certificate;
   if(rolling){
    causal_imu_certificates.push_back(imu_fault_numeric_certificate);
@@ -141,6 +152,7 @@ struct NoisyMotionScenario {
     if(e>=onset && e<onset+duration){size_t index=law["sc3_uwb_witness_anchor_index"].as<int>();faults[index]=law["sc3_uwb_witness_amplitude_m"].as<double>();b.measurements.at(index).range_m+=faults[index];}
    }
    if(kind=="H1" && e==3){faults[0]=.02;b.measurements[0].range_m+=.02;}
+   if(open && kind.rfind("OE_",0)==0 && kind!="OE_HEALTHY"){int second=kind=="OE_MIXED"?321:261;for(int onset:{61,second})if(e>=onset && e<onset+3){faults[0]+=law["sc3_uwb_witness_amplitude_m"].as<double>();b.measurements[0].range_m+=law["sc3_uwb_witness_amplitude_m"].as<double>();}}
    uwb.push_back(b);
    if(physical_source_reference){
     if(rolling){RawRangeLawEvidence certificate;try{certificate=certifyRawRanges(b,amp,freq,rate,lever,range_draws,faults);}catch(const std::exception&){certificate.valid=false;}range_certificates.push_back(std::move(certificate));}

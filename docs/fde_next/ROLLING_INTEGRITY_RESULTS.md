@@ -427,3 +427,17 @@ q0/200/1000=7/8/9. q has no ceiling; representation failures refuse rather
 than restart or truncate. First compilation failed on a multiprecision
 conditional expression type; explicit assignment repaired it,0 native epochs.
 Risk accounting alone is not upstream/time-uniform rolling qualification.
+
+Goal02 integration local result:360/360 actual native commits/raw issues in
+OE_MIXED. Actual prior replacements61 and321 (UA then UG), full support
+bridging followed by actual CombinedIMU80–83 and340–343. Global event,
+source prefix21+128k, parentk−1, increasing risk, finite navigation values
+and PE inside PL all verified. No x0 after30. Replay≤601 samples,
+capsules≤61, proof batches≤29. At321 q=9 and H/V5.05853/8.36961m;
+sampling risk upper9.98447e-7, not a renewed task. Max full service62.2368ms;
+performance remains OPEN. Extended raw source numeric mapping uses directed
+Machin π/phase reduction and Rodrigues at long times, not future max errors.
+One compile attempt failed for unsupported Timestamp comparison operators;
+strict comparisons repaired it before native playback. Native local360 has
+no abort or hidden refusal. Open automaton/queue/mode/identity tests and SC5
+boundary/math regressions PASS. Long matrix and final audit still pending.

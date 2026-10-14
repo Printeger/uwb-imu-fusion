@@ -37,6 +37,24 @@ std::pair<M,M> expAndV(const V& phi){
 I sine(I x){I value(0),power=x,factorial(1);for(int k=1;k<=49;++k){if(k>1){power*=x;factorial*=double(k);}if(k%2==1)value+=(k%4==1?power:-power)/factorial;}
  I rem=abs(power*x)/(factorial*50.);return value+I(-rem.upper(),rem.upper());
 }
+I piEnclosure(){
+ auto atanSeries=[](I x){I sum(0),power=x;for(int k=0;k<48;++k){sum+=(k%2?-power:power)/double(2*k+1);power*=square(x);}return sum+I(0,(abs(power)/97.).upper());};
+ return 16.*atanSeries(I(1)/5.)-4.*atanSeries(I(1)/239.);
+}
+I reducedSine(I x){
+ I pi=piEnclosure();double middle=x.lower()/2+x.upper()/2;
+ double turns=std::nearbyint(middle/(2.*(pi.lower()/2+pi.upper()/2)));
+ if(!std::isfinite(turns) || std::abs(turns)>9007199254740992.)throw std::runtime_error("SOURCE_PHASE_UNREPRESENTABLE");
+ I reduced=x-turns*2.*pi;
+ return sine(reduced);
+}
+M rotationExp(const V& angle){
+ I t=norm(angle);if(t.lower()<=.01)return expAndV(angle).first;
+ M a{{{I(0),-angle[2],angle[1]},{angle[2],I(0),-angle[0]},{-angle[1],angle[0],I(0)}}};
+ M a2=product(a,a),r=identity();I sinc=reducedSine(t)/t;
+ I c=(1.-reducedSine(t+piEnclosure()/2.))/square(t);
+ for(int j=0;j<3;++j)for(int k=0;k<3;++k)r[j][k]+=sinc*a[j][k]+c*a2[j][k];return r;
+}
 
 }
 // Independent directed Taylor evaluation of the source-to-input mapping.
@@ -56,8 +74,8 @@ RawInputRoundoff certifyRawGenerator(const NavigationState& obs,const Eigen::Mat
  }
  std::array<I,6> bias;for(int j=0;j<6;++j)bias[j]=I(initialBias(j))+I(-carried_bias_roundoff,carried_bias_roundoff);I dt=I(1)/200.;I axisnorm=sqrt(I(14));
  for(size_t i=0;i<samples.size();++i){I t=double(sample_offset+i)*dt;V angle,acc;
-  for(int j=0;j<3;++j){angle[j]=I(rate)*t*double(j+1)/axisnorm;acc[j]=-I(amp(j))*square(I(freq(j)))*sine(I(freq(j))*t);}acc[2]+=I(gravity);
-  auto r=expAndV(angle).first;V force{I(0),I(0),I(0)};for(int j=0;j<3;++j)for(int k=0;k<3;++k)force[j]+=r[k][j]*acc[k];
+  for(int j=0;j<3;++j){angle[j]=I(rate)*t*double(j+1)/axisnorm;acc[j]=-I(amp(j))*square(I(freq(j)))*(sample_offset?reducedSine(I(freq(j))*t):sine(I(freq(j))*t));}acc[2]+=I(gravity);
+  auto r=sample_offset?rotationExp(angle):expAndV(angle).first;V force{I(0),I(0),I(0)};for(int j=0;j<3;++j)for(int k=0;k<3;++k)force[j]+=r[k][j]*acc[k];
   if(i)for(int j=0;j<6;++j)bias[j]+=I(j<3?ba:bg)*sqrt(dt)*I(rw[i-1](j));
   if(observed_bias)for(int j=0;j<6;++j){if(!(*observed_bias)[i].allFinite())return out;out.bias_process(j)=std::max(out.bias_process(j),abs(I((*observed_bias)[i](j))-bias[j]).upper());}
   for(int j=0;j<3;++j){I f=force[j]+bias[j]+I(sa)*I(adc[i](j));I g=I(rate)*double(j+1)/axisnorm+bias[j+3]+I(sg)*I(adc[i](j+3));if(additive_fault){if(!(*additive_fault)[i].allFinite())return out;f+=I((*additive_fault)[i](j));g+=I((*additive_fault)[i](j+3));}out.accel_sample=std::max(out.accel_sample,abs(I(samples[i].specific_force_mps2(j))-f).upper());out.gyro_sample=std::max(out.gyro_sample,abs(I(samples[i].angular_velocity_radps(j))-g).upper());}
@@ -73,8 +91,9 @@ RawRangeLawEvidence certifyRawRanges(const UwbBatch& batch,const Eigen::Vector3d
  RawRangeLawEvidence out;out.batch=batch;
  if(batch.measurements.size()!=8 || !amp.allFinite() || !freq.allFinite() || !lever.allFinite() || !std::isfinite(rate))return out;
  I t=I(double(batch.timestamp.value()))/1e9;V angle,pos;
- for(int j=0;j<3;++j){angle[j]=I(rate)*t*double(j+1)/sqrt(I(14));pos[j]=I(amp(j))*sine(I(freq(j))*t);}pos[2]+=1.;
- auto offset=multiply(expAndV(angle).first,fixed(lever));for(int j=0;j<3;++j)pos[j]+=offset[j];
+ const bool long_time=batch.timestamp.value()>10000000000LL;
+ for(int j=0;j<3;++j){angle[j]=I(rate)*t*double(j+1)/sqrt(I(14));pos[j]=I(amp(j))*(long_time?reducedSine(I(freq(j))*t):sine(I(freq(j))*t));}pos[2]+=1.;
+ auto offset=multiply(long_time?rotationExp(angle):expAndV(angle).first,fixed(lever));for(int j=0;j<3;++j)pos[j]+=offset[j];
  for(size_t i=0;i<8;++i){const auto& m=batch.measurements[i];
   if(!m.anchor_position_m.allFinite() || !std::isfinite(m.range_m) || !std::isfinite(m.sigma_m) || m.sigma_m<=0 || !std::isfinite(draws[i]) || !std::isfinite(faults[i]))return out;
   V difference;for(int j=0;j<3;++j)difference[j]=pos[j]-I(m.anchor_position_m(j));

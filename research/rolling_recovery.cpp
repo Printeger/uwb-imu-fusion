@@ -58,15 +58,32 @@ RollingRecovery::RollingRecovery(const NavigationState& s,const ResolvedRollingP
 RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Sc2ImuMonitor& monitor,
  const std::deque<ImuMeasurement>& replay,const std::deque<RollingRawState>& capsules,
  const IntegrityConfig& config,bool fde){
+ return prepare(tx,finiteMonitorView(monitor,tx.end),replay,capsules,config,fde);
+}
+RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const RollingMonitorView& monitor,
+ const std::deque<ImuMeasurement>& replay,const std::deque<RollingRawState>& capsules,
+ const IntegrityConfig& config,bool fde){
  using Clock=std::chrono::steady_clock;const auto start=Clock::now();
  RollingFdeAssessment result;result.plan=EpochCommitPlan::nominalPlan(tx);
- auto assessment=monitor.assessment();
+ if(monitor.open!=policy_.open)throw std::invalid_argument("RECOVERY_CERTIFICATE_MODE_MIX");
+ auto assessment=monitor.state;
+ if(policy_.open && fde && monitor.alert_generation && monitor.alert_generation!=alert_generation_){
+  // Re-arm only numerical recovery for this new observed support. The
+  // source event, automaton histories, raw p/v/R/bias and prior repair records
+  // stay on their original global clock; this is not a healthy new task.
+  alert_generation_=monitor.alert_generation;isolated_=false;
+  quarantine_begin_=TimestampNs(0);quarantine_end_=TimestampNs(0);
+  observed_anchor_=-1;observed_uwb_onset_=0;held_anchor_=-1;held_until_=0;
+  open_pending_=true;
+ }
+ if(policy_.open && open_pending_)assessment.alarm=true;
  if(!monitor.matches(tx) || (!assessment.nominal_possible && !assessment.possible))throw std::runtime_error("RECOVERY_MONITOR_SCOPE_REFUSED");
  auto all=uwbCandidate(tx.uwb_batch,-1,1e-6,1e-9);bool uwb_alarm=all.gaussian.statistic>all.gaussian.threshold;
  int detected=-1;
  if(uwb_alarm){double best=INFINITY;for(int mask=0;mask<8;++mask){auto c=uwbCandidate(tx.uwb_batch,mask,1e-6,1e-9);if(c.gaussian.statistic<=c.gaussian.threshold && c.gaussian.statistic<best){best=c.gaussian.statistic;detected=mask;}}}
  if(detected>=0){observed_anchor_=detected;if(!observed_uwb_onset_)observed_uwb_onset_=tx.proposed_epoch;}
  if(!fde){result.status=assessment.alarm || uwb_alarm?"DETECTION_HELD":"KEEP";result.recovery="FDE_DISABLED";return result;}
+ if(policy_.open && history_unavailable_){result.status="RECOVERY_OUT_OF_BUFFER";result.recovery="BOUND_VALID_BUT_RECOVERY_UNAVAILABLE";return result;}
  bool held=held_anchor_>=0 && int(tx.proposed_epoch)<=held_until_;
  bool bridge=assessment.alarm && (!isolated_ || std::any_of(tx.raw_imu_slice.begin(),tx.raw_imu_slice.end(),[&](const auto& m){return !(m.timestamp<quarantine_begin_) && m.timestamp<quarantine_end_;}));
  if(assessment.alarm){
@@ -79,10 +96,11 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Sc2ImuM
  if(bridge && !isolated_){
   auto first=result.first_dependency;if(historical_range)first=std::min(first,observed_uwb_onset_);
   if(replay.empty() || replay.front().timestamp.value()>int64_t(first-1)*50000000LL || replay.back().timestamp!=tx.end){
+   if(policy_.open)history_unavailable_=true;
    result.status="RECOVERY_OUT_OF_BUFFER";result.recovery="BOUND_VALID_BUT_RECOVERY_UNAVAILABLE";return result;
   }
  }
- const bool search=uwb_alarm || assessment.alarm || held || historical_range;
+ const bool search=uwb_alarm || assessment.alarm || held || historical_range || (policy_.open && isolated_);
  if(!search)return result;
  result.actions=18;
  // Evaluate the complete native mask x IMU-action product. Physical proof
@@ -156,6 +174,6 @@ void RollingRecovery::committed(const RollingFdeAssessment& a,const EpochTransac
   for(size_t slot:a.removed_prior_slots)if(std::find(r.removed_factor_slots.begin(),r.removed_factor_slots.end(),slot)==r.removed_factor_slots.end())throw std::runtime_error("POLLUTED_PRIOR_SLOT_NOT_REMOVED");
   for(const auto& e:ledger.entries())if(e.lifecycle==FactorLifecycle::Active)for(const auto& f:a.removed_boundary)if(e.factor.get()==f.get())throw std::runtime_error("POLLUTED_PRIOR_STILL_ACTIVE");
  }
- if(a.current_bridge)isolated_=true;
+ if(a.current_bridge){isolated_=true;open_pending_=false;}
 }
 }

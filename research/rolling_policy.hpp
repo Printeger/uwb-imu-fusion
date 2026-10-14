@@ -9,6 +9,7 @@ struct ResolvedRollingPolicyV1 {
  int fgo=30,integrity=30,replay=50,mission=200;
  double budget=1e-6;
  std::string mode="follow_fgo";
+ bool open=false;size_t max_fault_records=4096;
 };
 inline ResolvedRollingPolicyV1 resolveRollingPolicy(const YAML::Node& root,
                                                    IntegrityConfig& config){
@@ -29,14 +30,20 @@ inline ResolvedRollingPolicyV1 resolveRollingPolicy(const YAML::Node& root,
   if(li<2 || li>lag)throw std::invalid_argument("CONFIG_SCOPE_UNSUPPORTED: explicit window");
   p.integrity=static_cast<int>(li);
  }else throw std::invalid_argument("UNKNOWN_WINDOW_MODE");
- const auto t=n["mission_epochs"].as<long long>();
+ p.open=n["risk_mode"].as<std::string>()=="time_uniform_blocks";
+ if(p.open && n["mission_epochs"] && !n["mission_epochs"].IsNull())throw std::invalid_argument("FINITE_OPEN_MODE_MIX");
+ const auto t=p.open?0:n["mission_epochs"].as<long long>();
  const auto extra=n["recovery_extra_epochs"].as<long long>();
- if(t<1 || t>10000 || extra<0 || extra>1000 ||
-    n["risk_mode"].as<std::string>()!="finite_mission" ||
+ if((!p.open && (t<1 || t>10000)) || extra<0 || extra>1000 ||
+    (!p.open && n["risk_mode"].as<std::string>()!="finite_mission") ||
     n["boundary_method"].as<std::string>()!="raw_outer_projection" ||
     n["runtime_resize"].as<std::string>()!="disabled")
   throw std::invalid_argument("CONFIG_SCOPE_UNSUPPORTED");
  p.mission=static_cast<int>(t);p.replay=p.fgo+static_cast<int>(extra);
+ if(p.open){
+  if(n["fault_mode"].as<std::string>()!="repeated_one_per_channel")throw std::invalid_argument("OPEN_FAULT_CONTRACT_UNSUPPORTED");
+  auto cap=n["max_fault_records"].as<long long>();if(cap<1 || cap>100000)throw std::invalid_argument("FAULT_RECORD_CAPACITY_UNSUPPORTED");p.max_fault_records=static_cast<size_t>(cap);
+ }
  p.budget=n["task_exceedance_budget"].as<double>();
  if(!std::isfinite(p.budget) || p.budget<=0 || p.budget>=1)
   throw std::invalid_argument("INVALID_TASK_BUDGET");

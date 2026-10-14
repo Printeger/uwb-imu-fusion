@@ -17,7 +17,7 @@ bool rawRangeShells(const RawRangeLawEvidence& law,const UwbBatch& b,int epoch,s
  return rawRangeShells(law,b,epoch,shells,50,7);
 }
 bool rawRangeShells(const RawRangeLawEvidence& law,const UwbBatch& b,int epoch,std::array<RawRangeShell,8>& shells,int mission,double q){
- if(mission<1 || mission>10000 || !std::isfinite(q) || q<=0 || !law.valid || law.source_law_id!="raw-source-rw-v1" || law.frame!="world" || epoch<1 || epoch>mission || b.id.value()!=uint64_t(epoch) || b.timestamp.value()!=epoch*50000000LL || b.measurements.size()!=8 || b.covariance_m2.size()!=0 || !b.covariance_model_id.empty() || !sameRawBatch(law.batch,b) || !sameRawBatch(law.sealed_batch_,b) || law.rho_num!=law.sealed_rho_)return false;
+ if(mission<1 || !std::isfinite(q) || q<=0 || !law.valid || law.source_law_id!="raw-source-rw-v1" || law.frame!="world" || epoch<1 || epoch>mission || b.id.value()!=uint64_t(epoch) || b.timestamp.value()!=epoch*50000000LL || b.measurements.size()!=8 || b.covariance_m2.size()!=0 || !b.covariance_model_id.empty() || !sameRawBatch(law.batch,b) || !sameRawBatch(law.sealed_batch_,b) || law.rho_num!=law.sealed_rho_)return false;
  std::set<uint64_t> anchors;
  for(size_t i=0;i<8;++i){const auto& m=b.measurements[i];double rho=law.rho_num[i];
   if(m.id.value()!=epoch*100+i+1 || m.factor_id!=FactorId(m.id.value()) || !anchors.insert(m.anchor_id.value()).second || m.timestamp!=b.timestamp || m.tag_id.value()!=0 || m.lever_arm_body_m || !m.anchor_position_m.allFinite() || !std::isfinite(m.range_m) || !std::isfinite(m.sigma_m) || m.sigma_m<=0 || !std::isfinite(rho) || rho<0 || rho>1e-8)return false;
