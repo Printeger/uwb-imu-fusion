@@ -593,3 +593,5 @@ PLAYED; PLAYED is a provider test length, not a risk horizon. Core mathematical
 implementation commit d2fd8c5; event/preregistration a8d617c; main verifier/
 result save3717534. Final doc/test save is local HEAD. Own transient artifacts
 are removed after reconciliation, no backups and no automatic push.
+
+SC6 system development and final 5000/10000 paced evaluation: [SC6_RESULTS.md](SC6_RESULTS.md). Original SC1–SC5 claims/defaults remain unchanged; SC6 gaps and scope are reported separately.

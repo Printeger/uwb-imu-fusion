@@ -6,18 +6,21 @@
 
 |Capability|Actual scope/status|
 |---|---|
-|SIMULATION_END_TO_END_VERIFIED|OPEN for unrestricted requested scope (A14 UWB alarm clock); full conditional D0/G0 and D1/G1 flow evaluated, G2 refusal retained.|
+|SIMULATION_END_TO_END_VERIFIED|Verified conditional registered D0/G0 and D1/G1 simulation flow; G2 functional refusal retained. Privileged simulation source qualification only.|
 |PL_TIGHTENING_VERIFIED_FOR_SCOPE|Verified coupled dynamics + sphere contractors on the original event; same-center M gain. Main bias remains RW-only.|
 |FAULT_RECOVERY_VALIDATED_FOR_SCOPE|D0 six strong witnesses validated. Requested D1/weak/late scope has missed episodes; no blanket recovery award.|
 |REALTIME_TARGET_MET_FOR_TESTED_PROFILES|OPEN: retain every 40/50ms miss below, including 40/40. Means do not grant a strict deadline award.|
 |RESOURCE_BEHAVIOR_VERIFIED_FOR_TESTED_DURATION|Finite measured behavior below; RESOURCE_OPTIMIZATION_OPEN for native tombstone/alert growth. No O(1) total memory.|
 
-Frozen final matrix:25 short rows +2 long rows, 22010 planned / 21710 successful receipts / 21710 raw-qualified. Sampled H/V exceedance count=0; this finite observation does not prove epsilon=1e-6. Mathematical inclusion/risk proof is separate. Application and hardware qualification stay CLOSED/UNQUALIFIED.
+Frozen final matrix (includes retained initial L1 logging failure when present): 32010 planned / 31710 successful receipts / 31710 raw-qualified. Sampled H/V exceedance count=0; this finite observation does not prove epsilon=1e-6. Mathematical inclusion/risk proof is separate. Application and hardware qualification stay CLOSED/UNQUALIFIED.
 
 ## 2. Baseline and scope
 
-Entry HEAD `20831ec47888c6d96c9ac73571254b0efd8e9b52`; computation freeze `2285aaf8d0a4f3fc1a9dec3b97033378caa1a1ca`. Runner SHA256 `e71003396d1c066951e4d178f19d96aab4ba6dd3e471a7e895e63d6e23390723`; unchanged production DSO `5faa46cc2d41492a55c65e9972a7bbe1f2a1b1773d791034ebdf119ec5954189`; config `55265150404b589c9f08867e29fe64ecbbcfa3ba9d044fac3ace2b113acca6e5`. Final delivery commit is obtained with `git log -1`, avoiding self-referential SHA.
+Entry HEAD `20831ec47888c6d96c9ac73571254b0efd8e9b52`; computation freeze `adab2da91a1448422c3982ef3dd5500cd16c6405`. Runner SHA256 `564818f491f8059637ae808e0a7535f28747b6044b7c5391e7afecf7550077b1`; unchanged production DSO `5faa46cc2d41492a55c65e9972a7bbe1f2a1b1773d791034ebdf119ec5954189`; config `55265150404b589c9f08867e29fe64ecbbcfa3ba9d044fac3ace2b113acca6e5`. Final delivery commit is obtained with `git log -1`, avoiding self-referential SHA.
 
+Actual computation identities (math/source/selection model is shared, clock instrumentation revision is separate):
+- final-C1,final-C2,final-F0,final-F1,final-F2,final-F3,final-F4,final-F5,final-L0,final-S0,final-S0-off,final-S1,final-S1-off,final-S2,final-S2-off,final-S3,final-V-20-20,final-V-30-10,final-V-40-40,final-W0,final-W1,final-W2,final-baseline-S0,final-baseline-S1,final-baseline-S1-off,final-baseline-S2,initial-L1: HEAD `2285aaf8d0a4f3fc1a9dec3b97033378caa1a1ca`, ELF `e71003396d1c066951e4d178f19d96aab4ba6dd3e471a7e895e63d6e23390723`.
+- final-L1: HEAD `adab2da91a1448422c3982ef3dd5500cd16c6405`, ELF `564818f491f8059637ae808e0a7535f28747b6044b7c5391e7afecf7550077b1`.
 GTSAM4.2a5 `/usr/local/lib/libgtsam.so.4` + unstable; Eigen3.3.7; TBB2020.1. Release `-O3 -march=native`; proof sources `-frounding-math -ffp-contract=off`, no fast-math. One TBB/BLAS/FGO worker; no affinity/WCET guarantee. Platform: Linux6.18.54.1-microsoft-standard-WSL2, x86_64, Intel Core Ultra5 125H,18 logical CPUs; no CPU affinity.
 
 Original source: range sigma=.1m, accel ADC=.02m/s², gyro ADC=.001rad/s; original initial15D tangent sigmas and sample-grid bias RW from inherited IMU config. Epsilon=1e-6; global time-uniform births never reset. D0 A=.04/Omega=.2; D1 A=1/Omega=1/J=2/alpha=2. Config freezes G0, G1 eight corners (±4,±4,0/4), G2 weak vertical0/.001; seeds20261010/20261011 and complete fault manifests. Duration/strength were not changed after results. All actual raw digests agree in A comparisons.
@@ -60,7 +63,7 @@ Provider owns trajectory/GT/draws/injection labels. Service receives only arrive
 |final-F4/tight-optimized/on/paced|160/160/160/160|0/0|0.0727009|0.0512129/0.051601|3.32207/6.11754|0/0|
 |final-F5/tight-optimized/on/paced|160/160/160/160|0/0|0.0727009|0.0512129/0.051601|3.32207/6.11754|0/0|
 |final-L0/tight-optimized/on/paced|5000/5000/5000/5000|0/0|0.0458142|0.031277/0.0334767|3.61518/6.44231|11/0|
-|final-L1/tight-optimized/on/paced|10000/10000/10000/9997|0/0|0.075248|0.063607/0.0402047|3.79189/4.51405|31/3|
+|final-L1/tight-optimized/on/paced|10000/10000/10000/9996|0/0|0.075248|0.063607/0.0402047|3.79189/4.51405|23/4|
 |final-S0/tight-optimized/on/paced|300/300/300/300|0/0|0.0500571|0.0355781/0.0352123|3.36607/6.20246|0/0|
 |final-S0-off/tight-optimized/off/offline|300/300/300/300|0/0|0.0500571|0.0355781/0.0352123|3.36607/6.20246|0/0|
 |final-S1/tight-optimized/on/paced|400/400/400/400|0/0|0.090906|0.0716728/0.0559187|3.56331/4.33671|0/0|
@@ -78,6 +81,7 @@ Provider owns trajectory/GT/draws/injection labels. Service receives only arrive
 |final-baseline-S1/baseline-adapter/on/offline|400/400/400/398|0/0|0.0894948|0.0711863/0.0542387|4.45705/5.40373|3/2|
 |final-baseline-S1-off/baseline-adapter/off/offline|400/400/400/399|0/0|0.22139|0.19788/0.0992823|4.46665/5.36464|1/1|
 |final-baseline-S2/baseline-adapter/on/offline|400/400/400/399|0/0|0.0888951|0.0686844/0.0564339|4.4538/5.37835|4/1|
+|initial-L1/tight-optimized/on/paced|10000/10000/10000/9997|0/0|0.075248|0.063607/0.0402047|3.79189/4.51405|31/3|
 
 All refusal/missing outputs remain in denominators; no stale fill. G2/S3 functional numerical seed/candidate refusal is not a proof that the physical feasible set is empty. Its planned300 epochs are retained. Offline service timing is not paced measurement-to-sink.
 
@@ -109,6 +113,15 @@ All refusal/missing outputs remain in denominators; no stale fill. G2/S3 functio
 |final-baseline-S1|0.411227|1.28332|0.21765/0.0346844|0.0478815/0.0850058 (399/399)|0.247784/0.387076 (380/380)|
 |final-baseline-S1-off|1.21783|1.30288|0.566375/0.0658284|0.0343762/0.0161778 (399/399)|0.302444/0.192238 (380/380)|
 |final-baseline-S2|0.408357|0.332349|0.212876/0.0345285|0.0472486/0.0841794 (399/399)|0.162102/0.231923 (380/380)|
+|initial-L1|0.352108|1.40586|0.10975/0.00948817|0.0294744/0.00733375 (9999/9999)|0.342235/0.0406697 (9980/9980)|
+
+|Bias axis RMSE row|accel x/y/z m/s²|gyro x/y/z rad/s|
+|---|---|---|
+|final-S0|0.155567/0.104284/0.0221374|0.00412408/0.00254808/0.00982565|
+|final-S1|0.272042/0.101496/0.0280347|0.0185869/0.0031091/0.0263725|
+|final-S2|0.334062/0.230408/0.0412552|0.0215979/0.0128243/0.0441133|
+|final-L0|0.0439916/0.0276761/0.00962582|0.00108492/0.0009918/0.00290119|
+|final-L1|0.093252/0.0569467/0.0103036|0.00365238/0.00182039/0.00856572|
 
 No application accuracy threshold exists; these are numerical evaluations. APE/H/V and state error P95/max are provided for main/long rows below. Bias per-axis errors are scored separately in native trace; scalar table is vector RMSE.
 
@@ -207,8 +220,14 @@ Fault-phase vector RMSE (n; tag/velocity/rotation/accel-bias/gyro-bias):
 |final-W0|61/0/50|None|[]|[]|[61, 62, 63]|
 |final-W1|61/3/500|61|[61]|[80, 81, 82, 83]|[61, 62, 63]|
 |final-W2|61/0/50|61|[61]|[71, 72, 73, 74]|[61, 62, 63]|
+|initial-L1|121/0/500|121|[121]|[140, 141, 142, 143]|[124, 125, 126]|
+|initial-L1|1121/3/500|None|[]|[]|[1118, 1119, 1120]|
+|initial-L1|3121/0/500|None|[]|[]|[3124, 3125, 3126]|
+|initial-L1|5121/3/500|None|[]|[]|[5118, 5119, 5120]|
+|initial-L1|7121/0/500|None|[]|[]|[7124, 7125, 7126]|
+|initial-L1|9121/3/500|None|[]|[]|[9118, 9119, 9120]|
 
-Bridge/prior/rejoin fields come from actual unique backend receipts and ledger checks. Rejoined flags from an earlier episode are not counted for a newly missed episode. D1 gyro and late misses stay requested-scope OPEN. Healthy extra UWB exclusions (including conservative hold) are: final-S1=2, final-C2=4, final-S2=4, final-F3=2, final-F2=2, final-V-30-10=4, final-W1=2, final-L0=0, final-V-20-20=4, final-W0=137, final-F1=2, final-L1=12, final-F4=2, final-F0=2, final-V-40-40=4, final-W2=2, final-F5=2, final-S0=0, final-S3=0, final-C1=0. No current hypothesis is used as truth.
+Bridge/prior/rejoin fields come from actual unique backend receipts and ledger checks. Rejoined flags from an earlier episode are not counted for a newly missed episode. D1 gyro and late misses stay requested-scope OPEN. Healthy extra UWB exclusions (including conservative hold) are: final-S1=2, final-C2=4, final-S2=4, final-F3=2, final-F2=2, final-V-30-10=4, final-W1=2, final-L0=0, final-V-20-20=4, final-W0=137, final-F1=2, final-F4=2, final-F0=2, final-V-40-40=4, final-W2=2, final-F5=2, final-S0=0, final-S3=0, final-C1=0, initial-L1=12, final-L1=12. No current hypothesis is used as truth.
 
 ## 6. Realtime and resource behavior
 
@@ -225,7 +244,7 @@ RUN_READY maps sensor stamps to steady clock. Independent producer releases200Hz
 |final-F4|18.294/22.372/28.881|18.448/22.508/29|23108|5/195/195|79/123|10|
 |final-F5|17.755/22.042/38.159|17.918/22.239/38.373|23148|5/195/195|79/123|10|
 |final-L0|19.535/21.229/49.067|19.714/21.411/49.238|43636|5/5034/5034|61/90|10|
-|final-L1|20.094/22.077/52.413|20.241/22.218/52.634|66356|5/10034/10034|88/141|10|
+|final-L1|19.921/21.497/52.557|20.064/21.641/54.274|66392|5/10034/10034|88/141|10|
 |final-S0|18.446/20.92/39.693|18.631/21.094/39.851|23624|5/334/334|61/90|10|
 |final-S1|18.892/21.98/31.879|19.077/22.158/32.092|24272|5/434/434|88/138|10|
 |final-S2|19.589/22.111/39.338|19.757/22.296/39.467|24260|5/453/453|88/141|10|
@@ -235,6 +254,7 @@ RUN_READY maps sensor stamps to steady clock. Independent producer releases200Hz
 |final-W0|20.587/28.717/35.372|20.731/28.867/35.523|23016|5/234/234|61/119|10|
 |final-W1|18.614/22.924/47.89|18.758/23.116/48.051|23292|5/253/253|88/141|10|
 |final-W2|18.549/21.899/44.262|18.704/22.054/44.433|23400|5/253/253|79/141|10|
+|initial-L1|20.094/22.077/52.413|20.241/22.218/52.634|66356|5/10034/10034|88/141|10|
 
 40/40 has genuine strict deadline misses; no average removes them. Failure paths have separate total cost in native full-schema refusal rows. Real cancel16:2 mutations/14 refusals; real overload16:3 mutations/13 refusals, queue80,160/110 IMU and16/11 UWB released/enqueued, no stale protection. Receiver unit tests cover timeout/duplicate/stamp/gap and continuity after a mere late receipt. Source gaps latch refusal, do not reset event. No raw stamp is replaced by wall time.
 
@@ -260,9 +280,9 @@ Snapshots at all500-epoch boundaries and declared late episode onsets (epoch:HPL
 - 4000: 3.7700594814580057/6.614305412976492/51.932680610918766/9/0/0/0
 - 4500: 3.5644399780911127/6.6539732589691498/58.296641841598159/9/0/0/0
 - 5000: 3.6512067413904594/6.5029481918534451/64.660603072277922/9/0/0/0
-**final-L1**: 10000 planned / 10000 rows / 10000 actual mutations / 10000 receipts / 10000 finite estimates / 10000 raw-qualified / 9997 timely; abort0, refusal0, unattempted0, never emitted0; inputs {'released_imu': 100000, 'enqueued_imu': 100000, 'released_uwb': 10000, 'enqueued_uwb': 10000, 'queue_peak': 10}.
+**final-L1**: 10000 planned / 10000 rows / 10000 actual mutations / 10000 receipts / 10000 finite estimates / 10000 raw-qualified / 9996 timely; abort0, refusal0, unattempted0, never emitted0; inputs {'released_imu': 100000, 'enqueued_imu': 100000, 'released_uwb': 10000, 'enqueued_uwb': 10000, 'queue_peak': 10}.
 
-First/last/max: q=7/9/9, risk=7.5e-07/9.9995e-07/9.9995e-07, bias_width=1.4099/128.3/128.3, hpl=3.08435/3.96388/4.92651, vpl=3.89174/4.47575/5.83476, slots=5/10034/10034, rss=56612/66356/66356, alerts=0/1/1, replay=11/601/601, capsules=2/61/61.
+First/last/max: q=7/9/9, risk=7.5e-07/9.9995e-07/9.9995e-07, bias_width=1.4099/128.3/128.3, hpl=3.08435/3.96388/4.92651, vpl=3.89174/4.47575/5.83476, slots=5/10034/10034, rss=56588/66392/66392, alerts=0/1/1, replay=11/601/601, capsules=2/61/61.
 
 Snapshots at all500-epoch boundaries and declared late episode onsets (epoch:HPL/VPL/bias-width/q/alerts/bridge/repair):
 - 121: 3.4935397639678212/4.2573654908644061/2.7590592820405853/8/1/1/1
@@ -311,7 +331,7 @@ Long measurement durations are250s/500s after RUN_READY, not risk horizons. Late
 |A11|PASS evaluation weak/short/staggered/repeated/late full denominators; unbounded/unknown concurrent scope not zero; functional misses OPEN.|
 |A12|PASS SC6 shared-step operator-held polluted prior actually repaired55/rejoin56–59 in80 epochs; tight optimized beyond-replay104 refuses100–104; unique commits, old104 negative retained.|
 |A13|PASS terminal unaligned tag/full-state/RPE1/20/ON/OFF/stage scores; NAVIGATION_ACCURACY_OPEN.|
-|A14|PARTIAL PACED_PIPELINE_OPEN: independent200Hz/20Hz and actual delivery proven; IMU alarm clock exists, separate UWB alarm wall clock missing (UWB_TTA_CLOCK_OPEN).|
+|A14|PASS independent200Hz/20Hz release/enqueue/queue, actual source/service/gate/sink clocks. Actual UWB alarm clock recording fixed and validated without changing native semantics; affected L1 rerun only, original failure retained.|
 |A15|PASS receiver timeout/stamp/duplicate/gap unit checks and real cancel/overflow; late space-valid outputs have no current protection.|
 |A16|PASS finite measured resource evaluation and transient copy reduction; RESOURCE_OPTIMIZATION_OPEN native tombstone/alert growth.|
 |A17|PASS exact same-model P90 healthy+joint semantics/raw identity, about3x median net improvement.|
@@ -323,11 +343,11 @@ Long measurement durations are250s/500s after RUN_READY, not risk horizons. Late
 |A23|PASS separates proof/recovery/accuracy/timeliness/resources; no finite-zero/WCET/infinite-memory/application claim.|
 |A24|PASS delivery after final local W4 save and own-cache cleanup; sole result and two actual figures. No push.|
 
-A14 partial prevents an unrestricted SIMULATION_END_TO_END_VERIFIED award; the exercised end-to-end flow is evaluated, while full requested capability remains OPEN. Five statuses above are scoped independently. SC6_COMPLETE_FOR_REGISTERED_SIMULATION_SCOPE is **not** granted.
+Five statuses above are scoped independently; requested D1/late recovery, complete navigation accuracy, strict realtime and infinite resource optimization remain OPEN. SC6_COMPLETE_FOR_REGISTERED_SIMULATION_SCOPE is **not** granted.
 
 ## 9. Reproduction, failures and Git
 
-W0 `2b19fed`; W1 `3f8a196`; W2 `69ccb4d`; W3 freeze `2285aaf`. W4 result/test/local save is final `git log -1`.
+W0 `2b19fed`; W1 `3f8a196`; W2 `69ccb4d`; W3 freeze `2285aaf`; W4 alarm-clock recording fix `adab2da` (mathematical/selection semantics unchanged). W4 result/test/local save is final `git log -1`.
 
 ```bash
 python3 tools/sc6_system_research.py check --build
@@ -337,11 +357,13 @@ python3 tools/sc6_system_research.py final --group long
 python3 tools/sc6_evaluate.py
 ```
 
+W4 actual logging bug: initial L1 missed separate UWB wall alarm timestamps, though all10000 receipts/raw and31 core/3 delivery misses were measured. Fix records immediately after actual functional UWB statistic; service consumes earliest IMU/UWB alarm. Shared-service held-FDE and S0/S2 paired90 prefixes validate actual clocks and bit-equal state/action/PL/risk/source/ledger versus old frozen executable. No source or algorithm change. Only affected L1 was rerun once as final-L1-clockfix; initial10000 failure row remains separately above. L0 has no alarms/exclusions and is retained at its original actual ELF, with11 core misses. Corrected L1 uses the updated freeze ELF; no fastest-selection or discarded denominator.
+
 Native: `epoch_raim_runner CONFIG CSV CASE sc6 on|off COUNT baseline-adapter|tight-reference|tight-optimized offline|paced SEED [shadow|cancel:3|delay:3]`. COUNT0 selects registered length. Use tools environment for the private DSO. Long runs only frozen candidate once each; no fastest rerun. W0 original B0/B1 commands and old SC1–SC5 results are reused, not whole campaigns repeated.
 
-Failure accounting: W1 compile const-config error, new-target make reconfiguration issue, one wrong-DSO direct check; all corrected before stage save. Initial680 W1 rows had valid native states but invalid Eigen-lazy tag/scoring fields; stable reruns only affected rows. Original recovered adapter mismatch was identified/fixed, not reported as P equality. W2 initial700 M +960 axis and560 rotation-metric A checks are retained in this result; metrics could improve one row and worsen another. W3 one decimal-refusal parser failure was fixed/rescored. Final bookkeeping initially expected25 total rows; corrected to25 short +2 long without rerunning any experiment. Final S3 and every realtime miss remain above. No noise reduction, raised AL, strengthened fault, reset q/bias/risk, removed difficult case, or repeated long selection.
+Failure accounting: W1 compile const-config error, new-target make reconfiguration issue, one wrong-DSO direct check; all corrected before stage save. Initial680 W1 rows had valid native states but invalid Eigen-lazy tag/scoring fields; stable reruns only affected rows. Original recovered adapter mismatch was identified/fixed, not reported as P equality. W2 initial700 M +960 axis and560 rotation-metric A checks are retained in this result; metrics could improve one row and worsen another. W3 one decimal-refusal parser failure was fixed/rescored. Final S3 and every realtime miss remain above. No noise reduction, raised AL, strengthened fault, reset q/bias/risk, removed difficult case, or repeated long selection.
 
-AL numeric counts on frozen traces: final-S1={'2/3': 0, '5/5': 397, '10/10': 400}, final-S2={'2/3': 0, '5/5': 397, '10/10': 400}, final-L0={'2/3': 0, '5/5': 0, '10/10': 5000}, final-L1={'2/3': 0, '5/5': 9798, '10/10': 10000}, final-S0={'2/3': 0, '5/5': 0, '10/10': 300}. Their computation cannot mutate state/action/PL/event.
+AL numeric counts on frozen traces: final-S1={'2/3': 0, '5/5': 397, '10/10': 400}, final-S2={'2/3': 0, '5/5': 397, '10/10': 400}, final-L0={'2/3': 0, '5/5': 0, '10/10': 5000}, final-S0={'2/3': 0, '5/5': 0, '10/10': 300}, final-L1={'2/3': 0, '5/5': 9798, '10/10': 10000}. Their computation cannot mutate state/action/PL/event.
 
 Transient traces/config/logs were exclusive to `.cache/sc6-20261014`; final cleanup removes only that task-created cache after summary verification. User requirement files and prior evidence are untouched.
 
@@ -350,9 +372,9 @@ Transient traces/config/logs were exclusive to `.cache/sc6-20261014`; final clea
 
 ![Actual long-flow timing and resource growth](sc6_realtime_resource.png)
 
-Figures use only actual committed outputs; omitted/refused counts appear in tables. First figure:1100/1100 S0/S1/S2 committed; second:15000/15000 L0/L1 committed, including3 late outputs. Global finite qualified=21710, planned=22010.
+Figures use only actual committed outputs; omitted/refused counts appear in tables. First figure:1100/1100 S0/S1/S2 committed; second:15000/15000 L0/L1 committed, including3 late outputs. Global finite qualified=31710, planned=32010.
 
-Final necessary core regression: **10/10 PASS**, executed once after final long flows.
+Final necessary core regression: **10/10 PASS** after original long flows; after the clock-only bug fix, only directly affected SC6/open boundary checks are supplemented, preserving the original invocation results.
 
 |Target|Result|
 |---|---|
@@ -367,17 +389,7 @@ Final necessary core regression: **10/10 PASS**, executed once after final long 
 |raw_range_checks []|PASS|
 |fde_next_checks ['config/fde_next.yaml']|PASS|
 
-SC6 shared-service additional tests:184/184 sole native mutations/raw-qualified; actual polluted marginal prior repaired55 and IMU rejoin56–59; beyond replay100–104 has raw coverage and no restoration. Frozen runner SHA remained unchanged through the regression build. No main noise sigma was changed.
+SC6 shared-service additional tests:184/184 sole native mutations/raw-qualified; actual polluted marginal prior repaired55 and IMU rejoin56–59; beyond replay100–104 has raw coverage and no restoration. Original frozen runner SHA stayed unchanged through the original regression build; the subsequent clock fix has its own recorded ELF and exact semantic-prefix comparison. No main noise sigma was changed.
 
-W4 clock-recording bug fix (same mathematical/selection identity):
-RollingRecovery now records the actual UWB alarm clock immediately after its
-functional statistic test, including FDE-disabled paths. Sc6Service consumes
-it with the IMU monitor clock and reports the earliest real alarm. New source
-contains no label/GT input. SC6 shared polluted-prior/replay tests pass with
-actual UWB alarm assertions; S0/S2 90-epoch prefixes compare **exactly equal**
-to frozen W3 state/action/PL/risk/source/ledger fields and actual raw digest.
-The earlier L1 10000/10000 is retained with its3 delivery/31 core misses and
-missing UWB alarm-clock diagnostic. Only this affected long row is rerun after
-new executable freeze. L0 has no IMU/UWB exclusions/alarms and is retained;
-its 5000/5000 and11 core misses are not replaced. This is an actual logging
-bug repair, not a fastest-repeat selection or a changed math/noise/fault case.
+Clock-only fix directly affected supplement after corrected L1: **3/3 PASS** (sc6_checks [], open_rolling_checks [], sc5_rolling_checks ['boundary']). Original10 regression results and initial L1 failure remain unchanged.
+Final bookkeeping audit:28 rows (25 registered short + retained initial L1 +2 accepted final long),32010 planned/31710 native/raw/31698 timely;80 core40 and12 delivery50 misses including the retained initial L1. Primary final L0/L1:15000/15000 receipts/raw,14996 timely,34 core40 and4 delivery50 misses. No input loss, source gap or native abort in either final long.

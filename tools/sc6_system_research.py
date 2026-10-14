@@ -87,6 +87,28 @@ def run(case,profile='tight-optimized',fde='on',mode='offline',count=0,seed=2026
     if r.returncode:print(log.read_text()[-2000:],flush=True)
     return summary
 
+CORE_CHECKS=[('sc6_checks',[]),('time_uniform_event_checks',[]),('open_rolling_checks',[]),('sc5_math_checks',[]),('sc5_event_checks',[]),('sc5_rolling_checks',[]),('sc5_rolling_checks',['boundary']),('hybrid_tightening_checks',[]),('raw_range_checks',[]),('fde_next_checks',['config/fde_next.yaml'])]
+def checks():
+    results=[]
+    with (CACHE/'final-regression.log').open('w') as log:
+        for target,args in CORE_CHECKS:
+            r=subprocess.run([str(BIN/target),*args],cwd=ROOT,env=environment(),capture_output=True,text=True)
+            output=r.stdout+r.stderr;log.write(target+' '+str(args)+' rc='+str(r.returncode)+'\n'+output+'\n');log.flush()
+            results.append(dict(target=target,args=args,returncode=r.returncode,tail=output[-2000:]));print(target,r.returncode,flush=True)
+            if r.returncode:break
+    (CACHE/'regression.json').write_text(json.dumps(results,indent=2))
+    if len(results)!=len(CORE_CHECKS) or any(r['returncode'] for r in results):raise RuntimeError('core regression failure retained')
+def compare():
+    for case in ['S0','S2']:
+        data={}
+        for profile in ['tight-reference','tight-optimized']:data[profile]=run(case,profile,count=90,label='P-'+case+'-'+profile)
+        a=list(csv.DictReader((CACHE/('P-'+case+'-tight-reference.csv')).open()));b=list(csv.DictReader((CACHE/('P-'+case+'-tight-optimized.csv')).open()))
+        assert data['tight-reference']['raw_digest']==data['tight-optimized']['raw_digest']
+        keys=[k for k in a[0] if not k.endswith('_ms') and k not in ['timely','rss']]
+        for x,y in zip(a,b):
+            for key in keys:assert x[key]==y[key],(case,x['epoch'],key,x[key],y[key])
+        print('P exact semantic comparison PASS',case,flush=True)
+
 def final(group):
     freeze=CACHE/'freeze.json'
     if not freeze.exists():raise RuntimeError('W3 freeze is required')
@@ -107,12 +129,13 @@ def final(group):
     run('S2',mode='paced',seed=20261011,label='final-C2')
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=['run','check','evaluate','final','freeze']);p.add_argument('--group',choices=['short','long'],default='short');p.add_argument('--case',default='S0');p.add_argument('--profile',default='tight-optimized');p.add_argument('--fde',default='on');p.add_argument('--mode',default='offline');p.add_argument('--epochs',type=int,default=0);p.add_argument('--seed',type=int,default=20261010);p.add_argument('--window');p.add_argument('--label');p.add_argument('--build',action='store_true');p.add_argument('--shadow',action='store_true');a=p.parse_args();CACHE.mkdir(parents=True,exist_ok=True)
-    if a.build:subprocess.run(['cmake','--build',str(BUILD),'--target','epoch_raim_runner','open_rolling_checks','-j2'],cwd=ROOT,env=environment(),check=True)
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=['run','check','evaluate','final','freeze','compare']);p.add_argument('--group',choices=['short','long'],default='short');p.add_argument('--case',default='S0');p.add_argument('--profile',default='tight-optimized');p.add_argument('--fde',default='on');p.add_argument('--mode',default='offline');p.add_argument('--epochs',type=int,default=0);p.add_argument('--seed',type=int,default=20261010);p.add_argument('--window');p.add_argument('--label');p.add_argument('--build',action='store_true');p.add_argument('--shadow',action='store_true');a=p.parse_args();CACHE.mkdir(parents=True,exist_ok=True)
+    if a.build:subprocess.run(['cmake','--build',str(BUILD),'--target','epoch_raim_runner',*sorted({t for t,_ in CORE_CHECKS}),'-j2'],cwd=ROOT,env=environment(),check=True)
     if a.command=='run':run(a.case,a.profile,a.fde,a.mode,a.epochs,a.seed,a.window,a.label,a.shadow)
     elif a.command=='freeze':(CACHE/'freeze.json').write_text(json.dumps(identity(),indent=2))
     elif a.command=='final':final(a.group)
-    elif a.command=='check':subprocess.run([str(BIN/'open_rolling_checks')],cwd=ROOT,env=environment(),check=True)
+    elif a.command=='check':checks()
+    elif a.command=='compare':compare()
     else:
         for path in sorted(CACHE.glob('*.json')):
             data=json.loads(path.read_text())
