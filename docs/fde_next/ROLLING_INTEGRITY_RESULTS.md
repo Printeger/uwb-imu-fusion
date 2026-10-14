@@ -453,3 +453,143 @@ stream. Corrected explicit p/v/quaternion schema replays the positive matrix;
 that500-run is not hidden or claimed as fully verified. No source/noise/AL
 or input amplitudes were changed. Long-flow qualification and realtime/box
 tightness are independent; final variants/negative and resource audit follow.
+
+### Goal02 final theorem and acceptance
+
+**TIME_UNIFORM_ROLLING_VERIFIED_FOR_SCOPE**. This supersedes TIME_UNIFORM_OPEN
+for this independent repeated-episode research model; finite RI01–RI16 and
+production contracts remain as previously recorded. Infinite-time coverage
+is not a claim of infinite usable/realtime navigation.
+
+For every block k, its delta/radius is determined by global index and the
+predeclared epsilon before observed input enters a consumer. Block0 has21
+sources; each later block128 new ADC/RW/range sources. Let E be the intersection
+over all blocks of their coordinate events. Directed delta lower bounds and
+integer q make P(Ek^c)≤2nk exp(−qk²/2)≤2nk·2^-mk≤deltak. Consequently
+P(E^c)≤eps/2+sum[k≥1]eps/(2k(k+1))=eps. No independence between windows,
+blocks, actions or output centers is used. Reused ADC sample10 belongs to
+block1 forever, and RW/range retain their first global birth allocation.
+The prefix accounting upper is eps(1−1/(2(k+1))); it increases, never resets.
+Representational overflow refuses; q has no ceiling.
+
+The exact physical relation now permits any sequence of registered episodes
+with at most one active IMU single-axis and one active UWB single-anchor
+episode at a time; onset grids/durations remain the registered50/500ms and
+1/3epoch rules. Active branches retain one shared amplitude interval over
+their whole episode. Every true history under E has a path in each channel's
+outer automaton: eligible no-active paths birth all allowed modes, active paths
+intersect only necessary source/motion intervals, ended possible paths merge
+existentially into no-active. This merge **does not declare a clean state**:
+old p/v/R/bias uncertainty is in the same rolling separator, and absolute
+birth IDs remain a compact deterministic historical recipe. Observed alert
+records have stable IDs and are retained; new numerical recovery generations
+do not reset the source event or the physical bank. Resource exhaustion
+refuses without deleting identities. Undetectable/out-of-model concurrency
+is not assigned zero risk; coverage is conditional on the declared scope.
+
+SC5 operator induction still gives projection of the exact feasible prefix
+inside each boundary: propagation uses the NEW block q for its10 RW increments,
+range shells use that batch's original q, and old data use their birth q.
+All9 current UWB masks outer-cover the allowed episode and IMU-independent
+physical reach covers every admissible IMU history. Backward/forward necessary
+contractions and Cartesian projection preserve the true trajectory. Therefore,
+on E, every receipt-bound issued tag at any k is within its outward-rounded
+HPL/VPL, for all adaptive actions/centers and permitted repeated fault sequences.
+Taking the union over all issued times adds no risk: the exceedance event is
+contained in E^c and has probability≤epsilon, uniformly over these faults.
+The all-time result is this theorem, not the observed1000 sample count.
+
+| Frozen positive row | Native/raw qualified | Actual prior repair | First four real IMU rejoin epochs | core40/full50 misses |
+|---|---|---|---|---|
+| O0 healthy500 |500/500|none|not needed|1/0|
+| O1 UA61→UG321,1000 |1000/1000|61,321;1 prior each;39/30 removed groups|80–83;340–343|1/1|
+| O2 UG61/261,500 |500/500|61,261;1 prior each;30 groups each|80–83;280–283|4/3|
+| O3 follow20/20,250 |250/250|none|not needed|0/0|
+| O3 follow40/40,250 |250/250|none|not needed|57/0|
+| O3 explicit30/10,250 |250/250|none|not needed|0/0|
+
+Final runtime matrix2766 scheduled:2754 native/qualified (2750 positive+
+4 before injected queue gaps),12 expected refusals,0 unexpected native abort.
+Cancel3 and overload3 each admit2, refuse6, and never deliver stale protection.
+The current delivery gate also checks global epoch/timestamp/version,
+duplicate receipt and deadline. Late outputs retain spatial diagnostics but
+current_protected=0. Formal production publication stays0 for every row.
+
+At1000: no x0, generation1000/parent999, separator971, source prefix128021,
+proof UWB971–1000 and new IMU endpoint IDs9991–10001. Alert IDs1/2 persist;
+ended IMU paths11626. q=9, prefix risk9.9950049950049963e-7;
+H/V=4.9003986974/7.3727446127m, still finite after both actual restorations.
+No full-prefix recalculation/recovery or enlarged FGO lag occurs.
+
+Additional real replay30 negative104 epochs: action held through99;
+100–104 return BOUND_VALID_BUT_RECOVERY_UNAVAILABLE with no bridge/repair,
+while raw protection remains valid. Unrecoverable history latches across future
+recovery requests rather than masquerading as a healthy new task. Two initial
+negative-test invocations each had1 initial successful native check plus99
+late-stream commits, then failed before committing100. A stale object from
+editing during compilation still updated recovery generation while FDE was
+held. Stable recompilation includes the already-present pending-history guard
+and fixes the test. These failures are retained, not marked as recovery success.
+Stable360 replay is exactly equal to the earlier360 in state/action/PL/event/
+source fields, validating default-path evidence; its timing is not compared.
+
+Final5 checks PASS: time_uniform_event_checks; open_rolling_checks (including
+the real104-epoch negative); sc5_rolling_checks boundary; sc5_math_checks;
+sc5_event_checks. They cover100-digit tails/large indices/infinite telescope,
+shared birth IDs, repeated shared theta/end effects, concurrency/resource,
+finite/open mode rejection, future noninterference, source/receipt tamper,
+pre/post-update unique commits, queue/deadline/gap and finite task semantics.
+Source numeric certification additionally uses directed Machin alternating
+series π bounds, integer2π reduction, Taylor sine remainder and Rodrigues;
+arrived numeric-domain failures reject instead of depending on future residue
+or silently renewing a task. No hardware Gaussian/motion law is inferred.
+
+| Main measurement | O0 | O1 | O2 |
+|---|---|---|---|
+| HPL min/max m |3.70271/4.96513|3.70271/5.41366|3.70271/5.31318|
+| VPL min/max m |5.46191/8.07781|5.46191/8.55992|5.46191/8.06842|
+| Actual tag-box vertical width max m |13.68654|14.09897|13.68654|
+| Full ms mean/median/P95/max |28.6951/29.3764/31.2191/48.8020|29.6022/29.6764/32.3225/52.9807|29.2975/29.6988/32.2514/56.9132|
+| Sampled resident max KiB |24812|27748|25112|
+| Native slots max |534|1053|535|
+| Native ledger entries max |90|141|123|
+
+Live states remain30 (40 in variant), proof batches29 (19/39/9 variants),
+replay601 and capsules61; active IMU branches≤120 and UWB≤32. Source recipe
+is O(1) arithmetic; expired candidate IDs are covered by global birth recipes
+and effects by the boundary, not raw archives. Explicit alert records grow
+with observed alerts (2 here), max_fault_records4096 then refusal. Native
+empty tombstone slots still grow with epoch, and bias width grows from1.40990
+to13.74891m/s² at1000; neither is hidden or reset. Dataset provider holds only
+the chosen finite playback separately from online consumers. No O(1) total
+memory, perpetual FDE observability, bounded infinite PL or WCET is claimed.
+
+All2750 positive outputs are finite. None pass AL2/3 or5/5; AL10/10 is a
+numeric postfilter and changes no state/action/boundary/PL/risk. Application
+evidence remains missing. **ROLLING_PERFORMANCE_OPEN** remains:4 main full50
+misses, plus variant40's57 core40 misses; cold mapping and diagnostic I/O are
+separate. Bounds here stay below8.56m vertical, not tens of meters, but this
+does not establish future tightness. Recovery availability is verified for
+the tested separated episodes within replay, not arbitrary delay/noise.
+**APPLICATION_AL_UNQUALIFIED / DEPLOYMENT_UNQUALIFIED** remain.
+
+Scope audit: infinite-event theorem PASS; raw all-time induction PASS;
+repeated physical history/identity/carry PASS; real second native prior repair
+and rejoin PASS; beyond200 and global source/risk PASS; all3 window variants
+PASS; future/mixed-mode/negative/queue safeguards PASS; explicit resource/
+performance/accuracy qualifications PASS reporting. No mock prerequisite,
+noise/AL/gyro reduction, finite-T relabeling or SC1–SC4 campaign repetition.
+
+Reproduce from the existing configured ROS/GTSAM workspace:
+
+```bash
+python3 tools/sc4_system_research.py open-check --build
+python3 tools/sc4_system_research.py open
+python3 tools/sc4_system_research.py open-remaining
+```
+
+The same epoch_raim_runner exposes CONFIG CSV SCENE open-rolling on|off
+PLAYED; PLAYED is a provider test length, not a risk horizon. Core mathematical
+implementation commit d2fd8c5; event/preregistration a8d617c; main verifier/
+result save3717534. Final doc/test save is local HEAD. Own transient artifacts
+are removed after reconciliation, no backups and no automatic push.

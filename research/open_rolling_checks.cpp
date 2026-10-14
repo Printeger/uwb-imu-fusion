@@ -1,6 +1,7 @@
 #include "open_fault_pool.hpp"
 #include "rolling_boundary.hpp"
 #include "open_delivery_gate.hpp"
+#include "rolling_recovery.hpp"
 #include <iostream>
 using namespace uwb_imu_pl;using namespace uwb_imu_pl::research;
 void require(bool b,const char* s){if(!b)throw std::runtime_error(s);}
@@ -33,5 +34,22 @@ int main(){try{
  require(proposal.current.p[0].lower()==unchanged.current.p[0].lower(),"future affected current boundary");
  auto receipt=backend.commitEpoch(std::move(tx),plan);require(proof.finalize(std::move(proposal),receipt,backend.retainedKeysV1(),backend.currentState()).valid,"actual open boundary refused");
  refuse([&]{proof.finalize(std::move(unchanged),receipt,backend.retainedKeysV1(),backend.currentState());});require(backend.backendUpdateCount()==2,"proof failure updated twice");
+ // Real late recovery outside declared replay. Detection continues while
+ // actions are operator-held; neither event nor fault identity is renewed.
+ NoisyMotionScenario late("config/sc5_open.yaml","OE_GYRO",20261010,104);
+ auto lp=resolveRollingPolicy(late.law,late.cfg);lp.replay=30;
+ OpenFaultPool lm(late.initial_observation,law,lp.budget);
+ RollingIntegrity lb(lp,late.initial_observation,law.initial_sigmas,law.accel_rw,law.gyro_rw,late.lever);
+ RollingRecovery lr(late.initial_observation,lp);IncrementalUwbImuEstimator native(late.cfg,late.lever);
+ native.initialize(late.initial_observation,law.initial_sigmas);native.ingestImu(late.imu[0]);lm.append(late.imu[0]);
+ std::deque<ImuMeasurement> raw{late.imu[0]};std::deque<RollingRawState> caps{lb.certificate().separator};
+ for(int k=1;k<=104;++k){for(int i=(k-1)*10+1;i<=k*10;++i){native.ingestImu(late.imu[i]);lm.append(late.imu[i]);raw.push_back(late.imu[i]);}while(raw.size()>301)raw.pop_front();
+  auto t=native.prepareEpoch(late.uwb[k-1]);auto mv=lm.view();auto a=lr.prepare(t,mv,raw,caps,late.cfg,k>=100);
+  if(k>=100 && (a.recovery!="BOUND_VALID_BUT_RECOVERY_UNAVAILABLE" || a.current_bridge || a.boundary_repair))throw std::runtime_error("outside buffer k="+std::to_string(k)+" status="+a.status+" recovery="+a.recovery+" alert_generation="+std::to_string(mv.alert_generation)+" alarm="+std::to_string(mv.state.alarm)+" first="+std::to_string(a.first_dependency));
+  auto prop=lb.propose(t,a.plan,late.range_certificates[k-1],mv);auto c=prop.current;auto saved=t;auto rr=native.commitEpoch(std::move(t),a.plan);
+  require(lb.finalize(std::move(prop),rr,native.retainedKeysV1(),native.currentState()).valid,"outside recovery lost valid raw protection");lr.committed(a,saved,rr,native.factorLedger());
+  caps.push_back(c);while(caps.size()>31)caps.pop_front();
+ }
+ require(lm.records().size()==1 && lm.records()[0].begin.value()>=0,"late identity erased");
  std::cout<<"OPEN CHECKS PASS repeated shared-theta paths, residual/birth IDs, concurrent axes outside, identity capacity refusal, finite/open mix, future independence, actual single commit\n";return 0;
  }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
