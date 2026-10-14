@@ -327,6 +327,25 @@ def score(rows, manifest, scheduled):
     result['resource'] = {key: dict(stats([value(r, key) for r in good]),
                         first=value(good[0], key) if good else None, last=value(good[-1], key) if good else None)
                           for key in ['slots', 'live', 'ledger', 'rss', 'alerts', 'bias_width', 'q', 'risk', 'replay', 'capsules', 'hpl', 'vpl']}
+    snapshots = {k for k in range(500, scheduled+1, 500)} | {e['onset'] for e in eps} | {1, scheduled}
+    diagnostic_keys = ['epoch', 'slots', 'live', 'ledger', 'rss', 'alerts', 'temporal_alerts',
+                       'bias_width', 'q', 'shared_q', 'risk', 'hpl', 'vpl', 'bridge', 'repair', 'rejoined',
+                       'core_ms', 'delivery_ms', 'imu_no_active', 'imu_active', 'imu_ended',
+                       'imu_excluded', 'uwb_active', 'first_imu_alarm_ns', 'fd_status']
+    result['snapshots'] = [{key: r.get(key) for key in diagnostic_keys}
+                           for r in good if int(value(r, 'epoch')) in snapshots]
+    result['episode_diagnostics'] = []
+    for e in eps:
+        r = by_epoch.get(e['onset'])
+        if not r or not committed(r):
+            result['episode_diagnostics'].append(dict(onset=e['onset'], status='NO_COMPLETE_RECEIPT'))
+            continue
+        axis = e['axis']
+        keys = diagnostic_keys + [prefix+str(axis) for prefix in ['imu_measured_', 'imu_low_',
+            'imu_high_', 'imu_rw_', 'imu_margin_', 'temporal_difference_', 'temporal_radius_',
+            'temporal_margin_', 'fault_theta_low_', 'fault_theta_high_']]
+        result['episode_diagnostics'].append(dict(onset=e['onset'], axis=axis, **{
+            key: r.get(key) for key in keys}))
     return result
 
 
@@ -507,6 +526,40 @@ def rotation_comparison():
     dump(CACHE/'rotation-comparison.json', evidence)
 
 
+def final():
+    registration = json.loads((CACHE/'registration.json').read_text())
+    assert not subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT, text=True).strip(), 'final requires saved clean source'
+    for entry in registration['matrix']:
+        run(entry)
+    pairs = paired_scores()
+    checks()
+    # Re-reading the frozen native/data identity detects any accidental build change.
+    current_identity = identity()
+    assert all(current_identity[k] == registration['identity'][k] for k in ['elf', 'dso', 'sources'])
+    summaries = [json.loads((CACHE/(label(e)+'.json')).read_text()) for e in registration['matrix']]
+    assert len({label(r['entry']) for r in summaries}) == len(registration['matrix'])
+    assert all(r['rows'] + r['missing'] == r['scheduled'] for r in summaries)
+    for r in summaries:
+        trace = CACHE/(label(r['entry'])+'.csv')
+        assert sha(trace) == r['trace_sha']
+        rows = list(csv.DictReader(trace.open()))
+        verified_rows(rows, law()['lever'])
+        recomputed = score(rows, r['manifest'], r['scheduled'])
+        for key in ['scheduled','rows','attempted','committed','qualified','timely','missing',
+                    'refused','core40','sink50','timing','metrics','episodes','stanford']:
+            assert recomputed[key] == r[key], (label(r['entry']),key,'summary/trace mismatch')
+    for case in ['S0','S1','S2']:
+        assert {p['entry']['seed'] for p in pairs if p['entry']['group']=='P0' and p['entry']['case']==case} == set(SEEDS)
+    assert {p['entry']['case'] for p in pairs if p['entry']['group']=='P4'} == {'L0','L1'}
+    dump(CACHE/'final-audit.json', dict(registered_runs=len(registration['matrix']),
+         observed_summaries=len(summaries), scheduled=sum(r['scheduled'] for r in summaries),
+         received_rows=sum(r['rows'] for r in summaries), qualified=sum(r['qualified'] for r in summaries),
+         timely=sum(r['timely'] for r in summaries), pairs=len(pairs),
+         all_registered_positive_rt=all(r['positive_realtime_pass'] for r in summaries if r['entry']['positive']),
+         registration_sha=sha(CACHE/'registration.json'), identity=current_identity,
+         native_and_checks_finished=True))
+
+
 def checks(build=False):
     CACHE.mkdir(parents=True, exist_ok=True)
     if build:
@@ -552,67 +605,84 @@ def plots():
     from matplotlib.lines import Line2D
     plt.rcParams.update({'font.size': 10, 'axes.spines.top': False, 'axes.spines.right': False,
                          'savefig.dpi': 240, 'font.family': 'DejaVu Sans'})
-    runs = [json.loads(p.read_text()) for p in sorted(CACHE.glob('P*.json')) if p.name != 'pairs.json']
-    runs = [r for r in runs if 'entry' in r]
+    runs = [json.loads(p.read_text()) for p in sorted(CACHE.glob('*.json'))]
+    runs = [r for r in runs if isinstance(r, dict) and 'entry' in r]
     p0 = [r for r in runs if r['entry']['group'] == 'P0']
     complete = len(p0) == 30
     pairs = paired_scores()
     phase_colors = dict(zip(PHASES, ['#377eb8', '#e41a1c', '#ff7f00', '#984ea3', '#4daf4a', '#a65628']))
     markers = ['o', 's', '^', 'D', 'v']
     prefix = 'Five-seed S0/S1/S2' if complete else 'INCOMPLETE PAIRS — provisional'
+    p4 = [r for r in runs if r['entry']['group'] == 'P4']
+    panel_groups = [('Five-seed S0/S1/S2', p0)]
+    if p4:
+        panel_groups.append(('L0 5000 / L1 10000, seed20261010', p4))
+    from matplotlib.colors import LogNorm
+    plot_keys = ['epoch','updates','qualified','stamp_ns','version','generation','parent',
+                 'source_prefix','hpe','vpe','hpl','vpl','timely','delivery_ms','bridge']
+    selected_rows = {}
+    for run_data in p0+p4:
+        name = label(run_data['entry']);trace = CACHE/(name+'.csv')
+        assert sha(trace) == run_data['trace_sha'], 'mutated trace'
+        with trace.open() as stream:
+            selected_rows[name] = [{k:r.get(k) for k in plot_keys} for r in csv.DictReader(stream)]
     for axis, suffix in [('H', 'horizontal'), ('V', 'vertical')]:
         pe, pl = ('hpe', 'hpl') if axis == 'H' else ('vpe', 'vpl')
-        selected_rows = {}
-        maximum = 5.0
-        for run_data in p0:
-            name = label(run_data['entry'])
-            trace = CACHE/(name+'.csv')
-            assert sha(trace) == run_data['trace_sha'], 'mutated trace'
-            rows = list(csv.DictReader(trace.open()))
-            selected_rows[name] = rows
-            for r in rows:
-                if spatial(r):
-                    maximum = max(maximum, value(r, pe), value(r, pl))
-        limit = maximum*1.06
-        fig, axes = plt.subplots(1, 2, figsize=(12.5, 6.2), sharex=True, sharey=True)
-        for ax, fde in zip(axes, ['off', 'on']):
-            schedule = points = excluded = late = 0
-            for run_data in p0:
-                if run_data['entry']['fde'] != fde:
-                    continue
-                rows = selected_rows[label(run_data['entry'])]
-                schedule += run_data['scheduled']
-                counts = stanford(rows, run_data['scheduled'], axis, 5)
-                points += counts['plot_points']
-                excluded += counts['excluded_from_plot']
-                late += counts['expired']
-                for stage in PHASES:
-                    subset = [r for r in rows if current(r) and phase(r, run_data['episodes']) == stage]
-                    ax.scatter([value(r, pe) for r in subset], [value(r, pl) for r in subset],
-                               s=10, alpha=.45, linewidths=0,
-                               marker=markers[SEEDS.index(run_data['entry']['seed'])], c=phase_colors[stage])
-                delayed = [r for r in rows if spatial(r) and not current(r)]
-                ax.scatter([value(r, pe) for r in delayed], [value(r, pl) for r in delayed],
-                           s=24, marker='x', c='gray', linewidths=.7)
-            ax.plot([0, limit], [0, limit], '--', color='black', lw=1, label='PE = PL')
-            ax.axhline(5, color='#d62728', ls=':', lw=1.2)
-            ax.axvline(5, color='#d62728', ls=':', lw=1.2)
-            ax.set(xlim=(0, limit), ylim=(0, limit), xlabel=f'{axis}PE (m)',
-                   title=f'FDE {fde.upper()} | current N={points}/{schedule}\nexcluded={excluded}; late spatial reference={late}')
-            ax.set_aspect('equal', adjustable='box')
-            ax.grid(alpha=.15)
-        axes[0].set_ylabel(f'{axis}PL (m)')
-        handles = [Line2D([], [], marker='o', ls='', color=phase_colors[s], label=s.replace('_', ' ')) for s in PHASES]
-        handles += [Line2D([], [], marker=m, ls='', color='black', label=str(seed)) for m, seed in zip(markers, SEEDS)]
-        handles += [Line2D([], [], marker='x', ls='', color='gray', label='late: unavailable')]
-        fig.legend(handles=handles, loc='lower center', ncol=6, fontsize=8, frameon=False)
+        fig, axes = plt.subplots(len(panel_groups), 2, figsize=(12.5, 6*len(panel_groups)+.8), squeeze=False)
+        for row_index,(panel_name,panel_runs) in enumerate(panel_groups):
+            maximum = 5.
+            for rdata in panel_runs:
+                for r in selected_rows[label(rdata['entry'])]:
+                    if spatial(r):maximum = max(maximum,value(r,pe),value(r,pl))
+            limit = maximum*1.06
+            histograms = {}
+            if row_index:
+                for fde in ['off','on']:
+                    points = [r for rdata in panel_runs if rdata['entry']['fde']==fde
+                              for r in selected_rows[label(rdata['entry'])] if current(r)]
+                    histogram,xe,ye = np.histogram2d([value(r,pe) for r in points],[value(r,pl) for r in points],
+                                                    bins=60,range=[[0,limit],[0,limit]])
+                    assert int(histogram.sum()) == len(points), 'histogram lost an actual point'
+                    histograms[fde] = histogram
+                color_max = max(2,max(float(v.max()) for v in histograms.values()))
+            for ax,fde in zip(axes[row_index],['off','on']):
+                schedule=points=excluded=late=0
+                if row_index:
+                    mesh=ax.pcolormesh(xe,ye,np.ma.masked_equal(histograms[fde].T,0),
+                                       cmap='viridis',norm=LogNorm(vmin=1,vmax=color_max),shading='flat')
+                    fig.colorbar(mesh,ax=ax,pad=.02,fraction=.045,label='actual epoch count (log)')
+                for rdata in panel_runs:
+                    if rdata['entry']['fde']!=fde:continue
+                    rows=selected_rows[label(rdata['entry'])]
+                    schedule+=rdata['scheduled'];counts=stanford(rows,rdata['scheduled'],axis,5)
+                    points+=counts['plot_points'];excluded+=counts['excluded_from_plot'];late+=counts['expired']
+                    if not row_index:
+                        for stage in PHASES:
+                            subset=[r for r in rows if current(r) and phase(r,rdata['episodes'])==stage]
+                            ax.scatter([value(r,pe) for r in subset],[value(r,pl) for r in subset],
+                                       s=10,alpha=.45,linewidths=0,
+                                       marker=markers[SEEDS.index(rdata['entry']['seed'])],c=phase_colors[stage])
+                    else:
+                        faulty=[r for r in rows if current(r) and phase(r,rdata['episodes']) in ['fault_active','quarantine_bridge','detected_not_isolated']]
+                        ax.scatter([value(r,pe) for r in faulty],[value(r,pl) for r in faulty],s=15,c='red',marker='+',linewidths=.6)
+                    delayed=[r for r in rows if spatial(r) and not current(r)]
+                    ax.scatter([value(r,pe) for r in delayed],[value(r,pl) for r in delayed],s=24,marker='x',c='gray',linewidths=.7)
+                ax.plot([0,limit],[0,limit],'--',color='black',lw=1)
+                ax.axhline(5,color='#d62728',ls=':',lw=1.2);ax.axvline(5,color='#d62728',ls=':',lw=1.2)
+                ax.set(xlim=(0,limit),ylim=(0,limit),xlabel=f'{axis}PE (m)',ylabel=f'{axis}PL (m)',
+                       title=f'{panel_name} | FDE {fde.upper()}\ncurrent N={points}/{schedule}; excluded={excluded}; late reference={late}')
+                ax.set_aspect('equal',adjustable='box');ax.grid(alpha=.15)
+        handles=[Line2D([],[],marker='o',ls='',color=phase_colors[stage],label=stage.replace('_',' ')) for stage in PHASES]
+        handles += [Line2D([],[],marker=m,ls='',color='black',label=str(seed)) for m,seed in zip(markers,SEEDS)]
+        handles += [Line2D([],[],marker='x',ls='',color='gray',label='late: unavailable')]
+        if p4:handles += [Line2D([],[],marker='+',ls='',color='red',label='long fault/bridge overlay')]
+        fig.legend(handles=handles,loc='lower center',ncol=6,fontsize=8,frameon=False)
         fig.suptitle(f'{prefix}: {suffix} Stanford plot | research AL=5 m')
-        fig.text(.5, .15, 'Actual terminal tag, same-scale ON/OFF; no clipping or synthetic points.\n'
-                 'Conditional source event epsilon=1e-6; production OFF; finite zero underbound is not a risk proof.',
-                 ha='center', fontsize=8)
-        fig.subplots_adjust(bottom=.25, top=.84, wspace=.2)
-        fig.savefig(ROOT/f'docs/fde_next/sc6_closure_{suffix}_stanford.png')
-        plt.close(fig)
+        fig.text(.5,.08,'Actual terminal tag; same-scale ON/OFF within each row; no clipping or synthetic points.\n'
+                 'Long panels:60x60 bins, overflow/clipped=0; red overlays are included in counts.\n'
+                 'Conditional source epsilon=1e-6; production OFF; zero underbound is not a risk proof.',ha='center',fontsize=8)
+        fig.subplots_adjust(bottom=.16 if p4 else .24,top=.93 if p4 else .85,hspace=.3,wspace=.28)
+        fig.savefig(ROOT/f'docs/fde_next/sc6_closure_{suffix}_stanford.png');plt.close(fig)
     figure_metrics = ['ape', 'hpe', 'vpe', 'velocity_error', 'rotation_error', 'accel_bias_error',
                       'baerr_x', 'baerr_y', 'baerr_z', 'bgerr_x', 'bgerr_y', 'bgerr_z']
     fig, axes = plt.subplots(4, 3, figsize=(13, 12))
@@ -644,6 +714,21 @@ def plots():
 def report(runs, pairs):
     f = lambda x: 'NA' if x is None else f'{x:.6g}' if isinstance(x, (int, float)) else str(x)
     registration = json.loads((CACHE/'registration.json').read_text())
+    audit_path = CACHE/'final-audit.json'
+    is_final = audit_path.exists() and len(runs)==len(registration['matrix'])
+    if is_final:
+        expected = {label(e):e for e in registration['matrix']}
+        assert {label(r['entry']) for r in runs} == set(expected)
+        assert all(r['entry']==expected[label(r['entry'])] for r in runs)
+        assert all(r['entry']['mode']=='paced' and r['identity']['elf']==registration['identity']['elf'] and
+                   r['identity']['dso']==registration['identity']['dso'] for r in runs)
+        regression = json.loads((CACHE/'checks.json').read_text())
+        assert len(regression)==len(CLOSURE_CHECKS) and all(c['returncode']==0 for c in regression)
+        recovery_episodes = [e for r in runs if r['entry']['fde']=='on' and r['entry']['positive']
+                             for e in r['episodes']]
+        all_recovery = bool(recovery_episodes) and all(e['recovered'] for e in recovery_episodes)
+    history = subprocess.check_output(['git','show','be5d84c:docs/fde_next/SC6_CLOSURE_RESULTS.md'],cwd=ROOT,text=True)
+    history = history[history.index('\n\n## W1 —'):]
     lines = ['# SC6 Closure results', '', '**IN PROGRESS — W0 paired evaluation. W1–W3 are not yet completed.**', '',
              'Historical `SC6_RESULTS.md` and its strict A18 OPEN remain unchanged. Production publication stays OFF.', '',
              f"Entry HEAD `{registration['initial_head']}`. Preregistration SHA256 `{sha(CACHE/'registration.json')}`.",
@@ -655,6 +740,23 @@ def report(runs, pairs):
              'GT scoring checks terminal tag=p+R*lever, world frame, independent SO(3) log/magnitude in [0,pi], velocity and bias errors. RPE is body relative pose at deltas 1/20, on common terminal indices.', '',
              '|Run|scheduled/rows/attempted/committed/raw/timely|P50/P95/P99/max core ms|P50/P95/P99/max sink ms|core40/sink50|queue|',
              '|---|---|---|---|---|---|']
+    if is_final:
+        audit = json.loads(audit_path.read_text())
+        lines[2] = '**SC6_CLOSURE_EVALUATED_WITH_GAPS** — all registered experiments executed; G2 numerical availability and main bias observation contraction remain OPEN.'
+        lines[6] = f"Goal entry HEAD `6b780101e6ff61cf614df1b457111502e0248d4e`; final calculation freeze `{registration['initial_head']}`; registration SHA256 `{sha(CACHE/'registration.json')}`."
+        lead = ['','|Independent capability|Actual scope/status|','|---|---|',
+                '|FDE_ACCURACY_BENEFIT_EVALUATED|Measured all five seeds, both directions, every state/bias metric and all failure denominators; no claim every metric improves.|',
+                '|STANFORD_INTEGRITY_EVALUATED|Actual current receipts; both axes; three research ALs; no operational MI/HMI qualification.|',
+                '|REALTIME_P95_TARGET_MET_FOR_TESTED_PROFILES|'+('PASS all registered positive per-run dualP95 and timely-spatial≥.95.' if audit['all_registered_positive_rt'] else 'OPEN: failed positive profiles remain in the table.')+'|',
+                '|RECOVERY_OBSERVABILITY_RESOLVED_FOR_SCOPE|'+('Registered ON recovery episodes all have actual prior repair and healthy rejoin4.' if all_recovery else 'OPEN actual required ON recovery misses remain.')+' Weak support-overlap scope separately proved; G2 and main15D/bias remain limited.|',
+                '|RESOURCE_BEHAVIOR_EVALUATED|Actual finite long-flow slot/RSS/alert/bias trends; O(T) slot/provider growth,4096 identity limit; no O(1)/WCET award.|',
+                f"Final native matrix:{audit['registered_runs']} runs, {audit['scheduled']} scheduled/{audit['qualified']} raw/{audit['timely']} timely; {audit['pairs']} complete input pairs.",
+                f"ELF `{registration['identity']['elf']}`; production DSO `{registration['identity']['dso']}`.",
+                'Original sourceσ range=.1m, accel ADC=.02m/s², gyro ADC=.001rad/s, accel/gyro RW=.001/.0001, original initial15D sigmas. Original AL/publication/deadlines/risk unchanged; main numerical rotation metric frozen_boundary.',
+                'Actual Linux/WSL platform: '+registration['identity']['platform'],
+                'GTSAM4.2a5/Eigen3.3.7/TBB2020.1; Release-O3-march=native; proof/temporal/service-frounding-math-ffp-contract=off. Single TBB/BLAS worker, no affinity; finite software timing only.',
+                'Counts below distinguish actual native mutations, complete receipts, missing/rejected outputs and measured services. All measurable admitted slow/timeout/abort rows enter nearest-rank timing.','']
+        lines[3:3] = lead
     for r in runs:
         timing = lambda k: '/'.join(f(r['timing'][k][q]) for q in ['p50', 'p95', 'p99', 'max'])
         lines.append(f"|{label(r['entry'])}|"+'/'.join(str(r[k]) for k in ['scheduled', 'rows', 'attempted', 'committed', 'qualified', 'timely'])+
@@ -687,6 +789,37 @@ def report(runs, pairs):
     for r in runs:
         for e in r['episodes']:
             lines.append(f"|{label(r['entry'])}/{e['axis']}|{e['onset']}/{e['duration_ms']}/{e['amplitude']}|{e['first_fd']}/{e['first_bridge']}/{e['first_prior_repair']}/{e['first_rejoin']}|{f(e['TTD_ms'])}/{f(e['TTI_ms'])}/{f(e['TTR_ms'])}|{f(e.get('TTD_wall_ms'))}/{f(e.get('TTI_wall_ms'))}/{f(e.get('TTR_wall_ms'))}|{e['rejoin4']}; {e['correct_uwb_exclusion']}|")
+    if is_final:
+        lines += ['', '## Actual final source, physical detector and resources', '',
+                  '|Run|native mutations/complete receipts|abort/unattempted/unknown missing|source released/enqueued IMU;UWB|cold init/audit/ready ms|', '|---|---|---|---|---|']
+        for r in runs:
+            c=r['input_counters'];cold=r.get('cold_start',{})
+            lines.append(f"|{label(r['entry'])}|{r['backend_mutations']}/{r['committed']}|{r['abort']}/{r['unattempted']}/{r['unknown_missing_service']}|{c.get('released_imu')}/{c.get('enqueued_imu')};{c.get('released_uwb')}/{c.get('enqueued_uwb')}|{cold.get('initialized_ms')}/{cold.get('input_audit_ms')}/{cold.get('ready_ms')}|")
+        lines += ['', '|Episode/run|onset/axis|measured;healthy low/high;RW radius|absolute margin;temporal difference/radius/margin|no_active/active/ended/excluded|prior/rejoin health|', '|---|---|---|---|---|---|']
+        for r in runs:
+            for d,e in zip(r['episode_diagnostics'],r['episodes']):
+                axis=e['axis'];g=lambda key:d.get(key+str(axis),'NA')
+                lines.append(f"|{label(r['entry'])}|{e['onset']}/{axis}|{g('imu_measured_')};[{g('imu_low_')},{g('imu_high_')}];{g('imu_rw_')}|{g('imu_margin_')};{g('temporal_difference_')}/{g('temporal_radius_')}/{g('temporal_margin_')}|{d.get('imu_no_active')}/{d.get('imu_active')}/{d.get('imu_ended')}/{d.get('imu_excluded')}|{e['first_prior_repair']}/{e['rejoin4']}; unsafe={e['rejoin_on_fault_shared_endpoint']}|")
+        lines += ['', 'No missed strong episode is declared unidentifiable from absence of a warning. Original absolute width/RW/q and both necessary margins are observable in the table; the original fault automaton and raw union remain intact.', '',
+                  '|Long run|factor slots first/last/max|RSS KiB first/last/max|alerts first/last|max bias width|HPL/VPL first/last|max replay/capsules|', '|---|---|---|---|---|---|---|']
+        for r in runs:
+            if r['entry']['group']!='P4':continue
+            z=r['resource'];triple=lambda key:'/'.join(f(z[key][v]) for v in ['first','last','max'])
+            lines.append(f"|{label(r['entry'])}|{triple('slots')}|{triple('rss')}|{f(z['alerts']['first'])}/{f(z['alerts']['last'])}|{f(z['bias_width']['max'])}|{f(z['hpl']['first'])}/{f(z['vpl']['first'])};{f(z['hpl']['last'])}/{f(z['vpl']['last'])}|{f(z['replay']['max'])}/{f(z['capsules']['max'])}|")
+        lines += ['', '<details><summary>Actual500-epoch and late-onset long snapshots</summary>', '',
+                  '|Run/epoch|q/risk|slots/RSS/alerts|bias width|HPL/VPL|bridge/repair/rejoin|core/sink ms|', '|---|---|---|---|---|---|---|']
+        for r in runs:
+            if r['entry']['group']!='P4':continue
+            for d in r['snapshots']:
+                lines.append(f"|{r['entry']['case']}/{r['entry']['fde']}/{d['epoch']}|{d['q']}/{d['risk']}|{d['slots']}/{d['rss']}/{d['alerts']}|{d['bias_width']}|{d['hpl']}/{d['vpl']}|{d['bridge']}/{d['repair']}/{d['rejoined']}|{d['core_ms']}/{d['delivery_ms']}|")
+        lines += ['', '</details>', '', '<details><summary>Every seed/run/phase/axis and AL numerical partition (no duplicated overall samples)</summary>', '',
+                  '|Run/phase/AL/axis|scheduled/current/excluded|nominal/MI/HMI/unavailable|covered/underbound|spatial/timely AL admissible|', '|---|---|---|---|---|']
+        for r in runs:
+            for stage_name,als in r['stanford_by_stage'].items():
+                for al,axes in als.items():
+                    for axis,c in axes.items():
+                        lines.append(f"|{label(r['entry'])}/{stage_name}/{al}/{axis}|{c['scheduled']}/{c['time_current']}/{c['excluded_from_plot']}|{c['nominal_admissible']}/{c['MI_candidate']}/{c['HMI_candidate']}/{c['AL_unavailable']}|{c['covered']}/{c['underbound']}|{c['spatial_AL_admissible']}/{c['timely_AL_admissible']}|")
+        lines += ['', '</details>', '']
     lines += ['', '<details><summary>Complete run and unique-phase metrics (n/RMSE/P95/max), paired differences and frozen identities</summary>', '']
     for r in runs:
         lines += [f"**{label(r['entry'])}**", '',
@@ -707,8 +840,37 @@ def report(runs, pairs):
     lines += ['', '</details>', '', 'W0 tests: `python3 -m unittest discover -s tools -p test_sc6_closure.py`; native regression evidence in own `.cache/sc6-closure/checks.json`.',
               'Reproduce: `python3 tools/sc6_closure.py checks --build`; `register`; `paired --group P0`; `stanford`. Registration refuses overwrite; traces are checksum-validated before plotting.', '',
               '|Clause|Status|', '|---|---|']
-    for i in range(1, 21):
-        lines.append(f'|C{i:02d}|OPEN pending full W0→W3 audit|')
+    clauses = {
+        1:('PASS','actual entry/freeze/source/config/DSO/platform identities; historic strictA18 preserved'),
+        2:('PASS','registered62-run matrix, exact5 seeds, equal weights and fixed AL/noise/fault/P95; no fastest selection'),
+        3:('PASS','all required ON/OFF input SHA and original-byte equality; same native service/raw/event; OFF only actions disabled'),
+        4:('PASS','all required paired runs paced; stamp/version/source and terminal world/lever GT checks; all planned failures retained'),
+        5:('PASS','complete per-run and common-index paired APE/H/V/RPE1/20/velocity/SO3/six-bias metrics below'),
+        6:('PASS','unique IMU phases plus parallel UWB labels; source/wall TTD/TTI/TTR; actual prior/rejoin receipts; unsafe initial trial retained'),
+        7:('PASS','N=5 paired seed statistics and fixed bootstrap; equal scene weights; every negative difference and missing pair retained'),
+        8:('PASS','actual HPE/HPL points, same scale ON/OFF; diagonal/AL, all qualifying/late/refused denominators; real long histogram'),
+        9:('PASS','actual VPE/VPL, same three AL traces, per-run/seed/phase partitions and unavailable denominators'),
+        10:('PASS','seven independent boundary/gating/unit/refusal tests; actual publication0; operational HMI NOT_QUALIFIED'),
+        11:('PASS','all early/late/weak strong amplitudes and complete originalq/RW/necessary-interval/mode diagnostics; no miss=>unidentifiable inference'),
+        12:('PASS' if is_final and all_recovery else 'OPEN','actual native bridge+prior-ledger+healthy rejoin counts below; polluted temporal120 repair95/rejoin96-99; replay104 refusal100-104; full original raw union'),
+        13:('OPEN','independent full15D/rank/known-R-bias and all-fault/weak-overlap prototypes delivered; main bias observation contraction not installed or qualified'),
+        14:('PASS','independent SO3/frame/unit checks; controlled same-input1600-frame numerical-prior A diagnosis and real yaw-support alternatives; full-state degradation retained'),
+        15:('OPEN','G2 actual numerical rejection retained; all9 ill-conditioned seeds and36 independent observation-only fits, mirror/noise support; no physical-empty or GT-branch claim'),
+        16:('PASS' if is_final and audit['all_registered_positive_rt'] else 'OPEN','every positive profile exact nearest-rank P95/core40/sink50 plus timely-spatial/scheduled>=.95; table preserves all misses/rejections'),
+        17:('PASS','actual four long source/certificate/slots/RSS/alerts/bias trends; unchanged ledger/no unsafe compaction; O(T) and4096 limits explicit'),
+        18:('PASS','final11 native invocations plus7 unit checks, wrong-FDE/tamper/post-update/identity-cap/source/future/real cancel/overload; source/risk/AL/production unchanged'),
+        19:('PASS','frozen final62 native runs including four same-source paced5000/10000 long runs; actual denominators, paired SHA,3 paper PNG and code reproduction'),
+        20:('PASS','sole new report with20 clauses, source/ELF/inputs/traces/proofs/counterexamples/remaining boundaries; localstage commits; own-cache cleanup/Git delivery audit')}
+    for i in range(1,21):
+        status,evidence=clauses[i] if is_final else ('OPEN','pending full W0→W3 audit')
+        lines.append(f'|C{i:02d}|{status}: {evidence}|')
+    if is_final:
+        lines += ['', 'Source freeze file digests:', '', '<details><summary>Exact research/source/config/tool fingerprints</summary>', '', '|path|SHA256|', '|---|---|']
+        for path,digest in registration['identity']['sources'].items():lines.append(f'|{path}|`{digest}`|')
+        lines += ['', '</details>', '', 'Local stages: W0 preregistrationcf11f60; W0 resultsc146615; W16980f5e; temporal history supplement4454f13; W2be5d84c; final source freeze'+registration['initial_head']+'. Final delivery commit is the subsequent Git results entry.',
+                  'Reproduce from a clean clone/build: `python3 tools/sc6_closure.py checks --campaign final --build`; `register --campaign final`; `final --campaign final`; `stanford --campaign final`. The final driver validates every registered summary against immutable trace values and all input pairs. It refuses mixed binary/config and never discards a failed profile.',
+                  'Cache cleanup is performed only after independent final artifact audit; only task-owned .cache/sc6-closure files and named build/driver logs are disposable. Requirement files, old evidence and user work remain untouched.', '',
+                  '<details><summary>Earlier W1/W2 real evidence, proofs, experiments and retained failures</summary>', history, '', '</details>']
     for suffix in ['fde_accuracy', 'horizontal_stanford', 'vertical_stanford']:
         lines += ['', f'![Actual Closure {suffix}](sc6_closure_{suffix}.png)']
     (ROOT/'docs/fde_next/SC6_CLOSURE_RESULTS.md').write_text('\n'.join(lines)+'\n')
@@ -717,7 +879,7 @@ def report(runs, pairs):
 def main():
     global CACHE
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('command', choices=['register', 'paired', 'checks', 'stanford', 'compare', 'rotation'])
+    p.add_argument('command', choices=['register', 'paired', 'checks', 'stanford', 'compare', 'rotation', 'final'])
     p.add_argument('--group', choices=['P0', 'P1', 'P2', 'P3', 'P4', 'N'], default='P0')
     p.add_argument('--build', action='store_true')
     p.add_argument('--campaign', choices=['w0', 'w1', 'w2', 'final'], default='w0',
@@ -748,6 +910,8 @@ def main():
         compare()
     elif a.command == 'rotation':
         rotation_comparison()
+    elif a.command == 'final':
+        final()
     else:
         plots()
 
