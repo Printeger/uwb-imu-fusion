@@ -581,3 +581,5 @@ set_source_files_properties(research/sc6_closure_checks.cpp PROPERTIES COMPILE_O
 add_executable(sc7_checks EXCLUDE_FROM_ALL research/sc7_checks.cpp)
 target_link_libraries(sc7_checks fde_research tbb)
 set_source_files_properties(research/sc7_checks.cpp PROPERTIES COMPILE_OPTIONS "-frounding-math;-ffp-contract=off")
+
+target_sources(fde_research PRIVATE research/numerical_candidate.cpp)

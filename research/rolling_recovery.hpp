@@ -16,7 +16,7 @@ struct RollingFdeAssessment {
 class RollingRecovery {
  Eigen::Matrix<double,6,1> bias_observation_;
  ResolvedRollingPolicyV1 policy_;
- bool isolated_=false,stable_rotation_=false,optimized_=false;
+ bool isolated_=false,stable_rotation_=false,optimized_=false,numerical_=false;
  TimestampNs quarantine_begin_,quarantine_end_;
  int held_anchor_=-1,held_until_=0,observed_anchor_=-1;
  size_t observed_uwb_onset_=0;
@@ -30,6 +30,7 @@ class RollingRecovery {
  RollingFdeAssessment prepare(EpochTransaction&,const RollingMonitorView&,
    const std::deque<ImuMeasurement>&,const std::deque<RollingRawState>&,
    const IntegrityConfig&,bool fde);
+ void enableNumericalRecovery(bool enabled){numerical_=enabled;}
  void committed(const RollingFdeAssessment&,const EpochTransaction&,const CommitReceipt&,
    const FactorLedger&);
 };

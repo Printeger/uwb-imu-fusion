@@ -1,5 +1,6 @@
 #include "rolling_recovery.hpp"
 #include "epoch_raim.hpp"
+#include "numerical_candidate.hpp"
 #include <gtsam/slam/PriorFactor.h>
 #include <gtsam/nonlinear/LinearContainerFactor.h>
 #include <Eigen/SVD>
@@ -84,7 +85,12 @@ RollingFdeAssessment RollingRecovery::prepare(EpochTransaction& tx,const Rolling
  if(policy_.open && open_pending_)assessment.alarm=true;
  if(!monitor.matches(tx) || (!assessment.nominal_possible && !assessment.possible))throw std::runtime_error("RECOVERY_MONITOR_SCOPE_REFUSED");
  std::array<std::optional<EpochRaim>,9> cached;
- auto candidate=[&](int mask){if(!optimized_)return uwbCandidate(tx.uwb_batch,mask,1e-6,1e-9);auto& item=cached[mask+1];if(!item)item=uwbCandidate(tx.uwb_batch,mask,1e-6,1e-9);return *item;};
+ Eigen::MatrixXd anchor_design(tx.uwb_batch.measurements.size()-1,3);for(int i=1;i<int(tx.uwb_batch.measurements.size());++i)anchor_design.row(i-1)=(tx.uwb_batch.measurements[i].anchor_position_m-tx.uwb_batch.measurements[0].anchor_position_m).transpose();auto singular=Eigen::JacobiSVD<Eigen::MatrixXd>(anchor_design).singularValues();
+ const bool difficult=numerical_ && singular.minCoeff()<1e-3*singular.maxCoeff();
+ auto evaluate=[&](int mask){return difficult?numericalUwbCandidate(tx.uwb_batch,mask).functional:uwbCandidate(tx.uwb_batch,mask,1e-6,1e-9);};
+ auto candidate=[&](int mask){if(!optimized_)return evaluate(mask);auto& item=cached[mask+1];if(!item)item=evaluate(mask);return *item;};
+ // Complete numerical mask census is bounded and entirely before native commit.
+ if(difficult)for(int mask=-1;mask<8;++mask)candidate(mask);
  auto all=candidate(-1);bool uwb_alarm=all.gaussian.statistic>all.gaussian.threshold;result.uwb_alarm=uwb_alarm;if(uwb_alarm)result.uwb_alarm_time=Clock::now();
  int detected=-1;
  if(uwb_alarm){double best=INFINITY;for(int mask=0;mask<8;++mask){auto c=candidate(mask);if(c.gaussian.statistic<=c.gaussian.threshold && c.gaussian.statistic<best){best=c.gaussian.statistic;detected=mask;}}}

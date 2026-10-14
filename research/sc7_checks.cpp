@@ -1,4 +1,5 @@
 #include "sc6_service.hpp"
+#include "numerical_candidate.hpp"
 #include <tbb/global_control.h>
 #include <fstream>
 #include <iomanip>
@@ -9,6 +10,17 @@ void require(bool v,const char* why){if(!v)throw std::runtime_error(why);}
 double vpl(double l,double u,double c){return std::max(std::abs(l-c),std::abs(u-c));}
 int main(int argc,char** argv){try{
  tbb::global_control serial(tbb::global_control::max_allowed_parallelism,1);
+ if(argc>1 && std::string(argv[1])=="geometry"){
+  Sc6Provider src("config/sc7.yaml","S3",20261010,1);auto b=src.uwb[0];
+  for(int mask=-1;mask<8;++mask){auto old=uwbCandidate(b,mask,1e-6,1e-9);auto c=numericalUwbCandidate(b,mask);std::cout<<" flags="<<c.numeric_converged<<'/'<<c.functional_post_test<<" status="<<c.functional.status<<" seeds="<<c.converged<<'/'<<c.attempted<<" stat="<<c.functional.gaussian.statistic<<" threshold="<<c.functional.gaussian.threshold<<'\n';require(c.numeric_converged && c.functional_post_test && !c.gaussian_reference_qualified && !c.functional.gaussian.pl.allFinite(),"G2 numerical/functional qualification split");std::cout<<"G2 mask="<<mask<<" old="<<old.status<<" squared_seed="<<c.squared_seed.transpose()<<" design="<<c.design_singular.transpose()<<" local_j="<<c.jacobian_singular.transpose()<<" roots="<<c.roots.size()<<" converged="<<c.converged<<'/'<<c.attempted<<" stat="<<c.functional.gaussian.statistic<<'\n';}
+  // Exact coplanar anchors: two global roots, both locally full rank.
+  for(auto& m:b.measurements){m.anchor_position_m.z()=0;m.range_m=(m.anchor_position_m-Eigen::Vector3d(.3,-.2,1.7)).norm();}
+  auto mirror=numericalUwbCandidate(b,-1);bool up=false,down=false;for(const auto& p:mirror.roots){up|=p.z()>1.69;down|=p.z()<-1.69;}require(up && down && mirror.jacobian_singular.minCoeff()>.1,"local rank confused with global root uniqueness");
+  auto bad=b;for(auto& m:bad.measurements)m.anchor_position_m.setZero();require(!numericalUwbCandidate(bad,-1).numeric_converged,"degenerate coincident anchors accepted");
+  // A seed touching an anchor may fail; other observation-only seeds survive.
+  for(auto& m:b.measurements)m.range_m=(m.anchor_position_m-b.measurements[0].anchor_position_m).norm();auto zero=numericalUwbCandidate(b,-1);require(!zero.gaussian_reference_qualified,"near-zero domain falsely Gaussian qualified");
+  std::cout<<"SC7 K3/K4 PASS both coplanar roots, local/full design ranks separate, all9 first G2 masks, no Gaussian inheritance; raw never consumes roots for pruning\n";return 0;
+ }
  if(argc>1 && std::string(argv[1])=="attribute"){
   if(argc!=7)throw std::invalid_argument("attribute CONFIG CASE EPOCHS SEED CSV");
   Sc6Provider src(argv[2],argv[3],std::stoi(argv[5]),std::stoi(argv[4]));src.law["sc7"]["attribute"]=true;

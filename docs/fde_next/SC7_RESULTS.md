@@ -38,3 +38,16 @@ Old G2 first epoch reproduced: NO_COMPLETE_POST_PASSED_ROLLING_ACTION; 0/1 nativ
 W0 reproduction: `cmake -S . -B /home/mint/ws_fusion_uwb/build/uwb_imu_pl`; `cmake --build /home/mint/ws_fusion_uwb/build/uwb_imu_pl --target sc7_checks epoch_raim_runner -j2`; `python3 tools/sc7_research.py check`; `python3 tools/sc7_research.py attribute` (temporary traces `.cache/sc7/`). Original generated A controls preceded the retained temporal config fix; their no-fault trajectories are unaffected. S1/S2 were rerun with inherited Closure temporal monitoring after that fix.
 
 Final C13, C15, HPL, VPL, recovery, P95 and SC7-A01–A20 assessment pending W1–W3. This is an intermediate stage save, not SC7 completion.
+
+## W1 — G2 numerical and native recovery
+
+Implemented observation-only six-seed, anchor-centered/scaled trust-region damped WLS, with exact residual curvature and positive curvature safeguard. The latter fixes diagnosed near-plane GN stagnation (mask5: independent optimum z≈−0.000318m, objective1.399602725; tiny GN curvature stalled x/y when damping stabilized z). No enlarged legacy 10m guard, no GT/prior root choice, unchanged retained covariance/residuals. Final residual/Jacobian are recomputed at the final numerical root.
+
+All9 first-input candidates converge and pass functional post-test. Eight masks expose two roots; mask5 converges to one near-plane minimizer; this is not a root-completeness claim. Independent SciPy36/36 fixed-seed solves agree in minimum objectives within printed precision1e-4. Coplanar fixture retains ±1.7m roots with full local range-J rank, while anchor-difference rank is2; coincident/near-range-zero cases tested. Local Gaussian reference/alpha qualification is explicitly false; PL=∞ for this diagnostic. Functional post thresholds are heuristics, not inherited false-alarm claims. Main raw masks/sets do not consume numerical roots, so unknown/missed roots remain covered by the original raw outer domain.
+
+|G2 seed|native/finite raw/scheduled|timely|x0 exit|core/sink nearest-rank P95 ms|core/sink max ms|core40/sink50|
+|---|---|---|---|---|---|---|
+|20261010|300/300/300|298|True|33.689852/34.221745|54.821739/54.990612|2/2|
+|20261011|300/300/300|292|True|34.974551/36.909168|86.681927/86.831652|5/8|
+
+Both runs include epoch1, actual marginalization and one native commit per epoch; numerical all9 census precedes the single commit. W1 G2 native recovery is verified for this scope, with no AL or global-root uniqueness award. Final integration will retest the frozen combined candidate. Reproduce: `python3 tools/sc7_research.py geometry`. Tested ELF `6a8e84fce298387c404e3223311edd851fc7580a58cd0f389e33327229b10bac`, original DSO `5faa46cc2d41492a55c65e9972a7bbe1f2a1b1773d791034ebdf119ec5954189`; source entry59bdd59 plus this W1 patch (local implementation commit follows).

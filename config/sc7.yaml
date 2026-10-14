@@ -5,3 +5,4 @@ sc7:
   attribute: false
   development_seed: 20261010
   confirmation_seed: 20261011
+  numerical_recovery: true
