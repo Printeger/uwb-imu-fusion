@@ -3,6 +3,8 @@
 #include "sc6_service.hpp"
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #include <iostream>
+#include <fstream>
+#include <filesystem>
 using namespace uwb_imu_pl;using namespace uwb_imu_pl::research;
 void require(bool x,const char* why){if(!x)throw std::runtime_error(why);}
 template<class F>void refuses(F f){bool caught=false;try{f();}catch(const std::exception&){caught=true;}require(caught,"required fail closed");}
@@ -47,5 +49,23 @@ int main(){try{
   if(72<=k && k<=75){require(r.action.rejoined && !r.action.current_bridge,"four actual healthy PIM rejoins missing");++rejoins;}
  }
  require(repairs==1 && rejoins==4 && service.updateCount()==81,"joint sole native mutation count");
+ // Temporal-only gyro FD, deliberately held past alarm retirement. The
+ // original temporal identity must drive actual dirty marginal-prior repair,
+ // or explicit beyond-replay refusal, not an empty absolute-pool support.
+ std::filesystem::create_directories(".cache/sc6-closure");
+ for(bool outside:{false,true}){
+  auto config=YAML::LoadFile("config/sc6_closure.yaml");auto cases=config["closure"]["additional_cases"];auto episode=cases["D1_G_E"]["faults"][0];episode[0]=61;episode[4]=61;
+  if(outside){config["rolling_integrity"]=YAML::Clone(researchLaw("config/sc5_open.yaml")["rolling_integrity"]);config["rolling_integrity"]["recovery_extra_epochs"]=0;}
+  std::string path=outside?".cache/sc6-closure/check-temporal-outside.yaml":".cache/sc6-closure/check-temporal-polluted.yaml";{std::ofstream out(path);out<<config;}
+  Sc6Provider held(path,"D1_G_E",20261010,outside?104:120);Sc6Service actual(held.law,held.cfg,held.initial,held.lever,held.domain,held.imu.front(),true,false,true);
+  int release=outside?100:95,repair=0,rejoin=0;
+  for(int k=1;k<=held.epochs;++k){auto r=actual.step(held.certify(k),k>=release);require(r.bound.valid && r.source_prefix==21+128*k,"held temporal raw/event lost");
+   if(!outside && k==release){require(r.action.boundary_repair && r.action.history_marginalized && !r.action.removed_prior_slots.empty(),"retired temporal identity lost actual dirty prior repair");++repair;}
+   if(!outside && release<k && k<=release+4){require(r.action.rejoined && !r.action.current_bridge,"held temporal healthy rejoin4 missing");++rejoin;}
+   if(outside && k>=release)require(r.action.recovery=="BOUND_VALID_BUT_RECOVERY_UNAVAILABLE" && !r.action.current_bridge && !r.action.boundary_repair,"retired temporal identity fabricated outside-replay restoration");
+  }
+  require(outside || (repair==1 && rejoin==4),"held native restoration denominator");
+  std::cout<<"TEMPORAL RETIRED "<<(outside?"outside104 refusal100-104":"polluted120 repair95 rejoin96-99")<<" actual updates="<<actual.updateCount()-1<<" repairs="<<repair<<" rejoins="<<rejoin<<"\n";
+ }
  std::cout<<"SC6 CLOSURE CHECKS PASS 12 early/late axes;100-digit directed healthy-difference bound; beginning+ending union; no false offset record; weak overlap; gap/off-grid fail closed; native joint80 repair61 bridge shared71 rejoin72-75\n";return 0;
  }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
