@@ -779,25 +779,31 @@ def figures():
     ax.set(title='O-FULL exclusive mean; closes to total',ylabel='Mean service time (ms)');ax.legend(fontsize=8,loc='upper right')
     finish(fig,'F08_latency_and_breakdown','Every measurable slow/abort frame retained; ECDF is descriptive. SF software source clock ±1 ms plus jitter; root CPU/RTF separate from bag waits.')
     # F09 legal ablations; raw values, no mixed-window causal claim.
-    fig,axs=sub(1,2,4.7);rr=[r for r in records if r['group']=='E07'];labels=[];table=[]
+    fig,axs=sub(1,2,4.7);rr=[r for r in records if r['group']=='E07'];labels=[];table=[];percent=[]
+    comparison={c['id']:c for c in metrics.get('ablation_comparisons',[])}
     for r in rr:
-        label=r['stream']+' '+r['id'].split('20261020')[0].split(r['stream']+'-')[-1].rstrip('-');labels.append(label)
-        integ=r.get('integrity',{}).get('axes',{});table.append([val(r),val(r,'are_rad'),integ.get('H',{}).get('pl',{}).get('mean'),integ.get('V',{}).get('pl',{}).get('mean'),r.get('timing',{}).get('core_ms',{}).get('p95')])
-    ax=axs[0,0];arr=np.array([[np.nan if v is None else v for v in row] for row in table])
+        names={'O-ABL-SUPPORT':'support off','O-ABL-JOINT':'joint + support off','O-ABL-G2':'old numeric (80)'}
+        labels.append(r['stream'].replace('SC8-','')+' / '+names.get(r['requested_method'],r['requested_method']))
+        c=comparison.get(r['id'],{});a=c.get('A_common',{});pl=c.get('PL_common',{});p=c.get('P_common',{})
+        raw=[a.get('ablated',{}).get('ape_m',{}).get('rmse'),a.get('ablated',{}).get('are_rad',{}).get('rmse'),pl.get('hpl',{}).get('ablated',{}).get('mean'),pl.get('vpl',{}).get('ablated',{}).get('mean'),p.get('ablated',{}).get('p95')]
+        base=[a.get('full',{}).get('ape_m',{}).get('rmse'),a.get('full',{}).get('are_rad',{}).get('rmse'),pl.get('hpl',{}).get('full',{}).get('mean'),pl.get('vpl',{}).get('full',{}).get('mean'),p.get('full',{}).get('p95')]
+        table.append(raw);percent.append([100*(x-y)/y if x is not None and y else np.nan for x,y in zip(raw,base)])
+    ax=axs[0,0];arr=np.asarray(percent)
     if len(arr):
-        scaled=arr/np.maximum(np.nanmax(np.where(np.isfinite(arr),abs(arr),0),axis=0),1e-9);ax.imshow(scaled,cmap='Blues',vmin=0,vmax=1,aspect='auto')
+        finite=arr[np.isfinite(arr)];limit=max(1.,float(np.max(abs(finite)))) if len(finite) else 1.
+        ax.imshow(arr,cmap='RdBu_r',vmin=-limit,vmax=limit,aspect='auto')
         for i in range(len(arr)):
-            for j in range(5):ax.text(j,i,number(table[i][j]),ha='center',va='center',fontsize=8)
+            for j in range(5):ax.text(j,i,number(table[i][j])+('\n'+f'{arr[i,j]:+.1f}%' if math.isfinite(arr[i,j]) else '\nNA'),ha='center',va='center',fontsize=8)
         ax.set(yticks=range(len(labels)),yticklabels=labels,xticks=range(5),xticklabels=['APE\n(m)','ARE\n(rad)','HPL\n(m)','VPL\n(m)','P95\n(ms)']);ax.grid(False)
     else:no(ax)
-    ax.set_title('Legal ablations: actual A / P values')
+    ax.set_title('Raw values + change from FULL (%)')
     ax=axs[0,1];main=[r for r in records if r['group'] in ['E01','E03'] and r['requested_method']=='O-FULL' and r['stream'] in ['SC8-D0','SC8-J'] and r.get('seed')==20261020]
     for i,r in enumerate(main):
         for j,axis in enumerate(['H','V']):
             m=r.get('same_center_M',{}).get(axis,{});v=m.get('reduction_m',{}).get('mean')
             if v is not None:ax.barh(i+j*.25,v,height=.2,color=COLORS['O-FULL'] if axis=='H' else '#56B4E9',label=axis if i==0 else None);ax.text(v,i+j*.25,f" {m.get('strict',0)} strict",va='center',fontsize=8)
     ax.set(yticks=np.arange(len(main))+.125,yticklabels=[r['stream'] for r in main],xlabel='Same-center old PL minus new PL (m)',title='M witness: same committed center');ax.legend()
-    finish(fig,'F09_ablations','Support-off and joint+support-off keep original physical-law inclusion. A=trajectory, M=same-center, P=timing; G2 old numeric run is only 80 epochs.')
+    finish(fig,'F09_ablations','Common source interval A / PL / P; red = increase from FULL, blue = decrease. M compares the same center. Original law retained; G2 comparison uses common first 80 epochs.')
     # F10 long streams preserve absolute sensor time and planned suffix.
     fig,axs=sub(4,1,7.2)
     are_ax=axs[0,0].twinx();are_ax.set_ylabel('Body ARE (rad)',fontsize=8)
@@ -853,7 +859,7 @@ def report():
     status,all_gaps=evaluation_status(records,metrics.get('validation',{}))
     metrics['status']=status;metrics['execution_gaps']=all_gaps
     def fmt(v):return 'NA' if v is None or (isinstance(v,float) and not math.isfinite(v)) else f'{v:.6g}' if isinstance(v,(float,np.floating)) else str(v)
-    def table(headers,rr):return '\n'.join(['| '+' | '.join(headers)+' |','|'+'|'.join(['---']*len(headers))+'|']+['| '+' | '.join(fmt(c).replace('|','/') for c in row)+' |' for row in rr])+'\n'
+    def table(headers,rr):return '\n'+'\n'.join(['| '+' | '.join(headers)+' |','|'+'|'.join(['---']*len(headers))+'|']+['| '+' | '.join(fmt(c).replace('|','/') for c in row)+' |' for row in rr])+'\n'
     def m(r,key,stat='rmse',view=None):
         vv=r.get('views',{});view=view or next(iter(vv),'');return vv.get(view,{}).get(key,{}).get(stat)
     def timing(r,key):
@@ -937,8 +943,10 @@ def report():
         path=OUT/filename
         if path.exists():
             receipt=json.loads(path.read_text());lines.append(f'\n最终本地审计/清理收据：[{filename}]({filename})，状态 {receipt.get("status")}。')
-    (OUT/'SC8_RESULTS.md').write_text('\n'.join(lines)+'\n')
-    print('REPORT',status,'pending',pending,'checks',checked,'gaps',len(gaps)+len(late),flush=True)
+    import re
+    document=re.sub(r'(?m)^(#{1,6} .+)\n(?!\n)',r'\1\n\n','\n'.join(lines)+'\n')
+    (OUT/'SC8_RESULTS.md').write_text(document)
+    print('REPORT',status,'pending',pending,'checks',checked,'gaps',len(all_gaps),flush=True)
 
 
 def evaluation_status(records,validation):
@@ -980,9 +988,13 @@ def ablation_comparisons(records,registry):
         if len(grid)<2:continue
         target=(grid,*metric.sample(*truth,grid)[1:]);aa=metric.evaluate((grid,*metric.sample(*a,grid)[1:]),target,lever)[0];bb=metric.evaluate((grid,*metric.sample(*b,grid)[1:]),target,lever)[0]
         ra={int(value(x,'stamp_ns')):x for x in rows(latest(index[r['id']]).parent/'trace.csv') if value(x,'updates')==1};rb={int(value(x,'stamp_ns')):x for x in rows(latest(index[base['id']]).parent/'trace.csv') if value(x,'updates')==1};stamps=sorted(ra.keys()&rb.keys());same_center=max([np.linalg.norm([value(ra[t],'tag_'+k)-value(rb[t],'tag_'+k) for k in 'xyz']) for t in stamps],default=float('nan'))
+        pstats={}
+        for label,rec in [('ablated',r),('full',base)]:
+            allrows=rows(latest(index[rec['id']]).parent/'trace.csv',keep_partial=True)
+            pstats[label]=metric.summary([value(x,'core_ms') for x in allrows if x.get('status')!='SOURCE_GAP_OR_ABORT' and grid[0]-1e-8<=value(x,'epoch')*.05<=grid[-1]+1e-8])
         out.append(dict(id=r['id'],baseline=base['id'],common_n=len(grid),interval_s=[float(grid[0]),float(grid[-1])],
             input_digest_equal=r['input_digest']==base['input_digest'],max_center_difference_m=same_center,
-            A_common=dict(ablated=aa,full=bb),PL_common={k:dict(ablated=metric.summary([value(ra[t],k) for t in stamps]),full=metric.summary([value(rb[t],k) for t in stamps])) for k in ['hpl','vpl']},
+            A_common=dict(ablated=aa,full=bb),P_common=pstats,PL_common={k:dict(ablated=metric.summary([value(ra[t],k) for t in stamps]),full=metric.summary([value(rb[t],k) for t in stamps])) for k in ['hpl','vpl']},
             performance_scope='Measured P includes complete run; G2 old prefix 80 has separate common-prefix A/PL comparison. No time speedup from unmatched lengths.'))
     return out
 
