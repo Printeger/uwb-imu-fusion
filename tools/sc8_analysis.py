@@ -80,7 +80,7 @@ def dataset_trajectory(run,lever):
     return t,tag,q
 
 
-def native_episodes(data,manifest):
+def native_episodes(data,manifest,paced=True):
     good=[r for r in data if value(r,'updates')==1];episodes=[]
     for i,f in enumerate(manifest['faults']):
         onset,axis,duration,amplitude,_=f;begin=(onset-1)*.05+.005;end=begin+duration*.001
@@ -116,6 +116,23 @@ def native_episodes(data,manifest):
             first_nominal_receipt_after_exclusion=int(value(after[0],'epoch')) if isolation and after else None,
             TTD_wall_ms=value(alarm[0],'uwb_alarm_ms')-onset*50 if alarm else None,
             TTI_wall_ms=value(isolation[0],'commit_time_ms')-onset*50 if isolation else None))
+    serviced=[r for r in data if r.get('status')!='SOURCE_GAP_OR_ABORT' and math.isfinite(value(r,'core_ms'))]
+    last=max([value(r,'epoch') for r in serviced],default=0)
+    for episode in episodes:
+        onset=episode['onset_epoch'];end_epoch=math.ceil(episode['end_s']/.05-1e-8) if episode['kind']=='IMU' else math.ceil(episode['end_s']/.05-1e-8)-1
+        episode['exposure']='NOT_CONFIRMED_REACHED' if last<onset else 'PARTIAL_FAULT_INTERVAL' if last<end_epoch else 'FULL_FAULT_INTERVAL_CONFIRMED'
+        episode['last_serviced_epoch']=int(last)
+        episode['followup_sensor_ms']=max(0.,last*.05-episode['end_s'])*1000
+        episode['qualified_service_epochs_in_episode']=sum(value(r,'qualified')==1 and onset<=value(r,'epoch')<=end_epoch for r in data)
+        if episode['kind']=='IMU':
+            episode['TTI_sensor_frontier_ms']=(episode['first_bridge']*.05-episode['begin_s'])*1000 if episode['first_bridge'] is not None else None
+            episode['TTR_sensor_frontier_ms']=(episode['rejoin4'][0]*.05-episode['begin_s'])*1000 if episode['rejoin4'] else None
+        else:
+            episode['TTD_sensor_ms']=(episode['first_fd']-onset)*50 if episode['first_fd'] is not None else None
+            episode['TTI_sensor_frontier_ms']=(episode['first_isolation']-onset)*50 if episode['first_isolation'] is not None else None
+        if not paced:
+            for key in ['TTD_wall_ms','TTI_wall_ms','TTR_wall_ms']:episode[key]=None
+            episode['wall_latency_scope']='NA_OFFLINE_NO_SOURCE_TO_WALL_CLOCK_MAP'
     return episodes
 
 
@@ -239,7 +256,7 @@ def score_entry(entry,execution,run,registry):
         result['actual_max_epoch']=max([int(value(r,'epoch')) for r in native if r.get('status')!='SOURCE_GAP_OR_ABORT'],default=0)
         result['max_committed_epoch']=max([int(value(r,'epoch')) for r in actual],default=0)
         result['x0_retired']=any(value(r,'x0')==0 for r in actual)
-        result['episodes']=native_episodes(native,manifest)
+        result['episodes']=native_episodes(native,manifest,entry['pace']=='paced')
         if not manifest.get('faults') and not manifest.get('uwb_faults'):
             result['known_healthy_diagnostics']={k:int(sum(value(x,k)==1 for x in actual)) for k in ['imu_alarm','uwb_alarm','bridge','repair','rejoined']}
         if entry.get('in_process_canary_epoch'):
@@ -752,7 +769,7 @@ def figures():
     axs[0,1].set(xlabel='Window (UWB epochs; 20 Hz)',ylabel='Mean common-interval PL (m)');axs[0,1].legend(fontsize=8)
     axs[1,0].axhline(40,color='#aa3333',ls=':');axs[1,0].set(xlabel='Window (UWB epochs)',ylabel='All measurable core P95 (ms)',yscale='log');axs[1,1].set(xlabel='All measurable core P95 (ms)',ylabel='Common-interval HPL (m)',xscale='log')
     if censored:axs[1,1].text(.02,.98,f'{len(censored)}/{len(wr)} stopped/refused or missing common interval.\nActual epochs and resource limits: report E05.\nNo missing APE / PL values imputed.',transform=axs[1,1].transAxes,va='top',fontsize=8)
-    finish(fig,'F07_window_frontier','Offline cost frontier; 100–1000 UWB epochs = 5–50 s. No extrapolation of censored common intervals; replay changes with LF.')
+    finish(fig,'F07_window_frontier','Offline frontier; 100–1000 UWB epochs = 5–50 s. Pareto labels (LF, LI), bubble area follows peak RSS. No censored-interval extrapolation; replay changes with LF.')
     # F08 full-boundary latency CDF and exclusive means (not summed P95s).
     fig,axs=sub(3,2,8.0)
     for ax,phase,kind in [(axs[0,0],'Healthy','core'),(axs[0,1],'Fault','core'),(axs[1,0],'Real','core'),(axs[1,1],'Healthy','sink'),(axs[2,0],'Fault','sink')]:
@@ -896,7 +913,7 @@ def report():
         table(['E03 主流','view','独立单位 N','APE mean / min / max m','ARE mean / min / max rad'],[(a['stream'],a['view'],a['metrics']['ape_m']['n_units'],' / '.join(fmt(a['metrics']['ape_m'][k]) for k in ['mean','min','max']),' / '.join(fmt(a['metrics']['are_rad'][k]) for k in ['mean','min','max'])) for a in metrics.get('unit_aggregates',[]) if a['group']=='E03' and a['stream'] in ['SC8-U','SC8-A','SC8-G','SC8-J']]),
         table(['定向例','status','APE m','ARE rad','raw / planned'],[(r['stream'],r['status'],m(r,'ape_m'),m(r,'are_rad'),f"{r.get('integrity',{}).get('spatial_valid','NA')} / {r.get('planned_epochs','NA')}") for r in records if r['group']=='E03' and r['stream'] not in ['SC8-U','SC8-A','SC8-G','SC8-J'] and r['stream'].startswith('SC8-')]),
         '\n以下为真实原生 episode receipt，FD/隔离/边缘先验替换/bridge/rejoin 分开；sensor TTD 与 wall TTD/TTI/TTR 不混。仅有 FD 或 PL 资格不等于恢复执行；first nominal receipt 不等于误差恢复。阶段 APE/ARE/速度/bias（healthy/fault/bridge/rejoin/late）完整保存在 JSON，位置改善不抵销姿态退化。',
-        table(['流/seed/method','episode','FD','隔离提交','prior / bridge','rejoin4','TTD sensor / wall ms','TTI / TTR wall ms','unsafe endpoint'],[(r['stream']+'/'+str(r.get('seed',''))[-2:]+'/'+r['requested_method'],e['kind']+'/'+str(e.get('axis',e.get('anchor_index')))+'@'+str(e['onset_epoch']),e.get('FD'),e.get('ISOLATION_COMMITTED'),f"{e.get('first_prior_repair')} / {e.get('first_bridge')}",e.get('rejoin4'),f"{fmt(e.get('TTD_sensor_ms'))} / {fmt(e.get('TTD_wall_ms'))}",f"{fmt(e.get('TTI_wall_ms'))} / {fmt(e.get('TTR_wall_ms'))}",e.get('unsafe_shared_endpoint')) for r in records if r['group'] in ['E03','E08'] for e in r.get('episodes',[])]),
+        table(['流/seed/method','episode / exposure','FD','隔离提交','prior / bridge','rejoin4','TTD sensor / wall ms','TTI / TTR wall ms','unsafe endpoint'],[(r['stream']+'/'+str(r.get('seed',''))[-2:]+'/'+r['requested_method'],e['kind']+'/'+str(e.get('axis',e.get('anchor_index')))+'@'+str(e['onset_epoch'])+' / '+e.get('exposure','NA'),e.get('FD'),e.get('ISOLATION_COMMITTED'),f"{e.get('first_prior_repair')} / {e.get('first_bridge')}",e.get('rejoin4'),f"{fmt(e.get('TTD_sensor_ms'))} / {fmt(e.get('TTD_wall_ms'))}",f"{fmt(e.get('TTI_wall_ms'))} / {fmt(e.get('TTR_wall_ms'))}",e.get('unsafe_shared_endpoint')) for r in records if r['group'] in ['E03','E08'] for e in r.get('episodes',[])]),
         table(['真实 overlay/method','实际注入前沿确认'],[(r['stream']+'/'+str(r.get('effective_method',r['requested_method'])),r.get('overlay_execution_coverage')) for r in records if r['group']=='E03' and r['stream'].startswith(('R2-','R3-'))]),
         table(['真实 overlay','view','公共 N','增量 APE m','增量 ARE rad'],[(e['stream'],e['view'],e['common_n'],e['delta_overlay_minus_original'].get('ape_m'),e['delta_overlay_minus_original'].get('are_rad')) for e in metrics.get('overlay_effects',[])]),
         '\n## E04：原生完整性、Stanford 与 AL',
