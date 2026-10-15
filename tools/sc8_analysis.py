@@ -279,6 +279,7 @@ def score_entry(entry,execution,run,registry):
                         ('late_last_quarter',[r for r in actual if value(r,'epoch')>.75*planned])]:
             result['phase_errors'][name]={k:metric.summary([value(r,k) for r in rr]) for k in ['ape','hpe','vpe','rotation_error','velocity_error','accel_bias_error','gyro_bias_error']}
     else:
+        imu_times=common.read_csv(inputs/'imu.csv');source_begin=float(imu_times[0]['t']);source_end=float(imu_times[-1]['t'])
         files={'S-ONLINE':'trajectory.tum.online.tum','S-FINAL':'trajectory.tum.history_final_calibration.tum'} if entry['requested_method']=='SFUISE' else {execution.get('effective_method') or 'UNKNOWN_INTERRUPTED_INTERFACE':'trajectory.tum'}
         for view,name in files.items():
             try:
@@ -290,11 +291,12 @@ def score_entry(entry,execution,run,registry):
                 estimate=tuple(a[keep] for a in estimate)
                 if len(estimate[0])<2:raise ValueError('fewer than two complete states in registered TEST interval; no suffix imputation')
                 score,arrays=metric.evaluate(estimate,truth,lever)
-                output_grid=gt.time[gt.time>=test_begin]
+                output_grid=gt.time[(gt.time>=max(test_begin,source_begin))&(gt.time<=source_end)]
                 covered=metric.sample(*estimate,output_grid)[0]
                 score['output_coverage_on_GT_TEST_grid']=dict(planned=len(output_grid),covered=int(covered.sum()),fraction=float(covered.mean()) if len(covered) else None,
                     estimate_states=len(estimate[0]),estimate_interval_s=[float(estimate[0][0]),float(estimate[0][-1])],
-                    semantics='Descriptive coverage of the entire supplied GT TEST timeline, not just successful output stamps; interpolation limited to 100 ms; not a causal emission rate or raw qualification')
+                    evaluation_domain_s=[max(test_begin,source_begin),source_end],
+                    semantics='Descriptive coverage of the entire supplied GT TEST timeline within original IMU source bounds, not just successful output stamps; interpolation limited to 100 ms; not a causal emission rate or raw qualification')
                 score['bias_error']='NA_NO_INDEPENDENT_REAL_GT' if entry['track']!='T-SIM' else 'NA_ESTIMATED_BIAS_NOT_EXPORTED'
                 score['source_pose_receipt']=('FIRST_CAUSAL_TUM' if view=='S-ONLINE' else 'FINAL_RETAINED_HISTORY_VALID_DOMAIN; original-idle prefix unavailable') if entry['requested_method']=='SFUISE' else 'COMPLETE_POST_COMMIT_STATE_ROWS; fixed physical tag conversion cross-checked against complete TUM rows; partial final buffer refused'
                 if entry['requested_method']=='SFUISE':score['velocity_error']='NA_ESTIMATED_VELOCITY_NOT_EXPORTED' if entry['track']=='T-SIM' else 'NA_NO_INDEPENDENT_REAL_VELOCITY_GT'
