@@ -1039,6 +1039,7 @@ def report():
     f=registry.get('frozen',{});counts=metrics['logical_run_status_counts'];pending=sum(counts.get(k,0) for k in ['NOT_ATTEMPTED','RUNNING'])
     checks=metrics.get('validation',{}).get('final-checks.json',{}).get('result',[]);checked=bool(checks) and all(c['returncode']==0 for c in checks)
     gaps=[r['id'] for r in records if r['status']=='EXECUTION_ERROR' or 'scoring_error' in r]
+    if any(r.get('track')=='T-SIM' and r['requested_method']=='SFUISE' and r.get('views') for r in records):gaps.append('SFUISE simulated velocity/bias estimates were not exported; source truth exists but corresponding state-error metrics remain NA, no pose-difference proxy')
     late=[r for r in records if r['group']=='E08' and r['stream']=='SC8-L1' and r['status'] not in ['NOT_ATTEMPTED','RUNNING'] and r.get('max_committed_epoch',0)<10000]
     if pending or not checked:status='IN_PROGRESS'
     elif gaps or late:status='SC8_EVALUATED_WITH_EXECUTION_GAPS'
@@ -1243,6 +1244,7 @@ def findings(metrics):
         if vals:paragraphs.append(f"{stream}：{len(vals)} 个 seed 的公共观测区间上 OFF−ON APE 改善 {min(vals):.6g}–{max(vals):.6g} m（均值 {np.mean(vals):.6g} m）；ARE 改善 {min(angles):.6g}–{max(angles):.6g} rad。负值是退化，不能由另一个指标抵销。")
     real=[r for r in rr if r['group']=='E02' and r['requested_method']=='O-FULL' and r['status'] not in ['NOT_ATTEMPTED','RUNNING']]
     if real:paragraphs.append(f"真实工程 FDE：已结束 {len(real)}/6 条完整录制尝试，其中 {sum(r['status']=='RESOURCE_LIMIT' for r in real)} 条在预登记 wall 资源门限截断；SC7 raw 资格仍全部拒绝。未完成后缀不填误差，不能将有限公共区间的收益推广到全录制。")
+    if any(r.get('reference_contract')=='OPEN_WALK_TRACKER_BODY_TAG' for r in rr):paragraphs.append('Walk R1/R2 的 tracker→IMU/body/tag 参照未闭合：物理 APE/ARE/RPE 撤回为 NA，原冻结参考下的数值只留作明确标注的代理诊断。没有按 TEST 选择翻转、时移或新杆臂来改善任何方法的分数。')
     for r in rr:
         if r['group']=='E02' and r['stream']=='R5' and 'ape_m' in r.get('views',{}).get('S-ONLINE',{}):
             score=r['views']['S-ONLINE'];paragraphs.append(f"STAR-Loc R5 的 SFUISE 首次在线流 tag APE RMSE {score['ape_m']['rmse']:.6g} m、最大 {score['ape_m']['max']:.6g} m，保留整个实测尺度；官方剔除未关闭，codec/单位/原始输入逐项核对，不能删去发散段后宣称成功。CAL-S 对 gyro/rig 转换的方向约定和角速度一致性尚未闭合，因此这些值描述冻结接口下的实际行为，不作为正确输入下算法本身的优劣证据。工程 ON 只有截断前缀，不能以其短段误差与该完整流作全程排名。")
