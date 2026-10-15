@@ -211,6 +211,10 @@ def score_entry(entry,execution,run,registry):
         actual=[r for r in native if value(r,'updates')==1]
         selected=[r for r in actual if entry['group']!='E05' or 1101<=value(r,'epoch')<=2100]
         result['window_common_summary']={k:metric.summary([value(r,k) for r in selected]) for k in ['hpl','vpl','hpe','vpe','ape','core_ms']}
+        if entry['group']=='E05':
+            result['window_common_coverage']=dict(planned=1000,committed=len(selected),valid_bounds=sum(spatial(r) for r in selected),
+                first_epoch=int(value(selected[0],'epoch')) if selected else None,last_epoch=int(value(selected[-1],'epoch')) if selected else None,
+                complete_pose_interval={int(value(r,'epoch')) for r in selected}==set(range(1101,2101)))
         result['planned_epochs']=planned;result['common_scoring_epochs']=[1101,2100] if entry['group']=='E05' else [1,planned]
         if len(selected)>=2:
             t=np.array([value(r,'stamp_ns')*1e-9 for r in selected])
@@ -862,19 +866,27 @@ def figures():
             if not rr:continue
             xx=[r['window'][0] if coupled else r['window'][1] for r in rr];col='#0072B2' if fault=='SC8-WH' else '#D55E00';label=('Healthy' if fault=='SC8-WH' else 'Repeated fault')+(' coupled' if coupled else ' LF=300')
             def seq(fn):return [fn(r) if fn(r) is not None else np.nan for r in rr]
-            axs[0,0].plot(xx,seq(lambda r:val(r)),marker=mark,ls=ls,color=col,label=label)
-            axs[0,1].plot(xx,seq(lambda r:r.get('window_common_summary',{}).get('hpl',{}).get('mean')),marker=mark,ls=ls,color=col,label=label+' H')
-            axs[0,1].plot(xx,seq(lambda r:r.get('window_common_summary',{}).get('vpl',{}).get('mean')),marker=mark,ls=':',color=col,label=label+' V')
+            def quality(ax,fn,complete,name,style):
+                ax.plot(xx,[fn(r) if complete(r) else np.nan for r in rr],marker=mark,ls=style,color=col,label=name)
+                for x,r in zip(xx,rr):
+                    v=fn(r)
+                    if v is not None and not complete(r):ax.plot(x,v,marker=mark,fillstyle='none',ls='None',color=col)
+            quality(axs[0,0],lambda r:val(r),lambda r:r.get('window_common_coverage',{}).get('complete_pose_interval',False),label,ls)
+            for key,style in [('hpl',ls),('vpl',':')]:
+                quality(axs[0,1],lambda r,k=key:r.get('window_common_summary',{}).get(k,{}).get('mean'),lambda r,k=key:r.get('window_common_summary',{}).get(k,{}).get('n')==1000,label+' '+key[0].upper(),style)
             axs[1,0].plot(xx,seq(lambda r:r.get('timing',{}).get('core_ms',{}).get('p95')),marker=mark,ls=ls,color=col,label=label)
             for r in rr:
                 latency95=r.get('timing',{}).get('core_ms',{}).get('p95');pl=r.get('window_common_summary',{}).get('hpl',{}).get('mean');rss=r.get('resources',{}).get('rss',{}).get('max')
-                if latency95 is not None and pl is not None:axs[1,1].scatter(latency95,pl,s=15+((rss or 0)/1024)*.05,color=col,marker=mark);axs[1,1].annotate(str(tuple(r['window'])),(latency95,pl),fontsize=8)
+                if latency95 is not None and pl is not None:
+                    n=r.get('window_common_summary',{}).get('hpl',{}).get('n',0);partial=n<1000 or r['status']!='SUCCESS'
+                    axs[1,1].scatter(latency95,pl,s=15+((rss or 0)/1024)*.05,facecolors='none' if partial else col,edgecolors=col,marker=mark)
+                    axs[1,1].annotate(str(tuple(r['window']))+(f' n={n}' if partial else ''),(latency95,pl),fontsize=8)
     censored=[f"{tuple(r['window'])} {r['stream'][-1]}: {r.get('actual_max_epoch',0)}/2100" for r in wr if r['status']!='SUCCESS' or not r.get('views')]
     axs[0,0].set(xlabel='LF = LI, or LI at LF=300 (UWB epochs)',ylabel='Tag APE RMSE (m)',title='Common epochs 1101–2100');axs[0,0].legend(fontsize=8)
     axs[0,1].set(xlabel='Window (UWB epochs; 20 Hz)',ylabel='Mean common-interval PL (m)');axs[0,1].legend(fontsize=8)
     axs[1,0].axhline(40,color='#aa3333',ls=':');axs[1,0].set(xlabel='Window (UWB epochs)',ylabel='All measurable core P95 (ms)',yscale='log');axs[1,1].set(xlabel='All measurable core P95 (ms)',ylabel='Common-interval HPL (m)',xscale='log')
     if censored:axs[1,1].text(.02,.98,f'{len(censored)}/{len(wr)} stopped/refused or missing common interval.\nActual epochs and resource limits: report E05.\nNo missing APE / PL values imputed.',transform=axs[1,1].transAxes,va='top',fontsize=8)
-    finish(fig,'F07_window_frontier','Offline frontier; 100–1000 UWB epochs = 5–50 s. Pareto labels (LF, LI); bubble area follows maximum sampled RSS at saved receipts; the true process peak may be larger. No interval extrapolation; replay changes with LF.')
+    finish(fig,'F07_window_frontier','Offline frontier; 100–1000 epochs = 5–50 s. Quality lines require all 1000 common epochs; open points show partial intervals or censored Pareto estimates, labelled n. Bubbles use sampled RSS, not the unknown true peak. No extrapolation; replay changes with LF.')
     # F08 full-boundary latency CDF and exclusive means (not summed P95s).
     fig,axs=sub(3,2,8.0)
     for ax,phase,kind in [(axs[0,0],'Healthy','core'),(axs[0,1],'Fault','core'),(axs[1,0],'Real','core'),(axs[1,1],'Healthy','sink'),(axs[2,0],'Fault','sink')]:
@@ -1042,8 +1054,8 @@ def report():
         '\nF05-H/V 使用同 stamp/tag/receipt 的实际 PE（横）/PL（纵）计数，不由均值合成。主图 full 尺度与 5 m zoom 均留 overflow；灰色 late bounds 不算及时可用；SFUISE/真实未知 PL 不画同 epsilon 点云。2/3、5/5、10/10 m 仅为研究 AL 后验评价，不改变在线噪声、risk、q 或发布规则。每轴互斥分区和 underbound 另外计数，AL-unavailable 中的 underbound 也不删除。零 HMI 样本不构成概率证明。',
         table(['流/seed/method','planned / committed / raw / timely','missing / refused','H under / V under','joint timely AL2/3 / 5/5 / 10/10','publication protected'],[(r['stream']+'/'+str(r.get('seed',''))[-2:]+'/'+r['requested_method'],f"{i['planned']} / {i['committed']} / {i['spatial_valid']} / {i['timely_spatial']}",f"{i['missing']} / {i['refused']}",f"{i['axes']['H']['underbound']} / {i['axes']['V']['underbound']}",' / '.join(str(i['joint_AL'][k]['timely_within_AL']) for k in ['2/3','5/5','10/10']),i['publication_protected']) for r in records if r['group'] in ['E01','E03'] and r['stream'] in ['SC8-H','SC8-U','SC8-A','SC8-G','SC8-J','SC8-D0','SC8-G2'] and 'axes' in (i:=r.get('integrity',{}))]),
         '\n## E05：窗口成本前沿',
-        '\n合法 7 配置 × 两个 2100 历元流；联动 30/100/300/600/1000 与固定 LF=300 的 LI=30/100/300 分开。100–1000 是真实 UWB 历元（5–50 s），不能把 IMU 条数叫窗口。公共评分 1101–2100、故障 1201/1601。4 个大窗 canary 是同一健康运行的 LF+2，不重启、不清零风险；必须观察实际 x0 退出/边缘化。预登记 RSS、1200 s wall 和连续 20 个 core>2 s 截断，保留 inflight lower bound，右截断不冒充完整 P95。',
-        table(['流 / LF,LI','status','actual / planned','common APE m','common mean H/V m','P95 core ms','receipt RSS max MiB','x0 retired / resource'],[(r['stream']+' '+str(r.get('window')),r['status'],f"{r.get('actual_max_epoch','NA')}/2100",m(r,'ape_m'),f"{fmt(r.get('window_common_summary',{}).get('hpl',{}).get('mean'))} / {fmt(r.get('window_common_summary',{}).get('vpl',{}).get('mean'))}",timing(r,'core_ms'),r.get('resources',{}).get('rss',{}).get('max',0)/1024 if r.get('resources') else None,f"{r.get('x0_retired')} / {r.get('resource_observation')}") for r in records if r['group']=='E05']),
+        '\n合法 7 配置 × 两个 2100 历元流；联动 30/100/300/600/1000 与固定 LF=300 的 LI=30/100/300 分开。100–1000 是真实 UWB 历元（5–50 s），不能把 IMU 条数叫窗口。公共评分 1101–2100、故障 1201/1601。表中另给公共提交/有效界 N；截断公共子段可描述但不连成完整区间收益趋势，未确认到达故障不能声称处理了该事件。4 个大窗 canary 是同一健康运行的 LF+2，不重启、不清零风险；必须观察实际 x0 退出/边缘化。预登记 RSS、1200 s wall 和连续 20 个 core>2 s 截断，保留 inflight lower bound，右截断不冒充完整 P95。',
+        table(['流 / LF,LI','status','actual / planned','common commits / valid bounds','common APE m','common mean H/V m','P95 core ms','receipt RSS max MiB','x0 retired / resource'],[(r['stream']+' '+str(r.get('window')),r['status'],f"{r.get('actual_max_epoch','NA')}/2100",f"{r.get('window_common_coverage',{}).get('committed',0)} / {r.get('window_common_coverage',{}).get('valid_bounds',0)}",m(r,'ape_m'),f"{fmt(r.get('window_common_summary',{}).get('hpl',{}).get('mean'))} / {fmt(r.get('window_common_summary',{}).get('vpl',{}).get('mean'))}",timing(r,'core_ms'),r.get('resources',{}).get('rss',{}).get('max',0)/1024 if r.get('resources') else None,f"{r.get('x0_retired')} / {r.get('resource_observation')}") for r in records if r['group']=='E05']),
         table(['同进程 canary run','LF+2 实际 receipt'],[(r['id'],r.get('canary')) for r in records if r['group']=='E05' and 'canary' in r]),
         '\n联动结果同时改变 FGO/replay 与 PL 历史，不能将 APE 变化只归因于完整性窗口。扩展窗不要求 40/50 ms，通过或不通过不是调整 guard 的理由；未到公共区间的 APE/PL 为 NA，不按短窗外推 1000。',
         '\n## E06：时间、CPU、RTF 与默认 profile',
