@@ -280,6 +280,7 @@ def score_entry(entry,execution,run,registry):
             try:
                 estimate=trajectory(run/name) if entry['requested_method']=='SFUISE' else dataset_trajectory(run,lever);keep=estimate[0]>=test_begin
                 estimate=tuple(a[keep] for a in estimate)
+                if len(estimate[0])<2:raise ValueError('fewer than two complete states in registered TEST interval; no suffix imputation')
                 score,arrays=metric.evaluate(estimate,truth,lever)
                 score['bias_error']='NA_NO_INDEPENDENT_REAL_GT' if entry['track']!='T-SIM' else 'NA_ESTIMATED_BIAS_NOT_EXPORTED'
                 score['source_pose_receipt']='FIRST_EMITTED_TUM' if entry['requested_method']=='SFUISE' else 'COMPLETE_POST_COMMIT_STATE_ROWS; fixed physical tag conversion cross-checked against complete TUM rows; partial final buffer refused'
