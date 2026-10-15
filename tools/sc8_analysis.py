@@ -278,12 +278,16 @@ def score_entry(entry,execution,run,registry):
         files={'S-ONLINE':'trajectory.tum.online.tum','S-FINAL':'trajectory.tum.history_final_calibration.tum'} if entry['requested_method']=='SFUISE' else {execution.get('effective_method') or 'UNKNOWN_INTERRUPTED_INTERFACE':'trajectory.tum'}
         for view,name in files.items():
             try:
-                estimate=trajectory(run/name) if entry['requested_method']=='SFUISE' else dataset_trajectory(run,lever);keep=estimate[0]>=test_begin
+                estimate=trajectory(run/name) if entry['requested_method']=='SFUISE' else dataset_trajectory(run,lever)
+                if view=='S-FINAL':
+                    estimate,validity=historical_support(run,estimate)
+                    result['historical_export_validity']=validity
+                keep=estimate[0]>=test_begin
                 estimate=tuple(a[keep] for a in estimate)
                 if len(estimate[0])<2:raise ValueError('fewer than two complete states in registered TEST interval; no suffix imputation')
                 score,arrays=metric.evaluate(estimate,truth,lever)
                 score['bias_error']='NA_NO_INDEPENDENT_REAL_GT' if entry['track']!='T-SIM' else 'NA_ESTIMATED_BIAS_NOT_EXPORTED'
-                score['source_pose_receipt']='FIRST_EMITTED_TUM' if entry['requested_method']=='SFUISE' else 'COMPLETE_POST_COMMIT_STATE_ROWS; fixed physical tag conversion cross-checked against complete TUM rows; partial final buffer refused'
+                score['source_pose_receipt']=('FIRST_CAUSAL_TUM' if view=='S-ONLINE' else 'FINAL_RETAINED_HISTORY_VALID_DOMAIN; original-idle prefix unavailable') if entry['requested_method']=='SFUISE' else 'COMPLETE_POST_COMMIT_STATE_ROWS; fixed physical tag conversion cross-checked against complete TUM rows; partial final buffer refused'
                 if entry['requested_method']=='SFUISE':score['velocity_error']='NA_ESTIMATED_VELOCITY_NOT_EXPORTED' if entry['track']=='T-SIM' else 'NA_NO_INDEPENDENT_REAL_VELOCITY_GT'
                 elif entry['track']=='T-SIM':score.update(dataset_sim_errors(run,inputs,entry,registry))
                 else:score['velocity_error']='NA_NO_INDEPENDENT_REAL_VELOCITY_GT'
@@ -376,7 +380,7 @@ def evaluate():
     for path in (CACHE/'runs').glob('*/execution.json'):
         d=json.loads(path.read_text());attempts.append(dict(id=path.parent.name,status=d['status'],source_identity=d['identity'],reason=d.get('reason'),returncode=d.get('returncode'),input_digest=d.get('input_digest'),input_files=d.get('input_files'),output_hashes=d.get('output_hashes'),elapsed_s=d.get('elapsed_s'),actual_run_id=d.get('actual_run_id'),runner_error=d.get('runner_error')))
     validation={}
-    for name in ['input-checks/result.json','input-checks/bag-parity.json','input-checks/all-bag-parity.json','sfuise_observer/check.json','equivalence/R3/equivalence.json','final-checks.json']:
+    for name in ['input-checks/result.json','input-checks/bag-parity.json','input-checks/all-bag-parity.json','spline-export-check/result.json','sfuise_observer/check.json','equivalence/R3/equivalence.json','final-checks.json']:
         p=CACHE/name
         if p.exists():validation[name]=dict(sha256=common.sha256(p),result=json.loads(p.read_text()))
     counts=dict(Counter(r['status'] for r in records));assert sum(counts.values())==len(registry['runs'])
@@ -465,7 +469,9 @@ def run_poses(record,entry):
             np.array([[value(r,'q'+k) for k in 'xyzw'] for r in data]))
     else:
         for view,name in ({'S-ONLINE':'trajectory.tum.online.tum','S-FINAL':'trajectory.tum.history_final_calibration.tum'} if entry['requested_method']=='SFUISE' else {record.get('effective_method','UNKNOWN'):'trajectory.tum'}).items():
-            try:poses[view]=trajectory(run/name) if entry['requested_method']=='SFUISE' else dataset_trajectory(run,lever)
+            try:
+                poses[view]=trajectory(run/name) if entry['requested_method']=='SFUISE' else dataset_trajectory(run,lever)
+                if view=='S-FINAL':poses[view]=historical_support(run,poses[view])[0]
             except (OSError,ValueError):continue
     for view,pose in list(poses.items()):
         mask=np.ones(len(pose[0]),bool)
@@ -477,13 +483,23 @@ def run_poses(record,entry):
 
 
 def paired_results(records,registry):
-    """No frame pseudo-replication: retain every seed/recording separately."""
+    """Independent ON/OFF gains and a separate common-view display grid."""
     grouped={};index={e['id']:e for e in registry['runs']}
     for r in records:
-        if r['group'] not in ['E01','E02','E03']:continue
-        if r['status'] in ['RUNNING','NOT_ATTEMPTED'] or 'scoring_error' in r:continue
-        e=index[r['id']];key=(r['group'],r['stream'],e['seed'])
-        grouped.setdefault(key,[]).append(r)
+        if r['group'] not in ['E01','E02','E03'] or r['status'] in ['RUNNING','NOT_ATTEMPTED'] or 'scoring_error' in r:continue
+        key=(r['group'],r['stream'],index[r['id']]['seed']);grouped.setdefault(key,[]).append(r)
+    def grid_for(truth,poses):
+        grid=truth[0];valid=np.ones(len(grid),bool)
+        for p in poses:valid&=metric.sample(*p,grid)[0]
+        return grid[valid]
+    def scored(poses,truth,lever,grid):
+        result={}
+        if len(grid)<2:return result
+        grid=grid[metric.sample(*truth,grid)[0]]
+        if len(grid)<2:return result
+        target=(grid,*metric.sample(*truth,grid)[1:])
+        for view,p in poses.items():result[view]=metric.evaluate((grid,*metric.sample(*p,grid)[1:]),target,lever)[0]
+        return result
     pairs=[]
     for key,group in grouped.items():
         by={r['requested_method']:r for r in group}
@@ -491,31 +507,30 @@ def paired_results(records,registry):
         poses={};truth=lever=None
         for r in group:
             pp,truth,lever=run_poses(r,index[r['id']]);poses.update(pp)
-        if truth is None:continue
-        grid=truth[0];valid=np.ones(len(grid),bool);online={k:p for k,p in poses.items() if k!='S-FINAL'}
-        for pose in online.values():valid&=metric.sample(*pose,grid)[0]
-        grid=grid[valid]
-        scores={}
-        if len(grid)>=2:
-            # Common reference grid is evaluator interpolation only. Actual
-            # first emissions/cutoffs remain the online source; never revised.
-            for view,pose in poses.items():
-                sampled=(grid,*metric.sample(*pose,grid)[1:])
-                common_truth=(grid,*metric.sample(*truth,grid)[1:])
-                scores[view]=metric.evaluate(sampled,common_truth,lever)[0]
-        on='O-FULL' if 'O-FULL' in poses else 'O-FDE-ENG';off='O-NOFDE' if 'O-NOFDE' in poses else 'O-ENG-NOFDE'
+        if truth is None or not poses:continue
+        on=by['O-FULL'].get('effective_method','O-FULL');off=by['O-NOFDE'].get('effective_method','O-NOFDE')
+        eligible=on in poses and off in poses
+        gain_grid=grid_for(truth,[poses[on],poses[off]]) if eligible else np.array([])
+        gain_scores=scored({k:poses[k] for k in [on,off]},truth,lever,gain_grid) if eligible else {}
+        display_grid=grid_for(truth,list(poses.values()));scores=scored(poses,truth,lever,display_grid)
         gains={}
-        if on in scores and off in scores:
+        if on in gain_scores and off in gain_scores:
             for name in ['ape_m','hpe_m','vpe_m','are_rad','rpe_tag_0.5s_m','rpe_body_0.5s_m','rpe_body_0.5s_rad','rpe_tag_1s_m','rpe_body_1s_m','rpe_body_1s_rad']:
-                a=scores[on][name]['rmse'];b=scores[off][name]['rmse']
-                gains[name]={'off_minus_on':b-a if a is not None and b is not None else None,
-                             'percent':100*(b-a)/b if a is not None and b else None}
-        pairs.append(dict(group=key[0],stream=key[1],seed=key[2],common_grid_n=len(grid),
-            common_interval_s=[float(grid[0]),float(grid[-1])] if len(grid) else None,
-            unit='seed_or_recording',actual_online_cutoffs_differ=True,
-            grid_semantics='GT evaluator grid; interpolation <=100ms; no estimator alignment or feedback; compare state age separately',
-            scores=scores,gains=gains,input_digests_equal=len({r.get('input_digest') for r in group})==1,
-            no_output_suffix_imputed=True))
+                a=gain_scores[on][name]['rmse'];b=gain_scores[off][name]['rmse']
+                gains[name]=dict(off_minus_on=b-a if a is not None and b is not None else None,percent=100*(b-a)/b if a is not None and b else None)
+        history={}
+        if all(k in poses for k in ['S-ONLINE','S-FINAL']):
+            hg=poses['S-ONLINE'][0];mask=metric.sample(*poses['S-FINAL'],hg)[0]&metric.sample(*truth,hg)[0];hg=hg[mask]
+            history=dict(common_n=len(hg),scores=scored({k:poses[k] for k in ['S-ONLINE','S-FINAL']},truth,lever,hg))
+        pairs.append(dict(group=key[0],stream=key[1],seed=key[2],common_grid_n=len(gain_grid),
+            common_interval_s=[float(gain_grid[0]),float(gain_grid[-1])] if len(gain_grid) else None,
+            gains=gains,gain_scores=gain_scores,gain_scope='ON/OFF first-stream intersection only; independent of SF/historical missing data',
+            scores=scores,display_common_grid_n=len(display_grid),display_common_interval_s=[float(display_grid[0]),float(display_grid[-1])] if len(display_grid) else None,
+            available_views=list(poses),missing_main_online_views=[k for k in [on,off,'S-ONLINE'] if k not in poses],
+            display_scope='intersection of all AVAILABLE views including valid historical support; missing methods remain NA; no claim of ON common coverage if ON absent',
+            SF_history_common=history,unit='seed_or_recording',actual_online_cutoffs_differ=True,
+            grid_semantics='GT evaluator grid; interpolation <=100ms, no estimator alignment or feedback; state age separate',
+            input_digests_equal=len({r.get('input_digest') for r in group})==1,no_output_suffix_imputed=True))
     return pairs
 
 
@@ -539,7 +554,7 @@ def envelope_indices(t,signals,events=(),bins=192):
 
 
 def build_plotdata(metrics,registry):
-    index={e['id']:e for e in registry['runs']};curves={};diagnostics={};stanford={};latency={};si={}
+    index={e['id']:e for e in registry['runs']};curves={};diagnostics={};stanford={};latency={};si={};references={}
     for r in metrics['runs']:
         if r['group']=='E00' or r['status'] in ['NOT_ATTEMPTED','RUNNING'] or 'scoring_error' in r:continue
         entry=index[r['id']];path=latest(entry);run=path.parent
@@ -564,6 +579,11 @@ def build_plotdata(metrics,registry):
         representative=(r['group']=='E02' and r['stream'] in ['R1','R3','R5']) or (r['group']=='E03' and r['stream']=='SC8-J' and r['seed']==20261020) or r['group']=='E08'
         if representative:
             poses,truth,lever=run_poses(r,entry)
+            if r['group']=='E02' and truth is not None and r['stream'] not in references:
+                mask=truth[0]>=r.get('scoring_begin_s') if r.get('scoring_begin_s') is not None else np.ones(len(truth[0]),bool)
+                rt,rp=truth[0][mask],truth[1][mask]
+                ri=envelope_indices(rt,[rp[:,j] for j in range(3)])
+                references[r['stream']]=dict(t=rt[ri],p=rp[ri],full_n=len(rt),gap_intervals=[[float(rt[j]),float(rt[j+1])] for j in np.where(np.diff(rt)>.100000001)[0]])
             for view,pose in poses.items():
                 try:_,a=metric.evaluate(pose,truth,lever)
                 except ValueError:continue
@@ -571,7 +591,8 @@ def build_plotdata(metrics,registry):
                 events=[(f[0]-1)*.05+.005 for f in registry['cases'].get(r['stream'],{}).get('faults',[])]
                 ix=envelope_indices(a['t'],[a[k] for k in ['ape','are','hpe','vpe']],events)
                 curves[r['id']+'|'+view]=dict(run=r['id'],stream=r['stream'],view=view,
-                    **{k:np.asarray(v)[ix] for k,v in a.items()},full_matched_n=len(a['t']),display_n=len(ix))
+                    **{k:np.asarray(v)[ix] for k,v in a.items()},full_matched_n=len(a['t']),display_n=len(ix),
+                    gap_intervals=[[float(a['t'][j]),float(a['t'][j+1])] for j in np.where(np.diff(a['t'])>.100000001)[0]])
         if raw and ((r['stream']=='SC8-J' and r.get('seed')==20261020 and r['group']=='E03') or r['group']=='E08'):
             actual=[x for x in raw if value(x,'updates')==1]
             if not actual:continue
@@ -594,7 +615,7 @@ def build_plotdata(metrics,registry):
                     counts,_,_=np.histogram2d(pe[mask],pl[mask],bins=[xbins,ybins]);layers[label]=counts.astype(int)
                 axisdata[view]=dict(x_edges=xbins,y_edges=ybins,layers=layers,total=len(pe),outside=int(((pe>xbins[-1])|(pl>ybins[-1])).sum()),within_pl=int((pe<=pl).sum()))
             hist[method][axis]=axisdata
-    return dict(schema='sc8-plotdata-v1',curves=curves,native_diagnostics=diagnostics,stanford=hist,
+    return dict(schema='sc8-plotdata-v1',curves=curves,reference_tracks=references,native_diagnostics=diagnostics,stanford=hist,
         si={k:dict(compressed_ecdf(v),over1=int(np.sum(np.asarray(v)>1))) for k,v in si.items()},
         latency={k:compressed_ecdf(v) for k,v in latency.items()},
         curve_reduction='Actual per-bin extrema for all displayed signals + first/last + fault +/-1s; statistics use every sample. ECDF keeps actual ranks; histogram bins sum actual PE/PL points.',
@@ -669,21 +690,31 @@ def figures():
         ax.set(yticks=range(len(pairs)),yticklabels=ylabels,title=title);ax.invert_yaxis()
         if key=='ape_m':ax.set_xscale('symlog',linthresh=.1)
     axs[0,0].legend(handles=[Line2D([],[],color=color(v),marker='D' if v=='S-FINAL' else 'x' if v=='O-NOFDE' else 'o',ls='--' if v=='S-FINAL' else '',label=v.replace('O-FULL','O-FULL / ENG')) for v in ['O-FULL','O-NOFDE','S-ONLINE','S-FINAL']],loc='lower left',bbox_to_anchor=(0,1.03),ncol=2,fontsize=8)
-    finish(fig,'F01_paired_accuracy','Each row is one seed / recording; common observed interval, no alignment. SFUISE has different cutoff/lag; final is historical.')
+    finish(fig,'F01_paired_accuracy','Each row is one seed / recording; common AVAILABLE-view domain, missing views NA. No alignment; SF cutoff/lag differs. Final history excludes invalid original-idle support.')
     # F02: preselected one recording per family. Same XY axes within each family.
     fig,axs=sub(3,2,7.0)
     for i,rid in enumerate(['R1','R3','R5']):
         cc=[c for c in data['curves'].values() if c['stream']==rid]
+        norm=matplotlib.colors.Normalize(vmin=0,vmax=max([max(c['ape']) for c in cc],default=1))
+        colored=None
         for c in cc:
             p=np.asarray(c['estimate']);t=np.asarray(c['t']);view=c['view'];ls='--' if view=='S-FINAL' else '-'
-            axs[i,0].plot(p[:,0],p[:,1],color=color(view),ls=ls,lw=.8,label=view)
-            axs[i,1].plot(t,p[:,2],color=color(view),ls=ls,lw=.8,label=view)
-        if cc:
-            c=max(cc,key=lambda c:len(c['t']));gt=np.asarray(c['truth']);axs[i,0].plot(gt[:,0],gt[:,1],'k-',lw=1,label='GT');axs[i,1].plot(c['t'],gt[:,2],'k-',lw=1)
-        else:no(axs[i,0]);no(axs[i,1])
+            tt,pp=display_with_gaps(t,p,c.get('gap_intervals',[]))
+            axs[i,0].plot(pp[:,0],pp[:,1],color=color(view),ls=ls,lw=.8,label=view)
+            colored=axs[i,0].scatter(p[:,0],p[:,1],c=c['ape'],norm=norm,cmap='viridis',s=3,
+                marker={'S-ONLINE':'^','S-FINAL':'D','O-NOFDE':'x','O-ENG-NOFDE':'x'}.get(view,'o'),linewidths=.2,alpha=.75)
+            axs[i,1].plot(tt,pp[:,2],color=color(view),ls=ls,lw=.8,label=view)
+        if colored is not None:fig.colorbar(colored,ax=axs[i,0],label='Tag APE (m)',fraction=.045,pad=.02)
+        reference=data.get('reference_tracks',{}).get(rid)
+        if reference:
+            tt,gg=display_with_gaps(np.asarray(reference['t']),np.asarray(reference['p']),reference.get('gap_intervals',[]))
+            axs[i,0].plot(gg[:,0],gg[:,1],'k-',lw=1,label='GT');axs[i,1].plot(tt,gg[:,2],'k-',lw=1)
+        elif cc:
+            c=max(cc,key=lambda c:len(c['t']));gt=np.asarray(c['truth']);tt,gg=display_with_gaps(np.asarray(c['t']),gt,c.get('gap_intervals',[]));axs[i,0].plot(gg[:,0],gg[:,1],'k-',lw=1,label='GT');axs[i,1].plot(tt,gg[:,2],'k-',lw=1)
+        if not cc:no(axs[i,0]);no(axs[i,1])
         axs[i,0].set(title=f'{rid}: tag XY',xlabel='x (m)',ylabel='y (m)',aspect='equal');axs[i,1].set(title=f'{rid}: tag height',xlabel='Sensor time (s)',ylabel='z (m)')
     axs[0,1].legend(fontsize=8,loc='best')
-    finish(fig,'F02_real_trajectories','T-REAL, no fitted SE(3) alignment. R3 uses held-out suffix after 16.679 s; missing/censored tracks remain absent.')
+    finish(fig,'F02_real_trajectories','First listed recording per family; XY marker color = actual APE, lines identify methods. No alignment. R3 TEST after 16.679 s; observed gaps broken, censored tracks absent.')
     # F03: actual strong joint raw fault, all first emissions and native receipts.
     fig,axs=sub(4,1,7.0)
     for c in data['curves'].values():
@@ -900,14 +931,16 @@ def report():
         '\n修正 actual realtime 杆臂后，新 direct/ROS fde=off R3 前缀：899/899 样本，tag 最大差 2.5855843e-10 m、姿态最大差 1.7075473e-6 deg（均小于 1e-5）；GT topic 发布 0，truth subscriptions 为空。20× 离线回放仅验证提交路径等价，不作为实时依据。',
         table(['W0 流','requested','effective','进程状态','wall s'],[(r['stream'],r['requested_method'],r.get('effective_method'),r['status'],r.get('wall_s')) for r in records if r['group']=='E00']),
         '\n## 评分、配对和不确定性口径',
-        '\n主 APE/HPE/VPE 在实际首发 estimate stamp 对同物理 tag/world 的 GT 插值，ARE 是 body SO(3) 测地角（rad）；不拟合 SE(3)、yaw 或测试时延。tag difference RPE 和减去固定杆臂后的 body SE(3) RPE 分别给 0.5/1 s，任何输入/GT gap>100 ms 的对均拒绝。RPE 的公共 GT 网格与配对表的有限间隔插值只用于评价首次输出流，不改因果输出、不使用最终历史替首发。SFUISE S-FINAL 是同一次运行在同一在线 stamp 网格上由最终 retained history + 最终标定导出，不是全局 batch 最优；artifact 级 revision 与最后输入上界独立记录，不冒充逐点精确依赖。',
+        '\n主 APE/HPE/VPE 在实际首发 estimate stamp 对同物理 tag/world 的 GT 插值，ARE 是 body SO(3) 测地角（rad）；不拟合 SE(3)、yaw 或测试时延。tag difference RPE 和减去固定杆臂后的 body SE(3) RPE 分别给 0.5/1 s，任何输入/GT gap>100 ms 的对均拒绝。RPE 的公共 GT 网格与配对表的有限间隔插值只用于评价首次输出流，不改因果输出、不使用最终历史替首发。SFUISE S-FINAL 是同一次运行在同一在线 stamp 网格的可验证子集上由最终 retained history + 最终标定导出，不是全局 batch 最优；artifact 级 revision 与最后输入上界独立记录，不冒充逐点精确依赖。',
         '\n独立评分器 12 项测试与 evo v1.29.0 对口径检查覆盖单位、符号、SO(3)、tag/body 杆臂、错误杆臂、固定偏置、SE(3) 世界变换、错序/重复/非有限、真实 dt、缺口与 nearest-rank 慢值。资源截断产生的不完整末行拒绝；完整 post-commit state 行只作固定物理 tag 转换并与完整 TUM 逐点核对，不从 GT 重建。真实 velocity/bias 无独立真值为 NA；仿真原生有物理状态/bias 真值，单列评分。SFUISE 未导出 velocity/bias 真值对口径时也不凭位置差分伪造。',
+        '\n历史导出的额外边界审计：冻结适配器将移动窗口的 idle 控制点写入 global history，导致起始 `t < global_origin + 2*dt` 的历史插值引用后续控制点。用原始 SplineState 类、不构造估计器的确定性 codec 检查：在线 p/q/velocity/bias 复原误差 0，安全域后历史误差 0，起始错误可直接复现。原始输出与 hash 全部保留；按样条支撑域对所有流统一拒绝这一历史前缀（通常 2 个点），不是按 PE 选点。S-ONLINE 全部首次输出不受影响；S-FINAL 仅报告可验证历史域，拒绝数、原始错误点/时间保存在 JSON，作为导出接口缺口列出。',
         '\n独立统计单位是 seed 或录制，三个 seed 不夸大显著性；逐帧 Stanford/ECDF 仅是有限运行描述，不作独立置信区间。配对收益为 OFF−ON，百分比用 OFF 作分母，退化保持负数；不同截止时刻的 SFUISE 另列 state age，S-FINAL 不排实时名次。过程被截断时不填后缀误差，配对表显式给公共可观测区间。',
         '\n## E01/E02：健康与真实主对照',
         table(['组/流/seed','view','status','匹配 N','APE m','HPE m','VPE m','ARE rad','tag RPE0.5 m','body RPE0.5 m / rad'],[(r['group']+'/'+r['stream']+'/'+str(r.get('seed',''))[-2:],v,r['status'],s.get('matched'),s.get('ape_m',{}).get('rmse'),s.get('hpe_m',{}).get('rmse'),s.get('vpe_m',{}).get('rmse'),s.get('are_rad',{}).get('rmse'),s.get('rpe_tag_0.5s_m',{}).get('rmse'),f"{fmt(s.get('rpe_body_0.5s_m',{}).get('rmse'))} / {fmt(s.get('rpe_body_0.5s_rad',{}).get('rmse'))}") for r in records if r['group'] in ['E01','E02'] for v,s in r.get('views',{}).items()]),
         table(['实测流/method','attempt / planned','commit / timely','未覆盖/资源后缀','原生 FDE 状态计数'],[(r['stream']+'/'+str(r.get('effective_method',r['requested_method'])),f"{r.get('attempted_epochs','NA')} / {r.get('planned_epochs','NA')}",f"{r.get('committed','NA')} / {r.get('timely_estimates','NA')}",r.get('startup_or_unattempted_epochs'),r.get('fde_status_counts',{'SFUISE':'official rejection; no matched raw PL'})) for r in records if r['group']=='E02']),
-        '\n主表上面的每方法实际 stamp 指标与下面配对公共区间指标含义不同；任一方法缺完整 TEST 输出时公共表保留 NA，不将短前缀性能当完整录制性能。',
+        '\n主表是每方法实际 stamp 指标。ON/OFF 收益只用两条首次流的公共区间；F01 的对照点另用所有可用视图（含有效历史域）的共同网格，缺方法明确为 NA；任一方法缺完整 TEST 输出时公共表保留 NA，不将短前缀性能当完整录制性能。',
         table(['流/seed','公共区间 s','公共 N','APE 改善 m / %','ARE 改善 rad','输入 digest 一致'],[(p['stream']+'/'+str(p['seed'])[-2:],p['common_interval_s'],p['common_grid_n'],f"{fmt(p['gains'].get('ape_m',{}).get('off_minus_on'))} / {fmt(p['gains'].get('ape_m',{}).get('percent'))}",p['gains'].get('are_rad',{}).get('off_minus_on'),p['input_digests_equal']) for p in metrics.get('paired',[]) if p['group'] in ['E01','E02']]),
+        table(['SF 同次运行历史对照','共同有效 N','首次 / 历史 APE m','首次 / 历史 ARE rad'],[(p['stream']+'/'+str(p['seed'])[-2:],p['SF_history_common']['common_n'],f"{fmt(p['SF_history_common']['scores'].get('S-ONLINE',{}).get('ape_m',{}).get('rmse'))} / {fmt(p['SF_history_common']['scores'].get('S-FINAL',{}).get('ape_m',{}).get('rmse'))}",f"{fmt(p['SF_history_common']['scores'].get('S-ONLINE',{}).get('are_rad',{}).get('rmse'))} / {fmt(p['SF_history_common']['scores'].get('S-FINAL',{}).get('are_rad',{}).get('rmse'))}") for p in metrics.get('paired',[]) if p.get('SF_history_common')]),
         '\n## E03：故障、恢复与实测增量',
         '\n主流 U/A/G/J 各三 seed、600 历元；健康 F0 复用 E01。登记强度保持 range +2.25 m/3 历元、raw accel 20 m/s² 或 gyro 1 rad/s/500 ms，标准噪声 draw 与初始观测不变；另有 D0 六轴、弱短、负、错峰定向例，不全排列。R2/R3 仅 FU/FG/FJ；注入 ORIGINAL_SENSOR_X 经固定旋转进入 body，保留 raw sample/range IDs、原时刻、delta 与 GT unchanged，不宣称这一未认证 body 混合方向满足单轴 raw 定理。',
         table(['流/seed','公共 N','APE OFF−ON m','APE %','ARE OFF−ON rad'],[(p['stream']+'/'+str(p['seed'])[-2:],p['common_grid_n'],p['gains'].get('ape_m',{}).get('off_minus_on'),p['gains'].get('ape_m',{}).get('percent'),p['gains'].get('are_rad',{}).get('off_minus_on')) for p in metrics.get('paired',[]) if p['group']=='E03']),
@@ -956,7 +989,7 @@ def report():
         '\n执行缺口：'+('; '.join(all_gaps) if all_gaps else '暂无已发生缺口；以最终矩阵和回归为准。'),
         f"\n断点：冻结 `{f.get('identity',{}).get('head','NA')}`；待运行 {pending}，运行错误/未完成长流 {len(gaps)+len(late)}。所有逻辑 ID 和实际 attempt 见 JSON。资源上限是结果；接口/执行缺口没有改写 PASS。最终审计和本轮 cache 清理状态另记录在本报告的本地阶段提交日志。",
         '\n## English Results',
-        f"\nThe frozen evaluation registered {metrics['registered']} unique runs and retained all {metrics['attempt_processes']} execution attempts (plus the registered ROS counterpart). Current process outcomes are {counts}. Accuracy is scored without fitted trajectory alignment, with each seed or recording retained as the independent unit. First causal SFUISE outputs and final retained-history outputs are separate views of the same run; differing initialization information, input cutoffs and state age preclude an unconditional online ranking. Only registered simulated sources can receive conditional raw protection bounds. Real and semi-synthetic recordings use an explicitly labelled engineering FDE pipeline with no matched raw PL. Censored suffixes, failures, negative gains and attitude degradation remain visible. Large-window results are measured cost frontiers, not an assertion of real-time operation at 1000 epochs. The evaluation status is {status}; zero observed HMI events are not a probabilistic proof."]
+        f"\nThe frozen evaluation registered {metrics['registered']} unique runs and retained all {metrics['attempt_processes']} execution attempts (plus the registered ROS counterpart). Current process outcomes are {counts}. Accuracy is scored without fitted trajectory alignment, with each seed or recording retained as the independent unit. First causal SFUISE outputs and final retained-history outputs are separate views of the same run; differing initialization information, input cutoffs and state age preclude an unconditional online ranking. Only registered simulated sources can receive conditional raw protection bounds. Real and semi-synthetic recordings use an explicitly labelled engineering FDE pipeline with no matched raw PL. Historical bootstrap points with invalid original-idle support are explicitly unavailable; first causal outputs are unchanged. Censored suffixes, failures, negative gains and attitude degradation remain visible. Large-window results are measured cost frontiers, not an assertion of real-time operation at 1000 epochs. The evaluation status is {status}; zero observed HMI events are not a probabilistic proof."]
     for filename in ['SC8_AUDIT.json','SC8_CLEANUP.json']:
         path=OUT/filename
         if path.exists():
@@ -974,6 +1007,8 @@ def evaluation_status(records,validation):
     gaps=[r['id'] for r in records if r['status']=='EXECUTION_ERROR' or 'scoring_error' in r]
     gaps += [r['id']+': long stream did not reach final planned epoch' for r in records if r['group']=='E08' and r['stream']=='SC8-L1' and r['status'] not in ['NOT_ATTEMPTED','RUNNING'] and r.get('max_committed_epoch',0)<10000]
     gaps += [r['id']+': real engineering run censored before complete recording' for r in records if r.get('track') in ['T-REAL','T-SEMI'] and r['group']!='E00' and r['status']=='RESOURCE_LIMIT']
+    historical=[r for r in records if r['group']!='E00' and r.get('historical_export_validity',{}).get('rejected_n',0)]
+    if historical:gaps.append('SFUISE historical original-idle prefix unavailable: '+str(sum(r['historical_export_validity']['rejected_n'] for r in historical))+' support-invalid exports across '+str(len(historical))+' formal runs; first causal outputs unaffected')
     return ('IN_PROGRESS' if pending or not checked else 'SC8_EVALUATED_WITH_EXECUTION_GAPS' if gaps else 'SC8_EVALUATION_COMPLETE_FOR_REGISTERED_MATRIX'),gaps
 
 
@@ -1076,7 +1111,7 @@ def audit():
             for al,v in integ['axes'][axis]['AL'].items():check(r['id']+f': {axis} AL{al} partition',sum(v[k] for k in ['nominal_admissible','MI_candidate','HMI_candidate','AL_unavailable'])==integ['spatial_valid'])
         if r.get('exclusive_means_ms'):check(r['id']+': exclusive mean closure',abs(sum(r['exclusive_means_ms'].values())-r['exclusive_mean_core_ms'])<1e-8)
     check('native_actual_physical_input_parity_all_formal',not paritybad,paritybad)
-    for name in ['input-checks/result.json','input-checks/bag-parity.json','input-checks/all-bag-parity.json','sfuise_observer/check.json','equivalence/R3/equivalence.json']:
+    for name in ['input-checks/result.json','input-checks/bag-parity.json','input-checks/all-bag-parity.json','spline-export-check/result.json','sfuise_observer/check.json','equivalence/R3/equivalence.json']:
         result=metrics.get('validation',{}).get(name,{}).get('result',{})
         check(name,result.get('status')=='PASS' or result.get('returncode')==0)
     final=metrics.get('validation',{}).get('final-checks.json',{}).get('result',[])
@@ -1122,6 +1157,44 @@ def dataset_sim_errors(run,inputs,entry,registry):
     return dict(velocity_error=metric.summary(np.linalg.norm(actual-velocity,axis=1)),
         accel_bias_error=metric.summary(ba),gyro_bias_error=metric.summary(bg),
         true_bias='REGISTERED_SIM_RW_TRUTH from source-only latent audit; evaluation-only, no estimator feedback')
+
+
+def display_with_gaps(t,p,gaps):
+    if not gaps:return t,p
+    tt=[];pp=[]
+    for i,(stamp,point) in enumerate(zip(t,p)):
+        if i and any(t[i-1]<=a+1e-8 and stamp>=b-1e-8 for a,b in gaps):
+            tt.append(float('nan'));pp.append(np.full_like(point,float('nan')))
+        tt.append(stamp);pp.append(point)
+    return np.asarray(tt),np.asarray(pp)
+
+
+def historical_support(run,pose):
+    """Reject only the mathematically undefined original-idle export domain.
+
+    Frozen global_.updateKnots copies the latest window's idles into the global
+    aggregate. Interpolation at t < origin+2*dt then refers to wrong controls.
+    This rule is derived from the upstream spline support, applies to all streams
+    without looking at PE, and never changes an estimator output or raw artifact.
+    """
+    obs=rows(run/'observer.csv')
+    if len(obs)<2:raise ValueError('historical exporter support cannot be identified from observer receipts')
+    stamps=[int(x['state_ns']) for x in obs];indices=[int(x['estimate_index']) for x in obs]
+    periods=[]
+    for a,b,i,j in zip(stamps,stamps[1:],indices,indices[1:]):
+        if j>i:
+            assert (b-a)%(j-i)==0,'nonuniform spline clock receipt'
+            periods.append((b-a)//(j-i))
+    dt=Counter(periods).most_common(1)[0][0];assert dt>0
+    origin=stamps[0]-indices[0]*dt+1
+    safe_ns=origin+2*dt-1000000000000
+    valid=np.rint(pose[0]*1e9).astype(np.int64)>=safe_ns
+    meta=dict(status='PARTIAL_HISTORICAL_EXPORT_SUPPORT',raw_n=len(valid),rejected_n=int((~valid).sum()),valid_n=int(valid.sum()),
+        safe_from_sensor_ns=safe_ns,global_origin_sensor_ns=origin-1000000000000,dt_ns=dt,
+        rejected_timestamp_s=pose[0][~valid],rejected_raw_positions=pose[1][~valid],rejected_raw_quaternions=pose[2][~valid],
+        reason='Global aggregate overwrote original idles; t < origin+2dt cannot be reconstructed. Mask is support-based, independent of error; raw files/hashes preserved.',
+        validation='test_sc8_spline_export.py: online codec exact, late interpolation identical, no estimator constructed')
+    return tuple(x[valid] for x in pose),meta
 
 if __name__=='__main__':
     import sys
