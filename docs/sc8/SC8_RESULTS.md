@@ -1,6 +1,6 @@
 # SC8 实验结果与复现报告
 
-**状态：IN_PROGRESS。**
+**状态：SC8_EVALUATED_WITH_EXECUTION_GAPS。**
 
 本轮实测值来自本次执行 journal；未复用历史 CSV。算法输、界较宽和大窗非实时均作为结果保留。进程 SUCCESS 只表示正常退出，功能、资格、deadline 和应用可用性分别列出。
 
@@ -26,11 +26,13 @@ Walk R1/R2 的 tracker→IMU/body/tag 参照未闭合：物理 APE/ARE/RPE 撤�
 
 STAR-Loc R5 的 SFUISE 首次在线流 tag APE RMSE 15854.8 m、最大 29335 m，保留整个实测尺度；官方剔除未关闭，codec/单位/原始输入逐项核对，不能删去发散段后宣称成功。CAL-S 对 gyro/rig 转换的方向约定和角速度一致性尚未闭合，因此这些值描述冻结接口下的实际行为，不作为正确输入下算法本身的优劣证据。工程 ON 只有截断前缀，不能以其短段误差与该完整流作全程排名。
 
-实际原生条件 raw 记录共 75931 个合格 tag receipt（不同场景/消融/窗口不可当作独立概率样本），H/V 合计 underbound 0 次。计数包含迟到与 AL-unavailable 的合格界；无论是否为零，都不作为风险概率证明。
+实际原生条件 raw 记录共 77131 个合格 tag receipt（不同场景/消融/窗口不可当作独立概率样本），H/V 合计 underbound 0 次。计数包含迟到与 AL-unavailable 的合格界；无论是否为零，都不作为风险概率证明。
 
 窗口前沿已结束 14/14：资源截断 0，进入公共 1101–2100 评分区间 14。窗口/回放同时变化，缺失公共区间不外推；1000 历元是否经历边缘化只认实际 receipt。
 
 同一注册健康 seed、完整公共 1000 历元：30/30→1000/1000 的 APE 为 0.04753682→0.04754147 m，HPL/VPL 几乎未变；core P95 为 25.0956→795.501 ms。该流没有可观的误差/界收益，却付出明显成本；这是一条流的成本前沿，不推广为所有运动或几何都无大窗收益。
+
+同一重复故障流的完整公共区间，30/30→1000/1000 的 APE 则由 0.1034583 降至 0.05404642 m。健康/故障窗口收益不同；联动改变 LF、LI 与回放，不能把该收益单独归因于 PL，且大窗仍明显非实时。
 
 消融 SC8-G2/O-ABL-G2 在历元 1 返回 NO_COMPLETE_POST_PASSED_ROLLING_ACTION，最后提交 0/80。无合格轨迹时精度与 PL 为 NA；实际 abort 耗时和全部计划分母仍保留，不补跑或放宽资格。
 
@@ -44,7 +46,7 @@ STAR-Loc R5 的 SFUISE 首次在线流 tag APE RMSE 15854.8 m、最大 29335 m�
 
 入口 HEAD `fa5b3dc9ffe3c88492352491d79ba022f373bfb5`；计算冻结提交 `61907ab417450d317e443e4ff10f2cce062deabe`。实际源内容/ELF/生产 DSO、loaded libraries、编译环境、平台、噪声、risk/birth q、AL、窗口 guard 和原合同摘要在 [冻结登记](../../config/sc8_experiments.yaml)；未升级 SFUISE、未 push。分析模块可在计算冻结后继续开发，不改变求解。
 
-登记 143 个唯一逻辑运行；当前状态 {'SUCCESS': 128, 'RESOURCE_LIMIT': 12, 'FAIL': 1, 'NOT_ATTEMPTED': 2}，合计 143。实际 attempt 157，另有辅助 ROS 求解 1，上限 160。W0 额外 attempt（包括预检失败）全部保留（版本状态与实际 exit code 分开，见 JSON），SFUISE 首发/历史共用一个进程。E06 两次确认不增加独立精度样本。
+登记 143 个唯一逻辑运行；当前状态 {'SUCCESS': 130, 'RESOURCE_LIMIT': 12, 'FAIL': 1}，合计 143。实际 attempt 159，另有辅助 ROS 求解 1，上限 160。W0 额外 attempt（包括预检失败）全部保留（版本状态与实际 exit code 分开，见 JSON），SFUISE 首发/历史共用一个进程。E06 两次确认不增加独立精度样本。
 
 - **T-SIM**：当前注册物理 law 下的条件 raw 保证；资格与实际数值/receipt 逐帧核验，仍无真实应用资格。
 - **T-REAL**：原始真实录制上的经验表现；SC7 raw producer 拒绝，不放宽采样率/噪声/运动域/anchor guard。requested O-FULL 实际明确为 **O-FDE-ENG**，off 为 **O-ENG-NOFDE**，均不冒充 SC7 恢复/PL。
@@ -628,8 +630,8 @@ core 从原始到达验证开始到 cleanup/receipt 完成；sink 含 ready/排�
 | E02/R6/20/O-FDE-ENG | 2408 | 314.676 / 964265 / 964265 | 12627.4 / 976645 | 1028.46 | 18.5633 / 18.6394 / NA | 291932 | 0.0019984 / NA: no matched raw PL |
 | E02/R6/20/O-ENG-NOFDE | 2408 | 2.63036 / 2.79275 / 2.79275 | 3.21679 / 3.43681 | 7.11351 | 0.128396 / 0.0769571 / NA | 122392 | 0.96243 / NA: no matched raw PL |
 | E02/R6/20/SFUISE_PINNED_OBSERVED | 554 | 48.3147 / 170.974 / 168.313 | 59.3928 / 179.319 | 97.2739 | 1.75576 / 0.390999 / NA | 120004 | NA / NA: no matched raw PL |
-| E06/SC8-H//O-FULL | NA | NA / NA / NA | NA / NA | NA | NA / NA / NA | NA | NA / NA: no matched raw PL |
-| E06/SC8-J//O-FULL | NA | NA / NA / NA | NA / NA | NA | NA / NA / NA | NA | NA / NA: no matched raw PL |
+| E06/SC8-H/20/O-FULL | 600 | 23.6964 / 23.83 / 23.83 | 25.2278 / 25.3678 | 13.3573 | 0.445242 / 0.431454 / 0.437897 | 95312 | 1 / True |
+| E06/SC8-J/20/O-FULL | 600 | 24.8926 / 25.1615 / 25.1615 | 28.4192 / 28.902 | 13.7308 | 0.457693 / 0.443537 / 0.450377 | 103196 | 0.996667 / True |
 
 
 默认 positive profile 必须同时 core P95≤40 ms、measurement-to-sink P95≤50 ms、及时空间有效/所有计划≥95%；所有测到的慢帧、失败候选和 abort 包含。真实只报及时估计率，不借用 raw 空间资格；formal attempt、启动未覆盖、资源停止后未尝试后缀均在全分母。exclusive 模块均值与总 core 均值逐 run 闭合，未分配的 guard/clock/abort 成本单列；阶段 P95 不相加。CPU、wall processing 与 sensor duration 分别记录，不声称全线程实现相同。资源截断、非成功运行或未处理 source-gap 不提供完整流 throughput RTF；已花 CPU/可测 service 除以全计划时长的 profile 成本比另存 censored_profile_cost_ratios，不能靠未处理后缀稀释成本后宣称速度。
@@ -670,7 +672,53 @@ L0 5000 FULL、L1 10000 FULL/NOFDE 使用最终冻结二进制、不重启、不
 
 [指标 JSON](SC8_METRICS.json)、[绘图必要数据](SC8_PLOTDATA.json)、[图表身份](SC8_FIGURES.json)。F00–F10 共 12 个 figure family（F05-H/V 两张），每张 180 mm、300 dpi PNG + 可编辑文字 SVG。只保存实际曲线峰谷/事件附近点和实际二维计数，统计仍用全样本；每 seed/录制指标留存，不将帧数当独立样本。
 
-图表当前为早先进度版本，未与本次 metrics 摘要匹配；本报告不嵌入旧图充当新结果。W3 会重新生成并核对全部图表身份。
+![F00_admission](figures/F00_admission.png)
+
+T-REAL raw refused. Walk physical reference OPEN; STAR gyro-input validation OPEN. W0 fixed 20 s prefixes: process completion is not qualification or reference closure. [SVG](figures/F00_admission.svg)
+
+![F01_paired_accuracy](figures/F01_paired_accuracy.png)
+
+Each row is one seed / recording; common AVAILABLE-view domain. Walk physical scores are NA (reference OPEN); STAR rows are input OPEN. Numerical proxies/interface outcomes remain in the report. No alignment; SF cutoff/lag differs. Final history excludes invalid original-idle support. [SVG](figures/F01_paired_accuracy.svg)
+
+![F02_real_trajectories](figures/F02_real_trajectories.png)
+
+First listed recording per family; R1 uses an unresolved frozen tracker proxy, not physical tag/body GT. Other XY marker colors = observed tag error; R5 gyro-input validation remains OPEN. Lines identify methods. No alignment. R3 TEST after 16.679 s; observed gaps broken, censored tracks absent. Large excursions keep full scale with GT-neighborhood insets. [SVG](figures/F02_real_trajectories.svg)
+
+![F03_joint_fault_receipts](figures/F03_joint_fault_receipts.png)
+
+T-SIM SC8-J seed 20261020; red: raw accel 20 m/s² for 500 ms; amber: range +2.25 m for 3 epochs. APE is linear below 0.1 m, logarithmic above; rejoined flag is a persistent state. Receipts do not imply accuracy recovery. [SVG](figures/F03_joint_fault_receipts.svg)
+
+![F04_fault_paired_gains](figures/F04_fault_paired_gains.png)
+
+Positive = OFF minus ON improvement; each seed / recording shown. Position gain does not cancel ARE degradation. FULL native episode receipts (fully exposed): U: UWB isolation 3/3, A: rejoin 3/3, G: rejoin 3/3, J: rejoin 3/3; UWB isolation 3/3. Real physical gains require a verified reference and two common post-injection states; otherwise NA. Walk tracker reference is OPEN. Engineering receipts have no equivalent qualified rejoin claim. [SVG](figures/F04_fault_paired_gains.svg)
+
+![F05_H_Stanford](figures/F05_H_Stanford.png)
+
+Conditional T-SIM only, E01/E03 main cases. Gray = late spatial bounds; refusal/missing denominators in metrics. Zero HMI samples do not prove risk. [SVG](figures/F05_H_Stanford.svg)
+
+![F05_V_Stanford](figures/F05_V_Stanford.png)
+
+Conditional T-SIM only, E01/E03 main cases. Gray = late spatial bounds; refusal/missing denominators in metrics. Zero HMI samples do not prove risk. [SVG](figures/F05_V_Stanford.svg)
+
+![F06_AL_and_SI](figures/F06_AL_and_SI.png)
+
+T-SIM finite-run diagnostics; all planned epochs in availability denominator. SI axis is linear below 0.01, logarithmic above. AL changes only evaluation, never estimator or risk. [SVG](figures/F06_AL_and_SI.svg)
+
+![F07_window_frontier](figures/F07_window_frontier.png)
+
+Offline frontier; 100–1000 epochs = 5–50 s. Quality lines require all 1000 common epochs; open points show partial intervals or censored Pareto estimates, labelled n. Bubbles use sampled RSS, not the unknown true peak. No extrapolation; replay changes with LF. [SVG](figures/F07_window_frontier.svg)
+
+![F08_latency_and_breakdown](figures/F08_latency_and_breakdown.png)
+
+Every measurable slow/abort frame retained; ECDF is descriptive. SF software source clock ±1 ms plus jitter; root CPU/RTF separate from bag waits. [SVG](figures/F08_latency_and_breakdown.svg)
+
+![F09_ablations](figures/F09_ablations.png)
+
+Common A / PL / P; red = increase from FULL, blue = decrease. M uses the same center; G2 uses first 80 epochs. Bias ratios are actual raw widths: D0/S0 gain uses original sample0, not continued full-state observability. M3 is shown separately; S1/S2 trajectories were not registered. [SVG](figures/F09_ablations.svg)
+
+![F10_long_streams](figures/F10_long_streams.png)
+
+T-SIM L0=5000, L1=10000 planned epochs. Faint dashed traces use right axes (ARE / slots). Blank suffixes have no committed output; receipt counts and bias in report + plot data. [SVG](figures/F10_long_streams.svg)
 
 ## 实际困难与后续采集
 
@@ -707,9 +755,9 @@ L0 5000 FULL、L1 10000 FULL/NOFDE 使用最终冻结二进制、不重启、不
 | A17 | 40/50 ms 和95%全计划分母；真实及时估计≠raw资格 |
 | A18 | E07: {'SUCCESS': 4, 'FAIL': 1}; 合并开关与 M/A/P 明示 |
 | A19 | E08: {'SUCCESS': 3}; late gaps=1 |
-| A20 | PENDING：图表与当前 metrics 摘要尚未全部匹配 |
-| A21 | PENDING：最终相关回归未全部结束 |
-| A22 | {'SUCCESS': 128, 'RESOURCE_LIMIT': 12, 'FAIL': 1, 'NOT_ATTEMPTED': 2}; attempts=157，辅助另计，完整版本/失败身份留存 |
+| A20 | F00–F10 实际图/精简绘图数据；NA和overflow保留 |
+| A21 | 最终相关回归 PASS |
+| A22 | {'SUCCESS': 130, 'RESOURCE_LIMIT': 12, 'FAIL': 1}; attempts=159，辅助另计，完整版本/失败身份留存 |
 | A23 | 唯一中文报告+English Results，实际冻结 registry/metrics/plot CLI |
 | A24 | 阶段本地 commit；只清理本轮 owned cache，保留原始数据/用户旧证据，不 push |
 
@@ -744,11 +792,11 @@ python3 tools/sc8_experiments.py report
 
 执行缺口：SFUISE simulated velocity/bias estimates were not exported; source truth exists but corresponding state-error metrics remain NA, no pose-difference proxy; STAR gyro-frame input validation OPEN: published transform direction labels and CAL-S gyro/GT consistency do not close; frozen outputs retained as interface-level outcomes, no intrinsic algorithm ranking; Walk physical tag/body GT reference OPEN: CAL-W rejects tracker=IMU identity; frozen numerical proxy metrics are retained separately, not physical accuracy; Registered scope omission: no separate weak-UWB amplitude matrix or S1/S2 bias trajectories; no historical curves substituted; E08-SC8-L1-O-FULL-20261020-30x30: long stream did not reach final planned epoch; E02-R1-O-FULL-20261020-30x30: real engineering run censored before complete recording; E02-R2-O-FULL-20261020-30x30: real engineering run censored before complete recording; E02-R3-O-FULL-20261020-30x30: real engineering run censored before complete recording; E02-R5-O-FULL-20261020-30x30: real engineering run censored before complete recording; E03-R2-FU-O-FULL-20261020-30x30: real engineering run censored before complete recording; E03-R2-FJ-O-FULL-20261020-30x30: real engineering run censored before complete recording; E03-R3-FU-O-FULL-20261020-30x30: real engineering run censored before complete recording; E03-R3-FG-O-FULL-20261020-30x30: real engineering run censored before complete recording; E03-R3-FJ-O-FULL-20261020-30x30: real engineering run censored before complete recording; SFUISE historical original-idle prefix unavailable: 58 support-invalid exports across 29 formal runs; first causal outputs unaffected
 
-断点：冻结 `61907ab417450d317e443e4ff10f2cce062deabe`；待运行 2，运行错误/未完成长流 1。所有逻辑 ID 和实际 attempt 见 JSON。资源上限是结果；接口/执行缺口没有改写 PASS。最终审计和本轮 cache 清理状态另记录在本报告的本地阶段提交日志。
+断点：冻结 `61907ab417450d317e443e4ff10f2cce062deabe`；待运行 0，运行错误/未完成长流 1。所有逻辑 ID 和实际 attempt 见 JSON。资源上限是结果；接口/执行缺口没有改写 PASS。最终审计和本轮 cache 清理状态另记录在本报告的本地阶段提交日志。
 
 ## English Results
 
-The frozen evaluation registered 143 unique runs and retained all 157 execution attempts (plus the registered ROS counterpart). Current process outcomes are {'SUCCESS': 128, 'RESOURCE_LIMIT': 12, 'FAIL': 1, 'NOT_ATTEMPTED': 2}. Accuracy is scored without fitted trajectory alignment, with each seed or recording retained as the independent unit. First causal SFUISE outputs and final retained-history outputs are separate views of the same run; differing initialization information, input cutoffs and state age preclude an unconditional online ranking. Only registered simulated sources can receive conditional raw protection bounds. Real and semi-synthetic recordings use an explicitly labelled engineering FDE pipeline with no matched raw PL. Walk physical tag/body reference remains open: CAL-W rejects tracker=IMU identity, so physical scores are unavailable and frozen proxy differences remain separately labelled. Historical bootstrap points with invalid original-idle support are explicitly unavailable; first causal outputs are unchanged. Censored suffixes, failures, negative gains and attitude degradation remain visible. Large-window results are measured cost frontiers, not an assertion of real-time operation at 1000 epochs. The evaluation status is IN_PROGRESS; zero observed HMI events are not a probabilistic proof.
+The frozen evaluation registered 143 unique runs and retained all 159 execution attempts (plus the registered ROS counterpart). Current process outcomes are {'SUCCESS': 130, 'RESOURCE_LIMIT': 12, 'FAIL': 1}. Accuracy is scored without fitted trajectory alignment, with each seed or recording retained as the independent unit. First causal SFUISE outputs and final retained-history outputs are separate views of the same run; differing initialization information, input cutoffs and state age preclude an unconditional online ranking. Only registered simulated sources can receive conditional raw protection bounds. Real and semi-synthetic recordings use an explicitly labelled engineering FDE pipeline with no matched raw PL. Walk physical tag/body reference remains open: CAL-W rejects tracker=IMU identity, so physical scores are unavailable and frozen proxy differences remain separately labelled. Historical bootstrap points with invalid original-idle support are explicitly unavailable; first causal outputs are unchanged. Censored suffixes, failures, negative gains and attitude degradation remain visible. Large-window results are measured cost frontiers, not an assertion of real-time operation at 1000 epochs. The evaluation status is SC8_EVALUATED_WITH_EXECUTION_GAPS; zero observed HMI events are not a probabilistic proof.
 
 Across 3 healthy seeds, full-pipeline tag APE RMSE ranged from 0.0487176 to 0.0526469 m. The default timing and timely-spatial tests passed 3/3, while timely joint availability at the research H/V alert limits of 2/3 m was only 3.5–5.667%. Small measured error does not imply equally tight protection bounds.
 
@@ -759,3 +807,7 @@ For SC8-A, mean paired OFF-minus-ON improvements were 0.0923626 m in APE and -1.
 For SC8-G, mean paired OFF-minus-ON improvements were -0.0677327 m in APE and -1.23141 rad in ARE across 3 seeds. Negative values denote deterioration; position and attitude effects are reported separately.
 
 For SC8-J, mean paired OFF-minus-ON improvements were 0.114792 m in APE and 0.20435 rad in ARE across 3 seeds. Negative values denote deterioration; position and attitude effects are reported separately.
+
+最终本地审计/清理收据：[SC8_AUDIT.json](SC8_AUDIT.json)，状态 PASS。
+
+最终本地审计/清理收据：[SC8_CLEANUP.json](SC8_CLEANUP.json)，状态 COMPLETE。
