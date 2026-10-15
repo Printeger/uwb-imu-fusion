@@ -1365,6 +1365,9 @@ def audit():
         for axis,views in axes.items():
             for view,h in views.items():check(f'{method} {axis} {view}: actual histogram tally',sum(np.asarray(a).sum() for a in h['layers'].values())+h['outside']==h['total'])
     previous=json.loads((OUT/'SC8_AUDIT.json').read_text()) if (OUT/'SC8_AUDIT.json').exists() else {}
+    repro_path=CACHE/'plotdata-reproduction.json'
+    reproduction=json.loads(repro_path.read_text()) if repro_path.exists() else previous.get('compact_plotdata_reproduction',{})
+    check('permanent_compact_plotdata_reproduces_all_PNGs',reproduction.get('status')=='PASS' and reproduction.get('source')=='PERMANENT_METRICS_AND_PLOTDATA_ONLY' and reproduction.get('metrics_sha256')==common.sha256(OUT/'SC8_METRICS.json') and reproduction.get('plotdata_sha256')==common.sha256(OUT/'SC8_PLOTDATA.json') and reproduction.get('png_sha256')=={k:v for k,v in artifacts.items() if k.endswith('.png')})
     retained={x['attempt']:x for x in previous.get('non_success_evidence',[])}
     for path in sorted((CACHE/'runs').glob('*/execution.json')):
         execution=json.loads(path.read_text())
@@ -1380,6 +1383,7 @@ def audit():
         scope='Reconciliation and truthful-disclosure audit only. PASS does not close OPEN references/input interfaces, certify the system, or remove execution gaps.',
         metrics_sha256=common.sha256(OUT/'SC8_METRICS.json'),registry_sha256=common.sha256(ROOT/'config/sc8_experiments.yaml'),
         plotdata_sha256=common.sha256(OUT/'SC8_PLOTDATA.json'),
+        compact_plotdata_reproduction=reproduction,
         analysis_source_sha256={str(p.relative_to(ROOT)):common.sha256(p) for p in [ROOT/'tools/sc8_analysis.py',ROOT/'tools/sc8_metrics.py',ROOT/'tools/sc8_cleanup.py',ROOT/'tools/test_sc8_reference.py',ROOT/'tools/test_sc8_metrics.py'] if p.exists()},
         non_success_evidence=list(retained.values()),
         metrics_status=metrics['status'],execution_gaps=metrics.get('execution_gaps'),
