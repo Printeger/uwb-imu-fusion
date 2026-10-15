@@ -273,9 +273,10 @@ def score_entry(entry,execution,run,registry):
         if cold:result['cold_start_ms']=dict(zip(['provider_and_estimator_init','input_audit_export','total_ready'],map(float,cold[-1])))
         result['semantics']='ACTUAL_NATIVE_COMMITTED_TAG; raw conditional simulation only'
         result['phase_errors']={}
-        for name,rr in [('healthy_prefix',[r for r in actual if value(r,'epoch')<121]),
+        first_fault=min([f[0] for f in manifest.get('faults',[])]+[f[0] for f in manifest.get('uwb_faults',[])],default=planned+1)
+        for name,rr in [('healthy_prefix',[r for r in actual if value(r,'epoch')<first_fault]),
                         ('bridge',[r for r in actual if value(r,'bridge')==1]),
-                        ('rejoin',[r for r in actual if value(r,'rejoined')==1]),
+                        ('rejoin',[r for r in actual if value(r,'rejoined')==1 and value(r,'bridge')==0]),
                         ('late_last_quarter',[r for r in actual if value(r,'epoch')>.75*planned])]:
             result['phase_errors'][name]={k:metric.summary([value(r,k) for r in rr]) for k in ['ape','hpe','vpe','rotation_error','velocity_error','accel_bias_error','gyro_bias_error']}
     else:
