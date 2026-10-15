@@ -1043,6 +1043,16 @@ def report():
         f"\n断点：冻结 `{f.get('identity',{}).get('head','NA')}`；待运行 {pending}，运行错误/未完成长流 {len(gaps)+len(late)}。所有逻辑 ID 和实际 attempt 见 JSON。资源上限是结果；接口/执行缺口没有改写 PASS。最终审计和本轮 cache 清理状态另记录在本报告的本地阶段提交日志。",
         '\n## English Results',
         f"\nThe frozen evaluation registered {metrics['registered']} unique runs and retained all {metrics['attempt_processes']} execution attempts (plus the registered ROS counterpart). Current process outcomes are {counts}. Accuracy is scored without fitted trajectory alignment, with each seed or recording retained as the independent unit. First causal SFUISE outputs and final retained-history outputs are separate views of the same run; differing initialization information, input cutoffs and state age preclude an unconditional online ranking. Only registered simulated sources can receive conditional raw protection bounds. Real and semi-synthetic recordings use an explicitly labelled engineering FDE pipeline with no matched raw PL. Historical bootstrap points with invalid original-idle support are explicitly unavailable; first causal outputs are unchanged. Censored suffixes, failures, negative gains and attitude degradation remain visible. Large-window results are measured cost frontiers, not an assertion of real-time operation at 1000 epochs. The evaluation status is {status}; zero observed HMI events are not a probabilistic proof."]
+    healthy=[r for r in records if r['group']=='E01' and r['stream']=='SC8-H' and r['requested_method']=='O-FULL' and 'ape_m' in r.get('views',{}).get('O-FULL',{})]
+    if healthy:
+        values=[r['views']['O-FULL']['ape_m']['rmse'] for r in healthy]
+        rates=[r['integrity']['joint_AL']['2/3']['timely_within_AL']/r['integrity']['planned'] for r in healthy]
+        lines.append(f"\nAcross {len(healthy)} healthy seeds, full-pipeline tag APE RMSE ranged from {min(values):.6g} to {max(values):.6g} m. The default timing and timely-spatial tests passed {sum(r.get('tested_profile_deadline_pass') is True for r in healthy)}/{len(healthy)}, while timely joint availability at the research H/V alert limits of 2/3 m was only {100*min(rates):.4g}–{100*max(rates):.4g}%. Small measured error does not imply equally tight protection bounds.")
+    for stream in ['SC8-U','SC8-A','SC8-G','SC8-J']:
+        pairs=[p for p in metrics.get('paired',[]) if p['group']=='E03' and p['stream']==stream]
+        values=[p['gains'].get('ape_m',{}).get('off_minus_on') for p in pairs];values=[v for v in values if v is not None]
+        angles=[p['gains'].get('are_rad',{}).get('off_minus_on') for p in pairs];angles=[v for v in angles if v is not None]
+        if values and angles:lines.append(f"\nFor {stream}, mean paired OFF-minus-ON improvements were {np.mean(values):.6g} m in APE and {np.mean(angles):.6g} rad in ARE across {len(values)} seeds. Negative values denote deterioration; position and attitude effects are reported separately.")
     for filename in ['SC8_AUDIT.json','SC8_CLEANUP.json']:
         path=OUT/filename
         if path.exists():
