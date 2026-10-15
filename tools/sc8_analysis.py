@@ -900,6 +900,7 @@ def figures():
     finish(fig,'F06_AL_and_SI','T-SIM finite-run diagnostics; all planned epochs in availability denominator. SI axis is linear below 0.01, logarithmic above. AL changes only evaluation, never estimator or risk.')
     # F07 common 1101--2100 window frontier; censored runs have no imputed APE.
     fig,axs=sub(2,2,5.8);wr=[r for r in records if r['group']=='E05' and r.get('window')]
+    window_ids={w:i+1 for i,w in enumerate([(30,30),(100,100),(300,300),(600,600),(1000,1000),(300,30),(300,100)])};pareto_seen=set()
     for fault,mark in [('SC8-WH','o'),('SC8-WJ','^')]:
         for coupled,ls in [(True,'-'),(False,'--')]:
             rr=sorted([r for r in wr if r['stream']==fault and ((r['window'][0]==r['window'][1]) if coupled else (r['window'][0]==300))],key=lambda r:r['window'][0] if coupled else r['window'][1])
@@ -916,15 +917,20 @@ def figures():
                 quality(axs[0,1],lambda r,k=key:r.get('window_common_summary',{}).get(k,{}).get('mean'),lambda r,k=key:r.get('window_common_summary',{}).get(k,{}).get('n')==1000,label+' '+key[0].upper(),style)
             axs[1,0].plot(xx,seq(lambda r:r.get('timing',{}).get('core_ms',{}).get('p95')),marker=mark,ls=ls,color=col,label=label)
             for r in rr:
+                if r['id'] in pareto_seen:continue
+                pareto_seen.add(r['id'])
                 latency95=r.get('timing',{}).get('core_ms',{}).get('p95');pl=r.get('window_common_summary',{}).get('hpl',{}).get('mean');rss=r.get('resources',{}).get('rss',{}).get('max')
                 if latency95 is not None and pl is not None:
                     n=r.get('window_common_summary',{}).get('hpl',{}).get('n',0);partial=n<1000 or r['status']!='SUCCESS'
                     axs[1,1].scatter(latency95,pl,s=15+((rss or 0)/1024)*.05,facecolors='none' if partial else col,edgecolors=col,marker=mark)
-                    axs[1,1].annotate(str(tuple(r['window']))+(f' n={n}' if partial else ''),(latency95,pl),fontsize=8)
+                    axs[1,1].annotate(str(window_ids[tuple(r['window'])])+(f' n={n}' if partial else ''),(latency95,pl),xytext=(0,7 if fault=='SC8-WH' else -15),textcoords='offset points',fontsize=8)
     censored=[f"{tuple(r['window'])} {r['stream'][-1]}: {r.get('actual_max_epoch',0)}/2100" for r in wr if r['status']!='SUCCESS' or not r.get('views')]
     axs[0,0].set(xlabel='LF = LI, or LI at LF=300 (UWB epochs)',ylabel='Tag APE RMSE (m)',title='Common epochs 1101–2100');axs[0,0].legend(fontsize=8)
     axs[0,1].set(xlabel='Window (UWB epochs; 20 Hz)',ylabel='Mean common-interval PL (m)');axs[0,1].legend(fontsize=8)
     axs[1,0].axhline(40,color='#aa3333',ls=':');axs[1,0].set(xlabel='Window (UWB epochs)',ylabel='All measurable core P95 (ms)',yscale='log');axs[1,1].set(xlabel='All measurable core P95 (ms)',ylabel='Common-interval HPL (m)',xscale='log')
+    for ax in [axs[0,0],axs[0,1],axs[1,1]]:ax.set_ylim(bottom=0)
+    axs[0,0].legend(fontsize=8,loc='lower right');axs[0,1].legend(fontsize=8,loc='lower right')
+    axs[1,1].text(.02,.05,'Pareto IDs (LF, LI):\n1:(30,30)  2:(100,100)\n3:(300,300)  4:(600,600)\n5:(1000,1000)\n6:(300,30)  7:(300,100)',transform=axs[1,1].transAxes,va='bottom',fontsize=8)
     if censored:axs[1,1].text(.02,.98,f'{len(censored)}/{len(wr)} stopped/refused or missing common interval.\nActual epochs and resource limits: report E05.\nNo missing APE / PL values imputed.',transform=axs[1,1].transAxes,va='top',fontsize=8)
     finish(fig,'F07_window_frontier','Offline frontier; 100–1000 epochs = 5–50 s. Quality lines require all 1000 common epochs; open points show partial intervals or censored Pareto estimates, labelled n. Bubbles use sampled RSS, not the unknown true peak. No extrapolation; replay changes with LF.')
     # F08 full-boundary latency CDF and exclusive means (not summed P95s).
@@ -1258,6 +1264,11 @@ def findings(metrics):
         paragraphs.append(f"实际原生条件 raw 记录共 {n} 个合格 tag receipt（不同场景/消融/窗口不可当作独立概率样本），H/V 合计 underbound {under} 次。计数包含迟到与 AL-unavailable 的合格界；无论是否为零，都不作为风险概率证明。")
     window=[r for r in rr if r['group']=='E05' and r['status'] not in ['NOT_ATTEMPTED','RUNNING']]
     if window:paragraphs.append(f"窗口前沿已结束 {len(window)}/14：资源截断 {sum(r['status']=='RESOURCE_LIMIT' for r in window)}，进入公共 1101–2100 评分区间 {sum(bool(r.get('views')) for r in window)}。窗口/回放同时变化，缺失公共区间不外推；1000 历元是否经历边缘化只认实际 receipt。")
+    base=next((r for r in window if r['stream']=='SC8-WH' and r['window']==[30,30] and r.get('window_common_coverage',{}).get('complete_pose_interval')),None)
+    large=next((r for r in window if r['stream']=='SC8-WH' and r['window']==[1000,1000] and r.get('window_common_coverage',{}).get('complete_pose_interval')),None)
+    if base and large:
+        a=base['views']['O-FULL']['ape_m']['rmse'];b=large['views']['O-FULL']['ape_m']['rmse'];p=base['timing']['core_ms']['p95'];q=large['timing']['core_ms']['p95']
+        paragraphs.append(f"同一注册健康 seed、完整公共 1000 历元：30/30→1000/1000 的 APE 为 {a:.7g}→{b:.7g} m，HPL/VPL 几乎未变；core P95 为 {p:.6g}→{q:.6g} ms。该流没有可观的误差/界收益，却付出明显成本；这是一条流的成本前沿，不推广为所有运动或几何都无大窗收益。")
     for r in rr:
         if r['group']=='E08' and r['status'] not in ['NOT_ATTEMPTED','RUNNING']:
             paragraphs.append(f"长流 {r['stream']}/{r['requested_method']}：实际最后提交 {r.get('max_committed_epoch',0)}/{r.get('planned_epochs')}，进程 {r['status']}；最后实际服务历元 {r.get('actual_max_epoch',0)}，source queue 记录 {r.get('source_delivery_counts',{})}。未提交后缀和未确认到达的晚期故障不算恢复成功。")
