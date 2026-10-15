@@ -380,7 +380,7 @@ def evaluate():
     for path in (CACHE/'runs').glob('*/execution.json'):
         d=json.loads(path.read_text());attempts.append(dict(id=path.parent.name,status=d['status'],source_identity=d['identity'],reason=d.get('reason'),returncode=d.get('returncode'),input_digest=d.get('input_digest'),input_files=d.get('input_files'),output_hashes=d.get('output_hashes'),elapsed_s=d.get('elapsed_s'),actual_run_id=d.get('actual_run_id'),runner_error=d.get('runner_error')))
     validation={}
-    for name in ['input-checks/result.json','input-checks/bag-parity.json','input-checks/all-bag-parity.json','spline-export-check/result.json','sfuise_observer/check.json','equivalence/R3/equivalence.json','final-checks.json']:
+    for name in ['input-checks/result.json','input-checks/bag-parity.json','input-checks/all-bag-parity.json','spline-export-check/result.json','native-observer-prefix-check.json','sfuise_observer/check.json','equivalence/R3/equivalence.json','final-checks.json']:
         p=CACHE/name
         if p.exists():validation[name]=dict(sha256=common.sha256(p),result=json.loads(p.read_text()))
     counts=dict(Counter(r['status'] for r in records));assert sum(counts.values())==len(registry['runs'])
@@ -932,7 +932,7 @@ def report():
         table(['W0 流','requested','effective','进程状态','wall s'],[(r['stream'],r['requested_method'],r.get('effective_method'),r['status'],r.get('wall_s')) for r in records if r['group']=='E00']),
         '\n## 评分、配对和不确定性口径',
         '\n主 APE/HPE/VPE 在实际首发 estimate stamp 对同物理 tag/world 的 GT 插值，ARE 是 body SO(3) 测地角（rad）；不拟合 SE(3)、yaw 或测试时延。tag difference RPE 和减去固定杆臂后的 body SE(3) RPE 分别给 0.5/1 s，任何输入/GT gap>100 ms 的对均拒绝。RPE 的公共 GT 网格与配对表的有限间隔插值只用于评价首次输出流，不改因果输出、不使用最终历史替首发。SFUISE S-FINAL 是同一次运行在同一在线 stamp 网格的可验证子集上由最终 retained history + 最终标定导出，不是全局 batch 最优；artifact 级 revision 与最后输入上界独立记录，不冒充逐点精确依赖。',
-        '\n独立评分器 12 项测试与 evo v1.29.0 对口径检查覆盖单位、符号、SO(3)、tag/body 杆臂、错误杆臂、固定偏置、SE(3) 世界变换、错序/重复/非有限、真实 dt、缺口与 nearest-rank 慢值。资源截断产生的不完整末行拒绝；完整 post-commit state 行只作固定物理 tag 转换并与完整 TUM 逐点核对，不从 GT 重建。真实 velocity/bias 无独立真值为 NA；仿真原生有物理状态/bias 真值，单列评分。SFUISE 未导出 velocity/bias 真值对口径时也不凭位置差分伪造。',
+        '\n原生旧 W0 联合故障前缀与正式 J600 的前160：raw ADC/range/独立初始观测、IDs/时间、state/PL 和 FD/先验/bridge/rejoin receipts 逐值相同（差0），不增加求解或精度重复样本。独立评分器 12 项测试与 evo v1.29.0 对口径检查覆盖单位、符号、SO(3)、tag/body 杆臂、错误杆臂、固定偏置、SE(3) 世界变换、错序/重复/非有限、真实 dt、缺口与 nearest-rank 慢值。资源截断产生的不完整末行拒绝；完整 post-commit state 行只作固定物理 tag 转换并与完整 TUM 逐点核对，不从 GT 重建。真实 velocity/bias 无独立真值为 NA；仿真原生有物理状态/bias 真值，单列评分。SFUISE 未导出 velocity/bias 真值对口径时也不凭位置差分伪造。',
         '\n历史导出的额外边界审计：冻结适配器将移动窗口的 idle 控制点写入 global history，导致起始 `t < global_origin + 2*dt` 的历史插值引用后续控制点。用原始 SplineState 类、不构造估计器的确定性 codec 检查：在线 p/q/velocity/bias 复原误差 0，安全域后历史误差 0，起始错误可直接复现。原始输出与 hash 全部保留；按样条支撑域对所有流统一拒绝这一历史前缀（通常 2 个点），不是按 PE 选点。S-ONLINE 全部首次输出不受影响；S-FINAL 仅报告可验证历史域，拒绝数、原始错误点/时间保存在 JSON，作为导出接口缺口列出。',
         '\n独立统计单位是 seed 或录制，三个 seed 不夸大显著性；逐帧 Stanford/ECDF 仅是有限运行描述，不作独立置信区间。配对收益为 OFF−ON，百分比用 OFF 作分母，退化保持负数；不同截止时刻的 SFUISE 另列 state age，S-FINAL 不排实时名次。过程被截断时不填后缀误差，配对表显式给公共可观测区间。',
         '\n## E01/E02：健康与真实主对照',
@@ -1111,7 +1111,7 @@ def audit():
             for al,v in integ['axes'][axis]['AL'].items():check(r['id']+f': {axis} AL{al} partition',sum(v[k] for k in ['nominal_admissible','MI_candidate','HMI_candidate','AL_unavailable'])==integ['spatial_valid'])
         if r.get('exclusive_means_ms'):check(r['id']+': exclusive mean closure',abs(sum(r['exclusive_means_ms'].values())-r['exclusive_mean_core_ms'])<1e-8)
     check('native_actual_physical_input_parity_all_formal',not paritybad,paritybad)
-    for name in ['input-checks/result.json','input-checks/bag-parity.json','input-checks/all-bag-parity.json','spline-export-check/result.json','sfuise_observer/check.json','equivalence/R3/equivalence.json']:
+    for name in ['input-checks/result.json','input-checks/bag-parity.json','input-checks/all-bag-parity.json','spline-export-check/result.json','native-observer-prefix-check.json','sfuise_observer/check.json','equivalence/R3/equivalence.json']:
         result=metrics.get('validation',{}).get(name,{}).get('result',{})
         check(name,result.get('status')=='PASS' or result.get('returncode')==0)
     final=metrics.get('validation',{}).get('final-checks.json',{}).get('result',[])

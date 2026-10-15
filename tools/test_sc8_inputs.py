@@ -114,7 +114,38 @@ def bag_parity(all_runs=False):
         async_group_original_timestamps='preserved in canonical input; group-end model is shared, unqualified on real data'))
     print('SC8 six-family lossless TOA/IMU/timestamp/offset physical parity PASS')
 
+
+def native_prefix():
+    import csv
+    a=CACHE/'runs/E00-SC8-J-O-FULL-20261020-30x30';b=CACHE/'runs/E03-SC8-J-O-FULL-20261020-30x30'
+    left=list(csv.DictReader((a/'trace.csv').open()));right=list(csv.DictReader((b/'trace.csv').open()))[:len(left)]
+    assert len(left)==len(right)==160
+    keys=['tag_x','tag_y','tag_z','px','py','pz','vx','vy','vz','qw','qx','qy','qz','bax','bay','baz','bgx','bgy','bgz','hpl','vpl']
+    errors={k:max(abs(float(x[k])-float(y[k])) for x,y in zip(left,right)) for k in keys}
+    fields=['updates','qualified','status','recovery','version','generation','parent','boundary','x0','source_prefix','risk','q','shared_q','alerts','uwb_alarm','bridge','rejoined','excluded','repair','removed_priors','removed_groups','fd_status','imu_alarm','bound_method']
+    changed={k:sum(x[k]!=y[k] for x,y in zip(left,right)) for k in fields};changed={k:v for k,v in changed.items() if v}
+    def physical(path):
+        values={'initial':[],'imu':[],'uwb':[]};ids={k:[] for k in values}
+        for line in path.open():
+            x=line.split()
+            if not x or x[0] not in values:continue
+            kind=x[0]
+            if kind=='initial':ids[kind].append(x[1:2]);values[kind].append(list(map(float.fromhex,x[2:18])))
+            elif kind=='imu':ids[kind].append(x[:4]);values[kind].append(list(map(float.fromhex,x[4:10])))
+            else:ids[kind].append(x[:10]);values[kind].append(list(map(float.fromhex,x[10:15])))
+        return values,ids
+    va,ia=physical(a/'trace.csv.input');vb,ib=physical(b/'trace.csv.input')
+    raw={k:float(np.max(abs(np.array(v)-np.array(vb[k][:len(v)])))) for k,v in va.items()}
+    ids_equal=all(v==ib[k][:len(v)] for k,v in ia.items())
+    result=dict(status='PASS' if max(errors.values())==0 and not changed and max(raw.values())==0 and ids_equal else 'FAIL',
+        epochs=len(left),max_absolute_state_and_PL_difference=errors,changed_receipts=changed,max_physical_input_difference=raw,source_ids_and_times_equal=ids_equal,
+        old_identity=json.loads((a/'execution.json').read_text())['identity'],new_identity=json.loads((b/'execution.json').read_text())['identity'],
+        scope='Existing W0 strong joint prefix vs formal600 first160; no new solve, not extra accuracy replicate')
+    save(CACHE/'native-observer-prefix-check.json',result);assert result['status']=='PASS'
+    print('SC8 native observer prefix exact equality PASS: state/PL, raw ADC/range/prior, IDs/times, FD/prior/bridge/rejoin receipts')
+
 if __name__=='__main__':
-    if sys.argv[1:]==['all-bags']:bag_parity(True)
+    if sys.argv[1:]==['prefix']:native_prefix()
+    elif sys.argv[1:]==['all-bags']:bag_parity(True)
     elif sys.argv[1:]==['bags']:bag_parity()
     else:check()
