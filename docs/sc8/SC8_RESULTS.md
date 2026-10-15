@@ -1,48 +1,598 @@
-# SC8 实验结果与执行记录
+# SC8 实验结果与复现报告
 
-**状态：IN_PROGRESS / W1。W0 已完成，计算身份已冻结，正式矩阵开始；本文件不是结项声明。**
+**状态：IN_PROGRESS。**
 
-入口 HEAD：`fa5b3dc9ffe3c88492352491d79ba022f373bfb5`。本地与设计时版本相同，工作区入口干净，无适用 AGENTS.md。保留用户既有数据和证据，不 push。实际运行矩阵位于 `config/sc8_experiments.yaml`，已展开 143 个唯一进程计划，上限 160；接口开发重试另外计账。
+本轮实测值来自本次执行 journal；未复用历史 CSV。算法输、界较宽和大窗非实时均作为结果保留。进程 SUCCESS 只表示正常退出，功能、资格、deadline 和应用可用性分别列出。
 
-本轮目标为可靠证据，不以算法全胜、所有 PL 满足 AL、或 1000 历元实时作为成功条件。T-SIM、T-REAL、T-SEMI 分开；实测不具有 SC7 raw 源资格，PL=NA/拒绝。
+## 当前实测结论
 
-## W0 数据与接口
+健康 D1/M3/G1：3 个独立 seed 的 FULL tag APE RMSE 为 0.0487176–0.0526469 m，ARE 为 0.077836–0.145406 rad；默认双 P95 与及时空间比例条件通过 3/3。这只覆盖实测的注册 profile，不授予真实应用资格。
 
-全量本地只读库存已确认 R1 Walk2、R2 Walk3、R3 无障碍 15-31-28、R4 障碍 15-46-27、R5 loop-3d-z_s3、R6 loop-2d-fast_s3，另有 CAL-W Walk1、CAL-O 15-48-55、CAL-S loop-2d_s3。本轮未下载外部数据，未启动历史 40 条 campaign。九条均由当前适配器新生成输入并完成元数据审计，未将旧 CSV 当新算法结果。
+同一健康组在研究 AL(H,V)=(2,3) m 下，joint 及时可用率为 3.5%–5.667%。空间 raw 资格、deadline 和满足所选 AL 是三个不同条件；厘米级实际误差不意味着 PL 也为厘米级。
 
-Walk 世界变换只拟合 CAL-W：844 个保留样本，拟合残差 RMSE 0.178204 m。GT 仅用于接口标定与评分，未用于估计器状态初值、故障决策或镜像选择。不能将标定残差视作独立真实 GT 的误差界。
+同一健康组在研究 AL(H,V)=(5,5) m 下，joint 及时可用率为 99.67%–100%。空间 raw 资格、deadline 和满足所选 AL 是三个不同条件；厘米级实际误差不意味着 PL 也为厘米级。
 
-CAL-O 的角运动激励不足以可靠识别完整外参：独立候选拟合得到约 0.176 s 时移、水平杆臂标准差约 0.08/0.07 m。保留诊断后，固定使用 R3 原录制前 20%（截至 14.678774643 s）作接口标定，14.678774643–16.678774643 s 为隔离段，R3 主评分从 16.678774643 s 开始。没有重置估计或风险。该族标记 `GT-assisted / test-involved segmented calibration / CALIBRATION_OPEN`，不称独立录制盲测。前缀拟合诊断：gyro RMSE 0.147482 rad/s、accel RMSE 0.287109 m/s²、时移 0.0155421 s；不据此授予完整 6D 外参可辨识性。
+SC8-U：3 个 seed 的公共观测区间上 OFF−ON APE 改善 -0.0165427–0.00364377 m（均值 -0.00790838 m）；ARE 改善 -0.00559297–0.126921 rad。负值是退化，不能由另一个指标抵销。
 
-STAR 使用官方几何与现有固定 ID 对应，不用 R5/R6 GT 拟合。20 ms 公共组包含不同物理时刻的测距；原时间保留，SFUISE RTLSStick 使用组末时间。这属于未认证的异步近似，不能称同步测距或继承仿真 raw 源定理。R5 最大 IMU 缺口约 257 ms，完整保留；接口时差上限由传感器 metadata 确定，不调整噪声。
+SC8-A：3 个 seed 的公共观测区间上 OFF−ON APE 改善 0.0800965–0.0989567 m（均值 0.0923626 m）；ARE 改善 -1.84491–-0.00337908 rad。负值是退化，不能由另一个指标抵销。
 
-实测 requested `O-FULL` 对应的研究 SC7 源 producer 仍拒绝。新增明确命名的 `O-FDE-ENG` 调用现有 general production pipeline，`O-ENG-NOFDE` 调用其 off 路径；这不是 SC7 完整恢复/PL 的替代验收。将分别报告实际候选、原生提交、失败、输出 coverage 与拒绝。通用 pipeline 不能借用未认证的 Gaussian 诊断签发 raw PL。
+SC8-G：3 个 seed 的公共观测区间上 OFF−ON APE 改善 -0.231997–0.0189474 m（均值 -0.0677327 m）；ARE 改善 -2.09146–-0.343893 rad。负值是退化，不能由另一个指标抵销。
 
-SFUISE 本地 SHA 为 `75bf5a32f1a8e5c3046a5bd1a1ddf659fa996f7d`，remote `KIT-ISAS/SFUISE`，入口源码干净且保持只读。官方测距剔除开启。另构建该固定源码的只读观察版本，新增输入截止、输出时刻、core/CPU 计时；原始数值语句逆向剥离后逐字节相同。确定性双实例检查通过：1746 条相同输入事件、122891 次 knot 逐项核对，状态/标定/官方剔除开关一致。SFUISE 官方传感器初始化和 ours 独立初始观测/共用传感器初始化的区别必须披露，不称两种初始化提供完全相同的信息。
+SC8-J：3 个 seed 的公共观测区间上 OFF−ON APE 改善 0.111106–0.118577 m（均值 0.114792 m）；ARE 改善 -1.35405–1.80446 rad。负值是退化，不能由另一个指标抵销。
 
-## 已完成的局部验证（不是正式主结果）
+真实工程 FDE：已结束 6/6 条完整录制尝试，其中 4 条在预登记 wall 资源门限截断；SC7 raw 资格仍全部拒绝。未完成后缀不填误差，不能将有限公共区间的收益推广到全录制。
 
-- 独立评分器 10 项测试通过，并与本地冻结 `evo v1.29.0` 核对 APE、ARE、body SE(3) RPE。包括姿态符号、单位、杆臂、时移、刚体变换、错序/重复、缺帧与 nearest-rank 慢值测试。
-- 原始输入测试通过：SC8-H/U/A/G/J 各 1401 个 IMU 样本、1120 条 range，共用独立初始观测及全部标准噪声 draw；纯 IMU case 无新增 UWB 故障。UWB 2.25 m/3 历元、加速度 20 m/s²/500 ms、陀螺 1 rad/s/500 ms，在 raw 层按 manifest 注入。原 SC7 F0 与其显式 SC8 等价描述的原始行完全一致。
-- 当前健康仿真冒烟 ON/OFF 各 80 次提交，160/160 条件 raw 合格；状态、H/V PL、source、generation、parent、版本与 bound_method 一致。未放开任何窗口或 source guard。
-- R1 SFUISE 20 s 固定前缀运行成功，一次求解导出在线与历史。不能将这条接口冒烟的数值用作 E02 正式结果。
-- R1 工程 FDE 两次配置预检失败已保留：缺 estimation_tuning 版本、以及 nominal-only tuning 对 on profile 的拒绝。修正为 runner 显式调用同一个现有传感器初始化函数，未修改核心 guard。第三次实际求解完成，约 499.98 s，期间观测到 `NO_VALID_CANDIDATE`、`AMBIGUOUS_UNAVAILABLE`、原生提交与显著积压。
+STAR-Loc R5 的 SFUISE 首次在线流 tag APE RMSE 15854.8 m、最大 29335 m，保留整个实测尺度；官方剔除未关闭，codec/单位/原始输入逐项核对，不能删去发散段后宣称成功。工程 ON 只有截断前缀，不能以其短段误差与该完整流作全程排名。
 
-## 新版 direct/ROS 合同复核
+实际原生条件 raw 记录共 21960 个合格 tag receipt（不同场景/消融/窗口不可当作独立概率样本），H/V 合计 underbound 0 次。计数包含迟到与 AL-unavailable 的合格界；无论是否为零，都不作为风险概率证明。
 
-R3 固定短前缀在统一实际杆臂后，通过当前 direct/ROS fde=off 对照：899/899 样本，tag 最大差 `2.5855843e-10 m`，姿态最大差 `1.7075473e-6 deg`（阈值均 `1e-5`）。GT topics 发布为 0，禁止的 truth subscriptions 为空。此为相同输入/初始化/提交路径的离线等价性检验，20× 回放不作源时延或实时资格证据。历史报告中的差异不能作为本轮路径不成立的结论。
+## 身份、预算与证据边界
 
-W0 发现并修正生成配置的 `realtime.lever_arm_body_m` 没有跟随 canonical CSV 杆臂的问题。已完成的第一条工程诊断保存为 `SUPERSEDED_INTERFACE_DIAGNOSTIC`；当时正在运行的 R2 保存为 `CANCELLED`，原因是接口配置修正，未据精度挑选。修正后的六条工程冒烟均已结束：R1/R2/R6 完成，R3/R4/R5 在登记的 1200 s wall 上限处 RESOURCE_LIMIT。完成不等于实时或完整功能 PASS。前述 nominal 的实际构造器使用 CSV 杆臂，其数值输出不因此重标为新配置运行。
+入口 HEAD `fa5b3dc9ffe3c88492352491d79ba022f373bfb5`；计算冻结提交 `61907ab417450d317e443e4ff10f2cce062deabe`。实际源内容/ELF/生产 DSO、loaded libraries、编译环境、平台、噪声、risk/birth q、AL、窗口 guard 和原合同摘要在 [冻结登记](../../config/sc8_experiments.yaml)；未升级 SFUISE、未 push。分析模块可在计算冻结后继续开发，不改变求解。
 
-R6 SFUISE 首版前缀发生 SIGSEGV (`-11`)，其 IMU 早于首个 range 约 0.7 s。W0 将静态 anchor-map ready 固定到首个合法 IMU/range 均到达后 25 ms；原始传感器时间和值未改变。该协议下六条前缀均完成。随后发现原 RTLSRange float32 wire 会量化 canonical double，新增 Float64 ToA wire（仅输入适配，内部仍为原 TOAData double），六条再次完成。旧失败与两个 superseded 协议全部保留，不混为同一冻结方法。六条 bag 中的 IMU/ToA double、有效位、ID、ns 时间及 offset 只应用一次均精确核对通过；SFUISE 原始数值语句与固定源码相同，双实例检查通过。
+登记 143 个唯一逻辑运行；当前状态 {'SUCCESS': 107, 'RESOURCE_LIMIT': 12, 'NOT_ATTEMPTED': 24}，合计 143。实际 attempt 135，另有辅助 ROS 求解 1，上限 160。W0 额外 attempt（包括预检失败）全部保留（版本状态与实际 exit code 分开，见 JSON），SFUISE 首发/历史共用一个进程。E06 两次确认不增加独立精度样本。
 
-W0 当前 22 个逻辑运行：19 SUCCESS、3 RESOURCE_LIMIT。保留 38 个执行 attempt，另有 direct/ROS 辅助求解 1 次；143 个逻辑计划加 16 个额外 attempt、辅助 1 次，预计总量 160。不得自动重试新增求解。E06 两次串行确认不是独立精度样本。正式仿真输入改用与求解完全同一 ELF 的 source-only 导出，以消除不同入口模板实例带来的约 1e-15 浮点差异；该步骤不构造估计器、不计求解次数。实测叠加故障保留原始 sensor X 方向，经冻结旋转进入 canonical body frame，不能冒充注册单 body 轴 raw 定理。
+- **T-SIM**：当前注册物理 law 下的条件 raw 保证；资格与实际数值/receipt 逐帧核验，仍无真实应用资格。
+- **T-REAL**：原始真实录制上的经验表现；SC7 raw producer 拒绝，不放宽采样率/噪声/运动域/anchor guard。requested O-FULL 实际明确为 **O-FDE-ENG**，off 为 **O-ENG-NOFDE**，均不冒充 SC7 恢复/PL。
+- **T-SEMI**：R2/R3 原始输入上叠加登记故障，GT 不变；原录制本身未认证健康，不将天然异常称已知 false alarm。
 
-## 断点与复现
+SFUISE 固定 SHA `75bf5a32f1a8e5c3046a5bd1a1ddf659fa996f7d`，官方测距剔除保持。插入式只读数值/时间观察与 lossless Float64 ToA wire 单独披露：内部仍为原 TOAData double，剥离插入后原数值语句逐字节相同；双实例确定性检查覆盖状态、标定、knot 与官方剔除状态。原始 float32 wire 会改变量测，故正式流使用与 ours 逐值一致的 double；不是改变噪声/残差/优化器。
 
-本轮临时输入、原始逐帧记录和执行 journal 仅在 `.cache/sc8/`。尚未审计的唯一证据不清理。每次执行保存实际 source/ELF 身份、输入摘要、命令和退出状态。入口原二进制与当前增量构建的二进制不混为一列。
+## E00：数据、CAL/TEST 与因果接口
 
-当前可用命令：
+九条输入新做单位/frame/lever/时间/GT/anchor/range 审计。六条测试按数据族预先选择，不按算法精度删序列；本地库存均存在，因此不启用 MILUV 备用；HUEC 和历史 40 条 campaign 未全跑。
+
+| ID | 序列 | IMU Hz | 时长 s | 最大 IMU gap s | anchor/tag | 最大测距组跨度 s |
+|---|---|---|---|---|---|---|
+| R1 | ISAS-Walk2 | 81.8928 | 76.0937 | 0.0128069 | 5/1 | 0 |
+| R2 | ISAS-Walk3 | 81.8912 | 81.6594 | 0.0133388 | 5/1 | 0 |
+| R3 | 2025-10-24-15-31-28_vicon_lidar_uwb_imu_no_obstacle | 202.233 | 73.3939 | 0.015393 | 4/1 | 0 |
+| R4 | 2025-10-24-15-46-27_vicon_lidar_uwb_imu_obstacle | 201.533 | 11.39 | 0.0153227 | 4/1 | 0 |
+| R5 | loop-3d-z_s3 | 202.218 | 150.104 | 0.25714 | 8/1 | 0.02 |
+| R6 | loop-2d-fast_s3 | 202.218 | 55.4028 | 0.0370875 | 8/1 | 0.02 |
+| CAL-W | ISAS-Walk1 | 81.896 | 59.1154 | 0.0213645 | 5/1 | 0 |
+| CAL-O | 2025-10-24-15-48-55_vicon_lidar_uwb_imu_obstacle | 202.33 | 11.5602 | 0.0154514 | 4/1 | 0 |
+| CAL-S | loop-2d_s3 | 202.218 | 105.138 | 0.034615 | 8/1 | 0.02 |
+
+
+Walk 世界变换只用 CAL-W Walk1：844 个 fit 样本，残差 RMSE 0.178204 m。CAL-O 15-48-55 激励不足（gyro 激励奇异值约 0.103/0.0217/0.0144），没有把它宣称独立完整外参标定。固定 R3 第一 20%（截至 14.678774643 s）用于接口拟合，另隔离 2 s，主 TEST 自 16.678774643 s 开始；该族为 **GT-assisted / test-involved segmented calibration / CALIBRATION_OPEN**。固定拟合时移 0.0155421 s、gyro RMSE 0.147482 rad/s、accel RMSE 0.287109 m/s²；不表示完整 6D 外参独立可辨识。STAR 使用官方几何/外参，未用 R5/R6 GT 再拟合。全部数字参数保存在 registry，不逐方法选对齐或时移。
+
+原始每条 range 时间保留，公共组末时间用于两种估计器的批处理近似，STAR 20 ms 异步组不称同步、不给 raw 资格。range_raw→calibrated range 只应用一次，SFUISE runtime offsets=0。GT 只进预登记 CAL 和评分，不给真状态初值、不选镜像、不发 truth topics。仿真 ours 用同一独立含噪初始观测；SFUISE 保留原生传感器初始化，不消费这一额外 prior，因此两者不是纯优化器隔离对照。
+
+原生 source-only 导出与正式求解使用同一 ELF，逐值验证真实 ADC/range/时间/ID/独立初始观测。W0 曾发现两个 C++ 入口模板实例约 1e-15 的差异，正式缓存按 native-export-v1 独立留存；旧 W0 不悄悄换输入。SFUISE 静态 map readiness 统一为 max(首 IMU,首合法 range)+25 ms，保留原 sensor 时间和值，等待计入延迟。R6 早期 SIGSEGV 及旧 float32 协议、wrong-lever 工程诊断均保留为失败/被替代版本，不计作最终方法结果。
+
+修正 actual realtime 杆臂后，新 direct/ROS fde=off R3 前缀：899/899 样本，tag 最大差 2.5855843e-10 m、姿态最大差 1.7075473e-6 deg（均小于 1e-5）；GT topic 发布 0，truth subscriptions 为空。20× 离线回放仅验证提交路径等价，不作为实时依据。
+
+| W0 流 | requested | effective | 进程状态 | wall s |
+|---|---|---|---|---|
+| R1 | O-NOM | O-NOM | SUCCESS | 15.602 |
+| R1 | O-FULL | O-FDE-ENG | SUCCESS | 1038.86 |
+| R1 | SFUISE | SFUISE_PINNED_OBSERVED | SUCCESS | 30.1469 |
+| R2 | O-NOM | O-NOM | SUCCESS | 15.546 |
+| R2 | O-FULL | O-FDE-ENG | SUCCESS | 875.163 |
+| R2 | SFUISE | SFUISE_PINNED_OBSERVED | SUCCESS | 30.2116 |
+| R3 | O-NOM | O-NOM | SUCCESS | 18.0824 |
+| R3 | O-FULL | O-FDE-ENG | RESOURCE_LIMIT | 1200.15 |
+| R3 | SFUISE | SFUISE_PINNED_OBSERVED | SUCCESS | 33.0489 |
+| R4 | O-NOM | O-NOM | SUCCESS | 9.4729 |
+| R4 | O-FULL | O-FDE-ENG | RESOURCE_LIMIT | 1200.08 |
+| R4 | SFUISE | SFUISE_PINNED_OBSERVED | SUCCESS | 24.1658 |
+| R5 | O-NOM | O-NOM | SUCCESS | 16.8696 |
+| R5 | O-FULL | O-FDE-ENG | RESOURCE_LIMIT | 1200.09 |
+| R5 | SFUISE | SFUISE_PINNED_OBSERVED | SUCCESS | 32.8985 |
+| R6 | O-NOM | O-NOM | SUCCESS | 18.7593 |
+| R6 | O-FULL | O-FDE-ENG | SUCCESS | 1103.95 |
+| R6 | SFUISE | SFUISE_PINNED_OBSERVED | SUCCESS | 33.5574 |
+| SC8-H | O-FULL | O-FULL | SUCCESS | 4.55788 |
+| SC8-H | O-NOFDE | O-NOFDE | SUCCESS | 4.5981 |
+| SC8-J | O-FULL | O-FULL | SUCCESS | 8.58626 |
+| SC8-J | O-NOFDE | O-NOFDE | SUCCESS | 8.57068 |
+
+
+## 评分、配对和不确定性口径
+
+主 APE/HPE/VPE 在实际首发 estimate stamp 对同物理 tag/world 的 GT 插值，ARE 是 body SO(3) 测地角（rad，主表同时给 deg）；不拟合 SE(3)、yaw 或测试时延。tag difference RPE 和减去固定杆臂后的 body SE(3) RPE 分别给 0.5/1 s，任何输入/GT gap>100 ms 的对均拒绝。RPE 的公共 GT 网格与配对表的有限间隔插值只用于评价首次输出流，不改因果输出、不使用最终历史替首发。SFUISE S-FINAL 是同一次运行在同一在线 stamp 网格的可验证子集上由最终 retained history + 最终标定导出，不是全局 batch 最优；artifact 级 revision 与最后输入上界独立记录，不冒充逐点精确依赖。
+
+原生旧 W0 联合故障前缀与正式 J600 的前160：raw ADC/range/独立初始观测、IDs/时间、state/PL 和 FD/先验/bridge/rejoin receipts 逐值相同（差0），不增加求解或精度重复样本。独立评分器 12 项测试与 evo v1.29.0 对口径检查覆盖单位、符号、SO(3)、tag/body 杆臂、错误杆臂、固定偏置、SE(3) 世界变换、错序/重复/非有限、真实 dt、缺口与 nearest-rank 慢值。资源截断产生的不完整末行拒绝；完整 post-commit state 行只作固定物理 tag 转换并与完整 TUM 逐点核对，不从 GT 重建。真实 velocity/bias 无独立真值为 NA；仿真原生有物理状态/bias 真值，单列评分。SFUISE 未导出 velocity/bias 真值对口径时也不凭位置差分伪造。
+
+历史导出的额外边界审计：冻结适配器将移动窗口的 idle 控制点写入 global history，导致起始 `t < global_origin + 2*dt` 的历史插值引用后续控制点。用原始 SplineState 类、不构造估计器的确定性 codec 检查：在线 p/q/velocity/bias 复原误差 0，安全域后历史误差 0，起始错误可直接复现。原始输出未改写，其 hash、被拒绝点的原始数值和时间永久留在 JSON；过程 trace 最后按约定清理。按样条支撑域对所有流统一拒绝这一历史前缀（通常 2 个点），不是按 PE 选点。S-ONLINE 全部首次输出不受影响；S-FINAL 仅报告可验证历史域，拒绝数、原始错误点/时间保存在 JSON，作为导出接口缺口列出。
+
+独立统计单位是 seed 或录制，三个 seed 不夸大显著性；逐帧 Stanford/ECDF 仅是有限运行描述，不作独立置信区间。配对收益为 OFF−ON，百分比用 OFF 作分母，退化保持负数；不同截止时刻的 SFUISE 另列 state age，S-FINAL 不排实时名次。过程被截断时不填后缀误差，配对表显式给公共可观测区间。
+
+## E01/E02：健康与真实主对照
+
+| 组/流/seed | view | status | 匹配 N | APE m | HPE m | VPE m | ARE rad / deg | tag RPE0.5 m | body RPE0.5 m / rad |
+|---|---|---|---|---|---|---|---|---|---|
+| E01/SC8-H/20 | O-FULL | SUCCESS | 600 | 0.0490479 | 0.0353238 | 0.0340284 | 0.077836 / 4.45967 | 0.0665703 | 0.0677771 / 0.0261778 |
+| E01/SC8-H/20 | O-NOFDE | SUCCESS | 600 | 0.0490479 | 0.0353238 | 0.0340284 | 0.077836 / 4.45967 | 0.0665703 | 0.0677771 / 0.0261778 |
+| E01/SC8-H/20 | S-ONLINE | SUCCESS | 300 | 0.318676 | 0.210887 | 0.238917 | 1.12411 / 64.4066 | 0.240042 | 0.350325 / 0.607652 |
+| E01/SC8-H/20 | S-FINAL | SUCCESS | 298 | 0.263078 | 0.182179 | 0.189791 | 0.812558 / 46.5562 | 0.0497582 | 0.134147 / 0.023022 |
+| E01/SC8-H/21 | O-FULL | SUCCESS | 600 | 0.0526469 | 0.0347111 | 0.0395832 | 0.145406 / 8.33113 | 0.0625663 | 0.0682346 / 0.0282603 |
+| E01/SC8-H/21 | O-NOFDE | SUCCESS | 600 | 0.0526469 | 0.0347111 | 0.0395832 | 0.145406 / 8.33113 | 0.0625663 | 0.0682346 / 0.0282603 |
+| E01/SC8-H/21 | S-ONLINE | SUCCESS | 300 | 0.289558 | 0.195789 | 0.213332 | 1.25905 / 72.1383 | 0.129097 | 0.256643 / 0.613833 |
+| E01/SC8-H/21 | S-FINAL | SUCCESS | 298 | 0.257861 | 0.167362 | 0.196169 | 0.840917 / 48.181 | 0.040399 | 0.127407 / 0.0208796 |
+| E01/SC8-H/22 | O-FULL | SUCCESS | 600 | 0.0487176 | 0.0335416 | 0.0353322 | 0.113639 / 6.51103 | 0.0623874 | 0.0647843 / 0.0236203 |
+| E01/SC8-H/22 | O-NOFDE | SUCCESS | 600 | 0.0487176 | 0.0335416 | 0.0353322 | 0.113639 / 6.51103 | 0.0623874 | 0.0647843 / 0.0236203 |
+| E01/SC8-H/22 | S-ONLINE | SUCCESS | 300 | 0.281683 | 0.204308 | 0.193916 | 1.24643 / 71.4152 | 0.133312 | 0.266351 / 0.590888 |
+| E01/SC8-H/22 | S-FINAL | SUCCESS | 298 | 0.252981 | 0.17887 | 0.178898 | 0.801951 / 45.9484 | 0.0463209 | 0.132033 / 0.021815 |
+| E01/SC8-D0/20 | O-FULL | SUCCESS | 600 | 0.0452439 | 0.0340975 | 0.0297384 | 0.0584128 / 3.34681 | 0.0634548 | 0.0634532 / 0.0249041 |
+| E01/SC8-D0/20 | O-NOFDE | SUCCESS | 600 | 0.0452439 | 0.0340975 | 0.0297384 | 0.0584128 / 3.34681 | 0.0634548 | 0.0634532 / 0.0249041 |
+| E01/SC8-D0/20 | S-ONLINE | SUCCESS | 300 | 0.251192 | 0.2054 | 0.144596 | 2.80972 / 160.985 | 0.113061 | 0.19346 / 0.526002 |
+| E01/SC8-D0/20 | S-FINAL | SUCCESS | 298 | 0.2754 | 0.234969 | 0.143649 | 2.89238 / 165.721 | 0.0292081 | 0.0728914 / 0.0257379 |
+| E01/SC8-G2/20 | O-FULL | SUCCESS | 600 | 0.0610026 | 0.0337921 | 0.0507879 | 0.0633548 / 3.62996 | 0.0753449 | 0.0751732 / 0.0267861 |
+| E01/SC8-G2/20 | O-NOFDE | SUCCESS | 600 | 0.0610026 | 0.0337921 | 0.0507879 | 0.0633548 / 3.62996 | 0.0753449 | 0.0751732 / 0.0267861 |
+| E01/SC8-G2/20 | S-ONLINE | SUCCESS | 300 | 2.28816 | 0.252203 | 2.27422 | 2.92148 / 167.389 | 0.364733 | 0.479387 / 0.523618 |
+| E01/SC8-G2/20 | S-FINAL | SUCCESS | 298 | 2.07682 | 0.235997 | 2.06336 | 2.95891 / 169.533 | 0.185308 | 0.263748 / 0.0239563 |
+| E01/SC8-H/20 | O-NOM | SUCCESS | 600 | 0.0490479 | 0.0353238 | 0.0340284 | 0.077836 / 4.45967 | 0.0665703 | 0.0677771 / 0.0261778 |
+| E02/R1/20 | O-FDE-ENG | RESOURCE_LIMIT | 68 | 0.102861 | 0.0834261 | 0.0601708 | 2.7268 / 156.234 | 0.0685883 | 0.0719716 / 0.193145 |
+| E02/R1/20 | O-ENG-NOFDE | SUCCESS | 1140 | 0.25345 | 0.180065 | 0.178364 | 1.53478 / 87.9367 | 0.137228 | 0.201444 / 0.213919 |
+| E02/R1/20 | S-ONLINE | SUCCESS | 760 | 0.249007 | 0.174433 | 0.1777 | 3.02068 / 173.072 | 0.144757 | 0.303121 / 0.568797 |
+| E02/R1/20 | S-FINAL | SUCCESS | 758 | 0.154495 | 0.141622 | 0.0617407 | 3.10481 / 177.892 | 0.0264068 | 0.257088 / 0.197666 |
+| E02/R2/20 | O-FDE-ENG | RESOURCE_LIMIT | 91 | 0.124852 | 0.104683 | 0.0680401 | 2.32105 / 132.986 | 0.0632771 | 0.0856488 / 0.420896 |
+| E02/R2/20 | O-ENG-NOFDE | SUCCESS | 1222 | 0.392616 | 0.236652 | 0.313277 | 2.23734 / 128.19 | 0.197172 | 0.335312 / 0.244964 |
+| E02/R2/20 | S-ONLINE | SUCCESS | 816 | 0.339099 | 0.205362 | 0.269842 | 2.87975 / 164.997 | 0.131813 | 0.292119 / 0.537639 |
+| E02/R2/20 | S-FINAL | SUCCESS | 814 | 0.182397 | 0.170261 | 0.0654201 | 2.9479 / 168.902 | 0.0292764 | 0.250315 / 0.236061 |
+| E02/R3/20 | O-FDE-ENG | RESOURCE_LIMIT | NA | NA | NA | NA | NA / NA | NA | NA / NA |
+| E02/R3/20 | O-ENG-NOFDE | SUCCESS | 2817 | 1.26593 | 0.236291 | 1.24369 | 2.17188 / 124.44 | 0.203904 | 0.728166 / 0.134913 |
+| E02/R3/20 | S-ONLINE | SUCCESS | 563 | 1.19724 | 0.153048 | 1.18742 | 0.978299 / 56.0524 | 0.1085 | 0.334765 / 0.127536 |
+| E02/R3/20 | S-FINAL | SUCCESS | 563 | 1.19084 | 0.137757 | 1.18285 | 0.911575 / 52.2294 | 0.0573676 | 0.286824 / 0.124668 |
+| E02/R4/20 | O-FDE-ENG | SUCCESS | 274 | 3.55889 | 0.158065 | 3.55538 | 3.03767 / 174.046 | 0.0640066 | 0.0631568 / 0.0498612 |
+| E02/R4/20 | O-ENG-NOFDE | SUCCESS | 468 | 3.00803 | 0.18732 | 3.00219 | 3.00684 / 172.279 | 0.38717 | 0.438425 / 0.102453 |
+| E02/R4/20 | S-ONLINE | SUCCESS | 113 | 1.00095 | 0.120662 | 0.993653 | 1.32466 / 75.8972 | 0.14656 | 0.209895 / 1.23699 |
+| E02/R4/20 | S-FINAL | SUCCESS | 111 | 0.968712 | 0.112376 | 0.962172 | 0.607929 / 34.8317 | 0.0907409 | 0.129598 / 0.0600843 |
+| E02/R5/20 | O-FDE-ENG | RESOURCE_LIMIT | 92 | 0.252638 | 0.0576196 | 0.24598 | 3.1237 / 178.975 | 0.062389 | 0.166633 / 0.168842 |
+| E02/R5/20 | O-ENG-NOFDE | SUCCESS | 6439 | 0.469521 | 0.269785 | 0.384273 | 2.83264 / 162.298 | 0.225714 | 0.35841 / 0.16767 |
+| E02/R5/20 | S-ONLINE | SUCCESS | 1483 | 15854.8 | 15271.5 | 4261.18 | 1.83527 / 105.153 | 162.412 | 162.45 / 0.362584 |
+| E02/R5/20 | S-FINAL | SUCCESS | 1481 | 15863.9 | 15280.1 | 4263.97 | 1.74859 / 100.187 | 162.005 | 162.04 / 0.214459 |
+| E02/R6/20 | O-FDE-ENG | SUCCESS | 141 | 0.189342 | 0.0457294 | 0.183737 | 3.09259 / 177.192 | 0.0335192 | 0.0466116 / 0.0731506 |
+| E02/R6/20 | O-ENG-NOFDE | SUCCESS | 2408 | 0.329522 | 0.120336 | 0.306764 | 2.43249 / 139.372 | 0.140816 | 0.653093 / 0.22778 |
+| E02/R6/20 | S-ONLINE | SUCCESS | 548 | 4442.22 | 2884.77 | 3378.08 | 2.12457 / 121.729 | 112.293 | 112.316 / 0.514749 |
+| E02/R6/20 | S-FINAL | SUCCESS | 548 | 4440.3 | 2883.6 | 3376.55 | 2.09065 / 119.785 | 112.28 | 112.288 / 0.328896 |
+
+
+| 实测流/method | attempt / planned | commit / timely | 未覆盖/资源后缀 | 原生 FDE 状态计数 |
+|---|---|---|---|---|
+| R1/O-FDE-ENG | 265 / 1172 | 83 / 6 | 907 | {'RISK_BUDGET_INVALID': 26, 'NO_VALID_CANDIDATE': 57, 'AMBIGUOUS_UNAVAILABLE': 91, 'NOT_TRIGGERED': 91} |
+| R1/O-ENG-NOFDE | 1140 / 1172 | 1140 / 1140 | 32 | {'FDE_DISABLED': 1140} |
+| R1/SFUISE_PINNED_OBSERVED | NA / NA | NA / NA | NA | {'SFUISE': 'official rejection; no matched raw PL'} |
+| R2/O-FDE-ENG | 341 / 1253 | 101 / 7 | 912 | {'NO_VALID_CANDIDATE': 80, 'RISK_BUDGET_INVALID': 23, 'AMBIGUOUS_UNAVAILABLE': 158, 'NOT_TRIGGERED': 80} |
+| R2/O-ENG-NOFDE | 1222 / 1253 | 1222 / 1222 | 31 | {'FDE_DISABLED': 1222} |
+| R2/SFUISE_PINNED_OBSERVED | NA / NA | NA / NA | NA | {'SFUISE': 'official rejection; no matched raw PL'} |
+| R3/O-FDE-ENG | 764 / 3669 | 545 / 6 | 2905 | {'RISK_BUDGET_INVALID': 534, 'NO_VALID_CANDIDATE': 11, 'AMBIGUOUS_UNAVAILABLE': 126, 'NOT_TRIGGERED': 93} |
+| R3/O-ENG-NOFDE | 3568 / 3669 | 3568 / 3568 | 101 | {'FDE_DISABLED': 3568} |
+| R3/SFUISE_PINNED_OBSERVED | NA / NA | NA / NA | NA | {'SFUISE': 'official rejection; no matched raw PL'} |
+| R4/O-FDE-ENG | 468 / 569 | 274 / 5 | 101 | {'RISK_BUDGET_INVALID': 264, 'NO_VALID_CANDIDATE': 10, 'AMBIGUOUS_UNAVAILABLE': 98, 'NOT_TRIGGERED': 96} |
+| R4/O-ENG-NOFDE | 468 / 569 | 468 / 468 | 101 | {'FDE_DISABLED': 468} |
+| R4/SFUISE_PINNED_OBSERVED | NA / NA | NA / NA | NA | {'SFUISE': 'official rejection; no matched raw PL'} |
+| R5/O-FDE-ENG | 318 / 6578 | 112 / 6 | 6260 | {'NO_VALID_CANDIDATE': 112, 'AMBIGUOUS_UNAVAILABLE': 118, 'NOT_TRIGGERED': 88} |
+| R5/O-ENG-NOFDE | 6440 / 6578 | 6440 / 6440 | 138 | {'FDE_DISABLED': 6440} |
+| R5/SFUISE_PINNED_OBSERVED | NA / NA | NA / NA | NA | {'SFUISE': 'official rejection; no matched raw PL'} |
+| R6/O-FDE-ENG | 2408 / 2502 | 141 / 5 | 94 | {'NO_VALID_CANDIDATE': 2244, 'AMBIGUOUS_UNAVAILABLE': 90, 'NOT_TRIGGERED': 53, 'MODEL_INVALID': 21} |
+| R6/O-ENG-NOFDE | 2408 / 2502 | 2408 / 2408 | 94 | {'FDE_DISABLED': 2408} |
+| R6/SFUISE_PINNED_OBSERVED | NA / NA | NA / NA | NA | {'SFUISE': 'official rejection; no matched raw PL'} |
+
+
+| 实测 view | 整个 GT TEST 网格覆盖 / N | 实际输出时间区间 s |
+|---|---|---|
+| R1/O-FDE-ENG | 0.0536137 / 3805 | [4.471092224, 8.785741329] |
+| R1/O-ENG-NOFDE | 0.865966 / 3805 | [4.471092224, 78.456339598] |
+| R1/S-ONLINE | 0.997372 / 3805 | [2.527455901000053, 78.42745590100003] |
+| R1/S-FINAL | 0.994744 / 3805 | [2.7274559010000985, 78.42745590100003] |
+| R2/O-FDE-ENG | 0.0578006 / 4083 | [4.524949789, 10.841878653] |
+| R2/O-ENG-NOFDE | 0.853049 / 4083 | [4.524949789, 84.11412477500001] |
+| R2/S-ONLINE | 0.998041 / 4083 | [2.583362912000098, 84.08336291199998] |
+| R2/S-FINAL | 0.995591 / 4083 | [2.7833629120000296, 84.08336291199998] |
+| R3/O-FDE-ENG | NA / NA | NA |
+| R3/O-ENG-NOFDE | 0.999097 / 16617 | [16.688840389000003, 73.36938762700001] |
+| R3/S-ONLINE | 0.998014 / 16617 | [16.715542069000094, 73.315542069] |
+| R3/S-FINAL | 0.998014 / 16617 | [16.715542069000094, 73.315542069] |
+| R4/O-FDE-ENG | 0.475778 / 3344 | [2.0349226000000002, 7.4944698810000006] |
+| R4/O-ENG-NOFDE | 0.819677 / 3344 | [2.0349226000000002, 11.374230146] |
+| R4/S-ONLINE | 0.984749 / 3344 | [0.11554206900007102, 11.315542069000116] |
+| R4/S-FINAL | 0.967105 / 3344 | [0.3155420690001165, 11.315542069000116] |
+| R5/O-FDE-ENG | 0.0142889 / 35342 | [3.2149668780000002, 5.302897269000001] |
+| R5/O-ENG-NOFDE | 0.98639 / 35342 | [3.2149668780000002, 150.225228073] |
+| R5/S-ONLINE | 0.999208 / 35342 | [1.3087889090001, 150.20878890900008] |
+| R5/S-FINAL | 0.99785 / 35342 | [1.5087889090000317, 150.20878890900008] |
+| R6/O-FDE-ENG | 0.0556453 / 12993 | [1.3033820820000002, 4.4600668720000005] |
+| R6/O-ENG-NOFDE | 0.977526 / 12993 | [1.3033820820000002, 54.704960264] |
+| R6/S-ONLINE | 0.999923 / 12993 | [-0.5968393109999397, 54.703160689000015] |
+| R6/S-FINAL | 0.999923 / 12993 | [-0.3968393109998942, 54.703160689000015] |
+
+
+主表是每方法实际 stamp 指标。ON/OFF 收益只用两条首次流的公共区间；F01 的对照点另用所有可用视图（含有效历史域）的共同网格，缺方法明确为 NA；任一方法缺完整 TEST 输出时公共表保留 NA，不将短前缀性能当完整录制性能。
+
+| 流/seed | 公共区间 s | 公共 N | APE 改善 m / % | ARE 改善 rad | 输入 digest 一致 |
+|---|---|---|---|---|---|
+| SC8-H/20 | [0.05, 30.0] | 600 | 0 / 0 | 0 | True |
+| SC8-H/21 | [0.05, 30.0] | 600 | 0 / 0 | 0 | True |
+| SC8-H/22 | [0.05, 30.0] | 600 | 0 / 0 | 0 | True |
+| SC8-D0/20 | [0.05, 30.0] | 600 | 0 / 0 | 0 | True |
+| SC8-G2/20 | [0.05, 30.0] | 600 | 0 / 0 | 0 | True |
+| R1/20 | [4.480014801025391, 8.780027627944946] | 204 | 0 / 0 | 0 | True |
+| R2/20 | [4.659981966018677, 10.839972257614136] | 236 | 0.957547 / 88.4957 | -0.0573898 | True |
+| R3/20 | NA | 0 | NA / NA | NA | True |
+| R4/20 | [2.035036563873291, 7.491589307785034] | 1591 | 0 / 0 | 0 | True |
+| R5/20 | [3.214966878, 5.302897269] | 505 | 0 / 0 | 0 | True |
+| R6/20 | [1.303382082, 4.460066872] | 723 | 0 / 0 | 0 | True |
+
+
+| SF 同次运行历史对照 | 共同有效 N | 首次 / 历史 APE m | 首次 / 历史 ARE rad |
+|---|---|---|---|
+| SC8-H/20 | 298 | 0.319082 / 0.263078 | 1.12135 / 0.812558 |
+| SC8-H/21 | 298 | 0.289572 / 0.257861 | 1.24872 / 0.840917 |
+| SC8-H/22 | 298 | 0.281263 / 0.252981 | 1.24641 / 0.801951 |
+| SC8-D0/20 | 298 | 0.251432 / 0.2754 | 2.81572 / 2.89238 |
+| SC8-G2/20 | 298 | 2.29575 / 2.07682 | 2.92782 / 2.95891 |
+| R1/20 | 758 | 0.247758 / 0.154495 | 3.02295 / 3.10481 |
+| R2/20 | 814 | 0.339272 / 0.182397 | 2.88185 / 2.9479 |
+| R3/20 | 563 | 1.19724 / 1.19084 | 0.978299 / 0.911575 |
+| R4/20 | 111 | 1.00534 / 0.968712 | 1.29012 / 0.607929 |
+| R5/20 | 1481 | 15865.5 / 15863.9 | 1.83405 / 1.74859 |
+| R6/20 | 548 | 4442.22 / 4440.3 | 2.12457 / 2.09065 |
+| SC8-U/20 | 298 | 0.319039 / 0.262383 | 1.12488 / 0.820274 |
+| SC8-U/21 | 298 | 0.289453 / 0.257606 | 1.24915 / 0.842485 |
+| SC8-U/22 | 298 | 0.281443 / 0.253031 | 1.24746 / 0.802198 |
+| SC8-A/20 | 298 | 462.43 / 461.83 | 1.08954 / 0.890104 |
+| SC8-A/21 | 298 | 405.431 / 404.885 | 1.5079 / 1.28318 |
+| SC8-A/22 | 298 | 461.863 / 461.27 | 1.25537 / 0.934717 |
+| SC8-G/20 | 298 | 293.45 / 293.086 | 2.21632 / 2.21842 |
+| SC8-G/21 | 298 | 289.109 / 288.714 | 2.2902 / 2.26496 |
+| SC8-G/22 | 298 | 391.264 / 390.771 | 2.26914 / 2.21357 |
+| SC8-J/20 | 298 | 462.172 / 461.572 | 1.09034 / 0.891084 |
+| SC8-J/21 | 298 | 404.786 / 404.239 | 1.48584 / 1.25415 |
+| SC8-J/22 | 298 | 456.361 / 455.769 | 1.23622 / 0.907139 |
+| R2-FU/20 | 814 | 0.344882 / 0.182518 | 2.86868 / 2.94802 |
+| R2-FG/20 | 814 | 2322.95 / 2322.76 | 2.67178 / 2.7488 |
+| R2-FJ/20 | 814 | 9597.16 / 9593.78 | 2.45698 / 2.52979 |
+| R3-FU/20 | 563 | 1.19716 / 1.19076 | 0.976131 / 0.909707 |
+| R3-FG/20 | 563 | 2396.62 / 2395.24 | 1.73475 / 1.72851 |
+| R3-FJ/20 | 563 | 266.59 / 266.447 | 2.47332 / 2.4809 |
+
+
+## E03：故障、恢复与实测增量
+
+主流 U/A/G/J 各三 seed、600 历元；健康 F0 复用 E01。登记强度保持 range +2.25 m/3 历元、raw accel 20 m/s² 或 gyro 1 rad/s/500 ms，标准噪声 draw 与初始观测不变；另有 D0 六轴、弱短、负、错峰定向例，不全排列。真实 overlay 公共交集若不足两个注入后状态，故障 gain 为 NA，故障前数值另留 JSON，不以零差异冒充恢复效果。R2/R3 仅 FU/FG/FJ；注入 ORIGINAL_SENSOR_X 经固定旋转进入 body，保留 raw sample/range IDs、原时刻、delta 与 GT unchanged，不宣称这一未认证 body 混合方向满足单轴 raw 定理。
+
+| 流/seed | 公共 / 注入后公共 N | APE OFF−ON m | APE % | ARE OFF−ON rad |
+|---|---|---|---|---|
+| SC8-U/20 | 600 / NA | -0.0165427 | -29.3036 | -0.00559297 |
+| SC8-U/21 | 600 / NA | 0.00364377 | 5.6354 | 0.0528513 |
+| SC8-U/22 | 600 / NA | -0.0108262 | -18.1641 | 0.126921 |
+| SC8-A/20 | 600 / NA | 0.0980346 | 62.1112 | -1.55856 |
+| SC8-A/21 | 600 / NA | 0.0800965 | 51.9671 | -1.84491 |
+| SC8-A/22 | 600 / NA | 0.0989567 | 62.3426 | -0.00337908 |
+| SC8-G/20 | 600 / NA | 0.0189474 | 25.7013 | -0.343893 |
+| SC8-G/21 | 600 / NA | 0.00985192 | 13.2005 | -1.25888 |
+| SC8-G/22 | 600 / NA | -0.231997 | -315.043 | -2.09146 |
+| SC8-J/20 | 600 / NA | 0.111106 | 65.7334 | 0.162639 |
+| SC8-J/21 | 600 / NA | 0.114695 | 64.0749 | -1.35405 |
+| SC8-J/22 | 600 / NA | 0.118577 | 66.9864 | 1.80446 |
+| R2-FU/20 | 177 / 121 | 0.102569 | 52.7791 | -0.123275 |
+| R2-FG/20 | 115 / 60 | 0 | 0 | 0 |
+| R2-FJ/20 | 53 / 0 | NA | NA | NA |
+| R3-FU/20 | 0 / 0 | NA | NA | NA |
+| R3-FG/20 | 0 / 0 | NA | NA | NA |
+| R3-FJ/20 | 0 / 0 | NA | NA | NA |
+
+
+| E03 主流 | view | 独立单位 N | APE mean / min / max m | ARE mean / min / max rad |
+|---|---|---|---|---|
+| SC8-U | O-FULL | 3 | 0.0681463 / 0.0610149 / 0.0729954 | 0.098745 / 0.0795472 / 0.124498 |
+| SC8-U | O-NOFDE | 3 | 0.060238 / 0.0564527 / 0.0646587 | 0.156805 / 0.0739542 / 0.21911 |
+| SC8-U | S-ONLINE | 3 | 0.296645 / 0.281862 / 0.318633 | 1.21152 / 1.1276 / 1.25948 |
+| SC8-U | S-FINAL | 3 | 0.257674 / 0.253031 / 0.262383 | 0.821652 / 0.802198 / 0.842485 |
+| SC8-A | O-FULL | 3 | 0.0645363 / 0.0597737 / 0.0740327 | 1.49096 / 0.258535 / 2.25069 |
+| SC8-A | O-NOFDE | 3 | 0.156899 / 0.154129 / 0.15873 | 0.355343 / 0.255156 / 0.405782 |
+| SC8-A | S-ONLINE | 3 | 441.761 / 404.077 / 460.886 | 1.2876 / 1.09259 / 1.51489 |
+| SC8-A | S-FINAL | 3 | 442.662 / 404.885 / 461.83 | 1.036 / 0.890104 / 1.28318 |
+| SC8-G | O-FULL | 3 | 0.141731 / 0.0547741 / 0.305637 | 1.46377 / 0.513466 / 2.28544 |
+| SC8-G | O-NOFDE | 3 | 0.073998 / 0.07364 / 0.0746327 | 0.232362 / 0.169574 / 0.333533 |
+| SC8-G | S-ONLINE | 3 | 323.524 / 288.144 / 389.958 | 2.25552 / 2.21221 / 2.2905 |
+| SC8-G | S-FINAL | 3 | 324.19 / 288.714 / 390.771 | 2.23232 / 2.21357 / 2.26496 |
+| SC8-J | O-FULL | 3 | 0.0602216 / 0.057919 / 0.0643066 | 1.03189 / 0.240301 / 2.31313 |
+| SC8-J | O-NOFDE | 3 | 0.175014 / 0.169025 / 0.179002 | 1.23624 / 0.704863 / 2.04476 |
+| SC8-J | S-ONLINE | 3 | 439.633 / 403.435 / 460.629 | 1.27426 / 1.09338 / 1.49309 |
+| SC8-J | S-FINAL | 3 | 440.527 / 404.239 / 461.572 | 1.01746 / 0.891084 / 1.25415 |
+
+
+| 定向例 | status | APE m | ARE rad | raw / planned |
+|---|---|---|---|---|
+| SC8-AX0 | SUCCESS | 0.0729321 | 0.731284 | 160 / 160 |
+| SC8-AX1 | SUCCESS | 0.0729321 | 0.731284 | 160 / 160 |
+| SC8-AX2 | SUCCESS | 0.0729321 | 0.731284 | 160 / 160 |
+| SC8-AX3 | SUCCESS | 0.0723629 | 1.18043 | 160 / 160 |
+| SC8-AX4 | SUCCESS | 0.0723629 | 1.18043 | 160 / 160 |
+| SC8-AX5 | SUCCESS | 0.0723629 | 1.18043 | 160 / 160 |
+| SC8-WEAK | SUCCESS | 0.0762377 | 1.7485 | 200 / 200 |
+| SC8-NEG | SUCCESS | 0.0762377 | 1.7485 | 200 / 200 |
+| SC8-STAGGER | SUCCESS | 0.0771021 | 1.16777 | 200 / 200 |
+
+
+以下为真实原生 episode receipt，FD/隔离/边缘先验替换/bridge/rejoin 分开；sensor TTD 与 wall TTD/TTI/TTR 不混。仅有 FD 或 PL 资格不等于恢复执行；first nominal receipt 不等于误差恢复。阶段 APE/ARE/速度/bias（healthy/fault/bridge/rejoin/late）完整保存在 JSON，位置改善不抵销姿态退化。
+
+| 流/seed/method | episode / exposure | FD | 隔离提交 | prior / bridge | rejoin4 | TTD sensor / wall ms | TTI / TTR wall ms | unsafe endpoint |
+|---|---|---|---|---|---|---|---|---|
+| SC8-U/20/O-FULL | UWB/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | None / None | NA | 0 / 6.10953 | 31.085 / NA | NA |
+| SC8-U/20/O-NOFDE | UWB/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | False | None / None | NA | 0 / 5.86639 | NA / NA | NA |
+| SC8-U/21/O-FULL | UWB/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | None / None | NA | 0 / 5.18268 | 22.453 / NA | NA |
+| SC8-U/21/O-NOFDE | UWB/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | False | None / None | NA | 0 / 5.02426 | NA / NA | NA |
+| SC8-U/22/O-FULL | UWB/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | None / None | NA | 0 / 5.63093 | 22.494 / NA | NA |
+| SC8-U/22/O-NOFDE | UWB/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | False | None / None | NA | 0 / 5.8492 | NA / NA | NA |
+| SC8-A/20/O-FULL | IMU/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 121 / 121 | [141, 142, 143, 144] | 8.88178e-13 / 48.4627 | 69.5149 / 1066.32 | [] |
+| SC8-A/20/O-NOFDE | IMU/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | False | None / None | [] | 8.88178e-13 / 47.744 | NA / NA | [] |
+| SC8-A/21/O-FULL | IMU/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 121 / 121 | [141, 142, 143, 144] | 8.88178e-13 / 48.6509 | 70.2565 / 1065.61 | [] |
+| SC8-A/21/O-NOFDE | IMU/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | False | None / None | [] | 8.88178e-13 / 48.9576 | NA / NA | [] |
+| SC8-A/22/O-FULL | IMU/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 121 / 121 | [141, 142, 143, 144] | 8.88178e-13 / 47.7893 | 71.1594 / 1066.83 | [] |
+| SC8-A/22/O-NOFDE | IMU/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | False | None / None | [] | 8.88178e-13 / 47.8231 | NA / NA | [] |
+| SC8-G/20/O-FULL | IMU/3@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 121 / 121 | [132, 133, 134, 135] | 8.88178e-13 / 48.8215 | 70.4538 / 616.491 | [] |
+| SC8-G/20/O-NOFDE | IMU/3@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | False | None / None | [] | 8.88178e-13 / 47.7347 | NA / NA | [] |
+| SC8-G/21/O-FULL | IMU/3@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 121 / 121 | [132, 133, 134, 135] | 8.88178e-13 / 47.6429 | 69.6469 / 617.389 | [] |
+| SC8-G/21/O-NOFDE | IMU/3@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | False | None / None | [] | 8.88178e-13 / 47.8306 | NA / NA | [] |
+| SC8-G/22/O-FULL | IMU/3@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 121 / 121 | [132, 133, 134, 135] | 8.88178e-13 / 48.2377 | 69.2857 / 617.383 | [] |
+| SC8-G/22/O-NOFDE | IMU/3@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | False | None / None | [] | 8.88178e-13 / 48.5691 | NA / NA | [] |
+| SC8-J/20/O-FULL | IMU/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 121 / 121 | [141, 142, 143, 144] | 8.88178e-13 / 47.7472 | 68.7016 / 1065.34 | [] |
+| SC8-J/20/O-FULL | UWB/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | None / None | NA | 0 / 4.9991 | 23.7016 / NA | NA |
+| SC8-J/20/O-NOFDE | IMU/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | False | None / None | [] | 8.88178e-13 / 47.7017 | NA / NA | [] |
+| SC8-J/20/O-NOFDE | UWB/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | False | None / None | NA | 0 / 5.2677 | NA / NA | NA |
+| SC8-J/21/O-FULL | IMU/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 121 / 121 | [141, 142, 143, 144] | 8.88178e-13 / 48.9737 | 71.1544 / 1066.49 | [] |
+| SC8-J/21/O-FULL | UWB/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | None / None | NA | 0 / 6.49278 | 26.1544 / NA | NA |
+| SC8-J/21/O-NOFDE | IMU/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | False | None / None | [] | 8.88178e-13 / 47.687 | NA / NA | [] |
+| SC8-J/21/O-NOFDE | UWB/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | False | None / None | NA | 0 / 4.93194 | NA / NA | NA |
+| SC8-J/22/O-FULL | IMU/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 121 / 121 | [141, 142, 143, 144] | 8.88178e-13 / 47.8619 | 70.083 / 1067.87 | [] |
+| SC8-J/22/O-FULL | UWB/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | None / None | NA | 0 / 5.30279 | 25.083 / NA | NA |
+| SC8-J/22/O-NOFDE | IMU/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | False | None / None | [] | 8.88178e-13 / 47.7098 | NA / NA | [] |
+| SC8-J/22/O-NOFDE | UWB/0@121 / FULL_FAULT_INTERVAL_CONFIRMED | True | False | None / None | NA | 0 / 5.03262 | NA / NA | NA |
+| SC8-AX0/20/O-FULL | IMU/0@61 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 61 / 61 | [81, 82, 83, 84] | 4.44089e-13 / 46.5207 | 70.1119 / 1067.39 | [] |
+| SC8-AX1/20/O-FULL | IMU/1@61 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 61 / 61 | [81, 82, 83, 84] | 4.44089e-13 / 46.6145 | 70.645 / 1068.31 | [] |
+| SC8-AX2/20/O-FULL | IMU/2@61 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 61 / 61 | [81, 82, 83, 84] | 4.44089e-13 / 46.5563 | 69.8849 / 1066.44 | [] |
+| SC8-AX3/20/O-FULL | IMU/3@61 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 61 / 61 | [81, 82, 83, 84] | 4.44089e-13 / 47.532 | 72.0528 / 1066.05 | [] |
+| SC8-AX4/20/O-FULL | IMU/4@61 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 61 / 61 | [81, 82, 83, 84] | 4.44089e-13 / 46.8079 | 70.8126 / 1067.28 | [] |
+| SC8-AX5/20/O-FULL | IMU/5@61 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 61 / 61 | [81, 82, 83, 84] | 4.44089e-13 / 47.6079 | 71.3255 / 1068.31 | [] |
+| SC8-WEAK/20/O-FULL | IMU/0@61 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 61 / 61 | [72, 73, 74, 75] | 4.44089e-13 / 47.7412 | 69.4792 / 616.588 | [] |
+| SC8-NEG/20/O-FULL | IMU/3@61 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 61 / 61 | [72, 73, 74, 75] | 4.44089e-13 / 47.7756 | 69.2558 / 616.653 | [] |
+| SC8-STAGGER/20/O-FULL | IMU/0@61 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | 61 / 61 | [81, 82, 83, 84] | 4.44089e-13 / 48.2899 | 69.1728 / 1067.73 | [] |
+| SC8-STAGGER/20/O-FULL | UWB/0@58 / FULL_FAULT_INTERVAL_CONFIRMED | True | True | None / None | NA | 0 / 5.2369 | 26.2692 / NA | NA |
+
+
+| 真实 overlay/method | 实际注入前沿确认 |
+|---|---|
+| R2-FU/O-FDE-ENG | {'manifest_base_onset_s': 6.005, 'physical_begin_s': 6.05, 'physical_end_s': 6.2, 'last_confirmed_numeric_input_s': 23.193716526000003, 'onset_confirmed_reached': True, 'last_fault_input_confirmed_reached': True, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 9.272984982, 'saved_states_after_overlay_begin': 45, 'saved_states_after_overlay_end': 45, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R2-FU/O-ENG-NOFDE | {'manifest_base_onset_s': 6.005, 'physical_begin_s': 6.05, 'physical_end_s': 6.2, 'last_confirmed_numeric_input_s': 84.11412477500001, 'onset_confirmed_reached': True, 'last_fault_input_confirmed_reached': True, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 84.11412477500001, 'saved_states_after_overlay_begin': 1199, 'saved_states_after_overlay_end': 1197, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R2-FU/SFUISE_PINNED_OBSERVED | {'manifest_base_onset_s': 6.005, 'physical_begin_s': 6.05, 'physical_end_s': 6.2, 'last_confirmed_numeric_input_s': 84.08164143600015, 'onset_confirmed_reached': True, 'last_fault_input_confirmed_reached': True, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 84.08336291199998, 'saved_states_after_overlay_begin': 781, 'saved_states_after_overlay_end': 779, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R2-FG/O-FDE-ENG | {'manifest_base_onset_s': 6.005, 'physical_begin_s': 6.005, 'physical_end_s': 6.505, 'last_confirmed_numeric_input_s': 84.11412477500001, 'onset_confirmed_reached': True, 'last_fault_input_confirmed_reached': True, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 7.6587374210000005, 'saved_states_after_overlay_begin': 24, 'saved_states_after_overlay_end': 16, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R2-FG/O-ENG-NOFDE | {'manifest_base_onset_s': 6.005, 'physical_begin_s': 6.005, 'physical_end_s': 6.505, 'last_confirmed_numeric_input_s': 84.11412477500001, 'onset_confirmed_reached': True, 'last_fault_input_confirmed_reached': True, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 84.11412477500001, 'saved_states_after_overlay_begin': 1200, 'saved_states_after_overlay_end': 1192, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R2-FG/SFUISE_PINNED_OBSERVED | {'manifest_base_onset_s': 6.005, 'physical_begin_s': 6.005, 'physical_end_s': 6.505, 'last_confirmed_numeric_input_s': 84.08164143600015, 'onset_confirmed_reached': True, 'last_fault_input_confirmed_reached': True, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 84.08336291199998, 'saved_states_after_overlay_begin': 781, 'saved_states_after_overlay_end': 776, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R2-FJ/O-FDE-ENG | {'manifest_base_onset_s': 6.005, 'physical_begin_s': 6.005, 'physical_end_s': 6.505, 'last_confirmed_numeric_input_s': 83.20403242100001, 'onset_confirmed_reached': True, 'last_fault_input_confirmed_reached': True, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 5.969116449, 'saved_states_after_overlay_begin': 0, 'saved_states_after_overlay_end': 0, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R2-FJ/O-ENG-NOFDE | {'manifest_base_onset_s': 6.005, 'physical_begin_s': 6.005, 'physical_end_s': 6.505, 'last_confirmed_numeric_input_s': 84.11412477500001, 'onset_confirmed_reached': True, 'last_fault_input_confirmed_reached': True, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 84.11412477500001, 'saved_states_after_overlay_begin': 1200, 'saved_states_after_overlay_end': 1192, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R2-FJ/SFUISE_PINNED_OBSERVED | {'manifest_base_onset_s': 6.005, 'physical_begin_s': 6.005, 'physical_end_s': 6.505, 'last_confirmed_numeric_input_s': 84.08164143600015, 'onset_confirmed_reached': True, 'last_fault_input_confirmed_reached': True, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 84.08336291199998, 'saved_states_after_overlay_begin': 781, 'saved_states_after_overlay_end': 776, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R3-FU/O-FDE-ENG | {'manifest_base_onset_s': 20.005, 'physical_begin_s': 20.05, 'physical_end_s': 20.2, 'last_confirmed_numeric_input_s': 17.248669863, 'onset_confirmed_reached': False, 'last_fault_input_confirmed_reached': False, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 12.948263168, 'saved_states_after_overlay_begin': 0, 'saved_states_after_overlay_end': 0, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R3-FU/O-ENG-NOFDE | {'manifest_base_onset_s': 20.005, 'physical_begin_s': 20.05, 'physical_end_s': 20.2, 'last_confirmed_numeric_input_s': 73.36938762700001, 'onset_confirmed_reached': True, 'last_fault_input_confirmed_reached': True, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 73.36938762700001, 'saved_states_after_overlay_begin': 2666, 'saved_states_after_overlay_end': 2659, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R3-FU/SFUISE_PINNED_OBSERVED | {'manifest_base_onset_s': 20.005, 'physical_begin_s': 20.05, 'physical_end_s': 20.2, 'last_confirmed_numeric_input_s': 73.31539706300009, 'onset_confirmed_reached': True, 'last_fault_input_confirmed_reached': True, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 73.315542069, 'saved_states_after_overlay_begin': 533, 'saved_states_after_overlay_end': 532, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R3-FG/O-FDE-ENG | {'manifest_base_onset_s': 20.005, 'physical_begin_s': 20.005, 'physical_end_s': 20.505, 'last_confirmed_numeric_input_s': 17.248669863, 'onset_confirmed_reached': False, 'last_fault_input_confirmed_reached': False, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 12.948263168, 'saved_states_after_overlay_begin': 0, 'saved_states_after_overlay_end': 0, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R3-FG/O-ENG-NOFDE | {'manifest_base_onset_s': 20.005, 'physical_begin_s': 20.005, 'physical_end_s': 20.505, 'last_confirmed_numeric_input_s': 73.36938762700001, 'onset_confirmed_reached': True, 'last_fault_input_confirmed_reached': True, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 73.36938762700001, 'saved_states_after_overlay_begin': 2669, 'saved_states_after_overlay_end': 2644, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R3-FG/SFUISE_PINNED_OBSERVED | {'manifest_base_onset_s': 20.005, 'physical_begin_s': 20.005, 'physical_end_s': 20.505, 'last_confirmed_numeric_input_s': 73.31539706300009, 'onset_confirmed_reached': True, 'last_fault_input_confirmed_reached': True, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 73.315542069, 'saved_states_after_overlay_begin': 534, 'saved_states_after_overlay_end': 529, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R3-FJ/O-FDE-ENG | {'manifest_base_onset_s': 20.005, 'physical_begin_s': 20.005, 'physical_end_s': 20.505, 'last_confirmed_numeric_input_s': 17.248669863, 'onset_confirmed_reached': False, 'last_fault_input_confirmed_reached': False, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 12.948263168, 'saved_states_after_overlay_begin': 0, 'saved_states_after_overlay_end': 0, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R3-FJ/O-ENG-NOFDE | {'manifest_base_onset_s': 20.005, 'physical_begin_s': 20.005, 'physical_end_s': 20.505, 'last_confirmed_numeric_input_s': 73.36938762700001, 'onset_confirmed_reached': True, 'last_fault_input_confirmed_reached': True, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 73.36938762700001, 'saved_states_after_overlay_begin': 2669, 'saved_states_after_overlay_end': 2644, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+| R3-FJ/SFUISE_PINNED_OBSERVED | {'manifest_base_onset_s': 20.005, 'physical_begin_s': 20.005, 'physical_end_s': 20.505, 'last_confirmed_numeric_input_s': 73.31539706300009, 'onset_confirmed_reached': True, 'last_fault_input_confirmed_reached': True, 'semantics': 'Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.', 'last_saved_state_s': 73.315542069, 'saved_states_after_overlay_begin': 534, 'saved_states_after_overlay_end': 529, 'saved_state_scope': 'Actual complete first-stream state rows; no GT reconstruction or gap fill'} |
+
+
+| 真实 overlay | view | 公共 / 注入后公共 N | 增量 APE m | 增量 ARE rad / 注入后可评 |
+|---|---|---|---|---|
+| R2-FU | O-FDE-ENG | 177 / 121 | 0.00674949 | 0.204573 / True |
+| R2-FU | O-ENG-NOFDE | 3483 / 3426 | 0.0184481 | -0.175195 / True |
+| R2-FU | S-ONLINE | 4075 / 3902 | 0.00547745 | -0.0131515 / True |
+| R2-FU | S-FINAL | 4065 / 3902 | 0.000120634 | 0.000120535 / True |
+| R2-FG | O-FDE-ENG | 115 / 60 | 0.214226 | 0.0403854 / True |
+| R2-FG | O-ENG-NOFDE | 3483 / 3428 | 0.0897056 | -0.152563 / True |
+| R2-FG | S-ONLINE | 4075 / 3904 | 2320.15 | -0.210127 / True |
+| R2-FG | S-FINAL | 4065 / 3904 | 2322.97 | -0.199051 / True |
+| R2-FJ | O-FDE-ENG | 53 / 0 | 0 | 0 / False |
+| R2-FJ | O-ENG-NOFDE | 3483 / 3428 | 0.0310419 | -0.580369 / True |
+| R2-FJ | S-ONLINE | 4075 / 3904 | 9577.11 | -0.423699 / True |
+| R2-FJ | S-FINAL | 4065 / 3904 | 9585.66 | -0.41744 / True |
+| R3-FU | O-ENG-NOFDE | 16602 / 15627 | 0.00266349 | 0.109703 / True |
+| R3-FU | S-ONLINE | 16584 / 15616 | -7.76257e-05 | -0.00217571 / True |
+| R3-FU | S-FINAL | 16584 / 15616 | -8.091e-05 | -0.00187787 / True |
+| R3-FG | O-ENG-NOFDE | 16602 / 15641 | 0.00127006 | 0.225619 / True |
+| R3-FG | S-ONLINE | 16584 / 15630 | 2396.01 | 0.757858 / True |
+| R3-FG | S-FINAL | 16584 / 15630 | 2394.64 | 0.818394 / True |
+| R3-FJ | O-ENG-NOFDE | 16602 / 15641 | 0.68302 | -0.535418 / True |
+| R3-FJ | S-ONLINE | 16584 / 15630 | 265.475 | 1.49686 / True |
+| R3-FJ | S-FINAL | 16584 / 15630 | 265.337 | 1.57096 / True |
+
+
+## E04：原生完整性、Stanford 与 AL
+
+F05-H/V 使用同 stamp/tag/receipt 的实际 PE（横）/PL（纵）计数，不由均值合成。主图 full 尺度与 5 m zoom 均留 overflow；灰色 late bounds 不算及时可用；SFUISE/真实未知 PL 不画同 epsilon 点云。2/3、5/5、10/10 m 仅为研究 AL 后验评价，不改变在线噪声、risk、q 或发布规则。每轴互斥分区和 underbound 另外计数，AL-unavailable 中的 underbound 也不删除。零 HMI 样本不构成概率证明。
+
+| 流/seed/method | planned / committed / raw / timely | missing / refused | H under / V under | joint timely AL2/3 / 5/5 / 10/10 | publication protected |
+|---|---|---|---|---|---|
+| SC8-H/20/O-FULL | 600 / 600 / 600 / 599 | 0 / 0 | 0 / 0 | 29 / 599 / 599 | 0 |
+| SC8-H/20/O-NOFDE | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 29 / 600 / 600 | 0 |
+| SC8-H/21/O-FULL | 600 / 600 / 600 / 598 | 0 / 0 | 0 / 0 | 34 / 598 / 598 | 0 |
+| SC8-H/21/O-NOFDE | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 34 / 600 / 600 | 0 |
+| SC8-H/22/O-FULL | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 21 / 600 / 600 | 0 |
+| SC8-H/22/O-NOFDE | 600 / 600 / 600 / 598 | 0 / 0 | 0 / 0 | 21 / 598 / 598 | 0 |
+| SC8-D0/20/O-FULL | 600 / 600 / 600 / 599 | 0 / 0 | 0 / 0 | 2 / 599 / 599 | 0 |
+| SC8-D0/20/O-NOFDE | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 2 / 600 / 600 | 0 |
+| SC8-G2/20/O-FULL | 600 / 600 / 600 / 597 | 0 / 0 | 0 / 0 | 0 / 0 / 597 | 0 |
+| SC8-G2/20/O-NOFDE | 600 / 600 / 600 / 599 | 0 / 0 | 0 / 0 | 0 / 0 / 599 | 0 |
+| SC8-U/20/O-FULL | 600 / 600 / 600 / 599 | 0 / 0 | 0 / 0 | 31 / 599 / 599 | 0 |
+| SC8-U/20/O-NOFDE | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 30 / 600 / 600 | 0 |
+| SC8-U/21/O-FULL | 600 / 600 / 600 / 597 | 0 / 0 | 0 / 0 | 31 / 597 / 597 | 0 |
+| SC8-U/21/O-NOFDE | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 32 / 600 / 600 | 0 |
+| SC8-U/22/O-FULL | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 22 / 600 / 600 | 0 |
+| SC8-U/22/O-NOFDE | 600 / 600 / 600 / 598 | 0 / 0 | 0 / 0 | 21 / 598 / 598 | 0 |
+| SC8-A/20/O-FULL | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 31 / 600 / 600 | 0 |
+| SC8-A/20/O-NOFDE | 600 / 600 / 600 / 599 | 0 / 0 | 0 / 0 | 25 / 599 / 599 | 0 |
+| SC8-A/21/O-FULL | 600 / 600 / 600 / 596 | 0 / 0 | 0 / 0 | 26 / 596 / 596 | 0 |
+| SC8-A/21/O-NOFDE | 600 / 600 / 600 / 598 | 0 / 0 | 0 / 0 | 22 / 598 / 598 | 0 |
+| SC8-A/22/O-FULL | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 21 / 600 / 600 | 0 |
+| SC8-A/22/O-NOFDE | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 19 / 600 / 600 | 0 |
+| SC8-G/20/O-FULL | 600 / 600 / 600 / 598 | 0 / 0 | 0 / 0 | 32 / 598 / 598 | 0 |
+| SC8-G/20/O-NOFDE | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 25 / 600 / 600 | 0 |
+| SC8-G/21/O-FULL | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 31 / 600 / 600 | 0 |
+| SC8-G/21/O-NOFDE | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 27 / 600 / 600 | 0 |
+| SC8-G/22/O-FULL | 600 / 600 / 600 / 598 | 0 / 0 | 0 / 0 | 18 / 598 / 598 | 0 |
+| SC8-G/22/O-NOFDE | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 22 / 600 / 600 | 0 |
+| SC8-J/20/O-FULL | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 34 / 600 / 600 | 0 |
+| SC8-J/20/O-NOFDE | 600 / 600 / 600 / 599 | 0 / 0 | 0 / 0 | 26 / 599 / 599 | 0 |
+| SC8-J/21/O-FULL | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 34 / 600 / 600 | 0 |
+| SC8-J/21/O-NOFDE | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 24 / 600 / 600 | 0 |
+| SC8-J/22/O-FULL | 600 / 600 / 600 / 600 | 0 / 0 | 0 / 0 | 21 / 600 / 600 | 0 |
+| SC8-J/22/O-NOFDE | 600 / 600 / 600 / 599 | 0 / 0 | 0 / 0 | 22 / 599 / 599 | 0 |
+
+
+## E05：窗口成本前沿
+
+合法 7 配置 × 两个 2100 历元流；联动 30/100/300/600/1000 与固定 LF=300 的 LI=30/100/300 分开。100–1000 是真实 UWB 历元（5–50 s），不能把 IMU 条数叫窗口。公共评分 1101–2100、故障 1201/1601。4 个大窗 canary 是同一健康运行的 LF+2，不重启、不清零风险；必须观察实际 x0 退出/边缘化。预登记 RSS、1200 s wall 和连续 20 个 core>2 s 截断，保留 inflight lower bound，右截断不冒充完整 P95。
+
+| 流 / LF,LI | status | actual / planned | common APE m | common mean H/V m | P95 core ms | receipt RSS max MiB | x0 retired / resource |
+|---|---|---|---|---|---|---|---|
+| SC8-WH None | NOT_ATTEMPTED | NA/2100 | NA | NA / NA | NA | NA | None / None |
+| SC8-WJ None | NOT_ATTEMPTED | NA/2100 | NA | NA / NA | NA | NA | None / None |
+| SC8-WH None | NOT_ATTEMPTED | NA/2100 | NA | NA / NA | NA | NA | None / None |
+| SC8-WJ None | NOT_ATTEMPTED | NA/2100 | NA | NA / NA | NA | NA | None / None |
+| SC8-WH None | NOT_ATTEMPTED | NA/2100 | NA | NA / NA | NA | NA | None / None |
+| SC8-WJ None | NOT_ATTEMPTED | NA/2100 | NA | NA / NA | NA | NA | None / None |
+| SC8-WH None | NOT_ATTEMPTED | NA/2100 | NA | NA / NA | NA | NA | None / None |
+| SC8-WJ None | NOT_ATTEMPTED | NA/2100 | NA | NA / NA | NA | NA | None / None |
+| SC8-WH None | NOT_ATTEMPTED | NA/2100 | NA | NA / NA | NA | NA | None / None |
+| SC8-WJ None | NOT_ATTEMPTED | NA/2100 | NA | NA / NA | NA | NA | None / None |
+| SC8-WH None | NOT_ATTEMPTED | NA/2100 | NA | NA / NA | NA | NA | None / None |
+| SC8-WJ None | NOT_ATTEMPTED | NA/2100 | NA | NA / NA | NA | NA | None / None |
+| SC8-WH None | NOT_ATTEMPTED | NA/2100 | NA | NA / NA | NA | NA | None / None |
+| SC8-WJ None | NOT_ATTEMPTED | NA/2100 | NA | NA / NA | NA | NA | None / None |
+
+
+| 同进程 canary run | LF+2 实际 receipt |
+|---|---|
+
+
+联动结果同时改变 FGO/replay 与 PL 历史，不能将 APE 变化只归因于完整性窗口。扩展窗不要求 40/50 ms，通过或不通过不是调整 guard 的理由；未到公共区间的 APE/PL 为 NA，不按短窗外推 1000。
+
+## E06：时间、CPU、RTF 与默认 profile
+
+core 从原始到达验证开始到 cleanup/receipt 完成；sink 含 ready/排队/载荷/接收门，不含 GT 评分。原生 source 资格计算属于 core，独立 source 生成与冷启动另列；独立 producer 按绝对 source 时间发布，初始化需等待真实 2 s 前缀到达，积压不免费。SFUISE core 包含 callback 与两次发布之间所有 active run 开销，CPU/RSS 来自 root solver；整进程 bag/start/drain wall 不作为 core 或算法加速比。SF 软件 clock 仿射映射在 EOF 后继续计时，1 ms 发布粒度与软件 jitter 未提供硬件实时资格。数值输入 cutoff 与仅 buffered callback cutoff 分列。
+
+| 组/流/seed/method | measured core N | P95 core / sink / age ms | P99 core / sink ms | root CPU s | CPU RTF / service RTF / processing RTF | RSS KiB | timely fraction / profile |
+|---|---|---|---|---|---|---|---|
+| E01/SC8-H/20/O-FULL | 600 | 23.7258 / 23.8928 / 23.8928 | 27.344 / 27.502 | 13.1413 | 0.438045 / 0.423731 / 0.430338 | 100728 | 0.998333 / True |
+| E01/SC8-H/20/O-NOFDE | 600 | 23.9635 / 24.1273 / 24.1273 | 25.0212 / 25.1786 | 13.4488 | 0.448293 / 0.434306 / 0.440928 | 103720 | 1 / True |
+| E01/SC8-H/20/SFUISE_PINNED_OBSERVED | 300 | 67.015 / 167.747 / 167.747 | 88.1414 / 188.71 | 48.765 | 1.6255 / 0.369421 / NA | 103828 | NA / NA: no matched raw PL |
+| E01/SC8-H/21/O-FULL | 600 | 24.3919 / 24.5215 / 24.5215 | 35.5191 / 36.3122 | 13.4207 | 0.447357 / 0.433273 / 0.43993 | 104816 | 0.996667 / True |
+| E01/SC8-H/21/O-NOFDE | 600 | 23.2974 / 23.4434 / 23.4434 | 24.2403 / 24.3983 | 13.1303 | 0.437678 / 0.423741 / 0.430268 | 105572 | 1 / True |
+| E01/SC8-H/21/SFUISE_PINNED_OBSERVED | 300 | 65.6574 / 165.311 / 165.311 | 88.6471 / 189.632 | 48.9958 | 1.63319 / 0.370974 / NA | 105568 | NA / NA: no matched raw PL |
+| E01/SC8-H/22/O-FULL | 600 | 22.9206 / 23.0692 / 23.0692 | 23.9522 / 24.089 | 13.0487 | 0.434956 / 0.421165 / 0.427546 | 104816 | 1 / True |
+| E01/SC8-H/22/O-NOFDE | 600 | 23.4293 / 23.6415 / 23.6415 | 25.9021 / 26.1084 | 13.3128 | 0.443761 / 0.430042 / 0.436621 | 105328 | 0.996667 / True |
+| E01/SC8-H/22/SFUISE_PINNED_OBSERVED | 300 | 62.3682 / 62.5213 / 62.5213 | 75.3915 / 76.5543 | 47.2749 | 1.57583 / 0.357917 / NA | 105320 | NA / NA: no matched raw PL |
+| E01/SC8-D0/20/O-FULL | 600 | 25.6845 / 25.8746 / 25.8746 | 26.8018 / 27.0346 | 14.5446 | 0.484821 / 0.470994 / 0.477428 | 100404 | 0.998333 / True |
+| E01/SC8-D0/20/O-NOFDE | 600 | 25.8468 / 25.9927 / 25.9927 | 27.5319 / 27.66 | 14.3985 | 0.479949 / 0.466348 / 0.472678 | 105188 | 1 / True |
+| E01/SC8-D0/20/SFUISE_PINNED_OBSERVED | 300 | 63.6189 / 163.507 / 163.507 | 70.1425 / 171.344 | 48.1123 | 1.60374 / 0.364647 / NA | 105196 | NA / NA: no matched raw PL |
+| E01/SC8-G2/20/O-FULL | 600 | 35.0141 / 35.2711 / 35.2711 | 35.9169 / 36.7891 | 19.4288 | 0.647627 / 0.634727 / 0.641504 | 105232 | 0.995 / True |
+| E01/SC8-G2/20/O-NOFDE | 600 | 34.7134 / 34.8736 / 34.8736 | 37.9676 / 38.6524 | 19.3902 | 0.646339 / 0.633776 / 0.640431 | 106000 | 0.998333 / True |
+| E01/SC8-G2/20/SFUISE_PINNED_OBSERVED | 300 | 72.9155 / 73.5311 / 73.5311 | 90.3783 / 91.219 | 55.755 | 1.8585 / 0.42867 / NA | 105996 | NA / NA: no matched raw PL |
+| E01/SC8-H/20/O-NOM | 600 | 2.1001 / 2.30293 / 2.30293 | 2.48613 / 2.68557 | 2.54677 | 0.0848924 / 0.0322906 / NA | 105908 | 1 / NA: no matched raw PL |
+| E02/R1/20/O-FDE-ENG | 265 | 12917.8 / 1.09137e+06 / 1.09137e+06 | 14684.1 / 1.15558e+06 | 1199.26 | NA / NA / NA | NA | 0.00511945 / NA: no matched raw PL |
+| E02/R1/20/O-ENG-NOFDE | 1140 | 2.48141 / 2.67505 / 2.67505 | 3.01352 / 3.20732 | 5.82148 | 0.0765041 / 0.0272825 / NA | 106176 | 0.972696 / NA: no matched raw PL |
+| E02/R1/20/SFUISE_PINNED_OBSERVED | 760 | 39.7014 / 113.435 / 109.053 | 56.7106 / 154.548 | 84.7739 | 1.11407 / 0.220988 / NA | 106000 | NA / NA: no matched raw PL |
+| E02/R2/20/O-FDE-ENG | 341 | 12799.3 / 1.13629e+06 / 1.13629e+06 | 13372.6 / 1.16663e+06 | 1199.29 | NA / NA / NA | NA | 0.00558659 / NA: no matched raw PL |
+| E02/R2/20/O-ENG-NOFDE | 1222 | 2.63078 / 2.76315 / 2.76315 | 3.16499 / 3.43319 | 6.39855 | 0.0783566 / 0.0275646 / NA | 106568 | 0.975259 / NA: no matched raw PL |
+| E02/R2/20/SFUISE_PINNED_OBSERVED | 816 | 44.1994 / 208.8 / 205.749 | 55.6748 / 244.328 | 96.7231 | 1.18447 / 0.237969 / NA | 106768 | NA / NA: no matched raw PL |
+| E02/R3/20/O-FDE-ENG | 764 | 10958.4 / 974640 / 974640 | 11480.9 / 1.14905e+06 | 1199.56 | NA / NA / NA | NA | 0.00163532 / NA: no matched raw PL |
+| E02/R3/20/O-ENG-NOFDE | 3568 | 2.4572 / 2.64599 / 2.64599 | 2.99046 / 3.19228 | 9.94538 | 0.135507 / 0.0839235 / NA | 109596 | 0.972472 / NA: no matched raw PL |
+| E02/R3/20/SFUISE_PINNED_OBSERVED | 733 | 56.2034 / 70.4159 / 70.2898 | 78.3313 / 94.8467 | 105.292 | 1.43462 / 0.332516 / NA | 109816 | NA / NA: no matched raw PL |
+| E02/R4/20/O-FDE-ENG | 468 | 10836.8 / 979529 / 979529 | 10953 / 1.08681e+06 | 1117.65 | 98.1254 / 98.11 / NA | 309312 | 0.00878735 / NA: no matched raw PL |
+| E02/R4/20/O-ENG-NOFDE | 468 | 2.21983 / 2.40584 / 2.40584 | 2.92238 / 3.01435 | 1.22682 | 0.10771 / 0.0630941 / NA | 109416 | 0.822496 / NA: no matched raw PL |
+| E02/R4/20/SFUISE_PINNED_OBSERVED | 113 | 58.8353 / 75.3471 / 75.0723 | 63.1563 / 82.4564 | 16.4241 | 1.44198 / 0.309995 / NA | 109416 | NA / NA: no matched raw PL |
+| E02/R5/20/O-FDE-ENG | 318 | 13099 / 1.12679e+06 / 1.12679e+06 | 13546.3 / 1.1685e+06 | 1200.34 | NA / NA / NA | NA | 0.000912131 / NA: no matched raw PL |
+| E02/R5/20/O-ENG-NOFDE | 6440 | 2.85544 / 3.03245 / 3.03245 | 3.55388 / 3.71747 | 20.2555 | 0.134943 / 0.0834236 / NA | 122512 | 0.979021 / NA: no matched raw PL |
+| E02/R5/20/SFUISE_PINNED_OBSERVED | 1490 | 57.8259 / 80.2634 / 76.4059 | 68.9316 / 102.582 | 269.327 | 1.79427 / 0.403701 / NA | 122760 | NA / NA: no matched raw PL |
+| E02/R6/20/O-FDE-ENG | 2408 | 314.676 / 964265 / 964265 | 12627.4 / 976645 | 1028.46 | 18.5633 / 18.6394 / NA | 291932 | 0.0019984 / NA: no matched raw PL |
+| E02/R6/20/O-ENG-NOFDE | 2408 | 2.63036 / 2.79275 / 2.79275 | 3.21679 / 3.43681 | 7.11351 | 0.128396 / 0.0769571 / NA | 122392 | 0.96243 / NA: no matched raw PL |
+| E02/R6/20/SFUISE_PINNED_OBSERVED | 554 | 48.3147 / 170.974 / 168.313 | 59.3928 / 179.319 | 97.2739 | 1.75576 / 0.390999 / NA | 120004 | NA / NA: no matched raw PL |
+| E06/SC8-H//O-FULL | NA | NA / NA / NA | NA / NA | NA | NA / NA / NA | NA | NA / NA: no matched raw PL |
+| E06/SC8-J//O-FULL | NA | NA / NA / NA | NA / NA | NA | NA / NA / NA | NA | NA / NA: no matched raw PL |
+
+
+默认 positive profile 必须同时 core P95≤40 ms、measurement-to-sink P95≤50 ms、及时空间有效/所有计划≥95%；所有测到的慢帧、失败候选和 abort 包含。真实只报及时估计率，不借用 raw 空间资格；formal attempt、启动未覆盖、资源停止后未尝试后缀均在全分母。exclusive 模块均值与总 core 均值逐 run 闭合，未分配的 guard/clock/abort 成本单列；阶段 P95 不相加。CPU、wall processing 与 sensor duration 分别记录，不声称全线程实现相同。资源截断不提供完整流 throughput RTF；已花 CPU/可测 service 除以全计划时长的 profile 成本比另存 censored_profile_cost_ratios，不能靠未处理后缀稀释成本后宣称速度。
+
+## E07：合法消融
+
+| 流/开关实际 ID | status | APE m / ARE rad | mean H/V PL m | P95 ms | same-center M |
+|---|---|---|---|---|---|
+| E07-SC8-D0-O-ABL-SUPPORT-20261020-30x30 | NOT_ATTEMPTED | NA / NA | NA / NA | NA | NA |
+| E07-SC8-D0-O-ABL-JOINT-20261020-30x30 | NOT_ATTEMPTED | NA / NA | NA / NA | NA | NA |
+| E07-SC8-J-O-ABL-SUPPORT-20261020-30x30 | NOT_ATTEMPTED | NA / NA | NA / NA | NA | NA |
+| E07-SC8-J-O-ABL-JOINT-20261020-30x30 | NOT_ATTEMPTED | NA / NA | NA / NA | NA | NA |
+| E07-SC8-G2-O-ABL-G2-20261020-30x30 | NOT_ATTEMPTED | NA / NA | NA / NA | NA | NA |
+
+
+| 消融 ID | 公共区间 s / N | APE ablated / FULL m | ARE ablated / FULL rad | 最大 center 差 m |
+|---|---|---|---|---|
+
+
+terminal support 关闭回原保守 box；joint/sample0 无独立合法开关，使用 joint+support 合并回退原物理 law，并明确不能分别归因。G2 旧数值候选 80 历元用于资格/数值对照，不拿其 80 vs 600 全段均值声称轨迹优劣。同 center M 见真实 old/new 同 stamp；A 完整轨迹与 P 时间分列，Gaussian 未资格结果不能收紧 raw 界。
+
+## E08：长期边界
+
+| 流/method | status | actual / planned | APE / ARE | x0 retired | last q / alerts | slots / ledger / replay / RSS last |
+|---|---|---|---|---|---|---|
+| SC8-L0/O-FULL | NOT_ATTEMPTED | NA / NA | NA / NA | NA | NA / NA | NA / NA / NA / NA |
+| SC8-L1/O-FULL | NOT_ATTEMPTED | NA / NA | NA / NA | NA | NA / NA | NA / NA / NA / NA |
+| SC8-L1/O-NOFDE | NOT_ATTEMPTED | NA / NA | NA / NA | NA | NA / NA | NA / NA / NA / NA |
+
+
+L0 5000 FULL、L1 10000 FULL/NOFDE 使用最终冻结二进制、不重启、不重置 source event。晚期故障与早期同幅值，ledger/provider/slot/RSS/queue 增长据实际 receipt 报告，不要求 O(1) 或无限全状态可观测。
+
+## 图表与精简数据
+
+[指标 JSON](SC8_METRICS.json)、[绘图必要数据](SC8_PLOTDATA.json)、[图表身份](SC8_FIGURES.json)。F00–F10 共 12 个 figure family（F05-H/V 两张），每张 180 mm、300 dpi PNG + 可编辑文字 SVG。只保存实际曲线峰谷/事件附近点和实际二维计数，统计仍用全样本；每 seed/录制指标留存，不将帧数当独立样本。
+
+图表当前为早先进度版本，未与本次 metrics 摘要匹配；本报告不嵌入旧图充当新结果。W3 会重新生成并核对全部图表身份。
+
+## 实际困难与后续采集
+
+当前真实工程管线的候选拒绝、姿态大误差和处理积压属于结果；不能用仿真 raw 定理、最终历史或较短成功前缀替它背书。仅有位置改善不代表 body 姿态/bias 已观测。SFUISE 的仿真 velocity/bias 未在冻结导出接口保存，虽有源真值也为 NA_ESTIMATED_STATE_NOT_EXPORTED，属于指标接口限制；不是无真值。
+
+手册补充范围的明确缺口：冻结矩阵登记了弱短 IMU、负幅和错峰，但没有独立弱幅 UWB 小矩阵，也没有另跑 S1/S2 bias 轨迹。D0/S0 与 M3 的结果不能顶替 S1/S2；不引用旧 SC7 曲线冒充本轮。S0 的 bias 包含收缩依赖原始 sample0 信息，不表示持续获得全部 bias 或 15D 可观测性。W0 额外 attempt 后本轮计划占满 160 上限，这些未登记补充不事后补点或伪称通过。
+
+后续可另采独立标定录制：覆盖三轴角运动、平移与不同姿态，独立测量 body/tag/IMU/GT 杆臂和时间延迟，并留完全不参与拟合的 TEST。优先记录硬件时间同步、原始逐条 range 和连续 IMU 缺口，保存提交/拒绝/发布时刻、依赖截止与原生恢复 receipt。若希望把经验结果提升为真实 raw 保证，还需独立验证初始 law、噪声/运动域/采样/anchor 映射及证明接口，不能由当前六条经验轨迹或零超界样本推导。
+
+这些采集与理论扩展建议不改变本轮冻结算法，也不阻止本轮仿真、经验和窗口边界的结项。
+
+## SC8-A01–A24 对账
+
+| 验收 | 证据/状态 |
+|---|---|
+| A01 | 入口/冻结 identity、ELF/DSO/libraries/platform；旧报告只库存；生产合同 hash 未改 |
+| A02 | E00 九条库存，六条固定测试，备用未启用 |
+| A03 | 单位/frame/lever/offset/time/GT/批次新审计；899/899 direct/ROS |
+| A04 | CAL-W 与 R3 prefix20 +2s 隔离，test-involved 明示，无逐方法测试拟合 |
+| A05 | 三通道和 requested/effective 分离；真实 raw 拒绝/PL NA |
+| A06 | SF 固定 pin、官方剔除、首发/历史/cutoff/revision，数值观察双实例检查 |
+| A07 | 共同 source-only、native 逐值 audit；lossless bag parity，原始数据不改 |
+| A08 | 12 项独立 scorer 测试 + evo 对口径 |
+| A09 | E01: {'SUCCESS': 16} |
+| A10 | E02: {'RESOURCE_LIMIT': 4, 'SUCCESS': 14}; 工程结果不叫 FULL raw |
+| A11 | E03: {'SUCCESS': 58, 'RESOURCE_LIMIT': 5}; 原生 episode 与真实增量/阶段分开 |
+| A12 | seed/录制统计，负收益保留，无帧级伪独立 CI |
+| A13 | 实际 H/V Stanford 分母对账，AL/SI/late/拒绝分层，零 HMI 不当证明 |
+| A14 | E05: {'NOT_ATTEMPTED': 14}; 7 唯一合法配置 |
+| A15 | 同进程 LF+2 canary、边缘化与 resource/inflight 右截断；公共 1101–2100，缺数据 NA |
+| A16 | 逐 run core/sink/age/CPU/RTF；exclusive 均值闭合，P95不相加 |
+| A17 | 40/50 ms 和95%全计划分母；真实及时估计≠raw资格 |
+| A18 | E07: {'NOT_ATTEMPTED': 5}; 合并开关与 M/A/P 明示 |
+| A19 | E08: {'NOT_ATTEMPTED': 3}; late gaps=0 |
+| A20 | PENDING：图表与当前 metrics 摘要尚未全部匹配 |
+| A21 | PENDING：最终相关回归未全部结束 |
+| A22 | {'SUCCESS': 107, 'RESOURCE_LIMIT': 12, 'NOT_ATTEMPTED': 24}; attempts=135，辅助另计，完整版本/失败身份留存 |
+| A23 | 唯一中文报告+English Results，实际冻结 registry/metrics/plot CLI |
+| A24 | 阶段本地 commit；只清理本轮 owned cache，保留原始数据/用户旧证据，不 push |
+
+
+## 复现与续跑
 
 ```bash
 python3 tools/sc8_experiments.py preflight --build
@@ -50,12 +600,39 @@ python3 tools/sc8_sfuise_observer.py
 python3 tools/sc8_sfuise_observer.py check
 python3 tools/test_sc8_metrics.py
 python3 tools/test_sc8_inputs.py
-python3 tools/sc8_experiments.py register
-python3 tools/sc8_experiments.py run --group E00
+python3 tools/test_sc8_inputs.py bags
+# 在已冻结环境续跑；已有完成/失败 attempt 默认均复用，不自动重复求解
+
+python3 tools/sc8_experiments.py run --group E01,E02,E03
+python3 tools/sc8_experiments.py run --group E05,E07,E08
+python3 tools/sc8_experiments.py run --group E06
+python3 tools/sc8_experiments.py checks
+python3 tools/sc8_experiments.py evaluate
+python3 tools/sc8_experiments.py figures
+python3 tools/sc8_experiments.py report
+# 全部运行和图表结束后审计；清理只接受当前 PASS 审计
+
+python3 tools/sc8_analysis.py audit
+python3 tools/sc8_cleanup.py --apply
+python3 tools/sc8_experiments.py report
 ```
 
-`register` 保留已经存在的登记；`run` 复用有身份的已执行记录。显式 `--retry-failed` 保存旧失败到原 attempt 目录，新建后续 attempt。W0 接口验证已完成；提交当前代码后执行 `freeze`，保存实际源、ELF、DSO、平台与校准数值，然后运行 `run --group E01,E02,E03`。当前仍无正式主结果或结项声明。
+在新环境重建时应核对 frozen source/依赖/ELF 身份；若编译器、库或 ELF 不同，须另存版本化 registry，不能覆盖此轮身份。registry 内保存完整数值 CAL 参数，输入重建使用冻结标定，不在 TEST 重拟合。只重画图可用永久 metrics+plotdata：`figures` 在原始 trace 不存在时读取保存的 plotdata，不启动求解。
 
-计算冻结源码提交：`def42ac`。精确源码/ELF/DSO、动态依赖、平台、全部校准数值和设计 SHA256 已写入 registry 的 `frozen`；后续只读分析可继续开发，不改变求解协议。下一命令：`python3 tools/sc8_experiments.py run --group E01,E02,E03`。
+执行缺口：Registered scope omission: no separate weak-UWB amplitude matrix or S1/S2 bias trajectories; no historical curves substituted; E02-R1-O-FULL-20261020-30x30: real engineering run censored before complete recording; E02-R2-O-FULL-20261020-30x30: real engineering run censored before complete recording; E02-R3-O-FULL-20261020-30x30: real engineering run censored before complete recording; E02-R5-O-FULL-20261020-30x30: real engineering run censored before complete recording; E03-R2-FU-O-FULL-20261020-30x30: real engineering run censored before complete recording; E03-R2-FJ-O-FULL-20261020-30x30: real engineering run censored before complete recording; E03-R3-FU-O-FULL-20261020-30x30: real engineering run censored before complete recording; E03-R3-FG-O-FULL-20261020-30x30: real engineering run censored before complete recording; E03-R3-FJ-O-FULL-20261020-30x30: real engineering run censored before complete recording; SFUISE historical original-idle prefix unavailable: 58 support-invalid exports across 29 formal runs; first causal outputs unaffected
 
-正式驱动第一次启动在设计摘要自检处因字段层级错误退出，尚未产生求解进程。已修正 guard 的字段访问，保留前一冻结为 `previous_freeze_before_formal`，重新冻结；设计和已完成数据不变。
+断点：冻结 `61907ab417450d317e443e4ff10f2cce062deabe`；待运行 24，运行错误/未完成长流 0。所有逻辑 ID 和实际 attempt 见 JSON。资源上限是结果；接口/执行缺口没有改写 PASS。最终审计和本轮 cache 清理状态另记录在本报告的本地阶段提交日志。
+
+## English Results
+
+The frozen evaluation registered 143 unique runs and retained all 135 execution attempts (plus the registered ROS counterpart). Current process outcomes are {'SUCCESS': 107, 'RESOURCE_LIMIT': 12, 'NOT_ATTEMPTED': 24}. Accuracy is scored without fitted trajectory alignment, with each seed or recording retained as the independent unit. First causal SFUISE outputs and final retained-history outputs are separate views of the same run; differing initialization information, input cutoffs and state age preclude an unconditional online ranking. Only registered simulated sources can receive conditional raw protection bounds. Real and semi-synthetic recordings use an explicitly labelled engineering FDE pipeline with no matched raw PL. Historical bootstrap points with invalid original-idle support are explicitly unavailable; first causal outputs are unchanged. Censored suffixes, failures, negative gains and attitude degradation remain visible. Large-window results are measured cost frontiers, not an assertion of real-time operation at 1000 epochs. The evaluation status is IN_PROGRESS; zero observed HMI events are not a probabilistic proof.
+
+Across 3 healthy seeds, full-pipeline tag APE RMSE ranged from 0.0487176 to 0.0526469 m. The default timing and timely-spatial tests passed 3/3, while timely joint availability at the research H/V alert limits of 2/3 m was only 3.5–5.667%. Small measured error does not imply equally tight protection bounds.
+
+For SC8-U, mean paired OFF-minus-ON improvements were -0.00790838 m in APE and 0.0580596 rad in ARE across 3 seeds. Negative values denote deterioration; position and attitude effects are reported separately.
+
+For SC8-A, mean paired OFF-minus-ON improvements were 0.0923626 m in APE and -1.13562 rad in ARE across 3 seeds. Negative values denote deterioration; position and attitude effects are reported separately.
+
+For SC8-G, mean paired OFF-minus-ON improvements were -0.0677327 m in APE and -1.23141 rad in ARE across 3 seeds. Negative values denote deterioration; position and attitude effects are reported separately.
+
+For SC8-J, mean paired OFF-minus-ON improvements were 0.114792 m in APE and 0.20435 rad in ARE across 3 seeds. Negative values denote deterioration; position and attitude effects are reported separately.
