@@ -780,7 +780,12 @@ def figures():
                 if v is not None:ax.plot(v,i+(j-(len(rr)-1)/2)*.13,'o',ms=4,color='#0072B2' if p['group']=='E03' and label.startswith('SC8') else '#009E73')
             if not any(p.get('gains',{}).get(key,{}).get('off_minus_on') is not None for p in rr):ax.text(.03,i,'NA',transform=ax.get_yaxis_transform())
         ax.axvline(0,color='black',lw=.8);ax.set(yticks=range(len(labels)),yticklabels=labels if ax is axs[0,0] else [],xlabel=unit);ax.invert_yaxis()
-    finish(fig,'F04_fault_paired_gains','Positive = OFF minus ON improvement; each seed / recording shown. Real overlays are empirical; position gain does not cancel ARE degradation.')
+    counts=[]
+    for stream in ['SC8-U','SC8-A','SC8-G','SC8-J']:
+        episodes=[e for r in records if r['group']=='E03' and r['stream']==stream and r['requested_method']=='O-FULL' for e in r.get('episodes',[])]
+        imu=[e for e in episodes if e['kind']=='IMU' and e.get('exposure')=='FULL_FAULT_INTERVAL_CONFIRMED'];uwb=[e for e in episodes if e['kind']=='UWB' and e.get('exposure')=='FULL_FAULT_INTERVAL_CONFIRMED']
+        counts.append(stream.replace('SC8-','')+': '+('rejoin '+str(sum(e.get('REJOIN_EXECUTED',False) for e in imu))+'/'+str(len(imu)) if imu else '')+('; ' if imu and uwb else '')+('UWB isolation '+str(sum(e.get('ISOLATION_COMMITTED',False) for e in uwb))+'/'+str(len(uwb)) if uwb else ''))
+    finish(fig,'F04_fault_paired_gains','Positive = OFF minus ON improvement; each seed / recording shown. Position gain does not cancel ARE degradation. FULL native episode receipts (fully exposed): '+', '.join(counts)+'. Real overlays are empirical and have no equivalent qualified rejoin claim.')
     # F05 H/V actual binned Stanford counts, full scale and zoom.
     for axis in ['H','V']:
         fig,axs=sub(2,2,6.0);full_extent=max([v[axis]['full']['y_edges'][-1] for v in data['stanford'].values()],default=10)
@@ -1022,6 +1027,7 @@ def report():
     if not figure_current:lines.append('\n图表当前为早先进度版本，未与本次 metrics 摘要匹配；本报告不嵌入旧图充当新结果。W3 会重新生成并核对全部图表身份。')
     lines += ['\n## 实际困难与后续采集',
         '\n当前真实工程管线的候选拒绝、姿态大误差和处理积压属于结果；不能用仿真 raw 定理、最终历史或较短成功前缀替它背书。仅有位置改善不代表 body 姿态/bias 已观测。SFUISE 的仿真 velocity/bias 未在冻结导出接口保存，虽有源真值也为 NA_ESTIMATED_STATE_NOT_EXPORTED，属于指标接口限制；不是无真值。',
+        '\n手册补充范围的明确缺口：冻结矩阵登记了弱短 IMU、负幅和错峰，但没有独立弱幅 UWB 小矩阵，也没有另跑 S1/S2 bias 轨迹。D0/S0 与 M3 的结果不能顶替 S1/S2；不引用旧 SC7 曲线冒充本轮。S0 的 bias 包含收缩依赖原始 sample0 信息，不表示持续获得全部 bias 或 15D 可观测性。W0 额外 attempt 后本轮计划占满 160 上限，这些未登记补充不事后补点或伪称通过。',
         '\n后续可另采独立标定录制：覆盖三轴角运动、平移与不同姿态，独立测量 body/tag/IMU/GT 杆臂和时间延迟，并留完全不参与拟合的 TEST。优先记录硬件时间同步、原始逐条 range 和连续 IMU 缺口，保存提交/拒绝/发布时刻、依赖截止与原生恢复 receipt。若希望把经验结果提升为真实 raw 保证，还需独立验证初始 law、噪声/运动域/采样/anchor 映射及证明接口，不能由当前六条经验轨迹或零超界样本推导。',
         '\n这些采集与理论扩展建议不改变本轮冻结算法，也不阻止本轮仿真、经验和窗口边界的结项。']
     lines += ['\n## SC8-A01–A24 对账',table(['验收','证据/状态'],[
@@ -1048,6 +1054,7 @@ def evaluation_status(records,validation):
     checks=validation.get('final-checks.json',{}).get('result',[])
     checked=bool(checks) and all(c['returncode']==0 for c in checks)
     gaps=[r['id'] for r in records if r['status']=='EXECUTION_ERROR' or 'scoring_error' in r]
+    gaps.append('Registered scope omission: no separate weak-UWB amplitude matrix or S1/S2 bias trajectories; no historical curves substituted')
     gaps += [r['id']+': long stream did not reach final planned epoch' for r in records if r['group']=='E08' and r['stream']=='SC8-L1' and r['status'] not in ['NOT_ATTEMPTED','RUNNING'] and r.get('max_committed_epoch',0)<10000]
     gaps += [r['id']+': real engineering run censored before complete recording' for r in records if r.get('track') in ['T-REAL','T-SEMI'] and r['group']!='E00' and r['status']=='RESOURCE_LIMIT']
     historical=[r for r in records if r['group']!='E00' and r.get('historical_export_validity',{}).get('rejected_n',0)]
