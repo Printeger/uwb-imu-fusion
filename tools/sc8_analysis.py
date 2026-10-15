@@ -915,8 +915,9 @@ def figures():
                     v=fn(r)
                     if v is not None and not complete(r):ax.plot(x,v,marker=mark,fillstyle='none',ls='None',color=col)
             quality(axs[0,0],lambda r:val(r),lambda r:r.get('window_common_coverage',{}).get('complete_pose_interval',False),label,ls)
+            pl_label=('Healthy' if fault=='SC8-WH' else 'Fault')+(' LF=LI' if coupled else ' LF=300')
             for key,style in [('hpl',ls),('vpl',':')]:
-                quality(axs[0,1],lambda r,k=key:r.get('window_common_summary',{}).get(k,{}).get('mean'),lambda r,k=key:r.get('window_common_summary',{}).get(k,{}).get('n')==1000,label+' '+key[0].upper(),style)
+                quality(axs[0,1],lambda r,k=key:r.get('window_common_summary',{}).get(k,{}).get('mean'),lambda r,k=key:r.get('window_common_summary',{}).get(k,{}).get('n')==1000,pl_label+' '+key[0].upper(),style)
             axs[1,0].plot(xx,seq(lambda r:r.get('timing',{}).get('core_ms',{}).get('p95')),marker=mark,ls=ls,color=col,label=label)
             for r in rr:
                 if r['id'] in pareto_seen:continue
@@ -931,7 +932,7 @@ def figures():
     axs[0,1].set(xlabel='Window (UWB epochs; 20 Hz)',ylabel='Mean common-interval PL (m)');axs[0,1].legend(fontsize=8)
     axs[1,0].axhline(40,color='#aa3333',ls=':');axs[1,0].set(xlabel='Window (UWB epochs)',ylabel='All measurable core P95 (ms)',yscale='log');axs[1,1].set(xlabel='All measurable core P95 (ms)',ylabel='Common-interval HPL (m)',xscale='log')
     for ax in [axs[0,0],axs[0,1],axs[1,1]]:ax.set_ylim(0,ax.get_ylim()[1]*1.18)
-    axs[0,0].legend(fontsize=8,loc='lower right');axs[0,1].legend(fontsize=8,loc='lower right')
+    axs[0,0].legend(fontsize=8,loc='lower right');axs[0,1].legend(fontsize=8,loc='lower center',ncol=2,columnspacing=.6,handlelength=1.4)
     axs[1,1].text(.02,.05,'Pareto IDs (LF, LI):\n1:(30,30)  2:(100,100)\n3:(300,300)  4:(600,600)\n5:(1000,1000)\n6:(300,30)  7:(300,100)',transform=axs[1,1].transAxes,va='bottom',fontsize=8)
     if censored:axs[1,1].text(.02,.98,f'{len(censored)}/{len(wr)} stopped/refused or missing common interval.\nActual epochs and resource limits: report E05.\nNo missing APE / PL values imputed.',transform=axs[1,1].transAxes,va='top',fontsize=8)
     finish(fig,'F07_window_frontier','Offline frontier; 100–1000 epochs = 5–50 s. Quality lines require all 1000 common epochs; open points show partial intervals or censored Pareto estimates, labelled n. Bubbles use sampled RSS, not the unknown true peak. No extrapolation; replay changes with LF.')
