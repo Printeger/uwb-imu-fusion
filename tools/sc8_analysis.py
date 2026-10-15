@@ -793,7 +793,7 @@ def figures():
             axs[3,0].scatter(t[ix],np.full(ix.sum(),j),s=8,color=COLORS['O-FULL'],marker='|')
         axs[3,0].set(yticks=range(len(receipt_rows)),yticklabels=[label for _,label in receipt_rows])
     else:no(axs[2,0]);no(axs[3,0])
-    for ax in axs[:,0]:ax.axvspan(6.005,6.505,color='#cc6677',alpha=.15);ax.axvspan(6.05,6.15,color='#bb8800',alpha=.15);ax.set_xlim(0,30)
+    for ax in axs[:,0]:ax.axvspan(6.005,6.505,color='#cc6677',alpha=.15);ax.axvspan(6.05,6.20,color='#bb8800',alpha=.15);ax.set_xlim(0,30)
     for ax,label in zip(axs[:,0],['Tag APE (m)','Body ARE (rad)','Accel FD margin\n(m/s²)','Native receipt']):ax.set_ylabel(label)
     axs[0,0].set_yscale('symlog',linthresh=.1)
     axs[0,0].set_ylim(bottom=0)
