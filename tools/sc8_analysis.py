@@ -248,6 +248,8 @@ def score_entry(entry,execution,run,registry):
         console=(run/'console.log').read_text() if (run/'console.log').exists() else ''
         matches=re.findall(r'SC6 denominator scheduled=(\d+) released_imu=(\d+) enqueued_imu=(\d+) released_uwb=(\d+) enqueued_uwb=(\d+) queue_peak=(\d+) committed=(\d+) refused=(\d+)',console)
         if matches:result['source_delivery_counts']=dict(zip(['scheduled','released_imu','enqueued_imu','released_uwb','enqueued_uwb','queue_peak','committed','refused'],map(int,matches[-1])))
+        cold=re.findall(r'SC6 COLD_START initialized_ms=([0-9.e+-]+) input_audit_ms=([0-9.e+-]+) ready_ms=([0-9.e+-]+)',console)
+        if cold:result['cold_start_ms']=dict(zip(['provider_and_estimator_init','input_audit_export','total_ready'],map(float,cold[-1])))
         result['semantics']='ACTUAL_NATIVE_COMMITTED_TAG; raw conditional simulation only'
         result['phase_errors']={}
         for name,rr in [('healthy_prefix',[r for r in actual if value(r,'epoch')<121]),
@@ -264,6 +266,9 @@ def score_entry(entry,execution,run,registry):
                 score,arrays=metric.evaluate(estimate,truth,lever)
                 score['bias_error']='NA_NO_INDEPENDENT_REAL_GT' if entry['track']!='T-SIM' else 'NA_ESTIMATED_BIAS_NOT_EXPORTED'
                 score['source_pose_receipt']='FIRST_EMITTED_TUM' if entry['requested_method']=='SFUISE' else 'COMPLETE_POST_COMMIT_STATE_ROWS; fixed physical tag conversion cross-checked against complete TUM rows; partial final buffer refused'
+                if entry['requested_method']=='SFUISE':score['velocity_error']='NA_ESTIMATED_VELOCITY_NOT_EXPORTED' if entry['track']=='T-SIM' else 'NA_NO_INDEPENDENT_REAL_VELOCITY_GT'
+                elif entry['track']=='T-SIM':score.update(dataset_sim_errors(run,inputs,entry,registry))
+                else:score['velocity_error']='NA_NO_INDEPENDENT_REAL_VELOCITY_GT'
                 result['views'][view]=score
                 if entry['track']=='T-SIM':phase_manifest=registry['cases'][entry['stream']]
                 elif 'overlay' in doc:
@@ -316,6 +321,7 @@ def score_entry(entry,execution,run,registry):
             result['output_rate_hz']=len(cutoff)/max(1e-9,float(gt.time[-1]-gt.time[0]))
             result['observed_cutoff_vs_numeric_cutoff_separated']='observed_sensor_cutoff_ns' in observer[0]
         result['integrity']=dict(statistical_qualification='UNQUALIFIED_REAL_SOURCE' if entry['track']!='T-SIM' else 'NO_RAW_PL_METHOD',HPL=None,VPL=None,publication_protected=0)
+    result['thread_policy_semantics']='Configured BLAS env 1; native TBB control 1; general candidate workers 1. ROS/system helper threads are not a measured one-thread guarantee; compare actual root CPU separately.'
     duration=common.csv_duration(inputs/'imu.csv');result['source_duration_s']=duration
     cpu=result.get('root_cpu_s')
     if cpu is None or not math.isfinite(cpu):cpu=execution.get('children_cpu_s') if entry['requested_method']!='SFUISE' else None
@@ -347,9 +353,11 @@ def evaluate():
         p=CACHE/name
         if p.exists():validation[name]=dict(sha256=common.sha256(p),result=json.loads(p.read_text()))
     counts=dict(Counter(r['status'] for r in records));assert sum(counts.values())==len(registry['runs'])
+    attempt_labels=dict(Counter(a['status'] for a in attempts))
+    exit_labels=dict(Counter('RUNNING' if a['status']=='RUNNING' else 'EXIT_0' if a.get('returncode')==0 else 'EXIT_NONZERO' if a.get('returncode') is not None else 'NO_EXIT_CODE_RECORDED' for a in attempts))
     pairs=paired_results(records,registry)
     metrics=dict(schema='sc8-metrics-v1',status='IN_PROGRESS',registry_sha256=common.sha256(ROOT/'config/sc8_experiments.yaml'),
-        registered=len(registry['runs']),logical_run_status_counts=counts,attempt_processes=len(attempts),
+        registered=len(registry['runs']),logical_run_status_counts=counts,attempt_processes=len(attempts),attempt_status_counts=attempt_labels,attempt_exit_counts=exit_labels,
         runs=records,attempts=attempts,paired=pairs,overlay_effects=overlay_effects(records,registry),unit_aggregates=unit_aggregates(records),ablation_comparisons=ablation_comparisons(records,registry),validation=validation,auxiliary_solver_audits=registry.get('auxiliary_solver_audits'),statistical_unit='SEED_OR_RECORDING_NOT_FRAMES')
     metrics['status'],metrics['execution_gaps']=evaluation_status(records,validation)
     save(OUT/'SC8_METRICS.json',metrics)
@@ -847,7 +855,7 @@ def report():
         '\n\n'.join(findings(metrics)),
         '\n## 身份、预算与证据边界',
         f"\n入口 HEAD `{registry['entry_head']}`；计算冻结提交 `{f.get('identity',{}).get('head','NA')}`。实际源内容/ELF/生产 DSO、loaded libraries、编译环境、平台、噪声、risk/birth q、AL、窗口 guard 和原合同摘要在 [冻结登记](../../config/sc8_experiments.yaml)；未升级 SFUISE、未 push。分析模块可在计算冻结后继续开发，不改变求解。",
-        f"\n登记 {metrics['registered']} 个唯一逻辑运行；当前状态 {counts}，合计 {sum(counts.values())}。实际 attempt {metrics['attempt_processes']}，另有辅助 ROS 求解 {sum(x.get('processes',0) for x in registry.get('auxiliary_solver_audits',[]))}，上限 160。W0 额外 attempt（包括预检失败）全部保留，SFUISE 首发/历史共用一个进程。E06 两次确认不增加独立精度样本。",
+        f"\n登记 {metrics['registered']} 个唯一逻辑运行；当前状态 {counts}，合计 {sum(counts.values())}。实际 attempt {metrics['attempt_processes']}，另有辅助 ROS 求解 {sum(x.get('processes',0) for x in registry.get('auxiliary_solver_audits',[]))}，上限 160。W0 额外 attempt（包括预检失败）全部保留（版本状态与实际 exit code 分开，见 JSON），SFUISE 首发/历史共用一个进程。E06 两次确认不增加独立精度样本。",
         '\n- **T-SIM**：当前注册物理 law 下的条件 raw 保证；资格与实际数值/receipt 逐帧核验，仍无真实应用资格。\n- **T-REAL**：原始真实录制上的经验表现；SC7 raw producer 拒绝，不放宽采样率/噪声/运动域/anchor guard。requested O-FULL 实际明确为 **O-FDE-ENG**，off 为 **O-ENG-NOFDE**，均不冒充 SC7 恢复/PL。\n- **T-SEMI**：R2/R3 原始输入上叠加登记故障，GT 不变；原录制本身未认证健康，不将天然异常称已知 false alarm。',
         '\nSFUISE 固定 SHA `75bf5a32f1a8e5c3046a5bd1a1ddf659fa996f7d`，官方测距剔除保持。插入式只读数值/时间观察与 lossless Float64 ToA wire 单独披露：内部仍为原 TOAData double，剥离插入后原数值语句逐字节相同；双实例确定性检查覆盖状态、标定、knot 与官方剔除状态。原始 float32 wire 会改变量测，故正式流使用与 ours 逐值一致的 double；不是改变噪声/残差/优化器。',
         '\n## E00：数据、CAL/TEST 与因果接口',
@@ -900,6 +908,10 @@ def report():
     figure_index=OUT/'SC8_FIGURES.json'
     if figure_index.exists():
         for item in json.loads(figure_index.read_text())['figures']:lines.append(f"\n![{item['id']}](figures/{item['id']}.png)\n\n{item['note']} [SVG](figures/{item['id']}.svg)")
+    lines += ['\n## 实际困难与后续采集',
+        '\n当前真实工程管线的候选拒绝、姿态大误差和处理积压属于结果；不能用仿真 raw 定理、最终历史或较短成功前缀替它背书。仅有位置改善不代表 body 姿态/bias 已观测。SFUISE 的仿真 velocity/bias 未在冻结导出接口保存，虽有源真值也为 NA_ESTIMATED_STATE_NOT_EXPORTED，属于指标接口限制；不是无真值。',
+        '\n后续可另采独立标定录制：覆盖三轴角运动、平移与不同姿态，独立测量 body/tag/IMU/GT 杆臂和时间延迟，并留完全不参与拟合的 TEST。优先记录硬件时间同步、原始逐条 range 和连续 IMU 缺口，保存提交/拒绝/发布时刻、依赖截止与原生恢复 receipt。若希望把经验结果提升为真实 raw 保证，还需独立验证初始 law、噪声/运动域/采样/anchor 映射及证明接口，不能由当前六条经验轨迹或零超界样本推导。',
+        '\n这些采集与理论扩展建议不改变本轮冻结算法，也不阻止本轮仿真、经验和窗口边界的结项。']
     lines += ['\n## SC8-A01–A24 对账',table(['验收','证据/状态'],[
         ('A01','入口/冻结 identity、ELF/DSO/libraries/platform；旧报告只库存；生产合同 hash 未改'),('A02','E00 九条库存，六条固定测试，备用未启用'),('A03','单位/frame/lever/offset/time/GT/批次新审计；899/899 direct/ROS'),('A04','CAL-W 与 R3 prefix20 +2s 隔离，test-involved 明示，无逐方法测试拟合'),('A05','三通道和 requested/effective 分离；真实 raw 拒绝/PL NA'),('A06','SF 固定 pin、官方剔除、首发/历史/cutoff/revision，数值观察双实例检查'),('A07','共同 source-only、native 逐值 audit；lossless bag parity，原始数据不改'),('A08','12 项独立 scorer 测试 + evo 对口径'),('A09',f"E01: {dict(Counter(r['status'] for r in records if r['group']=='E01'))}"),('A10',f"E02: {dict(Counter(r['status'] for r in records if r['group']=='E02'))}; 工程结果不叫 FULL raw"),('A11',f"E03: {dict(Counter(r['status'] for r in records if r['group']=='E03'))}; 原生 episode 与真实增量/阶段分开"),('A12','seed/录制统计，负收益保留，无帧级伪独立 CI'),('A13','实际 H/V Stanford 分母对账，AL/SI/late/拒绝分层，零 HMI 不当证明'),('A14',f"E05: {dict(Counter(r['status'] for r in records if r['group']=='E05'))}; 7 唯一合法配置"),('A15','同进程 LF+2 canary、边缘化与 resource/inflight 右截断；公共 1101–2100，缺数据 NA'),('A16','逐 run core/sink/age/CPU/RTF；exclusive 均值闭合，P95不相加'),('A17','40/50 ms 和95%全计划分母；真实及时估计≠raw资格'),('A18',f"E07: {dict(Counter(r['status'] for r in records if r['group']=='E07'))}; 合并开关与 M/A/P 明示"),('A19',f"E08: {dict(Counter(r['status'] for r in records if r['group']=='E08'))}; late gaps={len(late)}"),('A20','F00–F10 实际图/精简绘图数据；NA和overflow保留' if figure_index.exists() else 'PENDING'),('A21','最终相关回归 PASS' if checked else 'PENDING：最终相关回归未全部结束'),('A22',str(counts)+f"; attempts={metrics['attempt_processes']}，辅助另计，完整版本/失败身份留存"),('A23','唯一中文报告+English Results，实际冻结 registry/metrics/plot CLI'),('A24','阶段本地 commit；只清理本轮 owned cache，保留原始数据/用户旧证据，不 push')]),
         '\n## 复现与续跑',
@@ -981,3 +993,92 @@ def findings(metrics):
     window=[r for r in rr if r['group']=='E05' and r['status'] not in ['NOT_ATTEMPTED','RUNNING']]
     if window:paragraphs.append(f"窗口前沿已结束 {len(window)}/14：资源截断 {sum(r['status']=='RESOURCE_LIMIT' for r in window)}，进入公共 1101–2100 评分区间 {sum(bool(r.get('views')) for r in window)}。窗口/回放同时变化，缺失公共区间不外推；1000 历元是否经历边缘化只认实际 receipt。")
     return paragraphs
+
+
+def audit():
+    """Final read-only reconciliation. No solver, input mutation or cleanup."""
+    metrics=json.loads((OUT/'SC8_METRICS.json').read_text());registry=yaml.safe_load((ROOT/'config/sc8_experiments.yaml').read_text())
+    from sc8_experiments import current_identity
+    now=current_identity();frozen=registry['frozen']['identity'];checks=[]
+    def check(name,condition,detail=None):checks.append(dict(check=name,passed=bool(condition),detail=detail))
+    check('frozen_computation',now['computational_content_sha256']==frozen['computational_content_sha256'])
+    check('frozen_solver_ELF_and_DSO',now['binaries']==frozen['binaries'])
+    check('all_registered_attempted',all(r['status'] not in ['NOT_ATTEMPTED','RUNNING'] for r in metrics['runs']))
+    check('logical_status_partition',sum(metrics['logical_run_status_counts'].values())==len(registry['runs'])==len(metrics['runs']))
+    auxiliary=sum(a.get('processes',0) for a in registry.get('auxiliary_solver_audits',[]))
+    check('solver_process_ceiling',metrics['attempt_processes']+auxiliary<=160,dict(attempts=metrics['attempt_processes'],auxiliary=auxiliary))
+    check('scoring_errors_retained_and_absent',not any('scoring_error' in r for r in metrics['runs']),[r['id'] for r in metrics['runs'] if 'scoring_error' in r])
+    pairbad=[p['stream'] for p in metrics.get('paired',[]) if not p['input_digests_equal']]
+    check('main_physical_input_pairing',not pairbad,pairbad)
+    baseline=[r for r in metrics['runs'] if r['group']=='E01' and r['stream']=='SC8-H' and r.get('seed')==20261020]
+    full=next((r for r in baseline if r['requested_method']=='O-FULL'),{})
+    nominal=next((r for r in baseline if r['requested_method']=='O-NOM'),{})
+    for key in ['ape_m','are_rad','velocity_error','accel_bias_error','gyro_bias_error']:
+        a=full.get('views',{}).get('O-FULL',{}).get(key,{}).get('rmse');b=nominal.get('views',{}).get('O-NOM',{}).get(key,{}).get('rmse')
+        check('healthy_full_nominal_same_path_'+key,a is not None and b is not None and abs(a-b)<1e-12)
+    native=[];paritybad=[]
+    byid={e['id']:e for e in registry['runs']}
+    for r in metrics['runs']:
+        if r['group']=='E00' or r.get('track')!='T-SIM' or r['requested_method'] in ['O-NOM','SFUISE']:continue
+        entry=byid[r['id']];expected=entry.get('epochs',registry['cases'][entry['stream']]['epochs']);p=r.get('native_input_parity',{})
+        if p.get('status')!='PASS_EXACT_PHYSICAL_PREFIX' or p.get('imu')!=expected*10+1 or p.get('uwb')!=expected*8:paritybad.append(r['id'])
+        integ=r.get('integrity',{})
+        if 'axes' not in integ:continue
+        native.append(r['id'])
+        check(r['id']+': denominator',integ['planned']==integ['spatial_valid']+integ['refused']+integ['missing'])
+        for axis in ['H','V']:
+            for al,v in integ['axes'][axis]['AL'].items():check(r['id']+f': {axis} AL{al} partition',sum(v[k] for k in ['nominal_admissible','MI_candidate','HMI_candidate','AL_unavailable'])==integ['spatial_valid'])
+        if r.get('exclusive_means_ms'):check(r['id']+': exclusive mean closure',abs(sum(r['exclusive_means_ms'].values())-r['exclusive_mean_core_ms'])<1e-8)
+    check('native_actual_physical_input_parity_all_formal',not paritybad,paritybad)
+    for name in ['input-checks/result.json','input-checks/bag-parity.json','input-checks/all-bag-parity.json','sfuise_observer/check.json','equivalence/R3/equivalence.json']:
+        result=metrics.get('validation',{}).get(name,{}).get('result',{})
+        check(name,result.get('status')=='PASS' or result.get('returncode')==0)
+    final=metrics.get('validation',{}).get('final-checks.json',{}).get('result',[])
+    check('focused_final_regression',bool(final) and all(r['returncode']==0 for r in final))
+    fig_index=json.loads((OUT/'SC8_FIGURES.json').read_text());check('figure_families',len(fig_index['figures'])==12)
+    check('figure_metrics_identity',fig_index['metrics_sha256']==common.sha256(OUT/'SC8_METRICS.json'))
+    check('figure_plotdata_identity',fig_index['plotdata_sha256']==common.sha256(OUT/'SC8_PLOTDATA.json'))
+    from PIL import Image
+    artifacts={}
+    for family in fig_index['figures']:
+        for extension in ['png','svg']:
+            p=OUT/'figures'/(family['id']+'.'+extension);check(p.name,p.is_file() and p.stat().st_size>0)
+            if p.exists():artifacts[str(p.relative_to(OUT))]=common.sha256(p)
+        with Image.open(OUT/'figures'/(family['id']+'.png')) as im:
+            check(family['id']+': 300dpi_180mm',abs(im.width-180/25.4*300)<=2 and abs(im.info.get('dpi',(0,0))[0]-300)<1)
+    pdata=json.loads((OUT/'SC8_PLOTDATA.json').read_text())
+    for method,axes in pdata['stanford'].items():
+        for axis,views in axes.items():
+            for view,h in views.items():check(f'{method} {axis} {view}: actual histogram tally',sum(np.asarray(a).sum() for a in h['layers'].values())+h['outside']==h['total'])
+    result=dict(status='PASS' if all(c['passed'] for c in checks) else 'FAIL',checks=checks,artifacts=artifacts,
+        metrics_status=metrics['status'],execution_gaps=metrics.get('execution_gaps'),
+        numerical_regression_scope='Deterministic unit tests excluded from experimental solver budget by Handbook §7; ROS actual counterpart conservatively counted.',
+        cleanup='NOT_PERFORMED_BY_AUDIT')
+    save(OUT/'SC8_AUDIT.json',result);print('AUDIT',result['status'],'checks',len(checks),flush=True)
+    for c in checks:
+        if not c['passed']:print('FAILED',c['check'],c['detail'],flush=True)
+    return result
+
+
+
+def dataset_sim_errors(run,inputs,entry,registry):
+    rr=rows(run/'states.csv');bias={}
+    with (inputs/'raw.input').open() as f:
+        for line in f:
+            a=line.split()
+            if a and a[0]=='imu':bias[int(a[2])]=np.array(list(map(float.fromhex,a[16:22])))
+    tt=np.array([value(r,'t') for r in rr]);motion=registry['cases'][entry['stream']]['motion']
+    if motion=='M0':velocity=np.cos(tt[:,None]*[.5,.4,.3])*[.05,.032,.015]
+    else:velocity=np.column_stack([.48*np.cos(.6*tt),.3*np.cos(.5*tt),.16*np.cos(.4*tt)])
+    actual=np.array([[value(r,'v'+k) for k in 'xyz'] for r in rr]);ba=[];bg=[]
+    for r,t in zip(rr,tt):
+        truth=bias[round(t*1e9)];observed=np.array([value(r,k) for k in ['bax','bay','baz','bgx','bgy','bgz']]);ba.append(np.linalg.norm(observed[:3]-truth[:3]));bg.append(np.linalg.norm(observed[3:]-truth[3:]))
+    return dict(velocity_error=metric.summary(np.linalg.norm(actual-velocity,axis=1)),
+        accel_bias_error=metric.summary(ba),gyro_bias_error=metric.summary(bg),
+        true_bias='REGISTERED_SIM_RW_TRUTH from source-only latent audit; evaluation-only, no estimator feedback')
+
+if __name__=='__main__':
+    import sys
+    if sys.argv[1:]==['audit']:
+        raise SystemExit(0 if audit()['status']=='PASS' else 1)
+    raise SystemExit('Use: python3 tools/sc8_analysis.py audit (after the registered matrix and final regressions)')
