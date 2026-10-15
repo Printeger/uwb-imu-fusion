@@ -942,7 +942,7 @@ def figures():
             ph,method,metric_kind=key.split('|')
             if ph!=phase or metric_kind!=kind or not d['n']:continue
             ax.plot(d['x'],d['cdf'],color=color(method),label=f"{method} N={d['n']}")
-        ax.axvline(40 if kind=='core' else 50,color='#aa3333',ls=':',lw=.9);ax.set(title=f'{phase}: {kind}',xlabel='Latency (ms)',ylabel='Empirical CDF',xscale='symlog',ylim=(0,1.02));ax.legend(fontsize=8)
+        ax.axvline(40 if kind=='core' else 50,color='#aa3333',ls=':',lw=.9);ax.set(title=f'{phase}: {kind}',xlabel='Latency (ms)',ylabel='Empirical CDF',xscale='symlog',ylim=(0,1.02));ax.set_xlim(left=0);ax.legend(fontsize=8)
     ax=axs[2,1];groups=[];breakdowns=[]
     for stream,label in [('SC8-H','Healthy'),('SC8-J','Joint fault')]:
         rr=[r for r in records if r['stream']==stream and r['group'] in ['E01','E03'] and r['requested_method']=='O-FULL' and r.get('exclusive_means_ms')]
@@ -956,7 +956,7 @@ def figures():
     if breakdowns:
         for i,(label,keys) in enumerate(merged.items()):
             vv=[sum(b.get(k,0) for k in keys) for b in breakdowns];ax.bar(groups,vv,bottom=bottom,label=label,color=palette[i]);bottom+=vv
-        ax.set_ylim(0,max(bottom)*1.9)
+        ax.set_ylim(0,max(bottom)*2.5)
     else:no(ax)
     ax.set(title='O-FULL exclusive mean; closes to total',ylabel='Mean service time (ms)');ax.legend(fontsize=8,loc='upper right')
     finish(fig,'F08_latency_and_breakdown','Every measurable slow/abort frame retained; ECDF is descriptive. SF software source clock ±1 ms plus jitter; root CPU/RTF separate from bag waits.')
