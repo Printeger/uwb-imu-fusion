@@ -283,6 +283,7 @@ def score_entry(entry,execution,run,registry):
         result['last_recorded_epoch']=max([int(value(r,'epoch')) for r in native],default=0)
         result['actual_max_epoch']=max([int(value(r,'epoch')) for r in native if r.get('status')!='SOURCE_GAP_OR_ABORT'],default=0)
         result['max_committed_epoch']=max([int(value(r,'epoch')) for r in actual],default=0)
+        result['native_failures']=[dict(epoch=int(value(r,'epoch')),status=r.get('status'),reason=r.get('recovery')) for r in native if r.get('status')=='ABORT']
         result['x0_retired']=any(value(r,'x0')==0 for r in actual)
         result['episodes']=native_episodes(native,manifest,entry['pace']=='paced')
         if not manifest.get('faults') and not manifest.get('uwb_faults'):
@@ -967,7 +968,7 @@ def figures():
     comparison={c['id']:c for c in metrics.get('ablation_comparisons',[])}
     for r in rr:
         names={'O-ABL-SUPPORT':'support off','O-ABL-JOINT':'joint + support off','O-ABL-G2':'old numeric (80)'}
-        labels.append(r['stream'].replace('SC8-','')+' / '+names.get(r['requested_method'],r['requested_method']))
+        labels.append(r['stream'].replace('SC8-','')+' / '+names.get(r['requested_method'],r['requested_method'])+('\nREFUSED: no qualified state' if r['status']=='FAIL' and not r.get('views') else ''))
         c=comparison.get(r['id'],{});a=c.get('A_common',{});pl=c.get('PL_common',{});p=c.get('P_common',{})
         raw=[a.get('ablated',{}).get('ape_m',{}).get('rmse'),a.get('ablated',{}).get('are_rad',{}).get('rmse'),pl.get('hpl',{}).get('ablated',{}).get('mean'),pl.get('vpl',{}).get('ablated',{}).get('mean'),p.get('ablated',{}).get('p95')]
         base=[a.get('full',{}).get('ape_m',{}).get('rmse'),a.get('full',{}).get('are_rad',{}).get('rmse'),pl.get('hpl',{}).get('full',{}).get('mean'),pl.get('vpl',{}).get('full',{}).get('mean'),p.get('full',{}).get('p95')]
@@ -1269,6 +1270,10 @@ def findings(metrics):
     if base and large:
         a=base['views']['O-FULL']['ape_m']['rmse'];b=large['views']['O-FULL']['ape_m']['rmse'];p=base['timing']['core_ms']['p95'];q=large['timing']['core_ms']['p95']
         paragraphs.append(f"同一注册健康 seed、完整公共 1000 历元：30/30→1000/1000 的 APE 为 {a:.7g}→{b:.7g} m，HPL/VPL 几乎未变；core P95 为 {p:.6g}→{q:.6g} ms。该流没有可观的误差/界收益，却付出明显成本；这是一条流的成本前沿，不推广为所有运动或几何都无大窗收益。")
+    for r in rr:
+        if r['group']=='E07' and r.get('native_failures'):
+            fail=r['native_failures'][0]
+            paragraphs.append(f"消融 {r['stream']}/{r['requested_method']} 在历元 {fail['epoch']} 返回 {fail['reason']}，最后提交 {r.get('max_committed_epoch',0)}/{r.get('planned_epochs')}。无合格轨迹时精度与 PL 为 NA；实际 abort 耗时和全部计划分母仍保留，不补跑或放宽资格。")
     for r in rr:
         if r['group']=='E08' and r['status'] not in ['NOT_ATTEMPTED','RUNNING']:
             paragraphs.append(f"长流 {r['stream']}/{r['requested_method']}：实际最后提交 {r.get('max_committed_epoch',0)}/{r.get('planned_epochs')}，进程 {r['status']}；最后实际服务历元 {r.get('actual_max_epoch',0)}，source queue 记录 {r.get('source_delivery_counts',{})}。未提交后缀和未确认到达的晚期故障不算恢复成功。")
