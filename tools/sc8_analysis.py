@@ -930,7 +930,7 @@ def figures():
     axs[0,0].set(xlabel='LF = LI, or LI at LF=300 (UWB epochs)',ylabel='Tag APE RMSE (m)',title='Common epochs 1101–2100');axs[0,0].legend(fontsize=8)
     axs[0,1].set(xlabel='Window (UWB epochs; 20 Hz)',ylabel='Mean common-interval PL (m)');axs[0,1].legend(fontsize=8)
     axs[1,0].axhline(40,color='#aa3333',ls=':');axs[1,0].set(xlabel='Window (UWB epochs)',ylabel='All measurable core P95 (ms)',yscale='log');axs[1,1].set(xlabel='All measurable core P95 (ms)',ylabel='Common-interval HPL (m)',xscale='log')
-    for ax in [axs[0,0],axs[0,1],axs[1,1]]:ax.set_ylim(bottom=0)
+    for ax in [axs[0,0],axs[0,1],axs[1,1]]:ax.set_ylim(0,ax.get_ylim()[1]*1.18)
     axs[0,0].legend(fontsize=8,loc='lower right');axs[0,1].legend(fontsize=8,loc='lower right')
     axs[1,1].text(.02,.05,'Pareto IDs (LF, LI):\n1:(30,30)  2:(100,100)\n3:(300,300)  4:(600,600)\n5:(1000,1000)\n6:(300,30)  7:(300,100)',transform=axs[1,1].transAxes,va='bottom',fontsize=8)
     if censored:axs[1,1].text(.02,.98,f'{len(censored)}/{len(wr)} stopped/refused or missing common interval.\nActual epochs and resource limits: report E05.\nNo missing APE / PL values imputed.',transform=axs[1,1].transAxes,va='top',fontsize=8)
@@ -979,7 +979,7 @@ def figures():
         finite=arr[np.isfinite(arr)];limit=max(1.,float(np.max(abs(finite)))) if len(finite) else 1.
         ax.imshow(arr,cmap='RdBu_r',vmin=-limit,vmax=limit,aspect='auto')
         for i in range(len(arr)):
-            for j in range(5):ax.text(j,i,number(table[i][j])+('\n'+f'{arr[i,j]:+.1f}%' if math.isfinite(arr[i,j]) else '\nNA'),ha='center',va='center',fontsize=8)
+            for j in range(5):ax.text(j,i,number(table[i][j])+('\n'+f'{arr[i,j]:+.1f}%' if math.isfinite(arr[i,j]) else ''),ha='center',va='center',fontsize=8,color='white' if math.isfinite(arr[i,j]) and abs(arr[i,j])>.55*limit else 'black')
         ax.set(yticks=range(len(labels)),yticklabels=labels,xticks=range(5),xticklabels=['APE\n(m)','ARE\n(rad)','HPL\n(m)','VPL\n(m)','P95\n(ms)']);ax.grid(False)
     else:no(ax)
     ax.set_title('Raw values + change from FULL (%)')
@@ -1016,7 +1016,7 @@ def figures():
     for ax,label in zip(axs[:,0],['Tag APE (m)','H / V PL (m)','20 emitted-state\nrolling core P95 (ms)','Resident memory (MiB)']):ax.set_ylabel(label)
     axs[0,0].legend(ncol=3,fontsize=8);axs[-1,0].set_xlabel('Absolute sensor time (s); no restart or risk reset')
     if not long:no(axs[0,0])
-    finish(fig,'F10_long_streams','T-SIM L0=5000, L1=10000 planned epochs. Blank suffixes have no committed output; resource/receipt counts and ARE/bias/slots in report + plot data.')
+    finish(fig,'F10_long_streams','T-SIM L0=5000, L1=10000 planned epochs. Faint dashed traces use right axes (ARE / slots). Blank suffixes have no committed output; receipt counts and bias in report + plot data.')
     save(OUT/'SC8_FIGURES.json',dict(figures=figlog,plotdata_sha256=common.sha256(source),metrics_sha256=common.sha256(OUT/'SC8_METRICS.json')))
     print('FIGURES',len(figlog),'families, PNG + editable SVG',flush=True)
 
@@ -1271,6 +1271,10 @@ def findings(metrics):
     if base and large:
         a=base['views']['O-FULL']['ape_m']['rmse'];b=large['views']['O-FULL']['ape_m']['rmse'];p=base['timing']['core_ms']['p95'];q=large['timing']['core_ms']['p95']
         paragraphs.append(f"同一注册健康 seed、完整公共 1000 历元：30/30→1000/1000 的 APE 为 {a:.7g}→{b:.7g} m，HPL/VPL 几乎未变；core P95 为 {p:.6g}→{q:.6g} ms。该流没有可观的误差/界收益，却付出明显成本；这是一条流的成本前沿，不推广为所有运动或几何都无大窗收益。")
+    fault_windows=[next((r for r in window if r['stream']=='SC8-WJ' and r['window']==w and r.get('window_common_coverage',{}).get('complete_pose_interval')),None) for w in [[30,30],[1000,1000]]]
+    if all(fault_windows):
+        a,b=fault_windows
+        paragraphs.append(f"同一重复故障流的完整公共区间，30/30→1000/1000 的 APE 则由 {a['views']['O-FULL']['ape_m']['rmse']:.7g} 降至 {b['views']['O-FULL']['ape_m']['rmse']:.7g} m。健康/故障窗口收益不同；联动改变 LF、LI 与回放，不能把该收益单独归因于 PL，且大窗仍明显非实时。")
     for r in rr:
         if r['group']=='E07' and r.get('native_failures'):
             fail=r['native_failures'][0]
