@@ -761,9 +761,11 @@ def figures():
         if data.get('joint_raw_range'):
             raw=data['joint_raw_range'];range_ax=axs[2,0].twinx();range_ax.plot(raw['t'],raw['error_m'],color='#D55E00',lw=.8,label='Anchor range error');range_ax.set_ylabel('Range error (m)')
             handles,labels=axs[2,0].get_legend_handles_labels();h2,l2=range_ax.get_legend_handles_labels();axs[2,0].legend(handles+h2,labels+l2,ncol=3,fontsize=8,loc='upper right')
-        for j,(key,label) in enumerate([('imu_alarm','FD'),('bridge','Bridge'),('repair','Prior repair'),('rejoined','Rejoin')]):
-            v=np.asarray(d[key]);ix=v==1;axs[3,0].scatter(t[ix],np.full(ix.sum(),j),s=8,color=COLORS['O-FULL'],marker='|')
-        axs[3,0].set(yticks=range(4),yticklabels=['FD','Bridge','Prior repair','Rejoined state'])
+        receipt_rows=[('imu_alarm','IMU FD'),('excluded','UWB isolation'),('bridge','Bridge'),('repair','Prior repair'),('rejoined','Rejoined state')]
+        for j,(key,label) in enumerate(receipt_rows):
+            v=np.asarray(d[key]);ix=v>=0 if key=='excluded' else v==1
+            axs[3,0].scatter(t[ix],np.full(ix.sum(),j),s=8,color=COLORS['O-FULL'],marker='|')
+        axs[3,0].set(yticks=range(len(receipt_rows)),yticklabels=[label for _,label in receipt_rows])
     else:no(axs[2,0]);no(axs[3,0])
     for ax in axs[:,0]:ax.axvspan(6.005,6.505,color='#cc6677',alpha=.15);ax.axvspan(6.05,6.15,color='#bb8800',alpha=.15);ax.set_xlim(0,30)
     for ax,label in zip(axs[:,0],['Tag APE (m)','Body ARE (rad)','Accel FD margin\n(m/s²)','Native receipt']):ax.set_ylabel(label)
