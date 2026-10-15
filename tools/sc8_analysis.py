@@ -886,7 +886,11 @@ def figures():
     ax.set(title='O-FULL exclusive mean; closes to total',ylabel='Mean service time (ms)');ax.legend(fontsize=8,loc='upper right')
     finish(fig,'F08_latency_and_breakdown','Every measurable slow/abort frame retained; ECDF is descriptive. SF software source clock ±1 ms plus jitter; root CPU/RTF separate from bag waits.')
     # F09 legal ablations; raw values, no mixed-window causal claim.
-    fig,axs=sub(2,2,7.3);rr=[r for r in records if r['group']=='E07'];labels=[];table=[];percent=[]
+    fig=plt.figure(figsize=(180/25.4,8.0),constrained_layout=True)
+    layout=fig.add_gridspec(3,2,height_ratios=[2.4,1.2,2.0])
+    axs=np.array([[fig.add_subplot(layout[0,:]),fig.add_subplot(layout[1,:])],
+                  [fig.add_subplot(layout[2,0]),fig.add_subplot(layout[2,1])]])
+    rr=[r for r in records if r['group']=='E07'];labels=[];table=[];percent=[]
     comparison={c['id']:c for c in metrics.get('ablation_comparisons',[])}
     for r in rr:
         names={'O-ABL-SUPPORT':'support off','O-ABL-JOINT':'joint + support off','O-ABL-G2':'old numeric (80)'}
