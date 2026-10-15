@@ -221,9 +221,10 @@ compile_commands.json
 /sc5-open-*/
 /sc6-*/
 /sc7-*/
-/sc[1-7]*.csv
-/sc[1-7]*.json
-/sc[1-7]*.xml
+/sc8-*/
+/sc[1-8]*.csv
+/sc[1-8]*.json
+/sc[1-8]*.xml
 /sc6*.log
 
 # Open rolling direct-run outputs; default .cache/sc5-open/ is covered above.
