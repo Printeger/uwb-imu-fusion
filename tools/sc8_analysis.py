@@ -720,7 +720,7 @@ def figures():
         reference=data.get('reference_tracks',{}).get(rid)
         if reference:
             tt,gg=display_with_gaps(np.asarray(reference['t']),np.asarray(reference['p']),reference.get('gap_intervals',[]))
-            axs[i,0].plot(gg[:,0],gg[:,1],'k-',lw=1,label='GT');axs[i,1].plot(tt,gg[:,2],'k-',lw=1)
+            axs[i,0].plot(gg[:,0],gg[:,1],'k-',lw=1,label='GT');axs[i,1].plot(tt,gg[:,2],'k-',lw=1,label='GT')
         elif cc:
             c=max(cc,key=lambda c:len(c['t']));gt=np.asarray(c['truth']);tt,gg=display_with_gaps(np.asarray(c['t']),gt,c.get('gap_intervals',[]));axs[i,0].plot(gg[:,0],gg[:,1],'k-',lw=1,label='GT');axs[i,1].plot(tt,gg[:,2],'k-',lw=1)
         if not cc:no(axs[i,0]);no(axs[i,1])
@@ -729,11 +729,11 @@ def figures():
             axs[i,0].ticklabel_format(style='sci',axis='both',scilimits=(0,0),useMathText=True)
             if reference:
                 gp=np.asarray(reference['p']);rt=np.asarray(reference['t']);low=gp.min(axis=0);high=gp.max(axis=0);pad=np.maximum((high-low)*.15,.2)
-                zoom=axs[i,0].inset_axes([.54,.05,.43,.43]);zoom.set_title('GT neighborhood',fontsize=8)
+                zoom=axs[i,0].inset_axes([.54,.18,.43,.40]);zoom.set_title('GT neighborhood',fontsize=8)
                 for c in cc:
                     tt,pp=display_with_gaps(np.asarray(c['t']),np.asarray(c['estimate']),c.get('gap_intervals',[]));zoom.plot(pp[:,0],pp[:,1],color=color(c['view']),ls='--' if c['view']=='S-FINAL' else '-',lw=.65)
                 tt,gg=display_with_gaps(rt,gp,reference.get('gap_intervals',[]));zoom.plot(gg[:,0],gg[:,1],'k-',lw=.7);zoom.set(xlim=(low[0]-pad[0],high[0]+pad[0]),ylim=(low[1]-pad[1],high[1]+pad[1]));zoom.tick_params(labelsize=8)
-                zoomz=axs[i,1].inset_axes([.50,.65,.47,.30]);zoomz.set_title('GT height neighborhood',fontsize=8)
+                zoomz=axs[i,1].inset_axes([.50,.50,.47,.32]);zoomz.set_title('GT neighborhood',fontsize=8)
                 for c in cc:
                     tt,pp=display_with_gaps(np.asarray(c['t']),np.asarray(c['estimate']),c.get('gap_intervals',[]));zoomz.plot(tt,pp[:,2],color=color(c['view']),ls='--' if c['view']=='S-FINAL' else '-',lw=.65)
                 zoomz.plot(rt,gp[:,2],'k-',lw=.7);zoomz.set(xlim=(rt[0],rt[-1]),ylim=(low[2]-pad[2],high[2]+pad[2]));zoomz.tick_params(labelsize=8)
@@ -759,6 +759,7 @@ def figures():
     for ax in axs[:,0]:ax.axvspan(6.005,6.505,color='#cc6677',alpha=.15);ax.axvspan(6.05,6.15,color='#bb8800',alpha=.15);ax.set_xlim(0,30)
     for ax,label in zip(axs[:,0],['Tag APE (m)','Body ARE (rad)','Accel FD margin\n(m/s²)','Native receipt']):ax.set_ylabel(label)
     axs[0,0].set_yscale('symlog',linthresh=.1)
+    axs[0,0].set_ylim(bottom=0)
     axs[0,0].set_ylabel('Tag APE (m; symlog)')
     axs[-1,0].set_xlabel('Sensor time (s)');axs[0,0].legend(ncol=4,fontsize=8)
     finish(fig,'F03_joint_fault_receipts','T-SIM SC8-J seed 20261020; red: raw accel 20 m/s² for 500 ms; amber: range +2.25 m for 3 epochs. APE is linear below 0.1 m, logarithmic above; rejoined flag is a persistent state. Receipts do not imply accuracy recovery.')
