@@ -1039,7 +1039,6 @@ def report():
     f=registry.get('frozen',{});counts=metrics['logical_run_status_counts'];pending=sum(counts.get(k,0) for k in ['NOT_ATTEMPTED','RUNNING'])
     checks=metrics.get('validation',{}).get('final-checks.json',{}).get('result',[]);checked=bool(checks) and all(c['returncode']==0 for c in checks)
     gaps=[r['id'] for r in records if r['status']=='EXECUTION_ERROR' or 'scoring_error' in r]
-    if any(r.get('track')=='T-SIM' and r['requested_method']=='SFUISE' and r.get('views') for r in records):gaps.append('SFUISE simulated velocity/bias estimates were not exported; source truth exists but corresponding state-error metrics remain NA, no pose-difference proxy')
     late=[r for r in records if r['group']=='E08' and r['stream']=='SC8-L1' and r['status'] not in ['NOT_ATTEMPTED','RUNNING'] and r.get('max_committed_epoch',0)<10000]
     if pending or not checked:status='IN_PROGRESS'
     elif gaps or late:status='SC8_EVALUATED_WITH_EXECUTION_GAPS'
@@ -1162,6 +1161,7 @@ def evaluation_status(records,validation):
     checks=validation.get('final-checks.json',{}).get('result',[])
     checked=bool(checks) and all(c['returncode']==0 for c in checks)
     gaps=[r['id'] for r in records if r['status']=='EXECUTION_ERROR' or 'scoring_error' in r]
+    if any(r.get('track')=='T-SIM' and r['requested_method']=='SFUISE' and r.get('views') for r in records):gaps.append('SFUISE simulated velocity/bias estimates were not exported; source truth exists but corresponding state-error metrics remain NA, no pose-difference proxy')
     gaps.append('STAR gyro-frame input validation OPEN: published transform direction labels and CAL-S gyro/GT consistency do not close; frozen outputs retained as interface-level outcomes, no intrinsic algorithm ranking')
     gaps.append('Walk physical tag/body GT reference OPEN: CAL-W rejects tracker=IMU identity; frozen numerical proxy metrics are retained separately, not physical accuracy')
     gaps.append('Registered scope omission: no separate weak-UWB amplitude matrix or S1/S2 bias trajectories; no historical curves substituted')
