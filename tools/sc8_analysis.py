@@ -1272,6 +1272,8 @@ def audit():
     def check(name,condition,detail=None):checks.append(dict(check=name,passed=bool(condition),detail=detail))
     check('frozen_computation',now['computational_content_sha256']==frozen['computational_content_sha256'])
     check('frozen_solver_ELF_and_DSO',now['binaries']==frozen['binaries'])
+    changed_formal=[r['id'] for r in metrics['runs'] if r['group']!='E00' and (r.get('identity',{}).get('computational_content_sha256')!=frozen['computational_content_sha256'] or r.get('identity',{}).get('binaries')!=frozen['binaries'])]
+    check('every_formal_run_used_frozen_computation_and_ELFs',not changed_formal,changed_formal)
     changed_libraries=[p for p,h in registry['frozen'].get('loaded_libraries',{}).items() if not Path(p).is_file() or common.sha256(Path(p))!=h]
     changed_contracts=[p for p,h in registry['frozen'].get('unchanged_contracts',{}).items() if not (ROOT/p).is_file() or common.sha256(ROOT/p)!=h]
     check('frozen_loaded_libraries',not changed_libraries,changed_libraries)
@@ -1297,6 +1299,7 @@ def audit():
     check('CAL_reference_diagnostic_retained_as_OPEN',reference.get('status')=='OPEN_REFERENCE_CONTRACT' and reference.get('original_parameter_changes') is False)
     walk=[r for r in metrics['runs'] if r.get('reference_contract')=='OPEN_WALK_TRACKER_BODY_TAG']
     check('unresolved_walk_reference_has_no_physical_APE_or_ARE_claim',bool(walk) and all(s.get(k,{}).get('rmse') is None for r in walk for s in r.get('views',{}).values() for k in ['ape_m','are_rad']))
+    check('unresolved_walk_reference_has_no_physical_paired_gain',all(g.get('off_minus_on') is None for p in metrics.get('paired',[]) if p.get('reference_contract')=='OPEN_WALK_TRACKER_BODY_TAG' for g in p['gains'].values()))
     star=reference.get('STAR_CAL_only',{})
     check('STAR_tag_point_reference_verified_input_frame_gap_disclosed',star.get('status')=='INPUT_GYRO_FRAME_VALIDATION_OPEN' and star.get('official_tag_lever_consistency_rmse_m',1)<1e-9 and star.get('candidate_applied') is False)
     baseline=[r for r in metrics['runs'] if r['group']=='E01' and r['stream']=='SC8-H' and r.get('seed')==20261020]
