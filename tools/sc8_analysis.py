@@ -272,7 +272,8 @@ def score_entry(entry,execution,run,registry):
                 result['views'][view]=score
                 if entry['track']=='T-SIM':phase_manifest=registry['cases'][entry['stream']]
                 elif 'overlay' in doc:
-                    phase_manifest={'fault_intervals':[(doc['overlay']['onset_s'],doc['overlay']['onset_s']+.5)]}
+                    onset=doc['overlay']['onset_s'];is_uwb_only=entry['stream'].endswith('-FU')
+                    phase_manifest={'fault_intervals':[(onset+.045,onset+.195)] if is_uwb_only else [(onset,onset+.5)]}
                 else:phase_manifest={}
                 result.setdefault('phase_views',{})[view]=phase_scores(estimate,truth,lever,phase_manifest)
             except (ValueError,OSError,KeyError) as e:result['views'][view]={'status':'NA','reason':str(e)}
@@ -291,7 +292,7 @@ def score_entry(entry,execution,run,registry):
             result['committed']=sum(value(r,'committed')==1 for r in attempts)
             result['timely_estimates']=sum(value(r,'committed')==1 and 0<=value(r,'measurement_to_sink_ms')<=50 for r in attempts)
             result['fde_status_counts']=dict(Counter(r['fde_status'] for r in attempts))
-            result['general_receipts']={k:dict(Counter(r.get(k,'NOT_EXPORTED_W0') for r in attempts)) for k in ['action','detector_valid','detector_passed','bridge_active','historical_removed','internal_protected']}
+            result['general_receipts']={k:dict(Counter(r.get(k,'NOT_EXPORTED_W0') for r in attempts)) for k in ['action','detector_valid','detector_passed','bridge_active','history_removed_groups','history_added_groups','bridge_epochs','reinit_required','internal_protected_output']}
             result['general_recovery_semantics']='Engineering receipts only; no SC7 prior/bridge/rejoin qualification inherited'
             result['timing']={k:metric.summary([value(r,k) for r in attempts]) for k in ['core_ms','measurement_to_sink_ms','state_age_ms']}
             result['timely_estimate_fraction']=result['timely_estimates']/planned_batches if planned_batches else None
@@ -322,6 +323,14 @@ def score_entry(entry,execution,run,registry):
             result['observed_cutoff_vs_numeric_cutoff_separated']='observed_sensor_cutoff_ns' in observer[0]
         result['integrity']=dict(statistical_qualification='UNQUALIFIED_REAL_SOURCE' if entry['track']!='T-SIM' else 'NO_RAW_PL_METHOD',HPL=None,VPL=None,publication_protected=0)
     result['thread_policy_semantics']='Configured BLAS env 1; native TBB control 1; general candidate workers 1. ROS/system helper threads are not a measured one-thread guarantee; compare actual root CPU separately.'
+    if 'overlay' in doc:
+        onset=doc['overlay']['onset_s'];is_uwb_only=entry['stream'].endswith('-FU');physical_begin=onset+.045 if is_uwb_only else onset;physical_end=onset+.195 if is_uwb_only else onset+.5;attempted=rows(run/'attempts.csv')
+        observed=max([value(x,'max_sensor_stamp_used') for x in attempted if math.isfinite(value(x,'max_sensor_stamp_used'))],default=float('nan'))
+        if entry['requested_method']=='SFUISE':observed=result.get('solver_final_receipt',{}).get('max_numeric_input_ns',float('nan'))*1e-9-1000
+        result['overlay_execution_coverage']=dict(manifest_base_onset_s=onset,physical_begin_s=physical_begin,physical_end_s=physical_end,last_confirmed_numeric_input_s=observed,
+            onset_confirmed_reached=bool(math.isfinite(observed) and observed>=physical_begin),
+            last_fault_input_confirmed_reached=bool(math.isfinite(observed) and observed>=physical_end),
+            semantics='Completed native attempt / SF numeric receipt only; absent confirmation is not a claimed miss or false alarm; unmeasured inflight work may exist.')
     duration=common.csv_duration(inputs/'imu.csv');result['source_duration_s']=duration
     cpu=result.get('root_cpu_s')
     if cpu is None or not math.isfinite(cpu):cpu=execution.get('children_cpu_s') if entry['requested_method']!='SFUISE' else None
@@ -882,6 +891,7 @@ def report():
         table(['定向例','status','APE m','ARE rad','raw / planned'],[(r['stream'],r['status'],m(r,'ape_m'),m(r,'are_rad'),f"{r.get('integrity',{}).get('spatial_valid','NA')} / {r.get('planned_epochs','NA')}") for r in records if r['group']=='E03' and r['stream'] not in ['SC8-U','SC8-A','SC8-G','SC8-J'] and r['stream'].startswith('SC8-')]),
         '\n以下为真实原生 episode receipt，FD/隔离/边缘先验替换/bridge/rejoin 分开；sensor TTD 与 wall TTD/TTI/TTR 不混。仅有 FD 或 PL 资格不等于恢复执行；first nominal receipt 不等于误差恢复。阶段 APE/ARE/速度/bias（healthy/fault/bridge/rejoin/late）完整保存在 JSON，位置改善不抵销姿态退化。',
         table(['流/seed/method','episode','FD','隔离提交','prior / bridge','rejoin4','TTD sensor / wall ms','TTI / TTR wall ms','unsafe endpoint'],[(r['stream']+'/'+str(r.get('seed',''))[-2:]+'/'+r['requested_method'],e['kind']+'/'+str(e.get('axis',e.get('anchor_index')))+'@'+str(e['onset_epoch']),e.get('FD'),e.get('ISOLATION_COMMITTED'),f"{e.get('first_prior_repair')} / {e.get('first_bridge')}",e.get('rejoin4'),f"{fmt(e.get('TTD_sensor_ms'))} / {fmt(e.get('TTD_wall_ms'))}",f"{fmt(e.get('TTI_wall_ms'))} / {fmt(e.get('TTR_wall_ms'))}",e.get('unsafe_shared_endpoint')) for r in records if r['group'] in ['E03','E08'] for e in r.get('episodes',[])]),
+        table(['真实 overlay/method','实际注入前沿确认'],[(r['stream']+'/'+str(r.get('effective_method',r['requested_method'])),r.get('overlay_execution_coverage')) for r in records if r['group']=='E03' and r['stream'].startswith(('R2-','R3-'))]),
         table(['真实 overlay','view','公共 N','增量 APE m','增量 ARE rad'],[(e['stream'],e['view'],e['common_n'],e['delta_overlay_minus_original'].get('ape_m'),e['delta_overlay_minus_original'].get('are_rad')) for e in metrics.get('overlay_effects',[])]),
         '\n## E04：原生完整性、Stanford 与 AL',
         '\nF05-H/V 使用同 stamp/tag/receipt 的实际 PE（横）/PL（纵）计数，不由均值合成。主图 full 尺度与 5 m zoom 均留 overflow；灰色 late bounds 不算及时可用；SFUISE/真实未知 PL 不画同 epsilon 点云。2/3、5/5、10/10 m 仅为研究 AL 后验评价，不改变在线噪声、risk、q 或发布规则。每轴互斥分区和 underbound 另外计数，AL-unavailable 中的 underbound 也不删除。零 HMI 样本不构成概率证明。',
