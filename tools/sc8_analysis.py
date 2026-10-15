@@ -914,6 +914,7 @@ def figures():
             m=r.get('same_center_M',{}).get(axis,{});v=m.get('reduction_m',{}).get('mean')
             if v is not None:ax.barh(i+j*.25,v,height=.2,color=COLORS['O-FULL'] if axis=='H' else '#56B4E9',label=axis if i==0 else None);ax.text(v,i+j*.25,f" {m.get('strict',0)} strict",va='center',fontsize=8)
     ax.set(yticks=np.arange(len(main))+.125,yticklabels=[r['stream'] for r in main],xlabel='Same-center old PL minus new PL (m)',title='M witness: same committed center');ax.legend()
+    ax.margins(x=.25)
     for ax,j,title in [(axs[1,0],2,'Accel z bias envelope'),(axs[1,1],5,'Gyro z bias envelope')]:
         for d in data.get('bias_bounds',{}).values():
             width=np.asarray(d['bwidth_'+str(j)]);ref=np.asarray(d['reference_bwidth_'+str(j)]);label=d['stream'].replace('SC8-','')+' / '+('FULL' if d['method']=='O-FULL' else 'joint+support off')
