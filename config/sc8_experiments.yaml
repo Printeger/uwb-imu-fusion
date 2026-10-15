@@ -2988,3 +2988,30 @@ frozen:
     .cache/sc8/sfuise_observer/check.json: b806b91dd0dd64b3ddc8b851bc0f3395bd2dd77b9e698ae7fe1675008ab9e52c
     .cache/sc8/equivalence/R3/equivalence.json: eae2f3a2bacc7c790c6908787ce23d6d678ceb2d634bb8ddababc5736b4ed60a
   design_sha256: de11b25d711e26e33d8216d3f5953172d2d1b57b2f9fc690193da6fb6b91c46d
+analysis_amendments:
+- kind: POST_FREEZE_SCORING_SUPPORT_REPAIR
+  solver_protocol_changed: false
+  source_commit: 59f3b89
+  reason: Frozen global history aggregation overwrites original spline idles. Upstream
+    interpolation before origin+2*dt has no reconstructable historical support. Online
+    output and all later historical samples are unaffected.
+  rule: Apply the same spline-support mask to every SFUISE final-history view, independent
+    of PE; retain raw artifacts, hashes and rejected points. No estimator rerun, parameter
+    change, alignment or GT-based selection.
+  validation: tools/test_sc8_spline_export.py; no estimator constructed, zero FGO
+    solves; online codec error0, late error0, boundary defect reproduced.
+  scope: Historical prefix unavailable is reported as an interface gap; first causal
+    streams remain complete as actually received.
+- kind: POST_FREEZE_PARTIAL_EXPORT_PARSER_REPAIR
+  solver_protocol_changed: false
+  rule: Reject incomplete final buffered TUM/CSV line; use complete actual post-commit
+    states with fixed physical tag conversion and crosscheck every matching complete
+    TUM row; no suffix/state reconstruction from GT.
+- kind: ANALYSIS_PRESENTATION
+  solver_protocol_changed: false
+  pairing: ON/OFF gains use their first-stream common grid. Cross-method display uses
+    all AVAILABLE valid views; missing views remain NA. Same-run SF online/history
+    gains have a separate common valid domain.
+  representatives: 'First listed sequence per family: R1/R3/R5; display rule implemented
+    during W1, before all E02 results; all six remain in full tables, no accuracy-based
+    replacement.'
