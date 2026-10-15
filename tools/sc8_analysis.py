@@ -95,6 +95,7 @@ def native_episodes(data,manifest,paced=True):
         first=lambda x:int(value(x[0],'epoch')) if x else None
         episodes.append(dict(kind='IMU',axis=axis,onset_epoch=onset,begin_s=begin,end_s=end,amplitude=amplitude,
             first_fd=first(alarm),first_bridge=first(bridges),first_prior_repair=first(repairs),
+            rejoin_semantics='first four consecutive committed receipts in native rejoined state; not four separate rejoin transitions',
             rejoin4=[int(value(r,'epoch')) for r in rejoin[:4]],unsafe_shared_endpoint=[int(value(r,'epoch')) for r in unsafe],
             TTD_sensor_ms=(value(alarm[0],'first_imu_alarm_ns')*1e-9-begin)*1000 if alarm else None,
             TTD_wall_ms=value(alarm[0],'imu_alarm_ms')-begin*1000 if alarm else None,
@@ -554,7 +555,7 @@ def envelope_indices(t,signals,events=(),bins=192):
 
 
 def build_plotdata(metrics,registry):
-    index={e['id']:e for e in registry['runs']};curves={};diagnostics={};stanford={};latency={};si={};references={}
+    index={e['id']:e for e in registry['runs']};curves={};diagnostics={};stanford={};latency={};si={};references={};raw_ranges={}
     for r in metrics['runs']:
         if r['group']=='E00' or r['status'] in ['NOT_ATTEMPTED','RUNNING'] or 'scoring_error' in r:continue
         entry=index[r['id']];path=latest(entry);run=path.parent
@@ -579,6 +580,11 @@ def build_plotdata(metrics,registry):
         representative=(r['group']=='E02' and r['stream'] in ['R1','R3','R5']) or (r['group']=='E03' and r['stream']=='SC8-J' and r['seed']==20261020) or r['group']=='E08'
         if representative:
             poses,truth,lever=run_poses(r,entry)
+            if r['group']=='E03' and r['stream']=='SC8-J' and r.get('seed')==20261020 and not raw_ranges:
+                execution=json.loads(path.read_text());source=ROOT/execution['inputs'];rr=common.read_csv(source/'uwb.csv');aid=min(int(x['anchor_id']) for x in rr);rr=[x for x in rr if int(x['anchor_id'])==aid]
+                tt=np.array([float(x['t']) for x in rr]);ok,pp,_=metric.sample(*truth,tt)
+                anchor=np.array([[float(x[k]) for k in ['anchor_x','anchor_y','anchor_z']] for x in rr]);observed=np.array([float(x['range']) for x in rr])
+                raw_ranges=dict(stream='SC8-J',seed=20261020,anchor_id=aid,t=tt[ok],error_m=(observed-np.linalg.norm(pp-anchor,axis=1))[ok],scope='Actual common raw range minus source-truth distance; evaluator-only diagnostic, not estimator input')
             if r['group']=='E02' and truth is not None and r['stream'] not in references:
                 mask=truth[0]>=r.get('scoring_begin_s') if r.get('scoring_begin_s') is not None else np.ones(len(truth[0]),bool)
                 rt,rp=truth[0][mask],truth[1][mask]
@@ -596,12 +602,14 @@ def build_plotdata(metrics,registry):
         if raw and ((r['stream']=='SC8-J' and r.get('seed')==20261020 and r['group']=='E03') or r['group']=='E08'):
             actual=[x for x in raw if value(x,'updates')==1]
             if not actual:continue
-            keys=['ape','rotation_error','hpl','vpl','bias_width','core_ms','delivery_ms','slots','rss','ledger','replay','capsules','q','alerts','source_prefix','active_states','proof_explicit','imu_alarm','uwb_alarm','bridge','repair','removed_priors','removed_groups','rejoined','excluded','imu_margin_0','imu_margin_3']
+            keys=['ape','rotation_error','hpl','vpl','bias_width','core_ms','delivery_ms','slots','rss','ledger','replay','capsules','q','alerts','source_prefix','active_states','proof_explicit','imu_alarm','uwb_alarm','bridge','repair','removed_priors','removed_groups','rejoined','excluded','imu_margin_0','imu_margin_3','temporal_margin_0']
             tt=np.array([value(x,'epoch')*.05 for x in actual]);signals=[[value(x,k) for x in actual] for k in keys]
             cores=np.array([value(x,'core_ms') for x in actual]);rolling=[np.sort(cores[max(0,i-19):i+1])[math.ceil(.95*min(i+1,20))-1] for i in range(len(cores))]
             keys.append('core_rolling_p95');signals.append(rolling)
             events=[f[0]*.05 for f in registry['cases'][r['stream']]['faults']]
             ix=envelope_indices(tt,[*signals[:10],rolling],events)
+            event_indices=[j for j,x in enumerate(actual) if any(value(x,k)==1 for k in ['imu_alarm','uwb_alarm','bridge','repair','rejoined'])]
+            ix=np.unique(np.r_[ix,event_indices]).astype(int)
             diagnostics[r['id']]=dict(t=tt[ix],**{k:np.asarray(v)[ix] for k,v in zip(keys,signals)},full_n=len(actual),display_n=len(ix))
     hist={}
     for method,points in stanford.items():
@@ -615,7 +623,7 @@ def build_plotdata(metrics,registry):
                     counts,_,_=np.histogram2d(pe[mask],pl[mask],bins=[xbins,ybins]);layers[label]=counts.astype(int)
                 axisdata[view]=dict(x_edges=xbins,y_edges=ybins,layers=layers,total=len(pe),outside=int(((pe>xbins[-1])|(pl>ybins[-1])).sum()),within_pl=int((pe<=pl).sum()))
             hist[method][axis]=axisdata
-    return dict(schema='sc8-plotdata-v1',curves=curves,reference_tracks=references,native_diagnostics=diagnostics,stanford=hist,
+    return dict(schema='sc8-plotdata-v1',curves=curves,reference_tracks=references,joint_raw_range=raw_ranges,native_diagnostics=diagnostics,stanford=hist,
         si={k:dict(compressed_ecdf(v),over1=int(np.sum(np.asarray(v)>1))) for k,v in si.items()},
         latency={k:compressed_ecdf(v) for k,v in latency.items()},
         curve_reduction='Actual per-bin extrema for all displayed signals + first/last + fault +/-1s; statistics use every sample. ECDF keeps actual ranks; histogram bins sum actual PE/PL points.',
@@ -713,8 +721,20 @@ def figures():
             c=max(cc,key=lambda c:len(c['t']));gt=np.asarray(c['truth']);tt,gg=display_with_gaps(np.asarray(c['t']),gt,c.get('gap_intervals',[]));axs[i,0].plot(gg[:,0],gg[:,1],'k-',lw=1,label='GT');axs[i,1].plot(tt,gg[:,2],'k-',lw=1)
         if not cc:no(axs[i,0]);no(axs[i,1])
         axs[i,0].set(title=f'{rid}: tag XY',xlabel='x (m)',ylabel='y (m)',aspect='equal');axs[i,1].set(title=f'{rid}: tag height',xlabel='Sensor time (s)',ylabel='z (m)')
+        if cc and max(max(abs(np.asarray(c['estimate']).ravel())) for c in cc)>1000:
+            axs[i,0].ticklabel_format(style='sci',axis='both',scilimits=(0,0),useMathText=True)
+            if reference:
+                gp=np.asarray(reference['p']);rt=np.asarray(reference['t']);low=gp.min(axis=0);high=gp.max(axis=0);pad=np.maximum((high-low)*.15,.2)
+                zoom=axs[i,0].inset_axes([.54,.05,.43,.43]);zoom.set_title('GT neighborhood',fontsize=8)
+                for c in cc:
+                    tt,pp=display_with_gaps(np.asarray(c['t']),np.asarray(c['estimate']),c.get('gap_intervals',[]));zoom.plot(pp[:,0],pp[:,1],color=color(c['view']),ls='--' if c['view']=='S-FINAL' else '-',lw=.65)
+                tt,gg=display_with_gaps(rt,gp,reference.get('gap_intervals',[]));zoom.plot(gg[:,0],gg[:,1],'k-',lw=.7);zoom.set(xlim=(low[0]-pad[0],high[0]+pad[0]),ylim=(low[1]-pad[1],high[1]+pad[1]));zoom.tick_params(labelsize=8)
+                zoomz=axs[i,1].inset_axes([.50,.65,.47,.30]);zoomz.set_title('GT height neighborhood',fontsize=8)
+                for c in cc:
+                    tt,pp=display_with_gaps(np.asarray(c['t']),np.asarray(c['estimate']),c.get('gap_intervals',[]));zoomz.plot(tt,pp[:,2],color=color(c['view']),ls='--' if c['view']=='S-FINAL' else '-',lw=.65)
+                zoomz.plot(rt,gp[:,2],'k-',lw=.7);zoomz.set(xlim=(rt[0],rt[-1]),ylim=(low[2]-pad[2],high[2]+pad[2]));zoomz.tick_params(labelsize=8)
     axs[0,1].legend(fontsize=8,loc='best')
-    finish(fig,'F02_real_trajectories','First listed recording per family; XY marker color = actual APE, lines identify methods. No alignment. R3 TEST after 16.679 s; observed gaps broken, censored tracks absent.')
+    finish(fig,'F02_real_trajectories','First listed recording per family; XY marker color = actual APE, lines identify methods. No alignment. R3 TEST after 16.679 s; observed gaps broken, censored tracks absent. Large excursions keep full scale with GT-neighborhood insets.')
     # F03: actual strong joint raw fault, all first emissions and native receipts.
     fig,axs=sub(4,1,7.0)
     for c in data['curves'].values():
@@ -723,15 +743,21 @@ def figures():
         for ax,key in [(axs[0,0],'ape'),(axs[1,0],'are')]:ax.plot(c['t'],c[key],color=color(c['view']),ls=ls,lw=.9,label=c['view'])
     diag=[(rid,d) for rid,d in data['native_diagnostics'].items() if rid.startswith('E03') and 'O-FULL' in rid]
     if diag:
-        rid,d=diag[0];t=np.asarray(d['t']);axs[2,0].plot(t,d['imu_margin_0'],color=COLORS['O-FULL']);axs[2,0].axhline(0,color='#aa3333',lw=.8)
+        rid,d=diag[0];t=np.asarray(d['t']);axs[2,0].plot(t,d['imu_margin_0'],color=COLORS['O-FULL'],label='Absolute margin')
+        axs[2,0].plot(t,d['temporal_margin_0'],color=COLORS['O-FULL'],ls='--',label='Adjacent margin');axs[2,0].axhline(0,color='#aa3333',lw=.8)
+        if data.get('joint_raw_range'):
+            raw=data['joint_raw_range'];range_ax=axs[2,0].twinx();range_ax.plot(raw['t'],raw['error_m'],color='#D55E00',lw=.8,label='Anchor range error');range_ax.set_ylabel('Range error (m)')
+            handles,labels=axs[2,0].get_legend_handles_labels();h2,l2=range_ax.get_legend_handles_labels();axs[2,0].legend(handles+h2,labels+l2,ncol=3,fontsize=8,loc='upper right')
         for j,(key,label) in enumerate([('imu_alarm','FD'),('bridge','Bridge'),('repair','Prior repair'),('rejoined','Rejoin')]):
             v=np.asarray(d[key]);ix=v==1;axs[3,0].scatter(t[ix],np.full(ix.sum(),j),s=8,color=COLORS['O-FULL'],marker='|')
-        axs[3,0].set(yticks=range(4),yticklabels=['FD','Bridge','Prior repair','Rejoin'])
+        axs[3,0].set(yticks=range(4),yticklabels=['FD','Bridge','Prior repair','Rejoined state'])
     else:no(axs[2,0]);no(axs[3,0])
     for ax in axs[:,0]:ax.axvspan(6.005,6.505,color='#cc6677',alpha=.15);ax.axvspan(6.05,6.15,color='#bb8800',alpha=.15);ax.set_xlim(0,30)
     for ax,label in zip(axs[:,0],['Tag APE (m)','Body ARE (rad)','Accel FD margin\n(m/s²)','Native receipt']):ax.set_ylabel(label)
+    axs[0,0].set_yscale('symlog',linthresh=.1)
+    axs[0,0].set_ylabel('Tag APE (m; symlog)')
     axs[-1,0].set_xlabel('Sensor time (s)');axs[0,0].legend(ncol=4,fontsize=8)
-    finish(fig,'F03_joint_fault_receipts','T-SIM SC8-J seed 20261020; red: raw accel 20 m/s² for 500 ms; amber: range +2.25 m for 3 epochs. Receipts do not imply accuracy recovery.')
+    finish(fig,'F03_joint_fault_receipts','T-SIM SC8-J seed 20261020; red: raw accel 20 m/s² for 500 ms; amber: range +2.25 m for 3 epochs. APE is linear below 0.1 m, logarithmic above; rejoined flag is a persistent state. Receipts do not imply accuracy recovery.')
     # F04: paired independent gains retain negative values and posture effects.
     fig,axs=sub(1,3,4.5);pp=[p for p in metrics.get('paired',[]) if p['group']=='E03'];labels=list(dict.fromkeys(p['stream'] for p in pp))
     for ax,key,unit,scale in [(axs[0,0],'ape_m','APE gain (m)',1),(axs[0,1],'ape_m','APE gain (%)',1),(axs[0,2],'are_rad','ARE gain (rad)',1)]:
