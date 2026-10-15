@@ -317,6 +317,7 @@ def score_entry(entry,execution,run,registry):
                 result.setdefault('phase_views',{})[view]=phase_scores(estimate,truth,lever,phase_manifest)
             except (ValueError,OSError,KeyError) as e:result['views'][view]={'status':'NA','reason':str(e)}
         attempts=rows(run/'attempts.csv')
+        measured_attempts=[r for r in rows(run/'attempts.csv',keep_partial=True) if math.isfinite(value(r,'core_ms'))]
         if attempts:
             # Keep initialization and unattempted suffix in the full source denominator.
             source_rows=[r for r in common.read_csv(inputs/'uwb.csv') if int(r['tag_id'])==int(doc['primary_tag']) and int(r['valid'])!=0]
@@ -333,7 +334,8 @@ def score_entry(entry,execution,run,registry):
             result['fde_status_counts']=dict(Counter(r['fde_status'] for r in attempts))
             result['general_receipts']={k:dict(Counter(r.get(k,'NOT_EXPORTED_W0') for r in attempts)) for k in ['action','detector_valid','detector_passed','bridge_active','history_removed_groups','history_added_groups','bridge_epochs','reinit_required','internal_protected_output']}
             result['general_recovery_semantics']='Engineering receipts only; no SC7 prior/bridge/rejoin qualification inherited'
-            result['timing']={k:metric.summary([value(r,k) for r in attempts]) for k in ['core_ms','measurement_to_sink_ms','state_age_ms']}
+            result['timing']={k:metric.summary([value(r,k) for r in measured_attempts]) for k in ['core_ms','measurement_to_sink_ms','state_age_ms']}
+            result['partial_rows_with_measured_core']=sum(None in r.values() for r in measured_attempts)
             result['timely_estimate_fraction']=result['timely_estimates']/planned_batches if planned_batches else None
             result['root_cpu_s']=execution.get('details',{}).get('cpu_ms',float('nan'))/1000
             result['peak_rss_kib']=execution.get('details',{}).get('peak_rss_kib')
@@ -380,7 +382,10 @@ def score_entry(entry,execution,run,registry):
     result['CPU_RTF']=cpu/duration if cpu is not None and duration else None
     core=result.get('timing',{}).get('core_ms',{})
     result['service_RTF']=core['mean']*core['n']/1000/duration if isinstance(core,dict) and core.get('mean') is not None and duration else None
-    result['RTF_scope']='CPU_RTF=root CPU/source duration; service_RTF=all observed complete service intervals/source duration; native/dataset processing_RTF also subtracts measured deliberate source waits. SF post-last-publish active tail wall is not measured; no whole-bag speed claim.'
+    result['RTF_scope']='CPU_RTF=root CPU/source duration; service_RTF=all measurable service intervals/source duration; native/dataset processing_RTF also subtracts measured deliberate source waits. SF post-last-publish active tail wall is not measured; no whole-bag speed claim. Censored profile costs remain separate from completed-stream throughput.'
+    if execution['status']=='RESOURCE_LIMIT':
+        result['censored_profile_cost_ratios']=dict(CPU_over_planned_duration=result.get('CPU_RTF'),measured_service_over_planned_duration=result.get('service_RTF'))
+        result['CPU_RTF']=None;result['service_RTF']=None;result['processing_RTF']=None
     return result
 
 
@@ -600,13 +605,13 @@ def build_plotdata(metrics,registry):
             phase='Real' if r['group']=='E02' else 'Healthy' if r['group']=='E01' else 'Fault'
             method='S-ONLINE' if r['requested_method']=='SFUISE' else r.get('effective_method')
             if raw:vals=[value(x,'core_ms') for x in raw if x.get('status')!='SOURCE_GAP_OR_ABORT']
-            else:vals=[value(x,'core_ms') for x in rows(run/('observer.csv' if method=='S-ONLINE' else 'attempts.csv'))]
+            else:vals=[value(x,'core_ms') for x in rows(run/('observer.csv' if method=='S-ONLINE' else 'attempts.csv'),keep_partial=method!='S-ONLINE')]
             latency.setdefault(phase+'|'+method+'|core',[]).extend(vals)
             if raw:sinks=[value(x,'delivery_ms') for x in raw if x.get('status')!='SOURCE_GAP_OR_ABORT']
             elif method=='S-ONLINE':
                 obs={x['state_ns']:x for x in rows(run/'observer.csv')}
                 sinks=[(value(x,'source_clock_at_sink_ns')-value(obs[x['state_ns']],'max_sensor_stamp_used'))*1e-6 for x in rows(run/'trajectory.tum.online_cutoff.csv') if x['state_ns'] in obs]
-            else:sinks=[value(x,'measurement_to_sink_ms') for x in rows(run/'attempts.csv')]
+            else:sinks=[value(x,'measurement_to_sink_ms') for x in rows(run/'attempts.csv',keep_partial=True)]
             latency.setdefault(phase+'|'+method+'|sink',[]).extend(sinks)
         representative=(r['group']=='E02' and r['stream'] in ['R1','R3','R5']) or (r['group']=='E03' and r['stream']=='SC8-J' and r['seed']==20261020) or r['group']=='E08'
         if representative:
@@ -1041,7 +1046,7 @@ def report():
         '\n## E06：时间、CPU、RTF 与默认 profile',
         '\ncore 从原始到达验证开始到 cleanup/receipt 完成；sink 含 ready/排队/载荷/接收门，不含 GT 评分。原生 source 资格计算属于 core，独立 source 生成与冷启动另列；独立 producer 按绝对 source 时间发布，初始化需等待真实 2 s 前缀到达，积压不免费。SFUISE core 包含 callback 与两次发布之间所有 active run 开销，CPU/RSS 来自 root solver；整进程 bag/start/drain wall 不作为 core 或算法加速比。SF 软件 clock 仿射映射在 EOF 后继续计时，1 ms 发布粒度与软件 jitter 未提供硬件实时资格。数值输入 cutoff 与仅 buffered callback cutoff 分列。',
         table(['组/流/seed/method','measured core N','P95 core / sink / age ms','P99 core / sink ms','root CPU s','CPU RTF / service RTF / processing RTF','RSS KiB','timely fraction / profile'],[(r['group']+'/'+r['stream']+'/'+str(r.get('seed',''))[-2:]+'/'+str(r.get('effective_method',r['requested_method'])),r.get('timing',{}).get('core_ms',{}).get('n'),f"{fmt(timing(r,'core_ms'))} / {fmt(timing(r,'measurement_to_sink_ms'))} / {fmt(timing(r,'state_age_ms'))}",f"{fmt(timing(r,'core_ms','p99'))} / {fmt(timing(r,'measurement_to_sink_ms','p99'))}",r.get('root_cpu_s'),f"{fmt(r.get('CPU_RTF'))} / {fmt(r.get('service_RTF'))} / {fmt(r.get('processing_RTF'))}",r.get('peak_rss_kib'),f"{fmt(r.get('timely_spatial_fraction',r.get('timely_estimate_fraction')))} / {r.get('tested_profile_deadline_pass','NA: no matched raw PL')}") for r in records if r['group'] in ['E01','E02','E06']]),
-        '\n默认 positive profile 必须同时 core P95≤40 ms、measurement-to-sink P95≤50 ms、及时空间有效/所有计划≥95%；所有测到的慢帧、失败候选和 abort 包含。真实只报及时估计率，不借用 raw 空间资格；formal attempt、启动未覆盖、资源停止后未尝试后缀均在全分母。exclusive 模块均值与总 core 均值逐 run 闭合，未分配的 guard/clock/abort 成本单列；阶段 P95 不相加。CPU、wall processing 与 sensor duration 分别记录，不声称全线程实现相同。',
+        '\n默认 positive profile 必须同时 core P95≤40 ms、measurement-to-sink P95≤50 ms、及时空间有效/所有计划≥95%；所有测到的慢帧、失败候选和 abort 包含。真实只报及时估计率，不借用 raw 空间资格；formal attempt、启动未覆盖、资源停止后未尝试后缀均在全分母。exclusive 模块均值与总 core 均值逐 run 闭合，未分配的 guard/clock/abort 成本单列；阶段 P95 不相加。CPU、wall processing 与 sensor duration 分别记录，不声称全线程实现相同。资源截断不提供完整流 throughput RTF；已花 CPU/可测 service 除以全计划时长的 profile 成本比另存 censored_profile_cost_ratios，不能靠未处理后缀稀释成本后宣称速度。',
         '\n## E07：合法消融',
         table(['流/开关实际 ID','status','APE m / ARE rad','mean H/V PL m','P95 ms','same-center M'],[(r['id'],r['status'],f"{fmt(m(r,'ape_m'))} / {fmt(m(r,'are_rad'))}",f"{fmt(r.get('integrity',{}).get('axes',{}).get('H',{}).get('pl',{}).get('mean'))} / {fmt(r.get('integrity',{}).get('axes',{}).get('V',{}).get('pl',{}).get('mean'))}",timing(r,'core_ms'),r.get('same_center_M')) for r in records if r['group']=='E07']),
         table(['消融 ID','公共区间 s / N','APE ablated / FULL m','ARE ablated / FULL rad','最大 center 差 m'],[(a['id'],f"{a['interval_s']} / {a['common_n']}",f"{fmt(a['A_common']['ablated']['ape_m']['rmse'])} / {fmt(a['A_common']['full']['ape_m']['rmse'])}",f"{fmt(a['A_common']['ablated']['are_rad']['rmse'])} / {fmt(a['A_common']['full']['are_rad']['rmse'])}",a['max_center_difference_m']) for a in metrics.get('ablation_comparisons',[])]),
