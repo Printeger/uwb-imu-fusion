@@ -1178,6 +1178,15 @@ def audit():
     def check(name,condition,detail=None):checks.append(dict(check=name,passed=bool(condition),detail=detail))
     check('frozen_computation',now['computational_content_sha256']==frozen['computational_content_sha256'])
     check('frozen_solver_ELF_and_DSO',now['binaries']==frozen['binaries'])
+    changed_libraries=[p for p,h in registry['frozen'].get('loaded_libraries',{}).items() if not Path(p).is_file() or common.sha256(Path(p))!=h]
+    changed_contracts=[p for p,h in registry['frozen'].get('unchanged_contracts',{}).items() if not (ROOT/p).is_file() or common.sha256(ROOT/p)!=h]
+    check('frozen_loaded_libraries',not changed_libraries,changed_libraries)
+    check('original_noise_risk_AL_and_publication_contracts',not changed_contracts,changed_contracts)
+    import subprocess
+    import run_sfuise_benchmark as sf
+    baseline_head=subprocess.check_output(['git','-C',str(sf.SFUISE_ROOT),'rev-parse','HEAD'],text=True).strip()
+    baseline_status=subprocess.check_output(['git','-C',str(sf.SFUISE_ROOT),'status','--porcelain'],text=True).strip()
+    check('pinned_original_SFUISE_source_clean',baseline_head==registry['frozen']['baseline_pin'] and not baseline_status,dict(head=baseline_head,status=baseline_status))
     import hashlib
     design={k:registry[k] for k in ['seeds','cases','runs','resource_stops','evaluation','calibration','inventory']}
     check('frozen_registered_design',hashlib.sha256(json.dumps(design,sort_keys=True).encode()).hexdigest()==registry['frozen']['design_sha256'])
