@@ -283,6 +283,7 @@ def score_entry(entry,execution,run,registry):
         result['last_recorded_epoch']=max([int(value(r,'epoch')) for r in native],default=0)
         result['actual_max_epoch']=max([int(value(r,'epoch')) for r in native if r.get('status')!='SOURCE_GAP_OR_ABORT'],default=0)
         result['max_committed_epoch']=max([int(value(r,'epoch')) for r in actual],default=0)
+        result['source_processing_complete']=result['actual_max_epoch']>=planned and not any(r.get('status')=='SOURCE_GAP_OR_ABORT' for r in native)
         result['native_failures']=[dict(epoch=int(value(r,'epoch')),status=r.get('status'),reason=r.get('recovery')) for r in native if r.get('status')=='ABORT']
         result['x0_retired']=any(value(r,'x0')==0 for r in actual)
         result['episodes']=native_episodes(native,manifest,entry['pace']=='paced')
@@ -405,8 +406,8 @@ def score_entry(entry,execution,run,registry):
     core=result.get('timing',{}).get('core_ms',{})
     result['service_RTF']=core['mean']*core['n']/1000/duration if isinstance(core,dict) and core.get('mean') is not None and duration else None
     result['RTF_scope']='CPU_RTF=root CPU/source duration; service_RTF=all measurable service intervals/source duration; native/dataset processing_RTF also subtracts measured deliberate source waits. SF post-last-publish active tail wall is not measured; no whole-bag speed claim. Censored profile costs remain separate from completed-stream throughput.'
-    if execution['status']=='RESOURCE_LIMIT':
-        result['censored_profile_cost_ratios']=dict(CPU_over_planned_duration=result.get('CPU_RTF'),measured_service_over_planned_duration=result.get('service_RTF'))
+    if execution['status']!='SUCCESS' or result.get('source_processing_complete') is False:
+        result['censored_profile_cost_ratios']=dict(CPU_over_planned_duration=result.get('CPU_RTF'),measured_service_over_planned_duration=result.get('service_RTF'),processing_over_planned_duration=result.get('processing_RTF'))
         result['CPU_RTF']=None;result['service_RTF']=None;result['processing_RTF']=None
     if entry['stream'].split('-')[0] in ['R1','R2']:
         result['reference_contract']='OPEN_WALK_TRACKER_BODY_TAG'
@@ -1116,7 +1117,7 @@ def report():
         '\n## E06：时间、CPU、RTF 与默认 profile',
         '\ncore 从原始到达验证开始到 cleanup/receipt 完成；sink 含 ready/排队/载荷/接收门，不含 GT 评分。原生 source 资格计算属于 core，独立 source 生成与冷启动另列；独立 producer 按绝对 source 时间发布，初始化需等待真实 2 s 前缀到达，积压不免费。SFUISE core 包含 callback 与两次发布之间所有 active run 开销，CPU/RSS 来自 root solver；整进程 bag/start/drain wall 不作为 core 或算法加速比。SF 软件 clock 仿射映射在 EOF 后继续计时，1 ms 发布粒度与软件 jitter 未提供硬件实时资格。数值输入 cutoff 与仅 buffered callback cutoff 分列。',
         table(['组/流/seed/method','measured core N','P95 core / sink / age ms','P99 core / sink ms','root CPU s','CPU RTF / service RTF / processing RTF','RSS KiB','timely fraction / profile'],[(r['group']+'/'+r['stream']+'/'+str(r.get('seed',''))[-2:]+'/'+str(r.get('effective_method',r['requested_method'])),r.get('timing',{}).get('core_ms',{}).get('n'),f"{fmt(timing(r,'core_ms'))} / {fmt(timing(r,'measurement_to_sink_ms'))} / {fmt(timing(r,'state_age_ms'))}",f"{fmt(timing(r,'core_ms','p99'))} / {fmt(timing(r,'measurement_to_sink_ms','p99'))}",r.get('root_cpu_s'),f"{fmt(r.get('CPU_RTF'))} / {fmt(r.get('service_RTF'))} / {fmt(r.get('processing_RTF'))}",r.get('peak_rss_kib'),f"{fmt(r.get('timely_spatial_fraction',r.get('timely_estimate_fraction')))} / {r.get('tested_profile_deadline_pass','NA: no matched raw PL')}") for r in records if r['group'] in ['E01','E02','E06']]),
-        '\n默认 positive profile 必须同时 core P95≤40 ms、measurement-to-sink P95≤50 ms、及时空间有效/所有计划≥95%；所有测到的慢帧、失败候选和 abort 包含。真实只报及时估计率，不借用 raw 空间资格；formal attempt、启动未覆盖、资源停止后未尝试后缀均在全分母。exclusive 模块均值与总 core 均值逐 run 闭合，未分配的 guard/clock/abort 成本单列；阶段 P95 不相加。CPU、wall processing 与 sensor duration 分别记录，不声称全线程实现相同。资源截断不提供完整流 throughput RTF；已花 CPU/可测 service 除以全计划时长的 profile 成本比另存 censored_profile_cost_ratios，不能靠未处理后缀稀释成本后宣称速度。',
+        '\n默认 positive profile 必须同时 core P95≤40 ms、measurement-to-sink P95≤50 ms、及时空间有效/所有计划≥95%；所有测到的慢帧、失败候选和 abort 包含。真实只报及时估计率，不借用 raw 空间资格；formal attempt、启动未覆盖、资源停止后未尝试后缀均在全分母。exclusive 模块均值与总 core 均值逐 run 闭合，未分配的 guard/clock/abort 成本单列；阶段 P95 不相加。CPU、wall processing 与 sensor duration 分别记录，不声称全线程实现相同。资源截断、非成功运行或未处理 source-gap 不提供完整流 throughput RTF；已花 CPU/可测 service 除以全计划时长的 profile 成本比另存 censored_profile_cost_ratios，不能靠未处理后缀稀释成本后宣称速度。',
         '\n## E07：合法消融',
         table(['流/开关实际 ID','status','APE m / ARE rad','mean H/V PL m','P95 ms','same-center M'],[(r['id'],r['status'],f"{fmt(m(r,'ape_m'))} / {fmt(m(r,'are_rad'))}",f"{fmt(r.get('integrity',{}).get('axes',{}).get('H',{}).get('pl',{}).get('mean'))} / {fmt(r.get('integrity',{}).get('axes',{}).get('V',{}).get('pl',{}).get('mean'))}",timing(r,'core_ms'),r.get('same_center_M')) for r in records if r['group']=='E07']),
         table(['消融 ID','公共区间 s / N','APE ablated / FULL m','ARE ablated / FULL rad','最大 center 差 m'],[(a['id'],f"{a['interval_s']} / {a['common_n']}",f"{fmt(a['A_common']['ablated']['ape_m']['rmse'])} / {fmt(a['A_common']['full']['ape_m']['rmse'])}",f"{fmt(a['A_common']['ablated']['are_rad']['rmse'])} / {fmt(a['A_common']['full']['are_rad']['rmse'])}",a['max_center_difference_m']) for a in metrics.get('ablation_comparisons',[])]),
@@ -1307,6 +1308,7 @@ def audit():
     auxiliary=sum(a.get('processes',0) for a in registry.get('auxiliary_solver_audits',[]))
     check('solver_process_ceiling',metrics['attempt_processes']+auxiliary<=160,dict(attempts=metrics['attempt_processes'],auxiliary=auxiliary))
     check('scoring_errors_retained_and_absent',not any('scoring_error' in r for r in metrics['runs']),[r['id'] for r in metrics['runs'] if 'scoring_error' in r])
+    check('incomplete_source_processing_has_no_full_stream_RTF',all(r.get(k) is None for r in metrics['runs'] if r.get('source_processing_complete') is False for k in ['CPU_RTF','service_RTF','processing_RTF']))
     pairbad=[p['stream'] for p in metrics.get('paired',[]) if not p['input_digests_equal']]
     check('main_physical_input_pairing',not pairbad,pairbad)
     unsupported=[p['stream'] for p in metrics.get('paired',[]) if p.get('post_fault_common_n') is not None and p['post_fault_common_n']<2 and any(g.get('off_minus_on') is not None for g in p['gains'].values())]
